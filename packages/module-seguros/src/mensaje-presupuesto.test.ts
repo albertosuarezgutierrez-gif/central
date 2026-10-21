@@ -80,3 +80,11 @@ test('🪤 con enlace directo: el botón entra sin código, el de siempre queda 
   assert.doesNotMatch(correoPresupuesto(d).html, /#d=/)
   assert.deepEqual(revisarCopy(c.texto), [])
 })
+
+test('🪤 wa.me con el móvil del TOMADOR si lo hay; sin él, sin número (21/10/2026)', async () => {
+  // Para verlo en rojo: en `enlaceWhatsappPresupuesto` ignora `movil` → falla la primera; o pon un número fijo → falla la segunda.
+  const { enlaceWhatsappPresupuesto } = await import('./mensaje-presupuesto.ts')
+  assert.equal(enlaceWhatsappPresupuesto('Hola y adiós', '34600000000'), 'https://wa.me/34600000000?text=Hola%20y%20adi%C3%B3s')
+  assert.equal(enlaceWhatsappPresupuesto('Hola', null), 'https://wa.me/?text=Hola')
+  assert.equal(enlaceWhatsappPresupuesto('Hola', '12'), 'https://wa.me/?text=Hola')
+})

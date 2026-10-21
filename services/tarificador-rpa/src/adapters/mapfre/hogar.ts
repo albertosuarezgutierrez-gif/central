@@ -1,6 +1,11 @@
-// Mapfre wmediadores · «Patrimoniales → Tarificación y emisión rápida» HOGAR — BORRADOR (15/10/2026). APAGADO y SIN REGISTRAR:
-// `MAPFRE_HOGAR_ACTIVO = false` y `adapters/index.ts` NO lo importa. Fila de integración: 2026-10-15b_tarificador_mapfre_hogar.sql
-// (activo = false). Ver docs/tarificador/CONOCIMIENTO-PORTALES.md (Mapfre).
+// Mapfre wmediadores · «Patrimoniales → Tarificación y emisión rápida» HOGAR — BORRADOR (15/10/2026). APAGADO:
+// `MAPFRE_HOGAR_ACTIVO = false` y `adapters/index.ts` lo registra SOLO bajo ese flag (21/10/2026). Fila de integración:
+// 2026-10-15b_tarificador_mapfre_hogar.sql (activo = false). Además asegura solo lo encola con el interruptor
+// `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (y entonces inyecta DNI, nacimiento, nombre y apellidos de la ficha).
+// Ver docs/tarificador/CONOCIMIENTO-PORTALES.md (Mapfre).
+//
+// MODO GRABACIÓN: con el flag encendido, cada hueco (`hueco()` → atasco + `ErrorMapaIncompleto` con `pideInventarioDom`) PARA y el
+// runner adjunta el inventario de estructura de todas las pestañas/marcos: esa es la grabación que cierra cada TODO(grabación).
 //
 // Fuente: UNA grabación de Alberto (Chrome Recorder, 79 pasos, saneada) + el PDF del presupuesto que genera. Estructura vista:
 //   login → «Nueva producción» → «Patrimoniales» → «Tarificación y emisión rápida» (MISMA pestaña: todos los pasos son del
@@ -23,7 +28,7 @@
 //   2. los dos clics previos sin etiqueta (`#vc`, radio) y qué son las «protecciones» (`#protecciones-panel`, 2 clics) → `PROTECCIONES_MAPEADAS`;
 //   3. el selector de la pantalla de PRECIO: se intenta el texto visible con el formato del PDF (`primasDesdeTextoPrecio`); si no casa → atasco;
 //   4. las garantías en pantalla (el PDF trae ~14 filas por modalidad; la pantalla no está grabada) → `coberturas: []` + aviso;
-//   5. nombre y apellidos del tomador NO están en `FormularioHogar`: solo se escriben si vienen en `datosTomador` y el portal no los autorrellena.
+//   5. nombre y apellidos del tomador: `FormularioHogar.datosTomador` (lo inyecta asegura al entregar); solo se escriben si el portal no los autorrellena.
 
 import type { Locator, Page } from 'playwright'
 import {
@@ -66,7 +71,7 @@ export const BOTON_SIGUIENTE = 'SIGUIENTE'
 /** Selectores de la grabación. Los `#id` son estables; el del CP es estructural (frágil) y por eso va con `campoConRespaldo`. */
 export const SEL_HOGAR = {
   codigoPostal: 'div.ng-pristine > div:nth-of-type(5) div:nth-of-type(2) > input',
-  /** `null` = HUECO: la grabación no muestra el campo donde se teclea la referencia catastral. */
+  /** `null` = HUECO. TODO(grabación): la grabación no muestra el campo donde se teclea la referencia catastral. */
   referenciaCatastral: null as string | null,
   panelProtecciones: '#protecciones-panel',
   documento: '#numDocumento',
@@ -76,7 +81,10 @@ export const SEL_HOGAR = {
   apellido2: '#segundoApellido',
 } as const
 
-/** ¿Se sabe qué protecciones hay que marcar (y los dos clics previos `#vc`/radio)? NO: la grabación no tiene etiquetas. */
+/**
+ * ¿Se sabe qué protecciones hay que marcar (y los dos clics previos `#vc`/radio)? NO: la grabación no tiene etiquetas.
+ * TODO(grabación): etiquetas del panel; el dato ya viaja en `FormularioHogar.hogar.protecciones` (tres estados: `null` NUNCA se marca «No»).
+ */
 export const PROTECCIONES_MAPEADAS = false
 
 /** Modalidades del presupuesto visto en el PDF (nombres de producto; el orden es el de las columnas). */
@@ -253,9 +261,12 @@ export async function pasoVivienda(page: Page, f: FormularioHogar, rc: string, c
   await esperarCampoAsentado(page, c)
 }
 
-/** Nombre y apellidos del tomador si el riesgo los trae (`datosTomador`, lo pone asegura); no están en `FormularioHogar`. */
+/** Nombre y apellidos del tomador (`FormularioHogar.datosTomador`, lo pone asegura al entregar). Persona jurídica o ausente → vacío. */
 type DatosTomadorHogar = { nombre?: string | null; apellido1?: string | null; apellido2?: string | null }
-const datosTomadorDe = (f: FormularioHogar): DatosTomadorHogar => (f as FormularioHogar & { datosTomador?: DatosTomadorHogar }).datosTomador ?? {}
+export const datosTomadorDe = (f: FormularioHogar): DatosTomadorHogar => {
+  const d = f.datosTomador
+  return d && d.tipo === 'fisica' ? { nombre: d.nombre, apellido1: d.apellido1, apellido2: d.apellido2 } : {}
+}
 
 /**
  * Tomador: documento → salir del campo (Mapfre puede autorrellenar) → fecha, nombre y apellidos SOLO si el campo sigue vacío.
@@ -330,7 +341,7 @@ export const mapfreHogar = {
   compania: 'mapfre',
   ramo: 'hogar',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.1.0',
+  version: '0.2.0',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (!MAPFRE_HOGAR_ACTIVO) throw new ErrorTarificador('datos', `${ADAPTADOR}: adaptador en borrador y apagado (MAPFRE_HOGAR_ACTIVO = false)`)
     const rc = exigirDatosHogar(f)

@@ -8,8 +8,17 @@ import { normalizarTexto } from './coberturas-taxonomia.ts'
 export const ETIQUETA_RESUMEN_IA = 'Resumen preparado con IA y revisado por tu corredor'
 export const ETIQUETA_RESUMEN_PLANTILLA = 'Resumen preparado por tu corredor a partir del cuadro comparativo'
 
-export function etiquetaResumen(fuente: 'ia' | 'determinista' | string | null | undefined): string {
-  return fuente === 'ia' ? ETIQUETA_RESUMEN_IA : ETIQUETA_RESUMEN_PLANTILLA
+/** IA que el corredor AÚN no ha marcado como revisada (21/10/2026): no se le atribuye una revisión que no ha hecho. */
+export const ETIQUETA_RESUMEN_IA_SIN_REVISAR = 'Resumen preparado con IA'
+
+/**
+ * `revisada`: `false` = la IA lo redactó y el corredor aún no lo ha marcado como revisado (presupuesto de Avant2, que se
+ * prepara solo tras tarificar) → sin «revisado por tu corredor». `true` o ausente (estudios de ofertas, que genera el
+ * corredor a mano, y los anteriores al 21/10/2026) → la etiqueta de siempre.
+ */
+export function etiquetaResumen(fuente: 'ia' | 'determinista' | string | null | undefined, revisada?: boolean | null): string {
+  if (fuente !== 'ia') return ETIQUETA_RESUMEN_PLANTILLA
+  return revisada === false ? ETIQUETA_RESUMEN_IA_SIN_REVISAR : ETIQUETA_RESUMEN_IA
 }
 
 /**

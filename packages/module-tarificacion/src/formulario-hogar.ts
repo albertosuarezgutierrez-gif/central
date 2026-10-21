@@ -16,6 +16,7 @@
 // `explorador.ts`); los VALORES de uso/régimen/tipo, no: aquí son claves canónicas en español, no ids de Codeoscopic.
 import { esDniNie, normalizarDocumento } from './tomador.ts'
 import { tieneCaracteresProhibidos } from './poblacion.ts'
+import { validarDatosTomadorFicha, type DatosTomadorFicha } from './formulario-auto.ts'
 
 /** USO de la vivienda (decide la tarifa). */
 export const USOS_VIVIENDA = ['habitual', 'secundaria', 'alquiler', 'turistico'] as const
@@ -71,13 +72,47 @@ export type DatosHogar = {
   /** Capitales en euros (número). `null` = no consta: la pantalla de valoración de bienes no está mapeada todavía. */
   capitalContinenteEur: number | null
   capitalContenidoEur: number | null
+  /**
+   * Medidas de seguridad de la vivienda (21/10/2026). Ausente = el bloque no consta; cada campo `null` = «no se sabe» (NUNCA «no
+   * tiene»). Fuente única: `info_riesgo.datosVivienda` de la oportunidad (module-seguros, datos-vivienda-riesgo.ts:
+   * `puertaPrincipalBlindada`, `ventanasSeguras`, `urbanizacionCerrada`, `vigilante`). Las piden «Valoración de bienes» de Allianz y
+   * el panel `#protecciones-panel` de Mapfre, AÚN SIN MAPEAR: ningún adaptador las escribe hasta grabar esa pantalla, y un `null`
+   * nunca se escribe en el portal como «No». La alarma NO está: en la oportunidad es un id del catálogo de Codeoscopic sin
+   * traducción atestiguada (no se adivina).
+   */
+  protecciones?: ProteccionesHogar
+  /** Joyas y objetos de valor declarados (21/10/2026), en euros. Ausente = no consta; `0` = declarado «nada» (es un dato). */
+  objetosValor?: ObjetosValorHogar
 }
+
+/** Ver `DatosHogar.protecciones`. `null` = no se sabe. */
+export type ProteccionesHogar = {
+  puertaBlindada: boolean | null
+  ventanasSeguridad: boolean | null
+  urbanizacionCerrada: boolean | null
+  vigilancia: boolean | null
+}
+export const CLAVES_PROTECCIONES_HOGAR = ['puertaBlindada', 'ventanasSeguridad', 'urbanizacionCerrada', 'vigilancia'] as const satisfies readonly (keyof ProteccionesHogar)[]
+
+/** Ver `DatosHogar.objetosValor`. `null` = no se sabe; `0` = declarado sin. */
+export type ObjetosValorHogar = {
+  joyasCajaFuerteEur: number | null
+  joyasFueraCajaEur: number | null
+  objetosValorEur: number | null
+}
+export const CLAVES_OBJETOS_VALOR_HOGAR = ['joyasCajaFuerteEur', 'joyasFueraCajaEur', 'objetosValorEur'] as const satisfies readonly (keyof ObjetosValorHogar)[]
 
 export type FormularioHogar = {
   ramo: 'hogar'
   tomador: TomadorHogar
   inmueble: InmuebleHogar
   hogar: DatosHogar
+  /**
+   * Nombre y apellidos del tomador (21/10/2026), SOLO para los portales que dan de alta al tomador si no lo conocen (Mapfre Hogar).
+   * Mismo régimen que el DNI: lo pone ASEGURA desde la ficha al ENTREGAR el trabajo (nunca viaja desde plataforma ni se guarda en la
+   * cola) y el worker lo trata como SECRETO (`secretosDelRiesgo`). Ausente = no lo necesita el bot o no se inyectó.
+   */
+  datosTomador?: DatosTomadorFicha
 }
 
 export type ValidacionFormularioHogar = { ok: true; formulario: FormularioHogar } | { ok: false; errores: string[] }
@@ -87,7 +122,7 @@ export type ValidacionFormularioHogar = { ok: true; formulario: FormularioHogar 
  * El DNI/NIE y la fecha de nacimiento del tomador son datos personales que NO cruzan el puerto: los pone asegura desde la ficha
  * del cliente al ENTREGAR el trabajo al worker (mismo régimen que el NIF de Mapfre), y el worker valida el formulario ENTERO.
  */
-export type FormularioHogarSinTomador = Omit<FormularioHogar, 'tomador'>
+export type FormularioHogarSinTomador = Omit<FormularioHogar, 'tomador' | 'datosTomador'>
 export type ValidacionFormularioHogarSinTomador = { ok: true; formulario: FormularioHogarSinTomador } | { ok: false; errores: string[] }
 
 const obj = (v: unknown): Record<string, unknown> | null =>
@@ -131,6 +166,35 @@ function importe(v: unknown, campo: string, errores: string[]): number | null {
   const n = typeof v === 'number' ? v : NaN
   if (!Number.isFinite(n) || n <= 0 || n > 100_000_000) { errores.push(`${campo}: tiene que ser un importe en euros mayor que 0 (número, no texto)`); return null }
   return Math.round(n * 100) / 100
+}
+
+/** Importe que admite el `0` (declarado «nada»): vacío → `null` (no se sabe). */
+function importeCeroValido(v: unknown, campo: string, errores: string[]): number | null {
+  if (vacio(v)) return null
+  const n = typeof v === 'number' ? v : NaN
+  if (!Number.isFinite(n) || n < 0 || n > 100_000_000) { errores.push(`${campo}: tiene que ser un importe en euros ≥ 0 (número, no texto)`); return null }
+  return Math.round(n * 100) / 100
+}
+
+/** Bloque opcional de tres estados: ausente/`null` → `undefined` (no consta); objeto → cada clave `null` o su valor. */
+function bloqueOpcional<K extends string, T>(
+  v: unknown, nombre: string, claves: readonly K[], errores: string[], leer: (x: unknown, campo: string) => T | null,
+): Record<K, T | null> | undefined {
+  if (v === undefined || v === null) return undefined
+  const o = obj(v)
+  if (!o) { errores.push(`${nombre}: tiene que ser un objeto`); return undefined }
+  const fuera = Object.keys(o).filter((k) => !(claves as readonly string[]).includes(k))
+  if (fuera.length) { errores.push(`${nombre}: claves no admitidas (${fuera.join(', ')})`); return undefined }
+  const out = {} as Record<K, T | null>
+  for (const k of claves) out[k] = leer(o[k], `${nombre}.${k}`)
+  return Object.values(out).some((x) => x !== null) ? out : undefined
+}
+
+function booleano(v: unknown, campo: string, errores: string[]): boolean | null {
+  if (v === undefined || v === null) return null
+  if (typeof v === 'boolean') return v
+  errores.push(`${campo}: tiene que ser true, false o no venir (sin valor por defecto)`)
+  return null
 }
 
 function fechaIsoReal(s: string): boolean {
@@ -246,11 +310,21 @@ function validarHogar(entrada: unknown, hoy: Date, exigirTomador: boolean):
     if (conMadera === null) errores.push('hogar.conMadera: obligatorio (true o false, sin valor por defecto)')
     const capitalContinenteEur = importe(h.capitalContinenteEur, 'hogar.capitalContinenteEur', errores)
     const capitalContenidoEur = importe(h.capitalContenidoEur, 'hogar.capitalContenidoEur', errores)
+    // Opcionales de tres estados (21/10/2026): ausentes o todo `null` = el bloque no consta (no se devuelve).
+    const protecciones = bloqueOpcional(h.protecciones, 'hogar.protecciones', CLAVES_PROTECCIONES_HOGAR, errores, (x, c) => booleano(x, c, errores))
+    const objetosValor = bloqueOpcional(h.objetosValor, 'hogar.objetosValor', CLAVES_OBJETOS_VALOR_HOGAR, errores, (x, c) => importeCeroValido(x, c, errores))
     if (errores.length === n0 && uso && regimen && tipoVivienda && conMadera !== null) {
-      hogar = { uso, regimen, tipoVivienda, conMadera, capitalContinenteEur, capitalContenidoEur }
+      hogar = {
+        uso, regimen, tipoVivienda, conMadera, capitalContinenteEur, capitalContenidoEur,
+        ...(protecciones ? { protecciones } : {}), ...(objetosValor ? { objetosValor } : {}),
+      }
     }
   }
 
+  // Nombre/apellidos del tomador (Mapfre Hogar): solo en la validación del worker (lo inyecta asegura al entregar); al encolar desde
+  // plataforma NO se acepta (no cruza el puerto), igual que el bloque `tomador`.
+  const datosTomador = exigirTomador ? validarDatosTomadorFicha(e.datosTomador, errores) : null
+
   if (errores.length || (exigirTomador && !tomador) || !inmueble || !hogar) return { ok: false, errores: errores.length ? errores : ['formulario: incompleto'] }
-  return { ok: true, formulario: { ramo: 'hogar', tomador, inmueble, hogar } }
+  return { ok: true, formulario: { ramo: 'hogar', tomador, inmueble, hogar, ...(datosTomador ? { datosTomador } : {}) } }
 }

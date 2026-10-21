@@ -25,7 +25,7 @@
 // que usa una pimienta que solo existe allí. Quien entra con el correo de la
 // ficha ve el presupuesto por la rama del vínculo (`portal_vinculo.cliente_id`).
 
-import { calcularVencimiento, correoPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp } from '@central/module-seguros'
+import { calcularVencimiento, correoPresupuesto, enlaceWhatsappPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp } from '@central/module-seguros'
 import { generarCodigo, generarTokenVista, hashCodigoWhatsapp, hashTokenVista } from '@central/module-seguros-portal'
 
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
@@ -38,7 +38,7 @@ import { estadoEmailDeFicha } from './email-ficha'
 import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
 import { fechaEfectoDe } from './presupuesto'
 import { admiteCodeoscopic, decidirSalida } from './presupuesto-origen'
-import { movilDeFicha } from './presupuesto-codigo-whatsapp'
+import { movilDeFicha, movilParaChat } from './presupuesto-codigo-whatsapp'
 import type { BarreraLote, ResultadoCorreoLote } from './barrera-lote'
 import { envioIncierto, type EnRespuestaA } from './correo-hilo'
 import { correoEnHilo } from './propuesta-lead-puro'
@@ -71,9 +71,10 @@ export type ResultadoEnvio =
    * `email` null = por WhatsApp no se le nombra ningún correo (entra con el código que va en `mensaje`).
    * `codigo` es el código de acceso de ESTE enlace (el mismo que ya va en `mensaje`): el lote lo pone junto a su enlace.
    */
-  | { estado: 'enlace'; mensaje: string; whatsapp: string; enlace: string; email: string | null; venceEl: string; codigo: string }
+  | { estado: 'enlace'; mensaje: string; whatsapp: string; enlace: string; email: string | null; venceEl: string; codigo: string; telefono?: string | null }
   | { estado: 'confirmado'; venceEl: string }
   | { estado: 'error'; motivo: FalloEnvio; detalle: string }
+
 
 /** Los estados desde los que se puede (re)avisar. Decidido, elegido o caducado ya no. */
 const AVISABLE = new Set(['borrador', 'enlazado', 'enviado', 'visto'])
@@ -298,8 +299,10 @@ export async function ejecutarAviso(
     await db.presupuestoEvento.create({
       data: { presupuestoId: p.id, tipo: 'enlace_generado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'whatsapp_enlace' } },
     })
-    // Sin número: WhatsApp le deja elegir el chat. El número del hogar no identifica a nadie.
-    return { estado: 'enlace', mensaje, whatsapp: `https://wa.me/?text=${encodeURIComponent(mensaje)}`, enlace, email: emailAcceso, venceEl: venceSiSale.toISOString(), codigo: codigoWhatsapp! }
+    // Con el móvil del TOMADOR (21/10/2026, Alberto) el chat se abre ya con él; sin uno válido, sin número y WhatsApp le
+    // deja elegir. No identifica a nadie ni envía nada: es el chat que abre Alberto en su WhatsApp y manda él.
+    const movil = await movilParaChat(correduriaId, p.clienteId).catch(() => null)
+    return { estado: 'enlace', mensaje, whatsapp: enlaceWhatsappPresupuesto(mensaje, movil), enlace, email: emailAcceso, venceEl: venceSiSale.toISOString(), codigo: codigoWhatsapp!, telefono: movil }
   }
 
   // Acceso directo a la intranet (un solo uso, 24 h): el botón entra sin código y cae en la carátula,

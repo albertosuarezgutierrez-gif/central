@@ -1,5 +1,5 @@
 // Mapfre HOGAR (borrador, 15/10/2026): lector de prima con el formato del presupuesto, elección de fila de catastro, referencia
-// catastral del riesgo y que el adaptador NO está registrado. Fixtures SINTÉTICOS: ningún dato personal ni importe real.
+// catastral del riesgo y que el adaptador solo se registra con su flag (apagado). Fixtures SINTÉTICOS: ningún dato personal ni importe real.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
@@ -7,6 +7,7 @@ import { validarFormularioHogar, type FormularioHogar } from '@central/module-ta
 import { adaptadores } from '../src/adapters/index.ts'
 import {
   MAPFRE_HOGAR_ACTIVO,
+  datosTomadorDe,
   PROTECCIONES_MAPEADAS,
   SEL_HOGAR,
   ErrorMapaIncompleto,
@@ -100,11 +101,20 @@ test('fila de catastro: una sola → 0; varias → la única que casa por escale
   assert.throws(() => indiceFilaCatastro([], { escalera: null, planta: null, puerta: null }), (e: Error & { tipo?: string }) => e.tipo === 'datos')
 })
 
-test('NO está registrado: flag apagado y fuera de adapters/index.ts', () => {
+test('registro SOLO bajo el flag (21/10/2026): apagado no está en el registro; en index.ts, un import y un registro condicionado', () => {
   assert.equal(MAPFRE_HOGAR_ACTIVO, false)
   assert.equal(adaptadores.obtener('mapfre', 'hogar'), null)
   assert.ok(!adaptadores.claves().some((k) => k.includes('mapfre') && k.includes('hogar')))
-  assert.ok(!/mapfre\/hogar/.test(readFileSync(new URL('../src/adapters/index.ts', import.meta.url), 'utf8')))
+  const idx = readFileSync(new URL('../src/adapters/index.ts', import.meta.url), 'utf8').replace(/^\s*\/\/.*$/gm, '')
+  assert.match(idx, /^if \(MAPFRE_HOGAR_ACTIVO\) adaptadores\.registrar\(mapfreHogar\)$/m, 'mapfreHogar se registra SOLO con `if (MAPFRE_HOGAR_ACTIVO)`')
+  assert.equal((idx.match(/mapfreHogar/g) ?? []).length, 2, 'mapfreHogar: un import y un registro condicionado')
+})
+
+test('datosTomador (lo inyecta asegura): solo persona física; jurídica o ausente → nada que escribir (no se inventa)', () => {
+  const base = { ramo: 'hogar' } as never as Parameters<typeof datosTomadorDe>[0]
+  assert.deepEqual(datosTomadorDe(base), {})
+  assert.deepEqual(datosTomadorDe({ ...base, datosTomador: { tipo: 'fisica', nombre: 'PRUEBA', apellido1: 'UNO', apellido2: null, fechaNacimiento: '1980-01-15' } }), { nombre: 'PRUEBA', apellido1: 'UNO', apellido2: null })
+  assert.deepEqual(datosTomadorDe({ ...base, datosTomador: { tipo: 'juridica', razonSocial: 'EMPRESA PRUEBA' } }), {})
 })
 
 test('huecos explícitos: sin selector de la referencia ni mapa de protecciones; apagado, tarificar ni abre el navegador', async () => {

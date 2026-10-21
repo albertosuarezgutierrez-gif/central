@@ -1358,6 +1358,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Además la reserva se escribía antes de enviar → reintento 409 durante 10 min. PR #4919: comprobar canal antes de reservar + test.
 - Probable que `/api/sugerencia` y el aviso de heridos de `/api/siniestros` estén mudos por lo mismo (no verificado).
 
+## (21/10/2026) Presupuesto Avant2 con comparativa + portal + bots hogar + Allianz hogar ON
+- Presupuesto de origen Avant2 lleva `estudio` (cuadro + resumen IA/plantilla, `estudio-avant2.ts`); PDF rediseñado (logos, compañía+nivel, ✓/✗/?, «Acepta tu presupuesto», #2445B8 en texto pequeño); página del cliente (`EstudioCliente.tsx`) con el mismo estudio; plataforma: `ComparativaOportunidad` + `EnviarAlCliente` (copiar/WhatsApp/correo, confirma antes de rotar código) + «He revisado el resumen IA».
+- Regla: prima solo anual si las fechas de la compañía cubren 1 año exacto; si no, `primaPeriodo` y fuera del ranking.
+- Bots hogar: FormularioHogar con protecciones/objetos; Mapfre tras `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (SQL 2026-10-15b sin aplicar); Occident aparcado; fix parrilla «no aplica». **ALLIANZ_HOGAR_ACTIVO=true** (OK Alberto): falta imagen Fly + `TARIFICADOR_FLY_IMAGE` + redeploy, y capturar «Valoración de bienes»/«Precio» con la oportunidad de Pedro José (6f3a48f7-…).
+- Auditoría Avant2 hogar: petición idéntica a la del 07/09; primera vía `hogar-nuevo` real aún sin estrenar.
+
 ## (20/10/2026) Comparativa única + direcciones CP-primero en todo el monorepo (PR #4911)
 - Motor ÚNICO de comparativa (`module-seguros` comparar-ofertas/ofertas-fuentes/resumen-comparativa): cualquier fuente (Avant2, PDF compañía/competencia, póliza cartera, bot) y ramo; 3 estados por cobertura; IA etiquetada y validada (compañías/cifras), huella para no regenerar; puerto gratis `/api/operador/oportunidad/comparativa`. Pendiente: pintarlo en la pantalla de la oportunidad y en el PDF de origen Codeoscopic.
 - `packages/core-direccion` (CP→provincia, municipios INE en `./servidor`) + calle autocompletada del Catastro (cola de sugerencias con tope). Aplicado en plataforma (hogar), ialimp, ia-rest y transporte (con «Fuera de España»). Regla permanente en CLAUDE.md.

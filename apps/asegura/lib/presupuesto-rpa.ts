@@ -31,6 +31,7 @@ import { ofertaNormalizadaDeFila } from './documentos/oferta-leida'
 import { caducidadOfertas, type FilaOferta } from './ofertas-reglas'
 import { leerOportunidadParaOfertas } from './oportunidad-ofertas'
 import { autocompletarNecesidades } from './presupuesto'
+import { gastoIaAuto } from './ia-tope-estudio'
 import { cargarPropuestaOportunidad, referenciaOportunidad } from './propuesta-oportunidad'
 import { trabajosVigentes, type TrabajoParaPropuesta } from './propuesta-oportunidad-reglas'
 import { URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
@@ -338,21 +339,6 @@ async function borradorDelBotIgual(correduriaId: string, oportunidadId: string, 
   })
   const igual = candidatos.find((c) => mismoConjunto(c.opciones.map((o) => o.ofertaId ?? ''), ofertaIds))
   return igual?.id ?? null
-}
-
-/** Llamadas y € ESTIMADOS de las narrativas automáticas de las últimas 24 h (de esta correduría). Un fallo → NaN (fail-closed). */
-async function gastoIaAuto(correduriaId: string): Promise<{ llamadas24h: number; eur24h: number }> {
-  try {
-    const [g] = await prismaAsegura().$queryRaw<{ n: number; eur: number }[]>`
-      select count(*)::int as n, coalesce(sum(coalesce((e.detalle->>'eurEstimados')::numeric, 0)), 0)::float8 as eur
-      from presupuesto_evento e join presupuesto p on p.id = e.presupuesto_id
-      where p.correduria_id = ${correduriaId}::uuid and e.tipo = 'preparado'
-        and e.detalle->>'iaAuto' = 'intentada' and e.ocurrido_at >= now() - interval '24 hours'`
-    return { llamadas24h: g?.n ?? Number.NaN, eur24h: g?.eur ?? Number.NaN }
-  } catch (e) {
-    registrarErrorCartera('presupuesto/rpa/tope-ia', e)
-    return { llamadas24h: Number.NaN, eur24h: Number.NaN }
-  }
 }
 
 /** El análisis del recomendador (control de calidad + ranking) para el estudio. `null` = no se pudo (se dice, no se inventa). */

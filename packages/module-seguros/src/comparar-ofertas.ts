@@ -52,6 +52,11 @@ export type OfertaNormalizada = {
   referencia?: ReferenciaOferta | null
   /** Hechos que el adaptador no pudo dejar en un campo (se enseñan como reservas, nunca se esconden). */
   avisos?: string[]
+  /**
+   * El precio tal como lo dio la fuente cuando NO es una prima anual comparable (`primaTotal: null`): se enseña con su
+   * periodo (`meses: null` = no declarado) y nunca entra en el orden. Ausente = no hay tal precio.
+   */
+  primaPeriodo?: { importe: number; meses: number | null } | null
 }
 
 /**

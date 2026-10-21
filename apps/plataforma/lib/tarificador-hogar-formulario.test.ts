@@ -8,8 +8,8 @@ import {
 
 const BASE: EntradaBotHogar = {
   codigoPostal: '41001', municipio: 'VILLAPRUEBA', nombreVia: 'INVENTADA', numero: '1', planta: '2', puerta: 'B', anioConstruccion: 1990, anioReforma: null,
-  superficieM2: 90, referenciaCatastral: '1234567ab1234c0001df', capitalContinenteEur: 120000, capitalContenidoEur: null, tomadorEmpresa: false,
-  uso: 'habitual', regimen: 'propietario', tipoVivienda: 'piso', conMadera: 'no',
+  superficieM2: 90, referenciaCatastral: '1234567ab1234c0001df', capitalContinenteEur: 120000, capitalContenidoEur: null, protecciones: null, objetosValor: null,
+  tomadorEmpresa: false, uso: 'habitual', regimen: 'propietario', tipoVivienda: 'piso', conMadera: 'no',
 }
 const faltan = (e: EntradaBotHogar): string[] => { const r = formularioBotHogar(e); return r.ok ? [] : r.faltan }
 
@@ -84,7 +84,8 @@ test('datosViviendaParaBot: lee los datos guardados con sus nombres del bot; sin
   const v = datosViviendaParaBot(riesgo(DATOS, [{ rol: 'tomador', clienteId: 'c1', empresa: false, faltan: [] }]))
   assert.deepEqual(v, {
     codigoPostal: '41001', municipio: 'VILLAPRUEBA', nombreVia: 'INVENTADA', numero: '1', planta: '2', puerta: 'B', anioConstruccion: 1990, anioReforma: null,
-    superficieM2: 90, referenciaCatastral: '1234567AB1234C0001DF', capitalContinenteEur: 120000, capitalContenidoEur: null, tomadorEmpresa: false,
+    superficieM2: 90, referenciaCatastral: '1234567AB1234C0001DF', capitalContinenteEur: 120000, capitalContenidoEur: null,
+    protecciones: null, objetosValor: null, tomadorEmpresa: false,
   })
   const vacio = datosViviendaParaBot(riesgo(null))
   assert.ok(Object.entries(vacio).every(([k, x]) => (k === 'tomadorEmpresa' ? x === false : x === null)))
@@ -150,4 +151,39 @@ test('la ruta encolar pasa el riesgo de hogar por riesgoHogarSinTomador', async 
   const { readFileSync } = await import('node:fs')
   const src = readFileSync(new URL('../app/api/correduria/tarificador/encolar/route.ts', import.meta.url), 'utf8')
   assert.match(src, /encolarTarificacionHogar\(clienteId, oportunidadId, riesgoHogarSinTomador\(riesgo\)/)
+})
+
+// ─── 21/10/2026: protecciones y objetos de valor, de «Datos de la vivienda» (fuente única) ─────────────────────────────
+test('protecciones y objetos de valor: salen de datosVivienda con tres estados; todo null = no consta (no viaja)', () => {
+  const v = datosViviendaParaBot(riesgo({ ...DATOS, puertaPrincipalBlindada: true, vigilante: false, joyasEnCajaFuerte: 0, objetosDeValor: 2500 }))
+  assert.deepEqual(v.protecciones, { puertaBlindada: true, ventanasSeguridad: null, urbanizacionCerrada: null, vigilancia: false })
+  assert.deepEqual(v.objetosValor, { joyasCajaFuerteEur: 0, joyasFueraCajaEur: null, objetosValorEur: 2500 }, 'el 0 declarado es un dato')
+  const r = formularioBotHogar({ ...BASE, protecciones: v.protecciones, objetosValor: v.objetosValor })
+  assert.ok(r.ok)
+  if (r.ok) {
+    assert.deepEqual((r.riesgo.hogar as Record<string, unknown>).protecciones, v.protecciones)
+    assert.deepEqual((r.riesgo.hogar as Record<string, unknown>).objetosValor, v.objetosValor)
+  }
+  const nada = formularioBotHogar({ ...BASE, protecciones: { puertaBlindada: null, ventanasSeguridad: null, urbanizacionCerrada: null, vigilancia: null } })
+  assert.ok(nada.ok && !('protecciones' in (nada.riesgo.hogar as object)), 'un bloque todo null no viaja (no se sabe ≠ no tiene)')
+  const raro = datosViviendaParaBot(riesgo({ ...DATOS, puertaPrincipalBlindada: 'si', joyasFueraDeCaja: -5 }))
+  assert.equal(raro.protecciones, null, 'un texto no es un booleano: no se adivina')
+  assert.equal(raro.objetosValor, null)
+})
+
+test('una sola fuente de verdad: todo campo que lee el bot existe en CAMPOS_VIVIENDA de module-seguros', async () => {
+  const { CAMPOS_VIVIENDA } = await import('@central/module-seguros')
+  const { CAMPOS_VIVIENDA_DEL_BOT } = await import('./tarificador-hogar-formulario.ts')
+  const fuera = CAMPOS_VIVIENDA_DEL_BOT.filter((c) => !(CAMPOS_VIVIENDA as readonly string[]).includes(c))
+  assert.deepEqual(fuera, [], 'campo del bot que no está en datos-vivienda-riesgo.ts')
+  // Y el helper no lee de `d?.x` ningún campo fuera de esa lista (cepo de fuente).
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('./tarificador-hogar-formulario.ts', import.meta.url), 'utf8')
+  const leidos = [...new Set([...src.matchAll(/\bd\?\.(\w+)/g)].map((m) => m[1]!))]
+  assert.deepEqual(leidos.filter((c) => !(CAMPOS_VIVIENDA_DEL_BOT as readonly string[]).includes(c)), [])
+})
+
+test('riesgoHogarSinTomador quita también datosTomador (nombre/apellidos de Mapfre: los pone asegura)', async () => {
+  const { riesgoHogarSinTomador } = await import('./tarificador-hogar-formulario.ts')
+  assert.deepEqual(riesgoHogarSinTomador({ ramo: 'hogar', datosTomador: { nombre: 'X' } }), { ramo: 'hogar' })
 })

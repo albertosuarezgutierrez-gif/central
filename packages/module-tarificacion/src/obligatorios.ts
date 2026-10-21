@@ -230,8 +230,8 @@ const MAPFRE_HOGAR: readonly CampoObligatorio[] = [
   campo('inmueble.referenciaCatastral', 'referencia catastral de la vivienda (20 caracteres)', 'riesgo', {
     presente: (r) => /^[0-9A-Z]{14}[0-9A-Z]{4}[A-Z]{2}$/.test(texto(valorEnRuta(r, 'inmueble.referenciaCatastral')).replace(/[\s-]/g, '').toUpperCase()),
   }),
-  // `pasoTomador`: si Mapfre no conoce al tomador pide nombre y primer apellido (de `datosTomador`). Hoy asegura no los
-  // inyecta en hogar (`necesitaDatosTomador` solo auto/moto): hasta que lo haga, este bot no es tarificable.
+  // `pasoTomador`: si Mapfre no conoce al tomador pide nombre y primer apellido (de `datosTomador`). Asegura los inyecta desde la
+  // ficha SOLO con el interruptor `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (21/10/2026, `necesitaDatosTomador`); cerrado, ni se encola.
   { clave: 'datosTomador.nombre', etiqueta: 'nombre del tomador', bloque: 'personas', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.nombre) },
   { clave: 'datosTomador.apellido1', etiqueta: 'primer apellido del tomador', bloque: 'personas', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.apellido1) },
 ]
@@ -285,8 +285,8 @@ const DECLARACIONES: readonly Declaracion[] = [
   // no consta, se supone «A» y se declara (no bloquea).
   { compania: 'mapfre', ramo: 'moto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS], llegaAPrecio: true, nota: 'mismo plan NSEI que el coche (que dio precio real)' },
   { compania: 'mapfre', ramo: 'hogar', propios: () => MAPFRE_HOGAR, llegaAPrecio: false, nota: 'borrador apagado' },
-  // Occident hogar (hueco, sin registrar): lee nif, nacimiento, CP, vía y tipo de vivienda; todos ya en la forma de hogar.
-  // OJO: su `planFormularioHogar` lee `tomador.nif` (forma de riesgo-oportunidad), no `tomador.documentoIdentidad`.
+  // Occident hogar (hueco, sin registrar): lee documento, nacimiento, CP, vía y tipo de vivienda; todos ya en la forma de hogar
+  // (21/10/2026: `planFormularioHogar` lee ya el `FormularioHogar` canónico, `tomador.documentoIdentidad`).
   { compania: 'occident', ramo: 'hogar', propios: () => [], llegaAPrecio: false, nota: 'sin registrar' },
   // Generali Turismos (0.1.0, tras su flag APAGADO): el vehículo lo inyecta asegura desde Allianz/Mapfre; el resto de datos, la
   // forma del ramo (tomador, conductor y antecedentes como en las demás; antecedentes sin dato = supuesto favorable declarado).

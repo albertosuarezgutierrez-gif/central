@@ -96,14 +96,15 @@ test('la lista blanca NO se ha ampliado a ciegas (sigue siendo la de comunidades
 test('apagado y SIN registrar: flag falso por defecto y ausente del registro', () => {
   assert.equal(HOGAR_ACTIVO, false)
   assert.equal(adaptadores.obtener('occident', 'hogar'), null)
-  assert.ok(!adaptadores.claves().some((k) => /hogar/.test(k)))
+  assert.ok(!adaptadores.claves().some((k) => /occident/.test(k) && /hogar/.test(k)))
   assert.equal(occidentHogar.credencial, 'OCCIDENT_PORTAL')
 })
 
+// Forma CANÓNICA de `FormularioHogar` (21/10/2026; antes la de exploración con `tomador.nif`).
 const RIESGO_SINTETICO = {
-  tomador: { nif: 'X0000000T', fechaNacimiento: '01/01/1980' },
+  tomador: { documentoIdentidad: 'X0000000T', fechaNacimiento: '1980-01-01' },
   inmueble: { codigoPostal: '00000', nombreVia: 'Calle de Prueba', numero: '1' },
-  hogar: { tipoVivienda: 'Piso' },
+  hogar: { tipoVivienda: 'piso' },
 }
 
 test('huecos: el formulario lanza ErrorMapaIncompleto (prefijo occident/hogar), con riesgo válido y sin él', () => {
@@ -111,12 +112,17 @@ test('huecos: el formulario lanza ErrorMapaIncompleto (prefijo occident/hogar), 
   assert.throws(() => rellenarDatosRiesgoHogar(RIESGO_SINTETICO), (e) => e instanceof ErrorMapaIncompleto && e.falta.startsWith(FALTA_FORMULARIO_HOGAR))
   assert.equal(FALTA_FORMULARIO_HOGAR, 'formulario hogar: falta grabación')
   // Faltan datos: error de datos, no un hueco ni un valor inventado.
-  assert.throws(() => planFormularioHogar({ tomador: {}, inmueble: {}, hogar: {} }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /tomador\.nif/.test((e as Error).message))
+  assert.throws(() => planFormularioHogar({ tomador: {}, inmueble: {}, hogar: {} }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /tomador\.documentoIdentidad/.test((e as Error).message))
+  // La forma vieja de exploración (`tomador.nif`) ya no vale: sin documento canónico, `datos`.
+  assert.throws(() => planFormularioHogar({ ...RIESGO_SINTETICO, tomador: { nif: 'X0000000T', fechaNacimiento: '1980-01-01' } }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+  // Nacimiento que no es ISO real: no se adivina el orden.
+  assert.throws(() => planFormularioHogar({ ...RIESGO_SINTETICO, tomador: { documentoIdentidad: 'X0000000T', fechaNacimiento: '01/01/1980' } }), (e) => e instanceof ErrorTarificador && /tomador\.fechaNacimiento/.test((e as Error).message))
 })
 
 test('plan del paso 1: etiquetas VISTAS, sin tocar agente ni fecha de efecto; el SSO paso 2 es hipótesis solo de Hogar', () => {
   const plan = planFormularioHogar(RIESGO_SINTETICO)
   assert.ok(plan.some((o) => o.etiqueta === 'Nº documento tomador:' && o.tipo === 'texto'))
+  assert.ok(plan.some((o) => o.etiqueta === 'Fecha de nacimiento:' && o.valor === '01/01/1980'), 'ISO → dd/mm/aaaa como el portal')
   assert.ok(plan.some((o) => o.etiqueta === 'Código postal:*' && o.tipo === 'modal-texto'))
   assert.ok(!plan.some((o) => /agente|efecto/i.test(o.etiqueta)))
   assert.equal(SEL.ssoContrasena, null, 'comunidades sigue con el hueco del paso 2')

@@ -1,7 +1,8 @@
 'use client'
 
 // «Bots (gratis)» de una oportunidad de HOGAR con ENTRADA PROPIA (19/10/2026): como `BotsAutoRiesgo`, sale del riesgo de la
-// oportunidad (sus «Datos de la vivienda»), sin Avant2. Allianz Hogar está en EXPLORACIÓN: primera prueba real del bot.
+// oportunidad (sus «Datos de la vivienda»), sin Avant2. Allianz Hogar está en EXPLORACIÓN: primera prueba real del bot. Mapfre Hogar
+// aparece solo si asegura lo abre (`TARIFICADOR_HOGAR_COMPANIAS_EXTRA`) y su fila está activa.
 //
 // Qué viaja y qué no:
 //   · La vivienda (CP, calle, número, planta, puerta, año, m², reforma, referencia catastral, capitales) sale de lo guardado en
@@ -45,10 +46,13 @@ export default function BotsHogarRiesgo({ riesgo }: { riesgo: Riesgo }) {
 
   const formulario = useMemo(() => datosViviendaParaBot(riesgo), [riesgo])
   const iniciales = useMemo(() => eleccionesInicialesHogar(riesgo, catalogos ?? {}), [riesgo, catalogos])
-  // Allianz toma DNI/NIE y nacimiento de la ficha: si le faltan, su botón no encola (asegura lo repite al encolar: 422 sin gastar máquina).
+  // Allianz (y Mapfre, si asegura lo abre con su interruptor) toman DNI/NIE y nacimiento de la ficha: si le faltan, su botón no encola
+  // (asegura lo repite al encolar: 422 sin gastar máquina). Una compañía sin integración activa no pinta botón: el aviso no se ve.
   const bloqueos = useMemo(() => {
-    const aviso = avisoFichaTomadorParaHogar(faltanFichaTomadorParaHogar(riesgo))
-    return aviso ? { allianz: aviso } : undefined
+    const faltan = faltanFichaTomadorParaHogar(riesgo)
+    const allianz = avisoFichaTomadorParaHogar(faltan, 'Allianz Hogar')
+    const mapfre = avisoFichaTomadorParaHogar(faltan, 'Mapfre Hogar')
+    return allianz && mapfre ? { allianz, mapfre } : undefined
   }, [riesgo])
 
   if (anfitrion?.ocupado) return null

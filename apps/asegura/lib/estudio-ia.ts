@@ -14,7 +14,7 @@
 //      (`etiquetaResumen`: «Resumen preparado con IA y revisado por tu corredor» / plantilla).
 // La IA va por `iaTexto` (pasarela de plataforma → cadena de fallback de @central/core-ai, con tope de gasto).
 
-import { cifrasDeMatriz, companiaIntrusa, type ResultadoComparacion } from '@central/module-seguros'
+import { cifrasDeMatriz, companiaIntrusa, etiquetasOfertas, type ResultadoComparacion } from '@central/module-seguros'
 import { iaTexto } from './ia.ts'
 
 export type FuenteNarrativa = 'ia' | 'determinista'
@@ -24,6 +24,11 @@ export type Narrativa = {
   fuente: FuenteNarrativa
   /** Por qué se descartó la de la IA (`null` = no se descartó o no se intentó). */
   descartada: string | null
+  /**
+   * ¿La ha marcado el corredor como revisada? `false` = no (presupuesto de Avant2, preparado solo): la etiqueta NO dice
+   * «revisado por tu corredor». Ausente = estudios de ofertas (los genera él) y anteriores al 21/10/2026.
+   */
+  revisada?: boolean
 }
 
 const eurEs = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
@@ -49,8 +54,15 @@ export function cifrasDelTexto(texto: string): { valor: string; sufijo: '€' | 
 export function cifrasPermitidas(r: ResultadoComparacion): Set<string> {
   const s = new Set(cifrasDeMatriz(r))
   for (const o of r.ofertas) {
-    for (const nombre of [o.compania, o.producto ?? '']) {
+    for (const nombre of [o.compania, o.producto ?? '', o.nivel ?? '']) {
       for (const m of nombre.matchAll(/\d+(?:[.,]\d+)*/g)) s.add(m[0])
+    }
+    // El precio de otro periodo (Avant2 sin prima anual comparable) es un dato de la compañía: se puede citar tal cual.
+    const pp = o.primaPeriodo
+    if (pp && typeof pp.importe === 'number' && Number.isFinite(pp.importe)) {
+      s.add(eurEs(pp.importe))
+      s.add(eurEs(pp.importe).replace('€', ''))
+      if (typeof pp.meses === 'number') s.add(String(pp.meses))
     }
   }
   return s
@@ -70,10 +82,10 @@ export function cifraIntrusa(texto: string, permitidas: Set<string>): string | n
   return null
 }
 
+/** El nombre de la oferta en el texto: el MISMO que las cabeceras del cuadro (`etiquetasOfertas`: compañía y, si hace
+ *  falta para distinguirla, su nivel). Antes salía «Allianz (Allianz Hogar 2053)» tres veces para tres niveles. */
 function nombreOferta(r: ResultadoComparacion, id: string): string {
-  const o = r.ofertas.find((x) => x.id === id)
-  if (!o) return 'la oferta'
-  return o.producto ? `${o.compania} (${o.producto})` : o.compania
+  return etiquetasOfertas(r.ofertas).get(id) ?? 'la oferta'
 }
 
 /**
@@ -92,12 +104,28 @@ export function narrativaDeterminista(r: ResultadoComparacion, recomendadaId: st
   } else {
     frases.push('No se ha aportado la póliza actual: las ofertas se comparan entre sí, sin diferencias respecto a lo que hay hoy.')
   }
+  // Varias ofertas con precio de otro periodo (Avant2 sin `meses`): la reserva se dice UNA vez, no en cada oferta.
+  const deOtroPeriodo = r.ofertas.filter((o) => o.rol !== 'actual' && o.primaTotal === null && o.primaPeriodo)
+  const reservaComun = deOtroPeriodo.length >= 2
+  if (reservaComun) {
+    frases.push(deOtroPeriodo.length === r.ofertas.filter((o) => o.rol !== 'actual').length
+      ? 'Ninguno de estos precios se puede comparar todavía como prima anual: la compañía no confirma que cubran un año completo.'
+      : 'Algunos precios no se pueden comparar todavía como prima anual: la compañía no confirma que cubran un año completo.')
+  }
   for (const s of r.resumen) {
     if (s.rol === 'actual') continue
     const o = r.ofertas.find((x) => x.id === s.ofertaId)
     if (!o) continue
     const partes: string[] = []
-    partes.push(o.primaTotal !== null ? `prima total ${eurEs(o.primaTotal)}` : 'prima total no figura en el documento')
+    partes.push(
+      o.primaTotal !== null
+        ? `prima total ${eurEs(o.primaTotal)}`
+        : o.primaPeriodo && reservaComun
+          ? `precio ${eurEs(o.primaPeriodo.importe)}`
+          : o.primaPeriodo
+          ? `precio ${eurEs(o.primaPeriodo.importe)} ${o.primaPeriodo.meses !== null ? `de un periodo de ${o.primaPeriodo.meses} meses` : 'de un periodo que la compañía no declara como anual'}, sin prima anual comparable`
+          : 'prima total no figura en el documento',
+    )
     if (s.deltaPrimaEur !== null) {
       const sube = s.deltaPrimaEur > 0
       partes.push(
@@ -159,7 +187,9 @@ export async function generarNarrativa(
     ramo: r.ramo,
     superficieM2: r.superficieM2,
     ofertas: r.ofertas.map((o) => ({
-      id: o.id, rol: o.rol, compania: o.compania, producto: o.producto, primaTotal: o.primaTotal, primaNeta: o.primaNeta,
+      id: o.id, rol: o.rol, compania: o.compania, producto: o.producto, nivel: o.nivel ?? null, primaTotal: o.primaTotal, primaNeta: o.primaNeta,
+      // Precio que NO es anual comparable (Avant2): se puede citar con su periodo, nunca como prima anual.
+      precioOtroPeriodo: o.primaPeriodo ?? null,
       recomendada: o.id === recomendadaId,
     })),
     resumen: r.resumen,

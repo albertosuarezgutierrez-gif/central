@@ -8,6 +8,8 @@ import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fec
 import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
 import { EstudioOfertas } from './EstudioOfertas'
+import { EstudioCliente } from './EstudioCliente'
+import { leerEstudioCliente } from '@/lib/estudio-cliente'
 import { TEXTOS_OFERTAS, puedeDescargarPdf, supuestosDeOpciones, textoCompaniasOfertas, textoValidezOfertas } from '@/lib/presupuesto-ofertas-vista'
 import { TEXTOS_VISTA_PREVIA, esVistaPreviaBorrador } from '@/lib/vista-previa'
 import { DatosParaContratar } from './DatosParaContratar'
@@ -128,6 +130,11 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
   // «Ver como el cliente» un BORRADOR (18/10/2026): la misma página, con los botones de acción deshabilitados y rotulados.
   const vistaPrevia = esVistaPreviaBorrador(p) && !p.caducado && !p.retirado
+  // El ESTUDIO (21/10/2026): el MISMO que el PDF, para los dos orígenes, pedido a asegura con la identidad de la sesión
+  // (la ficha la decide asegura). Solo si ya salió hacia el cliente; si no hay o falla, la página sigue como antes.
+  const identidadEstudio = p.enviadoAt !== null && !p.retirado ? await getIdentidad() : null
+  const estudio = identidadEstudio ? await leerEstudioCliente(identidadEstudio.id, p.id) : null
+  const vistaEstudio = estudio?.estado === 'ok' ? estudio.vista : null
 
   return (
     <>
@@ -173,7 +180,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       )}
 
       {/* Tras «Revisa tus datos»: resumen IA + tabla de coberturas por compañía + comparar dos con IA. */}
-      {!deOfertas && !p.retirado && portada.length > 0 && (
+      {!vistaEstudio && !deOfertas && !p.retirado && portada.length > 0 && (
         <ResumenOpciones
           presupuestoId={p.id}
           corredor={p.vistaDeCorredor}
@@ -206,7 +213,22 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </section>
       )}
 
-      {deOfertas ? (
+      {vistaEstudio ? (
+        <EstudioCliente
+          vista={vistaEstudio}
+          presupuestoId={p.id}
+          opciones={p.opciones}
+          caducado={p.caducado}
+          puedeAceptar={puedeAceptar && !vistaPrevia}
+          bloqueoDatos={bloqueoDatos}
+          corredor={p.vistaDeCorredor}
+          codigoWhatsapp={p.accesoWhatsapp}
+          origen={p.origen}
+          pdf={puedeDescargarPdf(p)}
+          perdidas={Object.fromEntries(p.opciones.map((o) => [o.id, deOfertas ? null : avisoPerdidas(ramoCat, o.garantias, garantiasActual)]))}
+          otrasEnLista={!deOfertas && resto.length > 0}
+        />
+      ) : deOfertas ? (
         <EstudioOfertas
           presupuestoId={p.id}
           opciones={p.opciones}

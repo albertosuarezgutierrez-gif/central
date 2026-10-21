@@ -69,3 +69,22 @@ export async function narrativaConReutilizacion(
   }
   return { narrativa: await generar(), reutilizadaDe: null }
 }
+
+/**
+ * El resumen guardado de un presupuesto de AVANT2 (21/10/2026) con la MISMA tarificación y la MISMA huella, redactado
+ * por la IA: re-preparar el mismo presupuesto (otra selección que deja el mismo cuadro) no vuelve a pagar la IA ni le
+ * cambia el texto al corredor. Solo `origen = 'codeoscopic'` (los de ofertas tienen su propia vía). `null` = no hay.
+ * Un fallo de consulta LANZA (quien llama decide).
+ */
+export async function ultimoEstudioDeTarificacion(correduriaId: string, tarificacionId: string, huella: string): Promise<EstudioGuardado | null> {
+  const filas = await prismaAsegura().presupuesto.findMany({
+    where: { correduriaId, tarificacionId, origen: 'codeoscopic', estudio: { path: ['huella'], equals: huella } },
+    orderBy: { creadoAt: 'desc' },
+    take: 10,
+    select: { id: true, estudio: true },
+  })
+  const p = filas.find((f) => narrativaReutilizable(narrativaDeEstudio(f.estudio)))
+  if (!p) return null
+  const e = p.estudio && typeof p.estudio === 'object' && !Array.isArray(p.estudio) ? (p.estudio as Record<string, unknown>) : {}
+  return { presupuestoId: p.id, generadoAt: typeof e.generadoAt === 'string' ? e.generadoAt : null, huella, narrativa: narrativaDeEstudio(p.estudio) }
+}
