@@ -162,6 +162,8 @@ type OpcionesApp = {
   duplicadosOcultos?: boolean
   /** Un segundo `town` VISIBLE y habilitado (ambigüedad real: el robot no debe elegir cuál). */
   townVisibleDuplicado?: boolean
+  /** 0.1.5: `#buildingInformation` (año, reforma, m²) con `hidden` hasta pulsar «Comprobar»; `'nunca'` = no se destapa; `'overlay'` = no se destapa y aparece un diálogo. */
+  infoOculta?: boolean | 'nunca' | 'overlay'
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -179,8 +181,8 @@ ${campo('idNumber', 'Número de documento')}${campo('dateOfBirth', 'Fecha de nac
 ${campo('postalCode', 'Código postal')}${campo('province', 'Provincia', true, true)}${campo('town', 'Población')}
 ${campo('streetType', 'Tipo de vía', true, true)}${campo('streetName', 'Nombre de la vía')}${campo('streetNumber', 'Número', true, false, 'number')}
 ${campo('block', 'Bloque', false)}${campo('stair', 'Escalera', false)}${campo('floor', 'Piso', false)}${campo('flat', 'Puerta', false)}
-<button type="button" id="comprobar" onclick="window.comprobado=1">Comprobar</button>
-${campo('yearOfConstruction', 'Año de construcción', true, false, 'number')}${campo('yearOfRefurbishment', 'Año de la reforma', false, false, 'number')}${campo('surfaceAreaLiving', 'Superficie de la vivienda')}
+<div id="check-address"><button type="button" id="comprobar" onclick="${o.infoOculta === 'nunca' ? '' : o.infoOculta === 'overlay' ? `document.body.insertAdjacentHTML('beforeend','<div class=cdk-overlay-pane>Revise la direccion</div>')` : `document.getElementById('buildingInformation').hidden=false`}">Comprobar</button></div>
+<div id="buildingInformation" ${o.infoOculta ? 'hidden' : ''}>${campo('yearOfConstruction', 'Año de construcción', true, false, 'number')}${campo('yearOfRefurbishment', 'Año de la reforma', false, false, 'number')}${campo('surfaceAreaLiving', 'Superficie de la vivienda')}</div>
 ${radio('m1', 'madera', 'Sin madera', true)}${radio('m2', 'madera', 'Con madera')}
 ${radio('t1', 'tipo', 'Piso en alto', true)}${radio('t2', 'tipo', 'Unifamiliar Adosada / Pareada')}${radio('t3', 'tipo', 'Planta Baja o piso con ventanas a menos de 3 metros del suelo')}${radio('t4', 'tipo', 'Ático')}${radio('t5', 'tipo', 'Unifamiliar Independiente')}
 ${radio('r1', 'regimen', '<i></i>Propietario Propietario', true)}${radio('r2', 'regimen', '<i></i>Inquilino Inquilino')}
@@ -302,6 +304,35 @@ test('pantalla 1 completa: escribe por formcontrolname, fija las opciones del fo
     assert.throws(() => huecoTrasVivienda(paso), ErrorMapaIncompleto)
   } finally {
     await context.close()
+  }
+})
+
+test('0.1.5: la información de la vivienda está oculta → pulsa «Comprobar» (por ctx.pulsar) y luego escribe año y m²', async () => {
+  const { context, page, ctx, pulsados, marco, valor } = await abrir({ infoOculta: true })
+  try {
+    await rellenarPantallaVivienda(page, marco, FORM, ctx)
+    assert.equal(await valor('yearOfConstruction'), '1990')
+    assert.equal(await valor('surfaceAreaLiving'), '90')
+    assert.equal(pulsados.filter((p) => p === 'Comprobar').length, 1)
+    assert.ok(pulsados.indexOf('Comprobar') > pulsados.indexOf('opcion:Secundaria') - 4, 'Comprobar va antes de año/m², tras la dirección')
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.5: tras «Comprobar» la información sigue oculta → hueco claro (con el diálogo, sin cerrarlo)', async () => {
+  for (const infoOculta of ['nunca', 'overlay'] as const) {
+    const { context, page, ctx, pulsados, marco } = await abrir({ infoOculta })
+    try {
+      page.setDefaultTimeout(20_000)
+      await assert.rejects(
+        () => rellenarPantallaVivienda(page, marco, FORM, ctx),
+        (e) => e instanceof ErrorMapaIncompleto && /tras pulsar Comprobar la información de la vivienda no se destapó/.test((e as Error).message) && (infoOculta === 'overlay') === /Revise la direccion/.test((e as Error).message) && !(e as Error).message.includes('00000000T'),
+      )
+      assert.deepEqual(pulsados.filter((p) => p === 'Comprobar'), ['Comprobar'])
+    } finally {
+      await context.close()
+    }
   }
 })
 
