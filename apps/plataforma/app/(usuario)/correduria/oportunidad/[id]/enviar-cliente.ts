@@ -105,3 +105,55 @@ export function confirmarCorreoContacto(c: ContactoParaEnviar, o: { tomadorJurid
   const rotacion = o.rotacion ? ` ${o.rotacion.replace(/\s*¿Seguir\?\s*$/, '').replace(/^El cliente/, 'El tomador')}` : ''
   return `Se le manda a ${etiquetaContacto(c)} (${c.email}) el aviso con el enlace y un código para VER este presupuesto, ${como} (no como tomador): no podrá aceptarlo ni firmarlo.${rotacion} ¿Enviar?`
 }
+
+// ─── WhatsApp a una persona de contacto (21/10/2026, idea 4) ──────────────────────────────────────────────────────────
+// El teléfono del tomador suele ser una centralita: por WhatsApp Alberto puede elegir entre el TOMADOR y un contacto que
+// cumpla la MISMA regla (`destinatariosPresupuesto` con `canal:'whatsapp'`: dueño/administrador/representante de una
+// empresa, o autorizado a ver sus pólizas, con móvil válido). 🚨 Aquí NO llega ningún teléfono: el número del elegido solo
+// sale en el `wa.me` de la respuesta del envío, después de que asegura revalide. El contacto solo VE (marca en asegura).
+
+export type ContactoWhatsapp = { clienteId: string; nombre: string | null; relacion: string; via: ViaDestino }
+export type MovilTomador = 'con_movil' | 'sin_movil' | 'no_se_sabe'
+export type LecturaDestinatariosWhatsapp = { elegibles: ContactoWhatsapp[]; noElegibles: ContactoDescartado[]; tomadorJuridica: boolean; movilTomador: MovilTomador }
+
+/**
+ * `GET …/destinatarios?canal=whatsapp` → lo que pinta el selector del WhatsApp. `null` = no se pudo leer (y entonces solo
+ * se ofrece el tomador, lo de siempre: «no se pudo mirar» nunca es «no hay contactos»). Un teléfono que viniera en la
+ * respuesta se IGNORA (no se lee ningún campo de número). PURO.
+ */
+export function leerDestinatariosWhatsapp(status: number, j: unknown): LecturaDestinatariosWhatsapp | null {
+  const o = obj(j)
+  const d = obj(o?.destinatarios)
+  if (status !== 200 || o?.estado !== 'ok' || !d || (d.estado !== 'contactos' && d.estado !== 'nadie') || !Array.isArray(d.noElegibles)) return null
+  const noElegibles = d.noElegibles.map(leerDescartado).filter((x): x is ContactoDescartado => x !== null)
+  const elegibles: ContactoWhatsapp[] = []
+  if (d.estado === 'contactos' && Array.isArray(d.elegibles)) {
+    for (const e of d.elegibles) {
+      const x = obj(e)
+      const clienteId = texto(x?.clienteId)
+      if (!x || !clienteId || (x.via !== 'representacion' && x.via !== 'autorizacion')) continue
+      elegibles.push({ clienteId, nombre: texto(x.nombre), relacion: texto(x.relacion) ?? '—', via: x.via })
+    }
+  }
+  const m = o.movilTomador
+  const movilTomador: MovilTomador = m === 'con_movil' || m === 'sin_movil' ? m : 'no_se_sabe'
+  return { elegibles, noElegibles, tomadorJuridica: o.tomadorJuridica === true, movilTomador }
+}
+
+/** La opción del TOMADOR en el selector del WhatsApp: dice si su chat se abrirá con número. */
+export function etiquetaTomadorWhatsapp(m: MovilTomador | null): string {
+  if (m === 'con_movil') return 'El tomador (al móvil de su ficha)'
+  if (m === 'sin_movil') return 'El tomador (sin móvil válido: eliges tú el chat)'
+  return 'El tomador'
+}
+
+/**
+ * La pregunta antes de abrir el WhatsApp a un contacto: A QUIÉN, COMO QUÉ y QUÉ PUEDE hacer (verlo, no aceptarlo), y que
+ * lo manda Alberto. `rotacion` = el aviso de `avisoRotacion` (el enlace que ya tenga el TOMADOR deja de valer). PURO.
+ */
+export function confirmarWhatsappContacto(c: ContactoWhatsapp, o: { tomadorJuridica: boolean; rotacion: string | null }): string {
+  const como = o.tomadorJuridica ? 'como persona de contacto de la empresa' : 'como persona autorizada por el tomador'
+  // Neutro: el enlace vivo puede ser del tomador o de otra persona de contacto; no se da por hecho de quién.
+  const rotacion = o.rotacion ? ' El enlace enviado antes (a quien fuera) deja de valer.' : ''
+  return `Se abre WhatsApp con el chat de ${etiquetaContacto(c)} (el móvil de su ficha) y un mensaje con el enlace y un código para VER este presupuesto, ${como} (no como tomador): no podrá aceptarlo ni firmarlo. Lo mandas tú.${rotacion} ¿Seguir?`
+}

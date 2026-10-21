@@ -104,3 +104,45 @@ test('el caso real: Dueño con correo sí, Accionista sin permiso no, y las dos 
   assert.deepEqual(d.elegibles.map((e) => e.clienteId), ['v'])
   assert.deepEqual(d.noElegibles.map((e) => [e.clienteId, e.motivo]), [['b', 'relacion_no_habilita']])
 })
+
+// ─── Por WhatsApp (21/10/2026, idea 4): la MISMA regla de relación; el dato que cuenta es el MÓVIL ────────────────────
+// Para verlo en rojo: en `motivoSinCanal` devuelve `null` para whatsapp sin mirar `movil` → falla «sin móvil, no»;
+// o deja el corte por correo del tomador también para whatsapp → falla «el correo del tomador no corta».
+const conMovil = (clienteId: string, movil: PersonaDestino['movil'] = 'con_movil', tipoPersona: PersonaDestino['tipoPersona'] = 'fisica'): PersonaDestino =>
+  ({ clienteId, nombre: clienteId.toUpperCase(), tipoPersona, correo: 'no_se_sabe', movil })
+
+test('🪤 WhatsApp: Dueño de una empresa con móvil → elegible, aunque no se sepa su correo', () => {
+  const d = destinatariosPresupuesto(empresaSinCorreo, [fila(EMPRESA, 'v', 'Dueño')], [conMovil('v')], 'whatsapp')
+  assert.equal(destinatarioElegible(d, 'v')?.via, 'representacion')
+})
+
+test('🪤 WhatsApp: sin móvil, ilegible o sin mirar → NO, y se dice por qué', () => {
+  const d = destinatariosPresupuesto(empresaSinCorreo,
+    [fila(EMPRESA, 's', 'Dueño'), fila(EMPRESA, 'i', 'Administración'), fila(EMPRESA, 'x', 'Representante')],
+    [conMovil('s', 'sin_movil'), conMovil('i', 'no_se_sabe'), { ...persona('x'), movil: undefined }], 'whatsapp')
+  assert.equal(d.estado, 'nadie')
+  if (d.estado !== 'nadie') return
+  assert.deepEqual(Object.fromEntries(d.noElegibles.map((e) => [e.clienteId, e.motivo])), { s: 'sin_movil', i: 'movil_no_se_sabe', x: 'movil_no_se_sabe' })
+})
+
+test('🪤 WhatsApp: la RELACIÓN es la misma regla (Accionista no; autorización al revés no; Dueño de persona física no)', () => {
+  const d = destinatariosPresupuesto(empresaSinCorreo,
+    [fila(EMPRESA, 'acc', 'Accionista'), fila('rev', EMPRESA, 'Socio/a', true), fila(EMPRESA, 'aut', 'Socio/a', true)],
+    [conMovil('acc'), conMovil('rev'), conMovil('aut')], 'whatsapp')
+  assert.deepEqual(d.estado === 'contactos' ? d.elegibles.map((e) => [e.clienteId, e.via]) : [], [['aut', 'autorizacion']])
+  const fisica = destinatariosPresupuesto({ clienteId: EMPRESA, tipoPersona: 'fisica', correo: 'sin_email' }, [fila(EMPRESA, 'v', 'Dueño')], [conMovil('v')], 'whatsapp')
+  assert.equal(destinatarioElegible(fisica, 'v'), null)
+})
+
+test('🪤 WhatsApp: el correo del tomador (con correo, ilegible o de baja) NO corta; por correo sí', () => {
+  for (const correo of ['con_email', 'no_se_sabe', 'baja_de_correo'] as const) {
+    const t = { ...empresaSinCorreo, correo }
+    assert.equal(destinatarioElegible(destinatariosPresupuesto(t, [fila(EMPRESA, 'v', 'Dueño')], [conMovil('v')], 'whatsapp'), 'v')?.clienteId, 'v')
+    assert.equal(destinatarioElegible(destinatariosPresupuesto(t, [fila(EMPRESA, 'v', 'Dueño')], [{ ...persona('v'), movil: 'con_movil' }]), 'v'), null)
+  }
+})
+
+test('🪤 por CORREO el móvil no cuenta (sin regresión): con móvil y sin correo, no', () => {
+  const d = destinatariosPresupuesto(empresaSinCorreo, [fila(EMPRESA, 'v', 'Dueño')], [{ ...persona('v', 'sin_email'), movil: 'con_movil' }])
+  assert.equal(destinatarioElegible(d, 'v'), null)
+})

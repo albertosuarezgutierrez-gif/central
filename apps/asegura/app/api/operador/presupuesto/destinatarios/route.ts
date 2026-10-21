@@ -16,16 +16,21 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  *     (`tomador` · `tomador_no_se_sabe` · `tomador_baja` · `contactos` · `nadie`), con los no elegibles y su motivo.
  * Solo LEE. Es lo que pinta la pantalla; el envío lo vuelve a calcular (`envio-presupuesto.ts`), así que esto no autoriza
  * nada por sí solo. `emails` solo trae el de los ELEGIBLES. 404 = el tomador no existe en esta correduría.
+ * `&canal=whatsapp` (21/10/2026, idea 4): la misma regla mirando el MÓVIL (+ `movilTomador`). Ningún teléfono cruza aquí:
+ * el del elegido solo sale en el `wa.me` del envío, tras revalidar.
  */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const clienteId = new URL(req.url).searchParams.get('clienteId')?.trim() ?? ''
   if (!UUID.test(clienteId)) return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
+  const canalQ = new URL(req.url).searchParams.get('canal')
+  if (canalQ !== null && canalQ !== 'email' && canalQ !== 'whatsapp') return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
+  const canal = canalQ === 'whatsapp' ? 'whatsapp' : 'email'
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' })
-    const r = await leerDestinatarios(correduria.id, clienteId)
+    const r = await leerDestinatarios(correduria.id, clienteId, canal)
     if (!r) return NextResponse.json({ estado: 'error', motivo: 'no_encontrado' }, { status: 404 })
     return NextResponse.json({ estado: 'ok', ...r })
   } catch (e) {

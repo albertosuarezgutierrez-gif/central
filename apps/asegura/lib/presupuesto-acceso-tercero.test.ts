@@ -119,3 +119,75 @@ test('🪤 invariante del cinturón: el correo al TOMADOR no lleva código; solo
 test('🪤 el puente dice al portal si el código es de un tercero (para esconder los botones)', () => {
   assert.match(puente, /\{ estado: 'valido', presupuestoId: r\.presupuestoId, tercero: r\.tercero \}/)
 })
+
+// ─── Por WhatsApp a una persona de contacto (21/10/2026, idea 4) ────────────────────────────────────────────
+// Para verlo en rojo: en `ejecutarAviso` cambia `if (tercero) {` (la marca) por `if (tercero && entrada.canal === 'email') {`
+// → falla la 1ª; en `esAccesoTercero` cambia el cinturón a `f.whatsappCodigoHash !== null` → falla la 2ª; quita `|| !movil`
+// de la guarda de WhatsApp → falla la 3ª; mete `telefono: tercero.movil` en el `detalle` del `enlace_generado` → falla la 4ª.
+const terceroWhatsapp: FilaAccesoToken = { clienteId: TOMADOR, canalAviso: 'whatsapp_enlace', whatsappCodigoHash: H, marcaTercero: true }
+
+test('🪤 WhatsApp a una persona de contacto → firmar con ese token: sin_permiso (la marca se escribe por CUALQUIER canal, antes del CAS)', () => {
+  assert.deepEqual(fichaDeToken(terceroWhatsapp), { estado: 'sin_permiso' })
+  const ejecutar = cuerpoDe(envio, 'export async function ejecutarAviso(')
+  // La marca no depende del canal: el bloque es `if (tercero) { … TIPO_ACCESO_TERCERO … }`.
+  assert.match(ejecutar, /if \(tercero\) \{\s*await db\.presupuestoEvento\.create\(\{\s*data: \{ presupuestoId: p\.id, tipo: TIPO_ACCESO_TERCERO, origen: 'corredor', detalle: \{ tokenHash: nuevoHash,/)
+  const marca = ejecutar.indexOf('tipo: TIPO_ACCESO_TERCERO')
+  const cas = ejecutar.indexOf('const rotado = await db.presupuesto.updateMany(')
+  const ramaWhatsappTercero = ejecutar.indexOf("if (entrada.canal === 'whatsapp_enlace' && tercero) {")
+  assert.ok(marca > 0 && marca < cas && cas < ramaWhatsappTercero, 'marca → CAS → mensaje al tercero')
+  // Si la marca no se escribe, lanza: no hay `.catch` que la convierta en «sigue sin marca».
+  assert.doesNotMatch(ejecutar.slice(marca - 200, cas), /\.catch\(/)
+})
+
+test('🪤 WhatsApp al TOMADOR sigue firmando: el cinturón no lo confunde con un tercero (sin falso positivo)', () => {
+  assert.equal(esAccesoTercero({ canalAviso: 'whatsapp_enlace', whatsappCodigoHash: H, marcaTercero: false }), false)
+  assert.deepEqual(fichaDeToken(tomadorWhatsapp), { estado: 'ok', clienteId: TOMADOR })
+  // Y el cinturón del correo sigue cerrado.
+  assert.equal(esAccesoTercero({ canalAviso: 'email', whatsappCodigoHash: H, marcaTercero: false }), true)
+  // La rama del tomador por WhatsApp no escribe ninguna marca.
+  const ejecutar = cuerpoDe(envio, 'export async function ejecutarAviso(')
+  const ramaTomador = ejecutar.slice(ejecutar.indexOf("  if (entrada.canal === 'whatsapp_enlace') {"), ejecutar.indexOf('const correo = '))
+  assert.ok(ramaTomador.length > 0)
+  assert.doesNotMatch(ramaTomador, /TIPO_ACCESO_TERCERO|destinatario:/)
+})
+
+test('🪤 WhatsApp a un destinatario NO elegible → 409, revalidado en asegura con la regla del MÓVIL antes de escribir nada', () => {
+  const preparar = cuerpoDe(envio, 'export async function prepararAviso(')
+  assert.match(preparar, /const lectura = await leerDestinatarios\(correduriaId, p\.clienteId, 'whatsapp'\)/)
+  assert.match(preparar, /const movil = elegido \? await movilParaChat\(correduriaId, elegido\.clienteId\) : null/)
+  assert.match(preparar, /if \(!elegido \|\| !movil\) return error\('destinatario_no_elegible', TEXTO_NO_ELEGIBLE_WHATSAPP\)/)
+  assert.doesNotMatch(preparar, /updateMany\(|\.create\(/, 'prepararAviso solo lee')
+  const ruta = readFileSync(new URL('../app/api/operador/presupuesto/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /destinatario_no_elegible: 409/)
+  // El puerto ya no rechaza (400) un destinatario por WhatsApp: lo valida la regla (409).
+  assert.doesNotMatch(ruta, /canal !== 'email'\)\) \{\s*return NextResponse\.json\(\{ estado: 'error', motivo: 'datos_invalidos' \}/)
+  assert.match(ruta, /export const PATCH = auditado\(/)
+})
+
+test('🪤 el TELÉFONO del tercero solo viaja en el envío: ni en el listado, ni en eventos, historial o auditoría', () => {
+  const ejecutar = cuerpoDe(envio, 'export async function ejecutarAviso(')
+  const rama = ejecutar.slice(ejecutar.indexOf("if (entrada.canal === 'whatsapp_enlace' && tercero) {"), ejecutar.indexOf("  if (entrada.canal === 'whatsapp_enlace') {"))
+  const evento = rama.slice(rama.indexOf("tipo: 'enlace_generado'"), rama.indexOf('await anotarEnvioATercero('))
+  assert.ok(evento.length > 0)
+  assert.doesNotMatch(evento, /movil|telefono/)
+  assert.match(rama, /whatsapp: enlaceWhatsappPresupuesto\(mensaje, tercero\.movil\)/)
+  const anotar = envio.slice(envio.indexOf('async function anotarEnvioATercero('), envio.indexOf('async function enlaceDirectoPresupuesto('))
+  assert.doesNotMatch(anotar, /\.movil|\.email|telefono/)
+  // El listado por WhatsApp no lee números: solo el ESTADO del móvil (`movilDeFicha`), nunca `movilParaChat`.
+  const dest = readFileSync(new URL('./destinatarios-presupuesto.ts', import.meta.url), 'utf8')
+  const wa = dest.slice(dest.indexOf('async function leerDestinatariosWhatsapp('))
+  assert.ok(wa.length > 0)
+  assert.doesNotMatch(wa, /movilParaChat|descifrarCampo|telefono:/)
+  assert.match(wa, /emails: \{\}/)
+})
+
+test('🪤 la respuesta del WhatsApp a un tercero NO trae `telefono` (el número solo va dentro del wa.me) y «Ya lo he mandado» copia el destinatario sin móvil ni correo', () => {
+  const ejecutar = cuerpoDe(envio, 'export async function ejecutarAviso(')
+  const rama = ejecutar.slice(ejecutar.indexOf("if (entrada.canal === 'whatsapp_enlace' && tercero) {"), ejecutar.indexOf("if (entrada.canal === 'whatsapp_enlace') {"))
+  assert.match(rama, /return \{ estado: 'enlace'/)
+  assert.doesNotMatch(rama.slice(rama.indexOf('return {')), /telefono/)
+  const conf = cuerpoDe(envio, 'export async function confirmarWhatsapp(')
+  assert.match(conf, /tipo: 'enlace_generado'/)
+  assert.match(conf, /\{ clienteId: d\.clienteId, relacion: d\.relacion \?\? null, via: d\.via \?\? null \}/)
+  assert.doesNotMatch(conf, /movil|email/)
+})

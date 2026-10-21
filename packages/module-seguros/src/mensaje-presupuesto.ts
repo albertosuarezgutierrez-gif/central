@@ -200,6 +200,29 @@ export function correoPresupuestoTercero(d: DatosAvisoTercero): CorreoPresupuest
 }
 
 /**
+ * El WhatsApp a una PERSONA DE CONTACTO (21/10/2026, idea 4): el mismo trato que `correoPresupuestoTercero`, en el chat que
+ * Alberto abre en su móvil y manda él. Se le escribe COMO CONTACTO del tomador («en nombre de <empresa>» si es empresa
+ * explícita; «persona autorizada por <tomador>» si no), nunca como si fuera el tomador. Lleva el código de ESTE
+ * presupuesto y dice lo que ese código NO hace: podrá verlo, pero no aceptarlo (en asegura la marca `acceso_tercero` lo
+ * hace verdad: `sin_permiso`). Sin precio, compañía ni bien asegurado, y sin nombrar ningún correo. PURO.
+ */
+export function mensajePresupuestoWhatsappTercero(d: DatosAvisoTercero): string {
+  const tomador = d.tomador?.trim() || null
+  const de = tomador ?? (d.tomadorJuridica ? 'la empresa' : 'el titular')
+  const presentacion = d.tomadorJuridica
+    ? `Le he preparado a ${de} un presupuesto de seguro y te lo hago llegar a ti, como persona de contacto, en nombre de ${de}.`
+    : `Le he preparado a ${de} un presupuesto de seguro y te lo hago llegar a ti como persona autorizada por ${de}.`
+  return [
+    `${saludo(d.nombre)}. Soy Alberto, de Grupo ASegura.`,
+    presentacion,
+    `Al abrir el enlace te pedirá un código de acceso: es ${d.codigo}. Con él podrás verlo, pero no aceptarlo: aceptarlo tiene que hacerlo ${de}, o escríbeme y lo vemos.`,
+    `Lo puedes ver aquí: ${d.enlace}`,
+    `Es válido hasta el ${fechaEs(d.venceEl)}.`,
+    `Si no eres tú quien lleva los seguros de ${de}, dímelo y lo corrijo.`,
+  ].join('\n\n')
+}
+
+/**
  * El `wa.me` del aviso del presupuesto (21/10/2026): con el móvil del TOMADOR (solo dígitos E.164) si lo hay, para que el
  * chat de Alberto se abra ya con él; sin uno válido, SIN número (WhatsApp le deja elegir). No envía nada. PURO.
  */

@@ -38,8 +38,9 @@ const STATUS_FALLO: Record<FalloEnvio, number> = {
  *   POST  { polizaId | tarificacionId, claveNivelActual?, ocultar?: {companias?, precios?}, actor } → prepara un BORRADOR
  *   PATCH { id, motivo, actor }     → lo retira (con motivo, siempre)
  *   PATCH { id, accion:'avisar', canal:'email'|'whatsapp_enlace', actor } → avisa al cliente (PR 3)
- *         + `destinatarioClienteId` (21/10/2026, solo email): a una PERSONA DE CONTACTO si el tomador no tiene correo;
- *         se valida aquí con la regla (`destinatarios-presupuesto.ts`): 409 `destinatario_no_elegible` si no cabe.
+ *         + `destinatarioClienteId` (21/10/2026): a una PERSONA DE CONTACTO — por correo si el tomador no tiene correo,
+ *         o por WhatsApp a su móvil (idea 4) —; se valida aquí con la regla para ESE canal (`destinatarios-presupuesto.ts`):
+ *         409 `destinatario_no_elegible` si no cabe. Su token lleva la marca `acceso_tercero`: solo VE.
  *   PATCH { id, accion:'confirmar_whatsapp', actor } → Alberto dice que el WhatsApp ya salió
  *   PATCH { id, accion:'emitido', actor } → la compañía ya emitió la póliza del presupuesto aceptado
  *   PATCH { id, accion:'documento_descargado', actor } → se descargó el PDF para el cliente (sella
@@ -189,7 +190,7 @@ export const PATCH = auditado(async (req: Request) => {
       if (cuerpo.accion === 'avisar' && !canal) return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
       // Persona de contacto: un uuid o nada. Cualquier otra cosa es 400, no «al tomador» (no se cambia el destino en silencio).
       const dest = cuerpo.destinatarioClienteId
-      if (dest !== undefined && dest !== null && (typeof dest !== 'string' || !UUID.test(dest.trim()) || cuerpo.accion !== 'avisar' || canal !== 'email')) {
+      if (dest !== undefined && dest !== null && (typeof dest !== 'string' || !UUID.test(dest.trim()) || cuerpo.accion !== 'avisar' || !canal)) {
         return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
       }
       const r = cuerpo.accion === 'avisar'
