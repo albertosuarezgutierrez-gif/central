@@ -255,6 +255,13 @@ const ESPERA_PASO_MS = 30_000
 
 const selControl = (control: string) => `[formcontrolname="${control}"]`
 
+/**
+ * El input VISIBLE de ese `formcontrolname` (job 1bd6bfce, 21/10/2026: el HTML del atasco tenía TRES `town`/`postalCode`: el de
+ * «Vivienda» y dos copias `disabled` de pasos posteriores, ocultas). Sin `:visible`, `count() === 1` no se cumplía nunca y
+ * `inputValue` fallaba por modo estricto: la población autocompletada no se veía. Para LEER (el tipo de vía visible está deshabilitado).
+ */
+const inputVisible = (marco: Frame, control: string) => marco.locator(`input${selControl(control)}:visible`)
+
 /** Exactamente UN control visible con ese `formcontrolname` (input, o el propio nodo si es un input). */
 function controlFijo(marco: Frame, control: string, que: string): () => Promise<Locator> {
   return async () => {
@@ -318,7 +325,7 @@ async function escribir(marco: Frame, ctx: Pick<ContextoPortal, 'pausaAccion' | 
 async function esperarValor(marco: Frame, control: string, page: Pick<Page, 'waitForTimeout'>, ms: number): Promise<boolean> {
   const fin = Date.now() + ms
   for (;;) {
-    const loc = marco.locator(`input${selControl(control)}`)
+    const loc = inputVisible(marco, control)
     if ((await loc.count()) === 1 && ((await leer(loc)) ?? '').trim() !== '') return true
     if (Date.now() >= fin) return false
     await page.waitForTimeout(250)
@@ -444,8 +451,11 @@ type ResultadoLista = { por: 'nucleo' | 'municipio' | 'unica' } | { por: null; d
  * coincidencia → hueco que LISTA. Escribir en `town` no elige nada: sin opción pulsada el campo no queda con valor y se vacía.
  */
 async function elegirPoblacionDeLista(page: Page, marco: Frame, ctx: CtxVivienda, municipio: string | null, nombreVia: string | null): Promise<ResultadoLista> {
-  const campo = marco.locator(`input${selControl(CONTROLES.poblacion)}`)
-  if ((municipio === null && nombreVia === null) || (await campo.count()) !== 1) return { por: null, diag: 'sin municipio ni vía, o el campo no es único' }
+  if (municipio === null && nombreVia === null) return { por: null, diag: 'sin municipio ni vía en el riesgo' }
+  // Solo el `town` visible y habilitado del paso actual (hay copias `disabled` ocultas de otros pasos).
+  const campo = marco.locator(`input${selControl(CONTROLES.poblacion)}:visible:not([disabled])`)
+  const nCampo = await campo.count()
+  if (nCampo !== 1) return { por: null, diag: `campo town visible y habilitado: ${nCampo} coincidencias (en el DOM: ${await marco.locator(`input${selControl(CONTROLES.poblacion)}`).count()})` }
   const SEL_OPC = '[role=option]:visible, nx-autocomplete-option:visible, mat-option:visible'
   const previas = await marco.locator(SEL_OPC).count()
   let enlaceVisto = false
@@ -592,7 +602,7 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
       // Elegida por núcleo de la vía u opción única: el municipio del riesgo (Castillo de Locubín) puede NO ser la población del CP
       // (Ventas del Carrizal); ni se contrasta ni se aprende. Solo la vía por municipio / lo autocompletado se contrasta con él.
       if (f.inmueble.municipio !== null && (elegidaPor === null || elegidaPor === 'municipio')) {
-        const pob = await leer(marco.locator(`input${selControl(CONTROLES.poblacion)}`))
+        const pob = await leer(inputVisible(marco, CONTROLES.poblacion))
         if (plano(pob) !== plano(f.inmueble.municipio)) throw new ErrorMapaIncompleto('la elección de población del CP (el portal autocompletó otra distinta de la del riesgo)')
         await confirmarPob?.().catch(() => undefined)
       }
@@ -602,8 +612,8 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
         const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.tipoVia, 'via', hueco, true)
         if (!e.ok) throw new ErrorMapaIncompleto(hueco)
         // Se confirma como aprendido SOLO si la vía que quedó es la del riesgo (tipo + nombre, plano).
-        const tipo = await leer(marco.locator(`input${selControl(CONTROLES.tipoVia)}`))
-        const nombre = await leer(marco.locator(`input${selControl(CONTROLES.nombreVia)}`))
+        const tipo = await leer(inputVisible(marco, CONTROLES.tipoVia))
+        const nombre = await leer(inputVisible(marco, CONTROLES.nombreVia))
         if (!viaCoincide(tipo, nombre, f.inmueble.nombreVia)) throw new ErrorMapaIncompleto('la elección de la vía en el autocompletado (el portal dejó una vía distinta de la del riesgo)')
         await e.confirmar().catch(() => undefined)
       }
@@ -693,7 +703,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.1',
+  version: '0.1.2',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)

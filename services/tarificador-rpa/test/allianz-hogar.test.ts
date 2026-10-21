@@ -155,6 +155,13 @@ type OpcionesApp = {
   overlayAlEscribir?: string[]
   /** Una casilla (checkbox) con su `label for` y un `label` que envuelve otra. */
   casilla?: boolean
+  /**
+   * Copias OCULTAS y `disabled` de los controles de dirección (pasos posteriores), como en el HTML del atasco del job 1bd6bfce
+   * (21/10/2026: tres `town`/`postalCode` en el DOM). Por defecto SÍ: todo el banco corre con ellas. `false` = sin copias.
+   */
+  duplicadosOcultos?: boolean
+  /** Un segundo `town` VISIBLE y habilitado (ambigüedad real: el robot no debe elegir cuál). */
+  townVisibleDuplicado?: boolean
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -179,6 +186,8 @@ ${radio('t1', 'tipo', 'Piso en alto', true)}${radio('t2', 'tipo', 'Unifamiliar A
 ${radio('r1', 'regimen', '<i></i>Propietario Propietario', true)}${radio('r2', 'regimen', '<i></i>Inquilino Inquilino')}
 ${radio('u1', 'uso', 'Habitual', true)}${radio('u2', 'uso', 'Alquiler')}${radio('u3', 'uso', 'En venta y/o deshabitada')}${radio('u4', 'uso', 'Secundaria')}${radio('u5', 'uso', 'Turístico o vacacional')}
 <button type="button" id="NextPageFromRisk" disabled>SIGUIENTE</button>
+${o.duplicadosOcultos === false ? '' : `<div id="pasoDatos" style="display:none">${['postalCode', 'province', 'town', 'streetType', 'streetName'].map((f) => [0, 1].map((k) => `<nx-formfield><input id="dup-${f}-${k}" type="text" formcontrolname="${f}" disabled class="ng-valid"></nx-formfield>`).join('')).join('')}</div>`}
+${o.townVisibleDuplicado ? `<nx-formfield><label for="town-bis">Población</label><input id="town-bis" type="text" formcontrolname="town" class="ng-valid"></nx-formfield>` : ''}
 ${o.casilla ? `<span><input type="checkbox" id="c1"><label for="c1">Acepto condiciones</label></span><label id="envuelve"><input type="checkbox"> Recibir avisos</label>` : ''}
 ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" role="option" data-para="${o.lista!.para}" ${o.listaAlEnfocar ? 'style="display:none"' : ''}>${t}</mat-option>`).join('') : ''}
 <script>
@@ -268,7 +277,7 @@ async function abrir(o: OpcionesApp = {}) {
     },
   }
   const marco: Frame = await marcoHogar(page, 5_000)
-  const valor = (fcn: string) => marco.locator(`[formcontrolname="${fcn}"]`).inputValue()
+  const valor = (fcn: string) => marco.locator(`[formcontrolname="${fcn}"]:visible`).first().inputValue()
   const marcado = (id: string) => marco.locator(`#${id}`).isChecked()
   return { context, page, ctx, pulsados, marco, valor, marcado, guard }
 }
@@ -630,5 +639,35 @@ test('nada abre la lista de town → hueco con diagnóstico (sin datos personale
     assert.equal(await valor('town'), '')
   } finally {
     await context.close()
+  }
+})
+
+test('job 1bd6bfce: copias ocultas y disabled de town/postalCode en el DOM → se lee y se elige el town VISIBLE (no «el campo no es único»)', async () => {
+  // El CP autocompleta el town visible: con las copias, antes `esperarValor` nunca lo veía (count 3 ≠ 1).
+  const a = await abrir({ duplicadosOcultos: true })
+  try {
+    assert.equal(await a.marco.locator('input[formcontrolname="town"]').count(), 3, 'el mock reproduce las tres copias del HTML real')
+    await rellenarPantallaVivienda(a.page, a.marco, FORM, a.ctx)
+    assert.equal(await a.valor('town'), 'SEVILLA')
+  } finally {
+    await a.context.close()
+  }
+  // Y la lista que solo aparece al escribir: se escribe y elige en el town visible.
+  const b = await abrir({ duplicadosOcultos: true, sinAutocompletar: true, overlayAlEscribir: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL'] })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await rellenarPantallaVivienda(b.page, b.marco, f, b.ctx)
+    assert.equal(await b.valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('diagnóstico: dos town VISIBLES y habilitados → «campo town … 2 coincidencias» (no «sin municipio ni vía»)', async () => {
+  const a = await abrir({ sinAutocompletar: true, townVisibleDuplicado: true })
+  try {
+    await assert.rejects(() => rellenarPantallaVivienda(a.page, a.marco, FORM, a.ctx), (e) => e instanceof ErrorMapaIncompleto && /campo town visible y habilitado: 2 coincidencias/.test((e as Error).message) && !/sin municipio ni vía/.test((e as Error).message))
+  } finally {
+    await a.context.close()
   }
 })
