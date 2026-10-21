@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-21T07:14:28Z",
+  "generadoEn": "2026-10-21T09:07:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1020,7 +1020,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2262,7 +2262,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 284
+        "evidencias": 285
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2290,7 +2290,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 226
+        "evidencias": 227
       },
       "rrhh": {
         "estado": "no",
@@ -2560,7 +2560,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 35
       },
       "rrhh": {
         "estado": "no",
@@ -5685,10 +5685,13 @@
       "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/empleados/[id]/documentos/presign",
       "/api/admin/empleados/[id]/enlace",
+      "/api/admin/empresa/ajustes",
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
+      "/api/admin/fichajes/incidencias",
       "/api/admin/firmas",
+      "/api/admin/firmas/anular",
       "/api/admin/firmas/reclamar",
       "/api/admin/informes",
       "/api/admin/informes/exportar",
@@ -5727,6 +5730,7 @@
       "/api/e/expediente/[docId]/firmar",
       "/api/e/expediente/[docId]/firmar/codigo",
       "/api/e/fichaje",
+      "/api/e/fichaje/incidencia",
       "/api/e/login",
       "/api/e/push/subscribe",
       "/api/e/salir",
@@ -6329,6 +6333,7 @@
       "rrhh.firma_otps",
       "rrhh.firmas",
       "rrhh.incidencias_mes",
+      "rrhh.incidencias_ubicacion",
       "rrhh.mensajes",
       "rrhh.nominas",
       "rrhh.push_subscriptions",
@@ -7030,7 +7035,7 @@
     "packages": 44,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1751,
+    "apis": 1755,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
