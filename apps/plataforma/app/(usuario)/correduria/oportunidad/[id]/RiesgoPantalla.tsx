@@ -406,7 +406,7 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
       </SeccionPlegable>
 
       <SeccionPlegable id="sec-enviar" titulo="Enviar al cliente"
-        resumen={correoTomador === 'sin_email' ? 'El tomador no tiene correo en su ficha' : correoTomador === 'no_se_sabe' ? 'Correo del tomador: no se ha podido leer' : 'Ofertas para el cliente'}>
+        resumen={correoTomador === 'sin_email' ? 'El tomador no tiene correo: mira sus personas de contacto' : correoTomador === 'no_se_sabe' ? 'Correo del tomador: no se ha podido leer' : 'Ofertas para el cliente'}>
       <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} correoTomador={correoTomador} />
       </SeccionPlegable>
 

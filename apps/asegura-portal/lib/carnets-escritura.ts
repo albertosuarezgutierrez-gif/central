@@ -28,7 +28,10 @@ const Tipo = z.string().trim().min(1).max(10)
 const Fecha = z.string().trim().min(1).max(20)
 
 /** Cuerpo de `POST /api/mis-datos/carnets` y de `PATCH /api/mis-datos/carnets/[id]`. */
-export const EntradaCarnet = z.object({ fichaId: Uuid, tipo: Tipo, fecha: Fecha })
+export const EntradaCarnet = z
+  .object({ fichaId: Uuid, tipo: Tipo, fecha: Fecha.optional(), fechaCaducidad: Fecha.optional() })
+  // Una de las dos: la expedición (reverso) o la caducidad (anverso). `apps/asegura` deduce la expedición.
+  .refine((o) => o.fecha !== undefined || o.fechaCaducidad !== undefined)
 /** Cuerpo de `DELETE /api/mis-datos/carnets/[id]`. */
 export const EntradaBajaCarnet = z.object({ fichaId: Uuid })
 /** El `[id]` de la URL. */

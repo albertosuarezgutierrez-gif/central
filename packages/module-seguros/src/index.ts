@@ -473,7 +473,7 @@ export {
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
 export { mensajeReciboDevueltoWhatsapp, resumenRiesgo, saludoSegunHora, type EntradaWhatsappDevuelto } from './mensaje-recibo-devuelto.ts'
-export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, enlaceWhatsappPresupuesto, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
+export { correoPresupuesto, correoPresupuestoTercero, type DatosAvisoTercero, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, mensajePresupuestoWhatsappTercero, enlaceWhatsappPresupuesto, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -662,8 +662,8 @@ export {
   type HistoricaAgrupable,
   type GrupoHistorica,
 } from './ficha-historicas.ts'
-export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
-export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type CarnetRevisado, type TipoCarnet } from './carnet-ficha.ts'
+export { caducidadCarnet, expedicionDesdeCaducidad, type CaducidadCarnet } from './caducidad-carnet.ts'
+export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, fechaExpedicionDeEntrada, type CarnetRevisado, type ExpedicionResuelta, type TipoCarnet } from './carnet-ficha.ts'
 // Lo que una póliza subida sabe del TOMADOR y la ficha no: parche que solo rellena huecos (03/10/2026).
 export {
   CLAVES_EXTRACCION_GUARDABLES,
@@ -1554,3 +1554,8 @@ export {
   type Encaje, type FuenteNecesidad, type NecesidadFalta, type NecesidadLeida, type NecesidadesLead, type OpcionComparada, type OrigenPrecio,
   type Recomendacion,
 } from './propuesta-lead.ts'
+export {
+  TEXTO_NO_ELEGIBLE, destinatarioElegible, destinatariosPresupuesto, esRelacionDeRepresentacion,
+  type ContactoElegible, type ContactoNoElegible, type DestinatariosPresupuesto, type EstadoCorreoPersona, type MotivoNoElegible,
+  type CanalDestino, type EstadoMovilPersona, type PersonaDestino, type TipoPersonaFicha, type TomadorDestino, type ViaDestino,
+} from './destinatarios-presupuesto.ts'

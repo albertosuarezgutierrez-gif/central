@@ -13,6 +13,7 @@ import {
   AVISO_NO_ES_CONTRATACION,
   ETIQUETA_FIRMEZA,
   TEXTO_CARATULA,
+  textoAccesoTercero,
   TEXTO_COMPARACION,
   TEXTO_FIRMEZA,
   TEXTO_SIN_EQUIVALENTE,
@@ -230,8 +231,25 @@ test('la carátula no nombra ni el ramo ni el bien ni un importe', () => {
       `la carátula es PÚBLICA y reenviable: no puede nombrar «${palabra}»`,
     )
   }
-  assert.match(TEXTO_CARATULA.cuerpo, /entra con tu correo/i)
+  assert.match(TEXTO_CARATULA.cuerpo, /entra(r)? con tu correo/i)
   assert.match(TEXTO_CARATULA.cuerpo, /c[óo]digo de un solo uso/i)
+})
+
+test('🪤 carátula neutra (21/10/2026): no da por hecho el WhatsApp ni invita a CUALQUIERA a entrar con su correo', () => {
+  for (const t of [TEXTO_CARATULA.cuerpo, TEXTO_CARATULA.conCorreo]) assert.doesNotMatch(t, /WhatsApp/i)
+  // Entrar con el correo solo se ofrece a quien el presupuesto va a su nombre (una persona de contacto no).
+  assert.match(TEXTO_CARATULA.cuerpo, /Si el presupuesto es a tu nombre, también puedes entrar con tu correo/)
+  assert.match(TEXTO_CARATULA.conCorreo, /^Si el presupuesto es a tu nombre/)
+  assert.doesNotMatch(TEXTO_CARATULA.cuerpo, /te ha preparado/)
+})
+
+test('🪤 persona de contacto: se le dice que lo ve como contacto y que aceptarlo es del tomador', () => {
+  assert.equal(
+    textoAccesoTercero({ tomador: 'Talleres Ejemplo SL', juridica: true }),
+    'Este presupuesto te lo hemos enviado como persona de contacto de Talleres Ejemplo SL; para aceptarlo debe hacerlo el tomador o contactar con la correduría.',
+  )
+  assert.match(textoAccesoTercero({ tomador: 'José Suárez', juridica: false }), /como persona autorizada por José Suárez;/)
+  assert.doesNotMatch(textoAccesoTercero({ tomador: null, juridica: false }), /null|undefined|empresa/)
 })
 
 // ─── El copy regulado ────────────────────────────────────────────────────────

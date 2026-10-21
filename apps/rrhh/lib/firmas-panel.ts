@@ -101,6 +101,21 @@ export async function reclamarFirma(empresaId: string, usuarioId: string, docId:
   return avisarDocumento({ empresaId, empleadoId: rows[0].empleado_id, documentoId: docId, tipo: 'reclamacion_firma', creadoPor: usuarioId, origen })
 }
 
+/**
+ * «Quitar de pendientes»: ANULA la solicitud de firma (borrado lógico). NUNCA toca el documento ni su
+ * fichero: vuelve a 'no_requiere' (sale del panel, del cron y de «Reclamar», y el portal deja de pedir
+ * firma; si ya lo veía, sigue viéndolo) y deja la huella en firma_anulada_*. Solo afecta a solicitudes
+ * aún pendientes (no firmadas) de la empresa de la sesión. Devuelve cuántas ha anulado.
+ */
+export async function anularFirmas(empresaId: string, usuarioId: string, ids: string[]): Promise<number> {
+  return prisma.$executeRaw(Prisma.sql`
+    UPDATE rrhh.documentos
+    SET estado_firma = 'no_requiere', requiere_firma_empresa = false, firma_solicitada_at = NULL,
+        firma_anulada_at = now(), firma_anulada_por = ${usuarioId}
+    WHERE empresa_id = ${empresaId}::uuid AND id = ANY(${ids}::uuid[])
+      AND estado_firma IN ('pendiente', 'pendiente_empresa')`)
+}
+
 /** Cron: recordatorio automático a 3, 7 y luego cada 7 días. Idempotente por día (índice único). */
 export async function ejecutarRecordatorios(hoy = new Date()): Promise<{ revisados: number; enviados: number; ya_hoy: number; errores: number }> {
   const rows = await prisma.$queryRaw<{ id: string; empresa_id: string; empleado_id: string; firma_solicitada_at: Date; ultimo_ok: Date | null; ultimo_sin: Date | null }[]>(Prisma.sql`

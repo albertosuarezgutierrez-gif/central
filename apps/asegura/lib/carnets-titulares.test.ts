@@ -79,3 +79,38 @@ test('🪤 el puente de carnés ya no contesta varias_fichas ni resuelve con fic
   assert.doesNotMatch(src, /fichaPropiaDe\(/)
   assert.match(src, /agruparCarnetsPorTitular\(/)
 })
+
+// ─── Fecha de expedición (21/10/2026) ─────────────────────────────────────────
+
+import { expedicionParaPortal, fichasQueVenExpedicion } from './carnets-titulares.ts'
+
+const kA = { clienteId: A, id: 'k1', tipo: 'B', fechaCaducidad: '2030-01-01', fechaExpedicion: '2020-01-01' }
+
+test('🔒 la expedición solo sale para las fichas del conjunto permitido; sin conjunto, de ninguna (fail-closed)', () => {
+  const sinConjunto = agruparCarnetsPorTitular([ana], [kA])
+  assert.equal('fechaExpedicion' in sinConjunto[0]!.carnets[0]!, false)
+  const con = agruparCarnetsPorTitular([ana], [kA], new Set([A]))
+  assert.equal(con[0]!.carnets[0]!.fechaExpedicion, '2020-01-01')
+  // Otra ficha en el conjunto no abre ésta.
+  const otra = agruparCarnetsPorTitular([ana], [kA], new Set([B]))
+  assert.equal('fechaExpedicion' in otra[0]!.carnets[0]!, false)
+})
+
+test('🔒 quién ve la expedición: solo vínculo que opera (gestionar/administrar); tarjeta, completo y raros, no', () => {
+  assert.deepEqual([...fichasQueVenExpedicion([{ clienteId: A, nivel: 'gestionar' }, { clienteId: B, nivel: 'administrar' }])].sort(), [A, B])
+  for (const nivel of ['tarjeta', 'completo', 'root', '']) assert.equal(fichasQueVenExpedicion([{ clienteId: AJENA, nivel }]).size, 0, nivel)
+})
+
+test('la expedición que cruza es una fecha aaaa-mm-dd REAL; cualquier otra cosa, null (no consta)', () => {
+  assert.equal(expedicionParaPortal('2020-02-29'), '2020-02-29')
+  assert.equal(expedicionParaPortal(' 2020-02-29 '), '2020-02-29')
+  for (const raro of ['2021-02-29', '1/2/2020', '2020-13-01', '', null, undefined, 'v1:cifrado']) assert.equal(expedicionParaPortal(raro as string | null), null)
+  const con = agruparCarnetsPorTitular([ana], [{ ...kA, fechaExpedicion: '1/2/2020' }], new Set([A]))
+  assert.equal(con[0]!.carnets[0]!.fechaExpedicion, null)
+})
+
+test('sin caducidad calculable (falta el nacimiento) el carné sale con fechaCaducidad null, al final de la lista', () => {
+  const t = agruparCarnetsPorTitular([ana], [{ clienteId: A, id: 'sin', tipo: 'A2', fechaCaducidad: null }, kA])
+  assert.deepEqual(t[0]!.carnets.map((c) => c.id), ['k1', 'sin'])
+  assert.equal(t[0]!.carnets[1]!.fechaCaducidad, null)
+})

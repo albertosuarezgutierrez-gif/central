@@ -370,6 +370,9 @@ export function copyFijo(): string[] {
     TEXTO_CARATULA.conWhatsapp,
     TEXTO_CARATULA.conCorreo,
     TEXTO_CARATULA.enlaceMuerto,
+    MOTIVO_TERCERO,
+    textoAccesoTercero({ tomador: 'Ejemplo SL', juridica: true }),
+    textoAccesoTercero({ tomador: null, juridica: false }),
     TEXTO_AJENO,
     TEXTO_VINCULO_AMBIGUO,
     etiquetaPapeles(['mas_barata'], true) ?? '',
@@ -393,6 +396,22 @@ export function revisarCopyFijo(): string {
 // ─── Las frases de las puertas ───────────────────────────────────────────────
 
 /**
+ * Lo que ve una PERSONA DE CONTACTO (21/10/2026) en vez de «Aceptar», «Firmar» y «Datos incorrectos»: el código de su
+ * correo le deja VER el presupuesto del tomador, no aceptarlo. Empresa explícita → «persona de contacto de»; si no,
+ * «persona autorizada por». Sin nombre → «del tomador». PURO.
+ */
+/** El motivo del 403 de las rutas que escriben cuando entra una persona de contacto. */
+export const MOTIVO_TERCERO = 'Te hemos enviado este presupuesto para que lo veas: aceptarlo le toca al tomador. Si hace falta, escríbenos o llámanos.'
+
+export function textoAccesoTercero(t: { tomador: string | null; juridica: boolean }): string {
+  const quien = t.tomador?.trim() || null
+  const como = t.juridica
+    ? `como persona de contacto de ${quien ?? 'la empresa tomadora'}`
+    : `como persona autorizada por ${quien ?? 'el tomador'}`
+  return `Este presupuesto te lo hemos enviado ${como}; para aceptarlo debe hacerlo el tomador o contactar con la correduría.`
+}
+
+/**
  * 🚨 La carátula pública NO cuenta NADA del contenido: ni precio, ni compañía,
  * ni el bien asegurado, ni de quién es. Un enlace de correo se reenvía y se
  * queda en buzones compartidos, y en salud, vida o decesos el bien asegurado
@@ -404,10 +423,12 @@ export function revisarCopyFijo(): string {
  */
 export const TEXTO_CARATULA = {
   titulo: 'Tienes un presupuesto preparado',
+  // Neutro (21/10/2026): el código puede haber llegado por WhatsApp o por correo, y a una persona de contacto del
+  // tomador. Entrar con el correo solo sirve a quien el presupuesto va a su nombre: no se le invita a nadie más.
   cuerpo:
-    'Alberto Suárez, de Grupo ASegura, te ha preparado un presupuesto. Es personal, así que no se enseña aquí: escribe el código de acceso que te mandé por WhatsApp, o entra con tu correo y te mando un código de un solo uso.',
-  conWhatsapp: '¿Te lo he mandado por WhatsApp?',
-  conCorreo: 'O entra con tu correo',
+    'Alberto Suárez, de Grupo ASegura, ha preparado este presupuesto. No se enseña aquí: escribe el código de acceso que te hemos enviado. Si el presupuesto es a tu nombre, también puedes entrar con tu correo y te mando un código de un solo uso.',
+  conWhatsapp: 'Escribe el código de 6 dígitos que te hemos enviado',
+  conCorreo: 'Si el presupuesto es a tu nombre, entra con tu correo',
   enlaceMuerto:
     'Este enlace ya no sirve. Puede que haya caducado o que se haya retirado. Escríbeme y te preparo otro.',
 } as const

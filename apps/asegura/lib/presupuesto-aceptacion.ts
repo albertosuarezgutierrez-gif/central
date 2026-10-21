@@ -8,6 +8,8 @@
 // (puede no tener correo). El portal manda entonces el token del enlace (`tokenWhatsapp`) y la ficha
 // sale del PROPIO presupuesto (`fichaDeTokenWhatsapp`). Firma con ese mismo código (`otp_whatsapp`)
 // o, si tiene correo, con el de siempre: cualquiera de los dos.
+// 21/10/2026 — El código del correo a una PERSONA DE CONTACTO (tomador sin correo) va por la misma puerta, pero NO opera:
+// todas las acciones de aquí le devuelven `sin_permiso` (`presupuesto-acceso-tercero.ts`). Ve, no firma.
 //
 // Si la opción elegida es de OTRA compañía (por código DGS, nunca por nombre), en el mismo acto firma
 // la anulación de su póliza actual, a su vencimiento. Esa anulación nace `firmada` pero la cola de
@@ -39,6 +41,7 @@ import {
 import { origenPresupuesto } from './presupuesto-origen'
 import { datosAceptacionOfertas, gruposAceptacionOfertas, gruposRevisionOfertas, lineaEmitirEnCompania } from './ofertas-reglas'
 import { fichaDeTokenWhatsapp, gastarCodigoWhatsapp } from './presupuesto-codigo-whatsapp'
+import { fichaDeToken } from './presupuesto-acceso-tercero'
 import { gruposDatosUsadosDePresupuesto } from './datos-usados-ofertas-bd'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -205,11 +208,14 @@ type Base = { f: Fila; clienteId: string } | { estado: 'no_encontrado' } | { est
  */
 export type AccesoPortal = { identidadId: string } | { tokenWhatsapp: string }
 
-/** La ficha dueña del presupuesto para ESE acceso. Mismos desenlaces que `fichaPropiaDeRecurso`. */
+/**
+ * La ficha dueña del presupuesto para ESE acceso. Mismos desenlaces que `fichaPropiaDeRecurso`.
+ * 🚨 Con el token de una PERSONA DE CONTACTO (correo a un tercero, 21/10/2026) es `sin_permiso`: el token resuelve la ficha
+ * del TOMADOR y con ella se firmaría, se elegiría cuenta o se marcaría un dato a su nombre (`presupuesto-acceso-tercero.ts`).
+ */
 async function fichaDeAcceso(correduriaId: string, acceso: AccesoPortal, presupuestoId: string) {
   if ('tokenWhatsapp' in acceso) {
-    const f = await fichaDeTokenWhatsapp(correduriaId, acceso.tokenWhatsapp, presupuestoId)
-    return f ? { estado: 'ok' as const, clienteId: f.clienteId } : { estado: 'ajena' as const }
+    return fichaDeToken(await fichaDeTokenWhatsapp(correduriaId, acceso.tokenWhatsapp, presupuestoId))
   }
   // La ficha es la DUEÑA del presupuesto si está vinculada con nivel de operar; con varias no se elige.
   return fichaPropiaDeRecurso(correduriaId, acceso.identidadId, 'presupuesto', presupuestoId)

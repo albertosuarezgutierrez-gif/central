@@ -127,6 +127,12 @@ export type PresupuestoCliente = {
   necesidades: string | null
   /** Entró con el CÓDIGO DEL WHATSAPP (no con su correo): puede firmar con ese mismo código. */
   accesoWhatsapp: boolean
+  /**
+   * (21/10/2026) Entró con el código de un correo a una PERSONA DE CONTACTO del tomador: lo VE, no lo acepta ni firma ni
+   * marca un dato (asegura le devuelve `sin_permiso`). `null` = no es ese caso. `tomador` = su nombre (`null` = no se
+   * pudo leer); `juridica` = el tomador es empresa explícita (cambia cómo se le dice).
+   */
+  accesoTercero: { tomador: string | null; juridica: boolean } | null
 }
 
 export type LecturaPresupuesto =
@@ -195,8 +201,11 @@ export async function caratulaPorToken(tokenCrudo: unknown): Promise<Caratula> {
 //   · no está retirado ni vencido (el código del WhatsApp vale hasta `vence_el`).
 // El código ya se comprobó en asegura antes de poner la cookie; aquí no se vuelve a ver.
 
-/** El token del acceso por WhatsApp a ESE presupuesto, o `null`. Fallo de BD = `null` (no abre). */
-export async function accesoWhatsappDe(id: string): Promise<{ token: string } | null> {
+/**
+ * El token del acceso por WhatsApp a ESE presupuesto, o `null`. Fallo de BD = `null` (no abre). `tercero` = el código
+ * era el de una PERSONA DE CONTACTO (lo dijo asegura al comprobarlo): ve, no opera.
+ */
+export async function accesoWhatsappDe(id: string): Promise<{ token: string; tercero: boolean } | null> {
   if (!UUID.test(id)) return null
   const a = await getAccesoWhatsapp()
   if (!a || a.presupuestoId !== id || !formatoTokenVistaValido(a.token)) return null
@@ -205,7 +214,7 @@ export async function accesoWhatsappDe(id: string): Promise<{ token: string } | 
       where: { id, tokenHash: await hashTokenVista(a.token), retiradoAt: null, venceEl: { gt: new Date() } },
       select: { id: true },
     })
-    return fila ? { token: a.token } : null
+    return fila ? { token: a.token, tercero: a.tercero } : null
   } catch (e) {
     registrar('accesoWhatsappDe', e)
     return null
@@ -215,14 +224,15 @@ export async function accesoWhatsappDe(id: string): Promise<{ token: string } | 
 /**
  * Con qué se llama al puente para ESTE presupuesto: el token del WhatsApp si entró así (va
  * primero: es la puerta de este presupuesto en concreto), si no la identidad de la sesión.
- * `corredor` = es Alberto con la vista de corredor (no firma).
+ * `corredor` = es Alberto con la vista de corredor (no firma). `tercero` = entró con el código de una PERSONA DE
+ * CONTACTO: las rutas que escriben cortan con `sin_permiso` antes de llamar al puente (que también lo niega).
  */
-export async function accesoPuenteDe(id: string): Promise<{ acceso: AccesoPuente; corredor: boolean } | null> {
+export async function accesoPuenteDe(id: string): Promise<{ acceso: AccesoPuente; corredor: boolean; tercero: boolean } | null> {
   const identidad = await getIdentidad()
   const corredor = identidad !== null && identidad.corredor !== null
   const w = await accesoWhatsappDe(id)
-  if (w) return { acceso: { tokenWhatsapp: w.token }, corredor }
-  return identidad ? { acceso: { identidadId: identidad.id }, corredor } : null
+  if (w) return { acceso: { tokenWhatsapp: w.token }, corredor, tercero: w.tercero }
+  return identidad ? { acceso: { identidadId: identidad.id }, corredor, tercero: false } : null
 }
 
 // ─── La pantalla de dentro ───────────────────────────────────────────────────
@@ -261,7 +271,10 @@ export async function presupuestoAbiertoAlCliente(id: string): Promise<boolean> 
 export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuesto> {
   const identidad = await getIdentidad()
   // Segunda puerta: el código del WhatsApp, SOLO para este presupuesto (ver `accesoWhatsappDe`).
-  const porWhatsapp = (await accesoWhatsappDe(id)) !== null
+  const accesoW = await accesoWhatsappDe(id)
+  const porWhatsapp = accesoW !== null
+  // El código de un correo a una PERSONA DE CONTACTO: ve el presupuesto, no opera (21/10/2026).
+  const porTercero = accesoW?.tercero === true
   if (!identidad && !porWhatsapp) return { estado: 'sin_sesion' }
   const vistaDeCorredor = identidad !== null && identidad.corredor !== null
 
@@ -380,6 +393,9 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
     // deja en paz creyendo que ya lo ha visto.
     if (!vistaDeCorredor) await sellarVisto(p.id, p.clienteId, p.vistoAt)
 
+    // Persona de contacto: a quién representa, para decírselo (el nombre ya iba en su correo). Si no se lee, sin nombre.
+    const accesoTercero = porTercero ? await tomadorParaTercero(p.clienteId, p.correduriaId) : null
+
     return {
       estado: 'ok',
       presupuesto: {
@@ -400,6 +416,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
         vistaDeCorredor,
         necesidades: p.necesidades?.trim() || null,
         accesoWhatsapp: porWhatsapp,
+        accesoTercero,
       },
     }
   } catch (e) {
@@ -409,6 +426,26 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Nombre y tipo del TOMADOR del presupuesto, para el aviso a una persona de contacto. Solo se llama con el presupuesto
+ * ya autorizado (cookie de ESTE id + token vigente) y con SU `cliente_id`/`correduria_id`, nunca con uno de fuera. Un
+ * fallo no tumba la pantalla: se dice sin nombre (`juridica: false` = no se afirma que sea una empresa).
+ */
+async function tomadorParaTercero(clienteId: string, correduriaId: string): Promise<{ tomador: string | null; juridica: boolean }> {
+  try {
+    const c = await prisma.cliente.findFirst({
+      where: { id: clienteId, correduriaId },
+      select: { nombre: true, apellidos: true, tipoPersona: true },
+    })
+    if (!c) return { tomador: null, juridica: false }
+    const nombre = `${c.nombre ?? ''} ${c.apellidos ?? ''}`.trim()
+    return { tomador: nombre === '' ? null : nombre, juridica: c.tipoPersona === 'juridica' }
+  } catch (e) {
+    registrar('tomadorParaTercero', e)
+    return { tomador: null, juridica: false }
+  }
+}
 
 /**
  * Por qué no hay «la equivalente». Se DERIVA, porque el motivo que calculó

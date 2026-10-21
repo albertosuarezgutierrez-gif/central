@@ -12,6 +12,30 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Correduría · #4945 mergeado (presupuesto a contacto de empresa, SOLO LECTURA: el tercero no firma; marca `acceso_tercero`
+ligada al token). Idea 4: mismo selector para WhatsApp (Dueño/Administración con móvil; aunque el tomador tenga correo). Idea 2 (aviso de
+vencimiento restringido) DESCARTADA por Alberto: está en `git stash` «idea2-vencimiento». Pendiente: firma en representación (PR aparte).
+
+**(21/10/2026)** — Correduría · presupuesto a la persona de contacto de una EMPRESA sin correo (Studium: Victor «Dueño»). Regla
+de Alberto en `destinatariosPresupuesto` (module-seguros): solo «Dueño»/«Administración» (tomador `juridica`) o autorización vigente en
+`portal_autorizacion` (la columna `puede_ver_polizas` está MUERTA desde 03/09). Asegura revalida (409 si no elegible); el tercero recibe código
+solo de ese presupuesto y PUEDE firmar (decidido por Alberto). Ficha de empresa: aviso + «autorizar contacto» (queda pendiente de aceptar).
+Medido: 9 empresas en vigor, 3 sin correo, las 3 con Dueño/Administración con correo; 11/57 personas físicas sin correo.
+
+**(21/10/2026)** — Allianz moto (bot RPA) 0.7.16 → 0.7.19. 0.7.16 diagnosticó la fecha de nacimiento: mismo día/mes, año +40. 0.7.17 escribe
+las fechas con el setter nativo + `change`, sin pulsaciones, así que la máscara ePAC `date(224)` ya no desplaza el año; confirmado: la fecha de
+nacimiento pasa. 0.7.18 añade el flag `fechaAdquisicionPorDefecto`: PR #4938 pone fecha de adquisición = matriculación por defecto en «Pedir precio»
+de la oportunidad. 0.7.19 (decisión de Alberto): una fecha de adquisición anterior a la 1ª matriculación de Allianz se sustituye siempre por la de
+Allianz, con supuesto en el presupuesto (PR #4950). Imagen `moto-e5b0c81` en producción. Lección: los despliegues de plataforma se CANCELAN por pushes
+de otras sesiones a main; antes de pedir a Alberto que pulse, comprueba que el deployment READY lleva tu SHA y que recargue la página.
+Pendiente: confirmar el precio real de Allianz moto para el lead BMW F800 (Mapfre ya lo tarificó: 223,65€ / 300,40€).
+
+**(21/10/2026)** — RRHH · «Quitar de pendientes» en /admin/firmas (Pilar): selección 1/varias/todas → ANULACIÓN lógica (estado_firma='no_requiere'
++ `firma_anulada_at/_por`), el documento NUNCA se borra (PRL/EPIs/nóminas). Sale de panel, cron y portal. Migración 0026 aplicada en prod.
+
+**(21/10/2026)** — RRHH · interruptor «Permitir fichar sin ubicación» en /admin/fichajes (GET/PATCH `/api/admin/empresa/ajustes`, empresa de
+sesión, booleano estricto). Sin migración. Cierra el pendiente de la entrada de fichaje sin ubicación.
+
 **(21/10/2026)** — RRHH · «Notas internas» en la ficha del empleado (petición de Pilar): `rrhh.empleados.notas` (≤5000, NULL si vacío),
 PATCH admin existente filtrado por empresa de sesión, nunca en `/api/e/*` ni `/e/*`. Migración 0025 aplicada en prod.
 
@@ -1367,6 +1391,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 2 (auditoría + «que haga el trabajo por mí»).** Herramientas nuevas: `estado_oportunidad`, `cerrar_tarea`, `ver_siniestro`/`seguir_siniestro`, `contacto_cliente`, `ver_riesgo` y **`precio_hogar`** (Catastro → ficha de hogar → mismo cobro/cola que coche). Arreglos: descripciones por modo (en autónomo ya no dicen «botón»), **huella entre mensajes** (tabla `correduria_asistente_huella`, 30 min, `repetir=true`), `forzar` prohibido en el mismo turno, DNI tapado rechazado, timeout duro. Migración aplicada (huella + ramo `hogar`). Medido antes: 0 👍/👎 en 25 turnos; `preparar_emision` 5/5 fallaba por pasar nº de póliza en vez de uuid (regla nueva en el prompt).
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
+
+## (21/10/2026) asegura-portal: carné de conducir visible + avisos carné/ITV desmarcables
+- Origen: clienta María Luisa González Lozano no veía la fecha de su carné (cifrada) y metía la de caducidad donde se pide expedición (`max=hoy` → «no puede ser futura»).
+- Ahora: puede meter caducidad o expedición (`expedicionDesdeCaducidad`, ambiguo 70-75 años → pide expedición); la tarjeta muestra expedición + caducidad (solo vínculo `gestionar`/`administrar`) y «Cambiar» viene precargado.
+- Avisos: carné escalonado 90/30/7/0, `carnet_sin_nacimiento`, texto DGT + .ics; ITV automática en campana (30/7/0, «estimada» si ciclo estimado; sin correo). Interruptores `vencimiento_carnet`/`vencimiento_itv` (activados por defecto; el correo solo lo calla el titular).
+- Migración `apps/asegura-portal/prisma/sql/2026-10-21_aviso_vencimiento_carnet.sql` (amplía CHECK de `portal_aviso_silenciado`): ✅ aplicada el 21/10. PR #4955 mergeado. CIMA no pisa la fecha del cliente (`discrepa`).
+- Pendiente: la clienta tiene que mandar su fecha de expedición real; la fecha de nacimiento no la puede editar ella.
 
 ## (21/10/2026) Correduría · cola de Google Contactos atascada (🟢 y botón WhatsApp del portal)
 - Diagnóstico: 37 revisiones pendientes desde el 05/10 sin atender; un `duplicado_ambiguo` deja el contacto de Google INTACTO (sin 🟢) → hasta 8 clientes en vigor sin verde (2 `mismo_email`, 6 `telefono_compartido`).

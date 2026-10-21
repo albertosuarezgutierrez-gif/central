@@ -88,3 +88,62 @@ test('🪤 wa.me con el móvil del TOMADOR si lo hay; sin él, sin número (21/1
   assert.equal(enlaceWhatsappPresupuesto('Hola', null), 'https://wa.me/?text=Hola')
   assert.equal(enlaceWhatsappPresupuesto('Hola', '12'), 'https://wa.me/?text=Hola')
 })
+
+test('🪤 el correo a una persona de contacto: como contacto de la EMPRESA, con su código, y sin precio ni datos', async () => {
+  const { correoPresupuestoTercero } = await import('./mensaje-presupuesto.ts')
+  const t = { nombre: 'Víctor Pérez', tomador: 'Talleres Ejemplo SL', tomadorJuridica: true, enlace: 'https://x.es/presupuesto/abc', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' }
+  const c = correoPresupuestoTercero(t)
+  assert.match(c.asunto, /Talleres Ejemplo SL/)
+  assert.match(c.texto, /^Hola, Víctor:/)
+  assert.match(c.texto, /como persona de contacto de Talleres Ejemplo SL/)
+  assert.match(c.texto, /Le he preparado a Talleres Ejemplo SL/)
+  assert.doesNotMatch(c.texto, /Te he preparado|tu presupuesto|datos tuyos/i)
+  for (const x of [c.texto, c.html]) assert.match(x, /123456/)
+  assert.doesNotMatch(c.texto, /\b(DNI|NIE|IBAN|cuenta bancaria|€)\b/i)
+  assert.deepEqual(revisarCopy(c.texto), [])
+  assert.doesNotMatch(correoPresupuestoTercero({ ...t, tomador: null, nombre: null }).texto, /null|undefined/)
+  assert.match(correoPresupuestoTercero({ ...t, enlace: 'https://x.es/p/"><b>' }).html, /&quot;&gt;&lt;b&gt;/)
+})
+
+test('🪤 el correo a una persona de contacto NO promete que pueda aceptar: el código es solo para verlo', async () => {
+  const { correoPresupuestoTercero } = await import('./mensaje-presupuesto.ts')
+  const c = correoPresupuestoTercero({ nombre: null, tomador: 'Talleres Ejemplo SL', tomadorJuridica: true, enlace: 'https://x.es/p', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' })
+  for (const x of [c.texto, c.html]) assert.match(x, /solo para ver este presupuesto\. Para aceptarlo tiene que hacerlo Talleres Ejemplo SL/)
+  assert.doesNotMatch(c.texto, /acept(a|ar)lo t[uú]|f[ií]rmalo/i)
+})
+
+test('🪤 tomador PERSONA FÍSICA: «persona autorizada por <tomador>», nunca «de la empresa»', async () => {
+  const { correoPresupuestoTercero } = await import('./mensaje-presupuesto.ts')
+  const c = correoPresupuestoTercero({ nombre: 'Ana', tomador: 'José Suárez Salas', tomadorJuridica: false, enlace: 'https://x.es/p', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' })
+  assert.match(c.texto, /como persona autorizada por José Suárez Salas/)
+  for (const x of [c.asunto, c.texto, c.html]) assert.doesNotMatch(x, /empresa/i)
+  assert.doesNotMatch(correoPresupuestoTercero({ nombre: null, tomador: null, tomadorJuridica: false, enlace: 'https://x.es/p', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' }).texto, /empresa|null|undefined/i)
+})
+
+// 🪤 (21/10/2026, idea 4) El WhatsApp a una persona de contacto. Para verlo en rojo: en `mensajePresupuestoWhatsappTercero`
+// cambia «en nombre de» por «de» → falla la primera; quita «pero no aceptarlo» → falla la segunda.
+test('🪤 el WhatsApp a una persona de contacto: «en nombre de» la empresa / «persona autorizada por», con su código', async () => {
+  const { mensajePresupuestoWhatsappTercero } = await import('./mensaje-presupuesto.ts')
+  const t = { nombre: 'Víctor Pérez', tomador: 'Talleres Ejemplo SL', tomadorJuridica: true, enlace: 'https://x.es/presupuesto/abc', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' }
+  const w = mensajePresupuestoWhatsappTercero(t)
+  assert.match(w, /^Hola, Víctor\. Soy Alberto, de Grupo ASegura\./)
+  assert.match(w, /como persona de contacto, en nombre de Talleres Ejemplo SL/)
+  assert.match(w, /Le he preparado a Talleres Ejemplo SL/)
+  assert.match(w, /123456/)
+  assert.match(w, /https:\/\/x\.es\/presupuesto\/abc/)
+  assert.doesNotMatch(w, /Te he preparado|tu código|datos tuyos|también puedes entrar con tu correo/i)
+  assert.doesNotMatch(w, /\b(DNI|NIE|IBAN|cuenta bancaria|€)\b/i)
+  assert.deepEqual(revisarCopy(w), [])
+  const f = mensajePresupuestoWhatsappTercero({ ...t, tomador: 'Ana Ruiz', tomadorJuridica: false })
+  assert.match(f, /como persona autorizada por Ana Ruiz/)
+  assert.doesNotMatch(f, /persona de contacto/)
+  assert.doesNotMatch(mensajePresupuestoWhatsappTercero({ ...t, tomador: null, nombre: null }), /null|undefined/)
+})
+
+test('🪤 el WhatsApp a una persona de contacto dice que podrá VERLO pero no aceptarlo', async () => {
+  const { mensajePresupuestoWhatsappTercero } = await import('./mensaje-presupuesto.ts')
+  const w = mensajePresupuestoWhatsappTercero({ nombre: null, tomador: 'Talleres Ejemplo SL', tomadorJuridica: true, enlace: 'https://x.es/p', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' })
+  assert.match(w, /podrás verlo, pero no aceptarlo/)
+  assert.match(w, /aceptarlo tiene que hacerlo Talleres Ejemplo SL/)
+  assert.doesNotMatch(w, /para aceptarlo si te convence|Te servirá también para aceptarlo/)
+})

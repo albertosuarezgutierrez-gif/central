@@ -163,3 +163,9 @@ test('🪤 ficha vinculada de solo consulta → sin_permiso (403); el resto de r
   assert.equal(d2.estado, 'ajena')
   if (d2.estado === 'ajena') assert.deepEqual(resultadoDeDestinoAjeno(d2.motivo), { estado: 'no_encontrado' })
 })
+
+test('alta/cambio aceptan fechaCaducidad en lugar de fecha; sin ninguna → null', () => {
+  assert.deepEqual(leerOperacionCarnet('POST', { identidadId: ID, fichaId: A, tipo: 'B', fechaCaducidad: '2031-03-04' }), { accion: 'alta', identidadId: ID, fichaId: A, tipo: 'B', fechaCaducidad: '2031-03-04' })
+  assert.equal(leerOperacionCarnet('PATCH', { identidadId: ID, fichaId: A, id: K, tipo: 'B', fechaCaducidad: '04/03/2031' })?.accion, 'cambio')
+  assert.equal(leerOperacionCarnet('POST', { identidadId: ID, fichaId: A, tipo: 'B' }), null)
+})

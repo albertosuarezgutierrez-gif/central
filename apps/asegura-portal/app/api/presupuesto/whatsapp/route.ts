@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const r = await comprobarCodigoWhatsapp(token, codigo)
   if (r.estado === 'valido') {
     const res = NextResponse.json({ estado: 'ok' }, { status: 200 })
-    res.cookies.set(COOKIE_ACCESO_WHATSAPP, await crearAccesoWhatsapp({ presupuestoId: r.presupuestoId, token }), COOKIE_OPTS_ACCESO_WHATSAPP)
+    res.cookies.set(COOKIE_ACCESO_WHATSAPP, await crearAccesoWhatsapp({ presupuestoId: r.presupuestoId, token, tercero: r.tercero }), COOKIE_OPTS_ACCESO_WHATSAPP)
     return res
   }
   const status =

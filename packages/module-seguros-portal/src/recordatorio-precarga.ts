@@ -123,6 +123,7 @@ export function precargasDeRecordatorio(x: EntradaPrecargas): Precargas {
   for (const c of x.carnets ?? []) {
     // La fecha viene ya calculada por `caducidadCarnet()`; aquí solo se
     // comprueba que es una fecha, para no meter basura en el `<input type=date>`.
+    if (c.fechaCaducidad === null) continue // sin nacimiento no hay caducidad que recordar
     const caduca = c.fechaCaducidad.trim().slice(0, 10)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(caduca)) continue
     // 🚨 Un carné YA CADUCADO no se ofrece como recordatorio, y no por

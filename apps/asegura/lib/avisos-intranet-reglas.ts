@@ -49,8 +49,17 @@ export function enlacePortal(
   return url.toString()
 }
 
-/** `${tipo}:${id}` — la misma clave que la campana usa de `key`. Nunca el título. */
-export function claveAviso(a: Pick<Aviso, 'tipo' | 'id'>): string {
+/**
+ * `${tipo}:${id}` — la misma clave que la campana usa de `key`. Nunca el título.
+ *
+ * Excepción (21/10/2026): el carné «caduca pronto» va escalonado (90/30/7/0 días) y su `clave` lleva la fecha y
+ * el TRAMO (`carnet_en_ventana:<id>@2027-01-01#30`): el sello es por tramo, así que cada umbral se manda UNA
+ * vez y el siguiente se manda aunque el anterior ya saliera. Hasta ahora este sello era `tipo:id` a secas
+ * (un solo correo por carné para siempre). Los sellos antiguos `carnet_en_ventana:<id>` ya no casan: un
+ * carné que estuviera dentro de la ventana se avisará UNA vez más, con su tramo actual. Sin tabla nueva.
+ */
+export function claveAviso(a: Pick<Aviso, 'tipo' | 'id'> & { clave?: string }): string {
+  if (a.tipo === 'carnet_en_ventana' && typeof a.clave === 'string' && a.clave !== '') return a.clave
   return `${a.tipo}:${a.id}`
 }
 

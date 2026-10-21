@@ -72,9 +72,9 @@ export async function escribirCarnet(identidadId: string, op: OperacionCarnet): 
   const metodo = op.accion === 'alta' ? 'POST' : op.accion === 'cambio' ? 'PATCH' : 'DELETE'
   const cuerpo =
     op.accion === 'alta'
-      ? { identidadId, fichaId: op.fichaId, tipo: op.tipo, fecha: op.fecha }
+      ? { identidadId, fichaId: op.fichaId, tipo: op.tipo, fecha: op.fecha, fechaCaducidad: op.fechaCaducidad }
       : op.accion === 'cambio'
-        ? { identidadId, fichaId: op.fichaId, id: op.id, tipo: op.tipo, fecha: op.fecha }
+        ? { identidadId, fichaId: op.fichaId, id: op.id, tipo: op.tipo, fecha: op.fecha, fechaCaducidad: op.fechaCaducidad }
         : { identidadId, fichaId: op.fichaId, id: op.id }
   const control = new AbortController()
   const reloj = setTimeout(() => control.abort(), PORTAL_PUENTE_TIEMPO_MS)

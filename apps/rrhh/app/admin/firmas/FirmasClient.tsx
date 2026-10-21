@@ -38,6 +38,9 @@ export default function FirmasClient() {
   const [error, setError] = useState('')
   const [msg, setMsg] = useState<Record<string, string>>({})
   const [reclamando, setReclamando] = useState<string | null>(null)
+  const [sel, setSel] = useState<Set<string>>(new Set())
+  const [quitando, setQuitando] = useState(false)
+  const [toast, setToast] = useState('')
   const pet = useRef(0)
 
   const cargar = useCallback(async (offset: number) => {
@@ -56,6 +59,40 @@ export default function FirmasClient() {
   }, [estado, visto, demora, qAplicada])
 
   useEffect(() => { cargar(0) }, [cargar])
+  // La selección es de lo visible con el filtro actual: al cambiar de filtro se vacía.
+  useEffect(() => { setSel(new Set()) }, [estado, visto, demora, qAplicada])
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(''), 6000)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const todasMarcadas = filas.length > 0 && filas.every(f => sel.has(f.documento_id))
+  function marcar(id: string) {
+    setSel(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  }
+  function marcarTodas() { setSel(todasMarcadas ? new Set() : new Set(filas.map(f => f.documento_id))) }
+
+  async function quitar() {
+    const ids = [...sel]
+    if (ids.length === 0) return
+    if (!confirm(`Se dejará de pedir la firma de ${ids.length} ${ids.length === 1 ? 'documento' : 'documentos'}. Los documentos NO se borran.`)) return
+    setQuitando(true)
+    try {
+      const r = await fetch('/api/admin/firmas/anular', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) { setError(j.error ?? 'No se pudo quitar'); return }
+      const quitadas = new Set(ids)
+      // Recarga sin desmontar: quita las filas ya y vuelve a pedir la primera página.
+      setFilas(prev => prev.filter(x => !quitadas.has(x.documento_id)))
+      setSel(new Set())
+      setToast(`${j.anuladas} ${j.anuladas === 1 ? 'solicitud anulada' : 'solicitudes anuladas'}`)
+      await cargar(0)
+    } catch { setError('Error de red') }
+    finally { setQuitando(false) }
+  }
   useEffect(() => { const t = setTimeout(() => setQAplicada(q.trim()), 350); return () => clearTimeout(t) }, [q])
 
   async function reclamar(f: Fila) {
@@ -118,10 +155,35 @@ export default function FirmasClient() {
       {total != null && <p className="mb-2 text-sm text-ink-2">{total} {total === 1 ? 'documento' : 'documentos'}</p>}
       {error && <p className="mb-2 text-sm text-alert">{error}</p>}
 
+      {/* Móvil: la cabecera de la tabla se oculta (cards), así que la casilla «todas» va aquí. */}
+      {filas.length > 0 && (
+        <label className="mb-2 flex min-h-[44px] cursor-pointer items-center gap-3 text-sm text-ink-2 md:hidden">
+          <input type="checkbox" checked={todasMarcadas} onChange={marcarTodas} className="h-6 w-6 shrink-0" />
+          Seleccionar todas las visibles
+        </label>
+      )}
+      {sel.size > 0 && (
+        <div className="sticky top-0 z-20 mb-2 flex flex-wrap items-center justify-between gap-2 rounded-card border border-line bg-card p-2 shadow-sm">
+          <span className="text-sm font-medium text-ink">{sel.size} {sel.size === 1 ? 'seleccionada' : 'seleccionadas'}</span>
+          <span className="flex flex-wrap gap-2">
+            <button type="button" className={BTN_SEC} disabled={quitando} onClick={() => setSel(new Set())}>Cancelar</button>
+            <button type="button" className="min-h-[44px] px-3" disabled={quitando} onClick={quitar}>
+              {quitando ? 'Quitando…' : 'Quitar de pendientes'}
+            </button>
+          </span>
+        </div>
+      )}
+
       <Tabla fija>
           <thead>
             <tr className="border-b border-line bg-paper-2 text-left text-xs text-ink-3">
-              <th className="px-3 py-2 md:w-[26%]">Documento</th>
+              <th className="px-3 py-2 md:w-[26%]">
+                <label className="flex min-h-[44px] cursor-pointer items-center gap-3">
+                  <input type="checkbox" checked={todasMarcadas} onChange={marcarTodas} disabled={filas.length === 0}
+                    aria-label="Seleccionar todas las visibles" className="h-6 w-6 shrink-0" />
+                  Documento
+                </label>
+              </th>
               <th className="px-3 py-2 md:w-[16%]">Empleado</th>
               <th className="px-3 py-2 whitespace-nowrap">Demora</th>
               <th className="px-3 py-2">Abierto</th>
@@ -134,9 +196,17 @@ export default function FirmasClient() {
             {filas.map(f => (
               <tr key={f.documento_id} className="border-b border-line align-top">
                 <td className="px-3 py-2.5">
-                  <a href={`/admin/empleados/${f.empleado_id}`} className="font-medium text-ink no-underline hover:text-accent">{f.documento}</a>
-                  <div className="text-xs text-ink-3">{f.estado_firma === 'pendiente_empresa' ? 'Falta la firma de la empresa' : 'Falta la firma del empleado'}</div>
-                  {msg[f.documento_id] && <div className="text-xs text-accent-ink">{msg[f.documento_id]}</div>}
+                  <div className="flex items-start gap-3">
+                    <label className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center" title="Seleccionar">
+                      <input type="checkbox" checked={sel.has(f.documento_id)} onChange={() => marcar(f.documento_id)}
+                        aria-label={`Seleccionar ${f.documento}`} className="h-6 w-6" />
+                    </label>
+                    <div className="min-w-0 pt-2.5">
+                      <a href={`/admin/empleados/${f.empleado_id}`} className="font-medium text-ink no-underline hover:text-accent">{f.documento}</a>
+                      <div className="text-xs text-ink-3">{f.estado_firma === 'pendiente_empresa' ? 'Falta la firma de la empresa' : 'Falta la firma del empleado'}</div>
+                      {msg[f.documento_id] && <div className="text-xs text-accent-ink">{msg[f.documento_id]}</div>}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-3 py-2.5" data-label="Empleado">
                   <a href={`/admin/empleados/${f.empleado_id}`} className="text-ink no-underline hover:text-accent">{f.empleado}</a>
@@ -190,6 +260,11 @@ export default function FirmasClient() {
         {hayMas && <button type="button" className={BTN_SEC} disabled={cargando} onClick={() => cargar(filas.length)}>Ver más</button>}
         {cargando && <span className="text-sm text-ink-3">Cargando…</span>}
       </div>
+      {toast && (
+        <div role="status" className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-sm rounded-card border border-line bg-card px-4 py-3 text-sm text-ink shadow-lg">
+          {toast}
+        </div>
+      )}
     </Page>
   )
 }
