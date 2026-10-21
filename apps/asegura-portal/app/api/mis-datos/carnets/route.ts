@@ -8,7 +8,7 @@ import { escribirYResponder } from '@/lib/carnets-api'
 export const runtime = 'nodejs'
 
 /**
- * POST /api/mis-datos/carnets — el cliente añade un carné de conducir. `{ fichaId, tipo, fecha }`.
+ * POST /api/mis-datos/carnets — el cliente añade un carné de conducir. `{ fichaId, tipo, fecha | fechaCaducidad }`.
  *
  * 🚨 La identidad sale de la COOKIE (`requireIdentidad`), nunca del cuerpo. `fichaId` es el titular que ha
  * elegido y lo comprueba `apps/asegura` contra sus vínculos (`lib/carnets-escritura.ts`). La vista de

@@ -15,9 +15,9 @@ import type { CarnetDeTitular, TitularCarnets } from '@/lib/carnets-titulares'
  * alimentan el aviso de caducidad de la campana y la precarga de «Recordatorios».
  *
  * - Con UN titular, lista plana («tus carnés»); con varios, agrupada por titular y con selector al añadir.
- * - La fecha que se teclea es la de EXPEDICIÓN (la que pone el carné); la de caducidad se calcula en
- *   `apps/asegura` y es la que se enseña. La de expedición no vuelve nunca al portal (va cifrada), así que al
- *   corregir se escribe entera otra vez.
+ * - Se puede teclear la CADUCIDAD (anverso, por defecto) o la EXPEDICIÓN: `apps/asegura` deduce la expedición
+ *   desde la caducidad con el nacimiento y guarda solo la expedición; la caducidad que se enseña la calcula
+ *   él. La de expedición no vuelve nunca al portal (va cifrada), así que al corregir se escribe otra vez.
  * - La escritura la hace `apps/asegura` con la misma regla que el corredor; aquí solo se pinta lo que dice.
  *   Un fallo de lectura se DICE (nunca «no tienes carnés»).
  */
@@ -157,10 +157,10 @@ export function MisCarnets({ inicial, tipos, hoy }: { inicial: TitularCarnets[] 
           hoy={hoy}
           ocupado={ocupado}
           onCancelar={() => setForm(null)}
-          onGuardar={(fichaId, tipo, fecha) =>
+          onGuardar={(fichaId, tipo, cuerpoFecha) =>
             form.modo === 'alta'
-              ? enviar('/api/mis-datos/carnets', 'POST', { fichaId, tipo, fecha }, 'Carné guardado.')
-              : enviar(`/api/mis-datos/carnets/${encodeURIComponent(form.carnet.id)}`, 'PATCH', { fichaId, tipo, fecha }, 'Carné actualizado.')
+              ? enviar('/api/mis-datos/carnets', 'POST', { fichaId, tipo, ...cuerpoFecha }, 'Carné guardado.')
+              : enviar(`/api/mis-datos/carnets/${encodeURIComponent(form.carnet.id)}`, 'PATCH', { fichaId, tipo, ...cuerpoFecha }, 'Carné actualizado.')
           }
         />
       )}
@@ -185,10 +185,11 @@ function FormularioCarnet({
   hoy: string
   ocupado: boolean
   onCancelar: () => void
-  onGuardar: (fichaId: string, tipo: string, fecha: string) => void
+  onGuardar: (fichaId: string, tipo: string, cuerpoFecha: Record<string, string>) => void
 }) {
   const [fichaId, setFichaId] = useState(form.modo === 'cambio' ? form.fichaId : (titulares[0]?.fichaId ?? ''))
   const [tipo, setTipo] = useState(form.modo === 'cambio' ? form.carnet.tipo : 'B')
+  const [cual, setCual] = useState<'caducidad' | 'expedicion'>('caducidad')
   const [fecha, setFecha] = useState('')
   const listo = fichaId !== '' && tipo !== '' && fecha !== ''
 
@@ -197,7 +198,7 @@ function FormularioCarnet({
       className="mis-carnets-form"
       onSubmit={(e) => {
         e.preventDefault()
-        if (listo && !ocupado) onGuardar(fichaId, tipo, fecha)
+        if (listo && !ocupado) onGuardar(fichaId, tipo, cual === 'caducidad' ? { fechaCaducidad: fecha } : { fecha })
       }}
     >
       <p className="mis-carnets-form-titulo">{form.modo === 'alta' ? 'Añadir un carné' : `Cambiar el carné ${form.carnet.tipo}`}</p>
@@ -223,9 +224,36 @@ function FormularioCarnet({
           ))}
         </select>
       </label>
+      <fieldset className="mi-direccion-campo" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+        <legend>¿Qué fecha tienes a mano?</legend>
+        {(
+          [
+            ['caducidad', 'Caducidad (anverso)'],
+            ['expedicion', 'Expedición'],
+          ] as const
+        ).map(([valor, texto]) => (
+          <label key={valor} style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44 }}>
+            <input
+              type="radio"
+              name="cual-fecha-carnet"
+              checked={cual === valor}
+              onChange={() => {
+                setCual(valor)
+                setFecha('')
+              }}
+            />
+            <span>{texto}</span>
+          </label>
+        ))}
+      </fieldset>
       <label className="mi-direccion-campo">
-        <span>Fecha de expedición (la que pone tu carné; si lo renovaste, la de la última renovación)</span>
-        <input type="date" value={fecha} max={hoy} onChange={(e) => setFecha(e.target.value)} required />
+        <span>{cual === 'caducidad' ? 'Fecha de caducidad' : 'Fecha de expedición'}</span>
+        <input type="date" value={fecha} {...(cual === 'expedicion' ? { max: hoy } : {})} onChange={(e) => setFecha(e.target.value)} required />
+        <small>
+          {cual === 'caducidad'
+            ? 'La que ves en el anverso del carné (apartado 4b). Con ella y tu fecha de nacimiento calculamos el resto.'
+            : 'La del reverso (apartado 4a/10); si lo renovaste, la de la última renovación.'}
+        </small>
       </label>
       <div className="config-contactos-anadir">
         <button type="submit" className="boton-tenue" disabled={!listo || ocupado}>

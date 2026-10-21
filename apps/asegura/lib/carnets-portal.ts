@@ -177,6 +177,7 @@ export async function escribirCarnetPortal(
           ...(op.accion === 'cambio' ? { id: op.id } : {}),
           tipo: op.tipo,
           fecha: op.fecha,
+          fechaCaducidad: op.fechaCaducidad,
           actor,
           origen,
         })
