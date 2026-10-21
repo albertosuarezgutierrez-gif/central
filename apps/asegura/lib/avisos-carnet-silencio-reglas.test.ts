@@ -17,7 +17,7 @@ test('la identidad con el aviso apagado calla SU ficha, no la de otra identidad'
   const r = fichasConCarnetSilenciado({
     vinculos: [
       { identidadId: 'i1', clienteId: F1, nivel: 'gestionar' },
-      { identidadId: 'i2', clienteId: F2, nivel: 'administrar' },
+      { identidadId: 'i2', clienteId: F2, nivel: 'gestionar' },
     ],
     silenciadas: new Set(['i1']),
   })
@@ -25,10 +25,20 @@ test('la identidad con el aviso apagado calla SU ficha, no la de otra identidad'
 })
 
 test('🪤 un vínculo de solo consulta (tarjeta/completo/raro) a la ficha de OTRA persona no puede apagar su aviso', () => {
-  for (const nivel of ['tarjeta', 'completo', 'root', '']) {
+  for (const nivel of ['tarjeta', 'completo', 'administrar', 'root', '']) {
     const r = fichasConCarnetSilenciado({ vinculos: [{ identidadId: 'i1', clienteId: F1, nivel }], silenciadas: new Set(['i1']) })
     assert.equal(r.size, 0, `nivel «${nivel}» apagó el aviso de otra persona`)
   }
+})
+
+test('🪤 quien ADMINISTRA la ficha de otra persona no calla su correo; solo su titular (gestionar)', () => {
+  const vinculos = [
+    { identidadId: 'admin', clienteId: F2, nivel: 'administrar' },
+    { identidadId: 'admin', clienteId: F1, nivel: 'gestionar' },
+    { identidadId: 'titular2', clienteId: F2, nivel: 'gestionar' },
+  ]
+  assert.deepEqual([...fichasConCarnetSilenciado({ vinculos, silenciadas: new Set(['admin']) })], [F1])
+  assert.deepEqual([...fichasConCarnetSilenciado({ vinculos, silenciadas: new Set(['titular2']) })], [F2])
 })
 
 test('basta UNA identidad que opera la ficha con el aviso apagado', () => {

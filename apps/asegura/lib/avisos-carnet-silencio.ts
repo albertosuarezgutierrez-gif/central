@@ -6,10 +6,10 @@
  * (`portal_vinculo`, sin el vínculo temporal del CORREDOR; ver `avisos-vencimiento-canal.ts`).
  *
  * 🚨 Reglas:
- *  - Solo cuentan las identidades con un vínculo que OPERA sobre la ficha (`NIVELES_QUE_OPERAN`): la misma
- *    puerta que deja ver y tocar el carné en el portal. Quien solo tiene `tarjeta`/`completo` sobre la ficha de
- *    otra persona no puede apagar el aviso de esa persona.
- *  - Basta UNA de esas identidades con el aviso apagado: es una petición expresa de no recibirlo.
+ *  - Solo cuenta la identidad TITULAR de la ficha (vínculo `gestionar`). Quien la `administrar` (ve y toca el
+ *    carné de otra persona en el portal) o tiene `tarjeta`/`completo` NO puede callar el correo de esa persona:
+ *    ante la duda, se envía (decisión 21/10/2026).
+ *  - Basta UNA identidad titular con el aviso apagado: es una petición expresa de no recibirlo.
  *  - Sin identidad vinculada, o sin fila, se manda (encendido por defecto).
  *  - Lectura fallida → `null` y quien llama MANDA (fail-open): repetir un aviso es mejor que esconder uno.
  *

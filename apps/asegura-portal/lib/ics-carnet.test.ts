@@ -42,7 +42,7 @@ test('el texto se escapa y el id no puede colar saltos de línea en el UID', () 
   const ics = icsCaducidadCarnet({ ...base, tipo: 'B;C,1', id: 'ab\r\nBEGIN:EVIL' })!
   assert.match(ics, /UID:carnet-abBEGINEVIL@/)
   assert.doesNotMatch(ics, /\r\nBEGIN:EVIL/)
-  assert.match(ics, /SUMMARY:Caduca mi carné de conducir \(B\;C\\,1\)/)
+  assert.match(ics, /SUMMARY:Caduca mi carné de conducir \(B\\;C\\,1\)/)
 })
 
 test('ninguna línea pasa de 75 octetos y el plegado no parte un carácter', () => {

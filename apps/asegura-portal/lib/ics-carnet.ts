@@ -28,7 +28,7 @@ function diaSiguiente(iso: string): string {
 }
 
 function escapar(t: string): string {
-  return t.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
+  return t.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
 }
 
 /** Pliega a 75 octetos UTF-8 por línea (continuación: CRLF + espacio), sin partir un carácter. */
