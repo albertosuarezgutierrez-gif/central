@@ -154,6 +154,10 @@ export type RelacionCartera = RelacionFicha & {
    * se ofrece apoderamiento**, que NO es lo mismo que afirmar que es una persona.
    */
   tipoOtorgante: TipoOtorgantePortal | null
+  /** Tipo de persona del relacionado. `undefined`/`null` = no consta (NO es «persona física»). */
+  tipoPersona?: TipoOtorgantePortal | null
+  /** Estado del correo del relacionado. `undefined` = asegura no lo mandó; se trata como `no_se_sabe`. */
+  correo?: 'con_email' | 'sin_email' | 'baja_de_correo' | 'no_se_sabe'
   /** Pólizas vivas del relacionado. `null` = asegura no las contó (NO es 0). */
   polizasVivas: number | null
   /**
@@ -360,6 +364,9 @@ export function leerRelacion(v: unknown): RelacionCartera | null {
       o.tipoOtorgante === 'juridica' || o.tipoOtorgante === 'fisica'
         ? (o.tipoOtorgante as TipoOtorgantePortal)
         : null,
+    tipoPersona: o.tipoPersona === 'juridica' || o.tipoPersona === 'fisica' ? o.tipoPersona : null,
+    correo:
+      o.correo === 'con_email' || o.correo === 'sin_email' || o.correo === 'baja_de_correo' ? o.correo : 'no_se_sabe',
     polizasVivas: enteroONull(o.polizasVivas),
     polizasFigura: 'polizasFigura' in o ? enteroONull(o.polizasFigura) : undefined,
     autorizacion: leerAutorizacion(o.autorizacion),

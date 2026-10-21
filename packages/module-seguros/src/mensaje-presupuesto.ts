@@ -132,6 +132,64 @@ export function correoPresupuesto(d: DatosAvisoPresupuesto): CorreoPresupuesto {
 }
 
 /**
+ * El aviso a una PERSONA DE CONTACTO del tomador (21/10/2026): la empresa no tiene correo y Alberto elige a su dueño,
+ * administrador o representante (o a quien el tomador autoriza a ver sus pólizas) — `destinatarios-presupuesto.ts`.
+ * 🚨 Se le escribe COMO CONTACTO de la empresa, nunca como si fuera el tomador: «le he preparado a <empresa>», no
+ * «te he preparado». Lleva el CÓDIGO de acceso de ESTE presupuesto (el mismo mecanismo que el WhatsApp): abre ese
+ * presupuesto y nada más; no entra en el área de clientes de la empresa ni con su correo, que no es el de la ficha.
+ * Igual que el resto: sin precio, compañía ni bien asegurado.
+ */
+export type DatosAvisoTercero = {
+  /** Nombre de la persona de contacto; `null` = se saluda sin nombre. */
+  nombre: string | null
+  /** Nombre de la empresa (el tomador); `null` = «la empresa». */
+  empresa: string | null
+  enlace: string
+  venceEl: Date
+  /** Código de acceso de ESTE presupuesto (6 dígitos). */
+  codigo: string
+}
+
+export function correoPresupuestoTercero(d: DatosAvisoTercero): CorreoPresupuesto {
+  const empresa = d.empresa?.trim() || null
+  const deEmpresa = empresa ?? 'la empresa'
+  const asunto = empresa ? `Presupuesto de seguro para ${empresa}` : 'Presupuesto de seguro para la empresa'
+  const vence = `Es válido hasta el ${fechaEs(d.venceEl)}.`
+  const lineas = [
+    `${saludo(d.nombre)}:`,
+    `Te escribo como persona de contacto de ${deEmpresa}: en su ficha no tenemos un correo de la empresa. Le he preparado a ${deEmpresa} un presupuesto de seguro.`,
+    `Para verlo, abre este enlace y escribe este código de acceso: ${d.codigo}. El código sirve solo para este presupuesto.`,
+    d.enlace,
+    vence,
+    `Si no eres tú quien lleva los seguros de ${deEmpresa}, respóndeme y lo corrijo.`,
+    'Alberto Suárez · Grupo ASegura',
+  ]
+  const texto = lineas.join('\n\n')
+
+  const cuerpo = "font-family:'Nunito Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif"
+  const titular = 'font-family:Quicksand,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-weight:700'
+  const p = (t: string, extra = '') => `<p style="font-size:16px;line-height:1.6;margin:0 0 14px${extra}">${escapar(t)}</p>`
+  const html = [
+    `<div style="background:#f3f5fc;padding:24px 12px">`,
+    `<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e6e9f5;${cuerpo};color:${TINTA}">`,
+    `<div style="padding:28px 32px 20px;border-bottom:4px solid ${AZUL}"><img src="${LOGO_CORREO}" width="220" height="32" alt="Grupo ASegura" style="display:block;width:220px;height:auto;border:0"></div>`,
+    `<div style="padding:28px 32px">`,
+    `<p style="${titular};font-size:22px;line-height:1.25;color:${AZUL};margin:0 0 14px">${escapar(saludo(d.nombre))}</p>`,
+    p(`Te escribo como persona de contacto de ${deEmpresa}: en su ficha no tenemos un correo de la empresa. Le he preparado a ${deEmpresa} un presupuesto de seguro.`),
+    p('Para verlo, pulsa el botón y escribe este código de acceso (sirve solo para este presupuesto):'),
+    `<p style="${titular};font-size:28px;letter-spacing:4px;text-align:center;margin:8px 0 18px">${escapar(d.codigo)}</p>`,
+    `<div style="text-align:center;margin:0 0 22px"><a href="${escapar(d.enlace)}" style="display:inline-block;background:${AZUL};color:#fff;text-decoration:none;${titular};font-size:17px;padding:14px 28px;border-radius:10px">Ver el presupuesto</a></div>`,
+    p(vence, ';font-weight:700'),
+    p(`Si no eres tú quien lleva los seguros de ${deEmpresa}, respóndeme y lo corrijo.`),
+    `<p style="font-size:16px;line-height:1.5;margin:22px 0 0">Un saludo,<br><strong>Alberto Suárez</strong><br>Grupo ASegura</p>`,
+    `</div>`,
+    `<div style="background:#f3f5fc;padding:14px 32px;font-size:12px;line-height:1.5;color:#5a6280">Si el botón no funciona, copia este enlace en el navegador:<br><a href="${escapar(d.enlace)}" style="color:${AZUL};word-break:break-all">${escapar(d.enlace)}</a></div>`,
+    `</div></div>`,
+  ].join('')
+  return { asunto, texto, html }
+}
+
+/**
  * El `wa.me` del aviso del presupuesto (21/10/2026): con el móvil del TOMADOR (solo dígitos E.164) si lo hay, para que el
  * chat de Alberto se abra ya con él; sin uno válido, SIN número (WhatsApp le deja elegir). No envía nada. PURO.
  */

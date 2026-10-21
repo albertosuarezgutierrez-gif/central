@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Correduría · presupuesto a la persona de contacto de una EMPRESA sin correo (Studium: Victor «Dueño»). Regla
+de Alberto en `destinatariosPresupuesto` (module-seguros): solo «Dueño»/«Administración» (tomador `juridica`) o autorización vigente en
+`portal_autorizacion` (la columna `puede_ver_polizas` está MUERTA desde 03/09). Asegura revalida (409 si no elegible); el tercero recibe código
+solo de ese presupuesto y PUEDE firmar (decidido por Alberto). Ficha de empresa: aviso + «autorizar contacto» (queda pendiente de aceptar).
+Medido: 9 empresas en vigor, 3 sin correo, las 3 con Dueño/Administración con correo; 11/57 personas físicas sin correo.
+
 **(21/10/2026)** — Correduría · ficha de oportunidad: «Historial y bonificaciones» (SINCO, años sin siniestros) salía en ramos que no son
 de vehículo (lo vio Alberto en una de Accidentes). Ahora solo sale en auto/moto: `muestraHistorialSinco()` en `piezas-riesgo.ts` reutiliza
 `admiteDatosVehiculo()`; test `historial-sinco.test.ts` (visto en rojo). Pendiente: en esa misma ficha, la Comparativa dice «Esta oportunidad no

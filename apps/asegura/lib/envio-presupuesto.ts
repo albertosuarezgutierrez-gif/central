@@ -25,7 +25,7 @@
 // que usa una pimienta que solo existe allí. Quien entra con el correo de la
 // ficha ve el presupuesto por la rama del vínculo (`portal_vinculo.cliente_id`).
 
-import { calcularVencimiento, correoPresupuesto, enlaceWhatsappPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp } from '@central/module-seguros'
+import { calcularVencimiento, correoPresupuesto, correoPresupuestoTercero, destinatarioElegible, enlaceWhatsappPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp } from '@central/module-seguros'
 import { generarCodigo, generarTokenVista, hashCodigoWhatsapp, hashTokenVista } from '@central/module-seguros-portal'
 
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
@@ -35,6 +35,8 @@ import { crearEnlaceDirecto } from './avisos-intranet'
 import { datosParaEmitir } from './datos-emision'
 import { MOTIVO_REMITENTE, rechazoDeRemitente } from './correo-invitacion-portal'
 import { estadoEmailDeFicha } from './email-ficha'
+import { leerDestinatarios } from './destinatarios-presupuesto'
+import { anotarCambio } from './auditoria'
 import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
 import { fechaEfectoDe } from './presupuesto'
 import { admiteCodeoscopic, decidirSalida } from './presupuesto-origen'
@@ -57,6 +59,11 @@ export type FalloEnvio =
   | 'incierto'
   /** Aviso de un LOTE (propuesta de escenarios): otro presupuesto del lote no pudo salir, así que no sale ninguno. */
   | 'lote_cancelado'
+  /**
+   * El destinatario elegido NO es una persona de contacto que pueda recibirlo (21/10/2026): el tomador tiene correo, o
+   * esa ficha no es su dueño/administrador/representante ni está autorizada a ver sus pólizas, o no tiene correo.
+   */
+  | 'destinatario_no_elegible'
 
 /**
  * Lo que un presupuesto aporta al correo ÚNICO de su lote (`lib/barrera-lote.ts`): su enlace y a quién va.
@@ -125,7 +132,20 @@ const TEXTO_SIN_EMAIL: Record<string, string> = {
   ilegible: 'El correo de la ficha no se puede descifrar (PII_ENCRYPTION_KEY). Se arregla en Vercel, no llamando al cliente.',
 }
 
-type EntradaAviso = { id: string; canal: CanalAviso; actor: string }
+type EntradaAviso = {
+  id: string; canal: CanalAviso; actor: string
+  /**
+   * (21/10/2026) La empresa no tiene correo y Alberto elige a una PERSONA DE CONTACTO. Solo correo, nunca en lote ni en
+   * hilo. Se valida AQUÍ con la regla de `destinatarios-presupuesto.ts` (no se cree a la pantalla).
+   */
+  destinatarioClienteId?: string | null
+}
+
+/** La persona de contacto a la que sale el aviso en vez de al tomador. Ya VALIDADA en `prepararAviso`. */
+export type TerceroAviso = { clienteId: string; nombre: string | null; relacion: string; via: 'representacion' | 'autorizacion'; email: string }
+
+const TEXTO_NO_ELEGIBLE_ENVIO =
+  'Esa persona no puede recibir el presupuesto: solo un dueño, administrador o representante de la empresa, o alguien a quien el tomador autoriza a ver sus pólizas, con correo en su ficha, y solo si el tomador no tiene correo. No ha salido nada.'
 
 export async function avisarPresupuesto(
   correduriaId: string,
@@ -169,6 +189,8 @@ export type AvisoPreparado = {
   nombre: string | null
   emailAcceso: string | null
   datos: { nombre: string | null; enlace: string; venceEl: Date; email: string | null; faltanDatos: number | null }
+  /** `null` = va al tomador (lo de siempre). */
+  tercero: TerceroAviso | null
 }
 
 /** Fase 1: SOLO LEE. Todas las guardas; ninguna escritura. */
@@ -199,10 +221,26 @@ export async function prepararAviso(correduriaId: string, entrada: EntradaAviso,
   const salida = decidirSalida(p, { simulado: t?.simulado ?? null, opciones: opcionesOfertas })
   if (!salida.ok) return error(salida.motivo, salida.detalle)
 
+  // Persona de contacto (21/10/2026): la regla se RECALCULA aquí sobre la BD; el id que manda la pantalla no se cree.
+  let tercero: TerceroAviso | null = null
+  const destinatarioId = typeof entrada.destinatarioClienteId === 'string' ? entrada.destinatarioClienteId.trim() : ''
+  if (destinatarioId !== '') {
+    if (entrada.canal !== 'email') return error('destinatario_no_elegible', 'A una persona de contacto solo se le manda por correo.')
+    const lectura = await leerDestinatarios(correduriaId, p.clienteId)
+    const elegido = lectura ? destinatarioElegible(lectura.destinatarios, destinatarioId) : null
+    const email = elegido ? lectura?.emails[elegido.clienteId] : undefined
+    if (!elegido || !email) return error('destinatario_no_elegible', TEXTO_NO_ELEGIBLE_ENVIO)
+    tercero = { clienteId: elegido.clienteId, nombre: elegido.nombre, relacion: elegido.relacion, via: elegido.via, email }
+  }
+
   const ficha = await estadoEmailDeFicha(correduriaId, p.clienteId)
   // El correo con el que se le dice que puede entrar. `null` (solo por WhatsApp) = no se nombra ninguno.
   let emailAcceso: string | null
-  if (entrada.canal === 'email') {
+  if (tercero) {
+    // 🚨 El correo del contacto NO lleva al portal de la empresa (no es el de su ficha): entra con el CÓDIGO de este
+    // presupuesto, que va en el propio correo y no abre nada más. Por eso aquí no se exige `estadoPortalDeFicha`.
+    emailAcceso = tercero.email
+  } else if (entrada.canal === 'email') {
     if (ficha.estado !== 'ok') return error('sin_email', TEXTO_SIN_EMAIL[ficha.estado] ?? 'No hay un correo al que mandar el código.')
     // El portal enseña el presupuesto por el VÍNCULO con la ficha, y ese vínculo solo se forma si su
     // correo resuelve a ESTA ficha. Avisar a quien luego vería «este presupuesto no es tuyo» es peor
@@ -233,7 +271,8 @@ export async function prepararAviso(correduriaId: string, entrada: EntradaAviso,
 
   const token = generarTokenVista()
   // El código de acceso del WhatsApp: nuevo en cada enlace. Solo se guarda su hash, atado al token.
-  const codigoWhatsapp = entrada.canal === 'whatsapp_enlace' ? generarCodigo() : null
+  // A una persona de contacto también: es su única puerta, y abre SOLO este presupuesto (cookie del portal atada a él).
+  const codigoWhatsapp = entrada.canal === 'whatsapp_enlace' || tercero ? generarCodigo() : null
   const enlace = enlacePresupuesto(token)
   if (!enlace) return error('sin_enlace', 'Falta ASEGURA_PORTAL_URL o no es https: sin enlace no hay presupuesto que abrir. No se ha tocado nada.')
 
@@ -241,13 +280,13 @@ export async function prepararAviso(correduriaId: string, entrada: EntradaAviso,
   const nombre = await nombreDe(correduriaId, p.clienteId)
   // Cuántos datos SUYOS faltan para emitir (§4bis): solo el número. Si no se puede leer, no se dice nada.
   // En un presupuesto de ofertas no se dice: esos datos son los de la emisión por Avant2, que aquí no hay.
-  const faltanDatos = salida.via === 'ofertas'
+  const faltanDatos = salida.via === 'ofertas' || tercero
     ? null
     : await datosParaEmitir(correduriaId, p.clienteId).then((r) => r?.faltanCliente ?? null).catch(() => null)
   const datos = { nombre, enlace, venceEl: venceSiSale, email: emailAcceso, faltanDatos }
   return {
     estado: 'preparado', correduriaId, entrada: { id: entrada.id, canal: entrada.canal, actor: entrada.actor }, ahora,
-    p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos,
+    p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos, tercero,
   }
 }
 
@@ -270,9 +309,11 @@ export type DbAviso = Pick<ReturnType<typeof prismaAsegura>, 'presupuesto' | 'pr
 export async function ejecutarAviso(
   prep: AvisoPreparado, lote: BarreraLote<ParteLote> | null = null, db: DbAviso = prismaAsegura(), hilo: AvisoEnHilo | null = null,
 ): Promise<ResultadoEnvio> {
-  const { correduriaId, entrada, ahora, p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos } = prep
+  const { correduriaId, entrada, ahora, p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos, tercero } = prep
   // En el hilo solo por correo y nunca dentro de un lote (el lote compone su propio correo único).
   if (hilo && (entrada.canal !== 'email' || lote)) return error('no_enviable', 'Un aviso en el hilo del cliente solo sale por correo y suelto.')
+  // Una persona de contacto: solo por correo, suelto, y con su código (sin él no abriría nada).
+  if (tercero && (entrada.canal !== 'email' || lote || hilo || codigoWhatsapp === null)) return error('no_enviable', 'A una persona de contacto solo se le avisa por correo y suelto.')
   // 🚨 Con una clave que YA se usó (salió o quedó incierta) no se rota el enlace: el correo que quizá tiene el cliente
   //    lleva el token de entonces, y Resend no reenvía con la misma clave. Rotar aquí le dejaría un enlace muerto.
   if (hilo && (await claveYaUsada(db, p.id, hilo.idempotencia))) return error('incierto', TEXTO_CLAVE_USADA)
@@ -309,8 +350,12 @@ export async function ejecutarAviso(
   // que con sesión lleva al presupuesto. Si no se puede atar al correo, va el enlace de siempre.
   // Por correo `emailAcceso` es SIEMPRE el de la ficha: sin él se cortó arriba, antes de escribir.
   const correo = emailAcceso as string
-  const directo = await enlaceDirectoPresupuesto(correduriaId, p.clienteId, correo, enlace)
-  const base = correoPresupuesto({ ...datos, enlaceDirecto: directo })
+  // 🚨 A una persona de contacto NUNCA el acceso directo: esa llave abre la sesión del portal del TOMADOR (toda su
+  // bóveda) y además borra las del tomador. Va el enlace de la carátula con el código de este presupuesto.
+  const directo = tercero ? null : await enlaceDirectoPresupuesto(correduriaId, p.clienteId, correo, enlace)
+  const base = tercero
+    ? correoPresupuestoTercero({ nombre: tercero.nombre, empresa: nombre, enlace, venceEl: venceSiSale, codigo: codigoWhatsapp! })
+    : correoPresupuesto({ ...datos, enlaceDirecto: directo })
   const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', correo, hilo ? correoEnHilo(base, hilo) : base,
     lote ? { barrera: lote, parte: { presupuestoId: p.id, clienteId: p.clienteId, email: correo, nombre, enlace: directo ?? enlace, venceEl: venceSiSale } } : null,
     hilo)
@@ -337,10 +382,34 @@ export async function ejecutarAviso(
     data: {
       ...(p.enviadoAt === null ? { enviadoAt: ahora } : {}),
       venceEl: venceSiSale,
-      eventos: { create: [{ tipo: 'enviado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'email', reenvio: p.enviadoAt !== null, ...(hilo ? { enHilo: true, idempotencia: hilo.idempotencia } : {}) } }] },
+      eventos: { create: [{ tipo: 'enviado', origen: 'corredor', detalle: {
+        actor: entrada.actor, canal: 'email', reenvio: p.enviadoAt !== null, ...(hilo ? { enHilo: true, idempotencia: hilo.idempotencia } : {}),
+        // Quién lo recibió si no fue el tomador (id de ficha, relación y por qué; nunca el correo).
+        ...(tercero ? { destinatario: { clienteId: tercero.clienteId, relacion: tercero.relacion, via: tercero.via } } : {}),
+      } }] },
     },
   })
+  if (tercero) await anotarEnvioATercero(correduriaId, p.id, p.clienteId, tercero, entrada.actor)
   return { estado: 'enviado', email: correo, venceEl: venceSiSale.toISOString() }
+}
+
+/**
+ * Rastro de que el presupuesto del tomador lo recibió OTRA persona (21/10/2026): fila en `historial_interno` de la ficha
+ * del tomador y cambio auditado. No lanza: el correo ya salió y el evento `enviado` ya lo dice; un fallo aquí se registra.
+ */
+async function anotarEnvioATercero(correduriaId: string, presupuestoId: string, tomadorId: string, t: TerceroAviso, actor: string): Promise<void> {
+  anotarCambio({ entidad: 'presupuesto', id: presupuestoId, campo: 'destinatario_tercero', antes: null, despues: t.clienteId })
+  const quien = t.nombre ?? 'una persona de contacto'
+  const porque = t.via === 'representacion' ? `${t.relacion} de la empresa` : `autorizado/a por el tomador a ver sus pólizas (${t.relacion})`
+  try {
+    await prismaAsegura().$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${tomadorId}::uuid, cast('gestion' as tipo_historial_interno),
+              ${`Presupuesto enviado por correo a ${quien} (${porque}) como persona de contacto: el tomador no tiene correo en su ficha. ` +
+                `Lleva un código que abre SOLO ese presupuesto, no el área de clientes. Lo envió ${actor}.`})`
+  } catch (e) {
+    console.error('[asegura/presupuesto] no se pudo anotar en historial_interno el envío a un contacto:', e instanceof Error ? e.message : e)
+  }
 }
 
 /**

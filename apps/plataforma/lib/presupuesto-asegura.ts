@@ -243,6 +243,11 @@ export async function descargarPdfPresupuestoAsegura(id: string): Promise<Respon
   })
 }
 
+/** A quién se le puede mandar un presupuesto de ese tomador si no tiene correo (21/10/2026). Solo lectura. */
+export function destinatariosPresupuestoAsegura(clienteId: string): Promise<Reenvio> {
+  return puerto({ method: 'GET' }, `/destinatarios?clienteId=${encodeURIComponent(clienteId)}`)
+}
+
 export function listarPresupuestosAsegura(q: { clienteId?: string; polizaId?: string }): Promise<Reenvio> {
   const p = new URLSearchParams()
   if (q.clienteId) p.set('clienteId', q.clienteId)

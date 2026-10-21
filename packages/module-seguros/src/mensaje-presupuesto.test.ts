@@ -88,3 +88,19 @@ test('🪤 wa.me con el móvil del TOMADOR si lo hay; sin él, sin número (21/1
   assert.equal(enlaceWhatsappPresupuesto('Hola', null), 'https://wa.me/?text=Hola')
   assert.equal(enlaceWhatsappPresupuesto('Hola', '12'), 'https://wa.me/?text=Hola')
 })
+
+test('🪤 el correo a una persona de contacto: como contacto de la EMPRESA, con su código, y sin precio ni datos', async () => {
+  const { correoPresupuestoTercero } = await import('./mensaje-presupuesto.ts')
+  const t = { nombre: 'Víctor Pérez', empresa: 'Talleres Ejemplo SL', enlace: 'https://x.es/presupuesto/abc', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' }
+  const c = correoPresupuestoTercero(t)
+  assert.match(c.asunto, /Talleres Ejemplo SL/)
+  assert.match(c.texto, /^Hola, Víctor:/)
+  assert.match(c.texto, /como persona de contacto de Talleres Ejemplo SL/)
+  assert.match(c.texto, /Le he preparado a Talleres Ejemplo SL/)
+  assert.doesNotMatch(c.texto, /Te he preparado|tu presupuesto|datos tuyos/i)
+  for (const x of [c.texto, c.html]) assert.match(x, /123456/)
+  assert.doesNotMatch(c.texto, /\b(DNI|NIE|IBAN|cuenta bancaria|€)\b/i)
+  assert.deepEqual(revisarCopy(c.texto), [])
+  assert.doesNotMatch(correoPresupuestoTercero({ ...t, empresa: null, nombre: null }).texto, /null|undefined/)
+  assert.match(correoPresupuestoTercero({ ...t, enlace: 'https://x.es/p/"><b>' }).html, /&quot;&gt;&lt;b&gt;/)
+})

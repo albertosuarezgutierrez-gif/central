@@ -42,7 +42,8 @@ test('🪤 regenerar el enlace = código nuevo; avisar por correo lo borra; si e
   assert.match(cas, /whatsappCodigoHash: nuevoCodigoHash,/)
   assert.match(cas, /whatsappCodigoIntentos: 0,/)
   assert.match(avisar, /const nuevoCodigoHash = codigoWhatsapp === null \? null : await hashCodigoWhatsapp\(token, codigoWhatsapp\)/)
-  assert.match(avisar, /const codigoWhatsapp = entrada\.canal === 'whatsapp_enlace' \? generarCodigo\(\) : null/)
+  // (21/10/2026) También el correo a una PERSONA DE CONTACTO lleva código (su única puerta); el correo al tomador, no.
+  assert.match(avisar, /const codigoWhatsapp = entrada\.canal === 'whatsapp_enlace' \|\| tercero \? generarCodigo\(\) : null/)
   assert.match(avisar, /data: \{ tokenHash: p\.tokenHash, canalAviso: p\.canalAviso, whatsappCodigoHash: p\.whatsappCodigoHash,/)
   // El código va en el mensaje y en ningún otro sitio: ni en el evento ni en la respuesta fuera del texto.
   assert.match(avisar, /mensajePresupuestoWhatsapp\(\{ \.\.\.datos, codigo: codigoWhatsapp! \}\)/)

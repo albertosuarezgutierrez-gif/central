@@ -406,7 +406,7 @@ export const TEXTO_CARATULA = {
   titulo: 'Tienes un presupuesto preparado',
   cuerpo:
     'Alberto Suárez, de Grupo ASegura, te ha preparado un presupuesto. Es personal, así que no se enseña aquí: escribe el código de acceso que te mandé por WhatsApp, o entra con tu correo y te mando un código de un solo uso.',
-  conWhatsapp: '¿Te lo he mandado por WhatsApp?',
+  conWhatsapp: 'Escribe el código de 6 dígitos que te hemos enviado',
   conCorreo: 'O entra con tu correo',
   enlaceMuerto:
     'Este enlace ya no sirve. Puede que haya caducado o que se haya retirado. Escríbeme y te preparo otro.',

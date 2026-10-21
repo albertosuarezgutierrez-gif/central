@@ -6,12 +6,15 @@
 //   2. WhatsApp: abre el chat del tomador (`wa.me/<móvil>` si hay uno válido; si no, sin número) con el texto de marca.
 //      Lo manda Alberto; luego «Ya lo he mandado» lo sella como enviado.
 //   3. Correo: el envío de siempre (`avisar` por email, con confirmación); solo si el tomador tiene correo.
+//   4. (21/10/2026) Sin correo del tomador: a una PERSONA DE CONTACTO que Alberto elige entre las elegibles (dueño,
+//      administrador o representante, o autorizada a ver sus pólizas, con correo). Los no elegibles se listan con su
+//      porqué. asegura vuelve a comprobar la regla al enviar: este selector no autoriza nada.
 // Botones ≥44 px, en rejilla que baja a una columna en 320 px.
 
 import { useCallback, useEffect, useState } from 'react'
 import { btnStyle } from '@/components/ui'
 import { avisoRotacion, leerPresupuestoEnLista, textoAviso, type PresupuestoEnLista } from '@/lib/presupuesto-asegura'
-import { CONFIRMAR_CORREO, leerEnlaceAviso } from './enviar-cliente'
+import { CONFIRMAR_CORREO, cabeceraDestinatarios, confirmarCorreoContacto, etiquetaContacto, etiquetaDescartado, leerDestinatarios, leerEnlaceAviso, type LecturaDestinatarios } from './enviar-cliente'
 
 type Patch = { status: number; json: unknown }
 async function patch(id: string, cuerpo: Record<string, unknown>): Promise<Patch> {
@@ -40,6 +43,27 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
     } catch { setFila(null) }
   }, [clienteId, presupuestoId])
   useEffect(() => { void releer() }, [releer])
+
+  // Personas de contacto: solo se miran si el tomador NO tiene correo. `undefined` = leyendo; `null` = no se pudo leer.
+  const [destinos, setDestinos] = useState<LecturaDestinatarios | null | undefined>(undefined)
+  const [elegidoId, setElegidoId] = useState<string | null>(null)
+  useEffect(() => {
+    if (correo !== 'sin_email') return
+    let vivo = true
+    void (async () => {
+      try {
+        const r = await fetch(`/api/correduria/presupuesto/destinatarios?clienteId=${encodeURIComponent(clienteId)}`, { cache: 'no-store' })
+        const l = leerDestinatarios(r.status, await r.json().catch(() => null))
+        if (!vivo) return
+        setDestinos(l)
+        // Con uno solo se deja marcado; con varios, que elija Alberto.
+        setElegidoId(l?.estado === 'contactos' && l.elegibles.length === 1 ? l.elegibles[0]!.clienteId : null)
+      } catch { if (vivo) setDestinos(null) }
+    })()
+    return () => { vivo = false }
+  }, [correo, clienteId])
+  const elegibles = destinos?.estado === 'contactos' ? destinos.elegibles : []
+  const descartados = destinos && (destinos.estado === 'contactos' || destinos.estado === 'nadie') ? destinos.noElegibles : []
 
   async function pedirEnlace(): Promise<ReturnType<typeof leerEnlaceAviso>> {
     // Rotar mata el enlace que ya tenga: lo decide el SERVIDOR (se relee justo antes), no esta sesión.
@@ -105,6 +129,17 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
     setAviso(textoAviso(r.status, r.json))
   }
 
+  async function porCorreoAContacto() {
+    const elegido = elegibles.find((e) => e.clienteId === elegidoId)
+    if (!elegido) { setAviso({ ok: false, texto: 'Elige primero a qué persona de contacto se le manda.' }); return }
+    if (!window.confirm(confirmarCorreoContacto(elegido))) return
+    setOcupado(true); setAviso(null)
+    const r = await patch(presupuestoId, { accion: 'avisar', canal: 'email', destinatarioClienteId: elegido.clienteId })
+    setOcupado(false)
+    setAviso(textoAviso(r.status, r.json))
+    void releer()
+  }
+
   async function yaMandado() {
     if (!window.confirm('¿Le has mandado ya el mensaje desde tu móvil?')) return
     setOcupado(true)
@@ -122,7 +157,36 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
         <button type="button" disabled={ocupado} onClick={() => void whatsapp()} style={boton}>WhatsApp</button>
         {correo === 'con_email' && <button type="button" disabled={ocupado} onClick={() => void porCorreo()} style={{ ...btnStyle('primario'), minHeight: 44, width: '100%' }}>Correo…</button>}
       </div>
-      {correo === 'sin_email' && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sin correo en su ficha: por correo no se le puede avisar (sí por WhatsApp o copiando el enlace).</span>}
+      {correo === 'sin_email' && (
+        <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
+          <span style={{ fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>
+            {destinos === undefined ? 'Sin correo en su ficha. Mirando sus personas de contacto…' : cabeceraDestinatarios(destinos)}
+          </span>
+          {elegibles.length > 0 && (
+            <fieldset style={{ border: 0, margin: 0, padding: 0, display: 'grid', gap: 6, minWidth: 0 }}>
+              <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Mandárselo por correo a:</legend>
+              {elegibles.map((e) => (
+                <label key={e.clienteId} style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 14, overflowWrap: 'anywhere', cursor: 'pointer' }}>
+                  <input type="radio" name={`destino-${presupuestoId}`} checked={elegidoId === e.clienteId} onChange={() => setElegidoId(e.clienteId)} style={{ width: 20, height: 20, flex: '0 0 auto' }} />
+                  <span style={{ minWidth: 0 }}>{etiquetaContacto(e)} · {e.email}</span>
+                </label>
+              ))}
+              <button type="button" disabled={ocupado || elegidoId === null} onClick={() => void porCorreoAContacto()} style={{ ...btnStyle('primario'), minHeight: 44, width: '100%' }}>
+                Correo a la persona de contacto…
+              </button>
+            </fieldset>
+          )}
+          {descartados.length > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--muted)', minWidth: 0 }}>
+              <span>No pueden recibirlo:</span>
+              <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                {descartados.map((d) => <li key={d.clienteId} style={{ overflowWrap: 'anywhere' }}>{etiquetaDescartado(d)}</li>)}
+              </ul>
+            </div>
+          )}
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Al tomador también por WhatsApp o copiando el enlace.</span>
+        </div>
+      )}
       {correo === 'no_se_sabe' && <span style={{ fontSize: 12, color: 'var(--muted)' }}>No se ha podido comprobar su correo: el envío por correo no se ofrece hasta poder leerlo.</span>}
       {fila?.resumenIa === 'sin_revisar' && (
         <button type="button" disabled={ocupado} onClick={() => void revisarResumen()} style={{ ...btnStyle('sutil'), minHeight: 44, justifySelf: 'start' }}>

@@ -97,3 +97,21 @@ test('🪤 la propuesta con una clave ya intentada e incierta no prepara otro pr
   const guarda = f.indexOf("if (previo) return { estado: 'fallo_envio', motivo: 'incierto'")
   assert.ok(guarda > 0 && guarda < f.indexOf('prepararPresupuestoDeOfertas('), 'se corta antes de crear/retirar presupuestos')
 })
+
+// 🪤 Persona de contacto (21/10/2026). Para verlo en rojo: quita `tercero ? null :` delante de `enlaceDirectoPresupuesto`
+// → falla «nunca el acceso directo»; o mueve la guarda `destinatario_no_elegible` detrás del compare-and-swap.
+test('🪤 a una persona de contacto: se valida en el servidor ANTES de escribir, y nunca con la llave del portal del tomador', () => {
+  const primeraEscritura = avisar.indexOf('updateMany(')
+  const guarda = avisar.indexOf("if (!elegido || !email) return error('destinatario_no_elegible'")
+  assert.ok(guarda > 0 && guarda < primeraEscritura, 'la regla se comprueba antes de rotar nada')
+  assert.match(avisar, /const lectura = await leerDestinatarios\(correduriaId, p\.clienteId\)/)
+  assert.match(avisar, /destinatarioElegible\(lectura\.destinatarios, destinatarioId\)/)
+  // El acceso directo abre la sesión del portal del TOMADOR: a un tercero, jamás.
+  assert.match(avisar, /const directo = tercero \? null : await enlaceDirectoPresupuesto\(/)
+  // Su única puerta es el código de ESTE presupuesto, que va en su correo.
+  assert.match(avisar, /entrada\.canal === 'whatsapp_enlace' \|\| tercero \? generarCodigo\(\) : null/)
+  assert.match(avisar, /correoPresupuestoTercero\(\{ nombre: tercero\.nombre, empresa: nombre,/)
+  // Rastro: quién lo recibió, en el evento y en historial_interno.
+  assert.match(avisar, /destinatario: \{ clienteId: tercero\.clienteId, relacion: tercero\.relacion, via: tercero\.via \}/)
+  assert.match(avisar, /if \(tercero\) await anotarEnvioATercero\(/)
+})
