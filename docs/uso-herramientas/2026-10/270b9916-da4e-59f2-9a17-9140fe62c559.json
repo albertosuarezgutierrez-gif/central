@@ -1,0 +1,91 @@
+{
+ "sesion": "270b9916-da4e-59f2-9a17-9140fe62c559",
+ "inicio": "2026-10-21T06:20:49.021Z",
+ "fin": "2026-10-21T06:24:12.250Z",
+ "llamadas": 29,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 9,
+   "chars_in": 1140,
+   "chars_out": 22205,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 5,
+    "Read": 3,
+    "Glob": 1
+   }
+  },
+  "otro": {
+   "llamadas": 4,
+   "chars_in": 4154,
+   "chars_out": 490,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2,
+    "SubagentHandback": 2
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 4,
+   "chars_in": 349,
+   "chars_out": 22370,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_projects": 1,
+    "mcp__Vercel__get_runtime_errors": 1,
+    "mcp__Vercel__get_runtime_logs": 1,
+    "mcp__Vercel__filter_project_envs": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 3177,
+   "chars_out": 296,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "bash": {
+   "llamadas": 8,
+   "chars_in": 6061,
+   "chars_out": 14692,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 8
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 1428,
+   "chars_out": 91,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 1,
+   "chars_in": 73,
+   "chars_out": 239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1
+   }
+  }
+ }
+}
