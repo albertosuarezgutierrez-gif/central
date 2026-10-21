@@ -199,7 +199,7 @@ export async function editarSolicitud(empresaId: string, usuarioId: string, soli
   // (que decide la firma de la resolución y el aviso al empleado) no puede cambiar en medio.
   return prisma.$transaction(async tx => {
     const [prev] = await tx.$queryRaw<any[]>(Prisma.sql`
-      SELECT s.estado, e.email AS empleado_email
+      SELECT s.estado, s.empleado_id::text AS empleado_id, e.email AS empleado_email
       FROM rrhh.solicitudes s JOIN rrhh.empleados e ON e.id = s.empleado_id
       WHERE s.id = ${solicitudId}::uuid AND s.empresa_id = ${empresaId}::uuid
       FOR UPDATE OF s`)
@@ -218,7 +218,7 @@ export async function editarSolicitud(empresaId: string, usuarioId: string, soli
           motivo = ${v.motivo}, estado = ${estado}, ${resolucion}
       WHERE id = ${solicitudId}::uuid AND empresa_id = ${empresaId}::uuid`)
 
-    return { estado, estado_anterior: prev.estado as string, empleado_email: prev.empleado_email as string | null, tipo: v.tipo }
+    return { estado, estado_anterior: prev.estado as string, empleado_id: prev.empleado_id as string, empleado_email: prev.empleado_email as string | null, tipo: v.tipo }
   })
 }
 

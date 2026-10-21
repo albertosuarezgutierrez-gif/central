@@ -69,7 +69,11 @@ export interface RepoAcceso {
   candidatosPorEmail(emailNormalizado: string): Promise<Candidato[]>
 }
 
-export type CorreoCodigo = { to: string; nombre: string; empresas: string[]; codigo: string }
+/** `destinos` = a qué empleados (y empresas) corresponde el correo: solo para avisar al responsable si el envío falla. */
+export type CorreoCodigo = {
+  to: string; nombre: string; empresas: string[]; codigo: string
+  destinos?: { empleado_id: string; empresa_id: string; nombre: string }[]
+}
 export type EnviarCodigo = (c: CorreoCodigo) => Promise<boolean>
 
 // ── Paso 1: pedir código ───────────────────────────────────────────────────────────────────
@@ -100,7 +104,10 @@ export async function solicitarCodigoAcceso(
   const candidatos = await repo.candidatosPorEmail(email)
   if (candidatos.length === 0) return { ok: true, envio: null }
   const empresas = [...new Set(candidatos.map(c => c.empresa_nombre).filter(Boolean))]
-  return { ok: true, envio: () => enviar({ to: email, nombre: candidatos[0].nombre, empresas, codigo }) }
+  return { ok: true, envio: () => enviar({
+    to: email, nombre: candidatos[0].nombre, empresas, codigo,
+    destinos: candidatos.map(c => ({ empleado_id: c.empleado_id, empresa_id: c.empresa_id, nombre: c.nombre })),
+  }) }
 }
 
 // ── Paso 2: canjear código ─────────────────────────────────────────────────────────────────
