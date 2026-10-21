@@ -133,6 +133,26 @@ export type AtascoWorker = {
   /** Solo acciones: el texto esperado (de la tabla cerrada). */
   textoEsperado: string | null
   candidatos: CandidatoAtasco[]
+  /**
+   * Solo atascos de ELEGIR UNA OPCIÓN de lista (21/10/2026): textos de las opciones VISIBLES cuando paró (redactados).
+   * Ausente = no se miró (bot antiguo u otro tipo de atasco); `[]` = se miró y la lista no estaba abierta / no tenía opciones.
+   */
+  opciones?: string[]
+}
+
+/** Tope de opciones de lista que viajan con un atasco. */
+export const MAX_OPCIONES_ATASCO = 30
+
+/** Opciones de lista del cable: solo cadenas, redactadas, ≤120 caracteres, sin repetidas, ≤30. No-array → `undefined`. PURA. */
+export function leerOpcionesAtasco(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined
+  const out: string[] = []
+  for (const x of v) {
+    const t = cad(x, 120, true)
+    if (t && !out.includes(t)) out.push(t)
+    if (out.length >= MAX_OPCIONES_ATASCO) break
+  }
+  return out
 }
 
 const CLAVE = /^[a-z0-9_]{1,60}$/
@@ -209,6 +229,7 @@ export function leerAtascoWorker(v: unknown): AtascoWorker | null {
     etiqueta: tipo === 'campo' ? cad(o.etiqueta, 120, true) : null,
     textoEsperado: tipo === 'accion' ? cad(o.textoEsperado, 80) : null,
     candidatos,
+    ...(() => { const op = leerOpcionesAtasco(o.opciones); return op ? { opciones: op } : {} })(),
   }
 }
 

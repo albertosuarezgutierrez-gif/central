@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin correduría' }, { status: 503 })
     const [a, p] = await Promise.all([
-      listarAtascos(correduria.id, { pendientesAviso: avisos, conCaptura: avisos }),
+      listarAtascos(correduria.id, { pendientesAviso: avisos, conCaptura: avisos, sinCapturaConDatos: true }),
       listarPausas(correduria.id, { pendientesAviso: avisos }),
     ])
     if (a.estado === 'sin_esquema' && p.estado === 'sin_esquema') return NextResponse.json({ estado: 'sin_esquema' })

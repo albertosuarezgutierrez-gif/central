@@ -326,7 +326,7 @@ test('registrarResultado: una exploración no devuelve ofertas, solo ella termin
   const f = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
   assert.match(f, /if \(deExploracion && r\.tipo === 'ok'\) return \{ res: \{ estado: 'conflicto'/)
   assert.match(f, /if \(!deExploracion && r\.tipo === 'explorado'\) return \{ res: \{ estado: 'conflicto'/)
-  assert.match(f, /const evidencia = deExploracion \|\| deHumo \? null : \{ trabajo: t, captura: r\.captura, html: r\.html \}/)
+  assert.match(f, /const evidencia = deExploracion \|\| deHumo \? null : \{ trabajo: t, captura: r\.captura, capturaConDatos: r\.capturaConDatos, html: r\.html \}/)
   // La cola filtra por modo (la exploración solo con su interruptor) y el worker declara lo que sabe hacer.
   assert.match(f, /and coalesce\(to_jsonb\(w\)->>'modo', 'tarificar'\) = any\(\$\{\[\.\.\.modos\]\}::text\[\]\)/)
   assert.match(f, /reclamarSiguiente\(correduriaId, compania, modosReclamables\(deps\.env\)\)/)

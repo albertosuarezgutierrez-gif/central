@@ -129,7 +129,7 @@ export function vehiculoDelResultado(r: Pick<ResultadoAdaptador, 'vehiculoConfir
 
 export type CuerpoResultado =
   | ({ trabajoId: string; resultado: 'ok'; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] } & VehiculoDelResultado & MetaTraza)
-  | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }; capturaBase64?: string; html?: string } & MetaTraza)
+  | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }; capturaBase64?: string; /** La captura (JPEG de atasco) muestra datos personales del tomador: asegura no la manda a Telegram. */ capturaConDatos?: true; html?: string } & MetaTraza)
   /** Exploración terminada (13/10/2026): el MAPA ya lo construyó asegura en `/explorador/cierre`; aquí solo el desenlace. */
   | ({ trabajoId: string; resultado: 'explorado'; motivoFin: string; presupuesto?: CuerpoResultadoPresupuesto } & MetaTraza)
   /** Prueba nocturna de humo superada (15/10/2026, src/humo.ts): login y pantalla de inicio alcanzados. Un fallo va como `error`. */

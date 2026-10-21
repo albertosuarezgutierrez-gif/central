@@ -578,6 +578,8 @@ export type ResultadoWorker =
        *  inválido → se descarta y el trabajo falla como antes. NO va al `error` jsonb: vive en `tarificador_atascos`. */
       error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }
       captura: Buffer | null
+      /** La captura (JPEG de un atasco, 21/10/2026) muestra datos personales del tomador: no sale a Telegram. */
+      capturaConDatos: boolean
       html: string | null
     } & MetaWorker)
   /**
@@ -635,6 +637,29 @@ function base64(v: unknown, campo: string, errores: string[], max: number): Buff
 
 const esPdf = (b: Buffer) => b.subarray(0, 5).toString('latin1') === '%PDF-'
 const esPng = (b: Buffer) => b.length > 8 && b[0] === 0x89 && b.subarray(1, 4).toString('latin1') === 'PNG'
+const esJpeg = (b: Buffer) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
+
+/**
+ * Tipo de una captura del tarificador por sus BYTES (no por lo que diga el worker): PNG (fallo genérico, emisión) o JPEG
+ * (atasco/hueco, 21/10/2026). Otra cosa → `null` (se rechaza). PURA.
+ */
+export function mimeCaptura(b: Buffer | null | undefined): 'image/png' | 'image/jpeg' | null {
+  if (!b) return null
+  if (esPng(b)) return 'image/png'
+  if (esJpeg(b)) return 'image/jpeg'
+  return null
+}
+
+/** `error.atascoOpciones` del trabajo → lista de textos o `null` (no se miró / forma rara). Tres estados: `[]` = se miró y no había. PURA. */
+export function opcionesDeError(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null
+  return v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim().slice(0, 120)).slice(0, 30)
+}
+
+/** Nombre del documento de una captura de fallo: `fallo-<8 hex>.png|jpg` (lo reconoce la purga de evidencia). PURA. */
+export function nombreCapturaFallo(trabajoId: string, mime: 'image/png' | 'image/jpeg'): string {
+  return `fallo-${trabajoId.slice(0, 8)}.${mime === 'image/jpeg' ? 'jpg' : 'png'}`
+}
 
 export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoWorker } | { ok: false; errores: string[] } {
   const e = obj(entrada)
@@ -670,7 +695,7 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const mensaje = typeof err?.mensaje === 'string' && err.mensaje.trim() ? err.mensaje.trim().slice(0, 2000) : null
     if (!mensaje) errores.push('error.mensaje falta')
     const captura = base64(e.capturaBase64, 'capturaBase64', errores, MAX_BYTES_ADJUNTO)
-    if (captura && !esPng(captura)) errores.push('capturaBase64: no es un PNG')
+    if (captura && !mimeCaptura(captura)) errores.push('capturaBase64: no es un PNG ni un JPEG')
     const html = typeof e.html === 'string' && e.html !== '' ? e.html : null
     if (html && Buffer.byteLength(html, 'utf8') > MAX_BYTES_HTML) errores.push('html supera el techo')
     const url = typeof err?.url === 'string' ? err.url.slice(0, 500) : null
@@ -688,7 +713,7 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     if (errores.length) return { ok: false, errores }
     return {
       ok: true,
-      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(recorrido && recorrido.capturas.length > 0 ? { recorrido } : {}), ...(atasco ? { atasco } : {}) }, captura, html, ...leerMetaWorker(e) },
+      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(recorrido && recorrido.capturas.length > 0 ? { recorrido } : {}), ...(atasco ? { atasco } : {}) }, captura, capturaConDatos: captura !== null && e.capturaConDatos === true, html, ...leerMetaWorker(e) },
     }
   }
 
