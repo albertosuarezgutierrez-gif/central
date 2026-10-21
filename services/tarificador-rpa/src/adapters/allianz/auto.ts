@@ -1,3 +1,4 @@
+// Moto v0.7.17 (21/10/2026): `#driverBirthDate` (máscara `mask:date(224)`, class `input-DateText`) quedaba con el MISMO día y mes y el año +40 → las fechas dd/mm/aaaa se escriben SIN teclas ni foco (setter nativo + `change`), así la máscara no reinterpreta lo tecleado; se relee y, si el año sigue desplazado, para como `portal` diciendo «año desplazado ±N años».
 // Moto v0.7.16 (21/10/2026, trabajo real 3e85f80c): la fecha de nacimiento «distinta de todas» lleva la diferencia en días con signo y qué partes coinciden (sin valores) y el formato del campo (type/maxlength/placeholder/máscara); revisada la cadena ficha→tecleo: solo texto, sin zona horaria (sin desfase de ±1 día).
 // Moto v0.7.15 (20/10/2026, trabajo real 08abe9d5): el confirm «Primer periodo inferior a 355 días…» al pasar a Datos básicos se responde «No» (excepción exacta del guard, nunca se alarga) y el presupuesto avisa de que la prima no es anual.
 // Moto v0.7.14 (20/10/2026, trabajo real 2f90524e): `#driverBirthDate` quedaba con OTRA fecha válida → se dice con cuál coincide (sin el valor); si es la que el portal traía (registro de Allianz) o ninguna del formulario → `datos` «revisa la de la ficha», sin pelearse.
@@ -1079,13 +1080,41 @@ export async function elegirCompaniaOrigen(raiz: Pick<Frame, 'locator'>, buscada
   if ((await campo.inputValue()) !== valor) throw new ErrorTarificador('portal', 'allianz/moto: el portal no dejó fijada la compañía de origen')
 }
 
-async function escribirTexto(raiz: Pick<Frame, 'locator'>, sel: string, valor: string): Promise<void> {
-  const campo = raiz.locator(sel).first()
-  if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `allianz/moto: no aparece el campo ${sel} de Datos básicos`)
+/** `dd/mm/aaaa` (forma de las fechas que escribimos en los campos con máscara de fecha del portal). Puro. */
+export const esFechaDdMmAaaa = (v: string): boolean => /^\d{2}\/\d{2}\/\d{4}$/.test(v)
+
+/**
+ * v0.7.17: escribe una fecha dd/mm/aaaa en un campo con la máscara de fecha del portal (`data-mask=«;mask:date(224);…»`,
+ * class `input-DateText`) SIN teclas, sin foco y sin `input`/`blur`: setter nativo de `value` y luego `change` (para que
+ * corra su `onchange`, p. ej. `menores25()`). Con `fill`/`pressSequentially` la máscara reinterpretaba lo escrito y dejaba
+ * el mismo día y mes con el año +40 (trabajo real 3e85f80c). Nada se pulsa: no hay clic que pasar por `ctx.pulsar`.
+ */
+async function fijarFechaSinMascara(campo: Locator, valor: string): Promise<void> {
+  const setterNativo = (el: Element, v: string) => {
+    const i = el as HTMLInputElement
+    const set = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(i), 'value')?.set
+    if (set) set.call(i, v)
+    else i.value = v
+  }
+  await comprobarCampo(campo)
+  await campo.evaluate(setterNativo, valor)
+  await campo.dispatchEvent('change')
+}
+
+/** Texto normal: `fill` + `change` + blur (v0.7.13). Fecha dd/mm/aaaa: sin pasar por la máscara (v0.7.17). */
+async function escribirValorTexto(campo: Locator, valor: string): Promise<void> {
+  if (esFechaDdMmAaaa(valor)) return fijarFechaSinMascara(campo, valor)
   await comprobarCampo(campo)
   await campo.fill(valor)
   await campo.dispatchEvent('change')
   await campo.blur().catch(() => undefined)
+}
+
+async function escribirTexto(raiz: Pick<Frame, 'locator'>, sel: string, valor: string): Promise<void> {
+  const campo = raiz.locator(sel).first()
+  if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `allianz/moto: no aparece el campo ${sel} de Datos básicos`)
+  await comprobarCampo(campo)
+  await escribirValorTexto(campo, valor)
 }
 
 const alfanumerico = (s: string) => s.replace(/[^0-9A-Za-z]/g, '')
@@ -1112,6 +1141,13 @@ export function formaTextoLeido(leido: string): string {
 async function reescribirTexto(raiz: Pick<Frame, 'locator'>, sel: string, valor: string, page: Pick<Page, 'waitForTimeout'>): Promise<void> {
   const campo = raiz.locator(sel).first()
   await comprobarCampo(campo)
+  if (esFechaDdMmAaaa(valor)) {
+    // v0.7.17: una fecha NO se reescribe tecleando (la máscara de fecha del portal reinterpretaba las teclas: año +40).
+    await fijarFechaSinMascara(campo, valor)
+    await page.waitForTimeout(300)
+    return
+  }
+  await comprobarCampo(campo)
   await campo.fill('')
   await campo.pressSequentially(valor, { delay: 60, timeout: 15_000 })
   await campo.dispatchEvent('change')
@@ -1127,7 +1163,7 @@ async function rellenarSeguroAnteriorMoto(raiz: Pick<Frame, 'locator'>, d: Datos
 }
 
 /** De dónde parece salir la fecha de nacimiento que el portal dejó en `#driverBirthDate` (v0.7.14, trabajo real 2f90524e). */
-export type OrigenFechaLeida = 'nuestra' | 'vacia' | 'otro_formato' | 'registro' | 'carne' | 'adquisicion' | 'matriculacion' | 'dia_mes_cambiados' | 'distinta'
+export type OrigenFechaLeida = 'nuestra' | 'vacia' | 'otro_formato' | 'registro' | 'carne' | 'adquisicion' | 'matriculacion' | 'dia_mes_cambiados' | 'anio_desplazado' | 'distinta'
 
 /** Fechas dd/mm/aaaa conocidas al terminar Datos básicos. `previa` = lo que el portal traía en el campo ANTES de escribir (su registro). */
 export type FechasConocidasMoto = { nuestra: string; previa: string | null; carne: string | null; adquisicion: string | null; matriculacion: string | null }
@@ -1149,7 +1185,20 @@ export function origenFechaLeida(leido: string, c: FechasConocidasMoto): OrigenF
   if (igual(c.matriculacion)) return 'matriculacion'
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(c.nuestra.trim())
   if (m && m[1] !== m[2] && k === `${m[2]}${m[1]}${m[3]}`) return 'dia_mes_cambiados'
+  if (aniosDesplazados(t, c.nuestra) !== null) return 'anio_desplazado'
   return 'distinta'
+}
+
+/**
+ * v0.7.17 (trabajo real 3e85f80c): si lo leído es nuestra fecha con el MISMO día y mes y solo el año cambiado, cuántos años
+ * (con signo: +40 = el portal la dejó 40 años después). Un registro ajeno con el mismo día y mes es inverosímil: es la máscara
+ * de fecha del portal. `null` si no es ese caso. Puro; no devuelve ninguna de las dos fechas.
+ */
+export function aniosDesplazados(leido: string, nuestra: string): number | null {
+  const a = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(leido.trim())
+  const b = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(nuestra.trim())
+  if (!a || !b || a[1] !== b[1] || a[2] !== b[2] || a[3] === b[3]) return null
+  return Number(a[3]) - Number(b[3])
 }
 
 export const MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ =
@@ -1214,6 +1263,10 @@ export function errorFechaNacimientoMoto(origen: Exclude<OrigenFechaLeida, 'nues
   const conDif = extra.length > 0 ? ` [${extra.join('; ')}]` : ''
   if (origen === 'registro') return new ErrorTarificador('datos', `${MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ}${conDif}`)
   if (origen === 'distinta') return new ErrorTarificador('datos', `${MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ} (lo que queda en ${sel} es distinta de todas las fechas del formulario: probablemente del registro de Allianz)${conDif}`)
+  if (origen === 'anio_desplazado') {
+    const n = aniosDesplazados(leido, nuestra) as number
+    return new ErrorTarificador('portal', `allianz/moto: el portal desplazó el año de ${sel} (año desplazado ${n > 0 ? '+' : '−'}${Math.abs(n)} años, mismo día y mes: lo reinterpreta su máscara de fecha, no es la ficha; escrita sin teclas y reescrita una vez)${conDif}`)
+  }
   const que = { carne: '= fecha de carné', adquisicion: '= fecha de adquisición', matriculacion: '= fecha de matriculación', dia_mes_cambiados: '= nuestra fecha con día/mes cambiados' } as const
   const forma = origen === 'vacia' || origen === 'otro_formato' ? formaTextoLeido(leido) : `quedó ${que[origen]}`
   return new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${forma})${conDif}`)
@@ -1231,10 +1284,8 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
     if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `allianz/moto: no aparece el campo ${op.sel} de Datos básicos`)
     await comprobarCampo(campo)
     if (op.tipo === 'texto') {
-      await campo.fill(String(op.valor))
-      await campo.dispatchEvent('change')
-      // v0.7.13: quitar el foco AQUÍ (máscara de fecha y `onblur` del portal), no al pasar al campo siguiente.
-      await campo.blur().catch(() => undefined)
+      // v0.7.13: quitar el foco AQUÍ (`onblur` del portal). v0.7.17: las fechas dd/mm/aaaa, sin teclas (máscara de fecha).
+      await escribirValorTexto(campo, String(op.valor))
     } else if (op.tipo === 'select') {
       await campo.selectOption(String(op.valor))
     } else {
@@ -1278,7 +1329,9 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
       const origen = origenFechaLeida(leido, await conocidas())
       if (origen !== 'nuestra') throw errorFechaNacimientoMoto(origen, leido, nacimiento, await formatoCampo(raiz, sel))
     }
-    throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${formaTextoLeido(leido)})`)
+    const desp = esFechaDdMmAaaa(esperado) ? aniosDesplazados(leido, esperado) : null
+    const forma = desp !== null ? `año desplazado ${desp > 0 ? '+' : '−'}${Math.abs(desp)} años, mismo día y mes: máscara de fecha del portal` : formaTextoLeido(leido)
+    throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${forma})`)
   }
   if (ant.estuvoAsegurado) {
     if ((await raiz.locator(SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen).first().inputValue()) === '') throw new ErrorTarificador('portal', `allianz/moto: el portal vació ${SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen}`)
@@ -2567,7 +2620,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.16' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.17' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
