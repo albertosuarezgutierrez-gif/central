@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Allianz moto (bot RPA) 0.7.16 → 0.7.19. 0.7.16 diagnosticó la fecha de nacimiento: mismo día/mes, año +40. 0.7.17 escribe
+las fechas con el setter nativo + `change`, sin pulsaciones, así que la máscara ePAC `date(224)` ya no desplaza el año; confirmado: la fecha de
+nacimiento pasa. 0.7.18 añade el flag `fechaAdquisicionPorDefecto`: PR #4938 pone fecha de adquisición = matriculación por defecto en «Pedir precio»
+de la oportunidad. 0.7.19 (decisión de Alberto): una fecha de adquisición anterior a la 1ª matriculación de Allianz se sustituye siempre por la de
+Allianz, con supuesto en el presupuesto (PR #4950). Imagen `moto-e5b0c81` en producción. Lección: los despliegues de plataforma se CANCELAN por pushes
+de otras sesiones a main; antes de pedir a Alberto que pulse, comprueba que el deployment READY lleva tu SHA y que recargue la página.
+Pendiente: confirmar el precio real de Allianz moto para el lead BMW F800 (Mapfre ya lo tarificó: 223,65€ / 300,40€).
+
 **(21/10/2026)** — RRHH · «Quitar de pendientes» en /admin/firmas (Pilar): selección 1/varias/todas → ANULACIÓN lógica (estado_firma='no_requiere'
 + `firma_anulada_at/_por`), el documento NUNCA se borra (PRL/EPIs/nóminas). Sale de panel, cron y portal. Migración 0026 aplicada en prod.
 
