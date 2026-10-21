@@ -169,6 +169,16 @@ describe('validarFormularioAuto: fechaAdquisicion, fotocopiaAnterior y póliza a
     expect(sinFecha.ok && 'fechaAdquisicionPorDefecto' in sinFecha.formulario).toBe(false)
     expect(validarFormularioAuto({ ...base, fechaAdquisicion: '2021-03-04', fechaAdquisicionPorDefecto: 'si' }, hoy).ok).toBe(false)
   })
+  it('0.7.20 · clienteAltoPotencialAllianz / capAllianz: opcionales, viajan si vienen; fuera de formato → error sin repetir el valor', () => {
+    const r = validarFormularioAuto({ ...base, clienteAltoPotencialAllianz: 'SI', capAllianz: '10' }, hoy)
+    expect(r.ok && [r.formulario.clienteAltoPotencialAllianz, r.formulario.capAllianz]).toEqual(['si', '10'])
+    const sin = validarFormularioAuto(base, hoy)
+    expect(sin.ok && ['clienteAltoPotencialAllianz', 'capAllianz'].some((k) => k in sin.formulario)).toBe(false)
+    expect(validarFormularioAuto({ ...base, clienteAltoPotencialAllianz: 'quizá' }, hoy).ok).toBe(false)
+    const malo = validarFormularioAuto({ ...base, capAllianz: 'Pepe Ficticio 123' }, hoy)
+    expect(malo.ok).toBe(false)
+    expect(JSON.stringify(malo)).not.toContain('Pepe')
+  })
   it('fechaAdquisicion: futura, <1900, anterior a la matriculación o mal formada → error; igual a la matriculación vale', () => {
     for (const extra of [{ fechaAdquisicion: '2030-01-01' }, { fechaAdquisicion: '1899-12-31' }, { fechaAdquisicion: '04/03/2021' }, { fechaMatriculacion: '2020-01-01', fechaAdquisicion: '2019-12-31' }]) {
       expect(validarFormularioAuto({ ...base, ...extra }, hoy).ok).toBe(false)
