@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — RRHH · fichaje sin ubicación (Global2/Pilar): el aviso de permiso era de Safari para TODOS (captura era Android/Chrome) y
+«Reintentar» no sirve con permiso bloqueado. Ahora: mensaje por plataforma (iOS/Android/otro), `permissions.query` para detectar `denied`
+(botón «Ya lo he permitido»), «Obteniendo ubicación…», 400 `ubicacion_requerida` ya no culpa a permisos, timeout alta precisión 10 s.
+Solo cliente (`lib/geolocalizacion-fichaje.ts` + `FichajeEmpleado.tsx`). Pendiente Alberto: ¿«Fichar sin ubicación» marcado como emergencia?
+(la BD ya admite lat/lng null; lo bloquea `api/e/fichaje` → necesita flag por empresa).
+
 **(20/10/2026)** — Auditoría diaria (ligera): precio sano (0 bajo mínimo, motor on, k=0, última pasada 7,6 h). Correduría: CIMA entra (pulls 18:30 UTC ok)
 pero `queueDepth` 211→213 con 0-2 procesados y ingesta DEGRADADA (C0072: 22 d sin mandar, 14 pólizas vivas); alertas `cima_siniestros_corte` (SIN 12 d) y
 `_compania` (C0468,C0109); `seo_correduria` GSC 403; `ses_transporte` sin establecimiento (nunca ok). Cotizaciones Codeoscopic 7d: 1 (0,50€).

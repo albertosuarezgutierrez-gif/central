@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { obtenerPosicion, causaUbicacion, mensajeUbicacion } from '@/lib/geolocalizacion-fichaje'
+import { obtenerPosicion, causaUbicacion, mensajeUbicacion, detectarPlataforma, mensajePermisoUbicacion, estadoPermisoUbicacion } from '@/lib/geolocalizacion-fichaje'
 
 type Fichaje = {
   id: string; estado: string; entrada_at: string; salida_at: string | null
@@ -87,6 +87,8 @@ export default function FichajeEmpleado() {
   const [fichando, setFichando] = useState(false)
   const [msg, setMsg] = useState('')
   const [sinUbicacion, setSinUbicacion] = useState(false)
+  const [buscandoUbicacion, setBuscandoUbicacion] = useState(false)
+  const [permisoDenegado, setPermisoDenegado] = useState(false)
 
   async function recargar() {
     const r = await fetch('/api/e/fichaje')
@@ -97,17 +99,31 @@ export default function FichajeEmpleado() {
 
   async function fichar() {
     setFichando(true); setMsg(''); setSinUbicacion(false)
+    const plataforma = detectarPlataforma()
+    const eraDenegado = permisoDenegado
+    if (!eraDenegado && (await estadoPermisoUbicacion()) === 'denied') {
+      setPermisoDenegado(true); setSinUbicacion(true); setMsg(mensajePermisoUbicacion(plataforma)); setFichando(false); return
+    }
     let lat: number, lng: number
+    setBuscandoUbicacion(true)
     try {
       const pos = await obtenerPosicion()
       lat = pos.coords.latitude; lng = pos.coords.longitude
+      setPermisoDenegado(false)
     } catch (e) {
-      setSinUbicacion(true); setMsg(mensajeUbicacion(causaUbicacion(e))); setFichando(false); return
+      const causa = causaUbicacion(e)
+      const denegado = causa === 'permiso'
+      setPermisoDenegado(denegado)
+      setSinUbicacion(true)
+      setMsg(mensajeUbicacion(causa, plataforma) + (denegado && eraDenegado ? ' Si sigue igual, recarga la página.' : ''))
+      setBuscandoUbicacion(false); setFichando(false); return
     }
+    setBuscandoUbicacion(false)
     const r = await fetch('/api/e/fichaje', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lat, lng }) })
     const j = await r.json().catch(() => ({}))
     if (r.ok) { await recargar(); setMsg(j.accion === 'entrada' ? 'Entrada registrada ✓' : `Salida registrada · ${j.fichaje.horas_totales ?? 0} h`) }
-    else { setSinUbicacion(j.codigo === 'ubicacion_requerida'); setMsg(j.error ?? 'Error al fichar') }
+    else if (j.codigo === 'ubicacion_requerida') { setSinUbicacion(true); setMsg('No nos llegó tu ubicación. Pulsa Reintentar.') }
+    else { setMsg(j.error ?? 'Error al fichar') }
     setFichando(false)
   }
 
@@ -136,12 +152,12 @@ export default function FichajeEmpleado() {
         onClick={fichar} disabled={fichando}
         className={`w-full py-3 text-base font-semibold ${activo ? 'bg-alert text-white' : ''}`}
       >
-        {fichando ? 'Registrando…' : activo ? '⏹ Fichar salida' : '▶ Fichar entrada'}
+        {buscandoUbicacion ? 'Obteniendo ubicación…' : fichando ? 'Registrando…' : activo ? '⏹ Fichar salida' : '▶ Fichar entrada'}
       </button>
       {msg && <p className={`mt-2 text-center text-xs ${sinUbicacion ? 'text-alert' : 'text-ink-3'}`} role="alert">{msg}</p>}
       {sinUbicacion && (
         <button onClick={fichar} disabled={fichando} className="mt-2 w-full min-h-[44px] py-3 text-base font-semibold">
-          Reintentar
+          {permisoDenegado ? 'Ya lo he permitido, reintentar' : 'Reintentar'}
         </button>
       )}
 
