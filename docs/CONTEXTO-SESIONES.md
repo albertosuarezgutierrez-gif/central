@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — RRHH · «Quitar de pendientes» en /admin/firmas (Pilar): selección 1/varias/todas → ANULACIÓN lógica (estado_firma='no_requiere'
++ `firma_anulada_at/_por`), el documento NUNCA se borra (PRL/EPIs/nóminas). Sale de panel, cron y portal. Migración 0026 aplicada en prod.
+
 **(21/10/2026)** — RRHH · interruptor «Permitir fichar sin ubicación» en /admin/fichajes (GET/PATCH `/api/admin/empresa/ajustes`, empresa de
 sesión, booleano estricto). Sin migración. Cierra el pendiente de la entrada de fichaje sin ubicación.
 
