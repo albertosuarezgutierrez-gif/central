@@ -51,10 +51,11 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { WHERE_CARTERA_VIVA, WHERE_CARTERA_EN_VIGOR, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
+import { leerFichasConCarnetSilenciado } from './avisos-carnet-silencio'
 import { avisosActivos, esSoloContar, leerCanalesDeFichas } from './avisos-vencimiento'
 import { decidirAvisoVencimiento, diasEfectivosDeFicha, type OrigenAviso } from './avisos-vencimiento-canal'
 import { descifrar } from './avisos-vencimiento-reglas'
-import { descifrarCampo } from './cartera-edicion'
+import { campoIlegible, descifrarCampo } from './cartera-edicion'
 import {
   cuerpoAvisosIntranet, enviarAvisosIntranet, debeEscribirHoy, esTablaInexistente, elegirDestino, direccionesBloqueadas,
   type DetalleAviso, type EventoRebote,
@@ -416,12 +417,22 @@ export async function reunirPendientes(
       where: { clienteId: { in: [...titularesVivos] }, correduriaId },
       select: { id: true, clienteId: true, tipo: true, fechaCarnet: true },
     })
+    // «Avisarme de la caducidad de mi carné» apagado en el portal (21/10/2026): ese carné no entra en el
+    // correo. Lectura fallida (`null`) → se avisa igual (fail-open; ya queda registrado).
+    const carnetApagado = (await leerFichasConCarnetSilenciado(db, [...titularesVivos])) ?? new Set<string>()
     for (const c of carnets) {
+      if (carnetApagado.has(c.clienteId)) continue
       const f = fichaPorId.get(c.clienteId)
       if (!f) continue
       const fechaNacimiento = descifrarCampo(f.fechaNacimiento)
       if (fechaNacimiento === null) {
-        console.warn(`[asegura/avisos-intranet] fecha de nacimiento ilegible para el cliente ${c.clienteId}; se omite su carné ${c.id}`)
+        // Tres estados: ILEGIBLE (cifrada y no abre) ≠ AUSENTE (la ficha no la tiene). Lo primero se omite
+        // —no se afirma que falte lo que no se ha podido mirar—; lo segundo es un hecho y se avisa.
+        if (campoIlegible(f.fechaNacimiento)) {
+          console.warn(`[asegura/avisos-intranet] fecha de nacimiento ilegible para el cliente ${c.clienteId}; se omite su carné ${c.id}`)
+        } else {
+          dame(c.clienteId).carnets.push({ id: c.id, tipo: c.tipo, fechaCaducidad: null })
+        }
         continue
       }
       const fechaCarnet = descifrarCampo(c.fechaCarnet)

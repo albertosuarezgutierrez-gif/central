@@ -791,6 +791,13 @@ input, select, textarea, button { font: inherit; }
   color: var(--muted);
   margin: 0 0 6px;
 }
+.campana-enlace-externo {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+}
 .campana-push .campana-reintentar {
   font-size: 13px;
   font-weight: 500;

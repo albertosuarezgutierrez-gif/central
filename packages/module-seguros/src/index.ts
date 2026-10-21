@@ -662,8 +662,8 @@ export {
   type HistoricaAgrupable,
   type GrupoHistorica,
 } from './ficha-historicas.ts'
-export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
-export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type CarnetRevisado, type TipoCarnet } from './carnet-ficha.ts'
+export { caducidadCarnet, expedicionDesdeCaducidad, type CaducidadCarnet } from './caducidad-carnet.ts'
+export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, fechaExpedicionDeEntrada, type CarnetRevisado, type ExpedicionResuelta, type TipoCarnet } from './carnet-ficha.ts'
 // Lo que una póliza subida sabe del TOMADOR y la ficha no: parche que solo rellena huecos (03/10/2026).
 export {
   CLAVES_EXTRACCION_GUARDABLES,

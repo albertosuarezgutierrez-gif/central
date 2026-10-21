@@ -41,6 +41,7 @@ import {
   normalizarContacto,
   revisarAlta,
   revisarCarnet,
+  fechaExpedicionDeEntrada,
   revisarEdicion,
   seraPrincipalAlAnadir,
   nombrePendiente,
@@ -1173,7 +1174,7 @@ function origenCarnet(entrada: { actor: string; origen?: OrigenCarnet }): { tipo
 export async function guardarCarnet(
   correduriaId: string,
   clienteId: string,
-  entrada: { id?: unknown; tipo: unknown; fecha: unknown; actor: string; origen?: OrigenCarnet },
+  entrada: { id?: unknown; tipo: unknown; fecha: unknown; fechaCaducidad?: unknown; actor: string; origen?: OrigenCarnet },
 ): Promise<ResultadoCarnet> {
   try {
     const db = prismaAsegura()
@@ -1182,13 +1183,14 @@ export async function guardarCarnet(
       select: { fechaNacimiento: true },
     })
     if (!c) return noEncontrado()
-    const r = revisarCarnet({
-      tipo: entrada.tipo,
-      fecha: entrada.fecha,
-      fechaNacimiento: descifrarCampo(c.fechaNacimiento),
-      hoy: hoyParaCarnet(),
-    })
-    if (!r.ok) return invalido(r.motivo, r.campo)
+    const nacimiento = descifrarCampo(c.fechaNacimiento)
+    // Solo caducidad (la del anverso): se deduce la expedición con el nacimiento; sigue sin guardarse la caducidad.
+    const exp = fechaExpedicionDeEntrada({ tipo: entrada.tipo, fecha: entrada.fecha, fechaCaducidad: entrada.fechaCaducidad, fechaNacimiento: nacimiento })
+    if (!exp.ok) return invalido(exp.motivo, 'fecha')
+    const r = revisarCarnet({ tipo: entrada.tipo, fecha: exp.fecha, fechaNacimiento: nacimiento, hoy: hoyParaCarnet() })
+    if (!r.ok) {
+      return invalido(exp.viaCaducidad && r.campo === 'fecha' ? 'La fecha de caducidad no cuadra con tu fecha de nacimiento y el tipo de carné: revísala.' : r.motivo, r.campo)
+    }
     const id = typeof entrada.id === 'string' && entrada.id.trim() !== '' ? entrada.id.trim() : null
     const todos = await db.clienteCarnetConducir.findMany({ where: { clienteId, correduriaId }, select: { id: true, tipo: true } })
     const anterior = id ? todos.find((k) => k.id === id) : null

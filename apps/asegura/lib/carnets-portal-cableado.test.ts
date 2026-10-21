@@ -33,6 +33,9 @@ test('el rechazo de destinoCarnet se traduce con resultadoDeDestinoAjeno(d.motiv
 const lectura = fuente.slice(fuente.indexOf('export async function caducidadesCarnetDeIdentidad'), fuente.indexOf('export async function escribirCarnetPortal'))
 
 test('caducidadesCarnetDeIdentidad saca las fichas de fichasLegiblesDeCarnets(vinculosDeIdentidad(...))', () => {
-  assert.match(lectura, /ids\s*=\s*fichasLegiblesDeCarnets\(\s*await vinculosDeIdentidad\(correduriaId,\s*identidadId\)\s*\)/)
+  // La MISMA lista de vínculos alimenta las fichas legibles y las que pueden ver la expedición.
+  assert.match(lectura, /vinculos\s*=\s*await vinculosDeIdentidad\(correduriaId,\s*identidadId\)/)
+  assert.match(lectura, /ids\s*=\s*fichasLegiblesDeCarnets\(vinculos\)/)
+  assert.match(lectura, /conExpedicion\s*=\s*fichasQueVenExpedicion\(vinculos\)/)
   assert.match(fuente, /import \{[^}]*\bfichasLegiblesDeCarnets\b[^}]*\} from '\.\/carnets-titulares'/)
 })

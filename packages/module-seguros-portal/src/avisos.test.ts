@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 
 import { DIAS_VENTANA_AVISO } from './obligacion.ts'
 
-import { avisosDe, claveAviso, esClaveDescartable, HREF_POR_TIPO, textoGlobo, type AutorizacionParaAviso, type ObligacionParaAviso } from './avisos.ts'
+import { avisosDe, claveAviso, esClaveDescartable, HREF_POR_TIPO, textoGlobo, umbralCarnet, UMBRALES_AVISO_CARNET, TEXTO_QUE_HACER_CARNET, type AutorizacionParaAviso, type ObligacionParaAviso } from './avisos.ts'
 
 const HOY = new Date('2026-09-08T10:00:00Z')
 const dias = (n: number) => new Date(HOY.getTime() + n * 86_400_000)
@@ -166,17 +166,85 @@ test('datos: null se declara ilegible — «tus datos están bien» no se afirma
 
 const fecha = (n: number) => dias(n).toISOString().slice(0, 10)
 
-test('un carné entra solo en su ventana (60 días), no en los 7 de las obligaciones', () => {
+test('un carné entra solo en su ventana (90 días), no en los 7 de las obligaciones', () => {
   const carnets = [
     { id: 'c1', tipo: 'B', fechaCaducidad: fecha(0) },
-    { id: 'c2', tipo: 'B', fechaCaducidad: fecha(60) },
-    { id: 'c3', tipo: 'C', fechaCaducidad: fecha(61) },
+    { id: 'c2', tipo: 'B', fechaCaducidad: fecha(90) },
+    { id: 'c3', tipo: 'C', fechaCaducidad: fecha(91) },
   ]
   const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
   assert.deepEqual(r.avisos.map((a) => a.id), ['c1', 'c2'])
   assert.equal(r.avisos[0]!.tipo, 'carnet_en_ventana')
   assert.equal(r.avisos[0]!.href, '/boveda')
-  assert.match(r.avisos[0]!.titulo, /\(B\) caduca pronto/)
+  assert.match(r.avisos[1]!.titulo, /\(B\) caduca pronto/)
+  assert.match(r.avisos[0]!.titulo, /caduca hoy/)
+})
+
+test('🪤 umbral del carné: 90 / 30 / 7 / 0 por el MENOR umbral no pasado; fuera de ventana, null', () => {
+  const casos: [number | null, number | null][] = [
+    [91, null], [90, 90], [45, 90], [31, 90], [30, 30], [8, 30], [7, 7], [1, 7], [0, 0], [-1, null], [null, null], [7.5, null],
+  ]
+  for (const [faltan, esperado] of casos) assert.equal(umbralCarnet(faltan), esperado, `faltan ${faltan}`)
+  assert.deepEqual([...UMBRALES_AVISO_CARNET], [90, 30, 7, 0])
+})
+
+test('🪤 el TRAMO va en la clave: cambia al pasar de umbral y no dentro de él (campana y correo no repiten)', () => {
+  // Mismo carné (caduca dentro de 100 días); lo que se mueve es «hoy».
+  const caduca = fecha(100)
+  const en = (dia: number) =>
+    avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets: [{ id: 'c1', tipo: 'B', fechaCaducidad: caduca }], hoy: dias(dia) }).avisos[0]!.clave
+  assert.equal(en(15), en(60), 'mismo tramo (90): misma clave')
+  assert.notEqual(en(60), en(80), '90 → 30: otra clave')
+  assert.notEqual(en(80), en(95), '30 → 7: otra clave')
+  assert.notEqual(en(95), en(100), '7 → 0: otra clave')
+  assert.match(en(80), /^carnet_en_ventana:c1@\d{4}-\d{2}-\d{2}#30$/)
+  // Descartar el de 90 días no esconde el de 30.
+  const leidos = new Set([en(15)])
+  const mira = (dia: number) =>
+    avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets: [{ id: 'c1', tipo: 'B', fechaCaducidad: caduca }], leidos, hoy: dias(dia) }).avisos.length
+  assert.equal(mira(40), 0)
+  assert.equal(mira(80), 1)
+})
+
+test('el aviso del carné dice QUÉ HACER y lleva el enlace a la DGT (en ventana y caducado)', () => {
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets: [{ id: 'a', tipo: 'B', fechaCaducidad: fecha(20) }, { id: 'b', tipo: 'B', fechaCaducidad: fecha(-5) }], hoy: HOY })
+  assert.equal(r.avisos.length, 2)
+  for (const a of r.avisos) {
+    assert.match(a.detalle, /centro de reconocimiento de conductores/)
+    assert.match(a.detalle, /sancionable/)
+    assert.equal(a.enlaceExterno?.url, 'https://sede.dgt.gob.es')
+  }
+  assert.match(TEXTO_QUE_HACER_CARNET, /^Renuévalo en un centro de reconocimiento de conductores; conducir con el carné caducado es sancionable\.$/)
+})
+
+test('🪤 carné sin fecha de nacimiento (caducidad null): aviso fijo NO descartable, uno por titular; nunca «caducado»', () => {
+  const carnets = [
+    { id: 'c1', tipo: 'B', fechaCaducidad: null },
+    { id: 'c2', tipo: 'A2', fechaCaducidad: null },
+  ]
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, leidos: new Set(['carnet_sin_nacimiento:carnet_nacimiento']), hoy: HOY })
+  assert.equal(r.avisos.length, 1, 'uno por titular, no por carné')
+  const a = r.avisos[0]!
+  assert.equal(a.tipo, 'carnet_sin_nacimiento')
+  assert.equal(a.descartable, false)
+  assert.equal(a.href, '/boveda?vista=datos')
+  assert.match(a.titulo, /fecha de nacimiento/)
+  assert.equal(r.fuentesIlegibles.length, 0)
+  // Con varios titulares, uno por cada uno y nombrando a quién.
+  const dos = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets: [{ id: 'x', tipo: 'B', fechaCaducidad: null, titular: 'Ana' }, { id: 'y', tipo: 'B', fechaCaducidad: null, titular: 'Blas' }], hoy: HOY })
+  assert.equal(dos.avisos.length, 2)
+  assert.match(dos.avisos[0]!.titulo, /Ana/)
+})
+
+test('🪤 puente caído (carnets null) NO afirma que falte el nacimiento: fuente ilegible, ningún aviso', () => {
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets: null, hoy: HOY })
+  assert.equal(r.avisos.filter((a) => a.tipo === 'carnet_sin_nacimiento').length, 0)
+  assert.equal(r.fuentesIlegibles.includes('carnets'), true)
+})
+
+test('con el aviso del carné apagado tampoco sale «falta tu nacimiento»', () => {
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets: [{ id: 'c1', tipo: 'B', fechaCaducidad: null }], carnetsSilenciados: true, hoy: HOY })
+  assert.equal(r.avisos.length, 0)
 })
 
 test('🚨 un carné YA CADUCADO avisa: antes el aviso desaparecía justo al caducar', () => {
@@ -388,4 +456,21 @@ test('🪤 con varios titulares el aviso del carné NOMBRA a quién es; con uno,
   assert.equal(por.get('c-a'), 'El carné de conducir (B) de Ana Pérez caduca pronto')
   assert.equal(por.get('c-b'), 'Nos consta que el carné de conducir (A2) de Blas Gómez está caducado')
   assert.equal(por.get('c-yo'), 'Tu carné de conducir (C) caduca pronto')
+})
+
+test('🪤 «avisarme de la caducidad del carné» apagado: ni en ventana ni caducado, y la fuente no cuenta como ilegible', () => {
+  const carnets = [
+    { id: 'c-v', tipo: 'B', fechaCaducidad: fecha(10), titular: null },
+    { id: 'c-x', tipo: 'A2', fechaCaducidad: fecha(-3), titular: null },
+  ]
+  const base = { autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], hoy: HOY }
+  // Encendido (ausente o false): salen los dos.
+  assert.deepEqual(avisosDe({ ...base, carnets }).avisos.map((a) => a.tipo).sort(), ['carnet_caducado', 'carnet_en_ventana'])
+  assert.equal(avisosDe({ ...base, carnets, carnetsSilenciados: false }).avisos.length, 2)
+  // Apagado: no sale ninguno…
+  const apagado = avisosDe({ ...base, carnets, carnetsSilenciados: true })
+  assert.deepEqual(apagado.avisos.filter((a) => a.tipo.startsWith('carnet')), [])
+  // …y con el puente caído (`carnets: null`) tampoco se declara «no se pudo mirar» una fuente que no se necesita.
+  assert.equal(avisosDe({ ...base, carnets: null, carnetsSilenciados: true }).fuentesIlegibles.includes('carnets'), false)
+  assert.equal(avisosDe({ ...base, carnets: null }).fuentesIlegibles.includes('carnets'), true)
 })

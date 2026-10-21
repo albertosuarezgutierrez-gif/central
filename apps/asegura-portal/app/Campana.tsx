@@ -201,6 +201,12 @@ function Contenido({
                 <span className="campana-aviso-titulo">{a.titulo}</span>
                 <span className="campana-aviso-detalle">{a.detalle}</span>
               </a>
+              {/* Fuera del `<a>` de arriba (un enlace dentro de otro no es HTML válido) y a 44 px. */}
+              {a.enlaceExterno && (
+                <a className="campana-reintentar campana-enlace-externo" href={a.enlaceExterno.url} target="_blank" rel="noopener noreferrer">
+                  {a.enlaceExterno.texto}
+                </a>
+              )}
             </li>
           ))}
         </ul>
@@ -243,6 +249,8 @@ function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
       return 'tus partes de siniestro'
     case 'polizas_modificadas':
       return 'los cambios de tus pólizas'
+    case 'vehiculos':
+      return 'la ITV de tus vehículos'
   }
 }
 

@@ -1263,6 +1263,17 @@ model PortalPreferenciasAvisos {
   @@map("portal_preferencias_avisos")
 }
 
+/// Interruptor de avisos del portal (apagados por la persona; sin fila = encendido). AQUÍ SOLO SE LEE, para
+/// que el correo de la intranet respete «avisarme de la caducidad de mi carné» (`vencimiento_carnet`,
+/// `lib/avisos-carnet-silencio.ts`). Lo escribe el portal; DDL en `apps/asegura-portal/prisma/sql`.
+model PortalAvisoSilenciado {
+  identidadId String @map("identidad_id") @db.Uuid
+  tipo        String
+
+  @@id([identidadId, tipo])
+  @@map("portal_aviso_silenciado")
+}
+
 model PortalConsentimiento {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   identidadId  String   @map("identidad_id") @db.Uuid

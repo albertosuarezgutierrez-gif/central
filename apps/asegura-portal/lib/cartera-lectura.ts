@@ -36,6 +36,7 @@
 // existe. `confirmadaCima` = CIMA la ha traído (`id_poliza_entidad`); una
 // emitida por nosotros aún sin confirmar se dice como tal.
 import {
+  matriculacionDeCompania,
   ordenarHistorialSiniestros,
   siniestroAbierto,
   autorizacionVigente,
@@ -324,6 +325,11 @@ export type PolizaPortal = {
      * que la compañía no la ha comunicado.
      */
     ubicacionCifrada: boolean
+    /**
+     * Fecha de matriculación que da la COMPAÑÍA (EIAC), `YYYY-MM-DD`; mismo nivel que `cosa`. `null` = no la
+     * trae o no visible. Alimenta el aviso de ITV de la campana (nunca la estimada por la matrícula).
+     */
+    fechaMatriculacion?: string | null
   }
 }
 
@@ -1180,6 +1186,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           // Mismo nivel que `cosa`: es el mismo dato de contrato, solo que
           // suelto para poder autorrellenar un campo sin parsear el texto.
           matricula: ve.bien ? b.matricula : null,
+          fechaMatriculacion: ve.bien ? matriculacionDeCompania(p.datosEspecificos) : null,
           // Se vuelve a intentar abrir, a propósito: lo que importa es si el
           // sobre `v1:` SIGUE cerrado después del descifrado, en cualquiera de
           // las dos filas.
