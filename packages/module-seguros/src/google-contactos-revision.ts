@@ -148,3 +148,45 @@ export function efectoResolucion(tipo: string, accion: AccionRevision, motivo: s
   // «Mantener CRM» = lo de Google se rechaza (el CRM ya lo pisó o lo dejó como estaba).
   return { ok: true, estado: accion === 'mantener_crm' ? 'aceptada' : 'descartada', altaLead: false, vinculo: 'ninguno', mote: false, titular: false, enriquecer: false }
 }
+
+// ─── Para PINTAR las tarjetas de la cola (21/10/2026) ───────────────────────
+
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+const palabras = (s: string) => s.split(/\s+/).filter(Boolean)
+
+function contieneSecuencia(pajar: string[], aguja: string[]): boolean {
+  if (aguja.length === 0 || aguja.length > pajar.length) return false
+  for (let i = 0; i + aguja.length <= pajar.length; i++) {
+    if (aguja.every((w, j) => pajar[i + j] === w)) return true
+  }
+  return false
+}
+
+/**
+ * El nombre de una ficha SIN repetirlo. Hay fichas (volcado, leads) cuyo `apellidos` ya trae el nombre
+ * entero («Juan Manuel» + «Juan Manuel Duran Martinez»), o cuyo `nombre` ya trae los apellidos: pegar
+ * `nombre + apellidos` los duplicaba en la tarjeta. Si uno contiene al otro (palabra a palabra, sin
+ * tildes ni mayúsculas) gana el más largo; si no, se unen. Vacío → `null` (no se inventa «sin nombre»).
+ */
+export function nombreFichaLegible(nombre: string | null | undefined, apellidos: string | null | undefined): string | null {
+  const n = palabras(nombre ?? '')
+  const a = palabras(apellidos ?? '')
+  if (n.length === 0 && a.length === 0) return null
+  if (a.length === 0) return n.join(' ')
+  if (n.length === 0) return a.join(' ')
+  const nn = n.map(sinTildes)
+  const aa = a.map(sinTildes)
+  if (contieneSecuencia(aa, nn)) return a.join(' ')
+  if (contieneSecuencia(nn, aa)) return n.join(' ')
+  return [...n, ...a].join(' ')
+}
+
+/** Teléfono para leer: español de 9 dígitos → «600 11 22 33» (quita +34/0034); otro formato, tal cual. `null` si no hay. */
+export function telefonoParaMostrar(t: string | null | undefined): string | null {
+  if (typeof t !== 'string' || t.trim() === '') return null
+  let s = t.replace(/[\s.\-()]/g, '')
+  if (s.startsWith('0034')) s = '+34' + s.slice(4)
+  if (/^\+34\d{9}$/.test(s)) s = s.slice(3)
+  if (/^\d{9}$/.test(s)) return `${s.slice(0, 3)} ${s.slice(3, 5)} ${s.slice(5, 7)} ${s.slice(7)}`
+  return t.trim()
+}

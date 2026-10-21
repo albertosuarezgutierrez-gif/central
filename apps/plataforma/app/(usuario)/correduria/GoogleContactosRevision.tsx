@@ -26,6 +26,8 @@ import { anadirPagina, hayMas, primeraPagina, quitarResuelta, type ListaRevision
  */
 
 type Campos = { nombre: string; apellidos: string; telefono: string | null; email: string | null; grupo: 'cliente' | 'lead' | null }
+/** `null` = no se sabe / no se pudo leer (nunca «no tiene»). `polizas` = pólizas de las que es tomador. */
+type DatosFicha = { telefono: string | null; email: string | null; enVigor: boolean | null; polizas: number | null }
 type Revision = {
   id: string
   tipo: TipoRevisionGoogle
@@ -35,13 +37,30 @@ type Revision = {
   clienteNombre: string | null
   propuesta: Campos | null
   propuestaIlegible: boolean
-  candidatos?: { id: string; nombre: string | null; tipoPersona: string | null }[]
+  candidatos?: (DatosFicha & { id: string; nombre: string | null; tipoPersona: string | null })[]
+  clienteDatos?: DatosFicha | null
+  /** El número que comparten (telefono_titular / muchas fichas); `null` = no se pudo leer. */
+  telefonoCompartido?: string | null
   creadoEn: string
 }
 type Pagina = { revisiones: Revision[]; siguiente: string | null; pendientes: number; nombreDistintoPendientes: number | null }
 
 const pMuted = { fontSize: 13, color: 'var(--muted)', margin: 0 } as const
 const ETIQUETA_CAMPO: Record<string, string> = { nombre: 'nombre', apellidos: 'apellidos', telefono: 'teléfono', email: 'correo', grupo: 'cliente/lead' }
+
+/** Lo que ayuda a decidir sobre una ficha: ¿cliente en vigor?, ¿tomador?, teléfono y correo. */
+function DatosDeFicha({ d }: { d: DatosFicha | null | undefined }) {
+  if (!d) return null
+  const vigor = d.enVigor === null ? null : d.enVigor ? <Badge tono="positivo">Cliente en vigor</Badge> : <Badge tono="neutral">Sin póliza en vigor</Badge>
+  const tomador = d.polizas === null ? null : d.polizas > 0 ? <Badge tono="info">Tomador de {d.polizas} póliza{d.polizas === 1 ? '' : 's'}</Badge> : <Badge tono="neutral">Sin pólizas</Badge>
+  return (
+    <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>
+      {vigor}{tomador}
+      <span>Tel. {d.telefono ?? '—'}</span>
+      <span>Correo {d.email ?? '—'}</span>
+    </span>
+  )
+}
 
 function fecha(iso: string): string {
   return new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
@@ -239,31 +258,35 @@ export default function GoogleContactosRevision() {
                   <dt style={{ color: 'var(--muted)' }}>En el CRM</dt>
                   <dd style={{ margin: 0, overflowWrap: 'anywhere', fontWeight: 600 }}>
                     {rev.clienteId ? <Link href={`/correduria/cliente/${rev.clienteId}`}>{rev.clienteNombre ?? 'abrir ficha'}</Link> : '—'}
+                    {rev.clienteId && <div style={{ fontWeight: 400 }}><DatosDeFicha d={rev.clienteDatos} /></div>}
                   </dd>
                 </dl>
               )}
               {!duplicado && rev.clienteId && (
                 <p style={{ margin: 0, fontSize: 14, overflowWrap: 'anywhere' }}>
                   Ficha: <Link href={`/correduria/cliente/${rev.clienteId}`}>{rev.clienteNombre ?? 'abrir ficha'}</Link>
+                  <DatosDeFicha d={rev.clienteDatos} />
                 </p>
               )}
-              {titular && (
-                <p style={{ margin: 0, fontSize: 14 }}>
-                  Varias fichas tienen el MISMO teléfono. ¿De quién es? Esa ficha tendrá el contacto en tu agenda y las demás
-                  irán dentro (como empresa y en la nota). Las fichas del CRM no se fusionan.{' '}
-                  {(rev.candidatos ?? []).map((c, i) => (
-                    <span key={c.id}>{i > 0 ? ' · ' : ''}<Link href={`/correduria/cliente/${c.id}`}>{c.nombre ?? 'abrir ficha'}</Link></span>
-                  ))}
-                </p>
-              )}
-              {muchas && (
-                <p style={{ margin: 0, fontSize: 14 }}>
-                  {(rev.candidatos ?? []).length} fichas tienen el MISMO teléfono (¿centralita o gestoría?). No se combina en un
-                  contacto ni se crea ninguno nuevo: cada ficha sigue como estaba. Si alguna tiene mal el teléfono, corrígelo en su ficha.{' '}
-                  {(rev.candidatos ?? []).map((c, i) => (
-                    <span key={c.id}>{i > 0 ? ' · ' : ''}<Link href={`/correduria/cliente/${c.id}`}>{c.nombre ?? 'abrir ficha'}</Link></span>
-                  ))}
-                </p>
+              {(titular || muchas) && (
+                <div style={{ display: 'grid', gap: 6, fontSize: 14, minWidth: 0 }}>
+                  <p style={{ margin: 0 }}>
+                    {titular
+                      ? <>Varias fichas tienen el MISMO teléfono. ¿De quién es? Esa ficha tendrá el contacto en tu agenda y las demás irán dentro (como empresa y en la nota). Las fichas del CRM no se fusionan.</>
+                      : <>{(rev.candidatos ?? []).length} fichas tienen el MISMO teléfono (¿centralita o gestoría?). No se combina en un contacto ni se crea ninguno nuevo: cada ficha sigue como estaba. Si alguna tiene mal el teléfono, corrígelo en su ficha.</>}
+                  </p>
+                  <p style={{ margin: 0, overflowWrap: 'anywhere' }}>
+                    Teléfono en cuestión: <strong>{rev.telefonoCompartido ?? 'no se puede leer (clave de cifrado)'}</strong>
+                  </p>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+                    {(rev.candidatos ?? []).map((c) => (
+                      <li key={c.id} style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+                        <Link href={`/correduria/cliente/${c.id}`} style={{ fontWeight: 600, overflowWrap: 'anywhere', minHeight: 24 }}>{c.nombre ?? 'abrir ficha'}{c.tipoPersona === 'juridica' ? ' (empresa)' : ''}</Link>
+                        <DatosDeFicha d={c} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {enriquecer && p && (
                 <p style={{ margin: 0, fontSize: 14, overflowWrap: 'anywhere' }}>

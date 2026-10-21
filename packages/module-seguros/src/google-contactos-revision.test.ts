@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { accionesPermitidas, efectoResolucion } from './google-contactos-revision.ts'
+import { accionesPermitidas, efectoResolucion, nombreFichaLegible, telefonoParaMostrar } from './google-contactos-revision.ts'
 import { camposDeCrm, hashCampos, personaDesdeCampos, planificarSync, type PersonaGoogle, type Vinculo } from './google-contactos.ts'
 import type { ContactoMovil } from './vcard.ts'
 
@@ -41,4 +41,24 @@ test('acciones por tipo: «Aceptar como lead» solo para un contacto nuevo del g
   assert.ok(a.ok && a.altaLead && a.estado === 'aceptada')
   const d = efectoResolucion('propuesta_lead', 'descartar')
   assert.ok(d.ok && !d.altaLead && d.estado === 'descartada')
+})
+
+test('🪤 nombreFichaLegible: no duplica cuando apellidos ya trae el nombre (o al revés)', () => {
+  assert.equal(nombreFichaLegible('Juan Manuel', 'Juan Manuel Duran Martinez'), 'Juan Manuel Duran Martinez')
+  assert.equal(nombreFichaLegible('Juan Manuel Duran', 'duran'), 'Juan Manuel Duran')
+  assert.equal(nombreFichaLegible('Ana', 'Pérez'), 'Ana Pérez')
+  assert.equal(nombreFichaLegible('José  Luis', null), 'José Luis')
+  assert.equal(nombreFichaLegible(null, 'Gómez'), 'Gómez')
+  assert.equal(nombreFichaLegible('María', 'MARIA LÓPEZ'), 'MARIA LÓPEZ')
+  assert.equal(nombreFichaLegible(' ', ''), null)
+  // Un apellido que solo comparte letras con el nombre NO es contenido (palabra a palabra).
+  assert.equal(nombreFichaLegible('Ana', 'Anaya'), 'Ana Anaya')
+})
+
+test('telefonoParaMostrar: español en grupos, extranjero tal cual, vacío null', () => {
+  assert.equal(telefonoParaMostrar('600112233'), '600 11 22 33')
+  assert.equal(telefonoParaMostrar('+34 600112233'), '600 11 22 33')
+  assert.equal(telefonoParaMostrar('+351912345678'), '+351912345678')
+  assert.equal(telefonoParaMostrar(''), null)
+  assert.equal(telefonoParaMostrar(null), null)
 })
