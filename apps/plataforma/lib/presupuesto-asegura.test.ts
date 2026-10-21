@@ -313,3 +313,12 @@ test('sello de descarga: si asegura no contesta, se rinde en su tope y dice «no
     else process.env.ASEGURA_OPERADOR_SECRET = previo.secret
   }
 })
+
+test('🪤 rotar el enlace pregunta si el SERVIDOR ya tiene uno (no solo esta sesión), con su fecha', async () => {
+  // Para verlo en rojo: en `avisoRotacion` devuelve siempre null → falla.
+  const { avisoRotacion } = await import('./presupuesto-asegura.ts')
+  assert.match(avisoRotacion({ enlaceGeneradoAt: '2026-10-12T10:00:00Z', enviadoAt: null })!, /ya tiene un enlace del 12\/10; generar uno nuevo invalida el anterior/)
+  assert.match(avisoRotacion({ enlaceGeneradoAt: null, enviadoAt: '2026-10-13T10:00:00Z' })!, /del 13\/10/)
+  assert.equal(avisoRotacion({ enlaceGeneradoAt: null, enviadoAt: null }), null)
+  assert.match(avisoRotacion(null)!, /No se ha podido comprobar/)
+})

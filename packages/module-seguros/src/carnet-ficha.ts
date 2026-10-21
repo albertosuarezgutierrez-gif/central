@@ -2,6 +2,8 @@
 // modificar fecha de carnet»). La fecha es la de EXPEDICIÓN o última renovación: la antigüedad es
 // lo que tarifica, y de ella se DERIVA la caducidad (`caducidadCarnet`), que no se teclea ni se guarda.
 
+import { expedicionDesdeCaducidad } from './caducidad-carnet.ts'
+
 /** Los permisos de la DGT que se pueden anotar en la ficha: coche, moto y profesionales. */
 export const TIPOS_CARNET = ['B', 'A', 'A2', 'A1', 'AM', 'BE', 'C', 'C1', 'CE', 'C1E', 'D', 'D1', 'DE', 'D1E'] as const
 export type TipoCarnet = (typeof TIPOS_CARNET)[number]
@@ -49,4 +51,31 @@ export function revisarCarnet(entrada: {
     return { ok: false, campo: 'fecha', motivo: `Esa fecha es de antes de cumplir ${EDAD_MINIMA} años: revisa el carné o la fecha de nacimiento.` }
   }
   return { ok: true, tipo: tipo as TipoCarnet, fecha }
+}
+
+export type ExpedicionResuelta = { ok: true; fecha: unknown; viaCaducidad: boolean } | { ok: false; motivo: string }
+
+const MOTIVO_CADUCIDAD_SIN_CALCULO =
+  'No podemos calcularla con la fecha de caducidad; mete la fecha de expedición que aparece en el reverso, apartado 4a/10.'
+
+/**
+ * Qué fecha de expedición se valida: la tecleada (`fecha`) o, si solo llega la de CADUCIDAD (la del anverso),
+ * la que se deduce con `expedicionDesdeCaducidad` (necesita el nacimiento). Si llegan las dos, manda la
+ * expedición. La salida pasa después por `revisarCarnet` igual que siempre.
+ */
+export function fechaExpedicionDeEntrada(entrada: {
+  tipo: unknown
+  fecha: unknown
+  fechaCaducidad: unknown
+  fechaNacimiento: string | null
+}): ExpedicionResuelta {
+  const hayFecha = typeof entrada.fecha === 'string' && entrada.fecha.trim() !== ''
+  const crudo = typeof entrada.fechaCaducidad === 'string' ? entrada.fechaCaducidad.trim() : ''
+  if (hayFecha || crudo === '') return { ok: true, fecha: entrada.fecha, viaCaducidad: false }
+  const es = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(crudo)
+  const caducidad = es ? `${es[3]}-${es[2]}-${es[1]}` : crudo
+  if (!fechaReal(caducidad)) return { ok: false, motivo: 'La fecha de caducidad no es una fecha válida.' }
+  const exp = expedicionDesdeCaducidad({ fechaCaducidad: caducidad, fechaNacimiento: entrada.fechaNacimiento, tipo: claveTipoCarnet(entrada.tipo) })
+  if (!exp) return { ok: false, motivo: MOTIVO_CADUCIDAD_SIN_CALCULO }
+  return { ok: true, fecha: exp, viaCaducidad: true }
 }

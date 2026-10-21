@@ -28,6 +28,7 @@ import {
 } from '@central/module-tarificacion'
 import { Prisma } from '@prisma/client' // el MISMO cliente que el `prisma` de ./tenant: un Prisma.sql de otro cliente generado se envía como parámetro (P2010 en $6)
 import { prisma } from './tenant'
+import { capturaConDatos as capturaConDatosDe, opcionesDeError } from './tarificador-reglas'
 import { hayAtascos, hayConfianzaAprendido, hayPausas } from './esquema-bd'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -106,38 +107,54 @@ export type AtascoVisible = {
   caducaEn: string
   avisadoEn: string | null
   hayCaptura: boolean
-  /** Solo si se pidió `conCaptura` (avisos y detalle): PNG en base64. `null` = no hay o no cabe. */
+  /** Solo si se pidió `conCaptura` (avisos y detalle): PNG o JPEG en base64. `null` = no hay, no cabe o no se da (con datos en avisos). */
   capturaBase64?: string | null
+  /** Tipo de `capturaBase64` (21/10/2026: las de atasco son JPEG). */
+  capturaMime?: 'image/png' | 'image/jpeg' | null
+  /** Clave del paso (sin datos personales): `elegir_opcion_<campo>` = elegir una opción de una lista. */
+  clave: string
+  /** Nombre del cliente del trabajo (para que Alberto sepa de quién es; solo pantalla de plataforma, nunca Telegram). */
+  clienteNombre: string | null
+  /** Opciones de lista que vio el worker (texto): `null` = no se miraron (bot antiguo u otro atasco); `[]` = no había. */
+  opciones: string[] | null
+  /** La captura muestra datos del tomador: no sale a Telegram. */
+  capturaConDatos: boolean
 }
+
 
 type FilaAtasco = {
   id: string; trabajo_id: string; oportunidad_id: string | null; compania: string; ramo: string; clave: string; tipo: string; descripcion: string
   etiqueta: string | null; texto_esperado: string | null; candidatos: unknown; created_at: Date; caduca_at: Date; avisado_at: Date | null
   captura_documento_id: string | null; ronda: bigint
+  cliente_nombre?: string | null; opciones?: unknown; captura_con_datos?: string | null; con_cliente?: boolean | null
 }
 
-async function capturaDe(correduriaId: string, documentoId: string | null): Promise<string | null> {
+type Captura = { b64: string; mime: 'image/png' | 'image/jpeg' }
+
+/** La captura del atasco, SOLO de un documento de ESTA correduría (con BYPASSRLS el aislamiento es este `where`). */
+async function capturaDe(correduriaId: string, documentoId: string | null): Promise<Captura | null> {
   if (!documentoId) return null
   const d = await prisma.$queryRaw<{ contenido: Buffer | null; size_bytes: number | null; mime_type: string | null }[]>`
     select contenido, size_bytes, mime_type from seguros.documentos where id = ${documentoId}::uuid and correduria_id = ${correduriaId}::uuid`
   const f = d[0]
-  if (!f?.contenido || f.mime_type !== 'image/png' || f.contenido.length > MAX_BYTES_CAPTURA_PUERTO) return null
-  return Buffer.from(f.contenido).toString('base64')
+  const mime = f?.mime_type === 'image/png' || f?.mime_type === 'image/jpeg' ? f.mime_type : null
+  if (!f?.contenido || !mime || f.contenido.length > MAX_BYTES_CAPTURA_PUERTO) return null
+  return { b64: Buffer.from(f.contenido).toString('base64'), mime }
 }
 
 /** Captura del atasco si cabe en el tope TOTAL de la respuesta (si no, `null`: el aviso sale sin foto). */
-async function capturaDentroDeTope(correduriaId: string, documentoId: string | null, usado: number, suma: (n: number) => void): Promise<string | null> {
-  const b64 = await capturaDe(correduriaId, documentoId)
-  if (b64 === null || !cabeCapturaEnRespuesta(usado, b64.length)) return null
-  suma(b64.length)
-  return b64
+async function capturaDentroDeTope(correduriaId: string, documentoId: string | null, usado: number, suma: (n: number) => void): Promise<Captura | null> {
+  const c = await capturaDe(correduriaId, documentoId)
+  if (c === null || !cabeCapturaEnRespuesta(usado, c.b64.length)) return null
+  suma(c.b64.length)
+  return c
 }
 
 /**
  * Atascos ESPERANDO de la correduría (el trabajo sigue `atascado`). `pendientesAviso` = solo los que aún no se avisaron;
  * `id` = uno concreto; `conCaptura` añade la imagen (avisos y detalle). Filas ilegibles se cuentan, no desaparecen.
  */
-export async function listarAtascos(correduriaId: string, o: { pendientesAviso?: boolean; id?: string | null; conCaptura?: boolean } = {}): Promise<{ estado: 'ok'; atascos: AtascoVisible[]; ilegibles: number } | { estado: 'sin_esquema' }> {
+export async function listarAtascos(correduriaId: string, o: { pendientesAviso?: boolean; id?: string | null; conCaptura?: boolean; sinCapturaConDatos?: boolean } = {}): Promise<{ estado: 'ok'; atascos: AtascoVisible[]; ilegibles: number } | { estado: 'sin_esquema' }> {
   if (!(await hayAtascos())) return { estado: 'sin_esquema' }
   const soloAviso = o.pendientesAviso === true
   const id = o.id ?? null
@@ -145,9 +162,12 @@ export async function listarAtascos(correduriaId: string, o: { pendientesAviso?:
     select a.id::text as id, a.trabajo_id::text as trabajo_id, t.oportunidad_id::text as oportunidad_id, a.compania, a.ramo, a.clave, a.tipo,
            a.descripcion, a.etiqueta, a.texto_esperado, a.candidatos, a.created_at, a.caduca_at, a.avisado_at,
            a.captura_documento_id::text as captura_documento_id,
-           (select count(*) from seguros.tarificador_atascos b where b.trabajo_id = a.trabajo_id) as ronda
+           (select count(*) from seguros.tarificador_atascos b where b.trabajo_id = a.trabajo_id) as ronda,
+           nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente_nombre,
+           t.error->'atascoOpciones' as opciones, (t.error->>'capturaConDatos') as captura_con_datos, (t.cliente_id is not null) as con_cliente
     from seguros.tarificador_atascos a
     join seguros.tarificacion_trabajos t on t.id = a.trabajo_id and t.correduria_id = a.correduria_id
+    left join seguros.clientes c on c.id = t.cliente_id and c.correduria_id = t.correduria_id
     where a.correduria_id = ${correduriaId}::uuid and a.estado = 'esperando' and t.estado = 'atascado' and a.caduca_at > now()
       and (${!soloAviso} or a.avisado_at is null)
       and (${id}::uuid is null or a.id = ${id}::uuid)
@@ -159,12 +179,19 @@ export async function listarAtascos(correduriaId: string, o: { pendientesAviso?:
   for (const f of filas) {
     const a = atascoDeFila(f)
     if (!a) { ilegibles++; continue }
+    const conDatos = capturaConDatosDe(f)
     atascos.push({
       id: f.id, trabajoId: f.trabajo_id, oportunidadId: f.oportunidad_id, compania: f.compania, ramo: f.ramo, tipo: a.tipo,
       descripcion: a.descripcion, etiqueta: a.etiqueta, textoEsperado: a.textoEsperado, candidatos: candidatosVisibles(a),
       ronda: Number(f.ronda), maxRondas: MAX_RONDAS_ATASCO, creadoEn: f.created_at.toISOString(), caducaEn: f.caduca_at.toISOString(),
       avisadoEn: f.avisado_at?.toISOString() ?? null, hayCaptura: f.captura_documento_id !== null,
-      ...(o.conCaptura ? { capturaBase64: await capturaDentroDeTope(correduriaId, f.captura_documento_id, bytesCapturas, (n) => { bytesCapturas += n }) } : {}),
+      clave: f.clave, clienteNombre: f.cliente_nombre ?? null, opciones: opcionesDeError(f.opciones), capturaConDatos: conDatos,
+      // Con datos del tomador, la captura NO va a los avisos (Telegram): solo a la pantalla de plataforma (detalle).
+      ...(o.conCaptura ? await (async () => {
+        if (o.sinCapturaConDatos && conDatos) return { capturaBase64: null, capturaMime: null }
+        const c = await capturaDentroDeTope(correduriaId, f.captura_documento_id, bytesCapturas, (n) => { bytesCapturas += n })
+        return { capturaBase64: c?.b64 ?? null, capturaMime: c?.mime ?? null }
+      })() : {}),
     })
   }
   return { estado: 'ok', atascos, ilegibles }

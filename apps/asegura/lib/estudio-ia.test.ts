@@ -71,3 +71,10 @@ test('si la IA falla o no devuelve JSON, va la determinista (nunca lanza)', asyn
   const basura = await generarNarrativa(R, null, async () => 'no es json')
   assert.equal(basura.fuente, 'determinista')
 })
+
+test('🪤 la IA nombra una compañía que NO se ha comparado → se descarta y va la determinista', async () => {
+  // Para verlo en rojo: en `generarNarrativa`, quita el `if (compania !== null) return …`.
+  const n = await generarNarrativa(R, 'c', iaQueDice({ resumen: 'Compañía C mejora a Mapfre en el continente.', recomendacion: 'Te recomendamos Compañía C.' }))
+  assert.equal(n.fuente, 'determinista')
+  assert.match(n.descartada ?? '', /compañía ausente de la comparativa: Mapfre/)
+})

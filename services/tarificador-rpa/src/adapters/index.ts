@@ -4,6 +4,7 @@ import { allianzComunidades } from './allianz/comunidades.ts'
 import { allianzAuto, allianzMoto, AUTO_ACTIVO, MOTO_ACTIVO } from './allianz/auto.ts'
 import { mapfreAuto, mapfreMoto } from './mapfre/auto.ts'
 import { ALLIANZ_HOGAR_ACTIVO, allianzHogar } from './allianz/hogar.ts'
+import { MAPFRE_HOGAR_ACTIVO, mapfreHogar } from './mapfre/hogar.ts'
 import { GENERALI_AUTO_ACTIVO, generaliAuto } from './generali/auto.ts'
 
 /** Los adaptadores que trae compilados esta imagen (de cualquier ramo: el runner valida el riesgo con el del ramo, ramo.ts). */
@@ -23,8 +24,11 @@ adaptadores.registrar(mapfreAuto)
 adaptadores.registrar(mapfreMoto)
 // Allianz HOGAR (14/10/2026): pantalla 1 «Vivienda» mapeada de las exploraciones IA; lo que sigue (valoración, precio) es hueco
 // con inventario. Se registra SOLO con su flag (allianz/hogar.ts, APAGADO; lo enciende Alberto). Apagado, un trabajo de hogar
-// cae como `datos` («sin adaptador») sin abrir el navegador. Además asegura no acepta aún trabajos de hogar (validarEntradaRamo).
+// cae como `datos` («sin adaptador») sin abrir el navegador. Asegura ya encola hogar de Allianz (19/10/2026; puerta = su fila).
 if (ALLIANZ_HOGAR_ACTIVO) adaptadores.registrar(allianzHogar)
+// Mapfre HOGAR (borrador 15/10/2026; 21/10/2026 registro bajo flag): llega al CP y para en los huecos con inventario. SOLO con su flag
+// (mapfre/hogar.ts, APAGADO; lo enciende Alberto). Asegura además lo encola solo con `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre`.
+if (MAPFRE_HOGAR_ACTIVO) adaptadores.registrar(mapfreHogar)
 // Generali TURISMOS (18/10/2026, v0.1.0): mapa de 6 capturas hasta «Datos de Valoración»; lo que sigue (modelo/versión del
 // selector, tomador, antecedentes y PRECIO) es hueco con inventario. Se registra SOLO con su flag (generali/auto.ts, ENCENDIDO por
 // Alberto el 18/10/2026). La fila `seguros.companias_integracion` generali/auto sigue siendo la puerta de BD: sin ella no corre nada.

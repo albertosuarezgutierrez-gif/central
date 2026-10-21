@@ -57,7 +57,10 @@ export async function PATCH(req: NextRequest) {
         importeFacturado: p.importeFacturado ?? null,
         esInterno: p.esInterno,
         paradas: {
-          create: p.paradas.map((pa, i) => ({ orden: i, direccion: pa.direccion ?? null, tipo: pa.tipo })),
+          create: p.paradas
+            .map((pa) => ({ direccion: pa.direccion?.trim() || null, tipo: pa.tipo }))
+            .filter((pa) => pa.direccion !== null) // '' = parada vacía: no se inserta
+            .map((pa, i) => ({ orden: i, ...pa })),
         },
       },
     }),

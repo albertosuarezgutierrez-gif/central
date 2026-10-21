@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
   if (texto('referencia')) {
     consulta = { por: 'referencia', referencia: texto('referencia') }
   } else if (texto('direccion') && texto('municipio') && texto('provincia')) {
-    consulta = { por: 'direccion', direccion: texto('direccion'), municipio: texto('municipio'), provincia: texto('provincia') }
+    const via = texto('via') ? { tipo: texto('tipoVia'), nombre: texto('via') } : undefined
+    consulta = { por: 'direccion', direccion: texto('direccion'), municipio: texto('municipio'), provincia: texto('provincia'), via }
   } else {
     return NextResponse.json({ error: 'hace falta la referencia catastral, o dirección + municipio + provincia' }, { status: 400 })
   }

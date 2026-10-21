@@ -13,16 +13,17 @@
 //
 // 🚨 Un campo sin dato se pinta «sin dato» (nunca «0» ni vacío); lo que falta para pedir precio se dice.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import {
   AVISO_COMERCIO, AVISO_RIESGO_LIBRE, BIENES_COMERCIO, CATALOGO_HOGAR_DE_CAMPO, COMPANIAS_COMERCIO, ESPEC_POR_COMPANIA, ETIQUETA_COMPANIA_COMERCIO, ESPEC_CAPITAL, ESPEC_COMERCIO, ESPEC_LIBRE, ESPEC_VIVIENDA,
   ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_CAMPO_LIBRE, ETIQUETA_CAMPO_VIVIENDA, ETIQUETA_REGIMEN_LOCAL,
-  MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, camposCapitalDelRamo, soloLoQueCambia, textoFaltanComercio,
+  MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, numeroDesdeTexto, provinciaPorCp, camposCapitalDelRamo, soloLoQueCambia, textoFaltanComercio,
   type AseguradoAdicional, type CampoCapital, type CompaniaComercio, type PorCompaniaComercio, type CampoFaltaComercio, type CampoVivienda, type CapitalComercio, type EspecCampo, type MedidaComercio, type RamoCapital,
 } from '@central/module-seguros'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { eur } from '@/lib/dinero'
+import { elegirMunicipioCatalogo } from '@/lib/correduria/municipio-catalogo'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
 import AseguradosAdicionales, { aseguradosDeRiesgo, aseguradosParaEnviar, type AseguradoForm } from '../../cliente/[id]/AseguradosAdicionales'
 import { SelectorBuscable } from '../../SelectorBuscable'
@@ -33,7 +34,9 @@ import {
   type FilaCapital, type FilaMedida, type FormCompanias,
 } from './piezas-comercio'
 import type { Riesgo } from '@/lib/riesgo-asegura'
-import { avisoUsoCatastral, consultaCatastroDeForm, precargaCatastroVivienda, type CatastroVivienda, type PrecargaCatastro } from '@/lib/correduria/catastro-vivienda'
+import { avisoInfraseguro, capitalContinenteSugerido, discrepanciasCatastro, preguntasPorAntiguedad } from '@central/module-tarificacion'
+import type { PropuestaCarteraHogar } from '@/lib/correduria/hogar-cartera'
+import { avisoUsoCatastral, consultaCatastroDeForm, metadatosConsultaCatastro, precargaCatastroVivienda, type CatastroVivienda, type PrecargaCatastro } from '@/lib/correduria/catastro-vivienda'
 
 const campoCss: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44,
@@ -47,6 +50,8 @@ type Props = {
   riesgo: Riesgo; ocupado: boolean; onCambio: (texto: string) => void; onError: (texto: string) => void
   /** Avisa de una edición A MEDIAS (formulario abierto o guardando): bloquea el cotizador embebido (hogar). */
   onEditando?: (aMedias: boolean) => void
+  /** Hogar: lo que el cliente ya tiene en la cartera (punto de partida, nunca se escribe solo). */
+  propuestaCartera?: PropuestaCarteraHogar | null
 }
 type Form = Record<string, string>
 
@@ -177,8 +182,115 @@ const GRUPOS_VIVIENDA: Array<{ titulo: string; campos: CampoVivienda[] }> = [
   { titulo: 'Cómo es', campos: ['metrosCuadrados', 'anioConstruccion', 'anioUltimaReforma', 'habitaciones', 'tipoVivienda', 'uso', 'ocupacion', 'conMadera', 'ubicacion', 'material', 'calidad'] },
   { titulo: 'Protecciones', campos: ['alarma', 'puertasSecundarias', 'puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada', 'vigilante'] },
   { titulo: 'Qué se asegura', campos: ['propietarioEsTomador', 'capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos', 'asentamiento'] },
+  { titulo: 'Hipoteca y reformas', campos: ['hipoteca', 'bancoHipoteca', 'reformaTuberias', 'reformaElectrica'] },
 ]
+
+/**
+ * Qué campos de un grupo se enseñan con los valores de AHORA (texto de formulario): el banco solo con hipoteca = sí; las reformas de
+ * tuberías y electricidad solo si la vivienda tiene más de 40 años (`preguntasPorAntiguedad`). Sin año no se sabe la antigüedad: no se pregunta.
+ */
+function camposVisibles(campos: CampoVivienda[], v: Record<string, string | undefined>): CampoVivienda[] {
+  const anio = numeroDesdeTexto(v.anioConstruccion)
+  const q = preguntasPorAntiguedad(Number.isFinite(anio) ? anio : null, new Date())
+  return campos.filter((k) =>
+    k === 'bancoHipoteca' ? v.hipoteca === 'si'
+    : k === 'reformaTuberias' ? q.preguntarReformaTuberias
+    : k === 'reformaElectrica' ? q.preguntarReformaElectrica
+    : true)
+}
+
+const aNum = (t: string | undefined): number | null => { const n = numeroDesdeTexto(t); return Number.isFinite(n) && n > 0 ? n : null }
+
+/**
+ * Avisos que ASESORAN (no bloquean, no escriben): capital de continente sugerido (m² × coste de reconstrucción, ESTIMACIÓN por zona),
+ * infraseguro (< 80% de lo sugerido), diferencias con lo que dijo el Catastro y reformas por preguntar si el piso tiene más de 40 años.
+ */
+export function AsesorHogar({ v, onUsarCapital }: { v: Record<string, string | undefined>; onUsarCapital?: (eurosSugeridos: number) => void }) {
+  const m2 = aNum(v.metrosCuadrados)
+  const anio = aNum(v.anioConstruccion)
+  // Los m² declarados son el TOTAL CONSTRUIDO (vivienda + anexos): es lo que se manda a Codeoscopic y sobre lo que se sugiere el capital.
+  // Los datos de la consulta al Catastro solo valen si son de la referencia ACTUAL del riesgo (si se cambió, se avisa y no se comparan).
+  const rc = (v.referenciaCatastral ?? '').replace(/[\s-]/g, '').toUpperCase()
+  const consultaVale = !!v.catastroConsultadoAt && (v.catastroReferencia ?? '') !== '' && v.catastroReferencia === rc
+  const sug = capitalContinenteSugerido(m2, v.provincia || provinciaPorCp(v.cp) || null)
+  const infra = avisoInfraseguro(aNum(v.capitalContinente), sug?.capitalEur ?? null)
+  const dis = discrepanciasCatastro({ metrosCuadrados: m2, anioConstruccion: anio }, consultaVale ? { metrosCuadrados: aNum(v.catastroMetrosCuadrados), anioConstruccion: aNum(v.catastroAnioConstruccion) } : {})
+  const q = preguntasPorAntiguedad(anio, new Date())
+  const sinContestar = (k: string) => v[k] === undefined || v[k] === ''
+  const reformas = [q.preguntarReformaTuberias && sinContestar('reformaTuberias') && 'tuberías', q.preguntarReformaElectrica && sinContestar('reformaElectrica') && 'instalación eléctrica'].filter(Boolean)
+  const consulta = consultaVale ? fechaEs(v.catastroConsultadoAt ?? null) : null
+  const consultaAjena = !!v.catastroConsultadoAt && !consultaVale
+  if (!sug && dis.length === 0 && reformas.length === 0 && !consulta && !consultaAjena) return null
+  return (
+    <div role="status" style={{ display: 'grid', gap: 4, fontSize: 12, minWidth: 0, overflowWrap: 'anywhere' }}>
+      {consulta && <span style={{ color: 'var(--muted)' }}>Consulta al Catastro del {consulta}{v.usoCatastral ? ` · uso catastral: ${v.usoCatastral}` : ''}.</span>}
+      {consultaAjena && <span style={{ color: 'var(--warning)' }}>La última consulta al Catastro es de otra referencia: vuelve a consultarla para comparar m² y año.</span>}
+      {consultaVale && v.catastroMetrosVivienda && (
+        <span style={{ color: 'var(--muted)' }}>
+          Según el Catastro: vivienda {v.catastroMetrosVivienda} m²{v.catastroAnexos ? ` + anexos (${v.catastroAnexos})` : ''}{v.catastroMetrosCuadrados ? ` = ${v.catastroMetrosCuadrados} m² construidos` : ''}.
+          Se declara el total construido; el desglose es solo informativo.
+        </span>
+      )}
+      {sug && (
+        <span style={{ color: 'var(--muted)' }}>
+          Capital de continente sugerido: <strong>{eur(sug.capitalEur)}</strong> ({m2} m² construidos × {eur(sug.eurPorM2)}/m², estimación{sug.zona === 'media' ? ' de zona media' : ` de zona ${sug.zona}`}; no es una tarifa).
+          {onUsarCapital && (
+            <button type="button" onClick={() => onUsarCapital(sug.capitalEur)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, marginLeft: 6 }}>Usar la sugerencia</button>
+          )}
+        </span>
+      )}
+      {infra?.infraseguro && sug && (
+        <span style={{ color: 'var(--warning)' }}>Posible infraseguro: el capital de continente es el {Math.round(infra.ratio * 100)}% de lo sugerido ({eur(sug.capitalEur)}).</span>
+      )}
+      {dis.map((x) => <span key={x.campo} style={{ color: 'var(--warning)' }}>{x.mensaje} Revísalo con el cliente.</span>)}
+      {reformas.length > 0 && q.antiguedad !== null && (
+        <span style={{ color: 'var(--warning)' }}>La vivienda tiene {q.antiguedad} años: pregunta si se han reformado {reformas.join(' y ')}.</span>
+      )}
+    </div>
+  )
+}
+
+/** La póliza de hogar que el cliente ya tiene en la cartera (en vigor): compañía, vencimiento y capitales, como punto de partida. */
+function CarteraHogar({ p, onUsarCapitales }: { p: PropuestaCarteraHogar | null | undefined; onUsarCapitales: (c: { continente: number | null; contenido: number | null }) => void }) {
+  if (!p) return null
+  const caja: React.CSSProperties = { display: 'grid', gap: 6, fontSize: 13, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, minWidth: 0, overflowWrap: 'anywhere' }
+  if (p.estado === 'pendiente') return <div role="status" style={{ ...caja, color: 'var(--muted)' }}>No se han podido leer las pólizas del cliente: no se sabe si ya tiene un hogar en la cartera.</div>
+  if (p.estado === 'sin_poliza') return <div role="status" style={{ ...caja, color: 'var(--muted)' }}>El cliente no tiene ningún hogar en vigor en la cartera.</div>
+  if (p.estado === 'varias') {
+    return (
+      <div role="status" style={caja}>
+        <strong>Tiene varios hogares en vigor en la cartera</strong> (no se elige uno a ciegas):
+        {p.polizas.map((x, i) => <span key={i}>{x.aseguradora ?? 'compañía sin nombre'} · vence {fechaEs(x.fechaVencimiento) ?? 'sin fecha'}{x.direccion ? ` · ${x.direccion}` : ''}</span>)}
+      </div>
+    )
+  }
+  const hayCapital = p.capitalContinente !== null || p.capitalContenido !== null
+  return (
+    <div role="status" style={caja}>
+      <strong>Ya tiene un hogar en vigor en la cartera</strong>
+      <span>{p.aseguradora ?? 'Compañía sin nombre'}{p.numeroPoliza ? ` · póliza ${p.numeroPoliza}` : ''} · vence {fechaEs(p.fechaVencimiento) ?? 'sin fecha'}{p.direccion ? ` · ${p.direccion}` : ''}</span>
+      <span style={{ color: 'var(--muted)' }}>
+        Capitales actuales: continente {p.capitalContinente !== null ? eur(p.capitalContinente) : 'sin dato'}, contenido {p.capitalContenido !== null ? eur(p.capitalContenido) : 'sin dato'}.
+      </span>
+      {hayCapital && (
+        <button type="button" onClick={() => onUsarCapitales({ continente: p.capitalContinente, contenido: p.capitalContenido })} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, justifySelf: 'start', maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
+          Usar sus capitales como punto de partida
+        </button>
+      )}
+    </div>
+  )
+}
 const CAMPOS_EUROS = new Set<string>(['capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor'])
+
+/** Municipios INE del CP (tabla del CRM, `/api/correduria/codigo-postal`): solo ayudan a casar con el catálogo. Fallo o CP desconocido = `[]`. */
+async function municipiosIneDelCp(cp: string): Promise<string[]> {
+  try {
+    const r = await fetch(`/api/correduria/codigo-postal?cp=${encodeURIComponent(cp)}`)
+    if (!r.ok) return []
+    const j = (await r.json()) as { municipios?: unknown }
+    return Array.isArray(j.municipios) ? j.municipios.filter((x): x is string => typeof x === 'string') : []
+  } catch { return [] }
+}
 
 function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }) {
   const { d, dePoliza } = props
@@ -196,7 +308,7 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
   // Rellenar desde el Catastro (gratis, servicio público; el mismo que `HogarCatastro`/`hogar-nuevo`): solo lo VACÍO
   // del formulario; lo ya escrito que difiere se enseña, no se pisa. Nada se guarda hasta «Guardar». `base` = el formulario recién
   // abierto desde la lectura (el estado aún no se ha repintado).
-  async function leerCatastro(cuerpo?: { referencia: string }, base?: Form) {
+  async function leerCatastro(cuerpo?: { referencia: string } | { direccion: string; municipio: string; provincia: string }, base?: Form) {
     const form = base ?? E.form
     const q = cuerpo ? { ok: true as const, cuerpo } : consultaCatastroDeForm(form, nombreOpcion('tipoViaId', form.tipoViaId || null))
     if (!q.ok) { setCatastro({ estado: 'aviso', texto: q.motivo }); return }
@@ -208,12 +320,19 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
       if (j.estado === 'ok') {
         const pre = precargaCatastroVivienda(form, j.referencia, j.precalificacion.datos)
         // El relleno se calcula sobre el formulario de AHORA (no el de antes de la consulta): no pisa lo escrito mientras tanto.
-        if (Object.keys(pre.cambios).length > 0) E.setForm((f) => ({ ...f, ...precargaCatastroVivienda(f, j.referencia, j.precalificacion.datos).cambios }))
+        // + la consulta misma (cuándo y qué dijo el Catastro): se guarda con «Guardar» y sirve para avisar de discrepancias.
+        const meta = metadatosConsultaCatastro(j.precalificacion.datos, j.referencia, new Date().toISOString())
+        E.setForm((f) => ({ ...f, ...precargaCatastroVivienda(f, j.referencia, j.precalificacion.datos).cambios, ...meta }))
         setSugeridos(Object.keys(pre.cambios))
         setCatastro({ estado: 'hecho', pre, uso: j.precalificacion.datos.uso ?? null })
         return
       }
       if (j.estado === 'elegir') { setCatastro({ estado: 'elegir', via: j.via, inmuebles: j.inmuebles }); return }
+      // Varias calles parecidas (o ninguna casa del todo): NUNCA se elige en silencio; se ofrecen para que elija una persona.
+      if ((j.estado === 'ambigua' || j.estado === 'no_encontrado') && 'cuerpo' in q && 'direccion' in q.cuerpo && (j.parecidas ?? []).length > 0) {
+        setCatastro({ estado: 'parecidas', parecidas: j.parecidas!, municipio: q.cuerpo.municipio, provincia: q.cuerpo.provincia })
+        return
+      }
       setCatastro({
         estado: 'aviso',
         texto: j.estado === 'no_encontrado' ? 'Se ha consultado y el Catastro no devuelve ningún inmueble con esos datos.'
@@ -257,33 +376,76 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
     return String(v)
   }
 
-  async function buscarMunicipios() {
-    const cp = (E.form.cp ?? '').trim()
+  const cpRef = useRef('')
+  cpRef.current = (E.form.cp ?? '').trim()
+  async function buscarMunicipios(cpDado?: string) {
+    const cp = (cpDado ?? E.form.cp ?? '').trim()
     setNotaMunicipio(null)
     if (!/^\d{5}$/.test(cp)) { setNotaMunicipio('Escribe un código postal de 5 cifras.'); return }
     try {
       const r = await pedirCatalogo({ tipo: 'municipios', cp })
+      if (cpRef.current !== cp) return // respuesta tardía: el CP ya es otro
       if (r.estado !== 'ok') { setNotaMunicipio('No se ha podido leer el catálogo de municipios ahora.'); return }
       setMunicipios(r.opciones)
-      if (r.opciones.length === 0) setNotaMunicipio('Ese código postal no tiene municipios en el catálogo.')
-      else if (r.opciones.length === 1) E.setForm((f) => ({ ...f, municipioId: r.opciones[0].id, municipio: r.opciones[0].nombre }))
+      if (r.opciones.length === 0) { setNotaMunicipio(`El catálogo de Avant2 no tiene municipios para el código postal ${cp}.`); return }
+      // Un solo municipio en el CP → preseleccionado. Varios → si UNO casa EXACTO con lo guardado o con la tabla INE del CP
+      // (tildes, mayúsculas y artículos aparte), también; si no, el desplegable y lo elige una persona.
+      let elegido: Opcion | null = r.opciones.length === 1 ? r.opciones[0] : null
+      if (!elegido) {
+        const ine = await municipiosIneDelCp(cp)
+        if (cpRef.current !== cp) return
+        // Lo guardado solo vale con el CP guardado; con un CP nuevo, solo la tabla INE de ese CP.
+        const guardado = cp === ((d.cp as string | null) ?? '') ? (E.form.municipio || ((d.municipio as string | null) ?? null)) : null
+        elegido = elegirMunicipioCatalogo(r.opciones, { guardado, ine })
+      }
+      if (elegido) {
+        const e = elegido
+        E.setForm((f) => ({ ...f, municipioId: e.id, municipio: e.nombre }))
+      } else {
+        setNotaMunicipio('Hay varios municipios con ese código postal: elige el correcto en el desplegable.')
+      }
     } catch {
       setNotaMunicipio('No se ha podido leer el catálogo de municipios ahora.')
     }
   }
+
+  // Al abrir la edición con CP completo y sin municipio del catálogo, se busca solo (CP → desplegable): no hace falta pulsar el botón.
+  useEffect(() => {
+    if (E.editando && municipios === null && !E.form.municipioId && /^\d{5}$/.test((E.form.cp ?? '').trim())) void buscarMunicipios()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [E.editando])
 
   // El municipio del catálogo es de UN código postal: al cambiar el CP se suelta (y su lista de candidatos) para que no
   // quede un municipio de otra zona guardado junto al CP nuevo. Si se vuelve al CP guardado, se recupera.
   function alCambiarCp(e: React.ChangeEvent<HTMLInputElement>) {
     const cp = e.target.value
     const igualAlGuardado = cp.trim() === ((d.cp as string | null) ?? '')
+    const completo = /^\d{5}$/.test(cp.trim())
     setMunicipios(null)
-    setNotaMunicipio(igualAlGuardado ? null : 'Has cambiado el código postal: busca de nuevo el municipio.')
+    setNotaMunicipio(igualAlGuardado || completo ? null : 'Has cambiado el código postal: busca de nuevo el municipio.')
+    // CP primero: la provincia sale sola del código postal (la tabla del CRM) y el municipio del catálogo se busca solo.
+    const provincia = completo && !igualAlGuardado ? provinciaPorCp(cp.trim()) : null
     E.setForm((f) => ({
       ...f, cp,
+      ...(provincia ? { provincia } : {}),
       municipioId: igualAlGuardado && d.municipioId != null ? String(d.municipioId) : '',
       municipio: igualAlGuardado ? ((d.municipio as string | null) ?? '') : '',
     }))
+    if (completo && !igualAlGuardado) void buscarMunicipios(cp.trim())
+  }
+
+  // Punto de partida desde la cartera: SOLO los capitales que el formulario tiene vacíos (nada se pisa) y SOLO los que la ficha de CIMA trae.
+  // Quedan como sugeridos hasta «Guardar»; abrir la edición es lo único que hace falta para verlos.
+  function usarCapitalesDeCartera(c: { continente: number | null; contenido: number | null }) {
+    if (!E.editando) E.abrir()
+    const nuevos: Record<string, string> = {}
+    if (c.continente !== null) nuevos.capitalContinente = String(c.continente)
+    if (c.contenido !== null) nuevos.capitalContenido = String(c.contenido)
+    E.setForm((f) => {
+      const aplicar = Object.fromEntries(Object.entries(nuevos).filter(([k]) => (f[k] ?? '').trim() === ''))
+      setSugeridos((l) => [...new Set([...l, ...Object.keys(aplicar)])])
+      return { ...f, ...aplicar }
+    })
   }
 
   // «Rellenar desde el Catastro» ya desde la lectura: hay una referencia de bien (20 caracteres) y aún falta algo que el Catastro da.
@@ -313,11 +475,13 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
               </span>
             </div>
           )}
-          {GRUPOS_VIVIENDA.map((g) => (
+          <CarteraHogar p={props.propuestaCartera} onUsarCapitales={usarCapitalesDeCartera} />
+          <AsesorHogar v={aForm(ESPEC_VIVIENDA, d)} />
+          {GRUPOS_VIVIENDA.map((g) => ({ g, campos: camposVisibles(g.campos, aForm(ESPEC_VIVIENDA, d)) })).filter((x) => x.campos.length > 0).map(({ g, campos }) => (
             <div key={g.titulo} style={{ display: 'grid', gap: 6 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{g.titulo}</div>
               <dl style={{ ...REJILLA, margin: 0 }}>
-                {g.campos.map((k) => (
+                {campos.map((k) => (
                   <div key={k} style={{ display: 'grid', gap: 2, minWidth: 0 }}>
                     <dt style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ETIQUETA_CAMPO_VIVIENDA[k]}</dt>
                     <dd style={{ margin: 0, fontWeight: 600, overflowWrap: 'anywhere' }}>{valorLegible(k)}</dd>
@@ -330,11 +494,13 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
       }
       formulario={
         <div style={{ display: 'grid', gap: 14 }}>
-          {GRUPOS_VIVIENDA.map((g) => (
+          <CarteraHogar p={props.propuestaCartera} onUsarCapitales={usarCapitalesDeCartera} />
+          <AsesorHogar v={E.form} onUsarCapital={(eurosSugeridos) => { quitarSugerido('capitalContinente'); E.setForm((f) => ({ ...f, capitalContinente: String(eurosSugeridos) })) }} />
+          {GRUPOS_VIVIENDA.map((g) => ({ g, campos: camposVisibles(g.campos, E.form) })).filter((x) => x.campos.length > 0).map(({ g, campos }) => (
             <div key={g.titulo} style={{ display: 'grid', gap: 8 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{g.titulo}</div>
               <div style={REJILLA}>
-                {g.campos.map((k) => {
+                {campos.map((k) => {
                   const c = ESPEC_VIVIENDA.find((x) => x.clave === k)!
                   const et = ETIQUETA_CAMPO_VIVIENDA[k]
                   if (k === 'conMadera') {
@@ -351,7 +517,8 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
                   if (c.tipo.t === 'bool') {
                     return (
                       <label key={k} style={etiquetaCss}>{et}
-                        <select value={E.form[k] ?? ''} onChange={E.set(k)} style={campoCss}>
+                        <select value={E.form[k] ?? ''} style={campoCss}
+                          onChange={k === 'hipoteca' ? (ev) => { E.set(k)(ev); if (ev.target.value !== 'si') E.setForm((f) => ({ ...f, bancoHipoteca: '' })) } : E.set(k)}>
                           <option value="">Sin dato</option><option value="si">Sí</option><option value="no">No</option>
                         </select>
                       </label>
@@ -379,7 +546,7 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
                       <input value={E.form[k] ?? ''} onChange={(ev) => { quitarSugerido(k); if (k === 'cp') alCambiarCp(ev); else E.set(k)(ev) }} inputMode={numerico ? 'decimal' : k === 'cp' ? 'numeric' : undefined}
                         maxLength={c.tipo.t === 'texto' ? c.tipo.max : k === 'referenciaCatastral' ? 24 : undefined}
                         style={sugerido ? { ...campoCss, borderStyle: 'dashed', borderColor: 'var(--warning)' } : campoCss} />
-                      {sugerido && <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 400 }}>Sugerido por el Catastro: revísalo y guarda.</span>}
+                      {sugerido && <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 400 }}>Sugerido (Catastro o cartera): revísalo y guarda.</span>}
                     </label>
                   )
                 })}
@@ -388,17 +555,18 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
                     <button type="button" disabled={E.bloqueado || catastro.estado === 'consultando'} onClick={() => void leerCatastro()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
                       {catastro.estado === 'consultando' ? 'Consultando el Catastro…' : 'Rellenar desde el Catastro (gratis)'}
                     </button>
-                    <CatastroResultado c={catastro} deshabilitado={E.bloqueado || catastro.estado === 'consultando'} onElegir={(referencia) => void leerCatastro({ referencia })} />
+                    <CatastroResultado c={catastro} deshabilitado={E.bloqueado || catastro.estado === 'consultando'} onElegir={(referencia) => void leerCatastro({ referencia })} onElegirCalle={(direccion, municipio, provincia) => void leerCatastro({ direccion, municipio, provincia })} />
                     <button type="button" disabled={E.bloqueado} onClick={() => void buscarMunicipios()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
                       Buscar municipio por código postal
                     </button>
-                    {municipios && municipios.length > 1 && (
+                    {municipios && municipios.length > 0 && (
                       <select aria-label="Municipio del código postal" value={E.form.municipioId ?? ''} style={campoCss}
                         onChange={(e) => {
                           const o = municipios.find((m) => m.id === e.target.value)
                           E.setForm((f) => ({ ...f, municipioId: o?.id ?? '', municipio: o?.nombre ?? '' }))
                         }}>
                         <option value="">Elige el municipio</option>
+                        {E.form.municipioId && !municipios.some((m) => m.id === E.form.municipioId) && <option value={E.form.municipioId}>{E.form.municipio || E.form.municipioId}</option>}
                         {municipios.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                       </select>
                     )}
@@ -419,17 +587,30 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
 type RespuestaCatastro =
   | { estado: 'ok'; referencia: string; precalificacion: { datos: CatastroVivienda } }
   | { estado: 'elegir'; via: string; inmuebles: Array<{ refCompleta: string; planta: string | null; puerta: string | null }> }
-  | { estado: 'ambigua' } | { estado: 'no_encontrado' } | { estado: 'direccion_ilegible' } | { estado: 'error'; motivo: string }
+  | { estado: 'ambigua'; parecidas?: Array<{ etiqueta: string; direccion: string }> } | { estado: 'no_encontrado'; parecidas?: Array<{ etiqueta: string; direccion: string }> } | { estado: 'direccion_ilegible' } | { estado: 'error'; motivo: string }
 
 type CatastroLectura =
   | { estado: 'idle' } | { estado: 'consultando' } | { estado: 'aviso'; texto: string }
+  | { estado: 'parecidas'; parecidas: Array<{ etiqueta: string; direccion: string }>; municipio: string; provincia: string }
   | { estado: 'hecho'; pre: PrecargaCatastro; uso: string | null }
   | { estado: 'elegir'; via: string; inmuebles: Array<{ refCompleta: string; planta: string | null; puerta: string | null }> }
 
 /** Qué ha hecho el Catastro con el formulario: lo rellenado, lo que difiere (sin tocar) o el piso a elegir. */
-function CatastroResultado({ c, onElegir, deshabilitado }: { c: CatastroLectura; onElegir: (referencia: string) => void; deshabilitado: boolean }) {
+function CatastroResultado({ c, onElegir, onElegirCalle, deshabilitado }: { c: CatastroLectura; onElegir: (referencia: string) => void; onElegirCalle: (direccion: string, municipio: string, provincia: string) => void; deshabilitado: boolean }) {
   if (c.estado === 'idle' || c.estado === 'consultando') return null
   if (c.estado === 'aviso') return <span role="status" style={{ fontSize: 12, color: 'var(--warning)' }}>{c.texto}</span>
+  if (c.estado === 'parecidas') {
+    return (
+      <div style={{ display: 'grid', gap: 6 }}>
+        <span style={{ fontSize: 12, color: 'var(--warning)' }}>El callejero tiene varias calles con ese nombre (las de pedanía llevan su pedanía entre paréntesis). ¿Cuál es?</span>
+        {c.parecidas.map((p) => (
+          <button key={p.direccion} type="button" disabled={deshabilitado} onClick={() => onElegirCalle(p.direccion, c.municipio, c.provincia)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, justifyContent: 'flex-start', whiteSpace: 'normal', height: 'auto', textAlign: 'left' }}>
+            {p.etiqueta}
+          </button>
+        ))}
+      </div>
+    )
+  }
   if (c.estado === 'elegir') {
     return (
       <div style={{ display: 'grid', gap: 6 }}>

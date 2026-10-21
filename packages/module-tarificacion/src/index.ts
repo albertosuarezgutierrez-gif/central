@@ -113,6 +113,8 @@ export {
   obligatoriosDeRamo,
   capacidadesConObligatorios,
   valorEnRuta,
+  BLOQUES_OBLIGATORIO,
+  type BloqueObligatorio,
   type CampoObligatorio,
   type Faltante,
   type OrigenObligatorio,
@@ -142,6 +144,8 @@ export {
   REGIMENES_VIVIENDA,
   TIPOS_VIVIENDA,
   USOS_VIVIENDA,
+  CLAVES_OBJETOS_VALOR_HOGAR,
+  CLAVES_PROTECCIONES_HOGAR,
   fechaDdMmAaaaDeIso,
   validarFormularioHogar,
   validarFormularioHogarSinTomador,
@@ -149,6 +153,8 @@ export {
   type FormularioHogar,
   type FormularioHogarSinTomador,
   type InmuebleHogar,
+  type ObjetosValorHogar,
+  type ProteccionesHogar,
   type RegimenVivienda,
   type TipoVivienda,
   type TomadorHogar,
@@ -156,6 +162,13 @@ export {
   type ValidacionFormularioHogar,
   type ValidacionFormularioHogarSinTomador,
 } from './formulario-hogar.ts'
+
+// Ayudas puras de la oportunidad de HOGAR (20/10/2026): capital sugerido, infraseguro, discrepancias Catastro, antigüedad, bots por uso.
+export {
+  COSTE_RECONSTRUCCION_EUR_M2, REGLAS_USO_COMPANIA, UMBRAL_INFRASEGURO, TOLERANCIA_M2, ANTIGUEDAD_PREGUNTAR_REFORMAS, USOS_FILTRO_BOTS,
+  aceptaUso, avisoInfraseguro, capitalContinenteSugerido, discrepanciasCatastro, filtrarBotsPorUso, preguntasPorAntiguedad, zonaCostePorProvincia,
+  type AceptaUso, type AvisoInfraseguro, type CapitalSugerido, type DiscrepanciaCatastro, type FiltroBotsPorUso, type PreguntasAntiguedad, type UsoFiltroBots, type ZonaCoste,
+} from './hogar-asesor.ts'
 
 // Tomador canónico (08/10/2026): bloque reutilizable por los formularios.
 export {
@@ -377,12 +390,15 @@ export {
   type ConductorHabitual,
   type FormularioAuto,
   type DatosTomadorFicha,
+  validarDatosTomadorFicha,
   type SeleccionVehiculo,
   type ValidacionFormularioAuto,
   USOS_FRECUENCIA,
   TIPOS_GARAJE,
+  JUSTIFICANTES_SEGURO_ANTERIOR,
   type UsoFrecuencia,
   type TipoGaraje,
+  type JustificanteSeguroAnterior,
 } from './formulario-auto.ts'
 // Supuestos de un precio de coche por bot (15/10/2026): el valor «no determinante» de lo que el formulario no trae, DECLARADO.
 export {
@@ -759,6 +775,8 @@ export {
   atascoActivo,
   horasAtasco,
   leerAtascoWorker,
+  leerOpcionesAtasco,
+  MAX_OPCIONES_ATASCO,
   candidatosVisibles,
   candidatoAtascoBloqueado,
   elegirCandidatoAtasco,

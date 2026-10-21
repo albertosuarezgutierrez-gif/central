@@ -62,3 +62,50 @@ export async function descargarObjeto(path: string): Promise<ArrayBuffer> {
   if (!r.ok) throw new Error(`Storage download ${r.status}`)
   return r.arrayBuffer()
 }
+
+/** Copia un objeto dentro del bucket privado (service_role), sin bajarlo ni subirlo de nuevo. */
+export async function copiarObjeto(origen: string, destino: string): Promise<void> {
+  const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/copy`, {
+    method: 'POST',
+    headers: { ...cabecerasClave(serviceKey()), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bucketId: BUCKET_DOCS, sourceKey: origen, destinationKey: destino }),
+  })
+  if (!r.ok) throw new Error(`Storage copy ${r.status}: ${await r.text()}`)
+}
+
+/**
+ * Tamaño y tipo REALES de un objeto (HEAD, service_role). null si no existe o no se pudo leer.
+ * `tamano`/`tipo` null = no lo dice Storage (no se sabe), nunca 0.
+ */
+export async function infoObjeto(path: string): Promise<{ tamano: number | null; tipo: string | null } | null> {
+  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${BUCKET_DOCS}/${path}`
+  const r = await fetch(url, { method: 'HEAD', headers: cabecerasClave(serviceKey()) }).catch(() => null)
+  if (!r || !r.ok) return null
+  const len = Number.parseInt(r.headers.get('content-length') ?? '', 10)
+  const tipo = (r.headers.get('content-type') ?? '').split(';')[0].trim() || null
+  return { tamano: Number.isFinite(len) && len >= 0 ? len : null, tipo }
+}
+
+/** Lista los objetos (no carpetas) directamente bajo `prefijo/` (service_role). Lanza si Storage falla. */
+export async function listarObjetos(prefijo: string, limit = 1000, offset = 0): Promise<{ path: string; creado_at: string | null }[]> {
+  const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/list/${BUCKET_DOCS}`, {
+    method: 'POST',
+    headers: { ...cabecerasClave(serviceKey()), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prefix: prefijo, limit, offset, sortBy: { column: 'created_at', order: 'asc' } }),
+  })
+  if (!r.ok) throw new Error(`Storage list ${r.status}: ${await r.text()}`)
+  const xs = (await r.json()) as { name: string; id: string | null; created_at?: string | null }[]
+  const base = prefijo.replace(/\/+$/, '')
+  return xs.filter(x => x.id).map(x => ({ path: `${base}/${x.name}`, creado_at: x.created_at ?? null }))
+}
+
+/** Borra varios objetos de una vez (service_role). Lanza si Storage falla. */
+export async function borrarObjetos(paths: string[]): Promise<void> {
+  if (!paths.length) return
+  const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${BUCKET_DOCS}`, {
+    method: 'DELETE',
+    headers: { ...cabecerasClave(serviceKey()), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prefixes: paths }),
+  })
+  if (!r.ok) throw new Error(`Storage delete ${r.status}: ${await r.text()}`)
+}

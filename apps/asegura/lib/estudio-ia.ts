@@ -9,7 +9,12 @@
 //      ofertas que hay aquí, y la recomendación es la que marcó el CORREDOR, no un cálculo.
 // El cepo de esto vive en `estudio-ia.test.ts` (rómpelo y míralo en rojo).
 
-import { cifrasDeMatriz, type ResultadoComparacion } from '@central/module-seguros'
+//   4. (20/10/2026, comparativa única) Lo mismo con las COMPAÑÍAS: si el texto nombra una aseguradora que no
+//      está entre las comparadas (`companiaIntrusa`), se descarta igual. Y el texto lleva su etiqueta visible
+//      (`etiquetaResumen`: «Resumen preparado con IA y revisado por tu corredor» / plantilla).
+// La IA va por `iaTexto` (pasarela de plataforma → cadena de fallback de @central/core-ai, con tope de gasto).
+
+import { cifrasDeMatriz, companiaIntrusa, etiquetasOfertas, type ResultadoComparacion } from '@central/module-seguros'
 import { iaTexto } from './ia.ts'
 
 export type FuenteNarrativa = 'ia' | 'determinista'
@@ -19,6 +24,11 @@ export type Narrativa = {
   fuente: FuenteNarrativa
   /** Por qué se descartó la de la IA (`null` = no se descartó o no se intentó). */
   descartada: string | null
+  /**
+   * ¿La ha marcado el corredor como revisada? `false` = no (presupuesto de Avant2, preparado solo): la etiqueta NO dice
+   * «revisado por tu corredor». Ausente = estudios de ofertas (los genera él) y anteriores al 21/10/2026.
+   */
+  revisada?: boolean
 }
 
 const eurEs = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' }) + '€'
@@ -44,8 +54,15 @@ export function cifrasDelTexto(texto: string): { valor: string; sufijo: '€' | 
 export function cifrasPermitidas(r: ResultadoComparacion): Set<string> {
   const s = new Set(cifrasDeMatriz(r))
   for (const o of r.ofertas) {
-    for (const nombre of [o.compania, o.producto ?? '']) {
+    for (const nombre of [o.compania, o.producto ?? '', o.nivel ?? '']) {
       for (const m of nombre.matchAll(/\d+(?:[.,]\d+)*/g)) s.add(m[0])
+    }
+    // El precio de otro periodo (Avant2 sin prima anual comparable) es un dato de la compañía: se puede citar tal cual.
+    const pp = o.primaPeriodo
+    if (pp && typeof pp.importe === 'number' && Number.isFinite(pp.importe)) {
+      s.add(eurEs(pp.importe))
+      s.add(eurEs(pp.importe).replace('€', ''))
+      if (typeof pp.meses === 'number') s.add(String(pp.meses))
     }
   }
   return s
@@ -65,10 +82,10 @@ export function cifraIntrusa(texto: string, permitidas: Set<string>): string | n
   return null
 }
 
+/** El nombre de la oferta en el texto: el MISMO que las cabeceras del cuadro (`etiquetasOfertas`: compañía y, si hace
+ *  falta para distinguirla, su nivel). Antes salía «Allianz (Allianz Hogar 2053)» tres veces para tres niveles. */
 function nombreOferta(r: ResultadoComparacion, id: string): string {
-  const o = r.ofertas.find((x) => x.id === id)
-  if (!o) return 'la oferta'
-  return o.producto ? `${o.compania} (${o.producto})` : o.compania
+  return etiquetasOfertas(r.ofertas).get(id) ?? 'la oferta'
 }
 
 /**
@@ -87,12 +104,28 @@ export function narrativaDeterminista(r: ResultadoComparacion, recomendadaId: st
   } else {
     frases.push('No se ha aportado la póliza actual: las ofertas se comparan entre sí, sin diferencias respecto a lo que hay hoy.')
   }
+  // Varias ofertas con precio de otro periodo (Avant2 sin `meses`): la reserva se dice UNA vez, no en cada oferta.
+  const deOtroPeriodo = r.ofertas.filter((o) => o.rol !== 'actual' && o.primaTotal === null && o.primaPeriodo)
+  const reservaComun = deOtroPeriodo.length >= 2
+  if (reservaComun) {
+    frases.push(deOtroPeriodo.length === r.ofertas.filter((o) => o.rol !== 'actual').length
+      ? 'Ninguno de estos precios se puede comparar todavía como prima anual: la compañía no confirma que cubran un año completo.'
+      : 'Algunos precios no se pueden comparar todavía como prima anual: la compañía no confirma que cubran un año completo.')
+  }
   for (const s of r.resumen) {
     if (s.rol === 'actual') continue
     const o = r.ofertas.find((x) => x.id === s.ofertaId)
     if (!o) continue
     const partes: string[] = []
-    partes.push(o.primaTotal !== null ? `prima total ${eurEs(o.primaTotal)}` : 'prima total no figura en el documento')
+    partes.push(
+      o.primaTotal !== null
+        ? `prima total ${eurEs(o.primaTotal)}`
+        : o.primaPeriodo && reservaComun
+          ? `precio ${eurEs(o.primaPeriodo.importe)}`
+          : o.primaPeriodo
+          ? `precio ${eurEs(o.primaPeriodo.importe)} ${o.primaPeriodo.meses !== null ? `de un periodo de ${o.primaPeriodo.meses} meses` : 'de un periodo que la compañía no declara como anual'}, sin prima anual comparable`
+          : 'prima total no figura en el documento',
+    )
     if (s.deltaPrimaEur !== null) {
       const sube = s.deltaPrimaEur > 0
       partes.push(
@@ -119,15 +152,19 @@ export function narrativaDeterminista(r: ResultadoComparacion, recomendadaId: st
   return { resumen: frases.join(' '), recomendacion, fuente: 'determinista' }
 }
 
-const SYSTEM = `Eres un corredor de seguros español que redacta, para su cliente, el resumen de un estudio comparativo
+const SYSTEM = `Eres el corredor de Grupo ASegura que redacta, para su cliente, el resumen de un estudio comparativo
 de ofertas ya calculado. Te doy el resultado del cálculo en JSON y la lista de CIFRAS PERMITIDAS.
-Devuelve SOLO un JSON {"resumen": string, "recomendacion": string}, en español, tono claro y profesional, sin
-adjetivos comerciales.
+Devuelve SOLO un JSON {"resumen": string, "recomendacion": string}, en español.
+Voz de Grupo ASegura: cercana y clara, de tú, frases cortas, como quien se lo explica en persona; sin tecnicismos
+innecesarios, sin adjetivos comerciales, sin cursivas ni comillas raras. El nombre de la correduría se escribe
+«Grupo ASegura» (A y S mayúsculas).
 Reglas que no se pueden saltar:
 - NO escribas ninguna cifra (importe, porcentaje, número) que no esté LITERALMENTE en CIFRAS PERMITIDAS. Para contar
   cosas, usa palabras («dos ofertas»), no dígitos. No hagas cuentas nuevas.
 - No digas «la más barata del mercado», «la mejor», «ahorro garantizado» ni nada que no se pueda probar con el JSON.
 - "null" en el JSON significa que el dato NO FIGURA en el documento: dilo así, nunca como «no cubre» ni como 0.
+- No nombres ninguna compañía que no esté en "ofertas". El campo "orden" es un orden por prima, NO una
+  recomendación: no lo presentes como «la mejor».
 - "recomendacion" explica la oferta que el CORREDOR ha marcado como recomendada (campo recomendada); si no hay
   ninguna, di que el corredor no ha marcado ninguna. Nunca elijas tú otra.
 - Máximo 120 palabras en "resumen" y 60 en "recomendacion".`
@@ -150,10 +187,13 @@ export async function generarNarrativa(
     ramo: r.ramo,
     superficieM2: r.superficieM2,
     ofertas: r.ofertas.map((o) => ({
-      id: o.id, rol: o.rol, compania: o.compania, producto: o.producto, primaTotal: o.primaTotal, primaNeta: o.primaNeta,
+      id: o.id, rol: o.rol, compania: o.compania, producto: o.producto, nivel: o.nivel ?? null, primaTotal: o.primaTotal, primaNeta: o.primaNeta,
+      // Precio que NO es anual comparable (Avant2): se puede citar con su periodo, nunca como prima anual.
+      precioOtroPeriodo: o.primaPeriodo ?? null,
       recomendada: o.id === recomendadaId,
     })),
     resumen: r.resumen,
+    orden: r.ranking ? { criterio: r.ranking.criterio, puestos: r.ranking.puestos } : null,
     filas: r.filas.map((f) => ({
       garantia: f.etiqueta,
       celdas: f.celdas.map((c) => ({
@@ -183,5 +223,7 @@ export async function generarNarrativa(
   if (resumen === '' || recomendacion === '') return { ...respaldo, descartada: 'la IA devolvió un texto vacío' }
   const intrusa = cifraIntrusa(`${resumen}\n${recomendacion}`, permitidas)
   if (intrusa !== null) return { ...respaldo, descartada: `cifra ausente de la matriz: ${intrusa}` }
+  const compania = companiaIntrusa(`${resumen}\n${recomendacion}`, r.ofertas.map((o) => o.compania))
+  if (compania !== null) return { ...respaldo, descartada: `compañía ausente de la comparativa: ${compania}` }
   return { resumen: resumen.slice(0, 2000), recomendacion: recomendacion.slice(0, 1000), fuente: 'ia', descartada: null }
 }

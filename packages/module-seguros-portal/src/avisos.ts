@@ -20,6 +20,7 @@ import type { EstadoAutorizacion } from './autorizacion.ts'
 import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
 import type { ParteParaAviso } from './parte-aviso.ts'
 import { textoPolizaModificada, type PolizaModificadaParaAviso } from './poliza-cambios.ts'
+import { itvParaAviso, textoAvisoItv, type VehiculoParaAviso } from './aviso-itv.ts'
 
 export const TIPOS_AVISO = [
   'peticion_recibida',
@@ -30,6 +31,10 @@ export const TIPOS_AVISO = [
   'datos_por_revisar',
   'carnet_en_ventana',
   'carnet_caducado',
+  // Hay carné pero a la ficha le falta el nacimiento: sin él no se puede calcular cuándo caduca (21/10/2026).
+  'carnet_sin_nacimiento',
+  // La ITV del vehículo asegurado, escalonada a 30/7/0 días (21/10/2026). Ver `aviso-itv.ts`.
+  'itv_en_ventana',
   'anulacion_por_firmar',
   'felicitacion',
   'poliza_emitida',
@@ -39,13 +44,34 @@ export const TIPOS_AVISO = [
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
 /**
- * Ventana del carné de conducir: 60 días, no los 7 de `DIAS_VENTANA_AVISO`.
- * Renovar un carné exige cita en la DGT y (a partir de los 65) un
- * reconocimiento médico — un aviso a una semana vista llega tarde para pedir
- * hueco. Primer corte razonable (19/09/2026); ajustable sin tocar el resto del
- * catálogo.
+ * Avisos ESCALONADOS del carné de conducir (21/10/2026): a 90, 30 y 7 días y el mismo día de la caducidad
+ * (después, «caducado»). Antes era una ventana única de 60 días. Renovar exige cita y (desde los 65) un
+ * reconocimiento médico: 90 días da margen real; 30 y 7 son recordatorios; el día 0, el último.
+ *
+ * Son CONSTANTES y no la antelación del cliente (`diasAntelacion`: 3/7/15/30, pensada para decidir si
+ * renueva una PÓLIZA): su máximo (30) acortaría el primer aviso del carné por debajo de lo que cuesta pedir
+ * cita y hacer el reconocimiento, así que no «encaja» como primer umbral.
+ *
+ * El tramo vigente entra en la CLAVE del aviso (`ciclo`, abajo): al pasar de un tramo al siguiente el aviso
+ * es otro —vuelve a salir aunque se descartara el anterior y el correo de la intranet lo vuelve a mandar—,
+ * y dentro del mismo tramo no se repite (ni en la campana ni en el correo).
  */
-export const DIAS_VENTANA_AVISO_CARNET = 60
+export const UMBRALES_AVISO_CARNET = [90, 30, 7, 0] as const
+
+/** La ventana más ancha: el primer umbral. */
+export const DIAS_VENTANA_AVISO_CARNET = UMBRALES_AVISO_CARNET[0]
+
+/**
+ * El tramo en el que está un carné al que le faltan `faltan` días: el MENOR umbral que aún no se ha pasado
+ * (`faltan` 45 → 90, 30 → 30, 8 → 30, 7 → 7, 1 → 7, 0 → 0). `null` fuera de ventana (más de 90, o ya caducó).
+ */
+export function umbralCarnet(faltan: number | null): (typeof UMBRALES_AVISO_CARNET)[number] | null {
+  if (faltan === null || !Number.isInteger(faltan) || faltan < 0 || faltan > DIAS_VENTANA_AVISO_CARNET) return null
+  for (let i = UMBRALES_AVISO_CARNET.length - 1; i >= 0; i--) {
+    if (faltan <= UMBRALES_AVISO_CARNET[i]!) return UMBRALES_AVISO_CARNET[i]!
+  }
+  return null
+}
 
 /**
  * Hasta cuándo se dice que un carné está CADUCADO (21/09/2026).
@@ -76,6 +102,11 @@ export type Aviso = {
    */
   descartable: boolean
   /**
+   * Un segundo enlace, FUERA del portal (p. ej. la sede de la DGT), que la campana pinta junto al aviso.
+   * Aparte de `href` a propósito: ese lleva a donde se resuelve DENTRO del portal.
+   */
+  enlaceExterno?: { texto: string; url: string }
+  /**
    * Con qué se sella como LEÍDO. Por CICLO en lo que se repite (29/09/2026): la fila de un
    * vencimiento de cartera o de un carné es la MISMA cada año, así que sellar por `tipo:id` a secas
    * escondería también el del año que viene.
@@ -95,6 +126,7 @@ export type Aviso = {
 export const TIPOS_AVISO_DESCARTABLES = [
   'obligacion_en_ventana',
   'carnet_en_ventana',
+  'itv_en_ventana',
   'felicitacion',
   'poliza_emitida',
   'parte_actualizado',
@@ -123,7 +155,7 @@ function hrefPoliza(polizaId: string | null | undefined, porDefecto: string): st
   return polizaId ? `/boveda/poliza/${encodeURIComponent(polizaId)}` : porDefecto
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas', 'vehiculos'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -186,8 +218,11 @@ export type CarnetParaAviso = {
   id: string
   /** 'B', 'C1E'… tal cual lo guarda la DGT. */
   tipo: string
-  /** `YYYY-MM-DD`. */
-  fechaCaducidad: string
+  /**
+   * `YYYY-MM-DD`. `null` = hay carné pero NO se puede calcular cuándo caduca porque a la ficha le falta la
+   * fecha de nacimiento (ausente; una ilegible o un fallo del puente NO llegan aquí: son `carnets: null`).
+   */
+  fechaCaducidad: string | null
   /**
    * Nombre de la ficha DUEÑA del carné, solo cuando la identidad tiene VARIOS titulares con carné
    * (`null`/ausente = uno solo: es el suyo y se dice «tu carné», como siempre). Con varios, el texto
@@ -221,6 +256,21 @@ export type EntradaAvisos = {
   datos: ReparoParaAviso[] | null
   /** `null` = no se ha podido mirar (el puente a `apps/asegura` caído o sin configurar). */
   carnets: CarnetParaAviso[] | null
+  /**
+   * La persona APAGÓ «avisarme de la caducidad de mi carné» (`vencimiento_carnet`, 21/10/2026). Entonces no
+   * hay `carnet_en_ventana` ni `carnet_caducado`, y la fuente no cuenta como ilegible aunque `carnets` sea
+   * `null` (no se la necesita). Ausente/`false` = encendido (sin fila = encendido): si no se pudo leer el
+   * interruptor, quien llama NO lo activa y el aviso sale, que repetir uno es mejor que esconderlo.
+   */
+  carnetsSilenciados?: boolean
+  /**
+   * Vehículos asegurados para el aviso de ITV (21/10/2026). `null` = no se han podido leer. Ausente = esta
+   * superficie no lo consulta (la intranet no avisa de la ITV): no cuenta para el «!». Quien llama ya quitó
+   * los que tienen un recordatorio propio de ITV (`vehiculoCubiertoPorRecordatorio`): no se duplica.
+   */
+  vehiculos?: VehiculoParaAviso[] | null
+  /** La persona APAGÓ «avisarme de la ITV» (`vencimiento_itv`). Mismo trato que `carnetsSilenciados`. */
+  itvSilenciada?: boolean
   /**
    * Anulaciones que esperan SU firma (la de una póliza que ya sustituye otra, o una pedida por el
    * corredor). `null` = no se ha podido mirar. Sin firma no sale el correo a la compañía, así que
@@ -297,6 +347,10 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   // supresión), así que el enlace mandaría a alguien a buscar un dato que no
   // está. En «Recordatorios» sí aparece, porque es de donde sale su precarga.
   carnet_caducado: '/boveda?vista=recordatorios',
+  // Donde se ve el carné y se dice qué falta: «Mis datos → Tus carnés de conducir».
+  carnet_sin_nacimiento: '/boveda?vista=datos',
+  // «Recordatorios» ofrece la ITV precargada con su fecha: el sitio donde se deja puesto el aviso propio.
+  itv_en_ventana: '/boveda?vista=recordatorios',
   // «Pendiente de tu firma» vive en la bóveda (vista de seguros), que es donde se firma.
   anulacion_por_firmar: '/boveda',
   felicitacion: '/boveda',
@@ -321,11 +375,17 @@ function diaUtc(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
 }
 
-/** `YYYY-MM-DD` dentro de la ventana del carné, a fecha `hoy`. Mismo criterio que `entraEnVentana()`: solo futuro. */
+/** `YYYY-MM-DD` dentro de la ventana del carné (90 días), a fecha `hoy`. Mismo criterio que `entraEnVentana()`: solo futuro. */
 export function entraEnVentanaCarnet(fechaCaducidad: string, hoy: Date): boolean {
-  const faltan = diasHastaCarnet(fechaCaducidad, hoy)
-  return faltan !== null && faltan >= 0 && faltan <= DIAS_VENTANA_AVISO_CARNET
+  return umbralCarnet(diasHastaCarnet(fechaCaducidad, hoy)) !== null
 }
+
+/** Enlace a la renovación del permiso en la sede de la DGT (aparte de `href`, que es interno). */
+export const ENLACE_DGT_RENOVACION = { texto: 'Renovar en la sede de la DGT', url: 'https://sede.dgt.gob.es' } as const
+
+/** Lo que hay que HACER, en una frase. Va en el aviso de «caduca pronto» y en el de «caducado». */
+export const TEXTO_QUE_HACER_CARNET =
+  'Renuévalo en un centro de reconocimiento de conductores; conducir con el carné caducado es sancionable.'
 
 /**
  * Días que faltan para que caduque (negativos si YA caducó), o `null` si la
@@ -503,19 +563,31 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     }
   }
 
-  if (x.carnets === null) {
+  if (x.carnetsSilenciados === true) {
+    // Apagado por la persona: ni avisos ni fuente ilegible (no se mira lo que no se va a decir).
+  } else if (x.carnets === null) {
     fuentesIlegibles.push('carnets')
   } else {
+    // Titulares con carné pero SIN fecha de nacimiento en la ficha: un aviso por titular, no por carné.
+    const sinNacimiento = new Set<string>()
     for (const c of x.carnets) {
+      if (c.fechaCaducidad === null) {
+        sinNacimiento.add(typeof c.titular === 'string' && c.titular.trim() !== '' ? c.titular.trim() : '')
+        continue
+      }
       const cuando = fechaCarnetLegible(c.fechaCaducidad, x.hoy)
-      if (cuando !== null && entraEnVentanaCarnet(c.fechaCaducidad, x.hoy)) {
+      const faltan = diasHastaCarnet(c.fechaCaducidad, x.hoy)
+      const umbral = umbralCarnet(faltan)
+      if (cuando !== null && umbral !== null) {
         avisos.push({
           tipo: 'carnet_en_ventana',
           id: c.id,
-          titulo: `${mayuscula(nombreCarnet(c))} caduca pronto`,
-          detalle: `Caduca el ${cuando}. Pide cita en la DGT con tiempo.`,
-          ciclo: c.fechaCaducidad.trim().slice(0, 10),
+          titulo: `${mayuscula(nombreCarnet(c))} ${umbral === 0 ? 'caduca hoy' : 'caduca pronto'}`,
+          detalle: `${umbral === 0 ? 'Caduca hoy' : 'Caduca'} ${umbral === 0 ? `(${cuando})` : `el ${cuando}`}. ${TEXTO_QUE_HACER_CARNET}`,
+          // El TRAMO va en la clave: cada umbral (90/30/7/0) es un aviso distinto, y dentro de uno no se repite.
+          ciclo: `${c.fechaCaducidad.trim().slice(0, 10)}#${umbral}`,
           href: HREF_POR_TIPO.carnet_en_ventana,
+          enlaceExterno: ENLACE_DGT_RENOVACION,
         })
         continue
       }
@@ -529,10 +601,41 @@ export function avisosDe(x: EntradaAvisos): Avisos {
           tipo: 'carnet_caducado',
           id: c.id,
           titulo: `Nos consta que ${nombreCarnet(c)} está caducado`,
-          detalle: `Según lo que tenemos, caducó el ${cuando}. Si ya lo has renovado, escríbenos para que lo actualicemos; si no, pide cita en la DGT.`,
+          detalle: `Según lo que tenemos, caducó el ${cuando}. Si ya lo has renovado, escríbenos para que lo actualicemos; si no, ${TEXTO_QUE_HACER_CARNET.charAt(0).toLowerCase()}${TEXTO_QUE_HACER_CARNET.slice(1)}`,
           href: HREF_POR_TIPO.carnet_caducado,
+          enlaceExterno: ENLACE_DGT_RENOVACION,
         })
       }
+    }
+    for (const titular of [...sinNacimiento].sort()) {
+      avisos.push({
+        tipo: 'carnet_sin_nacimiento',
+        id: titular === '' ? 'carnet_nacimiento' : `carnet_nacimiento:${titular}`,
+        titulo: titular === '' ? 'Completa tu fecha de nacimiento para que te avisemos de la caducidad del carné' : `Falta la fecha de nacimiento de ${titular} para avisar de la caducidad de su carné`,
+        // La fecha de nacimiento NO la puede cambiar el cliente en el portal (la identidad se cambia con
+        // documento): se le dice cómo, sin enviarle a un campo que no existe.
+        detalle: 'Sin ella no podemos calcular cuándo caduca. Escríbenos con una copia de tu DNI y la completamos: tú no puedes cambiarla desde el portal.',
+        href: HREF_POR_TIPO.carnet_sin_nacimiento,
+      })
+    }
+  }
+
+  if (x.itvSilenciada === true) {
+    // Apagado por la persona: ni avisos ni fuente ilegible.
+  } else if (x.vehiculos === null) {
+    fuentesIlegibles.push('vehiculos')
+  } else {
+    for (const v of x.vehiculos ?? []) {
+      const itv = itvParaAviso(v, x.hoy)
+      if (itv === null) continue
+      avisos.push({
+        tipo: 'itv_en_ventana',
+        id: v.id,
+        ...textoAvisoItv(v, itv),
+        // La fecha y el TRAMO van en la clave: cada umbral (30/7/0) es un aviso distinto y el del año siguiente también.
+        ciclo: `${itv.fecha}#${itv.umbral}`,
+        href: HREF_POR_TIPO.itv_en_ventana,
+      })
     }
   }
 
@@ -625,7 +728,8 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     (x.felicitaciones === undefined ? 1 : 0) +
     (x.polizasNuevas === undefined ? 1 : 0) +
     (x.partes === undefined ? 1 : 0) +
-    (x.polizasModificadas === undefined ? 1 : 0)
+    (x.polizasModificadas === undefined ? 1 : 0) +
+    (x.vehiculos === undefined ? 1 : 0)
   const descartables = new Set<string>(TIPOS_AVISO_DESCARTABLES)
   const visibles = avisos
     .map(({ ciclo, ...a }) => ({ ...a, descartable: descartables.has(a.tipo), clave: claveAviso(a, ciclo) }))

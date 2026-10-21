@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Card from '@/components/ui/Card'
 
 type Resultado = {
   pagina: number
@@ -38,7 +39,7 @@ export default function DistribuirPdfPanel() {
   }
 
   return (
-    <section className="my-4 rounded-card border border-line bg-card p-4 max-w-lg">
+    <Card as="section" className="my-4 max-w-lg">
       <h2 className="mb-1 text-base font-medium">Distribuir nóminas desde PDF</h2>
       <p className="text-ink-3 mb-3 text-xs">Sube el PDF mensual con todas las nóminas. La IA identifica a cada empleado y les asigna su nómina automáticamente.</p>
       <form onSubmit={enviar} className="grid gap-2.5">
@@ -87,6 +88,6 @@ export default function DistribuirPdfPanel() {
           </ul>
         </div>
       )}
-    </section>
+    </Card>
   )
 }

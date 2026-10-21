@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { direccionConCiudad } from '@/lib/direccion-cp'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { callAI } from '@/lib/ai-client'
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   const prompt = `Genera dos textos cortos para la web de este restaurante:
 
 Restaurante: ${rest.nombre}
-Dirección: ${rest.direccion ?? ''}, ${rest.ciudad ?? ''}
+Dirección: ${direccionConCiudad(rest.direccion, rest.ciudad)}
 Tipo de cocina: ${rest.tipo_cocina ?? 'española'}
 Algunos platos: ${productosCtx}
 

@@ -243,6 +243,11 @@ export async function descargarPdfPresupuestoAsegura(id: string): Promise<Respon
   })
 }
 
+/** A quién se le puede mandar un presupuesto de ese tomador: por correo si no tiene (21/10/2026) o por WhatsApp (idea 4). Solo lectura. */
+export function destinatariosPresupuestoAsegura(clienteId: string, canal: 'email' | 'whatsapp' = 'email'): Promise<Reenvio> {
+  return puerto({ method: 'GET' }, `/destinatarios?clienteId=${encodeURIComponent(clienteId)}${canal === 'whatsapp' ? '&canal=whatsapp' : ''}`)
+}
+
 export function listarPresupuestosAsegura(q: { clienteId?: string; polizaId?: string }): Promise<Reenvio> {
   const p = new URLSearchParams()
   if (q.clienteId) p.set('clienteId', q.clienteId)
@@ -353,6 +358,8 @@ export type PresupuestoEnLista = {
   enviadoAt: string | null
   enlaceGeneradoAt: string | null
   vistoAt: string | null
+  /** Resumen IA del estudio: `sin_revisar` (la etiqueta no dice «revisado por tu corredor») · `revisado` · `null` (no hay o no se sabe). */
+  resumenIa?: 'sin_revisar' | 'revisado' | null
   opciones: number
   desdeEur: number | null
   /** Exigencias y necesidades escritas. `null` = no constan (o asegura aún no las manda): no se puede avisar. */
@@ -422,6 +429,7 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
     id, referencia: s(o.referencia), documentoDescargadoAt: s(o.documentoDescargadoAt),
     estado: estado as EstadoPresupuestoLista, clienteId: s(o.clienteId), ramo: s(o.ramo), creadoAt, venceEl,
     enviadoAt: s(o.enviadoAt), enlaceGeneradoAt: s(o.enlaceGeneradoAt), vistoAt: s(o.vistoAt),
+    resumenIa: o.resumenIa === 'sin_revisar' || o.resumenIa === 'revisado' ? o.resumenIa : null,
     opciones: typeof o.opciones === 'number' ? o.opciones : 0,
     desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
     necesidades: s(o.necesidades),
@@ -512,4 +520,17 @@ export function cotizacionIdDe(guardado: unknown): string | null {
   if (typeof guardado !== 'object' || guardado === null) return null
   const g = guardado as Record<string, unknown>
   return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
+}
+
+/**
+ * Antes de ROTAR el enlace (copiar/WhatsApp generan uno nuevo): ¿el cliente ya tiene uno? Lo dice el SERVIDOR
+ * (`enlaceGeneradoAt` / `enviadoAt`), no esta sesión. `p` null = no se ha podido comprobar → se pregunta igual. PURO.
+ */
+export function avisoRotacion(p: Pick<PresupuestoEnLista, 'enlaceGeneradoAt' | 'enviadoAt'> | null): string | null {
+  if (p === null) return 'No se ha podido comprobar si el cliente ya tiene un enlace de este presupuesto: si lo tiene, generar uno nuevo invalida el anterior. ¿Seguir?'
+  const f = p.enlaceGeneradoAt ?? p.enviadoAt
+  if (!f) return null
+  const d = new Date(f)
+  const dd = Number.isNaN(d.getTime()) ? '' : ` del ${d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Madrid' })}`
+  return `El cliente ya tiene un enlace${dd}; generar uno nuevo invalida el anterior. ¿Seguir?`
 }

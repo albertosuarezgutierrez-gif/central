@@ -158,3 +158,47 @@ test('duplicados hogar: con el primero ya ok y purgado, otra vivienda NO es dupl
   const src = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
   assert.match(src, /formasRiesgoDuplicado\(guardar\.riesgo/)
 })
+
+// ─── Interruptor de compañías de Hogar (21/10/2026) ──────────────────────────
+test('interruptor TARIFICADOR_HOGAR_COMPANIAS_EXTRA: solo abre compañías de la lista CERRADA (hoy mapfre); nunca occident', async () => {
+  const { companiasHogarRpa, COMPANIAS_HOGAR_RPA_CON_INTERRUPTOR, ENV_HOGAR_COMPANIAS_EXTRA, necesitaDatosTomador } = await import('./tarificador-reglas.ts')
+  assert.equal(ENV_HOGAR_COMPANIAS_EXTRA, 'TARIFICADOR_HOGAR_COMPANIAS_EXTRA')
+  assert.deepEqual([...COMPANIAS_HOGAR_RPA_CON_INTERRUPTOR], ['mapfre'])
+  assert.deepEqual(companiasHogarRpa({}), ['allianz'], 'sin interruptor, solo Allianz (lo de siempre)')
+  assert.deepEqual(companiasHogarRpa({ TARIFICADOR_HOGAR_COMPANIAS_EXTRA: ' Mapfre , occident,generali,allianz' }), ['allianz', 'mapfre'], 'occident/generali no se abren por env')
+  assert.deepEqual(companiasHogarRpa({ TARIFICADOR_HOGAR_COMPANIAS_EXTRA: 'mapfreX' }), ['allianz'], 'texto parecido no abre nada')
+  const con = { TARIFICADOR_HOGAR_COMPANIAS_EXTRA: 'mapfre' }
+  assert.equal(companiaAdmiteRamoRpa('mapfre', 'hogar', con), true)
+  assert.equal(companiaAdmiteRamoRpa('mapfre', 'hogar', {}), false)
+  assert.equal(companiaAdmiteRamoRpa('occident', 'hogar', { TARIFICADOR_HOGAR_COMPANIAS_EXTRA: 'occident' }), false)
+  // Mapfre Hogar abierto: DNI + nacimiento (bloque `tomador`) y nombre/apellidos (`datosTomador`) de la ficha.
+  assert.equal(necesitaTomadorHogar('mapfre', 'hogar', con), true)
+  assert.equal(necesitaTomadorHogar('mapfre', 'hogar', {}), false)
+  assert.equal(necesitaDatosTomador('mapfre', 'hogar', HOGAR, con), true)
+  assert.equal(necesitaDatosTomador('mapfre', 'hogar', { ...HOGAR, tomador: { documentoIdentidad: DNI } }, con), true, 'en hogar el bloque tomador no basta')
+  assert.equal(necesitaDatosTomador('mapfre', 'hogar', HOGAR, {}), false, 'cerrado: no se lee la ficha')
+  assert.equal(necesitaDatosTomador('allianz', 'hogar', HOGAR, con), false, 'Allianz no da de alta al tomador')
+  assert.equal(necesitaDatosTomador('mapfre', 'auto', {}, {}), true, 'auto/moto no cambian')
+})
+
+test('Mapfre Hogar con interruptor: riesgoParaEncolar exige la ficha (DNI, nacimiento, nombre y apellidos) y guarda SIN ellos', async () => {
+  const { lecturaTomadorFicha } = await import('./tarificador-reglas.ts')
+  const prev = process.env.TARIFICADOR_HOGAR_COMPANIAS_EXTRA
+  process.env.TARIFICADOR_HOGAR_COMPANIAS_EXTRA = 'mapfre'
+  try {
+    const RC = '1234567AB1234C0001DF'
+    const casa = { ...HOGAR, inmueble: { ...HOGAR.inmueble, referenciaCatastral: RC } }
+    const fila = { ...FILA, nombre: 'PRUEBA', apellidos: 'UNO DOS' }
+    const ok = riesgoParaEncolar('mapfre', 'hogar', casa, noLeer, () => lecturaTomadorFicha(fila, sinDescifrar), () => lecturaTomadorHogar(fila, sinDescifrar))
+    assert.ok(ok.ok, ok.ok ? '' : ok.motivo)
+    assert.deepEqual(ok.ok && ok.riesgo, casa, 'se guarda sin tomador ni datosTomador')
+    const sinNombre = riesgoParaEncolar('mapfre', 'hogar', casa, noLeer, () => lecturaTomadorFicha({ ...fila, nombre: null }, sinDescifrar), () => lecturaTomadorHogar(fila, sinDescifrar))
+    assert.ok(!sinNombre.ok && sinNombre.status === 422 && !sinNombre.motivo.includes('PRUEBA'))
+    // Sin referencia catastral de 20: Mapfre no se lanza (su obligatorio propio), antes de gastar máquina.
+    const sinRc = riesgoParaEncolar('mapfre', 'hogar', HOGAR, noLeer, () => lecturaTomadorFicha(fila, sinDescifrar), () => lecturaTomadorHogar(fila, sinDescifrar))
+    assert.ok(!sinRc.ok && sinRc.status === 422 && /referencia catastral/.test(sinRc.motivo))
+  } finally {
+    if (prev === undefined) delete process.env.TARIFICADOR_HOGAR_COMPANIAS_EXTRA
+    else process.env.TARIFICADOR_HOGAR_COMPANIAS_EXTRA = prev
+  }
+})

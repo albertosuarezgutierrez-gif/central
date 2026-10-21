@@ -11,8 +11,8 @@
 //   elemento se APRENDE y el worker lo revalida con sus tablas cerradas al repetir el camino.
 //
 // 🚨 Sin datos personales en Telegram: compañía, ramo, qué se buscaba y los textos de los candidatos YA redactados en el
-//    worker y en asegura. La captura de la pantalla va SOLO al chat de Alberto (como la de la emisión); el worker no la
-//    hace cuando el trabajo lleva un documento del tomador.
+//    worker y en asegura. La captura de la pantalla va SOLO al chat de Alberto (como la de la emisión) y NUNCA la que muestra
+//    datos del tomador (`capturaConDatos`, 21/10/2026: asegura la quita de los avisos; esa solo se ve en «Bots atascados»).
 // 🚨 Un fallo del puerto NO es «no hay atascos»: se dice con su causa.
 
 import { cabecerasPuerto } from './puerto-actor.ts'
@@ -48,6 +48,16 @@ export type Atasco = {
   caducaEn: string
   hayCaptura: boolean
   capturaBase64: string | null
+  /** Tipo de la captura (las de atasco desde el 21/10/2026 son JPEG). */
+  capturaMime: 'image/png' | 'image/jpeg'
+  /** Clave del paso (`elegir_opcion_<campo>` = elegir en una lista). `''` si asegura es anterior. */
+  clave: string
+  /** Nombre del cliente (solo pantalla; nunca Telegram). `null` = sin cliente o asegura anterior. */
+  clienteNombre: string | null
+  /** Opciones de lista que vio el bot: `null` = no se miraron; `[]` = no había ninguna visible. */
+  opciones: string[] | null
+  /** La captura puede llevar datos del tomador. FAIL-CLOSED: solo un `false` explícito de asegura la libera (Telegram). */
+  capturaConDatos: boolean
 }
 
 export type Pausa = { id: string; compania: string; ramo: string; motivo: string; pausadaEn: string; pendientes: number | null }
@@ -82,7 +92,84 @@ export function atascoValido(v: unknown): Atasco | null {
     // Tres estados: sin dato → null («—»), nunca 0.
     ronda: entero(o.ronda), maxRondas: entero(o.maxRondas), creadoEn, caducaEn, hayCaptura: o.hayCaptura === true,
     capturaBase64: typeof o.capturaBase64 === 'string' && /^[A-Za-z0-9+/]+=*$/.test(o.capturaBase64) ? o.capturaBase64 : null,
+    capturaMime: o.capturaMime === 'image/jpeg' ? 'image/jpeg' : 'image/png',
+    clave: cadena(o.clave) ?? '',
+    clienteNombre: cadena(o.clienteNombre),
+    capturaConDatos: o.capturaConDatos !== false,
+    opciones: Array.isArray(o.opciones) ? o.opciones.map(cadena).filter((x): x is string => x !== null).slice(0, 30) : null,
   }
+}
+
+// ─── Tarjeta de la pantalla (PURO) ───────────────────────────────────────────
+
+/** Etiquetas de opción de lista (Angular Material, NDBX de Allianz, ARIA, `<option>`). */
+const TAGS_OPCION = new Set(['mat-option', 'nx-autocomplete-option', 'nx-dropdown-item', 'option'])
+
+/** ¿El candidato es una OPCIÓN de lista (y no una etiqueta o un campo de la pantalla)? PURO. */
+export function esCandidatoOpcion(c: Pick<CandidatoVisible, 'tag' | 'role'>): boolean {
+  return c.role === 'option' || TAGS_OPCION.has(c.tag)
+}
+
+/** ¿El atasco es de ELEGIR UNA OPCIÓN de una lista desplegable? PURO. */
+export function esAtascoDeOpcion(a: Pick<Atasco, 'clave'>): boolean {
+  return /^elegir_opcion(_|$)/.test(a.clave)
+}
+
+const CAMPOS_LEGIBLES: Record<string, string> = { poblacion: 'población', via: 'vía', municipio: 'municipio', provincia: 'provincia' }
+
+/** «población», «vía»… del campo de un atasco de lista. PURO. */
+export function campoDeOpcion(clave: string): string {
+  const x = clave.replace(/^elegir_opcion_?/, '')
+  return CAMPOS_LEGIBLES[x] ?? (x.replace(/_/g, ' ').trim() || 'opción')
+}
+
+/** Frase llana de DÓNDE se ha parado el bot («elegir la población en la lista desplegable»). PURO. */
+export function paradoEn(a: Pick<Atasco, 'clave' | 'tipo' | 'descripcion' | 'etiqueta' | 'textoEsperado'>): string {
+  if (esAtascoDeOpcion(a)) return `elegir la ${campoDeOpcion(a.clave)} en la lista desplegable`
+  if (a.clave === 'hueco_mapa') {
+    // «Pantalla o paso sin mapa: allianz/hogar: mapa incompleto: faltan la elección de…» → «la elección de…».
+    const t = a.descripcion.replace(/^Pantalla o paso sin mapa:\s*/i, '').replace(/^[\w-]+\/[\w-]+:\s*/, '').replace(/^mapa incompleto:\s*(faltan?\s+)?/i, '')
+    return t || 'una pantalla que todavía no conoce'
+  }
+  if (a.tipo === 'campo') return `el campo «${a.etiqueta ?? a.descripcion}»`
+  return `el botón «${a.textoEsperado ?? a.descripcion}»`
+}
+
+export type BotonAtasco = { n: number; texto: string }
+
+export type VistaAtasco = {
+  titulo: string
+  paradoEn: string
+  /** `opciones` = botones con las opciones de la lista · `elementos` = botones con lo que hay en pantalla · `sin_opciones`. */
+  modo: 'opciones' | 'elementos' | 'sin_opciones'
+  botones: BotonAtasco[]
+  /** Textos que vio el bot en la lista y que no se pueden pulsar desde aquí (solo informativo). `null` = no se miró. */
+  opcionesVistas: string[] | null
+  captura: 'hay' | 'sin_captura'
+  /** Solo en `sin_opciones`: `vacia` (opciones = []: la lista no llegó a abrirse) · `sin_leer` (null: no se pudo leer) · `hay`. */
+  opcionesLeidas: 'vacia' | 'sin_leer' | 'hay'
+}
+
+/**
+ * Lo que pinta la tarjeta de un atasco, en castellano llano. Un atasco de LISTA solo ofrece como botón lo que sea una opción de
+ * lista (una etiqueta «Tipo de documento» no es una población); si no hay ninguna, `sin_opciones` y se dice. PURO.
+ */
+export function vistaAtasco(a: Atasco): VistaAtasco {
+  const titulo = `${nombre(a.compania)} · ${a.ramo || 'ramo'}`
+  const captura = a.hayCaptura ? 'hay' as const : 'sin_captura' as const
+  const texto = (c: CandidatoVisible) => (c.texto ?? c.etiqueta ?? c.id ?? `Elemento ${c.n}`).slice(0, 120)
+  if (esAtascoDeOpcion(a)) {
+    const botones = a.candidatos.filter(esCandidatoOpcion).map((c) => ({ n: c.n, texto: texto(c) }))
+    const pulsables = new Set(botones.map((b) => b.texto))
+    const opcionesVistas = a.opciones === null ? null : a.opciones.filter((o) => !pulsables.has(o))
+    return { titulo, paradoEn: paradoEn(a), modo: botones.length ? 'opciones' : 'sin_opciones', botones, opcionesVistas, captura, opcionesLeidas: a.opciones === null ? 'sin_leer' : a.opciones.length === 0 ? 'vacia' : 'hay' }
+  }
+  return { titulo, paradoEn: paradoEn(a), modo: 'elementos', botones: a.candidatos.map((c) => ({ n: c.n, texto: lineaCandidato(c).replace(/^\d+ · /, '') })), opcionesVistas: null, captura, opcionesLeidas: a.opciones === null ? 'sin_leer' : a.opciones.length === 0 ? 'vacia' : 'hay' }
+}
+
+/** Enlace al bloque «Pedir precio» de la oportunidad (para relanzar tras descartar). `null` sin oportunidad. PURO. */
+export function enlacePedirPrecio(oportunidadId: string | null): string | null {
+  return oportunidadId && UUID.test(oportunidadId) ? `/correduria/oportunidad/${oportunidadId}#pedir-precio` : null
 }
 
 function pausaValida(v: unknown): Pausa | null {

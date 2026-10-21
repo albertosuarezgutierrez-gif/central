@@ -56,6 +56,9 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId, 
       if (cuerpo.accion === 'necesidades') {
         const o = (j ?? {}) as { estado?: string; detalle?: string }
         setAviso(r.ok && o.estado === 'ok' ? { ok: true, texto: 'Necesidades guardadas.' } : { ok: false, texto: `NO guardadas: ${o.detalle ?? `HTTP ${r.status}`}` })
+      } else if (cuerpo.accion === 'revisar_resumen') {
+        const o = (j ?? {}) as { estado?: string; detalle?: string }
+        setAviso(r.ok && o.estado === 'ok' ? { ok: true, texto: 'Resumen marcado como revisado.' } : { ok: false, texto: `NO marcado: ${o.detalle ?? `HTTP ${r.status}`}` })
       } else if (cuerpo.accion === undefined) {
         const o = (j ?? {}) as { estado?: string; detalle?: string }
         setAviso(r.ok && o.estado === 'ok' ? { ok: true, texto: 'Retirado.' } : { ok: false, texto: `NO retirado: ${o.detalle ?? `HTTP ${r.status}`}` })
@@ -119,6 +122,13 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId, 
                     if (a.reenvio && !window.confirm('Se le abrirá un WhatsApp con un enlace NUEVO: el que ya tiene dejará de abrir. ¿Seguir?')) return
                     void patch(p, { accion: 'avisar', canal: 'whatsapp_enlace' }, window.open('', '_blank'))
                   }}>Por WhatsApp</button>
+              )}
+              {/* El resumen que redactó la IA no se presenta como «revisado por tu corredor» hasta que él lo marque. */}
+              {p.resumenIa === 'sin_revisar' && p.estado !== 'retirado' && (
+                <button type="button" disabled={!libre} style={btnStyle('secundario')}
+                  onClick={() => { if (window.confirm('¿Has leído el resumen que redactó la IA y das por bueno lo que dice? Desde ahora el cliente verá «revisado por tu corredor».')) void patch(p, { accion: 'revisar_resumen' }) }}>
+                  He revisado el resumen IA
+                </button>
               )}
               {a.confirmarWhatsapp && (
                 <button type="button" disabled={!libre} style={btnStyle('secundario')}

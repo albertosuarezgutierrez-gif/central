@@ -9,7 +9,7 @@ import { ErrorTarificador } from '../src/errores.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from '../src/ramo.ts'
 import { adaptadores } from '../src/adapters/index.ts'
 import { allianzComunidades } from '../src/adapters/allianz/comunidades.ts'
-import { allianzAuto, allianzMoto, elegirVehiculoMoto, ofertasDesdePrimas, planDatosBasicosMoto, SEL_DATOS_MOTO, supuestosDatosBasicosMoto } from '../src/adapters/allianz/auto.ts'
+import { allianzAuto, allianzMoto, elegirVehiculoMoto, exigirDatosPortalMoto, ofertasDesdePrimas, planDatosBasicosMoto, SEL_DATOS_MOTO, supuestosDatosBasicosMoto } from '../src/adapters/allianz/auto.ts'
 import { allianzHogar, planPantallaVivienda } from '../src/adapters/allianz/hogar.ts'
 import { mapfreAuto, mapfreMoto, planAltaTomador, planObjetoYFiguras } from '../src/adapters/mapfre/auto.ts'
 import { exigirDatosHogar, mapfreHogar } from '../src/adapters/mapfre/hogar.ts'
@@ -32,13 +32,15 @@ const coche = () => ({
   documentoTomador: '00000000T',
   datosTomador: { tipo: 'fisica', nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1985-03-10' },
 })
-const moto = () => ({ ...coche(), ramo: 'moto', seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', clase: 2, cilindradaCc: 250 } })
+const moto = () => ({ ...coche(), ramo: 'moto', seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', clase: 2, cilindradaCc: 250 }, polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio', fechaAdquisicion: '2016-01-02' })
+// `validarFormularioAuto` aún no conoce `fotocopiaAnterior` ni `fechaAdquisicion` (claves opcionales que lee el bot 0.7.11): se reponen sobre el formulario.
+const conExtrasMoto = (x: Record<string, unknown>): FormularioAuto => ({ ...auto(x), fechaAdquisicion: x.fechaAdquisicion, fotocopiaAnterior: x.fotocopiaAnterior }) as unknown as FormularioAuto
 const hogar = () => ({
   ramo: 'hogar',
   tomador: { documentoIdentidad: '00000000T', fechaNacimiento: '1980-01-15' },
   inmueble: { codigoPostal: '41001', municipio: 'SEVILLA', nombreVia: 'PRUEBA', numero: '1', planta: '2', anioConstruccion: 1990, superficieM2: 90, referenciaCatastral: '1234567AB1234C0001DF' },
   hogar: { uso: 'habitual', regimen: 'propietario', tipoVivienda: 'piso', conMadera: false },
-  datosTomador: { nombre: 'NOMBRE', apellido1: 'APELLIDO' },
+  datosTomador: { tipo: 'fisica', nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1980-01-15' },
 })
 
 const auto = (x: unknown): FormularioAuto => {
@@ -49,8 +51,8 @@ const auto = (x: unknown): FormularioAuto => {
 const casa = (x: unknown): FormularioHogar => {
   const v = validarFormularioHogar(x, HOY)
   assert.ok(v.ok, v.ok ? '' : v.errores.join('; '))
-  // `datosTomador` no es de la forma de hogar: el adaptador de Mapfre lo lee del riesgo crudo.
-  return { ...v.formulario, ...((x as { datosTomador?: unknown }).datosTomador ? { datosTomador: (x as { datosTomador: unknown }).datosTomador } : {}) } as FormularioHogar
+  // 21/10/2026: `datosTomador` ya es de la forma de hogar (lo valida y conserva `validarFormularioHogar`).
+  return v.formulario
 }
 const lanzaDatos = (fn: () => unknown) => {
   try {
@@ -115,6 +117,17 @@ test('Allianz moto: completo → nada falta y el plan pasa; cada obligatorio pro
     assert.ok(faltan('allianz', 'moto', r).includes(clave), clave)
     assert.ok(lanzaDatos(() => planDatosBasicosMoto(auto(r))), `planDatosBasicosMoto no falla sin ${clave}`)
   }
+  // 0.7.11: cada obligatorio nuevo quitado → faltan lo señala Y el bot falla `datos` antes del portal (y completo, no falla).
+  exigirDatosPortalMoto(conExtrasMoto(moto()))
+  for (const clave of ['companiaAnterior', 'polizaAnteriorUltimos5', 'fotocopiaAnterior', 'fechaAdquisicion']) {
+    const r = sin(moto(), clave)
+    assert.ok(faltan('allianz', 'moto', r).includes(clave), clave)
+    assert.ok(lanzaDatos(() => exigirDatosPortalMoto(conExtrasMoto(r))), `exigirDatosPortalMoto no falla sin ${clave}`)
+  }
+  // Sin seguro anterior (0 años) solo la fecha de adquisición sigue haciendo falta, en la declaración y en el bot.
+  const cero = { ...moto(), aniosAseguradoAnterior: 0 }
+  assert.deepEqual(faltan('allianz', 'moto', sin(sin(sin(cero, 'companiaAnterior'), 'polizaAnteriorUltimos5'), 'fotocopiaAnterior')), [])
+  exigirDatosPortalMoto(conExtrasMoto(sin(sin(sin(cero, 'companiaAnterior'), 'polizaAnteriorUltimos5'), 'fotocopiaAnterior')))
   const sinClase = sin(moto(), 'seleccionVehiculo.clase')
   assert.ok(faltan('allianz', 'moto', sinClase).includes('seleccionVehiculo.clase'))
   await assert.rejects(elegirVehiculoMoto({} as never, auto(sinClase).seleccionVehiculo!, {} as never), (e: unknown) => e instanceof ErrorTarificador && e.tipo === 'datos')
@@ -153,10 +166,9 @@ test('Hogar: Allianz y Occident no piden más que la forma; Mapfre exige la refe
   assert.ok(lanzaDatos(() => exigirDatosHogar(casa(parcela))))
 })
 
-test('Occident hogar (hueco, sin registrar): HOY lee `tomador.nif`, que la forma de hogar no trae → sigue fallando `datos` (deuda conocida)', () => {
-  // Si alguien alinea el adaptador con `tomador.documentoIdentidad`, este cepo se pone rojo: entonces se borra esta prueba.
+test('Occident hogar (hueco, sin registrar): lee la forma CANÓNICA de hogar (21/10/2026; antes `tomador.nif` → siempre `datos`)', () => {
   assert.deepEqual(faltan('occident', 'hogar', hogar()), [])
-  assert.ok(lanzaDatos(() => planFormularioHogar(casa(hogar()))), 'occident/hogar ya no lee tomador.nif: actualiza este cepo')
+  assert.ok(planFormularioHogar(casa(hogar())).length > 0, 'con el formulario validado, el plan del paso 1 sale sin errores de datos')
 })
 
 test('prepararTrabajo (red final): un riesgo con forma válida pero sin lo que pide el bot NO llega al adaptador', () => {

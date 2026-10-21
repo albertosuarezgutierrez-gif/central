@@ -13,7 +13,12 @@ import { busquedaCatastroDeVivienda } from '@central/module-seguros'
 
 /** Lo que el Catastro da de una vivienda (`PrecalificacionHogar.datos` de `@central/core-catastro`). */
 export type CatastroVivienda = {
+  /** m² CONSTRUIDOS TOTALES (vivienda + anexos). */
   metrosCuadrados: number | null
+  /** m² de la VIVIENDA sola, si el Catastro publica el desglose. Ausente/`null` = no hay desglose (se usa el total). */
+  metrosVivienda?: number | null
+  /** Anexos (aparcamiento, almacén…) con sus m². */
+  anexos?: Array<{ uso: string; superficie: number }>
   anioConstruccion: number | null
   direccion: string | null
   localidad: string | null
@@ -85,10 +90,13 @@ function delCatastro(campo: CampoDelCatastro, referencia: string | null, c: Cata
     case 'municipio': return limpio(c.localidad)
     case 'provincia': return limpio(c.provincia)
     // 0 m² no es una superficie: el Catastro sin dato no se convierte en «0».
-    case 'metrosCuadrados': return typeof c.metrosCuadrados === 'number' && Number.isFinite(c.metrosCuadrados) && c.metrosCuadrados > 0 ? String(c.metrosCuadrados) : null
+    // Superficie que se declara = TOTAL CONSTRUIDO (vivienda + anexos): declarar menos es riesgo de infraseguro. El desglose solo se muestra.
+    case 'metrosCuadrados': { const m = metrosPositivo(c.metrosCuadrados); return m !== null ? String(m) : null }
     case 'anioConstruccion': return typeof c.anioConstruccion === 'number' && Number.isInteger(c.anioConstruccion) && c.anioConstruccion >= 1500 ? String(c.anioConstruccion) : null
   }
 }
+
+const metrosPositivo = (n: number | null | undefined): number | null => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null)
 
 /** Compara sin que cuenten mayúsculas, espacios ni guiones de la referencia. */
 const igual = (a: string, b: string) => a.replace(/[\s-]/g, '').toUpperCase() === b.replace(/[\s-]/g, '').toUpperCase()
@@ -125,4 +133,26 @@ export function consultaCatastroDeForm(form: Record<string, string | undefined>,
   if (b.direccion === null) return { ok: false, motivo: 'Escribe la referencia catastral, o la calle con su número.' }
   if (b.municipio === null || b.provincia === null) return { ok: false, motivo: 'Para buscar por dirección hacen falta también el municipio y la provincia.' }
   return { ok: true, cuerpo: { direccion: b.direccion, municipio: b.municipio, provincia: b.provincia } }
+}
+
+/**
+ * Lo que se GUARDA de una consulta al Catastro en `datosVivienda` (20/10/2026): cuándo se hizo y qué dijo (uso catastral,
+ * m² y año), para poder avisar de discrepancias con lo declarado aunque pase el tiempo. Como texto de formulario: lo que el
+ * Catastro no trae es `''` («sin dato»), nunca `0`. A diferencia de la precarga, una consulta NUEVA sustituye a la anterior.
+ */
+export function metadatosConsultaCatastro(c: CatastroVivienda, referencia: string, ahoraIso: string): Record<'catastroConsultadoAt' | 'catastroReferencia' | 'usoCatastral' | 'catastroMetrosCuadrados' | 'catastroMetrosVivienda' | 'catastroMetrosAnexos' | 'catastroAnexos' | 'catastroAnioConstruccion', string> {
+  const anexos = (c.anexos ?? []).filter((a) => a.superficie > 0)
+  const sumaAnexos = anexos.reduce((s, a) => s + a.superficie, 0)
+  const bonito = (u: string) => `${u.charAt(0).toUpperCase()}${u.slice(1).toLowerCase()}`
+  return {
+    catastroConsultadoAt: ahoraIso,
+    usoCatastral: limpio(c.uso) ?? '',
+    // La referencia consultada: sus datos solo valen mientras sea la del riesgo.
+    catastroReferencia: limpio(referencia)?.replace(/[\s-]/g, '').toUpperCase() ?? '',
+    catastroMetrosCuadrados: delCatastro('metrosCuadrados', null, c) ?? '',
+    catastroMetrosVivienda: metrosPositivo(c.metrosVivienda) !== null ? String(c.metrosVivienda) : '',
+    catastroMetrosAnexos: sumaAnexos > 0 ? String(sumaAnexos) : '',
+    catastroAnexos: anexos.map((a) => `${bonito(a.uso)} ${a.superficie} m²`).join(' · '),
+    catastroAnioConstruccion: delCatastro('anioConstruccion', null, c) ?? '',
+  }
 }

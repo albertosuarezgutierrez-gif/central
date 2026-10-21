@@ -174,3 +174,21 @@ describe('tope total de capturas por respuesta', () => {
     expect(cabeCapturaEnRespuesta(0, -1)).toBe(false)
   })
 })
+
+describe('opciones de lista de un atasco (21/10/2026)', () => {
+  const base = { clave: 'elegir_opcion_poblacion', tipo: 'accion', descripcion: 'Opción de la lista de «poblacion»', candidatos: [{ tag: 'mat-option', selector: '#mat-option-1', texto: 'ALCALÁ' }] }
+  it('sin `opciones` en el cable → ausente (no se miró), nunca []', async () => {
+    const a = leerAtascoWorker(base)
+    expect(a).not.toBeNull()
+    expect('opciones' in a!).toBe(false)
+  })
+  it('`[]` se conserva: se miró y no había ninguna', async () => {
+    expect(leerAtascoWorker({ ...base, opciones: [] })!.opciones).toEqual([])
+  })
+  it('limpia: solo cadenas, sin vacíos ni repetidas, con tope', async () => {
+    const { leerOpcionesAtasco, MAX_OPCIONES_ATASCO } = await import('./index.ts')
+    expect(leerOpcionesAtasco(['  SEVILLA ', 'SEVILLA', '', 7, 'DOS HERMANAS'])).toEqual(['SEVILLA', 'DOS HERMANAS'])
+    expect(leerOpcionesAtasco(Array.from({ length: 50 }, (_, i) => `P${i}`))!.length).toBe(MAX_OPCIONES_ATASCO)
+    expect(leerOpcionesAtasco('SEVILLA')).toBeUndefined()
+  })
+})

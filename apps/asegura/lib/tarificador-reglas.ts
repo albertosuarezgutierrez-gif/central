@@ -9,7 +9,7 @@ import { leerVehiculoWorker, type VehiculoEncadenado } from './tarificador-esper
 import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
 import {
   claveCompania, envDeMaquina, esCif, faltanParaTarificar, mensajeFaltan, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarFormularioHogar, validarFormularioHogarSinTomador, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type Faltante, type FormularioAuto, type FormularioHogarSinTomador, type InventarioDom, type TomadorHogar, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
+  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type Faltante, type FichaTomadorAuto, type FormularioAuto, type FormularioHogarSinTomador, type InventarioDom, type TomadorHogar, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
 /**
@@ -26,12 +26,29 @@ export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: f
  */
 export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto', 'hogar'] as const
 
-/** Compañías con bot de TARIFICACIÓN de Hogar. Hoy solo Allianz (Mapfre hogar pide datos del tomador que asegura no inyecta; Occident, sin bot). */
+/** Compañías con bot de TARIFICACIÓN de Hogar SIEMPRE abiertas. Hoy solo Allianz (Occident, aparcado y sin bot registrado). */
 export const COMPANIAS_HOGAR_RPA = ['allianz'] as const
 
-/** ¿Esta compañía puede tarificar este ramo por RPA? Todo ramo salvo Hogar (solo `COMPANIAS_HOGAR_RPA`). PURA. */
-export function companiaAdmiteRamoRpa(compania: string, ramo: string): boolean {
-  return ramo !== 'hogar' || (COMPANIAS_HOGAR_RPA as readonly string[]).includes(claveCompania(compania))
+/**
+ * Compañías de Hogar que se ABREN SOLO con el interruptor (21/10/2026): `TARIFICADOR_HOGAR_COMPANIAS_EXTRA` (Vercel `central-asegura`),
+ * lista separada por comas, filtrada contra esta lista CERRADA (otro valor no abre nada: fail-closed). Mapfre: su bot (`mapfre/hogar.ts`)
+ * va tras `MAPFRE_HOGAR_ACTIVO` en el worker y asegura le inyecta DNI, nacimiento, nombre y apellidos de la ficha al entregar.
+ * Occident NO está a propósito: su fila `occident/hogar` está ACTIVA para explorar y abrirla aquí encolaría tarificaciones sin bot.
+ * Sin el interruptor, la fila `mapfre/hogar` sigue habilitando solo la EXPLORACIÓN (lo de siempre).
+ */
+export const COMPANIAS_HOGAR_RPA_CON_INTERRUPTOR = ['mapfre'] as const
+export const ENV_HOGAR_COMPANIAS_EXTRA = 'TARIFICADOR_HOGAR_COMPANIAS_EXTRA'
+
+/** Compañías que hoy tarifican Hogar por RPA: las fijas + las del interruptor (solo de la lista cerrada). PURA (el entorno entra). */
+export function companiasHogarRpa(env: Record<string, string | undefined> = process.env): string[] {
+  const extra = String(env[ENV_HOGAR_COMPANIAS_EXTRA] ?? '').split(',').map((c) => c.trim().toLowerCase())
+    .filter((c) => (COMPANIAS_HOGAR_RPA_CON_INTERRUPTOR as readonly string[]).includes(c))
+  return [...new Set<string>([...COMPANIAS_HOGAR_RPA, ...extra])]
+}
+
+/** ¿Esta compañía puede tarificar este ramo por RPA? Todo ramo salvo Hogar (solo `companiasHogarRpa()`). PURA (el entorno entra). */
+export function companiaAdmiteRamoRpa(compania: string, ramo: string, env: Record<string, string | undefined> = process.env): boolean {
+  return ramo !== 'hogar' || companiasHogarRpa(env).includes(claveCompania(compania))
 }
 
 /**
@@ -42,7 +59,7 @@ export function companiaAdmiteRamoRpa(compania: string, ramo: string): boolean {
 export function validarEntradaRamo(ramo: unknown, riesgo: unknown, compania?: string): ValidacionEntradaRamo {
   const v = validarFormaRamo(ramo, riesgo)
   if (!v.ok || compania === undefined) return v
-  if (!companiaAdmiteRamoRpa(compania, v.entrada.ramo)) return { ok: false, mensaje: `ramo_no_admitido: el bot de ${claveCompania(compania)} no tarifica ${v.entrada.ramo} (hogar: solo ${COMPANIAS_HOGAR_RPA.join(', ')})` }
+  if (!companiaAdmiteRamoRpa(compania, v.entrada.ramo)) return { ok: false, mensaje: `ramo_no_admitido: el bot de ${claveCompania(compania)} no tarifica ${v.entrada.ramo} (hogar: solo ${companiasHogarRpa().join(', ')})` }
   const faltan = faltanParaTarificar(compania, v.entrada.ramo, v.entrada.riesgo, { sinFicha: true })
   if (faltan && faltan.length) return { ok: false, mensaje: mensajeFaltan(faltan), errores: faltan.map((f) => f.etiqueta), faltan }
   return v
@@ -174,6 +191,12 @@ export function riesgoParaEncolar<T>(
   compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador,
   /** Hogar (19/10/2026): DNI/NIE y nacimiento de la ficha. Sin función = fail-closed (503 ilegible), nunca «no hace falta». */
   leerTomadorHogar: () => LecturaTomadorHogar = () => ({ estado: 'ilegible' }),
+  /**
+   * Allianz auto/moto (20/10/2026): `fichaTomador` de la ficha (NIF, CP, fechas…). Solo se aplica EN MEMORIA para evaluar los obligatorios de
+   * origen ficha (p. ej. `documentoTomador` de Allianz moto); lo guardado sigue sin ella (se inyecta al ENTREGAR). Sin función o `null` =
+   * «no se pudo mirar la ficha» → el obligatorio falta (conservador), nunca se da por cubierto.
+   */
+  leerFichaAuto: () => FichaTomadorAuto | null = () => null,
 ): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string; faltan?: Faltante[] } {
   const guardado = riesgoSinNifTomador(riesgo)
   // Compañía anterior (Mapfre auto, 15/10/2026): con años asegurado > 0 el portal pide su NOMBRE en «Figuras». Se corta aquí,
@@ -191,7 +214,12 @@ export function riesgoParaEncolar<T>(
   // Tomador de Hogar (DNI/NIE y nacimiento de la ficha): igual, se COMPRUEBA aquí y se inyecta al entregar; nunca se guarda.
   const h = aplicarTomadorHogar(compania, ramo, d.riesgo, leerTomadorHogar)
   if (!h.ok) return h
-  const faltan = faltanParaTarificar(compania, ramo, h.riesgo)
+  // Ficha del tomador de Allianz auto/moto: también EN MEMORIA, para que un obligatorio de origen ficha (NIF del tomador) se juzgue
+  // contra la ficha que recibirá el worker y no contra el riesgo guardado (que NUNCA lleva el documento).
+  const paraEvaluar = claveCompania(compania) === 'allianz' && (ramo === 'auto' || ramo === 'moto') && esObj(h.riesgo)
+    ? ((f) => (f ? { ...h.riesgo, fichaTomador: f } : h.riesgo))(leerFichaAuto())
+    : h.riesgo
+  const faltan = faltanParaTarificar(compania, ramo, paraEvaluar)
   if (faltan === null) return { ok: false, status: 422, motivo: `sin_obligatorios_declarados: ${claveCompania(compania)}/${ramo} no declara qué datos necesita su bot para tarificar (module-tarificacion obligatorios.ts)` }
   if (faltan.length) return { ok: false, status: 422, motivo: `faltan_datos: ${mensajeFaltan(faltan)}`, faltan }
   // Hogar: el worker valida el formulario ENTERO (edad del tomador 18-110, rangos…). Se corta aquí, antes de gastar máquina.
@@ -212,9 +240,9 @@ export function riesgoParaEncolar<T>(
 /** `incompleta` = la ficha se leyó y le falta o tiene mal algo (frases, nunca valores); `ilegible` = el cifrado no abre (no se ha podido mirar). */
 export type LecturaTomadorHogar = { estado: 'ok'; tomador: TomadorHogar } | { estado: 'incompleta'; faltan: string[] } | { estado: 'ilegible' }
 
-/** ¿El bot de este trabajo necesita el tomador de la ficha? Allianz + hogar. PURA. */
-export function necesitaTomadorHogar(compania: string, ramo: string): boolean {
-  return ramo === 'hogar' && (COMPANIAS_HOGAR_RPA as readonly string[]).includes(claveCompania(compania))
+/** ¿El bot de este trabajo necesita el tomador de la ficha? Hogar de una compañía de `companiasHogarRpa()` (todas lo piden). PURA (el entorno entra). */
+export function necesitaTomadorHogar(compania: string, ramo: string, env: Record<string, string | undefined> = process.env): boolean {
+  return ramo === 'hogar' && companiasHogarRpa(env).includes(claveCompania(compania))
 }
 
 /** Ficha → tomador de hogar, con TRES estados por campo. Lo cifrado (`v1:`) se abre con `descifrar`; si lanza → `ilegible`. PURA. */
@@ -322,9 +350,14 @@ export function lecturaTomadorFicha(fila: FilaTomadorFicha | null, descifrar: (v
   return { estado: 'ok', datos: { tipo: 'fisica', nombre, apellido1: primero, apellido2: segundo, fechaNacimiento: fecha } }
 }
 
-/** ¿Hacen falta los datos del tomador de la ficha? Mapfre + auto/moto + el riesgo no trae su bloque `tomador`. PURA. */
-export function necesitaDatosTomador(compania: string, ramo: string, riesgo: unknown): boolean {
+/**
+ * ¿Hacen falta los datos del tomador de la ficha? Mapfre + auto/moto + el riesgo no trae su bloque `tomador`; o (21/10/2026) Mapfre +
+ * hogar con el interruptor abierto (`companiasHogarRpa`): su bot da de alta al tomador que no conoce con nombre y apellidos. En hogar el
+ * bloque `tomador` (DNI y nacimiento) no basta: lo pone asegura igual, así que no cuenta. PURA (el entorno entra).
+ */
+export function necesitaDatosTomador(compania: string, ramo: string, riesgo: unknown, env: Record<string, string | undefined> = process.env): boolean {
   if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
+  if (ramo === 'hogar') return companiasHogarRpa(env).includes(claveCompania(compania))
   if (ramo !== 'auto' && ramo !== 'moto') return false
   return !(esObj(riesgo) && esObj(riesgo.tomador))
 }
@@ -545,6 +578,8 @@ export type ResultadoWorker =
        *  inválido → se descarta y el trabajo falla como antes. NO va al `error` jsonb: vive en `tarificador_atascos`. */
       error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }
       captura: Buffer | null
+      /** La captura (JPEG de un atasco, 21/10/2026) muestra datos personales del tomador: no sale a Telegram. */
+      capturaConDatos: boolean
       html: string | null
     } & MetaWorker)
   /**
@@ -602,6 +637,29 @@ function base64(v: unknown, campo: string, errores: string[], max: number): Buff
 
 const esPdf = (b: Buffer) => b.subarray(0, 5).toString('latin1') === '%PDF-'
 const esPng = (b: Buffer) => b.length > 8 && b[0] === 0x89 && b.subarray(1, 4).toString('latin1') === 'PNG'
+const esJpeg = (b: Buffer) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
+
+/**
+ * Tipo de una captura del tarificador por sus BYTES (no por lo que diga el worker): PNG (fallo genérico, emisión) o JPEG
+ * (atasco/hueco, 21/10/2026). Otra cosa → `null` (se rechaza). PURA.
+ */
+export function mimeCaptura(b: Buffer | null | undefined): 'image/png' | 'image/jpeg' | null {
+  if (!b) return null
+  if (esPng(b)) return 'image/png'
+  if (esJpeg(b)) return 'image/jpeg'
+  return null
+}
+
+/** `error.atascoOpciones` del trabajo → lista de textos o `null` (no se miró / forma rara). Tres estados: `[]` = se miró y no había. PURA. */
+export function opcionesDeError(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null
+  return v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim().slice(0, 120)).slice(0, 30)
+}
+
+/** Nombre del documento de una captura de fallo: `fallo-<8 hex>.png|jpg` (lo reconoce la purga de evidencia). PURA. */
+export function nombreCapturaFallo(trabajoId: string, mime: 'image/png' | 'image/jpeg'): string {
+  return `fallo-${trabajoId.slice(0, 8)}.${mime === 'image/jpeg' ? 'jpg' : 'png'}`
+}
 
 export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoWorker } | { ok: false; errores: string[] } {
   const e = obj(entrada)
@@ -637,7 +695,7 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const mensaje = typeof err?.mensaje === 'string' && err.mensaje.trim() ? err.mensaje.trim().slice(0, 2000) : null
     if (!mensaje) errores.push('error.mensaje falta')
     const captura = base64(e.capturaBase64, 'capturaBase64', errores, MAX_BYTES_ADJUNTO)
-    if (captura && !esPng(captura)) errores.push('capturaBase64: no es un PNG')
+    if (captura && !mimeCaptura(captura)) errores.push('capturaBase64: no es un PNG ni un JPEG')
     const html = typeof e.html === 'string' && e.html !== '' ? e.html : null
     if (html && Buffer.byteLength(html, 'utf8') > MAX_BYTES_HTML) errores.push('html supera el techo')
     const url = typeof err?.url === 'string' ? err.url.slice(0, 500) : null
@@ -655,7 +713,7 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     if (errores.length) return { ok: false, errores }
     return {
       ok: true,
-      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(recorrido && recorrido.capturas.length > 0 ? { recorrido } : {}), ...(atasco ? { atasco } : {}) }, captura, html, ...leerMetaWorker(e) },
+      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(recorrido && recorrido.capturas.length > 0 ? { recorrido } : {}), ...(atasco ? { atasco } : {}) }, captura, capturaConDatos: captura !== null && e.capturaConDatos === true, html, ...leerMetaWorker(e) },
     }
   }
 
@@ -696,4 +754,12 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
   }
 
   return { ok: false, errores: ['resultado tiene que ser «ok», «error», «explorado» o «humo»'] }
+}
+
+/**
+ * ¿La captura puede llevar datos del tomador? FAIL-CLOSED: solo es «sin datos» si el worker lo marcó expresamente (`'false'`)
+ * Y el trabajo no tiene cliente. Sin marca (bot antiguo) o con cliente → se trata como con datos (no sale a Telegram). PURO.
+ */
+export function capturaConDatos(f: { captura_con_datos?: string | null; con_cliente?: boolean | null }): boolean {
+  return !(f.captura_con_datos === 'false' && f.con_cliente === false)
 }

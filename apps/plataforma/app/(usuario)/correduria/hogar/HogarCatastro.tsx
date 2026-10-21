@@ -30,8 +30,8 @@ const CAMPOS: Record<string, string> = {
 export default function HogarCatastro() {
   const [modo, setModo] = useState<'direccion' | 'referencia'>('direccion')
   const [direccion, setDireccion] = useState('')
-  const [municipio, setMunicipio] = useState('SEVILLA')
-  const [provincia, setProvincia] = useState('SEVILLA')
+  const [municipio, setMunicipio] = useState('')
+  const [provincia, setProvincia] = useState('')
   const [referencia, setReferencia] = useState('')
   const [cargando, setCargando] = useState(false)
   const [r, setR] = useState<Respuesta | null>(null)
@@ -75,7 +75,7 @@ export default function HogarCatastro() {
           <input style={input} placeholder="Referencia catastral de 20 caracteres" value={referencia} onChange={e => setReferencia(e.target.value)} autoFocus />
         )}
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button type="submit" disabled={cargando} style={boton}>{cargando ? 'Consultando…' : 'Consultar Catastro'}</button>
+          <button type="submit" disabled={cargando || (modo === 'direccion' && (municipio.trim() === '' || provincia.trim() === ''))} style={boton}>{cargando ? 'Consultando…' : 'Consultar Catastro'}</button>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>Gratis: es el servicio público del Catastro, no Codeoscopic.</span>
         </div>
       </form>

@@ -12,18 +12,24 @@ function vapidListo(): boolean {
 
 type Sub = { endpoint: string; p256dh: string; auth: string }
 
-async function enviarA(subs: Sub[], titulo: string, cuerpo: string, url: string) {
-  if (!subs.length || !vapidListo()) return
+export type ResultadoPush = 'enviado' | 'sin_suscripcion' | 'sin_vapid' | 'error'
+
+async function enviarA(subs: Sub[], titulo: string, cuerpo: string, url: string): Promise<ResultadoPush> {
+  if (!subs.length) return 'sin_suscripcion'
+  if (!vapidListo()) return 'sin_vapid'
   const payload = JSON.stringify({ title: titulo, body: cuerpo, url })
-  await Promise.all(subs.map(async (s) => {
+  const oks = await Promise.all(subs.map(async (s) => {
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
+      return true
     } catch (e: any) {
       if (e?.statusCode === 410 || e?.statusCode === 404) {
         await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.push_subscriptions WHERE endpoint = ${s.endpoint}`).catch(() => {})
       }
+      return false
     }
   }))
+  return oks.some(Boolean) ? 'enviado' : 'error'
 }
 
 /** Push a los responsables de RR.HH. de una empresa (best-effort, no-op sin VAPID). */
@@ -44,4 +50,14 @@ export async function pushEmpleado(empresaId: string, empleadoId: string, titulo
       WHERE empresa_id = ${empresaId}::uuid AND suscriptor_tipo = 'titular' AND suscriptor_id = ${empleadoId}::uuid`)
     await enviarA(subs, titulo, cuerpo, url)
   } catch (e: any) { console.error('pushEmpleado', e?.message) }
+}
+
+/** Igual que `pushEmpleado` pero devuelve el resultado (para registrarlo en `rrhh.avisos`). No lanza. */
+export async function pushEmpleadoResultado(empresaId: string, empleadoId: string, titulo: string, cuerpo: string, url = '/e'): Promise<ResultadoPush> {
+  try {
+    const subs = await prisma.$queryRaw<Sub[]>(Prisma.sql`
+      SELECT endpoint, p256dh, auth FROM rrhh.push_subscriptions
+      WHERE empresa_id = ${empresaId}::uuid AND suscriptor_tipo = 'titular' AND suscriptor_id = ${empleadoId}::uuid`)
+    return await enviarA(subs, titulo, cuerpo, url)
+  } catch (e: any) { console.error('pushEmpleadoResultado', e?.message); return 'error' }
 }

@@ -43,6 +43,9 @@ export const USOS_FRECUENCIA = ['ocasional', 'diario', 'laboral'] as const
 export type UsoFrecuencia = (typeof USOS_FRECUENCIA)[number]
 export const TIPOS_GARAJE = ['calle', 'colectivo', 'individual'] as const
 export type TipoGaraje = (typeof TIPOS_GARAJE)[number]
+/** Justificante del seguro anterior: recibo del próximo año / certificado · recibos de los 2 últimos años. */
+export const JUSTIFICANTES_SEGURO_ANTERIOR = ['proximo_anio', 'dos_ultimos_anios'] as const
+export type JustificanteSeguroAnterior = (typeof JUSTIFICANTES_SEGURO_ANTERIOR)[number]
 /** Máximo de `companiaAnterior` (el adaptador la ignora por encima de 80). */
 export const MAX_COMPANIA_ANTERIOR = 80
 
@@ -76,6 +79,43 @@ export type ConductorHabitual = {
 export type DatosTomadorFicha =
   | { tipo: 'fisica'; nombre: string; apellido1: string; apellido2: string | null; fechaNacimiento: string }
   | { tipo: 'juridica'; razonSocial: string }
+
+/**
+ * `datosTomador` crudo → `DatosTomadorFicha`, o `null` si no viene (21/10/2026: extraído de `validarFormularioAuto` para que Hogar use
+ * la MISMA validación). Los errores van a `errores` y nombran el CAMPO, nunca el valor. PURA.
+ */
+export function validarDatosTomadorFicha(v: unknown, errores: string[]): DatosTomadorFicha | null {
+  const nada = (x: unknown) => x === undefined || x === null || (typeof x === 'string' && x.trim() === '')
+  if (nada(v)) return null
+  const d = typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
+  const t = (x: unknown, max: number): string | null | false => {
+    if (nada(x)) return null
+    if (typeof x !== 'string' || tieneCaracteresProhibidos(x)) return false
+    const s = x.replace(/\s+/g, ' ').trim()
+    return s.length <= max ? s : false
+  }
+  if (d?.tipo === 'juridica') {
+    const razon = t(d.razonSocial, 200)
+    if (typeof razon === 'string') return { tipo: 'juridica', razonSocial: razon }
+    errores.push('datosTomador.razonSocial: obligatoria en persona jurídica (texto ≤200)')
+    return null
+  }
+  if (d?.tipo === 'fisica') {
+    const nombre = t(d.nombre, 100)
+    const apellido1 = t(d.apellido1, 100)
+    const apellido2 = t(d.apellido2, 100)
+    const fn = typeof d.fechaNacimiento === 'string' ? d.fechaNacimiento.trim() : ''
+    const fnOk = /^\d{4}-\d{2}-\d{2}$/.test(fn) && !Number.isNaN(Date.parse(`${fn}T00:00:00Z`)) && new Date(`${fn}T00:00:00Z`).toISOString().slice(0, 10) === fn
+    if (typeof nombre !== 'string') errores.push('datosTomador.nombre: obligatorio (texto ≤100)')
+    if (typeof apellido1 !== 'string') errores.push('datosTomador.apellido1: obligatorio (texto ≤100)')
+    if (apellido2 === false) errores.push('datosTomador.apellido2: texto ≤100 (o no venir)')
+    if (!fnOk) errores.push('datosTomador.fechaNacimiento: obligatoria, AAAA-MM-DD')
+    if (typeof nombre === 'string' && typeof apellido1 === 'string' && apellido2 !== false && fnOk) return { tipo: 'fisica', nombre, apellido1, apellido2, fechaNacimiento: fn }
+    return null
+  }
+  errores.push('datosTomador.tipo: tiene que ser fisica o juridica')
+  return null
+}
 
 /**
  * Dirección del TOMADOR troceada (17/10/2026), de la ficha. La POBLACIÓN es `FichaTomadorAuto.localidad` (no se repite aquí).
@@ -278,6 +318,16 @@ export type FormularioAuto = {
   companiaAnterior?: string | null
   /** Últimos 5 dígitos (solo cifras) de la póliza ACTUAL del cliente (19/10/2026: Allianz Turismos los pide en «Antecedentes»). Texto de 5 cifras exactas; ausente = no consta. Dato sensible: nunca en supuestos, avisos ni logs. */
   polizaAnteriorUltimos5?: string | null
+  /** Fecha de ADQUISICIÓN del vehículo (ISO, no futura, ≥1900, no anterior a la matriculación). Allianz moto la pide (≠ matriculación). Ausente = no consta. */
+  fechaAdquisicion?: string | null
+  /** `true` = la fecha de adquisición NO la tecleó el corredor: es la de por defecto (= nuestra matriculación, que puede ser estimada). Solo lo usa Allianz moto (0.7.18) para subirla a la 1ª matriculación del portal; los demás bots lo ignoran. Ausente/`false` = explícita o no se sabe. Solo viaja con `fechaAdquisicion`. */
+  fechaAdquisicionPorDefecto?: boolean | null
+  /** Allianz moto (0.7.20, «enseñar al bot para el futuro»): «Cliente Alto Potencial» del CUESTIONARIO de la tabla de precios. HOY NO SE APLICA: el bot solo lo lee y, si viene, avisa de que no lo cambió. Los demás bots lo ignoran. Ausente = no se pide. */
+  clienteAltoPotencialAllianz?: 'si' | 'no' | null
+  /** Allianz moto (0.7.20): valor del desplegable «CAP» (descuento comercial) que se querría. HOY NO SE APLICA (solo lectura + aviso). Código corto de opción (cifras, letras, `.,%-`, ≤12). Los demás bots lo ignoran. */
+  capAllianz?: string | null
+  /** Justificante del seguro anterior que Allianz exige si estuvo asegurado (`JUSTIFICANTES_SEGURO_ANTERIOR`). Ausente = no consta. */
+  fotocopiaAnterior?: JustificanteSeguroAnterior | null
   // ── 15/10/2026: lo que el bot SUPONE si no viene (`supuestosAuto`), mismos nombres que el riesgo de la oportunidad ──
   /** 1ª matriculación (ISO, no futura), de `datosVehiculo.fechaMatriculacion`. Decide compra nuevo / 2ª mano. Ausente = no consta. */
   fechaMatriculacion?: string | null
@@ -556,32 +606,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   }
 
   // Datos del tomador para el ALTA en el portal (opcional; los pone asegura al entregar). Nunca se repite el valor en el error.
-  let datosTomador: DatosTomadorFicha | null = null
-  if (!vacio(e.datosTomador)) {
-    const d = typeof e.datosTomador === 'object' && e.datosTomador !== null && !Array.isArray(e.datosTomador) ? (e.datosTomador as Record<string, unknown>) : null
-    const t = (v: unknown, max: number): string | null | false => {
-      if (vacio(v)) return null
-      if (typeof v !== 'string' || tieneCaracteresProhibidos(v)) return false
-      const x = v.replace(/\s+/g, ' ').trim()
-      return x.length <= max ? x : false
-    }
-    if (d?.tipo === 'juridica') {
-      const razon = t(d.razonSocial, 200)
-      if (typeof razon === 'string') datosTomador = { tipo: 'juridica', razonSocial: razon }
-      else errores.push('datosTomador.razonSocial: obligatoria en persona jurídica (texto ≤200)')
-    } else if (d?.tipo === 'fisica') {
-      const nombre = t(d.nombre, 100)
-      const apellido1 = t(d.apellido1, 100)
-      const apellido2 = t(d.apellido2, 100)
-      const fn = typeof d.fechaNacimiento === 'string' ? d.fechaNacimiento.trim() : ''
-      const fnOk = /^\d{4}-\d{2}-\d{2}$/.test(fn) && !Number.isNaN(Date.parse(`${fn}T00:00:00Z`)) && new Date(`${fn}T00:00:00Z`).toISOString().slice(0, 10) === fn
-      if (typeof nombre !== 'string') errores.push('datosTomador.nombre: obligatorio (texto ≤100)')
-      if (typeof apellido1 !== 'string') errores.push('datosTomador.apellido1: obligatorio (texto ≤100)')
-      if (apellido2 === false) errores.push('datosTomador.apellido2: texto ≤100 (o no venir)')
-      if (!fnOk) errores.push('datosTomador.fechaNacimiento: obligatoria, AAAA-MM-DD')
-      if (typeof nombre === 'string' && typeof apellido1 === 'string' && apellido2 !== false && fnOk) datosTomador = { tipo: 'fisica', nombre, apellido1, apellido2, fechaNacimiento: fn }
-    } else errores.push('datosTomador.tipo: tiene que ser fisica o juridica')
-  }
+  const datosTomador = validarDatosTomadorFicha(e.datosTomador, errores)
 
   // Tomador de la ficha (opcional; lo pone asegura al entregar, 17/10/2026). Nunca se repite el valor en el error.
   let fichaTomador: FichaTomadorAuto | null = null
@@ -613,6 +638,22 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   // Supuestos de Allianz Turismos (opcionales, sin defecto: lo que no viene lo SUPONE el bot y lo declara).
   const fechaMatriculacion = fechaIso(e.fechaMatriculacion, 'fechaMatriculacion', errores)
   if (fechaMatriculacion !== null && fechaMatriculacion > hoy.toISOString().slice(0, 10)) errores.push('fechaMatriculacion: no puede ser futura')
+  const fechaAdquisicion = fechaIso(e.fechaAdquisicion, 'fechaAdquisicion', errores)
+  if (fechaAdquisicion !== null) {
+    if (fechaAdquisicion > hoy.toISOString().slice(0, 10)) errores.push('fechaAdquisicion: no puede ser futura')
+    else if (fechaAdquisicion < '1900-01-01') errores.push('fechaAdquisicion: no puede ser anterior a 1900')
+    else if (fechaMatriculacion !== null && fechaAdquisicion < fechaMatriculacion) errores.push('fechaAdquisicion: no puede ser anterior a la matriculación')
+  }
+  const fechaAdquisicionPorDefecto = booleano(e.fechaAdquisicionPorDefecto, 'fechaAdquisicionPorDefecto', errores)
+  const fotocopiaAnterior = cerrado(e.fotocopiaAnterior, 'fotocopiaAnterior', JUSTIFICANTES_SEGURO_ANTERIOR, null)
+  // Allianz moto 0.7.20: CAP / Cliente Alto Potencial, opcionales y SIN efecto hoy (el bot solo los lee). El error no repite el valor.
+  const clienteAltoPotencialAllianz = cerrado(e.clienteAltoPotencialAllianz, 'clienteAltoPotencialAllianz', ['si', 'no'] as const, null)
+  let capAllianz: string | null = null
+  if (!vacio(e.capAllianz)) {
+    const c = typeof e.capAllianz === 'string' ? e.capAllianz.trim() : typeof e.capAllianz === 'number' && Number.isFinite(e.capAllianz) ? String(e.capAllianz) : ''
+    if (/^[A-Za-z0-9.,%-]{1,12}$/.test(c)) capAllianz = c
+    else errores.push('capAllianz: código de opción corto (cifras, letras, «.,%-», máx. 12) o no venir')
+  }
   const fechaVencimiento = fechaIso(e.fechaVencimiento, 'fechaVencimiento', errores)
   const tipoGaraje = cerrado(e.tipoGaraje, 'tipoGaraje', TIPOS_GARAJE, null)
   const usoFrecuencia = cerrado(e.usoFrecuencia, 'usoFrecuencia', USOS_FRECUENCIA, null)
@@ -653,6 +694,11 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(companiaAnterior !== null ? { companiaAnterior } : {}),
       ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
       ...(fechaMatriculacion !== null ? { fechaMatriculacion } : {}),
+      ...(fechaAdquisicion !== null ? { fechaAdquisicion } : {}),
+      ...(fechaAdquisicion !== null && fechaAdquisicionPorDefecto !== null ? { fechaAdquisicionPorDefecto } : {}),
+      ...(fotocopiaAnterior !== null ? { fotocopiaAnterior } : {}),
+      ...(clienteAltoPotencialAllianz !== null ? { clienteAltoPotencialAllianz } : {}),
+      ...(capAllianz !== null ? { capAllianz } : {}),
       ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
       ...(tipoGaraje !== null ? { tipoGaraje } : {}),
       ...(usoFrecuencia !== null ? { usoFrecuencia } : {}),

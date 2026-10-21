@@ -15,6 +15,49 @@
 **(21/10/2026)** — Correduría · Occident solicitud 165109972 (Studium, acc. colectivo, efecto retroactivo 15/10): declaración de no siniestralidad en PDF firmada por Berta; emitida póliza 549683979 el 21/10. El correo de emisión no se leía y la solicitud quedó en bandeja sin oportunidad.
 Inventario histórico Gmail: 856 hilos sector, parsers cubren 13,4 %; spec «agente corredor de correo» en `docs/CORREDURIA-AGENTE-CORREO.md` (F0 deterministas sobre PR #4893 → F3). CIMA = verdad; correo cruza y avisa por Telegram.
 Pendiente Alberto: proveedor LLM UE (Anthropic vs Azure), almacenamiento adjuntos, días de espera CIMA, Mapfre FACTURA. 🚨 Triaje envía asuntos con tomador a Groq/NIM sin DPA; tirea.es/codeoscopic con credenciales en claro (rotar).
+**(21/10/2026)** — Allianz moto confirmada de punta a punta por Alberto con 0.7.20: prima = «Anual sucesivos» del RECIBO BANCARIO.
+«Cliente Alto Potencial = Sí» abre una ventana de descuento comercial, hoy DESACTIVADA en el broker; documentado en
+`docs/TARIFICADOR-DATOS-BOTS.md` (sección moto). Verificar con un run real cuando se active; el bot no aplica descuentos sin decisión.
+
+**(21/10/2026)** — Correduría · #4945 mergeado (presupuesto a contacto de empresa, SOLO LECTURA: el tercero no firma; marca `acceso_tercero`
+ligada al token). Idea 4: mismo selector para WhatsApp (Dueño/Administración con móvil; aunque el tomador tenga correo). Idea 2 (aviso de
+vencimiento restringido) DESCARTADA por Alberto: está en `git stash` «idea2-vencimiento». Pendiente: firma en representación (PR aparte).
+
+**(21/10/2026)** — Correduría · presupuesto a la persona de contacto de una EMPRESA sin correo (Studium: Victor «Dueño»). Regla
+de Alberto en `destinatariosPresupuesto` (module-seguros): solo «Dueño»/«Administración» (tomador `juridica`) o autorización vigente en
+`portal_autorizacion` (la columna `puede_ver_polizas` está MUERTA desde 03/09). Asegura revalida (409 si no elegible); el tercero recibe código
+solo de ese presupuesto y PUEDE firmar (decidido por Alberto). Ficha de empresa: aviso + «autorizar contacto» (queda pendiente de aceptar).
+Medido: 9 empresas en vigor, 3 sin correo, las 3 con Dueño/Administración con correo; 11/57 personas físicas sin correo.
+
+**(21/10/2026)** — Allianz moto (bot RPA) 0.7.16 → 0.7.19. 0.7.16 diagnosticó la fecha de nacimiento: mismo día/mes, año +40. 0.7.17 escribe
+las fechas con el setter nativo + `change`, sin pulsaciones, así que la máscara ePAC `date(224)` ya no desplaza el año; confirmado: la fecha de
+nacimiento pasa. 0.7.18 añade el flag `fechaAdquisicionPorDefecto`: PR #4938 pone fecha de adquisición = matriculación por defecto en «Pedir precio»
+de la oportunidad. 0.7.19 (decisión de Alberto): una fecha de adquisición anterior a la 1ª matriculación de Allianz se sustituye siempre por la de
+Allianz, con supuesto en el presupuesto (PR #4950). Imagen `moto-e5b0c81` en producción. Lección: los despliegues de plataforma se CANCELAN por pushes
+de otras sesiones a main; antes de pedir a Alberto que pulse, comprueba que el deployment READY lleva tu SHA y que recargue la página.
+Pendiente: confirmar el precio real de Allianz moto para el lead BMW F800 (Mapfre ya lo tarificó: 223,65€ / 300,40€).
+
+**(21/10/2026)** — RRHH · «Quitar de pendientes» en /admin/firmas (Pilar): selección 1/varias/todas → ANULACIÓN lógica (estado_firma='no_requiere'
++ `firma_anulada_at/_por`), el documento NUNCA se borra (PRL/EPIs/nóminas). Sale de panel, cron y portal. Migración 0026 aplicada en prod.
+
+**(21/10/2026)** — RRHH · interruptor «Permitir fichar sin ubicación» en /admin/fichajes (GET/PATCH `/api/admin/empresa/ajustes`, empresa de
+sesión, booleano estricto). Sin migración. Cierra el pendiente de la entrada de fichaje sin ubicación.
+
+**(21/10/2026)** — RRHH · «Notas internas» en la ficha del empleado (petición de Pilar): `rrhh.empleados.notas` (≤5000, NULL si vacío),
+PATCH admin existente filtrado por empresa de sesión, nunca en `/api/e/*` ni `/e/*`. Migración 0025 aplicada en prod.
+
+**(21/10/2026)** — Correduría · ficha de oportunidad: «Historial y bonificaciones» (SINCO, años sin siniestros) salía en ramos que no son
+de vehículo (lo vio Alberto en una de Accidentes). Ahora solo sale en auto/moto: `muestraHistorialSinco()` en `piezas-riesgo.ts` reutiliza
+`admiteDatosVehiculo()`; test `historial-sinco.test.ts` (visto en rojo). Pendiente: en esa misma ficha, la Comparativa dice «Esta oportunidad no
+existe en la correduría»: ruta y datos OK (asegura desplegado con #4911; la oportunidad existe); probable desfase de despliegue de #4920.
+Arreglado el mensaje: solo «no existe» si el puerto dice `estado:'no_encontrado'`; otro 404 = error con motivo (`comparativa-asegura.ts`, test visto en rojo).
+
+**(21/10/2026)** — RRHH · fichaje sin ubicación (Global2/Pilar): el aviso de permiso era de Safari para TODOS (captura era Android/Chrome) y
+«Reintentar» no sirve con permiso bloqueado. Ahora: mensaje por plataforma (iOS/Android/otro), `permissions.query` para detectar `denied`
+(botón «Ya lo he permitido»), «Obteniendo ubicación…», 400 `ubicacion_requerida` ya no culpa a permisos, timeout alta precisión 10 s.
+2ª parte (mismo PR #4927): «Fichar sin ubicación» de emergencia (`empresas.permite_fichar_sin_ubicacion` DEFAULT true, marca en fichaje),
+`rrhh.incidencias_ubicacion` + sección en /admin/fichajes, precisión GPS, aviso de permiso al abrir, aviso instalar PWA, guía pública
+`/ayuda/ubicacion`. Migración 0024 APLICADA en prod (wswbehlcuxqxyinousql). Pendiente: interruptor del permiso en el admin (hoy solo por SQL).
 
 **(20/10/2026)** — Auditoría diaria (ligera): precio sano (0 bajo mínimo, motor on, k=0, última pasada 7,6 h). Correduría: CIMA entra (pulls 18:30 UTC ok)
 pero `queueDepth` 211→213 con 0-2 procesados y ingesta DEGRADADA (C0072: 22 d sin mandar, 14 pólizas vivas); alertas `cima_siniestros_corte` (SIN 12 d) y
@@ -1359,6 +1402,58 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (20/10/2026) Correduría · correos de compañía que no llegaban a la cartera
 `correo_evento_entrante` vacía desde el 14/10: (1) central-asegura en prod con #4881 (anterior a #4885; un build viejo terminó después) → promovido a mano `dpl_HLRsKg1` (4660093); (2) los asuntos reales de Occident no casaban: lectores nuevos «Suscripción <ramo> <nº>, <tomador>» (rechazos de solicitud) y «Resumen de recibos anulados por impago» (tipo `anulacion` con nota de RECIBO anulado, clave póliza/recibo). El correo «Solicitud» rechazado hoy no se reprocesa (cursor+etiqueta; no compensa).
 **Pendiente:** suplemento rechazado sin lector (decisión de Alberto); comprobar a 24-48 h que `correo_evento_entrante` se llena.
+## (21/10/2026) asegura-portal: carné de conducir visible + avisos carné/ITV desmarcables
+- Origen: clienta María Luisa González Lozano no veía la fecha de su carné (cifrada) y metía la de caducidad donde se pide expedición (`max=hoy` → «no puede ser futura»).
+- Ahora: puede meter caducidad o expedición (`expedicionDesdeCaducidad`, ambiguo 70-75 años → pide expedición); la tarjeta muestra expedición + caducidad (solo vínculo `gestionar`/`administrar`) y «Cambiar» viene precargado.
+- Avisos: carné escalonado 90/30/7/0, `carnet_sin_nacimiento`, texto DGT + .ics; ITV automática en campana (30/7/0, «estimada» si ciclo estimado; sin correo). Interruptores `vencimiento_carnet`/`vencimiento_itv` (activados por defecto; el correo solo lo calla el titular).
+- Migración `apps/asegura-portal/prisma/sql/2026-10-21_aviso_vencimiento_carnet.sql` (amplía CHECK de `portal_aviso_silenciado`): ✅ aplicada el 21/10. PR #4955 mergeado. CIMA no pisa la fecha del cliente (`discrepa`).
+- Pendiente: la clienta tiene que mandar su fecha de expedición real; la fecha de nacimiento no la puede editar ella.
+
+## (21/10/2026) Correduría · cola de Google Contactos atascada (🟢 y botón WhatsApp del portal)
+- Diagnóstico: 37 revisiones pendientes desde el 05/10 sin atender; un `duplicado_ambiguo` deja el contacto de Google INTACTO (sin 🟢) → hasta 8 clientes en vigor sin verde (2 `mismo_email`, 6 `telefono_compartido`).
+- El botón WhatsApp/correo de invitación al portal se oculta si el email está en 2 fichas activas (`accion:'ninguna'`): no es bug, es dato (caso María Luisa González Lozano → unificar).
+- PR #4928: la cola enseña el teléfono en cuestión, enVigor, nº pólizas tomador, enlace a ficha; `nombreFichaLegible` no duplica nombre.
+- Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Aviso Telegram diario (09:xx Madrid, en el cron google-contactos) si hay revisiones de clientes en vigor ≥3 días: PR siguiente. Cola vaciada por Alberto el 21/10; María Luisa sigue sin botón portal (email en 2 fichas, falta fusionar).
+
+## (21/10/2026) asegura-portal: «Seguros que no nos constan» fallaba
+- Causa: el proyecto Vercel `asegura-portal` no tiene `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` → `/api/huecos-proteccion` 503 `sin_canal` (log prod 21/10 06:19Z). Pendiente: Alberto las añade.
+- Además la reserva se escribía antes de enviar → reintento 409 durante 10 min. PR #4919: comprobar canal antes de reservar + test.
+- Probable que `/api/sugerencia` y el aviso de heridos de `/api/siniestros` estén mudos por lo mismo (no verificado).
+
+## (21/10/2026) Presupuesto Avant2 con comparativa + portal + bots hogar + Allianz hogar ON
+- Presupuesto de origen Avant2 lleva `estudio` (cuadro + resumen IA/plantilla, `estudio-avant2.ts`); PDF rediseñado (logos, compañía+nivel, ✓/✗/?, «Acepta tu presupuesto», #2445B8 en texto pequeño); página del cliente (`EstudioCliente.tsx`) con el mismo estudio; plataforma: `ComparativaOportunidad` + `EnviarAlCliente` (copiar/WhatsApp/correo, confirma antes de rotar código) + «He revisado el resumen IA».
+- Regla: prima solo anual si las fechas de la compañía cubren 1 año exacto; si no, `primaPeriodo` y fuera del ranking.
+- Bots hogar: FormularioHogar con protecciones/objetos; Mapfre tras `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (SQL 2026-10-15b sin aplicar); Occident aparcado; fix parrilla «no aplica». **ALLIANZ_HOGAR_ACTIVO=true** (OK Alberto): falta imagen Fly + `TARIFICADOR_FLY_IMAGE` + redeploy, y capturar «Valoración de bienes»/«Precio» con la oportunidad de Pedro José (6f3a48f7-…).
+- Auditoría Avant2 hogar: petición idéntica a la del 07/09; primera vía `hogar-nuevo` real aún sin estrenar.
+
+## (20/10/2026) Comparativa única + direcciones CP-primero en todo el monorepo (PR #4911)
+- Motor ÚNICO de comparativa (`module-seguros` comparar-ofertas/ofertas-fuentes/resumen-comparativa): cualquier fuente (Avant2, PDF compañía/competencia, póliza cartera, bot) y ramo; 3 estados por cobertura; IA etiquetada y validada (compañías/cifras), huella para no regenerar; puerto gratis `/api/operador/oportunidad/comparativa`. Pendiente: pintarlo en la pantalla de la oportunidad y en el PDF de origen Codeoscopic.
+- `packages/core-direccion` (CP→provincia, municipios INE en `./servidor`) + calle autocompletada del Catastro (cola de sugerencias con tope). Aplicado en plataforma (hogar), ialimp, ia-rest y transporte (con «Fuera de España»). Regla permanente en CLAUDE.md.
+- Uso real (BD 20/10): rrhh EN USO (Global2); ialimp sin humanos desde 29/08 pero sync iCal/Smoobu viva; ia-rest sin uso.
+- Pedro José Moreno Gil: oportunidad hogar 6f3a48f7-… creada por Claude (capitales supuestos 228.000/40.000€); falta en pantalla: fecha nacimiento (cifrada), catálogos Avant2 y lanzar el 0,50€.
+- Pendiente fases 1-2 restantes: DatosRiesgo, PresupuestosCompanias, HogarCatastro, fichas del tomador, portal y asegura hogar-nuevo; module-seguros debe reexportar provinciaPorCp de core-direccion; quitar supuestos optimistas (habitaciones por m²) de asegura.
+
+## (20/10/2026) Correduría · oportunidad de HOGAR con Catastro
+- CP primero (fuera default SEVILLA), buscador Catastro en la oportunidad, avisos (capital sugerido, infraseguro, discrepancias, antigüedad >40, uso obligatorio antes del 0,50€, hipoteca, prellenado desde cartera viva). Helpers `module-tarificacion/src/hogar-asesor.ts`.
+- Fix `core-catastro` elegirVia: calles de pedanía («PARRA LA (VENTAS CARRIZA)») ya no se confunden con ISABEL PARRA/PARRAS; solo gana coincidencia exacta.
+- Decisión: a Codeoscopic se envía el TOTAL construido (vivienda+anexos); el desglose solo se muestra.
+- Sin confirmar (Alberto): `REGLAS_USO_COMPANIA` y `COSTE_RECONSTRUCCION_EUR_M2`. Bots de hogar sin precio: la vía real es Avant2.
+- Caso de prueba: Pedro José Moreno Gil (lead), RC 2053408VG1525S0001YW, 228 m², 2011. OK de Alberto a 1 cotización Avant2 (0,50€).
+- Siguiente: motor de comparativa ÚNICO (cualquier fuente/ramo) + resumen IA etiquetado + PDF existente.
+
+## (20/10/2026) RRHH · fichaje: error de ubicación en iPhone con permiso concedido
+- Captura de Pilar (Global2): «activa la ubicación» con Safari en Permitir. Causa: el catch de getCurrentPosition mapeaba TODO error (timeout/no disponible) a «permiso»; un único intento alta precisión 15 s.
+- Nuevo `apps/rrhh/lib/geolocalizacion-fichaje.ts` (+test): mensaje por código (1 → incluye iOS «Sitios web de Safari»), reintento baja precisión 20 s/maximumAge 60 s. Servidor intacto.
+
+## (20/10/2026) RRHH · layout de escritorio (admin + portal empleado)
+- Admin: shell hasta 1280px, menú lateral sticky agrupado (`AdminNav`), `app/admin/layout.tsx` (branding 1 vez; cada page sigue con `getSesion()`, cepo `lib/admin-guardas.test.ts`). Primitivas `components/ui/{Page,Card,Tabla}`.
+- Tablas sin min-width, cabecera fija, filtros en una línea; guardián `lib/tablas-responsive.test.ts`. `/e` a dos columnas en lg; ficha empleado y calendario en rejilla. Sin ver en navegador.
+
+## (20/10/2026) RRHH · documentos con IA + firma, avisos, panel de pendientes y recordatorios
+- Pilar sube PDF(s) en `/admin/documentos`: la IA propone tipo/carpeta/destinatarios/título/firma/resumen (null si duda); emparejado NIF>nombre único en código, homónimos «ambiguo»; nada se asigna sin su clic. Envío masivo a varios/toda la plantilla (copia por empleado).
+- Aviso email+push al solicitar firma (`lib/avisos.ts`, tabla `rrhh.avisos` con resultado por canal y `visto`); en `/e` badge «N sin ver».
+- `/admin/firmas`: pendientes con demora, visto, reclamaciones, «Reclamar». Cron diario `recordatorio-firmas` (3/7 días y semanal, idempotente por índice único).
+- Migración `0023_avisos_firma.sql` APLICADA en prod (20/10). Revisión architect: 8 hallazgos corregidos (idempotencia envío, preselección solo trabajadores, firma vetada en formación/datos). Env opcional `RRHH_PUBLIC_URL`. Pendiente: probar contra BD/SMTP/IA reales y UI a 320 px; staging huérfano sin limpieza.
 
 ## (20/10/2026) Correduría · Mi mesa = día a día + solicitudes a compañía (PR #4885)
 Mi mesa solo muestra lo trabajado: `esTrabajada()` (module-seguros) pliega en «Renovaciones sin tocar» las renovaciones automáticas sin acción humana (historial no automático, llamada/WhatsApp cerrada, `pendiente_cliente` o nº de solicitud). Botón «+ Tarea» con selector de cliente. Nº de solicitud en compañía en la OPORTUNIDAD (`compania_solicitud_*`, sin estado nuevo en el enum: «En la compañía» = abierta con nº) + lector Occident «Suscripción … - Solicitud N» (estado, enlace portal, tarea «Enviar documentación» si PTE DOCUMENTACION; al apuntar el nº se enganchan los `sin_resolver` de 90 días). Migración `2026-10-20_oportunidad_solicitud_compania.sql`.

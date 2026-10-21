@@ -145,7 +145,7 @@ export async function purgarRiesgosCerrados(db: DbPurga, correduriaId: string, l
  * Purga de la EVIDENCIA de fallo (capturas/HTML en `seguros.documentos`) de trabajos terminados hace más de
  * `DIAS_RETENCION_EVIDENCIA` días: borra los documentos de fallo y anula las referencias (`evidencia_documento_id` por el
  * ON DELETE SET NULL, `error.html_documento_id`, `tarificacion_trabajo_pasos.captura_ref`). Idempotente (un trabajo ya
- * purgado no vuelve a salir), por tandas, y solo borra ficheros `fallo-*.png|html` del agente (nunca el PDF de una oferta).
+ * purgado no vuelve a salir), por tandas, y solo borra ficheros `fallo-*.png|jpg|html` del agente (nunca el PDF de una oferta).
  * Devuelve cuántos documentos borró.
  */
 export async function purgarEvidenciaCaducada(db: DbPurga, correduriaId: string, dias = DIAS_RETENCION_EVIDENCIA, limite = 100): Promise<number> {
@@ -166,7 +166,7 @@ export async function purgarEvidenciaCaducada(db: DbPurga, correduriaId: string,
       -- colgando a un documento ya borrado (restos de una pasada a medias). Sin esto, uno con referencias a documentos
       -- no purgables saldría en cada pasada y copaba el lote.
       and (exists (select 1 from seguros.documentos x
-                   where x.correduria_id = t.correduria_id and x.subido_por = 'agente' and x.nombre_fichero ~ '^fallo-[0-9a-f]{8}\\.(png|html)$'
+                   where x.correduria_id = t.correduria_id and x.subido_por = 'agente' and x.nombre_fichero ~ '^fallo-[0-9a-f]{8}\\.(png|jpg|html)$'
                      and (x.id = t.evidencia_documento_id
                           or (jsonb_typeof(t.error) = 'object' and x.id::text = t.error->>'html_documento_id')
                           or exists (select 1 from seguros.tarificacion_trabajo_pasos p where p.trabajo_id = t.id and p.captura_ref = 'documento:' || x.id::text)))
@@ -193,7 +193,7 @@ export async function purgarEvidenciaCaducada(db: DbPurga, correduriaId: string,
     ? await db.$queryRaw<{ id: string }[]>`
     delete from seguros.documentos
     where id = any(${[...docs]}::uuid[]) and correduria_id = ${correduriaId}::uuid
-      and subido_por = 'agente' and nombre_fichero ~ '^fallo-[0-9a-f]{8}\\.(png|html)$'
+      and subido_por = 'agente' and nombre_fichero ~ '^fallo-[0-9a-f]{8}\\.(png|jpg|html)$'
     returning id::text as id`
     : []
   // Solo se anulan las referencias a documentos que YA NO existen (los que acabamos de borrar y los que quedaron colgando de

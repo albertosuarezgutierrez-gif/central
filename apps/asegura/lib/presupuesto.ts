@@ -40,12 +40,20 @@ import { completarCoberturasTarificacion } from './codeoscopic/coberturas-tarifi
 import { OCULTAR_VACIO, estaOculta, ordenResto, type Ocultar } from './presupuesto-ocultar'
 import { conjuntoEnDocumento, elegirReutilizable } from '@central/module-seguros/referencia-presupuesto'
 import { opcionesReutilizadas } from './presupuesto-reutilizado'
-import { compararOfertas, type ResultadoComparacion } from '@central/module-seguros'
+import { compararOfertas, ofertaDePolizaActual, ramoOfertaDe, type ResultadoComparacion } from '@central/module-seguros'
 import { ofertaNormalizadaDeFila } from './documentos/oferta-leida'
 import { generarNarrativa, type Narrativa } from './estudio-ia'
+import { huellaComparativa, narrativaConReutilizacion, ultimoEstudioDeTarificacion } from './comparativa-guardada'
+import { estudioDePresupuestoAvant2, garantiasAvant2De } from './estudio-avant2'
+import { estudioEnDocumento } from './estudio-cliente'
+import { leerEstudio } from './presupuesto-pdf-cuadro'
+import { polizaParaComparar } from './comparativa-oportunidad'
+import { gastoIaAuto } from './ia-tope-estudio'
+import { iaTexto } from './ia'
+import { fechaEfectoCaducada } from './codeoscopic/fecha-efecto'
 import { AVISO_OPCION_OFERTA, caducidadOfertas, opcionesDeOfertas, seleccionarParaConsolidar } from './ofertas-reglas'
 import { leerOportunidadParaOfertas, ofertasDeOportunidad } from './oportunidad-ofertas'
-import { VIA_PROPUESTA_LEAD, sustituiblePorPropuestaLead } from './presupuesto-rpa-reglas'
+import { EUR_ESTIMADO_NARRATIVA, VIA_PROPUESTA_LEAD, decidirIaAuto, sustituiblePorPropuestaLead } from './presupuesto-rpa-reglas'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -222,10 +230,12 @@ export async function prepararPresupuesto(
       avisos: unknown
       coberturas: unknown
       garantias: unknown
+      frecuencia_pago: string | null
+      meses: number | null
     }[]
   >`
     select id::text as id, compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur,
-           firmeza, requiere_rerate, referencia_vendor, avisos, coberturas, garantias
+           firmeza, requiere_rerate, referencia_vendor, avisos, coberturas, garantias, frecuencia_pago, meses
     from tarificacion_precios
     where tarificacion_id = ${cab.id}::uuid
     order by creado_at asc, prima_eur asc nulls last
@@ -400,12 +410,23 @@ export async function prepararPresupuesto(
     faltan.forEach((o, i) => { o.coberturas = sobres?.[i] ?? null })
   }
 
+  // 📊 El ESTUDIO (21/10/2026, opción B): cuadro comparativo + resumen con su etiqueta, con la MISMA lógica y huella
+  // que la comparativa de la oportunidad. Best-effort: si algo falla, el presupuesto sale igual, sin estudio (el PDF
+  // sale como antes, sin cuadro). La emisión NO cambia: sigue emitiendo por Avant2 el precio pulsado.
+  // La PORTADA (recomendadas) entra SIEMPRE al cuadro: ninguna opción destacada se queda sin columna.
+  const portadaIds = new Set(aCongelar.slice(0, nPortada).map((o) => o.precioId))
+  const estudioAvant2 = await estudioParaPresupuestoAvant2(correduriaId, cab, filas, oculta, creadoAt, portadaIds)
+
   const nOcultas = nOcultasPrevio
   const token = generarTokenVista()
   const tokenHash = await hashTokenVista(token)
 
   // Bajo cerrojo por tarificación: dos «Preparar» a la vez con lo mismo no crean dos presupuestos.
-  const hecho = await db.$transaction(async (tx) => {
+  // 🪙 Si se gastó IA en el resumen y la transacción falla (o el cerrojo encuentra otro), el gasto se anota igual en el
+  // tope de 24 h (`anotarGastoIa`): si no, un fallo repetido gastaría IA sin que el tope lo viera.
+  let hecho
+  try {
+  hecho = await db.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`presupuesto:${correduriaId}:${cab.id}`}))`
     const otro = await buscarReutilizable(tx, correduriaId, cab.id, enDocumento)
     if (otro) return { tipo: 'otro' as const, otro }
@@ -420,6 +441,7 @@ export async function prepararPresupuesto(
         venceEl,
         creadoAt,
         creadoPor: entrada.actor,
+        ...(estudioAvant2 ? { estudio: estudioAvant2.estudio as unknown as Prisma.InputJsonValue } : {}),
         opciones: {
           create: aCongelar.map((o) => ({
             orden: o.orden,
@@ -451,6 +473,8 @@ export async function prepararPresupuesto(
             detalle: {
               actor: entrada.actor,
               ...(nOcultas > 0 ? { ocultas: { n: nOcultas, companias: ocultar.companias, precios: ocultar.precios } } : {}),
+              // El resumen del estudio: quién lo redactó y si se gastó IA (cuenta para el tope común de 24 h).
+              ...(estudioAvant2 ? estudioAvant2.evento : { estudio: 'sin_estudio' }),
             },
           }],
         },
@@ -460,7 +484,12 @@ export async function prepararPresupuesto(
     return { tipo: 'creado' as const, creado }
     // El tope por defecto de Prisma (5 s) se queda corto con 30+ opciones y la espera del cerrojo.
   }, { timeout: 20_000, maxWait: 10_000 })
+  } catch (e) {
+    await anotarGastoIa(correduriaId, null, cab.id, estudioAvant2?.evento ?? null, 'transaccion_fallida')
+    throw e
+  }
   if (hecho.tipo === 'otro') {
+    await anotarGastoIa(correduriaId, hecho.otro.id, cab.id, estudioAvant2?.evento ?? null, 'cerrojo_encontro_otro')
     await anotarReutilizado(db, hecho.otro.id, entrada.actor)
     return respuestaReutilizada(hecho.otro)
   }
@@ -495,6 +524,105 @@ export async function prepararPresupuesto(
       enLista: aCongelar.length - nPortada - nOcultas,
       ocultas: nOcultas,
     },
+  }
+}
+
+/**
+ * Anota en el TOPE de 24 h (`gastoIaAuto` cuenta `preparado` e `ia_resumen` con `iaAuto = 'intentada'`) una IA que se
+ * pagó pero cuyo presupuesto no llegó a crearse. Se cuelga del presupuesto que la ganó o, si no hay, del último de la
+ * correduría (el tope cuenta por correduría). Sin presupuesto ninguno en la correduría no hay dónde: se registra el
+ * error. NUNCA lanza.
+ */
+async function anotarGastoIa(correduriaId: string, anclaId: string | null, tarificacionId: string, evento: Record<string, unknown> | null, motivo: string): Promise<void> {
+  if (!evento || evento.iaAuto !== 'intentada') return
+  try {
+    const db = prismaAsegura()
+    const ancla = anclaId ?? (await db.presupuesto.findFirst({ where: { correduriaId }, orderBy: { creadoAt: 'desc' }, select: { id: true } }))?.id ?? null
+    if (!ancla) { registrarErrorCartera('presupuesto/gasto-ia-sin-ancla', new Error(`IA gastada sin presupuesto (${tarificacionId})`)); return }
+    await db.presupuestoEvento.create({
+      data: { presupuestoId: ancla, tipo: 'ia_resumen', origen: 'sistema', detalle: { iaAuto: 'intentada', eurEstimados: evento.eurEstimados ?? EUR_ESTIMADO_NARRATIVA, tarificacionId, motivo } },
+    })
+  } catch (e) {
+    registrarErrorCartera('presupuesto/gasto-ia', e)
+  }
+}
+
+/**
+ * El `estudio` de un presupuesto de Avant2 (pura la comparación: `estudio-avant2.ts`): los precios EN DOCUMENTO de la
+ * tarificación, la póliza actual de la cartera si la hay, y el resumen (el guardado con la misma huella y tarificación
+ * si lo redactó la IA; si no, la IA con el tope común de 24 h, o la plantilla). Simulado = plantilla (no se gasta IA en
+ * un precio que no dio ninguna compañía). NUNCA lanza: `null` = sin estudio, y se registra el porqué.
+ */
+async function estudioParaPresupuestoAvant2(
+  correduriaId: string,
+  cab: Cabecera,
+  filas: { id: string; compania: string | null; producto: string | null; modalidad: string | null; categoria: string | null; prima_eur: string | number | null; franquicia_eur: string | number | null; firmeza: string | null; avisos: unknown; garantias: unknown; frecuencia_pago: string | null; meses: number | null }[],
+  oculta: boolean[],
+  ahora: Date,
+  portada: ReadonlySet<string> = new Set(),
+): Promise<{ estudio: Record<string, unknown>; evento: Record<string, unknown> } | null> {
+  try {
+    const ramo = ramoOfertaDe(cab.ramo)
+    const pol = cab.polizaId ? await polizaParaComparar(correduriaId, cab.clienteId, cab.polizaId) : null
+    const e = estudioDePresupuestoAvant2({
+      ramo: cab.ramo,
+      actual: pol ? ofertaDePolizaActual(pol, ramo) : null,
+      caducada: fechaEfectoCaducada(cab.fechaEfecto ? cab.fechaEfecto.toISOString().slice(0, 10) : null),
+      precios: filas.map((f, i) => ({
+        id: f.id, compania: f.compania, producto: f.producto, modalidad: f.modalidad, categoria: f.categoria,
+        primaEur: numero(f.prima_eur), franquiciaEur: numero(f.franquicia_eur), firmeza: f.firmeza,
+        frecuenciaPago: f.frecuencia_pago ?? null, meses: typeof f.meses === 'number' ? f.meses : null,
+        garantias: garantiasAvant2De(f.garantias),
+        avisos: Array.isArray(f.avisos) ? f.avisos.filter((a): a is string => typeof a === 'string') : null,
+        oculta: oculta[i] === true,
+        portada: portada.has(f.id),
+      })),
+    })
+    if (!e) return null
+    const guardado = await ultimoEstudioDeTarificacion(correduriaId, cab.id, e.huella).catch(() => null)
+    let narrativa: Narrativa
+    let iaAuto: 'reutilizada' | 'intentada' | 'omitida_tope' | 'simulada'
+    let motivoSinIa: string | null = null
+    if (guardado?.narrativa) {
+      // Mismo texto: conserva si el corredor ya lo revisó.
+      narrativa = guardado.narrativa
+      iaAuto = 'reutilizada'
+    } else if (cab.simulado) {
+      narrativa = await generarNarrativa(e.comparacion, null, null)
+      iaAuto = 'simulada'
+    } else {
+      const tope = decidirIaAuto(await gastoIaAuto(correduriaId))
+      narrativa = await generarNarrativa(e.comparacion, null, tope.usar ? iaTexto : null)
+      iaAuto = tope.usar ? 'intentada' : 'omitida_tope'
+      if (!tope.usar) motivoSinIa = tope.motivo
+    }
+    return {
+      estudio: {
+        version: 2,
+        origen: 'codeoscopic',
+        generadoAt: ahora.toISOString(),
+        huella: e.huella,
+        ...(guardado ? { narrativaReutilizadaDe: guardado.presupuestoId } : {}),
+        recomendadaId: null,
+        actualId: e.actualId,
+        enCuadro: e.enCuadro,
+        comparacion: e.comparacion,
+        // Lo redactó la IA y aquí nadie lo ha revisado: la etiqueta no dirá «revisado por tu corredor» hasta que él lo
+        // marque (`marcarResumenRevisado`). Una plantilla no necesita revisión.
+        narrativa: narrativa.fuente === 'ia' ? { ...narrativa, revisada: narrativa.revisada === true } : narrativa,
+      },
+      evento: {
+        estudio: narrativa.fuente,
+        iaAuto,
+        eurEstimados: iaAuto === 'intentada' ? EUR_ESTIMADO_NARRATIVA : 0,
+        ...(guardado ? { narrativaReutilizadaDe: guardado.presupuestoId } : {}),
+        ...(narrativa.descartada ? { narrativaDescartada: narrativa.descartada } : {}),
+        ...(motivoSinIa ? { sinIa: motivoSinIa } : {}),
+      },
+    }
+  } catch (err) {
+    registrarErrorCartera('presupuesto/estudio-avant2', err)
+    return null
   }
 }
 
@@ -697,6 +825,8 @@ export type PresupuestoEnLista = {
   id: string
   /** `codeoscopic` | `ofertas` (PDFs de compañías: se emite en la compañía, no por Avant2). */
   origen: string
+  /** El resumen IA del estudio: `sin_revisar` · `revisado` · `null` (no hay resumen de IA). */
+  resumenIa: 'sin_revisar' | 'revisado' | null
   /** Referencia propia `AS-AA-NNNN`. `null` = la BD aún no la tiene. */
   referencia: string | null
   /** Primer PDF descargado. NO es «enviado». `null` = no consta. */
@@ -767,6 +897,8 @@ export async function listarPresupuestos(
     return filas.map((p) => ({
       id: p.id,
       origen: p.origen,
+      // El resumen IA del estudio: `sin_revisar` = el corredor aún no lo ha marcado (la etiqueta no dice «revisado»).
+      resumenIa: estadoResumenIa(p.estudio),
       referencia: p.referencia ?? null,
       documentoDescargadoAt: p.documentoDescargadoAt ?? null,
       estado: estadoPresupuesto(p, hoy),
@@ -1017,7 +1149,66 @@ export async function ocultarOpcion(
   if (!hecho) {
     return { estado: 'error', motivo: 'ya_enviado', detalle: 'El presupuesto acaba de salir hacia el cliente: ya no se le cambia lo que ve.' }
   }
+  // El estudio congelado hablaba de OTRO conjunto de opciones: se rehace (cuadro y resumen) sobre las que quedan.
+  await rehacerEstudioTrasOcultar(correduriaId, p.id)
   return { estado: 'ok', oculta: entrada.ocultar }
+}
+
+/**
+ * Tras ocultar o mostrar una opción de un BORRADOR (21/10/2026, revisión): el cuadro y el resumen se rehacen sobre las
+ * opciones que quedan EN DOCUMENTO. Avant2: con la misma lógica que al preparar (recomendadas siempre dentro; resumen
+ * reutilizado si la huella coincide, si no IA con el tope común o plantilla). Ofertas: el estudio recortado
+ * (`estudioEnDocumento`) y su resumen de nuevo. Si entretanto salió hacia el cliente, no se toca (condición en el UPDATE).
+ * El gasto de IA queda en el tope (`ia_resumen`) aunque no se guarde. NUNCA lanza: lo peor es el estudio de antes, que
+ * las lecturas (PDF, página) recortan igualmente.
+ */
+async function rehacerEstudioTrasOcultar(correduriaId: string, presupuestoId: string): Promise<void> {
+  try {
+    const db = prismaAsegura()
+    const p = await db.presupuesto.findFirst({
+      where: { id: presupuestoId, correduriaId },
+      // oculta-exenta: hace falta saber cuáles están ocultas para rehacer el cuadro sin ellas.
+      select: { origen: true, tarificacionId: true, estudio: true, opciones: { select: { precioId: true, ofertaId: true, ocultaAt: true, papeles: true } } },
+    })
+    if (!p || p.estudio === null) return
+    const visibles = p.opciones.filter((o) => o.ocultaAt === null)
+    let nuevo: { estudio: Record<string, unknown>; evento: Record<string, unknown> } | null = null
+    if (p.origen === 'codeoscopic' && p.tarificacionId) {
+      const cab = await cabecera(correduriaId, { tarificacionId: p.tarificacionId })
+      if (!cab) return
+      const filas = await db.$queryRaw<Parameters<typeof estudioParaPresupuestoAvant2>[2]>`
+        select id::text as id, compania, producto, modalidad, categoria, prima_eur, franquicia_eur, firmeza, avisos, garantias, frecuencia_pago, meses
+        from tarificacion_precios where tarificacion_id = ${cab.id}::uuid`
+      const enDoc = new Set(visibles.map((o) => o.precioId).filter((x): x is string => !!x))
+      const portada = new Set(visibles.filter((o) => o.papeles.length > 0).map((o) => o.precioId).filter((x): x is string => !!x))
+      nuevo = await estudioParaPresupuestoAvant2(correduriaId, cab, filas, filas.map((f) => !enDoc.has(f.id)), new Date(), portada)
+    } else {
+      const leido = leerEstudio(p.estudio)
+      const e = leido ? estudioEnDocumento(leido, visibles.map((o) => ({ precioId: o.precioId ?? null, ofertaId: o.ofertaId ?? null }))) : null
+      if (!e) return
+      const tope = decidirIaAuto(await gastoIaAuto(correduriaId))
+      const narrativa = await generarNarrativa(e.comparacion, e.recomendadaId, tope.usar ? iaTexto : null)
+      const viejo = p.estudio && typeof p.estudio === 'object' && !Array.isArray(p.estudio) ? (p.estudio as Record<string, unknown>) : {}
+      nuevo = {
+        estudio: {
+          ...viejo, generadoAt: new Date().toISOString(), recomendadaId: e.recomendadaId, actualId: e.actualId, comparacion: e.comparacion, narrativa,
+          huella: huellaComparativa({ ramo: e.comparacion.ramo, ofertas: e.comparacion.ofertas, superficieM2: e.comparacion.superficieM2, recomendadaId: e.recomendadaId }),
+        },
+        evento: { estudio: narrativa.fuente, iaAuto: tope.usar ? 'intentada' : 'omitida_tope', eurEstimados: tope.usar ? EUR_ESTIMADO_NARRATIVA : 0 },
+      }
+    }
+    if (!nuevo) return
+    await db.presupuesto.updateMany({
+      where: { id: presupuestoId, correduriaId, enviadoAt: null, enlaceGeneradoAt: null, retiradoAt: null },
+      data: { estudio: nuevo.estudio as unknown as Prisma.InputJsonValue },
+    })
+    // El gasto de IA cuenta en el tope aunque el UPDATE no aplique (salió entretanto).
+    await db.presupuestoEvento.create({
+      data: { presupuestoId, tipo: 'ia_resumen', origen: 'sistema', detalle: { ...nuevo.evento, motivo: 'opcion_oculta_o_mostrada' } as Prisma.InputJsonValue },
+    })
+  } catch (e) {
+    registrarErrorCartera('presupuesto/rehacer-estudio', e)
+  }
 }
 
 
@@ -1074,6 +1265,11 @@ export async function prepararPresupuestoDeOfertas(
      * de siempre: se sustituyen todos los borradores de ofertas sin enviar.
      */
     via?: typeof VIA_PROPUESTA_LEAD
+    /**
+     * `true` = el corredor pide redactar el resumen de nuevo. Sin él, si ya hay un estudio de esta oportunidad con la
+     * MISMA huella (mismas ofertas, cifras y recomendada), se reutiliza su resumen (`comparativa-guardada.ts`).
+     */
+    regenerarResumen?: boolean
   },
   ahora: Date = new Date(),
 ): Promise<ResultadoPrepararOfertas> {
@@ -1100,19 +1296,24 @@ export async function prepararPresupuestoDeOfertas(
     : op.superficieM2
   const comparacion: ResultadoComparacion = compararOfertas({
     ramo: op.ramoOferta,
-    ofertas: [...(sel.actual ? [sel.actual] : []), ...sel.ofertas].map(ofertaNormalizadaDeFila),
+    ofertas: [...(sel.actual ? [sel.actual] : []), ...sel.ofertas].map((f) => ofertaNormalizadaDeFila(f, { ramo: op.ramoOferta })),
     superficieM2: superficie,
   })
   const recomendadaId = sel.recomendada?.id ?? null
-  const narrativa = await generarNarrativa(comparacion, recomendadaId)
+  const huella = huellaComparativa({ ramo: op.ramoOferta, ofertas: comparacion.ofertas, superficieM2: superficie, recomendadaId })
+  const { narrativa, reutilizadaDe } = await narrativaConReutilizacion(
+    correduriaId, op.id, huella, entrada.regenerarResumen === true, () => generarNarrativa(comparacion, recomendadaId),
+  )
   const opciones = opcionesDeOfertas(op.ramoOferta, sel.ofertas, ahora)
   const { venceEl, fuente } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
 
   const token = generarTokenVista()
   const tokenHash = await hashTokenVista(token)
   const estudio = {
-    version: 1,
+    version: 2,
     generadoAt: ahora.toISOString(),
+    huella,
+    ...(reutilizadaDe ? { narrativaReutilizadaDe: reutilizadaDe } : {}),
     recomendadaId,
     actualId: sel.actual?.id ?? null,
     comparacion,
@@ -1185,6 +1386,7 @@ export async function prepararPresupuestoDeOfertas(
               ofertas: opciones.map((o) => o.ofertaId),
               recomendada: recomendadaId,
               narrativa: narrativa.fuente,
+              ...(reutilizadaDe ? { narrativaReutilizadaDe: reutilizadaDe } : {}),
               ...(narrativa.descartada ? { narrativaDescartada: narrativa.descartada } : {}),
               ...(previos.length > 0 ? { sustituye: previos.map((p) => p.id) } : {}),
             },
@@ -1218,4 +1420,38 @@ export async function prepararPresupuestoDeOfertas(
       sustituidos: hecho.sustituidos,
     },
   }
+}
+
+
+/**
+ * El corredor marca como REVISADO el resumen que redactó la IA (21/10/2026): desde ahí la etiqueta dice «revisado por tu
+ * corredor» (`etiquetaResumen`). Solo un resumen de IA; una plantilla no se revisa. Deja evento con quién y cuándo.
+ */
+export async function marcarResumenRevisado(
+  correduriaId: string,
+  entrada: { id: string; actor: string },
+): Promise<{ estado: 'ok' } | { estado: 'error'; motivo: 'no_encontrado' | 'sin_resumen_ia'; detalle: string }> {
+  const db = prismaAsegura()
+  const p = await db.presupuesto.findFirst({ where: { id: entrada.id, correduriaId }, select: { id: true, estudio: true } })
+  if (!p) return { estado: 'error', motivo: 'no_encontrado', detalle: 'Ese presupuesto no existe en esta correduría.' }
+  const e = p.estudio && typeof p.estudio === 'object' && !Array.isArray(p.estudio) ? (p.estudio as Record<string, unknown>) : null
+  const n = e?.narrativa && typeof e.narrativa === 'object' && !Array.isArray(e.narrativa) ? (e.narrativa as Record<string, unknown>) : null
+  if (!e || !n || n.fuente !== 'ia') return { estado: 'error', motivo: 'sin_resumen_ia', detalle: 'Este presupuesto no tiene un resumen redactado por la IA que revisar.' }
+  const ahora = new Date()
+  await db.$transaction([
+    db.presupuesto.update({
+      where: { id: p.id },
+      data: { estudio: { ...e, narrativa: { ...n, revisada: true, revisadaPor: entrada.actor, revisadaAt: ahora.toISOString() } } as unknown as Prisma.InputJsonValue },
+    }),
+    db.presupuestoEvento.create({ data: { presupuestoId: p.id, tipo: 'resumen_revisado', origen: 'corredor', detalle: { actor: entrada.actor } } }),
+  ])
+  return { estado: 'ok' }
+}
+
+/** El estado del resumen IA de un `estudio` para la lista: `null` = no hay resumen de IA. PURO. */
+export function estadoResumenIa(estudio: unknown): 'sin_revisar' | 'revisado' | null {
+  const e = estudio && typeof estudio === 'object' && !Array.isArray(estudio) ? (estudio as Record<string, unknown>) : null
+  const n = e?.narrativa && typeof e.narrativa === 'object' && !Array.isArray(e.narrativa) ? (e.narrativa as Record<string, unknown>) : null
+  if (!n || n.fuente !== 'ia') return null
+  return n.revisada === false ? 'sin_revisar' : 'revisado'
 }

@@ -1,13 +1,19 @@
 'use client'
 import { useState } from 'react'
 
+import { InterruptorAvisoCarnet } from '@/app/InterruptorAvisoCarnet'
 import {
-  fechaCarnetEs,
+  TEXTO_FALTA_NACIMIENTO,
+  faltaNacimiento,
+  fechaPrecargada,
+  modoInicialCambio,
   necesitaSelectorTitular,
   textoAvisoCarnet,
+  textoFechasCarnet,
   titularesEscribibles,
   type ResultadoEscrituraCarnet,
 } from '@/lib/carnets-vista'
+import { icsCaducidadCarnet, nombreFicheroIcsCarnet } from '@/lib/ics-carnet'
 import type { CarnetDeTitular, TitularCarnets } from '@/lib/carnets-titulares'
 
 /**
@@ -15,9 +21,13 @@ import type { CarnetDeTitular, TitularCarnets } from '@/lib/carnets-titulares'
  * alimentan el aviso de caducidad de la campana y la precarga de «Recordatorios».
  *
  * - Con UN titular, lista plana («tus carnés»); con varios, agrupada por titular y con selector al añadir.
- * - La fecha que se teclea es la de EXPEDICIÓN (la que pone el carné); la de caducidad se calcula en
- *   `apps/asegura` y es la que se enseña. La de expedición no vuelve nunca al portal (va cifrada), así que al
- *   corregir se escribe entera otra vez.
+ * - Se puede teclear la CADUCIDAD (anverso, por defecto) o la EXPEDICIÓN: `apps/asegura` deduce la expedición
+ *   desde la caducidad con el nacimiento y guarda solo la expedición; la caducidad que se enseña la calcula
+ *   él. 21/10/2026: la tarjeta enseña «Expedido el … · Caduca el …» (la expedición solo llega si el puente
+ *   la permite: el titular o quien opera su ficha) y «Cambiar» abre el campo PRECARGADO con la fecha actual,
+ *   para verificarla en vez de volver a teclearla. Si falta la caducidad por falta de nacimiento, se dice.
+ * - Interruptor «avisarme cuando vaya a caducar» (misma fuente que Configuración) y «Añadir a mi calendario»
+ *   (.ics generado aquí, sin enviar nada).
  * - La escritura la hace `apps/asegura` con la misma regla que el corredor; aquí solo se pinta lo que dice.
  *   Un fallo de lectura se DICE (nunca «no tienes carnés»).
  */
@@ -86,8 +96,14 @@ export function MisCarnets({ inicial, tipos, hoy }: { inicial: TitularCarnets[] 
       <p className="antetitulo">Para tus avisos</p>
       <h2 id="mis-carnets-titulo">Tus carnés de conducir</h2>
       <p className="supresion-intro">
-        Con la fecha de tu carné calculamos cuándo caduca y te avisamos antes. Si lo has renovado, cambia su fecha.
+        Con la fecha de tu carné calculamos cuándo caduca y te avisamos antes (a los 90, 30 y 7 días y el día que
+        caduca). Si lo has renovado, cambia su fecha. Para renovarlo,{' '}
+        <a href="https://sede.dgt.gob.es" target="_blank" rel="noopener noreferrer">
+          sede de la DGT
+        </a>
+        .
       </p>
+      <InterruptorAvisoCarnet />
 
       {estado.tipo === 'aviso' && <p role="status" className="mi-direccion-aviso">{estado.texto}</p>}
       {estado.tipo === 'hecho' && <p role="status" className="mi-direccion-ok">{estado.texto}</p>}
@@ -106,8 +122,14 @@ export function MisCarnets({ inicial, tipos, hoy }: { inicial: TitularCarnets[] 
               <li key={c.id} className="config-contactos-fila">
                 <span className="config-contactos-valor">
                   <strong>Carné {c.tipo}</strong>
-                  <span className="config-contactos-etiqueta"> · caduca el {fechaCarnetEs(c.fechaCaducidad)}</span>
+                  {textoFechasCarnet(c) !== null && <span className="config-contactos-etiqueta"> · {textoFechasCarnet(c)}</span>}
+                  {faltaNacimiento(c) && (
+                    <span className="config-contactos-etiqueta" role="status" style={{ display: 'block' }}>
+                      {TEXTO_FALTA_NACIMIENTO}
+                    </span>
+                  )}
                 </span>
+                {c.fechaCaducidad !== null && <BotonCalendario id={c.id} tipo={c.tipo} fechaCaducidad={c.fechaCaducidad} />}
                 {t.fichaId !== '' && (
                   <>
                     <button
@@ -157,14 +179,35 @@ export function MisCarnets({ inicial, tipos, hoy }: { inicial: TitularCarnets[] 
           hoy={hoy}
           ocupado={ocupado}
           onCancelar={() => setForm(null)}
-          onGuardar={(fichaId, tipo, fecha) =>
+          onGuardar={(fichaId, tipo, cuerpoFecha) =>
             form.modo === 'alta'
-              ? enviar('/api/mis-datos/carnets', 'POST', { fichaId, tipo, fecha }, 'Carné guardado.')
-              : enviar(`/api/mis-datos/carnets/${encodeURIComponent(form.carnet.id)}`, 'PATCH', { fichaId, tipo, fecha }, 'Carné actualizado.')
+              ? enviar('/api/mis-datos/carnets', 'POST', { fichaId, tipo, ...cuerpoFecha }, 'Carné guardado.')
+              : enviar(`/api/mis-datos/carnets/${encodeURIComponent(form.carnet.id)}`, 'PATCH', { fichaId, tipo, ...cuerpoFecha }, 'Carné actualizado.')
           }
         />
       )}
     </section>
+  )
+}
+
+/** Descarga el .ics de la caducidad. Todo en el navegador; si no se puede generar, no hay botón. */
+function BotonCalendario({ id, tipo, fechaCaducidad }: { id: string; tipo: string; fechaCaducidad: string }) {
+  const descargar = () => {
+    const ics = icsCaducidadCarnet({ id, tipo, fechaCaducidad, ahora: new Date() })
+    if (ics === null) return
+    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nombreFicheroIcsCarnet(tipo)
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+  return (
+    <button type="button" className="boton-tenue" onClick={descargar}>
+      Añadir a mi calendario
+    </button>
   )
 }
 
@@ -185,11 +228,14 @@ function FormularioCarnet({
   hoy: string
   ocupado: boolean
   onCancelar: () => void
-  onGuardar: (fichaId: string, tipo: string, fecha: string) => void
+  onGuardar: (fichaId: string, tipo: string, cuerpoFecha: Record<string, string>) => void
 }) {
   const [fichaId, setFichaId] = useState(form.modo === 'cambio' ? form.fichaId : (titulares[0]?.fichaId ?? ''))
   const [tipo, setTipo] = useState(form.modo === 'cambio' ? form.carnet.tipo : 'B')
-  const [fecha, setFecha] = useState('')
+  const actual = form.modo === 'cambio' ? form.carnet : null
+  const [cual, setCual] = useState<'caducidad' | 'expedicion'>(actual ? modoInicialCambio(actual) : 'caducidad')
+  // «Cambiar» abre el campo con la fecha que hay, para poder verificarla; «Añadir», vacío.
+  const [fecha, setFecha] = useState(actual ? fechaPrecargada(actual, modoInicialCambio(actual)) : '')
   const listo = fichaId !== '' && tipo !== '' && fecha !== ''
 
   return (
@@ -197,7 +243,7 @@ function FormularioCarnet({
       className="mis-carnets-form"
       onSubmit={(e) => {
         e.preventDefault()
-        if (listo && !ocupado) onGuardar(fichaId, tipo, fecha)
+        if (listo && !ocupado) onGuardar(fichaId, tipo, cual === 'caducidad' ? { fechaCaducidad: fecha } : { fecha })
       }}
     >
       <p className="mis-carnets-form-titulo">{form.modo === 'alta' ? 'Añadir un carné' : `Cambiar el carné ${form.carnet.tipo}`}</p>
@@ -223,9 +269,36 @@ function FormularioCarnet({
           ))}
         </select>
       </label>
+      <fieldset className="mi-direccion-campo" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+        <legend>¿Qué fecha tienes a mano?</legend>
+        {(
+          [
+            ['caducidad', 'Caducidad (anverso)'],
+            ['expedicion', 'Expedición'],
+          ] as const
+        ).map(([valor, texto]) => (
+          <label key={valor} style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44 }}>
+            <input
+              type="radio"
+              name="cual-fecha-carnet"
+              checked={cual === valor}
+              onChange={() => {
+                setCual(valor)
+                setFecha(fechaPrecargada(actual, valor))
+              }}
+            />
+            <span>{texto}</span>
+          </label>
+        ))}
+      </fieldset>
       <label className="mi-direccion-campo">
-        <span>Fecha de expedición (la que pone tu carné; si lo renovaste, la de la última renovación)</span>
-        <input type="date" value={fecha} max={hoy} onChange={(e) => setFecha(e.target.value)} required />
+        <span>{cual === 'caducidad' ? 'Fecha de caducidad' : 'Fecha de expedición'}</span>
+        <input type="date" value={fecha} {...(cual === 'expedicion' ? { max: hoy } : {})} onChange={(e) => setFecha(e.target.value)} required />
+        <small>
+          {cual === 'caducidad'
+            ? 'La que ves en el anverso del carné (apartado 4b). Con ella y tu fecha de nacimiento calculamos el resto.'
+            : 'La del reverso (apartado 4a/10); si lo renovaste, la de la última renovación.'}
+        </small>
       </label>
       <div className="config-contactos-anadir">
         <button type="submit" className="boton-tenue" disabled={!listo || ocupado}>

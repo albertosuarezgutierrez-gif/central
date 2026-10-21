@@ -13,7 +13,7 @@ import {
   AMBITOS_CIRCULACION, AMBITO_CIRCULACION_POR_DEFECTO, CLASES_PERMISO, CLASE_PERMISO_POR_DEFECTO, MAX_COMPANIA_ANTERIOR, USOS_VEHICULO, USO_VEHICULO_POR_DEFECTO,
   esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto,
 } from '@central/module-tarificacion'
-import { historialBot, type CampoDeFicha, type DatoPersona, type FormularioBotMoto } from './tarificador-moto-formulario.ts'
+import { historialBot, polizaAnteriorUltimos5PorDefecto, ultimos5CifrasPoliza, type CampoDeFicha, type DatoPersona, type FormularioBotMoto } from './tarificador-moto-formulario.ts'
 import { duermeEnGaraje, GARAJES_CONOCIDOS } from '@central/module-seguros/garajes'
 
 export type EntradaBotAuto = {
@@ -56,6 +56,18 @@ export type EntradaBotAuto = {
   fechaMatriculacion?: string | null
   fechaVencimiento?: string | null
   conductorOcasional?: boolean | null
+  /**
+   * 20/10/2026 — Allianz Turismos y Mapfre piden las 5 últimas cifras de la póliza anterior si hubo seguro anterior. Lo TECLEADO
+   * (se normaliza a 5 cifras) manda; vacío → las 5 últimas del nº completo que ya consta (`numeroPolizaActual`: declarado o leído de
+   * la póliza subida), como en moto. Solo viaja con seguro actual y años asegurado ≠ 0.
+   */
+  polizaAnteriorUltimos5?: string | null
+  numeroPolizaActual?: string | null
+  /**
+   * Lo que la precalificación SABE que falta en la ficha del TOMADOR (`documento` · `codigoPostal`). NO viaja al riesgo: lo lee
+   * `reglasPrevias` (Allianz Turismos teclea documento y CP del tomador). Ausente = no se sabe, no se afirma nada.
+   */
+  tomadorSinEnFicha?: readonly ('documento' | 'codigoPostal')[]
 }
 
 /** Opciones de los selectores de la pantalla (etiqueta para la persona, clave para el bot). */
@@ -140,6 +152,9 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
   const fechaMatriculacion = isoValida(e.fechaMatriculacion)
   const fechaVencimiento = isoValida(e.fechaVencimiento)
   const tipoGaraje = tipoGarajeDeCodigo(e.garaje)
+  // Póliza anterior (últimas 5 cifras): solo con seguro actual y años ≠ 0; lo que no consta NO viaja (nunca un valor de cajón).
+  const conSeguroAnterior = e.tieneSeguroActual && aniosAseguradoAnterior !== 0
+  const polizaAnteriorUltimos5 = conSeguroAnterior ? ((e.polizaAnteriorUltimos5 ?? '').trim() === '' ? polizaAnteriorUltimos5PorDefecto(e.numeroPolizaActual) : ultimos5CifrasPoliza(e.polizaAnteriorUltimos5)) : null
 
   if (faltan.length) return { ok: false, faltan }
 
@@ -166,6 +181,7 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
     ambitoCirculacion,
     clasePermiso,
     ...(companiaAnterior !== null ? { companiaAnterior } : {}),
+    ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
     ...(fechaMatriculacion !== null && fechaMatriculacion <= hoy.toISOString().slice(0, 10) ? { fechaMatriculacion } : {}),
     ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
     ...(tipoGaraje !== null ? { tipoGaraje } : {}),

@@ -1,10 +1,11 @@
 'use client'
 import { useState } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
+import Tabla from '@/components/ui/Tabla'
 
 type Obra = { id: string; nombre: string; direccion: string | null; lat: number | null; lng: number | null; radio_m: number; activa: boolean }
 
-export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: Obra[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function ObrasClient({ inicial }: { inicial: Obra[] }) {
   const [lista, setLista] = useState<Obra[]>(inicial)
   const [nueva, setNueva] = useState({ nombre: '', direccion: '', lat: '', lng: '', radio_m: '200' })
   const [editId, setEditId] = useState<string | null>(null)
@@ -52,8 +53,7 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
   }
 
   return (
-    <AdminShell activo="obras" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      <h1 className="mb-4 text-2xl">Obras / centros de trabajo</h1>
+    <Page titulo="Obras / centros de trabajo">
 
       <form onSubmit={crear} className="mb-4 rounded-card border border-line bg-card p-3">
         <p className="mb-2 text-sm text-ink-2">Nueva obra</p>
@@ -69,8 +69,7 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
         <p className="text-ink-3 mt-1 text-xs">Las coordenadas (lat/lng) determinan la geovalla para el fichaje automático de obra. Radio en metros (defecto 200 m).</p>
       </form>
 
-      <div className="overflow-x-auto rounded-card border border-line bg-card">
-        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[520px]">
+      <Tabla tablaClassName="md:min-w-[520px]">
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Nombre</th>
@@ -121,8 +120,7 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
               <tr><td colSpan={6} className="px-3 py-3 text-ink-3">Sin obras creadas</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
-    </AdminShell>
+      </Tabla>
+    </Page>
   )
 }

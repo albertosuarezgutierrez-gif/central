@@ -166,6 +166,8 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 | `inmueble.superficie_m2` / `inmueble.anio_construccion` | Obligatorios; sin autocompletar antes de avanzar; Catastro solo si es inequívoco | — |
 | `hogar.uso` / `hogar.regimen` | Explícitos (habitual, secundaria, alquiler, turístico / propietario, inquilino); sin valor por defecto | — |
 | `hogar.tipo_vivienda` / `hogar.capital_continente` / `hogar.capital_contenido` | — | — |
+| `inmueble.referenciaCatastral` (20) | — | «Ref. catastral» tras el CP (campo exacto: TODO grabación) |
+| `hogar.protecciones` / `hogar.objetosValor` (21/10/2026, tres estados, de `datosVivienda`) | ¿«Valoración de bienes»? (sin ver) | `#protecciones-panel` (sin etiquetas) |
 
 ## Allianz (ePAC)
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DireccionCp } from './_DireccionCp'
 
 const inputRow: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 8 }
 const formBox: React.CSSProperties = { marginBottom: 16, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }
@@ -128,8 +129,8 @@ function ServicioFields({ f, set }: { f: SForm; set: (k: string, v: unknown) => 
   return (
     <div style={inputRow}>
       <input placeholder="Cliente" value={f.clienteNombre} onChange={(e) => set('clienteNombre', e.target.value)} />
-      <input placeholder="Origen" value={f.origen} onChange={(e) => set('origen', e.target.value)} />
-      <input placeholder="Destino" value={f.destino} onChange={(e) => set('destino', e.target.value)} />
+      <div style={{ gridColumn: '1 / -1' }}><DireccionCp etiquetaCampo="Origen" value={f.origen} onChange={(t) => set('origen', t)} /></div>
+      <div style={{ gridColumn: '1 / -1' }}><DireccionCp etiquetaCampo="Destino" value={f.destino} onChange={(t) => set('destino', t)} /></div>
       <input type="date" value={f.fecha} onChange={(e) => set('fecha', e.target.value)} />
       <input placeholder="Importe €" value={f.importe} onChange={(e) => set('importe', e.target.value)} />
       <select value={f.estado} onChange={(e) => set('estado', e.target.value)}>
@@ -179,7 +180,8 @@ export function EditServicio({ s }: { s: { id: string; clienteNombre?: string | 
 }
 
 // ─── Portes + paradas (ruta del servicio) ─────────────────────────────────────
-type ParadaF = { direccion: string; tipo: string }
+type ParadaF = { uid: string; direccion: string; tipo: string }
+const uidParada = () => Math.random().toString(36).slice(2)
 type PorteF = { vehiculoId: string; estado: string; kmEstimados: string; costeEstimado: string; importeFacturado: string; esInterno: boolean; paradas: ParadaF[] }
 const estadosPorte = ['planificado', 'en_curso', 'entregado', 'facturado', 'cancelado']
 
@@ -203,7 +205,7 @@ export function EditarPortes({ servicioId, portes, vehiculos }: { servicioId: st
       costeEstimado: p.costeEstimado?.toString() ?? '',
       importeFacturado: p.importeFacturado?.toString() ?? '',
       esInterno: p.esInterno,
-      paradas: p.paradas.map((pa) => ({ direccion: pa.direccion ?? '', tipo: pa.tipo })),
+      paradas: p.paradas.map((pa) => ({ uid: uidParada(), direccion: pa.direccion ?? '', tipo: pa.tipo })),
     }))
   const [f, setF] = useState<PorteF[]>(toForm)
 
@@ -213,7 +215,7 @@ export function EditarPortes({ servicioId, portes, vehiculos }: { servicioId: st
   const removePorte = (i: number) => setF((p) => p.filter((_, idx) => idx !== i))
   const setParada = (i: number, j: number, k: string, v: unknown) =>
     setF((p) => p.map((x, idx) => (idx === i ? { ...x, paradas: x.paradas.map((y, jdx) => (jdx === j ? { ...y, [k]: v } : y)) } : x)))
-  const addParada = (i: number) => setF((p) => p.map((x, idx) => (idx === i ? { ...x, paradas: [...x.paradas, { direccion: '', tipo: 'entrega' }] } : x)))
+  const addParada = (i: number) => setF((p) => p.map((x, idx) => (idx === i ? { ...x, paradas: [...x.paradas, { uid: uidParada(), direccion: '', tipo: 'entrega' }] } : x)))
   const removeParada = (i: number, j: number) => setF((p) => p.map((x, idx) => (idx === i ? { ...x, paradas: x.paradas.filter((_, jdx) => jdx !== j) } : x)))
 
   const n = portes.length
@@ -247,14 +249,14 @@ export function EditarPortes({ servicioId, portes, vehiculos }: { servicioId: st
                 <div style={{ marginTop: 8 }}>
                   <div className="muted" style={{ fontSize: 13, marginBottom: 4 }}>Paradas (en orden)</div>
                   {porte.paradas.map((pa, j) => (
-                    <div key={j} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 130px 32px', gap: 6, marginBottom: 5, alignItems: 'center' }}>
-                      <span className="muted">{j + 1}.</span>
-                      <input placeholder="Dirección / nodo" value={pa.direccion} onChange={(e) => setParada(i, j, 'direccion', e.target.value)} />
-                      <select value={pa.tipo} onChange={(e) => setParada(i, j, 'tipo', e.target.value)}>
+                    <div key={pa.uid} className="parada-fila">
+                      <span className="muted" style={{ minHeight: 44, display: 'flex', alignItems: 'center' }}>{j + 1}.</span>
+                      <DireccionCp permitirNodo value={pa.direccion} onChange={(t) => setParada(i, j, 'direccion', t)} />
+                      <select style={{ minHeight: 44 }} value={pa.tipo} onChange={(e) => setParada(i, j, 'tipo', e.target.value)}>
                         <option value="recogida">recogida</option>
                         <option value="entrega">entrega</option>
                       </select>
-                      <a onClick={() => removeParada(i, j)} className="muted" style={{ cursor: 'pointer', textAlign: 'center' }} title="Quitar parada">🗑</a>
+                      <a onClick={() => removeParada(i, j)} className="muted" style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Quitar parada">🗑</a>
                     </div>
                   ))}
                   <a onClick={() => addParada(i)} className="muted" style={{ cursor: 'pointer', fontSize: 13 }}>+ añadir parada</a>

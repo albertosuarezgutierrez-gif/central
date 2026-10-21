@@ -79,7 +79,162 @@ export type GuardEmision = {
  * a los que puede ir una petición que no sea GET mientras la ventana está abierta. La grabación NO registra la red: los
  * destinos son el `action` del formulario que envía `aceptar_onclick()`; si en real el portal manda otro POST, el trabajo
  * muere (fail-closed) y se añade aquí tras verlo. Lo vigila `test/regression-tarificador-rpa.test.ts` (romperla → rojo).
+ *
+ * `ajaxValidacion` (20/10/2026, Moto 0.7.7): POST de VALIDACIÓN del propio formulario que el portal dispara al perder el foco
+ * un campo justo cuando se pulsa la pestaña. Solo pasan por la capa (b), nunca relajan la (a) («aceptar» sigue bloqueado en
+ * ellos), y solo si casan EXACTOS: método POST, origen + ruta, `resource` y el resto de parámetros de la query, y las claves
+ * del cuerpo (`ajaxValidacionAvancePermitida`).
  */
+export type AjaxValidacionAvance = Readonly<{
+  /** Origen + ruta exactos. */
+  endpoint: string
+  /** Valor EXACTO del parámetro `resource` (la clase Java que atiende la llamada). */
+  resource: string
+  /** Únicos parámetros de la query además de `resource` (tokens de la sesión del framework), cada uno una vez. */
+  parametros: readonly string[]
+  /** Parámetros de query que PUEDEN venir además (p. ej. tokens que añade el framework), cada uno como mucho una vez. */
+  parametrosOpcionales?: readonly string[]
+  /** Únicas claves del cuerpo (urlencoded), cada una una vez, y la forma de su valor. */
+  cuerpo: readonly string[]
+  valorCuerpo: RegExp
+}>
+
+/**
+ * Comprobación de la LISTA NEGRA del NIF del tomador de ePAC (`validarNifAjaxidNifTaker()` del widget IdentificationNumber
+ * de «Riesgo municipio», captura del 20/10/2026): el `onchange` de `#idNifTaker_doc` hace
+ * `AjaxRequest('/drpc18/AJAXServlet?resource=pt.allianz.clientes.negocio.BlackListOperationsAjax&…thread=…&…synch=…',
+ * 'idNumberBL=<NIF>')` y pinta el texto devuelto como error del campo (vacío = NIF correcto). Es una CONSULTA: no lleva
+ * acción del formulario. El adaptador ya la dispara fuera de cualquier ventana (dispatchEvent('change')) y el guard la deja
+ * pasar; al pulsar `td#datosBasicos` el campo pierde el foco, el navegador repite el `change` y la misma consulta cae dentro
+ * de la ventana del avance (incidente 0.7.6). Esto la admite ahí, y SOLO ahí.
+ */
+export const AJAX_LISTA_NEGRA_NIF_ALLIANZ: AjaxValidacionAvance = Object.freeze({
+  endpoint: 'https://www.e-pacallianz.com/drpc18/AJAXServlet',
+  resource: 'pt.allianz.clientes.negocio.BlackListOperationsAjax',
+  parametros: Object.freeze(['com.ats.webbeans.struts.thread', 'com.ats.webbeans.struts.synch']),
+  cuerpo: Object.freeze(['idNumberBL']),
+  valorCuerpo: /^[A-Za-z0-9]{0,20}$/,
+})
+
+/**
+ * Ayuda contextual de ePAC (`AyudaAplicacionesAjax`, captura del 20/10/2026, incidente 0.7.7): en el `ready` de CADA pantalla del
+ * portal, `AjaxRequest('/drpc18/AJAXServlet?resource=com.ats.sea.visuals.util.AyudaAplicacionesAjax', 'pageId=<PAGEID>&codCia=<cia>')`
+ * pregunta si hay ayuda para esa pantalla y solo muestra u oculta el botón de ayuda (`ret.ayuda`). Es SOLO LECTURA. Se dispara
+ * al cargar la pantalla de destino del avance, es decir DENTRO de la ventana (td#datosBasicos y td#rate).
+ */
+export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.freeze({
+  endpoint: 'https://www.e-pacallianz.com/drpc18/AJAXServlet',
+  resource: 'com.ats.sea.visuals.util.AyudaAplicacionesAjax',
+  parametros: Object.freeze([] as string[]),
+  parametrosOpcionales: Object.freeze(['com.ats.webbeans.struts.thread', 'com.ats.webbeans.struts.synch']),
+  cuerpo: Object.freeze(['pageId', 'codCia']),
+  valorCuerpo: /^[A-Za-z0-9_.:$-]{0,64}$/,
+})
+
+/**
+ * LISTA BLANCA de recursos AJAX de SOLO LECTURA (consulta/ayuda/validación) admitidos durante un avance de pestaña. Cada
+ * entrada fija endpoint, `resource`, query y cuerpo. Todo lo demás (Emitir/Grabar/Contratar/Guardar/Pago/Firma…) sigue abortado.
+ */
+export const AJAX_LECTURA_ALLIANZ: readonly AjaxValidacionAvance[] = Object.freeze([AJAX_AYUDA_APLICACIONES_ALLIANZ])
+
+/** Claves que la regla declara (se pueden nombrar en un mensaje); cualquier otra podría ser un dato (NIF, nombre) y NUNCA se imprime. */
+const declaradasDe = (r: AjaxValidacionAvance): ReadonlySet<string> =>
+  new Set(['resource', ...r.parametros, ...(r.parametrosOpcionales ?? []), ...r.cuerpo])
+/** Nombra las claves declaradas y cuenta (sin nombrar) las no declaradas. */
+const listaClaves = (ks: readonly string[], decl: ReadonlySet<string>): string => {
+  const unicas = [...new Set(ks)]
+  const nombradas = unicas.filter((k) => decl.has(k))
+  const n = unicas.length - nombradas.length
+  return [...nombradas, ...(n ? [`${n} clave(s) no declarada(s)`] : [])].join(',')
+}
+
+/** Forma de un valor SIN revelarlo: longitud y categorías de caracteres presentes (nunca el texto; puede llevar un NIF). */
+function formaValor(v: string): string {
+  const cat: string[] = []
+  if (/[A-Za-z]/.test(v)) cat.push('letras')
+  if (/[0-9]/.test(v)) cat.push('dígitos')
+  if (/\s/.test(v)) cat.push('espacios')
+  if (/[^A-Za-z0-9\s]/.test(v)) cat.push('símbolos')
+  return `longitud ${v.length}, ${cat.join('+') || 'vacío'}`
+}
+
+const VALOR_QUERY = /^[A-Za-z0-9_.-]{0,64}$/
+
+/** Por qué `r` rechaza la petición (solo nombres de claves y categorías, NUNCA valores), o `null` si la admite. */
+function motivoRechazoRegla(r: AjaxValidacionAvance, u: URL, cuerpo: string | null): string | null {
+  const opc = r.parametrosOpcionales ?? []
+  const decl = declaradasDe(r)
+  const qk = [...u.searchParams.keys()]
+  if (new Set(qk).size !== qk.length) return `clave de query repetida: ${listaClaves(qk.filter((k, i) => qk.indexOf(k) !== i), decl)}`
+  const sobran = qk.filter((k) => k !== 'resource' && !r.parametros.includes(k) && !opc.includes(k))
+  if (sobran.length) return `clave de query no permitida: ${listaClaves(sobran, decl)}`
+  const faltan = r.parametros.filter((k) => !qk.includes(k))
+  if (faltan.length) return `falta clave de query: ${listaClaves(faltan, decl)}`
+  for (const p of [...r.parametros, ...opc].filter((k) => qk.includes(k))) {
+    if (!VALOR_QUERY.test(u.searchParams.get(p) ?? '\u0000')) return `forma de valor de query no permitida en «${p}» (${formaValor(u.searchParams.get(p) ?? '')})`
+  }
+  const texto = cuerpo ?? ''
+  if (texto === '') return 'cuerpo vacío o ilegible (se esperaban claves urlencoded)'
+  if (/^\s*[{[]/.test(texto) || texto.startsWith('--')) return 'cuerpo no urlencoded (JSON o multipart)'
+  const cp = new URLSearchParams(texto)
+  const ck = [...cp.keys()]
+  if (new Set(ck).size !== ck.length) return `clave de cuerpo repetida: ${listaClaves(ck.filter((k, i) => ck.indexOf(k) !== i), decl)}`
+  const extra = ck.filter((k) => !r.cuerpo.includes(k))
+  if (extra.length) return `clave de cuerpo no permitida: ${listaClaves(extra, decl)}`
+  const falta = r.cuerpo.filter((k) => !ck.includes(k))
+  if (falta.length) return `falta clave de cuerpo: ${listaClaves(falta, decl)}`
+  for (const k of r.cuerpo) {
+    if (!r.valorCuerpo.test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${k}» (${formaValor(cp.get(k) ?? '')})`
+  }
+  return null
+}
+
+/**
+ * Por qué NO es admisible esta petición como `ajaxValidacion` del avance (o `null` si lo es). PURA. Solo nombres de claves y
+ * categorías: ni valores del cuerpo ni de la query (pueden llevar un NIF). Primero lo grueso (método, esquema, host, ruta,
+ * `resource`) y, si el `resource` casa con una regla, el primer detalle de query/cuerpo que no cuadra con ESA regla.
+ */
+export function motivoAjaxRechazado(metodo: string, url: string, cuerpo: string | null, reglas: readonly AjaxValidacionAvance[]): string | null {
+  if (metodo !== 'POST') return `método ${metodo} (se exige POST)`
+  if (reglas.length === 0) return 'este avance no declara ninguna validación AJAX'
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return 'URL ilegible'
+  }
+  if (u.protocol !== 'https:') return 'protocolo distinto de https'
+  if (u.username || u.password) return 'URL con credenciales'
+  if (u.hash) return 'URL con fragmento'
+  const porRuta = reglas.filter((r) => `${u.origin}${u.pathname}` === r.endpoint)
+  if (porRuta.length === 0) {
+    const e = reglas.map((r) => { try { return new URL(r.endpoint) } catch { return null } }).find((x): x is URL => x !== null)
+    if (e && u.host !== e.host) return `host distinto del esperado (${u.host === `www.${e.host}` || `www.${u.host}` === e.host ? 'difiere solo en «www.»' : 'otro dominio'})`
+    return 'ruta distinta de la esperada'
+  }
+  const resource = u.searchParams.get('resource')
+  if (resource === null) return 'la query no trae «resource»'
+  const rr = porRuta.filter((r) => r.resource === resource)
+  if (rr.length === 0) return 'resource fuera de la lista blanca de lecturas'
+  let primero: string | null = null
+  for (const r of rr) {
+    const m = motivoRechazoRegla(r, u, cuerpo)
+    if (m === null) return null
+    primero ??= m
+  }
+  return primero
+}
+
+/**
+ * ¿Es esta petición una de las `ajaxValidacion` del avance vigente? PURA. Exige método POST; https sin credenciales ni
+ * fragmento; origen + ruta exactos; query = `resource` (valor exacto) + los `parametros` declarados (cada uno una vez, valor
+ * de token corto alfanumérico); cuerpo urlencoded con EXACTAMENTE las claves de `cuerpo` y valor de la forma declarada.
+ * Cualquier otra cosa → `false` (y la capa (b) aborta). El porqué de un `false` lo da `motivoAjaxRechazado`.
+ */
+export function ajaxValidacionAvancePermitida(metodo: string, url: string, cuerpo: string | null, reglas: readonly AjaxValidacionAvance[]): boolean {
+  return motivoAjaxRechazado(metodo, url, cuerpo, reglas) === null
+}
+
 export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
   'td#datosBasicos': Object.freeze({
     id: 'datosBasicos',
@@ -87,6 +242,7 @@ export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
     formOrigen: '/drpc18/riesgoMunicipio/control.do',
     formDestino: '/drpc18/datosBasicos/control.do',
     endpoints: Object.freeze(['https://www.e-pacallianz.com/drpc18/riesgoMunicipio/control.do']),
+    ajaxValidacion: Object.freeze([AJAX_LISTA_NEGRA_NIF_ALLIANZ, ...AJAX_LECTURA_ALLIANZ]),
   }),
   'td#rate': Object.freeze({
     id: 'rate',
@@ -94,9 +250,44 @@ export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
     formOrigen: '/drpc18/datosBasicos/control.do',
     formDestino: '/drpc18/tarifa/control.do',
     endpoints: Object.freeze(['https://www.e-pacallianz.com/drpc18/datosBasicos/control.do']),
+    ajaxValidacion: Object.freeze([...AJAX_LECTURA_ALLIANZ]),
   }),
 })
 export type SelectorAvancePestana = keyof typeof AVANCES_PESTANA_AUTORIZADOS
+
+/**
+ * EXCEPCIÓN EXACTA (Alberto, 20/10/2026, trabajo real 08abe9d5): el ÚNICO confirm() que NO tumba un avance. Al pasar de Riesgo
+ * municipio a Datos básicos de Allianz moto, el portal pone por su cuenta un primer periodo de menos de 355 días y pregunta si lo
+ * alarga 1 mes. Decisión de Alberto: se responde SIEMPRE «No» (dismiss; nunca se alarga) y el avance sigue, con un AVISO visible en
+ * el presupuesto (la prima no es anual). Solo ese texto (normalizado), solo en `td#datosBasicos`, una vez por trabajo. Cualquier otro
+ * confirm, o este mismo una segunda vez, sigue tumbando el avance.
+ */
+export const CONFIRMS_AVANCE_ACEPTABLES: Readonly<Partial<Record<SelectorAvancePestana, Readonly<{ texto: string; supuesto: string }>>>> = Object.freeze({
+  'td#datosBasicos': Object.freeze({
+    texto: 'Primer periodo inferior a 355 días. ¿Desea alargar el término 1 mes más?',
+    supuesto: 'Allianz: primer periodo inferior a un año (menos de 355 días; el portal no da la duración exacta); la prima no es anual y no es directamente comparable',
+  }),
+})
+
+/** Texto de un diálogo para compararlo: sin `<br>`, NFC, espacios colapsados. Puro. */
+export function normalizarTextoDialogo(bruto: string): string {
+  return bruto.replace(/<br\s*\/?>/gi, ' ').normalize('NFC').replace(/\s+/g, ' ').trim()
+}
+
+/** ¿Es ESTE diálogo la excepción exacta del avance `selector`? Puro: solo `confirm`, texto normalizado IGUAL y no visto antes en el trabajo. */
+export function confirmAvanceAceptable(selector: string, tipo: string, mensaje: string, yaAceptado: boolean): boolean {
+  if (yaAceptado || tipo !== 'confirm' || !Object.hasOwn(CONFIRMS_AVANCE_ACEPTABLES, selector)) return false
+  const regla = CONFIRMS_AVANCE_ACEPTABLES[selector as SelectorAvancePestana]
+  return regla !== undefined && normalizarTextoDialogo(mensaje) === regla.texto
+}
+
+const CONFIRMS_ACEPTADOS = new WeakMap<GuardEmision, Set<string>>()
+const SUPUESTOS_AVANCE = new WeakMap<Page, string[]>()
+
+/** Avisos que dejó la excepción exacta (confirm respondido «No») para el presupuesto. */
+export function supuestosAvanceAceptados(page: Page): readonly string[] {
+  return [...(SUPUESTOS_AVANCE.get(page) ?? [])]
+}
 /** Tope de la ventana de red del avance: el clic + la carga de la pestaña destino. Se cierra antes en cuanto se llega (finally). */
 export const VENTANA_RED_AVANCE_MS = 20_000
 
@@ -120,7 +311,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   const fases = new MaquinaFases()
   let ventanaHasta = 0
   // Ventana del avance de pestaña autorizado: hasta cuándo y a qué destinos (no GET) se puede ir. `null` = cerrada.
-  let avance: { hasta: number; endpoints: readonly string[] } | null = null
+  let avance: { hasta: number; endpoints: readonly string[]; ajax: readonly AjaxValidacionAvance[] } | null = null
   const avanceVigente = () => (avance && Date.now() < avance.hasta ? avance : null)
   // Ventana del guardado de presupuesto: hasta cuándo y desde qué ORIGEN (el del marco del botón). `null` = cerrada.
   let guardado: { hasta: number; origen: string } | null = null
@@ -196,15 +387,23 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
         await route.abort('blockedbyclient')
         return
       }
-      if (av && noGet && !enLista) {
+      // Validación AJAX declarada del avance (p. ej. la lista negra del NIF): solo capa (b); la (a) ya la miró sin «aceptar».
+      const enAjaxValidacion = av !== null && noGet && ajaxValidacionAvancePermitida(req.method(), url, cuerpoDe(req), av.ajax)
+      if (av && noGet && !enLista && !enAjaxValidacion) {
         // Capa (b) del avance: lista blanca de destinos. Un POST/PUT/… a cualquier otro sitio se aborta y el trabajo cae.
-        // Al mensaje solo va origen + ruta (la query de ePAC lleva identificadores de la sesión y del agente).
+        // Al mensaje solo va origen + ruta (la query de ePAC lleva identificadores de la sesión y del agente) y, si lo hay,
+        // el `resource` (nombre de clase del servlet AJAX, sin datos) para saber QUÉ llamada fue.
         let destino = '(url ilegible)'
         try {
           const u = new URL(url)
-          destino = `${u.origin}${u.pathname}`
+          const resource = u.searchParams.get('resource')
+          destino = `${u.origin}${u.pathname}${resource && /^[A-Za-z0-9_.]{1,120}$/.test(resource) ? ` (resource=${resource})` : ''}`
         } catch {}
-        violacion ??= new EmisionBloqueadaError('fase', `avance de pestaña: ${req.method()} a un destino fuera de la lista blanca: ${destino}`)
+        // Diagnóstico de un AJAX rechazado (0.7.9): QUÉ no cuadró, solo con nombres de claves y categorías, nunca valores.
+        const motivo = destino.includes('AJAXServlet') ? motivoAjaxRechazado(req.method(), url, cuerpoDe(req), av.ajax) : null
+        let pestana = ''
+        try { pestana = ` [pestaña de origen: ${new URL(av.endpoints[0] ?? '').pathname}]` } catch {}
+        violacion ??= new EmisionBloqueadaError('fase', `avance de pestaña: ${req.method()} a un destino fuera de la lista blanca: ${destino}${motivo ? ` [motivo: ${motivo}]` : ''}${pestana}`)
         await route.abort('blockedbyclient')
         return
       }
@@ -231,7 +430,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     },
   }
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
-  ABRIR_AVANCE.set(g, (hasta, endpoints) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints } })
+  ABRIR_AVANCE.set(g, (hasta, endpoints, ajax = []) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints, ajax } })
   ABRIR_GUARDADO.set(g, (origen) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen } })
   ABRIR_TURISMOS_GENERALI.set(g, { abrir: (ms) => { turismosGenerali = Date.now() + Math.min(ms, VENTANA_RED_TURISMOS_GENERALI_MS) }, cerrar: () => { turismosGenerali = 0 }, abierta: () => Date.now() < turismosGenerali })
   VENTANA_LOGIN.set(g, {
@@ -321,7 +520,7 @@ export function urlTurismosGeneraliPermitida(url: string): boolean {
 const ABRIR_GUARDADO = new WeakMap<GuardEmision, (origen: string) => void>()
 
 /** Solo `pulsarAvancePestanaAutorizado` (este fichero) puede abrir la ventana del avance. */
-const ABRIR_AVANCE = new WeakMap<GuardEmision, (hasta: number, endpoints: readonly string[]) => void>()
+const ABRIR_AVANCE = new WeakMap<GuardEmision, (hasta: number, endpoints: readonly string[], ajax?: readonly AjaxValidacionAvance[]) => void>()
 /** Cada avance autorizado, UNA vez por trabajo (contexto): no hay segundo «Aceptar» de la misma pestaña. */
 const AVANCES_USADOS = new WeakMap<GuardEmision, Set<string>>()
 
@@ -650,14 +849,23 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
   // UN plazo para todo: la ventana de red y la espera de la pantalla de destino vencen en el MISMO instante (`hasta`), y la
   // ventana se cierra antes en cuanto se llega (finally).
   const hasta = Date.now() + VENTANA_RED_AVANCE_MS
-  // Un diálogo del portal (confirm/alert) durante el avance NO se acepta: se descarta y el trabajo cae con motivo claro.
+  // Un diálogo del portal (confirm/alert) durante el avance NUNCA se acepta: se descarta y el trabajo cae (salvo la excepción exacta, que se responde «No» y sigue).
   let dialogo: { tipo: string; mensaje: string } | null = null
   const alDialogo = (d: Dialog) => {
-    dialogo ??= { tipo: d.type(), mensaje: redactarDatosPersonales(d.message().replace(/\s+/g, ' ').trim()).slice(0, 200) }
+    // Excepción EXACTA (`CONFIRMS_AVANCE_ACEPTABLES`): solo antes de cualquier otro diálogo y una vez por trabajo.
+    const aceptados = CONFIRMS_ACEPTADOS.get(guard) ?? new Set<string>()
+    if (dialogo === null && confirmAvanceAceptable(selector, d.type(), d.message(), aceptados.has(selector))) {
+      aceptados.add(selector)
+      CONFIRMS_ACEPTADOS.set(guard, aceptados)
+      SUPUESTOS_AVANCE.set(page, [...(SUPUESTOS_AVANCE.get(page) ?? []), CONFIRMS_AVANCE_ACEPTABLES[selector]!.supuesto])
+      d.dismiss().catch(() => {}) // «No»: nunca se alarga el término (decisión de Alberto)
+      return
+    }
+    dialogo ??= { tipo: d.type(), mensaje: textoDialogoPortalSeguro(d.message()) }
     d.dismiss().catch(() => {})
   }
   page.on('dialog', alDialogo)
-  abrir(hasta, regla.endpoints)
+  abrir(hasta, regla.endpoints, regla.ajaxValidacion)
   try {
     await boton.click()
     for (;;) {
@@ -665,7 +873,7 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
       const dlg = dialogo as { tipo: string; mensaje: string } | null // lo escribe el manejador del diálogo (TS no lo ve)
       if (dlg) {
         if (dlg.tipo === 'alert') throw new ErrorTarificador('datos', `allianz: el portal avisó al avanzar a ${regla.texto}: ${dlg.mensaje}`)
-        throw new EmisionBloqueadaError('fase', `avance de pestaña ${selector}: el portal pidió confirmación («${dlg.tipo}») y el robot no confirma`)
+        throw new EmisionBloqueadaError('fase', `avance de pestaña ${selector}: el portal pidió confirmación («${dlg.tipo}»: «${dlg.mensaje}») y el robot no confirma`)
       }
       for (const f of marcosVivos(page)) if ((await accionFormulario(f)) === regla.formDestino) {
         guard.comprobar()
@@ -682,6 +890,19 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
     page.off('dialog', alDialogo)
     guard.avance.cerrar()
   }
+}
+
+/**
+ * Texto de un diálogo nativo del portal (confirm/alert) apto para un error: el portal puede nombrar a la persona («Juan Pérez García
+ * ya tiene…»), y `redactarDatosPersonales` solo tapa trozos con cifras o @. Antes se tapan las secuencias de 2+ palabras
+ * Capitalizadas (o en MAYÚSCULAS) seguidas, con partículas «de/del/la/los/las/y» entre ellas, como posible nombre propio → «[nombre]».
+ * Las frases normales («La fecha de expedición del carné es anterior…») no tienen dos capitalizadas seguidas y se conservan. Tope 200.
+ */
+export function textoDialogoPortalSeguro(bruto: string): string {
+  const palabra = "\\p{Lu}[\\p{L}'’-]+"
+  const nombre = new RegExp(`${palabra}(?:\\s+(?:(?:de|del|la|las|los|y)\\s+)?${palabra})+`, 'gu')
+  const limpio = bruto.replace(/\s+/g, ' ').trim().replace(nombre, '[nombre]')
+  return redactarDatosPersonales(limpio).slice(0, 200)
 }
 
 /** Filas de ERROR del informe de incidencias del framework legado de ePAC (las de aviso no paran). */

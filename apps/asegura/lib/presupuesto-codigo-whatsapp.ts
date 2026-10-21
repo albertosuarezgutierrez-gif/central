@@ -17,13 +17,15 @@ import {
   estadoCodigoWhatsapp, formatoCodigoWhatsapp, formatoTokenVistaValido, hashCodigoWhatsapp, hashTokenVista, intentosQuedan,
   MAX_INTENTOS_WHATSAPP,
 } from '@central/module-seguros-portal'
-import { esMovilWhatsapp } from '@central/module-seguros'
+import { aE164, esMovilWhatsapp } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
+import { TIPO_ACCESO_TERCERO, esAccesoTercero, type FilaAccesoToken } from './presupuesto-acceso-tercero'
 
 export type ResultadoCodigoWhatsapp =
-  | { estado: 'valido'; presupuestoId: string; clienteId: string }
+  /** `tercero`: el código es el de una PERSONA DE CONTACTO (ve, no firma). Ver `presupuesto-acceso-tercero.ts`. */
+  | { estado: 'valido'; presupuestoId: string; clienteId: string; tercero: boolean }
   | { estado: 'incorrecto'; quedan: number }
   | { estado: 'bloqueado' }
   | { estado: 'caducado' }
@@ -47,7 +49,7 @@ export async function gastarCodigoWhatsapp(
   const tokenHash = await hashTokenVista(token)
   const fila = await db.presupuesto.findFirst({
     where: { tokenHash, correduriaId, ...(presupuestoId ? { id: presupuestoId } : {}) },
-    select: { id: true, clienteId: true, whatsappCodigoHash: true, whatsappCodigoIntentos: true, venceEl: true, retiradoAt: true },
+    select: { id: true, clienteId: true, canalAviso: true, whatsappCodigoHash: true, whatsappCodigoIntentos: true, venceEl: true, retiradoAt: true },
   })
   if (!fila) return { estado: 'no_encontrado' }
   const entradaHash = await hashCodigoWhatsapp(token, codigo)
@@ -90,29 +92,50 @@ export async function gastarCodigoWhatsapp(
       where: { id: fila.id, whatsappCodigoHash: gastado.hash },
       data: { whatsappCodigoIntentos: 0 },
     })
-    return { estado: 'valido', presupuestoId: fila.id, clienteId: fila.clienteId }
+    const tercero = esAccesoTercero({
+      canalAviso: fila.canalAviso, whatsappCodigoHash: gastado.hash, marcaTercero: await marcaTerceroDe(fila.id, tokenHash),
+    })
+    return { estado: 'valido', presupuestoId: fila.id, clienteId: fila.clienteId, tercero }
   }
   if (estado === 'incorrecto') return { estado: 'incorrecto', quedan: intentosQuedan(gastado.intentos) }
   return { estado }
 }
 
 /**
- * La ficha dueña del presupuesto, para quien entró con el código del WhatsApp (el portal guarda el
- * token en su cookie de acceso, que solo pone tras un código válido). `null` = el token ya no es el
- * de ese presupuesto (se regeneró o se avisó por correo), está retirado, vencido o sin código.
- *
- * 🚨 La ficha sale del PROPIO presupuesto, nunca de un `clienteId` que llegue de fuera.
+ * ¿Hay marca `acceso_tercero` para ESTE token? (`envio-presupuesto.ts` la escribe antes de activar el token de un correo a
+ * una persona de contacto.) Un fallo de BD LANZA: quien llama responde error, nunca «es el tomador».
  */
-export async function fichaDeTokenWhatsapp(correduriaId: string, token: string, presupuestoId: string, ahora: Date = new Date()): Promise<{ clienteId: string } | null> {
+async function marcaTerceroDe(presupuestoId: string, tokenHash: string): Promise<boolean> {
+  const e = await prismaAsegura().presupuestoEvento.findFirst({
+    where: { presupuestoId, tipo: TIPO_ACCESO_TERCERO, detalle: { path: ['tokenHash'], equals: tokenHash } },
+    select: { id: true },
+  })
+  return e !== null
+}
+
+/**
+ * El presupuesto del token, para quien entró con el código (el portal guarda el token en su cookie de acceso, que solo
+ * pone tras un código válido). `null` = el token ya no es el de ese presupuesto (se regeneró o se avisó por correo al
+ * tomador), está retirado, vencido o sin código.
+ *
+ * 🚨 La ficha sale del PROPIO presupuesto, nunca de un `clienteId` que llegue de fuera. Y es la del TOMADOR: si el código
+ * es el de una persona de contacto (`esAccesoTercero`), quien llama NO opera con ella (`fichaDeToken` → `sin_permiso`).
+ */
+export async function fichaDeTokenWhatsapp(correduriaId: string, token: string, presupuestoId: string, ahora: Date = new Date()): Promise<FilaAccesoToken | null> {
   if (!formatoTokenVistaValido(token)) return null
+  const tokenHash = await hashTokenVista(token)
   const fila = await prismaAsegura().presupuesto.findFirst({
     where: {
-      id: presupuestoId, correduriaId, tokenHash: await hashTokenVista(token),
+      id: presupuestoId, correduriaId, tokenHash,
       retiradoAt: null, whatsappCodigoHash: { not: null }, venceEl: { gt: ahora },
     },
-    select: { clienteId: true },
+    select: { clienteId: true, canalAviso: true, whatsappCodigoHash: true },
   })
-  return fila ? { clienteId: fila.clienteId } : null
+  if (!fila) return null
+  return {
+    clienteId: fila.clienteId, canalAviso: fila.canalAviso, whatsappCodigoHash: fila.whatsappCodigoHash,
+    marcaTercero: await marcaTerceroDe(presupuestoId, tokenHash),
+  }
 }
 
 export type MovilDeFicha = 'ok' | 'sin_movil' | 'ilegible' | 'no_encontrado'
@@ -134,4 +157,25 @@ export async function movilDeFicha(correduriaId: string, clienteId: string): Pro
     if (esMovilWhatsapp(descifrarCampo(v))) return 'ok'
   }
   return hayIlegible ? 'ilegible' : 'sin_movil'
+}
+
+/**
+ * El móvil del TOMADOR para abrir su chat (`wa.me/<número>`) en el WhatsApp de Alberto (21/10/2026). Solo dígitos E.164
+ * sin «+». `null` = no hay uno válido (o es ilegible): el enlace sale SIN número y WhatsApp le deja elegir el chat.
+ * 🚨 No envía nada: es el destino del chat que abre Alberto y que manda él. Mismo criterio que `movilDeFicha`.
+ */
+export async function movilParaChat(correduriaId: string, clienteId: string): Promise<string | null> {
+  const c = await prismaAsegura().cliente.findFirst({
+    where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
+    select: { telefono: true, telefonos: { select: { telefono: true } } },
+  })
+  if (!c) return null
+  for (const v of [c.telefono, ...c.telefonos.map((t) => t.telefono)]) {
+    if (typeof v !== 'string' || v.trim() === '' || campoIlegible(v)) continue
+    const claro = descifrarCampo(v)
+    if (!esMovilWhatsapp(claro)) continue
+    const e164 = aE164(claro)
+    if (e164) return e164.replace(/\D/g, '')
+  }
+  return null
 }

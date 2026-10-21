@@ -11,7 +11,7 @@
 // Anfitrión: la carcasa `PedirPrecioEmbebido` publica un hueco (`HuecoBotsContext`) ENCIMA de la sección Avant2 y el bloque se
 // pinta ahí con un portal aunque lo monte el cotizador del ramo (que es quien tiene el formulario). Sin hueco (pantalla
 // completa del cotizador) se pinta en línea. Un solo bloque por pantalla.
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Bot, Check, Info, X, UserRound } from 'lucide-react'
 import { btnStyle, cardStyle, CardHeader } from '@/components/ui'
@@ -24,9 +24,12 @@ import { adaptadorDeRamo, checklistBot, type ResultadoAdaptadorBot } from '@/lib
 import { avisoDeChecklist, resumenFilas, type ChecklistCompania, type EstadoFila } from '@/lib/tarificador-checklist'
 import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
 import { clasificarEncolar, MENSAJE_ENCOLAR_INCIERTO, MENSAJE_ENCOLAR_SIN_CONEXION, REINTENTO_INCIERTO_MS, REINTENTOS_INCIERTO } from '@/lib/tarificador-encolar-incierto'
-import { loteConOk, loteTerminado, ordenEncolado, resumenLote, type FilaLote } from '@/lib/tarificador-todas'
-import { accionGuardarExtra, extraEfectivo, valorCampoExtra, type AccionGuardarExtra } from '@/lib/tarificador-bots-extra'
+import { estadoPrevioDe, loteConOk, loteTerminado, ordenEncolado, resumenLote, textoFilaEncolada, type FilaLote } from '@/lib/tarificador-todas'
+import { accionGuardarExtra, cuerpoGuardarCompania, cuerpoGuardarHistorial, extraEfectivo, numeroPolizaAGuardar, opcionesDeCampoExtra, valorCampoExtra, type AccionGuardarExtra } from '@/lib/tarificador-bots-extra'
 import { guardarSexoEnFicha } from '@/lib/correduria/sexo-cotizador-ficha'
+import { pendientesPorBloque } from '@/lib/tarificador-pendientes'
+import { pendientesConGenerales, textoErrorGuardado } from '@/lib/tarificador-pendientes-vista'
+import { ChipsCompanias, PendientesEnLinea, PendientesMotorContext, type AccionesPanel, type CampoPanel, type PanelPendientes } from './PendientesMotor'
 import { llamarDatosRiesgo } from '../../oportunidad/[id]/piezas-riesgo'
 import PrepararPresupuestoBot from '../../oportunidad/[id]/PrepararPresupuestoBot'
 
@@ -65,7 +68,7 @@ const sinBots = (texto: string, estado?: string) => (
   </div>
 )
 
-export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania }: {
+export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania, historialDeclarado }: {
   ramo: string
   clienteId: string
   oportunidadId: string | null
@@ -75,6 +78,8 @@ export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario,
   inicialesExtra?: Record<string, string>
   /** Compañía → aviso de por qué su bot no puede encolar con esta ficha (p. ej. Mapfre sin nombre del tomador). */
   bloqueosPorCompania?: Record<string, string>
+  /** Lo ya declarado en «Historial y bonificaciones» (si se conoce): con un código de compañía o «sin seguro» no se reescribe al guardar la compañía. */
+  historialDeclarado?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null; numeroPoliza?: string | null } | null
 }) {
   const hueco = useContext(HuecoBotsContext)
   const anfitrion = useContext(AnfitrionBotsContext)
@@ -88,12 +93,12 @@ export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario,
     return () => ocupar(false)
   }, [registrado, ocupar])
   const bloque = adaptador
-    ? <BloqueBots ramo={ramo} adaptador={adaptador} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} inicialesExtra={inicialesExtra} bloqueosPorCompania={bloqueosPorCompania} />
+    ? <BloqueBots ramo={ramo} adaptador={adaptador} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} inicialesExtra={inicialesExtra} bloqueosPorCompania={bloqueosPorCompania} historialDeclarado={historialDeclarado} />
     : sinBots('Sin bots para este ramo todavía.')
   return hueco ? createPortal(bloque, hueco) : bloque
 }
 
-function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania }: {
+function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania, historialDeclarado }: {
   ramo: string
   adaptador: NonNullable<ReturnType<typeof adaptadorDeRamo>>
   clienteId: string
@@ -101,11 +106,18 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
   formulario: unknown
   inicialesExtra?: Record<string, string>
   bloqueosPorCompania?: Record<string, string>
+  historialDeclarado?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null; numeroPoliza?: string | null } | null
 }) {
   const [integ, setInteg] = useState<Integraciones>({ estado: 'cargando' })
   // `extra` = solo lo TECLEADO aquí; lo precargado (`inicialesExtra`, ficha, póliza) se mezcla al leer, así un dato que llega tarde también se ve.
   const [extra, setExtra] = useState<Record<string, string>>({})
-  const [guardadoAviso, setGuardadoAviso] = useState<string | null>(null)
+  // Último guardado POR campo (ok o NO guardado + motivo): un guardado fallido se dice junto a su campo y no parece guardado.
+  const [guardados, setGuardados] = useState<Record<string, { ok: boolean; texto: string }>>({})
+  const contextoPend = useContext(PendientesMotorContext)
+  const publicar = contextoPend?.publicar
+  // Auto y moto: los campos sueltos viven en los bloques Personas/Riesgo/Póliza (solo lo pendiente) y las compañías son chips.
+  // Los demás ramos (hogar) conservan el bloque de siempre.
+  const esMotor = adaptador.ramo === 'auto' || adaptador.ramo === 'moto'
   const efectivo = extraEfectivo(extra, inicialesExtra)
   // Lo ya guardado por campo (para no repetir el guardado): arranca con lo que se pinta al montar.
   const guardado = useRef<Record<string, string>>({})
@@ -119,17 +131,48 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
     const mio = valor.replace(/\s+/g, ' ').trim()
     guardado.current[clave] = mio
     let ok = false
+    // Motivo del servidor (saneado) cuando rechaza: p. ej. 422 si el historial ya dice «sin seguro actual».
+    let motivo = 'No se ha podido guardar este dato: tendrás que volver a ponerlo.'
     try {
-      if (a.tipo === 'cilindrada' && oportunidadId) ok = (await llamarDatosRiesgo({ oportunidadId, datosVehiculo: { cilindradaCc: a.cc } })).ok
-      else if (a.tipo === 'sexo') ok = await guardarSexoEnFicha(clienteId, a.sexo)
+      if (a.tipo === 'cilindrada' && oportunidadId) {
+        const r = await llamarDatosRiesgo({ oportunidadId, datosVehiculo: { cilindradaCc: a.cc } })
+        ok = r.ok
+        if (!ok) motivo = textoErrorGuardado(r.status, r.json)
+      } else if (a.tipo === 'fechaAdquisicion' && oportunidadId) {
+        // Misma vía que la cilindrada: `datosVehiculo.fechaCompra` del riesgo (la fecha de adquisición NO es la de matriculación).
+        const r = await llamarDatosRiesgo({ oportunidadId, datosVehiculo: { fechaCompra: a.fecha } })
+        ok = r.ok
+        if (!ok) motivo = textoErrorGuardado(r.status, r.json)
+      } else if ((a.tipo === 'poliza' || a.tipo === 'justificante') && oportunidadId) {
+        // Póliza: si el nº ya guardado termina en esas 5 cifras no se envía nada (no se pisa el nº completo con 5 cifras).
+        const nPoliza = a.tipo === 'poliza' ? numeroPolizaAGuardar(historialDeclarado?.numeroPoliza, a.ultimos5) : null
+        if (a.tipo === 'poliza' && nPoliza === null) ok = true
+        else {
+          const cuerpo = a.tipo === 'poliza' ? cuerpoGuardarHistorial(oportunidadId, 'numeroPoliza', nPoliza ?? a.ultimos5) : cuerpoGuardarHistorial(oportunidadId, 'fotocopiaAnterior', a.valor)
+          const r = await pedirJson('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) })
+          ok = r.status === 200 && (r.json as { estado?: string } | null)?.estado === 'ok'
+          if (!ok) motivo = textoErrorGuardado(r.status, r.json)
+        }
+      } else if (a.tipo === 'sexo') ok = await guardarSexoEnFicha(clienteId, a.sexo)
       else if (a.tipo === 'compania' && oportunidadId) {
-        const r = await pedirJson('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'editar', id: oportunidadId, aseguradora: a.texto }) })
+        const r = await pedirJson('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpoGuardarCompania(oportunidadId, a.texto, historialDeclarado)) })
         ok = r.status === 200 && (r.json as { estado?: string } | null)?.estado === 'ok'
+        if (!ok) motivo = textoErrorGuardado(r.status, r.json)
       }
     } catch { ok = false }
     if (!ok && guardado.current[clave] === mio) guardado.current[clave] = base
-    setGuardadoAviso(ok ? 'Guardado para la próxima vez.' : 'No se ha podido guardar este dato: tendrás que volver a ponerlo.')
+    // Solo la última edición de ese campo escribe su aviso (una respuesta tardía no pisa lo que se tecleó después).
+    if (guardado.current[clave] === mio || !ok) setGuardados((g) => ({ ...g, [clave]: ok ? { ok: true, texto: 'Guardado para la próxima vez.' } : { ok: false, texto: motivo } }))
   }
+  /** Teclear / elegir: el valor manda en el cálculo y el aviso de guardado anterior deja de valer. */
+  function cambiarExtra(clave: string, valor: string) {
+    setExtra((x) => ({ ...x, [clave]: valor }))
+    setGuardados((g) => { if (!(clave in g)) return g; const { [clave]: _quitado, ...resto } = g; return resto })
+  }
+  // Acciones ESTABLES para quien las recibe por el contexto (siempre llaman a la última versión de estas funciones).
+  const ultimas = useRef({ cambiar: cambiarExtra, guardar: guardarExtra })
+  ultimas.current = { cambiar: cambiarExtra, guardar: guardarExtra }
+  const acciones = useMemo<AccionesPanel>(() => ({ cambiar: (c, v) => ultimas.current.cambiar(c, v), guardar: (c, v) => void ultimas.current.guardar(c, v) }), [])
 
   // Solo la última petición escribe: una respuesta tardía de otro ramo no pisa la lista.
   const peticion = useRef(0)
@@ -144,33 +187,56 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
   useEffect(() => { void cargar() }, [cargar])
 
   const lista = integ.estado === 'ok' ? integ.lista : []
+  const resultado = adaptador.construir(formulario, efectivo)
+  // Pendientes por bloque: SOLO con la lista de compañías leída y no vacía (sin ella «no falta nada» sería falso: no se ha mirado).
+  const panel: PanelPendientes | null = esMotor && integ.estado === 'ok' && lista.length > 0
+    ? (() => {
+        const { pendientes, sueltos } = pendientesConGenerales(pendientesPorBloque({ adaptador, formulario, extra: efectivo, companias: lista.map((i) => i.compania) }), adaptador)
+        const campos: CampoPanel[] = adaptador.campos.map((c) => ({
+          clave: c.clave, etiqueta: c.etiqueta, ayuda: c.ayuda, placeholder: c.placeholder, bloque: c.bloque, texto: c.texto, maxLength: c.maxLength, fecha: c.fecha,
+          opciones: c.opciones ? opcionesDeCampoExtra(c.clave, c.opciones, formulario) : undefined,
+          valor: valorCampoExtra(c.clave, extra, inicialesExtra, formulario, c.porDefecto),
+          guardado: guardados[c.clave] ?? null,
+        }))
+        return { pendientes, sueltos, campos, nombres: Object.fromEntries(lista.map((i) => [i.compania, rotuloCompania(i.compania)])), bloqueos: bloqueosPorCompania ?? {} }
+      })()
+    : null
+  const huellaPanel = JSON.stringify(panel)
+  useEffect(() => {
+    if (publicar) publicar(panel ? { panel, acciones } : null)
+    // `panel` solo cambia cuando cambia su huella.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [huellaPanel, publicar, acciones])
+  useEffect(() => () => publicar?.(null), [publicar])
   // Revisado y sin ninguna compañía: línea discreta, ni campos ni botones.
   if (integ.estado === 'ok' && lista.length === 0) return sinBots(adaptador.sinIntegraciones ?? 'Sin bots para este ramo todavía.', adaptador.estado)
-
-  const resultado = adaptador.construir(formulario, efectivo)
   return (
     <div style={cardStyle}>
       <CardHeader title="Bots (gratis)" sub="Pide precio al portal de la compañía con los datos de este formulario. No cuesta 0,50€, tarda un par de minutos y solo da precio: no emite." />
       {adaptador.estado && <p role="note" style={{ fontSize: 13, color: 'var(--warning)', margin: '8px 0 0', overflowWrap: 'anywhere' }}>{adaptador.estado}</p>}
-      {adaptador.campos.map((c) => (
+      {!esMotor && adaptador.campos.map((c) => (
         <label key={c.clave} style={{ display: 'grid', gap: 4, fontSize: 13, maxWidth: 260, marginTop: 8 }}>
           <span>{c.etiqueta}{c.ayuda && <span style={{ color: 'var(--muted)' }}> — {c.ayuda}</span>}</span>
           {c.opciones ? (
-            <select value={valorCampoExtra(c.clave, extra, inicialesExtra, formulario, c.porDefecto)} onChange={(e) => { const v = e.target.value; setExtra((x) => ({ ...x, [c.clave]: v })); void guardarExtra(c.clave, v) }}
+            <select value={valorCampoExtra(c.clave, extra, inicialesExtra, formulario, c.porDefecto)} onChange={(e) => { const v = e.target.value; cambiarExtra(c.clave, v); void guardarExtra(c.clave, v) }}
               style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }}>
-              {c.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
+              {opcionesDeCampoExtra(c.clave, c.opciones, formulario).map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
             </select>
           ) : (
-            <input inputMode={c.texto ? 'text' : 'numeric'} maxLength={c.maxLength} autoComplete="off" value={valorCampoExtra(c.clave, extra, inicialesExtra, formulario)} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))} onBlur={(e) => void guardarExtra(c.clave, e.target.value)} placeholder={c.placeholder}
+            <input inputMode={c.texto ? 'text' : 'numeric'} maxLength={c.maxLength} autoComplete="off" value={valorCampoExtra(c.clave, extra, inicialesExtra, formulario)} onChange={(e) => cambiarExtra(c.clave, e.target.value)} onBlur={(e) => void guardarExtra(c.clave, e.target.value)} placeholder={c.placeholder}
               style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }} />
           )}
         </label>
       ))}
-      {guardadoAviso && <p role="status" style={{ fontSize: 12, color: 'var(--muted)', margin: '6px 0 0' }}>{guardadoAviso}</p>}
-      {!resultado.ok && (
+      {!esMotor && Object.entries(guardados).map(([clave, g]) => (
+        <p key={clave} role={g.ok ? 'status' : 'alert'} style={{ fontSize: 12, color: g.ok ? 'var(--muted)' : 'var(--negative)', margin: '6px 0 0', overflowWrap: 'anywhere' }}>{g.ok ? g.texto : `No guardado: ${g.texto}`}</p>
+      ))}
+      {esMotor && panel && <ChipsCompanias panel={panel} />}
+      {esMotor && panel && !contextoPend && <PendientesEnLinea panel={panel} acciones={acciones} />}
+      {!resultado.ok && (esMotor ? (panel?.sueltos ?? resultado.faltan) : resultado.faltan).length > 0 && (
         <div role="status" style={{ fontSize: 13, color: 'var(--warning)', marginTop: 10 }}>
           <strong>Para pedir precio por bot falta:</strong>
-          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>{resultado.faltan.map((f) => <li key={f} style={{ overflowWrap: 'anywhere' }}>{f}</li>)}</ul>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>{(esMotor ? (panel?.sueltos ?? resultado.faltan) : resultado.faltan).map((f) => <li key={f} style={{ overflowWrap: 'anywhere' }}>{f}</li>)}</ul>
         </div>
       )}
       {integ.estado === 'cargando' && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '10px 0 0' }}>Cargando las compañías con bot…</p>}
@@ -195,7 +261,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
           const bloqueo = bloqueosPorCompania?.[i.compania] ?? (resultado.ok ? avisoDeChecklist(check) : null)
           return (
             <FilaBot key={i.clave} integracion={i} ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId}
-              formulario={bloqueo && resultado.ok ? { ok: false, faltan: [bloqueo] } : resultado} aviso={bloqueo} checklist={check} />
+              formulario={bloqueo && resultado.ok ? { ok: false, faltan: [bloqueo] } : resultado} aviso={bloqueo} checklist={esMotor ? undefined : check} />
           )
         })}
       </div>
@@ -285,7 +351,7 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
           else if (veredicto === 'sin_conexion') fila = { compania, estado: 'rechazada', mensaje: MENSAJE_ENCOLAR_SIN_CONEXION }
           else {
             const e = leerEncoladoBot(r.status, r.json)
-            fila = e.ok ? { compania, estado: 'encolada', trabajoId: e.trabajoId, duplicado: e.duplicado, final: false, ok: false } : { compania, estado: 'rechazada', mensaje: e.mensaje }
+            fila = e.ok ? { compania, estado: 'encolada', trabajoId: e.trabajoId, duplicado: e.duplicado, final: false, ok: false, estadoPrevio: e.duplicado ? estadoPrevioDe(r.json) : null } : { compania, estado: 'rechazada', mensaje: e.mensaje }
           }
         }
         if (mia !== generacion.current) break
@@ -318,7 +384,7 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
               <li key={f.compania} style={{ overflowWrap: 'anywhere', color: f.estado === 'encolada' ? 'var(--text)' : 'var(--warning)' }}>
                 <strong>{rotuloCompania(f.compania)}:</strong>{' '}
                 {f.estado === 'encolada'
-                  ? `${f.duplicado ? 'ya había un trabajo en marcha' : 'encolado'} — ${f.final ? (f.ok ? 'con precio' : 'terminó sin precio') : 'en marcha'}`
+                  ? <>{textoFilaEncolada(f)}{f.duplicado && f.estadoPrevio === 'atascado' && !f.final && <> · <a href="/correduria/tarificador" style={{ display: 'inline-block', minHeight: 44, lineHeight: '44px' }}>Bots atascados</a></>}</>
                   : f.mensaje}
               </li>
             ))}

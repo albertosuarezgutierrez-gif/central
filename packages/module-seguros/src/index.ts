@@ -473,7 +473,7 @@ export {
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
 export { mensajeReciboDevueltoWhatsapp, resumenRiesgo, saludoSegunHora, type EntradaWhatsappDevuelto } from './mensaje-recibo-devuelto.ts'
-export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
+export { correoPresupuesto, correoPresupuestoTercero, type DatosAvisoTercero, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, mensajePresupuestoWhatsappTercero, enlaceWhatsappPresupuesto, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -662,8 +662,8 @@ export {
   type HistoricaAgrupable,
   type GrupoHistorica,
 } from './ficha-historicas.ts'
-export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
-export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type CarnetRevisado, type TipoCarnet } from './carnet-ficha.ts'
+export { caducidadCarnet, expedicionDesdeCaducidad, type CaducidadCarnet } from './caducidad-carnet.ts'
+export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, fechaExpedicionDeEntrada, type CarnetRevisado, type ExpedicionResuelta, type TipoCarnet } from './carnet-ficha.ts'
 // Lo que una póliza subida sabe del TOMADOR y la ficha no: parche que solo rellena huecos (03/10/2026).
 export {
   CLAVES_EXTRACCION_GUARDABLES,
@@ -969,7 +969,7 @@ export {
 export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
 export {
   ESTADOS_ALTA, ESTADOS_ALTA_SERVIDOR, MOTIVOS_PERDIDA, MOTIVOS_PERDIDA_VENTA, MOTIVO_DESCARTE, PRIORIDADES_TAREA, RAMOS_OPORTUNIDAD, TIPOS_TAREA, aplicarAccion,
-  CLAVES_HISTORIAL_DECLARADO, historialDeclaradoDe, incoherenciaHistorialDeclarado, seguroAnteriorDe, ultimosDigitosPoliza, validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
+  CLAVES_HISTORIAL_DECLARADO, JUSTIFICANTES_SEGURO_ANTERIOR_DECLARADO, historialDeclaradoDe, incoherenciaHistorialDeclarado, seguroAnteriorDe, ultimosDigitosPoliza, validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
 } from './oportunidad-seguimiento.ts'
 export {
   DIAS_APARCAR_NO_INTERESA, DIAS_PREPARAR_PRECIO, MAX_DIAS_RELLAMADA, PREFIJO_LLAMADA_CONTESTADA, PREFIJO_LLAMADA_SIN_RESPUESTA,
@@ -1157,6 +1157,7 @@ export {
   garantiasDeOpciones,
   type OpcionProductoLegible,
   claveCobertura,
+  clavesCatalogo,
   clasificarCoberturas,
   esTodoRiesgo,
   type ContextoGarantias,
@@ -1385,13 +1386,27 @@ export { telefonoParaFicha, formasHashTelefono } from './whatsapp-telefono.ts'
 export { redactarPii, type OpcionesRedaccion } from './redactar-pii.ts'
 
 export {
-  TAXONOMIA_POR_RAMO, ramoOfertaDe, garantiasDelRamo, garantiaCanonica, normalizarGarantia, normalizarTexto,
+  TAXONOMIA_POR_RAMO, ramoOfertaDe, garantiasDelRamo, garantiaCanonica, normalizarGarantia, normalizarTexto, remapearGarantiasLectura,
 } from './coberturas-taxonomia.ts'
 export type { RamoOferta, GrupoGarantia, TipoValorGarantia, GarantiaCanonica } from './coberturas-taxonomia.ts'
-export { compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2 } from './comparar-ofertas.ts'
+export {
+  compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2, VERSION_COMPARATIVA, FUENTES_OFERTA, CRITERIO_RANKING, estadoTriple,
+  textoHuellaComparativa,
+} from './comparar-ofertas.ts'
 export type {
   OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,
+  FuenteOferta, FraccionamientoOferta, ReferenciaOferta, EstadoTriple, PuestoRanking, RankingComparacion,
 } from './comparar-ofertas.ts'
+// Comparativa ÚNICA (20/10/2026): adaptadores por fuente y lo puro del resumen (etiqueta IA, cepo de compañías).
+export {
+  ofertaDeAvant2, ofertaDePolizaActual, ofertaDeBot, seleccionarAvant2, fraccionamientoDe, HOGAR_CATALOGO_A_TAXONOMIA,
+} from './ofertas-fuentes.ts'
+export type { PrecioAvant2, PolizaParaComparar, CoberturaPoliza, OfertaBot } from './ofertas-fuentes.ts'
+export { periodoEnAvisos, periodoDeAvant2 } from './ofertas-fuentes.ts'
+export { etiquetasOfertas, textoOpcionesComparadas } from './etiqueta-oferta.ts'
+export {
+  ETIQUETA_RESUMEN_IA, ETIQUETA_RESUMEN_IA_SIN_REVISAR, ETIQUETA_RESUMEN_PLANTILLA, etiquetaResumen, COMPANIAS_CONOCIDAS, companiaIntrusa, avisoCotizacionGuardada,
+} from './resumen-comparativa.ts'
 
 // Acuerdos con compañías (comisión por ramo, rappel, clave de mediador) — 06/10/2026.
 // Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md
@@ -1539,3 +1554,8 @@ export {
   type Encaje, type FuenteNecesidad, type NecesidadFalta, type NecesidadLeida, type NecesidadesLead, type OpcionComparada, type OrigenPrecio,
   type Recomendacion,
 } from './propuesta-lead.ts'
+export {
+  TEXTO_NO_ELEGIBLE, destinatarioElegible, destinatariosPresupuesto, esRelacionDeRepresentacion,
+  type ContactoElegible, type ContactoNoElegible, type DestinatariosPresupuesto, type EstadoCorreoPersona, type MotivoNoElegible,
+  type CanalDestino, type EstadoMovilPersona, type PersonaDestino, type TipoPersonaFicha, type TomadorDestino, type ViaDestino,
+} from './destinatarios-presupuesto.ts'

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
 import { textoFalloEnlace } from '@/lib/entrada-enlace'
+import { BIENVENIDA_CAMPANA } from '@/lib/bienvenida-campana'
 
 
 /**
@@ -14,7 +15,7 @@ import { textoFalloEnlace } from '@/lib/entrada-enlace'
  * no se caía: la puerta no miraba. Ahora `page.tsx` es un componente de
  * servidor que resuelve la sesión y solo monta esto si NO la hay.
  */
-export function Entrada() {
+export function Entrada({ bienvenida = false }: { bienvenida?: boolean }) {
   const [destino, setDestino] = useState('')
   const [codigo, setCodigo] = useState('')
   const [fase, setFase] = useState<'pedir' | 'verificar'>('pedir')
@@ -180,12 +181,24 @@ export function Entrada() {
           <span className="marca-palabra marca-palabra-grande" aria-hidden="true" />
           <span className="sr-marca">Grupo ASegura</span>
         </span>
-        <h1>
-          Mis <em>seguros</em>
-        </h1>
-        <p className="suave" style={{ marginTop: 0 }}>
-          Todos tus seguros en un sitio. Gratis, seas cliente o no.
-        </p>
+        {/* Bienvenida de la campaña «presentación de la app»: solo con marca de campaña y solo al pedir el
+            código; el campo de correo va JUSTO debajo, ya enfocado. Sin correo precargado. */}
+        {bienvenida && fase === 'pedir' ? (
+          <div className="bienvenida-campana" data-testid="bienvenida-campana">
+            <h1 className="bienvenida-titulo">{BIENVENIDA_CAMPANA[0]}</h1>
+            <p className="bienvenida-linea">{BIENVENIDA_CAMPANA[1]}</p>
+            <p className="bienvenida-linea">{BIENVENIDA_CAMPANA[2]}</p>
+          </div>
+        ) : (
+          <>
+            <h1>
+              Mis <em>seguros</em>
+            </h1>
+            <p className="suave" style={{ marginTop: 0 }}>
+              Todos tus seguros en un sitio. Gratis, seas cliente o no.
+            </p>
+          </>
+        )}
 
       {fase === 'pedir' ? (
         <form onSubmit={(e) => enviar(e, async () => void (await pedir()))} noValidate>
@@ -201,6 +214,7 @@ export function Entrada() {
             value={destino}
             onChange={(e) => setDestino(e.target.value)}
             placeholder="tu@email.com"
+            autoFocus={bienvenida}
             className="campo"
             aria-describedby={error ? 'entrada-error' : undefined}
           />

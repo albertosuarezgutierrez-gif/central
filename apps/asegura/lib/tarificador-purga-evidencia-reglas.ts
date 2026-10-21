@@ -2,7 +2,7 @@
 // Reglas PURAS (selección); la parte con BD vive en `purgarEvidenciaCaducada` de ./tarificador-purga.ts.
 //   · Solo trabajos TERMINADOS (ok / cancelado / error_definitivo) con más de DIAS_RETENCION_EVIDENCIA días.
 //   · `requiere_humano`, `atascado` y los abiertos conservan SIEMPRE su evidencia (una persona aún puede necesitarla).
-//   · Solo se borran documentos de FALLO (`fallo-*.png|html`, subidos por el agente): `evidencia_documento_id` de un `ok`
+//   · Solo se borran documentos de FALLO (`fallo-*.png|jpg|html`, subidos por el agente): `evidencia_documento_id` de un `ok`
 //     es el PDF de la oferta y NO se toca nunca.
 
 export const DIAS_RETENCION_EVIDENCIA = 15
@@ -24,7 +24,7 @@ export type TrabajoEvidencia = {
 
 /** Un fichero de fallo del tarificador (la captura o el HTML redactado), por el nombre con el que se guarda. */
 export function esNombreEvidenciaFallo(nombre: string | null | undefined): boolean {
-  return typeof nombre === 'string' && /^fallo-[0-9a-f]{8}\.(png|html)$/.test(nombre)
+  return typeof nombre === 'string' && /^fallo-[0-9a-f]{8}\.(png|jpg|html)$/.test(nombre)
 }
 
 export function idDeCapturaRef(ref: string | null | undefined): string | null {

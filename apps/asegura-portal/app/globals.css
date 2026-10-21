@@ -791,6 +791,13 @@ input, select, textarea, button { font: inherit; }
   color: var(--muted);
   margin: 0 0 6px;
 }
+.campana-enlace-externo {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+}
 .campana-push .campana-reintentar {
   font-size: 13px;
   font-weight: 500;
@@ -4019,6 +4026,21 @@ h1 em {
   font-size: 15px;
   font-weight: 600;
 }
+/* Bienvenida de la campaña: tres líneas sobre el campo de correo. Titular en la tipografía de marca,
+ * sin cursivas; el titular es la frase larga, por eso baja de tamaño para no ocupar la pantalla de un móvil
+ * de 320 px antes de que se vea el campo. */
+.bienvenida-campana { margin: 0 0 18px; }
+.bienvenida-titulo {
+  margin: 0 0 10px;
+  font-size: 19px;
+  line-height: 1.35;
+}
+.bienvenida-linea {
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--muted);
+}
 .entrada-otras {
   display: flex;
   flex-wrap: wrap;
@@ -4337,3 +4359,8 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
 }
 .config-version { font-size: 12px; color: var(--muted); }
 .campana-configurar { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; }
+
+/* ─── Estudio del presupuesto (21/10/2026): la recomendada arriba, con su precio grande ─── */
+.estudio-destacada { margin-top: 12px; }
+.estudio-importe-grande { font-size: 34px; }
+@media (max-width: 380px) { .estudio-importe-grande { font-size: 28px; } }

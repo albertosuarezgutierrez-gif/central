@@ -7,4 +7,6 @@ export {
 } from './parser.ts'
 export type { DatosCatastro, ConstruccionCatastro, ViviendaCatastro, CoordenadasCatastro, DireccionCatastro, InmuebleCatastro, ParamsDnploc } from './parser.ts'
 export { precalificarHogar } from './hogar.ts'
-export type { DatosHogar, SupuestoHogar, ReparoHogar, PrecalificacionHogar } from './hogar.ts'
+export type { AnexoCatastro, DatosHogar, SupuestoHogar, ReparoHogar, PrecalificacionHogar } from './hogar.ts'
+export { sugerirVias, nombreCalleEscrito, partirCalle, viaSigueVigente, componerDireccionConVia, paramsDnplocConVia } from './sugerencias-via.ts'
+export type { ViaCatastro } from './sugerencias-via.ts'

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { validarNifCif, validarIban } from '@/lib/fiscal'
+import DireccionCp from '@/components/DireccionCp'
 
 const C = {
   primary: 'var(--brand-primary)', brand: 'var(--brand-secondary)', light: 'var(--brand-light)',
@@ -192,29 +193,20 @@ export default function ClienteFichaPanel({ clienteId, cliente, contactosInicial
 
           {!form.facturacion_igual_contacto && (
             <>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ flex: 2 }}>
-                  <label style={labelStyle}>Vía</label>
-                  <input style={inputStyle} value={form.via_fiscal} onChange={e => set('via_fiscal', e.target.value)} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Número</label>
-                  <input style={inputStyle} value={form.numero_fiscal} onChange={e => set('numero_fiscal', e.target.value)} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>C.P.</label>
-                  <input style={inputStyle} value={form.cp_fiscal} onChange={e => set('cp_fiscal', e.target.value)} />
-                </div>
-                <div style={{ flex: 2 }}>
-                  <label style={labelStyle}>Municipio</label>
-                  <input style={inputStyle} value={form.municipio_fiscal} onChange={e => set('municipio_fiscal', e.target.value)} />
-                </div>
-              </div>
+              <DireccionCp
+                cp={form.cp_fiscal} municipio={form.municipio_fiscal} provincia={form.provincia_fiscal} calle={form.via_fiscal}
+                calleLabel="Vía" callePlaceholder="Calle San Vicente"
+                onChange={c => setForm(f => ({
+                  ...f,
+                  ...(c.cp !== undefined && { cp_fiscal: c.cp }),
+                  ...(c.municipio !== undefined && { municipio_fiscal: c.municipio }),
+                  ...(c.provincia !== undefined && { provincia_fiscal: c.provincia }),
+                  ...(c.calle !== undefined && { via_fiscal: c.calle }),
+                }))}
+              />
               <div>
-                <label style={labelStyle}>Provincia</label>
-                <input style={inputStyle} value={form.provincia_fiscal} onChange={e => set('provincia_fiscal', e.target.value)} />
+                <label style={labelStyle}>Número</label>
+                <input style={{ ...inputStyle, minHeight: 44 }} value={form.numero_fiscal} onChange={e => set('numero_fiscal', e.target.value)} />
               </div>
             </>
           )}

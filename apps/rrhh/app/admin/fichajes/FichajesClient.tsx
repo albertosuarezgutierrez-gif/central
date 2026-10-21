@@ -1,12 +1,23 @@
 'use client'
 import { useState, useEffect, Fragment } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
+import Tabla from '@/components/ui/Tabla'
+import {
+  ETIQUETA_CAUSA, ETIQUETA_PLATAFORMA, tramoSinUbicacion, textoPrecision,
+  type CausaIncidencia, type PlataformaIncidencia,
+} from '@/lib/ubicacion-fichaje'
 
 type Fichaje = {
   id: string; empleado_nombre: string | null; obra_nombre: string | null
   entrada_at: string; salida_at: string | null; horas_totales: number | null; estado: string
   observaciones: string | null
   lat_entrada: number | null; lng_entrada: number | null
+  sin_ubicacion_entrada?: boolean; sin_ubicacion_salida?: boolean
+  precision_entrada_m?: number | null
+}
+type Incidencia = {
+  empleado_id: string; empleado_nombre: string | null; causa: CausaIncidencia; plataforma: PlataformaIncidencia
+  total: number; fichados_sin_ubicacion: number; ultima_at: string
 }
 type Empleado = { id: string; nombre: string }
 type AuditRow = { campo: string; valor_antes: string | null; valor_despues: string | null; motivo: string; creado_at: string }
@@ -22,7 +33,7 @@ function fmtISO(iso: string | null) {
   return new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function FichajesClient() {
   const hoy = new Date()
   const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
   const [mes, setMes] = useState(mesActual)
@@ -38,6 +49,35 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
   const [auditId, setAuditId] = useState<string | null>(null)
   const [auditoria, setAuditoria] = useState<AuditRow[]>([])
   const [exportando, setExportando] = useState(false)
+  // null = aún no cargadas o no se pudieron leer («no se sabe»); [] = revisadas, sin incidencias.
+  const [incidencias, setIncidencias] = useState<Incidencia[] | null>(null)
+  const [cargandoIncidencias, setCargandoIncidencias] = useState(true)
+  // null = cargando (ni activado ni desactivado); 'error' = no se pudo leer
+  const [sinUbic, setSinUbic] = useState<boolean | null | 'error'>(null)
+  const [guardandoSinUbic, setGuardandoSinUbic] = useState(false)
+  const [msgSinUbic, setMsgSinUbic] = useState('')
+  useEffect(() => {
+    fetch('/api/admin/empresa/ajustes')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => setSinUbic(d.permite_fichar_sin_ubicacion === true))
+      .catch(() => setSinUbic('error'))
+  }, [])
+  async function cambiarSinUbic() {
+    if (typeof sinUbic !== 'boolean' || guardandoSinUbic) return
+    const previo = sinUbic, nuevo = !sinUbic
+    setSinUbic(nuevo); setGuardandoSinUbic(true); setMsgSinUbic('')
+    try {
+      const r = await fetch('/api/admin/empresa/ajustes', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permite_fichar_sin_ubicacion: nuevo }),
+      })
+      if (!r.ok) throw new Error()
+      setMsgSinUbic('Guardado ✓')
+      setTimeout(() => setMsgSinUbic(m => m === 'Guardado ✓' ? '' : m), 2500)
+    } catch {
+      setSinUbic(previo); setMsgSinUbic('No se pudo guardar. Inténtalo de nuevo.')
+    } finally { setGuardandoSinUbic(false) }
+  }
 
   async function cargar() {
     const params = new URLSearchParams({ mes })
@@ -46,6 +86,9 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
     if (r.ok) setFichajes((await r.json()).fichajes)
   }
   useEffect(() => { cargar() }, [mes, empleadoId])
+  useEffect(() => {
+    fetch('/api/admin/fichajes/incidencias').then(r => r.ok ? r.json() : null).then(j => setIncidencias(j?.incidencias ?? null)).catch(() => {}).finally(() => setCargandoIncidencias(false))
+  }, [])
   useEffect(() => {
     fetch('/api/admin/empleados').then(r => r.ok ? r.json() : { empleados: [] }).then(j => setEmpleados(j.empleados ?? [])).catch(() => {})
   }, [])
@@ -89,19 +132,18 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
   const totalHoras = cerrados.reduce((s, f) => s + Number(f.horas_totales ?? 0), 0)
 
   return (
-    <AdminShell activo="fichajes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      <h1 className="mb-4 text-2xl">Fichajes</h1>
+    <Page titulo="Fichajes">
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <input type="month" value={mes} onChange={e => setMes(e.target.value)} className="text-sm" />
         <select value={empleadoId} onChange={e => setEmpleadoId(e.target.value)} className="text-sm">
           <option value="">Todos los empleados</option>
           {empleados.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
         </select>
-        {totalHoras > 0 && <span className="text-sm text-ink-3">{totalHoras.toFixed(1)} h totales</span>}
+        <span className="text-sm tabular-nums text-ink-3">{totalHoras > 0 ? `${totalHoras.toFixed(1)} h totales` : ''}</span>
         <button
           onClick={exportarCSV} disabled={exportando || fichajes.length === 0}
-          className="ml-auto bg-paper-2 text-ink-2 text-xs px-3 py-1.5 rounded border border-line"
+          className="min-h-[44px] bg-paper-2 text-ink-2 text-xs px-3 py-1.5 rounded border border-line lg:justify-self-end"
         >
           {exportando ? 'Exportando…' : '⬇ Exportar CSV (ITSS)'}
         </button>
@@ -120,8 +162,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-card border border-line bg-card">
-        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[600px]">
+      <Tabla fija>
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Empleado</th>
@@ -163,19 +204,25 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
                     </td>
                   ) : (
                     <>
-                      <td className="px-3 py-2 font-medium">{f.empleado_nombre ?? '—'}</td>
-                      <td data-label="Fecha" className="px-3 py-2 text-ink-2">{fmtFecha(f.entrada_at)}</td>
-                      <td data-label="Entrada" className="px-3 py-2">{fmt(f.entrada_at)}</td>
-                      <td data-label="Salida" className="px-3 py-2">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
-                      <td data-label="Horas" className="px-3 py-2 text-right font-mono text-xs">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
-                      <td data-label="Obra" className="px-3 py-2 text-xs">
+                      <td className="px-3 py-2.5 font-medium">{f.empleado_nombre ?? '—'}</td>
+                      <td data-label="Fecha" className="px-3 py-2.5 text-ink-2">{fmtFecha(f.entrada_at)}</td>
+                      <td data-label="Entrada" className="px-3 py-2.5 tabular-nums">{fmt(f.entrada_at)}</td>
+                      <td data-label="Salida" className="px-3 py-2.5 tabular-nums">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
+                      <td data-label="Horas" className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
+                      <td data-label="Obra" className="px-3 py-2.5 text-xs">
                         {f.obra_nombre
                           ? <span className="text-ink-2">{f.obra_nombre}</span>
                           : f.lat_entrada != null && f.lng_entrada != null
                             ? <a href={`https://maps.google.com/?q=${f.lat_entrada},${f.lng_entrada}`} target="_blank" rel="noopener noreferrer" className="text-accent no-underline hover:underline">📍 Ver mapa</a>
                             : <span className="text-ink-3">—</span>}
+                        {textoPrecision(f.precision_entrada_m) && (
+                          <span className="ml-1 text-ink-3" title="Precisión del GPS al fichar la entrada">{textoPrecision(f.precision_entrada_m)}</span>
+                        )}
+                        {tramoSinUbicacion(f) && (
+                          <span className="ml-1 inline-block rounded-full bg-warn/20 px-1.5 text-warn">{tramoSinUbicacion(f)}</span>
+                        )}
                       </td>
-                      <td className="px-3 py-2 flex gap-1">
+                      <td className="px-3 py-2.5 flex gap-1">
                         <button
                           onClick={() => { setEditId(f.id); setEditSalida(''); setEditObs(f.observaciones ?? ''); setEditMotivo(''); setErrorEdit(''); setAuditId(null) }}
                           className="px-2 py-1.5 text-xs min-h-[36px]" title="Corregir"
@@ -190,7 +237,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
                 </tr>
                 {auditId === f.id && (
                   <tr key={`audit-${f.id}`} className="border-b border-line bg-paper-2/50">
-                    <td colSpan={7} className="px-3 py-2">
+                    <td colSpan={7} className="px-3 py-2.5">
                       {auditoria.length === 0 ? (
                         <p className="text-xs text-ink-3">Sin correcciones registradas</p>
                       ) : (
@@ -220,8 +267,68 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
               <tr><td colSpan={7} className="px-3 py-3 text-ink-3">Sin fichajes en este período</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
-    </AdminShell>
+      </Tabla>
+
+      <section className="mt-6">
+        <h2 className="mb-1 text-base">Incidencias de ubicación</h2>
+        <div className="mb-3 flex items-start gap-3 rounded border border-line bg-paper-2 p-3">
+          {typeof sinUbic === 'boolean' ? (
+            <button
+              type="button" role="switch" aria-checked={sinUbic} aria-label="Permitir fichar sin ubicación (emergencia)"
+              onClick={cambiarSinUbic} disabled={guardandoSinUbic}
+              className="-m-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center disabled:opacity-60"
+            >
+              <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${sinUbic ? 'bg-ink' : 'bg-line'}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${sinUbic ? 'left-[22px]' : 'left-0.5'}`} />
+              </span>
+            </button>
+          ) : (
+            <span className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-xs text-ink-3" aria-busy={sinUbic === null}>
+              {sinUbic === null ? '…' : '—'}
+            </span>
+          )}
+          <div className="min-w-0 flex-1 py-1">
+            <p className="text-sm font-medium">Permitir fichar sin ubicación (emergencia)</p>
+            <p className="text-xs text-ink-3">Si el GPS del móvil falla, el empleado podrá fichar igualmente. El fichaje queda marcado y lo verás aquí.</p>
+            {sinUbic === null && <p className="mt-1 text-xs text-ink-3">Cargando…</p>}
+            {sinUbic === 'error' && <p className="mt-1 text-xs text-red-600">No se ha podido leer el ajuste.</p>}
+            {msgSinUbic && <p role="status" className={`mt-1 text-xs ${msgSinUbic.startsWith('Guardado') ? 'text-ink-2' : 'text-red-600'}`}>{msgSinUbic}</p>}
+          </div>
+        </div>
+        <p className="mb-2 text-xs text-ink-3">Últimos 30 días: veces que el móvil del empleado no dio su ubicación al fichar.</p>
+        {cargandoIncidencias ? (
+          <p className="text-sm text-ink-3">Cargando…</p>
+        ) : incidencias === null ? (
+          <p className="text-sm text-ink-3">No se han podido cargar las incidencias.</p>
+        ) : incidencias.length === 0 ? (
+          <p className="text-sm text-ink-3">Sin incidencias de ubicación en los últimos 30 días.</p>
+        ) : (
+          <Tabla tablaClassName="md:min-w-[560px]">
+            <thead>
+              <tr className="border-b border-line bg-paper-2">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Empleado</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Causa</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Móvil</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-ink-3">Veces</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-ink-3">Fichó sin ubicación</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Última</th>
+              </tr>
+            </thead>
+            <tbody>
+              {incidencias.map(i => (
+                <tr key={`${i.empleado_id}-${i.causa}-${i.plataforma}`} className="border-b border-line last:border-0">
+                  <td className="px-3 py-2.5 font-medium">{i.empleado_nombre ?? '—'}</td>
+                  <td data-label="Causa" className="px-3 py-2.5 text-ink-2">{ETIQUETA_CAUSA[i.causa] ?? i.causa}</td>
+                  <td data-label="Móvil" className="px-3 py-2.5 text-ink-2">{ETIQUETA_PLATAFORMA[i.plataforma] ?? i.plataforma}</td>
+                  <td data-label="Veces" className="px-3 py-2.5 text-right tabular-nums">{i.total}</td>
+                  <td data-label="Fichó sin ubicación" className="px-3 py-2.5 text-right tabular-nums">{i.fichados_sin_ubicacion}</td>
+                  <td data-label="Última" className="px-3 py-2.5 text-ink-2">{fmtISO(i.ultima_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Tabla>
+        )}
+      </section>
+    </Page>
   )
 }

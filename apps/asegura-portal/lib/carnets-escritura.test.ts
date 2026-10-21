@@ -132,3 +132,9 @@ test('🪤 sin_permiso (403 del puente) llega al portal y se dice «solo consult
   assert.notEqual(textoAvisoCarnet({ estado: 'sin_permiso' }), textoAvisoCarnet({ estado: 'no_encontrado' }))
   assert.deepEqual(interpretarEscrituraCarnet(404, { estado: 'no_encontrado' }), { estado: 'no_encontrado' })
 })
+
+test('alta con solo fechaCaducidad es válida y viaja; sin ninguna fecha → null', () => {
+  assert.deepEqual(leerEscrituraCarnet('alta', { fichaId: A, tipo: 'B', fechaCaducidad: '2031-03-04' }), { accion: 'alta', fichaId: A, tipo: 'B', fechaCaducidad: '2031-03-04' })
+  assert.deepEqual(leerEscrituraCarnet('cambio', { fichaId: A, tipo: 'B', fechaCaducidad: '2031-03-04' }, K)?.accion, 'cambio')
+  assert.equal(leerEscrituraCarnet('alta', { fichaId: A, tipo: 'B' }), null)
+})

@@ -39,8 +39,18 @@ const Uuid = z.string().trim().uuid()
 const Tipo = z.string().trim().min(1).max(10)
 const Fecha = z.string().trim().min(1).max(20)
 
-export const AltaCarnetPortal = z.object({ identidadId: Uuid, fichaId: Uuid, tipo: Tipo, fecha: Fecha })
-export const CambioCarnetPortal = z.object({ identidadId: Uuid, fichaId: Uuid, id: Uuid, tipo: Tipo, fecha: Fecha })
+/**
+ * La fecha llega como `fecha` (expedición) O como `fechaCaducidad` (la del anverso; `guardarCarnet` deduce la
+ * expedición con el nacimiento). Una de las dos, no ninguna; si vienen las dos manda la expedición.
+ */
+const unaFecha = (o: { fecha?: string; fechaCaducidad?: string }) => o.fecha !== undefined || o.fechaCaducidad !== undefined
+
+export const AltaCarnetPortal = z
+  .object({ identidadId: Uuid, fichaId: Uuid, tipo: Tipo, fecha: Fecha.optional(), fechaCaducidad: Fecha.optional() })
+  .refine(unaFecha)
+export const CambioCarnetPortal = z
+  .object({ identidadId: Uuid, fichaId: Uuid, id: Uuid, tipo: Tipo, fecha: Fecha.optional(), fechaCaducidad: Fecha.optional() })
+  .refine(unaFecha)
 export const BajaCarnetPortal = z.object({ identidadId: Uuid, fichaId: Uuid, id: Uuid })
 
 export type AltaCarnetPortal = z.infer<typeof AltaCarnetPortal>

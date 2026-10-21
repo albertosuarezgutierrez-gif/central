@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { adaptadorDeRamo, checklistBot, ramosConBots } from './tarificador-bots-ramos.ts'
+import { extraEfectivo } from './tarificador-bots-extra.ts'
 
 test('ramo sin adaptador (o raro) → null', () => {
   for (const r of ['vida', 'salud', 'decesos', 'comunidades', 'HOGAR', 'AUTO', '', 'toString', '__proto__', null, undefined]) {
@@ -12,7 +13,7 @@ test('moto → adaptador con cilindrada editable; sin ella faltan datos y lo dic
   const a = adaptadorDeRamo('moto')
   assert.ok(a)
   assert.equal(a.ramo, 'moto')
-  assert.deepEqual(a.campos.map((c) => c.clave), ['cilindrada', 'sexo', 'companiaAnterior'])
+  assert.deepEqual(a.campos.map((c) => c.clave), ['cilindrada', 'sexo', 'companiaAnterior', 'fechaAdquisicion', 'polizaAnteriorUltimos5', 'fotocopiaAnterior'])
   assert.ok(ramosConBots().includes('moto'))
   const r = a.construir({
     matricula: '', marca: null, modelo: null, version: null, codigoPostal: null, fechaNacimiento: null, fechaCarne: null,
@@ -31,7 +32,7 @@ test('auto → adaptador con 3 desplegables (uso, ámbito, clase del permiso; de
   const a = adaptadorDeRamo('auto')
   assert.ok(a)
   assert.equal(a.ramo, 'auto')
-  assert.deepEqual(a.campos.map((c) => [c.clave, c.porDefecto]), [['usoVehiculo', 'particular'], ['ambitoCirculacion', 'espana'], ['clasePermiso', 'b'], ['companiaAnterior', undefined]])
+  assert.deepEqual(a.campos.map((c) => [c.clave, c.porDefecto]), [['usoVehiculo', 'particular'], ['ambitoCirculacion', 'espana'], ['clasePermiso', 'b'], ['companiaAnterior', undefined], ['polizaAnteriorUltimos5', undefined]])
   assert.ok(a.campos.filter((c) => !c.texto).every((c) => c.opciones?.some((o) => o.valor === c.porDefecto)), 'el defecto es una de las opciones')
   const r = a.construir({
     matricula: '', marca: null, modelo: null, version: null, codigoPostal: 'ficha', fechaNacimiento: 'ficha', fechaCarne: 'ficha',
@@ -50,6 +51,8 @@ const AUTO_BASE = {
   matricula: '1234BCD', marca: null, modelo: null, version: null, codigoPostal: '41003', fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01',
   sexo: null, garaje: null, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
   aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0', companiaAnterior: null,
+  // 20/10/2026: con seguro anterior Allianz y Mapfre piden la póliza anterior; aquí consta (sintética) y su defecto son sus 5 últimas cifras.
+  numeroPolizaActual: 'POL-2026-00012345',
 }
 
 test('auto · Mapfre y Allianz: con seguro actual y sin compañía anterior falta (Allianz la exige con cambio de seguro, 19/10/2026)', () => {
@@ -90,6 +93,9 @@ test('compañía sin declaración → no_disponible, también con el formulario 
   assert.equal(checklistBot(a, { ...AUTO_BASE, matricula: '' }, {}, 'zurich').estado, 'no_disponible')
 })
 
+// 20/10/2026 (bot Allianz moto 0.7.11): Allianz moto exige además póliza/justificante del seguro anterior y fecha de adquisición, que este formulario aún no recoge: aquí se mira solo el SEXO.
+const sinFaltaSexo = (c: ReturnType<typeof checklistBot>) => c.estado === 'evaluado' && !c.faltan.some((f) => f.clave === 'conductor.sexo')
+
 test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloquea Allianz Moto; vacío no se inventa', () => {
   const a = adaptadorDeRamo('moto')!
   const F = {
@@ -103,12 +109,20 @@ test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloqu
   const r0 = a.construir(F, { cilindrada: '125', sexo: '' })
   assert.ok(r0.ok && (r0.riesgo.conductor as { sexo: unknown }).sexo === null)
   const con = checklistBot(a, F, { cilindrada: '125', sexo: 'mujer' }, 'allianz')
-  assert.ok(con.estado === 'evaluado' && !con.bloquea)
+  assert.ok(sinFaltaSexo(con))
   const r = a.construir(F, { cilindrada: '125', sexo: 'mujer' })
   assert.ok(r.ok && (r.riesgo.conductor as { sexo: string }).sexo === 'mujer')
   // Sin tocar el desplegable manda el del formulario.
   const r2 = a.construir({ ...F, sexo: 'hombre' }, { cilindrada: '125' })
   assert.ok(r2.ok && (r2.riesgo.conductor as { sexo: string }).sexo === 'hombre')
+  // Bot 0.7.18: campo de adquisición sin tocar (vacío) → la de matriculación con la marca «por defecto»; tecleada → explícita.
+  const d = a.construir({ ...F, fechaMatriculacion: '2023-05-10' }, { cilindrada: '125', sexo: 'mujer', fechaAdquisicion: '' })
+  assert.ok(d.ok && d.riesgo.fechaAdquisicion === '2023-05-10' && d.riesgo.fechaAdquisicionPorDefecto === true)
+  const x = a.construir({ ...F, fechaMatriculacion: '2023-05-10' }, { cilindrada: '125', sexo: 'mujer', fechaAdquisicion: '2024-01-02' })
+  assert.ok(x.ok && x.riesgo.fechaAdquisicion === '2024-01-02' && x.riesgo.fechaAdquisicionPorDefecto === false)
+  // Oportunidad «#pedir-precio» (21/10/2026): el campo llega PRECARGADO con la `fechaCompra` guardada (= la matriculación), nunca vacío.
+  const pre = a.construir({ ...F, fechaMatriculacion: '2023-05-10' }, extraEfectivo({}, { cilindrada: '125', sexo: 'mujer', fechaAdquisicion: '2023-05-10' }))
+  assert.ok(pre.ok && pre.riesgo.fechaAdquisicion === '2023-05-10' && pre.riesgo.fechaAdquisicionPorDefecto === true)
 })
 
 test('moto · desplegable de sexo en su valor inicial («») no pisa el sexo del formulario', () => {
@@ -181,7 +195,8 @@ test('moto · sexoSinFicha (la ficha no da Sr./Sra.) bloquea Allianz Moto salvo 
   const sin = checklistBot(a, F, { cilindrada: '125', sexo: '' }, 'allianz')
   assert.ok(sin.estado === 'evaluado' && sin.bloquea && sin.filas.find((f) => f.clave === 'conductor.sexo')?.estado === 'falta')
   const con = checklistBot(a, F, { cilindrada: '125', sexo: 'hombre' }, 'allianz')
-  assert.ok(con.estado === 'evaluado' && !con.bloquea)
+  assert.ok(sinFaltaSexo(con))
+  assert.ok(con.estado === 'evaluado' && con.faltan.some((f) => f.clave === 'fechaAdquisicion'), 'Allianz moto pide la fecha de adquisición (0.7.11)')
 })
 
 // ─── Mapfre MOTO y la compañía anterior (19/10/2026, captura de Alberto: BMW sin póliza de moto) ──────────────────────────

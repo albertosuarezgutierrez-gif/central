@@ -49,6 +49,27 @@ export const TIPOS_AVISO_CIMA = [
 ] as const
 export type TipoAvisoCima = (typeof TIPOS_AVISO_CIMA)[number]
 
+/**
+ * Aviso de CADUCIDAD DEL CARNÉ de conducir (21/10/2026): encendido por defecto, la persona lo apaga con un
+ * interruptor (`portal_aviso_silenciado`, sin fila = encendido). 🚨 NO está en `TIPOS_AVISO_CIMA` a propósito:
+ * esa lista es también la de los tipos que el cron `avisos-cima` PLANIFICA y SELLA (`portal_aviso_cima`), y el
+ * carné se avisa por la campana y el correo de la intranet, no por ese cron. Solo comparte la tabla del
+ * interruptor. Su CHECK se amplía en `2026-10-21_aviso_vencimiento_carnet.sql` (cepo
+ * `test/regression-portal-aviso-carnet.test.ts`).
+ */
+export const TIPO_AVISO_VENCIMIENTO_CARNET = 'vencimiento_carnet' as const
+
+/**
+ * Aviso AUTOMÁTICO de la ITV del vehículo asegurado (21/10/2026): mismo trato que el del carné (encendido por
+ * defecto, fila en `portal_aviso_silenciado` = apagado, fuera de `TIPOS_AVISO_CIMA` y del cron que sella).
+ * CHECK ampliado en el mismo `2026-10-21_aviso_vencimiento_carnet.sql`.
+ */
+export const TIPO_AVISO_VENCIMIENTO_ITV = 'vencimiento_itv' as const
+
+/** Todo lo que se puede apagar en `portal_aviso_silenciado`: los avisos de CIMA + el del carné + el de la ITV. */
+export const TIPOS_AVISO_INTERRUPTOR = [...TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET, TIPO_AVISO_VENCIMIENTO_ITV] as const
+export type TipoAvisoInterruptor = (typeof TIPOS_AVISO_INTERRUPTOR)[number]
+
 /** Lo que se sella además de los tipos: la semilla. Los dos van al CHECK de la tabla. */
 export const TIPO_SEMILLA = 'base'
 

@@ -286,6 +286,26 @@ function primaMin(f: FilaParrilla): number {
 /**
  * PURO: la parrilla de una oportunidad. Una fila por compañía (identidad DGS); las que no tienen código, en su propia fila.
  */
+/**
+ * Lado BOT de la parrilla para los ramos con bloque «Bots (gratis)» PROPIO (moto, coche, hogar; 21/10/2026). Antes el lado bot
+ * solo salía de «Presupuestos de compañías» (capacidades: hoy solo comunidades) y en esos ramos la parrilla decía «no aplica»
+ * aunque hubiera precios de bot. Aquí se arma con las DOS lecturas del puerto: integraciones activas (= bots disponibles del ramo)
+ * y los trabajos de la oportunidad (ya filtrados por ramo y pasados por `trabajosParaParrilla`).
+ * 🚨 Tres estados: cualquiera de las dos sin leer → `sin_leer` (nunca «no aplica» ni «sin pedir»); ninguna integración ni trabajo
+ * del ramo → `no_aplica`. PURA.
+ */
+export function ladoBotDeLecturas(
+  ramo: string | null | undefined,
+  integraciones: readonly { compania: string; ramo: string }[] | null,
+  trabajos: readonly TrabajoBotParrilla[] | null,
+  motivoSinLeer = 'No se han podido leer los bots de esta oportunidad: no se sabe si hay precios de bot.',
+): LadoBot {
+  if (integraciones === null || trabajos === null) return { estado: 'sin_leer', motivo: motivoSinLeer }
+  const disponibles = [...new Set(integraciones.filter((i) => i.ramo === ramo).map((i) => i.compania))]
+  if (disponibles.length === 0 && trabajos.length === 0) return { estado: 'no_aplica' }
+  return { estado: 'ok', disponibles, trabajos: [...trabajos] }
+}
+
 export function construirParrilla(avant2: LadoAvant2, bot: LadoBot, umbralPct = UMBRAL_CUADRA_PCT): Parrilla {
   if (avant2.estado === 'no_aplica' && bot.estado === 'no_aplica') return { vacia: true, filas: [], sinIdentificar: [] }
 

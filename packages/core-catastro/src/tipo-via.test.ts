@@ -54,3 +54,35 @@ test('resolverTipoViaPorNombre: el callejero no conoce la calle → no_encontrad
   assert.equal(r.tipo, null)
   assert.equal(r.ambigua, false, 'sin ninguna vía en la respuesta no hay ambigüedad: es que no está')
 })
+
+// Caso real (20/10/2026): «Calle la Parra 13», Castillo de Locubín (Jaén). El callejero devuelve TRES candidatas para «Parra»;
+// las de pedanía llevan sufijo «(PEDANÍA)» y el artículo pospuesto («PARRA LA»). Antes ganaba «ISABEL PARRA» en silencio.
+const XML_TRES_PARRA =
+  '<?xml version="1.0" encoding="utf-8"?><consulta_callejero><callejero>' +
+  '<calle><tv>CL</tv><nv>ISABEL PARRA</nv></calle>' +
+  '<calle><tv>CL</tv><nv>PARRA LA (VENTAS CARRIZA)</nv></calle>' +
+  '<calle><tv>CL</tv><nv>PARRAS</nv></calle>' +
+  '</callejero></consulta_callejero>'
+
+test('resolverNombreVia: «Parra» con tres candidatas es ambigua y las ofrece TODAS (nunca elige en silencio)', async () => {
+  const { resolverNombreVia } = await import('./http.ts')
+  const r = await conFetchSimulado(XML_TRES_PARRA, () => resolverNombreVia('JAEN', 'CASTILLO DE LOCUBIN', 'CL', 'Parra'))
+  assert.equal(r.nombre, null)
+  assert.equal(r.ambigua, true)
+  assert.deepEqual(r.candidatas.map((c) => c.nombre).sort(), ['ISABEL PARRA', 'PARRAS', 'PARRA LA (VENTAS CARRIZA)'].sort())
+})
+
+test('resolverTipoViaPorNombre: «Parra» con tres candidatas es ambigua, sin tipo', async () => {
+  const r = await conFetchSimulado(XML_TRES_PARRA, () => resolverTipoViaPorNombre('JAEN', 'CASTILLO DE LOCUBIN', 'Parra'))
+  assert.equal(r.tipo, null)
+  assert.equal(r.nombre, null)
+  assert.equal(r.ambigua, true)
+})
+
+test('autocompletado: con 5 sugerencias en espera, las demás devuelven null sin lanzar', async () => {
+  const { listarViasPorTermino } = await import('./http.ts')
+  const r = await conFetchSimulado(XML_UNA_VIA, () =>
+    Promise.all(Array.from({ length: 8 }, () => listarViasPorTermino('SEVILLA', 'SEVILLA', 'SOCORRO'))))
+  assert.equal(r.filter((x) => x === null).length, 3)
+  assert.equal(r.filter((x) => Array.isArray(x)).length, 5)
+})

@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
 import { CATEGORIAS, MESES, pideAnio, pideMes, sufijoPeriodo } from '@/lib/categorias-empresa'
+import Card from '@/components/ui/Card'
+import Tabla from '@/components/ui/Tabla'
 
-type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
 type DocEmpresa = { id: string; categoria: string; nombre: string; storage_path: string; anio: number | null; mes: number | null; subido_at: string; url: string | null }
 
-export default function EmpresaClient({ branding }: { branding: Branding }) {
+export default function EmpresaClient() {
   const [docs, setDocs] = useState<DocEmpresa[]>([])
   const [docCategoria, setDocCategoria] = useState('contrato')
   const [docNombre, setDocNombre] = useState('')
@@ -63,10 +64,9 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
   const porCategoria = [...conocidas, ...huerfanas].filter(c => c.items.length > 0)
 
   return (
-    <AdminShell activo="empresa" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje}>
-      <h1 className="mb-4 text-2xl">Documentación de empresa</h1>
+    <Page titulo="Documentación de empresa" ancho="formulario">
 
-      <section className="mb-6 rounded-card border border-line bg-card p-4">
+      <Card as="section" className="mb-6">
         <h2 className="mb-3 text-base font-semibold">Subir documento</h2>
         <form onSubmit={subirDoc} className="grid grid-cols-1 gap-3">
           <div className="flex min-w-0 flex-wrap gap-2">
@@ -93,28 +93,27 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
           </div>
           {docMsg && <p className={`text-sm ${docMsg.startsWith('Error') ? 'text-alert' : 'text-ok'}`}>{docMsg}</p>}
         </form>
-      </section>
+      </Card>
 
       {porCategoria.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
           {porCategoria.map(cat => (
-            <section key={cat.id} className="rounded-card border border-line bg-card p-4">
+            <Card as="section" key={cat.id}>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">{cat.label}</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
+              <Tabla>
                   <tbody>
                     {cat.items.map(d => (
                       <tr key={d.id} className="border-b border-line/50 last:border-0 hover:bg-paper-2/50">
-                        <td className="py-2 pr-3">
+                        <td className="px-3 py-2.5">
                           {d.url
                             ? <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-accent no-underline hover:underline">{d.nombre}</a>
                             : <span>{d.nombre}</span>}
                           {d.anio && <span className="ml-1 text-xs text-ink-3">{sufijoPeriodo(d.anio, d.mes)}</span>}
                         </td>
-                        <td className="py-2 pr-3 text-xs text-ink-3 hidden sm:table-cell whitespace-nowrap">
+                        <td data-label="Fecha" className="px-3 py-2.5 text-xs tabular-nums text-ink-3 whitespace-nowrap">
                           {new Date(d.subido_at).toLocaleDateString('es-ES')}
                         </td>
-                        <td className="py-2 text-right">
+                        <td className="px-3 py-2.5 text-right">
                           <div className="flex items-center justify-end gap-1">
                             {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="rounded px-2 py-0.5 text-xs bg-paper-2 text-ink-2 hover:bg-line no-underline">Descargar</a>}
                             <button onClick={() => borrarDoc(d.id, d.nombre)} className="px-2 py-0.5 text-xs text-alert bg-paper-2 hover:bg-line">🗑️</button>
@@ -123,14 +122,13 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
-            </section>
+              </Tabla>
+            </Card>
           ))}
         </div>
       ) : (
         <p className="text-sm text-ink-3">Sin documentos. Sube el primero con el formulario de arriba.</p>
       )}
-    </AdminShell>
+    </Page>
   )
 }

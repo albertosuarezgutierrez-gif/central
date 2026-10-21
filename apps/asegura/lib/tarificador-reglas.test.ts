@@ -326,7 +326,7 @@ test('registrarResultado: una exploración no devuelve ofertas, solo ella termin
   const f = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
   assert.match(f, /if \(deExploracion && r\.tipo === 'ok'\) return \{ res: \{ estado: 'conflicto'/)
   assert.match(f, /if \(!deExploracion && r\.tipo === 'explorado'\) return \{ res: \{ estado: 'conflicto'/)
-  assert.match(f, /const evidencia = deExploracion \|\| deHumo \? null : \{ trabajo: t, captura: r\.captura, html: r\.html \}/)
+  assert.match(f, /const evidencia = deExploracion \|\| deHumo \? null : \{ trabajo: t, captura: r\.captura, capturaConDatos: r\.capturaConDatos, html: r\.html \}/)
   // La cola filtra por modo (la exploración solo con su interruptor) y el worker declara lo que sabe hacer.
   assert.match(f, /and coalesce\(to_jsonb\(w\)->>'modo', 'tarificar'\) = any\(\$\{\[\.\.\.modos\]\}::text\[\]\)/)
   assert.match(f, /reclamarSiguiente\(correduriaId, compania, modosReclamables\(deps\.env\)\)/)
@@ -400,6 +400,7 @@ const RIESGO_MOTO = {
   ramo: 'moto', matricula: '0000BBB', codigoPostal: '41003',
   conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'hombre' },
   tomadorEsConductor: true, aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0,
+  fechaAdquisicion: '2016-01-02', // Allianz moto 0.7.11: lo único que pide sin seguro anterior
   seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 },
 }
 const noLeer = () => { throw new Error('no debería leer la ficha') }
@@ -458,7 +459,10 @@ test('NIF Mapfre · ENCOLAR: el riesgo que se guarda NUNCA lleva el documento (n
   // Un `documentoTomador` que venga en la entrada tampoco se guarda (es el campo que pone asegura al entregar).
   const trae = riesgoParaEncolar('mapfre', 'moto', { ...RIESGO_MOTO, documentoTomador: 'X0000000T' }, () => ({ estado: 'ok', documento: NIF }), datosOk)
   assert.ok(trae.ok && !JSON.stringify(trae.riesgo).includes('0000000T'))
-  assert.deepEqual(riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }, noLeer, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+  // Allianz moto con tomador = conductor exige el NIF (bot 0.7.5+): se juzga contra la FICHA (en memoria); lo guardado sigue SIN documento.
+  const conFicha = riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }, noLeer, noLeer, undefined, () => ({ tipo: 'fisica', documento: NIF, codigoPostal: null, localidad: null, direccion: null, fechaNacimiento: null, fechaCarnet: null, tipoCarnet: null }))
+  assert.deepEqual(conFicha, { ok: true, riesgo: RIESGO_MOTO })
+  assert.ok(!JSON.stringify(conFicha).includes('00000000') && !JSON.stringify(conFicha).includes('fichaTomador'), 'el riesgo guardado no lleva documento ni fichaTomador')
   assert.deepEqual(riesgoSinNifTomador({ a: 1, documentoTomador: NIF }), { a: 1 })
   assert.equal(riesgoSinNifTomador(null), null)
 })
@@ -566,7 +570,9 @@ test('Datos tomador: encolarTrabajo los COMPRUEBA (leerTomadorFicha) y trabajoPa
   assert.match(fn, /leerTomadorFicha\(e\.correduriaId, clienteId\)/)
   // `riesgoEntrada` (18/10/2026) = el riesgo de la petición, con el vehículo encadenado de Generali si toca (tarificador-espera-vehiculo.ts).
   // 19/10/2026: + el tomador de Hogar (DNI/NIE y nacimiento de la ficha) como 6.º argumento.
-  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, riesgoEntrada, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\), \(\) => lecturaTomadorHogar\(fichaHogar, decryptField\)\)/)
+  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, riesgoEntrada, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\), \(\) => lecturaTomadorHogar\(fichaHogar, decryptField\), \(\) => fichaTomadorAutoDeFicha\(filaFichaAuto, decryptField, e\.ramo\)\)/)
+  // 20/10/2026: + la ficha de Allianz auto/moto (7.º argumento) para juzgar los obligatorios de origen ficha; solo en memoria.
+  assert.match(fn, /necesitaFichaTomador\(e\.compania, e\.ramo\) \? await leerFichaTomadorAuto\(e\.correduriaId, clienteId\)/)
   assert.match(fn, /let riesgoEntrada: RiesgoComunidad \| FormularioAuto \| FormularioHogarSinTomador = e\.riesgo\n/)
   assert.ok(!fn.includes('aplicarDatosTomador('), 'encolar NO inyecta (eso es al entregar)')
   assert.match(src, /from seguros\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid and merged_into_cliente_id is null`\n  const f = filas\[0\]/)
@@ -631,20 +637,53 @@ test('Obligatorios · validarEntradaRamo con compañía: rechaza con la lista le
   // Sin compañía: solo la forma (como antes). NIF y datos del tomador (ficha) no se miran aquí.
   assert.equal(validarEntradaRamo('auto', sinNada).ok, true)
   // Allianz moto: el sexo lo pone asegura del Sr./Sra. de la ficha al encolar → aquí (sin ficha) no se pide.
-  assert.equal(validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz').ok, true)
+  // 0.7.11: Allianz moto pide también el seguro anterior y la fecha de adquisición. Desde el 20/10/2026 `FormularioAuto` lleva
+  // `fotocopiaAnterior` y `fechaAdquisicion` (y `polizaAnteriorUltimos5`): el riesgo validado las CONSERVA y no falta nada.
+  const datosAnt = { companiaAnterior: 'COMPAÑÍA DE PRUEBA', polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio', fechaAdquisicion: '2016-01-02' }
+  const conAnt = validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null }, ...datosAnt }, 'allianz')
+  assert.ok(conAnt.ok, 'con los cuatro datos Allianz moto ya puede llegar a precio')
+  if (conAnt.ok) {
+    const r = conAnt.entrada.riesgo as unknown as Record<string, unknown>
+    assert.deepEqual([r.polizaAnteriorUltimos5, r.fotocopiaAnterior, r.fechaAdquisicion], ['00000', 'proximo_anio', '2016-01-02'])
+  }
+  // Un justificante fuera del enum o una fecha de adquisición futura se rechazan con la forma, no con «falta».
+  assert.ok(!validarEntradaRamo('moto', { ...MOTO, ...datosAnt, fotocopiaAnterior: 'otro' }, 'allianz').ok)
+  assert.ok(!validarEntradaRamo('moto', { ...MOTO, ...datosAnt, fechaAdquisicion: '2999-01-01' }, 'allianz').ok)
+  const sinAnt = validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz')
+  assert.ok(!sinAnt.ok)
+  if (!sinAnt.ok) assert.deepEqual(sinAnt.faltan?.map((f) => f.clave), ['companiaAnterior', 'polizaAnteriorUltimos5', 'fotocopiaAnterior', 'fechaAdquisicion'])
+  // Sin seguro anterior solo falta la fecha de adquisición.
+  const cero = validarEntradaRamo('moto', { ...MOTO, aniosAseguradoAnterior: 0, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz')
+  assert.ok(!cero.ok && cero.faltan?.map((f) => f.clave).join() === 'fechaAdquisicion')
   // Compañía sin declaración: aquí no se rechaza (lo hace riesgoParaEncolar).
   assert.equal(validarEntradaRamo('moto', MOTO, 'generali').ok, true)
 })
 
 test('Obligatorios · riesgoParaEncolar: falta algo → 422 `faltan_datos` con la lista; sin declaración → fail-closed; sin valores en el motivo', () => {
   // Sin sexo (ni Sr./Sra. en la ficha) falta; los años vacíos ya NO (supuesto favorable, 18/10/2026).
-  const r = riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, conductor: { ...RIESGO_MOTO.conductor, sexo: null }, aniosAseguradoAnterior: null }, noLeer, noLeer)
+  // La ficha trae NIF (si no, faltaría también `documentoTomador`: caso aparte más abajo), así que aquí solo falta el sexo.
+  const fichaConNif = () => ({ tipo: 'fisica' as const, documento: NIF, codigoPostal: null, localidad: null, direccion: null, fechaNacimiento: null, fechaCarnet: null, tipoCarnet: null })
+  const r = riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, conductor: { ...RIESGO_MOTO.conductor, sexo: null }, aniosAseguradoAnterior: null, companiaAnterior: 'COMPAÑÍA DE PRUEBA', polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio' }, noLeer, noLeer, undefined, fichaConNif)
   assert.ok(!r.ok && r.status === 422)
   if (!r.ok) {
     assert.equal(r.motivo, 'faltan_datos: Falta: sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha).')
     assert.deepEqual(r.faltan?.map((f) => f.clave), ['conductor.sexo'])
     assert.ok(!JSON.stringify(r).includes('0000BBB'))
   }
+  // Allianz moto, tomador = conductor y la ficha SIN NIF (o sin poder leerla): falta el NIF del tomador, con mensaje claro y sin valores.
+  for (const leer of [() => null, () => ({ ...fichaConNif(), documento: null })]) {
+    const sinNif = riesgoParaEncolar('allianz', 'moto', RIESGO_MOTO, noLeer, noLeer, undefined, leer)
+    assert.ok(!sinNif.ok && sinNif.status === 422)
+    if (!sinNif.ok) {
+      assert.match(sinNif.motivo, /^faltan_datos: Falta: NIF\/CIF del tomador/)
+      assert.deepEqual(sinNif.faltan?.map((f) => f.clave), ['documentoTomador'])
+    }
+  }
+  // Tomador que no es conductor ni propietario: el NIF no se exige (y no hace falta ni leer la ficha).
+  assert.ok(riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, tomadorEsConductor: false, tomadorEsPropietario: false }, noLeer, noLeer).ok)
+  // Cepo del invariante: el NIF de la ficha se aplica EN MEMORIA y no acaba en lo guardado.
+  const okFicha = riesgoParaEncolar('allianz', 'moto', RIESGO_MOTO, noLeer, noLeer, undefined, fichaConNif)
+  assert.ok(okFicha.ok && !JSON.stringify(okFicha.riesgo).includes('00000000') && !('fichaTomador' in (okFicha.riesgo as object)))
   const sinBot = riesgoParaEncolar('generali', 'moto', RIESGO_MOTO, noLeer, noLeer)
   assert.ok(!sinBot.ok && sinBot.status === 422 && sinBot.motivo.startsWith('sin_obligatorios_declarados: generali/moto'))
   // Mapfre: se evalúa con la ficha aplicada EN MEMORIA (NIF + datos) y lo guardado sigue SIN ellos.

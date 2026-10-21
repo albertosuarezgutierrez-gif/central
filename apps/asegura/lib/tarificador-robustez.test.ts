@@ -58,7 +58,7 @@ test('atascado HUÉRFANO (trabajo real 39c8016e, 15/10/2026): el barrido cierra 
   assert.ok(cad.indexOf("'huerfano'") < cad.indexOf('const vencidos'), 'los huérfanos se cierran en el mismo barrido')
   assert.match(cad, /purgarRiesgoTrabajos\(tx, \[h\.id\]\)\s+await evaluarCorte\(tx, h\.id\)/, 'el huérfano cerrado purga su riesgo y cuenta para el corte')
   const mf = tramo(leer('lib/tarificador.ts'), 'async function marcarFallo(', '// ─── Barrido')
-  assert.match(mf, /const marcaAtasco = atasco \? \{ atasco: 'esperando', atascoClave: atasco\.clave \} : \{\}/, 'el error de un atascado no dice que espera elección')
+  assert.match(mf, /const marcaAtasco = atasco \? \{ atasco: 'esperando', atascoClave: atasco\.clave, \.\.\.opcionesAtasco \} : \{\}/, 'el error de un atascado no dice que espera elección')
   assert.match(mf, /JSON\.stringify\(\{ \.\.\.error, \.\.\.marcaAtasco,/, 'la marca no llega al error jsonb')
 })
 
@@ -104,7 +104,7 @@ test('guardarAtasco cierra el atasco esperando anterior del mismo trabajo antes 
   assert.match(h, /update \w+\.tarificador_atascos[\s\S]*?set estado = 'descartado'[\s\S]*?where trabajo_id = \$\{trabajoId\}::uuid and estado = 'esperando'/, 'el helper no cierra los esperando')
   const l = tramo(src, 'export async function listarAtascos', '/** Marca como avisados')
   assert.match(l, /capturaDentroDeTope\(/)
-  assert.match(src, /cabeCapturaEnRespuesta\(usado, b64\.length\)/)
+  assert.match(src, /cabeCapturaEnRespuesta\(usado, c\.b64\.length\)/)
 })
 
 test('sqlSinPausa: los fragmentos SQL vienen de @prisma/client (el del `prisma` de ./tenant), no del cliente generado de asegura', () => {

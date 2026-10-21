@@ -336,10 +336,36 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   const endpoints = [...bloque![1].matchAll(/endpoints: Object\.freeze\(\[([^\]]*)\]\)/g)].map((m) => m[1].trim())
   assert.deepEqual(endpoints, ["'https://www.e-pacallianz.com/drpc18/riesgoMunicipio/control.do'", "'https://www.e-pacallianz.com/drpc18/datosBasicos/control.do'"])
   assert.ok(!/tarifa\/control|MotoServlet|contract|store|emit/i.test(endpoints.join(' ')), 'ningún destino de Tarificar/emisión en la lista blanca de red')
+  // 1b. Validaciones AJAX del avance (Moto 0.7.7): SOLO la lista negra del NIF y SOLO en td#datosBasicos.
+  const ajax = [...bloque![1].matchAll(/ajaxValidacion: Object\.freeze\(\[([^\]]*)\]/g)].map((m) => m[1].trim())
+  assert.deepEqual(ajax, ['AJAX_LISTA_NEGRA_NIF_ALLIANZ, ...AJAX_LECTURA_ALLIANZ', '...AJAX_LECTURA_ALLIANZ'], 'ajaxValidacion: lista negra del NIF solo en td#datosBasicos; lecturas (ayuda) en ambos')
+  const lectura = guard.match(/export const AJAX_LECTURA_ALLIANZ[^\n]*Object\.freeze\(\[([^\]]*)\]\)/)
+  assert.ok(lectura, 'falta AJAX_LECTURA_ALLIANZ')
+  assert.equal(lectura![1].trim(), 'AJAX_AYUDA_APLICACIONES_ALLIANZ', 'lista de lectura: solo la ayuda de aplicaciones')
+  const ayuda = guard.match(/export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object\.freeze\(\{([\s\S]*?)\n\}\)/)
+  assert.ok(ayuda, 'falta AJAX_AYUDA_APLICACIONES_ALLIANZ')
+  assert.match(ayuda![1], /resource: 'com\.ats\.sea\.visuals\.util\.AyudaAplicacionesAjax',/)
+  assert.ok(!/contract|store|emit|grab|aceptar|alta|poliza|pago|firma/i.test(ayuda![1]), 'la ayuda no puede llevar nada de emisión/grabación')
+  assert.ok(ayuda![1].includes('valorCuerpo: /^[A-Za-z0-9_.:$-]{0,64}$/'), 'la ayuda admite «$» (PAGEID real `datosBasicos$datosBasicos`) y nada más allá de [A-Za-z0-9_.:$-]')
+  assert.match(guard, /export function motivoAjaxRechazado\(/, 'el diagnóstico del AJAX rechazado existe')
+  assert.match(guard, /\[motivo: \$\{motivo\}\]/, 'el mensaje del guard lleva el motivo del AJAX rechazado')
+  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.20' : '0\.6\.18'/, 'versión Allianz moto 0.7.20')
+  // 20/10/2026 (trabajo real 6cd26c10, 0.7.11): Datos básicos de Moto rellena compañía/póliza/justificante del seguro anterior y la fecha de
+  // adquisición, y los huecos de datos paran ANTES del login (nunca se inventa); el carné se comprueba contra los 18 años antes de abrir el portal.
+  const autoMoto = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'))
+  assert.match(autoMoto, /planDatosBasicosMoto\(form\)\s*\n\s*exigirDatosPortalMoto\(form\)[\s\S]*?await login\(page, ctx\)/, 'exigirDatosPortalMoto va ANTES del login en tarificarMoto')
+  assert.match(autoMoto, /await rellenarDatosBasicosMoto\(datos, form, page, ctx\)/, 'Datos básicos recibe page y ctx (capa común de la compañía de origen)')
+  assert.match(autoMoto, /exigirCarneCoherente\(form\)\n\s*const f = conAntecedentesFavorables/, 'el plan de Datos básicos comprueba el carné antes de nada')
+  assert.match(autoMoto, /sugerirOpcion\(ctx\.formador, \{\s*clave: 'elegir_opcion_compania_origen'/, 'la compañía de origen usa la IA solo como ÍNDICE entre opciones visibles')
+  const listaNegra = guard.match(/export const AJAX_LISTA_NEGRA_NIF_ALLIANZ: AjaxValidacionAvance = Object\.freeze\(\{([\s\S]*?)\n\}\)/)
+  assert.ok(listaNegra, 'falta AJAX_LISTA_NEGRA_NIF_ALLIANZ')
+  assert.match(listaNegra![1], /endpoint: 'https:\/\/www\.e-pacallianz\.com\/drpc18\/AJAXServlet',\n\s*resource: 'pt\.allianz\.clientes\.negocio\.BlackListOperationsAjax',/)
+  assert.match(listaNegra![1], /cuerpo: Object\.freeze\(\['idNumberBL'\]\)/)
+  assert.ok(!/contract|store|emit|grab|aceptar|alta|poliza/i.test(listaNegra![1]), 'nada de emisión/grabación en la validación AJAX')
   // 2. La función: lista blanca (hasOwn) + comprobarBoton + pantalla de origen ANTES de abrir la ventana; un clic; finally cierra.
   const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarAvancePestanaAutorizado'))
   assert.ok(fn, 'falta pulsarAvancePestanaAutorizado en guard.ts')
-  const abrir = fn!.indexOf('abrir(hasta, regla.endpoints)')
+  const abrir = fn!.indexOf('abrir(hasta, regla.endpoints, regla.ajaxValidacion)')
   const clic = fn!.indexOf('.click(')
   for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'Object.hasOwn(AVANCES_PESTANA_AUTORIZADOS, selector)', 'aceptar_onclick', 'comprobarBoton(desc, { permitirAceptar: true })', 'regla.formOrigen']) {
     const i = fn!.indexOf(paso)
@@ -353,7 +379,8 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.ok(!/\.accept\(/.test(fn!) && /d\.dismiss\(\)/.test(fn!), 'los diálogos del portal se descartan, nunca se aceptan')
   // 3. El guard de red: capa (a) patrón de emisión en query y cuerpo; capa (b) destinos no GET en lista blanca.
   assert.match(guard, /const enLista = av !== null && destinoAvancePermitido\(url, av\.endpoints\)\n[\s\S]{0,400}?const op = \{ permitirAceptar: fases\.aceptarEnVuelo\(\) \|\| enLista, permitirGuardarPresupuesto: enGuardado \}/, 'capa (a): «aceptar» permitido SOLO hacia un destino de la lista blanca')
-  assert.match(guard, /if \(av && noGet && !enLista\)/, 'capa (b): todo no-GET fuera de la lista blanca se aborta')
+  assert.match(guard, /const enAjaxValidacion = av !== null && noGet && ajaxValidacionAvancePermitida\(req\.method\(\), url, cuerpoDe\(req\), av\.ajax\)\n\s*if \(av && noGet && !enLista && !enAjaxValidacion\)/, 'capa (b): todo no-GET fuera de la lista blanca (o de la validación AJAX declarada) se aborta')
+  assert.ok(!/permitirAceptar:[^\n]*enAjaxValidacion/.test(guard), 'la validación AJAX nunca relaja la capa (a)')
   assert.match(guard, /&& Date\.now\(\) < ventanaHasta && av === null && gv === null\)/, 'la ventana de emisión no vale con el avance ni con el guardado abiertos')
   // 4. Solo el runner la enchufa y solo auto.ts la usa, con los dos selectores literales; Moto con flag PROPIO y apagado.
   const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
@@ -379,9 +406,9 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.ok(!/validarRiesgoComunidad/.test(runner), 'el runner ya no valida con el de Comunidades a pelo')
 })
 
-test('Allianz HOGAR (14/10/2026): flag propio APAGADO, registro solo bajo el flag, hogar validado con su formulario y sin puertas de avance/guardado', () => {
+test('Allianz HOGAR (14/10/2026; encendido por Alberto 21/10/2026): flag propio, registro solo bajo el flag, hogar validado con su formulario y sin puertas de avance/guardado', () => {
   const hogar = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/hogar.ts'), 'utf8'))
-  assert.match(hogar, /^export const ALLIANZ_HOGAR_ACTIVO = false$/m, 'Allianz Hogar nace APAGADO (lo enciende Alberto)')
+  assert.match(hogar, /^export const ALLIANZ_HOGAR_ACTIVO = true$/m, 'Allianz Hogar ENCENDIDO por Alberto (21/10/2026); apagarlo es volver a false')
   // Solo `ctx.pulsar`: ni el avance autorizado (Aceptar), ni guardar/emitir, ni la pestaña de Moto.
   assert.ok(!/pulsarExploracionAutorizada|avanzarPestanaAutorizada|avanzarATarificar|pulsarGuardado|pulsarEmision|abrirProyecto/.test(hogar), 'Hogar no usa puertas de avance/guardado/emisión')
   const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
@@ -389,6 +416,19 @@ test('Allianz HOGAR (14/10/2026): flag propio APAGADO, registro solo bajo el fla
   assert.equal((idx.match(/allianzHogar/g) ?? []).length, 2, 'allianzHogar: un import y un registro condicionado')
   const ramo = sinComentarios(readFileSync(join(SRV, 'src/ramo.ts'), 'utf8'))
   assert.match(ramo, /case 'hogar':[\s\S]*?validarFormularioHogar\(crudo, hoy\)/, 'hogar se valida con validarFormularioHogar')
+})
+
+test('Mapfre HOGAR (21/10/2026): flag APAGADO, registro solo bajo el flag y asegura solo lo abre con el interruptor (lista cerrada, sin Occident)', () => {
+  const m = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/hogar.ts'), 'utf8'))
+  assert.match(m, /^export const MAPFRE_HOGAR_ACTIVO = false$/m, 'Mapfre Hogar nace APAGADO (lo enciende Alberto)')
+  assert.ok(!/pulsarExploracionAutorizada|avanzarPestanaAutorizada|pulsarGuardado|pulsarEmision|IMPRIMIR/.test(m), 'Mapfre Hogar no usa puertas de avance/guardado/emisión ni imprime')
+  const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
+  assert.match(idx, /^if \(MAPFRE_HOGAR_ACTIVO\) adaptadores\.registrar\(mapfreHogar\)$/m, 'mapfreHogar se registra SOLO con `if (MAPFRE_HOGAR_ACTIVO)`')
+  assert.ok(!/occidentHogar/.test(idx), 'Occident Hogar sigue SIN registrar (aparcado)')
+  const reglas = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador-reglas.ts'), 'utf8'))
+  assert.match(reglas, /export const COMPANIAS_HOGAR_RPA_CON_INTERRUPTOR = \['mapfre'\] as const/, 'el interruptor solo puede abrir Mapfre (Occident: su fila está activa para explorar)')
+  assert.match(reglas, /export const ENV_HOGAR_COMPANIAS_EXTRA = 'TARIFICADOR_HOGAR_COMPANIAS_EXTRA'/)
+  assert.match(reglas, /\.filter\(\(c\) => \(COMPANIAS_HOGAR_RPA_CON_INTERRUPTOR as readonly string\[\]\)\.includes\(c\)\)/, 'el env se filtra contra la lista cerrada')
 })
 
 /** Infracciones del EXPLORADOR IA del worker (fase B, 13/10/2026). Exportada en el test para verla FALLAR. */
@@ -696,7 +736,13 @@ test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactad
   const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
   assert.match(runner, /const secretosRiesgo = secretosDelRiesgo\(trabajo\.riesgo\)/)
   assert.match(runner, /const secretos = \[\.\.\.secretosDelEntorno\(env\), \.\.\.secretosRiesgo\]/)
-  assert.match(runner, /evidencia\.captura && secretosRiesgo\.length === 0 &&/, 'con NIF en el riesgo no viaja la captura (una imagen no se redacta)')
+  // 21/10/2026 (Alberto): con datos personales SOLO viaja la captura JPEG de un ATASCO/HUECO, marcada `capturaConDatos` (asegura no
+  // la manda a Telegram); el PNG genérico de un fallo sigue sin viajar. La regla vive en `capturaParaCable` (opciones-atasco.ts).
+  assert.match(runner, /capturaParaCable\(\{ png: evidencia\.captura, jpegAtasco: evidencia\.capturaAtasco, hayDatosPersonales: secretosRiesgo\.length > 0,/, 'la captura pasa por capturaParaCable con los secretos del riesgo')
+  assert.match(runner, /cap\.conDatos \? \{ capturaConDatos: true as const \}/, 'la captura con datos viaja MARCADA')
+  const op = sinComentarios(readFileSync(join(SRV, 'src/opciones-atasco.ts'), 'utf8'))
+  assert.match(op, /if \(o\.png && !o\.hayDatosPersonales &&/, 'con NIF en el riesgo no viaja el PNG genérico (una imagen no se redacta)')
+  assert.match(op, /return \{ base64: o\.jpegAtasco\.toString\('base64'\), conDatos: true \}/, 'el JPEG del atasco lleva SIEMPRE la marca de datos (fail-closed)')
   const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
   assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
 })

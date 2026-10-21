@@ -16,15 +16,29 @@
  *    el caso normal (persona + su empresa) se pintara con cabeceras sin motivo. Si la empresa tiene
  *    carnés (dato raro), sí cuenta: esconderlos sería decir «no hay» de algo que sí hay.
  *  - `nombrar` = hay más de un titular: entonces cada carné lleva el nombre; con uno, igual que siempre.
+ *  - 🔒 La fecha de EXPEDICIÓN (21/10/2026) cruza el puente SOLO para las fichas de `fichasConExpedicion`
+ *    (`fichasQueVenExpedicion`): las que la identidad tiene con vínculo `gestionar`/`administrar`. Hoy coincide
+ *    con las legibles (la misma puerta), pero se decide aparte y FAIL-CLOSED: si mañana se leen carnés con
+ *    otro nivel, la expedición (que sirve para verificar el dato y deducir la edad) no se va con ellos. Sin el
+ *    conjunto, no sale ninguna.
+ *  - `fechaCaducidad: null` = hay carné pero no se puede calcular (falta la fecha de nacimiento de la ficha):
+ *    el portal lo dice, no lo esconde ni lo da por «sin carné».
  */
 
 import { NIVELES_QUE_OPERAN } from './ficha-de-poliza.ts'
 
 export type FichaTitular = { id: string; nombre: string; tipoPersona: string | null }
 
-export type CarnetDeFicha = { clienteId: string; id: string; tipo: string; fechaCaducidad: string }
+export type CarnetDeFicha = {
+  clienteId: string
+  id: string
+  tipo: string
+  fechaCaducidad: string | null
+  /** `aaaa-mm-dd` descifrada, o `null` si no es una fecha legible. Solo cruza el puente si la ficha la permite. */
+  fechaExpedicion?: string | null
+}
 
-export type CarnetPortal = { id: string; tipo: string; fechaCaducidad: string }
+export type CarnetPortal = { id: string; tipo: string; fechaCaducidad: string | null; fechaExpedicion?: string | null }
 
 export type TitularCarnets = { fichaId: string; nombre: string; carnets: CarnetPortal[] }
 
@@ -45,12 +59,33 @@ export function fichasLegiblesDeCarnets(vinculos: readonly { clienteId: string; 
 }
 
 /**
+ * Las fichas cuya fecha de expedición puede ver esta identidad: vínculo que OPERA (`gestionar`/`administrar`,
+ * o sea, el titular o quien actúa con plenos poderes sobre su ficha). `tarjeta`, `completo` o un nivel
+ * desconocido → no. Misma lista que `fichasLegiblesDeCarnets`, por separado a propósito (ver cabecera).
+ */
+export function fichasQueVenExpedicion(vinculos: readonly { clienteId: string; nivel: string }[]): Set<string> {
+  return new Set(fichasLegiblesDeCarnets(vinculos))
+}
+
+/** Solo una fecha `aaaa-mm-dd` real cruza el puente; cualquier otra cosa es «no consta». */
+export function expedicionParaPortal(raw: string | null | undefined): string | null {
+  if (typeof raw !== 'string') return null
+  const t = raw.trim()
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t)
+  if (!m) return null
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  return d.toISOString().slice(0, 10) === t ? t : null
+}
+
+/**
  * Agrupa los carnés por su ficha dueña. Orden: el de `fichas` (el llamador las pasa ordenadas); dentro de
  * cada titular, por fecha de caducidad (la más cercana primero) y luego por tipo, para que sea estable.
  */
 export function agruparCarnetsPorTitular(
   fichas: readonly FichaTitular[],
   carnets: readonly CarnetDeFicha[],
+  /** Fichas de las que se puede enseñar la expedición. Ausente = de ninguna (fail-closed). */
+  fichasConExpedicion: ReadonlySet<string> = new Set(),
 ): TitularCarnets[] {
   const porFicha = new Map<string, CarnetPortal[]>()
   for (const f of fichas) {
@@ -60,7 +95,13 @@ export function agruparCarnetsPorTitular(
   for (const c of carnets) {
     const lista = porFicha.get(limpio(c.clienteId))
     if (!lista) continue // dueño fuera de las fichas leídas: no se cuelga de nadie
-    lista.push({ id: c.id, tipo: c.tipo, fechaCaducidad: c.fechaCaducidad })
+    const expedicion = fichasConExpedicion.has(limpio(c.clienteId)) ? expedicionParaPortal(c.fechaExpedicion) : null
+    lista.push({
+      id: c.id,
+      tipo: c.tipo,
+      fechaCaducidad: c.fechaCaducidad,
+      ...(fichasConExpedicion.has(limpio(c.clienteId)) ? { fechaExpedicion: expedicion } : {}),
+    })
   }
   const vistos = new Set<string>()
   const titulares: TitularCarnets[] = []
@@ -70,7 +111,8 @@ export function agruparCarnetsPorTitular(
     vistos.add(id)
     const lista = porFicha.get(id) ?? []
     if (f.tipoPersona === 'juridica' && lista.length === 0) continue
-    lista.sort((a, b) => a.fechaCaducidad.localeCompare(b.fechaCaducidad) || a.tipo.localeCompare(b.tipo))
+    // Sin caducidad calculable (`null`) al final: lo más urgente primero, lo que no se sabe después.
+    lista.sort((a, b) => (a.fechaCaducidad ?? '9999-12-31').localeCompare(b.fechaCaducidad ?? '9999-12-31') || a.tipo.localeCompare(b.tipo))
     titulares.push({ fichaId: id, nombre: f.nombre.trim(), carnets: lista })
   }
   return titulares

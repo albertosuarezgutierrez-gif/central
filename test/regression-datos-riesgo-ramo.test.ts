@@ -40,7 +40,10 @@ for (const x of PANTALLAS) {
 
 test('🪤 hogar: el buscador (GET) no pierde la oportunidad al ir de la dirección a la referencia', () => {
   const page = activas(leer(join(CORR, 'cliente/[id]/hogar-nuevo/page.tsx')))
-  assert.equal((page.match(/<input type="hidden" name="oportunidad"/g) ?? []).length, 2, 'los dos formularios de búsqueda la llevan')
+  // Referencia: el formulario de la propia página. Dirección: el buscador con CP primero (`BuscadorDireccionCp`), que recibe `oportunidad` y la pone en su GET.
+  const buscadorDireccion = activas(leer(join(CORR, 'BuscadorDireccionCp.tsx')))
+  assert.equal((page.match(/<input type="hidden" name="oportunidad"/g) ?? []).length + (buscadorDireccion.match(/<input type="hidden" name="oportunidad"/g) ?? []).length, 2, 'los dos formularios de búsqueda la llevan')
+  assert.match(page, /<BuscadorDireccionCp accion=\{accion\} oportunidad=\{oportunidad\}/, 'la dirección recibe la oportunidad')
   assert.match(page, /conOportunidad\(\{ referencia: i\.refCompleta \}\)/)
   assert.match(page, /conOportunidad\(\{ direccion: c\.direccion, municipio, provincia \}\)/)
   assert.match(page, /vivienda\?\.referenciaCatastral/, 'la referencia anotada en el riesgo se usa si la URL no trae otra')

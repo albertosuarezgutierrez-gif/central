@@ -78,3 +78,32 @@ export function caducidadCarnet(entrada: {
     esTramoMayor,
   }
 }
+
+/**
+ * Inversa de `caducidadCarnet`: dada la fecha de CADUCIDAD (la del anverso del carné), el nacimiento y el tipo,
+ * devuelve la fecha de expedición/última renovación (`YYYY-MM-DD`) que, pasada por `caducidadCarnet`, da
+ * exactamente esa caducidad.
+ *
+ * Prueba cada plazo posible del tipo (coche/moto 10 y 5; profesional 5 y 3), resta el plazo y VERIFICA por ida
+ * y vuelta (el tramo de edad se decide con la edad en la expedición, y un 29 de febrero puede no existir).
+ * `null` si falta o es inválido algún dato, si ningún plazo cuadra o si cuadra más de uno (ambiguo: no se
+ * adivina). Nunca se inventa la expedición.
+ */
+export function expedicionDesdeCaducidad(entrada: {
+  fechaCaducidad: string | null | undefined
+  fechaNacimiento: string | null | undefined
+  tipo: string | null | undefined
+}): string | null {
+  const caducidad = fechaUtc(entrada.fechaCaducidad)
+  if (!caducidad || !fechaUtc(entrada.fechaNacimiento)) return null
+  const diaCaducidad = caducidad.toISOString().slice(0, 10)
+  const profesional = typeof entrada.tipo === 'string' && TIPOS_PROFESIONALES.has(entrada.tipo.trim().toUpperCase())
+  const plazos = profesional ? [5, 3] : [10, 5]
+  const validas = new Set<string>()
+  for (const plazo of plazos) {
+    const exp = sumarAnios(caducidad, -plazo).toISOString().slice(0, 10)
+    const ida = caducidadCarnet({ fechaCarnet: exp, fechaNacimiento: entrada.fechaNacimiento, tipo: entrada.tipo })
+    if (ida && ida.fechaCaducidad === diaCaducidad && ida.plazoAnios === plazo) validas.add(exp)
+  }
+  return validas.size === 1 ? [...validas][0]! : null
+}

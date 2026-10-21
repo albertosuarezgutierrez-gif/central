@@ -9,6 +9,7 @@
 // al encolar y los inyecta al entregar el trabajo. Los avisos dicen QUÉ falta, jamás el valor.
 import {
   REGIMENES_VIVIENDA, TIPOS_VIVIENDA, USOS_VIVIENDA, claveHogarDeCatalogo, validarFormularioHogarSinTomador,
+  type ObjetosValorHogar, type ProteccionesHogar,
 } from '@central/module-tarificacion'
 import type { CampoDeFicha } from './tarificador-moto-formulario.ts'
 
@@ -43,6 +44,12 @@ export type DatosViviendaBot = {
   referenciaCatastral: string | null
   capitalContinenteEur: number | null
   capitalContenidoEur: number | null
+  /**
+   * Medidas de seguridad y objetos de valor (21/10/2026), de los MISMOS campos de «Datos de la vivienda» (fuente única:
+   * `datosVivienda`, ver `CAMPOS_VIVIENDA_DEL_BOT`). `null` = ninguno consta; dentro, cada campo `null` = no se sabe (nunca «no»).
+   */
+  protecciones: ProteccionesHogar | null
+  objetosValor: ObjetosValorHogar | null
   /** El tomador de la oportunidad es una empresa: el bot de hogar de Allianz solo tarifica personas con DNI/NIE. */
   tomadorEmpresa: boolean
 }
@@ -101,6 +108,9 @@ export function formularioBotHogar(e: EntradaBotHogar, hoy: Date = new Date()): 
   const rc = txt(e.referenciaCatastral)?.replace(/[\s-]/g, '').toUpperCase() ?? null
   const cont = typeof e.capitalContinenteEur === 'number' && e.capitalContinenteEur > 0 ? e.capitalContinenteEur : null
   const cnt = typeof e.capitalContenidoEur === 'number' && e.capitalContenidoEur > 0 ? e.capitalContenidoEur : null
+  // Opcionales de tres estados: solo viajan si algo consta (un bloque todo `null` no se manda: «no se sabe» ≠ «no tiene»).
+  const prot = e.protecciones && Object.values(e.protecciones).some((x) => x !== null) ? e.protecciones : null
+  const valor = e.objetosValor && Object.values(e.objetosValor).some((x) => x !== null) ? e.objetosValor : null
   const riesgo: Record<string, unknown> = {
     ramo: 'hogar',
     inmueble: {
@@ -112,6 +122,7 @@ export function formularioBotHogar(e: EntradaBotHogar, hoy: Date = new Date()): 
     hogar: {
       uso, regimen, tipoVivienda: tipo, conMadera,
       ...(cont !== null ? { capitalContinenteEur: cont } : {}), ...(cnt !== null ? { capitalContenidoEur: cnt } : {}),
+      ...(prot !== null ? { protecciones: prot } : {}), ...(valor !== null ? { objetosValor: valor } : {}),
     },
   }
   // Todo lo que viaja pasa por el MISMO validador que asegura (rangos, caracteres, coherencia de años).
@@ -126,6 +137,19 @@ export function formularioBotHogar(e: EntradaBotHogar, hoy: Date = new Date()): 
 const obj = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null)
+const noNeg = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null)
+const algo = <T extends Record<string, unknown>>(o: T): T | null => (Object.values(o).some((x) => x !== null) ? o : null)
+
+/**
+ * Los campos de `datosVivienda` (module-seguros, `CAMPOS_VIVIENDA`) que lee el bot de hogar. UNA sola fuente de verdad: el bot no
+ * guarda la vivienda en otro sitio; un test comprueba que todos existen en `CAMPOS_VIVIENDA` (renombrar uno allí lo pone en rojo).
+ */
+export const CAMPOS_VIVIENDA_DEL_BOT = [
+  'cp', 'municipio', 'nombreVia', 'numeroVia', 'planta', 'puertaVivienda', 'anioConstruccion', 'anioUltimaReforma', 'metrosCuadrados',
+  'referenciaCatastral', 'capitalContinente', 'capitalContenido', 'puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada',
+  'vigilante', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'tipoVivienda', 'uso', 'ocupacion', 'conMadera',
+] as const
 
 /** Lo mínimo del `Riesgo` (`lib/riesgo-asegura.ts`) que hace falta; estructural para no acoplar el helper al tipo entero. */
 export type RiesgoParaBotsHogar = {
@@ -149,6 +173,8 @@ export function datosViviendaParaBot(r: RiesgoParaBotsHogar): DatosViviendaBot {
     anioConstruccion: num(d?.anioConstruccion), anioReforma: num(d?.anioUltimaReforma), superficieM2: num(d?.metrosCuadrados),
     referenciaCatastral: str(d?.referenciaCatastral),
     capitalContinenteEur: num(d?.capitalContinente), capitalContenidoEur: num(d?.capitalContenido),
+    protecciones: algo({ puertaBlindada: bool(d?.puertaPrincipalBlindada), ventanasSeguridad: bool(d?.ventanasSeguras), urbanizacionCerrada: bool(d?.urbanizacionCerrada), vigilancia: bool(d?.vigilante) }),
+    objetosValor: algo({ joyasCajaFuerteEur: noNeg(d?.joyasEnCajaFuerte), joyasFueraCajaEur: noNeg(d?.joyasFueraDeCaja), objetosValorEur: noNeg(d?.objetosDeValor) }),
     tomadorEmpresa: tomador?.empresa === true,
   }
 }
@@ -193,11 +219,14 @@ export function faltanFichaTomadorParaHogar(r: Pick<RiesgoParaBotsHogar, 'figura
   return out
 }
 
-/** «Falta el DNI/NIE y la fecha de nacimiento en la ficha del tomador…» o `null` si no falta nada (o no se sabe). PURA. */
-export function avisoFichaTomadorParaHogar(faltan: readonly string[] | null): string | null {
+/**
+ * «Falta el DNI/NIE y la fecha de nacimiento en la ficha del tomador…» o `null` si no falta nada (o no se sabe). `bot` = el nombre
+ * del bot que los pide (21/10/2026: también Mapfre Hogar, que los toma igual de la ficha). PURA.
+ */
+export function avisoFichaTomadorParaHogar(faltan: readonly string[] | null, bot = 'Allianz Hogar'): string | null {
   if (!faltan || faltan.length === 0) return null
   const lista = faltan.length === 1 ? faltan[0] : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`
-  return `Falta ${lista} en la ficha del tomador: Allianz Hogar los pide en su primera pantalla y los toma de la ficha. Complétalo en la ficha.`
+  return `Falta ${lista} en la ficha del tomador: ${bot} los pide en su primera pantalla y los toma de la ficha. Complétalo en la ficha.`
 }
 
 /**
@@ -205,7 +234,8 @@ export function avisoFichaTomadorParaHogar(faltan: readonly string[] | null): st
  * (en cualquier nivel) que el navegador haya mandado. El DNI y el nacimiento los lee asegura de la ficha. No muta la entrada.
  */
 export function riesgoHogarSinTomador(riesgo: Record<string, unknown>): Record<string, unknown> {
-  const PROHIBIDA = /^(tomador|dni|nif|nie|documento(identidad)?|fechanacimiento|nacimiento)$/i
+  // 21/10/2026: también `datosTomador` (nombre y apellidos de Mapfre Hogar: los pone asegura desde la ficha, nunca plataforma).
+  const PROHIBIDA = /^(tomador|datostomador|dni|nif|nie|documento(identidad)?|fechanacimiento|nacimiento)$/i
   const limpiar = (v: unknown): unknown => {
     if (Array.isArray(v)) return v.map(limpiar)
     if (v && typeof v === 'object') {

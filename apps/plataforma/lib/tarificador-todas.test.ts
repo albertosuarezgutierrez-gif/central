@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { loteConOk, loteTerminado, ordenEncolado, resumenLote, type FilaLote } from './tarificador-todas.ts'
+import { estadoPrevioDe, textoFilaEncolada, loteConOk, loteTerminado, ordenEncolado, resumenLote, type FilaLote } from './tarificador-todas.ts'
 import { leerEncoladoBot } from './tarificador-moto-formulario.ts'
 
 test('orden: origen del vehículo primero, Generali al final, sin repetidas', () => {
@@ -33,4 +33,13 @@ test('el bloque de bots monta «Pedir precio a todas» con el mismo endpoint y d
   assert.match(src, /<PedirATodas /)
   assert.match(src, /<FilaBot /)
   assert.equal((src.match(/\/api\/correduria\/tarificador\/encolar/g) ?? []).length, 2)
+})
+
+test('duplicado atascado: no se dice «en marcha», se manda a Bots atascados', () => {
+  const f: FilaLote = { compania: 'allianz', estado: 'encolada', trabajoId: 'x', duplicado: true, final: false, ok: false, estadoPrevio: 'atascado' }
+  assert.match(textoFilaEncolada(f as never), /atascado esperando una elección tuya/)
+  assert.match(textoFilaEncolada({ ...f, estadoPrevio: 'pendiente' } as never), /ya había un trabajo en marcha/)
+  assert.match(textoFilaEncolada({ ...f, duplicado: false, estadoPrevio: null } as never), /^encolado/)
+  assert.equal(estadoPrevioDe({ estadoPrevio: 'atascado' }), 'atascado')
+  assert.equal(estadoPrevioDe(null), null)
 })

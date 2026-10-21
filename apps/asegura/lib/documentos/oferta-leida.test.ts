@@ -88,3 +88,13 @@ test('de la fila guardada a la oferta comparable: numeric como texto, garantías
   assert.deepEqual(Object.keys(o.garantias), ['continente'])
   assert.deepEqual(garantiasDeJson(null), {})
 })
+
+test('oferta de coche guardada con claves genéricas: se remapea al LEER y lo sin equivalencia se avisa', () => {
+  const inc = { estado: 'incluida', capital: null, limite: null, franquicia: null, evidencia: null }
+  const o = ofertaNormalizadaDeFila({ id: 'x', rol: 'oferta', compania: 'C', producto: null, primaNeta: null, primaTotal: '300', garantias: { asistencia: inc, rc_general: inc } }, { ramo: 'auto' })
+  assert.deepEqual(Object.keys(o.garantias), ['asistencia_viaje'])
+  assert.match(o.avisos?.[0] ?? '', /rc_general/)
+  // Sin ramo (o con un índice de `.map`), nada cambia.
+  const sin = ofertaNormalizadaDeFila({ id: 'x', rol: 'oferta', compania: 'C', producto: null, primaNeta: null, primaTotal: '300', garantias: { asistencia: inc } }, 0 as never)
+  assert.deepEqual(Object.keys(sin.garantias), ['asistencia'])
+})

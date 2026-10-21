@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  claseMotoPorCilindrada, claveDeCompania, cilindradaDeTexto, completarRiesgoMotoDesdeFicha, formularioBotMoto, leerEncoladoBot,
+  claseMotoPorCilindrada, claveDeCompania, cilindradaDeTexto, completarRiesgoMotoDesdeFicha, adquisicionEsPorDefecto, fechaAdquisicionPorDefecto, formularioBotMoto, polizaAnteriorUltimos5PorDefecto, leerEncoladoBot,
   mensajeFaltanDeFicha, type EntradaBotMoto, type FichaParaBot,
 } from './tarificador-moto-formulario.ts'
 
@@ -26,6 +26,39 @@ const faltan = (e: EntradaBotMoto) => {
   assert.equal(r.ok, false)
   return (r as Extract<typeof r, { ok: false }>).faltan.join(' | ')
 }
+
+test('fecha de adquisición: la explícita gana; vacía → la de matriculación; sin ninguna, no viaja (sigue faltando)', () => {
+  assert.equal(ok(entrada({ fechaAdquisicion: '2024-03-01', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicion, '2024-03-01')
+  assert.equal(ok(entrada({ fechaAdquisicion: '', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicion, '2023-05-10')
+  assert.equal(ok(entrada({ fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicion, '2023-05-10')
+  assert.equal('fechaAdquisicion' in ok(entrada({ fechaMatriculacion: '' })).riesgo, false)
+  assert.equal('fechaAdquisicion' in ok(entrada({ fechaMatriculacion: 'no-es-fecha' })).riesgo, false)
+  assert.match(faltan(entrada({ fechaAdquisicion: '10/05/2023', fechaMatriculacion: '2023-05-10' })), /Fecha de adquisición/, 'una explícita mal formada no cae a la matriculación')
+  assert.equal(fechaAdquisicionPorDefecto(' 2023-05-10 '), '2023-05-10')
+  assert.equal(fechaAdquisicionPorDefecto(null), null)
+  // Bot 0.7.18: la marca `fechaAdquisicionPorDefecto` dice si la fecha la tecleó Alberto (false) o salió de la matriculación (true).
+  assert.equal(ok(entrada({ fechaAdquisicion: '', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true)
+  assert.equal(ok(entrada({ fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true)
+  // 21/10/2026 (oportunidad «#pedir-precio»): precargada desde `fechaCompra` e IGUAL a la matriculación → por defecto (antes viajaba false).
+  assert.equal(ok(entrada({ fechaAdquisicion: '2023-05-10', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true, 'igual a la matriculación: por defecto')
+  assert.equal(ok(entrada({ fechaAdquisicion: ' 2023-05-10 ', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true)
+  assert.equal(adquisicionEsPorDefecto('', '2023-05-10', null), true)
+  assert.equal(adquisicionEsPorDefecto('2023-05-10', '2023-05-10', null), false, 'sin matriculación con que comparar: explícita')
+  assert.equal(adquisicionEsPorDefecto('2023-05-11', '2023-05-11', '2023-05-10'), false)
+  assert.equal(ok(entrada({ fechaAdquisicion: '2024-03-01', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, false)
+  assert.equal('fechaAdquisicionPorDefecto' in ok(entrada({ fechaMatriculacion: '' })).riesgo, false, 'sin fecha no viaja la marca')
+})
+
+test('póliza anterior: la explícita gana; vacía → 5 últimas cifras del nº completo; sin cifras suficientes, no viaja (sigue faltando)', () => {
+  assert.equal(ok(entrada({ polizaAnteriorUltimos5: '99999', numeroPolizaActual: 'ZZ-0012345678' })).riesgo.polizaAnteriorUltimos5, '99999')
+  assert.equal(ok(entrada({ polizaAnteriorUltimos5: '', numeroPolizaActual: 'ZZ-0012345678' })).riesgo.polizaAnteriorUltimos5, '45678')
+  assert.equal(ok(entrada({ numeroPolizaActual: 'AB 12-34/567' })).riesgo.polizaAnteriorUltimos5, '34567')
+  assert.equal('polizaAnteriorUltimos5' in ok(entrada({ numeroPolizaActual: 'AB-123' })).riesgo, false)
+  assert.equal('polizaAnteriorUltimos5' in ok(entrada({ numeroPolizaActual: null })).riesgo, false)
+  assert.equal('polizaAnteriorUltimos5' in ok(entrada({ tieneSeguroActual: false, numeroPolizaActual: '0012345678' })).riesgo, false, 'sin seguro anterior no viaja')
+  assert.equal(polizaAnteriorUltimos5PorDefecto('0012345678'), '45678')
+  assert.equal(polizaAnteriorUltimos5PorDefecto('1234'), null)
+})
 
 test('completo: riesgo de moto con la forma de FormularioAuto, sin inventar nada', () => {
   const r = ok(entrada())
@@ -234,4 +267,26 @@ test('companiaActualParaBots: la compañía elegida arriba viaja al bot (código
 test('poblacion: el municipio elegido viaja en el riesgo; vacío o con caracteres prohibidos no viaja', () => {
   assert.equal(ok(entrada({ poblacion: '  Villa   Álamo ' })).riesgo.poblacion, 'Villa Álamo')
   for (const p of [null, undefined, '', '   ', 'x'.repeat(81), 'Villa <Álamo>']) assert.equal('poblacion' in ok(entrada({ poblacion: p })).riesgo, false, String(p))
+})
+
+test('Allianz moto (20/10/2026): fecha de adquisición, póliza anterior (5 cifras) y justificante viajan en el riesgo y pasan el validador', () => {
+  const r = ok(entrada({ fechaAdquisicion: '2023-05-10', polizaAnteriorUltimos5: 'ab 12-34567', fotocopiaAnterior: 'dos_ultimos_anios' })).riesgo
+  assert.equal(r.fechaAdquisicion, '2023-05-10')
+  assert.equal(r.polizaAnteriorUltimos5, '34567', 'pegado el número entero: sus 5 últimas cifras')
+  assert.equal(r.fotocopiaAnterior, 'dos_ultimos_anios')
+  // Sin dato no viajan (nada de cajón).
+  const vacio = ok(entrada({})).riesgo
+  for (const k of ['fechaAdquisicion', 'polizaAnteriorUltimos5', 'fotocopiaAnterior']) assert.equal(k in vacio, false, k)
+  assert.equal('polizaAnteriorUltimos5' in ok(entrada({ polizaAnteriorUltimos5: '1234' })).riesgo, false, 'menos de 5 cifras: no consta')
+  assert.equal('fotocopiaAnterior' in ok(entrada({ fotocopiaAnterior: 'otro' })).riesgo, false, 'fuera del enum: no viaja')
+  // Sin seguro anterior (declarado, o 0 años) no se manda póliza ni justificante; la fecha de adquisición sí.
+  for (const sin of [{ tieneSeguroActual: false }, { aniosAsegurado: '0' }]) {
+    const s = ok(entrada({ ...sin, fechaAdquisicion: '2023-05-10', polizaAnteriorUltimos5: '12345', fotocopiaAnterior: 'proximo_anio' })).riesgo
+    assert.equal(s.fechaAdquisicion, '2023-05-10')
+    assert.equal('polizaAnteriorUltimos5' in s, false)
+    assert.equal('fotocopiaAnterior' in s, false)
+  }
+  // Fecha mal formada: se dice, no se descarta; futura: la rechaza el validador compartido.
+  assert.match(faltan(entrada({ fechaAdquisicion: '10/05/2023' })), /Fecha de adquisición/)
+  assert.match(faltan(entrada({ fechaAdquisicion: '2027-01-01' })), /fechaAdquisicion: no puede ser futura/)
 })

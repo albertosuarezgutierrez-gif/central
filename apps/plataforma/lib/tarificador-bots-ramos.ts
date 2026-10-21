@@ -5,23 +5,28 @@
 // ramo todavía» y no pinta botones.
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Los avisos dicen QUÉ falta, jamás el valor (dato personal).
-import { MAX_COMPANIA_ANTERIOR, obligatoriosPara } from '@central/module-tarificacion'
-import { formularioBotMoto, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
+import { MAX_COMPANIA_ANTERIOR, mensajeFaltan, obligatoriosPara, type BloqueObligatorio } from '@central/module-tarificacion'
+import { formularioBotMoto, OPCIONES_JUSTIFICANTE_ANTERIOR, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
 import { checklistCompania, MOTIVO_SIN_DECLARACION, type ChecklistCompania } from './tarificador-checklist.ts'
 import {
   formularioBotHogar, OPCIONES_MADERA_HOGAR, OPCIONES_REGIMEN_HOGAR, OPCIONES_TIPO_HOGAR, OPCIONES_USO_HOGAR, type DatosViviendaBot,
 } from './tarificador-hogar-formulario.ts'
+import { reglasPrevias } from './tarificador-reglas-previas.ts'
 import { formularioBotAuto, OPCIONES_AMBITO_CIRCULACION, OPCIONES_CLASE_PERMISO, OPCIONES_USO_VEHICULO, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 /** Un dato que el formulario del cotizador no tiene y la persona completa en el bloque (p. ej. la cilindrada de moto). */
 export type CampoExtraBot = {
   clave: string; etiqueta: string; ayuda?: string; placeholder?: string
+  /** Bloque del presupuesto donde se pide (personas / riesgo / poliza). Obligatorio: todo campo suelto tiene bloque. */
+  bloque: BloqueObligatorio
   /** Con `opciones` el campo es un desplegable (valor cerrado) y `porDefecto` es lo que muestra mientras no se toque. */
   opciones?: readonly { valor: string; etiqueta: string }[]
   porDefecto?: string
   /** Texto libre (no numérico): sin `opciones`, el campo es numérico salvo que lleve `texto`. `maxLength` limita lo tecleado. */
   texto?: boolean
   maxLength?: number
+  /** Fecha (`<input type="date">`, valor ISO aaaa-mm-dd). */
+  fecha?: boolean
 }
 
 export type ResultadoAdaptadorBot =
@@ -51,18 +56,28 @@ const OPCIONES_SEXO = [{ valor: '', etiqueta: 'Elegir…' }, { valor: 'hombre', 
 const adaptadorMoto: AdaptadorBot = {
   ramo: 'moto',
   campos: [
-    { clave: 'cilindrada', etiqueta: 'Cilindrada (cc)', ayuda: 'el bot separa Moto y Ciclomotor', placeholder: 'p. ej. 125' },
+    { clave: 'cilindrada', bloque: 'riesgo', etiqueta: 'Cilindrada (cc)', ayuda: 'el bot separa Moto y Ciclomotor', placeholder: 'p. ej. 125' },
     // Allianz Moto no tiene «sin dato» en sexo (obligatorio, 15/10/2026): se elige aquí si el cotizador no lo trae. Sin valor
     // por defecto: no se inventa. Un valor elegido aquí manda sobre el del formulario.
-    { clave: 'sexo', etiqueta: 'Sexo del conductor', ayuda: 'obligatorio en Allianz Moto', opciones: OPCIONES_SEXO, porDefecto: '' },
+    { clave: 'sexo', bloque: 'personas', etiqueta: 'Sexo del conductor', ayuda: 'obligatorio en Allianz Moto', opciones: OPCIONES_SEXO, porDefecto: '' },
     // Mapfre la pide en «Figuras» si hubo seguro anterior (años asegurado > 0, dato o supuesto). Sin seguro actual / 0 años no se pide.
-    { clave: 'companiaAnterior', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    { clave: 'companiaAnterior', bloque: 'poliza', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    // Allianz Moto (bot 0.7.11, 20/10/2026). Por defecto = la de matriculación (el corredor la cambia si es segunda mano); lo editado se guarda en `datosVehiculo.fechaCompra` del riesgo.
+    { clave: 'fechaAdquisicion', bloque: 'riesgo', etiqueta: 'Fecha de adquisición de la moto', ayuda: 'obligatoria en Allianz Moto. Por defecto, la de matriculación; cámbiala si la compró después (segunda mano)', fecha: true },
+    // Si estuvo asegurado, Allianz exige las 5 últimas cifras de la póliza anterior y qué justificante se aporta. Se guardan en el
+    // historial declarado de la oportunidad (`numeroPoliza` y `fotocopiaAnterior`).
+    { clave: 'polizaAnteriorUltimos5', bloque: 'poliza', etiqueta: 'Nº de póliza anterior (últimas 5 cifras)', ayuda: 'obligatorio en Allianz Moto si estuvo asegurado', placeholder: 'p. ej. 12345', texto: true, maxLength: 30 },
+    { clave: 'fotocopiaAnterior', bloque: 'poliza', etiqueta: 'Justificante del seguro anterior', ayuda: 'obligatorio en Allianz Moto si estuvo asegurado: cuál se aporta', opciones: OPCIONES_JUSTIFICANTE_ANTERIOR, porDefecto: '' },
   ],
   construir: (formulario, extra) => {
     const f = formulario as FormularioBotsMoto
     // El desplegable arranca en '' («Elegir…»): vacío = no tocado, así que manda el del formulario.
     const sexo = extra.sexo === 'hombre' || extra.sexo === 'mujer' ? extra.sexo : extra.sexo === undefined || extra.sexo === '' ? f.sexo : null
-    const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '', companiaAnterior: extra.companiaAnterior !== undefined ? extra.companiaAnterior : f.companiaAnterior })
+    const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '', companiaAnterior: extra.companiaAnterior !== undefined ? extra.companiaAnterior : f.companiaAnterior,
+      // Un campo TOCADO (aunque vacío) manda sobre el del formulario.
+      fechaAdquisicion: extra.fechaAdquisicion !== undefined ? extra.fechaAdquisicion : f.fechaAdquisicion,
+      polizaAnteriorUltimos5: extra.polizaAnteriorUltimos5 !== undefined ? extra.polizaAnteriorUltimos5 : f.polizaAnteriorUltimos5,
+      fotocopiaAnterior: extra.fotocopiaAnterior !== undefined ? extra.fotocopiaAnterior : f.fotocopiaAnterior })
     if (!r.ok) return { ok: false, faltan: r.faltan }
     // Sin sexo tecleado, asegura lo toma del Sr./Sra. de la ficha al encolar; si la ficha no lo permite, el checklist dice «falta».
     const sinDatoEnFicha = sexo === null && f.sexoSinFicha === true ? ['conductor.sexo'] : undefined
@@ -77,11 +92,13 @@ const adaptadorAuto: AdaptadorBot = {
   ramo: 'auto',
   // Mat-select del paso 2 de Mapfre (14/10/2026): el corredor puede cambiarlos antes de pedir precio. Defecto de coche.
   campos: [
-    { clave: 'usoVehiculo', etiqueta: 'Uso del vehículo', opciones: OPCIONES_USO_VEHICULO, porDefecto: 'particular' },
-    { clave: 'ambitoCirculacion', etiqueta: 'Ámbito de circulación', opciones: OPCIONES_AMBITO_CIRCULACION, porDefecto: 'espana' },
-    { clave: 'clasePermiso', etiqueta: 'Clase del permiso del conductor', opciones: OPCIONES_CLASE_PERMISO, porDefecto: 'b' },
+    { clave: 'usoVehiculo', bloque: 'riesgo', etiqueta: 'Uso del vehículo', opciones: OPCIONES_USO_VEHICULO, porDefecto: 'particular' },
+    { clave: 'ambitoCirculacion', bloque: 'riesgo', etiqueta: 'Ámbito de circulación', opciones: OPCIONES_AMBITO_CIRCULACION, porDefecto: 'espana' },
+    { clave: 'clasePermiso', bloque: 'personas', etiqueta: 'Clase del permiso del conductor', opciones: OPCIONES_CLASE_PERMISO, porDefecto: 'b' },
     // Mapfre la pide en «Figuras» si hubo seguro anterior (el riesgo guarda el código DGS, no el nombre): se teclea aquí.
-    { clave: 'companiaAnterior', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre y Allianz si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    { clave: 'companiaAnterior', bloque: 'poliza', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre y Allianz si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    // Allianz Turismos y Mapfre (20/10/2026): 5 últimas cifras de la póliza anterior si hubo seguro anterior. Por defecto las del nº completo que ya consta.
+    { clave: 'polizaAnteriorUltimos5', bloque: 'poliza', etiqueta: 'Nº de póliza anterior (últimas 5 cifras)', ayuda: 'lo piden Allianz y Mapfre si hubo seguro anterior', placeholder: 'p. ej. 12345', texto: true, maxLength: 30 },
   ],
   construir: (formulario, extra) => {
     const r = formularioBotAuto(entradaAuto(formulario, extra))
@@ -95,6 +112,8 @@ function entradaAuto(formulario: unknown, extra: Record<string, string>): Entrad
   return {
     ...f, usoVehiculo: extra.usoVehiculo, ambitoCirculacion: extra.ambitoCirculacion, clasePermiso: extra.clasePermiso,
     companiaAnterior: extra.companiaAnterior !== undefined ? extra.companiaAnterior : f.companiaAnterior,
+    // Un campo TOCADO (aunque vacío) manda sobre el del formulario; vacío → el por defecto sale de `numeroPolizaActual`.
+    polizaAnteriorUltimos5: extra.polizaAnteriorUltimos5 !== undefined ? extra.polizaAnteriorUltimos5 : f.polizaAnteriorUltimos5,
   }
 }
 
@@ -108,10 +127,10 @@ const adaptadorHogar: AdaptadorBot = {
   // Las cuatro elecciones deciden la tarifa de Allianz y NO tienen valor por defecto: arrancan en «Elegir…» (o precargadas solo si el
   // dato guardado casa exactamente con una opción) y el botón no encola hasta que las hay. El Catastro no sabe ninguna de las cuatro.
   campos: [
-    { clave: 'uso', etiqueta: 'Uso de la vivienda', ayuda: 'decide la tarifa; no lo sabe el Catastro', opciones: OPCIONES_USO_HOGAR, porDefecto: '' },
-    { clave: 'regimen', etiqueta: 'Régimen', ayuda: 'propietario o inquilino', opciones: OPCIONES_REGIMEN_HOGAR, porDefecto: '' },
-    { clave: 'tipoVivienda', etiqueta: 'Tipo de vivienda', opciones: OPCIONES_TIPO_HOGAR, porDefecto: '' },
-    { clave: 'conMadera', etiqueta: 'Construcción con madera', ayuda: 'pregunta explícita de Allianz', opciones: OPCIONES_MADERA_HOGAR, porDefecto: '' },
+    { clave: 'uso', bloque: 'riesgo', etiqueta: 'Uso de la vivienda', ayuda: 'decide la tarifa; no lo sabe el Catastro', opciones: OPCIONES_USO_HOGAR, porDefecto: '' },
+    { clave: 'regimen', bloque: 'riesgo', etiqueta: 'Régimen', ayuda: 'propietario o inquilino', opciones: OPCIONES_REGIMEN_HOGAR, porDefecto: '' },
+    { clave: 'tipoVivienda', bloque: 'riesgo', etiqueta: 'Tipo de vivienda', opciones: OPCIONES_TIPO_HOGAR, porDefecto: '' },
+    { clave: 'conMadera', bloque: 'riesgo', etiqueta: 'Construcción con madera', ayuda: 'pregunta explícita de Allianz', opciones: OPCIONES_MADERA_HOGAR, porDefecto: '' },
   ],
   construir: (formulario, extra) => {
     const r = formularioBotHogar({ ...(formulario as FormularioBotsHogar), uso: extra.uso, regimen: extra.regimen, tipoVivienda: extra.tipoVivienda, conMadera: extra.conMadera })
@@ -132,10 +151,27 @@ export function adaptadorDeRamo(ramo: string | null | undefined): AdaptadorBot |
  * Formulario aún incompleto → `sin_formulario` (los faltantes generales se listan aparte); compañía sin declaración →
  * `no_disponible`, nunca «todo ok». PURA.
  */
-export function checklistBot(adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string): ChecklistCompania {
+export function checklistBot(adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string, hoy: Date = new Date()): ChecklistCompania {
   const r = adaptador.construir(formulario, extra)
   if (!r.ok) return obligatoriosPara(compania, adaptador.ramo) === null ? { estado: 'no_disponible', motivo: MOTIVO_SIN_DECLARACION } : { estado: 'sin_formulario' }
-  return checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha, r.sinDatoEnFicha)
+  const c = checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha, r.sinDatoEnFicha)
+  return conReglasPrevias(c, reglasPrevias({ compania, ramo: adaptador.ramo, riesgo: r.riesgo, formulario, hoy }))
+}
+
+/**
+ * Añade al checklist las reglas previas incumplidas (`tarificador-reglas-previas.ts`) como filas `falta`: lo que el portal exige y
+ * `obligatorios.ts` no declara. Una clave que ya está en el checklist no se duplica (la de `obligatorios.ts` manda). PURA.
+ */
+export function conReglasPrevias(c: ChecklistCompania, reglas: readonly { clave: string; etiqueta: string }[]): ChecklistCompania {
+  if (c.estado !== 'evaluado' || reglas.length === 0) return c
+  const filas = [...c.filas]
+  const faltan = [...c.faltan]
+  for (const r of reglas) {
+    if (filas.some((f) => f.clave === r.clave)) continue
+    filas.push({ clave: r.clave, etiqueta: r.etiqueta, estado: 'falta' })
+    faltan.push({ clave: r.clave, etiqueta: r.etiqueta })
+  }
+  return { ...c, filas, faltan, deFicha: filas.filter((f) => f.estado === 'ficha').length, bloquea: faltan.length > 0, resumen: mensajeFaltan(faltan) }
 }
 
 /** Ramos con adaptador (para saber qué anfitrión monta el bloque). */

@@ -4,6 +4,7 @@ import { ACTOR_GESTOR, CARPETAS } from '@/lib/carpetas'
 import { listarExpediente, subirDocumento } from '@/lib/documental'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { avisarSolicitudFirma } from '@/lib/avisos'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,7 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { empresa_id } = await getSesion()
+    const { empresa_id, usuario_id } = await getSesion()
     const { id } = await params
     const form = await req.formData()
     const file = form.get('file') as File | null
@@ -39,7 +40,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         WHERE id = ${doc.id}::uuid`)
     } else if (soloEmpleado) {
       await prisma.$executeRaw(Prisma.sql`
-        UPDATE rrhh.documentos SET estado_firma = 'pendiente' WHERE id = ${doc.id}::uuid`)
+        UPDATE rrhh.documentos SET estado_firma = 'pendiente' WHERE id = ${doc.id}::uuid AND empresa_id = ${empresa_id}::uuid`)
+      // Solo firma el empleado → ya puede firmar: se le avisa (no bloquea si falla).
+      await avisarSolicitudFirma(empresa_id, id, doc.id, usuario_id, new URL(req.url).origin)
     }
     const estado_firma = requiereEmpresa ? 'pendiente_empresa' : soloEmpleado ? 'pendiente' : 'no_requiere'
     return NextResponse.json({ documento: { ...doc, estado_firma } }, { status: 201 })

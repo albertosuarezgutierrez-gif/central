@@ -46,9 +46,9 @@ const FORM: FormularioHogar = {
 
 // ───────────── puros ─────────────
 
-test('flag APAGADO y sin registrar', () => {
-  assert.equal(ALLIANZ_HOGAR_ACTIVO, false)
-  assert.equal(adaptadores.obtener('allianz', 'hogar'), null)
+test('flag ENCENDIDO (Alberto, 21/10/2026) y registrado', () => {
+  assert.equal(ALLIANZ_HOGAR_ACTIVO, true)
+  assert.equal(adaptadores.obtener('allianz', 'hogar')?.version, allianzHogar.version)
 })
 
 test('esAppHogar: origen exacto y ruta de la app vista', () => {
@@ -149,8 +149,19 @@ type OpcionesApp = {
   sinVia?: boolean
   /** Lista desplegada de `mat-option` (como la del portal): al pulsar una, rellena la población o la vía elegida. */
   lista?: { para: 'poblacion' | 'via'; textos: string[] }
+  /** La lista de poblaciones solo se muestra al enfocar `town` (como el desplegable real). */
+  listaAlEnfocar?: boolean
+  /** Forma real NDBX (21/10/2026): `town` NO abre nada con foco/flecha/clic; el panel (`nx-autocomplete-option` en un overlay, con `aria-controls` en `town`) aparece al ESCRIBIR y filtra por lo escrito. */
+  overlayAlEscribir?: string[]
   /** Una casilla (checkbox) con su `label for` y un `label` que envuelve otra. */
   casilla?: boolean
+  /**
+   * Copias OCULTAS y `disabled` de los controles de dirección (pasos posteriores), como en el HTML del atasco del job 1bd6bfce
+   * (21/10/2026: tres `town`/`postalCode` en el DOM). Por defecto SÍ: todo el banco corre con ellas. `false` = sin copias.
+   */
+  duplicadosOcultos?: boolean
+  /** Un segundo `town` VISIBLE y habilitado (ambigüedad real: el robot no debe elegir cuál). */
+  townVisibleDuplicado?: boolean
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -175,8 +186,10 @@ ${radio('t1', 'tipo', 'Piso en alto', true)}${radio('t2', 'tipo', 'Unifamiliar A
 ${radio('r1', 'regimen', '<i></i>Propietario Propietario', true)}${radio('r2', 'regimen', '<i></i>Inquilino Inquilino')}
 ${radio('u1', 'uso', 'Habitual', true)}${radio('u2', 'uso', 'Alquiler')}${radio('u3', 'uso', 'En venta y/o deshabitada')}${radio('u4', 'uso', 'Secundaria')}${radio('u5', 'uso', 'Turístico o vacacional')}
 <button type="button" id="NextPageFromRisk" disabled>SIGUIENTE</button>
+${o.duplicadosOcultos === false ? '' : `<div id="pasoDatos" style="display:none">${['postalCode', 'province', 'town', 'streetType', 'streetName'].map((f) => [0, 1].map((k) => `<nx-formfield><input id="dup-${f}-${k}" type="text" formcontrolname="${f}" disabled class="ng-valid"></nx-formfield>`).join('')).join('')}</div>`}
+${o.townVisibleDuplicado ? `<nx-formfield><label for="town-bis">Población</label><input id="town-bis" type="text" formcontrolname="town" class="ng-valid"></nx-formfield>` : ''}
 ${o.casilla ? `<span><input type="checkbox" id="c1"><label for="c1">Acepto condiciones</label></span><label id="envuelve"><input type="checkbox"> Recibir avisos</label>` : ''}
-${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" role="option" data-para="${o.lista!.para}">${t}</mat-option>`).join('') : ''}
+${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" role="option" data-para="${o.lista!.para}" ${o.listaAlEnfocar ? 'style="display:none"' : ''}>${t}</mat-option>`).join('') : ''}
 <script>
   document.querySelectorAll('mat-option').forEach((m) => m.addEventListener('click', () => {
     if (m.dataset.para === 'poblacion') { document.querySelector('[formcontrolname="province"]').value = 'SEVILLA'; document.querySelector('[formcontrolname="town"]').value = m.textContent; }
@@ -184,6 +197,7 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
     valida();
   }));
   const $ = (f) => document.querySelector('[formcontrolname="' + f + '"]');
+  $('town').addEventListener('focus', () => document.querySelectorAll('mat-option[data-para=poblacion]').forEach((m) => { m.style.display = ''; }));
   const valida = () => {
     for (const el of document.querySelectorAll('input[formcontrolname]')) {
       let ok = !el.required || el.value.trim() !== '';
@@ -205,6 +219,23 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
     items[1].removeAttribute('aria-disabled');
   });
   ${o.pasoInicial ? `document.querySelectorAll('nx-multi-step-item').forEach((el) => { if (el.textContent === ${JSON.stringify(o.pasoInicial)}) el.setAttribute('aria-selected', 'true'); else el.setAttribute('aria-selected', 'false'); });` : ''}
+  ${o.overlayAlEscribir ? `
+  const OVERLAY = ${JSON.stringify(o.overlayAlEscribir)};
+  $('town').setAttribute('role', 'combobox');
+  $('town').addEventListener('input', () => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((c) => c.remove());
+    const t = $('town').value.trim().toUpperCase();
+    $('town').removeAttribute('aria-controls');
+    if (t.length < 3) return;
+    const c = document.createElement('div'); c.className = 'cdk-overlay-container';
+    const p = document.createElement('div'); p.id = 'nx-autocomplete-panel-1'; p.setAttribute('role', 'listbox');
+    for (const x of OVERLAY.filter((x) => x.includes(t))) {
+      const op = document.createElement('nx-autocomplete-option'); op.setAttribute('role', 'option'); op.textContent = x;
+      op.addEventListener('click', () => { $('province').value = 'JAEN'; $('town').value = x; c.remove(); $('town').removeAttribute('aria-controls'); valida(); });
+      p.appendChild(op);
+    }
+    c.appendChild(p); document.body.appendChild(c); $('town').setAttribute('aria-controls', 'nx-autocomplete-panel-1');
+  });` : ''}
   valida();
 </script></body></html>`
 }
@@ -246,7 +277,7 @@ async function abrir(o: OpcionesApp = {}) {
     },
   }
   const marco: Frame = await marcoHogar(page, 5_000)
-  const valor = (fcn: string) => marco.locator(`[formcontrolname="${fcn}"]`).inputValue()
+  const valor = (fcn: string) => marco.locator(`[formcontrolname="${fcn}"]:visible`).first().inputValue()
   const marcado = (id: string) => marco.locator(`#${id}`).isChecked()
   return { context, page, ctx, pulsados, marco, valor, marcado, guard }
 }
@@ -440,16 +471,17 @@ test('viaCoincide: nombre solo o «tipo nombre» por plano(); otra vía o vacío
   assert.equal(viaCoincide('CALLE', null, 'PRUEBA'), false)
 })
 
-test('población elegida de la lista que COINCIDE con la del riesgo → se confirma lo aprendido; que NO coincide → hueco y NO se confirma', async () => {
-  for (const [elegida, ok] of [['SEVILLA', true], ['DOS HERMANAS', false]] as const) {
-    const { context, page, ctx, marco } = await abrir({ sinAutocompletar: true, lista: { para: 'poblacion', textos: ['DOS HERMANAS', 'SEVILLA'] } })
+test('población de la lista: el riesgo (SEVILLA) se elige SOLO por municipio, sin IA ni aprender; la IA que apuntara a otra ya no se consulta', async () => {
+  for (const [textos, ok] of [[['DOS HERMANAS', 'SEVILLA'], true], [['DOS HERMANAS', 'UTRERA'], false]] as const) {
+    const elegida = textos[0]
+    const { context, page, ctx, marco } = await abrir({ sinAutocompletar: true, listaAlEnfocar: true, lista: { para: 'poblacion', textos: [...textos] } })
     try {
       const llamadas: string[] = []
       const formador = await formadorDe((e) => e.findIndex((c) => c.texto === elegida), llamadas)
       const r = rellenarPantallaVivienda(page, marco, FORM, { ...ctx, formador })
       if (ok) await r
-      else await assert.rejects(() => r, (e) => e instanceof ErrorMapaIncompleto && /otra distinta/.test((e as Error).message))
-      assert.equal(confirmaciones(llamadas), ok ? 1 : 0, `confirmaciones eligiendo ${elegida}`)
+      else await assert.rejects(() => r, (e) => e instanceof ErrorMapaIncompleto && /ninguna opción coincide/.test((e as Error).message))
+      assert.equal(confirmaciones(llamadas), 0, `confirmaciones eligiendo ${elegida}`)
     } finally {
       await context.close()
     }
@@ -542,4 +574,131 @@ test('candidatos: la etiqueta de una CASILLA (for → checkbox o envolviéndola)
 
 test('SELECTOR_ACCIONES compartido: idéntico al de origin/main (sin label[for], mat-option ni [role=option])', () => {
   assert.equal(SELECTOR_ACCIONES, 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button, mat-icon:not(a mat-icon):not(button mat-icon):not([role=button] mat-icon)')
+})
+
+// ───────────── 21/10/2026: elección de la población del CP por el municipio del riesgo (CP 23693, varias poblaciones) ─────────────
+test('elegirPoblacionHogar: exacta (sin tildes/mayúsculas/prefijo CP), por palabras enteras, y nunca al azar', async () => {
+  const { elegirPoblacionHogar } = await import('../src/adapters/allianz/poblacion-localidad.ts')
+  const LISTA = ['23693 - VENTAS DEL CARRIZAL', 'Jaén', 'Las Infantas']
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Ventas del Carrizal'), { tipo: 'elegida', indice: 0, por: 'municipio' })
+  assert.deepEqual(elegirPoblacionHogar(['Ventas del Carrizal (Jaén)', 'Jaén Centro'], ' VENTAS  DEL CARRIZAL '), { tipo: 'elegida', indice: 0, por: 'municipio' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Jaen'), { tipo: 'elegida', indice: 1, por: 'municipio' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Linares'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(['Jaén', 'Jaén'], 'Jaén'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(['Jaén Norte', 'Jaén Sur'], 'Jaén'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, null), { tipo: 'sin_municipio' })
+  assert.deepEqual(elegirPoblacionHogar([], 'Jaén'), { tipo: 'sin_opciones' })
+})
+
+test('elegirPoblacionHogar: núcleo de la vía (prefijo del Catastro), opción única y prefijo ambiguo', async () => {
+  const { elegirPoblacionHogar, nucleoDeVia } = await import('../src/adapters/allianz/poblacion-localidad.ts')
+  assert.equal(nucleoDeVia('PARRA LA (VENTAS CARRIZA)'), 'VENTAS CARRIZA')
+  assert.equal(nucleoDeVia('PARRA LA'), null)
+  const LISTA = ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL']
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Castillo de Locubín', 'PARRA LA (VENTAS CARRIZA)'), { tipo: 'elegida', indice: 1, por: 'nucleo' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Castillo de Locubín', 'PARRA LA'), { tipo: 'elegida', indice: 0, por: 'municipio' })
+  assert.deepEqual(elegirPoblacionHogar(['23693 - OTRA'], 'Nada', null), { tipo: 'elegida', indice: 0, por: 'unica' })
+  assert.deepEqual(elegirPoblacionHogar(['VENTAS DEL CARRIZAL', 'VENTAS DEL CARRIZO'], 'Linares', 'X (VENTAS CARRI)'), { tipo: 'sin_coincidencia' })
+})
+
+test('flujo cableado: municipio (CASTILLO DE LOCUBIN) ≠ población del CP (VENTAS DEL CARRIZAL) → se elige por el núcleo de la vía y NO salta «otra distinta»', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ sinAutocompletar: true, listaAlEnfocar: true, lista: { para: 'poblacion', textos: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL'] } })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    // la vía no coincide con el nombre del mock (solo se contrasta si el portal no rellena el tipo de vía; aquí sí lo rellena)
+    await rellenarPantallaVivienda(page, marco, f, ctx)
+    assert.equal(await valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await context.close()
+  }
+})
+
+test('el portal AUTOCOMPLETA el núcleo de la vía (VENTAS DEL CARRIZAL) y el municipio del riesgo es otro → se acepta (0.1.3)', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ poblaciones: 'VENTAS DEL CARRIZAL' })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await rellenarPantallaVivienda(page, marco, f, ctx)
+    assert.equal(await valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await context.close()
+  }
+})
+
+test('el portal autocompleta un núcleo AJENO al de la vía y al municipio → sigue siendo «otra distinta»', async () => {
+  const { context, page, ctx, marco } = await abrir({ poblaciones: 'DOS HERMANAS' })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /otra distinta/.test((e as Error).message))
+  } finally {
+    await context.close()
+  }
+})
+
+test('el portal autocompleta otra población y la vía NO trae núcleo → estricto con el municipio (no se acepta por «única»)', async () => {
+  const { context, page, ctx, marco } = await abrir({ poblaciones: 'VENTAS DEL CARRIZAL' })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA' } }
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /otra distinta/.test((e as Error).message))
+  } finally {
+    await context.close()
+  }
+})
+
+test('forma real NDBX: la lista solo aparece al ESCRIBIR en town (overlay + aria-controls) → se escribe el núcleo y se elige VENTAS DEL CARRIZAL', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ sinAutocompletar: true, overlayAlEscribir: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL', 'VENTAS DEL CARRIZAL BAJO'] })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /ninguna opción coincide/.test((e as Error).message), 'dos opciones que casan con el núcleo → no se elige (fail-closed)')
+  } finally {
+    await context.close()
+  }
+  const b = await abrir({ sinAutocompletar: true, overlayAlEscribir: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL'] })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await rellenarPantallaVivienda(b.page, b.marco, f, b.ctx)
+    assert.equal(await b.valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('nada abre la lista de town → hueco con diagnóstico (sin datos personales) y town vacío', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ sinAutocompletar: true })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /sin opciones tras \d+ intentos/.test((e as Error).message))
+    assert.equal(await valor('town'), '')
+  } finally {
+    await context.close()
+  }
+})
+
+test('job 1bd6bfce: copias ocultas y disabled de town/postalCode en el DOM → se lee y se elige el town VISIBLE (no «el campo no es único»)', async () => {
+  // El CP autocompleta el town visible: con las copias, antes `esperarValor` nunca lo veía (count 3 ≠ 1).
+  const a = await abrir({ duplicadosOcultos: true })
+  try {
+    assert.equal(await a.marco.locator('input[formcontrolname="town"]').count(), 3, 'el mock reproduce las tres copias del HTML real')
+    await rellenarPantallaVivienda(a.page, a.marco, FORM, a.ctx)
+    assert.equal(await a.valor('town'), 'SEVILLA')
+  } finally {
+    await a.context.close()
+  }
+  // Y la lista que solo aparece al escribir: se escribe y elige en el town visible.
+  const b = await abrir({ duplicadosOcultos: true, sinAutocompletar: true, overlayAlEscribir: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL'] })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await rellenarPantallaVivienda(b.page, b.marco, f, b.ctx)
+    assert.equal(await b.valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('diagnóstico: dos town VISIBLES y habilitados → «campo town … 2 coincidencias» (no «sin municipio ni vía»)', async () => {
+  const a = await abrir({ sinAutocompletar: true, townVisibleDuplicado: true })
+  try {
+    await assert.rejects(() => rellenarPantallaVivienda(a.page, a.marco, FORM, a.ctx), (e) => e instanceof ErrorMapaIncompleto && /campo town visible y habilitado: 2 coincidencias/.test((e as Error).message) && !/sin municipio ni vía/.test((e as Error).message))
+  } finally {
+    await a.context.close()
+  }
 })

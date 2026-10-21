@@ -2,6 +2,14 @@
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useEffect, useState, useCallback } from 'react'
+import DireccionCp, { type EstiloDireccion } from '@/components/DireccionCp'
+import { componerDireccion, direccionOkParaPedido } from '@/lib/direccion-cp'
+
+const ESTILO_DIR: EstiloDireccion = {
+  input: { padding:'11px 12px', borderRadius:8, border:`1px solid ${C.rule}`, background:C.bg1, fontFamily:SN, fontSize:16, color:C.ink, outline:'none' },
+  label: { display:'block', fontFamily:SN, fontSize:11, fontWeight:600, color:C.ink3, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:6 },
+  texto:C.ink, tenue:C.ink3, aviso:C.verm, borde:C.rule, fondo:C.bg1, hover:C.bg2,
+}
 
 
 interface Producto { id:string; nombre:string; precio:number; seccion:string }
@@ -26,7 +34,9 @@ export default function PedidoRapidoApp() {
   const [cobro, setCobro]       = useState<Cobro>('contraentrega')
   const [nombre, setNombre]     = useState('')
   const [telefono, setTelefono] = useState('')
-  const [direccion, setDir]     = useState('')
+  // Dirección con CP primero: viaja al backend como UN texto (`cliente_direccion`), igual que antes.
+  const [dirP, setDirP]         = useState({ calle:'', cp:'', municipio:'' })
+  const direccion = componerDireccion(dirP)
   const [notas, setNotas]       = useState('')
   const [tiempoMin, setTiempo]  = useState(30)
   const [enviando, setEnviando] = useState(false)
@@ -72,6 +82,7 @@ export default function PedidoRapidoApp() {
 
   const enviar = async () => {
     if (!session || !carrito.length) return
+    if (!direccionOkParaPedido(tipo,dirP)) { setErr('Completa la dirección de entrega: código postal, municipio y calle'); return }
     setEnviando(true); setErr('')
     const res = await fetch('/api/storefront/pedido-operador', {
       method:'POST',
@@ -92,7 +103,7 @@ export default function PedidoRapidoApp() {
     setPaso('enviado')
   }
 
-  const resetear = () => { setCarrito([]); setNombre(''); setTelefono(''); setDir(''); setNotas(''); setResult(null); setErr(''); setPaso('canal') }
+  const resetear = () => { setCarrito([]); setNombre(''); setTelefono(''); setDirP({ calle:'', cp:'', municipio:'' }); setNotas(''); setResult(null); setErr(''); setPaso('canal') }
 
   if (!session) return (
     <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -183,9 +194,9 @@ export default function PedidoRapidoApp() {
           {[
             { label:`Nombre${canal==='mostrador'?' (opcional)':''}`, val:nombre, set:setNombre, ph:'Nombre completo', type:'text' },
             { label:`Teléfono${canal==='mostrador'?' (opcional)':''}`, val:telefono, set:setTelefono, ph:'600 000 000', type:'tel' },
-            ...(tipo==='delivery'?[{ label:'Dirección de entrega', val:direccion, set:setDir, ph:'Calle, número, piso', type:'text' }]:[]),
+            ...(tipo==='delivery'?[{ label:'__dir', val:'', set:(_:string)=>{}, ph:'', type:'text' }]:[]),
             { label:'Notas (opcional)', val:notas, set:setNotas, ph:'Sin cebolla, alérgenos…', type:'text' },
-          ].map(f => (
+          ].map(f => f.label==='__dir' ? <div key="__dir"><DireccionCp valor={dirP} onChange={setDirP} estilo={ESTILO_DIR} etiquetaCalle="Dirección de entrega" placeholderCalle="Calle, número, piso" /></div> : (
             <div key={f.label}>
               <label style={{ display:'block', fontFamily:SN, fontSize:11, fontWeight:600, color:C.ink3, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:6 }}>{f.label}</label>
               <input type={f.type} value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph}
@@ -224,8 +235,8 @@ export default function PedidoRapidoApp() {
         </div>
       </div>
       <div style={{ padding:'12px 16px 20px', borderTop:`1px solid ${C.rule}`, background:C.bg1, flexShrink:0 }}>
-        <button onPointerDown={() => setPaso('carta')}
-          style={{ width:'100%', padding:13, borderRadius:8, border:'none', background:C.ink, color:C.bg, fontFamily:SN, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+        <button onPointerDown={() => { if (!(!direccionOkParaPedido(tipo,dirP))) setPaso('carta') }} disabled={!direccionOkParaPedido(tipo,dirP)}
+          style={{ width:'100%', minHeight:44, padding:13, borderRadius:8, border:'none', background:C.ink, color:C.bg, fontFamily:SN, fontSize:14, fontWeight:700, cursor:'pointer', opacity:(!direccionOkParaPedido(tipo,dirP))?0.45:1 }}>
           Elegir productos →
         </button>
       </div>

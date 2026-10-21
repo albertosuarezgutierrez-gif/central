@@ -71,7 +71,7 @@ async function avisarAtascos(): Promise<Record<string, unknown>> {
   if (l.atascos.length && (await avisoPermitido('correduria.tarificador-atasco'))) {
     for (const a of l.atascos) {
       // La captura primero (si la hay; solo al chat de Alberto); los botones, en su propio mensaje.
-      if (a.capturaBase64) await tgSendPhoto({ data: Buffer.from(a.capturaBase64, 'base64'), nombre: 'bot-atascado.png' }, '🧩 Pantalla donde se ha atascado el bot').catch(() => null)
+      if (a.capturaBase64 && !a.capturaConDatos) await tgSendPhoto({ data: Buffer.from(a.capturaBase64, 'base64'), nombre: a.capturaMime === 'image/jpeg' ? 'bot-atascado.jpg' : 'bot-atascado.png' }, '🧩 Pantalla donde se ha atascado el bot').catch(() => null)
       const salio = (await tgSendButtons(componerAvisoAtasco(a), botonesAtasco(a)).catch(() => null)) !== null
       if (!salio) { sinEnviar.push(a.id); continue }
       await avisoEnviado('correduria.tarificador-atasco')

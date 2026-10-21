@@ -59,3 +59,17 @@ test('🚨 estado no reconocido (2xx) → null, nunca []: un estado nuevo del pu
   assert.equal(interpretarCarnets(200, { estado: 42 }), null)
   assert.equal(interpretarCarnets(200, {}), null)
 })
+
+test('la expedición y una caducidad null (falta el nacimiento) se leen del puente; la campana recibe null, no se pierde', () => {
+  const t = interpretarCarnets(200, {
+    estado: 'ok',
+    titulares: [{ fichaId: A, nombre: 'Ana', carnets: [{ id: 'k1', tipo: 'B', fechaCaducidad: '2030-01-01', fechaExpedicion: '2020-01-01' }, { id: 'k2', tipo: 'A2', fechaCaducidad: null }, { id: 'k3', tipo: 'C', fechaCaducidad: 5 }] }],
+  })
+  assert.deepEqual(t![0]!.carnets, [
+    { id: 'k1', tipo: 'B', fechaCaducidad: '2030-01-01', fechaExpedicion: '2020-01-01' },
+    { id: 'k2', tipo: 'A2', fechaCaducidad: null },
+  ])
+  assert.deepEqual(carnetsParaAviso(t!).map((c) => [c.id, c.fechaCaducidad]), [['k1', '2030-01-01'], ['k2', null]])
+  // La expedición NO viaja a la campana ni a la precarga.
+  assert.equal('fechaExpedicion' in carnetsParaAviso(t!)[0]!, false)
+})

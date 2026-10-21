@@ -77,7 +77,7 @@ import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
 import PrecioBots from '../PrecioBots'
 import { bloqueosAltaTomador } from '@/lib/tarificador-alta-tomador'
-import { datoDePersonaBot, companiaActualParaBots, tieneSeguroParaBots } from '@/lib/tarificador-moto-formulario'
+import { datoDePersonaBot, companiaActualParaBots, tieneSeguroParaBots, ultimos5CifrasPoliza } from '@/lib/tarificador-moto-formulario'
 import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
@@ -1093,7 +1093,7 @@ export default function CotizadorMoto({
 
       <div id="cotizador-tomador" style={cardStyle}>
         <CardHeader
-          title="2 · El tomador"
+          title={embebido ? 'Tomador' : '2 · El tomador'}
           sub={aMano.length > 0 ? 'Los datos personales NUNCA se suponen: los que falten se teclean aquí.' : 'La ficha trae todo lo personal; solo hay que confirmar estos dos.'}
         />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
@@ -1351,9 +1351,20 @@ export default function CotizadorMoto({
           clienteId={clienteId}
           oportunidadId={variante?.oportunidadId ?? null}
           bloqueosPorCompania={bloqueosAltaTomador(faltanInicial, tomadorEmpresa)}
-          inicialesExtra={{ cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '', sexo: correcciones.sexo === 'hombre' || correcciones.sexo === 'mujer' ? correcciones.sexo : '' }}
+          inicialesExtra={{
+            cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '',
+            sexo: correcciones.sexo === 'hombre' || correcciones.sexo === 'mujer' ? correcciones.sexo : '',
+            // Allianz Moto (20/10/2026): fecha de adquisición = `fechaCompra` del riesgo (sin ella, la matriculación: `formulario.fechaMatriculacion`); póliza anterior (5 últimas
+            // cifras) y justificante = historial DECLARADO de la oportunidad (`numeroPoliza`, `fotocopiaAnterior`). Sin dato, vacíos.
+            fechaAdquisicion: datosRiesgo?.fechaCompra ?? '',
+            polizaAnteriorUltimos5: ultimos5CifrasPoliza(embebido ? historialRiesgo?.numeroPoliza : null) ?? '',
+            fotocopiaAnterior: embebido ? historialRiesgo?.fotocopiaAnterior ?? '' : '',
+          }}
           formulario={{
             matricula,
+            fechaMatriculacion: matriculacion || null,
+            // Nº completo que ya consta (declarado arriba o leído de la póliza subida): las 5 últimas cifras, por defecto, de la póliza anterior.
+            numeroPolizaActual: (embebido ? historialRiesgo?.numeroPoliza?.trim() : null) || anterior?.seguroAnterior?.numeroPoliza?.trim() || anterior?.numeroPoliza?.trim() || null,
             marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
             modelo: embebido ? datosRiesgo?.modelo ?? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
             version: embebido ? datosRiesgo?.version ?? null : versiones.find((x) => x.id === codigoVehiculo)?.nombre ?? null,

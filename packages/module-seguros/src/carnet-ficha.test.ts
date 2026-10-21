@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { claveTipoCarnet, revisarCarnet } from './carnet-ficha.ts'
+import { claveTipoCarnet, fechaExpedicionDeEntrada, revisarCarnet } from './carnet-ficha.ts'
 
 const HOY = '2026-09-29'
 
@@ -42,4 +42,34 @@ test('sin nacimiento legible no se comprueba la edad', () => {
 test('claveTipoCarnet iguala mayúsculas y espacios', () => {
   assert.equal(claveTipoCarnet('c1 e'), 'C1E')
   assert.equal(claveTipoCarnet(null), '')
+})
+
+// ─── fechaExpedicionDeEntrada (caducidad del anverso → expedición) ───────────────────────────────────────────
+const ANIO = new Date().getUTCFullYear()
+
+test('con fecha de expedición manda ella, aunque venga también caducidad', () => {
+  assert.deepEqual(fechaExpedicionDeEntrada({ tipo: 'B', fecha: '2015-01-01', fechaCaducidad: `${ANIO + 3}-01-01`, fechaNacimiento: null }), {
+    ok: true,
+    fecha: '2015-01-01',
+    viaCaducidad: false,
+  })
+})
+
+test('solo caducidad: se deduce la expedición (también en dd/mm/aaaa) y con nacimiento', () => {
+  const nac = `${ANIO - 40}-01-01`
+  const r = fechaExpedicionDeEntrada({ tipo: 'b', fecha: undefined, fechaCaducidad: `15/03/${ANIO + 3}`, fechaNacimiento: nac })
+  assert.deepEqual(r, { ok: true, fecha: `${ANIO - 7}-03-15`, viaCaducidad: true })
+})
+
+test('solo caducidad sin nacimiento → motivo claro; fecha imposible → no válida', () => {
+  const sin = fechaExpedicionDeEntrada({ tipo: 'B', fecha: '', fechaCaducidad: `${ANIO + 3}-03-15`, fechaNacimiento: null })
+  assert.equal(sin.ok, false)
+  assert.match(sin.ok ? '' : sin.motivo, /apartado 4a\/10/)
+  const mala = fechaExpedicionDeEntrada({ tipo: 'B', fecha: '', fechaCaducidad: `${ANIO + 3}-02-30`, fechaNacimiento: `${ANIO - 40}-01-01` })
+  assert.equal(mala.ok, false)
+})
+
+test('sin ninguna de las dos → pasa tal cual y revisarCarnet dirá «Falta la fecha»', () => {
+  const r = fechaExpedicionDeEntrada({ tipo: 'B', fecha: undefined, fechaCaducidad: undefined, fechaNacimiento: null })
+  assert.deepEqual(r, { ok: true, fecha: undefined, viaCaducidad: false })
 })

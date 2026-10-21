@@ -67,6 +67,8 @@ import {
   configFly,
   huecosLibres,
   mensajeDuplicado,
+  mimeCaptura,
+  nombreCapturaFallo,
   peticionMaquina,
   repartirEnCurso,
   aplicarNifTomador,
@@ -200,7 +202,10 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   }
   // Tomador de Hogar (19/10/2026, Allianz): DNI/NIE y nacimiento de la ficha; solo se COMPRUEBAN aquí, se inyectan al entregar.
   const fichaHogar = necesitaTomadorHogar(e.compania, e.ramo) ? await leerTomadorFicha(e.correduriaId, clienteId) : null
-  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField), () => lecturaTomadorHogar(fichaHogar, decryptField))
+  // Allianz auto/moto (20/10/2026): la ficha completa (NIF…) se lee para EVALUAR los obligatorios de origen ficha (NIF del tomador de
+  // Allianz moto); lo guardado sigue sin ella, se inyecta al entregar.
+  const filaFichaAuto = necesitaFichaTomador(e.compania, e.ramo) ? await leerFichaTomadorAuto(e.correduriaId, clienteId) : null
+  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField), () => lecturaTomadorHogar(fichaHogar, decryptField), () => fichaTomadorAutoDeFicha(filaFichaAuto, decryptField, e.ramo))
   if (!guardar.ok) return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }
 
   // Sin duplicados (13/10/2026; `ok` con precio <10 min, 15/10/2026): mismo cliente (ficha) + compañía + ramo + oportunidad/póliza + riesgo
@@ -636,7 +641,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
 
     if (r.tipo === 'error') {
       // Una exploración no guarda captura ni HTML como documento (puede no tener cliente y no hacen falta para el mapa).
-      const evidencia = deExploracion || deHumo ? null : { trabajo: t, captura: r.captura, html: r.html }
+      const evidencia = deExploracion || deHumo ? null : { trabajo: t, captura: r.captura, capturaConDatos: r.capturaConDatos, html: r.html }
       // Defensa en profundidad: el recorrido se vuelve a sanear con los valores del riesgo de ESTE trabajo (ya leído arriba).
       if (r.error.recorrido) {
         const { recorrido: _crudo, ...resto } = r.error
@@ -813,7 +818,7 @@ async function marcarFallo(
   id: string,
   intentos: number,
   error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker },
-  evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,
+  evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; capturaConDatos?: boolean; html: string | null } | null,
   botVersion: string | null = null,
   conBotVersion = false,
 ): Promise<{ estado: string; tocada: boolean }> {
@@ -855,8 +860,11 @@ async function marcarFallo(
   const abierto = estado === 'error_reintentable' || estado === 'atascado'
   let capturaId: string | null = null
   let htmlId: string | null = null
-  if (evidencia?.captura) {
-    capturaId = await guardarAdjunto(db, evidencia.trabajo, { nombre: `fallo-${id.slice(0, 8)}.png`, mime: 'image/png', contenido: evidencia.captura, notas: `Captura del fallo del tarificador RPA (${error.tipo})` })
+  const mimeCap = mimeCaptura(evidencia?.captura)
+  if (evidencia?.captura && mimeCap) {
+    // PNG (fallo genérico) o JPEG (atasco/hueco, 21/10/2026: puede mostrar datos del tomador). Mismo sitio y mismas reglas que
+    // el HTML de evidencia: documento del cliente, solo por el puerto del operador, purga a los 15 días.
+    capturaId = await guardarAdjunto(db, evidencia.trabajo, { nombre: nombreCapturaFallo(id, mimeCap), mime: mimeCap, contenido: evidencia.captura, notas: `Captura del fallo del tarificador RPA (${error.tipo})` })
   }
   if (evidencia?.html) {
     htmlId = await guardarAdjunto(db, evidencia.trabajo, { nombre: `fallo-${id.slice(0, 8)}.html`, mime: 'text/html', contenido: Buffer.from(evidencia.html, 'utf8'), notas: `HTML (redactado) del fallo del tarificador RPA (${error.tipo})` })
@@ -864,8 +872,12 @@ async function marcarFallo(
   // `...error` lleva también los accesorios ya validados del cable (`opcionesVersion`, `inventarioDom`): van al jsonb.
   // Marca (15/10/2026): un `atascado` dice en su `error` que espera elección y con qué clave (solo la clave: el checkpoint, con
   // sus selectores, vive en `tarificador_atascos`). La caducidad la pisa con 'caducado' y el barrido de huérfanos con 'huerfano'.
-  const marcaAtasco = atasco ? { atasco: 'esperando', atascoClave: atasco.clave } : {}
-  const err = JSON.stringify({ ...error, ...marcaAtasco, html_documento_id: htmlId, en: new Date().toISOString() })
+  // Opciones de lista que vio el worker (21/10/2026; solo texto, redactado): `[]` = miró y no había; ausente = no se miró.
+  const opcionesAtasco = atasco && atascoCable?.opciones ? { atascoOpciones: atascoCable.opciones } : {}
+  const marcaAtasco = atasco ? { atasco: 'esperando', atascoClave: atasco.clave, ...opcionesAtasco } : {}
+  // `capturaConDatos`: la captura muestra datos del tomador → el aviso de Telegram sale SIN foto (solo pantalla de plataforma).
+  const marcaCaptura = capturaId ? { capturaConDatos: evidencia?.capturaConDatos === true } : {}
+  const err = JSON.stringify({ ...error, ...marcaAtasco, ...marcaCaptura, html_documento_id: htmlId, en: new Date().toISOString() })
   let filasTocadas: number
   if (conBotVersion) {
     filasTocadas = await db.$executeRaw`

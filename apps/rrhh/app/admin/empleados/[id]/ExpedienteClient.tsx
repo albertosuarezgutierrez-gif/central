@@ -1,7 +1,9 @@
 'use client'
 import { useState } from 'react'
 import ChatPanel from '@/components/ChatPanel'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
+import Card from '@/components/ui/Card'
+import { NOTAS_MAX } from '@/lib/notas-empleado'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
@@ -16,6 +18,7 @@ type Empleado = {
   coche: string | null; matricula: string | null
   fecha_alta: string | null
   fecha_reconocimiento_medico: string | null
+  notas: string | null
 }
 
 const FIRMA: Record<string, { txt: string; cls: string }> = {
@@ -29,7 +32,7 @@ function toDateInput(iso: string | null) {
   return iso.slice(0, 10)
 }
 
-export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function ExpedienteClient({ empleado, carpetas, inicial }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[] }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
   const [modoFirma, setModoFirma] = useState<Record<string, string>>({})
@@ -63,6 +66,9 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl,
   })
   const [fichaGuardando, setFichaGuardando] = useState(false)
   const [fichaMsg, setFichaMsg] = useState('')
+  const [notas, setNotas] = useState(empleado.notas ?? '')
+  const [notasEstado, setNotasEstado] = useState<'' | 'guardando' | 'ok' | 'error'>('')
+  const [notasError, setNotasError] = useState('')
   // El enlace de acceso NO viene en las props (con él se entra como el empleado): se pide al
   // pulsar «Ver enlace» (POST /enlace) o al regenerarlo (POST /acceso). Es una ruta relativa.
   const [enlace, setEnlace] = useState('')
@@ -83,6 +89,21 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl,
     setFichaGuardando(false)
     if (r.ok) setFichaMsg('Guardado')
     else setFichaMsg((await r.json()).error ?? 'Error al guardar')
+  }
+
+  async function guardarNotas() {
+    setNotasEstado('guardando'); setNotasError('')
+    try {
+      const r = await fetch(`/api/admin/empleados/${empleado.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ notas }),
+      })
+      if (r.ok) { setNotas(n => n.trim()); setNotasEstado('ok') }
+      else { setNotasError((await r.json().catch(() => ({}))).error ?? 'Error al guardar las notas'); setNotasEstado('error') }
+    } catch {
+      setNotasError('Error de red. Inténtalo de nuevo.'); setNotasEstado('error')
+    }
   }
 
   async function recargar() {
@@ -124,7 +145,13 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
   async function solicitarFirma(docId: string) {
     setError('')
     const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}/solicitar-firma`, { method: 'POST' })
-    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error')
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok) { setError(j.error ?? 'Error'); return }
+    await recargar()
+    // El aviso por email no tumba la solicitud, pero se dice si no salió (queda en Firmas pendientes).
+    const em = j.aviso?.email_estado
+    if (em && em !== 'enviado') setError(`Firma solicitada. Email no enviado (${em === 'sin_email' ? 'el empleado no tiene email' : em === 'sin_transporte' ? 'correo no configurado' : 'falló el envío'}); avisado en su portal.`)
+    else if (!j.aviso) setError('Firma solicitada, pero no se pudo registrar el aviso. Revisa «Firmas pendientes».')
   }
 
   function enlaceAcceso() {
@@ -167,32 +194,19 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
     setFicha(s => ({ ...s, [k]: ev.target.value }))
 
   return (
-    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      {/* Nav */}
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
-        <a href={`/admin/empleados/${empleado.id}/contrato`} className="text-sm text-accent no-underline hover:underline">Contrato laboral →</a>
-      </div>
-
+    <Page
+      titulo={ficha.apellidos ? `${ficha.apellidos}, ${ficha.nombre}` : ficha.nombre || '—'}
+      subtitulo={[ficha.puesto, ficha.estado !== 'activo' ? ficha.estado : null].filter(Boolean).join(' · ') || 'Sin puesto'}
+      volver={{ href: '/admin/empleados', texto: 'Empleados' }}
+      acciones={<a href={`/admin/empleados/${empleado.id}/contrato`} className="text-sm text-accent no-underline hover:underline">Contrato laboral →</a>}
+    >
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
       {/* Ficha */}
-      <div className="mb-4 rounded-[12px] border border-line bg-card">
-        {/* Cabecera de ficha */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-lg font-bold text-accent-ink">
-            {(ficha.apellidos || ficha.nombre).charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold text-ink">
-              {ficha.apellidos ? `${ficha.apellidos}, ${ficha.nombre}` : ficha.nombre || '—'}
-            </p>
-            <p className="text-sm text-ink-3">{[ficha.puesto, ficha.estado !== 'activo' ? ficha.estado : null].filter(Boolean).join(' · ') || 'Sin puesto'}</p>
-          </div>
-        </div>
-
+      <Card className="min-w-0 !p-0">
         <div className="p-4">
           {/* Sección: Datos de contacto */}
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">Datos de contacto</h2>
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Apellidos
               <input value={ficha.apellidos} onChange={f('apellidos')} placeholder="Primer apellido Segundo apellido" className="text-sm" />
@@ -225,7 +239,7 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
 
           {/* Sección: Datos personales */}
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">Datos personales</h2>
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               NIF / DNI
               <input value={ficha.dni} onChange={f('dni')} placeholder="12345678A" className="text-sm" />
@@ -253,7 +267,7 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
 
           {/* Sección: Datos laborales */}
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">Datos laborales</h2>
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Puesto
               <input value={ficha.puesto} onChange={f('puesto')} placeholder="Camarero/a, Recepcionista…" className="text-sm" />
@@ -322,10 +336,11 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
       {/* Acceso al portal */}
-      <div className="mb-4 rounded-[12px] border border-line bg-card p-4">
+      <Card>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">Acceso al portal del empleado</h2>
         {enlace && (
           <p className="mb-3 break-all rounded bg-paper-2 px-3 py-2 font-mono text-xs text-ink-2">{enlaceAcceso()}</p>
@@ -350,18 +365,45 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
         {errorEnlace && <p className="mt-2 text-sm text-alert">{errorEnlace}</p>}
         {msgSesiones && <p className={`mt-2 text-sm ${msgSesiones === 'Sesiones cerradas' ? 'text-ok' : 'text-alert'}`}>{msgSesiones}</p>}
         <p className="mt-2 text-xs text-ink-3">Si el empleado tiene email, entra en <strong>/e/entrar</strong> con un código que le llega por correo. Si no, envíale este enlace. Quien lo tenga entra como el empleado: no lo compartas por canales abiertos. Al generar uno nuevo el anterior deja de funcionar y se cierran sus sesiones abiertas.</p>
-      </div>
+      </Card>
 
-      {error && <p className="mb-3 text-sm text-alert">{error}</p>}
+      {/* Notas internas */}
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">Notas internas</h2>
+        <textarea
+          rows={5}
+          value={notas}
+          maxLength={NOTAS_MAX + 500}
+          onChange={e => { setNotas(e.target.value); setNotasEstado('') }}
+          aria-label="Notas internas"
+          className="w-full resize-y text-sm"
+        />
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className={notas.trim().length > NOTAS_MAX ? 'text-alert' : 'text-ink-3'}>{notas.trim().length}/{NOTAS_MAX}</span>
+          <span className="text-ink-3">Solo las ve la empresa, no el empleado.</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button onClick={guardarNotas} disabled={notasEstado === 'guardando' || notas.trim().length > NOTAS_MAX} className="min-h-[44px] text-sm">
+            {notasEstado === 'guardando' ? 'Guardando…' : 'Guardar notas'}
+          </button>
+          {notasEstado === 'ok' && <span className="text-sm text-ok">Guardado ✓</span>}
+          {notasEstado === 'error' && <span className="text-sm text-alert">{notasError}</span>}
+        </div>
+      </Card>
+
+      {error && <p className="text-sm text-alert">{error}</p>}
 
       {/* Chat */}
       <ChatPanel endpoint={`/api/admin/empleados/${empleado.id}/chat`} yo="gestor" />
+      </div>
+      </div>
 
-{/* Expediente: carpetas */}
+      {/* Expediente: carpetas */}
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-x-4 lg:grid-cols-2">
       {carpetas.map(c => {
         const dc = docs.filter(d => d.carpeta === c.id)
         return (
-          <section key={c.id} className="my-3 rounded-[12px] border border-line bg-card p-4">
+          <Card as="section" key={c.id} className="my-3 min-w-0">
             <h2 className="mb-2 text-base">{c.etiqueta} <span className="text-ink-3">({dc.length})</span></h2>
             <ul className="mb-3 grid gap-2">
               {dc.map(d => (
@@ -414,9 +456,10 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
                   onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f, modoFirma[c.id] ?? 'none'); e.currentTarget.value = ''; setModoFirma(s => ({ ...s, [c.id]: 'none' })) }} />
               </label>
             </div>
-          </section>
+          </Card>
         )
       })}
-    </AdminShell>
+      </div>
+    </Page>
   )
 }

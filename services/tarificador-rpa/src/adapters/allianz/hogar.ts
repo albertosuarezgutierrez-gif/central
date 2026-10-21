@@ -1,5 +1,5 @@
-// Allianz ePAC · «Allianz HOGAR» — adaptador de TARIFICACIÓN (14/10/2026). APAGADO (`ALLIANZ_HOGAR_ACTIVO = false`):
-// `adapters/index.ts` lo registra SOLO con el flag en `true`, y asegura aún no acepta trabajos de hogar (`validarEntradaRamo`).
+// Allianz ePAC · «Allianz HOGAR» — adaptador de TARIFICACIÓN (14/10/2026). ENCENDIDO por Alberto el 21/10/2026 (1.ª prueba real,
+// solo tarificar): `adapters/index.ts` lo registra SOLO con el flag en `true`. Asegura ya encola hogar de Allianz (19/10/2026; puerta = su fila).
 //
 // Fuente: las 6 exploraciones IA reales de Allianz Hogar (13-14/10/2026, tabla `seguros.tarificador_exploracion_pasos`; la
 // última, 14/10 ~09:33). TODAS se quedaron en la PANTALLA 1; nada de lo que viene después se ha visto. Lo visto (estructura,
@@ -43,12 +43,14 @@ import { esAppHogarAllianz } from '../../guard.ts'
 import { comprobarCampo } from './auto.ts'
 import { login, sesionSirve } from './comunidades.ts'
 import { abrirNuevaAlta, esperarMarcoApp } from './entrada.ts'
+import { elegirPoblacionHogar, nucleoDeVia } from './poblacion-localidad.ts'
 
 /**
- * Flag de registro de Allianz HOGAR. APAGADO: lo enciende Alberto (en código, como `MOTO_ACTIVO`) cuando quiera la 1.ª prueba
- * real. Además hace falta que asegura acepte el ramo (`validarEntradaRamo` / `RAMOS_TARIFICABLES_RPA`, ver docs).
+ * Flag de registro de Allianz HOGAR. ENCENDIDO (Alberto, 21/10/2026: OK para la 1.ª prueba real de TARIFICACIÓN, no emisión).
+ * Asegura acepta el ramo desde el 19/10/2026 (`validarEntradaRamo` / `companiasHogarRpa`); la puerta de BD sigue siendo la fila
+ * `seguros.companias_integracion` allianz/hogar. Tras «Vivienda» el bot PARA con inventario (Valoración/Precio sin mapa).
  */
-export const ALLIANZ_HOGAR_ACTIVO = false
+export const ALLIANZ_HOGAR_ACTIVO = true
 
 export const ADAPTADOR = 'allianz/hogar'
 
@@ -253,6 +255,13 @@ const ESPERA_PASO_MS = 30_000
 
 const selControl = (control: string) => `[formcontrolname="${control}"]`
 
+/**
+ * El input VISIBLE de ese `formcontrolname` (job 1bd6bfce, 21/10/2026: el HTML del atasco tenía TRES `town`/`postalCode`: el de
+ * «Vivienda» y dos copias `disabled` de pasos posteriores, ocultas). Sin `:visible`, `count() === 1` no se cumplía nunca y
+ * `inputValue` fallaba por modo estricto: la población autocompletada no se veía. Para LEER (el tipo de vía visible está deshabilitado).
+ */
+const inputVisible = (marco: Frame, control: string) => marco.locator(`input${selControl(control)}:visible`)
+
 /** Exactamente UN control visible con ese `formcontrolname` (input, o el propio nodo si es un input). */
 function controlFijo(marco: Frame, control: string, que: string): () => Promise<Locator> {
   return async () => {
@@ -316,7 +325,7 @@ async function escribir(marco: Frame, ctx: Pick<ContextoPortal, 'pausaAccion' | 
 async function esperarValor(marco: Frame, control: string, page: Pick<Page, 'waitForTimeout'>, ms: number): Promise<boolean> {
   const fin = Date.now() + ms
   for (;;) {
-    const loc = marco.locator(`input${selControl(control)}`)
+    const loc = inputVisible(marco, control)
     if ((await loc.count()) === 1 && ((await leer(loc)) ?? '').trim() !== '') return true
     if (Date.now() >= fin) return false
     await page.waitForTimeout(250)
@@ -429,6 +438,79 @@ async function opcionAutocompletada(page: Page, marco: Frame, ctx: CtxVivienda, 
   return { ok: false, confirmar: r.confirmar }
 }
 
+/** Resultado de `elegirPoblacionDeLista`: cómo se eligió, o `null` + diagnóstico SIN datos personales (para el mensaje del hueco). */
+type ResultadoLista = { por: 'nucleo' | 'municipio' | 'unica' } | { por: null; diag: string }
+
+/**
+ * Abre la lista de `town` y lee sus opciones (21/10/2026, trabajos 229b2fc5/b5089267: la lista NO se desplegaba con foco + flecha;
+ * el `nx-autocomplete` de NDBX filtra y abre al ESCRIBIR). Orden, parando en el primer intento que muestre opciones: foco →
+ * flecha abajo → clic → escribir en `town` una ficha del núcleo de la vía (la más larga) y luego del municipio. Las opciones se
+ * limitan al listbox de `town` (`aria-controls`/`aria-owns`, que Angular rellena AL ABRIR: se relee tras cada intento); sin ese
+ * enlace, solo valen opciones que no estaban visibles antes de tocar `town` (si ya había, no se sabe de quién son: `null`).
+ * Se elige con `elegirPoblacionHogar` (núcleo → municipio → opción única) y SOLO si es única (fail-closed). Con opciones y SIN
+ * coincidencia → hueco que LISTA. Escribir en `town` no elige nada: sin opción pulsada el campo no queda con valor y se vacía.
+ */
+async function elegirPoblacionDeLista(page: Page, marco: Frame, ctx: CtxVivienda, municipio: string | null, nombreVia: string | null): Promise<ResultadoLista> {
+  if (municipio === null && nombreVia === null) return { por: null, diag: 'sin municipio ni vía en el riesgo' }
+  // Solo el `town` visible y habilitado del paso actual (hay copias `disabled` ocultas de otros pasos).
+  const campo = marco.locator(`input${selControl(CONTROLES.poblacion)}:visible:not([disabled])`)
+  const nCampo = await campo.count()
+  if (nCampo !== 1) return { por: null, diag: `campo town visible y habilitado: ${nCampo} coincidencias (en el DOM: ${await marco.locator(`input${selControl(CONTROLES.poblacion)}`).count()})` }
+  const SEL_OPC = '[role=option]:visible, nx-autocomplete-option:visible, mat-option:visible'
+  const previas = await marco.locator(SEL_OPC).count()
+  let enlaceVisto = false
+  let intentos = 0
+  const abierta = () => {
+    // El enlace se relee cada vez: Angular pone aria-controls/aria-owns al abrir el panel, no antes.
+    return campo.evaluate((el) => (el.getAttribute('aria-controls') ?? el.getAttribute('aria-owns') ?? '').trim().split(/\s+/)[0]).catch(() => '')
+  }
+  // Texto + posición ORIGINAL en el locator (los vacíos se descartan sin desplazar los índices).
+  const leer = async (): Promise<{ opciones: Locator; items: { i: number; t: string }[] } | null> => {
+    const enlace = await abierta()
+    if (enlace) enlaceVisto = true
+    if (!enlace && previas > 0) return null
+    const opciones = enlace && /^[\w-]+$/.test(enlace) ? marco.locator(`#${enlace}`).locator(SEL_OPC) : marco.locator(SEL_OPC)
+    const items = (await opciones.evaluateAll((els) => els.map((el, i) => ({ i, t: ((el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim() })))).filter((x) => x.t !== '')
+    return items.length > 0 ? { opciones, items } : null
+  }
+  const nucleo = nucleoDeVia(nombreVia)
+  const fichasLargas = (t: string | null) =>
+    (t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().split(/[^A-Z0-9Ñ]+/).filter((w) => w.length >= 4 && !['DEL', 'LAS', 'LOS'].includes(w)).sort((x, y) => y.length - x.length)
+  const aEscribir = [...new Set([...fichasLargas(nucleo).slice(0, 1), ...fichasLargas(municipio).slice(0, 1)])]
+  const intentosApertura: Array<() => Promise<void>> = [
+    async () => void (await campo.focus({ timeout: 5_000 }).catch(() => undefined)),
+    async () => void (await campo.press('ArrowDown', { timeout: 5_000 }).catch(() => undefined)),
+    ...aEscribir.map((ficha) => async () => {
+      await campo.fill('', { timeout: 5_000 }).catch(() => undefined)
+      await campo.pressSequentially(ficha, { delay: 80, timeout: 8_000 }).catch(() => undefined)
+    }),
+  ]
+  let hallado: { opciones: Locator; items: { i: number; t: string }[] } | null = null
+  for (const abrir of intentosApertura) {
+    intentos++
+    await abrir()
+    await page.waitForTimeout(700)
+    hallado = await leer()
+    if (hallado) break
+  }
+  if (!hallado) {
+    // Nada elegido: se deja `town` vacío (lo escrito no es una elección) y sigue la capa común.
+    if (aEscribir.length > 0) await campo.fill('', { timeout: 5_000 }).catch(() => undefined)
+    return { por: null, diag: `sin opciones tras ${intentos} intentos (foco, flecha${aEscribir.length > 0 ? ', escribir' : ''}); enlace aria-controls/owns ${enlaceVisto ? 'visto' : 'ausente'}; opciones visibles antes: ${previas}` }
+  }
+  const { opciones, items } = hallado
+  const textos = items.map((x) => x.t)
+  const r = elegirPoblacionHogar(textos, municipio, nombreVia)
+  if (r.tipo === 'sin_opciones' || r.tipo === 'sin_municipio') return { por: null, diag: 'sin municipio ni opciones utilizables' }
+  if (r.tipo === 'sin_coincidencia') {
+    throw new ErrorMapaIncompleto(`la elección de población del CP (ninguna opción coincide de forma única con la del riesgo; el portal ofrece: ${textos.slice(0, 15).join(' | ')})`)
+  }
+  await ctx.pausaAccion()
+  await ctx.pulsar(opciones.nth(items[r.indice].i))
+  if (await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS)) return { por: r.por }
+  throw new ErrorMapaIncompleto('el efecto de la opción de población elegida (tras pulsarla, la población no quedó rellena)')
+}
+
 /** Pasos del asistente leídos del DOM (solo lectura). */
 async function leerPasos(marco: Frame): Promise<ItemPaso[]> {
   return marco.locator('nx-multi-step-item').evaluateAll((els) =>
@@ -504,15 +586,30 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
     const loc = await escribir(marco, ctx, op)
     if (op.autocompleta === 'poblacion') {
       let confirmarPob: (() => Promise<void>) | null = null
+      let elegidaPor: 'nucleo' | 'municipio' | 'unica' | null = null
       if (!(await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS))) {
-        const hueco = 'la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)'
-        const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco, f.inmueble.municipio !== null)
-        if (!e.ok) throw new ErrorMapaIncompleto(hueco)
-        confirmarPob = e.confirmar
+        const hueco0 = 'la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)'
+        // 21/10/2026: antes de la capa común, elección determinista por el municipio del riesgo (exacta o palabras enteras, UNA sola).
+        const lista = await elegirPoblacionDeLista(page, marco, ctx, f.inmueble.municipio, f.inmueble.nombreVia)
+        const hueco = lista.por === null ? `${hueco0} [${lista.diag}]` : hueco0
+        if (lista.por !== null) elegidaPor = lista.por
+        else {
+          const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco, f.inmueble.municipio !== null)
+          if (!e.ok) throw new ErrorMapaIncompleto(hueco)
+          confirmarPob = e.confirmar
+        }
       }
-      if (f.inmueble.municipio !== null) {
-        const pob = await leer(marco.locator(`input${selControl(CONTROLES.poblacion)}`))
-        if (plano(pob) !== plano(f.inmueble.municipio)) throw new ErrorMapaIncompleto('la elección de población del CP (el portal autocompletó otra distinta de la del riesgo)')
+      // Elegida por núcleo de la vía u opción única: el municipio del riesgo (Castillo de Locubín) puede NO ser la población del CP
+      // (Ventas del Carrizal); ni se contrasta ni se aprende. Solo la vía por municipio / lo autocompletado se contrasta con él.
+      if (f.inmueble.municipio !== null && (elegidaPor === null || elegidaPor === 'municipio')) {
+        const pob = await leer(inputVisible(marco, CONTROLES.poblacion))
+        if (plano(pob) !== plano(f.inmueble.municipio)) {
+          // 0.1.3 (21/10/2026): el portal autocompleta el ÚNICO núcleo del CP (Ventas del Carrizal) y el municipio del riesgo (Castillo de
+          // Locubín) es otro. Se acepta solo si casa con el núcleo entre paréntesis de la vía del riesgo (nunca por «única»); sin núcleo, estricto.
+          const r = elegirPoblacionHogar([pob ?? ''], f.inmueble.municipio, f.inmueble.nombreVia)
+          if (r.tipo !== 'elegida' || r.por === 'unica') throw new ErrorMapaIncompleto('la elección de población del CP (el portal autocompletó otra distinta de la del riesgo)')
+          if (r.por === 'nucleo') confirmarPob = null // población distinta del municipio: ni se contrasta ni se aprende
+        }
         await confirmarPob?.().catch(() => undefined)
       }
     } else if (op.autocompleta === 'via') {
@@ -521,8 +618,8 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
         const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.tipoVia, 'via', hueco, true)
         if (!e.ok) throw new ErrorMapaIncompleto(hueco)
         // Se confirma como aprendido SOLO si la vía que quedó es la del riesgo (tipo + nombre, plano).
-        const tipo = await leer(marco.locator(`input${selControl(CONTROLES.tipoVia)}`))
-        const nombre = await leer(marco.locator(`input${selControl(CONTROLES.nombreVia)}`))
+        const tipo = await leer(inputVisible(marco, CONTROLES.tipoVia))
+        const nombre = await leer(inputVisible(marco, CONTROLES.nombreVia))
         if (!viaCoincide(tipo, nombre, f.inmueble.nombreVia)) throw new ErrorMapaIncompleto('la elección de la vía en el autocompletado (el portal dejó una vía distinta de la del riesgo)')
         await e.confirmar().catch(() => undefined)
       }
@@ -570,6 +667,9 @@ export async function avanzarDesdeVivienda(page: Page, marco: Frame, ctx: CtxViv
 /**
  * Tras «Vivienda»: «Valoración de bienes» y «Precio» NO están vistos. Se para ahí pidiendo el inventario de estructura
  * (lo captura el runner) para mapearlas en la 1.ª prueba real. Nada se rellena ni se pulsa a ciegas.
+ * TODO(grabación) «Valoración de bienes»: capitales (`hogar.capitalContinenteEur/ContenidoEur`), joyas/objetos de valor
+ * (`hogar.objetosValor`) y medidas de seguridad (`hogar.protecciones`) ya viajan en el formulario; falta el DOM.
+ * TODO(grabación) «Precio»: lector de primas por modalidad + referencia → `ofertasDesdePrecios` (ya escrito y probado).
  */
 export function huecoTrasVivienda(paso: PasoHogar): never {
   if (paso === 'Precio') throw new ErrorMapaIncompleto('el lector de la pantalla «Precio» (sin explorar: primas, modalidades y referencia)')
@@ -609,7 +709,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.0',
+  version: '0.1.3',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)

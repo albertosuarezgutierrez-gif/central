@@ -40,7 +40,7 @@ test('🪤 sin código no se ve nada: la cookie de acceso SOLO se pone con un `v
 })
 
 test('🪤 sin código no se ve nada: sin sesión NI acceso por WhatsApp, la pantalla de dentro corta', () => {
-  assert.match(LIB, /const porWhatsapp = \(await accesoWhatsappDe\(id\)\) !== null/)
+  assert.match(LIB, /const accesoW = await accesoWhatsappDe\(id\)\s*const porWhatsapp = accesoW !== null/)
   assert.match(LIB, /if \(!identidad && !porWhatsapp\) return \{ estado: 'sin_sesion' \}/)
   // Sin acceso por WhatsApp, las dos ramas de siempre y fallando CERRADO.
   assert.match(LIB, /if \(!porWhatsapp\) \{\s*if \(identidad === null\) return \{ estado: 'sin_sesion' \}/)
@@ -72,4 +72,31 @@ test('🪤 firmar y avisar de un dato: quién sale de la sesión o de la cookie 
   }
   // El código del WhatsApp solo con el acceso por WhatsApp.
   assert.match(FIRMA, /via: b\.via === 'whatsapp' && 'tokenWhatsapp' in acceso \? 'whatsapp' : 'correo'/)
+})
+
+// ─── La PERSONA DE CONTACTO (21/10/2026): ve, no opera ──────────────────────
+const PAGINA = codigo('app/(portal)/boveda/presupuesto/[id]/page.tsx')
+
+test('🪤 persona de contacto: las rutas que escriben (firma, cuenta, dato incorrecto) cortan con sin_permiso ANTES del puente', () => {
+  for (const [src, llamada] of [[FIRMA, 'prepararAceptacion('], [DATOS, 'reportarDatosIncorrectos(']] as const) {
+    const veto = src.indexOf("if (puerta.tercero) return NextResponse.json({ estado: 'sin_permiso', motivo: MOTIVO_TERCERO }, { status: 403 })")
+    assert.ok(veto > 0, 'falta el veto del tercero')
+    assert.ok(veto < src.indexOf(llamada, src.indexOf('const puerta = await accesoPuenteDe')), 'el veto va antes de llamar al puente')
+  }
+  // En la firma, antes de la PRIMERA acción (preparar ya resuelve la cuenta).
+  assert.ok(FIRMA.indexOf('if (puerta.tercero)') < FIRMA.indexOf("if (b.accion === 'preparar')"))
+})
+
+test('🪤 persona de contacto: la marca viaja del puente a la cookie y de la cookie a la puerta', () => {
+  assert.match(RUTA, /crearAccesoWhatsapp\(\{ presupuestoId: r\.presupuestoId, token, tercero: r\.tercero \}\)/)
+  assert.match(AUTH, /return \{ presupuestoId, token, tercero: tercero === true \}/)
+  assert.match(LIB, /return fila \? \{ token: a\.token, tercero: a\.tercero \} : null/)
+  assert.match(LIB, /if \(w\) return \{ acceso: \{ tokenWhatsapp: w\.token \}, corredor, tercero: w\.tercero \}/)
+})
+
+test('🪤 persona de contacto: la pantalla no ofrece Aceptar, Revisa tus datos ni nombrar mediador, y lo dice', () => {
+  assert.match(PAGINA, /const puedeAceptar = [^\n]*&& tercero === null/)
+  assert.match(PAGINA, /const mostrarCotizados = [^\n]*&& tercero === null/)
+  assert.match(PAGINA, /puedeNombrar=\{[^}]*&& tercero === null\}/)
+  assert.match(PAGINA, /\{textoAccesoTercero\(tercero\)\}/)
 })

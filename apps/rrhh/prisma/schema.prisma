@@ -15,6 +15,8 @@ model empresas {
   marca_color  String?
   cnae_codigo  String?
   at_ep_tipo   Decimal? @db.Decimal(6, 4)
+  /// Fichar sin ubicación en emergencia (migración 0024); el fichaje queda marcado para el responsable.
+  permite_fichar_sin_ubicacion Boolean @default(true)
   creada_at    DateTime @default(now()) @db.Timestamptz(6)
   usuarios     usuarios_rrhh[]
   empleados    empleados[]
@@ -56,6 +58,8 @@ model empleados {
   matricula         String?
   fecha_alta        DateTime? @db.Date
   fecha_reconocimiento_medico DateTime? @db.Date
+  /// Notas internas de la empresa (migración 0025). NUNCA en /api/e/* ni /e/*.
+  notas         String?
   estado            String    @default("activo")
   acceso_token  String    @unique
   pin_hash      String?
@@ -84,6 +88,8 @@ model documentos {
   firmado_empresa_at       DateTime? @db.Timestamptz(6)
   firmado_empresa_nombre   String?
   firmado_empresa_hash     String?
+  firma_anulada_at         DateTime? @db.Timestamptz(6)
+  firma_anulada_por        String?
   creada_at    DateTime  @default(now()) @db.Timestamptz(6)
   empleado     empleados @relation(fields: [empleado_id], references: [id], onDelete: Cascade)
 

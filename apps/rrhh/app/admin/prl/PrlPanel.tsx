@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Card from '@/components/ui/Card'
 
 type Empleado = {
   id: string
@@ -63,14 +64,14 @@ export default function PrlPanel({ empleados }: { empleados: Empleado[] }) {
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {DOCUMENTOS.map(doc => (
-          <div key={doc.id} className="rounded-card border border-line bg-card p-4">
+          <Card key={doc.id}>
             <div className="mb-2 text-2xl">{doc.icono}</div>
             <h2 className="mb-1 text-sm font-semibold">{doc.titulo}</h2>
             <p className="text-ink-3 mb-4 text-xs">{doc.descripcion}</p>
             <button onClick={() => setModal(doc.id)} className="w-full text-sm">
               Generar documento
             </button>
-          </div>
+          </Card>
         ))}
       </div>
 
