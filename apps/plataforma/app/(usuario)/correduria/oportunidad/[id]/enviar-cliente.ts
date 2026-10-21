@@ -32,7 +32,8 @@ export type ContactoParaEnviar = { clienteId: string; nombre: string | null; rel
 export type ContactoDescartado = { clienteId: string; nombre: string | null; relacion: string; motivo: MotivoNoElegible }
 export type LecturaDestinatarios =
   | { estado: 'tomador' | 'tomador_no_se_sabe' | 'tomador_baja' }
-  | { estado: 'contactos'; elegibles: ContactoParaEnviar[]; noElegibles: ContactoDescartado[] }
+  /** `tomadorJuridica`: el tomador es empresa EXPLÍCITA (lo dice asegura; si no lo manda, `false`: no se inventa una empresa). */
+  | { estado: 'contactos'; elegibles: ContactoParaEnviar[]; noElegibles: ContactoDescartado[]; tomadorJuridica: boolean }
   | { estado: 'nadie'; noElegibles: ContactoDescartado[] }
 
 const MOTIVOS = Object.keys(TEXTO_NO_ELEGIBLE) as MotivoNoElegible[]
@@ -70,7 +71,7 @@ export function leerDestinatarios(status: number, j: unknown): LecturaDestinatar
     if (!x || !clienteId || !email || (x.via !== 'representacion' && x.via !== 'autorizacion')) continue
     elegibles.push({ clienteId, nombre: texto(x.nombre), relacion: texto(x.relacion) ?? '—', via: x.via, email })
   }
-  return elegibles.length > 0 ? { estado: 'contactos', elegibles, noElegibles } : { estado: 'nadie', noElegibles }
+  return elegibles.length > 0 ? { estado: 'contactos', elegibles, noElegibles, tomadorJuridica: o.tomadorJuridica === true } : { estado: 'nadie', noElegibles }
 }
 
 /** «Victor Pérez (Dueño)» — o «(autorizado a ver sus pólizas)» si entra por la autorización. */
@@ -94,7 +95,13 @@ export function cabeceraDestinatarios(l: LecturaDestinatarios | null): string {
   return 'El tomador tiene correo: el presupuesto va a él.'
 }
 
-/** La pregunta antes de mandar a un contacto: nada sale sin el OK de Alberto, y le dice A QUIÉN y COMO QUÉ. */
-export function confirmarCorreoContacto(c: ContactoParaEnviar): string {
-  return `Se le manda a ${etiquetaContacto(c)} (${c.email}) el aviso con el enlace y un código que abre SOLO este presupuesto, como persona de contacto de la empresa (no como tomador). ¿Enviar?`
+/**
+ * La pregunta antes de mandar a un contacto: nada sale sin el OK de Alberto, y le dice A QUIÉN, COMO QUÉ y QUÉ PUEDE hacer
+ * (verlo, no aceptarlo). `rotacion` = el aviso de `avisoRotacion` (el enlace que ya tenga el TOMADOR deja de valer) o
+ * `null` si no tenía ninguno. PURO.
+ */
+export function confirmarCorreoContacto(c: ContactoParaEnviar, o: { tomadorJuridica: boolean; rotacion: string | null }): string {
+  const como = o.tomadorJuridica ? 'como persona de contacto de la empresa' : 'como persona autorizada por el tomador'
+  const rotacion = o.rotacion ? ` ${o.rotacion.replace(/\s*¿Seguir\?\s*$/, '').replace(/^El cliente/, 'El tomador')}` : ''
+  return `Se le manda a ${etiquetaContacto(c)} (${c.email}) el aviso con el enlace y un código para VER este presupuesto, ${como} (no como tomador): no podrá aceptarlo ni firmarlo.${rotacion} ¿Enviar?`
 }

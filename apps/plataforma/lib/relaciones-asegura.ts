@@ -158,6 +158,12 @@ export type RelacionCartera = RelacionFicha & {
   tipoPersona?: TipoOtorgantePortal | null
   /** Estado del correo del relacionado. `undefined` = asegura no lo mandó; se trata como `no_se_sabe`. */
   correo?: 'con_email' | 'sin_email' | 'baja_de_correo' | 'no_se_sabe'
+  /**
+   * Tipos CRUDOS por sentido (ficha→relacionado / relacionado→ficha). La regla de a quién va un presupuesto mira el
+   * SENTIDO; `tipo` lo funde. `undefined` = asegura no los mandó (puerto viejo): no se decide con `tipo`.
+   */
+  tiposIda?: string[]
+  tiposVuelta?: string[]
   /** Pólizas vivas del relacionado. `null` = asegura no las contó (NO es 0). */
   polizasVivas: number | null
   /**
@@ -343,6 +349,10 @@ function enteroONull(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
 }
 
+function listaTipos(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((t) => typeof t === 'string' && t.trim() !== '')
+}
+
 /** Una fila del puerto → `RelacionCartera`, o `null` si no tiene forma de relación. */
 export function leerRelacion(v: unknown): RelacionCartera | null {
   if (typeof v !== 'object' || v === null) return null
@@ -367,6 +377,7 @@ export function leerRelacion(v: unknown): RelacionCartera | null {
     tipoPersona: o.tipoPersona === 'juridica' || o.tipoPersona === 'fisica' ? o.tipoPersona : null,
     correo:
       o.correo === 'con_email' || o.correo === 'sin_email' || o.correo === 'baja_de_correo' ? o.correo : 'no_se_sabe',
+    ...(listaTipos(o.tiposIda) && listaTipos(o.tiposVuelta) ? { tiposIda: o.tiposIda as string[], tiposVuelta: o.tiposVuelta as string[] } : {}),
     polizasVivas: enteroONull(o.polizasVivas),
     polizasFigura: 'polizasFigura' in o ? enteroONull(o.polizasFigura) : undefined,
     autorizacion: leerAutorizacion(o.autorizacion),

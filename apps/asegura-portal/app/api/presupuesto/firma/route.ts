@@ -6,6 +6,7 @@ import {
   MOTIVO_SIN_CASILLA, MOTIVO_SIN_CUENTA, firmarAceptacion, leerEntradaCuenta, pedirCodigoAceptacion, prepararAceptacion,
 } from '@/lib/presupuesto-firma'
 import { accesoPuenteDe } from '@/lib/presupuesto'
+import { MOTIVO_TERCERO } from '@/lib/presupuesto-vista'
 
 export const runtime = 'nodejs'
 
@@ -39,6 +40,8 @@ export async function POST(req: Request) {
   const puerta = await accesoPuenteDe(presupuestoId)
   if (!puerta) return NextResponse.json({ estado: 'sin_sesion' }, { status: 401 })
   const { acceso } = puerta
+  // Persona de contacto (21/10/2026): ve el presupuesto, no opera. Se corta aquí y, otra vez, en asegura (que decide).
+  if (puerta.tercero) return NextResponse.json({ estado: 'sin_permiso', motivo: MOTIVO_TERCERO }, { status: 403 })
 
   if (b.accion === 'preparar') {
     // Preparar es solo lectura: se permite a la vista de corredor.

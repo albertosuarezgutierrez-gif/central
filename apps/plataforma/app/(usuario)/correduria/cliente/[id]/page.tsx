@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import AvisoContactoEmpresa from './AvisoContactoEmpresa'
-import { avisoContactoEmpresa } from '@/lib/contacto-empresa'
+import { avisoContactoEmpresa, tipoPersonaDeColumna } from '@/lib/contacto-empresa'
 import { clasificarPolizaFicha, personaDeFicha, personasDePolizas, resumenFicha, siguienteAccion, type ClasePolizaFicha } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import Historial from '../../Historial'
@@ -125,7 +125,8 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
     : ficha.contactos.emails.length > 0 ? 'con_email' as const
     : 'sin_email' as const
   const avisoEmpresa = avisoContactoEmpresa(
-    { id: ficha.id, tipoPersona: personaDeFicha({ tipoPersona: ficha.identidad?.tipoPersona, dniEnmascarado: ficha.identidad?.dniEnmascarado, segmento: ficha.segmento }), correo: correoFicha },
+    // «Empresa» = la COLUMNA `tipo_persona`, el mismo criterio con el que asegura decide el envío (no el DNI ni el segmento).
+    { id: ficha.id, tipoPersona: tipoPersonaDeColumna(ficha.identidad?.tipoPersona), correo: correoFicha },
     ficha.relaciones,
   )
 

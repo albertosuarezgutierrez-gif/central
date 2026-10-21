@@ -47,6 +47,8 @@ const HEX_64 = /^[0-9a-f]{64}$/
  *   `identidadId` (quien entró con el código no tiene identidad): la ficha sale entonces del PROPIO
  *   presupuesto de ese token. `firmar` con `via:'whatsapp'` firma con ese código. El resto de acciones
  *   siguen pidiendo identidad.
+ *   21/10/2026 — Si el token es el de un correo a una PERSONA DE CONTACTO, esas cinco devuelven `sin_permiso` (403):
+ *   ve el presupuesto, no firma, no elige cuenta ni marca un dato (`lib/presupuesto-acceso-tercero.ts`).
  */
 const STATUS: Record<string, number> = {
   ok: 200, codigo_enviado: 200, aceptado: 200, no_encontrado: 404, no_admite: 409, sin_precio: 409,
@@ -76,7 +78,9 @@ export const POST = auditado(async (req: Request) => {
       if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
       const r = await gastarCodigoWhatsapp(correduria.id, tokenWhatsapp, s('codigo'))
       // `sin_codigo` aquí es «este enlace no salió por WhatsApp»: no es un fallo del puente.
-      const alPortal = r.estado === 'valido' ? { estado: 'valido', presupuestoId: r.presupuestoId } : r
+      // `tercero`: el código es el de una PERSONA DE CONTACTO. El portal lo usa para esconder «Aceptar»/«Datos incorrectos»;
+      // la guarda de verdad está aquí (`fichaDeToken` → `sin_permiso` en cada acción con token).
+      const alPortal = r.estado === 'valido' ? { estado: 'valido', presupuestoId: r.presupuestoId, tercero: r.tercero } : r
       return NextResponse.json(alPortal, { status: r.estado === 'sin_codigo' ? STATUS.sin_codigo_whatsapp : r.estado === 'no_encontrado' ? 404 : STATUS[r.estado] ?? 500 })
     }
     // `datos` y `datos_incorrectos` son del presupuesto, no de una opción: no piden `opcionId`.

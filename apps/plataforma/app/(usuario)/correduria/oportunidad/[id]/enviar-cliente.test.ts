@@ -48,7 +48,7 @@ test('🪤 destinatarios: solo los elegibles con correo al selector; los demás,
   assert.deepEqual(l.noElegibles.map((e) => e.clienteId), ['b']) // un motivo desconocido no se pinta.
   assert.match(cabeceraDestinatarios(l), /personas de contacto con correo: Victor \(Dueño\)/)
   assert.match(etiquetaDescartado(l.noElegibles[0]!), /Berta \(Accionista\): no es dueño, administrador ni representante, ni tiene permiso para ver sus pólizas/)
-  assert.match(confirmarCorreoContacto(l.elegibles[0]!), /v@x\.es.*persona de contacto de la empresa \(no como tomador\)/)
+  assert.equal(l.tomadorJuridica, false) // asegura no lo dijo: no se inventa una empresa.
   // Si ninguno tiene correo a la vista, es «nadie».
   assert.equal(leerDestinatarios(200, { ...j, emails: {} })?.estado, 'nadie')
 })
@@ -61,8 +61,36 @@ test('🪤 destinatarios: un fallo del puerto es «no se pudo leer», nunca «na
   assert.deepEqual(leerDestinatarios(200, { estado: 'ok', destinatarios: { estado: 'tomador_baja' } }), { estado: 'tomador_baja' })
 })
 
-test('el correo a un contacto pide confirmación y manda el destinatario elegido, nada más', () => {
+const VICTOR = { clienteId: 'v', nombre: 'Victor', relacion: 'Dueño', via: 'representacion' as const, email: 'v@x.es' }
+
+test('🪤 confirmar a un contacto de EMPRESA: a quién, como contacto de la empresa, y que no podrá aceptarlo', () => {
+  assert.match(confirmarCorreoContacto(VICTOR, { tomadorJuridica: true, rotacion: null }), /v@x\.es.*persona de contacto de la empresa \(no como tomador\): no podrá aceptarlo ni firmarlo\. ¿Enviar\?$/)
+})
+
+test('🪤 confirmar a un contacto de PERSONA FÍSICA: «persona autorizada por el tomador», nunca «de la empresa»', () => {
+  const t = confirmarCorreoContacto({ ...VICTOR, via: 'autorizacion' }, { tomadorJuridica: false, rotacion: null })
+  assert.match(t, /como persona autorizada por el tomador/)
+  assert.doesNotMatch(t, /empresa/)
+})
+
+test('🪤 confirmar a un contacto avisa de que el enlace que ya tenga el TOMADOR deja de valer', () => {
+  const t = confirmarCorreoContacto(VICTOR, { tomadorJuridica: true, rotacion: 'El cliente ya tiene un enlace del 20/10; generar uno nuevo invalida el anterior. ¿Seguir?' })
+  assert.match(t, /El tomador ya tiene un enlace del 20\/10; generar uno nuevo invalida el anterior\. ¿Enviar\?$/)
+  assert.doesNotMatch(t, /¿Seguir\?/)
+})
+
+test('🪤 el tipo del tomador para el texto lo dice asegura (`tomadorJuridica: true` explícito)', () => {
+  const j = { estado: 'ok', destinatarios: { estado: 'contactos', elegibles: [{ clienteId: 'v', nombre: 'Victor', relacion: 'Dueño', via: 'representacion' }], noElegibles: [] }, emails: { v: 'v@x.es' }, tomadorJuridica: true }
+  const l = leerDestinatarios(200, j)
+  assert.equal(l?.estado === 'contactos' && l.tomadorJuridica, true)
+  const l2 = leerDestinatarios(200, { ...j, tomadorJuridica: 'si' })
+  assert.equal(l2?.estado === 'contactos' && l2.tomadorJuridica, false)
+})
+
+test('el correo a un contacto pide confirmación (con el aviso de rotación, releído) y manda el destinatario elegido, nada más', () => {
   const src = readFileSync(new URL('./EnviarAlCliente.tsx', import.meta.url), 'utf8')
-  assert.match(src, /if \(!window\.confirm\(confirmarCorreoContacto\(elegido\)\)\) return/)
+  const f = src.slice(src.indexOf('async function porCorreoAContacto'), src.indexOf('async function yaMandado'))
+  assert.ok(f.indexOf('await releer()') > 0 && f.indexOf('await releer()') < f.indexOf('window.confirm('))
+  assert.match(f, /if \(!window\.confirm\(confirmarCorreoContacto\(elegido, \{ tomadorJuridica: destinos\?\.estado === 'contactos' && destinos\.tomadorJuridica, rotacion: avisoRotacionActual\(\) \}\)\)\) return/)
   assert.match(src, /accion: 'avisar', canal: 'email', destinatarioClienteId: elegido\.clienteId/)
 })

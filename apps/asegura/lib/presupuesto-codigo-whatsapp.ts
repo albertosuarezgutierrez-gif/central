@@ -21,9 +21,11 @@ import { aE164, esMovilWhatsapp } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
+import { TIPO_ACCESO_TERCERO, esAccesoTercero, type FilaAccesoToken } from './presupuesto-acceso-tercero'
 
 export type ResultadoCodigoWhatsapp =
-  | { estado: 'valido'; presupuestoId: string; clienteId: string }
+  /** `tercero`: el código es el de una PERSONA DE CONTACTO (ve, no firma). Ver `presupuesto-acceso-tercero.ts`. */
+  | { estado: 'valido'; presupuestoId: string; clienteId: string; tercero: boolean }
   | { estado: 'incorrecto'; quedan: number }
   | { estado: 'bloqueado' }
   | { estado: 'caducado' }
@@ -47,7 +49,7 @@ export async function gastarCodigoWhatsapp(
   const tokenHash = await hashTokenVista(token)
   const fila = await db.presupuesto.findFirst({
     where: { tokenHash, correduriaId, ...(presupuestoId ? { id: presupuestoId } : {}) },
-    select: { id: true, clienteId: true, whatsappCodigoHash: true, whatsappCodigoIntentos: true, venceEl: true, retiradoAt: true },
+    select: { id: true, clienteId: true, canalAviso: true, whatsappCodigoHash: true, whatsappCodigoIntentos: true, venceEl: true, retiradoAt: true },
   })
   if (!fila) return { estado: 'no_encontrado' }
   const entradaHash = await hashCodigoWhatsapp(token, codigo)
@@ -90,29 +92,50 @@ export async function gastarCodigoWhatsapp(
       where: { id: fila.id, whatsappCodigoHash: gastado.hash },
       data: { whatsappCodigoIntentos: 0 },
     })
-    return { estado: 'valido', presupuestoId: fila.id, clienteId: fila.clienteId }
+    const tercero = esAccesoTercero({
+      canalAviso: fila.canalAviso, whatsappCodigoHash: gastado.hash, marcaTercero: await marcaTerceroDe(fila.id, tokenHash),
+    })
+    return { estado: 'valido', presupuestoId: fila.id, clienteId: fila.clienteId, tercero }
   }
   if (estado === 'incorrecto') return { estado: 'incorrecto', quedan: intentosQuedan(gastado.intentos) }
   return { estado }
 }
 
 /**
- * La ficha dueña del presupuesto, para quien entró con el código del WhatsApp (el portal guarda el
- * token en su cookie de acceso, que solo pone tras un código válido). `null` = el token ya no es el
- * de ese presupuesto (se regeneró o se avisó por correo), está retirado, vencido o sin código.
- *
- * 🚨 La ficha sale del PROPIO presupuesto, nunca de un `clienteId` que llegue de fuera.
+ * ¿Hay marca `acceso_tercero` para ESTE token? (`envio-presupuesto.ts` la escribe antes de activar el token de un correo a
+ * una persona de contacto.) Un fallo de BD LANZA: quien llama responde error, nunca «es el tomador».
  */
-export async function fichaDeTokenWhatsapp(correduriaId: string, token: string, presupuestoId: string, ahora: Date = new Date()): Promise<{ clienteId: string } | null> {
+async function marcaTerceroDe(presupuestoId: string, tokenHash: string): Promise<boolean> {
+  const e = await prismaAsegura().presupuestoEvento.findFirst({
+    where: { presupuestoId, tipo: TIPO_ACCESO_TERCERO, detalle: { path: ['tokenHash'], equals: tokenHash } },
+    select: { id: true },
+  })
+  return e !== null
+}
+
+/**
+ * El presupuesto del token, para quien entró con el código (el portal guarda el token en su cookie de acceso, que solo
+ * pone tras un código válido). `null` = el token ya no es el de ese presupuesto (se regeneró o se avisó por correo al
+ * tomador), está retirado, vencido o sin código.
+ *
+ * 🚨 La ficha sale del PROPIO presupuesto, nunca de un `clienteId` que llegue de fuera. Y es la del TOMADOR: si el código
+ * es el de una persona de contacto (`esAccesoTercero`), quien llama NO opera con ella (`fichaDeToken` → `sin_permiso`).
+ */
+export async function fichaDeTokenWhatsapp(correduriaId: string, token: string, presupuestoId: string, ahora: Date = new Date()): Promise<FilaAccesoToken | null> {
   if (!formatoTokenVistaValido(token)) return null
+  const tokenHash = await hashTokenVista(token)
   const fila = await prismaAsegura().presupuesto.findFirst({
     where: {
-      id: presupuestoId, correduriaId, tokenHash: await hashTokenVista(token),
+      id: presupuestoId, correduriaId, tokenHash,
       retiradoAt: null, whatsappCodigoHash: { not: null }, venceEl: { gt: ahora },
     },
-    select: { clienteId: true },
+    select: { clienteId: true, canalAviso: true, whatsappCodigoHash: true },
   })
-  return fila ? { clienteId: fila.clienteId } : null
+  if (!fila) return null
+  return {
+    clienteId: fila.clienteId, canalAviso: fila.canalAviso, whatsappCodigoHash: fila.whatsappCodigoHash,
+    marcaTercero: await marcaTerceroDe(presupuestoId, tokenHash),
+  }
 }
 
 export type MovilDeFicha = 'ok' | 'sin_movil' | 'ilegible' | 'no_encontrado'

@@ -162,7 +162,10 @@ test('🪤 varias_fichas tiene mensaje propio en código y firma (no «presupues
 test('🪤 código del WhatsApp: solo un 200 `valido` con id abre; un 401, un 5xx, un corte o una forma rara NO', async () => {
   const { interpretarAccesoWhatsapp } = await import('./presupuesto-firma.ts')
   const id = '0b6f2f0e-3c1a-4d2b-9e8f-1a2b3c4d5e6f'
-  assert.deepEqual(interpretarAccesoWhatsapp(200, { estado: 'valido', presupuestoId: id }), { estado: 'valido', presupuestoId: id })
+  assert.deepEqual(interpretarAccesoWhatsapp(200, { estado: 'valido', presupuestoId: id }), { estado: 'valido', presupuestoId: id, tercero: false })
+  // (21/10/2026) El código de una PERSONA DE CONTACTO: solo un `true` literal la marca.
+  assert.deepEqual(interpretarAccesoWhatsapp(200, { estado: 'valido', presupuestoId: id, tercero: true }), { estado: 'valido', presupuestoId: id, tercero: true })
+  assert.deepEqual(interpretarAccesoWhatsapp(200, { estado: 'valido', presupuestoId: id, tercero: 'si' }), { estado: 'valido', presupuestoId: id, tercero: false })
   assert.equal(interpretarAccesoWhatsapp(200, { estado: 'valido' }).estado, 'error')
   assert.equal(interpretarAccesoWhatsapp(200, { estado: 'valido', presupuestoId: 'x' }).estado, 'error')
   assert.equal(interpretarAccesoWhatsapp(401, { estado: 'valido', presupuestoId: id }).estado, 'error')

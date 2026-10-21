@@ -91,7 +91,7 @@ test('🪤 wa.me con el móvil del TOMADOR si lo hay; sin él, sin número (21/1
 
 test('🪤 el correo a una persona de contacto: como contacto de la EMPRESA, con su código, y sin precio ni datos', async () => {
   const { correoPresupuestoTercero } = await import('./mensaje-presupuesto.ts')
-  const t = { nombre: 'Víctor Pérez', empresa: 'Talleres Ejemplo SL', enlace: 'https://x.es/presupuesto/abc', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' }
+  const t = { nombre: 'Víctor Pérez', tomador: 'Talleres Ejemplo SL', tomadorJuridica: true, enlace: 'https://x.es/presupuesto/abc', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' }
   const c = correoPresupuestoTercero(t)
   assert.match(c.asunto, /Talleres Ejemplo SL/)
   assert.match(c.texto, /^Hola, Víctor:/)
@@ -101,6 +101,21 @@ test('🪤 el correo a una persona de contacto: como contacto de la EMPRESA, con
   for (const x of [c.texto, c.html]) assert.match(x, /123456/)
   assert.doesNotMatch(c.texto, /\b(DNI|NIE|IBAN|cuenta bancaria|€)\b/i)
   assert.deepEqual(revisarCopy(c.texto), [])
-  assert.doesNotMatch(correoPresupuestoTercero({ ...t, empresa: null, nombre: null }).texto, /null|undefined/)
+  assert.doesNotMatch(correoPresupuestoTercero({ ...t, tomador: null, nombre: null }).texto, /null|undefined/)
   assert.match(correoPresupuestoTercero({ ...t, enlace: 'https://x.es/p/"><b>' }).html, /&quot;&gt;&lt;b&gt;/)
+})
+
+test('🪤 el correo a una persona de contacto NO promete que pueda aceptar: el código es solo para verlo', async () => {
+  const { correoPresupuestoTercero } = await import('./mensaje-presupuesto.ts')
+  const c = correoPresupuestoTercero({ nombre: null, tomador: 'Talleres Ejemplo SL', tomadorJuridica: true, enlace: 'https://x.es/p', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' })
+  for (const x of [c.texto, c.html]) assert.match(x, /solo para ver este presupuesto\. Para aceptarlo tiene que hacerlo Talleres Ejemplo SL/)
+  assert.doesNotMatch(c.texto, /acept(a|ar)lo t[uú]|f[ií]rmalo/i)
+})
+
+test('🪤 tomador PERSONA FÍSICA: «persona autorizada por <tomador>», nunca «de la empresa»', async () => {
+  const { correoPresupuestoTercero } = await import('./mensaje-presupuesto.ts')
+  const c = correoPresupuestoTercero({ nombre: 'Ana', tomador: 'José Suárez Salas', tomadorJuridica: false, enlace: 'https://x.es/p', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' })
+  assert.match(c.texto, /como persona autorizada por José Suárez Salas/)
+  for (const x of [c.asunto, c.texto, c.html]) assert.doesNotMatch(x, /empresa/i)
+  assert.doesNotMatch(correoPresupuestoTercero({ nombre: null, tomador: null, tomadorJuridica: false, enlace: 'https://x.es/p', venceEl: new Date('2026-11-01T10:00:00Z'), codigo: '123456' }).texto, /empresa|null|undefined/i)
 })

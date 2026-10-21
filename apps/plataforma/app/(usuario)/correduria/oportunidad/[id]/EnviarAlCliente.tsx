@@ -132,7 +132,9 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
   async function porCorreoAContacto() {
     const elegido = elegibles.find((e) => e.clienteId === elegidoId)
     if (!elegido) { setAviso({ ok: false, texto: 'Elige primero a qué persona de contacto se le manda.' }); return }
-    if (!window.confirm(confirmarCorreoContacto(elegido))) return
+    // Reenviar rota el enlace: el que ya tenga el TOMADOR deja de abrir. Se relee del servidor justo antes y se dice.
+    await releer()
+    if (!window.confirm(confirmarCorreoContacto(elegido, { tomadorJuridica: destinos?.estado === 'contactos' && destinos.tomadorJuridica, rotacion: avisoRotacionActual() }))) return
     setOcupado(true); setAviso(null)
     const r = await patch(presupuestoId, { accion: 'avisar', canal: 'email', destinatarioClienteId: elegido.clienteId })
     setOcupado(false)

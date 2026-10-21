@@ -110,7 +110,9 @@ test('🪤 a una persona de contacto: se valida en el servidor ANTES de escribir
   assert.match(avisar, /const directo = tercero \? null : await enlaceDirectoPresupuesto\(/)
   // Su única puerta es el código de ESTE presupuesto, que va en su correo.
   assert.match(avisar, /entrada\.canal === 'whatsapp_enlace' \|\| tercero \? generarCodigo\(\) : null/)
-  assert.match(avisar, /correoPresupuestoTercero\(\{ nombre: tercero\.nombre, empresa: nombre,/)
+  assert.match(avisar, /correoPresupuestoTercero\(\{ nombre: tercero\.nombre, tomador: nombre, tomadorJuridica: tercero\.tomadorJuridica,/)
+  // La primera escritura de un aviso a un tercero es su MARCA (antes del CAS): ver presupuesto-acceso-tercero.test.ts.
+  assert.ok(guarda < avisar.indexOf('tipo: TIPO_ACCESO_TERCERO'))
   // Rastro: quién lo recibió, en el evento y en historial_interno.
   assert.match(avisar, /destinatario: \{ clienteId: tercero\.clienteId, relacion: tercero\.relacion, via: tercero\.via \}/)
   assert.match(avisar, /if \(tercero\) await anotarEnvioATercero\(/)

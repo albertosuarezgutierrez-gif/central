@@ -182,6 +182,29 @@ export type RelacionCartera = RelacionFicha & {
    * Solo el estado: la dirección no cruza el puerto.
    */
   correo: 'con_email' | 'sin_email' | 'baja_de_correo' | 'no_se_sabe'
+  /**
+   * Los tipos CRUDOS de cada sentido (21/10/2026): `tiposIda` = filas ficha→relacionado, `tiposVuelta` = relacionado→ficha.
+   * `tipo` funde los dos (y da la vuelta al inverso); la regla de a quién se manda un presupuesto
+   * (`destinatariosPresupuesto`) mira el SENTIDO, así que plataforma la reproduce con estos, no con `tipo`.
+   */
+  tiposIda: string[]
+  tiposVuelta: string[]
+}
+
+/** Los tipos crudos de cada relacionado, por sentido (sin repetir). PURO. */
+export function tiposPorSentido(filas: readonly RelacionFila[], clienteId: string): Map<string, { ida: string[]; vuelta: string[] }> {
+  const out = new Map<string, { ida: string[]; vuelta: string[] }>()
+  for (const f of filas) {
+    if (f.clienteAId === f.clienteBId) continue
+    const ida = f.clienteAId === clienteId
+    if (!ida && f.clienteBId !== clienteId) continue
+    const otro = ida ? f.clienteBId : f.clienteAId
+    const g = out.get(otro) ?? { ida: [], vuelta: [] }
+    out.set(otro, g)
+    const lista = ida ? g.ida : g.vuelta
+    if (!lista.includes(f.tipo)) lista.push(f.tipo)
+  }
+  return out
 }
 
 async function correoDe(correduriaId: string, clienteId: string): Promise<RelacionCartera['correo']> {
@@ -368,9 +391,14 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
       nFigura = null
     }
     const porId = new Map(otros.map((o) => [o.id, o]))
+    // El correo de cada relacionado SOLO hace falta para el aviso de «empresa sin contacto» y para el presupuesto a una
+    // persona de contacto: tomador jurídico o sin correo. Fuera de eso no se descifra uno por relación en cada carga de
+    // la ficha; queda `no_se_sabe` (no se miró), nunca «no tiene».
+    const hacenFaltaCorreos = tipoOtorgante === 'juridica' || (await correoDe(correduriaId, clienteId)) !== 'con_email'
     const correos = new Map<string, RelacionCartera['correo']>(
-      await Promise.all(otros.map(async (o) => [o.id, await correoDe(correduriaId, o.id)] as const)),
+      hacenFaltaCorreos ? await Promise.all(otros.map(async (o) => [o.id, await correoDe(correduriaId, o.id)] as const)) : [],
     )
+    const sentidos = tiposPorSentido(filas, clienteId)
     return rel
       .map((r): RelacionCartera | null => {
         const o = porId.get(r.relacionadoId)
@@ -393,6 +421,8 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
           autorizacionInversa: resumirAutorizacion(autorizaciones.get(clavePar(r.relacionadoId, clienteId)) ?? [], hoy),
           tipoPersona: o.tipoPersona === 'juridica' || o.tipoPersona === 'fisica' ? o.tipoPersona : null,
           correo: correos.get(o.id) ?? 'no_se_sabe',
+          tiposIda: sentidos.get(o.id)?.ida ?? [],
+          tiposVuelta: sentidos.get(o.id)?.vuelta ?? [],
         }
       })
       .filter((r): r is RelacionCartera => r !== null)

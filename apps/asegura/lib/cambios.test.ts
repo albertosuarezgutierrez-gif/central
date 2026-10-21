@@ -69,3 +69,9 @@ test('las escrituras críticas de la cartera anotan sus cambios', () => {
   }
   assert.deepEqual(faltan, [], 'estas escrituras críticas no anotan qué cambiaron')
 })
+
+test('el destinatario tercero de un presupuesto guarda su VALOR (es el uuid de una ficha, no un dato personal)', () => {
+  const otro = '22222222-2222-4222-8222-222222222222'
+  assert.deepEqual(sanearCambio({ entidad: 'presupuesto', id: ID, campo: 'destinatario_tercero', antes: null, despues: otro }),
+    { entidad: 'presupuesto', id: ID, campo: 'destinatario_tercero', antes: null, despues: otro })
+})

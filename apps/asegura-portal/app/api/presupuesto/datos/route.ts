@@ -3,6 +3,7 @@ import { tgSend } from '@central/core-telegram'
 
 import { reportarDatosIncorrectos } from '@/lib/presupuesto-firma'
 import { accesoPuenteDe } from '@/lib/presupuesto'
+import { MOTIVO_TERCERO } from '@/lib/presupuesto-vista'
 
 export const runtime = 'nodejs'
 
@@ -24,6 +25,8 @@ export async function POST(req: Request) {
   if (!UUID.test(presupuestoId)) return NextResponse.json({ estado: 'no_disponible', motivo: 'Faltan datos.' }, { status: 422 })
   const puerta = await accesoPuenteDe(presupuestoId)
   if (!puerta) return NextResponse.json({ estado: 'sin_sesion' }, { status: 401 })
+  // Persona de contacto (21/10/2026): ve el presupuesto, no opera. Se corta aquí y, otra vez, en asegura (que decide).
+  if (puerta.tercero) return NextResponse.json({ estado: 'sin_permiso', motivo: MOTIVO_TERCERO }, { status: 403 })
   if (puerta.corredor) return NextResponse.json({ estado: 'solo_lectura' }, { status: 403 })
   if (texto.length < 3) return NextResponse.json({ estado: 'reintentar', motivo: 'Cuéntanos en unas palabras qué dato no es correcto.' }, { status: 422 })
 

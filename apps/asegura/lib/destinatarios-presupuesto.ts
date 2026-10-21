@@ -37,6 +37,8 @@ export type LecturaDestinatarios = {
   destinatarios: DestinatariosPresupuesto
   /** El correo de cada ELEGIBLE (para que Alberto vea a qué dirección va; el puerto sí deja cruzar el email). */
   emails: Record<string, string>
+  /** El tomador es empresa EXPLÍCITA (`tipo_persona = 'juridica'`; NULL no lo es). Cambia cómo se nombra al contacto. */
+  tomadorJuridica: boolean
 }
 
 /** `null` = el tomador no existe en esta correduría (o está fusionado). Un fallo de BD LANZA: no es «nadie». */
@@ -48,7 +50,8 @@ export async function leerDestinatarios(correduriaId: string, tomadorId: string)
   if (correoTomador.estado === 'no_encontrado') return null
   const tomador = { clienteId: t.id, tipoPersona: tipoPersona(t.tipoPersona), correo: correoDe(correoTomador) }
   // Con correo del tomador (o ilegible, o de baja) no se lee a nadie más: la regla ya no mira terceros.
-  if (tomador.correo !== 'sin_email') return { destinatarios: destinatariosPresupuesto(tomador, [], []), emails: {} }
+  const tomadorJuridica = tomador.tipoPersona === 'juridica'
+  if (tomador.correo !== 'sin_email') return { destinatarios: destinatariosPresupuesto(tomador, [], []), emails: {}, tomadorJuridica }
 
   const filas = await filasDe(correduriaId, tomadorId)
   const ids = [...new Set(filas.flatMap((f) => [f.clienteAId, f.clienteBId]).filter((id) => id !== tomadorId))]
@@ -68,5 +71,5 @@ export async function leerDestinatarios(correduriaId: string, tomadorId: string)
   const elegibles = new Set(destinatarios.estado === 'contactos' ? destinatarios.elegibles.map((x) => x.clienteId) : [])
   // Solo cruza el correo de quien PUEDE recibir: el de los no elegibles no hace falta para nada.
   for (const id of Object.keys(emails)) if (!elegibles.has(id)) delete emails[id]
-  return { destinatarios, emails }
+  return { destinatarios, emails, tomadorJuridica }
 }
