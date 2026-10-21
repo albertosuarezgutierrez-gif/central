@@ -1,19 +1,20 @@
 {
  "sesion": "8a5e2df0-c98f-5067-8c05-414589cd2bf3",
  "inicio": "2026-10-20T19:20:40.015Z",
- "fin": "2026-10-20T19:22:07.724Z",
- "llamadas": 26,
+ "fin": "2026-10-21T07:29:48.761Z",
+ "llamadas": 28,
  "categorias": {
   "otro": {
-   "llamadas": 2,
-   "chars_in": 3493,
-   "chars_out": 235,
+   "llamadas": 4,
+   "chars_in": 4511,
+   "chars_out": 519,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1,
-    "SubagentHandback": 1
+    "ToolSearch": 2,
+    "SubagentHandback": 1,
+    "SendMessage": 1
    }
   },
   "lectura-directa": {
