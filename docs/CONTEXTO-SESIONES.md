@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Correduría · presupuesto a la persona de contacto de una EMPRESA sin correo (Studium: Victor «Dueño»). Regla
+de Alberto en `destinatariosPresupuesto` (module-seguros): solo «Dueño»/«Administración» (tomador `juridica`) o autorización vigente en
+`portal_autorizacion` (la columna `puede_ver_polizas` está MUERTA desde 03/09). Asegura revalida (409 si no elegible); el tercero recibe código
+solo de ese presupuesto y PUEDE firmar (decidido por Alberto). Ficha de empresa: aviso + «autorizar contacto» (queda pendiente de aceptar).
+Medido: 9 empresas en vigor, 3 sin correo, las 3 con Dueño/Administración con correo; 11/57 personas físicas sin correo.
+
 **(21/10/2026)** — Allianz moto (bot RPA) 0.7.16 → 0.7.19. 0.7.16 diagnosticó la fecha de nacimiento: mismo día/mes, año +40. 0.7.17 escribe
 las fechas con el setter nativo + `change`, sin pulsaciones, así que la máscara ePAC `date(224)` ya no desplaza el año; confirmado: la fecha de
 nacimiento pasa. 0.7.18 añade el flag `fechaAdquisicionPorDefecto`: PR #4938 pone fecha de adquisición = matriculación por defecto en «Pedir precio»

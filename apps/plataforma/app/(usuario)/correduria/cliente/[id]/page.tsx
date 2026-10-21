@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import AvisoContactoEmpresa from './AvisoContactoEmpresa'
+import { avisoContactoEmpresa, tipoPersonaDeColumna } from '@/lib/contacto-empresa'
 import { clasificarPolizaFicha, personaDeFicha, personasDePolizas, resumenFicha, siguienteAccion, type ClasePolizaFicha } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import Historial from '../../Historial'
@@ -116,6 +118,18 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
     hoy: new Date(),
   })
 
+  // Empresa sin correo ni contacto autorizado (21/10/2026). `ilegible` ≠ «no tiene»; sin lista de correos, no se afirma.
+  const correoFicha = contacto.email ? 'con_email' as const
+    : contacto.emailIlegible ? 'no_se_sabe' as const
+    : ficha.contactos === null ? 'no_se_sabe' as const
+    : ficha.contactos.emails.length > 0 ? 'con_email' as const
+    : 'sin_email' as const
+  const avisoEmpresa = avisoContactoEmpresa(
+    // «Empresa» = la COLUMNA `tipo_persona`, el mismo criterio con el que asegura decide el envío (no el DNI ni el segmento).
+    { id: ficha.id, tipoPersona: tipoPersonaDeColumna(ficha.identidad?.tipoPersona), correo: correoFicha },
+    ficha.relaciones,
+  )
+
   // Se calculan UNA vez y las usan tres cosas: el contador de la pestaña, la
   // tarjeta 👤 y la 👪 —que ofrece declarar el vínculo de quien sale sin él
   // (Antonio Sevico en la ficha de José Suárez Salas, 03/09/2026)—.
@@ -143,6 +157,8 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           está fuera del buscador y de la cartera, y nadie más la ve. `activo`
           a `null` (asegura sin el campo) no pinta nada — no se afirma. */}
       <DescartarCliente zona="aviso" clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
+
+      {avisoEmpresa.aviso && <AvisoContactoEmpresa clienteId={ficha.id} nombreEmpresa={ficha.nombre} aviso={avisoEmpresa} />}
 
       <Cabecera ficha={ficha} resumen={resumen} seguros={seguros} idsConChip={idsConChipAviso(reparto)} />
 

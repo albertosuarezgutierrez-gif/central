@@ -18,10 +18,14 @@ import type { DatosParaEmitir } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // `sin_enlace`/`sin_proveedor`/`remitente` son averías nuestras (503); `rechazado`, del proveedor (502).
 const STATUS_FALLO: Record<FalloEnvio, number> = {
   no_encontrado: 404, no_enviable: 409, ocupado: 409, simulado: 422, sin_email: 422, sin_acceso: 422, sin_necesidades: 422,
   sin_revisar: 422, origen_desconocido: 422, lote_cancelado: 409,
+  // Persona de contacto que la regla no admite (o el tomador ya tiene correo): el servidor no se fía de la pantalla.
+  destinatario_no_elegible: 409,
   sin_enlace: 503, sin_proveedor: 503, remitente_no_verificado: 503, rechazado: 502,
   // Solo en el hilo (F4): no consta si salió. 502 como el rechazo, pero el detalle dice que NO se repita a ciegas.
   incierto: 502,
@@ -34,6 +38,8 @@ const STATUS_FALLO: Record<FalloEnvio, number> = {
  *   POST  { polizaId | tarificacionId, claveNivelActual?, ocultar?: {companias?, precios?}, actor } → prepara un BORRADOR
  *   PATCH { id, motivo, actor }     → lo retira (con motivo, siempre)
  *   PATCH { id, accion:'avisar', canal:'email'|'whatsapp_enlace', actor } → avisa al cliente (PR 3)
+ *         + `destinatarioClienteId` (21/10/2026, solo email): a una PERSONA DE CONTACTO si el tomador no tiene correo;
+ *         se valida aquí con la regla (`destinatarios-presupuesto.ts`): 409 `destinatario_no_elegible` si no cabe.
  *   PATCH { id, accion:'confirmar_whatsapp', actor } → Alberto dice que el WhatsApp ya salió
  *   PATCH { id, accion:'emitido', actor } → la compañía ya emitió la póliza del presupuesto aceptado
  *   PATCH { id, accion:'documento_descargado', actor } → se descargó el PDF para el cliente (sella
@@ -181,8 +187,13 @@ export const PATCH = auditado(async (req: Request) => {
     if (cuerpo?.accion === 'avisar' || cuerpo?.accion === 'confirmar_whatsapp') {
       const canal = cuerpo.canal === 'email' || cuerpo.canal === 'whatsapp_enlace' ? cuerpo.canal : null
       if (cuerpo.accion === 'avisar' && !canal) return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
+      // Persona de contacto: un uuid o nada. Cualquier otra cosa es 400, no «al tomador» (no se cambia el destino en silencio).
+      const dest = cuerpo.destinatarioClienteId
+      if (dest !== undefined && dest !== null && (typeof dest !== 'string' || !UUID.test(dest.trim()) || cuerpo.accion !== 'avisar' || canal !== 'email')) {
+        return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
+      }
       const r = cuerpo.accion === 'avisar'
-        ? await avisarPresupuesto(correduria.id, { id, canal: canal!, actor })
+        ? await avisarPresupuesto(correduria.id, { id, canal: canal!, actor, destinatarioClienteId: typeof dest === 'string' ? dest.trim() : null })
         : await confirmarWhatsapp(correduria.id, { id, actor })
       return NextResponse.json(r, { status: r.estado === 'error' ? STATUS_FALLO[r.motivo] : 200 })
     }

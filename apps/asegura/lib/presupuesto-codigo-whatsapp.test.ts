@@ -42,7 +42,8 @@ test('🪤 regenerar el enlace = código nuevo; avisar por correo lo borra; si e
   assert.match(cas, /whatsappCodigoHash: nuevoCodigoHash,/)
   assert.match(cas, /whatsappCodigoIntentos: 0,/)
   assert.match(avisar, /const nuevoCodigoHash = codigoWhatsapp === null \? null : await hashCodigoWhatsapp\(token, codigoWhatsapp\)/)
-  assert.match(avisar, /const codigoWhatsapp = entrada\.canal === 'whatsapp_enlace' \? generarCodigo\(\) : null/)
+  // (21/10/2026) También el correo a una PERSONA DE CONTACTO lleva código (su única puerta); el correo al tomador, no.
+  assert.match(avisar, /const codigoWhatsapp = entrada\.canal === 'whatsapp_enlace' \|\| tercero \? generarCodigo\(\) : null/)
   assert.match(avisar, /data: \{ tokenHash: p\.tokenHash, canalAviso: p\.canalAviso, whatsappCodigoHash: p\.whatsappCodigoHash,/)
   // El código va en el mensaje y en ningún otro sitio: ni en el evento ni en la respuesta fuera del texto.
   assert.match(avisar, /mensajePresupuestoWhatsapp\(\{ \.\.\.datos, codigo: codigoWhatsapp! \}\)/)
@@ -74,12 +75,14 @@ test('🪤 sin código no se firma por WhatsApp, y el código de OTRO presupuest
 
 test('🪤 quien entró por WhatsApp solo ve SU presupuesto: la ficha sale del propio presupuesto del token', () => {
   const ficha = src.slice(src.indexOf('export async function fichaDeTokenWhatsapp'), src.indexOf('export type MovilDeFicha'))
-  for (const c of ['id: presupuestoId', 'correduriaId', 'tokenHash: await hashTokenVista(token)', 'retiradoAt: null', 'whatsappCodigoHash: { not: null }', 'venceEl: { gt: ahora }']) {
+  assert.match(ficha, /const tokenHash = await hashTokenVista\(token\)/)
+  for (const c of ['id: presupuestoId', 'correduriaId', 'tokenHash,', 'retiradoAt: null', 'whatsappCodigoHash: { not: null }', 'venceEl: { gt: ahora }']) {
     assert.ok(ficha.includes(c), `falta «${c}» en el where`)
   }
   const acc = aceptacion.slice(aceptacion.indexOf('async function fichaDeAcceso'), aceptacion.indexOf('async function base('))
   assert.match(acc, /fichaDeTokenWhatsapp\(correduriaId, acceso\.tokenWhatsapp, presupuestoId\)/)
-  assert.match(acc, /\{ estado: 'ajena' as const \}/)
+  // Sin token vigente es «ajena» (y una persona de contacto, `sin_permiso`): `fichaDeToken`, cepo en presupuesto-acceso-tercero.test.ts.
+  assert.match(acc, /return fichaDeToken\(/)
 })
 
 test('🪤 el puente solo admite el token del WhatsApp en datos, aviso de dato, preparar, código y firmar', () => {

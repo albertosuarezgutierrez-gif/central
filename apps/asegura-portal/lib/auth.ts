@@ -128,11 +128,16 @@ export const COOKIE_ACCESO_WHATSAPP = 'asegura_portal_presupuesto'
 export const ACCESO_WHATSAPP_SEGUNDOS = 4 * 60 * 60
 export const COOKIE_OPTS_ACCESO_WHATSAPP = { ...COOKIE_OPTS, maxAge: ACCESO_WHATSAPP_SEGUNDOS } as const
 
-export type AccesoWhatsapp = { presupuestoId: string; token: string }
+/**
+ * `tercero` (21/10/2026): el código es el de un correo a una PERSONA DE CONTACTO del tomador. Lo dice asegura al comprobar
+ * el código; aquí solo sirve para que la pantalla esconda «Aceptar»/«Datos incorrectos» y las rutas corten antes. La
+ * guarda de verdad está en asegura (`sin_permiso` en cada acción con ese token), no en esta cookie.
+ */
+export type AccesoWhatsapp = { presupuestoId: string; token: string; tercero: boolean }
 
 export async function crearAccesoWhatsapp(a: AccesoWhatsapp): Promise<string> {
   const { token } = await createToken({
-    claims: { accesoWhatsapp: { presupuestoId: a.presupuestoId, token: a.token } },
+    claims: { accesoWhatsapp: { presupuestoId: a.presupuestoId, token: a.token, tercero: a.tercero } },
     secret: SECRET(),
     expiresIn: `${ACCESO_WHATSAPP_SEGUNDOS}s`,
   })
@@ -144,7 +149,7 @@ export async function verificarAccesoWhatsapp(jwt: string): Promise<AccesoWhatsa
   if (!payload || payload.identidadId !== undefined) return null
   const a = payload.accesoWhatsapp
   if (typeof a !== 'object' || a === null) return null
-  const { presupuestoId, token } = a as Record<string, unknown>
+  const { presupuestoId, token, tercero } = a as Record<string, unknown>
   if (typeof presupuestoId !== 'string' || typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return null
-  return { presupuestoId, token }
+  return { presupuestoId, token, tercero: tercero === true }
 }
