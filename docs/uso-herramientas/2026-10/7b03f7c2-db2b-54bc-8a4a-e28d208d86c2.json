@@ -1,13 +1,13 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-21T14:29:01.951Z",
- "llamadas": 11231,
+ "fin": "2026-10-21T15:11:07.767Z",
+ "llamadas": 11337,
  "categorias": {
   "otro": {
-   "llamadas": 1269,
-   "chars_in": 166296,
-   "chars_out": 9500818,
+   "llamadas": 1288,
+   "chars_in": 169025,
+   "chars_out": 9600727,
    "errores": 0,
    "archivos_citados": 44,
    "chars_citados": 5925840,
@@ -15,34 +15,34 @@
     "ToolSearch": 269,
     "SubagentHandback": 10,
     "SendMessage": 66,
-    "ReadNotifications": 757,
-    "Monitor": 157,
+    "ReadNotifications": 767,
+    "Monitor": 166,
     "AskUserQuestion": 8,
     "TaskStop": 2
    }
   },
   "agente:rastreador-codigo": {
-   "llamadas": 12,
-   "chars_in": 12992,
-   "chars_out": 21150,
+   "llamadas": 13,
+   "chars_in": 14290,
+   "chars_out": 24883,
    "errores": 0,
-   "archivos_citados": 23,
-   "chars_citados": 1550163,
+   "archivos_citados": 28,
+   "chars_citados": 1676880,
    "tools": {
-    "Agent": 12
+    "Agent": 13
    }
   },
   "lectura-directa": {
-   "llamadas": 1338,
-   "chars_in": 178950,
-   "chars_out": 10980801,
+   "llamadas": 1365,
+   "chars_in": 182431,
+   "chars_out": 11063495,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 27,
-    "Grep": 589,
-    "Read": 722
+    "Grep": 606,
+    "Read": 732
    }
   },
   "mcp:github": {
@@ -68,25 +68,25 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 188,
-   "chars_in": 422908,
-   "chars_out": 461928,
+   "llamadas": 190,
+   "chars_in": 428596,
+   "chars_out": 468008,
    "errores": 0,
-   "archivos_citados": 168,
-   "chars_citados": 6670008,
+   "archivos_citados": 171,
+   "chars_citados": 6864249,
    "tools": {
-    "Agent": 188
+    "Agent": 190
    }
   },
   "bash": {
-   "llamadas": 6245,
-   "chars_in": 4537977,
-   "chars_out": 19158336,
+   "llamadas": 6296,
+   "chars_in": 4582928,
+   "chars_out": 19299860,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 6245
+    "Bash": 6296
    }
   },
   "mcp:Vercel": {
@@ -111,15 +111,15 @@
    }
   },
   "sql": {
-   "llamadas": 779,
-   "chars_in": 318600,
-   "chars_out": 1555617,
+   "llamadas": 785,
+   "chars_in": 320722,
+   "chars_out": 1563335,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 5,
-    "mcp__Supabase__execute_sql": 774
+    "mcp__Supabase__execute_sql": 780
    }
   },
   "mcp:Supabase": {
