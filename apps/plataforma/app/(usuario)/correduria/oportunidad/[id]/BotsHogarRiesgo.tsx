@@ -10,39 +10,21 @@
 //   · USO, RÉGIMEN, TIPO y MADERA los elige una persona en el bloque (sin valor por defecto). Se precargan solo si lo guardado casa
 //     EXACTAMENTE con una opción del catálogo de Codeoscopic; si no, «Elegir…» y el botón no encola. El Catastro no sabe ninguno.
 //   · El DNI/NIE y el nacimiento del tomador NO viajan desde aquí: asegura los lee de la ficha al encolar y los inyecta al entregar.
-import { useContext, useEffect, useMemo, useState } from 'react'
+import { useContext, useMemo } from 'react'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 import {
   avisoFichaTomadorParaHogar, datosViviendaParaBot, eleccionesInicialesHogar, faltanFichaTomadorParaHogar, tomadorDeRiesgoHogar,
-  type CatalogosHogarLeidos,
 } from '@/lib/tarificador-hogar-formulario'
 import { cardStyle, CardHeader } from '@/components/ui'
-import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
 import PrecioBots, { AnfitrionBotsContext } from '../../cliente/[id]/PrecioBots'
-
-/** Catálogos de Codeoscopic (gratis) de los que se traducen las elecciones. Uno que no se puede leer NO inventa nada: solo valen los ids atestiguados. */
-const CATALOGOS: ReadonlyArray<{ clave: keyof CatalogosHogarLeidos; nombre: string }> = [
-  { clave: 'tipoVivienda', nombre: 'property-types' },
-  { clave: 'ocupacion', nombre: 'occupancy-types' },
-  { clave: 'uso', nombre: 'uses' },
-]
+// Catálogos de Codeoscopic (gratis) de los que se traducen las elecciones: leídos UNA vez por página (los comparte con
+// «Para tarificar faltan»). Uno que no se puede leer NO inventa nada: solo valen los ids atestiguados.
+import { useCatalogosHogar } from './useCatalogosHogar'
 
 export default function BotsHogarRiesgo({ riesgo }: { riesgo: Riesgo }) {
   const anfitrion = useContext(AnfitrionBotsContext)
-  const [catalogos, setCatalogos] = useState<CatalogosHogarLeidos | null>(null)
-
-  useEffect(() => {
-    let vivo = true
-    void Promise.all(CATALOGOS.map(async (c) => {
-      try {
-        const r = await pedirCatalogo({ tipo: 'hogar', nombre: c.nombre })
-        return [c.clave, r.estado === 'ok' ? r.opciones : undefined] as const
-      } catch {
-        return [c.clave, undefined] as const
-      }
-    })).then((pares) => { if (vivo) setCatalogos(Object.fromEntries(pares.filter(([, v]) => v !== undefined))) })
-    return () => { vivo = false }
-  }, [])
+  const leidos = useCatalogosHogar()
+  const catalogos = leidos?.catalogos ?? null
 
   const formulario = useMemo(() => datosViviendaParaBot(riesgo), [riesgo])
   const iniciales = useMemo(() => eleccionesInicialesHogar(riesgo, catalogos ?? {}), [riesgo, catalogos])

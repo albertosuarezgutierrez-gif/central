@@ -281,6 +281,11 @@ export const EDITOR_DE_FALTA: Record<string, 'completar' | 'formulario' | 'cambi
   fechaNacimiento_invalida: 'formulario',
 }
 
+/** Rótulo de UNA clave de `faltanDeFigura` (la clave tal cual si no tiene rótulo). */
+export function rotuloFalta(k: string): string {
+  return CAMPO_FALTA[k] ?? k
+}
+
 /** Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»). */
 export function rotulosFaltaEnFormulario(f: string[] | null): string[] {
   return (f ?? []).filter((k) => EDITOR_DE_FALTA[k] === 'formulario').map((k) => CAMPO_FALTA[k] ?? k)
