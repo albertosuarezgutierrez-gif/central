@@ -88,6 +88,8 @@ model documentos {
   firmado_empresa_at       DateTime? @db.Timestamptz(6)
   firmado_empresa_nombre   String?
   firmado_empresa_hash     String?
+  firma_anulada_at         DateTime? @db.Timestamptz(6)
+  firma_anulada_por        String?
   creada_at    DateTime  @default(now()) @db.Timestamptz(6)
   empleado     empleados @relation(fields: [empleado_id], references: [id], onDelete: Cascade)
 

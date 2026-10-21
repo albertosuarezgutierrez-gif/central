@@ -20,6 +20,12 @@ Allianz, con supuesto en el presupuesto (PR #4950). Imagen `moto-e5b0c81` en pro
 de otras sesiones a main; antes de pedir a Alberto que pulse, comprueba que el deployment READY lleva tu SHA y que recargue la página.
 Pendiente: confirmar el precio real de Allianz moto para el lead BMW F800 (Mapfre ya lo tarificó: 223,65€ / 300,40€).
 
+**(21/10/2026)** — RRHH · «Quitar de pendientes» en /admin/firmas (Pilar): selección 1/varias/todas → ANULACIÓN lógica (estado_firma='no_requiere'
++ `firma_anulada_at/_por`), el documento NUNCA se borra (PRL/EPIs/nóminas). Sale de panel, cron y portal. Migración 0026 aplicada en prod.
+
+**(21/10/2026)** — RRHH · interruptor «Permitir fichar sin ubicación» en /admin/fichajes (GET/PATCH `/api/admin/empresa/ajustes`, empresa de
+sesión, booleano estricto). Sin migración. Cierra el pendiente de la entrada de fichaje sin ubicación.
+
 **(21/10/2026)** — RRHH · «Notas internas» en la ficha del empleado (petición de Pilar): `rrhh.empleados.notas` (≤5000, NULL si vacío),
 PATCH admin existente filtrado por empresa de sesión, nunca en `/api/e/*` ni `/e/*`. Migración 0025 aplicada en prod.
 

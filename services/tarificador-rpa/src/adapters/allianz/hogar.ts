@@ -43,7 +43,7 @@ import { esAppHogarAllianz } from '../../guard.ts'
 import { comprobarCampo } from './auto.ts'
 import { login, sesionSirve } from './comunidades.ts'
 import { abrirNuevaAlta, esperarMarcoApp } from './entrada.ts'
-import { elegirPoblacionHogar } from './poblacion-localidad.ts'
+import { elegirPoblacionHogar, nucleoDeVia } from './poblacion-localidad.ts'
 
 /**
  * Flag de registro de Allianz HOGAR. ENCENDIDO (Alberto, 21/10/2026: OK para la 1.ª prueba real de TARIFICACIÓN, no emisión).
@@ -431,37 +431,73 @@ async function opcionAutocompletada(page: Page, marco: Frame, ctx: CtxVivienda, 
   return { ok: false, confirmar: r.confirmar }
 }
 
+/** Resultado de `elegirPoblacionDeLista`: cómo se eligió, o `null` + diagnóstico SIN datos personales (para el mensaje del hueco). */
+type ResultadoLista = { por: 'nucleo' | 'municipio' | 'unica' } | { por: null; diag: string }
+
 /**
- * Abre la lista de `town` (foco + flecha abajo si no se despliega sola), lee sus opciones y pulsa la que elige `elegirPoblacionHogar`
- * (núcleo de la vía → municipio → opción única). Devuelve cómo se eligió, o `null` si no hay lista fiable o falta dato (sigue la capa
- * común). Las opciones se limitan al listbox de `town` (`aria-controls`/`aria-owns`); sin ese enlace, la lista debe APARECER solo al
- * abrir `town` (si ya había opciones visibles antes, no se sabe de quién son: `null`). Con opciones y SIN coincidencia → hueco que LISTA.
+ * Abre la lista de `town` y lee sus opciones (21/10/2026, trabajos 229b2fc5/b5089267: la lista NO se desplegaba con foco + flecha;
+ * el `nx-autocomplete` de NDBX filtra y abre al ESCRIBIR). Orden, parando en el primer intento que muestre opciones: foco →
+ * flecha abajo → clic → escribir en `town` una ficha del núcleo de la vía (la más larga) y luego del municipio. Las opciones se
+ * limitan al listbox de `town` (`aria-controls`/`aria-owns`, que Angular rellena AL ABRIR: se relee tras cada intento); sin ese
+ * enlace, solo valen opciones que no estaban visibles antes de tocar `town` (si ya había, no se sabe de quién son: `null`).
+ * Se elige con `elegirPoblacionHogar` (núcleo → municipio → opción única) y SOLO si es única (fail-closed). Con opciones y SIN
+ * coincidencia → hueco que LISTA. Escribir en `town` no elige nada: sin opción pulsada el campo no queda con valor y se vacía.
  */
-async function elegirPoblacionDeLista(page: Page, marco: Frame, ctx: CtxVivienda, municipio: string | null, nombreVia: string | null): Promise<'nucleo' | 'municipio' | 'unica' | null> {
+async function elegirPoblacionDeLista(page: Page, marco: Frame, ctx: CtxVivienda, municipio: string | null, nombreVia: string | null): Promise<ResultadoLista> {
   const campo = marco.locator(`input${selControl(CONTROLES.poblacion)}`)
-  if ((municipio === null && nombreVia === null) || (await campo.count()) !== 1) return null
+  if ((municipio === null && nombreVia === null) || (await campo.count()) !== 1) return { por: null, diag: 'sin municipio ni vía, o el campo no es único' }
   const SEL_OPC = '[role=option]:visible, nx-autocomplete-option:visible, mat-option:visible'
-  const enlace = ((await campo.getAttribute('aria-controls').catch(() => null)) ?? (await campo.getAttribute('aria-owns').catch(() => null)) ?? '').trim().split(/\s+/)[0]
-  const opciones = enlace && /^[\w-]+$/.test(enlace) ? marco.locator(`#${enlace}`).locator(SEL_OPC) : marco.locator(SEL_OPC)
-  if (!enlace && (await opciones.count()) > 0) return null
-  // Texto + posición ORIGINAL en el locator (los vacíos se descartan sin desplazar los índices).
-  const leer = async () => (await opciones.evaluateAll((els) => els.map((el, i) => ({ i, t: ((el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim() })))).filter((x) => x.t !== '')
-  await campo.focus({ timeout: 5_000 }).catch(() => undefined)
-  let items = await leer()
-  if (items.length === 0) {
-    await campo.press('ArrowDown', { timeout: 5_000 }).catch(() => undefined)
-    await page.waitForTimeout(500)
-    items = await leer()
+  const previas = await marco.locator(SEL_OPC).count()
+  let enlaceVisto = false
+  let intentos = 0
+  const abierta = () => {
+    // El enlace se relee cada vez: Angular pone aria-controls/aria-owns al abrir el panel, no antes.
+    return campo.evaluate((el) => (el.getAttribute('aria-controls') ?? el.getAttribute('aria-owns') ?? '').trim().split(/\s+/)[0]).catch(() => '')
   }
+  // Texto + posición ORIGINAL en el locator (los vacíos se descartan sin desplazar los índices).
+  const leer = async (): Promise<{ opciones: Locator; items: { i: number; t: string }[] } | null> => {
+    const enlace = await abierta()
+    if (enlace) enlaceVisto = true
+    if (!enlace && previas > 0) return null
+    const opciones = enlace && /^[\w-]+$/.test(enlace) ? marco.locator(`#${enlace}`).locator(SEL_OPC) : marco.locator(SEL_OPC)
+    const items = (await opciones.evaluateAll((els) => els.map((el, i) => ({ i, t: ((el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim() })))).filter((x) => x.t !== '')
+    return items.length > 0 ? { opciones, items } : null
+  }
+  const nucleo = nucleoDeVia(nombreVia)
+  const fichasLargas = (t: string | null) =>
+    (t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().split(/[^A-Z0-9Ñ]+/).filter((w) => w.length >= 4 && !['DEL', 'LAS', 'LOS'].includes(w)).sort((x, y) => y.length - x.length)
+  const aEscribir = [...new Set([...fichasLargas(nucleo).slice(0, 1), ...fichasLargas(municipio).slice(0, 1)])]
+  const intentosApertura: Array<() => Promise<void>> = [
+    async () => void (await campo.focus({ timeout: 5_000 }).catch(() => undefined)),
+    async () => void (await campo.press('ArrowDown', { timeout: 5_000 }).catch(() => undefined)),
+    ...aEscribir.map((ficha) => async () => {
+      await campo.fill('', { timeout: 5_000 }).catch(() => undefined)
+      await campo.pressSequentially(ficha, { delay: 80, timeout: 8_000 }).catch(() => undefined)
+    }),
+  ]
+  let hallado: { opciones: Locator; items: { i: number; t: string }[] } | null = null
+  for (const abrir of intentosApertura) {
+    intentos++
+    await abrir()
+    await page.waitForTimeout(700)
+    hallado = await leer()
+    if (hallado) break
+  }
+  if (!hallado) {
+    // Nada elegido: se deja `town` vacío (lo escrito no es una elección) y sigue la capa común.
+    if (aEscribir.length > 0) await campo.fill('', { timeout: 5_000 }).catch(() => undefined)
+    return { por: null, diag: `sin opciones tras ${intentos} intentos (foco, flecha${aEscribir.length > 0 ? ', escribir' : ''}); enlace aria-controls/owns ${enlaceVisto ? 'visto' : 'ausente'}; opciones visibles antes: ${previas}` }
+  }
+  const { opciones, items } = hallado
   const textos = items.map((x) => x.t)
   const r = elegirPoblacionHogar(textos, municipio, nombreVia)
-  if (r.tipo === 'sin_opciones' || r.tipo === 'sin_municipio') return null
+  if (r.tipo === 'sin_opciones' || r.tipo === 'sin_municipio') return { por: null, diag: 'sin municipio ni opciones utilizables' }
   if (r.tipo === 'sin_coincidencia') {
     throw new ErrorMapaIncompleto(`la elección de población del CP (ninguna opción coincide de forma única con la del riesgo; el portal ofrece: ${textos.slice(0, 15).join(' | ')})`)
   }
   await ctx.pausaAccion()
   await ctx.pulsar(opciones.nth(items[r.indice].i))
-  if (await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS)) return r.por
+  if (await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS)) return { por: r.por }
   throw new ErrorMapaIncompleto('el efecto de la opción de población elegida (tras pulsarla, la población no quedó rellena)')
 }
 
@@ -542,10 +578,11 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
       let confirmarPob: (() => Promise<void>) | null = null
       let elegidaPor: 'nucleo' | 'municipio' | 'unica' | null = null
       if (!(await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS))) {
-        const hueco = 'la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)'
+        const hueco0 = 'la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)'
         // 21/10/2026: antes de la capa común, elección determinista por el municipio del riesgo (exacta o palabras enteras, UNA sola).
-        const por = await elegirPoblacionDeLista(page, marco, ctx, f.inmueble.municipio, f.inmueble.nombreVia)
-        if (por !== null) elegidaPor = por
+        const lista = await elegirPoblacionDeLista(page, marco, ctx, f.inmueble.municipio, f.inmueble.nombreVia)
+        const hueco = lista.por === null ? `${hueco0} [${lista.diag}]` : hueco0
+        if (lista.por !== null) elegidaPor = lista.por
         else {
           const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco, f.inmueble.municipio !== null)
           if (!e.ok) throw new ErrorMapaIncompleto(hueco)
@@ -656,7 +693,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.0',
+  version: '0.1.1',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
