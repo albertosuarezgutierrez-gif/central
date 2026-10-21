@@ -1935,6 +1935,34 @@ model CorreoCruceAviso {
   @@map("correo_cruce_aviso")
 }
 
+/// Lecturas del extractor LLM en MODO SOMBRA (F2 del agente de correo, 21/10/2026, `prisma/sql/2026-10-21b_correo_lectura_llm.sql`):
+/// UNA fila por correo. `ficha` ya validada literal contra el texto y SIN tomador; `comparacion` solo cuando un lector
+/// determinista también lo leyó (gana el lector). No la lee nada que actúe sobre la cartera. SQL crudo en `lib/correo-lectura-llm-bd.ts`.
+model CorreoLecturaLlm {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  mensajeId    String    @map("mensaje_id")
+  proposito    String
+  modo         String    @default("sombra")
+  modelo       String
+  tipo         String?
+  confianza    Decimal?  @db.Decimal(3, 2)
+  ficha        Json?
+  noLiterales  String[]  @default([]) @map("no_literales")
+  lectorTipo   String?   @map("lector_tipo")
+  comparacion  Json?
+  aciertos     Int?      @db.SmallInt
+  fallos       Int?      @db.SmallInt
+  revision     String?
+  corregido    Json?
+  revisadoAt   DateTime? @map("revisado_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([correduriaId, mensajeId], map: "correo_lectura_llm_unica")
+  @@index([correduriaId, createdAt(sort: Desc)], map: "correo_lectura_llm_reciente")
+  @@map("correo_lectura_llm")
+}
+
 /// Hilo de correo de un lead ↔ su oportunidad (19/10/2026, SQL `prisma/sql/2026-10-19b_correduria_f1.sql`). Sin email
 /// en claro (`email_cliente_ciego` = índice ciego). Se escribe por SQL crudo en `lib/correo-lead.ts` (el único índice
 /// único — `(correduria_id, cliente_id, message_id_raiz, coalesce(oportunidad_id, …))` — lleva una expresión, que

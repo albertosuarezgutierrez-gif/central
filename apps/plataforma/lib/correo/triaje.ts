@@ -36,6 +36,8 @@ import { PREFIJO_UID_ATASCADO, decidirUidAtascado, textoAvisoUidAtascado, type U
 import { pasadaSeguimientoLeads } from './lead-correduria-seguimiento-proceso'
 import { archivarAdjuntosCompania, puedeArchivarAdjuntos } from './documentos-compania'
 import { documentoCorreoAsegura } from '@/lib/seguimiento-asegura'
+import { extraerEnSombra, modoExtractorLLM, topesLLM, type PasadaLLM } from './extractor-llm'
+import { depsExtractorReales } from './extractor-llm-proceso'
 
 /** F5: el seguimiento de leads solo arranca si la pasada va holgada (la función muere a los 300 s). */
 const SEGUIMIENTO_HASTA_MS = 200_000
@@ -90,7 +92,7 @@ function etiquetaBonita(categoria: string): string {
 }
 
 export async function pasadaTriaje(): Promise<Record<string, number>> {
-  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0, leadsCorreduria: 0, seguimientoLeads: 0, documentosCompania: 0, documentosSinAsignar: 0, documentosNoGuardados: 0 }
+  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0, leadsCorreduria: 0, seguimientoLeads: 0, documentosCompania: 0, documentosSinAsignar: 0, documentosNoGuardados: 0, llmSombra: 0, llmSombraFallos: 0 }
   const cur = await prisma.$queryRaw<{ last_uid: number; uidvalidity: bigint | null }[]>`
     SELECT last_uid, uidvalidity FROM correo_cursor WHERE buzon = 'INBOX' LIMIT 1
   `
@@ -113,6 +115,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
   const t0 = Date.now()
   let uidDiferido: number | null = null
   let leadsPasada = 0
+  // F2 (21/10/2026): extractor LLM en MODO SOMBRA. Apagado salvo `CORREO_LLM_MODO=sombra`; tope por pasada y por día.
+  const modoLLM = modoExtractorLLM()
+  const topesExtractor = topesLLM()
+  const pasadaLLM: PasadaLLM = { usadas: 0 }
   // F5: ¿se ha leído TODO el buzón sin fallos? Solo entonces «el cliente no ha contestado» es un dato y no un «no lo he
   // podido mirar» (spec §4): si no, esta pasada no recuerda nada.
   let buzonAlDia = false
@@ -342,6 +348,20 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             }
           }
           if (correo.adjuntosCompaniaOmitidos) console.error(`[triaje] ${correo.adjuntosCompaniaOmitidos} PDF de compañía fuera por tope (5/correo, 3 MB, 40 MB/pasada)`)
+
+          // F2 del agente de correo (21/10/2026): extractor LLM en MODO SOMBRA. DESPUÉS de todo lo de arriba (avisos, evento,
+          // documentos): no retrasa nada ni decide nada. Lee la cola larga (ningún lector reconoce el correo) y, si hay cupo,
+          // también lo reconocido para medir su acierto contra el lector. Solo GUARDA la propuesta en asegura: ni cartera ni
+          // Telegram. La exclusión de credenciales vuelve a mirarse dentro (también sobre los PDF). Nunca lanza.
+          if (modoLLM === 'sombra' && (c.categoria === 'correduria' || c.categoria === 'correduria-recibo')) {
+            const r = await extraerEnSombra(
+              { messageId: correo.messageId, from: correo.from, subject: correo.subject, cuerpo: correo.texto ?? correo.extracto, categoria: c.categoria, deCliente: !!clienteRemitente },
+              evento ?? devolucion,
+              { modo: modoLLM, topes: topesExtractor, pasada: pasadaLLM, transcurridoMs: Date.now() - t0 },
+              depsExtractorReales(textoPdfs),
+            ).catch(() => null)
+            if (r?.llamado) { if (r.ok) stats.llmSombra++; else stats.llmSombraFallos++ }
+          }
 
           // Enlace con la ficha del cliente en asegura (20/09/2026): solo para correos de
           // aseguradora (`correduria` / `correduria-recibo`), y DESPUÉS del aviso de arriba

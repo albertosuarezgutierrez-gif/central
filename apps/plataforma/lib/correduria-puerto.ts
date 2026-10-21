@@ -515,6 +515,23 @@ export async function registrarEventoCorreoAsegura(evento: unknown, mensajeId: s
 }
 
 /**
+ * `POST /api/operador/correo/lectura-llm` — la lectura del extractor LLM en MODO SOMBRA (F2 del agente de correo,
+ * 21/10/2026). Solo se GUARDA para medir: asegura no toca la cartera ni avisa. Idempotente por Message-ID. Nunca lanza.
+ */
+export async function registrarLecturaLLMAsegura(lectura: Record<string, unknown>): Promise<RegistroDevoluciones> {
+  try {
+    const r = await pedirPost('/api/operador/correo/lectura-llm', lectura)
+    if (r === null) return { estado: 'sin_respuesta', motivo: 'falta ASEGURA_OPERADOR_SECRET' }
+    if (r.status === 200) return { estado: 'ok', json: r.json }
+    const j = (r.json ?? {}) as Record<string, unknown>
+    const motivo = typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}`
+    return r.status >= 400 && r.status < 500 ? { estado: 'rechazado', motivo } : { estado: 'sin_respuesta', motivo }
+  } catch {
+    return { estado: 'sin_respuesta', motivo: 'no se pudo llegar a asegura' }
+  }
+}
+
+/**
  * `POST /api/operador/correo/evento/reevaluar` — tras el triaje: las emisiones «sin resolver» que CIMA ya trae
  * pasan a `duplicado_cima` (14/10/2026). Nunca lanza: `null` = no se pudo (config, red, 4xx/5xx).
  */

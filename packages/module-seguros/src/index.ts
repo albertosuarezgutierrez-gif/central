@@ -1525,6 +1525,15 @@ export {
   type OportunidadEnlace, type PolizaNuevaEnlace, type SolicitudEmitidaEnlace, type TipoAvisoCruce,
 } from './correo-cruce-cima.ts'
 
+// F2 del agente corredor de correo (21/10/2026): extractor LLM en sombra (prompt, validación literal, comparación con el lector).
+export {
+  CAMPOS_COMPARADOS, CAMPOS_LITERALES, CONCEPTOS_IMPORTE, MAX_ADJUNTOS_LLM, MAX_CUERPO_LLM, SYSTEM_EXTRACTOR, TIPOS_FICHA_LLM,
+  apareceLiteral, claveIdentificador, compararConLector, fechaEscritaAIso, fechaLiteral, fichaParaGuardar, identificadorLiteral,
+  importeLiteral, normalizarCotejo, parsearRespuestaExtractor, textoLiteral, textoParaExtractor, validarFichaLLM,
+  type CampoComparado, type CampoLiteral, type ComparacionLector, type ConceptoImporte, type FichaCorreoLLM, type FichaGuardable,
+  type ImporteFicha, type ResultadoCampo, type TipoFichaLLM, type ValidacionFicha,
+} from './extractor-correo.ts'
+
 // «En la compañía» (20/10/2026): nº de solicitud en la compañía sobre una oportunidad abierta (no es un estado del enum).
 export {
   COMPANIAS_SOLICITUD, ROTULO_COMPANIA_SOLICITUD, estaEnCompania, normalizarNumeroSolicitud, pideDocumentacion,
