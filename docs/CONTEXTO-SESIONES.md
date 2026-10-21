@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — RRHH · NINGÚN correo salía: faltaba `RESEND_API_KEY` en Vercel `central-rrhh` (log «sin proveedor»). Creada clave Resend
+solo-envío iarest.es + `MAIL_FROM` «Portal del Empleado <no-responder@iarest.es>», redeploy. Nuevo `rrhh.avisos_admin` (0027): fallo de envío
+(acceso/notificación/firma) → banner en todo /admin con «Marcar como visto», dedupe 6 h. Pendiente: material con foto (esperando respuestas de Pilar).
+
 **(21/10/2026)** — Allianz moto confirmada de punta a punta por Alberto con 0.7.20: prima = «Anual sucesivos» del RECIBO BANCARIO.
 «Cliente Alto Potencial = Sí» abre una ventana de descuento comercial, hoy DESACTIVADA en el broker; documentado en
 `docs/TARIFICADOR-DATOS-BOTS.md` (sección moto). Verificar con un run real cuando se active; el bot no aplica descuentos sin decisión.

@@ -17,7 +17,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { aprobar } = await req.json().catch(() => ({}))
     const r = await resolverSolicitud(empresa_id, usuario_id, id, !!aprobar)
     // Notificar al empleado (best-effort, no bloquea la respuesta)
-    avisarEmpleado(r.empleado_email, r.tipo, r.estado as 'aprobada' | 'rechazada').catch(() => {})
+    avisarEmpleado(r.empleado_email, r.tipo, r.estado as 'aprobada' | 'rechazada', { empresaId: empresa_id, empleadoId: r.empleado_id }).catch(() => {})
     return NextResponse.json({ estado: r.estado, aviso: r.aviso })
   } catch (e) { return error(e) }
 }
@@ -36,7 +36,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     // Si el estado final cambia a aprobada/rechazada, el empleado se entera como al resolver.
     if (r.estado !== r.estado_anterior && r.estado !== 'solicitada') {
-      avisarEmpleado(r.empleado_email, r.tipo, r.estado as 'aprobada' | 'rechazada').catch(() => {})
+      avisarEmpleado(r.empleado_email, r.tipo, r.estado as 'aprobada' | 'rechazada', { empresaId: empresa_id, empleadoId: r.empleado_id }).catch(() => {})
     }
     return NextResponse.json({ estado: r.estado })
   } catch (e) { return error(e) }
