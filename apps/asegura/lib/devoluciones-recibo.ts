@@ -241,9 +241,8 @@ export function comisionEnRiesgo(v: string | null): number | null {
 }
 
 function importeEiacNum(v: string | null): number | null {
-  if (v === null) return null
-  const n = Number(v)
-  return Number.isFinite(n) ? n : null
+  // `importeEiac`, no `Number()`: un texto vacío o raro es «no se sabe» (null), nunca 0.
+  return importeEiac(v)
 }
 
 // ── Tarea por hito ─────────────────────────────────────────────────────────────
@@ -353,7 +352,7 @@ export async function seguirDevoluciones(tx: Tx, correduriaId: string, hoy: Date
     select r.id::text as "reciboId", r.id_recibo as "idRecibo", p.id::text as "polizaId", p.cliente_id::text as "clienteId",
            p.tipo::text as ramo, p.aseguradora as compania, p.numero_poliza as "numeroPoliza",
            to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto,
-           coalesce(d.importe, r.prima_total)::text as importe, d.tipo_motivo as "tipoMotivo", d.motivo
+           coalesce(d.importe::text, r.prima_total) as importe, d.tipo_motivo as "tipoMotivo", d.motivo
     from poliza_recibos r
     join polizas p on p.id = r.poliza_id and p.merged_into_poliza_id is null and p.sustituida_at is null
     left join lateral (
