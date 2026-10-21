@@ -19,7 +19,7 @@ export type FilaLote =
   | { compania: string; estado: 'rechazada'; mensaje: string }
   /** Sin respuesta fiable de asegura: PUEDE haberse encolado. Ni rechazada ni encolada; no se da por fallida. */
   | { compania: string; estado: 'incierta'; mensaje: string }
-  | { compania: string; estado: 'encolada'; trabajoId: string; duplicado: boolean; final: boolean; ok: boolean }
+  | { compania: string; estado: 'encolada'; trabajoId: string; duplicado: boolean; final: boolean; ok: boolean; /** Estado REAL del trabajo previo si `duplicado` (asegura `estadoPrevio`). */ estadoPrevio?: string | null }
 
 /** ¿Acabaron todos los trabajos encolados? (Rechazadas/omitidas no esperan.) Sin ninguna encolada → `false`. PURA. */
 export function loteTerminado(filas: readonly FilaLote[]): boolean {
@@ -40,4 +40,18 @@ export function resumenLote(filas: readonly FilaLote[]): string {
   if (n('incierta')) partes.push(`${n('incierta')} por confirmar`)
   if (n('omitida')) partes.push(`${n('omitida')} sin pedir`)
   return `${filas.length} compañía${filas.length === 1 ? '' : 's'}: ${partes.join(', ')}`
+}
+
+/** Texto de una compañía encolada. Un duplicado `atascado` NO está «en marcha»: espera una elección de la persona. PURA. */
+export function textoFilaEncolada(f: Extract<FilaLote, { estado: 'encolada' }>): string {
+  if (f.duplicado && f.estadoPrevio === 'atascado' && !f.final) {
+    return 'atascado esperando una elección tuya — ábrelo en Bots atascados'
+  }
+  return `${f.duplicado ? 'ya había un trabajo en marcha' : 'encolado'} — ${f.final ? (f.ok ? 'con precio' : 'terminó sin precio') : 'en marcha'}`
+}
+
+/** `estadoPrevio` de la respuesta de encolar, o `null`. PURA. */
+export function estadoPrevioDe(json: unknown): string | null {
+  const v = (typeof json === 'object' && json !== null ? (json as Record<string, unknown>).estadoPrevio : null)
+  return typeof v === 'string' && v.trim() ? v.trim() : null
 }
