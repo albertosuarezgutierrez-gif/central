@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T16:03:45Z",
-  "sha": "9b558f2e8ce41e490cd02fcb44c3e4974cb87b3b",
+  "generadoEn": "2026-10-21T17:04:50Z",
+  "sha": "81a4386c1586f42b674770ac60cc47b8e62e438b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -21180,6 +21180,44 @@
       "hash": "9dbaa522cfd2"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/correo/cruce-cima/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/correo/cruce-cima",
+      "hash": "1ad48d7cdba6"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/correo/documento/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 45
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/correo/documento",
+      "hash": "12a125faa3ec"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/correo/evento/asignar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/correo/evento/asignar",
+      "hash": "7dc56b046b80"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/correo/evento/reevaluar/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -21252,6 +21290,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/correo/seguimiento-lead",
       "hash": "e32123045345"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/correo/solicitud/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "GET /api/operador/correo/solicitud — historial de una solicitud en la compañía de principio a fin (F1 del agente de correo, 21/10/2026): `?eventoId=<uuid>` (desde una fila de la bandeja) o `?compania="
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/correo/solicitud",
+      "hash": "765911c671a1"
     },
     {
       "ruta": "apps/asegura/app/api/operador/correo/tarificar-lead/route.ts",
@@ -27801,7 +27860,7 @@
         "poliza_documentos"
       ],
       "rutaApi": null,
-      "hash": "ef0d5ca2acb1"
+      "hash": "0d3a7f714fa7"
     },
     {
       "ruta": "apps/asegura/lib/cartera-duplicados.ts",
@@ -36855,6 +36914,31 @@
       "hash": "242d66f461b4"
     },
     {
+      "ruta": "apps/asegura/lib/correo-asignar-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/correo-asignar-bd.ts «Asignar a cliente / oportunidad» desde la bandeja «Correos de compañía» (F1 del agente de correo, 21/10/2026): un aviso que quedó SIN RESOLVER (su nº no casó con nada) lo asigna Alberto a mano. La regla vive en `correo-documento.ts` (`decidirAsignacion`, puro y",
+      "exporta": [
+        "asignarEventoCorreo"
+      ],
+      "funciones": [
+        {
+          "nombre": "asignarEventoCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, a: AsignacionEvento, actor: string",
+          "retorno": "Promise<ResultadoAsignacion>",
+          "linea": 30
+        }
+      ],
+      "tablas": [
+        "correo_evento_entrante",
+        "historial_interno",
+        "oportunidades"
+      ],
+      "rutaApi": null,
+      "hash": "c9924ad6b122"
+    },
+    {
       "ruta": "apps/asegura/lib/correo-aviso-acceso.ts",
       "ambito": "apps/asegura",
       "resumen": "«Tienes un acceso esperando»: el correo que avisa a quien la correduría ha anotado como autorizado a ver los seguros de otra ficha. ── Por qué existe ────────────────────────────────────────────────────────── `autorizarVer()` escribe una fila de `portal_autorizacion` con `origen = 'corredor'` que na",
@@ -37070,6 +37154,386 @@
       "hash": "5520b1183297"
     },
     {
+      "ruta": "apps/asegura/lib/correo-cruce-cima-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/correo-cruce-cima-bd.ts Cruce diario correo ↔ CIMA (F1 del agente de correo, 21/10/2026, spec §4.2). Lo dispara el cron `correduria-cruce-cima` de plataforma: aquí se DECIDE qué avisar (reglas puras de `@central/module-seguros` + textos de `correo-cruce.ts`), se apunta UNA vez por h",
+      "exporta": [
+        "cruzarCorreoConCima",
+        "idsAvisados",
+        "marcarAvisosCruce"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 34
+        },
+        {
+          "nombre": "apuntar",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: Db, correduriaId: string, tipo: TipoAvisoCruce, id: string, texto: string, clienteId: string | null",
+          "retorno": "Promise<number>",
+          "linea": 40
+        },
+        {
+          "nombre": "cruzarCorreoConCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, hoy: string = hoyMadrid()",
+          "retorno": "Promise<ResultadoCruce>",
+          "linea": 51,
+          "resumen": "Decide y apunta los avisos de cruce de hoy y devuelve TODOS los pendientes de salir (también los de pasadas anteriores cuyo Telegram no salió). `hoy` inyectable (aaaa-mm-dd, Madrid) para probar sin re"
+        },
+        {
+          "nombre": "resolverPolizaPorNumero",
+          "kind": "function",
+          "exportada": false,
+          "params": "candidatas: Awaited<ReturnType<typeof polizasCandidatas>>, numero: string, dgs: string",
+          "retorno": "string | null",
+          "linea": 151,
+          "resumen": "El cliente de la ÚNICA póliza viva con ese nº y compañía (para el enlace del aviso). `null` si no hay una."
+        },
+        {
+          "nombre": "avisosCrucePendientes",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: Db, correduriaId: string",
+          "retorno": "Promise<AvisoCruce[]>",
+          "linea": 164,
+          "resumen": "Los avisos que aún no han salido, RECLAMADOS de forma atómica: dos pasadas solapadas del cron no reciben los mismos (si no, el Telegram saldría dos veces). Un aviso reclamado y no marcado vuelve a ser"
+        },
+        {
+          "nombre": "idsAvisados",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "string[] | null",
+          "linea": 181,
+          "resumen": "Ids válidos del cuerpo `{ avisados: [uuid…] }` (máx. 50). `null` = cuerpo no válido."
+        },
+        {
+          "nombre": "marcarAvisosCruce",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ids: readonly string[]",
+          "retorno": "Promise<number>",
+          "linea": 189,
+          "resumen": "Marca como avisados (Telegram salido). Idempotente. Devuelve cuántos se marcaron ahora."
+        }
+      ],
+      "tablas": [
+        "correo_cruce_aviso",
+        "correo_evento_entrante",
+        "recibo_devolucion",
+        "skip"
+      ],
+      "rutaApi": null,
+      "hash": "231308662180"
+    },
+    {
+      "ruta": "apps/asegura/lib/correo-cruce.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/correo-cruce.ts Textos de los avisos de CRUCE correo ↔ CIMA (F1 del agente de correo, 21/10/2026, spec §4.2 y §4.8). PURO (`node --test`). Se guardan ya compuestos en `correo_cruce_aviso.texto` y el cron de plataforma los manda por Telegram tal cual (con el enlace a la ficha que pon",
+      "exporta": [
+        "enCimaSegunResolucion",
+        "companiaDeDgs",
+        "textoAvisoEmisionSinCima",
+        "textoAvisoAnulacionSinCima",
+        "textoAvisoDevolucionSinRecibo",
+        "textoAvisoEnlaceAmbiguo",
+        "claveAvisoCruce"
+      ],
+      "funciones": [
+        {
+          "nombre": "enCimaSegunResolucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "cartera: ResolucionEvento, fueraDeCartera: ResolucionEvento",
+          "retorno": "boolean | null",
+          "linea": 16,
+          "resumen": "¿CIMA trae la póliza de una emisión comunicada por correo? `true` · `false` (de verdad no está) · `null` (no se sabe). `cartera`: lo resuelto contra la cartera viva de fichas ACTIVAS; `fueraDeCartera`"
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 25
+        },
+        {
+          "nombre": "companiaDeDgs",
+          "kind": "function",
+          "exportada": true,
+          "params": "dgs: string | null",
+          "retorno": "string",
+          "linea": 28,
+          "resumen": "Nombre de la compañía por su código DGS (las cuatro de los eventos); otro código, tal cual. `null` → «la compañía»."
+        },
+        {
+          "nombre": "limpio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 34
+        },
+        {
+          "nombre": "textoAvisoEmisionSinCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { compania: string; numeroPoliza: string; numeroSolicitud: string | null; fechaCorreo: string; diasHabiles: number }",
+          "retorno": "string",
+          "linea": 36
+        },
+        {
+          "nombre": "textoAvisoAnulacionSinCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { compania: string; numeroPoliza: string; fechaCorreo: string; diasHabiles: number }",
+          "retorno": "string",
+          "linea": 41
+        },
+        {
+          "nombre": "textoAvisoDevolucionSinRecibo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { codigoDgs: string; idRecibo: string; numeroPoliza: string | null; fechaCorreo: string; diasHabiles: number }",
+          "retorno": "string",
+          "linea": 45
+        },
+        {
+          "nombre": "textoAvisoEnlaceAmbiguo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { numeroPoliza: string | null; ramo: string | null; codigoDgs: string | null; candidatas: number; motivo: MotivoEnlaceAmbiguo }",
+          "retorno": "string",
+          "linea": 50
+        },
+        {
+          "nombre": "claveAvisoCruce",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoAvisoCruce, id: string",
+          "retorno": "string",
+          "linea": 63,
+          "resumen": "Clave de idempotencia de un aviso (un hecho, un aviso)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "09d86adcbe64"
+    },
+    {
+      "ruta": "apps/asegura/lib/correo-documento-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/correo-documento-bd.ts La mitad con BD de los adjuntos de correo de compañía (F1 del agente de correo, 21/10/2026). Lo que se DECIDE (validación, a qué ficha va) está en `correo-documento.ts` (puro, con test); aquí se lee lo resuelto del MISMO correo, se comprueba que el destino es ",
+      "exporta": [
+        "esFaltaMigracionDocumentos",
+        "guardarDocumentoCorreo",
+        "documentosCorreoSinAsignar",
+        "asignarDocumentoCorreo",
+        "asignarDocumentosDeMensaje"
+      ],
+      "funciones": [
+        {
+          "nombre": "esFaltaMigracionDocumentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 34,
+          "resumen": "¿El error es «falta la migración F1»? (columna `mensaje_id`, el CHECK de `subido_por` o el índice del ON CONFLICT)."
+        },
+        {
+          "nombre": "eventosDelCorreo",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: Db, correduriaId: string, mensajeId: string",
+          "retorno": "Promise<(EventoResuelto &",
+          "linea": 43
+        },
+        {
+          "nombre": "companiaDeDgs",
+          "kind": "function",
+          "exportada": false,
+          "params": "dgs: string",
+          "retorno": "string",
+          "linea": 73,
+          "resumen": "Clave de compañía de los eventos por su código DGS (para el rótulo); otra, el propio código."
+        },
+        {
+          "nombre": "anotar",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: Db, correduriaId: string, clienteId: string, polizaId: string | null, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 77
+        },
+        {
+          "nombre": "guardarDocumentoCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, entrada: EntradaDocumentoCorreo",
+          "retorno": "Promise<ResultadoDocumentoCorreo>",
+          "linea": 87,
+          "resumen": "Guarda UN adjunto PDF de un correo de compañía. El destino sale de lo resuelto para ESE Message-ID; si no casa, queda sin asignar (cliente/póliza/siniestro NULL) para la bandeja. `sin_migracion` = fal"
+        },
+        {
+          "nombre": "documentosCorreoSinAsignar",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<",
+          "linea": 167,
+          "resumen": "Los adjuntos de correo SIN asignar (90 días). Lanza si falla: quien llama lo dice, nunca «no hay»."
+        },
+        {
+          "nombre": "asignarDocumentoCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string, clienteId: string, actor: string",
+          "retorno": "Promise<'ok' | 'no_encontrado' | 'cliente_ajeno' | 'repetido'>",
+          "linea": 186,
+          "resumen": "Asigna a mano UN documento sin asignar a un cliente de esta correduría. `no_encontrado` = no existe, no es de correo o ya estaba asignado; `repetido` = ese MISMO fichero ya está en la ficha de ese cli"
+        },
+        {
+          "nombre": "avisosDelCorreo",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: Db, correduriaId: string, mensajeId: string",
+          "retorno": "Promise<number | null>",
+          "linea": 213,
+          "resumen": "Cuántos avisos trae un Message-ID (eventos + devoluciones). `null` = no se ha podido contar (no se mueve nada)."
+        },
+        {
+          "nombre": "asignarDocumentosDeMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, mensajeId: string, destino: { clienteId: string; polizaId: string | null },",
+          "retorno": "Promise<number>",
+          "linea": 242,
+          "resumen": "Los adjuntos SIN asignar de un correo pasan a la ficha que se acaba de resolver para él (asignación a mano del aviso, o una emisión que CIMA ya trae). Un fichero que ya estuviera en ese destino no se "
+        }
+      ],
+      "tablas": [
+        "correo_evento_entrante",
+        "documentos",
+        "historial_interno",
+        "node",
+        "polizas",
+        "recibo_devolucion"
+      ],
+      "rutaApi": null,
+      "hash": "f90977b2ef9d"
+    },
+    {
+      "ruta": "apps/asegura/lib/correo-documento.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/correo-documento.ts F1 del agente corredor de correo (21/10/2026, docs/CORREDURIA-AGENTE-CORREO.md §4.3): los PDF adjuntos de los correos de compañía pasan a `seguros.documentos`. PURO (sin BD ni red, `node --test`): validar lo que llega por el puerto y DECIDIR a qué ficha va. La es",
+      "exporta": [
+        "nombreFicheroSeguro",
+        "validarDocumentoCorreo",
+        "elegirDestinoDocumento",
+        "puedeMoverAdjuntosDelCorreo",
+        "notaDocumentoCorreo",
+        "validarAsignacionEvento",
+        "validarAsignacionDocumento",
+        "decidirAsignacion",
+        "notaAsignacionEvento"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreFicheroSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string",
+          "linea": 28,
+          "resumen": "Nombre de fichero seguro para guardar (sin rutas, saltos ni nulos)."
+        },
+        {
+          "nombre": "validarDocumentoCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "",
+          "linea": 37,
+          "resumen": "Cuerpo de `POST /api/operador/correo/documento`: `{ mensajeId, nombre, mime, base64 }`. Un PDF de verdad (cabecera `%PDF-`) de hasta 10 MB. No se fía del `mime` de quien llama: lo decide `mimeDocument"
+        },
+        {
+          "nombre": "elegirDestinoDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: readonly EventoResuelto[]",
+          "retorno": "DestinoDocumento",
+          "linea": 73,
+          "resumen": "A qué ficha va el adjunto, a partir de lo que ya se resolvió del MISMO correo. Solo cuentan los elementos con desenlace confirmado (`aplicado`/`duplicado_cima`) y con cliente. Sin elementos → sin asig"
+        },
+        {
+          "nombre": "puedeMoverAdjuntosDelCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisosDelCorreo: number | null",
+          "retorno": "boolean",
+          "linea": 96,
+          "resumen": "¿Se pueden mover TODOS los adjuntos sin asignar de un correo a la ficha de UNO de sus avisos? Solo si ese Message-ID trae exactamente UN aviso (filas de `correo_evento_entrante` + devoluciones de `rec"
+        },
+        {
+          "nombre": "notaDocumentoCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string | null, nombre: string, aMano: boolean",
+          "retorno": "string",
+          "linea": 101,
+          "resumen": "Nota de la ficha al archivar un adjunto: compañía y nombre del fichero, sin NIF/IBAN (el nombre puede llevarlos)."
+        },
+        {
+          "nombre": "validarAsignacionEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "",
+          "linea": 116,
+          "resumen": "la oportunidad, opcional (y obligatoria para una SOLICITUD: es lo que la engancha). El actor lo pone el servidor."
+        },
+        {
+          "nombre": "validarAsignacionDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "",
+          "linea": 127,
+          "resumen": "Cuerpo del PATCH de un documento sin asignar: `{ id, clienteId }`."
+        },
+        {
+          "nombre": "decidirAsignacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "evento: { tipo: string; estado: string } | null, pedido: { oportunidadId: string | null }, oportunidad: { clienteId: string; abierta: boolean } | null, clienteId: string,",
+          "retorno": "DecisionAsignacion",
+          "linea": 144,
+          "resumen": "el resto, a la ficha del cliente (nota en el historial, sin tareas ni siniestros: el aviso no casó solo)."
+        },
+        {
+          "nombre": "notaAsignacionEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { tipo: string; compania: string; clave: string; numeroPoliza: string | null; resumen: string | null }, actor: string",
+          "retorno": "string",
+          "linea": 163,
+          "resumen": "Nota de la ficha cuando Alberto asigna a mano un aviso que no casó. Sin el nombre del tomador."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7b5ce458ee43"
+    },
+    {
       "ruta": "apps/asegura/lib/correo-emision.ts",
       "ambito": "apps/asegura",
       "resumen": "El correo al cliente justo después de EMITIR su póliza (26/09/2026, dictado de Alberto: «enviar automáticamente mail con diseño moderno» y, en el mismo correo, el enlace para firmar la baja de la póliza anterior). El OK de este envío concreto es la pulsación de «Emitir». 🧾 Lleva un RESUMEN del segu",
@@ -37151,6 +37615,8 @@
       "ambito": "apps/asegura",
       "resumen": "apps/asegura/lib/correo-evento-bd.ts La mitad con BD de los eventos de correo de compañías (14/10/2026). Lo que se DECIDE está en `correo-evento.ts` (puro, con test); aquí solo se lee el contexto, se aplica el plan y se deja rastro. 1. Reserva: fila en `correo_evento_entrante` con la llave única (co",
       "exporta": [
+        "polizasCandidatas",
+        "polizasFueraDeCandidatas",
         "vincularSolicitudesPendientes",
         "registrarEventoCorreo",
         "eventosCorreoRecientes",
@@ -37165,7 +37631,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 61
+          "linea": 63
         },
         {
           "nombre": "numeroDe",
@@ -37173,15 +37639,24 @@
           "exportada": false,
           "params": "i: ItemEvento",
           "retorno": "string | null",
-          "linea": 65
+          "linea": 67
         },
         {
           "nombre": "polizasCandidatas",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "db: Db, correduriaId: string",
           "retorno": "Promise<(PolizaCandidata &",
-          "linea": 69
+          "linea": 72
+        },
+        {
+          "nombre": "polizasFueraDeCandidatas",
+          "kind": "function",
+          "exportada": true,
+          "params": "db: Db, correduriaId: string",
+          "retorno": "Promise<PolizaCandidata[]>",
+          "linea": 94,
+          "resumen": "Las pólizas de CIMA que `polizasCandidatas` deja fuera por su FICHA (cliente inactivo) o por estar fusionadas. Solo para el cruce con CIMA: que el nº esté aquí NO es «CIMA no la trae» (`enCimaSegunRes"
         },
         {
           "nombre": "siniestroPorNumero",
@@ -37189,7 +37664,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, compania: string, codigoDgs: string, numero: string, numeroPolizaCorreo: string | null,",
           "retorno": "Promise<EleccionSiniestro>",
-          "linea": 88,
+          "linea": 110,
           "resumen": "El siniestro con ese nº: la consulta acota por «contiene»; compañía y póliza las decide `elegirSiniestro` (puro, con test)."
         },
         {
@@ -37198,7 +37673,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, polizaId: string",
           "retorno": "Promise<ExpedienteAbierto | null>",
-          "linea": 111
+          "linea": 133
         },
         {
           "nombre": "hayTareaAbierta",
@@ -37206,7 +37681,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, claveTarea: string",
           "retorno": "Promise<boolean>",
-          "linea": 120
+          "linea": 142
         },
         {
           "nombre": "notaYaAnotada",
@@ -37214,7 +37689,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, filaId: string, claveTarea: string, campo: string, fecha: string | null,",
           "retorno": "Promise<boolean>",
-          "linea": 133,
+          "linea": 155,
           "resumen": "¿Ya se anotó ESTE aviso? Fila `aplicado` de la misma clave de tarea (póliza/recibo) con la misma fecha de la compañía. El resumen diario de Occident («próximos a la anulación») repite el mismo recibo "
         },
         {
@@ -37223,7 +37698,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, clienteId: string, polizaId: string | null, tipo: 'gestion' | 'siniestro', texto: string",
           "retorno": "Promise<void>",
-          "linea": 144
+          "linea": 166
         },
         {
           "nombre": "crearTareaCorreo",
@@ -37231,7 +37706,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, clienteId: string, polizaId: string, t: NonNullable<Plan['tarea']>,",
           "retorno": "Promise<string>",
-          "linea": 151,
+          "linea": 173,
           "resumen": "La tarea: colgada de la oportunidad abierta de la póliza si la hay (dos listas sobre el mismo cliente se pisan); si no, suelta."
         },
         {
@@ -37240,7 +37715,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, entrada: EntradaEvento, item: ItemEvento, candidatas: Awaited<ReturnType<typeof polizasCandidatas>>, fechaCorreo: string | null, hoy: string, instanteCorreo: Date | null,",
           "retorno": "Promise<ResultadoItemCorreo>",
-          "linea": 179
+          "linea": 201
         },
         {
           "nombre": "oportunidadDeSolicitud",
@@ -37248,7 +37723,7 @@
           "exportada": false,
           "params": "db: Db | Tx, correduriaId: string, compania: string, numero: string",
           "retorno": "Promise<OportunidadSolicitud | null>",
-          "linea": 313
+          "linea": 335
         },
         {
           "nombre": "aplicarSolicitud",
@@ -37256,16 +37731,16 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, compania: string, item: ItemSolicitud, op: OportunidadSolicitud, plan: Extract<ReturnType<typeof planSolicitud>, { estado: 'aplicado' }>, instante: Date | null, progreso: { estadoAplicado: boolean },",
           "retorno": "Promise<",
-          "linea": 333,
+          "linea": 355,
           "resumen": "Aplica UN estado de solicitud a su oportunidad (nota + estado + tarea). Devuelve la tarea creada (si la hay). La tarea se crea DESPUÉS de la transacción con `crearTarea` (la misma vía que una tarea a "
         },
         {
           "nombre": "procesarSolicitud",
           "kind": "function",
           "exportada": false,
-          "params": "db: Db, correduriaId: string, compania: string, item: ItemSolicitud, filaId: string, fechaCorreo: string | null, instanteCorreo: Date | null, hoy: string,",
+          "params": "db: Db, correduriaId: string, compania: string, codigoDgs: string, item: ItemSolicitud, filaId: string, fechaCorreo: string | null, instanteCorreo: Date | null, hoy: string,",
           "retorno": "Promise<ResultadoItemCorreo>",
-          "linea": 379
+          "linea": 414
         },
         {
           "nombre": "vincularSolicitudesPendientes",
@@ -37273,7 +37748,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, compania: string, numero: string, hoy: string = hoyMadrid(),",
           "retorno": "Promise<",
-          "linea": 426,
+          "linea": 464,
           "resumen": "Tras apuntar (o cambiar) el nº de solicitud en una oportunidad: los correos `solicitud` de ese nº y compañía que quedaron `sin_resolver` (y sin marcar como mirados) en los últimos 90 días se aplican a"
         },
         {
@@ -37282,7 +37757,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: EntradaEvento, fechaCorreo: string | null, hoy: string = hoyMadrid(), instanteCorreo: Date | null = null,",
           "retorno": "Promise<ResultadoEventoCorreo>",
-          "linea": 481,
+          "linea": 520,
           "resumen": "Aplica un evento de correo ya validado. `fechaCorreo` (aaaa-mm-dd) solo se usa en los textos. `sin_migracion` = falta `2026-10-14_correo_evento_entrante.sql`: no se ha escrito NADA."
         },
         {
@@ -37291,7 +37766,7 @@
           "exportada": true,
           "params": "correduriaId: string, dias = 30",
           "retorno": "Promise<",
-          "linea": 534,
+          "linea": 578,
           "resumen": "Los eventos de los últimos `dias` días, los sin resolver primero. `null` en `filas` nunca: si falla, lanza."
         },
         {
@@ -37300,7 +37775,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, revisado: boolean",
           "retorno": "Promise<boolean>",
-          "linea": 557,
+          "linea": 601,
           "resumen": "Pone (`true`) o quita (`false`) la marca de «mirado». Solo la fila de ESA correduría: `false` = no existe o es de otra (la ruta responde 404). Quitarla deja la fila otra vez en la cola de avisos."
         },
         {
@@ -37309,7 +37784,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: string = hoyMadrid(),",
           "retorno": "Promise<",
-          "linea": 574,
+          "linea": 618,
           "resumen": "Reevaluación de emisiones (14/10/2026): las filas `emision` `sin_resolver` sin mirar de los últimos 60 días se vuelven a resolver contra la cartera; si CIMA ya trae la póliza en vigor pasan a `duplica"
         },
         {
@@ -37318,7 +37793,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 610,
+          "linea": 658,
           "resumen": "Para la cola de avisos: los sin resolver (o a medias) de los últimos 30 días que nadie ha marcado como mirados."
         }
       ],
@@ -37333,7 +37808,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "038342560c74"
+      "hash": "c8f4388a8650"
     },
     {
       "ruta": "apps/asegura/lib/correo-evento.ts",
@@ -37355,6 +37830,8 @@
         "planItem",
         "estadoTrasErrorSolicitud",
         "planSolicitud",
+        "textoTareaRechazo",
+        "notaCierreDocumentacion",
         "decidirReevaluacionEmision",
         "tareaValida",
         "validarMarcaRevisado"
@@ -37374,7 +37851,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 100
+          "linea": 116
         },
         {
           "nombre": "id",
@@ -37382,7 +37859,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 103
+          "linea": 119
         },
         {
           "nombre": "dia",
@@ -37390,7 +37867,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 106
+          "linea": 122
         },
         {
           "nombre": "periodo",
@@ -37398,7 +37875,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 111
+          "linea": 127
         },
         {
           "nombre": "libre",
@@ -37406,7 +37883,7 @@
           "exportada": false,
           "params": "v: unknown, max = 300",
           "retorno": "string | null",
-          "linea": 114
+          "linea": 130
         },
         {
           "nombre": "importe",
@@ -37414,7 +37891,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 120
+          "linea": 136
         },
         {
           "nombre": "validarEntradaEvento",
@@ -37422,7 +37899,7 @@
           "exportada": true,
           "params": "b: unknown",
           "retorno": "",
-          "linea": 128,
+          "linea": 144,
           "resumen": "Valida el cuerpo de `POST /api/operador/correo/evento`: `{ mensajeId, compania?, evento }`. No se fía de la forma: un trozo que no se entiende se CUENTA en `ilegibles` (se dice), nunca se inventa."
         },
         {
@@ -37431,7 +37908,7 @@
           "exportada": true,
           "params": "n: string | null | undefined",
           "retorno": "string | null",
-          "linea": 229,
+          "linea": 261,
           "resumen": "Sin espacios, puntos, guiones ni barras, en mayúsculas y SIN ceros a la izquierda (Mapfre los pone, CIMA no siempre)."
         },
         {
@@ -37440,7 +37917,7 @@
           "exportada": false,
           "params": "p: Pick<PolizaCandidata, 'codigoDgs' | 'aseguradora'>, compania: string, codigoDgs: string",
           "retorno": "boolean",
-          "linea": 235
+          "linea": 267
         },
         {
           "nombre": "resolverPolizaEvento",
@@ -37448,7 +37925,7 @@
           "exportada": true,
           "params": "numeroPoliza: string | null, compania: string, codigoDgs: string, candidatas: readonly PolizaCandidata[],",
           "retorno": "ResolucionEvento",
-          "linea": 246,
+          "linea": 278,
           "resumen": "La póliza del evento por nº + compañía, entre las de la cartera VIVA (origen CIMA). En vigor → se escribe; viva pero no en vigor → cada tipo decide (casi siempre «CIMA ya lo sabe»); nada o más de una "
         },
         {
@@ -37457,7 +37934,7 @@
           "exportada": true,
           "params": "filas: readonly SiniestroCandidato[], numero: string, compania: string, codigoDgs: string, numeroPolizaCorreo: string | null,",
           "retorno": "EleccionSiniestro",
-          "linea": 284,
+          "linea": 316,
           "resumen": "El siniestro de la cartera al que se refiere el correo. Un nº de siniestro solo es único DENTRO de una compañía: sin código DGS en el siniestro, la compañía se mira en SU póliza (sin póliza, no casa)."
         },
         {
@@ -37466,7 +37943,7 @@
           "exportada": true,
           "params": "filas: readonly SiniestroCandidato[], tope: number, numero: string, compania: string, codigoDgs: string, numeroPolizaCorreo: string | null,",
           "retorno": "EleccionSiniestro",
-          "linea": 309,
+          "linea": 341,
           "resumen": "Como `elegirSiniestro`, pero sobre una lectura acotada: la consulta pide `tope + 1` filas; si llegan más de `tope` el LIMIT pudo dejar fuera el bueno, así que NO se elige ninguno (`poliza_distinta` → "
         },
         {
@@ -37475,7 +37952,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 321,
+          "linea": 353,
           "resumen": "Fecha (aaaa-mm-dd) en Europe/Madrid de la `fechaCorreo` recibida. Un ISO con hora ('2026-10-14T22:30:00.000Z') se pasa a Madrid (a las 00:30 de Madrid ya es el día siguiente); una fecha sola se respet"
         },
         {
@@ -37484,7 +37961,7 @@
           "exportada": true,
           "params": "tipo: TipoEventoCorreo",
           "retorno": "'fechaLimite' | 'fechaEfecto' | 'periodoHasta' | null",
-          "linea": 334,
+          "linea": 366,
           "resumen": "La fecha del aviso que distingue «la compañía repite lo mismo» de «dice algo nuevo» (para no anotar cada día el mismo resumen de Occident, que llega con otro Message-ID). `null` = el tipo no se dedupl"
         },
         {
@@ -37493,7 +37970,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 380
+          "linea": 412
         },
         {
           "nombre": "sumarDias",
@@ -37501,7 +37978,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 382
+          "linea": 414
         },
         {
           "nombre": "venceTarea",
@@ -37509,7 +37986,7 @@
           "exportada": true,
           "params": "fecha: string | null, hoy: string, porDefecto: number",
           "retorno": "string",
-          "linea": 389,
+          "linea": 421,
           "resumen": "Nunca en el pasado: un aviso que llega tarde vence HOY."
         },
         {
@@ -37518,7 +37995,7 @@
           "exportada": false,
           "params": "resumen: string",
           "retorno": "Plan",
-          "linea": 400
+          "linea": 432
         },
         {
           "nombre": "sinResolver",
@@ -37526,7 +38003,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "Plan",
-          "linea": 404
+          "linea": 436
         },
         {
           "nombre": "importeDeItem",
@@ -37534,7 +38011,7 @@
           "exportada": true,
           "params": "item: ItemEvento",
           "retorno": "number | null",
-          "linea": 412,
+          "linea": 444,
           "resumen": "Importe que se guarda en la fila (columna `importe`): el del recibo en riesgo o la prima de la póliza nueva."
         },
         {
@@ -37543,7 +38020,7 @@
           "exportada": true,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 422,
+          "linea": 454,
           "resumen": "¿El insert chocó con el CHECK de `tipo` (un tipo nuevo, como `emision`, antes de aplicar su SQL)? Es «falta la migración» (503 `sin_migracion`), no un fallo del servidor. El nombre es el que Postgres "
         },
         {
@@ -37552,7 +38029,7 @@
           "exportada": true,
           "params": "item: ItemEvento, polizaId: string",
           "retorno": "string",
-          "linea": 430,
+          "linea": 462,
           "resumen": "Clave de «una tarea por póliza/recibo» (pre-anulación e impago del MISMO recibo comparten tarea)."
         },
         {
@@ -37561,7 +38038,7 @@
           "exportada": true,
           "params": "item: ItemEvento, compania: string, ctx: ContextoItem",
           "retorno": "Plan",
-          "linea": 435
+          "linea": 469
         },
         {
           "nombre": "estadoTrasErrorSolicitud",
@@ -37569,7 +38046,7 @@
           "exportada": true,
           "params": "estadoYaAplicado: boolean",
           "retorno": "Extract<EstadoEventoCorreo, 'sin_resolver' | 'procesando'>",
-          "linea": 588,
+          "linea": 644,
           "resumen": "Desenlace de una solicitud que revienta a mitad. Si NADA se escribió en la oportunidad (falló la lectura o la transacción del estado, que es atómica) vuelve a `sin_resolver`: la bandeja la enseña y `v"
         },
         {
@@ -37578,8 +38055,26 @@
           "exportada": true,
           "params": "item: Extract<ItemEvento, { tipo: 'solicitud' }>, compania: string, op: OportunidadSolicitud | null, ctx: { fechaCorreo: string | null; hoy: string },",
           "retorno": "PlanSolicitud",
-          "linea": 597,
+          "linea": 653,
           "resumen": "Qué se hace con el estado de una solicitud. Sin oportunidad con ese nº → `sin_resolver` (bandeja «Correos de compañía»: Alberto apunta el nº en la oportunidad y el correo se engancha solo). Con ella →"
+        },
+        {
+          "nombre": "textoTareaRechazo",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, numero: string, motivo: string | null",
+          "retorno": "string",
+          "linea": 691,
+          "resumen": "Texto (y llave de idempotencia) de la tarea de una solicitud RECHAZADA. Sin la nota libre del suscriptor."
+        },
+        {
+          "nombre": "notaCierreDocumentacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "numeroPoliza: string | null",
+          "retorno": "string",
+          "linea": 696,
+          "resumen": "Línea que se añade a la tarea «enviar documentación» al cerrarla sola porque la compañía comunica la emisión."
         },
         {
           "nombre": "decidirReevaluacionEmision",
@@ -37587,7 +38082,7 @@
           "exportada": true,
           "params": "item: ItemEvento, compania: string, resolucion: ResolucionEvento, hoy: string,",
           "retorno": "DecisionReevaluacion",
-          "linea": 633,
+          "linea": 711,
           "resumen": "Reevaluación (14/10/2026): una emisión que quedó `sin_resolver` («aún no llegada por CIMA») pasa a `duplicado_cima` cuando CIMA ya trae la póliza. Reutiliza `planItem` (la MISMA regla que el POST): so"
         },
         {
@@ -37596,7 +38091,7 @@
           "exportada": true,
           "params": "t: TareaPlan, hoy: Date",
           "retorno": "",
-          "linea": 645
+          "linea": 723
         },
         {
           "nombre": "validarMarcaRevisado",
@@ -37604,13 +38099,13 @@
           "exportada": true,
           "params": "b: unknown",
           "retorno": "",
-          "linea": 655,
+          "linea": 733,
           "resumen": "Cuerpo de `PATCH /api/operador/correo/evento`: `{ id: uuid, revisado: boolean }`. Nada se coacciona."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "52f11f2b4d39"
+      "hash": "b4485a5606f4"
     },
     {
       "ruta": "apps/asegura/lib/correo-eventos.ts",
@@ -40015,6 +40510,45 @@
       "hash": "6f1daebef049"
     },
     {
+      "ruta": "apps/asegura/lib/enlace-poliza-oportunidad.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/enlace-poliza-oportunidad.ts Enlace póliza CIMA NUEVA ↔ oportunidad ABIERTA (F1 del agente de correo, 21/10/2026, spec §4.1 + §4.8). Corre DENTRO de `detectarYGuardar` (tras cada pull de CIMA), en su PROPIO punto de guardado, después del cierre por matrícula (`ganarOportunidadesEmit",
+      "exporta": [
+        "enlazarPolizasConOportunidades"
+      ],
+      "funciones": [
+        {
+          "nombre": "opcional",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, nombre: string, f: () => Promise<T>, siFalla: T",
+          "retorno": "Promise<T>",
+          "linea": 33,
+          "resumen": "Una consulta opcional (tabla de la migración F1) en su punto de guardado: si falla, no envenena la transacción."
+        },
+        {
+          "nombre": "enlazarPolizasConOportunidades",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: Tx, correduriaId: string",
+          "retorno": "Promise<ResultadoEnlaceOportunidades>",
+          "linea": 45
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "correo_cruce_aviso",
+        "gestiones",
+        "historial_interno",
+        "oportunidad_historial",
+        "oportunidades",
+        "polizas",
+        "solicitud_compania"
+      ],
+      "rutaApi": null,
+      "hash": "439c3af01f43"
+    },
+    {
       "ruta": "apps/asegura/lib/envio-presupuesto.ts",
       "ambito": "apps/asegura",
       "resumen": "El ENVÍO del presupuesto al cliente (spec 2026-09-21, §3, PR 3). Dos canales de aviso, que elige Alberto y que NO se funden: · `email`: lo manda este servidor; el sello `enviado_at` se pone solo si el proveedor lo acepta. · `whatsapp_enlace`: aquí NO sale nada. Se devuelve el texto y un `wa.me` que ",
@@ -40540,7 +41074,7 @@
           "exportada": true,
           "params": "correduriaId: string, db: Consultor = prismaAsegura()",
           "retorno": "Promise<Foto>",
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "detectarYGuardar",
@@ -40548,7 +41082,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResultadoDeteccion>",
-          "linea": 142
+          "linea": 149
         },
         {
           "nombre": "hoyMadrid",
@@ -40556,7 +41090,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 333
+          "linea": 356
         },
         {
           "nombre": "abrirRetencion",
@@ -40564,7 +41098,7 @@
           "exportada": false,
           "params": "tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string, polizaId: string, tipo: string",
           "retorno": "Promise<Retencion | null>",
-          "linea": 342,
+          "linea": 365,
           "resumen": "Pieza 2-b: CIMA anula una póliza con el vencimiento por delante → oportunidad de retención (`en_negociacion`) + llamada de prioridad alta para hoy, que sale en «Hoy · Tareas de hoy». `null` si no toca"
         },
         {
@@ -40573,7 +41107,7 @@
           "exportada": false,
           "params": "tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 395,
+          "linea": 418,
           "resumen": "Las bajas pendientes de revisar cuya póliza ya dio de baja el corredor desde el recibo devuelto: quedan revisadas como pérdida con SU motivo. Devuelve esas pólizas (no se anuncian como fuga)."
         },
         {
@@ -40582,7 +41116,7 @@
           "exportada": false,
           "params": "tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 408,
+          "linea": 431,
           "resumen": "Cierra como `ganada` las retenciones abiertas cuya póliza ya no se pierde, y sus tareas."
         },
         {
@@ -40591,7 +41125,7 @@
           "exportada": false,
           "params": "correduriaId: string, r: Retencion",
           "retorno": "Promise<void>",
-          "linea": 449,
+          "linea": 472,
           "resumen": "Best-effort y fuera de la transacción: la oportunidad y la llamada ya están guardadas."
         },
         {
@@ -40600,7 +41134,7 @@
           "exportada": false,
           "params": "db: Consultor, correduriaId: string, claves: string[] | null",
           "retorno": "Promise<FugaNueva[]>",
-          "linea": 461,
+          "linea": 484,
           "resumen": "Lo mínimo para reconocer la póliza: nombre del tomador, número y compañía. Nada de contacto."
         },
         {
@@ -40609,7 +41143,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<FugaNueva[] | null>",
-          "linea": 521
+          "linea": 544
         },
         {
           "nombre": "revisionValida",
@@ -40617,7 +41151,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Revision | null",
-          "linea": 532
+          "linea": 555
         },
         {
           "nombre": "revisarEvento",
@@ -40625,7 +41159,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, r: Revision, actor: string",
           "retorno": "Promise<boolean>",
-          "linea": 543,
+          "linea": 566,
           "resumen": "`true` si se revisó; `false` si no existe o ya estaba revisado (no se pisa una revisión)."
         }
       ],
@@ -40645,7 +41179,7 @@
         "siniestros"
       ],
       "rutaApi": null,
-      "hash": "683600a94912"
+      "hash": "72ca1d7b9f00"
     },
     {
       "ruta": "apps/asegura/lib/expedientes-auto-reglas.ts",
@@ -49553,6 +50087,42 @@
       ],
       "rutaApi": null,
       "hash": "65464fcce2e6"
+    },
+    {
+      "ruta": "apps/asegura/lib/solicitud-compania-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/solicitud-compania-bd.ts Seguimiento de una SOLICITUD en la compañía de principio a fin (F1 del agente de correo, 21/10/2026, spec §4.1). Una fila por (correduría, compañía DGS, nº de solicitud) en `seguros.solicitud_compania`; cada correo es un hito (`correo_evento_entrante.solicit",
+      "exporta": [
+        "anotarSolicitudCompania",
+        "historialSolicitud"
+      ],
+      "funciones": [
+        {
+          "nombre": "anotarSolicitudCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "db: Db, correduriaId: string, compania: string, codigoDgs: string, item: ItemSolicitud, oportunidadId: string | null, instante: Date | null, filaEventoId: string,",
+          "retorno": "Promise<string | null>",
+          "linea": 29,
+          "resumen": "Apunta el hito en `solicitud_compania` y engancha la fila del correo. Devuelve el id de la solicitud, o `null` si no se pudo (sin migración o error: se registra y se sigue)."
+        },
+        {
+          "nombre": "historialSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, q: { compania: string; numero: string } | { eventoId: string },",
+          "retorno": "Promise<HistorialSolicitud | 'sin_migracion'>",
+          "linea": 84,
+          "resumen": "El historial de una solicitud: la fila de `solicitud_compania` y TODOS los correos que hablan de ella (por su `solicitud_id`, por su nº, y los de su póliza emitida). `solicitud: null` con hitos = aún "
+        }
+      ],
+      "tablas": [
+        "correo_evento_entrante",
+        "set",
+        "solicitud_compania"
+      ],
+      "rutaApi": null,
+      "hash": "c0696a0aa825"
     },
     {
       "ruta": "apps/asegura/lib/solicitud-datos.ts",
@@ -107294,6 +107864,36 @@
       "hash": "e8a588cd550a"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/mesa/AsignarCorreo.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AsignarCorreo"
+      ],
+      "funciones": [
+        {
+          "nombre": "abiertasDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "j: unknown",
+          "retorno": "Op[] | null",
+          "linea": 17,
+          "resumen": "Lee `GET /api/correduria/oportunidad?clienteId=` y se queda con las ABIERTAS. Un fallo se dice, nunca «no tiene»."
+        },
+        {
+          "nombre": "AsignarCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ fila, onHecho, onCancelar }: { fila: CorreoCompania onHecho: (cliente: ClienteElegido, resumen: string) => void onCancelar: () => void }",
+          "retorno": null,
+          "linea": 31,
+          "resumen": "«Asignar a cliente / oportunidad» de un aviso SIN RESOLVER de la bandeja (F1 del agente de correo, 21/10/2026). El buscador arranca con el nombre SUGERIDO por el asunto, pero Alberto ELIGE la ficha: n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9d89c045fdda"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mesa/BandaAvisos.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -107361,7 +107961,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 16
+          "linea": 20
         },
         {
           "nombre": "CorreosCompania",
@@ -107369,13 +107969,79 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24,
+          "linea": 28,
           "resumen": "«Correos de compañía» (14/10/2026): los avisos que el triaje leyó en los correos de las compañías (siniestros, pre-anulaciones, impagos, anulaciones, suplementos) en los últimos 30 días y qué se hizo "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "25fe73504d6c"
+      "hash": "ccf29dcdf7b2"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/mesa/DocumentosSinAsignar.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "DocumentosSinAsignar"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 10
+        },
+        {
+          "nombre": "tamano",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "b: number | null",
+          "retorno": "string",
+          "linea": 11
+        },
+        {
+          "nombre": "DocumentosSinAsignar",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ lectura }: { lectura: LecturaDocumentosSinAsignar }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "«Documentos sin asignar» de la bandeja (F1 del agente de correo, 21/10/2026): PDF de correos de compañía cuyo aviso no casó con ninguna ficha. Se guardaron igual (no se pierden) y aquí se asignan a ma"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6325e22abd57"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/mesa/HistorialSolicitud.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "HistorialSolicitud"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 6
+        },
+        {
+          "nombre": "HistorialSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ id }: { id: string }",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "Historial de una solicitud en la compañía de principio a fin (F1 del agente de correo, 21/10/2026): cada correo que habla de ella (por su nº y por su póliza emitida), del primero al último. Se carga a"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b5b37e70ecf6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mesa/MesaClient.tsx",
@@ -107560,7 +108226,7 @@
           "nombre": "SelectorCliente",
           "kind": "function",
           "exportada": true,
-          "params": "{ onSelect }: { onSelect: (c: ClienteElegido) => void }",
+          "params": "{ onSelect, inicial }: { onSelect: (c: ClienteElegido) => void /** Término con el que arranca (y busca solo una vez): p. ej. el nombre SUGERIDO por el asunto de un correo. */ inicial?: string | null }",
           "retorno": null,
           "linea": 16,
           "resumen": "Buscador de CLIENTE reutilizable (sobre `/api/correduria/buscar`, el mismo de `BuscadorCartera`) que NO navega: al pulsar un resultado llama a `onSelect`. `BuscadorCartera` sigue a lo suyo (URL, tarje"
@@ -107568,7 +108234,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53e7bbfdcd5f"
+      "hash": "6ab95220944b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/NuevoCliente.tsx",
@@ -122473,16 +123139,26 @@
       "ambito": "apps/plataforma",
       "exporta": [
         "GET",
-        "PATCH"
+        "PATCH",
+        "POST"
       ],
       "funciones": [
+        {
+          "nombre": "sugerenciasPorMensaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "mensajes: string[]",
+          "retorno": "Promise<Map<string, string>>",
+          "linea": 18,
+          "resumen": "Asuntos de `correo_triaje` (buzón único de Alberto) por Message-ID → nombre SUGERIDO para asignar a mano (F1, 21/10/2026). Si la consulta falla, sin sugerencias (no rompe la bandeja). El Message-ID no"
+        },
         {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "req: NextRequest",
           "retorno": null,
-          "linea": 13,
+          "linea": 41,
           "resumen": "GET — bandeja «Correos de compañía» de Mi mesa (14/10/2026): avisos de compañías leídos del correo en los últimos 30 días con su estado (aplicado · ya en CIMA · sin resolver · a medias), los sin resol"
         },
         {
@@ -122491,13 +123167,25 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 24,
+          "linea": 70,
           "resumen": "PATCH { id, revisado } — «Marcar como mirado» / «Deshacer» (14/10/2026). Mismo guarda que el GET; reenvía al puerto de asegura (`PATCH /api/operador/correo/evento`) y devuelve su MISMO status y json."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 87,
+          "resumen": "POST — «Asignar a cliente / oportunidad» (F1, 21/10/2026): { accion:'asignar', id, clienteId, oportunidadId? } → un aviso sin resolver (asegura: `/correo/evento/asignar`). { accion:'asignar_documento'"
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "correo_triaje",
+        "next"
+      ],
       "rutaApi": "/api/correduria/correos-compania",
-      "hash": "7561a4566a08"
+      "hash": "2d3e028ce336"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/declaradas-vencer/route.ts",
@@ -124997,7 +125685,7 @@
           "exportada": false,
           "params": "ag: { id: string; etiqueta: string; maxHoras: number; nota: string }, evaluadoAt: Date, alerta: boolean, horas: number | null, motivo: string, sondaError: string | null,",
           "retorno": "Promise<void>",
-          "linea": 274,
+          "linea": 275,
           "resumen": "Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla. 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge que el p"
         },
         {
@@ -125006,7 +125694,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 295
+          "linea": 296
         }
       ],
       "tablas": [
@@ -125021,7 +125709,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "140eae5bc817"
+      "hash": "42093e7026cf"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -125530,6 +126218,27 @@
       "tablas": [],
       "rutaApi": "/api/cron/correduria-bajas-pue",
       "hash": "cb44c10e413e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/correduria-cruce-cima/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Cruce correo de compañías ↔ CIMA (F1 del agente de correo, 21/10/2026, docs/CORREDURIA-AGENTE-CORREO.md §4.2). Asegura DECIDE qué avisar (emitida por correo y CIMA no la trae a los 5 días hábiles, anulación que CIMA sigue d",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/correduria-cruce-cima",
+      "hash": "6c07f0a01e1b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-descubrir-emisiones/route.ts",
@@ -145571,7 +146280,12 @@
         "ordenarCorreos",
         "conRevisado",
         "interpretarCorreosCompania",
-        "textoElementoCorreo"
+        "textoElementoCorreo",
+        "admiteAsignar",
+        "conAsignado",
+        "nombreSugeridoDeAsunto",
+        "interpretarDocumentosSinAsignar",
+        "interpretarHistorialSolicitud"
       ],
       "funciones": [
         {
@@ -145580,7 +146294,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 40
+          "linea": 45
         },
         {
           "nombre": "fila",
@@ -145588,7 +146302,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CorreoCompania | null",
-          "linea": 42
+          "linea": 47
         },
         {
           "nombre": "admiteMarca",
@@ -145596,7 +146310,7 @@
           "exportada": true,
           "params": "e: Pick<CorreoCompania, 'estado'>",
           "retorno": "boolean",
-          "linea": 60,
+          "linea": 66,
           "resumen": "¿Admite la marca «mirado»? Sin resolver, o a medias (sin desenlace confirmado), mirado o no."
         },
         {
@@ -145605,7 +146319,7 @@
           "exportada": true,
           "params": "e: Pick<CorreoCompania, 'estado'> & { revisado?: boolean }",
           "retorno": "boolean",
-          "linea": 65,
+          "linea": 71,
           "resumen": "¿Pide que alguien lo mire AHORA? Admite la marca y nadie la ha puesto."
         },
         {
@@ -145614,7 +146328,7 @@
           "exportada": true,
           "params": "filas: CorreoCompania[]",
           "retorno": "CorreoCompania[]",
-          "linea": 70,
+          "linea": 76,
           "resumen": "Orden de la bandeja: los que piden mirar primero, los mirados al final; dentro, lo más reciente arriba."
         },
         {
@@ -145623,7 +146337,7 @@
           "exportada": true,
           "params": "filas: CorreoCompania[], id: string, revisado: boolean",
           "retorno": "CorreoCompania[]",
-          "linea": 76,
+          "linea": 82,
           "resumen": "Aplica en local el resultado de marcar/deshacer, sin recargar la lista. Id desconocido = sin cambios."
         },
         {
@@ -145632,7 +146346,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaCorreosCompania",
-          "linea": 80
+          "linea": 86
         },
         {
           "nombre": "textoElementoCorreo",
@@ -145640,13 +146354,89 @@
           "exportada": true,
           "params": "e: Pick<CorreoCompania, 'tipo' | 'clave' | 'numeroPoliza'>",
           "retorno": "string",
-          "linea": 104,
+          "linea": 110,
           "resumen": "El elemento de la fila, en una línea: «Siniestro 43000001 · póliza X», «Póliza nueva emitida: X» o «Póliza X»."
+        },
+        {
+          "nombre": "admiteAsignar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Pick<CorreoCompania, 'estado'>",
+          "retorno": "boolean",
+          "linea": 130,
+          "resumen": "¿Se puede «Asignar a cliente / oportunidad»? Solo lo SIN RESOLVER (lo demás ya tiene desenlace en la cartera)."
+        },
+        {
+          "nombre": "conAsignado",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: CorreoCompania[], id: string, cliente: { clienteId: string; nombre: string }, resumen: string",
+          "retorno": "CorreoCompania[]",
+          "linea": 135,
+          "resumen": "Aplica en local el resultado de asignar (sin recargar): pasa a `aplicado` con su cliente y deja de pedir mirar."
+        },
+        {
+          "nombre": "nombreSugeridoDeAsunto",
+          "kind": "function",
+          "exportada": true,
+          "params": "asunto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 150,
+          "resumen": "Nombre del tomador que algunas plantillas ponen al FINAL del asunto (Occident «Suscripción <ramo> <nº>, <TOMADOR>» o «… - Solicitud <nº> - <TOMADOR>»). PURA. Solo letras (sin dígitos), de 3 a 80 carac"
+        },
+        {
+          "nombre": "interpretarDocumentosSinAsignar",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaDocumentosSinAsignar",
+          "linea": 170,
+          "resumen": "`GET /api/operador/correo/documento` (o lo ya interpretado por la ruta). Tres estados, como la bandeja."
+        },
+        {
+          "nombre": "interpretarHistorialSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaHistorialSolicitud",
+          "linea": 194,
+          "resumen": "`GET /api/operador/correo/solicitud`. `estadoSolicitud: null` = no reconocido o aún sin seguimiento (no «presentada»)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "519a03aabbd7"
+      "hash": "01cd31cd3095"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/cruce-cima.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cruce correo ↔ CIMA (F1 del agente de correo, 21/10/2026). PURO: interpreta `POST /api/operador/correo/cruce-cima` de asegura y compone los Telegram. El cron `/api/cron/correduria-cruce-cima` manda, y SOLO si salió, marca. 🚨 Tres estados: `ok` (con o sin avisos: comprobado), `sin_migracion` (falta ",
+      "exporta": [
+        "interpretarCruce",
+        "componerAvisosCruce"
+      ],
+      "funciones": [
+        {
+          "nombre": "interpretarCruce",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaCruce",
+          "linea": 21
+        },
+        {
+          "nombre": "componerAvisosCruce",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: readonly AvisoCruce[], urlFicha: (id: string) => string",
+          "retorno": "",
+          "linea": 43,
+          "resumen": "Los mensajes de Telegram (HTML) y los ids que cubre cada uno: se marca un mensaje entero solo si salió."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7266d7b3944d"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/cuadre.ts",
@@ -149238,6 +150028,28 @@
       "hash": "031b48b9fd86"
     },
     {
+      "ruta": "apps/plataforma/lib/correo/adjuntos-compania.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/adjuntos-compania.ts — qué adjuntos de un correo de COMPAÑÍA se conservan para archivarlos en la ficha (F1 del agente corredor de correo, 21/10/2026, docs/CORREDURIA-AGENTE-CORREO.md §4.3 y §6). PURO (lo usa `imap.ts`). - Solo de remitentes de ASEGURADORA (`esDominioAseguradora`); Codeosc",
+      "exporta": [
+        "adjuntosDeCompania"
+      ],
+      "funciones": [
+        {
+          "nombre": "adjuntosDeCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { from: string; excluido: boolean }, adjuntos: readonly Crudo[] | undefined, presupuesto: { bytes: number },",
+          "retorno": "",
+          "linea": 27,
+          "resumen": "Adjuntos PDF que se conservan de un correo de compañía y cuántos válidos se quedan FUERA (para decirlo). `null` = este correo no es de compañía, está excluido o no trae ningún PDF. `presupuesto` es de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4b789e9e9d00"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/agoda-mensajes.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/agoda-mensajes.ts — parser PURO del aviso «New messages from your guests» de Agoda. POR QUÉ EXISTE (medido el 31/08/2026 contra Smoobu, 8 reservas de Agoda del histórico): el canal de Agoda es de UNA SOLA DIRECCIÓN. Smoobu ENTREGA nuestros mensajes al huésped por el alias `…@agoda-messagi",
@@ -149347,7 +150159,7 @@
           "exportada": true,
           "params": "from: string, categoria: string, confianza: number",
           "retorno": "Promise<void>",
-          "linea": 210,
+          "linea": 224,
           "resumen": "Auto-aprendizaje (mejora 4): si la IA ha clasificado este remitente igual ≥N veces con confianza ≥X (contando la actual), fija la regla en correo_reglas (creado_por='auto')."
         }
       ],
@@ -149358,7 +150170,7 @@
         "falsificado"
       ],
       "rutaApi": null,
-      "hash": "3314e5ac63b5"
+      "hash": "8f7a6f9fbdf0"
     },
     {
       "ruta": "apps/plataforma/lib/correo/contacto-sugerido-consulta.ts",
@@ -149883,12 +150695,54 @@
       "hash": "e05afc18a85f"
     },
     {
+      "ruta": "apps/plataforma/lib/correo/documentos-compania.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/documentos-compania.ts — los PDF de un correo de compañía, a asegura (F1 del agente de correo, 21/10/2026). El triaje lo llama DESPUÉS de registrar el aviso del mismo correo: así asegura ya sabe a qué póliza/cliente casó y archiva el PDF ahí; si no casó, queda «sin asignar» en la bandeja ",
+      "exporta": [
+        "cuboDocumento",
+        "puedeArchivarAdjuntos",
+        "archivarAdjuntosCompania"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuboDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "CuboDocumento",
+          "linea": 13
+        },
+        {
+          "nombre": "puedeArchivarAdjuntos",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: Pick<CorreoNuevo, 'from' | 'subject' | 'texto' | 'extracto'>, categoria: string",
+          "retorno": "boolean",
+          "linea": 25,
+          "resumen": "¿Este correo puede archivar adjuntos? Solo avisos de compañía, nunca uno excluido (segunda llave tras `imap.ts`)."
+        },
+        {
+          "nombre": "archivarAdjuntosCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: Pick<CorreoNuevo, 'messageId' | 'adjuntosCompania' | 'adjuntosCompaniaOmitidos'>, enviar: (body: { mensajeId: string; nombre: string; mime: string; base64: string }) => Promise<{ status: number; json: unknown }>,",
+          "retorno": "Promise<CuentaDocumentosCompania>",
+          "linea": 34,
+          "resumen": "Manda los adjuntos de compañía del correo a asegura. `enviar` es el puerto (inyectable para el test). Con `sin_migracion` se para (los siguientes darían lo mismo) y se cuenta lo que queda como no guar"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a1869a268d7e"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/evento-aviso.ts",
       "ambito": "apps/plataforma",
       "resumen": "Aviso de Telegram para un correo de COMPAÑÍA que no es una devolución (14/10/2026). PURO. El triaje lee el correo (`leerCorreoEventoAseguradora`: siniestro, pre-anulación, impago, anulación, suplemento, emisión, solicitud), asegura lo aplica a la cartera (`POST /api/operador/correo/evento`) y este a",
       "exporta": [
         "leerResultadosEvento",
         "eventoConfirmado",
+        "estadoSolicitudAviso",
         "textoAvisoEvento"
       ],
       "funciones": [
@@ -149940,7 +150794,7 @@
           "exportada": false,
           "params": "e: EventoAseguradora",
           "retorno": "string",
-          "linea": 106
+          "linea": 114
         },
         {
           "nombre": "lineaResultado",
@@ -149948,7 +150802,24 @@
           "exportada": false,
           "params": "r: ResultadoPuertoEvento, urlFicha: (id: string) => string",
           "retorno": "string",
-          "linea": 116
+          "linea": 125
+        },
+        {
+          "nombre": "marcaSolicitud",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: Solicitud",
+          "retorno": "string",
+          "linea": 137
+        },
+        {
+          "nombre": "estadoSolicitudAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Solicitud",
+          "retorno": "string",
+          "linea": 144,
+          "resumen": "El estado de la solicitud tal como lo pinta el aviso. Sin estado reconocido, se dice (nunca un «sin estado»)."
         },
         {
           "nombre": "textoAvisoEvento",
@@ -149956,13 +150827,13 @@
           "exportada": true,
           "params": "evento: EventoAseguradora, asunto: string, resultados: ResultadoPuertoEvento[] | null, urlFicha: (clienteId: string) => string, fallo: { estado: 'rechazado' | 'sin_respuesta'; motivo: string } | null = null,",
           "retorno": "string",
-          "linea": 130,
+          "linea": 155,
           "resumen": "`resultados === null` = el puerto no contestó (o falta config/migración): se avisa con lo leído y se dice que la cartera NO lo sabe."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "150f49ff4347"
+      "hash": "f129bd35f221"
     },
     {
       "ruta": "apps/plataforma/lib/correo/huespedes.ts",
@@ -150049,6 +150920,7 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/imap.ts — Lector IMAP incremental para el triaje de correo. Extiende el patrón de lib/agente-facturas/gmail.ts (imapflow + mailparser, credenciales GMAIL_USER / GMAIL_APP_PASSWORD) pero para TODO lo nuevo de INBOX, no solo facturas, y con capacidad de ETIQUETAR (X-GM-LABELS vía messageCop",
       "exporta": [
+        "correoExcluidoSinDescargar",
         "destinatariosDe",
         "referenciasDe",
         "abrirTriaje",
@@ -150056,12 +150928,21 @@
       ],
       "funciones": [
         {
+          "nombre": "correoExcluidoSinDescargar",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: { uid: number; uidValidity: number; from: string; fromRaw: string; subject: string; messageId: string | null; fecha: Date | null; labels: string[] }",
+          "retorno": "CorreoNuevo",
+          "linea": 69,
+          "resumen": "Correo EXCLUIDO por seguridad ya en el SOBRE (TIREA, tickets de Codeoscopic, asunto de credenciales del sector): no se descarga el mensaje (ni cuerpo ni adjuntos). Solo lo justo para que el triaje lo "
+        },
+        {
           "nombre": "destinatariosDe",
           "kind": "function",
           "exportada": true,
           "params": "lineas: readonly { key: string; line: string }[] | undefined",
           "retorno": "string[]",
-          "linea": 60,
+          "linea": 92,
           "resumen": "Puro: direcciones de destino a partir de las líneas de cabecera crudas (`parsed.headerLines`)."
         },
         {
@@ -150070,7 +150951,7 @@
           "exportada": true,
           "params": "inReplyTo: unknown, references: unknown",
           "retorno": "string[]",
-          "linea": 71,
+          "linea": 103,
           "resumen": "Puro: los Message-ID de In-Reply-To/References (mailparser da string o string[])."
         },
         {
@@ -150079,7 +150960,7 @@
           "exportada": false,
           "params": "from: string, adjuntos: { contentType?: string; filename?: string; content?: Buffer; size?: number }[] | undefined",
           "retorno": "Buffer[] | undefined",
-          "linea": 88
+          "linea": 120
         },
         {
           "nombre": "nuevoCliente",
@@ -150087,7 +150968,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 98
+          "linea": 130
         },
         {
           "nombre": "abrirTriaje",
@@ -150095,7 +150976,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SesionTriaje>",
-          "linea": 119
+          "linea": 153
         },
         {
           "nombre": "leerHiloCompleto",
@@ -150103,13 +150984,13 @@
           "exportada": true,
           "params": "messageIds: readonly string[]",
           "retorno": "Promise<MensajeHilo[] | null>",
-          "linea": 201,
+          "linea": 272,
           "resumen": "Todos los correos de los hilos de Gmail a los que pertenece alguno de esos Message-ID, buscados en «Todos los mensajes» (`\\All`, se llame «All Mail» o «Todos»): lo que un filtro etiquetó o archivó sin"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2169a4e30dd7"
+      "hash": "5bdfbebe19ac"
     },
     {
       "ruta": "apps/plataforma/lib/correo/keywords.ts",
@@ -150118,6 +150999,8 @@
       "exporta": [
         "asuntoDeRecibo",
         "esDominioAseguradora",
+        "exclusionSeguridad",
+        "asuntoExcluido",
         "clasificarPorKeyword"
       ],
       "funciones": [
@@ -150197,18 +151080,36 @@
           "linea": 90
         },
         {
+          "nombre": "exclusionSeguridad",
+          "kind": "function",
+          "exportada": true,
+          "params": "from: string, subject: string, cuerpo?: string | null",
+          "retorno": "MotivoExclusion | null",
+          "linea": 125,
+          "resumen": "¿Hay que EXCLUIR este correo por seguridad? `null` = no. Decide por remitente + asunto y, si se da, el cuerpo (solo para buscar secretos: nada de él sale de aquí). PURA."
+        },
+        {
+          "nombre": "asuntoExcluido",
+          "kind": "function",
+          "exportada": true,
+          "params": "subject: string",
+          "retorno": "string",
+          "linea": 146,
+          "resumen": "Lo único del correo excluido que se guarda: el asunto, TRUNCADO (puede citar a quién es el alta)."
+        },
+        {
           "nombre": "clasificarPorKeyword",
           "kind": "function",
           "exportada": true,
           "params": "from: string, subject: string",
           "retorno": "KeywordMatch | null",
-          "linea": 126,
+          "linea": 181,
           "resumen": "Clasifica un correo por reglas deterministas de alta precisión. Devuelve null si ninguna aplica (entonces decide la IA). NUNCA usa 'seguridad-sospechosa' ni 'personal-importante': esos exigen el juici"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "657708812042"
+      "hash": "68f7a5577d6c"
     },
     {
       "ruta": "apps/plataforma/lib/correo/lead-correduria-adjuntos.ts",
@@ -152707,7 +153608,7 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "RutaCorreo",
-          "linea": 193
+          "linea": 217
         },
         {
           "nombre": "descripcionParaPrompt",
@@ -152715,13 +153616,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 202,
+          "linea": 226,
           "resumen": "Genera el bloque de categorías para el prompt de clasificación (sin duplicar la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d736d9c47b7"
+      "hash": "fa54bb0fffc7"
     },
     {
       "ruta": "apps/plataforma/lib/correo/smoobu-notificacion.ts",
@@ -152818,7 +153719,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 43,
+          "linea": 46,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -152827,7 +153728,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 45
+          "linea": 48
         },
         {
           "nombre": "fmtFecha",
@@ -152835,7 +153736,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 51
+          "linea": 54
         },
         {
           "nombre": "mensajeAviso",
@@ -152843,7 +153744,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 57,
+          "linea": 60,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -152852,7 +153753,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 74
+          "linea": 77
         },
         {
           "nombre": "pasadaTriaje",
@@ -152860,7 +153761,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 87
+          "linea": 92
         },
         {
           "nombre": "digestTriaje",
@@ -152868,7 +153769,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 411,
+          "linea": 461,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -152877,7 +153778,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 451,
+          "linea": 501,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         },
         {
@@ -152886,7 +153787,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<string | null>",
-          "linea": 474,
+          "linea": 524,
           "resumen": "Solo el texto de los PDF del correo (para el lector de eventos, que separa cuerpo y adjuntos). `null` = no hay o no se leen."
         },
         {
@@ -152895,7 +153796,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo, textoPdf: string | null",
           "retorno": "string",
-          "linea": 485,
+          "linea": 535,
           "resumen": "Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO leí"
         }
       ],
@@ -152905,7 +153806,38 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "f297ee3c0b7a"
+      "hash": "411bf68c831a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/uid-atascado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/correo/uid-atascado.ts Un correo que IMAP lista pero no deja descargar CORTA la pasada del triaje en su UID (imap.ts, fase 2): saltarlo y seguir lo daría por visto sin leerlo. Pero si NUNCA se puede descargar, el buzón se quedaría atascado para siempre. Regla (PURA, con test): tr",
+      "exporta": [
+        "decidirUidAtascado",
+        "textoAvisoUidAtascado"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirUidAtascado",
+          "kind": "function",
+          "exportada": true,
+          "params": "previo: UidAtascado | null, fallido: number | null, uidValidity: number, diferido: boolean, tope = TOPE_PASADAS_UID_ATASCADO,",
+          "retorno": "DecisionUidAtascado",
+          "linea": 31,
+          "resumen": "`previo`: el contador guardado (o null). `fallido`: el UID que no se pudo descargar en esta pasada (o null). `diferido`: la pasada se cortó por tiempo antes de llegar al final (entonces no se cuenta n"
+        },
+        {
+          "nombre": "textoAvisoUidAtascado",
+          "kind": "function",
+          "exportada": true,
+          "params": "uid: number, fallos: number",
+          "retorno": "string",
+          "linea": 40
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "13c1d021a9ad"
     },
     {
       "ruta": "apps/plataforma/lib/correos-cliente.ts",
@@ -153022,7 +153954,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 270,
+          "linea": 273,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -153031,7 +153963,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 300,
+          "linea": 303,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -153040,7 +153972,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 322
+          "linea": 325
         },
         {
           "nombre": "ventanaMinutos",
@@ -153048,7 +153980,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 330,
+          "linea": 333,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -153057,13 +153989,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 342,
+          "linea": 345,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c776ef7a18c2"
+      "hash": "cfeba8ad5f75"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -153739,7 +154671,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2a85aa5439ec"
+      "hash": "5281b62baf1c"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso-programador.ts",
@@ -164460,6 +165392,13 @@
         "expedientesAsegura",
         "correosCompaniaAsegura",
         "marcarCorreoCompaniaAsegura",
+        "documentoCorreoAsegura",
+        "documentosCorreoSinAsignarAsegura",
+        "asignarDocumentoCorreoAsegura",
+        "asignarEventoCorreoAsegura",
+        "historialSolicitudAsegura",
+        "cruceCimaAsegura",
+        "marcarCruceCimaAsegura",
         "avisosAsegura",
         "interpretarTomador",
         "interpretarLecturaOportunidad",
@@ -164989,12 +165928,75 @@
           "resumen": "«Marcar como mirado» / «Deshacer» de la bandeja (14/10/2026)."
         },
         {
+          "nombre": "documentoCorreoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { mensajeId: string; nombre: string; mime: string; base64: string }",
+          "retorno": "Promise<Reenvio>",
+          "linea": 842,
+          "resumen": "`POST /api/operador/correo/documento`: UN PDF de un correo de compañía (asegura decide a qué ficha va, o sin asignar)."
+        },
+        {
+          "nombre": "documentosCorreoSinAsignarAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 846,
+          "resumen": "Adjuntos de correo SIN asignar (bandeja «Correos de compañía»)."
+        },
+        {
+          "nombre": "asignarDocumentoCorreoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { id: string; clienteId: string; actor: string }",
+          "retorno": "Promise<Reenvio>",
+          "linea": 850,
+          "resumen": "Asignar a mano un adjunto sin asignar. El actor lo pone la ruta (sesión) y va el ÚLTIMO."
+        },
+        {
+          "nombre": "asignarEventoCorreoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { id: string; clienteId: string; oportunidadId: string | null; actor: string }",
+          "retorno": "Promise<Reenvio>",
+          "linea": 854,
+          "resumen": "«Asignar a cliente / oportunidad» de un aviso sin resolver. El actor lo pone la ruta (sesión) y va el ÚLTIMO."
+        },
+        {
+          "nombre": "historialSolicitudAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventoId: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 858,
+          "resumen": "Historial de una solicitud en la compañía, desde una fila de la bandeja."
+        },
+        {
+          "nombre": "cruceCimaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 862,
+          "resumen": "Cruce diario correo ↔ CIMA: decide, apunta y devuelve los avisos pendientes de salir."
+        },
+        {
+          "nombre": "marcarCruceCimaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisados: string[]",
+          "retorno": "Promise<Reenvio>",
+          "linea": 866,
+          "resumen": "Marca como avisados (SOLO los que salieron por Telegram)."
+        },
+        {
           "nombre": "avisosAsegura",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 840
+          "linea": 869
         },
         {
           "nombre": "interpretarTomador",
@@ -165002,7 +166004,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TomadorLeido | undefined",
-          "linea": 886
+          "linea": 915
         },
         {
           "nombre": "interpretarLecturaOportunidad",
@@ -165010,7 +166012,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaDocumentoOportunidad",
-          "linea": 908,
+          "linea": 937,
           "resumen": "Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en `null` («no se leyó»), nunca en un valor plausible: una prima 0 o una fecha que no es fecha no rellenan nada. Si no se l"
         },
         {
@@ -165019,7 +166021,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 942,
+          "linea": 971,
           "resumen": "La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50»."
         },
         {
@@ -165028,7 +166030,7 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "EnlacePresupuesto | null",
-          "linea": 955
+          "linea": 984
         },
         {
           "nombre": "interpretarSolicitudesDatos",
@@ -165036,7 +166038,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SolicitudesDatos",
-          "linea": 999
+          "linea": 1028
         },
         {
           "nombre": "valorLegible",
@@ -165044,7 +166046,7 @@
           "exportada": true,
           "params": "campo: SolicitudDatos['campos'][number], v: string | number | boolean | null | undefined",
           "retorno": "string",
-          "linea": 1044,
+          "linea": 1073,
           "resumen": "Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—»."
         },
         {
@@ -165053,7 +166055,7 @@
           "exportada": true,
           "params": "body: { clienteId: string; ramo: 'auto' | 'moto' }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1061
+          "linea": 1090
         },
         {
           "nombre": "solicitudesDatosAsegura",
@@ -165061,7 +166063,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1064
+          "linea": 1093
         },
         {
           "nombre": "accionSolicitudDatosAsegura",
@@ -165069,7 +166071,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1067
+          "linea": 1096
         },
         {
           "nombre": "borradoresPresupuestoAsegura",
@@ -165077,7 +166079,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1072,
+          "linea": 1101,
           "resumen": "─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──"
         },
         {
@@ -165086,7 +166088,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1075
+          "linea": 1104
         },
         {
           "nombre": "borrarBorradorPresupuestoAsegura",
@@ -165094,7 +166096,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string, oportunidadId: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 1078
+          "linea": 1107
         },
         {
           "nombre": "riesgoAsegura",
@@ -165102,7 +166104,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1084,
+          "linea": 1113,
           "resumen": "─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────"
         },
         {
@@ -165111,7 +166113,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1091,
+          "linea": 1120,
           "resumen": "Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoL"
         },
         {
@@ -165120,7 +166122,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1094
+          "linea": 1123
         },
         {
           "nombre": "quitarFiguraAsegura",
@@ -165128,7 +166130,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1097
+          "linea": 1126
         },
         {
           "nombre": "compararVariantesAsegura",
@@ -165136,7 +166138,7 @@
           "exportada": true,
           "params": "oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1102,
+          "linea": 1131,
           "resumen": "Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis."
         },
         {
@@ -165145,7 +166147,7 @@
           "exportada": true,
           "params": "body: { polizaId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1107,
+          "linea": 1136,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio."
         },
         {
@@ -165154,7 +166156,7 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; nuevoClienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1112,
+          "linea": 1141,
           "resumen": "«Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis."
         },
         {
@@ -165163,7 +166165,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1121,
+          "linea": 1150,
           "resumen": "`POST /api/operador/correo/lead`: SOLO tras el «✅ Enviar» de Alberto en Telegram (`clp_env`). 30 s: Resend puede reintentar un 429. Un 5xx o un corte = «no se sabe si salió» (`interpretarEnvioPeticion"
         },
         {
@@ -165172,7 +166174,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1130,
+          "linea": 1159,
           "resumen": "`POST /api/operador/correo/respuesta-lead`: `accion:'casar'` (¿de qué hilo/oportunidades es?) o `accion:'guardar'` (los datos leídos, para escribirlos sin pisar nada). Responde SOLO claves, nunca valo"
         },
         {
@@ -165181,7 +166183,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1135,
+          "linea": 1164,
           "resumen": "`POST /api/operador/correo/adjunto`: un adjunto del cliente, que asegura guarda CIFRADO (sin clave, no lo guarda)."
         },
         {
@@ -165190,7 +166192,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1143,
+          "linea": 1172,
           "resumen": "`POST /api/operador/correo/seguimiento-lead` (F5): `pendientes` (hilos vivos, sin email), `recordar` (UN recordatorio en el hilo; asegura re-decide el hito y pone el destinatario desde la ficha) o `ce"
         },
         {
@@ -165199,7 +166201,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1153,
+          "linea": 1182,
           "resumen": "`POST /api/operador/correo/tarificar-lead`: `accion:'revisar'` (gratis: qué bots llegarían a precio y qué les falta), `accion:'tarificar'` (encola los bots; SOLO tras `clp_tar`) o `accion:'ampliar_top"
         },
         {
@@ -165208,7 +166210,7 @@
           "exportada": true,
           "params": "r: Reenvio",
           "retorno": "ContactosLead",
-          "linea": 1167,
+          "linea": 1196,
           "resumen": "La respuesta del puerto de Contactos, en uno de sus seis estados. Lo que no se entiende es `error` con motivo (nunca «añadido» ni «ya estaba» por defecto: no se afirma lo que no se ha visto). Sin PII:"
         },
         {
@@ -165217,13 +166219,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1184,
+          "linea": 1213,
           "resumen": "`POST /api/operador/correo/propuesta-lead`: `accion:'pendientes'`/`'revisar'` (gratis: comparativa, necesidades IDD y recomendada de los hilos con precio) o `accion:'enviar'` (SOLO tras «📤 Enviar» de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b27dba34d1d5"
+      "hash": "d00bb17aceaf"
     },
     {
       "ruta": "apps/plataforma/lib/seguimiento-presupuestos-asegura.ts",
@@ -180421,7 +181423,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 847
+          "linea": 859
         },
         {
           "nombre": "avisosDe",
@@ -180429,7 +181431,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 852,
+          "linea": 864,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -180438,13 +181440,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 862,
+          "linea": 874,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55c7c84b0549"
+      "hash": "d365c4d245fd"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -211977,6 +212979,142 @@
       "hash": "529dcdac636c"
     },
     {
+      "ruta": "packages/module-seguros/src/correo-cruce-cima.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/correo-cruce-cima.ts F1 del agente corredor de correo (21/10/2026, docs/CORREDURIA-AGENTE-CORREO.md §4.1, §4.2 y §4.8). PURO: decide, no escribe ni lee la BD. Tres cosas: 1. Días HÁBILES de espera antes de decir «la compañía la emitió por correo y CIMA no la trae» (por co",
+      "exporta": [
+        "diasEsperaCima",
+        "esDiaHabil",
+        "diasHabilesEntre",
+        "decidirAvisoEmisionSinCima",
+        "decidirAvisoAnulacionSinCima",
+        "decidirAvisoDevolucionSinRecibo",
+        "estadoSolicitudNormalizado",
+        "estadoCierraSolicitud",
+        "mismoTomador",
+        "decidirEnlacesPolizaOportunidad",
+        "dgsDeOportunidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasEsperaCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string",
+          "retorno": "number",
+          "linea": 31
+        },
+        {
+          "nombre": "diaValido",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: unknown",
+          "retorno": "iso is string",
+          "linea": 47
+        },
+        {
+          "nombre": "esDiaHabil",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "boolean",
+          "linea": 53
+        },
+        {
+          "nombre": "diasHabilesEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "number | null",
+          "linea": 63,
+          "resumen": "Días hábiles transcurridos DESDE `desde` (no cuenta) HASTA `hasta` (cuenta). `null` si alguna fecha no es válida (no se sabe ≠ 0). `hasta` anterior a `desde` → 0."
+        },
+        {
+          "nombre": "decidirAvisoEmisionSinCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { compania: string; fechaCorreo: string | null; hoy: string; enCima: boolean | null }",
+          "retorno": "DecisionCruce",
+          "linea": 87,
+          "resumen": "Emisión comunicada por correo (Allianz «Rel. Emisión», Occident «solicitud emitida · póliza N»). `enCima`: `true` = CIMA ya trae esa póliza en vigor; `false` = se miró y no está; `null` = no se pudo m"
+        },
+        {
+          "nombre": "decidirAvisoAnulacionSinCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { fechaCorreo: string | null; hoy: string; sigueEnVigor: boolean | null }",
+          "retorno": "DecisionCruce",
+          "linea": 99,
+          "resumen": "`false` = CIMA ya la refleja (o la póliza ya no está viva); `null` = no se pudo mirar."
+        },
+        {
+          "nombre": "decidirAvisoDevolucionSinRecibo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { fechaCorreo: string | null; hoy: string; reciboEnCartera: boolean | null }",
+          "retorno": "DecisionCruce",
+          "linea": 108,
+          "resumen": "Devolución de recibo por correo. `reciboEnCartera`: `true` = el recibo ya está (CIMA lo trajo); `null` = no se sabe."
+        },
+        {
+          "nombre": "estadoSolicitudNormalizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "fase: string | null | undefined, literal: string | null | undefined",
+          "retorno": "EstadoSolicitudCompania | null",
+          "linea": 129,
+          "resumen": "De la fase leída (`FaseSolicitud`) y el literal de la compañía al estado normalizado. Lo que no se reconoce → `null`."
+        },
+        {
+          "nombre": "estadoCierraSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EstadoSolicitudCompania | null",
+          "retorno": "boolean",
+          "linea": 136,
+          "resumen": "¿El estado cierra la solicitud? (rechazada / cerrada). `emitida` no: queda abierta hasta que llega su póliza."
+        },
+        {
+          "nombre": "mismoTomador",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { clienteId: string; dniHash: string | null }, b: { clienteId: string; dniHash: string | null }",
+          "retorno": "boolean",
+          "linea": 211,
+          "resumen": "¿Es la MISMA persona? Misma ficha, o las dos fichas con el mismo índice ciego del NIF. Dos NIF distintos, jamás."
+        },
+        {
+          "nombre": "casaHeuristica",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: OportunidadEnlace, p: PolizaNuevaEnlace",
+          "retorno": "boolean",
+          "linea": 216
+        },
+        {
+          "nombre": "decidirEnlacesPolizaOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "oportunidades: readonly OportunidadEnlace[], polizas: readonly PolizaNuevaEnlace[], solicitudes: readonly SolicitudEmitidaEnlace[],",
+          "retorno": "DecisionEnlaces",
+          "linea": 232,
+          "resumen": "Qué pólizas nuevas se enlazan con qué oportunidades abiertas. Prioridad: nº de solicitud → póliza (determinista) y, con lo que quede, la heurística tomador + compañía + ramo SOLO uno a uno (la póliza "
+        },
+        {
+          "nombre": "dgsDeOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: { companiaSolicitud: string | null; aseguradoraGanadora: string | null }",
+          "retorno": "string | null",
+          "linea": 293,
+          "resumen": "Compañía de una oportunidad: la de su solicitud (clave) o, si no, la ganadora apuntada por nombre. `null` = no consta."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8e4c28d5a032"
+    },
+    {
       "ruta": "packages/module-seguros/src/correo-marca.ts",
       "ambito": "packages/module-seguros",
       "resumen": "La marca en TODOS los correos al cliente (29/09/2026). Idea de Alberto: que el cliente aprenda que lo que llega con el «AS» de Grupo ASegura es de sus seguros. ⚠️ Lo que esto NO hace: autenticar. Un logo en el cuerpo lo copia cualquiera que imite el correo; lo único que el cliente puede comprobar de",
@@ -214303,7 +215441,7 @@
           "exportada": true,
           "params": "t: string",
           "retorno": "string",
-          "linea": 58
+          "linea": 59
         },
         {
           "nombre": "etiquetaEstadoDocumento",
@@ -214311,7 +215449,7 @@
           "exportada": true,
           "params": "e: EstadoDocumento",
           "retorno": "string",
-          "linea": 72
+          "linea": 73
         },
         {
           "nombre": "tipoDocumento",
@@ -214319,7 +215457,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TipoDocumento",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Un valor desconocido de la base se trata como `otro`/`recibido`, nunca revienta."
         },
         {
@@ -214328,7 +215466,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EstadoDocumento",
-          "linea": 84
+          "linea": 85
         },
         {
           "nombre": "revisarDocumento",
@@ -214336,7 +215474,7 @@
           "exportada": true,
           "params": "f: { type: string; size: number; name?: string }",
           "retorno": "string | null",
-          "linea": 124,
+          "linea": 125,
           "resumen": "Devuelve el motivo del rechazo (texto para pantalla) o `null` si el fichero vale. Se comprueba en el navegador ANTES de subir y otra vez en el servidor. 🚨 La lista es CERRADA a propósito. «Documentos"
         },
         {
@@ -214345,7 +215483,7 @@
           "exportada": true,
           "params": "f: { type: string; name?: string }",
           "retorno": "MimeDocumento | null",
-          "linea": 170,
+          "linea": 171,
           "resumen": "El mime con el que se GUARDA y con el que se SIRVE, resuelto desde la lista cerrada. `null` = el fichero no vale (mismo criterio que `revisarDocumento`). 🚨 Existe para que el `mime_type` de la fila N"
         },
         {
@@ -214354,7 +215492,7 @@
           "exportada": true,
           "params": "mime: MimeDocumento",
           "retorno": "TipoDocumento",
-          "linea": 184,
+          "linea": 185,
           "resumen": "Qué TIPO de documento es un adjunto de un parte de siniestro. Decisión de producto (03/09/2026): la foto del golpe es `foto` y el PDF es `parte_siniestro` (el amistoso, el atestado, el presupuesto del"
         },
         {
@@ -214363,7 +215501,7 @@
           "exportada": true,
           "params": "lista: DocumentoResumen[] | null",
           "retorno": "ResumenDocumentos",
-          "linea": 203
+          "linea": 204
         },
         {
           "nombre": "documentosQueFaltan",
@@ -214371,7 +215509,7 @@
           "exportada": true,
           "params": "lista: DocumentoResumen[] | null, necesarios: readonly TipoDocumento[],",
           "retorno": "TipoDocumento[] | null",
-          "linea": 225,
+          "linea": 226,
           "resumen": "¿Qué falta para poder EMITIR? Los `supuestos` de la precalificación son la lista de verificación; el papel que los cierra es este. Devuelve los tipos que no están ni recibidos ni revisados (los `pedid"
         },
         {
@@ -214380,13 +215518,13 @@
           "exportada": true,
           "params": "mime: string | null | undefined",
           "retorno": "MimeDocumento | 'application/octet-stream'",
-          "linea": 253,
+          "linea": 254,
           "resumen": "El `Content-Type` con el que se DEVUELVE un documento ya guardado, resuelto OTRA VEZ contra la lista cerrada. 🚨 No es redundante con `mimeDocumento()`, que normaliza al ESCRIBIR: las filas anteriores"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "934d23807a5f"
+      "hash": "25b5c71ab8ee"
     },
     {
       "ruta": "packages/module-seguros/src/duplicados.ts",
@@ -214701,6 +215839,8 @@
       "exporta": [
         "sinDatosSensibles",
         "contieneIban",
+        "avisoCompaniaIgnorado",
+        "motivoReciboAnulado",
         "eventoNecesitaAdjuntos",
         "leerCorreoEventoAseguradora"
       ],
@@ -214711,7 +215851,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 148,
+          "linea": 178,
           "resumen": "Quita IBAN, CCC y NIF/NIE/CIF de un texto libre."
         },
         {
@@ -214720,7 +215860,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 153,
+          "linea": 183,
           "resumen": "¿Hay un IBAN en el texto? (para los guardianes)."
         },
         {
@@ -214729,7 +215869,7 @@
           "exportada": false,
           "params": "s: string | null | undefined, max = 200",
           "retorno": "string | null",
-          "linea": 157
+          "linea": 187
         },
         {
           "nombre": "iso",
@@ -214737,7 +215877,7 @@
           "exportada": false,
           "params": "d: number, m: number, a: number",
           "retorno": "string | null",
-          "linea": 163
+          "linea": 193
         },
         {
           "nombre": "isoDeFecha",
@@ -214745,7 +215885,7 @@
           "exportada": false,
           "params": "s: string | undefined | null",
           "retorno": "string | null",
-          "linea": 169,
+          "linea": 199,
           "resumen": "`15.09.2026`, `15/09/2026`, `15-09-2026`, `10/10/26`."
         },
         {
@@ -214754,7 +215894,7 @@
           "exportada": false,
           "params": "s: string | undefined",
           "retorno": "number | null",
-          "linea": 176
+          "linea": 206
         },
         {
           "nombre": "finDeMes",
@@ -214762,7 +215902,7 @@
           "exportada": false,
           "params": "isoFecha: string",
           "retorno": "string",
-          "linea": 183
+          "linea": 213
         },
         {
           "nombre": "sumarDias",
@@ -214770,7 +215910,7 @@
           "exportada": false,
           "params": "isoFecha: string, dias: number",
           "retorno": "string | null",
-          "linea": 189
+          "linea": 219
         },
         {
           "nombre": "dominio",
@@ -214778,7 +215918,7 @@
           "exportada": false,
           "params": "remitente: string",
           "retorno": "string",
-          "linea": 194
+          "linea": 224
         },
         {
           "nombre": "esDe",
@@ -214786,7 +215926,7 @@
           "exportada": false,
           "params": "remitente: string, base: string",
           "retorno": "boolean",
-          "linea": 195
+          "linea": 225
         },
         {
           "nombre": "plano",
@@ -214794,7 +215934,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 199
+          "linea": 229
         },
         {
           "nombre": "lineas",
@@ -214802,7 +215942,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string[]",
-          "linea": 200
+          "linea": 230
         },
         {
           "nombre": "celdas",
@@ -214810,7 +215950,7 @@
           "exportada": false,
           "params": "l: string",
           "retorno": "string[]",
-          "linea": 201
+          "linea": 231
         },
         {
           "nombre": "base",
@@ -214818,7 +215958,7 @@
           "exportada": false,
           "params": "compania: CompaniaEvento",
           "retorno": "Base",
-          "linea": 203
+          "linea": 233
         },
         {
           "nombre": "subtipoDeAcciones",
@@ -214826,7 +215966,7 @@
           "exportada": false,
           "params": "acciones: string[]",
           "retorno": "SubtipoSiniestro",
-          "linea": 214
+          "linea": 244
         },
         {
           "nombre": "leerOccidentSiniestroDetalle",
@@ -214834,7 +215974,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSiniestro | null",
-          "linea": 220
+          "linea": 250
         },
         {
           "nombre": "seccionResumen",
@@ -214842,7 +215982,7 @@
           "exportada": false,
           "params": "p: string",
           "retorno": "SeccionResumen | null",
-          "linea": 273
+          "linea": 303
         },
         {
           "nombre": "siniestroDeResumen",
@@ -214850,7 +215990,7 @@
           "exportada": false,
           "params": "seccion: 'apertura' | 'cierre', numero: string, poliza: string, fecha: string, subtipoTexto: string | null",
           "retorno": "SiniestroLeido",
-          "linea": 280
+          "linea": 310
         },
         {
           "nombre": "leerOccidentSiniestroResumen",
@@ -214858,7 +215998,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSiniestro | null",
-          "linea": 292
+          "linea": 322
         },
         {
           "nombre": "accionTramitador",
@@ -214866,7 +216006,7 @@
           "exportada": false,
           "params": "nota: string",
           "retorno": "AccionTramitador",
-          "linea": 356
+          "linea": 386
         },
         {
           "nombre": "leerOccidentTramitador",
@@ -214874,7 +216014,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSiniestro | null",
-          "linea": 365
+          "linea": 406
         },
         {
           "nombre": "leerOccidentPreAnulacion",
@@ -214882,7 +216022,40 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoPreAnulacion | null",
-          "linea": 390
+          "linea": 433
+        },
+        {
+          "nombre": "leerOccidentMensajeRecibo",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CorreoEventoAseguradora",
+          "retorno": "EventoPreAnulacion | null",
+          "linea": 458
+        },
+        {
+          "nombre": "avisoCompaniaIgnorado",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { remitente: string; asunto: string; cuerpoTexto: string }",
+          "retorno": "MotivoIgnorado | null",
+          "linea": 477
+        },
+        {
+          "nombre": "motivoReciboAnulado",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "r: Pick<ReciboAnulado, 'idRecibo' | 'fechaAnulacion'>",
+          "retorno": "string",
+          "linea": 497,
+          "resumen": "Motivo de una anulación por recibo impagado (lo usa también el puerto de asegura, una por póliza)."
+        },
+        {
+          "nombre": "leerOccidentAnuladosImpago",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CorreoEventoAseguradora",
+          "retorno": "EventoAnulacion | null",
+          "linea": 500
         },
         {
           "nombre": "mesAnio",
@@ -214890,7 +216063,7 @@
           "exportada": false,
           "params": "m: string, a: string",
           "retorno": "string | null",
-          "linea": 408,
+          "linea": 529,
           "resumen": "── Occident · suplemento de regularización de RC ──────────────────────────────────────────────── · clientes@ «<tomador>, Regularización responsabilidad civil»: Ref. póliza de Responsabilidad Civil nº"
         },
         {
@@ -214899,7 +216072,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSuplemento | null",
-          "linea": 413
+          "linea": 534
         },
         {
           "nombre": "leerRealePreAnulacion",
@@ -214907,7 +216080,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoPreAnulacion | null",
-          "linea": 448
+          "linea": 569
         },
         {
           "nombre": "leerMapfreDelegacion",
@@ -214915,7 +216088,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoImpago | null",
-          "linea": 467,
+          "linea": 588,
           "resumen": "── Mapfre · «DELEGACIÓN RECIBO Nº 8800000001 PÓLIZA MAPFRE» ───────────────────────────────────── Agotadas las gestiones para el cobro de la póliza 0008400000001 con recibo número 8800000001 e importe"
         },
         {
@@ -214924,7 +216097,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoAnulacion | null",
-          "linea": 489,
+          "linea": 610,
           "resumen": "── Allianz · «OSN-CCC: Comunicación Anulación Póliza P-03100000000000» ─────────────────────────── TOMADOR: … PÓLIZA : 031000000 . … En respuesta a su petición, le informamos que hemos procedido a la "
         },
         {
@@ -214933,7 +216106,7 @@
           "exportada": false,
           "params": "fila: string",
           "retorno": "string | null",
-          "linea": 516,
+          "linea": 637,
           "resumen": "El producto de la 2.ª fila, sin matrícula, bonus ni «Produccion». Con cualquier resto dudoso (4+ cifras seguidas), `null`."
         },
         {
@@ -214942,7 +216115,7 @@
           "exportada": false,
           "params": "asunto: string",
           "retorno": "boolean",
-          "linea": 526
+          "linea": 647
         },
         {
           "nombre": "leerAllianzEmision",
@@ -214950,7 +216123,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoEmision | null",
-          "linea": 528
+          "linea": 649
         },
         {
           "nombre": "estadoSolicitud",
@@ -214958,7 +216131,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string | null",
-          "linea": 572
+          "linea": 714
         },
         {
           "nombre": "urlSolicitudOccident",
@@ -214966,7 +216139,7 @@
           "exportada": false,
           "params": "t: string, numero: string",
           "retorno": "string | null",
-          "linea": 582
+          "linea": 724
         },
         {
           "nombre": "leerOccidentSolicitud",
@@ -214974,7 +216147,25 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSolicitud | null",
-          "linea": 590
+          "linea": 732
+        },
+        {
+          "nombre": "pideDocumentacionSolicitud",
+          "kind": "function",
+          "exportada": false,
+          "params": "estado: string | null",
+          "retorno": "boolean",
+          "linea": 779,
+          "resumen": "Mismo criterio que `pideDocumentacion` de `solicitud-compania.ts` (no se importa: este módulo no depende de aquel)."
+        },
+        {
+          "nombre": "polizaEmitidaCuadra",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string, poliza: string",
+          "retorno": "boolean",
+          "linea": 784,
+          "resumen": "¿Los otros sitios donde la emitida repite el nº de póliza («Ingresada póliza número», `refpoli=` del enlace) cuadran?"
         },
         {
           "nombre": "limpiarEvento",
@@ -214982,7 +216173,7 @@
           "exportada": false,
           "params": "e: E",
           "retorno": "E",
-          "linea": 610
+          "linea": 800
         },
         {
           "nombre": "eventoNecesitaAdjuntos",
@@ -214990,7 +216181,7 @@
           "exportada": true,
           "params": "c: { remitente: string; asunto: string }",
           "retorno": "boolean",
-          "linea": 625,
+          "linea": 815,
           "resumen": "¿Este correo es de un formato cuyo lector mira el texto de los ADJUNTOS? Las listas de pre-anulación (Occident, Reale) pueden traer la tabla adjunta, y la «Rel. Emisión Producción» de Allianz la trae "
         },
         {
@@ -214999,13 +216190,13 @@
           "exportada": true,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoAseguradora | null",
-          "linea": 636,
+          "linea": 826,
           "resumen": "`null` = no es un correo de compañía que se sepa leer con certeza (comercial, campaña, conversación con la sucursal, recibo devuelto —ese va por `leerCorreoDevolucion`—…)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1b8abc22d074"
+      "hash": "0922886828f5"
     },
     {
       "ruta": "packages/module-seguros/src/expedientes.ts",
@@ -234520,7 +235711,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4940,
-    "funciones": 18803
+    "archivos": 4960,
+    "funciones": 18901
   }
 }
