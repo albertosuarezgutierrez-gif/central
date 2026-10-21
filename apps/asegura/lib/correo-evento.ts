@@ -23,7 +23,7 @@
 // - Sin IBAN ni NIF: el lector ya los quita; aquí se vuelve a pasar `sinDatosSensibles` por todo texto
 //   libre que entra por el puerto (segunda red: el puerto no se fía de quien llama).
 
-import { esCarteraEnVigor, esCarteraViva, motivoReciboAnulado, normalizarNumeroSolicitud, pideDocumentacion, sinDatosSensibles, textoTareaDocumentacion, urlSolicitudValida, validarTarea } from '@central/module-seguros'
+import { FASES_SOLICITUD, esCarteraEnVigor, esCarteraViva, motivoReciboAnulado, normalizarNumeroSolicitud, pideDocumentacion, sinDatosSensibles, textoTareaDocumentacion, urlSolicitudValida, validarTarea, type FaseSolicitud } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 
 export const TIPOS_EVENTO_CORREO = ['siniestro', 'pre_anulacion', 'impago', 'anulacion', 'suplemento', 'emision', 'solicitud'] as const
@@ -88,6 +88,15 @@ export type ItemEvento =
       estado: string | null
       /** Enlace al proyecto, ya validado (`urlSolicitudValida`). El TOMADOR no entra: no se guarda en la tabla. */
       url: string | null
+      /**
+       * Fase normalizada (21/10/2026). Ausente/`null` = otra o no reconocida. `emitida` NO toca ninguna póliza (la fuente es
+       * CIMA): apunta el estado en la oportunidad y cierra la tarea «enviar documentación».
+       */
+      fase?: FaseSolicitud | null
+      /** Nº de la póliza emitida (solo con `fase: 'emitida'`); informativo, para esperar a CIMA. */
+      numeroPoliza?: string | null
+      /** Código de motivo de un rechazo («RIESGO EXCLUIDO»). */
+      motivoRechazo?: string | null
     }
 
 export type EntradaEvento = {
@@ -209,9 +218,14 @@ export function validarEntradaEvento(b: unknown): { ok: true; entrada: EntradaEv
   } else if (tipo === 'solicitud') {
     // El `tomador` que trae el evento NO se copia: la fila guarda `detalle` y en ella no van nombres.
     const numero = normalizarNumeroSolicitud(e.numeroSolicitud)
+    const fase = FASES_SOLICITUD.find((f) => f === e.fase) ?? null
+    // La póliza solo con `emitida` (en otra fase, un nº de póliza no significa nada aquí y no se guarda).
+    const numeroPoliza = fase === 'emitida' ? id(e.numeroPoliza) : null
+    if (fase === 'emitida' && numeroPoliza === null && e.numeroPoliza !== null && e.numeroPoliza !== undefined) ilegibles++
     meter(numero ? {
       tipo, clave: numero, numeroSolicitud: numero, ramo: libre(e.ramo, 60), estado: libre(e.estado, 200),
       url: urlSolicitudValida(e.url, compania, numero),
+      fase, numeroPoliza, motivoRechazo: fase === 'rechazada' ? libre(e.motivoRechazo, 60) : null,
     } : null)
   } else {
     const poliza = id(e.numeroPoliza)
@@ -607,9 +621,16 @@ export type PlanSolicitud =
       motivo: null
       resumen: string
       /** Línea de `oportunidad_historial` (accion `correo_compania`). */
-      detalleHistorial: { compania: string; numeroSolicitud: string; estado: string | null; url: boolean; fechaCorreo: string | null }
+      detalleHistorial: { compania: string; numeroSolicitud: string; estado: string | null; url: boolean; fechaCorreo: string | null; fase?: FaseSolicitud; numeroPoliza?: string }
       /** Texto de la tarea «enviar documentación» si toca crearla (la BD comprueba que no haya una abierta igual). */
       tareaDocumentacion: TareaPlan | null
+      /** Solicitud RECHAZADA con la oportunidad abierta: tarea «decidir con el cliente» (misma idempotencia por texto). */
+      tareaRechazo: TareaPlan | null
+      /**
+       * Solicitud EMITIDA: cerrar la tarea «enviar documentación» abierta de ESTA solicitud (`textoTareaDocumentacion`), si
+       * la hay. `null` = no se cierra nada. La póliza NO se crea ni se toca: llega por CIMA.
+       */
+      cerrarTareaDocumentacion: string | null
     }
 
 const ABIERTAS_OPORTUNIDAD: ReadonlySet<string> = new Set(['competencia', 'en_negociacion', 'pendiente_cliente'])
@@ -641,17 +662,39 @@ export function planSolicitud(
     }
   }
   const abierta = ABIERTAS_OPORTUNIDAD.has(op.estado)
-  const tarea: TareaPlan | null = abierta && pideDocumentacion(item.estado)
+  const fase = item.fase ?? null
+  const emitida = fase === 'emitida'
+  const tarea: TareaPlan | null = abierta && !emitida && fase !== 'rechazada' && pideDocumentacion(item.estado)
     ? { tipo: 'tarea', prioridad: 'alta', fechaLimite: ctx.hoy, observaciones: textoTareaDocumentacion(compania, item.numeroSolicitud) }
     : null
-  const que = item.estado ? `«${item.estado}»` : 'estado no reconocido (míralo en el correo)'
+  const tareaRechazo: TareaPlan | null = abierta && fase === 'rechazada'
+    ? { tipo: 'tarea', prioridad: 'alta', fechaLimite: ctx.hoy, observaciones: textoTareaRechazo(compania, item.numeroSolicitud, item.motivoRechazo ?? null) }
+    : null
+  const que = emitida
+    ? (item.numeroPoliza ? `emitida póliza ${item.numeroPoliza} (se espera a CIMA)` : 'emitida, nº de póliza dudoso (míralo en el correo)')
+    : item.estado ? `«${item.estado}»` : 'estado no reconocido (míralo en el correo)'
   return {
     estado: 'aplicado',
     motivo: null,
     resumen: `oportunidad ${op.ramo ?? 'sin ramo'}${op.cliente ? ` de ${op.cliente}` : ''}: ${que}${abierta ? '' : ` (está ${op.estado})`}`,
-    detalleHistorial: { compania, numeroSolicitud: item.numeroSolicitud, estado: item.estado, url: item.url !== null, fechaCorreo: ctx.fechaCorreo },
+    detalleHistorial: {
+      compania, numeroSolicitud: item.numeroSolicitud, estado: item.estado, url: item.url !== null, fechaCorreo: ctx.fechaCorreo,
+      ...(fase ? { fase } : {}), ...(emitida && item.numeroPoliza ? { numeroPoliza: item.numeroPoliza } : {}),
+    },
     tareaDocumentacion: tarea,
+    tareaRechazo,
+    cerrarTareaDocumentacion: emitida ? textoTareaDocumentacion(compania, item.numeroSolicitud) : null,
   }
+}
+
+/** Texto (y llave de idempotencia) de la tarea de una solicitud RECHAZADA. Sin la nota libre del suscriptor. */
+export function textoTareaRechazo(compania: string, numero: string, motivo: string | null): string {
+  return `${PREFIJO_TAREA_CORREO} ${nombreCompania(compania)} ha RECHAZADO la solicitud ${numero}${motivo ? ` (motivo: ${motivo})` : ''}. Ver el motivo en el portal y decidir con el cliente (otra modalidad u otra compañía).`
+}
+
+/** Línea que se añade a la tarea «enviar documentación» al cerrarla sola porque la compañía comunica la emisión. */
+export function notaCierreDocumentacion(numeroPoliza: string | null): string {
+  return `\n— Cerrada sola: la compañía comunica por correo que la solicitud está EMITIDA${numeroPoliza ? ` (póliza ${numeroPoliza})` : ''}.`
 }
 
 /** La tarea del plan pasa las MISMAS reglas que una tarea a mano (`validarTarea`). */

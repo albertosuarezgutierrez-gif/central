@@ -26,7 +26,7 @@ import { esTablaInexistente } from './correo-avisos-intranet'
 import {
   ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, planSolicitud, type OportunidadSolicitud, claveNumero, claveTareaDe, elegirSiniestroAcotado, esCheckTipoEventoCorreo, importeDeItem,
   TOPE_SINIESTROS_CANDIDATOS, decidirReevaluacionEmision, planItem, resolverPolizaEvento,
-  estadoTrasErrorSolicitud, tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
+  estadoTrasErrorSolicitud, notaCierreDocumentacion, tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
   type PolizaCandidata,
 } from './correo-evento'
 
@@ -63,7 +63,8 @@ function hoyMadrid(): string {
 }
 
 function numeroDe(i: ItemEvento): string | null {
-  return i.tipo === 'solicitud' ? null : i.numeroPoliza
+  // Una solicitud EMITIDA guarda el nº de su póliza (informativo: no se resuelve contra la cartera, se espera a CIMA).
+  return i.tipo === 'solicitud' ? (i.fase === 'emitida' ? i.numeroPoliza ?? null : null) : i.numeroPoliza
 }
 
 async function polizasCandidatas(db: Db, correduriaId: string): Promise<(PolizaCandidata & { cliente: string | null })[]> {
@@ -355,7 +356,19 @@ async function aplicarSolicitud(
   })
   progreso.estadoAplicado = true
   let resumen = actualizado ? plan.resumen : `${plan.resumen} (correo más antiguo que el último estado: solo nota)`
-  const t = plan.tareaDocumentacion
+  // EMITIDA (21/10/2026): la tarea «enviar documentación» de ESTA solicitud ya no tiene sentido → se cierra (con una línea
+  // que dice por qué). Solo si el estado se aplicó (un correo viejo no cierra nada) y por el texto EXACTO de esa tarea.
+  if (actualizado && plan.cerrarTareaDocumentacion) {
+    const cerradas = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+      update gestiones set estado = 'cerrada', updated_at = now(),
+             observaciones = observaciones || ${notaCierreDocumentacion(item.numeroPoliza ?? null)}
+      where correduria_id = ${correduriaId}::uuid and oportunidad_id = ${op.id}::uuid and estado::text <> 'cerrada'
+        and observaciones = ${plan.cerrarTareaDocumentacion}
+      returning id::text as id`)
+    for (const g of cerradas) anotarCambio({ entidad: 'gestion', id: g.id, campo: 'estado', antes: 'pendiente', despues: 'cerrada' })
+    if (cerradas.length > 0) resumen = `${resumen}; tarea «enviar documentación» cerrada`
+  }
+  const t = plan.tareaDocumentacion ?? plan.tareaRechazo
   if (!actualizado || !t) return { gestionId: null, fechaLimite: null, resumen }
   // Comprobar + crear bajo un candado por oportunidad: dos correos a la vez no crean la tarea dos veces.
   // `crearTarea` va por ESTA transacción (`tx`): misma conexión (no pide otra al pool con esta ocupada) y la tarea
@@ -370,9 +383,10 @@ async function aplicarSolicitud(
     if (ya) return null
     return crearTarea(correduriaId, op.id, t, ACTOR_CORREO, undefined, tx)
   }, { timeout: 20_000 })
-  if (!r) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; ya había tarea de enviar documentación abierta` }
+  const cual = plan.tareaDocumentacion ? 'enviar documentación' : 'solicitud rechazada'
+  if (!r) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; ya había tarea de ${cual} abierta` }
   if (!r.ok) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; tarea NO creada (${r.motivo})` }
-  resumen = `${resumen}; tarea «enviar documentación» para hoy`
+  resumen = `${resumen}; tarea «${cual}» para hoy`
   return { gestionId: r.tareaId, fechaLimite: t.fechaLimite, resumen }
 }
 

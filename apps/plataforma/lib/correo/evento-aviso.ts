@@ -132,6 +132,22 @@ function lineaResultado(r: ResultadoPuertoEvento, urlFicha: (id: string) => stri
   return `  ${marca} ${quien}${esc(que)}${ficha}${rep}`
 }
 
+type Solicitud = Extract<EventoAseguradora, { tipo: 'solicitud' }>
+
+function marcaSolicitud(e: Solicitud): string {
+  // `fase` falta en eventos de antes de F0: se trata como «otra».
+  const fase = e.fase ?? null
+  return fase === 'emitida' ? '✅' : fase === 'rechazada' ? '❌' : '📨'
+}
+
+/** El estado de la solicitud tal como lo pinta el aviso. Sin estado reconocido, se dice (nunca un «sin estado»). */
+export function estadoSolicitudAviso(e: Solicitud): string {
+  const fase = e.fase ?? null
+  if (fase === 'emitida') return e.numeroPoliza ? `emitida póliza ${e.numeroPoliza}` : 'emitida (nº de póliza dudoso: míralo en el correo)'
+  if (fase === 'rechazada') return `Solicitud rechazada${e.motivoRechazo ? ` (${e.motivoRechazo})` : ''}`
+  return e.estado ?? 'estado no reconocido (míralo en el correo)'
+}
+
 /**
  * `resultados === null` = el puerto no contestó (o falta config/migración): se avisa con lo leído y se
  * dice que la cartera NO lo sabe.
@@ -146,8 +162,10 @@ export function textoAvisoEvento(
   const cia = COMPANIA[evento.compania] ?? esc(evento.compania)
   // Solicitud (20/10/2026): «📨 Occident · Solicitud N · <tomador> · <estado>». El tomador sale del asunto (que el
   // aviso ya pinta en los demás tipos) y NO se guarda en asegura.
+  // EMITIDA (21/10/2026): «✅ Occident · Solicitud N · <tomador> · emitida póliza N» (la póliza la trae CIMA; aquí solo se
+  // dice). RECHAZADA: «❌ … · Solicitud rechazada (RIESGO EXCLUIDO)».
   const lineas: string[] = evento.tipo === 'solicitud'
-    ? [[`📨 <b>${cia}</b>`, `Solicitud ${esc(evento.numeroSolicitud)}`, evento.tomador ? esc(evento.tomador) : null, evento.estado ? `<b>${esc(evento.estado)}</b>` : 'estado no reconocido (míralo en el correo)']
+    ? [[`${marcaSolicitud(evento)} <b>${cia}</b>`, `Solicitud ${esc(evento.numeroSolicitud)}`, evento.tomador ? esc(evento.tomador) : null, `<b>${esc(estadoSolicitudAviso(evento))}</b>`]
         .filter((x): x is string => x !== null).join(' · ')]
     : [`🏢 <b>${titulo(evento)}</b> — ${cia}`, esc(asunto.slice(0, 160))]
   const items = leidos(evento)

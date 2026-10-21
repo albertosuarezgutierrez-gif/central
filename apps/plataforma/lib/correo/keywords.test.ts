@@ -94,8 +94,10 @@ test('avisos operativos por asunto (MAO, ticket, fichero, desbloqueo) → corred
   assert.equal(clasificarPorKeyword('mediador@allianz.es', 'Solicitud de desbloqueo de póliza')?.categoria, 'correduria')
 })
 
-test('Codeoscopic: operativo → correduria, newsletter → ruido', () => {
-  assert.equal(clasificarPorKeyword('soporte@codeoscopic.com', 'Incidencia resuelta en su ERP')?.categoria, 'correduria')
+test('Codeoscopic: operativo → EXCLUIDO por seguridad (21/10/2026: sus tickets llevan claves en claro), newsletter → ruido', () => {
+  assert.equal(clasificarPorKeyword('soporte@codeoscopic.com', 'Incidencia resuelta en su ERP')?.categoria, 'excluido_seguridad')
+  // Los avisos Avant2 de emisión (sin credenciales) siguen siendo correduría operativa.
+  assert.equal(clasificarPorKeyword('avant2@codeoscopic.com', 'Avant2: Póliza aceptada 123456')?.categoria, 'correduria')
   assert.equal(clasificarPorKeyword('newsletter@codeoscopic.com', 'Novedades')?.categoria, 'ruido')
   assert.equal(clasificarPorKeyword('equipo@codeoscopic.com', 'Webinar: nueva versión')?.categoria, 'ruido')
 })

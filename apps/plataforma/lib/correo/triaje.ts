@@ -19,7 +19,7 @@ import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
 import { buscarFichaDeRemitente, debeSugerirContactoAseguradora, esDominioPersonal, textoAvisoCorreoCliente } from './contacto-sugerido'
-import { asuntoDeRecibo } from './keywords'
+import { CATEGORIA_EXCLUIDA, asuntoDeRecibo, asuntoExcluido } from './keywords'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
 import { proponerContactoSugerido } from './contacto-sugerido-pendiente'
 import { MOTIVO_POLIZA_ANULADA, esCorreoDevolucion, eventoNecesitaAdjuntos, leerCorreoDevolucion, leerCorreoEventoAseguradora, type EventoAseguradora, type LecturaCorreoDevolucion } from '@central/module-seguros'
@@ -80,6 +80,8 @@ function etiquetaBonita(categoria: string): string {
     'correduria-lead': 'Lead de seguros (hola@)',
     'asociacion-corredores': 'Asociación de corredores',
     'seguridad-sospechosa': 'Seguridad',
+    'excluido_seguridad': 'Excluido por seguridad (credenciales)',
+    'correduria-informativo': 'Aviso de compañía sin acción',
   }
   return m[categoria] ?? categoria
 }
@@ -356,8 +358,11 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           if (c.via === 'ia') await quizaAutoAprender(correo.from, c.categoria, c.confianza).catch(() => {})
         }
 
+        // 🛡️ Un correo EXCLUIDO por seguridad solo guarda el asunto truncado (la fila nació con el asunto entero).
+        const asuntoGuardado = c.categoria === CATEGORIA_EXCLUIDA ? asuntoExcluido(correo.subject) : null
         await prisma.$executeRaw`
           UPDATE correo_triaje SET
+            asunto = COALESCE(${asuntoGuardado}, asunto),
             categoria = ${c.categoria}, confianza = ${c.confianza}, via = ${c.via}, accion = ${accion},
             resumen = ${c.resumen}, accion_sugerida = ${c.accionSugerida}, fecha_limite = ${c.fechaLimite},
             notificado = ${accion !== 'sombra' && ruta.aviso === 'inmediato'}

@@ -143,6 +143,7 @@ const solicitud: EventoAseguradora = {
   tipo: 'solicitud', compania: 'occident', codigoDgs: 'C0468', ilegibles: 0,
   numeroSolicitud: '170000001', ramo: 'Acc.colec.', tomador: 'ACADEMIA INVENTADA SL', estado: 'PRIMA / PROY * PTE DOCUMENTACION',
   url: 'https://portaloccident.gco.global/Aplicacion/Paginas/default.aspx?x=1&idSubscripcio=00170000001',
+  fase: 'pte_documentacion', numeroPoliza: null, motivoRechazo: null,
 }
 
 test('solicitud casada: «📨 Occident · Solicitud N · tomador · estado» + a qué oportunidad y la tarea', () => {
@@ -155,6 +156,27 @@ test('solicitud casada: «📨 Occident · Solicitud N · tomador · estado» + 
   assert.match(t, /oportunidad accidentes de Academia Inventada SL/)
   assert.match(t, /abrir en Occident/)
   assert.match(t, /https:\/\/x\/ficha\/c9/)
+})
+
+test('solicitud EMITIDA (F0, 21/10/2026): «✅ Occident · Solicitud N · tomador · emitida póliza N» y lo que hizo asegura', () => {
+  const emitida: EventoAseguradora = { ...solicitud, estado: 'Solicitud emitida · póliza 540000021', url: null, fase: 'emitida', numeroPoliza: '540000021' } as EventoAseguradora
+  const t = textoAvisoEvento(emitida, 'Suscripción Acc.colec. 170000001, ACADEMIA INVENTADA SL', [{
+    clave: '170000001', estado: 'aplicado', repetido: false,
+    resumen: 'oportunidad accidentes de Academia Inventada SL: emitida póliza 540000021 (se espera a CIMA); tarea «enviar documentación» cerrada',
+    motivo: null, clienteId: 'c9', cliente: 'Academia Inventada SL', numeroPoliza: '540000021', tareaVence: null,
+  }], url)
+  assert.equal(t.split('\n')[0], '✅ <b>Occident</b> · Solicitud 170000001 · ACADEMIA INVENTADA SL · <b>emitida póliza 540000021</b>')
+  assert.match(t, /tarea «enviar documentación» cerrada/)
+  // Sin nº de póliza legible no se pinta uno.
+  const dudosa = textoAvisoEvento({ ...emitida, numeroPoliza: null } as EventoAseguradora, 'x', null, url)
+  assert.match(dudosa.split('\n')[0], /emitida \(nº de póliza dudoso/)
+})
+
+test('solicitud RECHAZADA: «❌ … · Solicitud rechazada (MOTIVO)»; un evento sin fase (anterior a F0) sigue con 📨', () => {
+  const r = textoAvisoEvento({ ...solicitud, estado: 'Solicitud rechazada', fase: 'rechazada', motivoRechazo: 'RIESGO EXCLUIDO' } as EventoAseguradora, 'x', null, url)
+  assert.equal(r.split('\n')[0], '❌ <b>Occident</b> · Solicitud 170000001 · ACADEMIA INVENTADA SL · <b>Solicitud rechazada (RIESGO EXCLUIDO)</b>')
+  const { fase: _f, ...viejo } = solicitud as Extract<EventoAseguradora, { tipo: 'solicitud' }>
+  assert.match(textoAvisoEvento(viejo as EventoAseguradora, 'x', null, url).split('\n')[0], /^📨 /)
 })
 
 test('solicitud SIN casar: lo dice y explica cómo engancharla', () => {

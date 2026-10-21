@@ -93,6 +93,61 @@ function categoriaCodeoscopic(f: string, subject: string): string {
   return news ? 'ruido' : 'correduria'
 }
 
+// ── 🛡️ Capa 0: EXCLUSIÓN DE SEGURIDAD (21/10/2026, spec docs/CORREDURIA-AGENTE-CORREO.md §5) ──────────────
+// Los hilos de TIREA (alta de CIMA; su Jira `tirea.atlassian.net`) y los tickets de Codeoscopic llevan CREDENCIALES EN
+// CLARO (usuario/contraseña de CIMA o de las compañías, reenviadas). Un correo excluido NO se parsea, no se guarda
+// extracto ni adjunto y NO va a ningún LLM (el clasificador lo mandaba a Groq/NIM cuando ninguna regla decidía): solo
+// queda su fila en `correo_triaje` con `categoria = 'excluido_seguridad'` y el asunto truncado. Se evalúa ANTES que
+// todo lo demás en `clasificar()` (cepo `test/regression-correo-exclusion.test.ts`).
+// - TIREA: TODO su correo, sin excepción.
+// - Codeoscopic: todo SALVO su newsletter (→ ruido), sus facturas (→ reglas de siempre) y los avisos Avant2 de emisión
+//   («Póliza aceptada», «Documentos de la emisión»: sin credenciales). Lo demás (tickets, alta/verificación/recuperación
+//   de contraseña de Avant) fuera.
+// - Cualquier remitente del SECTOR (aseguradoras de `ASEGURADORAS`, TIREA, Codeoscopic) con asunto de credenciales.
+//   Solo del sector a propósito: un «restablece tu contraseña» de otro remitente puede ser phishing y ese lo tiene que
+//   ver la IA (`seguridad-sospechosa`, aviso inmediato), no esconderse aquí.
+// - Detector de secretos en el cuerpo: «usuario:/contraseña:/password:/clave:» seguido de un valor, en correo del sector
+//   o en un reenvío que cita a TIREA/Codeoscopic (Alberto reenviando el alta de CIMA desde su gmail).
+export const CATEGORIA_EXCLUIDA = 'excluido_seguridad'
+export const TIREA = ['tirea.es', 'tirea.atlassian.net']
+const ASUNTO_CREDENCIALES = /contrasena|clave de acceso|credenciales|recuperacion de (la )?clave|usuario y contrasena|\bpassword\b|\bclaves? de usuario\b/i
+const AVANT2_EMISION = /^\s*avant\s*2?\s*:\s*(poliza aceptada|documentos de la emision)\b/i
+// «Usuario solicitante: M…» de Occident NO casa (hay una palabra entre «usuario» y los dos puntos): a propósito.
+const SECRETO_EN_CUERPO = /\b(usuario|user(name)?|login|password|contrase[ñn]a|clave(\s+de\s+acceso)?|pin)\s*[:=]\s*\S{3,}/i
+const CITA_TIREA_CODEOSCOPIC = /@tirea\.es\b|tirea\.atlassian\.net|@codeoscopic\.com\b/i
+
+export type MotivoExclusion = 'tirea' | 'codeoscopic' | 'asunto_credenciales' | 'secreto_en_cuerpo'
+
+/**
+ * ¿Hay que EXCLUIR este correo por seguridad? `null` = no. Decide por remitente + asunto y, si se da, el cuerpo (solo
+ * para buscar secretos: nada de él sale de aquí). PURA.
+ */
+export function exclusionSeguridad(from: string, subject: string, cuerpo?: string | null): MotivoExclusion | null {
+  const f = norm(from)
+  const dom = dominioDe(f)
+  const asunto = sinTildes(subject || '')
+  const deTirea = !!dom && TIREA.some(d => enDominio(dom, d))
+  const deCodeoscopic = !!dom && enDominio(dom, CODEOSCOPIC)
+  const delSector = deTirea || deCodeoscopic || (!!dom && ASEGURADORAS.some(d => enDominio(dom, d)))
+  if (deTirea) return 'tirea'
+  if (delSector && ASUNTO_CREDENCIALES.test(asunto)) return 'asunto_credenciales'
+  const texto = cuerpo ?? ''
+  const conSecreto = SECRETO_EN_CUERPO.test(texto)
+  if (conSecreto && (delSector || CITA_TIREA_CODEOSCOPIC.test(texto))) return 'secreto_en_cuerpo'
+  if (deCodeoscopic) {
+    const newsletter = categoriaCodeoscopic(f, subject) === 'ruido'
+    const factura = CODEOSCOPIC_FACTURA_BUZON.test(f) || CODEOSCOPIC_FACTURA_ASUNTO.test(asunto)
+    if (!newsletter && !factura && !AVANT2_EMISION.test(asunto)) return 'codeoscopic'
+  }
+  return null
+}
+
+/** Lo único del correo excluido que se guarda: el asunto, TRUNCADO (puede citar a quién es el alta). */
+export function asuntoExcluido(subject: string): string {
+  const s = (subject || '').replace(/\s+/g, ' ').trim()
+  return s.length > 60 ? `${s.slice(0, 59)}…` : s
+}
+
 // Dominio del remitente → categoría (procesadores de pago, plataformas de reserva, aseguradoras,
 // emisores de marketing masivo conocidos). El match cubre subdominios (info.homeexchange.com).
 const DOMINIOS: { categoria: string; dominios: string[] }[] = [
@@ -126,6 +181,9 @@ const ASUNTO: { categoria: string; re: RegExp }[] = [
 export function clasificarPorKeyword(from: string, subject: string): KeywordMatch | null {
   const f = norm(from)
   const dom = dominioDe(f)
+  // Segunda red de la capa 0 (la primera es `clasificar()`): quien llame aquí sin cuerpo tampoco lo saca de la exclusión.
+  const excluido = exclusionSeguridad(from, subject)
+  if (excluido) return { categoria: CATEGORIA_EXCLUIDA, motivo: `exclusión de seguridad (${excluido})` }
   // Antes que el dominio: si no, `occidentinforma.com` se lo llevaría a `correduria` y el aviso
   // llegaría en el digest de la noche.
   if (esReciboAseguradora(f, subject)) {
