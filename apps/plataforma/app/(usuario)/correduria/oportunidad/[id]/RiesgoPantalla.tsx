@@ -44,7 +44,7 @@ import { resumenIntervinientes, resumenObjeto } from '@/lib/correduria/para-tari
 import SeccionPlegable, { abrirSeccion } from './SeccionPlegable'
 import ParaTarificar from './ParaTarificar'
 import PropuestaEscenarios from './PropuestaEscenarios'
-import { fechaEs } from './piezas-riesgo'
+import { fechaEs, muestraHistorialSinco } from './piezas-riesgo'
 import type { PropuestaCarteraHogar } from '@/lib/correduria/hogar-cartera'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
 import { avisoRamoSinTarifa, companiasDisponibles, leerPresupuestos, type TrabajoCompania } from '@/lib/presupuestos-companias'
@@ -264,12 +264,14 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
       </SeccionPlegable>
 
       {/* «Historial y bonificaciones» (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. */}
-      <SeccionPlegable id="sec-historial" titulo="Historial y bonificaciones"
-        resumen={riesgo.historial === null ? 'No se ha podido leer' : riesgo.historial.seguroAnterior ? 'Con seguro anterior' : 'Seguro anterior: no consta'}>
-      <BloqueMotor bloque="poliza" activo={motor}>
-      <HistorialRiesgo riesgo={riesgo} hoy={hoy} />
-      </BloqueMotor>
-      </SeccionPlegable>
+      {muestraHistorialSinco(op.ramo) && (
+        <SeccionPlegable id="sec-historial" titulo="Historial y bonificaciones"
+          resumen={riesgo.historial === null ? 'No se ha podido leer' : riesgo.historial.seguroAnterior ? 'Con seguro anterior' : 'Seguro anterior: no consta'}>
+        <BloqueMotor bloque="poliza" activo={motor}>
+        <HistorialRiesgo riesgo={riesgo} hoy={hoy} />
+        </BloqueMotor>
+        </SeccionPlegable>
+      )}
 
       {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
           secundario (póliza) y el coste de 0,50€ viven aquí y en ningún otro sitio de la página. */}

@@ -1,7 +1,12 @@
 // Piezas puras de la pantalla del riesgo: fechas, motivo de un error del puerto y la llamada a
 // `/api/correduria/oportunidad/figuras`. Sin React, para que las compartan los componentes.
 
-import type { ClaveDatosRiesgo } from '@central/module-seguros'
+import { admiteDatosVehiculo, type ClaveDatosRiesgo } from '@central/module-seguros'
+
+/** «Historial y bonificaciones» (seguro anterior, años sin siniestros, SINCO) solo existe en ramos de VEHÍCULO (auto y moto). Ramo desconocido/null = no. */
+export function muestraHistorialSinco(ramo: unknown): boolean {
+  return admiteDatosVehiculo(ramo)
+}
 
 /** `2026-09-29` o un ISO completo → `29/09/2026`. Lo que no tiene forma de fecha se enseña tal cual. */
 export function fechaEs(iso: string | null): string | null {

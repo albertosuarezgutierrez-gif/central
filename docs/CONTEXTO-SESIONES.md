@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Correduría · ficha de oportunidad: «Historial y bonificaciones» (SINCO, años sin siniestros) salía en ramos que no son
+de vehículo (lo vio Alberto en una de Accidentes). Ahora solo sale en auto/moto: `muestraHistorialSinco()` en `piezas-riesgo.ts` reutiliza
+`admiteDatosVehiculo()`; test `historial-sinco.test.ts` (visto en rojo). Pendiente: en esa misma ficha, la Comparativa dice «Esta oportunidad no
+existe en la correduría» = 404 del puerto de asegura (`/api/operador` comparativa); falta ver la respuesta cruda para ese id.
+
 **(20/10/2026)** — Auditoría diaria (ligera): precio sano (0 bajo mínimo, motor on, k=0, última pasada 7,6 h). Correduría: CIMA entra (pulls 18:30 UTC ok)
 pero `queueDepth` 211→213 con 0-2 procesados y ingesta DEGRADADA (C0072: 22 d sin mandar, 14 pólizas vivas); alertas `cima_siniestros_corte` (SIN 12 d) y
 `_compania` (C0468,C0109); `seo_correduria` GSC 403; `ses_transporte` sin establecimiento (nunca ok). Cotizaciones Codeoscopic 7d: 1 (0,50€).
