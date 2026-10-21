@@ -4026,6 +4026,21 @@ h1 em {
   font-size: 15px;
   font-weight: 600;
 }
+/* Bienvenida de la campaña: tres líneas sobre el campo de correo. Titular en la tipografía de marca,
+ * sin cursivas; el titular es la frase larga, por eso baja de tamaño para no ocupar la pantalla de un móvil
+ * de 320 px antes de que se vea el campo. */
+.bienvenida-campana { margin: 0 0 18px; }
+.bienvenida-titulo {
+  margin: 0 0 10px;
+  font-size: 19px;
+  line-height: 1.35;
+}
+.bienvenida-linea {
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--muted);
+}
 .entrada-otras {
   display: flex;
   flex-wrap: wrap;

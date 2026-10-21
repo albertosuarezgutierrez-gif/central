@@ -70,6 +70,19 @@ export const VARIANTES_PRESENTACION = {
     intro: { texto: 'Te escribo para presentarte nuestra nueva app y, de paso, recordarte que sigo aquí para lo que necesites.', fuerte: 'sigo aquí para lo que necesites' },
     puente: 'Es GRATUITA y sirve para esto:',
   },
+  // C (21/10/2026): tras 100 envíos de A/B (26% abren, 1 clic, 0 altas) el problema es la conversión, no
+  // la apertura. Texto corto, beneficio concreto en la primera línea y el botón ANTES de cualquier otro
+  // párrafo. Misma firma, pie legal, enlace `?r=` y baja que A/B (se reutilizan las mismas piezas).
+  C: {
+    asunto: 'Te aviso antes de que caduque tu seguro o tu ITV (gratis)',
+    beneficio: { texto: 'Te aviso antes de que caduque tu seguro o tu ITV, para que no te pille a última hora. Es gratis.', fuerte: 'antes de que caduque tu seguro o tu ITV' },
+    boton: 'Activar mis avisos gratis',
+    puntos: [
+      'Todos tus seguros en un sitio, estén donde estén.',
+      'Sin contraseñas: tu correo y un código.',
+      'En el móvil.',
+    ],
+  },
 } as const
 export type VariantePresentacion = keyof typeof VARIANTES_PRESENTACION
 export const LETRAS_VARIANTE: readonly VariantePresentacion[] = Object.keys(VARIANTES_PRESENTACION) as VariantePresentacion[]
@@ -78,18 +91,21 @@ export function esVariantePresentacion(v: unknown): v is VariantePresentacion {
   return typeof v === 'string' && (LETRAS_VARIANTE as readonly string[]).includes(v)
 }
 
+/** Reparto por defecto (env vacía): las dos de siempre. C es OPT-IN (`ASEGURA_PRESENTACION_APP_VARIANTES=C`). */
+export const VARIANTES_POR_DEFECTO: readonly VariantePresentacion[] = ['A', 'B']
+
 /**
- * Variantes activas desde una env tipo `A,B` (o `A`). Vacía, ilegible o sin ninguna letra conocida →
- * todas. Repartir por turno (`varianteDeTurno`) deja los grupos del mismo tamaño en cada lote.
+ * Variantes activas desde una env tipo `A,B` (o `C`). Vacía, ilegible o sin ninguna letra conocida →
+ * `VARIANTES_POR_DEFECTO` (A,B: una variante nueva no entra en el reparto sin pedirla). Repartir por turno (`varianteDeTurno`) deja los grupos del mismo tamaño en cada lote.
  */
 export function variantesActivas(env: string | null | undefined): VariantePresentacion[] {
   const pedidas = (env ?? '').split(',').map((x) => x.trim().toUpperCase()).filter(esVariantePresentacion)
   const unicas = [...new Set(pedidas)]
-  return unicas.length > 0 ? unicas : [...LETRAS_VARIANTE]
+  return unicas.length > 0 ? unicas : [...VARIANTES_POR_DEFECTO]
 }
 
 export function varianteDeTurno(i: number, activas: readonly VariantePresentacion[]): VariantePresentacion {
-  const lista = activas.length > 0 ? activas : LETRAS_VARIANTE
+  const lista = activas.length > 0 ? activas : VARIANTES_POR_DEFECTO
   return lista[Math.abs(Math.floor(i)) % lista.length]!
 }
 
@@ -135,24 +151,39 @@ export function correoPresentacionApp(d: {
   const firmaNombre = MEDIADOR.identidad.nombre.split(' ').slice(0, 2).join(' ')
   const contacto = `${MEDIADOR.marca} · ${telefonoLegible()} · ${MEDIADOR.identidad.email}`
 
-  const texto = [
-    saludo,
-    '',
-    `Soy Alberto, de ${MEDIADOR.marca}. ${v.intro.texto}`,
-    '',
-    v.puente,
-    '',
-    ...VENTAJAS.map((v) => `· ${v}`),
-    '',
-    `Entra aquí: ${d.enlace}`,
-    '',
-    'Un saludo,',
-    firmaNombre,
-    contacto,
-    '',
-    '—',
-    pieLegalPresentacion(d.bajaUrl),
-  ].join('\n')
+  const pie = ['', '—', pieLegalPresentacion(d.bajaUrl)]
+  const texto = ('beneficio' in v
+    ? [
+        saludo,
+        '',
+        v.beneficio.texto,
+        '',
+        `${v.boton}: ${d.enlace}`,
+        '',
+        ...v.puntos.map((x) => `· ${x}`),
+        '',
+        'Un saludo,',
+        'Alberto',
+        contacto,
+        ...pie,
+      ]
+    : [
+        saludo,
+        '',
+        `Soy Alberto, de ${MEDIADOR.marca}. ${v.intro.texto}`,
+        '',
+        v.puente,
+        '',
+        ...VENTAJAS.map((v) => `· ${v}`),
+        '',
+        `Entra aquí: ${d.enlace}`,
+        '',
+        'Un saludo,',
+        firmaNombre,
+        contacto,
+        ...pie,
+      ]
+  ).join('\n')
 
   const titular = "font-family:Quicksand,'Nunito Sans',system-ui,sans-serif;font-weight:700"
   const p = 'margin:0 0 14px;font-size:16px;line-height:1.55'
@@ -161,15 +192,29 @@ export function correoPresentacionApp(d: {
     .map((l) => escapar(l))
     .map((l) => l.replace(escapar(d.bajaUrl), `<a href="${escapar(d.bajaUrl)}" style="color:#5a6280">${escapar(d.bajaUrl)}</a>`))
     .join('<br>')
-  const cuerpo = [
-    `<p style="${p}">${escapar(saludo)}</p>`,
-    `<p style="${p}">Soy Alberto, de ${escapar(MEDIADOR.marca)}. ${escapar(v.intro.texto).replace(escapar(v.intro.fuerte), `<strong>${escapar(v.intro.fuerte)}</strong>`)}</p>`,
-    `<p style="${p}">${escapar(v.puente).replace('GRATUITA', '<strong>gratuita</strong>')}</p>`,
-    `<ul style="margin:0 0 18px;padding-left:20px;font-size:16px;line-height:1.55">${VENTAJAS.map((v) => `<li style="margin:0 0 6px">${escapar(v)}</li>`).join('')}</ul>`,
-    `<p style="margin:0 0 22px"><a href="${escapar(d.enlace)}" style="display:inline-block;background:#3364ee;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-size:16px;${titular}">Abrir la app</a></p>`,
-    `<p style="${p}">Un saludo,<br><span style="${titular}">${escapar(firmaNombre)}</span><br><span style="font-size:14px;color:#5a6280">${escapar(contacto)}</span></p>`,
-    `<p style="margin:22px 0 0;padding-top:14px;border-top:1px solid #e6e9f5;font-size:12px;line-height:1.5;color:#5a6280">${pieHtml}</p>`,
-  ].join('')
+  const lista = (xs: readonly string[]) => `<ul style="margin:0 0 18px;padding-left:20px;font-size:16px;line-height:1.55">${xs.map((x) => `<li style="margin:0 0 6px">${escapar(x)}</li>`).join('')}</ul>`
+  const pieDoc = `<p style="margin:22px 0 0;padding-top:14px;border-top:1px solid #e6e9f5;font-size:12px;line-height:1.5;color:#5a6280">${pieHtml}</p>`
+  const firma = (despedida: string, nombreFirma: string) =>
+    `<p style="${p}">${despedida}<br><span style="${titular}">${escapar(nombreFirma)}</span><br><span style="font-size:14px;color:#5a6280">${escapar(contacto)}</span></p>`
+  const cuerpo = ('beneficio' in v
+    ? [
+        `<p style="${p}">${escapar(saludo)}</p>`,
+        `<p style="margin:0 0 18px;font-size:18px;line-height:1.5">${escapar(v.beneficio.texto).replace(escapar(v.beneficio.fuerte), `<strong>${escapar(v.beneficio.fuerte)}</strong>`)}</p>`,
+        `<p style="margin:0 0 24px"><a href="${escapar(d.enlace)}" style="display:block;max-width:340px;box-sizing:border-box;text-align:center;background:#3364ee;color:#fff;text-decoration:none;padding:18px 24px;border-radius:12px;font-size:19px;${titular}">${escapar(v.boton)}</a></p>`,
+        lista(v.puntos),
+        firma('Un saludo,', 'Alberto'),
+        pieDoc,
+      ]
+    : [
+        `<p style="${p}">${escapar(saludo)}</p>`,
+        `<p style="${p}">Soy Alberto, de ${escapar(MEDIADOR.marca)}. ${escapar(v.intro.texto).replace(escapar(v.intro.fuerte), `<strong>${escapar(v.intro.fuerte)}</strong>`)}</p>`,
+        `<p style="${p}">${escapar(v.puente).replace('GRATUITA', '<strong>gratuita</strong>')}</p>`,
+        lista(VENTAJAS),
+        `<p style="margin:0 0 22px"><a href="${escapar(d.enlace)}" style="display:inline-block;background:#3364ee;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-size:16px;${titular}">Abrir la app</a></p>`,
+        firma('Un saludo,', firmaNombre),
+        pieDoc,
+      ]
+  ).join('')
 
   return { asunto: v.asunto, texto, html: conMarcaCorreo(cuerpo), variante }
 }
