@@ -603,7 +603,13 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
       // (Ventas del Carrizal); ni se contrasta ni se aprende. Solo la vía por municipio / lo autocompletado se contrasta con él.
       if (f.inmueble.municipio !== null && (elegidaPor === null || elegidaPor === 'municipio')) {
         const pob = await leer(inputVisible(marco, CONTROLES.poblacion))
-        if (plano(pob) !== plano(f.inmueble.municipio)) throw new ErrorMapaIncompleto('la elección de población del CP (el portal autocompletó otra distinta de la del riesgo)')
+        if (plano(pob) !== plano(f.inmueble.municipio)) {
+          // 0.1.3 (21/10/2026): el portal autocompleta el ÚNICO núcleo del CP (Ventas del Carrizal) y el municipio del riesgo (Castillo de
+          // Locubín) es otro. Se acepta solo si casa con el núcleo entre paréntesis de la vía del riesgo (nunca por «única»); sin núcleo, estricto.
+          const r = elegirPoblacionHogar([pob ?? ''], f.inmueble.municipio, f.inmueble.nombreVia)
+          if (r.tipo !== 'elegida' || r.por === 'unica') throw new ErrorMapaIncompleto('la elección de población del CP (el portal autocompletó otra distinta de la del riesgo)')
+          if (r.por === 'nucleo') confirmarPob = null // población distinta del municipio: ni se contrasta ni se aprende
+        }
         await confirmarPob?.().catch(() => undefined)
       }
     } else if (op.autocompleta === 'via') {
@@ -703,7 +709,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.2',
+  version: '0.1.3',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
