@@ -30,6 +30,11 @@ export type CorreoCompania = {
   importe: number | null
   /** `true` = alguien lo marcó como mirado. Ausente (asegura antiguo) = `false`: no se ha mirado. */
   revisado: boolean
+  /**
+   * Nombre SUGERIDO por el asunto del correo para «Asignar a cliente / oportunidad» (F1, 21/10/2026). Solo una ayuda
+   * para la búsqueda: no asigna nada; lo confirma Alberto. `null` = el asunto no trae un nombre reconocible.
+   */
+  sugerencia: string | null
 }
 
 export type LecturaCorreosCompania =
@@ -53,6 +58,7 @@ function fila(v: unknown): CorreoCompania | null {
     fechaLimite: fl && /^\d{4}-\d{2}-\d{2}$/.test(fl) ? fl : null,
     revisado: o.revisado === true,
     importe: typeof o.importe === 'number' && Number.isFinite(o.importe) ? o.importe : null,
+    sugerencia: txt(o.sugerencia),
   }
 }
 
@@ -117,3 +123,89 @@ export const ROTULO_ESTADO_CORREO: Record<EstadoCorreoCompania, { texto: string;
 }
 
 export const ROTULO_COMPANIA: Record<string, string> = { reale: 'Reale', occident: 'Occident', mapfre: 'Mapfre', allianz: 'Allianz' }
+
+// ── F1 del agente de correo (21/10/2026): asignar a mano, sugerencia por asunto, documentos sin asignar ─────────
+
+/** ¿Se puede «Asignar a cliente / oportunidad»? Solo lo SIN RESOLVER (lo demás ya tiene desenlace en la cartera). */
+export function admiteAsignar(e: Pick<CorreoCompania, 'estado'>): boolean {
+  return e.estado === 'sin_resolver'
+}
+
+/** Aplica en local el resultado de asignar (sin recargar): pasa a `aplicado` con su cliente y deja de pedir mirar. */
+export function conAsignado(filas: CorreoCompania[], id: string, cliente: { clienteId: string; nombre: string }, resumen: string): CorreoCompania[] {
+  return ordenarCorreos(filas.map((f) => (f.id === id && admiteAsignar(f)
+    ? { ...f, estado: 'aplicado' as const, clienteId: cliente.clienteId, cliente: cliente.nombre, resumen, motivo: null, revisado: true }
+    : f)))
+}
+
+const PREFIJOS = /^\s*((re|rv|fw|fwd|reenv|resp)\s*:\s*)+/i
+const NIF = /\b(\d{8}[A-Z]|[XYZ]\d{7}[A-Z]|[A-HJNP-SUVW]\d{7}[0-9A-J])\b/gi
+const GENERICAS = /^(p[oó]liza|recibo|solicitud|suscripci[oó]n|siniestro|aviso|documentaci[oó]n|emisi[oó]n|anulaci[oó]n|suplemento|mediador|mediadores|corredor|prima|proy|pte)\b/i
+
+/**
+ * Nombre del tomador que algunas plantillas ponen al FINAL del asunto (Occident «Suscripción <ramo> <nº>, <TOMADOR>» o
+ * «… - Solicitud <nº> - <TOMADOR>»). PURA. Solo letras (sin dígitos), de 3 a 80 caracteres y sin NIF; si no, `null`.
+ * 🚨 Es una SUGERENCIA para el buscador: nunca se asigna nada por nombre sin que Alberto elija la ficha.
+ */
+export function nombreSugeridoDeAsunto(asunto: string | null | undefined): string | null {
+  if (typeof asunto !== 'string') return null
+  const a = asunto.replace(PREFIJOS, '').replace(/\s+/g, ' ').trim()
+  const cortes = [a.lastIndexOf(','), a.lastIndexOf(' - ')]
+  const corte = Math.max(...cortes)
+  if (corte < 0) return null
+  const resto = a.slice(corte + (a.startsWith(' - ', corte) ? 3 : 1)).replace(NIF, '').replace(/\s+/g, ' ').trim()
+  if (resto.length < 3 || resto.length > 80 || /\d/.test(resto) || GENERICAS.test(resto)) return null
+  if (!/^[\p{L}][\p{L} .'&-]*$/u.test(resto)) return null
+  return resto
+}
+
+export type DocumentoSinAsignar = { id: string; creado: string; nombre: string | null; bytes: number | null; compania: string | null }
+
+export type LecturaDocumentosSinAsignar =
+  | { estado: 'ok'; filas: DocumentoSinAsignar[]; truncado: boolean; descartados: number }
+  | { estado: 'sin_migracion' }
+  | { estado: 'error'; motivo: string }
+
+/** `GET /api/operador/correo/documento` (o lo ya interpretado por la ruta). Tres estados, como la bandeja. */
+export function interpretarDocumentosSinAsignar(status: number, json: unknown): LecturaDocumentosSinAsignar {
+  const o = typeof json === 'object' && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>) : null
+  if (o?.estado === 'sin_migracion') return { estado: 'sin_migracion' }
+  if (status !== 200 || o?.estado !== 'ok' || !Array.isArray(o.filas)) {
+    return { estado: 'error', motivo: o?.estado === 'sin_configurar' ? 'falta conectar el puerto de asegura' : typeof o?.motivo === 'string' ? o.motivo : `respuesta ${status}` }
+  }
+  const filas: DocumentoSinAsignar[] = []
+  let descartados = 0
+  for (const v of o.filas) {
+    const d = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null
+    const id = txt(d?.id), creado = txt(d?.creado)
+    if (!d || !id || !creado) { descartados++; continue }
+    filas.push({ id, creado, nombre: txt(d.nombre), bytes: typeof d.bytes === 'number' && Number.isFinite(d.bytes) ? d.bytes : null, compania: txt(d.compania) })
+  }
+  return { estado: 'ok', filas, truncado: o.truncado === true, descartados }
+}
+
+export type HitoSolicitud = { id: string; creado: string; tipo: string; estado: string; resumen: string | null; motivo: string | null }
+export type LecturaHistorialSolicitud =
+  | { estado: 'ok'; numeroPoliza: string | null; estadoSolicitud: string | null; estadoCompania: string | null; hitos: HitoSolicitud[] }
+  | { estado: 'sin_migracion' }
+  | { estado: 'error'; motivo: string }
+
+/** `GET /api/operador/correo/solicitud`. `estadoSolicitud: null` = no reconocido o aún sin seguimiento (no «presentada»). */
+export function interpretarHistorialSolicitud(status: number, json: unknown): LecturaHistorialSolicitud {
+  const o = typeof json === 'object' && json !== null && !Array.isArray(json) ? (json as Record<string, unknown>) : null
+  if (o?.estado === 'sin_migracion') return { estado: 'sin_migracion' }
+  if (status !== 200 || o?.estado !== 'ok' || !Array.isArray(o.hitos)) return { estado: 'error', motivo: `respuesta ${status}` }
+  const s = typeof o.solicitud === 'object' && o.solicitud !== null ? (o.solicitud as Record<string, unknown>) : null
+  const hitos: HitoSolicitud[] = []
+  for (const v of o.hitos) {
+    const h = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null
+    const id = txt(h?.id), creado = txt(h?.creado), tipo = txt(h?.tipo), estado = txt(h?.estado)
+    if (h && id && creado && tipo && estado) hitos.push({ id, creado, tipo, estado, resumen: txt(h.resumen), motivo: txt(h.motivo) })
+  }
+  return { estado: 'ok', numeroPoliza: txt(s?.numeroPoliza), estadoSolicitud: txt(s?.estado), estadoCompania: txt(s?.estadoCompania), hitos }
+}
+
+export const ROTULO_ESTADO_SOLICITUD: Record<string, string> = {
+  presentada: 'Presentada', pte_documentacion: 'Pendiente de documentación', pte_autorizacion: 'Pendiente de autorización',
+  aceptada: 'Aceptada (pendiente de emisión)', emitida: 'Emitida', rechazada: 'Rechazada', cerrada: 'Cerrada',
+}

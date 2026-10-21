@@ -10,13 +10,13 @@ import {
   CATEGORIAS_IA, CONFIANZA_MINIMA, descripcionParaPrompt,
   AUTO_APRENDER_VECES, AUTO_APRENDER_CONFIANZA,
 } from './rutas'
-import { clasificarPorKeyword } from './keywords'
+import { CATEGORIA_EXCLUIDA, asuntoExcluido, clasificarPorKeyword, exclusionSeguridad } from './keywords'
 import { parsearAvisoBooking } from './reserva-booking'
 import { esAvisoMensajesAgoda } from './agoda-mensajes'
 import type { CorreoNuevo } from './imap'
 import { RE_CODIGO_POSTAL, esDestinoCorreduria, esEcoPropioCorreduria, esLeadCorreduria } from './lead-correduria'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
-import { remitenteCorreo } from '@central/module-seguros'
+import { avisoCompaniaIgnorado, remitenteCorreo } from '@central/module-seguros'
 
 export interface Clasificacion {
   categoria: string
@@ -81,6 +81,20 @@ export async function llamarIA(system: string, user: string, maxTokens = 400): P
 }
 
 export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
+  // (-1) 🛡️ CAPA 0, lo PRIMERO (21/10/2026): TIREA, tickets de Codeoscopic, asuntos de credenciales del sector y cuerpos
+  // con «usuario:/contraseña:». No pasa por correo_reglas (que no la saque una regla aprendida), ni por la BD del lead, ni
+  // —sobre todo— por la IA (Groq/NIM): esos correos llevan credenciales en claro. Solo el asunto truncado queda guardado.
+  if (exclusionSeguridad(correo.from, correo.subject, correo.texto ?? correo.extracto)) {
+    return { categoria: CATEGORIA_EXCLUIDA, confianza: 1, via: 'regla', resumen: asuntoExcluido(correo.subject), accionSugerida: null, fechaLimite: null }
+  }
+
+  // (-1-bis) Aviso de compañía que se RECONOCE y se IGNORA (21/10/2026; hoy, el recordatorio de firma del mandato SEPA de
+  // Occident, spec §2): ni evento, ni aviso, ni nota en la ficha. Determinista (remitente + asunto + frases exactas) y
+  // ANTES que correo_reglas: la regla `@occidentinforma.com → correduria` lo mandaría a la cartera.
+  if (avisoCompaniaIgnorado({ remitente: correo.from, asunto: correo.subject, cuerpoTexto: correo.texto ?? correo.extracto })) {
+    return { categoria: 'correduria-informativo', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
+  }
+
   // (0) Aviso de reserva de Booking al propietario — determinista y ANTES que correo_reglas:
   // los correos de noreply@booking.com pueden tener regla aprendida hacia 'contabilidad' (las
   // facturas salen del mismo remitente) y se la llevaría por delante. El parser exige remitente

@@ -12,6 +12,8 @@ import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import { esCorreoAutomatico } from './lead-correduria.ts'
 import { ADJ_PRESUPUESTO_PASADA, adjuntosDeRespuestaLead, type AdjuntoCorreo } from './lead-correduria-adjuntos.ts'
+import { ADJ_COMPANIA_PRESUPUESTO_PASADA, adjuntosDeCompania } from './adjuntos-compania.ts'
+import { exclusionSeguridad } from './keywords.ts'
 
 export interface CorreoNuevo {
   uid: number
@@ -51,6 +53,36 @@ export interface CorreoNuevo {
   adjuntosLead?: AdjuntoCorreo[]
   /** Documentos válidos que se quedaron fuera por tope (se dice en el aviso; no es «no mandó nada»). */
   adjuntosLeadOmitidos?: number
+  /**
+   * PDF de un correo de ASEGURADORA para archivarlos en la ficha (F1 del agente de correo, 21/10/2026,
+   * `adjuntos-compania.ts`): topes 5/correo, 3 MB/adjunto, 40 MB/pasada. Nunca de un correo excluido por seguridad.
+   */
+  adjuntosCompania?: AdjuntoCorreo[]
+  /** PDF de compañía que se quedaron FUERA por tope (el triaje los suma a `ilegibles`: se dice, no se calla). */
+  adjuntosCompaniaOmitidos?: number
+}
+
+/**
+ * Correo EXCLUIDO por seguridad ya en el SOBRE (TIREA, tickets de Codeoscopic, asunto de credenciales del sector): no se
+ * descarga el mensaje (ni cuerpo ni adjuntos). Solo lo justo para que el triaje lo anote con el asunto truncado. PURO.
+ */
+export function correoExcluidoSinDescargar(s: {
+  uid: number; uidValidity: number; from: string; fromRaw: string; subject: string; messageId: string | null; fecha: Date | null; labels: string[]
+}): CorreoNuevo {
+  return {
+    uid: s.uid,
+    messageId: s.messageId || `no-id:${s.uidValidity}:${s.uid}`,
+    from: s.from,
+    fromRaw: s.fromRaw,
+    subject: s.subject,
+    fecha: s.fecha ?? new Date(),
+    labels: s.labels,
+    extracto: s.subject.slice(0, EXTRACTO_MAX),
+    texto: '',
+    destinatarios: [],
+    referencias: [],
+    automatico: false,
+  }
 }
 
 const RE_DIRECCION = /[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}/gi
@@ -109,6 +141,8 @@ export interface SesionTriaje {
   uidValidity: number
   /** Correos con UID > lastUid. Si uidValidity cambió, usa búsqueda por fecha (últimos 2 días). */
   listarNuevos(lastUid: number, uidValidityPrevio: number | null, max?: number): Promise<CorreoNuevo[]>
+  /** El UID en el que la ÚLTIMA `listarNuevos` cortó por no poder descargarlo (`null` = no cortó). Ver `uid-atascado.ts`. */
+  uidNoDescargable(): number | null
   /** Aplica una etiqueta Gmail (la crea si no existe). */
   etiquetar(uid: number, etiqueta: string): Promise<void>
   /** Saca el correo de INBOX (queda en «Todos»). */
@@ -122,9 +156,14 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
   const lock = await client.getMailboxLock('INBOX')
   const mbox = client.mailbox
   const uidValidity = mbox && typeof mbox !== 'boolean' ? Number(mbox.uidValidity) : 0
+  let uidCortado: number | null = null
 
   return {
     uidValidity,
+
+    uidNoDescargable() {
+      return uidCortado
+    },
 
     async listarNuevos(lastUid, uidValidityPrevio, max = 50) {
       const reset = uidValidityPrevio != null && uidValidityPrevio !== uidValidity
@@ -134,10 +173,39 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
         : { uid: `${lastUid + 1}:*` }
 
       const out: CorreoNuevo[] = []
+      uidCortado = null
       const presupuestoAdjuntos = { bytes: ADJ_PRESUPUESTO_PASADA }
-      for await (const msg of client.fetch(busqueda, { uid: true, labels: true, source: true })) {
+      const presupuestoCompania = { bytes: ADJ_COMPANIA_PRESUPUESTO_PASADA }
+      // Fase 1 (21/10/2026): solo el SOBRE (remitente, asunto, Message-ID, fecha, etiquetas). 🛡️ Lo que la capa 0 excluye
+      // ya por remitente/asunto no se DESCARGA: ni cuerpo ni adjuntos llegan a memoria.
+      const sobres: { uid: number; labels: string[]; from: string; fromRaw: string; subject: string; messageId: string | null; fecha: Date | null }[] = []
+      for await (const msg of client.fetch(busqueda, { uid: true, labels: true, envelope: true })) {
         // Con `uid:'N:*'` IMAP puede devolver el propio N si no hay nada nuevo: filtrar.
         if (!reset && lastUid > 0 && msg.uid <= lastUid) continue
+        const remite = msg.envelope?.from?.[0]
+        const from = (remite?.address || '').toLowerCase()
+        sobres.push({
+          uid: msg.uid,
+          labels: Array.from((msg.labels as Set<string> | undefined) ?? []),
+          from,
+          fromRaw: remite ? (remite.name ? `${remite.name} <${from}>` : from) : '',
+          subject: msg.envelope?.subject || '',
+          messageId: msg.envelope?.messageId || null,
+          fecha: msg.envelope?.date instanceof Date ? msg.envelope.date : null,
+        })
+        if (sobres.length >= max) break
+      }
+      // Fase 2: el mensaje entero, de uno en uno, solo de lo que la capa 0 no excluye por el sobre. En orden de UID: si uno
+      // no se puede descargar, la pasada se CORTA ahí (el cursor avanza hasta el máximo UID devuelto: saltarlo y seguir lo
+      // daría por visto sin haberlo leído nunca). La pasada siguiente lo reintenta.
+      sobres.sort((a, b) => a.uid - b.uid)
+      for (const sobre of sobres) {
+        if (exclusionSeguridad(sobre.from, sobre.subject)) {
+          out.push(correoExcluidoSinDescargar({ ...sobre, uidValidity }))
+          continue
+        }
+        const msg = await client.fetchOne(String(sobre.uid), { uid: true, source: true }, { uid: true })
+        if (!msg || !msg.source) { uidCortado = sobre.uid; break }
         const parsed = await simpleParser(msg.source as Buffer)
         const fromRaw = parsed.from?.text || ''
         const from = (parsed.from?.value?.[0]?.address || '').toLowerCase()
@@ -146,24 +214,27 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
         const destinatarios = destinatariosDe(parsed.headerLines)
         const referencias = referenciasDe(parsed.inReplyTo, parsed.references)
         const automatico = esCorreoAutomatico(parsed.headerLines)
-        const adjLead = adjuntosDeRespuestaLead({ referencias, destinatarios, automatico }, parsed.attachments, presupuestoAdjuntos)
+        // 🛡️ Excluido por el CUERPO (secreto en claro): el texto ya se leyó para detectarlo, pero NINGÚN adjunto se conserva.
+        const excluido = exclusionSeguridad(from, subject, parsed.text || '') !== null
+        const adjLead = excluido ? null : adjuntosDeRespuestaLead({ referencias, destinatarios, automatico }, parsed.attachments, presupuestoAdjuntos)
+        const adjCia = adjuntosDeCompania({ from, excluido }, parsed.attachments, presupuestoCompania)
         out.push({
-          uid: msg.uid,
-          messageId: parsed.messageId || `no-id:${uidValidity}:${msg.uid}`,
+          uid: sobre.uid,
+          messageId: parsed.messageId || `no-id:${uidValidity}:${sobre.uid}`,
           from,
           fromRaw,
           subject,
           fecha: parsed.date || new Date(),
-          labels: Array.from((msg.labels as Set<string> | undefined) ?? []),
+          labels: sobre.labels,
           extracto: `${subject}\n${cuerpo}`.slice(0, EXTRACTO_MAX),
           texto: (parsed.text || '').slice(0, TEXTO_MAX),
-          pdfs: pdfsDe(from, parsed.attachments),
+          pdfs: excluido ? undefined : pdfsDe(from, parsed.attachments),
           destinatarios,
           referencias,
           automatico,
           ...(adjLead ? { adjuntosLead: adjLead.adjuntos, adjuntosLeadOmitidos: adjLead.omitidos } : {}),
+          ...(adjCia ? { adjuntosCompania: adjCia.adjuntos, adjuntosCompaniaOmitidos: adjCia.omitidos } : {}),
         })
-        if (out.length >= max) break
       }
       return out
     },

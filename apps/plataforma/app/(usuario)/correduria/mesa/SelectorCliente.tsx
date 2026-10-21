@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import type { Busqueda } from '@/lib/correduria-puerto'
@@ -13,8 +13,12 @@ export type ClienteElegido = { clienteId: string; nombre: string }
  * oportunidades): aquí solo hace falta «a quién» y no se toca esa pantalla. Un fallo de lectura se DICE; un
  * resultado vacío solo dice «sin coincidencias» si la búsqueda era válida (`buscable`).
  */
-export default function SelectorCliente({ onSelect }: { onSelect: (c: ClienteElegido) => void }) {
-  const [q, setQ] = useState('')
+export default function SelectorCliente({ onSelect, inicial }: {
+  onSelect: (c: ClienteElegido) => void
+  /** Término con el que arranca (y busca solo una vez): p. ej. el nombre SUGERIDO por el asunto de un correo. */
+  inicial?: string | null
+}) {
+  const [q, setQ] = useState(inicial ?? '')
   const [estado, setEstado] = useState<
     | { fase: 'quieto' } | { fase: 'buscando' }
     | { fase: 'hecho'; clientes: ClienteElegido[]; buscable: boolean }
@@ -22,9 +26,9 @@ export default function SelectorCliente({ onSelect }: { onSelect: (c: ClienteEle
   >({ fase: 'quieto' })
   const turno = useRef(0)
 
-  async function buscar(e: React.FormEvent) {
-    e.preventDefault()
-    const termino = q.trim()
+  async function buscar(e?: React.FormEvent, valor?: string) {
+    e?.preventDefault()
+    const termino = (valor ?? q).trim()
     if (termino.length < 3) return
     const mio = ++turno.current
     setEstado({ fase: 'buscando' })
@@ -42,9 +46,18 @@ export default function SelectorCliente({ onSelect }: { onSelect: (c: ClienteEle
     }
   }
 
+  // Con un término inicial, una búsqueda sola al abrir (Alberto ve las candidatas y ELIGE; no se asigna nada).
+  const yaBuscado = useRef(false)
+  useEffect(() => {
+    if (yaBuscado.current || !inicial || inicial.trim().length < 3) return
+    yaBuscado.current = true
+    void buscar(undefined, inicial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inicial])
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-      <form onSubmit={buscar} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <form onSubmit={(e) => void buscar(e)} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 0, display: 'flex' }}>
           <Search size={18} strokeWidth={1.75} aria-hidden style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
           <input type="search" value={q} onChange={ev => setQ(ev.target.value)} aria-label="Buscar cliente" placeholder="Nombre, NIF, matrícula, póliza…"

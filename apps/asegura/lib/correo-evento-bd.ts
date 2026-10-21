@@ -23,10 +23,12 @@ import { anotarCambio } from './auditoria'
 import { abrirSiniestro } from './cartera-siniestros'
 import { crearTarea } from './oportunidad-seguimiento'
 import { esTablaInexistente } from './correo-avisos-intranet'
+import { anotarSolicitudCompania } from './solicitud-compania-bd'
+import { asignarDocumentosDeMensaje } from './correo-documento-bd'
 import {
   ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, planSolicitud, type OportunidadSolicitud, claveNumero, claveTareaDe, elegirSiniestroAcotado, esCheckTipoEventoCorreo, importeDeItem,
   TOPE_SINIESTROS_CANDIDATOS, decidirReevaluacionEmision, planItem, resolverPolizaEvento,
-  estadoTrasErrorSolicitud, tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
+  estadoTrasErrorSolicitud, notaCierreDocumentacion, tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
   type PolizaCandidata,
 } from './correo-evento'
 
@@ -63,10 +65,11 @@ function hoyMadrid(): string {
 }
 
 function numeroDe(i: ItemEvento): string | null {
-  return i.tipo === 'solicitud' ? null : i.numeroPoliza
+  // Una solicitud EMITIDA guarda el nº de su póliza (informativo: no se resuelve contra la cartera, se espera a CIMA).
+  return i.tipo === 'solicitud' ? (i.fase === 'emitida' ? i.numeroPoliza ?? null : null) : i.numeroPoliza
 }
 
-async function polizasCandidatas(db: Db, correduriaId: string): Promise<(PolizaCandidata & { cliente: string | null })[]> {
+export async function polizasCandidatas(db: Db, correduriaId: string): Promise<(PolizaCandidata & { cliente: string | null })[]> {
   // La cartera viva son unas pocas centenas: se lee una vez por correo y se resuelve en memoria (mismo
   // criterio que `resolverPolizasDeCorreo`). El volcado histórico (leads) ni se lee.
   const filas = await db.poliza.findMany({
@@ -81,6 +84,25 @@ async function polizasCandidatas(db: Db, correduriaId: string): Promise<(PolizaC
     id: p.id, clienteId: p.clienteId, numeroPoliza: p.numeroPoliza, codigoDgs: p.codigoEntidadDgs, aseguradora: p.aseguradora,
     importRef: p.importRef, eiacXmlHash: p.eiacXmlHash, estado: String(p.estado), sustituidaAt: p.sustituidaAt,
     cliente: [p.cliente?.nombre, p.cliente?.apellidos].filter(Boolean).join(' ') || null,
+  }))
+}
+
+/**
+ * Las pólizas de CIMA que `polizasCandidatas` deja fuera por su FICHA (cliente inactivo) o por estar fusionadas. Solo
+ * para el cruce con CIMA: que el nº esté aquí NO es «CIMA no la trae» (`enCimaSegunResolucion`). Si falla, lanza.
+ */
+export async function polizasFueraDeCandidatas(db: Db, correduriaId: string): Promise<PolizaCandidata[]> {
+  const filas = await db.poliza.findMany({
+    where: {
+      AND: [{ correduriaId }, WHERE_CARTERA_VIVA, { numeroPoliza: { not: null } },
+        { OR: [{ mergedIntoPolizaId: { not: null } }, { cliente: { activo: false } }] }],
+    },
+    orderBy: { id: 'asc' },
+    select: { id: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true, importRef: true, eiacXmlHash: true, estado: true, sustituidaAt: true },
+  })
+  return filas.map((p) => ({
+    id: p.id, clienteId: p.clienteId, numeroPoliza: p.numeroPoliza, codigoDgs: p.codigoEntidadDgs, aseguradora: p.aseguradora,
+    importRef: p.importRef, eiacXmlHash: p.eiacXmlHash, estado: String(p.estado), sustituidaAt: p.sustituidaAt,
   }))
 }
 
@@ -206,7 +228,7 @@ async function procesarItem(
   }
   const filaId = reservada[0].id
   // Una solicitud no tiene póliza: se casa con la OPORTUNIDAD por su nº (camino propio).
-  if (item.tipo === 'solicitud') return procesarSolicitud(db, correduriaId, entrada.compania, item, filaId, fechaCorreo, instanteCorreo, hoy)
+  if (item.tipo === 'solicitud') return procesarSolicitud(db, correduriaId, entrada.compania, entrada.codigoDgs, item, filaId, fechaCorreo, instanteCorreo, hoy)
 
   try {
     // 2. Contexto.
@@ -355,7 +377,19 @@ async function aplicarSolicitud(
   })
   progreso.estadoAplicado = true
   let resumen = actualizado ? plan.resumen : `${plan.resumen} (correo más antiguo que el último estado: solo nota)`
-  const t = plan.tareaDocumentacion
+  // EMITIDA (21/10/2026): la tarea «enviar documentación» de ESTA solicitud ya no tiene sentido → se cierra (con una línea
+  // que dice por qué). Solo si el estado se aplicó (un correo viejo no cierra nada) y por el texto EXACTO de esa tarea.
+  if (actualizado && plan.cerrarTareaDocumentacion) {
+    const cerradas = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+      update gestiones set estado = 'cerrada', updated_at = now(),
+             observaciones = observaciones || ${notaCierreDocumentacion(item.numeroPoliza ?? null)}
+      where correduria_id = ${correduriaId}::uuid and oportunidad_id = ${op.id}::uuid and estado::text <> 'cerrada'
+        and observaciones = ${plan.cerrarTareaDocumentacion}
+      returning id::text as id`)
+    for (const g of cerradas) anotarCambio({ entidad: 'gestion', id: g.id, campo: 'estado', antes: 'pendiente', despues: 'cerrada' })
+    if (cerradas.length > 0) resumen = `${resumen}; tarea «enviar documentación» cerrada`
+  }
+  const t = plan.tareaDocumentacion ?? plan.tareaRechazo
   if (!actualizado || !t) return { gestionId: null, fechaLimite: null, resumen }
   // Comprobar + crear bajo un candado por oportunidad: dos correos a la vez no crean la tarea dos veces.
   // `crearTarea` va por ESTA transacción (`tx`): misma conexión (no pide otra al pool con esta ocupada) y la tarea
@@ -370,14 +404,15 @@ async function aplicarSolicitud(
     if (ya) return null
     return crearTarea(correduriaId, op.id, t, ACTOR_CORREO, undefined, tx)
   }, { timeout: 20_000 })
-  if (!r) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; ya había tarea de enviar documentación abierta` }
+  const cual = plan.tareaDocumentacion ? 'enviar documentación' : 'solicitud rechazada'
+  if (!r) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; ya había tarea de ${cual} abierta` }
   if (!r.ok) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; tarea NO creada (${r.motivo})` }
-  resumen = `${resumen}; tarea «enviar documentación» para hoy`
+  resumen = `${resumen}; tarea «${cual}» para hoy`
   return { gestionId: r.tareaId, fechaLimite: t.fechaLimite, resumen }
 }
 
 async function procesarSolicitud(
-  db: Db, correduriaId: string, compania: string, item: ItemSolicitud, filaId: string,
+  db: Db, correduriaId: string, compania: string, codigoDgs: string, item: ItemSolicitud, filaId: string,
   fechaCorreo: string | null, instanteCorreo: Date | null, hoy: string,
 ): Promise<ResultadoItemCorreo> {
   const salida = (estado: EstadoEventoCorreo, resumen: string, motivo: string | null, op: OportunidadSolicitud | null, gestion: { fechaLimite: string | null }): ResultadoItemCorreo => ({
@@ -392,6 +427,8 @@ async function procesarSolicitud(
       await db.$executeRaw(Prisma.sql`
         update correo_evento_entrante set estado = 'sin_resolver', motivo = ${plan.motivo}, resumen = ${plan.resumen.slice(0, 300)}, updated_at = now()
         where id = ${filaId}::uuid and correduria_id = ${correduriaId}::uuid`)
+      // F1 (21/10/2026): la solicitud existe aunque no case con ninguna oportunidad (es lo que dice la compañía).
+      await anotarSolicitudCompania(db, correduriaId, compania, codigoDgs, item, null, instanteCorreo, filaId)
       return salida('sin_resolver', plan.resumen, plan.motivo, null, { fechaLimite: null })
     }
     const r = await aplicarSolicitud(db, correduriaId, compania, item, op, plan, instanteCorreo, progreso)
@@ -400,6 +437,7 @@ async function procesarSolicitud(
              cliente_id = ${op.clienteId}::uuid, oportunidad_id = ${op.id}::uuid, gestion_id = ${r.gestionId}::uuid,
              fecha_limite = ${r.fechaLimite}::date, updated_at = now()
       where id = ${filaId}::uuid and correduria_id = ${correduriaId}::uuid`)
+    await anotarSolicitudCompania(db, correduriaId, compania, codigoDgs, item, op.id, instanteCorreo, filaId)
     return salida('aplicado', r.resumen, null, op, r)
   } catch (e) {
     const causa = e instanceof Error ? e.message.slice(0, 200) : 'error'
@@ -427,8 +465,8 @@ export async function vincularSolicitudesPendientes(
   correduriaId: string, oportunidadId: string, compania: string, numero: string, hoy: string = hoyMadrid(),
 ): Promise<{ vinculados: number }> {
   const db = prismaAsegura()
-  const filas = await db.$queryRaw<{ id: string; detalle: unknown; creado: Date }[]>(Prisma.sql`
-    select id::text as id, detalle, created_at as creado from correo_evento_entrante
+  const filas = await db.$queryRaw<{ id: string; detalle: unknown; creado: Date; codigoDgs: string }[]>(Prisma.sql`
+    select id::text as id, detalle, created_at as creado, codigo_entidad_dgs as "codigoDgs" from correo_evento_entrante
     where correduria_id = ${correduriaId}::uuid and tipo = 'solicitud' and estado = 'sin_resolver' and revisado_at is null
       and compania = ${compania} and clave = ${numero}
       and created_at > now() - make_interval(days => ${VENTANA_VINCULAR_DIAS}::int)
@@ -462,6 +500,7 @@ export async function vincularSolicitudesPendientes(
                cliente_id = ${op.clienteId}::uuid, oportunidad_id = ${op.id}::uuid, gestion_id = ${r.gestionId}::uuid,
                fecha_limite = ${r.fechaLimite}::date, updated_at = now()
         where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+      await anotarSolicitudCompania(db, correduriaId, compania, f.codigoDgs, item, op.id, f.creado, f.id)
       vinculados++
     } catch (e) {
       const causa = e instanceof Error ? e.message.slice(0, 200) : 'error'
@@ -526,6 +565,11 @@ export type EventoCorreoFila = {
   importe: number | null
   /** `true` = alguien lo marcó como mirado (`revisado_at` no nulo). */
   revisado: boolean
+  /**
+   * Message-ID del correo (F1, 21/10/2026): plataforma lo casa con su `correo_triaje` para SUGERIR a quién asignarlo por
+   * el asunto (la sugerencia la confirma Alberto; aquí nunca se asigna por nombre). No se pinta.
+   */
+  mensajeId: string
 }
 
 const TECHO_LISTA = 300
@@ -538,7 +582,7 @@ export async function eventosCorreoRecientes(correduriaId: string, dias = 30): P
            e.tipo, e.subtipo, e.clave, e.compania, e.numero_poliza as "numeroPoliza", e.estado, e.motivo, e.resumen,
            e.cliente_id::text as "clienteId", nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
            to_char(e.fecha_limite, 'YYYY-MM-DD') as "fechaLimite", e.importe::text as importe,
-           (e.revisado_at is not null) as revisado
+           (e.revisado_at is not null) as revisado, e.mensaje_id as "mensajeId"
     from correo_evento_entrante e
     left join clientes c on c.id = e.cliente_id and c.correduria_id = e.correduria_id
     where e.correduria_id = ${correduriaId}::uuid and e.created_at >= now() - make_interval(days => ${d}::int)
@@ -575,10 +619,10 @@ export async function reevaluarEmisionesSinResolver(
   correduriaId: string, hoy: string = hoyMadrid(),
 ): Promise<{ revisadas: number; resueltas: number }> {
   const db = prismaAsegura()
-  let filas: { id: string; compania: string; codigoDgs: string; detalle: unknown }[]
+  let filas: { id: string; compania: string; codigoDgs: string; detalle: unknown; mensajeId: string }[]
   try {
     filas = await db.$queryRaw(Prisma.sql`
-      select id::text as id, compania, codigo_entidad_dgs as "codigoDgs", detalle
+      select id::text as id, compania, codigo_entidad_dgs as "codigoDgs", detalle, mensaje_id as "mensajeId"
       from correo_evento_entrante
       where correduria_id = ${correduriaId}::uuid and tipo = 'emision' and estado = 'sin_resolver' and revisado_at is null
         and created_at > now() - make_interval(days => ${VENTANA_REEVALUACION_DIAS}::int)
@@ -601,7 +645,11 @@ export async function reevaluarEmisionesSinResolver(
       update correo_evento_entrante set estado = 'duplicado_cima', poliza_id = ${d.polizaId}::uuid, cliente_id = ${d.clienteId}::uuid,
              motivo = ${d.motivo}, resumen = ${d.resumen}, updated_at = now()
       where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'sin_resolver' and revisado_at is null`)
-    if (n > 0) resueltas++
+    if (n > 0) {
+      resueltas++
+      // F1: los adjuntos del correo que quedaron sin asignar (la póliza aún no estaba) pasan ya a su ficha. Best-effort.
+      await asignarDocumentosDeMensaje(correduriaId, f.mensajeId, { clienteId: d.clienteId, polizaId: d.polizaId }).catch(() => 0)
+    }
   }
   return { revisadas: filas.length, resueltas }
 }

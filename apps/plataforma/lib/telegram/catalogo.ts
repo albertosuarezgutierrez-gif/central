@@ -343,6 +343,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
+    id: 'correo.no-descargable', categoria: 'correo',
+    titulo: 'Correo que no se puede descargar',
+    que: 'Un correo de la bandeja que Gmail lista pero no deja descargar en 3 revisiones seguidas: el triaje lo salta para no quedarse atascado. Hay que mirarlo a mano.',
+    cuando: 'Al ocurrir (revisión cada 10 min)',
+  },
+  {
     id: 'correo.digest', categoria: 'correo',
     titulo: 'Resumen diario del correo',
     que: 'Recuento por categoría de las últimas 24 h y lo que conviene que mires.',
@@ -629,6 +635,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Recordatorio mensual: ficheros recibidos de CIMA',
     que: 'Recuerda bajar del Portal CIMA el export «Ficheros recibidos» del último mes y compararlo con lo recibido; añade por compañía los días sin mandar fichero (o avisa de que no se pudo leer la ingesta).',
     cuando: 'El día 2 de cada mes a las 08:43 UTC (10:43 en verano, 09:43 en invierno)',
+  },
+  {
+    id: 'correduria.cruce-cima-correo', categoria: 'correduria',
+    titulo: 'Cruce del correo de compañías con CIMA',
+    que: 'Lo que la compañía dijo por correo y CIMA no refleja: póliza emitida que CIMA no trae a los 5 días hábiles, anulación que CIMA sigue dando en vigor, devolución de un recibo que no consta, y pólizas nuevas que casan con varias oportunidades (no se enlazan solas). Sin datos personales; con enlace a la ficha si se sabe.',
+    cuando: 'De lunes a viernes a las 12:37 UTC (14:37 en verano, 13:37 en invierno), y solo si hay algo nuevo',
   },
   {
     id: 'correduria.red-diaria', categoria: 'correduria',

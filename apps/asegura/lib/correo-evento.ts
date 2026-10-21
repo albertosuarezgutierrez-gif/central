@@ -23,7 +23,7 @@
 // - Sin IBAN ni NIF: el lector ya los quita; aquí se vuelve a pasar `sinDatosSensibles` por todo texto
 //   libre que entra por el puerto (segunda red: el puerto no se fía de quien llama).
 
-import { esCarteraEnVigor, esCarteraViva, normalizarNumeroSolicitud, pideDocumentacion, sinDatosSensibles, textoTareaDocumentacion, urlSolicitudValida, validarTarea } from '@central/module-seguros'
+import { FASES_SOLICITUD, esCarteraEnVigor, esCarteraViva, motivoReciboAnulado, normalizarNumeroSolicitud, pideDocumentacion, sinDatosSensibles, textoTareaDocumentacion, urlSolicitudValida, validarTarea, type FaseSolicitud } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 
 export const TIPOS_EVENTO_CORREO = ['siniestro', 'pre_anulacion', 'impago', 'anulacion', 'suplemento', 'emision', 'solicitud'] as const
@@ -61,7 +61,14 @@ export type ItemEvento =
       tipo: 'pre_anulacion' | 'impago'; clave: string
       numeroPoliza: string; idRecibo: string | null; importe: number | null; fechaLimite: string | null
     }
-  | { tipo: 'anulacion'; clave: string; numeroPoliza: string | null; fechaEfecto: string | null; motivo: string | null }
+  | {
+      tipo: 'anulacion'; clave: string; numeroPoliza: string | null; fechaEfecto: string | null; motivo: string | null
+      /**
+       * Solo en el resumen de recibos ANULADOS por impago (Occident, 20/10/2026): lo anulado es ESTE RECIBO, no
+       * necesariamente la póliza. Con él, la nota y la tarea hablan del recibo y la clave es póliza/recibo.
+       */
+      idRecibo?: string
+    }
   | {
       tipo: 'suplemento'; clave: string
       numeroPoliza: string; descripcion: string | null; periodoDesde: string | null; periodoHasta: string | null
@@ -81,6 +88,15 @@ export type ItemEvento =
       estado: string | null
       /** Enlace al proyecto, ya validado (`urlSolicitudValida`). El TOMADOR no entra: no se guarda en la tabla. */
       url: string | null
+      /**
+       * Fase normalizada (21/10/2026). Ausente/`null` = otra o no reconocida. `emitida` NO toca ninguna póliza (la fuente es
+       * CIMA): apunta el estado en la oportunidad y cierra la tarea «enviar documentación».
+       */
+      fase?: FaseSolicitud | null
+      /** Nº de la póliza emitida (solo con `fase: 'emitida'`); informativo, para esperar a CIMA. */
+      numeroPoliza?: string | null
+      /** Código de motivo de un rechazo («RIESGO EXCLUIDO»). */
+      motivoRechazo?: string | null
     }
 
 export type EntradaEvento = {
@@ -173,6 +189,17 @@ export function validarEntradaEvento(b: unknown): { ok: true; entrada: EntradaEv
         importe: importe(r?.importe), fechaLimite: dia(r?.fechaLimite),
       } : null)
     }
+  } else if (tipo === 'anulacion' && Array.isArray(e.recibos)) {
+    // Resumen de recibos ANULADOS por impago (Occident, 20/10/2026): una anulación por póliza. «Anulado en fecha» es del
+    // RECIBO, no el efecto de la baja: `fechaEfecto` queda null (no se sabe) y la fecha va en el motivo.
+    for (const r of e.recibos.slice(0, 200).map(obj)) {
+      const poliza = id(r?.numeroPoliza)
+      const recibo = id(r?.idRecibo)
+      meter(poliza && recibo ? {
+        tipo, clave: `${poliza}/${recibo}`, numeroPoliza: poliza, idRecibo: recibo, fechaEfecto: null,
+        motivo: libre(motivoReciboAnulado({ idRecibo: recibo, fechaAnulacion: dia(r?.fechaAnulacion) }), 120),
+      } : null)
+    }
   } else if (tipo === 'anulacion') {
     const poliza = id(e.numeroPoliza)
     meter({ tipo, clave: poliza ?? 'sin-poliza', numeroPoliza: poliza, fechaEfecto: dia(e.fechaEfecto), motivo: libre(e.motivo, 120) })
@@ -191,9 +218,14 @@ export function validarEntradaEvento(b: unknown): { ok: true; entrada: EntradaEv
   } else if (tipo === 'solicitud') {
     // El `tomador` que trae el evento NO se copia: la fila guarda `detalle` y en ella no van nombres.
     const numero = normalizarNumeroSolicitud(e.numeroSolicitud)
+    const fase = FASES_SOLICITUD.find((f) => f === e.fase) ?? null
+    // La póliza solo con `emitida` (en otra fase, un nº de póliza no significa nada aquí y no se guarda).
+    const numeroPoliza = fase === 'emitida' ? id(e.numeroPoliza) : null
+    if (fase === 'emitida' && numeroPoliza === null && e.numeroPoliza !== null && e.numeroPoliza !== undefined) ilegibles++
     meter(numero ? {
       tipo, clave: numero, numeroSolicitud: numero, ramo: libre(e.ramo, 60), estado: libre(e.estado, 200),
       url: urlSolicitudValida(e.url, compania, numero),
+      fase, numeroPoliza, motivoRechazo: fase === 'rechazada' ? libre(e.motivoRechazo, 60) : null,
     } : null)
   } else {
     const poliza = id(e.numeroPoliza)
@@ -429,6 +461,8 @@ export function esCheckTipoEventoCorreo(e: unknown): boolean {
 /** Clave de «una tarea por póliza/recibo» (pre-anulación e impago del MISMO recibo comparten tarea). */
 export function claveTareaDe(item: ItemEvento, polizaId: string): string {
   if (item.tipo === 'pre_anulacion' || item.tipo === 'impago') return `recibo:${polizaId}:${claveNumero(item.idRecibo) ?? '-'}`
+  // Un recibo anulado por impago: una tarea por RECIBO (otro recibo de la misma póliza, meses después, es otro aviso).
+  if (item.tipo === 'anulacion' && item.idRecibo) return `anulacion-recibo:${polizaId}:${claveNumero(item.idRecibo) ?? '-'}`
   return `${item.tipo}:${polizaId}`
 }
 
@@ -507,6 +541,21 @@ export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem):
     if (r.estado === 'no_en_vigor') {
       return { ...base('CIMA ya la trae no vigente: no se hace nada'), estado: 'duplicado_cima', motivo: 'la póliza ya no está en vigor según CIMA' }
     }
+    if (item.idRecibo) {
+      // Lo anulado es el RECIBO (anulación automática por impago). Que la póliza siga viva o no, el correo no lo dice.
+      const nota = `${cia} comunica por correo${delCorreo} que ha ANULADO POR IMPAGO el recibo ${item.idRecibo}${item.motivo ? ` (${item.motivo})` : ''}. El correo no dice que la póliza esté anulada.`
+      if (ctx.tareaAbierta) return { ...base('ya había tarea de ese recibo anulado: solo nota'), nota }
+      const fecha = venceTarea(null, ctx.hoy, 2)
+      return {
+        ...base(`tarea «recibo anulado por impago» creada, vence ${fechaEs(fecha)}`),
+        nota,
+        tarea: {
+          tipo: 'tarea', prioridad: 'alta', fechaLimite: fecha,
+          observaciones: `${PREFIJO_TAREA_CORREO} ${cia} ha anulado por impago el recibo ${item.idRecibo}. Comprobar en el portal de la compañía cómo queda la póliza y hablar con el cliente.`,
+        },
+        claveTarea: claveTareaDe(item, r.poliza.id),
+      }
+    }
     const efecto = item.fechaEfecto ? ` con efecto ${fechaEs(item.fechaEfecto)}` : ''
     const nota = `${cia} comunica por correo${delCorreo} la ANULACIÓN de la póliza${efecto}${item.motivo ? ` (${item.motivo})` : ''}.`
     if (ctx.tareaAbierta) return { ...base('ya había tarea de confirmar la anulación: solo nota'), nota }
@@ -572,9 +621,16 @@ export type PlanSolicitud =
       motivo: null
       resumen: string
       /** Línea de `oportunidad_historial` (accion `correo_compania`). */
-      detalleHistorial: { compania: string; numeroSolicitud: string; estado: string | null; url: boolean; fechaCorreo: string | null }
+      detalleHistorial: { compania: string; numeroSolicitud: string; estado: string | null; url: boolean; fechaCorreo: string | null; fase?: FaseSolicitud; numeroPoliza?: string }
       /** Texto de la tarea «enviar documentación» si toca crearla (la BD comprueba que no haya una abierta igual). */
       tareaDocumentacion: TareaPlan | null
+      /** Solicitud RECHAZADA con la oportunidad abierta: tarea «decidir con el cliente» (misma idempotencia por texto). */
+      tareaRechazo: TareaPlan | null
+      /**
+       * Solicitud EMITIDA: cerrar la tarea «enviar documentación» abierta de ESTA solicitud (`textoTareaDocumentacion`), si
+       * la hay. `null` = no se cierra nada. La póliza NO se crea ni se toca: llega por CIMA.
+       */
+      cerrarTareaDocumentacion: string | null
     }
 
 const ABIERTAS_OPORTUNIDAD: ReadonlySet<string> = new Set(['competencia', 'en_negociacion', 'pendiente_cliente'])
@@ -606,17 +662,39 @@ export function planSolicitud(
     }
   }
   const abierta = ABIERTAS_OPORTUNIDAD.has(op.estado)
-  const tarea: TareaPlan | null = abierta && pideDocumentacion(item.estado)
+  const fase = item.fase ?? null
+  const emitida = fase === 'emitida'
+  const tarea: TareaPlan | null = abierta && !emitida && fase !== 'rechazada' && pideDocumentacion(item.estado)
     ? { tipo: 'tarea', prioridad: 'alta', fechaLimite: ctx.hoy, observaciones: textoTareaDocumentacion(compania, item.numeroSolicitud) }
     : null
-  const que = item.estado ? `«${item.estado}»` : 'estado no reconocido (míralo en el correo)'
+  const tareaRechazo: TareaPlan | null = abierta && fase === 'rechazada'
+    ? { tipo: 'tarea', prioridad: 'alta', fechaLimite: ctx.hoy, observaciones: textoTareaRechazo(compania, item.numeroSolicitud, item.motivoRechazo ?? null) }
+    : null
+  const que = emitida
+    ? (item.numeroPoliza ? `emitida póliza ${item.numeroPoliza} (se espera a CIMA)` : 'emitida, nº de póliza dudoso (míralo en el correo)')
+    : item.estado ? `«${item.estado}»` : 'estado no reconocido (míralo en el correo)'
   return {
     estado: 'aplicado',
     motivo: null,
     resumen: `oportunidad ${op.ramo ?? 'sin ramo'}${op.cliente ? ` de ${op.cliente}` : ''}: ${que}${abierta ? '' : ` (está ${op.estado})`}`,
-    detalleHistorial: { compania, numeroSolicitud: item.numeroSolicitud, estado: item.estado, url: item.url !== null, fechaCorreo: ctx.fechaCorreo },
+    detalleHistorial: {
+      compania, numeroSolicitud: item.numeroSolicitud, estado: item.estado, url: item.url !== null, fechaCorreo: ctx.fechaCorreo,
+      ...(fase ? { fase } : {}), ...(emitida && item.numeroPoliza ? { numeroPoliza: item.numeroPoliza } : {}),
+    },
     tareaDocumentacion: tarea,
+    tareaRechazo,
+    cerrarTareaDocumentacion: emitida ? textoTareaDocumentacion(compania, item.numeroSolicitud) : null,
   }
+}
+
+/** Texto (y llave de idempotencia) de la tarea de una solicitud RECHAZADA. Sin la nota libre del suscriptor. */
+export function textoTareaRechazo(compania: string, numero: string, motivo: string | null): string {
+  return `${PREFIJO_TAREA_CORREO} ${nombreCompania(compania)} ha RECHAZADO la solicitud ${numero}${motivo ? ` (motivo: ${motivo})` : ''}. Ver el motivo en el portal y decidir con el cliente (otra modalidad u otra compañía).`
+}
+
+/** Línea que se añade a la tarea «enviar documentación» al cerrarla sola porque la compañía comunica la emisión. */
+export function notaCierreDocumentacion(numeroPoliza: string | null): string {
+  return `\n— Cerrada sola: la compañía comunica por correo que la solicitud está EMITIDA${numeroPoliza ? ` (póliza ${numeroPoliza})` : ''}.`
 }
 
 /** La tarea del plan pasa las MISMAS reglas que una tarea a mano (`validarTarea`). */

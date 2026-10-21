@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Correduría · Occident solicitud 165109972 (Studium, acc. colectivo, efecto retroactivo 15/10): declaración de no siniestralidad en PDF firmada por Berta; emitida póliza 549683979 el 21/10. El correo de emisión no se leía y la solicitud quedó en bandeja sin oportunidad.
+Inventario histórico Gmail: 856 hilos sector, parsers cubren 13,4 %; spec «agente corredor de correo» en `docs/CORREDURIA-AGENTE-CORREO.md` (F0 deterministas sobre PR #4893 → F3). CIMA = verdad; correo cruza y avisa por Telegram.
+Pendiente Alberto: proveedor LLM UE (Anthropic vs Azure), almacenamiento adjuntos, días de espera CIMA, Mapfre FACTURA. 🚨 Triaje envía asuntos con tomador a Groq/NIM sin DPA; tirea.es/codeoscopic con credenciales en claro (rotar).
 **(21/10/2026)** — RRHH · NINGÚN correo salía: faltaba `RESEND_API_KEY` en Vercel `central-rrhh` (log «sin proveedor»). Creada clave Resend
 solo-envío iarest.es + `MAIL_FROM` «Portal del Empleado <no-responder@iarest.es>», redeploy. Nuevo `rrhh.avisos_admin` (0027): fallo de envío
 (acceso/notificación/firma) → banner en todo /admin con «Marcar como visto», dedupe 6 h. Pendiente: material con foto (esperando respuestas de Pilar).
@@ -1400,6 +1403,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (20/10/2026) Correduría · correos de compañía que no llegaban a la cartera
+`correo_evento_entrante` vacía desde el 14/10: (1) central-asegura en prod con #4881 (anterior a #4885; un build viejo terminó después) → promovido a mano `dpl_HLRsKg1` (4660093); (2) los asuntos reales de Occident no casaban: lectores nuevos «Suscripción <ramo> <nº>, <tomador>» (rechazos de solicitud) y «Resumen de recibos anulados por impago» (tipo `anulacion` con nota de RECIBO anulado, clave póliza/recibo). El correo «Solicitud» rechazado hoy no se reprocesa (cursor+etiqueta; no compensa).
+**Pendiente:** suplemento rechazado sin lector (decisión de Alberto); comprobar a 24-48 h que `correo_evento_entrante` se llena.
 ## (21/10/2026) asegura-portal: carné de conducir visible + avisos carné/ITV desmarcables
 - Origen: clienta María Luisa González Lozano no veía la fecha de su carné (cifrada) y metía la de caducidad donde se pide expedición (`max=hoy` → «no puede ser futura»).
 - Ahora: puede meter caducidad o expedición (`expedicionDesdeCaducidad`, ambiguo 70-75 años → pide expedición); la tarjeta muestra expedición + caducidad (solo vínculo `gestionar`/`administrar`) y «Cambiar» viene precargado.

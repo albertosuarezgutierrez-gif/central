@@ -1509,11 +1509,21 @@ export type { ClaseExpediente, EntradaClase, EntradaTrabajada, EstadoVisible, Vu
 
 // Correos de compañías que no son recibos devueltos → eventos de la correduría (14/10/2026).
 export {
-  leerCorreoEventoAseguradora, eventoNecesitaAdjuntos, sinDatosSensibles, contieneIban, ACCIONES_TRAMITADOR,
-  type AccionTramitador,
+  leerCorreoEventoAseguradora, eventoNecesitaAdjuntos, motivoReciboAnulado, sinDatosSensibles, contieneIban, ACCIONES_TRAMITADOR,
+  avisoCompaniaIgnorado, FASES_SOLICITUD,
+  type AccionTramitador, type FaseSolicitud, type MotivoIgnorado,
   type CompaniaEvento, type CorreoEventoAseguradora, type EventoAseguradora, type EventoSiniestro, type EventoPreAnulacion,
-  type EventoImpago, type EventoAnulacion, type EventoSuplemento, type EventoEmision, type EventoSolicitud, type PolizaEmitidaCorreo, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo,
+  type EventoImpago, type EventoAnulacion, type EventoSuplemento, type EventoEmision, type EventoSolicitud, type PolizaEmitidaCorreo, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo, type ReciboAnulado,
 } from './evento-correo-aseguradora.ts'
+
+// F1 del agente corredor de correo (21/10/2026): días hábiles de espera a CIMA, avisos de cruce y enlace póliza↔oportunidad.
+export {
+  CODIGO_DGS_COMPANIA, DIAS_HABILES_ESPERA_CIMA, DIAS_HABILES_ESPERA_CIMA_DEFECTO, DIAS_HABILES_ESPERA_REFLEJO, ESTADOS_SOLICITUD_COMPANIA, TIPOS_AVISO_CRUCE,
+  decidirAvisoAnulacionSinCima, decidirAvisoDevolucionSinRecibo, decidirAvisoEmisionSinCima, decidirEnlacesPolizaOportunidad, dgsDeOportunidad,
+  diasEsperaCima, diasHabilesEntre, esDiaHabil, estadoCierraSolicitud, estadoSolicitudNormalizado, mismoTomador,
+  type DecisionCruce, type DecisionEnlaces, type EnlaceAmbiguo, type MotivoEnlaceAmbiguo, type EnlacePolizaOportunidad, type EstadoSolicitudCompania,
+  type OportunidadEnlace, type PolizaNuevaEnlace, type SolicitudEmitidaEnlace, type TipoAvisoCruce,
+} from './correo-cruce-cima.ts'
 
 // «En la compañía» (20/10/2026): nº de solicitud en la compañía sobre una oportunidad abierta (no es un estado del enum).
 export {

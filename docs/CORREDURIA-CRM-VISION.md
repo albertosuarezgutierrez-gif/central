@@ -16,6 +16,8 @@
 Este documento es la referencia. Las sesiones futuras lo leen ANTES de tocar la correduría (lo enruta
 la skill `correduria-crm`). Lo que aquí es «pendiente» se marca así; lo que está hecho lleva PR.
 
+> Agente corredor de correo (correo de compañías ↔ cartera CIMA, fases F0-F3): `docs/CORREDURIA-AGENTE-CORREO.md`.
+
 ---
 
 ## 1. Qué es y qué NO es

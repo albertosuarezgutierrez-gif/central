@@ -41,7 +41,8 @@ export type DocumentoResumen = {
   bytes: number | null
   sha256: string | null
   notas: string | null
-  subidoPor: 'corredor' | 'cliente' | 'agente'
+  /** `correo` (21/10/2026, F1 del agente de correo): adjunto PDF de un correo de compañía, guardado por el triaje. */
+  subidoPor: 'corredor' | 'cliente' | 'agente' | 'correo'
   clienteId: string | null
   polizaId: string | null
   siniestroId: string | null

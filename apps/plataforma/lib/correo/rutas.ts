@@ -156,6 +156,30 @@ export const RUTAS: RutaCorreo[] = [
     ejemplos: [],
   },
   {
+    // 🛡️ Capa 0 (21/10/2026, `keywords.ts::exclusionSeguridad`): TIREA, tickets de Codeoscopic y correo del sector con
+    // credenciales. No se etiqueta, no se archiva, no avisa, no se parsea ni va a la IA ni a la cartera: se queda en INBOX
+    // como llegó y en `correo_triaje` solo con el asunto truncado. Solo por regla: la IA ni la ve.
+    categoria: 'excluido_seguridad',
+    etiqueta: null,
+    archivar: false,
+    aviso: 'ninguno',
+    soloRegla: true,
+    descripcion: 'Correo del sector con credenciales (TIREA, tickets de Codeoscopic): excluido por seguridad. Solo por regla.',
+    ejemplos: [],
+  },
+  {
+    // Aviso de compañía que se RECONOCE y se IGNORA (21/10/2026, `avisoCompaniaIgnorado` de module-seguros): p. ej. el
+    // recordatorio de firma del mandato SEPA de Occident. Sin tarea, sin aviso, sin nota en la ficha; queda etiquetado
+    // con la correduría para verlo si se busca. Solo por regla.
+    categoria: 'correduria-informativo',
+    etiqueta: 'Triaje/Correduria',
+    archivar: false,
+    aviso: 'ninguno',
+    soloRegla: true,
+    descripcion: 'Aviso de compañía reconocido que no pide nada (recordatorio de firma de mandato SEPA). Solo por regla.',
+    ejemplos: [],
+  },
+  {
     categoria: 'leads-negocio',
     etiqueta: 'Triaje/Leads',
     archivar: false,

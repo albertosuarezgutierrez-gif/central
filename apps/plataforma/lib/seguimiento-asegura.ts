@@ -837,6 +837,35 @@ export function correosCompaniaAsegura(dias = 30): Promise<Reenvio> {
 export function marcarCorreoCompaniaAsegura(body: { id: string; revisado: boolean }): Promise<Reenvio> {
   return llamar('/api/operador/correo/evento', { method: 'PATCH', body: JSON.stringify(body) })
 }
+// ─── F1 del agente de correo (21/10/2026): adjuntos, asignar a mano, historial de solicitud, cruce con CIMA ─────
+/** `POST /api/operador/correo/documento`: UN PDF de un correo de compañía (asegura decide a qué ficha va, o sin asignar). */
+export function documentoCorreoAsegura(body: { mensajeId: string; nombre: string; mime: string; base64: string }): Promise<Reenvio> {
+  return llamar('/api/operador/correo/documento', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}
+/** Adjuntos de correo SIN asignar (bandeja «Correos de compañía»). */
+export function documentosCorreoSinAsignarAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/correo/documento', { method: 'GET' })
+}
+/** Asignar a mano un adjunto sin asignar. El actor lo pone la ruta (sesión) y va el ÚLTIMO. */
+export function asignarDocumentoCorreoAsegura(body: { id: string; clienteId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/correo/documento', { method: 'PATCH', body: JSON.stringify(body) })
+}
+/** «Asignar a cliente / oportunidad» de un aviso sin resolver. El actor lo pone la ruta (sesión) y va el ÚLTIMO. */
+export function asignarEventoCorreoAsegura(body: { id: string; clienteId: string; oportunidadId: string | null; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/correo/evento/asignar', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}
+/** Historial de una solicitud en la compañía, desde una fila de la bandeja. */
+export function historialSolicitudAsegura(eventoId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/correo/solicitud?eventoId=${encodeURIComponent(eventoId)}`, { method: 'GET' })
+}
+/** Cruce diario correo ↔ CIMA: decide, apunta y devuelve los avisos pendientes de salir. */
+export function cruceCimaAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/correo/cruce-cima', { method: 'POST', body: '{}' }, 55_000)
+}
+/** Marca como avisados (SOLO los que salieron por Telegram). */
+export function marcarCruceCimaAsegura(avisados: string[]): Promise<Reenvio> {
+  return llamar('/api/operador/correo/cruce-cima', { method: 'PATCH', body: JSON.stringify({ avisados }) })
+}
 export function avisosAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/avisos', { method: 'GET' }, 20_000)
 }

@@ -9,7 +9,7 @@
 // Sin IBAN ni NIF: el lector ya los quita; aquí solo se pintan números de póliza/recibo/siniestro,
 // importes, fechas y el nombre del tomador que devuelve asegura (como el aviso de devoluciones).
 
-import type { EventoAseguradora } from '@central/module-seguros'
+import { motivoReciboAnulado, type EventoAseguradora } from '@central/module-seguros'
 import { eur } from '../dinero.ts'
 
 export type EstadoEventoPuerto = 'aplicado' | 'duplicado_cima' | 'sin_resolver' | 'procesando'
@@ -79,6 +79,14 @@ function leidos(e: EventoAseguradora): Leido[] {
       linea: `Póliza ${esc(r.numeroPoliza)}${r.idRecibo ? ` · recibo ${esc(r.idRecibo)}` : ''}${r.importe !== null ? ` · ${eur(r.importe)}` : ''}${r.fechaLimite ? ` · ${e.tipo === 'pre_anulacion' ? 'anula' : 'plazo'} ${fechaEs(r.fechaLimite)}` : ''}`,
     }))
   }
+  if (e.tipo === 'anulacion' && e.recibos) {
+    // Resumen de recibos anulados por impago (Occident): una línea por recibo, con la clave de asegura (póliza/recibo).
+    // Sin «efecto»: «Anulado en fecha» es del recibo, no de la baja.
+    return e.recibos.map((r) => ({
+      clave: `${r.numeroPoliza}/${r.idRecibo}`,
+      linea: `Póliza ${esc(r.numeroPoliza)} · ${esc(motivoReciboAnulado(r))}`,
+    }))
+  }
   if (e.tipo === 'anulacion') {
     return [{
       clave: e.numeroPoliza ?? 'sin-poliza',
@@ -107,6 +115,7 @@ function titulo(e: EventoAseguradora): string {
   if (e.tipo === 'siniestro') return e.siniestros.length === 1 ? 'Siniestro' : `${e.siniestros.length} siniestros`
   if (e.tipo === 'pre_anulacion') return e.recibos.length === 1 ? 'Recibo a punto de ANULARSE' : `${e.recibos.length} recibos a punto de ANULARSE`
   if (e.tipo === 'impago') return 'Impago: la compañía DELEGA el cobro'
+  if (e.tipo === 'anulacion' && e.recibos) return e.recibos.length === 1 ? 'Recibo ANULADO por impago' : `${e.recibos.length} recibos ANULADOS por impago`
   if (e.tipo === 'anulacion') return 'Póliza ANULADA por la compañía'
   if (e.tipo === 'emision') return e.polizas.length === 1 ? 'Póliza nueva emitida' : `${e.polizas.length} pólizas nuevas emitidas`
   if (e.tipo === 'solicitud') return 'Solicitud en la compañía'
@@ -123,6 +132,22 @@ function lineaResultado(r: ResultadoPuertoEvento, urlFicha: (id: string) => stri
   return `  ${marca} ${quien}${esc(que)}${ficha}${rep}`
 }
 
+type Solicitud = Extract<EventoAseguradora, { tipo: 'solicitud' }>
+
+function marcaSolicitud(e: Solicitud): string {
+  // `fase` falta en eventos de antes de F0: se trata como «otra».
+  const fase = e.fase ?? null
+  return fase === 'emitida' ? '✅' : fase === 'rechazada' ? '❌' : '📨'
+}
+
+/** El estado de la solicitud tal como lo pinta el aviso. Sin estado reconocido, se dice (nunca un «sin estado»). */
+export function estadoSolicitudAviso(e: Solicitud): string {
+  const fase = e.fase ?? null
+  if (fase === 'emitida') return e.numeroPoliza ? `emitida póliza ${e.numeroPoliza}` : 'emitida (nº de póliza dudoso: míralo en el correo)'
+  if (fase === 'rechazada') return `Solicitud rechazada${e.motivoRechazo ? ` (${e.motivoRechazo})` : ''}`
+  return e.estado ?? 'estado no reconocido (míralo en el correo)'
+}
+
 /**
  * `resultados === null` = el puerto no contestó (o falta config/migración): se avisa con lo leído y se
  * dice que la cartera NO lo sabe.
@@ -137,8 +162,10 @@ export function textoAvisoEvento(
   const cia = COMPANIA[evento.compania] ?? esc(evento.compania)
   // Solicitud (20/10/2026): «📨 Occident · Solicitud N · <tomador> · <estado>». El tomador sale del asunto (que el
   // aviso ya pinta en los demás tipos) y NO se guarda en asegura.
+  // EMITIDA (21/10/2026): «✅ Occident · Solicitud N · <tomador> · emitida póliza N» (la póliza la trae CIMA; aquí solo se
+  // dice). RECHAZADA: «❌ … · Solicitud rechazada (RIESGO EXCLUIDO)».
   const lineas: string[] = evento.tipo === 'solicitud'
-    ? [[`📨 <b>${cia}</b>`, `Solicitud ${esc(evento.numeroSolicitud)}`, evento.tomador ? esc(evento.tomador) : null, evento.estado ? `<b>${esc(evento.estado)}</b>` : 'estado no reconocido (míralo en el correo)']
+    ? [[`${marcaSolicitud(evento)} <b>${cia}</b>`, `Solicitud ${esc(evento.numeroSolicitud)}`, evento.tomador ? esc(evento.tomador) : null, `<b>${esc(estadoSolicitudAviso(evento))}</b>`]
         .filter((x): x is string => x !== null).join(' · ')]
     : [`🏢 <b>${titulo(evento)}</b> — ${cia}`, esc(asunto.slice(0, 160))]
   const items = leidos(evento)

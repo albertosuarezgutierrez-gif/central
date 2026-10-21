@@ -41,6 +41,7 @@ import { proponerReciboDevuelto } from './aprobaciones'
 import { seguirDevoluciones } from './devoluciones-recibo'
 import { confirmarAnulaciones } from './anulaciones'
 import { abrirAnulacionesPorSustitucion, enlazarSustituciones, ganarOportunidadesEmitidas, liberarPresupuestosEmitidos } from './sustituciones-auto'
+import { enlazarPolizasConOportunidades } from './enlace-poliza-oportunidad'
 import { generarExpedientesAuto, type ResultadoExpedientesAuto } from './expedientes-auto'
 
 type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
@@ -130,6 +131,12 @@ export type ResultadoDeteccion = {
   oportunidadesGanadas: number
   /** El cierre de oportunidades ganadas falló en esta pasada (el resto sí corrió). */
   oportunidadesFallidas: boolean
+  /** F1 agente de correo: oportunidades ganadas por nº de solicitud o por tomador + compañía + ramo (uno a uno). */
+  oportunidadesEnlazadasCorreo: number
+  /** Pólizas nuevas con varias candidatas: NO se enlazan; aviso apuntado para el cruce con CIMA. */
+  enlacesAmbiguos: number
+  /** El enlace póliza↔oportunidad falló en esta pasada (el resto sí corrió). */
+  enlacesFallidos: boolean
   /** Expedientes abiertos solos (renovación propia / declarada a 60-30 días). `null` = el paso falló. */
   expedientesAbiertos: number | null
   /** Renovaciones abiertas solas cerradas como ganadas (renovó o la sustituyó otra). `null` = el paso falló. */
@@ -178,6 +185,19 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       await tx.$executeRaw`rollback to savepoint ganar_oportunidad`
       oportunidadesFallidas = true
       console.error('[eventos-cartera] oportunidades ganadas no cerradas:', err instanceof Error ? err.message : err)
+    }
+    // F1 del agente de correo (21/10/2026): con lo que la matrícula NO cerró, enlace por nº de solicitud → póliza y por
+    // tomador + compañía + ramo (uno a uno; lo ambiguo se avisa, no se enlaza). PROPIO punto de guardado.
+    await tx.$executeRaw`savepoint enlazar_oportunidad_correo`
+    let enlaces = { ganadas: [] as { id: string; estado: string }[], ambiguas: 0, solicitudesConPoliza: 0 }
+    let enlacesFallidos = false
+    try {
+      enlaces = await enlazarPolizasConOportunidades(tx, correduriaId)
+      await tx.$executeRaw`release savepoint enlazar_oportunidad_correo`
+    } catch (err) {
+      await tx.$executeRaw`rollback to savepoint enlazar_oportunidad_correo`
+      enlacesFallidos = true
+      console.error('[eventos-cartera] enlace póliza↔oportunidad no hecho:', err instanceof Error ? err.message : err)
     }
     const actual = await fotoActual(correduriaId, tx)
     const previa = await tx.$queryRaw<{ foto: Foto }[]>`
@@ -303,7 +323,10 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       anulacionesPorSustitucion: anulacionesAbiertas.abiertas,
       oportunidadesGanadas: ganadas.length,
       oportunidadesFallidas,
-      ganadas,
+      oportunidadesEnlazadasCorreo: enlaces.ganadas.length,
+      enlacesAmbiguos: enlaces.ambiguas,
+      enlacesFallidos,
+      ganadas: [...ganadas, ...enlaces.ganadas],
       expedientesAuto,
     }
   }, { timeout: 30_000 }).then(async (r) => {

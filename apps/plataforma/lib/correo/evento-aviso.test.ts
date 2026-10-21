@@ -143,6 +143,7 @@ const solicitud: EventoAseguradora = {
   tipo: 'solicitud', compania: 'occident', codigoDgs: 'C0468', ilegibles: 0,
   numeroSolicitud: '170000001', ramo: 'Acc.colec.', tomador: 'ACADEMIA INVENTADA SL', estado: 'PRIMA / PROY * PTE DOCUMENTACION',
   url: 'https://portaloccident.gco.global/Aplicacion/Paginas/default.aspx?x=1&idSubscripcio=00170000001',
+  fase: 'pte_documentacion', numeroPoliza: null, motivoRechazo: null,
 }
 
 test('solicitud casada: «📨 Occident · Solicitud N · tomador · estado» + a qué oportunidad y la tarea', () => {
@@ -157,6 +158,27 @@ test('solicitud casada: «📨 Occident · Solicitud N · tomador · estado» + 
   assert.match(t, /https:\/\/x\/ficha\/c9/)
 })
 
+test('solicitud EMITIDA (F0, 21/10/2026): «✅ Occident · Solicitud N · tomador · emitida póliza N» y lo que hizo asegura', () => {
+  const emitida: EventoAseguradora = { ...solicitud, estado: 'Solicitud emitida · póliza 540000021', url: null, fase: 'emitida', numeroPoliza: '540000021' } as EventoAseguradora
+  const t = textoAvisoEvento(emitida, 'Suscripción Acc.colec. 170000001, ACADEMIA INVENTADA SL', [{
+    clave: '170000001', estado: 'aplicado', repetido: false,
+    resumen: 'oportunidad accidentes de Academia Inventada SL: emitida póliza 540000021 (se espera a CIMA); tarea «enviar documentación» cerrada',
+    motivo: null, clienteId: 'c9', cliente: 'Academia Inventada SL', numeroPoliza: '540000021', tareaVence: null,
+  }], url)
+  assert.equal(t.split('\n')[0], '✅ <b>Occident</b> · Solicitud 170000001 · ACADEMIA INVENTADA SL · <b>emitida póliza 540000021</b>')
+  assert.match(t, /tarea «enviar documentación» cerrada/)
+  // Sin nº de póliza legible no se pinta uno.
+  const dudosa = textoAvisoEvento({ ...emitida, numeroPoliza: null } as EventoAseguradora, 'x', null, url)
+  assert.match(dudosa.split('\n')[0], /emitida \(nº de póliza dudoso/)
+})
+
+test('solicitud RECHAZADA: «❌ … · Solicitud rechazada (MOTIVO)»; un evento sin fase (anterior a F0) sigue con 📨', () => {
+  const r = textoAvisoEvento({ ...solicitud, estado: 'Solicitud rechazada', fase: 'rechazada', motivoRechazo: 'RIESGO EXCLUIDO' } as EventoAseguradora, 'x', null, url)
+  assert.equal(r.split('\n')[0], '❌ <b>Occident</b> · Solicitud 170000001 · ACADEMIA INVENTADA SL · <b>Solicitud rechazada (RIESGO EXCLUIDO)</b>')
+  const { fase: _f, ...viejo } = solicitud as Extract<EventoAseguradora, { tipo: 'solicitud' }>
+  assert.match(textoAvisoEvento(viejo as EventoAseguradora, 'x', null, url).split('\n')[0], /^📨 /)
+})
+
 test('solicitud SIN casar: lo dice y explica cómo engancharla', () => {
   const t = textoAvisoEvento(solicitud, 'asunto', [{
     clave: '170000001', estado: 'sin_resolver', repetido: false, resumen: 'solicitud 170000001 sin oportunidad → bandeja',
@@ -164,4 +186,26 @@ test('solicitud SIN casar: lo dice y explica cómo engancharla', () => {
   }], url)
   assert.match(t, /Ninguna oportunidad lleva ese nº/)
   assert.doesNotMatch(t, /asegura no devolvió este elemento/)
+})
+
+test('anulados por impago (Occident): una línea por recibo con la clave de asegura (la póliza), sin «efecto» inventado', () => {
+  const ev: EventoAseguradora = {
+    tipo: 'anulacion', compania: 'occident', codigoDgs: 'C0468', ilegibles: 0, numeroPoliza: null, fechaEfecto: null,
+    motivo: '2 recibos anulados por impago (anulación automática)',
+    recibos: [
+      { numeroPoliza: 'BIDS000001', idRecibo: '480000001-H', fechaAnulacion: '2026-10-15' },
+      { numeroPoliza: '8-10.000.001-P', idRecibo: '470000001-H', fechaAnulacion: null },
+    ],
+  }
+  const t = textoAvisoEvento(ev, 'Resumen de recibos anulados por impago 00000001 (16.10.2026)', [
+    { ...base, clave: 'BIDS000001/480000001-H', resumen: 'tarea «recibo anulado por impago» creada' },
+  ], url)
+  assert.match(t, /2 recibos ANULADOS por impago/)
+  assert.match(t, /Póliza BIDS000001 · Recibo 480000001-H anulado por impago el 15\/10\/2026/)
+  assert.match(t, /Póliza 8-10\.000\.001-P · Recibo 470000001-H anulado por impago \(anulación automática\)/)
+  assert.match(t, /tarea «recibo anulado por impago» creada/)
+  assert.match(t, /asegura no devolvió este elemento/) // la 2.ª no vino en los resultados: se dice
+  assert.doesNotMatch(t, /efecto/)
+  const uno = textoAvisoEvento({ ...ev, recibos: [ev.recibos![0]] }, 'x', null, url)
+  assert.match(uno, /Recibo ANULADO por impago/)
 })
