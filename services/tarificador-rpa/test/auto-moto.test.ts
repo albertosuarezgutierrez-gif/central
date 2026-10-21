@@ -31,6 +31,8 @@ import {
   planDatosBasicosMoto,
   rellenarDatosBasicosMoto,
   formaTextoLeido,
+  diferenciaFechaSinValor,
+  describirFormatoCampo,
   origenFechaLeida,
   MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ,
   rellenarRiesgoMoto,
@@ -95,7 +97,7 @@ const CIAS = OPC([['', '---Selección Compañías---'], ['0000', '**************
 // pisa con la de carné; 'ajena' = la pisa con una fecha que no está en el formulario (sin traerla antes).
 const DATOS = (revertirAnios = false, pierdeNacimiento: false | 'una' | 'siempre' | 'registro' | 'carne' | 'ajena' = false) => `<body><form>
 <select id="use"><option value="1" selected>Particular</option><option value="4">Autoescuela</option></select>
-<input id="driverBirthDate" onchange="javascript:menores25();"><input id="driverLicenseDate" onchange="javascript:funcTrue();">
+<input id="driverBirthDate" type="text" maxlength="10" placeholder="dd/mm/aaaa" onchange="javascript:menores25();"><input id="driverLicenseDate" onchange="javascript:funcTrue();">
 <select id="driverSex"><option value="V" selected>Hombre</option><option value="H">Mujer</option></select>
 <input id="licensePlate" type="text" onchange="javascript:eventoMatriculaDatosBasicos();">
 <input id="fechaMatriculacion" type="text" disabled>
@@ -361,7 +363,8 @@ test('v0.7.14: fecha de nacimiento pisada por el portal → se dice con QUÉ coi
   await page.setContent(DATOS(false, 'registro'))
   await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => {
     assert.ok(e instanceof ErrorTarificador && e.tipo === 'datos', String(e))
-    assert.equal(e.message, MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ)
+    assert.ok(e.message.startsWith(MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ), e.message)
+    assert.match(e.message, /\[difiere −4\.\d{3} días ≈ 12,\d años; día, mes y año distintos; campo: type=«text» maxlength=«10» placeholder=«dd\/mm\/aaaa»\]$/)
     assert.ok(sinValor(e.message))
     return true
   })
@@ -394,6 +397,43 @@ test('origenFechaLeida: etiqueta pura de cada coincidencia (orden: nuestra, vac�
   assert.equal(origenFechaLeida('01/01/2001', c), 'distinta')
   assert.equal(origenFechaLeida('11/11/1977', { ...c, previa: '' }), 'distinta', 'sin fecha previa no hay «registro»')
   assert.equal(origenFechaLeida('05/05/1990', { ...c, nuestra: '05/05/1990' }), 'nuestra')
+})
+
+test('v0.7.16 diferenciaFechaSinValor: días con signo, años aproximados y qué partes coinciden; sin zona horaria', () => {
+  for (const tz of ['UTC', 'Europe/Madrid', 'Pacific/Kiritimati', 'America/Los_Angeles']) {
+    process.env.TZ = tz
+    assert.equal(diferenciaFechaSinValor('31/12/1989', '01/01/1990'), 'difiere −1 día; día, mes y año distintos', tz)
+    assert.equal(diferenciaFechaSinValor('01/01/1991', '31/12/1990'), 'difiere +1 día; día, mes y año distintos', tz)
+    assert.equal(diferenciaFechaSinValor('30/03/1990', '31/03/1990'), 'difiere −1 día; mismo mes y año, distinto día', `${tz}: cambio de hora`)
+    assert.equal(diferenciaFechaSinValor('28/10/1990', '27/10/1990'), 'difiere +1 día; mismo mes y año, distinto día', `${tz}: cambio de hora`)
+    assert.equal(diferenciaFechaSinValor('03/03/1990', '03/02/1990'), 'difiere +28 días; mismo día y año, distinto mes', `${tz}: mes 0/1`)
+    assert.equal(diferenciaFechaSinValor('03/02/2000', '03/02/1990'), 'difiere +3.652 días ≈ 10 años; mismo día y mes, distinto año', tz)
+    assert.equal(diferenciaFechaSinValor('29/02/1992', '28/02/1992'), 'difiere +1 día; mismo mes y año, distinto día', `${tz}: bisiesto`)
+  }
+  delete process.env.TZ
+  assert.equal(diferenciaFechaSinValor('', '03/02/1990'), null)
+  assert.equal(diferenciaFechaSinValor('31/02/1990', '03/02/1990'), null, 'fecha imposible')
+  const m = diferenciaFechaSinValor('11/11/1977', '03/02/1990')!
+  assert.ok(!m.includes('1977') && !m.includes('1990') && !m.includes('11/11'), 'sin las fechas')
+})
+
+test('v0.7.16 cadena ficha→tecleo: fechaEs es solo texto (1 de enero, 31 de diciembre, cambio de hora) en cualquier zona horaria', () => {
+  for (const tz of ['UTC', 'Europe/Madrid', 'Pacific/Kiritimati', 'America/Los_Angeles']) {
+    process.env.TZ = tz
+    const plan = (nac: string) => planDatosBasicosMoto({ ...form, conductor: { ...form.conductor, fechaNacimiento: nac, fechaCarne: '2015-06-01' } }).find((o) => o.sel === '#driverBirthDate')!.valor
+    assert.equal(plan('1990-01-01'), '01/01/1990', tz)
+    assert.equal(plan('1990-12-31'), '31/12/1990', tz)
+    assert.equal(plan('1990-03-25'), '25/03/1990', `${tz}: cambio de hora de marzo`)
+    assert.equal(plan('1990-10-28'), '28/10/1990', `${tz}: cambio de hora de octubre`)
+  }
+  delete process.env.TZ
+})
+
+test('v0.7.16 describirFormatoCampo: type/maxlength/placeholder/máscara saneados; un ejemplo de fecha no sale', () => {
+  assert.equal(describirFormatoCampo({ type: 'text', maxlength: '10', placeholder: 'dd/mm/aaaa', 'data-mask': ';mask:date;;', pattern: null, class: null }), 'campo: type=«text» maxlength=«10» placeholder=«dd/mm/aaaa» data-mask=«;mask:date;;»')
+  assert.equal(describirFormatoCampo({ type: 'text', maxlength: '7', placeholder: 'mm/aaaa', 'data-mask': null, pattern: null, class: null }), 'campo: type=«text» maxlength=«7» placeholder=«mm/aaaa»')
+  assert.equal(describirFormatoCampo({ type: null, maxlength: null, placeholder: 'p.ej. 03/02/1990', 'data-mask': null, pattern: null, class: null }), 'campo: placeholder=«p.ej. #fecha»')
+  assert.equal(describirFormatoCampo({ type: null, maxlength: null, placeholder: null, 'data-mask': null, pattern: null, class: null }), null)
 })
 
 test('formaTextoLeido: solo la forma, nunca el valor', () => {
@@ -570,7 +610,7 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.15')
+  assert.equal(allianzMoto.version, '0.7.16')
 })
 
 // ── 0.7.11 · trabajo real 6cd26c10: el portal rechazaba carné, fecha de adquisición, justificante, compañía y póliza de origen ──
