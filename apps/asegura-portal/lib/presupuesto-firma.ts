@@ -357,7 +357,8 @@ export async function reportarDatosIncorrectos(acceso: AccesoPuente, presupuesto
 // el puente (`acceso_whatsapp`). Aquí solo se interpreta la respuesta, PURO.
 
 export type ResultadoAccesoWhatsapp =
-  | { estado: 'valido'; presupuestoId: string }
+  /** `tercero`: código de una PERSONA DE CONTACTO (ve, no firma). Solo un `true` literal: si no viene, `false`. */
+  | { estado: 'valido'; presupuestoId: string; tercero: boolean }
   | { estado: 'incorrecto'; quedan: number | null }
   | { estado: 'bloqueado' }
   | { estado: 'caducado' }
@@ -376,7 +377,7 @@ const UUID_PUENTE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 export function interpretarAccesoWhatsapp(status: number, j: unknown): ResultadoAccesoWhatsapp {
   const o = obj(j)
   if (status === 200 && o.estado === 'valido') {
-    return typeof o.presupuestoId === 'string' && UUID_PUENTE.test(o.presupuestoId) ? { estado: 'valido', presupuestoId: o.presupuestoId } : { estado: 'error' }
+    return typeof o.presupuestoId === 'string' && UUID_PUENTE.test(o.presupuestoId) ? { estado: 'valido', presupuestoId: o.presupuestoId, tercero: o.tercero === true } : { estado: 'error' }
   }
   if (o.estado === 'incorrecto') return { estado: 'incorrecto', quedan: typeof o.quedan === 'number' ? o.quedan : null }
   if (o.estado === 'bloqueado' || o.estado === 'caducado' || o.estado === 'sin_codigo' || o.estado === 'no_encontrado') return { estado: o.estado }

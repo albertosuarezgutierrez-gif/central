@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { presupuestoDeSesion } from '@/lib/presupuesto'
-import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoCaducidad } from '@/lib/presupuesto-vista'
+import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoAccesoTercero, textoCaducidad } from '@/lib/presupuesto-vista'
 
 import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fecha } from './Comparativa'
 import { TodasLasOpciones } from './TodasLasOpciones'
@@ -107,8 +107,11 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const deOfertas = p.origen === 'ofertas'
   // Qué falta para emitir (§4bis): solo mientras se puede contratar. `null` = no se pudo mirar.
   const mostrarDatos = !p.retirado && !p.caducado && p.emitidoAt === null && p.enviadoAt !== null
+  // (21/10/2026) Persona de contacto: lo VE, nada más. Sin «Revisa tus datos» (son del tomador y llevan «Datos
+  // incorrectos»), sin «Aceptar»/«Firmar» y sin nombrar mediador. asegura se lo niega igual (`sin_permiso`).
+  const tercero = p.accesoTercero
   // «Revisa tus datos»: mientras no esté emitido ni retirado. `null` = no se han podido leer.
-  const mostrarCotizados = !p.retirado && p.emitidoAt === null
+  const mostrarCotizados = !p.retirado && p.emitidoAt === null && tercero === null
   // «Datos para contratar» va por la identidad (su puente no admite el acceso por WhatsApp): quien
   // entró con el código del WhatsApp no lo ve, en vez de ver «no podemos comprobarlo» para siempre.
   const identidad = mostrarDatos && !p.accesoWhatsapp ? await getIdentidad() : null
@@ -127,7 +130,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const garantiasActual = ramoCat === null ? null : garantiasDeActual(ramoCat, p.actual?.coberturas ?? null)
   const companias = new Set(portada.map((o) => o.compania)).size
   // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones».
-  const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
+  const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null && tercero === null
   // «Ver como el cliente» un BORRADOR (18/10/2026): la misma página, con los botones de acción deshabilitados y rotulados.
   const vistaPrevia = esVistaPreviaBorrador(p) && !p.caducado && !p.retirado
   // El ESTUDIO (21/10/2026): el MISMO que el PDF, para los dos orígenes, pedido a asegura con la identidad de la sesión
@@ -166,6 +169,12 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </p>
       )}
       {esVistaPreviaBorrador(p) && <p className="pendiente" role="note"><strong>{TEXTOS_VISTA_PREVIA.banda}</strong></p>}
+
+      {tercero && (
+        <p className="pendiente" role="note">
+          {textoAccesoTercero(tercero)}
+        </p>
+      )}
 
       {/* ARRIBA del todo: los datos con los que se calculó el precio (dictado de Alberto, 28/09/2026). */}
       {mostrarCotizados && (
@@ -313,7 +322,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         caducado={p.caducado}
         hayPolizaActual={p.actual !== null}
         presupuestoId={p.id}
-        puedeNombrar={!p.retirado && p.aceptadoAt === null && p.emitidoAt === null && p.enviadoAt !== null}
+        puedeNombrar={!p.retirado && p.aceptadoAt === null && p.emitidoAt === null && p.enviadoAt !== null && tercero === null}
         corredor={p.vistaDeCorredor}
       />
       <Mediador

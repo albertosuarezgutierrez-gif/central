@@ -151,6 +151,8 @@ type OpcionesApp = {
   lista?: { para: 'poblacion' | 'via'; textos: string[] }
   /** La lista de poblaciones solo se muestra al enfocar `town` (como el desplegable real). */
   listaAlEnfocar?: boolean
+  /** Forma real NDBX (21/10/2026): `town` NO abre nada con foco/flecha/clic; el panel (`nx-autocomplete-option` en un overlay, con `aria-controls` en `town`) aparece al ESCRIBIR y filtra por lo escrito. */
+  overlayAlEscribir?: string[]
   /** Una casilla (checkbox) con su `label for` y un `label` que envuelve otra. */
   casilla?: boolean
 }
@@ -208,6 +210,23 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
     items[1].removeAttribute('aria-disabled');
   });
   ${o.pasoInicial ? `document.querySelectorAll('nx-multi-step-item').forEach((el) => { if (el.textContent === ${JSON.stringify(o.pasoInicial)}) el.setAttribute('aria-selected', 'true'); else el.setAttribute('aria-selected', 'false'); });` : ''}
+  ${o.overlayAlEscribir ? `
+  const OVERLAY = ${JSON.stringify(o.overlayAlEscribir)};
+  $('town').setAttribute('role', 'combobox');
+  $('town').addEventListener('input', () => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((c) => c.remove());
+    const t = $('town').value.trim().toUpperCase();
+    $('town').removeAttribute('aria-controls');
+    if (t.length < 3) return;
+    const c = document.createElement('div'); c.className = 'cdk-overlay-container';
+    const p = document.createElement('div'); p.id = 'nx-autocomplete-panel-1'; p.setAttribute('role', 'listbox');
+    for (const x of OVERLAY.filter((x) => x.includes(t))) {
+      const op = document.createElement('nx-autocomplete-option'); op.setAttribute('role', 'option'); op.textContent = x;
+      op.addEventListener('click', () => { $('province').value = 'JAEN'; $('town').value = x; c.remove(); $('town').removeAttribute('aria-controls'); valida(); });
+      p.appendChild(op);
+    }
+    c.appendChild(p); document.body.appendChild(c); $('town').setAttribute('aria-controls', 'nx-autocomplete-panel-1');
+  });` : ''}
   valida();
 </script></body></html>`
 }
@@ -580,6 +599,35 @@ test('flujo cableado: municipio (CASTILLO DE LOCUBIN) ≠ población del CP (VEN
     // la vía no coincide con el nombre del mock (solo se contrasta si el portal no rellena el tipo de vía; aquí sí lo rellena)
     await rellenarPantallaVivienda(page, marco, f, ctx)
     assert.equal(await valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await context.close()
+  }
+})
+
+test('forma real NDBX: la lista solo aparece al ESCRIBIR en town (overlay + aria-controls) → se escribe el núcleo y se elige VENTAS DEL CARRIZAL', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ sinAutocompletar: true, overlayAlEscribir: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL', 'VENTAS DEL CARRIZAL BAJO'] })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /ninguna opción coincide/.test((e as Error).message), 'dos opciones que casan con el núcleo → no se elige (fail-closed)')
+  } finally {
+    await context.close()
+  }
+  const b = await abrir({ sinAutocompletar: true, overlayAlEscribir: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL'] })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await rellenarPantallaVivienda(b.page, b.marco, f, b.ctx)
+    assert.equal(await b.valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('nada abre la lista de town → hueco con diagnóstico (sin datos personales) y town vacío', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ sinAutocompletar: true })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /sin opciones tras \d+ intentos/.test((e as Error).message))
+    assert.equal(await valor('town'), '')
   } finally {
     await context.close()
   }
