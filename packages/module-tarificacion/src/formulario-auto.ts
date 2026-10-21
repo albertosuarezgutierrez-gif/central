@@ -320,6 +320,8 @@ export type FormularioAuto = {
   polizaAnteriorUltimos5?: string | null
   /** Fecha de ADQUISICIÓN del vehículo (ISO, no futura, ≥1900, no anterior a la matriculación). Allianz moto la pide (≠ matriculación). Ausente = no consta. */
   fechaAdquisicion?: string | null
+  /** `true` = la fecha de adquisición NO la tecleó el corredor: es la de por defecto (= nuestra matriculación, que puede ser estimada). Solo lo usa Allianz moto (0.7.18) para subirla a la 1ª matriculación del portal; los demás bots lo ignoran. Ausente/`false` = explícita o no se sabe. Solo viaja con `fechaAdquisicion`. */
+  fechaAdquisicionPorDefecto?: boolean | null
   /** Justificante del seguro anterior que Allianz exige si estuvo asegurado (`JUSTIFICANTES_SEGURO_ANTERIOR`). Ausente = no consta. */
   fotocopiaAnterior?: JustificanteSeguroAnterior | null
   // ── 15/10/2026: lo que el bot SUPONE si no viene (`supuestosAuto`), mismos nombres que el riesgo de la oportunidad ──
@@ -638,6 +640,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     else if (fechaAdquisicion < '1900-01-01') errores.push('fechaAdquisicion: no puede ser anterior a 1900')
     else if (fechaMatriculacion !== null && fechaAdquisicion < fechaMatriculacion) errores.push('fechaAdquisicion: no puede ser anterior a la matriculación')
   }
+  const fechaAdquisicionPorDefecto = booleano(e.fechaAdquisicionPorDefecto, 'fechaAdquisicionPorDefecto', errores)
   const fotocopiaAnterior = cerrado(e.fotocopiaAnterior, 'fotocopiaAnterior', JUSTIFICANTES_SEGURO_ANTERIOR, null)
   const fechaVencimiento = fechaIso(e.fechaVencimiento, 'fechaVencimiento', errores)
   const tipoGaraje = cerrado(e.tipoGaraje, 'tipoGaraje', TIPOS_GARAJE, null)
@@ -680,6 +683,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
       ...(fechaMatriculacion !== null ? { fechaMatriculacion } : {}),
       ...(fechaAdquisicion !== null ? { fechaAdquisicion } : {}),
+      ...(fechaAdquisicion !== null && fechaAdquisicionPorDefecto !== null ? { fechaAdquisicionPorDefecto } : {}),
       ...(fotocopiaAnterior !== null ? { fotocopiaAnterior } : {}),
       ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
       ...(tipoGaraje !== null ? { tipoGaraje } : {}),

@@ -229,7 +229,9 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
     aniosAseguradoAnterior,
     siniestrosUltimos5Anios,
     ...(companiaAnterior !== null ? { companiaAnterior } : {}),
-    ...(fechaAdquisicion !== null ? { fechaAdquisicion } : {}),
+    // v0.7.18 del bot: `fechaAdquisicionPorDefecto` = no la tecleó Alberto (salió de `fechaAdquisicionPorDefecto`, la matriculación,
+    // que puede ser estimada): Allianz moto la sube a la 1ª matriculación de su portal si es posterior. Mapfre/Generali lo ignoran.
+    ...(fechaAdquisicion !== null ? { fechaAdquisicion, fechaAdquisicionPorDefecto: adqTxt === '' } : {}),
     ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
     ...(fotocopiaAnterior !== null ? { fotocopiaAnterior } : {}),
     // El garaje del cotizador es un SUPUESTO (dato de emisión, no de precio): no se manda como si fuera un dato.
