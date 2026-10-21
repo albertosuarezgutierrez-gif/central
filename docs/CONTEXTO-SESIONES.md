@@ -1369,7 +1369,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Diagnóstico: 37 revisiones pendientes desde el 05/10 sin atender; un `duplicado_ambiguo` deja el contacto de Google INTACTO (sin 🟢) → hasta 8 clientes en vigor sin verde (2 `mismo_email`, 6 `telefono_compartido`).
 - El botón WhatsApp/correo de invitación al portal se oculta si el email está en 2 fichas activas (`accion:'ninguna'`): no es bug, es dato (caso María Luisa González Lozano → unificar).
 - PR #4928: la cola enseña el teléfono en cuestión, enVigor, nº pólizas tomador, enlace a ficha; `nombreFichaLegible` no duplica nombre.
-- Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Propuesto y sin hacer: aviso Telegram de cola con clientes en vigor >3 días.
+- Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Aviso Telegram diario (09:xx Madrid, en el cron google-contactos) si hay revisiones de clientes en vigor ≥3 días: PR siguiente. Cola vaciada por Alberto el 21/10; María Luisa sigue sin botón portal (email en 2 fichas, falta fusionar).
 
 ## (21/10/2026) asegura-portal: «Seguros que no nos constan» fallaba
 - Causa: el proyecto Vercel `asegura-portal` no tiene `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` → `/api/huecos-proteccion` 503 `sin_canal` (log prod 21/10 06:19Z). Pendiente: Alberto las añade.
