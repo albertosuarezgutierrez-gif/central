@@ -88,6 +88,15 @@ export function elegirDestinoDocumento(eventos: readonly EventoResuelto[]): Dest
   return { asignado: true, clienteId, polizaId: null, siniestroId: null, motivo: polizas.size > 1 ? 'varias pólizas del mismo cliente: a su ficha' : 'el cliente del aviso' }
 }
 
+/**
+ * ¿Se pueden mover TODOS los adjuntos sin asignar de un correo a la ficha de UNO de sus avisos? Solo si ese Message-ID
+ * trae exactamente UN aviso (filas de `correo_evento_entrante` + devoluciones de `recibo_devolucion`). Con varios, un
+ * PDF puede ser de otro cliente: se quedan en «Documentos sin asignar». `null` (no se ha podido contar) → no se mueve.
+ */
+export function puedeMoverAdjuntosDelCorreo(avisosDelCorreo: number | null): boolean {
+  return avisosDelCorreo === 1
+}
+
 /** Nota de la ficha al archivar un adjunto: compañía y nombre del fichero, sin NIF/IBAN (el nombre puede llevarlos). */
 export function notaDocumentoCorreo(compania: string | null, nombre: string, aMano: boolean): string {
   const cia = compania ? ` de ${compania}` : ''

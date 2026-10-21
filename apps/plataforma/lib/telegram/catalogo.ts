@@ -343,6 +343,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
+    id: 'correo.no-descargable', categoria: 'correo',
+    titulo: 'Correo que no se puede descargar',
+    que: 'Un correo de la bandeja que Gmail lista pero no deja descargar en 3 revisiones seguidas: el triaje lo salta para no quedarse atascado. Hay que mirarlo a mano.',
+    cuando: 'Al ocurrir (revisión cada 10 min)',
+  },
+  {
     id: 'correo.digest', categoria: 'correo',
     titulo: 'Resumen diario del correo',
     que: 'Recuento por categoría de las últimas 24 h y lo que conviene que mires.',

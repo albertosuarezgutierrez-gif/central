@@ -5,8 +5,8 @@
 // correo, se comprueba que el destino es de esta correduría (`resolverDestino`, la misma guarda que una subida a mano)
 // y se escribe en `seguros.documentos` con `subido_por = 'correo'` y su `mensaje_id`.
 //
-// Dedupe (SQL 2026-10-21, índice `documentos_correo_unico`): el mismo fichero (sha256) una vez por póliza, o una vez sin
-// póliza. Si el mismo PDF llegó antes SIN asignar y ahora el correo sí casa, se ASIGNA aquel en vez de guardar otro.
+// Dedupe (SQL 2026-10-21, índice `documentos_correo_unico`): el mismo fichero (sha256) una vez por CLIENTE + póliza
+// (NULL de cada uno = el UUID cero): el mismo PDF genérico de dos clientes distintos son DOS filas, no una. Si el mismo PDF llegó antes SIN asignar y ahora el correo sí casa, se ASIGNA aquel en vez de guardar otro.
 //
 // El SQL crudo NO prefija el schema: la conexión ya trae `?schema=seguros`.
 
@@ -19,7 +19,7 @@ import { resolverDestino } from './cartera-documentos'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import { esColumnaAusente } from './pg-error'
 import { nombreCompania } from './correo-evento'
-import { elegirDestinoDocumento, notaDocumentoCorreo, type EntradaDocumentoCorreo, type EventoResuelto } from './correo-documento'
+import { elegirDestinoDocumento, notaDocumentoCorreo, puedeMoverAdjuntosDelCorreo, type EntradaDocumentoCorreo, type EventoResuelto } from './correo-documento'
 
 const SIN_POLIZA = '00000000-0000-0000-0000-000000000000'
 const SQL_F1 = '2026-10-21_correo_agente_f1.sql'
@@ -100,12 +100,15 @@ export async function guardarDocumentoCorreo(correduriaId: string, entrada: Entr
   const compania = eventos[0]?.compania ? nombreCompania(eventos[0].compania) : null
   const sha256 = createHash('sha256').update(entrada.contenido).digest('hex')
   const polizaClave = destino?.polizaId ?? SIN_POLIZA
+  const clienteClave = destino?.clienteId ?? SIN_POLIZA
   try {
     // 1. ¿Ya está ESTE fichero para este destino (o, sin destino, en cualquier sitio)? → repetido, nada que escribir.
     const [ya] = await db.$queryRaw<{ id: string; clienteId: string | null }[]>(Prisma.sql`
       select id::text as id, cliente_id::text as "clienteId" from documentos
       where correduria_id = ${correduriaId}::uuid and subido_por = 'correo' and sha256 = ${sha256}
-        and (${destino === null}::boolean or coalesce(poliza_id, ${SIN_POLIZA}::uuid) = ${polizaClave}::uuid)
+        and (${destino === null}::boolean
+             or (coalesce(cliente_id, ${SIN_POLIZA}::uuid) = ${clienteClave}::uuid
+                 and coalesce(poliza_id, ${SIN_POLIZA}::uuid) = ${polizaClave}::uuid))
       order by created_at asc limit 1`)
     if (ya) return { ok: true, estado: 'repetido', documentoId: ya.id, asignado: ya.clienteId !== null, clienteId: ya.clienteId, motivo: 'ese PDF ya estaba guardado' }
 
@@ -133,7 +136,8 @@ export async function guardarDocumentoCorreo(correduriaId: string, entrada: Entr
       values (${correduriaId}::uuid, ${destino?.clienteId ?? null}::uuid, ${destino?.polizaId ?? null}::uuid, ${destino?.siniestroId ?? null}::uuid,
               'otro', 'recibido', ${entrada.nombre.slice(0, 255)}, ${entrada.mime}, ${entrada.contenido.length}, ${sha256},
               ${entrada.contenido}, ${notas}, 'correo', false, ${entrada.mensajeId})
-      on conflict (correduria_id, sha256, coalesce(poliza_id, '00000000-0000-0000-0000-000000000000'::uuid))
+      on conflict (correduria_id, sha256, coalesce(cliente_id, '00000000-0000-0000-0000-000000000000'::uuid),
+                   coalesce(poliza_id, '00000000-0000-0000-0000-000000000000'::uuid))
         where subido_por = 'correo' and sha256 is not null
       do nothing
       returning id::text as id`)
@@ -175,8 +179,11 @@ export async function documentosCorreoSinAsignar(correduriaId: string): Promise<
   return { filas: filas.slice(0, TECHO_SIN_ASIGNAR), truncado: filas.length > TECHO_SIN_ASIGNAR }
 }
 
-/** Asigna a mano UN documento sin asignar a un cliente de esta correduría. `false` = no existe, no es de correo o ya estaba asignado. */
-export async function asignarDocumentoCorreo(correduriaId: string, id: string, clienteId: string, actor: string): Promise<'ok' | 'no_encontrado' | 'cliente_ajeno'> {
+/**
+ * Asigna a mano UN documento sin asignar a un cliente de esta correduría. `no_encontrado` = no existe, no es de correo o
+ * ya estaba asignado; `repetido` = ese MISMO fichero ya está en la ficha de ese cliente (sin póliza): no se duplica.
+ */
+export async function asignarDocumentoCorreo(correduriaId: string, id: string, clienteId: string, actor: string): Promise<'ok' | 'no_encontrado' | 'cliente_ajeno' | 'repetido'> {
   const destino = await resolverDestino(correduriaId, { clienteId })
   if (!destino?.clienteId) return 'cliente_ajeno'
   const db = prismaAsegura()
@@ -184,23 +191,59 @@ export async function asignarDocumentoCorreo(correduriaId: string, id: string, c
     update documentos set cliente_id = ${destino.clienteId}::uuid
     where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and subido_por = 'correo'
       and cliente_id is null and poliza_id is null and siniestro_id is null
+      and not exists (
+        select 1 from documentos o
+        where o.correduria_id = documentos.correduria_id and o.subido_por = 'correo' and o.sha256 = documentos.sha256
+          and o.id <> documentos.id and o.cliente_id = ${destino.clienteId}::uuid and o.poliza_id is null)
     returning id::text as id, nombre_fichero as nombre,
       (select e.compania from correo_evento_entrante e where e.correduria_id = documentos.correduria_id and e.mensaje_id = documentos.mensaje_id limit 1) as compania`)
-  if (!d) return 'no_encontrado'
+  if (!d) {
+    const [sigue] = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+      select id::text as id from documentos
+      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and subido_por = 'correo'
+        and cliente_id is null and poliza_id is null and siniestro_id is null`)
+    return sigue ? 'repetido' : 'no_encontrado'
+  }
   anotarCambio({ entidad: 'documento', id: d.id, campo: 'cliente_id', antes: null, despues: destino.clienteId })
   await anotar(db, correduriaId, destino.clienteId, null, `${notaDocumentoCorreo(d.compania ? nombreCompania(d.compania) : null, d.nombre ?? 'adjunto.pdf', true)} (por ${actor.slice(0, 100)})`)
   return 'ok'
 }
 
+/** Cuántos avisos trae un Message-ID (eventos + devoluciones). `null` = no se ha podido contar (no se mueve nada). */
+async function avisosDelCorreo(db: Db, correduriaId: string, mensajeId: string): Promise<number | null> {
+  let n = 0
+  try {
+    const [e] = await db.$queryRaw<{ n: number }[]>(Prisma.sql`
+      select count(*)::int as n from correo_evento_entrante
+      where correduria_id = ${correduriaId}::uuid and mensaje_id = ${mensajeId}`)
+    n += e?.n ?? 0
+  } catch (err) {
+    if (esTablaInexistente(err)) return null
+    throw err
+  }
+  try {
+    const [d] = await db.$queryRaw<{ n: number }[]>(Prisma.sql`
+      select count(*)::int as n from recibo_devolucion
+      where correduria_id = ${correduriaId}::uuid and mensaje_id = ${mensajeId}`)
+    n += d?.n ?? 0
+  } catch (err) {
+    // Sin la tabla de devoluciones no hay devoluciones que sumar.
+    if (!esTablaInexistente(err)) throw err
+  }
+  return n
+}
+
 /**
  * Los adjuntos SIN asignar de un correo pasan a la ficha que se acaba de resolver para él (asignación a mano del aviso,
  * o una emisión que CIMA ya trae). Un fichero que ya estuviera en ese destino no se duplica (se deja sin asignar).
- * Devuelve cuántos se asignaron. Sin la migración F1 → 0.
+ * SOLO si ese Message-ID trae UN único aviso (`puedeMoverAdjuntosDelCorreo`): con varios, el PDF puede ser de otro
+ * cliente y se queda en «Documentos sin asignar». Devuelve cuántos se asignaron. Sin la migración F1 → 0.
  */
 export async function asignarDocumentosDeMensaje(
   correduriaId: string, mensajeId: string, destino: { clienteId: string; polizaId: string | null },
 ): Promise<number> {
   const db = prismaAsegura()
+  if (!puedeMoverAdjuntosDelCorreo(await avisosDelCorreo(db, correduriaId, mensajeId))) return 0
   try {
     const filas = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
       update documentos d set cliente_id = ${destino.clienteId}::uuid, poliza_id = ${destino.polizaId}::uuid
@@ -209,6 +252,7 @@ export async function asignarDocumentosDeMensaje(
         and not exists (
           select 1 from documentos o
           where o.correduria_id = d.correduria_id and o.subido_por = 'correo' and o.sha256 = d.sha256 and o.id <> d.id
+            and coalesce(o.cliente_id, ${SIN_POLIZA}::uuid) = ${destino.clienteId}::uuid
             and coalesce(o.poliza_id, ${SIN_POLIZA}::uuid) = coalesce(${destino.polizaId}::uuid, ${SIN_POLIZA}::uuid))
       returning d.id::text as id`)
     for (const f of filas) anotarCambio({ entidad: 'documento', id: f.id, campo: 'cliente_id', antes: null, despues: destino.clienteId })

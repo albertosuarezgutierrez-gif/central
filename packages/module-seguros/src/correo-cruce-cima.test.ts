@@ -129,18 +129,32 @@ test('sin compañía o ramo en la oportunidad, otra compañía, póliza ANTERIOR
   assert.equal(decidirEnlacesPolizaOportunidad([op()], [pol({ previaMismoRiesgo: true })], []).enlaces.length, 0)
 })
 
-test('nº de solicitud → póliza gana a la heurística y no exige NIF; dos pólizas con ese nº → ambiguo', () => {
-  // La póliza es de otra ficha sin NIF: por heurística no casaría; por solicitud, sí (es prueba).
-  const p = pol({ clienteId: 'c9', dniHash: null, numeroPoliza: '0540000001' })
+test('nº de solicitud → póliza gana a la heurística (aunque sea de otra compañía de ramo, fecha…); dos pólizas con ese nº → ambiguo', () => {
+  // Misma ficha, otro ramo y anterior a la oportunidad: por heurística no casaría; por solicitud, sí (es prueba).
+  const p = pol({ ramo: 'auto', creadaEn: hace(40), numeroPoliza: '0540000001' })
   const d = decidirEnlacesPolizaOportunidad([op(), op({ id: 'op2' })], [p], [{ id: 's1', codigoDgs: 'C0468', numeroPoliza: '540000001', oportunidadId: 'op2' }])
   assert.deepEqual(d.enlaces, [{ oportunidadId: 'op2', polizaId: 'p1', via: 'solicitud', solicitudId: 's1' }])
   assert.deepEqual(d.solicitudesConPoliza, [{ solicitudId: 's1', polizaId: 'p1' }])
   assert.deepEqual(d.ambiguos, [])
+  // Otra ficha pero el MISMO NIF (índice ciego): es el mismo tomador → enlaza.
+  const mismoNif = decidirEnlacesPolizaOportunidad([op()], [pol({ clienteId: 'c9', dniHash: 'h1' })], [{ id: 's1', codigoDgs: 'C0468', numeroPoliza: '540000001', oportunidadId: 'op1' }])
+  assert.equal(mismoNif.enlaces.length, 1)
   // Misma póliza de OTRA compañía: no casa por solicitud.
   assert.equal(decidirEnlacesPolizaOportunidad([op()], [pol({ codigoDgs: 'C0109' })], [{ id: 's1', codigoDgs: 'C0468', numeroPoliza: '540000001', oportunidadId: 'op1' }]).solicitudesConPoliza.length, 0)
   const dos = decidirEnlacesPolizaOportunidad([op()], [pol(), pol({ id: 'p2' })], [{ id: 's1', codigoDgs: 'C0468', numeroPoliza: '540000001', oportunidadId: 'op1' }])
   assert.deepEqual(dos.enlaces, [])
   assert.deepEqual(dos.ambiguos.map((a) => a.motivo), ['solicitud_varias_polizas', 'solicitud_varias_polizas'])
+})
+
+test('🪤 nº de solicitud que casa con una póliza de OTRO tomador → no se gana la oportunidad: ambiguo', () => {
+  for (const otro of [pol({ clienteId: 'c9', dniHash: null }), pol({ clienteId: 'c9', dniHash: 'h9' })]) {
+    const d = decidirEnlacesPolizaOportunidad([op()], [otro], [{ id: 's1', codigoDgs: 'C0468', numeroPoliza: '540000001', oportunidadId: 'op1' }])
+    assert.deepEqual(d.enlaces, [])
+    assert.deepEqual(d.ambiguos, [{ polizaId: 'p1', oportunidades: ['op1'], motivo: 'solicitud_otro_tomador', solicitudId: 's1' }])
+  }
+  // Esa oportunidad tampoco se gana luego por la heurística con otra póliza (ya está en duda).
+  const d2 = decidirEnlacesPolizaOportunidad([op()], [pol({ clienteId: 'c9', dniHash: null }), pol({ id: 'p2', numeroPoliza: '540000099' })], [{ id: 's1', codigoDgs: 'C0468', numeroPoliza: '540000001', oportunidadId: 'op1' }])
+  assert.deepEqual(d2.enlaces, [])
 })
 
 test('compañía de la oportunidad: la de su solicitud; si no, la ganadora por nombre solo si es una', () => {

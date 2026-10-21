@@ -5,8 +5,22 @@
 // tal cual (con el enlace a la ficha que pone plataforma). SIN datos personales: ni nombre del tomador, ni NIF, ni IBAN;
 // solo compañía, nº de póliza/solicitud/recibo, fechas y días.
 
-import { CODIGO_DGS_COMPANIA, diasEsperaCima, sinDatosSensibles, type TipoAvisoCruce } from '@central/module-seguros'
-import { nombreCompania } from './correo-evento.ts'
+import { CODIGO_DGS_COMPANIA, diasEsperaCima, sinDatosSensibles, type MotivoEnlaceAmbiguo, type TipoAvisoCruce } from '@central/module-seguros'
+import { nombreCompania, type ResolucionEvento } from './correo-evento.ts'
+
+/**
+ * ¿CIMA trae la póliza de una emisión comunicada por correo? `true` · `false` (de verdad no está) · `null` (no se sabe).
+ * `cartera`: lo resuelto contra la cartera viva de fichas ACTIVAS; `fueraDeCartera`: lo resuelto contra las pólizas de
+ * CIMA que no entran ahí (ficha inactiva o fusionada). Que esté en una ficha inactiva NO es «CIMA no la trae»: `null`.
+ */
+export function enCimaSegunResolucion(cartera: ResolucionEvento, fueraDeCartera: ResolucionEvento): boolean | null {
+  if (cartera.estado === 'en_vigor' || cartera.estado === 'no_en_vigor') return true
+  if (cartera.motivo === 'ambigua') return null
+  if (cartera.motivo === 'sin_numero') return false
+  // `no_encontrada` entre las activas: ¿la tiene CIMA en una ficha inactiva/fusionada? Entonces no se sabe.
+  if (fueraDeCartera.estado !== 'sin_resolver' || fueraDeCartera.motivo === 'ambigua') return null
+  return false
+}
 
 const fechaEs = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 
@@ -33,13 +47,15 @@ export function textoAvisoDevolucionSinRecibo(p: { codigoDgs: string; idRecibo: 
   return limpio(`↩️ ${companiaDeDgs(p.codigoDgs)} avisó por correo el ${fechaEs(p.fechaCorreo)} de la devolución del recibo ${p.idRecibo}${pol} y ese recibo no consta en la cartera (CIMA no lo ha traído en ${p.diasHabiles} días hábiles). La devolución está apuntada y se enlazará sola cuando llegue.`)
 }
 
-export function textoAvisoEnlaceAmbiguo(p: { numeroPoliza: string | null; ramo: string | null; codigoDgs: string | null; candidatas: number; motivo: 'varias_oportunidades' | 'varias_polizas' | 'solicitud_varias_polizas' }): string {
+export function textoAvisoEnlaceAmbiguo(p: { numeroPoliza: string | null; ramo: string | null; codigoDgs: string | null; candidatas: number; motivo: MotivoEnlaceAmbiguo }): string {
   const que = `${p.numeroPoliza ?? 'sin nº'} (${companiaDeDgs(p.codigoDgs)}${p.ramo ? `, ${p.ramo}` : ''})`
   const por = p.motivo === 'varias_oportunidades'
     ? `casa con ${p.candidatas} oportunidades abiertas del mismo tomador, compañía y ramo`
     : p.motivo === 'varias_polizas'
       ? 'su oportunidad casa con más de una póliza nueva del mismo tomador, compañía y ramo'
-      : 'hay más de una póliza en CIMA con el nº que dio la compañía para la solicitud'
+      : p.motivo === 'solicitud_otro_tomador'
+        ? 'casa por el nº de solicitud, pero la póliza es de otro tomador que la oportunidad'
+        : 'hay más de una póliza en CIMA con el nº que dio la compañía para la solicitud'
   return limpio(`🔗 Póliza nueva ${que} entrada por CIMA: ${por}. No la he enlazado con ninguna: elígela tú en la ficha (Ganar → esa póliza).`)
 }
 

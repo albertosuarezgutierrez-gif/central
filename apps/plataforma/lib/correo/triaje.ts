@@ -32,6 +32,7 @@ import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
 import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
 import { fichaPorEmail, procesarLeadCorreo } from './lead-correduria-proceso'
 import { cursorTrasPasada, diferirCorreo, diferirLead } from './lead-correduria'
+import { PREFIJO_UID_ATASCADO, decidirUidAtascado, textoAvisoUidAtascado, type UidAtascado } from './uid-atascado'
 import { pasadaSeguimientoLeads } from './lead-correduria-seguimiento-proceso'
 import { archivarAdjuntosCompania, puedeArchivarAdjuntos } from './documentos-compania'
 import { documentoCorreoAsegura } from '@/lib/seguimiento-asegura'
@@ -95,6 +96,15 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
   `
   const lastUid = cur[0]?.last_uid ?? 0
   const uidValidityPrevio = cur[0]?.uidvalidity != null ? Number(cur[0].uidvalidity) : null
+  // Contador del UID que no se deja descargar (fila aparte de `correo_cursor`, ver `uid-atascado.ts`). Si no se lee, se
+  // empieza de cero: lo peor es tardar alguna pasada más en saltarlo, nunca saltar uno sin haberlo intentado 3 veces.
+  const atascoFila = await prisma.$queryRaw<{ buzon: string; last_uid: number; uidvalidity: bigint | null }[]>`
+    SELECT buzon, last_uid, uidvalidity FROM correo_cursor WHERE buzon LIKE ${PREFIJO_UID_ATASCADO + '%'} LIMIT 1
+  `.catch(() => [])
+  const atascoPrevio: UidAtascado | null = atascoFila[0]
+    ? { uid: Number(atascoFila[0].buzon.slice(PREFIJO_UID_ATASCADO.length)), fallos: atascoFila[0].last_uid, uidValidity: atascoFila[0].uidvalidity != null ? Number(atascoFila[0].uidvalidity) : null }
+    : null
+  let avisoAtasco: string | null = null
 
   const sesion = await abrirTriaje()
   let maxUid = lastUid
@@ -396,6 +406,22 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
       }
     }
     buzonAlDia = !quedanMas && uidDiferido === null && stats.errores === 0
+    // UID que no se deja descargar: 3 pasadas SEGUIDAS → se salta (el cursor llega hasta él) y se avisa.
+    const atasco = decidirUidAtascado(atascoPrevio, sesion.uidNoDescargable(), sesion.uidValidity, uidDiferido !== null)
+    if (atasco.accion !== 'nada') {
+      buzonAlDia = buzonAlDia && atasco.accion === 'limpiar'
+      await prisma.$executeRaw`DELETE FROM correo_cursor WHERE buzon LIKE ${PREFIJO_UID_ATASCADO + '%'}`.catch(() => {})
+      if (atasco.accion === 'contar') {
+        await prisma.$executeRaw`
+          INSERT INTO correo_cursor (buzon, last_uid, uidvalidity, updated_at)
+          VALUES (${PREFIJO_UID_ATASCADO + atasco.uid}, ${atasco.fallos}, ${BigInt(sesion.uidValidity)}, now())
+        `.catch(() => {})
+      } else if (atasco.accion === 'saltar') {
+        maxUid = Math.max(maxUid, atasco.uid)
+        avisoAtasco = textoAvisoUidAtascado(atasco.uid, atasco.fallos)
+        console.error(`[triaje] UID ${atasco.uid} no descargable en ${atasco.fallos} pasadas seguidas: saltado`)
+      }
+    }
   } finally {
     // Avanza el cursor SIEMPRE (aunque el bucle fallara), y cierra la sesión.
     await prisma.$executeRaw`
@@ -405,6 +431,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
     `.catch(() => {})
     await sesion.cerrar()
   }
+  if (avisoAtasco) await tgAviso('correo.no-descargable', avisoAtasco).catch(() => null)
   // F4 (19/10/2026): propuestas de leads de correo con precio → aviso §3.4 (o su actualización). Solo en vivo; nunca envía
   // nada al cliente (eso es 📤 en Telegram) y un fallo no rompe el triaje.
   if (!DRY_RUN()) {

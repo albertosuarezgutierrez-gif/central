@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { claveAvisoCruce, companiaDeDgs, textoAvisoAnulacionSinCima, textoAvisoDevolucionSinRecibo, textoAvisoEmisionSinCima, textoAvisoEnlaceAmbiguo } from './correo-cruce.ts'
+import { claveAvisoCruce, companiaDeDgs, enCimaSegunResolucion, textoAvisoAnulacionSinCima, textoAvisoDevolucionSinRecibo, textoAvisoEmisionSinCima, textoAvisoEnlaceAmbiguo } from './correo-cruce.ts'
 
 // F1 del agente corredor de correo (21/10/2026): avisos de cruce correo ↔ CIMA y enlace póliza ↔ oportunidad.
 const HOY = new Date().toISOString().slice(0, 10)
@@ -30,8 +30,23 @@ test('🪤 cruce: un fallo al leer la cartera NO es «CIMA no la trae» (lanza; 
   assert.doesNotMatch(f.slice(0, f.indexOf('const porId')), /polizasCandidatas\([^)]*\)\.catch/)
   // Solo `avisar` apunta: esperar / en_cima / no_se_sabe no.
   assert.equal((f.match(/!== 'avisar'\) continue/g) ?? []).length, 4)
-  // Lo ambiguo (dos pólizas con ese nº) es «no se sabe», nunca «no la trae».
-  assert.match(f, /r\.motivo === 'ambigua' \? null : false/)
+  // Lo ambiguo y lo que está en una ficha inactiva/fusionada es «no se sabe», nunca «no la trae»: las dos emisiones
+  // (evento y solicitud emitida) pasan por `enCimaSegunResolucion` con la cartera Y las pólizas fuera de ella.
+  assert.match(f, /const fuera = await polizasFueraDeCandidatas\(db, correduriaId\)/)
+  assert.doesNotMatch(f.slice(0, f.indexOf('// 1. Emisiones')), /polizasFueraDeCandidatas\([^)]*\)\.catch/)
+  assert.equal((f.match(/enCimaSegunResolucion\(\s+resolverPolizaEvento\([^)]*candidatas\),\s+resolverPolizaEvento\([^)]*fuera\)\)/g) ?? []).length, 2)
+})
+
+test('🪤 enCima: en una ficha INACTIVA o fusionada no es «CIMA no la trae» (null, no se avisa); ausente de verdad → false', () => {
+  const p = { id: 'p1', clienteId: 'c1', numeroPoliza: '1', codigoDgs: 'C0468', aseguradora: null, importRef: null, eiacXmlHash: null, estado: 'EV', sustituidaAt: null }
+  const no = { estado: 'sin_resolver', motivo: 'no_encontrada' } as const
+  assert.equal(enCimaSegunResolucion({ estado: 'en_vigor', poliza: p }, no), true)
+  assert.equal(enCimaSegunResolucion({ estado: 'no_en_vigor', poliza: p }, no), true)
+  assert.equal(enCimaSegunResolucion({ estado: 'sin_resolver', motivo: 'ambigua' }, no), null)
+  assert.equal(enCimaSegunResolucion(no, { estado: 'en_vigor', poliza: p }), null)
+  assert.equal(enCimaSegunResolucion(no, { estado: 'no_en_vigor', poliza: p }), null)
+  assert.equal(enCimaSegunResolucion(no, { estado: 'sin_resolver', motivo: 'ambigua' }), null)
+  assert.equal(enCimaSegunResolucion(no, no), false)
 })
 
 test('🪤 enlace póliza↔oportunidad: lo decide la regla pura, en su PROPIO punto de guardado, y lo ambiguo solo avisa', () => {

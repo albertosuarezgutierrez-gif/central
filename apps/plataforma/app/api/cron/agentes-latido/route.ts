@@ -100,7 +100,8 @@ const PROBES: Record<string, Prisma.Sql> = {
   trading_watchdog: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'trading_watchdog'`,
-  correo_triaje: Prisma.sql`SELECT max(updated_at) AS ultimo FROM correo_cursor`,
+  // Solo la fila del cursor: la del contador de UID no descargable (`INBOX:no-descargable:*`) no cuenta como latido.
+  correo_triaje: Prisma.sql`SELECT max(updated_at) AS ultimo FROM correo_cursor WHERE buzon = 'INBOX'`,
   // ialimp: `last_sync_at` es la columna que el sync escribe DE VERDAD en cada
   // pasada (la del panel, `ultimo_sync`, está a NULL desde siempre — nadie la
   // rellena). Solo cuentan las conexiones activas: una desactivada a mano no es

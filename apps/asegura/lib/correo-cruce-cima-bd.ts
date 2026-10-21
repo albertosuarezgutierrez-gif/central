@@ -18,8 +18,8 @@ import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import { MOTIVO_EMISION_NO_LLEGADA, claveNumero, resolverPolizaEvento } from './correo-evento'
-import { polizasCandidatas } from './correo-evento-bd'
-import { claveAvisoCruce, textoAvisoAnulacionSinCima, textoAvisoDevolucionSinRecibo, textoAvisoEmisionSinCima } from './correo-cruce'
+import { polizasCandidatas, polizasFueraDeCandidatas } from './correo-evento-bd'
+import { claveAvisoCruce, enCimaSegunResolucion, textoAvisoAnulacionSinCima, textoAvisoDevolucionSinRecibo, textoAvisoEmisionSinCima } from './correo-cruce'
 
 const SQL_F1 = '2026-10-21_correo_agente_f1.sql'
 const VENTANA_EMISION_DIAS = 60
@@ -59,6 +59,8 @@ export async function cruzarCorreoConCima(correduriaId: string, hoy: string = ho
   // La cartera viva, UNA vez. Si esto falla, lanza: sin cartera no se sabe si CIMA la trae.
   const candidatas = await polizasCandidatas(db, correduriaId)
   const porId = new Map(candidatas.map((p) => [p.id, p]))
+  // Las de CIMA en fichas inactivas o fusionadas (no son candidatas): estar ahí NO es «CIMA no la trae». También lanza.
+  const fuera = await polizasFueraDeCandidatas(db, correduriaId)
   let nuevos = 0
 
   // 1. Emisiones «aún no llegadas por CIMA» (la reevaluación de cada pasada del triaje ya quitó las que llegaron).
@@ -72,9 +74,10 @@ export async function cruzarCorreoConCima(correduriaId: string, hoy: string = ho
     order by created_at asc limit 300`)
   for (const e of emisiones) {
     if (!e.numeroPoliza) continue
-    const r = resolverPolizaEvento(e.numeroPoliza, e.compania, e.codigoDgs, candidatas)
-    // `no_en_vigor` = CIMA tiene ese nº (aunque no en vigor): sí la trae; `ambigua` = no se sabe cuál.
-    const enCima = r.estado === 'en_vigor' || r.estado === 'no_en_vigor' ? true : r.motivo === 'ambigua' ? null : false
+    // `no_en_vigor` = CIMA tiene ese nº (aunque no en vigor): sí la trae; `ambigua` o en ficha inactiva = no se sabe.
+    const enCima = enCimaSegunResolucion(
+      resolverPolizaEvento(e.numeroPoliza, e.compania, e.codigoDgs, candidatas),
+      resolverPolizaEvento(e.numeroPoliza, e.compania, e.codigoDgs, fuera))
     if (decidirAvisoEmisionSinCima({ compania: e.compania, fechaCorreo: e.dia, hoy, enCima }) !== 'avisar') continue
     const n = diasHabilesEntre(e.dia, hoy) ?? 0
     // Misma clave que la de la solicitud emitida: la misma póliza contada por dos correos es UN aviso.
@@ -92,8 +95,9 @@ export async function cruzarCorreoConCima(correduriaId: string, hoy: string = ho
     order by compania, numero_poliza, created_at asc
     limit 300`)
   for (const s of solicitudes) {
-    const r = resolverPolizaEvento(s.numeroPoliza, s.compania, s.codigoDgs, candidatas)
-    const enCima = r.estado === 'en_vigor' || r.estado === 'no_en_vigor' ? true : r.motivo === 'ambigua' ? null : false
+    const enCima = enCimaSegunResolucion(
+      resolverPolizaEvento(s.numeroPoliza, s.compania, s.codigoDgs, candidatas),
+      resolverPolizaEvento(s.numeroPoliza, s.compania, s.codigoDgs, fuera))
     if (decidirAvisoEmisionSinCima({ compania: s.compania, fechaCorreo: s.dia, hoy, enCima }) !== 'avisar') continue
     const n = diasHabilesEntre(s.dia, hoy) ?? 0
     // Clave por póliza (no por correo): la misma emisión repetida en dos correos es UN aviso.

@@ -141,6 +141,8 @@ export interface SesionTriaje {
   uidValidity: number
   /** Correos con UID > lastUid. Si uidValidity cambió, usa búsqueda por fecha (últimos 2 días). */
   listarNuevos(lastUid: number, uidValidityPrevio: number | null, max?: number): Promise<CorreoNuevo[]>
+  /** El UID en el que la ÚLTIMA `listarNuevos` cortó por no poder descargarlo (`null` = no cortó). Ver `uid-atascado.ts`. */
+  uidNoDescargable(): number | null
   /** Aplica una etiqueta Gmail (la crea si no existe). */
   etiquetar(uid: number, etiqueta: string): Promise<void>
   /** Saca el correo de INBOX (queda en «Todos»). */
@@ -154,9 +156,14 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
   const lock = await client.getMailboxLock('INBOX')
   const mbox = client.mailbox
   const uidValidity = mbox && typeof mbox !== 'boolean' ? Number(mbox.uidValidity) : 0
+  let uidCortado: number | null = null
 
   return {
     uidValidity,
+
+    uidNoDescargable() {
+      return uidCortado
+    },
 
     async listarNuevos(lastUid, uidValidityPrevio, max = 50) {
       const reset = uidValidityPrevio != null && uidValidityPrevio !== uidValidity
@@ -166,6 +173,7 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
         : { uid: `${lastUid + 1}:*` }
 
       const out: CorreoNuevo[] = []
+      uidCortado = null
       const presupuestoAdjuntos = { bytes: ADJ_PRESUPUESTO_PASADA }
       const presupuestoCompania = { bytes: ADJ_COMPANIA_PRESUPUESTO_PASADA }
       // Fase 1 (21/10/2026): solo el SOBRE (remitente, asunto, Message-ID, fecha, etiquetas). 🛡️ Lo que la capa 0 excluye
@@ -187,14 +195,17 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
         })
         if (sobres.length >= max) break
       }
-      // Fase 2: el mensaje entero, de uno en uno, solo de lo que la capa 0 no excluye por el sobre.
+      // Fase 2: el mensaje entero, de uno en uno, solo de lo que la capa 0 no excluye por el sobre. En orden de UID: si uno
+      // no se puede descargar, la pasada se CORTA ahí (el cursor avanza hasta el máximo UID devuelto: saltarlo y seguir lo
+      // daría por visto sin haberlo leído nunca). La pasada siguiente lo reintenta.
+      sobres.sort((a, b) => a.uid - b.uid)
       for (const sobre of sobres) {
         if (exclusionSeguridad(sobre.from, sobre.subject)) {
           out.push(correoExcluidoSinDescargar({ ...sobre, uidValidity }))
           continue
         }
         const msg = await client.fetchOne(String(sobre.uid), { uid: true, source: true }, { uid: true })
-        if (!msg || !msg.source) continue
+        if (!msg || !msg.source) { uidCortado = sobre.uid; break }
         const parsed = await simpleParser(msg.source as Buffer)
         const fromRaw = parsed.from?.text || ''
         const from = (parsed.from?.value?.[0]?.address || '').toLowerCase()

@@ -1521,7 +1521,7 @@ export {
   CODIGO_DGS_COMPANIA, DIAS_HABILES_ESPERA_CIMA, DIAS_HABILES_ESPERA_CIMA_DEFECTO, DIAS_HABILES_ESPERA_REFLEJO, ESTADOS_SOLICITUD_COMPANIA, TIPOS_AVISO_CRUCE,
   decidirAvisoAnulacionSinCima, decidirAvisoDevolucionSinRecibo, decidirAvisoEmisionSinCima, decidirEnlacesPolizaOportunidad, dgsDeOportunidad,
   diasEsperaCima, diasHabilesEntre, esDiaHabil, estadoCierraSolicitud, estadoSolicitudNormalizado, mismoTomador,
-  type DecisionCruce, type DecisionEnlaces, type EnlaceAmbiguo, type EnlacePolizaOportunidad, type EstadoSolicitudCompania,
+  type DecisionCruce, type DecisionEnlaces, type EnlaceAmbiguo, type MotivoEnlaceAmbiguo, type EnlacePolizaOportunidad, type EstadoSolicitudCompania,
   type OportunidadEnlace, type PolizaNuevaEnlace, type SolicitudEmitidaEnlace, type TipoAvisoCruce,
 } from './correo-cruce-cima.ts'
 

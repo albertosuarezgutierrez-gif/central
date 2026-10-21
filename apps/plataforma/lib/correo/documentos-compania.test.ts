@@ -54,3 +54,11 @@ test('🪤 triaje: los PDF van DESPUÉS de registrar el aviso del mismo correo, 
   // Nunca de un correo de cliente (gmail que reenvía) y siempre con la llave de exclusión.
   assert.match(TRIAJE, /if \(!clienteRemitente && correo\.adjuntosCompania\?\.length && puedeArchivarAdjuntos\(correo, c\.categoria\)\)/)
 })
+
+test('🪤 IMAP fase 2: un correo que no se puede descargar CORTA la pasada en ese UID (no se salta: el cursor lo daría por visto)', () => {
+  const imap = readFileSync(join(import.meta.dirname, 'imap.ts'), 'utf8')
+  const f2 = imap.slice(imap.indexOf('// Fase 2:'), imap.indexOf('async etiquetar('))
+  assert.match(f2, /sobres\.sort\(\(a, b\) => a\.uid - b\.uid\)\s+for \(const sobre of sobres\)/)
+  assert.match(f2, /if \(!msg \|\| !msg\.source\) \{ uidCortado = sobre\.uid; break \}/)
+  assert.doesNotMatch(f2, /if \(!msg \|\| !msg\.source\) continue/)
+})

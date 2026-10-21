@@ -7,7 +7,7 @@
 --        · `mensaje_id` (Message-ID del correo: rastro y dedupe);
 --        · un documento de correo puede quedar SIN colgar de nada (pendiente de asignar en la bandeja «Correos de
 --          compañía»): el CHECK `documentos_colgado_de_algo` se relaja SOLO para `subido_por = 'correo'`;
---        · dedupe: el MISMO fichero (sha256) del correo, una vez por póliza (o una vez sin póliza).
+--        · dedupe: el MISMO fichero (sha256) del correo, una vez por cliente + póliza (NULL de cada uno = UUID cero).
 --   2. `seguros.solicitud_compania`: una fila por (correduría, compañía DGS, nº de solicitud) con su estado normalizado,
 --      el literal de la compañía, la póliza emitida y la oportunidad. Los hitos son las filas de `correo_evento_entrante`
 --      (columna nueva `solicitud_id`).
@@ -29,7 +29,9 @@
 --   DROP TABLE IF EXISTS seguros.solicitud_compania;
 --   DROP INDEX IF EXISTS seguros.documentos_correo_unico;
 --   ALTER TABLE seguros.documentos DROP COLUMN IF EXISTS mensaje_id;
---   (y los dos CHECK de `documentos` como los dejó 2026-09-02_seguros_documentos.sql)
+--   (y los dos CHECK de `documentos` como estaban: `documentos_subido_por` sin 'correo' y
+--    `documentos_colgado_de_algo` como lo dejó 2026-10-07b_tarificador_grabaciones.sql — con portal_parte_id y
+--    tarificador_grabacion_id —, NO el de 2026-09-02, que hoy violan filas reales)
 
 BEGIN;
 
@@ -48,13 +50,23 @@ ALTER TABLE seguros.documentos ADD CONSTRAINT documentos_subido_por
 
 -- Un documento de correo sin resolver no cuelga de nada (bandeja «pendiente de asignar»); TODO lo demás, como siempre.
 ALTER TABLE seguros.documentos DROP CONSTRAINT IF EXISTS documentos_colgado_de_algo;
-ALTER TABLE seguros.documentos ADD CONSTRAINT documentos_colgado_de_algo
-  CHECK (cliente_id IS NOT NULL OR poliza_id IS NOT NULL OR siniestro_id IS NOT NULL
-         OR (subido_por = 'correo' AND mensaje_id IS NOT NULL));
+-- Parte del CHECK VIGENTE (2026-10-07b_tarificador_grabaciones.sql), no del de 2026-09-02: conserva TODOS sus OR
+-- (portal_parte_id y tarificador_grabacion_id incluidos; hay filas reales que solo cuelgan de ellos).
+ALTER TABLE seguros.documentos ADD CONSTRAINT documentos_colgado_de_algo CHECK (
+  cliente_id IS NOT NULL
+  OR poliza_id IS NOT NULL
+  OR siniestro_id IS NOT NULL
+  OR portal_parte_id IS NOT NULL
+  OR tarificador_grabacion_id IS NOT NULL
+  OR (subido_por = 'correo' AND mensaje_id IS NOT NULL)
+);
 
--- Mismo PDF del correo dos veces (el triaje relee, o la compañía lo reenvía) → una fila por póliza (o una sin póliza).
+-- Mismo PDF del correo dos veces (el triaje relee, o la compañía lo reenvía) → una fila por cliente + póliza. El cliente
+-- va en la clave: el MISMO PDF genérico (condiciones generales…) de dos clientes distintos son dos filas, no una.
 CREATE UNIQUE INDEX IF NOT EXISTS documentos_correo_unico
-  ON seguros.documentos (correduria_id, sha256, coalesce(poliza_id, '00000000-0000-0000-0000-000000000000'::uuid))
+  ON seguros.documentos (correduria_id, sha256,
+                         coalesce(cliente_id, '00000000-0000-0000-0000-000000000000'::uuid),
+                         coalesce(poliza_id, '00000000-0000-0000-0000-000000000000'::uuid))
   WHERE subido_por = 'correo' AND sha256 IS NOT NULL;
 
 -- La bandeja lee los pendientes de asignar.
@@ -99,7 +111,6 @@ CREATE INDEX IF NOT EXISTS solicitud_compania_oportunidad
   ON seguros.solicitud_compania (oportunidad_id) WHERE oportunidad_id IS NOT NULL;
 
 ALTER TABLE seguros.solicitud_compania ENABLE ROW LEVEL SECURITY;
-GRANT SELECT, INSERT, UPDATE ON seguros.solicitud_compania TO prisma_seguros;
 
 COMMENT ON TABLE seguros.solicitud_compania IS
   'F1 agente de correo (2026-10-21): seguimiento de una solicitud en la compañía (una fila por compañía + nº). Los hitos son filas de correo_evento_entrante (solicitud_id). Sin nombres ni NIF.';
@@ -130,9 +141,23 @@ CREATE INDEX IF NOT EXISTS correo_cruce_aviso_pendiente
   ON seguros.correo_cruce_aviso (correduria_id, created_at) WHERE avisado_at IS NULL;
 
 ALTER TABLE seguros.correo_cruce_aviso ENABLE ROW LEVEL SECURITY;
-GRANT SELECT, INSERT, UPDATE ON seguros.correo_cruce_aviso TO prisma_seguros;
 
 COMMENT ON TABLE seguros.correo_cruce_aviso IS
   'F1 agente de correo (2026-10-21): avisos de cruce correo↔CIMA, uno por clave; avisado_at solo cuando el Telegram salió.';
 
+-- ── 4. Permisos (patrón de 2026-10-07b) ──────────────────────────────────────
+-- Solo `prisma_seguros` (la app), sin DELETE: el schema tiene default privileges `arwd`, así que se REVOCA explícitamente
+-- (lección de 2026-10-06c). Ni `crm_seguros` (la ingesta de CIMA de Manuel) ni el portal ni anon/authenticated.
+REVOKE ALL ON seguros.solicitud_compania, seguros.correo_cruce_aviso
+  FROM PUBLIC, anon, authenticated, crm_seguros;
+GRANT SELECT, INSERT, UPDATE ON seguros.solicitud_compania TO prisma_seguros;
+GRANT SELECT, INSERT, UPDATE ON seguros.correo_cruce_aviso TO prisma_seguros;
+REVOKE DELETE, TRUNCATE ON seguros.solicitud_compania, seguros.correo_cruce_aviso FROM prisma_seguros;
+
 COMMIT;
+
+-- Verificación tras aplicar:
+--   select has_table_privilege('prisma_seguros', 'seguros.solicitud_compania', 'DELETE');  -- f
+--   select has_table_privilege('prisma_seguros', 'seguros.correo_cruce_aviso', 'DELETE');  -- f
+--   select has_table_privilege('crm_seguros',    'seguros.solicitud_compania', 'SELECT');  -- f
+--   select has_table_privilege('crm_seguros',    'seguros.correo_cruce_aviso', 'SELECT');  -- f

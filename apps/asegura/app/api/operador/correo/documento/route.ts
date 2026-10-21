@@ -68,6 +68,7 @@ export const PATCH = auditado(async (req: Request) => {
     const actor = typeof b?.actor === 'string' && b.actor.trim() !== '' ? b.actor.trim().slice(0, 120) : 'plataforma'
     const r = await asignarDocumentoCorreo(correduria.id, v.id, v.clienteId, actor)
     if (r === 'cliente_ajeno') return NextResponse.json({ estado: 'invalido', motivo: 'ese cliente no es de esta correduría' }, { status: 422 })
+    if (r === 'repetido') return NextResponse.json({ estado: 'conflicto', motivo: 'ese mismo PDF ya está en la ficha de ese cliente' }, { status: 409 })
     if (r === 'no_encontrado') return NextResponse.json({ estado: 'no_encontrado', motivo: 'ese documento no existe o ya está asignado' }, { status: 404 })
     return NextResponse.json({ estado: 'ok', id: v.id })
   } catch (e) {

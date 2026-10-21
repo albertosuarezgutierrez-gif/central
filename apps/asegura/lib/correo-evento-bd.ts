@@ -87,6 +87,25 @@ export async function polizasCandidatas(db: Db, correduriaId: string): Promise<(
   }))
 }
 
+/**
+ * Las pólizas de CIMA que `polizasCandidatas` deja fuera por su FICHA (cliente inactivo) o por estar fusionadas. Solo
+ * para el cruce con CIMA: que el nº esté aquí NO es «CIMA no la trae» (`enCimaSegunResolucion`). Si falla, lanza.
+ */
+export async function polizasFueraDeCandidatas(db: Db, correduriaId: string): Promise<PolizaCandidata[]> {
+  const filas = await db.poliza.findMany({
+    where: {
+      AND: [{ correduriaId }, WHERE_CARTERA_VIVA, { numeroPoliza: { not: null } },
+        { OR: [{ mergedIntoPolizaId: { not: null } }, { cliente: { activo: false } }] }],
+    },
+    orderBy: { id: 'asc' },
+    select: { id: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true, importRef: true, eiacXmlHash: true, estado: true, sustituidaAt: true },
+  })
+  return filas.map((p) => ({
+    id: p.id, clienteId: p.clienteId, numeroPoliza: p.numeroPoliza, codigoDgs: p.codigoEntidadDgs, aseguradora: p.aseguradora,
+    importRef: p.importRef, eiacXmlHash: p.eiacXmlHash, estado: String(p.estado), sustituidaAt: p.sustituidaAt,
+  }))
+}
+
 /** El siniestro con ese nº: la consulta acota por «contiene»; compañía y póliza las decide `elegirSiniestro` (puro, con test). */
 async function siniestroPorNumero(
   db: Db, correduriaId: string, compania: string, codigoDgs: string, numero: string, numeroPolizaCorreo: string | null,

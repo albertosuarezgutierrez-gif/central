@@ -186,11 +186,14 @@ export type EnlacePolizaOportunidad = {
   solicitudId: string | null
 }
 
+export type MotivoEnlaceAmbiguo = 'varias_oportunidades' | 'varias_polizas' | 'solicitud_varias_polizas' | 'solicitud_otro_tomador'
+
 export type EnlaceAmbiguo = {
   polizaId: string
   /** Oportunidades candidatas (para el aviso). Vacío con `solicitud_varias_polizas`. */
   oportunidades: string[]
-  motivo: 'varias_oportunidades' | 'varias_polizas' | 'solicitud_varias_polizas'
+  /** `solicitud_otro_tomador`: el nº de solicitud casa pero la póliza es de OTRO tomador que la oportunidad. */
+  motivo: MotivoEnlaceAmbiguo
   solicitudId: string | null
 }
 
@@ -251,6 +254,12 @@ export function decidirEnlacesPolizaOportunidad(
     solicitudesConPoliza.push({ solicitudId: s.id, polizaId: p.id })
     polizaUsada.add(p.id)
     const o = s.oportunidadId ? abiertas.get(s.oportunidadId) : undefined
+    // El nº casa, pero la oportunidad solo se gana si la póliza es del MISMO tomador (ficha o NIF). Si no → ambiguo.
+    if (o && !mismoTomador(o, p)) {
+      ambiguos.push({ polizaId: p.id, oportunidades: [o.id], motivo: 'solicitud_otro_tomador', solicitudId: s.id })
+      oportunidadUsada.add(o.id)
+      continue
+    }
     if (o && !oportunidadUsada.has(o.id)) {
       enlaces.push({ oportunidadId: o.id, polizaId: p.id, via: 'solicitud', solicitudId: s.id })
       oportunidadUsada.add(o.id)
