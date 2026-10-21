@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  accionesListas, aportacionAvant2, aportacionesBotsHogar, aportacionesBotsMotor, etiquetaPide, resumenIntervinientes, resumenObjeto, unirParaTarificar,
+  accionesListas, aportacionAvant2, opcionesQueAceptaElBot, respuestaRapidaDe, aportacionesBotsHogar, aportacionesBotsMotor, etiquetaPide, resumenIntervinientes, resumenObjeto, unirParaTarificar,
   type EntradaBotsHogar, type FiguraParaTarificar,
 } from './para-tarificar.ts'
 import type { DatosViviendaBot } from '../tarificador-hogar-formulario.ts'
@@ -143,4 +143,23 @@ test('bots de hogar sin figura de tomador: su ficha queda «sin comprobar», nun
   assert.equal(p.items.find((i) => i.clave === 'persona.tomador.ficha')?.estado, 'sin_comprobar')
   assert.equal(p.listo, false)
   assert.equal(accionesListas(p).bots, false)
+})
+
+test('respuestaRapidaDe: Sí/No para booleanos, catálogo para ids, null para el resto (se abre su sección)', () => {
+  const p = respuestaRapidaDe('vivienda.propietarioEsTomador')
+  assert.equal(p?.tipo, 'bool')
+  assert.deepEqual(p?.tipo === 'bool' && p.opciones.map((o) => o.valor), [true, false])
+  const a = respuestaRapidaDe('vivienda.asentamiento')
+  assert.equal(a?.tipo === 'catalogo' && a.catalogo, 'settlement-types')
+  const t = respuestaRapidaDe('vivienda.tipoVivienda')
+  assert.equal(t?.tipo === 'catalogo' && t.paraBot, 'tipoVivienda')
+  assert.equal(respuestaRapidaDe('vivienda.metrosCuadrados'), null)
+  assert.equal(respuestaRapidaDe('persona.1.dni'), null)
+  assert.equal(respuestaRapidaDe('vivienda.capitalContinente'), null)
+})
+
+test('opcionesQueAceptaElBot: deja las que casan con una clave del bot; si ninguna casa, todas', () => {
+  const cat = [{ id: 'a', nombre: 'Unifamiliar adosado' }, { id: 'b', nombre: 'Finca rústica' }, { id: 'c', nombre: 'Piso planta baja' }]
+  assert.deepEqual(opcionesQueAceptaElBot('tipoVivienda', cat).map((o) => o.id), ['a', 'c'])
+  assert.equal(opcionesQueAceptaElBot('tipoVivienda', [cat[1]!]).length, 1)
 })

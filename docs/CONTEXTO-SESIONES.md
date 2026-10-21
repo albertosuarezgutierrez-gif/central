@@ -18,6 +18,23 @@ de Alberto en `destinatariosPresupuesto` (module-seguros): solo «Dueño»/«Adm
 solo de ese presupuesto y PUEDE firmar (decidido por Alberto). Ficha de empresa: aviso + «autorizar contacto» (queda pendiente de aceptar).
 Medido: 9 empresas en vigor, 3 sin correo, las 3 con Dueño/Administración con correo; 11/57 personas físicas sin correo.
 
+**(21/10/2026)** — Allianz moto (bot RPA) 0.7.16 → 0.7.19. 0.7.16 diagnosticó la fecha de nacimiento: mismo día/mes, año +40. 0.7.17 escribe
+las fechas con el setter nativo + `change`, sin pulsaciones, así que la máscara ePAC `date(224)` ya no desplaza el año; confirmado: la fecha de
+nacimiento pasa. 0.7.18 añade el flag `fechaAdquisicionPorDefecto`: PR #4938 pone fecha de adquisición = matriculación por defecto en «Pedir precio»
+de la oportunidad. 0.7.19 (decisión de Alberto): una fecha de adquisición anterior a la 1ª matriculación de Allianz se sustituye siempre por la de
+Allianz, con supuesto en el presupuesto (PR #4950). Imagen `moto-e5b0c81` en producción. Lección: los despliegues de plataforma se CANCELAN por pushes
+de otras sesiones a main; antes de pedir a Alberto que pulse, comprueba que el deployment READY lleva tu SHA y que recargue la página.
+Pendiente: confirmar el precio real de Allianz moto para el lead BMW F800 (Mapfre ya lo tarificó: 223,65€ / 300,40€).
+
+**(21/10/2026)** — RRHH · «Quitar de pendientes» en /admin/firmas (Pilar): selección 1/varias/todas → ANULACIÓN lógica (estado_firma='no_requiere'
++ `firma_anulada_at/_por`), el documento NUNCA se borra (PRL/EPIs/nóminas). Sale de panel, cron y portal. Migración 0026 aplicada en prod.
+
+**(21/10/2026)** — RRHH · interruptor «Permitir fichar sin ubicación» en /admin/fichajes (GET/PATCH `/api/admin/empresa/ajustes`, empresa de
+sesión, booleano estricto). Sin migración. Cierra el pendiente de la entrada de fichaje sin ubicación.
+
+**(21/10/2026)** — RRHH · «Notas internas» en la ficha del empleado (petición de Pilar): `rrhh.empleados.notas` (≤5000, NULL si vacío),
+PATCH admin existente filtrado por empresa de sesión, nunca en `/api/e/*` ni `/e/*`. Migración 0025 aplicada en prod.
+
 **(21/10/2026)** — Correduría · ficha de oportunidad: «Historial y bonificaciones» (SINCO, años sin siniestros) salía en ramos que no son
 de vehículo (lo vio Alberto en una de Accidentes). Ahora solo sale en auto/moto: `muestraHistorialSinco()` en `piezas-riesgo.ts` reutiliza
 `admiteDatosVehiculo()`; test `historial-sinco.test.ts` (visto en rojo). Pendiente: en esa misma ficha, la Comparativa dice «Esta oportunidad no
@@ -1375,7 +1392,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Diagnóstico: 37 revisiones pendientes desde el 05/10 sin atender; un `duplicado_ambiguo` deja el contacto de Google INTACTO (sin 🟢) → hasta 8 clientes en vigor sin verde (2 `mismo_email`, 6 `telefono_compartido`).
 - El botón WhatsApp/correo de invitación al portal se oculta si el email está en 2 fichas activas (`accion:'ninguna'`): no es bug, es dato (caso María Luisa González Lozano → unificar).
 - PR #4928: la cola enseña el teléfono en cuestión, enVigor, nº pólizas tomador, enlace a ficha; `nombreFichaLegible` no duplica nombre.
-- Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Propuesto y sin hacer: aviso Telegram de cola con clientes en vigor >3 días.
+- Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Aviso Telegram diario (09:xx Madrid, en el cron google-contactos) si hay revisiones de clientes en vigor ≥3 días: PR siguiente. Cola vaciada por Alberto el 21/10; María Luisa sigue sin botón portal (email en 2 fichas, falta fusionar).
 
 ## (21/10/2026) asegura-portal: «Seguros que no nos constan» fallaba
 - Causa: el proyecto Vercel `asegura-portal` no tiene `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` → `/api/huecos-proteccion` 503 `sin_canal` (log prod 21/10 06:19Z). Pendiente: Alberto las añade.

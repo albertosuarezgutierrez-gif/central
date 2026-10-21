@@ -647,7 +647,7 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.18')
+  assert.equal(allianzMoto.version, '0.7.19')
 })
 
 // ── 0.7.11 · trabajo real 6cd26c10: el portal rechazaba carné, fecha de adquisición, justificante, compañía y póliza de origen ──
@@ -713,61 +713,48 @@ test('0.7.11 · elegirCompaniaOrigen: la fija elige; sin casar y sin IA → `dat
   assert.equal(await page.locator('#ciaOrigen').inputValue(), '', 'ambigua: nada elegido')
 })
 
-test('v0.7.18: adquisición anterior a la 1ª matriculación del PORTAL → la de por defecto se sube a la del portal (supuesto); la explícita o sin saberlo → datos con los días, sin fechas', () => {
+test('v0.7.19: adquisición anterior a la 1ª matriculación del PORTAL → SIEMPRE la del portal + supuesto con los días, sin fechas', () => {
   // Sin fecha del portal o adquisición ≥ portal: la nuestra, sin supuesto.
-  assert.deepEqual(fechaAdquisicionFrentePortal('2015-03-01', '2015-03-01', null), { iso: '2015-03-01', supuesto: null })
-  assert.deepEqual(fechaAdquisicionFrentePortal('2015-08-07', '2015-08-07', '2015-08-07'), { iso: '2015-08-07', supuesto: null }, 'iguales: lo admite')
-  assert.deepEqual(fechaAdquisicionFrentePortal('2016-01-02', null, '2015-08-07'), { iso: '2016-01-02', supuesto: null })
-  // Por defecto (= nuestra matriculación) y el portal la tiene después: la del portal + supuesto con los días.
-  const d = fechaAdquisicionFrentePortal('2015-03-01', '2015-03-01', '2015-08-07')
-  assert.equal(d.iso, '2015-08-07')
-  assert.match(d.supuesto ?? '', /^Fecha de adquisición = 1ª matriculación que Allianz tiene para la matrícula \(la de por defecto, nuestra fecha de matriculación, era 159 días anterior\)$/)
+  assert.deepEqual(fechaAdquisicionFrentePortal('2015-03-01', null), { iso: '2015-03-01', supuesto: null })
+  assert.deepEqual(fechaAdquisicionFrentePortal('2015-08-07', '2015-08-07'), { iso: '2015-08-07', supuesto: null }, 'iguales: lo admite')
+  assert.deepEqual(fechaAdquisicionFrentePortal('2016-01-02', '2015-08-07'), { iso: '2016-01-02', supuesto: null })
+  assert.deepEqual(fechaAdquisicionFrentePortal('no-es-fecha', '2015-08-07'), { iso: 'no-es-fecha', supuesto: null }, 'ilegible: sin cambio')
+  // Anterior: la del portal + supuesto con los días (sin ninguna fecha).
   const sinFechas = (m: string) => !/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|2015/.test(m)
-  // Explícita (≠ nuestra matriculación) y anterior a la del portal: datos.
-  assert.throws(() => fechaAdquisicionFrentePortal('2015-03-01', '2015-01-01', '2015-08-07'), (e) => {
-    assert.ok(e instanceof ErrorTarificador && e.tipo === 'datos', String(e))
-    assert.match(e.message, /la fecha de adquisición indicada es 159 días anterior a la 1ª matriculación que Allianz tiene para esta matrícula/)
-    return sinFechas(e.message)
-  })
-  // Marca de plataforma «por defecto» (sin nuestra matriculación en el riesgo, el caso real): portal posterior → la del portal; igual o anterior → la nuestra.
-  assert.equal(fechaAdquisicionFrentePortal('2015-03-01', null, '2015-08-07', true).iso, '2015-08-07')
-  assert.match(fechaAdquisicionFrentePortal('2015-03-01', null, '2015-08-07', true).supuesto ?? '', /era 159 días anterior/)
-  assert.deepEqual(fechaAdquisicionFrentePortal('2015-08-07', null, '2015-08-07', true), { iso: '2015-08-07', supuesto: null })
-  assert.deepEqual(fechaAdquisicionFrentePortal('2016-01-02', null, '2015-08-07', true), { iso: '2016-01-02', supuesto: null })
-  // Sin nuestra matriculación no se sabe si era la de por defecto: datos (nunca se cambia a ciegas). Miles con punto.
-  assert.throws(() => fechaAdquisicionFrentePortal('2010-01-01', null, '2015-08-07'), (e) => {
-    assert.ok(e instanceof ErrorTarificador && e.tipo === 'datos', String(e))
-    assert.match(e.message, /es 2\.044 días anterior .*no trae nuestra fecha de matriculación/)
-    return sinFechas(e.message)
-  })
+  const d = fechaAdquisicionFrentePortal('2015-03-01', '2015-08-07')
+  assert.equal(d.iso, '2015-08-07')
+  assert.equal(d.supuesto, 'Fecha de adquisición ajustada a la 1ª matriculación que Allianz tiene para la matrícula (la declarada era 159 días anterior)')
+  assert.ok(sinFechas(d.supuesto ?? ''))
+  // Miles con punto, y un solo día en singular.
+  assert.match(fechaAdquisicionFrentePortal('2010-01-01', '2015-08-07').supuesto ?? '', /la declarada era 2\.044 días anterior/)
+  assert.match(fechaAdquisicionFrentePortal('2015-08-06', '2015-08-07').supuesto ?? '', /era 1 día anterior/)
 })
 
-test('v0.7.18: rellenarDatosBasicosMoto lee la 1ª matriculación del portal ANTES de escribir la adquisición: por defecto → escribe la del portal y devuelve el supuesto; explícita → datos sin tocar el campo', async () => {
-  await page.setContent(DATOS())
-  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
-  const porDefecto = { ...formCompleto, fechaAdquisicion: '2015-03-01', fechaMatriculacion: '2015-03-01' } as FormularioAuto
-  const sup = await rellenarDatosBasicosMoto(page.mainFrame(), porDefecto, page)
-  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '07/08/2015', 'la del portal, no la nuestra')
-  assert.equal(sup.length, 1)
-  assert.match(sup[0]!, /1ª matriculación que Allianz tiene/)
+test('v0.7.19: rellenarDatosBasicosMoto lee la 1ª matriculación del portal ANTES de escribir la adquisición: anterior (por defecto, tecleada o sin marca) → escribe la del portal y devuelve el supuesto', async () => {
+  const conPortal = async () => {
+    await page.setContent(DATOS())
+    await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
+  }
+  const anterior = { ...formCompleto, fechaAdquisicion: '2015-03-01' } as FormularioAuto
+  const casos: Array<[string, FormularioAuto]> = [
+    ['= nuestra matriculación', { ...anterior, fechaMatriculacion: '2015-03-01' } as FormularioAuto],
+    ['marca por defecto', { ...anterior, fechaAdquisicionPorDefecto: true } as FormularioAuto],
+    ['sin marca ni nuestra matriculación', { ...anterior, fechaAdquisicionPorDefecto: false } as FormularioAuto],
+    ['tecleada a mano (≠ nuestra matriculación)', { ...anterior, fechaMatriculacion: '2015-01-01', fechaAdquisicionPorDefecto: false } as FormularioAuto],
+  ]
+  for (const [caso, form] of casos) {
+    await conPortal()
+    const sup = await rellenarDatosBasicosMoto(page.mainFrame(), form, page)
+    assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '07/08/2015', `${caso}: la del portal, no la nuestra`)
+    assert.equal(sup.length, 1, caso)
+    assert.match(sup[0]!, /^Fecha de adquisición ajustada a la 1ª matriculación que Allianz tiene para la matrícula \(la declarada era 159 días anterior\)$/, caso)
+  }
   // Posterior a la del portal: la nuestra y sin supuesto (lo de siempre).
-  await page.setContent(DATOS())
-  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
+  await conPortal()
   assert.deepEqual(await rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), [])
   assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '02/01/2016')
-  // Marca «por defecto» sin nuestra matriculación (lo que manda plataforma): la del portal.
+  // Portal sin fecha legible: la nuestra, sin supuesto.
   await page.setContent(DATOS())
-  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
-  const marca = { ...formCompleto, fechaAdquisicion: '2015-03-01', fechaAdquisicionPorDefecto: true } as FormularioAuto
-  assert.equal((await rellenarDatosBasicosMoto(page.mainFrame(), marca, page)).length, 1)
-  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '07/08/2015')
-  // Sin marca ni nuestra matriculación: datos (comportamiento anterior).
-  await page.setContent(DATOS())
-  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
-  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), { ...marca, fechaAdquisicionPorDefecto: false } as FormularioAuto, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
-  // Explícita y anterior: datos, el campo no se escribe.
-  await page.setContent(DATOS())
-  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
-  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), { ...porDefecto, fechaMatriculacion: '2015-01-01' } as FormularioAuto, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /159 días anterior/.test(e.message))
-  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '')
+  assert.deepEqual(await rellenarDatosBasicosMoto(page.mainFrame(), anterior, page), [])
+  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '01/03/2015')
 })

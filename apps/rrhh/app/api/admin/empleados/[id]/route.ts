@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { normalizarMatriculaFicha } from '@/lib/matricula'
+import { normalizarNotas } from '@/lib/notas-empleado'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,6 +40,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const fecha_alta       = body.fecha_alta !== undefined ? (String(body.fecha_alta).trim() || null) : undefined
     const fecha_reconocimiento_medico = body.fecha_reconocimiento_medico !== undefined ? (String(body.fecha_reconocimiento_medico).trim() || null) : undefined
 
+    // Notas internas: solo si vienen en el body (guardar la ficha no las toca).
+    let notas: string | null | undefined
+    if (body.notas !== undefined) {
+      const n = normalizarNotas(body.notas)
+      if (!n.ok) return NextResponse.json({ error: n.error }, { status: 400 })
+      notas = n.valor
+    }
+
     const c = (val: string | null | undefined, colName: string) =>
       val === undefined ? Prisma.sql`${Prisma.raw(colName)}` : Prisma.sql`${val}`
     // Las columnas DATE necesitan cast explícito: Prisma manda el parámetro como `text`
@@ -71,7 +80,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         coche             = ${c(coche, 'coche')},
         matricula         = ${c(matricula, 'matricula')},
         fecha_alta        = ${cDate(fecha_alta, 'fecha_alta')},
-        fecha_reconocimiento_medico = ${cDate(fecha_reconocimiento_medico, 'fecha_reconocimiento_medico')}
+        fecha_reconocimiento_medico = ${cDate(fecha_reconocimiento_medico, 'fecha_reconocimiento_medico')},
+        notas             = ${c(notas, 'notas')}
       WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
     return NextResponse.json({ ok: true })
   } catch (e) {

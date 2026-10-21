@@ -58,6 +58,8 @@ model empleados {
   matricula         String?
   fecha_alta        DateTime? @db.Date
   fecha_reconocimiento_medico DateTime? @db.Date
+  /// Notas internas de la empresa (migración 0025). NUNCA en /api/e/* ni /e/*.
+  notas         String?
   estado            String    @default("activo")
   acceso_token  String    @unique
   pin_hash      String?
@@ -86,6 +88,8 @@ model documentos {
   firmado_empresa_at       DateTime? @db.Timestamptz(6)
   firmado_empresa_nombre   String?
   firmado_empresa_hash     String?
+  firma_anulada_at         DateTime? @db.Timestamptz(6)
+  firma_anulada_por        String?
   creada_at    DateTime  @default(now()) @db.Timestamptz(6)
   empleado     empleados @relation(fields: [empleado_id], references: [id], onDelete: Cascade)
 

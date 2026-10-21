@@ -52,6 +52,32 @@ export default function FichajesClient() {
   // null = aún no cargadas o no se pudieron leer («no se sabe»); [] = revisadas, sin incidencias.
   const [incidencias, setIncidencias] = useState<Incidencia[] | null>(null)
   const [cargandoIncidencias, setCargandoIncidencias] = useState(true)
+  // null = cargando (ni activado ni desactivado); 'error' = no se pudo leer
+  const [sinUbic, setSinUbic] = useState<boolean | null | 'error'>(null)
+  const [guardandoSinUbic, setGuardandoSinUbic] = useState(false)
+  const [msgSinUbic, setMsgSinUbic] = useState('')
+  useEffect(() => {
+    fetch('/api/admin/empresa/ajustes')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => setSinUbic(d.permite_fichar_sin_ubicacion === true))
+      .catch(() => setSinUbic('error'))
+  }, [])
+  async function cambiarSinUbic() {
+    if (typeof sinUbic !== 'boolean' || guardandoSinUbic) return
+    const previo = sinUbic, nuevo = !sinUbic
+    setSinUbic(nuevo); setGuardandoSinUbic(true); setMsgSinUbic('')
+    try {
+      const r = await fetch('/api/admin/empresa/ajustes', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permite_fichar_sin_ubicacion: nuevo }),
+      })
+      if (!r.ok) throw new Error()
+      setMsgSinUbic('Guardado ✓')
+      setTimeout(() => setMsgSinUbic(m => m === 'Guardado ✓' ? '' : m), 2500)
+    } catch {
+      setSinUbic(previo); setMsgSinUbic('No se pudo guardar. Inténtalo de nuevo.')
+    } finally { setGuardandoSinUbic(false) }
+  }
 
   async function cargar() {
     const params = new URLSearchParams({ mes })
@@ -245,6 +271,30 @@ export default function FichajesClient() {
 
       <section className="mt-6">
         <h2 className="mb-1 text-base">Incidencias de ubicación</h2>
+        <div className="mb-3 flex items-start gap-3 rounded border border-line bg-paper-2 p-3">
+          {typeof sinUbic === 'boolean' ? (
+            <button
+              type="button" role="switch" aria-checked={sinUbic} aria-label="Permitir fichar sin ubicación (emergencia)"
+              onClick={cambiarSinUbic} disabled={guardandoSinUbic}
+              className="-m-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center disabled:opacity-60"
+            >
+              <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${sinUbic ? 'bg-ink' : 'bg-line'}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${sinUbic ? 'left-[22px]' : 'left-0.5'}`} />
+              </span>
+            </button>
+          ) : (
+            <span className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-xs text-ink-3" aria-busy={sinUbic === null}>
+              {sinUbic === null ? '…' : '—'}
+            </span>
+          )}
+          <div className="min-w-0 flex-1 py-1">
+            <p className="text-sm font-medium">Permitir fichar sin ubicación (emergencia)</p>
+            <p className="text-xs text-ink-3">Si el GPS del móvil falla, el empleado podrá fichar igualmente. El fichaje queda marcado y lo verás aquí.</p>
+            {sinUbic === null && <p className="mt-1 text-xs text-ink-3">Cargando…</p>}
+            {sinUbic === 'error' && <p className="mt-1 text-xs text-red-600">No se ha podido leer el ajuste.</p>}
+            {msgSinUbic && <p role="status" className={`mt-1 text-xs ${msgSinUbic.startsWith('Guardado') ? 'text-ink-2' : 'text-red-600'}`}>{msgSinUbic}</p>}
+          </div>
+        </div>
         <p className="mb-2 text-xs text-ink-3">Últimos 30 días: veces que el móvil del empleado no dio su ubicación al fichar.</p>
         {cargandoIncidencias ? (
           <p className="text-sm text-ink-3">Cargando…</p>

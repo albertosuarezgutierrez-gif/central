@@ -84,6 +84,8 @@ Ficha/cotizador hoy: `tarificador-moto-formulario.ts` (`formularioBotMoto`) y ca
 | Garaje de noche | p (si consta) | — | — | boolean | `garajeNoche: null` (supuesto, no se manda) | No |
 | Propietario / conductor otra ficha | **H** | **H** | — | — | cotizador | Sí, bloquea con aviso |
 
+Allianz Moto v0.7.19 (Alberto, 21/10/2026): si la fecha de adquisición es anterior a la 1ª matriculación que el portal trae por la matrícula (`#fechaMatriculacion`), venga de donde venga (por defecto, tecleada o sin marca `fechaAdquisicionPorDefecto`), el bot escribe la del portal y lo declara como supuesto con los días de diferencia, sin fechas (`fechaAdquisicionFrentePortal`, `allianz/auto.ts`); ya no para como `datos`. Sin fecha legible del portal, o igual/posterior, se escribe la nuestra.
+
 ---
 
 ## 3. HOGAR

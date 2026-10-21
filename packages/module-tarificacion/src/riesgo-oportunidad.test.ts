@@ -216,6 +216,13 @@ describe('claveHogarDeCatalogo', () => {
     expect(claveHogarDeCatalogo('tipoVivienda', 'XId', 'Chalet independiente')).toBe('independiente')
     expect(claveHogarDeCatalogo('regimen', 'XId', 'Inquilino')).toBe('inquilino')
   })
+  it('los nombres del catálogo de Codeoscopic (property-types) casan con la opción del bot (21/10/2026)', () => {
+    const pares: Array<[string, string]> = [
+      ['Unifamiliar adosado', 'adosada'], ['Unifamiliar independiente', 'independiente'],
+      ['Piso planta baja', 'planta_baja'], ['Piso intermedio', 'piso'], ['Ático', 'atico'],
+    ]
+    for (const [nombre, clave] of pares) expect(claveHogarDeCatalogo('tipoVivienda', 'XId', nombre)).toBe(clave)
+  })
   it('no casa EXACTAMENTE → null: parecidos, ambiguos, id desconocido sin nombre, vacíos y tipos raros', () => {
     expect(claveHogarDeCatalogo('uso', 'XId')).toBeNull()
     expect(claveHogarDeCatalogo('uso', 'XId', 'Segunda residencia de verano')).toBeNull()

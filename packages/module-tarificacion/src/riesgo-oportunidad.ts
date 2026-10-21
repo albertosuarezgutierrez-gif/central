@@ -80,8 +80,8 @@ const FRASES_CANONICAS: Readonly<Record<CampoCanonicoHogar, Readonly<Record<stri
     piso: ['piso', 'piso intermedio'],
     planta_baja: ['planta baja', 'piso planta baja', 'piso en planta baja'],
     atico: ['atico', 'piso atico'],
-    adosada: ['adosada', 'vivienda adosada', 'casa adosada', 'chalet adosado', 'adosado'],
-    independiente: ['independiente', 'vivienda independiente', 'casa independiente', 'chalet independiente'],
+    adosada: ['adosada', 'vivienda adosada', 'casa adosada', 'chalet adosado', 'adosado', 'unifamiliar adosado', 'unifamiliar adosada'],
+    independiente: ['independiente', 'vivienda independiente', 'casa independiente', 'chalet independiente', 'unifamiliar independiente'],
   }),
 })
 
