@@ -15,6 +15,8 @@ export async function GET(req: Request) {
   if (!guarda.ok) return guarda.respuesta
   const clienteId = new URL(req.url).searchParams.get('clienteId')?.trim() ?? ''
   if (clienteId === '') return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
-  const r = await destinatariosPresupuestoAsegura(clienteId)
+  // `canal=whatsapp` (idea 4): la misma regla con el móvil. Ningún teléfono cruza en esta lectura.
+  const canal = new URL(req.url).searchParams.get('canal') === 'whatsapp' ? 'whatsapp' : 'email'
+  const r = await destinatariosPresupuestoAsegura(clienteId, canal)
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

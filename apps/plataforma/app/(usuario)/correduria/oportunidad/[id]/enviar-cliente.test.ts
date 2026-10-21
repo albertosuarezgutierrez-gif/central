@@ -26,7 +26,10 @@ test('nada sale solo: el correo pide confirmación y el WhatsApp abre la ventana
   assert.match(src, /correo === 'con_email' && <button/)
   assert.doesNotMatch(src, /generarToken|generarCodigo/)
   // Antes de rotar se relee el servidor y se pregunta con su fecha.
-  assert.match(src, /await releer\(\)\n    const pregunta = avisoRotacionActual\(\)\n    if \(pregunta && !window\.confirm\(pregunta\)\) return null/)
+  // (idea 4: a un contacto la pregunta es otra, ver abajo; al tomador, la de siempre.)
+  const pedir = src.slice(src.indexOf('async function pedirEnlace'), src.indexOf('function avisoRotacionActual'))
+  assert.ok(pedir.indexOf('await releer()') > 0 && pedir.indexOf('await releer()') < pedir.indexOf('const pregunta = avisoRotacionActual()'))
+  assert.match(pedir, /const pregunta = avisoRotacionActual\(\)\n\s*if \(pregunta && !window\.confirm\(pregunta\)\) return null/)
 })
 
 // 🪤 Persona de contacto (21/10/2026). Para verlo en rojo: en `leerDestinatarios` acepta un elegible sin correo en `emails`
@@ -93,4 +96,48 @@ test('el correo a un contacto pide confirmación (con el aviso de rotación, rel
   assert.ok(f.indexOf('await releer()') > 0 && f.indexOf('await releer()') < f.indexOf('window.confirm('))
   assert.match(f, /if \(!window\.confirm\(confirmarCorreoContacto\(elegido, \{ tomadorJuridica: destinos\?\.estado === 'contactos' && destinos\.tomadorJuridica, rotacion: avisoRotacionActual\(\) \}\)\)\) return/)
   assert.match(src, /accion: 'avisar', canal: 'email', destinatarioClienteId: elegido\.clienteId/)
+})
+
+// ─── WhatsApp a una persona de contacto (21/10/2026, idea 4) ─────────────────────────────────────────────────────────
+// Para verlo en rojo: en `leerDestinatariosWhatsapp` copia `telefono` al elegible → falla «ningún teléfono»; en
+// `EnviarAlCliente.tsx` quita `destinatarioClienteId: contacto.clienteId` → falla la del envío; o quita la confirmación.
+test('🪤 el selector del WhatsApp: elegibles SIN teléfono (aunque viniera), no elegibles con su porqué, y «no se pudo leer» = null', async () => {
+  const { leerDestinatariosWhatsapp, etiquetaTomadorWhatsapp } = await import('./enviar-cliente.ts')
+  const j = {
+    estado: 'ok', tomadorJuridica: true, movilTomador: 'con_movil', emails: {},
+    destinatarios: { estado: 'contactos', elegibles: [{ clienteId: 'v', nombre: 'Victor', relacion: 'Dueño', via: 'representacion', telefono: '600000000' }], noElegibles: [{ clienteId: 'b', nombre: 'Berta', relacion: 'Accionista', motivo: 'sin_movil' }] },
+  }
+  const l = leerDestinatariosWhatsapp(200, j)
+  assert.deepEqual(l?.elegibles, [{ clienteId: 'v', nombre: 'Victor', relacion: 'Dueño', via: 'representacion' }])
+  assert.doesNotMatch(JSON.stringify(l), /600000000/)
+  assert.equal(l?.noElegibles[0]?.motivo, 'sin_movil')
+  assert.equal(l?.tomadorJuridica, true)
+  assert.equal(l?.movilTomador, 'con_movil')
+  assert.equal(leerDestinatariosWhatsapp(502, j), null)
+  assert.equal(leerDestinatariosWhatsapp(200, { estado: 'error' }), null)
+  assert.equal(leerDestinatariosWhatsapp(200, { ...j, movilTomador: 'raro' })?.movilTomador, 'no_se_sabe')
+  assert.match(etiquetaTomadorWhatsapp('sin_movil'), /sin móvil válido/)
+})
+
+test('🪤 la confirmación del WhatsApp a un contacto dice a quién, como qué, que solo lo VE, que lo manda Alberto y la rotación', async () => {
+  const { confirmarWhatsappContacto } = await import('./enviar-cliente.ts')
+  const c = { clienteId: 'v', nombre: 'Victor', relacion: 'Dueño', via: 'representacion' as const }
+  const t = confirmarWhatsappContacto(c, { tomadorJuridica: true, rotacion: 'El cliente ya tiene un enlace: dejará de abrir. ¿Seguir?' })
+  assert.match(t, /Victor \(Dueño\)/)
+  assert.match(t, /persona de contacto de la empresa/)
+  assert.match(t, /no podrá aceptarlo ni firmarlo/)
+  assert.match(t, /Lo mandas tú/)
+  assert.match(t, /El tomador ya tiene un enlace/)
+  assert.match(confirmarWhatsappContacto({ ...c, via: 'autorizacion' }, { tomadorJuridica: false, rotacion: null }), /persona autorizada por el tomador/)
+})
+
+test('🪤 el WhatsApp a un contacto pide confirmación (releída la rotación) y manda SU id con canal whatsapp; al tomador, sin id', () => {
+  const src = readFileSync(new URL('./EnviarAlCliente.tsx', import.meta.url), 'utf8')
+  const f = src.slice(src.indexOf('async function pedirEnlace'), src.indexOf('function avisoRotacionActual'))
+  assert.ok(f.indexOf('await releer()') > 0 && f.indexOf('await releer()') < f.indexOf('confirmarWhatsappContacto('))
+  assert.match(f, /if \(!window\.confirm\(confirmarWhatsappContacto\(contacto, \{ tomadorJuridica: destinosWa\?\.tomadorJuridica === true, rotacion: avisoRotacionActual\(\) \}\)\)\) return null/)
+  assert.match(f, /\? \{ accion: 'avisar', canal: 'whatsapp_enlace', destinatarioClienteId: contacto\.clienteId \}\s*: \{ accion: 'avisar', canal: 'whatsapp_enlace' \}/)
+  // La lectura del selector pide el canal WhatsApp; el teléfono no se pinta en ningún sitio.
+  assert.match(src, /destinatarios\?clienteId=\$\{encodeURIComponent\(clienteId\)\}&canal=whatsapp/)
+  assert.doesNotMatch(src, /\.telefono|\.movil\b/)
 })

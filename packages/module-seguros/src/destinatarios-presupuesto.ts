@@ -23,17 +23,35 @@
 //   · Elegible por relación pero sin correo, dado de baja o con correo ilegible: NO es elegible, y se dice por qué.
 //   · Dos fichas distintas no se funden jamás: se agrupa por `clienteId`.
 //
+//
+// POR WHATSAPP (21/10/2026, idea 4): la MISMA regla de relación (a)/(b), con otro canal (`canal = 'whatsapp'`):
+//   · El candidato necesita un MÓVIL válido (`movil = 'con_movil'`); sin él, `sin_movil`; ilegible o sin mirar,
+//     `movil_no_se_sabe` (nunca «no tiene»). Su correo no cuenta.
+//   · El estado del CORREO del tomador NO corta: por WhatsApp el tomador siempre sigue siendo una opción (su teléfono
+//     suele ser una centralita, que es justo por lo que se elige a una persona), y la baja de CORREO no es una baja de
+//     WhatsApp (hoy ya se le manda el WhatsApp a quien se dio de baja de correo). Esta decisión vive SOLO en la
+//     primera línea de la función: si Alberto quiere el mismo corte que por correo, se cambia ahí.
+//   · El contacto que lo recibe por WhatsApp solo VE (marca `acceso_tercero` en asegura, igual que por correo).
+//
 // PURO: lo usan asegura (para VALIDAR en el servidor el destinatario que pide la pantalla) y plataforma (para pintar
 // el selector). Cepo: `destinatarios-presupuesto.test.ts`.
 
 import { permiteAutorizar, type RelacionFila } from './relaciones.ts'
 
 export type EstadoCorreoPersona = 'con_email' | 'sin_email' | 'baja_de_correo' | 'no_se_sabe'
+/** ¿Tiene un móvil al que mandar un WhatsApp? `no_se_sabe` = ilegible o no se ha mirado, nunca «no tiene». */
+export type EstadoMovilPersona = 'con_movil' | 'sin_movil' | 'no_se_sabe'
+/** Por dónde sale el aviso: decide qué dato de contacto le hace falta al candidato. */
+export type CanalDestino = 'email' | 'whatsapp'
 export type TipoPersonaFicha = 'fisica' | 'juridica' | null
 
 export type TomadorDestino = { clienteId: string; tipoPersona: TipoPersonaFicha; correo: EstadoCorreoPersona }
 /** Lo que se sabe de cada ficha relacionada. Una que no está en la lista (fusionada, de otra correduría) no recibe nada. */
-export type PersonaDestino = { clienteId: string; nombre: string | null; tipoPersona: TipoPersonaFicha; correo: EstadoCorreoPersona }
+export type PersonaDestino = {
+  clienteId: string; nombre: string | null; tipoPersona: TipoPersonaFicha; correo: EstadoCorreoPersona
+  /** Solo cuenta por WhatsApp. Ausente = no se ha mirado = `no_se_sabe` (no elegible). */
+  movil?: EstadoMovilPersona
+}
 
 export type ViaDestino = 'representacion' | 'autorizacion'
 export type MotivoNoElegible =
@@ -44,6 +62,10 @@ export type MotivoNoElegible =
   | 'sin_email'
   | 'baja_de_correo'
   | 'email_no_se_sabe'
+  /** Por WhatsApp: no tiene un móvil válido (6xx/7xx) en su ficha. */
+  | 'sin_movil'
+  /** Por WhatsApp: su teléfono no se ha podido leer (o no se miró). */
+  | 'movil_no_se_sabe'
 
 export type ContactoElegible = { clienteId: string; nombre: string | null; relacion: string; via: ViaDestino }
 export type ContactoNoElegible = { clienteId: string; nombre: string | null; relacion: string; motivo: MotivoNoElegible }
@@ -78,16 +100,23 @@ export const TEXTO_NO_ELEGIBLE: Record<MotivoNoElegible, string> = {
   sin_email: 'no tiene correo en su ficha',
   baja_de_correo: 'se dio de baja de correo',
   email_no_se_sabe: 'su correo no se ha podido leer',
+  sin_movil: 'no tiene un móvil válido en su ficha',
+  movil_no_se_sabe: 'su teléfono no se ha podido leer',
 }
 
 export function destinatariosPresupuesto(
   tomador: TomadorDestino,
   relaciones: readonly RelacionFila[],
   personas: readonly PersonaDestino[],
+  canal: CanalDestino = 'email',
 ): DestinatariosPresupuesto {
-  if (tomador.correo === 'con_email') return { estado: 'tomador' }
-  if (tomador.correo === 'no_se_sabe') return { estado: 'tomador_no_se_sabe' }
-  if (tomador.correo === 'baja_de_correo') return { estado: 'tomador_baja' }
+  // Por WhatsApp el correo del tomador no corta (ver cabecera): el tomador sigue siendo una opción aparte.
+  if (canal === 'email') {
+    if (tomador.correo === 'con_email') return { estado: 'tomador' }
+    if (tomador.correo === 'no_se_sabe') return { estado: 'tomador_no_se_sabe' }
+    if (tomador.correo === 'baja_de_correo') return { estado: 'tomador_baja' }
+  }
+
 
   const porId = new Map(personas.map((p) => [p.clienteId, p]))
   // Por FICHA: la mejor razón que tenga (representación > autorización) y, si no tiene ninguna, sus tipos.
@@ -128,13 +157,24 @@ export function destinatariosPresupuesto(
       noElegibles.push({ clienteId, nombre: p.nombre, relacion, motivo: g.soloFaltaEmpresa ? 'tomador_no_es_empresa' : 'relacion_no_habilita' })
       continue
     }
-    if (p.correo !== 'con_email') {
-      noElegibles.push({ clienteId, nombre: p.nombre, relacion, motivo: p.correo === 'no_se_sabe' ? 'email_no_se_sabe' : p.correo })
+    const sinCanal = motivoSinCanal(p, canal)
+    if (sinCanal) {
+      noElegibles.push({ clienteId, nombre: p.nombre, relacion, motivo: sinCanal })
       continue
     }
     elegibles.push({ clienteId, nombre: p.nombre, relacion, via: g.via })
   }
   return elegibles.length > 0 ? { estado: 'contactos', elegibles, noElegibles } : { estado: 'nadie', noElegibles }
+}
+
+/** ¿Le falta al candidato el dato del canal? `null` = lo tiene. Por correo, su correo; por WhatsApp, su móvil. */
+function motivoSinCanal(p: PersonaDestino, canal: CanalDestino): MotivoNoElegible | null {
+  if (canal === 'whatsapp') {
+    const m = p.movil ?? 'no_se_sabe'
+    return m === 'con_movil' ? null : m === 'sin_movil' ? 'sin_movil' : 'movil_no_se_sabe'
+  }
+  if (p.correo === 'con_email') return null
+  return p.correo === 'no_se_sabe' ? 'email_no_se_sabe' : p.correo
 }
 
 /** ¿Puede recibir el presupuesto ESTE `clienteId`? La guarda del servidor: el que pide la pantalla no se cree. */

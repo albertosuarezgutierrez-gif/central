@@ -17,6 +17,13 @@
 //      (`codigoWhatsapp = null`); solo el correo a un tercero deja `canal_aviso = 'email'` CON código. Si alguien cambia
 //      eso, el fallo es CERRADO: el tomador queda como tercero (no firma), nunca al revés.
 // Basta con una de las dos para tratarlo como tercero.
+//
+// POR WHATSAPP (21/10/2026, idea 4): un enlace por WhatsApp a una persona de contacto deja `canal_aviso = 'whatsapp_enlace'`
+// CON código, exactamente igual que el WhatsApp al TOMADOR, así que el cinturón NO lo distingue ni debe: si lo tratara como
+// tercero, el tomador por WhatsApp dejaría de poder firmar (falso positivo). Para ese canal la MARCA EXPLÍCITA es la única
+// señal, y basta: se escribe con el mismo orden (marca → CAS) y la misma regla de «si falla la marca, no se rota ni se
+// genera el mensaje». El cinturón sigue igual de cerrado para el correo. Si la marca no se puede LEER, `marcaTerceroDe`
+// lanza y el puente responde error, nunca «es el tomador». Cepos en `presupuesto-acceso-tercero.test.ts`.
 
 /** Evento append-only que marca el token de un aviso a una persona de contacto. `detalle.tokenHash` = el hash del token. */
 export const TIPO_ACCESO_TERCERO = 'acceso_tercero'

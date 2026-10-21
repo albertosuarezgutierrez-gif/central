@@ -473,7 +473,7 @@ export {
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
 export { mensajeReciboDevueltoWhatsapp, resumenRiesgo, saludoSegunHora, type EntradaWhatsappDevuelto } from './mensaje-recibo-devuelto.ts'
-export { correoPresupuesto, correoPresupuestoTercero, type DatosAvisoTercero, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, enlaceWhatsappPresupuesto, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
+export { correoPresupuesto, correoPresupuestoTercero, type DatosAvisoTercero, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, mensajePresupuestoWhatsappTercero, enlaceWhatsappPresupuesto, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -1557,5 +1557,5 @@ export {
 export {
   TEXTO_NO_ELEGIBLE, destinatarioElegible, destinatariosPresupuesto, esRelacionDeRepresentacion,
   type ContactoElegible, type ContactoNoElegible, type DestinatariosPresupuesto, type EstadoCorreoPersona, type MotivoNoElegible,
-  type PersonaDestino, type TipoPersonaFicha, type TomadorDestino, type ViaDestino,
+  type CanalDestino, type EstadoMovilPersona, type PersonaDestino, type TipoPersonaFicha, type TomadorDestino, type ViaDestino,
 } from './destinatarios-presupuesto.ts'

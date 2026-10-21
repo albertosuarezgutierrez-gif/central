@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Correduría · #4945 mergeado (presupuesto a contacto de empresa, SOLO LECTURA: el tercero no firma; marca `acceso_tercero`
+ligada al token). Idea 4: mismo selector para WhatsApp (Dueño/Administración con móvil; aunque el tomador tenga correo). Idea 2 (aviso de
+vencimiento restringido) DESCARTADA por Alberto: está en `git stash` «idea2-vencimiento». Pendiente: firma en representación (PR aparte).
+
 **(21/10/2026)** — Correduría · presupuesto a la persona de contacto de una EMPRESA sin correo (Studium: Victor «Dueño»). Regla
 de Alberto en `destinatariosPresupuesto` (module-seguros): solo «Dueño»/«Administración» (tomador `juridica`) o autorización vigente en
 `portal_autorizacion` (la columna `puede_ver_polizas` está MUERTA desde 03/09). Asegura revalida (409 si no elegible); el tercero recibe código

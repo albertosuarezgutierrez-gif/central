@@ -25,7 +25,7 @@
 // que usa una pimienta que solo existe allí. Quien entra con el correo de la
 // ficha ve el presupuesto por la rama del vínculo (`portal_vinculo.cliente_id`).
 
-import { calcularVencimiento, correoPresupuesto, correoPresupuestoTercero, destinatarioElegible, enlaceWhatsappPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp } from '@central/module-seguros'
+import { calcularVencimiento, correoPresupuesto, correoPresupuestoTercero, destinatarioElegible, enlaceWhatsappPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp, mensajePresupuestoWhatsappTercero } from '@central/module-seguros'
 import { generarCodigo, generarTokenVista, hashCodigoWhatsapp, hashTokenVista } from '@central/module-seguros-portal'
 
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
@@ -61,8 +61,9 @@ export type FalloEnvio =
   /** Aviso de un LOTE (propuesta de escenarios): otro presupuesto del lote no pudo salir, así que no sale ninguno. */
   | 'lote_cancelado'
   /**
-   * El destinatario elegido NO es una persona de contacto que pueda recibirlo (21/10/2026): el tomador tiene correo, o
-   * esa ficha no es su dueño/administrador/representante ni está autorizada a ver sus pólizas, o no tiene correo.
+   * El destinatario elegido NO es una persona de contacto que pueda recibirlo (21/10/2026): por correo, el tomador tiene
+   * correo o esa ficha no tiene; por WhatsApp, esa ficha no tiene un móvil válido; y en los dos, esa ficha no es su
+   * dueño/administrador/representante ni está autorizada a ver sus pólizas.
    */
   | 'destinatario_no_elegible'
 
@@ -136,21 +137,31 @@ const TEXTO_SIN_EMAIL: Record<string, string> = {
 type EntradaAviso = {
   id: string; canal: CanalAviso; actor: string
   /**
-   * (21/10/2026) La empresa no tiene correo y Alberto elige a una PERSONA DE CONTACTO. Solo correo, nunca en lote ni en
-   * hilo. Se valida AQUÍ con la regla de `destinatarios-presupuesto.ts` (no se cree a la pantalla).
+   * (21/10/2026) Alberto elige a una PERSONA DE CONTACTO del tomador. Por correo (si el tomador no tiene) o por WhatsApp
+   * (idea 4: el teléfono del tomador suele ser una centralita); nunca en lote ni en hilo. Se valida AQUÍ con la regla de
+   * `destinatarios-presupuesto.ts` para ESE canal (no se cree a la pantalla).
    */
   destinatarioClienteId?: string | null
 }
 
 /** La persona de contacto a la que sale el aviso en vez de al tomador. Ya VALIDADA en `prepararAviso`. */
 export type TerceroAviso = {
-  clienteId: string; nombre: string | null; relacion: string; via: 'representacion' | 'autorizacion'; email: string
+  clienteId: string; nombre: string | null; relacion: string; via: 'representacion' | 'autorizacion'
+  /** Por correo: su dirección. Por WhatsApp `null` (no se le nombra ningún correo). */
+  email: string | null
+  /**
+   * Por WhatsApp: su móvil, solo dígitos E.164, para el `wa.me` que abre Alberto. Por correo `null`. 🚨 No se guarda en
+   * ningún evento, historial ni auditoría: solo sale en la respuesta del envío.
+   */
+  movil: string | null
   /** El TOMADOR es una empresa explícita (`tipo_persona = 'juridica'`): cambia cómo se le nombra en el correo. */
   tomadorJuridica: boolean
 }
 
 const TEXTO_NO_ELEGIBLE_ENVIO =
   'Esa persona no puede recibir el presupuesto: solo un dueño, administrador o representante de la empresa, o alguien a quien el tomador autoriza a ver sus pólizas, con correo en su ficha, y solo si el tomador no tiene correo. No ha salido nada.'
+const TEXTO_NO_ELEGIBLE_WHATSAPP =
+  'Esa persona no puede recibir el presupuesto por WhatsApp: solo un dueño, administrador o representante de la empresa, o alguien a quien el tomador autoriza a ver sus pólizas, con un móvil válido en su ficha. No se ha generado nada.'
 
 export async function avisarPresupuesto(
   correduriaId: string,
@@ -229,13 +240,19 @@ export async function prepararAviso(correduriaId: string, entrada: EntradaAviso,
   // Persona de contacto (21/10/2026): la regla se RECALCULA aquí sobre la BD; el id que manda la pantalla no se cree.
   let tercero: TerceroAviso | null = null
   const destinatarioId = typeof entrada.destinatarioClienteId === 'string' ? entrada.destinatarioClienteId.trim() : ''
-  if (destinatarioId !== '') {
-    if (entrada.canal !== 'email') return error('destinatario_no_elegible', 'A una persona de contacto solo se le manda por correo.')
+  if (destinatarioId !== '' && entrada.canal === 'email') {
     const lectura = await leerDestinatarios(correduriaId, p.clienteId)
     const elegido = lectura ? destinatarioElegible(lectura.destinatarios, destinatarioId) : null
     const email = elegido ? lectura?.emails[elegido.clienteId] : undefined
     if (!elegido || !email) return error('destinatario_no_elegible', TEXTO_NO_ELEGIBLE_ENVIO)
-    tercero = { clienteId: elegido.clienteId, nombre: elegido.nombre, relacion: elegido.relacion, via: elegido.via, email, tomadorJuridica: lectura?.tomadorJuridica === true }
+    tercero = { clienteId: elegido.clienteId, nombre: elegido.nombre, relacion: elegido.relacion, via: elegido.via, email, movil: null, tomadorJuridica: lectura?.tomadorJuridica === true }
+  } else if (destinatarioId !== '') {
+    // Por WhatsApp (idea 4): la MISMA regla con el móvil. El número del elegido se lee aquí y solo viaja en el `wa.me`.
+    const lectura = await leerDestinatarios(correduriaId, p.clienteId, 'whatsapp')
+    const elegido = lectura ? destinatarioElegible(lectura.destinatarios, destinatarioId) : null
+    const movil = elegido ? await movilParaChat(correduriaId, elegido.clienteId) : null
+    if (!elegido || !movil) return error('destinatario_no_elegible', TEXTO_NO_ELEGIBLE_WHATSAPP)
+    tercero = { clienteId: elegido.clienteId, nombre: elegido.nombre, relacion: elegido.relacion, via: elegido.via, email: null, movil, tomadorJuridica: lectura?.tomadorJuridica === true }
   }
 
   const ficha = await estadoEmailDeFicha(correduriaId, p.clienteId)
@@ -243,7 +260,7 @@ export async function prepararAviso(correduriaId: string, entrada: EntradaAviso,
   let emailAcceso: string | null
   if (tercero) {
     // 🚨 El correo del contacto NO lleva al portal del tomador (no es el de su ficha): entra con el CÓDIGO de este
-    // presupuesto, que va en el propio correo. Ese código le deja VERLO y nada más: toda acción del puente con ese token
+    // presupuesto, que va en el propio correo (o en el WhatsApp: entonces `null`, no se le nombra ningún correo). Ese código le deja VERLO y nada más: toda acción del puente con ese token
     // (aceptar, firmar, cuenta, «dato incorrecto») es `sin_permiso` (`presupuesto-acceso-tercero.ts`). Por eso aquí no
     // se exige `estadoPortalDeFicha`.
     emailAcceso = tercero.email
@@ -320,8 +337,10 @@ export async function ejecutarAviso(
   const { correduriaId, entrada, ahora, p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos, tercero } = prep
   // En el hilo solo por correo y nunca dentro de un lote (el lote compone su propio correo único).
   if (hilo && (entrada.canal !== 'email' || lote)) return error('no_enviable', 'Un aviso en el hilo del cliente solo sale por correo y suelto.')
-  // Una persona de contacto: solo por correo, suelto, y con su código (sin él no abriría nada).
-  if (tercero && (entrada.canal !== 'email' || lote || hilo || codigoWhatsapp === null)) return error('no_enviable', 'A una persona de contacto solo se le avisa por correo y suelto.')
+  // Una persona de contacto: suelta, con su código (sin él no abriría nada) y con el dato de SU canal.
+  if (tercero && (lote || hilo || codigoWhatsapp === null || (entrada.canal === 'email' ? !tercero.email : !tercero.movil))) {
+    return error('no_enviable', 'A una persona de contacto solo se le avisa suelto, por correo o por WhatsApp a su móvil.')
+  }
   // 🚨 Con una clave que YA se usó (salió o quedó incierta) no se rota el enlace: el correo que quizá tiene el cliente
   //    lleva el token de entonces, y Resend no reenvía con la misma clave. Rotar aquí le dejaría un enlace muerto.
   if (hilo && (await claveYaUsada(db, p.id, hilo.idempotencia))) return error('incierto', TEXTO_CLAVE_USADA)
@@ -329,9 +348,11 @@ export async function ejecutarAviso(
   // Compare-and-swap sobre el hash anterior: el segundo clic no encuentra la fila.
   const nuevoHash = await hashTokenVista(token)
   const nuevoCodigoHash = codigoWhatsapp === null ? null : await hashCodigoWhatsapp(token, codigoWhatsapp)
-  // 🚨 Persona de contacto: la MARCA de que este token es de un tercero va ANTES de activarlo. Si no se puede escribir,
-  // lanza y no se rota nada (sin marca, el código abriría la firma a nombre del tomador). Si el CAS se pierde o el correo
-  // no sale y vuelve el token anterior, la marca queda huérfana: su hash no es el de ningún token vivo.
+  // 🚨 Persona de contacto: la MARCA de que este token es de un tercero va ANTES de activarlo, POR CUALQUIER CANAL (correo
+  // o WhatsApp). Si no se puede escribir, lanza y no se rota nada (sin marca, el código abriría la firma a nombre del
+  // tomador). Si el CAS se pierde o el correo no sale y vuelve el token anterior, la marca queda huérfana: su hash no es el
+  // de ningún token vivo. Por WhatsApp la marca es la ÚNICA señal (el cinturón «correo + código» no lo cubre: el canal
+  // es el mismo que el WhatsApp al tomador): ver `presupuesto-acceso-tercero.ts`.
   if (tercero) {
     await db.presupuestoEvento.create({
       data: { presupuestoId: p.id, tipo: TIPO_ACCESO_TERCERO, origen: 'corredor', detalle: { tokenHash: nuevoHash, destinatario: tercero.clienteId, actor: entrada.actor } },
@@ -351,6 +372,18 @@ export async function ejecutarAviso(
   })
   if (rotado.count === 0) return error('ocupado', 'Otro clic lo está enviando o ha cambiado a la vez. Recarga antes de repetir.')
 
+  if (entrada.canal === 'whatsapp_enlace' && tercero) {
+    // A una PERSONA DE CONTACTO (idea 4): su texto («en nombre de» / «persona autorizada por», ve pero no acepta) y SU
+    // móvil, que solo viaja aquí, en el `wa.me` que abre Alberto. El evento y el historial nombran la ficha, nunca el número.
+    const mensaje = mensajePresupuestoWhatsappTercero({ nombre: tercero.nombre, tomador: nombre, tomadorJuridica: tercero.tomadorJuridica, enlace, venceEl: venceSiSale, codigo: codigoWhatsapp! })
+    await db.presupuestoEvento.create({
+      data: { presupuestoId: p.id, tipo: 'enlace_generado', origen: 'corredor', detalle: {
+        actor: entrada.actor, canal: 'whatsapp_enlace', destinatario: { clienteId: tercero.clienteId, relacion: tercero.relacion, via: tercero.via },
+      } },
+    })
+    await anotarEnvioATercero(correduriaId, p.id, p.clienteId, tercero, entrada.actor, 'whatsapp_enlace')
+    return { estado: 'enlace', mensaje, whatsapp: enlaceWhatsappPresupuesto(mensaje, tercero.movil), enlace, email: null, venceEl: venceSiSale.toISOString(), codigo: codigoWhatsapp!, telefono: tercero.movil }
+  }
   if (entrada.canal === 'whatsapp_enlace') {
     const mensaje = mensajePresupuestoWhatsapp({ ...datos, codigo: codigoWhatsapp! })
     await db.presupuestoEvento.create({
@@ -365,7 +398,7 @@ export async function ejecutarAviso(
   // Acceso directo a la intranet (un solo uso, 24 h): el botón entra sin código y cae en la carátula,
   // que con sesión lleva al presupuesto. Si no se puede atar al correo, va el enlace de siempre.
   // Por correo `emailAcceso` es SIEMPRE el de la ficha: sin él se cortó arriba, antes de escribir.
-  const correo = emailAcceso as string
+  const correo = (tercero ? tercero.email : emailAcceso) as string
   // 🚨 A una persona de contacto NUNCA el acceso directo: esa llave abre la sesión del portal del TOMADOR (toda su
   // bóveda) y además borra las del tomador. Va el enlace de la carátula con el código de este presupuesto.
   const directo = tercero ? null : await enlaceDirectoPresupuesto(correduriaId, p.clienteId, correo, enlace)
@@ -405,15 +438,16 @@ export async function ejecutarAviso(
       } }] },
     },
   })
-  if (tercero) await anotarEnvioATercero(correduriaId, p.id, p.clienteId, tercero, entrada.actor)
+  if (tercero) await anotarEnvioATercero(correduriaId, p.id, p.clienteId, tercero, entrada.actor, 'email')
   return { estado: 'enviado', email: correo, venceEl: venceSiSale.toISOString() }
 }
 
 /**
  * Rastro de que el presupuesto del tomador lo recibió OTRA persona (21/10/2026): fila en `historial_interno` de la ficha
- * del tomador y cambio auditado. No lanza: el correo ya salió y el evento `enviado` ya lo dice; un fallo aquí se registra.
+ * del tomador y cambio auditado. No lanza: el correo ya salió (o el enlace del WhatsApp ya está generado) y el evento
+ * `enviado`/`enlace_generado` ya lo dice; un fallo aquí se registra. Nunca lleva el correo ni el teléfono del contacto.
  */
-async function anotarEnvioATercero(correduriaId: string, presupuestoId: string, tomadorId: string, t: TerceroAviso, actor: string): Promise<void> {
+async function anotarEnvioATercero(correduriaId: string, presupuestoId: string, tomadorId: string, t: TerceroAviso, actor: string, canal: CanalAviso): Promise<void> {
   anotarCambio({ entidad: 'presupuesto', id: presupuestoId, campo: 'destinatario_tercero', antes: null, despues: t.clienteId })
   const quien = t.nombre ?? 'una persona de contacto'
   const porque = t.via === 'representacion' ? `${t.relacion} de la empresa` : `autorizado/a por el tomador a ver sus pólizas (${t.relacion})`
@@ -422,8 +456,11 @@ async function anotarEnvioATercero(correduriaId: string, presupuestoId: string, 
     await prismaAsegura().$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${tomadorId}::uuid, cast('gestion' as tipo_historial_interno),
-              ${`Presupuesto enviado por correo a ${quien} (${porque}) como persona de contacto: el tomador no tiene correo en su ficha. ` +
-                `Lleva un código para VER ese presupuesto: no puede aceptarlo, firmarlo ni dar una cuenta, y no entra en el área de clientes. Lo envió ${actor}.`})`
+              ${(canal === 'email'
+                ? `Presupuesto enviado por correo a ${quien} (${porque}) como persona de contacto: el tomador no tiene correo en su ficha. `
+                : `Enlace del presupuesto preparado para mandarlo por WhatsApp a ${quien} (${porque}) como persona de contacto, al móvil de su ficha; lo manda ${actor} desde su WhatsApp. `) +
+                `Lleva un código para VER ese presupuesto: no puede aceptarlo, firmarlo ni dar una cuenta, y no entra en el área de clientes.` +
+                (canal === 'email' ? ` Lo envió ${actor}.` : '')})`
   } catch (e) {
     console.error('[asegura/presupuesto] no se pudo anotar en historial_interno el envío a un contacto:', e instanceof Error ? e.message : e)
   }

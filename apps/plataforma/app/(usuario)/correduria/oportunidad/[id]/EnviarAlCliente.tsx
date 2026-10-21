@@ -9,12 +9,17 @@
 //   4. (21/10/2026) Sin correo del tomador: a una PERSONA DE CONTACTO que Alberto elige entre las elegibles (dueño,
 //      administrador o representante, o autorizada a ver sus pólizas, con correo). Los no elegibles se listan con su
 //      porqué. asegura vuelve a comprobar la regla al enviar: este selector no autoriza nada.
+//   5. (21/10/2026, idea 4) WhatsApp a una PERSONA DE CONTACTO con móvil (misma regla), elegida junto al tomador: su
+//      teléfono no llega aquí (solo en el `wa.me` de la respuesta) y su código solo deja VER (marca en asegura).
 // Botones ≥44 px, en rejilla que baja a una columna en 320 px.
 
 import { useCallback, useEffect, useState } from 'react'
 import { btnStyle } from '@/components/ui'
 import { avisoRotacion, leerPresupuestoEnLista, textoAviso, type PresupuestoEnLista } from '@/lib/presupuesto-asegura'
-import { CONFIRMAR_CORREO, cabeceraDestinatarios, confirmarCorreoContacto, etiquetaContacto, etiquetaDescartado, leerDestinatarios, leerEnlaceAviso, type LecturaDestinatarios } from './enviar-cliente'
+import {
+  CONFIRMAR_CORREO, cabeceraDestinatarios, confirmarCorreoContacto, confirmarWhatsappContacto, etiquetaContacto, etiquetaDescartado, etiquetaTomadorWhatsapp,
+  leerDestinatarios, leerDestinatariosWhatsapp, leerEnlaceAviso, type ContactoWhatsapp, type LecturaDestinatarios, type LecturaDestinatariosWhatsapp,
+} from './enviar-cliente'
 
 type Patch = { status: number; json: unknown }
 async function patch(id: string, cuerpo: Record<string, unknown>): Promise<Patch> {
@@ -62,15 +67,39 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
     })()
     return () => { vivo = false }
   }, [correo, clienteId])
+  // WhatsApp: el tomador o una persona de contacto con móvil. `null` = no se pudo leer → solo el tomador (lo de siempre).
+  const [destinosWa, setDestinosWa] = useState<LecturaDestinatariosWhatsapp | null | undefined>(undefined)
+  const [waA, setWaA] = useState<string>('tomador')
+  useEffect(() => {
+    let vivo = true
+    void (async () => {
+      try {
+        const r = await fetch(`/api/correduria/presupuesto/destinatarios?clienteId=${encodeURIComponent(clienteId)}&canal=whatsapp`, { cache: 'no-store' })
+        const l = leerDestinatariosWhatsapp(r.status, await r.json().catch(() => null))
+        if (vivo) { setDestinosWa(l); setWaA('tomador') }
+      } catch { if (vivo) setDestinosWa(null) }
+    })()
+    return () => { vivo = false }
+  }, [clienteId])
+  const elegiblesWa = destinosWa?.elegibles ?? []
+  const contactoWa: ContactoWhatsapp | null = elegiblesWa.find((e) => e.clienteId === waA) ?? null
+
   const elegibles = destinos?.estado === 'contactos' ? destinos.elegibles : []
   const descartados = destinos && (destinos.estado === 'contactos' || destinos.estado === 'nadie') ? destinos.noElegibles : []
 
-  async function pedirEnlace(): Promise<ReturnType<typeof leerEnlaceAviso>> {
+  async function pedirEnlace(contacto: ContactoWhatsapp | null = null): Promise<ReturnType<typeof leerEnlaceAviso>> {
     // Rotar mata el enlace que ya tenga: lo decide el SERVIDOR (se relee justo antes), no esta sesión.
     await releer()
-    const pregunta = avisoRotacionActual()
-    if (pregunta && !window.confirm(pregunta)) return null
-    const r = await patch(presupuestoId, { accion: 'avisar', canal: 'whatsapp_enlace' })
+    if (contacto) {
+      // A una persona de contacto SIEMPRE se pregunta: a quién, como qué, que solo lo ve, y si el tomador pierde su enlace.
+      if (!window.confirm(confirmarWhatsappContacto(contacto, { tomadorJuridica: destinosWa?.tomadorJuridica === true, rotacion: avisoRotacionActual() }))) return null
+    } else {
+      const pregunta = avisoRotacionActual()
+      if (pregunta && !window.confirm(pregunta)) return null
+    }
+    const r = await patch(presupuestoId, contacto
+      ? { accion: 'avisar', canal: 'whatsapp_enlace', destinatarioClienteId: contacto.clienteId }
+      : { accion: 'avisar', canal: 'whatsapp_enlace' })
     const e = leerEnlaceAviso(r.status, r.json)
     if (!e) { setAviso(textoAviso(r.status, r.json)); return null }
     setEnlaces((n) => n + 1)
@@ -110,14 +139,17 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
 
   async function whatsapp() {
     // La ventana se abre EN el clic (tras el await, el navegador la bloquea).
+    const contacto = contactoWa
     const ventana = window.open('', '_blank')
     setOcupado(true); setAviso(null)
     try {
-      const e = await pedirEnlace()
+      const e = await pedirEnlace(contacto)
       if (!e) { ventana?.close(); return }
       if (ventana) ventana.location.href = e.whatsapp
       else window.location.href = e.whatsapp
-      setAviso({ ok: true, texto: e.conTelefono ? 'Se ha abierto WhatsApp con su chat y el mensaje: revísalo y envíalo tú. Luego pulsa «Ya lo he mandado».' : 'No tiene un móvil válido en la ficha: WhatsApp se abre sin número para que elijas el chat. Luego pulsa «Ya lo he mandado».' })
+      setAviso({ ok: true, texto: contacto
+        ? `Se ha abierto WhatsApp con el chat de ${etiquetaContacto(contacto)} y el mensaje (con su código solo podrá verlo, no aceptarlo): revísalo y envíalo tú. Luego pulsa «Ya lo he mandado».`
+        : e.conTelefono ? 'Se ha abierto WhatsApp con su chat y el mensaje: revísalo y envíalo tú. Luego pulsa «Ya lo he mandado».' : 'No tiene un móvil válido en la ficha: WhatsApp se abre sin número para que elijas el chat. Luego pulsa «Ya lo he mandado».' })
     } finally { setOcupado(false) }
   }
 
@@ -156,9 +188,24 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
       <strong style={{ fontSize: 14 }}>Enviar al cliente</strong>
       <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))' }}>
         <button type="button" disabled={ocupado} onClick={() => void copiar()} style={boton}>{copiado ? 'Copiado ✓' : 'Copiar enlace'}</button>
-        <button type="button" disabled={ocupado} onClick={() => void whatsapp()} style={boton}>WhatsApp</button>
+        <button type="button" disabled={ocupado} onClick={() => void whatsapp()} style={boton}>{contactoWa ? 'WhatsApp al contacto' : 'WhatsApp'}</button>
         {correo === 'con_email' && <button type="button" disabled={ocupado} onClick={() => void porCorreo()} style={{ ...btnStyle('primario'), minHeight: 44, width: '100%' }}>Correo…</button>}
       </div>
+      {elegiblesWa.length > 0 && (
+        <fieldset style={{ border: 0, margin: 0, padding: 0, display: 'grid', gap: 6, minWidth: 0 }}>
+          <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>WhatsApp a:</legend>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 14, overflowWrap: 'anywhere', cursor: 'pointer' }}>
+            <input type="radio" name={`wa-${presupuestoId}`} checked={waA === 'tomador'} onChange={() => setWaA('tomador')} style={{ width: 20, height: 20, flex: '0 0 auto' }} />
+            <span style={{ minWidth: 0 }}>{etiquetaTomadorWhatsapp(destinosWa?.movilTomador ?? null)}</span>
+          </label>
+          {elegiblesWa.map((e) => (
+            <label key={e.clienteId} style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 14, overflowWrap: 'anywhere', cursor: 'pointer' }}>
+              <input type="radio" name={`wa-${presupuestoId}`} checked={waA === e.clienteId} onChange={() => setWaA(e.clienteId)} style={{ width: 20, height: 20, flex: '0 0 auto' }} />
+              <span style={{ minWidth: 0 }}>{etiquetaContacto(e)} · solo para verlo</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
       {correo === 'sin_email' && (
         <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
           <span style={{ fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>
