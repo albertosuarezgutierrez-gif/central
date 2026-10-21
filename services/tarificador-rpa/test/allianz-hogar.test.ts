@@ -613,6 +613,37 @@ test('flujo cableado: municipio (CASTILLO DE LOCUBIN) ≠ población del CP (VEN
   }
 })
 
+test('el portal AUTOCOMPLETA el núcleo de la vía (VENTAS DEL CARRIZAL) y el municipio del riesgo es otro → se acepta (0.1.3)', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ poblaciones: 'VENTAS DEL CARRIZAL' })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await rellenarPantallaVivienda(page, marco, f, ctx)
+    assert.equal(await valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await context.close()
+  }
+})
+
+test('el portal autocompleta un núcleo AJENO al de la vía y al municipio → sigue siendo «otra distinta»', async () => {
+  const { context, page, ctx, marco } = await abrir({ poblaciones: 'DOS HERMANAS' })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /otra distinta/.test((e as Error).message))
+  } finally {
+    await context.close()
+  }
+})
+
+test('el portal autocompleta otra población y la vía NO trae núcleo → estricto con el municipio (no se acepta por «única»)', async () => {
+  const { context, page, ctx, marco } = await abrir({ poblaciones: 'VENTAS DEL CARRIZAL' })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA' } }
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /otra distinta/.test((e as Error).message))
+  } finally {
+    await context.close()
+  }
+})
+
 test('forma real NDBX: la lista solo aparece al ESCRIBIR en town (overlay + aria-controls) → se escribe el núcleo y se elige VENTAS DEL CARRIZAL', async () => {
   const { context, page, ctx, marco, valor } = await abrir({ sinAutocompletar: true, overlayAlEscribir: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL', 'VENTAS DEL CARRIZAL BAJO'] })
   try {
