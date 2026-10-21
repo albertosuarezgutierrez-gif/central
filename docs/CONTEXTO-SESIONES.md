@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — RRHH · «Notas internas» en la ficha del empleado (petición de Pilar): `rrhh.empleados.notas` (≤5000, NULL si vacío),
+PATCH admin existente filtrado por empresa de sesión, nunca en `/api/e/*` ni `/e/*`. Migración 0025 aplicada en prod.
+
+**(21/10/2026)** — Correduría · ficha de oportunidad: «Historial y bonificaciones» (SINCO, años sin siniestros) salía en ramos que no son
+de vehículo (lo vio Alberto en una de Accidentes). Ahora solo sale en auto/moto: `muestraHistorialSinco()` en `piezas-riesgo.ts` reutiliza
+`admiteDatosVehiculo()`; test `historial-sinco.test.ts` (visto en rojo). Pendiente: en esa misma ficha, la Comparativa dice «Esta oportunidad no
+existe en la correduría»: ruta y datos OK (asegura desplegado con #4911; la oportunidad existe); probable desfase de despliegue de #4920.
+Arreglado el mensaje: solo «no existe» si el puerto dice `estado:'no_encontrado'`; otro 404 = error con motivo (`comparativa-asegura.ts`, test visto en rojo).
+
 **(21/10/2026)** — RRHH · fichaje sin ubicación (Global2/Pilar): el aviso de permiso era de Safari para TODOS (captura era Android/Chrome) y
 «Reintentar» no sirve con permiso bloqueado. Ahora: mensaje por plataforma (iOS/Android/otro), `permissions.query` para detectar `denied`
 (botón «Ya lo he permitido»), «Obteniendo ubicación…», 400 `ubicacion_requerida` ya no culpa a permisos, timeout alta precisión 10 s.
@@ -1363,7 +1372,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Diagnóstico: 37 revisiones pendientes desde el 05/10 sin atender; un `duplicado_ambiguo` deja el contacto de Google INTACTO (sin 🟢) → hasta 8 clientes en vigor sin verde (2 `mismo_email`, 6 `telefono_compartido`).
 - El botón WhatsApp/correo de invitación al portal se oculta si el email está en 2 fichas activas (`accion:'ninguna'`): no es bug, es dato (caso María Luisa González Lozano → unificar).
 - PR #4928: la cola enseña el teléfono en cuestión, enVigor, nº pólizas tomador, enlace a ficha; `nombreFichaLegible` no duplica nombre.
-- Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Propuesto y sin hacer: aviso Telegram de cola con clientes en vigor >3 días.
+- Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Aviso Telegram diario (09:xx Madrid, en el cron google-contactos) si hay revisiones de clientes en vigor ≥3 días: PR siguiente. Cola vaciada por Alberto el 21/10; María Luisa sigue sin botón portal (email en 2 fichas, falta fusionar).
 
 ## (21/10/2026) asegura-portal: «Seguros que no nos constan» fallaba
 - Causa: el proyecto Vercel `asegura-portal` no tiene `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` → `/api/huecos-proteccion` 503 `sin_canal` (log prod 21/10 06:19Z). Pendiente: Alberto las añade.

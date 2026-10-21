@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  claseMotoPorCilindrada, claveDeCompania, cilindradaDeTexto, completarRiesgoMotoDesdeFicha, fechaAdquisicionPorDefecto, formularioBotMoto, polizaAnteriorUltimos5PorDefecto, leerEncoladoBot,
+  claseMotoPorCilindrada, claveDeCompania, cilindradaDeTexto, completarRiesgoMotoDesdeFicha, adquisicionEsPorDefecto, fechaAdquisicionPorDefecto, formularioBotMoto, polizaAnteriorUltimos5PorDefecto, leerEncoladoBot,
   mensajeFaltanDeFicha, type EntradaBotMoto, type FichaParaBot,
 } from './tarificador-moto-formulario.ts'
 
@@ -39,7 +39,12 @@ test('fecha de adquisición: la explícita gana; vacía → la de matriculación
   // Bot 0.7.18: la marca `fechaAdquisicionPorDefecto` dice si la fecha la tecleó Alberto (false) o salió de la matriculación (true).
   assert.equal(ok(entrada({ fechaAdquisicion: '', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true)
   assert.equal(ok(entrada({ fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true)
-  assert.equal(ok(entrada({ fechaAdquisicion: '2023-05-10', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, false, 'tecleada igual a la matriculación: explícita')
+  // 21/10/2026 (oportunidad «#pedir-precio»): precargada desde `fechaCompra` e IGUAL a la matriculación → por defecto (antes viajaba false).
+  assert.equal(ok(entrada({ fechaAdquisicion: '2023-05-10', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true, 'igual a la matriculación: por defecto')
+  assert.equal(ok(entrada({ fechaAdquisicion: ' 2023-05-10 ', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true)
+  assert.equal(adquisicionEsPorDefecto('', '2023-05-10', null), true)
+  assert.equal(adquisicionEsPorDefecto('2023-05-10', '2023-05-10', null), false, 'sin matriculación con que comparar: explícita')
+  assert.equal(adquisicionEsPorDefecto('2023-05-11', '2023-05-11', '2023-05-10'), false)
   assert.equal(ok(entrada({ fechaAdquisicion: '2024-03-01', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, false)
   assert.equal('fechaAdquisicionPorDefecto' in ok(entrada({ fechaMatriculacion: '' })).riesgo, false, 'sin fecha no viaja la marca')
 })
