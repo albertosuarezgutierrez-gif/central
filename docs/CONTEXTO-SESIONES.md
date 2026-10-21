@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Correduría · Occident solicitud 165109972 (Studium, acc. colectivo, efecto retroactivo 15/10): declaración de no siniestralidad en PDF firmada por Berta; emitida póliza 549683979 el 21/10. El correo de emisión no se leía y la solicitud quedó en bandeja sin oportunidad.
+Inventario histórico Gmail: 856 hilos sector, parsers cubren 13,4 %; spec «agente corredor de correo» en `docs/CORREDURIA-AGENTE-CORREO.md` (F0 deterministas sobre PR #4893 → F3). CIMA = verdad; correo cruza y avisa por Telegram.
+Pendiente Alberto: proveedor LLM UE (Anthropic vs Azure), almacenamiento adjuntos, días de espera CIMA, Mapfre FACTURA. 🚨 Triaje envía asuntos con tomador a Groq/NIM sin DPA; tirea.es/codeoscopic con credenciales en claro (rotar).
+
 **(20/10/2026)** — Auditoría diaria (ligera): precio sano (0 bajo mínimo, motor on, k=0, última pasada 7,6 h). Correduría: CIMA entra (pulls 18:30 UTC ok)
 pero `queueDepth` 211→213 con 0-2 procesados y ingesta DEGRADADA (C0072: 22 d sin mandar, 14 pólizas vivas); alertas `cima_siniestros_corte` (SIN 12 d) y
 `_compania` (C0468,C0109); `seo_correduria` GSC 403; `ses_transporte` sin establecimiento (nunca ok). Cotizaciones Codeoscopic 7d: 1 (0,50€).
