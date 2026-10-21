@@ -252,6 +252,7 @@ export function primaDeTexto(t: string | null | undefined): number | null {
 
 const ESPERA_AUTOCOMPLETADO_MS = 10_000
 const ESPERA_PASO_MS = 30_000
+const ESPERA_INFO_VIVIENDA_MS = 15_000
 
 const selControl = (control: string) => `[formcontrolname="${control}"]`
 
@@ -556,7 +557,7 @@ async function obligatoriosInvalidos(marco: Frame): Promise<string[]> {
 }
 
 /**
- * Pantalla 1 «Vivienda»: rellena con el plan puro y comprueba cada autocompletado. No pulsa «Comprobar» (no está visto) ni
+ * Pantalla 1 «Vivienda»: rellena con el plan puro y comprueba cada autocompletado. Pulsa «Comprobar» (0.1.5) solo si la información de la vivienda sigue oculta; no
  * cambia el «Tipo de documento» (lista no vista): si hace falta, hueco con inventario.
  */
 export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: FormularioHogar, ctx: CtxVivienda): Promise<void> {
@@ -583,6 +584,7 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
       await marcarOpcion(marco, ctx, op)
       continue
     }
+    if (op.control === CONTROLES.anioConstruccion) await destaparInformacionVivienda(page, marco, ctx)
     const loc = await escribir(marco, ctx, op)
     if (op.autocompleta === 'poblacion') {
       let confirmarPob: (() => Promise<void>) | null = null
@@ -629,6 +631,33 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
   }
   const invalidos = await obligatoriosInvalidos(marco)
   if (invalidos.length) throw new ErrorMapaIncompleto(`por qué siguen inválidos estos obligatorios: ${invalidos.join(', ')}`)
+}
+
+/**
+ * 0.1.5 (21/10/2026, job bef8bd1f): «Año de construcción», «Año de la reforma» y «Superficie» viven en
+ * `#buildingInformation`, que el portal deja con `hidden` hasta validar la dirección con «Comprobar» (`#check-address button`).
+ * Sin ese clic el año daba «0 coincidencias». Se pulsa SOLO por `ctx.pulsar` (guard) y SOLO si el año aún no se ve; luego se
+ * espera a que se destape. Si no se destapa: hueco (con el texto del overlay/diálogo visible, sin cerrarlo a ciegas).
+ */
+async function destaparInformacionVivienda(page: Page, marco: Frame, ctx: Pick<ContextoPortal, 'pulsar' | 'pausaAccion'>): Promise<void> {
+  const anio = marco.locator(`#buildingInformation input${selControl(CONTROLES.anioConstruccion)}:visible`)
+  if ((await anio.count()) > 0) return
+  const boton = marco.locator('#check-address button')
+  const n = await boton.count()
+  if (n !== 1) throw new ErrorMapaIncompleto(`el botón «Comprobar» de la dirección (${n} coincidencias) para destapar la información de la vivienda`)
+  await ctx.pausaAccion()
+  await ctx.pulsar(boton)
+  const fin = Date.now() + ESPERA_INFO_VIVIENDA_MS
+  while ((await anio.count()) === 0) {
+    if (Date.now() >= fin) {
+      const overlay = await marco
+        .locator('.cdk-overlay-pane, [role="dialog"], [role="alertdialog"]')
+        .evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || '').replace(/\s+/g, ' ').trim()).filter((t) => t !== '').join(' | '))
+        .catch(() => '')
+      throw new ErrorMapaIncompleto(`tras pulsar Comprobar la información de la vivienda no se destapó${overlay ? ` (diálogo visible: «${overlay.slice(0, 120)}»)` : ''}`)
+    }
+    await page.waitForTimeout(250)
+  }
 }
 
 /** «SIGUIENTE» de la pantalla 1 por `ctx.pulsar` (guard de emisión) y espera a que el asistente cambie de paso. */
@@ -709,7 +738,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.4',
+  version: '0.1.5',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
