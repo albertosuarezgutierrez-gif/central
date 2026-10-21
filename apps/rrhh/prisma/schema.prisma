@@ -58,6 +58,8 @@ model empleados {
   matricula         String?
   fecha_alta        DateTime? @db.Date
   fecha_reconocimiento_medico DateTime? @db.Date
+  /// Notas internas de la empresa (migración 0025). NUNCA en /api/e/* ni /e/*.
+  notas         String?
   estado            String    @default("activo")
   acceso_token  String    @unique
   pin_hash      String?
