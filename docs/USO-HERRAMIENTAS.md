@@ -171,24 +171,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 363 | 58.185 | 49.806.780 | 0 | 0 |
-| `otro` | 358 | 13.505 | 31.161.917 | 18.922.489 | 0 |
-| `lectura-directa` | 309 | 9.492 | 27.714.986 | 0 | 0 |
-| `mcp:github` | 311 | 7.265 | 5.711.034 | 54.621.355 | 100 |
-| `sql` | 228 | 5.538 | 2.801.170 | 2.351.230 | 20 |
-| `escritura` | 228 | 5.013 | 74.061.721 | 0 | 0 |
+| `bash` | 363 | 58.224 | 49.823.703 | 0 | 0 |
+| `otro` | 358 | 13.523 | 31.206.525 | 18.922.489 | 0 |
+| `lectura-directa` | 309 | 9.498 | 27.721.078 | 0 | 0 |
+| `mcp:github` | 311 | 7.271 | 5.712.643 | 54.621.355 | 100 |
+| `sql` | 228 | 5.543 | 2.803.873 | 2.351.230 | 20 |
+| `escritura` | 228 | 5.020 | 74.545.818 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 45 | 1.262 | 5.184.457 | 0 | 0 |
 | `mcp:Gmail` | 54 | 1.262 | 1.371.795 | 0 | 77 |
-| `mcp:Vercel` | 76 | 1.095 | 1.106.535 | 204.477 | 34 |
-| `agente:general-purpose` | 123 | 927 | 550.518 | 15.183.641 | 0 |
-| `mcp:claude-code-remote` | 56 | 603 | 56.790 | 20.519 | 0 |
+| `mcp:Vercel` | 76 | 1.098 | 1.107.361 | 204.477 | 34 |
+| `agente:general-purpose` | 123 | 928 | 551.297 | 15.202.155 | 0 |
+| `mcp:claude-code-remote` | 56 | 604 | 56.850 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 11 | 540 | 663.082 | 0 | 0 |
 | `mcp:Supabase` | 135 | 414 | 73.474 | 5.123 | 7 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
 | `agente:agente-architect` | 74 | 352 | 246.473 | 8.335.534 | 0 |
 | `mcp:Google-Drive` | 27 | 151 | 149.412 | 0 | 2 |
-| `agente:agente-mecanico` | 49 | 127 | 75.656 | 7.024.734 | 0 |
+| `agente:agente-mecanico` | 49 | 128 | 76.050 | 7.292.612 | 0 |
 | `agente:rastreador-codigo` | 54 | 100 | 31.178 | 1.298.020 | 0 |
 | `mcp:OpenSEO` | 5 | 92 | 76.972 | 0 | 2 |
 | `agente:Explore` | 38 | 83 | 40.430 | 2.175.916 | 0 |

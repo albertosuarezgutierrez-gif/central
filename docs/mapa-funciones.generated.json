@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T10:04:19Z",
-  "sha": "9309b862cf02b72057377f295b48e34f33dd25c0",
+  "generadoEn": "2026-10-21T10:36:42Z",
+  "sha": "d2bd4f0d7d6dc70af0de59ccddcb49f477fb93b4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -229455,7 +229455,7 @@
           "exportada": true,
           "params": "f: Pick<FormularioAuto, 'documentoTomador' | 'tomador' | 'fichaTomador'> | null | undefined",
           "retorno": "string | null",
-          "linea": 344,
+          "linea": 348,
           "resumen": "Documento del tomador que el robot teclea en el portal: `documentoTomador` (lo pone asegura) o, si no, el del bloque `tomador`. `null` = no consta. PURO; nunca se loguea."
         },
         {
@@ -229464,7 +229464,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "string[]",
-          "linea": 356,
+          "linea": 360,
           "resumen": "Formas en que el documento del tomador puede aparecer en un texto o en el HTML del portal (tal cual, con guion o espacio antes de la letra de control), más el NOMBRE, los APELLIDOS, la RAZÓN SOCIAL y "
         },
         {
@@ -229473,7 +229473,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 425,
+          "linea": 429,
           "resumen": "email (algo@algo.algo); teléfono español (9 dígitos que empiezan por 6, 7, 8 o 9, con espacios o guiones opcionales y prefijo +34 o 0034 opcional); IBAN (ES + 22 dígitos, con o sin espacios); y bastid"
         },
         {
@@ -229482,7 +229482,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 443
+          "linea": 447
         },
         {
           "nombre": "fechaIso",
@@ -229490,7 +229490,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "string | null",
-          "linea": 445
+          "linea": 449
         },
         {
           "nombre": "entero",
@@ -229498,7 +229498,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number",
           "retorno": "number | null",
-          "linea": 457
+          "linea": 461
         },
         {
           "nombre": "booleano",
@@ -229506,7 +229506,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "boolean | null",
-          "linea": 467
+          "linea": 471
         },
         {
           "nombre": "edad",
@@ -229514,7 +229514,7 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": null,
-          "linea": 476
+          "linea": 480
         },
         {
           "nombre": "validarFormularioAuto",
@@ -229522,12 +229522,12 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioAuto",
-          "linea": 483
+          "linea": 487
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3af14006d79a"
+      "hash": "3ab4f1ddfff2"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-comercio.ts",
