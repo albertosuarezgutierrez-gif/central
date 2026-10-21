@@ -1392,7 +1392,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Origen: clienta María Luisa González Lozano no veía la fecha de su carné (cifrada) y metía la de caducidad donde se pide expedición (`max=hoy` → «no puede ser futura»).
 - Ahora: puede meter caducidad o expedición (`expedicionDesdeCaducidad`, ambiguo 70-75 años → pide expedición); la tarjeta muestra expedición + caducidad (solo vínculo `gestionar`/`administrar`) y «Cambiar» viene precargado.
 - Avisos: carné escalonado 90/30/7/0, `carnet_sin_nacimiento`, texto DGT + .ics; ITV automática en campana (30/7/0, «estimada» si ciclo estimado; sin correo). Interruptores `vencimiento_carnet`/`vencimiento_itv` (activados por defecto; el correo solo lo calla el titular).
-- Migración `apps/asegura-portal/prisma/sql/2026-10-21_aviso_vencimiento_carnet.sql` (amplía CHECK de `portal_aviso_silenciado`): aplicar al mergear. CIMA no pisa la fecha del cliente (`discrepa`).
+- Migración `apps/asegura-portal/prisma/sql/2026-10-21_aviso_vencimiento_carnet.sql` (amplía CHECK de `portal_aviso_silenciado`): ✅ aplicada el 21/10. PR #4955 mergeado. CIMA no pisa la fecha del cliente (`discrepa`).
 - Pendiente: la clienta tiene que mandar su fecha de expedición real; la fecha de nacimiento no la puede editar ella.
 
 ## (21/10/2026) Correduría · cola de Google Contactos atascada (🟢 y botón WhatsApp del portal)
