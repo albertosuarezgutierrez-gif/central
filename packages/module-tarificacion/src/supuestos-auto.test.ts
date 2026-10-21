@@ -160,6 +160,15 @@ describe('validarFormularioAuto: fechaAdquisicion, fotocopiaAnterior y póliza a
     const sin = validarFormularioAuto(base, hoy)
     expect(sin.ok && ['fechaAdquisicion', 'fotocopiaAnterior'].some((k) => k in sin.formulario)).toBe(false)
   })
+  it('fechaAdquisicionPorDefecto: viaja solo con fechaAdquisicion; no booleano → error', () => {
+    const r = validarFormularioAuto({ ...base, fechaAdquisicion: '2021-03-04', fechaAdquisicionPorDefecto: true }, hoy)
+    expect(r.ok && r.formulario.fechaAdquisicionPorDefecto).toBe(true)
+    const f = validarFormularioAuto({ ...base, fechaAdquisicion: '2021-03-04', fechaAdquisicionPorDefecto: false }, hoy)
+    expect(f.ok && f.formulario.fechaAdquisicionPorDefecto).toBe(false)
+    const sinFecha = validarFormularioAuto({ ...base, fechaAdquisicionPorDefecto: true }, hoy)
+    expect(sinFecha.ok && 'fechaAdquisicionPorDefecto' in sinFecha.formulario).toBe(false)
+    expect(validarFormularioAuto({ ...base, fechaAdquisicion: '2021-03-04', fechaAdquisicionPorDefecto: 'si' }, hoy).ok).toBe(false)
+  })
   it('fechaAdquisicion: futura, <1900, anterior a la matriculación o mal formada → error; igual a la matriculación vale', () => {
     for (const extra of [{ fechaAdquisicion: '2030-01-01' }, { fechaAdquisicion: '1899-12-31' }, { fechaAdquisicion: '04/03/2021' }, { fechaMatriculacion: '2020-01-01', fechaAdquisicion: '2019-12-31' }]) {
       expect(validarFormularioAuto({ ...base, ...extra }, hoy).ok).toBe(false)

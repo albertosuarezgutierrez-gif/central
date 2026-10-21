@@ -17,6 +17,13 @@ de vehículo (lo vio Alberto en una de Accidentes). Ahora solo sale en auto/moto
 `admiteDatosVehiculo()`; test `historial-sinco.test.ts` (visto en rojo). Pendiente: en esa misma ficha, la Comparativa dice «Esta oportunidad no
 existe en la correduría» = 404 del puerto de asegura (`/api/operador` comparativa); falta ver la respuesta cruda para ese id.
 
+**(21/10/2026)** — RRHH · fichaje sin ubicación (Global2/Pilar): el aviso de permiso era de Safari para TODOS (captura era Android/Chrome) y
+«Reintentar» no sirve con permiso bloqueado. Ahora: mensaje por plataforma (iOS/Android/otro), `permissions.query` para detectar `denied`
+(botón «Ya lo he permitido»), «Obteniendo ubicación…», 400 `ubicacion_requerida` ya no culpa a permisos, timeout alta precisión 10 s.
+2ª parte (mismo PR #4927): «Fichar sin ubicación» de emergencia (`empresas.permite_fichar_sin_ubicacion` DEFAULT true, marca en fichaje),
+`rrhh.incidencias_ubicacion` + sección en /admin/fichajes, precisión GPS, aviso de permiso al abrir, aviso instalar PWA, guía pública
+`/ayuda/ubicacion`. Migración 0024 APLICADA en prod (wswbehlcuxqxyinousql). Pendiente: interruptor del permiso en el admin (hoy solo por SQL).
+
 **(20/10/2026)** — Auditoría diaria (ligera): precio sano (0 bajo mínimo, motor on, k=0, última pasada 7,6 h). Correduría: CIMA entra (pulls 18:30 UTC ok)
 pero `queueDepth` 211→213 con 0-2 procesados y ingesta DEGRADADA (C0072: 22 d sin mandar, 14 pólizas vivas); alertas `cima_siniestros_corte` (SIN 12 d) y
 `_compania` (C0468,C0109); `seo_correduria` GSC 403; `ses_transporte` sin establecimiento (nunca ok). Cotizaciones Codeoscopic 7d: 1 (0,50€).
@@ -1357,6 +1364,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (21/10/2026) Correduría · cola de Google Contactos atascada (🟢 y botón WhatsApp del portal)
+- Diagnóstico: 37 revisiones pendientes desde el 05/10 sin atender; un `duplicado_ambiguo` deja el contacto de Google INTACTO (sin 🟢) → hasta 8 clientes en vigor sin verde (2 `mismo_email`, 6 `telefono_compartido`).
+- El botón WhatsApp/correo de invitación al portal se oculta si el email está en 2 fichas activas (`accion:'ninguna'`): no es bug, es dato (caso María Luisa González Lozano → unificar).
+- PR #4928: la cola enseña el teléfono en cuestión, enVigor, nº pólizas tomador, enlace a ficha; `nombreFichaLegible` no duplica nombre.
+- Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Propuesto y sin hacer: aviso Telegram de cola con clientes en vigor >3 días.
 
 ## (21/10/2026) asegura-portal: «Seguros que no nos constan» fallaba
 - Causa: el proyecto Vercel `asegura-portal` no tiene `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` → `/api/huecos-proteccion` 503 `sin_canal` (log prod 21/10 06:19Z). Pendiente: Alberto las añade.
