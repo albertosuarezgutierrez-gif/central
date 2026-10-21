@@ -1,4 +1,4 @@
--- ⏳ SIN APLICAR. Portal de Grupo ASegura — interruptores «avisarme cuando vaya a caducar mi carné» y «avisarme de la
+-- ✅ APLICADA el 21/10/2026 (migración `aviso_vencimiento_carnet_itv`). Portal de Grupo ASegura — interruptores «avisarme cuando vaya a caducar mi carné» y «avisarme de la
 -- ITV de mi vehículo» (21/10/2026). Un solo fichero y un solo CHECK para los dos tipos nuevos (`vencimiento_carnet`,
 -- `vencimiento_itv`): donde abajo se dice «el valor nuevo» o «el aviso» vale para ambos.
 --
