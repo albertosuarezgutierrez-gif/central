@@ -792,3 +792,10 @@ details[open] > summary .seccion-chev { transform: rotate(90deg); }
 @media (max-width: 480px) {
   .rotulo-ancho { display: none; }
 }
+
+/* Secciones plegadas de la pantalla del riesgo (`SeccionPlegable`, 21/10/2026): sin triángulo nativo (el ▸ gira con
+   `.seccion-chev`) y la tarjeta de cada bloque de dentro se aplana (sin sombra ni relleno lateral: ya está en una tarjeta;
+   a 320 px dos rellenos de 20 px se comían el ancho). */
+.seccion-plegable > summary { list-style: none; }
+.seccion-plegable > summary::-webkit-details-marker { display: none; }
+.seccion-plegable-cuerpo > :is(section, div) { box-shadow: none !important; background: transparent !important; padding-left: 0 !important; padding-right: 0 !important; }

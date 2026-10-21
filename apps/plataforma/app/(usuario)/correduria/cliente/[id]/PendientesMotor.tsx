@@ -15,6 +15,7 @@ import type { PendientesPorBloque, Pendiente } from '@/lib/tarificador-pendiente
 import {
   ROTULO_BLOQUE, bloqueDeChip, bloquesEnLinea, camposCompletosDeBloque, idBloqueMotor, rotuloCompleto, rotuloEstadoPendiente, textoChip, tituloChip, vistaBloque,
 } from '@/lib/tarificador-pendientes-vista'
+import { abrirSeccion } from '../../oportunidad/[id]/SeccionPlegable'
 
 /** Un campo suelto del adaptador ya resuelto para pintar (valor visible, opciones, y cómo fue su último guardado). */
 export type CampoPanel = {
@@ -52,10 +53,23 @@ export function PendientesMotorProvider({ children }: { children: ReactNode }) {
   return <PendientesMotorContext.Provider value={valor}>{children}</PendientesMotorContext.Provider>
 }
 
-/** Lleva al bloque (el scroller de plataforma es `LayoutShell`: `scrollIntoView` vale). */
+/** Sección plegada de la pantalla del riesgo (`RiesgoPantalla`) donde vive cada bloque de motor. */
+const SECCION_DE_BLOQUE: Record<BloqueObligatorio, string> = { personas: 'sec-intervinientes', riesgo: 'sec-objeto', poliza: 'sec-historial' }
+
+/**
+ * Lleva al bloque (el scroller de plataforma es `LayoutShell`: `scrollIntoView` vale). En la pantalla del riesgo el bloque vive en
+ * una `SeccionPlegable` PEREZOSA (plegada = sin montar, sin id que buscar): se abre la sección y se va al bloque cuando ya está.
+ */
 export function irABloque(bloque: BloqueObligatorio, abrirCompleto = false) {
-  if (abrirCompleto) { const d = document.getElementById(`${idBloqueMotor(bloque)}-completo`); if (d instanceof HTMLDetailsElement) d.open = true }
-  document.getElementById(idBloqueMotor(bloque))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const id = idBloqueMotor(bloque)
+  const desplegarCompleto = () => { if (abrirCompleto) { const d = document.getElementById(`${id}-completo`); if (d instanceof HTMLDetailsElement) d.open = true } }
+  if (document.getElementById(SECCION_DE_BLOQUE[bloque])) {
+    abrirSeccion(SECCION_DE_BLOQUE[bloque], id)
+    window.setTimeout(desplegarCompleto, 60)
+    return
+  }
+  desplegarCompleto()
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const ENTRADA: React.CSSProperties = { padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%', boxSizing: 'border-box' }
@@ -231,7 +245,7 @@ export function ChipsCompanias({ panel }: { panel: PanelPendientes }) {
           <li key={r.compania} style={{ minWidth: 0 }}>
             {bloque ? (
               <a href={`#${idBloqueMotor(bloque)}`} title={title} style={estilo}
-                onClick={(e) => { if (document.getElementById(idBloqueMotor(bloque))) { e.preventDefault(); irABloque(bloque) } }}>{texto}</a>
+                onClick={(e) => { if (document.getElementById(idBloqueMotor(bloque)) || document.getElementById(SECCION_DE_BLOQUE[bloque])) { e.preventDefault(); irABloque(bloque) } }}>{texto}</a>
             ) : <span title={title} style={estilo}>{texto}</span>}
           </li>
         )

@@ -40,3 +40,45 @@ export function elegirPoblacionPorLocalidades(opciones: readonly OpcionPoblacion
   if (elegidas.size !== 1) return null
   return opciones.find((o) => o.codigo === [...elegidas][0]) ?? null
 }
+
+/** Resultado de elegir la población en la lista desplegada de Allianz Hogar (`town`). `indice` = posición en `textos`. */
+export type EleccionPoblacionHogar = { tipo: 'elegida'; indice: number; por: 'nucleo' | 'municipio' | 'unica' } | { tipo: 'sin_opciones' } | { tipo: 'sin_municipio' } | { tipo: 'sin_coincidencia' }
+
+const PALABRAS_VACIAS = new Set(['DE', 'DEL', 'LA', 'LAS', 'LOS', 'EL'])
+
+const fichas = (t: string): string[] => clavePoblacion(t).replace(/[^A-Z0-9Ñ ]/g, ' ').split(/\s+/).filter((w) => w !== '' && !PALABRAS_VACIAS.has(w))
+
+/** «PARRA LA (VENTAS CARRIZA)» → «VENTAS CARRIZA» (el núcleo entre paréntesis del callejero del Catastro); sin paréntesis → `null`. */
+export function nucleoDeVia(nombreVia: string | null | undefined): string | null {
+  const m = /\(([^()]+)\)\s*$/.exec(nombreVia ?? '')
+  return m && fichas(m[1]).length > 0 ? m[1].trim() : null
+}
+
+/** Cada ficha de la aguja es igual a una ficha de la opción o prefijo (≥4 letras) de una (el Catastro trunca: «CARRIZA» ↔ «CARRIZAL»). */
+function agujaCasa(aguja: string, opcion: string): boolean {
+  const fa = fichas(aguja)
+  const fo = fichas(opcion)
+  return fa.length > 0 && fa.every((w) => fo.some((o) => o === w || (w.length >= 4 && o.startsWith(w))))
+}
+
+/**
+ * Allianz Hogar (21/10/2026): el CP tiene varias poblaciones (p. ej. 23693) y el portal no autocompleta `town`. Elige la opción de
+ * la lista (texto sin prefijo «CP -») probando, en orden y aceptando solo una coincidencia ÚNICA: (1) el núcleo entre paréntesis del
+ * nombre de la vía (fichas iguales o prefijo ≥4 letras, sin del/de/la/…); (2) el municipio (exacto o palabras enteras);
+ * (3) si el portal ofrece UNA sola opción, esa (el CP la fija). Si no, no se elige (atasco con la lista). PURA.
+ */
+export function elegirPoblacionHogar(textos: readonly string[], municipio: string | null, nombreVia: string | null = null): EleccionPoblacionHogar {
+  if (textos.length === 0) return { tipo: 'sin_opciones' }
+  const etiquetas = textos.map((t) => t.replace(/^\s*\d{5}\s*-\s*/, '').trim())
+  const nucleo = nucleoDeVia(nombreVia)
+  if (nucleo !== null) {
+    const casan = etiquetas.map((e, i) => (agujaCasa(nucleo, e) ? i : -1)).filter((i) => i >= 0)
+    if (casan.length === 1) return { tipo: 'elegida', indice: casan[0], por: 'nucleo' }
+  }
+  if (municipio !== null && municipio.trim() !== '') {
+    const o = elegirPoblacionPorLocalidades(etiquetas.map((etiqueta, i) => ({ codigo: String(i), etiqueta })), [municipio])
+    if (o !== null) return { tipo: 'elegida', indice: Number(o.codigo), por: 'municipio' }
+  }
+  if (textos.length === 1) return { tipo: 'elegida', indice: 0, por: 'unica' }
+  return nucleo === null && (municipio === null || municipio.trim() === '') ? { tipo: 'sin_municipio' } : { tipo: 'sin_coincidencia' }
+}

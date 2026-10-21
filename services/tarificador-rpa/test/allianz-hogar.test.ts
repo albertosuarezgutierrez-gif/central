@@ -149,6 +149,8 @@ type OpcionesApp = {
   sinVia?: boolean
   /** Lista desplegada de `mat-option` (como la del portal): al pulsar una, rellena la población o la vía elegida. */
   lista?: { para: 'poblacion' | 'via'; textos: string[] }
+  /** La lista de poblaciones solo se muestra al enfocar `town` (como el desplegable real). */
+  listaAlEnfocar?: boolean
   /** Una casilla (checkbox) con su `label for` y un `label` que envuelve otra. */
   casilla?: boolean
 }
@@ -176,7 +178,7 @@ ${radio('r1', 'regimen', '<i></i>Propietario Propietario', true)}${radio('r2', '
 ${radio('u1', 'uso', 'Habitual', true)}${radio('u2', 'uso', 'Alquiler')}${radio('u3', 'uso', 'En venta y/o deshabitada')}${radio('u4', 'uso', 'Secundaria')}${radio('u5', 'uso', 'Turístico o vacacional')}
 <button type="button" id="NextPageFromRisk" disabled>SIGUIENTE</button>
 ${o.casilla ? `<span><input type="checkbox" id="c1"><label for="c1">Acepto condiciones</label></span><label id="envuelve"><input type="checkbox"> Recibir avisos</label>` : ''}
-${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" role="option" data-para="${o.lista!.para}">${t}</mat-option>`).join('') : ''}
+${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" role="option" data-para="${o.lista!.para}" ${o.listaAlEnfocar ? 'style="display:none"' : ''}>${t}</mat-option>`).join('') : ''}
 <script>
   document.querySelectorAll('mat-option').forEach((m) => m.addEventListener('click', () => {
     if (m.dataset.para === 'poblacion') { document.querySelector('[formcontrolname="province"]').value = 'SEVILLA'; document.querySelector('[formcontrolname="town"]').value = m.textContent; }
@@ -184,6 +186,7 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
     valida();
   }));
   const $ = (f) => document.querySelector('[formcontrolname="' + f + '"]');
+  $('town').addEventListener('focus', () => document.querySelectorAll('mat-option[data-para=poblacion]').forEach((m) => { m.style.display = ''; }));
   const valida = () => {
     for (const el of document.querySelectorAll('input[formcontrolname]')) {
       let ok = !el.required || el.value.trim() !== '';
@@ -440,16 +443,17 @@ test('viaCoincide: nombre solo o «tipo nombre» por plano(); otra vía o vacío
   assert.equal(viaCoincide('CALLE', null, 'PRUEBA'), false)
 })
 
-test('población elegida de la lista que COINCIDE con la del riesgo → se confirma lo aprendido; que NO coincide → hueco y NO se confirma', async () => {
-  for (const [elegida, ok] of [['SEVILLA', true], ['DOS HERMANAS', false]] as const) {
-    const { context, page, ctx, marco } = await abrir({ sinAutocompletar: true, lista: { para: 'poblacion', textos: ['DOS HERMANAS', 'SEVILLA'] } })
+test('población de la lista: el riesgo (SEVILLA) se elige SOLO por municipio, sin IA ni aprender; la IA que apuntara a otra ya no se consulta', async () => {
+  for (const [textos, ok] of [[['DOS HERMANAS', 'SEVILLA'], true], [['DOS HERMANAS', 'UTRERA'], false]] as const) {
+    const elegida = textos[0]
+    const { context, page, ctx, marco } = await abrir({ sinAutocompletar: true, listaAlEnfocar: true, lista: { para: 'poblacion', textos: [...textos] } })
     try {
       const llamadas: string[] = []
       const formador = await formadorDe((e) => e.findIndex((c) => c.texto === elegida), llamadas)
       const r = rellenarPantallaVivienda(page, marco, FORM, { ...ctx, formador })
       if (ok) await r
-      else await assert.rejects(() => r, (e) => e instanceof ErrorMapaIncompleto && /otra distinta/.test((e as Error).message))
-      assert.equal(confirmaciones(llamadas), ok ? 1 : 0, `confirmaciones eligiendo ${elegida}`)
+      else await assert.rejects(() => r, (e) => e instanceof ErrorMapaIncompleto && /ninguna opción coincide/.test((e as Error).message))
+      assert.equal(confirmaciones(llamadas), 0, `confirmaciones eligiendo ${elegida}`)
     } finally {
       await context.close()
     }
@@ -542,4 +546,41 @@ test('candidatos: la etiqueta de una CASILLA (for → checkbox o envolviéndola)
 
 test('SELECTOR_ACCIONES compartido: idéntico al de origin/main (sin label[for], mat-option ni [role=option])', () => {
   assert.equal(SELECTOR_ACCIONES, 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button, mat-icon:not(a mat-icon):not(button mat-icon):not([role=button] mat-icon)')
+})
+
+// ───────────── 21/10/2026: elección de la población del CP por el municipio del riesgo (CP 23693, varias poblaciones) ─────────────
+test('elegirPoblacionHogar: exacta (sin tildes/mayúsculas/prefijo CP), por palabras enteras, y nunca al azar', async () => {
+  const { elegirPoblacionHogar } = await import('../src/adapters/allianz/poblacion-localidad.ts')
+  const LISTA = ['23693 - VENTAS DEL CARRIZAL', 'Jaén', 'Las Infantas']
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Ventas del Carrizal'), { tipo: 'elegida', indice: 0, por: 'municipio' })
+  assert.deepEqual(elegirPoblacionHogar(['Ventas del Carrizal (Jaén)', 'Jaén Centro'], ' VENTAS  DEL CARRIZAL '), { tipo: 'elegida', indice: 0, por: 'municipio' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Jaen'), { tipo: 'elegida', indice: 1, por: 'municipio' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Linares'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(['Jaén', 'Jaén'], 'Jaén'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(['Jaén Norte', 'Jaén Sur'], 'Jaén'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, null), { tipo: 'sin_municipio' })
+  assert.deepEqual(elegirPoblacionHogar([], 'Jaén'), { tipo: 'sin_opciones' })
+})
+
+test('elegirPoblacionHogar: núcleo de la vía (prefijo del Catastro), opción única y prefijo ambiguo', async () => {
+  const { elegirPoblacionHogar, nucleoDeVia } = await import('../src/adapters/allianz/poblacion-localidad.ts')
+  assert.equal(nucleoDeVia('PARRA LA (VENTAS CARRIZA)'), 'VENTAS CARRIZA')
+  assert.equal(nucleoDeVia('PARRA LA'), null)
+  const LISTA = ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL']
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Castillo de Locubín', 'PARRA LA (VENTAS CARRIZA)'), { tipo: 'elegida', indice: 1, por: 'nucleo' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Castillo de Locubín', 'PARRA LA'), { tipo: 'elegida', indice: 0, por: 'municipio' })
+  assert.deepEqual(elegirPoblacionHogar(['23693 - OTRA'], 'Nada', null), { tipo: 'elegida', indice: 0, por: 'unica' })
+  assert.deepEqual(elegirPoblacionHogar(['VENTAS DEL CARRIZAL', 'VENTAS DEL CARRIZO'], 'Linares', 'X (VENTAS CARRI)'), { tipo: 'sin_coincidencia' })
+})
+
+test('flujo cableado: municipio (CASTILLO DE LOCUBIN) ≠ población del CP (VENTAS DEL CARRIZAL) → se elige por el núcleo de la vía y NO salta «otra distinta»', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ sinAutocompletar: true, listaAlEnfocar: true, lista: { para: 'poblacion', textos: ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL'] } })
+  try {
+    const f = { ...FORM, inmueble: { ...FORM.inmueble, municipio: 'Castillo de Locubín', nombreVia: 'PARRA LA (VENTAS CARRIZA)' } }
+    // la vía no coincide con el nombre del mock (solo se contrasta si el portal no rellena el tipo de vía; aquí sí lo rellena)
+    await rellenarPantallaVivienda(page, marco, f, ctx)
+    assert.equal(await valor('town'), 'VENTAS DEL CARRIZAL')
+  } finally {
+    await context.close()
+  }
 })

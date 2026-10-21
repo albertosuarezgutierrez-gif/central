@@ -1,6 +1,10 @@
 'use client'
 
 // La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · historial del seguro y del carné · pedir precio (bloque único) · parrilla de precios Avant2 ↔ bot (13/10/2026) · presupuestos P1…Pn · historial de variantes.
+// 21/10/2026 (Alberto, en el móvil: «la pantalla es muy larga; que todo quede plegado»): arriba, abierto, SOLO «Para tarificar
+// faltan» (`ParaTarificar`); cada bloque va en una `SeccionPlegable` con su resumen de una línea, y no se monta (ni lee) hasta
+// abrirla. Excepciones montadas desde el principio (plegadas): «Pedir precio» (sus bots publican lo que falta de motor) y
+// «Presupuestos de compañías» (alimenta el lado bot de la parrilla).
 // Tras cualquier cambio de figuras se RELEE el riesgo entero del puerto: lo que se pinta es siempre
 // lo que asegura tiene, nunca una suposición local de cómo quedó.
 
@@ -35,7 +39,10 @@ import { avisoSinAvant2 } from '@/lib/correduria/registro-ramos'
 import ParrillaPrecios, { trabajosParaParrilla } from './ParrillaPrecios'
 import { ladoBotDeLecturas, type LadoBot } from './parrilla-precios'
 import { adaptadorDeRamo } from '@/lib/tarificador-bots-ramos'
-import { leerIntegraciones } from '@/lib/tarificador-probar'
+import { leerIntegraciones, type IntegracionVista } from '@/lib/tarificador-probar'
+import { resumenIntervinientes, resumenObjeto } from '@/lib/correduria/para-tarificar'
+import SeccionPlegable, { abrirSeccion } from './SeccionPlegable'
+import ParaTarificar from './ParaTarificar'
 import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
 import type { PropuestaCarteraHogar } from '@/lib/correduria/hogar-cartera'
@@ -74,6 +81,9 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
   // lado bot de la parrilla se lee aparte (integraciones activas + trabajos de la oportunidad). Antes salía «no aplica» siempre.
   const botsPropios = botsDelRamo.length === 0 && adaptadorDeRamo(op.ramo) !== null
   const [ladoBot, setLadoBot] = useState<LadoBot | null>(() => (botsDelRamo.length === 0 && !botsPropios ? { estado: 'no_aplica' } : null))
+  // Las compañías con bot activo en el ramo (para «Para tarificar faltan»): `undefined` = leyéndose · `null` = no se pudo leer ·
+  // `[]` = ninguna (o el ramo no tiene bots con entrada propia).
+  const [integracionesRamo, setIntegracionesRamo] = useState<IntegracionVista[] | null | undefined>(() => (botsPropios ? undefined : []))
   const alLeerBots = useCallback((l: { estado: 'ok'; trabajos: TrabajoCompania[] } | { estado: 'error'; texto: string }) => {
     setLadoBot(l.estado === 'ok' ? { estado: 'ok', disponibles: botsDelRamo, trabajos: trabajosParaParrilla(l.trabajos) } : { estado: 'sin_leer', motivo: l.texto })
   }, [botsDelRamo])
@@ -95,6 +105,7 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
       ])
       if (!vivo) return
       const li = leerIntegraciones(i.status, i.json)
+      setIntegracionesRamo(li.ok ? li.integraciones.filter((x) => x.ramo === op.ramo) : null)
       const lp = p.status === 200 ? leerPresupuestos(p.json) : null
       setLadoBot(ladoBotDeLecturas(op.ramo, li.ok ? li.integraciones : null, lp ? trabajosParaParrilla(lp.trabajos.filter((t) => t.ramo === op.ramo)) : null))
     })()
@@ -135,6 +146,8 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
   // pedir precio sigue necesitando el clic de confirmación (0,50€).
   useEffect(() => {
     if (acciones.principal && abrirAlCargar(window.location.hash, op.ramo)) setCotizadorAbierto(true)
+    // «Pedir precio» va plegada: llegar con `#pedir-precio` la abre y lleva a ella.
+    if (acciones.principal && abrirAlCargar(window.location.hash, op.ramo)) abrirSeccion('sec-pedir-precio', 'pedir-precio')
     // Una vez, al llegar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -193,7 +206,26 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
         </div>
       )}
 
+      {/* Lo ÚNICO abierto (21/10/2026): lo que falta para tarificar, de Avant2 y de los bots, sin repetir. */}
+      <ParaTarificar
+        riesgo={riesgo}
+        aplicaAvant2={!!acciones.principal}
+        esVehiculo={esVehiculo}
+        integraciones={integracionesRamo}
+        onTarificarAvant2={() => {
+          if (CotizadorEmbebido) setCotizadorAbierto(true)
+          abrirSeccion('sec-pedir-precio', 'pedir-precio')
+        }}
+        onLanzarBots={() => {
+          // Moto: sus bots van dentro del cotizador (abrirlo es gratis).
+          if (op.ramo === 'moto' && CotizadorEmbebido) setCotizadorAbierto(true)
+          abrirSeccion('sec-pedir-precio', op.ramo === 'moto' ? 'pedir-precio' : 'bots-gratis')
+        }}
+      />
+
       {/* Orden (Alberto, 13/10/2026): intervinientes → objeto del riesgo → historial → verificación + pedir precio. */}
+      <SeccionPlegable id="sec-intervinientes" titulo="Intervinientes" resumen={resumenIntervinientes(riesgo.figuras)}
+        tono={riesgo.figuras.some((f) => f.faltan === null || f.faltan.length > 0) ? 'aviso' : 'normal'}>
       <BloqueMotor bloque="personas" activo={motor}>
       <FigurasRiesgo
         riesgo={riesgo}
@@ -203,7 +235,11 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
         onEditando={alEditarFiguras}
       />
       </BloqueMotor>
+      </SeccionPlegable>
 
+      <SeccionPlegable id="sec-objeto" titulo={esVehiculo ? 'Vehículo' : bloqueDatos?.clave === 'datosVivienda' ? 'Vivienda' : 'Datos del riesgo'}
+        resumen={resumenObjeto(bloqueDatos, eur, riesgo.faltanVehiculo, esVehiculo)}
+        tono={(esVehiculo ? riesgo.faltanVehiculo === null || riesgo.faltanVehiculo.length > 0 : bloqueDatos === null || bloqueDatos.faltan.length > 0) ? 'aviso' : 'normal'}>
       {esVehiculo ? (
         <BloqueMotor bloque="riesgo" activo={motor}>
         <DatosVehiculo
@@ -225,14 +261,21 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
           onEditando={alEditarObjeto}
         />
       )}
+      </SeccionPlegable>
 
       {/* «Historial y bonificaciones» (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. */}
+      <SeccionPlegable id="sec-historial" titulo="Historial y bonificaciones"
+        resumen={riesgo.historial === null ? 'No se ha podido leer' : riesgo.historial.seguroAnterior ? 'Con seguro anterior' : 'Seguro anterior: no consta'}>
       <BloqueMotor bloque="poliza" activo={motor}>
       <HistorialRiesgo riesgo={riesgo} hoy={hoy} />
       </BloqueMotor>
+      </SeccionPlegable>
 
       {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
           secundario (póliza) y el coste de 0,50€ viven aquí y en ningún otro sitio de la página. */}
+      {/* Montada desde el principio (plegada): los bots de coche publican aquí lo que falta, y el cotizador se abre desde arriba. */}
+      <SeccionPlegable id="sec-pedir-precio" titulo="Pedir precio" perezosa={false}
+        resumen={acciones.principal ? (botsPropios ? 'Avant2 y bots de compañía (gratis)' : 'Avant2') : hayBots ? 'Bots de compañía (gratis)' : 'Este ramo se cotiza fuera'}>
       <AnfitrionBotsContext.Provider value={anfitrionBots}>
       <section id="pedir-precio" aria-labelledby="pedir-precio-titulo" style={{ ...cardStyle, display: 'grid', gap: 8, minWidth: 0 }}>
         <div id="pedir-precio-titulo" style={{ fontSize: 14, fontWeight: 600 }}>Pedir precio</div>
@@ -279,9 +322,13 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
               )}
             </div>
             {/* Bots RPA (gratis) con entrada propia: no dependen de Avant2 (ni de su precalificación) ni de abrir el cotizador. */}
-            {op.ramo === 'auto' && <BotsAutoRiesgo riesgo={riesgo} />}
-            {/* Hogar (19/10/2026): Allianz Hogar en exploración, con los datos de la vivienda y el Catastro; uso/régimen/tipo/madera, a elegir. */}
-            {op.ramo === 'hogar' && <BotsHogarRiesgo riesgo={riesgo} />}
+            {(op.ramo === 'auto' || op.ramo === 'hogar') && (
+              <div id="bots-gratis" style={{ minWidth: 0, scrollMarginTop: 8 }}>
+                {op.ramo === 'auto' && <BotsAutoRiesgo riesgo={riesgo} />}
+                {/* Hogar (19/10/2026): Allianz Hogar en exploración, con los datos de la vivienda y el Catastro; uso/régimen/tipo/madera, a elegir. */}
+                {op.ramo === 'hogar' && <BotsHogarRiesgo riesgo={riesgo} />}
+              </div>
+            )}
             {CotizadorEmbebido && cotizadorAbierto && (
               <div id="pedir-precio-cotizador" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
                 <CotizadorEmbebido
@@ -294,6 +341,7 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
                     setCotizadorAbierto(false)
                     setCotizandoEmbebido(false)
                     setAbrirPrecios(id)
+                    abrirSeccion('sec-presupuestos-riesgo')
                     void recargar('Precio pedido y guardado en «Presupuestos de este riesgo»: desde ahí se emite.')
                   }}
                   onDesfase={() => void recargar()}
@@ -323,12 +371,12 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
               Este ramo se cotiza con los bots de compañía: el formulario de presupuestos de más abajo va ya sembrado con el capital y la dirección de los datos; allí eliges compañías y lo pides.
             </p>
             <div>
-              <a href="#presupuestos" style={{ ...btnStyle('primario', 'md'), minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', maxWidth: '100%' }}>
+              <a href="#presupuestos" onClick={(e) => { e.preventDefault(); abrirSeccion('sec-presupuestos-companias', 'presupuestos') }} style={{ ...btnStyle('primario', 'md'), minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', maxWidth: '100%' }}>
                 Ir a pedir presupuestos →
               </a>
             </div>
             {/* Sin acción principal (p. ej. sin Avant2) el coche sigue teniendo sus bots con entrada propia. */}
-            {op.ramo === 'auto' && <BotsAutoRiesgo riesgo={riesgo} />}
+            {op.ramo === 'auto' && <div id="bots-gratis" style={{ minWidth: 0, scrollMarginTop: 8 }}><BotsAutoRiesgo riesgo={riesgo} /></div>}
           </>
         ) : (
           <>
@@ -342,17 +390,27 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
         )}
       </section>
       </AnfitrionBotsContext.Provider>
+      </SeccionPlegable>
 
       {/* UNA parrilla por oportunidad (13/10/2026): Avant2 frente al bot, por compañía. Solo compara; los precios con su
           «Emitir», PDF y traza siguen en «Presupuestos de compañías» y en «Presupuestos de este riesgo» (P1…Pn). */}
+      <SeccionPlegable id="sec-precios" titulo="Precios y comparativa"
+        resumen={comparativa === null ? 'Leyendo…' : comparativa.estado !== 'ok' ? 'No se ha podido leer la comparativa' : comparativa.datos.avant2 ? 'Hay una cotización de Avant2 guardada' : 'Sin cotización de Avant2 guardada'}>
       <ParrillaPrecios oportunidadId={op.id} claveVariantes={riesgo.variantes.map((v) => v.id).join(',')} bot={ladoBot} />
 
       {/* La comparativa ÚNICA (21/10/2026): Avant2 + PDFs + bots + póliza en cartera, por el mismo motor que el PDF. */}
       <ComparativaOportunidad lectura={comparativa} onRecargar={() => void releerComparativa()} />
+      </SeccionPlegable>
 
+      <SeccionPlegable id="sec-enviar" titulo="Enviar al cliente"
+        resumen={correoTomador === 'sin_email' ? 'El tomador no tiene correo en su ficha' : correoTomador === 'no_se_sabe' ? 'Correo del tomador: no se ha podido leer' : 'Ofertas para el cliente'}>
       <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} correoTomador={correoTomador} />
+      </SeccionPlegable>
 
-      {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
+      {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). Montada desde el
+          principio (plegada): su lectura alimenta el lado bot de la parrilla. */}
+      {botsDelRamo.length > 0 && (
+      <SeccionPlegable id="sec-presupuestos-companias" titulo="Presupuestos de compañías (bots)" perezosa={false} resumen={`${botsDelRamo.length} ${botsDelRamo.length === 1 ? 'compañía' : 'compañías'} con bot`}>
       <PresupuestosCompanias
         oportunidadId={op.id}
         clienteId={op.clienteId}
@@ -360,13 +418,18 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
         riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
         onLectura={alLeerBots}
       />
-      {/* Ramos sin bloque de compañías (auto, moto…): el botón de «preparar presupuesto» se monta aparte. */}
+      </SeccionPlegable>
+      )}
+      {/* Ramos sin bloque de compañías (auto, moto…): el botón de «preparar presupuesto» se monta aparte (solo se pinta con algún precio de bot). */}
       {botsDelRamo.length === 0 && <PrepararPresupuestoBotSolo oportunidadId={op.id} />}
 
+      <SeccionPlegable id="sec-presupuestos-riesgo" titulo="Presupuestos de este riesgo"
+        resumen={riesgo.variantes.length === 0 ? 'Aún ninguno' : `${riesgo.variantes.length} ${riesgo.variantes.length === 1 ? 'presupuesto' : 'presupuestos'} (P1…P${riesgo.variantes.length})`}>
       <HistorialVariantes riesgo={riesgo} abrirPrecios={abrirPrecios} />
 
       {/* Varios presupuestos de este riesgo en UNA propuesta (07/10/2026). Preparar no avisa a nadie. */}
       <PropuestaEscenarios riesgo={riesgo} />
+      </SeccionPlegable>
     </div>
     </PendientesMotorProvider>
   )
