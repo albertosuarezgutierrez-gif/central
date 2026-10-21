@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T07:14:28Z",
-  "sha": "76fe3ece77630c316d6a2fd07be85f2d7171c8f9",
+  "generadoEn": "2026-10-21T08:27:22Z",
+  "sha": "f80e144d4ee937fb81920065dcd4bec47b425ede",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -40763,12 +40763,21 @@
       ],
       "funciones": [
         {
+          "nombre": "campoDeFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "principal: string | null | undefined, secundario: string | null | undefined",
+          "retorno": "",
+          "linea": 59,
+          "resumen": "Principal si lo hay; solo si NO hay principal se mira el secundario. Un principal que no abre (clave PII) es «ilegible», NO «no tiene»: no se cae al secundario como si fuera el de la ficha."
+        },
+        {
           "nombre": "leerPropuesta",
           "kind": "function",
           "exportada": false,
           "params": "c: string | null",
           "retorno": "",
-          "linea": 43
+          "linea": 64
         },
         {
           "nombre": "listarRevisiones",
@@ -40776,7 +40785,7 @@
           "exportada": true,
           "params": "correduriaId: string, despuesDe: string | null",
           "retorno": "Promise<",
-          "linea": 72,
+          "linea": 93,
           "resumen": "Pendientes, de la más reciente a la más antigua, de 50 en 50. Paginación por CLAVE (`creado_en`, `id`) de la última que se vio, no por desplazamiento ni con el `cursor` de Prisma: al resolver tarjetas"
         },
         {
@@ -40785,7 +40794,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { id: string; accion: AccionRevision; actor: string; forzar: boolean; clienteId?: string | null },",
           "retorno": "Promise<ResultadoResolucion>",
-          "linea": 118
+          "linea": 172
         },
         {
           "nombre": "liberarClaim",
@@ -40793,7 +40802,7 @@
           "exportada": false,
           "params": "correduriaId: string, id: string, actor: string, resueltoEn: Date",
           "retorno": "Promise<void>",
-          "linea": 178,
+          "linea": 232,
           "resumen": "Deshace un claim propio (mismo actor y mismo instante) si el alta del lead no salió."
         },
         {
@@ -40802,7 +40811,7 @@
           "exportada": false,
           "params": "correduriaId: string, fila: { id: string; telefonoHash: string | null; candidatos: string[] }, actor: string, clienteId: string | null,",
           "retorno": "Promise<ResultadoResolucion>",
-          "linea": 193,
+          "linea": 247,
           "resumen": "Guarda la ficha elegida como TITULAR del número (`google_contactos_titular_telefono`, por índice ciego) y cierra la revisión, en UNA transacción. Solo vale una de las candidatas, viva y sin fusionar. "
         },
         {
@@ -40811,7 +40820,7 @@
           "exportada": false,
           "params": "correduriaId: string, fila: { id: string; clienteId: string | null; campos: string[]; propuestaCifrada: string | null }, actor: string,",
           "retorno": "Promise<ResultadoResolucion>",
-          "linea": 235,
+          "linea": 289,
           "resumen": "«Añadir a la ficha»: el teléfono/correo que el contacto de Google tiene y la ficha NO. Se añade con el alta normal de contactos de la ficha (`anadirContacto`: cifrado + índice ciego + duplicados en ot"
         },
         {
@@ -40820,7 +40829,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 279
+          "linea": 333
         },
         {
           "nombre": "unificarOMote",
@@ -40828,7 +40837,7 @@
           "exportada": false,
           "params": "correduriaId: string, fila: FilaUnificar, actor: string, modo: { accion: AccionRevision; vinculo: boolean; mote: boolean }, leerGoogle: (resourceName: string) => Promise<PersonaGoogle | null>,",
           "retorno": "Promise<ResultadoResolucion>",
-          "linea": 295,
+          "linea": 349,
           "resumen": "«Unificar» un `duplicado_ambiguo` inequívoco y/o guardar un MOTE («Usar como mote»), en UNA transacción: el claim de la revisión, el vínculo PENDIENTE ficha ↔ resourceName (origen `adoptado`, hash `HA"
         },
         {
@@ -40837,7 +40846,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { motivo: MotivoDuplicado; actor: string; despuesDe?: string | null },",
           "retorno": "Promise<ResultadoLote>",
-          "linea": 399,
+          "linea": 453,
           "resumen": "«Unificar todos los de nombre distinto» con la opción POR DEFECTO (mote = su nombre de agenda), de 20 en 20 por CURSOR (`despuesDe` = la última vista; `siguiente` para seguir). Una que no se puede uni"
         }
       ],
@@ -40845,7 +40854,7 @@
         "google_contactos_revision"
       ],
       "rutaApi": null,
-      "hash": "3d53b9cca9bb"
+      "hash": "09084b247a73"
     },
     {
       "ruta": "apps/asegura/lib/google-contactos.ts",
@@ -103130,7 +103139,7 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "irABloque",
@@ -103138,8 +103147,8 @@
           "exportada": true,
           "params": "bloque: BloqueObligatorio, abrirCompleto = false",
           "retorno": null,
-          "linea": 56,
-          "resumen": "Lleva al bloque (el scroller de plataforma es `LayoutShell`: `scrollIntoView` vale)."
+          "linea": 63,
+          "resumen": "Lleva al bloque (el scroller de plataforma es `LayoutShell`: `scrollIntoView` vale). En la pantalla del riesgo el bloque vive en una `SeccionPlegable` PEREZOSA (plegada = sin montar, sin id que buscar"
         },
         {
           "nombre": "Insignia",
@@ -103147,7 +103156,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: Pendiente['estado'] }",
           "retorno": null,
-          "linea": 63
+          "linea": 77
         },
         {
           "nombre": "ControlCampo",
@@ -103155,7 +103164,7 @@
           "exportada": false,
           "params": "{ campo, acciones, estado }: { campo: CampoPanel; acciones: AccionesPanel; estado?: Pendiente['estado'] }",
           "retorno": null,
-          "linea": 69,
+          "linea": 83,
           "resumen": "Control de un campo suelto. El guardado fallido se dice y marca el campo: nunca parece guardado."
         },
         {
@@ -103164,7 +103173,7 @@
           "exportada": true,
           "params": "{ bloque, panel, acciones, completarAbajo = true }: { bloque: BloqueObligatorio; panel: PanelPendientes; acciones: AccionesPanel; completarAbajo?: boolean }",
           "retorno": null,
-          "linea": 103,
+          "linea": 117,
           "resumen": "Lo pendiente de UN bloque (props puras): controles editables, lo de la ficha nombrado, y lo que se completa abajo. `completarAbajo`: solo la ficha de la oportunidad tiene el bloque de siempre plegado "
         },
         {
@@ -103173,7 +103182,7 @@
           "exportada": false,
           "params": "{ bloque, panel, acciones }: { bloque: BloqueObligatorio; panel: PanelPendientes; acciones: AccionesPanel }",
           "retorno": null,
-          "linea": 147,
+          "linea": 161,
           "resumen": "Campos sueltos del bloque que NO están pendientes: se editan en «<Bloque> · completo»."
         },
         {
@@ -103182,7 +103191,7 @@
           "exportada": true,
           "params": "{ bloque, activo, children }: { bloque: BloqueObligatorio; activo: boolean; children: ReactNode }",
           "retorno": null,
-          "linea": 162,
+          "linea": 176,
           "resumen": "Envoltorio de un bloque de la página (Personas = intervinientes · Riesgo = vehículo · Póliza = historial). Si PrecioBots ya publicó qué falta: título con su estado, pendientes arriba y el bloque de si"
         },
         {
@@ -103191,7 +103200,7 @@
           "exportada": true,
           "params": "{ panel, acciones }: { panel: PanelPendientes; acciones: AccionesPanel }",
           "retorno": null,
-          "linea": 190,
+          "linea": 204,
           "resumen": "Sin proveedor (pantalla completa del cotizador): los bloques en línea. Pinta lo pendiente Y los campos sueltos ya completos (uso, ámbito, clase de permiso, sexo, cilindrada…) plegados en «<Bloque> · c"
         },
         {
@@ -103200,7 +103209,7 @@
           "exportada": true,
           "params": "{ panel }: { panel: PanelPendientes }",
           "retorno": null,
-          "linea": 216,
+          "linea": 230,
           "resumen": "Chips por compañía: «Allianz listo» · «Mapfre faltan 2» · «Generali no disponible». Los que faltan llevan a su bloque."
         }
       ],
@@ -103208,7 +103217,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "09524e20a2b9"
+      "hash": "85270f787268"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/piezas.tsx",
@@ -105656,12 +105665,21 @@
       ],
       "funciones": [
         {
+          "nombre": "DatosDeFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ d }: { d: DatosFicha | null | undefined }",
+          "retorno": null,
+          "linea": 52,
+          "resumen": "Lo que ayuda a decidir sobre una ficha: ¿cliente en vigor?, ¿tomador?, teléfono y correo."
+        },
+        {
           "nombre": "fecha",
           "kind": "function",
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 46
+          "linea": 65
         },
         {
           "nombre": "pagina",
@@ -105669,7 +105687,7 @@
           "exportada": false,
           "params": "j: unknown",
           "retorno": "Pagina | null",
-          "linea": 50
+          "linea": 69
         },
         {
           "nombre": "GoogleContactosRevision",
@@ -105677,12 +105695,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 62
+          "linea": 81
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb97a16879de"
+      "hash": "7b74677f2cd8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/GoogleContactosSimulacion.tsx",
@@ -107051,12 +107069,12 @@
           "exportada": true,
           "params": "{ riesgo }: { riesgo: Riesgo }",
           "retorno": null,
-          "linea": 30
+          "linea": 24
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "473c9919c90f"
+      "hash": "4f3db53c0969"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/cargar-variante.tsx",
@@ -107445,7 +107463,7 @@
           "exportada": false,
           "params": "spec: readonly EspecCampo[], datos: Record<string, unknown>",
           "retorno": "Form",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Los datos del bloque como texto de formulario: `null` → '' (nunca «null» ni «0»); sí/no → 'si' | 'no'."
         },
         {
@@ -107454,7 +107472,7 @@
           "exportada": false,
           "params": "spec: readonly EspecCampo[], form: Form",
           "retorno": "Record<string, unknown>",
-          "linea": 68,
+          "linea": 69,
           "resumen": "El formulario de vuelta a valores tipados, para compararlo con lo guardado y mandar SOLO lo que cambió."
         },
         {
@@ -107463,7 +107481,7 @@
           "exportada": false,
           "params": "{ titulo, ayuda, confirmadoAt, dePoliza, aviso, nota, editando, bloqueado, enviando, errorForm, onEditar, onConfirmar, onGuardar, onCancelar, lectura, formulario }: { titulo: string ayuda: string confirmadoAt: string | null dePoliza: boolea",
           "retorno": null,
-          "linea": 78,
+          "linea": 79,
           "resumen": "El marco común: cabecera con el sello, aviso de lo que falta, botones."
         },
         {
@@ -107472,7 +107490,7 @@
           "exportada": false,
           "params": "clave: 'datosVivienda' | 'datosCapital' | 'datosComercio' | 'datosRiesgoLibre', { riesgo, ocupado, onCambio, onError, onEditando }: Props, spec: readonly EspecCampo[], datos: Record<string, unknown>, nombre: string",
           "retorno": null,
-          "linea": 138,
+          "linea": 139,
           "resumen": "Estado y acciones comunes: editar, guardar solo lo que cambió, confirmar."
         },
         {
@@ -107481,7 +107499,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 175
+          "linea": 176
         },
         {
           "nombre": "camposVisibles",
@@ -107489,7 +107507,7 @@
           "exportada": false,
           "params": "campos: CampoVivienda[], v: Record<string, string | undefined>",
           "retorno": "CampoVivienda[]",
-          "linea": 191,
+          "linea": 192,
           "resumen": "Qué campos de un grupo se enseñan con los valores de AHORA (texto de formulario): el banco solo con hipoteca = sí; las reformas de tuberías y electricidad solo si la vivienda tiene más de 40 años (`pr"
         },
         {
@@ -107498,7 +107516,7 @@
           "exportada": false,
           "params": "t: string | undefined",
           "retorno": "number | null",
-          "linea": 201
+          "linea": 202
         },
         {
           "nombre": "AsesorHogar",
@@ -107506,7 +107524,7 @@
           "exportada": true,
           "params": "{ v, onUsarCapital }: { v: Record<string, string | undefined>; onUsarCapital?: (eurosSugeridos: number) => void }",
           "retorno": null,
-          "linea": 207,
+          "linea": 208,
           "resumen": "Avisos que ASESORAN (no bloquean, no escriben): capital de continente sugerido (m² × coste de reconstrucción, ESTIMACIÓN por zona), infraseguro (< 80% de lo sugerido), diferencias con lo que dijo el C"
         },
         {
@@ -107515,8 +107533,17 @@
           "exportada": false,
           "params": "{ p, onUsarCapitales }: { p: PropuestaCarteraHogar | null | undefined; onUsarCapitales: (c: { continente: number | null; contenido: number | null }) => void }",
           "retorno": null,
-          "linea": 253,
+          "linea": 254,
           "resumen": "La póliza de hogar que el cliente ya tiene en la cartera (en vigor): compañía, vencimiento y capitales, como punto de partida."
+        },
+        {
+          "nombre": "municipiosIneDelCp",
+          "kind": "function",
+          "exportada": false,
+          "params": "cp: string",
+          "retorno": "Promise<string[]>",
+          "linea": 286,
+          "resumen": "Municipios INE del CP (tabla del CRM, `/api/correduria/codigo-postal`): solo ayudan a casar con el catálogo. Fallo o CP desconocido = `[]`."
         },
         {
           "nombre": "DatosVivienda",
@@ -107524,7 +107551,7 @@
           "exportada": false,
           "params": "props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }",
           "retorno": null,
-          "linea": 284
+          "linea": 295
         },
         {
           "nombre": "CatastroResultado",
@@ -107532,7 +107559,7 @@
           "exportada": false,
           "params": "{ c, onElegir, onElegirCalle, deshabilitado }: { c: CatastroLectura; onElegir: (referencia: string) => void; onElegirCalle: (direccion: string, municipio: string, provincia: string) => void; deshabilitado: boolean }",
           "retorno": null,
-          "linea": 563,
+          "linea": 599,
           "resumen": "Qué ha hecho el Catastro con el formulario: lo rellenado, lo que difiere (sin tocar) o el piso a elegir."
         },
         {
@@ -107541,7 +107568,7 @@
           "exportada": false,
           "params": "props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }",
           "retorno": null,
-          "linea": 610
+          "linea": 646
         },
         {
           "nombre": "legiblePC",
@@ -107549,7 +107576,7 @@
           "exportada": false,
           "params": "etiqueta: string, v: unknown",
           "retorno": "React.ReactNode",
-          "linea": 758,
+          "linea": 794,
           "resumen": "Valor de una pregunta de compañía: `null` = «sin dato» (nunca No ni 0); € y m² por la etiqueta."
         },
         {
@@ -107558,7 +107585,7 @@
           "exportada": false,
           "params": "props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean; tarifica: boolean }",
           "retorno": null,
-          "linea": 766
+          "linea": 802
         },
         {
           "nombre": "DatosLibre",
@@ -107566,7 +107593,7 @@
           "exportada": false,
           "params": "props: Props & { d: Record<string, unknown>; dePoliza: boolean }",
           "retorno": null,
-          "linea": 995
+          "linea": 1031
         },
         {
           "nombre": "DatosRiesgo",
@@ -107574,7 +107601,7 @@
           "exportada": true,
           "params": "props: Props",
           "retorno": null,
-          "linea": 1039,
+          "linea": 1075,
           "resumen": "El bloque de datos del riesgo de los ramos que NO son de vehículo. `null` = asegura no lo manda: no se inventa."
         }
       ],
@@ -107582,7 +107609,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6a4698486d73"
+      "hash": "3f748c9b85e5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/DatosVehiculo.tsx",
@@ -108316,6 +108343,43 @@
       "hash": "58c58bb8432a"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/ParaTarificar.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ParaTarificar"
+      ],
+      "funciones": [
+        {
+          "nombre": "ParaTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ riesgo, aplicaAvant2, esVehiculo, integraciones, onTarificarAvant2, onLanzarBots, onGuardado }: { riesgo: Riesgo /** El ramo se cotiza con Avant2 desde esta pantalla (`accionesPrecio().principal`). */ aplicaAvant2: boolean esVehiculo: boo",
+          "retorno": null,
+          "linea": 41
+        },
+        {
+          "nombre": "FilaDato",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ item, quien, respuesta = null }: { item: ItemTarificar; quien: string | null; respuesta?: { oportunidadId: string; onGuardado: (texto: string) => void } | null }",
+          "retorno": null,
+          "linea": 167
+        },
+        {
+          "nombre": "RespuestaEnLinea",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ item, oportunidadId, onGuardado }: { item: ItemTarificar; oportunidadId: string; onGuardado: (texto: string) => void }",
+          "retorno": null,
+          "linea": 191,
+          "resumen": "Contestar de un toque un dato simple de la vivienda (Sí/No o una opción del catálogo) SIN salir del bloque. Guarda por el mismo camino que el formulario de «Datos de la vivienda» (`llamarDatosRiesgo` "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f203e196c97f"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/parrilla-acciones.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -109003,6 +109067,7 @@
       "ambito": "apps/plataforma",
       "resumen": "Piezas puras de la pantalla del riesgo: fechas, motivo de un error del puerto y la llamada a `/api/correduria/oportunidad/figuras`. Sin React, para que las compartan los componentes.",
       "exporta": [
+        "muestraHistorialSinco",
         "fechaEs",
         "motivoDe",
         "llamarFiguras",
@@ -109010,12 +109075,21 @@
       ],
       "funciones": [
         {
+          "nombre": "muestraHistorialSinco",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: unknown",
+          "retorno": "boolean",
+          "linea": 7,
+          "resumen": "«Historial y bonificaciones» (seguro anterior, años sin siniestros, SINCO) solo existe en ramos de VEHÍCULO (auto y moto). Ramo desconocido/null = no."
+        },
+        {
           "nombre": "fechaEs",
           "kind": "function",
           "exportada": true,
           "params": "iso: string | null",
           "retorno": "string | null",
-          "linea": 7,
+          "linea": 12,
           "resumen": "`2026-09-29` o un ISO completo → `29/09/2026`. Lo que no tiene forma de fecha se enseña tal cual."
         },
         {
@@ -109024,7 +109098,7 @@
           "exportada": true,
           "params": "r: Respuesta",
           "retorno": "string",
-          "linea": 24,
+          "linea": 29,
           "resumen": "El motivo que manda asegura, o el código HTTP; nunca un «error» sin más."
         },
         {
@@ -109033,7 +109107,7 @@
           "exportada": true,
           "params": "method: 'POST' | 'DELETE', body: Record<string, unknown>",
           "retorno": "Promise<Respuesta>",
-          "linea": 31
+          "linea": 36
         },
         {
           "nombre": "llamarDatosRiesgo",
@@ -109041,13 +109115,13 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; confirmar?: boolean } & Partial<Record<ClaveDatosRiesgo, Record<string, unknown>>>",
           "retorno": "Promise<Respuesta>",
-          "linea": 50,
+          "linea": 55,
           "resumen": "PATCH de los datos del riesgo de cualquier ramo (`/api/correduria/oportunidad/riesgo`). El cuerpo lleva exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0170d887792c"
+      "hash": "615e6e1e8cc6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PreciosVarianteGuardada.tsx",
@@ -109241,12 +109315,42 @@
           "exportada": true,
           "params": "{ inicial, hoy, propuestaCartera = null, correoTomador = 'no_se_sabe' }: { inicial: Riesgo; hoy: string; propuestaCartera?: PropuestaCarteraHogar | null; correoTomador?: 'con_email' | 'sin_email' | 'no_se_sabe' }",
           "retorno": null,
-          "linea": 45
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "37f287367002"
+      "hash": "3b6952054172"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SeccionPlegable.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SeccionPlegable",
+        "abrirSeccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "SeccionPlegable",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ id, titulo, resumen, tono = 'normal', perezosa = true, children }: { id: string titulo: string resumen?: ReactNode tono?: TonoResumen perezosa?: boolean children: ReactNode }",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "abrirSeccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, dentro?: string",
+          "retorno": null,
+          "linea": 42,
+          "resumen": "Abre la sección (si estaba plegada, la monta) y la trae a la vista. `dentro`: id de un elemento de dentro al que ir."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9ca4183f2187"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SelectorCatalogoVehiculo.tsx",
@@ -109275,6 +109379,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7239e24b36be"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/useCatalogosHogar.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "useCatalogosHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerCatalogos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<CatalogosHogar>",
+          "linea": 21
+        },
+        {
+          "nombre": "useCatalogosHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "activo = true",
+          "retorno": "CatalogosHogar | null",
+          "linea": 42,
+          "resumen": "`null` = aún leyéndose. `activo: false` = no se pide nada (otro ramo)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f2ad09e78349"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/useComparativa.ts",
@@ -144514,7 +144647,7 @@
           "exportada": true,
           "params": "f: string | null | undefined",
           "retorno": "string",
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "precioOpcion",
@@ -144522,7 +144655,7 @@
           "exportada": true,
           "params": "o: Pick<OfertaNormalizada, 'primaTotal' | 'primaPeriodo'>",
           "retorno": "",
-          "linea": 66,
+          "linea": 67,
           "resumen": "El precio de una opción como se escribe: anual comparable, de otro periodo (con su periodo) o «No figura». PURO."
         },
         {
@@ -144531,13 +144664,13 @@
           "exportada": true,
           "params": "c: ResultadoComparacion",
           "retorno": null,
-          "linea": 82,
+          "linea": 83,
           "resumen": "Las filas de la vista: cada opción con su etiqueta (compañía + nivel), precio, puesto y reservas, en el orden del ranking. PURO."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "da5d66557ff9"
+      "hash": "db54b77046a3"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/competencia-oportunidad.ts",
@@ -146126,6 +146259,46 @@
       "hash": "35b9b6b6ba8c"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/municipio-catalogo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Municipio del catálogo de Avant2 (Codeoscopic `/towns?postalCode=`) a partir de lo que ya se sabe del CP (21/10/2026). PURO: sin red; importable desde 'use client'. Regla de la casa (CLAUDE.md «Direcciones postales»): CP → municipios en un desplegable, y si UNO solo casa, preseleccionado. 🚫 Solo EX",
+      "exporta": [
+        "clavesMunicipio",
+        "elegirMunicipioCatalogo"
+      ],
+      "funciones": [
+        {
+          "nombre": "sinSignos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 10
+        },
+        {
+          "nombre": "clavesMunicipio",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string[]",
+          "linea": 13,
+          "resumen": "Variantes normalizadas de un nombre de municipio: «Puerto de Santa María, El» = «El Puerto de Santa María» = «Puerto de Santa Maria»; «Alicante/Alacant» da las dos."
+        },
+        {
+          "nombre": "elegirMunicipioCatalogo",
+          "kind": "function",
+          "exportada": true,
+          "params": "opciones: readonly OpcionMunicipio[], e: { guardado?: string | null; ine?: readonly string[] | null }",
+          "retorno": "OpcionMunicipio | null",
+          "linea": 34,
+          "resumen": "· `ine`: la tabla INE del CP, SOLO si el CP tiene un único municipio (con varios no se preselecciona aunque el catálogo traiga solo uno de ellos: podría ser el que no es). `null` = tabla desconocida. "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1827d1d623fb"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/municipio-cotizador-riesgo.ts",
       "ambito": "apps/plataforma",
       "resumen": "Municipio elegido en el cotizador cuando VARIOS comparten el código postal → la OPORTUNIDAD (20/10/2026). PURO. Se guarda en el riesgo (`info_riesgo.datosVehiculo`: `municipioCirculacionId`, `municipioCirculacion` y el ancla `municipioCirculacionCp`), por el mismo PATCH que la cilindrada (`llamarDat",
@@ -146485,6 +146658,160 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cb665c8d7451"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/para-tarificar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Para tarificar faltan» (21/10/2026, Alberto: «aquí solo es necesario saber los datos que faltan para tarificar»). PURO: sin red ni envs, importable desde 'use client' y desde tests. UNA lista que une lo que pide cada herramienta de precio: · Avant2 (Codeoscopic, 0,50€): la comprobación PREVIA con l",
+      "exporta": [
+        "unirParaTarificar",
+        "etiquetaPide",
+        "accionesListas",
+        "aportacionAvant2",
+        "aportacionesBotsHogar",
+        "aportacionesBotsMotor",
+        "resumenIntervinientes",
+        "resumenObjeto",
+        "respuestaRapidaDe",
+        "opcionesQueAceptaElBot"
+      ],
+      "funciones": [
+        {
+          "nombre": "unirParaTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "aportaciones: readonly Aportacion[]",
+          "retorno": "ParaTarificar",
+          "linea": 45,
+          "resumen": "Une las aportaciones: un item por clave; el estado más urgente; el destino y la etiqueta del primero (Avant2 va primero). PURA."
+        },
+        {
+          "nombre": "etiquetaPide",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: ItemTarificar, p: ParaTarificar",
+          "retorno": "string | null",
+          "linea": 63,
+          "resumen": "«Lo pide: Allianz Hogar» solo si NO lo piden todos los comprobados (con uno solo no hace falta decirlo). `null` = no se dice. PURA."
+        },
+        {
+          "nombre": "accionesListas",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParaTarificar",
+          "retorno": "",
+          "linea": 72,
+          "resumen": "¿Se puede ofrecer el botón de tarificar de cada herramienta? Solo si SU comprobación se hizo (ninguna fuente suya «sin comprobar») y no le queda ningún dato (ni falta, ni confirmar, ni sin comprobar) "
+        },
+        {
+          "nombre": "mayus",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 80
+        },
+        {
+          "nombre": "destinoFalta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "k: string",
+          "retorno": "Destino",
+          "linea": 90,
+          "resumen": "Dónde se completa cada clave de `faltanDeFigura`: el estado civil se elige en el cotizador; lo demás, en «Intervinientes»."
+        },
+        {
+          "nombre": "itemsFiguras",
+          "kind": "function",
+          "exportada": false,
+          "params": "figuras: readonly FiguraParaTarificar[]",
+          "retorno": "Omit<ItemTarificar, 'pide'>[]",
+          "linea": 92
+        },
+        {
+          "nombre": "aportacionAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { aplica: boolean esVehiculo: boolean datosRiesgo: DatosRiesgoParaTarificar faltanVehiculo: readonly string[] | null figuras: readonly FiguraParaTarificar[] }",
+          "retorno": "Aportacion | null",
+          "linea": 115,
+          "resumen": "Lo que Avant2 pide y aún no está, según la comprobación previa de asegura. `null` = el ramo no se cotiza con Avant2 desde aquí. `datosRiesgo: null` (asegura no lo manda) o `faltanVehiculo: null` = SIN"
+        },
+        {
+          "nombre": "riesgoHogarParaComprobar",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: DatosViviendaBot, el: Record<string, string>",
+          "retorno": "Record<string, unknown>",
+          "linea": 190,
+          "resumen": "El `riesgo` de hogar SIN validar, con lo que consta, para mirar presencia con `checklistCompania` (no viaja a ningún sitio)."
+        },
+        {
+          "nombre": "aportacionesBotsHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaBotsHogar",
+          "retorno": "Aportacion[]",
+          "linea": 203,
+          "resumen": "Una aportación por compañía con bot de hogar activo. Lista vacía = ninguna activa (no hay nada que comprobar). PURA."
+        },
+        {
+          "nombre": "aportacionesBotsMotor",
+          "kind": "function",
+          "exportada": true,
+          "params": "pub: PublicadoMotor | null, motivoSinPublicar: string",
+          "retorno": "Aportacion[]",
+          "linea": 266,
+          "resumen": "De lo publicado por «Bots (gratis)» de coche/moto. `null` = aún no lo ha publicado: SIN COMPROBAR (`motivo` dice dónde). PURA."
+        },
+        {
+          "nombre": "n",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "k: number, uno: string, varios: string",
+          "retorno": null,
+          "linea": 286
+        },
+        {
+          "nombre": "resumenIntervinientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "figuras: readonly FiguraParaTarificar[]",
+          "retorno": "string",
+          "linea": 289,
+          "resumen": "«3 personas · 2 datos pendientes» / «… · ficha sin leer». PURA."
+        },
+        {
+          "nombre": "resumenObjeto",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosRiesgoParaTarificar, eur: (x: number) => string, faltanVehiculo?: readonly string[] | null, esVehiculo = false",
+          "retorno": "string",
+          "linea": 301,
+          "resumen": "«228.000€ continente · 3 datos pendientes». `eur` se inyecta (formato de la app). PURA."
+        },
+        {
+          "nombre": "respuestaRapidaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string",
+          "retorno": "RespuestaRapida | null",
+          "linea": 330,
+          "resumen": "De la clave de un item de «Para tarificar faltan» (`vivienda.<campo>`), cómo se contesta de un toque: un Sí/No o una opción del catálogo. `null` = se abre su sección. PURA."
+        },
+        {
+          "nombre": "opcionesQueAceptaElBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "paraBot: 'tipoVivienda' | 'uso' | 'regimen', opciones: readonly { id: string; nombre: string }[]",
+          "retorno": "",
+          "linea": 346,
+          "resumen": "Para un dato que pide un bot: solo las opciones del catálogo que el bot acepta (las que casan con una de sus claves). Si ninguna casa, todas (no se esconde nada). PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ffdc0ba75b7f"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/parrilla-coherencia.ts",
@@ -162919,6 +163246,7 @@
         "interpretarRiesgo",
         "estadoPresupuestoVariante",
         "figuraDelRol",
+        "rotuloFalta",
         "rotulosFaltaEnFormulario",
         "faltaMovil",
         "faltaSexo",
@@ -162998,12 +163326,21 @@
           "resumen": "Figura que ocupa un rol: la asignada o, si no hay, la del tomador (salvo el ocasional, que es opcional)."
         },
         {
+          "nombre": "rotuloFalta",
+          "kind": "function",
+          "exportada": true,
+          "params": "k: string",
+          "retorno": "string",
+          "linea": 285,
+          "resumen": "Rótulo de UNA clave de `faltanDeFigura` (la clave tal cual si no tiene rótulo)."
+        },
+        {
           "nombre": "rotulosFaltaEnFormulario",
           "kind": "function",
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "string[]",
-          "linea": 285,
+          "linea": 290,
           "resumen": "Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»)."
         },
         {
@@ -163012,7 +163349,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "boolean",
-          "linea": 290,
+          "linea": 295,
           "resumen": "¿La ficha de la figura NO tiene móvil? `null` (no se pudo leer la ficha) = no se sabe → false: no se ofrece escribir a ciegas."
         },
         {
@@ -163021,7 +163358,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "boolean",
-          "linea": 294,
+          "linea": 299,
           "resumen": "¿La ficha de la figura NO tiene sexo? Misma regla que `faltaMovil`: `null` = no se sabe → false."
         },
         {
@@ -163030,7 +163367,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "string | null",
-          "linea": 297
+          "linea": 302
         },
         {
           "nombre": "precioComparado",
@@ -163038,7 +163375,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PrecioComparado",
-          "linea": 313
+          "linea": 318
         },
         {
           "nombre": "interpretarComparacion",
@@ -163046,7 +163383,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "LecturaComparacion",
-          "linea": 319
+          "linea": 324
         },
         {
           "nombre": "mejoresComparacion",
@@ -163054,7 +163391,7 @@
           "exportada": true,
           "params": "filas: readonly FilaComparacion[]",
           "retorno": "",
-          "linea": 338,
+          "linea": 343,
           "resumen": "La prima más baja de cada columna (`null` = esa variante no tiene ningún precio)."
         },
         {
@@ -163063,7 +163400,7 @@
           "exportada": true,
           "params": "f: FilaComparacion",
           "retorno": "number | null",
-          "linea": 347,
+          "linea": 352,
           "resumen": "`b − a` redondeado al céntimo; `null` si falta cualquiera de las dos (no se compara con un hueco)."
         },
         {
@@ -163072,13 +163409,13 @@
           "exportada": true,
           "params": "variantes: readonly VarianteRiesgo[], ids: readonly string[]",
           "retorno": "[VarianteRiesgo, VarianteRiesgo] | null",
-          "linea": 353,
+          "linea": 358,
           "resumen": "Las dos marcadas, la más ANTIGUA como `a` (orden de `creadoAt`; sin fecha, la de más abajo en la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b68f18f28b7"
+      "hash": "4fa0f60b4ed6"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -178214,7 +178551,7 @@
           "exportada": false,
           "params": "s: string | null | undefined",
           "retorno": "s is string",
-          "linea": 260
+          "linea": 262
         },
         {
           "nombre": "carneDelRamo",
@@ -178222,7 +178559,7 @@
           "exportada": false,
           "params": "ramo: RamoVehiculoBot, tipo: string",
           "retorno": "boolean",
-          "linea": 266,
+          "linea": 268,
           "resumen": "¿Este tipo de carné de la ficha vale para el ramo? Moto: A, A1, A2. Coche: B (mismo criterio que `carnetBDeFicha` de asegura)."
         },
         {
@@ -178231,7 +178568,7 @@
           "exportada": true,
           "params": "riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
           "retorno": "",
-          "linea": 277,
+          "linea": 279,
           "resumen": "coche: B); si no hay, el que traen sus pólizas. Nada se inventa: lo que la ficha no tiene va en `faltan` (el servidor corta sin gastar). El NIF del tomador NO va aquí: lo inyecta asegura al entregar e"
         },
         {
@@ -178240,7 +178577,7 @@
           "exportada": true,
           "params": "riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
           "retorno": "",
-          "linea": 286,
+          "linea": 288,
           "resumen": "Lo mismo para el COCHE (14/10/2026): carné B."
         },
         {
@@ -178249,7 +178586,7 @@
           "exportada": true,
           "params": "ramo: RamoVehiculoBot, riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
           "retorno": "",
-          "linea": 294
+          "linea": 296
         },
         {
           "nombre": "mensajeFaltanDeFicha",
@@ -178257,7 +178594,7 @@
           "exportada": true,
           "params": "faltan: readonly CampoDeFicha[], ramo: RamoVehiculoBot = 'moto'",
           "retorno": "string",
-          "linea": 332
+          "linea": 334
         },
         {
           "nombre": "claveDeCompania",
@@ -178265,7 +178602,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 338,
+          "linea": 340,
           "resumen": "`compania` de la petición → clave limpia, o `null` si no tiene forma de clave (minúsculas, dígitos, `_`/`-`)."
         },
         {
@@ -178274,7 +178611,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "EncoladoBot",
-          "linea": 352,
+          "linea": 354,
           "resumen": "Respuesta de `POST /api/correduria/tarificador/encolar` → trabajo o texto para la persona. Los `errores` de asegura son de forma y no llevan el valor (el validador nunca lo repite), así que se pueden "
         },
         {
@@ -178283,13 +178620,13 @@
           "exportada": true,
           "params": "a: { tieneSeguroActual: boolean companias: readonly { codigoDgs: string; nombreComun: string }[] | null codigo: string libre: string leida?: string | null }",
           "retorno": "string | null",
-          "linea": 385,
+          "linea": 387,
           "resumen": "sin elegir, la compañía leída de la póliza de la oportunidad (`poliza_competencia.aseguradora`). Sin seguro actual → `null` (los años = 0 los descarta `formularioBotMoto`). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69cd1f6f7961"
+      "hash": "45d6078bbe7c"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-panel.ts",
@@ -182880,7 +183217,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 15
+          "linea": 25
         },
         {
           "nombre": "fmtFecha",
@@ -182888,7 +183225,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 18
+          "linea": 28
         },
         {
           "nombre": "fmtISO",
@@ -182896,7 +183233,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 21
+          "linea": 31
         },
         {
           "nombre": "FichajesClient",
@@ -182904,14 +183241,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 26
+          "linea": 36
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "e0a57f52b38d"
+      "hash": "e2bf09085ebe"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -184001,6 +184338,27 @@
       "hash": "1a924ca9d852"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/fichajes/incidencias/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "Incidencias de ubicación de los últimos 30 días de la empresa de la SESIÓN."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/fichajes/incidencias",
+      "hash": "3756dc83546d"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/fichajes/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -184977,6 +185335,27 @@
       "hash": "2d754b592296"
     },
     {
+      "ruta": "apps/rrhh/app/api/e/fichaje/incidencia/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Incidencia de ubicación (el GPS del móvil no dio posición). El cliente la manda sin esperar respuesta; el responsable la ve en /admin/fichajes. Sin correo, push ni mensajes salientes."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/fichaje/incidencia",
+      "hash": "cdb2a310b899"
+    },
+    {
       "ruta": "apps/rrhh/app/api/e/fichaje/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -184990,7 +185369,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 7
+          "linea": 9
         },
         {
           "nombre": "POST",
@@ -184998,12 +185377,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 17
+          "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": "/api/e/fichaje",
-      "hash": "4211c54303da"
+      "hash": "c97cac61bd11"
     },
     {
       "ruta": "apps/rrhh/app/api/e/login/route.ts",
@@ -185190,6 +185569,88 @@
       ],
       "rutaApi": "/api/operador/personas",
       "hash": "cbdfa23112ca"
+    },
+    {
+      "ruta": "apps/rrhh/app/ayuda/ubicacion/GuiaUbicacion.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GuiaUbicacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "Movil",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ children, etiqueta }: { children: ReactNode; etiqueta: string }",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Pantalla de móvil simplificada; `children` se dibuja dentro (viewBox 120x200 de la pantalla)."
+        },
+        {
+          "nombre": "Resalte",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "{ x, y, w, h }: { x: number; y: number; w: number; h: number }",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "Linea",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "{ y, w = 70 }: { y: number; w?: number }",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "Dibujo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ id }: { id: string }",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "dibujoDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "id: string",
+          "retorno": null,
+          "linea": 102,
+          "resumen": "El último paso de ambos usa el mismo dibujo."
+        },
+        {
+          "nombre": "GuiaUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 104
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f3f22869faed"
+    },
+    {
+      "ruta": "apps/rrhh/app/ayuda/ubicacion/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1b6311773202"
     },
     {
       "ruta": "apps/rrhh/app/e/[token]/LoginEmpleado.tsx",
@@ -185632,7 +186093,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 10
+          "linea": 15
         },
         {
           "nombre": "CalendarioMes",
@@ -185640,8 +186101,25 @@
           "exportada": false,
           "params": "{ fichajes }: { fichajes: Fichaje[] }",
           "retorno": null,
-          "linea": 15,
+          "linea": 20,
           "resumen": "---- Calendario mensual ----"
+        },
+        {
+          "nombre": "leerDescartado",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 92
+        },
+        {
+          "nombre": "registrarIncidencia",
+          "kind": "function",
+          "exportada": false,
+          "params": "causa: CausaUbicacion, plataforma: Plataforma, estado_permiso: EstadoPermisoUbicacion | null",
+          "retorno": null,
+          "linea": 97,
+          "resumen": "Best-effort: registra la incidencia sin esperar ni bloquear el fichaje."
         },
         {
           "nombre": "FichajeEmpleado",
@@ -185649,12 +186127,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 83
+          "linea": 106
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e7ee4482776"
+      "hash": "fc6af71ca051"
     },
     {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
@@ -187301,6 +187779,10 @@
         "fichajeActivo",
         "ficharEntrada",
         "ficharSalida",
+        "permiteFicharSinUbicacion",
+        "registrarIncidenciaUbicacion",
+        "enlazarIncidenciaFichaje",
+        "resumenIncidenciasUbicacion",
         "listarFichajes",
         "fichajesMesEmpleado"
       ],
@@ -187311,7 +187793,7 @@
           "exportada": false,
           "params": "empresaId: string, lat: number | null, lng: number | null",
           "retorno": "Promise<string | null>",
-          "linea": 18
+          "linea": 22
         },
         {
           "nombre": "fichajeActivo",
@@ -187319,23 +187801,59 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string",
           "retorno": "Promise<Fichaje | null>",
-          "linea": 29
+          "linea": 33
         },
         {
           "nombre": "ficharEntrada",
           "kind": "function",
           "exportada": true,
-          "params": "empresaId: string, empleadoId: string, lat: number | null, lng: number | null",
+          "params": "empresaId: string, empleadoId: string, lat: number | null, lng: number | null, extra: ExtraFichaje = {}",
           "retorno": "Promise<Fichaje>",
-          "linea": 40
+          "linea": 46
         },
         {
           "nombre": "ficharSalida",
           "kind": "function",
           "exportada": true,
-          "params": "empresaId: string, empleadoId: string, lat: number | null, lng: number | null",
+          "params": "empresaId: string, empleadoId: string, lat: number | null, lng: number | null, extra: ExtraFichaje = {}",
           "retorno": "Promise<Fichaje>",
-          "linea": 49
+          "linea": 57
+        },
+        {
+          "nombre": "permiteFicharSinUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 73,
+          "resumen": "¿La empresa deja fichar sin ubicación? Sin fila (o error de lectura del valor) → no."
+        },
+        {
+          "nombre": "registrarIncidenciaUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, i: IncidenciaUbicacion",
+          "retorno": "Promise<void>",
+          "linea": 80,
+          "resumen": "Registra una incidencia de ubicación (el GPS del móvil no dio posición)."
+        },
+        {
+          "nombre": "enlazarIncidenciaFichaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, fichajeId: string, i: IncidenciaUbicacion,",
+          "retorno": "Promise<void>",
+          "linea": 90,
+          "resumen": "Enlaza un fichaje SIN ubicación con su incidencia: la última sin enlazar del empleado en los últimos 15 min (la registró el cliente al fallar el GPS). Si no llegó (es best-effort), la crea."
+        },
+        {
+          "nombre": "resumenIncidenciasUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<ResumenIncidencia[]>",
+          "linea": 113,
+          "resumen": "Incidencias de los últimos 30 días agrupadas por empleado, causa y plataforma (de ESA empresa)."
         },
         {
           "nombre": "listarFichajes",
@@ -187343,7 +187861,7 @@
           "exportada": true,
           "params": "empresaId: string, opts: { mes?: string; empleadoId?: string } = {}",
           "retorno": "Promise<Fichaje[]>",
-          "linea": 61
+          "linea": 125
         },
         {
           "nombre": "fichajesMesEmpleado",
@@ -187351,14 +187869,15 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, mes: string",
           "retorno": "Promise<",
-          "linea": 77
+          "linea": 141
         }
       ],
       "tablas": [
-        "rrhh"
+        "rrhh",
+        "upd"
       ],
       "rutaApi": null,
-      "hash": "33c9b741e4fc"
+      "hash": "147a7710c328"
     },
     {
       "ruta": "apps/rrhh/lib/firma-empresa.ts",
@@ -187526,6 +188045,9 @@
       "resumen": "Obtención de la posición para fichar y mensajes por código de error (W3C GeolocationPositionError). Antes TODO error se mostraba como «activa la ubicación»; en iOS un timeout o una posición no disponible hacían creer al empleado que le faltaba un permiso que ya tenía concedido.",
       "exporta": [
         "causaUbicacion",
+        "detectarPlataforma",
+        "mensajePermisoUbicacion",
+        "estadoPermisoUbicacion",
         "mensajeUbicacion",
         "obtenerPosicion"
       ],
@@ -187536,15 +188058,39 @@
           "exportada": true,
           "params": "err: unknown",
           "retorno": "CausaUbicacion",
-          "linea": 18
+          "linea": 24
+        },
+        {
+          "nombre": "detectarPlataforma",
+          "kind": "function",
+          "exportada": true,
+          "params": "userAgent: string = typeof navigator !== 'undefined' ? navigator.userAgent : '', maxTouchPoints: number = typeof navigator !== 'undefined' ? navigator.maxTouchPoints ?? 0 : 0,",
+          "retorno": "Plataforma",
+          "linea": 36
+        },
+        {
+          "nombre": "mensajePermisoUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "plataforma: Plataforma",
+          "retorno": "string",
+          "linea": 47
+        },
+        {
+          "nombre": "estadoPermisoUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "permisos: Pick<Permissions, 'query'> | undefined = typeof navigator !== 'undefined' ? navigator.permissions : undefined,",
+          "retorno": "Promise<EstadoPermisoUbicacion>",
+          "linea": 53
         },
         {
           "nombre": "mensajeUbicacion",
           "kind": "function",
           "exportada": true,
-          "params": "causa: CausaUbicacion",
+          "params": "causa: CausaUbicacion, plataforma: Plataforma = 'otro'",
           "retorno": "string",
-          "linea": 27
+          "linea": 65
         },
         {
           "nombre": "obtenerPosicion",
@@ -187552,13 +188098,13 @@
           "exportada": true,
           "params": "geo: Pick<Geolocation, 'getCurrentPosition'> | undefined = typeof navigator !== 'undefined' ? navigator.geolocation : undefined,",
           "retorno": "Promise<GeolocationPosition>",
-          "linea": 39,
-          "resumen": "Alta precisión primero (15 s); si falla por timeout/no disponible, reintento con baja precisión y caché de 60 s. Un PERMISO denegado no se reintenta. El error final es el del último intento."
+          "linea": 78,
+          "resumen": "Alta precisión primero (10 s); si falla por timeout/no disponible, reintento con baja precisión y caché de 60 s. Un PERMISO denegado no se reintenta. El error final es el del último intento."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad1f6371068c"
+      "hash": "1a75aa84f2a4"
     },
     {
       "ruta": "apps/rrhh/lib/informes/cabecera.ts",
@@ -188145,6 +188691,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4ea2f016811d"
+    },
+    {
+      "ruta": "apps/rrhh/lib/instalar-app.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Sugerencia de «instalar» el portal en la pantalla de inicio (rrhh tiene manifest + sw.js). Android: solo si el navegador lanzó `beforeinstallprompt` (botón «Instalar»). iOS: solo en Safari y fuera del modo standalone (no hay API: se explica «Compartir > Añadir…»).",
+      "exporta": [
+        "esSafariIOS",
+        "avisoInstalar"
+      ],
+      "funciones": [
+        {
+          "nombre": "esSafariIOS",
+          "kind": "function",
+          "exportada": true,
+          "params": "userAgent: string",
+          "retorno": "boolean",
+          "linea": 11,
+          "resumen": "Safari de iOS de verdad: Chrome/Firefox/Edge en iOS no ofrecen «Añadir a pantalla de inicio» igual."
+        },
+        {
+          "nombre": "avisoInstalar",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: { plataforma: Plataforma; userAgent: string; standalone: boolean; hayPromptAndroid: boolean; descartado: boolean }",
+          "retorno": "'android' | 'ios' | null",
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ffd5bb918315"
     },
     {
       "ruta": "apps/rrhh/lib/mailer.ts",
@@ -188980,7 +189557,12 @@
       "ambito": "apps/rrhh",
       "resumen": "Ubicación OBLIGATORIA al fichar (entrada y salida). El servidor no se fía del cliente.",
       "exporta": [
-        "validarUbicacionFichaje"
+        "validarUbicacionFichaje",
+        "normalizarPrecision",
+        "decidirFichaje",
+        "validarIncidenciaUbicacion",
+        "tramoSinUbicacion",
+        "textoPrecision"
       ],
       "funciones": [
         {
@@ -188998,11 +189580,64 @@
           "params": "body: unknown",
           "retorno": "ResultadoUbicacion",
           "linea": 15
+        },
+        {
+          "nombre": "deLista",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: readonly T[], v: unknown",
+          "retorno": "T | null",
+          "linea": 35
+        },
+        {
+          "nombre": "normalizarPrecision",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 40,
+          "resumen": "`coords.accuracy` en metros enteros; fuera de [0, 100000] o no finito → null («no se sabe»)."
+        },
+        {
+          "nombre": "decidirFichaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown, permiteSinUbicacion: boolean",
+          "retorno": "DecisionFichaje",
+          "linea": 56,
+          "resumen": "Decide cómo se registra un fichaje. Coordenadas válidas mandan siempre (aunque venga `sin_ubicacion`). Sin ellas, solo se acepta `sin_ubicacion: true` (booleano estricto) y SOLO si la empresa lo permi"
+        },
+        {
+          "nombre": "validarIncidenciaUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown, userAgent: string | null",
+          "retorno": "IncidenciaUbicacion | null",
+          "linea": 76,
+          "resumen": "Valida el registro de una incidencia: causa y plataforma de la lista cerrada (si no, null → 400)."
+        },
+        {
+          "nombre": "tramoSinUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { sin_ubicacion_entrada?: boolean | null; sin_ubicacion_salida?: boolean | null }",
+          "retorno": "string | null",
+          "linea": 96,
+          "resumen": "Distintivo «sin ubicación» de un fichaje: qué tramo se registró sin GPS, o null si ninguno."
+        },
+        {
+          "nombre": "textoPrecision",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: number | null | undefined",
+          "retorno": "string | null",
+          "linea": 105,
+          "resumen": "«±12 m»; null (no se sabe) no se pinta, nunca «±0 m» por defecto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "21db52b12cd8"
+      "hash": "c358e14aa0d4"
     },
     {
       "ruta": "apps/rrhh/lib/verificacion.ts",
@@ -214480,7 +215115,9 @@
       "exporta": [
         "esMotivoDuplicado",
         "accionesPermitidas",
-        "efectoResolucion"
+        "efectoResolucion",
+        "nombreFichaLegible",
+        "telefonoParaMostrar"
       ],
       "funciones": [
         {
@@ -214507,11 +215144,45 @@
           "params": "tipo: string, accion: AccionRevision, motivo: string | null = null, campos: readonly string[] = []",
           "retorno": "EfectoResolucion",
           "linea": 131
+        },
+        {
+          "nombre": "sinTildes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 154
+        },
+        {
+          "nombre": "palabras",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 155
+        },
+        {
+          "nombre": "nombreFichaLegible",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string | null | undefined, apellidos: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 163,
+          "resumen": "El nombre de una ficha SIN repetirlo. Hay fichas (volcado, leads) cuyo `apellidos` ya trae el nombre entero («Juan Manuel» + «Juan Manuel Duran Martinez»), o cuyo `nombre` ya trae los apellidos: pegar"
+        },
+        {
+          "nombre": "telefonoParaMostrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 180,
+          "resumen": "Teléfono para leer: español de 9 dígitos → «600 11 22 33» (quita +34/0034); otro formato, tal cual. `null` si no hay."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "44c85219afce"
+      "hash": "83123dafa9e8"
     },
     {
       "ruta": "packages/module-seguros/src/google-contactos-simulacion.ts",
@@ -227691,7 +228362,7 @@
           "exportada": true,
           "params": "f: Pick<FormularioAuto, 'documentoTomador' | 'tomador' | 'fichaTomador'> | null | undefined",
           "retorno": "string | null",
-          "linea": 342,
+          "linea": 344,
           "resumen": "Documento del tomador que el robot teclea en el portal: `documentoTomador` (lo pone asegura) o, si no, el del bloque `tomador`. `null` = no consta. PURO; nunca se loguea."
         },
         {
@@ -227700,7 +228371,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "string[]",
-          "linea": 354,
+          "linea": 356,
           "resumen": "Formas en que el documento del tomador puede aparecer en un texto o en el HTML del portal (tal cual, con guion o espacio antes de la letra de control), más el NOMBRE, los APELLIDOS, la RAZÓN SOCIAL y "
         },
         {
@@ -227709,7 +228380,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 423,
+          "linea": 425,
           "resumen": "email (algo@algo.algo); teléfono español (9 dígitos que empiezan por 6, 7, 8 o 9, con espacios o guiones opcionales y prefijo +34 o 0034 opcional); IBAN (ES + 22 dígitos, con o sin espacios); y bastid"
         },
         {
@@ -227718,7 +228389,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 441
+          "linea": 443
         },
         {
           "nombre": "fechaIso",
@@ -227726,7 +228397,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "string | null",
-          "linea": 443
+          "linea": 445
         },
         {
           "nombre": "entero",
@@ -227734,7 +228405,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number",
           "retorno": "number | null",
-          "linea": 455
+          "linea": 457
         },
         {
           "nombre": "booleano",
@@ -227742,7 +228413,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "boolean | null",
-          "linea": 465
+          "linea": 467
         },
         {
           "nombre": "edad",
@@ -227750,7 +228421,7 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": null,
-          "linea": 474
+          "linea": 476
         },
         {
           "nombre": "validarFormularioAuto",
@@ -227758,12 +228429,12 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioAuto",
-          "linea": 481
+          "linea": 483
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dcfc48e14ee3"
+      "hash": "3af14006d79a"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-comercio.ts",
@@ -229825,7 +230496,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3efdbb4b9f72"
+      "hash": "16d0f8295cca"
     },
     {
       "ruta": "packages/module-tarificacion/src/riesgo.ts",
@@ -232441,7 +233112,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4903,
-    "funciones": 18629
+    "archivos": 4913,
+    "funciones": 18689
   }
 }
