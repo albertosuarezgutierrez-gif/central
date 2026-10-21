@@ -440,16 +440,17 @@ test('viaCoincide: nombre solo o «tipo nombre» por plano(); otra vía o vacío
   assert.equal(viaCoincide('CALLE', null, 'PRUEBA'), false)
 })
 
-test('población elegida de la lista que COINCIDE con la del riesgo → se confirma lo aprendido; que NO coincide → hueco y NO se confirma', async () => {
-  for (const [elegida, ok] of [['SEVILLA', true], ['DOS HERMANAS', false]] as const) {
-    const { context, page, ctx, marco } = await abrir({ sinAutocompletar: true, lista: { para: 'poblacion', textos: ['DOS HERMANAS', 'SEVILLA'] } })
+test('población de la lista: el riesgo (SEVILLA) se elige SOLO por municipio, sin IA ni aprender; la IA que apuntara a otra ya no se consulta', async () => {
+  for (const [textos, ok] of [[['DOS HERMANAS', 'SEVILLA'], true], [['DOS HERMANAS', 'UTRERA'], false]] as const) {
+    const elegida = textos[0]
+    const { context, page, ctx, marco } = await abrir({ sinAutocompletar: true, lista: { para: 'poblacion', textos: [...textos] } })
     try {
       const llamadas: string[] = []
       const formador = await formadorDe((e) => e.findIndex((c) => c.texto === elegida), llamadas)
       const r = rellenarPantallaVivienda(page, marco, FORM, { ...ctx, formador })
       if (ok) await r
-      else await assert.rejects(() => r, (e) => e instanceof ErrorMapaIncompleto && /otra distinta/.test((e as Error).message))
-      assert.equal(confirmaciones(llamadas), ok ? 1 : 0, `confirmaciones eligiendo ${elegida}`)
+      else await assert.rejects(() => r, (e) => e instanceof ErrorMapaIncompleto && /ninguna opción coincide/.test((e as Error).message))
+      assert.equal(confirmaciones(llamadas), 0, `confirmaciones eligiendo ${elegida}`)
     } finally {
       await context.close()
     }
@@ -542,4 +543,29 @@ test('candidatos: la etiqueta de una CASILLA (for → checkbox o envolviéndola)
 
 test('SELECTOR_ACCIONES compartido: idéntico al de origin/main (sin label[for], mat-option ni [role=option])', () => {
   assert.equal(SELECTOR_ACCIONES, 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button, mat-icon:not(a mat-icon):not(button mat-icon):not([role=button] mat-icon)')
+})
+
+// ───────────── 21/10/2026: elección de la población del CP por el municipio del riesgo (CP 23693, varias poblaciones) ─────────────
+test('elegirPoblacionHogar: exacta (sin tildes/mayúsculas/prefijo CP), por palabras enteras, y nunca al azar', async () => {
+  const { elegirPoblacionHogar } = await import('../src/adapters/allianz/poblacion-localidad.ts')
+  const LISTA = ['23693 - VENTAS DEL CARRIZAL', 'Jaén', 'Las Infantas']
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Ventas del Carrizal'), { tipo: 'elegida', indice: 0 })
+  assert.deepEqual(elegirPoblacionHogar(['Ventas del Carrizal (Jaén)', 'Jaén Centro'], ' VENTAS  DEL CARRIZAL '), { tipo: 'elegida', indice: 0 })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Jaen'), { tipo: 'elegida', indice: 1 })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Linares'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(['Jaén', 'Jaén'], 'Jaén'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(['Jaén Norte', 'Jaén Sur'], 'Jaén'), { tipo: 'sin_coincidencia' })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, null), { tipo: 'sin_municipio' })
+  assert.deepEqual(elegirPoblacionHogar([], 'Jaén'), { tipo: 'sin_opciones' })
+})
+
+test('elegirPoblacionHogar: núcleo de la vía (prefijo del Catastro), opción única y prefijo ambiguo', async () => {
+  const { elegirPoblacionHogar, nucleoDeVia } = await import('../src/adapters/allianz/poblacion-localidad.ts')
+  assert.equal(nucleoDeVia('PARRA LA (VENTAS CARRIZA)'), 'VENTAS CARRIZA')
+  assert.equal(nucleoDeVia('PARRA LA'), null)
+  const LISTA = ['CASTILLO DE LOCUBIN', 'VENTAS DEL CARRIZAL']
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Castillo de Locubín', 'PARRA LA (VENTAS CARRIZA)'), { tipo: 'elegida', indice: 1 })
+  assert.deepEqual(elegirPoblacionHogar(LISTA, 'Castillo de Locubín', 'PARRA LA'), { tipo: 'elegida', indice: 0 })
+  assert.deepEqual(elegirPoblacionHogar(['23693 - OTRA'], 'Nada', null), { tipo: 'elegida', indice: 0 })
+  assert.deepEqual(elegirPoblacionHogar(['VENTAS DEL CARRIZAL', 'VENTAS DEL CARRIZO'], 'Linares', 'X (VENTAS CARRI)'), { tipo: 'sin_coincidencia' })
 })

@@ -43,6 +43,7 @@ import { esAppHogarAllianz } from '../../guard.ts'
 import { comprobarCampo } from './auto.ts'
 import { login, sesionSirve } from './comunidades.ts'
 import { abrirNuevaAlta, esperarMarcoApp } from './entrada.ts'
+import { elegirPoblacionHogar } from './poblacion-localidad.ts'
 
 /**
  * Flag de registro de Allianz HOGAR. ENCENDIDO (Alberto, 21/10/2026: OK para la 1.ª prueba real de TARIFICACIÓN, no emisión).
@@ -430,6 +431,34 @@ async function opcionAutocompletada(page: Page, marco: Frame, ctx: CtxVivienda, 
   return { ok: false, confirmar: r.confirmar }
 }
 
+/**
+ * Abre la lista de `town` (foco + flecha abajo si no se despliega sola), lee sus opciones y pulsa la que coincide con el municipio
+ * del riesgo (`elegirPoblacionHogar`). `true` = quedó con valor. `false` = no hay lista legible o falta municipio (sigue la capa
+ * común). Con opciones y SIN coincidencia única → hueco que LISTA las opciones (nunca se elige una al azar).
+ */
+async function elegirPoblacionDeLista(page: Page, marco: Frame, ctx: CtxVivienda, municipio: string | null, nombreVia: string | null): Promise<boolean> {
+  const campo = marco.locator(`input${selControl(CONTROLES.poblacion)}`)
+  if ((municipio === null && nombreVia === null) || (await campo.count()) !== 1) return false
+  const opciones = marco.locator('[role=option]:visible, nx-autocomplete-option:visible, mat-option:visible')
+  const leerTextos = async () => (await opciones.allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim()).filter((t) => t !== '')
+  let textos = await leerTextos()
+  if (textos.length === 0) {
+    await campo.focus({ timeout: 5_000 }).catch(() => undefined)
+    await campo.press('ArrowDown', { timeout: 5_000 }).catch(() => undefined)
+    await page.waitForTimeout(500)
+    textos = await leerTextos()
+  }
+  const r = elegirPoblacionHogar(textos, municipio, nombreVia)
+  if (r.tipo === 'sin_opciones' || r.tipo === 'sin_municipio') return false
+  if (r.tipo === 'sin_coincidencia') {
+    throw new ErrorMapaIncompleto(`la elección de población del CP (ninguna opción coincide de forma única con la del riesgo; el portal ofrece: ${textos.slice(0, 15).join(' | ')})`)
+  }
+  await ctx.pausaAccion()
+  await ctx.pulsar(opciones.nth(r.indice))
+  if (await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS)) return true
+  throw new ErrorMapaIncompleto('el efecto de la opción de población elegida (tras pulsarla, la población no quedó rellena)')
+}
+
 /** Pasos del asistente leídos del DOM (solo lectura). */
 async function leerPasos(marco: Frame): Promise<ItemPaso[]> {
   return marco.locator('nx-multi-step-item').evaluateAll((els) =>
@@ -507,9 +536,12 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
       let confirmarPob: (() => Promise<void>) | null = null
       if (!(await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS))) {
         const hueco = 'la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)'
-        const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco, f.inmueble.municipio !== null)
-        if (!e.ok) throw new ErrorMapaIncompleto(hueco)
-        confirmarPob = e.confirmar
+        // 21/10/2026: antes de la capa común, elección determinista por el municipio del riesgo (exacta o palabras enteras, UNA sola).
+        if (!(await elegirPoblacionDeLista(page, marco, ctx, f.inmueble.municipio, f.inmueble.nombreVia))) {
+          const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco, f.inmueble.municipio !== null)
+          if (!e.ok) throw new ErrorMapaIncompleto(hueco)
+          confirmarPob = e.confirmar
+        }
       }
       if (f.inmueble.municipio !== null) {
         const pob = await leer(marco.locator(`input${selControl(CONTROLES.poblacion)}`))
