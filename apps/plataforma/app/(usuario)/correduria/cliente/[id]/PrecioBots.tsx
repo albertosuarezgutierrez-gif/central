@@ -24,7 +24,7 @@ import { adaptadorDeRamo, checklistBot, type ResultadoAdaptadorBot } from '@/lib
 import { avisoDeChecklist, resumenFilas, type ChecklistCompania, type EstadoFila } from '@/lib/tarificador-checklist'
 import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
 import { clasificarEncolar, MENSAJE_ENCOLAR_INCIERTO, MENSAJE_ENCOLAR_SIN_CONEXION, REINTENTO_INCIERTO_MS, REINTENTOS_INCIERTO } from '@/lib/tarificador-encolar-incierto'
-import { loteConOk, loteTerminado, ordenEncolado, resumenLote, type FilaLote } from '@/lib/tarificador-todas'
+import { estadoPrevioDe, loteConOk, loteTerminado, ordenEncolado, resumenLote, textoFilaEncolada, type FilaLote } from '@/lib/tarificador-todas'
 import { accionGuardarExtra, cuerpoGuardarCompania, cuerpoGuardarHistorial, extraEfectivo, numeroPolizaAGuardar, opcionesDeCampoExtra, valorCampoExtra, type AccionGuardarExtra } from '@/lib/tarificador-bots-extra'
 import { guardarSexoEnFicha } from '@/lib/correduria/sexo-cotizador-ficha'
 import { pendientesPorBloque } from '@/lib/tarificador-pendientes'
@@ -351,7 +351,7 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
           else if (veredicto === 'sin_conexion') fila = { compania, estado: 'rechazada', mensaje: MENSAJE_ENCOLAR_SIN_CONEXION }
           else {
             const e = leerEncoladoBot(r.status, r.json)
-            fila = e.ok ? { compania, estado: 'encolada', trabajoId: e.trabajoId, duplicado: e.duplicado, final: false, ok: false } : { compania, estado: 'rechazada', mensaje: e.mensaje }
+            fila = e.ok ? { compania, estado: 'encolada', trabajoId: e.trabajoId, duplicado: e.duplicado, final: false, ok: false, estadoPrevio: e.duplicado ? estadoPrevioDe(r.json) : null } : { compania, estado: 'rechazada', mensaje: e.mensaje }
           }
         }
         if (mia !== generacion.current) break
@@ -384,7 +384,7 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
               <li key={f.compania} style={{ overflowWrap: 'anywhere', color: f.estado === 'encolada' ? 'var(--text)' : 'var(--warning)' }}>
                 <strong>{rotuloCompania(f.compania)}:</strong>{' '}
                 {f.estado === 'encolada'
-                  ? `${f.duplicado ? 'ya había un trabajo en marcha' : 'encolado'} — ${f.final ? (f.ok ? 'con precio' : 'terminó sin precio') : 'en marcha'}`
+                  ? <>{textoFilaEncolada(f)}{f.duplicado && f.estadoPrevio === 'atascado' && !f.final && <> · <a href="/correduria/tarificador" style={{ display: 'inline-block', minHeight: 44, lineHeight: '44px' }}>Bots atascados</a></>}</>
                   : f.mensaje}
               </li>
             ))}
