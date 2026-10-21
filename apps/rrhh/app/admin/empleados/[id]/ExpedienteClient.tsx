@@ -3,6 +3,7 @@ import { useState } from 'react'
 import ChatPanel from '@/components/ChatPanel'
 import Page from '@/components/ui/Page'
 import Card from '@/components/ui/Card'
+import { NOTAS_MAX } from '@/lib/notas-empleado'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
@@ -17,6 +18,7 @@ type Empleado = {
   coche: string | null; matricula: string | null
   fecha_alta: string | null
   fecha_reconocimiento_medico: string | null
+  notas: string | null
 }
 
 const FIRMA: Record<string, { txt: string; cls: string }> = {
@@ -64,6 +66,9 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
   })
   const [fichaGuardando, setFichaGuardando] = useState(false)
   const [fichaMsg, setFichaMsg] = useState('')
+  const [notas, setNotas] = useState(empleado.notas ?? '')
+  const [notasEstado, setNotasEstado] = useState<'' | 'guardando' | 'ok' | 'error'>('')
+  const [notasError, setNotasError] = useState('')
   // El enlace de acceso NO viene en las props (con él se entra como el empleado): se pide al
   // pulsar «Ver enlace» (POST /enlace) o al regenerarlo (POST /acceso). Es una ruta relativa.
   const [enlace, setEnlace] = useState('')
@@ -84,6 +89,21 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
     setFichaGuardando(false)
     if (r.ok) setFichaMsg('Guardado')
     else setFichaMsg((await r.json()).error ?? 'Error al guardar')
+  }
+
+  async function guardarNotas() {
+    setNotasEstado('guardando'); setNotasError('')
+    try {
+      const r = await fetch(`/api/admin/empleados/${empleado.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ notas }),
+      })
+      if (r.ok) { setNotas(n => n.trim()); setNotasEstado('ok') }
+      else { setNotasError((await r.json().catch(() => ({}))).error ?? 'Error al guardar las notas'); setNotasEstado('error') }
+    } catch {
+      setNotasError('Error de red. Inténtalo de nuevo.'); setNotasEstado('error')
+    }
   }
 
   async function recargar() {
@@ -345,6 +365,30 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
         {errorEnlace && <p className="mt-2 text-sm text-alert">{errorEnlace}</p>}
         {msgSesiones && <p className={`mt-2 text-sm ${msgSesiones === 'Sesiones cerradas' ? 'text-ok' : 'text-alert'}`}>{msgSesiones}</p>}
         <p className="mt-2 text-xs text-ink-3">Si el empleado tiene email, entra en <strong>/e/entrar</strong> con un código que le llega por correo. Si no, envíale este enlace. Quien lo tenga entra como el empleado: no lo compartas por canales abiertos. Al generar uno nuevo el anterior deja de funcionar y se cierran sus sesiones abiertas.</p>
+      </Card>
+
+      {/* Notas internas */}
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">Notas internas</h2>
+        <textarea
+          rows={5}
+          value={notas}
+          maxLength={NOTAS_MAX + 500}
+          onChange={e => { setNotas(e.target.value); setNotasEstado('') }}
+          aria-label="Notas internas"
+          className="w-full resize-y text-sm"
+        />
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className={notas.trim().length > NOTAS_MAX ? 'text-alert' : 'text-ink-3'}>{notas.trim().length}/{NOTAS_MAX}</span>
+          <span className="text-ink-3">Solo las ve la empresa, no el empleado.</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button onClick={guardarNotas} disabled={notasEstado === 'guardando' || notas.trim().length > NOTAS_MAX} className="min-h-[44px] text-sm">
+            {notasEstado === 'guardando' ? 'Guardando…' : 'Guardar notas'}
+          </button>
+          {notasEstado === 'ok' && <span className="text-sm text-ok">Guardado ✓</span>}
+          {notasEstado === 'error' && <span className="text-sm text-alert">{notasError}</span>}
+        </div>
       </Card>
 
       {error && <p className="text-sm text-alert">{error}</p>}
