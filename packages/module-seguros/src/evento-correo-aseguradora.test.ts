@@ -380,3 +380,11 @@ test('solicitud: un cuerpo larguísimo en mayúsculas sin «*» termina rápido 
   assert.ok(Date.now() - t0 < 2000, `tardó ${Date.now() - t0} ms`)
   assert.ok(e === null || e.tipo === 'solicitud')
 })
+
+test('sinDatosSensibles: NIF con guion/puntos, NIE con guiones e IBAN en minúsculas', () => {
+  assert.equal(sinDatosSensibles('NIF 12345678-Z fin'), 'NIF [retirado] fin')
+  assert.equal(sinDatosSensibles('NIF 12.345.678-Z fin'), 'NIF [retirado] fin')
+  assert.equal(sinDatosSensibles('NIE X-1234567-L fin'), 'NIE [retirado] fin')
+  assert.equal(sinDatosSensibles('NIE X 1234567 L fin'), 'NIE [retirado] fin')
+  assert.equal(sinDatosSensibles('cta es91 2100 0418 4502 0005 1332 fin'), 'cta [retirado] fin')
+})

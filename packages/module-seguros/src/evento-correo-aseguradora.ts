@@ -170,9 +170,9 @@ export type EventoAseguradora = EventoSiniestro | EventoPreAnulacion | EventoImp
 
 // ── utilidades ───────────────────────────────────────────────────────────────
 
-const IBAN = /\b[A-Z]{2}\d{2}(?:[\s-]?[A-Z0-9]{4}){3,7}(?:[\s-]?[A-Z0-9]{1,3})?\b/g
+const IBAN = /\b[A-Z]{2}\d{2}(?:[\s-]?[A-Z0-9]{4}){3,7}(?:[\s-]?(?=[A-Z0-9]{1,3}\b)(?=[A-Z]{0,2}\d)[A-Z0-9]{1,3})?\b/gi
 const CCC = /\b\d{4}[\s-]?\d{4}[\s-]?\d{2}[\s-]?\d{10}\b/g
-const NIF = /\b(?:\d{8}\s?[A-Z]|[XYZ]\s?\d{7}\s?[A-Z]|[ABCDEFGHJNPQRSUVW]-?\d{7}[0-9A-J]?)\b/gi
+const NIF = /\b(?:\d{2}\.?\d{3}\.?\d{3}[\s-]?[A-Z]|[XYZ][\s.-]?\d{1,2}\.?\d{3}\.?\d{3}[\s-]?[A-Z]|[ABCDEFGHJNPQRSUVW]-?\d{7}[0-9A-J]?)\b/gi
 
 /** Quita IBAN, CCC y NIF/NIE/CIF de un texto libre. */
 export function sinDatosSensibles(texto: string): string {

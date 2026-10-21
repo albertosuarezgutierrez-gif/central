@@ -147,3 +147,21 @@ test('comparación con una devolución leída', () => {
   assert.equal(c.campos.fechas, 'acierto')
   assert.equal(c.campos.importes, 'omitido')
 })
+
+test('🚨 literalidad estricta: importe o identificador recortado de otro mayor NO se acepta', () => {
+  assert.equal(importeLiteral('234,56', 'Prima total 1.234,56 €'), null, 'importe recortado por la izquierda')
+  assert.equal(importeLiteral('1.234,56', 'Prima total 1.234,56 €'), 1234.56)
+  assert.equal(identificadorLiteral('512345', 'Póliza 0094/512345 vigente'), null, 'identificador recortado tras «/»')
+  assert.equal(identificadorLiteral('0094/512345', 'Póliza 0094/512345 vigente'), '0094/512345')
+  assert.equal(identificadorLiteral('480000123', 'Recibo 480000123-H emitido'), '480000123')
+})
+
+test('estado: ≤6 palabras y sin datos sensibles (puede colarse un nombre en una frase larga)', () => {
+  const t = 'Estado: PTE DOCUMENTACION. Juan Pérez García y Ana López Ruiz han solicitado la baja inmediata'
+  assert.equal(validarFichaLLM({ estado: 'PTE DOCUMENTACION' }, t).ficha.estado, 'PTE DOCUMENTACION')
+  const largo = 'Juan Pérez García y Ana López Ruiz han solicitado la baja'
+  const r = validarFichaLLM({ estado: largo }, t)
+  assert.equal(r.ficha.estado, null)
+  assert.ok(r.noLiterales.includes('estado'))
+  assert.equal(validarFichaLLM({ estado: 'NIF 12345678-Z' }, 'NIF 12345678-Z').ficha.estado, null)
+})

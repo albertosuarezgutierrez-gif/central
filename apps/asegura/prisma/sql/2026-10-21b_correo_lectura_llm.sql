@@ -17,6 +17,8 @@
 -- (el triaje lo cuenta y sigue: la llamada al modelo ya se gastó, pero no se pierde nada de la cartera). Y el extractor
 -- arranca APAGADO (`CORREO_LLM_MODO` sin poner = `off`).
 --
+-- Nota: `backup_seguros` hereda SELECT sobre esta tabla por los default privileges del schema (aceptado).
+--
 -- Reversible: DROP TABLE IF EXISTS seguros.correo_lectura_llm;
 
 BEGIN;

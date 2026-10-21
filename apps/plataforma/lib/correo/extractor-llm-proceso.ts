@@ -9,7 +9,7 @@
 import { openrouterChatEx } from '@central/core-ai'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { costePorUso, dentroDePresupuestoDiario, registrarUso } from '@/lib/ai-gateway'
+import { costePorUso, dentroDePresupuestoDiario, PROVEEDOR_PASARELA, registrarUso } from '@/lib/ai-gateway'
 import { getDirectorEstado, openrouterConfigPasarela } from '@/lib/ia-director'
 import { modeloOpenRouterValido } from '@/lib/modelo-openrouter'
 import { registrarLecturaLLMAsegura } from '@/lib/correduria-puerto'
@@ -30,7 +30,7 @@ async function llamar(system: string, user: string): Promise<{ texto: string; mo
   if (!or) throw new Error('extractor: sin OPENROUTER_API_KEY (no se cae a Groq/NIM)')
   const presupuesto = await dentroDePresupuestoDiario(APP_EXTRACTOR)
   if (!presupuesto.ok) {
-    await registrarUso({ app: APP_EXTRACTOR, endpoint: ENDPOINT_EXTRACTOR, proveedor: 'openrouter', modelo, ok: false, ms: 0, error: presupuesto.motivo ?? 'presupuesto' })
+    await registrarUso({ app: APP_EXTRACTOR, endpoint: ENDPOINT_EXTRACTOR, proveedor: PROVEEDOR_PASARELA, modelo, ok: false, ms: 0, error: presupuesto.motivo ?? 'presupuesto' })
     throw new Error(presupuesto.motivo ?? 'presupuesto diario excedido')
   }
   const t0 = Date.now()
@@ -42,10 +42,10 @@ async function llamar(system: string, user: string): Promise<{ texto: string; mo
     const coste = typeof r.usage?.cost === 'number' && Number.isFinite(r.usage.cost)
       ? +(r.usage.cost * Number(process.env.AI_USD_EUR ?? 0.9)).toFixed(6)
       : costePorUso(r.model, r.usage, (await getDirectorEstado().catch(() => null))?.modelos ?? [])
-    await registrarUso({ app: APP_EXTRACTOR, endpoint: ENDPOINT_EXTRACTOR, proveedor: 'openrouter', modelo: r.model, ok: true, ms: Date.now() - t0, tokens: r.usage?.total_tokens ?? 0, costeEur: coste })
+    await registrarUso({ app: APP_EXTRACTOR, endpoint: ENDPOINT_EXTRACTOR, proveedor: PROVEEDOR_PASARELA, modelo: r.model, ok: true, ms: Date.now() - t0, tokens: r.usage?.total_tokens ?? 0, costeEur: coste })
     return { texto: r.text, modelo: r.model }
   } catch (e) {
-    await registrarUso({ app: APP_EXTRACTOR, endpoint: ENDPOINT_EXTRACTOR, proveedor: 'openrouter', modelo, ok: false, ms: Date.now() - t0, error: e instanceof Error ? e.message.slice(0, 200) : 'fallo' })
+    await registrarUso({ app: APP_EXTRACTOR, endpoint: ENDPOINT_EXTRACTOR, proveedor: PROVEEDOR_PASARELA, modelo, ok: false, ms: Date.now() - t0, error: e instanceof Error ? e.message.slice(0, 200) : 'fallo' })
     throw e
   }
 }

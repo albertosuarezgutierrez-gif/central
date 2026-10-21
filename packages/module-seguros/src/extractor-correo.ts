@@ -133,14 +133,18 @@ function escaparRe(s: string): string {
 }
 
 /** ¿Aparece `valor` en `texto` como pieza entera (sin pegarse a otra letra o cifra)? Ambos ya normalizados. */
-function aparece(valorNorm: string, textoNorm: string): boolean {
+function aparece(valorNorm: string, textoNorm: string, estricto = false): boolean {
   if (!valorNorm) return false
-  return new RegExp(`(?:^|[^\\p{L}\\p{N}])${escaparRe(valorNorm)}(?:$|[^\\p{L}\\p{N}])`, 'u').test(textoNorm)
+  // Estricto (importes e identificadores): un separador (. , / -) pegado a una cifra por fuera indica que el valor es un
+  // trozo de otro mayor («234,56» dentro de «1.234,56», «512345» dentro de «0094/512345»).
+  const izq = estricto ? '(?:^|[^\\p{L}\\p{N}.,/-]|(?<!\\p{N})[.,/-])' : '(?:^|[^\\p{L}\\p{N}])'
+  const der = estricto ? '(?:$|[^\\p{L}\\p{N}.,/-]|[.,/-](?!\\p{N}))' : '(?:$|[^\\p{L}\\p{N}])'
+  return new RegExp(`${izq}${escaparRe(valorNorm)}${der}`, 'u').test(textoNorm)
 }
 
 /** ¿El valor aparece literalmente en el texto (normalizado)? */
-export function apareceLiteral(valor: string, texto: string): boolean {
-  return aparece(normalizarCotejo(valor), normalizarCotejo(texto))
+export function apareceLiteral(valor: string, texto: string, estricto = false): boolean {
+  return aparece(normalizarCotejo(valor), normalizarCotejo(texto), estricto)
 }
 
 function cadena(v: unknown): string | null {
@@ -155,7 +159,7 @@ const RE_ID = /^[A-Za-z0-9][A-Za-z0-9 ./-]{2,39}$/
 export function identificadorLiteral(v: unknown, texto: string): string | null {
   const s = cadena(v)
   if (!s || !RE_ID.test(s) || (s.match(/\d/g) ?? []).length < 3) return null
-  return apareceLiteral(s, texto) ? s : null
+  return apareceLiteral(s, texto, true) ? s : null
 }
 
 const RE_IMPORTE_ES = /^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?$/
@@ -182,7 +186,7 @@ export function importeLiteral(v: unknown, texto: string): number | null {
   const textoNorm = normalizarCotejo(texto)
   const variantes = [...new Set([s, sinMiles(s), conMiles(sinMiles(s))])]
   const pareceDinero = (lit: string): boolean => {
-    if (!aparece(lit, textoNorm)) return false
+    if (!aparece(lit, textoNorm, true)) return false
     if (/,\d{1,2}$/.test(lit)) return true
     const e = escaparRe(lit)
     return new RegExp(`(?:^|[^\\p{N}.,])${e}\\s?(?:€|eur\\b|euros\\b)|(?:€|eur)\\s?${e}(?:$|[^\\p{N}.,])`, 'u').test(textoNorm)
@@ -229,6 +233,17 @@ export function textoLiteral(v: unknown, texto: string, max: number): string | n
   const s = cadena(v)
   if (!s || s.length < 2 || s.length > max || !/\p{L}/u.test(s) || /\[retirado\]/i.test(s)) return null
   return apareceLiteral(s, texto) ? s : null
+}
+
+const MAX_PALABRAS_ESTADO = 6
+
+/** Estado de la compañía: texto corto literal, sin datos sensibles y de ≤6 palabras (una frase larga puede llevar un nombre). */
+export function estadoLiteral(v: unknown, texto: string): string | null {
+  const s = textoLiteral(v, texto, 80)
+  if (!s) return null
+  if (s.split(/\s+/).length > MAX_PALABRAS_ESTADO) return null
+  const limpio = sinDatosSensibles(s)
+  return limpio === s ? s : null
 }
 
 function confianza(v: unknown): number | null {
@@ -283,7 +298,7 @@ export function validarFichaLLM(raw: Record<string, unknown> | null, texto: stri
     fechaVencimiento: campo('fechaVencimiento', 'fecha_vencimiento', (v) => fechaLiteral(v, texto)),
     fechaLimite: campo('fechaLimite', 'fecha_limite', (v) => fechaLiteral(v, texto)),
     importes,
-    estado: campo('estado', 'estado', (v) => textoLiteral(v, texto, 80)),
+    estado: campo('estado', 'estado', (v) => estadoLiteral(v, texto)),
     confianza: confianza(r.confianza),
   }
   if (importeDescartado) noLiterales.push('importes')
