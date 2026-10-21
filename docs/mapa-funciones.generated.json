@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T17:04:50Z",
-  "sha": "81a4386c1586f42b674770ac60cc47b8e62e438b",
+  "generadoEn": "2026-10-21T17:37:26Z",
+  "sha": "9203e4e0b629c1c0b73f26a21fb553e02551aabf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -21256,6 +21256,15 @@
       "hash": "2d582a3a9d41"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/correo/lectura-llm/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/correo/lectura-llm",
+      "hash": "1be37611a04d"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/correo/propuesta-lead/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -38457,6 +38466,91 @@
       ],
       "rutaApi": null,
       "hash": "7eeb3c3a631f"
+    },
+    {
+      "ruta": "apps/asegura/lib/correo-lectura-llm-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/correo-lectura-llm-bd.ts Guarda la lectura del extractor LLM en MODO SOMBRA (F2 del agente de correo, 21/10/2026). Una fila por correo (`correo_lectura_llm_unica`): releer el mismo correo no escribe dos veces. NO toca la cartera: ni pólizas, ni recibos, ni tareas, ni historial. Sin ",
+      "exporta": [
+        "guardarLecturaLLM"
+      ],
+      "funciones": [
+        {
+          "nombre": "guardarLecturaLLM",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, e: EntradaLecturaLLM",
+          "retorno": "Promise<ResultadoGuardarLectura>",
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "correo_lectura_llm"
+      ],
+      "rutaApi": null,
+      "hash": "03b94062a7d1"
+    },
+    {
+      "ruta": "apps/asegura/lib/correo-lectura-llm.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/correo-lectura-llm.ts Validación de la ENTRADA del puerto `POST /api/operador/correo/lectura-llm` (F2 del agente de correo, 21/10/2026). PURO. Plataforma manda la lectura del extractor LLM en modo sombra (ficha ya validada literal contra el texto). Aquí se vuelve a construir la fich",
+      "exporta": [
+        "validarEntradaLecturaLLM"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 31
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 39,
+          "resumen": "Nº de póliza/recibo/…: si el filtro de datos sensibles lo toca, no era un nº limpio → `null`."
+        },
+        {
+          "nombre": "enLista",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, lista: readonly T[]",
+          "retorno": "T | null",
+          "linea": 44
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 48
+        },
+        {
+          "nombre": "ficha",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "FichaGuardable | null",
+          "linea": 52
+        },
+        {
+          "nombre": "validarEntradaLecturaLLM",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown",
+          "retorno": "",
+          "linea": 80
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5278fbbecd81"
     },
     {
       "ruta": "apps/asegura/lib/correo-respuesta-lead-puro.ts",
@@ -144068,6 +144162,7 @@
         "interpretarImpagados",
         "registrarDevolucionesAsegura",
         "registrarEventoCorreoAsegura",
+        "registrarLecturaLLMAsegura",
         "reevaluarEventosCorreoAsegura",
         "resolverDevolucionAsegura",
         "bajaPorDevolucionAsegura",
@@ -144247,12 +144342,21 @@
           "resumen": "`POST /api/operador/correo/evento` — un aviso de compañía ya leído (`leerCorreoEventoAseguradora`): siniestro, pre-anulación, impago, anulación o suplemento (14/10/2026). Mismos tres desenlaces que la"
         },
         {
+          "nombre": "registrarLecturaLLMAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "lectura: Record<string, unknown>",
+          "retorno": "Promise<RegistroDevoluciones>",
+          "linea": 521,
+          "resumen": "`POST /api/operador/correo/lectura-llm` — la lectura del extractor LLM en MODO SOMBRA (F2 del agente de correo, 21/10/2026). Solo se GUARDA para medir: asegura no toca la cartera ni avisa. Idempotente"
+        },
+        {
           "nombre": "reevaluarEventosCorreoAsegura",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 521,
+          "linea": 538,
           "resumen": "`POST /api/operador/correo/evento/reevaluar` — tras el triaje: las emisiones «sin resolver» que CIMA ya trae pasan a `duplicado_cima` (14/10/2026). Nunca lanza: `null` = no se pudo (config, red, 4xx/5"
         },
         {
@@ -144261,7 +144365,7 @@
           "exportada": true,
           "params": "reciboId: string, actor: string",
           "retorno": "Promise<ResolucionDevolucion>",
-          "linea": 535,
+          "linea": 552,
           "resumen": "`PATCH /api/operador/recibos/devolucion` — «cobrado de nuevo» a mano. El actor lo pone el servidor."
         },
         {
@@ -144270,7 +144374,7 @@
           "exportada": true,
           "params": "reciboId: string, motivo: string, nota: string | null, actor: string",
           "retorno": "Promise<BajaDevolucion>",
-          "linea": 564,
+          "linea": 581,
           "resumen": "`PATCH /api/operador/recibos/devolucion {accion:'baja'}` — «el cliente se va». El actor lo pone el servidor. `sin_respuesta` (red o 5xx) NO es «no se hizo»: la transacción pudo terminar."
         },
         {
@@ -144279,7 +144383,7 @@
           "exportada": true,
           "params": "polizaId: string, actor: string, motivo: string | null, dias?: number,",
           "retorno": "Promise<DescarteRetencion>",
-          "linea": 599,
+          "linea": 616,
           "resumen": "`POST /api/operador/retencion/descartar` — quita una póliza de \"Hay que llamar\" `dias` días (el puerto acota 1-30, por defecto 10). **NO la marca como resuelta**: si al caducar el plazo el recibo sigu"
         },
         {
@@ -144288,7 +144392,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<Busqueda>",
-          "linea": 616
+          "linea": 633
         },
         {
           "nombre": "interpretarLineas",
@@ -144296,7 +144400,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LineasCodeoscopic",
-          "linea": 643,
+          "linea": 660,
           "resumen": "Puro. `hogar` degrada a `desconocido` ante cualquier forma rara: afirmar «hogar disponible» o «ausente» sobre un JSON que no se entiende sería lo mismo que inventarlo."
         },
         {
@@ -144305,7 +144409,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "HogarCodeoscopic",
-          "linea": 655
+          "linea": 672
         },
         {
           "nombre": "lineasCodeoscopic",
@@ -144313,7 +144417,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LineasCodeoscopic>",
-          "linea": 670
+          "linea": 687
         },
         {
           "nombre": "interpretarDiagnosticoProyecto",
@@ -144321,7 +144425,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "DiagnosticoProyecto",
-          "linea": 695
+          "linea": 712
         },
         {
           "nombre": "diagnosticoProyectoCodeoscopic",
@@ -144329,7 +144433,7 @@
           "exportada": true,
           "params": "projectId: string",
           "retorno": "Promise<DiagnosticoProyecto>",
-          "linea": 706
+          "linea": 723
         },
         {
           "nombre": "proyectosAvant2Cliente",
@@ -144337,7 +144441,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<",
-          "linea": 723,
+          "linea": 740,
           "resumen": "Lo que contesta asegura, TAL CUAL, con su status: la pantalla distingue «no hay proyectos» (`ok` con lista vacía) de «no se ha podido mirar» (cualquier otra cosa). Gratis: solo lecturas. Hasta 11 lect"
         },
         {
@@ -144346,7 +144450,7 @@
           "exportada": true,
           "params": "clienteId: string, projectId: string, solicitadoPor: string",
           "retorno": "Promise<",
-          "linea": 733,
+          "linea": 750,
           "resumen": "Trae un proyecto de la web de Avant2 como tarificación. No vuelve a tarificar (0€)."
         },
         {
@@ -144355,7 +144459,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CompaniasCodeoscopic",
-          "linea": 759,
+          "linea": 776,
           "resumen": "Puro. Como `interpretarLineas`: `buscada` degrada a `desconocido` ante cualquier forma rara. Decir «Fidelidade ausente» sobre un JSON que no se entiende sería afirmar una ausencia sin haberla medido."
         },
         {
@@ -144364,7 +144468,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CompaniaBuscada",
-          "linea": 771
+          "linea": 788
         },
         {
           "nombre": "companiasCodeoscopic",
@@ -144372,7 +144476,7 @@
           "exportada": true,
           "params": "buscar: string",
           "retorno": "Promise<CompaniasCodeoscopic>",
-          "linea": 789
+          "linea": 806
         },
         {
           "nombre": "impagadosAsegura",
@@ -144380,7 +144484,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Impagados>",
-          "linea": 799
+          "linea": 816
         },
         {
           "nombre": "interpretarConfirmacionDireccion",
@@ -144388,7 +144492,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "ConfirmacionDireccion",
-          "linea": 831
+          "linea": 848
         },
         {
           "nombre": "confirmarDireccionAsegura",
@@ -144396,7 +144500,7 @@
           "exportada": true,
           "params": "direccion: string, codigoPostal: string, municipio: string,",
           "retorno": "Promise<ConfirmacionDireccion>",
-          "linea": 849
+          "linea": 866
         },
         {
           "nombre": "leerRelacionadaPuerto",
@@ -144404,7 +144508,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 906
+          "linea": 923
         },
         {
           "nombre": "interpretarSustituciones",
@@ -144412,7 +144516,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Sustituciones",
-          "linea": 914
+          "linea": 931
         },
         {
           "nombre": "sustitucionesAsegura",
@@ -144420,7 +144524,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Sustituciones>",
-          "linea": 962
+          "linea": 979
         },
         {
           "nombre": "sellarAnulacionConfirmadaAsegura",
@@ -144428,7 +144532,7 @@
           "exportada": true,
           "params": "polizaViejaId: string, motivo: string, fechaEfectoBaja: string | null, actor: string,",
           "retorno": "Promise<SelloAnulacionConfirmada>",
-          "linea": 983,
+          "linea": 1000,
           "resumen": "`POST /api/operador/sustituciones {accion:'anulacion_confirmada'}` — la compañía confirmó la anulación de la póliza VIEJA por su cauce (17/10/2026). El actor lo pone el servidor. No cambia el estado ("
         },
         {
@@ -144437,7 +144541,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "DuplicadosVivosPuerto",
-          "linea": 1008
+          "linea": 1025
         },
         {
           "nombre": "leerPolizaRevision",
@@ -144445,7 +144549,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PolizaRevision | null",
-          "linea": 1066
+          "linea": 1083
         },
         {
           "nombre": "interpretarRevision",
@@ -144453,7 +144557,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "BandejaRevision",
-          "linea": 1080
+          "linea": 1097
         },
         {
           "nombre": "revisionAsegura",
@@ -144461,7 +144565,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<BandejaRevision>",
-          "linea": 1105
+          "linea": 1122
         },
         {
           "nombre": "resolverRevisionAsegura",
@@ -144469,7 +144573,7 @@
           "exportada": true,
           "params": "casoId: string, decision: DecisionRevision, nota?: string",
           "retorno": "Promise<ResolucionBandejaPolizas>",
-          "linea": 1121
+          "linea": 1138
         },
         {
           "nombre": "interpretarRetenidas",
@@ -144477,7 +144581,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Retenidas",
-          "linea": 1164
+          "linea": 1181
         },
         {
           "nombre": "retenidasAsegura",
@@ -144485,7 +144589,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Retenidas>",
-          "linea": 1220,
+          "linea": 1237,
           "resumen": "Revisa en Avant2 las emisiones retenidas. POST sin cuerpo (lee Avant2, no tarifica)."
         },
         {
@@ -144494,7 +144598,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 1236,
+          "linea": 1253,
           "resumen": "Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026). Solo lee el vendor (gratis); asegura registra lo que puede demostrar y deja el resto en revisión. La lectura de la respuesta es PURA y vi"
         },
         {
@@ -144503,7 +144607,7 @@
           "exportada": true,
           "params": "limite = 50, desde = 0",
           "retorno": "Promise<ColaRevision>",
-          "linea": 1245,
+          "linea": 1262,
           "resumen": "Cola de REVISIÓN del descubrimiento (03/10/2026): las emisiones de Avant2 que no se pudieron registrar solas. La lectura de la respuesta es PURA (`lib/correduria/emisiones-revision.ts`); un fallo es `"
         },
         {
@@ -144512,7 +144616,7 @@
           "exportada": true,
           "params": "id: string, nota: string | null",
           "retorno": "Promise<ResolucionRevision>",
-          "linea": 1256,
+          "linea": 1273,
           "resumen": "«Marcar revisada»: idempotente en asegura (`resuelta`/`ya_resuelta`). El actor viaja en `x-actor`."
         },
         {
@@ -144521,7 +144625,7 @@
           "exportada": true,
           "params": "q: { projectId: string; clienteId: string; oportunidadId?: string | null },",
           "retorno": "Promise<",
-          "linea": 1267,
+          "linea": 1284,
           "resumen": "Vista previa (GET, gratis) de registrar en la intranet una emisión hecha en la web de Avant2."
         },
         {
@@ -144530,7 +144634,7 @@
           "exportada": true,
           "params": "b: { projectId: string; clienteId: string; oportunidadId?: string | null; actor: string },",
           "retorno": "Promise<",
-          "linea": 1281,
+          "linea": 1298,
           "resumen": "Registra la emisión externa. `actor` lo pone el servidor con la sesión."
         },
         {
@@ -144539,7 +144643,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LecturaOportunidadesAviso>",
-          "linea": 1295,
+          "linea": 1312,
           "resumen": "── Oportunidades a 45 días (regla única, 29/09/2026) ──────────────────────"
         },
         {
@@ -144548,7 +144652,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "EstadoPortalCliente | null",
-          "linea": 1362,
+          "linea": 1379,
           "resumen": "🚨 Un valor que no reconocemos es `null` («no comprobado»), no un estado por defecto. Un asegura más nuevo que esta pantalla mandaría una etiqueta que aquí no existe, y elegir la optimista diría que e"
         },
         {
@@ -144557,7 +144661,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 1440,
+          "linea": 1457,
           "resumen": "Tri-estado de verdad: un campo ausente es `null` («no se informó»), no `false`. Con `=== true` a secas, un puerto que no manda el campo diría que TODOS están sin email."
         },
         {
@@ -144566,7 +144670,7 @@
           "exportada": true,
           "params": "email: boolean | null, telefono: boolean | null, canalEnPoliza: number | null, contactoDeOtros: number | null, contactoDeAllegados: number | null,",
           "retorno": "EstadoCanal",
-          "linea": 1452,
+          "linea": 1469,
           "resumen": "El estado se DERIVA de dónde hay contacto; no se cree el que venga en el JSON. Si falta cualquiera de las cuatro medidas, el resultado es `no_comprobado`. 🚨 Ojo al último bloque: sin saber lo de la p"
         },
         {
@@ -144575,7 +144679,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaContacto[]",
-          "linea": 1477,
+          "linea": 1494,
           "resumen": "Las fichas nombradas. Una entrada sin id o con el nombre cifrado (`v1:`) se descarta: sigue contada en `contactoDeOtros`, pero no se inventa un nombre."
         },
         {
@@ -144584,7 +144688,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaAllegado[]",
-          "linea": 1493,
+          "linea": 1510,
           "resumen": "Ídem, conservando el parentesco. Sin parentesco legible se descarta: sigue contado en `contactoDeAllegados`, pero no se dice «llama a X» a secas."
         },
         {
@@ -144593,7 +144697,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SinCanal",
-          "linea": 1508
+          "linea": 1525
         },
         {
           "nombre": "sinCanalAsegura",
@@ -144601,7 +144705,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SinCanal>",
-          "linea": 1578
+          "linea": 1595
         },
         {
           "nombre": "interpretarCalidad",
@@ -144609,7 +144713,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CalidadDato",
-          "linea": 1596
+          "linea": 1613
         },
         {
           "nombre": "calidadAsegura",
@@ -144617,7 +144721,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CalidadDato>",
-          "linea": 1638
+          "linea": 1655
         },
         {
           "nombre": "planBackfillDni",
@@ -144625,7 +144729,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillDni>",
-          "linea": 1701
+          "linea": 1718
         },
         {
           "nombre": "interpretarPlanBackfill",
@@ -144633,7 +144737,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillDni",
-          "linea": 1712,
+          "linea": 1729,
           "resumen": "Puro: separado para poder probarlo sin red."
         },
         {
@@ -144642,7 +144746,7 @@
           "exportada": true,
           "params": "limite?: number",
           "retorno": "Promise<EscrituraBackfillDni>",
-          "linea": 1760,
+          "linea": 1777,
           "resumen": "Lanza la escritura. `limite` la parte en tandas: descifrar y hashear 32.000 fichas ya consume parte de los 300 s del endpoint de asegura, así que una pasada sin tope puede no llegar. Se vuelve a pulsa"
         },
         {
@@ -144651,7 +144755,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "EscrituraBackfillDni",
-          "linea": 1788,
+          "linea": 1805,
           "resumen": "Puro: separado para poder probarlo sin red. Para el backfill de CONTACTO la respuesta trae además `derivadosEscritos`/`derivadosRestantes` (las mitades del email); se suman a `escritos`/`restantes` pa"
         },
         {
@@ -144660,7 +144764,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillContacto>",
-          "linea": 1843
+          "linea": 1860
         },
         {
           "nombre": "interpretarPlanBackfillContacto",
@@ -144668,7 +144772,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillContacto",
-          "linea": 1854,
+          "linea": 1871,
           "resumen": "Puro: separado para poder probarlo sin red."
         },
         {
@@ -144677,13 +144781,13 @@
           "exportada": true,
           "params": "limite?: number",
           "retorno": "Promise<EscrituraBackfillDni>",
-          "linea": 1892,
+          "linea": 1909,
           "resumen": "Lanza la escritura, por tandas. Misma forma de respuesta que la del DNI."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3090e252c421"
+      "hash": "99a3d1ad0796"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-tarificacion-tg.ts",
@@ -150836,6 +150940,134 @@
       "hash": "f129bd35f221"
     },
     {
+      "ruta": "apps/plataforma/lib/correo/extractor-llm-proceso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/extractor-llm-proceso.ts — Las dependencias REALES del extractor LLM en sombra (F2, 21/10/2026). Proveedor: la cadena de `@central/core-ai` por OpenRouter (decisión de Alberto, 21/10/2026), con el modelo de MEJOR calidad de extracción del catálogo (`anthropic/claude-sonnet-4.5`, el que ya",
+      "exporta": [
+        "modeloExtractor",
+        "depsExtractorReales"
+      ],
+      "funciones": [
+        {
+          "nombre": "modeloExtractor",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 23,
+          "resumen": "Modelo del extractor: `CORREO_LLM_MODELO` si es un slug válido de OpenRouter; si no, el por defecto."
+        },
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "system: string, user: string",
+          "retorno": "Promise<",
+          "linea": 27
+        },
+        {
+          "nombre": "usadasHoy",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<number | null>",
+          "linea": 54,
+          "resumen": "Llamadas del extractor HOY (día UTC, como el presupuesto diario de la pasarela), fallidas incluidas. `null` = no se pudo leer."
+        },
+        {
+          "nombre": "guardar",
+          "kind": "function",
+          "exportada": false,
+          "params": "lectura: Record<string, unknown>",
+          "retorno": "Promise<boolean>",
+          "linea": 65
+        },
+        {
+          "nombre": "depsExtractorReales",
+          "kind": "function",
+          "exportada": true,
+          "params": "textoAdjuntos: () => Promise<string | null>",
+          "retorno": "DepsExtractor",
+          "linea": 71
+        }
+      ],
+      "tablas": [
+        "ai_usos"
+      ],
+      "rutaApi": null,
+      "hash": "6d63d6437610"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/extractor-llm.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/extractor-llm.ts — F2 del agente corredor de correo (21/10/2026): el EXTRACTOR LLM en MODO SOMBRA. Para los correos de compañía (`correduria` / `correduria-recibo`) que NINGÚN lector determinista reconoce (la «cola larga»), el modelo propone una ficha (tipo, nºs, importes, fechas, estado)",
+      "exporta": [
+        "modoExtractorLLM",
+        "topesLLM",
+        "filtroPrevioLLM",
+        "topeDiarioLLM",
+        "extraerEnSombra"
+      ],
+      "funciones": [
+        {
+          "nombre": "modoExtractorLLM",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | undefined = process.env.CORREO_LLM_MODO",
+          "retorno": "ModoExtractorLLM",
+          "linea": 31,
+          "resumen": "`CORREO_LLM_MODO`: solo `sombra` lo enciende. Cualquier otro valor (o ninguno) = apagado."
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | undefined, defecto: number, max: number",
+          "retorno": "number",
+          "linea": 42
+        },
+        {
+          "nombre": "topesLLM",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env",
+          "retorno": "TopesLLM",
+          "linea": 48,
+          "resumen": "Topes desde el entorno (`CORREO_LLM_TOPE_PASADA`, `CORREO_LLM_TOPE_DIA`). Un valor ilegible = el por defecto."
+        },
+        {
+          "nombre": "filtroPrevioLLM",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CorreoParaExtractor, ctx: { modo: ModoExtractorLLM; topes: TopesLLM; usadasPasada: number; transcurridoMs: number },",
+          "retorno": "MotivoNoLlamar | null",
+          "linea": 81,
+          "resumen": "Filtro previo, sin gastar nada: modo, exclusión de seguridad, categoría, cliente, remitente de aseguradora, tope de la pasada y tiempo. `null` = sigue. El orden importa: APAGADO y EXCLUIDO van primero"
+        },
+        {
+          "nombre": "topeDiarioLLM",
+          "kind": "function",
+          "exportada": true,
+          "params": "proposito: Proposito, usadasHoy: number | null, topes: TopesLLM",
+          "retorno": "MotivoNoLlamar | null",
+          "linea": 99,
+          "resumen": "Tope diario. `usadasHoy = null` (el contador no se pudo leer) → no se llama: no se sabe lo gastado. La comparación (un lector ya lo leyó) solo usa la MITAD del tope: la cola larga, que es lo que aport"
+        },
+        {
+          "nombre": "extraerEnSombra",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CorreoParaExtractor, lector: EventoAseguradora | LecturaCorreoDevolucion | null, ctx: { modo: ModoExtractorLLM; topes: TopesLLM; pasada: PasadaLLM; transcurridoMs: number }, deps: DepsExtractor,",
+          "retorno": "Promise<ResultadoExtractor>",
+          "linea": 129,
+          "resumen": "Lee un correo con el modelo en MODO SOMBRA. Nunca lanza. `lector` = lo que leyó un lector determinista del MISMO correo (`null` = ninguno lo reconoce → cola larga). No devuelve nada que el triaje deba"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "93ea2934620d"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/huespedes.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/huespedes.ts — Enruta un correo de huésped al agente de huéspedes de SIVRA. Los correos de guest.booking.com traen el nº de confirmación de la reserva (OTA), pero el agente (procesarMensajeHuesped) necesita el bookingId INTERNO de Smoobu. Resolvemos el uno al otro consultando Smoobu; si n",
@@ -153719,7 +153951,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 46,
+          "linea": 48,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -153728,7 +153960,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 48
+          "linea": 50
         },
         {
           "nombre": "fmtFecha",
@@ -153736,7 +153968,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 54
+          "linea": 56
         },
         {
           "nombre": "mensajeAviso",
@@ -153744,7 +153976,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 60,
+          "linea": 62,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -153753,7 +153985,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 77
+          "linea": 79
         },
         {
           "nombre": "pasadaTriaje",
@@ -153761,7 +153993,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 92
+          "linea": 94
         },
         {
           "nombre": "digestTriaje",
@@ -153769,7 +154001,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 461,
+          "linea": 481,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -153778,7 +154010,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 501,
+          "linea": 521,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         },
         {
@@ -153787,7 +154019,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<string | null>",
-          "linea": 524,
+          "linea": 544,
           "resumen": "Solo el texto de los PDF del correo (para el lector de eventos, que separa cuerpo y adjuntos). `null` = no hay o no se leen."
         },
         {
@@ -153796,7 +154028,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo, textoPdf: string | null",
           "retorno": "string",
-          "linea": 535,
+          "linea": 555,
           "resumen": "Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO leí"
         }
       ],
@@ -153806,7 +154038,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "411bf68c831a"
+      "hash": "847494c89c9c"
     },
     {
       "ruta": "apps/plataforma/lib/correo/uid-atascado.ts",
@@ -216196,7 +216428,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0922886828f5"
+      "hash": "ca9efaf0534c"
     },
     {
       "ruta": "packages/module-seguros/src/expedientes.ts",
@@ -216384,6 +216616,263 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "fb86d7aedf1b"
+    },
+    {
+      "ruta": "packages/module-seguros/src/extractor-correo.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/extractor-correo.ts F2 del agente corredor de correo (21/10/2026, docs/CORREDURIA-AGENTE-CORREO.md §3 capa 3 y §9 F2): el EXTRACTOR LLM para la cola larga de correos de compañía que ningún lector determinista reconoce. PURO: prompt, esquema, validación literal y comparaci",
+      "exporta": [
+        "textoParaExtractor",
+        "parsearRespuestaExtractor",
+        "normalizarCotejo",
+        "apareceLiteral",
+        "identificadorLiteral",
+        "importeLiteral",
+        "fechaEscritaAIso",
+        "fechaLiteral",
+        "textoLiteral",
+        "estadoLiteral",
+        "validarFichaLLM",
+        "fichaParaGuardar",
+        "claveIdentificador",
+        "compararConLector"
+      ],
+      "funciones": [
+        {
+          "nombre": "recortar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string, max: number",
+          "retorno": "string",
+          "linea": 69
+        },
+        {
+          "nombre": "textoParaExtractor",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { remitente: string; asunto: string; cuerpoTexto: string; textoAdjuntos?: string | null }",
+          "retorno": "string | null",
+          "linea": 77,
+          "resumen": "El texto EXACTO que se manda al modelo (y contra el que se valida su respuesta). Sin IBAN/CCC/NIF; del remitente, solo el dominio. `null` = no hay nada que leer."
+        },
+        {
+          "nombre": "parsearRespuestaExtractor",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 111,
+          "resumen": "El primer objeto JSON de la respuesta, o `null` si no hay uno legible."
+        },
+        {
+          "nombre": "normalizarCotejo",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 127,
+          "resumen": "Normaliza para cotejar: NFKC, espacios raros a espacio, espacios colapsados, minúsculas."
+        },
+        {
+          "nombre": "escaparRe",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 131
+        },
+        {
+          "nombre": "aparece",
+          "kind": "function",
+          "exportada": false,
+          "params": "valorNorm: string, textoNorm: string, estricto = false",
+          "retorno": "boolean",
+          "linea": 136,
+          "resumen": "¿Aparece `valor` en `texto` como pieza entera (sin pegarse a otra letra o cifra)? Ambos ya normalizados."
+        },
+        {
+          "nombre": "apareceLiteral",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string, texto: string, estricto = false",
+          "retorno": "boolean",
+          "linea": 146,
+          "resumen": "¿El valor aparece literalmente en el texto (normalizado)?"
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 150
+        },
+        {
+          "nombre": "identificadorLiteral",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, texto: string",
+          "retorno": "string | null",
+          "linea": 159,
+          "resumen": "Nº de póliza/solicitud/recibo/siniestro: forma de identificador (≥3 cifras) y literal en el texto."
+        },
+        {
+          "nombre": "sinMiles",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 167
+        },
+        {
+          "nombre": "conMiles",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 171
+        },
+        {
+          "nombre": "importeLiteral",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, texto: string",
+          "retorno": "number | null",
+          "linea": 181,
+          "resumen": "Importe en formato español, literal en el texto. Además de aparecer, tiene que PARECER dinero en el texto: con decimales («120,00») o pegado a «€»/«EUR»/«euros». Así un «2026» del asunto no pasa por i"
+        },
+        {
+          "nombre": "isoValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: number, m: number, d: number",
+          "retorno": "string | null",
+          "linea": 204
+        },
+        {
+          "nombre": "fechaEscritaAIso",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string | null",
+          "linea": 212,
+          "resumen": "Fecha escrita (`15/09/2026`, `15-09-26`, `15.09.2026`, `2026-09-15`, `15 de septiembre de 2026`) → ISO."
+        },
+        {
+          "nombre": "fechaLiteral",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, texto: string",
+          "retorno": "string | null",
+          "linea": 224,
+          "resumen": "Fecha literal en el texto y válida en el calendario → ISO."
+        },
+        {
+          "nombre": "textoLiteral",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, texto: string, max: number",
+          "retorno": "string | null",
+          "linea": 232,
+          "resumen": "Texto libre corto (tomador, estado): con letras, sin marcas de dato retirado, literal en el texto."
+        },
+        {
+          "nombre": "estadoLiteral",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, texto: string",
+          "retorno": "string | null",
+          "linea": 241,
+          "resumen": "Estado de la compañía: texto corto literal, sin datos sensibles y de ≤6 palabras (una frase larga puede llevar un nombre)."
+        },
+        {
+          "nombre": "confianza",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 249
+        },
+        {
+          "nombre": "tipoFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "TipoFichaLLM | null",
+          "linea": 254
+        },
+        {
+          "nombre": "conceptoImporte",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "ConceptoImporte",
+          "linea": 259
+        },
+        {
+          "nombre": "validarFichaLLM",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: Record<string, unknown> | null, texto: string",
+          "retorno": "ValidacionFicha",
+          "linea": 270,
+          "resumen": "Valida la respuesta del modelo CONTRA EL TEXTO que vio (`textoParaExtractor`). Lo que no aparece literal → `null` y cuenta en `noLiterales`. `raw = null` (respuesta ilegible) → ficha vacía, sin `noLit"
+        },
+        {
+          "nombre": "fichaParaGuardar",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FichaCorreoLLM",
+          "retorno": "FichaGuardable",
+          "linea": 313,
+          "resumen": "La ficha SIN el nombre del tomador (spec §8: 0 PII en la lectura guardada). El estado vuelve a pasar por el filtro."
+        },
+        {
+          "nombre": "claveIdentificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 345,
+          "resumen": "Clave para comparar nºs: sin separadores, mayúsculas y sin ceros a la izquierda."
+        },
+        {
+          "nombre": "huella",
+          "kind": "function",
+          "exportada": false,
+          "params": "lector: EventoAseguradora | LecturaCorreoDevolucion",
+          "retorno": "HuellaLector",
+          "linea": 349
+        },
+        {
+          "nombre": "compararId",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | null, ref: Set<string>",
+          "retorno": "ResultadoCampo",
+          "linea": 396
+        },
+        {
+          "nombre": "compararConjunto",
+          "kind": "function",
+          "exportada": false,
+          "params": "valores: T[], ref: Set<T>",
+          "retorno": "ResultadoCampo",
+          "linea": 402
+        },
+        {
+          "nombre": "compararConLector",
+          "kind": "function",
+          "exportada": true,
+          "params": "ficha: FichaCorreoLLM, lector: EventoAseguradora | LecturaCorreoDevolucion",
+          "retorno": "ComparacionLector",
+          "linea": 412,
+          "resumen": "Compara la ficha del LLM con lo que leyó un lector determinista del MISMO correo. Un campo que el lector no trae no cuenta (`sin_referencia`); uno que el LLM no dio es `omitido` (no es fallo: es prude"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "38add12a065e"
     },
     {
       "ruta": "packages/module-seguros/src/fecha-pintable.ts",
@@ -235711,7 +236200,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4960,
-    "funciones": 18901
+    "archivos": 4966,
+    "funciones": 18947
   }
 }
