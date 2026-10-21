@@ -634,6 +634,7 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
 }
 
 /**
+ * 0.1.6 (job a1282d9e): el portal repite `#check-address` (id duplicado: «Comprobar» habilitado + copias `disabled` ocultas/«Comprobada») → solo el visible y habilitado.
  * 0.1.5 (21/10/2026, job bef8bd1f): «Año de construcción», «Año de la reforma» y «Superficie» viven en
  * `#buildingInformation`, que el portal deja con `hidden` hasta validar la dirección con «Comprobar» (`#check-address button`).
  * Sin ese clic el año daba «0 coincidencias». Se pulsa SOLO por `ctx.pulsar` (guard) y SOLO si el año aún no se ve; luego se
@@ -642,9 +643,9 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
 async function destaparInformacionVivienda(page: Page, marco: Frame, ctx: Pick<ContextoPortal, 'pulsar' | 'pausaAccion'>): Promise<void> {
   const anio = marco.locator(`#buildingInformation input${selControl(CONTROLES.anioConstruccion)}:visible`)
   if ((await anio.count()) > 0) return
-  const boton = marco.locator('#check-address button')
+  const boton = marco.locator('#check-address button:visible:not([disabled])')
   const n = await boton.count()
-  if (n !== 1) throw new ErrorMapaIncompleto(`el botón «Comprobar» de la dirección (${n} coincidencias) para destapar la información de la vivienda`)
+  if (n !== 1) throw new ErrorMapaIncompleto(`el botón «Comprobar» de la dirección visible y habilitado (${n} coincidencias; en el DOM: ${await marco.locator('#check-address button').count()}) para destapar la información de la vivienda`)
   await ctx.pausaAccion()
   await ctx.pulsar(boton)
   const fin = Date.now() + ESPERA_INFO_VIVIENDA_MS
@@ -738,7 +739,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.5',
+  version: '0.1.6',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
