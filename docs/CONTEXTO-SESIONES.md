@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Tarificador · #4973 (Generali 0.2.15 usa la 1.ª matriculación ESTIMADA por matrícula, campo propio
+`fechaMatriculacionEstimada` solo para Generali; Mapfre 0.8.13 cierra el modal que tapaba «Nueva producción»; Allianz
+0.6.19 compañía anterior «A / B» + fallback «otras»). Mapfre auto OK con 0.8.13 (2 precios). Imagen en prod `main-81a4386`.
+🚨 Dos sesiones se pisaron `TARIFICADOR_FLY_IMAGE` (11 s de diferencia, quedó una imagen sin los fixes): construir SIEMPRE
+desde `main` actual y releer la env antes de redesplegar. Un trabajo terminado conserva un `riesgo` purgado: copiarlo por
+INSERT da «riesgo inválido» → re-encolar desde plataforma. Pendiente: Alberto pulsa Allianz auto y Generali.
 **(21/10/2026)** — Correduría · Occident solicitud 165109972 (Studium, acc. colectivo, efecto retroactivo 15/10): declaración de no siniestralidad en PDF firmada por Berta; emitida póliza 549683979 el 21/10. El correo de emisión no se leía y la solicitud quedó en bandeja sin oportunidad.
 Inventario histórico Gmail: 856 hilos sector, parsers cubren 13,4 %; spec «agente corredor de correo» en `docs/CORREDURIA-AGENTE-CORREO.md` (F0 deterministas sobre PR #4893 → F3). CIMA = verdad; correo cruza y avisa por Telegram.
 Pendiente Alberto: proveedor LLM UE (Anthropic vs Azure), almacenamiento adjuntos, días de espera CIMA, Mapfre FACTURA. 🚨 Triaje envía asuntos con tomador a Groq/NIM sin DPA; tirea.es/codeoscopic con credenciales en claro (rotar).
