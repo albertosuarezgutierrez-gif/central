@@ -5,14 +5,14 @@
 // ramo todavía» y no pinta botones.
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Los avisos dicen QUÉ falta, jamás el valor (dato personal).
-import { MAX_COMPANIA_ANTERIOR, mensajeFaltan, obligatoriosPara, type BloqueObligatorio } from '@central/module-tarificacion'
+import { claveCompania, MAX_COMPANIA_ANTERIOR, mensajeFaltan, obligatoriosPara, type BloqueObligatorio } from '@central/module-tarificacion'
 import { formularioBotMoto, OPCIONES_JUSTIFICANTE_ANTERIOR, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
 import { checklistCompania, MOTIVO_SIN_DECLARACION, type ChecklistCompania } from './tarificador-checklist.ts'
 import {
   formularioBotHogar, OPCIONES_MADERA_HOGAR, OPCIONES_REGIMEN_HOGAR, OPCIONES_TIPO_HOGAR, OPCIONES_USO_HOGAR, type DatosViviendaBot,
 } from './tarificador-hogar-formulario.ts'
 import { reglasPrevias } from './tarificador-reglas-previas.ts'
-import { formularioBotAuto, OPCIONES_AMBITO_CIRCULACION, OPCIONES_CLASE_PERMISO, OPCIONES_USO_VEHICULO, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
+import { fechaMatriculacionParaBot, formularioBotAuto, OPCIONES_AMBITO_CIRCULACION, OPCIONES_CLASE_PERMISO, OPCIONES_USO_VEHICULO, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 /** Un dato que el formulario del cotizador no tiene y la persona completa en el bloque (p. ej. la cilindrada de moto). */
 export type CampoExtraBot = {
@@ -155,7 +155,19 @@ export function checklistBot(adaptador: AdaptadorBot, formulario: unknown, extra
   const r = adaptador.construir(formulario, extra)
   if (!r.ok) return obligatoriosPara(compania, adaptador.ramo) === null ? { estado: 'no_disponible', motivo: MOTIVO_SIN_DECLARACION } : { estado: 'sin_formulario' }
   const c = checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha, r.sinDatoEnFicha)
-  return conReglasPrevias(c, reglasPrevias({ compania, ramo: adaptador.ramo, riesgo: r.riesgo, formulario, hoy }))
+  return conSupuestoMatriculacion(conReglasPrevias(c, reglasPrevias({ compania, ramo: adaptador.ramo, riesgo: r.riesgo, formulario, hoy })), compania, adaptador.ramo, formulario, hoy)
+}
+
+/**
+ * Generali auto exige la 1.ª matriculación. Si no consta pero la estimamos por la serie de la matrícula (mismo estimador que
+ * «Datos del vehículo»), viaja la estimada y aquí se avisa como fila `supuesto` (no bloquea). PURA.
+ */
+export function conSupuestoMatriculacion(c: ChecklistCompania, compania: string, ramo: string, formulario: unknown, hoy: Date): ChecklistCompania {
+  if (c.estado !== 'evaluado' || ramo !== 'auto' || claveCompania(compania) !== 'generali' || !formulario || typeof formulario !== 'object') return c
+  if (c.filas.some((f) => f.clave === 'fechaMatriculacion')) return c
+  const f = fechaMatriculacionParaBot(formulario as EntradaBotAuto, hoy)
+  if (!f?.estimada) return c
+  return { ...c, filas: [...c.filas, { clave: 'fechaMatriculacion', etiqueta: 'Fecha de 1.ª matriculación estimada por la serie de la matrícula', estado: 'supuesto' }] }
 }
 
 /**

@@ -14,6 +14,7 @@ import {
   esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto,
 } from '@central/module-tarificacion'
 import { historialBot, polizaAnteriorUltimos5PorDefecto, ultimos5CifrasPoliza, type CampoDeFicha, type DatoPersona, type FormularioBotMoto } from './tarificador-moto-formulario.ts'
+import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { duermeEnGaraje, GARAJES_CONOCIDOS } from '@central/module-seguros/garajes'
 
 export type EntradaBotAuto = {
@@ -108,6 +109,20 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/
  * Formulario del cotizador de coche → `riesgo` de auto para asegura, o QUÉ falta (en castellano, sin valores). Lo de la ficha
  * va en `completarDesdeFicha` (lo pone el servidor; si la ficha tampoco lo tiene, corta sin gastar).
  */
+/**
+ * 1.ª matriculación que viaja al bot: la del vehículo si consta (vendor/ficha/editada) y, si no, la ESTIMADA por la serie de la
+ * matrícula (`fechaMatriculacionEstimada`, el mismo estimador que `DatosVehiculo` y el asistente de Telegram). Generali la exige y
+ * antes se bloqueaba aunque la calculáramos nosotros (21/10/2026). Sin fecha válida y sin serie estimable → `null` (sigue bloqueando
+ * Generali). `estimada` = no es un dato: se declara como supuesto. PURA (`hoy` inyectado).
+ */
+export function fechaMatriculacionParaBot(e: Pick<EntradaBotAuto, 'fechaMatriculacion' | 'matricula'>, hoy: Date): { fecha: string; estimada: boolean } | null {
+  const hoyIso = hoy.toISOString().slice(0, 10)
+  const t = typeof e.fechaMatriculacion === 'string' ? e.fechaMatriculacion.trim().slice(0, 10) : ''
+  if (ISO.test(t) && new Date(`${t}T00:00:00Z`).toISOString().slice(0, 10) === t && t <= hoyIso) return { fecha: t, estimada: false }
+  const est = fechaMatriculacionEstimada(normalizarMatricula(e.matricula ?? ''), hoyIso)
+  return est && ISO.test(est.estimada) && est.estimada <= hoyIso ? { fecha: est.estimada, estimada: true } : null
+}
+
 export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): FormularioBotMoto {
   const faltan: string[] = []
   const completarDesdeFicha: CampoDeFicha[] = []
@@ -149,7 +164,10 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
     const t = typeof v === 'string' ? v.trim().slice(0, 10) : ''
     return ISO.test(t) && new Date(`${t}T00:00:00Z`).toISOString().slice(0, 10) === t ? t : null
   }
-  const fechaMatriculacion = isoValida(e.fechaMatriculacion)
+  const fm = fechaMatriculacionParaBot(e, hoy)
+  // La compartida (Allianz/Mapfre leen la real de su portal y la usan para elegir versión) SOLO lleva la real; la estimada va aparte y solo Generali la lee.
+  const fechaMatriculacion = fm && !fm.estimada ? fm.fecha : null
+  const fechaMatriculacionEstimada = fm?.estimada ? fm.fecha : null
   const fechaVencimiento = isoValida(e.fechaVencimiento)
   const tipoGaraje = tipoGarajeDeCodigo(e.garaje)
   // Póliza anterior (últimas 5 cifras): solo con seguro actual y años ≠ 0; lo que no consta NO viaja (nunca un valor de cajón).
@@ -182,7 +200,8 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
     clasePermiso,
     ...(companiaAnterior !== null ? { companiaAnterior } : {}),
     ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
-    ...(fechaMatriculacion !== null && fechaMatriculacion <= hoy.toISOString().slice(0, 10) ? { fechaMatriculacion } : {}),
+    ...(fechaMatriculacion !== null ? { fechaMatriculacion } : {}),
+    ...(fechaMatriculacionEstimada !== null ? { fechaMatriculacionEstimada } : {}),
     ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
     ...(tipoGaraje !== null ? { tipoGaraje } : {}),
     ...(typeof e.conductorOcasional === 'boolean' ? { conductorOcasional: e.conductorOcasional } : {}),

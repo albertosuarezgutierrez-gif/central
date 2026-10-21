@@ -38,7 +38,7 @@ test('completo: riesgo de AUTO con la forma de FormularioAuto (matrícula, CP de
   assert.equal(r.riesgo.siniestrosUltimos5Anios, 0) // 8 años sin siniestros ⇒ 0 en los últimos 5 (deducción)
   assert.equal(r.riesgo.garajeNoche, null) // garaje sin dato → no consta
   // Lo que FormularioAuto no tiene (matriculación, km) no viaja: no hay claves inventadas.
-  assert.deepEqual(Object.keys(r.riesgo).sort(), ['ambitoCirculacion', 'aniosAseguradoAnterior', 'clasePermiso', 'codigoPostal', 'conductor', 'garajeNoche', 'matricula', 'ramo', 'seleccionVehiculo', 'siniestrosUltimos5Anios', 'tomadorEsConductor', 'tomadorEsPropietario', 'usoVehiculo'])
+  assert.deepEqual(Object.keys(r.riesgo).sort(), ['ambitoCirculacion', 'aniosAseguradoAnterior', 'clasePermiso', 'codigoPostal', 'conductor', 'fechaMatriculacionEstimada', 'garajeNoche', 'matricula', 'ramo', 'seleccionVehiculo', 'siniestrosUltimos5Anios', 'tomadorEsConductor', 'tomadorEsPropietario', 'usoVehiculo'])
 })
 
 test('garaje: calle/vía pública → false; garajes → true; vacío o código no visto → null (no se traduce a ojo)', () => {
@@ -58,7 +58,7 @@ test('supuestos de Allianz Turismos (15/10/2026): tipo de garaje, 1ª matriculac
   const r = ok(entrada({ garaje: 'CommunalParking', fechaMatriculacion: '2019-03-01', fechaVencimiento: '2027-01-15', conductorOcasional: false }))
   assert.deepEqual([r.riesgo.tipoGaraje, r.riesgo.fechaMatriculacion, r.riesgo.fechaVencimiento, r.riesgo.conductorOcasional], ['colectivo', '2019-03-01', '2027-01-15', false])
   // Sin forma válida (o matriculación futura) no viajan y NUNCA bloquean el botón: el bot supone y lo declara.
-  const raro = ok(entrada({ fechaMatriculacion: '2030-01-01', fechaVencimiento: '15/01/2027', conductorOcasional: null }))
+  const raro = ok(entrada({ matricula: 'M1234AB', fechaMatriculacion: '2030-01-01', fechaVencimiento: '15/01/2027', conductorOcasional: null }))
   for (const k of ['fechaMatriculacion', 'fechaVencimiento', 'conductorOcasional', 'tipoGaraje']) assert.equal(k in raro.riesgo, false, k)
 })
 
@@ -160,4 +160,13 @@ test('uso, ámbito, clase del permiso y compañía anterior (Mapfre, 14/10/2026)
   assert.doesNotMatch(mal, /zzz/, 'el valor no se repite')
   assert.equal(claveCerrada('', ['b'], 'b'), 'b')
   assert.equal(claveCerrada('c', ['b'], 'b'), undefined)
+})
+
+test('la estimada por serie NO pisa la compartida: fechaMatriculacion = solo la real; la estimada va en campo aparte (solo Generali)', () => {
+  const est = ok(entrada())
+  assert.equal('fechaMatriculacion' in est.riesgo, false)
+  assert.match(String(est.riesgo.fechaMatriculacionEstimada), /^\d{4}-\d{2}-\d{2}$/)
+  const real = ok(entrada({ fechaMatriculacion: '2019-03-01' }))
+  assert.equal(real.riesgo.fechaMatriculacion, '2019-03-01')
+  assert.equal('fechaMatriculacionEstimada' in real.riesgo, false)
 })
