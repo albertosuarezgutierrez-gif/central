@@ -154,14 +154,6 @@ export function efectoResolucion(tipo: string, accion: AccionRevision, motivo: s
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const palabras = (s: string) => s.split(/\s+/).filter(Boolean)
 
-function contieneSecuencia(pajar: string[], aguja: string[]): boolean {
-  if (aguja.length === 0 || aguja.length > pajar.length) return false
-  for (let i = 0; i + aguja.length <= pajar.length; i++) {
-    if (aguja.every((w, j) => pajar[i + j] === w)) return true
-  }
-  return false
-}
-
 /**
  * El nombre de una ficha SIN repetirlo. Hay fichas (volcado, leads) cuyo `apellidos` ya trae el nombre
  * entero («Juan Manuel» + «Juan Manuel Duran Martinez»), o cuyo `nombre` ya trae los apellidos: pegar
@@ -176,8 +168,11 @@ export function nombreFichaLegible(nombre: string | null | undefined, apellidos:
   if (n.length === 0) return a.join(' ')
   const nn = n.map(sinTildes)
   const aa = a.map(sinTildes)
-  if (contieneSecuencia(aa, nn)) return a.join(' ')
-  if (contieneSecuencia(nn, aa)) return n.join(' ')
+  // Solo los dos patrones reales: apellidos = nombre + más («Juan Manuel» / «Juan Manuel Duran»), o nombre
+  // terminado en APELLIDOS de ≥2 palabras. Un solo apellido igual al último nombre («Ana María» / «María»)
+  // o igual al nombre («Pedro» / «Pedro») puede ser legítimo: se unen.
+  if (a.length > n.length && nn.every((w, i) => aa[i] === w)) return a.join(' ')
+  if (a.length >= 2 && n.length > a.length && aa.every((w, i) => nn[n.length - a.length + i] === w)) return n.join(' ')
   return [...n, ...a].join(' ')
 }
 

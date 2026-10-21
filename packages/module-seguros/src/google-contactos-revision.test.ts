@@ -45,7 +45,9 @@ test('acciones por tipo: «Aceptar como lead» solo para un contacto nuevo del g
 
 test('🪤 nombreFichaLegible: no duplica cuando apellidos ya trae el nombre (o al revés)', () => {
   assert.equal(nombreFichaLegible('Juan Manuel', 'Juan Manuel Duran Martinez'), 'Juan Manuel Duran Martinez')
-  assert.equal(nombreFichaLegible('Juan Manuel Duran', 'duran'), 'Juan Manuel Duran')
+  assert.equal(nombreFichaLegible('Juan Manuel Duran Martinez', 'duran martinez'), 'Juan Manuel Duran Martinez')
+  assert.equal(nombreFichaLegible('Ana María', 'María'), 'Ana María María')
+  assert.equal(nombreFichaLegible('Pedro', 'Pedro'), 'Pedro Pedro')
   assert.equal(nombreFichaLegible('Ana', 'Pérez'), 'Ana Pérez')
   assert.equal(nombreFichaLegible('José  Luis', null), 'José Luis')
   assert.equal(nombreFichaLegible(null, 'Gómez'), 'Gómez')

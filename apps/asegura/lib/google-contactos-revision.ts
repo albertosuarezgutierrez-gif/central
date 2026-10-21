@@ -19,7 +19,7 @@ import { decryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
 import { Prisma } from './generated/asegura-client'
-import { altaCliente, anadirContacto, descifrarCampo, listarContactos } from './cartera-edicion'
+import { altaCliente, anadirContacto, campoIlegible, descifrarCampo, listarContactos } from './cartera-edicion'
 import { lectorContactoGoogle } from './google-contactos'
 
 export const PAGINA_REVISION = 50
@@ -50,7 +50,16 @@ export type RevisionGoogle = {
  * (clave PII), nunca «no tiene». `enVigor` = `esCarteraEnVigor` en ≥1 póliza; `polizas` = pólizas de las
  * que es TOMADOR (`polizas.cliente_id`; no hay otra figura en la BD), `null` si no se pudieron contar.
  */
-export type DatosFichaRevision = { telefono: string | null; email: string | null; enVigor: boolean | null; polizas: number | null }
+export type DatosFichaRevision = { telefono: string | null; telefonoIlegible: boolean; email: string | null; emailIlegible: boolean; enVigor: boolean | null; polizas: number | null }
+
+/**
+ * Principal si lo hay; solo si NO hay principal se mira el secundario. Un principal que no abre
+ * (clave PII) es «ilegible», NO «no tiene»: no se cae al secundario como si fuera el de la ficha.
+ */
+function campoDeFicha(principal: string | null | undefined, secundario: string | null | undefined): { valor: string | null; ilegible: boolean } {
+  const c = typeof principal === 'string' && principal.trim() !== '' ? principal : secundario
+  return { valor: descifrarCampo(c), ilegible: campoIlegible(c) }
+}
 
 function leerPropuesta(c: string | null): { propuesta: CamposSincronizados | null; ilegible: boolean } {
   if (!c) return { propuesta: null, ilegible: false }
@@ -119,8 +128,7 @@ export async function listarRevisiones(correduriaId: string, despuesDe: string |
   const datos = new Map<string, DatosFichaRevision>(fichas.map((f) => {
     const suyas = polizas.filter((p) => p.clienteId === f.id)
     return [f.id, {
-      telefono: telefonoParaMostrar(descifrarCampo(f.telefono) ?? descifrarCampo(f.telefonos[0]?.telefono)),
-      email: descifrarCampo(f.email) ?? descifrarCampo(f.emails[0]?.email),
+      ...(() => { const t = campoDeFicha(f.telefono, f.telefonos[0]?.telefono); const e = campoDeFicha(f.email, f.emails[0]?.email); return { telefono: telefonoParaMostrar(t.valor), telefonoIlegible: t.ilegible, email: e.valor, emailIlegible: e.ilegible } })(),
       enVigor: suyas.some((p) => esCarteraEnVigor({ importRef: p.importRef, eiacXmlHash: p.eiacXmlHash, estado: String(p.estado), sustituidaAt: p.sustituidaAt })),
       polizas: suyas.length,
     }]
@@ -137,7 +145,7 @@ export async function listarRevisiones(correduriaId: string, despuesDe: string |
     }
     return null
   }
-  const sinDatos: DatosFichaRevision = { telefono: null, email: null, enVigor: null, polizas: null }
+  const sinDatos: DatosFichaRevision = { telefono: null, telefonoIlegible: false, email: null, emailIlegible: false, enVigor: null, polizas: null }
   const tipoPersona = new Map(fichas.map((f) => [f.id, f.tipoPersona ?? null]))
   return {
     revisiones: pagina.map((f) => {

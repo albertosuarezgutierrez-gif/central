@@ -27,7 +27,7 @@ import { anadirPagina, hayMas, primeraPagina, quitarResuelta, type ListaRevision
 
 type Campos = { nombre: string; apellidos: string; telefono: string | null; email: string | null; grupo: 'cliente' | 'lead' | null }
 /** `null` = no se sabe / no se pudo leer (nunca «no tiene»). `polizas` = pólizas de las que es tomador. */
-type DatosFicha = { telefono: string | null; email: string | null; enVigor: boolean | null; polizas: number | null }
+type DatosFicha = { telefono: string | null; telefonoIlegible?: boolean; email: string | null; emailIlegible?: boolean; enVigor: boolean | null; polizas: number | null }
 type Revision = {
   id: string
   tipo: TipoRevisionGoogle
@@ -56,8 +56,8 @@ function DatosDeFicha({ d }: { d: DatosFicha | null | undefined }) {
   return (
     <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>
       {vigor}{tomador}
-      <span>Tel. {d.telefono ?? '—'}</span>
-      <span>Correo {d.email ?? '—'}</span>
+      <span>Tel. {d.telefonoIlegible ? 'ilegible (clave)' : (d.telefono ?? '—')}</span>
+      <span>Correo {d.emailIlegible ? 'ilegible (clave)' : (d.email ?? '—')}</span>
     </span>
   )
 }
@@ -281,7 +281,7 @@ export default function GoogleContactosRevision() {
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
                     {(rev.candidatos ?? []).map((c) => (
                       <li key={c.id} style={{ display: 'grid', gap: 2, minWidth: 0 }}>
-                        <Link href={`/correduria/cliente/${c.id}`} style={{ fontWeight: 600, overflowWrap: 'anywhere', minHeight: 24 }}>{c.nombre ?? 'abrir ficha'}{c.tipoPersona === 'juridica' ? ' (empresa)' : ''}</Link>
+                        <Link href={`/correduria/cliente/${c.id}`} style={{ fontWeight: 600, overflowWrap: 'anywhere', minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>{c.nombre ?? 'abrir ficha'}{c.tipoPersona === 'juridica' ? ' (empresa)' : ''}</Link>
                         <DatosDeFicha d={c} />
                       </li>
                     ))}
