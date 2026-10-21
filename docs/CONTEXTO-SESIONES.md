@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Allianz moto confirmada de punta a punta por Alberto con 0.7.20: prima = «Anual sucesivos» del RECIBO BANCARIO.
+«Cliente Alto Potencial = Sí» abre una ventana de descuento comercial, hoy DESACTIVADA en el broker; documentado en
+`docs/TARIFICADOR-DATOS-BOTS.md` (sección moto). Verificar con un run real cuando se active; el bot no aplica descuentos sin decisión.
+
 **(21/10/2026)** — Correduría · #4945 mergeado (presupuesto a contacto de empresa, SOLO LECTURA: el tercero no firma; marca `acceso_tercero`
 ligada al token). Idea 4: mismo selector para WhatsApp (Dueño/Administración con móvil; aunque el tomador tenga correo). Idea 2 (aviso de
 vencimiento restringido) DESCARTADA por Alberto: está en `git stash` «idea2-vencimiento». Pendiente: firma en representación (PR aparte).
