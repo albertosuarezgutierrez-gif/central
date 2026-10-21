@@ -124,7 +124,7 @@ export default function EnviarAlCliente({ presupuestoId, clienteId, correo }: { 
   async function copiar() {
     setOcupado(true); setAviso(null); setCopiado(false); setManual(null)
     try {
-      const e = await pedirEnlace()
+      const e = await pedirEnlace(contactoWa)
       if (!e) return
       try {
         await navigator.clipboard.writeText(e.mensaje)

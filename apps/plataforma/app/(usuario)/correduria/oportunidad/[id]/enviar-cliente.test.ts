@@ -127,7 +127,8 @@ test('🪤 la confirmación del WhatsApp a un contacto dice a quién, como qué,
   assert.match(t, /persona de contacto de la empresa/)
   assert.match(t, /no podrá aceptarlo ni firmarlo/)
   assert.match(t, /Lo mandas tú/)
-  assert.match(t, /El tomador ya tiene un enlace/)
+  assert.match(t, /El enlace enviado antes \(a quien fuera\) deja de valer/)
+  assert.doesNotMatch(t, /El tomador ya tiene/)
   assert.match(confirmarWhatsappContacto({ ...c, via: 'autorizacion' }, { tomadorJuridica: false, rotacion: null }), /persona autorizada por el tomador/)
 })
 
@@ -140,4 +141,10 @@ test('🪤 el WhatsApp a un contacto pide confirmación (releída la rotación) 
   // La lectura del selector pide el canal WhatsApp; el teléfono no se pinta en ningún sitio.
   assert.match(src, /destinatarios\?clienteId=\$\{encodeURIComponent\(clienteId\)\}&canal=whatsapp/)
   assert.doesNotMatch(src, /\.telefono|\.movil\b/)
+})
+
+test('🪤 «Copiar enlace» con un contacto elegido pide el enlace CON ese contacto (marca de tercero), no el del tomador', () => {
+  const src = readFileSync(new URL('./EnviarAlCliente.tsx', import.meta.url), 'utf8')
+  const copiar = src.slice(src.indexOf('async function copiar()'), src.indexOf('async function whatsapp()'))
+  assert.match(copiar, /pedirEnlace\(contactoWa\)/)
 })

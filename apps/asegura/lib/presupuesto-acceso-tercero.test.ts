@@ -180,3 +180,14 @@ test('🪤 el TELÉFONO del tercero solo viaja en el envío: ni en el listado, n
   assert.doesNotMatch(wa, /movilParaChat|descifrarCampo|telefono:/)
   assert.match(wa, /emails: \{\}/)
 })
+
+test('🪤 la respuesta del WhatsApp a un tercero NO trae `telefono` (el número solo va dentro del wa.me) y «Ya lo he mandado» copia el destinatario sin móvil ni correo', () => {
+  const ejecutar = cuerpoDe(envio, 'export async function ejecutarAviso(')
+  const rama = ejecutar.slice(ejecutar.indexOf("if (entrada.canal === 'whatsapp_enlace' && tercero) {"), ejecutar.indexOf("if (entrada.canal === 'whatsapp_enlace') {"))
+  assert.match(rama, /return \{ estado: 'enlace'/)
+  assert.doesNotMatch(rama.slice(rama.indexOf('return {')), /telefono/)
+  const conf = cuerpoDe(envio, 'export async function confirmarWhatsapp(')
+  assert.match(conf, /tipo: 'enlace_generado'/)
+  assert.match(conf, /\{ clienteId: d\.clienteId, relacion: d\.relacion \?\? null, via: d\.via \?\? null \}/)
+  assert.doesNotMatch(conf, /movil|email/)
+})

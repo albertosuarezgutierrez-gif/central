@@ -382,7 +382,7 @@ export async function ejecutarAviso(
       } },
     })
     await anotarEnvioATercero(correduriaId, p.id, p.clienteId, tercero, entrada.actor, 'whatsapp_enlace')
-    return { estado: 'enlace', mensaje, whatsapp: enlaceWhatsappPresupuesto(mensaje, tercero.movil), enlace, email: null, venceEl: venceSiSale.toISOString(), codigo: codigoWhatsapp!, telefono: tercero.movil }
+    return { estado: 'enlace', mensaje, whatsapp: enlaceWhatsappPresupuesto(mensaje, tercero.movil), enlace, email: null, venceEl: venceSiSale.toISOString(), codigo: codigoWhatsapp! }
   }
   if (entrada.canal === 'whatsapp_enlace') {
     const mensaje = mensajePresupuestoWhatsapp({ ...datos, codigo: codigoWhatsapp! })
@@ -512,8 +512,14 @@ export async function confirmarWhatsapp(
     data: { enviadoAt: ahora },
   })
   if (n.count === 0) return error('ocupado', 'Ha cambiado a la vez. Recarga.')
+  // Si el último enlace generado fue a una persona de contacto, el evento lo dice (solo id y relación: ni móvil ni correo).
+  const ultimo = await db.presupuestoEvento.findFirst({
+    where: { presupuestoId: p.id, tipo: 'enlace_generado' }, orderBy: { ocurridoAt: 'desc' }, select: { detalle: true },
+  }).catch(() => null)
+  const d = (ultimo?.detalle as { destinatario?: { clienteId?: unknown; relacion?: unknown; via?: unknown } } | null)?.destinatario
+  const destinatario = d && typeof d.clienteId === 'string' ? { clienteId: d.clienteId, relacion: d.relacion ?? null, via: d.via ?? null } : null
   await db.presupuestoEvento.create({
-    data: { presupuestoId: p.id, tipo: 'enviado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'whatsapp_enlace', confirmado_a_mano: true } },
+    data: { presupuestoId: p.id, tipo: 'enviado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'whatsapp_enlace', confirmado_a_mano: true, ...(destinatario ? { destinatario } : {}) } },
   })
   return { estado: 'confirmado', venceEl: p.venceEl.toISOString() }
 }

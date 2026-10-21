@@ -153,6 +153,7 @@ export function etiquetaTomadorWhatsapp(m: MovilTomador | null): string {
  */
 export function confirmarWhatsappContacto(c: ContactoWhatsapp, o: { tomadorJuridica: boolean; rotacion: string | null }): string {
   const como = o.tomadorJuridica ? 'como persona de contacto de la empresa' : 'como persona autorizada por el tomador'
-  const rotacion = o.rotacion ? ` ${o.rotacion.replace(/\s*¿Seguir\?\s*$/, '').replace(/^El cliente/, 'El tomador')}` : ''
+  // Neutro: el enlace vivo puede ser del tomador o de otra persona de contacto; no se da por hecho de quién.
+  const rotacion = o.rotacion ? ' El enlace enviado antes (a quien fuera) deja de valer.' : ''
   return `Se abre WhatsApp con el chat de ${etiquetaContacto(c)} (el móvil de su ficha) y un mensaje con el enlace y un código para VER este presupuesto, ${como} (no como tomador): no podrá aceptarlo ni firmarlo. Lo mandas tú.${rotacion} ¿Seguir?`
 }
