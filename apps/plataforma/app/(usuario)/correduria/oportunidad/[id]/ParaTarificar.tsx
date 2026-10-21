@@ -8,16 +8,18 @@
 // 🚨 Tres estados: lo que no se ha podido comprobar se dice «sin comprobar», nunca «listo». 🚨 Avant2 y los bots NO piden lo
 // mismo: un dato que solo pide uno lleva «Lo pide: …». 🚨 Tarificar con Avant2 aquí solo ABRE el cotizador (gratis): los 0,50€
 // se pagan en su botón final, que pide la verificación completa.
-import { useContext, useMemo } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 import { datosViviendaParaBot, eleccionesInicialesHogar } from '@/lib/tarificador-hogar-formulario'
 import { rotuloCompania, type IntegracionVista } from '@/lib/tarificador-probar'
 import {
-  accionesListas, aportacionAvant2, aportacionesBotsHogar, aportacionesBotsMotor, etiquetaPide, unirParaTarificar, type Aportacion, type Destino, type ItemTarificar,
+  accionesListas, aportacionAvant2, aportacionesBotsHogar, aportacionesBotsMotor, etiquetaPide, opcionesQueAceptaElBot, respuestaRapidaDe, unirParaTarificar, type Aportacion, type Destino, type ItemTarificar,
 } from '@/lib/correduria/para-tarificar'
 import { PendientesMotorContext } from '../../cliente/[id]/PendientesMotor'
+import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
+import { llamarDatosRiesgo, motivoDe } from './piezas-riesgo'
 import { abrirSeccion } from './SeccionPlegable'
 import { useCatalogosHogar } from './useCatalogosHogar'
 
@@ -36,7 +38,7 @@ const ROTULO_ESTADO: Record<ItemTarificar['estado'], { texto: string; color: str
   sin_comprobar: { texto: 'Sin comprobar', color: 'var(--muted)' },
 }
 
-export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integraciones, onTarificarAvant2, onLanzarBots }: {
+export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integraciones, onTarificarAvant2, onLanzarBots, onGuardado }: {
   riesgo: Riesgo
   /** El ramo se cotiza con Avant2 desde esta pantalla (`accionesPrecio().principal`). */
   aplicaAvant2: boolean
@@ -45,6 +47,8 @@ export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integr
   integraciones: IntegracionVista[] | null | undefined
   onTarificarAvant2: () => void
   onLanzarBots: () => void
+  /** Tras guardar un dato en línea: la pantalla relee el riesgo (y este bloque se recalcula). */
+  onGuardado: (texto: string) => void
 }) {
   const op = riesgo.oportunidad
   const hogar = op.ramo === 'hogar'
@@ -113,7 +117,7 @@ export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integr
 
       {pendientes.length > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6, minWidth: 0 }}>
-          {pendientes.map((it) => <FilaDato key={it.clave} item={it} quien={etiquetaPide(it, p)} />)}
+          {pendientes.map((it) => <FilaDato key={it.clave} item={it} quien={etiquetaPide(it, p)} respuesta={hogar && it.estado === 'falta' ? { oportunidadId: op.id, onGuardado } : null} />)}
         </ul>
       )}
 
@@ -160,7 +164,7 @@ export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integr
   )
 }
 
-function FilaDato({ item, quien }: { item: ItemTarificar; quien: string | null }) {
+function FilaDato({ item, quien, respuesta = null }: { item: ItemTarificar; quien: string | null; respuesta?: { oportunidadId: string; onGuardado: (texto: string) => void } | null }) {
   const e = ROTULO_ESTADO[item.estado]
   const ir = () => { const d = SECCION_DE_DESTINO[item.destino]; abrirSeccion(d.seccion, d.dentro) }
   return (
@@ -174,6 +178,56 @@ function FilaDato({ item, quien }: { item: ItemTarificar; quien: string | null }
         </span>
         <ChevronRight size={18} aria-hidden style={{ color: 'var(--muted)', flex: 'none' }} />
       </button>
+      {respuesta && <RespuestaEnLinea item={item} {...respuesta} />}
     </li>
+  )
+}
+
+/**
+ * Contestar de un toque un dato simple de la vivienda (Sí/No o una opción del catálogo) SIN salir del bloque. Guarda por el mismo
+ * camino que el formulario de «Datos de la vivienda» (`llamarDatosRiesgo` → PATCH /api/correduria/oportunidad/riesgo, solo ese campo,
+ * queda sin confirmar como cualquier guardado). 🚫 Nada se contesta solo: cada botón es una decisión de la persona.
+ */
+function RespuestaEnLinea({ item, oportunidadId, onGuardado }: { item: ItemTarificar; oportunidadId: string; onGuardado: (texto: string) => void }) {
+  const r = useMemo(() => respuestaRapidaDe(item.clave), [item.clave])
+  const [opciones, setOpciones] = useState<{ id: string; nombre: string }[] | 'error' | null>(null)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const catalogo = r?.tipo === 'catalogo' ? r.catalogo : null
+  const paraBot = r?.tipo === 'catalogo' && item.destino === 'bots' ? r.paraBot : null
+  useEffect(() => {
+    if (!catalogo) return
+    let vivo = true
+    pedirCatalogo({ tipo: 'hogar', nombre: catalogo })
+      .then((x) => { if (vivo) setOpciones(x.estado === 'ok' ? x.opciones : 'error') })
+      .catch(() => { if (vivo) setOpciones('error') })
+    return () => { vivo = false }
+  }, [catalogo])
+  if (!r) return null
+
+  async function guardar(valor: boolean | string, rotulo: string) {
+    if (!r) return
+    setGuardando(true)
+    setError(null)
+    const res = await llamarDatosRiesgo({ oportunidadId, datosVivienda: { [r.campo]: valor } })
+    setGuardando(false)
+    if (!res.ok) { setError(`No se ha guardado: ${motivoDe(res)}`); return }
+    onGuardado(`${item.etiqueta.split(' (')[0]}: ${rotulo}. Guardado (sin confirmar hasta que confirmes la vivienda).`)
+  }
+
+  const boton: React.CSSProperties = { ...btnStyle('secundario', 'sm'), minHeight: 44, minWidth: 44, whiteSpace: 'normal', height: 'auto', flex: '1 1 120px' }
+  const lista = Array.isArray(opciones) ? (paraBot ? opcionesQueAceptaElBot(paraBot, opciones) : opciones) : null
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 10px 2px', minWidth: 0 }}>
+      {r.tipo === 'bool' && r.opciones.map((o) => (
+        <button key={o.etiqueta} type="button" disabled={guardando} onClick={() => void guardar(o.valor, o.etiqueta)} style={boton}>{o.etiqueta}</button>
+      ))}
+      {r.tipo === 'catalogo' && opciones === null && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Leyendo opciones…</span>}
+      {r.tipo === 'catalogo' && opciones === 'error' && <span style={{ fontSize: 12, color: 'var(--negative)' }}>No se han podido leer las opciones: ábrelo en su sección.</span>}
+      {r.tipo === 'catalogo' && lista && lista.map((o) => (
+        <button key={o.id} type="button" disabled={guardando} onClick={() => void guardar(o.id, o.nombre)} style={boton}>{o.nombre}</button>
+      ))}
+      {error && <span role="alert" style={{ fontSize: 12, color: 'var(--negative)', flexBasis: '100%', overflowWrap: 'anywhere' }}>{error}</span>}
+    </div>
   )
 }

@@ -23,6 +23,7 @@ import {
 } from '@central/module-seguros'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { eur } from '@/lib/dinero'
+import { elegirMunicipioCatalogo } from '@/lib/correduria/municipio-catalogo'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
 import AseguradosAdicionales, { aseguradosDeRiesgo, aseguradosParaEnviar, type AseguradoForm } from '../../cliente/[id]/AseguradosAdicionales'
 import { SelectorBuscable } from '../../SelectorBuscable'
@@ -281,6 +282,16 @@ function CarteraHogar({ p, onUsarCapitales }: { p: PropuestaCarteraHogar | null 
 }
 const CAMPOS_EUROS = new Set<string>(['capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor'])
 
+/** Municipios INE del CP (tabla del CRM, `/api/correduria/codigo-postal`): solo ayudan a casar con el catálogo. Fallo o CP desconocido = `[]`. */
+async function municipiosIneDelCp(cp: string): Promise<string[]> {
+  try {
+    const r = await fetch(`/api/correduria/codigo-postal?cp=${encodeURIComponent(cp)}`)
+    if (!r.ok) return []
+    const j = (await r.json()) as { municipios?: unknown }
+    return Array.isArray(j.municipios) ? j.municipios.filter((x): x is string => typeof x === 'string') : []
+  } catch { return [] }
+}
+
 function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: string[]; dePoliza: boolean }) {
   const { d, dePoliza } = props
   const [catalogos, setCatalogos] = useState<Record<string, Opcion[] | 'error'>>({})
@@ -373,12 +384,30 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
       const r = await pedirCatalogo({ tipo: 'municipios', cp })
       if (r.estado !== 'ok') { setNotaMunicipio('No se ha podido leer el catálogo de municipios ahora.'); return }
       setMunicipios(r.opciones)
-      if (r.opciones.length === 0) setNotaMunicipio('Ese código postal no tiene municipios en el catálogo.')
-      else if (r.opciones.length === 1) E.setForm((f) => ({ ...f, municipioId: r.opciones[0].id, municipio: r.opciones[0].nombre }))
+      if (r.opciones.length === 0) { setNotaMunicipio(`El catálogo de Avant2 no tiene municipios para el código postal ${cp}.`); return }
+      // Un solo municipio en el CP → preseleccionado. Varios → si UNO casa EXACTO con lo guardado o con la tabla INE del CP
+      // (tildes, mayúsculas y artículos aparte), también; si no, el desplegable y lo elige una persona.
+      let elegido: Opcion | null = r.opciones.length === 1 ? r.opciones[0] : null
+      if (!elegido) {
+        const ine = await municipiosIneDelCp(cp)
+        elegido = elegirMunicipioCatalogo(r.opciones, [E.form.municipio, (d.municipio as string | null) ?? null, ...ine])
+      }
+      if (elegido) {
+        const e = elegido
+        E.setForm((f) => ({ ...f, municipioId: e.id, municipio: e.nombre }))
+      } else {
+        setNotaMunicipio('Hay varios municipios con ese código postal: elige el correcto en el desplegable.')
+      }
     } catch {
       setNotaMunicipio('No se ha podido leer el catálogo de municipios ahora.')
     }
   }
+
+  // Al abrir la edición con CP completo y sin municipio del catálogo, se busca solo (CP → desplegable): no hace falta pulsar el botón.
+  useEffect(() => {
+    if (E.editando && municipios === null && !E.form.municipioId && /^\d{5}$/.test((E.form.cp ?? '').trim())) void buscarMunicipios()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [E.editando])
 
   // El municipio del catálogo es de UN código postal: al cambiar el CP se suelta (y su lista de candidatos) para que no
   // quede un municipio de otra zona guardado junto al CP nuevo. Si se vuelve al CP guardado, se recupera.
@@ -524,13 +553,14 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
                     <button type="button" disabled={E.bloqueado} onClick={() => void buscarMunicipios()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
                       Buscar municipio por código postal
                     </button>
-                    {municipios && municipios.length > 1 && (
+                    {municipios && municipios.length > 0 && (
                       <select aria-label="Municipio del código postal" value={E.form.municipioId ?? ''} style={campoCss}
                         onChange={(e) => {
                           const o = municipios.find((m) => m.id === e.target.value)
                           E.setForm((f) => ({ ...f, municipioId: o?.id ?? '', municipio: o?.nombre ?? '' }))
                         }}>
                         <option value="">Elige el municipio</option>
+                        {E.form.municipioId && !municipios.some((m) => m.id === E.form.municipioId) && <option value={E.form.municipioId}>{E.form.municipio || E.form.municipioId}</option>}
                         {municipios.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                       </select>
                     )}
