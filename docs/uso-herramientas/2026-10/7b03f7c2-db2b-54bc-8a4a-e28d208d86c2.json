@@ -1,21 +1,21 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-21T12:13:33.524Z",
- "llamadas": 11135,
+ "fin": "2026-10-21T12:16:32.359Z",
+ "llamadas": 11142,
  "categorias": {
   "otro": {
-   "llamadas": 1252,
-   "chars_in": 163105,
-   "chars_out": 9427799,
+   "llamadas": 1256,
+   "chars_in": 163235,
+   "chars_out": 9463100,
    "errores": 0,
    "archivos_citados": 44,
    "chars_citados": 5925840,
    "tools": {
-    "ToolSearch": 264,
+    "ToolSearch": 265,
     "SubagentHandback": 10,
     "SendMessage": 65,
-    "ReadNotifications": 750,
+    "ReadNotifications": 753,
     "Monitor": 153,
     "AskUserQuestion": 8,
     "TaskStop": 2
@@ -46,9 +46,9 @@
    }
   },
   "mcp:github": {
-   "llamadas": 529,
-   "chars_in": 157590,
-   "chars_out": 1462518,
+   "llamadas": 531,
+   "chars_in": 158286,
+   "chars_out": 1466412,
    "errores": 4,
    "archivos_citados": 8,
    "chars_citados": 3295583,
@@ -61,8 +61,8 @@
     "mcp__github__pull_request_read": 90,
     "mcp__github__merge_pull_request": 63,
     "mcp__github__add_reply_to_pull_request_comment": 21,
-    "mcp__github__get_job_logs": 25,
-    "mcp__github__add_issue_comment": 14,
+    "mcp__github__get_job_logs": 26,
+    "mcp__github__add_issue_comment": 15,
     "mcp__github__actions_get": 20,
     "mcp__github__search_pull_requests": 1
    }
@@ -79,14 +79,14 @@
    }
   },
   "bash": {
-   "llamadas": 6205,
-   "chars_in": 4516932,
-   "chars_out": 19077215,
+   "llamadas": 6206,
+   "chars_in": 4517115,
+   "chars_out": 19077592,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 6205
+    "Bash": 6206
    }
   },
   "mcp:Vercel": {
