@@ -19,7 +19,7 @@
 import { caducidadCarnet } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
-import { borrarCarnet, descifrarCampo, guardarCarnet } from './cartera-edicion'
+import { borrarCarnet, campoIlegible, descifrarCampo, guardarCarnet } from './cartera-edicion'
 import {
   destinoCarnet,
   resultadoDeDestinoAjeno,
@@ -27,7 +27,7 @@ import {
   type OperacionCarnetPortal,
   type ResultadoCarnetPortalEscritura,
 } from './carnets-portal-reglas'
-import { agruparCarnetsPorTitular, fichasLegiblesDeCarnets, type CarnetDeFicha, type TitularCarnets } from './carnets-titulares'
+import { agruparCarnetsPorTitular, fichasLegiblesDeCarnets, fichasQueVenExpedicion, type CarnetDeFicha, type TitularCarnets } from './carnets-titulares'
 import { vinculosDeIdentidad } from './contacto-portal'
 import type { VinculoPortal } from './ficha-de-poliza'
 
@@ -59,8 +59,11 @@ export async function caducidadesCarnetDeIdentidad(
   identidadId: string,
 ): Promise<ResultadoCarnetsPortal> {
   let ids: string[]
+  let conExpedicion: Set<string>
   try {
-    ids = fichasLegiblesDeCarnets(await vinculosDeIdentidad(correduriaId, identidadId))
+    const vinculos = await vinculosDeIdentidad(correduriaId, identidadId)
+    ids = fichasLegiblesDeCarnets(vinculos)
+    conExpedicion = fichasQueVenExpedicion(vinculos)
   } catch (e) {
     console.error('[carnets-portal] no se pudieron leer los vínculos:', e instanceof Error ? e.message : e)
     return { estado: 'error', causa: 'vinculos_ilegibles' }
@@ -88,7 +91,9 @@ export async function caducidadesCarnetDeIdentidad(
       if (!cliente) continue // ficha fusionada o fuera de las vinculadas: no se cuelga de nadie
       if (!nacimiento.has(cliente.id)) nacimiento.set(cliente.id, descifrarCampo(cliente.fechaNacimiento))
       const fechaNacimiento = nacimiento.get(cliente.id) ?? null
-      if (fechaNacimiento === null) {
+      // 🚨 Ilegible (cifrada y no abre) ≠ ausente (la ficha no la tiene): lo primero sigue siendo un `error`
+      // entero; lo segundo deja el carné SIN caducidad calculable (`null`) para que el portal diga que falta.
+      if (fechaNacimiento === null && campoIlegible(cliente.fechaNacimiento)) {
         console.error(`[carnets-portal] fecha de nacimiento ilegible para el cliente ${cliente.id}`)
         return { estado: 'error', causa: 'fecha_nacimiento_ilegible' }
       }
@@ -97,9 +102,13 @@ export async function caducidadesCarnetDeIdentidad(
         console.warn(`[carnets-portal] fecha de carné ilegible en la fila ${f.id}; se omite`)
         continue
       }
+      if (fechaNacimiento === null) {
+        calculados.push({ clienteId: f.clienteId, id: f.id, tipo: f.tipo, fechaCaducidad: null, fechaExpedicion: fechaCarnet })
+        continue
+      }
       const r = caducidadCarnet({ fechaCarnet, fechaNacimiento, tipo: f.tipo })
       if (r === null) continue
-      calculados.push({ clienteId: f.clienteId, id: f.id, tipo: f.tipo, fechaCaducidad: r.fechaCaducidad })
+      calculados.push({ clienteId: f.clienteId, id: f.id, tipo: f.tipo, fechaCaducidad: r.fechaCaducidad, fechaExpedicion: fechaCarnet })
     }
 
     const titulares = agruparCarnetsPorTitular(
@@ -109,6 +118,7 @@ export async function caducidadesCarnetDeIdentidad(
         tipoPersona: c.tipoPersona === null ? null : String(c.tipoPersona),
       })),
       calculados,
+      conExpedicion,
     )
     if (titulares.length > 1) return { estado: 'varios_titulares', titulares }
     return { estado: 'ok', carnets: titulares[0]?.carnets ?? [], titulares }

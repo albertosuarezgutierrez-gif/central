@@ -81,6 +81,11 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
     uno: 'un carné de conducir que nos consta caducado',
     varios: 'carnés de conducir que nos constan caducados',
   },
+  // Sin la fecha de nacimiento no se puede calcular la caducidad del carné. No se copia ningún dato.
+  carnet_sin_nacimiento: {
+    uno: 'un dato que nos falta para avisarte de la caducidad de tu carné',
+    varios: 'datos que nos faltan para avisarte de la caducidad de tu carné',
+  },
   anulacion_por_firmar: {
     uno: 'un documento pendiente de tu firma',
     varios: 'documentos pendientes de tu firma',
@@ -151,6 +156,7 @@ export const ASUNTO_POR_TIPO: Record<TipoAviso, string> = {
   datos_por_revisar: 'dato de tu dirección por revisar',
   carnet_en_ventana: 'carné de conducir próximo a caducar',
   carnet_caducado: 'carné de conducir caducado',
+  carnet_sin_nacimiento: 'falta tu fecha de nacimiento (carné de conducir)',
   anulacion_por_firmar: 'documento pendiente de tu firma',
   felicitacion: 'felicitación',
   poliza_emitida: 'póliza nueva',

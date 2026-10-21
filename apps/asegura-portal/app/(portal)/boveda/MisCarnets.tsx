@@ -1,13 +1,19 @@
 'use client'
 import { useState } from 'react'
 
+import { InterruptorAvisoCarnet } from '@/app/InterruptorAvisoCarnet'
 import {
-  fechaCarnetEs,
+  TEXTO_FALTA_NACIMIENTO,
+  faltaNacimiento,
+  fechaPrecargada,
+  modoInicialCambio,
   necesitaSelectorTitular,
   textoAvisoCarnet,
+  textoFechasCarnet,
   titularesEscribibles,
   type ResultadoEscrituraCarnet,
 } from '@/lib/carnets-vista'
+import { icsCaducidadCarnet, nombreFicheroIcsCarnet } from '@/lib/ics-carnet'
 import type { CarnetDeTitular, TitularCarnets } from '@/lib/carnets-titulares'
 
 /**
@@ -17,7 +23,11 @@ import type { CarnetDeTitular, TitularCarnets } from '@/lib/carnets-titulares'
  * - Con UN titular, lista plana («tus carnés»); con varios, agrupada por titular y con selector al añadir.
  * - Se puede teclear la CADUCIDAD (anverso, por defecto) o la EXPEDICIÓN: `apps/asegura` deduce la expedición
  *   desde la caducidad con el nacimiento y guarda solo la expedición; la caducidad que se enseña la calcula
- *   él. La de expedición no vuelve nunca al portal (va cifrada), así que al corregir se escribe otra vez.
+ *   él. 21/10/2026: la tarjeta enseña «Expedido el … · Caduca el …» (la expedición solo llega si el puente
+ *   la permite: el titular o quien opera su ficha) y «Cambiar» abre el campo PRECARGADO con la fecha actual,
+ *   para verificarla en vez de volver a teclearla. Si falta la caducidad por falta de nacimiento, se dice.
+ * - Interruptor «avisarme cuando vaya a caducar» (misma fuente que Configuración) y «Añadir a mi calendario»
+ *   (.ics generado aquí, sin enviar nada).
  * - La escritura la hace `apps/asegura` con la misma regla que el corredor; aquí solo se pinta lo que dice.
  *   Un fallo de lectura se DICE (nunca «no tienes carnés»).
  */
@@ -86,8 +96,14 @@ export function MisCarnets({ inicial, tipos, hoy }: { inicial: TitularCarnets[] 
       <p className="antetitulo">Para tus avisos</p>
       <h2 id="mis-carnets-titulo">Tus carnés de conducir</h2>
       <p className="supresion-intro">
-        Con la fecha de tu carné calculamos cuándo caduca y te avisamos antes. Si lo has renovado, cambia su fecha.
+        Con la fecha de tu carné calculamos cuándo caduca y te avisamos antes (a los 90, 30 y 7 días y el día que
+        caduca). Si lo has renovado, cambia su fecha. Para renovarlo,{' '}
+        <a href="https://sede.dgt.gob.es" target="_blank" rel="noopener noreferrer">
+          sede de la DGT
+        </a>
+        .
       </p>
+      <InterruptorAvisoCarnet />
 
       {estado.tipo === 'aviso' && <p role="status" className="mi-direccion-aviso">{estado.texto}</p>}
       {estado.tipo === 'hecho' && <p role="status" className="mi-direccion-ok">{estado.texto}</p>}
@@ -106,8 +122,14 @@ export function MisCarnets({ inicial, tipos, hoy }: { inicial: TitularCarnets[] 
               <li key={c.id} className="config-contactos-fila">
                 <span className="config-contactos-valor">
                   <strong>Carné {c.tipo}</strong>
-                  <span className="config-contactos-etiqueta"> · caduca el {fechaCarnetEs(c.fechaCaducidad)}</span>
+                  {textoFechasCarnet(c) !== null && <span className="config-contactos-etiqueta"> · {textoFechasCarnet(c)}</span>}
+                  {faltaNacimiento(c) && (
+                    <span className="config-contactos-etiqueta" role="status" style={{ display: 'block' }}>
+                      {TEXTO_FALTA_NACIMIENTO}
+                    </span>
+                  )}
                 </span>
+                {c.fechaCaducidad !== null && <BotonCalendario id={c.id} tipo={c.tipo} fechaCaducidad={c.fechaCaducidad} />}
                 {t.fichaId !== '' && (
                   <>
                     <button
@@ -168,6 +190,27 @@ export function MisCarnets({ inicial, tipos, hoy }: { inicial: TitularCarnets[] 
   )
 }
 
+/** Descarga el .ics de la caducidad. Todo en el navegador; si no se puede generar, no hay botón. */
+function BotonCalendario({ id, tipo, fechaCaducidad }: { id: string; tipo: string; fechaCaducidad: string }) {
+  const descargar = () => {
+    const ics = icsCaducidadCarnet({ id, tipo, fechaCaducidad, ahora: new Date() })
+    if (ics === null) return
+    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nombreFicheroIcsCarnet(tipo)
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+  return (
+    <button type="button" className="boton-tenue" onClick={descargar}>
+      Añadir a mi calendario
+    </button>
+  )
+}
+
 function FormularioCarnet({
   form,
   titulares,
@@ -189,8 +232,10 @@ function FormularioCarnet({
 }) {
   const [fichaId, setFichaId] = useState(form.modo === 'cambio' ? form.fichaId : (titulares[0]?.fichaId ?? ''))
   const [tipo, setTipo] = useState(form.modo === 'cambio' ? form.carnet.tipo : 'B')
-  const [cual, setCual] = useState<'caducidad' | 'expedicion'>('caducidad')
-  const [fecha, setFecha] = useState('')
+  const actual = form.modo === 'cambio' ? form.carnet : null
+  const [cual, setCual] = useState<'caducidad' | 'expedicion'>(actual ? modoInicialCambio(actual) : 'caducidad')
+  // «Cambiar» abre el campo con la fecha que hay, para poder verificarla; «Añadir», vacío.
+  const [fecha, setFecha] = useState(actual ? fechaPrecargada(actual, modoInicialCambio(actual)) : '')
   const listo = fichaId !== '' && tipo !== '' && fecha !== ''
 
   return (
@@ -239,7 +284,7 @@ function FormularioCarnet({
               checked={cual === valor}
               onChange={() => {
                 setCual(valor)
-                setFecha('')
+                setFecha(fechaPrecargada(actual, valor))
               }}
             />
             <span>{texto}</span>

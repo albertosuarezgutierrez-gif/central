@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 
 import { DIAS_ANTELACION_OPCIONES, UMBRALES_SUBIDA_PRIMA, type CanalAviso, type DiasAntelacion, type UmbralSubidaPrima } from '@central/module-seguros-portal'
 
+import { InterruptorAvisoCarnet } from '../../InterruptorAvisoCarnet'
+
 /**
  * Antelación, «no molestar» (13/10/2026) y umbral de subida de precio (fase B). Valen para todos los
  * dispositivos de la persona.
@@ -129,6 +131,12 @@ export function AjustesAvisos() {
       <p className="suave config-nota">
         Comparamos el precio anual con el último que vimos de esa misma póliza. Si cambia la forma de pago
         (por ejemplo, de anual a mensual) no lo comparamos, porque no serían cifras equivalentes.
+      </p>
+
+      <InterruptorAvisoCarnet />
+      <p className="suave config-nota">
+        Te lo decimos en la campana y por correo, con antelación. Lo apagas aquí o desde «Mis datos → Tus carnés de
+        conducir»; no cambia nada de tus carnés guardados.
       </p>
 
       <fieldset className="campana-prefs">

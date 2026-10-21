@@ -13,7 +13,12 @@
  */
 import type { CarnetParaAviso } from '@central/module-seguros-portal'
 
-export type CarnetDeTitular = { id: string; tipo: string; fechaCaducidad: string }
+/**
+ * `fechaCaducidad: null` = hay carné pero no se puede calcular cuándo caduca (a la ficha le falta la fecha de
+ * nacimiento): la pantalla lo dice y NO genera aviso. `fechaExpedicion` solo llega si el puente la permite
+ * (el titular o quien opera su ficha); ausente/`null` = no consta aquí, nunca «no tiene».
+ */
+export type CarnetDeTitular = { id: string; tipo: string; fechaCaducidad: string | null; fechaExpedicion?: string | null }
 export type TitularCarnets = { fichaId: string; nombre: string; carnets: CarnetDeTitular[] }
 
 function esObjeto(x: unknown): x is Record<string, unknown> {
@@ -23,8 +28,13 @@ function esObjeto(x: unknown): x is Record<string, unknown> {
 function carnetsValidos(crudo: unknown): CarnetDeTitular[] {
   return (Array.isArray(crudo) ? crudo : [])
     .filter(esObjeto)
-    .filter((c) => typeof c.id === 'string' && typeof c.tipo === 'string' && typeof c.fechaCaducidad === 'string')
-    .map((c) => ({ id: c.id as string, tipo: c.tipo as string, fechaCaducidad: c.fechaCaducidad as string }))
+    .filter((c) => typeof c.id === 'string' && typeof c.tipo === 'string' && (typeof c.fechaCaducidad === 'string' || c.fechaCaducidad === null))
+    .map((c) => ({
+      id: c.id as string,
+      tipo: c.tipo as string,
+      fechaCaducidad: c.fechaCaducidad as string | null,
+      ...(typeof c.fechaExpedicion === 'string' && c.fechaExpedicion !== '' ? { fechaExpedicion: c.fechaExpedicion } : {}),
+    }))
 }
 
 /**
@@ -62,6 +72,8 @@ export function carnetsParaAviso(titulares: readonly TitularCarnets[]): CarnetPa
     t.carnets.map((c) => ({
       id: c.id,
       tipo: c.tipo,
+      // `null` (a la ficha le falta el nacimiento) viaja tal cual: la campana dice qué falta y la precarga
+      // de recordatorios lo salta. La expedición no viaja aquí: no hace falta.
       fechaCaducidad: c.fechaCaducidad,
       titular: varios ? (t.nombre !== '' ? t.nombre : 'otra ficha vinculada') : null,
     })),

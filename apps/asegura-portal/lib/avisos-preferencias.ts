@@ -1,5 +1,6 @@
 import {
-  TIPOS_AVISO_CIMA,
+  TIPOS_AVISO_INTERRUPTOR,
+  TIPO_AVISO_VENCIMIENTO_CARNET,
   VERSION_TEXTO_AVISOS,
   consentimientoVigente,
   horaDeMinutos,
@@ -7,7 +8,7 @@ import {
   type CanalAviso,
   type DiasAntelacion,
   type PreferenciasAvisosGuardadas,
-  type TipoAvisoCima,
+  type TipoAvisoInterruptor,
   type UmbralSubidaPrima,
 } from '@central/module-seguros-portal'
 
@@ -15,18 +16,18 @@ import { prisma } from './db'
 import { getIdentidad } from './session'
 import type { VistaPospuesta } from './push-estado'
 
-export type PreferenciasAvisos = Record<TipoAvisoCima, boolean>
+export type PreferenciasAvisos = Record<TipoAvisoInterruptor, boolean>
 
-/** Qué avisos de CIMA tiene encendidos la identidad de la cookie. Sin fila = encendido. */
+/** Qué avisos tiene encendidos la identidad de la cookie (los de CIMA y el del carné). Sin fila = encendido. */
 export async function preferenciasDeSesion(): Promise<PreferenciasAvisos | null> {
   const identidad = await getIdentidad()
   if (!identidad) return null
   const apagados = await prisma.portalAvisoSilenciado.findMany({ where: { identidadId: identidad.id }, select: { tipo: true } })
   const off = new Set(apagados.map((a) => a.tipo))
-  return Object.fromEntries(TIPOS_AVISO_CIMA.map((t) => [t, !off.has(t)])) as PreferenciasAvisos
+  return Object.fromEntries(TIPOS_AVISO_INTERRUPTOR.map((t) => [t, !off.has(t)])) as PreferenciasAvisos
 }
 
-export async function cambiarPreferenciaDeSesion(tipo: TipoAvisoCima, activo: boolean): Promise<boolean> {
+export async function cambiarPreferenciaDeSesion(tipo: TipoAvisoInterruptor, activo: boolean): Promise<boolean> {
   const identidad = await getIdentidad()
   if (!identidad) return false
   // Siempre acotado por `identidadId` de la cookie: la frontera entre una bóveda y otra.
@@ -36,6 +37,19 @@ export async function cambiarPreferenciaDeSesion(tipo: TipoAvisoCima, activo: bo
     await prisma.portalAvisoSilenciado.createMany({ data: [{ identidadId: identidad.id, tipo }], skipDuplicates: true })
   }
   return true
+}
+
+/**
+ * ¿Apagó esta identidad «avisarme de la caducidad de mi carné»? (la pasa la campana). Sin fila = encendido
+ * (`false`). Si la lectura falla, LANZA: la campana lo trata como encendido (repetir un aviso es mejor que
+ * esconderlo) y lo registra. Acotada por `identidadId`.
+ */
+export async function avisoCarnetSilenciado(identidadId: string): Promise<boolean> {
+  const fila = await prisma.portalAvisoSilenciado.findUnique({
+    where: { identidadId_tipo: { identidadId, tipo: TIPO_AVISO_VENCIMIENTO_CARNET } },
+    select: { tipo: true },
+  })
+  return fila !== null
 }
 
 // ─── «Configuración → Avisos» (13/10/2026) ───────────────────────────────────

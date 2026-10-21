@@ -63,3 +63,49 @@ export function fechaCarnetEs(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim())
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso
 }
+
+// ─── Fechas de la tarjeta (21/10/2026) ───────────────────────────────────────
+
+/** Lo que se dice cuando hay carné pero no se puede calcular su caducidad. No hay pantalla donde completarlo. */
+export const TEXTO_FALTA_NACIMIENTO =
+  'Nos falta tu fecha de nacimiento para calcular la caducidad. Tú no puedes cambiarla desde el portal: escríbenos con una copia de tu DNI y la completamos.'
+
+type FechasCarnet = { fechaCaducidad: string | null; fechaExpedicion?: string | null }
+
+/**
+ * «Expedido el dd/mm/aaaa · Caduca el dd/mm/aaaa». Cada mitad solo si se conoce: una fecha que no consta no se
+ * inventa ni se sustituye por otra. Sin ninguna de las dos → `null` (la tarjeta no pinta línea).
+ */
+export function textoFechasCarnet(c: FechasCarnet): string | null {
+  const partes: string[] = []
+  const exp = c.fechaExpedicion?.trim()
+  if (exp) partes.push(`Expedido el ${fechaCarnetEs(exp)}`)
+  if (c.fechaCaducidad !== null) partes.push(`Caduca el ${fechaCarnetEs(c.fechaCaducidad)}`)
+  return partes.length > 0 ? partes.join(' · ') : null
+}
+
+/** Hay carné pero no caducidad calculable: falta el nacimiento (el puente no distingue otra causa). */
+export function faltaNacimiento(c: FechasCarnet): boolean {
+  return c.fechaCaducidad === null
+}
+
+/** Qué fecha se ofrece al pulsar «Cambiar»: la caducidad (anverso) salvo que no conste y sí la expedición. */
+export function modoInicialCambio(c: FechasCarnet): 'caducidad' | 'expedicion' {
+  return c.fechaCaducidad === null && (c.fechaExpedicion?.trim() ?? '') !== '' ? 'expedicion' : 'caducidad'
+}
+
+/** Valor PRECARGADO del campo de fecha (`aaaa-mm-dd`) según el modo elegido; `''` si esa fecha no consta. */
+export function fechaPrecargada(c: FechasCarnet | null, cual: 'caducidad' | 'expedicion'): string {
+  if (c === null) return ''
+  const v = cual === 'caducidad' ? c.fechaCaducidad : (c.fechaExpedicion ?? null)
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim()) ? v.trim() : ''
+}
+
+/** Lee el interruptor de `GET /api/push/preferencias`: `null` = no se sabe (nunca se pinta «encendido» a ciegas). */
+export function leerInterruptorCarnet(j: unknown): boolean | null {
+  if (typeof j !== 'object' || j === null) return null
+  const p = (j as { preferencias?: unknown }).preferencias
+  if (typeof p !== 'object' || p === null) return null
+  const v = (p as Record<string, unknown>)['vencimiento_carnet']
+  return typeof v === 'boolean' ? v : null
+}

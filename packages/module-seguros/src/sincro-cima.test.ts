@@ -155,3 +155,29 @@ test('teléfono y email con otro formato no son diferencia; motivos de lo copiad
   )
   assert.equal(motivoCopiadoCima('discrepa'), null)
 })
+
+test('🪤 una fecha de carné YA guardada y distinta de la de CIMA NUNCA es una acción automática (no pisa la corrección del cliente)', () => {
+  // Las acciones que `aplicarSincroCima('rellenar')` ejecuta sin preguntar (`AUTOMATICAS` en apps/asegura).
+  const automaticas = ['rellenar', 'anadir', 'completar', 'formatear', 'corregir', 'normalizar']
+  const cimaB = { ...soloNombre, fechaCarnet: '1999-01-03' }
+  const casos: Record<string, string[]> = {
+    'el cliente corrigió a otra fecha': ['2018-05-05'],
+    'dos carnés B, ninguno coincide': ['2018-05-05', '2001-01-01'],
+    'la expedición deducida de su caducidad se va 2 días': ['1999-01-05'],
+    'otro formato Y otra fecha (no es «la misma en otro formato»)': ['5/5/2018'],
+  }
+  for (const [caso, carnets] of Object.entries(casos)) {
+    const d = compararConCima({ ...vacia, carnets }, cimaB).filter((x) => x.campo === 'fechaCarnet')
+    assert.equal(d.length, 1, caso)
+    assert.equal(d[0]!.accion, 'discrepa', caso)
+    assert.ok(!automaticas.includes(d[0]!.accion), caso)
+  }
+})
+
+test('la fecha de carné solo es automática si NO había ninguna (rellenar) o es la MISMA en otro formato (normalizar)', () => {
+  const cimaB = { ...soloNombre, fechaCarnet: '1999-01-03' }
+  assert.equal(compararConCima({ ...vacia, carnets: [] }, cimaB)[0]!.accion, 'rellenar')
+  assert.equal(compararConCima({ ...vacia, carnets: ['1999/1/3'] }, cimaB)[0]!.accion, 'normalizar')
+  // Ilegible (null) = no se sabe: no se toca nada.
+  assert.deepEqual(compararConCima({ ...vacia, carnets: [null] }, cimaB), [])
+})
