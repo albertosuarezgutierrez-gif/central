@@ -13,8 +13,8 @@
 //
 // 🚨 Tres estados: una comprobación que no se pudo hacer es `sin_comprobar` (nunca «nada pendiente»); `listo` exige que TODAS las
 // fuentes se hayan comprobado y no quede nada. 🚨 Sin datos personales en las claves: solo ids, campos y etiquetas.
-import { ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_VEHICULO, ETIQUETA_CAMPO_VIVIENDA, type CampoCapital, type CampoVehiculo, type CampoVivienda } from '@central/module-seguros'
-import type { BloqueObligatorio } from '@central/module-tarificacion'
+import { CATALOGO_HOGAR_DE_CAMPO, ESPEC_VIVIENDA, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_VEHICULO, ETIQUETA_CAMPO_VIVIENDA, type CampoCapital, type CampoVehiculo, type CampoVivienda } from '@central/module-seguros'
+import { claveHogarDeCatalogo, type BloqueObligatorio } from '@central/module-tarificacion'
 import { checklistCompania, MOTIVO_SIN_DECLARACION } from '../tarificador-checklist.ts'
 import { formularioBotHogar, type DatosViviendaBot } from '../tarificador-hogar-formulario.ts'
 import { rotuloFalta } from '../riesgo-asegura.ts'
@@ -318,4 +318,32 @@ export function resumenObjeto(d: DatosRiesgoParaTarificar, eur: (x: number) => s
   }
   partes.push(d.faltan.length ? n(d.faltan.length, 'dato pendiente', 'datos pendientes') : 'completo')
   return mayus(partes.join(' · '))
+}
+
+// ─── Respuesta en línea de los datos simples (21/10/2026) ────────────────────────────────────────────────────────────────────
+
+export type RespuestaRapida =
+  | { campo: string; tipo: 'bool'; opciones: readonly { etiqueta: string; valor: boolean }[] }
+  | { campo: string; tipo: 'catalogo'; catalogo: string; paraBot: 'tipoVivienda' | 'uso' | 'regimen' | null }
+
+/** De la clave de un item de «Para tarificar faltan» (`vivienda.<campo>`), cómo se contesta de un toque: un Sí/No o una opción del catálogo. `null` = se abre su sección. PURA. */
+export function respuestaRapidaDe(clave: string): RespuestaRapida | null {
+  const m = /^vivienda\.([A-Za-z]+)$/.exec(clave)
+  const campo = m?.[1]
+  const espec = campo ? ESPEC_VIVIENDA.find((e) => e.clave === campo) : undefined
+  if (!campo || !espec) return null
+  if (espec.tipo.t === 'bool') {
+    return { campo, tipo: 'bool', opciones: campo === 'conMadera' ? [{ etiqueta: 'Con madera', valor: true }, { etiqueta: 'Sin madera', valor: false }] : [{ etiqueta: 'Sí', valor: true }, { etiqueta: 'No', valor: false }] }
+  }
+  if (espec.tipo.t === 'id' && Object.hasOwn(CATALOGO_HOGAR_DE_CAMPO, campo)) {
+    const paraBot = campo === 'tipoVivienda' ? 'tipoVivienda' : campo === 'ocupacion' ? 'uso' : campo === 'uso' ? 'regimen' : null
+    return { campo, tipo: 'catalogo', catalogo: CATALOGO_HOGAR_DE_CAMPO[campo as keyof typeof CATALOGO_HOGAR_DE_CAMPO], paraBot }
+  }
+  return null
+}
+
+/** Para un dato que pide un bot: solo las opciones del catálogo que el bot acepta (las que casan con una de sus claves). Si ninguna casa, todas (no se esconde nada). PURA. */
+export function opcionesQueAceptaElBot(paraBot: 'tipoVivienda' | 'uso' | 'regimen', opciones: readonly { id: string; nombre: string }[]): { id: string; nombre: string }[] {
+  const casan = opciones.filter((o) => claveHogarDeCatalogo(paraBot, o.id, o.nombre) !== null)
+  return casan.length > 0 ? casan : [...opciones]
 }

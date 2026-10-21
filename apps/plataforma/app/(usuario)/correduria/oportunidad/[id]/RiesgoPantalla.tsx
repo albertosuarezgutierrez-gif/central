@@ -212,6 +212,7 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
         aplicaAvant2={!!acciones.principal}
         esVehiculo={esVehiculo}
         integraciones={integracionesRamo}
+        onGuardado={(texto) => void recargar(texto)}
         onTarificarAvant2={() => {
           if (CotizadorEmbebido) setCotizadorAbierto(true)
           abrirSeccion('sec-pedir-precio', 'pedir-precio')
