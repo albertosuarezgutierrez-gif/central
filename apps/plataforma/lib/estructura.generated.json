@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-21T07:14:28Z",
+  "generadoEn": "2026-10-21T08:03:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2290,7 +2290,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 226
+        "evidencias": 227
       },
       "rrhh": {
         "estado": "no",
@@ -2560,7 +2560,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 35
       },
       "rrhh": {
         "estado": "no",
@@ -5688,6 +5688,7 @@
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
+      "/api/admin/fichajes/incidencias",
       "/api/admin/firmas",
       "/api/admin/firmas/reclamar",
       "/api/admin/informes",
@@ -5727,6 +5728,7 @@
       "/api/e/expediente/[docId]/firmar",
       "/api/e/expediente/[docId]/firmar/codigo",
       "/api/e/fichaje",
+      "/api/e/fichaje/incidencia",
       "/api/e/login",
       "/api/e/push/subscribe",
       "/api/e/salir",
@@ -6329,6 +6331,7 @@
       "rrhh.firma_otps",
       "rrhh.firmas",
       "rrhh.incidencias_mes",
+      "rrhh.incidencias_ubicacion",
       "rrhh.mensajes",
       "rrhh.nominas",
       "rrhh.push_subscriptions",
@@ -7030,7 +7033,7 @@
     "packages": 44,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1751,
+    "apis": 1753,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
