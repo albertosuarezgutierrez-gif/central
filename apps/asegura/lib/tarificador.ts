@@ -876,7 +876,7 @@ async function marcarFallo(
   const opcionesAtasco = atasco && atascoCable?.opciones ? { atascoOpciones: atascoCable.opciones } : {}
   const marcaAtasco = atasco ? { atasco: 'esperando', atascoClave: atasco.clave, ...opcionesAtasco } : {}
   // `capturaConDatos`: la captura muestra datos del tomador → el aviso de Telegram sale SIN foto (solo pantalla de plataforma).
-  const marcaCaptura = capturaId && evidencia?.capturaConDatos ? { capturaConDatos: true } : {}
+  const marcaCaptura = capturaId ? { capturaConDatos: evidencia?.capturaConDatos === true } : {}
   const err = JSON.stringify({ ...error, ...marcaAtasco, ...marcaCaptura, html_documento_id: htmlId, en: new Date().toISOString() })
   let filasTocadas: number
   if (conBotVersion) {

@@ -39,12 +39,12 @@ export function pideCapturaAtasco(o: { hayAtasco: boolean; huecoMapa: boolean })
 
 /**
  * Qué captura viaja a asegura. PURA.
- *   · JPEG del atasco (si lo hay y cabe): siempre; `conDatos` = el riesgo lleva datos personales del tomador.
+ *   · JPEG del atasco (si lo hay y cabe): siempre, y SIEMPRE `conDatos: true` (fail-closed: una imagen no se redacta).
  *   · Si no, el PNG de siempre, SOLO sin datos personales (regla anterior: una imagen no se redacta).
  *   · Nada → `null` (la pantalla dirá «sin captura»).
  */
 export function capturaParaCable(o: { png: Buffer | null; jpegAtasco: Buffer | null; hayDatosPersonales: boolean; maxBytes: number }): { base64: string; conDatos: boolean } | null {
-  if (o.jpegAtasco && o.jpegAtasco.length > 0 && o.jpegAtasco.length <= o.maxBytes) return { base64: o.jpegAtasco.toString('base64'), conDatos: o.hayDatosPersonales }
+  if (o.jpegAtasco && o.jpegAtasco.length > 0 && o.jpegAtasco.length <= o.maxBytes) return { base64: o.jpegAtasco.toString('base64'), conDatos: true }
   if (o.png && !o.hayDatosPersonales && o.png.length > 0 && o.png.length <= o.maxBytes) return { base64: o.png.toString('base64'), conDatos: false }
   return null
 }
@@ -54,9 +54,13 @@ export async function capturaJpegAtasco(page: Pick<Page, 'screenshot'>): Promise
   return page.screenshot({ type: 'jpeg', quality: CALIDAD_JPEG_ATASCO, fullPage: false, timeout: 10_000 }).catch(() => null)
 }
 
-/** Textos de las opciones de lista VISIBLES en todos los marcos (crudos; se limpian con `limpiarOpciones`). Nunca lanza. */
-export async function leerOpcionesVisibles(page: Pick<Page, 'frames'>): Promise<string[]> {
+/**
+ * Textos de las opciones de lista VISIBLES en todos los marcos (crudos; se limpian con `limpiarOpciones`). Nunca lanza.
+ * Tres estados: `null` = no se pudo leer (falló el `evaluate` y no hay nada) · `[]` = se miró y no había · lista.
+ */
+export async function leerOpcionesVisibles(page: Pick<Page, 'frames'>): Promise<string[] | null> {
   const out: string[] = []
+  let fallos = 0
   for (const f of page.frames()) {
     if (f.isDetached() || out.length >= MAX_OPCIONES_ATASCO * 2) continue
     const textos = await f
@@ -66,8 +70,9 @@ export async function leerOpcionesVisibles(page: Pick<Page, 'frames'>): Promise<
           .map((el) => ((el as HTMLElement).innerText || el.textContent || '').slice(0, 300))
           .slice(0, 60)
       }, SELECTOR_OPCIONES_VISIBLES)
-      .catch(() => [] as string[])
+      .catch(() => null)
+    if (textos === null) { fallos++; continue }
     out.push(...textos)
   }
-  return out
+  return out.length === 0 && fallos > 0 ? null : out
 }

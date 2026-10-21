@@ -36,6 +36,14 @@ export default function BotsAtascados() {
   const [relanzar, setRelanzar] = useState<string | null>(null)
   const pedidas = useRef(new Set<string>())
 
+  // El modal de la imagen se cierra con Escape.
+  useEffect(() => {
+    if (!ampliada) return
+    const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') setAmpliada(null) }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  }, [ampliada])
+
   // Recarga SIN vaciar la lista (no desmonta).
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -72,14 +80,16 @@ export default function BotsAtascados() {
         if (!a.hayCaptura || pedidas.current.has(a.id)) continue
         pedidas.current.add(a.id)
         setCapturas((c) => ({ ...c, [a.id]: null }))
+        if (!vivo) { pedidas.current.delete(a.id); break }
         try {
           const res = await fetch(`/api/correduria/tarificador/atascos/${encodeURIComponent(a.id)}`, { cache: 'no-store' })
           const j = (await res.json().catch(() => null)) as { atasco?: { capturaBase64?: unknown; capturaMime?: unknown } } | null
           const b64 = typeof j?.atasco?.capturaBase64 === 'string' && /^[A-Za-z0-9+/]+=*$/.test(j.atasco.capturaBase64) ? j.atasco.capturaBase64 : null
           const mime = j?.atasco?.capturaMime === 'image/jpeg' ? 'image/jpeg' : 'image/png'
-          if (vivo) setCapturas((c) => ({ ...c, [a.id]: b64 ? { b64, mime } : '' }))
+          // El resultado es por id: vale aunque `atascos` haya cambiado (si no, el bucle nuevo, que ya vio el id como pedido, no lo repetiría).
+          setCapturas((c) => ({ ...c, [a.id]: b64 ? { b64, mime } : '' }))
         } catch {
-          if (vivo) setCapturas((c) => ({ ...c, [a.id]: '' }))
+          setCapturas((c) => ({ ...c, [a.id]: '' }))
         }
       }
     })()
@@ -202,13 +212,13 @@ export default function BotsAtascados() {
                     </div>
                     <p style={{ margin: 0, fontSize: 14, overflowWrap: 'anywhere' }}>
                       Cliente: <strong>{a.clienteNombre ?? 'sin nombre en la ficha'}</strong>
-                      {oportunidad && <> · <Link href={oportunidad}>ver oportunidad</Link></>}
+                      {oportunidad && <> · <Link href={oportunidad} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>ver oportunidad</Link></>}
                     </p>
                     <p style={{ margin: 0, fontSize: 16, overflowWrap: 'anywhere' }}>
                       El bot se ha parado en: <strong>{v.paradoEn}</strong>
                     </p>
 
-                    {v.captura === 'sin_captura' && <p className="muted" style={{ margin: 0, fontSize: 13 }}>Sin captura (bot antiguo).</p>}
+                    {v.captura === 'sin_captura' && <p className="muted" style={{ margin: 0, fontSize: 13 }}>Sin captura de este atasco.</p>}
                     {v.captura === 'hay' && cap === null && <p className="muted" style={{ margin: 0, fontSize: 13 }}>Cargando la captura…</p>}
                     {v.captura === 'hay' && cap === '' && <p className="muted" style={{ margin: 0, fontSize: 13 }}>No se ha podido cargar la captura.</p>}
                     {v.captura === 'hay' && cap && (
@@ -250,8 +260,12 @@ export default function BotsAtascados() {
                     {v.modo === 'sin_opciones' && (
                       <div role="note" style={{ border: '1px solid var(--warning)', borderRadius: 8, padding: 10, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
                         <p style={{ margin: 0, fontSize: 14, overflowWrap: 'anywhere' }}>
-                          El bot no ha podido leer las opciones de esa lista (no llegó a abrirse), así que desde aquí no se puede elegir.
-                          Descártalo y vuelve a pedir el precio; si se repite, avisa para mapear esa pantalla.
+                          {v.opcionesLeidas === 'vacia'
+                            ? 'El bot no ha podido leer las opciones de esa lista (no llegó a abrirse), así que desde aquí no se puede elegir.'
+                            : v.opcionesLeidas === 'sin_leer'
+                              ? 'No se pudieron leer las opciones de esa lista, así que desde aquí no se puede elegir.'
+                              : 'Ninguna de las opciones que vio el bot se puede pulsar desde aquí.'}
+                          {' '}Descártalo y vuelve a pedir el precio; si se repite, avisa para mapear esa pantalla.
                         </p>
                         {v.opcionesVistas && v.opcionesVistas.length > 0 && (
                           <p className="muted" style={{ margin: 0, fontSize: 13, overflowWrap: 'anywhere' }}>El portal enseñaba: {v.opcionesVistas.join(' · ')}</p>

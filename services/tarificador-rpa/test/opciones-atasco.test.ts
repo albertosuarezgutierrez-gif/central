@@ -1,14 +1,23 @@
 // Captura JPEG y opciones de lista de un atasco (21/10/2026). Un brazo por regla.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { capturaParaCable, limpiarOpciones, pideCapturaAtasco, MAX_OPCIONES_ATASCO } from '../src/opciones-atasco.ts'
+import { capturaParaCable, leerOpcionesVisibles, limpiarOpciones, pideCapturaAtasco, MAX_OPCIONES_ATASCO } from '../src/opciones-atasco.ts'
 
 const png = Buffer.from('png-bytes')
 const jpg = Buffer.from('jpeg-bytes')
 
 test('captura: con atasco viaja el JPEG aunque haya datos personales, MARCADO conDatos', () => {
   assert.deepEqual(capturaParaCable({ png, jpegAtasco: jpg, hayDatosPersonales: true, maxBytes: 100 }), { base64: jpg.toString('base64'), conDatos: true })
-  assert.deepEqual(capturaParaCable({ png, jpegAtasco: jpg, hayDatosPersonales: false, maxBytes: 100 }), { base64: jpg.toString('base64'), conDatos: false })
+  // Fail-closed (21/10/2026): el JPEG de un atasco SIEMPRE va marcado, también sin secretos del riesgo (una imagen no se redacta).
+  assert.deepEqual(capturaParaCable({ png, jpegAtasco: jpg, hayDatosPersonales: false, maxBytes: 100 }), { base64: jpg.toString('base64'), conDatos: true })
+})
+
+test('opciones: tres estados — evaluate roto → null (no []); sin opciones → []; con opciones → lista', async () => {
+  const marco = (evaluate: () => Promise<string[]>) => ({ isDetached: () => false, evaluate })
+  const pagina = (...marcos: ReturnType<typeof marco>[]) => ({ frames: () => marcos }) as unknown as Parameters<typeof leerOpcionesVisibles>[0]
+  assert.equal(await leerOpcionesVisibles(pagina(marco(async () => { throw new Error('detached') }))), null)
+  assert.deepEqual(await leerOpcionesVisibles(pagina(marco(async () => []))), [])
+  assert.deepEqual(await leerOpcionesVisibles(pagina(marco(async () => { throw new Error('x') }), marco(async () => ['SEVILLA']))), ['SEVILLA'])
 })
 
 test('captura: sin atasco y con datos personales NO viaja (una imagen no se redacta)', () => {

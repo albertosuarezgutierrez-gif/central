@@ -742,7 +742,7 @@ test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactad
   assert.match(runner, /cap\.conDatos \? \{ capturaConDatos: true as const \}/, 'la captura con datos viaja MARCADA')
   const op = sinComentarios(readFileSync(join(SRV, 'src/opciones-atasco.ts'), 'utf8'))
   assert.match(op, /if \(o\.png && !o\.hayDatosPersonales &&/, 'con NIF en el riesgo no viaja el PNG genérico (una imagen no se redacta)')
-  assert.match(op, /return \{ base64: o\.jpegAtasco\.toString\('base64'\), conDatos: o\.hayDatosPersonales \}/, 'el JPEG del atasco lleva la marca de datos')
+  assert.match(op, /return \{ base64: o\.jpegAtasco\.toString\('base64'\), conDatos: true \}/, 'el JPEG del atasco lleva SIEMPRE la marca de datos (fail-closed)')
   const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
   assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
 })

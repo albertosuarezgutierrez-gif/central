@@ -56,6 +56,8 @@ export type Atasco = {
   clienteNombre: string | null
   /** Opciones de lista que vio el bot: `null` = no se miraron; `[]` = no había ninguna visible. */
   opciones: string[] | null
+  /** La captura puede llevar datos del tomador. FAIL-CLOSED: solo un `false` explícito de asegura la libera (Telegram). */
+  capturaConDatos: boolean
 }
 
 export type Pausa = { id: string; compania: string; ramo: string; motivo: string; pausadaEn: string; pendientes: number | null }
@@ -93,6 +95,7 @@ export function atascoValido(v: unknown): Atasco | null {
     capturaMime: o.capturaMime === 'image/jpeg' ? 'image/jpeg' : 'image/png',
     clave: cadena(o.clave) ?? '',
     clienteNombre: cadena(o.clienteNombre),
+    capturaConDatos: o.capturaConDatos !== false,
     opciones: Array.isArray(o.opciones) ? o.opciones.map(cadena).filter((x): x is string => x !== null).slice(0, 30) : null,
   }
 }
@@ -143,6 +146,8 @@ export type VistaAtasco = {
   /** Textos que vio el bot en la lista y que no se pueden pulsar desde aquí (solo informativo). `null` = no se miró. */
   opcionesVistas: string[] | null
   captura: 'hay' | 'sin_captura'
+  /** Solo en `sin_opciones`: `vacia` (opciones = []: la lista no llegó a abrirse) · `sin_leer` (null: no se pudo leer) · `hay`. */
+  opcionesLeidas: 'vacia' | 'sin_leer' | 'hay'
 }
 
 /**
@@ -157,9 +162,9 @@ export function vistaAtasco(a: Atasco): VistaAtasco {
     const botones = a.candidatos.filter(esCandidatoOpcion).map((c) => ({ n: c.n, texto: texto(c) }))
     const pulsables = new Set(botones.map((b) => b.texto))
     const opcionesVistas = a.opciones === null ? null : a.opciones.filter((o) => !pulsables.has(o))
-    return { titulo, paradoEn: paradoEn(a), modo: botones.length ? 'opciones' : 'sin_opciones', botones, opcionesVistas, captura }
+    return { titulo, paradoEn: paradoEn(a), modo: botones.length ? 'opciones' : 'sin_opciones', botones, opcionesVistas, captura, opcionesLeidas: a.opciones === null ? 'sin_leer' : a.opciones.length === 0 ? 'vacia' : 'hay' }
   }
-  return { titulo, paradoEn: paradoEn(a), modo: 'elementos', botones: a.candidatos.map((c) => ({ n: c.n, texto: lineaCandidato(c).replace(/^\d+ · /, '') })), opcionesVistas: null, captura }
+  return { titulo, paradoEn: paradoEn(a), modo: 'elementos', botones: a.candidatos.map((c) => ({ n: c.n, texto: lineaCandidato(c).replace(/^\d+ · /, '') })), opcionesVistas: null, captura, opcionesLeidas: a.opciones === null ? 'sin_leer' : a.opciones.length === 0 ? 'vacia' : 'hay' }
 }
 
 /** Enlace al bloque «Pedir precio» de la oportunidad (para relanzar tras descartar). `null` sin oportunidad. PURO. */

@@ -755,3 +755,11 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
 
   return { ok: false, errores: ['resultado tiene que ser «ok», «error», «explorado» o «humo»'] }
 }
+
+/**
+ * ¿La captura puede llevar datos del tomador? FAIL-CLOSED: solo es «sin datos» si el worker lo marcó expresamente (`'false'`)
+ * Y el trabajo no tiene cliente. Sin marca (bot antiguo) o con cliente → se trata como con datos (no sale a Telegram). PURO.
+ */
+export function capturaConDatos(f: { captura_con_datos?: string | null; con_cliente?: boolean | null }): boolean {
+  return !(f.captura_con_datos === 'false' && f.con_cliente === false)
+}

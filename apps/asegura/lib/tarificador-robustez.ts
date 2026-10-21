@@ -28,7 +28,7 @@ import {
 } from '@central/module-tarificacion'
 import { Prisma } from '@prisma/client' // el MISMO cliente que el `prisma` de ./tenant: un Prisma.sql de otro cliente generado se envía como parámetro (P2010 en $6)
 import { prisma } from './tenant'
-import { opcionesDeError } from './tarificador-reglas'
+import { capturaConDatos as capturaConDatosDe, opcionesDeError } from './tarificador-reglas'
 import { hayAtascos, hayConfianzaAprendido, hayPausas } from './esquema-bd'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -126,7 +126,7 @@ type FilaAtasco = {
   id: string; trabajo_id: string; oportunidad_id: string | null; compania: string; ramo: string; clave: string; tipo: string; descripcion: string
   etiqueta: string | null; texto_esperado: string | null; candidatos: unknown; created_at: Date; caduca_at: Date; avisado_at: Date | null
   captura_documento_id: string | null; ronda: bigint
-  cliente_nombre?: string | null; opciones?: unknown; captura_con_datos?: boolean | null
+  cliente_nombre?: string | null; opciones?: unknown; captura_con_datos?: string | null; con_cliente?: boolean | null
 }
 
 type Captura = { b64: string; mime: 'image/png' | 'image/jpeg' }
@@ -164,7 +164,7 @@ export async function listarAtascos(correduriaId: string, o: { pendientesAviso?:
            a.captura_documento_id::text as captura_documento_id,
            (select count(*) from seguros.tarificador_atascos b where b.trabajo_id = a.trabajo_id) as ronda,
            nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente_nombre,
-           t.error->'atascoOpciones' as opciones, (t.error->>'capturaConDatos') = 'true' as captura_con_datos
+           t.error->'atascoOpciones' as opciones, (t.error->>'capturaConDatos') as captura_con_datos, (t.cliente_id is not null) as con_cliente
     from seguros.tarificador_atascos a
     join seguros.tarificacion_trabajos t on t.id = a.trabajo_id and t.correduria_id = a.correduria_id
     left join seguros.clientes c on c.id = t.cliente_id and c.correduria_id = t.correduria_id
@@ -179,15 +179,16 @@ export async function listarAtascos(correduriaId: string, o: { pendientesAviso?:
   for (const f of filas) {
     const a = atascoDeFila(f)
     if (!a) { ilegibles++; continue }
+    const conDatos = capturaConDatosDe(f)
     atascos.push({
       id: f.id, trabajoId: f.trabajo_id, oportunidadId: f.oportunidad_id, compania: f.compania, ramo: f.ramo, tipo: a.tipo,
       descripcion: a.descripcion, etiqueta: a.etiqueta, textoEsperado: a.textoEsperado, candidatos: candidatosVisibles(a),
       ronda: Number(f.ronda), maxRondas: MAX_RONDAS_ATASCO, creadoEn: f.created_at.toISOString(), caducaEn: f.caduca_at.toISOString(),
       avisadoEn: f.avisado_at?.toISOString() ?? null, hayCaptura: f.captura_documento_id !== null,
-      clave: f.clave, clienteNombre: f.cliente_nombre ?? null, opciones: opcionesDeError(f.opciones), capturaConDatos: f.captura_con_datos === true,
+      clave: f.clave, clienteNombre: f.cliente_nombre ?? null, opciones: opcionesDeError(f.opciones), capturaConDatos: conDatos,
       // Con datos del tomador, la captura NO va a los avisos (Telegram): solo a la pantalla de plataforma (detalle).
       ...(o.conCaptura ? await (async () => {
-        if (o.sinCapturaConDatos && f.captura_con_datos === true) return { capturaBase64: null, capturaMime: null }
+        if (o.sinCapturaConDatos && conDatos) return { capturaBase64: null, capturaMime: null }
         const c = await capturaDentroDeTope(correduriaId, f.captura_documento_id, bytesCapturas, (n) => { bytesCapturas += n })
         return { capturaBase64: c?.b64 ?? null, capturaMime: c?.mime ?? null }
       })() : {}),

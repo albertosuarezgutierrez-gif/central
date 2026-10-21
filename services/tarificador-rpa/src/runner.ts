@@ -435,7 +435,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     // ATASCO / HUECO (21/10/2026, opciones-atasco.ts): pantallazo JPEG para que Alberto VEA dónde paró (viaja aunque el riesgo
     // lleve datos personales, marcado `capturaConDatos`) y, si el atasco es de elegir una opción de lista, sus textos visibles.
     const capturaAtasco = pideCapturaAtasco({ hayAtasco: atasco !== null, huecoMapa: pideInventarioDom(error) }) ? await capturaJpegAtasco(actual) : null
-    const opcionesAtasco = atasco && esPeticionOpcion(atasco) ? await leerOpcionesVisibles(actual).catch(() => []) : null
+    const opcionesAtasco = atasco && esPeticionOpcion(atasco) ? await leerOpcionesVisibles(actual).catch(() => null) : null
     return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom, capturaAtasco, opcionesAtasco }, atasco }
   } catch (e) {
     ti.cubrir({ ok: false, codigo: 'desconocido' })

@@ -15,7 +15,7 @@ const base: Atasco = {
     { n: 2, tag: 'mat-option', id: null, type: null, role: 'option', texto: 'SEVILLA', etiqueta: null },
   ],
   ronda: 1, maxRondas: 3, creadoEn: '2026-10-21T08:00:00Z', caducaEn: '2026-10-22T08:00:00Z', hayCaptura: true, capturaBase64: null,
-  capturaMime: 'image/jpeg', clave: 'elegir_opcion_poblacion', clienteNombre: 'Ana Ruiz', opciones: ['SEVILLA', 'CAMAS'],
+  capturaMime: 'image/jpeg', clave: 'elegir_opcion_poblacion', clienteNombre: 'Ana Ruiz', opciones: ['SEVILLA', 'CAMAS'], capturaConDatos: true,
 }
 
 test('esCandidatoOpcion: una opción de lista sí; una etiqueta no', () => {
@@ -43,6 +43,21 @@ test('vistaAtasco: sin opciones capturadas (solo etiquetas) → sin_opciones, si
   assert.equal(v.modo, 'sin_opciones')
   assert.deepEqual(v.botones, [])
   assert.equal(v.opcionesVistas, null)
+  assert.equal(v.opcionesLeidas, 'sin_leer', 'null = no se pudo leer, NO «no llegó a abrirse»')
+})
+
+test('vistaAtasco: «no llegó a abrirse» solo con opciones = [] (tres estados)', () => {
+  const sin = { ...base, candidatos: [base.candidatos[0]!] }
+  assert.equal(vistaAtasco({ ...sin, opciones: [] }).opcionesLeidas, 'vacia')
+  assert.equal(vistaAtasco({ ...sin, opciones: null }).opcionesLeidas, 'sin_leer')
+  assert.equal(vistaAtasco({ ...sin, opciones: ['CAMAS'] }).opcionesLeidas, 'hay')
+})
+
+test('atascoValido: capturaConDatos FAIL-CLOSED (solo un false explícito la libera)', () => {
+  const crudo = { ...base, capturaBase64: undefined }
+  assert.equal(atascoValido({ ...crudo, capturaConDatos: false })!.capturaConDatos, false)
+  assert.equal(atascoValido({ ...crudo, capturaConDatos: undefined })!.capturaConDatos, true)
+  assert.equal(atascoValido({ ...crudo, capturaConDatos: 'no' })!.capturaConDatos, true)
 })
 
 test('vistaAtasco: tres estados de la captura y de otros atascos (elementos)', () => {
@@ -72,6 +87,16 @@ test('pantalla: los botones de opción llaman a responder(elegir n) y son ≥44 
   assert.match(src, /responder\(a, \{ accion: 'elegir', n: b\.n \}\)/)
   assert.match(src, /minHeight: 44/)
   assert.match(src, /maxWidth: '100%'/)
-  assert.match(src, /Sin captura \(bot antiguo\)/)
+  assert.match(src, /Sin captura de este atasco/)
+  assert.ok(!/bot antiguo/.test(src), 'sin captura no se culpa al bot antiguo')
+  assert.match(src, /No se pudieron leer las opciones/)
+  assert.match(src, /if \(!vivo\) \{ pedidas\.current\.delete\(a\.id\); break \}/, 'el bucle viejo libera lo que no pidió')
+  assert.match(src, /e\.key === 'Escape'/, 'el modal de la imagen se cierra con Escape')
+  assert.match(src, /minHeight: 44[^\n]*>ver oportunidad|ver oportunidad<\/Link>/, 'ver oportunidad es un enlace con alto ≥44')
   assert.match(src, /El bot se ha parado en:/)
+})
+
+test('aviso de Telegram: la foto del atasco solo sale si NO lleva datos del tomador (fail-closed)', () => {
+  const ruta = readFileSync(join(import.meta.dirname, '../app/api/cron/tarificador-verificacion/route.ts'), 'utf8')
+  assert.match(ruta, /if \(a\.capturaBase64 && !a\.capturaConDatos\) await tgSendPhoto/)
 })

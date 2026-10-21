@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { leerResultadoWorker, mimeCaptura, nombreCapturaFallo, opcionesDeError } from './tarificador-reglas.ts'
+import { capturaConDatos, leerResultadoWorker, mimeCaptura, nombreCapturaFallo, opcionesDeError } from './tarificador-reglas.ts'
 import { esNombreEvidenciaFallo } from './tarificador-purga-evidencia-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -48,12 +48,21 @@ test('servicio: los avisos (Telegram) nunca llevan la captura con datos; el deta
   const det = leer('app/api/operador/tarificador/atascos/[id]/route.ts')
   assert.match(det, /if \(!operadorAutorizado\(req\)\) return NextResponse\.json\(\{ error: 'No autorizado' \}, \{ status: 401 \}\)/)
   const rob = leer('lib/tarificador-robustez.ts')
-  assert.match(rob, /if \(o\.sinCapturaConDatos && f\.captura_con_datos === true\) return \{ capturaBase64: null, capturaMime: null \}/)
+  assert.match(rob, /if \(o\.sinCapturaConDatos && conDatos\) return \{ capturaBase64: null, capturaMime: null \}/)
   assert.match(rob, /from seguros\.documentos where id = \$\{documentoId\}::uuid and correduria_id = \$\{correduriaId\}::uuid/, 'la captura solo de ESTA correduría')
 })
 
 test('guardado: la captura usa el nombre/mime de sus bytes y marca capturaConDatos en el error', () => {
   const src = leer('lib/tarificador.ts')
   assert.match(src, /nombre: nombreCapturaFallo\(id, mimeCap\), mime: mimeCap/)
-  assert.match(src, /const marcaCaptura = capturaId && evidencia\?\.capturaConDatos \? \{ capturaConDatos: true \} : \{\}/)
+  assert.match(src, /const marcaCaptura = capturaId \? \{ capturaConDatos: evidencia\?\.capturaConDatos === true \} : \{\}/)
+})
+
+test('capturaConDatos: fail-closed — sin marca o con cliente se trata como con datos; solo `false` + sin cliente sale', () => {
+  assert.equal(capturaConDatos({ captura_con_datos: 'true', con_cliente: false }), true)
+  assert.equal(capturaConDatos({ captura_con_datos: null, con_cliente: false }), true)
+  assert.equal(capturaConDatos({ captura_con_datos: undefined, con_cliente: undefined }), true)
+  assert.equal(capturaConDatos({ captura_con_datos: 'false', con_cliente: true }), true)
+  assert.equal(capturaConDatos({ captura_con_datos: 'false', con_cliente: null }), true)
+  assert.equal(capturaConDatos({ captura_con_datos: 'false', con_cliente: false }), false)
 })
