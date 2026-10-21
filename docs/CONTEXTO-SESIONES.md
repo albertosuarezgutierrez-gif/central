@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — Correduría · ficha de oportunidad: «Historial y bonificaciones» (SINCO, años sin siniestros) salía en ramos que no son
+de vehículo (lo vio Alberto en una de Accidentes). Ahora solo sale en auto/moto: `muestraHistorialSinco()` en `piezas-riesgo.ts` reutiliza
+`admiteDatosVehiculo()`; test `historial-sinco.test.ts` (visto en rojo). Pendiente: en esa misma ficha, la Comparativa dice «Esta oportunidad no
+existe en la correduría» = 404 del puerto de asegura (`/api/operador` comparativa); falta ver la respuesta cruda para ese id.
+
 **(21/10/2026)** — RRHH · fichaje sin ubicación (Global2/Pilar): el aviso de permiso era de Safari para TODOS (captura era Android/Chrome) y
 «Reintentar» no sirve con permiso bloqueado. Ahora: mensaje por plataforma (iOS/Android/otro), `permissions.query` para detectar `denied`
 (botón «Ya lo he permitido»), «Obteniendo ubicación…», 400 `ubicacion_requerida` ya no culpa a permisos, timeout alta precisión 10 s.
