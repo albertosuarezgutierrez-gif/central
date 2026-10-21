@@ -42,7 +42,7 @@ export function elegirPoblacionPorLocalidades(opciones: readonly OpcionPoblacion
 }
 
 /** Resultado de elegir la población en la lista desplegada de Allianz Hogar (`town`). `indice` = posición en `textos`. */
-export type EleccionPoblacionHogar = { tipo: 'elegida'; indice: number } | { tipo: 'sin_opciones' } | { tipo: 'sin_municipio' } | { tipo: 'sin_coincidencia' }
+export type EleccionPoblacionHogar = { tipo: 'elegida'; indice: number; por: 'nucleo' | 'municipio' | 'unica' } | { tipo: 'sin_opciones' } | { tipo: 'sin_municipio' } | { tipo: 'sin_coincidencia' }
 
 const PALABRAS_VACIAS = new Set(['DE', 'DEL', 'LA', 'LAS', 'LOS', 'EL'])
 
@@ -73,12 +73,12 @@ export function elegirPoblacionHogar(textos: readonly string[], municipio: strin
   const nucleo = nucleoDeVia(nombreVia)
   if (nucleo !== null) {
     const casan = etiquetas.map((e, i) => (agujaCasa(nucleo, e) ? i : -1)).filter((i) => i >= 0)
-    if (casan.length === 1) return { tipo: 'elegida', indice: casan[0] }
+    if (casan.length === 1) return { tipo: 'elegida', indice: casan[0], por: 'nucleo' }
   }
   if (municipio !== null && municipio.trim() !== '') {
     const o = elegirPoblacionPorLocalidades(etiquetas.map((etiqueta, i) => ({ codigo: String(i), etiqueta })), [municipio])
-    if (o !== null) return { tipo: 'elegida', indice: Number(o.codigo) }
+    if (o !== null) return { tipo: 'elegida', indice: Number(o.codigo), por: 'municipio' }
   }
-  if (textos.length === 1) return { tipo: 'elegida', indice: 0 }
+  if (textos.length === 1) return { tipo: 'elegida', indice: 0, por: 'unica' }
   return nucleo === null && (municipio === null || municipio.trim() === '') ? { tipo: 'sin_municipio' } : { tipo: 'sin_coincidencia' }
 }

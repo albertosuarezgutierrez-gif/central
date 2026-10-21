@@ -65,6 +65,18 @@ export function etiquetaPide(item: ItemTarificar, p: ParaTarificar): string | nu
   return `Lo pide: ${item.pide.join(', ')}`
 }
 
+/**
+ * ¿Se puede ofrecer el botón de tarificar de cada herramienta? Solo si SU comprobación se hizo (ninguna fuente suya «sin
+ * comprobar») y no le queda ningún dato (ni falta, ni confirmar, ni sin comprobar) que ella pida. Bots = todas las compañías. PURA.
+ */
+export function accionesListas(p: ParaTarificar): { avant2: boolean; bots: boolean } {
+  const pideAlguno = (quienes: readonly string[]) => p.items.some((i) => i.pide.some((q) => quienes.includes(q)))
+  const a = p.comprobaciones.filter((c) => c.quien === QUIEN_AVANT2)
+  const b = p.comprobaciones.filter((c) => c.quien !== QUIEN_AVANT2)
+  const lista = (cs: readonly Comprobacion[]) => cs.length > 0 && cs.every((c) => c.estado === 'comprobado') && !pideAlguno(cs.map((c) => c.quien))
+  return { avant2: lista(a), bots: lista(b) }
+}
+
 const mayus = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s)
 
 // ─── Avant2 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -217,7 +229,9 @@ export function aportacionesBotsHogar(e: EntradaBotsHogar): Aportacion[] {
         // Origen FICHA: asegura lo pone desde la ficha del tomador al encolar. Aquí se mira si la ficha lo TIENE.
         const t = e.tomador
         const claves = FICHA_DE_CLAVE[fila.clave]
-        if (!t || !claves) continue
+        if (!claves) continue
+        // Sin la figura del tomador no se puede mirar su ficha: «sin comprobar», nunca cubierto (como `faltanFichaTomadorParaHogar`).
+        if (!t) { items.push({ clave: 'persona.tomador.ficha', etiqueta: 'Ficha del tomador no disponible: no se puede comprobar', estado: 'sin_comprobar', destino: 'personas' }); continue }
         if (t.faltan === null) { items.push({ clave: `persona.${t.clienteId}.ficha`, etiqueta: `Ficha de ${t.nombre}: no se ha podido leer`, estado: 'sin_comprobar', destino: 'personas' }); continue }
         for (const k of claves) if (t.faltan.includes(k)) items.push({ clave: `persona.${t.clienteId}.${k}`, etiqueta: `${mayus(rotuloFalta(k))} · ${t.nombre}`, estado: 'falta', destino: 'personas' })
       }

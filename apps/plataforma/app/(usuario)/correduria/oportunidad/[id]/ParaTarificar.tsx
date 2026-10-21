@@ -15,7 +15,7 @@ import type { Riesgo } from '@/lib/riesgo-asegura'
 import { datosViviendaParaBot, eleccionesInicialesHogar } from '@/lib/tarificador-hogar-formulario'
 import { rotuloCompania, type IntegracionVista } from '@/lib/tarificador-probar'
 import {
-  aportacionAvant2, aportacionesBotsHogar, aportacionesBotsMotor, etiquetaPide, unirParaTarificar, type Aportacion, type Destino, type ItemTarificar,
+  accionesListas, aportacionAvant2, aportacionesBotsHogar, aportacionesBotsMotor, etiquetaPide, unirParaTarificar, type Aportacion, type Destino, type ItemTarificar,
 } from '@/lib/correduria/para-tarificar'
 import { PendientesMotorContext } from '../../cliente/[id]/PendientesMotor'
 import { abrirSeccion } from './SeccionPlegable'
@@ -90,7 +90,10 @@ export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integr
   const pendientes = p.items.filter((i) => i.estado !== 'sin_comprobar')
   const itemsSinComprobar = p.items.filter((i) => i.estado === 'sin_comprobar')
   const fuentesSinComprobar = p.comprobaciones.filter((c) => c.estado === 'sin_comprobar')
-  const hayBotsComprobados = p.comprobados.some((q) => q !== 'Avant2')
+  // Cada botón solo con SU comprobación hecha y nada suyo pendiente ni «sin comprobar».
+  const listas = accionesListas(p)
+  const verAvant2 = aplicaAvant2 && listas.avant2
+  const hayAcciones = verAvant2 || listas.bots
   const nadaQueComprobar = p.comprobaciones.length === 0
   const titulo = pendientes.length > 0 ? 'Para tarificar faltan' : p.listo ? 'Para tarificar no falta nada' : 'Para tarificar'
   const notaAvant2 = p.comprobaciones.find((c) => c.quien === 'Avant2')?.nota
@@ -125,9 +128,9 @@ export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integr
         </div>
       )}
 
-      {pendientes.length === 0 && !nadaQueComprobar && (
+      {hayAcciones && (
         <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))' }}>
-          {aplicaAvant2 && (
+          {verAvant2 && (
             <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
               <button type="button" onClick={onTarificarAvant2} style={{ ...btnStyle('primario', 'md'), minHeight: 44, whiteSpace: 'normal', height: 'auto' }}>
                 Tarificar con Avant2 · 0,50€
@@ -135,9 +138,9 @@ export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integr
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>Abre el cotizador (gratis). Solo se paga al confirmar en su botón final.</span>
             </div>
           )}
-          {hayBotsComprobados && (
+          {listas.bots && (
             <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
-              <button type="button" onClick={onLanzarBots} style={{ ...btnStyle(aplicaAvant2 ? 'secundario' : 'primario', 'md'), minHeight: 44, whiteSpace: 'normal', height: 'auto' }}>
+              <button type="button" onClick={onLanzarBots} style={{ ...btnStyle(verAvant2 ? 'secundario' : 'primario', 'md'), minHeight: 44, whiteSpace: 'normal', height: 'auto' }}>
                 Lanzar bots (gratis)
               </button>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>Lleva a «Bots (gratis)»: «Pedir precio a todas» o compañía a compañía. Solo precio.</span>
@@ -146,7 +149,7 @@ export default function ParaTarificar({ riesgo, aplicaAvant2, esVehiculo, integr
         </div>
       )}
 
-      {pendientes.length > 0 && (
+      {!nadaQueComprobar && !p.listo && (
         <button type="button" onClick={() => abrirSeccion('sec-pedir-precio', 'pedir-precio')}
           style={{ all: 'unset', cursor: 'pointer', color: 'var(--primary)', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
           Ir a «Pedir precio» igualmente →

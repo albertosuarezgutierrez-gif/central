@@ -432,30 +432,36 @@ async function opcionAutocompletada(page: Page, marco: Frame, ctx: CtxVivienda, 
 }
 
 /**
- * Abre la lista de `town` (foco + flecha abajo si no se despliega sola), lee sus opciones y pulsa la que coincide con el municipio
- * del riesgo (`elegirPoblacionHogar`). `true` = quedó con valor. `false` = no hay lista legible o falta municipio (sigue la capa
- * común). Con opciones y SIN coincidencia única → hueco que LISTA las opciones (nunca se elige una al azar).
+ * Abre la lista de `town` (foco + flecha abajo si no se despliega sola), lee sus opciones y pulsa la que elige `elegirPoblacionHogar`
+ * (núcleo de la vía → municipio → opción única). Devuelve cómo se eligió, o `null` si no hay lista fiable o falta dato (sigue la capa
+ * común). Las opciones se limitan al listbox de `town` (`aria-controls`/`aria-owns`); sin ese enlace, la lista debe APARECER solo al
+ * abrir `town` (si ya había opciones visibles antes, no se sabe de quién son: `null`). Con opciones y SIN coincidencia → hueco que LISTA.
  */
-async function elegirPoblacionDeLista(page: Page, marco: Frame, ctx: CtxVivienda, municipio: string | null, nombreVia: string | null): Promise<boolean> {
+async function elegirPoblacionDeLista(page: Page, marco: Frame, ctx: CtxVivienda, municipio: string | null, nombreVia: string | null): Promise<'nucleo' | 'municipio' | 'unica' | null> {
   const campo = marco.locator(`input${selControl(CONTROLES.poblacion)}`)
-  if ((municipio === null && nombreVia === null) || (await campo.count()) !== 1) return false
-  const opciones = marco.locator('[role=option]:visible, nx-autocomplete-option:visible, mat-option:visible')
-  const leerTextos = async () => (await opciones.allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim()).filter((t) => t !== '')
-  let textos = await leerTextos()
-  if (textos.length === 0) {
-    await campo.focus({ timeout: 5_000 }).catch(() => undefined)
+  if ((municipio === null && nombreVia === null) || (await campo.count()) !== 1) return null
+  const SEL_OPC = '[role=option]:visible, nx-autocomplete-option:visible, mat-option:visible'
+  const enlace = ((await campo.getAttribute('aria-controls').catch(() => null)) ?? (await campo.getAttribute('aria-owns').catch(() => null)) ?? '').trim().split(/\s+/)[0]
+  const opciones = enlace && /^[\w-]+$/.test(enlace) ? marco.locator(`#${enlace}`).locator(SEL_OPC) : marco.locator(SEL_OPC)
+  if (!enlace && (await opciones.count()) > 0) return null
+  // Texto + posición ORIGINAL en el locator (los vacíos se descartan sin desplazar los índices).
+  const leer = async () => (await opciones.evaluateAll((els) => els.map((el, i) => ({ i, t: ((el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim() })))).filter((x) => x.t !== '')
+  await campo.focus({ timeout: 5_000 }).catch(() => undefined)
+  let items = await leer()
+  if (items.length === 0) {
     await campo.press('ArrowDown', { timeout: 5_000 }).catch(() => undefined)
     await page.waitForTimeout(500)
-    textos = await leerTextos()
+    items = await leer()
   }
+  const textos = items.map((x) => x.t)
   const r = elegirPoblacionHogar(textos, municipio, nombreVia)
-  if (r.tipo === 'sin_opciones' || r.tipo === 'sin_municipio') return false
+  if (r.tipo === 'sin_opciones' || r.tipo === 'sin_municipio') return null
   if (r.tipo === 'sin_coincidencia') {
     throw new ErrorMapaIncompleto(`la elección de población del CP (ninguna opción coincide de forma única con la del riesgo; el portal ofrece: ${textos.slice(0, 15).join(' | ')})`)
   }
   await ctx.pausaAccion()
-  await ctx.pulsar(opciones.nth(r.indice))
-  if (await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS)) return true
+  await ctx.pulsar(opciones.nth(items[r.indice].i))
+  if (await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS)) return r.por
   throw new ErrorMapaIncompleto('el efecto de la opción de población elegida (tras pulsarla, la población no quedó rellena)')
 }
 
@@ -534,16 +540,21 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
     const loc = await escribir(marco, ctx, op)
     if (op.autocompleta === 'poblacion') {
       let confirmarPob: (() => Promise<void>) | null = null
+      let elegidaPor: 'nucleo' | 'municipio' | 'unica' | null = null
       if (!(await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS))) {
         const hueco = 'la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)'
         // 21/10/2026: antes de la capa común, elección determinista por el municipio del riesgo (exacta o palabras enteras, UNA sola).
-        if (!(await elegirPoblacionDeLista(page, marco, ctx, f.inmueble.municipio, f.inmueble.nombreVia))) {
+        const por = await elegirPoblacionDeLista(page, marco, ctx, f.inmueble.municipio, f.inmueble.nombreVia)
+        if (por !== null) elegidaPor = por
+        else {
           const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco, f.inmueble.municipio !== null)
           if (!e.ok) throw new ErrorMapaIncompleto(hueco)
           confirmarPob = e.confirmar
         }
       }
-      if (f.inmueble.municipio !== null) {
+      // Elegida por núcleo de la vía u opción única: el municipio del riesgo (Castillo de Locubín) puede NO ser la población del CP
+      // (Ventas del Carrizal); ni se contrasta ni se aprende. Solo la vía por municipio / lo autocompletado se contrasta con él.
+      if (f.inmueble.municipio !== null && (elegidaPor === null || elegidaPor === 'municipio')) {
         const pob = await leer(marco.locator(`input${selControl(CONTROLES.poblacion)}`))
         if (plano(pob) !== plano(f.inmueble.municipio)) throw new ErrorMapaIncompleto('la elección de población del CP (el portal autocompletó otra distinta de la del riesgo)')
         await confirmarPob?.().catch(() => undefined)

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  aportacionAvant2, aportacionesBotsHogar, aportacionesBotsMotor, etiquetaPide, resumenIntervinientes, resumenObjeto, unirParaTarificar,
+  accionesListas, aportacionAvant2, aportacionesBotsHogar, aportacionesBotsMotor, etiquetaPide, resumenIntervinientes, resumenObjeto, unirParaTarificar,
   type EntradaBotsHogar, type FiguraParaTarificar,
 } from './para-tarificar.ts'
 import type { DatosViviendaBot } from '../tarificador-hogar-formulario.ts'
@@ -125,4 +125,22 @@ test('SeccionPlegable: plegada de inicio (sin `open` controlado) y perezosa (no 
   assert.doesNotMatch(s, /<details[^>]*\sopen[=\s{]/, 'sin `open`: nace plegada y React no la vuelve a cerrar')
   assert.match(s, /useState\(!perezosa\)/)
   assert.match(s, /\{montada && children\}/)
+})
+
+test('botones de tarificar: solo con SU comprobación hecha; un «sin comprobar» no los enciende', () => {
+  const okA2 = avant2([], [{ ...TOMADOR, faltan: [] }])!
+  const botsOk = botsHogar({ vivienda: { ...VIVIENDA, anioConstruccion: 1990 }, elecciones: { ...ELECCIONES, conMadera: 'no' }, tomador: { ...TOMADOR, faltan: [] } })
+  assert.deepEqual(accionesListas(unirParaTarificar([okA2, ...botsOk])), { avant2: true, bots: true })
+  // Compañías sin leer: Avant2 sí, bots no (aunque no haya ningún dato «falta»).
+  assert.deepEqual(accionesListas(unirParaTarificar([okA2, ...botsHogar({ companias: null })])), { avant2: true, bots: false })
+  // La ficha del tomador sin leer (item «sin comprobar» de Avant2 y del bot): ninguno de los dos.
+  const sinFicha = { ...TOMADOR, faltan: null }
+  assert.deepEqual(accionesListas(unirParaTarificar([avant2([], [sinFicha])!, ...botsHogar({ vivienda: { ...VIVIENDA, anioConstruccion: 1990 }, elecciones: { ...ELECCIONES, conMadera: 'no' }, tomador: sinFicha })])), { avant2: false, bots: false })
+})
+
+test('bots de hogar sin figura de tomador: su ficha queda «sin comprobar», nunca cubierta', () => {
+  const p = unirParaTarificar(botsHogar({ vivienda: { ...VIVIENDA, anioConstruccion: 1990 }, elecciones: { ...ELECCIONES, conMadera: 'no' }, tomador: null }))
+  assert.equal(p.items.find((i) => i.clave === 'persona.tomador.ficha')?.estado, 'sin_comprobar')
+  assert.equal(p.listo, false)
+  assert.equal(accionesListas(p).bots, false)
 })
