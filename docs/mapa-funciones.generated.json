@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T07:14:28Z",
-  "sha": "76fe3ece77630c316d6a2fd07be85f2d7171c8f9",
+  "generadoEn": "2026-10-21T07:56:51Z",
+  "sha": "f864598625cf05bcd73ffc4d1b446016b152f681",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -103130,7 +103130,7 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "irABloque",
@@ -103138,8 +103138,8 @@
           "exportada": true,
           "params": "bloque: BloqueObligatorio, abrirCompleto = false",
           "retorno": null,
-          "linea": 56,
-          "resumen": "Lleva al bloque (el scroller de plataforma es `LayoutShell`: `scrollIntoView` vale)."
+          "linea": 63,
+          "resumen": "Lleva al bloque (el scroller de plataforma es `LayoutShell`: `scrollIntoView` vale). En la pantalla del riesgo el bloque vive en una `SeccionPlegable` PEREZOSA (plegada = sin montar, sin id que buscar"
         },
         {
           "nombre": "Insignia",
@@ -103147,7 +103147,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: Pendiente['estado'] }",
           "retorno": null,
-          "linea": 63
+          "linea": 77
         },
         {
           "nombre": "ControlCampo",
@@ -103155,7 +103155,7 @@
           "exportada": false,
           "params": "{ campo, acciones, estado }: { campo: CampoPanel; acciones: AccionesPanel; estado?: Pendiente['estado'] }",
           "retorno": null,
-          "linea": 69,
+          "linea": 83,
           "resumen": "Control de un campo suelto. El guardado fallido se dice y marca el campo: nunca parece guardado."
         },
         {
@@ -103164,7 +103164,7 @@
           "exportada": true,
           "params": "{ bloque, panel, acciones, completarAbajo = true }: { bloque: BloqueObligatorio; panel: PanelPendientes; acciones: AccionesPanel; completarAbajo?: boolean }",
           "retorno": null,
-          "linea": 103,
+          "linea": 117,
           "resumen": "Lo pendiente de UN bloque (props puras): controles editables, lo de la ficha nombrado, y lo que se completa abajo. `completarAbajo`: solo la ficha de la oportunidad tiene el bloque de siempre plegado "
         },
         {
@@ -103173,7 +103173,7 @@
           "exportada": false,
           "params": "{ bloque, panel, acciones }: { bloque: BloqueObligatorio; panel: PanelPendientes; acciones: AccionesPanel }",
           "retorno": null,
-          "linea": 147,
+          "linea": 161,
           "resumen": "Campos sueltos del bloque que NO están pendientes: se editan en «<Bloque> · completo»."
         },
         {
@@ -103182,7 +103182,7 @@
           "exportada": true,
           "params": "{ bloque, activo, children }: { bloque: BloqueObligatorio; activo: boolean; children: ReactNode }",
           "retorno": null,
-          "linea": 162,
+          "linea": 176,
           "resumen": "Envoltorio de un bloque de la página (Personas = intervinientes · Riesgo = vehículo · Póliza = historial). Si PrecioBots ya publicó qué falta: título con su estado, pendientes arriba y el bloque de si"
         },
         {
@@ -103191,7 +103191,7 @@
           "exportada": true,
           "params": "{ panel, acciones }: { panel: PanelPendientes; acciones: AccionesPanel }",
           "retorno": null,
-          "linea": 190,
+          "linea": 204,
           "resumen": "Sin proveedor (pantalla completa del cotizador): los bloques en línea. Pinta lo pendiente Y los campos sueltos ya completos (uso, ámbito, clase de permiso, sexo, cilindrada…) plegados en «<Bloque> · c"
         },
         {
@@ -103200,7 +103200,7 @@
           "exportada": true,
           "params": "{ panel }: { panel: PanelPendientes }",
           "retorno": null,
-          "linea": 216,
+          "linea": 230,
           "resumen": "Chips por compañía: «Allianz listo» · «Mapfre faltan 2» · «Generali no disponible». Los que faltan llevan a su bloque."
         }
       ],
@@ -103208,7 +103208,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "09524e20a2b9"
+      "hash": "85270f787268"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/piezas.tsx",
@@ -107051,12 +107051,12 @@
           "exportada": true,
           "params": "{ riesgo }: { riesgo: Riesgo }",
           "retorno": null,
-          "linea": 30
+          "linea": 24
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "473c9919c90f"
+      "hash": "4f3db53c0969"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/cargar-variante.tsx",
@@ -108316,6 +108316,34 @@
       "hash": "58c58bb8432a"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/ParaTarificar.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ParaTarificar"
+      ],
+      "funciones": [
+        {
+          "nombre": "ParaTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ riesgo, aplicaAvant2, esVehiculo, integraciones, onTarificarAvant2, onLanzarBots }: { riesgo: Riesgo /** El ramo se cotiza con Avant2 desde esta pantalla (`accionesPrecio().principal`). */ aplicaAvant2: boolean esVehiculo: boolean /** Com",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "FilaDato",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ item, quien }: { item: ItemTarificar; quien: string | null }",
+          "retorno": null,
+          "linea": 163
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "700d2bf988d0"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/parrilla-acciones.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -109241,12 +109269,42 @@
           "exportada": true,
           "params": "{ inicial, hoy, propuestaCartera = null, correoTomador = 'no_se_sabe' }: { inicial: Riesgo; hoy: string; propuestaCartera?: PropuestaCarteraHogar | null; correoTomador?: 'con_email' | 'sin_email' | 'no_se_sabe' }",
           "retorno": null,
-          "linea": 45
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "37f287367002"
+      "hash": "029ed78f6c7f"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SeccionPlegable.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SeccionPlegable",
+        "abrirSeccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "SeccionPlegable",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ id, titulo, resumen, tono = 'normal', perezosa = true, children }: { id: string titulo: string resumen?: ReactNode tono?: TonoResumen perezosa?: boolean children: ReactNode }",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "abrirSeccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, dentro?: string",
+          "retorno": null,
+          "linea": 42,
+          "resumen": "Abre la sección (si estaba plegada, la monta) y la trae a la vista. `dentro`: id de un elemento de dentro al que ir."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9ca4183f2187"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SelectorCatalogoVehiculo.tsx",
@@ -109275,6 +109333,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7239e24b36be"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/useCatalogosHogar.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "useCatalogosHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerCatalogos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<CatalogosHogar>",
+          "linea": 21
+        },
+        {
+          "nombre": "useCatalogosHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "activo = true",
+          "retorno": "CatalogosHogar | null",
+          "linea": 42,
+          "resumen": "`null` = aún leyéndose. `activo: false` = no se pide nada (otro ramo)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f2ad09e78349"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/useComparativa.ts",
@@ -146487,6 +146574,140 @@
       "hash": "cb665c8d7451"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/para-tarificar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Para tarificar faltan» (21/10/2026, Alberto: «aquí solo es necesario saber los datos que faltan para tarificar»). PURO: sin red ni envs, importable desde 'use client' y desde tests. UNA lista que une lo que pide cada herramienta de precio: · Avant2 (Codeoscopic, 0,50€): la comprobación PREVIA con l",
+      "exporta": [
+        "unirParaTarificar",
+        "etiquetaPide",
+        "accionesListas",
+        "aportacionAvant2",
+        "aportacionesBotsHogar",
+        "aportacionesBotsMotor",
+        "resumenIntervinientes",
+        "resumenObjeto"
+      ],
+      "funciones": [
+        {
+          "nombre": "unirParaTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "aportaciones: readonly Aportacion[]",
+          "retorno": "ParaTarificar",
+          "linea": 45,
+          "resumen": "Une las aportaciones: un item por clave; el estado más urgente; el destino y la etiqueta del primero (Avant2 va primero). PURA."
+        },
+        {
+          "nombre": "etiquetaPide",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: ItemTarificar, p: ParaTarificar",
+          "retorno": "string | null",
+          "linea": 63,
+          "resumen": "«Lo pide: Allianz Hogar» solo si NO lo piden todos los comprobados (con uno solo no hace falta decirlo). `null` = no se dice. PURA."
+        },
+        {
+          "nombre": "accionesListas",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParaTarificar",
+          "retorno": "",
+          "linea": 72,
+          "resumen": "¿Se puede ofrecer el botón de tarificar de cada herramienta? Solo si SU comprobación se hizo (ninguna fuente suya «sin comprobar») y no le queda ningún dato (ni falta, ni confirmar, ni sin comprobar) "
+        },
+        {
+          "nombre": "mayus",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 80
+        },
+        {
+          "nombre": "destinoFalta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "k: string",
+          "retorno": "Destino",
+          "linea": 90,
+          "resumen": "Dónde se completa cada clave de `faltanDeFigura`: el estado civil se elige en el cotizador; lo demás, en «Intervinientes»."
+        },
+        {
+          "nombre": "itemsFiguras",
+          "kind": "function",
+          "exportada": false,
+          "params": "figuras: readonly FiguraParaTarificar[]",
+          "retorno": "Omit<ItemTarificar, 'pide'>[]",
+          "linea": 92
+        },
+        {
+          "nombre": "aportacionAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { aplica: boolean esVehiculo: boolean datosRiesgo: DatosRiesgoParaTarificar faltanVehiculo: readonly string[] | null figuras: readonly FiguraParaTarificar[] }",
+          "retorno": "Aportacion | null",
+          "linea": 115,
+          "resumen": "Lo que Avant2 pide y aún no está, según la comprobación previa de asegura. `null` = el ramo no se cotiza con Avant2 desde aquí. `datosRiesgo: null` (asegura no lo manda) o `faltanVehiculo: null` = SIN"
+        },
+        {
+          "nombre": "riesgoHogarParaComprobar",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: DatosViviendaBot, el: Record<string, string>",
+          "retorno": "Record<string, unknown>",
+          "linea": 190,
+          "resumen": "El `riesgo` de hogar SIN validar, con lo que consta, para mirar presencia con `checklistCompania` (no viaja a ningún sitio)."
+        },
+        {
+          "nombre": "aportacionesBotsHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaBotsHogar",
+          "retorno": "Aportacion[]",
+          "linea": 203,
+          "resumen": "Una aportación por compañía con bot de hogar activo. Lista vacía = ninguna activa (no hay nada que comprobar). PURA."
+        },
+        {
+          "nombre": "aportacionesBotsMotor",
+          "kind": "function",
+          "exportada": true,
+          "params": "pub: PublicadoMotor | null, motivoSinPublicar: string",
+          "retorno": "Aportacion[]",
+          "linea": 266,
+          "resumen": "De lo publicado por «Bots (gratis)» de coche/moto. `null` = aún no lo ha publicado: SIN COMPROBAR (`motivo` dice dónde). PURA."
+        },
+        {
+          "nombre": "n",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "k: number, uno: string, varios: string",
+          "retorno": null,
+          "linea": 286
+        },
+        {
+          "nombre": "resumenIntervinientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "figuras: readonly FiguraParaTarificar[]",
+          "retorno": "string",
+          "linea": 289,
+          "resumen": "«3 personas · 2 datos pendientes» / «… · ficha sin leer». PURA."
+        },
+        {
+          "nombre": "resumenObjeto",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosRiesgoParaTarificar, eur: (x: number) => string, faltanVehiculo?: readonly string[] | null, esVehiculo = false",
+          "retorno": "string",
+          "linea": 301,
+          "resumen": "«228.000€ continente · 3 datos pendientes». `eur` se inyecta (formato de la app). PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "332d98c3141c"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/parrilla-coherencia.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lo que la parrilla de precios y el panel de emisión tienen que decir con coherencia (29/09/2026). PURO: lo importan los componentes cliente y lo vigila su `.test.ts`. Caso fundacional (proyecto 40975463): Mapfre salía en «no dicen si incluyen grúa» porque sus coberturas aún no se habían leído; los a",
@@ -162919,6 +163140,7 @@
         "interpretarRiesgo",
         "estadoPresupuestoVariante",
         "figuraDelRol",
+        "rotuloFalta",
         "rotulosFaltaEnFormulario",
         "faltaMovil",
         "faltaSexo",
@@ -162998,12 +163220,21 @@
           "resumen": "Figura que ocupa un rol: la asignada o, si no hay, la del tomador (salvo el ocasional, que es opcional)."
         },
         {
+          "nombre": "rotuloFalta",
+          "kind": "function",
+          "exportada": true,
+          "params": "k: string",
+          "retorno": "string",
+          "linea": 285,
+          "resumen": "Rótulo de UNA clave de `faltanDeFigura` (la clave tal cual si no tiene rótulo)."
+        },
+        {
           "nombre": "rotulosFaltaEnFormulario",
           "kind": "function",
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "string[]",
-          "linea": 285,
+          "linea": 290,
           "resumen": "Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»)."
         },
         {
@@ -163012,7 +163243,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "boolean",
-          "linea": 290,
+          "linea": 295,
           "resumen": "¿La ficha de la figura NO tiene móvil? `null` (no se pudo leer la ficha) = no se sabe → false: no se ofrece escribir a ciegas."
         },
         {
@@ -163021,7 +163252,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "boolean",
-          "linea": 294,
+          "linea": 299,
           "resumen": "¿La ficha de la figura NO tiene sexo? Misma regla que `faltaMovil`: `null` = no se sabe → false."
         },
         {
@@ -163030,7 +163261,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "string | null",
-          "linea": 297
+          "linea": 302
         },
         {
           "nombre": "precioComparado",
@@ -163038,7 +163269,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PrecioComparado",
-          "linea": 313
+          "linea": 318
         },
         {
           "nombre": "interpretarComparacion",
@@ -163046,7 +163277,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "LecturaComparacion",
-          "linea": 319
+          "linea": 324
         },
         {
           "nombre": "mejoresComparacion",
@@ -163054,7 +163285,7 @@
           "exportada": true,
           "params": "filas: readonly FilaComparacion[]",
           "retorno": "",
-          "linea": 338,
+          "linea": 343,
           "resumen": "La prima más baja de cada columna (`null` = esa variante no tiene ningún precio)."
         },
         {
@@ -163063,7 +163294,7 @@
           "exportada": true,
           "params": "f: FilaComparacion",
           "retorno": "number | null",
-          "linea": 347,
+          "linea": 352,
           "resumen": "`b − a` redondeado al céntimo; `null` si falta cualquiera de las dos (no se compara con un hueco)."
         },
         {
@@ -163072,13 +163303,13 @@
           "exportada": true,
           "params": "variantes: readonly VarianteRiesgo[], ids: readonly string[]",
           "retorno": "[VarianteRiesgo, VarianteRiesgo] | null",
-          "linea": 353,
+          "linea": 358,
           "resumen": "Las dos marcadas, la más ANTIGUA como `a` (orden de `creadoAt`; sin fecha, la de más abajo en la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b68f18f28b7"
+      "hash": "4fa0f60b4ed6"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -232441,7 +232672,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4903,
-    "funciones": 18629
+    "archivos": 4907,
+    "funciones": 18649
   }
 }
