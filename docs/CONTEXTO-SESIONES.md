@@ -15,7 +15,8 @@
 **(21/10/2026)** — Correduría · ficha de oportunidad: «Historial y bonificaciones» (SINCO, años sin siniestros) salía en ramos que no son
 de vehículo (lo vio Alberto en una de Accidentes). Ahora solo sale en auto/moto: `muestraHistorialSinco()` en `piezas-riesgo.ts` reutiliza
 `admiteDatosVehiculo()`; test `historial-sinco.test.ts` (visto en rojo). Pendiente: en esa misma ficha, la Comparativa dice «Esta oportunidad no
-existe en la correduría» = 404 del puerto de asegura (`/api/operador` comparativa); falta ver la respuesta cruda para ese id.
+existe en la correduría»: ruta y datos OK (asegura desplegado con #4911; la oportunidad existe); probable desfase de despliegue de #4920.
+Arreglado el mensaje: solo «no existe» si el puerto dice `estado:'no_encontrado'`; otro 404 = error con motivo (`comparativa-asegura.ts`, test visto en rojo).
 
 **(21/10/2026)** — RRHH · fichaje sin ubicación (Global2/Pilar): el aviso de permiso era de Safari para TODOS (captura era Android/Chrome) y
 «Reintentar» no sirve con permiso bloqueado. Ahora: mensaje por plataforma (iOS/Android/otro), `permissions.query` para detectar `denied`

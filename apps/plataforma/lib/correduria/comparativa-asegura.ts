@@ -31,7 +31,8 @@ const txt = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
 export function interpretarComparativa(status: number, json: unknown): LecturaComparativa {
   const j = obj(json)
   if (j?.estado === 'sin_configurar') return { estado: 'sin_configurar' }
-  if (status === 404) return { estado: 'no_encontrado' }
+  // Solo el 404 REAL del puerto (trae `estado:'no_encontrado'`) es «no existe»; un 404 de ruta/despliegue a medias es un error.
+  if (status === 404) return j?.estado === 'no_encontrado' ? { estado: 'no_encontrado' } : { estado: 'error', motivo: 'el puerto de asegura no tiene esta ruta (HTTP 404; ¿despliegue a medias?)' }
   if (status !== 200 || j?.estado !== 'ok') return { estado: 'error', motivo: txt(j?.motivo) ?? txt(j?.causa) ?? `HTTP ${status}` }
   const c = obj(j.comparacion)
   if (!c || !Array.isArray(c.ofertas) || !Array.isArray(c.filas) || !Array.isArray(c.resumen)) return { estado: 'error', motivo: 'respuesta sin comparativa' }
