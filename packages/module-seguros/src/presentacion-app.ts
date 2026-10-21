@@ -162,7 +162,7 @@ export function correoPresentacionApp(d: {
         '',
         ...v.puntos.map((x) => `· ${x}`),
         '',
-        'Un abrazo,',
+        'Un saludo,',
         'Alberto',
         contacto,
         ...pie,
@@ -202,7 +202,7 @@ export function correoPresentacionApp(d: {
         `<p style="margin:0 0 18px;font-size:18px;line-height:1.5">${escapar(v.beneficio.texto).replace(escapar(v.beneficio.fuerte), `<strong>${escapar(v.beneficio.fuerte)}</strong>`)}</p>`,
         `<p style="margin:0 0 24px"><a href="${escapar(d.enlace)}" style="display:block;max-width:340px;box-sizing:border-box;text-align:center;background:#3364ee;color:#fff;text-decoration:none;padding:18px 24px;border-radius:12px;font-size:19px;${titular}">${escapar(v.boton)}</a></p>`,
         lista(v.puntos),
-        firma('Un abrazo,', 'Alberto'),
+        firma('Un saludo,', 'Alberto'),
         pieDoc,
       ]
     : [
