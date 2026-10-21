@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T10:04:19Z",
-  "sha": "9309b862cf02b72057377f295b48e34f33dd25c0",
+  "generadoEn": "2026-10-21T10:54:11Z",
+  "sha": "82523c86235f20bc182467f1e3d0457b1b56df39",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7983,9 +7983,9 @@
           "nombre": "Entrada",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ bienvenida = false }: { bienvenida?: boolean }",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "La pantalla de entrada: pedir el código y canjearlo. 🚨 Vive aquí y no en `page.tsx` desde el 05/09/2026, y no es un refactor: la raíz `/` era este componente de CLIENTE y por tanto **no miraba nunca "
         },
         {
@@ -7994,7 +7994,7 @@
           "exportada": false,
           "params": "codigo: string",
           "retorno": "string",
-          "linea": 289
+          "linea": 303
         },
         {
           "nombre": "textoVinculo",
@@ -8002,13 +8002,13 @@
           "exportada": false,
           "params": "estado: string | undefined",
           "retorno": "string | null",
-          "linea": 311,
+          "linea": 325,
           "resumen": "Solo los estados del vínculo que la persona tiene que saber; el resto no dice nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aa1992bf4971"
+      "hash": "146054e133dd"
     },
     {
       "ruta": "apps/asegura-portal/app/hoja/[token]/page.tsx",
@@ -8616,15 +8616,15 @@
           "nombre": "Raiz",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: Promise<{ r?: string | string[] }> }",
           "retorno": null,
-          "linea": 33,
+          "linea": 35,
           "resumen": "La puerta de la calle. 🚨 SU TRABAJO ES MIRAR SI YA HAY SESIÓN, y es lo que faltaba (05/09/2026). Hasta hoy `/` era directamente el formulario —un componente de cliente— así que a quien ya había entra"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "34476d56ab4a"
+      "hash": "3402a8516fed"
     },
     {
       "ruta": "apps/asegura-portal/app/PieLegal.tsx",
@@ -9683,6 +9683,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2a68d89ce8cc"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/bienvenida-campana.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "hayMarcaDeCampana"
+      ],
+      "funciones": [
+        {
+          "nombre": "hayMarcaDeCampana",
+          "kind": "function",
+          "exportada": true,
+          "params": "refDeLaUrl: unknown, valorCookie: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 11,
+          "resumen": "¿Llega esta persona desde el correo de la campaña «presentación de la app»? (21/10/2026) Sí si trae un `?r=` con FORMA de ref (el primer clic: la cookie aún no existe, la pone el POST a `/api/campana/"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "89c68eb0a606"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
@@ -104024,7 +104045,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "c263d4a44af1"
+      "hash": "8a83bbde73cb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PresupuestosAvant2.tsx",
@@ -179931,7 +179952,9 @@
         "ordenEncolado",
         "loteTerminado",
         "loteConOk",
-        "resumenLote"
+        "resumenLote",
+        "textoFilaEncolada",
+        "estadoPrevioDe"
       ],
       "funciones": [
         {
@@ -179969,11 +179992,29 @@
           "retorno": "string",
           "linea": 36,
           "resumen": "Resumen de una línea: «3 compañías: 2 encoladas, 1 rechazada». PURA."
+        },
+        {
+          "nombre": "textoFilaEncolada",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Extract<FilaLote, { estado: 'encolada' }>",
+          "retorno": "string",
+          "linea": 46,
+          "resumen": "Texto de una compañía encolada. Un duplicado `atascado` NO está «en marcha»: espera una elección de la persona. PURA."
+        },
+        {
+          "nombre": "estadoPrevioDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "string | null",
+          "linea": 54,
+          "resumen": "`estadoPrevio` de la respuesta de encolar, o `null`. PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "25671ca44929"
+      "hash": "e939e4adf903"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-verificacion-asegura.ts",
@@ -219718,7 +219759,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is VariantePresentacion",
-          "linea": 77
+          "linea": 90
         },
         {
           "nombre": "variantesActivas",
@@ -219726,8 +219767,8 @@
           "exportada": true,
           "params": "env: string | null | undefined",
           "retorno": "VariantePresentacion[]",
-          "linea": 85,
-          "resumen": "Variantes activas desde una env tipo `A,B` (o `A`). Vacía, ilegible o sin ninguna letra conocida → todas. Repartir por turno (`varianteDeTurno`) deja los grupos del mismo tamaño en cada lote."
+          "linea": 101,
+          "resumen": "Variantes activas desde una env tipo `A,B` (o `C`). Vacía, ilegible o sin ninguna letra conocida → `VARIANTES_POR_DEFECTO` (A,B: una variante nueva no entra en el reparto sin pedirla). Repartir por tu"
         },
         {
           "nombre": "varianteDeTurno",
@@ -219735,7 +219776,7 @@
           "exportada": true,
           "params": "i: number, activas: readonly VariantePresentacion[]",
           "retorno": "VariantePresentacion",
-          "linea": 91
+          "linea": 107
         },
         {
           "nombre": "escapar",
@@ -219743,7 +219784,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 106
+          "linea": 122
         },
         {
           "nombre": "pieLegalPresentacion",
@@ -219751,7 +219792,7 @@
           "exportada": true,
           "params": "bajaUrl: string",
           "retorno": "string",
-          "linea": 111,
+          "linea": 127,
           "resumen": "Pie LSSI/RGPD: quién escribe, por qué, cómo darse de baja. Datos SIEMPRE de `MEDIADOR`."
         },
         {
@@ -219760,7 +219801,7 @@
           "exportada": true,
           "params": "d: { nombre: string | null | undefined enlace: string bajaUrl: string variante?: VariantePresentacion }",
           "retorno": "CorreoPresentacion",
-          "linea": 125,
+          "linea": 141,
           "resumen": "El correo de presentación. `nombre` puede venir vacío o roto del volcado: sin nombre de pila reconocible se saluda sin nombre (nunca «Hola null»)."
         },
         {
@@ -219769,7 +219810,7 @@
           "exportada": true,
           "params": "bajaUrl: string",
           "retorno": "Record<string, string>",
-          "linea": 178,
+          "linea": 223,
           "resumen": "Cabeceras de baja de un clic (RFC 2369 + RFC 8058). Gmail/Yahoo las exigen a remitentes masivos."
         },
         {
@@ -219778,7 +219819,7 @@
           "exportada": false,
           "params": "f: FilaEmbudo",
           "retorno": "number",
-          "linea": 225,
+          "linea": 270,
           "resumen": "Etapa MÁS AVANZADA con prueba. Cada etapa implica las anteriores: un registrado con `?r=` visitó, una visita con `?r=` es un clic (aunque Resend no lo viera: bloqueadores, o el enlace copiado a mano),"
         },
         {
@@ -219787,7 +219828,7 @@
           "exportada": true,
           "params": "filas: readonly FilaEmbudo[]",
           "retorno": "EmbudoCampana",
-          "linea": 235
+          "linea": 280
         },
         {
           "nombre": "etapaPersona",
@@ -219795,7 +219836,7 @@
           "exportada": true,
           "params": "f: FilaEmbudo",
           "retorno": "EtapaPersona",
-          "linea": 262,
+          "linea": 307,
           "resumen": "Hasta dónde llegó UNA persona, con la misma regla de implicación que el embudo. `sin_datos` = salió pero no hay eventos legibles: no se afirma ni que llegara ni que no."
         },
         {
@@ -219804,13 +219845,13 @@
           "exportada": true,
           "params": "filas: readonly T[], clave: (f: T) => string",
           "retorno": "",
-          "linea": 274,
+          "linea": 319,
           "resumen": "El embudo partido por una clave (lote, variante…), ordenado por ella. Para comparar día a día y A/B."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b77d07f7e1e"
+      "hash": "f40a8fac8168"
     },
     {
       "ruta": "packages/module-seguros/src/presupuesto-ayudas.ts",
@@ -229455,7 +229496,7 @@
           "exportada": true,
           "params": "f: Pick<FormularioAuto, 'documentoTomador' | 'tomador' | 'fichaTomador'> | null | undefined",
           "retorno": "string | null",
-          "linea": 344,
+          "linea": 348,
           "resumen": "Documento del tomador que el robot teclea en el portal: `documentoTomador` (lo pone asegura) o, si no, el del bloque `tomador`. `null` = no consta. PURO; nunca se loguea."
         },
         {
@@ -229464,7 +229505,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "string[]",
-          "linea": 356,
+          "linea": 360,
           "resumen": "Formas en que el documento del tomador puede aparecer en un texto o en el HTML del portal (tal cual, con guion o espacio antes de la letra de control), más el NOMBRE, los APELLIDOS, la RAZÓN SOCIAL y "
         },
         {
@@ -229473,7 +229514,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 425,
+          "linea": 429,
           "resumen": "email (algo@algo.algo); teléfono español (9 dígitos que empiezan por 6, 7, 8 o 9, con espacios o guiones opcionales y prefijo +34 o 0034 opcional); IBAN (ES + 22 dígitos, con o sin espacios); y bastid"
         },
         {
@@ -229482,7 +229523,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 443
+          "linea": 447
         },
         {
           "nombre": "fechaIso",
@@ -229490,7 +229531,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "string | null",
-          "linea": 445
+          "linea": 449
         },
         {
           "nombre": "entero",
@@ -229498,7 +229539,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number",
           "retorno": "number | null",
-          "linea": 457
+          "linea": 461
         },
         {
           "nombre": "booleano",
@@ -229506,7 +229547,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "boolean | null",
-          "linea": 467
+          "linea": 471
         },
         {
           "nombre": "edad",
@@ -229514,7 +229555,7 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": null,
-          "linea": 476
+          "linea": 480
         },
         {
           "nombre": "validarFormularioAuto",
@@ -229522,12 +229563,12 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioAuto",
-          "linea": 483
+          "linea": 487
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3af14006d79a"
+      "hash": "3ab4f1ddfff2"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-comercio.ts",
@@ -234205,7 +234246,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4935,
-    "funciones": 18777
+    "archivos": 4936,
+    "funciones": 18780
   }
 }
