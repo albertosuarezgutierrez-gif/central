@@ -1,18 +1,18 @@
 {
  "sesion": "dd55427e-d1ed-5a28-8910-415a170d6711",
  "inicio": "2026-10-20T10:49:19.096Z",
- "fin": "2026-10-20T10:49:25.090Z",
- "llamadas": 7,
+ "fin": "2026-10-21T14:02:15.302Z",
+ "llamadas": 52,
  "categorias": {
   "agente:general-purpose": {
-   "llamadas": 1,
-   "chars_in": 1183,
-   "chars_out": 1404,
+   "llamadas": 2,
+   "chars_in": 2090,
+   "chars_out": 2532,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   },
   "agente:lector-correo": {
@@ -27,25 +27,30 @@
    }
   },
   "otro": {
-   "llamadas": 2,
-   "chars_in": 344,
-   "chars_out": 683,
+   "llamadas": 10,
+   "chars_in": 7051,
+   "chars_out": 2212,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 2
+    "ToolSearch": 2,
+    "SubagentHandback": 4,
+    "SendMessage": 2,
+    "SendUserFile": 2
    }
   },
   "mcp:Gmail": {
-   "llamadas": 2,
-   "chars_in": 108,
-   "chars_out": 21455,
+   "llamadas": 10,
+   "chars_in": 638,
+   "chars_out": 50045,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__search_threads": 2
+    "mcp__Gmail__search_threads": 3,
+    "mcp__Gmail__get_thread": 3,
+    "mcp__Gmail__get_message": 4
    }
   },
   "mcp:Supabase": {
@@ -57,6 +62,63 @@
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 16,
+   "chars_in": 7842,
+   "chars_out": 47445,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 16
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 3005,
+   "chars_out": 3082,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 1
+   }
+  },
+  "bash": {
+   "llamadas": 5,
+   "chars_in": 7634,
+   "chars_out": 5339,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 5
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 5,
+   "chars_in": 685,
+   "chars_out": 259017,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 2,
+    "Glob": 1,
+    "Grep": 2
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 2694,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
    }
   }
  }
