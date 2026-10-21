@@ -20,6 +20,7 @@ import type { EstadoAutorizacion } from './autorizacion.ts'
 import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
 import type { ParteParaAviso } from './parte-aviso.ts'
 import { textoPolizaModificada, type PolizaModificadaParaAviso } from './poliza-cambios.ts'
+import { itvParaAviso, textoAvisoItv, type VehiculoParaAviso } from './aviso-itv.ts'
 
 export const TIPOS_AVISO = [
   'peticion_recibida',
@@ -32,6 +33,8 @@ export const TIPOS_AVISO = [
   'carnet_caducado',
   // Hay carné pero a la ficha le falta el nacimiento: sin él no se puede calcular cuándo caduca (21/10/2026).
   'carnet_sin_nacimiento',
+  // La ITV del vehículo asegurado, escalonada a 30/7/0 días (21/10/2026). Ver `aviso-itv.ts`.
+  'itv_en_ventana',
   'anulacion_por_firmar',
   'felicitacion',
   'poliza_emitida',
@@ -123,6 +126,7 @@ export type Aviso = {
 export const TIPOS_AVISO_DESCARTABLES = [
   'obligacion_en_ventana',
   'carnet_en_ventana',
+  'itv_en_ventana',
   'felicitacion',
   'poliza_emitida',
   'parte_actualizado',
@@ -151,7 +155,7 @@ function hrefPoliza(polizaId: string | null | undefined, porDefecto: string): st
   return polizaId ? `/boveda/poliza/${encodeURIComponent(polizaId)}` : porDefecto
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas', 'vehiculos'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -260,6 +264,14 @@ export type EntradaAvisos = {
    */
   carnetsSilenciados?: boolean
   /**
+   * Vehículos asegurados para el aviso de ITV (21/10/2026). `null` = no se han podido leer. Ausente = esta
+   * superficie no lo consulta (la intranet no avisa de la ITV): no cuenta para el «!». Quien llama ya quitó
+   * los que tienen un recordatorio propio de ITV (`vehiculoCubiertoPorRecordatorio`): no se duplica.
+   */
+  vehiculos?: VehiculoParaAviso[] | null
+  /** La persona APAGÓ «avisarme de la ITV» (`vencimiento_itv`). Mismo trato que `carnetsSilenciados`. */
+  itvSilenciada?: boolean
+  /**
    * Anulaciones que esperan SU firma (la de una póliza que ya sustituye otra, o una pedida por el
    * corredor). `null` = no se ha podido mirar. Sin firma no sale el correo a la compañía, así que
    * si nadie se lo dice, la vieja se renueva y se cobra.
@@ -337,6 +349,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   carnet_caducado: '/boveda?vista=recordatorios',
   // Donde se ve el carné y se dice qué falta: «Mis datos → Tus carnés de conducir».
   carnet_sin_nacimiento: '/boveda?vista=datos',
+  // «Recordatorios» ofrece la ITV precargada con su fecha: el sitio donde se deja puesto el aviso propio.
+  itv_en_ventana: '/boveda?vista=recordatorios',
   // «Pendiente de tu firma» vive en la bóveda (vista de seguros), que es donde se firma.
   anulacion_por_firmar: '/boveda',
   felicitacion: '/boveda',
@@ -606,6 +620,25 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     }
   }
 
+  if (x.itvSilenciada === true) {
+    // Apagado por la persona: ni avisos ni fuente ilegible.
+  } else if (x.vehiculos === null) {
+    fuentesIlegibles.push('vehiculos')
+  } else {
+    for (const v of x.vehiculos ?? []) {
+      const itv = itvParaAviso(v, x.hoy)
+      if (itv === null) continue
+      avisos.push({
+        tipo: 'itv_en_ventana',
+        id: v.id,
+        ...textoAvisoItv(v, itv),
+        // La fecha y el TRAMO van en la clave: cada umbral (30/7/0) es un aviso distinto y el del año siguiente también.
+        ciclo: `${itv.fecha}#${itv.umbral}`,
+        href: HREF_POR_TIPO.itv_en_ventana,
+      })
+    }
+  }
+
   if (x.firmas === null) {
     fuentesIlegibles.push('firmas')
   } else {
@@ -695,7 +728,8 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     (x.felicitaciones === undefined ? 1 : 0) +
     (x.polizasNuevas === undefined ? 1 : 0) +
     (x.partes === undefined ? 1 : 0) +
-    (x.polizasModificadas === undefined ? 1 : 0)
+    (x.polizasModificadas === undefined ? 1 : 0) +
+    (x.vehiculos === undefined ? 1 : 0)
   const descartables = new Set<string>(TIPOS_AVISO_DESCARTABLES)
   const visibles = avisos
     .map(({ ciclo, ...a }) => ({ ...a, descartable: descartables.has(a.tipo), clave: claveAviso(a, ciclo) }))

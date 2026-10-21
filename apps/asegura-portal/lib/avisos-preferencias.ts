@@ -1,6 +1,7 @@
 import {
   TIPOS_AVISO_INTERRUPTOR,
   TIPO_AVISO_VENCIMIENTO_CARNET,
+  TIPO_AVISO_VENCIMIENTO_ITV,
   VERSION_TEXTO_AVISOS,
   consentimientoVigente,
   horaDeMinutos,
@@ -47,6 +48,15 @@ export async function cambiarPreferenciaDeSesion(tipo: TipoAvisoInterruptor, act
 export async function avisoCarnetSilenciado(identidadId: string): Promise<boolean> {
   const fila = await prisma.portalAvisoSilenciado.findUnique({
     where: { identidadId_tipo: { identidadId, tipo: TIPO_AVISO_VENCIMIENTO_CARNET } },
+    select: { tipo: true },
+  })
+  return fila !== null
+}
+
+/** ¿Apagó esta identidad «avisarme de la ITV de mi vehículo»? Mismo contrato que `avisoCarnetSilenciado`. */
+export async function avisoItvSilenciado(identidadId: string): Promise<boolean> {
+  const fila = await prisma.portalAvisoSilenciado.findUnique({
+    where: { identidadId_tipo: { identidadId, tipo: TIPO_AVISO_VENCIMIENTO_ITV } },
     select: { tipo: true },
   })
   return fila !== null

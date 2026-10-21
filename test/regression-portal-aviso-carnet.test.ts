@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
-import { TIPOS_AVISO_CIMA, TIPOS_AVISO_INTERRUPTOR, TIPO_AVISO_VENCIMIENTO_CARNET } from '../packages/module-seguros-portal/src/avisos-cima.ts'
+import { TIPOS_AVISO_CIMA, TIPOS_AVISO_INTERRUPTOR, TIPO_AVISO_VENCIMIENTO_CARNET, TIPO_AVISO_VENCIMIENTO_ITV } from '../packages/module-seguros-portal/src/avisos-cima.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 const leer = (f: string) => readFileSync(join(ROOT, f), 'utf8')
@@ -14,7 +14,8 @@ const SQL = leer('apps/asegura-portal/prisma/sql/2026-10-21_aviso_vencimiento_ca
 
 test('🚨 el carné NO está en TIPOS_AVISO_CIMA (el cron no lo sella) pero SÍ en la lista del interruptor', () => {
   assert.equal((TIPOS_AVISO_CIMA as readonly string[]).includes(TIPO_AVISO_VENCIMIENTO_CARNET), false)
-  assert.deepEqual([...TIPOS_AVISO_INTERRUPTOR], [...TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET])
+  assert.equal((TIPOS_AVISO_CIMA as readonly string[]).includes(TIPO_AVISO_VENCIMIENTO_ITV), false)
+  assert.deepEqual([...TIPOS_AVISO_INTERRUPTOR], [...TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET, TIPO_AVISO_VENCIMIENTO_ITV])
 })
 
 test('🚨 el CHECK de portal_aviso_silenciado del SQL nuevo es EXACTAMENTE la lista del interruptor, y no toca el sello del cron', () => {
@@ -57,4 +58,37 @@ test('🔒 la expedición cruza el puente solo con el conjunto de fichas permiti
   const p = sinComentarios(leer('apps/asegura/lib/carnets-portal.ts'))
   assert.match(p, /agruparCarnetsPorTitular\([\s\S]*?calculados,\s*conExpedicion,\s*\)/)
   assert.doesNotMatch(sinComentarios(leer('apps/asegura/lib/carnets-titulares.ts')), /nacimiento/i) // el agrupador de lo que cruza ni conoce el nacimiento
+})
+
+// ─── Aviso automático de la ITV (21/10/2026): mismo patrón, mismo SQL ───────────────────────────────────
+
+test('🚨 la ITV: el SQL de marcha atrás quita AMBOS tipos y la lista vieja del CHECK no los lleva', () => {
+  const crudo = leer('apps/asegura-portal/prisma/sql/2026-10-21_aviso_vencimiento_carnet.sql')
+  assert.match(crudo, /DELETE FROM seguros\.portal_aviso_silenciado WHERE tipo IN \('vencimiento_carnet', 'vencimiento_itv'\)/)
+  const atras = /--\s+CHECK \(tipo IN \(([^)]*)\)\)/.exec(crudo.replace(/--\s{2,}/g, '-- '))
+  assert.ok(atras, 'falta la marcha atrás del CHECK')
+  assert.doesNotMatch(atras[1]!, /vencimiento_(carnet|itv)/)
+})
+
+test('🚨 la campana pasa los vehículos y el interruptor de la ITV a avisosDe; si no se leen, NO se apaga', () => {
+  const r = sinComentarios(leer('apps/asegura-portal/app/api/avisos/route.ts'))
+  assert.match(r, /vehiculosParaAvisoDeIdentidad\(identidad\.id\)/)
+  assert.match(r, /avisoItvSilenciado\(identidad\.id\)/)
+  assert.match(r, /vehiculos: vehiculos\.status === 'fulfilled' \? vehiculos\.value : null/)
+  assert.match(r, /itvSilenciada: itvSilenciada\.status === 'fulfilled' \? itvSilenciada\.value : false/)
+})
+
+test('🔒 la lectura de la ITV va acotada por la identidad (interruptor, declaradas y recordatorios)', () => {
+  const p = sinComentarios(leer('apps/asegura-portal/lib/avisos-preferencias.ts'))
+  assert.match(p, /identidadId_tipo: \{ identidadId, tipo: TIPO_AVISO_VENCIMIENTO_ITV \}/)
+  const v = sinComentarios(leer('apps/asegura-portal/lib/vehiculos-aviso.ts'))
+  assert.match(v, /portalPolizaDeclarada\.findMany\(\{\s*where: \{ identidadId,/)
+  assert.match(v, /portalObligacion\.findMany\(\{\s*where: \{ identidadId, tipo: 'itv' \}/)
+})
+
+test('el interruptor de la ITV sale en «Configuración → Avisos» y escribe por la misma ruta con su tipo', () => {
+  assert.match(sinComentarios(leer('apps/asegura-portal/app/(portal)/configuracion/AjustesAvisos.tsx')), /<InterruptorAvisoItv \/>/)
+  const c = leer('apps/asegura-portal/app/InterruptorAvisoItv.tsx')
+  assert.match(c, /tipo: 'vencimiento_itv'/)
+  assert.match(c, /\/api\/push\/preferencias/)
 })

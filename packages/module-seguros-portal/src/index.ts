@@ -555,6 +555,17 @@ export type { PolizaResoluble, ResolucionPoliza } from './correo-aseguradora.ts'
 // matriculación (21/09/2026). Lee su cabecera: `fiabilidad` distingue la
 // primera inspección (firme) de un ciclo que SUPONE revisiones anteriores.
 export { perfilItvDeRamo, proximaItv } from './itv.ts'
+export {
+  UMBRALES_AVISO_ITV,
+  DIAS_VENTANA_AVISO_ITV,
+  umbralItv,
+  itvParaAviso,
+  textoAvisoItv,
+  matriculaEnmascarada,
+  nombreVehiculo,
+  vehiculoCubiertoPorRecordatorio,
+} from './aviso-itv.ts'
+export type { VehiculoParaAviso, RecordatorioParaDedup, ItvParaAviso, UmbralItv } from './aviso-itv.ts'
 export type { FiabilidadItv, PerfilItv, ProximaItv } from './itv.ts'
 
 // Lo que el portal ya sabe y puede ofrecer precargado al ponerse un
@@ -591,7 +602,7 @@ export {
 } from './mejorar-precio.ts'
 export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } from './mejorar-precio.ts'
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
-export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET, TIPOS_AVISO_INTERRUPTOR, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima, urlPushCima } from './avisos-cima.ts'
+export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET, TIPO_AVISO_VENCIMIENTO_ITV, TIPOS_AVISO_INTERRUPTOR, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima, urlPushCima } from './avisos-cima.ts'
 // Fase B de avisos (13/10/2026): vencimiento de aportadas, subida de prima, vencimientos de pólizas autorizadas.
 export {
   DIAS_CAPTACION_APORTADA,

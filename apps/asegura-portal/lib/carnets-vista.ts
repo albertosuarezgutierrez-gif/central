@@ -101,11 +101,20 @@ export function fechaPrecargada(c: FechasCarnet | null, cual: 'caducidad' | 'exp
   return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim()) ? v.trim() : ''
 }
 
-/** Lee el interruptor de `GET /api/push/preferencias`: `null` = no se sabe (nunca se pinta «encendido» a ciegas). */
-export function leerInterruptorCarnet(j: unknown): boolean | null {
+/** Lee un interruptor de `GET /api/push/preferencias`: `null` = no se sabe (nunca se pinta «encendido» a ciegas). */
+export function leerInterruptor(j: unknown, tipo: string): boolean | null {
   if (typeof j !== 'object' || j === null) return null
   const p = (j as { preferencias?: unknown }).preferencias
   if (typeof p !== 'object' || p === null) return null
-  const v = (p as Record<string, unknown>)['vencimiento_carnet']
+  const v = (p as Record<string, unknown>)[tipo]
   return typeof v === 'boolean' ? v : null
+}
+
+export function leerInterruptorCarnet(j: unknown): boolean | null {
+  return leerInterruptor(j, 'vencimiento_carnet')
+}
+
+/** El de la ITV del vehículo (21/10/2026). */
+export function leerInterruptorItv(j: unknown): boolean | null {
+  return leerInterruptor(j, 'vencimiento_itv')
 }

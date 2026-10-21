@@ -1,4 +1,6 @@
--- ⏳ SIN APLICAR. Portal de Grupo ASegura — interruptor «avisarme cuando vaya a caducar mi carné» (21/10/2026).
+-- ⏳ SIN APLICAR. Portal de Grupo ASegura — interruptores «avisarme cuando vaya a caducar mi carné» y «avisarme de la
+-- ITV de mi vehículo» (21/10/2026). Un solo fichero y un solo CHECK para los dos tipos nuevos (`vencimiento_carnet`,
+-- `vencimiento_itv`): donde abajo se dice «el valor nuevo» o «el aviso» vale para ambos.
 --
 -- El tipo `vencimiento_carnet` se guarda en `seguros.portal_aviso_silenciado` (sin fila = ENCENDIDO; apagarlo
 -- inserta una fila), como el resto de interruptores. Esa tabla tiene un CHECK de `tipo` que NO admite el valor
@@ -18,7 +20,8 @@ BEGIN;
 ALTER TABLE seguros.portal_aviso_silenciado DROP CONSTRAINT IF EXISTS portal_aviso_silenciado_tipo_check;
 ALTER TABLE seguros.portal_aviso_silenciado ADD CONSTRAINT portal_aviso_silenciado_tipo_check
   CHECK (tipo IN ('recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva', 'poliza_modificada',
-                  'vencimiento_aportada', 'subida_prima', 'vencimiento_autorizado', 'vencimiento_carnet'));
+                  'vencimiento_aportada', 'subida_prima', 'vencimiento_autorizado', 'vencimiento_carnet',
+                  'vencimiento_itv'));
 
 COMMIT;
 
@@ -26,7 +29,7 @@ COMMIT;
 -- SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'portal_aviso_silenciado_tipo_check';
 --
 -- ── Marcha atrás ─────────────────────────────────────────────────────────────
---   DELETE FROM seguros.portal_aviso_silenciado WHERE tipo = 'vencimiento_carnet';
+--   DELETE FROM seguros.portal_aviso_silenciado WHERE tipo IN ('vencimiento_carnet', 'vencimiento_itv');
 --   ALTER TABLE seguros.portal_aviso_silenciado DROP CONSTRAINT IF EXISTS portal_aviso_silenciado_tipo_check;
 --   ALTER TABLE seguros.portal_aviso_silenciado ADD CONSTRAINT portal_aviso_silenciado_tipo_check
 --     CHECK (tipo IN ('recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva', 'poliza_modificada',

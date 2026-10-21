@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { autorizacionesDeIdentidad } from '@/lib/autorizaciones'
 import { avisosDe, type Avisos } from '@/lib/avisos'
 import { avisosLeidosDeIdentidad } from '@/lib/avisos-leidos'
-import { avisoCarnetSilenciado, diasAntelacionDeIdentidad } from '@/lib/avisos-preferencias'
+import { avisoCarnetSilenciado, avisoItvSilenciado, diasAntelacionDeIdentidad } from '@/lib/avisos-preferencias'
 import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { carnetsDeIdentidad } from '@/lib/carnets'
 import { felicitacionesDeIdentidad } from '@/lib/felicitaciones'
@@ -15,6 +15,7 @@ import { partesAvisoDeIdentidad } from '@/lib/partes-aviso'
 import { polizasNuevasDeIdentidad } from '@/lib/polizas-nuevas'
 import { polizasModificadasDeIdentidad } from '@/lib/polizas-modificadas'
 import { requireIdentidad } from '@/lib/session'
+import { vehiculosParaAvisoDeIdentidad } from '@/lib/vehiculos-aviso'
 
 export const runtime = 'nodejs'
 
@@ -42,7 +43,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos, antelacion, carnetSilenciado] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos, antelacion, carnetSilenciado, vehiculos, itvSilenciada] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -68,6 +69,9 @@ export async function GET() {
     diasAntelacionDeIdentidad(identidad.id),
     // «Avisarme de la caducidad de mi carné» (21/10/2026): encendido salvo que lo apagara. Si no se lee, encendido.
     avisoCarnetSilenciado(identidad.id),
+    // Decimotercera y decimocuarta (21/10/2026): los vehículos para el aviso de ITV y su interruptor.
+    vehiculosParaAvisoDeIdentidad(identidad.id),
+    avisoItvSilenciado(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -85,6 +89,8 @@ export async function GET() {
   if (leidos.status === 'rejected') console.error('[avisos] avisos leídos ilegibles', leidos.reason)
   if (antelacion.status === 'rejected') console.error('[avisos] antelación ilegible: se usan 7 días', antelacion.reason)
   if (carnetSilenciado.status === 'rejected') console.error('[avisos] interruptor del carné ilegible: se avisa', carnetSilenciado.reason)
+  if (vehiculos.status === 'rejected') console.error('[avisos] vehículos ilegibles', vehiculos.reason)
+  if (itvSilenciada.status === 'rejected') console.error('[avisos] interruptor de la ITV ilegible: se avisa', itvSilenciada.reason)
   // `null` del puente = no se pudo mirar (no «no hay»).
   const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
@@ -109,6 +115,8 @@ export async function GET() {
     leidos: leidos.status === 'fulfilled' ? leidos.value : null,
     diasAntelacion: antelacion.status === 'fulfilled' ? antelacion.value : null,
     carnetsSilenciados: carnetSilenciado.status === 'fulfilled' ? carnetSilenciado.value : false,
+    vehiculos: vehiculos.status === 'fulfilled' ? vehiculos.value : null,
+    itvSilenciada: itvSilenciada.status === 'fulfilled' ? itvSilenciada.value : false,
     hoy: new Date(),
   })
 
