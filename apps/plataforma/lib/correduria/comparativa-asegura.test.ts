@@ -30,3 +30,11 @@ test('filas: compañía + nivel y orden del ranking (sin prima comparable, al fi
   const f = filasPrecios(c)
   assert.deepEqual(f.map((x) => [x.etiqueta, x.posicion]), [['Compañía Uno · Básico', 1], ['Compañía Uno · Premium', 2], ['Compañía Uno · Estándar', null]])
 })
+
+test('un 404 solo es «no existe» si el puerto lo dice; si no, es error (ruta/despliegue a medias)', () => {
+  assert.equal(interpretarComparativa(404, { estado: 'no_encontrado' }).estado, 'no_encontrado')
+  const nulo = interpretarComparativa(404, null)
+  assert.equal(nulo.estado, 'error')
+  assert.match(nulo.estado === 'error' ? nulo.motivo : '', /404/)
+  assert.equal(interpretarComparativa(404, {}).estado, 'error')
+})
