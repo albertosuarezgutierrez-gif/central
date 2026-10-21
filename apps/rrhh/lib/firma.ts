@@ -9,6 +9,7 @@ import {
 } from '@central/module-rrhh'
 import { descargarObjeto } from '@/lib/storage'
 import { getTransporter, MAIL_FROM } from '@/lib/mailer'
+import { registrarFalloEnvio } from '@/lib/avisos-admin'
 
 const proveedor = new FirmaPropia()
 
@@ -79,6 +80,7 @@ function deps(empresaId: string, empleadoId: string): DepsFirma {
             })
             return true
           } catch {
+            await registrarFalloEnvio({ empresaId, empleadoId, canal: 'firma', hayTransporte: true, nombre, email: to })
             return false
           }
         },
@@ -90,7 +92,13 @@ function deps(empresaId: string, empleadoId: string): DepsFirma {
 
 /** Genera y envía el código OTP de firma (10 min). Ver `@central/module-rrhh`. */
 export async function solicitarCodigoFirma(empresaId: string, empleadoId: string, docId: string) {
-  return orquestarCodigo(deps(empresaId, empleadoId), docId)
+  const r = await orquestarCodigo(deps(empresaId, empleadoId), docId)
+  // Sin transporte el puerto de email es null y el módulo devuelve `enviado:false` sin intentar nada:
+  // se deja aviso al responsable (solo si el empleado TIENE email; el helper lo lee de su ficha).
+  if (!r.enviado && !getTransporter()) {
+    await registrarFalloEnvio({ empresaId, empleadoId, canal: 'firma', hayTransporte: false, soloSiHayEmail: true })
+  }
+  return r
 }
 
 /** El gestor solicita la firma de un documento (estado_firma → 'pendiente'). Scope por empresa. */
