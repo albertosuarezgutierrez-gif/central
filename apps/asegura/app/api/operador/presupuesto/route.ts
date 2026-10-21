@@ -4,7 +4,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { guardarNecesidades, listarPresupuestos, ocultarOpcion, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
+import { guardarNecesidades, listarPresupuestos, marcarResumenRevisado, ocultarOpcion, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
 import { leerOcultar } from '@/lib/presupuesto-ocultar'
 import { auditado } from '@/lib/auditoria'
 import { avisarPresupuesto, confirmarWhatsapp, marcarEmitido, type FalloEnvio } from '@/lib/envio-presupuesto'
@@ -165,6 +165,10 @@ export const PATCH = auditado(async (req: Request) => {
       if (!esEtapa(cuerpo.etapa)) return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
       const r = await marcarSeguimientoAvisado(correduria.id, { id, etapa: cuerpo.etapa, actor })
       return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 404 })
+    }
+    if (cuerpo?.accion === 'revisar_resumen') {
+      const r = await marcarResumenRevisado(correduria.id, { id, actor })
+      return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : r.motivo === 'no_encontrado' ? 404 : 409 })
     }
     if (cuerpo?.accion === 'documento_descargado') {
       const r = await marcarDocumentoDescargado(correduria.id, { id, actor })

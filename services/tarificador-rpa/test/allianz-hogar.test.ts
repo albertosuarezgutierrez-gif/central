@@ -46,9 +46,9 @@ const FORM: FormularioHogar = {
 
 // ───────────── puros ─────────────
 
-test('flag APAGADO y sin registrar', () => {
-  assert.equal(ALLIANZ_HOGAR_ACTIVO, false)
-  assert.equal(adaptadores.obtener('allianz', 'hogar'), null)
+test('flag ENCENDIDO (Alberto, 21/10/2026) y registrado', () => {
+  assert.equal(ALLIANZ_HOGAR_ACTIVO, true)
+  assert.equal(adaptadores.obtener('allianz', 'hogar')?.version, allianzHogar.version)
 })
 
 test('esAppHogar: origen exacto y ruta de la app vista', () => {

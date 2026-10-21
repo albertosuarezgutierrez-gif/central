@@ -473,7 +473,7 @@ export {
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
 export { mensajeReciboDevueltoWhatsapp, resumenRiesgo, saludoSegunHora, type EntradaWhatsappDevuelto } from './mensaje-recibo-devuelto.ts'
-export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
+export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, enlaceWhatsappPresupuesto, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -1402,8 +1402,10 @@ export {
   ofertaDeAvant2, ofertaDePolizaActual, ofertaDeBot, seleccionarAvant2, fraccionamientoDe, HOGAR_CATALOGO_A_TAXONOMIA,
 } from './ofertas-fuentes.ts'
 export type { PrecioAvant2, PolizaParaComparar, CoberturaPoliza, OfertaBot } from './ofertas-fuentes.ts'
+export { periodoEnAvisos, periodoDeAvant2 } from './ofertas-fuentes.ts'
+export { etiquetasOfertas, textoOpcionesComparadas } from './etiqueta-oferta.ts'
 export {
-  ETIQUETA_RESUMEN_IA, ETIQUETA_RESUMEN_PLANTILLA, etiquetaResumen, COMPANIAS_CONOCIDAS, companiaIntrusa, avisoCotizacionGuardada,
+  ETIQUETA_RESUMEN_IA, ETIQUETA_RESUMEN_IA_SIN_REVISAR, ETIQUETA_RESUMEN_PLANTILLA, etiquetaResumen, COMPANIAS_CONOCIDAS, companiaIntrusa, avisoCotizacionGuardada,
 } from './resumen-comparativa.ts'
 
 // Acuerdos con compañías (comisión por ramo, rappel, clave de mediador) — 06/10/2026.

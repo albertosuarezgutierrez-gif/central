@@ -20,6 +20,8 @@ import FigurasRiesgo from './FigurasRiesgo'
 import HistorialRiesgo from './HistorialRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
+import ComparativaOportunidad, { AvisoAvant2Guardada } from './ComparativaOportunidad'
+import { useComparativa } from './useComparativa'
 import PasarOportunidad from './PasarOportunidad'
 import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
 import BotsAutoRiesgo from './BotsAutoRiesgo'
@@ -31,14 +33,16 @@ import PresupuestosCompanias from './PresupuestosCompanias'
 import PrepararPresupuestoBotSolo from './PrepararPresupuestoBotSolo'
 import { avisoSinAvant2 } from '@/lib/correduria/registro-ramos'
 import ParrillaPrecios, { trabajosParaParrilla } from './ParrillaPrecios'
-import type { LadoBot } from './parrilla-precios'
+import { ladoBotDeLecturas, type LadoBot } from './parrilla-precios'
+import { adaptadorDeRamo } from '@/lib/tarificador-bots-ramos'
+import { leerIntegraciones } from '@/lib/tarificador-probar'
 import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
 import type { PropuestaCarteraHogar } from '@/lib/correduria/hogar-cartera'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
-import { avisoRamoSinTarifa, companiasDisponibles, type TrabajoCompania } from '@/lib/presupuestos-companias'
+import { avisoRamoSinTarifa, companiasDisponibles, leerPresupuestos, type TrabajoCompania } from '@/lib/presupuestos-companias'
 
-export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null }: { inicial: Riesgo; hoy: string; propuestaCartera?: PropuestaCarteraHogar | null }) {
+export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, correoTomador = 'no_se_sabe' }: { inicial: Riesgo; hoy: string; propuestaCartera?: PropuestaCarteraHogar | null; correoTomador?: 'con_email' | 'sin_email' | 'no_se_sabe' }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
   // Editar una ficha desde el modal de «Editar datos» refresca la página del servidor (router.refresh):
   // el riesgo que llega de nuevo manda sobre el que había, y el aviso «Falta…» se actualiza solo.
@@ -60,13 +64,42 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null }
   const alEditarObjeto = useCallback((b: boolean) => setEditandoObjeto(b), [])
   const alEditarFiguras = useCallback((b: boolean) => setEditandoFiguras(b), [])
   const op = riesgo.oportunidad
+  // La comparativa única (21/10/2026): una lectura para el aviso de antes del 0,50€ y para su bloque. Se relee al cambiar
+  // las variantes (p. ej. tras pedir precio).
+  const { lectura: comparativa, recargar: releerComparativa } = useComparativa(op.id, riesgo.variantes.map((v) => v.id).join(','))
   // «Parrilla de precios»: el lado bot llega de la MISMA lectura (y sondeo) de «Presupuestos de compañías»; sin bot
   // para el ramo, ese bloque no se pinta ni lee, y el lado es «no aplica». `null` = aún leyéndose.
   const botsDelRamo = useMemo(() => companiasDisponibles(op.ramo).map((c) => c.compania), [op.ramo])
-  const [ladoBot, setLadoBot] = useState<LadoBot | null>(() => (botsDelRamo.length === 0 ? { estado: 'no_aplica' } : null))
+  // Ramos con bloque «Bots (gratis)» PROPIO (moto, coche, hogar; 21/10/2026): no pasan por «Presupuestos de compañías», así que el
+  // lado bot de la parrilla se lee aparte (integraciones activas + trabajos de la oportunidad). Antes salía «no aplica» siempre.
+  const botsPropios = botsDelRamo.length === 0 && adaptadorDeRamo(op.ramo) !== null
+  const [ladoBot, setLadoBot] = useState<LadoBot | null>(() => (botsDelRamo.length === 0 && !botsPropios ? { estado: 'no_aplica' } : null))
   const alLeerBots = useCallback((l: { estado: 'ok'; trabajos: TrabajoCompania[] } | { estado: 'error'; texto: string }) => {
     setLadoBot(l.estado === 'ok' ? { estado: 'ok', disponibles: botsDelRamo, trabajos: trabajosParaParrilla(l.trabajos) } : { estado: 'sin_leer', motivo: l.texto })
   }, [botsDelRamo])
+  useEffect(() => {
+    if (!botsPropios) return
+    let vivo = true
+    const leerJson = async (url: string): Promise<{ status: number; json: unknown }> => {
+      try {
+        const r = await fetch(url, { cache: 'no-store' })
+        return { status: r.status, json: await r.json().catch(() => null) }
+      } catch {
+        return { status: 0, json: null }
+      }
+    }
+    void (async () => {
+      const [i, p] = await Promise.all([
+        leerJson('/api/correduria/tarificador/integraciones'),
+        leerJson(`/api/correduria/tarificador/oportunidad?id=${encodeURIComponent(op.id)}`),
+      ])
+      if (!vivo) return
+      const li = leerIntegraciones(i.status, i.json)
+      const lp = p.status === 200 ? leerPresupuestos(p.json) : null
+      setLadoBot(ladoBotDeLecturas(op.ramo, li.ok ? li.integraciones : null, lp ? trabajosParaParrilla(lp.trabajos.filter((t) => t.ramo === op.ramo)) : null))
+    })()
+    return () => { vivo = false }
+  }, [botsPropios, op.id, op.ramo])
 
   async function recargar(texto?: string) {
     setRecargando(true)
@@ -210,6 +243,8 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null }
                 {faltaDatos} {CotizadorEmbebido ? `Complétalo arriba, en «${bloqueObjetoDeRamo(op.ramo)}»: el bloque de precio no lo vuelve a pedir.` : 'Puedes seguir: la pantalla de precio lo pedirá.'}
               </p>
             )}
+            {/* ANTES del botón de 0,50€: si ya hay una cotización de Avant2 guardada, se dice (abrirla es gratis). */}
+            <AvisoAvant2Guardada lectura={comparativa} />
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
               {op.polizaId && acciones.secundario
                 ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con los intervinientes y los datos de esta página; retarificar la póliza usa sus datos de hoy.'
@@ -312,7 +347,10 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null }
           «Emitir», PDF y traza siguen en «Presupuestos de compañías» y en «Presupuestos de este riesgo» (P1…Pn). */}
       <ParrillaPrecios oportunidadId={op.id} claveVariantes={riesgo.variantes.map((v) => v.id).join(',')} bot={ladoBot} />
 
-      <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
+      {/* La comparativa ÚNICA (21/10/2026): Avant2 + PDFs + bots + póliza en cartera, por el mismo motor que el PDF. */}
+      <ComparativaOportunidad lectura={comparativa} onRecargar={() => void releerComparativa()} />
+
+      <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} correoTomador={correoTomador} />
 
       {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
       <PresupuestosCompanias

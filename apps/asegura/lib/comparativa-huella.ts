@@ -19,7 +19,10 @@ export function narrativaDeEstudio(estudio: unknown): Narrativa | null {
   const x = n as Record<string, unknown>
   if (typeof x.resumen !== 'string' || typeof x.recomendacion !== 'string') return null
   if (x.fuente !== 'ia' && x.fuente !== 'determinista') return null
-  return { resumen: x.resumen, recomendacion: x.recomendacion, fuente: x.fuente, descartada: typeof x.descartada === 'string' ? x.descartada : null }
+  return {
+    resumen: x.resumen, recomendacion: x.recomendacion, fuente: x.fuente, descartada: typeof x.descartada === 'string' ? x.descartada : null,
+    ...(typeof x.revisada === 'boolean' ? { revisada: x.revisada } : {}),
+  }
 }
 
 /**

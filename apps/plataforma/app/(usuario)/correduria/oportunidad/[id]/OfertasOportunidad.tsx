@@ -10,6 +10,7 @@ import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import type { FilaMatriz } from '@central/module-seguros'
 import { interpretarOfertas, type OfertaVista, type OfertasOportunidad as Datos } from '@/lib/correduria/ofertas-asegura'
 import { motivoDe, type Respuesta } from './piezas-riesgo'
+import EnviarAlCliente from './EnviarAlCliente'
 import {
   NO_FIGURA, avisosDeOferta, citaNoEncontrada, conGarantiaEditada, elegidasPorDefecto, estadoLectura, importeOFalta,
   importeParaInput, lineasDeValor, marcaDeCelda, parsearImporteEs, puedeGenerarPresupuesto, rotuloEstadoOferta,
@@ -32,7 +33,7 @@ async function llamar(url: string, init: RequestInit): Promise<Respuesta> {
 
 type Generado = { id: string; referencia: string | null }
 
-export default function OfertasOportunidad({ oportunidadId, clienteId, polizaId }: { oportunidadId: string; clienteId: string; polizaId: string | null }) {
+export default function OfertasOportunidad({ oportunidadId, clienteId, polizaId, correoTomador = 'no_se_sabe' }: { oportunidadId: string; clienteId: string; polizaId: string | null; correoTomador?: 'con_email' | 'sin_email' | 'no_se_sabe' }) {
   const [abierto, setAbierto] = useState(false)
   const [datos, setDatos] = useState<Datos | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -110,14 +111,7 @@ export default function OfertasOportunidad({ oportunidadId, clienteId, polizaId 
     setAviso({ ok: true, texto: 'Presupuesto generado en borrador. No se ha enviado nada al cliente.' })
   }
 
-  async function enviar(g: Generado) {
-    if (!window.confirm('Se le manda por correo el aviso con el enlace (sin precios: los ve al entrar con su código). ¿Enviar?')) return
-    setOcupado('enviar'); setAviso(null)
-    const r = await llamar('/api/correduria/presupuesto', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: g.id, accion: 'avisar', canal: 'email' }) })
-    setOcupado(null)
-    const j = (r.json ?? {}) as { estado?: string; detalle?: string; motivo?: string }
-    setAviso(r.ok || j.estado === 'ok' ? { ok: true, texto: 'Aviso enviado al cliente.' } : { ok: false, texto: `NO enviado: ${j.detalle ?? j.motivo ?? `HTTP ${r.status}`}` })
-  }
+
 
   const ofertas = useMemo(() => datos?.ofertas ?? [], [datos])
   const vivas = ofertas.filter((o) => o.estado !== 'descartada')
@@ -204,8 +198,9 @@ export default function OfertasOportunidad({ oportunidadId, clienteId, polizaId 
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <a href={`/api/correduria/presupuesto/pdf?id=${encodeURIComponent(generado.id)}`} target="_blank" rel="noopener noreferrer" style={{ ...btnStyle('secundario'), textDecoration: 'none' }}>Ver PDF</a>
                     <a href={polizaId ? `/correduria/poliza/${encodeURIComponent(polizaId)}` : `/correduria/cliente/${encodeURIComponent(clienteId)}`} style={{ ...btnStyle('secundario'), textDecoration: 'none' }}>Ver en presupuestos</a>
-                    <button type="button" disabled={ocupado !== null} onClick={() => void enviar(generado)} style={btnStyle('secundario')}>Enviar por correo…</button>
                   </div>
+                  {/* «Enviar al cliente» (21/10/2026): copiar enlace · WhatsApp · correo. Nada sale sin clic. */}
+                  <EnviarAlCliente presupuestoId={generado.id} clienteId={clienteId} correo={correoTomador} />
                 </div>
               )}
             </div>

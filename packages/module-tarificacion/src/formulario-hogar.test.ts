@@ -130,3 +130,71 @@ describe('validarFormularioHogarSinTomador', () => {
     expect(errores(sin).some((e) => e.startsWith('tomador: obligatorio'))).toBe(true)
   })
 })
+
+// 21/10/2026: protecciones, objetos de valor (tres estados, opcionales) y datos del tomador (solo en la validación del worker).
+describe('hogar · bloques opcionales de tres estados', () => {
+  it('ausentes o todo null = el bloque no consta (no se devuelve: nunca «no tiene»)', () => {
+    for (const p of [undefined, null, { puertaBlindada: null, ventanasSeguridad: null, urbanizacionCerrada: null, vigilancia: null }]) {
+      const f = base()
+      ;(f.hogar as Record<string, unknown>).protecciones = p
+      const v = validarFormularioHogar(f, HOY)
+      expect(v.ok).toBe(true)
+      if (v.ok) expect('protecciones' in v.formulario.hogar).toBe(false)
+    }
+  })
+
+  it('protecciones: solo booleanos; lo que no viene es null (no se sabe), nunca false', () => {
+    const f = base()
+    ;(f.hogar as Record<string, unknown>).protecciones = { puertaBlindada: true, vigilancia: false }
+    const v = validarFormularioHogar(f, HOY)
+    expect(v.ok).toBe(true)
+    if (v.ok) expect(v.formulario.hogar.protecciones).toEqual({ puertaBlindada: true, ventanasSeguridad: null, urbanizacionCerrada: null, vigilancia: false })
+    const malo = base()
+    ;(malo.hogar as Record<string, unknown>).protecciones = { puertaBlindada: 'si' }
+    expect(errores(malo).some((e) => e.startsWith('hogar.protecciones.puertaBlindada:'))).toBe(true)
+    const intrusa = base()
+    ;(intrusa.hogar as Record<string, unknown>).protecciones = { alarma: true }
+    expect(errores(intrusa).some((e) => e.startsWith('hogar.protecciones: claves no admitidas'))).toBe(true)
+  })
+
+  it('objetos de valor: el 0 es un dato (declarado «nada»); negativo o texto, error que nombra el campo', () => {
+    const f = base()
+    ;(f.hogar as Record<string, unknown>).objetosValor = { joyasCajaFuerteEur: 0, objetosValorEur: 1500.555 }
+    const v = validarFormularioHogar(f, HOY)
+    expect(v.ok).toBe(true)
+    if (v.ok) expect(v.formulario.hogar.objetosValor).toEqual({ joyasCajaFuerteEur: 0, joyasFueraCajaEur: null, objetosValorEur: 1500.56 })
+    const malo = base()
+    ;(malo.hogar as Record<string, unknown>).objetosValor = { joyasFueraCajaEur: -1 }
+    expect(errores(malo).some((e) => e.startsWith('hogar.objetosValor.joyasFueraCajaEur:'))).toBe(true)
+  })
+
+  it('el validador SIN tomador también los acepta (viajan desde plataforma)', () => {
+    const { tomador: _t, ...f } = base()
+    ;(f.hogar as Record<string, unknown>).protecciones = { ventanasSeguridad: true }
+    const v = validarFormularioHogarSinTomador(f, HOY)
+    expect(v.ok).toBe(true)
+    if (v.ok) expect(v.formulario.hogar.protecciones?.ventanasSeguridad).toBe(true)
+  })
+})
+
+describe('hogar · datosTomador (Mapfre: nombre y apellidos que inyecta asegura)', () => {
+  const dt = { tipo: 'fisica', nombre: 'PRUEBA', apellido1: 'UNO', apellido2: null, fechaNacimiento: '1980-01-15' }
+  it('el worker lo valida y lo conserva; ausente, no aparece', () => {
+    const v = validarFormularioHogar({ ...base(), datosTomador: dt }, HOY)
+    expect(v.ok).toBe(true)
+    if (v.ok) expect(v.formulario.datosTomador).toEqual(dt)
+    const sin = validarFormularioHogar(base(), HOY)
+    expect(sin.ok && 'datosTomador' in sin.formulario).toBe(false)
+  })
+  it('mal formado: error que nombra el campo, nunca el valor', () => {
+    const e = errores({ ...base(), datosTomador: { tipo: 'fisica', nombre: 'PRUEBA' } })
+    expect(e).toContain('datosTomador.apellido1: obligatorio (texto ≤100)')
+    expect(e.join(' ')).not.toContain('PRUEBA')
+  })
+  it('al encolar (sin tomador) se DESCARTA: no cruza el puerto', () => {
+    const { tomador: _t, ...f } = base()
+    const v = validarFormularioHogarSinTomador({ ...f, datosTomador: dt }, HOY)
+    expect(v.ok).toBe(true)
+    if (v.ok) expect('datosTomador' in v.formulario).toBe(false)
+  })
+})

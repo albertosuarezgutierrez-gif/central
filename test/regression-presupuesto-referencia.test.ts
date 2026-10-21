@@ -21,6 +21,9 @@ const leer = (r: string) => readFileSync(join(RAIZ, r), 'utf8')
 const codigo = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
 
 const PDF = 'apps/asegura/lib/presupuesto-pdf.ts'
+// Lo común de los PDF (textos de la referencia) y el cuadro comparativo salieron a su fichero el 21/10/2026: cuentan como PDF.
+const PDF_BASE = 'apps/asegura/lib/presupuesto-pdf-base.ts'
+const PDF_CUADRO = 'apps/asegura/lib/presupuesto-pdf-cuadro.ts'
 const PDF_DATOS = 'apps/asegura/lib/presupuesto-pdf-datos.ts'
 const PREPARAR = 'apps/asegura/lib/presupuesto.ts'
 const REFERENCIA = 'apps/asegura/lib/presupuesto-referencia.ts'
@@ -29,12 +32,12 @@ const REFERENCIA = 'apps/asegura/lib/presupuesto-referencia.ts'
 const IDS_VENDOR = /project_?id|projectId|referenciaVendor|referencia_vendor|idPrecio|id_precio|accepted_offer|codeoscopic/i
 
 test('el PDF ni lee ni pinta ningún id de Avant2/Codeoscopic', () => {
-  assert.doesNotMatch(codigo(leer(PDF)), IDS_VENDOR, `${PDF} nombra un id del vendor`)
+  for (const f of [PDF, PDF_BASE, PDF_CUADRO]) assert.doesNotMatch(codigo(leer(f)), IDS_VENDOR, `${f} nombra un id del vendor`)
   assert.doesNotMatch(codigo(leer(PDF_DATOS)), IDS_VENDOR, `${PDF_DATOS} lee un id del vendor`)
 })
 
 test('el PDF lleva NUESTRA referencia en la cabecera y la frase para que el cliente la cite', () => {
-  const pdf = codigo(leer(PDF))
+  const pdf = codigo(leer(PDF)) + codigo(leer(PDF_BASE))
   assert.match(pdf, /referencia: string \| null/, 'DatosPdfPresupuesto trae la referencia')
   assert.match(pdf, /`Referencia \$\{referencia\}`/, 'la cabecera dice «Referencia AS-…»')
   assert.match(pdf, /cita la referencia/, 'la frase que le pide citarla')

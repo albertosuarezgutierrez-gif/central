@@ -20,8 +20,8 @@ import { numeroLeido, ofertaNormalizadaDeFila } from './documentos/oferta-leida'
 import { leerOportunidadParaOfertas, ofertasDeOportunidad } from './oportunidad-ofertas'
 import { huellaComparativa, ultimoEstudioGuardado } from './comparativa-guardada'
 
-/** Columnas de Avant2 en el cuadro (las 24 de una tarificación no se leen). */
-export const MAX_AVANT2_EN_CUADRO = 6
+import { MAX_AVANT2_EN_CUADRO } from './estudio-avant2'
+export { MAX_AVANT2_EN_CUADRO }
 
 export type Avant2Guardada = {
   cotizacionId: string
@@ -102,7 +102,7 @@ export async function comparativaDeOportunidad(correduriaId: string, oportunidad
     guardado: g
       ? {
           presupuestoId: g.presupuestoId, generadoAt: g.generadoAt, vigente: g.huella !== null && g.huella === huella,
-          etiqueta: g.narrativa ? etiquetaResumen(g.narrativa.fuente) : null,
+          etiqueta: g.narrativa ? etiquetaResumen(g.narrativa.fuente, g.narrativa.revisada) : null,
           narrativa: g.narrativa ? { resumen: g.narrativa.resumen, recomendacion: g.narrativa.recomendacion, fuente: g.narrativa.fuente } : null,
         }
       : null,
@@ -127,7 +127,7 @@ async function ultimaAvant2DeOportunidad(correduriaId: string, oportunidadId: st
 }
 
 /** La póliza de la cartera, de ESTE cliente, lista para `ofertaDePolizaActual`. `null` = no está aquí. */
-async function polizaParaComparar(correduriaId: string, clienteId: string, polizaId: string) {
+export async function polizaParaComparar(correduriaId: string, clienteId: string, polizaId: string) {
   const p = await prismaAsegura().poliza.findFirst({
     where: { id: polizaId, correduriaId, clienteId },
     select: {

@@ -10,6 +10,7 @@ import { gastarCodigoWhatsapp } from '@/lib/presupuesto-codigo-whatsapp'
 import { entregarJustificanteAnulacion } from '@/lib/justificante-anulacion'
 import { pideLlamada, preguntaIA, resumenIA } from '@/lib/comparativa-ia-servicio'
 import { pdfEstudioParaPortal } from '@/lib/presupuesto-pdf-portal'
+import { estudioParaPortal } from '@/lib/presupuesto-estudio-portal'
 import { actividadCliente } from '@/lib/presupuesto-actividad-servicio'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
@@ -29,6 +30,7 @@ const HEX_64 = /^[0-9a-f]{64}$/
  *        { accion:'codigo',   identidadId, presupuestoId, opcionId }
  *        { accion:'firmar',   identidadId, presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados, cuenta, ip?, userAgent? }
  *        { accion:'pdf',      identidadId, presupuestoId }          → el estudio comparativo en PDF (solo origen ofertas, ya enviado)
+ *        { accion:'estudio',  identidadId, presupuestoId }          → el estudio (cuadro + resumen) para la PÁGINA, ambos orígenes, ya enviado
  *        { accion:'datos',    identidadId, presupuestoId }          → «Revisa tus datos» (no escribe)
  *        { accion:'datos_incorrectos', identidadId, presupuestoId, texto } → avisa; cierra la firma desde el portal
  *        { accion:'resumen_ia',  identidadId, presupuestoId }                          → resumen IA (cacheado)
@@ -79,7 +81,7 @@ export const POST = auditado(async (req: Request) => {
     }
     // `datos` y `datos_incorrectos` son del presupuesto, no de una opción: no piden `opcionId`.
     const sinOpcion = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'resumen_ia' ||
-      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme' || b?.accion === 'actividad' || b?.accion === 'pdf'
+      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme' || b?.accion === 'actividad' || b?.accion === 'pdf' || b?.accion === 'estudio'
     // Quien entró con el código del WhatsApp llega con el token y SIN identidad: solo para estas acciones.
     const admiteWhatsapp = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'preparar' ||
       b?.accion === 'codigo' || b?.accion === 'firmar'
@@ -110,6 +112,11 @@ export const POST = auditado(async (req: Request) => {
         })
       }
       return NextResponse.json(r, { status: r.estado === 'no_encontrado' ? 404 : r.estado === 'no_disponible' ? 409 : STATUS[r.estado] ?? 409 })
+    }
+    if (b?.accion === 'estudio') {
+      // El MISMO estudio que el PDF, en lista blanca (`estudio-cliente.ts`), de SU ficha y ya enviado. Solo lectura.
+      const r = await estudioParaPortal(correduria.id, identidadId, presupuestoId)
+      return NextResponse.json(r, { status: r.estado === 'ok' || r.estado === 'sin_estudio' ? 200 : r.estado === 'no_encontrado' ? 404 : r.estado === 'no_disponible' ? 409 : STATUS[r.estado] ?? 409 })
     }
     if (b?.accion === 'datos_incorrectos') {
       const r = await reportarDatosIncorrectos(correduria.id, acceso, presupuestoId, s('texto'))
