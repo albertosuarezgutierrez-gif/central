@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T13:38:04Z",
-  "sha": "8c5fd029be6afa307fc96ee4229602f5e07d1324",
+  "generadoEn": "2026-10-21T16:03:45Z",
+  "sha": "9b558f2e8ce41e490cd02fcb44c3e4974cb87b3b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -177467,6 +177467,7 @@
         "claveCerrada",
         "garajeNocheDeCodigo",
         "tipoGarajeDeCodigo",
+        "fechaMatriculacionParaBot",
         "formularioBotAuto"
       ],
       "funciones": [
@@ -177476,7 +177477,7 @@
           "exportada": true,
           "params": "v: string | null | undefined, lista: readonly string[], porDefecto: string",
           "retorno": "string | undefined",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Valor del selector → clave cerrada (o el defecto si viene vacío). `undefined` = valor que no está en la lista. PURA."
         },
         {
@@ -177485,7 +177486,7 @@
           "exportada": true,
           "params": "codigo: string | null | undefined",
           "retorno": "boolean | null",
-          "linea": 92,
+          "linea": 93,
           "resumen": "Código de garaje → `garajeNoche` del formulario. Calle / vía pública → `false`; garaje individual, comunitario o «Garaje» → `true`; vacío o un código que no se ha visto → `null` (no se traduce a ojo: "
         },
         {
@@ -177494,8 +177495,17 @@
           "exportada": true,
           "params": "codigo: string | null | undefined",
           "retorno": "'calle' | 'colectivo' | 'individual' | null",
-          "linea": 100,
+          "linea": 101,
           "resumen": "Código de garaje → `tipoGaraje` del formulario (15/10/2026): calle · colectivo (comunitario) · individual. «Garaje» a secas, vacío o un código no visto → `null` (el bot supone «colectivo» y lo DECLARA"
+        },
+        {
+          "nombre": "fechaMatriculacionParaBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Pick<EntradaBotAuto, 'fechaMatriculacion' | 'matricula'>, hoy: Date",
+          "retorno": "",
+          "linea": 118,
+          "resumen": "1.ª matriculación que viaja al bot: la del vehículo si consta (vendor/ficha/editada) y, si no, la ESTIMADA por la serie de la matrícula (`fechaMatriculacionEstimada`, el mismo estimador que `DatosVehi"
         },
         {
           "nombre": "formularioBotAuto",
@@ -177503,13 +177513,12 @@
           "exportada": true,
           "params": "e: EntradaBotAuto, hoy: Date = new Date()",
           "retorno": "FormularioBotMoto",
-          "linea": 111,
-          "resumen": "Formulario del cotizador de coche → `riesgo` de auto para asegura, o QUÉ falta (en castellano, sin valores). Lo de la ficha va en `completarDesdeFicha` (lo pone el servidor; si la ficha tampoco lo tie"
+          "linea": 126
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "149e1cb266ab"
+      "hash": "ab02e11d3294"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-auto-riesgo.ts",
@@ -177880,6 +177889,7 @@
       "exporta": [
         "adaptadorDeRamo",
         "checklistBot",
+        "conSupuestoMatriculacion",
         "conReglasPrevias",
         "ramosConBots"
       ],
@@ -177912,12 +177922,21 @@
           "resumen": "Checklist de datos obligatorios de UNA compañía para este formulario (15/10/2026): reemplaza al antiguo `faltaPorCompania`. Construye el riesgo con el adaptador y lo pasa por `faltanParaTarificar` (la"
         },
         {
+          "nombre": "conSupuestoMatriculacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ChecklistCompania, compania: string, ramo: string, formulario: unknown, hoy: Date",
+          "retorno": "ChecklistCompania",
+          "linea": 165,
+          "resumen": "Generali auto exige la 1.ª matriculación. Si no consta pero la estimamos por la serie de la matrícula (mismo estimador que «Datos del vehículo»), viaja la estimada y aquí se avisa como fila `supuesto`"
+        },
+        {
           "nombre": "conReglasPrevias",
           "kind": "function",
           "exportada": true,
           "params": "c: ChecklistCompania, reglas: readonly { clave: string; etiqueta: string }[]",
           "retorno": "ChecklistCompania",
-          "linea": 165,
+          "linea": 177,
           "resumen": "Añade al checklist las reglas previas incumplidas (`tarificador-reglas-previas.ts`) como filas `falta`: lo que el portal exige y `obligatorios.ts` no declara. Una clave que ya está en el checklist no "
         },
         {
@@ -177926,13 +177945,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string[]",
-          "linea": 178,
+          "linea": 190,
           "resumen": "Ramos con adaptador (para saber qué anfitrión monta el bloque)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0454d1ae52e2"
+      "hash": "cbd9d47572d8"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-checklist.ts",
@@ -180001,7 +180020,7 @@
           "params": "compania: string, ramo: string, riesgo: Record<string, unknown>",
           "retorno": "ReglaPrevia | null",
           "linea": 107,
-          "resumen": "Hueco 2: Generali auto exige la fecha de 1.ª matriculación (`generali/auto.ts`: sin ella, `datos`). Normalmente viene del vendor por matrícula. PURA."
+          "resumen": "Hueco 2: Generali auto exige la fecha de 1.ª matriculación (`generali/auto.ts`: sin ella, `datos`). El riesgo ya la trae del vendor/ficha o, si no, estimada por la serie de la matrícula (`fechaMatricu"
         },
         {
           "nombre": "tomadorSinEnFicha",
@@ -180009,7 +180028,7 @@
           "exportada": true,
           "params": "faltan: readonly string[] | null | undefined",
           "retorno": "('documento' | 'codigoPostal')[] | undefined",
-          "linea": 114,
+          "linea": 115,
           "resumen": "Qué de la ficha del TOMADOR sabemos que no está (de la precalificación de la ficha: claves `dni` y `cp`). `null` = no se pudo leer → no se afirma nada. PURA."
         },
         {
@@ -180018,7 +180037,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: Record<string, unknown>, sinEnFicha: readonly string[] | undefined",
           "retorno": "ReglaPrevia[]",
-          "linea": 126,
+          "linea": 127,
           "resumen": "Hueco 4: Allianz Turismos teclea el documento y el CP + localidad del TOMADOR (`planDatosTurismos`). Los pone asegura desde la ficha al entregar, así que solo se avisa cuando la precalificación ya sab"
         },
         {
@@ -180027,7 +180046,7 @@
           "exportada": true,
           "params": "ramo: string, riesgo: Record<string, unknown>",
           "retorno": "ReglaPrevia | null",
-          "linea": 141,
+          "linea": 142,
           "resumen": "Hueco 3: carné con menos de 18 años (16 con A1/AM) en la fecha del carné. Todas las compañías de auto y moto. PURA."
         },
         {
@@ -180036,7 +180055,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: Record<string, unknown>",
           "retorno": "ReglaPrevia | null",
-          "linea": 156,
+          "linea": 157,
           "resumen": "Hueco 7: moto con siniestros en 5 años > 0. Allianz Moto (`planDatosBasicosMoto`) y Mapfre moto sin bloque de historial (`planFigurasSinHistorial`) paran con hueco de mapa: hoy no se cotizan automátic"
         },
         {
@@ -180045,13 +180064,13 @@
           "exportada": true,
           "params": "a: { compania: string; ramo: string; riesgo: Record<string, unknown>; formulario?: unknown; hoy?: Date }",
           "retorno": "ReglaPrevia[]",
-          "linea": 169,
+          "linea": 170,
           "resumen": "Todas las reglas previas de una compañía × ramo sobre el riesgo que construyó el adaptador. `formulario` aporta lo que no viaja en el riesgo. PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2d29b3eef924"
+      "hash": "c1092cb753db"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-todas.ts",
@@ -184323,13 +184342,13 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 11,
+          "linea": 13,
           "resumen": "Marco común del panel: branding de la empresa ACTIVA de la sesión, leído en servidor una vez. 🚨 Esto NO es la barrera de seguridad: un layout no se re-ejecuta en cada navegación cliente y los route h"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3bf82bcb7909"
+      "hash": "3f6e514fba13"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/NominasPanel.tsx",
@@ -184602,6 +184621,27 @@
       "tablas": [],
       "rutaApi": "/api/admin/asistente",
       "hash": "83386a228f98"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/avisos-admin/visto/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "«Marcar como visto» los avisos de envío fallido. Siempre acotado a la empresa de la sesión."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/avisos-admin/visto",
+      "hash": "0f72d3d695af"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/calendario/route.ts",
@@ -185813,7 +185853,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/solicitudes/[id]",
-      "hash": "995f6520c47a"
+      "hash": "796f8d465b98"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/solicitudes/route.ts",
@@ -187002,6 +187042,27 @@
       "hash": "bce7a4a4d149"
     },
     {
+      "ruta": "apps/rrhh/components/AvisosAdminBanner.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "AvisosAdminBanner"
+      ],
+      "funciones": [
+        {
+          "nombre": "AvisosAdminBanner",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ avisos }: { avisos: Aviso[] }",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Fallos de envío de correo de los últimos 7 días (solo del panel: el empleado nunca lo ve)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8cf39986c31d"
+    },
+    {
       "ruta": "apps/rrhh/components/CambiadorEmpresa.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -187246,15 +187307,15 @@
           "exportada": true,
           "params": "c",
           "retorno": null,
-          "linea": 59,
-          "resumen": "Envío real (remitente de rrhh, `MAIL_FROM`). `false` si no hay transporte o falla: no se dice al usuario."
+          "linea": 63,
+          "resumen": "Envío real (remitente de rrhh, `MAIL_FROM`). `false` si no hay transporte o falla: al EMPLEADO no se le dice nada (anti-enumeración), pero al responsable SÍ: queda un aviso en su panel (`rrhh.avisos_a"
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "8b88bae2d5a1"
+      "hash": "ea58dacc2b3b"
     },
     {
       "ruta": "apps/rrhh/lib/acceso-email.ts",
@@ -187310,7 +187371,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, enviar: EnviarCodigo, entrada: { email: unknown; ip: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoSolicitar>",
-          "linea": 86,
+          "linea": 90,
           "resumen": "`envio` es la tarea de mandar el correo (o `null` si el email no es de nadie): la ruta la lanza con `after()` para que la respuesta NO espere al SMTP. `null` y no-`null` producen la MISMA respuesta HT"
         },
         {
@@ -187319,7 +187380,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, entrada: { email: unknown; codigo: unknown }, ahora = new Date(),",
           "retorno": "Promise<ResultadoVerificar>",
-          "linea": 114
+          "linea": 121
         },
         {
           "nombre": "completarAcceso",
@@ -187327,7 +187388,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, compararPin: (pin: string, hash: string) => Promise<boolean>, ticket: { otp_id: string; empleados: string[] }, entrada: { email: unknown; empleado_id: unknown; pin: unknown },",
           "retorno": "Promise<ResultadoCompletar>",
-          "linea": 152
+          "linea": 159
         },
         {
           "nombre": "correoCodigo",
@@ -187335,13 +187396,13 @@
           "exportada": true,
           "params": "c: CorreoCodigo",
           "retorno": "",
-          "linea": 177,
+          "linea": 184,
           "resumen": "Asunto y cuerpo (texto plano, sobrio). Puro para poder testearlo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0ebfa98b6a5"
+      "hash": "f0df7959879b"
     },
     {
       "ruta": "apps/rrhh/lib/ai.ts",
@@ -187759,6 +187820,100 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "5c4005461983"
+    },
+    {
+      "ruta": "apps/rrhh/lib/avisos-admin-reglas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Decisión PURA de los avisos al responsable por correo fallido (sin BD ni correo → testeable). Tabla: `rrhh.avisos_admin` (migración 0027). Aquí NO entra nunca el código ni la clave.",
+      "exporta": [
+        "motivoFallo",
+        "textoMotivo",
+        "debeAvisar",
+        "textoAvisoEnvio"
+      ],
+      "funciones": [
+        {
+          "nombre": "motivoFallo",
+          "kind": "function",
+          "exportada": true,
+          "params": "hayTransporte: boolean",
+          "retorno": "MotivoFallo",
+          "linea": 11,
+          "resumen": "Sin transporte (`createMailTransporter()` → null) = sin proveedor; si lo había y falló = error del servidor."
+        },
+        {
+          "nombre": "textoMotivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MotivoFallo",
+          "retorno": "string",
+          "linea": 15
+        },
+        {
+          "nombre": "debeAvisar",
+          "kind": "function",
+          "exportada": true,
+          "params": "ultimoAviso: Date | null | undefined, ahora: Date = new Date()",
+          "retorno": "boolean",
+          "linea": 20,
+          "resumen": "¿Hay que crear aviso? No si el último del mismo empleado y canal es de hace menos de 6 h."
+        },
+        {
+          "nombre": "textoAvisoEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAviso",
+          "retorno": "string",
+          "linea": 30,
+          "resumen": "Texto del aviso. Solo nombre y email del empleado: ningún código, hash ni clave."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c522112df9e2"
+    },
+    {
+      "ruta": "apps/rrhh/lib/avisos-admin.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Adaptador Prisma de `rrhh.avisos_admin` (migración 0027): deja un aviso en el panel del responsable cuando un correo de rrhh no sale. La decisión (motivo, dedupe 6 h, texto) es PURA en `avisos-admin-reglas.ts`. 🚨 NUNCA lanza (un fallo aquí no puede tumbar el envío ni la petición) y NUNCA recibe cód",
+      "exporta": [
+        "registrarFalloEnvio",
+        "listarAvisosAdmin",
+        "marcarAvisosAdminVistos"
+      ],
+      "funciones": [
+        {
+          "nombre": "registrarFalloEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FalloEnvio",
+          "retorno": "Promise<void>",
+          "linea": 22
+        },
+        {
+          "nombre": "listarAvisosAdmin",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<AvisoAdmin[]>",
+          "linea": 51,
+          "resumen": "Fallos de los últimos 7 días SIN ver, de LA empresa de la sesión."
+        },
+        {
+          "nombre": "marcarAvisosAdminVistos",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, ids?: string[]",
+          "retorno": "Promise<number>",
+          "linea": 64,
+          "resumen": "«Marcar como visto»: solo los de esa empresa."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "bd0961c04887"
     },
     {
       "ruta": "apps/rrhh/lib/avisos-reglas.ts",
@@ -188954,7 +189109,7 @@
           "exportada": false,
           "params": "empresaId: string, empleadoId: string",
           "retorno": "DepsFirma",
-          "linea": 19,
+          "linea": 20,
           "resumen": "Construye los puertos de firma con el SQL de rrhh (tablas `rrhh.documentos/firmas/firma_otps`), scopeados a (empresa, empleado). La orquestación owner-agnóstica vive en `@central/module-rrhh`."
         },
         {
@@ -188963,7 +189118,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 92,
+          "linea": 94,
           "resumen": "Genera y envía el código OTP de firma (10 min). Ver `@central/module-rrhh`."
         },
         {
@@ -188972,7 +189127,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 97,
+          "linea": 105,
           "resumen": "El gestor solicita la firma de un documento (estado_firma → 'pendiente'). Scope por empresa."
         },
         {
@@ -188981,7 +189136,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string, ctx: { ip?: string | null; user_agent?: string | null; nombre_confirmado: string; codigo?: string | null }",
           "retorno": null,
-          "linea": 102,
+          "linea": 110,
           "resumen": "El empleado firma el documento (firma avanzada propia, eIDAS art.26). Devuelve la evidencia."
         }
       ],
@@ -188990,7 +189145,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "608f4172c761"
+      "hash": "ffa383f11301"
     },
     {
       "ruta": "apps/rrhh/lib/firmas-panel.ts",
@@ -189956,7 +190111,7 @@
           "exportada": false,
           "params": "empresaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 6,
+          "linea": 7,
           "resumen": "Emails de los responsables de RR.HH. de una empresa."
         },
         {
@@ -189965,16 +190120,16 @@
           "exportada": true,
           "params": "empresaId: string, asunto: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 17,
+          "linea": 18,
           "resumen": "Avisa por email a los responsables de RR.HH. Best-effort y NO bloqueante: si no hay SMTP configurado o falla, no lanza. Listo para funcionar en cuanto se carguen las env de correo (SMTP_HOST, SMTP_POR"
         },
         {
           "nombre": "avisarEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "email: string | null, tipo: string, estado: 'aprobada' | 'rechazada'",
+          "params": "email: string | null, tipo: string, estado: 'aprobada' | 'rechazada', ctx?: { empresaId: string; empleadoId: string },",
           "retorno": "Promise<void>",
-          "linea": 30,
+          "linea": 36,
           "resumen": "Avisa al empleado por email cuando su solicitud es resuelta. Best-effort, silencioso si falla."
         },
         {
@@ -189983,7 +190138,7 @@
           "exportada": true,
           "params": "empleadoId: string",
           "retorno": "Promise<string>",
-          "linea": 49,
+          "linea": 62,
           "resumen": "Nombre del empleado (para componer los avisos)."
         }
       ],
@@ -189991,7 +190146,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "1ffd87d5d863"
+      "hash": "12b95d779604"
     },
     {
       "ruta": "apps/rrhh/lib/operador.ts",
@@ -190447,7 +190602,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "5c9fbb8b4d5e"
+      "hash": "0a495e187b6b"
     },
     {
       "ruta": "apps/rrhh/lib/storage.ts",
@@ -229605,7 +229760,7 @@
           "exportada": true,
           "params": "f: Pick<FormularioAuto, 'documentoTomador' | 'tomador' | 'fichaTomador'> | null | undefined",
           "retorno": "string | null",
-          "linea": 348,
+          "linea": 350,
           "resumen": "Documento del tomador que el robot teclea en el portal: `documentoTomador` (lo pone asegura) o, si no, el del bloque `tomador`. `null` = no consta. PURO; nunca se loguea."
         },
         {
@@ -229614,7 +229769,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "string[]",
-          "linea": 360,
+          "linea": 362,
           "resumen": "Formas en que el documento del tomador puede aparecer en un texto o en el HTML del portal (tal cual, con guion o espacio antes de la letra de control), más el NOMBRE, los APELLIDOS, la RAZÓN SOCIAL y "
         },
         {
@@ -229623,7 +229778,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 429,
+          "linea": 431,
           "resumen": "email (algo@algo.algo); teléfono español (9 dígitos que empiezan por 6, 7, 8 o 9, con espacios o guiones opcionales y prefijo +34 o 0034 opcional); IBAN (ES + 22 dígitos, con o sin espacios); y bastid"
         },
         {
@@ -229632,7 +229787,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 447
+          "linea": 449
         },
         {
           "nombre": "fechaIso",
@@ -229640,7 +229795,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "string | null",
-          "linea": 449
+          "linea": 451
         },
         {
           "nombre": "entero",
@@ -229648,7 +229803,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number",
           "retorno": "number | null",
-          "linea": 461
+          "linea": 463
         },
         {
           "nombre": "booleano",
@@ -229656,7 +229811,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "boolean | null",
-          "linea": 471
+          "linea": 473
         },
         {
           "nombre": "edad",
@@ -229664,7 +229819,7 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": null,
-          "linea": 480
+          "linea": 482
         },
         {
           "nombre": "validarFormularioAuto",
@@ -229672,12 +229827,12 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioAuto",
-          "linea": 487
+          "linea": 489
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ab4f1ddfff2"
+      "hash": "deadb98506ee"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-comercio.ts",
@@ -234365,7 +234520,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4936,
-    "funciones": 18792
+    "archivos": 4940,
+    "funciones": 18803
   }
 }

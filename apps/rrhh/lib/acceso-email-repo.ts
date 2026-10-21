@@ -3,6 +3,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getTransporter, MAIL_FROM } from '@/lib/mailer'
+import { registrarFalloEnvio } from '@/lib/avisos-admin'
 import { correoCodigo, type Candidato, type EnviarCodigo, type OtpFila, type RepoAcceso } from '@/lib/acceso-email'
 
 export const repoAcceso: RepoAcceso = {
@@ -55,16 +56,23 @@ export const repoAcceso: RepoAcceso = {
   },
 }
 
-/** Envío real (remitente de rrhh, `MAIL_FROM`). `false` si no hay transporte o falla: no se dice al usuario. */
+/**
+ * Envío real (remitente de rrhh, `MAIL_FROM`). `false` si no hay transporte o falla: al EMPLEADO no se le
+ * dice nada (anti-enumeración), pero al responsable SÍ: queda un aviso en su panel (`rrhh.avisos_admin`).
+ */
 export const enviarCodigoAcceso: EnviarCodigo = async (c) => {
+  const avisar = (hayTransporte: boolean) => Promise.all((c.destinos ?? []).map(d => registrarFalloEnvio({
+    empresaId: d.empresa_id, empleadoId: d.empleado_id, canal: 'acceso', hayTransporte, nombre: d.nombre, email: c.to,
+  })))
   const t = getTransporter()
-  if (!t) { console.warn('[acceso-email] sin transporte de correo: código no enviado'); return false }
+  if (!t) { console.warn('[acceso-email] sin transporte de correo: código no enviado'); await avisar(false); return false }
   try {
     const { subject, text } = correoCodigo(c)
     await t.sendMail({ from: MAIL_FROM, to: c.to, subject, text })
     return true
   } catch (e) {
     console.error('[acceso-email] fallo al enviar el código', e instanceof Error ? e.message : e)
+    await avisar(true)
     return false
   }
 }

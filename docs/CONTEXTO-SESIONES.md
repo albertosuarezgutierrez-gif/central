@@ -15,6 +15,10 @@
 **(21/10/2026)** — Correduría · Occident solicitud 165109972 (Studium, acc. colectivo, efecto retroactivo 15/10): declaración de no siniestralidad en PDF firmada por Berta; emitida póliza 549683979 el 21/10. El correo de emisión no se leía y la solicitud quedó en bandeja sin oportunidad.
 Inventario histórico Gmail: 856 hilos sector, parsers cubren 13,4 %; spec «agente corredor de correo» en `docs/CORREDURIA-AGENTE-CORREO.md` (F0 deterministas sobre PR #4893 → F3). CIMA = verdad; correo cruza y avisa por Telegram.
 Pendiente Alberto: proveedor LLM UE (Anthropic vs Azure), almacenamiento adjuntos, días de espera CIMA, Mapfre FACTURA. 🚨 Triaje envía asuntos con tomador a Groq/NIM sin DPA; tirea.es/codeoscopic con credenciales en claro (rotar).
+**(21/10/2026)** — RRHH · NINGÚN correo salía: faltaba `RESEND_API_KEY` en Vercel `central-rrhh` (log «sin proveedor»). Creada clave Resend
+solo-envío iarest.es + `MAIL_FROM` «Portal del Empleado <no-responder@iarest.es>», redeploy. Nuevo `rrhh.avisos_admin` (0027): fallo de envío
+(acceso/notificación/firma) → banner en todo /admin con «Marcar como visto», dedupe 6 h. Pendiente: material con foto (esperando respuestas de Pilar).
+
 **(21/10/2026)** — Allianz moto confirmada de punta a punta por Alberto con 0.7.20: prima = «Anual sucesivos» del RECIBO BANCARIO.
 «Cliente Alto Potencial = Sí» abre una ventana de descuento comercial, hoy DESACTIVADA en el broker; documentado en
 `docs/TARIFICADOR-DATOS-BOTS.md` (sección moto). Verificar con un run real cuando se active; el bot no aplica descuentos sin decisión.

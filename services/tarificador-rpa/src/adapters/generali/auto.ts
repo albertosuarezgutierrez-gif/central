@@ -132,7 +132,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * combustible; equivalentes → declarada, material → `eleccion`) por las puertas nuevas de guard.ts; ANTES de avanzar se verifica el «Resumen»
  * (código/descripción); se avanza con «Siguiente» o «Confirmar». Sin Potencia/Versión (una sola versión) sigue como 0.2.13.
  */
-export const VERSION_GENERALI_AUTO = '0.2.14'
+export const VERSION_GENERALI_AUTO = '0.2.15'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -1193,8 +1193,12 @@ export async function rellenarValoracionGenerali(page: Page, form: FormularioAut
 
   const fecha = await controlJuntoA(marco, ETIQUETAS_VALORACION.fechaPrimeraMatriculacion, 'input', ctx.formador)
   if (!fecha) throw new ErrorMapaIncompletoGenerali(`el campo «${ETIQUETAS_VALORACION.fechaPrimeraMatriculacion}» (captura 6)`)
-  const fm = fechaGenerali(form.fechaMatriculacion ?? null)
-  if (fm) await escribir(fecha, fm, ctx)
+  // 0.2.15 (21/10/2026): sin la real, la ESTIMADA por la serie de la matrícula (`fechaMatriculacionEstimada`, solo la lee Generali) y se declara.
+  const fm = fechaGenerali(form.fechaMatriculacion ?? form.fechaMatriculacionEstimada ?? null)
+  if (fm) {
+    await escribir(fecha, fm, ctx)
+    if (!form.fechaMatriculacion) supuestos.push('Fecha de 1.ª matriculación estimada por la serie de la matrícula')
+  }
   else if ((await fecha.inputValue().catch(() => '')).trim() === '') throw new ErrorTarificador('datos', 'generali/auto: Generali pide la fecha de 1ª matriculación y el riesgo no la trae')
 
   const roles = rolesGenerali(form)
