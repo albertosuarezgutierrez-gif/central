@@ -38,8 +38,11 @@ import { ErrorTarificador, ErrorVerificacionHumana } from '../../errores.ts'
 import { hayCaptcha } from '../../captcha.ts'
 import { ErrorCredenciales, exigirSinRechazoCredenciales } from '../../credenciales.ts'
 import { ErrorMapaIncompleto } from './auto.ts'
+import { cerrarAvisosModales } from './avisos.ts'
 
 export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
+  /** Log del runner (opcional): el aviso modal cerrado antes de «Nueva producción» deja su título. */
+  log?: (m: string, d?: Record<string, unknown>) => void
   /** El enlace «…Emisión…» de menú: SOLO por la excepción exacta del guard (`pulsarEnlaceEntradaAutorizado`). */
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
   /** Las MISMAS credenciales del login (`ctx.credenciales`): solo para el login antiguo (`/loginexternopi/`) que a veces
@@ -421,6 +424,7 @@ async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string
 async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number }): Promise<Page> {
   const menuMs = esperas.menuMs ?? ESPERA_MENU_MS
   const confirmaciones: (() => Promise<void>)[] = []
+  await cerrarAvisosModales(page, ctx) // v0.8.13: un modal del portal sobre la home intercepta el clic en «Nueva producción»
   const pestana = await conRespaldo(page, ctx, () => localizar(page, ['tab'], PESTANA_NUEVA_PRODUCCION, 'pestaña', menuMs), {
     clave: 'pestana_nueva_produccion', tipo: 'accion', textoEsperado: PESTANA_NUEVA_PRODUCCION,
     descripcion: `pestaña «${PESTANA_NUEVA_PRODUCCION}» del menú superior del portal de mediadores (despliega los ramos)`,

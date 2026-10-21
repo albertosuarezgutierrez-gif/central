@@ -103,11 +103,12 @@ export function reglaPolizaAnterior(compania: string, ramo: string, riesgo: Reco
   }
 }
 
-/** Hueco 2: Generali auto exige la fecha de 1.ª matriculación (`generali/auto.ts`: sin ella, `datos`). Normalmente viene del vendor por matrícula. PURA. */
+/** Hueco 2: Generali auto exige la fecha de 1.ª matriculación (`generali/auto.ts`: sin ella, `datos`). El riesgo ya la trae del vendor/ficha o, si no, estimada por la serie de la matrícula (`fechaMatriculacionParaBot`): solo bloquea si no hay forma de obtenerla. PURA. */
 export function reglaMatriculacionGenerali(compania: string, ramo: string, riesgo: Record<string, unknown>): ReglaPrevia | null {
   if (claveCompania(compania) !== 'generali' || ramo !== 'auto') return null
   const f = typeof riesgo.fechaMatriculacion === 'string' ? riesgo.fechaMatriculacion.trim() : ''
-  return partes(f) ? null : { clave: 'fechaMatriculacion', etiqueta: 'fecha de 1.ª matriculación del vehículo (Generali la exige; suele venir del vendor por matrícula)', bloque: 'riesgo' }
+  const est = typeof riesgo.fechaMatriculacionEstimada === 'string' ? riesgo.fechaMatriculacionEstimada.trim() : ''
+  return partes(f) || partes(est) ? null : { clave: 'fechaMatriculacion', etiqueta: 'fecha de 1.ª matriculación del vehículo (Generali la exige; no se pudo obtener del vendor ni estimar por la matrícula)', bloque: 'riesgo' }
 }
 
 /** Qué de la ficha del TOMADOR sabemos que no está (de la precalificación de la ficha: claves `dni` y `cp`). `null` = no se pudo leer → no se afirma nada. PURA. */

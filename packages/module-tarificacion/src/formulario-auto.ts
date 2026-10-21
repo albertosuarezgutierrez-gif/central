@@ -331,6 +331,8 @@ export type FormularioAuto = {
   // ── 15/10/2026: lo que el bot SUPONE si no viene (`supuestosAuto`), mismos nombres que el riesgo de la oportunidad ──
   /** 1ª matriculación (ISO, no futura), de `datosVehiculo.fechaMatriculacion`. Decide compra nuevo / 2ª mano. Ausente = no consta. */
   fechaMatriculacion?: string | null
+  /** 1ª matriculación ESTIMADA por la serie de la matrícula (ISO, no futura). SOLO la lee Generali (exige la fecha y no la autorrellena); Allianz/Mapfre la ignoran y leen la real de su portal. */
+  fechaMatriculacionEstimada?: string | null
   /** Vencimiento de la póliza ACTUAL (ISO): la fecha de efecto si es futura. Ausente = no consta. */
   fechaVencimiento?: string | null
   /** Tipo de garaje (`TIPOS_GARAJE`), del código de garaje del riesgo. Ausente = no consta. */
@@ -638,6 +640,8 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   // Supuestos de Allianz Turismos (opcionales, sin defecto: lo que no viene lo SUPONE el bot y lo declara).
   const fechaMatriculacion = fechaIso(e.fechaMatriculacion, 'fechaMatriculacion', errores)
   if (fechaMatriculacion !== null && fechaMatriculacion > hoy.toISOString().slice(0, 10)) errores.push('fechaMatriculacion: no puede ser futura')
+  const fechaMatriculacionEstimada = fechaIso(e.fechaMatriculacionEstimada, 'fechaMatriculacionEstimada', errores)
+  if (fechaMatriculacionEstimada !== null && fechaMatriculacionEstimada > hoy.toISOString().slice(0, 10)) errores.push('fechaMatriculacionEstimada: no puede ser futura')
   const fechaAdquisicion = fechaIso(e.fechaAdquisicion, 'fechaAdquisicion', errores)
   if (fechaAdquisicion !== null) {
     if (fechaAdquisicion > hoy.toISOString().slice(0, 10)) errores.push('fechaAdquisicion: no puede ser futura')
@@ -694,6 +698,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(companiaAnterior !== null ? { companiaAnterior } : {}),
       ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
       ...(fechaMatriculacion !== null ? { fechaMatriculacion } : {}),
+      ...(fechaMatriculacionEstimada !== null ? { fechaMatriculacionEstimada } : {}),
       ...(fechaAdquisicion !== null ? { fechaAdquisicion } : {}),
       ...(fechaAdquisicion !== null && fechaAdquisicionPorDefecto !== null ? { fechaAdquisicionPorDefecto } : {}),
       ...(fotocopiaAnterior !== null ? { fotocopiaAnterior } : {}),

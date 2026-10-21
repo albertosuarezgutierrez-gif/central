@@ -7,7 +7,7 @@ import {
 } from './tarificador-reglas-previas.ts'
 import { adaptadorDeRamo, checklistBot } from './tarificador-bots-ramos.ts'
 import { pendientesPorBloque } from './tarificador-pendientes.ts'
-import { formularioBotAuto, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
+import { fechaMatriculacionParaBot, formularioBotAuto, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 const HOY = new Date('2026-10-20T10:00:00Z')
 
@@ -242,10 +242,20 @@ test('checklistBot: una fecha «de la ficha» no se evalúa (la lee el servidor)
 
 test('checklistBot (Generali auto): sin 1.ª matriculación falta; con ella, no', () => {
   const a = adaptadorDeRamo('auto')!
-  const sin = checklistBot(a, AUTO, {}, 'generali', HOY)
+  const sin = checklistBot(a, { ...AUTO, matricula: 'M1234AB' }, {}, 'generali', HOY) // matrícula provincial: sin serie estimable
   assert.ok(sin.estado === 'evaluado' && sin.faltan.some((f) => f.clave === 'fechaMatriculacion'))
   const con = checklistBot(a, { ...AUTO, fechaMatriculacion: '2019-03-01' }, {}, 'generali', HOY)
   assert.ok(con.estado === 'evaluado' && !con.faltan.some((f) => f.clave === 'fechaMatriculacion'))
+})
+
+test('checklistBot (Generali auto): sin fecha guardada pero con matrícula estimable NO bloquea y avisa como supuesto', () => {
+  const a = adaptadorDeRamo('auto')!
+  const x = checklistBot(a, AUTO, {}, 'generali', HOY) // AUTO no trae fechaMatriculacion; la matrícula 1234BCD sí es estimable
+  assert.ok(x.estado === 'evaluado' && !x.faltan.some((f) => f.clave === 'fechaMatriculacion'))
+  assert.equal(x.estado === 'evaluado' && x.filas.find((f) => f.clave === 'fechaMatriculacion')?.estado, 'supuesto')
+  const r = formularioBotAuto(AUTO, HOY)
+  assert.ok(r.ok && typeof r.riesgo.fechaMatriculacionEstimada === 'string' && !('fechaMatriculacion' in r.riesgo)) // viaja aparte; la compartida sigue siendo solo la real
+  assert.equal(fechaMatriculacionParaBot({ matricula: '1234BCD', fechaMatriculacion: '2019-03-01' }, HOY)?.estimada, false)
 })
 
 test('checklistBot (Allianz Turismos): la ficha sin documento ni CP del tomador falta; sin esa señal no se afirma', () => {

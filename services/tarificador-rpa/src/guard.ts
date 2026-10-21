@@ -9,7 +9,7 @@
 
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
 import { ErrorTarificador } from './errores.ts'
-import { indicesCompaniaActual } from './compania-actual.ts'
+import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
 import { MEDIADOR_GENERALI, opcionMediadorGenerali } from './adapters/generali/reglas.ts'
 import {
   EmisionBloqueadaError,
@@ -2267,7 +2267,7 @@ const MAX_OPCIONES_COMPANIA = 200
 
 export type ResultadoCompaniaActualTurismos =
   /** Elegida la ÚNICA opción que casa con `buscada`. */
-  | { estado: 'elegida'; opciones: string[]; elegida: string }
+  | { estado: 'elegida'; opciones: string[]; elegida: string; /** La declarada no estaba: se marcó la ÚNICA opción genérica («OTRAS»…); quien llama lo DECLARA. */ generica?: true }
   /** Sin `buscada` (no consta): se abrió, se leyó y se cerró sin elegir. */
   | { estado: 'sin_elegir'; opciones: string[] }
   /** `buscada` no casa con ninguna opción: se cerró sin elegir. */
@@ -2285,7 +2285,7 @@ export type ResultadoCompaniaActualTurismos =
  * elige si devuelve EXACTAMENTE un índice; 0 o varios → no se elige. Vacía si `buscada` normaliza a nada. Puro.
  */
 export function casarCompaniaActualTurismos(opciones: readonly string[], buscada: string): number[] {
-  return indicesCompaniaActual(opciones, buscada)
+  return indicesCompaniaActualCompuesta(opciones, buscada)
 }
 
 /**
@@ -2333,7 +2333,15 @@ export async function companiaActualTurismosAllianz(marco: Frame, guard: GuardEm
     await cerrar()
     return { estado: 'sin_elegir', opciones }
   }
-  const hits = casarCompaniaActualTurismos(opciones, buscada)
+  let hits = casarCompaniaActualTurismos(opciones, buscada)
+  let generica = false
+  if (hits.length === 0) {
+    const g = indiceOpcionGenerica(opciones)
+    if (g >= 0) {
+      hits = [g]
+      generica = true
+    }
+  }
   if (hits.length !== 1) {
     await cerrar()
     return hits.length === 0 ? { estado: 'no_casa', opciones } : { estado: 'ambigua', opciones, coincidencias: hits.length, candidatas: hits.map((i) => opciones[i]) }
@@ -2344,7 +2352,7 @@ export async function companiaActualTurismosAllianz(marco: Frame, guard: GuardEm
   guard.comprobar()
   const ahora = (await control.innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
   if (planoOpcion(ahora) !== planoOpcion(opciones[hits[0]])) return { estado: 'no_unica', opciones, motivo: 'la opción no quedó elegida' }
-  return { estado: 'elegida', opciones, elegida: opciones[hits[0]] }
+  return { estado: 'elegida', opciones, elegida: opciones[hits[0]], ...(generica ? { generica: true as const } : {}) }
 }
 
 // ─────────── TARJETAS DE VEHÍCULO de Allianz AUTOS Turismos (v0.6.4 del bot, 17/10/2026) ───────────
@@ -3528,4 +3536,12 @@ export async function vaciarCodigoSmsGenerali(page: Page): Promise<void> {
   for (let i = 0; i < n; i++) await campos.nth(i).fill('', { timeout: 2_000 }).catch(() => undefined)
   const porEtiqueta = page.getByLabel(ETIQUETA_CODIGO_SMS_GENERALI, { exact: true })
   if ((await porEtiqueta.count().catch(() => 0)) === 1) await porEtiqueta.first().fill('', { timeout: 2_000 }).catch(() => undefined)
+}
+
+/**
+ * Mapfre (21/10/2026): pulsa Escape para cerrar un AVISO MODAL del portal que tapa la home (nunca compromete nada: solo
+ * cierra un diálogo; no hay foco en ningún formulario ni campo de emisión). El teclado vive SOLO en este fichero.
+ */
+export async function pulsarEscapeAvisoModal(page: Page): Promise<void> {
+  await page.keyboard.press('Escape').catch(() => undefined)
 }
