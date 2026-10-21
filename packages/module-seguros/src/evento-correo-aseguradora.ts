@@ -81,12 +81,27 @@ export type EventoSiniestro = Base & { tipo: 'siniestro'; siniestros: SiniestroL
 export type EventoPreAnulacion = Base & { tipo: 'pre_anulacion'; recibos: ReciboEnRiesgo[] }
 /** La compañía da por agotado su cobro y lo DELEGA en la correduría (Mapfre «Delegación recibo»). */
 export type EventoImpago = Base & { tipo: 'impago'; recibos: ReciboEnRiesgo[] }
+/** Un recibo que la compañía dice haber ANULADO por impago (Occident «Resumen de recibos anulados por impago»). */
+export type ReciboAnulado = {
+  numeroPoliza: string
+  /** Nº de recibo TAL CUAL. */
+  idRecibo: string
+  /** `YYYY-MM-DD`: día en que la compañía ANULÓ el recibo. NO es la fecha de efecto de la baja (el correo no la da). */
+  fechaAnulacion: string | null
+}
 export type EventoAnulacion = Base & {
   tipo: 'anulacion'
+  /** Con `recibos`, SIEMPRE `null`: lo anulado es el recibo, no se sabe si la póliza (manda la lista). */
   numeroPoliza: string | null
   /** `YYYY-MM-DD`: desde cuándo deja de tener efecto. */
   fechaEfecto: string | null
   motivo: string | null
+  /**
+   * Solo el resumen de recibos ANULADOS por impago (Occident, 20/10/2026): una entrada por recibo. Ausente = el aviso
+   * es la anulación de una póliza y valen los campos de arriba. Un puerto que no conozca `recibos` ve `numeroPoliza:
+   * null` y lo deja en la bandeja: nunca anota «póliza anulada» por un recibo.
+   */
+  recibos?: ReciboAnulado[]
 }
 export type EventoSuplemento = Base & {
   tipo: 'suplemento'
@@ -400,6 +415,42 @@ function leerOccidentPreAnulacion(c: CorreoEventoAseguradora): EventoPreAnulacio
   return out
 }
 
+// ── Occident · «Resumen de recibos anulados por impago 00000000 - 00000000 (16.10.2026)» ─────────────────────
+// Adjuntamos listado de recibos que se han anulado de forma automática por superar el plazo de cobro previsto. …:
+//   Póliza: BIDS000001 - Recibo: 480000001-H - Anulado en fecha: 15.10.2026 Por favor, no responda …
+// Visto el 01/08 y el 17/10/2026 (la lista va en el CUERPO, una fila por recibo; los dos de un solo recibo). Los nº
+// del asunto son códigos del MEDIADOR, no pólizas. «Anulado en fecha» es cuándo se anuló el RECIBO: la fecha de efecto
+// de la baja no la da el correo → `fechaEfecto: null` (no se supone) y la fecha va en el motivo.
+const RECIBO_ANULADO_OCCIDENT = /P[oó]liza:\s*([A-Z0-9][A-Z0-9.-]*[A-Z0-9])\s+-\s+Recibo:\s*([A-Z0-9-]+)\s+-\s+Anulado\s+en\s+fecha:\s*(\d{2}\.\d{2}\.\d{4})/gi
+
+/** Motivo de una anulación por recibo impagado (lo usa también el puerto de asegura, una por póliza). */
+export const motivoReciboAnulado = (r: Pick<ReciboAnulado, 'idRecibo' | 'fechaAnulacion'>): string =>
+  `Recibo ${r.idRecibo} anulado por impago${r.fechaAnulacion ? ` el ${r.fechaAnulacion.split('-').reverse().join('/')}` : ''} (anulación automática)`
+
+function leerOccidentAnuladosImpago(c: CorreoEventoAseguradora): EventoAnulacion | null {
+  if (!esDe(c.remitente, 'occidentinforma.com')) return null
+  if (!/^\s*resumen\s+de\s+recibos\s+anulados\s+por\s+impago\b/i.test(c.asunto)) return null
+  const t = plano(`${c.cuerpoTexto}\n${c.textoAdjuntos ?? ''}`)
+  const recibos: ReciboAnulado[] = []
+  let filas = 0
+  for (const m of t.matchAll(RECIBO_ANULADO_OCCIDENT)) {
+    filas++
+    if (recibos.some((r) => r.numeroPoliza === m[1] && r.idRecibo === m[2])) continue
+    recibos.push({ numeroPoliza: m[1], idRecibo: m[2], fechaAnulacion: isoDeFecha(m[3]) })
+  }
+  const menciones = t.match(/P[oó]liza:/gi)?.length ?? 0
+  const unico = recibos.length === 1 ? recibos[0] : null
+  return {
+    ...base('occident'), tipo: 'anulacion',
+    numeroPoliza: null,
+    fechaEfecto: null,
+    motivo: unico ? motivoReciboAnulado(unico) : recibos.length > 1 ? `${recibos.length} recibos anulados por impago (anulación automática)` : null,
+    recibos,
+    // «Póliza:» que no se ha sabido leer como fila; sin ninguna fila, el correo entero es ilegible.
+    ilegibles: Math.max(menciones - filas, recibos.length === 0 ? 1 : 0),
+  }
+}
+
 // ── Occident · suplemento de regularización de RC ────────────────────────────────────────────────
 // · clientes@ «<tomador>, Regularización responsabilidad civil»:
 //   Ref. póliza de Responsabilidad Civil nº BIDS000001 Tomador: … Período de regularización: 6/2025 a 6/2026
@@ -562,6 +613,15 @@ function leerAllianzEmision(c: CorreoEventoAseguradora): EventoEmision | null {
 // la respuesta de un suscriptor) → `estado: null` + ilegible: se avisa «míralo», no se inventa.
 // La nota libre y el nombre del mediador NO salen (texto de una persona). El tomador solo va al aviso (ver tipo).
 const ASUNTO_SOLICITUD = /^\s*suscripci[oó]n\s+(.+?)\s+-\s+solicitud\s+(\d{6,12})\s*(?:-\s*(.*))?$/i
+// Variante SIN guion (oct 2026): «Suscripción <ramo> <nº>, <tomador>». Cuerpo visto (3 reales, 15-19/10/2026):
+//   Le informamos que la solicitud de póliza referenciada ha sido rechazada: Contrato mediador: … Solicitud: <nº>
+//   Modalidad: … Tomador: … [Motivo del rechazo: …] Observaciones: <nota libre> … ?idSubscripcio=00<nº> …
+// El asunto solo no basta (podría ser otro nº): se lee SOLO si el cuerpo dice «Solicitud: <el mismo nº>». La
+// «solicitud del SUPLEMENTO de la póliza referenciada» (mismo asunto, trae además «Póliza: <nº>») NO es un proyecto
+// de una oportunidad: no se lee como `solicitud` (no se casaría con nada y diría «apunta el nº en la oportunidad»).
+const ASUNTO_SOLICITUD_COMA = /^\s*suscripci[oó]n\s+(\S.*?)\s+(\d{6,12})\s*,\s*(.*)$/i
+const SOLICITUD_RECHAZADA = /la\s+solicitud\s+de\s+p[oó]liza\s+referenciada\s+ha\s+sido\s+rechazada/i
+const SOLICITUD_SUPLEMENTO = /la\s+solicitud\s+del?\s+suplemento/i
 const ESTADOS_SOLICITUD_FIJOS: readonly RegExp[] = [/caducidad\s+de\s+solicitud/i, /finalizaci[oó]n\s+autom[aá]tica/i]
 // `<DISPONIBLE> * <ESTADO>`, todo en mayúsculas (el texto que sigue, la nota, ya lleva minúsculas o un enlace).
 const ESTADO_ASTERISCO = /\b([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ0-9.]*(?:\s*\/\s*[A-ZÁÉÍÓÚÑ0-9.]+|\s+[A-ZÁÉÍÓÚÑ0-9.]+)*)\s+\*\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ0-9.]*(?:\s+[A-ZÁÉÍÓÚÑ0-9.]+)*)(?=\s+[A-ZÁÉÍÓÚÑ]?[a-záéíóúñ]|\s+https?:|\s*\||\s*$)/
@@ -589,10 +649,16 @@ function urlSolicitudOccident(t: string, numero: string): string | null {
 
 function leerOccidentSolicitud(c: CorreoEventoAseguradora): EventoSolicitud | null {
   if (!esDe(c.remitente, 'occidentinforma.com')) return null
-  const a = ASUNTO_SOLICITUD.exec(c.asunto)
+  const conGuion = ASUNTO_SOLICITUD.exec(c.asunto)
+  const a = conGuion ?? ASUNTO_SOLICITUD_COMA.exec(c.asunto)
   if (!a) return null
   const t = plano(c.cuerpoTexto)
-  const estado = textoCorto(estadoSolicitud(t), 80)
+  if (!conGuion) {
+    if (SOLICITUD_SUPLEMENTO.test(t)) return null
+    const enCuerpo = /\bSolicitud:\s*0*(\d{6,12})\b/i.exec(t)?.[1]
+    if (enCuerpo !== a[2].replace(/^0+/, '')) return null
+  }
+  const estado = textoCorto(!conGuion && SOLICITUD_RECHAZADA.test(t) ? 'Solicitud rechazada' : estadoSolicitud(t), 80)
   const ramo = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,/-]{2,40}$/.test(a[1].trim()) ? a[1].trim() : null
   return {
     ...base('occident'), tipo: 'solicitud', numeroSolicitud: a[2], ramo,
@@ -641,6 +707,7 @@ export function leerCorreoEventoAseguradora(c: CorreoEventoAseguradora): EventoA
     leerOccidentSiniestroResumen(c) ??
     leerOccidentTramitador(c) ??
     leerOccidentPreAnulacion(c) ??
+    leerOccidentAnuladosImpago(c) ??
     leerOccidentSolicitud(c) ??
     leerOccidentSuplemento(c) ??
     leerRealePreAnulacion(c) ??

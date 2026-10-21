@@ -23,7 +23,7 @@
 // - Sin IBAN ni NIF: el lector ya los quita; aquí se vuelve a pasar `sinDatosSensibles` por todo texto
 //   libre que entra por el puerto (segunda red: el puerto no se fía de quien llama).
 
-import { esCarteraEnVigor, esCarteraViva, normalizarNumeroSolicitud, pideDocumentacion, sinDatosSensibles, textoTareaDocumentacion, urlSolicitudValida, validarTarea } from '@central/module-seguros'
+import { esCarteraEnVigor, esCarteraViva, motivoReciboAnulado, normalizarNumeroSolicitud, pideDocumentacion, sinDatosSensibles, textoTareaDocumentacion, urlSolicitudValida, validarTarea } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 
 export const TIPOS_EVENTO_CORREO = ['siniestro', 'pre_anulacion', 'impago', 'anulacion', 'suplemento', 'emision', 'solicitud'] as const
@@ -61,7 +61,14 @@ export type ItemEvento =
       tipo: 'pre_anulacion' | 'impago'; clave: string
       numeroPoliza: string; idRecibo: string | null; importe: number | null; fechaLimite: string | null
     }
-  | { tipo: 'anulacion'; clave: string; numeroPoliza: string | null; fechaEfecto: string | null; motivo: string | null }
+  | {
+      tipo: 'anulacion'; clave: string; numeroPoliza: string | null; fechaEfecto: string | null; motivo: string | null
+      /**
+       * Solo en el resumen de recibos ANULADOS por impago (Occident, 20/10/2026): lo anulado es ESTE RECIBO, no
+       * necesariamente la póliza. Con él, la nota y la tarea hablan del recibo y la clave es póliza/recibo.
+       */
+      idRecibo?: string
+    }
   | {
       tipo: 'suplemento'; clave: string
       numeroPoliza: string; descripcion: string | null; periodoDesde: string | null; periodoHasta: string | null
@@ -171,6 +178,17 @@ export function validarEntradaEvento(b: unknown): { ok: true; entrada: EntradaEv
       meter(poliza ? {
         tipo, clave: recibo ? `${poliza}/${recibo}` : poliza, numeroPoliza: poliza, idRecibo: recibo,
         importe: importe(r?.importe), fechaLimite: dia(r?.fechaLimite),
+      } : null)
+    }
+  } else if (tipo === 'anulacion' && Array.isArray(e.recibos)) {
+    // Resumen de recibos ANULADOS por impago (Occident, 20/10/2026): una anulación por póliza. «Anulado en fecha» es del
+    // RECIBO, no el efecto de la baja: `fechaEfecto` queda null (no se sabe) y la fecha va en el motivo.
+    for (const r of e.recibos.slice(0, 200).map(obj)) {
+      const poliza = id(r?.numeroPoliza)
+      const recibo = id(r?.idRecibo)
+      meter(poliza && recibo ? {
+        tipo, clave: `${poliza}/${recibo}`, numeroPoliza: poliza, idRecibo: recibo, fechaEfecto: null,
+        motivo: libre(motivoReciboAnulado({ idRecibo: recibo, fechaAnulacion: dia(r?.fechaAnulacion) }), 120),
       } : null)
     }
   } else if (tipo === 'anulacion') {
@@ -429,6 +447,8 @@ export function esCheckTipoEventoCorreo(e: unknown): boolean {
 /** Clave de «una tarea por póliza/recibo» (pre-anulación e impago del MISMO recibo comparten tarea). */
 export function claveTareaDe(item: ItemEvento, polizaId: string): string {
   if (item.tipo === 'pre_anulacion' || item.tipo === 'impago') return `recibo:${polizaId}:${claveNumero(item.idRecibo) ?? '-'}`
+  // Un recibo anulado por impago: una tarea por RECIBO (otro recibo de la misma póliza, meses después, es otro aviso).
+  if (item.tipo === 'anulacion' && item.idRecibo) return `anulacion-recibo:${polizaId}:${claveNumero(item.idRecibo) ?? '-'}`
   return `${item.tipo}:${polizaId}`
 }
 
@@ -506,6 +526,21 @@ export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem):
     if (r.estado === 'sin_resolver') return sinResolver(MOTIVO_RESOLUCION[r.motivo])
     if (r.estado === 'no_en_vigor') {
       return { ...base('CIMA ya la trae no vigente: no se hace nada'), estado: 'duplicado_cima', motivo: 'la póliza ya no está en vigor según CIMA' }
+    }
+    if (item.idRecibo) {
+      // Lo anulado es el RECIBO (anulación automática por impago). Que la póliza siga viva o no, el correo no lo dice.
+      const nota = `${cia} comunica por correo${delCorreo} que ha ANULADO POR IMPAGO el recibo ${item.idRecibo}${item.motivo ? ` (${item.motivo})` : ''}. El correo no dice que la póliza esté anulada.`
+      if (ctx.tareaAbierta) return { ...base('ya había tarea de ese recibo anulado: solo nota'), nota }
+      const fecha = venceTarea(null, ctx.hoy, 2)
+      return {
+        ...base(`tarea «recibo anulado por impago» creada, vence ${fechaEs(fecha)}`),
+        nota,
+        tarea: {
+          tipo: 'tarea', prioridad: 'alta', fechaLimite: fecha,
+          observaciones: `${PREFIJO_TAREA_CORREO} ${cia} ha anulado por impago el recibo ${item.idRecibo}. Comprobar en el portal de la compañía cómo queda la póliza y hablar con el cliente.`,
+        },
+        claveTarea: claveTareaDe(item, r.poliza.id),
+      }
     }
     const efecto = item.fechaEfecto ? ` con efecto ${fechaEs(item.fechaEfecto)}` : ''
     const nota = `${cia} comunica por correo${delCorreo} la ANULACIÓN de la póliza${efecto}${item.motivo ? ` (${item.motivo})` : ''}.`

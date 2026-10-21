@@ -165,3 +165,25 @@ test('solicitud SIN casar: lo dice y explica cómo engancharla', () => {
   assert.match(t, /Ninguna oportunidad lleva ese nº/)
   assert.doesNotMatch(t, /asegura no devolvió este elemento/)
 })
+
+test('anulados por impago (Occident): una línea por recibo con la clave de asegura (la póliza), sin «efecto» inventado', () => {
+  const ev: EventoAseguradora = {
+    tipo: 'anulacion', compania: 'occident', codigoDgs: 'C0468', ilegibles: 0, numeroPoliza: null, fechaEfecto: null,
+    motivo: '2 recibos anulados por impago (anulación automática)',
+    recibos: [
+      { numeroPoliza: 'BIDS000001', idRecibo: '480000001-H', fechaAnulacion: '2026-10-15' },
+      { numeroPoliza: '8-10.000.001-P', idRecibo: '470000001-H', fechaAnulacion: null },
+    ],
+  }
+  const t = textoAvisoEvento(ev, 'Resumen de recibos anulados por impago 00000001 (16.10.2026)', [
+    { ...base, clave: 'BIDS000001/480000001-H', resumen: 'tarea «recibo anulado por impago» creada' },
+  ], url)
+  assert.match(t, /2 recibos ANULADOS por impago/)
+  assert.match(t, /Póliza BIDS000001 · Recibo 480000001-H anulado por impago el 15\/10\/2026/)
+  assert.match(t, /Póliza 8-10\.000\.001-P · Recibo 470000001-H anulado por impago \(anulación automática\)/)
+  assert.match(t, /tarea «recibo anulado por impago» creada/)
+  assert.match(t, /asegura no devolvió este elemento/) // la 2.ª no vino en los resultados: se dice
+  assert.doesNotMatch(t, /efecto/)
+  const uno = textoAvisoEvento({ ...ev, recibos: [ev.recibos![0]] }, 'x', null, url)
+  assert.match(uno, /Recibo ANULADO por impago/)
+})
