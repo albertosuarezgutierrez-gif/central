@@ -25,13 +25,20 @@ export function clavesMunicipio(nombre: string): string[] {
 }
 
 /**
- * La opción del catálogo que casa con alguno de los nombres conocidos (lo guardado en la ficha, la tabla INE del CP).
- * `null` si ninguna casa o si casan DOS opciones distintas (ambiguo). Una sola opción en el catálogo se resuelve fuera
- * (el CP solo tiene ese municipio), no aquí. PURA.
+ * La opción del catálogo que se puede preseleccionar. Dos vías, y nada más:
+ *  · `guardado`: el municipio guardado, que el llamante pasa SOLO si el CP no ha cambiado; vale si casa con UNA opción;
+ *  · `ine`: la tabla INE del CP, SOLO si el CP tiene un único municipio (con varios no se preselecciona aunque el catálogo
+ *    traiga solo uno de ellos: podría ser el que no es). `null` = tabla desconocida.
+ * `null` si no casa ninguna o casan dos (ambiguo). PURA.
  */
-export function elegirMunicipioCatalogo(opciones: readonly OpcionMunicipio[], nombresConocidos: readonly (string | null | undefined)[]): OpcionMunicipio | null {
-  const buscadas = new Set(nombresConocidos.flatMap((n) => (typeof n === 'string' && n.trim() !== '' ? clavesMunicipio(n) : [])))
-  if (buscadas.size === 0) return null
-  const hallados = opciones.filter((o) => clavesMunicipio(o.nombre).some((c) => buscadas.has(c)))
-  return hallados.length === 1 ? hallados[0]! : null
+export function elegirMunicipioCatalogo(opciones: readonly OpcionMunicipio[], e: { guardado?: string | null; ine?: readonly string[] | null }): OpcionMunicipio | null {
+  const casa = (nombres: readonly (string | null | undefined)[]): OpcionMunicipio | null => {
+    const buscadas = new Set(nombres.flatMap((n) => (typeof n === 'string' && n.trim() !== '' ? clavesMunicipio(n) : [])))
+    if (buscadas.size === 0) return null
+    const hallados = opciones.filter((o) => clavesMunicipio(o.nombre).some((c) => buscadas.has(c)))
+    return hallados.length === 1 ? hallados[0]! : null
+  }
+  const porGuardado = casa([e.guardado])
+  if (porGuardado) return porGuardado
+  return e.ine && e.ine.length === 1 ? casa(e.ine) : null
 }

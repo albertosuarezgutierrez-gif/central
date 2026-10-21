@@ -13,7 +13,7 @@
 //
 // 🚨 Un campo sin dato se pinta «sin dato» (nunca «0» ni vacío); lo que falta para pedir precio se dice.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import {
   AVISO_COMERCIO, AVISO_RIESGO_LIBRE, BIENES_COMERCIO, CATALOGO_HOGAR_DE_CAMPO, COMPANIAS_COMERCIO, ESPEC_POR_COMPANIA, ETIQUETA_COMPANIA_COMERCIO, ESPEC_CAPITAL, ESPEC_COMERCIO, ESPEC_LIBRE, ESPEC_VIVIENDA,
@@ -376,12 +376,15 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
     return String(v)
   }
 
+  const cpRef = useRef('')
+  cpRef.current = (E.form.cp ?? '').trim()
   async function buscarMunicipios(cpDado?: string) {
     const cp = (cpDado ?? E.form.cp ?? '').trim()
     setNotaMunicipio(null)
     if (!/^\d{5}$/.test(cp)) { setNotaMunicipio('Escribe un código postal de 5 cifras.'); return }
     try {
       const r = await pedirCatalogo({ tipo: 'municipios', cp })
+      if (cpRef.current !== cp) return // respuesta tardía: el CP ya es otro
       if (r.estado !== 'ok') { setNotaMunicipio('No se ha podido leer el catálogo de municipios ahora.'); return }
       setMunicipios(r.opciones)
       if (r.opciones.length === 0) { setNotaMunicipio(`El catálogo de Avant2 no tiene municipios para el código postal ${cp}.`); return }
@@ -390,7 +393,10 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
       let elegido: Opcion | null = r.opciones.length === 1 ? r.opciones[0] : null
       if (!elegido) {
         const ine = await municipiosIneDelCp(cp)
-        elegido = elegirMunicipioCatalogo(r.opciones, [E.form.municipio, (d.municipio as string | null) ?? null, ...ine])
+        if (cpRef.current !== cp) return
+        // Lo guardado solo vale con el CP guardado; con un CP nuevo, solo la tabla INE de ese CP.
+        const guardado = cp === ((d.cp as string | null) ?? '') ? (E.form.municipio || ((d.municipio as string | null) ?? null)) : null
+        elegido = elegirMunicipioCatalogo(r.opciones, { guardado, ine })
       }
       if (elegido) {
         const e = elegido
