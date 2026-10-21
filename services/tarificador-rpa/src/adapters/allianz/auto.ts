@@ -1,3 +1,4 @@
+// Moto v0.7.16 (21/10/2026, trabajo real 3e85f80c): la fecha de nacimiento «distinta de todas» lleva la diferencia en días con signo y qué partes coinciden (sin valores) y el formato del campo (type/maxlength/placeholder/máscara); revisada la cadena ficha→tecleo: solo texto, sin zona horaria (sin desfase de ±1 día).
 // Moto v0.7.15 (20/10/2026, trabajo real 08abe9d5): el confirm «Primer periodo inferior a 355 días…» al pasar a Datos básicos se responde «No» (excepción exacta del guard, nunca se alarga) y el presupuesto avisa de que la prima no es anual.
 // Moto v0.7.14 (20/10/2026, trabajo real 2f90524e): `#driverBirthDate` quedaba con OTRA fecha válida → se dice con cuál coincide (sin el valor); si es la que el portal traía (registro de Allianz) o ninguna del formulario → `datos` «revisa la de la ficha», sin pelearse.
 // Moto v0.7.13 (20/10/2026, trabajo real e5bcdb08): el portal perdía `#driverBirthDate` tras escribirlo → blur tras cada texto y UNA reescritura tecleada de lo perdido; el error dice la FORMA (vacío/otra fecha), nunca el valor.
@@ -1154,14 +1155,68 @@ export function origenFechaLeida(leido: string, c: FechasConocidasMoto): OrigenF
 export const MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ =
   'allianz/moto: Allianz tiene otra fecha de nacimiento para este NIF (el portal pone la de su registro en lugar de la de la ficha); revisa la de la ficha'
 
+/** Atributos de FORMATO de un campo (no datos personales) que explican cómo reinterpreta lo tecleado. */
+export const ATRIBUTOS_FORMATO_CAMPO = ['type', 'maxlength', 'placeholder', 'data-mask', 'pattern', 'class'] as const
+
+/**
+ * «campo: type=text maxlength=10 placeholder=«dd/mm/aaaa» …» a partir de los atributos leídos. Puro. Cada valor saneado: solo
+ * letras, `/ . : ; , ( ) _ -` y espacios; un ejemplo de fecha → «#fecha» y series de 4+ cifras → «#»; como mucho 40 caracteres.
+ */
+export function describirFormatoCampo(attrs: Readonly<Record<string, string | null>>): string | null {
+  const limpio = (v: string) => v.replace(/\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}/g, '#fecha').replace(/\d{4,}/g, '#').replace(/[^\p{L}\d/.:;,()_#\- ]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 40)
+  const partes = ATRIBUTOS_FORMATO_CAMPO.filter((k) => attrs[k] !== null && attrs[k] !== undefined).map((k) => `${k}=«${limpio(attrs[k] as string)}»`)
+  return partes.length > 0 ? `campo: ${partes.join(' ')}` : null
+}
+
+async function formatoCampo(raiz: Pick<Frame, 'locator'>, sel: string): Promise<string | null> {
+  const attrs = await raiz.locator(sel).first().evaluate((el, ks) => Object.fromEntries(ks.map((k) => [k, el.getAttribute(k)])), [...ATRIBUTOS_FORMATO_CAMPO]).catch(() => null)
+  return attrs ? describirFormatoCampo(attrs as Record<string, string | null>) : null
+}
+
 /** Error de `#driverBirthDate` según el origen. Puro. Registro de Allianz → `datos` (lo resuelve Alberto en la ficha); fallo nuestro → `portal`. */
-export function errorFechaNacimientoMoto(origen: Exclude<OrigenFechaLeida, 'nuestra'>, leido: string): ErrorTarificador {
+/** dd/mm/aaaa → días desde 1970 (UTC, sin zona horaria: solo aritmética de calendario). `null` si no es una fecha real. Puro. */
+function diaCalendario(t: string): { d: number; dia: string; mes: string; anio: string } | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t.trim())
+  if (!m) return null
+  const ms = Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1]))
+  const f = new Date(ms)
+  if (f.getUTCFullYear() !== Number(m[3]) || f.getUTCMonth() !== Number(m[2]) - 1 || f.getUTCDate() !== Number(m[1])) return null
+  return { d: Math.round(ms / 86_400_000), dia: m[1], mes: m[2], anio: m[3] }
+}
+
+/**
+ * v0.7.16 (trabajo real 3e85f80c): cuánto y en qué difiere lo que quedó de lo que escribimos, SIN ninguna de las dos fechas:
+ * diferencia en días con signo (− = anterior a la nuestra), los años aproximados si pasa de un año, y qué partes coinciden.
+ * Distingue un desfase nuestro (±1 día, mes 0/1) de una fecha de otra persona/registro. Puro. `null` si alguna no es fecha.
+ */
+export function diferenciaFechaSinValor(leido: string, nuestra: string): string | null {
+  const a = diaCalendario(leido)
+  const b = diaCalendario(nuestra)
+  if (!a || !b) return null
+  const n = a.d - b.d
+  const abs = Math.abs(n)
+  const signo = n < 0 ? '−' : '+'
+  const anios = abs >= 365 ? ` ≈ ${(Math.round((abs / 365.25) * 10) / 10).toLocaleString('es-ES')} años` : ''
+  const partes = [['día', a.dia === b.dia], ['mes', a.mes === b.mes], ['año', a.anio === b.anio]] as const
+  const iguales = partes.filter(([, ig]) => ig).map(([p]) => p)
+  const distintas = partes.filter(([, ig]) => !ig).map(([p]) => p)
+  const y = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`)
+  const coincide = iguales.length === 0 ? 'día, mes y año distintos' : `mismo ${y(iguales)}, distinto ${y(distintas)}`
+  const miles = String(abs).replace(/\B(?=(\d{3})+(?!\d))/g, '.') // 3.652 (también con 4 cifras, regla del repo)
+  return `difiere ${signo}${miles} ${abs === 1 ? 'día' : 'días'}${anios}; ${coincide}`
+}
+
+/** Error de `#driverBirthDate` según el origen. Puro. Registro de Allianz → `datos` (lo resuelve Alberto en la ficha); fallo nuestro → `portal`. */
+export function errorFechaNacimientoMoto(origen: Exclude<OrigenFechaLeida, 'nuestra'>, leido: string, nuestra = '', formato: string | null = null): ErrorTarificador {
   const sel = SEL_DATOS_MOTO.conductorNacimiento
-  if (origen === 'registro') return new ErrorTarificador('datos', MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ)
-  if (origen === 'distinta') return new ErrorTarificador('datos', `${MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ} (lo que queda en ${sel} es distinta de todas las fechas del formulario: probablemente del registro de Allianz)`)
+  const dif = diferenciaFechaSinValor(leido, nuestra)
+  const extra = [dif, formato].filter((x): x is string => !!x)
+  const conDif = extra.length > 0 ? ` [${extra.join('; ')}]` : ''
+  if (origen === 'registro') return new ErrorTarificador('datos', `${MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ}${conDif}`)
+  if (origen === 'distinta') return new ErrorTarificador('datos', `${MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ} (lo que queda en ${sel} es distinta de todas las fechas del formulario: probablemente del registro de Allianz)${conDif}`)
   const que = { carne: '= fecha de carné', adquisicion: '= fecha de adquisición', matriculacion: '= fecha de matriculación', dia_mes_cambiados: '= nuestra fecha con día/mes cambiados' } as const
   const forma = origen === 'vacia' || origen === 'otro_formato' ? formaTextoLeido(leido) : `quedó ${que[origen]}`
-  return new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${forma})`)
+  return new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${forma})${conDif}`)
 }
 
 export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'> = {}): Promise<void> {
@@ -1208,7 +1263,7 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
   for (const [sel, esperado] of textos) {
     const leido = await leerTexto(sel)
     if (alfanumerico(leido) === alfanumerico(esperado)) continue
-    if (sel === SEL_DATOS_MOTO.conductorNacimiento && origenFechaLeida(leido, await conocidas()) === 'registro') throw errorFechaNacimientoMoto('registro', leido)
+    if (sel === SEL_DATOS_MOTO.conductorNacimiento && origenFechaLeida(leido, await conocidas()) === 'registro') throw errorFechaNacimientoMoto('registro', leido, nacimiento, await formatoCampo(raiz, sel))
     await reescribirTexto(raiz, sel, esperado, page)
   }
   // Releer TODO al final: los selects encadenados (años en la compañía → años sin siniestros) pueden revertirse, y las
@@ -1221,7 +1276,7 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
     if (alfanumerico(leido) === alfanumerico(esperado)) continue
     if (sel === SEL_DATOS_MOTO.conductorNacimiento) {
       const origen = origenFechaLeida(leido, await conocidas())
-      if (origen !== 'nuestra') throw errorFechaNacimientoMoto(origen, leido)
+      if (origen !== 'nuestra') throw errorFechaNacimientoMoto(origen, leido, nacimiento, await formatoCampo(raiz, sel))
     }
     throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${formaTextoLeido(leido)})`)
   }
@@ -2512,7 +2567,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.15' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.16' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
