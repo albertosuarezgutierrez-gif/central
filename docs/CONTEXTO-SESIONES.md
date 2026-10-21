@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/10/2026)** — RRHH · interruptor «Permitir fichar sin ubicación» en /admin/fichajes (GET/PATCH `/api/admin/empresa/ajustes`, empresa de
+sesión, booleano estricto). Sin migración. Cierra el pendiente de la entrada de fichaje sin ubicación.
+
 **(21/10/2026)** — RRHH · «Notas internas» en la ficha del empleado (petición de Pilar): `rrhh.empleados.notas` (≤5000, NULL si vacío),
 PATCH admin existente filtrado por empresa de sesión, nunca en `/api/e/*` ni `/e/*`. Migración 0025 aplicada en prod.
 
