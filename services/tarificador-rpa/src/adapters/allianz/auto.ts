@@ -1,3 +1,4 @@
+// Moto v0.7.18 (21/10/2026): Allianz rechazaba «[fechaAdquisicion] … no puede ser anterior a la fecha de primera matriculación» con la adquisición POR DEFECTO (= nuestra matriculación, que puede ser estimada): antes de escribirla se lee la 1ª matriculación del portal (DGT por matrícula); si la adquisición es la de por defecto (marca `fechaAdquisicionPorDefecto` de plataforma, o = nuestra matriculación) y la del portal es posterior, se usa la del portal y se declara como supuesto; si es explícita (o no se sabe), para como `datos` diciendo cuántos días antes (sin fechas).
 // Moto v0.7.17 (21/10/2026): `#driverBirthDate` (máscara `mask:date(224)`, class `input-DateText`) quedaba con el MISMO día y mes y el año +40 → las fechas dd/mm/aaaa se escriben SIN teclas ni foco (setter nativo + `change`), así la máscara no reinterpreta lo tecleado; se relee y, si el año sigue desplazado, para como `portal` diciendo «año desplazado ±N años».
 // Moto v0.7.16 (21/10/2026, trabajo real 3e85f80c): la fecha de nacimiento «distinta de todas» lleva la diferencia en días con signo y qué partes coinciden (sin valores) y el formato del campo (type/maxlength/placeholder/máscara); revisada la cadena ficha→tecleo: solo texto, sin zona horaria (sin desfase de ±1 día).
 // Moto v0.7.15 (20/10/2026, trabajo real 08abe9d5): el confirm «Primer periodo inferior a 355 días…» al pasar a Datos básicos se responde «No» (excepción exacta del guard, nunca se alarga) y el presupuesto avisa de que la prima no es anual.
@@ -1272,7 +1273,42 @@ export function errorFechaNacimientoMoto(origen: Exclude<OrigenFechaLeida, 'nues
   return new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${forma})${conDif}`)
 }
 
-export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'> = {}): Promise<void> {
+/** ISO aaaa-mm-dd → días desde 1970 (UTC). `null` si no es una fecha real. Puro. */
+function diaIso(iso: string | null | undefined): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso ?? '').trim())
+  if (!m) return null
+  const ms = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return new Date(ms).toISOString().slice(0, 10) === m[0] ? Math.round(ms / 86_400_000) : null
+}
+
+const diasTexto = (n: number) => `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} ${n === 1 ? 'día' : 'días'}`
+
+/**
+ * v0.7.18 (trabajo real, 21/10/2026): Allianz rechaza «la fecha de adquisición del vehículo no puede ser anterior a la fecha de
+ * primera matriculación», comparando con SU 1ª matriculación (`#fechaMatriculacion`, autorrellenada por la matrícula), no con la
+ * nuestra (que en plataforma puede ser estimada por la serie de la matrícula). Decide qué adquisición escribir. Puro.
+ *  - Portal sin fecha legible, o adquisición ≥ la del portal → la nuestra, sin supuesto.
+ *  - Adquisición POR DEFECTO (marca `fechaAdquisicionPorDefecto` de plataforma, o = nuestra fecha de matriculación) y la del portal
+ *    es posterior → la del portal + supuesto declarado.
+ *  - Explícita (≠ nuestra matriculación) o sin nuestra matriculación para saberlo → `datos`, cuántos días antes (nunca las fechas).
+ */
+export function fechaAdquisicionFrentePortal(adquisicionIso: string, nuestraMatriculacionIso: string | null, portalMatriculacionIso: string | null, porDefecto = false): { iso: string; supuesto: string | null } {
+  const adq = diaIso(adquisicionIso)
+  const portal = diaIso(portalMatriculacionIso)
+  if (adq === null || portal === null || adq >= portal) return { iso: adquisicionIso, supuesto: null }
+  const dias = diasTexto(portal - adq)
+  const nuestra = diaIso(nuestraMatriculacionIso)
+  if (porDefecto || (nuestra !== null && nuestra === adq)) {
+    return { iso: portalMatriculacionIso as string, supuesto: `Fecha de adquisición = 1ª matriculación que Allianz tiene para la matrícula (la de por defecto, nuestra fecha de matriculación, era ${dias} anterior)` }
+  }
+  if (nuestra !== null) {
+    throw new ErrorTarificador('datos', `allianz/moto: la fecha de adquisición indicada es ${dias} anterior a la 1ª matriculación que Allianz tiene para esta matrícula (Allianz no lo admite): revisa la fecha de adquisición o la matrícula`)
+  }
+  throw new ErrorTarificador('datos', `allianz/moto: la fecha de adquisición es ${dias} anterior a la 1ª matriculación que Allianz tiene para esta matrícula (Allianz no lo admite) y el riesgo no trae nuestra fecha de matriculación para saber si era la de por defecto: revisa la fecha de adquisición (si salió de una matriculación estimada, pon la real)`)
+}
+
+/** Rellena Datos básicos de Moto. Devuelve los supuestos que hubo que tomar del portal (v0.7.18: la fecha de adquisición). */
+export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'> = {}): Promise<string[]> {
   exigirDatosPortalMoto(f)
   const ant = datosPortalMoto(f)
   const plan = planDatosBasicosMoto(f)
@@ -1295,10 +1331,14 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
     // «Asegurado en otra compañía» = Sí abre compañía de origen, póliza y justificante: antes de los años en la compañía.
     if (op.sel === SEL_DATOS_MOTO.aseguradoOtraCia && op.valor === 'S' && ant.estuvoAsegurado) await rellenarSeguroAnteriorMoto(raiz, ant, page, ctx)
   }
-  await escribirTexto(raiz, SEL_SEGURO_ANTERIOR_MOTO.fechaAdquisicion, fechaEs(ant.fechaAdquisicionIso as string))
+  // v0.7.18: la adquisición se compara con la 1ª matriculación que el PORTAL ya tiene (la de la matrícula), no con la nuestra.
+  const matriculacionPortal = fechaIsoDesdeTexto(await raiz.locator(SEL_DATOS_MOTO.fechaMatriculacion).first().inputValue({ timeout: 1_000 }).catch(() => ''))
+  const adquisicion = fechaAdquisicionFrentePortal(ant.fechaAdquisicionIso as string, f.fechaMatriculacion ?? null, matriculacionPortal, f.fechaAdquisicionPorDefecto === true)
+  const adquisicionEs = fechaEs(adquisicion.iso)
+  await escribirTexto(raiz, SEL_SEGURO_ANTERIOR_MOTO.fechaAdquisicion, adquisicionEs)
   const textos: Array<[string, string]> = [
     ...plan.filter((o) => o.tipo === 'texto').map((o): [string, string] => [o.sel, String(o.valor)]),
-    [SEL_SEGURO_ANTERIOR_MOTO.fechaAdquisicion, fechaEs(ant.fechaAdquisicionIso as string)],
+    [SEL_SEGURO_ANTERIOR_MOTO.fechaAdquisicion, adquisicionEs],
     ...(ant.estuvoAsegurado ? ([[SEL_SEGURO_ANTERIOR_MOTO.polizaOrigen, ant.poliza5 as string]] as Array<[string, string]>) : []),
   ]
   const nacimiento = String(plan.find((o) => o.sel === SEL_DATOS_MOTO.conductorNacimiento)?.valor ?? '')
@@ -1306,7 +1346,7 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
     nuestra: nacimiento,
     previa: nacimientoPrevio,
     carne: String(plan.find((o) => o.sel === SEL_DATOS_MOTO.conductorCarne)?.valor ?? ''),
-    adquisicion: fechaEs(ant.fechaAdquisicionIso as string),
+    adquisicion: adquisicionEs,
     matriculacion: await raiz.locator(SEL_DATOS_MOTO.fechaMatriculacion).first().inputValue({ timeout: 1_000 }).catch(() => null),
   })
   // v0.7.13: lo que el portal perdió tras escribirlo (p. ej. la fecha de nacimiento, trabajo e5bcdb08) se reescribe UNA vez.
@@ -1336,7 +1376,7 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
   if (ant.estuvoAsegurado) {
     if ((await raiz.locator(SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen).first().inputValue()) === '') throw new ErrorTarificador('portal', `allianz/moto: el portal vació ${SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen}`)
     if ((await raiz.locator(SEL_SEGURO_ANTERIOR_MOTO.fotocopia).first().inputValue()) !== FOTOCOPIA_PORTAL[ant.fotocopia as ClaveFotocopia]) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó fijado ${SEL_SEGURO_ANTERIOR_MOTO.fotocopia}`)
-  }
+  }  return adquisicion.supuesto ? [adquisicion.supuesto] : []
 }
 
 /**
@@ -1430,7 +1470,7 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   const datos = await avanzarPestanaGuardada(page, ctx, 'datosBasicos', 'moto')
   await lanzarSiHayErrores(datos)
   const fechaMatriculacion = await consultarMatriculaMoto(datos, form.matricula, page)
-  await rellenarDatosBasicosMoto(datos, form, page, ctx)
+  const supuestosDatos = await rellenarDatosBasicosMoto(datos, form, page, ctx)
   await lanzarSiHayErrores(datos)
   await ctx.pausa()
   // Tarificar: SOLO se abre la pestaña y se leen primas. Nada del pie, ni Archivar/Emitir/Proyecto Ampliado/Datos emisión (el adaptador no guarda: eso es del explorador).
@@ -1439,7 +1479,7 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   const primas = await leerPrimasTarificar(tarifa)
   // 18/10/2026: los antecedentes SUPUESTOS (favorables) viajan con cada oferta («Precio con supuestos: …»).
   return {
-    ofertas: conDatosUsados(ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }, supuestosMoto(supuestoVersion, form, supuestosAvanceAceptados(page))), usados),
+    ofertas: conDatosUsados(ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }, supuestosMoto(supuestoVersion, form, [...supuestosDatos, ...supuestosAvanceAceptados(page)])), usados),
     // El vehículo fijado en el `<select>` (resolverVehiculo): asegura solo lo encadena a Generali en ramo auto; viaja igual.
     seleccionVehiculo: seleccionVehiculoConfirmada(usados.vehiculo),
   }
@@ -2620,7 +2660,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.17' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.18' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

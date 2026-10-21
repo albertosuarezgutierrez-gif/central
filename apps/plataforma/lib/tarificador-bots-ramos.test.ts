@@ -114,6 +114,11 @@ test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloqu
   // Sin tocar el desplegable manda el del formulario.
   const r2 = a.construir({ ...F, sexo: 'hombre' }, { cilindrada: '125' })
   assert.ok(r2.ok && (r2.riesgo.conductor as { sexo: string }).sexo === 'hombre')
+  // Bot 0.7.18: campo de adquisición sin tocar (vacío) → la de matriculación con la marca «por defecto»; tecleada → explícita.
+  const d = a.construir({ ...F, fechaMatriculacion: '2023-05-10' }, { cilindrada: '125', sexo: 'mujer', fechaAdquisicion: '' })
+  assert.ok(d.ok && d.riesgo.fechaAdquisicion === '2023-05-10' && d.riesgo.fechaAdquisicionPorDefecto === true)
+  const x = a.construir({ ...F, fechaMatriculacion: '2023-05-10' }, { cilindrada: '125', sexo: 'mujer', fechaAdquisicion: '2024-01-02' })
+  assert.ok(x.ok && x.riesgo.fechaAdquisicion === '2024-01-02' && x.riesgo.fechaAdquisicionPorDefecto === false)
 })
 
 test('moto · desplegable de sexo en su valor inicial («») no pisa el sexo del formulario', () => {
