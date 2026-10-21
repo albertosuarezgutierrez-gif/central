@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-21T10:56:56Z",
+  "generadoEn": "2026-10-21T15:16:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5663,6 +5663,7 @@
     ],
     "rrhh": [
       "/api/admin/asistente",
+      "/api/admin/avisos-admin/visto",
       "/api/admin/calendario",
       "/api/admin/contratos/[empleadoId]",
       "/api/admin/cuenta/branding",
@@ -6328,6 +6329,7 @@
     "rrhh": [
       "rrhh.acceso_otps",
       "rrhh.avisos",
+      "rrhh.avisos_admin",
       "rrhh.contratos_laborales",
       "rrhh.documentos",
       "rrhh.empleados",
@@ -7037,7 +7039,7 @@
     "packages": 44,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1757,
+    "apis": 1758,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

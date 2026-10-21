@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T13:38:04Z",
-  "sha": "8c5fd029be6afa307fc96ee4229602f5e07d1324",
+  "generadoEn": "2026-10-21T15:16:31Z",
+  "sha": "14c5780a4fa4f248e897b5b2fff55b7ad0e634ab",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -184323,13 +184323,13 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 11,
+          "linea": 13,
           "resumen": "Marco común del panel: branding de la empresa ACTIVA de la sesión, leído en servidor una vez. 🚨 Esto NO es la barrera de seguridad: un layout no se re-ejecuta en cada navegación cliente y los route h"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3bf82bcb7909"
+      "hash": "3f6e514fba13"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/NominasPanel.tsx",
@@ -184602,6 +184602,27 @@
       "tablas": [],
       "rutaApi": "/api/admin/asistente",
       "hash": "83386a228f98"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/avisos-admin/visto/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "«Marcar como visto» los avisos de envío fallido. Siempre acotado a la empresa de la sesión."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/avisos-admin/visto",
+      "hash": "0f72d3d695af"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/calendario/route.ts",
@@ -185813,7 +185834,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/admin/solicitudes/[id]",
-      "hash": "995f6520c47a"
+      "hash": "796f8d465b98"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/solicitudes/route.ts",
@@ -187002,6 +187023,27 @@
       "hash": "bce7a4a4d149"
     },
     {
+      "ruta": "apps/rrhh/components/AvisosAdminBanner.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "AvisosAdminBanner"
+      ],
+      "funciones": [
+        {
+          "nombre": "AvisosAdminBanner",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ avisos }: { avisos: Aviso[] }",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Fallos de envío de correo de los últimos 7 días (solo del panel: el empleado nunca lo ve)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8cf39986c31d"
+    },
+    {
       "ruta": "apps/rrhh/components/CambiadorEmpresa.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -187246,15 +187288,15 @@
           "exportada": true,
           "params": "c",
           "retorno": null,
-          "linea": 59,
-          "resumen": "Envío real (remitente de rrhh, `MAIL_FROM`). `false` si no hay transporte o falla: no se dice al usuario."
+          "linea": 63,
+          "resumen": "Envío real (remitente de rrhh, `MAIL_FROM`). `false` si no hay transporte o falla: al EMPLEADO no se le dice nada (anti-enumeración), pero al responsable SÍ: queda un aviso en su panel (`rrhh.avisos_a"
         }
       ],
       "tablas": [
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "8b88bae2d5a1"
+      "hash": "ea58dacc2b3b"
     },
     {
       "ruta": "apps/rrhh/lib/acceso-email.ts",
@@ -187310,7 +187352,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, enviar: EnviarCodigo, entrada: { email: unknown; ip: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoSolicitar>",
-          "linea": 86,
+          "linea": 90,
           "resumen": "`envio` es la tarea de mandar el correo (o `null` si el email no es de nadie): la ruta la lanza con `after()` para que la respuesta NO espere al SMTP. `null` y no-`null` producen la MISMA respuesta HT"
         },
         {
@@ -187319,7 +187361,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, entrada: { email: unknown; codigo: unknown }, ahora = new Date(),",
           "retorno": "Promise<ResultadoVerificar>",
-          "linea": 114
+          "linea": 121
         },
         {
           "nombre": "completarAcceso",
@@ -187327,7 +187369,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, compararPin: (pin: string, hash: string) => Promise<boolean>, ticket: { otp_id: string; empleados: string[] }, entrada: { email: unknown; empleado_id: unknown; pin: unknown },",
           "retorno": "Promise<ResultadoCompletar>",
-          "linea": 152
+          "linea": 159
         },
         {
           "nombre": "correoCodigo",
@@ -187335,13 +187377,13 @@
           "exportada": true,
           "params": "c: CorreoCodigo",
           "retorno": "",
-          "linea": 177,
+          "linea": 184,
           "resumen": "Asunto y cuerpo (texto plano, sobrio). Puro para poder testearlo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0ebfa98b6a5"
+      "hash": "f0df7959879b"
     },
     {
       "ruta": "apps/rrhh/lib/ai.ts",
@@ -187759,6 +187801,100 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "5c4005461983"
+    },
+    {
+      "ruta": "apps/rrhh/lib/avisos-admin-reglas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Decisión PURA de los avisos al responsable por correo fallido (sin BD ni correo → testeable). Tabla: `rrhh.avisos_admin` (migración 0027). Aquí NO entra nunca el código ni la clave.",
+      "exporta": [
+        "motivoFallo",
+        "textoMotivo",
+        "debeAvisar",
+        "textoAvisoEnvio"
+      ],
+      "funciones": [
+        {
+          "nombre": "motivoFallo",
+          "kind": "function",
+          "exportada": true,
+          "params": "hayTransporte: boolean",
+          "retorno": "MotivoFallo",
+          "linea": 11,
+          "resumen": "Sin transporte (`createMailTransporter()` → null) = sin proveedor; si lo había y falló = error del servidor."
+        },
+        {
+          "nombre": "textoMotivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MotivoFallo",
+          "retorno": "string",
+          "linea": 15
+        },
+        {
+          "nombre": "debeAvisar",
+          "kind": "function",
+          "exportada": true,
+          "params": "ultimoAviso: Date | null | undefined, ahora: Date = new Date()",
+          "retorno": "boolean",
+          "linea": 20,
+          "resumen": "¿Hay que crear aviso? No si el último del mismo empleado y canal es de hace menos de 6 h."
+        },
+        {
+          "nombre": "textoAvisoEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAviso",
+          "retorno": "string",
+          "linea": 30,
+          "resumen": "Texto del aviso. Solo nombre y email del empleado: ningún código, hash ni clave."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c522112df9e2"
+    },
+    {
+      "ruta": "apps/rrhh/lib/avisos-admin.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Adaptador Prisma de `rrhh.avisos_admin` (migración 0027): deja un aviso en el panel del responsable cuando un correo de rrhh no sale. La decisión (motivo, dedupe 6 h, texto) es PURA en `avisos-admin-reglas.ts`. 🚨 NUNCA lanza (un fallo aquí no puede tumbar el envío ni la petición) y NUNCA recibe cód",
+      "exporta": [
+        "registrarFalloEnvio",
+        "listarAvisosAdmin",
+        "marcarAvisosAdminVistos"
+      ],
+      "funciones": [
+        {
+          "nombre": "registrarFalloEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FalloEnvio",
+          "retorno": "Promise<void>",
+          "linea": 22
+        },
+        {
+          "nombre": "listarAvisosAdmin",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string",
+          "retorno": "Promise<AvisoAdmin[]>",
+          "linea": 51,
+          "resumen": "Fallos de los últimos 7 días SIN ver, de LA empresa de la sesión."
+        },
+        {
+          "nombre": "marcarAvisosAdminVistos",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, ids?: string[]",
+          "retorno": "Promise<number>",
+          "linea": 64,
+          "resumen": "«Marcar como visto»: solo los de esa empresa."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "bd0961c04887"
     },
     {
       "ruta": "apps/rrhh/lib/avisos-reglas.ts",
@@ -188954,7 +189090,7 @@
           "exportada": false,
           "params": "empresaId: string, empleadoId: string",
           "retorno": "DepsFirma",
-          "linea": 19,
+          "linea": 20,
           "resumen": "Construye los puertos de firma con el SQL de rrhh (tablas `rrhh.documentos/firmas/firma_otps`), scopeados a (empresa, empleado). La orquestación owner-agnóstica vive en `@central/module-rrhh`."
         },
         {
@@ -188963,7 +189099,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 92,
+          "linea": 94,
           "resumen": "Genera y envía el código OTP de firma (10 min). Ver `@central/module-rrhh`."
         },
         {
@@ -188972,7 +189108,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 97,
+          "linea": 105,
           "resumen": "El gestor solicita la firma de un documento (estado_firma → 'pendiente'). Scope por empresa."
         },
         {
@@ -188981,7 +189117,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string, ctx: { ip?: string | null; user_agent?: string | null; nombre_confirmado: string; codigo?: string | null }",
           "retorno": null,
-          "linea": 102,
+          "linea": 110,
           "resumen": "El empleado firma el documento (firma avanzada propia, eIDAS art.26). Devuelve la evidencia."
         }
       ],
@@ -188990,7 +189126,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "608f4172c761"
+      "hash": "ffa383f11301"
     },
     {
       "ruta": "apps/rrhh/lib/firmas-panel.ts",
@@ -189956,7 +190092,7 @@
           "exportada": false,
           "params": "empresaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 6,
+          "linea": 7,
           "resumen": "Emails de los responsables de RR.HH. de una empresa."
         },
         {
@@ -189965,16 +190101,16 @@
           "exportada": true,
           "params": "empresaId: string, asunto: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 17,
+          "linea": 18,
           "resumen": "Avisa por email a los responsables de RR.HH. Best-effort y NO bloqueante: si no hay SMTP configurado o falla, no lanza. Listo para funcionar en cuanto se carguen las env de correo (SMTP_HOST, SMTP_POR"
         },
         {
           "nombre": "avisarEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "email: string | null, tipo: string, estado: 'aprobada' | 'rechazada'",
+          "params": "email: string | null, tipo: string, estado: 'aprobada' | 'rechazada', ctx?: { empresaId: string; empleadoId: string },",
           "retorno": "Promise<void>",
-          "linea": 30,
+          "linea": 36,
           "resumen": "Avisa al empleado por email cuando su solicitud es resuelta. Best-effort, silencioso si falla."
         },
         {
@@ -189983,7 +190119,7 @@
           "exportada": true,
           "params": "empleadoId: string",
           "retorno": "Promise<string>",
-          "linea": 49,
+          "linea": 62,
           "resumen": "Nombre del empleado (para componer los avisos)."
         }
       ],
@@ -189991,7 +190127,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "1ffd87d5d863"
+      "hash": "12b95d779604"
     },
     {
       "ruta": "apps/rrhh/lib/operador.ts",
@@ -190447,7 +190583,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "5c9fbb8b4d5e"
+      "hash": "0a495e187b6b"
     },
     {
       "ruta": "apps/rrhh/lib/storage.ts",
@@ -234365,7 +234501,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4936,
-    "funciones": 18792
+    "archivos": 4940,
+    "funciones": 18801
   }
 }
