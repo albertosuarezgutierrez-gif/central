@@ -1781,7 +1781,8 @@ export function esAppHogarAllianz(url: string): boolean {
 }
 
 /** Resultado de marcar una opción del riesgo. `no_unica`/`no_quedo` son HUECOS de mapa (el adaptador para con inventario). */
-export type ResultadoOpcionHogar = { estado: 'ya_marcada' | 'marcada' } | { estado: 'no_unica'; coincidencias: number } | { estado: 'no_quedo' }
+export type ResultadoOpcionHogar = { estado: 'ya_marcada' | 'marcada' } | { estado: 'no_unica'; coincidencias: number } | { estado: 'no_quedo'; caja?: string }
+
 
 /**
  * Marca UNA opción del riesgo de Allianz HOGAR (el ÚNICO camino del adaptador para tocar un radio). Exige, en orden:
@@ -1819,9 +1820,18 @@ export async function marcarOpcionRiesgoHogarAllianz(marco: Frame, guard: GuardE
   comprobarBoton(descControl)
   const desc = await descripcion(label)
   comprobarBoton(desc)
-  await label.click()
+  // 0.1.4: el label puede no ser clicable (vio «not visible» 30 s): PLAN B sobre el MISMO input radio ya resuelto y comprobado.
+  try {
+    await label.scrollIntoViewIfNeeded({ timeout: 2_000 }).catch(() => undefined)
+    await label.click({ timeout: 5_000 })
+  } catch {
+    await control.check({ force: true, timeout: 5_000 }).catch(() => undefined)
+    if (!(await control.isChecked().catch(() => false))) await control.evaluate((el) => (el as HTMLInputElement).click()).catch(() => undefined)
+  }
   guard.comprobar()
-  return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+  if (await control.isChecked().catch(() => false)) return { estado: 'marcada' }
+  const bb = await label.boundingBox({ timeout: 1_000 }).catch(() => null)
+  return { estado: 'no_quedo', caja: bb ? `boundingBox label x=${Math.round(bb.x)} y=${Math.round(bb.y)} w=${Math.round(bb.width)} h=${Math.round(bb.height)}` : 'boundingBox label: null (sin caja visible)' }
 }
 
 /**
@@ -1852,9 +1862,18 @@ export async function marcarOpcionResueltaHogarAllianz(marco: Frame, guard: Guar
     return [r.id || null, r.name || null, r.getAttribute('onclick'), r.getAttribute('onchange'), r.getAttribute('aria-label'), r.getAttribute('formaction')]
   }))
   comprobarBoton(await descripcion(etiqueta))
-  await etiqueta.click()
+  // 0.1.4: el label puede no ser clicable (vio «not visible» 30 s): PLAN B sobre el MISMO input radio ya resuelto y comprobado.
+  try {
+    await etiqueta.scrollIntoViewIfNeeded({ timeout: 2_000 }).catch(() => undefined)
+    await etiqueta.click({ timeout: 5_000 })
+  } catch {
+    await control.check({ force: true, timeout: 5_000 }).catch(() => undefined)
+    if (!(await control.isChecked().catch(() => false))) await control.evaluate((el) => (el as HTMLInputElement).click()).catch(() => undefined)
+  }
   guard.comprobar()
-  return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+  if (await control.isChecked().catch(() => false)) return { estado: 'marcada' }
+  const bb = await etiqueta.boundingBox({ timeout: 1_000 }).catch(() => null)
+  return { estado: 'no_quedo', caja: bb ? `boundingBox label x=${Math.round(bb.x)} y=${Math.round(bb.y)} w=${Math.round(bb.width)} h=${Math.round(bb.height)}` : 'boundingBox label: null (sin caja visible)' }
 }
 
 // ─────────── OPCIONES de Allianz AUTOS Turismos (app Angular `ngx-motor-azs`, 15/10/2026; v0.6.1 del bot) ───────────
