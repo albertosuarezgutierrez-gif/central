@@ -167,29 +167,29 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 373 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 374 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 362 | 57.959 | 49.491.183 | 0 | 0 |
-| `otro` | 357 | 13.476 | 31.138.070 | 18.922.489 | 0 |
-| `lectura-directa` | 308 | 9.456 | 27.682.342 | 0 | 0 |
-| `mcp:github` | 311 | 7.260 | 5.706.899 | 54.621.355 | 100 |
-| `sql` | 227 | 5.527 | 2.795.249 | 2.351.230 | 20 |
-| `escritura` | 227 | 5.012 | 74.057.405 | 0 | 0 |
+| `bash` | 363 | 58.185 | 49.806.780 | 0 | 0 |
+| `otro` | 358 | 13.505 | 31.161.917 | 18.922.489 | 0 |
+| `lectura-directa` | 309 | 9.492 | 27.714.986 | 0 | 0 |
+| `mcp:github` | 311 | 7.265 | 5.711.034 | 54.621.355 | 100 |
+| `sql` | 228 | 5.538 | 2.801.170 | 2.351.230 | 20 |
+| `escritura` | 228 | 5.013 | 74.061.721 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 45 | 1.262 | 5.184.457 | 0 | 0 |
 | `mcp:Gmail` | 54 | 1.262 | 1.371.795 | 0 | 77 |
 | `mcp:Vercel` | 76 | 1.095 | 1.106.535 | 204.477 | 34 |
-| `agente:general-purpose` | 122 | 922 | 547.763 | 15.075.018 | 0 |
+| `agente:general-purpose` | 123 | 927 | 550.518 | 15.183.641 | 0 |
 | `mcp:claude-code-remote` | 56 | 603 | 56.790 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 11 | 540 | 663.082 | 0 | 0 |
-| `mcp:Supabase` | 134 | 413 | 73.376 | 5.123 | 7 |
+| `mcp:Supabase` | 135 | 414 | 73.474 | 5.123 | 7 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
-| `agente:agente-architect` | 73 | 350 | 244.999 | 8.321.339 | 0 |
+| `agente:agente-architect` | 74 | 352 | 246.473 | 8.335.534 | 0 |
 | `mcp:Google-Drive` | 27 | 151 | 149.412 | 0 | 2 |
 | `agente:agente-mecanico` | 49 | 127 | 75.656 | 7.024.734 | 0 |
-| `agente:rastreador-codigo` | 53 | 99 | 30.890 | 1.278.043 | 0 |
+| `agente:rastreador-codigo` | 54 | 100 | 31.178 | 1.298.020 | 0 |
 | `mcp:OpenSEO` | 5 | 92 | 76.972 | 0 | 2 |
 | `agente:Explore` | 38 | 83 | 40.430 | 2.175.916 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
