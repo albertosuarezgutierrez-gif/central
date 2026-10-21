@@ -2,12 +2,22 @@
 import { useState, useEffect, Fragment } from 'react'
 import Page from '@/components/ui/Page'
 import Tabla from '@/components/ui/Tabla'
+import {
+  ETIQUETA_CAUSA, ETIQUETA_PLATAFORMA, tramoSinUbicacion, textoPrecision,
+  type CausaIncidencia, type PlataformaIncidencia,
+} from '@/lib/ubicacion-fichaje'
 
 type Fichaje = {
   id: string; empleado_nombre: string | null; obra_nombre: string | null
   entrada_at: string; salida_at: string | null; horas_totales: number | null; estado: string
   observaciones: string | null
   lat_entrada: number | null; lng_entrada: number | null
+  sin_ubicacion_entrada?: boolean; sin_ubicacion_salida?: boolean
+  precision_entrada_m?: number | null
+}
+type Incidencia = {
+  empleado_id: string; empleado_nombre: string | null; causa: CausaIncidencia; plataforma: PlataformaIncidencia
+  total: number; fichados_sin_ubicacion: number; ultima_at: string
 }
 type Empleado = { id: string; nombre: string }
 type AuditRow = { campo: string; valor_antes: string | null; valor_despues: string | null; motivo: string; creado_at: string }
@@ -39,6 +49,9 @@ export default function FichajesClient() {
   const [auditId, setAuditId] = useState<string | null>(null)
   const [auditoria, setAuditoria] = useState<AuditRow[]>([])
   const [exportando, setExportando] = useState(false)
+  // null = aún no cargadas o no se pudieron leer («no se sabe»); [] = revisadas, sin incidencias.
+  const [incidencias, setIncidencias] = useState<Incidencia[] | null>(null)
+  const [cargandoIncidencias, setCargandoIncidencias] = useState(true)
 
   async function cargar() {
     const params = new URLSearchParams({ mes })
@@ -47,6 +60,9 @@ export default function FichajesClient() {
     if (r.ok) setFichajes((await r.json()).fichajes)
   }
   useEffect(() => { cargar() }, [mes, empleadoId])
+  useEffect(() => {
+    fetch('/api/admin/fichajes/incidencias').then(r => r.ok ? r.json() : null).then(j => setIncidencias(j?.incidencias ?? null)).catch(() => {}).finally(() => setCargandoIncidencias(false))
+  }, [])
   useEffect(() => {
     fetch('/api/admin/empleados').then(r => r.ok ? r.json() : { empleados: [] }).then(j => setEmpleados(j.empleados ?? [])).catch(() => {})
   }, [])
@@ -173,6 +189,12 @@ export default function FichajesClient() {
                           : f.lat_entrada != null && f.lng_entrada != null
                             ? <a href={`https://maps.google.com/?q=${f.lat_entrada},${f.lng_entrada}`} target="_blank" rel="noopener noreferrer" className="text-accent no-underline hover:underline">📍 Ver mapa</a>
                             : <span className="text-ink-3">—</span>}
+                        {textoPrecision(f.precision_entrada_m) && (
+                          <span className="ml-1 text-ink-3" title="Precisión del GPS al fichar la entrada">{textoPrecision(f.precision_entrada_m)}</span>
+                        )}
+                        {tramoSinUbicacion(f) && (
+                          <span className="ml-1 inline-block rounded-full bg-warn/20 px-1.5 text-warn">{tramoSinUbicacion(f)}</span>
+                        )}
                       </td>
                       <td className="px-3 py-2.5 flex gap-1">
                         <button
@@ -220,6 +242,43 @@ export default function FichajesClient() {
             )}
           </tbody>
       </Tabla>
+
+      <section className="mt-6">
+        <h2 className="mb-1 text-base">Incidencias de ubicación</h2>
+        <p className="mb-2 text-xs text-ink-3">Últimos 30 días: veces que el móvil del empleado no dio su ubicación al fichar.</p>
+        {cargandoIncidencias ? (
+          <p className="text-sm text-ink-3">Cargando…</p>
+        ) : incidencias === null ? (
+          <p className="text-sm text-ink-3">No se han podido cargar las incidencias.</p>
+        ) : incidencias.length === 0 ? (
+          <p className="text-sm text-ink-3">Sin incidencias de ubicación en los últimos 30 días.</p>
+        ) : (
+          <Tabla tablaClassName="md:min-w-[560px]">
+            <thead>
+              <tr className="border-b border-line bg-paper-2">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Empleado</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Causa</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Móvil</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-ink-3">Veces</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-ink-3">Fichó sin ubicación</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Última</th>
+              </tr>
+            </thead>
+            <tbody>
+              {incidencias.map(i => (
+                <tr key={`${i.empleado_id}-${i.causa}-${i.plataforma}`} className="border-b border-line last:border-0">
+                  <td className="px-3 py-2.5 font-medium">{i.empleado_nombre ?? '—'}</td>
+                  <td data-label="Causa" className="px-3 py-2.5 text-ink-2">{ETIQUETA_CAUSA[i.causa] ?? i.causa}</td>
+                  <td data-label="Móvil" className="px-3 py-2.5 text-ink-2">{ETIQUETA_PLATAFORMA[i.plataforma] ?? i.plataforma}</td>
+                  <td data-label="Veces" className="px-3 py-2.5 text-right tabular-nums">{i.total}</td>
+                  <td data-label="Fichó sin ubicación" className="px-3 py-2.5 text-right tabular-nums">{i.fichados_sin_ubicacion}</td>
+                  <td data-label="Última" className="px-3 py-2.5 text-ink-2">{fmtISO(i.ultima_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Tabla>
+        )}
+      </section>
     </Page>
   )
 }

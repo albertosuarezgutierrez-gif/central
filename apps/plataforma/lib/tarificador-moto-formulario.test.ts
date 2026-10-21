@@ -36,6 +36,12 @@ test('fecha de adquisición: la explícita gana; vacía → la de matriculación
   assert.match(faltan(entrada({ fechaAdquisicion: '10/05/2023', fechaMatriculacion: '2023-05-10' })), /Fecha de adquisición/, 'una explícita mal formada no cae a la matriculación')
   assert.equal(fechaAdquisicionPorDefecto(' 2023-05-10 '), '2023-05-10')
   assert.equal(fechaAdquisicionPorDefecto(null), null)
+  // Bot 0.7.18: la marca `fechaAdquisicionPorDefecto` dice si la fecha la tecleó Alberto (false) o salió de la matriculación (true).
+  assert.equal(ok(entrada({ fechaAdquisicion: '', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true)
+  assert.equal(ok(entrada({ fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, true)
+  assert.equal(ok(entrada({ fechaAdquisicion: '2023-05-10', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, false, 'tecleada igual a la matriculación: explícita')
+  assert.equal(ok(entrada({ fechaAdquisicion: '2024-03-01', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicionPorDefecto, false)
+  assert.equal('fechaAdquisicionPorDefecto' in ok(entrada({ fechaMatriculacion: '' })).riesgo, false, 'sin fecha no viaja la marca')
 })
 
 test('póliza anterior: la explícita gana; vacía → 5 últimas cifras del nº completo; sin cifras suficientes, no viaja (sigue faltando)', () => {

@@ -15,6 +15,8 @@ model empresas {
   marca_color  String?
   cnae_codigo  String?
   at_ep_tipo   Decimal? @db.Decimal(6, 4)
+  /// Fichar sin ubicación en emergencia (migración 0024); el fichaje queda marcado para el responsable.
+  permite_fichar_sin_ubicacion Boolean @default(true)
   creada_at    DateTime @default(now()) @db.Timestamptz(6)
   usuarios     usuarios_rrhh[]
   empleados    empleados[]

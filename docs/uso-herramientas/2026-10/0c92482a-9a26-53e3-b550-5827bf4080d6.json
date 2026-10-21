@@ -1,0 +1,30 @@
+{
+ "sesion": "0c92482a-9a26-53e3-b550-5827bf4080d6",
+ "inicio": "2026-10-21T07:35:49.683Z",
+ "fin": "2026-10-21T07:35:56.258Z",
+ "llamadas": 3,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1800,
+   "chars_out": 2021,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 323,
+   "chars_out": 490,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 2
+   }
+  }
+ }
+}

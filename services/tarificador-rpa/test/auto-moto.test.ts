@@ -30,9 +30,12 @@ import {
   leerVehiculoPortal,
   planDatosBasicosMoto,
   rellenarDatosBasicosMoto,
+  fechaAdquisicionFrentePortal,
   formaTextoLeido,
   diferenciaFechaSinValor,
   describirFormatoCampo,
+  aniosDesplazados,
+  esFechaDdMmAaaa,
   origenFechaLeida,
   MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ,
   rellenarRiesgoMoto,
@@ -95,9 +98,12 @@ const CIAS = OPC([['', '---Selección Compañías---'], ['0000', '**************
 // vacía la fecha de nacimiento una vez; 'siempre' = el portal la vacía tras cada cambio.
 // v0.7.14 (trabajo real 2f90524e): 'registro' = el portal trae una fecha propia (inventada) y la repone tras cada cambio; 'carne' = la
 // pisa con la de carné; 'ajena' = la pisa con una fecha que no está en el formulario (sin traerla antes).
-const DATOS = (revertirAnios = false, pierdeNacimiento: false | 'una' | 'siempre' | 'registro' | 'carne' | 'ajena' = false) => `<body><form>
+// v0.7.17 (trabajo real 3e85f80c): 'mascara40' = máscara de fecha que, al procesar teclas/`input`/blur de una fecha completa, deja el
+// mismo día y mes con el año +40 (en las tres fechas); 'mascara40change' = el desplazamiento llega en el `change` (no lo evita el bot).
+const MASCARA40 = (eventos: string[]) => `document.querySelectorAll('.input-DateText').forEach((el) => ${JSON.stringify(eventos)}.forEach((ev) => el.addEventListener(ev, () => setTimeout(() => { const m = /^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/.exec(el.value); if (m) el.value = m[1] + '/' + m[2] + '/' + (Number(m[3]) + 40) }, 0))))`
+const DATOS = (revertirAnios = false, pierdeNacimiento: false | 'una' | 'siempre' | 'registro' | 'carne' | 'ajena' | 'mascara40' | 'mascara40change' = false) => `<body><form>
 <select id="use"><option value="1" selected>Particular</option><option value="4">Autoescuela</option></select>
-<input id="driverBirthDate" type="text" maxlength="10" placeholder="dd/mm/aaaa" onchange="javascript:menores25();"><input id="driverLicenseDate" onchange="javascript:funcTrue();">
+<input id="driverBirthDate" type="text" maxlength="10" placeholder="dd/mm/aaaa" class="input-DateText" data-mask=";mask:date(224);unLimited:true;;" onchange="javascript:menores25();"><input id="driverLicenseDate" class="input-DateText" onchange="javascript:funcTrue();">
 <select id="driverSex"><option value="V" selected>Hombre</option><option value="H">Mujer</option></select>
 <input id="licensePlate" type="text" onchange="javascript:eventoMatriculaDatosBasicos();">
 <input id="fechaMatriculacion" type="text" disabled>
@@ -106,7 +112,7 @@ const DATOS = (revertirAnios = false, pierdeNacimiento: false | 'una' | 'siempre
 <select id="ciaOrigen" onchange="setLitCia()">${CIAS}</select>
 <input id="polizaOrigen" type="text" maxlength="5">
 <select id="fotocopia"><option value="" selected>No</option><option value="P">recibo próximo año/Certificado</option><option value="U">recibo 2 últimos años</option></select>
-<input id="fechaAdquisicion" type="text">
+<input id="fechaAdquisicion" type="text" class="input-DateText">
 <select id="yearsOrigCompany" onchange="setAniosSinisters()">${OPC([['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', 'Más de 5']])}</select>
 <select id="aniosSinSiniestros" onchange="setNumSinisters()">${OPC([['00', '0'], ['01', '1'], ['02', '2'], ['03', '3'], ['04', '4'], ['05', '5']])}</select>
 <input id="numDisasters" value="0">
@@ -116,8 +122,10 @@ document.getElementById('licensePlate').addEventListener('change', () => setTime
 ${revertirAnios ? "document.getElementById('aniosSinSiniestros').addEventListener('change', (e) => setTimeout(() => (e.target.value = '00'), 0))" : ''}
 ${pierdeNacimiento === 'una' ? "document.getElementById('aseguradoOtraCia').addEventListener('change', () => setTimeout(() => { document.getElementById('driverBirthDate').value = '' }, 0), { once: true })" : ''}
 ${pierdeNacimiento === 'siempre' ? "document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '' }, 0))" : ''}
-${pierdeNacimiento === 'registro' ? "window.nInputs = 0; document.getElementById('driverBirthDate').value = '11/11/1977'; document.getElementById('driverBirthDate').addEventListener('input', () => { window.nInputs++ }); document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '11/11/1977' }, 0))" : ''}
+${pierdeNacimiento === 'registro' ? "window.nCambios = 0; document.getElementById('driverBirthDate').value = '11/11/1977'; document.getElementById('driverBirthDate').addEventListener('change', () => { window.nCambios++ }); document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '11/11/1977' }, 0))" : ''}
 ${pierdeNacimiento === 'carne' ? "document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '05/04/2010' }, 0))" : ''}
+${pierdeNacimiento === 'mascara40' ? MASCARA40(['keyup', 'input', 'blur']) : ''}
+${pierdeNacimiento === 'mascara40change' ? MASCARA40(['change']) : ''}
 ${pierdeNacimiento === 'ajena' ? "document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '11/11/1977' }, 0))" : ''}
 </script></body>`
 
@@ -364,11 +372,11 @@ test('v0.7.14: fecha de nacimiento pisada por el portal → se dice con QUÉ coi
   await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => {
     assert.ok(e instanceof ErrorTarificador && e.tipo === 'datos', String(e))
     assert.ok(e.message.startsWith(MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ), e.message)
-    assert.match(e.message, /\[difiere −4\.\d{3} días ≈ 12,\d años; día, mes y año distintos; campo: type=«text» maxlength=«10» placeholder=«dd\/mm\/aaaa»\]$/)
+    assert.match(e.message, /\[difiere −4\.\d{3} días ≈ 12,\d años; día, mes y año distintos; campo: type=«text» maxlength=«10» placeholder=«dd\/mm\/aaaa» data-mask=«;mask:date\(224\);unLimited:true;;» class=«input-DateText»\]$/)
     assert.ok(sinValor(e.message))
     return true
   })
-  assert.equal(await page.evaluate(() => (window as unknown as { nInputs: number }).nInputs), 1, 'no se pelea: no reescribe la del registro')
+  assert.equal(await page.evaluate(() => (window as unknown as { nCambios: number }).nCambios), 1, 'no se pelea: no reescribe la del registro')
   await page.setContent(DATOS(false, 'carne'))
   await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => {
     assert.ok(e instanceof ErrorTarificador && e.tipo === 'portal', String(e))
@@ -383,6 +391,34 @@ test('v0.7.14: fecha de nacimiento pisada por el portal → se dice con QUÉ coi
   })
 })
 
+test('v0.7.17: máscara de fecha que desplaza el año +40 al teclear/blur → las fechas se escriben sin teclas y quedan EXACTAS; si lo desplaza el change → portal «año desplazado +40»', async () => {
+  await page.setContent(DATOS(false, 'mascara40'))
+  await rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page)
+  await page.waitForTimeout(50)
+  assert.equal(await page.locator('#driverBirthDate').inputValue(), '03/02/1990', 'nacimiento exacto dd/mm/aaaa')
+  assert.equal(await page.locator('#driverLicenseDate').inputValue(), '05/04/2010', 'carné: mismo camino')
+  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '02/01/2016', 'adquisición: mismo camino')
+  await page.setContent(DATOS(false, 'mascara40change'))
+  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => {
+    assert.ok(e instanceof ErrorTarificador && e.tipo === 'portal', String(e))
+    assert.match(e.message, /el portal desplazó el año de #driverBirthDate \(año desplazado \+40 años, mismo día y mes: lo reinterpreta su máscara de fecha/)
+    assert.match(e.message, /difiere \+14\.610 días ≈ 40 años; mismo día y mes, distinto año/)
+    assert.ok(!e.message.includes('1990') && !e.message.includes('2030') && !e.message.includes('03/02'), 'sin el valor')
+    return true
+  })
+})
+
+test('v0.7.17 aniosDesplazados / esFechaDdMmAaaa: solo mismo día y mes con otro año; puro', () => {
+  assert.equal(aniosDesplazados('03/02/2030', '03/02/1990'), 40)
+  assert.equal(aniosDesplazados('03/02/1950', '03/02/1990'), -40)
+  assert.equal(aniosDesplazados('03/02/1990', '03/02/1990'), null, 'la misma no es desplazada')
+  assert.equal(aniosDesplazados('04/02/2030', '03/02/1990'), null, 'otro día')
+  assert.equal(aniosDesplazados('', '03/02/1990'), null)
+  assert.equal(esFechaDdMmAaaa('03/02/1990'), true)
+  assert.equal(esFechaDdMmAaaa('00000'), false)
+  assert.equal(esFechaDdMmAaaa('1990-02-03'), false)
+})
+
 test('origenFechaLeida: etiqueta pura de cada coincidencia (orden: nuestra, vacía, formato, registro, carné, adquisición, matriculación, día/mes)', () => {
   const c = { nuestra: '03/02/1990', previa: '11/11/1977', carne: '05/04/2010', adquisicion: '02/01/2016', matriculacion: '07/08/2015' }
   assert.equal(origenFechaLeida('03/02/1990', c), 'nuestra')
@@ -394,6 +430,7 @@ test('origenFechaLeida: etiqueta pura de cada coincidencia (orden: nuestra, vac�
   assert.equal(origenFechaLeida('02/01/2016', c), 'adquisicion')
   assert.equal(origenFechaLeida('07/08/2015', c), 'matriculacion')
   assert.equal(origenFechaLeida('02/03/1990', c), 'dia_mes_cambiados')
+  assert.equal(origenFechaLeida('03/02/2030', c), 'anio_desplazado', 'v0.7.17: mismo día y mes, año +40')
   assert.equal(origenFechaLeida('01/01/2001', c), 'distinta')
   assert.equal(origenFechaLeida('11/11/1977', { ...c, previa: '' }), 'distinta', 'sin fecha previa no hay «registro»')
   assert.equal(origenFechaLeida('05/05/1990', { ...c, nuestra: '05/05/1990' }), 'nuestra')
@@ -610,7 +647,7 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.16')
+  assert.equal(allianzMoto.version, '0.7.18')
 })
 
 // ── 0.7.11 · trabajo real 6cd26c10: el portal rechazaba carné, fecha de adquisición, justificante, compañía y póliza de origen ──
@@ -674,4 +711,63 @@ test('0.7.11 · elegirCompaniaOrigen: la fija elige; sin casar y sin IA → `dat
   assert.equal(await page.locator('#ciaOrigen').inputValue(), '', 'nada elegido')
   await assert.rejects(elegirCompaniaOrigen(page.mainFrame(), 'mutua madrileña', page, {}), (e) => esDatos(e) && /casa con 2 opciones/.test((e as Error).message))
   assert.equal(await page.locator('#ciaOrigen').inputValue(), '', 'ambigua: nada elegido')
+})
+
+test('v0.7.18: adquisición anterior a la 1ª matriculación del PORTAL → la de por defecto se sube a la del portal (supuesto); la explícita o sin saberlo → datos con los días, sin fechas', () => {
+  // Sin fecha del portal o adquisición ≥ portal: la nuestra, sin supuesto.
+  assert.deepEqual(fechaAdquisicionFrentePortal('2015-03-01', '2015-03-01', null), { iso: '2015-03-01', supuesto: null })
+  assert.deepEqual(fechaAdquisicionFrentePortal('2015-08-07', '2015-08-07', '2015-08-07'), { iso: '2015-08-07', supuesto: null }, 'iguales: lo admite')
+  assert.deepEqual(fechaAdquisicionFrentePortal('2016-01-02', null, '2015-08-07'), { iso: '2016-01-02', supuesto: null })
+  // Por defecto (= nuestra matriculación) y el portal la tiene después: la del portal + supuesto con los días.
+  const d = fechaAdquisicionFrentePortal('2015-03-01', '2015-03-01', '2015-08-07')
+  assert.equal(d.iso, '2015-08-07')
+  assert.match(d.supuesto ?? '', /^Fecha de adquisición = 1ª matriculación que Allianz tiene para la matrícula \(la de por defecto, nuestra fecha de matriculación, era 159 días anterior\)$/)
+  const sinFechas = (m: string) => !/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|2015/.test(m)
+  // Explícita (≠ nuestra matriculación) y anterior a la del portal: datos.
+  assert.throws(() => fechaAdquisicionFrentePortal('2015-03-01', '2015-01-01', '2015-08-07'), (e) => {
+    assert.ok(e instanceof ErrorTarificador && e.tipo === 'datos', String(e))
+    assert.match(e.message, /la fecha de adquisición indicada es 159 días anterior a la 1ª matriculación que Allianz tiene para esta matrícula/)
+    return sinFechas(e.message)
+  })
+  // Marca de plataforma «por defecto» (sin nuestra matriculación en el riesgo, el caso real): portal posterior → la del portal; igual o anterior → la nuestra.
+  assert.equal(fechaAdquisicionFrentePortal('2015-03-01', null, '2015-08-07', true).iso, '2015-08-07')
+  assert.match(fechaAdquisicionFrentePortal('2015-03-01', null, '2015-08-07', true).supuesto ?? '', /era 159 días anterior/)
+  assert.deepEqual(fechaAdquisicionFrentePortal('2015-08-07', null, '2015-08-07', true), { iso: '2015-08-07', supuesto: null })
+  assert.deepEqual(fechaAdquisicionFrentePortal('2016-01-02', null, '2015-08-07', true), { iso: '2016-01-02', supuesto: null })
+  // Sin nuestra matriculación no se sabe si era la de por defecto: datos (nunca se cambia a ciegas). Miles con punto.
+  assert.throws(() => fechaAdquisicionFrentePortal('2010-01-01', null, '2015-08-07'), (e) => {
+    assert.ok(e instanceof ErrorTarificador && e.tipo === 'datos', String(e))
+    assert.match(e.message, /es 2\.044 días anterior .*no trae nuestra fecha de matriculación/)
+    return sinFechas(e.message)
+  })
+})
+
+test('v0.7.18: rellenarDatosBasicosMoto lee la 1ª matriculación del portal ANTES de escribir la adquisición: por defecto → escribe la del portal y devuelve el supuesto; explícita → datos sin tocar el campo', async () => {
+  await page.setContent(DATOS())
+  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
+  const porDefecto = { ...formCompleto, fechaAdquisicion: '2015-03-01', fechaMatriculacion: '2015-03-01' } as FormularioAuto
+  const sup = await rellenarDatosBasicosMoto(page.mainFrame(), porDefecto, page)
+  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '07/08/2015', 'la del portal, no la nuestra')
+  assert.equal(sup.length, 1)
+  assert.match(sup[0]!, /1ª matriculación que Allianz tiene/)
+  // Posterior a la del portal: la nuestra y sin supuesto (lo de siempre).
+  await page.setContent(DATOS())
+  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
+  assert.deepEqual(await rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), [])
+  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '02/01/2016')
+  // Marca «por defecto» sin nuestra matriculación (lo que manda plataforma): la del portal.
+  await page.setContent(DATOS())
+  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
+  const marca = { ...formCompleto, fechaAdquisicion: '2015-03-01', fechaAdquisicionPorDefecto: true } as FormularioAuto
+  assert.equal((await rellenarDatosBasicosMoto(page.mainFrame(), marca, page)).length, 1)
+  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '07/08/2015')
+  // Sin marca ni nuestra matriculación: datos (comportamiento anterior).
+  await page.setContent(DATOS())
+  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
+  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), { ...marca, fechaAdquisicionPorDefecto: false } as FormularioAuto, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+  // Explícita y anterior: datos, el campo no se escribe.
+  await page.setContent(DATOS())
+  await page.locator('#fechaMatriculacion').evaluate((el) => { (el as HTMLInputElement).value = '07/08/2015' })
+  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), { ...porDefecto, fechaMatriculacion: '2015-01-01' } as FormularioAuto, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /159 días anterior/.test(e.message))
+  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '')
 })

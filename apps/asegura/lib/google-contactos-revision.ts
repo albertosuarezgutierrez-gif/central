@@ -10,15 +10,16 @@
  * 🛡️ Cada consulta lleva `correduriaId` (Prisma con BYPASSRLS: el filtro es el código).
  */
 import { HASH_PENDIENTE_UNIFICAR, limpiarMote, moteDesdeAgenda, type CamposSincronizados, type PersonaGoogle } from '@central/module-seguros/google-contactos'
+import { esCarteraEnVigor } from '@central/module-seguros'
 import {
-  efectoResolucion, esMotivoDuplicado, MOTIVOS_UNIFICABLES_EN_LOTE,
+  efectoResolucion, esMotivoDuplicado, MOTIVOS_UNIFICABLES_EN_LOTE, nombreFichaLegible, telefonoParaMostrar,
   type AccionRevision, type MotivoDuplicado, type TipoRevisionGoogle,
 } from '@central/module-seguros/google-contactos-revision'
 import { decryptField } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
 import { Prisma } from './generated/asegura-client'
-import { altaCliente, anadirContacto, listarContactos } from './cartera-edicion'
+import { altaCliente, anadirContacto, campoIlegible, descifrarCampo, listarContactos } from './cartera-edicion'
 import { lectorContactoGoogle } from './google-contactos'
 
 export const PAGINA_REVISION = 50
@@ -36,8 +37,28 @@ export type RevisionGoogle = {
   propuesta: CamposSincronizados | null
   propuestaIlegible: boolean
   /** Solo `telefono_titular` (un botón por ficha) y `telefono_muchas_fichas` (informativa): las fichas que comparten el número. */
-  candidatos: { id: string; nombre: string | null; tipoPersona: string | null }[]
+  candidatos: (DatosFichaRevision & { id: string; nombre: string | null; tipoPersona: string | null })[]
+  /** Datos de la ficha de `clienteId` (para comparar con lo de Google); `null` si no hay ficha. */
+  clienteDatos: DatosFichaRevision | null
+  /** Solo `telefono_titular`/`telefono_muchas_fichas`: el número que comparten, legible; `null` = no se pudo leer. */
+  telefonoCompartido: string | null
   creadoEn: string
+}
+
+/**
+ * Lo que hace falta para decidir sobre una ficha (21/10/2026). `null` = no se sabe / no se pudo leer
+ * (clave PII), nunca «no tiene». `enVigor` = `esCarteraEnVigor` en ≥1 póliza; `polizas` = pólizas de las
+ * que es TOMADOR (`polizas.cliente_id`; no hay otra figura en la BD), `null` si no se pudieron contar.
+ */
+export type DatosFichaRevision = { telefono: string | null; telefonoIlegible: boolean; email: string | null; emailIlegible: boolean; enVigor: boolean | null; polizas: number | null }
+
+/**
+ * Principal si lo hay; solo si NO hay principal se mira el secundario. Un principal que no abre
+ * (clave PII) es «ilegible», NO «no tiene»: no se cae al secundario como si fuera el de la ficha.
+ */
+function campoDeFicha(principal: string | null | undefined, secundario: string | null | undefined): { valor: string | null; ilegible: boolean } {
+  const c = typeof principal === 'string' && principal.trim() !== '' ? principal : secundario
+  return { valor: descifrarCampo(c), ilegible: campoIlegible(c) }
 }
 
 function leerPropuesta(c: string | null): { propuesta: CamposSincronizados | null; ilegible: boolean } {
@@ -91,9 +112,40 @@ export async function listarRevisiones(correduriaId: string, despuesDe: string |
   const pagina = filas.slice(0, PAGINA_REVISION)
   const ids = [...new Set(pagina.flatMap((f) => [f.clienteId, ...f.candidatos]).filter((x): x is string => !!x))]
   const fichas = ids.length
-    ? await db.cliente.findMany({ where: { correduriaId, id: { in: ids } }, select: { id: true, nombre: true, apellidos: true, tipoPersona: true } })
+    ? await db.cliente.findMany({
+        where: { correduriaId, id: { in: ids } },
+        select: {
+          id: true, nombre: true, apellidos: true, tipoPersona: true, telefono: true, email: true, telefonoLookupHash: true,
+          telefonos: { orderBy: [{ esPrincipal: 'desc' }, { createdAt: 'asc' }], select: { telefono: true, telefonoLookupHash: true } },
+          emails: { orderBy: [{ esPrincipal: 'desc' }, { createdAt: 'asc' }], take: 1, select: { email: true } },
+        },
+      })
     : []
-  const nombre = new Map(fichas.map((f) => [f.id, [f.nombre, f.apellidos].filter(Boolean).join(' ').trim() || null]))
+  const polizas = ids.length
+    ? await db.poliza.findMany({ where: { correduriaId, clienteId: { in: ids } }, select: { clienteId: true, estado: true, importRef: true, eiacXmlHash: true, sustituidaAt: true } })
+    : []
+  const nombre = new Map(fichas.map((f) => [f.id, nombreFichaLegible(f.nombre, f.apellidos)]))
+  const datos = new Map<string, DatosFichaRevision>(fichas.map((f) => {
+    const suyas = polizas.filter((p) => p.clienteId === f.id)
+    return [f.id, {
+      ...(() => { const t = campoDeFicha(f.telefono, f.telefonos[0]?.telefono); const e = campoDeFicha(f.email, f.emails[0]?.email); return { telefono: telefonoParaMostrar(t.valor), telefonoIlegible: t.ilegible, email: e.valor, emailIlegible: e.ilegible } })(),
+      enVigor: suyas.some((p) => esCarteraEnVigor({ importRef: p.importRef, eiacXmlHash: p.eiacXmlHash, estado: String(p.estado), sustituidaAt: p.sustituidaAt })),
+      polizas: suyas.length,
+    }]
+  }))
+  /** El número que comparten, leído de la primera ficha que lo tiene con ese hash (principal o secundario). */
+  const numeroDeHash = (hash: string | null, cands: string[]): string | null => {
+    if (!hash) return null
+    for (const id of cands) {
+      const f = fichas.find((x) => x.id === id)
+      if (!f) continue
+      const cifrado = f.telefonoLookupHash === hash ? f.telefono : f.telefonos.find((t) => t.telefonoLookupHash === hash)?.telefono
+      const t = telefonoParaMostrar(descifrarCampo(cifrado))
+      if (t) return t
+    }
+    return null
+  }
+  const sinDatos: DatosFichaRevision = { telefono: null, telefonoIlegible: false, email: null, emailIlegible: false, enVigor: null, polizas: null }
   const tipoPersona = new Map(fichas.map((f) => [f.id, f.tipoPersona ?? null]))
   return {
     revisiones: pagina.map((f) => {
@@ -102,7 +154,9 @@ export async function listarRevisiones(correduriaId: string, despuesDe: string |
         id: f.id, tipo: f.tipo as TipoRevisionGoogle, motivo: esMotivoDuplicado(f.motivo) ? f.motivo : null, campos: f.campos, clienteId: f.clienteId,
         clienteNombre: f.clienteId ? (nombre.get(f.clienteId) ?? null) : null,
         propuesta: p.propuesta, propuestaIlegible: p.ilegible, creadoEn: f.creadoEn.toISOString(),
-        candidatos: f.candidatos.map((id) => ({ id, nombre: nombre.get(id) ?? null, tipoPersona: tipoPersona.get(id) ?? null })),
+        candidatos: f.candidatos.map((id) => ({ id, nombre: nombre.get(id) ?? null, tipoPersona: tipoPersona.get(id) ?? null, ...(datos.get(id) ?? sinDatos) })),
+        clienteDatos: f.clienteId ? (datos.get(f.clienteId) ?? null) : null,
+        telefonoCompartido: numeroDeHash(f.telefonoHash, f.candidatos),
       }
     }),
     siguiente: filas.length > PAGINA_REVISION ? pagina[pagina.length - 1].id : null,
