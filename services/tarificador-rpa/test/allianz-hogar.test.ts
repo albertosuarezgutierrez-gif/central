@@ -412,6 +412,29 @@ test('guard: marcarOpcionResueltaHogarAllianz marca solo un <label for> de un ra
   }
 })
 
+test('guard 0.1.4: label no clicable (display:none) → plan B marca el radio ya resuelto; un radio que de verdad no se marca sigue dando no_quedo con boundingBox', async () => {
+  const { context, marco, guard, marcado } = await abrir()
+  try {
+    await marco.evaluate(() => { (document.querySelector('label[for="u4"]') as HTMLElement).style.display = 'none' })
+    assert.deepEqual(await marcarOpcionRiesgoHogarAllianz(marco, guard, 'Secundaria'), { estado: 'marcada' })
+    assert.equal(await marcado('u4'), true)
+    await marco.evaluate(() => { (document.querySelector('label[for="u2"]') as HTMLElement).style.display = 'none' })
+    assert.deepEqual(await marcarOpcionResueltaHogarAllianz(marco, guard, marco.locator('label[for="u2"]')), { estado: 'marcada' })
+    assert.equal(await marcado('u2'), true)
+    // Radio que el portal no deja marcar (cancela el clic) y label sin caja: error de siempre + boundingBox.
+    await marco.evaluate(() => {
+      document.getElementById('u5')!.addEventListener('click', (e) => e.preventDefault())
+      ;(document.querySelector('label[for="u5"]') as HTMLElement).style.display = 'none'
+    })
+    const r = await marcarOpcionRiesgoHogarAllianz(marco, guard, 'Turístico o vacacional')
+    assert.equal(r.estado, 'no_quedo')
+    assert.match((r as { caja?: string }).caja ?? '', /boundingBox label/)
+    assert.equal(await marcado('u5'), false)
+  } finally {
+    await context.close()
+  }
+})
+
 // ───────────── opciones del riesgo: etiqueta exacta NO casa → capa común (fijo → aprendido → IA → atasco) ─────────────
 async function formadorDe(elegir: (e: { texto: string | null }[]) => number | null, llamadas: string[], conocimiento: unknown[] = []): Promise<ContextoFormador> {
   return prepararFormador({

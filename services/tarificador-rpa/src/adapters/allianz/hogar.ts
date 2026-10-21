@@ -340,7 +340,7 @@ async function marcarOpcion(marco: Frame, ctx: CtxVivienda, op: Extract<Operacio
   if (typeof ctx.marcarOpcionHogar !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Hogar en el contexto del worker', false)
   const r = await ctx.marcarOpcionHogar(marco, op.etiqueta)
   if (r.estado === 'no_unica') return opcionPorCapaComun(marco, ctx, op, `la opción «${op.etiqueta}» (${op.que}) de la pantalla «Vivienda» (${r.coincidencias} coincidencias exactas)`)
-  if (r.estado === 'no_quedo') return opcionPorCapaComun(marco, ctx, op, `cómo se marca «${op.etiqueta}» (${op.que}): tras pulsar no quedó marcada`)
+  if (r.estado === 'no_quedo') return opcionPorCapaComun(marco, ctx, op, `cómo se marca «${op.etiqueta}» (${op.que}): tras pulsar no quedó marcada${r.caja ? ` (${r.caja})` : ''}`)
 }
 
 const slug = (t: string) => normalizarTexto(t).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'x'
@@ -709,7 +709,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.3',
+  version: '0.1.4',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
