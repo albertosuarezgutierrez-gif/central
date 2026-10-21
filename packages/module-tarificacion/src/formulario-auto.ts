@@ -322,6 +322,10 @@ export type FormularioAuto = {
   fechaAdquisicion?: string | null
   /** `true` = la fecha de adquisición NO la tecleó el corredor: es la de por defecto (= nuestra matriculación, que puede ser estimada). Solo lo usa Allianz moto (0.7.18) para subirla a la 1ª matriculación del portal; los demás bots lo ignoran. Ausente/`false` = explícita o no se sabe. Solo viaja con `fechaAdquisicion`. */
   fechaAdquisicionPorDefecto?: boolean | null
+  /** Allianz moto (0.7.20, «enseñar al bot para el futuro»): «Cliente Alto Potencial» del CUESTIONARIO de la tabla de precios. HOY NO SE APLICA: el bot solo lo lee y, si viene, avisa de que no lo cambió. Los demás bots lo ignoran. Ausente = no se pide. */
+  clienteAltoPotencialAllianz?: 'si' | 'no' | null
+  /** Allianz moto (0.7.20): valor del desplegable «CAP» (descuento comercial) que se querría. HOY NO SE APLICA (solo lectura + aviso). Código corto de opción (cifras, letras, `.,%-`, ≤12). Los demás bots lo ignoran. */
+  capAllianz?: string | null
   /** Justificante del seguro anterior que Allianz exige si estuvo asegurado (`JUSTIFICANTES_SEGURO_ANTERIOR`). Ausente = no consta. */
   fotocopiaAnterior?: JustificanteSeguroAnterior | null
   // ── 15/10/2026: lo que el bot SUPONE si no viene (`supuestosAuto`), mismos nombres que el riesgo de la oportunidad ──
@@ -642,6 +646,14 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   }
   const fechaAdquisicionPorDefecto = booleano(e.fechaAdquisicionPorDefecto, 'fechaAdquisicionPorDefecto', errores)
   const fotocopiaAnterior = cerrado(e.fotocopiaAnterior, 'fotocopiaAnterior', JUSTIFICANTES_SEGURO_ANTERIOR, null)
+  // Allianz moto 0.7.20: CAP / Cliente Alto Potencial, opcionales y SIN efecto hoy (el bot solo los lee). El error no repite el valor.
+  const clienteAltoPotencialAllianz = cerrado(e.clienteAltoPotencialAllianz, 'clienteAltoPotencialAllianz', ['si', 'no'] as const, null)
+  let capAllianz: string | null = null
+  if (!vacio(e.capAllianz)) {
+    const c = typeof e.capAllianz === 'string' ? e.capAllianz.trim() : typeof e.capAllianz === 'number' && Number.isFinite(e.capAllianz) ? String(e.capAllianz) : ''
+    if (/^[A-Za-z0-9.,%-]{1,12}$/.test(c)) capAllianz = c
+    else errores.push('capAllianz: código de opción corto (cifras, letras, «.,%-», máx. 12) o no venir')
+  }
   const fechaVencimiento = fechaIso(e.fechaVencimiento, 'fechaVencimiento', errores)
   const tipoGaraje = cerrado(e.tipoGaraje, 'tipoGaraje', TIPOS_GARAJE, null)
   const usoFrecuencia = cerrado(e.usoFrecuencia, 'usoFrecuencia', USOS_FRECUENCIA, null)
@@ -685,6 +697,8 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(fechaAdquisicion !== null ? { fechaAdquisicion } : {}),
       ...(fechaAdquisicion !== null && fechaAdquisicionPorDefecto !== null ? { fechaAdquisicionPorDefecto } : {}),
       ...(fotocopiaAnterior !== null ? { fotocopiaAnterior } : {}),
+      ...(clienteAltoPotencialAllianz !== null ? { clienteAltoPotencialAllianz } : {}),
+      ...(capAllianz !== null ? { capAllianz } : {}),
       ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
       ...(tipoGaraje !== null ? { tipoGaraje } : {}),
       ...(usoFrecuencia !== null ? { usoFrecuencia } : {}),

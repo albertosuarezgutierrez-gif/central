@@ -349,7 +349,7 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.ok(ayuda![1].includes('valorCuerpo: /^[A-Za-z0-9_.:$-]{0,64}$/'), 'la ayuda admite «$» (PAGEID real `datosBasicos$datosBasicos`) y nada más allá de [A-Za-z0-9_.:$-]')
   assert.match(guard, /export function motivoAjaxRechazado\(/, 'el diagnóstico del AJAX rechazado existe')
   assert.match(guard, /\[motivo: \$\{motivo\}\]/, 'el mensaje del guard lleva el motivo del AJAX rechazado')
-  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.19' : '0\.6\.18'/, 'versión Allianz moto 0.7.19')
+  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.20' : '0\.6\.18'/, 'versión Allianz moto 0.7.20')
   // 20/10/2026 (trabajo real 6cd26c10, 0.7.11): Datos básicos de Moto rellena compañía/póliza/justificante del seguro anterior y la fecha de
   // adquisición, y los huecos de datos paran ANTES del login (nunca se inventa); el carné se comprueba contra los 18 años antes de abrir el portal.
   const autoMoto = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'))

@@ -1,3 +1,4 @@
+// Moto v0.7.20 (21/10/2026, captura de Alberto de «PRECIOS MODALIDADES»): la prima ANUAL comparable es «Anual sucesivos» del RECIBO BANCARIO (el «Anual 1er Recibo» depende del primer periodo: 182,23 € frente a 275,82 €); el 1er recibo va en avisos y, con sucesivos, se quita el supuesto «primer periodo inferior a un año… no comparable» (sin sucesivos: como antes). Solo LECTURA de lo demás: columnas con ⚠ («Normas de Contratación»), el texto rojo de TIREA y el CUESTIONARIO «Cliente Alto Potencial»/«CAP» (= descuento comercial; Alberto: no se fija aún, «enseñar al bot para el futuro») descritos saneados en avisos; `capAllianz`/`clienteAltoPotencialAllianz` del formulario NO se aplican (aviso). No se pulsa nada nuevo.
 // Moto v0.7.19 (21/10/2026, decisión de Alberto): si la fecha de adquisición es anterior a la 1ª matriculación del portal (`#fechaMatriculacion`), venga de donde venga (por defecto, tecleada o sin marca), se escribe la del portal (setter nativo, 0.7.17) y se declara como supuesto con los días de diferencia (sin fechas); ya no para como `datos`. `fechaAdquisicionPorDefecto` se sigue aceptando pero no decide.
 // Moto v0.7.18 (21/10/2026): Allianz rechazaba «[fechaAdquisicion] … no puede ser anterior a la fecha de primera matriculación» con la adquisición POR DEFECTO (= nuestra matriculación, que puede ser estimada): antes de escribirla se lee la 1ª matriculación del portal (DGT por matrícula); si la adquisición es la de por defecto (marca `fechaAdquisicionPorDefecto` de plataforma, o = nuestra matriculación) y la del portal es posterior, se usa la del portal y se declara como supuesto; si es explícita (o no se sabe), para como `datos` diciendo cuántos días antes (sin fechas).
 // Moto v0.7.17 (21/10/2026): `#driverBirthDate` (máscara `mask:date(224)`, class `input-DateText`) quedaba con el MISMO día y mes y el año +40 → las fechas dd/mm/aaaa se escriben SIN teclas ni foco (setter nativo + `change`), así la máscara no reinterpreta lo tecleado; se relee y, si el año sigue desplazado, para como `portal` diciendo «año desplazado ±N años».
@@ -175,6 +176,7 @@ import {
   type TarjetaVehiculoTurismos,
   contarOpcionesMarcablesTurismos,
   supuestosAvanceAceptados,
+  CONFIRMS_AVANCE_ACEPTABLES,
 } from '../../guard.ts'
 import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
@@ -582,6 +584,229 @@ export function ofertasDesdePrimas(primas: readonly PrimaModalidad[], producto: 
       ...(supuestos ? [supuestos] : []),
     ],
   }))
+}
+
+// ───────────────────────── MOTO v0.7.20: prima comparable, avisos de la tabla y CUESTIONARIO (solo lectura) ─────────────────────────
+// Captura de Alberto (21/10/2026) de «PRECIOS MODALIDADES» de Moto: secciones RECIBO FÍSICO · RECIBO BANCARIO · FRACCIONAMIENTOS;
+// en las dos primeras, filas «Anual 1er Recibo» y «Anual sucesivos». Con un primer periodo corto el 1er recibo NO es anual
+// (G. Básicas 182,23 € frente a 275,82 € de sucesivos con término de un año): la prima COMPARABLE es «Anual sucesivos» del recibo
+// bancario. Celdas con ⚠ = «Opción sujeta a Normas de Contratación de la Compañía». Bajo la tabla, texto rojo del portal
+// (TIREA) y el CUESTIONARIO con «Cliente Alto Potencial» y «CAP» (= el descuento comercial): HOY solo se LEEN y describen
+// («enseñar al bot para el futuro»); no se cambian ni se pulsa nada. Nada de esto toca el pie de emisión.
+
+/** Un control de formulario de la pantalla de precios con su contexto de etiqueta (lo que devuelve el navegador). */
+export type ControlCandidato = {
+  tag: string
+  tipo: string | null
+  id: string | null
+  name: string | null
+  /** Textos de etiqueta del más específico al más amplio (`label[for]`, aria-label, title, label envolvente, celda anterior, fila, contenedor). */
+  etiquetas: readonly string[]
+  valor: string | null
+  opciones: ReadonlyArray<{ valor: string; texto: string }>
+  min: string | null
+  max: string | null
+  maxLength: number | null
+  step: string | null
+  deshabilitado: boolean
+  soloLectura: boolean
+  botonesCerca: readonly string[]
+}
+
+/** Campos del CUESTIONARIO que se describen (solo lectura). `cap` = el descuento comercial de Allianz. */
+export const CAMPOS_CUESTIONARIO_MOTO = [
+  { clave: 'clienteAltoPotencial', nombre: 'Cliente Alto Potencial', casa: (t: string) => plano(t).includes('cliente alto potencial') },
+  { clave: 'cap', nombre: 'CAP', casa: (t: string) => /(^|[^a-z0-9])cap([^a-z0-9]|$)/.test(plano(t)) },
+] as const
+
+const plano = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+/** Importe en formato español: `2.162,49€` (puntos de miles también con 4 cifras). PURA. */
+export function eurEs(n: number): string {
+  const [ent, dec] = Math.abs(n).toFixed(2).split('.')
+  return `${n < 0 ? '-' : ''}${ent.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${dec}€`
+}
+
+const idSeguro = (t: string | null): string | null => (t && /^[A-Za-z_][A-Za-z0-9_.:-]{0,59}$/.test(t) ? t : t ? '(id no estándar)' : null)
+const textoSeguro = (t: string, n = 60): string => redactarDatosPersonales(t.replace(/\s+/g, ' ').trim()).slice(0, n)
+/** Valor tecleado: cifras, separadores y «%»; otra cosa no se copia (podría ser un dato personal). */
+const valorSeguro = (t: string | null): string => (t === null || t === '' ? 'vacío' : /^[\d\s.,%+-]{1,12}$/.test(t) ? t.trim() : '(texto, no se copia)')
+/** Código de opción de un desplegable (S/N, 05, 10%…): corto y sin espacios raros. */
+const codigoSeguro = (t: string | null): string => (t === null || t === '' ? 'vacío' : /^[A-Za-z0-9.,%+-]{1,12}$/.test(t.trim()) ? t.trim() : '(no se copia)')
+
+/** Describe un control saneado (sin datos personales). PURA. */
+export function describirControl(c: ControlCandidato): string {
+  const esSelect = c.tag.toUpperCase() === 'SELECT'
+  const partes = [`<${idSeguro(c.tag.toLowerCase()) ?? '?'}${c.tipo ? ` type=${idSeguro(c.tipo)}` : ''}>`, `id=${idSeguro(c.id) ?? '—'}`, `name=${idSeguro(c.name) ?? '—'}`]
+  if (c.opciones.length > 0) {
+    const ops = c.opciones.slice(0, 25).map((o) => `${codigoSeguro(o.valor)}«${textoSeguro(o.texto, 20)}»`)
+    partes.push(`opciones [${ops.join(', ')}${c.opciones.length > 25 ? `, … (${c.opciones.length})` : ''}]`)
+  }
+  if (c.min !== null || c.max !== null) partes.push(`min=${valorSeguro(c.min)} max=${valorSeguro(c.max)}`)
+  if (c.step !== null) partes.push(`step=${valorSeguro(c.step)}`)
+  if (c.maxLength !== null && c.maxLength >= 0) partes.push(`maxlength=${c.maxLength}`)
+  partes.push(`valor actual ${esSelect ? codigoSeguro(c.valor) : valorSeguro(c.valor)}`)
+  if (c.deshabilitado) partes.push('deshabilitado')
+  if (c.soloLectura) partes.push('solo lectura')
+  if (c.botonesCerca.length > 0) partes.push(`botones cerca: ${c.botonesCerca.slice(0, 5).map((b) => `«${textoSeguro(b, 30)}»`).join(', ')}`)
+  return partes.join(' · ')
+}
+
+/**
+ * Candidatos → un aviso por campo del CUESTIONARIO (`CAMPOS_CUESTIONARIO_MOTO`). Cada campo se queda con el control cuya etiqueta
+ * MÁS ESPECÍFICA lo nombra (una fila con «Cliente Alto Potencial … CAP» no confunde los dos); un control no sirve a dos campos.
+ * No encontrado → se dice («no se encontró», lo mirado). PURA.
+ */
+export function avisosCuestionarioMoto(candidatos: readonly ControlCandidato[]): string[] {
+  const usados = new Set<number>()
+  return CAMPOS_CUESTIONARIO_MOTO.map((campo) => {
+    let mejor: { i: number; nivel: number } | null = null
+    candidatos.forEach((c, i) => {
+      if (usados.has(i)) return
+      const nivel = c.etiquetas.findIndex((t) => campo.casa(t))
+      if (nivel >= 0 && (mejor === null || nivel < mejor.nivel)) mejor = { i, nivel }
+    })
+    const pref = `Allianz «${campo.nombre}» (cuestionario de la tabla de precios; solo lectura, NO se cambia en 0.7.20):`
+    if (mejor === null) return `${pref} no se encontró en la pantalla de precios.`
+    const elegido: { i: number; nivel: number } = mejor
+    usados.add(elegido.i)
+    return `${pref} ${describirControl(candidatos[elegido.i])}.`
+  })
+}
+
+/** Lo que el formulario PIDE para CAP / Cliente Alto Potencial no se aplica hoy: se dice, sin tocar el portal. PURA. */
+export function avisoCuestionarioPedido(form: Pick<FormularioAuto, 'clienteAltoPotencialAllianz' | 'capAllianz'>): string | null {
+  const pedido = [
+    ...(form.clienteAltoPotencialAllianz ? [`Cliente Alto Potencial=${form.clienteAltoPotencialAllianz}`] : []),
+    ...(form.capAllianz ? [`CAP=${codigoSeguro(form.capAllianz)}`] : []),
+  ]
+  return pedido.length === 0 ? null : `Pedido ${pedido.join(', ')}: NO aplicado (Allianz moto 0.7.20 solo lee el cuestionario); el precio es con el valor que trae el portal.`
+}
+
+/** Texto rojo del portal bajo la tabla (p. ej. «Tomador no disponible en TIREA…») → aviso saneado. PURA. */
+export function avisosTextoPortalTarificar(textos: readonly string[]): string[] {
+  const vistos = new Set<string>()
+  const out: string[] = []
+  for (const t of textos) {
+    const limpio = textoSeguro(t.replace(/^\s*-\s*/, ''), 200)
+    if (limpio === '' || vistos.has(limpio)) continue
+    vistos.add(limpio)
+    out.push(`Allianz (texto del portal bajo la tabla de precios): ${limpio}`)
+  }
+  return out.slice(0, 3)
+}
+
+export type ExtrasTarificarMoto = { normas: readonly string[]; textosPortal: readonly string[]; controles: readonly ControlCandidato[] }
+
+/**
+ * Lee (SOLO lectura: ni clic, ni foco, ni escritura) de la pestaña Tarificar: modalidades con ⚠ (elemento con title/alt/texto
+ * «Normas de Contratación» en sus celdas `td[id^="<m>_"]` o en su cabecera), textos que nombran TIREA y los controles con su etiqueta.
+ */
+export async function leerExtrasTarificarMoto(raiz: Pick<Frame, 'locator'>, modalidades: readonly string[]): Promise<ExtrasTarificarMoto> {
+  const { normas, textosPortal } = await raiz.locator('body').first().evaluate((body, mods: string[]) => {
+    // Sin funciones con nombre dentro del navegador (tsx inyecta `__name`, que la página no tiene).
+    const normas: string[] = []
+    for (const m of mods) {
+      const zonas = Array.from(body.querySelectorAll('td[id]')).filter((td) => td.id.startsWith(`${m}_`))
+      const cabecera = body.querySelector(`#modality_${CSS.escape(m)}`)?.closest('table')
+      if (cabecera) zonas.push(cabecera)
+      const hay = zonas.some((z) =>
+        [z, ...Array.from(z.querySelectorAll('*'))].some((n) =>
+          /normas de contrataci/i.test(`${n.getAttribute('title') ?? ''} ${n.getAttribute('alt') ?? ''} ${n.getAttribute('aria-label') ?? ''} ${n.children.length === 0 ? (n.textContent ?? '') : ''}`),
+        ),
+      )
+      if (hay) normas.push(m)
+    }
+    const textosPortal: string[] = []
+    for (const el of Array.from(body.querySelectorAll('*'))) {
+      if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue
+      const propio = Array.from(el.childNodes).filter((n) => n.nodeType === 3).map((n) => n.textContent ?? '').join(' ')
+      if (/\bTIREA\b/i.test(propio)) textosPortal.push((el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 400))
+    }
+    return { normas, textosPortal: textosPortal.slice(0, 5) }
+  }, [...modalidades])
+  return { normas, textosPortal, controles: await leerControlesTarificar(raiz) }
+}
+
+/**
+ * Controles visibles de la pantalla de precios con su etiqueta: `label[for]`, `aria-label`/`title`, la `<label>` que lo envuelve,
+ * la celda anterior, el texto de su fila (`tr`) y el contenedor inmediato. Botones cercanos = textos de botones de la misma
+ * tabla/fieldset/form (para saber cuál confirma, sin pulsarlo). SOLO lectura.
+ */
+export async function leerControlesTarificar(raiz: Pick<Frame, 'locator'>): Promise<ControlCandidato[]> {
+  return raiz.locator('select, textarea, input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="image"])').evaluateAll((els) =>
+    els.map((e) => {
+      const el = e as HTMLInputElement & HTMLSelectElement
+      const porFor = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent ?? '' : ''
+      const envoltorio = el.closest('label')?.textContent ?? ''
+      const celda = el.closest('td, th')
+      let anterior = celda?.previousElementSibling ?? null
+      while (anterior && (anterior.textContent ?? '').trim() === '') anterior = anterior.previousElementSibling
+      const fila = el.closest('tr')
+      const textoFila = fila ? Array.from(fila.querySelectorAll('td, th, label, span')).filter((n) => !n.contains(el)).map((n) => n.textContent ?? '').join(' ') : ''
+      const contenedor = (el.parentElement?.textContent ?? '').slice(0, 200)
+      const etiquetas = [porFor, el.getAttribute('aria-label') ?? '', el.getAttribute('title') ?? '', envoltorio, anterior?.textContent ?? '', textoFila, contenedor]
+        .map((t) => t.replace(/\s+/g, ' ').trim().slice(0, 300))
+        .filter((t) => t !== '')
+      const zona = el.closest('table, fieldset, form') ?? document.body
+      const botones = Array.from(zona.querySelectorAll('button, input[type="button"], input[type="submit"], a.button, a[role="button"]'))
+        .map((b) => ((b as HTMLInputElement).value || b.textContent || '').replace(/\s+/g, ' ').trim())
+        .filter((t) => t !== '')
+      const esSelect = el.tagName === 'SELECT'
+      return {
+        tag: el.tagName,
+        tipo: esSelect ? null : el.getAttribute('type'),
+        id: el.id || null,
+        name: el.getAttribute('name'),
+        etiquetas,
+        valor: esSelect ? (el.selectedOptions[0]?.value ?? null) : el.value,
+        opciones: esSelect ? Array.from(el.options).map((o) => ({ valor: o.value, texto: (o.textContent ?? '').trim() })) : [],
+        min: el.getAttribute('min'),
+        max: el.getAttribute('max'),
+        maxLength: esSelect ? null : el.getAttribute('maxlength') === null ? null : Number(el.getAttribute('maxlength')),
+        step: el.getAttribute('step'),
+        deshabilitado: el.disabled,
+        soloLectura: !esSelect && el.readOnly,
+        botonesCerca: [...new Set(botones)].slice(0, 5),
+      }
+    }),
+  )
+}
+
+/** Lectura tolerante: si falla, se dice que NO se pudo mirar (nunca «no hay»), y la tarificación sigue con los precios. */
+export async function extrasTarificarMotoSeguros(raiz: Pick<Frame, 'locator'>, modalidades: readonly string[]): Promise<{ extras: ExtrasTarificarMoto | null; avisos: string[] }> {
+  try {
+    const extras = await leerExtrasTarificarMoto(raiz, modalidades)
+    return { extras, avisos: [...avisosTextoPortalTarificar(extras.textosPortal), ...avisosCuestionarioMoto(extras.controles)] }
+  } catch {
+    return { extras: null, avisos: ['Allianz moto: no se pudo leer el cuestionario ni los avisos bajo la tabla de precios (sin comprobar: ⚠ de Normas de Contratación, TIREA, CAP).'] }
+  }
+}
+
+export const AVISO_PRIMA_SUCESIVOS =
+  'Prima anual comparable = «Anual sucesivos» del RECIBO BANCARIO de la tabla «PRECIOS MODALIDADES» (el 1er recibo depende del primer periodo); sin desglose neta/impuestos.'
+
+/**
+ * Ofertas de MOTO (v0.7.20). Con «Anual sucesivos» legible: ESA es la prima anual comparable, el 1er recibo va en avisos si
+ * difiere, y el supuesto «primer periodo inferior a un año… no comparable» (`supuestoPeriodo`) se QUITA (ya no aplica). Sin
+ * sucesivos: como antes (1er recibo + ese supuesto). Modalidades con ⚠ → aviso de Normas de Contratación. PURA.
+ */
+export function ofertasMotoDesdePrimas(
+  primas: readonly PrimaModalidad[],
+  vehiculo: Vehiculo | null,
+  supuestos: { supuestoVersion: string | null; form: FormularioAuto; delPortal: readonly string[]; supuestoPeriodo: string | null },
+  normas: readonly string[] = [],
+): OfertaNormalizada[] {
+  const sinPeriodo = supuestos.delPortal.filter((x) => x !== supuestos.supuestoPeriodo)
+  return primas.map((p) => {
+    const sucesivos = p.sucesivosEur
+    const textoSup = supuestosMoto(supuestos.supuestoVersion, supuestos.form, sucesivos !== null ? sinPeriodo : supuestos.delPortal)
+    const [o] = ofertasDesdePrimas([p], 'Moto', vehiculo, textoSup)
+    const avisoNormas = normas.includes(p.modalidad) ? [`Modalidad «${p.nombre}»: opción sujeta a Normas de Contratación de la Compañía (⚠ en la tabla).`] : []
+    if (sucesivos === null) return { ...o, avisos: [...o.avisos, ...avisoNormas] }
+    const primerRecibo = p.primerReciboEur !== sucesivos ? [`1er recibo: ${eurEs(p.primerReciboEur)} (primer periodo distinto de un año)`] : []
+    return { ...o, primaAnualEur: sucesivos, importeReciboEur: sucesivos, avisos: [AVISO_PRIMA_SUCESIVOS, ...primerRecibo, ...o.avisos.slice(1), ...avisoNormas] }
+  })
 }
 
 // ───────────────────────── MOTO: formulario editable (grabación 13/10/2026) ─────────────────────────
@@ -1475,9 +1700,18 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   const tarifa = await avanzarPestanaGuardada(page, ctx, 'tarificar', 'moto')
   await lanzarSiHayErrores(tarifa)
   const primas = await leerPrimasTarificar(tarifa)
-  // 18/10/2026: los antecedentes SUPUESTOS (favorables) viajan con cada oferta («Precio con supuestos: …»).
+  // v0.7.20: ⚠ Normas de Contratación, texto rojo (TIREA) y CUESTIONARIO (CAP / Cliente Alto Potencial) se LEEN; no se cambia ni pulsa nada.
+  const { extras, avisos: avisosTabla } = await extrasTarificarMotoSeguros(tarifa, primas.map((p) => p.modalidad))
+  const pedido = avisoCuestionarioPedido(form)
+  // 18/10/2026: los antecedentes SUPUESTOS (favorables) viajan con cada oferta («Precio con supuestos: …»). v0.7.20: prima = «Anual sucesivos».
+  const ofertas = ofertasMotoDesdePrimas(
+    primas,
+    { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion },
+    { supuestoVersion, form, delPortal: [...supuestosDatos, ...supuestosAvanceAceptados(page)], supuestoPeriodo: CONFIRMS_AVANCE_ACEPTABLES['td#datosBasicos']?.supuesto ?? null },
+    extras?.normas ?? [],
+  )
   return {
-    ofertas: conDatosUsados(ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }, supuestosMoto(supuestoVersion, form, [...supuestosDatos, ...supuestosAvanceAceptados(page)])), usados),
+    ofertas: conDatosUsados(ofertas.map((o) => ({ ...o, avisos: [...o.avisos, ...avisosTabla, ...(pedido ? [pedido] : [])] })), usados),
     // El vehículo fijado en el `<select>` (resolverVehiculo): asegura solo lo encadena a Generali en ramo auto; viaja igual.
     seleccionVehiculo: seleccionVehiculoConfirmada(usados.vehiculo),
   }
@@ -2658,7 +2892,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.19' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.20' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
