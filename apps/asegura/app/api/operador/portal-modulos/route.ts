@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 
-import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
+import { aseguraConfigurada } from '@/lib/asegura-db'
+import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { operadorAutorizado } from '@/lib/operador'
+import { prisma } from '@/lib/tenant'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +41,12 @@ export async function GET(req: Request) {
 
   const todas = new URL(req.url).searchParams.get('todas') === '1'
   try {
-    const filas = await prismaAsegura().$queryRaw<Fila[]>`
+    // Ámbito: las tablas del portal no llevan `correduria_id`; se acota por la ficha vinculada
+    // (`clientes.correduria_id`). Sin vínculo (`c.id IS NULL`) no hay correduría que comparar: se
+    // muestra, porque es justo lo que el operador tiene que resolver.
+    const correduria = await correduriaUnica()
+    if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' })
+    const filas = await prisma.$queryRaw<Fila[]>`
       SELECT m.id, m.modulo, m.estado, m.solicitado_en, m.activado_en, m.retirado_en,
              m.version_condiciones, m.origen, m.identidad_id, i.nombre,
              v.cliente_id, NULLIF(TRIM(CONCAT_WS(' ', c.nombre, c.apellidos)), '') AS cliente,
@@ -52,7 +59,8 @@ export async function GET(req: Request) {
            ORDER BY pv.creado_en ASC LIMIT 1
         ) v ON true
         LEFT JOIN seguros.clientes c ON c.id = v.cliente_id
-       WHERE ${todas} OR m.estado = 'solicitado'
+       WHERE (${todas} OR m.estado = 'solicitado')
+         AND (c.id IS NULL OR c.correduria_id = ${correduria.id}::uuid)
        ORDER BY m.solicitado_en ASC
        LIMIT 500`
     return NextResponse.json({
