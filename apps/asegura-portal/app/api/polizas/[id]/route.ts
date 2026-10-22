@@ -1,13 +1,15 @@
 import { Prisma } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { fotoDeLaPoliza, puedeBorrarDeclarada } from '@central/module-seguros-portal'
 
 import { registrarUso } from '@/lib/autorizaciones'
+import { avisarTitularEmpresa } from '@/lib/aviso-poliza-declarada'
 import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import {
   cambiosDeEdicion,
+  DECLARADA_ELIMINADA,
   DECLARADA_NO_ELIMINADA,
   fotoHistorial,
   guardarObligaciones,
@@ -15,6 +17,8 @@ import {
 } from '@/lib/declaradas-eliminadas'
 import { normalizarParche } from '@/lib/poliza-editable'
 import { requireIdentidad } from '@/lib/session'
+import { leerTitularParche } from '@/lib/titular-propuesto'
+import { leerVigenciaDeclarada } from '@/lib/vigente-declarada'
 
 export const runtime = 'nodejs'
 
@@ -56,6 +60,123 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     cuerpo = await req.json()
   } catch {
     return NextResponse.json({ error: 'cuerpo_invalido' }, { status: 400 })
+  }
+
+  // «¿Sigue vigente?» (22/10/2026, `lib/vigente-declarada.ts`). Ausente → la corrección de siempre.
+  // Sola → SOLO se guarda la respuesta: no es una revisión de los datos, así que no se marca
+  // `confirmadaPorUsuario` ni se pasa por `normalizarParche`. «No» = ya no la tiene → se QUITA con
+  // el mismo borrado lógico que el DELETE (y su mismo permiso, `quitar`). Siempre con la identidad
+  // autorizada (`duenaId`) dentro del `where`.
+  const vigencia = leerVigenciaDeclarada(cuerpo)
+  if (vigencia.tipo === 'error') return NextResponse.json({ error: vigencia.error }, { status: 400 })
+  if (vigencia.tipo === 'sola') {
+    if (vigencia.valor === 'no') {
+      const paraQuitar = await accesoADeclarada(identidad.id, id, 'quitar')
+      if (paraQuitar === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+      const quitada = await quitarDeclarada(id, paraQuitar.identidadId, 'no')
+      if (quitada.estado === 200 && !paraQuitar.propia) await registrarUso(identidad.id, paraQuitar.autorizacionIds)
+      return NextResponse.json(
+        quitada.estado === 200 ? { ...quitada.cuerpo, vigenteDeclarada: 'no' } : quitada.cuerpo,
+        { status: quitada.estado },
+      )
+    }
+    const { count } = await prisma.portalPolizaDeclarada.updateMany({
+      where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+      data: { vigenteDeclarada: vigencia.valor },
+    })
+    if (count === 0) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    if (!acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
+    return NextResponse.json({ id, vigenteDeclarada: vigencia.valor })
+  }
+
+  // «Sí, es de mi empresa» (22/10/2026, `lib/titular-propuesto.ts`): la respuesta al paso posterior
+  // a la subida. Va SOLA: no es una revisión de los datos (no marca `confirmadaPorUsuario`). Solo la
+  // dueña de la fila la contesta — es una declaración sobre SU relación con esa empresa, que un
+  // tercero con «Total» no puede hacer por ella (404, como «no existe»). 🔒 No da acceso a nada:
+  // ni crea ficha de la empresa ni la vincula; la casa la reconcilia el corredor.
+  const titularParche = leerTitularParche(cuerpo)
+  if (titularParche.tipo === 'error') return NextResponse.json({ error: titularParche.error }, { status: 400 })
+  // «Es mía» / «No lo sé» (22/10/2026): 'propio' o vuelta a NULL. Misma regla que «empresa»: solo la
+  // dueña de la fila, 404 si no es suya o no existe; con `identidadId` DENTRO del `where`. Se
+  // vacían los datos de empresa (el CHECK de la BD los liga a `titular_tipo='empresa'`).
+  if (titularParche.tipo === 'propio' || titularParche.tipo === 'ninguno') {
+    if (!acceso.propia) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    const nuevoTipo = titularParche.tipo === 'propio' ? 'propio' : null
+    const hecho = await prisma.$transaction(async (tx) => {
+      const previa = await tx.portalPolizaDeclarada.findFirst({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        select: SELECT_HISTORIAL,
+      })
+      if (!previa) return null
+      const { count } = await tx.portalPolizaDeclarada.updateMany({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        data: {
+          titularTipo: nuevoTipo,
+          titularEmpresaNombre: null,
+          titularEmpresaCif: null,
+          titularRolDeclarado: null,
+          actualizadaEn: new Date(),
+        },
+      })
+      if (count === 0) return null
+      const despues = await tx.portalPolizaDeclarada.findFirst({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        select: SELECT_HISTORIAL,
+      })
+      const cambios = despues ? cambiosDeEdicion(previa, despues) : null
+      if (cambios !== null) {
+        await tx.portalPolizaDeclaradaHistorial.create({
+          data: { polizaId: id, identidadId: duenaId, accion: 'editada', antes: cambios.antes, despues: cambios.despues },
+        })
+      }
+      return true
+    })
+    if (hecho === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    return NextResponse.json({ id, titularTipo: nuevoTipo })
+  }
+  if (titularParche.tipo === 'empresa') {
+    if (!acceso.propia) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    const hecho = await prisma.$transaction(async (tx) => {
+      const previa = await tx.portalPolizaDeclarada.findFirst({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        select: SELECT_HISTORIAL,
+      })
+      if (!previa) return null
+      const { count } = await tx.portalPolizaDeclarada.updateMany({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        data: {
+          titularTipo: 'empresa',
+          titularEmpresaNombre: titularParche.nombre,
+          titularEmpresaCif: titularParche.cif,
+          titularRolDeclarado: titularParche.rol,
+          actualizadaEn: new Date(),
+        },
+      })
+      if (count === 0) return null
+      const despues = await tx.portalPolizaDeclarada.findFirst({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        select: SELECT_HISTORIAL,
+      })
+      const cambios = despues ? cambiosDeEdicion(previa, despues) : null
+      if (cambios !== null) {
+        await tx.portalPolizaDeclaradaHistorial.create({
+          data: { polizaId: id, identidadId: duenaId, accion: 'editada', antes: cambios.antes, despues: cambios.despues },
+        })
+      }
+      return { compania: previa.compania }
+    })
+    if (hecho === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    // Alberto (22/10/2026): quien confirma «es de mi empresa» es la PERSONA DE CONTACTO propuesta
+    // para el vencimiento. El portal no escribe en la ficha de la empresa: lo PROPONE por Telegram
+    // (best-effort, en `after()`: nunca retrasa ni tumba la respuesta).
+    after(() => avisarTitularEmpresa({
+      identidadId: duenaId,
+      empresa: titularParche.nombre,
+      cif: titularParche.cif,
+      rol: titularParche.rol,
+      compania: hecho.compania,
+    }))
+    return NextResponse.json({ id, titularTipo: 'empresa', titularEmpresaNombre: titularParche.nombre, titularRolDeclarado: titularParche.rol })
   }
 
   // El RAMO GUARDADO, antes de validar. Los campos específicos (`datosRamo`) solo
@@ -106,6 +227,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         // El usuario ha revisado estos datos con sus ojos: eso es lo único que
         // `confirmadaPorUsuario` significa.
         confirmadaPorUsuario: true,
+        // «Sí, la sigo teniendo» junto a la prima/fecha nuevas: misma escritura.
+        ...(vigencia.tipo === 'con_cambios' ? { vigenteDeclarada: vigencia.valor } : {}),
         // Sigue siendo un dato APORTADO por el cliente, no verificado contra la
         // compañía. Que lo haya tecleado él no lo asciende de categoría.
         procedencia: 'declarado',
@@ -206,7 +329,19 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (acceso === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
   const duenaId = acceso.identidadId
 
-  const resultado = await prisma
+  const resultado = await quitarDeclarada(id, duenaId, null)
+  if (resultado.estado === 200 && !acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
+  return NextResponse.json(resultado.cuerpo, { status: resultado.estado })
+}
+
+/**
+ * El borrado LÓGICO entero (partes congelados, obligaciones apartadas, `eliminadaEn`, historial) en
+ * UNA transacción. Lo usan el DELETE y el PATCH con `vigenteDeclarada: 'no'` («ya no la tengo»):
+ * una sola implementación para que las dos puertas no diverjan. `duenaId` ya viene autorizado
+ * por `accesoADeclarada(…, 'quitar')`; aquí va DENTRO de cada `where`.
+ */
+async function quitarDeclarada(id: string, duenaId: string, vigencia: 'no' | null) {
+  return prisma
     .$transaction(async (tx) => {
       // Existe, es de la dueña Y está en la bóveda: las tres cosas en la misma consulta. Si no,
       // 404 — nunca un 403, que confirmaría que esa póliza existe. Quitar dos veces es «no
@@ -281,6 +416,14 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
       // arriba lanzando, para no dejar partes desligados de una póliza que sigue viva.
       if (count === 0) throw new CarreraAlQuitar()
 
+      // Un «no, ya no la tengo» del cliente se guarda en la MISMA transacción que la quita.
+      if (vigencia === 'no') {
+        await tx.portalPolizaDeclarada.updateMany({
+          where: { id, identidadId: duenaId, ...DECLARADA_ELIMINADA },
+          data: { vigenteDeclarada: 'no' },
+        })
+      }
+
       // El historial va a nombre de la DUEÑA: es su «Eliminadas» y quien la puede restaurar.
       await tx.portalPolizaDeclaradaHistorial.create({
         data: {
@@ -292,7 +435,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
             obligaciones: guardarObligaciones(obligaciones),
             partesDesligados: partes.map((p) => p.id),
           },
-          despues: { eliminadaEn: ahora.toISOString() },
+          despues: { eliminadaEn: ahora.toISOString(), ...(vigencia === 'no' ? { vigenteDeclarada: 'no' } : {}) },
         },
       })
 
@@ -305,9 +448,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
       if (e instanceof CarreraAlQuitar) return { estado: 404 as const, cuerpo: { error: 'no_encontrada' } }
       throw e
     })
-
-  if (resultado.estado === 200 && !acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
-  return NextResponse.json(resultado.cuerpo, { status: resultado.estado })
 }
 
 /** La póliza se quitó en otra pestaña entre la lectura y la marca: se revierte la transacción. */

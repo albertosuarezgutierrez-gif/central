@@ -275,3 +275,75 @@ tiene vetadas hasta decidirlo (nada sale sin su OK; emisión en sandbox).
 - Nueva pantalla = en `apps/plataforma/(usuario)/correduria`, nunca en asegura.
 - Ningún cambio de emisión/CIMA sin spec y OK de Alberto (§5).
 - Al cerrar un pendiente de la tabla del §4, actualiza este documento en el mismo PR.
+
+## 11. Pólizas aportadas → vencimientos → tarificación → negociación (visión de Alberto, 22/10/2026)
+
+**Visión.** Las pólizas de OTRAS compañías que aportan los clientes (portal) o Alberto (plataforma/correduría) se
+asignan solas al lead existente, o se crea el lead si no existe, con su documentación adjunta. Al principio se
+guarda TODO (BD consistente y consultable) hasta que la extracción funcione al 100 %. **Prioridad actual: los
+VENCIMIENTOS bien orquestados, organizados e informados**, para llegar a cada uno con plazo. Al subir se busca la
+máxima información, sobre todo el **precio actual**. Más adelante: tarificar cada póliza en su ventana de
+vencimiento (los bots del tarificador ya existen) → comparar con su precio → «llegamos / no llegamos» y diferencia.
+Con eso, y con tiempo, Alberto negocia con las compañías descuentos adicionales para captar esos clientes; luego se
+manda presupuesto al cliente (**siempre con OK de Alberto por envío**).
+
+**Decisión sobre vigencia (Alberto, 22/10/2026).** Al subir se ASUME que la póliza está viva (si la sube es porque
+la tiene). Al subir solo se pregunta el **precio de la última renovación** y la **fecha de renovación** si el
+documento está desfasado (`proyectarVencimiento` ya detecta la fecha pasada). La confirmación de vigencia llega al
+**VENCIMIENTO**, a medio plazo y de forma automática: se le pide al cliente que confirme; si responde «ya no la
+tengo», la póliza se descarta por **borrado lógico** (desaparece de su portal y de nuestros vencimientos, se conserva
+el rastro; `vigente_declarada = 'no'`). Borrado físico solo si el cliente lo pide (RGPD). Se intenta siempre como
+proceso con TODAS las pólizas aportadas.
+
+### Qué existe hoy (visto en código, 22/10/2026)
+- Alta con documento en el portal: `apps/asegura-portal/app/api/polizas/route.ts:99` (`altaConDocumento`; lee con IA,
+  guarda el fichero con `guardarDocumentoPropio`, crea `portalPolizaDeclarada` en `:139`; alta manual en `:281`).
+  Las pólizas declaradas viven en `seguros.portal_poliza_declarada` (`apps/asegura-portal/prisma/schema.prisma:292`).
+- Alta desde documento por el corredor y cotejo: `packages/module-seguros/src/poliza-de-documento.ts`
+  (`prepararDeclaradaDesdeDocumento:380`, `clasificarCoincidencias:451`, `puedeEnlazarse:462`) y
+  `apps/asegura/lib/poliza-de-documento.ts`.
+- Vencimiento proyectado al aniversario, marcado como proyectado: `proyectarVencimiento`
+  (`poliza-de-documento.ts:331`, devuelve `{fecha, proyectado}`; usada en `:391`). **La idea 3 ya existe en la vía
+  del corredor**; falta decidir si el panel la enseña como «proyectado».
+- Colas en `/correduria` → Hoy: «Leads del portal» (`LeadsPortal.tsx`, `apps/plataforma/lib/leads-asegura.ts`,
+  lógica pura `packages/module-seguros-portal/src/lead-declarada.ts`: `leadDeclarada:138`, `estadoLead:96`,
+  `normalizarNumeroPoliza:208`) y «Declaradas por vencer» (`DeclaradasVencer.tsx`,
+  `apps/asegura/lib/cartera-declaradas.ts:71` `declaradasPorVencer`, ventana ≤60 días; ver `CORREDURIA-INTRANET-IDEAS.md`).
+- Borrado lógico por el usuario: `eliminada_en` (`apps/asegura-portal/prisma/sql/2026-10-10_declaradas_borrado_logico.sql`,
+  filtro `sqlDeclaradaViva` en `apps/asegura/lib/declaradas-eliminadas.ts:25`).
+- Tarificador RPA (bots por compañía, cola `seguros.tarificacion_trabajos`): `docs/TARIFICADOR-RPA.md`,
+  `apps/asegura/lib/tarificador*.ts`, `presupuesto-rpa.ts`.
+
+### Pendiente (no hecho)
+- `vigente_declarada` en `seguros.portal_poliza_declarada`: **no existe aún en el repo** (en curso, PR #4995).
+- Pregunta de precio de última renovación / fecha de renovación en la subida, y el proceso automático de
+  confirmación de vigencia al vencimiento («ya no la tengo» → `vigente_declarada='no'` + borrado lógico).
+- Tarificación automática en ventana de vencimiento, comparación «llegamos / no llegamos», agregado de negociación.
+- Asignación automática a lead/creación de lead desde la subida de Alberto: no verificado de punta a punta; comprobar
+  antes de afirmarlo.
+
+### Ideas PROPUESTAS (pendientes de decidir; ninguna hecha)
+1. Panel de vencimientos por mes con «completitud» por póliza: precio (leído / declarado / falta), vencimiento
+   (leído / proyectado / declarado), datos para tarificar (matrícula, dirección catastral…) completos o no.
+2. Pedir al cliente en el portal SOLO los datos que faltan para tarificar, no un formulario genérico.
+3. Vencimiento proyectado al próximo aniversario siempre marcado como proyectado, nunca como leído (ver arriba).
+4. Agregado para negociar: por compañía rival + ramo → nº de pólizas, prima total, vencimientos por mes.
+5. ~~Deduplicar por compañía + número de póliza~~ HECHO para la OPORTUNIDAD (22/10/2026, regla de abajo); la
+   `portal_poliza_declarada` del portal aún se duplica.
+6. Ventana de trabajo: tarificar a ~60 días del vencimiento, presupuesto a ~30-45 días (decide Alberto).
+7. Aprovechar documentos que no son póliza: ficha catastral → referencia catastral para hogar/comercio; recibo → precio actual.
+
+### Reglas
+- **Escaneo de pólizas: nunca duplicar (22/10/2026).** Se leen TODAS las personas con DNI/CIF (tomador, asegurados,
+  propietario, conductores, beneficiarios) y se casan por índice ciego en toda la cartera: activa antes que descartada,
+  la única descartada se REACTIVA con nota, dos activas = «revisar» + Telegram. La póliza (compañía + nº normalizado) con
+  oportunidad abierta en cualquier ficha se ACTUALIZA (vencimiento, prima, `info_riesgo.lecturaDocumento`), sin pisar lo
+  puesto a mano ni con `null`; el portal casa, nunca abre fichas de terceros. Modelo de visión: `OPENROUTER_POLIZA_MODEL`
+  (+ `_SUPLENTE`). Código: `module-seguros/escaneo-poliza.ts`, `apps/asegura/lib/oportunidad-documento.ts`.
+- **Lo leído del documento nunca se pisa con lo declarado.** `null` = «no se sabe» (tres estados), jamás 0/vacío.
+- **Nada sale al cliente sin OK de Alberto por envío** (borrador por defecto; regla 7 de la skill).
+- **Al principio Alberto valida todo a mano** (22/10): confirma con la compañía precio y coberturas antes de que un
+  presupuesto llegue al cliente. La automatización PREPARA (tarifica, compara, redacta); validar y enviar es suyo.
+- **Las declaradas NUNCA van a `seguros.polizas`**: contarían como cartera CIMA (`esCarteraViva`/`esCarteraEnVigor`). Viven en
+  `portal_poliza_declarada`.
+- La tarificación cuesta (Avant2 0,50 €/consulta, no idempotente): una vez por ventana, contra cupo; los bots RPA no emiten.

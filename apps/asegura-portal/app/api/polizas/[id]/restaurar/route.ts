@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import {
   bienesDeObligacionesGuardadas,
   DECLARADA_ELIMINADA,
+  DECLARADA_NO_ELIMINADA,
   obligacionesParaRestaurar,
 } from '@/lib/declaradas-eliminadas'
 import { requireIdentidad } from '@/lib/session'
@@ -50,6 +51,13 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     })
     // 0 = otra pestaña la restauró en medio. El resultado que ve la persona es el que quería.
     if (count === 0) return null
+
+    // Si se quitó por «no, ya no la tengo» (`vigenteDeclarada: 'no'`), restaurarla desdice ese «no»:
+    // vuelve a «no contestado» (NULL), nunca a «sí». Un «sí»/«no lo sé» previo se respeta.
+    await tx.portalPolizaDeclarada.updateMany({
+      where: { id, identidadId: identidad.id, vigenteDeclarada: 'no', ...DECLARADA_NO_ELIMINADA },
+      data: { vigenteDeclarada: null },
+    })
 
     // La ÚLTIMA eliminación de ESTA póliza de ESTA identidad: si la quitó, la restauró y la volvió
     // a quitar, lo que vuelve es lo que tenía la segunda vez.

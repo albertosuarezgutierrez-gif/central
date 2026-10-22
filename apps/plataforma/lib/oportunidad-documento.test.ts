@@ -103,6 +103,16 @@ test('propuesta de identidad: se lee entera o no se lee (no se inventa una a med
 
 test('🪤 «yaExistia»: dice que no se ha duplicado y enlaza a la ficha', () => {
   const a = interpretarOportunidadDocumento({ estado: 'actualizada', clienteId: 'c1', vence: '2027-03-01', llamada: '2027-01-15', completada: false, yaExistia: true })!
-  assert.match(a.texto, /Ya estaba subida: no se ha duplicado/)
+  assert.match(a.texto, /ya tenía oportunidad: no se ha duplicado/)
   assert.equal(a.clienteId, 'c1')
+})
+
+test('22/10: la póliza ya tenía oportunidad → se dice qué se actualizó; ambigua → aviso', () => {
+  const a = interpretarOportunidadDocumento({ estado: 'actualizada', yaExistia: true, clienteId: 'c', camposActualizados: ['vencimiento', 'prima'], discrepancias: 0 })!
+  assert.equal(a.tono, 'info')
+  assert.match(a.texto, /no se ha duplicado; le he actualizado: vencimiento, prima/)
+  const m = interpretarOportunidadDocumento({ estado: 'actualizada', yaExistia: true, clienteId: 'c', camposActualizados: [], discrepancias: 2 })!
+  assert.equal(m.tono, 'aviso')
+  assert.match(m.texto, /NO se han pisado/)
+  assert.match(interpretarOportunidadDocumento({ estado: 'revisar', motivo: 'ficha_ambigua', candidatas: ['a', 'b'] })!.texto, /varias fichas activas/)
 })

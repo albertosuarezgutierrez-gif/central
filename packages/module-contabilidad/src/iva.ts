@@ -1,4 +1,4 @@
-import type { Apunte, IVATrimestral } from './types'
+import type { Apunte, IVATrimestral } from './types.ts'
 
 /** Redondea a 2 decimales (igual que SQL ROUND(x, 2)). */
 export function round2(n: number): number {

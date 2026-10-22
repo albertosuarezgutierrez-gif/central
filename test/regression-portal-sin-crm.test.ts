@@ -26,6 +26,19 @@ test('🚨 toda tabla portal_* nueva le revoca la tabla al rol del CRM', () => {
   assert.deepEqual(faltan, [])
 })
 
+test('el barrido ve las tablas de PATRIMONIO (22/10/2026) y todas revocan al CRM', () => {
+  // Si la regex de arriba dejara de casar con este SQL, el primer test pasaría en verde sin mirar nada.
+  const f = 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'
+  const sql = readFileSync(join(RAIZ, f), 'utf8').replace(/--.*$/gm, '')
+  const tablas = [...sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?seguros\.(portal_patrimonio_[a-z_]+)/gi)].map((m) => m[1])
+  assert.ok(tablas.length >= 18, `solo ${tablas.length} tablas portal_patrimonio_* en ${f}`)
+  for (const t of ['portal_patrimonio_inquilino', 'portal_patrimonio_contrato', 'portal_patrimonio_aviso_inquilino']) {
+    assert.ok(tablas.includes(t), `falta ${t}`)
+  }
+  const sinRevoke = tablas.filter((t) => !new RegExp(`REVOKE ALL ON seguros\\.${t} FROM crm_seguros`, 'i').test(sql))
+  assert.deepEqual(sinRevoke, [])
+})
+
 test('el barrido del 24/09 revoca TODAS las portal_* por patrón, no por lista', () => {
   const sql = readFileSync(join(RAIZ, 'apps/asegura/prisma/sql/2026-09-24b_portal_sin_crm.sql'), 'utf8')
   assert.match(sql, /tablename LIKE 'portal\\_%'/)

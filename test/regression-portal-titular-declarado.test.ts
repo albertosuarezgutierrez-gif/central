@@ -30,27 +30,24 @@ const PUERTO = leer('apps', 'asegura', 'lib', 'leads-portal.ts')
 const MANUAL = leer('apps', 'asegura-portal', 'app', '(portal)', 'boveda', 'AnadirPoliza.tsx')
 const SQL = leer('apps', 'asegura-portal', 'prisma', 'sql', '2026-09-07_portal_declarada_titular.sql')
 
-test('🚨 la casilla «es de una empresa» arranca SIN marcar, y sin marcarla se manda «propio»', () => {
-  // Alberto, 08/09/2026: «la mayoría no tiene empresa». La pregunta ya no es
-  // una puerta que hay que cruzar para subir nada: es una casilla a la vista
-  // que arranca en «no». Y lo que viaja SIEMPRE es una respuesta («propio» o
-  // «empresa»), porque «no se preguntó» decide que NO se coteje contra ninguna
-  // ficha, y eso dejaría sin comprobar todas las pólizas personales.
+test('🚨 la pregunta de tres opciones arranca SIN contestar, y sin contestar NO se manda «propio»', () => {
+  // Alberto, 08/09/2026: «la mayoría no tiene empresa» → la pregunta no bloquea la subida.
+  // 🚨 22/10/2026: lo que viajaba sin contestar era «propio», un «no se sabe» guardado como
+  // AFIRMACIÓN. Ahora hay tres opciones explícitas: «Es mía» → 'propio', empresa → 'empresa',
+  // «No lo sé» / sin contestar → NADA (NULL). 'propio' solo si el cliente lo dice.
   const codigo = sinComentarios(SUBIR)
-  assert.match(codigo, /useState\(false\)/, 'la casilla de empresa tiene que arrancar sin marcar')
-  assert.match(codigo, /type="checkbox"/, 'tiene que ser una casilla, no un par de radios obligatorios')
-  // 🪤 Anclado al principio de línea: la primera versión buscaba el `append`
-  // suelto y seguía verde con `if (esDeEmpresa) body.append(...)` delante, que
-  // es exactamente el condicional que este cepo prohíbe. Se vio al romperlo.
-  assert.match(
-    codigo,
-    /^\s*body\.append\('titularTipo', deQuien\)/m,
-    'el titular tiene que viajar siempre, sin condicionarlo a que se haya contestado',
-  )
+  assert.match(codigo, /useState<RespuestaTitular \| null>\(null\)/, 'la pregunta tiene que arrancar sin contestar')
+  assert.match(codigo, /type="radio"/, 'tres opciones explícitas')
+  assert.match(codigo, /titularDeLaRespuesta\(respuesta\)/, 'la respuesta se traduce con el helper puro (no lo sé / sin contestar → null)')
+  assert.match(codigo, /texto: 'Es mía'/)
+  assert.match(codigo, /texto: 'Es de una empresa que gestiono'/)
+  assert.match(codigo, /texto: 'No lo sé'/)
   assert.ok(
-    !/useState<'propio' \| 'empresa' \| null>/.test(codigo),
-    'la pregunta ya no arranca en null: eso bloqueaba los dos botones a todo el mundo',
+    !/^\s*body\.append\('titularTipo', deQuien\)/m.test(codigo),
+    'el titular NO viaja sin condición: sin contestar la fila nace con titular_tipo NULL',
   )
+  assert.match(codigo, /deQuien === 'propio'\) body\.append\('titularTipo', 'propio'\)/, '«Es mía» viaja «propio»')
+  assert.match(codigo, /body\.append\('titularTipo', 'empresa'\)/, 'empresa viaja «empresa»')
 })
 
 test('🚨 no se puede decir «empresa» sin decir cuál', () => {
@@ -61,7 +58,7 @@ test('🚨 no se puede decir «empresa» sin decir cuál', () => {
   assert.match(codigo, /listoParaSubir/, 'falta la guarda que impide subir «de empresa» sin decir cuál')
   assert.match(
     codigo,
-    /deQuien === 'empresa' && empresa\.trim\(\) !== ''/,
+    /deQuien !== 'empresa' \|\| \(empresa\.trim\(\) !== ''/,
     'decir «de mi empresa» tiene que exigir el nombre',
   )
   assert.match(codigo, /disabled=\{subiendo \|\| !listoParaSubir\}/, 'el input de fichero tiene que estar bloqueado con «empresa» a medias')
@@ -121,9 +118,11 @@ test('🚨 el alta A MANO manda la misma respuesta', () => {
   // contestar dos centímetros más arriba. Y «no se preguntó» decide que NO se
   // coteje contra ninguna ficha: el lead salía siempre sin comprobar.
   const codigo = sinComentarios(MANUAL)
-  const envio = codigo.match(/body: JSON\.stringify\(\{[\s\S]*?\}\)/)?.[0] ?? ''
+  const envio = codigo.match(/body: JSON\.stringify\(\{[\s\S]*?\bcompania,/)?.[0] ?? ''
   assert.notEqual(envio, '', 'no se encuentra el cuerpo del alta a mano')
-  assert.match(envio, /titularTipo: titular\.tipo/, 'el alta a mano tiene que mandar el titular')
+  // 22/10/2026: «Es mía» → 'propio', empresa → 'empresa'; «No lo sé» / sin contestar, nada (NULL).
+  assert.match(envio, /titular\.tipo === 'empresa'[\s\S]*titularTipo: 'empresa'/, 'el alta a mano tiene que mandar el titular cuando es de empresa')
+  assert.match(envio, /titular\.tipo === 'propio' \? \{ titularTipo: 'propio' \} : \{\}/, '«Es mía» tiene que viajar «propio» solo si lo dijo')
 })
 
 test('🚨 la pregunta se hace UNA vez, y bloquea los DOS caminos', () => {

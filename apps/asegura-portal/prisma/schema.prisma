@@ -115,6 +115,7 @@ model PortalIdentidad {
   enlacesFamilia    PortalInvitacionEnlace[]
   usoEnlaceFamilia  PortalInvitacionEnlaceUso?
   revisionesPoliza  PortalRevisionPoliza[]
+  modulos           PortalModulo[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -265,6 +266,12 @@ model PortalPolizaDeclarada {
   titularEmpresaNombre String?           @map("titular_empresa_nombre")
   /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
   titularEmpresaCif    String?           @map("titular_empresa_cif")
+  /// Qué dice ser el cliente en esa empresa (22/10/2026,
+  /// `prisma/sql/2026-10-22_portal_declarada_titular_rol.sql`): `propietario` | `administrador` |
+  /// `empleado` | `otro` (CHECK; solo con `titular_tipo='empresa'`). `null` = no lo dijo (es
+  /// opcional y saltable). 🔒 Es una DECLARACIÓN: no da acceso a la ficha de la empresa.
+  /// ⚠️ Declarada aquí ANTES de que exista en la BD = 42703 en toda lectura: el SQL va antes.
+  titularRolDeclarado  String?           @map("titular_rol_declarado")
   extraccionBruta      Json?             @map("extraccion_bruta")
   /// Garantías que la IA leyó en el PDF (lista de textos cortos). NULL = no se
   /// ha leído (alta a mano o subida anterior al 20/09/2026); `[]` = leído y no
@@ -284,8 +291,14 @@ model PortalPolizaDeclarada {
   /// ⚠️ Declarada aquí ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va
   /// antes del despliegue.
   eliminadaEn          DateTime?         @map("eliminada_en") @db.Timestamptz(6)
+  /// Respuesta del cliente a «¿sigue vigente?» (22/10/2026,
+  /// `prisma/sql/2026-10-22_portal_poliza_vigente_declarada.sql`): `si` | `no` | `no_sabe` (CHECK).
+  /// 🚨 `null` = no preguntado / no contestado, NUNCA «sí». `no` va siempre con `eliminadaEn`
+  /// (el PATCH la quita por borrado lógico). Se valida en `lib/vigente-declarada.ts`.
+  /// ⚠️ Declarada aquí ANTES de que exista en la BD = 42703 en toda lectura: el SQL va antes.
+  vigenteDeclarada     String?           @map("vigente_declarada")
 
-  identidad PortalIdentidad        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  identidad PortalIdentidad       @relation(fields: [identidadId], references: [id], onDelete: Cascade)
   bien      PortalBien?            @relation(fields: [bienId], references: [id])
   partes    PortalParteSiniestro[]
 
@@ -462,6 +475,29 @@ model PortalRevisionPoliza {
   @@unique([polizaDeclaradaId, huella], map: "portal_revision_poliza_una_por_huella")
   @@index([identidadId, creadaEn(sort: Desc)], map: "idx_portal_revision_poliza_identidad")
   @@map("portal_revision_poliza")
+  @@schema("seguros")
+}
+
+/// «Herramientas» del portal (Fase 0, 22/10/2026): la petición/activación de un módulo del catálogo
+/// (`MODULOS_PORTAL` de `module-seguros-portal`) por IDENTIDAD. SQL: `prisma/sql/2026-10-22_portal_modulos.sql`.
+/// 🚨 GRANT por columnas: el rol solo INSERTA (identidad_id, modulo, version_condiciones). Por eso
+/// `estado`, `origen` y `solicitadoEn` llevan `dbgenerated`: un `@default("…")`/`@default(now())`
+/// Prisma lo RELLENA en el cliente, la sentencia nombraría la columna y moriría con 42501 — y,
+/// sobre todo, el portal no debe poder escribir el estado (no se autoactiva).
+model PortalModulo {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId        String    @map("identidad_id") @db.Uuid
+  modulo             String
+  estado             String    @default(dbgenerated("'solicitado'::text"))
+  solicitadoEn       DateTime  @default(dbgenerated("now()")) @map("solicitado_en") @db.Timestamptz(6)
+  activadoEn         DateTime? @map("activado_en") @db.Timestamptz(6)
+  retiradoEn         DateTime? @map("retirado_en") @db.Timestamptz(6)
+  versionCondiciones String?   @map("version_condiciones")
+  origen             String    @default(dbgenerated("'portal'::text"))
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@map("portal_modulo")
   @@schema("seguros")
 }
 
@@ -1573,6 +1609,432 @@ model Ipid {
   retiradoAt    DateTime? @map("retirado_at") @db.Timestamptz(6)
 
   @@map("ipid")
+  @@schema("seguros")
+}
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+// PATRIMONIO (Fase 1, paso 3, 22/10/2026). DDL: `prisma/sql/2026-10-22_portal_patrimonio.sql` (⛔ SIN APLICAR
+// hasta el OK de Alberto; se aplica en el MISMO paso que el despliegue que lo use).
+// 🚨 Espejo EXACTO del GRANT SELECT por columnas de cada tabla (cepo `test/regression-portal-patrimonio-sql.test.ts`):
+// una columna de más y TODA consulta del modelo cae con 42501. Lo que el rol no INSERTA lleva `dbgenerated`
+// (un `@default` de Prisma se rellena en el cliente y nombraría la columna). `actualizadoEn` lo pone un TRIGGER:
+// no usar `@updatedAt`. Sin DELETE: se archiva (`archivadoEn`), se anula, se descarta o se desactiva.
+// Las FK a tablas ya existentes (clientes, portal_identidad, polizas…) viven en la BD, no como relación Prisma,
+// para no tocar esos modelos. Dinero en céntimos `BigInt` (`*Cent`); `null` = «no se sabe», nunca 0.
+// Toda lectura parte de `accesosPatrimonio(identidadId)` (paso 4): aquí no hay aislamiento, solo forma.
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+
+/// Titular (persona o sociedad) = una ficha de la cartera. Nombre/NIF se leen de `clientes`, no se copian.
+/// Trigger: la ficha no puede estar fusionada y `correduriaId` tiene que ser el de la ficha.
+model PortalPatrimonioTitular {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId            String    @unique @map("cliente_id") @db.Uuid
+  correduriaId         String    @map("correduria_id") @db.Uuid
+  tipo                 String
+  deduceIva            Boolean?  @map("deduce_iva")
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  inmuebles     PortalPatrimonioInmueble[]
+  inquilinos    PortalPatrimonioInquilino[]
+  plantillas    PortalPatrimonioPlantillaGasto[]
+  gastos        PortalPatrimonioGasto[]
+  importaciones PortalPatrimonioImportacion[]
+  comunidades   PortalPatrimonioComunidad[]
+
+  @@map("portal_patrimonio_titular")
+  @@schema("seguros")
+}
+
+/// Inmueble. Dirección por la regla de la casa (CP → municipio INE → vía → número).
+model PortalPatrimonioInmueble {
+  id                                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId                         String    @map("titular_id") @db.Uuid
+  alias                             String
+  uso                               String
+  referenciaCatastral               String?   @map("referencia_catastral") @db.Char(20)
+  cp                                String?
+  municipioIne                      String?   @map("municipio_ine")
+  via                               String?
+  numero                            String?
+  resto                             String?
+  direccionNormalizada              String?   @map("direccion_normalizada")
+  superficieM2                      Decimal?  @map("superficie_m2") @db.Decimal(10, 2)
+  anioConstruccion                  Int?      @map("anio_construccion")
+  enComunidad                       Boolean?  @map("en_comunidad")
+  suministros                       String[]  @default(dbgenerated("'{}'::text[]"))
+  valorReconstruccionEstimadoCent   BigInt?   @map("valor_reconstruccion_estimado_cent")
+  valorReconstruccionEstimadoFuente String?   @map("valor_reconstruccion_estimado_fuente")
+  creadoEn                          DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn                     DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId              String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn                       DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  titular      PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
+  comunidades  PortalPatrimonioInmuebleComunidad[]
+  contratos    PortalPatrimonioContrato[]
+  plantillas   PortalPatrimonioPlantillaGasto[]
+  gastos       PortalPatrimonioGasto[]
+  obligaciones PortalPatrimonioObligacion[]
+  polizas      PortalPatrimonioInmueblePoliza[]
+
+  @@unique([id, titularId])
+  @@map("portal_patrimonio_inmueble")
+  @@schema("seguros")
+}
+
+/// Comunidad de propietarios de UN titular, NO compartida (Alberto, 22/10/2026): un vecino nunca lee ni edita
+/// la ficha de otro; dos clientes de la misma comunidad = dos filas (el cruce, en /correduria, más adelante).
+model PortalPatrimonioComunidad {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId            String    @map("titular_id") @db.Uuid
+  nombre              String
+  nifComunidad         String?   @map("nif_comunidad")
+  administradorNombre  String?   @map("administrador_nombre")
+  administradorEmail   String?   @map("administrador_email")
+  cp                   String?
+  direccionNormalizada String?   @map("direccion_normalizada")
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  titular   PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
+  inmuebles PortalPatrimonioInmuebleComunidad[]
+  derramas  PortalPatrimonioDerrama[]
+
+  @@unique([id, titularId])
+  @@map("portal_patrimonio_comunidad")
+  @@schema("seguros")
+}
+
+/// Puente inmueble ↔ comunidad, ambos del MISMO titular (FK compuestas en BD).
+model PortalPatrimonioInmuebleComunidad {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId            String    @map("titular_id") @db.Uuid
+  inmuebleId          String    @map("inmueble_id") @db.Uuid
+  comunidadId          String    @map("comunidad_id") @db.Uuid
+  coeficiente          Decimal?  @db.Decimal(9, 6)
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  inmueble  PortalPatrimonioInmueble  @relation(fields: [inmuebleId], references: [id])
+  comunidad PortalPatrimonioComunidad @relation(fields: [comunidadId], references: [id])
+
+  @@unique([inmuebleId, comunidadId])
+  @@map("portal_patrimonio_inmueble_comunidad")
+  @@schema("seguros")
+}
+
+/// Inquilino. 🚨 SIN `nif_cifrado`/`email_cifrado`/`telefono_cifrado`: el rol del portal no los tiene
+/// concedidos (no tiene la clave para descifrarlos). El alta y la PII van por el PUENTE de `apps/asegura`.
+model PortalPatrimonioInquilino {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId            String    @map("titular_id") @db.Uuid
+  tipo                 String
+  nombre               String
+  emailHash            String?   @map("email_hash")
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  titular   PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
+  contratos PortalPatrimonioContratoInquilino[]
+
+  @@unique([id, titularId])
+  @@map("portal_patrimonio_inquilino")
+  @@schema("seguros")
+}
+
+/// Contrato de larga estancia (LAU). FK compuesta `(inmueble_id, titular_id)` en BD.
+model PortalPatrimonioContrato {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId              String    @map("titular_id") @db.Uuid
+  inmuebleId             String    @map("inmueble_id") @db.Uuid
+  inicio                 DateTime  @db.Date
+  fin                    DateTime? @db.Date
+  terminadoEn            DateTime? @map("terminado_en") @db.Date
+  rentaMensualCent       BigInt    @map("renta_mensual_cent")
+  clausula               String
+  indice                 String?
+  indiceDescripcion      String?   @map("indice_descripcion")
+  fianzaCent             BigInt?   @map("fianza_cent")
+  fianzaDepositadaEn     DateTime? @map("fianza_depositada_en") @db.Date
+  fianzaOrganismo        String?   @map("fianza_organismo")
+  fianzaDevueltaEn       DateTime? @map("fianza_devuelta_en") @db.Date
+  seguroInquilinoExigido Boolean?  @map("seguro_inquilino_exigido")
+  seguroInquilinoVence   DateTime? @map("seguro_inquilino_vence") @db.Date
+  creadoEn               DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn          DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId   String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn            DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  inmueble        PortalPatrimonioInmueble             @relation(fields: [inmuebleId], references: [id])
+  inquilinos      PortalPatrimonioContratoInquilino[]
+  actualizaciones PortalPatrimonioRentaActualizacion[]
+  enlaces         PortalPatrimonioEnlaceInquilino[]
+  avisos          PortalPatrimonioAvisoInquilino[]
+
+  @@unique([id, titularId])
+  @@map("portal_patrimonio_contrato")
+  @@schema("seguros")
+}
+
+/// Puente contrato ↔ inquilino, ambos del MISMO titular (FK compuestas en BD).
+model PortalPatrimonioContratoInquilino {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId            String    @map("titular_id") @db.Uuid
+  contratoId           String    @map("contrato_id") @db.Uuid
+  inquilinoId          String    @map("inquilino_id") @db.Uuid
+  papel                String
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  contrato  PortalPatrimonioContrato  @relation(fields: [contratoId], references: [id])
+  inquilino PortalPatrimonioInquilino @relation(fields: [inquilinoId], references: [id])
+
+  @@unique([contratoId, inquilinoId])
+  @@map("portal_patrimonio_contrato_inquilino")
+  @@schema("seguros")
+}
+
+/// APPEND-ONLY: el rol solo SELECT + INSERT. `notificadaEn` la sella `apps/asegura`.
+model PortalPatrimonioRentaActualizacion {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contratoId           String    @map("contrato_id") @db.Uuid
+  desde                DateTime  @db.Date
+  rentaMensualCent     BigInt    @map("renta_mensual_cent")
+  indice               String?
+  pctAplicado          Decimal?  @map("pct_aplicado") @db.Decimal(6, 3)
+  periodo              String?
+  topado               Boolean?
+  notificadaEn         DateTime? @map("notificada_en") @db.Timestamptz(6)
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+
+  contrato PortalPatrimonioContrato @relation(fields: [contratoId], references: [id])
+
+  @@unique([contratoId, desde])
+  @@map("portal_patrimonio_renta_actualizacion")
+  @@schema("seguros")
+}
+
+/// Gasto FIJO recurrente. `importeCent` null = variable (espera la factura), nunca 0.
+model PortalPatrimonioPlantillaGasto {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId            String    @map("titular_id") @db.Uuid
+  inmuebleId           String?   @map("inmueble_id") @db.Uuid
+  comunidadId          String?   @map("comunidad_id") @db.Uuid
+  concepto             String
+  categoria            String
+  periodicidad         String
+  diaMes               Int       @map("dia_mes") @db.SmallInt
+  inicio               DateTime  @db.Date
+  fin                  DateTime? @db.Date
+  importeCent          BigInt?   @map("importe_cent")
+  proveedor            String?
+  activo               Boolean   @default(true)
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+
+  titular  PortalPatrimonioTitular   @relation(fields: [titularId], references: [id])
+  inmueble PortalPatrimonioInmueble? @relation(fields: [inmuebleId], references: [id])
+
+  @@map("portal_patrimonio_plantilla_gasto")
+  @@schema("seguros")
+}
+
+/// Derrama de la comunidad en N cuotas: genera gastos `origen='derrama'` con clave `<derrama>:<n>`.
+model PortalPatrimonioDerrama {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comunidadId          String    @map("comunidad_id") @db.Uuid
+  inmuebleId           String    @map("inmueble_id") @db.Uuid
+  concepto             String
+  totalCent            BigInt    @map("total_cent")
+  cuotas               Int       @db.SmallInt
+  primera              DateTime  @db.Date
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  comunidad PortalPatrimonioComunidad @relation(fields: [comunidadId], references: [id])
+
+  @@map("portal_patrimonio_derrama")
+  @@schema("seguros")
+}
+
+/// Gasto imputado. Solo cuenta `confirmado`; descartar = `estado`, nunca DELETE. Índice único parcial
+/// (`titular_id`, `clave`) en BD: el generador es idempotente (P2002 tolerado).
+model PortalPatrimonioGasto {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId                String    @map("titular_id") @db.Uuid
+  inmuebleId               String?   @map("inmueble_id") @db.Uuid
+  fecha                    DateTime  @db.Date
+  categoria                String?
+  concepto                 String?
+  baseCent                 BigInt?   @map("base_cent")
+  totalCent                BigInt?   @map("total_cent")
+  estado                   String    @default(dbgenerated("'propuesto'::text"))
+  origen                   String
+  clave                    String?
+  documentoId              String?   @map("documento_id") @db.Uuid
+  propuesta                Json?
+  confirmadoEn             DateTime? @map("confirmado_en") @db.Timestamptz(6)
+  confirmadoPorIdentidadId String?   @map("confirmado_por_identidad_id") @db.Uuid
+  creadoEn                 DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn            DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId     String?   @map("creado_por_identidad_id") @db.Uuid
+
+  titular  PortalPatrimonioTitular   @relation(fields: [titularId], references: [id])
+  inmueble PortalPatrimonioInmueble? @relation(fields: [inmuebleId], references: [id])
+
+  @@map("portal_patrimonio_gasto")
+  @@schema("seguros")
+}
+
+/// Índices IPC/IRAV del INE. El portal SOLO LEE (lo escribe el cron de `apps/asegura`); append-only:
+/// una revisión es fila nueva con `revisado=true`. El lector toma la más reciente por `descargadoEn`.
+model PortalPatrimonioIndice {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  indice       String
+  periodo      String   @db.Char(7)
+  pct          Decimal  @db.Decimal(6, 3)
+  fuenteUrl    String   @map("fuente_url")
+  descargadoEn DateTime @default(dbgenerated("now()")) @map("descargado_en") @db.Timestamptz(6)
+  revisado     Boolean  @default(dbgenerated("false"))
+  creadoEn     DateTime @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_patrimonio_indice")
+  @@schema("seguros")
+}
+
+/// Importación de Excel/CSV. Nada de aquí cuenta hasta `confirmada` (cepo de los pasos 10-11).
+model PortalPatrimonioImportacion {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId          String    @map("identidad_id") @db.Uuid
+  titularId            String    @map("titular_id") @db.Uuid
+  documentoId          String?   @map("documento_id") @db.Uuid
+  mapeo                Json?
+  estado               String    @default(dbgenerated("'propuesta'::text"))
+  confirmadaEn         DateTime? @map("confirmada_en") @db.Timestamptz(6)
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+
+  titular PortalPatrimonioTitular           @relation(fields: [titularId], references: [id])
+  filas   PortalPatrimonioImportacionFila[]
+
+  @@map("portal_patrimonio_importacion")
+  @@schema("seguros")
+}
+
+model PortalPatrimonioImportacionFila {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  importacionId        String   @map("importacion_id") @db.Uuid
+  n                    Int
+  entidad              String
+  /// Tránsito de la vista previa, SIN NIF/email/teléfono (van cifrados por el puente). La BD lo vacía (null)
+  /// al confirmar/descartar la importación y rechaza escribirlo en una cerrada.
+  datos                Json?
+  problema             String?
+  creadoId             String?  @map("creado_id") @db.Uuid
+  creadoEn             DateTime @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?  @map("creado_por_identidad_id") @db.Uuid
+
+  importacion PortalPatrimonioImportacion @relation(fields: [importacionId], references: [id])
+
+  @@unique([importacionId, n])
+  @@map("portal_patrimonio_importacion_fila")
+  @@schema("seguros")
+}
+
+/// Obligación del INMUEBLE (ITE, certificado energético, gas…). Las de contrato se CALCULAN.
+/// `aplica` false = no aplica; null = no se sabe (sale `sin_dato`).
+model PortalPatrimonioObligacion {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inmuebleId           String    @map("inmueble_id") @db.Uuid
+  tipo                 String
+  descripcion          String?
+  aplica               Boolean?
+  ultima               DateTime? @db.Date
+  vence                DateTime? @db.Date
+  periodicidadMeses    Int?      @map("periodicidad_meses") @db.SmallInt
+  avisadaEn            DateTime? @map("avisada_en") @db.Timestamptz(6)
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  inmueble PortalPatrimonioInmueble @relation(fields: [inmuebleId], references: [id])
+
+  @@map("portal_patrimonio_obligacion")
+  @@schema("seguros")
+}
+
+/// Enlace del inquilino. Token HASHEADO; anular NO borra (solo UPDATE de `anuladoEn`/`ultimoUsoEn`).
+/// El par (contrato, inquilino) tiene que existir en el puente (FK en BD).
+model PortalPatrimonioEnlaceInquilino {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contratoId           String    @map("contrato_id") @db.Uuid
+  inquilinoId          String    @map("inquilino_id") @db.Uuid
+  tokenHash            String    @unique @map("token_hash")
+  caducaEn             DateTime? @map("caduca_en") @db.Timestamptz(6)
+  anuladoEn            DateTime? @map("anulado_en") @db.Timestamptz(6)
+  ultimoUsoEn          DateTime? @map("ultimo_uso_en") @db.Timestamptz(6)
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+
+  contrato PortalPatrimonioContrato @relation(fields: [contratoId], references: [id])
+
+  @@map("portal_patrimonio_enlace_inquilino")
+  @@schema("seguros")
+}
+
+/// Avería/siniestro/consulta del inquilino desde su página pública. `estado` nace `recibido` (no se concede
+/// en el INSERT); convertir en parte = `estado` + `parteId` (CHECK los ata).
+model PortalPatrimonioAvisoInquilino {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contratoId    String   @map("contrato_id") @db.Uuid
+  inquilinoId   String   @map("inquilino_id") @db.Uuid
+  tipo          String
+  texto         String
+  fotos         String[] @default(dbgenerated("'{}'::uuid[]")) @db.Uuid
+  estado        String   @default(dbgenerated("'recibido'::text"))
+  parteId       String?  @map("parte_id") @db.Uuid
+  creadoEn      DateTime @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+
+  contrato PortalPatrimonioContrato @relation(fields: [contratoId], references: [id])
+
+  @@map("portal_patrimonio_aviso_inquilino")
+  @@schema("seguros")
+}
+
+/// Seguro del inmueble: póliza de la cartera O aportada (exactamente una, CHECK). La póliza tiene que estar
+/// en la cartera que la identidad VE (`carteraDeIdentidad`): eso lo comprueba el código.
+model PortalPatrimonioInmueblePoliza {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inmuebleId           String    @map("inmueble_id") @db.Uuid
+  polizaId             String?   @map("poliza_id") @db.Uuid
+  polizaDeclaradaId    String?   @map("poliza_declarada_id") @db.Uuid
+  creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
+  creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+
+  inmueble PortalPatrimonioInmueble @relation(fields: [inmuebleId], references: [id])
+
+  @@map("portal_patrimonio_inmueble_poliza")
   @@schema("seguros")
 }
 

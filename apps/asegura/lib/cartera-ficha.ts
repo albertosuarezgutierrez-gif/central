@@ -75,6 +75,15 @@ export type PolizaDeclaradaFicha = {
   titularTipo: string | null
   titularEmpresaNombre: string | null
   /**
+   * Qué es el documento que subió, según la extracción (`extraccion_bruta.datos.tipoDocumento`):
+   * `poliza` | `suplemento` | `recibo` | `otro`. `null` = no se sabe (alta a mano o sin extracción).
+   */
+  tipoDocumento: string | null
+  /** Con qué se leyó (`extraccion_bruta.fuente`: `texto`, `none`…). `none` = no se pudo leer nada. `null` = no consta. */
+  fuente: string | null
+  /** Nombre del fichero subido (para reconocer el documento en la tarjeta). */
+  documentoNombre: string | null
+  /**
    * `true` = esta MISMA ficha ya tiene una póliza con ese número: es una
    * declarada de algo que la casa ya gestiona, no una oportunidad de venta.
    * `null` = sin número que cotejar (no se sabe). El cotejo es solo contra las
@@ -665,6 +674,17 @@ export async function listarCarnets(
  * el cotejo bueno contra la ficha de esa sociedad ya lo hace `leads-portal.ts`
  * para la cola de ventas; aquí, sin ese cruce, se deja `null` (no se sabe).
  */
+/** De la extracción bruta, solo lo que la ficha necesita; cualquier forma rara = `null` (no se sabe). */
+function leerExtraccion(v: unknown): { tipoDocumento: string | null; fuente: string | null } {
+  if (!esObjetoPlano(v)) return { tipoDocumento: null, fuente: null }
+  const datos = esObjetoPlano(v.datos) ? v.datos : {}
+  const t = datos.tipoDocumento, f = v.fuente
+  return {
+    tipoDocumento: typeof t === 'string' && t.trim() !== '' ? t : null,
+    fuente: typeof f === 'string' && f.trim() !== '' ? f : null,
+  }
+}
+
 async function listarDeclaradas(
   correduriaId: string,
   clienteId: string,
@@ -680,6 +700,7 @@ async function listarDeclaradas(
         id: true, compania: true, numeroPoliza: true, ramo: true, primaAnual: true,
         fechaVencimiento: true, matricula: true, procedencia: true, confirmadaPorUsuario: true,
         titularTipo: true, titularEmpresaNombre: true, datosRamo: true,
+        documentoNombre: true, extraccionBruta: true,
       },
       orderBy: { creadaEn: 'desc' },
     })
@@ -704,6 +725,9 @@ async function listarDeclaradas(
         confirmadaPorUsuario: f.confirmadaPorUsuario,
         titularTipo: f.titularTipo ?? null,
         titularEmpresaNombre: f.titularEmpresaNombre ?? null,
+        tipoDocumento: leerExtraccion(f.extraccionBruta).tipoDocumento,
+        fuente: leerExtraccion(f.extraccionBruta).fuente,
+        documentoNombre: f.documentoNombre ?? null,
         yaEnCartera: numero === null ? null : numerosPropios.has(numero),
         bien: describirBien(f.ramo, datosConMatricula),
       }

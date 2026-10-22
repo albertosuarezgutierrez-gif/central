@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { decidirFicha, esDocumentoDeSeguro, fichaDelDocumento, planTomador, posiblesDuplicadosPorContacto, puedeAbrirFiguras, puedeVolcarEnFicha, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad, decidirOportunidadExistente } from './oportunidad-documento-reglas.ts'
+import { decidirFicha, esDocumentoDeSeguro, fichaDelDocumento, planTomador, posiblesDuplicadosPorContacto, puedeAbrirFiguras, puedeVolcarEnFicha, fechaLlamada, mismoNombre, proximoVencimiento, ramoOportunidad, decidirOportunidadExistente, decidirOportunidadDeLaPoliza } from './oportunidad-documento-reglas.ts'
 
 const HOY = new Date('2026-09-29T10:00:00Z')
 
@@ -182,4 +182,47 @@ test('🪤 otro nº, otra compañía, sin nº, o existente cerrada/descartada: s
     assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162048', aseguradora: 'Línea Directa' }, [{ ...ab, estado }]), { accion: 'crear' })
   }
   assert.deepEqual(decidirOportunidadExistente({ numeroPoliza: '18162048', aseguradora: 'Línea Directa' }, []), { accion: 'crear' })
+})
+
+// ─── «Escanear nunca duplica» (22/10/2026) ─────────────────────────────────
+
+const ALTA_EMPRESA = { nombre: 'SOTO CUATRO SL', apellidos: '', dni: 'B12345674', tipoPersona: 'juridica' as const }
+
+test('🪤 planTomador pasa el activo REAL: la activa gana a la descartada; la única descartada se reactiva', () => {
+  const dos = planTomador({ clienteSube: null, nombreFicha: null, dniFicha: null, alta: ALTA_EMPRESA, encontradas: [{ id: 'vieja', por: 'dni', activo: false }, { id: 'buena', por: 'dni', activo: true }] })
+  assert.deepEqual(dos, { tipo: 'ficha', clienteId: 'buena', porque: 'dni_cartera' })
+  const una = planTomador({ clienteSube: null, nombreFicha: null, dniFicha: null, alta: ALTA_EMPRESA, encontradas: [{ id: 'vieja', por: 'dni', activo: false }] })
+  assert.deepEqual(una, { tipo: 'ficha', clienteId: 'vieja', porque: 'dni_cartera', reactivar: true })
+})
+
+test('🪤 dos fichas activas con el mismo CIF: ambigua (ni se elige ni se abre un tercer lead)', () => {
+  const p = planTomador({ clienteSube: null, nombreFicha: null, dniFicha: null, alta: ALTA_EMPRESA, encontradas: [{ id: 'a', por: 'dni', activo: true }, { id: 'b', por: 'dni', activo: true }] })
+  assert.deepEqual(p, { tipo: 'ambigua', candidatas: ['a', 'b'] })
+})
+
+const OP = (id: string, clienteId: string, estado = 'competencia', numeroPoliza: string | null = '4C-G-442.003.889', aseguradora: string | null = 'Allianz') => ({ id, clienteId, estado, numeroPoliza, aseguradora })
+
+test('🪤 la póliza ya tiene oportunidad en OTRA ficha (Soto Cuatro): se actualiza esa, no se crea', () => {
+  // Antonio sube desde su ficha la póliza de Soto Cuatro: la oportunidad está en la ficha de la empresa.
+  const d = decidirOportunidadDeLaPoliza({ numeroPoliza: '4CG442003889', aseguradora: 'Allianz' }, [OP('dde093fb', 'soto')], ['lead-nuevo', 'antonio'])
+  assert.deepEqual(d, { accion: 'actualizar', id: 'dde093fb', clienteId: 'soto' })
+})
+
+test('oportunidad de la póliza: cerradas solo avisan; otra compañía no casa; varias en fichas ajenas = ambigua', () => {
+  assert.deepEqual(decidirOportunidadDeLaPoliza({ numeroPoliza: '4CG442003889', aseguradora: 'Allianz' }, [OP('x', 'soto', 'ganada')]), { accion: 'crear', cerradas: ['x'] })
+  assert.deepEqual(decidirOportunidadDeLaPoliza({ numeroPoliza: '4CG442003889', aseguradora: 'Mapfre' }, [OP('x', 'soto')]), { accion: 'crear', cerradas: [] })
+  assert.deepEqual(decidirOportunidadDeLaPoliza({ numeroPoliza: '4CG442003889', aseguradora: null }, [OP('x', 'a'), OP('y', 'b')]), { accion: 'ambigua', ids: ['x', 'y'] })
+  assert.deepEqual(decidirOportunidadDeLaPoliza({ numeroPoliza: '4CG442003889', aseguradora: 'Allianz' }, [OP('x', 'a'), OP('y', 'b')], ['b']), { accion: 'actualizar', id: 'y', clienteId: 'b' })
+  assert.deepEqual(decidirOportunidadDeLaPoliza({ numeroPoliza: null, aseguradora: null }, [OP('x', 'a')]), { accion: 'crear', cerradas: [] })
+})
+
+test('🪤 adopción por nº de póliza: DNI de OTRA ficha → revisar; compañía ausente → revisar; mismo DNI y compañía → adopta', () => {
+  const nueva = { numeroPoliza: '4CG442003889', aseguradora: 'Allianz' }
+  // Brazo 1: la ficha decidida por DNI no es la de la oportunidad.
+  assert.deepEqual(decidirOportunidadDeLaPoliza(nueva, [OP('x', 'soto')], ['otra'], 'otra'), { accion: 'revisar', id: 'x', clienteId: 'soto', porque: 'ficha_distinta' })
+  // Brazo 2: falta la compañía en el documento o en la oportunidad.
+  assert.deepEqual(decidirOportunidadDeLaPoliza({ ...nueva, aseguradora: null }, [OP('x', 'soto')], ['soto'], 'soto'), { accion: 'revisar', id: 'x', clienteId: 'soto', porque: 'compania_ausente' })
+  assert.deepEqual(decidirOportunidadDeLaPoliza(nueva, [OP('x', 'soto', 'competencia', '4C-G-442.003.889', null)], ['soto'], 'soto'), { accion: 'revisar', id: 'x', clienteId: 'soto', porque: 'compania_ausente' })
+  // Brazo 3: mismo DNI (misma ficha) y compañía → adopta.
+  assert.deepEqual(decidirOportunidadDeLaPoliza(nueva, [OP('x', 'soto')], ['soto'], 'soto'), { accion: 'actualizar', id: 'x', clienteId: 'soto' })
 })

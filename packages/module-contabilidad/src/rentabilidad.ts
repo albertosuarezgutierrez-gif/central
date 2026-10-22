@@ -1,5 +1,5 @@
-import type { Apunte, RentabilidadEntidad } from './types'
-import { round2 } from './iva'
+import type { Apunte, RentabilidadEntidad } from './types.ts'
+import { round2 } from './iva.ts'
 
 /**
  * Calcula la rentabilidad agrupada por entidad (propiedad, evento, local…).

@@ -8,7 +8,10 @@
 // - Nunca lanza: devuelve un desenlace con nombre. Quien lo llama tras guardar un fichero NO puede
 //   perder el fichero porque la oportunidad falle.
 // - Una póliza en vigor con nosotros no es una oportunidad (`ya_nuestra`).
-// - La deduplicación es la de `crearOportunidad`: el mismo seguro ya abierto se COMPLETA, no se repite.
+// - NUNCA duplica (22/10/2026): la póliza (compañía + nº normalizado) se busca en TODA la correduría y, si
+//   ya tiene oportunidad abierta, se ACTUALIZA (vencimiento, prima, capitales, garantías; lo puesto a mano
+//   no se pisa); las personas con DNI/CIF se casan con su ficha por índice ciego (la activa; la única
+//   descartada se reactiva; dos activas = «revisar» + Telegram). Después, la de `crearOportunidad`.
 // - El DNI del documento no sale de aquí.
 import {
   admiteDatosVehiculo,
@@ -25,15 +28,26 @@ import {
   prepararAltaDesdeDocumento,
   seguroAnteriorDe,
   vencimientoUrgente,
+  ACCION_ACTUALIZADA_DOCUMENTO,
+  decidirFichaPorIdentidad,
+  fusionarLecturaEnOportunidad,
+  normalizarPersonasPoliza,
+  planTareaTrasVencimiento,
+  procedenciaCamposOportunidad,
+  riesgoLeidoDeDocumento,
+  rolesDelRamo,
+  type PersonaEnlazada,
   type ContactoTomadorLeido,
   type LecturaPoliza,
   type MarcaIdentidadDocumento,
   type PropuestaIdentidad,
 } from '@central/module-seguros'
 import { computeDniLookupHash } from '@central/module-seguros-pii'
+import { tgSend } from '@central/core-telegram'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
-import { altaCliente, altaLeadSinContacto, anotarHistorialCliente, coincidencias, descifrarCampo } from './cartera-edicion'
+import { altaCliente, altaLeadSinContacto, anotarHistorialCliente, coincidencias, descifrarCampo, reactivarPorPoliza } from './cartera-edicion'
+import { asignarFigura } from './oportunidad-riesgo'
 import { crearRelacion } from './cartera-relaciones'
 import { crearOportunidad } from './oportunidad-seguimiento'
 import { datosVehiculoParaOportunidad } from './oportunidad-vehiculo-catalogo'
@@ -50,9 +64,13 @@ import {
   esDocumentoDeSeguro,
   fechaLlamada,
   mismoNombre,
-  decidirOportunidadExistente,
+  decidirOportunidadDeLaPoliza,
+  normalizarNumeroPoliza,
   proximoVencimiento,
   ramoOportunidad,
+  textoAvisoAmbiguo,
+  ORIGENES_DEL_CLIENTE,
+  type OportunidadDeLaPoliza,
 } from './oportunidad-documento-reglas'
 
 export type ResultadoOportunidadDocumento =
@@ -92,7 +110,20 @@ export type ResultadoOportunidadDocumento =
       figuras: FiguraResultado[] | null
       /** Lo que no se ha podido hacer con alguna figura (sin nombres). */
       avisosFiguras: string[]
+      /** 22/10/2026: qué se ha actualizado en la oportunidad con lo leído (nombres de campo, sin valores). */
+      camposActualizados?: string[]
+      /** Datos leídos distintos de lo puesto a mano: NO se han pisado (constan en el historial). */
+      discrepancias?: number
+      /** La ficha del tomador estaba descartada y se ha reactivado. */
+      reactivada?: boolean
+      /** La misma póliza ya tuvo oportunidades CERRADAS (se ha abierto otra y se ha anotado). */
+      cerradasPrevias?: number
     }
+  /**
+   * No se ha elegido a ciegas (22/10/2026): el DNI/CIF del tomador está en varias fichas activas, o la
+   * póliza tiene oportunidades abiertas en varias fichas. Nada creado; Telegram a Alberto (`avisado`).
+   */
+  | { estado: 'revisar'; motivo: 'ficha_ambigua' | 'oportunidad_ambigua'; candidatas: string[]; avisado: boolean }
   | { estado: 'ya_nuestra' }
   | { estado: 'no_es_seguro' }
   | { estado: 'sin_lectura'; motivo: string }
@@ -180,6 +211,9 @@ async function oportunidadDesdeLecturaInterna(
       : { ramo: leida.ramo, fase: leida.fase, datos: leida.datos as unknown as Record<string, unknown> }
     const d = r.datos
     if (!esDocumentoDeSeguro(d)) return { estado: 'no_es_seguro' }
+    // El JSON tal cual lo devolvió la IA (personas, capitales y garantías viven ahí); de una lectura a
+    // mano, sus propios datos.
+    const bruto: Record<string, unknown> = ('bruto' in leida && leida.bruto ? (leida.bruto as Record<string, unknown>) : null) ?? d
     // Contacto, domicilio, carné y mediador del tomador: ya normalizados si vienen del lector; de una
     // lectura a mano (`LecturaPoliza`), se normalizan aquí de las mismas claves.
     const contacto: ContactoTomadorLeido = ('contacto' in leida && leida.contacto) || normalizarContactoTomador(d)
@@ -195,6 +229,17 @@ async function oportunidadDesdeLecturaInterna(
     const { alta } = prepararAltaDesdeDocumento(l, { tomadorEsEmpresa: contacto.tomadorEsEmpresa, cifTomador: contacto.cifTomador })
     const empresa = contacto.tomadorEsEmpresa === true || alta?.tipoPersona === 'juridica'
 
+    // La compañía (03/10/2026): lo leído si es un nombre; si es basura («P.P.») o no está, la del código DGS.
+    // Sin DGS, el nombre leído se casa EXACTO (normalizado) con el catálogo y se guarda su nombre común;
+    // si no casa o casa con varias, se queda lo leído (o null). `companias_dgs` no tiene CIF.
+    // 22/10/2026: ANTES de elegir ficha: con el nº, identifica la póliza para buscar su oportunidad.
+    const porDgs = await nombrePorDgs(txt(d.codigoEntidadDgs, 10))
+    const porNombre = porDgs || !txt(d.compania) ? null : companiaPorNombre(txt(d.compania), await catalogoCompanias())
+    const aseguradora = porNombre?.nombre ?? companiaLegible(txt(d.compania), porDgs)
+    const numeroPoliza = txt(d.numeroPoliza, 60)
+    const verificado = e.verificado !== false
+    const delCliente = ORIGENES_DEL_CLIENTE.includes(e.origen)
+
     const db = prismaAsegura()
     const ficha = e.clienteSube
       ? await db.cliente.findFirst({
@@ -203,8 +248,9 @@ async function oportunidadDesdeLecturaInterna(
         })
       : null
     const clienteSube = ficha?.id ?? null
-    // UNA búsqueda por índice ciego con el DNI/CIF, el teléfono y el email del documento. Solo el
-    // DNI/CIF asigna ficha; el contacto solo deja «posible duplicado» (`planTomador`).
+    // UNA búsqueda por índice ciego con el DNI/CIF, el teléfono y el email del documento, en TODA la
+    // cartera (descartadas incluidas, con su `activo`). Solo el DNI/CIF asigna ficha; el contacto solo
+    // deja «posible duplicado» (`planTomador`).
     const hayClave = Boolean(alta?.dni || contacto.telefono || contacto.email)
     const encontradas = hayClave
       ? await coincidencias(e.correduriaId, { dni: alta?.dni ?? null, telefono: contacto.telefono, email: contacto.email }).catch(() => null)
@@ -216,15 +262,54 @@ async function oportunidadDesdeLecturaInterna(
       alta: alta ? { nombre: alta.nombre, apellidos: alta.apellidos, dni: alta.dni ?? null, tipoPersona: alta.tipoPersona ?? null } : null,
       encontradas,
     })
-    if (decision.tipo === 'sin_persona') return { estado: 'sin_persona' }
-    const verificado = e.verificado !== false
-    if (!verificado && decision.tipo === 'lead' && !alta?.dni) return { estado: 'sin_persona' }
+
+    // 22/10/2026: ¿YA tiene oportunidad esta póliza (compañía + nº normalizado) en TODA la correduría?
+    // Si sí, esa es la oportunidad (y su ficha, la del tomador): se ACTUALIZA, no se abre otra ni otro lead.
+    const existentes = numeroPoliza ? await oportunidadesDeLaPoliza(e.correduriaId, numeroPoliza) : []
+    const preferidas = decision.tipo === 'ficha' ? [decision.clienteId, clienteSube] : decision.tipo === 'ambigua' ? [...decision.candidatas, clienteSube] : [clienteSube]
+    const dOp = existentes === null ? { accion: 'crear' as const, cerradas: [] as string[] } : decidirOportunidadDeLaPoliza({ numeroPoliza, aseguradora }, existentes, preferidas, decision.tipo === 'ficha' ? decision.clienteId : null)
+    if (dOp.accion === 'ambigua') {
+      const avisado = await avisarAmbiguo(textoAvisoAmbiguo({ motivo: 'oportunidad_ambigua', ids: dOp.ids, origen: e.origen }))
+      return { estado: 'revisar', motivo: 'oportunidad_ambigua', candidatas: dOp.ids, avisado }
+    }
+    if (dOp.accion === 'revisar') {
+      // Identidad no firme (DNI de otra ficha, o compañía ausente): no se escribe NADA (ni lectura, ni
+      // personas, ni relación). Solo el aviso a Alberto.
+      const avisado = await avisarAmbiguo(textoAvisoAmbiguo({ motivo: 'oportunidad_dudosa', ids: [dOp.id], origen: e.origen }))
+      return { estado: 'revisar', motivo: 'oportunidad_ambigua', candidatas: [dOp.id], avisado }
+    }
+    const opPrevia = dOp.accion === 'actualizar' ? existentes?.find((x) => x.id === dOp.id) ?? null : null
+
+    if (!opPrevia) {
+      if (decision.tipo === 'sin_persona') return { estado: 'sin_persona' }
+      if (!verificado && decision.tipo === 'lead' && !alta?.dni) return { estado: 'sin_persona' }
+      if (decision.tipo === 'ambigua') {
+        // Dos fichas ACTIVAS con el mismo DNI/CIF: ni se elige a ciegas ni se abre una tercera.
+        const avisado = await avisarAmbiguo(textoAvisoAmbiguo({ motivo: 'ficha_ambigua', ids: decision.candidatas, origen: e.origen }))
+        for (const id of decision.candidatas) {
+          await anotarHistorialCliente(e.correduriaId, id, 'gestion', `Ficha AMBIGUA: su DNI/CIF está también en ${decision.candidatas.filter((x) => x !== id).join(', ')}; una póliza subida (${e.origen}) no se ha asignado a ninguna. Revisa y funde si son la misma persona.`).catch(() => null)
+        }
+        return { estado: 'revisar', motivo: 'ficha_ambigua', candidatas: decision.candidatas, avisado }
+      }
+    }
 
     let clienteNuevo = false
+    let reactivada = false
     let compartenContacto: string[] = []
-    if (decision.tipo === 'ficha') {
+    const avisos: string[] = []
+    if (opPrevia) {
+      clienteId = opPrevia.clienteId
+      if (decision.tipo === 'ficha' && decision.clienteId !== opPrevia.clienteId) {
+        avisos.push(`el DNI/CIF del tomador está en otra ficha (${decision.clienteId}) que la de la oportunidad de esta póliza: revisa si son la misma persona`)
+      }
+      if (opPrevia.clienteActivo === false && verificado) {
+        reactivada = await reactivarPorPoliza(e.correduriaId, opPrevia.clienteId, '', notaReactivada(numeroPoliza, e.origen))
+      }
+    } else if (decision.tipo === 'ficha') {
       clienteId = decision.clienteId
-    } else {
+      // La única ficha con su DNI/CIF estaba DESCARTADA: es ella, y vuelve (con nota en su historial).
+      if (decision.reactivar && verificado) reactivada = await reactivarPorPoliza(e.correduriaId, clienteId, '', notaReactivada(numeroPoliza, e.origen))
+    } else if (decision.tipo === 'lead') {
       // El lead nace con el DNI/CIF del documento (o sin identificador si no trae): lo decide `planTomador`.
       const nuevo = decision.alta
       // Sin DNI, el mismo recibo subido dos veces (o reintentado) no puede abrir dos leads: se reusa
@@ -247,12 +332,15 @@ async function oportunidadDesdeLecturaInterna(
         if (!porDni) return { estado: 'error', motivo: `No se pudo abrir el lead del tomador: ${lead.motivo}` }
         clienteId = porDni.id
       }
+    } else {
+      return { estado: 'sin_persona' }
     }
+    const fichaTomador: string = clienteId
 
     let relacionado = false
-    if (clienteSube && clienteId !== clienteSube) {
+    if (clienteSube && fichaTomador !== clienteSube) {
       const rel = await crearRelacion(e.correduriaId, clienteSube, {
-        relacionadoId: clienteId,
+        relacionadoId: fichaTomador,
         tipo: 'Otra',
         observaciones: 'Documento de su seguro subido desde esta ficha',
         actor: e.actor,
@@ -265,12 +353,15 @@ async function oportunidadDesdeLecturaInterna(
     // documento es el de la ficha (o ella no tiene); quién puede volcar, en `puedeVolcarEnFicha`
     // (desde el portal, solo en la ficha propia de quien sube).
     const hoy = e.hoy ?? new Date()
+    const porqueFicha = opPrevia
+      ? (decision.tipo === 'ficha' && decision.clienteId === fichaTomador ? decision.porque : 'oportunidad_existente')
+      : decision.tipo === 'ficha' ? decision.porque : null
     const quienSube = {
       origen: e.origen,
       verificado,
       hayTomador: alta !== null,
-      porqueFicha: decision.tipo === 'ficha' ? decision.porque : null,
-      clienteId,
+      porqueFicha,
+      clienteId: fichaTomador,
       clienteSube,
     }
     // La identidad, ANTES del volcado (que puede escribir el DNI del documento en una ficha sin DNI:
@@ -279,17 +370,17 @@ async function oportunidadDesdeLecturaInterna(
     if (alta?.dni && !empresa) {
       let dniFichaAntes: string | null = null
       let actual: { nombre: string | null; apellidos: string | null } | null = null
-      if (decision.tipo === 'ficha' && ficha && clienteId === ficha.id) {
+      if (decision.tipo === 'ficha' && ficha && fichaTomador === ficha.id) {
         dniFichaAntes = descifrarCampo(ficha.dni)
         actual = ficha
-      } else if (decision.tipo === 'ficha' && decision.porque === 'dni_cartera') {
+      } else if (decision.tipo === 'ficha' && decision.porque === 'dni_cartera' && decision.clienteId === fichaTomador) {
         dniFichaAntes = alta.dni
-        actual = await db.cliente.findFirst({ where: { id: clienteId, correduriaId: e.correduriaId }, select: { nombre: true, apellidos: true } }).catch(() => null)
+        actual = await db.cliente.findFirst({ where: { id: fichaTomador, correduriaId: e.correduriaId }, select: { nombre: true, apellidos: true } }).catch(() => null)
       }
       const a = normalizarDni(alta.dni)
       const f = normalizarDni(dniFichaAntes ?? '')
       const hash = computeDniLookupHash(alta.dni)
-      if (hash && verificado) identidad.marca = { dniHash: hash, clienteId, coincidiaConFicha: a.ok && f.ok && a.valor.valor === f.valor.valor }
+      if (hash && verificado) identidad.marca = { dniHash: hash, clienteId: fichaTomador, coincidiaConFicha: a.ok && f.ok && a.valor.valor === f.valor.valor }
       if (actual && puedeAbrirFiguras(quienSube)) {
         const p = propuestaIdentidadDesdePoliza({
           dniFicha: dniFichaAntes,
@@ -298,15 +389,17 @@ async function oportunidadDesdeLecturaInterna(
           ficha: actual,
           leido: { nombre: alta.nombre, apellidos: alta.apellidos },
         })
-        if (p) identidad.propuesta = { clienteId, propuesta: p }
+        if (p) identidad.propuesta = { clienteId: fichaTomador, propuesta: p }
       }
     }
 
-    const identificado = puedeVolcarEnFicha(quienSube)
+    // Con una oportunidad que ya existía y en OTRA ficha que la del DNI/CIF leído, no se vuelca nada
+    // (no se sabe si el DNI leído es de esa ficha).
+    const identificado = puedeVolcarEnFicha(quienSube) && !(opPrevia && porqueFicha === 'oportunidad_existente' && decision.tipo === 'ficha')
     const volcado = identificado
       ? await volcarPolizaEnFicha({
           correduriaId: e.correduriaId,
-          clienteId,
+          clienteId: fichaTomador,
           actor: e.actor,
           origen: e.origen,
           hoy,
@@ -321,19 +414,13 @@ async function oportunidadDesdeLecturaInterna(
           },
         })
       : null
-    if (clienteNuevo) await notaPosiblesDuplicados(e.correduriaId, clienteId, alta ? `${alta.nombre} ${alta.apellidos}` : null, compartenContacto, e.actor)
+    if (clienteNuevo) await notaPosiblesDuplicados(e.correduriaId, fichaTomador, alta ? `${alta.nombre} ${alta.apellidos}` : null, compartenContacto, e.actor)
 
     const vence = proximoVencimiento(txt(d.fechaVencimiento, 10), hoy)
     const llamada = fechaLlamada(vence, hoy)
     const prima = typeof d.primaAnual === 'number' && Number.isFinite(d.primaAnual) && d.primaAnual > 0 && d.primaAnual < 1_000_000 ? d.primaAnual : null
     const vehiculo = [txt(d.marca, 40), txt(d.modelo, 40)].filter(Boolean).join(' ') || null
     const sinVerificar = verificado ? '' : ' — subido desde el portal por alguien sin ficha: SIN VERIFICAR'
-    // La compañía (03/10/2026): lo leído si es un nombre; si es basura («P.P.») o no está, la del código DGS.
-    // Sin DGS, el nombre leído se casa EXACTO (normalizado) con el catálogo y se guarda su nombre común;
-    // si no casa o casa con varias, se queda lo leído (o null). `companias_dgs` no tiene CIF.
-    const porDgs = await nombrePorDgs(txt(d.codigoEntidadDgs, 10))
-    const porNombre = porDgs || !txt(d.compania) ? null : companiaPorNombre(txt(d.compania), await catalogoCompanias())
-    const aseguradora = porNombre?.nombre ?? companiaLegible(txt(d.compania), porDgs)
     const { motivo: financiada } = polizaFinanciada(contacto)
     const urgente = vencimientoUrgente(vence, hoy.toISOString().slice(0, 10))
     const avisoFinanciada = financiada ? ` · Póliza de concesionario/financiada (${financiada}): mira si está atada a la financiación antes de proponer el cambio.` : ''
@@ -343,7 +430,7 @@ async function oportunidadDesdeLecturaInterna(
       fechaFinVigencia: vence,
       aseguradora,
       prima,
-      numeroPoliza: txt(d.numeroPoliza, 60),
+      numeroPoliza,
       matricula: txt(d.matricula, 20),
       vehiculo,
       seguroAnterior: r.fase === 'auto'
@@ -376,14 +463,51 @@ async function oportunidadDesdeLecturaInterna(
           combustible: txt(d.combustible, 40), fechaMatriculacion: txt(d.fechaMatriculacion, 10),
         }, catalogosVehiculoReales())).catch(() => null)
       : null
-    // 06/10/2026: la misma póliza (nº normalizado + compañía) ya abierta en esta ficha, en la de donde se
-    // subió o en una fusionada en ella: NO se abre otra (nº 18162048 subido dos veces = dos «competencia»).
-    const previa = await oportunidadAbiertaDeLaPoliza(e.correduriaId, [clienteId, clienteSube], datos.numeroPoliza, datos.aseguradora)
-    const o = previa
-      ? { ok: false as const, estado: 'duplicada' as const, motivo: 'ya existía', status: 409 as const, id: previa, completada: false }
-      : await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, { hoy, origen: `documento:${e.origen}`, datosVehiculo })
-    const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== clienteId) : []
+    // 22/10/2026: la oportunidad de ESTA póliza (compañía + nº) ya existe en la correduría → se actualiza
+    // esa (no se crea otra). Si no, se crea; las cerradas de la misma póliza quedan anotadas en la nueva.
+    const cerradas = dOp.accion === 'crear' ? dOp.cerradas : []
+    const o = opPrevia
+      ? { ok: false as const, estado: 'duplicada' as const, motivo: 'ya existía', status: 409 as const, id: opPrevia.id, completada: false }
+      : await crearOportunidad(e.correduriaId, fichaTomador, datos, e.actor, {
+          hoy, origen: `documento:${e.origen}`, datosVehiculo,
+          trasCrear: cerradas.length === 0 ? undefined : async (tx, id) => {
+            await tx.$executeRaw(Prisma.sql`
+              insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+              values (${e.correduriaId}::uuid, ${id}::uuid, 'poliza_con_oportunidad_cerrada', null, null, ${JSON.stringify({ previas: cerradas })}::jsonb, ${e.actor})`)
+          },
+        })
+    const posiblesDuplicados = clienteNuevo ? compartenContacto.filter((id) => id !== fichaTomador) : []
     const conIdentificador = decision.tipo === 'lead' ? Boolean(decision.alta.dni) : Boolean(alta?.dni)
+    const opId = o.ok ? o.id : o.estado === 'duplicada' && 'id' in o ? o.id : null
+    const esMotor = datos.ramo === 'auto' || datos.ramo === 'moto'
+
+    // Las personas de la póliza (22/10/2026, TODOS los ramos): cada una con DNI/CIF se casa con SU ficha
+    // por índice ciego. Desde el portal NUNCA se abre ficha ni relación (privacidad): solo se casa.
+    let ambiguas = 0
+    let personas: PersonaEnlazada[] | null = null
+    if (opId) {
+      const p = await casarPersonasDeLaPoliza({
+        correduriaId: e.correduriaId, oportunidadId: opId, tomadorId: fichaTomador, ramo: datos.ramo, bruto,
+        // Motor por el corredor: las figuras las abre y asigna `figurasDesdePoliza` (abajo).
+        asignar: verificado && !(esMotor && puedeAbrirFiguras(quienSube)),
+        relacionar: puedeAbrirFiguras(quienSube),
+        reactivar: verificado && !delCliente,
+        numeroPoliza, origen: e.origen, actor: e.actor,
+      })
+      personas = p.personas
+      ambiguas += p.ambiguas
+      avisos.push(...p.avisos)
+    }
+
+    // Lo leído (vencimiento, prima, capitales, garantías, personas) a la oportunidad: al crearla y al
+    // reencontrarla. Lo puesto a mano no se pisa; `null` no pisa nada.
+    let actualizacion: { campos: string[]; discrepancias: number } | null = null
+    if (opId) {
+      actualizacion = await aplicarLecturaEnOportunidad({
+        correduriaId: e.correduriaId, oportunidadId: opId, clienteId: fichaTomador, actor: e.actor, origen: e.origen, verificado, hoy, nueva: o.ok,
+        leido: { fechaFinVigencia: vence, prima, vencimientoDocumento: txt(d.fechaVencimiento, 10), riesgo: riesgoLeidoDeDocumento(bruto), personas },
+      })
+    }
 
     // Motor (03/10/2026): cada persona de la póliza que no es el tomador tiene su ficha, su rol en la
     // oportunidad y su relación con el tomador (`oportunidad-figuras.ts`). Solo con la ficha del
@@ -391,9 +515,8 @@ async function oportunidadDesdeLecturaInterna(
     // enlace de datos nunca, ni a su propia ficha). Una
     // figura que falla no tumba la oportunidad: va a `avisosFiguras`.
     let figuras: FiguraResultado[] | null = null
-    let avisosFiguras: string[] = []
-    const opId = o.ok ? o.id : o.estado === 'duplicada' && 'id' in o ? o.id : null
-    if (opId && !previa && (datos.ramo === 'auto' || datos.ramo === 'moto')) {
+    let avisosFiguras: string[] = [...avisos]
+    if (opId && esMotor) {
       // La oportunidad ya existe: si las figuras fallan, no se devuelve `error`, se avisa.
       try {
         const plan = planFiguras(
@@ -411,58 +534,231 @@ async function oportunidadDesdeLecturaInterna(
         )
         if (puedeAbrirFiguras(quienSube)) {
           const f = await figurasDesdePoliza({
-            correduriaId: e.correduriaId, oportunidadId: opId, tomadorId: clienteId, ramo: datos.ramo, plan,
+            correduriaId: e.correduriaId, oportunidadId: opId, tomadorId: fichaTomador, ramo: datos.ramo, plan,
             numeroPoliza: datos.numeroPoliza, actor: e.actor, origen: e.origen, hoy,
             contactoTomador: { telefono: contacto.telefono, email: contacto.email }, fechaTarea: llamada,
           })
           figuras = f.figuras
-          avisosFiguras = f.avisos
+          avisosFiguras = [...avisosFiguras, ...f.avisos]
+          ambiguas += f.ambiguas
         }
         // Sin datos personales en las líneas: valen también sin verificar (son del riesgo, no de nadie).
-        await anotarConductorJoven({ correduriaId: e.correduriaId, oportunidadId: opId, plan, hoy, actor: e.actor })
-        await anotarFigurasSinNombre({ correduriaId: e.correduriaId, oportunidadId: opId, plan, actor: e.actor })
+        // Una vez por oportunidad (la misma póliza subida otra vez no repite las líneas).
+        if (!opPrevia) {
+          await anotarConductorJoven({ correduriaId: e.correduriaId, oportunidadId: opId, plan, hoy, actor: e.actor })
+          await anotarFigurasSinNombre({ correduriaId: e.correduriaId, oportunidadId: opId, plan, actor: e.actor })
+        }
       } catch (err) {
         console.error('[oportunidad-documento] figuras:', err instanceof Error ? err.message : err)
         avisosFiguras = [...avisosFiguras, 'No se han podido revisar las figuras de la póliza; revísalas a mano en la oportunidad.']
       }
     }
+    if (ambiguas > 0) await avisarAmbiguo(textoAvisoAmbiguo({ motivo: 'figura_ambigua', ids: opId ? [opId] : [], origen: e.origen, n: ambiguas }))
 
-    const comun = { clienteId, clienteNuevo, relacionado, vence, llamada, ficha: volcado, financiada, posiblesDuplicados, conIdentificador, figuras, avisosFiguras }
+    const comun = {
+      clienteId: fichaTomador, clienteNuevo, relacionado, vence, llamada, ficha: volcado, financiada, posiblesDuplicados, conIdentificador, figuras, avisosFiguras,
+      camposActualizados: actualizacion?.campos ?? [], discrepancias: actualizacion?.discrepancias ?? 0, reactivada, cerradasPrevias: cerradas.length,
+    }
     if (o.ok) return { estado: 'creada', oportunidadId: o.id, completada: false, ...comun }
-    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, completada: o.completada, ...(previa ? { yaExistia: true } : {}), ...comun }
-    return { estado: 'error', motivo: o.motivo, clienteId }
+    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, completada: o.completada || (actualizacion?.campos.length ?? 0) > 0, ...(opPrevia ? { yaExistia: true } : {}), ...comun }
+    return { estado: 'error', motivo: o.motivo, clienteId: fichaTomador }
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo abrir la oportunidad:', err instanceof Error ? err.message : err)
     return { estado: 'error', motivo: err instanceof Error ? err.message : String(err), ...(clienteId ? { clienteId } : {}) }
   }
 }
 
+const notaReactivada = (numeroPoliza: string | null, origen: string) =>
+  `Ficha reactivada automáticamente: estaba DESCARTADA y es la de una póliza subida (${numeroPoliza ? `nº ${numeroPoliza}` : 'sin nº legible'}, ${origen}). Si no debía volver, descártala otra vez.`
+
 /**
- * La oportunidad ABIERTA de esa misma póliza en las fichas dadas (y las fusionadas en ellas), o null.
- * La decisión es `decidirOportunidadExistente` (pura). Si la consulta falla, null: se sigue como antes
- * (`crearOportunidad` aún deduplica por ramo y seguro).
+ * Todas las oportunidades (abiertas y cerradas) de la correduría con ese nº de póliza normalizado, con
+ * la ficha VIVA de cada una (una fusionada apunta a su destino) y si está activa. `null` = no se pudo
+ * buscar (entonces se sigue como antes: `crearOportunidad` aún deduplica por ramo y seguro en la ficha).
  */
-async function oportunidadAbiertaDeLaPoliza(
-  correduriaId: string,
-  clientes: (string | null)[],
-  numeroPoliza: string | null,
-  aseguradora: string | null,
-): Promise<string | null> {
-  const ids = [...new Set(clientes.filter((c): c is string => !!c))]
-  if (ids.length === 0 || !numeroPoliza) return null
+async function oportunidadesDeLaPoliza(correduriaId: string, numeroPoliza: string): Promise<(OportunidadDeLaPoliza & { clienteActivo: boolean | null })[] | null> {
+  const n = normalizarNumeroPoliza(numeroPoliza)
+  if (!n) return []
   try {
-    const filas = await prismaAsegura().$queryRaw<{ id: string; estado: string; numeroPoliza: string | null; aseguradora: string | null }[]>(Prisma.sql`
-      select o.id::text as id, o.estado::text as estado, o.numero_poliza as "numeroPoliza",
-             nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora
+    const filas = await prismaAsegura().$queryRaw<{ id: string; estado: string; numeroPoliza: string | null; aseguradora: string | null; clienteId: string; clienteActivo: boolean | null }[]>(Prisma.sql`
+      select o.id::text as id, o.estado::text as estado,
+             coalesce(nullif(trim(o.numero_poliza), ''), nullif(trim(o.poliza_competencia->>'nPoliza'), ''), nullif(trim(o.poliza_competencia->>'numeroPoliza'), '')) as "numeroPoliza",
+             nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora,
+             coalesce(c.merged_into_cliente_id, o.cliente_id)::text as "clienteId",
+             coalesce(v.activo, c.activo) as "clienteActivo"
       from oportunidades o
+      left join clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
+      left join clientes v on v.id = c.merged_into_cliente_id and v.correduria_id = o.correduria_id
       where o.correduria_id = ${correduriaId}::uuid
-        and (o.cliente_id = any(${ids}::uuid[])
-             or o.cliente_id in (select c.id from clientes c where c.correduria_id = ${correduriaId}::uuid and c.merged_into_cliente_id = any(${ids}::uuid[])))
+        and upper(regexp_replace(coalesce(nullif(trim(o.numero_poliza), ''), o.poliza_competencia->>'nPoliza', o.poliza_competencia->>'numeroPoliza', ''), '[^A-Za-z0-9]', '', 'g')) = ${n}
       order by o.created_at`)
-    const d = decidirOportunidadExistente({ numeroPoliza, aseguradora }, filas)
-    return d.accion === 'reutilizar' ? d.id : null
+    return filas
   } catch (err) {
-    console.error('[oportunidad-documento] no se pudo buscar la oportunidad existente:', err instanceof Error ? err.message : err)
+    console.error('[oportunidad-documento] no se pudo buscar la oportunidad de la póliza:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+/** Telegram a Alberto (el bot de siempre). `false` = no salió (sin bot configurado o error): se dice. */
+async function avisarAmbiguo(texto: string): Promise<boolean> {
+  try {
+    return (await tgSend(texto)) !== null
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Las personas de la póliza que NO son el tomador (asegurados, propietario, conductores, beneficiarios),
+ * casadas con su ficha por índice ciego del DNI/CIF en toda la cartera (`decidirFichaPorIdentidad`).
+ * NUNCA abre una ficha (eso solo lo hace `figurasDesdePoliza`, motor y por el corredor). Sin nombres ni
+ * DNI en lo que devuelve: rol + id de ficha (`null` = sin ficha o sin identificador).
+ */
+async function casarPersonasDeLaPoliza(e: {
+  correduriaId: string; oportunidadId: string; tomadorId: string; ramo: string; bruto: Record<string, unknown>
+  /** Asignar el rol en la oportunidad (solo los del ramo, solo si está libre). */
+  asignar: boolean
+  /** Relacionar con el tomador si no lo estaba (solo el corredor: desde el portal nunca). */
+  relacionar: boolean
+  reactivar: boolean
+  numeroPoliza: string | null; origen: string; actor: string
+}): Promise<{ personas: PersonaEnlazada[]; ambiguas: number; avisos: string[] }> {
+  const avisos: string[] = []
+  let ambiguas = 0
+  const personas: PersonaEnlazada[] = [{ rol: 'tomador', clienteId: e.tomadorId }]
+  const delRamo = rolesDelRamo(e.ramo) as readonly string[]
+  for (const p of normalizarPersonasPoliza(e.bruto)) {
+    if (p.rol === 'tomador') continue
+    if (!p.identificador) { personas.push({ rol: p.rol, clienteId: null }); continue }
+    try {
+      const cs = await coincidencias(e.correduriaId, { dni: p.identificador }).then((x) => x.filter((c) => c.por === 'dni')).catch(() => null)
+      const dec = decidirFichaPorIdentidad(cs ? cs.map((c) => ({ id: c.id, activo: c.activo !== false })) : null, e.tomadorId)
+      if (dec.tipo === 'ambigua') {
+        ambiguas++
+        avisos.push(`${ROTULO_PERSONA[p.rol]}: su DNI/CIF está en varias fichas activas (posible duplicado): no se ha vinculado ninguna`)
+        personas.push({ rol: p.rol, clienteId: null })
+        continue
+      }
+      if (dec.tipo !== 'ficha') {
+        if (dec.tipo === 'sin_mirar') avisos.push(`${ROTULO_PERSONA[p.rol]}: no se ha podido buscar su DNI/CIF en la cartera`)
+        personas.push({ rol: p.rol, clienteId: null })
+        continue
+      }
+      personas.push({ rol: p.rol, clienteId: dec.clienteId })
+      if (dec.clienteId === e.tomadorId) continue
+      if (dec.reactivar) {
+        if (!e.reactivar) continue
+        await reactivarPorPoliza(e.correduriaId, dec.clienteId, '', notaReactivada(e.numeroPoliza, e.origen))
+      }
+      // Beneficiarios: NO son figura (Alberto, 10/10/2026): solo constan casados en la oportunidad.
+      if (!e.asignar || p.rol === 'beneficiario' || !delRamo.includes(p.rol)) continue
+      if (e.relacionar) {
+        await crearRelacion(e.correduriaId, e.tomadorId, {
+          relacionadoId: dec.clienteId, tipo: 'Otra', observaciones: `${ROTULO_PERSONA[p.rol]}${e.numeroPoliza ? ` (póliza ${e.numeroPoliza})` : ''}`, actor: e.actor,
+        }).catch(() => null)
+      }
+      // Sin relación con el tomador (portal), `asignarFigura` lo rechaza (422): queda casada, sin rol.
+      const a = await asignarFigura(e.correduriaId, { oportunidadId: e.oportunidadId, rol: p.rol, clienteId: dec.clienteId, actor: e.actor, soloSiLibre: true }).catch(() => null)
+      if (a && !a.ok && a.status !== 409 && a.status !== 422) avisos.push(`${ROTULO_PERSONA[p.rol]}: no se ha podido asignar a la oportunidad (${a.motivo})`)
+    } catch (err) {
+      console.error('[oportunidad-documento] persona sin casar:', err instanceof Error ? err.message : err)
+      avisos.push(`${ROTULO_PERSONA[p.rol]}: no se ha podido casar con su ficha`)
+    }
+  }
+  return { personas, ambiguas, avisos }
+}
+
+const ROTULO_PERSONA: Record<PersonaEnlazada['rol'], string> = {
+  tomador: 'Tomador', asegurado: 'Asegurado', propietario: 'Propietario', conductor_habitual: 'Conductor habitual',
+  conductor_ocasional: 'Conductor ocasional', beneficiario: 'Beneficiario',
+}
+
+/**
+ * Lo leído de la póliza a SU oportunidad, en una transacción con la fila bloqueada: columnas
+ * (`fecha_fin_vigencia`, `prima_bruta`) e `info_riesgo.lecturaDocumento` (capitales, garantías,
+ * personas). Quién puso cada campo sale del historial (`procedenciaCamposOportunidad`); lo puesto a
+ * mano no se pisa y la discrepancia queda en el historial con la FOTO de lo anterior. Sin verificar
+ * (portal sin ficha) no se escribe nada: solo consta. Si cambia el vencimiento, la llamada pendiente se
+ * mueve (la misma regla que al corregirlo a mano). Best-effort: un fallo no tumba la oportunidad.
+ */
+async function aplicarLecturaEnOportunidad(e: {
+  correduriaId: string; oportunidadId: string; clienteId: string; actor: string; origen: string; verificado: boolean; hoy: Date
+  /** Recién creada: lo leído completa su `info_riesgo`, sin nota en la ficha (ya dice «abierta»). */
+  nueva: boolean
+  leido: Parameters<typeof fusionarLecturaEnOportunidad>[0]['leido']
+}): Promise<{ campos: string[]; discrepancias: number } | null> {
+  try {
+    const r = await prismaAsegura().$transaction(async (tx) => {
+      const [op] = await tx.$queryRaw<{ fecha: string | null; prima: number | null; lectura: unknown; estado: string }[]>(Prisma.sql`
+        select to_char(fecha_fin_vigencia, 'YYYY-MM-DD') as fecha, prima_bruta::float8 as prima,
+               info_riesgo->'lecturaDocumento' as lectura, estado::text as estado
+        from oportunidades where id = ${e.oportunidadId}::uuid and correduria_id = ${e.correduriaId}::uuid for update`)
+      if (!op) return null
+      const eventos = await tx.$queryRaw<{ accion: string; detalle: unknown }[]>(Prisma.sql`
+        select accion, detalle from oportunidad_historial
+        where oportunidad_id = ${e.oportunidadId}::uuid and correduria_id = ${e.correduriaId}::uuid order by created_at, id`)
+      const f = fusionarLecturaEnOportunidad({
+        actual: { fechaFinVigencia: op.fecha, prima: op.prima, lectura: op.lectura },
+        procedencia: procedenciaCamposOportunidad(eventos),
+        leido: e.leido,
+        leidoEn: e.hoy.toISOString(),
+      })
+      const hayCambios = Object.keys(f.cambios).length > 0 || f.lecturaCambiada
+      if (!e.verificado) {
+        if (hayCambios || f.discrepancias.length > 0) {
+          await tx.$executeRaw(Prisma.sql`
+            insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+            values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${ACCION_ACTUALIZADA_DOCUMENTO}, cast(${op.estado} as estado_comercial), cast(${op.estado} as estado_comercial),
+                    ${JSON.stringify({ origen: e.origen, sinVerificar: true, noAplicado: f.cambios, discrepancias: f.discrepancias })}::jsonb, ${e.actor})`)
+        }
+        return { campos: [] as string[], discrepancias: f.discrepancias.length }
+      }
+      if (!hayCambios && f.discrepancias.length === 0) return { campos: [] as string[], discrepancias: 0 }
+      if (hayCambios) {
+        await tx.$executeRaw(Prisma.sql`
+          update oportunidades set
+            fecha_fin_vigencia = case when ${f.cambios.fechaFinVigencia !== undefined} then ${f.cambios.fechaFinVigencia ?? null}::date else fecha_fin_vigencia end,
+            prima_bruta = case when ${f.cambios.prima !== undefined} then ${f.cambios.prima ?? null}::numeric else prima_bruta end,
+            info_riesgo = case when ${f.lecturaCambiada} then jsonb_set(coalesce(info_riesgo, '{}'::jsonb), '{lecturaDocumento}', ${JSON.stringify(f.lectura)}::jsonb) else info_riesgo end,
+            updated_at = now()
+          where id = ${e.oportunidadId}::uuid and correduria_id = ${e.correduriaId}::uuid`)
+      }
+      const detalle: Record<string, unknown> = { origen: e.origen, cambios: f.cambios, antes: f.antes, discrepancias: f.discrepancias, ...(f.lecturaCambiada ? { lecturaCambiada: true } : {}) }
+      if (f.cambios.fechaFinVigencia) {
+        // La próxima llamada de seguimiento, al nuevo vencimiento (como `editarOportunidad` con `reprogramar`).
+        const [prox] = await tx.$queryRaw<{ id: string; fecha: string }[]>(Prisma.sql`
+          select id::text as id, to_char(fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD') as fecha
+          from gestiones
+          where oportunidad_id = ${e.oportunidadId}::uuid and correduria_id = ${e.correduriaId}::uuid
+            and origen_trigger = 'central:seguimiento' and tipo::text = 'llamada' and estado::text <> 'cerrada' and fecha_limite is not null
+          order by fecha_limite limit 1 for update`)
+        const plan = planTareaTrasVencimiento(f.cambios.fechaFinVigencia, prox ?? null, e.hoy.toISOString().slice(0, 10))
+        if (plan.accion === 'mover') {
+          await tx.$executeRaw(Prisma.sql`
+            update gestiones set fecha_limite = (${plan.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid', updated_at = now()
+            where id = ${plan.tareaId}::uuid and correduria_id = ${e.correduriaId}::uuid`)
+          detalle.tarea = { tareaId: plan.tareaId, antes: plan.desde, despues: plan.fecha }
+        }
+      }
+      await tx.$executeRaw(Prisma.sql`
+        insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+        values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${ACCION_ACTUALIZADA_DOCUMENTO}, cast(${op.estado} as estado_comercial), cast(${op.estado} as estado_comercial),
+                ${JSON.stringify(detalle)}::jsonb, ${e.actor})`)
+      const campos = [
+        ...(f.cambios.fechaFinVigencia ? ['vencimiento'] : []),
+        ...(f.cambios.prima !== undefined ? ['prima'] : []),
+        ...(f.lecturaCambiada ? ['datos leídos (capitales, garantías, personas)'] : []),
+      ]
+      return { campos, discrepancias: f.discrepancias.length }
+    })
+    if (r && !e.nueva && (r.campos.length > 0 || r.discrepancias > 0)) {
+      const que = r.campos.length > 0 ? `actualizada con la póliza subida (${r.campos.join(', ')})` : 'sin cambios'
+      const dis = r.discrepancias > 0 ? `; ${r.discrepancias} dato(s) leídos distintos de lo puesto a mano: NO se han pisado (ver historial de la oportunidad)` : ''
+      await anotarHistorialCliente(e.correduriaId, e.clienteId, 'gestion', `Oportunidad ${que}${dis} — ${e.origen}, por ${e.actor}`).catch(() => null)
+    }
+    return r
+  } catch (err) {
+    console.error('[oportunidad-documento] no se pudo aplicar lo leído a la oportunidad:', err instanceof Error ? err.message : err)
     return null
   }
 }

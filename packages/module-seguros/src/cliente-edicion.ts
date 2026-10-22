@@ -747,7 +747,8 @@ export function revisarAlta(e: Record<string, unknown>): AltaRevisada {
 }
 
 /** Con qué se ha encontrado ya una ficha al dar de alta (para no duplicarla). */
-export type Coincidencia = { id: string; nombre: string; por: 'dni' | 'telefono' | 'email'; tipo: string }
+/** `activo`: `false` = ficha DESCARTADA (sigue contando, a propósito); ausente = no se pidió. */
+export type Coincidencia = { id: string; nombre: string; por: 'dni' | 'telefono' | 'email'; tipo: string; activo?: boolean }
 
 /**
  * Un DNI que ya está NUNCA se fuerza: es la misma persona. Teléfono o email

@@ -26,6 +26,7 @@ import {
   accionFiguraSinNombre,
   conductoresDelPlan,
   contactoSoloDelTomador,
+  decidirFichaPorIdentidad,
   detalleRelacionFigura,
   faltaDniOCarne,
   hayConductorJovenONovel,
@@ -40,7 +41,7 @@ import {
   type RolFigura,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
-import { altaCliente, altaLeadSinContacto, anadirContacto, coincidencias, listarContactos } from './cartera-edicion'
+import { altaCliente, altaLeadSinContacto, anadirContacto, coincidencias, listarContactos, reactivarPorPoliza } from './cartera-edicion'
 import { crearRelacion } from './cartera-relaciones'
 import { asignarFigura } from './oportunidad-riesgo'
 import { volcarFiguraEnFicha } from './ficha-desde-poliza'
@@ -51,7 +52,8 @@ import { mismoNombre } from './oportunidad-documento-reglas'
  * (`campos`: solo booleanos, `null` = no se pudo mirar). Sin nombres, DNI ni valores.
  */
 export type FiguraResultado = { rol: RolFigura | null; clienteId: string; creada: boolean; campos?: CamposFigura }
-export type ResultadoFiguras = { figuras: FiguraResultado[]; avisos: string[] }
+/** `ambiguas`: figuras cuyo DNI está en varias fichas ACTIVAS (no se vinculan; quien llama avisa por Telegram). */
+export type ResultadoFiguras = { figuras: FiguraResultado[]; avisos: string[]; ambiguas: number }
 
 const queEs = (p: PersonaFigura) => (p.rolesLeidos[0] ? DETALLE_ROL_FIGURA[p.rolesLeidos[0]] : 'Figura de la póliza')
 
@@ -73,7 +75,8 @@ export async function figurasDesdePoliza(e: {
 }): Promise<ResultadoFiguras> {
   const figuras: FiguraResultado[] = []
   const avisos: string[] = []
-  if (e.plan.personas.length === 0) return { figuras, avisos }
+  let ambiguas = 0
+  if (e.plan.personas.length === 0) return { figuras, avisos, ambiguas }
   // Lo que la oportunidad ya tiene asignado (`null` = no se pudo mirar: entonces no se asigna nada).
   const yaAsignadas = await prismaAsegura()
     .$queryRaw<{ rol: string; cliente_id: string }[]>(Prisma.sql`
@@ -90,6 +93,7 @@ export async function figurasDesdePoliza(e: {
       const ficha = await fichaDeFigura(e, p)
       if ('aviso' in ficha) {
         if (ficha.aviso) avisos.push(`${que}: ${ficha.aviso}`)
+        if ('ambigua' in ficha && ficha.ambigua) ambiguas++
         continue
       }
       const { clienteId, creada } = ficha
@@ -152,7 +156,7 @@ export async function figurasDesdePoliza(e: {
       avisos.push(`${que}: no se ha podido procesar`)
     }
   }
-  return { figuras, avisos }
+  return { figuras, avisos, ambiguas }
 }
 
 /**
@@ -162,13 +166,22 @@ export async function figurasDesdePoliza(e: {
 async function fichaDeFigura(
   e: { correduriaId: string; tomadorId: string; actor: string; origen: string },
   p: PersonaFigura,
-): Promise<{ clienteId: string; creada: boolean } | { aviso: string | null }> {
+): Promise<{ clienteId: string; creada: boolean } | { aviso: string | null; ambigua?: true }> {
   if (p.dni) {
     const conDni = await coincidencias(e.correduriaId, { dni: p.dni }).then((cs) => cs.filter((c) => c.por === 'dni')).catch(() => null)
     if (conDni === null) return { aviso: 'no se ha podido buscar su DNI en la cartera; no se ha abierto ficha' }
-    if (conDni.length > 1) return { aviso: 'su DNI está en varias fichas (posible duplicado): no se ha vinculado ninguna' }
-    const suya = conDni[0]
-    if (suya) return fichaPorDni(e.tomadorId, suya, p)
+    // En TODA la cartera (22/10/2026): la activa antes que la descartada; la única descartada se usa y
+    // se reactiva; dos activas = ambigua (no se elige a ciegas). Antes: dos fichas = ninguna, siempre.
+    const d = decidirFichaPorIdentidad(conDni.map((c) => ({ id: c.id, activo: c.activo !== false })))
+    if (d.tipo === 'ambigua') return { aviso: 'su DNI está en varias fichas activas (posible duplicado): no se ha vinculado ninguna', ambigua: true }
+    const suya = d.tipo === 'ficha' ? conDni.find((c) => c.id === d.clienteId) : undefined
+    if (suya) {
+      const r = fichaPorDni(e.tomadorId, suya, p)
+      if ('clienteId' in r && d.tipo === 'ficha' && d.reactivar) {
+        await reactivarPorPoliza(e.correduriaId, r.clienteId, '', `Ficha reactivada automáticamente: estaba DESCARTADA y figura (${queEs(p).toLowerCase()}) en una póliza subida (${e.origen}). Si no debía volver, descártala otra vez.`)
+      }
+      return r
+    }
     const alta = await altaCliente(e.correduriaId, { ...partirNombre(p.nombre), dni: p.dni, fuente: 'venta_directa' }, e.actor)
     if (alta.ok) return { clienteId: alta.id, creada: true }
     // El DNI ya estaba en una ficha que la búsqueda no vio (carrera): la misma comprobación de nombre.

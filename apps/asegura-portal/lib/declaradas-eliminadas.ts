@@ -57,6 +57,7 @@ export const CAMPOS_HISTORIAL = [
   'titularTipo',
   'titularEmpresaNombre',
   'titularEmpresaCif',
+  'titularRolDeclarado',
   'confirmadaPorUsuario',
 ] as const
 export type CampoHistorial = (typeof CAMPOS_HISTORIAL)[number]
@@ -77,6 +78,7 @@ export const SELECT_HISTORIAL = {
   titularTipo: true,
   titularEmpresaNombre: true,
   titularEmpresaCif: true,
+  titularRolDeclarado: true,
   confirmadaPorUsuario: true,
 } as const satisfies Prisma.PortalPolizaDeclaradaSelect
 

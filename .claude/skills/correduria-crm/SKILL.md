@@ -18,6 +18,8 @@ real medido, orden de trabajo). Después, según lo que toques:
 - **Portal del cliente → `apps/asegura-portal/CLAUDE.md`** (es la fuente de verdad de esa app:
   aislamiento por código, lectura por columnas, calendario). Diseño del calendario en
   `docs/superpowers/specs/2026-09-02-asegura-portal-calendario-clientes-design.md`.
+- **«Herramientas» del portal (módulos gratis para clientes: flota, RRHH, alquileres) → `docs/ASEGURA-PORTAL-MODULOS.md`**
+  (hoja de ruta por fases, riesgos y preguntas abiertas; tabla `seguros.portal_modulo`, cola `GET /api/operador/portal-modulos`).
 - Ideas de producto ya recogidas (con su coste y su bloqueo) → `docs/CORREDURIA-INTRANET-IDEAS.md`.
   **Mira ahí antes de proponer una idea nueva**: probablemente ya está, con lo que la bloquea.
 - Sector y agente semanal → skill `agente-correduria`.
@@ -25,6 +27,10 @@ real medido, orden de trabajo). Después, según lo que toques:
   diagnóstico de «la ingesta está muda») → skill `cima-ingesta`.** La regla 6 de aquí abajo dice
   QUÉ no se hace sin spec; el CÓMO de la tubería está allí.
 - Google Contacts (agenda del móvil/WhatsApp) → skill `google-contactos`.
+- **Pólizas de otras compañías aportadas (portal o Alberto) → vencimientos → tarificación → negociación** →
+  `docs/CORREDURIA-CRM-VISION.md` §11 (visión 22/10/2026, hecho vs pendiente, ideas propuestas). Reglas clave: se
+  asume viva al subir y se confirma al vencimiento (`vigente_declarada`); lo leído no se pisa; las declaradas NUNCA
+  en `seguros.polizas`; nada sale al cliente sin OK.
 
 ## 🚨 No romper
 

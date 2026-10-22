@@ -423,6 +423,12 @@ export type PolizaDeclaradaFicha = {
   confirmadaPorUsuario: boolean
   titularTipo: string | null
   titularEmpresaNombre: string | null
+  /** `poliza` | `suplemento` | `recibo` | `otro` según la extracción; `null`/ausente = no se sabe. */
+  tipoDocumento?: string | null
+  /** Con qué se leyó el documento (`none` = no se pudo leer). `null`/ausente = no consta. */
+  fuente?: string | null
+  /** Nombre del fichero subido. */
+  documentoNombre?: string | null
   /**
    * `true` = esta ficha ya tiene una póliza con ese número: no es una
    * oportunidad, es la misma póliza subida dos veces. `null` = no se ha
@@ -458,6 +464,9 @@ export function leerDeclaradas(v: unknown): PolizaDeclaradaFicha[] | null {
       confirmadaPorUsuario: d.confirmadaPorUsuario === true,
       titularTipo: cadena(d.titularTipo),
       titularEmpresaNombre: cadena(d.titularEmpresaNombre),
+      tipoDocumento: cadena(d.tipoDocumento),
+      fuente: cadena(d.fuente),
+      documentoNombre: cadena(d.documentoNombre),
       yaEnCartera: typeof d.yaEnCartera === 'boolean' ? d.yaEnCartera : null,
       bien: leerBienDeclarada(d.bien),
     })

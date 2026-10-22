@@ -8,7 +8,7 @@
 //
 // Aquí no hay BD ni red: lo que decide va testeado en `oportunidad-documento-reglas.test.ts`.
 
-import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad, mismaCompania } from '@central/module-seguros'
+import { DIAS_AVISO_OPORTUNIDAD, decidirFichaPorIdentidad, fechaAvisoOportunidad, mismaCompania } from '@central/module-seguros'
 
 /** Días antes del vencimiento a los que se llama: la regla única de las oportunidades (`@central/module-seguros`). */
 export const DIAS_LLAMADA_ANTES_VENCIMIENTO = DIAS_AVISO_OPORTUNIDAD
@@ -93,9 +93,12 @@ export function mismoNombre(a: string | null | undefined, b: string | null | und
 const dniNormal = (s: string | null | undefined) => (s ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '')
 
 export type DecisionFicha =
-  | { tipo: 'ficha'; clienteId: string; porque: 'dni_ficha' | 'dni_cartera' | 'nombre' | 'sin_tomador' }
+  /** `reactivar`: la ficha estaba DESCARTADA y es la única con ese DNI/CIF: se usa y se reactiva (22/10/2026). */
+  | { tipo: 'ficha'; clienteId: string; porque: 'dni_ficha' | 'dni_cartera' | 'nombre' | 'sin_tomador'; reactivar?: boolean }
   | { tipo: 'lead' }
   | { tipo: 'sin_persona' }
+  /** Dos o más fichas ACTIVAS con el mismo DNI/CIF (22/10/2026): no se elige a ciegas ni se abre otra. */
+  | { tipo: 'ambigua'; candidatas: string[] }
 
 /**
  * ¿A qué ficha va la oportunidad? Por IDENTIDAD (DNI) antes que por nombre, y dos DNI distintos
@@ -116,12 +119,11 @@ export function decidirFicha(e: {
   const dniDoc = dniNormal(e.dniDocumento)
   if (dniDoc) {
     if (e.clienteSube && e.dniFicha && dniNormal(e.dniFicha) === dniDoc) return { tipo: 'ficha', clienteId: e.clienteSube, porque: 'dni_ficha' }
-    const cs = e.coincidencias ?? []
-    if (cs.length > 0) {
-      const propia = e.clienteSube ? cs.find((c) => c.id === e.clienteSube) : undefined
-      const elegida = propia ?? cs.find((c) => c.activo) ?? cs[0]
-      return { tipo: 'ficha', clienteId: elegida.id, porque: 'dni_cartera' }
-    }
+    // En TODA la cartera, descartadas incluidas (22/10/2026): la activa antes que la descartada; la
+    // única descartada se usa y se REACTIVA; dos activas = ambigua (`decidirFichaPorIdentidad`).
+    const d = decidirFichaPorIdentidad(e.coincidencias ?? [], e.clienteSube)
+    if (d.tipo === 'ficha') return { tipo: 'ficha', clienteId: d.clienteId, porque: 'dni_cartera', ...(d.reactivar ? { reactivar: true } : {}) }
+    if (d.tipo === 'ambigua') return { tipo: 'ambigua', candidatas: d.candidatas }
     // La ficha no tiene DNI guardado (o no se pudo leer) pero se llama igual: es ella. Con OTRO DNI
     // en la ficha, no: es otra persona aunque se llame igual.
     if (e.clienteSube && !e.dniFicha && mismoNombre(e.tomador, e.nombreFicha, { exacto: true })) return { tipo: 'ficha', clienteId: e.clienteSube, porque: 'nombre' }
@@ -186,7 +188,8 @@ export function puedeAbrirFiguras(e: Parameters<typeof puedeVolcarEnFicha>[0]): 
 export type AltaTomador = { nombre: string; apellidos: string; dni: string | null; tipoPersona: 'fisica' | 'juridica' | null }
 
 export type PlanTomador =
-  | { tipo: 'ficha'; clienteId: string; porque: 'dni_ficha' | 'dni_cartera' | 'nombre' | 'sin_tomador' }
+  | { tipo: 'ficha'; clienteId: string; porque: 'dni_ficha' | 'dni_cartera' | 'nombre' | 'sin_tomador'; reactivar?: boolean }
+  | { tipo: 'ambigua'; candidatas: string[] }
   /** Lead nuevo CON su DNI/CIF si lo trae (`alta.dni`), sin él si no; y las fichas que solo comparten contacto. */
   | { tipo: 'lead'; alta: AltaTomador; posiblesDuplicados: string[] }
   | { tipo: 'sin_persona' }
@@ -207,11 +210,16 @@ export function planTomador(e: {
   nombreFicha: string | null
   dniFicha: string | null
   alta: AltaTomador | null
-  encontradas: { id: string; por: string }[] | null
+  /** `activo` = `clientes.activo` (22/10/2026: antes se suponía `true` para todas y una descartada podía ganar). */
+  encontradas: { id: string; por: string; activo?: boolean }[] | null
 }): PlanTomador {
   const porIdentidad = e.encontradas === null
     ? null
-    : [...new Set(e.encontradas.filter((x) => x.por === 'dni').map((x) => x.id))].map((id) => ({ id, activo: true }))
+    : [...new Set(e.encontradas.filter((x) => x.por === 'dni').map((x) => x.id))].map((id) => ({
+        id,
+        // Sin el dato (llamada antigua) se supone activa: es lo que se hacía antes.
+        activo: e.encontradas!.some((x) => x.id === id && x.por === 'dni' && x.activo !== false),
+      }))
   const d = decidirFicha({
     clienteSube: e.clienteSube,
     nombreFicha: e.nombreFicha,
@@ -317,4 +325,68 @@ export function decidirOportunidadExistente(
     (o) => ESTADOS_ABIERTOS.includes(o.estado) && normalizarNumeroPoliza(o.numeroPoliza) === n && mismaCompania(nueva.aseguradora, o.aseguradora) !== 'otra',
   )
   return ya ? { accion: 'reutilizar', id: ya.id } : { accion: 'crear' }
+}
+
+export type OportunidadDeLaPoliza = OportunidadExistente & { clienteId: string }
+
+export type DecisionOportunidadPoliza =
+  | { accion: 'actualizar'; id: string; clienteId: string }
+  /** `cerradas`: la misma póliza ya tuvo oportunidad (ganada, perdida, descartada): se crea y se avisa. */
+  | { accion: 'crear'; cerradas: string[] }
+  /** Varias ABIERTAS de la misma póliza en fichas distintas y ninguna es la del documento: no se elige. */
+  | { accion: 'ambigua'; ids: string[] }
+  /**
+   * El nº de póliza casa con una abierta, pero no se puede afirmar que sea la misma (23/10/2026, revisión):
+   * el DNI/CIF leído es de OTRA ficha, o falta la compañía en un lado. NO se escribe nada (ni lectura, ni
+   * personas, ni relación): solo aviso.
+   */
+  | { accion: 'revisar'; id: string; clienteId: string; porque: 'ficha_distinta' | 'compania_ausente' }
+
+/**
+ * ¿Ya tiene oportunidad ESTA póliza en TODA la correduría? (22/10/2026, «escanear nunca duplica».)
+ * Mismo nº normalizado y misma compañía (o desconocida en un lado). Una ABIERTA → se ACTUALIZA, esté
+ * en la ficha que esté (el nº + compañía identifican la póliza mejor que la ficha que se haya elegido).
+ * Varias abiertas: la de la primera ficha de `preferidas` (tomador por DNI/CIF, la de donde se sube)
+ * que tenga alguna, la más antigua; si ninguna está en esas fichas y hay más de una ficha → ambigua.
+ * Las CERRADAS no se reabren: se devuelven para avisar. Sin nº → crear.
+ */
+export function decidirOportunidadDeLaPoliza(
+  nueva: { numeroPoliza: string | null; aseguradora: string | null },
+  existentes: readonly OportunidadDeLaPoliza[],
+  preferidas: readonly (string | null)[] = [],
+  /** Ficha decidida por DNI/CIF (`decidirFicha` → `tipo==='ficha'`); `null`/omitida = el documento no la fija. */
+  fichaPorDni: string | null = null,
+): DecisionOportunidadPoliza {
+  const n = normalizarNumeroPoliza(nueva.numeroPoliza)
+  if (!n) return { accion: 'crear', cerradas: [] }
+  const misma = existentes.filter((o) => normalizarNumeroPoliza(o.numeroPoliza) === n && mismaCompania(nueva.aseguradora, o.aseguradora) !== 'otra')
+  const abiertas = misma.filter((o) => ESTADOS_ABIERTOS.includes(o.estado))
+  const cerradas = misma.filter((o) => !ESTADOS_ABIERTOS.includes(o.estado)).map((o) => o.id)
+  if (abiertas.length === 0) return { accion: 'crear', cerradas }
+  // Adoptar una abierta solo con identidad firme: misma compañía (conocida en los dos lados) y, si el DNI
+  // fija ficha, que sea la de la oportunidad. Si no, a revisar sin escribir nada.
+  const adoptar = (o: OportunidadDeLaPoliza): DecisionOportunidadPoliza => {
+    if (mismaCompania(nueva.aseguradora, o.aseguradora) !== 'misma') return { accion: 'revisar', id: o.id, clienteId: o.clienteId, porque: 'compania_ausente' }
+    if (fichaPorDni && fichaPorDni !== o.clienteId) return { accion: 'revisar', id: o.id, clienteId: o.clienteId, porque: 'ficha_distinta' }
+    return { accion: 'actualizar', id: o.id, clienteId: o.clienteId }
+  }
+  for (const c of preferidas) {
+    const suya = c ? abiertas.find((o) => o.clienteId === c) : undefined
+    if (suya) return adoptar(suya)
+  }
+  const fichas = new Set(abiertas.map((o) => o.clienteId))
+  if (fichas.size === 1) return adoptar(abiertas[0])
+  return { accion: 'ambigua', ids: abiertas.map((o) => o.id) }
+}
+
+/**
+ * El Telegram a Alberto cuando una subida NO elige a ciegas (22/10/2026). Solo ids (ficha u
+ * oportunidad) y el origen: ni nombres, ni DNI/CIF, ni nº de póliza.
+ */
+export function textoAvisoAmbiguo(e: { motivo: 'ficha_ambigua' | 'oportunidad_ambigua' | 'oportunidad_dudosa' | 'figura_ambigua'; ids: readonly string[]; origen: string; n?: number }): string {
+  const ids = e.ids.slice(0, 10).map((id) => `<code>${id}</code>`).join(', ')
+  if (e.motivo === 'ficha_ambigua') return `⚠️ <b>Póliza subida sin asignar</b> (${e.origen}): el DNI/CIF del tomador está en ${e.ids.length} fichas ACTIVAS (${ids}). No se ha elegido ninguna ni abierto otra: revisa y funde si son la misma persona, y vuelve a subirla.`
+  if (e.motivo === 'oportunidad_ambigua') return `⚠️ <b>Póliza subida sin asignar</b> (${e.origen}): ya tiene ${e.ids.length} oportunidades ABIERTAS en fichas distintas (${ids}). No se ha actualizado ninguna: deja una sola y vuelve a subirla.`
+  if (e.motivo === 'oportunidad_dudosa') return `⚠️ <b>Póliza subida sin asignar</b> (${e.origen}): su nº de póliza coincide con la oportunidad ${ids}, pero el DNI/CIF del tomador es de otra ficha o falta la compañía. No se ha escrito nada: revisa si es la misma póliza y vuelve a subirla.`
+  return `⚠️ <b>Póliza subida</b> (${e.origen}): ${e.n ?? 1} persona(s) de la póliza tienen su DNI/CIF en varias fichas activas: no se han vinculado${ids ? ` (oportunidad ${ids})` : ''}. Revisa los posibles duplicados.`
 }

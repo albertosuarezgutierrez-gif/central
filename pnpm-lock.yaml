@@ -1285,6 +1285,12 @@ importers:
 
   packages/module-pagos: {}
 
+  packages/module-patrimonio:
+    dependencies:
+      '@central/module-contabilidad':
+        specifier: workspace:*
+        version: link:../module-contabilidad
+
   packages/module-pesca: {}
 
   packages/module-presupuestos: {}
