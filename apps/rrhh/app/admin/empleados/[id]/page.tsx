@@ -5,6 +5,8 @@ import { Prisma } from '@prisma/client'
 import { ACTOR_GESTOR } from '@/lib/carpetas'
 import { listarExpediente } from '@/lib/documental'
 import ExpedienteClient from './ExpedienteClient'
+import Card from '@/components/ui/Card'
+import MaterialAdminLista from '@/components/MaterialAdminLista'
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   let empresa_id: string
@@ -19,5 +21,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       FROM rrhh.empleados WHERE id = ${id}::uuid AND empresa_id = ${empresa_id}::uuid LIMIT 1`)
   if (!empRows[0]) notFound()
   const { carpetas, documentos } = { carpetas: (await import('@/lib/carpetas')).CARPETAS, documentos: await listarExpediente(empresa_id, id, ACTOR_GESTOR) }
-  return <ExpedienteClient empleado={JSON.parse(JSON.stringify(empRows[0]))} carpetas={carpetas} inicial={JSON.parse(JSON.stringify(documentos))} />
+  return (
+    <>
+      <ExpedienteClient empleado={JSON.parse(JSON.stringify(empRows[0]))} carpetas={carpetas} inicial={JSON.parse(JSON.stringify(documentos))} />
+      {/* El empleado ya está comprobado como de ESTA empresa (consulta de arriba); la API vuelve a filtrar por la sesión. */}
+      <Card as="section" className="my-3 min-w-0">
+        <h2 className="mb-2 text-base">Material</h2>
+        <MaterialAdminLista empleadoId={id} />
+      </Card>
+    </>
+  )
 }

@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — RRHH · «Mi material» con foto (Pilar): empleado sube foto (cámara, compresión cliente ~1600px, magic bytes, ≤8MB server / ≤4MB
+original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
+(0028, aplicada). Pendiente fase 2: revisión periódica mensual.
+
 **(22/10/2026)** — Patrimonio portal F1 pasos 2-3 (PR #4995): puros `acceso`/`infraseguro`/`enlace-inquilino` en `module-patrimonio`;
 SQL `2026-10-22_portal_patrimonio.sql` APLICADO en BD (18 tablas, triggers, GRANT por columnas, crm_seguros 0, sin DELETE).
 Decisiones Alberto: comunidad propia de cada titular (no compartida); filas de importación se vacían al cerrar.
