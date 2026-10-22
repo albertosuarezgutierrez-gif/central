@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-22T09:59:56Z",
+  "generadoEn": "2026-10-22T10:40:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -435,7 +435,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 6
       },
       "asegura-web": {
         "estado": "no",
@@ -542,8 +542,8 @@
         "evidencias": 0
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 3
       },
       "asegura-web": {
         "estado": "no",
@@ -2054,8 +2054,8 @@
         "evidencias": 0
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 6
       },
       "asegura-web": {
         "estado": "no",
@@ -2325,7 +2325,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 152
+        "evidencias": 153
       },
       "asegura-web": {
         "estado": "usado",
@@ -2433,7 +2433,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 121
+        "evidencias": 122
       },
       "asegura-web": {
         "estado": "usado",
@@ -4484,6 +4484,9 @@
       "/api/mis-datos/cuenta",
       "/api/mis-datos/cuenta/codigo",
       "/api/modulos",
+      "/api/patrimonio/codigo-postal",
+      "/api/patrimonio/inmuebles",
+      "/api/patrimonio/vias",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
@@ -7132,7 +7135,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1766,
+    "apis": 1769,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
