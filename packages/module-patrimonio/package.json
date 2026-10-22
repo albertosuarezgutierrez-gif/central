@@ -10,7 +10,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@central/module-contabilidad": "workspace:*"
+    "@central/module-contabilidad": "workspace:*",
+    "@central/module-tarificacion": "workspace:*"
   },
   "scripts": {
     "test": "node --test src/*.test.ts"
