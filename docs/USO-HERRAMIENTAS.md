@@ -171,24 +171,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 368 | 60.925 | 52.443.821 | 0 | 0 |
-| `otro` | 363 | 14.356 | 32.286.445 | 19.504.587 | 0 |
-| `lectura-directa` | 313 | 9.891 | 28.340.621 | 0 | 0 |
-| `mcp:github` | 315 | 7.498 | 5.841.861 | 54.621.355 | 100 |
-| `sql` | 232 | 5.923 | 2.999.267 | 2.351.230 | 24 |
-| `escritura` | 230 | 5.268 | 77.903.371 | 0 | 0 |
+| `bash` | 368 | 61.038 | 52.630.236 | 0 | 0 |
+| `otro` | 363 | 14.415 | 32.346.647 | 19.545.881 | 0 |
+| `lectura-directa` | 313 | 9.893 | 28.340.987 | 0 | 0 |
+| `mcp:github` | 315 | 7.511 | 5.850.925 | 54.621.355 | 100 |
+| `sql` | 232 | 5.925 | 2.999.557 | 2.351.230 | 24 |
+| `escritura` | 230 | 5.269 | 78.170.621 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 56 | 1.362 | 1.516.367 | 0 | 101 |
-| `mcp:Vercel` | 78 | 1.318 | 1.192.326 | 237.328 | 38 |
+| `mcp:Vercel` | 78 | 1.321 | 1.193.004 | 237.328 | 38 |
 | `mcp:Booking-com` | 46 | 1.290 | 5.288.482 | 0 | 0 |
-| `agente:general-purpose` | 125 | 994 | 585.375 | 16.508.102 | 0 |
-| `mcp:claude-code-remote` | 59 | 711 | 63.542 | 20.519 | 0 |
+| `agente:general-purpose` | 125 | 997 | 587.933 | 17.108.127 | 0 |
+| `mcp:claude-code-remote` | 59 | 715 | 63.720 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 12 | 591 | 721.568 | 0 | 0 |
 | `mcp:Supabase` | 137 | 434 | 74.957 | 5.123 | 7 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
-| `agente:agente-architect` | 76 | 382 | 268.066 | 8.659.831 | 0 |
+| `agente:agente-architect` | 76 | 383 | 268.676 | 8.667.408 | 0 |
 | `mcp:Google-Drive` | 28 | 153 | 156.250 | 0 | 2 |
-| `agente:agente-mecanico` | 51 | 133 | 77.009 | 7.569.041 | 0 |
+| `agente:agente-mecanico` | 51 | 134 | 77.046 | 7.569.041 | 0 |
 | `agente:rastreador-codigo` | 56 | 109 | 34.904 | 1.399.460 | 0 |
 | `mcp:OpenSEO` | 5 | 92 | 76.972 | 0 | 2 |
 | `mcp:Resend` | 9 | 88 | 78.484 | 0 | 0 |

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-22T11:49:19Z",
-  "sha": "47aa4b973fd7a1f85fc47c3241db7bc9cb63f484",
+  "generadoEn": "2026-10-22T13:05:52Z",
+  "sha": "f95abe624e24d44c34deaecf49832adf101999dc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6162,6 +6162,53 @@
       "hash": "891d65d1b795"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/Documentos.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Documentos"
+      ],
+      "funciones": [
+        {
+          "nombre": "mensaje",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "j: { error?: string; campo?: string }",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "tamanoEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "b: number",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "Documentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId, inmuebleId }: { clienteId: string; inmuebleId: string }",
+          "retorno": null,
+          "linea": 36,
+          "resumen": "Documentos del inmueble: carpetas, subir, descargar y borrar. El `titular` y el owner que se mandan son PETICIONES: el servidor las busca dentro de lo que esta sesión puede ver (ajeno = 404). La lista"
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "acf716510dce"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -6174,7 +6221,7 @@
           "exportada": false,
           "params": "v: boolean | null",
           "retorno": null,
-          "linea": 12
+          "linea": 14
         },
         {
           "nombre": "InmueblePage",
@@ -6182,13 +6229,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 19,
+          "linea": 21,
           "resumen": "Ficha del inmueble. 🚨 El id de la URL NO consulta por sí solo: `inmuebleAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver (`accesosPatrimonio`). Si no existe o no es tuyo: 404 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cbc0484896bf"
+      "hash": "decb688b2199"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/ListaInmuebles.tsx",
@@ -7534,6 +7581,75 @@
       "tablas": [],
       "rutaApi": "/api/patrimonio/derramas",
       "hash": "7866eb9cfd21"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/documentos/[id]/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "disposicion",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 14,
+          "resumen": "Nombre para la cabecera: ASCII de relleno + `filename*` UTF-8 (RFC 5987). `nombreSeguro` ya quitó comillas y control."
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "`GET /api/patrimonio/documentos/<id>?titular=<ficha>` — DESCARGA. Nunca una URL pública: vuelve a comprobar acceso y rol, y responde siempre `attachment` con un MIME de la lista cerrada (PDF/JPG/PNG/W"
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 53
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/documentos/[id]",
+      "hash": "301720684ca6"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/documentos/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "ajeno, inexistente o sin nivel = la misma 404. El tope por identidad va ANTES de leer el cuerpo; sin `content-length` numérico, 411; mayor que el máximo, 413 (también antes de leer)."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 47
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/documentos",
+      "hash": "fecde9099ac5"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/facturas/route.ts",
@@ -14300,6 +14416,55 @@
       "hash": "3b9a40c20daf"
     },
     {
+      "ruta": "apps/asegura-portal/lib/patrimonio/carpetas.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 8) — carpetas de documentos por owner y QUIÉN puede hacer qué en cada una. PURO. Usa el motor `@central/module-documental` (owner opaco tipo+id, `ConfigCarpeta`, `puedeVer`/`puedeSubir`). Las carpetas las define ESTA vertical, no el módulo. Dos actores del módulo: `gesto",
+      "exporta": [
+        "esOwnerDocumento",
+        "carpetaDeOwner",
+        "puedeDocumento"
+      ],
+      "funciones": [
+        {
+          "nombre": "G",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "id: string, etiqueta: string",
+          "retorno": "ConfigCarpeta",
+          "linea": 16
+        },
+        {
+          "nombre": "esOwnerDocumento",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is OwnerDocumento",
+          "linea": 34
+        },
+        {
+          "nombre": "carpetaDeOwner",
+          "kind": "function",
+          "exportada": true,
+          "params": "owner: unknown, carpeta: unknown",
+          "retorno": "boolean",
+          "linea": 37,
+          "resumen": "¿La carpeta existe PARA ESE owner?"
+        },
+        {
+          "nombre": "puedeDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "rol: RolDocumental | null | undefined, accion: AccionDocumental, owner: unknown, carpeta: unknown",
+          "retorno": "boolean",
+          "linea": 48,
+          "resumen": "Tabla de permisos. Gestión/Total: ven (`ver`) y suben/borran (`gestionar_gastos_documentos`); `inquilino` solo ve y sube en carpetas que el módulo marca para el titular (recibos) y NUNCA borra. Rol `n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "06cca1ccc0fd"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/patrimonio/dia-madrid.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "PATRIMONIO (22/10/2026, paso 7) — el «día» de un tope diario es el de ESPAÑA (Europe/Madrid), no el de UTC: a las 00:30 de Madrid en verano todavía es «ayer» en UTC y el contador no se reiniciaría hasta las 02:00. PURO: el reloj se inyecta.",
@@ -14399,6 +14564,147 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2d7b3d87377b"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/documentos-api.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 8) — lógica PURA (puertos inyectados, sin prisma ni sesión) de los documentos de un inmueble/contrato/inquilino: subir, listar, descargar y borrar (lógico). La BD real está en `documentos-bd.ts` (SQL `2026-10-22_portal_patrimonio_documento.sql`). 🚨 Como `facturas-api.ts",
+      "exporta": [
+        "nombreSeguro",
+        "nombreConExtension",
+        "responderSubidaDocumento",
+        "responderListaDocumentos",
+        "responderDescargaDocumento",
+        "responderBorrarDocumento"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 48,
+          "resumen": "Nombre mostrable: sin ruta, sin caracteres de control (C0/C1), sin marcas de dirección bidi (`factura‮fdp.exe` se pintaría «factura.exe.pdf» al revés) ni separadores de línea Unicode, ≤120 caracteres "
+        },
+        {
+          "nombre": "nombreConExtension",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, mime: TipoFactura",
+          "retorno": "string",
+          "linea": 62,
+          "resumen": "El nombre con la extensión de su tipo real: si ya la lleva (`.jpeg` vale para JPG) se deja; si no, se añade."
+        },
+        {
+          "nombre": "owner",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipo: unknown, id: unknown",
+          "retorno": "OwnerRef | null",
+          "linea": 69
+        },
+        {
+          "nombre": "titularCon",
+          "kind": "function",
+          "exportada": false,
+          "params": "accesos: AccesosMapa, pedido: unknown, accion: 'ver' | 'subir' | 'borrar', o: OwnerDocumento",
+          "retorno": "string | null",
+          "linea": 73,
+          "resumen": "El titular pedido, SOLO si está en los accesos y su nivel permite la acción sobre alguna carpeta del owner."
+        },
+        {
+          "nombre": "responderSubidaDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosDocumentos, c: { titular: unknown; ownerTipo: unknown; ownerId: unknown; carpeta: unknown; fichero: FicheroDocumento | null },",
+          "retorno": "Promise<Respuesta>",
+          "linea": 78
+        },
+        {
+          "nombre": "responderListaDocumentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosDocumentos, c: { titular: unknown; ownerTipo: unknown; ownerId: unknown; desde?: unknown }",
+          "retorno": "Promise<Respuesta>",
+          "linea": 108
+        },
+        {
+          "nombre": "responderDescargaDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosDocumentos, c: { titular: unknown; documento: unknown }",
+          "retorno": "Promise<RespuestaDescarga>",
+          "linea": 120
+        },
+        {
+          "nombre": "responderBorrarDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosDocumentos, c: { titular: unknown; documento: unknown }",
+          "retorno": "Promise<Respuesta>",
+          "linea": 131
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e83b94a243f0"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/documentos-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 8) — adaptador con BD de los documentos de un inmueble/contrato/inquilino (ficheros en `bytea`, tabla `portal_patrimonio_documento`, SQL `2026-10-22_portal_patrimonio_documento.sql`). 🚨 Como `facturas-bd.ts`/`gastos-bd.ts`: parte de `accesosPatrimonio(identidadId)` (coo",
+      "exporta": [
+        "crearDocumentoTx",
+        "puertosDocumentos"
+      ],
+      "funciones": [
+        {
+          "nombre": "aMeta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: FilaMeta",
+          "retorno": "DocumentoMeta",
+          "linea": 29
+        },
+        {
+          "nombre": "ownerDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: FilaMeta",
+          "retorno": "OwnerRef | null",
+          "linea": 30
+        },
+        {
+          "nombre": "titularExistente",
+          "kind": "function",
+          "exportada": false,
+          "params": "clienteId: string",
+          "retorno": "Promise<",
+          "linea": 34,
+          "resumen": "El titular de una ficha YA autorizada, sin crearlo (leer/listar/borrar no dan de alta nada)."
+        },
+        {
+          "nombre": "crearDocumentoTx",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: Tx, x: { titularId: string; identidadId: string; owner: OwnerRef; carpeta: string; nombre: string; mime: TipoFactura; sha256: string; contenido: Buffer },",
+          "retorno": "Promise<string>",
+          "linea": 43,
+          "resumen": "Inserta el documento DENTRO de una transacción ya abierta (la usan `guardar` y la subida de facturas, que lo hace en la misma reserva). No comprueba el tope: lo hace quien la llama con SU bloqueo. La "
+        },
+        {
+          "nombre": "puertosDocumentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, ahora: () => Date = () => new Date()",
+          "retorno": "PuertosDocumentos",
+          "linea": 64
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0f210e972b36"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/extraer-factura.ts",
@@ -14554,7 +14860,7 @@
           "exportada": false,
           "params": "c: unknown",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "vacio",
@@ -14562,7 +14868,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "titularGestion",
@@ -14570,7 +14876,7 @@
           "exportada": false,
           "params": "accesos: AccesosMapa, pedido: unknown",
           "retorno": "string | null",
-          "linea": 61
+          "linea": 71
         },
         {
           "nombre": "responderSubidaFactura",
@@ -14578,7 +14884,7 @@
           "exportada": true,
           "params": "p: PuertosFacturas, c: CamposSubida",
           "retorno": "Promise<Respuesta>",
-          "linea": 68
+          "linea": 78
         },
         {
           "nombre": "importeOpcional",
@@ -14586,7 +14892,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null | 'invalido'",
-          "linea": 99,
+          "linea": 109,
           "resumen": "Importe opcional: vacío o 0 = «no hay» (`null`); inválido o negativo = `'invalido'`."
         },
         {
@@ -14595,7 +14901,7 @@
           "exportada": true,
           "params": "cuerpo: unknown",
           "retorno": "V",
-          "linea": 111,
+          "linea": 121,
           "resumen": "Lo que la persona ha revisado. `total` obligatorio y > 0 (nunca un gasto de 0 €); `base`, `iva` y `retencion` opcionales. El cuadre es total = base + IVA − retención (±2 céntimos): una factura con ret"
         },
         {
@@ -14604,12 +14910,12 @@
           "exportada": true,
           "params": "p: PuertosFacturas, cuerpo: unknown",
           "retorno": "Promise<Respuesta>",
-          "linea": 147
+          "linea": 157
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fba902ba6f95"
+      "hash": "805454490651"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/facturas-bd.ts",
@@ -14625,7 +14931,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 20
+          "linea": 24
         },
         {
           "nombre": "puertosFacturas",
@@ -14633,13 +14939,15 @@
           "exportada": true,
           "params": "identidadId: string, ahora: () => Date = () => new Date()",
           "retorno": "PuertosFacturas",
-          "linea": 23,
+          "linea": 27,
           "resumen": "`ahora` se inyecta para poder probar el límite del día; en producción es el reloj."
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "node"
+      ],
       "rutaApi": null,
-      "hash": "440e4f99ab22"
+      "hash": "79cb5dc1eb58"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/gastos-api.ts",
@@ -15005,13 +15313,13 @@
           "exportada": true,
           "params": "identidadId: string, idPedido: string",
           "retorno": "Promise<FichaInmueble | null>",
-          "linea": 124,
+          "linea": 126,
           "resumen": "El inmueble del id de la URL SOLO si cuelga de un titular autorizado. `null` = 404 (no existe o no es tuyo)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d4c8639c1a24"
+      "hash": "4ee3a9608d65"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/lectura.ts",
@@ -239856,7 +240164,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5036,
-    "funciones": 19252
+    "archivos": 5042,
+    "funciones": 19278
   }
 }
