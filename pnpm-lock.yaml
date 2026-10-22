@@ -257,6 +257,9 @@ importers:
       '@central/core-telegram':
         specifier: workspace:*
         version: link:../../packages/core-telegram
+      '@central/module-patrimonio':
+        specifier: workspace:*
+        version: link:../../packages/module-patrimonio
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros
@@ -1290,6 +1293,9 @@ importers:
       '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../module-contabilidad
+      '@central/module-tarificacion':
+        specifier: workspace:*
+        version: link:../module-tarificacion
 
   packages/module-pesca: {}
 
