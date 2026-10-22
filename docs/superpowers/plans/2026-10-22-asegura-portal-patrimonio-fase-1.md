@@ -40,7 +40,7 @@
   `NavPortal.tsx`: entrada «Patrimonio» solo si `accesosPatrimonio` no está vacío.
 - Responsive ≥320 px (mide en el scroller), dinero con `eur()`. Tests de la ruta (aislamiento 404) y del formulario (CP primero).
 
-## Paso 6 — Gastos fijos, comunidad y derramas (general-purpose, sonnet)
+## Paso 6 — Gastos fijos, comunidad y derramas ✅ (22/10/2026)
 - `app/(portal)/patrimonio/gastos/*`, `app/api/patrimonio/plantillas/route.ts`, `app/api/patrimonio/derramas/route.ts`,
   `app/api/cron/patrimonio-gastos/route.ts` (idempotente por `clave`, `CRON_SECRET`), `vercel.json` cron.
 - Tests: el cron dos veces no duplica (P2002 tolerado), plantilla ajena → 404.

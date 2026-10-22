@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Patrimonio F1 paso 6: `/patrimonio/gastos` (plantillas, comunidad, derramas; comunidad exige nivel Total) + cron diario
+`/api/cron/patrimonio-gastos` (05:20, idempotente por `clave`, `isCronAuthorized`) que genera gastos `propuesto`. Siguiente: paso 7 (facturas con IA).
 **(22/10/2026)** — Patrimonio portal F1 pasos 4-5 (PR #5009): `lib/patrimonio/accesos.ts` (solo vínculos gestionar/administrar,
 nunca origen corredor; vista corredor → nada; 404) + `lectura.ts`; pantallas `/patrimonio` (lista por titular, ficha de inmueble,
 alta con CP primero → `DireccionCp.tsx` portado de plataforma). §15 del SQL ya aplicado por Alberto. #4995 fusionado.
