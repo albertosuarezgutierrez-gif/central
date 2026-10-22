@@ -13,6 +13,8 @@ import { fechaEs } from '@/lib/fechas'
 
 import { AnadirPoliza, type PolizaGuardada } from './AnadirPoliza'
 import { PasoRenovacion } from './PasoRenovacion'
+import { PasoTitularEmpresa } from './PasoTitularEmpresa'
+import { titularDeLaCasilla, type PropuestaTitular } from '@/lib/titular-propuesto'
 import type { RamoOpcion } from './CamposPoliza'
 
 type DatosLeidos = {
@@ -34,6 +36,8 @@ type Resultado = {
    *  ha probado ninguna. `'contrasena_incorrecta'` = SÍ se probó una y no era —
    *  la pantalla ofrece escribir otra, nunca la misma. */
   motivo?: 'protegido' | 'contrasena_incorrecta'
+  /** «Está a nombre de X: ¿es de tu empresa?». Solo se PROPONE; ausente = la API vieja, no se pregunta. */
+  propuestaTitular?: PropuestaTitular
 }
 
 /** Lo que cabe en una subida: Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta. */
@@ -72,12 +76,12 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   // quién es?» antes de poder subir nada era ponerle una puerta al 95 % para
   // atender al 5 %. La casilla sigue a la vista, así que quien sube la de su
   // sociedad la marca y entonces sí se le pide cuál (nombre + CIF).
-  // Lo que se guarda si no la marca es «propio», y eso se coteja contra su
-  // ficha personal — el coste asumido es que una póliza de empresa subida sin
-  // marcar la casilla puede salir como oportunidad aunque la sociedad ya la
-  // tenga con la casa; lo revisa el corredor, que ve la fila igualmente.
+  // 🚨 Si NO la marca se guarda NULL («no consta»), no «propio» (22/10/2026). Antes se guardaba
+  // «propio», y eso era un «no se sabe» guardado como afirmación: hacía visibles a los terceros
+  // autorizados (`TITULAR_TIPO_VISIBLE_A_TERCERO`) pólizas de empresa subidas sin marcar la casilla.
+  // Si el documento trae como tomador una empresa, se le pregunta DESPUÉS (`PasoTitularEmpresa`).
   const [esDeEmpresa, setEsDeEmpresa] = useState(false)
-  const deQuien: 'propio' | 'empresa' = esDeEmpresa ? 'empresa' : 'propio'
+  const deQuien = titularDeLaCasilla(esDeEmpresa)
   // Se recuerda entre subidas porque quien trae las pólizas de su empresa trae
   // varias seguidas. Se recuerda VISIBLE: el control sigue en pantalla con la
   // respuesta marcada, así que cambiarla es un clic y no hay nada oculto.
@@ -96,6 +100,8 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const [errorReintento, setErrorReintento] = useState<string | null>(null)
   /** El paso opcional «documento desfasado» se ha cerrado («Ahora no»). Vuelve a abrirse en otra subida. */
   const [pasoRenovacionCerrado, setPasoRenovacionCerrado] = useState(false)
+  /** El paso opcional «¿es de tu empresa?» se ha cerrado (contestado o «Ahora no»). */
+  const [pasoTitularCerrado, setPasoTitularCerrado] = useState(false)
 
   async function subir(e: React.ChangeEvent<HTMLInputElement>) {
     const elegido = e.target.files?.[0]
@@ -109,6 +115,7 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     setContrasena('')
     setErrorReintento(null)
     setPasoRenovacionCerrado(false)
+    setPasoTitularCerrado(false)
     // Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta (29/09/2026): una foto se
     // encoge aquí, y un PDF que siga pasando de 4 MB se dice claro en vez de mandarlo.
     const f = await encogerSiHaceFalta(elegido)
@@ -118,9 +125,9 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     }
     const body = new FormData()
     body.append('documento', f)
-    // Siempre viaja: «propio» si no ha marcado la casilla, «empresa» si sí.
-    body.append('titularTipo', deQuien)
+    // Solo viaja si ha marcado la casilla: sin marcar, la fila nace con `titular_tipo` NULL.
     if (deQuien === 'empresa') {
+      body.append('titularTipo', 'empresa')
       body.append('titularEmpresaNombre', empresa)
       if (cif.trim() !== '') body.append('titularEmpresaCif', cif)
     }
@@ -201,7 +208,7 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const cifPuesto = cif.trim() !== ''
   const cifMal = deQuien === 'empresa' && cifPuesto && !titularParaEnviar.cifValido
   const listoParaSubir =
-    deQuien === 'propio' || (deQuien === 'empresa' && empresa.trim() !== '' && titularParaEnviar.cifValido)
+    deQuien === null || (deQuien === 'empresa' && empresa.trim() !== '' && titularParaEnviar.cifValido)
   const etiquetaRamo = (valor: string | null) =>
     valor === null ? null : (ramos.find((r) => r.valor === valor)?.etiqueta ?? valor)
 
@@ -468,6 +475,18 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
                         : NO_LEIDO}
                     </dd>
                   </dl>
+                  {/* Tomador leído = una EMPRESA y no había dicho de quién es: se PROPONE la
+                      pregunta (opcional). Sin respuesta, `titular_tipo` sigue a NULL. */}
+                  {resultado.id && !pasoTitularCerrado && resultado.propuestaTitular?.tipo === 'preguntar_empresa' && (
+                    <PasoTitularEmpresa
+                      key={`titular-${resultado.id}`}
+                      polizaId={resultado.id}
+                      nombre={resultado.propuestaTitular.nombre}
+                      cif={resultado.propuestaTitular.cif}
+                      onCerrar={() => setPasoTitularCerrado(true)}
+                      onGuardado={() => router.refresh()}
+                    />
+                  )}
                   {/* Documento DESFASADO (vencimiento leído ya pasado o prima sin leer): paso
                       opcional para pedir la prima de la última renovación y la fecha en que
                       renueva. Solo si SÍ se leyó algo (rama `fuente !== 'none'`) y hay fila. */}

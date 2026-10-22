@@ -265,16 +265,20 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     titulo = pr.titulo
     if (pr.sinLeer) {
       // No se pudo leer: no se pregunta al cliente lo que el documento sí diría. Se revisa el fichero.
-      lineas = [pr.documento ? `Fichero: ${pr.documento}` : null]
+      lineas = [pr.deEmpresa, pr.documento ? `Fichero: ${pr.documento}` : null]
       avisos.push({ texto: 'Revisar el documento', tono: 'aviso' })
     } else {
       lineas = [
+        // 🚨 Declarada de su EMPRESA: no es un seguro de esta persona. Se dice ARRIBA.
+        pr.deEmpresa,
         pr.compania,
         pr.numero,
         [textoVence(d.fechaVencimiento, ctx.hoy, 'declarado', { anual: true }), d.primaAnual !== null ? eur(d.primaAnual) : null].filter(Boolean).join(' · '),
       ]
     }
-    if (!pr.sinLeer) avisos.push({ texto: 'Abrir seguimiento', tono: 'aviso' })
+    // Una de su empresa no se sigue en la ficha de la persona: sería venderle a ella lo de la sociedad.
+    if (pr.deEmpresa) avisos.push({ texto: 'No es suya: de su empresa', tono: 'aviso' })
+    else if (!pr.sinLeer) avisos.push({ texto: 'Abrir seguimiento', tono: 'aviso' })
   }
 
   const cuerpo = (

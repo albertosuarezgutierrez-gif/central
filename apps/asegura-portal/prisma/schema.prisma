@@ -265,6 +265,12 @@ model PortalPolizaDeclarada {
   titularEmpresaNombre String?           @map("titular_empresa_nombre")
   /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
   titularEmpresaCif    String?           @map("titular_empresa_cif")
+  /// Qué dice ser el cliente en esa empresa (22/10/2026,
+  /// `prisma/sql/2026-10-22_portal_declarada_titular_rol.sql`): `propietario` | `administrador` |
+  /// `empleado` | `otro` (CHECK; solo con `titular_tipo='empresa'`). `null` = no lo dijo (es
+  /// opcional y saltable). 🔒 Es una DECLARACIÓN: no da acceso a la ficha de la empresa.
+  /// ⚠️ Declarada aquí ANTES de que exista en la BD = 42703 en toda lectura: el SQL va antes.
+  titularRolDeclarado  String?           @map("titular_rol_declarado")
   extraccionBruta      Json?             @map("extraccion_bruta")
   /// Garantías que la IA leyó en el PDF (lista de textos cortos). NULL = no se
   /// ha leído (alta a mano o subida anterior al 20/09/2026); `[]` = leído y no

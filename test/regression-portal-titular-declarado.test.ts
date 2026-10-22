@@ -30,26 +30,25 @@ const PUERTO = leer('apps', 'asegura', 'lib', 'leads-portal.ts')
 const MANUAL = leer('apps', 'asegura-portal', 'app', '(portal)', 'boveda', 'AnadirPoliza.tsx')
 const SQL = leer('apps', 'asegura-portal', 'prisma', 'sql', '2026-09-07_portal_declarada_titular.sql')
 
-test('🚨 la casilla «es de una empresa» arranca SIN marcar, y sin marcarla se manda «propio»', () => {
-  // Alberto, 08/09/2026: «la mayoría no tiene empresa». La pregunta ya no es
-  // una puerta que hay que cruzar para subir nada: es una casilla a la vista
-  // que arranca en «no». Y lo que viaja SIEMPRE es una respuesta («propio» o
-  // «empresa»), porque «no se preguntó» decide que NO se coteje contra ninguna
-  // ficha, y eso dejaría sin comprobar todas las pólizas personales.
+test('🚨 la casilla «es de una empresa» arranca SIN marcar, y sin marcarla NO se manda «propio»', () => {
+  // Alberto, 08/09/2026: «la mayoría no tiene empresa» → casilla a la vista que arranca en «no».
+  // 🚨 22/10/2026: lo que viajaba sin marcarla era «propio», un «no se sabe» guardado como
+  // AFIRMACIÓN — y `TITULAR_TIPO_VISIBLE_A_TERCERO = 'propio'` enseñaba a terceros autorizados
+  // pólizas de empresa subidas sin marcar la casilla. Ahora sin marcar NO viaja nada (NULL); si el
+  // tomador leído es una empresa, se pregunta después (`PasoTitularEmpresa`).
   const codigo = sinComentarios(SUBIR)
   assert.match(codigo, /useState\(false\)/, 'la casilla de empresa tiene que arrancar sin marcar')
   assert.match(codigo, /type="checkbox"/, 'tiene que ser una casilla, no un par de radios obligatorios')
-  // 🪤 Anclado al principio de línea: la primera versión buscaba el `append`
-  // suelto y seguía verde con `if (esDeEmpresa) body.append(...)` delante, que
-  // es exactamente el condicional que este cepo prohíbe. Se vio al romperlo.
-  assert.match(
-    codigo,
-    /^\s*body\.append\('titularTipo', deQuien\)/m,
-    'el titular tiene que viajar siempre, sin condicionarlo a que se haya contestado',
+  assert.match(codigo, /titularDeLaCasilla\(esDeEmpresa\)/, 'la casilla se traduce con el helper puro (sin marcar → null)')
+  assert.ok(!/'propio'/.test(codigo), 'la subida no puede mandar «propio» por su cuenta: eso lo afirma el cliente o nadie')
+  assert.ok(
+    !/^\s*body\.append\('titularTipo', deQuien\)/m.test(codigo),
+    'el titular NO viaja sin condición: sin marcar la casilla la fila nace con titular_tipo NULL',
   )
+  assert.match(codigo, /body\.append\('titularTipo', 'empresa'\)/, 'marcada, viaja «empresa»')
   assert.ok(
     !/useState<'propio' \| 'empresa' \| null>/.test(codigo),
-    'la pregunta ya no arranca en null: eso bloqueaba los dos botones a todo el mundo',
+    'la pregunta no es una puerta obligatoria: eso bloqueaba los dos botones a todo el mundo',
   )
 })
 
@@ -123,7 +122,9 @@ test('🚨 el alta A MANO manda la misma respuesta', () => {
   const codigo = sinComentarios(MANUAL)
   const envio = codigo.match(/body: JSON\.stringify\(\{[\s\S]*?\}\)/)?.[0] ?? ''
   assert.notEqual(envio, '', 'no se encuentra el cuerpo del alta a mano')
-  assert.match(envio, /titularTipo: titular\.tipo/, 'el alta a mano tiene que mandar el titular')
+  // 22/10/2026: solo si marcó «es de una empresa»; sin marcar, nada (NULL = «no consta»).
+  assert.match(envio, /titular\.tipo === 'empresa'[\s\S]*titularTipo: 'empresa'/, 'el alta a mano tiene que mandar el titular cuando la marcó')
+  assert.ok(!/'propio'/.test(envio), 'el alta a mano no puede mandar «propio» por omisión')
 })
 
 test('🚨 la pregunta se hace UNA vez, y bloquea los DOS caminos', () => {

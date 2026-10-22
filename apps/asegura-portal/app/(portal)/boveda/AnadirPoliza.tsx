@@ -51,7 +51,11 @@ export function AnadirPoliza({
    * discrepando, y el que se guardara sería el que estuviera más cerca del
    * `fetch` — o sea, cuestión de suerte.
    */
-  titular: { tipo: 'propio' | 'empresa'; nombre: string; cif: string }
+  /**
+   * `tipo: null` = no ha marcado «es de una empresa»: NO se manda `titularTipo` y la fila nace con
+   * `titular_tipo` NULL («no consta»). Nunca `'propio'` por omisión (`lib/titular-propuesto.ts`).
+   */
+  titular: { tipo: 'empresa' | null; nombre: string; cif: string }
   onCancelar: () => void
   onGuardada: (poliza: PolizaGuardada) => void
 }) {
@@ -113,9 +117,9 @@ export function AnadirPoliza({
           // La misma respuesta que en el alta con documento. Sin esto, todo lo
           // añadido a mano nacía como «no se preguntó» aunque la persona
           // acabara de contestar dos centímetros más arriba.
-          titularTipo: titular.tipo,
+          // Solo viaja si la marcó: sin marcar, «no consta» (NULL), no «es mía».
           ...(titular.tipo === 'empresa'
-            ? { titularEmpresaNombre: titular.nombre, titularEmpresaCif: titular.cif.trim() || null }
+            ? { titularTipo: 'empresa', titularEmpresaNombre: titular.nombre, titularEmpresaCif: titular.cif.trim() || null }
             : {}),
           compania,
           numeroPoliza,

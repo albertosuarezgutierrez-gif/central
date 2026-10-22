@@ -46,6 +46,7 @@ import {
 } from '@central/module-seguros-portal'
 
 import { normalizarCoberturasLeidas } from './coberturas-leidas'
+import { normalizarTomadorLeido, type TomadorLeido } from './titular-propuesto'
 import {
   normalizarReferenciaCatastralLeida,
   normalizarVehiculoLeido,
@@ -96,6 +97,13 @@ export type PolizaExtraida = PolizaLeida &
      * el documento no enumera ninguna. Nunca se inventan ni se «traducen».
      */
     coberturas: string[] | null
+    /**
+     * El TOMADOR leído, ya minimizado (`lib/titular-propuesto.ts`): `null` = no se leyó;
+     * `{tipo:'persona'}` = persona física (ni su nombre ni su DNI se guardan: el DNI solo sirve
+     * para clasificar); `{tipo:'empresa', nombre, cif}` = empresa, CIF solo si es válido. Sirve
+     * para PROPONER «¿es de tu empresa?» tras subir; nunca escribe `titular_tipo` solo.
+     */
+    tomador: TomadorLeido | null
   }
 
 /**
@@ -163,7 +171,7 @@ export type ResultadoExtraccion = {
 // puede volver a leer — hay que pedirle a la persona que lo suba otra vez.
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"fechaEfecto":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null,"coberturas":string[]|null}
+{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"fechaEfecto":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null,"coberturas":string[]|null,"tomador":string|null,"tomadorEsEmpresa":boolean|null,"cifTomador":string|null,"dni":string|null}
 Reglas:
 - "compania": la ASEGURADORA que emite/suscribe este contrato (la «entidad aseguradora» de las condiciones particulares o del pie legal). NUNCA el mediador, corredor o agente, ni una aseguradora citada como anterior, de reaseguro, de publicidad o de asistencia. Cópiala como aparece; si no la ves con claridad, null.
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
@@ -177,6 +185,10 @@ Reglas:
 - "fechaMatriculacion": la fecha de PRIMERA MATRICULACIÓN del vehículo, que no es la fecha de efecto ni la de vencimiento de la póliza.
 - "referenciaCatastral": la referencia catastral del inmueble asegurado, tal cual aparece. Cópiala carácter a carácter; NUNCA la completes ni la corrijas.
 - "coberturas": la lista de GARANTÍAS o coberturas contratadas que el documento enumera (por ejemplo "Defensa jurídica", "Asistencia en viaje", "Responsabilidad civil familiar", "Lunas", "Robo"). Cada una un texto corto, con el nombre exacto que le da la compañía, sin importes ni franquicias. Solo las CONTRATADAS: si el documento distingue contratadas y no contratadas, deja fuera las segundas. Si el documento no enumera ninguna, pon [].
+- "tomador": el TOMADOR del seguro (puede llamarse "tomador", "titular de la póliza", "contratante" o "policyholder"). Si es una EMPRESA (sociedad, S.L., S.A.…), su RAZÓN SOCIAL tal cual, NUNCA la "persona de contacto" ni el conductor.
+- "tomadorEsEmpresa": true si el tomador es una persona jurídica (empresa, sociedad, comunidad, asociación…); false si es una persona física; null si no se puede decidir.
+- "cifTomador": el identificador fiscal del tomador EMPRESA (rotulado "CIF", "NIF", "NIF-IVA" o "VAT", a veces con "ES" delante). Cópialo tal cual. Si el tomador es persona física, null.
+- "dni": el DNI/NIE del tomador PERSONA FÍSICA. Si el tomador es una empresa, null (NO pongas el de la persona de contacto ni el del conductor).
 - Si un dato NO aparece en el documento, pon null. NUNCA lo inventes ni lo deduzcas, y NUNCA escribas "N/A", "no consta", "desconocido" ni un guion: eso es null.`
 
 /** Todos los campos a `null`. La forma de un fallo de lectura tiene que ser la
@@ -191,6 +203,7 @@ function extraidaVacia(): PolizaExtraida {
     datosRamo: null,
     datosRamoOrigen: null,
     coberturas: null,
+    tomador: null,
   }
 }
 
@@ -438,7 +451,7 @@ export async function extraerPoliza(
     const apiKey = (process.env.OPENROUTER_API_KEY ?? '').trim()
     if (!apiKey) return nadaLeido()
     const pedirTexto = (system: string) =>
-      openrouterChat({ apiKey }, [{ role: 'user', content: texto.slice(0, 20_000) }], { system, maxTokens: 600 })
+      openrouterChat({ apiKey }, [{ role: 'user', content: texto.slice(0, 20_000) }], { system, maxTokens: 900 })
     // Un fallo de IA es «no lo hemos podido mirar», no «no hay datos»: se degrada
     // a `none` y la póliza se guarda igual, para completarla a mano.
     let salida: string
@@ -535,6 +548,9 @@ export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): P
     datosRamo,
     datosRamoOrigen: origenesDelDocumento(datosRamo),
     coberturas: normalizarCoberturasLeidas(o.coberturas),
+    // Minimizado AQUÍ, antes de que nada lo guarde: el DNI de una persona física se usa para
+    // clasificar y se descarta (esta fila acaba en `extraccion_bruta` y en la respuesta).
+    tomador: normalizarTomadorLeido(bruto),
   }
 }
 

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db'
 import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { extraerPoliza } from '@/lib/extraer-poliza'
 import { requireIdentidad } from '@/lib/session'
+import { proponerTitular } from '@/lib/titular-propuesto'
 
 export const runtime = 'nodejs'
 
@@ -53,7 +54,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // La misma comprobación que el PATCH: existe Y es tuya, en la misma consulta.
   const actual = await prisma.portalPolizaDeclarada.findFirst({
     where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
-    select: { id: true },
+    select: { id: true, titularTipo: true },
   })
   if (!actual) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
 
@@ -111,5 +112,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     fechaVencimiento: datos.fechaVencimiento,
   }))
 
-  return NextResponse.json({ id, datos, fuente, camposRamo, motivo })
+  // Proponer no es guardar: «¿es de tu empresa?» solo se pregunta; sin respuesta, NULL.
+  const propuestaTitular = proponerTitular({ titularGuardado: actual.titularTipo, tomador: datos.tomador })
+  return NextResponse.json({ id, datos, fuente, camposRamo, motivo, propuestaTitular })
 }

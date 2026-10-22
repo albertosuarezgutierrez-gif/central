@@ -100,3 +100,51 @@ export async function avisarPolizaDeclaradaDesdeAlta(
   const clienteNombre = await nombreClienteVinculado(c.identidadId)
   return avisarPolizaDeclarada({ ...c, clienteNombre })
 }
+
+// ── «Es de mi empresa» + rol (22/10/2026) ───────────────────────────────────
+// Alberto: quien sube y confirma «es de mi empresa» es la PERSONA DE CONTACTO y gestor de esa póliza
+// para los vencimientos. El portal NO escribe en la ficha de la empresa (eso es de `apps/asegura` y
+// lo valida Alberto): lo deja en la declarada y lo PROPONE en una línea por Telegram.
+
+/** Cómo se dice el rol en la frase «que dice ser …». `null` = no lo dijo (se dice, no se inventa). */
+const ROL_EN_FRASE: Record<string, string> = {
+  propietario: 'propietario o socio',
+  administrador: 'administrador',
+  empleado: 'empleado',
+  otro: 'otra cosa (sin precisar)',
+}
+
+export type ContextoTitularEmpresa = {
+  identidadId: string
+  empresa: string
+  /** Solo si pasó el dígito de control. */
+  cif: string | null
+  rol: string | null
+  compania: string | null
+  /** `null` = identidad sin vincular a una ficha (no se inventa un nombre). */
+  clienteNombre: string | null
+}
+
+export function mensajeTitularEmpresa(c: ContextoTitularEmpresa): string {
+  const quien = c.clienteNombre ?? 'una identidad SIN vincular a tu cartera'
+  const empresa = `${c.empresa}${c.cif ? ` (${c.cif})` : ''}`
+  const rol = c.rol !== null && ROL_EN_FRASE[c.rol] ? `que dice ser ${ROL_EN_FRASE[c.rol]}` : 'que no ha dicho qué es en ella'
+  const compania = c.compania ? ` · ${c.compania}` : ''
+  return `🏢 Póliza de ${empresa} aportada por ${quien}, ${rol} → contacto propuesto para el vencimiento${compania}.\nIdentidad ${c.identidadId}`
+}
+
+/** Best-effort y nunca lanza, como el aviso del alta. */
+export async function avisarTitularEmpresa(c: Omit<ContextoTitularEmpresa, 'clienteNombre'>): Promise<ResultadoAviso> {
+  try {
+    const clienteNombre = await nombreClienteVinculado(c.identidadId)
+    const id = await tgSend(mensajeTitularEmpresa({ ...c, clienteNombre }))
+    if (id === null) {
+      console.warn('[portal] titular empresa sin avisar: falta TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID en este proyecto')
+      return 'sin_canal'
+    }
+    return 'enviado'
+  } catch (e) {
+    console.error('[portal] no se ha podido avisar del titular empresa:', e instanceof Error ? e.message : e)
+    return 'error'
+  }
+}

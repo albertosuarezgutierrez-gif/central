@@ -1,9 +1,10 @@
 import { Prisma } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { fotoDeLaPoliza, puedeBorrarDeclarada } from '@central/module-seguros-portal'
 
 import { registrarUso } from '@/lib/autorizaciones'
+import { avisarTitularEmpresa } from '@/lib/aviso-poliza-declarada'
 import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import {
@@ -16,6 +17,7 @@ import {
 } from '@/lib/declaradas-eliminadas'
 import { normalizarParche } from '@/lib/poliza-editable'
 import { requireIdentidad } from '@/lib/session'
+import { leerTitularParche } from '@/lib/titular-propuesto'
 import { leerVigenciaDeclarada } from '@/lib/vigente-declarada'
 
 export const runtime = 'nodejs'
@@ -85,6 +87,58 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (count === 0) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
     if (!acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
     return NextResponse.json({ id, vigenteDeclarada: vigencia.valor })
+  }
+
+  // «Sí, es de mi empresa» (22/10/2026, `lib/titular-propuesto.ts`): la respuesta al paso posterior
+  // a la subida. Va SOLA: no es una revisión de los datos (no marca `confirmadaPorUsuario`). Solo la
+  // dueña de la fila la contesta — es una declaración sobre SU relación con esa empresa, que un
+  // tercero con «Total» no puede hacer por ella (404, como «no existe»). 🔒 No da acceso a nada:
+  // ni crea ficha de la empresa ni la vincula; la casa la reconcilia el corredor.
+  const titularParche = leerTitularParche(cuerpo)
+  if (titularParche.tipo === 'error') return NextResponse.json({ error: titularParche.error }, { status: 400 })
+  if (titularParche.tipo === 'empresa') {
+    if (!acceso.propia) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    const hecho = await prisma.$transaction(async (tx) => {
+      const previa = await tx.portalPolizaDeclarada.findFirst({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        select: SELECT_HISTORIAL,
+      })
+      if (!previa) return null
+      const { count } = await tx.portalPolizaDeclarada.updateMany({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        data: {
+          titularTipo: 'empresa',
+          titularEmpresaNombre: titularParche.nombre,
+          titularEmpresaCif: titularParche.cif,
+          titularRolDeclarado: titularParche.rol,
+          actualizadaEn: new Date(),
+        },
+      })
+      if (count === 0) return null
+      const despues = await tx.portalPolizaDeclarada.findFirst({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        select: SELECT_HISTORIAL,
+      })
+      const cambios = despues ? cambiosDeEdicion(previa, despues) : null
+      if (cambios !== null) {
+        await tx.portalPolizaDeclaradaHistorial.create({
+          data: { polizaId: id, identidadId: duenaId, accion: 'editada', antes: cambios.antes, despues: cambios.despues },
+        })
+      }
+      return { compania: previa.compania }
+    })
+    if (hecho === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    // Alberto (22/10/2026): quien confirma «es de mi empresa» es la PERSONA DE CONTACTO propuesta
+    // para el vencimiento. El portal no escribe en la ficha de la empresa: lo PROPONE por Telegram
+    // (best-effort, en `after()`: nunca retrasa ni tumba la respuesta).
+    after(() => avisarTitularEmpresa({
+      identidadId: duenaId,
+      empresa: titularParche.nombre,
+      cif: titularParche.cif,
+      rol: titularParche.rol,
+      compania: hecho.compania,
+    }))
+    return NextResponse.json({ id, titularTipo: 'empresa', titularEmpresaNombre: titularParche.nombre, titularRolDeclarado: titularParche.rol })
   }
 
   // El RAMO GUARDADO, antes de validar. Los campos específicos (`datosRamo`) solo

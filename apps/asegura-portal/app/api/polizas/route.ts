@@ -13,6 +13,7 @@ import { extraerPoliza } from '@/lib/extraer-poliza'
 import { normalizarAlta } from '@/lib/poliza-editable'
 import { rateLimit } from '@/lib/rate-limit'
 import { requireIdentidad } from '@/lib/session'
+import { proponerTitular } from '@/lib/titular-propuesto'
 
 export const runtime = 'nodejs'
 
@@ -214,7 +215,19 @@ async function altaConDocumento(req: Request, identidadId: string) {
     referenciaCatastral: datos.referenciaCatastral,
   }))
 
-  return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo, motivo, documentoGuardado: documentoGuardado.estado })
+  // «Esta póliza está a nombre de X. ¿Es de tu empresa?» — solo se PROPONE (la pantalla pregunta y,
+  // si dice que sí, lo guarda por PATCH). Sin respuesta, `titular_tipo` sigue a NULL.
+  const propuestaTitular = proponerTitular({ titularGuardado: columnasTitular(titular).titularTipo, tomador: datos.tomador })
+
+  return NextResponse.json({
+    id: poliza.id,
+    datos,
+    fuente,
+    camposRamo,
+    motivo,
+    documentoGuardado: documentoGuardado.estado,
+    propuestaTitular,
+  })
 }
 
 /** Forma de la ficha del titular en `enNombreDe` (solo forma: quién es lo decide `titularParaAnadir`). */

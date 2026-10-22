@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { esNoPoliza, presentarDeclarada } from './declarada-presentacion.ts'
+import { esNoPoliza, lineaDeEmpresa, presentarDeclarada } from './declarada-presentacion.ts'
 import type { PolizaDeclaradaFicha } from '../ficha-asegura'
 
 const dec = (over: Partial<PolizaDeclaradaFicha> = {}): PolizaDeclaradaFicha => ({
@@ -49,4 +49,18 @@ test('tipo null (no se sabe) con datos: visible, no excluido', () => {
   assert.equal(esNoPoliza(dec({ tipoDocumento: null })), false)
   assert.equal(p.excluir, false)
   assert.equal(p.sinLeer, false)
+})
+
+test('🚨 declarada de su EMPRESA: no se presenta como suya, se rotula «De X (empresa)»', () => {
+  const p = presentarDeclarada(dec({ compania: 'Mapfre', numeroPoliza: 'X-1', titularTipo: 'empresa', titularEmpresaNombre: 'Transportes Ejemplo SL' }))
+  assert.equal(p.deEmpresa, 'De Transportes Ejemplo SL (empresa)')
+  assert.equal(p.excluir, false)
+  // También cuando no se pudo leer el documento.
+  assert.equal(presentarDeclarada(dec({ titularTipo: 'empresa', titularEmpresaNombre: 'X SL' })).deEmpresa, 'De X SL (empresa)')
+})
+
+test('titular NULL («no consta») o propio: no se afirma que sea de una empresa', () => {
+  assert.equal(presentarDeclarada(dec({ compania: 'Mapfre', titularTipo: null })).deEmpresa, null)
+  assert.equal(presentarDeclarada(dec({ compania: 'Mapfre', titularTipo: 'propio' })).deEmpresa, null)
+  assert.equal(lineaDeEmpresa({ titularTipo: 'empresa', titularEmpresaNombre: '  ' }), 'De su empresa (sin nombre)')
 })
