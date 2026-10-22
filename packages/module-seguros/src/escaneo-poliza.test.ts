@@ -49,13 +49,22 @@ test('personas: todos los roles, de cualquier ramo, con su identificador', () =>
   ])
 })
 
-test('personas: misma persona sin DNI en una mención se une; dos DNI distintos nunca', () => {
-  const p = normalizarPersonasPoliza({ personas: [
+test('personas: mismo nombre sin DNI en ambos se une; con DNI en alguno NO; dos DNI distintos nunca', () => {
+  const sinDni = normalizarPersonasPoliza({ personas: [
     { rol: 'asegurado', nombre: 'Ana Ruiz', dni: null },
-    { rol: 'asegurado', nombre: 'RUIZ ANA', dni: DNI_A },
+    { rol: 'asegurado', nombre: 'RUIZ ANA', dni: null },
+  ] })
+  assert.equal(sinDni.length, 1)
+  // Padre con DNI + hijo homónimo sin DNI = DOS personas (identidad antes que nombre).
+  const homonimos = normalizarPersonasPoliza({ personas: [
+    { rol: 'asegurado', nombre: 'Ana Ruiz', dni: DNI_A },
+    { rol: 'asegurado', nombre: 'RUIZ ANA', dni: null },
+  ] })
+  assert.deepEqual(homonimos.map((x) => x.identificador), [DNI_A, null])
+  const p = normalizarPersonasPoliza({ personas: [
+    { rol: 'asegurado', nombre: 'Ana Ruiz', dni: DNI_A },
     { rol: 'asegurado', nombre: 'Ana Ruiz', dni: DNI_B },
   ] })
-  assert.equal(p.length, 2)
   assert.deepEqual(p.map((x) => x.identificador), [DNI_A, DNI_B])
   assert.deepEqual(normalizarPersonasPoliza(null), [])
 })

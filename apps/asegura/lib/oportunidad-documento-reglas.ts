@@ -335,6 +335,12 @@ export type DecisionOportunidadPoliza =
   | { accion: 'crear'; cerradas: string[] }
   /** Varias ABIERTAS de la misma póliza en fichas distintas y ninguna es la del documento: no se elige. */
   | { accion: 'ambigua'; ids: string[] }
+  /**
+   * El nº de póliza casa con una abierta, pero no se puede afirmar que sea la misma (23/10/2026, revisión):
+   * el DNI/CIF leído es de OTRA ficha, o falta la compañía en un lado. NO se escribe nada (ni lectura, ni
+   * personas, ni relación): solo aviso.
+   */
+  | { accion: 'revisar'; id: string; clienteId: string; porque: 'ficha_distinta' | 'compania_ausente' }
 
 /**
  * ¿Ya tiene oportunidad ESTA póliza en TODA la correduría? (22/10/2026, «escanear nunca duplica».)
@@ -348,6 +354,8 @@ export function decidirOportunidadDeLaPoliza(
   nueva: { numeroPoliza: string | null; aseguradora: string | null },
   existentes: readonly OportunidadDeLaPoliza[],
   preferidas: readonly (string | null)[] = [],
+  /** Ficha decidida por DNI/CIF (`decidirFicha` → `tipo==='ficha'`); `null`/omitida = el documento no la fija. */
+  fichaPorDni: string | null = null,
 ): DecisionOportunidadPoliza {
   const n = normalizarNumeroPoliza(nueva.numeroPoliza)
   if (!n) return { accion: 'crear', cerradas: [] }
@@ -355,12 +363,19 @@ export function decidirOportunidadDeLaPoliza(
   const abiertas = misma.filter((o) => ESTADOS_ABIERTOS.includes(o.estado))
   const cerradas = misma.filter((o) => !ESTADOS_ABIERTOS.includes(o.estado)).map((o) => o.id)
   if (abiertas.length === 0) return { accion: 'crear', cerradas }
+  // Adoptar una abierta solo con identidad firme: misma compañía (conocida en los dos lados) y, si el DNI
+  // fija ficha, que sea la de la oportunidad. Si no, a revisar sin escribir nada.
+  const adoptar = (o: OportunidadDeLaPoliza): DecisionOportunidadPoliza => {
+    if (mismaCompania(nueva.aseguradora, o.aseguradora) !== 'misma') return { accion: 'revisar', id: o.id, clienteId: o.clienteId, porque: 'compania_ausente' }
+    if (fichaPorDni && fichaPorDni !== o.clienteId) return { accion: 'revisar', id: o.id, clienteId: o.clienteId, porque: 'ficha_distinta' }
+    return { accion: 'actualizar', id: o.id, clienteId: o.clienteId }
+  }
   for (const c of preferidas) {
     const suya = c ? abiertas.find((o) => o.clienteId === c) : undefined
-    if (suya) return { accion: 'actualizar', id: suya.id, clienteId: suya.clienteId }
+    if (suya) return adoptar(suya)
   }
   const fichas = new Set(abiertas.map((o) => o.clienteId))
-  if (fichas.size === 1) return { accion: 'actualizar', id: abiertas[0].id, clienteId: abiertas[0].clienteId }
+  if (fichas.size === 1) return adoptar(abiertas[0])
   return { accion: 'ambigua', ids: abiertas.map((o) => o.id) }
 }
 
@@ -368,9 +383,10 @@ export function decidirOportunidadDeLaPoliza(
  * El Telegram a Alberto cuando una subida NO elige a ciegas (22/10/2026). Solo ids (ficha u
  * oportunidad) y el origen: ni nombres, ni DNI/CIF, ni nº de póliza.
  */
-export function textoAvisoAmbiguo(e: { motivo: 'ficha_ambigua' | 'oportunidad_ambigua' | 'figura_ambigua'; ids: readonly string[]; origen: string; n?: number }): string {
+export function textoAvisoAmbiguo(e: { motivo: 'ficha_ambigua' | 'oportunidad_ambigua' | 'oportunidad_dudosa' | 'figura_ambigua'; ids: readonly string[]; origen: string; n?: number }): string {
   const ids = e.ids.slice(0, 10).map((id) => `<code>${id}</code>`).join(', ')
   if (e.motivo === 'ficha_ambigua') return `⚠️ <b>Póliza subida sin asignar</b> (${e.origen}): el DNI/CIF del tomador está en ${e.ids.length} fichas ACTIVAS (${ids}). No se ha elegido ninguna ni abierto otra: revisa y funde si son la misma persona, y vuelve a subirla.`
   if (e.motivo === 'oportunidad_ambigua') return `⚠️ <b>Póliza subida sin asignar</b> (${e.origen}): ya tiene ${e.ids.length} oportunidades ABIERTAS en fichas distintas (${ids}). No se ha actualizado ninguna: deja una sola y vuelve a subirla.`
+  if (e.motivo === 'oportunidad_dudosa') return `⚠️ <b>Póliza subida sin asignar</b> (${e.origen}): su nº de póliza coincide con la oportunidad ${ids}, pero el DNI/CIF del tomador es de otra ficha o falta la compañía. No se ha escrito nada: revisa si es la misma póliza y vuelve a subirla.`
   return `⚠️ <b>Póliza subida</b> (${e.origen}): ${e.n ?? 1} persona(s) de la póliza tienen su DNI/CIF en varias fichas activas: no se han vinculado${ids ? ` (oportunidad ${ids})` : ''}. Revisa los posibles duplicados.`
 }
