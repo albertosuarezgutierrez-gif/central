@@ -14,8 +14,6 @@
 // las dos cosas pasó.
 import { tgSend } from '@central/core-telegram'
 
-import { prisma } from './db'
-
 export type ResultadoAviso = 'enviado' | 'sin_canal' | 'error'
 
 export type ContextoPolizaDeclarada = {
@@ -27,10 +25,21 @@ export type ContextoPolizaDeclarada = {
   fechaVencimiento: string | null
   /** `null` = la identidad no está vinculada a ninguna ficha de la cartera. */
   clienteNombre: string | null
+  /**
+   * Qué leyó la extracción. `null` = no se sabe (estado conservador: se avisa como
+   * hasta ahora, sin afirmar que no sea una póliza). Solo `'otro'` dice «no es póliza».
+   */
+  tipoDocumento?: 'poliza' | 'suplemento' | 'recibo' | 'otro' | null
+  /** Referencia catastral leída, si el documento la trae (p. ej. una ficha catastral). */
+  referenciaCatastral?: string | null
 }
 
 export function mensajePolizaDeclarada(c: ContextoPolizaDeclarada): string {
   const quien = c.clienteNombre ?? 'una identidad SIN vincular a tu cartera'
+  if (c.tipoDocumento === 'otro') {
+    const que = c.referenciaCatastral ? ` (ficha catastral ${c.referenciaCatastral})` : ''
+    return `📥 Documento aportado por ${quien}: no parece una póliza${que}.\nIdentidad ${c.identidadId}`
+  }
   const compania = c.compania ?? 'compañía sin leer'
   const ramo = c.ramo ? ` (${c.ramo})` : ''
   const numero = c.numeroPoliza ? `, nº ${c.numeroPoliza}` : ''
@@ -62,6 +71,8 @@ export async function avisarPolizaDeclarada(c: ContextoPolizaDeclarada): Promise
  */
 async function nombreClienteVinculado(identidadId: string): Promise<string | null> {
   try {
+    // Import dinámico: así el texto del aviso (puro) se puede testear sin cliente Prisma.
+    const { prisma } = await import('./db')
     const vinculo = await prisma.portalVinculo.findFirst({
       where: { identidadId },
       orderBy: { creadoEn: 'asc' },

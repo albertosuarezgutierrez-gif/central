@@ -210,6 +210,8 @@ async function altaConDocumento(req: Request, identidadId: string) {
     ramo: datos.ramo,
     numeroPoliza: datos.numeroPoliza,
     fechaVencimiento: datos.fechaVencimiento,
+    tipoDocumento: datos.tipoDocumento,
+    referenciaCatastral: datos.referenciaCatastral,
   }))
 
   return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo, motivo, documentoGuardado: documentoGuardado.estado })
