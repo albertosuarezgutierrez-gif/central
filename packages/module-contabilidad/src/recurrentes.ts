@@ -1,4 +1,4 @@
-import type { PeriodicidadRecurrente, PlantillaRecurrente } from './types'
+import type { PeriodicidadRecurrente, PlantillaRecurrente } from './types.ts'
 
 /**
  * Genera las fechas de materialización de una plantilla recurrente entre

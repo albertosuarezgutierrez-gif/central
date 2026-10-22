@@ -1,5 +1,5 @@
-import type { Apunte, ResultadoMensual } from './types'
-import { round2 } from './iva'
+import type { Apunte, ResultadoMensual } from './types.ts'
+import { round2 } from './iva.ts'
 
 /**
  * Calcula el Resultado (PyG) mensual para un año a partir de un array de apuntes.

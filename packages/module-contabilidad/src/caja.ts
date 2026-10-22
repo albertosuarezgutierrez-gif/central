@@ -7,7 +7,7 @@
 import type {
   MovimientoCaja, CuadreCaja, CuadreEmpleado,
   FilaArqueoEmpleado, ResumenDescuadreEmpleado, PuntoSerieDescuadre,
-} from './types'
+} from './types.ts'
 
 // Redondeo a 2 decimales. Local (no se importa de ./iva) para que este módulo sea
 // una "hoja" autónoma y el runner `node --test` (type-stripping) pueda cargarlo
