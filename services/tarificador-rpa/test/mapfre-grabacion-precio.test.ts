@@ -13,8 +13,11 @@ import {
   confirmarVehiculoMapfre,
   ErrorFronteraEmision,
   ErrorMapaGuardMapfre,
+  esBotonGenerarProyectoMapfre,
   exigirSinCuentaBancaria,
+  generarProyectoMapfre,
   instalarGuardEmision,
+  numeroProyectoMapfreNuevo,
   pulsar,
   pulsarContinuarMapfre,
   TEXTOS_CIERRE_CLUB_MAPFRE,
@@ -29,6 +32,8 @@ import {
   historialAnterior,
   indiceFilaVehiculoMapfre,
   mapfreAuto,
+  AVISO_PROYECTO_MAPFRE,
+  ofertasConProyectoMapfre,
   patronEtiqueta,
   planObjetoYFiguras,
   precioDesdeObjetoAsegurado,
@@ -88,6 +93,16 @@ async function preparar(html: string): Promise<{ context: BrowserContext; page: 
   await page.setContent(html)
   return { context, page, guard }
 }
+/** Igual que `preparar`, pero servido desde un origen https (el guardado exige origen http(s) del marco del botón). */
+async function prepararHttps(html: string): Promise<{ context: BrowserContext; page: Page; guard: GuardEmision }> {
+  const context = await browser.newContext()
+  const guard = await instalarGuardEmision(context)
+  await context.route('https://nsei.ejemplo.test/**', (r) => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }))
+  const page = await context.newPage()
+  page.setDefaultTimeout(3_000)
+  await page.goto('https://nsei.ejemplo.test/evt21_nsei_fe-web/')
+  return { context, page, guard }
+}
 const marca = (page: Page, k: string) => page.evaluate((x) => (window as unknown as Record<string, unknown>)[x] ?? null, k)
 
 /** Contexto del runner con las funciones guardadas REALES de guard.ts (como runner.ts). */
@@ -121,7 +136,9 @@ const CLUB = (izquierda = 'No, gracias') => `<mat-dialog-container><app-club-map
 const TARJETA = (producto: string, prima: string) => `<prima-producto><section><mat-select><span class="mat-select-value-text">${producto}</span></mat-select><mat-select><span class="mat-select-value-text">ANUAL</span></mat-select></section><section><div class="caja-primas"><p><strong>${prima}</strong></p></div></section></prima-producto>`
 
 /** Una página NSEI con TODOS los componentes a la vez (como la SPA): el stepper manda. Mat-select con overlay CDK. */
-const NSEI = (o: { filas?: Array<[string, string, string?, string?]>; polizaObligatoria?: boolean; club?: string | null; primas?: string; interruptor?: boolean | null; cpAsincrono?: boolean; errorEn?: 'matriculacion' | null; sinUsoAmbito?: boolean } = {}) => `<!doctype html><body>
+/** v0.8.14 · qué hace el portal al pulsar «Generar Proyecto»: pinta el nº en «Proyectos» (input de solo lectura), nada, o un diálogo de pago. */
+type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago'; texto?: string; previo?: string }
+const NSEI = (o: { filas?: Array<[string, string, string?, string?]>; polizaObligatoria?: boolean; club?: string | null; primas?: string; interruptor?: boolean | null; cpAsincrono?: boolean; errorEn?: 'matriculacion' | null; sinUsoAmbito?: boolean; proyecto?: ProyectoFixture } = {}) => `<!doctype html><body>
 <style>mat-select{display:inline-block;min-width:80px;min-height:14px;border:1px solid #999}</style>
 <mat-horizontal-stepper>${PASOS.map((p, i) => `<mat-step-header role="tab" aria-selected="${i === 0}">${i + 1} ${p}</mat-step-header>`).join('')}</mat-horizontal-stepper>
 <template id="tplVeh">${DIALOGO_VEHICULO(o.filas ?? [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6']])}</template>
@@ -138,7 +155,8 @@ const NSEI = (o: { filas?: Array<[string, string, string?, string?]>; polizaObli
 <mat-form-field><mat-label>Nº de Póliza${o.polizaObligatoria ? '<span class="mat-placeholder-required">*</span>' : ''}</mat-label><input formcontrolname="numPoliza"></mat-form-field>
 <input formcontrolname="siniestros"></div></app-historial-siniestralidad></div></app-figuras>
 <app-coberturas><app-primas id="primas"></app-primas><app-descuentos><tabla-descuentos-resumen><table><tbody><tr><td>RECARGO TÉCNICO</td></tr></tbody></table></tabla-descuentos-resumen></app-descuentos>
-<div class="btn-panel"><button id="irGenerar" onclick="window.__generar=1">Ir a generar</button><button onclick="window.__proyecto=1">Generar Proyecto</button></div></app-coberturas>
+<div class="btn-panel"><button id="irGenerar" onclick="window.__generar=1">Ir a generar</button><button onclick="generarProyecto()">${o.proyecto?.texto ?? 'Generar Proyecto'}</button></div><p>${o.proyecto?.previo ?? ''}</p></app-coberturas>
+<app-proyecto></app-proyecto>
 <div class="btn-panel"><div class="right"><button id="cont" onclick="continuar()">Continuar</button></div></div>
 <div class="cdk-overlay-container" id="ov"></div>
 <script>
@@ -151,6 +169,10 @@ function continuar(){window.__continuar=(window.__continuar||0)+1;const h=[...do
  h[i].setAttribute('aria-selected','false');h[i+1].setAttribute('aria-selected','true');
  if(PASO_COBERTURAS(i+1)){${o.club === null ? 'calcular()' : `setTimeout(()=>document.getElementById('ov').insertAdjacentHTML('beforeend', ${JSON.stringify(CLUB(o.club ?? undefined))}),80)`}}}
 function PASO_COBERTURAS(i){return i===3}
+function generarProyecto(){window.__proyecto=(window.__proyecto||0)+1;const tras=${JSON.stringify(o.proyecto?.tras ?? 'numero')};const ov=document.getElementById('ov');ov.insertAdjacentHTML('beforeend','<mat-dialog-container id="gen">Generando proyecto</mat-dialog-container>');
+ setTimeout(()=>{document.getElementById('gen').remove();if(tras==='mudo')return;if(tras==='dialogoPago'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Para continuar debe realizar el pago</p><button onclick="window.__pagado=1">Aceptar</button></mat-dialog-container>');return}
+ const h=[...document.querySelectorAll('mat-step-header')];h[3].setAttribute('aria-selected','false');h[4].setAttribute('aria-selected','true');
+ document.querySelector('app-proyecto').innerHTML='<mat-form-field><mat-label>Nº Proyecto</mat-label><input readonly value="9876543210"></mat-form-field><mat-select><span>Castellano</span></mat-select>'},300)}
 function cerrarClub(){document.querySelector('mat-dialog-container').remove();calcular()}
 function calcular(){document.getElementById('ov').insertAdjacentHTML('beforeend','<mat-dialog-container id="calc">Calculando las primas</mat-dialog-container>');setTimeout(()=>{document.getElementById('calc').remove();document.getElementById('primas').innerHTML=${JSON.stringify(o.primas ?? TARJETA('PRODUCTO UNO', 'PRIMA TOTAL: 1.234,56 €') + TARJETA('PRODUCTO DOS', 'PRIMA TOTAL: 987,65 €'))}},300)}
 </script></body>`
@@ -468,4 +490,117 @@ test('Coberturas: el Club MAPFRE sin la función guardada → hueco, sin pulsar;
   const primas = await esperarPrimasMapfre(b.page, { formador: undefined }, 5_000)
   assert.deepEqual(primas.map((p) => p.primaTotalEur), [1234.56, 987.65])
   await b.context.close()
+})
+
+// ───────────────────────── 5 · «Generar Proyecto» (v0.8.14, 22/10/2026, autorizado por Alberto) ─────────────────────────
+
+test('nº de proyecto: solo el NUEVO tras el clic, con etiqueta, y nunca con forma de NIF/teléfono/IBAN', () => {
+  assert.equal(numeroProyectoMapfreNuevo('', 'Proyectos\nNº Proyecto: 9876543210\nIdioma'), '9876543210')
+  assert.equal(numeroProyectoMapfreNuevo('', 'Proyecto nº 2026/000123 generado'), '2026/000123')
+  assert.equal(numeroProyectoMapfreNuevo('', 'Se ha generado el proyecto 1234567890'), '1234567890')
+  assert.equal(numeroProyectoMapfreNuevo('Nº Proyecto: 1111111', 'Nº Proyecto: 1111111'), null, 'el que ya estaba no vale')
+  assert.equal(numeroProyectoMapfreNuevo('Nº Proyecto: 1111111', 'Nº Proyecto: 1111111. Nº Proyecto: 2222222'), '2222222')
+  assert.equal(numeroProyectoMapfreNuevo('', 'Nº proyecto: 00000000T'), null, 'forma de NIF')
+  assert.equal(numeroProyectoMapfreNuevo('', 'Nº proyecto: 612345678'), null, 'forma de móvil')
+  assert.equal(numeroProyectoMapfreNuevo('', 'PRIMA TOTAL: 1.234,56 €'), null)
+})
+
+test('botón: solo «Generar Proyecto» EXACTO; «Ir a generar» o mezclado con emitir/contratar/firmar/pagar, NO', () => {
+  for (const t of ['Generar Proyecto', ' GENERAR  PROYECTO ', 'Generar proyecto']) assert.equal(esBotonGenerarProyectoMapfre([t]), true, t)
+  for (const t of ['Ir a generar', 'Ir a generar proyecto', 'Generar Proyecto y contratar', 'Generar proyecto y emitir', 'Generar proyecto y firmar', 'Generar proyecto y pagar', 'Contratar', 'Grabar póliza']) assert.equal(esBotonGenerarProyectoMapfre([t]), false, t)
+  assert.equal(esBotonGenerarProyectoMapfre(['Generar Proyecto', null, null, null, 'btnContratar']), false, 'un id de contratar tumba el texto bueno')
+})
+
+test('ofertas: generado → referenciaPortal en TODAS + aviso; sin nº / no generado → solo aviso legible (precio intacto)', () => {
+  const o = (p: string, prima: number) => ({ compania: 'mapfre', producto: p, primaAnualEur: prima, avisos: ['a'], referenciaPortal: null }) as unknown as import('@central/module-tarificacion').OfertaNormalizada
+  const g = ofertasConProyectoMapfre([o('Auto · UNO', 100), o('Auto · DOS', 200)], { estado: 'generado', numero: '9876543210' })
+  assert.deepEqual(g.map((x) => x.referenciaPortal), ['9876543210', '9876543210'])
+  assert.ok(g.every((x) => x.avisos.at(-1) === `${AVISO_PROYECTO_MAPFRE}: nº 9876543210.`))
+  const s = ofertasConProyectoMapfre([o('Auto · UNO', 100)], { estado: 'sin_numero', motivo: 'no se leyó el nº de proyecto en 45 s' })
+  assert.equal(s[0]!.referenciaPortal, null)
+  assert.match(s[0]!.avisos.at(-1)!, /^Se pulsó «Generar Proyecto» en Mapfre/)
+  const n = ofertasConProyectoMapfre([o('Auto · UNO', 100)], { estado: 'no_generado', motivo: 'no aparece el botón «Generar Proyecto» en «Coberturas»' })
+  assert.equal(n[0]!.referenciaPortal, null)
+  assert.equal(n[0]!.primaAnualEur, 100)
+  assert.match(n[0]!.avisos.at(-1)!, /^Proyecto NO guardado en Mapfre: no aparece el botón/)
+})
+
+test('E2E fixture: prima leída → «Generar Proyecto» UNA vez → nº de proyecto en referenciaPortal; «Ir a generar» intacto', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null }))
+  const ctx = { ...ctxReal(page, guard), generarProyectoMapfre: (pg: Page) => generarProyectoMapfre(pg, guard, 4_000) }
+  await ctx.continuarMapfre!(page, 'datosBasicos')
+  const veh = await consultarVehiculoPorMatricula(page, MATRICULA, ctx, 3_000, undefined, form)
+  const r = await precioDesdeObjetoAsegurado(page, form, veh, ctx, 8_000)
+  assert.deepEqual(r.ofertas.map((o) => [o.primaAnualEur, o.referenciaPortal]), [[1234.56, '9876543210'], [987.65, '9876543210']])
+  assert.equal(await marca(page, '__proyecto'), 1, 'un solo clic')
+  assert.equal(await marca(page, '__generar'), null, 'no pulsa «Ir a generar»')
+  assert.equal((await generarProyectoMapfre(page, guard, 500)).estado, 'no_generado', 'una vez por trabajo')
+  await context.close()
+})
+
+test('«Generar Proyecto» SIN nº legible o con diálogo de PAGO → precio intacto + aviso; el diálogo no se toca', async () => {
+  for (const [tras, re] of [['mudo', /no se leyó el nº de proyecto/], ['dialogoPago', /diálogo que menciona «pag/]] as const) {
+    const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { tras } }))
+    await hastaCoberturas(page, guard)
+    await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+    const r = await generarProyectoMapfre(page, guard, 1_500)
+    assert.equal(r.estado, 'sin_numero', tras)
+    if (r.estado === 'sin_numero') assert.match(r.motivo, re)
+    assert.equal(await marca(page, '__pagado'), null, 'no acepta el diálogo de pago')
+    await context.close()
+  }
+})
+
+test('botón «Generar Proyecto y contratar» o ausente → NO se pulsa; motivo legible', async () => {
+  for (const [texto, re] of [['Generar Proyecto y contratar', /no aparece el botón «Generar Proyecto»/]] as const) {
+    const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { texto } }))
+    await hastaCoberturas(page, guard)
+    await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+    const r = await generarProyectoMapfre(page, guard, 500)
+    assert.equal(r.estado, 'no_generado')
+    if (r.estado === 'no_generado') assert.match(r.motivo, re)
+    assert.equal(await marca(page, '__proyecto'), null)
+    await context.close()
+  }
+})
+
+test('nº de proyecto: una FECHA nunca es nº de proyecto (revisión 22/10/2026)', () => {
+  assert.equal(numeroProyectoMapfreNuevo('', 'Proyecto 22/10/2026 generado'), null)
+  assert.equal(numeroProyectoMapfreNuevo('', 'Proyecto: 1-2-26'), null)
+  assert.equal(numeroProyectoMapfreNuevo('', 'Nº proyecto: 22.10.2026'), null)
+  assert.equal(numeroProyectoMapfreNuevo('', 'Proyecto 22/10/2026 · Nº Proyecto: 9876543210'), '9876543210')
+  assert.equal(numeroProyectoMapfreNuevo('', 'Proyecto nº 2026/000123 generado'), '2026/000123', 'una referencia con barra que NO es fecha sigue valiendo')
+})
+
+test('«Generar Proyecto»: la vía Mapfre usa SOLO la opción estrecha (no `permitirGuardarPresupuesto`, que la sigue bloqueando)', () => {
+  assert.throws(() => comprobarBoton(['Generar Proyecto'], { permitirGuardarPresupuesto: true }), EmisionBloqueadaError)
+  assert.doesNotThrow(() => comprobarBoton(['Generar Proyecto'], { permitirGenerarProyectoMapfre: true }))
+  assert.equal(esBotonGenerarProyectoMapfre(['Generar Proyecto']), true)
+})
+
+test('«Generar Proyecto»: un error BENIGNO del portal antes del clic (desconexión al contar botones) → `no_generado` y precio intacto, sin pulsar', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  // Solo la lista de botones de Coberturas «se desconecta»: el resto de la página responde.
+  const original = page.locator.bind(page)
+  const roto = (): unknown => new Proxy({}, { get: (_t, k) => (k === 'count' ? () => Promise.reject(new Error('Target page, context or browser has been closed')) : k === 'then' ? undefined : () => roto()) })
+  ;(page as unknown as { locator: (s: string) => unknown }).locator = (s: string) => (s === 'app-coberturas' ? roto() : original(s))
+  const r = await generarProyectoMapfre(page, guard, 500)
+  ;(page as unknown as { locator: unknown }).locator = original
+  assert.equal(r.estado, 'no_generado')
+  assert.equal(await marca(page, '__proyecto'), null)
+  // La ofertas conservan su prima (el aviso es legible, no un error del trabajo).
+  const o = { compania: 'mapfre', producto: 'Auto · UNO', primaAnualEur: 1234.56, avisos: [], referenciaPortal: null } as unknown as import('@central/module-tarificacion').OfertaNormalizada
+  assert.equal(ofertasConProyectoMapfre([o], r)[0]!.primaAnualEur, 1234.56)
+  await context.close()
+})
+
+test('«Generar Proyecto»: una violación REAL del guard SÍ se relanza (fail-closed)', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null }))
+  await hastaCoberturas(page, guard)
+  await page.evaluate(() => fetch('https://otro.ejemplo.test/emitirPoliza', { method: 'POST', body: 'x=1' }).catch(() => null))
+  await assert.rejects(() => generarProyectoMapfre(page, guard, 500), EmisionBloqueadaError)
+  assert.equal(await marca(page, '__proyecto'), null)
+  await context.close()
 })

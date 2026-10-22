@@ -729,3 +729,18 @@ export type {
 } from './preferencias-avisos.ts'
 // Evolución de la prima (14/10/2026): detalle al que lleva el push de subida de prima.
 export { baseDeUnidad, evolucionDePrima, porcentajeDeSubida, type EvolucionPrima, type FilaPrimaObservada } from './evolucion-prima.ts'
+// «Herramientas» (módulos gratis para clientes, Fase 0, 22/10/2026): catálogo cerrado y botón por estado.
+export {
+  CATALOGO_MODULOS,
+  ESTADOS_MODULO,
+  MODULOS_PORTAL,
+  TEXTO_SOLICITUD_MODULO,
+  VERSION_CONDICIONES_MODULOS,
+  accionModulo,
+  admiteSolicitud,
+  disponibilidadModulo,
+  esModuloPortal,
+  mensajeSolicitudModulo,
+  tarjetasModulos,
+} from './modulos.ts'
+export type { AccionModulo, DisponibilidadModulo, EstadoModulo, FichaModulo, FilaModulo, ModuloPortal, TarjetaModulo } from './modulos.ts'

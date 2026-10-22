@@ -1,4 +1,8 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.14 (22/10/2026, AUTORIZADO por Alberto: «un proyecto no es póliza»): tras LEER las primas, el bot pulsa «Generar Proyecto»
+//   por `ctx.generarProyectoMapfre` (guard.ts: texto exacto, guardar por la lista única, ventana de red de guardado, nada más tras el
+//   clic) y lleva el nº de proyecto a `referenciaPortal` de cada oferta. Si no se genera o no se lee el nº: precio intacto + AVISO
+//   legible («Proyecto NO guardado en Mapfre: …»). «Ir a generar», «Contratar» y el paso 6 siguen bloqueados.
 // v0.8.7 (18/10/2026, trabajo real de moto atascado en «plan de campos de MOTO»): el inventario guardado del paso 2 de moto es el
 // del coche (matrícula, 1ª matriculación, CP; licencia con «Clase *» y «Valido desde *»): MOTO va por el mismo plan con la clase
 // de permiso de moto (A si no consta, declarada). Antecedentes sin dato → supuesto favorable declarado (decisión de Alberto).
@@ -27,8 +31,9 @@
 // diálogo tras la búsqueda del tomador) es `ErrorMapaIncompleto` con `pideInventarioDom` = el runner adjunta el inventario de estructura.
 //
 // 🚨 SEGURIDAD. Este fichero NO pulsa nada (ni `.click`, ni `ctx.pulsar`): solo lee y rellena campos de texto, siempre
-// tras `comprobarCampo`. Los clics de la entrada van por `entrada.ts`; el del diálogo de vehículo y «Continuar», por guard.ts. No hay selectores para: «Contratar» (uno por producto, en la tarjeta de prima), el paso 6, «Generar
-// Proyecto» / «Ir a generar proyecto» (crean un nº de proyecto REAL en Mapfre y generan documentación), el «Aceptar» de
+// tras `comprobarCampo`. Los clics de la entrada van por `entrada.ts`; el del diálogo de vehículo, «Continuar» y «Generar Proyecto»
+// (v0.8.14), por guard.ts. No hay selectores para: «Contratar» (uno por producto, en la tarjeta de prima), el paso 6, «Ir a generar
+// proyecto», el «Aceptar» de
 // documentos, el «Aceptar Obs. y Cláusulas», el «Aceptar» de descuentos/verificación, ni la casilla de la cláusula de
 // declaración. «Continuar» del paso 3 NO es un avance neutro: lanza «Verificando controles técnicos» + «Calculando las
 // primas» (es lo que lleva a precio): PERMITIDO por Alberto (14/10/2026), solo por `pulsarContinuarMapfre` desde «Figuras».
@@ -1411,6 +1416,26 @@ export async function planFigurasSinHistorial(nsei: Page, f: FormularioAuto, pla
 }
 
 const ESPERA_PRIMAS_MS = 60_000
+
+/** Aviso fijo cuando el proyecto quedó generado en Mapfre (para rescatarlo si el cliente acepta). */
+export const AVISO_PROYECTO_MAPFRE = 'Proyecto guardado en Mapfre (no es póliza)'
+
+type ResultadoProyecto = import('../../guard.ts').ResultadoProyectoMapfre
+
+/**
+ * v0.8.14: lleva el resultado de «Generar Proyecto» a CADA oferta (un proyecto de NSEI cubre la tarificación entera). Generado →
+ * `referenciaPortal` = nº de proyecto + aviso. Sin nº / no generado → solo un aviso legible (no es error del precio). PURA.
+ */
+export function ofertasConProyectoMapfre(ofertas: readonly OfertaNormalizada[], r: ResultadoProyecto): OfertaNormalizada[] {
+  const aviso =
+    r.estado === 'generado'
+      ? `${AVISO_PROYECTO_MAPFRE}: nº ${r.numero}.`
+      : r.estado === 'sin_numero'
+        ? `Se pulsó «Generar Proyecto» en Mapfre pero no se leyó el nº de proyecto (${r.motivo}): compruébalo en Mapfre.`
+        : `Proyecto NO guardado en Mapfre: ${r.motivo}.`
+  const ref = r.estado === 'generado' ? r.numero : null
+  return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso] }))
+}
 const SEL_DIALOGO_OCUPADO = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 
 /** Texto VISIBLE de Coberturas (o de la página) recortado y REDACTADO, para el atasco cuando no hay prima legible. */
@@ -1424,7 +1449,7 @@ async function textoVisibleSaneado(nsei: Page): Promise<string> {
  * Paso 4 «Coberturas»: cierra «Club MAPFRE» si sale (por `ctx.cerrarClubMapfre`, botón izquierdo validado en guard.ts) y
  * ESPERA de forma robusta a que las tarjetas de producto tengan una prima LEGIBLE y QUIETA entre dos lecturas (sin diálogos de
  * «Calculando…» abiertos). Comprueba que el paso activo es Coberturas. Agotada la espera → atasco con el texto visible saneado.
- * Solo lectura: tras leer la prima NO se pulsa nada más (ni «Ir a generar», ni «Generar Proyecto»; bloqueados en el guard).
+ * Solo lectura: aquí no se pulsa nada más («Generar Proyecto» va DESPUÉS, por `ctx.generarProyectoMapfre`; «Ir a generar», nunca).
  */
 export async function esperarPrimasMapfre(nsei: Page, ctx: Pick<ContextoPortal, 'cerrarClubMapfre' | 'formador'>, esperaMs = ESPERA_PRIMAS_MS): Promise<PrimaProductoMapfre[]> {
   const hasta = Date.now() + esperaMs
@@ -1472,7 +1497,7 @@ export async function precioDesdeObjetoAsegurado(
   nsei: Page,
   form: FormularioAuto,
   vehiculo: VehiculoConfirmado,
-  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'>,
+  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'generarProyectoMapfre'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
@@ -1502,20 +1527,25 @@ export async function precioDesdeObjetoAsegurado(
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
   const usados = { codigoPostal: cpPortal, localidad: null, vehiculo: { marca: null, modelo: null, version: null, denominacion: vehiculo?.denominacion ?? null } }
-  return { ofertas: conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), vehiculoConfirmado: vehiculo }
+  // v0.8.14: «Generar Proyecto» DESPUÉS de leer (el precio ya está a salvo). Una violación del guard se relanza (fail-closed).
+  const proyecto: ResultadoProyecto = ctx.generarProyectoMapfre
+    ? await ctx.generarProyectoMapfre(nsei)
+    : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
+  ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
+  return { ofertas: ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), proyecto), vehiculoConfirmado: vehiculo }
 }
 
 /**
  * Adaptador de Mapfre (registrado SIEMPRE; la puerta es la fila `companias_integracion`). Coche y moto comparten NSEI
  * («Turismos y Motos»). Flujo: login → entrada (pestaña nueva de NSEI) → paso 1 (NIF → salir del campo, Mapfre busca sola; si no existe, alta en el formulario →
  * «Continuar») → vehículo confirmado por matrícula (fila por regla fija) → CP → «Continuar» → licencia + compañía anterior →
- * «Continuar» (calcula) → «Club MAPFRE» (cerrar) → LECTURA de la prima en Coberturas. Ahí PARA (tarificar ≠ generar proyecto).
+ * «Continuar» (calcula) → «Club MAPFRE» (cerrar) → LECTURA de la prima en Coberturas → «Generar Proyecto» (v0.8.14) y lectura del nº. Ahí PARA.
  */
 export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.13',
+  version: '0.8.14',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

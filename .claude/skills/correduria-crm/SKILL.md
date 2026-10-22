@@ -18,6 +18,8 @@ real medido, orden de trabajo). Después, según lo que toques:
 - **Portal del cliente → `apps/asegura-portal/CLAUDE.md`** (es la fuente de verdad de esa app:
   aislamiento por código, lectura por columnas, calendario). Diseño del calendario en
   `docs/superpowers/specs/2026-09-02-asegura-portal-calendario-clientes-design.md`.
+- **«Herramientas» del portal (módulos gratis para clientes: flota, RRHH, alquileres) → `docs/ASEGURA-PORTAL-MODULOS.md`**
+  (hoja de ruta por fases, riesgos y preguntas abiertas; tabla `seguros.portal_modulo`, cola `GET /api/operador/portal-modulos`).
 - Ideas de producto ya recogidas (con su coste y su bloqueo) → `docs/CORREDURIA-INTRANET-IDEAS.md`.
   **Mira ahí antes de proponer una idea nueva**: probablemente ya está, con lo que la bloquea.
 - Sector y agente semanal → skill `agente-correduria`.

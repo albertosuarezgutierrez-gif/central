@@ -115,6 +115,7 @@ model PortalIdentidad {
   enlacesFamilia    PortalInvitacionEnlace[]
   usoEnlaceFamilia  PortalInvitacionEnlaceUso?
   revisionesPoliza  PortalRevisionPoliza[]
+  modulos           PortalModulo[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -474,6 +475,29 @@ model PortalRevisionPoliza {
   @@unique([polizaDeclaradaId, huella], map: "portal_revision_poliza_una_por_huella")
   @@index([identidadId, creadaEn(sort: Desc)], map: "idx_portal_revision_poliza_identidad")
   @@map("portal_revision_poliza")
+  @@schema("seguros")
+}
+
+/// «Herramientas» del portal (Fase 0, 22/10/2026): la petición/activación de un módulo del catálogo
+/// (`MODULOS_PORTAL` de `module-seguros-portal`) por IDENTIDAD. SQL: `prisma/sql/2026-10-22_portal_modulos.sql`.
+/// 🚨 GRANT por columnas: el rol solo INSERTA (identidad_id, modulo, version_condiciones). Por eso
+/// `estado`, `origen` y `solicitadoEn` llevan `dbgenerated`: un `@default("…")`/`@default(now())`
+/// Prisma lo RELLENA en el cliente, la sentencia nombraría la columna y moriría con 42501 — y,
+/// sobre todo, el portal no debe poder escribir el estado (no se autoactiva).
+model PortalModulo {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId        String    @map("identidad_id") @db.Uuid
+  modulo             String
+  estado             String    @default(dbgenerated("'solicitado'::text"))
+  solicitadoEn       DateTime  @default(dbgenerated("now()")) @map("solicitado_en") @db.Timestamptz(6)
+  activadoEn         DateTime? @map("activado_en") @db.Timestamptz(6)
+  retiradoEn         DateTime? @map("retirado_en") @db.Timestamptz(6)
+  versionCondiciones String?   @map("version_condiciones")
+  origen             String    @default(dbgenerated("'portal'::text"))
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@map("portal_modulo")
   @@schema("seguros")
 }
 

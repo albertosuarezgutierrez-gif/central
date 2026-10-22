@@ -8,6 +8,7 @@ import { chromium, type Browser, type Frame } from 'playwright'
 import type { OfertaNormalizada } from '@central/module-tarificacion'
 import {
   BOTONES_GUARDAR_PRESUPUESTO_TURISMOS,
+  motivoFormularioGuardarTurismos,
   confirmacionGuardadoNueva,
   esBotonGuardarPresupuestoTurismos,
   guardarPresupuestoTurismosAllianz,
@@ -46,7 +47,7 @@ test('ofertas: guardado → referenciaPortal + aviso; no guardado → solo aviso
   assert.equal(n!.referenciaPortal, null)
   assert.equal(n!.primaAnualEur, 100)
   assert.match(n!.avisos.at(-1)!, /NO guardado/)
-  assert.equal(allianzAuto.version, '0.6.19')
+  assert.equal(allianzAuto.version, '0.6.20')
 })
 
 // ── Navegador: carcasa ePAC + app de Turismos con el formulario de guardado ──
@@ -63,7 +64,15 @@ type Opc = {
   textoPrevio?: string
   /** El clic no pinta confirmación nueva. */
   clicMudo?: boolean
+  /**
+   * v0.6.20 · cómo está el bloque «Guardar el presupuesto»: `tarde` (oculto y aparece a los 1,5 s), `oculto` (display:none siempre),
+   * `sin` (no hay `nx-mt-save-proposal`; con `botonFuera`, un «Guardar presupuesto» suelto fuera), `altoCero` (`<form>` de alto 0
+   * con el contenido visible: Playwright no lo da por «visible»).
+   */
+  bloque?: 'tarde' | 'oculto' | 'sin' | 'altoCero'
+  botonFuera?: boolean
 }
+const hostBloque = (o: Opc) => (o.bloque === 'sin' ? 'div' : 'nx-mt-save-proposal')
 const caja = (id: string, texto: string, marcada: boolean) =>
   `<nx-checkbox><input type="checkbox" id="${id}" ${marcada ? 'checked' : ''}><label for="${id}"><span></span><div>${texto}</div></label></nx-checkbox>`
 const app = (o: Opc) => `<!doctype html><html><body><div id="appArea">
@@ -75,7 +84,8 @@ const app = (o: Opc) => `<!doctype html><html><body><div id="appArea">
 </nx-mt-person-information>
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-1"><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div>OTRA</div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>X</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>Y</div></nx-data-display></nx-selectable-card>
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-2" checked><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div> MARCA </div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>MODELO</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>  </div></nx-data-display></nx-selectable-card>
-<nx-mt-save-proposal><form novalidate>
+${o.botonFuera ? '<button type="button" id="fuera" onclick="window.__fuera=1">Guardar presupuesto</button>' : ''}
+<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' || o.bloque === 'oculto' ? 'display:none' : ''}"><form novalidate style="${o.bloque === 'altoCero' ? 'height:0;overflow:visible' : ''}">
   <h3>Guardar el presupuesto</h3>
   <label for="ident">Identificador presupuesto</label><input id="ident" maxlength="30" required>
   <label for="nombre">Nombre</label><input id="nombre" required value="${o.nombre ?? 'NOMBRE'}">
@@ -83,8 +93,9 @@ const app = (o: Opc) => `<!doctype html><html><body><div id="appArea">
   ${caja('c4', ' Terceros con lunas ', false)}${caja('c5', ' Todos los paquetes ', false)}
   <button type="button" id="guardar" disabled><span><span><span>${o.boton ?? 'Guardar presupuesto'}</span></span></span></button>
   <p id="res">${o.textoPrevio ?? ''}</p>
-</form></nx-mt-save-proposal></div>
+</form></${hostBloque(o)}></div>
 <script>
+  if (${o.bloque === 'tarde'}) setTimeout(() => { document.getElementById('bloque').style.display = '' }, 1500)
   const b = document.getElementById('guardar'), i = document.getElementById('ident'), n = document.getElementById('nombre')
   const ver = () => { b.disabled = !(i.value && n.value) }
   i.addEventListener('input', ver); ver()
@@ -117,7 +128,7 @@ async function abrir(o: Opc = {}) {
   page.setDefaultTimeout(3_000)
   await page.goto('https://www.e-pacallianz.com/ngx-azs-epac/private/application')
   const marco = page.frames().find((f) => f.url().startsWith('https://cloud.e-pacallianz.com')) as Frame
-  await marco.waitForSelector('#guardar')
+  await marco.waitForSelector('#guardar', { state: 'attached' })
   return { context, guard, marco }
 }
 
@@ -140,7 +151,7 @@ test('obligatorio vacío (nombre) → NO se pulsa y se dice cuál; texto de bot�
   for (const [o, re] of [[{ nombre: '' }, /«Nombre»/], [{ boton: 'Guardar presupuesto y emitir' }, /no aparece el botón/]] as const) {
     const { context, guard, marco } = await abrir(o)
     try {
-      const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261018-ABCDEF12', 500)
+      const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261018-ABCDEF12', 500, 300)
       assert.equal(r.estado, 'no_guardado')
       if (r.estado === 'no_guardado') assert.match(r.motivo, re)
       assert.equal(await marco.evaluate(() => (window as unknown as { __pulsado?: boolean }).__pulsado ?? false), false)
@@ -206,4 +217,51 @@ test('seleccionVehiculo del resultado (para Generali): marca/modelo/versión con
   assert.equal(seleccionVehiculoConfirmada({ marca: 'MARCA', modelo: '  ', version: 'V' }), null)
   assert.equal(seleccionVehiculoConfirmada(null), null)
   assert.equal(seleccionVehiculoConfirmada({ marca: 'MARCA', modelo: 'MODELO', version: '1234BCD' }), null, 'una matrícula no viaja')
+})
+
+// ── v0.6.20 (22/10/2026): runs reales del 19 y 22/10 → «el formulario «Guardar el presupuesto» no está a la vista» y referencia NULL ──
+
+test('v0.6.20: formulario que se pinta TARDE o con `<form>` de alto 0 → se espera/desplaza y SE GUARDA con su nº', async () => {
+  for (const bloque of ['tarde', 'altoCero'] as const) {
+    const { context, guard, marco } = await abrir({ bloque })
+    try {
+      const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 2_000, 5_000)
+      assert.deepEqual(r, { estado: 'guardado', identificador: 'GA-20261022-ABCDEF12', referencia: '123456789' }, bloque)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('v0.6.20: bloque OCULTO, ausente o con «Guardar presupuesto» suelto FUERA → NO se pulsa nada y el motivo dice cuál', async () => {
+  const casos: [Opc, RegExp][] = [
+    [{ bloque: 'oculto' }, /está en la pantalla pero OCULTO/],
+    [{ bloque: 'sin' }, /no aparece en la pantalla de precios/],
+    [{ bloque: 'sin', botonFuera: true }, /hay 2 botón\(es\) «Guardar presupuesto» FUERA del formulario/],
+  ]
+  for (const [o, re] of casos) {
+    const { context, guard, marco } = await abrir(o)
+    try {
+      const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 500, 600)
+      assert.equal(r.estado, 'no_guardado')
+      if (r.estado === 'no_guardado') assert.match(r.motivo, re)
+      const w = await marco.evaluate(() => { const x = window as unknown as { __pulsado?: boolean; __fuera?: number }; return { p: x.__pulsado ?? false, f: x.__fuera ?? 0 } })
+      assert.deepEqual(w, { p: false, f: 0 }, 'no se pulsa nada')
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('v0.6.20: motivo del formulario (PURA) y propagación: referencia y aviso legible llegan a CADA oferta', () => {
+  const base = { hosts: 1, formularios: 1, conBotonVisible: 0, botonesGuardarFuera: 0, otrosBotones: [] as string[] }
+  assert.equal(motivoFormularioGuardarTurismos({ ...base, conBotonVisible: 1 }), null)
+  assert.match(motivoFormularioGuardarTurismos({ ...base, conBotonVisible: 2 })!, /ambiguo/)
+  assert.match(motivoFormularioGuardarTurismos({ ...base, hosts: 0, formularios: 0 })!, /no aparece/)
+  assert.match(motivoFormularioGuardarTurismos({ ...base, otrosBotones: ['Guardar y emitir'] })!, /botones a la vista: «Guardar y emitir»/)
+  const o = (p: string) => ({ compania: 'allianz', producto: p, primaAnualEur: 100, avisos: [], referenciaPortal: null }) as unknown as OfertaNormalizada
+  const g = ofertasConPresupuestoTurismos([o('A'), o('B'), o('C')], { estado: 'guardado', identificador: 'GA-1', referencia: 'GA-20261022-0001' })
+  assert.deepEqual(g.map((x) => x.referenciaPortal), ['GA-20261022-0001', 'GA-20261022-0001', 'GA-20261022-0001'])
+  const n = ofertasConPresupuestoTurismos([o('A'), o('B')], { estado: 'no_guardado', motivo: motivoFormularioGuardarTurismos({ ...base, hosts: 0, formularios: 0 })! })
+  assert.ok(n.every((x) => x.referenciaPortal === null && /^Presupuesto NO guardado en Allianz: el bloque «Guardar el presupuesto» no aparece/.test(x.avisos.at(-1)!)))
 })

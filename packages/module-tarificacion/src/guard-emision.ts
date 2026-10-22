@@ -25,6 +25,9 @@ export const PATRON_EMISION = new RegExp(`emit|emisi|contrat|formaliz|suplement|
 // «NUEVA ALTA» NO está aquí a propósito (Alberto, 05/10/2026): es la NAVEGACIÓN para cotizar.
 // «Archivar» (texto, td#store, `sendActionEvent('store')`) viene de `PATRONES_GUARDADO_GUARD` (acciones-portal.ts, lista
 // única del 14/10/2026): sigue BLOQUEADO aquí; solo `permitirGuardarPresupuesto` lo deja pasar (ver `pareceEmision`).
+/** «Generar Proyecto» de Mapfre NSEI. Bloqueado siempre salvo con `permitirGenerarProyectoMapfre` (ver `OpcionesGuard`). */
+export const PATRON_GENERAR_PROYECTO_MAPFRE = /generar[\s_+-]*proyecto/i
+
 export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /elij[ae][\s_+-]*una[\s_+-]*opcion/i,
   /recuperacion[\s_+-]*de[\s_+-]*contrasena/i,
@@ -62,9 +65,11 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /no[\s_+-]*es[\s_+-]*el[\s_+-]*vehiculo/i,
   /vehiculo[\s_+-]*no[\s_+-]*catalogado/i,
   // Mapfre NSEI, paso «Coberturas» (grabación de Alberto del 15/10/2026): «Ir a generar» y «Generar Proyecto» crean un nº de
-  // proyecto REAL en Mapfre y su documentación. El bot TARIFICA: lee la prima en Coberturas y PARA. Bloqueados en todo `pulsar()`.
+  // proyecto REAL en Mapfre y su documentación. Bloqueados en todo `pulsar()`, en el explorador IA y con `permitirGuardarPresupuesto`.
+  // «Generar Proyecto» (22/10/2026, Alberto: un proyecto no es póliza) SOLO pasa con la opción estrecha
+  // `permitirGenerarProyectoMapfre`, que pide únicamente `generarProyectoMapfre` (guard.ts del worker) para su botón y su ventana de red.
   /ir[\s_+-]*a[\s_+-]*generar/i,
-  /generar[\s_+-]*proyecto/i,
+  PATRON_GENERAR_PROYECTO_MAPFRE,
 ]
 
 // «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza
@@ -81,6 +86,13 @@ export type OpcionesGuard = {
    * Solo lo pide `pulsarGuardadoPresupuesto` (worker) y la red durante SU ventana.
    */
   permitirGuardarPresupuesto?: boolean
+  /**
+   * «GENERAR PROYECTO» DE MAPFRE NSEI (22/10/2026, Alberto: un proyecto no es póliza). Excepción ESTRECHA: quita de los bloqueos
+   * SOLO `PATRON_GENERAR_PROYECTO_MAPFRE`; no abre Archivar/store, «Aceptar», «Ir a generar» ni nada de `PATRON_EMISION`.
+   * Solo la pide `generarProyectoMapfre` (guard.ts del worker), para su botón y para la red durante SU ventana. El explorador IA
+   * (`bloqueoGuardadoPresupuesto`) NUNCA la usa: para él «Generar proyecto» sigue siendo `boton_de_emision`.
+   */
+  permitirGenerarProyectoMapfre?: boolean
 }
 
 // Sin «parameter properties» (`constructor(readonly x)`): `node --test` solo QUITA tipos y no las admite.
@@ -124,7 +136,9 @@ export function pareceEmision(texto: string | null | undefined, opciones: Opcion
   // Las URL pueden venir codificadas (`%C3%A9mitir`, `contrat%61r`): se decodifica si se puede.
   t = plano(decodificarUrlTolerante(t))
   if (PATRON_EMISION.test(t)) return true
-  const bloqueos = opciones.permitirGuardarPresupuesto ? TEXTOS_BLOQUEADOS_ALTA.filter((r) => !PATRONES_GUARDADO_GUARD.includes(r)) : TEXTOS_BLOQUEADOS_ALTA
+  const bloqueos = TEXTOS_BLOQUEADOS_ALTA.filter(
+    (r) => !(opciones.permitirGuardarPresupuesto && PATRONES_GUARDADO_GUARD.includes(r)) && !(opciones.permitirGenerarProyectoMapfre && r === PATRON_GENERAR_PROYECTO_MAPFRE),
+  )
   if (bloqueos.some((r) => r.test(t))) return true
   return !opciones.permitirAceptar && PATRON_ACEPTAR.test(t)
 }
