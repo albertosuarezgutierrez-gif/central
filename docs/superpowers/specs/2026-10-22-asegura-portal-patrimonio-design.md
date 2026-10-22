@@ -98,6 +98,8 @@ el despliegue que la usa. Rol sin `DELETE` salvo donde se diga: se archiva (`arc
 | `portal_patrimonio_plantilla_gasto` | `titular_id`, `inmueble_id NULL`, `comunidad_id NULL`, `concepto`, `categoria` CHECK, `periodicidad` CHECK, `dia_mes smallint CHECK 1..31`, `inicio`, `fin NULL`, `importe_cent NULL`, `proveedor NULL`, `activo` | `importe_cent NULL` = variable (no 0). |
 | `portal_patrimonio_gasto` | `titular_id`, `inmueble_id NULL`, `fecha`, `categoria NULL`, `concepto`, `base_cent NULL`, `total_cent NULL`, `estado` CHECK propuesto/confirmado/descartado, `origen` CHECK plantilla/factura/manual/derrama, `clave NULL`, `documento_id NULL`, `propuesta jsonb NULL` (motivos + confianza de la IA), `confirmado_en`, `confirmado_por_identidad_id` | UNIQUE (`titular_id`,`clave`) parcial `WHERE clave IS NOT NULL`: el generador es idempotente. CHECK `estado<>'confirmado' OR (base_cent IS NOT NULL OR total_cent IS NOT NULL)`. |
 | `portal_patrimonio_derrama` | `comunidad_id`, `inmueble_id`, `concepto`, `total_cent`, `cuotas`, `primera date` | Genera gastos `origen='derrama'`, clave `<derrama>:<n>`. |
+| `portal_patrimonio_indice` | `indice` CHECK IPC/IRAV, `periodo char(7)`, `pct numeric`, `fuente_url`, `descargado_en`, `revisado boolean` | Escribe SOLO el cron de `apps/asegura` (rol `prisma_seguros`); el portal solo LEE. Append-only. |
+| `portal_patrimonio_importacion` (+ `_fila`) | `identidad_id`, `titular_id`, `documento_id` (el fichero), `mapeo jsonb` (propuesto por la IA / corregido), `estado` CHECK propuesta/revisada/confirmada/descartada; fila: `n`, `entidad`, `datos jsonb`, `problema NULL`, `creado_id NULL` | Nada de aquí cuenta hasta `confirmada`; al confirmar, cada fila apunta a lo que creó (`creado_id`). |
 | `portal_patrimonio_obligacion` | `inmueble_id`, `tipo` CHECK, `aplica boolean NULL`, `ultima date NULL`, `vence date NULL`, `periodicidad_meses NULL`, `avisada_en NULL` | Las de contrato NO se guardan: se calculan. |
 | `portal_patrimonio_enlace_inquilino` | `contrato_id`, `inquilino_id`, `token_hash`, `creado_en`, `anulado_en NULL`, `ultimo_uso_en NULL` | Token HASHEADO; anular no borra. |
 | `portal_patrimonio_aviso_inquilino` | `contrato_id`, `inquilino_id`, `tipo` CHECK averia/siniestro/consulta, `texto`, `fotos` (documentos), `estado` CHECK recibido/visto/convertido_en_parte/cerrado, `parte_id NULL` | El rol del portal INSERTA desde la página pública. |
@@ -141,9 +143,24 @@ sugerencia automática (misma referencia catastral/dirección que `describirBien
    leerla», nunca un gasto de 0 €.
 4. **Comunidad**: cuota = plantilla `COMUNIDAD`; derrama → `cuotasDerrama` (suma exacta).
 5. **Contrato**: alta con renta, fechas, cláusula, fianza, seguro exigido; adjuntar el PDF (documental). Actualización:
-   `calcularActualizacionRenta` con el índice que trae el adaptador (tabla de índices mantenida a mano en `apps/asegura`
-   con fuente y fecha, como el catálogo de teléfonos) y el **tope legal como parámetro**; propone, el propietario
-   la aplica y la notifica.
+   `calcularActualizacionRenta` con el índice que trae el adaptador desde `seguros.portal_patrimonio_indice` y el
+   **tope legal como parámetro**; propone, el propietario la aplica y la notifica.
+   **Índices AUTOMÁTICOS (decisión de Alberto, 22/10/2026):** nadie los teclea. Un cron mensual
+   (`apps/asegura/app/api/cron/indices-renta`) los descarga de la API JSON del INE (IPC general variación anual;
+   IRAV), los valida (periodo esperado, número finito, rango razonable) y los guarda en
+   `portal_patrimonio_indice (indice, periodo, pct, fuente_url, descargado_en)`, UNIQUE (`indice`,`periodo`),
+   append-only: una revisión del INE es una fila nueva con `revisado=true`, nunca se pisa. **Si falla** (red, formato,
+   periodo que no llega a su fecha) avisa por Telegram y NO escribe nada. Un índice que falta es `sin_indice` («aún no
+   tenemos el dato del INE»), nunca 0 %.
+10. **Importar datos existentes (decisión de Alberto, 22/10/2026):** el CLIENTE sube su Excel/CSV en el portal
+    (`/patrimonio/importar`, 10 MB). La IA lee las cabeceras y unas filas de muestra y PROPONE el mapeo de columnas
+    a entidades (inmuebles, inquilinos, contratos, gastos fijos y variables, comunidad) con su confianza; el cliente
+    corrige el mapeo, ve una vista previa de lo que se va a crear (con las filas que no se entienden apartadas, no
+    descartadas en silencio) y CONFIRMA. Hasta entonces todo vive en `portal_patrimonio_importacion` (+ `_fila`,
+    `estado` CHECK `propuesta/revisada/confirmada/descartada`) y **nada cuenta**: ni rentabilidad, ni calendario,
+    ni avisos. Al confirmar se crean filas normales; las celdas vacías o de cajón se guardan como `null` (no se
+    sabe), nunca 0. Duplicados por referencia catastral/NIF: se proponen como «ya existe», no se funden solos.
+    Direcciones del Excel: se intentan casar con el callejero (CP primero); la que no casa queda «por validar».
 6. **Calendario**: `calendarioPatrimonio` → «Pendiente de ti» y campana (fuente nueva `patrimonio`, con su `sinComprobar`).
    Push con el circuito existente. Sin fecha → «dinos cuándo fue la última».
 7. **Rentabilidad**: `rentabilidadPorInmueble` por año/trimestre/mes; los avisos se traducen a frases
@@ -199,5 +216,5 @@ Inmuebles dados de alta por piloto, facturas subidas/confirmadas, % de propuesta
 | 3 | ¿Remitente de los avisos al inquilino? | **En nombre del propietario «vía Grupo ASegura»** (From técnico del portal, `Reply-To` del propietario si lo da). |
 | 4 | ¿Quién gestiona? | **El titular, o un tercero autorizado con nivel Gestión o Total** (`patrimonio_gestion`/`patrimonio_total`). |
 | 5 | Volumen de los pilotos (inmuebles, contratos, facturas/mes) | **Desconocido**: el diseño pagina a 50 + «Ver más» y no asume < 100 inmuebles. Pedir el Excel de Grupo Elca para dimensionar e importar. |
-| 6 | ¿Importamos el Excel de Grupo Elca? | Sí, como paso propio del plan, con revisión del cliente (filas `propuesto`). |
-| 7 | ¿Quién mantiene la tabla de índices IPC/IRAV? | Alberto/agente, a mano con fuente y fecha (como el catálogo de teléfonos). |
+| 6 | ¿Importamos el Excel de Grupo Elca? | **DECIDIDO (22/10)**: lo sube el propio cliente en el portal; la IA propone el mapeo y el cliente confirma (§5.10). |
+| 7 | ¿Quién mantiene la tabla de índices IPC/IRAV? | **DECIDIDO (22/10)**: nadie a mano; cron mensual desde el INE con aviso si falla (§5.5). |

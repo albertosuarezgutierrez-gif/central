@@ -57,8 +57,19 @@
 
 ## Paso 9 — Contratos, inquilinos y actualización de renta (agente-architect: PII)
 - `patrimonio/contrato/[id]`, alta de inquilino con PII por el PUENTE de `apps/asegura` (`/api/portal/patrimonio/inquilino`),
-  `lib/patrimonio/indices.ts` (tabla mantenida con fuente/fecha), propuesta de actualización (aplicar = fila append-only).
+  `lib/patrimonio/indices.ts` (LEE `portal_patrimonio_indice`, que llena el paso 9b), propuesta de actualización
+  (aplicar = fila append-only).
 - Tests: sin cláusula no propone; índice distinto rechaza; el portal nunca guarda NIF en claro.
+
+## Paso 9b — Índices IPC/IRAV automáticos desde el INE (general-purpose, sonnet; revisión agente-architect)
+- Puro: `packages/module-patrimonio/src/indices-ine.ts` — `parsearSerieIne(json, indice)` → `{periodo, pct}[]` y
+  `validarIndice` (periodo `YYYY-MM`, número finito, rango −10..+20 %, sin huecos raros); test con JSON de muestra
+  guardado en el test (nada de red en tests) y rojo.
+- `apps/asegura/app/api/cron/indices-renta/route.ts` (`CRON_SECRET`, mensual en `vercel.json`): descarga la API JSON
+  del INE (IPC general variación anual; IRAV), valida y hace INSERT de lo nuevo en `portal_patrimonio_indice`
+  (ON CONFLICT DO NOTHING; revisión del INE = fila `revisado=true`). Si falla o el periodo esperado no llega en
+  su fecha → Telegram (`core-telegram`) y NO escribe. DDL de la tabla en el SQL del paso 3 (GRANT SELECT al portal).
+- Tests: fallo de red/formato no escribe y avisa; dos pasadas no duplican; índice ausente → la propuesta sale `sin_indice`.
 
 ## Paso 10 — Calendario y avisos (general-purpose, sonnet)
 - `lib/patrimonio/calendario.ts` (adaptador de `calendarioPatrimonio`), fuente `patrimonio` en `lib/avisos.ts`/«Pendiente de ti»
@@ -78,5 +89,17 @@
 - Texto de encargo de tratamiento (`app/legal/encargo-patrimonio`), `portal_consentimiento` tipo `encargo_patrimonio`,
   `VERSION_TEXTOS_LEGALES` +1, gate «gratis solo con póliza en vigor» (`esCarteraEnVigor`).
 
-## Paso 14 — Importar el Excel de Grupo Elca (agente-mecanico + revisión)
-- Script de importación a filas `propuesto` revisables por el cliente. Depende de recibir el Excel.
+## Paso 14 — Importación por el cliente: Excel/CSV con mapeo propuesto por IA (agente-architect para el puro y la confirmación)
+Va después de pantallas, gastos y contratos (pasos 5-9) porque crea esas mismas entidades por sus mismas rutas.
+- 14a Puro: `packages/module-patrimonio/src/importacion.ts` — `proponerMapeo(cabeceras, muestra)` heurístico (la IA lo
+  mejora, no lo sustituye), `aplicarMapeo(filas, mapeo)` → filas por entidad con `problema` (fecha/CP/importe ilegible,
+  celda de cajón → `null`, nunca 0), `detectarDuplicados` (ref. catastral / NIF / clave de plantilla) como «ya existe».
+  Tests + rojo.
+- 14b `app/api/patrimonio/importaciones/route.ts` (subida 10 MB, xlsx/csv, tope por identidad/día) +
+  `lib/patrimonio/mapeo-ia.ts` (`core-ai`, solo cabeceras + ≤20 filas de muestra) → `portal_patrimonio_importacion(_fila)`
+  en estado `propuesta`. DDL en el SQL del paso 3.
+- 14c `app/(portal)/patrimonio/importar/*`: corregir el mapeo, vista previa por entidad (apartadas visibles, ~50 + «Ver más»),
+  CONFIRMAR → crea filas normales en una transacción, sellando `creado_id`. Hasta confirmar nada entra en rentabilidad,
+  calendario ni avisos (cepo: las lecturas de los pasos 10-11 no leen tablas de importación). Direcciones: CP primero contra
+  el callejero; la que no casa queda «por validar».
+- Tests: importación ajena → 404; confirmar dos veces no duplica; fila con problema no se crea sola.
