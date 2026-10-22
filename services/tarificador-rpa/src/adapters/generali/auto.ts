@@ -872,13 +872,16 @@ async function resolverTrasOtrosModelo(
 ): Promise<{ valor: string; texto: string; indice: number }> {
   const ini = Date.now()
   let ultimo = { label: '', input: '', n: antes.length }
+  let puestaDesde: number | null = null
   for (;;) {
     const ops = await opcionesSelect(menu.select).catch(() => [] as { valor: string; texto: string }[])
     const m = await leerModeloMostrado(menu)
     ultimo = { label: m.label, input: m.input, n: ops.length }
     const est = estadoTrasOtrosModeloGenerali(antes, ops.map((o) => o.texto), otros.texto, m.label, m.input, b.texto, b.modo)
     const t = Date.now() - ini
-    if (est.tipo === 'puesta' && t >= ESTABLE_TRAS_OTROS_MS) {
+    // «Estable» = puesta SIN interrupción durante la ventana (si el AJAX la devuelve a «Seleccione uno», el reloj vuelve a cero).
+    puestaDesde = est.tipo === 'puesta' ? (puestaDesde ?? Date.now()) : null
+    if (puestaDesde !== null && Date.now() - puestaDesde >= ESTABLE_TRAS_OTROS_MS) {
       avisos?.push(supuesto)
       return { ...otros, indice: indiceOtros }
     }
