@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Patrimonio F1 paso 7 (facturas con IA): `POST/PATCH /api/patrimonio/facturas` + `RevisarFactura.tsx`. Subir deja un gasto `propuesto`
+(origen `factura`, importes NULL si no se leyó, `propuesta` jsonb con motivos); confirmar/descartar lo hace la persona (total >0, fecha y categoría obligatorias).
+Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; titular/inmueble ajeno → 404. Sin SQL nuevo. Pendiente: revisión agente-architect, `documento_id` (paso 8).
 **(22/10/2026)** — Patrimonio F1 paso 6: `/patrimonio/gastos` (plantillas, comunidad, derramas; comunidad exige nivel Total) + cron diario
 `/api/cron/patrimonio-gastos` (05:20, idempotente por `clave`, `isCronAuthorized`) que genera gastos `propuesto`. Siguiente: paso 7 (facturas con IA).
 **(22/10/2026)** — RRHH · «Mi material» con foto (Pilar): empleado sube foto (cámara, compresión cliente ~1600px, magic bytes, ≤8MB server / ≤4MB
