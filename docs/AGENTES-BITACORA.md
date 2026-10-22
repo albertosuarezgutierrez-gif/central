@@ -17,6 +17,11 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+### 22/10/2026 · sivra_mercado_booking
+- 24/24 ventanas medidas (aforos 2/4/5/12), 233 comps `booking_mcp`; escaparate propio 4/4; 0 sin respuesta. Plan: 548 ventanas, 524 fuera por tope.
+- Medianas por fecha/aforo no calculadas en esta pasada (los comps quedan en `market_rates`).
+- Propios descartados: HOUSE SEVILLANA ×3 en mercado. 3 alojamientos sin puntuación omitidos (Limehome Pureza, Patio del Museo, Barrio Arenal).
+
 - **2026-10-21 · trading-analista** · hizo: pasada completa 20:15 UTC (NAV 33.822,25€ → saldo; cartera VWCE+CVX → panel; 0 operaciones nuevas + latido; /analizar 24 símbolos sin compras paper nuevas —LLY ya abierta, CVX por concentración, SNDK bajo SMA50—; /puntuar 0 puntuadas/0 cerradas; Telegram enviado con stops viables); dudas: 2ª fuente (Stooq/Yahoo) solo llega al 20/10 → contraste `sinJuzgar` (24 en analizar, 4 en puntuar), precios solo IBKR sin vetos; volumen de la última vela parcial en IBKR (rvol flojo = artefacto); velas de 80 sesiones (no ~120) por coste de transcripción; fallos: 4 microincoherencias OHLC (close fuera de [low,high] ≤0,03%) heredadas del bróker, no de la transcripción; canal-aviso.sh no admite cuerpos >128 KB (copia que lee de fichero); PRs/commits: —
 - **2026-10-21 · facturas-correo** · hizo: Paso 0 (Vía B sana, última copia 21/10; `gmail-adjuntos` caído CONNECTION_CLOSED, Vía A no usable); 10 hilos candidatos revisados, 0 facturas nuevas deducibles (clickedu, Mapfre campañas, Tryp, DEHU, Asecon "facturas BOOKING" = recopilación para Hacienda, mensajes de huéspedes Booking); 1-bis sin subidas manuales nuevas; 4.0: backlog `v_facturas_sin_cargo` con 2 `sin_revisar` (anthropic 180,00€ 05/10; Si Que Brilla 1.128,48€ 03/10) sin cargo en banco (último mov. 19/10; solo 170€ Anthropic y 208,32€ TRANSF 2100 del 28/09), dejadas sin tocar; 0 conciliados. Colas Gmail: Revisar 3 (incl. Endesa Dúplex P26CON043826944 sin PDF/importe), PDF-pendiente 2 (Endesa Socorro ago/sep), Extraccion-fallida 4 (no facturas nuevas; Giraldillo AFV-11808 es reenvío repetido ya conocido). dudas: ¿1.128,48€ Si Que Brilla pagado desde otra cuenta?; ¿180€ Anthropic es otro cargo en feed distinto? fallos: —; PRs/commits: —
 
