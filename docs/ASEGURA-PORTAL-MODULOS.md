@@ -31,6 +31,22 @@
 - Firma por OTP (`core-firma` + `core-identity`).
 - Fuera de Fase 1 (van a Fase 2): contratos, rentas, impagos y fianzas.
 
+### Decisión técnica (inventario 22/10)
+- **Paquete nuevo `packages/module-patrimonio`** (lógica pura): inmueble, sociedad titular, inquilino, contrato,
+  gasto fijo como PLANTILLA + generador mensual, gasto variable, comunidad, vencimientos.
+- Se apoya en **`module-contabilidad`** (`Apunte` con `entidad_id`, `calcularRentabilidad`, `generarFechasRecurrente`)
+  y en **`module-documental`**.
+- **Tablas nuevas del portal** (`seguros.portal_*`, con las reglas de siempre: GRANT por columnas antes que schema,
+  REVOKE a `crm_seguros`, identidad de la cookie en cada `where`) y **sección nueva en `apps/asegura-portal/app/(portal)`**.
+- **Se PORTAN ideas** (no código acoplado):
+  - de `apps/ialimp`: `propietario_gastos` (periodicidad, `fecha_vencimiento` + `alerta_dias`, póliza/proveedor),
+    `ContabilidadTab`, escaneo de facturas con IA a `documentos_contables`;
+  - de `plataforma` → `/sivra`: plantillas `gastos_fijos` con `dia_mes`, categorías
+    `ALQUILER`/`SUMINISTROS`/`COMUNIDAD`/`SEGURO`/`IMPUESTOS`, P&L por piso.
+- **NO se reutiliza ialimp como app:** segundo login con token permanente, mezcla limpieza/reservas, y riesgo para
+  la sincronización iCal/Smoobu → `cleaning_sessions`, que sigue viva.
+- **Núcleo nuevo:** inquilino, contrato de larga estancia con renta, comunidad como entidad, liquidación.
+
 ## Ideas aprobadas por Alberto (22/10/2026), por priorizar
 - **Segundo cliente interesado: Grupo Elca** (patrimonial, hoy lo lleva en Excel): control de comunidades y gastos
   FIJOS/VARIABLES por inmueble. ⇒ **La Fase 1 incluye control económico por inmueble**, no solo inquilinos y
