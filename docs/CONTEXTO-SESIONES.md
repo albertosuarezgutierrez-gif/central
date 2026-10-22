@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Patrimonio portal F1 pasos 2-3 (PR #4995): puros `acceso`/`infraseguro`/`enlace-inquilino` en `module-patrimonio`;
+SQL `2026-10-22_portal_patrimonio.sql` APLICADO en BD (18 tablas, triggers, GRANT por columnas, crm_seguros 0, sin DELETE).
+Decisiones Alberto: comunidad propia de cada titular (no compartida); filas de importación se vacían al cerrar.
+🚨 El MCP Supabase se CUELGA (timeout 60 s) con cualquier `DROP` en el SQL (pide confirmación): usar `CREATE OR REPLACE TRIGGER`.
+PENDIENTE: §15 del SQL (CHECK de alcance `patrimonio_*` en `portal_autorizacion`) a mano en el editor SQL antes del paso 4.
+CI de Actions no corre en el PR desde las 08:11 (solo Vercel/automerge): code-review y sacar de draft.
 **(22/10/2026)** — asegura-portal · aviso «Póliza aportada… compañía sin leer» de Antonio Lozano: NO era fallo de lectura, subió una ficha catastral (`tipoDocumento:'otro'`). El aviso ahora lo dice (`aviso-poliza-declarada.ts` + test). Sus 10 PDF están guardados como `portal_poliza_declarada` (destino correcto para pólizas de otra compañía; nunca `seguros.polizas`) y salen en su ficha «Aportadas desde el portal». 4 Generali comercio con vencimiento leído 03/2018 (probable 1.er periodo, renovación tácita): no se inventa fecha. Pendiente: pedirle último recibo; propuesta `proyectarVencimiento` también en el portal; 3 PDF «v loreto» ilegibles.
 **(21/10/2026)** — Tarificador · #4973 (Generali 0.2.15 usa la 1.ª matriculación ESTIMADA por matrícula, campo propio
 `fechaMatriculacionEstimada` solo para Generali; Mapfre 0.8.13 cierra el modal que tapaba «Nueva producción»; Allianz

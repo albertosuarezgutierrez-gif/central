@@ -1,4 +1,6 @@
--- ⛔ SIN APLICAR. Patrimonio en el portal del cliente — Fase 1, paso 3 (22/10/2026).
+-- ✅ APLICADO 22/10/2026 (OK de Alberto) salvo §15 (CHECK de alcance en portal_autorizacion): PENDIENTE,
+--    el MCP se cuelga con DROP; ejecutar §15 a mano en el editor SQL de Supabase antes del paso 4.
+-- Patrimonio en el portal del cliente — Fase 1, paso 3 (22/10/2026).
 -- NO se aplica sin OK de Alberto, y se aplica en el MISMO paso que el despliegue de asegura-portal que
 -- la usa (regla del portal). 🚨 GRANT antes que schema: `schema.prisma` ya declara los modelos
 -- `PortalPatrimonio*` con EXACTAMENTE las columnas que aquí se conceden en SELECT (cepo
