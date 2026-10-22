@@ -3027,6 +3027,14 @@ export async function marcarPlacasEspecialesGenerali(page: Page, guard: GuardEmi
 const RE_POTENCIA_GENERALI = /^\d{2,4}(?:[.,]\d+)?\s*CV$/i
 /** Nombre de un grupo de opciones del selector que NO es «Placas especiales» (id/name simple de PrimeFaces, con `:`). */
 const esGrupoPotenciaGenerali = (g: string) => /^[A-Za-z][A-Za-z0-9_:.-]{0,60}$/.test(g) && !/^placaesp/i.test(g)
+/** v0.2.17: el grupo de combustible además tiene que llamarse combustible/carburante. */
+const esGrupoCombustibleGenerali = (g: string) => esGrupoPotenciaGenerali(g) && /combust|carbur/i.test(g)
+/** Mayúsculas sin tildes ni espacios dobles (solo para las listas blancas de texto de los grupos del selector). */
+const sinTildesGenerali = (t: string) => textoMenu(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+/** v0.2.17: «No lo sé» de los grupos del selector (potencia y combustible). */
+const esNoLoSeGenerali = (t: string) => sinTildesGenerali(t) === 'NO LO SE'
+/** v0.2.17: textos EXACTOS que la puerta de combustible puede marcar. Nada más. */
+const COMBUSTIBLES_SELECTOR_GENERALI = Object.freeze(['DIESEL', 'GASOLINA', 'ELECTRICO', 'HIBRIDO', 'HIBRIDO ENCHUFABLE', 'GLP', 'GNC', 'HIDROGENO', 'NO LO SE'])
 
 /** Literal XPath seguro para un texto (con comillas dobles, simples o ambas). */
 function literalXpath(t: string): string {
@@ -3035,20 +3043,18 @@ function literalXpath(t: string): string {
   return 'concat(' + t.split('"').map((x) => `"${x}"`).join(`, '"', `) + ')'
 }
 
-/** Marca la potencia `texto` («116.0 CV») del grupo `grupo`, UNA vez por trabajo. Ya marcada → no se toca (y no gasta la puerta). */
-export async function elegirPotenciaGenerali(page: Page, guard: GuardEmision, grupo: string, texto: string): Promise<void> {
-  guard.comprobar()
-  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'la potencia del selector de Generali con una ventana de red abierta')
-  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
-  if (typeof grupo !== 'string' || !esGrupoPotenciaGenerali(grupo)) throw new EmisionBloqueadaError('boton', String(grupo ?? '').slice(0, 80))
-  if (!RE_POTENCIA_GENERALI.test(t)) throw new EmisionBloqueadaError('boton', t.slice(0, 80))
+/**
+ * Marca la opción de texto EXACTO `t` del grupo `grupo` del selector (marco `selVehiculo` único), UNA vez por `clave`: exactamente una
+ * opción con ese texto, su etiqueta visible y su descripción pasan `comprobarBoton`. Ya marcada → no se toca (y no gasta la puerta).
+ */
+async function marcarOpcionGrupoGenerali(page: Page, guard: GuardEmision, grupo: string, t: string, clave: string, que: string): Promise<void> {
   const marco = marcoSelectorVehiculosGenerali(page)
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
-  if (usados.has('generali:elegir-potencia')) throw new EmisionBloqueadaError('fase', 'la potencia del selector de Generali ya se eligió en este trabajo')
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `${que} del selector de Generali ya se eligió en este trabajo`)
   await exigirSinCuentaBancaria(page)
   const radios = marco.locator(`input[type=radio][name="${grupo.replace(/"/g, '')}"]`)
   const n = await radios.count()
-  if (n === 0 || n > 40) throw new ErrorMapaGuardGenerali(`el grupo de potencias «${grupo.slice(0, 60)}» (${n} opciones; hace falta entre 1 y 40)`)
+  if (n === 0 || n > 40) throw new ErrorMapaGuardGenerali(`el grupo de ${que} «${grupo.slice(0, 60)}» (${n} opciones; hace falta entre 1 y 40)`)
   const casan: { id: string; marcada: boolean }[] = []
   for (let i = 0; i < n; i++) {
     const r = radios.nth(i)
@@ -3058,17 +3064,40 @@ export async function elegirPotenciaGenerali(page: Page, guard: GuardEmision, gr
     const et = ((await lab.first().innerText().catch(() => '')) ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
     if (et === t) casan.push({ id, marcada: await r.isChecked().catch(() => false) })
   }
-  if (casan.length !== 1) throw new ErrorMapaGuardGenerali(`la potencia «${t}» del grupo «${grupo.slice(0, 60)}» (${casan.length} opciones con ese texto exacto; hace falta exactamente una)`)
+  if (casan.length !== 1) throw new ErrorMapaGuardGenerali(`${que} «${t}» del grupo «${grupo.slice(0, 60)}» (${casan.length} opciones con ese texto exacto; hace falta exactamente una)`)
   if (casan[0]!.marcada) return
   const etiqueta = marco.locator(`label[for="${casan[0]!.id.replace(/"/g, '')}"]`).filter({ visible: true })
-  if ((await etiqueta.count()) !== 1) throw new ErrorMapaGuardGenerali(`la etiqueta visible de la potencia «${t}»`)
+  if ((await etiqueta.count()) !== 1) throw new ErrorMapaGuardGenerali(`la etiqueta visible de ${que} «${t}»`)
   const desc = await descripcion(etiqueta)
   if (textoMenu(desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
   comprobarBoton(desc)
-  usados.add('generali:elegir-potencia')
+  usados.add(clave)
   AVANCES_USADOS.set(guard, usados)
   await etiqueta.click()
   guard.comprobar()
+}
+
+/** Marca la potencia `texto` («116.0 CV» o, v0.2.17, «No lo sé») del grupo `grupo`, UNA vez por trabajo. Ya marcada → no se toca (y no gasta la puerta). */
+export async function elegirPotenciaGenerali(page: Page, guard: GuardEmision, grupo: string, texto: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'la potencia del selector de Generali con una ventana de red abierta')
+  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (typeof grupo !== 'string' || !esGrupoPotenciaGenerali(grupo)) throw new EmisionBloqueadaError('boton', String(grupo ?? '').slice(0, 80))
+  if (!RE_POTENCIA_GENERALI.test(t) && !esNoLoSeGenerali(t)) throw new EmisionBloqueadaError('boton', t.slice(0, 80))
+  await marcarOpcionGrupoGenerali(page, guard, grupo, t, 'generali:elegir-potencia', 'la potencia')
+}
+
+/**
+ * v0.2.17: marca el combustible `texto` (lista blanca cerrada: Diésel, Gasolina… o «No lo sé») del grupo `grupo` (que se llama
+ * combustible/carburante y no es «Placas especiales»), UNA vez por trabajo. Mismo marco y mismas comprobaciones que la potencia.
+ */
+export async function elegirCombustibleGenerali(page: Page, guard: GuardEmision, grupo: string, texto: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'el combustible del selector de Generali con una ventana de red abierta')
+  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (typeof grupo !== 'string' || !esGrupoCombustibleGenerali(grupo)) throw new EmisionBloqueadaError('boton', String(grupo ?? '').slice(0, 80))
+  if (!COMBUSTIBLES_SELECTOR_GENERALI.includes(sinTildesGenerali(t))) throw new EmisionBloqueadaError('boton', t.slice(0, 80))
+  await marcarOpcionGrupoGenerali(page, guard, grupo, t, 'generali:elegir-combustible', 'el combustible')
 }
 
 /**
@@ -3166,14 +3195,16 @@ async function abrirMenuGenerali(page: Page, guard: GuardEmision, base: string, 
 }
 
 /** Pulsa el `li` de `data-label` EXACTO del panel `#<base>_panel`. Exactamente uno; su texto y atributos pasan `comprobarBoton`. Una vez por `clave`. */
-async function elegirItemMenuGenerali(page: Page, guard: GuardEmision, base: string, texto: string, idValido: (b: string) => boolean, clave: string, que: string): Promise<void> {
+async function elegirItemMenuGenerali(page: Page, guard: GuardEmision, base: string, texto: string, idValido: (b: string) => boolean, clave: string, que: string, primeraDeIguales = false): Promise<void> {
   const { marco, usados } = await prepararPuertaMenuGenerali(page, guard, base, idValido, clave, que)
   const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
   if (t === '') throw new EmisionBloqueadaError('boton', '')
   const etq = texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-  const item = marco.locator(`[id="${base}_panel"] li[data-label="${etq}"]`)
-  const n = await item.count()
-  if (n !== 1) throw new ErrorMapaGuardGenerali(`la opción «${t.slice(0, 60)}» en el panel «#${base}_panel» (${n} elementos con ese texto exacto; hace falta exactamente uno)`)
+  const todos = marco.locator(`[id="${base}_panel"] li[data-label="${etq}"]`)
+  const n = await todos.count()
+  // v0.2.17: la versión puede venir REPETIDA con el mismo texto exacto (prueba real): solo ahí se admite la PRIMERA de las idénticas (tope 40).
+  if (primeraDeIguales ? n < 1 || n > 40 : n !== 1) throw new ErrorMapaGuardGenerali(`la opción «${t.slice(0, 60)}» en el panel «#${base}_panel» (${n} elementos con ese texto exacto; hace falta ${primeraDeIguales ? 'al menos uno' : 'exactamente uno'})`)
+  const item = todos.first()
   const desc = await descripcion(item)
   if (textoMenu(desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
   comprobarBoton(desc)
@@ -3206,8 +3237,17 @@ export async function elegirMarcaListaGenerali(page: Page, guard: GuardEmision, 
 // la marca: id de menú válido (no el de marcas ni sus elementos internos), solo el disparador propio, `li` de texto exacto (también «Otros»)
 // por `comprobarBoton`, URL `selVehiculo` y una vez por trabajo cada puerta.
 
+/** v0.2.17: ids de menú usados como «Modelo» en cada trabajo (la puerta de versión nunca abre ni elige en el menú de modelos). */
+const BASES_MODELO_GENERALI = new WeakMap<GuardEmision, Set<string>>()
+function anotarBaseModeloGenerali(guard: GuardEmision, base: string): void {
+  const s = BASES_MODELO_GENERALI.get(guard) ?? new Set<string>()
+  s.add(base)
+  BASES_MODELO_GENERALI.set(guard, s)
+}
+
 /** Abre el desplegable «Modelo» por su disparador propio, UNA vez por trabajo. */
 export async function abrirDesplegableModeloGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
+  if (typeof base === 'string' && esIdModeloGenerali(base)) anotarBaseModeloGenerali(guard, base)
   await abrirMenuGenerali(page, guard, base, esIdModeloGenerali, claveRondaModeloGenerali(guard, 'generali:abrir-modelo'), 'el desplegable de modelos')
 }
 
@@ -3216,8 +3256,25 @@ export async function elegirModeloListaGenerali(page: Page, guard: GuardEmision,
   const clave = claveRondaModeloGenerali(guard, 'generali:elegir-modelo')
   const otros = esTextoOtrosGenerali(texto ?? '')
   if (otros && clave !== 'generali:elegir-modelo') throw new EmisionBloqueadaError('fase', '«Otros» en el desplegable de modelos de Generali ya se eligió en este trabajo')
+  if (typeof base === 'string' && esIdModeloGenerali(base)) anotarBaseModeloGenerali(guard, base)
   await elegirItemMenuGenerali(page, guard, base, texto, esIdModeloGenerali, clave, 'el modelo de la lista')
   if (otros) AVANCES_USADOS.get(guard)?.add(CLAVE_MODELO_OTROS_GENERALI)
+}
+
+// v0.2.17 (22/10/2026, prueba real): tras combustible y potencia, «Versión» es otro SelectOneMenu de PrimeFaces con textos REPETIDOS
+// («2.9 CRDI 163 FULL» dos veces). Mismas reglas que el modelo (disparador propio, `li` de `data-label` exacto por `comprobarBoton`, URL
+// `selVehiculo`, una vez por trabajo cada puerta) y además: el id no puede ser el del menú de marcas NI el de modelos de este trabajo; si el
+// texto está repetido se pulsa el PRIMERO de los idénticos (el adaptador lo declara como supuesto).
+const esIdVersionGenerali = (guard: GuardEmision) => (b: string) => esIdModeloGenerali(b) && !(BASES_MODELO_GENERALI.get(guard)?.has(b) ?? false)
+
+/** Abre el desplegable «Versión» por su disparador propio, UNA vez por trabajo (nunca el de marcas ni el de modelos). */
+export async function abrirDesplegableVersionGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
+  await abrirMenuGenerali(page, guard, base, esIdVersionGenerali(guard), 'generali:abrir-version', 'el desplegable de versiones')
+}
+
+/** Pulsa el `li` de la versión elegida (`data-label` exacto; repetido → el primero) del panel `#<base>_panel`, UNA vez por trabajo; el texto pasa `comprobarBoton`. */
+export async function elegirVersionListaGenerali(page: Page, guard: GuardEmision, base: string, texto: string): Promise<void> {
+  await elegirItemMenuGenerali(page, guard, base, texto, esIdVersionGenerali(guard), 'generali:elegir-version-lista', 'la versión de la lista', true)
 }
 
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────

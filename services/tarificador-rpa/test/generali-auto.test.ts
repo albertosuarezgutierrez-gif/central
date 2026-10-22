@@ -38,7 +38,7 @@ import {
 } from '../src/adapters/generali/reglas.ts'
 import { ErrorMapaIncompletoGenerali, decidirFilaVersionGenerali, decidirPotenciaGenerali, clasificarPostConfirmarGenerali, fijarEsperaPostConfirmarGenerali, fijarEsperasTrasOtrosGenerali, modeloVerificadoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, pulsarAvanzarSelectorVehiculosGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
+import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, pulsarAvanzarSelectorVehiculosGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from '../src/ramo.ts'
 import { vehiculoDelResultado } from '../src/api.ts'
@@ -159,8 +159,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.16')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.16')
+  assert.equal(generaliAuto.version, '0.2.17')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.17')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -1229,5 +1229,115 @@ test('v0.2.14 · puertas del guard: potencia (solo «NNN CV», nunca «Placas es
     assert.equal(await contador(c.page, '__confirmado'), null)
   } finally {
     await c.cerrar()
+  }
+})
+
+// ───────────── v0.2.17: combustible · potencia con «No lo sé» · «Versión» desplegable con textos REPETIDOS (prueba real 22/10/2026) ─────────────
+
+const VERSIONES_0217 = ['2.5 TCI', '2.9 CRDI 163 FULL', '2.9 CRDI 163 FULL', '2.9 CRDI 163 FULL AUTO', '2.9 CRDI 163 GL', '2.9 CRDI 163 GLS', '3.5 V6 195']
+/** Grupos «combustible» y «potencia» (con «No lo sé») y SelectOneMenu «Versión» (id de prueba `selversion`); la potencia FILTRA la lista por AJAX (300 ms). `extra` sale al elegir la versión. */
+const FICHA_0217 = (extra = '') => {
+  const grupo = (name: string, ops: string[]) => `<table><tr>${ops.map((o, i) => `<td><input type="radio" id="${name}:${i}" name="${name}" style="position:absolute;left:-999px" onchange="window.__${name}=(window.__${name}||[]).concat('${o}');${name === 'potencia' ? `setTimeout(function(){window.__filtrar('${o}')},300)` : ''}"><label for="${name}:${i}">${o}</label></td>`).join('')}</tr></table>`
+  return `<span>combustible</span>${grupo('combustible', ['Diésel', 'Gasolina', 'No lo sé'])}
+  <span>potencia</span>${grupo('potencia', ['100.0 CV', '150.0 CV', '163.0 CV', '195.0 CV', 'No lo sé'])}
+  <span>Versión</span>
+  <div id="selversion" role="combobox" tabindex="0" onclick="document.getElementById('selversion_panel').style.display='block'"><div class="ui-helper-hidden-accessible" style="position:absolute;width:0;height:0;overflow:hidden"><select id="selversion_input" name="selversion_input" style="width:0;height:0;border:0;padding:0"></select></div><label id="selversion_label" class="ui-selectonemenu-label">Seleccione una</label><div class="ui-selectonemenu-trigger"><span class="ui-icon ui-icon-triangle-1-s"></span></div></div>
+  <div id="selversion_panel" style="display:none"><ul id="selversion_items"></ul></div>
+  <div id="extra" style="display:none">${extra}</div>
+  <script>
+    window.__pintar=function(vs){var s=document.getElementById('selversion_input');s.innerHTML='<option value="null">Seleccione una</option>'+vs.map(function(v,i){return '<option value="V'+i+'">'+v+'</option>'}).join('');
+      document.getElementById('selversion_items').innerHTML=vs.map(function(v){return '<li data-label="'+v+'" class="ui-selectonemenu-item">'+v+'</li>'}).join('');
+      Array.from(document.querySelectorAll('#selversion_items li')).forEach(function(li,i){li.onclick=function(){s.selectedIndex=i+1;document.getElementById('selversion_label').textContent=li.dataset.label;window.__version=(window.__version||[]).concat(i);document.getElementById('selversion_panel').style.display='none';document.getElementById('extra').style.display='block'}})};
+    window.__filtrar=function(p){var n=parseFloat(p);window.__pintar(${JSON.stringify(VERSIONES_0217)}.filter(function(v){return isNaN(n)||v.split(' ').indexOf(String(n))>=0}))};
+    window.__pintar(${JSON.stringify(VERSIONES_0217)});
+  </script>`
+}
+const ctx0217 = (page: Page, guard: GuardEmision) => ({
+  ...(ctxPF(page, guard) as unknown as Record<string, unknown>),
+  elegirCombustibleGenerali: (g: string, t: string) => elegirCombustibleGenerali(page, guard, g, t),
+  abrirDesplegableVersionGenerali: (base: string) => abrirDesplegableVersionGenerali(page, guard, base),
+  elegirVersionListaGenerali: (base: string, texto: string) => elegirVersionListaGenerali(page, guard, base, texto),
+}) as unknown as ContextoPortal
+
+test('v0.2.17 · combustible → potencia (CV exacto) → recarga → versión repetida: la PRIMERA de las idénticas, declarada, verificada y «Confirmar» una vez', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA', 'LEON'], FICHA_0217()))
+  try {
+    const avisos: string[] = []
+    const form = coche({ seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA', descripcion: '2.9 CRDI 163 FULL' }, vehiculoConfirmado: { origen: 'mapfre', denominacion: 'SEAT IBIZA 2.9 CRDI 163 FULL', cv: 163, cc: 2902, puertas: 5, fechaInicio: null, combustible: 'diesel' } })
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, form, ctx0217(page, guard), avisos), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /sigue a «Confirmar»/.test(e.message), 'sin «Identificación del vehículo» en la fixture: hueco POSTERIOR a «Confirmar»')
+    assert.deepEqual(await contador(page, '__combustible'), ['Diésel'])
+    assert.deepEqual(await contador(page, '__potencia'), ['163.0 CV'])
+    assert.deepEqual(await contador(page, '__version'), [0], 'lista filtrada a las de 163: la primera «2.9 CRDI 163 FULL»')
+    assert.equal(await page.locator('#selversion_input').inputValue(), 'V0')
+    assert.equal(await page.locator('#selversion_label').textContent(), '2.9 CRDI 163 FULL')
+    assert.equal(await contador(page, '__confirmado'), 1)
+    assert.ok(avisos.some((a) => /Versión elegida automáticamente: 2\.9 CRDI 163 FULL \(había 2 equivalentes; revisar en la emisión\)/.test(a)), avisos.join(' | '))
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.17 · sin combustible ni CV en el riesgo: «No lo sé» declarado en los dos grupos y la versión se PREGUNTA (sin «Confirmar»)', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA'], FICHA_0217()))
+  try {
+    const avisos: string[] = []
+    const form = coche({ seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA' } })
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, form, ctx0217(page, guard), avisos), (e: unknown) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.length === 6, 'la lista sin repetidos')
+    assert.deepEqual(await contador(page, '__combustible'), ['No lo sé'])
+    assert.deepEqual(await contador(page, '__potencia'), ['No lo sé'])
+    assert.equal(await contador(page, '__version'), null)
+    assert.equal(await contador(page, '__confirmado'), null)
+    assert.ok(avisos.some((a) => /combustible del vehículo no consta.*«No lo sé»/.test(a)) && avisos.some((a) => /potencia del vehículo no consta.*«No lo sé»/.test(a)), avisos.join(' | '))
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.17 · un campo nuevo que sale tras elegir la versión sigue PARANDO antes de «Confirmar»', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA'], FICHA_0217('<span>Valor venal</span><input type="text" id="valorvenal">')))
+  try {
+    const form = coche({ seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA', descripcion: '3.5 V6 195' }, vehiculoConfirmado: { origen: 'mapfre', denominacion: 'SEAT IBIZA 3.5 V6 195', cv: 195, cc: 3497, puertas: 5, fechaInicio: null, combustible: 'gasolina' } })
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, form, ctx0217(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /tras elegir combustible, potencia y versión/.test(e.message) && /Valor venal/.test(e.message))
+    assert.deepEqual(await contador(page, '__version'), [0], 'filtrada a «3.5 V6 195»')
+    assert.equal(await contador(page, '__confirmado'), null, 'NO se pulsa «Confirmar»')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.17 · puertas del guard: combustible (lista blanca, grupo «combustible», una vez), potencia «No lo sé», versión (ni el menú de modelos, repetida → la primera, una vez)', async () => {
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA'], FICHA_0217()))
+  try {
+    await a.page.evaluate(() => { (document.getElementById('bloque_modelo') as HTMLElement).style.display = 'block'; (document.getElementById('nuevos') as HTMLElement).style.display = 'block' })
+    await assert.rejects(elegirCombustibleGenerali(a.page, a.guard, 'potencia', 'No lo sé'), EmisionBloqueadaError, 'el grupo tiene que ser de combustible')
+    await assert.rejects(elegirCombustibleGenerali(a.page, a.guard, 'placaesp', 'No'), EmisionBloqueadaError)
+    await assert.rejects(elegirCombustibleGenerali(a.page, a.guard, 'combustible', 'Aceptar'), EmisionBloqueadaError, 'solo combustibles o «No lo sé»')
+    await elegirCombustibleGenerali(a.page, a.guard, 'combustible', 'Gasolina')
+    assert.deepEqual(await contador(a.page, '__combustible'), ['Gasolina'])
+    await assert.rejects(elegirCombustibleGenerali(a.page, a.guard, 'combustible', 'Diésel'), EmisionBloqueadaError, 'una vez por trabajo')
+    await elegirPotenciaGenerali(a.page, a.guard, 'potencia', 'No lo sé')
+    assert.deepEqual(await contador(a.page, '__potencia'), ['No lo sé'])
+    await abrirDesplegableModeloGenerali(a.page, a.guard, 'selmodelo')
+    await assert.rejects(abrirDesplegableVersionGenerali(a.page, a.guard, 'selmodelo'), EmisionBloqueadaError, 'la puerta de versión no abre el menú de modelos')
+    await assert.rejects(abrirDesplegableVersionGenerali(a.page, a.guard, 'buscamarca'), EmisionBloqueadaError, 'ni el de marcas')
+    await a.page.waitForTimeout(400)
+    await abrirDesplegableVersionGenerali(a.page, a.guard, 'selversion')
+    await assert.rejects(abrirDesplegableVersionGenerali(a.page, a.guard, 'selversion'), EmisionBloqueadaError, 'una vez')
+    await assert.rejects(elegirVersionListaGenerali(a.page, a.guard, 'selversion', '2.9 CRDI'), (e: unknown) => e instanceof ErrorMapaGuardGenerali, 'texto exacto, no parcial')
+    await elegirVersionListaGenerali(a.page, a.guard, 'selversion', '2.9 CRDI 163 FULL')
+    assert.deepEqual(await contador(a.page, '__version'), [1], 'repetida: el PRIMER `li` de los idénticos')
+    await assert.rejects(elegirVersionListaGenerali(a.page, a.guard, 'selversion', '2.5 TCI'), EmisionBloqueadaError, 'una vez')
+    await assert.rejects(elegirModeloListaGenerali(a.page, a.guard, 'selmodelo', '2.9 CRDI 163 FULL'), (e: unknown) => e instanceof ErrorTarificador, 'la puerta de modelo no elige versiones repetidas')
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(PORTAL, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA'], FICHA_0217()))
+  try {
+    await assert.rejects(elegirCombustibleGenerali(b.page, b.guard, 'combustible', 'Gasolina'), (e: unknown) => e instanceof ErrorTarificador, 'otra URL: no es el selector')
+    await assert.rejects(abrirDesplegableVersionGenerali(b.page, b.guard, 'selversion'), (e: unknown) => e instanceof ErrorTarificador)
+    assert.equal(await contador(b.page, '__combustible'), null)
+  } finally {
+    await b.cerrar()
   }
 })
