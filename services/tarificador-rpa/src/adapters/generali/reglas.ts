@@ -937,6 +937,10 @@ export type ControlPersonasGenerali = {
   vacio: boolean
   /** Solo botones/enlaces: su rótulo (saneado al resumir). */
   texto?: string
+  /** v0.2.21 · opciones/casillas: ¿está marcado? (nunca su valor). */
+  marcado?: boolean
+  /** v0.2.21 · desplegables de `roles_*` (TOMADOR, NO HAY…): texto de la opción elegida (catálogo, no dato personal). */
+  opcion?: string
 }
 
 /** Por qué un campo del tomador no se pudo rellenar (o `ok`). PURA. */
@@ -949,16 +953,31 @@ export function motivoCampoInteresadoGenerali(c: { existe: boolean; visible: boo
   return 'ok'
 }
 
-/** Resumen del bloque de personas para el atasco: sufijo del id, tipo y banderas, nunca valores; rótulos de botones saneados. PURA. */
-export function resumenPersonasGenerali(els: readonly ControlPersonasGenerali[], max = 1_400): string {
-  if (els.length === 0) return 'ningún control con id reg1063A_personas_*'
-  const partes = els.map((e) => {
-    const sufijo = e.id.startsWith(PREFIJO_ID_PERSONAS_GENERALI) ? e.id.slice(PREFIJO_ID_PERSONAS_GENERALI.length) : e.id
+/**
+ * Resumen del bloque de personas para el atasco: solo CONTROLES (los contenedores `div/fieldset` no cuentan: en 0.2.20 llenaban el tope y
+ * los campos del interesado salían como «no_existe»), sufijo del id, tipo y banderas, nunca valores. Radios del mismo id se juntan
+ * («×2, marcados 0»); en los desplegables de roles va la opción elegida; rótulos de botones saneados. PURA.
+ */
+export function resumenPersonasGenerali(els: readonly ControlPersonasGenerali[], max = 1_100): string {
+  const controles = els.filter((e) => !/^(div|fieldset|span|label|td|tr|table|form)$/i.test(e.tag))
+  if (controles.length === 0) return els.length === 0 ? 'ningún control con id reg1063A_personas_*' : 'solo contenedores, ningún control'
+  const sufijoDe = (id: string) => (id.startsWith(PREFIJO_ID_PERSONAS_GENERALI) ? id.slice(PREFIJO_ID_PERSONAS_GENERALI.length) : id)
+  const vistos = new Set<string>()
+  const partes: string[] = []
+  for (const e of controles) {
+    if (e.marcado !== undefined) {
+      if (vistos.has(e.id)) continue
+      vistos.add(e.id)
+      const grupo = controles.filter((x) => x.id === e.id)
+      partes.push(`${sufijoDe(e.id)} [${e.tipo}×${grupo.length}, marcados ${grupo.filter((x) => x.marcado).length}${grupo.some((x) => !x.visible) ? ', oculto' : ''}${grupo.some((x) => !x.habilitado) ? ', deshab' : ''}]`)
+      continue
+    }
     const banderas = [e.visible ? null : 'oculto', e.habilitado ? null : 'deshab', e.editable ? null : 'ro'].filter((x) => x !== null).join(',')
     const rotulo = e.texto ? ` «${sanearFragmentoGenerali(e.texto).slice(0, 40)}»` : ''
-    const estado = /button|submit|a$/i.test(`${e.tipo}|${e.tag}`) ? '' : e.vacio ? ' vacío' : ' con valor'
-    return `${sufijo} [${e.tag}/${e.tipo}${banderas ? `,${banderas}` : ''}]${rotulo}${estado}`
-  })
+    const opcion = e.opcion ? ` =«${sanearFragmentoGenerali(e.opcion).slice(0, 30)}»` : ''
+    const estado = /button|submit|image/i.test(e.tipo) || e.tag.toLowerCase() === 'a' ? '' : e.vacio ? ' vacío' : ' con valor'
+    partes.push(`${sufijoDe(e.id)} [${e.tag}/${e.tipo}${banderas ? `,${banderas}` : ''}]${rotulo}${opcion}${estado}`)
+  }
   const t = partes.join('; ')
   return t.length > max ? `${t.slice(0, max)}…` : t
 }

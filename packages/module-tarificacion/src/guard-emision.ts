@@ -27,6 +27,10 @@ export const PATRON_EMISION = new RegExp(`emit|emisi|contrat|formaliz|suplement|
 // única del 14/10/2026): sigue BLOQUEADO aquí; solo `permitirGuardarPresupuesto` lo deja pasar (ver `pareceEmision`).
 /** «Generar Proyecto» de Mapfre NSEI. Bloqueado siempre salvo con `permitirGenerarProyectoMapfre` (ver `OpcionesGuard`). */
 export const PATRON_GENERAR_PROYECTO_MAPFRE = /generar[\s_+-]*proyecto/i
+/** «Ir a generar proyecto» de Mapfre NSEI (navega al paso donde vive «Generar Proyecto»). Bloqueado siempre salvo con `permitirIrAGenerarProyectoMapfre` Y texto ENTERO exacto. */
+export const PATRON_IR_A_GENERAR_MAPFRE = /ir[\s_+-]*a[\s_+-]*generar/i
+/** Texto ENTERO (sin tildes, minúsculas, espacios colapsados) del único control que abre `permitirIrAGenerarProyectoMapfre`. */
+const TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE = 'ir a generar proyecto'
 
 export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /elij[ae][\s_+-]*una[\s_+-]*opcion/i,
@@ -68,7 +72,7 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   // proyecto REAL en Mapfre y su documentación. Bloqueados en todo `pulsar()`, en el explorador IA y con `permitirGuardarPresupuesto`.
   // «Generar Proyecto» (22/10/2026, Alberto: un proyecto no es póliza) SOLO pasa con la opción estrecha
   // `permitirGenerarProyectoMapfre`, que pide únicamente `generarProyectoMapfre` (guard.ts del worker) para su botón y su ventana de red.
-  /ir[\s_+-]*a[\s_+-]*generar/i,
+  PATRON_IR_A_GENERAR_MAPFRE,
   PATRON_GENERAR_PROYECTO_MAPFRE,
 ]
 
@@ -93,6 +97,13 @@ export type OpcionesGuard = {
    * (`bloqueoGuardadoPresupuesto`) NUNCA la usa: para él «Generar proyecto» sigue siendo `boton_de_emision`.
    */
   permitirGenerarProyectoMapfre?: boolean
+  /**
+   * «IR A GENERAR PROYECTO» DE MAPFRE NSEI (22/10/2026): excepción ESTRECHA y por TEXTO ENTERO. Solo una descripción cuyo texto
+   * completo (sin tildes, mayúsculas ni espacios de más) sea «Ir a generar proyecto» deja de casar con `PATRON_IR_A_GENERAR_MAPFRE` y
+   * `PATRON_GENERAR_PROYECTO_MAPFRE`; cualquier otra cosa (id, href, «Contratar», «Ir a generar proyecto y contratar») sigue
+   * bloqueada, y `PATRON_EMISION` nunca se relaja. Solo la pide `generarProyectoMapfre` (guard.ts del worker), UNA vez, para navegar.
+   */
+  permitirIrAGenerarProyectoMapfre?: boolean
 }
 
 // Sin «parameter properties» (`constructor(readonly x)`): `node --test` solo QUITA tipos y no las admite.
@@ -136,8 +147,12 @@ export function pareceEmision(texto: string | null | undefined, opciones: Opcion
   // Las URL pueden venir codificadas (`%C3%A9mitir`, `contrat%61r`): se decodifica si se puede.
   t = plano(decodificarUrlTolerante(t))
   if (PATRON_EMISION.test(t)) return true
+  const irAGenerarExacto = opciones.permitirIrAGenerarProyectoMapfre === true && t.toLowerCase().replace(/\s+/g, ' ').trim() === TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE
   const bloqueos = TEXTOS_BLOQUEADOS_ALTA.filter(
-    (r) => !(opciones.permitirGuardarPresupuesto && PATRONES_GUARDADO_GUARD.includes(r)) && !(opciones.permitirGenerarProyectoMapfre && r === PATRON_GENERAR_PROYECTO_MAPFRE),
+    (r) =>
+      !(opciones.permitirGuardarPresupuesto && PATRONES_GUARDADO_GUARD.includes(r)) &&
+      !(opciones.permitirGenerarProyectoMapfre && r === PATRON_GENERAR_PROYECTO_MAPFRE) &&
+      !(irAGenerarExacto && (r === PATRON_IR_A_GENERAR_MAPFRE || r === PATRON_GENERAR_PROYECTO_MAPFRE)),
   )
   if (bloqueos.some((r) => r.test(t))) return true
   return !opciones.permitirAceptar && PATRON_ACEPTAR.test(t)
