@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { patrimonioDeIdentidad } from '@/lib/patrimonio/inmuebles-bd'
@@ -22,6 +23,11 @@ export default async function PatrimonioPage() {
     <>
       <h1>Patrimonio</h1>
       <p className="suave" style={{ marginTop: 0 }}>Tus inmuebles y los de quien te ha dado acceso, por titular.</p>
+      {titulares.length > 0 && (
+        <p style={{ margin: '0 0 12px' }}>
+          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/gastos">Gastos fijos, comunidad y derramas</Link>
+        </p>
+      )}
 
       {titulares.length === 0 ? (
         <section className="seccion"><p style={{ margin: 0 }}>No tienes ningún patrimonio asignado en este portal.</p></section>

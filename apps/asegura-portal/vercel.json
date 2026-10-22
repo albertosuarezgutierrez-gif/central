@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/avisos-cima",
       "schedule": "45 12 * * *"
+    },
+    {
+      "path": "/api/cron/patrimonio-gastos",
+      "schedule": "20 5 * * *"
     }
   ]
 }
