@@ -58,6 +58,14 @@ import {
   type ControlPersonasGenerali,
   camposInteresadoGenerali,
   fragmentosImportesGenerali,
+  filaCoincideDocumentoGenerali,
+  ID_BOTON_PERSONAS_GENERALI,
+  normalizarRotuloGenerali,
+  RE_ALTA_PERSONA_GENERALI,
+  RE_BUSCAR_PERSONA_GENERALI,
+  RE_ELEGIR_FILA_GENERALI,
+  resumenControlesAbiertoGenerali,
+  type ControlAbiertoGenerali,
   PREFIJO_ID_INTERESADO_GENERALI,
   resumenPantallaGenerali,
   valorRiesgoGenerali,
@@ -180,8 +188,14 @@ export const GENERALI_AUTO_ACTIVO = true
  * (uno solo visible) y, si no se encuentra, el atasco lo dice. Cada campo omitido da su motivo (`omitido:`). El atasco lleva «Tomador» y
  * «Roles/Personas» PRIMERO y compactos (el mensaje se corta a 2000). Las opciones de rol (`roles_zprieq`/`roles_cconno`), desplegables `ycond1/ycond2`
  * y el botón `lnkPers` NO se tocan (hace falta una puerta en runner/adaptador y la semántica; ver docs/TARIFICADOR-RPA.md).
+ * 0.2.22 (22/10/2026, misma prueba con 0.2.21: «Es obligatorio informar el tomador»; roles ya correctos —TOMADOR / NO HAY—, y TODOS los `interesado_*`
+ * readonly/deshabilitados y VACÍOS; existe `roles_lnkPers` «Personas»). Hipótesis: el interesado se rellena al buscar/elegir la persona. Si tras el
+ * rellenado normal el NIF del interesado sigue readonly y vacío, se pulsa UNA vez «Personas» (por `ctx.pulsar`), se espera lo que abre (ventana nueva,
+ * marco o capa), y SOLO si hay un buscador con campo de documento y botón «Buscar/Consultar» se teclea el NIF del tomador, se busca y, si sale
+ * EXACTAMENTE una fila y su documento coincide, se elige (por `ctx.pulsar`). 0 o varias filas, o una pantalla de ALTA: PARA sin crear nada. Después se
+ * verifica que `interesado_nifcif`/`nombre` ya traen valor. El mensaje lleva la rama tomada y el inventario SANEADO de lo abierto (sin valores).
  */
-export const VERSION_GENERALI_AUTO = '0.2.21'
+export const VERSION_GENERALI_AUTO = '0.2.22'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -1613,6 +1627,237 @@ export async function rellenarInteresadoGenerali(marco: Raiz, form: Parameters<t
   return hechos
 }
 
+// ───────────────────────── v0.2.22 · «Personas»: buscar y elegir la persona del tomador ─────────────────────────
+
+/** Controles visibles de lo que abrió «Personas» (sin valores; los rótulos de celdas de resultados NO salen: pueden ser nombres). Sin funciones con nombre (tsx). */
+const JS_CONTROLES_ABIERTO = `(() => {
+  const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const out = [];
+  document.querySelectorAll('input,select,textarea,button,a').forEach((e) => {
+    if (!vis(e)) return;
+    const tag = e.tagName.toLowerCase();
+    const tipo = tag === 'select' || tag === 'textarea' ? tag : (e.getAttribute('type') || (tag === 'input' ? 'text' : tag)).toLowerCase();
+    if (tipo === 'hidden') return;
+    const boton = tag === 'button' || tag === 'a' || ['button', 'submit', 'image', 'reset'].indexOf(tipo) > -1;
+    const enCelda = !!e.closest('td');
+    let rot = '';
+    if (!enCelda) {
+      if (boton) rot = e.value || e.textContent || e.title || '';
+      else { const l = e.labels && e.labels[0]; rot = (l ? l.textContent : '') || e.getAttribute('placeholder') || e.title || ''; }
+    }
+    out.push({ tag: tag, tipo: tipo, id: String(e.id || '').slice(0, 60), rotulo: String(rot).replace(/\\s+/g, ' ').trim().slice(0, 40), ro: !!(e.disabled || e.readOnly) });
+  });
+  const filas = Array.from(document.querySelectorAll('tr')).filter((tr) => vis(tr) && tr.querySelector('td')).length;
+  return { controles: out.slice(0, 50), filas: filas };
+})()`
+
+const SEL_CAMPO_TEXTO = 'input:not([type]), input[type=text], input[type=search], input[type=number]'
+const SEL_ACCION = 'input[type=button], input[type=submit], button, a'
+const RE_DOCUMENTO_CAMPO = /nif|cif|docum|identif|\bdni\b|\bnie\b/i
+const RE_PERSONA_CAMPO = /nombre|apell/i
+const RE_DOC_PARECE = /^(?:[XYZ]?\d{7,8}[A-Z]|[A-Z]\d{7}[A-Z0-9])$/
+const ESPERA_ABRIR_PERSONAS_MS = 8_000
+const ESPERA_RESULTADOS_PERSONAS_MS = 7_000
+const ESPERA_VUELTA_PERSONAS_MS = 8_000
+const pausaMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+type RamaPersonas = 'ventana' | 'marco' | 'capa'
+type RaizAbierta = { rama: RamaPersonas; marco: Frame; nuevo: boolean }
+type Buscador = { marco: Frame; documento: Locator; buscar: Locator }
+type Hallazgo = { tipo: 'buscador'; b: Buscador; rama: RamaPersonas } | { tipo: 'alta'; rama: RamaPersonas }
+type FilaPersonas = { loc: Locator; celdas: string[]; controles: string[]; onclick: boolean }
+
+const paginaDe = (r: Raiz): Page => (typeof (r as Frame).page === 'function' ? (r as Frame).page() : (r as Page))
+
+async function rotuloDe(l: Locator): Promise<string> {
+  return normalizarRotuloGenerali(await l.evaluate((e) => (e as HTMLInputElement).value || e.textContent || e.getAttribute('title') || '').catch(() => ''))
+}
+
+/** ¿Hay un buscador (UN campo de documento editable ajeno al interesado + UN botón Buscar/Consultar) o una pantalla de ALTA? Solo lee. */
+async function analizarAbiertoPersonas(m: Frame, nuevo: boolean): Promise<{ tipo: 'buscador'; b: Buscador } | { tipo: 'alta' } | null> {
+  const campos = m.locator(SEL_CAMPO_TEXTO).filter({ visible: true })
+  const documentos: Locator[] = []
+  let camposPersona = 0
+  const nc = Math.min(await campos.count().catch(() => 0), 30)
+  for (let i = 0; i < nc; i++) {
+    const c = campos.nth(i)
+    const d = (await c.evaluate((e) => { const x = e as HTMLInputElement; return [x.id, x.name, x.placeholder, x.title, x.labels && x.labels[0] ? x.labels[0].textContent : ''].join(' ') }).catch(() => '')) as string
+    if (d.includes(PREFIJO_ID_INTERESADO_GENERALI)) continue
+    if (!(await c.isEditable().catch(() => false))) continue
+    if (RE_DOCUMENTO_CAMPO.test(d)) documentos.push(c)
+    else if (RE_PERSONA_CAMPO.test(d)) camposPersona++
+  }
+  const acciones = m.locator(SEL_ACCION).filter({ visible: true })
+  const buscar: Locator[] = []
+  let altas = 0
+  const na = Math.min(await acciones.count().catch(() => 0), 60)
+  for (let i = 0; i < na; i++) {
+    const r = await rotuloDe(acciones.nth(i))
+    if (RE_BUSCAR_PERSONA_GENERALI.test(r)) buscar.push(acciones.nth(i))
+    else if (nuevo && RE_ALTA_PERSONA_GENERALI.test(r)) altas++
+  }
+  if (documentos.length === 1 && buscar.length === 1) return { tipo: 'buscador', b: { marco: m, documento: documentos[0]!, buscar: buscar[0]! } }
+  if (nuevo && documentos.length === 0 && (altas > 0 || camposPersona >= 2)) return { tipo: 'alta' }
+  return null
+}
+
+/** Marcos de lo que abrió «Personas»: ventanas nuevas, marcos nuevos y, al final, los de siempre (capa). */
+function raicesTrasPersonas(page: Page, antesP: ReadonlySet<Page>, antesF: ReadonlySet<Frame>, sinBuscador: ReadonlySet<Frame>): RaizAbierta[] {
+  const out: RaizAbierta[] = []
+  for (const p of page.context().pages()) if (!antesP.has(p) && !p.isClosed()) for (const f of p.frames()) if (!f.isDetached()) out.push({ rama: 'ventana', marco: f, nuevo: true })
+  for (const f of page.frames()) if (!antesF.has(f) && !f.isDetached()) out.push({ rama: 'marco', marco: f, nuevo: true })
+  for (const f of page.frames()) if (antesF.has(f) && !f.isDetached() && !sinBuscador.has(f)) out.push({ rama: 'capa', marco: f, nuevo: false })
+  return out
+}
+
+async function inventarioPersonas(raices: readonly RaizAbierta[]): Promise<string> {
+  const nuevas = raices.filter((r) => r.nuevo)
+  if (nuevas.length === 0) return 'no se detectó ventana ni marco nuevo'
+  const partes: string[] = []
+  for (const r of nuevas.slice(0, 3)) {
+    const l = ((await r.marco.evaluate(JS_CONTROLES_ABIERTO).catch(() => null)) as { controles: ControlAbiertoGenerali[]; filas: number } | null) ?? { controles: [], filas: 0 }
+    partes.push(`[${r.rama}] ${resumenControlesAbiertoGenerali(l.controles, l.filas, Math.floor(650 / Math.min(nuevas.length, 3)))}`)
+  }
+  return partes.join(' | ')
+}
+
+/** Filas de resultado: con algún control o un documento, sin campos de texto (las de maquetación y los encabezados no cuentan). */
+async function filasResultadoPersonas(m: Frame): Promise<FilaPersonas[]> {
+  const trs = m.locator('tr').filter({ visible: true })
+  const n = Math.min(await trs.count().catch(() => 0), 100)
+  const out: FilaPersonas[] = []
+  for (let i = 0; i < n; i++) {
+    const loc = trs.nth(i)
+    const info = (await loc
+      .evaluate((tr) => {
+        if (!tr.querySelector('td') || tr.querySelector('table')) return null
+        if (tr.querySelector('input[type=text],input:not([type]),input[type=search],input[type=number],select,textarea')) return null
+        const celdas = Array.from(tr.children).filter((c) => /^(td|th)$/i.test(c.tagName)).map((c) => (c.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80))
+        return { celdas, onclick: !!tr.getAttribute('onclick') }
+      })
+      .catch(() => null)) as { celdas: string[]; onclick: boolean } | null
+    if (!info) continue
+    const ctl = loc.locator(SEL_ACCION).filter({ visible: true })
+    const controles: string[] = []
+    for (let j = 0; j < Math.min(await ctl.count().catch(() => 0), 8); j++) controles.push(await rotuloDe(ctl.nth(j)))
+    if (controles.some((c) => RE_BUSCAR_PERSONA_GENERALI.test(c))) continue
+    const pareceDoc = info.celdas.some((c) => RE_DOC_PARECE.test(c.toUpperCase().replace(/[^A-Z0-9]/g, '')))
+    if (controles.length === 0 && !info.onclick && !pareceDoc) continue
+    out.push({ loc, celdas: info.celdas, controles, onclick: info.onclick })
+  }
+  return out
+}
+
+/** ¿El interesado está readonly/deshabilitado y VACÍO (NIF y, si existe, nombre)? Solo lee. */
+async function interesadoSoloLecturaVacioGenerali(marco: Raiz): Promise<boolean> {
+  const estado = async (campo: string): Promise<{ ro: boolean; vacio: boolean } | null> => {
+    const l = marco.locator(idInteresado(campo)).filter({ visible: true })
+    if ((await l.count().catch(() => 0)) !== 1) return null
+    return (await l.first().evaluate((e) => ({ ro: !!((e as HTMLInputElement).disabled || (e as HTMLInputElement).readOnly), vacio: String((e as HTMLInputElement).value || '').trim() === '' })).catch(() => null)) as { ro: boolean; vacio: boolean } | null
+  }
+  const nif = await estado('nifcif')
+  if (!nif || !nif.ro || !nif.vacio) return false
+  const nombre = await estado('nombre')
+  return !nombre || nombre.vacio
+}
+
+async function interesadoRellenoGenerali(marco: Raiz): Promise<boolean> {
+  for (const campo of ['nifcif', 'nombre']) {
+    const l = marco.locator(idInteresado(campo)).filter({ visible: true })
+    if ((await l.count().catch(() => 0)) !== 1) return false
+    if ((await l.first().inputValue().catch(() => '')).trim() === '') return false
+  }
+  return true
+}
+
+/**
+ * v0.2.22 · Si tras el rellenado normal el «Interesado / Tomador» sigue READONLY y VACÍO, pulsa UNA vez «Personas» (`ctx.pulsar`), espera lo que abre
+ * (ventana nueva, marco o capa), busca el NIF del tomador y elige la fila SOLO si es la única y su documento coincide. Nunca crea una persona
+ * (pantalla de alta, 0 filas o varias: `ErrorMapaIncompletoGenerali` con la rama y el inventario SANEADO de lo abierto, sin valores). Tras volver
+ * verifica que `interesado_nifcif`/`nombre` ya traen valor. Devuelve lo hecho y un diagnóstico compacto (`null` = no aplicaba, no se pulsó nada).
+ */
+export async function elegirPersonaTomadorGenerali(
+  marco: Raiz,
+  form: Parameters<typeof camposInteresadoGenerali>[0],
+  ctx: ContextoPortal,
+  esperas: { abrirMs?: number; resultadosMs?: number; vueltaMs?: number } = {},
+): Promise<{ hechos: string[]; diag: string } | null> {
+  if (!(await interesadoSoloLecturaVacioGenerali(marco))) return null
+  const page = paginaDe(marco)
+  const parar = (que: string, ...extra: string[]): never => {
+    throw new ErrorMapaIncompletoGenerali(`la persona del tomador: ${que}. No se crea ni se elige nada más. Personas-pulsar: ${extra.join('; ')}`)
+  }
+  const nif = camposInteresadoGenerali(form).find((c) => c.campo === 'nifcif')?.valor ?? null
+  if (!nif) return parar('el interesado es de solo lectura y el riesgo no trae el NIF/documento del tomador (o es persona jurídica, sin mapa)', 'rama=sin_nif')
+  let boton: Locator | null = marco.locator(`[id="${ID_BOTON_PERSONAS_GENERALI}"]`).filter({ visible: true })
+  if ((await boton.count().catch(() => 0)) !== 1) boton = (await localizarPestanaPersonasGenerali(marco)).control
+  if (!boton) return parar('el interesado es de solo lectura y no se halla el botón «Personas» (roles_lnkPers)', 'rama=sin_boton')
+
+  const antesP = new Set(page.context().pages())
+  const antesF = new Set(page.frames())
+  const sinBuscador = new Set<Frame>()
+  for (const f of page.frames()) if (!f.isDetached() && (await analizarAbiertoPersonas(f, false)) !== null) sinBuscador.add(f)
+  await ctx.pulsar(boton)
+
+  // 1. Esperar a que aparezca lo que abre.
+  const finAbrir = Date.now() + (esperas.abrirMs ?? ESPERA_ABRIR_PERSONAS_MS)
+  const cargadas = new Set<Page>()
+  let raices: RaizAbierta[] = []
+  const donde: { h: Hallazgo | null } = { h: null }
+  for (;;) {
+    for (const p of page.context().pages()) if (!antesP.has(p) && !cargadas.has(p)) { cargadas.add(p); await p.waitForLoadState('domcontentloaded', { timeout: 3_000 }).catch(() => undefined) }
+    raices = raicesTrasPersonas(page, antesP, antesF, sinBuscador)
+    for (const r of raices) {
+      const a = await analizarAbiertoPersonas(r.marco, r.nuevo)
+      if (a) { donde.h = { ...a, rama: r.rama }; break }
+    }
+    if (donde.h || Date.now() >= finAbrir) break
+    await pausaMs(400)
+  }
+  const inv = await inventarioPersonas(raices)
+  const hallazgo = donde.h
+  if (!hallazgo) return parar('se pulsó «Personas» y no se encontró un buscador con campo de documento y botón «Buscar/Consultar»', `rama=${raices.find((r) => r.nuevo)?.rama ?? 'nada_nuevo'}, sin_buscador`, `controles: ${inv}`)
+  if (hallazgo.tipo === 'alta') return parar('«Personas» abrió una pantalla de ALTA de persona, no un buscador', `rama=${hallazgo.rama}, alta`, `controles: ${inv}`)
+
+  // 2. Buscar el NIF del tomador.
+  const { documento, buscar, marco: mb } = hallazgo.b
+  await ctx.pausaAccion()
+  await comprobarCampo(documento)
+  await documento.fill(nif)
+  await documento.blur().catch(() => undefined)
+  await confirmarUso(documento)
+  await ctx.pulsar(buscar)
+
+  // 3. Esperar el resultado (estable en dos lecturas) y exigir EXACTAMENTE una fila cuyo documento coincide.
+  const finRes = Date.now() + (esperas.resultadosMs ?? ESPERA_RESULTADOS_PERSONAS_MS)
+  let filas: FilaPersonas[] = []
+  let previas = -1
+  for (;;) {
+    await pausaMs(500)
+    if (mb.isDetached()) break
+    filas = await filasResultadoPersonas(mb)
+    if (filas.length > 0 && filas.length === previas) break
+    previas = filas.length
+    if (Date.now() >= finRes) break
+  }
+  const coinciden = filas.filter((f) => filaCoincideDocumentoGenerali(f.celdas, nif))
+  const rama = `rama=${hallazgo.rama}, buscador, filas=${filas.length}, coinciden=${coinciden.length}`
+  if (filas.length !== 1 || coinciden.length !== 1) return parar(`la búsqueda devolvió ${filas.length} fila(s) y ${coinciden.length} con el documento exacto; no se elige a ciegas ni se da de alta`, rama, `controles: ${await inventarioPersonas(raices)}`)
+
+  // 4. Elegir esa fila por el guard.
+  const fila = coinciden[0]!
+  const idx = fila.controles.filter((c) => RE_ELEGIR_FILA_GENERALI.test(c)).length === 1 ? fila.controles.findIndex((c) => RE_ELEGIR_FILA_GENERALI.test(c)) : fila.controles.length === 1 ? 0 : -1
+  if (idx >= 0) await ctx.pulsar(fila.loc.locator(SEL_ACCION).filter({ visible: true }).nth(idx))
+  else if (fila.onclick) await ctx.pulsar(fila.loc)
+  else return parar('la fila única no tiene un control claro para elegirla (ni «Seleccionar» ni un solo botón)', rama, `controles: ${await inventarioPersonas(raices)}`)
+
+  // 5. Volver y verificar que el interesado ya trae NIF y nombre.
+  const finVuelta = Date.now() + (esperas.vueltaMs ?? ESPERA_VUELTA_PERSONAS_MS)
+  while (!(await interesadoRellenoGenerali(marco)) && Date.now() < finVuelta) await pausaMs(400)
+  if (!(await interesadoRellenoGenerali(marco))) return parar('se eligió la fila única pero `interesado_nifcif`/`nombre` siguen vacíos', rama, 'verificación=vacío', `controles: ${await inventarioPersonas(raices)}`)
+  return { hechos: ['tomador.persona_elegida'], diag: `${rama}, verificado; controles: ${inv.slice(0, 350)}` }
+}
+
 /** Oferta de Generali con el importe del lector tolerante: avisos claros de lo que NO se sabe y de lo SUPUESTO. */
 export function ofertaGenerali(eur: number, supuestos: string | null): OfertaNormalizada {
   return {
@@ -1669,10 +1914,13 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     const hechos = await rellenarMapaProvisionalGenerali(marco, antes, ant.formulario, ctx)
     const omitidos: string[] = []
     hechos.push(...(await rellenarInteresadoGenerali(marco, ant.formulario, ctx, omitidos)))
+    // v0.2.22: interesado readonly y vacío → «Personas» (buscar y elegir la persona). Para sin crear nada si no es seguro.
+    const persona = await elegirPersonaTomadorGenerali(marco, ant.formulario, ctx)
+    if (persona) hechos.push(...persona.hechos)
     // Tras rellenar, se relee (el portal puede pintar campos nuevos al salir de uno).
     if (hechos.length > 0) await recorrerScroll(page, marco)
     const personas = await leerPersonasGenerali(page)
-    const tomador = `Tomador: ${motivosInteresadoGenerali(camposInteresadoGenerali(ant.formulario), personas)}${omitidos.length ? `; omitido: ${omitidos.join(', ')}` : ''}. Personas: ${resumenPersonasGenerali(personas)}`
+    const tomador = `Tomador: ${motivosInteresadoGenerali(camposInteresadoGenerali(ant.formulario), personas)}${omitidos.length ? `; omitido: ${omitidos.join(', ')}` : ''}${persona ? `; Personas-pulsar: ${persona.diag}` : ''}. Personas: ${resumenPersonasGenerali(personas, 800)}`
     return { pantalla: hechos.length > 0 ? await leerPantalla(marco) : antes, hechos, tomador }
   })
   ctx.log?.(`generali/auto: Datos de Valoración: ${pantalla.campos.length} campos, ${pantalla.botones.length} botones, mapa provisional: ${hechos.join(',') || 'nada'}`)
