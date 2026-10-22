@@ -49,7 +49,7 @@ test('ofertas: guardado → referenciaPortal + aviso; no guardado → solo aviso
   assert.equal(n!.referenciaPortal, null)
   assert.equal(n!.primaAnualEur, 100)
   assert.match(n!.avisos.at(-1)!, /NO guardado/)
-  assert.equal(allianzAuto.version, '0.6.22')
+  assert.equal(allianzAuto.version, '0.6.23')
 })
 
 // ── Navegador: carcasa ePAC + app de Turismos con el formulario de guardado ──
@@ -81,6 +81,9 @@ type Opc = {
   plegado?: 'ok' | 'emitir' | 'pestana'
   /** v0.6.22 · barra con «Guardar presupuesto» visible que revela el bloque oculto: `linea` (lo muestra) o `dialogo` (lo mueve a un overlay); `inerte` no revela nada. Siempre con paso «Pago». */
   abridor?: 'linea' | 'dialogo' | 'inerte'
+  /** v0.6.23 · toda la pantalla (barra incluida) dentro de UN <form> (como el Angular real); la barra es `<button>` SIN type o `<nx-button role=button>`. */
+  envuelto?: boolean
+  barra?: 'sinTipo' | 'nx'
 }
 const ABRE_PLEGADO = (o: Opc) => {
   if (!o.plegado) return ''
@@ -90,6 +93,11 @@ const ABRE_PLEGADO = (o: Opc) => {
   return `${ajeno}<nx-expansion-panel><button type="button" id="cab" aria-expanded="false" aria-controls="cuerpo" onclick="window.__desplegado=(window.__desplegado||0)+1;document.getElementById('cuerpo').style.display='';this.setAttribute('aria-expanded','true')">${cab}</button><div id="cuerpo" style="display:none">`
 }
 const CIERRA_PLEGADO = (o: Opc) => (!o.plegado ? '' : o.plegado === 'pestana' ? '</div>' : '</div></nx-expansion-panel>')
+const BARRA = (o: Opc) => {
+  const clic = `window.__abierto=(window.__abierto||0)+1;const b=document.getElementById('bloque');${o.abridor === 'inerte' ? '' : o.abridor === 'dialogo' ? "const d=document.createElement('div');d.setAttribute('role','dialog');d.style.cssText='position:fixed;top:0;left:0;max-height:100vh;overflow:auto;background:#fff';document.body.appendChild(d);d.appendChild(b);b.style.display=''" : "b.style.display=''"}`
+  if (o.barra === 'nx') return `<nx-button role="button" id="barra" onclick="${clic}"><nx-icon></nx-icon>Guardar presupuesto</nx-button>`
+  return `<button ${o.barra === 'sinTipo' ? '' : 'type="button" '}id="barra" onclick="${clic}"><nx-icon></nx-icon>Guardar presupuesto</button>`
+}
 const hostBloque = (o: Opc) => (o.bloque === 'sin' ? 'div' : 'nx-mt-save-proposal')
 const caja = (id: string, texto: string, marcada: boolean) =>
   `<nx-checkbox><input type="checkbox" id="${id}" ${marcada ? 'checked' : ''}><label for="${id}"><span></span><div>${texto}</div></label></nx-checkbox>`
@@ -102,7 +110,7 @@ const app = (o: Opc) => `<!doctype html><html><body><div id="appArea">
 </nx-mt-person-information>
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-1"><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div>OTRA</div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>X</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>Y</div></nx-data-display></nx-selectable-card>
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-2" checked><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div> MARCA </div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>MODELO</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>  </div></nx-data-display></nx-selectable-card>
-${o.abridor ? `<nav><a role="tab" onclick="window.__pago=1">Pago</a><button type="button" id="barra" onclick="window.__abierto=(window.__abierto||0)+1;const b=document.getElementById('bloque');${o.abridor === 'inerte' ? '' : o.abridor === 'dialogo' ? "const d=document.createElement('div');d.setAttribute('role','dialog');d.style.cssText='position:fixed;top:0;left:0;max-height:100vh;overflow:auto;background:#fff';document.body.appendChild(d);d.appendChild(b);b.style.display=''" : "b.style.display=''"}"><nx-icon></nx-icon>Guardar presupuesto</button></nav>` : ''}
+${o.abridor ? `<nav><a role="tab" onclick="window.__pago=1">Pago</a>${BARRA(o)}</nav>` : ''}
 ${o.botonFuera ? '<button type="button" id="fuera" onclick="window.__fuera=1">Guardar presupuesto</button>' : ''}
 ${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' || o.bloque === 'oculto' || !!o.abridor ? 'display:none' : ''}"><form novalidate style="${o.bloque === 'altoCero' ? 'height:0;overflow:visible' : ''}">
   <h3>Guardar el presupuesto</h3>
@@ -114,6 +122,7 @@ ${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' ||
   <p id="res">${o.textoPrevio ?? ''}</p>
 </form></${hostBloque(o)}>${CIERRA_PLEGADO(o)}</div>
 <script>
+  if (${!!o.envuelto}) { const f = document.createElement('form'); f.setAttribute('novalidate', ''); f.addEventListener('submit', (e) => e.preventDefault()); const raiz = document.getElementById('appArea'); while (raiz.firstChild) f.appendChild(raiz.firstChild); raiz.appendChild(f) }
   if (${o.bloque === 'tarde'}) setTimeout(() => { document.getElementById('bloque').style.display = '' }, 1500)
   const b = document.getElementById('guardar'), i = document.getElementById('ident'), n = document.getElementById('nombre')
   const ver = () => { b.disabled = !(i.value && n.value) }
@@ -360,6 +369,34 @@ test('v0.6.22: el «Guardar presupuesto» de la barra no abre nada → una sola 
     if (r.estado === 'no_guardado') assert.match(r.motivo, /OCULTO.*se pulsó el «Guardar presupuesto» de la pantalla para abrirlo y siguió sin verse/)
     const w = await marco.evaluate(() => { const x = window as unknown as { __abierto?: number; __pago?: number; __pulsado?: boolean }; return { a: x.__abierto ?? 0, p: x.__pago ?? 0, g: x.__pulsado ?? false } })
     assert.deepEqual(w, { a: 1, p: 0, g: false })
+  } finally {
+    await context.close()
+  }
+})
+
+test('v0.6.23: TODA la pantalla dentro de un <form>; «Guardar presupuesto» de la barra como <button> sin type o como elemento nx-* → se pulsa UNA vez, abre y SE GUARDA; «Pago» nunca', async () => {
+  for (const barra of ['sinTipo', 'nx'] as const) {
+    for (const abridor of ['linea', 'dialogo'] as const) {
+      const { context, guard, marco } = await abrir({ abridor, barra, envuelto: true })
+      try {
+        const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 2_000, 9_000)
+        assert.deepEqual(r, { estado: 'guardado', identificador: 'GA-20261022-ABCDEF12', referencia: '123456789' }, `${barra}/${abridor}`)
+        const w = await marco.evaluate(() => { const x = window as unknown as { __abierto?: number; __pago?: number }; return { a: x.__abierto ?? 0, p: x.__pago ?? 0 } })
+        assert.deepEqual(w, { a: 1, p: 0 }, `${barra}/${abridor}: una apertura y «Pago» intacto`)
+      } finally {
+        await context.close()
+      }
+    }
+  }
+})
+
+test('v0.6.23: dentro del <form> envolvente, dos «Guardar presupuesto» a la vista (ambiguo) → no se pulsa ninguno', async () => {
+  const { context, guard, marco } = await abrir({ abridor: 'inerte', barra: 'sinTipo', envuelto: true, botonFuera: true })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 500, 5_000)
+    assert.equal(r.estado, 'no_guardado')
+    const w = await marco.evaluate(() => { const x = window as unknown as { __abierto?: number; __fuera?: number }; return { a: x.__abierto ?? 0, f: x.__fuera ?? 0 } })
+    assert.deepEqual(w, { a: 0, f: 0 })
   } finally {
     await context.close()
   }

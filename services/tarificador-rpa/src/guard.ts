@@ -1524,6 +1524,26 @@ export function esBotonGenerarProyectoMapfre(descripciones: readonly (string | n
   return !cat.emision && !cat.prohibida
 }
 
+/** v0.8.16: texto EXACTO del único control de navegación que se pulsa si «Generar Proyecto» no está en «Coberturas». */
+export const TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE = 'IR A GENERAR PROYECTO'
+
+/**
+ * v0.8.16 (22/10/2026, run real: en «Coberturas» solo había «Ir a generar proyecto», que lleva a la vista del botón «Generar Proyecto»).
+ * ¿Este control es «Ir a generar proyecto» y nada más? Texto ENTERO exacto (nunca «Contratar» ni «Ir a generar proyecto y contratar»)
+ * + `comprobarBoton` con SOLO `permitirIrAGenerarProyectoMapfre` (que además exige texto entero exacto en cada descripción que lo
+ * contenga) + lista única: nunca emisión ni prohibida. PURA.
+ */
+export function esBotonIrAGenerarProyectoMapfre(descripciones: readonly (string | null | undefined)[]): boolean {
+  if (sinTildesMayus(descripciones[0]) !== TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE) return false
+  try {
+    comprobarBoton(descripciones, { permitirIrAGenerarProyectoMapfre: true })
+  } catch {
+    return false
+  }
+  const cat = clasificarAccionPortal(descripciones.filter((d): d is string => typeof d === 'string'))
+  return !cat.emision && !cat.prohibida
+}
+
 /** v0.8.15: cuánto se espera (desplazando la pantalla) a que aparezca el botón «Generar Proyecto» antes de rendirse. */
 export const MS_BUSCA_BOTON_PROYECTO_MAPFRE = 10_000
 const SEL_CONTROLES_PROYECTO_MAPFRE = 'button, a, [role="button"], [role="menuitem"], input[type="button"], input[type="submit"], [mat-button], [mat-raised-button], [mat-flat-button], [mat-stroked-button], [mat-menu-item], [class*="btn"], [class*="button"]'
@@ -1570,6 +1590,18 @@ export function decidirBotonGenerarProyectoMapfre(controles: readonly ControlPro
   const unico = elegidos[0]!
   if (!unico.c.habilitado) return { motivo: 'el botón «Generar Proyecto» está deshabilitado', definitivo: false }
   return { indice: unico.i }
+}
+
+/** ¿Esta etiqueta es EXACTAMENTE «Ir a generar proyecto»? PURA. */
+export function esEtiquetaIrAGenerarProyectoMapfre(etiqueta: string | null | undefined): boolean {
+  return sinTildesMayus(etiqueta) === TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE
+}
+
+/** Qué «Ir a generar proyecto» pulsar: EXACTAMENTE uno visible (cualquier otro número → ninguno) y habilitado. PURA. */
+export function decidirBotonIrAGenerarProyectoMapfre(controles: readonly ControlProyectoMapfre[]): { indice: number } | null {
+  const visibles = controles.map((c, i) => ({ c, i })).filter((x) => x.c.visible && esEtiquetaIrAGenerarProyectoMapfre(x.c.etiqueta))
+  if (visibles.length !== 1 || !visibles[0]!.c.habilitado) return null
+  return { indice: visibles[0]!.i }
 }
 
 /**
@@ -1649,7 +1681,7 @@ async function escanearControlesProyectoMapfre(page: Page): Promise<ControlProye
  * Busca el botón «Generar Proyecto» esperando (y desplazando la pantalla, sin clics) hasta `esperaMs`. Devuelve el control o el
  * motivo legible, con la lista saneada de botones/enlaces a la vista para saber qué hay en pantalla. Solo lectura.
  */
-async function buscarBotonGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs: number): Promise<{ boton: Locator } | { estado: 'no_generado'; motivo: string }> {
+async function buscarBotonGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs: number, conIr = false): Promise<{ boton: Locator } | { ir: Locator } | { estado: 'no_generado'; motivo: string }> {
   const hasta = Date.now() + esperaMs
   let controles: ControlProyectoMapfre[] = []
   let decision: ReturnType<typeof decidirBotonGenerarProyectoMapfre>
@@ -1658,6 +1690,14 @@ async function buscarBotonGenerarProyectoMapfre(page: Page, guard: GuardEmision,
     controles = await escanearControlesProyectoMapfre(page)
     decision = decidirBotonGenerarProyectoMapfre(controles)
     if ('indice' in decision || decision.definitivo || Date.now() >= hasta) break
+    // v0.8.16: sin «Generar Proyecto» pero con UN «Ir a generar proyecto» a la vista (tras una vuelta de gracia) → ese es el camino.
+    if (conIr && vuelta >= 1) {
+      const ir = decidirBotonIrAGenerarProyectoMapfre(controles)
+      if (ir) {
+        const loc = page.locator(`[data-rpa-ctl="${ir.indice}"]`)
+        if ((await loc.count().catch(() => 0)) === 1) return { ir: loc }
+      }
+    }
     await desplazarPantallaMapfre(page, vuelta % 2 === 0)
     await page.waitForTimeout(500)
   }
@@ -1675,13 +1715,14 @@ async function buscarBotonGenerarProyectoMapfre(page: Page, guard: GuardEmision,
  * inventario del explorador, `comprobarBoton` y la ventana de red con SOLO `permitirGenerarProyectoMapfre` (no Archivar/store).
  * Frontera bancaria, un único control, origen http(s), diálogos nativos rechazados y ventana cerrada SIEMPRE.
  */
-async function pulsarGenerarProyectoMapfre(page: Page, guard: GuardEmision, boton: Locator, trasClic: () => Promise<void>): Promise<void> {
+async function pulsarGenerarProyectoMapfre(page: Page, guard: GuardEmision, boton: Locator, trasClic: () => Promise<void>, cual: 'generar' | 'ir' = 'generar'): Promise<void> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Generar Proyecto» con otra ventana de red abierta')
   await exigirSinCuentaBancaria(page)
   if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', '«Generar Proyecto»: no hay exactamente un control')
   const desc = await descripcionVivaGenerarProyecto(boton)
-  if (!esBotonGenerarProyectoMapfre(desc)) throw new EmisionBloqueadaError('boton', '«Generar Proyecto»: el control vivo no pasa la lista blanca')
+  // v0.8.16: ÚNICA puerta de la ventana estrecha; `cual` elige la lista blanca: «Generar Proyecto» o (una vez, solo navega) «Ir a generar proyecto».
+  if (!(cual === 'ir' ? esBotonIrAGenerarProyectoMapfre(desc) : esBotonGenerarProyectoMapfre(desc))) throw new EmisionBloqueadaError('boton', `«${cual === 'ir' ? 'Ir a generar proyecto' : 'Generar Proyecto'}»: el control vivo no pasa la lista blanca`)
   const origen = await boton.evaluate((el) => el.ownerDocument.location.origin).catch(() => null)
   if (!origen || !/^https?:\/\//.test(origen)) throw new EmisionBloqueadaError('fase', '«Generar Proyecto»: sin origen http(s) conocido')
   const abrir = ABRIR_GUARDADO.get(guard)
@@ -1763,9 +1804,32 @@ async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, es
   const conPrima = await page.locator('app-coberturas prima-producto').filter({ hasText: /\d\s*€/ }).count().catch(() => 0)
   if (conPrima === 0) return { estado: 'no_generado', motivo: 'no hay primas a la vista en «Coberturas»' }
   // v0.8.15: el botón puede estar en el pie del paso (fuera de `app-coberturas`), ser <a>/[role=button]/solo icono o pintarse tarde.
-  const buscado = await buscarBotonGenerarProyectoMapfre(page, guard, esperaBotonMs)
+  const buscado = await buscarBotonGenerarProyectoMapfre(page, guard, esperaBotonMs, !usados.has('mapfre:ir-generar'))
   if ('estado' in buscado) return buscado
-  const { boton } = buscado
+  let boton: Locator
+  if ('ir' in buscado) {
+    // v0.8.16: el control real de «Coberturas» es «Ir a generar proyecto»: se pulsa UNA vez (navega, no crea nada) y se espera a que
+    // en la vista siguiente aparezca «Generar Proyecto». Si no aparece → motivo benigno con las etiquetas a la vista (saneadas).
+    usados.add('mapfre:ir-generar')
+    AVANCES_USADOS.set(guard, usados)
+    let navegado = false
+    try {
+      await pulsarGenerarProyectoMapfre(page, guard, buscado.ir, async () => {
+        navegado = true
+        await page.waitForTimeout(500)
+      }, 'ir')
+    } catch (e) {
+      guard.comprobar()
+      if (e instanceof ErrorFronteraEmision) throw e
+      return { estado: 'no_generado', motivo: `${navegado ? 'se pulsó «Ir a generar proyecto» pero el portal no respondió' : 'no se pudo pulsar «Ir a generar proyecto»'}` }
+    }
+    const tras = await buscarBotonGenerarProyectoMapfre(page, guard, esperaBotonMs, false)
+    if ('estado' in tras) return { estado: 'no_generado', motivo: `se pulsó «Ir a generar proyecto» y ${tras.motivo.replace(/^no aparece el botón «Generar Proyecto» en «Coberturas»/, 'sigue sin aparecer el botón «Generar Proyecto»')}` }
+    if (!('boton' in tras)) return { estado: 'no_generado', motivo: 'se pulsó «Ir a generar proyecto» y no se localizó «Generar Proyecto»' }
+    boton = tras.boton
+  } else {
+    boton = buscado.boton
+  }
   if (!esBotonGenerarProyectoMapfre(await descripcionVivaGenerarProyecto(boton))) return { estado: 'no_generado', motivo: 'el botón «Generar Proyecto» no pasa la lista blanca (menciona emitir/contratar/firmar/pagar u otra acción): no se pulsa' }
   return { boton }
 }
@@ -3946,23 +4010,27 @@ export const MAX_APERTURAS_GUARDAR_TURISMOS = 1
 /** Marca (`data-rpa-abrir`) el ÚNICO control visible y habilitado con el texto exacto de la lista blanca. Devuelve cuántos candidatos hay. Solo lectura. */
 async function marcarAbridorGuardarTurismos(marco: Frame): Promise<number> {
   return marco
-    .evaluate(({ textos }) => {
+    .evaluate(({ textos, host }) => {
       document.querySelectorAll('[data-rpa-abrir]').forEach((n) => n.removeAttribute('data-rpa-abrir'))
       const cand: Element[] = []
-      for (const b of Array.from(document.querySelectorAll('button, a, [role="button"]'))) {
-        // `type` explícito: un <button> sin atributo vale «submit» en el DOM y es justo el botón de barra que buscamos (fuera de form).
+      // v0.6.23: MISMO conjunto y MISMA visibilidad que el listado de controles del diagnóstico (`estadoFormularioGuardarTurismos`) + `nx-button`.
+      // Sin la exclusión general de `closest('form')`: Allianz envuelve toda la pantalla en un <form> y el «Guardar presupuesto» de la barra
+      // vive dentro (un <button> sin `type` es «submit» en el DOM; en la barra no envía el formulario del bloque, y el guard vigila la red).
+      for (const b of Array.from(document.querySelectorAll('button, a, [role="button"], [role="tab"], input[type="button"], input[type="submit"], nx-button'))) {
+        // Fuera: deshabilitados, los submit EXPLÍCITOS (type="submit"/input submit) y todo lo que viva DENTRO del propio bloque de guardado.
         if (b.getAttribute('type') === 'submit' || (b as HTMLButtonElement).disabled || b.getAttribute('aria-disabled') === 'true') continue
-        if (b.closest('form')) continue
+        if (b.closest(host)) continue
         const r = b.getBoundingClientRect()
         if (!(r.width > 0 && r.height > 0) || getComputedStyle(b).visibility === 'hidden') continue
         const c = b.cloneNode(true) as HTMLElement
         c.querySelectorAll('nx-icon, svg, i, .nx-icon').forEach((x) => x.remove())
-        if (textos.includes((c.textContent || '').replace(/\s+/g, ' ').trim())) cand.push(b)
+        const t = (c.textContent || '').replace(/\s+/g, ' ').trim() || b.getAttribute('aria-label') || b.getAttribute('title') || (b as HTMLInputElement).value || ''
+        if (textos.includes(String(t).replace(/\s+/g, ' ').trim())) cand.push(b)
       }
       const hojas = cand.filter((e) => !cand.some((o) => o !== e && e.contains(o)))
       if (hojas.length === 1) hojas[0]!.setAttribute('data-rpa-abrir', '1')
       return hojas.length
-    }, { textos: [...BOTONES_GUARDAR_PRESUPUESTO_TURISMOS] })
+    }, { textos: [...BOTONES_GUARDAR_PRESUPUESTO_TURISMOS], host: SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS })
     .catch(() => 0)
 }
 
