@@ -12,7 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(22/10/2026)** — Patrimonio F1 paso 8 (documentos) ✅ en código, REQUIERE SQL `apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio_documento.sql` (sin aplicar; mismo paso que el deploy). Ficheros EN BD
+**(22/10/2026)** — Patrimonio F1 paso 8 (documentos) ✅ en código, SQL APLICADO 22/10 (verificado) `apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio_documento.sql` (sin aplicar; mismo paso que el deploy). Ficheros EN BD
 (`bytea`, ≤10 MB, PDF/JPG/PNG/WebP; decisión de Alberto): tabla `portal_patrimonio_documento` (un owner inmueble|contrato|inquilino con FK compuesta al titular, sin DELETE, solo se sella `borrado_en`, trigger anti-«desborrar»,
 FK compuesta de `portal_patrimonio_gasto.documento_id`). `documentos-bd.ts` (tope 40/día/identidad, tx + advisory lock, listas sin `contenido`), rutas `/api/patrimonio/documentos[/id]` (411/413, `attachment`+`nosniff`+`no-store`),
 `Documentos.tsx` en la ficha del inmueble. Facturas: con inmueble, el fichero se guarda como documento (carpeta Facturas) en la MISMA tx de la reserva y rellena `documento_id`; sin inmueble no se guarda. Cepos en rojo y restaurados.
