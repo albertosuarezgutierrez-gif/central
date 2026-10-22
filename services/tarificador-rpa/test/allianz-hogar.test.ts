@@ -17,6 +17,7 @@ import {
   ALLIANZ_HOGAR_ACTIVO,
   ErrorMapaIncompleto,
   allianzHogar,
+  anioCatastroAceptable,
   avanzarDesdeVivienda,
   esAppHogar,
   ETIQUETAS_MADERA,
@@ -166,10 +167,12 @@ type OpcionesApp = {
   infoOculta?: boolean | 'nunca' | 'overlay'
   /**
    * 0.1.7 (HTML del atasco del 22/10/2026): tras «Comprobar» año/reforma/m² llegan RELLENOS por el Catastro y `disabled`, con la casilla
-   * `nx-checkbox[formcontrolname=enableCadastreEditing]` «Modificar datos del catastro.» sin marcar que los habilita. `'no_habilita'` =
-   * la casilla se marca pero los campos siguen deshabilitados. Datos inventados.
+   * `nx-checkbox[formcontrolname=enableCadastreEditing]` «Modificar datos del catastro.» sin marcar. `true` = forma REAL (0.1.8, HTML del
+   * job 95454433): al marcarla SOLO se habilita «Superficie de la vivienda»; año y reforma siguen `disabled` (el año con el del Catastro).
+   * `'habilita_todo'` = se habilitan los tres; `'no_habilita'` = no se habilita nada; `'anio_vacio'` = forma real con el año del Catastro
+   * vacío. Datos inventados.
    */
-  catastro?: true | 'no_habilita'
+  catastro?: true | 'habilita_todo' | 'no_habilita' | 'anio_vacio'
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -245,10 +248,11 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
     c.appendChild(p); document.body.appendChild(c); $('town').setAttribute('aria-controls', 'nx-autocomplete-panel-1');
   });` : ''}
   ${o.catastro ? `
-  $('yearOfConstruction').value = '1950'; $('surfaceAreaLiving').value = '55';
+  $('yearOfConstruction').value = ${o.catastro === 'anio_vacio' ? "''" : "'1950'"}; $('surfaceAreaLiving').value = '55';
   document.getElementById('cat-1').addEventListener('change', (ev) => {
-    if (${o.catastro === 'no_habilita' ? 'true' : 'false'}) return;
-    for (const f of ['yearOfConstruction', 'yearOfRefurbishment', 'surfaceAreaLiving']) $(f).disabled = !ev.target.checked;
+    ev.target.value = String(ev.target.checked);
+    const habilita = ${JSON.stringify(o.catastro === 'habilita_todo' ? ['yearOfConstruction', 'yearOfRefurbishment', 'surfaceAreaLiving'] : o.catastro === 'no_habilita' ? [] : ['surfaceAreaLiving'])};
+    for (const f of habilita) $(f).disabled = !ev.target.checked;
   });` : ''}
   valida();
 </script></body></html>`
@@ -348,12 +352,19 @@ test('0.1.5: tras «Comprobar» la información sigue oculta → hueco claro (co
   }
 })
 
-test('0.1.7: tras «Comprobar» el Catastro deja año/m² rellenos y deshabilitados → marca «Modificar datos del catastro.» (ctx.pulsar) y escribe los del formulario', async () => {
+test('anioCatastroAceptable: 4 cifras entre 1700 y el año de hoy (hoy inyectado)', () => {
+  const hoy = new Date(2030, 5, 1)
+  assert.equal(anioCatastroAceptable('1950', hoy), true)
+  assert.equal(anioCatastroAceptable(' 2030 ', hoy), true)
+  for (const v of ['2031', '1699', '', null, '0', '19500', '19a0', '1950.5']) assert.equal(anioCatastroAceptable(v, hoy), false, String(v))
+})
+
+test('0.1.8 (forma real, job 95454433): marcar «Modificar datos del catastro.» solo habilita los m² → se acepta el año del Catastro (no se teclea) y se escriben los m²', async () => {
   const { context, page, ctx, pulsados, marco, valor, marcado } = await abrir({ infoOculta: true, catastro: true })
   try {
     await rellenarPantallaVivienda(page, marco, FORM, ctx)
     assert.equal(await marcado('cat-1'), true)
-    assert.equal(await valor('yearOfConstruction'), '1990', 'el año del formulario, no el del Catastro')
+    assert.equal(await valor('yearOfConstruction'), '1950', 'el año lo fija el Catastro: no se toca')
     assert.equal(await valor('surfaceAreaLiving'), '90', 'los m² del formulario, no los del Catastro')
     const iC = pulsados.indexOf('Comprobar')
     const iM = pulsados.indexOf('Modificar datos del catastro.')
@@ -364,17 +375,34 @@ test('0.1.7: tras «Comprobar» el Catastro deja año/m² rellenos y deshabilita
   }
 })
 
-test('0.1.7: la casilla del Catastro no habilita el año → hueco claro (no se escribe ni se adivina)', async () => {
-  const { context, page, ctx, marco, valor } = await abrir({ infoOculta: true, catastro: 'no_habilita' })
+test('0.1.7: si la casilla habilita también el año → se escribe el del formulario', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ infoOculta: true, catastro: 'habilita_todo' })
   try {
-    page.setDefaultTimeout(20_000)
-    await assert.rejects(
-      () => rellenarPantallaVivienda(page, marco, FORM, ctx),
-      (e) => e instanceof ErrorMapaIncompleto && /sigue deshabilitado tras marcar «Modificar datos del catastro\.»/.test((e as Error).message),
-    )
-    assert.equal(await valor('yearOfConstruction'), '1950', 'no se tocó el año del Catastro')
+    await rellenarPantallaVivienda(page, marco, FORM, ctx)
+    assert.equal(await valor('yearOfConstruction'), '1990')
+    assert.equal(await valor('surfaceAreaLiving'), '90')
   } finally {
     await context.close()
+  }
+})
+
+test('0.1.8: estados desconocidos → hueco que DICE el estado observado (casilla, campo, valor; sin datos)', async () => {
+  const casos = [
+    { o: { catastro: 'no_habilita' as const }, form: FORM, re: /el efecto de marcar «Modificar datos del catastro\.» \(casilla .*: marcada; campo: deshabilitado, con valor del portal; «Superficie de la vivienda»: deshabilitada\)/ },
+    { o: { catastro: 'anio_vacio' as const }, form: FORM, re: /sin un año del Catastro aceptable \(casilla .*: marcada; campo: deshabilitado, vacío\)/ },
+    { o: { catastro: true as const }, form: { ...FORM, inmueble: { ...FORM.inmueble, anioReforma: 2010 } }, re: /por qué «Año de la reforma» está deshabilitado \(casilla .*: marcada; campo: deshabilitado, vacío\)/ },
+  ]
+  for (const c of casos) {
+    const { context, page, ctx, marco } = await abrir({ infoOculta: true, ...c.o })
+    try {
+      page.setDefaultTimeout(20_000)
+      await assert.rejects(
+        () => rellenarPantallaVivienda(page, marco, c.form, ctx),
+        (e) => e instanceof ErrorMapaIncompleto && c.re.test((e as Error).message) && !(e as Error).message.includes('1950') && !(e as Error).message.includes('00000000T'),
+      )
+    } finally {
+      await context.close()
+    }
   }
 })
 
