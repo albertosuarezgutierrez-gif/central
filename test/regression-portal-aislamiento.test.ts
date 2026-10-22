@@ -119,8 +119,12 @@ const CARTERA_SIN_SESION = new Set([
 
 /** `prisma.portalPoliza…`, `prisma.portalBien…`, `prisma.portalIdentidad…` */
 const USA_PRISMA_PORTAL = /prisma\s*\.\s*portal[A-Z]/
-/** Importa la puerta única, con alias `@/`, por ruta relativa, o `./session` desde dentro de `lib/`. */
-const USA_SESION = /from\s+['"](@\/lib\/session|(?:\.\.?\/)+lib\/session|\.\/session)(?:\.ts)?['"]/
+/**
+ * Importa la puerta única, con alias `@/`, por ruta relativa, `./session` desde dentro de `lib/` o
+ * `../session` desde una subcarpeta de `lib/` (`lib/patrimonio/`, 22/10/2026). Desde `app/` un
+ * `../session` no resuelve a nada: no compila, así que no abre una puerta falsa.
+ */
+const USA_SESION = /from\s+['"](@\/lib\/session|(?:\.\.?\/)+lib\/session|\.\/session|\.\.\/session)(?:\.ts)?['"]/
 /** El filtro por identidad, escrito de verdad en la consulta. */
 const FILTRA_POR_IDENTIDAD = /identidadId/
 
@@ -366,4 +370,21 @@ test('documentos de póliza: se busca la póliza en la cartera ANTES de leer fic
   assert.match(src, /carteraDeIdentidad\(identidadId\)/)
   assert.match(src, /cartera\.propias\.some/)
   assert.doesNotMatch(src, /cartera\.autorizadas/)
+})
+
+// ─── Patrimonio (22/10/2026) ─────────────────────────────────────────────────
+// `lib/patrimonio/` es la primera subcarpeta de `lib/` que toca `prisma.portal*` y la cartera. Que viva un
+// nivel más abajo no la saca de este guardián: si el escáner dejara de verla (o la puerta `../session` dejara
+// de contar), las reglas de arriba pasarían en verde sin mirarla. El cepo propio, con las reglas del
+// adaptador, es `test/regression-portal-patrimonio-aislamiento.test.ts`.
+test('patrimonio: el guardián ve lib/patrimonio/accesos.ts y lo da por bueno con sus mismas reglas', () => {
+  const f = 'apps/asegura-portal/lib/patrimonio/accesos.ts'
+  assert.ok(ficherosDelPortal().includes(f), `${f} no está entre los ficheros que mira el guardián`)
+  assert.ok(!EXENTOS.has(f) && !CARTERA_SIN_SESION.has(f), `${f} no puede estar exento: es LA frontera del patrimonio`)
+  const src = readFileSync(join(ROOT, f), 'utf8')
+  assert.match(src, USA_PRISMA_PORTAL, 'accesos.ts lee portal_vinculo / portal_autorizacion')
+  assert.match(src, USA_PRISMA_CARTERA, 'accesos.ts lee fichas de la cartera (las vivas)')
+  assert.match(src, USA_SESION)
+  assert.match(src, FILTRA_POR_IDENTIDAD)
+  assert.match(src, NOMBRA_VINCULO)
 })

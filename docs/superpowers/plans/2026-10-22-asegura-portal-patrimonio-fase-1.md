@@ -11,7 +11,7 @@
 - Tests: `pnpm --filter @central/module-patrimonio test` (58), también con `TZ=Pacific/Kiritimati` y `TZ=Pacific/Pago_Pago`;
   `pnpm --filter @central/module-contabilidad test`; `tsc` del paquete y de `apps/sivra`; `pnpm test:guardia`.
 
-## Paso 2 — Puro: accesos, infraseguro, enlace del inquilino (agente-architect)
+## Paso 2 — Puro: accesos, infraseguro, enlace del inquilino ✅ (22/10/2026)
 - `packages/module-patrimonio/src/acceso.ts`: `nivelesPatrimonio({vinculadas, dueno, autorizaciones})` → `Map<titularId, 'gestion'|'total'>`
   fail-closed (alcance desconocido → nada; revocada/no aceptada → nada; se queda el nivel más alto) y `puede(nivel, accion)`
   con la tabla de §4.
@@ -21,7 +21,7 @@
 - `src/enlace-inquilino.ts`: qué ve el inquilino (lista blanca de campos) y estados del enlace (anulado, caducado).
 - Tests `*.test.ts` de cada uno + rojo.
 
-## Paso 3 — SQL + schema (agente-architect, NO aplica en BD sin OK de Alberto)
+## Paso 3 — SQL + schema ✅ aplicado en BD (22/10/2026)
 - `apps/asegura-portal/prisma/sql/2026-10-2X_portal_patrimonio.sql`: tablas de §4, CHECKs, índices únicos parciales,
   `REVOKE ALL … FROM crm_seguros`, `GRANT` por columnas a `prisma_asegura_portal` (sin DELETE), alcances
   `patrimonio_gestion`/`patrimonio_total` en el CHECK de `portal_autorizacion.alcance` (sin tocar `ALCANCES`).
@@ -29,12 +29,12 @@
 - Tests: `test/regression-portal-sin-crm.test.ts` (debe cubrir las tablas nuevas), cepo nuevo
   `test/regression-portal-patrimonio-sql.test.ts` (lee el SQL: cada tabla con REVOKE y sin GRANT DELETE).
 
-## Paso 4 — Accesos y adaptadores (agente-architect)
+## Paso 4 — Accesos y adaptadores ✅ (22/10/2026)
 - `apps/asegura-portal/lib/patrimonio/accesos.ts` (`accesosPatrimonio(identidadId)` a imagen de `lib/flota.ts`),
   `lib/patrimonio/lectura.ts` (filas → tipos puros; céntimos `bigint` → `number`).
 - Cepo `test/regression-portal-patrimonio-aislamiento.test.ts` + inclusión en `test/regression-portal-aislamiento.test.ts`.
 
-## Paso 5 — Pantallas de titulares e inmuebles (general-purpose, sonnet)
+## Paso 5 — Pantallas de titulares e inmuebles ✅ (22/10/2026)
 - `app/(portal)/patrimonio/page.tsx` (lista por titular, plegado perezoso ~50 + «Ver más»), `patrimonio/inmueble/[id]/page.tsx`,
   `patrimonio/NuevoInmueble.tsx` reutilizando `BuscadorDireccionCp`/`lib/catastro.ts`; `app/api/patrimonio/inmuebles/route.ts`.
   `NavPortal.tsx`: entrada «Patrimonio» solo si `accesosPatrimonio` no está vacío.
