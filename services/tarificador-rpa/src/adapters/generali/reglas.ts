@@ -7,7 +7,14 @@
 //   3. Tomador, conductor y antecedentes como en las demás compañías; antecedentes sin dato = supuesto favorable DECLARADO.
 // 🚨 Sin datos personales en mensajes: ni matrícula, ni nombres de mediador (solo cuentas y el código propio).
 
-import { supuestoConductorTomador, type FormularioAuto } from '@central/module-tarificacion'
+import {
+  datosEquivalenciaDesdeEtiqueta,
+  normalizarCombustible,
+  supuestoConductorTomador,
+  supuestoVersionAutomatica,
+  type Combustible,
+  type FormularioAuto,
+} from '@central/module-tarificacion'
 
 /**
  * Código del MEDIADOR que se elige en la cascada de «Seleccionar mediador» (Alberto, 18/10/2026). Es el código de la
@@ -349,11 +356,15 @@ export function opcionPuestaPrimeFaces(valorActual: string, textoActual: string,
  * El `data-label` EXACTO del `li` que corresponde al texto de la opción del `<select>` oculto: el idéntico si existe; si no, el ÚNICO
  * que casa normalizado (elipsis «…» vs «...», espacios dobles o duros, mayúsculas). 0 o varios → `null` (no se pulsa nada). PURA.
  */
-export function dataLabelDeOpcionGenerali(dataLabels: readonly string[], texto: string): string | null {
-  if (dataLabels.filter((d) => d === texto).length === 1) return texto
+export function dataLabelDeOpcionGenerali(dataLabels: readonly string[], texto: string, repetidas = false): string | null {
+  const identicas = dataLabels.filter((d) => d === texto).length
+  if (identicas === 1 || (repetidas && identicas > 1)) return texto
   const n = normalizarCatalogo(texto)
   if (n === '') return null
   const casan = dataLabels.filter((d) => normalizarCatalogo(d) === n)
+  // v0.2.17 (`repetidas`, solo la versión): varios `li` con el MISMO texto exacto cuentan como uno (la puerta pulsa el primero).
+  const distintos = [...new Set(casan)]
+  if (repetidas) return distintos.length === 1 ? distintos[0]! : null
   return casan.length === 1 ? casan[0]! : null
 }
 
@@ -420,10 +431,158 @@ export function cvDePotenciaGenerali(etiqueta: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
-/** El grupo de opciones «Potencia» entre los controles del selector: no es «Placas especiales» y TODAS sus opciones son «NNN CV». `null` si no hay (o hay varios). PURA. */
+/**
+ * El grupo de opciones «Potencia» entre los controles del selector: no es «Placas especiales» y TODAS sus opciones son «NNN CV» o
+ * (v0.2.17) «No lo sé», con al menos una «NNN CV». `null` si no hay (o hay varios). PURA.
+ */
 export function grupoPotenciaGenerali(campos: readonly CampoSelectorGenerali[]): { grupo: string; opciones: string[] } | null {
-  const hallados = campos.filter((c) => c.tipo === 'grupo' && c.clave.startsWith('grupo|') && !/^placaesp/i.test(c.clave.slice(6)) && c.opciones.length > 0 && c.opciones.length === c.total && c.opciones.every((o) => cvDePotenciaGenerali(o) !== null))
+  const hallados = campos.filter(
+    (c) =>
+      c.tipo === 'grupo' && c.clave.startsWith('grupo|') && !/^placaesp/i.test(c.clave.slice(6)) && c.opciones.length > 0 && c.opciones.length === c.total &&
+      c.opciones.every((o) => cvDePotenciaGenerali(o) !== null || esOpcionNoLoSeGenerali(o)) && c.opciones.some((o) => cvDePotenciaGenerali(o) !== null),
+  )
   return hallados.length === 1 ? { grupo: hallados[0]!.clave.slice(6), opciones: hallados[0]!.opciones } : null
+}
+
+// ───────────── v0.2.17: combustible · potencia exacta · versión del desplegable (con textos repetidos) ─────────────
+// Prueba real (22/10/2026): tras «Otros modelos ...» el selector enseña «combustible» [grupo] (Diésel | Gasolina | No lo sé), «potencia»
+// [grupo] («163.0 CV»… | No lo sé) y «Versión» [desplegable] con opciones REPETIDAS. Orden: combustible → potencia → (recarga) → versión.
+
+/** ¿Es la opción «No lo sé» de los grupos del selector? PURA. */
+export function esOpcionNoLoSeGenerali(texto: string): boolean {
+  return normalizarCatalogo(texto) === 'NO LO SE'
+}
+
+/**
+ * El grupo «combustible» del selector: un grupo (no «Placas especiales») cuyo nombre dice combustible/carburante, o cuyas opciones son
+ * todas combustibles reconocibles o «No lo sé» (al menos un combustible). `null` si no hay o hay varios. PURA.
+ */
+export function grupoCombustibleGenerali(campos: readonly CampoSelectorGenerali[]): { grupo: string; opciones: string[] } | null {
+  const hallados = campos.filter((c) => {
+    if (c.tipo !== 'grupo' || !c.clave.startsWith('grupo|') || /^placaesp/i.test(c.clave.slice(6)) || c.opciones.length === 0 || c.opciones.length !== c.total) return false
+    if (/combust|carbur/i.test(c.clave.slice(6)) || /combust|carbur/i.test(c.etiqueta)) return true
+    return c.opciones.every((o) => normalizarCombustible(o) !== null || esOpcionNoLoSeGenerali(o)) && c.opciones.some((o) => normalizarCombustible(o) !== null)
+  })
+  return hallados.length === 1 ? { grupo: hallados[0]!.clave.slice(6), opciones: hallados[0]!.opciones } : null
+}
+
+type FormVehiculoRiesgo = Pick<FormularioAuto, 'vehiculoConfirmado' | 'seleccionVehiculo'>
+
+/** Texto de la versión del riesgo (descripción de la selección o denominación confirmada), o `null`. PURA. */
+function textoVersionRiesgo(form: FormVehiculoRiesgo): string | null {
+  const d = form.seleccionVehiculo?.descripcion?.trim() || form.vehiculoConfirmado?.denominacion?.trim() || ''
+  return d === '' ? null : d
+}
+
+/**
+ * Combustible del riesgo: el del vehículo confirmado (Mapfre); si no consta, el que DIGA el texto de la versión (descripción o
+ * denominación: «GASOLINA», «DIESEL»…). Nada → `null` (no consta; nunca se deduce de siglas de motor). PURA.
+ */
+export function combustibleRiesgoGenerali(form: FormVehiculoRiesgo): Combustible | null {
+  const vc = form.vehiculoConfirmado?.combustible ?? null
+  if (vc) return vc
+  const t = textoVersionRiesgo(form)
+  return t ? (datosEquivalenciaDesdeEtiqueta(t).combustible ?? null) : null
+}
+
+/** CV del riesgo (enteros): los del vehículo confirmado; si no constan, los «NNN CV» del texto de la versión. `null` = no consta. PURA. */
+export function cvRiesgoGenerali(form: FormVehiculoRiesgo): number | null {
+  const vc = form.vehiculoConfirmado?.cv
+  if (typeof vc === 'number' && Number.isFinite(vc) && vc > 0) return Math.round(vc)
+  const t = textoVersionRiesgo(form)
+  const cv = t ? datosEquivalenciaDesdeEtiqueta(t).cv : null
+  return typeof cv === 'number' && cv > 0 ? Math.round(cv) : null
+}
+
+const ETIQUETA_COMBUSTIBLE: Record<Combustible, string> = {
+  gasolina: 'gasolina', diesel: 'diésel', electrico: 'eléctrico', hibrido: 'híbrido', hibrido_enchufable: 'híbrido enchufable', glp: 'GLP', gnc: 'GNC', hidrogeno: 'hidrógeno',
+}
+
+export type DecisionGrupoGenerali = { tipo: 'opcion'; texto: string; supuesto: string | null } | { tipo: 'sin_opcion'; motivo: string }
+
+/**
+ * Combustible del selector: la opción cuyo texto normalizado es el combustible del riesgo («Diésel» ↔ diesel). Sin dato o sin opción
+ * que case → «No lo sé» con supuesto SOLO si el portal lo ofrece; si no, `sin_opcion` (nunca se inventa). Varias que casan → `sin_opcion`. PURA.
+ */
+export function decidirCombustibleGenerali(opciones: readonly string[], combustible: Combustible | null): DecisionGrupoGenerali {
+  if (combustible) {
+    const casan = opciones.filter((o) => !esOpcionNoLoSeGenerali(o) && normalizarCombustible(o) === combustible)
+    if (casan.length === 1) return { tipo: 'opcion', texto: casan[0]!, supuesto: null }
+    if (casan.length > 1) return { tipo: 'sin_opcion', motivo: `el combustible ${ETIQUETA_COMBUSTIBLE[combustible]} casa con ${casan.length} opciones (${opciones.join(' | ').slice(0, 200)})` }
+  }
+  const noLoSe = opciones.find(esOpcionNoLoSeGenerali)
+  const que = combustible ? `el combustible del riesgo (${ETIQUETA_COMBUSTIBLE[combustible]}) no figura entre las opciones del selector de Generali` : 'el combustible del vehículo no consta en el riesgo'
+  if (noLoSe) return { tipo: 'opcion', texto: noLoSe, supuesto: `${que}: se marcó «${noLoSe}» (supuesto; revisar en la emisión)` }
+  return { tipo: 'sin_opcion', motivo: `${que} y el selector no ofrece «No lo sé» (opciones: ${opciones.join(' | ').slice(0, 200)})` }
+}
+
+/**
+ * Potencia del selector por CV ENTERO EXACTO del riesgo (163 ↔ «163.0 CV»). Sin coincidencia o sin dato → «No lo sé» con supuesto si el
+ * portal lo ofrece; si no, `sin_exacta` (decide la regla de 0.2.14 con tolerancia o pregunta). PURA.
+ */
+export function potenciaExactaGenerali(
+  opciones: readonly string[],
+  cv: number | null,
+): { tipo: 'exacta'; texto: string } | { tipo: 'no_lo_se'; texto: string; supuesto: string } | { tipo: 'sin_exacta' } {
+  if (cv !== null) {
+    const exactas = opciones.filter((o) => {
+      const n = cvDePotenciaGenerali(o)
+      return n !== null && Math.round(n) === Math.round(cv)
+    })
+    if (exactas.length >= 1 && exactas.every((o) => normalizarCatalogo(o) === normalizarCatalogo(exactas[0]!))) return { tipo: 'exacta', texto: exactas[0]! }
+  }
+  const noLoSe = opciones.find(esOpcionNoLoSeGenerali)
+  if (!noLoSe) return { tipo: 'sin_exacta' }
+  const que = cv === null ? 'la potencia del vehículo no consta en el riesgo' : `la potencia del riesgo (${Math.round(cv)} CV) no figura entre las opciones del selector de Generali`
+  return { tipo: 'no_lo_se', texto: noLoSe, supuesto: `${que}: se marcó «${noLoSe}» (supuesto; revisar en la emisión)` }
+}
+
+/** Lo que se sabe del riesgo para elegir la versión del desplegable. `persona` = elección de la bandeja (manda). */
+export type ReferenciaVersionDesplegable = { persona: string | null; buscado: string | null; cv: number | null; combustible: Combustible | null }
+export type EleccionVersionDesplegable = { tipo: 'opcion'; indice: number; supuesto: string | null } | { tipo: 'preguntar'; candidatas: string[] }
+
+/**
+ * Versión del desplegable «Versión» (v0.2.17; el portal REPITE textos, p. ej. «2.9 CRDI 163 FULL» dos veces). Índices sobre `opciones`.
+ *   1. elección de una persona: exacta normalizada (repetida → la primera, declarada); no casa → preguntar;
+ *   2. versión del riesgo: exacta normalizada; si no, contención por palabra entera (en cualquier sentido), filtrada por CV/combustible
+ *      si eso deja alguna; idénticas o varias → la PRIMERA, declarada («Versión elegida automáticamente: …; revisar en la emisión»);
+ *   3. sin dato o sin casar: filtro por potencia (el número de CV como palabra entera) y combustible (descarta las que dicen otro).
+ *      Una → esa; varias → la primera, declarada; ninguna, o sin ningún dato con varias → preguntar con todas. PURA.
+ */
+export function elegirVersionDesplegableGenerali(opciones: readonly string[], ref: ReferenciaVersionDesplegable): EleccionVersionDesplegable {
+  const validas = opciones.map((o, i) => ({ o, i, n: normalizarCatalogo(o) })).filter((x) => !esOpcionVaciaCatalogo(x.o))
+  const preguntar: EleccionVersionDesplegable = { tipo: 'preguntar', candidatas: validas.map((x) => x.o) }
+  if (validas.length === 0) return preguntar
+  const primera = (xs: typeof validas, declarar: boolean): EleccionVersionDesplegable => ({
+    tipo: 'opcion',
+    indice: xs[0]!.i,
+    supuesto: declarar || xs.length > 1 ? supuestoVersionAutomatica(xs[0]!.o, xs.length) : null,
+  })
+  const persona = ref.persona?.trim() ? normalizarCatalogo(ref.persona) : ''
+  if (persona !== '') {
+    const casan = validas.filter((x) => x.n === persona)
+    return casan.length > 0 ? primera(casan, false) : preguntar
+  }
+  if (validas.length === 1) return { tipo: 'opcion', indice: validas[0]!.i, supuesto: null }
+  const compatible = (x: (typeof validas)[number]): boolean => {
+    if (ref.cv !== null && !x.n.split(' ').includes(String(Math.round(ref.cv))) && datosEquivalenciaDesdeEtiqueta(x.o).cv !== Math.round(ref.cv)) return false
+    const c = datosEquivalenciaDesdeEtiqueta(x.o).combustible ?? null
+    return !(ref.combustible && c && c !== ref.combustible)
+  }
+  const b = ref.buscado?.trim() ? normalizarCatalogo(ref.buscado) : ''
+  if (b !== '') {
+    const exactas = validas.filter((x) => x.n === b)
+    if (exactas.length > 0) return primera(exactas, false)
+    const contenidas = validas.filter((x) => contieneFrase(ref.buscado!, x.o) || contieneFrase(x.o, ref.buscado!))
+    if (contenidas.length > 0) {
+      const filtradas = contenidas.filter(compatible)
+      return primera(filtradas.length > 0 ? filtradas : contenidas, true)
+    }
+  }
+  if (ref.cv === null && ref.combustible === null) return preguntar
+  const filtradas = validas.filter(compatible)
+  if (filtradas.length === 0) return preguntar
+  return filtradas.length === 1 ? { tipo: 'opcion', indice: filtradas[0]!.i, supuesto: null } : primera(filtradas, true)
 }
 
 /** El desplegable «Versión» del selector (PrimeFaces o nativo), si lo hay y es único. PURA. */
