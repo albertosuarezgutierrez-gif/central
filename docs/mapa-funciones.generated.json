@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-22T09:59:56Z",
-  "sha": "03699f09fa9a3761fb66ff17bd7dff33d9b4cedd",
+  "generadoEn": "2026-10-22T11:30:41Z",
+  "sha": "451674bc1879444062653a97d3e59c59a295fa99",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5871,13 +5871,13 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 26,
+          "linea": 28,
           "resumen": "El armazón de las pantallas con sesión. 🚨 **Vive en el `layout` y no en cada página**, y eso es lo que arregla el fallo que se veía: hasta ahora cada página abría su propio `<main>` con un `maxWidth:"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "98755dfd9fa3"
+      "hash": "598492f38e76"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/loading.tsx",
@@ -5911,7 +5911,7 @@
           "nombre": "NavPortal",
           "kind": "function",
           "exportada": true,
-          "params": "{ llamar, whatsapp }: { llamar?: { tel: string; numero: string } /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */ whatsapp?: string }",
+          "params": "{ llamar, whatsapp, patrimonio }: { /** `accesosPatrimonio` no vacío (lo calcula el layout): sin titulares no hay entrada. */ patrimonio?: boolean llamar?: { tel: string; numero: string } /** El enlace `wa.me` ya compuesto en el servidor (v",
           "retorno": null,
           "linea": 51,
           "resumen": "La navegación del portal: **un solo `<nav>` con dos formas**. 🚨 El mismo DOM se pinta como cajón (drawer) en el móvil y como lateral vertical en el escritorio; lo decide `globals.css` (`.portal-nav`)"
@@ -5922,7 +5922,7 @@
           "exportada": false,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 293,
+          "linea": 306,
           "resumen": "── Iconos de la barra inferior ───────────────────────────────────────────── SVG en línea y no una librería: el portal no carga ninguna de iconos y una dependencia nueva por cinco dibujos no compensa."
         },
         {
@@ -5931,7 +5931,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 301
+          "linea": 314
         },
         {
           "nombre": "IconoRecibos",
@@ -5939,7 +5939,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 302
+          "linea": 315
         },
         {
           "nombre": "IconoSiniestros",
@@ -5947,7 +5947,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 303
+          "linea": 316
         },
         {
           "nombre": "IconoMas",
@@ -5955,12 +5955,231 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 304
+          "linea": 317
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "72625637a76e"
+      "hash": "42c135a048d0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/DireccionCp.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "DireccionCp"
+      ],
+      "funciones": [
+        {
+          "nombre": "DireccionCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ valor, onCambio, disabled }: { valor: ValorDireccion; onCambio: (v: ValorDireccion) => void; disabled?: boolean }",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "a163ec66d5e0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/GastosTitular.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GastosTitular"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "Plegable",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ filas, vacio, pinta }: { filas: T[]; vacio: string; pinta: (f: T) => React.ReactNode }",
+          "retorno": null,
+          "linea": 31,
+          "resumen": "Plegado perezoso: ~50 filas y «Ver más»."
+        },
+        {
+          "nombre": "useEnvio",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, alTerminar: () => void",
+          "retorno": null,
+          "linea": 47,
+          "resumen": "Envío común: POST JSON y `router.refresh()` sin desmontar."
+        },
+        {
+          "nombre": "Formulario",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, children, error, enviando, onSubmit, onCancelar }: { titulo: string; children: React.ReactNode; error: string | null; enviando: boolean; onSubmit: () => void; onCancelar: () => void }",
+          "retorno": null,
+          "linea": 72
+        },
+        {
+          "nombre": "NuevaPlantilla",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ t, cerrar }: { t: TitularGastos; cerrar: () => void }",
+          "retorno": null,
+          "linea": 88
+        },
+        {
+          "nombre": "NuevaComunidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ t, cerrar }: { t: TitularGastos; cerrar: () => void }",
+          "retorno": null,
+          "linea": 138
+        },
+        {
+          "nombre": "NuevaDerrama",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ t, cerrar }: { t: TitularGastos; cerrar: () => void }",
+          "retorno": null,
+          "linea": 180
+        },
+        {
+          "nombre": "GastosTitular",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titular: t }: { titular: TitularGastos }",
+          "retorno": null,
+          "linea": 211
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "f0fbc49cce8f"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GastosPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "GastosPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "«Gastos fijos» (paso 6, 22/10/2026): plantillas de gasto por inmueble/titular, comunidad y derramas. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `gastosDeIdentidad`): solo los titulares a los qu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "af1fde95a903"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "InmueblePage"
+      ],
+      "funciones": [
+        {
+          "nombre": "triestado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: boolean | null",
+          "retorno": null,
+          "linea": 12
+        },
+        {
+          "nombre": "InmueblePage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "Ficha del inmueble. 🚨 El id de la URL NO consulta por sí solo: `inmuebleAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver (`accesosPatrimonio`). Si no existe o no es tuyo: 404 "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cbc0484896bf"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/ListaInmuebles.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "ListaInmuebles"
+      ],
+      "funciones": [
+        {
+          "nombre": "ListaInmuebles",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inmuebles }: { inmuebles: Fila[] }",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "Plegado perezoso: ~50 filas y «Ver más». Nada monta cientos de filas de golpe."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4cb0cb0b3587"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/NuevoInmueble.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "NuevoInmueble"
+      ],
+      "funciones": [
+        {
+          "nombre": "NuevoInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titulares }: { titulares: { clienteId: string; nombre: string }[] }",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "Alta de un inmueble. `titulares` = solo aquellos donde el nivel permite el alta (lo filtra el servidor)."
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "d5ef61599ebd"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "PatrimonioPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PatrimonioPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "«Patrimonio» (Fase 1, 22/10/2026): los inmuebles por titular. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `patrimonioDeIdentidad`): se ven SOLO los titulares a los que esta sesión tiene acceso. "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3c508246945b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/resumen/ImprimirResumen.tsx",
@@ -6532,6 +6751,27 @@
       ],
       "rutaApi": "/api/cron/avisos-push",
       "hash": "8096e96e56c5"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/cron/patrimonio-gastos/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "GET /api/cron/patrimonio-gastos — genera los gastos `propuesto` de las plantillas de gasto fijo y de las cuotas de derrama que ya tocan. Idempotente por `clave` (índice único en BD; P2002 tolerado): c"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/patrimonio-gastos",
+      "hash": "5b119fbb1f9f"
     },
     {
       "ruta": "apps/asegura-portal/app/api/datos/documento/route.ts",
@@ -7156,6 +7396,149 @@
       "tablas": [],
       "rutaApi": "/api/modulos",
       "hash": "0be3a1c10b80"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/codigo-postal/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`GET /api/patrimonio/codigo-postal?cp=41003` → `{ cp, municipios, provincia }`. Primer peldaño de la dirección (CP primero). `municipios: null` = CP que la tabla no conoce (se escribe a mano), NO «nin"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/codigo-postal",
+      "hash": "13b533d3fd57"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/comunidades/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "`POST /api/patrimonio/comunidades` — alta de la comunidad de propietarios de UN titular y enlace de sus inmuebles (con coeficiente opcional; vacío = no consta). Estructura: solo nivel Total (`alta_baj"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/comunidades",
+      "hash": "325dd649267d"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/derramas/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "`POST /api/patrimonio/derramas` — alta de una derrama de la comunidad de UN titular en N cuotas (las cuotas las materializa el cron como gastos `propuesto`). Nivel Gestión o Total. 🚨 El `titular` del"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/derramas",
+      "hash": "7866eb9cfd21"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "`GET /api/patrimonio/inmuebles` — los titulares y inmuebles que ve ESTA sesión. `POST` — alta de un inmueble en un titular al que la sesión puede dar de alta (nivel Total). 🚨 La identidad sale de la "
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 30
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/inmuebles",
+      "hash": "ed523c9df4d0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/plantillas/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "`GET /api/patrimonio/plantillas` — plantillas de gasto fijo, comunidades y derramas de los titulares que ve ESTA sesión. `POST` — alta de una plantilla en un titular donde el nivel permite gestionar g"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 30
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/plantillas",
+      "hash": "e8ca9c205ead"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/vias/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/vias",
+      "hash": "ee6a6b484ccd"
     },
     {
       "ruta": "apps/asegura-portal/app/api/peticiones/[id]/route.ts",
@@ -13731,6 +14114,670 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b06dcc7a2890"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/accesos.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026) — QUIÉN ve el patrimonio de QUÉ titular. Adaptador con BD de la regla pura `nivelesPatrimonio` / `puede` de `@central/module-patrimonio` (`src/acceso.ts`), a imagen de `accesosFlota()`. 🚨 La frontera es UNA: toda lectura o escritura de `prisma.portalPatrimonio*` parte de `ac",
+      "exporta": [
+        "accesosPatrimonio",
+        "titularPermitido"
+      ],
+      "funciones": [
+        {
+          "nombre": "nivelDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "Nivel",
+          "linea": 46
+        },
+        {
+          "nombre": "accesosPatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<AccesosPatrimonio>",
+          "linea": 54,
+          "resumen": "Los titulares (por `cliente_id` de su ficha) cuyo patrimonio ve ESTA identidad, con su nivel. Vacío si la sesión no es la de `identidadId` (no se confía a ciegas en el parámetro) o es una vista de cor"
+        },
+        {
+          "nombre": "titularPermitido",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedido: unknown, accesos: AccesosPatrimonio",
+          "retorno": "string | null",
+          "linea": 105,
+          "resumen": "El titular pedido (URL/cuerpo) SOLO si está dentro de los accesos ya resueltos. `null` = no existe o no es suyo: la ruta contesta 404 en los dos casos, a propósito."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "64e09ad20546"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/alta-inmueble.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026) — validación PURA del alta de un inmueble (`POST /api/patrimonio/inmuebles`). Lo que entra es lo que la persona tecleó y NADA de ello decide a quién pertenece el inmueble: `titular` es solo la petición («quiero darlo de alta en esta ficha»); el handler (`inmuebles-api.ts`) la",
+      "exporta": [
+        "numeroYResto",
+        "validarAltaInmueble"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, min: number, max: number",
+          "retorno": "string | null",
+          "linea": 36
+        },
+        {
+          "nombre": "numeroYResto",
+          "kind": "function",
+          "exportada": true,
+          "params": "cola: string",
+          "retorno": "",
+          "linea": 43,
+          "resumen": "El número de portal de lo que sigue a la calle: «, 12 2ºB» → { numero: '12', resto: '2ºB' }."
+        },
+        {
+          "nombre": "validarAltaInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "ResultadoAlta",
+          "linea": 50
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3b9a40c20daf"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/direccion-cp.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026) — regla de la casa para direcciones: CP PRIMERO → provincia automática + desplegable de municipios → calle autocompletada con el callejero del Catastro → número. PURO: lo usa `DireccionCp.tsx` (cliente) y `alta-inmueble.ts` (servidor), así que lo que la pantalla bloquea el se",
+      "exporta": [
+        "normalizarCp",
+        "cpValido",
+        "estadoDireccion",
+        "aplicarLecturaCp",
+        "componerDireccionNormalizada"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: string",
+          "retorno": "string",
+          "linea": 15,
+          "resumen": "Solo cifras y como mucho cinco: lo que se teclea en el campo."
+        },
+        {
+          "nombre": "cpValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "cp: string",
+          "retorno": "boolean",
+          "linea": 19
+        },
+        {
+          "nombre": "estadoDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { cp: string; provincia: string; municipio: string; lectura: LecturaCp }",
+          "retorno": "EstadoDireccion",
+          "linea": 33
+        },
+        {
+          "nombre": "aplicarLecturaCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "lectura: { municipios: string[] | null; provincia: string | null }, actual: { provincia: string; municipio: string },",
+          "retorno": "",
+          "linea": 50,
+          "resumen": "Qué provincia y municipio quedan tras leer un CP. La provincia es la del CP siempre que el CP la dé; el municipio solo se fija solo si el CP tiene UNO; si había uno elegido y ya no está en la lista, s"
+        },
+        {
+          "nombre": "componerDireccionNormalizada",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { direccion: string; cp: string; municipio: string; provincia: string }",
+          "retorno": "string",
+          "linea": 62,
+          "resumen": "Texto para casar facturas y mostrar: «CL PARRA LA 12, 41003 SEVILLA (SEVILLA)»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2d7b3d87377b"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/gastos-api.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 6) — lógica PURA (puertos inyectados, sin prisma ni sesión) de comunidades, plantillas de gasto fijo y derramas: `GET/POST /api/patrimonio/{plantillas,comunidades,derramas}`. La BD real está en `gastos-bd.ts`. 🚨 El `titular` del cuerpo es una PETICIÓN: se busca DENTRO d",
+      "exporta": [
+        "eurosACentimos",
+        "validarPlantilla",
+        "validarComunidad",
+        "validarDerrama",
+        "responderListaGastos",
+        "responderAltaPlantilla",
+        "responderAltaComunidad",
+        "responderAltaDerrama"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, min: number, max: number",
+          "retorno": "string | null",
+          "linea": 26
+        },
+        {
+          "nombre": "opcional",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is null | undefined | ''",
+          "linea": 31
+        },
+        {
+          "nombre": "eurosACentimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number | null | 'invalido'",
+          "linea": 34,
+          "resumen": "«1.234,56» / «1234.5» / «12» → céntimos enteros. Vacío → `null` (variable). Inválido o ≤ 0 → `'invalido'`."
+        },
+        {
+          "nombre": "importeCent",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null | 'invalido'",
+          "linea": 44,
+          "resumen": "Céntimos del cuerpo: entero > 0, o `null` si falta (variable). Un 0 o un negativo NO es «variable»: es inválido."
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: unknown",
+          "retorno": null,
+          "linea": 72
+        },
+        {
+          "nombre": "validarPlantilla",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "V<DatosPlantilla>",
+          "linea": 74
+        },
+        {
+          "nombre": "validarComunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "V<DatosComunidad>",
+          "linea": 108
+        },
+        {
+          "nombre": "validarDerrama",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "V<DatosDerrama>",
+          "linea": 136
+        },
+        {
+          "nombre": "titularConPermiso",
+          "kind": "function",
+          "exportada": false,
+          "params": "accesos: AccesosMapa, cuerpo: unknown, accion: Accion",
+          "retorno": "string | null",
+          "linea": 191,
+          "resumen": "Titular DENTRO de los accesos y con el nivel que da la acción; si no, `null` (la 404 única)."
+        },
+        {
+          "nombre": "responderListaGastos",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosGastos",
+          "retorno": "Promise<Respuesta>",
+          "linea": 197
+        },
+        {
+          "nombre": "alta",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PuertosGastos, cuerpo: unknown, accion: Accion, validar: (c: unknown) => V<T>, crear: (x: { clienteId: string; datos: T }) => Promise<ResultadoCrear>,",
+          "retorno": "Promise<Respuesta>",
+          "linea": 203
+        },
+        {
+          "nombre": "responderAltaPlantilla",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: PuertosGastos, c: unknown",
+          "retorno": null,
+          "linea": 220
+        },
+        {
+          "nombre": "responderAltaComunidad",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: PuertosGastos, c: unknown",
+          "retorno": null,
+          "linea": 221
+        },
+        {
+          "nombre": "responderAltaDerrama",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: PuertosGastos, c: unknown",
+          "retorno": null,
+          "linea": 222
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eff764d3acab"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/gastos-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 6) — adaptador con BD de gastos fijos, comunidad y derramas. 🚨 TODA función parte de `accesosPatrimonio(identidadId)` (cookie + `portal_vinculo`). El titular, el inmueble y la comunidad del cuerpo NUNCA consultan por sí solos: se buscan DENTRO del titular ya autorizado ",
+      "exporta": [
+        "puertosGastos",
+        "gastosDeIdentidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "dia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "aFecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "nombreDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: { nombre: string; apellidos: string | null }",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: bigint | number | null",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "titularDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "clienteId: string, identidadId: string",
+          "retorno": "Promise<",
+          "linea": 21,
+          "resumen": "El titular (fila `portal_patrimonio_titular`) de una ficha YA autorizada; nace la primera vez que se da de alta algo."
+        },
+        {
+          "nombre": "listarGastos",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string, ids: readonly string[], accesos: AccesosMapa",
+          "retorno": "Promise<TitularGastos[]>",
+          "linea": 36
+        },
+        {
+          "nombre": "codigoPrisma",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": null,
+          "linea": 119
+        },
+        {
+          "nombre": "puertosGastos",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "PuertosGastos",
+          "linea": 121
+        },
+        {
+          "nombre": "gastosDeIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<TitularGastos[]>",
+          "linea": 242,
+          "resumen": "Para la página de gastos. Vacío = esta identidad no tiene patrimonio."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "90be88061390"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/generar-gastos-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 6) — adaptador con BD del cron `patrimonio-gastos` (puertos de `generar-gastos.ts`). ⚠️ EXENTO a propósito de `accesosPatrimonio` y de `lib/session` (ver los EXENTOS de `test/regression-portal-patrimonio-aislamiento.test.ts` y `test/regression-portal-aislamiento.test.ts`",
+      "exporta": [
+        "puertosGenerador"
+      ],
+      "funciones": [
+        {
+          "nombre": "dia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "puertosGenerador",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "PuertosGenerador",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1859b22476b8"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/generar-gastos.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 6) — generador de gastos `propuesto` desde plantillas y derramas, SIN prisma (puertos). La BD real está en `generar-gastos-bd.ts`; la ruta es `app/api/cron/patrimonio-gastos/route.ts`. Idempotente por `clave` (`<plantilla>:<YYYY-MM>` / `<derrama>:<n>`; índice único (titu",
+      "exporta": [
+        "ventanaPlantillas",
+        "generarGastosPropuestos"
+      ],
+      "funciones": [
+        {
+          "nombre": "ventanaPlantillas",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string",
+          "retorno": "",
+          "linea": 36,
+          "resumen": "Ventana de plantillas: desde el 1 del mes anterior hasta hoy (lo futuro no se propone; lo muy viejo no se rescata)."
+        },
+        {
+          "nombre": "generarGastosPropuestos",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosGenerador, hoy: string",
+          "retorno": "Promise<ResumenGenerador>",
+          "linea": 40
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bf901ad9fa7f"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/inmuebles-api.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026) — lógica de `GET/POST /api/patrimonio/inmuebles`, SIN prisma ni sesión (puertos inyectados), para poder probar el aislamiento con `node --test`. La ruta real (`app/api/patrimonio/inmuebles/route.ts`) le pasa los puertos de `inmuebles-bd.ts`, que sí resuelven `accesosPatrimoni",
+      "exporta": [
+        "responderLista",
+        "responderAlta"
+      ],
+      "funciones": [
+        {
+          "nombre": "responderLista",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosInmuebles",
+          "retorno": "Promise<Respuesta>",
+          "linea": 45
+        },
+        {
+          "nombre": "responderAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosInmuebles, cuerpo: unknown",
+          "retorno": "Promise<Respuesta>",
+          "linea": 51
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9cdecf0277b5"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/inmuebles-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026) — adaptador con BD de las pantallas de titulares e inmuebles (paso 5). 🚨 TODA función parte de `accesosPatrimonio(identidadId)` (cookie + `portal_vinculo`); el titular, el inmueble o el id de la URL NUNCA consultan por sí solos: se buscan DENTRO de lo autorizado. Sin RLS, un",
+      "exporta": [
+        "puertosInmuebles",
+        "patrimonioDeIdentidad",
+        "inmuebleAutorizado"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: { nombre: string; apellidos: string | null }",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "listarTitulares",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string, ids: readonly string[], accesos: AccesosMapa",
+          "retorno": "Promise<TitularLista[]>",
+          "linea": 20,
+          "resumen": "Los titulares que ve esta identidad, con sus inmuebles (sin archivados)."
+        },
+        {
+          "nombre": "puertosInmuebles",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "PuertosInmuebles",
+          "linea": 57
+        },
+        {
+          "nombre": "patrimonioDeIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<TitularLista[]>",
+          "linea": 110,
+          "resumen": "Para la página de la lista. Vacío = esta identidad no tiene patrimonio (la página lo dice)."
+        },
+        {
+          "nombre": "inmuebleAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, idPedido: string",
+          "retorno": "Promise<FichaInmueble | null>",
+          "linea": 124,
+          "resumen": "El inmueble del id de la URL SOLO si cuelga de un titular autorizado. `null` = 404 (no existe o no es tuyo)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d4c8639c1a24"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/lectura.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026) — filas de Prisma (`PortalPatrimonio*`) → tipos PUROS de `@central/module-patrimonio`. PURO a propósito: aquí no hay `prisma` ni sesión. Quien lee las filas es quien ya pasó por `accesosPatrimonio()` (`lib/patrimonio/accesos.ts`) y trae SOLO las del titular autorizado; esto s",
+      "exporta": [
+        "centimos",
+        "fechaDe",
+        "decimal",
+        "titularDeFila",
+        "inmuebleDeFila",
+        "inquilinoDeFila",
+        "contratoDeFila",
+        "plantillaDeFila",
+        "gastoDeFila",
+        "derramaDeFila",
+        "obligacionDeFila"
+      ],
+      "funciones": [
+        {
+          "nombre": "invalida",
+          "kind": "function",
+          "exportada": false,
+          "params": "campo: string, valor: unknown",
+          "retorno": "never",
+          "linea": 43
+        },
+        {
+          "nombre": "deLista",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: readonly T[], v: unknown, campo: string",
+          "retorno": "T",
+          "linea": 47
+        },
+        {
+          "nombre": "centimos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: bigint | null",
+          "retorno": "Centimos | null",
+          "linea": 52,
+          "resumen": "Céntimos de la BD (`bigint`) → `number` exacto. `null` → `null`. Fuera de rango → error, nunca redondeo."
+        },
+        {
+          "nombre": "centimosObligatorio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: bigint, campo: string",
+          "retorno": "Centimos",
+          "linea": 62,
+          "resumen": "Igual que `centimos` para una columna NOT NULL: un `null` aquí es una fila rota."
+        },
+        {
+          "nombre": "fechaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date | null",
+          "retorno": "Fecha | null",
+          "linea": 68,
+          "resumen": "Columna `date` → `YYYY-MM-DD` en UTC. `null` → `null`."
+        },
+        {
+          "nombre": "fechaObligatoria",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date, campo: string",
+          "retorno": "Fecha",
+          "linea": 74
+        },
+        {
+          "nombre": "decimal",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: DecimalLike | null",
+          "retorno": "number | null",
+          "linea": 80,
+          "resumen": "`numeric` → `number`. `null` → `null`. Un texto no numérico es una fila rota."
+        },
+        {
+          "nombre": "titularDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaTitular, ficha: FichaTitular",
+          "retorno": "Titular",
+          "linea": 98,
+          "resumen": "`nif` va SIEMPRE `null`: el rol del portal no lee `clientes.dni` (GRANT por columnas, spec §7). Es «el portal no lo sabe», no «no tiene NIF»: la pantalla no puede decir que falta."
+        },
+        {
+          "nombre": "inmuebleDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaInmueble",
+          "retorno": "Inmueble",
+          "linea": 126
+        },
+        {
+          "nombre": "inquilinoDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaInquilino",
+          "retorno": "Inquilino",
+          "linea": 154,
+          "resumen": "`nif` y `email` van SIEMPRE `null`: están CIFRADOS y el rol del portal ni los tiene concedidos ni tiene la clave (spec §7). Se leen por el puente de `apps/asegura` cuando el nivel es `total`, no aquí."
+        },
+        {
+          "nombre": "contratoDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaContrato, inquilinoIds: readonly string[], actualizaciones: readonly FilaRentaActualizacion[],",
+          "retorno": "Contrato",
+          "linea": 185,
+          "resumen": "`inquilinoIds` y `actualizaciones` las trae quien lee (puente y tabla append-only) del MISMO contrato. Fianza: sin importe, depósito ni devolución anotados → `null` («no consta»), no una fianza de 0 €"
+        },
+        {
+          "nombre": "plantillaDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaPlantillaGasto",
+          "retorno": "PlantillaGasto",
+          "linea": 251,
+          "resumen": "`importe` `null` = variable (espera la factura), NUNCA 0."
+        },
+        {
+          "nombre": "gastoDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaGasto",
+          "retorno": "Gasto",
+          "linea": 282,
+          "resumen": "`categoria`, `base` y `total` `null` = no consta (un gasto sin total NO es de 0 €)."
+        },
+        {
+          "nombre": "derramaDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaDerrama, titularId: string",
+          "retorno": "Derrama",
+          "linea": 308,
+          "resumen": "La derrama cuelga de la comunidad; el titular lo pone quien la leyó DENTRO de un titular autorizado."
+        },
+        {
+          "nombre": "obligacionDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaObligacion",
+          "retorno": "ObligacionInmueble",
+          "linea": 346,
+          "resumen": "`aplica` `null` = no se sabe (sale `sin_dato`), no «no aplica»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a92410837759"
     },
     {
       "ruta": "apps/asegura-portal/lib/pendiente-de-ti.ts",
@@ -185986,7 +187033,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 9
+          "linea": 11
         }
       ],
       "tablas": [
@@ -185994,7 +187041,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "a3dca0174c50"
+      "hash": "8a941d6d487e"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/EmpleadosClient.tsx",
@@ -186309,6 +187356,29 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3f6e514fba13"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/material/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "MaterialPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "MaterialPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "558de1b64911"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/NominasPanel.tsx",
@@ -187425,6 +188495,48 @@
       "hash": "1c391651a231"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/material/[id]/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "RRHH pone el estado (revisado / falta_roto / devuelto) con nota opcional. Solo su empresa."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/material/[id]",
+      "hash": "a7698c03e84f"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/material/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Material de la empresa de la sesión (filtros empleado/tipo/estado; 50 + «Ver más»)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/material",
+      "hash": "01317bb5e043"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/mis-empresas/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -188372,6 +189484,58 @@
       "hash": "bf80de824fd5"
     },
     {
+      "ruta": "apps/rrhh/app/api/e/material/[id]/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Borrado lógico de un material PROPIO mientras siga pendiente de revisar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/material/[id]",
+      "hash": "411e7c2d813d"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/e/material/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Material del propio empleado (con miniatura por URL firmada de 1 h)."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "Sube la foto de un material (multipart: foto, tipo, nombre, nota). La empresa y el empleado salen SIEMPRE de la sesión; el path lo construye el servidor. Tipo real por magic bytes, máx. 8 MB."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/material",
+      "hash": "b42762cbbc67"
+    },
+    {
       "ruta": "apps/rrhh/app/api/e/push/subscribe/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -188726,14 +189890,14 @@
           "exportada": true,
           "params": "{ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "a35c3b49ac09"
+      "hash": "a85b6230b975"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -188914,7 +190078,7 @@
           "exportada": true,
           "params": "pathname: string | null, href: string",
           "retorno": "boolean",
-          "linea": 48,
+          "linea": 50,
           "resumen": "¿El enlace `href` es la sección activa de `pathname`? (incluye subrutas: /admin/empleados/123)."
         },
         {
@@ -188923,7 +190087,7 @@
           "exportada": false,
           "params": "{ d }: { d: string }",
           "retorno": null,
-          "linea": 55
+          "linea": 57
         },
         {
           "nombre": "AdminNav",
@@ -188931,13 +190095,13 @@
           "exportada": true,
           "params": "{ tieneFichaje }: { tieneFichaje?: boolean }",
           "retorno": null,
-          "linea": 68,
+          "linea": 70,
           "resumen": "Menú del panel. En móvil: una fila horizontal con scroll (los grupos son `display:contents` y sus cabeceras se ocultan). En escritorio: columna agrupada con cabeceras pequeñas."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "550811847114"
+      "hash": "db2548f334d6"
     },
     {
       "ruta": "apps/rrhh/components/AdminShell.tsx",
@@ -189116,6 +190280,68 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "fc6af71ca051"
+    },
+    {
+      "ruta": "apps/rrhh/components/MaterialAdminLista.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "MaterialAdminLista"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "MaterialAdminLista",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ empleados, empleadoId }: { empleados?: Empleado[]; empleadoId?: string }",
+          "retorno": null,
+          "linea": 28,
+          "resumen": "Material de la empresa (panel). Con `empleadoId` fijo es el bloque «Material» de la ficha del empleado (sin filtro de empleado). 50 + «Ver más» que añade sin desmontar lo ya cargado."
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "39a6dbdb3a7c"
+    },
+    {
+      "ruta": "apps/rrhh/components/MaterialEmpleado.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "MaterialEmpleado"
+      ],
+      "funciones": [
+        {
+          "nombre": "comprimir",
+          "kind": "function",
+          "exportada": false,
+          "params": "file: File",
+          "retorno": "Promise<Blob | null>",
+          "linea": 18,
+          "resumen": "Reduce a ~1600 px de lado mayor en JPEG. null si el navegador no puede decodificarla (p. ej. HEIC)."
+        },
+        {
+          "nombre": "MaterialEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 44
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "4e81cac607af"
     },
     {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
@@ -191874,6 +193100,196 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d4e3dab88570"
+    },
+    {
+      "ruta": "apps/rrhh/lib/material-repo.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Material del empleado: acceso a BD (rrhh.material_empleado, migración 0028) + URLs firmadas. 🚨 Toda consulta filtra por el empresa_id de la SESIÓN (y por el empleado_id de la sesión en las del portal /e). El rol rrhh_app tiene BYPASSRLS: el aislamiento es este WHERE, no la RLS.",
+      "exporta": [
+        "crearMaterial",
+        "listarMaterialEmpleado",
+        "borrarMaterialEmpleado",
+        "listarMaterialAdmin",
+        "cambiarEstadoMaterial"
+      ],
+      "funciones": [
+        {
+          "nombre": "conUrl",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: T",
+          "retorno": "Promise<Omit<T, 'foto_path' | 'empresa_id'> &",
+          "linea": 19,
+          "resumen": "Firma la foto SOLO si el path de la fila cuelga de su empresa/empleado (defensa en profundidad)."
+        },
+        {
+          "nombre": "plano",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: T",
+          "retorno": "T",
+          "linea": 30
+        },
+        {
+          "nombre": "crearMaterial",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, d: AltaMaterial, path: string",
+          "retorno": "Promise<Material>",
+          "linea": 32
+        },
+        {
+          "nombre": "listarMaterialEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string",
+          "retorno": "Promise<Material[]>",
+          "linea": 41,
+          "resumen": "Lista del propio empleado (sin borrados), lo último primero."
+        },
+        {
+          "nombre": "borrarMaterialEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, id: string",
+          "retorno": "Promise<boolean>",
+          "linea": 56,
+          "resumen": "Borrado lógico por el empleado: solo lo SUYO y solo si sigue `pendiente` (la condición va en el UPDATE, así no hay carrera con una revisión simultánea). Devuelve si borró algo. La foto se conserva en "
+        },
+        {
+          "nombre": "listarMaterialAdmin",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, f: FiltrosMaterial",
+          "retorno": "Promise<",
+          "linea": 65,
+          "resumen": "Panel: material de la empresa de la sesión, filtrable y paginado (50 + «Ver más»)."
+        },
+        {
+          "nombre": "cambiarEstadoMaterial",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, usuarioId: string, id: string, estado: EstadoMaterial, nota: string | null,",
+          "retorno": "Promise<",
+          "linea": 96,
+          "resumen": "RRHH pone el estado. Solo filas vivas de SU empresa. Devuelve la fila actualizada o null."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "92e9e8ca14c0"
+    },
+    {
+      "ruta": "apps/rrhh/lib/material.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Material del empleado (EPIs, herramientas, maquinaria): reglas PURAS (migración 0028). El empleado sube una foto + tipo + nombre corto + nota; RRHH la revisa y pone el estado. 🚨 Aislamiento: el path de la foto lo construye el SERVIDOR (`pathMaterial`) con el empresa_id y el empleado_id de la SESIÓN",
+      "exporta": [
+        "detectarImagen",
+        "validarFoto",
+        "validarAltaMaterial",
+        "validarCambioEstado",
+        "empleadoPuedeBorrar",
+        "pathMaterial",
+        "esPathMaterialDe",
+        "leerFiltrosMaterial",
+        "decidirSubida"
+      ],
+      "funciones": [
+        {
+          "nombre": "ascii",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "b: Uint8Array, desde: number, hasta: number",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "detectarImagen",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: Uint8Array",
+          "retorno": "MimeFoto | null",
+          "linea": 42,
+          "resumen": "Tipo REAL por los magic bytes (no por el content-type declarado). null = no es una imagen admitida."
+        },
+        {
+          "nombre": "validarFoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "declarado: string, tamano: number, cabecera: Uint8Array",
+          "retorno": "FotoValida",
+          "linea": 53,
+          "resumen": "Valida la foto: tamaño (1..8 MB), content-type declarado en la lista y que coincida con los magic bytes."
+        },
+        {
+          "nombre": "validarAltaMaterial",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { tipo?: unknown; nombre?: unknown; nota?: unknown }",
+          "retorno": "",
+          "linea": 68,
+          "resumen": "Valida tipo / nombre (1..80, recortado) / nota (≤500, vacía → NULL)."
+        },
+        {
+          "nombre": "validarCambioEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { estado?: unknown; nota?: unknown }",
+          "retorno": "",
+          "linea": 81,
+          "resumen": "Cambio de estado desde el panel: solo los de `ESTADOS_REVISION`; nota opcional ≤500 (vacía → NULL)."
+        },
+        {
+          "nombre": "empleadoPuedeBorrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "boolean",
+          "linea": 91,
+          "resumen": "El empleado solo puede borrar lo suyo mientras RRHH no lo haya revisado."
+        },
+        {
+          "nombre": "pathMaterial",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, uuid: string, ext: string",
+          "retorno": "string",
+          "linea": 99,
+          "resumen": "`material/<empresa>/<empleado>/<uuid>.<ext>` — sin datos personales en el nombre."
+        },
+        {
+          "nombre": "esPathMaterialDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, path: unknown",
+          "retorno": "path is string",
+          "linea": 106,
+          "resumen": "¿`path` es una foto de material de ESA empresa y ESE empleado? (antes de firmar una URL)."
+        },
+        {
+          "nombre": "leerFiltrosMaterial",
+          "kind": "function",
+          "exportada": true,
+          "params": "sp: URLSearchParams",
+          "retorno": "FiltrosMaterial",
+          "linea": 116,
+          "resumen": "Filtros del panel desde la query. Un valor fuera de catálogo se IGNORA (no se convierte en otro)."
+        },
+        {
+          "nombre": "decidirSubida",
+          "kind": "function",
+          "exportada": true,
+          "params": "original: { type: string; size: number }, comprimida: { size: number } | null",
+          "retorno": "",
+          "linea": 135,
+          "resumen": "Qué sube el cliente: la versión comprimida si la hay; si la compresión falló (p. ej. HEIC en un navegador que no lo decodifica), el ORIGINAL solo si es de un tipo admitido y cabe en lo que deja pasar "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b2f33b2f7941"
     },
     {
       "ruta": "apps/rrhh/lib/matricula.ts",
@@ -233981,7 +235397,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 116,
+          "linea": 127,
           "resumen": "Quita tildes para que «Emisión» o «Formalización» no se escapen por un acento."
         },
         {
@@ -233990,7 +235406,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 123,
+          "linea": 134,
           "resumen": "Decodifica %-secuencias UTF-8 válidas UNA A UNA: una secuencia mal formada (`%E0%A4%A`) no apaga la decodificación del resto (fail-closed)."
         },
         {
@@ -233999,7 +235415,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 133
+          "linea": 144
         },
         {
           "nombre": "parametrosParecenEmision",
@@ -234007,7 +235423,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 164,
+          "linea": 179,
           "resumen": "· el VALOR de cada parámetro con clave de acción (`action`, `accion`, `event`, `operation`, `cmd`…): `store`, `contract` o cualquier cosa que case con `pareceEmision`. El resto del cuerpo (datos del r"
         },
         {
@@ -234016,7 +235432,7 @@
           "exportada": true,
           "params": "url: string, opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 179,
+          "linea": 194,
           "resumen": "Lanza si la URL casa con el patrón."
         },
         {
@@ -234025,7 +235441,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 188,
+          "linea": 203,
           "resumen": "Lanza si el botón a pulsar casa con el patrón. Se mira TODO lo que lo describe (texto visible, `aria-label`, `title`, `value`, `id`, `name`, `href`): un botón con icono y `id=\"btnEmitir\"` también es e"
         },
         {
@@ -234034,12 +235450,12 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 200
+          "linea": 215
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "44c5f4a1cf3b"
+      "hash": "748d49acaeb6"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-asesor.ts",
@@ -238022,7 +239438,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4995,
-    "funciones": 19105
+    "archivos": 5028,
+    "funciones": 19216
   }
 }

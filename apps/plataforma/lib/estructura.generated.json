@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-22T09:59:56Z",
+  "generadoEn": "2026-10-22T11:30:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -435,7 +435,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 6
       },
       "asegura-web": {
         "estado": "no",
@@ -542,8 +542,8 @@
         "evidencias": 0
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 3
       },
       "asegura-web": {
         "estado": "no",
@@ -2054,8 +2054,8 @@
         "evidencias": 0
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 12
       },
       "asegura-web": {
         "estado": "no",
@@ -2325,7 +2325,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 152
+        "evidencias": 153
       },
       "asegura-web": {
         "estado": "usado",
@@ -2433,7 +2433,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 121
+        "evidencias": 122
       },
       "asegura-web": {
         "estado": "usado",
@@ -4457,6 +4457,7 @@
       "/api/contacto-compania/[compania]",
       "/api/cron/avisos-cima",
       "/api/cron/avisos-push",
+      "/api/cron/patrimonio-gastos",
       "/api/datos",
       "/api/datos/documento",
       "/api/documento/dni",
@@ -4484,6 +4485,12 @@
       "/api/mis-datos/cuenta",
       "/api/mis-datos/cuenta/codigo",
       "/api/modulos",
+      "/api/patrimonio/codigo-postal",
+      "/api/patrimonio/comunidades",
+      "/api/patrimonio/derramas",
+      "/api/patrimonio/inmuebles",
+      "/api/patrimonio/plantillas",
+      "/api/patrimonio/vias",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
@@ -5769,6 +5776,8 @@
       "/api/admin/firmas/reclamar",
       "/api/admin/informes",
       "/api/admin/informes/exportar",
+      "/api/admin/material",
+      "/api/admin/material/[id]",
       "/api/admin/mis-empresas",
       "/api/admin/nominas",
       "/api/admin/nominas/[nominaId]/confirmar",
@@ -5806,6 +5815,8 @@
       "/api/e/fichaje",
       "/api/e/fichaje/incidencia",
       "/api/e/login",
+      "/api/e/material",
+      "/api/e/material/[id]",
       "/api/e/push/subscribe",
       "/api/e/salir",
       "/api/e/solicitudes",
@@ -6431,6 +6442,7 @@
       "rrhh.firmas",
       "rrhh.incidencias_mes",
       "rrhh.incidencias_ubicacion",
+      "rrhh.material_empleado",
       "rrhh.mensajes",
       "rrhh.nominas",
       "rrhh.push_subscriptions",
@@ -7132,7 +7144,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1766,
+    "apis": 1777,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
