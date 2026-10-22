@@ -122,3 +122,62 @@ test('🚨 ningún fichero del portal toca prisma.portalPatrimonio* sin pasar po
       `una consulta con el titular de la URL devuelve los inmuebles de cualquiera:\n  - ${infractores.join('\n  - ')}`,
   )
 })
+
+// ─── Documentos (paso 8, 22/10/2026): ficheros en BD de un titular que no son de otro ───────────────────────────
+const DOC_BD = 'apps/asegura-portal/lib/patrimonio/documentos-bd.ts'
+const DOC_RUTA = 'apps/asegura-portal/app/api/patrimonio/documentos/route.ts'
+const DOC_RUTA_ID = 'apps/asegura-portal/app/api/patrimonio/documentos/[id]/route.ts'
+
+/** Cuerpo de un método del objeto de puertos (`async nombre(` hasta el siguiente método de primer nivel). */
+function metodo(src: string, nombre: string): string {
+  const i = src.indexOf(`async ${nombre}(`)
+  assert.ok(i >= 0, `falta ${nombre} en ${DOC_BD}`)
+  const j = src.slice(i + 1).search(/\n    (?:async )?\w+\(/)
+  return src.slice(i, j < 0 ? undefined : i + 1 + j)
+}
+
+test('🚨 documentos-bd: parte de accesosPatrimonio, no está exento y TODA consulta lleva el titular resuelto', () => {
+  const src = leer(DOC_BD)
+  assert.ok(!CRON_SIN_SESION.has(DOC_BD))
+  assert.match(src, /\baccesosPatrimonio\(identidadId\)/)
+  assert.match(src, /getIdentidad\(\)\)\?\.id === identidadId/, 'defensa en profundidad: la sesión es la de identidadId')
+  for (const m of ['ownerDelTitular', 'guardar', 'listar', 'leer', 'borrar']) {
+    assert.match(metodo(src, m), /titularDe\(clienteId\)/, `${m}: el titular se resuelve desde la ficha autorizada`)
+  }
+  for (const m of ['listar', 'leer', 'borrar']) {
+    assert.match(metodo(src, m), /titularId: t\.id/, `${m}: el documento se busca DENTRO del titular (id ajeno = 0 filas = 404)`)
+  }
+  assert.match(metodo(src, 'ownerDelTitular'), /titularId: t\.id/, 'el owner se busca dentro del titular')
+  assert.match(metodo(src, 'borrar'), /borradoEn: null/, 'solo se sella un documento vivo')
+})
+
+test('🚨 documentos-bd: las LISTAS no leen el fichero (solo la descarga) y nada borra filas', () => {
+  const src = leer(DOC_BD)
+  assert.doesNotMatch(metodo(src, 'listar'), /contenido/, 'la lista no puede traer los bytes de 50 ficheros')
+  assert.match(src, /const SELECT_META = \{[^}]*\}/)
+  assert.doesNotMatch(src.match(/const SELECT_META = \{[^}]*\}/)![0], /contenido/)
+  assert.match(metodo(src, 'leer'), /contenido: true/, 'la descarga sí lee el fichero')
+  assert.doesNotMatch(src, /\.delete\(|\.deleteMany\(|\$queryRawUnsafe|\$executeRawUnsafe/, 'sin DELETE: borrar es sellar borrado_en')
+})
+
+test('🚨 documentos: la descarga es attachment + nosniff + no-store, y pasa por responderDescargaDocumento', () => {
+  const src = leer(DOC_RUTA_ID)
+  assert.match(src, /responderDescargaDocumento\(/)
+  assert.match(src, /'content-disposition': disposicion\(/)
+  assert.match(src, /return `attachment; filename=/, 'siempre attachment, nunca inline')
+  assert.match(src, /'x-content-type-options': 'nosniff'/)
+  assert.match(src, /'cache-control': 'private, no-store'/)
+  assert.match(src, /responderBorrarDocumento\(/)
+  assert.doesNotMatch(src, /inline/i)
+  // El titular y la identidad salen de la sesión/acceso: la ruta no consulta nada por sí misma.
+  assert.doesNotMatch(src, /prisma/)
+  assert.doesNotMatch(leer(DOC_RUTA), /prisma/)
+})
+
+test('🚨 documentos (lógica pura): el rol y la carpeta salen del documento REAL, y ajeno = la misma 404', () => {
+  const src = leer('apps/asegura-portal/lib/patrimonio/documentos-api.ts')
+  const desc = src.slice(src.indexOf('export async function responderDescargaDocumento'), src.indexOf('export async function responderBorrarDocumento'))
+  assert.match(desc, /if \(!accesos\.has\(c\.titular\)\) return NO_ENCONTRADO/)
+  assert.match(desc, /puedeDocumento\(accesos\.get\(c\.titular\), 'ver', d\.owner\.tipo, d\.meta\.carpeta\)/)
+  assert.doesNotMatch(src, /status:\s*403/, 'ajeno es 404, nunca 403')
+})

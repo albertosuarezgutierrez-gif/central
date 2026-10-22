@@ -5,12 +5,16 @@
 // gasto lleva `titularId` + `origen: 'factura'` + `estado: 'propuesto'` en el `where` (id ajeno = 0 filas = 404).
 // Solo usa columnas con GRANT para `prisma_asegura_portal` (sin SQL nuevo). El tope diario cuenta FILAS de esta identidad
 // en el día de Madrid, y contar + insertar ocurren dentro de UNA transacción con un bloqueo asesor por identidad.
+import { createHash } from 'node:crypto'
+
 import type { Prisma } from '@prisma/client'
 
 import { prisma } from '../db'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
+import { CARPETA_FACTURAS } from './carpetas'
 import { fechaMadrid, inicioDiaMadrid } from './dia-madrid'
+import { crearDocumentoTx } from './documentos-bd'
 import { extraerFactura } from './extraer-factura'
 import type { AccesosMapa } from './gastos-api'
 import { titularDe } from './gastos-bd'
@@ -48,7 +52,7 @@ export function puertosFacturas(identidadId: string, ahora: () => Date = () => n
       return i !== null
     },
 
-    async reservarPropuesta({ clienteId, inmuebleId }) {
+    async reservarPropuesta({ clienteId, inmuebleId, fichero }) {
       if (!(await sesionOk())) return { ok: false, motivo: 'no_encontrado' }
       const t = await titularDe(clienteId, identidadId)
       if (!t) return { ok: false, motivo: 'no_encontrado' }
@@ -75,7 +79,23 @@ export function puertosFacturas(identidadId: string, ahora: () => Date = () => n
           },
           select: { id: true },
         })
-        return { ok: true as const, id: g.id }
+        // El fichero se guarda como documento del inmueble EN LA MISMA transacción (todo o nada). No pasa por el tope de
+        // documentos: lo acota el de facturas (20/día) y esta reserva ya tiene su bloqueo. Sin inmueble no hay owner.
+        let documentoId: string | null = null
+        if (inmuebleId !== null) {
+          documentoId = await crearDocumentoTx(tx, {
+            titularId: t.id,
+            identidadId,
+            owner: { tipo: 'inmueble', id: inmuebleId },
+            carpeta: CARPETA_FACTURAS,
+            nombre: fichero.nombre,
+            mime: fichero.mime,
+            sha256: createHash('sha256').update(fichero.contenido).digest('hex'),
+            contenido: fichero.contenido,
+          })
+          await tx.portalPatrimonioGasto.updateMany({ where: { id: g.id, titularId: t.id }, data: { documentoId } })
+        }
+        return { ok: true as const, id: g.id, documentoId }
       })
     },
 

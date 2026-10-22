@@ -15,7 +15,8 @@ import { esCategoriaGasto, esFecha, puede, type CategoriaGasto } from '@central/
 
 import { eurosACentimos, type AccesosMapa, type Respuesta } from './gastos-api.ts'
 import { cuadre, PROPUESTA_VACIA, TOLERANCIA_CENT, type FuenteFactura, type PropuestaFactura } from './factura-propuesta.ts'
-import { tipoRealFactura } from './tipo-fichero.ts'
+import { tipoRealFactura, type TipoFactura } from './tipo-fichero.ts'
+import { nombreSeguro } from './documentos-api.ts'
 
 export const MAX_BYTES_FACTURA = 10 * 1024 * 1024
 export const MAX_FACTURAS_DIA = 20
@@ -49,7 +50,16 @@ export interface PuertosFacturas {
    * `propuesto` vacía (sin importes). Dos subidas simultáneas no pueden pasar el tope. `tope` = ya hay MAX_FACTURAS_DIA;
    * `no_encontrado` = el titular/inmueble no encaja.
    */
-  reservarPropuesta(x: { clienteId: string; inmuebleId: string | null }): Promise<{ ok: true; id: string } | { ok: false; motivo: 'tope' | 'no_encontrado' }>
+  reservarPropuesta(x: {
+    clienteId: string
+    inmuebleId: string | null
+    /**
+     * El fichero ya validado por sus bytes. Si hay inmueble, se guarda como DOCUMENTO del inmueble (carpeta facturas) en la
+     * MISMA transacción que la reserva (todo o nada) y el gasto lleva su `documentoId`. Sin inmueble no hay owner al que
+     * colgarlo: no se guarda (`documentoId: null`) y la lectura sigue igual.
+     */
+    fichero: { nombre: string; mime: TipoFactura; contenido: Buffer }
+  }): Promise<{ ok: true; id: string; documentoId?: string | null } | { ok: false; motivo: 'tope' | 'no_encontrado' }>
   leer(f: FicheroFactura): Promise<ResultadoLectura>
   /** Rellena la fila reservada con lo leído (importes nulos si no se leyeron). Solo toca una fila `propuesto` de ESE titular. */
   completarPropuesta(x: { clienteId: string; gastoId: string; lectura: ResultadoLectura }): Promise<void>
@@ -81,7 +91,7 @@ export async function responderSubidaFactura(p: PuertosFacturas, c: CamposSubida
   const mime = tipoRealFactura(c.fichero.contenido)
   if (mime === null) return { status: 415, body: { error: 'formato_no_admitido' } }
   // Tope diario ANTES de gastar IA, contado en BD y reservado en el mismo paso (el limitador en memoria de la ruta solo frena ráfagas).
-  const reserva = await p.reservarPropuesta({ clienteId, inmuebleId })
+  const reserva = await p.reservarPropuesta({ clienteId, inmuebleId, fichero: { nombre: nombreSeguro(c.fichero.nombre) || 'factura', mime, contenido: c.fichero.contenido } })
   if (!reserva.ok) return reserva.motivo === 'tope' ? { status: 429, body: { error: 'tope_diario' } } : NO_ENCONTRADO
   let lectura: ResultadoLectura
   try {
@@ -90,7 +100,7 @@ export async function responderSubidaFactura(p: PuertosFacturas, c: CamposSubida
     lectura = { propuesta: PROPUESTA_VACIA, motivos: ['La lectura automática ha fallado. Rellena los datos a mano.'], fuente: 'none' }
   }
   await p.completarPropuesta({ clienteId, gastoId: reserva.id, lectura })
-  return { status: 201, body: { id: reserva.id, titular: clienteId, inmueble: inmuebleId, fuente: lectura.fuente, propuesta: lectura.propuesta, motivos: lectura.motivos } }
+  return { status: 201, body: { id: reserva.id, titular: clienteId, inmueble: inmuebleId, documento: reserva.documentoId ?? null, fuente: lectura.fuente, propuesta: lectura.propuesta, motivos: lectura.motivos } }
 }
 
 type V = { ok: true; datos: DatosConfirmacion } | { ok: false; campo: string; motivo?: 'no_cuadra' }

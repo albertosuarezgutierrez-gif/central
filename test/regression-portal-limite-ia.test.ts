@@ -22,6 +22,10 @@ const SUGERIR = 'apps/asegura-portal/app/api/catastro/sugerir/route.ts'
 const FACTURAS = 'apps/asegura-portal/app/api/patrimonio/facturas/route.ts'
 const FACTURAS_API = 'apps/asegura-portal/lib/patrimonio/facturas-api.ts'
 const FACTURAS_BD = 'apps/asegura-portal/lib/patrimonio/facturas-bd.ts'
+// Patrimonio, paso 8 (22/10/2026): subida de documentos (ficheros de hasta 10 MB en BD). Mismo orden: tope en memoria
+// por identidad y content-length (411/413) ANTES de leer el cuerpo; tope DIARIO contado en BD dentro de una transacción.
+const DOCUMENTOS = 'apps/asegura-portal/app/api/patrimonio/documentos/route.ts'
+const DOCUMENTOS_BD = 'apps/asegura-portal/lib/patrimonio/documentos-bd.ts'
 
 const leer = (p: string) => readFileSync(join(RAIZ, p), 'utf8')
 const sinComentarios = (f: string) => f.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
@@ -149,4 +153,46 @@ test('la sesión sigue exigiéndose: el tope se suma, no sustituye', () => {
     assert.ok(pos(cuerpo, 'requireIdentidad()') < pos(cuerpo, 'rateLimit('), `${ruta}: sin identidad no hay clave que topar`)
     assert.match(cuerpo, /sin_sesion/, `${ruta}: sin sesión, 401`)
   }
+})
+
+test('POST /api/patrimonio/documentos topa por identidad y exige content-length (411) acotado (413) ANTES de leer el cuerpo', () => {
+  const cuerpo = cuerpoDelPost(DOCUMENTOS)
+  const tope = pos(cuerpo, 'rateLimit(')
+  const cabecera = pos(cuerpo, "headers.get('content-length')")
+  const lectura = pos(cuerpo, 'req.formData(')
+  assert.ok(tope < cabecera && cabecera < lectura, 'orden: tope → content-length → lectura del cuerpo')
+  assert.ok(lectura < pos(cuerpo, 'responderSubidaDocumento('), 'la lógica recibe el fichero ya leído y acotado')
+  const antes = cuerpo.slice(cabecera, lectura)
+  assert.match(antes, /status:\s*411/, 'ausente o no numérico: 411')
+  assert.match(antes, /MAX_BYTES_DOCUMENTO[\s\S]*status:\s*413/, 'mayor que el máximo: 413')
+  assert.doesNotMatch(cuerpo.slice(cabecera, cabecera + 40), /\?\?\s*0/, 'un content-length ausente no vale 0')
+  assert.match(cuerpo.slice(tope, tope + 160), /identidad\.id/, 'el tope es por identidad, nunca por IP')
+  assert.doesNotMatch(cuerpo, /getIp\(/)
+})
+
+test('documentos: contar + insertar es UNA transacción con bloqueo por identidad y el día es el de Madrid', () => {
+  const fuente = sinComentarios(leer(DOCUMENTOS_BD))
+  const i = fuente.indexOf('async guardar(')
+  assert.ok(i > 0, 'no se encontró guardar')
+  const cuerpo = fuente.slice(i, fuente.indexOf('async listar(', i))
+  const tx = pos(cuerpo, '$transaction(')
+  const lock = pos(cuerpo, 'pg_advisory_xact_lock')
+  const cuenta = pos(cuerpo, '.count(')
+  const crea = pos(cuerpo, 'crearDocumentoTx(')
+  assert.ok(tx < lock && lock < cuenta && cuenta < crea, 'orden: transacción → bloqueo → recuento → inserción')
+  assert.match(cuerpo, /\$executeRaw`[^`]*\$\{/, 'el bloqueo va parametrizado, nunca concatenado')
+  assert.match(cuerpo, /creadoPorIdentidadId: identidadId/, 'se cuenta por identidad (también los borrados)')
+  assert.doesNotMatch(cuerpo.slice(cuenta, crea), /borradoEn/, 'subir-borrar-subir en bucle no puede esquivar el tope')
+  assert.match(cuerpo, /inicioDiaMadrid\(/)
+})
+
+test('facturas: el fichero se guarda como documento en la MISMA transacción que la reserva, y el gasto lo enlaza', () => {
+  const fuente = sinComentarios(leer(FACTURAS_BD))
+  const i = fuente.indexOf('async reservarPropuesta')
+  const cuerpo = fuente.slice(i, fuente.indexOf('leer:', i))
+  const lock = pos(cuerpo, 'pg_advisory_xact_lock')
+  const doc = pos(cuerpo, 'crearDocumentoTx(tx,')
+  assert.ok(lock < pos(cuerpo, '.count(') && pos(cuerpo, '.count(') < doc, 'el documento entra después del tope, dentro de la transacción')
+  assert.match(cuerpo.slice(doc), /portalPatrimonioGasto\.updateMany\([\s\S]*documentoId/, 'el gasto lleva el documentoId')
+  assert.match(cuerpo, /CARPETA_FACTURAS/, 'carpeta Facturas del inmueble')
 })

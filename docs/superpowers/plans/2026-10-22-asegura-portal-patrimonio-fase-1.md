@@ -51,9 +51,9 @@
   `patrimonio/gastos/RevisarFactura.tsx` (propuesta + motivos + confirmar).
 - Tests: `fuente:'none'` no crea gasto de 0; `OTRO` se anula; inmueble ajeno → 404.
 
-## Paso 8 — Documentos (general-purpose, sonnet)
+## Paso 8 — Documentos ✅ (22/10/2026) — requiere SQL `2026-10-22_portal_patrimonio_documento.sql` (sin aplicar)
 - `module-documental` con owners `inmueble`/`contrato`/`inquilino`, carpetas definidas en `lib/patrimonio/carpetas.ts`;
-  storage del portal existente. Tests de permisos por nivel (Gestión sube; inquilino solo su carpeta de recibos).
+  ficheros EN BD (`bytea`, tabla `portal_patrimonio_documento`, decisión de Alberto 22/10/2026; no Storage). Tests de permisos por nivel (Gestión sube; inquilino solo su carpeta de recibos).
 
 ## Paso 9 — Contratos, inquilinos y actualización de renta (agente-architect: PII)
 - `patrimonio/contrato/[id]`, alta de inquilino con PII por el PUENTE de `apps/asegura` (`/api/portal/patrimonio/inquilino`),
