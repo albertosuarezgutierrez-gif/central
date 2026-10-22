@@ -349,7 +349,7 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.ok(ayuda![1].includes('valorCuerpo: /^[A-Za-z0-9_.:$-]{0,64}$/'), 'la ayuda admite «$» (PAGEID real `datosBasicos$datosBasicos`) y nada más allá de [A-Za-z0-9_.:$-]')
   assert.match(guard, /export function motivoAjaxRechazado\(/, 'el diagnóstico del AJAX rechazado existe')
   assert.match(guard, /\[motivo: \$\{motivo\}\]/, 'el mensaje del guard lleva el motivo del AJAX rechazado')
-  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.21' : '0\.6\.19'/, 'versión Allianz moto 0.7.21')
+  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.21' : '0\.6\.20'/, 'versión Allianz moto 0.7.21')
   // 20/10/2026 (trabajo real 6cd26c10, 0.7.11): Datos básicos de Moto rellena compañía/póliza/justificante del seguro anterior y la fecha de
   // adquisición, y los huecos de datos paran ANTES del login (nunca se inventa); el carné se comprueba contra los 18 años antes de abrir el portal.
   const autoMoto = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'))
@@ -378,7 +378,10 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.match(fn!, /if \(Date\.now\(\) >= hasta\)/)
   assert.ok(!/\.accept\(/.test(fn!) && /d\.dismiss\(\)/.test(fn!), 'los diálogos del portal se descartan, nunca se aceptan')
   // 3. El guard de red: capa (a) patrón de emisión en query y cuerpo; capa (b) destinos no GET en lista blanca.
-  assert.match(guard, /const enLista = av !== null && destinoAvancePermitido\(url, av\.endpoints\)\n[\s\S]{0,400}?const op = \{ permitirAceptar: fases\.aceptarEnVuelo\(\) \|\| enLista, permitirGuardarPresupuesto: enGuardado \}/, 'capa (a): «aceptar» permitido SOLO hacia un destino de la lista blanca')
+  assert.match(guard, /const enLista = av !== null && destinoAvancePermitido\(url, av\.endpoints\)\n[\s\S]{0,400}?const op = \{ permitirAceptar: fases\.aceptarEnVuelo\(\) \|\| enLista, permitirGuardarPresupuesto: enGuardado && !enProyectoMapfre, permitirGenerarProyectoMapfre: enProyectoMapfre \}/, 'capa (a): «aceptar» permitido SOLO hacia un destino de la lista blanca')
+  // 22/10/2026: la ventana de «Generar Proyecto» de Mapfre abre SOLO su patrón (no Archivar/store), y solo la abre su puerta estrecha.
+  assert.match(guard, /const enProyectoMapfre = enGuardado && gv\.proyectoMapfre\n/, 'la ventana de «Generar Proyecto» es un modo propio de la de guardado')
+  assert.equal((guard.match(/abrir\(origen, true\)/g) ?? []).length, 1, 'solo una puerta abre la ventana estrecha de «Generar Proyecto»')
   assert.match(guard, /const enAjaxValidacion = av !== null && noGet && ajaxValidacionAvancePermitida\(req\.method\(\), url, cuerpoDe\(req\), av\.ajax\)\n\s*if \(av && noGet && !enLista && !enAjaxValidacion\)/, 'capa (b): todo no-GET fuera de la lista blanca (o de la validación AJAX declarada) se aborta')
   assert.ok(!/permitirAceptar:[^\n]*enAjaxValidacion/.test(guard), 'la validación AJAX nunca relaja la capa (a)')
   assert.match(guard, /&& Date\.now\(\) < ventanaHasta && av === null && gv === null\)/, 'la ventana de emisión no vale con el avance ni con el guardado abiertos')

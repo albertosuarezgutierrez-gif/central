@@ -6,7 +6,7 @@ import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
 import type { OpcionesMatSelect } from './mat-select.ts'
-import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, SelectorAvancePestana } from './guard.ts'
+import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, ResultadoProyectoMapfre, SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -85,6 +85,11 @@ export type ContextoPortal = ContextoTarificacion & {
    * IZQUIERDA (texto validado en guard.ts, `cerrarClubMapfre`). Una vez y solo tras el «Continuar» desde Figuras.
    */
   cerrarClubMapfre?: (pagina: Page) => Promise<'cerrado'>
+  /**
+   * Mapfre NSEI (v0.8.14, 22/10/2026, autorizado por Alberto: un proyecto no es póliza): tras LEER las primas, pulsa «Generar
+   * Proyecto» y lee el nº de proyecto, por `generarProyectoMapfre` (guard.ts). Nunca lanza por «no se pudo» (salvo violación del guard).
+   */
+  generarProyectoMapfre?: (pagina: Page) => Promise<ResultadoProyectoMapfre>
   /**
    * Allianz HOGAR (14/10/2026): marca UNA opción del riesgo (madera, tipo de vivienda, régimen, uso) de la pantalla «Vivienda»
    * por `marcarOpcionRiesgoHogarAllianz` de guard.ts (lista cerrada de etiquetas EXACTAS, marco de la app de Hogar,

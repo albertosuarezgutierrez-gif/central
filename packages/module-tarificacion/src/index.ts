@@ -35,7 +35,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, type OpcionesGuard } from './guard-emision.ts'
 export {
   ACCIONES_PORTAL,
   PATRONES_GUARDADO_GUARD,
@@ -54,6 +54,11 @@ export {
   extraerReferenciaPresupuesto,
   referenciaPresupuestoValida,
   RE_REFERENCIA_PRESUPUESTO,
+  RE_AVISO_GUARDADO_PORTAL,
+  MAX_AVISO_GUARDADO_PORTAL,
+  avisoGuardadoPortalDeAvisos,
+  referenciaPortalValida,
+  RE_IDENTIFICADOR_BOT_PRESUPUESTO,
   type AccionPortal,
   type CategoriaAccionPortal,
   type ClasificacionAccion,
