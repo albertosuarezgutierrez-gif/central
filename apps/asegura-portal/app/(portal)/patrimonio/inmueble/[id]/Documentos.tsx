@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { CARPETAS_POR_OWNER } from '@/lib/patrimonio/carpetas'
 
 type Doc = { id: string; carpeta: string; nombre: string; mime: string; tamano: number; creadoEn: string }
-type Lista = { documentos: Doc[]; hayMas: boolean }
+type Lista = { documentos: Doc[]; hayMas: boolean; soloLectura?: boolean }
 
 const CARPETAS = CARPETAS_POR_OWNER.inmueble
 const ETIQUETA = Object.fromEntries(CARPETAS.map((c) => [c.id, c.etiqueta])) as Record<string, string>
@@ -36,6 +36,8 @@ const fechaEs = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { tim
 export function Documentos({ clienteId, inmuebleId }: { clienteId: string; inmuebleId: string }) {
   const [docs, setDocs] = useState<Doc[] | null>(null)
   const [hayMas, setHayMas] = useState(false)
+  // Inmueble archivado: histórico del cliente. Se ve y se descarga; no se sube ni se borra (lo dice el servidor).
+  const [soloLectura, setSoloLectura] = useState(false)
   const [filtro, setFiltro] = useState<string>('')
   const [carpeta, setCarpeta] = useState<string>(CARPETAS[0].id)
   const [fichero, setFichero] = useState<File | null>(null)
@@ -61,6 +63,7 @@ export function Documentos({ clienteId, inmuebleId }: { clienteId: string; inmue
         // Recarga desde 0 sustituye sin vaciar antes (no parpadea); «Ver más» añade sin repetir.
         setDocs((prev) => (desde === 0 || !prev ? nuevos : [...prev, ...nuevos.filter((n) => !prev.some((p) => p.id === n.id))]))
         setHayMas(Boolean(j.hayMas))
+        setSoloLectura(j.soloLectura === true)
       } catch {
         setError('No hemos podido conectar. Vuelve a intentarlo.')
       } finally {
@@ -122,7 +125,8 @@ export function Documentos({ clienteId, inmuebleId }: { clienteId: string; inmue
 
   return (
     <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-      <form
+      {soloLectura && <p className="suave" role="status" style={{ margin: 0 }}>Este inmueble está archivado: puedes ver y descargar sus documentos, pero no subir ni borrar.</p>}
+      {!soloLectura && <form
         onSubmit={(e) => { e.preventDefault(); void subir() }}
         style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}
       >
@@ -137,7 +141,7 @@ export function Documentos({ clienteId, inmuebleId }: { clienteId: string; inmue
         <div>
           <button type="submit" className="boton" style={boton} disabled={subiendo || !fichero}>{subiendo ? 'Subiendo…' : 'Subir documento'}</button>
         </div>
-      </form>
+      </form>}
 
       {error && <p className="error-linea" role="alert" style={{ margin: 0 }}>{error}</p>}
 
@@ -162,7 +166,7 @@ export function Documentos({ clienteId, inmuebleId }: { clienteId: string; inmue
                 <a className="boton boton-secundario" style={{ ...boton, display: 'inline-flex', alignItems: 'center' }} href={`/api/patrimonio/documentos/${d.id}?${new URLSearchParams({ titular: clienteId })}`} download>
                   Descargar
                 </a>
-                {confirmando === d.id ? (
+                {soloLectura ? null : confirmando === d.id ? (
                   <>
                     <button type="button" className="boton" style={boton} disabled={borrando === d.id} onClick={() => void borrar(d.id)}>
                       {borrando === d.id ? 'Borrando…' : 'Sí, borrar'}

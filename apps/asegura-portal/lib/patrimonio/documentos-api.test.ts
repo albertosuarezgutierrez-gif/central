@@ -28,14 +28,14 @@ const DOC_AJENO = '77777777-7777-7777-7777-777777777777'
 const PDF = Buffer.from('%PDF-1.7\nx')
 const fich = (e: Partial<FicheroDocumento> = {}): FicheroDocumento => ({ nombre: 'a.pdf', mime: 'application/pdf', tamano: 100, contenido: PDF, ...e })
 
-function puertos(niveles: [string, NivelPatrimonio][], o: { ocupadas?: number } = {}) {
+function puertos(niveles: [string, NivelPatrimonio][], o: { ocupadas?: number; archivado?: boolean } = {}) {
   const log = { guardar: [] as unknown[], borrar: [] as unknown[], leer: [] as unknown[] }
   let ocupadas = o.ocupadas ?? 0
   const borrados = new Set<string>()
   const meta = (id: string, carpeta: string): DocumentoMeta => ({ id, carpeta, nombre: 'a.pdf', mime: 'application/pdf', tamano: 10, creadoEn: '2026-10-22T10:00:00Z' })
   const p: PuertosDocumentos = {
     accesos: async () => new Map(niveles),
-    ownerDelTitular: async (c, ow: OwnerRef) => c === MIO && ow.id === INM,
+    ownerDelTitular: async (c, ow: OwnerRef) => (c === MIO && ow.id === INM ? (o.archivado ? 'archivado' : 'activo') : null),
     guardar: async (x) => {
       log.guardar.push(x)
       if (ocupadas >= MAX_DOCUMENTOS_DIA) return { ok: false, motivo: 'tope' }
@@ -46,7 +46,7 @@ function puertos(niveles: [string, NivelPatrimonio][], o: { ocupadas?: number } 
     leer: async (x) => {
       log.leer.push(x)
       if (x.clienteId !== MIO || x.documentoId !== DOC || borrados.has(DOC)) return null
-      return { meta: meta(DOC, 'facturas'), owner: { tipo: 'inmueble', id: INM }, contenido: PDF }
+      return { meta: meta(DOC, 'facturas'), owner: { tipo: 'inmueble', id: INM }, ownerArchivado: o.archivado === true, contenido: PDF }
     },
     borrar: async (x) => { log.borrar.push(x); borrados.add(x.documentoId); return 'ok' },
   }
@@ -159,4 +159,21 @@ test('borrar no lee los bytes del fichero (solo la descarga los lee)', async () 
   const { p, log } = puertos([[MIO, 'gestion']])
   await responderBorrarDocumento(p, { titular: MIO, documento: DOC })
   assert.equal((log.leer[0] as { conContenido?: boolean }).conContenido, false)
+})
+
+test('inmueble ARCHIVADO: se lista (soloLectura) y se descarga; NO se sube ni se borra', async () => {
+  const { p, log } = puertos([[MIO, 'total']], { archivado: true })
+  const lista = await responderListaDocumentos(p, { titular: MIO, ownerTipo: 'inmueble', ownerId: INM })
+  assert.equal(lista.status, 200)
+  assert.equal(lista.body.soloLectura, true)
+  assert.equal((await responderDescargaDocumento(p, { titular: MIO, documento: DOC })).status, 200)
+  assert.deepEqual(await subir(p), { status: 404, body: { error: 'no_encontrado' } })
+  assert.equal(log.guardar.length, 0)
+  assert.deepEqual(await responderBorrarDocumento(p, { titular: MIO, documento: DOC }), { status: 404, body: { error: 'no_encontrado' } })
+  assert.equal(log.borrar.length, 0)
+})
+
+test('inmueble activo: la lista NO es de solo lectura', async () => {
+  const { p } = puertos([[MIO, 'total']])
+  assert.equal((await responderListaDocumentos(p, { titular: MIO, ownerTipo: 'inmueble', ownerId: INM })).body.soloLectura, false)
 })

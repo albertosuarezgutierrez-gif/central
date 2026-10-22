@@ -26,6 +26,9 @@ const FACTURAS_BD = 'apps/asegura-portal/lib/patrimonio/facturas-bd.ts'
 // por identidad y content-length (411/413) ANTES de leer el cuerpo; tope DIARIO contado en BD dentro de una transacción.
 const DOCUMENTOS = 'apps/asegura-portal/app/api/patrimonio/documentos/route.ts'
 const DOCUMENTOS_BD = 'apps/asegura-portal/lib/patrimonio/documentos-bd.ts'
+// Los cuerpos transaccionales (bloqueo → recuento → inserción) viven aparte para probarlos con un tx falso.
+const DOCUMENTOS_TX = 'apps/asegura-portal/lib/patrimonio/documentos-tx.ts'
+const FACTURAS_TX = 'apps/asegura-portal/lib/patrimonio/facturas-tx.ts'
 
 const leer = (p: string) => readFileSync(join(RAIZ, p), 'utf8')
 const sinComentarios = (f: string) => f.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
@@ -81,20 +84,26 @@ test('facturas: el tope DIARIO se RESERVA (cuenta + inserta) ANTES de leer con I
 })
 
 test('facturas: contar + insertar es UNA transacción con bloqueo por identidad, y el día es el de Madrid', () => {
-  const fuente = sinComentarios(leer(FACTURAS_BD))
-  const i = fuente.indexOf('async reservarPropuesta')
+  // La transacción vive en facturas-tx.ts (para probar el orden con un tx falso: facturas-tx.test.ts); el adaptador la abre.
+  const bd = sinComentarios(leer(FACTURAS_BD))
+  const i = bd.indexOf('async reservarPropuesta')
   assert.ok(i > 0, 'no se encontró reservarPropuesta')
-  const cuerpo = fuente.slice(i, fuente.indexOf('leer:', i))
-  const tx = pos(cuerpo, '$transaction(')
+  const cuerpoBd = bd.slice(i, bd.indexOf('leer:', i))
+  assert.ok(pos(cuerpoBd, '$transaction(') < pos(cuerpoBd, 'reservarConTope('), 'el adaptador abre la transacción y delega en reservarConTope')
+  assert.match(cuerpoBd, /identidadId/, 'el bloqueo es por identidad')
+  assert.match(cuerpoBd, /inicioDiaMadrid\(/, 'el día del tope es el de Europe/Madrid')
+  const fuente = sinComentarios(leer(FACTURAS_TX))
+  const j = fuente.indexOf('export async function reservarConTope')
+  assert.ok(j > 0, 'no se encontró reservarConTope')
+  const cuerpo = fuente.slice(j, fuente.indexOf('export class', j))
   const lock = pos(cuerpo, 'pg_advisory_xact_lock')
   const cuenta = pos(cuerpo, '.count(')
   const crea = pos(cuerpo, '.create(')
-  assert.ok(tx < lock && lock < cuenta && cuenta < crea, 'orden: transacción → bloqueo → recuento → inserción (sin bloqueo, N subidas simultáneas pasan el tope)')
+  assert.ok(lock < cuenta && cuenta < crea, 'orden: bloqueo → recuento → inserción (sin bloqueo, N subidas simultáneas pasan el tope)')
   assert.match(cuerpo, /\$executeRaw`[^`]*\$\{/, 'el bloqueo va parametrizado con $executeRaw, nunca concatenado')
   assert.match(cuerpo, /identidadId/, 'el bloqueo es por identidad')
-  assert.match(cuerpo, /inicioDiaMadrid\(/, 'el día del tope es el de Europe/Madrid')
-  assert.doesNotMatch(fuente, /toISOString\(\)\.slice\(0,\s*10\)\}T00/, 'el día en UTC reinicia el tope a las 02:00 de Madrid')
-  assert.doesNotMatch(fuente, /\$queryRawUnsafe|\$executeRawUnsafe/)
+  assert.doesNotMatch(bd + fuente, /toISOString\(\)\.slice\(0,\s*10\)\}T00/, 'el día en UTC reinicia el tope a las 02:00 de Madrid')
+  assert.doesNotMatch(bd + fuente, /\$queryRawUnsafe|\$executeRawUnsafe/)
 })
 
 test('POST /api/patrimonio/facturas exige content-length numérico (411) y acotado (413) ANTES de leer el cuerpo', () => {
@@ -171,28 +180,32 @@ test('POST /api/patrimonio/documentos topa por identidad y exige content-length 
 })
 
 test('documentos: contar + insertar es UNA transacción con bloqueo por identidad y el día es el de Madrid', () => {
-  const fuente = sinComentarios(leer(DOCUMENTOS_BD))
-  const i = fuente.indexOf('async guardar(')
+  const bd = sinComentarios(leer(DOCUMENTOS_BD))
+  const i = bd.indexOf('async guardar(')
   assert.ok(i > 0, 'no se encontró guardar')
-  const cuerpo = fuente.slice(i, fuente.indexOf('async listar(', i))
-  const tx = pos(cuerpo, '$transaction(')
+  const cuerpoBd = bd.slice(i, bd.indexOf('async listar(', i))
+  assert.ok(pos(cuerpoBd, '$transaction(') < pos(cuerpoBd, 'guardarConTope('), 'el adaptador abre la transacción y delega en guardarConTope')
+  assert.match(cuerpoBd, /inicioDiaMadrid\(/)
+  const fuente = sinComentarios(leer(DOCUMENTOS_TX))
+  const j = fuente.indexOf('export async function guardarConTope')
+  assert.ok(j > 0, 'no se encontró guardarConTope')
+  const cuerpo = fuente.slice(j)
   const lock = pos(cuerpo, 'pg_advisory_xact_lock')
   const cuenta = pos(cuerpo, '.count(')
   const crea = pos(cuerpo, 'crearDocumentoTx(')
-  assert.ok(tx < lock && lock < cuenta && cuenta < crea, 'orden: transacción → bloqueo → recuento → inserción')
+  assert.ok(lock < cuenta && cuenta < crea, 'orden: bloqueo → recuento → inserción')
   assert.match(cuerpo, /\$executeRaw`[^`]*\$\{/, 'el bloqueo va parametrizado, nunca concatenado')
-  assert.match(cuerpo, /creadoPorIdentidadId: identidadId/, 'se cuenta por identidad (también los borrados)')
+  assert.match(cuerpo, /creadoPorIdentidadId: x\.identidadId/, 'se cuenta por identidad (también los borrados)')
   assert.doesNotMatch(cuerpo.slice(cuenta, crea), /borradoEn/, 'subir-borrar-subir en bucle no puede esquivar el tope')
-  assert.match(cuerpo, /inicioDiaMadrid\(/)
 })
 
 test('facturas: el fichero se guarda como documento en la MISMA transacción que la reserva, y el gasto lo enlaza', () => {
-  const fuente = sinComentarios(leer(FACTURAS_BD))
-  const i = fuente.indexOf('async reservarPropuesta')
-  const cuerpo = fuente.slice(i, fuente.indexOf('leer:', i))
+  const fuente = sinComentarios(leer(FACTURAS_TX))
+  const i = fuente.indexOf('export async function reservarConTope')
+  const cuerpo = fuente.slice(i, fuente.indexOf('export class', i))
   const lock = pos(cuerpo, 'pg_advisory_xact_lock')
   const doc = pos(cuerpo, 'crearDocumentoTx(tx,')
   assert.ok(lock < pos(cuerpo, '.count(') && pos(cuerpo, '.count(') < doc, 'el documento entra después del tope, dentro de la transacción')
   assert.match(cuerpo.slice(doc), /portalPatrimonioGasto\.updateMany\([\s\S]*documentoId/, 'el gasto lleva el documentoId')
-  assert.match(cuerpo, /CARPETA_FACTURAS/, 'carpeta Facturas del inmueble')
+  assert.match(sinComentarios(leer(FACTURAS_BD)), /CARPETA_FACTURAS/, 'carpeta Facturas del inmueble')
 })

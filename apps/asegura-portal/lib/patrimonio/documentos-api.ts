@@ -28,14 +28,17 @@ export type OwnerRef = { tipo: OwnerDocumento; id: string }
 
 export interface PuertosDocumentos {
   accesos(): Promise<AccesosMapa>
-  /** ¿El inmueble/contrato/inquilino es de ESE titular (y no está archivado)? Se busca dentro del titular, nunca suelto. */
-  ownerDelTitular(clienteId: string, owner: OwnerRef): Promise<boolean>
+  /**
+   * Estado del inmueble/contrato/inquilino DENTRO de ese titular: `null` = no existe / no es suyo. `archivado` se sigue
+   * viendo y descargando (histórico del cliente) pero no admite subir ni borrar.
+   */
+  ownerDelTitular(clienteId: string, owner: OwnerRef): Promise<'activo' | 'archivado' | null>
   /** ATÓMICO: cuenta los documentos de esta identidad en el día de Madrid y, si hay hueco, inserta la fila. */
   guardar(x: { clienteId: string; owner: OwnerRef; carpeta: string; nombre: string; mime: TipoFactura; tamano: number; sha256: string; contenido: Buffer }): Promise<{ ok: true; id: string } | { ok: false; motivo: 'tope' | 'no_encontrado' }>
   /** Sin `contenido`, sin borrados, más recientes primero. Pide `limite + 1` para saber si hay más. */
   listar(x: { clienteId: string; owner: OwnerRef; limite: number; desde: number }): Promise<DocumentoMeta[]>
   /** Solo un documento NO borrado DE ese titular. `conContenido: false` = sin los bytes (para decidir un borrado). */
-  leer(x: { clienteId: string; documentoId: string; conContenido?: boolean }): Promise<{ meta: DocumentoMeta; owner: OwnerRef; contenido: Buffer } | null>
+  leer(x: { clienteId: string; documentoId: string; conContenido?: boolean }): Promise<{ meta: DocumentoMeta; owner: OwnerRef; ownerArchivado: boolean; contenido: Buffer } | null>
   /** Sella `borrado_en` (sin DELETE). Solo un documento no borrado de ese titular. */
   borrar(x: { clienteId: string; documentoId: string }): Promise<'ok' | 'no_encontrado'>
 }
@@ -82,7 +85,8 @@ export async function responderSubidaDocumento(
   const o = owner(c.ownerTipo, c.ownerId)
   if (!o) return NO_ENCONTRADO
   const clienteId = titularCon(await p.accesos(), c.titular, 'subir', o.tipo)
-  if (clienteId === null || !(await p.ownerDelTitular(clienteId, o))) return NO_ENCONTRADO
+  // Archivado = solo lectura: no se sube (misma 404 que un owner ajeno).
+  if (clienteId === null || (await p.ownerDelTitular(clienteId, o)) !== 'activo') return NO_ENCONTRADO
   if (!carpetaDeOwner(o.tipo, c.carpeta)) return { status: 400, body: { error: 'datos_invalidos', campo: 'carpeta' } }
   const carpeta = c.carpeta as string
   // El permiso se mira sobre la carpeta PEDIDA (no solo la primera del owner): el inquilino solo sube a `recibos`.
@@ -109,10 +113,11 @@ export async function responderListaDocumentos(p: PuertosDocumentos, c: { titula
   const o = owner(c.ownerTipo, c.ownerId)
   if (!o) return NO_ENCONTRADO
   const clienteId = titularCon(await p.accesos(), c.titular, 'ver', o.tipo)
-  if (clienteId === null || !(await p.ownerDelTitular(clienteId, o))) return NO_ENCONTRADO
+  const estado = clienteId === null ? null : await p.ownerDelTitular(clienteId, o)
+  if (clienteId === null || estado === null) return NO_ENCONTRADO
   const desde = typeof c.desde === 'number' && Number.isInteger(c.desde) && c.desde >= 0 ? c.desde : 0
   const filas = await p.listar({ clienteId, owner: o, limite: MAX_DOCUMENTOS_LISTA, desde })
-  return { status: 200, body: { documentos: filas.slice(0, MAX_DOCUMENTOS_LISTA), hayMas: filas.length > MAX_DOCUMENTOS_LISTA } }
+  return { status: 200, body: { documentos: filas.slice(0, MAX_DOCUMENTOS_LISTA), hayMas: filas.length > MAX_DOCUMENTOS_LISTA, soloLectura: estado === 'archivado' } }
 }
 
 export type RespuestaDescarga = Respuesta | { status: 200; fichero: { nombre: string; mime: TipoFactura; contenido: Buffer } }
@@ -133,7 +138,7 @@ export async function responderBorrarDocumento(p: PuertosDocumentos, c: { titula
   const accesos = await p.accesos()
   if (!accesos.has(c.titular)) return NO_ENCONTRADO
   const d = await p.leer({ clienteId: c.titular, documentoId: c.documento, conContenido: false })
-  if (!d || !puedeDocumento(accesos.get(c.titular), 'borrar', d.owner.tipo, d.meta.carpeta)) return NO_ENCONTRADO
+  if (!d || d.ownerArchivado || !puedeDocumento(accesos.get(c.titular), 'borrar', d.owner.tipo, d.meta.carpeta)) return NO_ENCONTRADO
   const r = await p.borrar({ clienteId: c.titular, documentoId: c.documento })
   return r === 'ok' ? { status: 200, body: { id: c.documento } } : NO_ENCONTRADO
 }

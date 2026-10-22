@@ -4,9 +4,9 @@
 // aquí desde la ficha ya autorizada, jamás del cliente; el inmueble se busca DENTRO del titular y toda escritura sobre un
 // gasto lleva `titularId` + `origen: 'factura'` + `estado: 'propuesto'` en el `where` (id ajeno = 0 filas = 404).
 // Solo usa columnas con GRANT para `prisma_asegura_portal` (sin SQL nuevo). El tope diario cuenta FILAS de esta identidad
-// en el día de Madrid, y contar + insertar ocurren dentro de UNA transacción con un bloqueo asesor por identidad.
-import { createHash } from 'node:crypto'
-
+// en el día de Madrid, y contar + insertar ocurren dentro de UNA transacción con un bloqueo asesor por identidad
+// (`facturas-tx.ts`, con el orden de sentencias cubierto por test). Confirmar con otro inmueble traslada el documento
+// (copia + sello del viejo + repunte del gasto) en la misma transacción.
 import type { Prisma } from '@prisma/client'
 
 import { prisma } from '../db'
@@ -14,8 +14,9 @@ import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
 import { CARPETA_FACTURAS } from './carpetas'
 import { fechaMadrid, inicioDiaMadrid } from './dia-madrid'
-import { crearDocumentoTx } from './documentos-bd'
+import type { TxMin } from './documentos-tx'
 import { extraerFactura } from './extraer-factura'
+import { ConfirmacionAdelantada, confirmarGasto, reservarConTope } from './facturas-tx'
 import type { AccesosMapa } from './gastos-api'
 import { titularDe } from './gastos-bd'
 import { MAX_FACTURAS_DIA, type PuertosFacturas } from './facturas-api'
@@ -58,45 +59,19 @@ export function puertosFacturas(identidadId: string, ahora: () => Date = () => n
       if (!t) return { ok: false, motivo: 'no_encontrado' }
       const ahoraD = ahora()
       // Un solo paso: sin el bloqueo, N subidas simultáneas leen el mismo recuento (< tope), todas pasan y todas gastan IA.
-      // El bloqueo (por identidad, hasta el commit) serializa recuento + inserción; la fila queda ya contada para la siguiente.
-      return prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`portal-factura:${identidadId}`}, 0))`
-        const hoy = await tx.portalPatrimonioGasto.count({
-          where: { creadoPorIdentidadId: identidadId, origen: 'factura', creadoEn: { gte: inicioDiaMadrid(ahoraD) } },
-        })
-        if (hoy >= MAX_FACTURAS_DIA) return { ok: false as const, motivo: 'tope' as const }
-        const g = await tx.portalPatrimonioGasto.create({
-          data: {
-            titularId: t.id,
-            inmuebleId,
-            // `fecha` es NOT NULL: hoy es solo un marcador (la verdad leída irá en `propuesta.leido.fecha`) y confirmar
-            // EXIGE que la persona dé la fecha. Importes y categoría quedan NULL: nunca 0.
-            fecha: aFecha(fechaMadrid(ahoraD)),
-            estado: 'propuesto',
-            origen: 'factura',
-            propuesta: { fuente: 'none', motivos: ['Leyendo la factura…'], leido: PROPUESTA_VACIA } as unknown as Prisma.InputJsonValue,
-            creadoPorIdentidadId: identidadId,
-          },
-          select: { id: true },
-        })
-        // El fichero se guarda como documento del inmueble EN LA MISMA transacción (todo o nada). No pasa por el tope de
-        // documentos: lo acota el de facturas (20/día) y esta reserva ya tiene su bloqueo. Sin inmueble no hay owner.
-        let documentoId: string | null = null
-        if (inmuebleId !== null) {
-          documentoId = await crearDocumentoTx(tx, {
-            titularId: t.id,
-            identidadId,
-            owner: { tipo: 'inmueble', id: inmuebleId },
-            carpeta: CARPETA_FACTURAS,
-            nombre: fichero.nombre,
-            mime: fichero.mime,
-            sha256: createHash('sha256').update(fichero.contenido).digest('hex'),
-            contenido: fichero.contenido,
-          })
-          await tx.portalPatrimonioGasto.updateMany({ where: { id: g.id, titularId: t.id }, data: { documentoId } })
-        }
-        return { ok: true as const, id: g.id, documentoId }
-      })
+      return prisma.$transaction(async (tx) =>
+        reservarConTope(tx as unknown as TxMin, {
+          identidadId,
+          titularId: t.id,
+          inmuebleId,
+          carpetaFacturas: CARPETA_FACTURAS,
+          fichero,
+          desde: inicioDiaMadrid(ahoraD),
+          fechaMarcador: fechaMadrid(ahoraD),
+          max: MAX_FACTURAS_DIA,
+          propuestaInicial: { fuente: 'none', motivos: ['Leyendo la factura…'], leido: PROPUESTA_VACIA } as unknown as Prisma.InputJsonValue,
+        }),
+      )
     },
 
     leer: (f) => extraerFactura(f.contenido, f.mime, f.nombre),
@@ -122,28 +97,15 @@ export function puertosFacturas(identidadId: string, ahora: () => Date = () => n
     },
 
     async confirmar({ clienteId, gastoId, datos }) {
-      // IVA y retención no tienen columna: se guardan en `propuesta.confirmado` (jsonb) junto a lo leído, sin pisarlo.
-      let propuesta: Prisma.InputJsonValue | undefined
-      if (await sesionOk()) {
-        const t = await titularDe(clienteId, identidadId)
-        const previa = t ? await prisma.portalPatrimonioGasto.findFirst({ where: { id: gastoId, titularId: t.id, origen: 'factura' }, select: { propuesta: true } }) : null
-        const base = previa?.propuesta && typeof previa.propuesta === 'object' && !Array.isArray(previa.propuesta) ? previa.propuesta : {}
-        propuesta = { ...base, confirmado: { ivaCent: datos.ivaCent, retencionCent: datos.retencionCent } } as unknown as Prisma.InputJsonValue
+      if (!(await sesionOk())) return 'no_encontrado'
+      const t = await titularDe(clienteId, identidadId)
+      if (!t) return 'no_encontrado'
+      try {
+        return await prisma.$transaction(async (tx) => confirmarGasto(tx as unknown as TxMin, { titularId: t.id, identidadId, gastoId, datos, ahora: ahora() }))
+      } catch (e) {
+        if (e instanceof ConfirmacionAdelantada) return 'ya_resuelto'
+        throw e
       }
-      return resolver(clienteId, gastoId, {
-        // Siempre se escribe lo que la persona eligió al revisar: «Sin inmueble» DESASIGNA el de la subida (si se
-        // conservara, el gasto se imputaría a un inmueble que la persona ha quitado). Ya validado dentro del titular.
-        inmuebleId: datos.inmuebleId,
-        fecha: aFecha(datos.fecha),
-        categoria: datos.categoria,
-        concepto: datos.concepto,
-        baseCent: datos.baseCent === null ? null : BigInt(datos.baseCent),
-        totalCent: BigInt(datos.totalCent),
-        ...(propuesta === undefined ? {} : { propuesta }),
-        estado: 'confirmado',
-        confirmadoEn: new Date(),
-        confirmadoPorIdentidadId: identidadId,
-      })
     },
 
     descartar: ({ clienteId, gastoId }) => resolver(clienteId, gastoId, { estado: 'descartado' }),
