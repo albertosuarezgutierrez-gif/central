@@ -35,6 +35,10 @@
       "schedule": "0 9 1 * *"
     },
     {
+      "path": "/api/cron/indices-renta",
+      "schedule": "0 10 20 * *"
+    },
+    {
       "path": "/api/cron/polizas-pdf",
       "schedule": "20 * * * *"
     },

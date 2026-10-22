@@ -66,7 +66,7 @@
   (aplicar = fila append-only).
 - Tests: sin cláusula no propone; índice distinto rechaza; el portal nunca guarda NIF en claro.
 
-## Paso 9b — Índices IPC/IRAV automáticos desde el INE (general-purpose, sonnet; revisión agente-architect)
+## Paso 9b — Índices IPC/IRAV automáticos desde el INE (general-purpose, sonnet; revisión agente-architect) ✅ (22/10/2026)
 - Puro: `packages/module-patrimonio/src/indices-ine.ts` — `parsearSerieIne(json, indice)` → `{periodo, pct}[]` y
   `validarIndice` (periodo `YYYY-MM`, número finito, rango −10..+20 %, sin huecos raros); test con JSON de muestra
   guardado en el test (nada de red en tests) y rojo.
