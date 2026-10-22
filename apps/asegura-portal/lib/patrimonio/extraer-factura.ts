@@ -13,8 +13,8 @@ import { normalizarFacturaLeida, PROPUESTA_VACIA, type FuenteFactura, type Propu
 export type ResultadoFactura = { propuesta: PropuestaFactura; motivos: string[]; fuente: FuenteFactura }
 
 const INSTRUCCION = `Eres un extractor de facturas españolas. Devuelve SOLO un JSON con estas claves:
-{"proveedor": string|null, "nif_proveedor": string|null, "fecha": "YYYY-MM-DD"|null, "base_imponible": number|null, "iva": number|null, "total": number|null, "concepto": string|null, "categoria": ${CATEGORIAS_GASTO.filter((c) => c !== 'OTRO').map((c) => `"${c}"`).join('|')}|null}
-Importes en euros, con punto decimal, sin símbolo. "iva" es el IMPORTE del IVA, no el porcentaje. "fecha" es la de emisión.
+{"proveedor": string|null, "nif_proveedor": string|null, "fecha": "YYYY-MM-DD"|null, "base_imponible": number|null, "iva": number|null, "retencion": number|null, "total": number|null, "concepto": string|null, "categoria": ${CATEGORIAS_GASTO.filter((c) => c !== 'OTRO').map((c) => `"${c}"`).join('|')}|null}
+Importes en euros, con punto decimal, sin símbolo. "iva" es el IMPORTE del IVA, no el porcentaje. "retencion" es el IMPORTE retenido de IRPF (alquileres, profesionales), no el porcentaje; null si no hay. "total" es lo que se paga: base + IVA − retención. "fecha" es la de emisión.
 Si un dato no aparece en el documento, pon null. NUNCA inventes ni pongas 0, "N/A" ni "OTRO" cuando no lo sepas.`
 
 const MODELO = () => ({ models: modelosLecturaPoliza(process.env), privacidad: true })
@@ -32,9 +32,10 @@ function interpretar(salida: string, fuente: 'texto' | 'vision'): ResultadoFactu
   return { propuesta, motivos, fuente }
 }
 
-export async function extraerFactura(buffer: Buffer, mimeType: string, fileName = ''): Promise<ResultadoFactura> {
+export async function extraerFactura(buffer: Buffer, mimeType: string, _fileName = ''): Promise<ResultadoFactura> {
   const apiKey = (process.env.OPENROUTER_API_KEY ?? '').trim()
-  const esPdf = mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')
+  // El tipo llega YA comprobado por los bytes (`tipo-fichero.ts`); el nombre del fichero no decide nada.
+  const esPdf = mimeType === 'application/pdf'
 
   if (esPdf) {
     let texto = ''

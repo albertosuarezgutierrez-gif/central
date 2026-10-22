@@ -21,17 +21,31 @@ const INM = '44444444-4444-4444-4444-444444444444'
 const INM_AJENO = '55555555-5555-5555-5555-555555555555'
 const GASTO = '66666666-6666-6666-6666-666666666666'
 
-const fichero = (extra: Partial<FicheroFactura> = {}): FicheroFactura => ({ nombre: 'f.pdf', mime: 'application/pdf', tamano: 1000, contenido: Buffer.from('x'), ...extra })
+const PDF = Buffer.from('%PDF-1.7\n%contenido')
+const fichero = (extra: Partial<FicheroFactura> = {}): FicheroFactura => ({ nombre: 'f.pdf', mime: 'application/pdf', tamano: 1000, contenido: PDF, ...extra })
 const ILEGIBLE: ResultadoLectura = { propuesta: PROPUESTA_VACIA, motivos: ['No legible'], fuente: 'none' }
 
-function puertos(niveles: [string, NivelPatrimonio][], o: { hoy?: number; lectura?: ResultadoLectura; resolver?: 'ok' | 'no_encontrado' | 'ya_resuelto' } = {}) {
-  const llamadas = { leer: 0, crear: [] as unknown[], confirmar: [] as unknown[], descartar: [] as unknown[] }
+function puertos(niveles: [string, NivelPatrimonio][], o: { hoy?: number; lectura?: ResultadoLectura; resolver?: 'ok' | 'no_encontrado' | 'ya_resuelto'; leerFalla?: boolean } = {}) {
+  const llamadas = { leer: 0, leerMime: [] as string[], reservar: [] as unknown[], completar: [] as unknown[], confirmar: [] as unknown[], descartar: [] as unknown[] }
+  let ocupadas = o.hoy ?? 0
   const p: PuertosFacturas = {
     accesos: async () => new Map(niveles),
     inmuebleDelTitular: async (_c, i) => i === INM,
-    contarFacturasHoy: async () => o.hoy ?? 0,
-    leer: async () => { llamadas.leer++; return o.lectura ?? ILEGIBLE },
-    crearPropuesta: async (x) => { llamadas.crear.push(x); return { ok: true, id: GASTO } },
+    // Atómico como el real: recuento + reserva en un paso síncrono (no hay await entre comprobar y sumar).
+    reservarPropuesta: async (x) => {
+      llamadas.reservar.push(x)
+      if (ocupadas >= MAX_FACTURAS_DIA) return { ok: false, motivo: 'tope' }
+      ocupadas++
+      return { ok: true, id: GASTO }
+    },
+    leer: async (f) => {
+      llamadas.leer++
+      llamadas.leerMime.push(f.mime)
+      await new Promise((r) => setTimeout(r, 1))
+      if (o.leerFalla) throw new Error('boom')
+      return o.lectura ?? ILEGIBLE
+    },
+    completarPropuesta: async (x) => { llamadas.completar.push(x) },
     confirmar: async (x) => { llamadas.confirmar.push(x); return o.resolver ?? 'ok' },
     descartar: async (x) => { llamadas.descartar.push(x); return o.resolver ?? 'ok' },
   }
@@ -47,7 +61,7 @@ test('titular ajeno o inexistente: 404 idéntica, sin gastar IA ni escribir', as
   assert.deepEqual(ajeno, await subir(p, 'no-existe'))
   assert.deepEqual(ajeno, await subir(p, undefined))
   assert.equal(llamadas.leer, 0)
-  assert.deepEqual(llamadas.crear, [])
+  assert.deepEqual(llamadas.reservar, [])
 })
 
 test('inmueble AJENO al titular: 404 y no se llama a la IA', async () => {
@@ -56,25 +70,56 @@ test('inmueble AJENO al titular: 404 y no se llama a la IA', async () => {
   assert.equal(r.status, 404)
   assert.deepEqual(r, await subir(p, MIO, { inmueble: 'no-es-uuid' }))
   assert.equal(llamadas.leer, 0)
-  assert.deepEqual(llamadas.crear, [])
+  assert.deepEqual(llamadas.reservar, [])
 })
 
-test('tope diario contado en BD: al llegar al máximo, 429 y sin IA', async () => {
+test('tope diario: al llegar al máximo, 429 y sin IA; justo por debajo, pasa', async () => {
   const { p, llamadas } = puertos([[MIO, 'total']], { hoy: MAX_FACTURAS_DIA })
   const r = await subir(p, MIO)
   assert.equal(r.status, 429)
   assert.equal(r.body.error, 'tope_diario')
   assert.equal(llamadas.leer, 0)
+  assert.deepEqual(llamadas.completar, [])
   const justo = puertos([[MIO, 'total']], { hoy: MAX_FACTURAS_DIA - 1 })
   assert.equal((await subir(justo.p, MIO)).status, 201)
 })
 
-test('fichero: ausente 400, grande 413, formato raro 415; ninguno llama a la IA', async () => {
+test('subidas SIMULTÁNEAS: solo caben las que quedan hasta el tope y solo esas gastan IA', async () => {
+  const { p, llamadas } = puertos([[MIO, 'total']], { hoy: MAX_FACTURAS_DIA - 3 })
+  const rs = await Promise.all(Array.from({ length: 12 }, () => subir(p, MIO)))
+  assert.equal(rs.filter((r) => r.status === 201).length, 3)
+  assert.equal(rs.filter((r) => r.status === 429).length, 9)
+  assert.equal(llamadas.leer, 3)
+})
+
+test('la reserva va ANTES de leer y la fila se completa DESPUÉS, también si la IA lanza', async () => {
+  const { p, llamadas } = puertos([[MIO, 'total']], { leerFalla: true })
+  const r = await subir(p, MIO)
+  assert.equal(r.status, 201)
+  assert.equal(r.body.fuente, 'none')
+  assert.equal(llamadas.reservar.length, 1)
+  assert.equal(llamadas.completar.length, 1)
+})
+
+test('fichero: ausente 400, grande 413, formato raro 415; ninguno reserva cupo ni llama a la IA', async () => {
   const { p, llamadas } = puertos([[MIO, 'total']])
   assert.equal((await subir(p, MIO, { fichero: null })).status, 400)
   assert.equal((await subir(p, MIO, { fichero: fichero({ tamano: MAX_BYTES_FACTURA + 1 }) })).status, 413)
-  assert.equal((await subir(p, MIO, { fichero: fichero({ mime: 'application/zip' }) })).status, 415)
+  assert.equal((await subir(p, MIO, { fichero: fichero({ mime: 'application/zip', contenido: Buffer.from('PK\x03\x04') }) })).status, 415)
   assert.equal(llamadas.leer, 0)
+  assert.deepEqual(llamadas.reservar, [])
+})
+
+test('el tipo lo deciden los BYTES: un «pdf» que no lo es, 415; una imagen declarada como pdf se lee como imagen', async () => {
+  const { p, llamadas } = puertos([[MIO, 'total']])
+  assert.equal((await subir(p, MIO, { fichero: fichero({ mime: 'application/pdf', contenido: Buffer.from('<html>no soy pdf</html>') }) })).status, 415)
+  assert.equal((await subir(p, MIO, { fichero: fichero({ mime: 'image/jpeg', contenido: Buffer.alloc(0) }) })).status, 415)
+  assert.equal(llamadas.leer, 0)
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0])
+  assert.equal((await subir(p, MIO, { fichero: fichero({ mime: 'application/pdf', contenido: png }) })).status, 201)
+  assert.deepEqual(llamadas.leerMime, ['image/png'])
+  // El navegador a veces no manda tipo: con bytes válidos se lee igual.
+  assert.equal((await subir(p, MIO, { fichero: fichero({ mime: '' }) })).status, 201)
 })
 
 test('fuente none: crea una propuesta SIN importes (nunca un gasto de 0) y lo dice', async () => {
@@ -82,10 +127,10 @@ test('fuente none: crea una propuesta SIN importes (nunca un gasto de 0) y lo di
   const r = await subir(p, MIO, { inmueble: INM })
   assert.equal(r.status, 201)
   assert.equal(r.body.fuente, 'none')
-  const creado = llamadas.crear[0] as { lectura: ResultadoLectura; inmuebleId: string }
-  assert.equal(creado.inmuebleId, INM)
-  assert.equal(creado.lectura.propuesta.totalCent, null)
-  assert.equal(creado.lectura.propuesta.baseCent, null)
+  assert.equal((llamadas.reservar[0] as { inmuebleId: string }).inmuebleId, INM)
+  const hecho = llamadas.completar[0] as { lectura: ResultadoLectura }
+  assert.equal(hecho.lectura.propuesta.totalCent, null)
+  assert.equal(hecho.lectura.propuesta.baseCent, null)
   assert.deepEqual(llamadas.confirmar, [])
 })
 
@@ -107,7 +152,7 @@ test('confirmar: ok llama al puerto con céntimos; titular ajeno, gasto ajeno e 
   const bien = puertos([[MIO, 'gestion']])
   const ok = await responderResolverFactura(bien.p, confirmacion())
   assert.equal(ok.status, 200)
-  assert.deepEqual((bien.llamadas.confirmar[0] as { datos: unknown }).datos, { inmuebleId: null, fecha: '2026-10-03', categoria: 'SUMINISTROS', concepto: null, baseCent: 10000, totalCent: 12100 })
+  assert.deepEqual((bien.llamadas.confirmar[0] as { datos: unknown }).datos, { inmuebleId: null, fecha: '2026-10-03', categoria: 'SUMINISTROS', concepto: null, baseCent: 10000, ivaCent: null, retencionCent: null, totalCent: 12100 })
 
   const { p, llamadas } = puertos([[MIO, 'total']])
   assert.equal((await responderResolverFactura(p, confirmacion({ titular: AJENO }))).status, 404)
@@ -123,4 +168,34 @@ test('descartar y acción desconocida', async () => {
   assert.equal(llamadas.descartar.length, 1)
   assert.equal((await responderResolverFactura(p, { accion: 'borrar', titular: MIO, gasto: GASTO })).status, 400)
   assert.equal((await responderResolverFactura(p, { accion: 'descartar', titular: AJENO, gasto: GASTO })).status, 404)
+})
+
+test('retención de IRPF: base > total vale si total = base + IVA − retención (±2 cént.)', () => {
+  const ok = (extra: Record<string, unknown>) => validarConfirmacion(confirmacion(extra))
+  // Profesional: 1000 + 210 IVA − 150 retención = 1060
+  const bien = ok({ base: '1000,00', iva: '210,00', retencion: '150,00', total: '1060,00' })
+  assert.equal(bien.ok, true)
+  if (bien.ok) assert.deepEqual([bien.datos.baseCent, bien.datos.ivaCent, bien.datos.retencionCent, bien.datos.totalCent], [100000, 21000, 15000, 106000])
+  assert.equal(ok({ base: '1000,00', iva: '210,00', retencion: '150,00', total: '1060,02' }).ok, true) // redondeo
+  assert.equal(ok({ base: '1000,00', iva: '210,00', retencion: '150,00', total: '1060,05' }).ok, false)
+  // Exenta con retención (alquiler de local exento, sin IVA): 1000 − 150 = 850
+  assert.equal(ok({ base: '1000,00', iva: '', retencion: '150,00', total: '850,00' }).ok, true)
+  assert.equal(ok({ base: '1000,00', iva: '0', retencion: '150,00', total: '850,00' }).ok, true)
+  // Sin retención, base > total sigue siendo error; y total menor que base − retención también.
+  const mal = ok({ base: '150,00', total: '100,00' })
+  assert.deepEqual(mal.ok ? null : [mal.campo, mal.motivo], ['base', 'no_cuadra'])
+  assert.equal(ok({ base: '1000,00', retencion: '150,00', total: '800,00' }).ok, false)
+  // Retención sin base o mayor que la base: error en «retencion»; negativa o texto, también.
+  for (const r of [{ base: '', retencion: '10,00' }, { base: '100,00', retencion: '150,00' }, { base: '100,00', retencion: '-5' }, { base: '100,00', retencion: 'abc' }]) {
+    const x = ok({ ...r, total: '100,00' })
+    assert.deepEqual(x.ok ? null : x.campo, 'retencion', JSON.stringify(r))
+  }
+})
+
+test('el 400 de un cuadre fallido dice qué pasa (motivo no_cuadra) y no confirma nada', async () => {
+  const { p, llamadas } = puertos([[MIO, 'total']])
+  const r = await responderResolverFactura(p, confirmacion({ base: '100,00', iva: '21,00', total: '150,00' }))
+  assert.equal(r.status, 400)
+  assert.deepEqual([r.body.campo, r.body.motivo], ['total', 'no_cuadra'])
+  assert.deepEqual(llamadas.confirmar, [])
 })

@@ -36,8 +36,10 @@ export async function POST(req: Request) {
   if (!(req.headers.get('content-type') ?? '').includes('multipart/form-data')) {
     return NextResponse.json({ error: 'datos_invalidos', campo: 'fichero' }, { status: 400 })
   }
-  const declarado = Number(req.headers.get('content-length') ?? 0)
-  if (declarado > MAX_BYTES_FACTURA + 64 * 1024) return NextResponse.json({ error: 'fichero_grande' }, { status: 413 })
+  // Sin `content-length` numérico (p. ej. chunked) no hay forma de acotar el cuerpo antes de leerlo: 411. Mayor que el máximo: 413.
+  const cabecera = req.headers.get('content-length')
+  if (cabecera === null || !/^\d+$/.test(cabecera.trim())) return NextResponse.json({ error: 'longitud_requerida' }, { status: 411 })
+  if (Number(cabecera) > MAX_BYTES_FACTURA + 64 * 1024) return NextResponse.json({ error: 'fichero_grande' }, { status: 413 })
   let form: FormData
   try {
     form = await req.formData()

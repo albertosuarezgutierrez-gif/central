@@ -392,3 +392,18 @@ test('patrimonio: el guardián ve lib/patrimonio/accesos.ts y lo da por bueno co
   assert.match(src, FILTRA_POR_IDENTIDAD)
   assert.match(src, NOMBRA_VINCULO)
 })
+
+// Facturas pendientes de revisar (22/10/2026): reabrir una propuesta guardada es una LECTURA de gastos con importes. Solo de
+// los titulares ya autorizados por `accesosPatrimonio` Y con nivel de gestión; el id del gasto nunca llega del cliente a la lectura.
+test('patrimonio: las facturas pendientes se leen solo de titulares con nivel de gestión y dentro de los accesos', () => {
+  const src = readFileSync(join(ROOT, 'apps/asegura-portal/lib/patrimonio/gastos-bd.ts'), 'utf8')
+  const i = src.indexOf('const gestionables')
+  assert.ok(i > 0, 'no se encuentra la lectura de facturas pendientes')
+  const bloque = src.slice(i, src.indexOf('const propias', i))
+  assert.match(bloque, /titulares\.filter\(\(t\) => puede\(accesos\.get\(t\.clienteId\), 'gestionar_gastos_documentos'\)\)/, 'solo con nivel de gestión')
+  assert.match(bloque, /where:\s*\{\s*titularId:\s*t\.id,\s*origen:\s*'factura',\s*estado:\s*'propuesto'\s*\}/, 'filtrada por titular, origen y estado')
+  assert.match(src, /clienteId:\s*\{\s*in:\s*\[\.\.\.ids\]\s*\}/, 'los titulares salen de los ids que dio accesosPatrimonio')
+  assert.ok(!EXENTOS.has('apps/asegura-portal/lib/patrimonio/gastos-bd.ts'), 'gastos-bd no puede estar exento')
+  const ui = readFileSync(join(ROOT, 'apps/asegura-portal/app/(portal)/patrimonio/gastos/GastosTitular.tsx'), 'utf8')
+  assert.match(ui, /t\.puedeGestionar && <FacturasPendientes/, 'la lista solo se pinta con nivel de gestión')
+})

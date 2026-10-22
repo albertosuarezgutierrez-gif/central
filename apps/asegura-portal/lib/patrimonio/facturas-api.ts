@@ -7,16 +7,18 @@
 //
 // 🚨 El `titular` y el `inmueble` del formulario son PETICIONES: el titular se busca DENTRO de los accesos resueltos por
 // la cookie, con nivel de gestión; el inmueble, DENTRO de ese titular. Ajeno, inexistente o sin nivel: la MISMA 404
-// `no_encontrado` (nunca 403). El tope diario se cuenta en BD (filas `origen='factura'` de la identidad), no en memoria,
-// y se comprueba ANTES de llamar a la IA.
+// `no_encontrado` (nunca 403). El tope diario se cuenta en BD (filas `origen='factura'` de la identidad, día de Madrid),
+// no en memoria. Contar e insertar es UN solo paso atómico (`reservarPropuesta`: bloqueo por identidad + recuento + fila
+// `propuesto` vacía) y va ANTES de la IA: subidas simultáneas no pueden pasar el tope. La lectura rellena después esa fila
+// (`completarPropuesta`). El tipo del fichero lo deciden sus BYTES (`tipo-fichero.ts`), no el MIME del navegador.
 import { esCategoriaGasto, esFecha, puede, type CategoriaGasto } from '@central/module-patrimonio'
 
 import { eurosACentimos, type AccesosMapa, type Respuesta } from './gastos-api.ts'
-import type { FuenteFactura, PropuestaFactura } from './factura-propuesta.ts'
+import { cuadre, PROPUESTA_VACIA, TOLERANCIA_CENT, type FuenteFactura, type PropuestaFactura } from './factura-propuesta.ts'
+import { tipoRealFactura } from './tipo-fichero.ts'
 
 export const MAX_BYTES_FACTURA = 10 * 1024 * 1024
 export const MAX_FACTURAS_DIA = 20
-export const MIMES_FACTURA = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const
 
 const NO_ENCONTRADO: Respuesta = { status: 404, body: { error: 'no_encontrado' } }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -32,6 +34,9 @@ export type DatosConfirmacion = {
   categoria: CategoriaGasto
   concepto: string | null
   baseCent: number | null
+  /** Solo se guardan en `propuesta` (jsonb): el gasto confirmado no tiene columna de IVA ni de retención. */
+  ivaCent: number | null
+  retencionCent: number | null
   totalCent: number
 }
 
@@ -39,11 +44,15 @@ export interface PuertosFacturas {
   accesos(): Promise<AccesosMapa>
   /** ¿El inmueble es de ESE titular (y no está archivado)? Se busca dentro del titular, nunca suelto. */
   inmuebleDelTitular(clienteId: string, inmuebleId: string): Promise<boolean>
-  /** Facturas subidas hoy por esta identidad: cuenta FILAS en BD. */
-  contarFacturasHoy(): Promise<number>
+  /**
+   * ATÓMICO: cuenta las filas `origen='factura'` de esta identidad en el día de Madrid y, si hay hueco, inserta la fila
+   * `propuesto` vacía (sin importes). Dos subidas simultáneas no pueden pasar el tope. `tope` = ya hay MAX_FACTURAS_DIA;
+   * `no_encontrado` = el titular/inmueble no encaja.
+   */
+  reservarPropuesta(x: { clienteId: string; inmuebleId: string | null }): Promise<{ ok: true; id: string } | { ok: false; motivo: 'tope' | 'no_encontrado' }>
   leer(f: FicheroFactura): Promise<ResultadoLectura>
-  /** Crea el gasto `propuesto` (importes nulos si no se leyeron). `no_encontrado` si el titular/inmueble no encaja. */
-  crearPropuesta(x: { clienteId: string; inmuebleId: string | null; lectura: ResultadoLectura }): Promise<{ ok: true; id: string } | { ok: false }>
+  /** Rellena la fila reservada con lo leído (importes nulos si no se leyeron). Solo toca una fila `propuesto` de ESE titular. */
+  completarPropuesta(x: { clienteId: string; gastoId: string; lectura: ResultadoLectura }): Promise<void>
   /** Solo actúa sobre un gasto `origen='factura'` `propuesto` DE ese titular. */
   confirmar(x: { clienteId: string; gastoId: string; datos: DatosConfirmacion }): Promise<'ok' | 'no_encontrado' | 'ya_resuelto'>
   descartar(x: { clienteId: string; gastoId: string }): Promise<'ok' | 'no_encontrado' | 'ya_resuelto'>
@@ -67,19 +76,38 @@ export async function responderSubidaFactura(p: PuertosFacturas, c: CamposSubida
     inmuebleId = c.inmueble
   }
   if (!c.fichero) return { status: 400, body: { error: 'fichero_requerido' } }
-  if (c.fichero.tamano > MAX_BYTES_FACTURA) return { status: 413, body: { error: 'fichero_grande' } }
-  if (!(MIMES_FACTURA as readonly string[]).includes(c.fichero.mime)) return { status: 415, body: { error: 'formato_no_admitido' } }
-  // Tope diario ANTES de gastar IA, contando filas en BD (el limitador en memoria de la ruta solo frena ráfagas).
-  if ((await p.contarFacturasHoy()) >= MAX_FACTURAS_DIA) return { status: 429, body: { error: 'tope_diario' } }
-  const lectura = await p.leer(c.fichero)
-  const r = await p.crearPropuesta({ clienteId, inmuebleId, lectura })
-  if (!r.ok) return NO_ENCONTRADO
-  return { status: 201, body: { id: r.id, titular: clienteId, inmueble: inmuebleId, fuente: lectura.fuente, propuesta: lectura.propuesta, motivos: lectura.motivos } }
+  if (Math.max(c.fichero.tamano, c.fichero.contenido.length) > MAX_BYTES_FACTURA) return { status: 413, body: { error: 'fichero_grande' } }
+  // Los bytes mandan: el MIME del navegador (o de quien monte la petición a mano) no prueba nada.
+  const mime = tipoRealFactura(c.fichero.contenido)
+  if (mime === null) return { status: 415, body: { error: 'formato_no_admitido' } }
+  // Tope diario ANTES de gastar IA, contado en BD y reservado en el mismo paso (el limitador en memoria de la ruta solo frena ráfagas).
+  const reserva = await p.reservarPropuesta({ clienteId, inmuebleId })
+  if (!reserva.ok) return reserva.motivo === 'tope' ? { status: 429, body: { error: 'tope_diario' } } : NO_ENCONTRADO
+  let lectura: ResultadoLectura
+  try {
+    lectura = await p.leer({ ...c.fichero, mime })
+  } catch {
+    lectura = { propuesta: PROPUESTA_VACIA, motivos: ['La lectura automática ha fallado. Rellena los datos a mano.'], fuente: 'none' }
+  }
+  await p.completarPropuesta({ clienteId, gastoId: reserva.id, lectura })
+  return { status: 201, body: { id: reserva.id, titular: clienteId, inmueble: inmuebleId, fuente: lectura.fuente, propuesta: lectura.propuesta, motivos: lectura.motivos } }
 }
 
-type V = { ok: true; datos: DatosConfirmacion } | { ok: false; campo: string }
+type V = { ok: true; datos: DatosConfirmacion } | { ok: false; campo: string; motivo?: 'no_cuadra' }
 
-/** Lo que la persona ha revisado. `total` obligatorio y > 0 (nunca un gasto de 0 €); `base` opcional. */
+/** Importe opcional: vacío o 0 = «no hay» (`null`); inválido o negativo = `'invalido'`. */
+function importeOpcional(v: unknown): number | null | 'invalido' {
+  const c = eurosACentimos(v)
+  if (c === 'invalido' && /^\s*0+([.,]0+)?\s*€?\s*$/.test(String(v))) return null
+  return c
+}
+
+/**
+ * Lo que la persona ha revisado. `total` obligatorio y > 0 (nunca un gasto de 0 €); `base`, `iva` y `retencion` opcionales.
+ * El cuadre es total = base + IVA − retención (±2 céntimos): una factura con retención de IRPF tiene base > total, y una
+ * exenta con retención no trae IVA. Sin IVA no se puede exigir igualdad (puede ser exenta o no constar): el total solo
+ * puede ser MENOR que base − retención si algo no cuadra.
+ */
 export function validarConfirmacion(cuerpo: unknown): V {
   const b = obj(cuerpo)
   let inmuebleId: string | null = null
@@ -92,7 +120,20 @@ export function validarConfirmacion(cuerpo: unknown): V {
   const total = eurosACentimos(b.total)
   if (total === null || total === 'invalido') return { ok: false, campo: 'total' }
   const base = eurosACentimos(b.base)
-  if (base === 'invalido' || (base !== null && base > total)) return { ok: false, campo: 'base' }
+  if (base === 'invalido') return { ok: false, campo: 'base' }
+  const iva = importeOpcional(b.iva)
+  if (iva === 'invalido') return { ok: false, campo: 'iva' }
+  const retencion = importeOpcional(b.retencion)
+  if (retencion === 'invalido') return { ok: false, campo: 'retencion' }
+  // Una retención sin base no se puede comprobar contra nada: se pide la base.
+  if (retencion !== null && (base === null || retencion > base)) return { ok: false, campo: 'retencion' }
+  if (base !== null) {
+    if (iva !== null) {
+      if (Math.abs(cuadre(base, iva, retencion) - total) > TOLERANCIA_CENT) return { ok: false, campo: 'total', motivo: 'no_cuadra' }
+    } else if (total < cuadre(base, null, retencion)) {
+      return { ok: false, campo: 'base', motivo: 'no_cuadra' }
+    }
+  }
   let concepto: string | null = null
   if (!vacio(b.concepto)) {
     if (typeof b.concepto !== 'string') return { ok: false, campo: 'concepto' }
@@ -100,7 +141,7 @@ export function validarConfirmacion(cuerpo: unknown): V {
     if (t.length < 1 || t.length > 200) return { ok: false, campo: 'concepto' }
     concepto = t
   }
-  return { ok: true, datos: { inmuebleId, fecha: b.fecha, categoria: b.categoria, concepto, baseCent: base, totalCent: total } }
+  return { ok: true, datos: { inmuebleId, fecha: b.fecha, categoria: b.categoria, concepto, baseCent: base, ivaCent: iva, retencionCent: retencion, totalCent: total } }
 }
 
 export async function responderResolverFactura(p: PuertosFacturas, cuerpo: unknown): Promise<Respuesta> {
@@ -115,7 +156,7 @@ export async function responderResolverFactura(p: PuertosFacturas, cuerpo: unkno
     r = await p.descartar({ clienteId, gastoId })
   } else if (b.accion === 'confirmar') {
     const v = validarConfirmacion(b)
-    if (!v.ok) return { status: 400, body: { error: 'datos_invalidos', campo: v.campo } }
+    if (!v.ok) return { status: 400, body: { error: 'datos_invalidos', campo: v.campo, ...(v.motivo ? { motivo: v.motivo } : {}) } }
     if (v.datos.inmuebleId && !(await p.inmuebleDelTitular(clienteId, v.datos.inmuebleId))) return NO_ENCONTRADO
     r = await p.confirmar({ clienteId, gastoId, datos: v.datos })
   } else {

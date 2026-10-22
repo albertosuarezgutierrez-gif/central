@@ -12,6 +12,8 @@ export type PropuestaFactura = {
   fecha: string | null
   baseCent: number | null
   ivaCent: number | null
+  /** Retención de IRPF (importe, no porcentaje) que resta del total: alquileres, profesionales. `null` = no consta. */
+  retencionCent: number | null
   totalCent: number | null
   concepto: string | null
   /** Nunca `OTRO`: «otro» es el cajón de «no lo sé» y se anula a `null`. */
@@ -21,7 +23,7 @@ export type PropuestaFactura = {
 export type FuenteFactura = 'texto' | 'vision' | 'none'
 
 export const PROPUESTA_VACIA: PropuestaFactura = {
-  proveedor: null, nifProveedor: null, fecha: null, baseCent: null, ivaCent: null, totalCent: null, concepto: null, categoria: null,
+  proveedor: null, nifProveedor: null, fecha: null, baseCent: null, ivaCent: null, retencionCent: null, totalCent: null, concepto: null, categoria: null,
 }
 
 const CAJON = new Set(['', 'otro', 'otros', 'n/a', 'na', 'n.a.', 'null', 'undefined', 'none', 'desconocido', 'desconocida', 'no consta', 'no disponible', 'sin datos', '-', '--', '—', '?', 'ninguno', 'ninguna', 'unknown'])
@@ -56,13 +58,21 @@ export function eurosLeidosACentimos(v: unknown): number | null {
   if (typeof v === 'number') n = v
   else if (typeof v === 'string') {
     const s = v.replace(/[€\s]/g, '')
-    const canon = s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s
+    // Con coma: los puntos son miles. Sin coma: «1.234» / «1.234.567» (grupos de 3) son miles españoles; «12.5» / «12.50», decimales.
+    const canon = s.includes(',') || /^\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '').replace(',', '.') : s
     if (!/^\d+(\.\d+)?$/.test(canon)) return null
     n = Number(canon)
   } else return null
   if (!Number.isFinite(n)) return null
   const cent = Math.round(n * 100)
   return Number.isSafeInteger(cent) && cent > 0 ? cent : null
+}
+
+export const TOLERANCIA_CENT = 2
+
+/** Lo que debe sumar el total: base + IVA (si se conoce; exenta = 0) − retención (si la hay). */
+export function cuadre(baseCent: number, ivaCent: number | null, retencionCent: number | null): number {
+  return baseCent + (ivaCent ?? 0) - (retencionCent ?? 0)
 }
 
 export type FacturaNormalizada = { propuesta: PropuestaFactura; motivos: string[] }
@@ -81,6 +91,7 @@ export function normalizarFacturaLeida(bruto: unknown): FacturaNormalizada {
     fecha: fecha(b.fecha),
     baseCent: eurosLeidosACentimos(b.base_imponible ?? b.base),
     ivaCent: eurosLeidosACentimos(b.iva),
+    retencionCent: eurosLeidosACentimos(b.retencion ?? b.retencion_irpf),
     totalCent: eurosLeidosACentimos(b.total),
     concepto: texto(b.concepto, 200),
     categoria,
@@ -92,9 +103,38 @@ export function normalizarFacturaLeida(bruto: unknown): FacturaNormalizada {
   if (p.totalCent === null) motivos.push('No hemos podido leer el total.')
   if (p.baseCent === null) motivos.push('No hemos podido leer la base imponible.')
   if (!p.categoria) motivos.push('No hemos podido decidir la categoría: elígela tú.')
-  // Cuadre: base + IVA ≈ total (tolerancia 2 céntimos por redondeos). Si no cuadra, se avisa; no se corrige a ojo.
-  if (p.baseCent !== null && p.ivaCent !== null && p.totalCent !== null && Math.abs(p.baseCent + p.ivaCent - p.totalCent) > 2) {
-    motivos.push('La base más el IVA no suman el total leído: revisa los importes (puede haber retención o recargo).')
+  // Cuadre: total = base + IVA − retención (tolerancia 2 céntimos por redondeos). Si no cuadra, se avisa; no se corrige a ojo.
+  if (p.baseCent !== null && p.ivaCent !== null && p.totalCent !== null && Math.abs(cuadre(p.baseCent, p.ivaCent, p.retencionCent) - p.totalCent) > TOLERANCIA_CENT) {
+    motivos.push('La base más el IVA, menos la retención si la hay, no suman el total leído: revisa los importes (puede haber un recargo).')
   }
+  if (p.baseCent !== null && p.retencionCent !== null && p.retencionCent > p.baseCent) motivos.push('La retención leída es mayor que la base: revisa los importes.')
   return { propuesta: p, motivos }
+}
+
+export type PropuestaGuardada = { fuente: FuenteFactura; motivos: string[]; propuesta: PropuestaFactura }
+
+const cent = (v: unknown) => (typeof v === 'number' && Number.isSafeInteger(v) && v > 0 ? v : null)
+
+/**
+ * Lee el jsonb `propuesta` que dejó la subida (`{ fuente, motivos, leido }`) para reabrir la revisión. Defensiva: una
+ * fila antigua (sin `retencionCent`) o corrupta no rompe la pantalla; lo ilegible vuelve a «no se sabe» (`null`), jamás a 0.
+ */
+export function leerPropuestaGuardada(json: unknown): PropuestaGuardada {
+  const o = (json && typeof json === 'object' && !Array.isArray(json) ? json : {}) as Record<string, unknown>
+  const l = (o.leido && typeof o.leido === 'object' && !Array.isArray(o.leido) ? o.leido : {}) as Record<string, unknown>
+  const fuente: FuenteFactura = o.fuente === 'texto' || o.fuente === 'vision' ? o.fuente : 'none'
+  const motivos = Array.isArray(o.motivos) ? o.motivos.filter((m): m is string => typeof m === 'string') : []
+  const categoria = typeof l.categoria === 'string' && l.categoria !== 'OTRO' && esCategoriaGasto(l.categoria) ? l.categoria : null
+  const propuesta: PropuestaFactura = {
+    proveedor: typeof l.proveedor === 'string' && l.proveedor ? l.proveedor : null,
+    nifProveedor: typeof l.nifProveedor === 'string' && l.nifProveedor ? l.nifProveedor : null,
+    fecha: typeof l.fecha === 'string' && esFecha(l.fecha) ? l.fecha : null,
+    baseCent: cent(l.baseCent),
+    ivaCent: cent(l.ivaCent),
+    retencionCent: cent(l.retencionCent),
+    totalCent: cent(l.totalCent),
+    concepto: typeof l.concepto === 'string' && l.concepto ? l.concepto : null,
+    categoria,
+  }
+  return { fuente, motivos, propuesta }
 }
