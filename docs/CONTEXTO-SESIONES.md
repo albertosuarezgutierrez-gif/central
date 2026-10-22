@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Patrimonio portal F1 pasos 4-5 (PR #5009): `lib/patrimonio/accesos.ts` (solo vínculos gestionar/administrar,
+nunca origen corredor; vista corredor → nada; 404) + `lectura.ts`; pantallas `/patrimonio` (lista por titular, ficha de inmueble,
+alta con CP primero → `DireccionCp.tsx` portado de plataforma). §15 del SQL ya aplicado por Alberto. #4995 fusionado.
+Pendiente: calle fuera de callejero se guarda como texto (`via`/`numero` null, sin columna «por validar»); `municipio_ine` null
+(la tabla de CP no trae código INE); recibo del paso de renovación no se liga a la declarada (paso 8). Siguiente: paso 6 (gastos).
 **(22/10/2026)** — Patrimonio portal F1 pasos 2-3 (PR #4995): puros `acceso`/`infraseguro`/`enlace-inquilino` en `module-patrimonio`;
 SQL `2026-10-22_portal_patrimonio.sql` APLICADO en BD (18 tablas, triggers, GRANT por columnas, crm_seguros 0, sin DELETE).
 Decisiones Alberto: comunidad propia de cada titular (no compartida); filas de importación se vacían al cerrar.

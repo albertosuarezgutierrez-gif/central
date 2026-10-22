@@ -5,6 +5,8 @@ import { NavPortal } from './NavPortal'
 import { BandaCorredor } from './BandaCorredor'
 import { BienvenidaAvisos } from './BienvenidaAvisos'
 import { SALUDO_CLIENTE } from '../WhatsappFlotante'
+import { accesosPatrimonio } from '@/lib/patrimonio/accesos'
+import { getIdentidad } from '@/lib/session'
 
 /**
  * El armazón de las pantallas con sesión.
@@ -24,6 +26,15 @@ import { SALUDO_CLIENTE } from '../WhatsappFlotante'
  * que no ocupa sitio en el flujo y por tanto no reservaría nada.
  */
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
+  // «Patrimonio» en el menú SOLO si esta sesión tiene algún titular (`accesosPatrimonio`). Un fallo de lectura
+  // no inventa la entrada: sin comprobar = no se enseña.
+  let conPatrimonio = false
+  try {
+    const identidad = await getIdentidad()
+    conPatrimonio = identidad !== null && (await accesosPatrimonio(identidad.id)).size > 0
+  } catch {
+    conPatrimonio = false
+  }
   return (
     <div className="portal-shell">
       <BandaCorredor />
@@ -31,6 +42,7 @@ export default async function PortalLayout({ children }: { children: React.React
         <NavPortal
           llamar={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }}
           whatsapp={whatsappUrl(SALUDO_CLIENTE)}
+          patrimonio={conPatrimonio}
         />
       </Suspense>
       <main className="portal-contenido">
