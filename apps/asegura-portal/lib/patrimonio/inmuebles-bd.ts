@@ -115,6 +115,8 @@ export async function patrimonioDeIdentidad(identidadId: string): Promise<Titula
 
 export type FichaInmueble = {
   inmueble: ReturnType<typeof inmuebleDeFila>
+  /** La ficha del titular (clave de `accesosPatrimonio`): las rutas de documentos lo piden como `titular`. */
+  clienteId: string
   titularNombre: string
   nivel: 'gestion' | 'total'
   valorReconstruccionCent: number | null
@@ -135,6 +137,7 @@ export async function inmuebleAutorizado(identidadId: string, idPedido: string):
   const ficha = await prisma.cliente.findUnique({ where: { id: fila.titular.clienteId }, select: { nombre: true, apellidos: true } })
   return {
     inmueble: inmuebleDeFila(fila as FilaInmueble),
+    clienteId: fila.titular.clienteId,
     titularNombre: ficha ? nombreDe(ficha) : '',
     nivel,
     valorReconstruccionCent: fila.valorReconstruccionEstimadoCent === null ? null : Number(fila.valorReconstruccionEstimadoCent),

@@ -17,7 +17,12 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const RAIZ = new URL('..', import.meta.url).pathname
-const SQL = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, '')
+// Paso 3 (tablas) + paso 8 (documentos, 22/10/2026): el barrido y el espejo con el schema cubren los dos ficheros.
+const SQL_DOCUMENTO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio_documento.sql'), 'utf8').replace(/--.*$/gm, '')
+const SQL = [
+  readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
+  SQL_DOCUMENTO,
+].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
 
@@ -47,7 +52,7 @@ function modeloDe(tabla: string): { nombre: string; campos: Campo[] } | null {
       if (!l || l.startsWith('//') || l.startsWith('@@')) continue
       const [nombre, tipoBruto] = l.split(/\s+/)
       const tipo = tipoBruto.replace(/[?[\]]/g, '')
-      if (!['String', 'Int', 'BigInt', 'Decimal', 'Boolean', 'DateTime', 'Json'].includes(tipo)) continue
+      if (!['String', 'Int', 'BigInt', 'Decimal', 'Boolean', 'DateTime', 'Json', 'Bytes'].includes(tipo)) continue
       const map = /@map\("([^"]+)"\)/.exec(l)
       const def = /@default\((.*)\)/.exec(l)
       campos.push({
@@ -67,7 +72,7 @@ test('el SQL crea las tablas de §4 de la spec (y es transaccional)', () => {
   for (const t of [
     'titular', 'inmueble', 'comunidad', 'inmueble_comunidad', 'inquilino', 'contrato', 'contrato_inquilino',
     'renta_actualizacion', 'plantilla_gasto', 'gasto', 'derrama', 'indice', 'importacion', 'importacion_fila',
-    'obligacion', 'enlace_inquilino', 'aviso_inquilino', 'inmueble_poliza',
+    'obligacion', 'enlace_inquilino', 'aviso_inquilino', 'inmueble_poliza', 'documento',
   ]) assert.ok(TABLAS.includes(`portal_patrimonio_${t}`), `falta portal_patrimonio_${t}`)
   assert.match(SQL, /^BEGIN;/m)
   assert.match(SQL, /^COMMIT;/m)
@@ -194,4 +199,44 @@ test('🚨 importación: `datos` se vacía al confirmar/descartar y no admite da
   assert.match(SQL, /BEFORE UPDATE OF estado ON seguros\.portal_patrimonio_importacion\s+FOR EACH ROW EXECUTE FUNCTION seguros\.portal_patrimonio_importacion_no_reabrir\(\)/)
   const datos = modeloDe('portal_patrimonio_importacion_fila')!.campos.find((c) => c.columna === 'datos')
   assert.ok(datos && /\bJson\?/.test(datos.linea), 'el modelo tiene que declarar `datos Json?`')
+})
+
+test('🚨 documentos (paso 8): un owner del MISMO titular, carpeta de ese owner, sin DELETE y sellado inmutable', async () => {
+  const b = bloque('portal_patrimonio_documento')
+  for (const o of ['inmueble', 'contrato', 'inquilino']) {
+    assert.match(b, new RegExp(`FOREIGN KEY \\(${o}_id, titular_id\\) REFERENCES seguros\\.portal_patrimonio_${o} \\(id, titular_id\\)`), `${o}: FK compuesta al titular`)
+  }
+  assert.match(b, /num_nonnulls\(inmueble_id, contrato_id, inquilino_id\) = 1/)
+  assert.match(b, /size_bytes BETWEEN 1 AND 10485760/)
+  assert.match(b, /mime IN \('application\/pdf', 'image\/jpeg', 'image\/png', 'image\/webp'\)/)
+  // Solo el sello de borrado se puede actualizar, jamás borrar filas ni mudar de titular/owner.
+  assert.deepEqual([...(concedidas('UPDATE', 'portal_patrimonio_documento') ?? [])].sort(), ['borrado_en', 'borrado_por_identidad_id'])
+  assert.ok(!concedidas('INSERT', 'portal_patrimonio_documento')!.has('borrado_en'), 'un documento no nace borrado')
+  assert.match(SQL_DOCUMENTO, /BEFORE UPDATE ON seguros\.portal_patrimonio_documento\s+FOR EACH ROW EXECUTE FUNCTION seguros\.portal_patrimonio_documento_inmutable\(\)/)
+  assert.match(SQL_DOCUMENTO, /OLD\.borrado_en IS NOT NULL AND NEW\.borrado_en IS DISTINCT FROM OLD\.borrado_en/, 'no se desborra')
+  assert.match(SQL_DOCUMENTO, /NEW\.contenido IS DISTINCT FROM OLD\.contenido/, 'el fichero no se reescribe')
+  // El gasto con fichero lo tiene del MISMO titular (FK compuesta con la columna que ya existía).
+  assert.match(SQL_DOCUMENTO, /FOREIGN KEY \(documento_id, titular_id\) REFERENCES seguros\.portal_patrimonio_documento \(id, titular_id\)/)
+  // Se aplica ENTERO por el MCP de Supabase, que se cuelga con cualquier DROP (también DROP TRIGGER IF EXISTS): ni uno, ni en comentarios.
+  assert.doesNotMatch(readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio_documento.sql'), 'utf8'), /\bDROP\b/i)
+  assert.match(SQL_DOCUMENTO, /CREATE OR REPLACE TRIGGER portal_patrimonio_documento_inmutable/)
+  // Quién borró: solo en el UPDATE que sella (vivo → borrado), y nunca en un documento vivo.
+  assert.match(SQL_DOCUMENTO, /AND NOT \(OLD\.borrado_en IS NULL AND NEW\.borrado_en IS NOT NULL\)/)
+  assert.match(b, /CHECK \(borrado_por_identidad_id IS NULL OR borrado_en IS NOT NULL\)/)
+})
+
+test('🚨 documentos: las carpetas del CHECK de la BD son EXACTAMENTE las de carpetas.ts, por owner', async () => {
+  const { CARPETAS_POR_OWNER } = await import('../apps/asegura-portal/lib/patrimonio/carpetas.ts')
+  const b = bloque('portal_patrimonio_documento')
+  const check = /carpeta\s+text NOT NULL CHECK \(carpeta IN \(([^)]*)\)\)/.exec(b)
+  assert.ok(check, 'no encuentro el CHECK de carpeta')
+  const bd = check[1].split(',').map((x) => x.trim().replace(/'/g, '')).sort()
+  const codigo = Object.values(CARPETAS_POR_OWNER).flat().map((c) => c.id).sort()
+  assert.deepEqual(bd, codigo)
+  // Y la carpeta casa con el owner: cada lista del CHECK `carpeta_del_owner` es la de su owner.
+  for (const [owner, carpetas] of Object.entries(CARPETAS_POR_OWNER)) {
+    const m = new RegExp(`${owner}_id\\s+IS NOT NULL AND carpeta IN \\(([^)]*)\\)`).exec(b)
+    assert.ok(m, `falta la carpeta del owner ${owner}`)
+    assert.deepEqual(m[1].split(',').map((x) => x.trim().replace(/'/g, '')).sort(), carpetas.map((c) => c.id).sort())
+  }
 })

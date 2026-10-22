@@ -6,6 +6,8 @@ import { inmuebleAutorizado } from '@/lib/patrimonio/inmuebles-bd'
 import { ETIQUETA_USO } from '@/lib/patrimonio/usos'
 import { getIdentidad } from '@/lib/session'
 
+import { Documentos } from './Documentos'
+
 export const dynamic = 'force-dynamic'
 
 const noConsta = 'No consta'
@@ -49,6 +51,10 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
             </div>
           ))}
         </dl>
+      </section>
+      <section className="seccion">
+        <h2>Documentos</h2>
+        <Documentos clienteId={ficha.clienteId} inmuebleId={i.id} />
       </section>
       <p style={{ marginTop: 24 }}>
         <Link href="/patrimonio">← Todo el patrimonio</Link>

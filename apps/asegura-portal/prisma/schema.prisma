@@ -1901,6 +1901,31 @@ model PortalPatrimonioGasto {
   @@schema("seguros")
 }
 
+/// Fichero (PDF/JPG/PNG/WebP, ≤ 10 MB) de un inmueble, contrato o inquilino, guardado EN BD (decisión de Alberto,
+/// 22/10/2026). Cuelga de exactamente un owner del MISMO titular (FK compuesta en BD). Sin DELETE: borrar es sellar
+/// `borradoEn`/`borradoPorIdentidadId` (único UPDATE concedido). 🚨 Las LISTAS nunca seleccionan `contenido`: solo la descarga.
+/// Sin relaciones Prisma a propósito: el aislamiento lo dan las FK compuestas y `accesosPatrimonio`.
+model PortalPatrimonioDocumento {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId             String    @map("titular_id") @db.Uuid
+  inmuebleId            String?   @map("inmueble_id") @db.Uuid
+  contratoId            String?   @map("contrato_id") @db.Uuid
+  inquilinoId           String?   @map("inquilino_id") @db.Uuid
+  carpeta               String
+  nombre                String
+  mime                  String
+  sizeBytes             Int       @map("size_bytes")
+  sha256                String
+  contenido             Bytes
+  creadoPorIdentidadId  String?   @map("creado_por_identidad_id") @db.Uuid
+  creadoEn              DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  borradoEn             DateTime? @map("borrado_en") @db.Timestamptz(6)
+  borradoPorIdentidadId String?   @map("borrado_por_identidad_id") @db.Uuid
+
+  @@map("portal_patrimonio_documento")
+  @@schema("seguros")
+}
+
 /// Índices IPC/IRAV del INE. El portal SOLO LEE (lo escribe el cron de `apps/asegura`); append-only:
 /// una revisión es fila nueva con `revisado=true`. El lector toma la más reciente por `descargadoEn`.
 model PortalPatrimonioIndice {

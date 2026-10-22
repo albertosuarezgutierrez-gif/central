@@ -26,6 +26,13 @@ test('🚨 toda tabla portal_* nueva le revoca la tabla al rol del CRM', () => {
   assert.deepEqual(faltan, [])
 })
 
+test('el barrido ve la tabla de DOCUMENTOS de patrimonio (paso 8) y revoca al CRM', () => {
+  const f = 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio_documento.sql'
+  const sql = readFileSync(join(RAIZ, f), 'utf8').replace(/--.*$/gm, '')
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS seguros\.portal_patrimonio_documento\b/)
+  assert.match(sql, /REVOKE ALL ON seguros\.portal_patrimonio_documento FROM crm_seguros/i)
+})
+
 test('el barrido ve las tablas de PATRIMONIO (22/10/2026) y todas revocan al CRM', () => {
   // Si la regex de arriba dejara de casar con este SQL, el primer test pasaría en verde sin mirar nada.
   const f = 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'

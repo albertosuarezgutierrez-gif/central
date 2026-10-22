@@ -199,3 +199,22 @@ test('el 400 de un cuadre fallido dice qué pasa (motivo no_cuadra) y no confirm
   assert.deepEqual([r.body.campo, r.body.motivo], ['total', 'no_cuadra'])
   assert.deepEqual(llamadas.confirmar, [])
 })
+
+test('la reserva recibe el fichero validado por sus bytes (para guardarlo como documento del inmueble) y la respuesta dice si se guardó', async () => {
+  const llamadas: { reservar: { fichero?: { nombre: string; mime: string; contenido: Buffer } }[] } = { reservar: [] }
+  const { p } = puertos([[MIO, 'gestion']])
+  const original = p.reservarPropuesta
+  p.reservarPropuesta = async (x) => {
+    llamadas.reservar.push(x)
+    const r = await original(x)
+    return r.ok ? { ...r, documentoId: x.inmuebleId ? 'doc-1' : null } : r
+  }
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0])
+  const con = await subir(p, MIO, { inmueble: INM, fichero: fichero({ nombre: '../../a b.pdf', mime: 'application/pdf', contenido: png }) })
+  assert.equal(con.status, 201)
+  assert.equal((con.body as { documento: string | null }).documento, 'doc-1')
+  assert.equal(llamadas.reservar[0].fichero?.mime, 'image/png', 'los bytes mandan, no el MIME declarado')
+  assert.equal(llamadas.reservar[0].fichero?.nombre, 'a b.pdf', 'sin ruta')
+  const sin = await subir(p, MIO, {})
+  assert.equal((sin.body as { documento: string | null }).documento, null, 'sin inmueble no hay owner: no se guarda')
+})
