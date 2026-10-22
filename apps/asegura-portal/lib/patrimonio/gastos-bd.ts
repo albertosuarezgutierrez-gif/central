@@ -10,7 +10,11 @@ import { puede } from '@central/module-patrimonio'
 import { prisma } from '../db'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
-import type { AccesosMapa, PuertosGastos, TitularGastos } from './gastos-api'
+import { leerPropuestaGuardada } from './factura-propuesta'
+import type { AccesosMapa, FacturaPendiente, PuertosGastos, TitularGastos } from './gastos-api'
+
+/** Tope de filas que se traen por titular; la pantalla las pliega de 50 en 50. */
+const MAX_PENDIENTES = 150
 
 const dia = (d: Date) => d.toISOString().slice(0, 10)
 const aFecha = (s: string) => new Date(`${s}T00:00:00.000Z`)
@@ -18,7 +22,7 @@ const nombreDe = (f: { nombre: string; apellidos: string | null }) => `${f.nombr
 const num = (v: bigint | number | null) => (v === null ? null : Number(v))
 
 /** El titular (fila `portal_patrimonio_titular`) de una ficha YA autorizada; nace la primera vez que se da de alta algo. */
-async function titularDe(clienteId: string, identidadId: string): Promise<{ id: string } | null> {
+export async function titularDe(clienteId: string, identidadId: string): Promise<{ id: string } | null> {
   const ficha = await prisma.cliente.findFirst({
     where: { id: clienteId, mergedIntoClienteId: null, activo: true },
     select: { id: true, correduriaId: true, tipoPersona: true },
@@ -59,6 +63,24 @@ async function listarGastos(identidadId: string, ids: readonly string[], accesos
     // Cuáles de esas fichas son las TUYAS (vínculo de esta identidad): el resto las ves por Dueño o por autorización.
     prisma.portalVinculo.findMany({ where: { identidadId, origen: { not: 'corredor' } }, select: { clienteId: true } }),
   ])
+  // Facturas por revisar: SOLO de los titulares (ya dentro de `accesos`) donde esta identidad tiene nivel de gestión.
+  const gestionables = titulares.filter((t) => puede(accesos.get(t.clienteId), 'gestionar_gastos_documentos'))
+  const pendientesPorTitular = new Map<string, FacturaPendiente[]>()
+  await Promise.all(
+    gestionables.map(async (t) => {
+      const filas = await prisma.portalPatrimonioGasto.findMany({
+        where: { titularId: t.id, origen: 'factura', estado: 'propuesto' },
+        orderBy: { creadoEn: 'desc' },
+        take: MAX_PENDIENTES,
+        select: { id: true, inmuebleId: true, propuesta: true, creadoEn: true },
+      })
+      const vivos = new Set(t.inmuebles.map((i) => i.id))
+      pendientesPorTitular.set(
+        t.clienteId,
+        filas.map((g) => ({ id: g.id, inmuebleId: g.inmuebleId && vivos.has(g.inmuebleId) ? g.inmuebleId : null, ...leerPropuestaGuardada(g.propuesta), subidaEn: g.creadoEn.toISOString() })),
+      )
+    }),
+  )
   const propias = new Set(vinculos.map((v) => v.clienteId))
   const porCliente = new Map(titulares.map((t) => [t.clienteId, t]))
   return fichas
@@ -73,6 +95,7 @@ async function listarGastos(identidadId: string, ids: readonly string[], accesos
         propio: propias.has(f.id),
         puedeGestionar: puede(nivel, 'gestionar_gastos_documentos'),
         puedeEstructura: puede(nivel, 'alta_baja'),
+        facturasPendientes: pendientesPorTitular.get(f.id) ?? [],
         inmuebles: (t?.inmuebles ?? []).map((i) => ({ id: i.id, alias: i.alias })),
         plantillas: (t?.plantillas ?? []).map((p) => ({
           id: p.id,

@@ -13,6 +13,8 @@ import {
   type TitularGastos,
 } from '@/lib/patrimonio/gastos-api'
 
+import { FacturasPendientes, RevisarFactura } from './RevisarFactura'
+
 export const PAGINA_GASTOS = 50
 
 const ERRORES: Record<string, string> = {
@@ -264,6 +266,8 @@ export function GastosTitular({ titular: t }: { titular: TitularGastos }) {
           {t.comunidades.some((c) => c.inmuebles.length > 0) && boton('derrama', 'Añadir derrama')}
         </div>
       )}
+      {t.puedeGestionar && <FacturasPendientes clienteId={t.clienteId} inmuebles={t.inmuebles} pendientes={t.facturasPendientes} />}
+      {t.puedeGestionar && <div style={{ marginTop: 8 }}><RevisarFactura clienteId={t.clienteId} inmuebles={t.inmuebles} /></div>}
       {abierto === 'plantilla' && <NuevaPlantilla t={t} cerrar={cerrar} />}
       {abierto === 'comunidad' && <NuevaComunidad t={t} cerrar={cerrar} />}
       {abierto === 'derrama' && <NuevaDerrama t={t} cerrar={cerrar} />}

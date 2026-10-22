@@ -45,7 +45,7 @@
   `app/api/cron/patrimonio-gastos/route.ts` (idempotente por `clave`, `CRON_SECRET`), `vercel.json` cron.
 - Tests: el cron dos veces no duplica (P2002 tolerado), plantilla ajena → 404.
 
-## Paso 7 — Facturas con IA (general-purpose, sonnet; revisión agente-architect)
+## Paso 7 — Facturas con IA ✅ (22/10/2026; pendiente revisión agente-architect)
 - `lib/patrimonio/extraer-factura.ts` (patrón de `apps/plataforma/lib/agente-facturas/extraer.ts`, `core-ai`, `pdf-parse` en
   `serverExternalPackages` ya está), `app/api/patrimonio/facturas/route.ts` (10 MB, tope por identidad/día),
   `patrimonio/gastos/RevisarFactura.tsx` (propuesta + motivos + confirmar).

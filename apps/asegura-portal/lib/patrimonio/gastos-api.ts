@@ -8,6 +8,7 @@
 // comunidad (estructura: qué inmueble cuelga de qué comunidad) = `alta_baja` (solo Total).
 // Importes: `null` = variable / no consta, NUNCA 0 (la BD lo exige: `importe_cent > 0`).
 import { CATEGORIAS_GASTO, esCategoriaGasto, esFecha, puede, type CategoriaGasto, type NivelPatrimonio, type Periodicidad } from '@central/module-patrimonio'
+import type { FuenteFactura, PropuestaFactura } from './factura-propuesta.ts'
 
 export type AccesosMapa = ReadonlyMap<string, NivelPatrimonio>
 export type Respuesta = { status: number; body: Record<string, unknown> }
@@ -34,7 +35,8 @@ const opcional = (v: unknown): v is null | undefined | '' => v === undefined || 
 export function eurosACentimos(v: unknown): number | null | 'invalido' {
   if (opcional(v)) return null
   const s = String(v).trim().replace(/\s/g, '').replace(/€/g, '')
-  const normal = s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s
+  // Sin coma, «1.234» / «1.234.567» (grupos de 3 dígitos) son miles españoles; «12.5» / «12.50» son decimales.
+  const normal = s.includes(',') || (typeof v === 'string' && /^\d{1,3}(\.\d{3})+$/.test(s)) ? s.replace(/\./g, '').replace(',', '.') : s
   if (!/^\d+(\.\d{1,2})?$/.test(normal)) return 'invalido'
   const cent = Math.round(Number(normal) * 100)
   return Number.isSafeInteger(cent) && cent > 0 ? cent : 'invalido'
@@ -159,6 +161,17 @@ export type DerramaFila = {
   id: string; comunidadId: string; comunidadNombre: string; inmuebleId: string; inmuebleAlias: string; concepto: string
   totalCent: number; cuotas: number; primera: string
 }
+/** Factura leída con IA que se subió y aún no se ha confirmado ni descartado (la revisión se pudo cerrar sin resolverla). */
+export type FacturaPendiente = {
+  id: string
+  inmuebleId: string | null
+  fuente: FuenteFactura
+  /** Lo LEÍDO (`propuesta.leido`): `fecha: null` = «fecha sin leer». La columna `fecha` del gasto es solo un marcador. */
+  propuesta: PropuestaFactura
+  motivos: string[]
+  subidaEn: string
+}
+
 export type TitularGastos = {
   clienteId: string
   nombre: string
@@ -171,6 +184,8 @@ export type TitularGastos = {
   plantillas: PlantillaFila[]
   comunidades: ComunidadFila[]
   derramas: DerramaFila[]
+  /** Solo con nivel de gestión; vacío si no puede gestionar. */
+  facturasPendientes: FacturaPendiente[]
 }
 
 export type ResultadoCrear = { ok: true; id: string } | { ok: false; motivo: 'no_encontrado' | 'duplicado' }
