@@ -1876,6 +1876,38 @@ export async function marcarOpcionResueltaHogarAllianz(marco: Frame, guard: Guar
   return { estado: 'no_quedo', caja: bb ? `boundingBox label x=${Math.round(bb.x)} y=${Math.round(bb.y)} w=${Math.round(bb.width)} h=${Math.round(bb.height)}` : 'boundingBox label: null (sin caja visible)' }
 }
 
+/**
+ * 0.1.9 «Valoración de bienes» de Allianz HOGAR: LECTURA de un grupo de opciones (NDBX `nx-radio-group`, Si/No) por el texto EXACTO de
+ * su pregunta (`[nxheadline]`) dentro de `ambito`. Solo localiza y lee (el adaptador no puede nombrar radios: guardián de la raíz);
+ * marcar sigue siendo SOLO `marcarOpcionResueltaHogarAllianz` (comprobarBoton + label for único + que quede marcado).
+ */
+export function grupoOpcionesHogarAllianz(marco: Frame, ambito: string, pregunta: string): Locator {
+  const exacto = new RegExp(`^\\s*${pregunta.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\s*$`, 'i')
+  return marco.locator(`${ambito} nx-radio-group:visible`).filter({ has: marco.locator('[nxheadline]', { hasText: exacto }) })
+}
+
+/** Textos de las opciones MARCADAS del grupo: `checked` o el punto `.nx-radio__dot` de NDBX (el input real no lleva `checked`). Solo lectura. */
+export async function opcionesMarcadasHogarAllianz(grupo: Locator): Promise<string[]> {
+  return grupo.locator('input[type=radio]').evaluateAll((els) =>
+    els
+      .filter((el) => {
+        const r = el as HTMLInputElement
+        const lab = r.labels && r.labels[0]
+        return r.checked || !!(lab && lab.querySelector('.nx-radio__dot'))
+      })
+      .map((el) => {
+        const lab = (el as HTMLInputElement).labels?.[0]
+        return ((lab && (lab.innerText || lab.textContent)) || '').replace(/\s+/g, ' ').trim()
+      }),
+  )
+}
+
+/** La `<label for>` del grupo cuyo texto es EXACTAMENTE `texto` (para `marcarOpcionResueltaHogarAllianz`). Solo localiza. */
+export function etiquetaEnGrupoHogarAllianz(grupo: Locator, texto: string): Locator {
+  const exacto = new RegExp(`^\\s*${texto.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\s*$`, 'i')
+  return grupo.locator('label[for]').filter({ hasText: exacto })
+}
+
 // ─────────── OPCIONES de Allianz AUTOS Turismos (app Angular `ngx-motor-azs`, 15/10/2026; v0.6.1 del bot) ───────────
 
 /**
