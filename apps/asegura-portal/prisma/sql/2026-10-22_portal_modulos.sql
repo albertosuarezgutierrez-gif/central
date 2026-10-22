@@ -1,4 +1,4 @@
--- ⏳ SIN APLICAR. Portal de Grupo ASegura — «Herramientas» (módulos), Fase 0 (22/10/2026).
+-- ✅ APLICADA el 22/10/2026 (proyecto central). Portal de Grupo ASegura — «Herramientas» (módulos), Fase 0 (22/10/2026).
 --
 -- Se aplica ANTES (o en el mismo paso) que el despliegue de asegura-portal que la usa: el
 -- `schema.prisma` del portal ya declara `PortalModulo`. Sin la tabla, `/herramientas` pinta las
