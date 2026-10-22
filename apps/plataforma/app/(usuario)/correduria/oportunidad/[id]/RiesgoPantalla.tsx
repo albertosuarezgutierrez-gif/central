@@ -42,6 +42,8 @@ import { adaptadorDeRamo } from '@/lib/tarificador-bots-ramos'
 import { leerIntegraciones, type IntegracionVista } from '@/lib/tarificador-probar'
 import { resumenIntervinientes, resumenObjeto } from '@/lib/correduria/para-tarificar'
 import SeccionPlegable, { abrirSeccion } from './SeccionPlegable'
+import DeclararEmitida from './DeclararEmitida'
+import { ANCLA_PRESUPUESTOS_BOTS, comoSeTarifica } from '@/lib/correduria/tarificar-oportunidad'
 import ParaTarificar from './ParaTarificar'
 import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs, muestraHistorialSinco } from './piezas-riesgo'
@@ -135,7 +137,9 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
   const estado = (ROTULO_ESTADO as Record<string, string>)[op.estado] ?? (op.estado || 'Estado sin leer')
   const ramo = ramoVariante(op.ramo)
   const acciones = accionesPrecio({ ramo: op.ramo, polizaId: op.polizaId, tomadorId: tomadorDelRiesgo(riesgo), oportunidadId: op.id })
-  const hayBots = !acciones.principal && companiasDisponibles(op.ramo).length > 0
+  // «¿Se tarifica y cómo?» (22/10/2026): la MISMA función que decide si la ficha pinta «Tarificar →».
+  const como = comoSeTarifica(op.ramo)
+  const hayBots = !acciones.principal && como.tipo === 'bots'
   // Ramo SIN cotizador Avant2 (comercio, RC, comunidades, otros…): aviso explícito; no se inventa cotizador (13/10/2026).
   const sinAvant2 = acciones.principal ? null : avisoSinAvant2(op.ramo, { hayBots })
   const esVehiculo = op.ramo === 'auto' || op.ramo === 'moto'
@@ -148,6 +152,8 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
     if (acciones.principal && abrirAlCargar(window.location.hash, op.ramo)) setCotizadorAbierto(true)
     // «Pedir precio» va plegada: llegar con `#pedir-precio` la abre y lleva a ella.
     if (acciones.principal && abrirAlCargar(window.location.hash, op.ramo)) abrirSeccion('sec-pedir-precio', 'pedir-precio')
+    // «Tarificar →» de un ramo con bots (comunidades) llega con `#presupuestos`: abre su bloque.
+    if (como.tipo === 'bots' && window.location.hash === `#${ANCLA_PRESUPUESTOS_BOTS}`) abrirSeccion('sec-presupuestos-companias', ANCLA_PRESUPUESTOS_BOTS)
     // Una vez, al llegar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -394,6 +400,14 @@ export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null, 
       </section>
       </AnfitrionBotsContext.Provider>
       </SeccionPlegable>
+
+      {/* «Póliza emitida» declarada a mano (22/10/2026): solo donde no se emite desde aquí (sin Avant2). No es cartera:
+          queda «pendiente de confirmar con CIMA» hasta que CIMA la trae y se enlaza sola. */}
+      {como.tipo !== 'avant2' && (
+      <SeccionPlegable id="sec-desenlace" titulo="Póliza emitida" resumen="Declarar el desenlace a mano (no es cartera hasta que CIMA la traiga)">
+      <DeclararEmitida oportunidadId={op.id} onCambio={() => void recargar('Declarada «Emitida · pendiente de confirmar con CIMA».')} />
+      </SeccionPlegable>
+      )}
 
       {/* UNA parrilla por oportunidad (13/10/2026): Avant2 frente al bot, por compañía. Solo compara; los precios con su
           «Emitir», PDF y traza siguen en «Presupuestos de compañías» y en «Presupuestos de este riesgo» (P1…Pn). */}

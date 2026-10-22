@@ -1534,6 +1534,16 @@ export {
   type ImporteFicha, type ResultadoCampo, type TipoFichaLLM, type ValidacionFicha,
 } from './extractor-correo.ts'
 
+// «Póliza emitida» declarada a mano (22/10/2026): no es cartera; la confirma el enlace F1 cuando CIMA la trae.
+export {
+  ACCION_ANULADA_DECLARACION, ACCION_DECLARACION_CONFIRMADA, ACCION_DECLARADA_EMITIDA, DIAS_ESPERA_CIMA_DECLARADA, ORIGEN_DECLARACION_MANUAL,
+  ROTULO_DECLARADA_CONFIRMADA, ROTULO_DECLARADA_PENDIENTE, VENTANA_ENLACE_DIAS,
+  declaracionVigente, detalleDeclaracion, diagnosticarDeclarada, diasNaturalesEntre, estadoDeclaracion, leerDetalleDeclaracion,
+  mismaDeclaracion, rotuloDeclaracion, validarDeclaracionEmitida,
+  type CompaniaDeclarable, type DeclaracionEmitida, type DeclaracionValidada, type DeclaracionVigente, type DiagnosticoDeclarada,
+  type EstadoDeclaracion, type MotivoNoEnlaza, type PeticionDeclaracion, type PolizaConNumero,
+} from './declaracion-emision.ts'
+
 // «En la compañía» (20/10/2026): nº de solicitud en la compañía sobre una oportunidad abierta (no es un estado del enum).
 export {
   COMPANIAS_SOLICITUD, ROTULO_COMPANIA_SOLICITUD, estaEnCompania, normalizarNumeroSolicitud, pideDocumentacion,
@@ -1586,3 +1596,4 @@ export {
   type EventoHistorialOportunidad, type GarantiaLeida, type LecturaDocumentoOportunidad, type PersonaEnlazada,
   type PersonaPolizaLeida, type Procedencia, type ResultadoFusion, type RiesgoLeido, type RolPersonaPoliza, type ValorLeidoDocumento,
 } from './escaneo-poliza.ts'
+export { PAQUETES_AUTO, coberturasDePaquete, type PaqueteAuto, type CoberturaPaquete, type ValorCobertura, type FuenteCobertura, type TipoFuente, type CompaniaPaquetes } from './coberturas-paquetes-auto.ts'

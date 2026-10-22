@@ -1,4 +1,10 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.15 (22/10/2026, run real: «Proyecto NO guardado en Mapfre: no aparece el botón «Generar Proyecto» en «Coberturas»»; sin HTML guardado):
+//   el botón se busca en TODA la pantalla (el «Continuar» ya vive en el pie del paso, fuera de `app-coberturas`) y no solo como <button>
+//   (<a>, [role=button], mat-button…), con el texto SIN iconos (un mat-icon dentro rompía la igualdad exacta) o, en botones de solo
+//   icono, por aria-label/title/value; se espera (hasta 10 s, desplazando la pantalla, sin clics). Texto EXACTO y guard intactos
+//   (`permitirGenerarProyectoMapfre`, una sola vez). Si sigue sin aparecer, el aviso lista las etiquetas de botones/enlaces a la vista
+//   (≤10, ≤40 caracteres, sin cifras largas/@/nombres) para saber qué hay. Código en guard.ts (`buscarBotonGenerarProyectoMapfre`).
 // v0.8.14 (22/10/2026, AUTORIZADO por Alberto: «un proyecto no es póliza»): tras LEER las primas, el bot pulsa «Generar Proyecto»
 //   por `ctx.generarProyectoMapfre` (guard.ts: texto exacto, guardar por la lista única, ventana de red de guardado, nada más tras el
 //   clic) y lleva el nº de proyecto a `referenciaPortal` de cada oferta. Si no se genera o no se lee el nº: precio intacto + AVISO
@@ -1545,7 +1551,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.14',
+  version: '0.8.15',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

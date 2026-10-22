@@ -1,3 +1,7 @@
+// Turismos v0.6.21 (22/10/2026, run real de las 3 modalidades: «el formulario «Guardar el presupuesto» está en la pantalla pero OCULTO»):
+// si el bloque cuelga de un panel PLEGADO (acordeón/pestaña/<details>), `guardarPresupuestoTurismosAllianz` (guard.ts) despliega SOLO ese
+// panel (control con aria-expanded="false" que contiene o gobierna el bloque; hasta 2 por trabajo; pasa la guardia y no es el botón de
+// guardar) y vuelve a esperar. Si sigue sin verse, el aviso lista las etiquetas de botones/enlaces a la vista (≤10, sin datos personales).
 // Turismos v0.6.20 (22/10/2026, runs reales del 19 y 22/10 con `referencia_vendor` NULL: «el formulario «Guardar el presupuesto» no está a la vista»):
 // `guardarPresupuestoTurismosAllianz` (guard.ts) ESPERA al bloque, desplaza la pantalla hasta él (scroll, sin clic), da el formulario
 // por visible por su BOTÓN (un `<form>` de alto 0 no es «visible» para Playwright) y, si no lo usa, deja un motivo LEGIBLE en el aviso.
@@ -2926,7 +2930,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.20',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.21',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

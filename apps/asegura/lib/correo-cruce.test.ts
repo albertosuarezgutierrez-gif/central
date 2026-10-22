@@ -29,6 +29,7 @@ test('🪤 cruce: un fallo al leer la cartera NO es «CIMA no la trae» (lanza; 
   assert.match(f, /const candidatas = await polizasCandidatas\(db, correduriaId\)/)
   assert.doesNotMatch(f.slice(0, f.indexOf('const porId')), /polizasCandidatas\([^)]*\)\.catch/)
   // Solo `avisar` apunta: esperar / en_cima / no_se_sabe no.
+  // La «Póliza emitida» declarada a mano (paso 5) decide con `diagnosticarDeclarada` (cepo en declaracion-emision.test.ts).
   assert.equal((f.match(/!== 'avisar'\) continue/g) ?? []).length, 4)
   // Lo ambiguo y lo que está en una ficha inactiva/fusionada es «no se sabe», nunca «no la trae»: las dos emisiones
   // (evento y solicitud emitida) pasan por `enCimaSegunResolucion` con la cartera Y las pólizas fuera de ella.

@@ -13,7 +13,13 @@ import {
   confirmarVehiculoMapfre,
   ErrorFronteraEmision,
   ErrorMapaGuardMapfre,
+  decidirBotonGenerarProyectoMapfre,
+  descripcionGenerarProyecto,
   esBotonGenerarProyectoMapfre,
+  etiquetaEfectivaControl,
+  etiquetasControlesSaneadas,
+  sufijoControlesVisibles,
+  type ControlProyectoMapfre,
   exigirSinCuentaBancaria,
   generarProyectoMapfre,
   instalarGuardEmision,
@@ -137,7 +143,22 @@ const TARJETA = (producto: string, prima: string) => `<prima-producto><section><
 
 /** Una página NSEI con TODOS los componentes a la vez (como la SPA): el stepper manda. Mat-select con overlay CDK. */
 /** v0.8.14 · qué hace el portal al pulsar «Generar Proyecto»: pinta el nº en «Proyectos» (input de solo lectura), nada, o un diálogo de pago. */
-type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago'; texto?: string; previo?: string }
+type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago'; texto?: string; previo?: string; donde?: 'pie' | 'icono' | 'aria' | 'enlace' | 'tarde' | 'oculto' | 'ninguno' }
+/** v0.8.15 · dónde y cómo pinta el portal el botón «Generar Proyecto» (por defecto: <button> dentro de `app-coberturas`). */
+const BOTON_PROYECTO = (o: ProyectoFixture | undefined) => {
+  const t = o?.texto ?? 'Generar Proyecto'
+  const clic = 'onclick="generarProyecto()"'
+  switch (o?.donde) {
+    case 'icono': return `<button ${clic}><mat-icon>description</mat-icon> ${t}</button>`
+    case 'aria': return `<button ${clic} aria-label="${t}"><mat-icon>description</mat-icon></button>`
+    case 'enlace': return `<a role="button" ${clic}>${t}</a>`
+    case 'oculto': return `<div style="display:none"><button ${clic}>${t}</button></div>`
+    case 'pie': case 'tarde': case 'ninguno': return ''
+    default: return `<button ${clic}>${t}</button>`
+  }
+}
+const PIE_PROYECTO = (o: ProyectoFixture | undefined) =>
+  o?.donde === 'pie' ? `<button onclick="generarProyecto()">${o.texto ?? 'Generar Proyecto'}</button>` : o?.donde === 'tarde' ? '<span id="pieTarde"></span><script>setTimeout(()=>{document.getElementById("pieTarde").innerHTML=\'<button onclick="generarProyecto()">Generar Proyecto</button>\'},1200)</script>' : ''
 const NSEI = (o: { filas?: Array<[string, string, string?, string?]>; polizaObligatoria?: boolean; club?: string | null; primas?: string; interruptor?: boolean | null; cpAsincrono?: boolean; errorEn?: 'matriculacion' | null; sinUsoAmbito?: boolean; proyecto?: ProyectoFixture } = {}) => `<!doctype html><body>
 <style>mat-select{display:inline-block;min-width:80px;min-height:14px;border:1px solid #999}</style>
 <mat-horizontal-stepper>${PASOS.map((p, i) => `<mat-step-header role="tab" aria-selected="${i === 0}">${i + 1} ${p}</mat-step-header>`).join('')}</mat-horizontal-stepper>
@@ -155,9 +176,9 @@ const NSEI = (o: { filas?: Array<[string, string, string?, string?]>; polizaObli
 <mat-form-field><mat-label>Nº de Póliza${o.polizaObligatoria ? '<span class="mat-placeholder-required">*</span>' : ''}</mat-label><input formcontrolname="numPoliza"></mat-form-field>
 <input formcontrolname="siniestros"></div></app-historial-siniestralidad></div></app-figuras>
 <app-coberturas><app-primas id="primas"></app-primas><app-descuentos><tabla-descuentos-resumen><table><tbody><tr><td>RECARGO TÉCNICO</td></tr></tbody></table></tabla-descuentos-resumen></app-descuentos>
-<div class="btn-panel"><button id="irGenerar" onclick="window.__generar=1">Ir a generar</button><button onclick="generarProyecto()">${o.proyecto?.texto ?? 'Generar Proyecto'}</button></div><p>${o.proyecto?.previo ?? ''}</p></app-coberturas>
+<div class="btn-panel"><button id="irGenerar" onclick="window.__generar=1">Ir a generar</button>${BOTON_PROYECTO(o.proyecto)}</div><p>${o.proyecto?.previo ?? ''}</p></app-coberturas>
 <app-proyecto></app-proyecto>
-<div class="btn-panel"><div class="right"><button id="cont" onclick="continuar()">Continuar</button></div></div>
+<div class="btn-panel"><div class="right">${PIE_PROYECTO(o.proyecto)}<button id="cont" onclick="continuar()">Continuar</button></div></div>
 <div class="cdk-overlay-container" id="ov"></div>
 <script>
 function abrir(sel, opciones){const ov=document.getElementById('ov');const panel=document.createElement('div');panel.className='cdk-overlay-pane';for(const t of opciones){const m=document.createElement('mat-option');m.setAttribute('role','option');m.textContent=t;m.style.display='block';m.onclick=()=>{sel.querySelector('.v').textContent=t;panel.remove()};panel.appendChild(m)}ov.appendChild(panel)}
@@ -551,6 +572,66 @@ test('«Generar Proyecto» SIN nº legible o con diálogo de PAGO → precio int
   }
 })
 
+test('v0.8.15 · el botón vive en el PIE del paso (fuera de `app-coberturas`), con icono, solo-icono, enlace o se pinta TARDE → se pulsa UNA vez y se lee el nº', async () => {
+  for (const donde of ['pie', 'icono', 'aria', 'enlace', 'tarde'] as const) {
+    const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { donde } }))
+    await hastaCoberturas(page, guard)
+    await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+    const r = await generarProyectoMapfre(page, guard, 4_000, 3_000)
+    assert.deepEqual(r, { estado: 'generado', numero: '9876543210' }, donde)
+    assert.equal(await marca(page, '__proyecto'), 1, `${donde}: un solo clic`)
+    assert.equal(await marca(page, '__generar'), null, `${donde}: no pulsa «Ir a generar»`)
+    await context.close()
+  }
+})
+
+test('v0.8.15 · botón ausente u OCULTO → no se pulsa; el motivo lista los botones/enlaces a la vista (sin «Generar Proyecto» ni datos personales)', async () => {
+  for (const [donde, re] of [['ninguno', /^no aparece el botón «Generar Proyecto» en «Coberturas»; controles a la vista: .*«Ir a generar».*«Continuar»/], ['oculto', /\(hay 1 con ese texto pero OCULTO: puede estar plegado\); controles a la vista: /]] as const) {
+    const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { donde } }))
+    await hastaCoberturas(page, guard)
+    await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+    const r = await generarProyectoMapfre(page, guard, 500, 1_200)
+    assert.equal(r.estado, 'no_generado', donde)
+    if (r.estado === 'no_generado') assert.match(r.motivo, re, donde)
+    assert.equal(await marca(page, '__proyecto'), null, `${donde}: no se pulsa nada`)
+    await context.close()
+  }
+})
+
+test('v0.8.15 · lista de controles: etiquetas saneadas (≤10, ≤40, sin cifras largas/@/teléfonos/nombres), únicas y las interesantes primero (PURA)', () => {
+  const crudas = ['Continuar', 'continuar', 'Volver', 'JUAN PEREZ LOPEZ', 'Maria Garcia', 'correo@dominio.es', 'Ref 1234567', '612 345 678', 'x'.repeat(41), '', null, undefined, 'Guardar Proyecto', 'Ir a generar', 'Descargar PDF', ...Array.from({ length: 15 }, (_, i) => `Opción extra ${String.fromCharCode(65 + i)}`)]
+  const out = etiquetasControlesSaneadas(crudas)
+  assert.equal(out.length, 10)
+  assert.deepEqual(out.slice(0, 3), ['Guardar Proyecto', 'Ir a generar', 'Descargar PDF'].filter((t) => /guard|generar|descarg/i.test(t)))
+  assert.ok(out.includes('Continuar') && out.includes('Volver'))
+  assert.equal(out.filter((t) => /^continuar$/i.test(t)).length, 1, 'sin duplicados')
+  for (const t of out) assert.ok(t.length <= 40 && !/\d{5,}|@/.test(t) && !/JUAN|Maria Garcia/.test(t), t)
+  assert.equal(sufijoControlesVisibles([]), '')
+  assert.equal(sufijoControlesVisibles(['A', 'B']), '; controles a la vista: «A», «B»')
+})
+
+test('v0.8.15 · decisión del botón (PURA): texto exacto, varios → el de Coberturas, deshabilitado/oculto → espera, «Ir a generar» nunca', () => {
+  const c = (etiqueta: string, o: Partial<ControlProyectoMapfre> = {}): ControlProyectoMapfre => ({ etiqueta, visible: true, habilitado: true, enCoberturas: false, ...o })
+  assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Continuar'), c('GENERAR  proyecto')]), { indice: 1 })
+  assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Generar Proyecto'), c('Generar Proyecto', { enCoberturas: true })]), { indice: 1 })
+  assert.match((decidirBotonGenerarProyectoMapfre([c('Generar Proyecto'), c('Generar Proyecto')]) as { motivo: string }).motivo, /ambiguo/)
+  for (const falsos of ['Ir a generar', 'Ir a generar proyecto', 'Generar Proyecto y contratar', 'Guardar proyecto', '']) {
+    const d = decidirBotonGenerarProyectoMapfre([c(falsos)])
+    assert.ok('motivo' in d && /^no aparece el botón/.test(d.motivo), falsos)
+  }
+  const oc = decidirBotonGenerarProyectoMapfre([c('Generar Proyecto', { visible: false })])
+  assert.ok('motivo' in oc && /OCULTO/.test(oc.motivo) && !oc.definitivo)
+  const des = decidirBotonGenerarProyectoMapfre([c('Generar Proyecto', { habilitado: false })])
+  assert.ok('motivo' in des && /deshabilitado/.test(des.motivo) && !des.definitivo)
+  assert.equal(etiquetaEfectivaControl({ texto: ' ', aria: 'Generar proyecto', title: 'otro' }), 'Generar proyecto')
+  assert.equal(etiquetaEfectivaControl({ texto: 'Texto', aria: 'aria' }), 'Texto')
+  // la etiqueta sin iconos entra en la guardia, y un id de contratar sigue tumbándola
+  assert.equal(esBotonGenerarProyectoMapfre(descripcionGenerarProyecto(['description Generar Proyecto', null, null, null], 'Generar Proyecto')), true)
+  assert.equal(esBotonGenerarProyectoMapfre(descripcionGenerarProyecto(['', 'Generar Proyecto', null, null], '')), true)
+  assert.equal(esBotonGenerarProyectoMapfre(descripcionGenerarProyecto(['Generar Proyecto', null, null, null, 'btnContratar'], 'Generar Proyecto')), false)
+  assert.equal(esBotonGenerarProyectoMapfre(descripcionGenerarProyecto(['x', null, null, null], 'Ir a generar')), false)
+})
+
 test('botón «Generar Proyecto y contratar» o ausente → NO se pulsa; motivo legible', async () => {
   for (const [texto, re] of [['Generar Proyecto y contratar', /no aparece el botón «Generar Proyecto»/]] as const) {
     const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { texto } }))
@@ -582,12 +663,11 @@ test('«Generar Proyecto»: un error BENIGNO del portal antes del clic (desconex
   const { context, page, guard } = await prepararHttps(NSEI({ club: null }))
   await hastaCoberturas(page, guard)
   await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
-  // Solo la lista de botones de Coberturas «se desconecta»: el resto de la página responde.
-  const original = page.locator.bind(page)
-  const roto = (): unknown => new Proxy({}, { get: (_t, k) => (k === 'count' ? () => Promise.reject(new Error('Target page, context or browser has been closed')) : k === 'then' ? undefined : () => roto()) })
-  ;(page as unknown as { locator: (s: string) => unknown }).locator = (s: string) => (s === 'app-coberturas' ? roto() : original(s))
+  // v0.8.15: el escáner de botones lee con `page.evaluate`; solo ESA lectura «se desconecta»: el resto de la página responde.
+  const original = page.evaluate.bind(page)
+  ;(page as unknown as { evaluate: unknown }).evaluate = () => Promise.reject(new Error('Target page, context or browser has been closed'))
   const r = await generarProyectoMapfre(page, guard, 500)
-  ;(page as unknown as { locator: unknown }).locator = original
+  ;(page as unknown as { evaluate: unknown }).evaluate = original
   assert.equal(r.estado, 'no_generado')
   assert.equal(await marca(page, '__proyecto'), null)
   // La ofertas conservan su prima (el aviso es legible, no un error del trabajo).

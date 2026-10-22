@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { ORIGEN_LEAD_CORREO, TOPE_DIARIO_LEADS_CORREO, cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, fijarSolicitudCompania, leerOportunidad, oportunidadesDeCliente, posponerOportunidad, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
+import { ORIGEN_LEAD_CORREO, TOPE_DIARIO_LEADS_CORREO, cambiarEstadoOportunidad, anularDeclaracion, crearOportunidad, declararEmitida, editarOportunidad, fijarSolicitudCompania, leerOportunidad, oportunidadesDeCliente, posponerOportunidad, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
 import type { AccionOportunidad } from '@central/module-seguros'
 import { auditado } from '@/lib/auditoria'
 import { vincularSolicitudesPendientes } from '@/lib/correo-evento-bd'
@@ -25,6 +25,13 @@ export const dynamic = 'force-dynamic'
  *        el nº de solicitud (`numero: null` lo quita) y engancha los correos de esa solicitud que quedaron sin resolver
  *        → { estado:'ok', numero, compania, estadoOportunidad, vinculados } (`vinculados: null` = no se pudo mirar)
  *        · 409 otra oportunidad ya lo lleva · 503 `sin_migracion` (SQL 2026-10-20)
+ *   POST { accion:'declarar_emitida', id, numeroPoliza, codigoDgs? | compania?, fechaEfecto?, nota?, actor } → «Póliza emitida»
+ *        declarada a mano (22/10/2026): una ABIERTA pasa a ganada (como `ganar`, SIN póliza: no es cartera) o se corrige una
+ *        ganada sin póliza enlazada; compañía del catálogo (`codigoDgs`) o por nombre sin código; la confirma el enlace F1
+ *        cuando CIMA trae ese nº → { estado:'ok', oportunidad, declaracion, sinCambios } (misma declaración = no-op)
+ *        · 400 sin cliente · 422 nº/compañía/fecha no válidos o estado que no admite · 404
+ *   POST { accion:'anular_declaracion', id, actor } → deshace una declaración (ganada sin póliza enlazada): vuelve a
+ *        «en negociación» · 409 si no hay declaración vigente o ya está enlazada
  *   POST { id, accion, ..., actor } → cambia su estado:
  *        interesado · propuesta_enviada · ganar {polizaGanadaId?}
  *        perder {motivo, detalle?, competidor?, primaCompetidor?} · aparcar {aparcadaHasta, detalle} · reabrir
@@ -105,6 +112,18 @@ export const POST = auditado(async (req: Request) => {
           })
         : { vinculados: 0 }
       return NextResponse.json({ estado: 'ok', numero: r.numero, compania: r.compania, estadoOportunidad: r.estado, vinculados: v?.vinculados ?? null })
+    }
+    if (b?.accion === 'declarar_emitida') {
+      if (typeof b.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
+      const r = await declararEmitida(correduria.id, b.id, { numeroPoliza: b.numeroPoliza, codigoDgs: b.codigoDgs, compania: b.compania, fechaEfecto: b.fechaEfecto, nota: b.nota }, actorDe(b))
+      if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
+      return NextResponse.json({ estado: 'ok', oportunidad: r.oportunidad, declaracion: r.declaracion, sinCambios: r.sinCambios })
+    }
+    if (b?.accion === 'anular_declaracion') {
+      if (typeof b.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
+      const r = await anularDeclaracion(correduria.id, b.id, actorDe(b))
+      if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
+      return NextResponse.json({ estado: 'ok', oportunidad: r.oportunidad })
     }
     const accion = ACCIONES.find(a => a === b?.accion)
     if (!b || typeof b.id !== 'string' || !accion) {

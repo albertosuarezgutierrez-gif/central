@@ -19,6 +19,14 @@ Decisiones Alberto: comunidad propia de cada titular (no compartida); filas de i
 PENDIENTE: §15 del SQL (CHECK de alcance `patrimonio_*` en `portal_autorizacion`) a mano en el editor SQL antes del paso 4.
 CI de Actions no corre en el PR desde las 08:11 (solo Vercel/automerge): code-review y sacar de draft.
 **(22/10/2026)** — asegura-portal · aviso «Póliza aportada… compañía sin leer» de Antonio Lozano: NO era fallo de lectura, subió una ficha catastral (`tipoDocumento:'otro'`). El aviso ahora lo dice (`aviso-poliza-declarada.ts` + test). Sus 10 PDF están guardados como `portal_poliza_declarada` (destino correcto para pólizas de otra compañía; nunca `seguros.polizas`) y salen en su ficha «Aportadas desde el portal». 4 Generali comercio con vencimiento leído 03/2018 (probable 1.er periodo, renovación tácita): no se inventa fecha. Pendiente: pedirle último recibo; propuesta `proyectarVencimiento` también en el portal; 3 PDF «v loreto» ilegibles.
+
+**(22/10/2026)** — Tarificador auto · Generali 0.2.16→0.2.18 (#4989 «Otros modelos», #4991 combustible/CV/versión, #4996 uso
+Particular Diario por defecto con supuesto); #4992 guarda proyecto/presupuesto en el portal (Mapfre 0.8.14 «Generar Proyecto»,
+Allianz 0.6.20 «Guardar presupuesto») y plataforma enseña el nº. Mapfre y Allianz auto ya tarifican OK. Imagen prod `main-636296c`.
+GRANT UPDATE en `tarificacion_trabajo_pasos` a `prisma_seguros` (la purga daba 42501 en cada pasada). Lecciones: otra sesión
+pisó `TARIFICADOR_FLY_IMAGE` con imágenes viejas (comprobar con `merge-base --is-ancestor`); 3 errores seguidos auto-pausan la
+compañía (reanudar exige `reanudada_at` + `reanudada_por`); tras `error_definitivo` el `riesgo` se purga y NO se relanza por
+SQL: hay que pulsar el botón. Pendiente: primera pasada de Generali 0.2.18 y ver el nº de proyecto Mapfre/Allianz en real.
 **(21/10/2026)** — Tarificador · #4973 (Generali 0.2.15 usa la 1.ª matriculación ESTIMADA por matrícula, campo propio
 `fechaMatriculacionEstimada` solo para Generali; Mapfre 0.8.13 cierra el modal que tapaba «Nueva producción»; Allianz
 0.6.19 compañía anterior «A / B» + fallback «otras»). Mapfre auto OK con 0.8.13 (2 precios). Imagen en prod `main-81a4386`.

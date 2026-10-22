@@ -50,6 +50,10 @@ import {
   claveEtiquetaRiesgoGenerali,
   decidirVerificacionMatricula,
   leerPrecioGenerali,
+  avisosObligatorioGenerali,
+  camposInteresadoGenerali,
+  fragmentosImportesGenerali,
+  PREFIJO_ID_INTERESADO_GENERALI,
   resumenPantallaGenerali,
   valorRiesgoGenerali,
   type PantallaLeida,
@@ -154,8 +158,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * versión, una vez cada una). Antes de «Confirmar» se relee el selector: un campo nuevo sin mapear sigue PARANDO.
  * 0.2.18 (22/10/2026, prueba real: «Uso del Vehículo» ofrece «Particular Ocasional (…)» y «Particular Diario (…)»): manda `usoFrecuencia` del riesgo;
  * sin dato → «Particular Diario» declarado como supuesto (`decidirUsoGenerali`, reglas.ts). Otro uso: sin mapa, como antes.
+ * 0.2.19 (22/10/2026, trabajo 304ac3a2: «Garantías y Resultados» sin precio; el portal mostraba «Es obligatorio informar el tomador» y los
+ * campos del «Interesado / Tomador» seguían vacíos): rellena nombre, apellidos, NIF, nacimiento y carné del tomador por sus ids reales
+ * (`camposInteresadoGenerali`); el lector del precio mira también los `<input>` de solo lectura y 2 líneas de lookahead; el atasco
+ * nombra los avisos «Es obligatorio…» y trae fragmentos saneados alrededor de cada «€».
  */
-export const VERSION_GENERALI_AUTO = '0.2.18'
+export const VERSION_GENERALI_AUTO = '0.2.19'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -436,12 +444,31 @@ async function describirSelects(raiz: Raiz): Promise<string> {
   return r.map((s) => `«${s.etiqueta || '(sin etiqueta)'}» (${s.total}): ${s.opciones.join(' | ')}`).join(' ; ').slice(0, 1200)
 }
 
+/** Importes en controles de formulario (solo lectura o no): «etiqueta valor», con la etiqueta sacada del label/aria/id/name. Sin funciones con nombre (tsx). */
+const JS_IMPORTES_INPUT = `(() => {
+  const out = [];
+  document.querySelectorAll('input, textarea').forEach((e) => {
+    const t = (e.getAttribute('type') || 'text').toLowerCase();
+    if (!['text', 'number', 'tel', ''].includes(t)) return;
+    const v = String(e.value || '').trim();
+    if (!/^[€\\s]*\\d[\\d.]*(,\\d{1,2})?\\s*(€|eur|euros)?$/i.test(v) || !/[,€]/.test(v)) return;
+    const lab = e.id ? document.querySelector('label[for="' + e.id.replace(/"/g, '') + '"]') : null;
+    const par = e.closest('td,div,li,tr');
+    const nombre = ((e.id || '') + ' ' + (e.name || '')).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_.]/g, ' ');
+    const txt = ((lab && lab.textContent) || e.getAttribute('aria-label') || e.title || (par && par.textContent && par.textContent.length < 80 ? par.textContent : '') || '') + ' ' + nombre;
+    out.push(txt.replace(/\\s+/g, ' ').trim().slice(0, 100) + '\\n' + v);
+  });
+  return out;
+})()`
+
 /** Texto visible de todos los marcos (para el lector tolerante del precio). */
 async function textoPagina(page: Page): Promise<string> {
   const partes: string[] = []
   for (const f of page.frames()) {
     if (f.isDetached()) continue
     partes.push(await f.locator('body').innerText({ timeout: 2_000 }).catch(() => ''))
+    // Importes en `<input>` (innerText no los ve): «etiqueta valor» con la etiqueta del id/name/aria/label.
+    partes.push(((await f.evaluate(JS_IMPORTES_INPUT).catch(() => [])) as string[]).join('\n'))
   }
   return partes.join('\n')
 }
@@ -1463,6 +1490,24 @@ export async function rellenarMapaProvisionalGenerali(
   return hechos
 }
 
+/**
+ * Rellena el «Interesado / Tomador» por sus ids reales (v0.2.19): solo campos visibles, habilitados, de texto y VACÍOS, con el dato que
+ * trae el riesgo. Sin tomador en el portal «Garantías y Resultados» no calcula. Devuelve los campos rellenados (nombres, no valores).
+ */
+export async function rellenarInteresadoGenerali(marco: Raiz, form: Parameters<typeof camposInteresadoGenerali>[0], ctx: ContextoPortal): Promise<string[]> {
+  const hechos: string[] = []
+  for (const { campo, valor } of camposInteresadoGenerali(form)) {
+    const loc = marco.locator(`[id="${PREFIJO_ID_INTERESADO_GENERALI}${campo}"]`).filter({ visible: true })
+    if ((await loc.count().catch(() => 0)) !== 1) continue
+    const el = loc.first()
+    if (!(await el.isEnabled().catch(() => false)) || !(await el.isEditable().catch(() => false))) continue
+    if ((await el.inputValue().catch(() => 'x')).trim() !== '') continue
+    await escribir(el, valor, ctx)
+    hechos.push(`tomador.${campo}`)
+  }
+  return hechos
+}
+
 /** Oferta de Generali con el importe del lector tolerante: avisos claros de lo que NO se sabe y de lo SUPUESTO. */
 export function ofertaGenerali(eur: number, supuestos: string | null): OfertaNormalizada {
   return {
@@ -1517,6 +1562,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     await recorrerScroll(page, marco)
     const antes = await leerPantalla(marco)
     const hechos = await rellenarMapaProvisionalGenerali(marco, antes, ant.formulario, ctx)
+    hechos.push(...(await rellenarInteresadoGenerali(marco, ant.formulario, ctx)))
     // Tras rellenar, se relee (el portal puede pintar campos nuevos al salir de uno).
     if (hechos.length > 0) await recorrerScroll(page, marco)
     return { pantalla: hechos.length > 0 ? await leerPantalla(marco) : antes, hechos }
@@ -1531,10 +1577,13 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const lectura = await paso('lectura_primas', () => esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS))
   if (lectura.tipo === 'unico') return { ofertas: [ofertaGenerali(lectura.eur, texto)] }
   const despues = await leerPantallaPagina(page)
+  const textoFinal = await textoPagina(page)
+  const obligatorios = avisosObligatorioGenerali(textoFinal)
+  const importes = fragmentosImportesGenerali(textoFinal)
   const que = lectura.tipo === 'varios'
     ? `${lectura.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lectura.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
     : 'ningún importe legible con «prima/precio/importe/total»'
-  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Pantalla: ${resumenPantallaGenerali(despues, 900)}. Mapa provisional: ${hechos.join(',') || 'nada'}${texto ? `; ${texto}` : ''}`)
+  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}Textos con «€»: ${importes.length ? importes.map((f) => `«${f}»`).join(' ') : 'ninguno'}. Pantalla: ${resumenPantallaGenerali(despues, 900)}. Mapa provisional: ${hechos.join(',') || 'nada'}${texto ? `; ${texto}` : ''}`)
 }
 
 /**

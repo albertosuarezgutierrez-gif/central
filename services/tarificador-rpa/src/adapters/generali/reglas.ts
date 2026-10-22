@@ -766,7 +766,7 @@ export function valorRiesgoGenerali(
 
 /** Importes en formato español (1.234,56 € · 1234,56€ · € 1.234,56 · 1.234 €), dentro de una línea. */
 const RE_IMPORTE_EN_LINEA = /(?:€\s*)?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?\s*(?:€|eur(?:os)?\b)?|(?:€\s*)?\d+(?:,\d{1,2})\s*(?:€|eur(?:os)?\b)?|(?:€\s*)?\d+\s*(?:€|eur(?:os)?\b)|€\s*\d+/gi
-const RE_LINEA_PRECIO = /\b(PRIMA|PRECIO|IMPORTE|TOTAL|A PAGAR)\b/
+const RE_LINEA_PRECIO = /\b(PRIMA|PRIMAS|PRECIO|IMPORTE|TOTAL|A PAGAR|RECIBO|COSTE|CONTADO|ANUAL)\b/
 const RE_LINEA_TOTAL = /\bTOTAL\b/
 /** Líneas con importes que NO son el precio (capitales, franquicias, valores del vehículo, límites). */
 const RE_LINEA_NO_PRECIO = /\b(FRANQUICIA|CAPITAL|SUMA ASEGURADA|LIMITE|VALOR|ACCESORIOS|INDEMNIZACION|KM|KILOMETROS)\b/
@@ -806,10 +806,12 @@ export function leerPrecioGenerali(texto: string, ignorar: readonly number[] = [
     if (!RE_LINEA_PRECIO.test(n) || RE_LINEA_NO_PRECIO.test(n)) continue
     let imps = importesDe(l)
     let linea = l
-    const sig = lineas[i + 1]
-    if (imps.length === 0 && sig && sig.length <= 30 && !RE_LINEA_PRECIO.test(normalizarCatalogo(sig))) {
+    // Etiqueta y valor en celdas distintas (v0.2.19): el importe puede estar en una de las 2 líneas siguientes.
+    for (let k = 1; k <= 2 && imps.length === 0; k++) {
+      const sig = lineas[i + k]
+      if (!sig || sig.length > 30 || RE_LINEA_PRECIO.test(normalizarCatalogo(sig))) break
       imps = importesDe(sig)
-      linea = `${l} ${sig}`
+      if (imps.length > 0) linea = `${l} ${sig}`
     }
     for (const eur of imps) {
       if (eur < PRIMA_MIN_GENERALI_EUR || eur > PRIMA_MAX_GENERALI_EUR || ignorar.includes(eur)) continue
@@ -838,4 +840,81 @@ export function esPortalCorredorGenerali(url: string, codigo: string = MEDIADOR_
   if (u.origin !== 'https://www.generali.es' || u.username || u.password) return false
   if (u.pathname !== '/arq_genernetPortalFormWeb/CorredorPortal.po') return false
   return urlConMediador(url, codigo) !== false
+}
+
+// ───────────────────────── v0.2.19 · tomador («Interesado / Tomador») + diagnóstico de la pantalla de resultados ─────────────────────────
+
+/** Prefijo de los ids reales del bloque «Interesado / Tomador» de «Datos de Valoración» (inventario del trabajo 304ac3a2). */
+export const PREFIJO_ID_INTERESADO_GENERALI = 'reg1063A_personas_interesado_'
+/** Campo de texto del «Interesado / Tomador» → sufijo del id real. */
+export type CampoInteresadoGenerali = 'nifcif' | 'nombre' | 'papell' | 'sapell' | 'ffnain' | 'ffcain'
+
+/**
+ * Qué teclear en el «Interesado / Tomador» (persona FÍSICA). Sin tomador en el portal, «Garantías y Resultados» se queda con el
+ * aviso «Es obligatorio informar el tomador» y no hay precio. Solo datos que el riesgo trae (nada se inventa); jurídica → `[]`
+ * (sin captura de esa variante: hueco). El NIF va primero (el portal puede autorrellenar al salir del campo). PURA.
+ */
+export function camposInteresadoGenerali(form: {
+  documentoTomador?: string | null
+  tomador?: { tipo?: string | null; nombre?: string | null; apellido1?: string | null; apellido2?: string | null; documentoIdentidad?: string | null; fechaNacimiento?: string | null } | null
+  datosTomador?: { tipo: string; nombre?: string; apellido1?: string; apellido2?: string | null; fechaNacimiento?: string } | null
+  fichaTomador?: { documento?: string | null } | null
+  conductor?: { fechaNacimiento?: string | null; fechaCarne?: string | null } | null
+}): { campo: CampoInteresadoGenerali; valor: string }[] {
+  const dt = form.datosTomador?.tipo === 'fisica' ? form.datosTomador : null
+  const t = form.tomador && form.tomador.tipo !== 'juridica' ? form.tomador : null
+  if (form.datosTomador?.tipo === 'juridica' || form.tomador?.tipo === 'juridica') return []
+  const limpio = (x: string | null | undefined) => {
+    const v = String(x ?? '').replace(/\s+/g, ' ').trim()
+    return v === '' ? null : v
+  }
+  const doc = limpio(form.documentoTomador ?? form.tomador?.documentoIdentidad ?? form.fichaTomador?.documento)
+  const nac = fechaGenerali(dt?.fechaNacimiento ?? t?.fechaNacimiento ?? form.conductor?.fechaNacimiento)
+  const out: { campo: CampoInteresadoGenerali; valor: string | null }[] = [
+    { campo: 'nifcif', valor: doc },
+    { campo: 'nombre', valor: limpio(dt?.nombre ?? t?.nombre) },
+    { campo: 'papell', valor: limpio(dt?.apellido1 ?? t?.apellido1) },
+    { campo: 'sapell', valor: limpio(dt?.apellido2 ?? t?.apellido2) },
+    { campo: 'ffnain', valor: nac },
+    { campo: 'ffcain', valor: fechaGenerali(form.conductor?.fechaCarne) },
+  ]
+  return out.filter((c): c is { campo: CampoInteresadoGenerali; valor: string } => c.valor !== null)
+}
+
+/** Avisos de validación del portal («Es obligatorio informar el tomador»…) en el texto visible: líneas «Es obligatorio…». PURA. */
+export function avisosObligatorioGenerali(texto: string): string[] {
+  const vistos = new Set<string>()
+  for (const l of String(texto ?? '').split(/\r?\n/)) {
+    const t = l.replace(/\s+/g, ' ').trim()
+    if (/^(es obligatori[oa]|falta|debe (informar|indicar)|campo obligatorio)/i.test(t) && t.length <= 120) vistos.add(t)
+  }
+  return [...vistos].slice(0, 8)
+}
+
+/** Quita lo que puede ser dato personal de un fragmento de texto (NIF/NIE/CIF, fechas, correos, teléfonos, matrículas, CP). PURA. */
+export function sanearFragmentoGenerali(t: string): string {
+  return String(t ?? '')
+    .replace(/\s+/g, ' ')
+    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[correo]')
+    .replace(/\b[XYZ]?\d{7,8}[A-Z]\b/gi, '[doc]')
+    .replace(/\b[A-Z]\d{7}[A-Z0-9]\b/gi, '[doc]')
+    .replace(/\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b/g, '[fecha]')
+    .replace(/\b\d{4}\s?[BCDFGHJKLMNPRSTVWXYZ]{3}\b/gi, '[mat]')
+    .replace(/\b[6-9]\d{8}\b/g, '[tel]')
+    .replace(/\b\d{5}\b(?![.,]\d)/g, '[n]')
+}
+
+/**
+ * Fragmentos del texto visible alrededor de cada importe «€» (±45 caracteres, saneados, sin repetir, máx. `max`): para que el
+ * atasco diga QUÉ hay en la pantalla de resultados sin volcar datos personales. PURA.
+ */
+export function fragmentosImportesGenerali(texto: string, max = 8): string[] {
+  const t = String(texto ?? '').replace(/ /g, ' ').replace(/\s+/g, ' ')
+  const out: string[] = []
+  for (const m of t.matchAll(/€|\beur(?:os)?\b/gi)) {
+    const f = sanearFragmentoGenerali(t.slice(Math.max(0, (m.index ?? 0) - 45), (m.index ?? 0) + 8)).trim()
+    if (f && !out.includes(f)) out.push(f)
+    if (out.length >= max) break
+  }
+  return out
 }
