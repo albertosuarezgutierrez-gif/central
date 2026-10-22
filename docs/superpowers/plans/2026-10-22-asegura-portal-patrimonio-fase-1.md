@@ -55,7 +55,12 @@
 - `module-documental` con owners `inmueble`/`contrato`/`inquilino`, carpetas definidas en `lib/patrimonio/carpetas.ts`;
   ficheros EN BD (`bytea`, tabla `portal_patrimonio_documento`, decisión de Alberto 22/10/2026; no Storage). Tests de permisos por nivel (Gestión sube; inquilino solo su carpeta de recibos).
 
-## Paso 9 — Contratos, inquilinos y actualización de renta (agente-architect: PII)
+## Paso 9 — Contratos, inquilinos y actualización de renta ✅ (22/10/2026)
+- Hecho: `lib/patrimonio/{indices,contratos-api,contratos-bd,inquilinos-puente}.ts`, `patrimonio/contrato/[id]` (+ alta de
+  contrato en la ficha del inmueble), rutas `api/patrimonio/contratos{,/[id]/renta,/[id]/inquilinos}` e
+  `inquilinos/[id]` (PII bajo demanda, Total); puente `apps/asegura/app/api/portal/patrimonio/inquilino` (recalcula el
+  nivel desde el contrato, cifra o se niega con `sin_clave`). Índice viejo (> 2 meses) = `sin_indice`; tope legal `null`.
+  Cepo `test/regression-portal-patrimonio-inquilino.test.ts`. Sin SQL nuevo.
 - `patrimonio/contrato/[id]`, alta de inquilino con PII por el PUENTE de `apps/asegura` (`/api/portal/patrimonio/inquilino`),
   `lib/patrimonio/indices.ts` (LEE `portal_patrimonio_indice`, que llena el paso 9b), propuesta de actualización
   (aplicar = fila append-only).

@@ -1,12 +1,16 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
+import { puede } from '@central/module-patrimonio'
+
 import { eur } from '@/lib/dinero'
+import { contratosDelInmueble } from '@/lib/patrimonio/contratos-bd'
 import { inmuebleAutorizado } from '@/lib/patrimonio/inmuebles-bd'
 import { ETIQUETA_USO } from '@/lib/patrimonio/usos'
 import { getIdentidad } from '@/lib/session'
 
 import { Documentos } from './Documentos'
+import { NuevoContrato } from './NuevoContrato'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +29,8 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
   const ficha = await inmuebleAutorizado(identidad.id, id)
   if (ficha === null) notFound()
   const i = ficha.inmueble
+  const contratos = await contratosDelInmueble(identidad.id, i.id)
+  const fechaEs = (f: string) => f.split('-').reverse().join('/')
 
   const filas: [string, string][] = [
     ['Titular', ficha.titularNombre || noConsta],
@@ -51,6 +57,25 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
             </div>
           ))}
         </dl>
+      </section>
+      <section className="seccion">
+        <h2>Contratos</h2>
+        {contratos.length === 0 ? (
+          <p>No hay contratos anotados en este inmueble.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px', display: 'grid', gap: 8 }}>
+            {contratos.map((c) => (
+              <li key={c.id} style={{ minWidth: 0 }}>
+                <Link href={`/patrimonio/contrato/${c.id}`} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10, overflowWrap: 'anywhere' }}>
+                  Desde el {fechaEs(c.inicio)}
+                  {c.terminadoEn ? ` · terminado el ${fechaEs(c.terminadoEn)}` : c.fin ? ` · fin pactado ${fechaEs(c.fin)}` : ''}
+                  {' · '}renta inicial {eur(c.rentaMensualCent / 100)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {puede(ficha.nivel, 'alta_baja') && <NuevoContrato inmuebleId={i.id} />}
       </section>
       <section className="seccion">
         <h2>Documentos</h2>

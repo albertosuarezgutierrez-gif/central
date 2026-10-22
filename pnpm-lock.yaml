@@ -160,6 +160,9 @@ importers:
       '@central/core-vehiculos':
         specifier: workspace:*
         version: link:../../packages/core-vehiculos
+      '@central/module-patrimonio':
+        specifier: workspace:*
+        version: link:../../packages/module-patrimonio
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros

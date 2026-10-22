@@ -18,6 +18,7 @@
     "@central/core-identity": "workspace:*",
     "@central/core-telegram": "workspace:*",
     "@central/core-vehiculos": "workspace:*",
+    "@central/module-patrimonio": "workspace:*",
     "@central/module-seguros": "workspace:*",
     "@central/module-seguros-pii": "workspace:*",
     "@central/module-seguros-portal": "workspace:*",
