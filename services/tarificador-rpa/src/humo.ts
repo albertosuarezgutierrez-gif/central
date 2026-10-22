@@ -41,7 +41,7 @@ import { mapfreHogar } from './adapters/mapfre/hogar.ts'
 import { mapfreAuto, mapfreMoto } from './adapters/mapfre/auto.ts'
 import { elegirMediadorGenerali, generaliAuto, loginGenerali } from './adapters/generali/auto.ts'
 
-export const HUMO_VERSION = '0.3.0'
+export const HUMO_VERSION = '0.3.1'
 const TOPE_HUMO_MS = 3 * 60_000
 const TOPE_PASO_MS = 30_000
 const ESPERA_MENU_MS = 20_000
@@ -81,8 +81,17 @@ async function menuMapfre(page: Page): Promise<void> {
 /**
  * Generali (v0.3.0 del humo, 19/10/2026; prueba real b41be722): «Seleccionar mediador» vive en un MARCO sin etiquetas. Se usa el
  * MISMO paso que la tarificación (`elegirMediadorGenerali`, todos los marcos; el botón SOLO por `pulsarMediadorGenerali`) y luego
- * se comprueba que el menú «NEGOCIO» está a la vista en algún marco. No se sobrevuela ni se pulsa el menú.
+ * se comprueba que el menú «NEGOCIO» está en el DOM de algún marco (v0.3.1: plegado ≠ ausente). No se sobrevuela ni se pulsa el menú.
  */
+/** ¿Hay un «NEGOCIO» en algún marco? Como `menuNegocioVisible` del adaptador (prueba real 31e76085): en CorredorPortal.po es un <a> sin href
+ * que puede estar plegado y no contar como «visible»; basta con que esté en el DOM. Solo lee. */
+export async function hayMenuNegocio(page: Pick<Page, 'frames'>): Promise<boolean> {
+  for (const f of page.frames()) {
+    if (!f.isDetached() && (await f.getByText(/^\s*NEGOCIO\s*$/).count().catch(() => 0)) >= 1) return true
+  }
+  return false
+}
+
 async function menuGenerali(page: Page, guard: GuardEmision): Promise<void> {
   const puerta: Pick<ContextoPortal, 'pausaAccion' | 'confirmarMediadorGenerali' | 'entrarPortalGenerali'> = {
     pausaAccion: () => dormir(azar(300, 1_200)),
@@ -92,9 +101,7 @@ async function menuGenerali(page: Page, guard: GuardEmision): Promise<void> {
   await elegirMediadorGenerali(page, puerta)
   const fin = Date.now() + ESPERA_MENU_MS
   while (Date.now() < fin) {
-    for (const f of page.frames()) {
-      if (!f.isDetached() && (await f.getByText(/^\s*NEGOCIO\s*$/).filter({ visible: true }).count().catch(() => 0)) >= 1) return
-    }
+    if (await hayMenuNegocio(page)) return
     await dormir(500)
   }
   throw new ErrorTarificador('portal', 'generali: el menú «NEGOCIO» no está visible tras elegir el mediador')

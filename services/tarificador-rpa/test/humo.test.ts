@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { MODOS_SOPORTADOS } from '../src/api.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { HUMO_COMPANIAS_SOPORTADAS, HUMO_VERSION, HumoRequiereSms, PRUEBAS_HUMO, claveHumo, decidirHumo, humoRequiereSms, mensajeFalloHumo, motivoOmitidoSms, pruebaDeHumo, ramosConBotDe } from '../src/humo.ts'
+import { HUMO_COMPANIAS_SOPORTADAS, hayMenuNegocio, HUMO_VERSION, HumoRequiereSms, PRUEBAS_HUMO, claveHumo, decidirHumo, humoRequiereSms, mensajeFalloHumo, motivoOmitidoSms, pruebaDeHumo, ramosConBotDe } from '../src/humo.ts'
 import { ErrorVerificacionHumana } from '../src/errores.ts'
 import { leerDispositivo } from '../src/sesion-manual.ts'
 import { sellarSesion } from '../src/boveda-sesion.ts'
@@ -141,4 +141,17 @@ test('leerDispositivo (humo): SOLO lee; caducado o ilegible → sin estado y sin
   assert.deepEqual(await leerDispositivo({ leer: async () => null }, clave, 'generali'), { estado: null, motivo: 'ninguna' })
   assert.deepEqual(await leerDispositivo({ leer: async () => { throw new Error('almacén de sesión: leer respondió 503') } }, clave, 'generali'), { estado: null, motivo: 'almacen_leer_503' })
   assert.equal(escrituras, 0)
+})
+
+// 22/10/2026: en CorredorPortal.po «NEGOCIO» es un <a> sin href que puede estar plegado (no «visible»); basta con que esté en el DOM.
+test('hayMenuNegocio: NEGOCIO presente en el DOM pero plegado (no visible) cuenta como menú presente', async () => {
+  const marco = (enDom: number, visibles: number, desacoplado = false) => ({
+    isDetached: () => desacoplado,
+    getByText: () => ({ count: async () => enDom, filter: () => ({ count: async () => visibles }) }),
+  })
+  const pagina = (...m: ReturnType<typeof marco>[]) => ({ frames: () => m }) as never
+  assert.equal(await hayMenuNegocio(pagina(marco(1, 0))), true)
+  assert.equal(await hayMenuNegocio(pagina(marco(0, 0), marco(1, 0))), true)
+  assert.equal(await hayMenuNegocio(pagina(marco(0, 0))), false)
+  assert.equal(await hayMenuNegocio(pagina(marco(1, 1, true))), false)
 })
