@@ -142,8 +142,9 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 **«Llega a precio» (19/10/2026, F3b de la correduría).** Cada declaración de `obligatorios.ts` lleva `llegaAPrecio` explícito
 (`llegaAPrecio(compania, ramo)`; sin declaración = `false`). Desde el aviso de un LEAD solo se lanzan los que llegan; los demás salen
 «🧪 en pruebas» y no gastan cupo. Hoy `false`: Generali auto y Allianz Turismos (se paran antes del precio), hogares y Occident. Al ver
-> Generali auto 0.2.19 (22/10/2026): «Garantías y Resultados» no daba precio porque el «Interesado / Tomador» estaba vacío (el portal avisa «Es obligatorio informar el tomador»); ahora se rellena por ids reales, el lector mira también `<input>` y el atasco trae avisos y fragmentos saneados con «€».
 el primer precio real de un bot, se pone `true` ahí (con su cepo en `obligatorios.test.ts`).
+
+> Generali auto 0.2.19 (22/10/2026): «Garantías y Resultados» no daba precio porque el «Interesado / Tomador» estaba vacío (el portal avisa «Es obligatorio informar el tomador»); ahora se rellena por ids reales, el lector mira también `<input>` y el atasco trae avisos y fragmentos saneados con «€».
 
 ## Allianz Autos/Moto (en construcción, 10/10/2026)
 - `allianz/auto.ts` → `allianzAuto` y `allianzMoto` (`AUTO_ACTIVO=false`, Turismos no se registra; Moto solo con `MOTO_ACTIVO`). Mapa de la grabación de Moto del 09/10 (app legada «Motos-online» en el iframe `appArea`); se SUPONE que Turismos usa los mismos ids (la grabación de Auto del 08/10 no pudo leer el iframe).
