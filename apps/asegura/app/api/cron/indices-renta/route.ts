@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { tgSend } from '@central/core-telegram'
 import type { IndiceIne } from '@central/module-patrimonio'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { prisma } from '@/lib/db'
+import { prisma } from '@/lib/tenant' // tabla GLOBAL (INE): sin ámbito; prisma sale de la puerta única
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { ejecutarIndicesRenta } from '@/lib/indices-renta'
 

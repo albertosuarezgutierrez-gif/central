@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Patrimonio F1 pasos 9, 9b y arreglos (integrados, sin commitear). Paso 9: contratos/inquilinos/renta; PII del inquilino por puente a asegura, solo nivel Total, 503 `sin_puente`/`sin_clave`; `TOPE_LEGAL_PCT` = null (sin tope inventado).
+Paso 9b: cron `/api/cron/indices-renta` (día 20, 10:00 UTC, tabla global append-only `portal_patrimonio_indice`): IRAV = tabla INE 72975; IPC = serie IPC251852, POR VERIFICAR en la primera ejecución (avisa por Telegram si falla).
+Arreglos: inmueble archivado = documentos solo lectura; factura confirmada con otro inmueble TRASLADA el documento; la subida de factura exige inmueble.
+Integración: el cron importa `prisma` desde `@/lib/tenant` (guardián de aislamiento; tabla global, sin ámbito). tsc portal+asegura, tests patrimonio y guardia verdes.
 **(22/10/2026)** — Patrimonio F1 paso 8 (documentos) ✅ en código, SQL APLICADO 22/10 (verificado) `apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio_documento.sql` (sin aplicar; mismo paso que el deploy). Ficheros EN BD
 (`bytea`, ≤10 MB, PDF/JPG/PNG/WebP; decisión de Alberto): tabla `portal_patrimonio_documento` (un owner inmueble|contrato|inquilino con FK compuesta al titular, sin DELETE, solo se sella `borrado_en`, trigger anti-«desborrar»,
 FK compuesta de `portal_patrimonio_gasto.documento_id`). `documentos-bd.ts` (tope 40/día/identidad, tx + advisory lock, listas sin `contenido`), rutas `/api/patrimonio/documentos[/id]` (411/413, `attachment`+`nosniff`+`no-store`),
