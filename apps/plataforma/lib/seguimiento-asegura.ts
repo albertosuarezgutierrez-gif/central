@@ -16,6 +16,8 @@
 import { cabecerasPuerto } from './puerto-actor.ts'
 import { leerResumenPresupuestos, leerSinOportunidad, type PresupuestoSinOportunidad, type ResumenPresupuestos } from './correduria/presupuestos-oportunidad.ts'
 import {
+  estadoDeclaracion,
+  rotuloDeclaracion,
   MOTIVOS_PERDIDA,
   MOTIVO_DESCARTE,
   RAMOS_OPORTUNIDAD,
@@ -181,7 +183,46 @@ export type Oportunidad = {
   primaCompetidor: number | null
   aparcadaHasta: string | null
   cerradaAt: string | null
+  /** La póliza de CIMA enlazada al ganarla. `null` = ninguna (o asegura aún no lo manda). */
+  polizaGanadaId?: string | null
 }
+
+/**
+ * «Póliza emitida» declarada a mano por el corredor (22/10/2026). NO es cartera ni «cliente»: con la oportunidad ganada y
+ * sin `polizaGanadaId` es «Emitida · pendiente de confirmar con CIMA»; con la póliza enlazada, confirmada.
+ */
+export type DeclaracionVista = {
+  numeroPoliza: string
+  /** Nombre de la compañía (el del catálogo si se eligió de él). */
+  compania: string
+  /** `null` = compañía sin código DGS conocido (casa con CIMA solo por nº + tomador). */
+  codigoDgs: string | null
+  fechaEfecto: string | null
+  declaradaAt: string
+}
+
+/** Puro. Forma que no se entiende → `null` (no se inventa una declaración). */
+export function leerDeclaracion(v: unknown): DeclaracionVista | null {
+  const d = objeto(v)
+  const numeroPoliza = texto(d?.numeroPoliza)
+  const compania = texto(d?.compania)
+  const declaradaAt = texto(d?.declaradaAt)
+  if (!d || !numeroPoliza || !compania || !declaradaAt) return null
+  const dgs = texto(d.codigoDgs)
+  if (dgs !== null && !/^[A-Z]\d{4}$/.test(dgs)) return null
+  const f = texto(d.fechaEfecto)
+  return { numeroPoliza, compania, codigoDgs: dgs, fechaEfecto: f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : null, declaradaAt }
+}
+
+/** El rótulo del estado de una declarada (`null` = no hay declaración que pintar). Nunca «En vigor»: eso es de CIMA. */
+export function rotuloEstadoDeclaracion(o: { estado: string; polizaGanadaId?: string | null; declaracion?: DeclaracionVista | null }): string | null {
+  const e = estadoDeclaracion({
+    estado: o.estado, polizaGanadaId: o.polizaGanadaId ?? null,
+    declaracion: o.declaracion ? { ...o.declaracion, origen: 'manual' } : null,
+  })
+  return e ? rotuloDeclaracion(e) : null
+}
+
 export type TareaSeguimiento = {
   id: string
   tipo: string
@@ -204,6 +245,8 @@ export type LecturaOportunidad =
       /** Tareas del puerto sin la forma esperada: se cuentan, no se pintan como «pendiente». */
       tareasDescartadas: number
       historial: EntradaHistorial[]
+      /** «Póliza emitida» declarada a mano (vigente). `null` = no hay, o asegura aún no lo manda. */
+      declaracion: DeclaracionVista | null
     }
   | { estado: 'no_encontrado' }
   | { estado: 'sin_configurar' }
@@ -267,7 +310,9 @@ export function interpretarOportunidad(status: number, json: unknown): LecturaOp
       primaCompetidor: numero(op.primaCompetidor),
       aparcadaHasta: texto(op.aparcadaHasta),
       cerradaAt: texto(op.cerradaAt),
+      polizaGanadaId: texto(op.polizaGanadaId),
     },
+    declaracion: leerDeclaracion(o?.declaracion),
     cliente: ctx ? texto(ctx.cliente) : null,
     aseguradora: ctx ? texto(ctx.aseguradora) : null,
     fueCliente: ctx && typeof ctx.fueCliente === 'boolean' ? ctx.fueCliente : null,
@@ -303,6 +348,8 @@ export type OportunidadDeCliente = Oportunidad & {
    * `riesgo_condicionado` = emitida pero RETENIDA por la compañía: no está en vigor.
    */
   emision?: EmisionOportunidad | null
+  /** «Póliza emitida» declarada a mano (22/10/2026). `null` = no hay (o asegura aún no lo manda). */
+  declaracion?: DeclaracionVista | null
 }
 
 export type EmisionOportunidad = {
@@ -375,6 +422,8 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       polizaId: texto(r.polizaId),
       presupuestos: leerResumenPresupuestos(r.presupuestos),
       emision: leerEmisionOportunidad(r.emision),
+      polizaGanadaId: texto(r.polizaGanadaId),
+      declaracion: leerDeclaracion(r.declaracion),
     })
   }
   return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas, sinOportunidad: leerSinOportunidad(o.sinOportunidad) }
