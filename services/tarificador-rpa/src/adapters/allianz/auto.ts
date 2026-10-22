@@ -1,3 +1,6 @@
+// Turismos v0.6.20 (22/10/2026, runs reales del 19 y 22/10 con `referencia_vendor` NULL: «el formulario «Guardar el presupuesto» no está a la vista»):
+// `guardarPresupuestoTurismosAllianz` (guard.ts) ESPERA al bloque, desplaza la pantalla hasta él (scroll, sin clic), da el formulario
+// por visible por su BOTÓN (un `<form>` de alto 0 no es «visible» para Playwright) y, si no lo usa, deja un motivo LEGIBLE en el aviso.
 // Turismos v0.6.19 / Moto v0.7.21 (21/10/2026, trabajo real: «DIVINA PASTORA / CLEVEREA» sin casar): la compañía anterior COMPUESTA «A / B» (marca / revendedor) prueba cada parte por separado (la primera que casa con UNA sola); si nada casa y el desplegable tiene UNA opción genérica («OTRAS», «RESTO», «VARIAS…») se marca y se DECLARA («Compañía anterior «X» no está en la lista de Allianz: se marca «…»»); sin genérica sigue `datos` con la lista COMPLETA (las afines a cada parte, primero; tope por opciones enteras). Ver compania-actual.ts.
 // Moto v0.7.20 (21/10/2026, captura de Alberto de «PRECIOS MODALIDADES»): la prima ANUAL comparable es «Anual sucesivos» del RECIBO BANCARIO (el «Anual 1er Recibo» depende del primer periodo: 182,23 € frente a 275,82 €); el 1er recibo va en avisos y, con sucesivos, se quita el supuesto «primer periodo inferior a un año… no comparable» (sin sucesivos: como antes). Solo LECTURA de lo demás: columnas con ⚠ («Normas de Contratación»), el texto rojo de TIREA y el CUESTIONARIO «Cliente Alto Potencial»/«CAP» (= descuento comercial; Alberto: no se fija aún, «enseñar al bot para el futuro») descritos saneados en avisos; `capAllianz`/`clienteAltoPotencialAllianz` del formulario NO se aplican (aviso). No se pulsa nada nuevo.
 // Moto v0.7.19 (21/10/2026, decisión de Alberto): si la fecha de adquisición es anterior a la 1ª matriculación del portal (`#fechaMatriculacion`), venga de donde venga (por defecto, tecleada o sin marca), se escribe la del portal (setter nativo, 0.7.17) y se declara como supuesto con los días de diferencia (sin fechas); ya no para como `datos`. `fechaAdquisicionPorDefecto` se sigue aceptando pero no decide.
@@ -2923,7 +2926,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.19',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.20',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

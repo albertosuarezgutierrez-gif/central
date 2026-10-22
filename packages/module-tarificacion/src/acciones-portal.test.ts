@@ -3,6 +3,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   ACCIONES_PORTAL,
+  avisoGuardadoPortalDeAvisos,
+  referenciaPortalValida,
   CAMPOS_BANCARIOS,
   detectarParada,
   bloqueoGuardadoPresupuesto,
@@ -382,5 +384,44 @@ describe('excepción estrecha Allianz: td#EMISION_PROJ «Proyecto ampliado» (14
     expect(pareceEmision('EMISION_PROJ', { permitirGuardarPresupuesto: true })).toBe(true)
     expect(descripcionesSinExcepcionProyecto(['Proyecto ampliado', 'EMISION_PROJ'], 'EMISION_PROJ2', 'Proyecto ampliado')).toContain('EMISION_PROJ')
     expect(Object.isFrozen(EXCEPCION_PROYECTO_AMPLIADO)).toBe(true)
+  })
+})
+
+describe('avisoGuardadoPortalDeAvisos (22/10/2026): solo el aviso FIJO del guardado en el portal cruza a plataforma', () => {
+  it('devuelve el aviso de guardado (o de NO guardado) y nada más', () => {
+    expect(avisoGuardadoPortalDeAvisos(['Prima anual…', 'Presupuesto NO guardado en Allianz: motivo de prueba.'])).toBe('Presupuesto NO guardado en Allianz: motivo de prueba.')
+    expect(avisoGuardadoPortalDeAvisos(['Proyecto guardado en Mapfre: nº 1234567 (no es póliza).'])).toBe('Proyecto guardado en Mapfre: nº 1234567 (no es póliza).')
+    expect(avisoGuardadoPortalDeAvisos(['Se pulsó «Generar Proyecto» en Mapfre pero no se leyó el nº.'])).toMatch(/^Se pulsó/)
+    expect(avisoGuardadoPortalDeAvisos(['Precio con supuestos: uso diario.', 'Texto del portal: Presupuesto guardado en X'])).toBeNull()
+    expect(avisoGuardadoPortalDeAvisos(null)).toBeNull()
+    expect(avisoGuardadoPortalDeAvisos([`Proyecto NO guardado en Mapfre: ${'x'.repeat(500)}`])!.length).toBe(300)
+  })
+  it('referenciaPortalValida: el identificador del bot (que parece un IBAN) y las referencias del portal, sí; NIF/teléfono/IBAN, no', () => {
+    for (const ok of ['GA-20261022-ABCDEF12', 'GA-20261022-D6', '9876543210', '2026/000123']) expect(referenciaPortalValida(ok)).toBe(true)
+    for (const mal of ['GA-2026102-ABCDEF12', 'GA-20261022-abcdef12', '00000000T', '612345678', 'ES9121000418450200051332', 42, null]) expect(referenciaPortalValida(mal)).toBe(false)
+  })
+})
+
+describe('«Generar Proyecto» NO es un permiso general de guardado (revisión 22/10/2026)', () => {
+  const RES = { tipoPantalla: 'resultado' as const, hayImportes: true, presupuestoEnCurso: false }
+  it('el explorador IA (bloqueoGuardadoPresupuesto) sigue viendo «Generar proyecto» como botón de emisión, aun en resultado con importes', () => {
+    for (const texto of ['Generar proyecto', 'GENERAR PROYECTO', 'generarProyecto()']) {
+      expect(bloqueoGuardadoPresupuesto({ tag: 'button', texto }, RES), texto).toBe('boton_de_emision')
+    }
+  })
+  it('permitirGuardarPresupuesto NO abre «Generar proyecto»; solo la opción estrecha permitirGenerarProyectoMapfre, y solo eso', () => {
+    expect(pareceEmision('Generar Proyecto', { permitirGuardarPresupuesto: true })).toBe(true)
+    expect(pareceEmision('Generar Proyecto', { permitirGenerarProyectoMapfre: true })).toBe(false)
+    for (const t of ['Archivar', 'store', 'Proyecto ampliado', 'Ir a generar', 'Ir a generar proyecto', 'Generar proyecto y emitir', 'Aceptar'])
+      expect(pareceEmision(t, { permitirGenerarProyectoMapfre: true }), t).toBe(true)
+    expect(nombresAccionesPortal('guardar_presupuesto')).not.toContain('Generar proyecto')
+    expect(PATRONES_GUARDADO_GUARD.some((r) => r.test('Generar proyecto'))).toBe(false)
+  })
+})
+
+describe('referenciaPresupuestoValida: una FECHA no es referencia (revisión 22/10/2026)', () => {
+  it('fechas fuera; referencias con barra que no son fecha, dentro', () => {
+    for (const f of ['22/10/2026', '1-2-26', '22.10.2026', '01/01/20']) expect(referenciaPortalValida(f), f).toBe(false)
+    for (const ok of ['2026/000123', '9876543210', 'PRY-2026-0042']) expect(referenciaPortalValida(ok), ok).toBe(true)
   })
 })

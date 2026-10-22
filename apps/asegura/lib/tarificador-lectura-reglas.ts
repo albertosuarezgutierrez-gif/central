@@ -4,7 +4,7 @@
 //    ofertas con sus primas. NUNCA la URL del portal, el HTML/captura del fallo (`html_documento_id`,
 //    `evidencia_documento_id`: solo operador interno), ni el riesgo, ni credenciales.
 
-import { motivoLegible, riesgoYaPurgado, supuestosDeAvisos, validarOpcionesVersion, type CandidatoVersion } from '@central/module-tarificacion'
+import { avisoGuardadoPortalDeAvisos, motivoLegible, referenciaPortalValida, riesgoYaPurgado, supuestosDeAvisos, validarOpcionesVersion, type CandidatoVersion } from '@central/module-tarificacion'
 
 export type FilaTrabajoLectura = {
   estado: string
@@ -31,6 +31,14 @@ export type OfertaLectura = {
    * Solo ese aviso de `avisos[]` cruza (lista blanca; sin datos personales). `null` = el bot no supuso nada (o no lo dice).
    */
   supuestos: string | null
+  /**
+   * 22/10/2026 (Alberto): nº con el que el bot dejó el presupuesto/proyecto GUARDADO en el portal (Allianz «Guardar presupuesto»,
+   * Mapfre «Generar Proyecto»), para rescatarlo si el cliente acepta. Solo si pasa `referenciaPresupuestoValida` (sin forma de
+   * NIF/teléfono/IBAN/tarjeta). `null` = no se guardó o no se leyó (≠ «no hay»).
+   */
+  referenciaPortal: string | null
+  /** El aviso FIJO del bot sobre ese guardado («Presupuesto NO guardado en Allianz: …»), o `null` si el bot no dice nada. */
+  avisoGuardado: string | null
 }
 
 export type TrabajoLectura = {
@@ -88,6 +96,8 @@ export function ofertasPublicas(respuesta: unknown): { ofertas: OfertaLectura[];
       pdfIndice: indice,
       fechaTerminoPortal: fechaIso(o.fechaTerminoPortal),
       supuestos: supuestosDeAvisos(o.avisos),
+      referenciaPortal: referenciaPortalValida(o.referenciaPortal) ? o.referenciaPortal : null,
+      avisoGuardado: avisoGuardadoPortalDeAvisos(o.avisos),
     })
   }
   return {

@@ -25,10 +25,10 @@ test('proyecta estado, fechas, prima total, desglose y pdfs; nada más', () => {
   const t = proyectarTrabajo(fila, respuesta)
   assert.equal(t.estado, 'ok')
   assert.equal(t.creadoEn, '2026-10-06T10:00:00.000Z')
-  assert.deepEqual(t.ofertas, [{ compania: 'allianz', producto: 'Comunidades 2020', primaTotalAnual: 1234.5, primaNeta: 1000, impuestos: 234.5, primaTotalSucesivos: null, primaNetaSucesivos: null, impuestosSucesivos: null, pdfIndice: 0, fechaTerminoPortal: null, supuestos: null }])
+  assert.deepEqual(t.ofertas, [{ compania: 'allianz', producto: 'Comunidades 2020', primaTotalAnual: 1234.5, primaNeta: 1000, impuestos: 234.5, primaTotalSucesivos: null, primaNetaSucesivos: null, impuestosSucesivos: null, pdfIndice: 0, fechaTerminoPortal: null, supuestos: null, referenciaPortal: null, avisoGuardado: null }])
   assert.deepEqual(t.pdfs, [{ indice: 0, nombre: 'oferta.pdf' }])
   const s = JSON.stringify(t)
-  for (const prohibido of ['documentoId', 'doc-1', 'referenciaPortal', 'coberturas', 'avisos']) assert.ok(!s.includes(prohibido), prohibido)
+  for (const prohibido of ['documentoId', 'doc-1', '"P1"', 'coberturas', 'avisos']) assert.ok(!s.includes(prohibido), prohibido)
 })
 
 test('propaga la columna de sucesivos (prima anual de renovación) sin confundirla con el primer recibo', () => {
@@ -56,6 +56,21 @@ test('supuestos del bot (15/10/2026): de `avisos[]` solo cruza el «Precio con s
   const largo = proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: [`Precio con supuestos: ${'x'.repeat(MAX_AVISO_SUPUESTOS + 200)}`] }] }).ofertas[0]
   assert.equal(largo.supuestos?.length, MAX_AVISO_SUPUESTOS)
   assert.equal(proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: 'Precio con supuestos: no es lista' }] }).ofertas[0].supuestos, null)
+})
+
+test('22/10/2026: el nº del presupuesto/proyecto GUARDADO en el portal y su aviso cruzan a plataforma; una referencia con forma de NIF/teléfono, no', () => {
+  const base = respuesta.ofertas[0]
+  const g = proyectarTrabajo(fila, { ofertas: [{ ...base, referenciaPortal: 'GA-20261022-ABCDEF12', avisos: ['Presupuesto guardado en Allianz (no vinculante): identificador GA-20261022-ABCDEF12 (el portal no enseñó número).'] }] }).ofertas[0]
+  assert.equal(g.referenciaPortal, 'GA-20261022-ABCDEF12')
+  assert.match(g.avisoGuardado ?? '', /^Presupuesto guardado en Allianz/)
+  const m = proyectarTrabajo(fila, { ofertas: [{ ...base, referenciaPortal: '9876543210', avisos: ['Proyecto guardado en Mapfre (no es póliza): nº 9876543210.'] }] }).ofertas[0]
+  assert.equal(m.referenciaPortal, '9876543210')
+  const n = proyectarTrabajo(fila, { ofertas: [{ ...base, referenciaPortal: null, avisos: ['Presupuesto NO guardado en Allianz: no aparece el bloque.'] }] }).ofertas[0]
+  assert.equal(n.referenciaPortal, null)
+  assert.equal(n.avisoGuardado, 'Presupuesto NO guardado en Allianz: no aparece el bloque.')
+  for (const mala of ['00000000T', '612345678', 'ES9121000418450200051332', 42, 'x']) {
+    assert.equal(proyectarTrabajo(fila, { ofertas: [{ ...base, referenciaPortal: mala }] }).ofertas[0].referenciaPortal, null, String(mala))
+  }
 })
 
 test('un trabajo que no está ok no enseña ofertas; el error sale sin url ni ids de evidencia', () => {

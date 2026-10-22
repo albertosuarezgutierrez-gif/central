@@ -31,6 +31,8 @@ import {
   senalCuentaBancaria,
   pareceEmision,
   redactarDatosPersonales,
+  extraerReferenciaPresupuesto,
+  referenciaPresupuestoValida,
   usarPermisoEmision,
   type ModalidadPortal,
   type PermisoEmision,
@@ -63,7 +65,7 @@ export type GuardEmision = {
   ventana: VentanaRed
   /** Ventana de red del AVANCE DE PESTAÑA autorizado (Moto, 13/10/2026). Solo la abre `pulsarAvancePestanaAutorizado`. */
   avance: VentanaRed
-  /** Ventana de red del GUARDADO DE PRESUPUESTO (14/10/2026). Solo la abre `pulsarGuardadoPresupuesto`. */
+  /** Ventana de red del GUARDADO DE PRESUPUESTO (14/10/2026). Solo la abren `pulsarGuardadoPresupuesto` y, en modo estrecho, `pulsarGenerarProyectoMapfre`. */
   guardado: VentanaRed
 }
 
@@ -314,7 +316,8 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   let avance: { hasta: number; endpoints: readonly string[]; ajax: readonly AjaxValidacionAvance[] } | null = null
   const avanceVigente = () => (avance && Date.now() < avance.hasta ? avance : null)
   // Ventana del guardado de presupuesto: hasta cuándo y desde qué ORIGEN (el del marco del botón). `null` = cerrada.
-  let guardado: { hasta: number; origen: string } | null = null
+  // `proyectoMapfre`: la ventana es la de «Generar Proyecto» de Mapfre (abre SOLO `permitirGenerarProyectoMapfre`, no Archivar).
+  let guardado: { hasta: number; origen: string; proyectoMapfre: boolean } | null = null
   const guardadoVigente = () => (guardado && Date.now() < guardado.hasta ? guardado : null)
   // Ventana del LOGIN ASISTIDO (14/10/2026): mientras está abierta, lo que no es GET SOLO puede ir al origen del SSO.
   let login: { hasta: number; origen: string } | null = null
@@ -352,7 +355,9 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // emitir, contract, validar_aceptar… siguen abortando (`permitirGuardarPresupuesto` no los toca).
       const gv = guardadoVigente()
       const enGuardado = gv !== null && origenDe(url) === gv.origen
-      const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado }
+      // «Generar Proyecto» de Mapfre (22/10/2026): su ventana abre SOLO su patrón (`permitirGenerarProyectoMapfre`), no Archivar/store.
+      const enProyectoMapfre = enGuardado && gv.proyectoMapfre
+      const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado && !enProyectoMapfre, permitirGenerarProyectoMapfre: enProyectoMapfre }
       const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
       const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
       if (porUrl && !porCuerpo && !noGet && Date.now() < turismosGenerali && av === null && gv === null && Date.now() >= ventanaHasta && urlTurismosGeneraliPermitida(url)) {
@@ -431,7 +436,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   }
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints, ajax = []) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints, ajax } })
-  ABRIR_GUARDADO.set(g, (origen) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen } })
+  ABRIR_GUARDADO.set(g, (origen, proyectoMapfre = false) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen, proyectoMapfre } })
   ABRIR_TURISMOS_GENERALI.set(g, { abrir: (ms) => { turismosGenerali = Date.now() + Math.min(ms, VENTANA_RED_TURISMOS_GENERALI_MS) }, cerrar: () => { turismosGenerali = 0 }, abierta: () => Date.now() < turismosGenerali })
   VENTANA_LOGIN.set(g, {
     abrir: (origen) => { login = { hasta: Date.now() + VENTANA_RED_LOGIN_MS, origen }; rechazoLogin = null },
@@ -516,8 +521,8 @@ export function urlTurismosGeneraliPermitida(url: string): boolean {
   return !pareceEmision(resto) && !parametrosParecenEmision(resto)
 }
 
-/** Solo `pulsarGuardadoPresupuesto` (este fichero) puede abrir la ventana del guardado. */
-const ABRIR_GUARDADO = new WeakMap<GuardEmision, (origen: string) => void>()
+/** Solo `pulsarGuardadoPresupuesto` y `pulsarGenerarProyectoMapfre` (este fichero) pueden abrir la ventana del guardado. */
+const ABRIR_GUARDADO = new WeakMap<GuardEmision, (origen: string, proyectoMapfre?: boolean) => void>()
 
 /** Solo `pulsarAvancePestanaAutorizado` (este fichero) puede abrir la ventana del avance. */
 const ABRIR_AVANCE = new WeakMap<GuardEmision, (hasta: number, endpoints: readonly string[], ajax?: readonly AjaxValidacionAvance[]) => void>()
@@ -1440,6 +1445,199 @@ export async function cerrarClubMapfre(page: Page, guard: GuardEmision): Promise
     if (Date.now() >= hasta) throw new ErrorTarificador('portal', 'mapfre: el diálogo «Club MAPFRE» no se cerró')
     await page.waitForTimeout(200)
   }
+}
+
+// ─────────── Mapfre NSEI «Generar Proyecto» (v0.8.14 del bot, 22/10/2026, AUTORIZADO por Alberto: un proyecto no es póliza) ───────────
+// Tras LEER las primas en «Coberturas», el bot pulsa «Generar Proyecto» (crea un nº de proyecto en Mapfre para rescatarlo si el
+// cliente acepta) y lee ese nº («Proyectos», paso 5 de la grabación del 15/10/2026). NUNCA «Ir a generar», «Contratar» ni nada del
+// paso 6. Reglas: (1) solo en «Coberturas», con primas a la vista, sin diálogos abiertos, una vez por trabajo y tras calcular;
+// (2) EXACTAMENTE un botón visible de `app-coberturas` con texto ENTERO «Generar Proyecto» que pase `comprobarBoton` con la opción
+// ESTRECHA `permitirGenerarProyectoMapfre` (revisión 22/10/2026: NO es un permiso general de guardado; el explorador IA lo sigue
+// viendo como emisión) y que la lista única no clasifique como emisión ni prohibida; (3) el clic va por `pulsarGenerarProyectoMapfre`
+// (ventana de red SOLO hacia el origen del botón y SOLO con esa opción; diálogos nativos rechazados); (4) tras el clic no se pulsa
+// NADA más: si sale un diálogo que hable de emitir/contratar/firmar/pagar, se para. Lo que falle (también un error del portal:
+// desconexión, timeout) → motivo legible; el precio ya leído NO se toca. Solo una violación REAL de la red de emisión (la que
+// lanza `guard.comprobar()`) se relanza: fail-closed, el trabajo cae entero.
+
+/** Texto EXACTO (sin tildes, mayúsculas, espacios colapsados) del único botón que se pulsa. */
+export const TEXTO_GENERAR_PROYECTO_MAPFRE = 'GENERAR PROYECTO'
+/** Cuánto se espera a leer el nº de proyecto tras el clic (modal «Generando proyecto» incluido). */
+export const MS_PROYECTO_MAPFRE = 45_000
+const SEL_DIALOGOS_MAPFRE = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
+/** Palabras que, en un diálogo tras el clic, hacen PARAR (sin tocar nada). Sobre texto sin tildes y en minúsculas. */
+const RE_DIALOGO_PELIGROSO_MAPFRE = /emit|emisi|contrat|formaliz|firmar|firma digital|pagar|\bpago\b|grabar poliza|domicili|iban/
+
+export type ResultadoProyectoMapfre =
+  | { estado: 'generado'; numero: string }
+  | { estado: 'sin_numero'; motivo: string }
+  | { estado: 'no_generado'; motivo: string }
+
+/** ¿Este control es «Generar Proyecto» y nada más? Texto ENTERO exacto + `comprobarBoton` con SOLO `permitirGenerarProyectoMapfre` + lista única: nunca emisión ni prohibida. PURA. */
+export function esBotonGenerarProyectoMapfre(descripciones: readonly (string | null | undefined)[]): boolean {
+  if (sinTildesMayus(descripciones[0]) !== TEXTO_GENERAR_PROYECTO_MAPFRE) return false
+  try {
+    comprobarBoton(descripciones, { permitirGenerarProyectoMapfre: true })
+  } catch {
+    return false
+  }
+  const cat = clasificarAccionPortal(descripciones.filter((d): d is string => typeof d === 'string'))
+  return !cat.emision && !cat.prohibida
+}
+
+/**
+ * El clic de «Generar Proyecto» (solo desde `generarProyectoMapfre`). Como `pulsarGuardadoPresupuesto` pero ESTRECHO: sin
+ * inventario del explorador, `comprobarBoton` y la ventana de red con SOLO `permitirGenerarProyectoMapfre` (no Archivar/store).
+ * Frontera bancaria, un único control, origen http(s), diálogos nativos rechazados y ventana cerrada SIEMPRE.
+ */
+async function pulsarGenerarProyectoMapfre(page: Page, guard: GuardEmision, boton: Locator, trasClic: () => Promise<void>): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Generar Proyecto» con otra ventana de red abierta')
+  await exigirSinCuentaBancaria(page)
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', '«Generar Proyecto»: no hay exactamente un control')
+  const desc = await descripcion(boton)
+  if (!esBotonGenerarProyectoMapfre(desc)) throw new EmisionBloqueadaError('boton', '«Generar Proyecto»: el control vivo no pasa la lista blanca')
+  const origen = await boton.evaluate((el) => el.ownerDocument.location.origin).catch(() => null)
+  if (!origen || !/^https?:\/\//.test(origen)) throw new EmisionBloqueadaError('fase', '«Generar Proyecto»: sin origen http(s) conocido')
+  const abrir = ABRIR_GUARDADO.get(guard)
+  if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de guardado')
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  abrir(origen, true)
+  try {
+    await boton.click()
+    await trasClic()
+    guard.comprobar()
+    if (dialogo) throw new GuardadoConDialogoError(dialogo)
+  } finally {
+    page.off('dialog', alDialogo)
+    guard.guardado.cerrar()
+  }
+}
+
+const RE_PROYECTO_SUELTO = /\bproyecto\s*[:#]?\s*(\d[\d/.-]{4,29})(?![A-Za-z0-9])/gi
+
+/** Todas las referencias de proyecto de un texto (con etiqueta: «Nº proyecto…», «Proyecto nº…», «Proyecto 123456…»), en orden. PURA. */
+function referenciasProyectoMapfre(texto: string): string[] {
+  const out: string[] = []
+  let t = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ')
+  for (let i = 0; i < 10; i++) {
+    const r = extraerReferenciaPresupuesto(t)
+    if (!r) break
+    out.push(r)
+    t = t.replace(r, ' ')
+  }
+  for (const m of t.matchAll(RE_PROYECTO_SUELTO)) {
+    const c = m[1]!.replace(/[.-]+$/, '')
+    if (referenciaPresupuestoValida(c)) out.push(c)
+  }
+  return out
+}
+
+/**
+ * Nº de proyecto NUEVO tras «Generar Proyecto»: la primera referencia de proyecto que aparece en `despues` y NO estaba en `antes`
+ * (una que ya estaba en pantalla puede ser de otro proyecto). Sin forma de NIF/teléfono/IBAN/tarjeta (`referenciaPresupuestoValida`).
+ * `null` = no se vio («no se sabe», nunca «no hay»). PURA.
+ */
+export function numeroProyectoMapfreNuevo(antes: string, despues: string): string | null {
+  const previas = new Set(referenciasProyectoMapfre(antes).map((r) => r.toUpperCase()))
+  return referenciasProyectoMapfre(despues).find((r) => !previas.has(r.toUpperCase())) ?? null
+}
+
+/** Texto de la pantalla + «etiqueta: valor» SOLO de los campos cuya etiqueta habla de «proyecto» (el nº suele ir en un input de solo lectura). Solo lectura. */
+async function textoProyectoMapfre(page: Page): Promise<string> {
+  return page
+    .evaluate(() => {
+      const partes: string[] = [document.body ? document.body.innerText || '' : '']
+      for (const n of Array.from(document.querySelectorAll('input, textarea'))) {
+        const el = n as HTMLInputElement
+        if (el.type === 'hidden' || el.type === 'password' || !el.value) continue
+        const ff = el.closest('mat-form-field')
+        const lf = ff ? ff.querySelector('mat-label, label') : null
+        const lab = ((el.labels && el.labels[0] ? el.labels[0].textContent : '') || (lf ? lf.textContent : '') || el.getAttribute('placeholder') || el.getAttribute('aria-label') || el.getAttribute('formcontrolname') || el.getAttribute('name') || '').replace(/\s+/g, ' ').trim()
+        if (/proyecto/i.test(lab)) partes.push(`Nº proyecto: ${el.value}`)
+      }
+      return partes.join('\n')
+    })
+    .catch(() => '')
+}
+
+/** Comprobaciones previas al clic (solo lectura). Devuelve el botón elegido o el motivo de no pulsar. Puede lanzar por errores del portal. */
+async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision): Promise<{ boton: Locator } | { estado: 'no_generado'; motivo: string }> {
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_generado', motivo: 'otra ventana de red abierta' }
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('mapfre:proyecto')) return { estado: 'no_generado', motivo: '«Generar Proyecto» ya se pulsó en este trabajo' }
+  if (!usados.has('mapfre:continuar:figuras')) return { estado: 'no_generado', motivo: '«Generar Proyecto» fuera de orden (antes de calcular las primas)' }
+  const paso = await pasoActivoMapfre(page)
+  if (!paso?.includes('COBERTURAS')) return { estado: 'no_generado', motivo: 'el paso activo no es «Coberturas»' }
+  if ((await page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').count().catch(() => 0)) > 0) return { estado: 'no_generado', motivo: 'hay un diálogo abierto sobre «Coberturas»' }
+  const conPrima = await page.locator('app-coberturas prima-producto').filter({ hasText: /\d\s*€/ }).count().catch(() => 0)
+  if (conPrima === 0) return { estado: 'no_generado', motivo: 'no hay primas a la vista en «Coberturas»' }
+  const controles = page.locator('app-coberturas').locator('button, [role="button"]').locator('visible=true')
+  const elegidos: Locator[] = []
+  const total = await controles.count()
+  for (let i = 0; i < total; i++) {
+    const c = controles.nth(i)
+    if (sinTildesMayus(await c.innerText({ timeout: 1_000 }).catch(() => '')) === TEXTO_GENERAR_PROYECTO_MAPFRE) elegidos.push(c)
+  }
+  if (elegidos.length !== 1) return { estado: 'no_generado', motivo: elegidos.length === 0 ? 'no aparece el botón «Generar Proyecto» en «Coberturas»' : `hay ${elegidos.length} botones «Generar Proyecto» (ambiguo: no se pulsa ninguno)` }
+  const boton = elegidos[0]!
+  if (!esBotonGenerarProyectoMapfre(await descripcion(boton))) return { estado: 'no_generado', motivo: 'el botón «Generar Proyecto» no pasa la lista blanca (menciona emitir/contratar/firmar/pagar u otra acción): no se pulsa' }
+  return { boton }
+}
+
+/**
+ * «Generar Proyecto» de Mapfre NSEI con las reglas de arriba. Nunca lanza por «no se pudo» (tampoco por un error del portal antes
+ * o después del clic: desconexión, timeout…): lo devuelve. Solo relanza la violación REAL del guard (`guard.comprobar()`).
+ */
+export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs = MS_PROYECTO_MAPFRE): Promise<ResultadoProyectoMapfre> {
+  guard.comprobar()
+  let boton: Locator
+  let antes: string
+  try {
+    const prep = await prepararGenerarProyectoMapfre(page, guard)
+    if ('estado' in prep) return prep
+    boton = prep.boton
+    antes = await textoProyectoMapfre(page)
+  } catch {
+    guard.comprobar()
+    return { estado: 'no_generado', motivo: 'el portal no respondió al preparar «Generar Proyecto»' }
+  }
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  usados.add('mapfre:proyecto')
+  AVANCES_USADOS.set(guard, usados)
+  let pulsado = false
+  let numero: string | null = null
+  let peligro: string | null = null
+  try {
+    await pulsarGenerarProyectoMapfre(page, guard, boton, async () => {
+      pulsado = true
+      const fin = Date.now() + esperaMs
+      while (Date.now() < fin) {
+        guard.comprobar()
+        // Tras el clic NO se pulsa nada: un diálogo que hable de emitir/contratar/firmar/pagar → se para aquí.
+        const dialogos = await page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').allInnerTexts().catch(() => [] as string[])
+        const malo = dialogos.map((t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()).find((t) => RE_DIALOGO_PELIGROSO_MAPFRE.test(t))
+        if (malo !== undefined) {
+          peligro = (malo.match(RE_DIALOGO_PELIGROSO_MAPFRE) ?? [''])[0]
+          return
+        }
+        numero = numeroProyectoMapfreNuevo(antes, await textoProyectoMapfre(page))
+        if (numero) return
+        await page.waitForTimeout(400)
+      }
+    })
+  } catch (e) {
+    guard.comprobar()
+    const motivo = e instanceof ErrorFronteraEmision ? 'hay un campo de cuenta bancaria a la vista' : e instanceof GuardadoConDialogoError ? 'el portal abrió un diálogo del navegador (no se acepta)' : e instanceof EmisionBloqueadaError ? 'el guard no autorizó el control' : 'el portal no dejó completar el proyecto'
+    return pulsado ? { estado: 'sin_numero', motivo } : { estado: 'no_generado', motivo }
+  }
+  if (numero) return { estado: 'generado', numero }
+  if (peligro !== null) return { estado: 'sin_numero', motivo: `tras pulsar salió un diálogo que menciona «${peligro}»: el bot no toca nada más` }
+  return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s` }
 }
 
 /**
@@ -3353,14 +3551,96 @@ export type ResultadoGuardarPresupuestoTurismos =
   | { estado: 'no_guardado'; motivo: string }
 
 /** Guarda el presupuesto en la pantalla de precios de Turismos con las reglas de arriba. Nunca lanza por «no se pudo»: lo devuelve. */
-export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
+/** Host del bloque «Guardar el presupuesto» bajo la tabla de precios. */
+export const SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS = 'nx-mt-save-proposal'
+/** v0.6.20: cuánto se espera (desplazando la pantalla) a que el formulario «Guardar el presupuesto» tenga su botón a la vista. */
+export const MS_APARECE_FORM_GUARDAR_TURISMOS = 12_000
+
+/** Lo que hay en el marco del bloque de guardado: hosts, formularios, formularios con botón de la lista blanca VISIBLE, y botones de la lista blanca visibles FUERA del bloque. */
+export type EstadoFormularioGuardarTurismos = {
+  hosts: number
+  formularios: number
+  conBotonVisible: number
+  botonesGuardarFuera: number
+  /** Textos de los botones VISIBLES dentro del bloque (para el diagnóstico cuando ninguno es de la lista blanca). */
+  otrosBotones: string[]
+}
+
+/** Solo lectura del DOM del marco (no pulsa nada). Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`). */
+async function estadoFormularioGuardarTurismos(marco: Frame): Promise<EstadoFormularioGuardarTurismos> {
+  return marco
+    .evaluate(({ host, textos }) => {
+      const hosts = document.querySelectorAll(host).length
+      const forms = Array.from(document.querySelectorAll(`${host} form`))
+      let conBotonVisible = 0
+      const otrosBotones: string[] = []
+      for (const f of forms) {
+        let hay = false
+        for (const b of Array.from(f.querySelectorAll('button'))) {
+          const r = b.getBoundingClientRect()
+          const cs = getComputedStyle(b)
+          if (!(r.width > 0 && r.height > 0 && cs.visibility !== 'hidden')) continue
+          const t = (b.innerText || '').replace(/\s+/g, ' ').trim()
+          if (textos.includes(t)) hay = true
+          else if (t !== '') otrosBotones.push(t.slice(0, 40))
+        }
+        if (hay) conBotonVisible++
+      }
+      let botonesGuardarFuera = 0
+      for (const b of Array.from(document.querySelectorAll('button'))) {
+        if (b.closest(host)) continue
+        const r = b.getBoundingClientRect()
+        const cs = getComputedStyle(b)
+        if (r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && textos.includes((b.innerText || '').replace(/\s+/g, ' ').trim())) botonesGuardarFuera++
+      }
+      return { hosts, formularios: forms.length, conBotonVisible, botonesGuardarFuera, otrosBotones: otrosBotones.slice(0, 3) }
+    }, { host: SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS, textos: [...BOTONES_GUARDAR_PRESUPUESTO_TURISMOS] })
+    .catch(() => ({ hosts: 0, formularios: 0, conBotonVisible: 0, botonesGuardarFuera: 0, otrosBotones: [] }))
+}
+
+/**
+ * v0.6.20: por qué NO se puede usar el formulario «Guardar el presupuesto» (`null` = hay exactamente uno con su botón a la vista).
+ * El motivo va TAL CUAL al aviso de la oferta (lo ve Alberto junto al precio): legible y sin datos del cliente. PURA.
+ */
+export function motivoFormularioGuardarTurismos(e: EstadoFormularioGuardarTurismos): string | null {
+  if (e.conBotonVisible === 1) return null
+  if (e.conBotonVisible > 1) return `hay ${e.conBotonVisible} formularios «Guardar el presupuesto» con botón a la vista (ambiguo: no se pulsa ninguno)`
+  const fuera = e.botonesGuardarFuera > 0 ? `; hay ${e.botonesGuardarFuera} botón(es) «Guardar presupuesto» FUERA del formulario (sin mapear: el bot no lo pulsa)` : ''
+  if (e.hosts === 0) return `el bloque «Guardar el presupuesto» no aparece en la pantalla de precios (esperado y desplazada la pantalla)${fuera}`
+  if (e.formularios === 0) return `el bloque «Guardar el presupuesto» está en la pantalla pero sin formulario dentro${fuera}`
+  if (e.otrosBotones.length > 0) return `no aparece el botón «Guardar presupuesto» en el formulario (botones a la vista: ${e.otrosBotones.map((t) => `«${redactarDatosPersonales(t)}»`).join(', ')})${fuera}`
+  return `el formulario «Guardar el presupuesto» está en la pantalla pero OCULTO (su botón no se ve; puede estar plegado)${fuera}`
+}
+
+export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS, esperaFormMs = MS_APARECE_FORM_GUARDAR_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_guardado', motivo: 'otra ventana de red abierta' }
   if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) return { estado: 'no_guardado', motivo: 'fuera de la app de Allianz AUTOS' }
   if (!/^[A-Z0-9-]{1,30}$/.test(identificador)) return { estado: 'no_guardado', motivo: 'identificador no válido' }
   const page = marco.page()
-  const form = marco.locator(SEL_FORM_GUARDAR_PRESUPUESTO_TURISMOS).filter({ visible: true })
-  if ((await form.count().catch(() => 0)) !== 1) return { estado: 'no_guardado', motivo: 'el formulario «Guardar el presupuesto» no está a la vista' }
+  // v0.6.20 (22/10/2026): los runs reales del 19 y 22/10 dejaron «el formulario no está a la vista» (referencia NULL). Se espera
+  // a que el bloque aparezca (se pinta tras la tabla), se DESPLAZA la pantalla hasta él (scroll, no clic) y el formulario se da
+  // por visible por su BOTÓN (un `<form>` de alto 0 con hijos visibles no es «visible» para Playwright). Si no, motivo legible.
+  const forms = marco.locator(SEL_FORM_GUARDAR_PRESUPUESTO_TURISMOS)
+  const hasta = Date.now() + esperaFormMs
+  let estadoForm = await estadoFormularioGuardarTurismos(marco)
+  while (estadoForm.conBotonVisible !== 1 && Date.now() < hasta) {
+    guard.comprobar()
+    if (estadoForm.hosts > 0) await marco.locator(SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS).first().scrollIntoViewIfNeeded({ timeout: 1_000 }).catch(() => {})
+    else await marco.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {})
+    await page.waitForTimeout(400)
+    estadoForm = await estadoFormularioGuardarTurismos(marco)
+  }
+  const motivoForm = motivoFormularioGuardarTurismos(estadoForm)
+  if (motivoForm) return { estado: 'no_guardado', motivo: motivoForm }
+  let form: Locator | null = null
+  for (let i = 0; i < (await forms.count()); i++) {
+    const botonesForm = forms.nth(i).locator('button').filter({ visible: true })
+    for (let j = 0; j < (await botonesForm.count()); j++) {
+      if (BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.includes(planoTurismos(await botonesForm.nth(j).innerText().catch(() => '')))) form = forms.nth(i)
+    }
+  }
+  if (!form) return { estado: 'no_guardado', motivo: 'el formulario «Guardar el presupuesto» desapareció antes de usarlo' }
   // Botón: exactamente uno con texto de la lista blanca DENTRO del formulario.
   const botones = form.locator('button').filter({ visible: true })
   const candidatos: Locator[] = []

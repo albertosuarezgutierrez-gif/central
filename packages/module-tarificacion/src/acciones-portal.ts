@@ -52,6 +52,9 @@ export const ACCIONES_PORTAL: readonly AccionPortal[] = Object.freeze([
   A('guardar_presupuesto', 'Descargar', /descarg|download/),
   A('guardar_presupuesto', 'Imprimir', /imprim|\bprint\b/),
   A('guardar_presupuesto', 'Generar PDF', /generar[\s_+-]*pdf|\bpdf\b/),
+  // «Generar Proyecto» (Mapfre NSEI) NO está aquí a propósito (revisión del 22/10/2026): no es un permiso general de guardado.
+  // Sigue en `TEXTOS_BLOQUEADOS_ALTA` y solo lo abre la opción estrecha `permitirGenerarProyectoMapfre` (guard-emision.ts),
+  // que pide ÚNICAMENTE `generarProyectoMapfre` del worker. El explorador IA lo sigue viendo como `boton_de_emision`.
 ])
 
 /**
@@ -201,6 +204,9 @@ export function senalCuentaBancaria(descripciones: readonly (string | null | und
 /** Forma de una referencia de presupuesto: 4-30 caracteres alfanuméricos (con `/ . -`), empieza por letra o cifra. */
 export const RE_REFERENCIA_PRESUPUESTO = /^[A-Za-z0-9][A-Za-z0-9/.-]{3,29}$/
 
+/** Forma de FECHA: nunca es una referencia de presupuesto ni un nº de proyecto. */
+const RE_FECHA_REFERENCIA = /^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$/
+
 /**
  * ¿Se puede guardar/enseñar esta referencia? Forma de {@link RE_REFERENCIA_PRESUPUESTO}, al menos una cifra, y NADA con forma
  * de identificador de persona o de cobro: NIF/NIE/CIF, móvil/fijo español de 9 cifras, IBAN, tarjeta. (No se usa
@@ -213,6 +219,8 @@ export function referenciaPresupuestoValida(c: unknown): c is string {
   if (/^(?:34)?[6789]\d{8}$/.test(x)) return false
   if (/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(x)) return false
   if (/^\d{13,19}$/.test(x)) return false
+  // Una FECHA («22/10/2026», «1.2.26») no es una referencia ni un nº de proyecto (revisión del 22/10/2026).
+  if (RE_FECHA_REFERENCIA.test(c)) return false
   return true
 }
 
@@ -234,4 +242,31 @@ export function extraerReferenciaPresupuesto(texto: string | null | undefined): 
     if (referenciaPresupuestoValida(c)) return c
   }
   return null
+}
+
+// ─── Aviso del guardado en el portal (22/10/2026) ───────────────────────────
+/**
+ * Prefijos FIJOS del aviso que deja cada bot sobre el guardado del presupuesto/proyecto en el portal (guardado con su nº, o por
+ * qué NO se guardó). Son textos del bot (motivo = etiquetas del portal, nunca valores del cliente): asegura los deja cruzar a
+ * plataforma con {@link avisoGuardadoPortalDeAvisos}.
+ */
+export const RE_AVISO_GUARDADO_PORTAL = /^(?:(?:Presupuesto|Proyecto) (?:NO )?guardado en |Se pulsó «(?:Guardar presupuesto|Generar Proyecto)»)/
+export const MAX_AVISO_GUARDADO_PORTAL = 300
+
+/** Identificador que el bot de Allianz pone al presupuesto («GA-AAAAMMDD-<≤8 del trabajo>», sin datos personales). */
+export const RE_IDENTIFICADOR_BOT_PRESUPUESTO = /^GA-\d{8}-[0-9A-Z]{1,8}$/
+
+/**
+ * ¿Se puede enseñar esta `referenciaPortal` de un bot? El identificador del bot (que {@link referenciaPresupuestoValida} tomaría
+ * por un IBAN: «GA» + 2 cifras + resto) o una referencia del portal válida. PURA.
+ */
+export function referenciaPortalValida(c: unknown): c is string {
+  return (typeof c === 'string' && RE_IDENTIFICADOR_BOT_PRESUPUESTO.test(c)) || referenciaPresupuestoValida(c)
+}
+
+/** El aviso de guardado en el portal de una oferta (`avisos[]` del worker), o `null`. Lectura defensiva. PURA. */
+export function avisoGuardadoPortalDeAvisos(avisos: unknown): string | null {
+  if (!Array.isArray(avisos)) return null
+  const a = avisos.find((x): x is string => typeof x === 'string' && RE_AVISO_GUARDADO_PORTAL.test(x))
+  return a ? a.replace(/\s+/g, ' ').trim().slice(0, MAX_AVISO_GUARDADO_PORTAL) : null
 }

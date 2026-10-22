@@ -21,7 +21,16 @@ export type VersionVista = { codigo: string | null; etiqueta: string }
  * `supuestos` (15/10/2026): lo que el bot SUPUSO para dar ese precio («Precio con supuestos: uso diario, garaje colectivo…»), tal
  * como lo deja pasar asegura. `null` = no supuso nada (o una versión de asegura que aún no lo manda).
  */
-export type OfertaVista = { compania: string; producto: string; primaAnual: number; primaNeta: number | null; impuestos: number | null; primaSucesivos: number | null; pdfIndice: number | null; supuestos: string | null }
+export type OfertaVista = {
+  compania: string; producto: string; primaAnual: number; primaNeta: number | null; impuestos: number | null; primaSucesivos: number | null; pdfIndice: number | null; supuestos: string | null
+  /**
+   * 22/10/2026 (Alberto): nº con el que el bot dejó el presupuesto/proyecto GUARDADO en el portal (Allianz, Mapfre), para rescatarlo
+   * si el cliente acepta. `null`/ausente = no se guardó o no se leyó (≠ «no hay»; lo dice `avisoGuardado`).
+   */
+  referenciaPortal?: string | null
+  /** Aviso fijo del bot sobre ese guardado («Presupuesto NO guardado en Allianz: …»). `null`/ausente = el bot no dijo nada. */
+  avisoGuardado?: string | null
+}
 export type TrabajoVista = {
   estado: string
   error: { tipo: string; mensaje: string } | null
@@ -130,6 +139,8 @@ export function leerTrabajo(status: number, json: unknown): LecturaTrabajo {
         primaNeta: num(f.primaNeta), impuestos: num(f.impuestos), primaSucesivos: num(f.primaTotalSucesivos),
         pdfIndice: typeof f.pdfIndice === 'number' && Number.isInteger(f.pdfIndice) ? f.pdfIndice : null,
         supuestos: str(f.supuestos)?.slice(0, MAX_AVISO_SUPUESTOS) ?? null,
+        referenciaPortal: str(f.referenciaPortal)?.trim().slice(0, 40) || null,
+        avisoGuardado: str(f.avisoGuardado)?.slice(0, 300) ?? null,
       })
     }
   }
@@ -190,6 +201,16 @@ export function textoOferta(o: OfertaVista): string {
 }
 
 /**
+ * «Nº proyecto Mapfre: 9876543210» / «Nº presupuesto Allianz: GA-…»: el número con el que el presupuesto quedó guardado en el
+ * portal, para rescatarlo si el cliente acepta. Sin número → el aviso del bot (por qué no se guardó), o `null` si no dijo nada. PURA.
+ */
+export function textoReferenciaPortal(o: Pick<OfertaVista, 'compania' | 'referenciaPortal' | 'avisoGuardado'>): string | null {
+  const ref = o.referenciaPortal?.trim()
+  if (ref) return `Nº ${o.compania === 'mapfre' ? 'proyecto' : 'presupuesto'}${o.compania ? ` ${rotuloCompania(o.compania)}` : ''}: ${ref}`
+  return o.avisoGuardado?.trim() || null
+}
+
+/**
  * Qué decir de un trabajo: título, tono, motivo (si lo hay), ofertas y si hay que elegir versión. Un `ok` SIN ofertas no se
  * presenta como éxito vacío: «terminó sin ofertas» (el bot pudo no leer el precio).
  */
@@ -197,6 +218,8 @@ export function resumenTrabajo(t: TrabajoVista): {
   titulo: string; tono: TonoEstado; final: boolean; motivo: string | null; ofertas: string[]; pideVersion: boolean
   /** Supuestos con los que se dio el precio (sin repetir: suelen ser los mismos en todas las modalidades). */
   supuestos: string[]
+  /** Por oferta (mismo índice que `ofertas`): nº del presupuesto/proyecto guardado en el portal o por qué no; `null` = nada que decir. */
+  referencias: ({ texto: string; guardado: boolean } | null)[]
 } {
   const final = esEstadoFinal(t.estado)
   const sinOfertas = t.estado === 'ok' && t.ofertas.length === 0
@@ -209,5 +232,9 @@ export function resumenTrabajo(t: TrabajoVista): {
     ofertas: t.ofertas.map(textoOferta),
     pideVersion: t.estado === 'requiere_humano' && t.opcionesVersion !== null,
     supuestos: [...new Set(t.ofertas.map((o) => o.supuestos).filter((x): x is string => x !== null))],
+    referencias: t.ofertas.map((o) => {
+      const texto = textoReferenciaPortal(o)
+      return texto === null ? null : { texto, guardado: !!o.referenciaPortal?.trim() }
+    }),
   }
 }

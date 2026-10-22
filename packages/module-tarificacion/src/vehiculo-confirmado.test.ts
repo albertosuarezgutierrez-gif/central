@@ -7,6 +7,7 @@ import {
   anioEnRango,
   SUBCLAVES_RIESGO,
   comprobarBoton,
+  clasificarAccionPortal,
   datosDesdeEtiquetaVersion,
   datosEquivalenciaDesdeEtiqueta,
   elegirVersionAutomaticamente,
@@ -212,6 +213,16 @@ describe('guard · botones del diálogo «Selección de vehículo» de Mapfre', 
   it.each(['Ir a generar', 'IR A GENERAR', 'Generar Proyecto', 'Generar proyecto', 'generarProyecto()', 'btn_ir_a_generar'])('Coberturas (grabación 15/10/2026): bloquea «%s» siempre, también con «Aceptar» permitido', (t) => {
     expect(() => comprobarBoton([t], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
     expect(() => comprobarBoton([t])).toThrow(EmisionBloqueadaError)
+  })
+  it('22/10/2026 (Alberto): «Generar Proyecto» pasa SOLO con la opción estrecha `permitirGenerarProyectoMapfre` (NO con `permitirGuardarPresupuesto`); «Ir a generar» y cualquier mezcla con emitir/contratar/firmar/pagar, nunca', () => {
+    for (const t of ['Generar Proyecto', 'GENERAR PROYECTO', 'generarProyecto()']) {
+      expect(() => comprobarBoton([t], { permitirGenerarProyectoMapfre: true })).not.toThrow()
+      expect(() => comprobarBoton([t], { permitirGuardarPresupuesto: true }), t).toThrow(EmisionBloqueadaError)
+      expect(clasificarAccionPortal([t])).toEqual({ emision: null, prohibida: null, guardar: null })
+    }
+    for (const t of ['Ir a generar', 'Ir a generar proyecto', 'btn_ir_a_generar', 'Generar proyecto y emitir', 'Generar proyecto y contratar', 'Generar proyecto y firmar', 'Generar proyecto y pagar', 'Grabar póliza', 'Archivar', 'Aceptar']) {
+      expect(() => comprobarBoton([t], { permitirGenerarProyectoMapfre: true }), t).toThrow(EmisionBloqueadaError)
+    }
   })
   it('lo que el bot SÍ pulsa sigue pasando («Continuar», un mat-select de licencia)', () => {
     for (const t of ['Continuar', 'Clase de permiso', 'Valido desde', 'Compañía anterior']) expect(() => comprobarBoton([t])).not.toThrow()

@@ -497,7 +497,17 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
           {res?.motivo && <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{res.motivo}</span>}
           {res && res.ofertas.length > 0 && (
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: 'grid', gap: 4 }}>
-              {res.ofertas.map((o, n) => <li key={n} style={{ overflowWrap: 'anywhere' }}>{o}</li>)}
+              {res.ofertas.map((o, n) => (
+                <li key={n} style={{ overflowWrap: 'anywhere' }}>
+                  {o}
+                  {/* 22/10/2026: nº con el que el bot dejó el presupuesto guardado en el portal (o por qué no), para rescatarlo. */}
+                  {res.referencias[n] && (
+                    <div style={{ fontSize: 12, color: res.referencias[n]!.guardado ? 'var(--muted)' : 'var(--warning)', fontWeight: res.referencias[n]!.guardado ? 600 : 400, overflowWrap: 'anywhere', minWidth: 0 }}>
+                      {res.referencias[n]!.texto}
+                    </div>
+                  )}
+                </li>
+              ))}
             </ul>
           )}
           {/* Lo que el bot SUPUSO para dar ese precio (uso, garaje, 2º conductor…): junto al precio, nunca escondido. */}

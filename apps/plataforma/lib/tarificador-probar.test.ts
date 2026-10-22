@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MAX_AVISO_SUPUESTOS } from '@central/module-tarificacion'
 import {
-  esEstadoFinal, leerEncolado, leerIntegraciones, leerTrabajo, resumenTrabajo, rotuloEstado, textoOferta, textoPrima, rotuloIntegracion,
+  esEstadoFinal, leerEncolado, leerIntegraciones, leerTrabajo, resumenTrabajo, rotuloEstado, textoOferta, textoPrima, rotuloIntegracion, textoReferenciaPortal,
 } from './tarificador-probar.ts'
 
 const ID = '11111111-1111-4111-8111-111111111111'
@@ -135,4 +135,25 @@ test('versiones SIN código (Mapfre, 15/10/2026): se leen y piden versión; una 
   if (!l.ok) return
   assert.deepEqual(l.trabajo.opcionesVersion, [{ codigo: null, etiqueta: 'Marca Prueba 2.9 Gl · 163 CV' }, { codigo: null, etiqueta: 'Marca Prueba 2.9 Gls · 163 CV' }])
   assert.equal(resumenTrabajo(l.trabajo).pideVersion, true)
+})
+
+test('22/10/2026: nº del presupuesto/proyecto guardado en el portal junto a cada precio de bot; sin nº, el aviso del bot; sin nada, null', () => {
+  const l = leerTrabajo(200, {
+    estado: 'ok',
+    ofertas: [
+      { ...OFERTA, referenciaPortal: 'GA-20261022-ABCDEF12', avisoGuardado: 'Presupuesto guardado en Allianz (no vinculante): identificador GA-20261022-ABCDEF12.' },
+      { ...OFERTA, compania: 'mapfre', referenciaPortal: '9876543210' },
+      { ...OFERTA, referenciaPortal: null, avisoGuardado: 'Presupuesto NO guardado en Allianz: el bloque no aparece.' },
+      { ...OFERTA, referenciaPortal: '  ', avisoGuardado: 7 },
+    ],
+  })
+  assert.ok(l.ok)
+  if (!l.ok) return
+  assert.deepEqual(resumenTrabajo(l.trabajo).referencias, [
+    { texto: 'Nº presupuesto Allianz: GA-20261022-ABCDEF12', guardado: true },
+    { texto: 'Nº proyecto Mapfre: 9876543210', guardado: true },
+    { texto: 'Presupuesto NO guardado en Allianz: el bloque no aparece.', guardado: false },
+    null,
+  ])
+  assert.equal(textoReferenciaPortal({ compania: 'mapfre' }), null, 'asegura antigua sin el campo: nada que decir')
 })
