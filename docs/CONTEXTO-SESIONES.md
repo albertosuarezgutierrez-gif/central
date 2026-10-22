@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Patrimonio F1 paso 6: `/patrimonio/gastos` (plantillas, comunidad, derramas; comunidad exige nivel Total) + cron diario
+`/api/cron/patrimonio-gastos` (05:20, idempotente por `clave`, `isCronAuthorized`) que genera gastos `propuesto`. Siguiente: paso 7 (facturas con IA).
 **(22/10/2026)** — RRHH · «Mi material» con foto (Pilar): empleado sube foto (cámara, compresión cliente ~1600px, magic bytes, ≤8MB server / ≤4MB
 original por límite Vercel 4,5MB) a bucket privado; /admin/material con estados revisado/falta_roto/devuelto + bloque en ficha. `rrhh.material_empleado`
 (0028, aplicada). Pendiente fase 2: revisión periódica mensual.

@@ -92,6 +92,10 @@ const EXENTOS = new Set([
   // que da `identidadesTitulares` sobre la cartera de ESA identidad). Cepo propio:
   // `test/regression-portal-niveles-acceso.test.ts`.
   'apps/asegura-portal/lib/declarada-ajena.ts',
+  // Cron de gastos de patrimonio (22/10/2026): adaptador de BD del generador. Lo ejecuta el cron autenticado por
+  // `CRON_SECRET`, no una persona: no hay identidad, hay muchos titulares. Cada fila lleva el `titularId` de su propia
+  // plantilla / de la comunidad de su derrama, jamás de una request. Cepo: `regression-portal-patrimonio-aislamiento`.
+  'apps/asegura-portal/lib/patrimonio/generar-gastos-bd.ts',
 ])
 
 /**
