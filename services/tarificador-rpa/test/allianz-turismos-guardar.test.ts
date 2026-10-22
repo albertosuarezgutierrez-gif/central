@@ -11,6 +11,8 @@ import {
   motivoFormularioGuardarTurismos,
   confirmacionGuardadoNueva,
   esBotonGuardarPresupuestoTurismos,
+  esExpansorGuardarTurismosPermitido,
+  etiquetasControlesSaneadas,
   guardarPresupuestoTurismosAllianz,
   identificadorPresupuestoTurismos,
   instalarGuardEmision,
@@ -47,7 +49,7 @@ test('ofertas: guardado → referenciaPortal + aviso; no guardado → solo aviso
   assert.equal(n!.referenciaPortal, null)
   assert.equal(n!.primaAnualEur, 100)
   assert.match(n!.avisos.at(-1)!, /NO guardado/)
-  assert.equal(allianzAuto.version, '0.6.20')
+  assert.equal(allianzAuto.version, '0.6.21')
 })
 
 // ── Navegador: carcasa ePAC + app de Turismos con el formulario de guardado ──
@@ -71,7 +73,21 @@ type Opc = {
    */
   bloque?: 'tarde' | 'oculto' | 'sin' | 'altoCero'
   botonFuera?: boolean
+  /**
+   * v0.6.21 · el bloque cuelga de un panel PLEGADO (`nx-expansion-panel` con su cabecera `aria-expanded="false"` + `aria-controls`),
+   * junto a otro panel ajeno «Vista Ampliada» que NO se debe tocar. `ok`: cabecera «Opciones de guardado»; `emitir`: cabecera
+   * «Guardar y emitir»; `pestana`: lo gobierna una pestaña no seleccionada.
+   */
+  plegado?: 'ok' | 'emitir' | 'pestana'
 }
+const ABRE_PLEGADO = (o: Opc) => {
+  if (!o.plegado) return ''
+  const cab = o.plegado === 'emitir' ? 'Guardar y emitir' : 'Opciones de guardado'
+  const ajeno = '<nx-expansion-panel><button type="button" id="vista" aria-expanded="false" aria-controls="cuerpoVista" onclick="window.__vista=1">Vista Ampliada</button><div id="cuerpoVista" style="display:none">x</div></nx-expansion-panel>'
+  if (o.plegado === 'pestana') return `${ajeno}<div role="tablist"><button type="button" role="tab" id="cab" aria-selected="false" aria-controls="cuerpo" onclick="window.__desplegado=(window.__desplegado||0)+1;document.getElementById('cuerpo').style.display='';this.setAttribute('aria-selected','true')">Guardar</button></div><div id="cuerpo" role="tabpanel" style="display:none">`
+  return `${ajeno}<nx-expansion-panel><button type="button" id="cab" aria-expanded="false" aria-controls="cuerpo" onclick="window.__desplegado=(window.__desplegado||0)+1;document.getElementById('cuerpo').style.display='';this.setAttribute('aria-expanded','true')">${cab}</button><div id="cuerpo" style="display:none">`
+}
+const CIERRA_PLEGADO = (o: Opc) => (!o.plegado ? '' : o.plegado === 'pestana' ? '</div>' : '</div></nx-expansion-panel>')
 const hostBloque = (o: Opc) => (o.bloque === 'sin' ? 'div' : 'nx-mt-save-proposal')
 const caja = (id: string, texto: string, marcada: boolean) =>
   `<nx-checkbox><input type="checkbox" id="${id}" ${marcada ? 'checked' : ''}><label for="${id}"><span></span><div>${texto}</div></label></nx-checkbox>`
@@ -85,7 +101,7 @@ const app = (o: Opc) => `<!doctype html><html><body><div id="appArea">
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-1"><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div>OTRA</div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>X</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>Y</div></nx-data-display></nx-selectable-card>
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-2" checked><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div> MARCA </div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>MODELO</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>  </div></nx-data-display></nx-selectable-card>
 ${o.botonFuera ? '<button type="button" id="fuera" onclick="window.__fuera=1">Guardar presupuesto</button>' : ''}
-<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' || o.bloque === 'oculto' ? 'display:none' : ''}"><form novalidate style="${o.bloque === 'altoCero' ? 'height:0;overflow:visible' : ''}">
+${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' || o.bloque === 'oculto' ? 'display:none' : ''}"><form novalidate style="${o.bloque === 'altoCero' ? 'height:0;overflow:visible' : ''}">
   <h3>Guardar el presupuesto</h3>
   <label for="ident">Identificador presupuesto</label><input id="ident" maxlength="30" required>
   <label for="nombre">Nombre</label><input id="nombre" required value="${o.nombre ?? 'NOMBRE'}">
@@ -93,7 +109,7 @@ ${o.botonFuera ? '<button type="button" id="fuera" onclick="window.__fuera=1">Gu
   ${caja('c4', ' Terceros con lunas ', false)}${caja('c5', ' Todos los paquetes ', false)}
   <button type="button" id="guardar" disabled><span><span><span>${o.boton ?? 'Guardar presupuesto'}</span></span></span></button>
   <p id="res">${o.textoPrevio ?? ''}</p>
-</form></${hostBloque(o)}></div>
+</form></${hostBloque(o)}>${CIERRA_PLEGADO(o)}</div>
 <script>
   if (${o.bloque === 'tarde'}) setTimeout(() => { document.getElementById('bloque').style.display = '' }, 1500)
   const b = document.getElementById('guardar'), i = document.getElementById('ident'), n = document.getElementById('nombre')
@@ -264,4 +280,57 @@ test('v0.6.20: motivo del formulario (PURA) y propagación: referencia y aviso l
   assert.deepEqual(g.map((x) => x.referenciaPortal), ['GA-20261022-0001', 'GA-20261022-0001', 'GA-20261022-0001'])
   const n = ofertasConPresupuestoTurismos([o('A'), o('B')], { estado: 'no_guardado', motivo: motivoFormularioGuardarTurismos({ ...base, hosts: 0, formularios: 0 })! })
   assert.ok(n.every((x) => x.referenciaPortal === null && /^Presupuesto NO guardado en Allianz: el bloque «Guardar el presupuesto» no aparece/.test(x.avisos.at(-1)!)))
+})
+
+// ── v0.6.21 (22/10/2026): run real de las 3 modalidades → formulario en pantalla pero OCULTO: se despliega SOLO el panel que lo gobierna ──
+
+test('v0.6.21: bloque en un panel PLEGADO (acordeón o pestaña) → se despliega SOLO ese panel (no «Vista Ampliada») y SE GUARDA', async () => {
+  for (const plegado of ['ok', 'pestana'] as const) {
+    const { context, guard, marco } = await abrir({ plegado })
+    try {
+      const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 2_000, 8_000)
+      assert.deepEqual(r, { estado: 'guardado', identificador: 'GA-20261022-ABCDEF12', referencia: '123456789' }, plegado)
+      const w = await marco.evaluate(() => { const x = window as unknown as { __desplegado?: number; __vista?: number }; return { d: x.__desplegado ?? 0, v: x.__vista ?? 0 } })
+      assert.deepEqual(w, { d: 1, v: 0 }, `${plegado}: un despliegue y «Vista Ampliada» intacta`)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('v0.6.21: el control plegado es «Guardar y emitir» → NO se pulsa; motivo legible con los controles a la vista', async () => {
+  const { context, guard, marco } = await abrir({ plegado: 'emitir' })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 500, 3_000)
+    assert.equal(r.estado, 'no_guardado')
+    if (r.estado === 'no_guardado') assert.match(r.motivo, /OCULTO.*; controles a la vista: .*«Vista Ampliada»/)
+    const w = await marco.evaluate(() => { const x = window as unknown as { __desplegado?: number; __vista?: number; __pulsado?: boolean }; return { d: x.__desplegado ?? 0, v: x.__vista ?? 0, p: x.__pulsado ?? false } })
+    assert.deepEqual(w, { d: 0, v: 0, p: false }, 'no se pulsa nada')
+  } finally {
+    await context.close()
+  }
+})
+
+test('v0.6.21: bloque oculto sin panel que lo gobierne → no se pulsa nada y el motivo lista las etiquetas a la vista (PURA + navegador)', async () => {
+  const base = { hosts: 1, formularios: 1, conBotonVisible: 0, botonesGuardarFuera: 0, otrosBotones: [] as string[] }
+  assert.equal(motivoFormularioGuardarTurismos({ ...base, controlesVisibles: ['Volver', 'Imprimir'], desplegados: 1 }), 'el formulario «Guardar el presupuesto» está en la pantalla pero OCULTO (su botón no se ve; puede estar plegado); se desplegó 1 panel(es) plegado(s) sin que apareciera; controles a la vista: «Volver», «Imprimir»')
+  assert.equal(motivoFormularioGuardarTurismos({ ...base, conBotonVisible: 1, controlesVisibles: ['Volver'] }), null)
+  const { context, guard, marco } = await abrir({ bloque: 'oculto' })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 500, 900)
+    assert.equal(r.estado, 'no_guardado')
+    if (r.estado === 'no_guardado') assert.match(r.motivo, /OCULTO \(su botón no se ve; puede estar plegado\)(; hay 1 botón.*)?; controles a la vista: /)
+  } finally {
+    await context.close()
+  }
+})
+
+test('v0.6.21: etiquetas saneadas (PURA) y control plegable permitido solo si no es guardar/emitir', () => {
+  const out = etiquetasControlesSaneadas(['Volver', 'ANA LOPEZ PEREZ', 'a@b.es', 'Ref 12345678', 'Imprimir', 'Imprimir', ' '])
+  assert.deepEqual(out, ['Imprimir', 'Volver'])
+  assert.equal(esExpansorGuardarTurismosPermitido(['Opciones de guardado', null, null, null, 'cab']), true)
+  assert.equal(esExpansorGuardarTurismosPermitido(['', 'Mostrar más', null, null]), true)
+  for (const t of ['Guardar presupuesto', 'Guardar proyecto', 'Guardar y emitir', 'Contratar', 'Pagar', 'Enviar', 'Emitir póliza']) assert.equal(esExpansorGuardarTurismosPermitido([t, null, null, null]), false, t)
+  assert.equal(esExpansorGuardarTurismosPermitido(['Opciones', null, null, null, 'btnEmitir']), false, 'un id de emitir lo tumba')
+  assert.equal(esExpansorGuardarTurismosPermitido(['x'.repeat(41), null, null, null]), false)
 })

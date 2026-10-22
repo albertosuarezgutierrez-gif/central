@@ -1578,3 +1578,4 @@ export {
   type ContactoElegible, type ContactoNoElegible, type DestinatariosPresupuesto, type EstadoCorreoPersona, type MotivoNoElegible,
   type CanalDestino, type EstadoMovilPersona, type PersonaDestino, type TipoPersonaFicha, type TomadorDestino, type ViaDestino,
 } from './destinatarios-presupuesto.ts'
+export { PAQUETES_AUTO, coberturasDePaquete, type PaqueteAuto, type CoberturaPaquete, type ValorCobertura, type FuenteCobertura, type TipoFuente, type CompaniaPaquetes } from './coberturas-paquetes-auto.ts'
