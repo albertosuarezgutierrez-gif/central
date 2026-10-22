@@ -55,5 +55,7 @@ export function puedeDocumento(rol: RolDocumental | null | undefined, accion: Ac
     return false
   }
   if (rol !== 'gestion' && rol !== 'total') return false
-  return puede(rol, accion === 'ver' ? 'ver' : 'gestionar_gastos_documentos')
+  if (accion === 'ver') return puede(rol, 'ver')
+  if (accion === 'subir' || accion === 'borrar') return puede(rol, 'gestionar_gastos_documentos')
+  return false
 }
