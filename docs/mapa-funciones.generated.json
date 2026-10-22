@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-21T17:39:10Z",
-  "sha": "83486f0135799df95ed697faa4caa637b3c0b9a2",
+  "generadoEn": "2026-10-22T06:19:35Z",
+  "sha": "ae72663805aa25ba83524c8915c5de35cfd13f13",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54337,7 +54337,7 @@
           "exportada": false,
           "params": "d: Date | string",
           "retorno": "string",
-          "linea": 49
+          "linea": 57
         },
         {
           "nombre": "num",
@@ -54345,7 +54345,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 50
+          "linea": 58
         },
         {
           "nombre": "fechaIso",
@@ -54353,7 +54353,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 51
+          "linea": 59
         },
         {
           "nombre": "errorPublico",
@@ -54361,7 +54361,7 @@
           "exportada": true,
           "params": "e: unknown",
           "retorno": "",
-          "linea": 54,
+          "linea": 62,
           "resumen": "Del jsonb `error` solo salen tipo y mensaje (recortado)."
         },
         {
@@ -54370,7 +54370,7 @@
           "exportada": true,
           "params": "respuesta: unknown",
           "retorno": "",
-          "linea": 63,
+          "linea": 71,
           "resumen": "`respuesta.ofertas[]` de `tarificaciones` (canal rpa) → ofertas públicas + PDFs (por índice del worker)."
         },
         {
@@ -54379,7 +54379,7 @@
           "exportada": true,
           "params": "fila: FilaTrabajoLectura, respuesta: unknown",
           "retorno": "TrabajoLectura",
-          "linea": 99
+          "linea": 109
         },
         {
           "nombre": "documentoDePdf",
@@ -54387,7 +54387,7 @@
           "exportada": true,
           "params": "respuesta: unknown, indice: number",
           "retorno": "string | null",
-          "linea": 115,
+          "linea": 125,
           "resumen": "`documentoId` de la oferta cuyo PDF tiene ese índice (lo guardó `registrarResultado`)."
         },
         {
@@ -54396,7 +54396,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "number | null",
-          "linea": 126,
+          "linea": 136,
           "resumen": "Índice de la URL: entero 0..99 sin ceros a la izquierda ni signos."
         },
         {
@@ -54405,7 +54405,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | number | boolean | null",
-          "linea": 143
+          "linea": 153
         },
         {
           "nombre": "riesgoPublico",
@@ -54413,7 +54413,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 147,
+          "linea": 157,
           "resumen": "`riesgo` jsonb → solo claves conocidas con valor primitivo. Cualquier otra cosa → `null`."
         },
         {
@@ -54422,7 +54422,7 @@
           "exportada": true,
           "params": "fila: { id: string; created_at: Date | string; riesgo: unknown } | null",
           "retorno": "UltimoRiesgo",
-          "linea": 167
+          "linea": 177
         },
         {
           "nombre": "primeroReutilizable",
@@ -54430,7 +54430,7 @@
           "exportada": true,
           "params": "filas: readonly T[]",
           "retorno": "",
-          "linea": 180,
+          "linea": 190,
           "resumen": "PLANTILLA (13/10/2026, purga): de los trabajos más recientes primero, el primero cuyo riesgo NO esté ya purgado. Un trabajo cerrado y purgado se SALTA (nunca se precarga ni se reencola un riesgo a med"
         },
         {
@@ -54439,13 +54439,13 @@
           "exportada": true,
           "params": "previo: unknown",
           "retorno": "unknown",
-          "linea": 190,
+          "linea": 200,
           "resumen": "Riesgo previo para REENCOLAR (probar ficha). Si la `eleccionVersion` la puso la IA (`eleccionVersionIa` presente en el riesgo guardado) NO se arrastra como definitiva: se quitan ambas y el robot vuelv"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "02cd0d4921bb"
+      "hash": "7c461792996a"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-lectura.ts",
@@ -104749,7 +104749,7 @@
           "exportada": false,
           "params": "{ check, nombre }: { check: Extract<ChecklistCompania, { estado: 'evaluado' }>; nombre: string }",
           "retorno": null,
-          "linea": 536,
+          "linea": 546,
           "resumen": "Desplegable con los datos que pide el bot de la compañía (≤ ~16 filas): ✓ listo · ✗ falta · «se toma de la ficha»."
         }
       ],
@@ -104758,7 +104758,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "8a83bbde73cb"
+      "hash": "b30a6e476d1c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PresupuestosAvant2.tsx",
@@ -104818,7 +104818,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "724d1c0f30e0"
+      "hash": "110610102c75"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/RespuestasSolicitud.tsx",
@@ -181014,6 +181014,7 @@
         "tonoEstado",
         "textoPrima",
         "textoOferta",
+        "textoReferenciaPortal",
         "resumenTrabajo"
       ],
       "funciones": [
@@ -181023,7 +181024,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 33
+          "linea": 42
         },
         {
           "nombre": "str",
@@ -181031,7 +181032,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 34
+          "linea": 43
         },
         {
           "nombre": "num",
@@ -181039,7 +181040,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 35
+          "linea": 44
         },
         {
           "nombre": "mensajeDeFallo",
@@ -181047,7 +181048,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "string",
-          "linea": 40,
+          "linea": 49,
           "resumen": "Mensaje común de un fallo de pasarela (sin datos del cliente)."
         },
         {
@@ -181056,7 +181057,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaIntegraciones",
-          "linea": 52,
+          "linea": 61,
           "resumen": "Lista de compañía+ramo activos. `[]` es «revisado y no hay ninguna»; una respuesta rota NO es `[]`."
         },
         {
@@ -181065,7 +181066,7 @@
           "exportada": true,
           "params": "c: string",
           "retorno": "string",
-          "linea": 70
+          "linea": 79
         },
         {
           "nombre": "rotuloIntegracion",
@@ -181073,7 +181074,7 @@
           "exportada": true,
           "params": "i: { compania: string; ramo: string }",
           "retorno": "string",
-          "linea": 74
+          "linea": 83
         },
         {
           "nombre": "leerEncolado",
@@ -181081,7 +181082,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaEncolado",
-          "linea": 87,
+          "linea": 96,
           "resumen": "Respuesta de «probar»: 202 encolado, o `duplicado: true` con el id del trabajo existente (se muestra ese)."
         },
         {
@@ -181090,7 +181091,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaTrabajo",
-          "linea": 107,
+          "linea": 116,
           "resumen": "Estado y ofertas de UN trabajo. Respuesta rota o sin estado → «no se pudo comprobar», nunca «sin ofertas»."
         },
         {
@@ -181099,7 +181100,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "boolean",
-          "linea": 148
+          "linea": 159
         },
         {
           "nombre": "rotuloEstado",
@@ -181107,7 +181108,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "string",
-          "linea": 167,
+          "linea": 178,
           "resumen": "Texto del estado (para personas). Un estado que no conocemos se muestra tal cual, sin inventar."
         },
         {
@@ -181116,7 +181117,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "TonoEstado",
-          "linea": 173
+          "linea": 184
         },
         {
           "nombre": "textoPrima",
@@ -181124,7 +181125,7 @@
           "exportada": true,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 181,
+          "linea": 192,
           "resumen": "Prima total anual en formato español; `null` = «—» (no se leyó, nunca 0,00€)."
         },
         {
@@ -181133,8 +181134,17 @@
           "exportada": true,
           "params": "o: OfertaVista",
           "retorno": "string",
-          "linea": 186,
+          "linea": 197,
           "resumen": "Resumen de una oferta: «Allianz · Moto — 312,45€/año (neta 280,00€ · impuestos 32,45€)»."
+        },
+        {
+          "nombre": "textoReferenciaPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: Pick<OfertaVista, 'compania' | 'referenciaPortal' | 'avisoGuardado'>",
+          "retorno": "string | null",
+          "linea": 207,
+          "resumen": "«Nº proyecto Mapfre: 9876543210» / «Nº presupuesto Allianz: GA-…»: el número con el que el presupuesto quedó guardado en el portal, para rescatarlo si el cliente acepta. Sin número → el aviso del bot "
         },
         {
           "nombre": "resumenTrabajo",
@@ -181142,13 +181152,13 @@
           "exportada": true,
           "params": "t: TrabajoVista",
           "retorno": "",
-          "linea": 196,
+          "linea": 217,
           "resumen": "Qué decir de un trabajo: título, tono, motivo (si lo hay), ofertas y si hay que elegir versión. Un `ok` SIN ofertas no se presenta como éxito vacío: «terminó sin ofertas» (el bot pudo no leer el preci"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0d9d4a6a2cab"
+      "hash": "657714b091d8"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-reglas-previas.ts",
@@ -229103,7 +229113,9 @@
         "fronteraEmisionPorCampos",
         "senalCuentaBancaria",
         "referenciaPresupuestoValida",
-        "extraerReferenciaPresupuesto"
+        "extraerReferenciaPresupuesto",
+        "referenciaPortalValida",
+        "avisoGuardadoPortalDeAvisos"
       ],
       "funciones": [
         {
@@ -229120,7 +229132,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 72
+          "linea": 75
         },
         {
           "nombre": "descripcionesSinExcepcionProyecto",
@@ -229128,7 +229140,7 @@
           "exportada": true,
           "params": "descripciones: readonly T[], id: string | null | undefined, texto: string | null | undefined",
           "retorno": "T[]",
-          "linea": 84,
+          "linea": 87,
           "resumen": "Quita de `descripciones` el id de la excepción (una vez) si el control la cumple; si no, las devuelve tal cual. Pura."
         },
         {
@@ -229137,7 +229149,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[]",
           "retorno": "ClasificacionAccion",
-          "linea": 97,
+          "linea": 100,
           "resumen": "Clasifica TODO lo que describe a un control (texto, aria, id, name, onclick…). Devuelve el nombre de la PRIMERA acción de cada categoría que casa (o `null`). Quien decide aplica: emisión > prohibida >"
         },
         {
@@ -229146,7 +229158,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAccionPortal",
           "retorno": "string[]",
-          "linea": 113,
+          "linea": 116,
           "resumen": "Nombres de una categoría, para el prompt y la documentación."
         },
         {
@@ -229155,7 +229167,7 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 118,
+          "linea": 121,
           "resumen": "Las líneas del prompt del explorador, generadas de {@link ACCIONES_PORTAL} (lo vigila el test de asegura)."
         },
         {
@@ -229164,7 +229176,7 @@
           "exportada": false,
           "params": "d: string",
           "retorno": "string[]",
-          "linea": 164,
+          "linea": 167,
           "resumen": "Las dos formas en que se mira una descripción: plana, y con camelCase y `_` separados (`numCCC` → `num ccc`)."
         },
         {
@@ -229173,7 +229185,7 @@
           "exportada": false,
           "params": "d: string",
           "retorno": "CampoBancario | null",
-          "linea": 167,
+          "linea": 170,
           "resumen": "El {@link CampoBancario} con el que casa UNA descripción, o `null`."
         },
         {
@@ -229182,7 +229194,7 @@
           "exportada": true,
           "params": "camposDesc: readonly (string | null | undefined)[]",
           "retorno": "FronteraCampos",
-          "linea": 177,
+          "linea": 180,
           "resumen": "Descripciones (etiqueta, name, id, placeholder, aria…) de los CAMPOS de una pantalla → ¿hay frontera de emisión? `frontera` ⇔ hay un campo bancario; `campoBancario` = su nombre canónico y `etiqueta` ="
         },
         {
@@ -229191,7 +229203,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[]",
           "retorno": "string | null",
-          "linea": 195,
+          "linea": 198,
           "resumen": "La primera descripción de un control que es campo bancario (tal cual, recortada), o `null`. Pura. La usa el worker."
         },
         {
@@ -229200,7 +229212,7 @@
           "exportada": true,
           "params": "c: unknown",
           "retorno": "c is string",
-          "linea": 209,
+          "linea": 215,
           "resumen": "¿Se puede guardar/enseñar esta referencia? Forma de {@link RE_REFERENCIA_PRESUPUESTO}, al menos una cifra, y NADA con forma de identificador de persona o de cobro: NIF/NIE/CIF, móvil/fijo español de 9"
         },
         {
@@ -229209,13 +229221,31 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 224,
+          "linea": 232,
           "resumen": "Texto visible tras guardar → la REFERENCIA del presupuesto que da el portal, o `null` (no se vio: «no se sabe», nunca «no hay»). Solo con una etiqueta explícita delante (referencia / nº de presupuesto"
+        },
+        {
+          "nombre": "referenciaPortalValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: unknown",
+          "retorno": "c is string",
+          "linea": 263,
+          "resumen": "¿Se puede enseñar esta `referenciaPortal` de un bot? El identificador del bot (que {@link referenciaPresupuestoValida} tomaría por un IBAN: «GA» + 2 cifras + resto) o una referencia del portal válida."
+        },
+        {
+          "nombre": "avisoGuardadoPortalDeAvisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: unknown",
+          "retorno": "string | null",
+          "linea": 268,
+          "resumen": "El aviso de guardado en el portal de una oferta (`avisos[]` del worker), o `null`. Lectura defensiva. PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4b0730a810c2"
+      "hash": "7c66e287cc3f"
     },
     {
       "ruta": "packages/module-tarificacion/src/aria-redaccion.ts",
@@ -232159,7 +232189,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 104,
+          "linea": 116,
           "resumen": "Quita tildes para que «Emisión» o «Formalización» no se escapen por un acento."
         },
         {
@@ -232168,7 +232198,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 111,
+          "linea": 123,
           "resumen": "Decodifica %-secuencias UTF-8 válidas UNA A UNA: una secuencia mal formada (`%E0%A4%A`) no apaga la decodificación del resto (fail-closed)."
         },
         {
@@ -232177,7 +232207,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 121
+          "linea": 133
         },
         {
           "nombre": "parametrosParecenEmision",
@@ -232185,7 +232215,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 150,
+          "linea": 164,
           "resumen": "· el VALOR de cada parámetro con clave de acción (`action`, `accion`, `event`, `operation`, `cmd`…): `store`, `contract` o cualquier cosa que case con `pareceEmision`. El resto del cuerpo (datos del r"
         },
         {
@@ -232194,7 +232224,7 @@
           "exportada": true,
           "params": "url: string, opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 165,
+          "linea": 179,
           "resumen": "Lanza si la URL casa con el patrón."
         },
         {
@@ -232203,7 +232233,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 174,
+          "linea": 188,
           "resumen": "Lanza si el botón a pulsar casa con el patrón. Se mira TODO lo que lo describe (texto visible, `aria-label`, `title`, `value`, `id`, `name`, `href`): un botón con icono y `id=\"btnEmitir\"` también es e"
         },
         {
@@ -232212,12 +232242,12 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 186
+          "linea": 200
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cade6a4f0ad8"
+      "hash": "44c5f4a1cf3b"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-asesor.ts",
@@ -236201,6 +236231,6 @@
   ],
   "resumen": {
     "archivos": 4966,
-    "funciones": 18947
+    "funciones": 18950
   }
 }
