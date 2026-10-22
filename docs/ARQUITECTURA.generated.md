@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-21T17:39:10Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-22T09:59:56Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 44 packages · 23 capacidades · 44 skills · 1764 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1766 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,12 +21,12 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-firma, core-identity, core-telegram, core-vehiculos, module-seguros, module-seguros-pii, module-seguros-portal, module-tarificacion
 - **Capacidades:** QR / portal cliente
 - **Tablas (141):** if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones, seguros.cliente_telefonos…
-- **Rutas API:** 277
+- **Rutas API:** 278
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-push, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** Escáner / OCR, Notificaciones (push)
-- **Tablas (30):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_aviso_cima, seguros.portal_aviso_leido, seguros.portal_aviso_silenciado, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_invitacion_enlace, seguros.portal_invitacion_enlace_uso, seguros.portal_mensaje, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_poliza_declarada_historial, seguros.portal_preferencias_avisos, seguros.portal_prima_observada, seguros.portal_push_suscripcion, seguros.portal_revision_poliza, seguros.portal_supresion, seguros.portal_vinculo, seguros.portal_vista_corredor
-- **Rutas API:** 75
+- **Tablas (49):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_aviso_cima, seguros.portal_aviso_leido, seguros.portal_aviso_silenciado, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_invitacion_enlace, seguros.portal_invitacion_enlace_uso, seguros.portal_mensaje, seguros.portal_modulo, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_patrimonio_aviso_inquilino, seguros.portal_patrimonio_comunidad, seguros.portal_patrimonio_contrato, seguros.portal_patrimonio_contrato_inquilino, seguros.portal_patrimonio_derrama, seguros.portal_patrimonio_enlace_inquilino, seguros.portal_patrimonio_gasto, seguros.portal_patrimonio_importacion, seguros.portal_patrimonio_importacion_fila…
+- **Rutas API:** 76
 ### asegura-web
 - **Módulos que usa:** core-consent, module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -167,6 +167,9 @@
 - **module-pagos** (module) → `@central/module-pagos`
   - Lo usan: plataforma
   - Depende de: —
+- **module-patrimonio** (module) → `@central/module-patrimonio`
+  - Lo usan: —
+  - Depende de: module-contabilidad, module-tarificacion
 - **module-pesca** (module) → `@central/module-pesca`
   - Lo usan: mariscos
   - Depende de: —
