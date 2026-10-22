@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-22T09:59:56Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-22T11:49:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1766 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1778 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -23,10 +23,10 @@
 - **Tablas (141):** if, seguros._volcado_control, seguros.acuerdo_comisiones, seguros.acuerdo_objetivos, seguros.acuerdos_compania, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.borradores_presupuesto, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.cambio_cuenta_solicitud, seguros.campana_envio, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.claves_mediador, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_mote, seguros.cliente_relaciones, seguros.cliente_telefonos…
 - **Rutas API:** 278
 ### asegura-portal
-- **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-push, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
-- **Capacidades:** Escáner / OCR, Notificaciones (push)
+- **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-identity, core-push, core-telegram, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal
+- **Capacidades:** Facturación / VeriFactu, Escáner / OCR, Notificaciones (push)
 - **Tablas (49):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_aviso_cima, seguros.portal_aviso_leido, seguros.portal_aviso_silenciado, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_invitacion_enlace, seguros.portal_invitacion_enlace_uso, seguros.portal_mensaje, seguros.portal_modulo, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_patrimonio_aviso_inquilino, seguros.portal_patrimonio_comunidad, seguros.portal_patrimonio_contrato, seguros.portal_patrimonio_contrato_inquilino, seguros.portal_patrimonio_derrama, seguros.portal_patrimonio_enlace_inquilino, seguros.portal_patrimonio_gasto, seguros.portal_patrimonio_importacion, seguros.portal_patrimonio_importacion_fila…
-- **Rutas API:** 76
+- **Rutas API:** 84
 ### asegura-web
 - **Módulos que usa:** core-consent, module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -60,8 +60,8 @@
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Informes, Notificaciones (push), Asistente / copiloto IA
-- **Tablas (16):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 79
+- **Tablas (17):** rrhh.acceso_otps, rrhh.avisos, rrhh.avisos_admin, rrhh.contratos_laborales, rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.incidencias_mes, rrhh.incidencias_ubicacion, rrhh.material_empleado, rrhh.mensajes, rrhh.nominas, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
+- **Rutas API:** 83
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -84,7 +84,7 @@
   - Lo usan: asegura-web, housesevillana, ia-rest, plataforma
   - Depende de: —
 - **core-direccion** (core) → `@central/core-direccion`
-  - Lo usan: ia-rest, ialimp, plataforma, transporte
+  - Lo usan: asegura-portal, ia-rest, ialimp, plataforma, transporte
   - Depende de: core-catastro
 - **core-email** (core) → `@central/core-email`
   - Lo usan: asegura, asegura-portal, ialimp, plataforma, rrhh, sivra
@@ -168,7 +168,7 @@
   - Lo usan: plataforma
   - Depende de: —
 - **module-patrimonio** (module) → `@central/module-patrimonio`
-  - Lo usan: —
+  - Lo usan: asegura-portal
   - Depende de: module-contabilidad, module-tarificacion
 - **module-pesca** (module) → `@central/module-pesca`
   - Lo usan: mariscos
@@ -273,7 +273,7 @@
 - ⚠️ **Almacén / stock / ASN**: en almacen, alquiler, ia-rest, ialimp, sivra; falta en asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, transporte.
 - ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, transporte.
 - ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
+- ⚠️ **Facturación / VeriFactu**: en asegura-portal, ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
 - ⚠️ **Hardware bridge**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
 - ⚠️ **Escáner / OCR**: en asegura-portal, ia-rest, ialimp; falta en almacen, alquiler, asegura, asegura-web, housesevillana, mariscos, rrhh, sivra, transporte.
 - ⚠️ **Informes**: en ialimp, rrhh; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, ia-rest, mariscos, sivra, transporte.
