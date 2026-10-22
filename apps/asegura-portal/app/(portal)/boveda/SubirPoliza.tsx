@@ -7,10 +7,12 @@ import { useState } from 'react'
 import { avisoDocumentoNoPoliza } from '@central/module-seguros-portal'
 
 import { eur } from '@/lib/dinero'
+import { motivosDesfase } from '@/lib/documento-desfasado'
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
 import { fechaEs } from '@/lib/fechas'
 
 import { AnadirPoliza, type PolizaGuardada } from './AnadirPoliza'
+import { PasoRenovacion } from './PasoRenovacion'
 import type { RamoOpcion } from './CamposPoliza'
 
 type DatosLeidos = {
@@ -92,6 +94,8 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   /** Por qué no ha entrado, cuando se sabe (tamaño). `null` = el mensaje genérico. */
   const [motivoError, setMotivoError] = useState<string | null>(null)
   const [errorReintento, setErrorReintento] = useState<string | null>(null)
+  /** El paso opcional «documento desfasado» se ha cerrado («Ahora no»). Vuelve a abrirse en otra subida. */
+  const [pasoRenovacionCerrado, setPasoRenovacionCerrado] = useState(false)
 
   async function subir(e: React.ChangeEvent<HTMLInputElement>) {
     const elegido = e.target.files?.[0]
@@ -104,6 +108,7 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     setFicheroProtegido(null)
     setContrasena('')
     setErrorReintento(null)
+    setPasoRenovacionCerrado(false)
     // Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta (29/09/2026): una foto se
     // encoge aquí, y un PDF que siga pasando de 4 MB se dice claro en vez de mandarlo.
     const f = await encogerSiHaceFalta(elegido)
@@ -463,6 +468,18 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
                         : NO_LEIDO}
                     </dd>
                   </dl>
+                  {/* Documento DESFASADO (vencimiento leído ya pasado o prima sin leer): paso
+                      opcional para pedir la prima de la última renovación y la fecha en que
+                      renueva. Solo si SÍ se leyó algo (rama `fuente !== 'none'`) y hay fila. */}
+                  {resultado.id && !pasoRenovacionCerrado && motivosDesfaseDe(resultado.datos).length > 0 && (
+                    <PasoRenovacion
+                      key={resultado.id}
+                      polizaId={resultado.id}
+                      motivos={motivosDesfaseDe(resultado.datos)}
+                      onCerrar={() => setPasoRenovacionCerrado(true)}
+                      onGuardado={() => router.refresh()}
+                    />
+                  )}
                 </>
               )}
             </div>
@@ -471,6 +488,13 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
       </details>
     </section>
   )
+}
+
+/** `hoy` en la fecha LOCAL del navegador (`YYYY-MM-DD`), que es la que ve la persona. */
+function motivosDesfaseDe(datos: DatosLeidos) {
+  const d = new Date()
+  const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return motivosDesfase({ fechaVencimiento: datos.fechaVencimiento, primaAnual: datos.primaAnual }, hoy)
 }
 
 const NO_LEIDO = <span className="tenue">No lo hemos encontrado en el documento</span>

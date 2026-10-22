@@ -8,6 +8,7 @@ import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import {
   cambiosDeEdicion,
+  DECLARADA_ELIMINADA,
   DECLARADA_NO_ELIMINADA,
   fotoHistorial,
   guardarObligaciones,
@@ -15,6 +16,7 @@ import {
 } from '@/lib/declaradas-eliminadas'
 import { normalizarParche } from '@/lib/poliza-editable'
 import { requireIdentidad } from '@/lib/session'
+import { leerVigenciaDeclarada } from '@/lib/vigente-declarada'
 
 export const runtime = 'nodejs'
 
@@ -56,6 +58,33 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     cuerpo = await req.json()
   } catch {
     return NextResponse.json({ error: 'cuerpo_invalido' }, { status: 400 })
+  }
+
+  // «¿Sigue vigente?» (22/10/2026, `lib/vigente-declarada.ts`). Ausente → la corrección de siempre.
+  // Sola → SOLO se guarda la respuesta: no es una revisión de los datos, así que no se marca
+  // `confirmadaPorUsuario` ni se pasa por `normalizarParche`. «No» = ya no la tiene → se QUITA con
+  // el mismo borrado lógico que el DELETE (y su mismo permiso, `quitar`). Siempre con la identidad
+  // autorizada (`duenaId`) dentro del `where`.
+  const vigencia = leerVigenciaDeclarada(cuerpo)
+  if (vigencia.tipo === 'error') return NextResponse.json({ error: vigencia.error }, { status: 400 })
+  if (vigencia.tipo === 'sola') {
+    if (vigencia.valor === 'no') {
+      const paraQuitar = await accesoADeclarada(identidad.id, id, 'quitar')
+      if (paraQuitar === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+      const quitada = await quitarDeclarada(id, paraQuitar.identidadId, 'no')
+      if (quitada.estado === 200 && !paraQuitar.propia) await registrarUso(identidad.id, paraQuitar.autorizacionIds)
+      return NextResponse.json(
+        quitada.estado === 200 ? { ...quitada.cuerpo, vigenteDeclarada: 'no' } : quitada.cuerpo,
+        { status: quitada.estado },
+      )
+    }
+    const { count } = await prisma.portalPolizaDeclarada.updateMany({
+      where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+      data: { vigenteDeclarada: vigencia.valor },
+    })
+    if (count === 0) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    if (!acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
+    return NextResponse.json({ id, vigenteDeclarada: vigencia.valor })
   }
 
   // El RAMO GUARDADO, antes de validar. Los campos específicos (`datosRamo`) solo
@@ -106,6 +135,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         // El usuario ha revisado estos datos con sus ojos: eso es lo único que
         // `confirmadaPorUsuario` significa.
         confirmadaPorUsuario: true,
+        // «Sí, la sigo teniendo» junto a la prima/fecha nuevas: misma escritura.
+        ...(vigencia.tipo === 'con_cambios' ? { vigenteDeclarada: vigencia.valor } : {}),
         // Sigue siendo un dato APORTADO por el cliente, no verificado contra la
         // compañía. Que lo haya tecleado él no lo asciende de categoría.
         procedencia: 'declarado',
@@ -206,7 +237,19 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (acceso === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
   const duenaId = acceso.identidadId
 
-  const resultado = await prisma
+  const resultado = await quitarDeclarada(id, duenaId, null)
+  if (resultado.estado === 200 && !acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
+  return NextResponse.json(resultado.cuerpo, { status: resultado.estado })
+}
+
+/**
+ * El borrado LÓGICO entero (partes congelados, obligaciones apartadas, `eliminadaEn`, historial) en
+ * UNA transacción. Lo usan el DELETE y el PATCH con `vigenteDeclarada: 'no'` («ya no la tengo»):
+ * una sola implementación para que las dos puertas no diverjan. `duenaId` ya viene autorizado
+ * por `accesoADeclarada(…, 'quitar')`; aquí va DENTRO de cada `where`.
+ */
+async function quitarDeclarada(id: string, duenaId: string, vigencia: 'no' | null) {
+  return prisma
     .$transaction(async (tx) => {
       // Existe, es de la dueña Y está en la bóveda: las tres cosas en la misma consulta. Si no,
       // 404 — nunca un 403, que confirmaría que esa póliza existe. Quitar dos veces es «no
@@ -281,6 +324,14 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
       // arriba lanzando, para no dejar partes desligados de una póliza que sigue viva.
       if (count === 0) throw new CarreraAlQuitar()
 
+      // Un «no, ya no la tengo» del cliente se guarda en la MISMA transacción que la quita.
+      if (vigencia === 'no') {
+        await tx.portalPolizaDeclarada.updateMany({
+          where: { id, identidadId: duenaId, ...DECLARADA_ELIMINADA },
+          data: { vigenteDeclarada: 'no' },
+        })
+      }
+
       // El historial va a nombre de la DUEÑA: es su «Eliminadas» y quien la puede restaurar.
       await tx.portalPolizaDeclaradaHistorial.create({
         data: {
@@ -292,7 +343,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
             obligaciones: guardarObligaciones(obligaciones),
             partesDesligados: partes.map((p) => p.id),
           },
-          despues: { eliminadaEn: ahora.toISOString() },
+          despues: { eliminadaEn: ahora.toISOString(), ...(vigencia === 'no' ? { vigenteDeclarada: 'no' } : {}) },
         },
       })
 
@@ -305,9 +356,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
       if (e instanceof CarreraAlQuitar) return { estado: 404 as const, cuerpo: { error: 'no_encontrada' } }
       throw e
     })
-
-  if (resultado.estado === 200 && !acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
-  return NextResponse.json(resultado.cuerpo, { status: resultado.estado })
 }
 
 /** La póliza se quitó en otra pestaña entre la lectura y la marca: se revierte la transacción. */
