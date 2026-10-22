@@ -38,12 +38,15 @@ export async function GET(req: Request) {
         return filas.map((f) => ({ periodo: f.periodo, pct: Number(f.pct) }))
       },
       insertar: async (indice, filas, fuenteUrl) => {
-        for (const f of filas) {
-          await prisma.$executeRaw`
-            INSERT INTO seguros.portal_patrimonio_indice (indice, periodo, pct, fuente_url, revisado)
-            VALUES (${indice}, ${f.periodo}, ${f.pct}, ${fuenteUrl}, ${f.revisado})
-            ON CONFLICT DO NOTHING`
-        }
+        // Todo o nada por índice: un corte a mitad no deja la serie con huecos (la validación es de la serie entera).
+        await prisma.$transaction(
+          filas.map(
+            (f) => prisma.$executeRaw`
+              INSERT INTO seguros.portal_patrimonio_indice (indice, periodo, pct, fuente_url, revisado)
+              VALUES (${indice}, ${f.periodo}, ${f.pct}, ${fuenteUrl}, ${f.revisado})
+              ON CONFLICT DO NOTHING`,
+          ),
+        )
       },
       avisar: (t) => tgSend(t),
     })

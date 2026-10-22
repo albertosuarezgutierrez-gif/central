@@ -99,9 +99,9 @@ export function validarIndice(puntos: readonly PuntoIndice[]): ResultadoValidaci
 }
 
 /**
- * Último periodo que YA debería estar publicado en `hoy`. El IPC de un mes sale a mediados del siguiente; el
- * IRAV se publica con más retraso, por eso se le exige un mes menos. Conservador a propósito: si el cron corre
- * a final de mes y falta este periodo, es un retraso real y se avisa.
+ * Último periodo que YA debería estar publicado en `hoy`: mes − 1 para IPC e IRAV (los dos salen hacia el día 15
+ * del mes siguiente; IRAV de junio 2026 publicado el 15/07/2026). El cron corre el día 20: si falta, es un retraso
+ * real y se avisa.
  */
 export function periodoEsperado(_indice: IndiceIne, hoyIso: string): string {
   return periodoAtras(hoyIso, 1)
