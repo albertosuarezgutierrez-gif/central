@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Patrimonio F1 paso 8 (documentos), PARCIAL: `lib/patrimonio/carpetas.ts` (owners inmueble/contrato/inquilino, permisos por nivel; inquilino solo `recibos`) +
+`documentos-api.ts` (subir/listar/descargar/borrado lógico con puertos, 10 MB, bytes mágicos, 404 ajeno) + tests; `module-documental` añadido a deps. Falta `documentos-bd.ts`, rutas, pantalla
+en la ficha y `documento_id` de facturas: `seguros.documentos` no tiene owner ni UPDATE → hace falta tabla `portal_patrimonio_documento` (SQL propuesto en el informe; Alberto la aplica).
 **(22/10/2026)** — Patrimonio F1 paso 7 (facturas con IA): `POST/PATCH /api/patrimonio/facturas` + `RevisarFactura.tsx`. Subir deja un gasto `propuesto`
 (origen `factura`, importes NULL si no se leyó, `propuesta` jsonb con motivos); confirmar/descartar lo hace la persona (total >0, fecha y categoría obligatorias).
 Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; titular/inmueble ajeno → 404. Sin SQL nuevo. Pendiente: revisión agente-architect, `documento_id` (paso 8).
