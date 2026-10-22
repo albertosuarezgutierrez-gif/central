@@ -622,11 +622,37 @@ export function esEtiquetaVerificacionMatricula(etiqueta: string): boolean {
   return /MATRICULA/.test(t) && /(VERIFIC|CONFIRM|REPET|REPIT|COMPROB)/.test(t)
 }
 
-/** Opción del «Uso del Vehículo» para el uso del riesgo (hoy solo particular; otro uso = sin mapa). PURA. */
-export function elegirUsoGenerali(opciones: readonly string[], uso: string | null | undefined): EleccionCatalogo {
-  if ((uso ?? 'particular') !== 'particular') return { tipo: 'ninguna' }
+/** Supuesto declarado cuando el uso particular no distingue ocasional/diario y el portal ofrece las dos (v0.2.18). */
+export const SUPUESTO_USO_PARTICULAR_DIARIO = 'Uso del vehículo: Particular Diario (por defecto; revisar si es ocasional)'
+
+/**
+ * Opción del «Uso del Vehículo» para el uso del riesgo (hoy solo particular; otro uso = sin mapa). v0.2.18: el portal separa
+ * «Particular Ocasional (…)» y «Particular Diario (…)»: manda `usoFrecuencia` del riesgo (ocasional → Ocasional; diario/laboral → Diario);
+ * sin dato, «Particular Diario» (uso particular estándar y conservador en precio) y `supuesto` lo declara. PURA.
+ */
+export function decidirUsoGenerali(
+  opciones: readonly string[],
+  uso: string | null | undefined,
+  frecuencia?: string | null,
+): { eleccion: EleccionCatalogo; supuesto: string | null } {
+  if ((uso ?? 'particular') !== 'particular') return { eleccion: { tipo: 'ninguna' }, supuesto: null }
   const ix = opciones.flatMap((o, i) => (!esOpcionVaciaCatalogo(o) && /\bPARTICULAR\b/.test(normalizarCatalogo(o)) && !/\b(ALQUILER|TAXI|AUTOESCUELA|EMPRESA|PROFESIONAL|COMERCIAL)\b/.test(normalizarCatalogo(o)) ? [i] : []))
-  return ix.length === 1 ? { tipo: 'unica', indice: ix[0]!, porSimilitud: false } : ix.length === 0 ? { tipo: 'ninguna' } : { tipo: 'varias', indices: ix }
+  if (ix.length === 1) return { eleccion: { tipo: 'unica', indice: ix[0]!, porSimilitud: false }, supuesto: null }
+  if (ix.length === 0) return { eleccion: { tipo: 'ninguna' }, supuesto: null }
+  const con = (re: RegExp): number[] => ix.filter((i) => re.test(normalizarCatalogo(opciones[i]!)))
+  const oca = con(/\bOCASIONAL\b/)
+  const dia = con(/\bDIARIO\b/)
+  if (ix.length === oca.length + dia.length && oca.length === 1 && dia.length === 1) {
+    if (frecuencia === 'ocasional') return { eleccion: { tipo: 'unica', indice: oca[0]!, porSimilitud: false }, supuesto: null }
+    if (frecuencia === 'diario' || frecuencia === 'laboral') return { eleccion: { tipo: 'unica', indice: dia[0]!, porSimilitud: false }, supuesto: null }
+    return { eleccion: { tipo: 'unica', indice: dia[0]!, porSimilitud: false }, supuesto: SUPUESTO_USO_PARTICULAR_DIARIO }
+  }
+  return { eleccion: { tipo: 'varias', indices: ix }, supuesto: null }
+}
+
+/** Compatibilidad: solo la elección (sin supuesto). PURA. */
+export function elegirUsoGenerali(opciones: readonly string[], uso: string | null | undefined, frecuencia?: string | null): EleccionCatalogo {
+  return decidirUsoGenerali(opciones, uso, frecuencia).eleccion
 }
 
 /** Opción de «Garaje» para el tipo del riesgo/supuesto (`calle` · `colectivo` · `individual`). PURA. */
