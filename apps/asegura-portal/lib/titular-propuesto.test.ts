@@ -5,12 +5,30 @@ import {
   leerTitularParche,
   normalizarTomadorLeido,
   proponerTitular,
-  titularDeLaCasilla,
+  preseleccionTitular,
+  titularDeLaRespuesta,
 } from './titular-propuesto.ts'
 
-test('🚨 casilla sin marcar → null («no consta»), NUNCA «propio»', () => {
-  assert.equal(titularDeLaCasilla(false), null)
-  assert.equal(titularDeLaCasilla(true), 'empresa')
+test('🚨 tres opciones: «Es mía» → propio, empresa → empresa, «No lo sé»/sin contestar → null, NUNCA «propio» por omisión', () => {
+  assert.equal(titularDeLaRespuesta('propio'), 'propio')
+  assert.equal(titularDeLaRespuesta('empresa'), 'empresa')
+  assert.equal(titularDeLaRespuesta('no_se'), null)
+  assert.equal(titularDeLaRespuesta(null), null)
+})
+
+test('preselección: empresa leída → empresa; persona o sin tomador → ninguna (el DNI de quien sube no se conoce)', () => {
+  assert.equal(preseleccionTitular({ tipo: 'empresa', nombre: 'X SL', cif: 'B91234567' }), 'empresa')
+  assert.equal(preseleccionTitular({ tipo: 'persona' }), null)
+  assert.equal(preseleccionTitular(null), null)
+})
+
+test('PATCH titular: «es mía» y «no lo sé» van solos; empresa por esta vía o con otros campos → error', () => {
+  assert.deepEqual(leerTitularParche({ titularTipo: 'propio' }), { tipo: 'propio' })
+  assert.deepEqual(leerTitularParche({ titularTipo: null }), { tipo: 'ninguno' })
+  assert.equal(leerTitularParche({ titularTipo: 'empresa' }).tipo, 'error')
+  assert.equal(leerTitularParche({ titularTipo: 'otro' }).tipo, 'error')
+  assert.equal(leerTitularParche({ titularTipo: 'propio', primaAnual: 3 }).tipo, 'error')
+  assert.equal(leerTitularParche({ titularTipo: 'propio', titularEmpresa: { nombre: 'X' } }).tipo, 'error')
 })
 
 test('tomador empresa por CIF → se propone la pregunta con su nombre y CIF', () => {

@@ -96,6 +96,44 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // ni crea ficha de la empresa ni la vincula; la casa la reconcilia el corredor.
   const titularParche = leerTitularParche(cuerpo)
   if (titularParche.tipo === 'error') return NextResponse.json({ error: titularParche.error }, { status: 400 })
+  // «Es mía» / «No lo sé» (22/10/2026): 'propio' o vuelta a NULL. Misma regla que «empresa»: solo la
+  // dueña de la fila, 404 si no es suya o no existe; con `identidadId` DENTRO del `where`. Se
+  // vacían los datos de empresa (el CHECK de la BD los liga a `titular_tipo='empresa'`).
+  if (titularParche.tipo === 'propio' || titularParche.tipo === 'ninguno') {
+    if (!acceso.propia) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    const nuevoTipo = titularParche.tipo === 'propio' ? 'propio' : null
+    const hecho = await prisma.$transaction(async (tx) => {
+      const previa = await tx.portalPolizaDeclarada.findFirst({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        select: SELECT_HISTORIAL,
+      })
+      if (!previa) return null
+      const { count } = await tx.portalPolizaDeclarada.updateMany({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        data: {
+          titularTipo: nuevoTipo,
+          titularEmpresaNombre: null,
+          titularEmpresaCif: null,
+          titularRolDeclarado: null,
+          actualizadaEn: new Date(),
+        },
+      })
+      if (count === 0) return null
+      const despues = await tx.portalPolizaDeclarada.findFirst({
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
+        select: SELECT_HISTORIAL,
+      })
+      const cambios = despues ? cambiosDeEdicion(previa, despues) : null
+      if (cambios !== null) {
+        await tx.portalPolizaDeclaradaHistorial.create({
+          data: { polizaId: id, identidadId: duenaId, accion: 'editada', antes: cambios.antes, despues: cambios.despues },
+        })
+      }
+      return true
+    })
+    if (hecho === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    return NextResponse.json({ id, titularTipo: nuevoTipo })
+  }
   if (titularParche.tipo === 'empresa') {
     if (!acceso.propia) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
     const hecho = await prisma.$transaction(async (tx) => {
