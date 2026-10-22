@@ -3131,6 +3131,18 @@ async function prepararPuertaMenuGenerali(page: Page, guard: GuardEmision, base:
   return { marco, usados }
 }
 
+/**
+ * v0.2.16: la puerta de modelo admite UNA segunda ronda (abrir + elegir) SOLO si la primera elección fue «Otros…» (fallo real de la 0.2.15:
+ * «Otros modelos ...» recarga la lista y el modelo hay que elegirlo en la lista nueva). La segunda ronda usa su propia clave (`<clave>:2`),
+ * también una vez, y nunca vuelve a elegir «Otros». Devuelve la clave a gastar.
+ */
+const CLAVE_MODELO_OTROS_GENERALI = 'generali:modelo-otros'
+function claveRondaModeloGenerali(guard: GuardEmision, clave: string): string {
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  return usados.has(clave) && usados.has(CLAVE_MODELO_OTROS_GENERALI) ? `${clave}:2` : clave
+}
+const esTextoOtrosGenerali = (t: string) => /^OTROS\b/.test(textoMenu(t))
+
 const esIdMarcasGenerali = (b: string) => b === ID_MENU_MARCAS_GENERALI
 /** Id de un SelectOneMenu de PrimeFaces distinto del de marcas y que no sea uno de sus elementos internos (`_input`, `_panel`, `_label`…). */
 const esIdModeloGenerali = (b: string) => /^[A-Za-z][A-Za-z0-9_-]{0,40}$/.test(b) && b !== ID_MENU_MARCAS_GENERALI && !/_(input|panel|label|items|focus|filter)$/i.test(b)
@@ -3196,12 +3208,16 @@ export async function elegirMarcaListaGenerali(page: Page, guard: GuardEmision, 
 
 /** Abre el desplegable «Modelo» por su disparador propio, UNA vez por trabajo. */
 export async function abrirDesplegableModeloGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
-  await abrirMenuGenerali(page, guard, base, esIdModeloGenerali, 'generali:abrir-modelo', 'el desplegable de modelos')
+  await abrirMenuGenerali(page, guard, base, esIdModeloGenerali, claveRondaModeloGenerali(guard, 'generali:abrir-modelo'), 'el desplegable de modelos')
 }
 
 /** Pulsa el `li` del modelo elegido (o «Otros») del panel `#<base>_panel`, UNA vez por trabajo; el texto pasa `comprobarBoton` (fail-closed). */
 export async function elegirModeloListaGenerali(page: Page, guard: GuardEmision, base: string, texto: string): Promise<void> {
-  await elegirItemMenuGenerali(page, guard, base, texto, esIdModeloGenerali, 'generali:elegir-modelo', 'el modelo de la lista')
+  const clave = claveRondaModeloGenerali(guard, 'generali:elegir-modelo')
+  const otros = esTextoOtrosGenerali(texto ?? '')
+  if (otros && clave !== 'generali:elegir-modelo') throw new EmisionBloqueadaError('fase', '«Otros» en el desplegable de modelos de Generali ya se eligió en este trabajo')
+  await elegirItemMenuGenerali(page, guard, base, texto, esIdModeloGenerali, clave, 'el modelo de la lista')
+  if (otros) AVANCES_USADOS.get(guard)?.add(CLAVE_MODELO_OTROS_GENERALI)
 }
 
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────
