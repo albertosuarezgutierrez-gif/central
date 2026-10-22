@@ -16,6 +16,7 @@ import EditarVencimiento from './EditarVencimiento'
 import DescartarVolcado from './DescartarVolcado'
 import TarificarOportunidad from './TarificarOportunidad'
 import { destinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
+import { presentarDeclarada } from '@/lib/correduria/declarada-presentacion'
 
 /**
  * Los seguros del cliente en tres cubos, cada uno una tarjeta que se pincha
@@ -33,7 +34,9 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
   const abiertos = new Map<string, number>()
   for (const s of siniestros ?? []) if (s.abierto) abiertos.set(s.polizaId, (abiertos.get(s.polizaId) ?? 0) + 1)
   const ctx: Ctx = { abiertos: siniestros === null ? null : abiertos, clienteId, hoy }
-  const { conNosotros, oportunidades, yaNoExiste, historicas, descartadas } = reparto
+  const { conNosotros, yaNoExiste, historicas, descartadas } = reparto
+  // Un documento que no es póliza (p. ej. la ficha catastral) no es una oportunidad: ni se pinta ni cuenta.
+  const oportunidades = reparto.oportunidades.filter(s => s.clase !== 'declarada' || !presentarDeclarada(s.declarada).excluir)
 
   return (
     <>
@@ -258,12 +261,20 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     href = `/correduria/cliente/${ctx.clienteId}?tab=oportunidades`
     ramo = TIPOS[d.ramo ?? ''] ?? rotuloRamo(d.ramo)
     estado = 'Aportada por el cliente'
-    titulo = d.bien?.cosa ?? d.matricula ?? (d.compania ? `Seguro en ${d.compania}` : 'Sin detalle del bien')
-    lineas = [
-      d.compania ?? 'Compañía sin leer',
-      [textoVence(d.fechaVencimiento, ctx.hoy, 'declarado', { anual: true }), d.primaAnual !== null ? eur(d.primaAnual) : null].filter(Boolean).join(' · '),
-    ]
-    avisos.push({ texto: 'Abrir seguimiento', tono: 'aviso' })
+    const pr = presentarDeclarada(d)
+    titulo = pr.titulo
+    if (pr.sinLeer) {
+      // No se pudo leer: no se pregunta al cliente lo que el documento sí diría. Se revisa el fichero.
+      lineas = [pr.documento ? `Fichero: ${pr.documento}` : null]
+      avisos.push({ texto: 'Revisar el documento', tono: 'aviso' })
+    } else {
+      lineas = [
+        pr.compania,
+        pr.numero,
+        [textoVence(d.fechaVencimiento, ctx.hoy, 'declarado', { anual: true }), d.primaAnual !== null ? eur(d.primaAnual) : null].filter(Boolean).join(' · '),
+      ]
+    }
+    if (!pr.sinLeer) avisos.push({ texto: 'Abrir seguimiento', tono: 'aviso' })
   }
 
   const cuerpo = (
