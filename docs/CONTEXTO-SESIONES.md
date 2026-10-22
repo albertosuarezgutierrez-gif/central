@@ -12,12 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(22/10/2026)** — Patrimonio F1 paso 8 (documentos), PARCIAL: `lib/patrimonio/carpetas.ts` (owners inmueble/contrato/inquilino, permisos por nivel; inquilino solo `recibos`) +
-`documentos-api.ts` (subir/listar/descargar/borrado lógico con puertos, 10 MB, bytes mágicos, 404 ajeno) + tests; `module-documental` añadido a deps. Falta `documentos-bd.ts`, rutas, pantalla
-en la ficha y `documento_id` de facturas: `seguros.documentos` no tiene owner ni UPDATE → hace falta tabla `portal_patrimonio_documento` (SQL propuesto en el informe; Alberto la aplica).
+**(22/10/2026)** — Patrimonio F1 paso 8 (documentos) ✅ en código, REQUIERE SQL `apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio_documento.sql` (sin aplicar; mismo paso que el deploy). Ficheros EN BD
+(`bytea`, ≤10 MB, PDF/JPG/PNG/WebP; decisión de Alberto): tabla `portal_patrimonio_documento` (un owner inmueble|contrato|inquilino con FK compuesta al titular, sin DELETE, solo se sella `borrado_en`, trigger anti-«desborrar»,
+FK compuesta de `portal_patrimonio_gasto.documento_id`). `documentos-bd.ts` (tope 40/día/identidad, tx + advisory lock, listas sin `contenido`), rutas `/api/patrimonio/documentos[/id]` (411/413, `attachment`+`nosniff`+`no-store`),
+`Documentos.tsx` en la ficha del inmueble. Facturas: con inmueble, el fichero se guarda como documento (carpeta Facturas) en la MISMA tx de la reserva y rellena `documento_id`; sin inmueble no se guarda. Cepos en rojo y restaurados.
 **(22/10/2026)** — Patrimonio F1 paso 7 (facturas con IA): `POST/PATCH /api/patrimonio/facturas` + `RevisarFactura.tsx`. Subir deja un gasto `propuesto`
 (origen `factura`, importes NULL si no se leyó, `propuesta` jsonb con motivos); confirmar/descartar lo hace la persona (total >0, fecha y categoría obligatorias).
-Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; titular/inmueble ajeno → 404. Sin SQL nuevo. Pendiente: revisión agente-architect, `documento_id` (paso 8).
+Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; titular/inmueble ajeno → 404. Sin SQL nuevo. Pendiente: revisión agente-architect.
 **(22/10/2026)** — Patrimonio F1 paso 6: `/patrimonio/gastos` (plantillas, comunidad, derramas; comunidad exige nivel Total) + cron diario
 `/api/cron/patrimonio-gastos` (05:20, idempotente por `clave`, `isCronAuthorized`) que genera gastos `propuesto`. Siguiente: paso 7 (facturas con IA).
 **(22/10/2026)** — RRHH · «Mi material» con foto (Pilar): empleado sube foto (cámara, compresión cliente ~1600px, magic bytes, ≤8MB server / ≤4MB

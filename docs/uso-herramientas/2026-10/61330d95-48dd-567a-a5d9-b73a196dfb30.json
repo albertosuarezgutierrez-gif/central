@@ -1,19 +1,19 @@
 {
  "sesion": "61330d95-48dd-567a-a5d9-b73a196dfb30",
  "inicio": "2026-10-22T06:19:10.637Z",
- "fin": "2026-10-22T12:38:43.268Z",
- "llamadas": 1506,
+ "fin": "2026-10-22T12:45:46.569Z",
+ "llamadas": 1537,
  "categorias": {
   "otro": {
-   "llamadas": 206,
-   "chars_in": 148995,
-   "chars_out": 1037504,
+   "llamadas": 207,
+   "chars_in": 152746,
+   "chars_out": 1037565,
    "errores": 0,
    "archivos_citados": 20,
    "chars_citados": 324929,
    "tools": {
     "ToolSearch": 38,
-    "SubagentHandback": 41,
+    "SubagentHandback": 42,
     "SendMessage": 12,
     "ReadNotifications": 89,
     "Monitor": 23,
@@ -47,14 +47,14 @@
    }
   },
   "bash": {
-   "llamadas": 909,
-   "chars_in": 538261,
-   "chars_out": 4392345,
+   "llamadas": 938,
+   "chars_in": 604275,
+   "chars_out": 4644677,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 909
+    "Bash": 938
    }
   },
   "sql": {
@@ -99,14 +99,14 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 16,
-   "chars_in": 44959,
-   "chars_out": 48328,
+   "llamadas": 17,
+   "chars_in": 47189,
+   "chars_out": 50768,
    "errores": 0,
-   "archivos_citados": 47,
-   "chars_citados": 873080,
+   "archivos_citados": 49,
+   "chars_citados": 903387,
    "tools": {
-    "Agent": 16
+    "Agent": 17
    }
   },
   "mcp:claude-code-remote": {
