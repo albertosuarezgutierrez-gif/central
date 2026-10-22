@@ -12,6 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Correduría · agente de correo F2 + declarar emitida. F2 (PR #4981): migración `correo_lectura_llm` APLICADA, `CORREO_LLM_MODO=sombra` en Vercel plataforma y redeploy, fila `ia_presupuestos` app `correo-extractor` (0,50€/día, 8€/mes); `sinDatosSensibles` tacha NIF/NIE con separadores e IBAN en minúsculas; cotejo literal estricto de importes/ids. PR #5001: «Tarificar» solo si `comoSeTarifica(ramo)` ≠ `no` (Avant2 o bot); acciones `declarar_emitida`/`anular_declaracion` (gana sin crear póliza, «Emitida · pendiente de confirmar con CIMA»); el enlace F1 casa por nº+DGS+tomador; cruce diario avisa si CIMA no la trae a 10 días o no es enlazable. Sin migración. Pendiente: probar a 320 px y el circuito real con Grupo Studium (solicitud 165109972, Occident). Cambio de contraseña TIREA (22/10) verificado: la ingesta CIMA sigue entrando.
 **(22/10/2026)** — Patrimonio F1 paso 7 (facturas con IA): `POST/PATCH /api/patrimonio/facturas` + `RevisarFactura.tsx`. Subir deja un gasto `propuesto`
 (origen `factura`, importes NULL si no se leyó, `propuesta` jsonb con motivos); confirmar/descartar lo hace la persona (total >0, fecha y categoría obligatorias).
 Tope 20/día contado en BD (filas por `creado_por_identidad_id`) + rateLimit; titular/inmueble ajeno → 404. Sin SQL nuevo. Pendiente: revisión agente-architect, `documento_id` (paso 8).
