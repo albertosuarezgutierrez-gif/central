@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-21T17:39:10Z",
+  "generadoEn": "2026-10-22T09:59:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -171,6 +171,11 @@
       "id": "module-pagos",
       "tipo": "module",
       "npm": "@central/module-pagos"
+    },
+    {
+      "id": "module-patrimonio",
+      "tipo": "module",
+      "npm": "@central/module-patrimonio"
     },
     {
       "id": "module-pesca",
@@ -1020,11 +1025,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 17
       },
       "asegura-web": {
         "estado": "no",
@@ -2035,6 +2040,60 @@
         "evidencias": 0
       }
     },
+    "module-patrimonio": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-pesca": {
       "almacen": {
         "estado": "no",
@@ -2266,7 +2325,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 147
+        "evidencias": 152
       },
       "asegura-web": {
         "estado": "usado",
@@ -2290,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 233
+        "evidencias": 237
       },
       "rrhh": {
         "estado": "no",
@@ -2374,7 +2433,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 116
+        "evidencias": 121
       },
       "asegura-web": {
         "estado": "usado",
@@ -4027,6 +4086,10 @@
     "module-nominas": [],
     "module-organizador-trabajo": [],
     "module-pagos": [],
+    "module-patrimonio": [
+      "module-contabilidad",
+      "module-tarificacion"
+    ],
     "module-pesca": [],
     "module-presupuestos": [],
     "module-proveedores": [],
@@ -4268,6 +4331,7 @@
       "/api/operador/poliza/emitida",
       "/api/operador/poliza/intervinientes",
       "/api/operador/poliza/traer-pdf",
+      "/api/operador/portal-modulos",
       "/api/operador/portal/invitaciones",
       "/api/operador/presupuesto",
       "/api/operador/presupuesto/destinatarios",
@@ -4419,6 +4483,7 @@
       "/api/mis-datos/contactos/[id]",
       "/api/mis-datos/cuenta",
       "/api/mis-datos/cuenta/codigo",
+      "/api/modulos",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
@@ -6039,8 +6104,27 @@
       "seguros.portal_invitacion_enlace",
       "seguros.portal_invitacion_enlace_uso",
       "seguros.portal_mensaje",
+      "seguros.portal_modulo",
       "seguros.portal_obligacion",
       "seguros.portal_parte_siniestro",
+      "seguros.portal_patrimonio_aviso_inquilino",
+      "seguros.portal_patrimonio_comunidad",
+      "seguros.portal_patrimonio_contrato",
+      "seguros.portal_patrimonio_contrato_inquilino",
+      "seguros.portal_patrimonio_derrama",
+      "seguros.portal_patrimonio_enlace_inquilino",
+      "seguros.portal_patrimonio_gasto",
+      "seguros.portal_patrimonio_importacion",
+      "seguros.portal_patrimonio_importacion_fila",
+      "seguros.portal_patrimonio_indice",
+      "seguros.portal_patrimonio_inmueble",
+      "seguros.portal_patrimonio_inmueble_comunidad",
+      "seguros.portal_patrimonio_inmueble_poliza",
+      "seguros.portal_patrimonio_inquilino",
+      "seguros.portal_patrimonio_obligacion",
+      "seguros.portal_patrimonio_plantilla_gasto",
+      "seguros.portal_patrimonio_renta_actualizacion",
+      "seguros.portal_patrimonio_titular",
       "seguros.portal_peticion_acceso",
       "seguros.portal_poliza_declarada",
       "seguros.portal_poliza_declarada_historial",
@@ -7045,10 +7129,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 44,
+    "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1764,
+    "apis": 1766,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
