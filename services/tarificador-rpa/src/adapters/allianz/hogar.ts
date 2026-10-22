@@ -253,6 +253,11 @@ export function primaDeTexto(t: string | null | undefined): number | null {
 const ESPERA_AUTOCOMPLETADO_MS = 10_000
 const ESPERA_PASO_MS = 30_000
 const ESPERA_INFO_VIVIENDA_MS = 15_000
+const ESPERA_EDICION_CATASTRO_MS = 10_000
+
+/** 0.1.7: casilla que desbloquea año/reforma/m² rellenados por el Catastro tras «Comprobar» (`nx-checkbox`, texto visto). */
+export const CONTROL_EDITAR_CATASTRO = 'enableCadastreEditing'
+export const TEXTO_EDITAR_CATASTRO = 'Modificar datos del catastro.'
 
 const selControl = (control: string) => `[formcontrolname="${control}"]`
 
@@ -584,7 +589,10 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
       await marcarOpcion(marco, ctx, op)
       continue
     }
-    if (op.control === CONTROLES.anioConstruccion) await destaparInformacionVivienda(page, marco, ctx)
+    if (op.control === CONTROLES.anioConstruccion) {
+      await destaparInformacionVivienda(page, marco, ctx)
+      await habilitarEdicionCatastro(page, marco, ctx)
+    }
     const loc = await escribir(marco, ctx, op)
     if (op.autocompleta === 'poblacion') {
       let confirmarPob: (() => Promise<void>) | null = null
@@ -657,6 +665,37 @@ async function destaparInformacionVivienda(page: Page, marco: Frame, ctx: Pick<C
         .catch(() => '')
       throw new ErrorMapaIncompleto(`tras pulsar Comprobar la información de la vivienda no se destapó${overlay ? ` (diálogo visible: «${overlay.slice(0, 120)}»)` : ''}`)
     }
+    await page.waitForTimeout(250)
+  }
+}
+
+/**
+ * 0.1.7 (22/10/2026, HTML del atasco «por qué «Año de construcción» está deshabilitado»): tras «Comprobar» el portal rellena
+ * `yearOfConstruction`, `yearOfRefurbishment`, `surfaceAreaLiving` y `surfaceAreaOutbuilding` con los datos del CATASTRO y los deja
+ * `disabled`; los desbloquea la casilla `nx-checkbox[formcontrolname="enableCadastreEditing"]` «Modificar datos del catastro.»
+ * (sin marcar) de `#buildingInformation`. Se marca SOLO si el año está deshabilitado, por `ctx.pulsar` (guard) sobre su etiqueta
+ * visible de texto EXACTO, y se espera a que el año se habilite: el robot tarifica con los datos del FORMULARIO (los del cliente),
+ * nunca con lo que el Catastro dejó. Sin la casilla, ya marcada, o si no habilita → hueco con inventario (no se adivina).
+ */
+async function habilitarEdicionCatastro(page: Page, marco: Frame, ctx: Pick<ContextoPortal, 'pulsar' | 'pausaAccion'>): Promise<void> {
+  const anio = marco.locator(`#buildingInformation input${selControl(CONTROLES.anioConstruccion)}:visible`)
+  if ((await anio.count()) !== 1 || !(await anio.isDisabled())) return // un año único y habilitado: nada que hacer (el resto, `escribir`)
+  const caja = marco.locator(`#buildingInformation nx-checkbox${selControl(CONTROL_EDITAR_CATASTRO)}`)
+  const casilla = caja.locator('input[type="checkbox"]')
+  const nCaja = await caja.count()
+  if (nCaja !== 1 || (await casilla.count()) !== 1) {
+    throw new ErrorMapaIncompleto(`por qué «Año de construcción» está deshabilitado (casilla «${TEXTO_EDITAR_CATASTRO}»: ${nCaja} coincidencias)`)
+  }
+  if (await casilla.isChecked()) throw new ErrorMapaIncompleto(`por qué «Año de construcción» sigue deshabilitado con «${TEXTO_EDITAR_CATASTRO}» ya marcada`)
+  const etiqueta = caja.locator('label:visible')
+  if ((await etiqueta.count()) !== 1 || plano(await etiqueta.innerText()) !== plano(TEXTO_EDITAR_CATASTRO)) {
+    throw new ErrorMapaIncompleto(`la etiqueta visible de la casilla «${TEXTO_EDITAR_CATASTRO}» que habilita «Año de construcción»`)
+  }
+  await ctx.pausaAccion()
+  await ctx.pulsar(etiqueta)
+  const fin = Date.now() + ESPERA_EDICION_CATASTRO_MS
+  while (await anio.isDisabled()) {
+    if (Date.now() >= fin) throw new ErrorMapaIncompleto(`por qué «Año de construcción» sigue deshabilitado tras marcar «${TEXTO_EDITAR_CATASTRO}»`)
     await page.waitForTimeout(250)
   }
 }
@@ -739,7 +778,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.6',
+  version: '0.1.7',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)

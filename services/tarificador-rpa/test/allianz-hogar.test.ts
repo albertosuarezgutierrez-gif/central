@@ -164,6 +164,12 @@ type OpcionesApp = {
   townVisibleDuplicado?: boolean
   /** 0.1.5: `#buildingInformation` (año, reforma, m²) con `hidden` hasta pulsar «Comprobar»; `'nunca'` = no se destapa; `'overlay'` = no se destapa y aparece un diálogo. */
   infoOculta?: boolean | 'nunca' | 'overlay'
+  /**
+   * 0.1.7 (HTML del atasco del 22/10/2026): tras «Comprobar» año/reforma/m² llegan RELLENOS por el Catastro y `disabled`, con la casilla
+   * `nx-checkbox[formcontrolname=enableCadastreEditing]` «Modificar datos del catastro.» sin marcar que los habilita. `'no_habilita'` =
+   * la casilla se marca pero los campos siguen deshabilitados. Datos inventados.
+   */
+  catastro?: true | 'no_habilita'
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -182,7 +188,7 @@ ${campo('postalCode', 'Código postal')}${campo('province', 'Provincia', true, t
 ${campo('streetType', 'Tipo de vía', true, true)}${campo('streetName', 'Nombre de la vía')}${campo('streetNumber', 'Número', true, false, 'number')}
 ${campo('block', 'Bloque', false)}${campo('stair', 'Escalera', false)}${campo('floor', 'Piso', false)}${campo('flat', 'Puerta', false)}
 <div id="check-address"><button type="button" id="comprobar" onclick="${o.infoOculta === 'nunca' ? '' : o.infoOculta === 'overlay' ? `document.body.insertAdjacentHTML('beforeend','<div class=cdk-overlay-pane>Revise la direccion</div>')` : `document.getElementById('buildingInformation').hidden=false`}">Comprobar</button></div>
-<div id="buildingInformation" ${o.infoOculta ? 'hidden' : ''}>${campo('yearOfConstruction', 'Año de construcción', true, false, 'number')}${campo('yearOfRefurbishment', 'Año de la reforma', false, false, 'number')}${campo('surfaceAreaLiving', 'Superficie de la vivienda')}</div>
+<div id="buildingInformation" ${o.infoOculta ? 'hidden' : ''}>${o.catastro ? `<nx-checkbox formcontrolname="enableCadastreEditing" class="nx-checkbox"><input type="checkbox" class="nx-checkbox__input" id="cat-1" value="false" style="opacity:0;position:absolute;width:1px;height:1px"><label class="nx-checkbox__label has-label" for="cat-1"><span class="nx-checkbox__control"></span><div class="nx-checkbox__label-text"> Modificar datos del catastro. </div></label></nx-checkbox>` : ''}${campo('yearOfConstruction', 'Año de construcción', true, !!o.catastro, 'number')}${campo('yearOfRefurbishment', 'Año de la reforma', false, !!o.catastro, 'number')}${campo('surfaceAreaLiving', 'Superficie de la vivienda', true, !!o.catastro)}</div>
 ${radio('m1', 'madera', 'Sin madera', true)}${radio('m2', 'madera', 'Con madera')}
 ${radio('t1', 'tipo', 'Piso en alto', true)}${radio('t2', 'tipo', 'Unifamiliar Adosada / Pareada')}${radio('t3', 'tipo', 'Planta Baja o piso con ventanas a menos de 3 metros del suelo')}${radio('t4', 'tipo', 'Ático')}${radio('t5', 'tipo', 'Unifamiliar Independiente')}
 ${radio('r1', 'regimen', '<i></i>Propietario Propietario', true)}${radio('r2', 'regimen', '<i></i>Inquilino Inquilino')}
@@ -237,6 +243,12 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
       p.appendChild(op);
     }
     c.appendChild(p); document.body.appendChild(c); $('town').setAttribute('aria-controls', 'nx-autocomplete-panel-1');
+  });` : ''}
+  ${o.catastro ? `
+  $('yearOfConstruction').value = '1950'; $('surfaceAreaLiving').value = '55';
+  document.getElementById('cat-1').addEventListener('change', (ev) => {
+    if (${o.catastro === 'no_habilita' ? 'true' : 'false'}) return;
+    for (const f of ['yearOfConstruction', 'yearOfRefurbishment', 'surfaceAreaLiving']) $(f).disabled = !ev.target.checked;
   });` : ''}
   valida();
 </script></body></html>`
@@ -333,6 +345,36 @@ test('0.1.5: tras «Comprobar» la información sigue oculta → hueco claro (co
     } finally {
       await context.close()
     }
+  }
+})
+
+test('0.1.7: tras «Comprobar» el Catastro deja año/m² rellenos y deshabilitados → marca «Modificar datos del catastro.» (ctx.pulsar) y escribe los del formulario', async () => {
+  const { context, page, ctx, pulsados, marco, valor, marcado } = await abrir({ infoOculta: true, catastro: true })
+  try {
+    await rellenarPantallaVivienda(page, marco, FORM, ctx)
+    assert.equal(await marcado('cat-1'), true)
+    assert.equal(await valor('yearOfConstruction'), '1990', 'el año del formulario, no el del Catastro')
+    assert.equal(await valor('surfaceAreaLiving'), '90', 'los m² del formulario, no los del Catastro')
+    const iC = pulsados.indexOf('Comprobar')
+    const iM = pulsados.indexOf('Modificar datos del catastro.')
+    assert.ok(iC >= 0 && iM > iC, 'primero «Comprobar», luego la casilla del Catastro')
+    assert.equal(pulsados.filter((p) => p === 'Modificar datos del catastro.').length, 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.7: la casilla del Catastro no habilita el año → hueco claro (no se escribe ni se adivina)', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ infoOculta: true, catastro: 'no_habilita' })
+  try {
+    page.setDefaultTimeout(20_000)
+    await assert.rejects(
+      () => rellenarPantallaVivienda(page, marco, FORM, ctx),
+      (e) => e instanceof ErrorMapaIncompleto && /sigue deshabilitado tras marcar «Modificar datos del catastro\.»/.test((e as Error).message),
+    )
+    assert.equal(await valor('yearOfConstruction'), '1950', 'no se tocó el año del Catastro')
+  } finally {
+    await context.close()
   }
 })
 
