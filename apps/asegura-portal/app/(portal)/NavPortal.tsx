@@ -48,7 +48,9 @@ import { CargandoEnlace } from './CargandoEnlace'
  * de la ruta y del parámetro, y no baja como prop desde cada página — así el
  * `layout` puede pintar la navegación una sola vez para todas.
  */
-export function NavPortal({ llamar, whatsapp }: {
+export function NavPortal({ llamar, whatsapp, patrimonio }: {
+  /** `accesosPatrimonio` no vacío (lo calcula el layout): sin titulares no hay entrada. */
+  patrimonio?: boolean
   llamar?: { tel: string; numero: string }
   /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */
   whatsapp?: string
@@ -168,6 +170,17 @@ export function NavPortal({ llamar, whatsapp }: {
         >
           Mi resumen
         </Link>
+        {patrimonio && (
+          <Link
+            href="/patrimonio"
+            className="portal-nav-item"
+            aria-current={ruta.startsWith('/patrimonio') ? 'page' : undefined}
+            data-activa={ruta.startsWith('/patrimonio') ? 'si' : undefined}
+            onClick={cerrar}
+          >
+            Patrimonio
+          </Link>
+        )}
         {/* «Herramientas» (22/10/2026): módulos gratis para clientes (flota, RRHH, alquileres). Otra RUTA,
             como «Mi resumen»; no está en `pestanasPortal()`. Ver `app/(portal)/herramientas/page.tsx`. */}
         <Link
