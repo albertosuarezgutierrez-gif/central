@@ -68,6 +68,9 @@ const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   // Mismo SQL, rellenando `fecha_fin_vigencia` de una oportunidad ya abierta sin fecha.
   fecha_desde_recaptacion: 'Fecha estimada desde Recaptación (póliza antigua)',
   editada: 'Corregida (ramo, vencimiento, compañía o prima)',
+  // 22/10/2026, «escanear nunca duplica» (asegura `oportunidad-documento.ts`): la póliza subida otra vez actualiza la que había.
+  actualizada_documento: 'Actualizada con la póliza subida (lo puesto a mano no se pisa)',
+  poliza_con_oportunidad_cerrada: 'Esta póliza ya tuvo una oportunidad cerrada',
   tarea_creada: 'Tarea creada',
   tarea_cerrada: 'Tarea cerrada',
   llamada: 'Llamada registrada',

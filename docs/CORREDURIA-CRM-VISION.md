@@ -328,11 +328,18 @@ proceso con TODAS las pólizas aportadas.
 2. Pedir al cliente en el portal SOLO los datos que faltan para tarificar, no un formulario genérico.
 3. Vencimiento proyectado al próximo aniversario siempre marcado como proyectado, nunca como leído (ver arriba).
 4. Agregado para negociar: por compañía rival + ramo → nº de pólizas, prima total, vencimientos por mes.
-5. Deduplicar por compañía + número de póliza (cliente o Alberto suben la misma dos veces).
+5. ~~Deduplicar por compañía + número de póliza~~ HECHO para la OPORTUNIDAD (22/10/2026, regla de abajo); la
+   `portal_poliza_declarada` del portal aún se duplica.
 6. Ventana de trabajo: tarificar a ~60 días del vencimiento, presupuesto a ~30-45 días (decide Alberto).
 7. Aprovechar documentos que no son póliza: ficha catastral → referencia catastral para hogar/comercio; recibo → precio actual.
 
 ### Reglas
+- **Escaneo de pólizas: nunca duplicar (22/10/2026).** Se leen TODAS las personas con DNI/CIF (tomador, asegurados,
+  propietario, conductores, beneficiarios) y se casan por índice ciego en toda la cartera: activa antes que descartada,
+  la única descartada se REACTIVA con nota, dos activas = «revisar» + Telegram. La póliza (compañía + nº normalizado) con
+  oportunidad abierta en cualquier ficha se ACTUALIZA (vencimiento, prima, `info_riesgo.lecturaDocumento`), sin pisar lo
+  puesto a mano ni con `null`; el portal casa, nunca abre fichas de terceros. Modelo de visión: `OPENROUTER_POLIZA_MODEL`
+  (+ `_SUPLENTE`). Código: `module-seguros/escaneo-poliza.ts`, `apps/asegura/lib/oportunidad-documento.ts`.
 - **Lo leído del documento nunca se pisa con lo declarado.** `null` = «no se sabe» (tres estados), jamás 0/vacío.
 - **Nada sale al cliente sin OK de Alberto por envío** (borrador por defecto; regla 7 de la skill).
 - **Al principio Alberto valida todo a mano** (22/10): confirma con la compañía precio y coberturas antes de que un

@@ -1578,3 +1578,11 @@ export {
   type ContactoElegible, type ContactoNoElegible, type DestinatariosPresupuesto, type EstadoCorreoPersona, type MotivoNoElegible,
   type CanalDestino, type EstadoMovilPersona, type PersonaDestino, type TipoPersonaFicha, type TomadorDestino, type ViaDestino,
 } from './destinatarios-presupuesto.ts'
+export {
+  ACCION_ACTUALIZADA_DOCUMENTO, CAMPOS_PROCEDENCIA, CLAVES_CAPITAL, MAX_GARANTIAS, MAX_PERSONAS_POLIZA, MODELO_POLIZA_DEFECTO,
+  MODELO_POLIZA_SUPLENTE, ROLES_PERSONA_POLIZA, decidirFichaPorIdentidad, fusionarLecturaEnOportunidad, importeLeido,
+  leerLecturaDocumento, modelosLecturaPoliza, normalizarPersonasPoliza, procedenciaCamposOportunidad, riesgoLeidoDeDocumento,
+  type CampoProcedencia, type CandidataIdentidad, type CapitalesLeidos, type DecisionIdentidad, type Discrepancia,
+  type EventoHistorialOportunidad, type GarantiaLeida, type LecturaDocumentoOportunidad, type PersonaEnlazada,
+  type PersonaPolizaLeida, type Procedencia, type ResultadoFusion, type RiesgoLeido, type RolPersonaPoliza, type ValorLeidoDocumento,
+} from './escaneo-poliza.ts'

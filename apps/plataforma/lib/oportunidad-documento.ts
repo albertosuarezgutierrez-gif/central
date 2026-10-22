@@ -29,16 +29,34 @@ export function interpretarOportunidadDocumento(v: unknown): AvisoOportunidadDoc
       const cuando = vence
         ? `vence el ${vence}; llamada el ${llamada ?? '—'}`
         : 'sin vencimiento legible: queda una tarea para pedirlo'
+      // 22/10/2026: la póliza ya tenía oportunidad (en cualquier ficha): se ACTUALIZA, nunca se duplica.
+      const campos = lista(o.camposActualizados)
+      const discrepancias = typeof o.discrepancias === 'number' && o.discrepancias > 0 ? o.discrepancias : 0
+      const extra = [
+        o.reactivada === true ? 'la ficha estaba descartada y se ha reactivado' : null,
+        discrepancias > 0 ? `${discrepancias} dato(s) leídos no coinciden con lo puesto a mano y NO se han pisado (míralo en su historial)` : null,
+      ].filter(Boolean)
+      const cola = extra.length > 0 ? ` Ojo: ${extra.join('; ')}.` : ''
       if (o.yaExistia === true) {
-        return { tono: 'info', texto: 'Ya estaba subida: no se ha duplicado. Sigue la oportunidad que ya había.', clienteId }
+        const hecho = campos.length > 0 ? `le he actualizado: ${campos.join(', ')}` : 'no había nada nuevo que actualizar'
+        return { tono: discrepancias > 0 ? 'aviso' : 'info', texto: `Esta póliza ya tenía oportunidad: no se ha duplicado; ${hecho}.${cola}`, clienteId }
       }
       const que = o.estado === 'creada'
         ? 'Oportunidad abierta sola'
         : o.completada === true
           ? 'Ya tenía una oportunidad de este seguro: le he completado lo que faltaba'
           : 'Ya tenía una oportunidad de este seguro abierta: sigue esa'
-      return { tono: 'ok', texto: `${que}${quien} (${cuando}).`, clienteId }
+      const cerradas = typeof o.cerradasPrevias === 'number' && o.cerradasPrevias > 0 ? ' Esta póliza ya tuvo una oportunidad cerrada (anotado en la nueva).' : ''
+      return { tono: discrepancias > 0 ? 'aviso' : 'ok', texto: `${que}${quien} (${cuando}).${cerradas}${cola}`, clienteId }
     }
+    case 'revisar':
+      return {
+        tono: 'aviso',
+        texto: o.motivo === 'oportunidad_ambigua'
+          ? 'Esta póliza ya tiene oportunidades abiertas en varias fichas: no se ha tocado ninguna. Deja una sola y vuelve a subirla.'
+          : 'El DNI/CIF del tomador está en varias fichas activas: no se ha elegido ninguna ni abierto otra. Revisa el posible duplicado y vuelve a subirla.',
+        clienteId: null,
+      }
     case 'ya_nuestra':
       return { tono: 'info', texto: 'Esta póliza ya es nuestra (en vigor): no es una oportunidad.', clienteId: null }
     case 'no_es_seguro':

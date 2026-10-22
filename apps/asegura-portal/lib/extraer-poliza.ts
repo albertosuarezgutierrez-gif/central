@@ -28,6 +28,7 @@
 // se guarda igual; allí es un error que la persona ve.
 import { validarCompaniaContraTexto } from './compania-en-texto'
 import { openrouterChat, openrouterVision, cleanJSON } from '@central/core-ai'
+import { modelosLecturaPoliza } from '@central/module-seguros'
 import {
   MAX_TEXTO_RAMO,
   camposDeRamo,
@@ -422,6 +423,13 @@ async function leerDatosRamo(
   }
 }
 
+/**
+ * El modelo que lee pólizas (22/10/2026): el mismo que en asegura (`modelosLecturaPoliza`,
+ * `OPENROUTER_POLIZA_MODEL` + suplente en la MISMA petición) y solo proveedores que no guardan ni
+ * entrenan con los datos. Antes, sin `model`: el default de texto de core-ai, sin suplente.
+ */
+const MODELO_POLIZA = () => ({ models: modelosLecturaPoliza(process.env), privacidad: true })
+
 export async function extraerPoliza(
   buffer: Buffer,
   mimeType: string,
@@ -451,7 +459,7 @@ export async function extraerPoliza(
     const apiKey = (process.env.OPENROUTER_API_KEY ?? '').trim()
     if (!apiKey) return nadaLeido()
     const pedirTexto = (system: string) =>
-      openrouterChat({ apiKey }, [{ role: 'user', content: texto.slice(0, 20_000) }], { system, maxTokens: 900 })
+      openrouterChat({ apiKey }, [{ role: 'user', content: texto.slice(0, 20_000) }], { system, maxTokens: 900, ...MODELO_POLIZA() })
     // Un fallo de IA es «no lo hemos podido mirar», no «no hay datos»: se degrada
     // a `none` y la póliza se guarda igual, para completarla a mano.
     let salida: string
@@ -482,6 +490,7 @@ export async function extraerPoliza(
         INSTRUCCION,
         [{ data: buffer.toString('base64'), mediaType: mimeType }],
         'Extrae los datos de esta póliza.',
+        MODELO_POLIZA(),
       )
     } catch (e) {
       console.warn('[portal] openrouterVision falló:', e)
@@ -493,6 +502,7 @@ export async function extraerPoliza(
         instruccion,
         [{ data: buffer.toString('base64'), mediaType: mimeType }],
         'Extrae los datos de esta póliza.',
+        MODELO_POLIZA(),
       ),
     )
     return { datos, fuente: 'vision', camposRamo: estado }

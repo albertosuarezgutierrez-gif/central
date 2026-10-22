@@ -25,7 +25,7 @@
 // lo vigila `test/regression-marcadores-sin-dato.test.ts`.
 
 import { openrouterVision, cleanJSON } from '@central/core-ai'
-import { iaTexto } from '../ia.ts'
+import { iaTexto, viaIA } from '../ia.ts'
 import { leerPdfProbando, pdfCifrado } from './pdf-contrasena.ts'
 import {
   normalizarAutoLeido,
@@ -35,6 +35,7 @@ import {
   normalizarContactoTomador,
   normalizarFigurasLeidas,
   figurasSinNombre,
+  modelosLecturaPoliza,
   type AutoLeido,
   type FiguraLeida,
   type FiguraSinNombre,
@@ -109,7 +110,9 @@ Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
 "fechaMatriculacion":"YYYY-MM-DD"|null,"fechaCarnet":"YYYY-MM-DD"|null,
 "aniosSinSiniestros":number|null,"siniestrosUltimos5":number|null,
 "direccion":string|null,"cp":string|null,"localidad":string|null,"metrosCuadrados":number|null,
-"anioConstruccion":number|null,"capitalContinente":number|null,"capitalContenido":number|null,
+"anioConstruccion":number|null,"capitalContinente":number|null,"capitalContenido":number|null,"capitalAsegurado":number|null,
+"garantias":[{"nombre":string,"capital":number|null,"franquicia":number|null}],
+"personas":[{"rol":"tomador"|"asegurado"|"propietario"|"conductor_habitual"|"conductor_ocasional"|"beneficiario","nombre":string|null,"dni":string|null}],
 "telefono":string|null,"email":string|null,"domicilioVia":string|null,"domicilioCp":string|null,
 "domicilioPoblacion":string|null,"domicilioProvincia":string|null,"claseCarnet":string|null,
 "mediador":string|null,"cesionDerechos":boolean|null,"modalidad":string|null,"pagoUnicoPlurianual":boolean|null,"tomadorEsConductorHabitual":boolean|null,
@@ -143,7 +146,20 @@ Reglas, por orden de importancia:
   precio y no hay nada que delate el error.
 - "primaAnual" es el TOTAL que paga el cliente (con recargos, IPS y Consorcio),
   no la prima neta. Si el pago es fraccionado, el año completo, no el fraccionamiento.
-- "capitalContinente" y "capitalContenido" en euros, solo el número.
+- "capitalContinente" y "capitalContenido" en euros, solo el número (hogar, comercio o comunidades).
+- "capitalAsegurado": el capital o suma asegurada PRINCIPAL de la póliza en euros (vida, accidentes,
+  decesos, RC…: el límite o capital que la póliza garantiza), solo el número. Si no aparece, null.
+- "garantias" (CUALQUIER ramo): cada garantía o cobertura que la póliza enumera, con su nombre tal cual
+  ("Incendio", "Responsabilidad Civil", "Lunas"…), su capital/límite en euros si figura junto a ella y
+  su franquicia en euros si la tiene; null en lo que no figure. Como mucho 40. Si la póliza no enumera
+  garantías, []. NO inventes garantías por el ramo.
+- "personas" (CUALQUIER ramo): TODAS las personas o empresas que la póliza nombra en estos papeles, con
+  su nombre y su DNI/NIE/CIF si figura JUNTO a ella (si no, null; NUNCA copies el de otra persona):
+  "tomador" (también aquí, además de arriba), "asegurado" (cada asegurado: vida, salud, decesos,
+  accidentes, hogar…), "propietario" (del vehículo o de la vivienda), "conductor_habitual",
+  "conductor_ocasional" y "beneficiario" (cada beneficiario designado o beneficiario preferente, p. ej.
+  un banco). Una entrada por persona y papel, como mucho 12. Si la misma persona tiene dos papeles,
+  dos entradas. Si no nombra a nadie más que al tomador, solo el tomador.
 - "combustible" es el tipo de combustible/motor del vehículo tal como lo escribe el documento
   (p. ej. "Gasolina", "Diésel", "Eléctrico", "Híbrido"). Si no aparece, null: NO lo deduzcas de la
   marca ni del modelo.
@@ -151,8 +167,8 @@ Reglas, por orden de importancia:
   fechaCarnet, aniosSinSiniestros, siniestrosUltimos5) solo tienen sentido si el
   ramo es auto o moto: en cualquier otro caso, todos a null.
 - Los campos de VIVIENDA (direccion, cp, localidad, metrosCuadrados,
-  anioConstruccion, capitalContinente, capitalContenido) solo tienen sentido si
-  el ramo es hogar: en cualquier otro caso, todos a null.
+  anioConstruccion) solo tienen sentido si el ramo es hogar: en cualquier otro
+  caso, todos a null.
 - "tomador" es el TOMADOR del seguro, que el documento puede llamar "tomador", "titular de la
   póliza", "nombre del titular de la póliza", "contratante" o "policyholder". Si es una EMPRESA
   (sociedad, "Empresa: …", S.L., S.A.…), "tomador" es su RAZÓN SOCIAL tal cual, NUNCA la "persona de
@@ -215,9 +231,29 @@ const PETICION = 'Extrae los datos de esta póliza de seguro.'
 /**
  * Tope de salida de la IA (texto y visión). 1.700 bastaban para los campos sueltos; con `figuras`
  * (hasta 6 personas con 11 claves cada una, domicilio incluido) el JSON crece, y uno cortado no
- * parsea y se queda en «nada leído» (03/10/2026).
+ * parsea y se queda en «nada leído» (03/10/2026). 22/10/2026: + `personas` (12) y `garantias` (40) → 4.500.
  */
-const MAX_TOKENS = 3000
+
+/**
+ * Lectura de TEXTO de la póliza con el modelo de pólizas (`modelosLecturaPoliza`, 22/10/2026): por la
+ * pasarela (coste en `ai_usos` y topes) con el modelo explícito y, si falla, su suplente. Sin pasarela
+ * no se puede elegir modelo (`iaTexto` lanzaría): la llamada de siempre.
+ */
+async function leerTextoConModeloPoliza(texto: string): Promise<string> {
+  const base = { system: INSTRUCCION, maxTokens: MAX_TOKENS, timeoutMs: 45_000, privado: true, cliente: 'lectura-poliza' }
+  if (viaIA() !== 'pasarela') return iaTexto(texto, { ...base, timeoutMs: 55_000 })
+  let ultimo: unknown = null
+  for (const modelo of modelosLecturaPoliza(process.env)) {
+    try {
+      return await iaTexto(texto, { ...base, modeloOpenRouter: modelo })
+    } catch (e) {
+      ultimo = e
+      console.warn(`[asegura] lectura de póliza con ${modelo} falló:`, e instanceof Error ? e.message : e)
+    }
+  }
+  throw ultimo instanceof Error ? ultimo : new Error(String(ultimo))
+}
+const MAX_TOKENS = 4500
 
 function nadaLeido(motivo: string): ResultadoLecturaPoliza {
   return { fase: 'ninguno', motivo }
@@ -341,7 +377,7 @@ export async function leerPoliza(
       )
     }
     try {
-      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: MAX_TOKENS, timeoutMs: 55_000, privado: true })
+      const salida = await leerTextoConModeloPoliza(texto.slice(0, 20_000))
       return empaquetar(parsear(salida), 'texto')
     } catch (e) {
       console.warn('[asegura] lectura de texto por IA falló:', e)
@@ -360,7 +396,10 @@ export async function leerPoliza(
         INSTRUCCION,
         [{ data: buffer.toString('base64'), mediaType: mimeType }],
         PETICION,
-        { maxTokens: MAX_TOKENS },
+        // Modelo de pólizas con su suplente en la MISMA petición (fallback nativo de OpenRouter) y solo
+        // proveedores que no guardan ni entrenan con los datos (22/10/2026). Antes, sin `model`: el
+        // default de texto de core-ai (deepseek), sin suplente.
+        { maxTokens: MAX_TOKENS, models: modelosLecturaPoliza(process.env), privacidad: true, signal: AbortSignal.timeout(90_000) },
       )
       return empaquetar(parsear(salida), 'vision')
     } catch (e) {

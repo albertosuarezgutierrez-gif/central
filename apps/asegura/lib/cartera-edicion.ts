@@ -140,6 +140,13 @@ async function clienteDe(correduriaId: string, clienteId: string) {
 // ─── Coincidencias (búsqueda previa) ─────────────────────────────────────────
 
 /**
+ * Lo que se lee de cada ficha coincidente. `activo` se LEE (22/10/2026: para preferir la activa a la
+ * descartada al escanear una póliza); NO se filtra por él (ver abajo). Fuera de la función a propósito:
+ * el guardián `regression-cliente-descartado` busca un filtro por `activo` dentro de su cuerpo.
+ */
+const SEL_COINCIDENCIA = { id: true, nombre: true, apellidos: true, tipo: true, activo: true } as const
+
+/**
  * ¿Qué OTRAS fichas de la correduría tienen ya este DNI/teléfono/email?
  * Mira el principal (`clientes`) y también los secundarios de las tablas
  * hijas. Las lápidas de fusión no cuentan.
@@ -158,17 +165,18 @@ export async function coincidencias(
   const db = prismaAsegura()
   const out: Coincidencia[] = []
   const vistos = new Set<string>()
-  const nombreDe = (c: { id: string; nombre: string; apellidos: string; tipo: unknown }) => ({
+  const nombreDe = (c: { id: string; nombre: string; apellidos: string; tipo: unknown; activo: boolean }) => ({
     id: c.id,
     nombre: `${c.nombre} ${c.apellidos}`.trim(),
     tipo: String(c.tipo),
+    activo: c.activo,
   })
-  const anota = (c: { id: string; nombre: string; apellidos: string; tipo: unknown }, por: Coincidencia['por']) => {
+  const anota = (c: { id: string; nombre: string; apellidos: string; tipo: unknown; activo: boolean }, por: Coincidencia['por']) => {
     if (c.id === excepto || vistos.has(`${c.id}:${por}`)) return
     vistos.add(`${c.id}:${por}`)
     out.push({ ...nombreDe(c), por })
   }
-  const sel = { id: true, nombre: true, apellidos: true, tipo: true } as const
+  const sel = SEL_COINCIDENCIA
 
   if (datos.dni) {
     const h = computeDniLookupHash(datos.dni)
@@ -919,22 +927,30 @@ export async function restaurarCliente(
  * vivas, así que en cuanto vuelve a tener una, la ficha vuelve. Best-effort a
  * propósito: la póliza ya está creada y un fallo aquí no puede deshacerla.
  */
-export async function reactivarPorPoliza(correduriaId: string, clienteId: string, porque: string): Promise<void> {
+export async function reactivarPorPoliza(
+  correduriaId: string,
+  clienteId: string,
+  porque: string,
+  /** Texto entero del historial (22/10/2026: reactivada por una póliza ESCANEADA, que no es de cartera). */
+  nota?: string,
+): Promise<boolean> {
   try {
     const r = await prismaAsegura().cliente.updateMany({
       where: { id: clienteId, correduriaId, activo: false },
       data: { activo: true, updatedAt: new Date() },
     })
-    if (r.count === 0) return
+    if (r.count === 0) return false
     anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'activo', antes: false, despues: true })
     await anotarHistorial(
       correduriaId,
       clienteId,
       'gestion',
-      `Ficha reactivada automáticamente: ${porque}. Estaba descartada y ha vuelto a tener una póliza.`,
+      nota ?? `Ficha reactivada automáticamente: ${porque}. Estaba descartada y ha vuelto a tener una póliza.`,
     )
+    return true
   } catch (e) {
     console.error('[cartera-edicion] no se pudo reactivar la ficha descartada:', e instanceof Error ? e.message : e)
+    return false
   }
 }
 
