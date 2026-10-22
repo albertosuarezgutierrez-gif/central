@@ -335,6 +335,8 @@ proceso con TODAS las pólizas aportadas.
 ### Reglas
 - **Lo leído del documento nunca se pisa con lo declarado.** `null` = «no se sabe» (tres estados), jamás 0/vacío.
 - **Nada sale al cliente sin OK de Alberto por envío** (borrador por defecto; regla 7 de la skill).
+- **Al principio Alberto valida todo a mano** (22/10): confirma con la compañía precio y coberturas antes de que un
+  presupuesto llegue al cliente. La automatización PREPARA (tarifica, compara, redacta); validar y enviar es suyo.
 - **Las declaradas NUNCA van a `seguros.polizas`**: contarían como cartera CIMA (`esCarteraViva`/`esCarteraEnVigor`). Viven en
   `portal_poliza_declarada`.
 - La tarificación cuesta (Avant2 0,50 €/consulta, no idempotente): una vez por ventana, contra cupo; los bots RPA no emiten.
