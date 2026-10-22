@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import SolicitudesEmpleado from '@/components/SolicitudesEmpleado'
 import FichajeEmpleado from '@/components/FichajeEmpleado'
+import MaterialEmpleado from '@/components/MaterialEmpleado'
 import ActivarPush from '@/components/ActivarPush'
 import Wordmark from '@/components/Wordmark'
 import { estiloMarca } from '@/lib/branding'
@@ -134,6 +135,8 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
 
       <div className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block">
       {tieneFichaje && <FichajeEmpleado />}
+
+      <MaterialEmpleado />
 
       <SolicitudesEmpleado />
       </div>
