@@ -992,3 +992,44 @@ export function motivosInteresadoGenerali(campos: readonly { campo: string }[], 
     })
     .join(', ')
 }
+
+// ───────────────────────── v0.2.22 · botón «Personas» (buscador de personas) del tomador ─────────────────────────
+
+/** Id real del botón «Personas» que abre el buscador de personas (inventario del trabajo 304ac3a2). */
+export const ID_BOTON_PERSONAS_GENERALI = 'reg1063A_personas_roles_lnkPers'
+/** Rótulo (normalizado) del botón que lanza la búsqueda dentro del buscador de personas. */
+export const RE_BUSCAR_PERSONA_GENERALI = /^(buscar|consultar|buscar persona|consultar persona|busqueda|consulta|buscar cliente)$/
+/** Rótulos (normalizados) que delatan una pantalla de ALTA de persona: ahí no se crea nada. */
+export const RE_ALTA_PERSONA_GENERALI = /^(alta|nuevo|nueva persona|nueva|crear|crear persona|dar de alta|alta de persona|alta persona|nuevo cliente)$/
+/** Rótulos (normalizados) del control que elige una fila del resultado. */
+export const RE_ELEGIR_FILA_GENERALI = /^(seleccionar|elegir|seleccion|sel|escoger|seleccionar persona)$/
+
+/** Minúsculas, sin tildes ni espacios sobrantes. PURA. */
+export function normalizarRotuloGenerali(t: string | null | undefined): string {
+  return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.:]+$/g, '').replace(/\s+/g, ' ').trim()
+}
+
+/** Documento comparable: mayúsculas, solo letras y dígitos. PURA. */
+export function documentoNormalizadoGenerali(t: string | null | undefined): string {
+  return String(t ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+}
+
+/** ¿Alguna celda de la fila ES exactamente el documento buscado? (igualdad de celda, no subcadena). PURA. */
+export function filaCoincideDocumentoGenerali(celdas: readonly string[], documento: string): boolean {
+  const d = documentoNormalizadoGenerali(documento)
+  return d !== '' && celdas.some((c) => documentoNormalizadoGenerali(c) === d)
+}
+
+/** Control visible de la ventana/capa que abrió «Personas» (sin valores: solo tipo, id y rótulo de etiqueta/botón). */
+export type ControlAbiertoGenerali = { tag: string; tipo: string; id: string; rotulo: string; ro: boolean }
+
+/** Inventario compacto y SANEADO de lo que abrió «Personas»: etiquetas/ids/tipos, nunca valores. Tope `max`. PURA. */
+export function resumenControlesAbiertoGenerali(controles: readonly ControlAbiertoGenerali[], filas: number, max = 650): string {
+  const partes = controles.map((c) => {
+    const id = c.id.startsWith(PREFIJO_ID_PERSONAS_GENERALI) ? c.id.slice(PREFIJO_ID_PERSONAS_GENERALI.length) : c.id
+    const rot = c.rotulo ? ` «${sanearFragmentoGenerali(c.rotulo).slice(0, 30)}»` : ''
+    return `${c.tag}/${c.tipo}${c.ro ? ',ro' : ''}${id ? `#${sanearFragmentoGenerali(id).slice(0, 40)}` : ''}${rot}`
+  })
+  const t = `${partes.join('; ') || 'sin controles visibles'}; filas:${filas}`
+  return t.length > max ? `${t.slice(0, max)}…` : t
+}
