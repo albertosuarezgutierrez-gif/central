@@ -39,7 +39,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { claveCampo, conRespaldoIA, normalizarTexto, registrarAtasco, type PeticionResolver } from '../../formador.ts'
 import { esTextoContinuar } from '../../continuar.ts'
-import { esAppHogarAllianz } from '../../guard.ts'
+import { esAppHogarAllianz, etiquetaEnGrupoHogarAllianz, grupoOpcionesHogarAllianz, opcionesMarcadasHogarAllianz } from '../../guard.ts'
 import { comprobarCampo } from './auto.ts'
 import { login, sesionSirve } from './comunidades.ts'
 import { abrirNuevaAlta, esperarMarcoApp } from './entrada.ts'
@@ -307,8 +307,9 @@ async function esInvalido(loc: Locator): Promise<boolean> {
 }
 
 /** Escribe un valor (tras `comprobarCampo`) y comprueba que QUEDÓ; si no, reintenta tecleando una vez; si no, hueco. */
-async function escribir(marco: Frame, ctx: Pick<ContextoPortal, 'pausaAccion' | 'formador'>, op: Extract<OperacionVivienda, { tipo: 'escribir' }>): Promise<Locator> {
-  const { loc, confirmar } = await controlUnico(marco, ctx, op.control, op.que)
+async function escribir(marco: Frame, ctx: Pick<ContextoPortal, 'pausaAccion' | 'formador'>, op: Extract<OperacionVivienda, { tipo: 'escribir' }>, fijo?: Locator): Promise<Locator> {
+  // `fijo` (0.1.9, «Valoración de bienes»): control ya localizado y único en su pantalla; sin capa común (no se aprende nada).
+  const { loc, confirmar } = fijo ? { loc: fijo, confirmar: async () => undefined } : await controlUnico(marco, ctx, op.control, op.que)
   if (await loc.isDisabled()) throw new ErrorMapaIncompleto(`por qué «${op.que}» está deshabilitado (${await diagnosticoCampoCatastro(marco, loc)})`)
   await comprobarCampo(loc)
   await ctx.pausaAccion()
@@ -758,17 +759,143 @@ export async function avanzarDesdeVivienda(page: Page, marco: Frame, ctx: CtxViv
   if (await boton.isDisabled()) throw new ErrorMapaIncompleto('por qué «SIGUIENTE» sigue deshabilitado con todo relleno (¿hace falta «Comprobar» la dirección?)')
   await ctx.pausaAccion()
   await ctx.pulsar(boton)
+  const paso = await esperarCambioDePaso(page, marco, 'Vivienda', esperaMs)
+  await r.confirmar().catch(() => undefined)
+  return paso
+}
+
+/** Tras pulsar el avance de `desde`: espera a que el asistente cambie de paso. Un paso de EMISIÓN → para sin tocar nada. */
+async function esperarCambioDePaso(page: Page, marco: Frame, desde: PasoHogar, esperaMs: number): Promise<PasoHogar> {
   const fin = Date.now() + esperaMs
   for (;;) {
     const paso = pasoActual(await leerPasos(marco).catch(() => []))
-    if (paso !== null && PASOS_EMISION.includes(paso)) throw new EmisionBloqueadaError('fase', `${ADAPTADOR}: tras «SIGUIENTE» el asistente está en «${paso}» (emisión): el robot no toca nada`)
-    if (paso !== null && paso !== 'Vivienda') {
-      await r.confirmar().catch(() => undefined)
-      return paso
-    }
-    if (Date.now() >= fin) throw new ErrorMapaIncompleto('el efecto de «SIGUIENTE» (el asistente no cambió de paso)')
+    if (paso !== null && PASOS_EMISION.includes(paso)) throw new EmisionBloqueadaError('fase', `${ADAPTADOR}: tras «Siguiente» de «${desde}» el asistente está en «${paso}» (emisión): el robot no toca nada`)
+    if (paso !== null && paso !== desde) return paso
+    if (Date.now() >= fin) throw new ErrorMapaIncompleto(`el efecto de «Siguiente» en «${desde}» (el asistente no cambió de paso)`)
     await page.waitForTimeout(300)
   }
+}
+
+// ───────────────────────── pantalla 2 «Valoración de bienes» (0.1.9) ─────────────────────────
+//
+// Mapa del HTML real del job 399d86c2 (22/10/2026), dentro de `epac-goods-page` (panel «Step 2/7: Valoración de bienes»):
+//   · aviso «No se ha podido obtener la información del Catastro con los valores introducidos» (informativo, no bloquea);
+//   · «Bienes asegurados»: radios «Caja fuerte» Si/No (de serie «No»); `sumInsuredBuilding` «Inmueble» (€, obligatorio, RELLENO por
+//     el portal); casilla `firstRisk` «Asegurar a valor máximo cubierto» (sin marcar; NO se toca); `sumInsuredContent` «Mobiliario»
+//     (€, oblig., relleno); «Joyas fuera de caja fuerte» → `sumInsuredValuablesNoSafe` (€, oblig., relleno); `sumInsuredSpecialObjects`
+//     «Objetos especiales» (€, oblig., relleno). Con «Caja fuerte = Si» aparece algo más (filas vacías en el DOM): SIN VER;
+//   · «Medidas de seguridad»: radios «Alarma conectada» y «Puerta blindada» Si/No (de serie «No»);
+//   · «Fecha de inicio del seguro»: `startDate` (no obligatorio, relleno con hoy; NO se toca);
+//   · botones «Anterior» y «Siguiente» (sin id) al pie.
+// Política: dato del formulario → se escribe; sin dato → se acepta el valor de serie del portal SI es razonable y se anota
+// (`supuestos`, sin importes); nada razonable → hueco con el estado observado. Nunca se adivina un obligatorio.
+
+export const SEL_PANTALLA_VALORACION = 'epac-goods-page'
+export const TEXTO_SIGUIENTE_VALORACION = 'Siguiente'
+
+export type OperacionValoracion =
+  | { tipo: 'importe'; control: string; que: string; valor: number | null; minimo: number }
+  | { tipo: 'grupo'; pregunta: string; valor: 'Si' | 'No' | null }
+
+/** Plan de «Valoración de bienes» (orden incluido). Pura. Joyas EN caja fuerte > 0 → hueco (su campo no está visto). */
+export function planValoracionBienes(f: FormularioHogar): OperacionValoracion[] {
+  const ov = f.hogar.objetosValor
+  if (ov && ov.joyasCajaFuerteEur !== null && ov.joyasCajaFuerteEur > 0) {
+    throw new ErrorMapaIncompleto('el campo de joyas EN caja fuerte de «Valoración de bienes» (con «Caja fuerte = Si»; sin explorar)')
+  }
+  const pb = f.hogar.protecciones?.puertaBlindada ?? null
+  return [
+    // «Caja fuerte» no consta en el formulario: se deja la de serie (solo se exige que haya una marcada).
+    { tipo: 'grupo', pregunta: 'Caja fuerte', valor: null },
+    { tipo: 'importe', control: 'sumInsuredBuilding', que: 'Inmueble', valor: f.hogar.capitalContinenteEur, minimo: 1 },
+    { tipo: 'importe', control: 'sumInsuredContent', que: 'Mobiliario', valor: f.hogar.capitalContenidoEur, minimo: 1 },
+    { tipo: 'importe', control: 'sumInsuredValuablesNoSafe', que: 'Joyas fuera de caja fuerte', valor: ov?.joyasFueraCajaEur ?? null, minimo: 0 },
+    // HIPÓTESIS (a confirmar con Alberto): «Objetos especiales» de Allianz = `objetosValorEur` del formulario.
+    { tipo: 'importe', control: 'sumInsuredSpecialObjects', que: 'Objetos especiales', valor: ov?.objetosValorEur ?? null, minimo: 0 },
+    // La alarma NO está en el formulario (id de catálogo sin traducir): se deja la de serie.
+    { tipo: 'grupo', pregunta: 'Alarma conectada', valor: null },
+    { tipo: 'grupo', pregunta: 'Puerta blindada', valor: pb === null ? null : pb ? 'Si' : 'No' },
+  ]
+}
+
+/** Euros → texto del campo (`dironlynumberscomma`): entero sin miles; decimales con coma. Pura. */
+export function importeCampo(eur: number): string {
+  return Number.isInteger(eur) ? String(eur) : eur.toFixed(2).replace('.', ',')
+}
+
+/** ¿El importe que el portal dejó de serie es razonable? Número legible ≥ `minimo`. Pura. */
+export function importeDeSerieAceptable(leido: string | null | undefined, minimo: number): boolean {
+  const n = importeEs((leido ?? '').trim())
+  return n !== null && n >= minimo
+}
+
+async function fijarGrupoValoracion(marco: Frame, ctx: CtxVivienda, op: Extract<OperacionValoracion, { tipo: 'grupo' }>, supuestos: string[]): Promise<void> {
+  const grupo = grupoOpcionesHogarAllianz(marco, SEL_PANTALLA_VALORACION, op.pregunta)
+  const n = await grupo.count()
+  if (n !== 1) throw new ErrorMapaIncompleto(`el grupo «${op.pregunta}» de «Valoración de bienes» (${n} coincidencias)`)
+  const marcadas = await opcionesMarcadasHogarAllianz(grupo)
+  if (op.valor === null) {
+    if (marcadas.length !== 1) throw new ErrorMapaIncompleto(`«${op.pregunta}» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie (${marcadas.length} marcadas)`)
+    supuestos.push(`${op.pregunta}: «${marcadas[0]}» (de serie)`)
+    return
+  }
+  if (marcadas.length === 1 && plano(marcadas[0]) === plano(op.valor)) return
+  if (typeof ctx.marcarOpcionHogarResuelta !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Hogar en el contexto del worker', false)
+  const etiqueta = etiquetaEnGrupoHogarAllianz(grupo, op.valor)
+  const r = await ctx.marcarOpcionHogarResuelta(marco, etiqueta)
+  if (r.estado === 'no_unica' || r.estado === 'no_quedo') {
+    throw new ErrorMapaIncompleto(`cómo se marca «${op.valor}» en «${op.pregunta}» de «Valoración de bienes» (${r.estado === 'no_unica' ? `${r.coincidencias} coincidencias` : 'tras pulsar no quedó marcada'}; marcadas antes: ${marcadas.length})`)
+  }
+}
+
+async function fijarImporteValoracion(marco: Frame, ctx: CtxVivienda, op: Extract<OperacionValoracion, { tipo: 'importe' }>, supuestos: string[]): Promise<void> {
+  const campo = marco.locator(`${SEL_PANTALLA_VALORACION} input${selControl(op.control)}:visible`)
+  const n = await campo.count()
+  if (n !== 1) throw new ErrorMapaIncompleto(`el campo «${op.que}» (${op.control}) de «Valoración de bienes» (${n} coincidencias visibles; en el DOM: ${await marco.locator(`input${selControl(op.control)}`).count()})`)
+  const deshabilitado = await campo.isDisabled()
+  const leido = await leer(campo)
+  const estado = `campo: ${deshabilitado ? 'deshabilitado' : 'habilitado'}, ${leido === null ? 'valor ilegible' : leido.trim() === '' ? 'vacío' : importeDeSerieAceptable(leido, op.minimo) ? 'con importe del portal' : 'con un valor no razonable'}`
+  if (op.valor === null) {
+    if (!importeDeSerieAceptable(leido, op.minimo) || (await esInvalido(campo))) throw new ErrorMapaIncompleto(`«${op.que}» de «Valoración de bienes» sin dato en el formulario y sin un importe de serie aceptable (${estado})`)
+    supuestos.push(`${op.que}: el importe de serie del portal`)
+    return
+  }
+  if (deshabilitado) throw new ErrorMapaIncompleto(`por qué «${op.que}» de «Valoración de bienes» está deshabilitado (${estado})`)
+  const loc = await escribir(marco, ctx, { tipo: 'escribir', control: op.control, que: op.que, valor: importeCampo(op.valor) }, campo)
+  if (await esInvalido(loc)) throw new ErrorMapaIncompleto(`por qué el portal marca inválido «${op.que}» de «Valoración de bienes» tras rellenarlo`)
+}
+
+/**
+ * Pantalla 2 «Valoración de bienes»: aplica `planValoracionBienes` (importes por `formcontrolname` dentro de `epac-goods-page`; radios
+ * por la puerta guardada `ctx.marcarOpcionHogarResuelta`). Devuelve los valores de serie aceptados (`supuestos`, sin importes).
+ */
+export async function rellenarValoracionBienes(page: Page, marco: Frame, f: FormularioHogar, ctx: CtxVivienda): Promise<string[]> {
+  await exigirPaso(marco, 'Valoración de bienes')
+  const pantalla = marco.locator(`${SEL_PANTALLA_VALORACION}:visible`)
+  if ((await pantalla.count()) !== 1) throw new ErrorMapaIncompleto(`la pantalla «Valoración de bienes» (${SEL_PANTALLA_VALORACION} visible: ${await pantalla.count()})`)
+  const supuestos: string[] = []
+  for (const op of planValoracionBienes(f)) {
+    if (op.tipo === 'grupo') await fijarGrupoValoracion(marco, ctx, op, supuestos)
+    else await fijarImporteValoracion(marco, ctx, op, supuestos)
+  }
+  const invalidos = await obligatoriosInvalidos(marco)
+  if (invalidos.length) throw new ErrorMapaIncompleto(`por qué siguen inválidos estos obligatorios de «Valoración de bienes»: ${invalidos.join(', ')}`)
+  void page
+  return supuestos
+}
+
+/** «Siguiente» de «Valoración de bienes» (UNO visible con ese texto ENTERO dentro de `epac-goods-page`) por `ctx.pulsar` (guard). */
+export async function avanzarDesdeValoracion(page: Page, marco: Frame, ctx: CtxVivienda, esperaMs = ESPERA_PASO_MS): Promise<PasoHogar> {
+  const boton = marco.locator(`${SEL_PANTALLA_VALORACION} button:visible`).filter({ hasText: /^\s*siguiente\s*$/i })
+  const n = await boton.count()
+  if (n !== 1) throw new ErrorMapaIncompleto(`el botón «${TEXTO_SIGUIENTE_VALORACION}» de «Valoración de bienes» (${n} coincidencias)`)
+  if (await boton.isDisabled()) {
+    const inv = await obligatoriosInvalidos(marco)
+    throw new ErrorMapaIncompleto(`por qué «${TEXTO_SIGUIENTE_VALORACION}» de «Valoración de bienes» sigue deshabilitado (obligatorios inválidos: ${inv.length ? inv.join(', ') : 'ninguno visible'})`)
+  }
+  await ctx.pausaAccion()
+  await ctx.pulsar(boton)
+  return esperarCambioDePaso(page, marco, 'Valoración de bienes', esperaMs)
 }
 
 /**
@@ -778,9 +905,10 @@ export async function avanzarDesdeVivienda(page: Page, marco: Frame, ctx: CtxViv
  * (`hogar.objetosValor`) y medidas de seguridad (`hogar.protecciones`) ya viajan en el formulario; falta el DOM.
  * TODO(grabación) «Precio»: lector de primas por modalidad + referencia → `ofertasDesdePrecios` (ya escrito y probado).
  */
-export function huecoTrasVivienda(paso: PasoHogar): never {
-  if (paso === 'Precio') throw new ErrorMapaIncompleto('el lector de la pantalla «Precio» (sin explorar: primas, modalidades y referencia)')
-  throw new ErrorMapaIncompleto(`la pantalla «${paso}» del asistente (sin explorar; después viene «Precio», tampoco explorada)`)
+export function huecoTrasVivienda(paso: PasoHogar, supuestos: readonly string[] = []): never {
+  const sup = supuestos.length > 0 ? `; valores del portal aceptados en «Valoración de bienes»: ${supuestos.join(' · ')}` : ''
+  if (paso === 'Precio') throw new ErrorMapaIncompleto(`el lector de la pantalla «Precio» (sin explorar: primas, modalidades y referencia)${sup}`)
+  throw new ErrorMapaIncompleto(`la pantalla «${paso}» del asistente (sin explorar; después viene «Precio», tampoco explorada)${sup}`)
 }
 
 /**
@@ -788,7 +916,7 @@ export function huecoTrasVivienda(paso: PasoHogar): never {
  * sigue (en Valoración, «Continuar»/«Siguiente»; en Precio, «Calcular») → aprendido → IA → ATASCO con candidatos (Telegram);
  * lo resuelto se pulsa por `ctx.pulsar` (guard) y NO se confirma (no se sabe si era lo correcto). Después, hueco con inventario.
  */
-export async function pasoSinMapa(page: Page, marco: Frame, ctx: CtxVivienda, paso: PasoHogar): Promise<never> {
+export async function pasoSinMapa(page: Page, marco: Frame, ctx: CtxVivienda, paso: PasoHogar, supuestos: readonly string[] = []): Promise<never> {
   const clave = paso === 'Precio' ? 'calcular' : 'continuar'
   try {
     const nombre = clave === 'calcular' ? /^\s*calcular\s*$/i : /^\s*(continuar|siguiente)\s*$/i
@@ -809,14 +937,14 @@ export async function pasoSinMapa(page: Page, marco: Frame, ctx: CtxVivienda, pa
   } catch (e) {
     if (!(e instanceof ErrorMapaIncompleto)) throw e
   }
-  return huecoTrasVivienda(paso)
+  return huecoTrasVivienda(paso, supuestos)
 }
 
 export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.8',
+  version: '0.1.9',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
@@ -825,6 +953,10 @@ export const allianzHogar = {
     const marco = await marcoHogar(page)
     await ctx.paso('formulario', () => rellenarPantallaVivienda(page, marco, f, ctx))
     const paso = await ctx.paso('tarificar', () => avanzarDesdeVivienda(page, marco, ctx))
-    return pasoSinMapa(page, marco, ctx, paso)
+    if (paso !== 'Valoración de bienes') return pasoSinMapa(page, marco, ctx, paso)
+    // 0.1.9: «Valoración de bienes» mapeada; «Precio» sigue SIN mapa (se para ahí con inventario).
+    const supuestos = await ctx.paso('formulario', () => rellenarValoracionBienes(page, marco, f, ctx))
+    const paso2 = await ctx.paso('tarificar', () => avanzarDesdeValoracion(page, marco, ctx))
+    return pasoSinMapa(page, marco, ctx, paso2, supuestos)
   },
 } as const
