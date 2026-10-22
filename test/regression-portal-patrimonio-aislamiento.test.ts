@@ -83,8 +83,16 @@ const USA_PATRIMONIO = /prisma\s*\.\s*portalPatrimonio[A-Z]/
 const PASA_POR_ACCESOS = /\baccesosPatrimonio\(/
 
 /** Infractores: tocan las tablas del patrimonio sin resolver antes los accesos de la sesión. */
+/**
+ * El ÚNICO fichero que puede tocar el patrimonio sin `accesosPatrimonio`: el adaptador del cron de gastos (lo ejecuta
+ * `CRON_SECRET`, no una persona). Añadir algo aquí es una decisión, no un trámite.
+ */
+const CRON_SIN_SESION = new Set(['apps/asegura-portal/lib/patrimonio/generar-gastos-bd.ts'])
+
 function sinAccesos(ficheros: ReadonlyArray<{ f: string; src: string }>): string[] {
-  return ficheros.filter(({ src }) => USA_PATRIMONIO.test(src) && !PASA_POR_ACCESOS.test(src)).map(({ f }) => f)
+  return ficheros
+    .filter(({ f, src }) => !CRON_SIN_SESION.has(f) && USA_PATRIMONIO.test(src) && !PASA_POR_ACCESOS.test(src))
+    .map(({ f }) => f)
 }
 
 test('el detector de este cepo muerde (brazos sintéticos)', () => {
