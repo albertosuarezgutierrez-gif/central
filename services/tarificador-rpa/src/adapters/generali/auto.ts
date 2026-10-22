@@ -80,7 +80,7 @@ import {
   type FichaVersionGenerali,
   type FilaVersionGenerali,
   elegirOpcionCatalogo,
-  elegirUsoGenerali,
+  decidirUsoGenerali,
   esEtiquetaVerificacionMatricula,
   esOpcionVaciaCatalogo,
   fechaGenerali,
@@ -152,8 +152,10 @@ export const GENERALI_AUTO_ACTIVO = true
  * ofrece) → espera a la recarga → versión del desplegable (bandeja > versión del riesgo > CV/combustible; idénticas → la primera, declarada;
  * sin elección → `eleccion` con la lista), verificada valor+texto+label y estable. Puertas nuevas en guard.ts (combustible, abrir/elegir
  * versión, una vez cada una). Antes de «Confirmar» se relee el selector: un campo nuevo sin mapear sigue PARANDO.
+ * 0.2.18 (22/10/2026, prueba real: «Uso del Vehículo» ofrece «Particular Ocasional (…)» y «Particular Diario (…)»): manda `usoFrecuencia` del riesgo;
+ * sin dato → «Particular Diario» declarado como supuesto (`decidirUsoGenerali`, reglas.ts). Otro uso: sin mapa, como antes.
  */
-export const VERSION_GENERALI_AUTO = '0.2.17'
+export const VERSION_GENERALI_AUTO = '0.2.18'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -1392,9 +1394,11 @@ export async function rellenarValoracionGenerali(page: Page, form: FormularioAut
   const uso = await controlJuntoA(marco, ETIQUETAS_VALORACION.uso, 'select', ctx.formador)
   if (!uso) throw new ErrorMapaIncompletoGenerali(`el desplegable «${ETIQUETAS_VALORACION.uso}» (captura 6)`)
   const opUso = (await opcionesSelect(uso)).map((o) => o.texto)
-  const eUso = elegirUsoGenerali(opUso, form.usoVehiculo)
+  const dUso = decidirUsoGenerali(opUso, form.usoVehiculo, form.usoFrecuencia)
+  const eUso = dUso.eleccion
   if (eUso.tipo !== 'unica') throw new ErrorMapaIncompletoGenerali(`la opción de «${ETIQUETAS_VALORACION.uso}» para el uso particular (${eUso.tipo === 'varias' ? `${eUso.indices.length} casan` : 'ninguna casa'}): ${opUso.filter((o) => !esOpcionVaciaCatalogo(o)).join(' | ').slice(0, 600)}`)
   await elegirIndice(uso, eUso.indice, ctx)
+  if (dUso.supuesto) supuestos.push(dUso.supuesto)
 
   const s = supuestosAuto(form, hoy)
   const garaje = await controlJuntoA(marco, ETIQUETAS_VALORACION.garaje, 'select', ctx.formador)

@@ -1,5 +1,5 @@
-import type { Apunte, ResumenTesoreria } from './types'
-import { round2 } from './iva'
+import type { Apunte, ResumenTesoreria } from './types.ts'
+import { round2 } from './iva.ts'
 
 /**
  * Calcula el resumen de tesorería a partir de un array de apuntes.

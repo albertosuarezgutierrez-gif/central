@@ -14,26 +14,26 @@ export type {
   FilaArqueoEmpleado,
   ResumenDescuadreEmpleado,
   PuntoSerieDescuadre,
-} from './types'
+} from './types.ts'
 
 // IVA
-export { round2, calcularCuotaIva, calcularTotal, calcularIVA } from './iva'
+export { round2, calcularCuotaIva, calcularTotal, calcularIVA } from './iva.ts'
 
 // Resultado / PyG
-export { calcularPyG } from './pyg'
+export { calcularPyG } from './pyg.ts'
 
 // Tesorería
-export { calcularTesoreria } from './tesoreria'
+export { calcularTesoreria } from './tesoreria.ts'
 
 // Cuadre / arqueo de caja
 export {
   calcularCuadreCaja, calcularCuadrePorEmpleado, totalDesglose, DENOMINACIONES_EUR,
   resumirDescuadresEmpleado, detectarPatronRecurrente, serieDescuadreEmpleado,
-} from './caja'
-export type { OpcionesCuadre } from './caja'
+} from './caja.ts'
+export type { OpcionesCuadre } from './caja.ts'
 
 // Rentabilidad por entidad
-export { calcularRentabilidad } from './rentabilidad'
+export { calcularRentabilidad } from './rentabilidad.ts'
 
 // Recurrentes
-export { generarFechasRecurrente } from './recurrentes'
+export { generarFechasRecurrente } from './recurrentes.ts'

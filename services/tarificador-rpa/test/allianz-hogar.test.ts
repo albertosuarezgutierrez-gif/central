@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { chromium, type Browser, type Frame, type Page } from 'playwright'
+import { chromium, type Browser, type Frame, type Locator, type Page } from 'playwright'
 import { EmisionBloqueadaError, type FormularioHogar } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 import { SELECTOR_ACCIONES, describirElemento, extraerCandidatos, prepararFormador, type ContextoFormador } from '../src/formador.ts'
@@ -17,6 +17,16 @@ import {
   ALLIANZ_HOGAR_ACTIVO,
   ErrorMapaIncompleto,
   allianzHogar,
+  leerPrecioHogar,
+  ofertasDesdePrecioHogar,
+  referenciaOperacion,
+  terminoDeVigencia,
+  avanzarDesdeValoracion,
+  importeCampo,
+  importeDeSerieAceptable,
+  pasoSinMapa,
+  planValoracionBienes,
+  rellenarValoracionBienes,
   anioCatastroAceptable,
   avanzarDesdeVivienda,
   esAppHogar,
@@ -173,6 +183,17 @@ type OpcionesApp = {
    * vacío. Datos inventados.
    */
   catastro?: true | 'habilita_todo' | 'no_habilita' | 'anio_vacio'
+  /**
+   * 0.1.9: «Valoración de bienes» (forma del HTML real del job 399d86c2, `epac-goods-page`), oculta hasta «SIGUIENTE» de Vivienda.
+   * Importes RELLENOS de serie (inventados); radios NDBX Si/No con el punto `.nx-radio__dot` en «No» y SIN `checked`.
+   * `sinSerie` = esa pregunta sin opción marcada; `vacio` = ese importe vacío de serie.
+   */
+  valoracion?: { sinSerie?: string; vacio?: string }
+  /**
+   * 0.1.10: «Precio» (forma del HTML real del job 03b0d6f5, `epac-price-page`), visible tras «Siguiente» de Valoración. 3 modalidades
+   * con importes INVENTADOS; `ilegible` = esa modalidad sin «la anualidad»; `frecuencia` = el texto del desplegable (de serie «Anual»).
+   */
+  precio?: { ilegible?: string; frecuencia?: string }
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -197,6 +218,27 @@ ${radio('t1', 'tipo', 'Piso en alto', true)}${radio('t2', 'tipo', 'Unifamiliar A
 ${radio('r1', 'regimen', '<i></i>Propietario Propietario', true)}${radio('r2', 'regimen', '<i></i>Inquilino Inquilino')}
 ${radio('u1', 'uso', 'Habitual', true)}${radio('u2', 'uso', 'Alquiler')}${radio('u3', 'uso', 'En venta y/o deshabitada')}${radio('u4', 'uso', 'Secundaria')}${radio('u5', 'uso', 'Turístico o vacacional')}
 <button type="button" id="NextPageFromRisk" disabled>SIGUIENTE</button>
+${(() => {
+    const v = o.valoracion ?? {}
+    const grupo = (n: number, pregunta: string) => `<nx-radio-group role="radiogroup" data-testid="security-measures-id"><div nxheadline="subsection-xsmall"><span> ${pregunta} </span></div>${['Si', 'No'].map((op, k) => `<nx-radio><input type="radio" class="nx-radio__input" id="g${n}-${k}" name="g${n}" style="opacity:0;position:absolute"><label class="nx-radio__label has-label" for="g${n}-${k}"><div class="nx-radio__circle">${op === 'No' && v.sinSerie !== pregunta ? '<div class="nx-radio__dot"></div>' : ''}</div><span class="nx-radio__label--text"> ${op} </span></label></nx-radio>`).join('')}</nx-radio-group>`
+    const imp = (fcn: string, etiqueta: string, valor: string) => `<nx-formfield label="${etiqueta}"><label for="${fcn}">${etiqueta}</label><span>€</span><input id="${fcn}" formcontrolname="${fcn}" maxlength="12" dironlynumberscomma required aria-required="true" value="${v.vacio === fcn ? '' : valor}"></nx-formfield>`
+    return `<epac-goods-page id="goods" style="display:none"><nx-message-banner context="warning"><span>No se ha podido obtener la información del Catastro con los valores introducidos</span></nx-message-banner>
+<h4><span> Bienes asegurados </span></h4>${grupo(1, 'Caja fuerte')}${imp('sumInsuredBuilding', 'Inmueble', '120000')}<nx-checkbox formcontrolname="firstRisk"><input type="checkbox" id="fr" value="false"><label for="fr">Asegurar a valor máximo cubierto</label></nx-checkbox>
+${imp('sumInsuredContent', 'Mobiliario', '30000')}<p>Joyas fuera de caja fuerte</p>${imp('sumInsuredValuablesNoSafe', '¿Qué cantidad quieres asegurar?', '0')}${imp('sumInsuredSpecialObjects', 'Objetos especiales', '0')}
+<h4><span> Medidas de seguridad </span></h4>${grupo(2, 'Alarma conectada')}${grupo(3, 'Puerta blindada')}
+<h4><span> Fecha de inicio del seguro </span></h4><input formcontrolname="startDate" nxdatefield value="22/10/2026">
+<button type="button" nxbutton="primary">Anterior</button><button type="button" nxbutton="primary" id="sigGoods">Siguiente</button></epac-goods-page>`
+  })()}
+${(() => {
+    const p = o.precio ?? {}
+    const mods: Array<[string, string, string, boolean]> = [['ESTÁNDAR', '100,10', '110,20', false], ['COMPLETO', '200,30', '1.210,40', true], ['SUPERIOR', '300,50', '310,60', false]]
+    const cab = ([n, r, a, sel]: [string, string, string, boolean]) => `<div class="nx-comparison-table__cell nx-comparison-table__header-cell" role="columnheader"><nx-ibl-offerings-header class="header-container"><div class="product-title-wrap"><p class="title nx-font-weight-semibold">${n}</p><nx-icon aria-label="Blocked" data-testid="header-blockage" name="exclamation-circle-warning"></nx-icon></div><p class="product-margin"><span class="product-price-primer-recibo"> ${r}&nbsp;€ </span><br><span class="product-frequency-primer-recibo"> primer recibo </span></p><p class="product-margin anualidad"><span class="product-price"> ${p.ilegible === n ? '' : `${a}&nbsp;€`} </span><br><span class="product-frequency"> la anualidad </span></p><button type="button" data-testid="select" aria-pressed="${sel}">${sel ? 'Seleccionado' : 'Seleccionar'}</button></nx-ibl-offerings-header></div>`
+    return `<epac-price-page id="precio" style="display:none"><nx-ibl-operation-number><p>Número operación: 900000001</p></nx-ibl-operation-number>
+<nx-dropdown role="combobox" formcontrolname="paymentFrequency"><span class="nx-dropdown__rendered">${p.frecuencia ?? 'Anual'}</span></nx-dropdown><nx-dropdown role="combobox" formcontrolname="policyTerm"><span class="nx-dropdown__rendered">22/10/2026 - 01/10/2027</span></nx-dropdown>
+<p> Precio condicionado a la comprobación de los datos que nos has facilitado. </p><nx-comparison-table><div role="table"><nx-comparison-table-flex-row class="is-header-row is-sticky-row"><div role="row">${mods.map(cab).join('')}</div></nx-comparison-table-flex-row>
+<nx-comparison-table-flex-row class="is-content-row"><div role="row"><div class="nx-comparison-table__description-cell">Incendio</div></div></nx-comparison-table-flex-row></div></nx-comparison-table>
+<button type="button">Anterior</button><button type="button" id="sigPrecio" onclick="document.body.dataset.siguientePrecio='1'">Siguiente</button><button type="button" id="guardarPres" onclick="document.body.dataset.guardado='1'">Guardar presupuesto</button></epac-price-page>`
+  })()}
 ${o.duplicadosOcultos === false ? '' : `<div id="pasoDatos" style="display:none">${['postalCode', 'province', 'town', 'streetType', 'streetName'].map((f) => [0, 1].map((k) => `<nx-formfield><input id="dup-${f}-${k}" type="text" formcontrolname="${f}" disabled class="ng-valid"></nx-formfield>`).join('')).join('')}<div id="check-address"><button type="button" disabled>Comprobar</button></div></div><div id="check-address"><button type="button" disabled>Comprobada</button></div>`}
 ${o.townVisibleDuplicado ? `<nx-formfield><label for="town-bis">Población</label><input id="town-bis" type="text" formcontrolname="town" class="ng-valid"></nx-formfield>` : ''}
 ${o.casilla ? `<span><input type="checkbox" id="c1"><label for="c1">Acepto condiciones</label></span><label id="envuelve"><input type="checkbox"> Recibir avisos</label>` : ''}
@@ -216,7 +258,7 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
       el.className = ok ? 'ng-valid' : 'ng-invalid';
       el.setAttribute('aria-invalid', ok ? 'false' : 'true');
     }
-    document.getElementById('NextPageFromRisk').disabled = !!document.querySelector('input[required].ng-invalid');
+    document.getElementById('NextPageFromRisk').disabled = [...document.querySelectorAll('input[required].ng-invalid')].some((el) => !el.closest('#goods'));
   };
   document.addEventListener('input', valida);
   document.addEventListener('change', valida);
@@ -228,6 +270,17 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
   document.getElementById('NextPageFromRisk').addEventListener('click', () => {
     const items = document.querySelectorAll('nx-multi-step-item');
     items[1].removeAttribute('aria-disabled');
+    document.getElementById('goods').style.display = '';
+  });
+  document.querySelectorAll('#goods input[type=radio]').forEach((r) => r.addEventListener('change', () => {
+    r.closest('nx-radio-group').querySelectorAll('.nx-radio__dot').forEach((d) => d.remove());
+    r.labels[0].querySelector('.nx-radio__circle').insertAdjacentHTML('beforeend', '<div class="nx-radio__dot"></div>');
+  }));
+  document.getElementById('sigGoods').addEventListener('click', () => {
+    if (document.querySelector('#goods input[required].ng-invalid')) return;
+    document.getElementById('goods').style.display = 'none';
+    document.querySelectorAll('nx-multi-step-item')[2].removeAttribute('aria-disabled');
+    document.getElementById('precio').style.display = '';
   });
   ${o.pasoInicial ? `document.querySelectorAll('nx-multi-step-item').forEach((el) => { if (el.textContent === ${JSON.stringify(o.pasoInicial)}) el.setAttribute('aria-selected', 'true'); else el.setAttribute('aria-selected', 'false'); });` : ''}
   ${o.overlayAlEscribir ? `
@@ -400,6 +453,147 @@ test('0.1.8: estados desconocidos → hueco que DICE el estado observado (casill
         () => rellenarPantallaVivienda(page, marco, c.form, ctx),
         (e) => e instanceof ErrorMapaIncompleto && c.re.test((e as Error).message) && !(e as Error).message.includes('1950') && !(e as Error).message.includes('00000000T'),
       )
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+// ───────────── 0.1.9: «Valoración de bienes» ─────────────
+
+const FORM_VAL: FormularioHogar = {
+  ...FORM,
+  hogar: {
+    ...FORM.hogar,
+    capitalContinenteEur: 150000,
+    capitalContenidoEur: 25000.5,
+    objetosValor: { joyasCajaFuerteEur: 0, joyasFueraCajaEur: 1500, objetosValorEur: null },
+    protecciones: { puertaBlindada: true, ventanasSeguridad: null, urbanizacionCerrada: null, vigilancia: null },
+  },
+}
+
+test('0.1.9 puros: plan de «Valoración de bienes», importeCampo e importeDeSerieAceptable', () => {
+  const plan = planValoracionBienes(FORM_VAL)
+  assert.deepEqual(plan.map((o) => (o.tipo === 'grupo' ? `${o.pregunta}=${o.valor}` : `${o.control}=${o.valor}`)), [
+    'Caja fuerte=null', 'sumInsuredBuilding=150000', 'sumInsuredContent=25000.5', 'sumInsuredValuablesNoSafe=1500', 'sumInsuredSpecialObjects=null', 'Alarma conectada=null', 'Puerta blindada=Si',
+  ])
+  assert.throws(() => planValoracionBienes({ ...FORM_VAL, hogar: { ...FORM_VAL.hogar, objetosValor: { joyasCajaFuerteEur: 100, joyasFueraCajaEur: 0, objetosValorEur: 0 } } }), (e) => e instanceof ErrorMapaIncompleto && /joyas EN caja fuerte/.test((e as Error).message))
+  assert.equal(importeCampo(150000), '150000')
+  assert.equal(importeCampo(25000.5), '25000,50')
+  assert.equal(importeDeSerieAceptable('120.000', 1), true)
+  assert.equal(importeDeSerieAceptable('0', 0), true)
+  assert.equal(importeDeSerieAceptable('0', 1), false)
+  assert.equal(importeDeSerieAceptable('', 0), false)
+  assert.equal(importeDeSerieAceptable('abc', 0), false)
+})
+
+async function hastaValoracion(o: OpcionesApp = {}) {
+  const a = await abrir(o)
+  const ctx = {
+    ...a.ctx,
+    marcarOpcionHogarResuelta: async (m: Frame, etiqueta: Locator) => {
+      const r = await marcarOpcionResueltaHogarAllianz(m, a.guard, etiqueta)
+      if (r.estado === 'marcada') a.pulsados.push(`resuelta:${((await etiqueta.textContent()) ?? '').trim()}`)
+      return r
+    },
+  }
+  await rellenarPantallaVivienda(a.page, a.marco, FORM_VAL, ctx)
+  assert.equal(await avanzarDesdeVivienda(a.page, a.marco, ctx, 3_000), 'Valoración de bienes')
+  return { ...a, ctx }
+}
+
+test('0.1.9: «Valoración de bienes» (forma real): escribe capitales y joyas del formulario, deja lo de serie anotado, marca puerta blindada, avanza y PARA en «Precio» sin pulsar nada más', async () => {
+  const { context, page, ctx, pulsados, marco, valor } = await hastaValoracion()
+  try {
+    const supuestos = await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+    assert.equal(await valor('sumInsuredBuilding'), '150000')
+    assert.equal(await valor('sumInsuredContent'), '25000,50')
+    assert.equal(await valor('sumInsuredValuablesNoSafe'), '1500')
+    assert.equal(await valor('sumInsuredSpecialObjects'), '0', 'sin dato: el de serie')
+    assert.equal(await marco.locator('#g3-0').isChecked(), true, 'Puerta blindada = Si')
+    assert.equal(await marco.locator('#fr').isChecked(), false, '«Asegurar a valor máximo cubierto» no se toca')
+    assert.deepEqual(supuestos, ['Caja fuerte: «No» (de serie)', 'Objetos especiales: el importe de serie del portal', 'Alarma conectada: «No» (de serie)'])
+    assert.ok(!supuestos.join(' ').match(/\d/), 'los supuestos no llevan importes')
+    assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+    await assert.rejects(() => pasoSinMapa(page, marco, ctx, 'Precio', supuestos), (e) => e instanceof ErrorMapaIncompleto && /lector de la pantalla «Precio».*valores del portal aceptados en «Valoración de bienes»: Caja fuerte/.test((e as Error).message))
+    assert.deepEqual(pulsados.slice(-3), ['SIGUIENTE', 'resuelta:Si', 'Siguiente'], 'en Valoración solo se pulsa la puerta blindada y «Siguiente»')
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.9: sin dato y sin valor de serie razonable → hueco con el estado observado (nunca se adivina)', async () => {
+  for (const [o, re] of [
+    [{ vacio: 'sumInsuredSpecialObjects' }, /«Objetos especiales» de «Valoración de bienes» sin dato en el formulario y sin un importe de serie aceptable \(campo: habilitado, vacío\)/],
+    [{ sinSerie: 'Alarma conectada' }, /«Alarma conectada» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie \(0 marcadas\)/],
+  ] as const) {
+    const { context, page, ctx, marco } = await hastaValoracion({ valoracion: o })
+    try {
+      await assert.rejects(() => rellenarValoracionBienes(page, marco, FORM_VAL, ctx), (e) => e instanceof ErrorMapaIncompleto && re.test((e as Error).message) && !(e as Error).message.includes('00000000T'))
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+// ───────────── 0.1.10: «Precio» (solo lectura) ─────────────
+
+test('0.1.10 puros: referenciaOperacion, terminoDeVigencia y ofertasDesdePrecioHogar (fail-closed)', () => {
+  assert.equal(referenciaOperacion('Número operación: 900000001'), '900000001')
+  assert.equal(referenciaOperacion('Operación pendiente'), null)
+  assert.equal(terminoDeVigencia('22/10/2026 - 01/10/2027'), '2027-10-01')
+  assert.equal(terminoDeVigencia('2027'), null)
+  const base = {
+    modalidades: [
+      { nombre: 'A', primerRecibo: '10,00 €', anualidad: '1.100,50 €', seleccionada: true, conAviso: false },
+      { nombre: 'B', primerRecibo: '', anualidad: '200,00 €', seleccionada: false, conAviso: true },
+    ],
+    operacion: 'Número operación: 900000001', frecuencia: 'Anual', vigencia: '22/10/2026 - 01/10/2027', condicionado: true,
+  }
+  const o = ofertasDesdePrecioHogar(base, ['Caja fuerte: «No» (de serie)'])
+  assert.deepEqual(o.map((x) => [x.producto, x.primaAnualEur, x.importeReciboEur, x.fraccionamiento, x.referenciaPortal, x.fechaTerminoPortal]), [
+    ['Allianz HOGAR · A', 1100.5, 10, 'anual', '900000001', '2027-10-01'],
+    ['Allianz HOGAR · B', 200, null, 'anual', '900000001', '2027-10-01'],
+  ])
+  assert.ok(o[0]!.avisos.includes('Modalidad preseleccionada por el portal.') && !o[1]!.avisos.includes('Modalidad preseleccionada por el portal.'))
+  assert.ok(o[1]!.avisos.some((a) => /Blocked/.test(a)) && o[1]!.avisos.some((a) => /Primer recibo» ilegible/.test(a)))
+  assert.ok(o[0]!.avisos.some((a) => /Caja fuerte/.test(a)) && o[0]!.avisos.some((a) => /Precio condicionado/.test(a)))
+  const hueco = (l: typeof base, re: RegExp) => assert.throws(() => ofertasDesdePrecioHogar(l), (e) => e instanceof ErrorMapaIncompleto && re.test((e as Error).message))
+  hueco({ ...base, modalidades: [] }, /tabla sin cabeceras; 0 modalidades/)
+  hueco({ ...base, modalidades: [base.modalidades[0]!, { ...base.modalidades[1]!, nombre: 'a' }] }, /vacíos o repetidos/)
+  hueco({ ...base, modalidades: [base.modalidades[0]!, { ...base.modalidades[1]!, anualidad: '' }] }, /ilegible en: B; 2 modalidades; nombres: «A» «B»; seleccionada: A/)
+  hueco({ ...base, frecuencia: 'Bimestral' }, /Frecuencia de pago.*«Bimestral»/)
+})
+
+test('0.1.10: flujo hasta «Precio» → lee 3 modalidades (anualidad, primer recibo, referencia, término, preseleccionada) SIN pulsar nada en «Precio»', async () => {
+  const { context, page, ctx, pulsados, marco } = await hastaValoracion()
+  try {
+    const supuestos = await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+    assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+    const antes = pulsados.length
+    const ofertas = await leerPrecioHogar(page, marco, supuestos, 3_000)
+    assert.deepEqual(ofertas.map((o) => [o.producto, o.primaAnualEur, o.importeReciboEur]), [
+      ['Allianz HOGAR · ESTÁNDAR', 110.2, 100.1], ['Allianz HOGAR · COMPLETO', 1210.4, 200.3], ['Allianz HOGAR · SUPERIOR', 310.6, 300.5],
+    ])
+    assert.ok(ofertas.every((o) => o.referenciaPortal === '900000001' && o.fraccionamiento === 'anual' && o.fechaTerminoPortal === '2027-10-01'))
+    assert.deepEqual(ofertas.map((o) => o.avisos.includes('Modalidad preseleccionada por el portal.')), [false, true, false])
+    assert.equal(pulsados.length, antes, 'en «Precio» no se pulsa nada')
+    assert.equal(await page.frames().find((f) => f === marco)!.evaluate(() => JSON.stringify(document.body.dataset)), '{}', 'ni «Siguiente» ni «Guardar presupuesto»')
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.10: «la anualidad» ilegible o frecuencia desconocida → hueco con el estado observado (ningún importe supuesto)', async () => {
+  for (const [precio, re] of [
+    [{ ilegible: 'COMPLETO' }, /ilegible en: COMPLETO; 3 modalidades; nombres: «ESTÁNDAR» «COMPLETO» «SUPERIOR»; seleccionada: COMPLETO/],
+    [{ frecuencia: 'Bimestral' }, /Frecuencia de pago» de «Precio» \(se lee «Bimestral»/],
+  ] as const) {
+    const { context, page, ctx, marco } = await hastaValoracion({ precio })
+    try {
+      await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+      assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+      await assert.rejects(() => leerPrecioHogar(page, marco, [], 1_500), (e) => e instanceof ErrorMapaIncompleto && re.test((e as Error).message))
     } finally {
       await context.close()
     }

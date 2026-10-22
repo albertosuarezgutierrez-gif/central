@@ -1,0 +1,20 @@
+{
+  "name": "@central/module-patrimonio",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Patrimonio inmobiliario del portal del cliente de Grupo ASegura (22/10/2026): tipos y reglas PURAS para propietarios con varios inmuebles y sociedades — gastos fijos recurrentes y su generación, imputación de facturas a inmueble/categoría (propuesta que el cliente confirma), renta devengada de contratos de larga estancia, actualización de renta por índice (el índice entra como parámetro), calendario de obligaciones con `hoy` inyectado y rentabilidad por inmueble. Dinero en CÉNTIMOS ENTEROS. Apoyado en @central/module-contabilidad (generarFechasRecurrente, calcularRentabilidad). Sin BD, sin red, sin reloj.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@central/module-contabilidad": "workspace:*"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}
