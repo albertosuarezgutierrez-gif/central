@@ -1,3 +1,5 @@
+// Turismos v0.6.22 (22/10/2026): si el formulario sigue OCULTO y hay UN control visible «Guardar presupuesto» (barra) fuera de formularios, se pulsa UNA vez por trabajo
+// (guard.ts: `abrirFormularioGuardarTurismos`, lista blanca de guardado, sin ventana de red) para abrirlo (en línea o diálogo); Revisión/Pago/Confirmación nunca.
 // Turismos v0.6.21 (22/10/2026, run real de las 3 modalidades: «el formulario «Guardar el presupuesto» está en la pantalla pero OCULTO»):
 // si el bloque cuelga de un panel PLEGADO (acordeón/pestaña/<details>), `guardarPresupuestoTurismosAllianz` (guard.ts) despliega SOLO ese
 // panel (control con aria-expanded="false" que contiene o gobierna el bloque; hasta 2 por trabajo; pasa la guardia y no es el botón de
@@ -2930,7 +2932,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.21',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.22',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

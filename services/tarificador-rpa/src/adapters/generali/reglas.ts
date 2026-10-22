@@ -858,7 +858,7 @@ export function camposInteresadoGenerali(form: {
   documentoTomador?: string | null
   tomador?: { tipo?: string | null; nombre?: string | null; apellido1?: string | null; apellido2?: string | null; documentoIdentidad?: string | null; fechaNacimiento?: string | null } | null
   datosTomador?: { tipo: string; nombre?: string; apellido1?: string; apellido2?: string | null; fechaNacimiento?: string } | null
-  fichaTomador?: { documento?: string | null } | null
+  fichaTomador?: { documento?: string | null; fechaNacimiento?: string | null; fechaCarnet?: string | null } | null
   conductor?: { fechaNacimiento?: string | null; fechaCarne?: string | null } | null
 }): { campo: CampoInteresadoGenerali; valor: string }[] {
   const dt = form.datosTomador?.tipo === 'fisica' ? form.datosTomador : null
@@ -869,14 +869,14 @@ export function camposInteresadoGenerali(form: {
     return v === '' ? null : v
   }
   const doc = limpio(form.documentoTomador ?? form.tomador?.documentoIdentidad ?? form.fichaTomador?.documento)
-  const nac = fechaGenerali(dt?.fechaNacimiento ?? t?.fechaNacimiento ?? form.conductor?.fechaNacimiento)
+  const nac = fechaGenerali(dt?.fechaNacimiento ?? t?.fechaNacimiento ?? form.fichaTomador?.fechaNacimiento ?? form.conductor?.fechaNacimiento)
   const out: { campo: CampoInteresadoGenerali; valor: string | null }[] = [
     { campo: 'nifcif', valor: doc },
     { campo: 'nombre', valor: limpio(dt?.nombre ?? t?.nombre) },
     { campo: 'papell', valor: limpio(dt?.apellido1 ?? t?.apellido1) },
     { campo: 'sapell', valor: limpio(dt?.apellido2 ?? t?.apellido2) },
     { campo: 'ffnain', valor: nac },
-    { campo: 'ffcain', valor: fechaGenerali(form.conductor?.fechaCarne) },
+    { campo: 'ffcain', valor: fechaGenerali(form.fichaTomador?.fechaCarnet ?? form.conductor?.fechaCarne) },
   ]
   return out.filter((c): c is { campo: CampoInteresadoGenerali; valor: string } => c.valor !== null)
 }
@@ -917,4 +917,59 @@ export function fragmentosImportesGenerali(texto: string, max = 8): string[] {
     if (out.length >= max) break
   }
   return out
+}
+
+// ───────────────────────── v0.2.20 · «Personas» (pestaña del tomador) + inventario saneado del bloque ─────────────────────────
+
+/** Texto EXACTO de la pestaña (botón) que muestra «Personas que intervienen › Interesado / Tomador» (inventario del trabajo 304ac3a2). */
+export const PESTANA_PERSONAS_GENERALI = 'Personas'
+/** Prefijo de los ids de todo el bloque de personas (roles, interesado, domicilio). */
+export const PREFIJO_ID_PERSONAS_GENERALI = 'reg1063A_personas_'
+
+/** Estado de un control del bloque de personas (sin valores: solo si lo tiene). */
+export type ControlPersonasGenerali = {
+  id: string
+  tag: string
+  tipo: string
+  visible: boolean
+  habilitado: boolean
+  editable: boolean
+  vacio: boolean
+  /** Solo botones/enlaces: su rótulo (saneado al resumir). */
+  texto?: string
+}
+
+/** Por qué un campo del tomador no se pudo rellenar (o `ok`). PURA. */
+export function motivoCampoInteresadoGenerali(c: { existe: boolean; visible: boolean; habilitado: boolean; editable: boolean; vacio: boolean }): 'ok' | 'no_existe' | 'oculto' | 'deshabilitado' | 'solo_lectura' | 'con_valor' {
+  if (!c.existe) return 'no_existe'
+  if (!c.visible) return 'oculto'
+  if (!c.habilitado) return 'deshabilitado'
+  if (!c.editable) return 'solo_lectura'
+  if (!c.vacio) return 'con_valor'
+  return 'ok'
+}
+
+/** Resumen del bloque de personas para el atasco: sufijo del id, tipo y banderas, nunca valores; rótulos de botones saneados. PURA. */
+export function resumenPersonasGenerali(els: readonly ControlPersonasGenerali[], max = 1_400): string {
+  if (els.length === 0) return 'ningún control con id reg1063A_personas_*'
+  const partes = els.map((e) => {
+    const sufijo = e.id.startsWith(PREFIJO_ID_PERSONAS_GENERALI) ? e.id.slice(PREFIJO_ID_PERSONAS_GENERALI.length) : e.id
+    const banderas = [e.visible ? null : 'oculto', e.habilitado ? null : 'deshab', e.editable ? null : 'ro'].filter((x) => x !== null).join(',')
+    const rotulo = e.texto ? ` «${sanearFragmentoGenerali(e.texto).slice(0, 40)}»` : ''
+    const estado = /button|submit|a$/i.test(`${e.tipo}|${e.tag}`) ? '' : e.vacio ? ' vacío' : ' con valor'
+    return `${sufijo} [${e.tag}/${e.tipo}${banderas ? `,${banderas}` : ''}]${rotulo}${estado}`
+  })
+  const t = partes.join('; ')
+  return t.length > max ? `${t.slice(0, max)}…` : t
+}
+
+/** Qué pasó con cada campo del tomador que el riesgo trae (`campo:motivo`, sin valores) cruzando con los controles leídos. PURA. */
+export function motivosInteresadoGenerali(campos: readonly { campo: string }[], controles: readonly ControlPersonasGenerali[]): string {
+  if (campos.length === 0) return 'el riesgo no trae datos del tomador (o es persona jurídica)'
+  return campos
+    .map(({ campo }) => {
+      const c = controles.find((x) => x.id === `${PREFIJO_ID_INTERESADO_GENERALI}${campo}`)
+      return `${campo}:${motivoCampoInteresadoGenerali({ existe: !!c, visible: !!c?.visible, habilitado: !!c?.habilitado, editable: !!c?.editable, vacio: !!c?.vacio })}`
+    })
+    .join(', ')
 }

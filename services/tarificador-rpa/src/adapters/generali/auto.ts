@@ -51,6 +51,11 @@ import {
   decidirVerificacionMatricula,
   leerPrecioGenerali,
   avisosObligatorioGenerali,
+  motivosInteresadoGenerali,
+  PESTANA_PERSONAS_GENERALI,
+  PREFIJO_ID_PERSONAS_GENERALI,
+  resumenPersonasGenerali,
+  type ControlPersonasGenerali,
   camposInteresadoGenerali,
   fragmentosImportesGenerali,
   PREFIJO_ID_INTERESADO_GENERALI,
@@ -162,8 +167,13 @@ export const GENERALI_AUTO_ACTIVO = true
  * campos del «Interesado / Tomador» seguían vacíos): rellena nombre, apellidos, NIF, nacimiento y carné del tomador por sus ids reales
  * (`camposInteresadoGenerali`); el lector del precio mira también los `<input>` de solo lectura y 2 líneas de lookahead; el atasco
  * nombra los avisos «Es obligatorio…» y trae fragmentos saneados alrededor de cada «€».
+ * 0.2.20 (22/10/2026, misma prueba con 0.2.19: «mapa provisional: nada», el tomador seguía vacío y los ids eran los correctos). HIPÓTESIS: el bloque
+ * «Interesado / Tomador» cuelga de la pestaña «Personas» (botón junto a «Vehículo») y sus campos no se ven hasta pulsarla; si los
+ * campos existen pero están ocultos se pulsa «Personas» (por `ctx.pulsar`, una vez) y se rellena; tras el NIF se espera a la recarga. Fecha de
+ * nacimiento y carné caen a `fichaTomador`. El atasco trae el inventario SANEADO de `reg1063A_personas_*` (tipo, oculto/deshab/ro, vacío o
+ * con valor, rótulos de botones como el de búsqueda de persona) y el motivo por campo. NO se pulsa el buscador de personas (sin evidencia).
  */
-export const VERSION_GENERALI_AUTO = '0.2.19'
+export const VERSION_GENERALI_AUTO = '0.2.20'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -1490,20 +1500,64 @@ export async function rellenarMapaProvisionalGenerali(
   return hechos
 }
 
+/** Controles del bloque de personas (ids `reg1063A_personas_*`) y rótulos de botones/enlaces afines. Sin valores. Sin funciones con nombre (tsx). */
+const JS_PERSONAS = `(() => {
+  const out = [];
+  const visible = (e) => { const r = e.getBoundingClientRect(); const s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
+  document.querySelectorAll('[id^="${PREFIJO_ID_PERSONAS_GENERALI}"]').forEach((e) => {
+    const tag = e.tagName.toLowerCase();
+    const tipo = tag === 'select' ? 'select' : (e.getAttribute('type') || 'text').toLowerCase();
+    const boton = ['button', 'submit', 'image'].includes(tipo) || tag === 'a' || tag === 'button';
+    const o = { id: e.id, tag, tipo, visible: visible(e), habilitado: !e.disabled, editable: !e.disabled && !e.readOnly, vacio: boton ? false : String(e.value || '').trim() === '' };
+    if (boton) o.texto = String(e.value || e.textContent || e.title || '').replace(/\\s+/g, ' ').trim().slice(0, 60);
+    out.push(o);
+  });
+  return out.slice(0, 60);
+})()`
+
+/** Lee los controles del bloque de personas en la raíz (todos sus marcos si es una página). Solo lee. */
+export async function leerPersonasGenerali(raiz: Raiz): Promise<ControlPersonasGenerali[]> {
+  const marcos: Frame[] = 'frames' in raiz && typeof raiz.frames === 'function' ? (raiz as Page).frames() : [raiz as Frame]
+  const out: ControlPersonasGenerali[] = []
+  for (const f of marcos) {
+    if (f.isDetached()) continue
+    out.push(...(((await f.evaluate(JS_PERSONAS).catch(() => [])) as ControlPersonasGenerali[]) ?? []))
+  }
+  return out
+}
+
+/** Controles de texto del tomador con ese id y, de ellos, los visibles. */
+const idInteresado = (campo: string) => `[id="${PREFIJO_ID_INTERESADO_GENERALI}${campo}"]`
+
 /**
- * Rellena el «Interesado / Tomador» por sus ids reales (v0.2.19): solo campos visibles, habilitados, de texto y VACÍOS, con el dato que
- * trae el riesgo. Sin tomador en el portal «Garantías y Resultados» no calcula. Devuelve los campos rellenados (nombres, no valores).
+ * Rellena el «Interesado / Tomador» por sus ids reales: solo campos visibles, habilitados, editables y VACÍOS, con el dato que trae el
+ * riesgo. Sin tomador en el portal «Garantías y Resultados» no calcula. v0.2.20: si los campos EXISTEN pero están ocultos (cuelgan de la
+ * pestaña «Personas»), pulsa esa pestaña UNA vez por `ctx.pulsar` (solo cambia de vista) y reintenta. Devuelve lo hecho (nombres, no valores).
  */
 export async function rellenarInteresadoGenerali(marco: Raiz, form: Parameters<typeof camposInteresadoGenerali>[0], ctx: ContextoPortal): Promise<string[]> {
   const hechos: string[] = []
-  for (const { campo, valor } of camposInteresadoGenerali(form)) {
-    const loc = marco.locator(`[id="${PREFIJO_ID_INTERESADO_GENERALI}${campo}"]`).filter({ visible: true })
+  const campos = camposInteresadoGenerali(form)
+  let pestanaPulsada = false
+  for (const { campo, valor } of campos) {
+    let loc = marco.locator(idInteresado(campo)).filter({ visible: true })
+    if ((await loc.count().catch(() => 0)) === 0 && !pestanaPulsada && (await marco.locator(idInteresado(campo)).count().catch(() => 0)) === 1) {
+      pestanaPulsada = true
+      const pestana = marco.getByRole('button', { name: PESTANA_PERSONAS_GENERALI, exact: true }).filter({ visible: true })
+      if ((await pestana.count().catch(() => 0)) === 1) {
+        await ctx.pulsar(pestana.first())
+        await new Promise((r) => setTimeout(r, 600))
+        hechos.push('pestana.personas')
+        loc = marco.locator(idInteresado(campo)).filter({ visible: true })
+      }
+    }
     if ((await loc.count().catch(() => 0)) !== 1) continue
     const el = loc.first()
     if (!(await el.isEnabled().catch(() => false)) || !(await el.isEditable().catch(() => false))) continue
     if ((await el.inputValue().catch(() => 'x')).trim() !== '') continue
     await escribir(el, valor, ctx)
     hechos.push(`tomador.${campo}`)
+    // El portal puede autorrellenar o recargar el bloque al salir del NIF.
+    if (campo === 'nifcif') await new Promise((r) => setTimeout(r, 800))
   }
   return hechos
 }
@@ -1558,14 +1612,16 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   for (const x of ant.supuestos) if (!supuestos.includes(x)) supuestos.push(x)
   const texto = textoSupuestos(supuestos)
   const marco = (await marcoConTexto(page, 'Identificación del vehículo', 5_000)) ?? page
-  const { pantalla, hechos } = await paso('formulario', async () => {
+  const { pantalla, hechos, tomador } = await paso('formulario', async () => {
     await recorrerScroll(page, marco)
     const antes = await leerPantalla(marco)
     const hechos = await rellenarMapaProvisionalGenerali(marco, antes, ant.formulario, ctx)
     hechos.push(...(await rellenarInteresadoGenerali(marco, ant.formulario, ctx)))
     // Tras rellenar, se relee (el portal puede pintar campos nuevos al salir de uno).
     if (hechos.length > 0) await recorrerScroll(page, marco)
-    return { pantalla: hechos.length > 0 ? await leerPantalla(marco) : antes, hechos }
+    const personas = await leerPersonasGenerali(page)
+    const tomador = `Tomador: ${motivosInteresadoGenerali(camposInteresadoGenerali(ant.formulario), personas)}. Bloque personas: ${resumenPersonasGenerali(personas)}`
+    return { pantalla: hechos.length > 0 ? await leerPantalla(marco) : antes, hechos, tomador }
   })
   ctx.log?.(`generali/auto: Datos de Valoración: ${pantalla.campos.length} campos, ${pantalla.botones.length} botones, mapa provisional: ${hechos.join(',') || 'nada'}`)
   const datos = `Datos de Valoración: ${resumenPantallaGenerali(pantalla, 700)}`
@@ -1583,7 +1639,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const que = lectura.tipo === 'varios'
     ? `${lectura.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lectura.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
     : 'ningún importe legible con «prima/precio/importe/total»'
-  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}Textos con «€»: ${importes.length ? importes.map((f) => `«${f}»`).join(' ') : 'ninguno'}. Pantalla: ${resumenPantallaGenerali(despues, 900)}. Mapa provisional: ${hechos.join(',') || 'nada'}${texto ? `; ${texto}` : ''}`)
+  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}Textos con «€»: ${importes.length ? importes.map((f) => `«${f}»`).join(' ') : 'ninguno'}. Pantalla: ${resumenPantallaGenerali(despues, 900)}. Mapa provisional: ${hechos.join(',') || 'nada'}. ${tomador}${texto ? `; ${texto}` : ''}`)
 }
 
 /**
