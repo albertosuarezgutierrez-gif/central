@@ -898,6 +898,139 @@ export async function avanzarDesdeValoracion(page: Page, marco: Frame, ctx: CtxV
   return esperarCambioDePaso(page, marco, 'Valoración de bienes', esperaMs)
 }
 
+// ───────────────────────── pantalla 3 «Precio» (0.1.10, SOLO LECTURA) ─────────────────────────
+//
+// Mapa del HTML real del job 03b0d6f5 (22/10/2026), dentro de `epac-price-page`:
+//   · `nx-ibl-operation-number` «Número operación: N» (referencia de la cotización en Allianz);
+//   · opciones de la póliza: `paymentFrequency` «Frecuencia de pago» (de serie «Anual»), `policyTerm` «Vigencia de la póliza»
+//     («dd/mm/aaaa - dd/mm/aaaa», el término lo ajusta ePAC al día 1); «Opciones de agente» (niveles, CAP, reducción, venta
+//     cruzada, colaborador, recargo): NO se tocan;
+//   · aviso de la compañía «Precio condicionado a la comprobación de los datos que nos has facilitado.»;
+//   · tabla `nx-comparison-table`: una cabecera `nx-ibl-offerings-header` por modalidad (vistas 3: ESTÁNDAR, COMPLETO, SUPERIOR) con
+//     `.title`, `.product-price-primer-recibo` («primer recibo»), `.product-price` («la anualidad»), un icono `header-blockage`
+//     (aria-label «Blocked», popover sin texto) y el botón «Seleccionar»/«Seleccionado» (`aria-pressed`; de serie COMPLETO);
+//     filas de coberturas por modalidad (sin leer en esta versión);
+//   · botones: «Anterior», «Siguiente» (lleva a «Datos»: territorio de EMISIÓN) y «Guardar presupuesto» (guarda la cotización).
+// El robot aquí NO PULSA NADA (ni «Seleccionar», ni desplegables, ni «Siguiente», ni «Guardar presupuesto»): lee y devuelve.
+
+export const SEL_PANTALLA_PRECIO = 'epac-price-page'
+
+/** Lo leído de la pantalla «Precio»: textos crudos (sin interpretar). */
+export type ModalidadLeidaHogar = { nombre: string; primerRecibo: string; anualidad: string; seleccionada: boolean; conAviso: boolean }
+export type LecturaPrecioHogar = {
+  modalidades: ModalidadLeidaHogar[]
+  operacion: string
+  frecuencia: string
+  vigencia: string
+  condicionado: boolean
+}
+
+const FRACCIONAMIENTOS: Readonly<Record<string, NonNullable<OfertaNormalizada['fraccionamiento']>>> = {
+  anual: 'anual', semestral: 'semestral', trimestral: 'trimestral', mensual: 'mensual',
+}
+
+/** «Número operación: 624…» → el número; otra forma → `null`. Pura. */
+export function referenciaOperacion(t: string): string | null {
+  const m = /^\s*n[uú]mero\s+(?:de\s+)?operaci[oó]n\s*:?\s*([A-Za-z0-9-]{4,30})\s*$/i.exec(t)
+  return m ? m[1] : null
+}
+
+/** «22/10/2026 - 01/10/2027» → término ISO `2027-10-01`; otra forma → `null`. Pura. */
+export function terminoDeVigencia(t: string): string | null {
+  const m = /^\s*\d{2}\/\d{2}\/\d{4}\s*-\s*(\d{2})\/(\d{2})\/(\d{4})\s*$/.exec(t)
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null
+}
+
+/**
+ * Lectura → ofertas (una por modalidad). PURA y fail-closed: sin modalidades, un nombre vacío o repetido, una «la anualidad»
+ * ilegible, o una frecuencia de pago desconocida → `ErrorMapaIncompleto` con el estado observado (nunca un importe supuesto).
+ * Prima anual = «la anualidad»; `importeReciboEur` = «primer recibo» (primer periodo hasta el término que fija el portal).
+ */
+export function ofertasDesdePrecioHogar(l: LecturaPrecioHogar, supuestos: readonly string[] = []): OfertaNormalizada[] {
+  const estado = `${l.modalidades.length} modalidades; nombres: ${l.modalidades.map((m) => `«${m.nombre || '¿?'}»`).join(' ') || 'ninguno'}; seleccionada: ${l.modalidades.filter((m) => m.seleccionada).map((m) => m.nombre).join(', ') || 'ninguna'}`
+  if (l.modalidades.length === 0) throw new ErrorMapaIncompleto(`las modalidades de la pantalla «Precio» (tabla sin cabeceras; ${estado})`)
+  const nombres = l.modalidades.map((m) => plano(m.nombre))
+  if (nombres.some((n) => n === '') || new Set(nombres).size !== nombres.length) throw new ErrorMapaIncompleto(`los nombres de las modalidades de «Precio» (vacíos o repetidos; ${estado})`)
+  const ilegibles = l.modalidades.filter((m) => primaDeTexto(m.anualidad) === null).map((m) => m.nombre)
+  if (ilegibles.length > 0) throw new ErrorMapaIncompleto(`«la anualidad» legible en «Precio» (ilegible en: ${ilegibles.join(', ')}; ${estado})`)
+  const fr = FRACCIONAMIENTOS[plano(l.frecuencia)]
+  if (!fr) throw new ErrorMapaIncompleto(`la «Frecuencia de pago» de «Precio» (se lee «${l.frecuencia.slice(0, 20) || 'vacía'}»; ${estado})`)
+  const referencia = referenciaOperacion(l.operacion)
+  const termino = terminoDeVigencia(l.vigencia)
+  return l.modalidades.map((m) => {
+    const recibo = primaDeTexto(m.primerRecibo)
+    return {
+      compania: 'allianz',
+      producto: `Allianz HOGAR · ${m.nombre}`,
+      primaAnualEur: Math.round(primaDeTexto(m.anualidad)! * 100) / 100,
+      primaNetaEur: null,
+      fraccionamiento: fr,
+      importeReciboEur: recibo,
+      coberturas: [],
+      franquicias: [],
+      validaHasta: null,
+      referenciaPortal: referencia,
+      pdf: null,
+      desglose: null,
+      fechaTerminoPortal: termino,
+      avisos: [
+        'Prima anual = «la anualidad» de la tabla de Allianz Hogar (con impuestos; sin desglose neta/impuestos). El importe del recibo es el «primer recibo» (primer periodo hasta el término que fija el portal).',
+        `Frecuencia de pago: «${l.frecuencia}» (la de serie del portal; el robot no la cambia).`,
+        ...(m.seleccionada ? ['Modalidad preseleccionada por el portal.'] : []),
+        ...(m.conAviso ? ['El portal muestra un icono de aviso («Blocked») en la cabecera de la modalidad; su texto no se leyó.'] : []),
+        ...(l.condicionado ? ['Allianz: «Precio condicionado a la comprobación de los datos que nos has facilitado.»'] : []),
+        ...(recibo === null ? ['«Primer recibo» ilegible: importe del recibo no consta.'] : []),
+        ...(referencia === null ? ['Número de operación no leído.'] : []),
+        ...(termino === null ? ['Vigencia de la póliza no leída.'] : []),
+        'Coberturas no leídas (la tabla de coberturas por modalidad está en pantalla; lector pendiente).',
+        ...(supuestos.length > 0 ? [`Valores del portal aceptados en «Valoración de bienes»: ${supuestos.join(' · ')}.`] : []),
+      ],
+    }
+  })
+}
+
+/** SOLO LECTURA de la pantalla «Precio» (texto JS, no función: tsx envolvería las funciones con nombre en `__name`). Sin pantalla → `null`. */
+const SCRIPT_LEER_PRECIO_HOGAR = `(() => {
+  const txt = (e) => ((e && (e.innerText || e.textContent)) || '').replace(/[\\s\\u00a0]+/g, ' ').trim();
+  const visible = (e) => !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0;
+  const pag = Array.from(document.querySelectorAll('${SEL_PANTALLA_PRECIO}')).find(visible);
+  if (!pag) return null;
+  const tabla = Array.from(pag.querySelectorAll('nx-comparison-table')).find(visible);
+  const cabeceras = tabla ? Array.from(tabla.querySelectorAll('.is-header-row nx-ibl-offerings-header')) : [];
+  const dd = (f) => txt(pag.querySelector('nx-dropdown[formcontrolname="' + f + '"] .nx-dropdown__rendered') || pag.querySelector('nx-dropdown[formcontrolname="' + f + '"]'));
+  return {
+    modalidades: cabeceras.map((c) => ({
+      nombre: txt(c.querySelector('.product-title-wrap .title')),
+      primerRecibo: txt(c.querySelector('.product-price-primer-recibo')),
+      anualidad: txt(c.querySelector('.product-price')),
+      seleccionada: !!c.querySelector('button[data-testid="select"][aria-pressed="true"]'),
+      conAviso: !!c.querySelector('[data-testid="header-blockage"]'),
+    })),
+    operacion: txt(pag.querySelector('nx-ibl-operation-number')),
+    frecuencia: dd('paymentFrequency'),
+    vigencia: dd('policyTerm'),
+    condicionado: /precio condicionado a la comprobaci/i.test(txt(pag)),
+  };
+})()`
+
+/**
+ * Lee «Precio» (sin pulsar nada). Espera a que la tabla tenga cabeceras con «la anualidad» legible (el portal la pinta tras
+ * calcular); al vencer, decide `ofertasDesdePrecioHogar` con lo que haya (fail-closed, con el estado observado).
+ */
+export async function leerPrecioHogar(page: Page, marco: Frame, supuestos: readonly string[] = [], esperaMs = ESPERA_PASO_MS): Promise<OfertaNormalizada[]> {
+  await exigirPaso(marco, 'Precio')
+  const fin = Date.now() + esperaMs
+  for (;;) {
+    const l = (await marco.evaluate(SCRIPT_LEER_PRECIO_HOGAR).catch(() => null)) as LecturaPrecioHogar | null
+    const lista = l !== null && l.modalidades.length > 0 && l.modalidades.every((m) => primaDeTexto(m.anualidad) !== null)
+    if (lista || Date.now() >= fin) {
+      if (l === null) throw new ErrorMapaIncompleto(`la pantalla «Precio» (${SEL_PANTALLA_PRECIO} visible: no)`)
+      return ofertasDesdePrecioHogar(l, supuestos)
+    }
+    await page.waitForTimeout(500)
+  }
+}
+
 /**
  * Tras «Vivienda»: «Valoración de bienes» y «Precio» NO están vistos. Se para ahí pidiendo el inventario de estructura
  * (lo captura el runner) para mapearlas en la 1.ª prueba real. Nada se rellena ni se pulsa a ciegas.
@@ -944,7 +1077,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.9',
+  version: '0.1.10',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
@@ -954,9 +1087,11 @@ export const allianzHogar = {
     await ctx.paso('formulario', () => rellenarPantallaVivienda(page, marco, f, ctx))
     const paso = await ctx.paso('tarificar', () => avanzarDesdeVivienda(page, marco, ctx))
     if (paso !== 'Valoración de bienes') return pasoSinMapa(page, marco, ctx, paso)
-    // 0.1.9: «Valoración de bienes» mapeada; «Precio» sigue SIN mapa (se para ahí con inventario).
     const supuestos = await ctx.paso('formulario', () => rellenarValoracionBienes(page, marco, f, ctx))
     const paso2 = await ctx.paso('tarificar', () => avanzarDesdeValoracion(page, marco, ctx))
-    return pasoSinMapa(page, marco, ctx, paso2, supuestos)
+    if (paso2 !== 'Precio') return pasoSinMapa(page, marco, ctx, paso2, supuestos)
+    // 0.1.10: «Precio» se LEE (sin pulsar nada) y el bot termina aquí: no «Siguiente» (→ Datos/emisión), no «Guardar presupuesto».
+    const ofertas = await ctx.paso('lectura_primas', () => leerPrecioHogar(page, marco, supuestos))
+    return { ofertas }
   },
 } as const

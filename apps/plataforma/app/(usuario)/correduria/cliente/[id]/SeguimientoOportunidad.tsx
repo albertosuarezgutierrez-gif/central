@@ -81,6 +81,11 @@ const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   conductor_habitual_sin_nombre: 'Hay un conductor habitual sin nombre en la póliza: complétalo a mano.',
   propietario_sin_nombre: 'Hay un propietario del vehículo sin nombre en la póliza: complétalo a mano.',
   figura_asignada: 'Figura asignada al riesgo',
+  // «Póliza emitida» declarada a mano (22/10/2026): no es cartera hasta que CIMA la trae (`emitida_en_cartera`).
+  declarada_emitida: 'Póliza emitida declarada a mano (pendiente de confirmar con CIMA)',
+  anulada_declaracion: 'Declaración de póliza emitida ANULADA (vuelve a en negociación)',
+  declaracion_confirmada_cima: 'Póliza declarada confirmada por CIMA (enlazada sola)',
+  emitida_en_cartera: 'Póliza enlazada sola al entrar por CIMA',
 }
 
 /**

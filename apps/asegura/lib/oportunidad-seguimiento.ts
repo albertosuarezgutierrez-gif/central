@@ -22,6 +22,15 @@
 
 import {
   aplicarAccion,
+  ACCION_ANULADA_DECLARACION,
+  ACCION_DECLARADA_EMITIDA,
+  declaracionVigente,
+  mismaDeclaracion,
+  type CompaniaDeclarable,
+  detalleDeclaracion,
+  leerDetalleDeclaracion,
+  validarDeclaracionEmitida,
+  type DeclaracionVigente,
   validarSolicitudCompania,
   ROTULO_COMPANIA_SOLICITUD,
   type CompaniaSolicitud,
@@ -53,6 +62,7 @@ import {
   type SeguroAnterior,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
+import { anotarCambio } from './auditoria'
 import { esColumnaAusente } from './pg-error'
 import { puedeEscribirDatosVehiculo } from './oportunidad-vehiculo-previo'
 import { prismaAsegura } from './asegura-db'
@@ -60,7 +70,7 @@ import { comoSeAbrioOportunidad } from './oportunidad-origen'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type Fallo = { ok: false; estado: 'invalido' | 'no_encontrado' | 'conflicto' | 'sin_migracion'; motivo: string; status: 404 | 409 | 422 | 503 }
+export type Fallo = { ok: false; estado: 'invalido' | 'no_encontrado' | 'conflicto' | 'sin_migracion'; motivo: string; status: 400 | 404 | 409 | 422 | 503 }
 
 export type OportunidadSeguimiento = {
   id: string
@@ -170,7 +180,7 @@ function mapOportunidad(f: FilaOportunidad): OportunidadSeguimiento {
 export async function leerOportunidad(
   correduriaId: string,
   id: string,
-): Promise<{ oportunidad: OportunidadSeguimiento; contexto: ContextoOportunidad; historial: EntradaHistorial[]; tareas: Tarea[] } | null> {
+): Promise<{ oportunidad: OportunidadSeguimiento; contexto: ContextoOportunidad; declaracion: DeclaracionVigente | null; historial: EntradaHistorial[]; tareas: Tarea[] } | null> {
   if (!UUID.test(id)) return null
   const db = prismaAsegura()
   const [fila] = await db.$queryRaw<FilaOportunidad[]>(Prisma.sql`
@@ -202,10 +212,13 @@ export async function leerOportunidad(
       where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
       order by (estado = 'cerrada'), fecha_limite nulls last, created_at desc limit 100`),
   ])
+  const historialIso = historial.map(h => ({ ...h, fecha: h.fecha.toISOString() }))
   return {
     oportunidad: mapOportunidad(fila),
     contexto,
-    historial: historial.map(h => ({ ...h, fecha: h.fecha.toISOString() })),
+    // «Póliza emitida» declarada a mano (22/10/2026): la vigente (la última, salvo una anulación posterior). `null` = no hay.
+    declaracion: declaracionVigente(historialIso),
+    historial: historialIso,
     tareas: tareas.map(t => ({ ...t, creada: t.creada.toISOString() })),
   }
 }
@@ -1121,6 +1134,11 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
    * `riesgo_condicionado` es «retenida» DERIVADA: proyecto sin póliza (no hay estado propio).
    */
   emision: { projectId: string; estado: 'riesgo_condicionado' | 'rechazada' | 'emitida'; compania: string | null; desde: string } | null
+  /**
+   * «Póliza emitida» declarada a mano por el corredor (22/10/2026). `null` = no hay. NO es cartera: con
+   * `polizaGanadaId` null la pantalla dice «Emitida · pendiente de confirmar con CIMA».
+   */
+  declaracion: DeclaracionVigente | null
 }
 
 /**
@@ -1206,6 +1224,7 @@ export async function oportunidadesDeCliente(
     polizaId: string | null
     presupuestos: JsonResumen
     emision: OportunidadDeCliente['emision']
+    declaracion: { detalle: unknown; fecha: string; actor: string } | null
   })[]>(Prisma.sql`
     select o.id::text as id, o.cliente_id::text as "clienteId", o.tipo::text as ramo, o.estado::text as estado,
            o.fecha_fin_vigencia as "fechaFin", o.motivo_perdida as "motivoPerdida",
@@ -1261,7 +1280,15 @@ export async function oportunidadesDeCliente(
               from codeoscopic_projects cp
              where cp.oportunidad_id = o.id and cp.correduria_id = o.correduria_id
                and cp.estado::text in ('riesgo_condicionado', 'rechazada', 'emitida')
-             order by cp.updated_at desc limit 1) as emision
+             order by cp.updated_at desc limit 1) as emision,
+           -- «Póliza emitida» declarada a mano (22/10/2026): la última, si ninguna anulación la ha dejado sin efecto.
+           (select json_build_object('detalle', h.detalle, 'fecha', to_char(h.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), 'actor', h.actor)
+              from oportunidad_historial h
+             where h.oportunidad_id = o.id and h.correduria_id = o.correduria_id and h.accion = ${ACCION_DECLARADA_EMITIDA}
+               and not exists (select 1 from oportunidad_historial r
+                                where r.oportunidad_id = o.id and r.correduria_id = o.correduria_id
+                                  and r.accion = ${ACCION_ANULADA_DECLARACION} and r.created_at > h.created_at)
+             order by h.created_at desc limit 1) as declaracion
     from oportunidades o
     where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid
     order by (o.estado::text in ('ganada', 'perdida')), o.cerrada_at desc nulls last, o.created_at desc
@@ -1281,6 +1308,7 @@ export async function oportunidadesDeCliente(
       polizaId: f.polizaId,
       presupuestos: resumenPresupuestos(f.presupuestos),
       emision: f.emision ?? null,
+      declaracion: f.declaracion ? declaracionVigente([{ accion: ACCION_DECLARADA_EMITIDA, ...f.declaracion }]) : null,
     })),
     truncado: filas.length > TECHO_POR_CLIENTE,
   }
@@ -1468,4 +1496,130 @@ export async function fijarSolicitudCompania(
     if (esColumnaAusente(e)) return { ok: false, estado: 'sin_migracion', motivo: 'Falta aplicar prisma/sql/2026-10-20_oportunidad_solicitud_compania.sql.', status: 503 }
     throw e
   }
+}
+
+// ── «Póliza emitida» declarada a mano (22/10/2026) ─────────────────────────────
+
+/**
+ * Alberto declara el desenlace de una oportunidad que no se tarifica desde la pantalla (accidentes colectivos, RC,
+ * comercios…): nº de póliza + compañía (obligatorios; del catálogo `companias_dgs` con su código, o cualquier otra por
+ * nombre SIN código), fecha de efecto y nota (opcionales). NO crea póliza ni toca `polizas`: lo declarado no es cartera.
+ * Una ABIERTA pasa a `ganada` por la MISMA transición que la acción `ganar` (cierra sus tareas, deja su fila en
+ * `oportunidad_historial`), sin `poliza_ganada_id`; la declaración va en otra fila (`declarada_emitida`, detalle sin texto
+ * libre) y la nota a la ficha (`historial_interno`). Sobre una GANADA sin póliza enlazada, corrige (nueva fila; manda la
+ * última). Repetir la MISMA (nº + compañía + fecha) es un no-op (`sinCambios`). La confirma el enlace F1 con CIMA.
+ */
+export async function declararEmitida(
+  correduriaId: string,
+  id: string,
+  datos: { numeroPoliza?: unknown; codigoDgs?: unknown; compania?: unknown; fechaEfecto?: unknown; nota?: unknown },
+  actor: string,
+  hoy: Date = hoyUtc(),
+): Promise<{ ok: true; oportunidad: OportunidadSeguimiento; declaracion: DeclaracionVigente; sinCambios: boolean } | Fallo> {
+  if (!UUID.test(id)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
+  const db = prismaAsegura()
+  // El catálogo de compañías con su código DGSFP real (tabla de referencia). Si no se lee, `null`: no se acepta un código.
+  const catalogo = await db.$queryRaw<CompaniaDeclarable[]>(Prisma.sql`
+    select codigo_dgs as "codigoDgs", nombre_comun as "nombreComun" from companias_dgs where activa`).catch(() => null)
+  const r = await db.$transaction(async tx => {
+    const [fila] = await tx.$queryRaw<FilaOportunidad[]>(Prisma.sql`
+      ${SELECT_OPORTUNIDAD} where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+    if (!fila) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
+    if (!fila.clienteId) return { ok: false as const, estado: 'invalido' as const, motivo: 'Esta oportunidad no tiene cliente (tomador): asígnalo antes de dar la póliza por emitida.', status: 400 as const }
+    const antes = mapOportunidad(fila)
+    const v = validarDeclaracionEmitida({ estado: antes.estado, polizaGanadaId: antes.polizaGanadaId }, datos, hoyMadridIso(), catalogo)
+    if (!v.ok) return { ok: false as const, estado: 'invalido' as const, motivo: v.motivo, status: 422 as const }
+    const d = v.declaracion
+    const previa = antes.estado === 'ganada' ? await declaracionVigenteDe(tx, correduriaId, id) : null
+    // Doble envío idéntico: no-op (ni fila nueva, ni nota, ni auditoría de cambio).
+    if (previa && mismaDeclaracion(previa, d)) return { ok: true as const, antes, oportunidad: antes, declaracion: previa, sinCambios: true }
+    let despues = antes
+    if (d.ganar) {
+      // `ganar` solo admite «en negociación»/«propuesta enviada»: una sin trabajar (`competencia`) que ya se emitió en la
+      // compañía pasa antes por «interesado», con su propia fila de historial (rastro honesto, sin saltarse la regla).
+      let desde = antes
+      if (antes.estado === 'competencia') {
+        const i = await transicionar(tx, correduriaId, antes, { accion: 'interesado' }, actor, hoy)
+        if (!i.ok) return i
+        desde = i.oportunidad
+      }
+      const t = await transicionar(tx, correduriaId, desde, { accion: 'ganar' }, actor, hoy)
+      if (!t.ok) return t
+      despues = t.oportunidad
+    }
+    const [h] = await tx.$queryRaw<{ fecha: Date }[]>(Prisma.sql`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${id}::uuid, ${ACCION_DECLARADA_EMITIDA},
+              cast(${antes.estado} as estado_comercial), cast(${despues.estado} as estado_comercial),
+              ${JSON.stringify(detalleDeclaracion(d))}::jsonb, ${actor})
+      returning created_at as fecha`)
+    const sello = (h?.fecha ?? new Date()).toISOString()
+    const fecha = d.fechaEfecto ? `, efecto ${d.fechaEfecto.slice(8, 10)}/${d.fechaEfecto.slice(5, 7)}/${d.fechaEfecto.slice(0, 4)}` : ''
+    const sinDgs = d.codigoDgs ? '' : ' (compañía sin código DGS: se casará con CIMA solo por nº y tomador)'
+    const que = previa ? 'CORREGIDA la declaración: ahora póliza' : 'póliza'
+    const texto = `Oportunidad ${antes.ramo ?? 'sin ramo'}: ${que} ${d.numeroPoliza} de ${d.compania}${fecha} DECLARADA emitida a mano${sinDgs}` +
+      ` (pendiente de confirmar con CIMA; no es cartera hasta que CIMA la traiga) — por ${actor}${d.nota ? `. Nota: ${d.nota}` : ''}`
+    await anotarEnFicha(correduriaId, antes.clienteId, texto.slice(0, 2000), tx)
+    return { ok: true as const, antes, oportunidad: despues, declaracion: { ...leerDetalleDeclaracion(detalleDeclaracion(d))!, declaradaAt: sello, actor }, sinCambios: false }
+  })
+  if (!r.ok) return r
+  if (!r.sinCambios) {
+    if (r.antes.estado !== r.oportunidad.estado) anotarCambio({ entidad: 'oportunidad', id, campo: 'estado', antes: r.antes.estado, despues: r.oportunidad.estado })
+    anotarCambio({ entidad: 'oportunidad', id, campo: 'poliza_declarada' })
+  }
+  return { ok: true, oportunidad: r.oportunidad, declaracion: r.declaracion, sinCambios: r.sinCambios }
+}
+
+/** La declaración vigente de UNA oportunidad, leída en la transacción de quien llama. */
+async function declaracionVigenteDe(tx: Tx, correduriaId: string, id: string): Promise<DeclaracionVigente | null> {
+  const filas = await tx.$queryRaw<{ accion: string; detalle: unknown; fecha: Date; actor: string }[]>(Prisma.sql`
+    select accion, detalle, created_at as fecha, actor from oportunidad_historial
+    where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
+      and accion in (${ACCION_DECLARADA_EMITIDA}, ${ACCION_ANULADA_DECLARACION})
+    order by created_at desc limit 50`)
+  return declaracionVigente(filas.map((f) => ({ ...f, fecha: f.fecha.toISOString() })))
+}
+
+/**
+ * Deshace una declaración equivocada (22/10/2026): solo sobre una GANADA con declaración vigente y SIN póliza de CIMA
+ * enlazada. La oportunidad vuelve a «en negociación» (abierta, `cerrada_at` a null) y la declaración queda sin efecto
+ * por la fila `anulada_declaracion` (lo ÚNICO que la invalida). Nota en la ficha y auditoría. Sus tareas no se reabren:
+ * la tarjeta dirá «Sin siguiente paso» y se le pone una en «Gestionar».
+ */
+export async function anularDeclaracion(
+  correduriaId: string, id: string, actor: string,
+): Promise<{ ok: true; oportunidad: OportunidadSeguimiento } | Fallo> {
+  if (!UUID.test(id)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
+  const r = await prismaAsegura().$transaction(async tx => {
+    const [fila] = await tx.$queryRaw<FilaOportunidad[]>(Prisma.sql`
+      ${SELECT_OPORTUNIDAD} where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+    if (!fila) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
+    if (fila.estado !== 'ganada') return { ok: false as const, estado: 'conflicto' as const, motivo: 'Solo se anula la declaración de una oportunidad ganada.', status: 409 as const }
+    if (fila.polizaGanadaId) return { ok: false as const, estado: 'conflicto' as const, motivo: 'CIMA ya trajo la póliza y está enlazada: la declaración no se puede anular.', status: 409 as const }
+    const decl = await declaracionVigenteDe(tx, correduriaId, id)
+    if (!decl) return { ok: false as const, estado: 'conflicto' as const, motivo: 'Esta oportunidad no tiene una póliza declarada a mano que anular.', status: 409 as const }
+    const [act] = await tx.$queryRaw<FilaOportunidad[]>(Prisma.sql`
+      update oportunidades set estado = 'en_negociacion', cerrada_at = null, updated_at = now()
+      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado::text = 'ganada' and poliza_ganada_id is null
+      returning id::text as id, cliente_id::text as "clienteId", tipo::text as ramo, estado::text as estado,
+        fecha_fin_vigencia as "fechaFin", motivo_perdida as "motivoPerdida",
+        motivo_perdida_detalle as "motivoDetalle", competidor,
+        prima_competidor::float8 as "primaCompetidor", aparcada_hasta as "aparcadaHasta",
+        aparcada_motivo as "aparcadaMotivo", cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId",
+        ${SQL_NOTAS} as notas`)
+    if (!act) return { ok: false as const, estado: 'conflicto' as const, motivo: 'La oportunidad cambió mientras tanto: recarga.', status: 409 as const }
+    await tx.$executeRaw(Prisma.sql`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${id}::uuid, ${ACCION_ANULADA_DECLARACION}, 'ganada', 'en_negociacion',
+              ${JSON.stringify({ numeroPoliza: decl.numeroPoliza, codigoDgs: decl.codigoDgs })}::jsonb, ${actor})`)
+    if (fila.clienteId) {
+      await anotarEnFicha(correduriaId, fila.clienteId,
+        `Oportunidad ${fila.ramo ?? 'sin ramo'}: ANULADA la declaración de la póliza ${decl.numeroPoliza} de ${decl.compania}; vuelve a «en negociación» — por ${actor}`.slice(0, 2000), tx)
+    }
+    return { ok: true as const, oportunidad: mapOportunidad(act) }
+  })
+  if (!r.ok) return r
+  anotarCambio({ entidad: 'oportunidad', id, campo: 'estado', antes: 'ganada', despues: 'en_negociacion' })
+  anotarCambio({ entidad: 'oportunidad', id, campo: 'poliza_declarada' })
+  return { ok: true, oportunidad: r.oportunidad }
 }

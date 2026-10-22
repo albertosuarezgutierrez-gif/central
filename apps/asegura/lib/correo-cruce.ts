@@ -5,7 +5,7 @@
 // tal cual (con el enlace a la ficha que pone plataforma). SIN datos personales: ni nombre del tomador, ni NIF, ni IBAN;
 // solo compañía, nº de póliza/solicitud/recibo, fechas y días.
 
-import { CODIGO_DGS_COMPANIA, diasEsperaCima, sinDatosSensibles, type MotivoEnlaceAmbiguo, type TipoAvisoCruce } from '@central/module-seguros'
+import { CODIGO_DGS_COMPANIA, DIAS_ESPERA_CIMA_DECLARADA, VENTANA_ENLACE_DIAS, diasEsperaCima, sinDatosSensibles, type MotivoEnlaceAmbiguo, type MotivoNoEnlaza, type TipoAvisoCruce } from '@central/module-seguros'
 import { nombreCompania, type ResolucionEvento } from './correo-evento.ts'
 
 /**
@@ -36,6 +36,27 @@ const limpio = (t: string): string => sinDatosSensibles(t).slice(0, 600)
 export function textoAvisoEmisionSinCima(p: { compania: string; numeroPoliza: string; numeroSolicitud: string | null; fechaCorreo: string; diasHabiles: number }): string {
   const sol = p.numeroSolicitud ? ` (solicitud ${p.numeroSolicitud})` : ''
   return limpio(`📭 ${nombreCompania(p.compania)} comunicó por correo el ${fechaEs(p.fechaCorreo)} la emisión de la póliza ${p.numeroPoliza}${sol} y CIMA aún no la trae (${p.diasHabiles} días hábiles; se esperan ${diasEsperaCima(p.compania)}). Mírala en el portal de la compañía: no se ha creado nada en la cartera.`)
+}
+
+/** «Póliza emitida» declarada a mano (22/10/2026) que CIMA no ha traído tras `DIAS_ESPERA_CIMA_DECLARADA` días naturales. */
+export function textoAvisoDeclaradaSinCima(p: { compania: string; codigoDgs: string | null; numeroPoliza: string; fechaDeclaracion: string; dias: number }): string {
+  const sinDgs = p.codigoDgs ? '' : ' (compañía sin código DGS: se casará solo por nº y tomador)'
+  return limpio(`📭 Declaraste emitida a mano el ${fechaEs(p.fechaDeclaracion)} la póliza ${p.numeroPoliza} de ${p.compania}${sinDgs} y CIMA aún no la trae (${p.dias} días; se esperan ${DIAS_ESPERA_CIMA_DECLARADA}). Sigue «pendiente de confirmar con CIMA»: mírala en el portal de la compañía y revisa el nº. No se ha creado nada en la cartera.`)
+}
+
+const POR_QUE_NO_ENLAZA: Record<MotivoNoEnlaza, string> = {
+  otra_compania: 'pero es de OTRA compañía que la declarada',
+  otro_tomador: 'pero es de OTRO tomador que la oportunidad',
+  enlazada_otra: 'pero ya está enlazada a OTRA oportunidad',
+  no_vigente: 'pero no está en vigor (o está sustituida)',
+  antigua: `pero entró hace más de ${VENTANA_ENLACE_DIAS} días y no se enlaza sola`,
+  varias: 'pero hay más de una póliza del tomador con ese nº',
+}
+
+/** CIMA trae ese nº pero el enlace NO puede casarlo con la declaración: se dice por qué (nunca se queda mudo). */
+export function textoAvisoDeclaradaNoEnlaza(p: { compania: string; codigoDgs: string | null; numeroPoliza: string; fechaDeclaracion: string; motivo: MotivoNoEnlaza }): string {
+  const sinDgs = p.codigoDgs ? '' : ' (sin código DGS)'
+  return limpio(`🔗 Declaraste emitida a mano el ${fechaEs(p.fechaDeclaracion)} la póliza ${p.numeroPoliza} de ${p.compania}${sinDgs}. CIMA tiene ese nº ${POR_QUE_NO_ENLAZA[p.motivo]}. No la he enlazado: revisa el nº o la ficha y, si la declaración está mal, anúlala en la oportunidad.`)
 }
 
 export function textoAvisoAnulacionSinCima(p: { compania: string; numeroPoliza: string; fechaCorreo: string; diasHabiles: number }): string {

@@ -17,6 +17,10 @@ import {
   ALLIANZ_HOGAR_ACTIVO,
   ErrorMapaIncompleto,
   allianzHogar,
+  leerPrecioHogar,
+  ofertasDesdePrecioHogar,
+  referenciaOperacion,
+  terminoDeVigencia,
   avanzarDesdeValoracion,
   importeCampo,
   importeDeSerieAceptable,
@@ -185,6 +189,11 @@ type OpcionesApp = {
    * `sinSerie` = esa pregunta sin opción marcada; `vacio` = ese importe vacío de serie.
    */
   valoracion?: { sinSerie?: string; vacio?: string }
+  /**
+   * 0.1.10: «Precio» (forma del HTML real del job 03b0d6f5, `epac-price-page`), visible tras «Siguiente» de Valoración. 3 modalidades
+   * con importes INVENTADOS; `ilegible` = esa modalidad sin «la anualidad»; `frecuencia` = el texto del desplegable (de serie «Anual»).
+   */
+  precio?: { ilegible?: string; frecuencia?: string }
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -219,6 +228,16 @@ ${imp('sumInsuredContent', 'Mobiliario', '30000')}<p>Joyas fuera de caja fuerte<
 <h4><span> Medidas de seguridad </span></h4>${grupo(2, 'Alarma conectada')}${grupo(3, 'Puerta blindada')}
 <h4><span> Fecha de inicio del seguro </span></h4><input formcontrolname="startDate" nxdatefield value="22/10/2026">
 <button type="button" nxbutton="primary">Anterior</button><button type="button" nxbutton="primary" id="sigGoods">Siguiente</button></epac-goods-page>`
+  })()}
+${(() => {
+    const p = o.precio ?? {}
+    const mods: Array<[string, string, string, boolean]> = [['ESTÁNDAR', '100,10', '110,20', false], ['COMPLETO', '200,30', '1.210,40', true], ['SUPERIOR', '300,50', '310,60', false]]
+    const cab = ([n, r, a, sel]: [string, string, string, boolean]) => `<div class="nx-comparison-table__cell nx-comparison-table__header-cell" role="columnheader"><nx-ibl-offerings-header class="header-container"><div class="product-title-wrap"><p class="title nx-font-weight-semibold">${n}</p><nx-icon aria-label="Blocked" data-testid="header-blockage" name="exclamation-circle-warning"></nx-icon></div><p class="product-margin"><span class="product-price-primer-recibo"> ${r}&nbsp;€ </span><br><span class="product-frequency-primer-recibo"> primer recibo </span></p><p class="product-margin anualidad"><span class="product-price"> ${p.ilegible === n ? '' : `${a}&nbsp;€`} </span><br><span class="product-frequency"> la anualidad </span></p><button type="button" data-testid="select" aria-pressed="${sel}">${sel ? 'Seleccionado' : 'Seleccionar'}</button></nx-ibl-offerings-header></div>`
+    return `<epac-price-page id="precio" style="display:none"><nx-ibl-operation-number><p>Número operación: 900000001</p></nx-ibl-operation-number>
+<nx-dropdown role="combobox" formcontrolname="paymentFrequency"><span class="nx-dropdown__rendered">${p.frecuencia ?? 'Anual'}</span></nx-dropdown><nx-dropdown role="combobox" formcontrolname="policyTerm"><span class="nx-dropdown__rendered">22/10/2026 - 01/10/2027</span></nx-dropdown>
+<p> Precio condicionado a la comprobación de los datos que nos has facilitado. </p><nx-comparison-table><div role="table"><nx-comparison-table-flex-row class="is-header-row is-sticky-row"><div role="row">${mods.map(cab).join('')}</div></nx-comparison-table-flex-row>
+<nx-comparison-table-flex-row class="is-content-row"><div role="row"><div class="nx-comparison-table__description-cell">Incendio</div></div></nx-comparison-table-flex-row></div></nx-comparison-table>
+<button type="button">Anterior</button><button type="button" id="sigPrecio" onclick="document.body.dataset.siguientePrecio='1'">Siguiente</button><button type="button" id="guardarPres" onclick="document.body.dataset.guardado='1'">Guardar presupuesto</button></epac-price-page>`
   })()}
 ${o.duplicadosOcultos === false ? '' : `<div id="pasoDatos" style="display:none">${['postalCode', 'province', 'town', 'streetType', 'streetName'].map((f) => [0, 1].map((k) => `<nx-formfield><input id="dup-${f}-${k}" type="text" formcontrolname="${f}" disabled class="ng-valid"></nx-formfield>`).join('')).join('')}<div id="check-address"><button type="button" disabled>Comprobar</button></div></div><div id="check-address"><button type="button" disabled>Comprobada</button></div>`}
 ${o.townVisibleDuplicado ? `<nx-formfield><label for="town-bis">Población</label><input id="town-bis" type="text" formcontrolname="town" class="ng-valid"></nx-formfield>` : ''}
@@ -261,6 +280,7 @@ ${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" r
     if (document.querySelector('#goods input[required].ng-invalid')) return;
     document.getElementById('goods').style.display = 'none';
     document.querySelectorAll('nx-multi-step-item')[2].removeAttribute('aria-disabled');
+    document.getElementById('precio').style.display = '';
   });
   ${o.pasoInicial ? `document.querySelectorAll('nx-multi-step-item').forEach((el) => { if (el.textContent === ${JSON.stringify(o.pasoInicial)}) el.setAttribute('aria-selected', 'true'); else el.setAttribute('aria-selected', 'false'); });` : ''}
   ${o.overlayAlEscribir ? `
@@ -510,6 +530,70 @@ test('0.1.9: sin dato y sin valor de serie razonable → hueco con el estado obs
     const { context, page, ctx, marco } = await hastaValoracion({ valoracion: o })
     try {
       await assert.rejects(() => rellenarValoracionBienes(page, marco, FORM_VAL, ctx), (e) => e instanceof ErrorMapaIncompleto && re.test((e as Error).message) && !(e as Error).message.includes('00000000T'))
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+// ───────────── 0.1.10: «Precio» (solo lectura) ─────────────
+
+test('0.1.10 puros: referenciaOperacion, terminoDeVigencia y ofertasDesdePrecioHogar (fail-closed)', () => {
+  assert.equal(referenciaOperacion('Número operación: 900000001'), '900000001')
+  assert.equal(referenciaOperacion('Operación pendiente'), null)
+  assert.equal(terminoDeVigencia('22/10/2026 - 01/10/2027'), '2027-10-01')
+  assert.equal(terminoDeVigencia('2027'), null)
+  const base = {
+    modalidades: [
+      { nombre: 'A', primerRecibo: '10,00 €', anualidad: '1.100,50 €', seleccionada: true, conAviso: false },
+      { nombre: 'B', primerRecibo: '', anualidad: '200,00 €', seleccionada: false, conAviso: true },
+    ],
+    operacion: 'Número operación: 900000001', frecuencia: 'Anual', vigencia: '22/10/2026 - 01/10/2027', condicionado: true,
+  }
+  const o = ofertasDesdePrecioHogar(base, ['Caja fuerte: «No» (de serie)'])
+  assert.deepEqual(o.map((x) => [x.producto, x.primaAnualEur, x.importeReciboEur, x.fraccionamiento, x.referenciaPortal, x.fechaTerminoPortal]), [
+    ['Allianz HOGAR · A', 1100.5, 10, 'anual', '900000001', '2027-10-01'],
+    ['Allianz HOGAR · B', 200, null, 'anual', '900000001', '2027-10-01'],
+  ])
+  assert.ok(o[0]!.avisos.includes('Modalidad preseleccionada por el portal.') && !o[1]!.avisos.includes('Modalidad preseleccionada por el portal.'))
+  assert.ok(o[1]!.avisos.some((a) => /Blocked/.test(a)) && o[1]!.avisos.some((a) => /Primer recibo» ilegible/.test(a)))
+  assert.ok(o[0]!.avisos.some((a) => /Caja fuerte/.test(a)) && o[0]!.avisos.some((a) => /Precio condicionado/.test(a)))
+  const hueco = (l: typeof base, re: RegExp) => assert.throws(() => ofertasDesdePrecioHogar(l), (e) => e instanceof ErrorMapaIncompleto && re.test((e as Error).message))
+  hueco({ ...base, modalidades: [] }, /tabla sin cabeceras; 0 modalidades/)
+  hueco({ ...base, modalidades: [base.modalidades[0]!, { ...base.modalidades[1]!, nombre: 'a' }] }, /vacíos o repetidos/)
+  hueco({ ...base, modalidades: [base.modalidades[0]!, { ...base.modalidades[1]!, anualidad: '' }] }, /ilegible en: B; 2 modalidades; nombres: «A» «B»; seleccionada: A/)
+  hueco({ ...base, frecuencia: 'Bimestral' }, /Frecuencia de pago.*«Bimestral»/)
+})
+
+test('0.1.10: flujo hasta «Precio» → lee 3 modalidades (anualidad, primer recibo, referencia, término, preseleccionada) SIN pulsar nada en «Precio»', async () => {
+  const { context, page, ctx, pulsados, marco } = await hastaValoracion()
+  try {
+    const supuestos = await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+    assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+    const antes = pulsados.length
+    const ofertas = await leerPrecioHogar(page, marco, supuestos, 3_000)
+    assert.deepEqual(ofertas.map((o) => [o.producto, o.primaAnualEur, o.importeReciboEur]), [
+      ['Allianz HOGAR · ESTÁNDAR', 110.2, 100.1], ['Allianz HOGAR · COMPLETO', 1210.4, 200.3], ['Allianz HOGAR · SUPERIOR', 310.6, 300.5],
+    ])
+    assert.ok(ofertas.every((o) => o.referenciaPortal === '900000001' && o.fraccionamiento === 'anual' && o.fechaTerminoPortal === '2027-10-01'))
+    assert.deepEqual(ofertas.map((o) => o.avisos.includes('Modalidad preseleccionada por el portal.')), [false, true, false])
+    assert.equal(pulsados.length, antes, 'en «Precio» no se pulsa nada')
+    assert.equal(await page.frames().find((f) => f === marco)!.evaluate(() => JSON.stringify(document.body.dataset)), '{}', 'ni «Siguiente» ni «Guardar presupuesto»')
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.10: «la anualidad» ilegible o frecuencia desconocida → hueco con el estado observado (ningún importe supuesto)', async () => {
+  for (const [precio, re] of [
+    [{ ilegible: 'COMPLETO' }, /ilegible en: COMPLETO; 3 modalidades; nombres: «ESTÁNDAR» «COMPLETO» «SUPERIOR»; seleccionada: COMPLETO/],
+    [{ frecuencia: 'Bimestral' }, /Frecuencia de pago» de «Precio» \(se lee «Bimestral»/],
+  ] as const) {
+    const { context, page, ctx, marco } = await hastaValoracion({ precio })
+    try {
+      await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+      assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+      await assert.rejects(() => leerPrecioHogar(page, marco, [], 1_500), (e) => e instanceof ErrorMapaIncompleto && re.test((e as Error).message))
     } finally {
       await context.close()
     }
