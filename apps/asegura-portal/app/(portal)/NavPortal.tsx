@@ -168,6 +168,17 @@ export function NavPortal({ llamar, whatsapp }: {
         >
           Mi resumen
         </Link>
+        {/* «Herramientas» (22/10/2026): módulos gratis para clientes (flota, RRHH, alquileres). Otra RUTA,
+            como «Mi resumen»; no está en `pestanasPortal()`. Ver `app/(portal)/herramientas/page.tsx`. */}
+        <Link
+          href="/herramientas"
+          className="portal-nav-item"
+          aria-current={ruta === '/herramientas' ? 'page' : undefined}
+          data-activa={ruta === '/herramientas' ? 'si' : undefined}
+          onClick={cerrar}
+        >
+          Herramientas
+        </Link>
         {/* Llamar al corredor, a un toque desde cualquier sección (24/09/2026). El
             número llega del servidor (`MEDIADOR`): importar `@central/module-seguros`
             aquí arrastraría la cartera entera al bundle del navegador. */}
