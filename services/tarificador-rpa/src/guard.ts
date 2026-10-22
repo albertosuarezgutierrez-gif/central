@@ -3950,7 +3950,8 @@ async function marcarAbridorGuardarTurismos(marco: Frame): Promise<number> {
       document.querySelectorAll('[data-rpa-abrir]').forEach((n) => n.removeAttribute('data-rpa-abrir'))
       const cand: Element[] = []
       for (const b of Array.from(document.querySelectorAll('button, a, [role="button"]'))) {
-        if ((b as HTMLButtonElement).type === 'submit' || (b as HTMLButtonElement).disabled || b.getAttribute('aria-disabled') === 'true') continue
+        // `type` explícito: un <button> sin atributo vale «submit» en el DOM y es justo el botón de barra que buscamos (fuera de form).
+        if (b.getAttribute('type') === 'submit' || (b as HTMLButtonElement).disabled || b.getAttribute('aria-disabled') === 'true') continue
         if (b.closest('form')) continue
         const r = b.getBoundingClientRect()
         if (!(r.width > 0 && r.height > 0) || getComputedStyle(b).visibility === 'hidden') continue
@@ -3995,7 +3996,8 @@ async function abrirFormularioGuardarTurismos(marco: Frame, guard: GuardEmision)
     guard.comprobar()
     await page.waitForTimeout(500)
     return true
-  } catch {
+  } catch (e) {
+    if (e instanceof ErrorFronteraEmision) throw e
     guard.comprobar()
   }
   return false
