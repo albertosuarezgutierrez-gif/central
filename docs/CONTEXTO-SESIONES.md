@@ -12,6 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — asegura-portal · aviso «Póliza aportada… compañía sin leer» de Antonio Lozano: NO era fallo de lectura, subió una ficha catastral (`tipoDocumento:'otro'`). El aviso ahora lo dice (`aviso-poliza-declarada.ts` + test). Sus 10 PDF están guardados como `portal_poliza_declarada` (destino correcto para pólizas de otra compañía; nunca `seguros.polizas`) y salen en su ficha «Aportadas desde el portal». 4 Generali comercio con vencimiento leído 03/2018 (probable 1.er periodo, renovación tácita): no se inventa fecha. Pendiente: pedirle último recibo; propuesta `proyectarVencimiento` también en el portal; 3 PDF «v loreto» ilegibles.
 **(21/10/2026)** — Tarificador · #4973 (Generali 0.2.15 usa la 1.ª matriculación ESTIMADA por matrícula, campo propio
 `fechaMatriculacionEstimada` solo para Generali; Mapfre 0.8.13 cierra el modal que tapaba «Nueva producción»; Allianz
 0.6.19 compañía anterior «A / B» + fallback «otras»). Mapfre auto OK con 0.8.13 (2 precios). Imagen en prod `main-81a4386`.
