@@ -60,6 +60,9 @@ import {
   elegirGarajeGenerali,
   elegirMarcaExactaGenerali,
   elegirModeloGenerali,
+  dataLabelDeOpcionGenerali,
+  estadoTrasOtrosModeloGenerali,
+  opcionPuestaPrimeFaces,
   camposNuevosSelectorGenerali,
   cvDePotenciaGenerali,
   desplegableVersionGenerali,
@@ -131,8 +134,13 @@ export const GENERALI_AUTO_ACTIVO = true
  * Código | Modelo | Versión + «Resumen». La potencia y la fila se eligen con la regla de versión automática del monorepo (CV ±10 %, cc ±5 %,
  * combustible; equivalentes → declarada, material → `eleccion`) por las puertas nuevas de guard.ts; ANTES de avanzar se verifica el «Resumen»
  * (código/descripción); se avanza con «Siguiente» o «Confirmar». Sin Potencia/Versión (una sola versión) sigue como 0.2.13.
+ * 0.2.16 (22/10/2026, prueba real: «el modelo no quedó seleccionado: label=«Seleccione uno», input=«Seleccione uno» (esperado «Otros modelos ...»)»):
+ * «Otros modelos ...» no se da por puesto hasta que el AJAX termina: si sigue puesto y estable → ese (supuesto); si el portal RECARGA la lista
+ * (el «...» es un «ver más»), el modelo se elige en la lista nueva por la misma regla y por la segunda ronda de la puerta de modelo (guard.ts:
+ * solo tras «Otros», una vez, nunca «Otros» otra vez); si nada cambia → hueco claro SIN «Confirmar». Además «puesta» exige valor Y texto de
+ * la opción (un valor compartido con «Seleccione uno» ya no «casa») y el `li` se empareja normalizado («…»/«...», espacios).
  */
-export const VERSION_GENERALI_AUTO = '0.2.15'
+export const VERSION_GENERALI_AUTO = '0.2.16'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -185,6 +193,16 @@ async function controlJuntoA(raiz: Raiz, etiqueta: string, tag: 'input' | 'selec
 
 async function opcionesSelect(sel: Locator): Promise<{ valor: string; texto: string }[]> {
   return sel.evaluate((el) => Array.from((el as HTMLSelectElement).options).map((o) => ({ valor: o.value ?? '', texto: (o.textContent ?? '').trim() })))
+}
+
+/** Valor y texto de la opción seleccionada de un `<select>` (también oculto). Vacíos si no se deja leer. Solo lee. */
+async function leerOpcionSeleccionada(sel: Locator): Promise<{ valor: string; texto: string }> {
+  return sel
+    .evaluate((el) => {
+      const s = el as HTMLSelectElement
+      return { valor: s.value ?? '', texto: (s.selectedOptions[0]?.textContent ?? '').trim() }
+    })
+    .catch(() => ({ valor: '', texto: '' }))
 }
 
 async function esSelectNativo(l: Locator): Promise<boolean> {
@@ -759,16 +777,21 @@ async function ponerOpcionPrimeFaces(
   ctx: Pick<ContextoPortal, 'pausaAccion'>,
   que: string,
 ): Promise<void> {
-  const puesta = async () => (await menu.select.inputValue().catch(() => '')) === elegida.valor
+  // v0.2.16: valor Y texto de la opción seleccionada (si el placeholder y «Otros modelos ...» comparten valor, el valor solo «casaba» sin elegir).
+  const puesta = async () => {
+    const actual = await leerOpcionSeleccionada(menu.select)
+    return opcionPuestaPrimeFaces(actual.valor, actual.texto, elegida)
+  }
   if (!abrir || !elegir) throw new ErrorMapaIncompletoGenerali(`las puertas guardadas del desplegable de ${que} (disparador y \`li\`) en el contexto del runner`, false)
   await ctx.pausaAccion()
   try {
     // v0.2.7: se abre pulsando el disparador propio de PrimeFaces (sin las opciones dentro), no el `div` que las contiene.
     await abrir(menu.base)
-    const etq = elegida.texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-    const item = raiz.locator(`[id="${menu.base}_panel"] li[data-label="${etq}"]`)
-    if ((await item.count()) === 1) {
-      await elegir(menu.base, elegida.texto)
+    // v0.2.16: el `li` se empareja con la opción normalizada («…» vs «...», espacios) y a la puerta va su `data-label` EXACTO.
+    const etiquetas = await raiz.locator(`[id="${menu.base}_panel"] li[data-label]`).evaluateAll((els) => els.map((el) => el.getAttribute('data-label') ?? '')).catch(() => [] as string[])
+    const etq = dataLabelDeOpcionGenerali(etiquetas, elegida.texto)
+    if (etq !== null) {
+      await elegir(menu.base, etq)
       for (let i = 0; i < 10 && !(await puesta()); i++) await new Promise((r) => setTimeout(r, 300))
     }
   } catch (err) {
@@ -815,9 +838,71 @@ export async function elegirModeloPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v
     if (lista.length > 0) throw new ErrorEleccionVersion(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
     throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo('modelo', b.texto, textos, { tipo: 'ninguna' }))
   }
-  if (e.tipo === 'otros') avisos?.push(e.supuesto)
   await ponerOpcionPrimeFaces(raiz, menu, opciones[e.indice]!, e.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo»')
-  return { ...opciones[e.indice]!, indice: e.indice }
+  if (e.tipo !== 'otros') return { ...opciones[e.indice]!, indice: e.indice }
+  return resolverTrasOtrosModelo(raiz, menu, textos, opciones[e.indice]!, e.indice, e.supuesto, b, ctx, avisos)
+}
+
+/** Plazo para que el AJAX de «Otros modelos ...» termine (deje «Otros» puesto o recargue la lista). */
+let ESPERA_TRAS_OTROS_MS = 10_000
+/** «Otros» tiene que SEGUIR puesto al menos esto antes de darlo por bueno (el AJAX puede devolverlo a «Seleccione uno»). */
+let ESTABLE_TRAS_OTROS_MS = 3_000
+/** Solo para pruebas: acorta las esperas tras «Otros modelos ...». */
+export function fijarEsperasTrasOtrosGenerali(espera: number, estable: number): void {
+  ESPERA_TRAS_OTROS_MS = espera
+  ESTABLE_TRAS_OTROS_MS = estable
+}
+
+/**
+ * v0.2.16 (fallo real de la 0.2.15: tras «Otros modelos ...» el desplegable volvió a «Seleccione uno» y el bot paró antes de «Confirmar»).
+ * Se espera al AJAX: si «Otros» queda puesto y estable → ese (supuesto declarado). Si la lista se RECARGA con modelos nuevos (la opción
+ * con «...» es un «ver más»), se elige el modelo en la lista nueva por la misma regla (exacta; varias/ninguna → `eleccion`, sin pulsar) y
+ * por la segunda puerta del guard (solo permitida tras «Otros»). Si ni una cosa ni otra → hueco SIN pulsar «Confirmar».
+ */
+async function resolverTrasOtrosModelo(
+  raiz: Raiz,
+  menu: MenuPrimeFaces,
+  antes: readonly string[],
+  otros: { valor: string; texto: string },
+  indiceOtros: number,
+  supuesto: string,
+  b: { texto: string; modo: 'dato' | 'denominacion' },
+  ctx: ContextoPortal,
+  avisos?: string[],
+): Promise<{ valor: string; texto: string; indice: number }> {
+  const ini = Date.now()
+  let ultimo = { label: '', input: '', n: antes.length }
+  let puestaDesde: number | null = null
+  for (;;) {
+    const ops = await opcionesSelect(menu.select).catch(() => [] as { valor: string; texto: string }[])
+    const m = await leerModeloMostrado(menu)
+    ultimo = { label: m.label, input: m.input, n: ops.length }
+    const est = estadoTrasOtrosModeloGenerali(antes, ops.map((o) => o.texto), otros.texto, m.label, m.input, b.texto, b.modo)
+    const t = Date.now() - ini
+    // «Estable» = puesta SIN interrupción durante la ventana (si el AJAX la devuelve a «Seleccione uno», el reloj vuelve a cero).
+    puestaDesde = est.tipo === 'puesta' ? (puestaDesde ?? Date.now()) : null
+    if (puestaDesde !== null && Date.now() - puestaDesde >= ESTABLE_TRAS_OTROS_MS) {
+      avisos?.push(supuesto)
+      return { ...otros, indice: indiceOtros }
+    }
+    if (est.tipo === 'ampliada') {
+      const e = est.eleccion
+      if (e.tipo === 'varias' || e.tipo === 'ninguna') {
+        const lista = e.cercanas.length > 0 ? e.cercanas : ops.map((o) => o.texto).filter((o) => !esOpcionVaciaCatalogo(o)).slice(0, 25)
+        if (lista.length > 0) throw new ErrorEleccionVersion(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+        throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo('modelo', b.texto, ops.map((o) => o.texto), { tipo: 'ninguna' }))
+      }
+      // `otros` no llega aquí (estadoTrasOtrosModeloGenerali lo convierte en `ninguna`): unica.
+      await ponerOpcionPrimeFaces(raiz, menu, ops[e.indice]!, e.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo» (lista ampliada tras «Otros modelos»)')
+      return { ...ops[e.indice]!, indice: e.indice }
+    }
+    if (t >= ESPERA_TRAS_OTROS_MS) break
+    await new Promise((r) => setTimeout(r, 400))
+  }
+  throw new ErrorMapaIncompletoGenerali(
+    `lo que hace el portal tras elegir «${otros.texto.slice(0, 40)}» en «Modelo»: en ${Math.round(ESPERA_TRAS_OTROS_MS / 1000)} s ni quedó puesto ni cambió la lista ` +
+      `(label=«${ultimo.label.slice(0, 60)}», input=«${ultimo.input.slice(0, 60)}», ${ultimo.n} opciones); NO se pulsa «Confirmar»`,
+  )
 }
 
 // ───────────── v0.2.14: potencia · versión · tabla · «Resumen» ─────────────

@@ -315,7 +315,7 @@ export type EleccionModeloGenerali =
 export function elegirModeloGenerali(opciones: readonly string[], buscado: string, modo: 'dato' | 'denominacion' = 'dato'): EleccionModeloGenerali {
   const e = elegirMarcaExactaGenerali(opciones, buscado)
   if (e.tipo !== 'ninguna' || normalizarCatalogo(buscado) === '') return e
-  const esOtros = (o: string) => !esOpcionVaciaCatalogo(o) && normalizarCatalogo(o).split(' ')[0] === OPCION_OTROS_MODELO_GENERALI
+  const esOtros = esOpcionOtrosModeloGenerali
   if (modo === 'denominacion') {
     // v0.2.12: la denominación completa contiene el modelo como palabra entera («… TUCSON 1.6 …»); se queda el más largo («I20 ACTIVE»
     // gana a «I20»). Uno → ese; varios distintos → una persona elige; ninguno → «Otros» como con un dato suelto.
@@ -327,6 +327,67 @@ export function elegirModeloGenerali(opciones: readonly string[], buscado: strin
   const otros = opciones.flatMap((o, i) => (esOtros(o) ? [i] : []))
   if (otros.length === 1) return { tipo: 'otros', indice: otros[0]!, supuesto: avisoModeloOtrosGenerali(buscado) }
   return e
+}
+
+// ───────────── v0.2.16: «Otros modelos ...» y el emparejado opción ↔ `li` del SelectOneMenu ─────────────
+
+/** ¿Es la opción de cierre «Otros…» de la lista de modelos («Otros modelos ...», «Otros modelos…», «OTROS»)? PURA. */
+export function esOpcionOtrosModeloGenerali(texto: string): boolean {
+  return !esOpcionVaciaCatalogo(texto) && normalizarCatalogo(texto).split(' ')[0] === OPCION_OTROS_MODELO_GENERALI
+}
+
+/**
+ * La opción decidida está PUESTA en el `<select>` oculto cuando su valor Y el texto de la opción seleccionada son los de la elegida
+ * (normalizados). Solo el valor no basta: si «Seleccione uno» y «Otros modelos ...» comparten valor, el valor «casa» sin elegir nada. PURA.
+ */
+export function opcionPuestaPrimeFaces(valorActual: string, textoActual: string, elegida: { valor: string; texto: string }): boolean {
+  const e = normalizarCatalogo(elegida.texto)
+  return valorActual === elegida.valor && e !== '' && normalizarCatalogo(textoActual) === e
+}
+
+/**
+ * El `data-label` EXACTO del `li` que corresponde al texto de la opción del `<select>` oculto: el idéntico si existe; si no, el ÚNICO
+ * que casa normalizado (elipsis «…» vs «...», espacios dobles o duros, mayúsculas). 0 o varios → `null` (no se pulsa nada). PURA.
+ */
+export function dataLabelDeOpcionGenerali(dataLabels: readonly string[], texto: string): string | null {
+  if (dataLabels.filter((d) => d === texto).length === 1) return texto
+  const n = normalizarCatalogo(texto)
+  if (n === '') return null
+  const casan = dataLabels.filter((d) => normalizarCatalogo(d) === n)
+  return casan.length === 1 ? casan[0]! : null
+}
+
+export type EstadoTrasOtrosGenerali =
+  | { tipo: 'puesta' }
+  | { tipo: 'esperar' }
+  | { tipo: 'ampliada'; eleccion: EleccionModeloGenerali }
+
+/**
+ * Tras pulsar «Otros modelos ...» (prueba real 0.2.15: el desplegable volvió a «Seleccione uno»). El portal puede (a) dejar «Otros» puesto
+ * (label E input lo dicen) → `puesta`; (b) RECARGAR la lista con más modelos (la opción con «...» es un «ver más») → `ampliada` con la
+ * elección del modelo sobre la lista NUEVA por la misma regla; un «Otros» de la lista nueva NO se vuelve a elegir (sería un bucle): queda
+ * `ninguna` con las cercanas; (c) nada de eso todavía → `esperar` (el AJAX no ha terminado). PURA.
+ */
+export function estadoTrasOtrosModeloGenerali(
+  antes: readonly string[],
+  ahora: readonly string[],
+  otros: string,
+  label: string,
+  input: string,
+  buscado: string,
+  modo: 'dato' | 'denominacion' = 'dato',
+): EstadoTrasOtrosGenerali {
+  const o = normalizarCatalogo(otros)
+  if (o !== '' && normalizarCatalogo(label) === o && normalizarCatalogo(input) === o) return { tipo: 'puesta' }
+  const previas = new Set(antes.map(normalizarCatalogo))
+  const nuevas = ahora.filter((x) => !esOpcionVaciaCatalogo(x) && !previas.has(normalizarCatalogo(x)))
+  if (nuevas.length === 0) return { tipo: 'esperar' }
+  const e = elegirModeloGenerali(ahora, buscado, modo)
+  if (e.tipo !== 'otros') return { tipo: 'ampliada', eleccion: e }
+  const reales = ahora.filter((x) => !esOpcionVaciaCatalogo(x) && !esOpcionOtrosModeloGenerali(x))
+  const b = normalizarCatalogo(buscado)
+  const cerca = reales.filter((x) => contieneFrase(buscado, x) || contieneFrase(x, buscado) || normalizarCatalogo(x).startsWith(b.slice(0, 3)))
+  return { tipo: 'ampliada', eleccion: { tipo: 'ninguna', cercanas: cerca.slice(0, 25) } }
 }
 
 /** Un control del selector de vehículos leído de la página (solo lectura): etiqueta, tipo y sus opciones (catálogo). */
