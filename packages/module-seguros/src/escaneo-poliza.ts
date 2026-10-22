@@ -128,7 +128,8 @@ export function normalizarPersonasPoliza(raw: unknown): PersonaPolizaLeida[] {
     const clave = p.nombre ? claveNombre(p.nombre) : ''
     const igual = out.find((q) => q.rol === p.rol && (
       (p.identificador !== null && q.identificador === p.identificador) ||
-      (clave !== '' && q.nombre !== null && claveNombre(q.nombre) === clave && (q.identificador === null || p.identificador === null))
+      // Por nombre SOLO si ninguna trae identificador: un padre con DNI y su hijo homónimo sin DNI son dos personas.
+      (clave !== '' && q.nombre !== null && claveNombre(q.nombre) === clave && q.identificador === null && p.identificador === null)
     ))
     if (!igual) { out.push({ ...p }); continue }
     igual.nombre ??= p.nombre

@@ -267,10 +267,16 @@ async function oportunidadDesdeLecturaInterna(
     // Si sí, esa es la oportunidad (y su ficha, la del tomador): se ACTUALIZA, no se abre otra ni otro lead.
     const existentes = numeroPoliza ? await oportunidadesDeLaPoliza(e.correduriaId, numeroPoliza) : []
     const preferidas = decision.tipo === 'ficha' ? [decision.clienteId, clienteSube] : decision.tipo === 'ambigua' ? [...decision.candidatas, clienteSube] : [clienteSube]
-    const dOp = existentes === null ? { accion: 'crear' as const, cerradas: [] as string[] } : decidirOportunidadDeLaPoliza({ numeroPoliza, aseguradora }, existentes, preferidas)
+    const dOp = existentes === null ? { accion: 'crear' as const, cerradas: [] as string[] } : decidirOportunidadDeLaPoliza({ numeroPoliza, aseguradora }, existentes, preferidas, decision.tipo === 'ficha' ? decision.clienteId : null)
     if (dOp.accion === 'ambigua') {
       const avisado = await avisarAmbiguo(textoAvisoAmbiguo({ motivo: 'oportunidad_ambigua', ids: dOp.ids, origen: e.origen }))
       return { estado: 'revisar', motivo: 'oportunidad_ambigua', candidatas: dOp.ids, avisado }
+    }
+    if (dOp.accion === 'revisar') {
+      // Identidad no firme (DNI de otra ficha, o compañía ausente): no se escribe NADA (ni lectura, ni
+      // personas, ni relación). Solo el aviso a Alberto.
+      const avisado = await avisarAmbiguo(textoAvisoAmbiguo({ motivo: 'oportunidad_dudosa', ids: [dOp.id], origen: e.origen }))
+      return { estado: 'revisar', motivo: 'oportunidad_ambigua', candidatas: [dOp.id], avisado }
     }
     const opPrevia = dOp.accion === 'actualizar' ? existentes?.find((x) => x.id === dOp.id) ?? null : null
 
