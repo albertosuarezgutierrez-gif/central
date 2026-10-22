@@ -1447,7 +1447,47 @@ export async function cerrarClubMapfre(page: Page, guard: GuardEmision): Promise
   }
 }
 
-// ─────────── Mapfre NSEI «Generar Proyecto» (v0.8.14 del bot, 22/10/2026, AUTORIZADO por Alberto: un proyecto no es póliza) ───────────
+// ─────────── Diagnóstico de pantalla SIN datos personales (Mapfre 0.8.15 / Allianz Turismos 0.6.21, 22/10/2026) ───────────
+// Los guardados fallaban con «no aparece el botón» sin HTML guardado. Cuando no se encuentra el control, el motivo (benigno, el
+// precio no se toca) lleva ahora una lista corta de las ETIQUETAS de botones/enlaces a la vista, para saber qué hay en la pantalla.
+// Solo etiquetas ≤40 caracteres; fuera todo lo que tenga secuencias de 5+ cifras, @, forma de teléfono/NIF o parezca un nombre de persona.
+
+export const MAX_ETIQUETAS_DIAGNOSTICO = 10
+const MAX_LARGO_ETIQUETA_DIAGNOSTICO = 40
+/** Etiquetas que nos interesan primero (guardar/proyecto/presupuesto/descargar…): salen delante si hay más de 10. */
+const RE_ETIQUETA_INTERESANTE = /guard|generar|proyecto|presupuesto|imprim|descarg|pdf|archiv|grabar|ampli|desplieg|expand|mostrar|detalle|resumen|opcion/i
+/** Vocabulario de interfaz: un rótulo de 2-4 palabras Capitalizadas que NO case aquí se descarta por si es un nombre propio. */
+const RE_VOCABULARIO_INTERFAZ = new RegExp(`${RE_ETIQUETA_INTERESANTE.source}|continu|volver|siguiente|anterior|atras|inicio|menu|ayuda|salir|cerrar|buscar|nuev|cancel|acept|edit|\\bver\\b|ajuste|calcul|tarific|cobertura|garant|paquete|precio|prima|vehiculo|seguro|contrat|enviar|comparar|recalcul`, 'i')
+
+/** Etiquetas de botones/enlaces aptas para el aviso (sin datos personales), únicas, las interesantes primero, como mucho `max`. PURA. */
+export function etiquetasControlesSaneadas(crudas: readonly (string | null | undefined)[], max = MAX_ETIQUETAS_DIAGNOSTICO): string[] {
+  const vistas = new Set<string>()
+  const buenas: string[] = []
+  for (const cruda of crudas) {
+    const t = (cruda ?? '').replace(/\s+/g, ' ').trim()
+    if (t === '' || t.length > MAX_LARGO_ETIQUETA_DIAGNOSTICO) continue
+    if (/\d{5,}/.test(t) || /@/.test(t) || /\d[\d\s.\-]{6,}\d/.test(t)) continue
+    if (redactarDatosPersonales(t) !== t) continue
+    const sinTildes = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const palabras = sinTildes.split(' ')
+    const pareceNombre = palabras.length >= 2 && palabras.length <= 4 && palabras.every((w) => /^[A-Z][A-Za-z.'-]*$/.test(w)) && !RE_VOCABULARIO_INTERFAZ.test(sinTildes)
+    if (pareceNombre) continue
+    const clave = sinTildes.toLowerCase()
+    if (vistas.has(clave)) continue
+    vistas.add(clave)
+    buenas.push(t)
+  }
+  const primero = buenas.filter((t) => RE_ETIQUETA_INTERESANTE.test(t))
+  const resto = buenas.filter((t) => !RE_ETIQUETA_INTERESANTE.test(t))
+  return [...primero, ...resto].slice(0, max)
+}
+
+/** Cola del motivo: «; controles a la vista: «A», «B»» (ya saneados con `etiquetasControlesSaneadas`), o cadena vacía. PURA. */
+export function sufijoControlesVisibles(etiquetas: readonly string[] | undefined): string {
+  return etiquetas && etiquetas.length > 0 ? `; controles a la vista: ${etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
+}
+
+// ─────────── Mapfre NSEI «Generar Proyecto» (v0.8.14, endurecido en 0.8.15; 22/10/2026, AUTORIZADO por Alberto: un proyecto no es póliza) ───────────
 // Tras LEER las primas en «Coberturas», el bot pulsa «Generar Proyecto» (crea un nº de proyecto en Mapfre para rescatarlo si el
 // cliente acepta) y lee ese nº («Proyectos», paso 5 de la grabación del 15/10/2026). NUNCA «Ir a generar», «Contratar» ni nada del
 // paso 6. Reglas: (1) solo en «Coberturas», con primas a la vista, sin diálogos abiertos, una vez por trabajo y tras calcular;
@@ -1484,6 +1524,152 @@ export function esBotonGenerarProyectoMapfre(descripciones: readonly (string | n
   return !cat.emision && !cat.prohibida
 }
 
+/** v0.8.15: cuánto se espera (desplazando la pantalla) a que aparezca el botón «Generar Proyecto» antes de rendirse. */
+export const MS_BUSCA_BOTON_PROYECTO_MAPFRE = 10_000
+const SEL_CONTROLES_PROYECTO_MAPFRE = 'button, a, [role="button"], [role="menuitem"], input[type="button"], input[type="submit"], [mat-button], [mat-raised-button], [mat-flat-button], [mat-stroked-button], [mat-menu-item], [class*="btn"], [class*="button"]'
+
+/** Un control de la pantalla de Coberturas tal y como lo ve el escáner (solo lectura). */
+export type ControlProyectoMapfre = {
+  /** Texto propio del control SIN iconos (mat-icon/svg); si no tiene, su aria-label, title o value. */
+  etiqueta: string
+  visible: boolean
+  habilitado: boolean
+  enCoberturas: boolean
+}
+
+/** ¿Esta etiqueta es EXACTAMENTE «Generar Proyecto» (sin tildes, mayúsculas ni espacios de más)? PURA. */
+export function esEtiquetaGenerarProyectoMapfre(etiqueta: string | null | undefined): boolean {
+  return sinTildesMayus(etiqueta) === TEXTO_GENERAR_PROYECTO_MAPFRE
+}
+
+/** Etiqueta efectiva de un control: su texto sin iconos y, si no tiene (botón de solo icono), aria-label → title → value. PURA. */
+export function etiquetaEfectivaControl(c: { texto?: string | null; aria?: string | null; title?: string | null; valor?: string | null }): string {
+  for (const x of [c.texto, c.aria, c.title, c.valor]) {
+    const t = (x ?? '').replace(/\s+/g, ' ').trim()
+    if (t !== '') return t
+  }
+  return ''
+}
+
+/**
+ * Qué botón «Generar Proyecto» pulsar (v0.8.15). El texto ha de ser EXACTO; el control puede estar en cualquier sitio de la pantalla
+ * (pie del paso incluido, no solo `app-coberturas`) y ser `<button>`, `<a>`, `[role=button]`… Con varios visibles gana el ÚNICO de
+ * `app-coberturas`; si sigue habiendo varios → ambiguo (no se pulsa ninguno, definitivo). Deshabilitado → se espera. PURA.
+ */
+export function decidirBotonGenerarProyectoMapfre(controles: readonly ControlProyectoMapfre[]): { indice: number } | { motivo: string; definitivo: boolean } {
+  const casan = controles.map((c, i) => ({ c, i })).filter((x) => esEtiquetaGenerarProyectoMapfre(x.c.etiqueta))
+  const visibles = casan.filter((x) => x.c.visible)
+  const ocultos = casan.length - visibles.length
+  if (visibles.length === 0) return { motivo: `no aparece el botón «Generar Proyecto» en «Coberturas»${ocultos > 0 ? ` (hay ${ocultos} con ese texto pero OCULTO: puede estar plegado)` : ''}`, definitivo: false }
+  let elegidos = visibles
+  if (elegidos.length > 1) {
+    const en = elegidos.filter((x) => x.c.enCoberturas)
+    if (en.length === 1) elegidos = en
+  }
+  if (elegidos.length > 1) return { motivo: `hay ${elegidos.length} botones «Generar Proyecto» (ambiguo: no se pulsa ninguno)`, definitivo: true }
+  const unico = elegidos[0]!
+  if (!unico.c.habilitado) return { motivo: 'el botón «Generar Proyecto» está deshabilitado', definitivo: false }
+  return { indice: unico.i }
+}
+
+/**
+ * Descripción de un control para `esBotonGenerarProyectoMapfre`: como `descripcion` pero con la ETIQUETA sin iconos (un `mat-icon` con
+ * su ligadura dentro del botón rompía la igualdad exacta) y, en botones de solo icono, el aria-label/title/value. El resto de campos
+ * (id, onclick, ancestros…) quedan como están: siguen pudiendo bloquear. PURA.
+ */
+export function descripcionGenerarProyecto(desc: readonly (string | null)[], etiquetaSinIconos: string): (string | null)[] {
+  const efectiva = etiquetaEfectivaControl({ texto: etiquetaSinIconos, aria: desc[1], title: desc[2], valor: desc[3] })
+  return [efectiva, ...desc.slice(1)]
+}
+
+async function descripcionVivaGenerarProyecto(boton: Locator): Promise<(string | null)[]> {
+  const sinIconos = await boton
+    .evaluate((el) => {
+      const c = el.cloneNode(true) as HTMLElement
+      c.querySelectorAll('mat-icon, .mat-icon, .material-icons, svg').forEach((x) => x.remove())
+      return (c.textContent ?? '').replace(/\s+/g, ' ').trim()
+    })
+    .catch(() => '')
+  return descripcionGenerarProyecto(await descripcion(boton), sinIconos)
+}
+
+/** Desplaza las zonas con scroll de la pantalla (sin clics) por si el control está fuera de la vista o se pinta al llegar. */
+async function desplazarPantallaMapfre(page: Page, alFinal: boolean): Promise<void> {
+  await page
+    .evaluate((fin) => {
+      const alto = (e: Element) => (e as HTMLElement).scrollHeight
+      window.scrollTo(0, fin ? alto(document.documentElement) : 0)
+      document.querySelectorAll('mat-sidenav-content, mat-drawer-content, main, app-coberturas, mat-stepper, .mat-stepper-content, [class*="scroll"]').forEach((e) => {
+        const h = e as HTMLElement
+        if (h.scrollHeight > h.clientHeight) h.scrollTop = fin ? h.scrollHeight : 0
+      })
+    }, alFinal)
+    .catch(() => {})
+}
+
+/** Lee TODOS los botones/enlaces de la pantalla (fuera de diálogos), marca cada uno con `data-rpa-ctl` y devuelve sus datos. Solo lectura. */
+async function escanearControlesProyectoMapfre(page: Page): Promise<ControlProyectoMapfre[]> {
+  return page
+    .evaluate(
+      ({ sel, dialogos }) => {
+        document.querySelectorAll('[data-rpa-ctl]').forEach((n) => n.removeAttribute('data-rpa-ctl'))
+        const salida: { texto: string; aria: string | null; title: string | null; valor: string | null; visible: boolean; habilitado: boolean; enCoberturas: boolean }[] = []
+        const nodos = Array.from(document.querySelectorAll(sel))
+        for (const n of nodos) {
+          if (salida.length >= 300) break
+          if (n.closest(dialogos)) continue
+          // Un envoltorio (`div.btn…`) con un botón dentro no cuenta: cuenta el botón.
+          if (n.querySelector('button, a, [role="button"], input[type="button"], input[type="submit"]')) continue
+          const h = n as HTMLElement & { value?: unknown; disabled?: boolean }
+          const r = h.getBoundingClientRect()
+          const cs = getComputedStyle(h)
+          const visible = r.width > 0 && r.height > 0 && cs.visibility === 'visible' && cs.display !== 'none'
+          const c = h.cloneNode(true) as HTMLElement
+          c.querySelectorAll('mat-icon, .mat-icon, .material-icons, svg').forEach((x) => x.remove())
+          h.setAttribute('data-rpa-ctl', String(salida.length))
+          salida.push({
+            texto: (c.textContent ?? '').replace(/\s+/g, ' ').trim(),
+            aria: h.getAttribute('aria-label'),
+            title: h.getAttribute('title'),
+            valor: typeof h.value === 'string' ? h.value : null,
+            visible,
+            habilitado: !(h.disabled === true || h.getAttribute('aria-disabled') === 'true' || h.hasAttribute('disabled')),
+            enCoberturas: h.closest('app-coberturas') !== null,
+          })
+        }
+        return salida
+      },
+      { sel: SEL_CONTROLES_PROYECTO_MAPFRE, dialogos: SEL_DIALOGOS_MAPFRE },
+    )
+    .then((l) => l.map((x) => ({ etiqueta: etiquetaEfectivaControl(x), visible: x.visible, habilitado: x.habilitado, enCoberturas: x.enCoberturas })))
+    .catch(() => [])
+}
+
+/**
+ * Busca el botón «Generar Proyecto» esperando (y desplazando la pantalla, sin clics) hasta `esperaMs`. Devuelve el control o el
+ * motivo legible, con la lista saneada de botones/enlaces a la vista para saber qué hay en pantalla. Solo lectura.
+ */
+async function buscarBotonGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs: number): Promise<{ boton: Locator } | { estado: 'no_generado'; motivo: string }> {
+  const hasta = Date.now() + esperaMs
+  let controles: ControlProyectoMapfre[] = []
+  let decision: ReturnType<typeof decidirBotonGenerarProyectoMapfre>
+  for (let vuelta = 0; ; vuelta++) {
+    guard.comprobar()
+    controles = await escanearControlesProyectoMapfre(page)
+    decision = decidirBotonGenerarProyectoMapfre(controles)
+    if ('indice' in decision || decision.definitivo || Date.now() >= hasta) break
+    await desplazarPantallaMapfre(page, vuelta % 2 === 0)
+    await page.waitForTimeout(500)
+  }
+  if ('indice' in decision) {
+    const boton = page.locator(`[data-rpa-ctl="${decision.indice}"]`)
+    if ((await boton.count().catch(() => 0)) === 1) return { boton }
+    return { estado: 'no_generado', motivo: 'el botón «Generar Proyecto» cambió de sitio antes de pulsarlo' }
+  }
+  const visibles = etiquetasControlesSaneadas(controles.filter((c) => c.visible).map((c) => c.etiqueta))
+  return { estado: 'no_generado', motivo: `${decision.motivo}${sufijoControlesVisibles(visibles)}` }
+}
+
 /**
  * El clic de «Generar Proyecto» (solo desde `generarProyectoMapfre`). Como `pulsarGuardadoPresupuesto` pero ESTRECHO: sin
  * inventario del explorador, `comprobarBoton` y la ventana de red con SOLO `permitirGenerarProyectoMapfre` (no Archivar/store).
@@ -1494,7 +1680,7 @@ async function pulsarGenerarProyectoMapfre(page: Page, guard: GuardEmision, boto
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Generar Proyecto» con otra ventana de red abierta')
   await exigirSinCuentaBancaria(page)
   if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', '«Generar Proyecto»: no hay exactamente un control')
-  const desc = await descripcion(boton)
+  const desc = await descripcionVivaGenerarProyecto(boton)
   if (!esBotonGenerarProyectoMapfre(desc)) throw new EmisionBloqueadaError('boton', '«Generar Proyecto»: el control vivo no pasa la lista blanca')
   const origen = await boton.evaluate((el) => el.ownerDocument.location.origin).catch(() => null)
   if (!origen || !/^https?:\/\//.test(origen)) throw new EmisionBloqueadaError('fase', '«Generar Proyecto»: sin origen http(s) conocido')
@@ -1566,7 +1752,7 @@ async function textoProyectoMapfre(page: Page): Promise<string> {
 }
 
 /** Comprobaciones previas al clic (solo lectura). Devuelve el botón elegido o el motivo de no pulsar. Puede lanzar por errores del portal. */
-async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision): Promise<{ boton: Locator } | { estado: 'no_generado'; motivo: string }> {
+async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaBotonMs: number): Promise<{ boton: Locator } | { estado: 'no_generado'; motivo: string }> {
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_generado', motivo: 'otra ventana de red abierta' }
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('mapfre:proyecto')) return { estado: 'no_generado', motivo: '«Generar Proyecto» ya se pulsó en este trabajo' }
@@ -1576,16 +1762,11 @@ async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision): P
   if ((await page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').count().catch(() => 0)) > 0) return { estado: 'no_generado', motivo: 'hay un diálogo abierto sobre «Coberturas»' }
   const conPrima = await page.locator('app-coberturas prima-producto').filter({ hasText: /\d\s*€/ }).count().catch(() => 0)
   if (conPrima === 0) return { estado: 'no_generado', motivo: 'no hay primas a la vista en «Coberturas»' }
-  const controles = page.locator('app-coberturas').locator('button, [role="button"]').locator('visible=true')
-  const elegidos: Locator[] = []
-  const total = await controles.count()
-  for (let i = 0; i < total; i++) {
-    const c = controles.nth(i)
-    if (sinTildesMayus(await c.innerText({ timeout: 1_000 }).catch(() => '')) === TEXTO_GENERAR_PROYECTO_MAPFRE) elegidos.push(c)
-  }
-  if (elegidos.length !== 1) return { estado: 'no_generado', motivo: elegidos.length === 0 ? 'no aparece el botón «Generar Proyecto» en «Coberturas»' : `hay ${elegidos.length} botones «Generar Proyecto» (ambiguo: no se pulsa ninguno)` }
-  const boton = elegidos[0]!
-  if (!esBotonGenerarProyectoMapfre(await descripcion(boton))) return { estado: 'no_generado', motivo: 'el botón «Generar Proyecto» no pasa la lista blanca (menciona emitir/contratar/firmar/pagar u otra acción): no se pulsa' }
+  // v0.8.15: el botón puede estar en el pie del paso (fuera de `app-coberturas`), ser <a>/[role=button]/solo icono o pintarse tarde.
+  const buscado = await buscarBotonGenerarProyectoMapfre(page, guard, esperaBotonMs)
+  if ('estado' in buscado) return buscado
+  const { boton } = buscado
+  if (!esBotonGenerarProyectoMapfre(await descripcionVivaGenerarProyecto(boton))) return { estado: 'no_generado', motivo: 'el botón «Generar Proyecto» no pasa la lista blanca (menciona emitir/contratar/firmar/pagar u otra acción): no se pulsa' }
   return { boton }
 }
 
@@ -1593,12 +1774,12 @@ async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision): P
  * «Generar Proyecto» de Mapfre NSEI con las reglas de arriba. Nunca lanza por «no se pudo» (tampoco por un error del portal antes
  * o después del clic: desconexión, timeout…): lo devuelve. Solo relanza la violación REAL del guard (`guard.comprobar()`).
  */
-export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs = MS_PROYECTO_MAPFRE): Promise<ResultadoProyectoMapfre> {
+export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs = MS_PROYECTO_MAPFRE, esperaBotonMs = Math.min(MS_BUSCA_BOTON_PROYECTO_MAPFRE, esperaMs)): Promise<ResultadoProyectoMapfre> {
   guard.comprobar()
   let boton: Locator
   let antes: string
   try {
-    const prep = await prepararGenerarProyectoMapfre(page, guard)
+    const prep = await prepararGenerarProyectoMapfre(page, guard, esperaBotonMs)
     if ('estado' in prep) return prep
     boton = prep.boton
     antes = await textoProyectoMapfre(page)
@@ -3596,6 +3777,10 @@ export type EstadoFormularioGuardarTurismos = {
   botonesGuardarFuera: number
   /** Textos de los botones VISIBLES dentro del bloque (para el diagnóstico cuando ninguno es de la lista blanca). */
   otrosBotones: string[]
+  /** v0.6.21: etiquetas SANEADAS (≤10, sin datos personales) de los botones/enlaces a la vista en TODA la pantalla, para el motivo. */
+  controlesVisibles?: string[]
+  /** v0.6.21: cuántos paneles plegados se desplegaron (clic de despliegue) para llegar al formulario. */
+  desplegados?: number
 }
 
 /** Solo lectura del DOM del marco (no pulsa nada). Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`). */
@@ -3625,9 +3810,22 @@ async function estadoFormularioGuardarTurismos(marco: Frame): Promise<EstadoForm
         const cs = getComputedStyle(b)
         if (r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && textos.includes((b.innerText || '').replace(/\s+/g, ' ').trim())) botonesGuardarFuera++
       }
-      return { hosts, formularios: forms.length, conBotonVisible, botonesGuardarFuera, otrosBotones: otrosBotones.slice(0, 3) }
+      // v0.6.21: etiquetas de TODOS los botones/enlaces a la vista (iconos aparte; solo-icono → aria-label/title), en crudo: se sanean fuera.
+      const controles: string[] = []
+      for (const b of Array.from(document.querySelectorAll('button, a, [role="button"], [role="tab"], input[type="button"], input[type="submit"]'))) {
+        if (controles.length >= 120) break
+        const r = b.getBoundingClientRect()
+        const cs = getComputedStyle(b)
+        if (!(r.width > 0 && r.height > 0 && cs.visibility !== 'hidden')) continue
+        const c = b.cloneNode(true) as HTMLElement
+        c.querySelectorAll('nx-icon, svg, i, .nx-icon').forEach((x) => x.remove())
+        const t = (c.textContent || '').replace(/\s+/g, ' ').trim() || (b.getAttribute('aria-label') || b.getAttribute('title') || (b as HTMLInputElement).value || '')
+        if (t) controles.push(String(t))
+      }
+      return { hosts, formularios: forms.length, conBotonVisible, botonesGuardarFuera, otrosBotones: otrosBotones.slice(0, 3), controles }
     }, { host: SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS, textos: [...BOTONES_GUARDAR_PRESUPUESTO_TURISMOS] })
-    .catch(() => ({ hosts: 0, formularios: 0, conBotonVisible: 0, botonesGuardarFuera: 0, otrosBotones: [] }))
+    .then(({ controles, ...resto }) => ({ ...resto, controlesVisibles: etiquetasControlesSaneadas(controles) }))
+    .catch(() => ({ hosts: 0, formularios: 0, conBotonVisible: 0, botonesGuardarFuera: 0, otrosBotones: [], controlesVisibles: [] as string[] }))
 }
 
 /**
@@ -3638,10 +3836,103 @@ export function motivoFormularioGuardarTurismos(e: EstadoFormularioGuardarTurism
   if (e.conBotonVisible === 1) return null
   if (e.conBotonVisible > 1) return `hay ${e.conBotonVisible} formularios «Guardar el presupuesto» con botón a la vista (ambiguo: no se pulsa ninguno)`
   const fuera = e.botonesGuardarFuera > 0 ? `; hay ${e.botonesGuardarFuera} botón(es) «Guardar presupuesto» FUERA del formulario (sin mapear: el bot no lo pulsa)` : ''
-  if (e.hosts === 0) return `el bloque «Guardar el presupuesto» no aparece en la pantalla de precios (esperado y desplazada la pantalla)${fuera}`
-  if (e.formularios === 0) return `el bloque «Guardar el presupuesto» está en la pantalla pero sin formulario dentro${fuera}`
-  if (e.otrosBotones.length > 0) return `no aparece el botón «Guardar presupuesto» en el formulario (botones a la vista: ${e.otrosBotones.map((t) => `«${redactarDatosPersonales(t)}»`).join(', ')})${fuera}`
-  return `el formulario «Guardar el presupuesto» está en la pantalla pero OCULTO (su botón no se ve; puede estar plegado)${fuera}`
+  const desplegados = e.desplegados ? `; se desplegó ${e.desplegados} panel(es) plegado(s) sin que apareciera` : ''
+  // v0.6.21: qué hay en pantalla (etiquetas de botones/enlaces, sin datos personales) para ver dónde está de verdad el guardado.
+  const cola = `${fuera}${desplegados}${sufijoControlesVisibles(e.controlesVisibles)}`
+  if (e.hosts === 0) return `el bloque «Guardar el presupuesto» no aparece en la pantalla de precios (esperado y desplazada la pantalla)${cola}`
+  if (e.formularios === 0) return `el bloque «Guardar el presupuesto» está en la pantalla pero sin formulario dentro${cola}`
+  if (e.otrosBotones.length > 0) return `no aparece el botón «Guardar presupuesto» en el formulario (botones a la vista: ${e.otrosBotones.map((t) => `«${redactarDatosPersonales(t)}»`).join(', ')})${cola}`
+  return `el formulario «Guardar el presupuesto» está en la pantalla pero OCULTO (su botón no se ve; puede estar plegado)${cola}`
+}
+
+// v0.6.21 (22/10/2026): en los runs reales de las 3 modalidades el bloque estaba en pantalla pero OCULTO. Si cuelga de un panel
+// plegado (acordeón/pestaña/<details>), SOLO se despliega ese panel: un control con `aria-expanded="false"` (o pestaña no seleccionada
+// / <summary>) que CONTIENE el bloque o lo gobierna (`aria-controls`) — nunca otro. El clic pasa `comprobarBoton` con la opción de
+// guardar presupuesto y la lista única (no emisión ni prohibido), no puede ser el botón de guardar ni un `submit`, y se hace a lo más
+// MAX_DESPLIEGUES_GUARDAR_TURISMOS veces por trabajo. Desplegar un panel no envía nada: la ventana de red de guardado NO se abre.
+
+/** Cuántos paneles plegados se pueden desplegar por trabajo (anidados). */
+export const MAX_DESPLIEGUES_GUARDAR_TURISMOS = 2
+const SEL_PANEL_PLEGABLE = 'nx-expansion-panel, nx-accordion-item, mat-expansion-panel, details, nx-tab-group, [class*="expansion-panel"], [class*="accordion-item"]'
+
+/** ¿Este control plegable se puede pulsar para DESPLEGAR el bloque de guardado? Etiqueta ≤40, no es el botón de guardar y pasa la guardia. PURA. */
+export function esExpansorGuardarTurismosPermitido(descripciones: readonly (string | null | undefined)[]): boolean {
+  const etiqueta = planoTurismos(etiquetaEfectivaControl({ texto: descripciones[0], aria: descripciones[1], title: descripciones[2], valor: descripciones[3] }))
+  if (etiqueta.length > 40) return false
+  if (BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.includes(etiqueta)) return false
+  try {
+    comprobarBoton(descripciones, { permitirGuardarPresupuesto: true })
+  } catch {
+    return false
+  }
+  const cat = clasificarAccionPortal(descripciones.filter((d): d is string => typeof d === 'string' && d !== ''))
+  return !cat.emision && !cat.prohibida
+}
+
+/** Marca (`data-rpa-exp`) los controles plegados que gobiernan el bloque y devuelve cuántos son. Solo lectura. */
+async function marcarExpansoresGuardarTurismos(marco: Frame): Promise<number> {
+  return marco
+    .evaluate(({ host, panel }) => {
+      document.querySelectorAll('[data-rpa-exp]').forEach((n) => n.removeAttribute('data-rpa-exp'))
+      const bloque = document.querySelector(host)
+      if (!bloque) return 0
+      let n = 0
+      for (const e of Array.from(document.querySelectorAll('[aria-expanded="false"], [role="tab"][aria-selected="false"], summary'))) {
+        if (/^(INPUT|SELECT|TEXTAREA|LABEL)$/.test(e.tagName) || (e as HTMLButtonElement).type === 'submit') continue
+        const r = e.getBoundingClientRect()
+        if (!(r.width > 0 && r.height > 0) || getComputedStyle(e).visibility === 'hidden') continue
+        const ctrl = e.getAttribute('aria-controls')
+        const destino = ctrl ? document.getElementById(ctrl) : null
+        const caja = e.closest(panel)
+        const gobierna = bloque.contains(e) || (destino !== null && destino.contains(bloque)) || (caja !== null && caja.contains(bloque) && !e.contains(bloque)) || (e.tagName === 'SUMMARY' && e.parentElement !== null && e.parentElement.contains(bloque))
+        if (!gobierna) continue
+        e.setAttribute('data-rpa-exp', String(n++))
+        if (n >= 5) break
+      }
+      return n
+    }, { host: SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS, panel: SEL_PANEL_PLEGABLE })
+    .catch(() => 0)
+}
+
+/**
+ * Despliega UN panel plegado que gobierna el bloque «Guardar el presupuesto» (ver reglas arriba). `true` = se pulsó uno.
+ * Nunca lanza por «no se pudo»; solo relanza la violación REAL del guard (`guard.comprobar()`).
+ */
+async function desplegarBloqueGuardarTurismos(marco: Frame, guard: GuardEmision): Promise<boolean> {
+  guard.comprobar()
+  const page = marco.page()
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  let hechos = 0
+  for (let i = 1; i <= MAX_DESPLIEGUES_GUARDAR_TURISMOS; i++) if (usados.has(`allianz:desplegar-guardar:${i}`)) hechos++
+  if (hechos >= MAX_DESPLIEGUES_GUARDAR_TURISMOS) return false
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return false
+  try {
+    await exigirSinCuentaBancaria(page)
+    const n = await marcarExpansoresGuardarTurismos(marco)
+    for (let i = 0; i < n; i++) {
+      const el = marco.locator(`[data-rpa-exp="${i}"]`)
+      if ((await el.count()) !== 1) continue
+      const desc = await descripcion(el)
+      if (!esExpansorGuardarTurismosPermitido(desc)) continue
+      usados.add(`allianz:desplegar-guardar:${hechos + 1}`)
+      AVANCES_USADOS.set(guard, usados)
+      const alDialogo = (d: Dialog) => {
+        d.dismiss().catch(() => {})
+      }
+      page.on('dialog', alDialogo)
+      try {
+        await el.click({ timeout: 3_000 })
+      } finally {
+        page.off('dialog', alDialogo)
+      }
+      guard.comprobar()
+      await page.waitForTimeout(500)
+      return true
+    }
+  } catch {
+    guard.comprobar()
+  }
+  return false
 }
 
 export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS, esperaFormMs = MS_APARECE_FORM_GUARDAR_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
@@ -3656,13 +3947,20 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
   const forms = marco.locator(SEL_FORM_GUARDAR_PRESUPUESTO_TURISMOS)
   const hasta = Date.now() + esperaFormMs
   let estadoForm = await estadoFormularioGuardarTurismos(marco)
-  while (estadoForm.conBotonVisible !== 1 && Date.now() < hasta) {
+  let desplegados = 0
+  for (let vuelta = 0; estadoForm.conBotonVisible !== 1 && Date.now() < hasta; vuelta++) {
     guard.comprobar()
     if (estadoForm.hosts > 0) await marco.locator(SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS).first().scrollIntoViewIfNeeded({ timeout: 1_000 }).catch(() => {})
     else await marco.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {})
     await page.waitForTimeout(400)
     estadoForm = await estadoFormularioGuardarTurismos(marco)
+    // v0.6.21: tras dar una vuelta sin verlo, si el bloque cuelga de un panel PLEGADO se despliega (solo ese; ver arriba).
+    if (estadoForm.conBotonVisible !== 1 && estadoForm.hosts > 0 && vuelta >= 1 && (await desplegarBloqueGuardarTurismos(marco, guard))) {
+      desplegados++
+      estadoForm = await estadoFormularioGuardarTurismos(marco)
+    }
   }
+  estadoForm = { ...estadoForm, desplegados }
   const motivoForm = motivoFormularioGuardarTurismos(estadoForm)
   if (motivoForm) return { estado: 'no_guardado', motivo: motivoForm }
   let form: Locator | null = null
