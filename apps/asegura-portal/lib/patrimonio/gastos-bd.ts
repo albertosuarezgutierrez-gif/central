@@ -18,7 +18,7 @@ const nombreDe = (f: { nombre: string; apellidos: string | null }) => `${f.nombr
 const num = (v: bigint | number | null) => (v === null ? null : Number(v))
 
 /** El titular (fila `portal_patrimonio_titular`) de una ficha YA autorizada; nace la primera vez que se da de alta algo. */
-async function titularDe(clienteId: string, identidadId: string): Promise<{ id: string } | null> {
+export async function titularDe(clienteId: string, identidadId: string): Promise<{ id: string } | null> {
   const ficha = await prisma.cliente.findFirst({
     where: { id: clienteId, mergedIntoClienteId: null, activo: true },
     select: { id: true, correduriaId: true, tipoPersona: true },
