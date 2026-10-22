@@ -19,6 +19,7 @@ import {
   parsearPrima,
   primaParaCampo,
   rotuloMotivo,
+  rotuloEstadoDeclaracion,
   rotuloRamo,
   textoAltaOportunidad,
   type LecturaDocumentoOportunidad,
@@ -284,6 +285,7 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
   const aparcada = o.aparcadaHasta !== null && o.aparcadaHasta > hoyMadrid()
   const vencida = o.proximaTarea !== null && o.proximaTarea.fechaLimite < hoyMadrid()
   const puedeGanar = o.estado === 'en_negociacion' || o.estado === 'pendiente_cliente'
+  const tarificar = destinoTarificar({ ramo: o.ramo, tomadorId: o.clienteId, oportunidadId: o.id, polizaId: null })
 
   async function accion(body: Record<string, unknown>, ok: string) {
     setOcupado(true)
@@ -330,16 +332,10 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
         <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ ...btnStyle(desplegada ? 'secundario' : 'primario', 'sm'), minHeight: 44 }}>
           {desplegada ? 'Plegar ▴' : 'Gestionar ▾'}
         </button>
-        {/* UN solo botón hacia el precio y el riesgo (10/10/2026): abre la pantalla de precio del ramo
-            (confirmación de 0,50 € allí) con las figuras del riesgo; nunca cotiza desde aquí. */}
-        <TarificarOportunidad
-          tomadorId={o.clienteId}
-          destino={destinoTarificar({ ramo: o.ramo, tomadorId: o.clienteId, oportunidadId: o.id, polizaId: null })}
-          riesgoHref={`/correduria/oportunidad/${encodeURIComponent(o.id)}`}
-        />
-        {destinoTarificar({ ramo: o.ramo, tomadorId: o.clienteId, oportunidadId: o.id, polizaId: null }).tipo !== 'no' && (
-          <Link href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} prefetch={false} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Ver riesgo →</Link>
-        )}
+        {/* UN solo botón hacia el precio (10/10/2026), y SOLO si se tarifica de verdad (22/10/2026, `comoSeTarifica`): si
+            no, no se pinta y «Ver riesgo →» pasa a primario (allí se declara el desenlace a mano). Nunca cotiza desde aquí. */}
+        <TarificarOportunidad tomadorId={o.clienteId} destino={tarificar} />
+        <Link href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} prefetch={false} style={{ ...btnStyle(tarificar.tipo === 'no' ? 'primario' : 'sutil', 'sm'), minHeight: 44, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Ver riesgo →</Link>
       </div>
 
       {desplegada && <SeguimientoOportunidad id={o.id} telefono={telefono} onCambio={onRecargar} />}
@@ -405,11 +401,19 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
 function FilaCerrada({ o, desplegada, onAlternar, onRecargar }: { o: OportunidadDeCliente; desplegada: boolean; onAlternar: () => void; onRecargar: () => void }) {
   const cuando = o.cerradaAt ? fmt(o.cerradaAt.slice(0, 10)) : null
   const descartada = o.motivoPerdida === 'error_alta'
+  // «Póliza emitida» declarada a mano (22/10/2026): «Emitida · pendiente de confirmar con CIMA» hasta que CIMA la trae.
+  const rotuloDeclarada = rotuloEstadoDeclaracion(o)
   return (
     <li id={`op-${o.id}`} style={{ borderTop: '1px solid var(--border)', paddingTop: 6, scrollMarginTop: 80 }}>
       <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ all: 'unset', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600 }}>{desplegada ? '▾' : '▸'} {rotuloRamo(o.ramo)}</button>{' '}
-      <b>{descartada ? 'Descartada' : ROTULO_ESTADO[o.estado]}</b>
+      <b>{descartada ? 'Descartada' : rotuloDeclarada ?? ROTULO_ESTADO[o.estado]}</b>
       {cuando && <> el {cuando}</>}
+      {rotuloDeclarada && o.declaracion && (
+        <span style={{ color: o.polizaGanadaId ? 'var(--text)' : 'var(--warning)', overflowWrap: 'anywhere' }}>
+          {' '}· póliza {o.declaracion.numeroPoliza} de {o.declaracion.compania}{o.declaracion.fechaEfecto ? `, efecto ${fmt(o.declaracion.fechaEfecto)}` : ''}
+          {!o.polizaGanadaId && ' (declarada a mano: no es cartera hasta que CIMA la traiga)'}
+        </span>
+      )}
       {o.estado === 'perdida' && !descartada && o.motivoPerdida && <span style={{ color: 'var(--muted)' }}> · {rotuloMotivo(o.motivoPerdida)}{o.competidor ? ` (${o.competidor})` : ''}</span>}
       {o.presupuestos && o.presupuestos.variantes > 0 && <span style={{ color: 'var(--muted)' }}> · {textoPresupuestos(o.presupuestos)}</span>}
       {' '}<Link href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} prefetch={false} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Ver riesgo →</Link>

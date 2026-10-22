@@ -154,6 +154,12 @@ export type OportunidadEnlace = {
   codigoDgs: string | null
   /** ISO con hora. */
   creadaEn: string
+  /**
+   * Póliza DECLARADA a mano por el corredor (22/10/2026, `declaracion-emision.ts`): solo en una oportunidad GANADA sin
+   * póliza enlazada. Con ella, la oportunidad casa SOLO por ese nº exacto + compañía (si tiene DGS) + mismo tomador (vía `declaracion`),
+   * nunca por la heurística. Ausente/`null` = no hay declaración.
+   */
+  declarada?: { codigoDgs: string | null; numeroPoliza: string } | null
 }
 
 export type PolizaNuevaEnlace = {
@@ -182,11 +188,14 @@ export type SolicitudEmitidaEnlace = {
 export type EnlacePolizaOportunidad = {
   oportunidadId: string
   polizaId: string
-  via: 'solicitud' | 'tomador_compania_ramo'
+  via: 'solicitud' | 'tomador_compania_ramo' | 'declaracion'
   solicitudId: string | null
 }
 
-export type MotivoEnlaceAmbiguo = 'varias_oportunidades' | 'varias_polizas' | 'solicitud_varias_polizas' | 'solicitud_otro_tomador'
+export type MotivoEnlaceAmbiguo =
+  | 'varias_oportunidades' | 'varias_polizas' | 'solicitud_varias_polizas' | 'solicitud_otro_tomador'
+  /** Declarada a mano: el nº casa con más de una póliza nueva de esa compañía, o con la de OTRO tomador. */
+  | 'declarada_varias_polizas' | 'declarada_otro_tomador'
 
 export type EnlaceAmbiguo = {
   polizaId: string
@@ -253,7 +262,9 @@ export function decidirEnlacesPolizaOportunidad(
     if (!p) continue
     solicitudesConPoliza.push({ solicitudId: s.id, polizaId: p.id })
     polizaUsada.add(p.id)
-    const o = s.oportunidadId ? abiertas.get(s.oportunidadId) : undefined
+    const o0 = s.oportunidadId ? abiertas.get(s.oportunidadId) : undefined
+    // Una oportunidad DECLARADA a mano solo casa con SU nº declarado: si la solicitud trae otro, aquí no se gana (1b decide).
+    const o = o0?.declarada && numeroPolizaComparable(o0.declarada.numeroPoliza) !== num ? undefined : o0
     // El nº casa, pero la oportunidad solo se gana si la póliza es del MISMO tomador (ficha o NIF). Si no → ambiguo.
     if (o && !mismoTomador(o, p)) {
       ambiguos.push({ polizaId: p.id, oportunidades: [o.id], motivo: 'solicitud_otro_tomador', solicitudId: s.id })
@@ -266,9 +277,30 @@ export function decidirEnlacesPolizaOportunidad(
     }
   }
 
-  // (2) Heurística, uno a uno.
+  // (1b) Declarada a mano (22/10/2026): nº EXACTO (comparable) + misma compañía (DGS) + MISMO tomador. Varias pólizas con
+  // ese nº, o la de otro tomador → no se enlaza y se avisa. Sin póliza con ese nº, la oportunidad espera (no cae a (2)).
+  for (const o of oportunidades) {
+    if (!o.declarada || oportunidadUsada.has(o.id)) continue
+    const num = numeroPolizaComparable(o.declarada.numeroPoliza)
+    if (!num) continue
+    // Sin código DGS (compañía fuera del catálogo) la compañía no filtra: casa por nº + tomador.
+    const dgs = o.declarada.codigoDgs
+    const casan = polizas.filter((p) => !polizaUsada.has(p.id) && (dgs === null || p.codigoDgs === dgs) && numeroPolizaComparable(p.numeroPoliza) === num)
+    if (casan.length === 0) continue
+    oportunidadUsada.add(o.id)
+    for (const p of casan) polizaUsada.add(p.id)
+    if (casan.length > 1) {
+      for (const p of casan) ambiguos.push({ polizaId: p.id, oportunidades: [o.id], motivo: 'declarada_varias_polizas', solicitudId: null })
+      continue
+    }
+    const p = casan[0]!
+    if (!mismoTomador(o, p)) { ambiguos.push({ polizaId: p.id, oportunidades: [o.id], motivo: 'declarada_otro_tomador', solicitudId: null }); continue }
+    enlaces.push({ oportunidadId: o.id, polizaId: p.id, via: 'declaracion', solicitudId: null })
+  }
+
+  // (2) Heurística, uno a uno. Una declarada nunca entra: o casa por su nº o espera.
   const restoP = polizas.filter((p) => !polizaUsada.has(p.id))
-  const restoO = oportunidades.filter((o) => !oportunidadUsada.has(o.id))
+  const restoO = oportunidades.filter((o) => !oportunidadUsada.has(o.id) && !o.declarada)
   const porPoliza = new Map<string, string[]>()
   const porOportunidad = new Map<string, string[]>()
   for (const p of restoP) {
