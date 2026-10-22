@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/10/2026)** — Auditoría diaria (ligera): sin 🔴. Precio sano (0 bajo mínimo, 0 raíl a la baja roto, 4 pisos on, k=0, última pasada 7,6 h);
+🟠 `oscilantes` 68 (14 el 11/10, sigue subiendo) y 2 subidas sin justificar. CIMA entra (pull 18:30 ok) pero cola 217 con 0-1 procesados e ingesta DEGRADADA
+(C0072, C0109/C0468 sin SIN). Siguen: `seo_correduria` GSC 403, `ses_transporte` sin establecimiento, `subastas_idealista` mudo desde 27/09. Codeoscopic 7d: 1 (0,50€).
+
 **(21/10/2026)** — Tarificador · #4973 (Generali 0.2.15 usa la 1.ª matriculación ESTIMADA por matrícula, campo propio
 `fechaMatriculacionEstimada` solo para Generali; Mapfre 0.8.13 cierra el modal que tapaba «Nueva producción»; Allianz
 0.6.19 compañía anterior «A / B» + fallback «otras»). Mapfre auto OK con 0.8.13 (2 precios). Imagen en prod `main-81a4386`.
