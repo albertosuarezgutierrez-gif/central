@@ -7,8 +7,10 @@
 // quedaba a la vista de quien la persona autorizó a mirar SUS seguros personales.
 //
 // Reglas:
-//   1. La casilla sin marcar NO dice nada → `null` (la columna vacía, «no consta»). Solo la
-//      casilla marcada (o la respuesta explícita del paso posterior) escribe algo.
+//   1. Pregunta EXPLÍCITA de tres opciones: «Es mía» → 'propio' · «Es de una empresa que gestiono» →
+//      'empresa' · «No lo sé» (o sin contestar) → `null` («no consta»). Nunca se guarda 'propio' por
+//      omisión: sin contestar no se afirma nada. Sin 'propio' explícito la declarada personal no la ve
+//      un autorizado con «Total» (`TITULAR_TIPO_VISIBLE_A_TERCERO`) ni se coteja (`fichaParaCotejar`).
 //   2. Si el documento trae como tomador una EMPRESA y la persona no ha dicho ya de quién es, se le
 //      PROPONE la pregunta («Esta póliza está a nombre de X. ¿Es de tu empresa?»). Proponer no es
 //      guardar: sin respuesta, la columna sigue a NULL.
@@ -66,12 +68,25 @@ export function normalizarTomadorLeido(bruto: unknown): TomadorLeido | null {
   return { tipo: 'empresa', nombre, cif: cifDeEmpresa(o.cifTomador) ?? cifDeEmpresa(o.dni) }
 }
 
+/** Las tres respuestas de la pregunta «¿De quién es esta póliza?». */
+export type RespuestaTitular = 'propio' | 'empresa' | 'no_se'
+
 /**
- * Lo que viaja en el alta con documento según la casilla. Sin marcar → `null` = NO se manda
- * `titularTipo` y la fila nace con `titular_tipo` NULL («no consta»). Nunca `'propio'` por defecto.
+ * Lo que viaja en el alta según la respuesta. `no_se` o sin contestar (`null`) → `null` = NO se manda
+ * `titularTipo` y la fila nace con `titular_tipo` NULL («no consta»). 'propio' solo si lo dijo.
  */
-export function titularDeLaCasilla(esDeEmpresa: boolean): 'empresa' | null {
-  return esDeEmpresa ? 'empresa' : null
+export function titularDeLaRespuesta(r: RespuestaTitular | null): 'propio' | 'empresa' | null {
+  return r === 'propio' || r === 'empresa' ? r : null
+}
+
+/**
+ * Preselección tras leer el documento. Solo una EMPRESA leída (por CIF o por el lector) preselecciona
+ * «empresa». Una persona física NO preselecciona «Es mía»: el portal no lee el DNI de la ficha de nadie
+ * (ni su hash), así que «el DNI del tomador es el de quien sube» sería una suposición. Sin tomador →
+ * sin preselección: el cliente elige.
+ */
+export function preseleccionTitular(tomador: TomadorLeido | null): RespuestaTitular | null {
+  return tomador !== null && tomador.tipo === 'empresa' ? 'empresa' : null
 }
 
 export type PropuestaTitular =
@@ -92,6 +107,10 @@ export function proponerTitular(e: { titularGuardado: string | null; tomador: To
 export type LecturaTitularParche =
   | { tipo: 'ausente' }
   | { tipo: 'error'; error: 'titular_invalido' | 'titular_con_cambios' }
+  /** `{ titularTipo: 'propio' }` = «es mía». */
+  | { tipo: 'propio' }
+  /** `{ titularTipo: null }` = «no lo sé»: vuelve a NULL («no consta»). */
+  | { tipo: 'ninguno' }
   | {
       tipo: 'empresa'
       nombre: string
@@ -101,16 +120,28 @@ export type LecturaTitularParche =
     }
 
 /**
- * El cuerpo del PATCH `{ titularEmpresa: { nombre, cif?, rol? } }` = «sí, es de mi empresa».
- * Va SOLO (como `vigenteDeclarada`): no es una revisión de los datos de la póliza. «No» no se
- * manda — no escribe nada, la columna sigue a NULL.
+ * El cuerpo del PATCH de titular, SIEMPRE solo (como `vigenteDeclarada`): no es una revisión de los
+ * datos de la póliza.
+ *   `{ titularEmpresa: { nombre, cif?, rol? } }` = «sí, es de mi empresa».
+ *   `{ titularTipo: 'propio' }`                  = «es mía».
+ *   `{ titularTipo: null }`                      = «no lo sé» (vuelve a NULL).
  */
 export function leerTitularParche(cuerpo: unknown): LecturaTitularParche {
   if (cuerpo === null || typeof cuerpo !== 'object' || Array.isArray(cuerpo)) return { tipo: 'ausente' }
   const bruto = cuerpo as Record<string, unknown>
-  if (!('titularEmpresa' in bruto) || bruto.titularEmpresa === undefined) return { tipo: 'ausente' }
-  const otros = Object.keys(bruto).filter((k) => k !== 'titularEmpresa' && bruto[k] !== undefined)
+  const hayEmpresa = 'titularEmpresa' in bruto && bruto.titularEmpresa !== undefined
+  const hayTipo = 'titularTipo' in bruto && bruto.titularTipo !== undefined
+  if (!hayEmpresa && !hayTipo) return { tipo: 'ausente' }
+  const propias = hayEmpresa ? 'titularEmpresa' : 'titularTipo'
+  const otros = Object.keys(bruto).filter((k) => k !== propias && bruto[k] !== undefined)
   if (otros.length > 0) return { tipo: 'error', error: 'titular_con_cambios' }
+
+  if (!hayEmpresa) {
+    if (bruto.titularTipo === 'propio') return { tipo: 'propio' }
+    if (bruto.titularTipo === null) return { tipo: 'ninguno' }
+    // 'empresa' va por `titularEmpresa` (lleva nombre): aquí no se admite.
+    return { tipo: 'error', error: 'titular_invalido' }
+  }
 
   const t = bruto.titularEmpresa
   if (!t || typeof t !== 'object' || Array.isArray(t)) return { tipo: 'error', error: 'titular_invalido' }

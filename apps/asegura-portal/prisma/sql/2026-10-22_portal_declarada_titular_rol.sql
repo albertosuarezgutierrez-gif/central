@@ -1,6 +1,6 @@
 -- Portal de Grupo ASegura — «¿Qué eres en X?» al declarar una póliza como de tu empresa (22/10/2026).
 --
--- ⏳ SIN APLICAR. 🚨 Se aplica ANTES del despliegue de asegura-portal que la usa: su `schema.prisma`
+-- ✅ APLICADO 22/10/2026. 🚨 Se aplica ANTES del despliegue de asegura-portal que la usa: su `schema.prisma`
 -- ya declara `titular_rol_declarado`, y sin la columna CUALQUIER consulta a `portal_poliza_declarada`
 -- cae con 42703 (bóveda, hoja QR, partes, calendario). Es ADITIVA: el código viejo sigue
 -- funcionando sobre ella. `apps/asegura` NO la declara (lee por GRANT de columna): no le afecta.

@@ -14,7 +14,7 @@ import { fechaEs } from '@/lib/fechas'
 import { AnadirPoliza, type PolizaGuardada } from './AnadirPoliza'
 import { PasoRenovacion } from './PasoRenovacion'
 import { PasoTitularEmpresa } from './PasoTitularEmpresa'
-import { titularDeLaCasilla, type PropuestaTitular } from '@/lib/titular-propuesto'
+import { preseleccionTitular, titularDeLaRespuesta, type PropuestaTitular, type RespuestaTitular } from '@/lib/titular-propuesto'
 import type { RamoOpcion } from './CamposPoliza'
 
 type DatosLeidos = {
@@ -62,6 +62,12 @@ const MAX_BYTES_SUBIDA = 4 * 1024 * 1024
  * apunte, y lo que cambia es que el papel queda guardado donde antes se
  * descartaba. El texto lo dice.
  */
+const OPCIONES_TITULAR: readonly { valor: RespuestaTitular; texto: string }[] = [
+  { valor: 'propio', texto: 'Es mía' },
+  { valor: 'empresa', texto: 'Es de una empresa que gestiono' },
+  { valor: 'no_se', texto: 'No lo sé' },
+]
+
 export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const router = useRouter()
   const [estado, setEstado] = useState<'reposo' | 'subiendo' | 'listo' | 'error'>('reposo')
@@ -80,8 +86,11 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   // «propio», y eso era un «no se sabe» guardado como afirmación: hacía visibles a los terceros
   // autorizados (`TITULAR_TIPO_VISIBLE_A_TERCERO`) pólizas de empresa subidas sin marcar la casilla.
   // Si el documento trae como tomador una empresa, se le pregunta DESPUÉS (`PasoTitularEmpresa`).
-  const [esDeEmpresa, setEsDeEmpresa] = useState(false)
-  const deQuien = titularDeLaCasilla(esDeEmpresa)
+  // 22/10/2026: pregunta EXPLÍCITA de tres opciones («Es mía» / «Es de una empresa que gestiono» /
+  // «No lo sé»). Arranca SIN contestar y no bloquea la subida: sin contestar = «No lo sé» = NULL.
+  const [respuesta, setRespuesta] = useState<RespuestaTitular | null>(null)
+  const esDeEmpresa = respuesta === 'empresa'
+  const deQuien = titularDeLaRespuesta(respuesta)
   // Se recuerda entre subidas porque quien trae las pólizas de su empresa trae
   // varias seguidas. Se recuerda VISIBLE: el control sigue en pantalla con la
   // respuesta marcada, así que cambiarla es un clic y no hay nada oculto.
@@ -125,7 +134,9 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     }
     const body = new FormData()
     body.append('documento', f)
-    // Solo viaja si ha marcado la casilla: sin marcar, la fila nace con `titular_tipo` NULL.
+    // «Es mía» → 'propio'; empresa → con su nombre/CIF; «No lo sé»/sin contestar → no viaja y la fila
+    // nace con `titular_tipo` NULL.
+    if (deQuien === 'propio') body.append('titularTipo', 'propio')
     if (deQuien === 'empresa') {
       body.append('titularTipo', 'empresa')
       body.append('titularEmpresaNombre', empresa)
@@ -208,7 +219,7 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const cifPuesto = cif.trim() !== ''
   const cifMal = deQuien === 'empresa' && cifPuesto && !titularParaEnviar.cifValido
   const listoParaSubir =
-    deQuien === null || (deQuien === 'empresa' && empresa.trim() !== '' && titularParaEnviar.cifValido)
+    deQuien !== 'empresa' || (empresa.trim() !== '' && titularParaEnviar.cifValido)
   const etiquetaRamo = (valor: string | null) =>
     valor === null ? null : (ramos.find((r) => r.valor === valor)?.etiqueta ?? valor)
 
@@ -244,15 +255,23 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
           </details>
 
           <div className="de-quien">
-            <label className="de-quien-casilla">
-              <input
-                type="checkbox"
-                checked={esDeEmpresa}
-                onChange={(e) => setEsDeEmpresa(e.target.checked)}
-                disabled={subiendo}
-              />
-              Esta póliza es de una empresa, no mía
-            </label>
+            <fieldset style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              <legend style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, padding: 0 }}>¿De quién es esta póliza?</legend>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {OPCIONES_TITULAR.map((o) => (
+                  <label key={o.valor} className="de-quien-casilla">
+                    <input
+                      type="radio"
+                      name="de-quien"
+                      checked={respuesta === o.valor}
+                      onChange={() => setRespuesta(o.valor)}
+                      disabled={subiendo}
+                    />
+                    {o.texto}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             {esDeEmpresa && (
               <div className="de-quien-empresa">
                 <label>
@@ -483,6 +502,7 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
                       polizaId={resultado.id}
                       nombre={resultado.propuestaTitular.nombre}
                       cif={resultado.propuestaTitular.cif}
+                      preseleccion={preseleccionTitular({ tipo: 'empresa', nombre: resultado.propuestaTitular.nombre, cif: resultado.propuestaTitular.cif })}
                       onCerrar={() => setPasoTitularCerrado(true)}
                       onGuardado={() => router.refresh()}
                     />
