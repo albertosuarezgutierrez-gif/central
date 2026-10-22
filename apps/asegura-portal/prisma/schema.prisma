@@ -1642,6 +1642,7 @@ model PortalPatrimonioTitular {
   plantillas    PortalPatrimonioPlantillaGasto[]
   gastos        PortalPatrimonioGasto[]
   importaciones PortalPatrimonioImportacion[]
+  comunidades   PortalPatrimonioComunidad[]
 
   @@map("portal_patrimonio_titular")
   @@schema("seguros")
@@ -1684,11 +1685,12 @@ model PortalPatrimonioInmueble {
   @@schema("seguros")
 }
 
-/// Comunidad de propietarios. Compartida entre inmuebles (incluso de titulares que no se ven entre sí): se
-/// alcanza SOLO a través de `PortalPatrimonioInmuebleComunidad` de un inmueble autorizado.
+/// Comunidad de propietarios de UN titular, NO compartida (Alberto, 22/10/2026): un vecino nunca lee ni edita
+/// la ficha de otro; dos clientes de la misma comunidad = dos filas (el cruce, en /correduria, más adelante).
 model PortalPatrimonioComunidad {
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre               String
+  titularId            String    @map("titular_id") @db.Uuid
+  nombre              String
   nifComunidad         String?   @map("nif_comunidad")
   administradorNombre  String?   @map("administrador_nombre")
   administradorEmail   String?   @map("administrador_email")
@@ -1699,16 +1701,20 @@ model PortalPatrimonioComunidad {
   creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
   archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
 
+  titular   PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
   inmuebles PortalPatrimonioInmuebleComunidad[]
   derramas  PortalPatrimonioDerrama[]
 
+  @@unique([id, titularId])
   @@map("portal_patrimonio_comunidad")
   @@schema("seguros")
 }
 
+/// Puente inmueble ↔ comunidad, ambos del MISMO titular (FK compuestas en BD).
 model PortalPatrimonioInmuebleComunidad {
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  inmuebleId           String    @map("inmueble_id") @db.Uuid
+  titularId            String    @map("titular_id") @db.Uuid
+  inmuebleId          String    @map("inmueble_id") @db.Uuid
   comunidadId          String    @map("comunidad_id") @db.Uuid
   coeficiente          Decimal?  @db.Decimal(9, 6)
   creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
@@ -1936,7 +1942,9 @@ model PortalPatrimonioImportacionFila {
   importacionId        String   @map("importacion_id") @db.Uuid
   n                    Int
   entidad              String
-  datos                Json
+  /// Tránsito de la vista previa, SIN NIF/email/teléfono (van cifrados por el puente). La BD lo vacía (null)
+  /// al confirmar/descartar la importación y rechaza escribirlo en una cerrada.
+  datos                Json?
   problema             String?
   creadoId             String?  @map("creado_id") @db.Uuid
   creadoEn             DateTime @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)

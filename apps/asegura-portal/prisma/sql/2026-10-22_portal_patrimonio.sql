@@ -118,10 +118,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_portal_patrimonio_inmueble_refcat
 CREATE INDEX IF NOT EXISTS idx_portal_patrimonio_inmueble_titular
   ON seguros.portal_patrimonio_inmueble (titular_id) WHERE archivado_en IS NULL;
 
--- ─── 3. Comunidad de propietarios (compartida; la fila no expone a los demás vecinos) ──
+-- ─── 3. Comunidad de propietarios — de UN titular, NO compartida (decisión de Alberto, 22/10/2026) ──
+-- Cada titular lleva su propia ficha de la comunidad: un vecino nunca lee ni edita la de otro. Si dos
+-- clientes están en la misma comunidad hay DOS filas; el cruce entre ellos lo hará el corredor en
+-- /correduria (no aquí). `inmueble_comunidad` exige inmueble y comunidad del MISMO titular (FK compuesta).
 CREATE TABLE IF NOT EXISTS seguros.portal_patrimonio_comunidad (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  nombre                  text NOT NULL CHECK (char_length(btrim(nombre)) BETWEEN 1 AND 120),
+  titular_id              uuid NOT NULL REFERENCES seguros.portal_patrimonio_titular (id),
+  nombre                 text NOT NULL CHECK (char_length(btrim(nombre)) BETWEEN 1 AND 120),
   nif_comunidad           text,
   administrador_nombre    text,
   administrador_email     text,
@@ -130,19 +134,28 @@ CREATE TABLE IF NOT EXISTS seguros.portal_patrimonio_comunidad (
   creado_en               timestamptz NOT NULL DEFAULT now(),
   actualizado_en          timestamptz NOT NULL DEFAULT now(),
   creado_por_identidad_id uuid REFERENCES seguros.portal_identidad (id) ON DELETE SET NULL,
-  archivado_en            timestamptz
+  archivado_en            timestamptz,
+  CONSTRAINT portal_patrimonio_comunidad_id_titular UNIQUE (id, titular_id)
 );
+CREATE INDEX IF NOT EXISTS idx_portal_patrimonio_comunidad_titular
+  ON seguros.portal_patrimonio_comunidad (titular_id) WHERE archivado_en IS NULL;
 
 CREATE TABLE IF NOT EXISTS seguros.portal_patrimonio_inmueble_comunidad (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  inmueble_id             uuid NOT NULL REFERENCES seguros.portal_patrimonio_inmueble (id),
-  comunidad_id            uuid NOT NULL REFERENCES seguros.portal_patrimonio_comunidad (id),
+  titular_id              uuid NOT NULL,
+  inmueble_id             uuid NOT NULL,
+  comunidad_id            uuid NOT NULL,
   -- Coeficiente de participación en %. NULL = no consta.
   coeficiente             numeric(9, 6) CHECK (coeficiente > 0 AND coeficiente <= 100),
   creado_en               timestamptz NOT NULL DEFAULT now(),
   actualizado_en          timestamptz NOT NULL DEFAULT now(),
   creado_por_identidad_id uuid REFERENCES seguros.portal_identidad (id) ON DELETE SET NULL,
   archivado_en            timestamptz,
+  -- Inmueble y comunidad del MISMO titular (regla 4): un titular no puede colgarse de la comunidad de otro.
+  CONSTRAINT portal_patrimonio_ic_inmueble_del_titular
+    FOREIGN KEY (inmueble_id, titular_id) REFERENCES seguros.portal_patrimonio_inmueble (id, titular_id),
+  CONSTRAINT portal_patrimonio_ic_comunidad_del_titular
+    FOREIGN KEY (comunidad_id, titular_id) REFERENCES seguros.portal_patrimonio_comunidad (id, titular_id),
   -- Entera (no parcial): es destino de FK (derrama, plantilla). Volver a enlazar = desarchivar.
   CONSTRAINT portal_patrimonio_inmueble_comunidad_unica UNIQUE (inmueble_id, comunidad_id)
 );
@@ -363,7 +376,13 @@ CREATE TABLE IF NOT EXISTS seguros.portal_patrimonio_importacion_fila (
   importacion_id          uuid NOT NULL REFERENCES seguros.portal_patrimonio_importacion (id),
   n                       integer NOT NULL CHECK (n >= 1),
   entidad                 text NOT NULL CHECK (entidad IN ('inmueble', 'inquilino', 'contrato', 'plantilla_gasto', 'gasto', 'comunidad')),
-  datos                   jsonb NOT NULL,
+  -- 🚨 Datos de TRÁNSITO de la vista previa. La app NO mete aquí NIF, email ni teléfono del inquilino
+  -- (el portal no puede cifrarlos: van CIFRADOS a `portal_patrimonio_inquilino` por el puente de
+  -- apps/asegura); como mucho una marca «trae NIF». Y aun así, al CONFIRMAR o DESCARTAR la importación
+  -- la BD vacía `datos` de todas sus filas (trigger `portal_patrimonio_importacion_cerrar`) y rechaza
+  -- escribir datos en una importación cerrada (`portal_patrimonio_importacion_fila_abierta`).
+  -- NULL = vaciada al cerrar.
+  datos                   jsonb,
   -- NULL = sin problema detectado. Una fila con problema no se crea sola.
   problema                text,
   -- Lo que creó al confirmar. NULL = no creada (aún, o apartada).
@@ -457,6 +476,57 @@ CREATE TRIGGER portal_patrimonio_titular_coherente
   BEFORE INSERT OR UPDATE OF cliente_id, correduria_id ON seguros.portal_patrimonio_titular
   FOR EACH ROW EXECUTE FUNCTION seguros.portal_patrimonio_titular_coherente();
 
+-- Importación: una CERRADA (confirmada/descartada) no se reabre, y al cerrarse se vacía `datos` de sus
+-- filas (decisión de Alberto, 22/10/2026: nada de PII en claro que sobreviva a la vista previa).
+-- Los triggers se disparan para TODOS los roles (también prisma_seguros), no solo para el portal.
+CREATE OR REPLACE FUNCTION seguros.portal_patrimonio_importacion_no_reabrir() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.estado IN ('confirmada', 'descartada') AND NEW.estado IS DISTINCT FROM OLD.estado THEN
+    RAISE EXCEPTION 'portal_patrimonio_importacion: una importacion % no se reabre', OLD.estado USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION seguros.portal_patrimonio_importacion_cerrar() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE seguros.portal_patrimonio_importacion_fila SET datos = NULL
+   WHERE importacion_id = NEW.id AND datos IS NOT NULL;
+  RETURN NULL;
+END $$;
+
+-- Una fila no puede llevar datos si su importación ya está cerrada. `FOR SHARE` sobre la importación
+-- serializa con el UPDATE que la cierra (sin él, una fila escrita a la vez que se confirma podría
+-- quedarse con datos). Requiere UPDATE en alguna columna de la importación: el portal lo tiene.
+CREATE OR REPLACE FUNCTION seguros.portal_patrimonio_importacion_fila_abierta() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+DECLARE e text;
+BEGIN
+  IF NEW.datos IS NULL THEN RETURN NEW; END IF;
+  SELECT estado INTO e FROM seguros.portal_patrimonio_importacion WHERE id = NEW.importacion_id FOR SHARE;
+  IF e IN ('confirmada', 'descartada') THEN
+    RAISE EXCEPTION 'portal_patrimonio_importacion_fila: la importacion esta % y no admite datos', e USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS portal_patrimonio_importacion_no_reabrir ON seguros.portal_patrimonio_importacion;
+CREATE TRIGGER portal_patrimonio_importacion_no_reabrir
+  BEFORE UPDATE OF estado ON seguros.portal_patrimonio_importacion
+  FOR EACH ROW EXECUTE FUNCTION seguros.portal_patrimonio_importacion_no_reabrir();
+
+DROP TRIGGER IF EXISTS portal_patrimonio_importacion_cerrar ON seguros.portal_patrimonio_importacion;
+CREATE TRIGGER portal_patrimonio_importacion_cerrar
+  AFTER UPDATE OF estado ON seguros.portal_patrimonio_importacion
+  FOR EACH ROW WHEN (NEW.estado IN ('confirmada', 'descartada'))
+  EXECUTE FUNCTION seguros.portal_patrimonio_importacion_cerrar();
+
+DROP TRIGGER IF EXISTS portal_patrimonio_importacion_fila_abierta ON seguros.portal_patrimonio_importacion_fila;
+CREATE TRIGGER portal_patrimonio_importacion_fila_abierta
+  BEFORE INSERT OR UPDATE OF datos ON seguros.portal_patrimonio_importacion_fila
+  FOR EACH ROW EXECUTE FUNCTION seguros.portal_patrimonio_importacion_fila_abierta();
+
 DO $$
 DECLARE t text;
 BEGIN
@@ -520,19 +590,19 @@ GRANT UPDATE (alias, uso, referencia_catastral, cp, municipio_ine, via, numero, 
 REVOKE ALL ON seguros.portal_patrimonio_inmueble FROM crm_seguros;
 
 -- comunidad
-GRANT SELECT (id, nombre, nif_comunidad, administrador_nombre, administrador_email, cp, direccion_normalizada,
+GRANT SELECT (id, titular_id, nombre, nif_comunidad, administrador_nombre, administrador_email, cp, direccion_normalizada,
               creado_en, actualizado_en, creado_por_identidad_id, archivado_en)
   ON seguros.portal_patrimonio_comunidad TO prisma_asegura_portal;
-GRANT INSERT (nombre, nif_comunidad, administrador_nombre, administrador_email, cp, direccion_normalizada, creado_por_identidad_id)
+GRANT INSERT (titular_id, nombre, nif_comunidad, administrador_nombre, administrador_email, cp, direccion_normalizada, creado_por_identidad_id)
   ON seguros.portal_patrimonio_comunidad TO prisma_asegura_portal;
 GRANT UPDATE (nombre, nif_comunidad, administrador_nombre, administrador_email, cp, direccion_normalizada, archivado_en)
   ON seguros.portal_patrimonio_comunidad TO prisma_asegura_portal;
 REVOKE ALL ON seguros.portal_patrimonio_comunidad FROM crm_seguros;
 
 -- inmueble_comunidad
-GRANT SELECT (id, inmueble_id, comunidad_id, coeficiente, creado_en, actualizado_en, creado_por_identidad_id, archivado_en)
+GRANT SELECT (id, titular_id, inmueble_id, comunidad_id, coeficiente, creado_en, actualizado_en, creado_por_identidad_id, archivado_en)
   ON seguros.portal_patrimonio_inmueble_comunidad TO prisma_asegura_portal;
-GRANT INSERT (inmueble_id, comunidad_id, coeficiente, creado_por_identidad_id)
+GRANT INSERT (titular_id, inmueble_id, comunidad_id, coeficiente, creado_por_identidad_id)
   ON seguros.portal_patrimonio_inmueble_comunidad TO prisma_asegura_portal;
 GRANT UPDATE (coeficiente, archivado_en)
   ON seguros.portal_patrimonio_inmueble_comunidad TO prisma_asegura_portal;
@@ -714,4 +784,6 @@ COMMIT;
 --     seguros.portal_patrimonio_contrato_inquilino, seguros.portal_patrimonio_contrato,
 --     seguros.portal_patrimonio_inquilino, seguros.portal_patrimonio_inmueble_comunidad,
 --     seguros.portal_patrimonio_comunidad, seguros.portal_patrimonio_inmueble, seguros.portal_patrimonio_titular;
---   DROP FUNCTION seguros.portal_patrimonio_tocar(), seguros.portal_patrimonio_titular_coherente();
+--   DROP FUNCTION seguros.portal_patrimonio_tocar(), seguros.portal_patrimonio_titular_coherente(),
+--     seguros.portal_patrimonio_importacion_no_reabrir(), seguros.portal_patrimonio_importacion_cerrar(),
+--     seguros.portal_patrimonio_importacion_fila_abierta();

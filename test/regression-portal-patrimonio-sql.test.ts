@@ -169,3 +169,29 @@ test('alcances patrimonio_* en el CHECK de la BD, sin perder ninguno, y fuera de
   assert.ok(alcances)
   assert.doesNotMatch(alcances[1], /patrimonio/, 'patrimonio_* NO entra en ALCANCES: abriría la bóveda a los lectores viejos')
 })
+
+function bloque(tabla: string): string {
+  const m = new RegExp(`CREATE TABLE IF NOT EXISTS seguros\\.${tabla} \\(([\\s\\S]*?)\\n\\);`).exec(SQL)
+  assert.ok(m, `no encuentro el CREATE TABLE de ${tabla}`)
+  return m[1]
+}
+
+test('🚨 la comunidad es de UN titular: nadie lee ni edita la de otro vecino (Alberto, 22/10/2026)', () => {
+  assert.match(bloque('portal_patrimonio_comunidad'), /titular_id\s+uuid NOT NULL REFERENCES seguros\.portal_patrimonio_titular/)
+  const ic = bloque('portal_patrimonio_inmueble_comunidad')
+  assert.match(ic, /FOREIGN KEY \(inmueble_id, titular_id\) REFERENCES seguros\.portal_patrimonio_inmueble \(id, titular_id\)/)
+  assert.match(ic, /FOREIGN KEY \(comunidad_id, titular_id\) REFERENCES seguros\.portal_patrimonio_comunidad \(id, titular_id\)/)
+  // Ninguna fila se puede mudar de titular desde el portal (eso rompería todas las FK compuestas).
+  const mudanzas = TABLAS.filter((t) => concedidas('UPDATE', t)?.has('titular_id'))
+  assert.deepEqual(mudanzas, [])
+})
+
+test('🚨 importación: `datos` se vacía al confirmar/descartar y no admite datos una vez cerrada', () => {
+  assert.match(bloque('portal_patrimonio_importacion_fila'), /^\s+datos\s+jsonb,$/m, '`datos` tiene que ser nullable')
+  assert.match(SQL, /UPDATE seguros\.portal_patrimonio_importacion_fila SET datos = NULL\s+WHERE importacion_id = NEW\.id/)
+  assert.match(SQL, /AFTER UPDATE OF estado ON seguros\.portal_patrimonio_importacion\s+FOR EACH ROW WHEN \(NEW\.estado IN \('confirmada', 'descartada'\)\)\s+EXECUTE FUNCTION seguros\.portal_patrimonio_importacion_cerrar\(\)/)
+  assert.match(SQL, /BEFORE INSERT OR UPDATE OF datos ON seguros\.portal_patrimonio_importacion_fila\s+FOR EACH ROW EXECUTE FUNCTION seguros\.portal_patrimonio_importacion_fila_abierta\(\)/)
+  assert.match(SQL, /BEFORE UPDATE OF estado ON seguros\.portal_patrimonio_importacion\s+FOR EACH ROW EXECUTE FUNCTION seguros\.portal_patrimonio_importacion_no_reabrir\(\)/)
+  const datos = modeloDe('portal_patrimonio_importacion_fila')!.campos.find((c) => c.columna === 'datos')
+  assert.ok(datos && /\bJson\?/.test(datos.linea), 'el modelo tiene que declarar `datos Json?`')
+})
