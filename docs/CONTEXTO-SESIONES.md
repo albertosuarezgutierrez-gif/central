@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/10/2026)** — Barrido de repos GitHub para agentes (anthropics/skills, obra/superpowers, karanb192/claude-code-hooks, wshobson/agents, VoltAgent). Aplicado B: paso de evaluación de `description` (should/should-not-trigger) en `agentes-entrenador`; C: sección «Ecosistema Claude Code» en `docs/VIGIA-OSS.md`.
+A (re-sincronizar brainstorming/writing-plans de superpowers 7.0.1) NO aplicado: el clon de superpowers no estaba disponible para diff; nuestras copias están vendorizadas tal cual en `.claude/skills/`, sin personalizaciones.
+Pendiente decisión de Alberto: hooks de karanb192 (protect-tests, config-guard, subagent-spawn-cap) y `plugin-eval` de wshobson en `/auditoria-diaria`. Sin commitear.
 **(22/10/2026)** — Patrimonio F1 pasos 9, 9b y arreglos (integrados, sin commitear). Paso 9: contratos/inquilinos/renta; PII del inquilino por puente a asegura, solo nivel Total, 503 `sin_puente`/`sin_clave`; `TOPE_LEGAL_PCT` = null (sin tope inventado).
 Paso 9b: cron `/api/cron/indices-renta` (día 20, 10:00 UTC, tabla global append-only `portal_patrimonio_indice`): IRAV = tabla INE 72975; IPC = serie IPC251852, POR VERIFICAR en la primera ejecución (avisa por Telegram si falla).
 Arreglos: inmueble archivado = documentos solo lectura; factura confirmada con otro inmueble TRASLADA el documento; la subida de factura exige inmueble.
