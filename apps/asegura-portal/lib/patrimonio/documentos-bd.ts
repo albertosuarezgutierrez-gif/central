@@ -5,22 +5,19 @@
 // resuelve aquí desde la ficha ya autorizada; el owner y el documento se buscan SIEMPRE con `titularId` en el `where` (id ajeno
 // = 0 filas = 404) y la BD lo repite con FK compuestas `(x_id, titular_id)`. Las LISTAS no seleccionan `contenido`: solo la
 // descarga lo lee. Sin DELETE: borrar es sellar `borrado_en`. El tope diario cuenta FILAS (también las borradas) de esta
-// identidad en el día de Madrid; contar + insertar es UNA transacción con bloqueo asesor por identidad.
-import type { Prisma } from '@prisma/client'
-
+// identidad en el día de Madrid; contar + insertar es UNA transacción con bloqueo asesor por identidad (`documentos-tx.ts`).
+// Owner ARCHIVADO: se sigue viendo y descargando (histórico del cliente), no se sube ni se borra.
 import { prisma } from '../db'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
 import { OWNERS_DOCUMENTO, type OwnerDocumento } from './carpetas'
 import { inicioDiaMadrid } from './dia-madrid'
 import { MAX_DOCUMENTOS_DIA, type DocumentoMeta, type OwnerRef, type PuertosDocumentos } from './documentos-api'
+import { COLUMNA_OWNER, guardarConTope, type TxMin } from './documentos-tx'
 import type { AccesosMapa } from './gastos-api'
 import type { TipoFactura } from './tipo-fichero'
 
-type Tx = Prisma.TransactionClient
-
-/** Columna FK de cada owner. */
-const COLUMNA: Record<OwnerDocumento, 'inmuebleId' | 'contratoId' | 'inquilinoId'> = { inmueble: 'inmuebleId', contrato: 'contratoId', inquilino: 'inquilinoId' }
+const COLUMNA: Record<OwnerDocumento, 'inmuebleId' | 'contratoId' | 'inquilinoId'> = COLUMNA_OWNER
 
 /** Lo que se lee de una lista: SIN `contenido`. */
 const SELECT_META = { id: true, carpeta: true, nombre: true, mime: true, sizeBytes: true, creadoEn: true, inmuebleId: true, contratoId: true, inquilinoId: true } as const
@@ -36,29 +33,17 @@ async function titularExistente(clienteId: string): Promise<{ id: string } | nul
   return t && t.archivadoEn === null ? { id: t.id } : null
 }
 
-/**
- * Inserta el documento DENTRO de una transacción ya abierta (la usan `guardar` y la subida de facturas, que lo hace en la
- * misma reserva). No comprueba el tope: lo hace quien la llama con SU bloqueo. La BD exige un único owner del mismo titular.
- */
-export async function crearDocumentoTx(
-  tx: Tx,
-  x: { titularId: string; identidadId: string; owner: OwnerRef; carpeta: string; nombre: string; mime: TipoFactura; sha256: string; contenido: Buffer },
-): Promise<string> {
-  const d = await tx.portalPatrimonioDocumento.create({
-    data: {
-      titularId: x.titularId,
-      [COLUMNA[x.owner.tipo]]: x.owner.id,
-      carpeta: x.carpeta,
-      nombre: x.nombre,
-      mime: x.mime,
-      sizeBytes: x.contenido.length,
-      sha256: x.sha256,
-      contenido: x.contenido,
-      creadoPorIdentidadId: x.identidadId,
-    },
-    select: { id: true },
-  })
-  return d.id
+/** Estado del owner DENTRO del titular: `null` = no existe / no es de ese titular. */
+async function estadoOwner(donde: { id: string; titularId: string }, owner: OwnerRef): Promise<'activo' | 'archivado' | null> {
+  if (!(OWNERS_DOCUMENTO as readonly string[]).includes(owner.tipo)) return null
+  const sel = { archivadoEn: true } as const
+  const fila =
+    owner.tipo === 'inmueble'
+      ? await prisma.portalPatrimonioInmueble.findFirst({ where: donde, select: sel })
+      : owner.tipo === 'contrato'
+        ? await prisma.portalPatrimonioContrato.findFirst({ where: donde, select: sel })
+        : await prisma.portalPatrimonioInquilino.findFirst({ where: donde, select: sel })
+  return fila === null ? null : fila.archivadoEn === null ? 'activo' : 'archivado'
 }
 
 export function puertosDocumentos(identidadId: string, ahora: () => Date = () => new Date()): PuertosDocumentos {
@@ -76,31 +61,17 @@ export function puertosDocumentos(identidadId: string, ahora: () => Date = () =>
 
     async ownerDelTitular(clienteId, owner) {
       const t = await titularDe(clienteId)
-      if (!t || !(OWNERS_DOCUMENTO as readonly string[]).includes(owner.tipo)) return false
-      const donde = { id: owner.id, titularId: t.id, archivadoEn: null }
-      const fila =
-        owner.tipo === 'inmueble'
-          ? await prisma.portalPatrimonioInmueble.findFirst({ where: donde, select: { id: true } })
-          : owner.tipo === 'contrato'
-            ? await prisma.portalPatrimonioContrato.findFirst({ where: donde, select: { id: true } })
-            : await prisma.portalPatrimonioInquilino.findFirst({ where: donde, select: { id: true } })
-      return fila !== null
+      return t ? estadoOwner({ id: owner.id, titularId: t.id }, owner) : null
     },
 
     async guardar({ clienteId, owner, carpeta, nombre, mime, sha256, contenido }) {
       const t = await titularDe(clienteId)
       if (!t) return { ok: false, motivo: 'no_encontrado' }
-      const ahoraD = ahora()
+      const desde = inicioDiaMadrid(ahora())
       // Un solo paso: sin el bloqueo, N subidas simultáneas leen el mismo recuento (< tope) y todas pasan.
-      return prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`portal-documento:${identidadId}`}, 0))`
-        const hoy = await tx.portalPatrimonioDocumento.count({
-          where: { creadoPorIdentidadId: identidadId, creadoEn: { gte: inicioDiaMadrid(ahoraD) } },
-        })
-        if (hoy >= MAX_DOCUMENTOS_DIA) return { ok: false as const, motivo: 'tope' as const }
-        const id = await crearDocumentoTx(tx, { titularId: t.id, identidadId, owner, carpeta, nombre, mime, sha256, contenido })
-        return { ok: true as const, id }
-      })
+      return prisma.$transaction(async (tx) =>
+        guardarConTope(tx as unknown as TxMin, { identidadId, titularId: t.id, owner, carpeta, nombre, mime, sha256, contenido, desde, max: MAX_DOCUMENTOS_DIA }),
+      )
     },
 
     async listar({ clienteId, owner, limite, desde }) {
@@ -125,8 +96,9 @@ export function puertosDocumentos(identidadId: string, ahora: () => Date = () =>
         select: conContenido ? { ...SELECT_META, contenido: true } : SELECT_META,
       })
       const owner = f ? ownerDe(f) : null
-      const bytes = f && 'contenido' in f && f.contenido ? Buffer.from(f.contenido as Uint8Array) : Buffer.alloc(0)
-      return f && owner ? { meta: aMeta(f), owner, contenido: bytes } : null
+      if (!f || !owner) return null
+      const bytes = 'contenido' in f && f.contenido ? Buffer.from(f.contenido as Uint8Array) : Buffer.alloc(0)
+      return { meta: aMeta(f), owner, ownerArchivado: (await estadoOwner({ id: owner.id, titularId: t.id }, owner)) === 'archivado', contenido: bytes }
     },
 
     async borrar({ clienteId, documentoId }) {

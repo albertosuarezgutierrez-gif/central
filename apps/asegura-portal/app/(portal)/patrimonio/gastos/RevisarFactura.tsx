@@ -5,6 +5,7 @@ import { useState } from 'react'
 
 import { eur } from '@/lib/dinero'
 import type { PropuestaFactura } from '@/lib/patrimonio/factura-propuesta'
+import { destinoDelFichero, reglaInmuebleSubida } from '@/lib/patrimonio/facturas-regla'
 import { CATEGORIAS_GASTO, ETIQUETA_CATEGORIA, type FacturaPendiente } from '@/lib/patrimonio/gastos-api'
 
 const ERRORES: Record<string, string> = {
@@ -109,6 +110,13 @@ function Revision({ s, clienteId, inmuebles, fin }: { s: Subida; clienteId: stri
             {inmuebles.map((i) => <option key={i.id} value={i.id}>{i.alias}</option>)}
           </select>
         </label>
+        {(() => {
+          const destino = destinoDelFichero(s.inmueble, inmueble)
+          const origen = inmuebles.find((i) => i.id === s.inmueble)?.alias
+          if (destino === 'se_traslada') return <p className="suave" style={{ margin: 0, fontSize: 13 }}>El fichero de la factura se guardará en este inmueble.</p>
+          if (destino === 'queda' && inmueble === '') return <p className="suave" style={{ margin: 0, fontSize: 13 }}>Sin inmueble: el fichero seguirá guardado en {origen ? `«${origen}»` : 'el inmueble donde lo subiste'}.</p>
+          return null
+        })()}
         <label style={etiqueta}>Fecha<input className="campo" type="date" value={fecha} required disabled={ocupado} onChange={(e) => setFecha(e.target.value)} /></label>
         <label style={etiqueta}>Categoría
           <select className="campo" value={categoria} required disabled={ocupado} onChange={(e) => setCategoria(e.target.value)}>
@@ -182,12 +190,15 @@ export function RevisarFactura({ clienteId, inmuebles }: { clienteId: string; in
   const [error, setError] = useState<string | null>(null)
   const [subida, setSubida] = useState<Subida | null>(null)
   const cerrar = () => { setAbierto(false); setSubida(null); setFichero(null); setError(null) }
+  const regla = reglaInmuebleSubida(inmuebles.length, inmueble)
 
   if (!abierto) {
     return <button type="button" className="boton boton-secundario" style={boton} onClick={() => setAbierto(true)}>Subir factura</button>
   }
   async function subir() {
     if (!fichero) return setError(ERRORES.fichero_requerido)
+    // Sin inmueble no se guarda el fichero: con inmuebles hay que elegir uno.
+    if (regla === 'elegir') return setError('Elige el inmueble de la factura para guardarla.')
     setSubiendo(true)
     setError(null)
     try {
@@ -209,12 +220,16 @@ export function RevisarFactura({ clienteId, inmuebles }: { clienteId: string; in
   return (
     <form style={{ ...rejilla, marginTop: 12 }} onSubmit={(e) => { e.preventDefault(); void subir() }}>
       <h3 style={{ margin: 0 }}>Subir factura</h3>
-      <label style={etiqueta}>Inmueble (opcional)
-        <select className="campo" value={inmueble} disabled={subiendo} onChange={(e) => setInmueble(e.target.value)}>
-          <option value="">Sin inmueble</option>
-          {inmuebles.map((i) => <option key={i.id} value={i.id}>{i.alias}</option>)}
-        </select>
-      </label>
+      {regla === 'sin_inmuebles' ? (
+        <p className="suave" role="status" style={{ margin: 0 }}>Añade primero un inmueble para guardar la factura. Puedes leerla igualmente, pero el fichero no se conservará.</p>
+      ) : (
+        <label style={etiqueta}>Inmueble (para guardar la factura)
+          <select className="campo" value={inmueble} required disabled={subiendo} onChange={(e) => setInmueble(e.target.value)}>
+            <option value="" disabled>Elige un inmueble</option>
+            {inmuebles.map((i) => <option key={i.id} value={i.id}>{i.alias}</option>)}
+          </select>
+        </label>
+      )}
       <label style={etiqueta}>Factura (PDF o foto, máx. 10 MB)
         <input className="campo" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required disabled={subiendo} onChange={(e) => setFichero(e.target.files?.[0] ?? null)} />
       </label>
