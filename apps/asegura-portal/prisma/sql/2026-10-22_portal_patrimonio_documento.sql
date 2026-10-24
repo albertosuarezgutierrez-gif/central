@@ -122,6 +122,7 @@ GRANT INSERT (titular_id, inmueble_id, contrato_id, inquilino_id, carpeta, nombr
 GRANT UPDATE (borrado_en, borrado_por_identidad_id)
   ON seguros.portal_patrimonio_documento TO prisma_asegura_portal;
 REVOKE ALL ON seguros.portal_patrimonio_documento FROM crm_seguros;
+REVOKE DELETE, TRUNCATE ON seguros.portal_patrimonio_documento FROM prisma_seguros; -- aplicado 24/10/2026 (OK Alberto)
 
 -- La factura leída con IA (paso 7) guarda su fichero como documento DEL MISMO titular. `documento_id` NULL = sin fichero
 -- guardado (MATCH SIMPLE no comprueba la FK con una columna NULL). Sin ON DELETE: los documentos no se borran.
