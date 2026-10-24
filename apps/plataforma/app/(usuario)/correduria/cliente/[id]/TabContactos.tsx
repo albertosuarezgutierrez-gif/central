@@ -34,6 +34,7 @@ import {
   type RespuestaQuitarInterviniente,
 } from '@/lib/intervinientes-asegura'
 import { etiquetaPoliza } from './piezas'
+import ModulosPortal from './ModulosPortal'
 
 /**
  * Con quién se habla de esta ficha: **una sola lista de personas** y los datos
@@ -170,6 +171,11 @@ export default function TabContactos({ ficha, personas }: {
           no hay invitación que mandar. */}
       <Bloque titulo="Portal del cliente" Icono={KeyRound}>
         <Portal clienteId={ficha.id} nombre={ficha.nombre} telefonos={telefonosDe(ficha)} />
+      </Bloque>
+
+      {/* Qué herramientas del portal tiene activadas (Patrimonio y alquileres, Flota…). */}
+      <Bloque titulo="Módulos del portal" Icono={KeyRound}>
+        <ModulosPortal clienteId={ficha.id} />
       </Bloque>
 
       {/* UNA lista: quién sale en sus pólizas y quién tiene vínculo declarado. */}

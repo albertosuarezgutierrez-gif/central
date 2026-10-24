@@ -540,3 +540,13 @@ export function censoInvitacionesAsegura(): Promise<Reenvio> {
 export function invitarLoteAsegura(body: { clienteIds: string[]; actor: string }): Promise<Reenvio> {
   return llamar('/api/operador/portal/invitaciones', { method: 'POST', body: JSON.stringify(body) }, 290_000)
 }
+
+/** `GET /api/operador/cliente/portal-modulos?clienteId=` — los módulos del portal de esa ficha (gratis). */
+export function modulosPortalAsegura(clienteId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/cliente/portal-modulos?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
+}
+
+/** `POST /api/operador/cliente/portal-modulos` — activa o retira un módulo. El `actor` lo pone el servidor. */
+export function escribirModuloPortalAsegura(entrada: { clienteId: string; modulo: string; accion: 'activar' | 'retirar'; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/portal-modulos', { method: 'POST', body: JSON.stringify(entrada) })
+}
