@@ -16,25 +16,30 @@ export function generarFechasRecurrente(
   hasta: Date
 ): Date[] {
   const fechas: Date[] = []
-  let cur = new Date(plantilla.fecha_inicio)
+  const inicio = new Date(plantilla.fecha_inicio)
   const fin =
     plantilla.fecha_fin && plantilla.fecha_fin < hasta ? plantilla.fecha_fin : hasta
 
-  while (cur <= fin) {
-    fechas.push(new Date(cur))
-    cur = siguienteFecha(cur, plantilla.periodicidad)
+  // Cada fecha se calcula DESDE EL INICIO (n pasos), no encadenando: encadenar desde un día 31 arrastraba el recorte
+  // (31/01 → 28/02 → 28/03…). El día de `inicio` se conserva y, en un mes más corto, se recorta a su último día.
+  for (let n = 0; ; n++) {
+    const cur = sumarPasos(inicio, plantilla.periodicidad, n)
+    if (!(cur <= fin)) break // `!(<=)` y no `>`: una fecha inválida (NaN) corta en vez de buclear
+    fechas.push(cur)
   }
 
   return fechas
 }
 
-function siguienteFecha(fecha: Date, periodicidad: PeriodicidadRecurrente): Date {
-  const d = new Date(fecha)
-  switch (periodicidad) {
-    case 'mensual':    d.setMonth(d.getMonth() + 1); break
-    case 'trimestral': d.setMonth(d.getMonth() + 3); break
-    case 'semestral':  d.setMonth(d.getMonth() + 6); break
-    case 'anual':      d.setFullYear(d.getFullYear() + 1); break
-  }
+const MESES_POR_PASO: Record<PeriodicidadRecurrente, number> = { mensual: 1, trimestral: 3, semestral: 6, anual: 12 }
+
+/** `inicio` + n pasos, en UTC (no depende del huso del servidor). Día 31 + 1 mes = último día del mes, nunca el mes siguiente. */
+function sumarPasos(inicio: Date, periodicidad: PeriodicidadRecurrente, n: number): Date {
+  const meses = inicio.getUTCMonth() + n * MESES_POR_PASO[periodicidad]
+  const anio = inicio.getUTCFullYear() + Math.floor(meses / 12)
+  const mes = ((meses % 12) + 12) % 12
+  const ultimoDia = new Date(Date.UTC(anio, mes + 1, 0)).getUTCDate()
+  const d = new Date(inicio)
+  d.setUTCFullYear(anio, mes, Math.min(inicio.getUTCDate(), ultimoDia))
   return d
 }

@@ -98,6 +98,11 @@ export const ACCIONES_PATRIMONIO = [
   'alta_baja',
   /** Ver NIF/IBAN/teléfono del inquilino. */
   'ver_pii_inquilino',
+  /**
+   * Enlazar/desenlazar un seguro con el inmueble y declarar «no tiene seguro» (spec 24/10/2026 §2.5: nivel ≥
+   * Gestión). Solo ESCRIBE la decisión: la póliza se busca dentro de lo que la identidad ve (adaptador).
+   */
+  'enlazar_seguro',
   /** Autorizar a un tercero: NUNCA por nivel (ver `puedeAutorizarPatrimonio`). */
   'autorizar_tercero',
 ] as const
@@ -105,8 +110,8 @@ export const ACCIONES_PATRIMONIO = [
 export type AccionPatrimonio = (typeof ACCIONES_PATRIMONIO)[number]
 
 const TABLA: Readonly<Record<NivelPatrimonio, ReadonlySet<AccionPatrimonio>>> = Object.freeze({
-  gestion: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos']),
-  total: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'alta_baja', 'ver_pii_inquilino']),
+  gestion: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'enlazar_seguro']),
+  total: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'alta_baja', 'ver_pii_inquilino', 'enlazar_seguro']),
 })
 
 /** Tabla de §4. Nivel o acción desconocidos (o `undefined`: el titular no está en el mapa) → `false`. */

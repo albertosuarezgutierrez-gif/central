@@ -312,18 +312,21 @@ function Svg({ children }: { children: ReactNode }) {
   )
 }
 const IconoSeguros = () => <Svg><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m9 12 2 2 4-4" /></Svg>
-const IconoRecibos = () => <Svg><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" /><path d="M9 8h6M9 12h6M9 16h3" /></Svg>
+const IconoInicio = () => <Svg><path d="M3.5 11 12 4l8.5 7" /><path d="M5.5 9.5V20h13V9.5" /><path d="M10 20v-5h4v5" /></Svg>
 const IconoSiniestros = () => <Svg><path d="M12 4 2.8 20h18.4L12 4Z" /><path d="M12 10v4.5M12 17.5v.01" /></Svg>
 const IconoMas = () => <Svg><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18" cy="12" r="1.2" /></Svg>
 
 /**
+ * 24/10/2026 (decisión de Alberto): `Inicio · Seguros · Siniestros · WhatsApp · Más`. «Inicio» sustituye a «Recibos»,
+ * que sigue en el cajón («Más») y en cada tarjeta de seguro. Cinco huecos es el máximo a 320 px (44 px cada uno).
+ *
  * Las tres secciones de la barra inferior (la cuarta es WhatsApp), por `href` contra `pestanasPortal()` — la
  * etiqueta y la ruta salen de ahí, no se teclean dos veces: renombrar una
  * sección en el módulo la renombra también aquí, y una que desaparezca del
  * módulo desaparece de la barra en vez de quedar como enlace roto.
  */
 const TABBAR = [
+  { href: '/inicio', Icono: IconoInicio },
   { href: '/boveda', Icono: IconoSeguros },
-  { href: '/boveda?vista=recibos', Icono: IconoRecibos },
   { href: '/boveda?vista=siniestro', Icono: IconoSiniestros },
 ] as const

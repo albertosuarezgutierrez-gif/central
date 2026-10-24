@@ -6,11 +6,14 @@ import { puede } from '@central/module-patrimonio'
 import { eur } from '@/lib/dinero'
 import { contratosDelInmueble } from '@/lib/patrimonio/contratos-bd'
 import { inmuebleAutorizado } from '@/lib/patrimonio/inmuebles-bd'
+import { segurosDeInmueble, type SegurosDeInmueble } from '@/lib/patrimonio/seguros-inmueble-api'
+import { puertosSegurosInmueble } from '@/lib/patrimonio/seguros-inmueble-bd'
 import { ETIQUETA_USO } from '@/lib/patrimonio/usos'
 import { getIdentidad } from '@/lib/session'
 
 import { Documentos } from './Documentos'
 import { NuevoContrato } from './NuevoContrato'
+import { SegurosInmueble } from './SegurosInmueble'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,13 +32,21 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
   const ficha = await inmuebleAutorizado(identidad.id, id)
   if (ficha === null) notFound()
   const i = ficha.inmueble
-  const contratos = await contratosDelInmueble(identidad.id, i.id)
+  // Archivado: los contratos vivos no se listan (sus páginas dan 404) y no se ofrece ninguna alta.
+  const [contratos, seguros] = await Promise.all([
+    ficha.archivado ? Promise.resolve([]) : contratosDelInmueble(identidad.id, i.id),
+    // Un fallo leyendo los seguros no tumba la ficha: la sección dice «no hemos podido comprobarlo».
+    segurosDeInmueble(puertosSegurosInmueble(identidad.id), i.id).catch((e: unknown): SegurosDeInmueble | null | 'error' => {
+      console.error('[patrimonio/inmueble] seguros:', e instanceof Error ? e.message : e)
+      return 'error'
+    }),
+  ])
   const fechaEs = (f: string) => f.split('-').reverse().join('/')
 
   const filas: [string, string][] = [
     ['Titular', ficha.titularNombre || noConsta],
     ['Uso', ETIQUETA_USO[i.uso]],
-    ['Dirección', i.direccion ?? noConsta],
+    ['Dirección', i.direccion === null ? noConsta : ficha.calleSinValidar ? `${i.direccion} (calle por validar: no casa con el callejero del Catastro)` : i.direccion],
     ['Referencia catastral', i.referenciaCatastral ?? noConsta],
     ['Superficie', i.superficieM2 === null ? noConsta : `${i.superficieM2.toLocaleString('es-ES')} m²`],
     ['Año de construcción', i.anioConstruccion === null ? noConsta : String(i.anioConstruccion)],
@@ -48,6 +59,11 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
     <>
       <p className="antetitulo">Patrimonio</p>
       <h1 style={{ overflowWrap: 'anywhere' }}>{i.alias}</h1>
+      {ficha.archivado && (
+        <p role="note" className="suave" style={{ margin: '0 0 12px' }}>
+          <strong>Archivado.</strong> Este inmueble ya no está activo: lo ves en solo lectura, con sus documentos.
+        </p>
+      )}
       <section className="seccion">
         <dl style={{ margin: 0, display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {filas.map(([k, v]) => (
@@ -58,6 +74,15 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
           ))}
         </dl>
       </section>
+      <section className="seccion" aria-labelledby="seguros-inmueble">
+        <h2 id="seguros-inmueble">Seguros</h2>
+        {seguros === 'error' || seguros === null ? (
+          <p className="aviso-linea" role="status">Ahora no hemos podido comprobar los seguros de este inmueble. Vuelve a intentarlo en un rato.</p>
+        ) : (
+          <SegurosInmueble datos={seguros} soloLectura={ficha.archivado} />
+        )}
+      </section>
+      {!ficha.archivado && (
       <section className="seccion">
         <h2>Contratos</h2>
         {contratos.length === 0 ? (
@@ -77,6 +102,7 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
         )}
         {puede(ficha.nivel, 'alta_baja') && <NuevoContrato inmuebleId={i.id} />}
       </section>
+      )}
       <section className="seccion">
         <h2>Documentos</h2>
         <Documentos clienteId={ficha.clienteId} inmuebleId={i.id} />

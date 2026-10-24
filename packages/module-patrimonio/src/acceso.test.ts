@@ -82,6 +82,9 @@ test('tabla §4: Gestión ve y gestiona gastos/documentos; solo Total da altas/b
   assert.equal(puede('total', 'gestionar_gastos_documentos'), true)
   assert.equal(puede('total', 'alta_baja'), true)
   assert.equal(puede('total', 'ver_pii_inquilino'), true)
+  // Enlazar un seguro (24/10/2026): desde Gestión, como gastos y documentos.
+  assert.equal(puede('gestion', 'enlazar_seguro'), true)
+  assert.equal(puede('total', 'enlazar_seguro'), true)
 })
 
 test('autorizar a un tercero NUNCA lo da el nivel', () => {

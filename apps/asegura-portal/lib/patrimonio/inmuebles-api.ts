@@ -14,6 +14,8 @@ export type ResumenInmueble = {
   uso: string
   /** `null` = no consta. */
   direccion: string | null
+  /** `true` = la calle no casó con el Catastro («calle por validar»); `null` = sin dirección (no consta). */
+  calleSinValidar: boolean | null
   superficieM2: number | null
 }
 

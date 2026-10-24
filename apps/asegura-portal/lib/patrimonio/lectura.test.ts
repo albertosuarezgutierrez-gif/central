@@ -9,6 +9,7 @@ import {
   decimal,
   fechaDe,
   gastoDeFila,
+  calleSinValidar,
   inmuebleDeFila,
   inquilinoDeFila,
   obligacionDeFila,
@@ -155,4 +156,10 @@ test('obligación: aplica null = no se sabe; las de contrato no se guardan (revi
   const base = { id: 'o1', inmuebleId: 'i1', tipo: 'revision_gas', aplica: null, ultima: null, vence: null, periodicidadMeses: null }
   assert.equal(obligacionDeFila(base).aplica, null)
   assert.throws(() => obligacionDeFila({ ...base, tipo: 'fin_contrato' }), /obligacion\.tipo/)
+})
+
+test('calle por validar: via null con dirección = por validar; vía oficial = no; sin dirección = null (no consta)', () => {
+  assert.equal(calleSinValidar({ via: null, direccionNormalizada: 'Calle X 1, 41003 Sevilla (Sevilla)' }), true)
+  assert.equal(calleSinValidar({ via: 'CL PARRA LA', direccionNormalizada: 'CL PARRA LA 12, 41003 SEVILLA (SEVILLA)' }), false)
+  assert.equal(calleSinValidar({ via: null, direccionNormalizada: null }), null)
 })

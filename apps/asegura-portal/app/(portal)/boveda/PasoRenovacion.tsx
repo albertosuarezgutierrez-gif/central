@@ -7,7 +7,7 @@
 // que renueva. Va por el PATCH de siempre (`confirmadaPorUsuario=true`, lo leído queda en
 // `extraccionBruta`). NO se escribe `vigenteDeclarada`: suponerlo no es que el cliente lo diga.
 // Se puede saltar sin consecuencias. «O sube el último recibo» reutiliza `EscanerDocumento`
-// (archiva el recibo contra ESTA póliza); NO el selector del alta, que crearía una póliza duplicada.
+// (archiva el recibo contra ESTA póliza declarada: `polizaFija=d:<id>`); NO el selector del alta, que crearía una póliza duplicada.
 import { useId, useState } from 'react'
 
 import type { MotivoDesfase } from '@/lib/documento-desfasado'
@@ -136,7 +136,7 @@ export function PasoRenovacion({ polizaId, motivos, onCerrar, onGuardado }: Prop
       </form>
       {/* Fuera del <form>: el escáner tiene sus propios botones y no debe enviar este. */}
       {conRecibo ? (
-        <EscanerDocumento />
+        <EscanerDocumento polizaFija={`d:${polizaId}`} />
       ) : (
         <p className="suave" style={{ fontSize: 14, margin: 0 }}>
           o{' '}

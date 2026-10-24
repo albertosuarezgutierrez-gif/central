@@ -35,7 +35,7 @@ export const dynamic = 'force-dynamic'
 export default async function Raiz({ searchParams }: { searchParams: Promise<{ r?: string | string[] }> }) {
   // La puerta única: la identidad sale de la cookie, nunca de la petición.
   const identidad = await getIdentidad()
-  if (identidad) redirect('/boveda')
+  if (identidad) redirect('/inicio')
   // Bienvenida solo para quien viene del correo de campaña (`?r=` o su cookie). Sin sesión, por definición.
   const { r } = await searchParams
   const jar = await cookies()

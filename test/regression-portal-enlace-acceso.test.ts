@@ -80,7 +80,7 @@ test('la RAIZ mira si ya hay sesion antes de pedir nada', () => {
   const src = leer('apps/asegura-portal/app/page.tsx')
   assert.doesNotMatch(src, /^'use client'/m, 'la raíz tiene que resolverse en el servidor para leer la cookie')
   assert.match(src, /getIdentidad\(\)/, 'la raíz resuelve la sesión por la puerta única')
-  assert.match(src, /redirect\(['"]\/boveda['"]\)/, 'con sesión viva se entra directo, sin pedir código')
+  assert.match(src, /redirect\(['"]\/inicio['"]\)/, 'con sesión viva se entra directo, sin pedir código (a Inicio desde el 24/10/2026)')
 })
 
 test('el correo manda el codigo aunque no haya enlace', () => {

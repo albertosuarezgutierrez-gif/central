@@ -47,6 +47,7 @@ export default async function PatrimonioPage() {
                     alias: i.alias,
                     uso: i.uso,
                     direccion: i.direccion,
+                    calleSinValidar: i.calleSinValidar,
                     superficie: i.superficieM2 === null ? null : i.superficieM2.toLocaleString('es-ES'),
                   }))}
                 />

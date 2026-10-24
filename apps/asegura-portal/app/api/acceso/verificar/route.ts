@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   const { tipo, destino } = parsed.data
   const valorHash = hashCanal(destino)
 
-  let irA = '/boveda'
+  let irA = '/inicio'
   if ('enlace' in parsed.data) {
     const e = await canjearEnlace(destino, parsed.data.enlace)
     if ('error' in e) return NextResponse.json({ error: e.error }, { status: 401 })

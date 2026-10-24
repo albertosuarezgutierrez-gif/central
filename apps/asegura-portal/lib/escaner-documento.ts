@@ -125,6 +125,17 @@ export function proponerPoliza(lectura: Pick<LecturaEscaner, 'compania' | 'numer
   return { polizaId: null, motivo: 'sin_coincidencia' }
 }
 
+/**
+ * Póliza que queda elegida tras leer un documento. Si el escáner se abre DESDE una póliza concreta (`fija`, con el
+ * prefijo `c:`/`d:` de `polizasPropiasParaEscaner`; p. ej. el recibo del paso de renovación), manda ella y no la
+ * propuesta de la IA: el recibo se archiva contra ESA póliza. El servidor sigue validándola contra las propias de la
+ * sesión (ajena = 404). `''` = ninguna en concreto.
+ */
+export function polizaTrasLectura(fija: string | null | undefined, propuestaId: string | null | undefined): string {
+  if (fija) return fija
+  return propuestaId ?? ''
+}
+
 /** Una carta de impago pide avisar al corredor. Solo la decide el TIPO que confirmó la persona. */
 export function esCartaImpago(tipo: unknown): boolean {
   return tipo === 'carta_impago'

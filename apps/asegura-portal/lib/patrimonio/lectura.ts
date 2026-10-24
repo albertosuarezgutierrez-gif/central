@@ -123,6 +123,16 @@ export type FilaInmueble = {
   suministros: string[]
 }
 
+/**
+ * «Calle por validar» (sin columna nueva): el alta guarda `via` SOLO si la calle casó con el callejero del Catastro
+ * (`alta-inmueble.ts`); `via = null` con dirección = texto libre que nadie ha validado. Sin dirección no se sabe
+ * (`null`, no `true`): no consta ≠ por validar.
+ */
+export function calleSinValidar(f: { via: string | null; direccionNormalizada: string | null }): boolean | null {
+  if (f.direccionNormalizada === null || f.direccionNormalizada.trim() === '') return null
+  return f.via === null || f.via.trim() === ''
+}
+
 export function inmuebleDeFila(f: FilaInmueble): Inmueble {
   return {
     id: f.id,

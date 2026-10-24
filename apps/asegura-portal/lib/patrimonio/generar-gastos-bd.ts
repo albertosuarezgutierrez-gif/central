@@ -54,6 +54,14 @@ export function puertosGenerador(): PuertosGenerador {
         }),
       )
     },
+    async inmueblesArchivados(ids) {
+      if (ids.length === 0) return new Set<string>()
+      const filas = await prisma.portalPatrimonioInmueble.findMany({
+        where: { id: { in: [...ids] }, archivadoEn: { not: null } },
+        select: { id: true },
+      })
+      return new Set(filas.map((f) => f.id))
+    },
     async clavesDe(titularId) {
       const filas = await prisma.portalPatrimonioGasto.findMany({ where: { titularId, clave: { not: null } }, select: { clave: true } })
       return new Set(filas.map((f) => f.clave as string))

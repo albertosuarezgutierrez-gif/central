@@ -181,3 +181,44 @@ test('🚨 documentos (lógica pura): el rol y la carpeta salen del documento RE
   assert.match(desc, /puedeDocumento\(accesos\.get\(c\.titular\), 'ver', d\.owner\.tipo, d\.meta\.carpeta\)/)
   assert.doesNotMatch(src, /status:\s*403/, 'ajeno es 404, nunca 403')
 })
+
+// ─── Enlace inmueble ↔ póliza (24/10/2026, P11): el enlace no puede ser la puerta trasera a la póliza de otro ─────
+const SEG_BD = 'apps/asegura-portal/lib/patrimonio/seguros-inmueble-bd.ts'
+const SEG_API = 'apps/asegura-portal/lib/patrimonio/seguros-inmueble-api.ts'
+const SEG_RUTA = 'apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/seguros/route.ts'
+
+test('🚨 enlaces: solo seguros-inmueble-bd toca la tabla puente, y siempre tras autorizar el inmueble', () => {
+  const ficheros = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'apps/asegura-portal'], { cwd: ROOT, encoding: 'utf8' })
+    .split('\n')
+    .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\.tsx?$/.test(f))
+  const tocan = ficheros.filter((f) => /prisma\s*\.\s*portalPatrimonioInmueblePoliza\b|tx\s*\.\s*portalPatrimonioInmueblePoliza\b/.test(leer(f)))
+  assert.deepEqual(tocan, [SEG_BD], 'la tabla puente tiene UNA puerta: lib/patrimonio/seguros-inmueble-bd.ts')
+  const src = leer(SEG_BD)
+  assert.ok(!CRON_SIN_SESION.has(SEG_BD))
+  assert.match(src, /\baccesosPatrimonio\(identidadId\)/)
+  assert.match(src, /titular: \{ clienteId: \{ in: \[\.\.\.acc\.keys\(\)\] \}, archivadoEn: null \}/, 'el inmueble se busca DENTRO de los titulares autorizados')
+  // Cada operación (leer enlaces, crear, archivar, declarar) vuelve a autorizar el inmueble antes de tocarlo.
+  assert.ok((src.match(/await inmuebleAutorizadoId\(/g) ?? []).length >= 5, 'cada puerto re-autoriza el inmueble')
+  const ops = [...src.matchAll(/portalPatrimonioInmueblePoliza\.(findMany|updateMany|create)\(\{\s*(where|data): \{ ([^}]*)/g)]
+  assert.ok(ops.length >= 4, 'brazo de control: el detector tiene que ver las 4 operaciones')
+  for (const m of ops) assert.match(m[3], /inmuebleId/, `${m[1]} sin inmuebleId`)
+  assert.doesNotMatch(src, /\.delete\(|\.deleteMany\(|\$queryRaw|\$executeRaw/, 'sin DELETE ni SQL crudo')
+})
+
+test('🚨 enlaces: lo que «ve» la identidad sale de carteraDeIdentidad y de SUS declaradas; nunca prisma.poliza por un id', () => {
+  const src = leer(SEG_BD)
+  assert.match(src, /carteraDeIdentidad\(identidadId\)/)
+  assert.doesNotMatch(src, /prisma\s*\.\s*(poliza|cliente)\b/, 'ni pólizas ni fichas leídas a mano: la cartera ya viene filtrada por nivel')
+  assert.match(src, /portalPolizaDeclarada\.findMany\(\{\s*where: \{ identidadId, \.\.\.DECLARADA_NO_ELIMINADA \}/)
+  assert.match(src, /ubicacion: p\.bien\.ubicacion/, 'la dirección para casar es la que ESTE nivel ve (describirBien)')
+  // La API busca la póliza del cuerpo DENTRO de su lista (tipo incluido), no en la unión ni por id suelto.
+  const api = leer(SEG_API)
+  assert.match(api, /const fuente = tipo === 'cartera' \? vis\.cartera : vis\.declaradas/)
+  assert.match(api, /const poliza = fuente\.find\(\(v\) => v\.id === c\.polizaId\)/)
+  assert.match(api, /if \(inm === null \|\| !puede\(inm\.nivel, 'enlazar_seguro'\)\) return NO_ENCONTRADO/)
+  assert.match(api, /vigente: v \? v\.vigente : null/, 'póliza que no ves: vigencia «no se sabe», ni sí ni no')
+  assert.match(api, /poliza: v \? pintable\(v\) : null/, 'póliza que no ves: sin detalle')
+  assert.doesNotMatch(api, /numeroPoliza|prima/i, 'el nº de póliza y la prima no salen por el inmueble')
+  assert.doesNotMatch(api, /status:\s*403/)
+  assert.doesNotMatch(leer(SEG_RUTA), /prisma/)
+})

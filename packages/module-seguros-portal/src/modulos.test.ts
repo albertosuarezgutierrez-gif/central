@@ -46,33 +46,33 @@ test('esModuloPortal solo admite ids del catálogo', () => {
   assert.equal(esModuloPortal({}), false)
 })
 
-test('disponibilidad: flota según el acceso, RRHH bajo solicitud, alquileres próximamente', () => {
-  assert.equal(disponibilidadModulo('flota', { accesoFlota: true }), 'disponible')
-  assert.equal(disponibilidadModulo('flota', { accesoFlota: false }), 'bajo_solicitud')
-  assert.equal(disponibilidadModulo('flota', { accesoFlota: null }), null)
-  assert.equal(disponibilidadModulo('rrhh', { accesoFlota: true }), 'bajo_solicitud')
-  assert.equal(disponibilidadModulo('alquileres', { accesoFlota: true }), 'proximamente')
+test('disponibilidad: flota según el acceso, RRHH bajo solicitud', () => {
+  assert.equal(disponibilidadModulo('flota', { accesoFlota: true, accesoPatrimonio: false }), 'disponible')
+  assert.equal(disponibilidadModulo('flota', { accesoFlota: false, accesoPatrimonio: false }), 'bajo_solicitud')
+  assert.equal(disponibilidadModulo('flota', { accesoFlota: null, accesoPatrimonio: false }), null)
+  assert.equal(disponibilidadModulo('rrhh', { accesoFlota: true, accesoPatrimonio: false }), 'bajo_solicitud')
+  assert.equal(disponibilidadModulo('alquileres', { accesoFlota: true, accesoPatrimonio: false }), 'bajo_solicitud')
 })
 
 test('flota con acceso se ABRE aunque no haya fila (ni lectura de filas)', () => {
-  assert.deepEqual(accionModulo('flota', { accesoFlota: true, filas: [] }), { tipo: 'abrir', href: '/flota' })
-  assert.deepEqual(accionModulo('flota', { accesoFlota: true, filas: null }), { tipo: 'abrir', href: '/flota' })
+  assert.deepEqual(accionModulo('flota', { accesoFlota: true, accesoPatrimonio: false, filas: [] }), { tipo: 'abrir', href: '/flota' })
+  assert.deepEqual(accionModulo('flota', { accesoFlota: true, accesoPatrimonio: false, filas: null }), { tipo: 'abrir', href: '/flota' })
 })
 
 test('sin poder mirar (null) no se ofrece Solicitar: «sin comprobar», nunca «no tienes»', () => {
-  assert.equal(accionModulo('flota', { accesoFlota: null, filas: [] }).tipo, 'sin_comprobar')
-  assert.equal(accionModulo('rrhh', { accesoFlota: false, filas: null }).tipo, 'sin_comprobar')
-  assert.equal(accionModulo('alquileres', { accesoFlota: false, filas: null }).tipo, 'sin_comprobar')
+  assert.equal(accionModulo('flota', { accesoFlota: null, accesoPatrimonio: false, filas: [] }).tipo, 'sin_comprobar')
+  assert.equal(accionModulo('rrhh', { accesoFlota: false, accesoPatrimonio: false, filas: null }).tipo, 'sin_comprobar')
+  assert.equal(accionModulo('alquileres', { accesoFlota: false, accesoPatrimonio: false, filas: null }).tipo, 'sin_comprobar')
 })
 
 test('[] = revisado y sin pedir → Solicitar / Apuntarme', () => {
-  assert.equal(accionModulo('rrhh', { accesoFlota: false, filas: [] }).tipo, 'solicitar')
-  assert.equal(accionModulo('flota', { accesoFlota: false, filas: [] }).tipo, 'solicitar')
-  assert.equal(accionModulo('alquileres', { accesoFlota: false, filas: [] }).tipo, 'apuntarse')
+  assert.equal(accionModulo('rrhh', { accesoFlota: false, accesoPatrimonio: false, filas: [] }).tipo, 'solicitar')
+  assert.equal(accionModulo('flota', { accesoFlota: false, accesoPatrimonio: false, filas: [] }).tipo, 'solicitar')
+  assert.equal(accionModulo('alquileres', { accesoFlota: false, accesoPatrimonio: false, filas: [] }).tipo, 'solicitar')
 })
 
 test('una fila solicitada se dice con su fecha y ya no admite otra', () => {
-  const a = accionModulo('rrhh', { accesoFlota: false, filas: [{ modulo: 'rrhh', estado: 'solicitado', solicitadoEn: HOY }] })
+  const a = accionModulo('rrhh', { accesoFlota: false, accesoPatrimonio: false, filas: [{ modulo: 'rrhh', estado: 'solicitado', solicitadoEn: HOY }] })
   assert.deepEqual(a, { tipo: 'solicitado', desde: HOY })
   assert.equal(admiteSolicitud(a), false)
 })
@@ -82,15 +82,15 @@ test('una retirada no bloquea volver a pedirlo; la fila de OTRO módulo no cuent
     { modulo: 'rrhh', estado: 'retirado', solicitadoEn: HOY },
     { modulo: 'alquileres', estado: 'solicitado', solicitadoEn: HOY },
   ]
-  assert.equal(accionModulo('rrhh', { accesoFlota: false, filas }).tipo, 'solicitar')
+  assert.equal(accionModulo('rrhh', { accesoFlota: false, accesoPatrimonio: false, filas }).tipo, 'solicitar')
 })
 
 test('activo: RRHH no se abre en el portal (sin SSO), lo dice; flota activa se abre', () => {
   const activo = [{ modulo: 'rrhh', estado: 'activo', solicitadoEn: HOY }]
-  const a = accionModulo('rrhh', { accesoFlota: false, filas: activo })
+  const a = accionModulo('rrhh', { accesoFlota: false, accesoPatrimonio: false, filas: activo })
   assert.equal(a.tipo, 'activo')
   assert.equal(admiteSolicitud(a), false)
-  const f = accionModulo('flota', { accesoFlota: false, filas: [{ modulo: 'flota', estado: 'activo', solicitadoEn: HOY }] })
+  const f = accionModulo('flota', { accesoFlota: false, accesoPatrimonio: false, filas: [{ modulo: 'flota', estado: 'activo', solicitadoEn: HOY }] })
   assert.deepEqual(f, { tipo: 'abrir', href: '/flota' })
 })
 
@@ -101,8 +101,21 @@ test('solo solicitar/apuntarse admiten fila', () => {
   assert.equal(admiteSolicitud({ tipo: 'sin_comprobar' }), false)
 })
 
+test('🚨 «Gestión de alquileres» ES Patrimonio (Alberto, 24/10/2026): abre /patrimonio con acceso; sin comprobar no ofrece nada', () => {
+  assert.equal(CATALOGO_MODULOS.alquileres.hrefPortal, '/patrimonio')
+  assert.doesNotMatch(CATALOGO_MODULOS.alquileres.descripcion, /preparando|apúntate/i)
+  assert.equal(disponibilidadModulo('alquileres', { accesoFlota: false, accesoPatrimonio: true }), 'disponible')
+  assert.equal(disponibilidadModulo('alquileres', { accesoFlota: false, accesoPatrimonio: null }), null)
+  assert.deepEqual(accionModulo('alquileres', { accesoFlota: false, accesoPatrimonio: true, filas: null }), { tipo: 'abrir', href: '/patrimonio' })
+  assert.equal(accionModulo('alquileres', { accesoFlota: false, accesoPatrimonio: null, filas: [] }).tipo, 'sin_comprobar')
+  // Ningún módulo queda en «próximamente» → nadie ve ya «Apuntarme».
+  for (const id of MODULOS_PORTAL) {
+    assert.notEqual(disponibilidadModulo(id, { accesoFlota: false, accesoPatrimonio: false }), 'proximamente', id)
+  }
+})
+
 test('tarjetas en el orden del catálogo', () => {
-  const t = tarjetasModulos({ accesoFlota: false, filas: [] })
+  const t = tarjetasModulos({ accesoFlota: false, accesoPatrimonio: false, filas: [] })
   assert.deepEqual(t.map((x) => x.id), ['flota', 'rrhh', 'alquileres'])
 })
 
@@ -111,7 +124,7 @@ test('el aviso de Telegram escapa el nombre y dice si está sin vincular', () =>
   assert.ok(m.startsWith('🧰 Ana &lt;b&gt;&amp; (sin vincular a tu cartera) pide el módulo Portal del Empleado.'))
   assert.match(m, /Identidad i-1/)
   const v = mensajeSolicitudModulo({ identidadId: 'i-2', nombre: 'Luis', vinculada: true, modulo: 'alquileres' })
-  assert.ok(v.startsWith('🧰 Luis se apunta al módulo Gestión de alquileres.'))
+  assert.ok(v.startsWith('🧰 Luis pide el módulo Patrimonio y alquileres.'))
   const sinNombre = mensajeSolicitudModulo({ identidadId: 'i-3', nombre: '  ', vinculada: true, modulo: 'flota' })
   assert.ok(sinNombre.startsWith('🧰 Alguien sin nombre pide el módulo'))
 })

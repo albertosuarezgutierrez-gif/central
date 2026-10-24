@@ -89,16 +89,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             acaba de recibir un código por correo, así que lo primero que tiene
             que reconocer es la marca. */}
         <header className="marca-barra">
-          <span className="marca-escudo">
-            <MarcaAsegura alto={15} />
-          </span>
-          <span className="marca-nombre">
-            {/* Logotipo en trazo fino, con el «AS» oficial dentro (el mismo
-                fichero que la web). El nombre en texto sigue ahí para el
-                lector de pantalla. */}
-            <span className="marca-palabra" aria-hidden="true" />
-            <span className="sr-marca">{MARCA.logos.wordmark}</span>
-          </span>
+          {/* 24/10/2026: el logo lleva a Inicio. A `/` y no a `/inicio`: la raíz ya decide (con sesión → Inicio,
+              sin ella → la entrada), y este layout no resuelve sesión. `display: contents` para no tocar el
+              reparto flex de la barra (escudo y nombre siguen siendo hijos directos a efectos de maquetación). */}
+          <a href="/" className="marca-inicio" style={{ display: 'contents', color: 'inherit', textDecoration: 'none' }}>
+            <span className="marca-escudo">
+              <MarcaAsegura alto={15} />
+            </span>
+            <span className="marca-nombre">
+              {/* Logotipo en trazo fino, con el «AS» oficial dentro (el mismo
+                  fichero que la web). El nombre en texto sigue ahí para el
+                  lector de pantalla. */}
+              <span className="marca-palabra" aria-hidden="true" />
+              <span className="sr-marca">{MARCA.logos.wordmark}</span>
+            </span>
+          </a>
           <span className="marca-coletilla">Correduría de seguros</span>
           {/* Las acciones de la cabecera van sueltas y no en un menú:
               esconder cosas detrás de un botón cuesta un toque más, un
