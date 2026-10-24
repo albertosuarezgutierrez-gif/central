@@ -27,7 +27,7 @@ async function leer(correduriaId: string, clienteId: string): Promise<Lectura> {
   const identidades = [...new Set(vinc.map((v) => v.id))]
   const filas = identidades.length === 0 ? [] : await db.$queryRaw<FilaModuloCliente[]>`
     select id::text as id, identidad_id::text as "identidadId", modulo, estado
-      from seguros.portal_modulo where identidad_id = any(${identidades}::uuid[])`
+      from portal_modulo where identidad_id = any(${identidades}::uuid[])`
   const pol = await db.$queryRaw<{ n: number }[]>`
     select count(*)::int as n from polizas p
      where p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid
@@ -71,15 +71,15 @@ export async function escribirModulo(
     for (const op of ops) {
       if (op.tipo === 'insertar_activo') {
         await tx.$executeRaw`
-          insert into seguros.portal_modulo (identidad_id, modulo, estado, activado_en, origen)
+          insert into portal_modulo (identidad_id, modulo, estado, activado_en, origen)
           values (${op.identidadId}::uuid, ${modulo}, 'activo', now(), 'corredor')`
       } else if (op.tipo === 'activar') {
         await tx.$executeRaw`
-          update seguros.portal_modulo set estado = 'activo', activado_en = now()
+          update portal_modulo set estado = 'activo', activado_en = now()
            where id = ${op.filaId}::uuid and estado = 'solicitado'`
       } else {
         await tx.$executeRaw`
-          update seguros.portal_modulo set estado = 'retirado', retirado_en = now()
+          update portal_modulo set estado = 'retirado', retirado_en = now()
            where id = ${op.filaId}::uuid and estado <> 'retirado'`
       }
     }
