@@ -33,6 +33,7 @@ import { eur } from "@/lib/dinero"
 import { anclaRail, anclaRailCon, type OrigenAncla, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
 import { resumenLecturasCaidas, avisoLecturasCaidas, type LecturaCaida } from "@/lib/sivra/pricing-lecturas"
 import { PASADAS_POR_DIA_APPLY } from "@/lib/sivra/pricing-latido-apply"
+import { histeresisSentido } from "@/lib/sivra/pricing-histeresis"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -940,6 +941,9 @@ export async function POST(req: NextRequest) {
     // guardas en esta pasada. En la respuesta a propósito: una descongelación en masa tiene que
     // poder verse sin abrir la BD, y un 0 aquí es la prueba de que el candado no se ha tocado.
     const descongeladas: { fecha: string; motivo: string }[] = []
+    // Fechas cuyo cambio se RETUVO por histéresis de sentido (pricing-histeresis.ts): el vaivén
+    // 88→80→88 que la banda muerta del 3% no ve. En la respuesta para poder medir cuánto muerde.
+    const histeresis: { fecha: string; old: number; target: number }[] = []
     // Fechas donde el techo de mercado medido recortó el objetivo (pricing-techo-mercado.ts). En
     // la respuesta a propósito: un precio que baja por el techo debe poder distinguirse de uno que
     // baja porque el mercado del mes se hundió.
@@ -1155,6 +1159,7 @@ export async function POST(req: NextRequest) {
       // Suelo del raíl del día: lo captura también el techo de mercado de más abajo, para que un
       // precio inflado DESCIENDA a velocidad de raíl (varias pasadas), nunca de golpe.
       let railLo: number | null = null
+      let railHi: number | null = null
       // Se declaran fuera del `if` para que viajen a `pricing_applied`: dentro quedarían en el
       // ámbito del raíl y la fila persistida volvería a no decir desde dónde se midió el tope.
       let railAncla: number | null = null
@@ -1175,6 +1180,7 @@ export async function POST(req: NextRequest) {
         const lo = Math.round(ancla * (1 - Number(r.max_change_pct)))
         const hi = Math.round(ancla * (1 + Number(r.max_change_pct)))
         railLo = lo
+        railHi = hi
         target = clamp(target, lo, hi)
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
@@ -1362,6 +1368,20 @@ export async function POST(req: NextRequest) {
       // esté por debajo del suelo del propietario (eso se corrige siempre).
       if (old != null && (r.min_price == null || old >= r.min_price)
           && Math.abs(target - old) / old < 0.03) continue
+      // 🔁 Histéresis POR SENTIDO (11/10/2026, ver pricing-histeresis.ts). La banda de arriba no ve
+      // el vaivén: si la última escritura NUESTRA de esta fecha fue al revés hace <48 h, un reverso
+      // <10% no se escribe. Reutiliza `ultimaEscritura` (misma lectura que los congeladores, sin
+      // consulta nueva); sin esa lectura, `null` → el helper no retiene y el motor es el de antes.
+      // Nunca retiene evento, fecha cercana/last-minute, bajada a min_price ni precio fuera de raíl.
+      if (old != null) {
+        const h = histeresisSentido({
+          old, target,
+          ultima: hayHistorialEscrituras ? ultimaEscritura.get(`${r.property_id}|${date}`) ?? null : null,
+          diasVista: daysOut, eventTarget, lastMinuteActivo: lm.factor < 1,
+          minPrice: r.min_price, maxPrice: r.max_price, railLo, railHi,
+        })
+        if (h.retener) { histeresis.push({ fecha: date, old, target }); continue }
+      }
       // Idea #3 — min-stay en noches de evento fuerte y lejanas, salvo hueco suelto entre reservas
       // (que sería imposible de cubrir con 2-3 noches). Solo lo escribimos si ya vamos a tocar la
       // fecha; el gap-discount sigue tratando los huecos aparte.
@@ -1520,6 +1540,9 @@ export async function POST(req: NextRequest) {
       // moverse. `0` significa «el candado no ha tenido que abrirse», no «no hay candado».
       descongeladas: descongeladas.length > 0
         ? { fechas: descongeladas.length, sample: descongeladas.slice(0, 5) }
+        : undefined,
+      histeresis: histeresis.length > 0
+        ? { fechas: histeresis.length, sample: histeresis.slice(0, 5) }
         : undefined,
     })
     for (const c of congeladas) congeladasGlobal.push({ property: r.property_id, ...c })
