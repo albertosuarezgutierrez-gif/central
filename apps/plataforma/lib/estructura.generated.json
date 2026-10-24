@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-24T09:24:34Z",
+  "generadoEn": "2026-10-24T10:05:40Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 25
+        "evidencias": 29
       },
       "asegura-web": {
         "estado": "no",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 297
+        "evidencias": 299
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 154
+        "evidencias": 157
       },
       "asegura-web": {
         "estado": "usado",
@@ -2429,11 +2429,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 43
+        "evidencias": 44
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 122
+        "evidencias": 123
       },
       "asegura-web": {
         "estado": "usado",
@@ -4214,6 +4214,7 @@
       "/api/operador/cliente/historial",
       "/api/operador/cliente/mote",
       "/api/operador/cliente/portal",
+      "/api/operador/cliente/portal-modulos",
       "/api/operador/cliente/portal/vista",
       "/api/operador/cliente/relaciones",
       "/api/operador/cliente/relaciones/aviso",
@@ -4497,6 +4498,7 @@
       "/api/patrimonio/documentos/[id]",
       "/api/patrimonio/facturas",
       "/api/patrimonio/inmuebles",
+      "/api/patrimonio/inmuebles/[id]/seguros",
       "/api/patrimonio/inquilinos/[id]",
       "/api/patrimonio/plantillas",
       "/api/patrimonio/vias",
@@ -5375,6 +5377,7 @@
       "/api/correduria/cliente/fusion",
       "/api/correduria/cliente/nota",
       "/api/correduria/cliente/portal",
+      "/api/correduria/cliente/portal-modulos",
       "/api/correduria/cliente/portal/vista",
       "/api/correduria/cliente/relaciones",
       "/api/correduria/cliente/relaciones/aviso",
@@ -7154,7 +7157,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1786,
+    "apis": 1789,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
