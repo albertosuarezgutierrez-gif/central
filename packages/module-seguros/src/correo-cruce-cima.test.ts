@@ -9,7 +9,12 @@ import {
 // F1 del agente corredor de correo (21/10/2026). Reloj INYECTADO: «hoy» sale del reloj real solo para construir fechas
 // relativas; ninguna fecha fija se compara contra el reloj (CLAUDE.md, bomba de tiempo del 17/10).
 const iso = (d: Date) => d.toISOString().slice(0, 10)
-const HOY = iso(new Date())
+// «hoy» anclado al último día hábil (sábado/domingo/festivo rompían la aserción de 3 hábiles: fallo del 24/10/2026, sábado).
+const HOY = (() => {
+  const d = new Date()
+  while (!esDiaHabil(iso(d))) d.setUTCDate(d.getUTCDate() - 1)
+  return iso(d)
+})()
 
 /** El día hábil `n` hábiles ANTES de `hoy` (camina hacia atrás con la misma regla que se prueba aparte). */
 function haceHabiles(hoy: string, n: number): string {

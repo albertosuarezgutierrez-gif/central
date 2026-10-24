@@ -19,6 +19,16 @@
 | `pvilas/hospedajes` | 🚫 **GPLv3 + Python + muerto (may-2023, 1 mantenedor)** — NO se integra. Vale solo por sus `esquemas/3.0.0/` (7 XSD + WSDL del Ministerio), cuyos namespaces casan con nuestro `module-ses/src/soap.ts`. Sin sandbox SES (pre-ses da 502), validar contra XSD en local es el único preflight antes de apagar Chekin. ⚠️ Espejo de 2023, anterior al RD 933/2021 en vigor: pedir los vigentes al Ministerio | sivra / module-ses (referencia) | — (sin releases; último commit 12/05/2023) | 2026-08-28 |
 | `zarpilla/verifactu-node-lib` | Librería JS/TS para VeriFactu (MIT). HOY inmadura (10 commits, sin releases, no firma ni envía a AEAT) — vigilar por si madura; referencia útil para `core-fiscal` | core-fiscal (ia-rest) | — (sin releases) | 2026-07-02 |
 
+## Ecosistema Claude Code
+
+> Repos de herramientas para NUESTROS agentes/skills/hooks (no dependencias del producto). Vigilar releases y licencia; barrido del 24/10/2026.
+
+- `anthropics/skills` — Apache-2.0 solo en `skill-creator` (docx/pdf/pptx/xlsx son source-available: NO copiar; comprobar LICENSE por skill). Su bucle de evaluación de `description` inspira el paso de `agentes-entrenador`.
+- `obra/superpowers` — MIT, v7.0.1 (vista 24/10/2026). Origen de nuestras skills vendorizadas (brainstorming, writing-plans, systematic-debugging, verification-before-completion, code-review); re-sincronizar a mano con diff por skill.
+- `karanb192/claude-code-hooks` — MIT, 1 mantenedor. Hooks candidatos (protect-tests, config-guard, subagent-spawn-cap) contra el «fake green» de agentes; pendiente decisión de Alberto.
+- `wshobson/agents` — MIT, 1 mantenedor. `plugin-eval` (lint estático de skills/agentes sin llamar al modelo) sería chequeo barato en `/auditoria-diaria`; pendiente decisión.
+- `VoltAgent/awesome-claude-code-subagents` — MIT. Solo cantera de ideas (04-quality-security, 09-meta-orchestration) para `agente-architect`/`verificador-esceptico`; no copiar en bloque.
+
 ## Bitácora de hallazgos (lo más reciente arriba)
 
 - **2026-08-28 (2ª pasada del día) — Paso 2 a mano, a petición de Alberto. 3 búsquedas, 1 hallazgo.**
