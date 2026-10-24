@@ -1,8 +1,8 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-24T09:02:41.463Z",
- "llamadas": 12560,
+ "fin": "2026-10-24T09:18:55.402Z",
+ "llamadas": 12595,
  "categorias": {
   "otro": {
    "llamadas": 1509,
@@ -80,14 +80,14 @@
    }
   },
   "bash": {
-   "llamadas": 6907,
-   "chars_in": 5050545,
-   "chars_out": 20904441,
+   "llamadas": 6932,
+   "chars_in": 5063673,
+   "chars_out": 21042416,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 6907
+    "Bash": 6932
    }
   },
   "mcp:Vercel": {
@@ -112,15 +112,15 @@
    }
   },
   "sql": {
-   "llamadas": 869,
-   "chars_in": 353325,
-   "chars_out": 1744612,
+   "llamadas": 879,
+   "chars_in": 356337,
+   "chars_out": 1769831,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 5,
-    "mcp__Supabase__execute_sql": 864
+    "mcp__Supabase__execute_sql": 874
    }
   },
   "mcp:Supabase": {
