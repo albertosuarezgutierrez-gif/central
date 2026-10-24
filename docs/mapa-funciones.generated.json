@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-22T13:05:52Z",
-  "sha": "f95abe624e24d44c34deaecf49832adf101999dc",
+  "generadoEn": "2026-10-24T09:24:34Z",
+  "sha": "1388a66359162c19f76b1e1099a1883b159c0cb3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5963,6 +5963,112 @@
       "hash": "42c135a048d0"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/contrato/[id]/ContratoAcciones.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "AplicarRenta",
+        "AltaInquilino",
+        "VerDatosInquilino"
+      ],
+      "funciones": [
+        {
+          "nombre": "mensaje",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: string | undefined",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "AplicarRenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "props: { contratoId: string; desde: string; rentaNuevaCent: number; indice: string; periodo: string }",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "Aplica la propuesta tal cual se ve. El servidor la recalcula y, si no coincide, no escribe nada."
+        },
+        {
+          "nombre": "AltaInquilino",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ contratoId }: { contratoId: string }",
+          "retorno": null,
+          "linea": 65,
+          "resumen": "Alta de inquilino. El NIF, correo y teléfono viajan al servidor de Grupo ASegura cifrados en reposo; aquí no se guardan."
+        },
+        {
+          "nombre": "VerDatosInquilino",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inquilinoId }: { inquilinoId: string }",
+          "retorno": null,
+          "linea": 157,
+          "resumen": "NIF, correo y teléfono bajo demanda (solo nivel Total). `null` = no lo diste; ilegible = lo hay pero no se puede leer."
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "27613e5bde7f"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/contrato/[id]/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "ContratoPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string | null",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "cent",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: number | null",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "textoPropuesta",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: ResultadoActualizacion, indice: string | null, descripcion: string | null",
+          "retorno": "string",
+          "linea": 22,
+          "resumen": "Texto de la propuesta: dice el HECHO, sin inventar un 0 % cuando no tenemos el índice."
+        },
+        {
+          "nombre": "ContratoPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 46,
+          "resumen": "Ficha del contrato. 🚨 El id de la URL NO consulta por sí solo: `contratoAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver. Si no existe o no es tuyo: 404 (nunca 403). La PII de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "703d5664b997"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/DireccionCp.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -6100,7 +6206,7 @@
           "exportada": false,
           "params": "c: number | null",
           "retorno": null,
-          "linea": 31,
+          "linea": 32,
           "resumen": "Céntimos → texto editable en español («1234,56»); `null` → vacío (no se sabe, no «0»)."
         },
         {
@@ -6109,7 +6215,7 @@
           "exportada": false,
           "params": "j: RespuestaApi",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "Dato",
@@ -6117,7 +6223,7 @@
           "exportada": false,
           "params": "{ k, v }: { k: string; v: string }",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         },
         {
           "nombre": "Revision",
@@ -6125,7 +6231,7 @@
           "exportada": false,
           "params": "{ s, clienteId, inmuebles, fin }: { s: Subida; clienteId: string; inmuebles: { id: string; alias: string }[]; fin: () => void }",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "fechaEs",
@@ -6133,7 +6239,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 134
+          "linea": 142
         },
         {
           "nombre": "FacturasPendientes",
@@ -6141,7 +6247,7 @@
           "exportada": true,
           "params": "{ clienteId, inmuebles, pendientes }: { clienteId: string; inmuebles: { id: string; alias: string }[]; pendientes: FacturaPendiente[] }",
           "retorno": null,
-          "linea": 140,
+          "linea": 148,
           "resumen": "Facturas ya subidas y leídas que quedaron sin confirmar (se cerró la revisión): reabre la misma revisión con lo guardado. Solo se pinta para titulares con nivel de gestión (el servidor ya las filtra p"
         },
         {
@@ -6150,7 +6256,7 @@
           "exportada": true,
           "params": "{ clienteId, inmuebles }: { clienteId: string; inmuebles: { id: string; alias: string }[] }",
           "retorno": null,
-          "linea": 177,
+          "linea": 185,
           "resumen": "Subir factura → ver propuesta y motivos → corregir → confirmar. El gasto no existe como confirmado hasta el último paso."
         }
       ],
@@ -6159,7 +6265,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "891d65d1b795"
+      "hash": "26dbcc9af124"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/Documentos.tsx",
@@ -6206,7 +6312,31 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "acf716510dce"
+      "hash": "e501e94154a0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/NuevoContrato.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "NuevoContrato"
+      ],
+      "funciones": [
+        {
+          "nombre": "NuevoContrato",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inmuebleId }: { inmuebleId: string }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "Alta de un contrato de larga estancia (solo nivel Total; lo filtra el servidor). Vacío = «no consta», nunca 0."
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "16b22366c3f0"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/page.tsx",
@@ -6221,7 +6351,7 @@
           "exportada": false,
           "params": "v: boolean | null",
           "retorno": null,
-          "linea": 14
+          "linea": 18
         },
         {
           "nombre": "InmueblePage",
@@ -6229,13 +6359,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 21,
+          "linea": 25,
           "resumen": "Ficha del inmueble. 🚨 El id de la URL NO consulta por sí solo: `inmuebleAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver (`accesosPatrimonio`). Si no existe o no es tuyo: 404 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "decb688b2199"
+      "hash": "be2056b5a7d3"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/ListaInmuebles.tsx",
@@ -7562,6 +7692,69 @@
       "hash": "325dd649267d"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/[id]/inquilinos/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`POST /api/patrimonio/contratos/<id>/inquilinos` — alta de un inquilino (o avalista) en un contrato (nivel Total). 🚨 El NIF, correo y teléfono NO se guardan en esta app: van por el PUENTE a `apps/ase"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/contratos/[id]/inquilinos",
+      "hash": "3aee011384d1"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/[id]/renta/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "`POST /api/patrimonio/contratos/<id>/renta` — APLICA la actualización de renta propuesta (fila nueva, append-only). 🚨 El servidor RECALCULA la propuesta (contrato + tabla de índices); el cuerpo `{des"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/contratos/[id]/renta",
+      "hash": "7b082cad0655"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`POST /api/patrimonio/contratos` — alta de un contrato de larga estancia en un inmueble (nivel Total). 🚨 La identidad sale de la cookie; el `inmueble` del cuerpo se busca DENTRO de `accesosPatrimonio"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/contratos",
+      "hash": "0165fbbfc2eb"
+    },
+    {
       "ruta": "apps/asegura-portal/app/api/patrimonio/derramas/route.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -7710,6 +7903,27 @@
       "tablas": [],
       "rutaApi": "/api/patrimonio/inmuebles",
       "hash": "ed523c9df4d0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/inquilinos/[id]/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`GET /api/patrimonio/inquilinos/<id>` — NIF, correo y teléfono del inquilino, descifrados por el PUENTE de `apps/asegura`. Solo nivel Total (`ver_pii_inquilino`); ajeno o sin nivel: 404. Se pide bajo "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/inquilinos/[id]",
+      "hash": "54b79aadcfbb"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/plantillas/route.ts",
@@ -14465,6 +14679,214 @@
       "hash": "06cca1ccc0fd"
     },
     {
+      "ruta": "apps/asegura-portal/lib/patrimonio/contratos-api.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 9) — lógica PURA (puertos inyectados, sin prisma ni sesión) de contratos, inquilinos y actualización de renta: `POST /api/patrimonio/contratos`, `POST /api/patrimonio/contratos/[id]/{inquilinos,renta}` y `GET /api/patrimonio/inquilinos/[id]`. La BD real está en `contrato",
+      "exporta": [
+        "validarAltaContrato",
+        "validarAltaInquilino",
+        "responderAltaContrato",
+        "propuestaDeContrato",
+        "responderAplicarRenta",
+        "responderAltaInquilino",
+        "responderPiiInquilino"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown>",
+          "linea": 34
+        },
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 35
+        },
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, min: number, max: number",
+          "retorno": "string | null",
+          "linea": 36
+        },
+        {
+          "nombre": "fechaOpcional",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Fecha | null | 'invalido'",
+          "linea": 62
+        },
+        {
+          "nombre": "validarAltaContrato",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "V<DatosAltaContrato>",
+          "linea": 68,
+          "resumen": "Forma del alta de un contrato. Los CHECK de la BD lo repiten (cláusula ⇔ índice, `otro` descrito, fin ≥ inicio)."
+        },
+        {
+          "nombre": "pii",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null | 'invalido'",
+          "linea": 138
+        },
+        {
+          "nombre": "validarAltaInquilino",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "V<DatosAltaInquilino>",
+          "linea": 145
+        },
+        {
+          "nombre": "dentro",
+          "kind": "function",
+          "exportada": false,
+          "params": "accesos: AccesosMapa, id: unknown, accion: AccionPatrimonio, buscar: (id: string, ids: readonly string[]) => Promise<T | null>,",
+          "retorno": "Promise<T | null>",
+          "linea": 204,
+          "resumen": "Busca DENTRO de los accesos y exige el nivel de la acción. `null` = la 404 única."
+        },
+        {
+          "nombre": "responderAltaContrato",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosContratos, cuerpo: unknown",
+          "retorno": "Promise<Respuesta>",
+          "linea": 218
+        },
+        {
+          "nombre": "propuestaDeContrato",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Pick<PuertosContratos, 'hoy' | 'indices'>, c: Contrato",
+          "retorno": "Promise<ResultadoActualizacion>",
+          "linea": 229,
+          "resumen": "La propuesta de HOY para un contrato ya autorizado (la usan la página y el aplicar: una sola regla)."
+        },
+        {
+          "nombre": "responderAplicarRenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosContratos, contratoId: unknown, cuerpo: unknown",
+          "retorno": "Promise<Respuesta>",
+          "linea": 234
+        },
+        {
+          "nombre": "responderAltaInquilino",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosContratos, contratoId: unknown, cuerpo: unknown",
+          "retorno": "Promise<Respuesta>",
+          "linea": 248
+        },
+        {
+          "nombre": "responderPiiInquilino",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosContratos, inquilinoId: unknown",
+          "retorno": "Promise<Respuesta>",
+          "linea": 271
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fd887738b240"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/contratos-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 9) — adaptador con BD de contratos, inquilinos y actualización de renta. 🚨 TODA función parte de `accesosPatrimonio(identidadId)` (cookie + `portal_vinculo`); el contrato, el inmueble o el inquilino de la URL NUNCA consultan por sí solos: se buscan DENTRO de los titular",
+      "exporta": [
+        "puertosContratos",
+        "contratoAutorizado",
+        "contratosDelInmueble"
+      ],
+      "funciones": [
+        {
+          "nombre": "aFecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string | null",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "contratoDentro",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "id: string, clientesIds: readonly string[]",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "El `where` del contrato pedido DENTRO de los titulares autorizados (y sin archivar)."
+        },
+        {
+          "nombre": "leerContrato",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: string, clientesIds: readonly string[]",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "contratoPuro",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaLeida",
+          "retorno": "Contrato",
+          "linea": 45
+        },
+        {
+          "nombre": "filasIndice",
+          "kind": "function",
+          "exportada": false,
+          "params": "indice: IndiceActualizacion",
+          "retorno": "Promise<FilaIndice[]>",
+          "linea": 50
+        },
+        {
+          "nombre": "puertosContratos",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "PuertosContratos",
+          "linea": 63
+        },
+        {
+          "nombre": "contratoAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, idPedido: string",
+          "retorno": "Promise<FichaContrato | null>",
+          "linea": 155,
+          "resumen": "El contrato del id de la URL SOLO si cuelga de un titular autorizado. `null` = 404 (no existe o no es tuyo)."
+        },
+        {
+          "nombre": "contratosDelInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, inmuebleId: string",
+          "retorno": "Promise<ContratoResumen[]>",
+          "linea": 196,
+          "resumen": "Contratos (sin archivar) de un inmueble, buscados DENTRO de los titulares autorizados."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "42e167e0e311"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/patrimonio/dia-madrid.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "PATRIMONIO (22/10/2026, paso 7) — el «día» de un tope diario es el de ESPAÑA (Europe/Madrid), no el de UTC: a las 00:30 de Madrid en verano todavía es «ayer» en UTC y el contador no se reiniciaría hasta las 02:00. PURO: el reloj se inyecta.",
@@ -14584,7 +15006,7 @@
           "exportada": true,
           "params": "v: string",
           "retorno": "string",
-          "linea": 48,
+          "linea": 51,
           "resumen": "Nombre mostrable: sin ruta, sin caracteres de control (C0/C1), sin marcas de dirección bidi (`factura‮fdp.exe` se pintaría «factura.exe.pdf» al revés) ni separadores de línea Unicode, ≤120 caracteres "
         },
         {
@@ -14593,7 +15015,7 @@
           "exportada": true,
           "params": "nombre: string, mime: TipoFactura",
           "retorno": "string",
-          "linea": 62,
+          "linea": 65,
           "resumen": "El nombre con la extensión de su tipo real: si ya la lleva (`.jpeg` vale para JPG) se deja; si no, se añade."
         },
         {
@@ -14602,7 +15024,7 @@
           "exportada": false,
           "params": "tipo: unknown, id: unknown",
           "retorno": "OwnerRef | null",
-          "linea": 69
+          "linea": 72
         },
         {
           "nombre": "titularCon",
@@ -14610,7 +15032,7 @@
           "exportada": false,
           "params": "accesos: AccesosMapa, pedido: unknown, accion: 'ver' | 'subir' | 'borrar', o: OwnerDocumento",
           "retorno": "string | null",
-          "linea": 73,
+          "linea": 76,
           "resumen": "El titular pedido, SOLO si está en los accesos y su nivel permite la acción sobre alguna carpeta del owner."
         },
         {
@@ -14619,7 +15041,7 @@
           "exportada": true,
           "params": "p: PuertosDocumentos, c: { titular: unknown; ownerTipo: unknown; ownerId: unknown; carpeta: unknown; fichero: FicheroDocumento | null },",
           "retorno": "Promise<Respuesta>",
-          "linea": 78
+          "linea": 81
         },
         {
           "nombre": "responderListaDocumentos",
@@ -14627,7 +15049,7 @@
           "exportada": true,
           "params": "p: PuertosDocumentos, c: { titular: unknown; ownerTipo: unknown; ownerId: unknown; desde?: unknown }",
           "retorno": "Promise<Respuesta>",
-          "linea": 108
+          "linea": 112
         },
         {
           "nombre": "responderDescargaDocumento",
@@ -14635,7 +15057,7 @@
           "exportada": true,
           "params": "p: PuertosDocumentos, c: { titular: unknown; documento: unknown }",
           "retorno": "Promise<RespuestaDescarga>",
-          "linea": 120
+          "linea": 125
         },
         {
           "nombre": "responderBorrarDocumento",
@@ -14643,19 +15065,18 @@
           "exportada": true,
           "params": "p: PuertosDocumentos, c: { titular: unknown; documento: unknown }",
           "retorno": "Promise<Respuesta>",
-          "linea": 131
+          "linea": 136
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e83b94a243f0"
+      "hash": "95f1d44f3dba"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/documentos-bd.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "PATRIMONIO (22/10/2026, paso 8) — adaptador con BD de los documentos de un inmueble/contrato/inquilino (ficheros en `bytea`, tabla `portal_patrimonio_documento`, SQL `2026-10-22_portal_patrimonio_documento.sql`). 🚨 Como `facturas-bd.ts`/`gastos-bd.ts`: parte de `accesosPatrimonio(identidadId)` (coo",
       "exporta": [
-        "crearDocumentoTx",
         "puertosDocumentos"
       ],
       "funciones": [
@@ -14665,7 +15086,7 @@
           "exportada": false,
           "params": "f: FilaMeta",
           "retorno": "DocumentoMeta",
-          "linea": 29
+          "linea": 26
         },
         {
           "nombre": "ownerDe",
@@ -14673,7 +15094,7 @@
           "exportada": false,
           "params": "f: FilaMeta",
           "retorno": "OwnerRef | null",
-          "linea": 30
+          "linea": 27
         },
         {
           "nombre": "titularExistente",
@@ -14681,17 +15102,17 @@
           "exportada": false,
           "params": "clienteId: string",
           "retorno": "Promise<",
-          "linea": 34,
+          "linea": 31,
           "resumen": "El titular de una ficha YA autorizada, sin crearlo (leer/listar/borrar no dan de alta nada)."
         },
         {
-          "nombre": "crearDocumentoTx",
+          "nombre": "estadoOwner",
           "kind": "function",
-          "exportada": true,
-          "params": "tx: Tx, x: { titularId: string; identidadId: string; owner: OwnerRef; carpeta: string; nombre: string; mime: TipoFactura; sha256: string; contenido: Buffer },",
-          "retorno": "Promise<string>",
-          "linea": 43,
-          "resumen": "Inserta el documento DENTRO de una transacción ya abierta (la usan `guardar` y la subida de facturas, que lo hace en la misma reserva). No comprueba el tope: lo hace quien la llama con SU bloqueo. La "
+          "exportada": false,
+          "params": "donde: { id: string; titularId: string }, owner: OwnerRef",
+          "retorno": "Promise<'activo' | 'archivado' | null>",
+          "linea": 37,
+          "resumen": "Estado del owner DENTRO del titular: `null` = no existe / no es de ese titular."
         },
         {
           "nombre": "puertosDocumentos",
@@ -14699,12 +15120,44 @@
           "exportada": true,
           "params": "identidadId: string, ahora: () => Date = () => new Date()",
           "retorno": "PuertosDocumentos",
-          "linea": 64
+          "linea": 49
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0f210e972b36"
+      "hash": "25df5fd93a74"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/documentos-tx.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026) — cuerpos TRANSACCIONALES de los documentos, sin prisma ni sesión (el cliente de transacción se recibe por parámetro con una forma mínima). Existen aparte de `documentos-bd.ts` para poder probar con un `tx` falso el ORDEN de las sentencias (bloqueo → recuento → inserción): si",
+      "exporta": [
+        "crearDocumentoTx",
+        "guardarConTope"
+      ],
+      "funciones": [
+        {
+          "nombre": "crearDocumentoTx",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxMin, x: { titularId: string; identidadId: string; owner: OwnerTx; carpeta: string; nombre: string; mime: string; sha256: string; contenido: Buffer },",
+          "retorno": "Promise<string>",
+          "linea": 30,
+          "resumen": "Inserta el documento DENTRO de una transacción ya abierta (la usan `guardarConTope`, la subida de facturas y el traslado de una factura a otro inmueble). No comprueba el tope: lo hace quien la llama c"
+        },
+        {
+          "nombre": "guardarConTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxMin, x: { identidadId: string; titularId: string; owner: OwnerTx; carpeta: string; nombre: string; mime: string; sha256: string; contenido: Buffer; desde: Date; max: number },",
+          "retorno": "Promise<",
+          "linea": 52,
+          "resumen": "Tope diario ATÓMICO: bloqueo asesor por identidad → recuento (también borrados) → inserción, todo en la misma transacción."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ffc502d6e2ac"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/extraer-factura.ts",
@@ -14931,7 +15384,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "puertosFacturas",
@@ -14939,15 +15392,87 @@
           "exportada": true,
           "params": "identidadId: string, ahora: () => Date = () => new Date()",
           "retorno": "PuertosFacturas",
-          "linea": 27,
+          "linea": 28,
           "resumen": "`ahora` se inyecta para poder probar el límite del día; en producción es el reloj."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1111c99597ed"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/facturas-regla.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026) — reglas PURAS de la UI de facturas (sin imports: se usan desde el cliente).",
+      "exporta": [
+        "reglaInmuebleSubida",
+        "destinoDelFichero"
+      ],
+      "funciones": [
+        {
+          "nombre": "reglaInmuebleSubida",
+          "kind": "function",
+          "exportada": true,
+          "params": "inmuebles: number, inmuebleElegido: string",
+          "retorno": "'ok' | 'elegir' | 'sin_inmuebles'",
+          "linea": 8,
+          "resumen": "Regla de la UI de subida: el fichero solo se guarda si cuelga de un inmueble (sin owner no hay carpeta). Con inmuebles hay que ELEGIR uno (`elegir`); sin ninguno no se puede guardar el fichero (`sin_i"
+        },
+        {
+          "nombre": "destinoDelFichero",
+          "kind": "function",
+          "exportada": true,
+          "params": "inmuebleSubida: string | null, inmuebleConfirmado: string",
+          "retorno": "'se_traslada' | 'queda' | 'sin_fichero'",
+          "linea": 17,
+          "resumen": "Al confirmar: ¿qué pasa con el fichero guardado? `se_traslada` = se copia al inmueble nuevo; `queda` = «sin inmueble» o el mismo (el documento sigue en el inmueble de la subida); `sin_fichero` = la su"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "555bae2f6122"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/facturas-tx.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, pasos 7-8) — cuerpos TRANSACCIONALES de las facturas, sin prisma ni sesión (el `tx` entra por parámetro con la forma mínima de `documentos-tx.ts`), para probar con un `tx` falso el ORDEN de las sentencias y el traslado del documento al confirmar con otro inmueble. Sin SQL nue",
+      "exporta": [
+        "reservarConTope",
+        "confirmarGasto"
+      ],
+      "funciones": [
+        {
+          "nombre": "aFecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "reservarConTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxMin, x: { identidadId: string titularId: string inmuebleId: string | null carpetaFacturas: string fichero: { nombre: string; mime: string; contenido: Buffer } desde: Date fechaMarcador: string max: number propuestaInicial: unknown },",
+          "retorno": "Promise<",
+          "linea": 12,
+          "resumen": "Tope diario de facturas ATÓMICO: bloqueo por identidad → recuento → fila `propuesto` (+ documento del inmueble)."
+        },
+        {
+          "nombre": "confirmarGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxMin, x: { titularId: string; identidadId: string; gastoId: string; datos: DatosConfirmacion; ahora: Date },",
+          "retorno": "Promise<'ok' | 'no_encontrado' | 'ya_resuelto'>",
+          "linea": 68,
+          "resumen": "Confirma el gasto. Si se confirma con OTRO inmueble del mismo titular y la factura tenía documento, el documento (inmutable por trigger) se COPIA en el inmueble nuevo, el viejo se sella `borrado_en` y"
         }
       ],
       "tablas": [
         "node"
       ],
       "rutaApi": null,
-      "hash": "79cb5dc1eb58"
+      "hash": "cc2cadf30967"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/gastos-api.ts",
@@ -15234,6 +15759,74 @@
       "hash": "bf901ad9fa7f"
     },
     {
+      "ruta": "apps/asegura-portal/lib/patrimonio/indices.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 9) — qué variación de índice (IPC/IRAV) se usa para PROPONER la actualización de la renta de un contrato, y si lo que el propietario pide aplicar es exactamente lo propuesto. PURO: sin prisma ni sesión ni reloj. Las filas llegan de `seguros.portal_patrimonio_indice` (la ",
+      "exporta": [
+        "periodoReferencia",
+        "elegirVariacion",
+        "propuestaRenta",
+        "confirmarAplicacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesIndice",
+          "kind": "function",
+          "exportada": false,
+          "params": "periodo: string",
+          "retorno": "number | null",
+          "linea": 44
+        },
+        {
+          "nombre": "periodoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 49
+        },
+        {
+          "nombre": "periodoReferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "aniversario: Fecha",
+          "retorno": "string",
+          "linea": 56,
+          "resumen": "Periodo de referencia (`YYYY-MM`) para un aniversario: el mes ANTERIOR al del aniversario."
+        },
+        {
+          "nombre": "elegirVariacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaIndice[], indice: IndiceActualizacion, aniversario: Fecha,",
+          "retorno": "VariacionIndice | null",
+          "linea": 68,
+          "resumen": "La variación que corresponde a ese aniversario, del índice del contrato. `null` = no la tenemos (regla 2 y 4)."
+        },
+        {
+          "nombre": "propuestaRenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "contrato: Contrato, filas: readonly FilaIndice[], hoy: Fecha",
+          "retorno": "ResultadoActualizacion",
+          "linea": 98,
+          "resumen": "Propuesta de actualización para HOY. Delega en el puro; aquí solo se elige la variación del índice del contrato para el aniversario que toca. Sin cláusula, el puro devuelve `sin_clausula` antes de mir"
+        },
+        {
+          "nombre": "confirmarAplicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown, propuesta: ResultadoActualizacion",
+          "retorno": "ResultadoConfirmacion",
+          "linea": 114,
+          "resumen": "Regla 6: el cuerpo confirma lo propuesto; no aporta nada que se guarde."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3780f3592850"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/patrimonio/inmuebles-api.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "PATRIMONIO (22/10/2026) — lógica de `GET/POST /api/patrimonio/inmuebles`, SIN prisma ni sesión (puertos inyectados), para poder probar el aislamiento con `node --test`. La ruta real (`app/api/patrimonio/inmuebles/route.ts`) le pasa los puertos de `inmuebles-bd.ts`, que sí resuelven `accesosPatrimoni",
@@ -15320,6 +15913,60 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4ee3a9608d65"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/inquilinos-puente.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (22/10/2026, paso 9) — el PUENTE de la PII del inquilino a `apps/asegura` (`/api/portal/patrimonio/inquilino`), a imagen de `lib/mis-datos.ts` ↔ `/api/portal/contacto`. Por qué: el NIF, el correo y el teléfono del inquilino van CIFRADOS con `PII_ENCRYPTION_KEY`, que el portal NO tiene (ni",
+      "exporta": [
+        "altaInquilinoPorPuente",
+        "piiInquilinoPorPuente"
+      ],
+      "funciones": [
+        {
+          "nombre": "puente",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "",
+          "linea": 18
+        },
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "init: { metodo: 'GET' | 'POST'; query?: URLSearchParams; cuerpo?: unknown }",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 51
+        },
+        {
+          "nombre": "altaInquilinoPorPuente",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, contratoId: string, datos: DatosAltaInquilino,",
+          "retorno": "Promise<ResultadoPuenteAlta>",
+          "linea": 53
+        },
+        {
+          "nombre": "piiInquilinoPorPuente",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, inquilinoId: string",
+          "retorno": "Promise<ResultadoPuentePii>",
+          "linea": 71
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ce20eb2ddb4f"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/lectura.ts",
@@ -21022,6 +21669,30 @@
       "hash": "4b6748731eb0"
     },
     {
+      "ruta": "apps/asegura/app/api/cron/indices-renta/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "GET /api/cron/indices-renta — IPC e IRAV del INE → `portal_patrimonio_indice` (paso 9b, 22/10/2026). Mensual, día 20 a las 10:00 UTC (`vercel.json`): el IPC del mes anterior ya está publicado. Auth: `"
+        }
+      ],
+      "tablas": [
+        "next",
+        "seguros"
+      ],
+      "rutaApi": "/api/cron/indices-renta",
+      "hash": "0b5587de99a0"
+    },
+    {
       "ruta": "apps/asegura/app/api/cron/polizas-pdf/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -26127,6 +26798,26 @@
       "tablas": [],
       "rutaApi": "/api/portal/nota",
       "hash": "82c2ccbf59e1"
+    },
+    {
+      "ruta": "apps/asegura/app/api/portal/patrimonio/inquilino/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 44
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/portal/patrimonio/inquilino",
+      "hash": "79f314ddde23"
     },
     {
       "ruta": "apps/asegura/app/api/portal/personas-poliza/route.ts",
@@ -44773,6 +45464,62 @@
       "hash": "274871a642e0"
     },
     {
+      "ruta": "apps/asegura/lib/indices-renta.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "serieDe",
+        "urlSerie",
+        "urlTabla",
+        "ejecutarIndicesRenta"
+      ],
+      "funciones": [
+        {
+          "nombre": "serieDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "indice: IndiceIne, env: Record<string, string | undefined> = process.env",
+          "retorno": "string | null",
+          "linea": 34,
+          "resumen": "Código de serie forzado por env, o el por defecto; `null` si el índice se baja por tabla."
+        },
+        {
+          "nombre": "urlSerie",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string",
+          "retorno": "string",
+          "linea": 38
+        },
+        {
+          "nombre": "urlTabla",
+          "kind": "function",
+          "exportada": true,
+          "params": "tabla: string",
+          "retorno": "string",
+          "linea": 42
+        },
+        {
+          "nombre": "ejecutarIndicesRenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "deps: DepsIndicesRenta",
+          "retorno": "Promise<ResultadoIndice[]>",
+          "linea": 64
+        },
+        {
+          "nombre": "unIndice",
+          "kind": "function",
+          "exportada": false,
+          "params": "indice: IndiceIne, d: DepsIndicesRenta",
+          "retorno": "Promise<ResultadoIndice>",
+          "linea": 76
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6a3b43f60dd4"
+    },
+    {
       "ruta": "apps/asegura/lib/informe-mediacion.ts",
       "ambito": "apps/asegura",
       "resumen": "Informe anual de mediación (base de la documentación estadístico-contable a la DGSFP). Solo lectura. La suma vive en `@central/module-seguros` (informe-mediacion.ts); aquí, las consultas. Tres bloques: primas del año por compañía y ramo (recibos de la cartera viva O que ha mandado CIMA, aunque cuelg",
@@ -47397,6 +48144,111 @@
       ],
       "rutaApi": null,
       "hash": "50f0942febce"
+    },
+    {
+      "ruta": "apps/asegura/lib/patrimonio-inquilino-portal.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Patrimonio del portal (22/10/2026, paso 9) — el lado de ASEGURA del puente del inquilino (`app/api/portal/patrimonio/inquilino`): alta con la PII CIFRADA y lectura descifrada para el propietario. 🚨 El portal es la app pública. Lo que llega por el puente es `identidadId` + `contratoId` (o `inquilino",
+      "exporta": [
+        "puedePatrimonio",
+        "altaInquilinoDesdePortal",
+        "piiInquilinoParaPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "nivelDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "Nivel",
+          "linea": 30
+        },
+        {
+          "nombre": "puedePatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, identidadId: string, clienteId: string, accion: AccionPatrimonio,",
+          "retorno": "Promise<boolean>",
+          "linea": 33,
+          "resumen": "¿Puede ESTA identidad hacer `accion` sobre el patrimonio de la ficha `clienteId`? Fail-closed."
+        },
+        {
+          "nombre": "altaInquilinoDesdePortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, d: AltaInquilinoPortal",
+          "retorno": "Promise<ResultadoAltaPuente>",
+          "linea": 111,
+          "resumen": "Alta del inquilino en el contrato. El titular sale del CONTRATO, nunca del cuerpo."
+        },
+        {
+          "nombre": "piiInquilinoParaPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, identidadId: string, inquilinoId: string",
+          "retorno": "Promise<ResultadoPiiPuente>",
+          "linea": 147,
+          "resumen": "PII descifrada para el propietario (nivel Total). `null` = no la dio; `ilegibles` = la hay pero no abre."
+        }
+      ],
+      "tablas": [
+        "portal_autorizacion",
+        "portal_patrimonio_contrato",
+        "portal_patrimonio_contrato_inquilino",
+        "portal_patrimonio_inquilino",
+        "portal_patrimonio_titular"
+      ],
+      "rutaApi": null,
+      "hash": "0c30fc3c4791"
+    },
+    {
+      "ruta": "apps/asegura/lib/patrimonio-inquilino-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Patrimonio del portal (22/10/2026, paso 9) — REGLAS puras del alta de inquilino que llega del portal por el puente (`app/api/portal/patrimonio/inquilino`). Sin BD. Lo de BD (acceso, inserción, lectura) está en `lib/patrimonio-inquilino-portal.ts`. Dos cosas que no se negocian: 1. 🚨 NUNCA en claro. ",
+      "exporta": [
+        "revisarAltaInquilino",
+        "cifrarPii",
+        "cifrarAltaInquilino"
+      ],
+      "funciones": [
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "revisarAltaInquilino",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: unknown",
+          "retorno": "Revision<AltaInquilinoPortal>",
+          "linea": 33
+        },
+        {
+          "nombre": "cifrarPii",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string | null",
+          "linea": 72,
+          "resumen": "Cifra o NADA: sin el sobre `v1:` (falta la clave) devuelve `null`, nunca el texto en claro."
+        },
+        {
+          "nombre": "cifrarAltaInquilino",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Pick<AltaInquilinoPortal, 'nif' | 'email' | 'telefono'>",
+          "retorno": "PiiCifrada | null",
+          "linea": 84,
+          "resumen": "Lo que se escribe en BD. `null` (con algún dato dado) = falta una clave: el alta NO se hace."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ae6f6f92621b"
     },
     {
       "ruta": "apps/asegura/lib/personas-portal-entradas.ts",
@@ -208034,6 +208886,101 @@
       "hash": "8f1c4c5daea8"
     },
     {
+      "ruta": "packages/module-patrimonio/src/indices-ine.ts",
+      "ambito": "packages/module-patrimonio",
+      "resumen": "Índices IPC / IRAV del INE (paso 9b). Funciones PURAS: el JSON llega como parámetro, nada de red ni reloj (`hoy` entra siempre inyectado). El cron de `apps/asegura` descarga, y aquí se interpreta, se valida y se decide qué filas son nuevas. Un índice dudoso NO se escribe: de él cuelga una renta que ",
+      "exporta": [
+        "esPeriodoIndice",
+        "periodoAtras",
+        "parsearSerieIne",
+        "validarIndice",
+        "periodoEsperado",
+        "planificarInserciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "esPeriodoIndice",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is string",
+          "linea": 21
+        },
+        {
+          "nombre": "numeroDePeriodo",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: string",
+          "retorno": "number",
+          "linea": 25
+        },
+        {
+          "nombre": "periodoDeNumero",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 29
+        },
+        {
+          "nombre": "periodoAtras",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoyIso: string, meses: number",
+          "retorno": "string",
+          "linea": 35,
+          "resumen": "Mes `YYYY-MM` de una fecha ISO (`hoy` inyectado) desplazado `meses` hacia atrás."
+        },
+        {
+          "nombre": "parsearSerieIne",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown, indice: IndiceIne",
+          "retorno": "PuntoIndice[]",
+          "linea": 45,
+          "resumen": "Convierte la respuesta de `DATOS_SERIE` en `{periodo, pct}[]` ordenado por periodo. Lanza `formato_ine(...)` si la forma no es la esperada (no adivina ni salta puntos: un punto roto invalida la descar"
+        },
+        {
+          "nombre": "validarIndice",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: readonly PuntoIndice[]",
+          "retorno": "ResultadoValidacion",
+          "linea": 77,
+          "resumen": "Valida una serie ya parseada: periodo `YYYY-MM` válido y sin repetir, `pct` finito dentro de −10..+20 %, y meses CONSECUTIVOS (un hueco en medio es señal de que el INE o nuestro parseo se ha torcido)."
+        },
+        {
+          "nombre": "periodoEsperado",
+          "kind": "function",
+          "exportada": true,
+          "params": "_indice: IndiceIne, hoyIso: string",
+          "retorno": "string",
+          "linea": 106,
+          "resumen": "Último periodo que YA debería estar publicado en `hoy`: mes − 1 para IPC e IRAV (los dos salen hacia el día 15 del mes siguiente; IRAV de junio 2026 publicado el 15/07/2026). El cron corre el día 20: "
+        },
+        {
+          "nombre": "mismoPct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number, b: number",
+          "retorno": null,
+          "linea": 121
+        },
+        {
+          "nombre": "planificarInserciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "descargados: readonly PuntoIndice[], guardados: readonly IndiceGuardado[],",
+          "retorno": "InsercionIndice[]",
+          "linea": 127,
+          "resumen": "Qué hay que insertar: periodos que no tenemos (`revisado=false`) y periodos cuyo valor ha cambiado respecto a la lectura vigente (`revisado=true`). Lo ya guardado e igual no se repite → dos pasadas no"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3e955b1d1f23"
+    },
+    {
       "ruta": "packages/module-patrimonio/src/infraseguro.ts",
       "ambito": "packages/module-patrimonio",
       "resumen": "Alerta de infraseguro de un inmueble (spec §5.8): capital de continente asegurado vs valor de reconstrucción ESTIMADO con los m² del Catastro (`capitalContinenteSugerido` de module-tarificacion, que calcula el adaptador). La comparación y el umbral (80 %) NO se duplican: son `avisoInfraseguro`/`UMBR",
@@ -240164,7 +241111,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5042,
-    "funciones": 19278
+    "archivos": 5062,
+    "funciones": 19355
   }
 }
