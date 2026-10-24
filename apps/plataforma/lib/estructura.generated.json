@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-22T13:05:52Z",
+  "generadoEn": "2026-10-24T08:52:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2050,12 +2050,12 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 25
       },
       "asegura-web": {
         "estado": "no",
@@ -2321,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 295
+        "evidencias": 297
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2375,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 63
+        "evidencias": 64
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2429,7 +2429,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 43
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3025,7 +3025,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 20
+        "evidencias": 21
       },
       "asegura-portal": {
         "presente": false,
@@ -4172,6 +4172,7 @@
       "/api/cron/coberturas-backfill",
       "/api/cron/felicitaciones",
       "/api/cron/google-contactos",
+      "/api/cron/indices-renta",
       "/api/cron/polizas-pdf",
       "/api/cron/presentacion-app",
       "/api/cron/purga-rgpd",
@@ -4415,6 +4416,7 @@
       "/api/portal/documento",
       "/api/portal/mejorar-precio",
       "/api/portal/nota",
+      "/api/portal/patrimonio/inquilino",
       "/api/portal/personas-poliza",
       "/api/portal/presupuesto",
       "/api/portal/solicitud-datos",
@@ -4487,11 +4489,15 @@
       "/api/modulos",
       "/api/patrimonio/codigo-postal",
       "/api/patrimonio/comunidades",
+      "/api/patrimonio/contratos",
+      "/api/patrimonio/contratos/[id]/inquilinos",
+      "/api/patrimonio/contratos/[id]/renta",
       "/api/patrimonio/derramas",
       "/api/patrimonio/documentos",
       "/api/patrimonio/documentos/[id]",
       "/api/patrimonio/facturas",
       "/api/patrimonio/inmuebles",
+      "/api/patrimonio/inquilinos/[id]",
       "/api/patrimonio/plantillas",
       "/api/patrimonio/vias",
       "/api/peticiones",
@@ -7148,7 +7154,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1780,
+    "apis": 1786,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
