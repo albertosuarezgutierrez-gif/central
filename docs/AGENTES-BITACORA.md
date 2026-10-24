@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-24 · mercado-booking** · hizo: 24/24 ventanas (aforos 2/4/5/12; 06-2027, 09-2027, 03/04-2027, 11/12-2026), 237 comps `booking_mcp`; escaparate propio 4/4 (29-nov, 13-dic); 3 propios (HOUSE SEVILLANA) descartados del corpus; plan 572, 548 fuera por tope; latido ok; dudas: —; fallos: —; PRs/commits: —
+
 - **2026-10-22 · facturas-correo** · hizo: Vía B sana (copias a `_buzon_pdf` hoy); 5 hilos candidatos 48h, ninguno factura (Occident, Asecon, AEAT basura, cole, Mapfre campaña); backlog 4.0: 26 revisada_sin_cargo, 2 sin_revisar (Si Que Brilla oct 1.128,48€ sin cargo aún; Anthropic 5/10 180€ sin casar, banco muestra 2×170€ el 01 y 02/10); sin escrituras; dudas: Anthropic 180 vs 170×2; fallos: —; PRs/commits: —
 
 ### 22/10/2026 · sivra_mercado_booking
