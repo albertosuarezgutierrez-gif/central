@@ -438,6 +438,10 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    PR draft del **carril 2** (no a `main`).
 
 4. **Reconciliación de memoria y skills** (el núcleo, **carril 1**):
+   - **Lint estático de agentes y skills** (sin modelo, coste ~0): `node scripts/lint-agentes.mjs`.
+     Refleja en el informe los ERROR (frontmatter sin `name`/`description`, `name` ≠ fichero/carpeta,
+     duplicados) y el nº de AVISO (descripciones fuera de 40-1024, enlaces a ficheros que no existen,
+     `tools` raras). Los ERROR se arreglan en el carril 1; los AVISO solo se listan.
    - **Las CONVERSACIONES del rango, no solo los commits** (petición de Alberto, 02/09/2026:
      *«revisa las conversaciones por si hay algo pendiente por hacer; actualiza skill, memoria,
      agentes, todo»*). El límite conocido de este doc —una sesión de solo charla no deja commit y

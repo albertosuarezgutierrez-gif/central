@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/10/2026)** — Barrido de repos GitHub para agentes (anthropics/skills, obra/superpowers, karanb192/claude-code-hooks, wshobson/agents, VoltAgent). Aplicado B: paso de evaluación de `description` (should/should-not-trigger) en `agentes-entrenador`; C: sección «Ecosistema Claude Code» en `docs/VIGIA-OSS.md`.
+Después: superpowers v7.0.1 aplicado (brainstorming/writing-plans; `SUPERPOWERS_DISABLE_TELEMETRY` en settings); hook PreToolUse `scripts/proteger-tests.mjs` bloquea añadir `.skip(`/`.only(`/`.todo(`/`xit(`/`skip: true` o vaciar un test (cepo `test/regression-hook-proteger-tests.test.ts`; `{ skip: 10 }` de Prisma pasa); lint estático `scripts/lint-agentes.mjs` en `/auditoria-diaria` (0 ERROR, 3 AVISO de enlaces rotos). Fix bomba de tiempo `correo-cruce-cima.test.ts` (sábado). Descartados a propósito: config-guard y subagent-spawn-cap (bloquean trabajo legítimo). PR #5028.
 **(22/10/2026)** — Patrimonio F1 pasos 9, 9b y arreglos (integrados, sin commitear). Paso 9: contratos/inquilinos/renta; PII del inquilino por puente a asegura, solo nivel Total, 503 `sin_puente`/`sin_clave`; `TOPE_LEGAL_PCT` = null (sin tope inventado).
 Paso 9b: cron `/api/cron/indices-renta` (día 20, 10:00 UTC, tabla global append-only `portal_patrimonio_indice`): IRAV = tabla INE 72975; IPC = serie IPC251852, POR VERIFICAR en la primera ejecución (avisa por Telegram si falla).
 Arreglos: inmueble archivado = documentos solo lectura; factura confirmada con otro inmueble TRASLADA el documento; la subida de factura exige inmueble.
