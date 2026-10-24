@@ -10,6 +10,7 @@ import {
   normalizarLecturaEscaner,
   prefijoArchivosDelDia,
   prefijoEscaneosDelDia,
+  polizaTrasLectura,
   proponerPoliza,
   textoAvisoImpago,
 } from './escaner-documento.ts'
@@ -77,4 +78,17 @@ test('cupo del escáner: clave por día de MADRID, no UTC', () => {
   // El cupo de archivado no comparte prefijo con el de lecturas (si no, uno gastaría el del otro).
   assert.equal(prefijoArchivosDelDia(new Date('2026-10-13T10:00:00Z')), 'escaner-archivo:2026-10-13:')
   assert.ok(!prefijoArchivosDelDia(new Date('2026-10-13T10:00:00Z')).startsWith(prefijoEscaneosDelDia(new Date('2026-10-13T10:00:00Z'))))
+})
+
+test('polizaTrasLectura: la póliza fija (recibo del paso de renovación) manda sobre la propuesta de la IA', () => {
+  assert.equal(polizaTrasLectura('d:abc', 'c:otra'), 'd:abc')
+  assert.equal(polizaTrasLectura('d:abc', null), 'd:abc')
+  assert.equal(polizaTrasLectura(undefined, 'c:otra'), 'c:otra')
+  assert.equal(polizaTrasLectura(undefined, null), '')
+})
+
+test('PasoRenovacion abre el escáner LIGADO a la póliza declarada que renueva (d:<id>)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/(portal)/boveda/PasoRenovacion.tsx', import.meta.url), 'utf8')
+  assert.match(src, /<EscanerDocumento polizaFija=\{`d:\$\{polizaId\}`\} \/>/)
 })

@@ -26,6 +26,8 @@ export interface PuertosGenerador {
   derramas(): Promise<Derrama[]>
   /** Claves ya persistidas de ese titular (cualquier estado, también `descartado`). */
   clavesDe(titularId: string): Promise<ReadonlySet<string>>
+  /** Cuáles de estos inmuebles están ARCHIVADOS (la derrama cuelga de su `inmuebleId`, sin relación en el schema). */
+  inmueblesArchivados(ids: readonly string[]): Promise<ReadonlySet<string>>
   /** `duplicado` = el índice único dijo que ya existía (P2002 tolerado). */
   insertar(g: GastoGenerado): Promise<'creado' | 'duplicado'>
 }
@@ -40,10 +42,17 @@ export function ventanaPlantillas(hoy: string): { desde: string; hasta: string }
 export async function generarGastosPropuestos(p: PuertosGenerador, hoy: string): Promise<ResumenGenerador> {
   const { desde, hasta } = ventanaPlantillas(hoy)
   const candidatos: GastoGenerado[] = []
-  for (const pl of await p.plantillas()) {
+  const plantillas = await p.plantillas()
+  const archivadosPl = await p.inmueblesArchivados([...new Set(plantillas.flatMap((x) => (x.inmuebleId === null ? [] : [x.inmuebleId])))])
+  for (const pl of plantillas) {
+    if (pl.inmuebleId !== null && archivadosPl.has(pl.inmuebleId)) continue
     for (const o of generarOcurrencias(pl, desde, hasta)) candidatos.push({ ...o, origen: 'plantilla' })
   }
-  for (const d of await p.derramas()) {
+  const derramas = await p.derramas()
+  // Inmueble archivado = no se proponen gastos nuevos de sus derramas (defensa además de lo que filtre el adaptador).
+  const archivados = await p.inmueblesArchivados([...new Set(derramas.map((d) => d.inmuebleId))])
+  for (const d of derramas) {
+    if (archivados.has(d.inmuebleId)) continue
     // Todas las cuotas ya vencidas (la clave evita repetir las ya generadas); las futuras esperan a su mes.
     for (const o of cuotasDerrama(d)) if (o.fecha <= hasta) candidatos.push({ ...o, origen: 'derrama' })
   }

@@ -19,11 +19,12 @@ const derrama = (extra: Partial<Derrama> = {}): Derrama => ({
 })
 
 /** BD falsa con el mismo contrato que el índice único (titular_id, clave): el segundo insert es `duplicado`. */
-function bdFalsa(plantillas: PlantillaGasto[], derramas: Derrama[]) {
+function bdFalsa(plantillas: PlantillaGasto[], derramas: Derrama[], archivados: string[] = []) {
   const filas = new Map<string, GastoGenerado>()
   const p: PuertosGenerador = {
     plantillas: async () => plantillas,
     derramas: async () => derramas,
+    inmueblesArchivados: async (ids) => new Set(ids.filter((i) => archivados.includes(i))),
     clavesDe: async (t) => new Set([...filas.keys()].filter((k) => k.startsWith(`${t}|`)).map((k) => k.slice(t.length + 1))),
     insertar: async (g) => {
       const k = `${g.titularId}|${g.clave}`
@@ -107,4 +108,19 @@ test('el adaptador de BD tolera P2002 y escribe estado propuesto', () => {
   assert.match(src, /e\.code === 'P2002'\) return 'duplicado'/)
   assert.match(src, /estado: 'propuesto'/)
   assert.doesNotMatch(src, /totalCent: g\.importe \?\? 0/)
+})
+
+test('inmueble ARCHIVADO: ni sus derramas ni sus plantillas generan gastos; los de otro inmueble sí', async () => {
+  const { p, filas } = bdFalsa(
+    [plantilla({ id: 'pl-a', inmuebleId: 'inm-arch' }), plantilla({ id: 'pl-b', inmuebleId: 'inm-vivo' }), plantilla({ id: 'pl-c', inmuebleId: null })],
+    [derrama({ id: 'de-a', inmuebleId: 'inm-arch' }), derrama({ id: 'de-b', inmuebleId: 'inm-vivo' })],
+    ['inm-arch'],
+  )
+  await generarGastosPropuestos(p, HOY)
+  const claves = [...filas.values()].map((g) => g.clave)
+  assert.ok(claves.length > 0)
+  assert.ok(!claves.some((c) => c.startsWith('de-a:') || c.startsWith('pl-a:')), 'nada del inmueble archivado')
+  assert.ok(claves.some((c) => c.startsWith('de-b:')))
+  assert.ok(claves.some((c) => c.startsWith('pl-b:')))
+  assert.ok(claves.some((c) => c.startsWith('pl-c:')))
 })

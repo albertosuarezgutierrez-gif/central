@@ -29,13 +29,14 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
   const ficha = await inmuebleAutorizado(identidad.id, id)
   if (ficha === null) notFound()
   const i = ficha.inmueble
-  const contratos = await contratosDelInmueble(identidad.id, i.id)
+  // Archivado: los contratos vivos no se listan (sus páginas dan 404) y no se ofrece ninguna alta.
+  const contratos = ficha.archivado ? [] : await contratosDelInmueble(identidad.id, i.id)
   const fechaEs = (f: string) => f.split('-').reverse().join('/')
 
   const filas: [string, string][] = [
     ['Titular', ficha.titularNombre || noConsta],
     ['Uso', ETIQUETA_USO[i.uso]],
-    ['Dirección', i.direccion ?? noConsta],
+    ['Dirección', i.direccion === null ? noConsta : ficha.calleSinValidar ? `${i.direccion} (calle por validar: no casa con el callejero del Catastro)` : i.direccion],
     ['Referencia catastral', i.referenciaCatastral ?? noConsta],
     ['Superficie', i.superficieM2 === null ? noConsta : `${i.superficieM2.toLocaleString('es-ES')} m²`],
     ['Año de construcción', i.anioConstruccion === null ? noConsta : String(i.anioConstruccion)],
@@ -48,6 +49,11 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
     <>
       <p className="antetitulo">Patrimonio</p>
       <h1 style={{ overflowWrap: 'anywhere' }}>{i.alias}</h1>
+      {ficha.archivado && (
+        <p role="note" className="suave" style={{ margin: '0 0 12px' }}>
+          <strong>Archivado.</strong> Este inmueble ya no está activo: lo ves en solo lectura, con sus documentos.
+        </p>
+      )}
       <section className="seccion">
         <dl style={{ margin: 0, display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {filas.map(([k, v]) => (
@@ -58,6 +64,7 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
           ))}
         </dl>
       </section>
+      {!ficha.archivado && (
       <section className="seccion">
         <h2>Contratos</h2>
         {contratos.length === 0 ? (
@@ -77,6 +84,7 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
         )}
         {puede(ficha.nivel, 'alta_baja') && <NuevoContrato inmuebleId={i.id} />}
       </section>
+      )}
       <section className="seccion">
         <h2>Documentos</h2>
         <Documentos clienteId={ficha.clienteId} inmuebleId={i.id} />

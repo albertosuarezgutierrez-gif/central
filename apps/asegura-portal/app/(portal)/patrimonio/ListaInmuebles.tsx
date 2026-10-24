@@ -7,7 +7,7 @@ import { ETIQUETA_USO, type UsoInmueble } from '@/lib/patrimonio/usos'
 
 export const PAGINA_INMUEBLES = 50
 
-type Fila = { id: string; alias: string; uso: string; direccion: string | null; superficie: string | null }
+type Fila = { id: string; alias: string; uso: string; direccion: string | null; calleSinValidar?: boolean | null; superficie: string | null }
 
 /** Plegado perezoso: ~50 filas y «Ver más». Nada monta cientos de filas de golpe. */
 export function ListaInmuebles({ inmuebles }: { inmuebles: Fila[] }) {
@@ -23,6 +23,7 @@ export function ListaInmuebles({ inmuebles }: { inmuebles: Fila[] }) {
                 <strong>{i.alias}</strong>
                 <br />
                 <span className="suave" style={{ fontSize: 13 }}>{i.direccion ?? 'Dirección: no consta'}{i.superficie ? ` · ${i.superficie} m²` : ''}</span>
+                {i.calleSinValidar === true && <span className="suave" style={{ fontSize: 12, display: 'block' }}>Calle por validar</span>}
               </span>
               <span className="chip">{ETIQUETA_USO[i.uso as UsoInmueble] ?? i.uso}</span>
             </Link>

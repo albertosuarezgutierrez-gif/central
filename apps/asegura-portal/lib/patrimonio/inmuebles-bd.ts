@@ -9,7 +9,7 @@ import { puede } from '@central/module-patrimonio'
 import { prisma } from '../db'
 import { accesosPatrimonio } from './accesos'
 import type { AccesosMapa, PuertosInmuebles, TitularLista } from './inmuebles-api'
-import { inmuebleDeFila, type FilaInmueble } from './lectura'
+import { calleSinValidar, inmuebleDeFila, type FilaInmueble } from './lectura'
 import { getIdentidad } from '../session'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -47,7 +47,7 @@ async function listarTitulares(identidadId: string, ids: readonly string[], acce
         puedeAlta: puede(nivel, 'alta_baja'),
         inmuebles: (inmueblesDe.get(f.id) ?? []).map((i) => {
           const m = inmuebleDeFila(i as FilaInmueble)
-          return { id: m.id, alias: m.alias, uso: m.uso, direccion: m.direccion, superficieM2: m.superficieM2 }
+          return { id: m.id, alias: m.alias, uso: m.uso, direccion: m.direccion, calleSinValidar: calleSinValidar(i), superficieM2: m.superficieM2 }
         }),
       }
     })
@@ -120,15 +120,22 @@ export type FichaInmueble = {
   titularNombre: string
   nivel: 'gestion' | 'total'
   valorReconstruccionCent: number | null
+  /** Inmueble archivado: histórico del cliente, SOLO LECTURA (la página no ofrece altas ni ediciones). */
+  archivado: boolean
+  /** `true` = «calle por validar»; `null` = sin dirección. */
+  calleSinValidar: boolean | null
 }
 
-/** El inmueble del id de la URL SOLO si cuelga de un titular autorizado. `null` = 404 (no existe o no es tuyo). */
+/**
+ * El inmueble del id de la URL SOLO si cuelga de un titular autorizado. `null` = 404 (no existe o no es tuyo).
+ * Un inmueble ARCHIVADO se devuelve con `archivado: true` (solo lectura); el titular archivado sigue siendo 404.
+ */
 export async function inmuebleAutorizado(identidadId: string, idPedido: string): Promise<FichaInmueble | null> {
   if (!UUID.test(idPedido)) return null
   const accesos = await accesosPatrimonio(identidadId)
   if (accesos.size === 0) return null
   const fila = await prisma.portalPatrimonioInmueble.findFirst({
-    where: { id: idPedido, archivadoEn: null, titular: { clienteId: { in: [...accesos.keys()] }, archivadoEn: null } },
+    where: { id: idPedido, titular: { clienteId: { in: [...accesos.keys()] }, archivadoEn: null } },
     include: { titular: { select: { clienteId: true } } },
   })
   if (!fila) return null
@@ -141,5 +148,7 @@ export async function inmuebleAutorizado(identidadId: string, idPedido: string):
     titularNombre: ficha ? nombreDe(ficha) : '',
     nivel,
     valorReconstruccionCent: fila.valorReconstruccionEstimadoCent === null ? null : Number(fila.valorReconstruccionEstimadoCent),
+    archivado: fila.archivadoEn !== null,
+    calleSinValidar: calleSinValidar(fila),
   }
 }

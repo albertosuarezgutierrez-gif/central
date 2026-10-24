@@ -7,7 +7,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 
 import { eur } from '@/lib/dinero'
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
-import { ETIQUETA_TIPO_ESCANER, TIPOS_ESCANER, type LecturaEscaner, type PolizaCandidata, type PropuestaPoliza, type TipoEscaner } from '@/lib/escaner-documento'
+import { ETIQUETA_TIPO_ESCANER, TIPOS_ESCANER, polizaTrasLectura, type LecturaEscaner, type PolizaCandidata, type PropuestaPoliza, type TipoEscaner } from '@/lib/escaner-documento'
 
 // Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta.
 const MAX_BYTES = 4 * 1024 * 1024
@@ -22,7 +22,11 @@ const MOTIVO_TEXTO: Record<PropuestaPoliza['motivo'], string> = {
   sin_coincidencia: 'No hemos podido saber de cuál es: elígela si quieres.',
 }
 
-export function EscanerDocumento() {
+/**
+ * `polizaFija` (opcional): id con prefijo (`d:<id>` declarada, `c:<id>` cartera) de la póliza contra la que se archiva
+ * SIEMPRE; sin él, la elige la persona (con la propuesta de la IA).
+ */
+export function EscanerDocumento({ polizaFija }: { polizaFija?: string } = {}) {
   const uid = useId()
   const entrada = useRef<HTMLInputElement>(null)
   const [fase, setFase] = useState<Fase>('reposo')
@@ -77,12 +81,13 @@ export function EscanerDocumento() {
       if (!j.ia) {
         // Sin IA: se archiva a mano. No es un error.
         setIa(false)
+        setPolizaId(polizaTrasLectura(polizaFija, null))
       } else {
         setLegible(j.legible)
         setTipo(j.lectura.tipo ?? '')
         setFecha(j.lectura.fecha ?? '')
         setImporteTxt(j.lectura.importe !== null ? String(j.lectura.importe).replace('.', ',') : '')
-        setPolizaId(j.propuesta?.polizaId ?? '')
+        setPolizaId(polizaTrasLectura(polizaFija, j.propuesta?.polizaId))
         setMotivo(j.propuesta?.motivo ?? null)
       }
       setFase('confirmar')
@@ -141,11 +146,15 @@ export function EscanerDocumento() {
           </div>
           <div>
             <label htmlFor={`${uid}-poliza`}>¿De qué póliza?</label>
+            {polizaFija ? (
+              <p className="editor-ayuda" style={{ margin: 0 }}>De la póliza que acabas de subir.</p>
+            ) : (<>
             {motivo !== null && <p className="editor-ayuda">{MOTIVO_TEXTO[motivo]}</p>}
             <select id={`${uid}-poliza`} className="campo" value={polizaId} onChange={(e) => setPolizaId(e.target.value)} style={{ minHeight: 44 }}>
               <option value="">Ninguna en concreto</option>
               {polizas.map((p) => <option key={p.id} value={p.id}>{[p.compania ?? 'Compañía sin leer', p.numeroPoliza].filter(Boolean).join(' · ')}</option>)}
             </select>
+            </>)}
           </div>
           <div>
             <label htmlFor={`${uid}-fecha`}>Fecha (opcional)</label>
