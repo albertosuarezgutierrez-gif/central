@@ -86,6 +86,17 @@ description: Agente PROGRAMADO semanal (domingo) que mejora los prompts de los a
    (lo mismo dicho en dos sitios que divergirán), secciones muertas (describen algo que ya
    no existe — si es drift factual puro, derívalo a `/auditoria-diaria` en vez de tocarlo).
 
+   **Evaluar la `description`** (la parte que decide si una skill/agente se dispara; solo si el
+   diagnóstico apunta a un disparo erróneo: no se activa cuando debía, o se activa sin venir a
+   cuento). Método del bucle de `skill-creator` de anthropics/skills (Apache-2.0; solo el método,
+   sin copiar sus scripts):
+   - Redacta ~8 prompts reales de Alberto: 4 *should-trigger* y 4 *should-not-trigger* (los
+     negativos, cercanos al tema, que se confunden con otra skill nuestra).
+   - Puntúa la `description` actual: ¿se dispararía con cada uno? Anota aciertos y fallos.
+   - Propón UNA `description` mejor (más concreta en el cuándo, sin solaparse con skills vecinas),
+     repuntúa con el mismo set y entrega solo si mejora sin romper ningún negativo.
+   - Va por carril 2 (PR draft, uno por skill) con el set y las dos puntuaciones en el cuerpo.
+
 5. **Entregar por carriles.** Para cada acción del paso 3-4: decide carril (recuerda: por
    defecto carril 2). Abre los PR draft (uno por skill) y aplica los carril-1 con su línea
    en `AUTO-APLICADOS.md`. Manda UN solo Telegram resumen con los links a los PRs (no uno
