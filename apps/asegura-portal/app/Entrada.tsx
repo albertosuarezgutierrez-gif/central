@@ -156,8 +156,8 @@ export function Entrada({ bienvenida = false }: { bienvenida?: boolean }) {
       setError(cuerpo.error ?? 'error')
       return false
     }
-    // A dónde ir lo decide el servidor (ruta interna validada); por defecto, la bóveda.
-    const irA = typeof cuerpo.irA === 'string' && /^\/(?![/\\])/.test(cuerpo.irA) ? cuerpo.irA : '/boveda'
+    // A dónde ir lo decide el servidor (ruta interna validada); por defecto, Inicio (24/10/2026).
+    const irA = typeof cuerpo.irA === 'string' && /^\/(?![/\\])/.test(cuerpo.irA) ? cuerpo.irA : '/inicio'
     // El vínculo con la cartera no bloquea la entrada, pero si no se ha podido
     // resolver se dice antes de irse: un «no tienes pólizas» sin esta línea
     // sería una afirmación sobre algo que no se ha mirado.

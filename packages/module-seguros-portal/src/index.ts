@@ -743,4 +743,6 @@ export {
   mensajeSolicitudModulo,
   tarjetasModulos,
 } from './modulos.ts'
-export type { AccionModulo, DisponibilidadModulo, EstadoModulo, FichaModulo, FilaModulo, ModuloPortal, TarjetaModulo } from './modulos.ts'
+export type { AccionModulo, ContextoModulos, DisponibilidadModulo, EstadoModulo, FichaModulo, FilaModulo, ModuloPortal, TarjetaModulo } from './modulos.ts'
+export { FAMILIAS_SEGURO, NOMBRE_FAMILIA, familiaSeguro } from './familia-seguro.ts'
+export type { ClaseSeguro, FamiliaSeguro, SublineaPatrimonial } from './familia-seguro.ts'

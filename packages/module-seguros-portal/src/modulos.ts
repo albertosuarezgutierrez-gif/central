@@ -60,15 +60,17 @@ export const CATALOGO_MODULOS: Record<ModuloPortal, FichaModulo> = {
     hrefPortal: null,
     textoActivo: 'Activado. Se usa en el Portal del Empleado, con el acceso que te hemos enviado.',
   },
+  // 24/10/2026 (Alberto): «Gestión de alquileres» y Patrimonio son LA MISMA herramienta. El id `alquileres` se
+  // conserva (es el CHECK de `portal_modulo.modulo` y las filas ya pedidas siguen valiendo); cambia lo que dice y a
+  // dónde lleva. Fase 1: solo para clientes con ficha (el acceso lo da `accesosPatrimonio`, no esta tarjeta).
   alquileres: {
     id: 'alquileres',
-    nombre: 'Gestión de alquileres',
+    nombre: 'Patrimonio y alquileres',
     descripcion:
-      'Tus inmuebles alquilados e inquilinos, sus documentos y un recordatorio anual para que el inquilino ' +
-      'nos mande su seguro. Lo estamos preparando: apúntate y te avisamos cuando esté.',
-    seguros: 'Hogar del propietario, impago de alquiler y el seguro del inquilino.',
-    hrefPortal: null,
-    textoActivo: 'Te has apuntado y ya está activado para ti. Te escribiremos para empezar.',
+      'Tus pisos y locales en un sitio: gastos, contratos e inquilinos, sus documentos y qué seguro tiene cada uno.',
+    seguros: 'Hogar del propietario, comunidad, impago de alquiler y el seguro del inquilino.',
+    hrefPortal: '/patrimonio',
+    textoActivo: 'Activado. Si no ves tus inmuebles en «Patrimonio», escríbenos.',
   },
 }
 
@@ -82,12 +84,10 @@ export function esModuloPortal(v: unknown): v is ModuloPortal {
  * - Flota: `disponible` si ya lleva la flota de alguna sociedad (dueño o jefe), `bajo_solicitud` si
  *   no, y `null` si no se ha podido comprobar (no se adivina).
  * - RRHH: `bajo_solicitud` (se da de alta a mano, por operador, en apps/rrhh; no hay SSO).
- * - Alquileres: `proximamente` («apúntate»).
+ * - Patrimonio y alquileres (24/10/2026): `disponible` si `accesosPatrimonio` no está vacío (fase 1: clientes
+ *   con ficha), `bajo_solicitud` si no, y `null` si no se ha podido comprobar. Ya no es «próximamente».
  */
-export function disponibilidadModulo(
-  id: ModuloPortal,
-  ctx: { accesoFlota: boolean | null },
-): DisponibilidadModulo | null {
+export function disponibilidadModulo(id: ModuloPortal, ctx: ContextoModulos): DisponibilidadModulo | null {
   switch (id) {
     case 'flota':
       if (ctx.accesoFlota === null) return null
@@ -95,9 +95,13 @@ export function disponibilidadModulo(
     case 'rrhh':
       return 'bajo_solicitud'
     case 'alquileres':
-      return 'proximamente'
+      if (ctx.accesoPatrimonio === null) return null
+      return ctx.accesoPatrimonio ? 'disponible' : 'bajo_solicitud'
   }
 }
+
+/** Lo que se sabe de ESTA persona para decidir cada tarjeta. `null` = no se ha podido comprobar (nunca «no tiene»). */
+export type ContextoModulos = { accesoFlota: boolean | null; accesoPatrimonio: boolean | null }
 
 export type FilaModulo = { modulo: string; estado: string; solicitadoEn: Date }
 
@@ -125,11 +129,11 @@ function filaVigente(filas: readonly FilaModulo[], id: ModuloPortal): FilaModulo
 
 export function accionModulo(
   id: ModuloPortal,
-  ctx: { accesoFlota: boolean | null; filas: readonly FilaModulo[] | null },
+  ctx: ContextoModulos & { filas: readonly FilaModulo[] | null },
 ): AccionModulo {
   const ficha = CATALOGO_MODULOS[id]
   const disp = disponibilidadModulo(id, ctx)
-  // Lo que ya se puede usar en el portal se abre, haya o no fila: el acceso lo da otra cosa (flota).
+  // Lo que ya se puede usar en el portal se abre, haya o no fila: el acceso lo da otra cosa (flota, patrimonio).
   if (disp === 'disponible' && ficha.hrefPortal !== null) return { tipo: 'abrir', href: ficha.hrefPortal }
   if (disp === null || ctx.filas === null) return { tipo: 'sin_comprobar' }
   const fila = filaVigente(ctx.filas, id)
@@ -141,7 +145,7 @@ export function accionModulo(
 }
 
 /** Las tarjetas de `/herramientas`, en el orden del catálogo. */
-export function tarjetasModulos(ctx: { accesoFlota: boolean | null; filas: readonly FilaModulo[] | null }): TarjetaModulo[] {
+export function tarjetasModulos(ctx: ContextoModulos & { filas: readonly FilaModulo[] | null }): TarjetaModulo[] {
   return MODULOS_PORTAL.map((id) => ({
     ...CATALOGO_MODULOS[id],
     disponibilidad: disponibilidadModulo(id, ctx),
@@ -167,6 +171,6 @@ export function mensajeSolicitudModulo(c: {
   const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   const nombre = c.nombre?.trim() ? esc(c.nombre.trim()) : 'Alguien sin nombre'
   const quien = c.vinculada ? nombre : `${nombre} (sin vincular a tu cartera)`
-  const verbo = disponibilidadModulo(c.modulo, { accesoFlota: false }) === 'proximamente' ? 'se apunta al' : 'pide el'
+  const verbo = disponibilidadModulo(c.modulo, { accesoFlota: false, accesoPatrimonio: false }) === 'proximamente' ? 'se apunta al' : 'pide el'
   return `🧰 ${quien} ${verbo} módulo ${esc(CATALOGO_MODULOS[c.modulo].nombre)}.\nIdentidad ${c.identidadId}`
 }

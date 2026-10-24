@@ -4364,3 +4364,58 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
 .estudio-destacada { margin-top: 12px; }
 .estudio-importe-grande { font-size: 34px; }
 @media (max-width: 380px) { .estudio-importe-grande { font-size: 28px; } }
+
+/* ─── Inicio (24/10/2026): tarjetas de seguros por familia y de herramientas ───────────────────────────────────
+ * Una columna por defecto (el scroller es `.portal-contenido`); 2 o más desde 600 px con `auto-fit`. Cada tarjeta es
+ * UN enlace ≥44 px con foco visible; el aviso lleva icono Y texto (nada solo con color). Cobalto solo en la acción. */
+.inicio-rejilla {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 600px) {
+  .inicio-rejilla { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .inicio-ancha { grid-column: span 2; }
+}
+.inicio-tarjeta {
+  display: grid;
+  gap: 4px;
+  min-height: 44px;
+  min-width: 0;
+  height: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.2);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.inicio-tarjeta:hover { background: var(--surface-hover); }
+.inicio-tarjeta:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.inicio-tarjeta-titulo {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--display, var(--serif));
+  font-weight: 700;
+  font-size: 17px;
+}
+.inicio-tarjeta-linea { margin: 0; font-size: 15px; }
+.inicio-tarjeta-aviso { margin: 0; font-size: 15px; color: var(--warn); }
+.inicio-tarjeta-cta {
+  margin-top: 4px;
+  font-family: var(--display, var(--serif));
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+.inicio-mas { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
+@media (prefers-reduced-motion: no-preference) {
+  .inicio-tarjeta { transition: background-color 120ms var(--curva); }
+}

@@ -24,13 +24,16 @@ import {
 
 import { prisma } from './db'
 import { empresasDeFlota } from './flota'
+import { accesosPatrimonio } from './patrimonio/accesos'
 import { getIdentidad } from './session'
 
-type Contexto = { accesoFlota: boolean | null; filas: FilaModulo[] | null }
+type Contexto = { accesoFlota: boolean | null; accesoPatrimonio: boolean | null; filas: FilaModulo[] | null }
 
 async function contextoDe(identidadId: string): Promise<Contexto> {
-  const [flota, filas] = await Promise.allSettled([
+  const [flota, patrimonio, filas] = await Promise.allSettled([
     empresasDeFlota(identidadId),
+    // 24/10/2026: «Patrimonio y alquileres» se abre si esta sesión ya tiene titulares (fase 1: clientes con ficha).
+    accesosPatrimonio(identidadId),
     prisma.portalModulo.findMany({
       where: { identidadId },
       select: { modulo: true, estado: true, solicitadoEn: true },
@@ -38,8 +41,10 @@ async function contextoDe(identidadId: string): Promise<Contexto> {
   ])
   if (flota.status === 'rejected') console.error('[portal/modulos] no se pudo comprobar la flota:', motivo(flota.reason))
   if (filas.status === 'rejected') console.error('[portal/modulos] no se pudo leer portal_modulo:', motivo(filas.reason))
+  if (patrimonio.status === 'rejected') console.error('[portal/modulos] no se pudo comprobar el patrimonio:', motivo(patrimonio.reason))
   return {
     accesoFlota: flota.status === 'fulfilled' ? flota.value.length > 0 : null,
+    accesoPatrimonio: patrimonio.status === 'fulfilled' ? patrimonio.value.size > 0 : null,
     filas: filas.status === 'fulfilled' ? filas.value : null,
   }
 }

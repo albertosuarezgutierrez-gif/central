@@ -58,19 +58,22 @@ test('las pestañas son ocho, en orden, y «Contactos» y «Configuración» son
   // el 13/09/2026: «Recordatorios» (ITV, carnet, caldera… propios del cliente,
   // sin póliza detrás). «Mensajes» se retiró el 26/09/2026. Ocho desde el
   // 13/10/2026: «Configuración» (avisos y consentimientos), otra ruta.
+  // Nueve desde el 24/10/2026: «Inicio» (`/inicio`) delante de todo, otra ruta.
   const p = pestanasPortal()
-  assert.equal(p.length, 8)
+  assert.equal(p.length, 9)
   assert.deepEqual(
     p.map((x) => x.etiqueta),
-    ['Seguros', 'Mi QR', 'Recibos', 'Siniestros', 'Recordatorios', 'Contactos', 'Datos', 'Configuración'],
+    ['Inicio', 'Seguros', 'Mi QR', 'Recibos', 'Siniestros', 'Recordatorios', 'Contactos', 'Datos', 'Configuración'],
   )
-  assert.equal(p[7].vista, null)
-  assert.equal(p[7].href, '/configuracion')
-  assert.equal(p[1].vista, 'hoja')
-  assert.equal(p[1].href, '/boveda?vista=hoja')
-  assert.equal(p[5].vista, null)
-  assert.equal(p[5].href, '/autorizaciones')
-  assert.equal(p[6].vista, 'datos')
+  assert.equal(p[0].vista, null)
+  assert.equal(p[0].href, '/inicio')
+  assert.equal(p[8].vista, null)
+  assert.equal(p[8].href, '/configuracion')
+  assert.equal(p[2].vista, 'hoja')
+  assert.equal(p[2].href, '/boveda?vista=hoja')
+  assert.equal(p[6].vista, null)
+  assert.equal(p[6].href, '/autorizaciones')
+  assert.equal(p[7].vista, 'datos')
   assert.equal(vistaDeBoveda('datos'), 'datos')
   assert.equal(vistaDeBoveda('hoja'), 'hoja')
 })
@@ -95,7 +98,9 @@ test('no hay dos pestañas que se lean como la misma cosa', () => {
   // pueden competir por la misma palabra.
   const etiquetas = pestanasPortal().map((p) => p.etiqueta.toLowerCase())
   assert.equal(new Set(etiquetas).size, etiquetas.length, 'dos pestañas con la misma etiqueta')
-  for (const sinonimos of [['seguro', 'póliza'], ['siniestro', 'parte']]) {
+  // 24/10/2026: «Inicio» no puede leerse como «Mi resumen» (el resumen anual para la renta, fuera de esta lista).
+  assert.ok(!etiquetas.some((e) => e.includes('resumen')), '«Inicio» no es «Mi resumen»: no se llaman igual')
+  for (const sinonimos of [['seguro', 'póliza'], ['siniestro', 'parte'], ['inicio', 'portada', 'principal']]) {
     const usadas = sinonimos.filter((raiz) => etiquetas.some((e) => e.includes(raiz)))
     assert.ok(
       usadas.length <= 1,

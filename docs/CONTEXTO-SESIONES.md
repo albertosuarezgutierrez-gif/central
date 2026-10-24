@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/10/2026)** — Portal patrimonio: huecos cerrados (archivado solo lectura, sin gastos en archivados, recibo de renovación ligado, calle por validar, `generarFechasRecurrente`) + P10-P12: enlace inmueble↔póliza (SQL `2026-10-24_portal_patrimonio_enlace_poliza.sql`), página `/inicio`, barra móvil. En archivado la sección Seguros se ve en solo lectura.
+Decisiones de Alberto: interés legítimo informado para las señales; Palacio Busto Tavera = empresa; Antonio con acceso Total pendiente de aceptar; pantalla de módulos en /correduria; tope de renta editable + aviso anual.
+`REVOKE DELETE` sobre documentos a `prisma_seguros` APLICADO. Sin commitear (squash en el índice); tsc portal y tests patrimonio/seguros-portal/regression-portal verdes.
 **(22/10/2026)** — Patrimonio F1 pasos 9, 9b y arreglos (integrados, sin commitear). Paso 9: contratos/inquilinos/renta; PII del inquilino por puente a asegura, solo nivel Total, 503 `sin_puente`/`sin_clave`; `TOPE_LEGAL_PCT` = null (sin tope inventado).
 Paso 9b: cron `/api/cron/indices-renta` (día 20, 10:00 UTC, tabla global append-only `portal_patrimonio_indice`): IRAV = tabla INE 72975; IPC = serie IPC251852, POR VERIFICAR en la primera ejecución (avisa por Telegram si falla).
 Arreglos: inmueble archivado = documentos solo lectura; factura confirmada con otro inmueble TRASLADA el documento; la subida de factura exige inmueble.

@@ -1671,6 +1671,11 @@ model PortalPatrimonioInmueble {
   actualizadoEn                     DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
   creadoPorIdentidadId              String?   @map("creado_por_identidad_id") @db.Uuid
   archivadoEn                       DateTime? @map("archivado_en") @db.Timestamptz(6)
+  /// «He revisado y no tiene seguro» (24/10/2026, `prisma/sql/2026-10-24_portal_patrimonio_enlace_poliza.sql`).
+  /// 🚨 NULL = no lo ha dicho, que NO es «no tiene» (`estadoSeguroInmueble` de `@central/module-patrimonio`).
+  /// ⚠️ Declarada ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
+  sinSeguroDeclaradoEn              DateTime? @map("sin_seguro_declarado_en") @db.Timestamptz(6)
+  sinSeguroDeclaradoPorIdentidadId  String?   @map("sin_seguro_declarado_por_identidad_id") @db.Uuid
 
   titular      PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
   comunidades  PortalPatrimonioInmuebleComunidad[]
@@ -2056,6 +2061,11 @@ model PortalPatrimonioInmueblePoliza {
   actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
   creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
   archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+  /// `confirmado` | `rechazado` (CHECK; 24/10/2026). Un «No es este» queda escrito para no volver a proponerlo.
+  /// Sin `@default` de Prisma: el código lo escribe SIEMPRE (el DEFAULT de la BD solo cubre filas viejas).
+  estado               String
+  /// `manual` | `propuesta_refcat` | `propuesta_direccion` (CHECK). Lo decide el servidor (`origenAEscribir`).
+  origen               String
 
   inmueble PortalPatrimonioInmueble @relation(fields: [inmuebleId], references: [id])
 

@@ -76,34 +76,73 @@
   su fecha → Telegram (`core-telegram`) y NO escribe. DDL de la tabla en el SQL del paso 3 (GRANT SELECT al portal).
 - Tests: fallo de red/formato no escribe y avisa; dos pasadas no duplican; índice ausente → la propuesta sale `sin_indice`.
 
-## Paso 10 — Calendario y avisos (general-purpose, sonnet)
+## Orden nuevo desde el 24/10/2026 (P10-P18)
+> Spec: `docs/superpowers/specs/2026-10-24-portal-inicio-herramientas-oportunidades.md` (§4 reordena los antiguos 10-14).
+> Decisiones de Alberto (24/10/2026): Patrimonio solo para clientes con póliza en fase 1; «Inicio» sustituye a «Recibos»
+> en la barra móvil; coches dentro de «Patrimoniales»; la tarjeta «Gestión de alquileres» del catálogo ES Patrimonio.
+> Prerrequisito suelto: el SQL del paso 8 (`2026-10-22_portal_patrimonio_documento.sql`) — su cabecera dice aplicado el 22/10.
+
+## P10 — Puro + SQL del enlace inmueble ↔ póliza ✅ código (24/10/2026) · ⏳ SQL SIN APLICAR
+- Puro `packages/module-patrimonio/src/enlace-seguro.ts` (+ test): `estadoSeguroInmueble` (tres estados + derivados
+  `con_seguro_no_vigente` y `enlazado_sin_comprobar` —enlace cuya póliza no ve quien mira o cartera ilegible—),
+  `proponerEnlaces` (ref. catastral de 20 / CP + vía + número solo con la dirección VISIBLE a ese nivel; nunca municipio
+  ni compañía), `origenAEscribir`, `declaradaVigente`, `resumenSegurosPatrimonio`. Acción `enlazar_seguro` (Gestión y
+  Total) en `acceso.ts`. `familiaSeguro` en `module-seguros-portal/src/familia-seguro.ts` (+ test).
+- SQL `apps/asegura-portal/prisma/sql/2026-10-24_portal_patrimonio_enlace_poliza.sql` (sin DROP; CHECKs por bloque DO;
+  GRANT por columnas; REVOKE `crm_seguros`) + `schema.prisma` espejo. 🚨 Aplicar ANTES del despliegue que lo usa.
+- Pendiente de P10 según la spec: `senalesDeInmueble` y `permisoContacto` (van con el motor, P16, después de legal) y
+  los consentimientos `encargo_patrimonio`/`comercial_patrimonio` (P15).
+
+## P11 — Enlace en la ficha del inmueble ✅ (24/10/2026; pendiente revisión agente-architect)
+- `lib/patrimonio/seguros-inmueble-{api,bd}.ts`, `GET/POST /api/patrimonio/inmuebles/[id]/seguros`,
+  `patrimonio/inmueble/[id]/SegurosInmueble.tsx`: estado, «¿Este seguro es de X? Sí / No es este», enlazar a mano,
+  desenlazar (archivar), «No tiene seguro» / quitarlo, «Añadir póliza». Póliza ajena → 404; detalle solo si quien mira
+  ve la póliza. Cepos en `test/regression-portal-patrimonio-aislamiento.test.ts` y `-sql.test.ts`.
+- Limitación conocida: un enlace a una póliza luego FUSIONADA queda «sin comprobar» (la cartera solo trae la final).
+
+## P12 — Inicio ✅ (24/10/2026)
+- `app/(portal)/inicio/page.tsx`, `lib/inicio.ts` (`allSettled`, una fuente por tarjeta), `lib/inicio-tarjetas.ts` (+ test),
+  `/` y el canje del código → `/inicio`, logo → `/`, `pestanasPortal()` con «Inicio» primero, barra móvil
+  `Inicio · Seguros · Siniestros · WhatsApp · Más`, catálogo «Patrimonio y alquileres» → `/patrimonio`.
+  Cepo `test/regression-portal-inicio.test.ts`.
+- Pendiente: chip «N cosas pendientes» por familia (de `pendientesDeTi`) y `?familia=` en `/boveda`; medir a 320 px
+  con Playwright sobre `.portal-contenido`.
+
+## P13 — Calendario y avisos (antiguo 10; sonnet)
 - `lib/patrimonio/calendario.ts` (adaptador de `calendarioPatrimonio`), fuente `patrimonio` en `lib/avisos.ts`/«Pendiente de ti»
-  (con `sinComprobar`), push en `api/cron/avisos-push`. Tests: fuente ilegible → `!`, nunca «0».
+  (con `sinComprobar`), push en `api/cron/avisos-push`, y «inmueble sin revisar» en «Pendiente de ti».
+  Tests: fuente ilegible → `!`, nunca «0».
 
-## Paso 11 — Rentabilidad e infraseguro (general-purpose, sonnet)
-- `patrimonio/rentabilidad/page.tsx` (año/trimestre/mes), frases por aviso, CTA «Pedir precio» → lead declarada
-  (`lead-declarada.ts`) SOLO del titular, nunca del inquilino. Tests de textos por aviso y de `null` → «—».
+## P14 — Rentabilidad + infraseguro + «Pedir precio» (antiguo 11, corregido; sonnet, puente: architect)
+- `patrimonio/rentabilidad/page.tsx`; infraseguro con el capital de la póliza ENLAZADA; CTA «Pedir precio» del inmueble
+  sin seguro → PUENTE `apps/asegura /api/portal/patrimonio/pedir-precio` (a imagen de `mejorar-precio-portal.ts`:
+  candado, `info_riesgo.origen='portal:patrimonio'`, gestión, historial), NO `lead-declarada.ts`. Solo titular o Total,
+  nunca el inquilino.
 
-## Paso 12 — Inquilino por enlace (agente-architect)
+## P15 — Legal y alta (antiguo 13, ampliado; architect + Alberto)
+- Encargo de tratamiento, consentimientos `encargo_patrimonio` y `comercial_patrimonio` (CHECK + `TIPOS_CONSENTIMIENTO`),
+  párrafo de privacidad del perfilado, `VERSION_TEXTOS_LEGALES` +1, gate «gratis solo con póliza en vigor».
+
+## P16 — Motor de señales y cola en `/correduria` (architect)
+- `senalesDeInmueble`/`permisoContacto` (puros), SQL `portal_patrimonio_senal`, cron, puerto operador,
+  `OportunidadesPatrimonio.tsx` + bloque en la ficha. Requiere P14 y **P15 desplegado**. Nunca contacta a nadie.
+
+## P17 — Inquilino por enlace (antiguo 12; architect)
 - `app/inquilino/[token]/page.tsx` + `app/api/inquilino/*` (código al correo, tope por IP/destino), subida del recibo del
   seguro y aviso de avería → `portal_patrimonio_aviso_inquilino`; convertir en parte desde el propietario. Envío del
   correo en `apps/asegura` (borrador hasta OK). Consentimiento comercial propio del inquilino, no premarcado.
 - Cepos: el token no abre sesión; el inquilino no ve gastos/rentas; ninguna lectura de leads toca inquilinos.
 
-## Paso 13 — Legal y alta del módulo (agente-architect + Alberto)
-- Texto de encargo de tratamiento (`app/legal/encargo-patrimonio`), `portal_consentimiento` tipo `encargo_patrimonio`,
-  `VERSION_TEXTOS_LEGALES` +1, gate «gratis solo con póliza en vigor» (`esCarteraEnVigor`).
-
-## Paso 14 — Importación por el cliente: Excel/CSV con mapeo propuesto por IA (agente-architect para el puro y la confirmación)
-Va después de pantallas, gastos y contratos (pasos 5-9) porque crea esas mismas entidades por sus mismas rutas.
-- 14a Puro: `packages/module-patrimonio/src/importacion.ts` — `proponerMapeo(cabeceras, muestra)` heurístico (la IA lo
+## P18 — Importación por el cliente (antiguo 14; architect para el puro y la confirmación)
+Lo importado entra `sin_mirar` y genera señales solo tras confirmar.
+- 18a Puro: `packages/module-patrimonio/src/importacion.ts` — `proponerMapeo(cabeceras, muestra)` heurístico (la IA lo
   mejora, no lo sustituye), `aplicarMapeo(filas, mapeo)` → filas por entidad con `problema` (fecha/CP/importe ilegible,
   celda de cajón → `null`, nunca 0), `detectarDuplicados` (ref. catastral / NIF / clave de plantilla) como «ya existe».
   Tests + rojo.
-- 14b `app/api/patrimonio/importaciones/route.ts` (subida 10 MB, xlsx/csv, tope por identidad/día) +
+- 18b `app/api/patrimonio/importaciones/route.ts` (subida 10 MB, xlsx/csv, tope por identidad/día) +
   `lib/patrimonio/mapeo-ia.ts` (`core-ai`, solo cabeceras + ≤20 filas de muestra) → `portal_patrimonio_importacion(_fila)`
   en estado `propuesta`. DDL en el SQL del paso 3.
-- 14c `app/(portal)/patrimonio/importar/*`: corregir el mapeo, vista previa por entidad (apartadas visibles, ~50 + «Ver más»),
+- 18c `app/(portal)/patrimonio/importar/*`: corregir el mapeo, vista previa por entidad (apartadas visibles, ~50 + «Ver más»),
   CONFIRMAR → crea filas normales en una transacción, sellando `creado_id`. Hasta confirmar nada entra en rentabilidad,
   calendario ni avisos (cepo: las lecturas de los pasos 10-11 no leen tablas de importación). Direcciones: CP primero contra
   el callejero; la que no casa queda «por validar».

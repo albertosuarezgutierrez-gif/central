@@ -19,9 +19,13 @@ import { join } from 'node:path'
 const RAIZ = new URL('..', import.meta.url).pathname
 // Paso 3 (tablas) + paso 8 (documentos, 22/10/2026): el barrido y el espejo con el schema cubren los dos ficheros.
 const SQL_DOCUMENTO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio_documento.sql'), 'utf8').replace(/--.*$/gm, '')
+// Enlace inmueble ↔ póliza (24/10/2026, P10): columnas nuevas en dos tablas ya existentes; entra en el mismo espejo.
+const RUTA_ENLACE = 'apps/asegura-portal/prisma/sql/2026-10-24_portal_patrimonio_enlace_poliza.sql'
+const SQL_ENLACE = readFileSync(join(RAIZ, RUTA_ENLACE), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
+  SQL_ENLACE,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
@@ -239,4 +243,28 @@ test('🚨 documentos: las carpetas del CHECK de la BD son EXACTAMENTE las de ca
     assert.ok(m, `falta la carpeta del owner ${owner}`)
     assert.deepEqual(m[1].split(',').map((x) => x.trim().replace(/'/g, '')).sort(), carpetas.map((c) => c.id).sort())
   }
+})
+
+test('🚨 enlace inmueble ↔ póliza (24/10/2026): estado/origen cerrados, «no tiene seguro» coherente, sin DROP ni DELETE', () => {
+  assert.doesNotMatch(readFileSync(join(RAIZ, RUTA_ENLACE), 'utf8'), /\bDROP\b/i, 'el MCP de Supabase se cuelga con cualquier DROP')
+  assert.match(SQL_ENLACE, /^BEGIN;/m)
+  assert.match(SQL_ENLACE, /^COMMIT;/m)
+  assert.match(SQL_ENLACE, /CHECK \(estado IN \('confirmado', 'rechazado'\)\)/)
+  assert.match(SQL_ENLACE, /CHECK \(origen IN \('manual', 'propuesta_refcat', 'propuesta_direccion'\)\)/)
+  assert.match(SQL_ENLACE, /CHECK \(sin_seguro_declarado_en IS NOT NULL OR sin_seguro_declarado_por_identidad_id IS NULL\)/)
+  // Idempotente: cada CHECK solo si no existe.
+  assert.equal([...SQL_ENLACE.matchAll(/IF NOT EXISTS \(SELECT 1 FROM pg_constraint WHERE conname = /g)].length, 3)
+  // El portal ESCRIBE la decisión al crear el enlace y no la reescribe nunca (cambiar de opinión = archivar + otra).
+  const upd = concedidas('UPDATE', 'portal_patrimonio_inmueble_poliza')!
+  assert.ok(!upd.has('estado') && !upd.has('origen'), 'estado/origen no se reescriben')
+  assert.deepEqual([...upd], ['archivado_en'])
+  const ins = concedidas('INSERT', 'portal_patrimonio_inmueble_poliza')!
+  assert.ok(ins.has('estado') && ins.has('origen'))
+  assert.ok(concedidas('UPDATE', 'portal_patrimonio_inmueble')!.has('sin_seguro_declarado_en'))
+  assert.ok(concedidas('SELECT', 'portal_patrimonio_inmueble')!.has('sin_seguro_declarado_por_identidad_id'))
+  for (const t of ['portal_patrimonio_inmueble_poliza', 'portal_patrimonio_inmueble']) {
+    assert.match(SQL_ENLACE, new RegExp(`REVOKE ALL ON seguros\\.${t} FROM crm_seguros`), t)
+  }
+  // Los consentimientos de patrimonio son del paso legal (P15), no de este SQL.
+  assert.doesNotMatch(SQL_ENLACE, /portal_consentimiento/)
 })

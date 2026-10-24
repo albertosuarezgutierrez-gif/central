@@ -135,6 +135,9 @@ export interface PestanaPortal {
  */
 export function pestanasPortal(): PestanaPortal[] {
   return [
+    // 24/10/2026: «Inicio» (`/inicio`), la PRIMERA: seguros por familia y debajo las herramientas. Otra RUTA, no
+    // un panel de la bóveda. 🚨 No es «Mi resumen» (el resumen anual para la renta, `/resumen`): son dos cosas.
+    { vista: null, etiqueta: 'Inicio', href: '/inicio' },
     { vista: 'seguros', etiqueta: 'Seguros', href: '/boveda' },
     // 09/09/2026: acceso directo a la hoja/QR de la nevera, antes enterrada
     // al final de «Mis seguros». «Mi QR» y no «Hoja» ni «QR de acceso»: es la

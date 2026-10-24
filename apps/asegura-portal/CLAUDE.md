@@ -33,7 +33,7 @@
 - `portal_codigo.codigo` guarda el HASH (`hashCodigo()` de `lib/auth.ts`), comparación en tiempo constante. `hashCanal()` normaliza (trim+minúsculas): cambiarlo o su pimienta desvincula a todos.
 - El canal es un PUERTO (`lib/canal.ts`, `canal-email.ts`, `canal-consola.ts`; consola devuelve `false` en producción). 🚨 **`canal_no_disponible` (503, canal no registrado) ≠ `envio_fallido` (502, envío no salió)**; `obtenerCanal()` devuelve `null`, `enviarCodigo()` devuelve `false`, ninguno lanza.
 - `POST /api/acceso/solicitar` (pública): orden de guardas = canal (503) → tope IP 6/h (429, en memoria, no es el límite real) → `destino_invalido` (400, `src/destino.ts` valida PERO NO normaliza) → tope por DESTINO 5/h (429, cuenta filas en BD). La fila se escribe para cualquier destino (no ser oráculo de «¿es cliente?»). `/api/acceso/verificar`: 30/15 min por IP.
-- La raíz `/` (`app/page.tsx`, servidor) mira `getIdentidad()` y redirige a `/boveda`; el formulario vive en `app/Entrada.tsx`. El enlace del correo (`?d=&c=`, `lib/enlace-acceso.ts`) pre-rellena y NO canjea; sin `PORTAL_PUBLIC_URL` https no hay enlace, el correo sale con el código.
+- La raíz `/` (`app/page.tsx`, servidor) mira `getIdentidad()` y redirige a `/inicio` (24/10/2026; `/boveda` no cambia, es «Seguros»; cepo `regression-portal-inicio`); el formulario vive en `app/Entrada.tsx`. El enlace del correo (`?d=&c=`, `lib/enlace-acceso.ts`) pre-rellena y NO canjea; sin `PORTAL_PUBLIC_URL` https no hay enlace, el correo sale con el código.
 - Cambio de correo en «Mis datos»/«Añadir correo»: exige `codigoCorreo` a ese correo (`lib/correo-cambio.ts`, `lib/verificar-correo.ts`); se comprueba antes y se gasta solo si el guardado sale bien.
 
 ## Vínculo con la cartera (Fase 4)
