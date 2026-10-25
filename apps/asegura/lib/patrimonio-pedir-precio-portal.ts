@@ -22,6 +22,7 @@ import { sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { Prisma } from './generated/asegura-client'
 import { sqlDeclaradaViva } from './declaradas-eliminadas'
+import { fichasDeIdentidad } from './contacto-portal'
 import { puedePatrimonio } from './patrimonio-inquilino-portal'
 import {
   ORIGEN_PORTAL_PATRIMONIO,
@@ -130,4 +131,24 @@ export async function pedirPrecioPatrimonio(correduriaId: string, d: PeticionPed
     }
   }
   return { estado: 'ok', pedidoEl: r.pedidoEl, yaExistia: r.yaExistia }
+}
+
+export type PeticionInmuebleAbierta = { inmuebleId: string; pedidoEl: string }
+
+/**
+ * Las peticiones «Pedir precio» ABIERTAS de las fichas de esta identidad (25/10/2026), para que el portal no vuelva a
+ * ofrecer el botón y diga «Precio pedido el dd/mm». Solo lectura. La ficha sale de `portal_vinculo`
+ * (`fichasDeIdentidad`), no del cuerpo ni de la query. `'sin_ficha'` = la identidad no tiene ficha vinculada.
+ */
+export async function peticionesPedirPrecioAbiertas(correduriaId: string, identidadId: string): Promise<PeticionInmuebleAbierta[] | 'sin_ficha'> {
+  const fichas = await fichasDeIdentidad(correduriaId, identidadId)
+  if (fichas.length === 0) return 'sin_ficha'
+  return prismaAsegura().$queryRaw<PeticionInmuebleAbierta[]>(Prisma.sql`
+    select o.info_riesgo->>'inmuebleId' as "inmuebleId",
+           to_char(min(o.created_at) at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "pedidoEl"
+    from oportunidades o
+    where o.correduria_id = ${correduriaId}::uuid
+      and o.cliente_id in (${Prisma.join(fichas.map((f) => Prisma.sql`${f}::uuid`))})
+      and o.info_riesgo->>'inmuebleId' is not null and ${ABIERTA}
+    group by 1`)
 }

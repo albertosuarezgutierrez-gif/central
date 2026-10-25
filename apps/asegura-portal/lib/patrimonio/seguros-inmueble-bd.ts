@@ -14,6 +14,7 @@ import {
   type EstadoDecisionSeguro,
   type OrigenEnlace,
   type PrimaSeguroInmueble,
+  type NivelPatrimonio,
   type ResumenSegurosPatrimonio,
   type TipoPolizaEnlace,
 } from '@central/module-patrimonio'
@@ -98,6 +99,26 @@ export async function resumenPatrimonio(identidadId: string, visibles: readonly 
     select: { id: true, inmuebleId: true, polizaId: true, polizaDeclaradaId: true, estado: true, origen: true },
   })
   return resumenSegurosPatrimonio(estadosDeInmuebles(inmuebles, filas, visibles))
+}
+
+/**
+ * Inmuebles vivos de los titulares autorizados y sus enlaces vivos, para el aviso «póliza sin inmueble» (25/10/2026).
+ * La tabla puente tiene UNA puerta (este fichero): `poliza-sin-inmueble-bd.ts` pasa por aquí. Los ids de inmueble salen de la
+ * consulta de titulares autorizados, nunca de la request. Lanza si la BD falla.
+ */
+export async function inmueblesYEnlacesDeIdentidad(identidadId: string) {
+  if ((await getIdentidad())?.id !== identidadId) return { acc: new Map<string, NivelPatrimonio>(), inmuebles: [], filas: [] }
+  const acc = await accesosPatrimonio(identidadId)
+  if (acc.size === 0) return { acc, inmuebles: [], filas: [] }
+  const inmuebles = await prisma.portalPatrimonioInmueble.findMany({
+    where: { archivadoEn: null, titular: { clienteId: { in: [...acc.keys()] }, archivadoEn: null } },
+    select: { id: true, referenciaCatastral: true, cp: true, via: true, numero: true, titular: { select: { clienteId: true } } },
+  })
+  const filas = inmuebles.length === 0 ? [] : await prisma.portalPatrimonioInmueblePoliza.findMany({
+    where: { inmuebleId: { in: inmuebles.map((i) => i.id) }, archivadoEn: null },
+    select: { inmuebleId: true, polizaId: true, polizaDeclaradaId: true, estado: true },
+  })
+  return { acc, inmuebles, filas }
 }
 
 /**

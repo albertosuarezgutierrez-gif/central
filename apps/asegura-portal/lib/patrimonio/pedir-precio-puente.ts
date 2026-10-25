@@ -7,7 +7,7 @@
 //
 // Fallos que NO se colapsan: `sin_puente` (faltan envs) ≠ `error` (no ha salido: reintentar). Ninguno se le enseña a la
 // persona como «pedido».
-import { PORTAL_PUENTE_TIEMPO_MS } from '../puente-config'
+import { PORTAL_PUENTE_TIEMPO_MS } from '../puente-config.ts'
 
 const RUTA = '/api/portal/patrimonio/pedir-precio'
 
@@ -20,6 +20,48 @@ export type ResultadoPuentePedirPrecio =
   | { estado: 'no_aplica' }
   | { estado: 'sin_puente' }
   | { estado: 'error'; causa: string }
+
+const FECHA = /^\d{4}-\d{2}-\d{2}$/
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Interpreta la respuesta del GET de peticiones abiertas. PURA. Cualquier cosa que no sea un 200 `ok` con la lista bien
+ * formada es `null` = «no hemos podido comprobarlo» (jamás una lista vacía: eso diría «no hay petición»).
+ */
+export function interpretarPeticionesAbiertas(status: number, j: unknown): { inmuebleId: string; pedidoEl: string }[] | null {
+  const o = (typeof j === 'object' && j !== null ? j : {}) as Record<string, unknown>
+  if (status !== 200 || o.estado !== 'ok' || !Array.isArray(o.peticiones)) return null
+  const out: { inmuebleId: string; pedidoEl: string }[] = []
+  for (const f of o.peticiones) {
+    const r = (typeof f === 'object' && f !== null ? f : {}) as Record<string, unknown>
+    if (typeof r.inmuebleId !== 'string' || !UUID.test(r.inmuebleId) || typeof r.pedidoEl !== 'string' || !FECHA.test(r.pedidoEl)) return null
+    out.push({ inmuebleId: r.inmuebleId, pedidoEl: r.pedidoEl })
+  }
+  return out
+}
+
+/** Peticiones «Pedir precio» abiertas de esta identidad. `null` = sin puente, corte o respuesta rara (no se afirma nada). */
+export async function peticionesPedirPrecioPorPuente(identidadId: string): Promise<{ inmuebleId: string; pedidoEl: string }[] | null> {
+  const base = process.env.ASEGURA_PUENTE_URL
+  const secret = process.env.ASEGURA_PORTAL_PUENTE_SECRET
+  if (!base || !secret) return null
+  const control = new AbortController()
+  const reloj = setTimeout(() => control.abort(), PORTAL_PUENTE_TIEMPO_MS)
+  try {
+    const res = await fetch(`${base.replace(/\/+$/, '')}${RUTA}?identidadId=${encodeURIComponent(identidadId)}`, {
+      method: 'GET',
+      headers: { authorization: `Bearer ${secret}` },
+      cache: 'no-store',
+      signal: control.signal,
+    })
+    return interpretarPeticionesAbiertas(res.status, await res.json().catch(() => null))
+  } catch (e) {
+    console.error('[portal/pedir-precio] no se pudieron leer las peticiones abiertas:', e instanceof Error && e.name === 'AbortError' ? 'timeout' : 'red')
+    return null
+  } finally {
+    clearTimeout(reloj)
+  }
+}
 
 export async function pedirPrecioPorPuente(x: { identidadId: string; inmuebleId: string; tipo: TipoPedirPrecio }): Promise<ResultadoPuentePedirPrecio> {
   const base = process.env.ASEGURA_PUENTE_URL

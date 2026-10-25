@@ -53,6 +53,21 @@ export function textoTareaPrecioPatrimonio(x: { tipo: TipoPedirPrecio; alias: st
   return `Pedir precio de seguro de ${x.ramo}: el inmueble «${alias}» ${QUE[x.tipo]}. Lo ha pedido él desde Patrimonio en el portal.`
 }
 
+/**
+ * `GET /api/portal/patrimonio/pedir-precio?identidadId=` (25/10/2026): solo la identidad, nada más. Un `clienteId` o un
+ * `inmuebleId` en la query se IGNORA: la ficha sale de `portal_vinculo` en asegura, nunca de quien llama.
+ */
+export function identidadDeConsulta(url: string): string | null {
+  let v: string | null
+  try {
+    v = new URL(url).searchParams.get('identidadId')
+  } catch {
+    return null
+  }
+  const t = v?.trim() ?? ''
+  return UUID.test(t) ? t : null
+}
+
 /** Telegram a Alberto: SOLO ids (sin nombre ni dirección). */
 export function textoAvisoPedirPrecio(x: { oportunidadId: string; inmuebleId: string }): string {
   return `🏠 Petición de precio desde Patrimonio (portal)\nOportunidad ${x.oportunidadId}\nInmueble ${x.inmuebleId}\nMírala en plataforma /correduria → Hoy.`

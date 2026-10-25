@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 
 import {
   aplicaPedirPrecio,
+  identidadDeConsulta,
   ramoDeUso,
   textoAvisoPedirPrecio,
   textoTareaPrecioPatrimonio,
@@ -56,4 +57,19 @@ test('🚨 cableado: el puente no usa lead-declarada, recalcula el nivel y la ru
   assert.match(ruta, /puentePortalAutorizado\(req\)/)
   assert.match(ruta, /auditado\(/)
   assert.doesNotMatch(ruta, /ASEGURA_OPERADOR_SECRET|operadorAutorizado/)
+})
+
+test('GET de peticiones abiertas: solo identidadId; clienteId/inmuebleId de la query se ignoran y la ficha sale de asegura', () => {
+  assert.equal(identidadDeConsulta(`https://x.test/api/portal/patrimonio/pedir-precio?identidadId=${U}&clienteId=otro&inmuebleId=${I}`), U)
+  assert.equal(identidadDeConsulta('https://x.test/api/portal/patrimonio/pedir-precio?identidadId=no-es-uuid'), null)
+  assert.equal(identidadDeConsulta('https://x.test/api/portal/patrimonio/pedir-precio'), null)
+  assert.equal(identidadDeConsulta('no es una url'), null)
+  const fuente = readFileSync(new URL('./patrimonio-pedir-precio-portal.ts', import.meta.url), 'utf8')
+  const f = fuente.slice(fuente.indexOf('export async function peticionesPedirPrecioAbiertas'))
+  assert.match(f, /fichasDeIdentidad\(correduriaId, identidadId\)/)
+  assert.doesNotMatch(f, /clienteId\s*[:=]/)
+  const ruta = readFileSync(new URL('../app/api/portal/patrimonio/pedir-precio/route.ts', import.meta.url), 'utf8')
+  const get = ruta.slice(ruta.indexOf('export async function GET'), ruta.indexOf('export const POST'))
+  assert.match(get, /puentePortalAutorizado\(req\)/)
+  assert.doesNotMatch(get, /clienteId|searchParams/)
 })

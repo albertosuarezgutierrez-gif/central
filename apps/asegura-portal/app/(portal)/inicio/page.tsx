@@ -64,7 +64,7 @@ export default async function InicioPage() {
   // El nombre sale de la IDENTIDAD; si duda, sin nombre (nunca «Hola, cliente»).
   const pila = nombreDePila(identidad.nombre)
   const tel = MEDIADOR.identidad.telefono
-  const patrimonio = textoPatrimonio(r.patrimonio, r.vinculada)
+  const patrimonio = textoPatrimonio(r.patrimonio, r.vinculada, r.polizasSinInmueble)
   const calendario = textoCalendario(r.calendario)
   const flota = textoFlota(r.flota)
 

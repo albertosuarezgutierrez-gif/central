@@ -20,6 +20,7 @@ import {
   type ProximaFecha,
   type TarjetaFamilia,
 } from './inicio-tarjetas'
+import { avisosPolizasSinInmueble } from './patrimonio/poliza-sin-inmueble-bd'
 import { resumenPatrimonio, visiblesDeCartera, visiblesDeDeclaradas } from './patrimonio/seguros-inmueble-bd'
 import { getIdentidad } from './session'
 import { declaradaVigente } from '@central/module-patrimonio'
@@ -28,6 +29,8 @@ export type ResumenInicio = {
   familias: TarjetaFamilia[]
   vinculada: boolean
   patrimonio: FuentePatrimonio
+  /** Nº de pólizas de hogar/comunidad sin inmueble en el patrimonio. `null` = sin comprobar (no se afirma nada). */
+  polizasSinInmueble: number | null
   /** Nº de empresas cuya flota lleva. `null` = sin comprobar. */
   flota: number | null
   /** Las 3 próximas fechas. `null` = sin comprobar. */
@@ -123,6 +126,17 @@ export async function resumenInicio(identidadId: string): Promise<ResumenInicio 
     patrimonio = null
   }
 
+  // Pólizas de hogar/comunidad sin inmueble: con la MISMA cartera y declaradas ya leídas, y SIN llamar al puente (solo
+  // cuenta; los botones y el estado de las peticiones viven en `/patrimonio` y en la ficha de la póliza).
+  let polizasSinInmueble: number | null = null
+  if (patrimonio !== null && patrimonio !== 'no_disponible') {
+    try {
+      polizasSinInmueble = (await avisosPolizasSinInmueble(identidadId, { conPeticiones: false, cartera, declaradas })).length
+    } catch (e) {
+      console.error('[portal/inicio] fuente «pólizas sin inmueble» sin comprobar:', motivo(e))
+    }
+  }
+
   const flota = valor(rFlota, 'flota')
   const calendario = valor(rCalendario, 'calendario')
   const marcas = valor(rMarcas, 'sugerencia')
@@ -145,6 +159,7 @@ export async function resumenInicio(identidadId: string): Promise<ResumenInicio 
     familias,
     vinculada: vinculo === 'vinculada',
     patrimonio,
+    polizasSinInmueble,
     flota: flota === null ? null : flota.length,
     calendario: calendario === null ? null : calendario.map((o) => ({ titulo: o.titulo, fecha: o.fechaAccionable.toISOString().slice(0, 10) })),
     sugerencia,

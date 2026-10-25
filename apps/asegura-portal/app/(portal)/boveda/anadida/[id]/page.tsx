@@ -10,9 +10,12 @@ import { evolucionDePrimaDePoliza } from '@/lib/evolucion-prima'
 import { clavePedida, estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
 import { entradaDesdeFila, hayClaveIA, huellaRevision } from '@/lib/revision-poliza'
 import { leerRevisionDeSesion } from '@/lib/revision-poliza-bd'
+import { esRamoDeVivienda } from '@central/module-patrimonio'
+import { avisosPolizasSinInmueble } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
 
+import { AvisoPolizaSinInmueble } from '../../../patrimonio/AvisoPolizaSinInmueble'
 import { BienDeclarada, IconoRamo, RAMO } from '../../PolizaVista'
 import { CaptacionDeclarada } from '../../CaptacionDeclarada'
 import { EvolucionPrima } from '../../EvolucionPrima'
@@ -109,6 +112,15 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
   // «Evolución de la prima»: solo las PROPIAS (el cron observa solo las aportadas de cada identidad).
   const evolucionPrima = await evolucionDePrimaDePoliza('aportada', p.id, acceso.propia)
 
+  // Hogar/comunidad que no cuelga de ningún inmueble del patrimonio. Solo las PROPIAS (el aviso lista las declaradas de
+  // esta identidad); si la lectura falla, la ficha no se cae y no afirma nada.
+  const avisoSinInmueble = acceso.propia && esRamoDeVivienda(p.ramo)
+    ? await avisosPolizasSinInmueble(identidad.id, { conPeticiones: true }).then(
+        (l) => l.find((a) => a.tipo === 'declarada' && a.id === p.id) ?? null,
+        () => null,
+      )
+    : null
+
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
   const objeto =
     p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
@@ -135,6 +147,16 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
         {deOtro && <span className="chip">{puedeEditar ? 'Puedes corregirla' : 'Solo lectura'}</span>}
         <span className="chip">{etiquetaProcedencia(p.procedencia)}</span>
       </div>
+
+      {avisoSinInmueble && (
+        <AvisoPolizaSinInmueble
+          aviso={{
+            tipo: avisoSinInmueble.tipo, id: avisoSinInmueble.id, ubicacion: avisoSinInmueble.ubicacion,
+            referenciaCatastral: avisoSinInmueble.referenciaCatastral, propuesta: avisoSinInmueble.propuesta,
+            peticion: avisoSinInmueble.peticion, titularClienteId: avisoSinInmueble.titularClienteId,
+          }}
+        />
+      )}
 
       {/* 🚨 El aviso que justifica que esta ficha sea distinta de la de la
           cartera. Para el cliente las dos son «un seguro»; la diferencia real es

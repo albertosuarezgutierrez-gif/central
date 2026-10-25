@@ -4,8 +4,8 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
-import { pedirPrecioPatrimonio } from '@/lib/patrimonio-pedir-precio-portal'
-import { validarPedirPrecio } from '@/lib/patrimonio-pedir-precio-reglas'
+import { pedirPrecioPatrimonio, peticionesPedirPrecioAbiertas } from '@/lib/patrimonio-pedir-precio-portal'
+import { identidadDeConsulta, validarPedirPrecio } from '@/lib/patrimonio-pedir-precio-reglas'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +21,27 @@ export const runtime = 'nodejs'
  * de esa identidad se recalcula aquí (`lib/patrimonio-pedir-precio-portal.ts`). Ajeno o sin nivel = `no_encontrado` (404,
  * nunca 403). `no_aplica` (409): el inmueble tiene un seguro en vigor o no se puede saber. Esta ruta no envía nada al cliente.
  */
+/**
+ * GET `?identidadId=` → `{ estado:'ok', peticiones:[{ inmuebleId, pedidoEl }] }` (25/10/2026): las peticiones abiertas de
+ * las fichas de esa identidad, para que el portal no vuelva a ofrecer el botón. Solo lectura, mismo secreto de puente;
+ * la ficha se resuelve aquí por `portal_vinculo`, jamás desde la query (un `clienteId` en la URL se ignora).
+ */
+export async function GET(req: Request) {
+  if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  try {
+    if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
+    const identidadId = identidadDeConsulta(req.url)
+    if (!identidadId) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
+    const correduria = await correduriaUnica()
+    if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
+    const r = await peticionesPedirPrecioAbiertas(correduria.id, identidadId)
+    // Sin ficha no hay peticiones posibles: lista vacía real.
+    return NextResponse.json({ estado: 'ok', peticiones: r === 'sin_ficha' ? [] : r })
+  } catch (e) {
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('portal/patrimonio-pedir-precio', e) }, { status: 503 })
+  }
+}
+
 export const POST = auditado(async (req: Request) => {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
