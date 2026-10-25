@@ -36,9 +36,7 @@ import {
   type EstadoPlazo,
   type EstadoSupresion,
 } from '@central/module-seguros-portal'
-import { versionTextosLegales } from '@central/module-seguros'
-
-import { senalesActivas } from './patrimonio-senales-activas'
+import { VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
 
 import { prisma } from './db'
 import { correduriaUnica } from './peticiones'
@@ -181,7 +179,7 @@ export async function registrarSupresion(
         motivo: normalizarMotivo(entrada.motivo),
         // Sin la versión de los textos no se puede reconstruir QUÉ se le dijo que
         // se iba a conservar: el alcance cambia cuando cambian los textos.
-        versionTextos: versionTextosLegales(senalesActivas()),
+        versionTextos: VERSION_TEXTOS_LEGALES,
         ip: entrada.ip ?? null,
         userAgent: entrada.userAgent ?? null,
       },

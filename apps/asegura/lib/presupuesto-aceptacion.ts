@@ -185,6 +185,7 @@ function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado:
     anula: anulacion ? { compania: anulacion.compania, numeroPoliza: anulacion.numeroPoliza, fechaEfecto: anulacion.fechaEfecto } : null,
     vistoAntes: {
       opciones: f.nOpciones, companias: f.nCompanias,
+      // Versión VIGENTE de los textos del portal: constante única de `@central/module-seguros` (nunca un literal).
       informacionMediador: `${MEDIADOR.identidad.portal}/legal/mediador`, versionTextos: VERSION_TEXTOS_LEGALES,
     },
     necesidades: f.necesidades,

@@ -19,6 +19,8 @@ import {
   ramoDeUso,
   textoAvisoPedirPrecio,
   textoTareaPrecioPatrimonio,
+  municipioDeDireccion,
+  usoLegible,
   validarPedirPrecio,
 } from './patrimonio-pedir-precio-reglas.ts'
 
@@ -47,9 +49,10 @@ test('ramo por uso y textos: sin dirección ni nº de póliza; Telegram solo ids
   assert.equal(ramoDeUso('local'), 'comercio')
   assert.equal(ramoDeUso('vivienda'), 'hogar')
   assert.equal(ramoDeUso(null), 'hogar')
-  const t = textoTareaPrecioPatrimonio({ tipo: 'inmueble_sin_seguro', alias: '  Piso   de Triana ', ramo: 'hogar' })
-  assert.match(t, /«Piso de Triana»/)
+  const t = textoTareaPrecioPatrimonio({ tipo: 'inmueble_sin_seguro', uso: 'vivienda', municipio: '  SEVILLA ', ramo: 'hogar' })
+  assert.match(t, /vivienda en SEVILLA/)
   assert.match(t, /no tiene seguro/)
+  assert.doesNotMatch(t, /«/, 'la tarea no cita el alias del cliente')
   const aviso = textoAvisoPedirPrecio({ oportunidadId: 'o1', inmuebleId: 'i1' })
   assert.match(aviso, /o1/)
   assert.doesNotMatch(aviso, /Triana/)
@@ -91,9 +94,9 @@ test('comunidad (25/10/2026): tipo válido en el cuerpo, ramo comunidades pase l
   assert.equal(ramoDePeticion('comunidad', 'local'), 'comunidades')
   assert.equal(ramoDePeticion('inmueble_sin_seguro', 'local'), 'comercio')
   assert.equal(ramoDePeticion('seguro_no_vigente', null), 'hogar')
-  const t = textoTareaPrecioPatrimonio({ tipo: 'comunidad', alias: 'Piso Socorro', ramo: 'comunidades' })
+  const t = textoTareaPrecioPatrimonio({ tipo: 'comunidad', uso: 'vivienda', municipio: 'Sevilla', ramo: 'comunidades' })
   assert.match(t, /comunidades/)
-  assert.match(t, /«Piso Socorro»/)
+  assert.match(t, /vivienda en Sevilla/)
   assert.doesNotMatch(t, /no tiene seguro/)
 })
 
@@ -162,15 +165,36 @@ test('🚨 asegura re-decide cada oferta: contrato terminado, hipoteca sin confi
   assert.equal(aplicaCompararExterna(false), false)
 })
 
+test('🚨 tarea sin alias (26/10/2026): tipo de inmueble + municipio + tipo de petición; lo que no consta, se dice', () => {
+  assert.equal(usoLegible('local'), 'local')
+  assert.equal(usoLegible('Vivienda'), 'vivienda')
+  assert.equal(usoLegible('otro'), 'inmueble')
+  assert.equal(usoLegible(null), 'inmueble')
+  assert.equal(municipioDeDireccion('CL PARRA LA 12, 41003 SEVILLA (SEVILLA)'), 'SEVILLA')
+  assert.equal(municipioDeDireccion('Calle Socorro 24, 41003 Sevilla'), 'Sevilla', 'importación sin provincia')
+  assert.equal(municipioDeDireccion('Av. de la Paz 3, 2º B, 28001 Madrid (Madrid)'), 'Madrid')
+  assert.equal(municipioDeDireccion('Calle Socorro 24'), null, 'sin CP no se adivina')
+  assert.equal(municipioDeDireccion('Calle Socorro 24, Sevilla'), null, 'sin CP el tramo puede ser calle')
+  assert.equal(municipioDeDireccion(null), null)
+  for (const tipo of ['inmueble_sin_seguro', 'seguro_no_vigente', 'comunidad', 'impago_alquiler', 'hipoteca'] as const) {
+    const t = textoTareaPrecioPatrimonio({ tipo, uso: 'local', municipio: null, ramo: 'comercio' })
+    assert.match(t, /local \(municipio no consta\)/, tipo)
+    assert.doesNotMatch(t, /«|»/, `${tipo}: la tarea no cita ningún alias`)
+  }
+  // El puente ya no lee ni pasa el alias a la tarea.
+  const lib = readFileSync(new URL('./patrimonio-pedir-precio-portal.ts', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
+  assert.doesNotMatch(lib, /i\.alias|alias:/)
+})
+
 test('textos: renta en formato español o SIN cifra; Telegram solo ids', () => {
   assert.equal(eurosEs(216249), '2.162,49€')
   assert.equal(eurosEs(null), null)
   assert.equal(eurosEs(0), null)
-  assert.match(textoTareaPrecioPatrimonio({ tipo: 'impago_alquiler', alias: 'Piso Triana', ramo: 'impago_alquiler', rentaCent: 85000 }), /\(renta 850,00€\/mes\)/)
-  assert.doesNotMatch(textoTareaPrecioPatrimonio({ tipo: 'impago_alquiler', alias: 'Piso Triana', ramo: 'impago_alquiler', rentaCent: null }), /renta/)
-  assert.match(textoTareaPrecioPatrimonio({ tipo: 'hipoteca', alias: 'Piso', ramo: 'hogar' }), /hipoteca/)
-  assert.match(textoTareaPrecioPatrimonio({ tipo: 'comparar_externa', alias: '', ramo: 'hogar', compania: 'Mapfre', vence: '2026-12-03' }), /vence el 03\/12\/2026/)
-  assert.match(textoTareaPrecioPatrimonio({ tipo: 'comparar_externa', alias: '', ramo: 'auto', vence: null }), /sin vencimiento conocido/)
+  assert.match(textoTareaPrecioPatrimonio({ tipo: 'impago_alquiler', uso: 'vivienda', municipio: 'Sevilla', ramo: 'impago_alquiler', rentaCent: 85000 }), /\(renta 850,00€\/mes\)/)
+  assert.doesNotMatch(textoTareaPrecioPatrimonio({ tipo: 'impago_alquiler', uso: 'vivienda', municipio: 'Sevilla', ramo: 'impago_alquiler', rentaCent: null }), /renta/)
+  assert.match(textoTareaPrecioPatrimonio({ tipo: 'hipoteca', uso: 'vivienda', municipio: null, ramo: 'hogar' }), /hipoteca/)
+  assert.match(textoTareaPrecioPatrimonio({ tipo: 'comparar_externa', uso: null, municipio: null, ramo: 'hogar', compania: 'Mapfre', vence: '2026-12-03' }), /vence el 03\/12\/2026/)
+  assert.match(textoTareaPrecioPatrimonio({ tipo: 'comparar_externa', uso: null, municipio: null, ramo: 'auto', vence: null }), /sin vencimiento conocido/)
   assert.match(textoHistorialPedirPrecio('hipoteca'), /hipoteca/)
   assert.match(textoAvisoPedirPrecio({ oportunidadId: 'o1', inmuebleId: null, tipo: 'comparar_externa' }), /comparar_externa/)
 })

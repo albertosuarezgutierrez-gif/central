@@ -12,8 +12,9 @@ export const maxDuration = 120
 /**
  * GET /api/cron/senales-patrimonio — el motor de señales de patrimonio (P16, 26/10/2026). Diario, 06:30 UTC (`vercel.json`).
  *
- * 🚨 APAGADO por defecto: sin `PATRIMONIO_SENALES_ACTIVAS=1` responde `{estado:'apagado'}` SIN tocar la BD. Encendido, solo
- * calcula para las fichas cuya identidad tiene `comercial_patrimonio` vigente. NO envía nada (ni correo, ni Telegram).
+ * 🚨 APAGADO por defecto: sin `PATRIMONIO_SENALES_ACTIVAS=1` responde `{estado:'apagado'}` SIN tocar la BD. Encendido
+ * (interés legítimo informado), calcula para toda ficha con patrimonio salvo oposición vigente, y BORRA las señales que
+ * superan el plazo de conservación (`MESES_RETENCION_SENALES`). NO envía nada (ni correo, ni Telegram).
  * Auth: `CRON_SECRET` por `Authorization: Bearer` (sin esa env no se autoriza a nadie). `?contar=1` = ensayo: cuenta lo
  * que haría y no escribe.
  */

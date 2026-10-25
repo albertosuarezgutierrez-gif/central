@@ -4,7 +4,11 @@ import assert from 'node:assert/strict'
 
 import {
   DIAS_TRAS_DESCARTE,
+  MESES_RETENCION_SENALES,
+  POLITICA_CALCULO,
   calcularSenales,
+  corteRetencionSenales,
+  debePurgarseSenal,
   patrimonioSenalesActivas,
   permisoContacto,
   planificarSenales,
@@ -16,7 +20,7 @@ import {
   type FilaSenalExistente,
   type InmuebleParaSenal,
 } from './senales.ts'
-import { sumarDias } from './fechas.ts'
+import { sumarDias, sumarMeses } from './fechas.ts'
 
 const HOY = '2026-10-26'
 const C = 'cli-1'
@@ -102,23 +106,46 @@ test('poliza_externa_por_vencer: vigente y dentro de 60 días; vencida, lejana, 
   assert.equal(senalesDeDeclaradas({ clienteId: C, hoy: HOY, declaradas: [d({ ramo: null })] })[0]!.ramo, 'otros')
 })
 
-test('permisoContacto: una oposición gana a todo; pedido > consentido > sin_permiso', () => {
-  assert.equal(permisoContacto({ peticionAbierta: true, consentimientos: [true, false] }), 'opuesto')
-  assert.equal(permisoContacto({ peticionAbierta: true, consentimientos: [null] }), 'pedido')
-  assert.equal(permisoContacto({ peticionAbierta: false, consentimientos: [true, null] }), 'consentido')
-  assert.equal(permisoContacto({ peticionAbierta: false, consentimientos: [null] }), 'sin_permiso')
-  assert.equal(permisoContacto({ peticionAbierta: false, consentimientos: [] }), 'sin_permiso')
+test('permisoContacto: una oposición gana a todo; pedido > consentido (comercial) > sin_permiso', () => {
+  assert.equal(permisoContacto({ peticionAbierta: true, oposiciones: [null, true], comerciales: [true] }), 'opuesto')
+  assert.equal(permisoContacto({ peticionAbierta: true, oposiciones: [null], comerciales: [null] }), 'pedido')
+  assert.equal(permisoContacto({ peticionAbierta: false, oposiciones: [false], comerciales: [true, null] }), 'consentido')
+  assert.equal(permisoContacto({ peticionAbierta: false, oposiciones: [null], comerciales: [null] }), 'sin_permiso')
+  assert.equal(permisoContacto({ peticionAbierta: false, oposiciones: [], comerciales: [] }), 'sin_permiso')
+  assert.equal(permisoContacto({ peticionAbierta: false, oposiciones: [null], comerciales: [false] }), 'sin_permiso', 'retirar «comercial» no es oponerse a las señales')
 })
 
-test('puedeCalcularSenales: interruptor apagado = nunca, aunque haya consentimiento', () => {
-  assert.equal(puedeCalcularSenales({ interruptor: false, consentimientos: [true] }), false)
-  assert.equal(puedeCalcularSenales({ interruptor: false, consentimientos: [true], politica: 'interes_legitimo' }), false)
-  assert.equal(puedeCalcularSenales({ interruptor: true, consentimientos: [true] }), true)
-  assert.equal(puedeCalcularSenales({ interruptor: true, consentimientos: [null] }), false, 'sin consentimiento vigente no se calcula')
-  assert.equal(puedeCalcularSenales({ interruptor: true, consentimientos: [] }), false)
-  assert.equal(puedeCalcularSenales({ interruptor: true, consentimientos: [true, false] }), false, 'una oposición basta')
-  assert.equal(puedeCalcularSenales({ interruptor: true, consentimientos: [null], politica: 'interes_legitimo' }), true)
-  assert.equal(puedeCalcularSenales({ interruptor: true, consentimientos: [false], politica: 'interes_legitimo' }), false)
+test('política vigente: interés legítimo informado (variante A publicada)', () => {
+  assert.equal(POLITICA_CALCULO, 'interes_legitimo')
+})
+
+test('puedeCalcularSenales: apagado = nunca; encendido = salvo oposición VIGENTE', () => {
+  assert.equal(puedeCalcularSenales({ interruptor: false, oposiciones: [] }), false)
+  assert.equal(puedeCalcularSenales({ interruptor: false, oposiciones: [null, false] }), false)
+  assert.equal(puedeCalcularSenales({ interruptor: true, oposiciones: [] }), true, 'sin identidades nadie se ha opuesto')
+  assert.equal(puedeCalcularSenales({ interruptor: true, oposiciones: [null] }), true, 'sin casilla previa: nunca opuesto = se calcula')
+  assert.equal(puedeCalcularSenales({ interruptor: true, oposiciones: [false] }), true, 'retiró la oposición = se calcula')
+  assert.equal(puedeCalcularSenales({ interruptor: true, oposiciones: [true] }), false)
+  assert.equal(puedeCalcularSenales({ interruptor: true, oposiciones: [null, false, true] }), false, 'una oposición de cualquier identidad basta')
+})
+
+test('retención: 24 meses desde el cierre, o desde la última actualización si sigue viva (hoy inyectado)', () => {
+  assert.equal(MESES_RETENCION_SENALES, 24)
+  const corte = corteRetencionSenales(HOY)
+  assert.equal(corte, sumarMeses(HOY, -24))
+  assert.ok(MESES_RETENCION_SENALES * 30 > DIAS_TRAS_DESCARTE, 'purgar no puede saltarse los 180 días del descarte')
+  const antes = sumarDias(corte, -1)
+  // Cerrada: manda cerradaEn, aunque ultimaVezEn sea antigua o reciente.
+  assert.equal(debePurgarseSenal({ cerradaEn: antes, ultimaVezEn: HOY, hoy: HOY }), true)
+  assert.equal(debePurgarseSenal({ cerradaEn: corte, ultimaVezEn: antes, hoy: HOY }), false, 'el día del corte aún se conserva')
+  assert.equal(debePurgarseSenal({ cerradaEn: sumarDias(HOY, -10), ultimaVezEn: antes, hoy: HOY }), false)
+  // Viva: manda ultimaVezEn.
+  assert.equal(debePurgarseSenal({ cerradaEn: null, ultimaVezEn: antes, hoy: HOY }), true)
+  assert.equal(debePurgarseSenal({ cerradaEn: null, ultimaVezEn: sumarDias(HOY, -1), hoy: HOY }), false)
+  // Sin fecha: no se destruye lo que no se sabe fechar.
+  assert.equal(debePurgarseSenal({ cerradaEn: null, ultimaVezEn: null, hoy: HOY }), false)
+  // 29/02 → recorta al 28/02 dos años antes, sin desbordar.
+  assert.equal(corteRetencionSenales('2028-02-29'), '2026-02-28')
 })
 
 test('180 días: una descartada no vuelve hasta el día 180; las demás cerradas sí', () => {

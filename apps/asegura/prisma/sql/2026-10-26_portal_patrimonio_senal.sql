@@ -17,12 +17,11 @@
 --    descarte, `DIAS_TRAS_DESCARTE` de `@central/module-patrimonio`).
 --  · `inmueble_id`/`titular_id` pueden ser NULL solo en `poliza_externa_por_vencer` (cuelga de una declarada de la identidad).
 --
--- ── PASO MANUAL APARTE (no está en este fichero) ──────────────────────────────
---  El consentimiento `comercial_patrimonio` necesita ensanchar el CHECK de `seguros.portal_consentimiento.tipo` (hoy:
---  avisos, comercial, lds_art19; nombre de la restricción: `portal_consentimiento_tipo_check`, comprobarlo con `\d`). Eso exige
---  sustituir la restricción antigua, con una sentencia de borrado que este repositorio no escribe en ficheros SQL: hacerlo a
---  mano, en una transacción, ANTES de encender el interruptor, dejando la lista: 'avisos', 'comercial', 'lds_art19',
---  'comercial_patrimonio'. (Sin eso, dar la casilla devuelve 500 y el motor no calcula nada: falla cerrado.)
+-- ── Oposición (26/10/2026) ────────────────────────────────────────────────────
+--  Base legal: interés legítimo informado. La OPOSICIÓN (`oposicion_senales_patrimonio`) exige ensanchar el CHECK de
+--  `seguros.portal_consentimiento.tipo`: `2026-10-26_portal_consentimiento_oposicion.sql` (aparte, idempotente).
+--  Retención: el cron BORRA las señales a los 24 meses (`MESES_RETENCION_SENALES`); `prisma_seguros` tiene DELETE por los
+--  privilegios por defecto del schema; el portal no.
 SET search_path = seguros, public;
 
 BEGIN;

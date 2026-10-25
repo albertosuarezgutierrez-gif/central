@@ -1,11 +1,23 @@
-# BORRADOR P15 — Textos legales de las señales de patrimonio (26/10/2026)
+# P15 — Textos legales de las señales de patrimonio (26/10/2026)
 
-> **Estado: BORRADOR. NO ACTIVO. Pendiente de aprobación de Alberto (y, si se quiere, de un asesor).**
-> Todo lo de este documento está en el código detrás del interruptor `PATRIMONIO_SENALES_ACTIVAS` (env, apagado por
-> defecto; solo el valor exacto `1` enciende). Apagado: no se muestra nada nuevo, no se escribe ningún consentimiento nuevo,
-> no se calcula ni se lee ninguna señal, y `VERSION_TEXTOS_LEGALES` sigue siendo `2026-10-v1`.
-> Los textos de abajo son los que el código pinta hoy. Si Alberto cambia una palabra, se cambia el fichero indicado y, si es de
-> fondo, la versión (`-borrador` desaparece al aprobar).
+> **Estado: VARIANTE A PUBLICADA (26/10/2026) — «interés legítimo informado», decisión de Alberto.**
+> ⚠️ Nomenclatura: en la primera versión de este borrador las letras iban al revés («A» = consentimiento). Desde hoy:
+> **variante A = interés legítimo (publicada, §3)**; **variante B = consentimiento previo (DESCARTADA, §3-B, se conserva
+> solo como histórico)**. En el código: `POLITICA_CALCULO = 'interes_legitimo'`.
+> Qué cambió en el código al publicar:
+> - Política de privacidad del portal: apartado «3 bis» SIEMPRE visible (`ApartadoSenalesPatrimonio.tsx`), también con el
+>   motor apagado (con interés legítimo hay que informar ANTES de calcular). `VERSION_TEXTOS_LEGALES` = `2026-10-v2`
+>   (fecha `2026-10-26`), constante ÚNICA en `packages/module-seguros/src/mediador.ts` (se retiró la variante con interruptor).
+>   Todos los clientes vuelven a acreditar la información precontractual (`lds_art19`) en su siguiente entrada con código.
+> - Sin casilla de consentimiento previo: `comercial_patrimonio` desaparece. En su lugar, el derecho de OPOSICIÓN:
+>   tipo `oposicion_senales_patrimonio` en `portal_consentimiento` (append-only; `otorgado=true` = se opone, `false` = retira
+>   la oposición), ruta `POST /api/oposicion-senales-patrimonio`, casilla «No quiero…» en «Configuración → Privacidad» y en
+>   «Patrimonio» (con el aviso informativo). SQL previo: `apps/asegura/prisma/sql/2026-10-26_portal_consentimiento_oposicion.sql`.
+> - El motor calcula para toda ficha con patrimonio salvo oposición vigente; el permiso para CONTACTAR sigue siendo «lo ha
+>   pedido» o el consentimiento `comercial` (`permisoContacto`).
+> - Conservación (decisión §0.3): 24 meses desde el cierre o desde la última actualización (`MESES_RETENCION_SENALES`); el cron
+>   diario las BORRA.
+> - Sigue pendiente: §0.2 (supresión) y lo de §0.7. El interruptor `PATRIMONIO_SENALES_ACTIVAS` sigue APAGADO.
 
 ## 0. Decisiones que necesito de Alberto antes de encender nada
 
@@ -32,7 +44,7 @@
    la casilla también en «Configuración», Telegram inmediato para «Lo ha pedido», y el CHECK de `portal_consentimiento.tipo`
    (paso SQL manual, ver §5).
 
-## 1. Aviso en la herramienta (pantalla «Patrimonio», encima de las listas, solo con la herramienta activada)
+## 1. Aviso en la herramienta — SUSTITUIDO (26/10/2026): el vigente está en `OposicionSenalesPatrimonio.tsx` (`conAviso`)
 
 Fichero: `apps/asegura-portal/app/(portal)/patrimonio/ConsentimientoPatrimonio.tsx`.
 
@@ -45,7 +57,7 @@ Fichero: `apps/asegura-portal/app/(portal)/patrimonio/ConsentimientoPatrimonio.t
 > comunidad. Esto no te envía ningún mensaje: solo te contactamos si lo pides con «Pedir precio» o si marcas la casilla.
 > Detalle en la política de privacidad.
 
-## 2. Casilla `comercial_patrimonio` y su retirada
+## 2. Casilla `comercial_patrimonio` — DESCARTADA (26/10/2026): la sustituye la oposición `oposicion_senales_patrimonio`
 
 Fichero del texto sellado: `packages/module-seguros-portal/src/consentimiento.ts`
 (`TEXTO_CONSENTIMIENTO_COMERCIAL_PATRIMONIO`, versión `2026-11-p1-borrador`; al aprobar, quitar `-borrador`).
@@ -61,7 +73,7 @@ Mensajes de estado: «Anotado: revisaremos los seguros de tus inmuebles.» · «
 que tuviéramos apuntado (puede tardar hasta un día).» (la retirada de las señales abiertas la hace el cron diario) · «Todavía no
 nos has dicho nada: mientras tanto, no revisamos los seguros de tus inmuebles.»
 
-## 3. Ampliación de la política de privacidad — variante A (la que está en el código: consentimiento)
+## 3-B. Variante B — consentimiento previo (DESCARTADA el 26/10/2026; antes llamada «A»; histórico)
 
 Fichero: `apps/asegura-portal/app/legal/privacidad/ApartadoSenalesPatrimonio.tsx` (se pinta como «3 bis» solo con el
 interruptor; entra con `VERSION_TEXTOS_LEGALES_PATRIMONIO = 2026-11-v1`).
@@ -88,7 +100,11 @@ interruptor; entra con `VERSION_TEXTOS_LEGALES_PATRIMONIO = 2026-11-v1`).
 Cada frase es una afirmación sobre el código (mapa en la cabecera del componente; cepo
 `test/regression-portal-patrimonio-senales.test.ts`).
 
-## 3-B. Variante B (si Alberto confirma «interés legítimo informado»; NO está en el código)
+## 3. Variante A — interés legítimo informado (PUBLICADA el 26/10/2026; antes llamada «B»)
+
+> Texto vigente, palabra por palabra, en `apps/asegura-portal/app/legal/privacidad/ApartadoSenalesPatrimonio.tsx` (manda el
+> código; lo de abajo es el borrador de partida). Añade sobre el borrador: derecho de oposición desde «Configuración» o
+> «Patrimonio» o por correo, y el plazo de conservación de 24 meses.
 
 Sustituye a las viñetas «Solo si la marcas» y «Base legal»:
 
@@ -105,7 +121,7 @@ Sustituye a las viñetas «Solo si la marcas» y «Base legal»:
 Requiere además: casilla invertida («No quiero…», `comercial_patrimonio=false` = oposición), informar **antes** de calcular
 (aviso al entrar en Patrimonio, no solo en la política) y `POLITICA_CALCULO='interes_legitimo'`.
 
-## 4. Qué cambia en el código al activar (para que Alberto sepa qué aprueba)
+## 4. Qué cambiaba al activar — HISTÓRICO (lo vigente está en la cabecera)
 
 - `versionTextosLegales(true)` → `2026-11-v1` / fecha `2026-10-26`: la acreditación `lds_art19` y las solicitudes de supresión
   se sellan con ella; **todos los clientes volverán a acreditar la información precontractual al entrar** (es el coste de
@@ -116,7 +132,7 @@ Requiere además: casilla invertida («No quiero…», `comercial_patrimonio=fal
   (2) ensanchar a mano el CHECK de `portal_consentimiento.tipo` (§5); (3) desplegar; (4) poner `PATRIMONIO_SENALES_ACTIVAS=1`
   en `central-asegura` **y** `asegura-portal` y redeploy; (5) ensayo `GET /api/cron/senales-patrimonio?contar=1`.
 
-## 5. Paso SQL manual (no está en ningún fichero, a propósito)
+## 5. Paso SQL — ya en fichero: `apps/asegura/prisma/sql/2026-10-26_portal_consentimiento_oposicion.sql`
 
 `seguros.portal_consentimiento.tipo` tiene un CHECK con `avisos, comercial, lds_art19`. Hay que sustituirlo por uno que admita
 también `comercial_patrimonio` (la sentencia de borrado de la restricción antigua no se escribe en ficheros del repo). Sin
