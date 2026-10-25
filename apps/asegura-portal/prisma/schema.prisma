@@ -1684,6 +1684,10 @@ model PortalPatrimonioInmueble {
   catastroEstado                    String?   @map("catastro_estado")
   /// La persona marca que preside/administra la comunidad. NULL = no lo ha dicho (≠ false).
   presidenteComunidad               Boolean?  @map("presidente_comunidad")
+  /// «¿Tiene hipoteca?» (25/10/2026, `prisma/sql/2026-10-25_portal_patrimonio_hipoteca.sql`): `si` | `no` | `no_se` (CHECK).
+  /// 🚨 NULL = no lo ha dicho, que NO es «no tiene». Solo `si` ofrece revisar los seguros de la hipoteca (y solo si pulsa).
+  /// ⚠️ Declarada ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
+  hipoteca                          String?
 
   titular      PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
   comunidades  PortalPatrimonioInmuebleComunidad[]

@@ -81,7 +81,7 @@ test('los fallos del puente no se muestran como «pedido»: sin puente 503, caí
 test('🚨 cableado: el cliente del puente no manda clienteId, no usa lead-declarada y la ruta no toca prisma', () => {
   const quita = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
   const puente = quita(readFileSync(new URL('./pedir-precio-puente.ts', import.meta.url), 'utf8'))
-  assert.match(puente, /JSON\.stringify\(\{ identidadId: x\.identidadId, inmuebleId: x\.inmuebleId, tipo: x\.tipo \}\)/)
+  assert.match(puente, /JSON\.stringify\(\{ identidadId: x\.identidadId, tipo: x\.tipo, inmuebleId: x\.inmuebleId, contratoId: x\.contratoId, polizaDeclaradaId: x\.polizaDeclaradaId \}\)/)
   assert.doesNotMatch(puente, /clienteId|lead-declarada|prisma/)
   assert.match(puente, /\/api\/portal\/patrimonio\/pedir-precio/)
   assert.match(puente, /ASEGURA_PORTAL_PUENTE_SECRET/)

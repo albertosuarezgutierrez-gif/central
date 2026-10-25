@@ -9,6 +9,8 @@
  * `sinComprobar` y nunca se lee como «no tienes nada pendiente».
  */
 
+import type { ItemComparar } from './patrimonio/ofertas'
+
 export type ItemPendiente = {
   clave: string
   titulo: string
@@ -49,6 +51,11 @@ export type EntradaPendientes = {
      */
     reparaciones?: { cubre: number; sinSeguro: number; sinComprobar: number } | null
   } | null
+  /**
+   * Pólizas que el cliente DECLARÓ (de otra correduría) y vencen en ≤ 60 días (`itemsCompararPendientes`). Ausente o vacío = nada.
+   * Es el aviso del vencimiento de SU póliza (informativo); «Compárala» es un botón de la ficha, no se pide desde aquí.
+   */
+  declaradasPorVencer?: ItemComparar[]
 }
 
 export type PendientesDeTi = { items: ItemPendiente[]; sinComprobar: string[] }
@@ -197,6 +204,11 @@ export function pendientesDeTi(e: EntradaPendientes, ramo: (r: string) => string
         })
       }
     }
+  }
+
+  // 6. Sus pólizas de otra correduría que vencen pronto: el aviso es de SU vencimiento; la petición es el botón de la ficha.
+  for (const c of e.declaradasPorVencer ?? []) {
+    items.push({ clave: `comparar:${c.id}`, titulo: c.titulo, detalle: c.detalle, href: c.href, urgente: false })
   }
 
   return { items, sinComprobar }

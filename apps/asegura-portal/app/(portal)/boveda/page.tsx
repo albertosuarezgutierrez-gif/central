@@ -26,6 +26,8 @@ import { esFecha } from '@central/module-patrimonio'
 import { prellenadoDeUrl } from '@/lib/patrimonio/cubre-seguro'
 import { fechaMadrid } from '@/lib/patrimonio/dia-madrid'
 import { patrimonioParaPendientes } from '@/lib/patrimonio/pendiente-bd'
+import { itemsCompararPendientes } from '@/lib/patrimonio/ofertas'
+import { declaradaVigente as declaradaVigenteOferta } from '@central/module-patrimonio'
 import { presupuestosPendientesDeIdentidad } from '@/lib/presupuesto'
 import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
@@ -267,6 +269,16 @@ export default async function Boveda({
                   ? false
                   : null,
             patrimonio: patrimonioPendiente,
+            // Sus declaradas (de otra correduría) que vencen en ≤ 60 días: aviso informativo; la petición es el botón de la ficha.
+            declaradasPorVencer: itemsCompararPendientes(
+              declaradas.map((d) => ({
+                id: d.id,
+                vence: d.fechaVencimiento ? d.fechaVencimiento.toISOString().slice(0, 10) : null,
+                vigente: declaradaVigenteOferta(d, new Date()),
+                etiqueta: [d.ramo ? `de ${(RAMO[d.ramo] ?? d.ramo).toLowerCase()}` : '', d.compania ? `(${d.compania})` : ''].filter(Boolean).join(' '),
+              })),
+              hoyMadrid,
+            ),
           },
           (r) => (RAMO[r] ?? r).toLowerCase(),
         )

@@ -13,6 +13,8 @@ import { leerRevisionDeSesion } from '@/lib/revision-poliza-bd'
 import { esRamoDeVivienda } from '@central/module-patrimonio'
 import { avisosPolizasSinInmueble } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { fechaEs } from '@/lib/fechas'
+import { textoCompararExterna } from '@/lib/patrimonio/ofertas'
+import { declaradaVigente as declaradaVigenteOferta } from '@central/module-patrimonio'
 import { getIdentidad } from '@/lib/session'
 
 import { AvisoPolizaSinInmueble } from '../../../patrimonio/AvisoPolizaSinInmueble'
@@ -21,6 +23,7 @@ import { CaptacionDeclarada } from '../../CaptacionDeclarada'
 import { EvolucionPrima } from '../../EvolucionPrima'
 import { EditarPoliza } from '../../EditarPoliza'
 import { EliminarPoliza } from '../../EliminarPoliza'
+import { OfertaBoton } from '../../../patrimonio/OfertaBoton'
 import { RevisarPoliza } from './RevisarPoliza'
 import { avisoPartesConservados, etiquetaProcedencia } from '@central/module-seguros-portal'
 
@@ -269,6 +272,21 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           una póliza APORTADA, por lo mismo que «quitarla» — una de la cartera
           la media la correduría y ahí se habla con Alberto, no se manda una
           carta sola. La carta se compone y se enseña; no se envía desde aquí. */}
+      {/* «Comparar» (25/10/2026): solo en las PROPIAS y vigentes. Con vencimiento dice cuándo vence; sin él no se ofrece por
+          fecha pero el botón manual sigue. El botón es la petición: nada se manda sin pulsarlo. */}
+      {!deOtro && declaradaVigenteOferta(p, new Date()) && (
+        <section className="seccion" aria-labelledby="comparar-titulo">
+          <h2 id="comparar-titulo">¿Quieres que te la comparemos?</h2>
+          <OfertaBoton
+            tipo="comparar_externa"
+            objeto={{ polizaDeclaradaId: p.id }}
+            titulo={textoCompararExterna(p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null)}
+            texto="Miramos si podemos mejorarte el precio o las coberturas de esta póliza."
+            boton="Compárala"
+          />
+        </section>
+      )}
+
       {!deOtro && (
       <section className="seccion" aria-labelledby="carta-titulo">
         <h2 id="carta-titulo">Si no quieres renovarla</h2>

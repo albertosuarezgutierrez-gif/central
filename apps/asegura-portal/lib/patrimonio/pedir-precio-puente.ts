@@ -11,7 +11,23 @@ import { PORTAL_PUENTE_TIEMPO_MS } from '../puente-config.ts'
 
 const RUTA = '/api/portal/patrimonio/pedir-precio'
 
-export type TipoPedirPrecio = 'inmueble_sin_seguro' | 'seguro_no_vigente' | 'comunidad'
+/** Un tipo por línea (fácil de fusionar). Espejo de `TIPOS_PEDIR_PRECIO` de `apps/asegura`, que lo vuelve a validar. */
+export type TipoPedirPrecio =
+  | 'inmueble_sin_seguro'
+  | 'seguro_no_vigente'
+  | 'comunidad'
+  | 'comparar_externa'
+  | 'impago_alquiler'
+  | 'hipoteca'
+
+/** Lo que viaja: `comparar_externa` lleva la póliza declarada; `impago_alquiler`, inmueble + contrato; el resto, el inmueble. */
+export type PeticionPuentePedirPrecio = {
+  identidadId: string
+  tipo: TipoPedirPrecio
+  inmuebleId?: string
+  contratoId?: string
+  polizaDeclaradaId?: string
+}
 
 export type ResultadoPuentePedirPrecio =
   | { estado: 'ok'; pedidoEl: string; yaExistia: boolean }
@@ -63,7 +79,7 @@ export async function peticionesPedirPrecioPorPuente(identidadId: string): Promi
   }
 }
 
-export async function pedirPrecioPorPuente(x: { identidadId: string; inmuebleId: string; tipo: TipoPedirPrecio }): Promise<ResultadoPuentePedirPrecio> {
+export async function pedirPrecioPorPuente(x: PeticionPuentePedirPrecio): Promise<ResultadoPuentePedirPrecio> {
   const base = process.env.ASEGURA_PUENTE_URL
   const secret = process.env.ASEGURA_PORTAL_PUENTE_SECRET
   if (!base || !secret) return { estado: 'sin_puente' }
@@ -73,7 +89,7 @@ export async function pedirPrecioPorPuente(x: { identidadId: string; inmuebleId:
     const res = await fetch(`${base.replace(/\/+$/, '')}${RUTA}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${secret}` },
-      body: JSON.stringify({ identidadId: x.identidadId, inmuebleId: x.inmuebleId, tipo: x.tipo }),
+      body: JSON.stringify({ identidadId: x.identidadId, tipo: x.tipo, inmuebleId: x.inmuebleId, contratoId: x.contratoId, polizaDeclaradaId: x.polizaDeclaradaId }),
       cache: 'no-store',
       signal: control.signal,
     })

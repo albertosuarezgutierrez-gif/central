@@ -10,6 +10,7 @@ import { prisma } from '../db'
 import { accesosPatrimonio } from './accesos'
 import type { AccesosMapa, PuertosInmuebles, TitularLista } from './inmuebles-api'
 import { calleSinValidar, inmuebleDeFila, type FilaInmueble } from './lectura'
+import { esRespuestaHipoteca, type RespuestaHipoteca } from './ofertas'
 import { getIdentidad } from '../session'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -124,6 +125,8 @@ export type FichaInmueble = {
   archivado: boolean
   /** `true` = «calle por validar»; `null` = sin dirección. */
   calleSinValidar: boolean | null
+  /** «¿Tiene hipoteca?» que dijo el cliente. `null` = no lo ha dicho (que NO es «no tiene»). */
+  hipoteca: RespuestaHipoteca | null
 }
 
 /**
@@ -150,5 +153,6 @@ export async function inmuebleAutorizado(identidadId: string, idPedido: string):
     valorReconstruccionCent: fila.valorReconstruccionEstimadoCent === null ? null : Number(fila.valorReconstruccionEstimadoCent),
     archivado: fila.archivadoEn !== null,
     calleSinValidar: calleSinValidar(fila),
+    hipoteca: esRespuestaHipoteca(fila.hipoteca) ? fila.hipoteca : null,
   }
 }
