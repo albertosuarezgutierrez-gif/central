@@ -4120,6 +4120,30 @@ async function etiquetaDeCampoGuardar(c: Locator): Promise<string> {
     return (e.labels?.[0]?.textContent ?? n.getAttribute('aria-label') ?? n.getAttribute('placeholder') ?? '').replace(/\s+/g, ' ').replace(/\*/g, '').trim()
   }).catch(() => '')
 }
+/** Autorizado por el titular (Alberto) el 25/10/2026, SOLO en el formulario «Guardar el presupuesto» de Allianz Turismos: la casilla informativa
+ *  «Obtenga información sobre nuestra política de privacidad». Rótulo normalizado (sin tildes, minúsculas) con TODAS estas piezas. Cualquier otra
+ *  casilla de consentimiento (comercial, cesión a terceros, publicidad…) sigue sin marcarse. */
+export const CASILLA_PRIVACIDAD_INFORMATIVA_GUARDAR_TURISMOS: readonly string[] = Object.freeze(['politica de privacidad', 'informacion'])
+export const esCasillaPrivacidadInformativaGuardarTurismos = (rotulo: string): boolean => {
+  const n = rotulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ')
+  return CASILLA_PRIVACIDAD_INFORMATIVA_GUARDAR_TURISMOS.every((p) => n.includes(p))
+}
+/** Marca (vía el guard) la casilla de privacidad informativa DENTRO de `form`; exactamente una coincidencia, si no, no toca nada. */
+async function marcarCasillaPrivacidadGuardarTurismos(form: Locator, guard: GuardEmision): Promise<void> {
+  const cajas = form.locator('nx-checkbox')
+  const idx: number[] = []
+  for (let i = 0; i < (await cajas.count()); i++) {
+    if (esCasillaPrivacidadInformativaGuardarTurismos(await cajas.nth(i).locator('label').first().innerText().catch(() => ''))) idx.push(i)
+  }
+  if (idx.length !== 1) return
+  const caja = cajas.nth(idx[0]!)
+  const input = caja.locator('input[type=checkbox]')
+  if ((await input.count()) !== 1 || (await input.isChecked().catch(() => true))) return
+  const label = caja.locator('label').first()
+  comprobarBoton(await descripcion(label))
+  await label.click({ timeout: 5_000 })
+  guard.comprobar()
+}
 async function rellenarObligatoriosGuardarTurismos(form: Locator, marco: Frame, identificador: string, contacto: ContactoGuardarTurismos | null): Promise<void> {
   const campos = form.locator(SEL_CAMPOS_TEXTO_GUARDAR).filter({ visible: true })
   const n = await campos.count()
@@ -4249,6 +4273,8 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
     // obligatorios VACÍOS con lo que el bot ya tiene (nombre/descripción del presupuesto = el identificador; correo/teléfono del tomador
     // solo si el riesgo los trae). Nombres de persona, documentos, cuentas y casillas de consentimiento NUNCA. Se espera a que se habilite.
     await rellenarObligatoriosGuardarTurismos(form, marco, identificador, contacto)
+    // v0.6.27 (25/10/2026, decisión del titular): la casilla informativa de privacidad sí se marca (lista blanca estrecha); las demás, nunca.
+    await marcarCasillaPrivacidadGuardarTurismos(form, guard)
     const hastaHabilita = Date.now() + esperaHabilitaMs
     while (!(await boton.isEnabled().catch(() => false)) && Date.now() < hastaHabilita) await page.waitForTimeout(250)
     if (!(await boton.isEnabled().catch(() => false))) {

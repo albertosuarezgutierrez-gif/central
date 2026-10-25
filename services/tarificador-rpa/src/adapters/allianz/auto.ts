@@ -1,4 +1,5 @@
-// Turismos v0.6.26 (25/10/2026, trabajo real e3c52938: el formulario «Guardar el presupuesto» ya abre pero el botón sigue DESHABILITADO): `guardarPresupuestoTurismosAllianz`
+// Turismos v0.6.27 (25/10/2026, decisión del titular): además se marca la casilla informativa «Obtenga información sobre nuestra política de privacidad» (solo en «Guardar el presupuesto»); el resto de consentimientos, nunca.
+// Turismos v0.6.27 (25/10/2026, trabajo real e3c52938: el formulario «Guardar el presupuesto» ya abre pero el botón sigue DESHABILITADO): `guardarPresupuestoTurismosAllianz`
 // rellena los obligatorios vacíos con datos que el bot ya tiene (descripción/referencia = identificador; correo/teléfono del tomador solo si el riesgo los trae),
 // NUNCA casillas de consentimiento, espera ≤5 s a que se habilite y, si no, el aviso lista las etiquetas (sin valores) de lo que falta.
 // Turismos v0.6.25 (25/10/2026): «Código postal»/«Localidad» del tomador que reaparecen DESHABILITADOS y rellenos tras teclear el documento (el localizador
@@ -2192,7 +2193,7 @@ export type PasoPlanTurismos = { paso: PasoTurismos; operaciones: OperacionTuris
  */
 type FichaTomadorLeida = { tipo: 'fisica' | 'juridica' | null; documento: string | null; codigoPostal: string | null; localidad: string | null; fechaNacimiento: string | null; fechaCarnet: string | null }
 const textoDe = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
-/** v0.6.26: correo/teléfono del tomador SOLO si la ficha los trae (`fichaTomador.email/telefono`); null = no consta. Se usan en tiempo de ejecución, nunca se loguean. PURA. */
+/** v0.6.27: correo/teléfono del tomador SOLO si la ficha los trae (`fichaTomador.email/telefono`); null = no consta. Se usan en tiempo de ejecución, nunca se loguean. PURA. */
 export function contactoGuardarTurismos(f: object): { email: string | null; telefono: string | null } | null {
   const v = (f as { fichaTomador?: unknown }).fichaTomador
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
@@ -2964,7 +2965,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.26',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.27',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

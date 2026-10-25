@@ -20,6 +20,7 @@ import {
   instalarGuardEmision,
   leerDatosUsadosTurismosAllianz,
   referenciaPresupuestoDeTexto,
+  esCasillaPrivacidadInformativaGuardarTurismos,
 } from '../src/guard.ts'
 import { allianzAuto, AVISO_PRESUPUESTO_GUARDADO, ofertasConPresupuestoTurismos, seleccionVehiculoConfirmada } from '../src/adapters/allianz/auto.ts'
 
@@ -51,7 +52,7 @@ test('ofertas: guardado → referenciaPortal + aviso; no guardado → solo aviso
   assert.equal(n!.referenciaPortal, null)
   assert.equal(n!.primaAnualEur, 100)
   assert.match(n!.avisos.at(-1)!, /NO guardado/)
-  assert.equal(allianzAuto.version, '0.6.26')
+  assert.equal(allianzAuto.version, '0.6.27')
 })
 
 // ── Navegador: carcasa ePAC + app de Turismos con el formulario de guardado ──
@@ -89,7 +90,7 @@ type Opc = {
   /** v0.6.24 · inventario real del 22/10 (barra con «Vista Ampliada», «Guardar presupuesto», «Datos del vehículo») y CSS `text-transform: uppercase`: `innerText` sale «GUARDAR PRESUPUESTO», `textContent` no. */
   mayusculas?: boolean
   /** v0.6.26 · obligatorios EXTRA que habilitan el botón: `descripcion` (texto), `contacto` (correo + teléfono), `consentimiento` (casilla legal que el bot NO marca). */
-  extra?: 'descripcion' | 'contacto' | 'consentimiento'
+  extra?: 'descripcion' | 'contacto' | 'consentimiento' | 'privacidad' | 'comercial' | 'privacidadFuera'
 }
 const ABRE_PLEGADO = (o: Opc) => {
   if (!o.plegado) return ''
@@ -119,12 +120,12 @@ const app = (o: Opc) => `<!doctype html><html><head>${o.mayusculas ? '<style>but
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-2" checked><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div> MARCA </div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>MODELO</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>  </div></nx-data-display></nx-selectable-card>
 ${o.abridor ? `<nav><a role="tab" onclick="window.__pago=1">Pago</a>${INVENTARIO_BARRA(o)}${BARRA(o)}</nav>` : ''}
 ${o.botonFuera ? '<button type="button" id="fuera" onclick="window.__fuera=1">Guardar presupuesto</button>' : ''}
-${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' || o.bloque === 'oculto' || !!o.abridor ? 'display:none' : ''}"><form novalidate style="${o.bloque === 'altoCero' ? 'height:0;overflow:visible' : ''}">
+${o.extra === 'privacidadFuera' ? caja('priv', 'Obtenga información sobre nuestra política de privacidad', false) : ''}${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' || o.bloque === 'oculto' || !!o.abridor ? 'display:none' : ''}"><form novalidate style="${o.bloque === 'altoCero' ? 'height:0;overflow:visible' : ''}">
   <h3>Guardar el presupuesto</h3>
   <label for="ident">Identificador presupuesto</label><input id="ident" maxlength="30" required>
   <label for="nombre">Nombre</label><input id="nombre" required value="${o.nombre ?? 'NOMBRE'}">
   ${caja('c1', 'Envío a cliente', o.envioMarcado ?? false)}${caja('c2', 'Envío a agente', false)}${caja('c3', 'Mostrar presupuesto en eCliente', true)}
-  ${o.extra === 'descripcion' ? '<label for="desc">Descripción</label><textarea id="desc"></textarea>' : ''}${o.extra === 'contacto' ? '<label for="em">Correo electrónico</label><input id="em" type="email"><label for="tf">Teléfono</label><input id="tf">' : ''}${o.extra === 'consentimiento' ? '<nx-checkbox><input type="checkbox" id="lopd" required><label for="lopd"><span></span><div>Acepto la política de protección de datos</div></label></nx-checkbox>' : ''}
+  ${o.extra === 'descripcion' ? '<label for="desc">Descripción</label><textarea id="desc"></textarea>' : ''}${o.extra === 'contacto' ? '<label for="em">Correo electrónico</label><input id="em" type="email"><label for="tf">Teléfono</label><input id="tf">' : ''}${o.extra === 'privacidad' ? caja('priv', 'Obtenga información sobre nuestra política de privacidad', false) : ''}${o.extra === 'comercial' ? caja('com', 'Acepto recibir comunicaciones comerciales', false) : ''}${o.extra === 'consentimiento' ? '<nx-checkbox><input type="checkbox" id="lopd" required><label for="lopd"><span></span><div>Acepto la política de protección de datos</div></label></nx-checkbox>' : ''}
   ${caja('c4', ' Terceros con lunas ', false)}${caja('c5', ' Todos los paquetes ', false)}
   <button type="button" id="guardar" disabled><span><span><span>${o.boton ?? 'Guardar presupuesto'}</span></span></span></button>
   <p id="res">${o.textoPrevio ?? ''}</p>
@@ -134,8 +135,8 @@ ${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' ||
   if (${o.bloque === 'tarde'}) setTimeout(() => { document.getElementById('bloque').style.display = '' }, 1500)
   const b = document.getElementById('guardar'), i = document.getElementById('ident'), n = document.getElementById('nombre')
   const ex = (id) => document.getElementById(id)
-  const ver = () => { b.disabled = !(i.value && n.value) || (ex('desc') && !ex('desc').value) || (ex('em') && !(ex('em').value && ex('tf').value)) || (ex('lopd') && !ex('lopd').checked) }
-  document.querySelectorAll('textarea, #em, #tf').forEach((x) => x.addEventListener('input', ver))
+  const ver = () => { b.disabled = !(i.value && n.value) || (ex('desc') && !ex('desc').value) || (ex('em') && !(ex('em').value && ex('tf').value)) || (ex('lopd') && !ex('lopd').checked) || (ex('com') && !ex('com').checked) || (ex('priv') && ${o.extra === 'privacidad'} && !ex('priv').checked) }
+  document.querySelectorAll('textarea, #em, #tf, #lopd, #com, #priv').forEach((x) => { x.addEventListener('input', ver); x.addEventListener('change', ver) })
   i.addEventListener('input', ver); ver()
   b.addEventListener('click', () => { window.__pulsado = true; if (!${!!o.clicMudo}) document.getElementById('res').textContent = 'Presupuesto nº 123456789 guardado correctamente' })
   if (${!!o.envioPegado}) document.querySelector('label[for=c1]').addEventListener('click', (e) => e.preventDefault())
@@ -496,4 +497,37 @@ test('v0.6.26: qué dato encaja con cada etiqueta (personales, bancarios y legal
   assert.equal(datoParaCampoGuardarTurismos('Correo electrónico'), 'email')
   assert.equal(datoParaCampoGuardarTurismos('Teléfono móvil'), 'telefono')
   for (const t of ['Nombre', 'Apellidos', 'NIF', 'IBAN', 'Número de cuenta', 'Fecha de nacimiento', 'Acepto la política']) assert.equal(datoParaCampoGuardarTurismos(t), null, t)
+})
+
+test('v0.6.27: casilla de privacidad INFORMATIVA dentro del formulario → se marca, el botón se habilita y se pulsa', async () => {
+  const { context, guard, marco } = await abrir({ extra: 'privacidad' })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261025-ABCDEF12', 2_000, 2_000, null, 2_000)
+    assert.equal(r.estado, 'guardado')
+    assert.equal(await marco.locator('#priv').isChecked(), true)
+  } finally { await context.close() }
+})
+
+test('v0.6.27: casilla de consentimiento COMERCIAL → NO se marca, no se pulsa y sale en el aviso', async () => {
+  const { context, guard, marco } = await abrir({ extra: 'comercial' })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261025-ABCDEF12', 2_000, 2_000, null, 800)
+    assert.equal(r.estado, 'no_guardado')
+    if (r.estado === 'no_guardado') assert.match(r.motivo, /Acepto recibir comunicaciones comerciales.*no se marca/)
+    assert.equal(await marco.locator('#com').isChecked(), false)
+    assert.equal(await marco.evaluate(() => (window as unknown as { __pulsado?: boolean }).__pulsado === true), false)
+  } finally { await context.close() }
+})
+
+test('v0.6.27: la casilla de privacidad FUERA del formulario de guardado no se toca', async () => {
+  const { context, guard, marco } = await abrir({ extra: 'privacidadFuera' })
+  try {
+    await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261025-ABCDEF12', 2_000, 2_000, null, 2_000)
+    assert.equal(await marco.locator('#priv').isChecked(), false)
+  } finally { await context.close() }
+})
+
+test('v0.6.27: lista blanca de rótulos de privacidad informativa', () => {
+  assert.equal(esCasillaPrivacidadInformativaGuardarTurismos('Obtenga información sobre nuestra política de privacidad'), true)
+  for (const t of ['Acepto la política de protección de datos', 'Acepto la política de privacidad y la cesión a terceros', 'Información comercial', 'Publicidad']) assert.equal(esCasillaPrivacidadInformativaGuardarTurismos(t), false, t)
 })
