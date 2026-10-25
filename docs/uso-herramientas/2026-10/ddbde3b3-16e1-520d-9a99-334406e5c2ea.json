@@ -1,0 +1,106 @@
+{
+ "sesion": "ddbde3b3-16e1-520d-9a99-334406e5c2ea",
+ "inicio": "2026-10-25T09:06:05.607Z",
+ "fin": "2026-10-25T13:43:55.151Z",
+ "llamadas": 52,
+ "categorias": {
+  "otro": {
+   "llamadas": 15,
+   "chars_in": 959,
+   "chars_out": 124773,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 2,
+    "PushNotification": 1,
+    "ReadNotifications": 11
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 3,
+   "chars_in": 316,
+   "chars_out": 59602,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 3
+   }
+  },
+  "bash": {
+   "llamadas": 8,
+   "chars_in": 2377,
+   "chars_out": 4471,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 8
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 7,
+   "chars_in": 653,
+   "chars_out": 33450,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 3,
+    "mcp__Gmail__get_thread": 2,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__label_thread": 1
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 9,
+   "chars_in": 818,
+   "chars_out": 20153,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 5,
+    "mcp__Google-Drive__read_file_content": 3,
+    "mcp__Google-Drive__copy_file": 1
+   }
+  },
+  "sql": {
+   "llamadas": 5,
+   "chars_in": 2023,
+   "chars_out": 16274,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 5
+   }
+  },
+  "mcp:github": {
+   "llamadas": 4,
+   "chars_in": 738,
+   "chars_out": 15502,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 2
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 1,
+   "chars_in": 73,
+   "chars_out": 239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1
+   }
+  }
+ }
+}
