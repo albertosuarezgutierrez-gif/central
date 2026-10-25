@@ -24,6 +24,8 @@ export type AltaInquilinoPortal = {
   nif: string | null
   email: string | null
   telefono: string | null
+  /** Id del inquilino YA existente (del mismo titular) que la persona acepta reutilizar. El servidor lo vuelve a comprobar. */
+  reutilizarId: string | null
 }
 
 export type Revision<T> = { ok: true; datos: T } | { ok: false; campo: string; motivo: string }
@@ -65,7 +67,32 @@ export function revisarAltaInquilino(cuerpo: unknown): Revision<AltaInquilinoPor
     if (!r.ok) return { ok: false, campo: 'telefono', motivo: r.motivo }
     telefono = r.valor
   }
-  return { ok: true, datos: { identidadId: b.identidadId, contratoId: b.contratoId, tipo: b.tipo, nombre, papel, nif, email, telefono } }
+  let reutilizarId: string | null = null
+  if (!vacio(b.reutilizarId)) {
+    if (typeof b.reutilizarId !== 'string' || !UUID.test(b.reutilizarId)) return { ok: false, campo: 'reutilizarId', motivo: 'Inquilino no válido.' }
+    reutilizarId = b.reutilizarId.toLowerCase()
+  }
+  return { ok: true, datos: { identidadId: b.identidadId, contratoId: b.contratoId, tipo: b.tipo, nombre, papel, nif, email, telefono, reutilizarId } }
+}
+
+export type CandidatoDuplicado = { id: string; nombre: string; tipo: string; nif: string | null }
+
+/**
+ * ¿Ya hay un inquilino del MISMO titular con este documento? Agrupa por IDENTIDAD (el documento normalizado), nunca por
+ * nombre: dos «Juan García» con DNI distinto son dos personas. `nif` de un candidato = el descifrado (`null` = no lo dio
+ * o no abre: ni coincide ni descarta). El documento de entrada ya viene normalizado; el del candidato se normaliza aquí
+ * igual (mayúsculas, sin separadores), así que un registro antiguo con otra grafía tampoco se escapa.
+ */
+export function buscarDuplicadoPorNif(nif: string | null, candidatos: readonly CandidatoDuplicado[]): CandidatoDuplicado | null {
+  if (nif === null) return null
+  const buscado = normalizarDni(nif)
+  if (!buscado.ok) return null
+  for (const c of candidatos) {
+    if (c.nif === null) continue
+    const otro = normalizarDni(c.nif)
+    if (otro.ok && otro.valor.valor === buscado.valor.valor) return c
+  }
+  return null
 }
 
 /** Cifra o NADA: sin el sobre `v1:` (falta la clave) devuelve `null`, nunca el texto en claro. */

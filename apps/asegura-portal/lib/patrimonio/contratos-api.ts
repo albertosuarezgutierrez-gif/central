@@ -135,6 +135,8 @@ export type DatosAltaInquilino = {
   nif: string | null
   email: string | null
   telefono: string | null
+  /** Inquilino ya existente del mismo titular que la persona ha aceptado reutilizar (lo que el servidor le propuso). */
+  reutilizarId?: string | null
 }
 
 const pii = (v: unknown, max: number): string | null | 'invalido' => {
@@ -157,7 +159,9 @@ export function validarAltaInquilino(cuerpo: unknown): V<DatosAltaInquilino> {
   if (email === 'invalido') return { ok: false, campo: 'email' }
   const telefono = pii(b.telefono, 25)
   if (telefono === 'invalido') return { ok: false, campo: 'telefono' }
-  return { ok: true, datos: { tipo: b.tipo, nombre, papel, nif, email, telefono } }
+  if (!vacio(b.reutilizarId) && (typeof b.reutilizarId !== 'string' || !UUID.test(b.reutilizarId))) return { ok: false, campo: 'reutilizarId' }
+  const reutilizarId = vacio(b.reutilizarId) ? null : (b.reutilizarId as string)
+  return { ok: true, datos: { tipo: b.tipo, nombre, papel, nif, email, telefono, reutilizarId } }
 }
 
 // ─── Puertos ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -169,6 +173,9 @@ export type ResultadoPuenteAlta =
   | { estado: 'ok'; id: string }
   | { estado: 'invalido'; campo: string | null; motivo: string }
   | { estado: 'no_encontrado' }
+  /** Ya hay un inquilino del mismo titular con ese documento: se propone reutilizarlo (no se ha escrito nada). */
+  | { estado: 'duplicado'; id: string; nombre: string }
+  | { estado: 'ya_en_contrato'; id: string }
   /** Faltan las envs del puente en este despliegue. NO es «falló el envío». */
   | { estado: 'sin_puente' }
   /** asegura no tiene la clave para cifrar: no se guarda NADA en claro. */
@@ -267,6 +274,10 @@ export async function responderAltaInquilino(p: PuertosContratos, contratoId: un
       return { status: 400, body: { error: 'datos_invalidos', campo: r.campo, motivo: r.motivo } }
     case 'no_encontrado':
       return NO_ENCONTRADO
+    case 'duplicado':
+      return { status: 409, body: { error: 'inquilino_duplicado', id: r.id, nombre: r.nombre } }
+    case 'ya_en_contrato':
+      return { status: 409, body: { error: 'ya_en_contrato' } }
     case 'sin_puente':
       return { status: 503, body: { error: 'sin_puente' } }
     case 'sin_clave':

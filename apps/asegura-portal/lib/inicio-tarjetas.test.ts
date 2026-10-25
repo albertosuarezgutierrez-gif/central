@@ -29,7 +29,7 @@ test('cuenta cartera y aportadas por separado, sublíneas y la próxima renovaci
     declaradas: [pol({ ramo: 'salud', vence: null })],
   })
   const patr = t.find((x) => x.familia === 'patrimoniales')!
-  assert.deepEqual(patr.estado, { tipo: 'con_seguros', conNosotros: 3, aportadas: 0, proxima: '2026-11-15', inmuebles: 2, vehiculos: 1 })
+  assert.deepEqual(patr.estado, { tipo: 'con_seguros', conNosotros: 3, aportadas: 0, proxima: '2026-11-15', inmuebles: 2, vehiculos: 1, pendientes: 0 })
   assert.deepEqual(textoTarjetaFamilia(patr, '900').lineas, ['3 con nosotros', 'Inmuebles 2 · Vehículos 1', 'Renueva el 15/11/2026'])
   const pers = t.find((x) => x.familia === 'personales')!
   assert.deepEqual(textoTarjetaFamilia(pers, '900').lineas, ['1 aportada'])
@@ -92,4 +92,23 @@ test('calendario y flota: null = sin comprobar; vacío = «no nos consta»; flot
   assert.deepEqual(textoCalendario([{ titulo: 'Renovación hogar', fecha: '2026-11-03' }]).lineas, ['03/11/2026 · Renovación hogar'])
   assert.equal(textoFlota(0), null)
   assert.equal(textoFlota(null)!.lineas[0], 'Ahora no hemos podido comprobar tu flota.')
+})
+
+test('chip «N pendientes» por familia: cuenta las en vigor con pendiente y calla si no hay', async () => {
+  const { tarjetasFamilias, chipPendientes, textoTarjetaFamilia } = await import('./inicio-tarjetas.ts')
+  const t = tarjetasFamilias({
+    cartera: [
+      { ramo: 'salud', empresa: false, enVigor: true, vence: null, pendiente: true },
+      { ramo: 'vida', empresa: false, enVigor: true, vence: null, pendiente: true },
+      { ramo: 'hogar', empresa: false, enVigor: true, vence: null },
+      { ramo: 'decesos', empresa: false, enVigor: false, vence: null, pendiente: true },
+    ],
+    declaradas: [],
+    vinculo: 'vinculada',
+    hayEmpresa: false,
+    hoy: '2026-10-26',
+  })
+  assert.equal(chipPendientes(t[0]), '2 pendientes')
+  assert.equal(chipPendientes(t[1]), null)
+  assert.equal(textoTarjetaFamilia(t[0], '1').href, '/boveda?familia=personales')
 })

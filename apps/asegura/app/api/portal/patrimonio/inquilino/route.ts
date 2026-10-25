@@ -17,8 +17,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * Puente del PATRIMONIO del portal (22/10/2026, paso 9): la PII del inquilino (NIF, correo, teléfono) se cifra AQUÍ,
  * que es donde está `PII_ENCRYPTION_KEY`; el portal no la tiene ni la guarda.
  *
- * POST `{ identidadId, contratoId, tipo, nombre, papel?, nif?, email?, telefono? }` — alta del inquilino en el contrato.
- * GET `?identidadId=&inquilinoId=` — la PII descifrada para el propietario (nivel Total).
+ * POST `{ identidadId, contratoId, tipo, nombre, papel?, nif?, email?, telefono?, reutilizarId? }` — alta del inquilino en el contrato.
+ *   Si el titular ya tiene un inquilino con ese documento: 409 `duplicado` (id y nombre) y NO se escribe; con `reutilizarId` = ese id
+ *   se enlaza el existente al contrato en vez de duplicarlo.
+ * GET `?identidadId=&inquilinoId=` — la PII descifrada para el propietario (nivel Total). Deja traza en `auditoria` (ids, sin PII).
  *
  * 🚨 Como el resto de `/api/portal/*`: NO acepta titular ni `clienteId`. El titular sale del contrato/inquilino y el
  * nivel de esa identidad se recalcula aquí (`lib/patrimonio-inquilino-portal.ts`). Sin nivel o ajeno = `no_encontrado`.
@@ -34,6 +36,8 @@ export const POST = auditado(async (req: Request) => {
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
     const alta = await altaInquilinoDesdePortal(correduria.id, r.datos)
     if (alta.estado === 'ok') return NextResponse.json({ estado: 'ok', id: alta.id }, { status: 201 })
+    if (alta.estado === 'duplicado') return NextResponse.json({ estado: 'duplicado', id: alta.id, nombre: alta.nombre }, { status: 409 })
+    if (alta.estado === 'ya_en_contrato') return NextResponse.json({ estado: 'ya_en_contrato', id: alta.id }, { status: 409 })
     if (alta.estado === 'sin_clave') return NextResponse.json({ estado: 'sin_clave' }, { status: 503 })
     return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
   } catch (e) {
