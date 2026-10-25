@@ -26,7 +26,7 @@
 // Las claves del mapa son el `cliente_id` de la ficha del titular (`portal_patrimonio_titular.cliente_id`,
 // UNIQUE). Un titular ARCHIVADO (`archivado_en`) lo filtra quien lee filas de `portal_patrimonio_titular`
 // (`lib/patrimonio/lectura.ts` deja el mapeo; la consulta lleva `archivadoEn: null`).
-import { NIVELES, puedeAutorizar, type Nivel } from '@central/module-seguros-portal'
+import { NIVELES, accesoPatrimonioPorModulo, puedeAutorizar, type Nivel } from '@central/module-seguros-portal'
 import {
   ALCANCE_PATRIMONIO_GESTION,
   ALCANCE_PATRIMONIO_TOTAL,
@@ -89,13 +89,30 @@ export async function accesosPatrimonio(identidadId: string): Promise<AccesosPat
     where: { id: { in: candidatas }, mergedIntoClienteId: null, activo: true },
     select: { id: true },
   })
-  return nivelesPatrimonio({
+  const porCartera = nivelesPatrimonio({
     vinculadas: propias,
     dueno: deDueno,
     autorizaciones,
     fichasVivas: new Set(vivas.map((f) => f.id)),
     hoy: new Date(),
   })
+  if (porCartera.size === 0) return porCartera
+  // 25/10/2026: además de la póliza viva, el módulo `alquileres` activo de ESTA identidad (regla única, pura:
+  // `accesoPatrimonioPorModulo`). Quien ya tiene inmuebles creados conserva el acceso mientras no se le retire.
+  const [filas, conInmuebles] = await Promise.all([
+    prisma.portalModulo
+      .findMany({ where: { identidadId, modulo: 'alquileres' }, select: { modulo: true, estado: true } })
+      .catch((e) => {
+        console.error('[portal/patrimonio] no se pudo leer portal_modulo (acceso cerrado):', e instanceof Error ? e.message : e)
+        return null
+      }),
+    prisma.portalPatrimonioInmueble
+      .count({ where: { archivadoEn: null, titular: { clienteId: { in: [...porCartera.keys()] } } } })
+      .then((n) => n > 0)
+      .catch(() => null),
+  ])
+  const abre = accesoPatrimonioPorModulo({ titulares: porCartera.size, filas, tieneInmuebles: conInmuebles })
+  return abre ? porCartera : new Map()
 }
 
 /**

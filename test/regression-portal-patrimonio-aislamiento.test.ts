@@ -68,7 +68,7 @@ test('🚨 fichasVivas: solo fichas activas y sin fusionar llegan a la regla pur
   const f = cuerpo(leer(ACCESOS), 'accesosPatrimonio')
   assert.match(f, /prisma\.cliente\.findMany\(\{\s*where: \{ id: \{ in: candidatas \}, mergedIntoClienteId: null, activo: true \}/)
   assert.match(f, /fichasVivas: new Set\(vivas\.map\(\(f\) => f\.id\)\)/)
-  assert.match(f, /return nivelesPatrimonio\(\{/)
+  assert.match(f, /const porCartera = nivelesPatrimonio\(\{/)
 })
 
 test('lectura.ts es PURO: sin prisma ni sesión, y sin convertir «no se sabe» en 0', () => {

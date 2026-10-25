@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs'
 
 import {
   CATALOGO_MODULOS,
+  TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO,
+  accesoPatrimonioPorModulo,
   ESTADOS_MODULO,
   MODULOS_PORTAL,
   accionModulo,
@@ -127,4 +129,30 @@ test('el aviso de Telegram escapa el nombre y dice si está sin vincular', () =>
   assert.ok(v.startsWith('🧰 Luis pide el módulo Patrimonio y alquileres.'))
   const sinNombre = mensajeSolicitudModulo({ identidadId: 'i-3', nombre: '  ', vinculada: true, modulo: 'flota' })
   assert.ok(sinNombre.startsWith('🧰 Alguien sin nombre pide el módulo'))
+})
+
+// ── Patrimonio: el acceso exige el módulo alquileres activo (25/10/2026) ──
+const fila = (estado: string, modulo = 'alquileres') => ({ modulo, estado })
+
+test('patrimonio: sin póliza viva (titulares 0) nunca, ni con módulo activo', () => {
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 0, filas: [fila('activo')], tieneInmuebles: true }), false)
+})
+test('patrimonio: activo abre; sin fila y sin inmuebles no; sin fila con inmuebles (piloto) si', () => {
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('activo')], tieneInmuebles: false }), true)
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [], tieneInmuebles: false }), false)
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [], tieneInmuebles: true }), true)
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('solicitado')], tieneInmuebles: false }), false)
+})
+test('patrimonio: retirar CIERRA aunque haya inmuebles; pedirlo de nuevo no cierra', () => {
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('retirado')], tieneInmuebles: true }), false)
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('retirado'), fila('solicitado')], tieneInmuebles: true }), true)
+})
+test('patrimonio: flota activa no abre; lectura fallida = cerrado', () => {
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('activo', 'flota')], tieneInmuebles: false }), false)
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: null, tieneInmuebles: true }), false)
+  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [], tieneInmuebles: null }), false)
+})
+test('tarjeta alquileres: activo sin acceso real NO manda a /patrimonio', () => {
+  const a = accionModulo('alquileres', { accesoFlota: false, accesoPatrimonio: false, filas: [{ modulo: 'alquileres', estado: 'activo', solicitadoEn: HOY }] })
+  assert.deepEqual(a, { tipo: 'activo', texto: TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO })
 })
