@@ -697,6 +697,45 @@ test('v0.6.6 el portal BLOQUEA el CP después de localizarlo (como tras validar 
   }
 })
 
+test('v0.6.25 (trabajo real e3c52938): tras teclear el documento el portal rehace el bloque y el CP/Localidad REAPARECEN deshabilitados y rellenos → se leen, no «no aparece»', async () => {
+  // Tras el documento, CP y Localidad desaparecen ~0,6 s y vuelven deshabilitados con valor (el localizador común descarta los deshabilitados).
+  const rehacer = (cp: string) => async (m: Frame) => {
+    await m.evaluate((v) => {
+      const w = window as unknown as { __rehecho?: boolean }
+      if (w.__rehecho) return
+      w.__rehecho = true
+      const doc = document.querySelector('#ng-z-doc') as HTMLInputElement
+      doc.addEventListener('change', () => {
+        const cp1 = document.querySelector('#ng-z-cp1') as HTMLInputElement
+        const loc1 = document.querySelector('#ng-z-loc1') as HTMLInputElement
+        for (const e of [cp1, loc1]) e.style.display = 'none'
+        for (const l of Array.from(document.querySelectorAll('label[for="ng-z-cp1"], label[for="ng-z-loc1"]'))) (l as HTMLElement).style.display = 'none'
+        setTimeout(() => {
+          cp1.value = v; cp1.disabled = true; loc1.value = 'Villaficticia'; loc1.disabled = true
+          for (const e of [cp1, loc1]) e.style.display = ''
+          for (const l of Array.from(document.querySelectorAll('label[for="ng-z-cp1"], label[for="ng-z-loc1"]'))) (l as HTMLElement).style.display = ''
+        }, 600)
+      })
+    }, cp)
+  }
+  const igual = await recorrerConBloqueo({}, FORM, rehacer('00000'))
+  try {
+    assert.ok(esMapa(/«Selección de paquete»/)(igual.error), igual.error?.message)
+    assert.ok(!/«Código postal» \(/.test(igual.error.message) && !/no aparece/.test(igual.error.message), igual.error.message)
+    assert.deepEqual(igual.tecleoBloqueado, [], 'ni foco ni tecleo en los bloqueados')
+    assert.ok(sinPersonales(igual.error.message))
+  } finally {
+    await igual.context.close()
+  }
+  const otro = await recorrerConBloqueo({}, FORM, rehacer('11111'))
+  try {
+    assert.ok(esMapa(/«Selección de paquete»/)(otro.error) && otro.error.message.includes(SUPUESTO_CP_FIJADO_DISTINTO), otro.error?.message)
+    assert.ok(!otro.error.message.includes('11111'))
+  } finally {
+    await otro.context.close()
+  }
+})
+
 const marcada = (a: { marco: Frame }, g: string) => a.marco.evaluate((gr) => Array.from(document.querySelectorAll(`input[name="ng-z-${gr}"]`)).findIndex((x) => (x as HTMLInputElement).checked), g)
 
 test('v0.6.10 plan (puro): con dato del riesgo no hay supuesto (0 partes es un DATO); sin dato, el supuesto favorable declarado', () => {
