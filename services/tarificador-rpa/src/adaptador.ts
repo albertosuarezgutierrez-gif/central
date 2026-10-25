@@ -112,7 +112,7 @@ export type ContextoPortal = ContextoTarificacion & {
   /** Allianz AUTOS Turismos (v0.6.11, 19/10/2026): escribe los 5 últimos dígitos de la póliza actual en «Antecedentes» por `polizaActualTurismosAllianz` (guard.ts). Dato sensible. */
   polizaActualTurismos?: (marco: Frame, ultimos5: string | null) => Promise<ResultadoPolizaActualTurismos>
   /** Allianz AUTOS Turismos (v0.6.13, 18/10/2026, autorizado por Alberto): «Guardar presupuesto» (no vinculante) en la pantalla de precios por `guardarPresupuestoTurismosAllianz` (guard.ts). */
-  guardarPresupuestoTurismos?: (marco: Frame, identificador: string) => Promise<ResultadoGuardarPresupuestoTurismos>
+  guardarPresupuestoTurismos?: (marco: Frame, identificador: string, contacto?: { email?: string | null; telefono?: string | null } | null) => Promise<ResultadoGuardarPresupuestoTurismos>
   /**
    * Generali (18/10/2026): botón de «Seleccionar mediador» por `pulsarMediadorGenerali` de guard.ts. El guard comprueba
    * que el desplegable `selectMediador` tiene puesto EXACTAMENTE el mediador de la correduría (`MEDIADOR_GENERALI`).

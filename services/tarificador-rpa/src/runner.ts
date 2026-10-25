@@ -275,10 +275,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         await ctx.pausaAccion()
         return polizaActualTurismosAllianz(marco, guard, ultimos5)
       },
-      guardarPresupuestoTurismos: async (marco, identificador) => {
+      guardarPresupuestoTurismos: async (marco, identificador, contacto) => {
         if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
         await ctx.pausaAccion()
-        return guardarPresupuestoTurismosAllianz(marco, guard, identificador)
+        return guardarPresupuestoTurismosAllianz(marco, guard, identificador, undefined, undefined, contacto ?? null)
       },
       confirmarMediadorGenerali: async (selectMediador) => {
         if (selectMediador.page() !== page) throw new ErrorTarificador('portal', 'generali: el desplegable del mediador no es de este trabajo')

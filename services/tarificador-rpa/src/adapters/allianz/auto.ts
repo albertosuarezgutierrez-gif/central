@@ -1,3 +1,6 @@
+// Turismos v0.6.26 (25/10/2026, trabajo real e3c52938: el formulario «Guardar el presupuesto» ya abre pero el botón sigue DESHABILITADO): `guardarPresupuestoTurismosAllianz`
+// rellena los obligatorios vacíos con datos que el bot ya tiene (descripción/referencia = identificador; correo/teléfono del tomador solo si el riesgo los trae),
+// NUNCA casillas de consentimiento, espera ≤5 s a que se habilite y, si no, el aviso lista las etiquetas (sin valores) de lo que falta.
 // Turismos v0.6.25 (25/10/2026): «Código postal»/«Localidad» del tomador que reaparecen DESHABILITADOS y rellenos tras teclear el documento (el localizador
 // común los descarta = «no aparece») se leen y se deciden como bloqueados en vez de dejar el paso con hueco (trabajo real e3c52938).
 // Turismos v0.6.24 (22/10/2026): la lista blanca de «Guardar presupuesto» compara sin mayúsculas ni tildes (`innerText` aplica el `text-transform` del CSS y
@@ -2189,6 +2192,15 @@ export type PasoPlanTurismos = { paso: PasoTurismos; operaciones: OperacionTuris
  */
 type FichaTomadorLeida = { tipo: 'fisica' | 'juridica' | null; documento: string | null; codigoPostal: string | null; localidad: string | null; fechaNacimiento: string | null; fechaCarnet: string | null }
 const textoDe = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+/** v0.6.26: correo/teléfono del tomador SOLO si la ficha los trae (`fichaTomador.email/telefono`); null = no consta. Se usan en tiempo de ejecución, nunca se loguean. PURA. */
+export function contactoGuardarTurismos(f: object): { email: string | null; telefono: string | null } | null {
+  const v = (f as { fichaTomador?: unknown }).fichaTomador
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  const email = textoDe(o.email)
+  const telefono = textoDe(o.telefono)
+  return email === null && telefono === null ? null : { email, telefono }
+}
 export function fichaTomadorTurismos(f: object): FichaTomadorLeida | null {
   const v = (f as { fichaTomador?: unknown }).fichaTomador
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
@@ -2873,7 +2885,7 @@ export async function recorrerPasosTurismos(
         // EXCEPCIÓN: si salta la red de emisión del guard (violación), `guardarPresupuestoTurismosAllianz` la RELANZA y el trabajo
         // entero cae como bloqueo de emisión (`error_definitivo`): ese precio NO llega a asegura. Es a propósito (fail-closed).
         const guardado = ctx.guardarPresupuestoTurismos
-          ? await ctx.guardarPresupuestoTurismos(marco, identificadorPresupuestoTurismos(ctx.trabajoId ?? 'sin-trabajo'))
+          ? await ctx.guardarPresupuestoTurismos(marco, identificadorPresupuestoTurismos(ctx.trabajoId ?? 'sin-trabajo'), contactoGuardarTurismos(form))
           : ({ estado: 'no_guardado', motivo: 'el runner no trae la puerta de guardado' } as const)
         ctx.formador?.log('turismos_guardar_presupuesto', { estado: guardado.estado })
         // 18/10/2026: CP, localidad y vehículo que Allianz usó, leídos del portal (guard.ts, solo lectura); null = no se leyó.
@@ -2952,7 +2964,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.25',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.26',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

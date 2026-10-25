@@ -15,6 +15,7 @@ import {
   esExpansorGuardarTurismosPermitido,
   etiquetasControlesSaneadas,
   guardarPresupuestoTurismosAllianz,
+  datoParaCampoGuardarTurismos,
   identificadorPresupuestoTurismos,
   instalarGuardEmision,
   leerDatosUsadosTurismosAllianz,
@@ -50,7 +51,7 @@ test('ofertas: guardado → referenciaPortal + aviso; no guardado → solo aviso
   assert.equal(n!.referenciaPortal, null)
   assert.equal(n!.primaAnualEur, 100)
   assert.match(n!.avisos.at(-1)!, /NO guardado/)
-  assert.equal(allianzAuto.version, '0.6.25')
+  assert.equal(allianzAuto.version, '0.6.26')
 })
 
 // ── Navegador: carcasa ePAC + app de Turismos con el formulario de guardado ──
@@ -87,6 +88,8 @@ type Opc = {
   barra?: 'sinTipo' | 'nx'
   /** v0.6.24 · inventario real del 22/10 (barra con «Vista Ampliada», «Guardar presupuesto», «Datos del vehículo») y CSS `text-transform: uppercase`: `innerText` sale «GUARDAR PRESUPUESTO», `textContent` no. */
   mayusculas?: boolean
+  /** v0.6.26 · obligatorios EXTRA que habilitan el botón: `descripcion` (texto), `contacto` (correo + teléfono), `consentimiento` (casilla legal que el bot NO marca). */
+  extra?: 'descripcion' | 'contacto' | 'consentimiento'
 }
 const ABRE_PLEGADO = (o: Opc) => {
   if (!o.plegado) return ''
@@ -121,6 +124,7 @@ ${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' ||
   <label for="ident">Identificador presupuesto</label><input id="ident" maxlength="30" required>
   <label for="nombre">Nombre</label><input id="nombre" required value="${o.nombre ?? 'NOMBRE'}">
   ${caja('c1', 'Envío a cliente', o.envioMarcado ?? false)}${caja('c2', 'Envío a agente', false)}${caja('c3', 'Mostrar presupuesto en eCliente', true)}
+  ${o.extra === 'descripcion' ? '<label for="desc">Descripción</label><textarea id="desc"></textarea>' : ''}${o.extra === 'contacto' ? '<label for="em">Correo electrónico</label><input id="em" type="email"><label for="tf">Teléfono</label><input id="tf">' : ''}${o.extra === 'consentimiento' ? '<nx-checkbox><input type="checkbox" id="lopd" required><label for="lopd"><span></span><div>Acepto la política de protección de datos</div></label></nx-checkbox>' : ''}
   ${caja('c4', ' Terceros con lunas ', false)}${caja('c5', ' Todos los paquetes ', false)}
   <button type="button" id="guardar" disabled><span><span><span>${o.boton ?? 'Guardar presupuesto'}</span></span></span></button>
   <p id="res">${o.textoPrevio ?? ''}</p>
@@ -129,7 +133,9 @@ ${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' ||
   if (${!!o.envuelto}) { const f = document.createElement('form'); f.setAttribute('novalidate', ''); f.addEventListener('submit', (e) => e.preventDefault()); const raiz = document.getElementById('appArea'); while (raiz.firstChild) f.appendChild(raiz.firstChild); raiz.appendChild(f) }
   if (${o.bloque === 'tarde'}) setTimeout(() => { document.getElementById('bloque').style.display = '' }, 1500)
   const b = document.getElementById('guardar'), i = document.getElementById('ident'), n = document.getElementById('nombre')
-  const ver = () => { b.disabled = !(i.value && n.value) }
+  const ex = (id) => document.getElementById(id)
+  const ver = () => { b.disabled = !(i.value && n.value) || (ex('desc') && !ex('desc').value) || (ex('em') && !(ex('em').value && ex('tf').value)) || (ex('lopd') && !ex('lopd').checked) }
+  document.querySelectorAll('textarea, #em, #tf').forEach((x) => x.addEventListener('input', ver))
   i.addEventListener('input', ver); ver()
   b.addEventListener('click', () => { window.__pulsado = true; if (!${!!o.clicMudo}) document.getElementById('res').textContent = 'Presupuesto nº 123456789 guardado correctamente' })
   if (${!!o.envioPegado}) document.querySelector('label[for=c1]').addEventListener('click', (e) => e.preventDefault())
@@ -441,4 +447,53 @@ test('v0.6.23: dentro del <form> envolvente, dos «Guardar presupuesto» a la vi
   } finally {
     await context.close()
   }
+})
+
+
+test('v0.6.26: obligatorio «Descripción» vacío → se rellena con el identificador, el botón se habilita y se guarda', async () => {
+  const { context, guard, marco } = await abrir({ extra: 'descripcion' })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261025-ABCDEF12', 2_000)
+    assert.equal(r.estado, 'guardado')
+    assert.equal(await marco.locator('#desc').inputValue(), 'GA-20261025-ABCDEF12')
+  } finally { await context.close() }
+})
+
+test('v0.6.26: correo y teléfono obligatorios → se rellenan SOLO con el contacto que trae el riesgo (en ejecución)', async () => {
+  const { context, guard, marco } = await abrir({ extra: 'contacto' })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261025-ABCDEF12', 2_000, 2_000, { email: 'prueba@example.invalid', telefono: '600000000' }, 1_000)
+    assert.equal(r.estado, 'guardado')
+    assert.equal(await marco.locator('#em').inputValue(), 'prueba@example.invalid')
+  } finally { await context.close() }
+  const b = await abrir({ extra: 'contacto' })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(b.marco, b.guard, 'GA-20261025-ABCDEF12', 2_000, 2_000, null, 800)
+    assert.equal(r.estado, 'no_guardado')
+    if (r.estado === 'no_guardado') {
+      assert.match(r.motivo, /deshabilitado/)
+      assert.match(r.motivo, /«Correo electrónico»/)
+      assert.match(r.motivo, /«Teléfono»/)
+    }
+    assert.equal(await b.marco.locator('#em').inputValue(), '', 'sin dato del riesgo no se inventa nada')
+    assert.equal(await b.marco.evaluate(() => (window as unknown as { __pulsado?: boolean }).__pulsado === true), false)
+  } finally { await b.context.close() }
+})
+
+test('v0.6.26: casilla de consentimiento obligatoria → NO se marca, no se pulsa, y aparece en el aviso sin valores', async () => {
+  const { context, guard, marco } = await abrir({ extra: 'consentimiento' })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261025-ABCDEF12', 2_000, 2_000, null, 800)
+    assert.equal(r.estado, 'no_guardado')
+    if (r.estado === 'no_guardado') assert.match(r.motivo, /Acepto la política de protección de datos.*no se marca/)
+    assert.equal(await marco.locator('#lopd').isChecked(), false)
+    assert.equal(await marco.evaluate(() => (window as unknown as { __pulsado?: boolean }).__pulsado === true), false)
+  } finally { await context.close() }
+})
+
+test('v0.6.26: qué dato encaja con cada etiqueta (personales, bancarios y legales, nunca)', () => {
+  assert.equal(datoParaCampoGuardarTurismos('Descripción'), 'texto')
+  assert.equal(datoParaCampoGuardarTurismos('Correo electrónico'), 'email')
+  assert.equal(datoParaCampoGuardarTurismos('Teléfono móvil'), 'telefono')
+  for (const t of ['Nombre', 'Apellidos', 'NIF', 'IBAN', 'Número de cuenta', 'Fecha de nacimiento', 'Acepto la política']) assert.equal(datoParaCampoGuardarTurismos(t), null, t)
 })
