@@ -24,6 +24,7 @@ import {
   TIPOS_TAREA,
   mensajeRenovacionLeadWhatsapp,
   puedeWhatsappLead,
+  ramoSolicitud,
   seguroAnteriorDe,
   type CanalLead,
   type ContactoMovil,
@@ -31,6 +32,7 @@ import {
   type MotivoPerdida,
   type PasoLead,
   type RamoOportunidad,
+  type RamoSolicitud,
   type SeguroAnterior,
   type TipoTarea,
   type VentanaLead,
@@ -1051,11 +1053,13 @@ export function enlaceOportunidadDe(guardado: unknown): EnlacePresupuesto | null
 
 export type SolicitudDatos = {
   id: string
-  ramo: 'moto' | 'auto'
+  /** 25/10/2026: cualquier ramo de oportunidad (antes, solo moto/auto). */
+  ramo: RamoSolicitud
   estado: 'pendiente' | 'completada' | 'anulada' | 'caducada'
   caduca: string
   completada: string | null
-  campos: { clave: string; etiqueta: string; opciones?: { valor: string; etiqueta: string }[] }[]
+  /** `tipo` (25/10/2026): `direccion` se contesta en subclaves (`viviendaCp`…) y se pinta junta. */
+  campos: { clave: string; etiqueta: string; tipo?: string; opciones?: { valor: string; etiqueta: string }[] }[]
   /** `null` = sin completar o ilegible (entonces `ilegible` lo dice). */
   respuestas: Record<string, string | number | boolean | null> | null
   ilegible: boolean
@@ -1084,7 +1088,7 @@ export function interpretarSolicitudesDatos(status: number, json: unknown): Soli
     const s = objeto(x)
     const id = texto(s?.id)
     const estado = uno(ESTADOS_SOLICITUD, s?.estado)
-    const ramo = s?.ramo === 'moto' || s?.ramo === 'auto' ? s.ramo : null
+    const ramo = ramoSolicitud(s?.ramo)
     if (!s || !id || !estado || !ramo || !Array.isArray(s.campos)) continue
     const campos = s.campos.flatMap((c) => {
       const co = objeto(c)
@@ -1094,7 +1098,8 @@ export function interpretarSolicitudesDatos(status: number, json: unknown): Soli
       const opciones = Array.isArray(co?.opciones)
         ? co.opciones.flatMap((op) => { const oo = objeto(op); const v = texto(oo?.valor); const e = texto(oo?.etiqueta); return v && e ? [{ valor: v, etiqueta: e }] : [] })
         : undefined
-      return [{ clave, etiqueta, ...(opciones ? { opciones } : {}) }]
+      const tipo = texto(co?.tipo)
+      return [{ clave, etiqueta, ...(tipo ? { tipo } : {}), ...(opciones ? { opciones } : {}) }]
     })
     const r = objeto(s.respuestas)
     const respuestas = r
@@ -1136,7 +1141,7 @@ export function valorLegible(campo: SolicitudDatos['campos'][number], v: string 
  * la URL: no se loguea.
  */
 export const TIMEOUT_ENLACE_LEAD_MS = 8_000
-export function solicitudLeadWebAsegura(body: { clienteId: string; ramo: 'auto' | 'moto' }): Promise<Reenvio> {
+export function solicitudLeadWebAsegura(body: { clienteId: string; ramo: string; existente: boolean }): Promise<Reenvio> {
   return llamar('/api/operador/solicitud-datos/lead-web', { method: 'POST', body: JSON.stringify(body) }, TIMEOUT_ENLACE_LEAD_MS)
 }
 export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio> {

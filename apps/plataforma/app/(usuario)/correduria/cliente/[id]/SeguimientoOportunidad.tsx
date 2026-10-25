@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 import { btnStyle, SeccionCard } from '@/components/ui'
 import { eur } from '@/lib/dinero'
+import { ramoSolicitud } from '@central/module-seguros'
 import PedirDatos from './PedirDatos'
 import {
   MOTIVOS_PERDIDA_UI,
@@ -190,9 +191,10 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
       </SeccionCard>
 
       {/* El botón «Tarificar →» (y el enlace «Ver riesgo →») viven en la fila (10/10/2026): aquí solo los datos que faltan. */}
-      {!cerrada && (op.ramo === 'auto' || op.ramo === 'moto') && (
+      {/* 25/10/2026: el enlace de datos vale para todos los ramos (antes, solo auto/moto). */}
+      {!cerrada && ramoSolicitud(op.ramo) && (
         <SeccionCard titulo="Datos para tarificar" sinTarjeta>
-          <PedirDatos oportunidadId={op.id} clienteId={op.clienteId} telefono={telefono} ramo={op.ramo} />
+          <PedirDatos oportunidadId={op.id} clienteId={op.clienteId} telefono={telefono} ramo={ramoSolicitud(op.ramo)!} />
         </SeccionCard>
       )}
 

@@ -36,7 +36,8 @@ export const dynamic = 'force-dynamic'
 // (no se le revela si ya estaba en la cartera) y 502 en el tercero.
 //
 // Nunca se fuerza un duplicado desde aquí: si el teléfono/email ya está en una
-// ficha (409 forzable), el contacto se anota en ESA ficha, tipo `contacto`.
+// ficha (409 forzable), el contacto se anota en ESA ficha, tipo `contacto`, y
+// (25/10/2026) se le abre la oportunidad del ramo con su enlace a ciegas.
 // Ningún dato personal pasa por `console.*`.
 export async function POST(req: NextRequest) {
   const ip = getIp(req)
@@ -75,14 +76,15 @@ export async function POST(req: NextRequest) {
     motivo = resultado.motivo
   }
 
-  // Auto/moto con ficha NUEVA: oportunidad + enlace al formulario de datos (06/10/2026). FAIL-SOFT:
-  // el puerto tiene 8 s; cualquier fallo, tope o respuesta rara = aviso con el texto de siempre.
+  // Oportunidad + enlace al formulario de datos (06/10/2026 auto/moto con ficha nueva; 25/10/2026 TODOS los ramos y
+  // también la ficha que ya existía, a ciegas: venta cruzada). FAIL-SOFT: el puerto tiene 8 s; cualquier fallo, tope,
+  // SQL sin aplicar o respuesta rara = aviso con el texto de siempre.
   // La respuesta lleva el token en la URL: ni se loguea ni se guarda.
   let enlace: EnlaceDatos = { estado: 'sin_enlace' }
-  const ramoEnlace = ramoEnlaceDatos(lead.tipoSeguro, resultado, lead.telefono)
-  if (ramoEnlace && ficha) {
+  const pedir = ramoEnlaceDatos(lead.tipoSeguro, resultado, lead.telefono)
+  if (pedir && ficha) {
     // `llamar` no lanza: red, timeout o puerto caído vuelven como 502/503 → sin enlace.
-    const s = await solicitudLeadWebAsegura({ clienteId: ficha.id, ramo: ramoEnlace })
+    const s = await solicitudLeadWebAsegura({ clienteId: ficha.id, ramo: pedir.ramo, existente: pedir.existente })
     enlace = interpretarEnlaceDatos(s.status, s.json)
   }
 

@@ -42,3 +42,25 @@ test('datos de un tercero: la página lo sabe (para pedir el consentimiento); si
   const n = interpretarSolicitud(200, { estado: 'ok', ramo: 'auto', campos: [campo] })
   assert.equal(n.estado === 'ok' && n.tercero, false)
 })
+
+test('25/10/2026: el enlace vale para cualquier ramo de oportunidad (hogar incluido), no para uno inventado', () => {
+  const campo = { clave: 'vivienda', etiqueta: 'Dirección de la vivienda', tipo: 'direccion', obligatorio: true }
+  const h = interpretarSolicitud(200, { estado: 'ok', ramo: 'hogar', campos: [campo] })
+  assert.equal(h.estado, 'ok')
+  assert.equal(h.estado === 'ok' && h.ramo, 'hogar')
+  assert.equal(interpretarSolicitud(200, { estado: 'ok', ramo: 'comunidades', campos: [campo] }).estado, 'ok')
+  assert.equal(interpretarSolicitud(200, { estado: 'ok', ramo: 'barco', campos: [campo] }).estado, 'error')
+})
+
+test('las ayudas de dirección del enlace exigen un token VIVO (no son un servicio anónimo del Catastro)', async () => {
+  const { readFileSync } = await import('node:fs')
+  for (const r of ['../app/api/datos/codigo-postal/route.ts', '../app/api/datos/vias/route.ts']) {
+    const src = readFileSync(new URL(r, import.meta.url), 'utf8')
+    const guarda = src.indexOf('await tokenSolicitudVivo(')
+    assert.ok(guarda > 0, r)
+    assert.ok(guarda < src.search(/municipiosPorCp\(|buscarViasCallejero\(/), `${r}: la guarda va antes de consultar`)
+    assert.match(src, /rateLimit\(`datos-/)
+  }
+  const { tokenSolicitudVivo } = await import('./solicitud-datos.ts')
+  assert.equal(await tokenSolicitudVivo('corto'), false)
+})

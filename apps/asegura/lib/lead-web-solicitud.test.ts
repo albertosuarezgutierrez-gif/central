@@ -30,3 +30,29 @@ test('el lead web escribe la solicitud con `insertarSolicitud` dentro de `trasCr
   assert.ok(dup > 0 && cs > dup, 'crearSolicitud solo tras descartar todo lo que no sea duplicada')
   assert.equal(lead.split('await crearSolicitud(').length - 1, 1)
 })
+
+// ─── 25/10/2026: todos los ramos y fichas que ya existían (a CIEGAS) ─────────
+const sol = readFileSync(new URL('./solicitud-datos.ts', import.meta.url), 'utf8')
+const sqlRamos = readFileSync(new URL('../prisma/sql/2026-10-25_solicitud_datos_todos_ramos.sql', import.meta.url), 'utf8')
+
+test('un enlace del formulario web (actor `web`) NUNCA trae el DNI ni el nacimiento de la ficha', () => {
+  const f = sol.slice(sol.indexOf('export async function solicitudPorToken'), sol.indexOf('export type ResultadoDocSolicitud'))
+  const ciego = f.indexOf('if (f.creadaPor === ACTOR_ENLACE_WEB) return')
+  const relleno = f.indexOf('await identidadFicha(f)')
+  assert.ok(ciego > 0 && relleno > ciego, 'la salida a ciegas va ANTES de leer la identidad de la ficha')
+  assert.match(sol, /creada_por as "creadaPor"/)
+  assert.match(sol, /export const ACTOR_ENLACE_WEB = 'web'/)
+})
+
+test('ficha que ya existía: campos a ciegas (NADA_CONOCIDO) en las dos ramas, y solo con el actor web', () => {
+  assert.match(lead, /const campos = existente \? camposSolicitud\(ramo, NADA_CONOCIDO\)/)
+  assert.match(lead, /await crearSolicitud\(correduriaId, oportunidadId, actor, null, \{ fichaCiega: existente \}\)/)
+  assert.match(lead, /if \(actor !== ACTOR_ENLACE_WEB\) return/)
+})
+
+test('el SQL del CHECK de ramo admite exactamente RAMOS_OPORTUNIDAD', async () => {
+  const { RAMOS_SOLICITUD } = await import('@central/module-seguros')
+  const lista = /CHECK \(ramo IN \(([\s\S]*?)\)\)/.exec(sqlRamos)?.[1] ?? ''
+  const enSql = [...lista.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort()
+  assert.deepEqual(enSql, [...RAMOS_SOLICITUD].sort())
+})

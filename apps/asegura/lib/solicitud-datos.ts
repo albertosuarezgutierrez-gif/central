@@ -20,7 +20,9 @@ import { after } from 'next/server'
 import {
   DIAS_SOLICITUD,
   MAX_DOCS_SOLICITUD,
+  NADA_CONOCIDO,
   camposSolicitud,
+  nombreRamoSolicitud,
   conIdentidad,
   contrastarConDocumentos,
   etiquetaDocSolicitud,
@@ -45,6 +47,14 @@ import { revisarDocumento } from '@central/module-seguros'
 import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 import { oportunidadDesdeFichero } from './oportunidad-documento'
+import { trasCompletarHogar } from './solicitud-datos-hogar'
+
+/**
+ * `creada_por` de las solicitudes que genera el formulario web ANÓNIMO (lead web, 06/10/2026 y 25/10/2026). Un
+ * enlace así NUNCA trae datos de la ficha relleno (ni DNI ni nacimiento) ni pregunta según lo que la ficha ya sabe:
+ * el formulario lo pudo rellenar cualquiera con el email de un cliente y su propio móvil.
+ */
+export const ACTOR_ENLACE_WEB = 'web'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TOKEN = /^[A-Za-z0-9_-]{40,60}$/
@@ -91,6 +101,8 @@ export async function crearSolicitud(
   oportunidadId: string,
   actor: string,
   personaId: string | null = null,
+  /** `fichaCiega`: se pide todo como si la ficha no supiera nada (lead web de una ficha que ya existía). */
+  opciones: { fichaCiega?: boolean } = {},
 ): Promise<{ ok: true; id: string; token: string | null; nueva: boolean; ramo: RamoSolicitud; caduca: string; tercero: boolean } | Fallo> {
   if (!UUID.test(oportunidadId)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
   const db = prismaAsegura()
@@ -100,7 +112,7 @@ export async function crearSolicitud(
   if (!o) return { ok: false, estado: 'no_encontrado', motivo: 'Esa oportunidad no es de esta correduría.', status: 404 }
   if (o.estado === 'ganada' || o.estado === 'perdida') return { ok: false, estado: 'conflicto', motivo: `La oportunidad está ${o.estado}.`, status: 409 }
   const ramo = ramoSolicitud(o.ramo)
-  if (!ramo) return { ok: false, estado: 'invalido', motivo: 'Por ahora el enlace de datos es solo para moto y coche.', status: 422 }
+  if (!ramo) return { ok: false, estado: 'invalido', motivo: 'Ese ramo no admite enlace de datos.', status: 422 }
 
   if (personaId !== null && !UUID.test(personaId)) return { ok: false, estado: 'invalido', motivo: 'id de persona no válido', status: 422 }
   const persona = personaId ?? o.clienteId
@@ -112,7 +124,7 @@ export async function crearSolicitud(
       where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid`)
     if (!fig || fig.n === 0) return { ok: false, estado: 'invalido', motivo: 'Esa persona no figura en este riesgo.', status: 422 }
   }
-  const campos = await camposParaPersona(correduriaId, persona, ramo)
+  const campos = opciones.fichaCiega ? camposSolicitud(ramo, NADA_CONOCIDO) : await camposParaPersona(correduriaId, persona, ramo)
   if (!campos) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha de esa persona.', status: 404 }
   const r = await prismaAsegura().$transaction((tx) =>
     insertarSolicitud(tx, { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero, estadoOportunidad: o.estado }))
@@ -254,13 +266,13 @@ export type SolicitudPublica =
   | { estado: 'muerta' }
   | { estado: 'completada' }
 
-type FilaToken = { id: string; correduriaId: string; oportunidadId: string; clienteId: string; ramo: string; estado: string; caduca: Date; campos: CampoSolicitud[]; tercero: boolean }
+type FilaToken = { id: string; correduriaId: string; oportunidadId: string; clienteId: string; ramo: string; estado: string; caduca: Date; campos: CampoSolicitud[]; tercero: boolean; creadaPor: string }
 
 async function porToken(token: string): Promise<FilaToken | null> {
   if (!TOKEN.test(token)) return null
   const [f] = await prismaAsegura().$queryRaw<FilaToken[]>(Prisma.sql`
     select id::text as id, correduria_id::text as "correduriaId", oportunidad_id::text as "oportunidadId",
-           cliente_id::text as "clienteId", ramo, estado, caduca_at as caduca, campos, tercero
+           cliente_id::text as "clienteId", ramo, estado, caduca_at as caduca, campos, tercero, creada_por as "creadaPor"
     from solicitud_datos where token_hash = ${hashToken(token)}`)
   return f ?? null
 }
@@ -291,6 +303,8 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   // Datos de un TERCERO: no se rellena nada. El enlace puede ir al cliente, y el DNI de su padre no
   // es suyo para verlo (a diferencia del propio, que Alberto decidió traer relleno).
   if (f.tercero) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: true }
+  // Enlace del formulario web ANÓNIMO: nada de la ficha, ni su DNI (ver `ACTOR_ENLACE_WEB`).
+  if (f.creadaPor === ACTOR_ENLACE_WEB) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: false }
   const id = await identidadFicha(f)
   const campos = conIdentidad(f.campos).map((c) => {
     const actual = c.clave === 'dni' ? id.dni : c.clave === 'fechaNacimiento' ? id.fechaNacimiento : null
@@ -412,7 +426,8 @@ export async function responderSolicitud(
   const ficha: Record<string, Respuesta> = {}
   if (id.dni) ficha.dni = id.dni
   if (id.fechaNacimiento) ficha.fechaNacimiento = id.fechaNacimiento
-  const ramoTexto = f.ramo === 'moto' ? 'moto' : 'coche'
+  const ramoLeido = ramoSolicitud(f.ramo)
+  const ramoTexto = ramoLeido ? nombreRamoSolicitud(ramoLeido) : f.ramo
   const hecho = await prismaAsegura().$transaction(async (tx) => {
     const [o] = await tx.$queryRaw<{ estado: string; clienteId: string }[]>(Prisma.sql`
       select estado::text as estado, cliente_id::text as "clienteId" from oportunidades where id = ${f.oportunidadId}::uuid for update`)
@@ -463,5 +478,19 @@ export async function responderSolicitud(
               ${`${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO} ${ramoTexto}. Ya se puede tarificar.`})`)
     return true
   })
+  if (hecho && ramoLeido === 'hogar') {
+    // Catastro → riesgo de la oportunidad → Telegram con el resumen, tras contestar al cliente. Nunca tumba la respuesta.
+    const respuestas = v.respuestas
+    const { correduriaId, oportunidadId, tercero } = f
+    try {
+      after(async () => {
+        const [o] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>(Prisma.sql`
+          select cliente_id::text as "clienteId" from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
+        await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, tercero })
+      })
+    } catch (e) {
+      console.error('[solicitud-datos] no se pudo programar el aviso de hogar:', e instanceof Error ? e.message : e)
+    }
+  }
   return hecho ? { ok: true } : { ok: false, estado: 'muerta' }
 }

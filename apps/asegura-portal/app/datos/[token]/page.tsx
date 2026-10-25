@@ -1,4 +1,5 @@
 import { MarcaAsegura } from '../../MarcaAsegura'
+import { tituloSolicitud } from '@central/module-seguros'
 import { leerSolicitud } from '@/lib/solicitud-datos'
 import Formulario from './Formulario'
 
@@ -24,20 +25,20 @@ export default async function DatosPresupuesto({ params }: { params: Promise<{ t
           <>
             {s.tercero ? (
               <>
-                <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Datos de la persona que figurará en el seguro de {s.ramo === 'moto' ? 'la moto' : 'el coche'}</h1>
+                <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>{tituloSolicitud(s.ramo, true)}</h1>
                 <p className="suave" style={{ marginTop: 0 }}>
                   Son para preparar el presupuesto. Los puede rellenar esa persona, o tú con su permiso; lo que no sepas, déjalo en blanco si no es obligatorio.
                 </p>
               </>
             ) : (
               <>
-                <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Datos para tu presupuesto de {s.ramo === 'moto' ? 'moto' : 'coche'}</h1>
+                <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>{tituloSolicitud(s.ramo, false)}</h1>
                 <p className="suave" style={{ marginTop: 0 }}>
                   Con esto te preparamos el precio. Te lleva dos minutos; lo que no sepas, déjalo en blanco si no es obligatorio.
                 </p>
               </>
             )}
-            <Formulario token={token} campos={s.campos} tercero={s.tercero} />
+            <Formulario token={token} campos={s.campos} ramo={s.ramo} tercero={s.tercero} />
           </>
         )}
         {s.estado === 'completada' && (

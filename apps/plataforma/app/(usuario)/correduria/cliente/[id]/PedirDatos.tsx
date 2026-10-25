@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link2 } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { Ico, FILA } from '../../iconos'
+import type { RamoSolicitud } from '@central/module-seguros'
 import { interpretarSolicitudesDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
 import { enlaceWhatsappConMensaje } from '@/lib/telefono-wa'
 import { fmt } from './piezas'
@@ -17,7 +18,12 @@ import { RespuestasSolicitud } from './RespuestasSolicitud'
  * El enlace solo se ve al crearlo: asegura guarda su huella, no el enlace. Si se
  * pierde, se anula y se crea otro.
  */
-export default function PedirDatos({ oportunidadId, clienteId, telefono = null, ramo }: { oportunidadId: string; clienteId: string; telefono?: string | null; ramo: 'moto' | 'auto' }) {
+/** Pantalla de pedir precio de cada ramo (25/10/2026: el enlace vale para todos; el atajo, solo donde hay pantalla). */
+const PANTALLA_TARIFICAR: Partial<Record<RamoSolicitud, string>> = {
+  moto: 'moto-nuevo', auto: 'auto-nuevo', hogar: 'hogar-nuevo', vida: 'vida-nuevo', salud: 'salud-nuevo', decesos: 'decesos-nuevo',
+}
+
+export default function PedirDatos({ oportunidadId, clienteId, telefono = null, ramo }: { oportunidadId: string; clienteId: string; telefono?: string | null; ramo: RamoSolicitud }) {
   const [lectura, setLectura] = useState<SolicitudesDatos | null>(null)
   const [nuevo, setNuevo] = useState<{ url: string; mensaje: string; caduca: string } | null>(null)
   const [ocupado, setOcupado] = useState(false)
@@ -79,7 +85,9 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
   const completada = solicitudes.find((s) => s.estado === 'completada')
   const pendiente = solicitudes.find((s) => s.estado === 'pendiente')
   // Con `?oportunidad=` para volver al MISMO borrador (su clave lleva la oportunidad).
-  const tarificar = `/correduria/cliente/${clienteId}/${ramo === 'moto' ? 'moto-nuevo' : 'auto-nuevo'}?oportunidad=${encodeURIComponent(oportunidadId)}`
+  // Solo los ramos con pantalla de pedir precio; el resto se cotiza fuera (sin atajo).
+  const pantalla = PANTALLA_TARIFICAR[ramo]
+  const tarificar = pantalla ? `/correduria/cliente/${clienteId}/${pantalla}?oportunidad=${encodeURIComponent(oportunidadId)}` : null
 
   return (
     <div style={{ display: 'grid', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
@@ -102,7 +110,7 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
         </div>
       )}
 
-      {completada && <RespuestasSolicitud s={completada} quien="El cliente" tarificar={{ href: tarificar, ramo }} />}
+      {completada && <RespuestasSolicitud s={completada} quien="El cliente" tarificar={tarificar ? { href: tarificar, ramo } : null} />}
 
       {!nuevo && pendiente && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
