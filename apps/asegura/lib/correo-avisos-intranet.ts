@@ -88,6 +88,8 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
   },
   // La intranet NO avisa de la ITV (el cálculo vive en el portal); la etiqueta existe porque el Record la exige.
   itv_en_ventana: { uno: 'una ITV próxima', varios: 'ITV próximas' },
+  // La intranet NO avisa del patrimonio (el calendario vive en el portal, que no manda correo); la etiqueta existe porque el Record la exige.
+  patrimonio_en_ventana: { uno: 'un vencimiento de tu patrimonio', varios: 'vencimientos de tu patrimonio' },
   anulacion_por_firmar: {
     uno: 'un documento pendiente de tu firma',
     varios: 'documentos pendientes de tu firma',
@@ -160,6 +162,7 @@ export const ASUNTO_POR_TIPO: Record<TipoAviso, string> = {
   carnet_caducado: 'carné de conducir caducado',
   carnet_sin_nacimiento: 'falta tu fecha de nacimiento (carné de conducir)',
   itv_en_ventana: 'ITV próxima',
+  patrimonio_en_ventana: 'vencimiento de tu patrimonio',
   anulacion_por_firmar: 'documento pendiente de tu firma',
   felicitacion: 'felicitación',
   poliza_emitida: 'póliza nueva',

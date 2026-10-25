@@ -117,7 +117,7 @@ test('todo ilegible manda sobre el «+» aunque haya avisos de relleno', () => {
 
 test('cada tipo tiene destino, y es una pantalla del portal', () => {
   for (const [tipo, href] of Object.entries(HREF_POR_TIPO)) {
-    assert.match(href, /^\/(autorizaciones|boveda)/, `${tipo} lleva a ${href}, que no es una pantalla del portal`)
+    assert.match(href, /^\/(autorizaciones|boveda|patrimonio)/, `${tipo} lleva a ${href}, que no es una pantalla del portal`)
     assert.ok(!/\/api\//.test(href), `${tipo} apunta a una API: la campana enlaza pantallas, no ejecuta acciones`)
   }
 })

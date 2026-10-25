@@ -172,3 +172,47 @@ test('declarada propia por referencia catastral → propuesta_refcat', async () 
   const s = (await segurosDeInmueble(p, INM))!
   assert.deepEqual(s.propuestas.map((x) => [x.tipo, x.id, x.origen]), [['declarada', D_MIA, 'propuesta_refcat']])
 })
+
+// ─── P14 (24/10/2026): infraseguro con el capital de la póliza ENLAZADA y «Pedir precio» ──────────────────────────────
+const enlazada = [{ id: ENL, polizaId: P_MIA, polizaDeclaradaId: null, estado: 'confirmado', origen: 'manual' }]
+const conCapital = (cap: number | null | undefined): PolizaVisible => ({ ...hogar, capitalContinenteCent: cap })
+
+test('infraseguro: capital de la póliza enlazada contra el valor estimado; por debajo del 80 % avisa con lo que falta', async () => {
+  const { p } = puertos({ filas: enlazada, cartera: [conCapital(7_000_000)], inm: inmueble({ enComunidad: false, valorReconstruccionCent: 10_000_000 }) })
+  const s = (await segurosDeInmueble(p, INM))!
+  assert.deepEqual(s.infraseguro, { estado: 'infraseguro', ratio: 0.7, faltante: 3_000_000 })
+  assert.equal(s.capitalContinenteCent, 7_000_000)
+  const { p: ok } = puertos({ filas: enlazada, cartera: [conCapital(9_000_000)], inm: inmueble({ enComunidad: false, valorReconstruccionCent: 10_000_000 }) })
+  assert.equal((await segurosDeInmueble(ok, INM))!.infraseguro?.estado, 'ok')
+})
+
+test('🚨 infraseguro: sin capital o sin valor estimado es «sin dato», nunca «ok» ni 0; sin seguro enlazado en vigor no aplica', async () => {
+  const sinCap = puertos({ filas: enlazada, cartera: [conCapital(undefined)], inm: inmueble({ enComunidad: false, valorReconstruccionCent: 10_000_000 }) })
+  assert.deepEqual((await segurosDeInmueble(sinCap.p, INM))!.infraseguro, { estado: 'sin_dato', motivo: 'sin_capital' })
+  const sinValor = puertos({ filas: enlazada, cartera: [conCapital(7_000_000)], inm: inmueble({ enComunidad: false, valorReconstruccionCent: null }) })
+  assert.deepEqual((await segurosDeInmueble(sinValor.p, INM))!.infraseguro, { estado: 'sin_dato', motivo: 'sin_valor_estimado' })
+  const sinEnlace = puertos({ filas: [], inm: inmueble({ valorReconstruccionCent: 10_000_000 }) })
+  assert.equal((await segurosDeInmueble(sinEnlace.p, INM))!.infraseguro, null)
+  // La póliza enlazada que esta identidad no ve (la enlazó otra persona): no se inventa su capital.
+  const ajena = puertos({ filas: enlazada, cartera: [], inm: inmueble({ valorReconstruccionCent: 10_000_000 }) })
+  assert.equal((await segurosDeInmueble(ajena.p, INM))!.infraseguro, null)
+})
+
+test('infraseguro en comunidad: sin póliza de comunidad enlazada un capital propio bajo NO es infraseguro (no lo sabemos)', async () => {
+  const { p } = puertos({ filas: enlazada, cartera: [conCapital(2_000_000)], inm: inmueble({ enComunidad: true, valorReconstruccionCent: 10_000_000 }) })
+  assert.deepEqual((await segurosDeInmueble(p, INM))!.infraseguro, { estado: 'sin_dato', motivo: 'comunidad_sin_poliza' })
+})
+
+test('🚨 «Pedir precio»: solo nivel Total y solo con el inmueble sin seguro (o con el seguro caducado)', async () => {
+  const sinSeguro = new Date('2026-10-12T09:00:00Z')
+  const total = puertos({ inm: inmueble({ nivel: 'total', sinSeguroDeclaradoEn: sinSeguro }) })
+  assert.equal((await segurosDeInmueble(total.p, INM))!.puedePedirPrecio, true)
+  const gestion = puertos({ inm: inmueble({ nivel: 'gestion', sinSeguroDeclaradoEn: sinSeguro }) })
+  assert.equal((await segurosDeInmueble(gestion.p, INM))!.puedePedirPrecio, false)
+  const sinMirar = puertos({ inm: inmueble({ nivel: 'total' }) })
+  assert.equal((await segurosDeInmueble(sinMirar.p, INM))!.puedePedirPrecio, false, 'sin mirar no es «sin seguro»')
+  const asegurado = puertos({ filas: enlazada, inm: inmueble({ nivel: 'total' }) })
+  assert.equal((await segurosDeInmueble(asegurado.p, INM))!.puedePedirPrecio, false)
+  const caducado = puertos({ filas: enlazada, cartera: [{ ...hogar, vigente: false }], inm: inmueble({ nivel: 'total' }) })
+  assert.equal((await segurosDeInmueble(caducado.p, INM))!.puedePedirPrecio, true)
+})

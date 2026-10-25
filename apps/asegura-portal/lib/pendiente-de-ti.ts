@@ -33,6 +33,12 @@ export type EntradaPendientes = {
   presupuestos: PresupuestoPendiente[] | null
   /** `true` = hay que confirmar el contacto; `false` = vigente; `null` = no se pudo comprobar. */
   contactoPorConfirmar: boolean | null
+  /**
+   * Patrimonio (24/10/2026, P13). Ausente = esta superficie no lo consulta. `null` = no se ha podido comprobar (va a
+   * `sinComprobar`, nunca «nada pendiente»). `sinRevisar` = inmuebles sin mirar si tienen seguro; `sinFecha` = vencimientos
+   * de los que no sabemos cuándo tocan.
+   */
+  patrimonio?: { vencidas: number; porVencer: number; sinFecha: number; sinRevisar: number | null } | null
 }
 
 export type PendientesDeTi = { items: ItemPendiente[]; sinComprobar: string[] }
@@ -116,6 +122,49 @@ export function pendientesDeTi(e: EntradaPendientes, ramo: (r: string) => string
       href: '#aviso-contacto-titulo',
       urgente: false,
     })
+  }
+
+  // 5. Patrimonio: lo vencido, lo que se acerca, lo que no tiene fecha y los inmuebles sin revisar.
+  if (e.patrimonio === null) sinComprobar.push('tu patrimonio')
+  else if (e.patrimonio !== undefined) {
+    const p = e.patrimonio
+    if (p.vencidas > 0) {
+      items.push({
+        clave: 'patrimonio:vencidas',
+        titulo: p.vencidas === 1 ? 'Tienes un vencimiento pasado en tu patrimonio' : `Tienes ${p.vencidas} vencimientos pasados en tu patrimonio`,
+        detalle: 'Míralos en el calendario.',
+        href: '/patrimonio/calendario',
+        urgente: true,
+      })
+    }
+    if (p.porVencer > 0) {
+      items.push({
+        clave: 'patrimonio:por_vencer',
+        titulo: p.porVencer === 1 ? 'Se acerca un vencimiento de tu patrimonio' : `Se acercan ${p.porVencer} vencimientos de tu patrimonio`,
+        detalle: null,
+        href: '/patrimonio/calendario',
+        urgente: false,
+      })
+    }
+    if (p.sinFecha > 0) {
+      items.push({
+        clave: 'patrimonio:sin_fecha',
+        titulo: p.sinFecha === 1 ? 'Dinos cuándo te toca una revisión de tu patrimonio' : `Dinos cuándo te tocan ${p.sinFecha} revisiones de tu patrimonio`,
+        detalle: 'No sabemos la fecha, así que no podemos avisarte.',
+        href: '/patrimonio/calendario',
+        urgente: false,
+      })
+    }
+    if (p.sinRevisar === null) sinComprobar.push('los seguros de tus inmuebles')
+    else if (p.sinRevisar > 0) {
+      items.push({
+        clave: 'patrimonio:sin_revisar',
+        titulo: p.sinRevisar === 1 ? 'Revisa si tu inmueble tiene seguro' : `Revisa si tus ${p.sinRevisar} inmuebles tienen seguro`,
+        detalle: 'Enlaza el seguro que tengan o dinos que no tienen.',
+        href: '/patrimonio',
+        urgente: false,
+      })
+    }
   }
 
   return { items, sinComprobar }

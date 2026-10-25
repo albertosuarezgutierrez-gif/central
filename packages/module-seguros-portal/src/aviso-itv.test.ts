@@ -141,7 +141,7 @@ test('una superficie que no consulta vehículos (la intranet) no cuenta la fuent
   const sin = avisosDe({ ...base, carnets: null, felicitaciones: null, polizasNuevas: null, partes: null, polizasModificadas: null })
   assert.equal(sin.fuentesIlegibles.includes('vehiculos'), false)
   // Todas las fuentes que SÍ consulta, caídas, más vehículos caída: «!» (ninguna legible).
-  const todas = avisosDe({ ...base, autorizaciones: null, obligaciones: null, peticiones: null, datos: null, carnets: null, firmas: null, felicitaciones: null, polizasNuevas: null, partes: null, polizasModificadas: null, vehiculos: null })
+  const todas = avisosDe({ ...base, autorizaciones: null, obligaciones: null, peticiones: null, datos: null, carnets: null, firmas: null, felicitaciones: null, polizasNuevas: null, partes: null, polizasModificadas: null, vehiculos: null, patrimonio: null })
   assert.equal(todas.globo, '!')
   assert.equal(todas.fuentesIlegibles.length, FUENTES_AVISO.length)
 })

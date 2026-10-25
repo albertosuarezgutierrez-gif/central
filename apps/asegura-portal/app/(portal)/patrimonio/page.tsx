@@ -24,8 +24,10 @@ export default async function PatrimonioPage() {
       <h1>Patrimonio</h1>
       <p className="suave" style={{ marginTop: 0 }}>Tus inmuebles y los de quien te ha dado acceso, por titular.</p>
       {titulares.length > 0 && (
-        <p style={{ margin: '0 0 12px' }}>
+        <p style={{ margin: '0 0 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/gastos">Gastos fijos, comunidad y derramas</Link>
+          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/calendario">Calendario y avisos</Link>
+          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/rentabilidad">Rentabilidad</Link>
         </p>
       )}
 

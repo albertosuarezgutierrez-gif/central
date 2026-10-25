@@ -96,6 +96,10 @@ const EXENTOS = new Set([
   // `CRON_SECRET`, no una persona: no hay identidad, hay muchos titulares. Cada fila lleva el `titularId` de su propia
   // plantilla / de la comunidad de su derrama, jamás de una request. Cepo: `regression-portal-patrimonio-aislamiento`.
   'apps/asegura-portal/lib/patrimonio/generar-gastos-bd.ts',
+  // Push de los vencimientos del patrimonio (24/10/2026, P13): lo ejecuta el cron `avisos-push` (CRON_SECRET), sin cookie.
+  // Cada consulta parte de `portal_vinculo` de la identidad dueña de la suscripción y SOLO mira sus fichas propias que
+  // operan. Cepo: `regression-portal-patrimonio-aislamiento`.
+  'apps/asegura-portal/lib/patrimonio/avisos-push-bd.ts',
 ])
 
 /**
@@ -114,6 +118,7 @@ const NOMBRA_VINCULO = /portalVinculo/
 const CARTERA_SIN_SESION = new Set([
   'apps/asegura-portal/lib/vinculo.ts',
   'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+  'apps/asegura-portal/lib/patrimonio/avisos-push-bd.ts',
   // El aviso de póliza declarada (17/09/2026): recibe `identidadId` ya resuelto
   // por quien llama (`app/api/polizas/route.ts`, que sí pasa por `requireIdentidad()`
   // de `lib/session`) y solo lee el cliente colgado de SU vínculo, nunca de un

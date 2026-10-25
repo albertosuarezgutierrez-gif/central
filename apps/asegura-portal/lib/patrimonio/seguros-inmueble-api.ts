@@ -12,12 +12,14 @@
 //    sin datos. Y su vigencia queda `null` (no se puede comprobar con lo que esta identidad ve): el puro lo dice.
 //  · Jamás se enseña el nº de póliza ni la prima: la póliza se identifica por compañía + bien (regla del portal).
 import {
+  alertaInfraseguro,
   esEstadoDecisionSeguro,
   esRamoDeInmueble,
   estadoSeguroInmueble,
   origenAEscribir,
   proponerEnlaces,
   puede,
+  type AlertaInfraseguro,
   type EstadoDecisionSeguro,
   type EstadoSeguroInmueble,
   type InmuebleParaEnlace,
@@ -41,10 +43,19 @@ export type PolizaVisible = {
   vence: string | null
   /** `true` en vigor · `false` consta que no · `null` no se ha podido saber. */
   vigente: boolean | null
+  /**
+   * Capital de CONTINENTE en céntimos (`capital-continente.ts`). `null`/ausente = no consta (nunca 0). Solo sirve para
+   * la alerta de infraseguro: no se pinta en la lista.
+   */
+  capitalContinenteCent?: number | null
+  /** Coste anual del seguro en céntimos, anualidad `desde`→`vence`. `null`/ausente = no consta o no visible a tu nivel. Solo rentabilidad. */
+  costeAnualCent?: number | null
+  /** `YYYY-MM-DD` del efecto de la anualidad. `null`/ausente = no consta. */
+  desde?: string | null
 }
 
 /** Lo que se pinta de una póliza (sin ref. catastral ni nada que sirva para casar). */
-export type PolizaPintable = Omit<PolizaVisible, 'referenciaCatastral'>
+export type PolizaPintable = Omit<PolizaVisible, 'referenciaCatastral' | 'capitalContinenteCent' | 'costeAnualCent' | 'desde'>
 
 export type FilaEnlace = {
   id: string
@@ -60,6 +71,8 @@ export type InmuebleDeSeguros = InmuebleParaEnlace & {
   nivel: NivelPatrimonio
   enComunidad: boolean | null
   sinSeguroDeclaradoEn: Date | null
+  /** Valor de reconstrucción estimado (céntimos). `null`/ausente = sin m² del Catastro: no se estima. */
+  valorReconstruccionCent?: number | null
 }
 
 export interface PuertosSegurosInmueble {
@@ -101,6 +114,15 @@ export type SegurosDeInmueble = {
   /** Lo que se puede enlazar a mano (ramos de inmueble o sin ramo claro), sin lo ya confirmado. */
   enlazables: PolizaPintable[]
   puedeEnlazar: boolean
+  /**
+   * Alerta de infraseguro con el capital de la póliza ENLAZADA y en vigor (P14). `null` = no aplica (sin seguro
+   * enlazado en vigor): sin póliza no hay capital que comparar.
+   */
+  infraseguro: AlertaInfraseguro | null
+  capitalContinenteCent: number | null
+  valorEstimadoCent: number | null
+  /** «Pedir precio»: inmueble sin seguro (o con el seguro caducado) y nivel `total`. */
+  puedePedirPrecio: boolean
   /** Alguna fuente (cartera o declaradas) no se ha podido leer: la pantalla lo dice. */
   sinComprobar: boolean
 }
@@ -188,6 +210,23 @@ export async function segurosDeInmueble(p: PuertosSegurosInmueble, idPedido: unk
   })
   const yaPropuestas = new Set(propuestas.map((x) => clave(x.tipo, x.id)))
 
+  const vigentes = filas
+    .filter((f) => f.estado === 'confirmado')
+    .map((f) => {
+      const par = tipoDeFila(f)
+      return par ? porClave.get(clave(par.tipo, par.id)) : undefined
+    })
+    .filter((v): v is PolizaVisible => v !== undefined && v.vigente === true)
+  const esComunidad = (v: PolizaVisible) => ['comunidad', 'comunidades'].includes((v.ramo ?? '').trim().toLowerCase())
+  // El capital del propio inmueble: el mayor de sus pólizas en vigor que NO son de comunidad (su continente es el edificio).
+  const capitales = vigentes.filter((v) => !esComunidad(v)).map((v) => v.capitalContinenteCent).filter((c): c is number => typeof c === 'number' && c > 0)
+  const capital = capitales.length > 0 ? Math.max(...capitales) : null
+  const valorEstimado = typeof inm.valorReconstruccionCent === 'number' ? inm.valorReconstruccionCent : null
+  const infraseguro =
+    vigentes.length === 0
+      ? null
+      : alertaInfraseguro({ capitalContinente: capital, valorEstimado, enComunidad: inm.enComunidad, polizaComunidadEnlazada: vigentes.some(esComunidad) })
+
   return {
     inmuebleId: inm.id,
     alias: inm.alias,
@@ -200,6 +239,10 @@ export async function segurosDeInmueble(p: PuertosSegurosInmueble, idPedido: unk
       .filter((v) => enlazable(v) && !confirmadas.has(clave(v.tipo, v.id)) && !yaPropuestas.has(clave(v.tipo, v.id)))
       .map(pintable),
     puedeEnlazar: puede(inm.nivel, 'enlazar_seguro'),
+    infraseguro,
+    capitalContinenteCent: capital,
+    valorEstimadoCent: valorEstimado,
+    puedePedirPrecio: puede(inm.nivel, 'pedir_precio') && (estado === 'sin_seguro' || estado === 'con_seguro_no_vigente'),
     sinComprobar: vis.cartera === null || vis.declaradas === null,
   }
 }

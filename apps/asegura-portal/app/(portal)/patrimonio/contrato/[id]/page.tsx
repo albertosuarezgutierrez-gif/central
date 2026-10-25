@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
-import { estadoContrato, rentaVigente, type ResultadoActualizacion } from '@central/module-patrimonio'
+import { estadoContrato, rentaVigente, type ResultadoActualizacion, type TopeAplicable } from '@central/module-patrimonio'
 
 import { eur } from '@/lib/dinero'
 import { contratoAutorizado } from '@/lib/patrimonio/contratos-bd'
@@ -9,6 +9,7 @@ import { fechaMadrid } from '@/lib/patrimonio/dia-madrid'
 import { getIdentidad } from '@/lib/session'
 
 import { AltaInquilino, AplicarRenta, VerDatosInquilino } from './ContratoAcciones'
+import { TopeRenta } from './TopeRenta'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,20 @@ const fecha = (f: string | null) => (f === null ? noConsta : f.split('-').revers
 const cent = (c: number | null) => (c === null ? '—' : eur(c / 100))
 const pct = (n: number) => `${n.toLocaleString('es-ES', { maximumFractionDigits: 3 })} %`
 const ESTADO = { futuro: 'Todavía no ha empezado', vigente: 'Vigente', terminado: 'Terminado' } as const
+
+/** De dónde sale el tope que se aplica: del cliente, de la ley del año o «no lo tenemos» (nunca un 0 %). */
+function textoTope(t: TopeAplicable): string {
+  switch (t.origen) {
+    case 'cliente':
+      return `${pct(t.pct as number)} (el que tú has fijado).`
+    case 'cliente_sin_tope':
+      return 'sin tope (así lo has indicado).'
+    case 'catalogo':
+      return `${pct(t.pct as number)} (límite legal de ${t.anio} que tenemos anotado${t.catalogo ? `, según ${t.catalogo.norma}` : ''}).`
+    case 'sin_catalogo':
+      return `no tenemos anotado ningún límite para ${t.anio}. Si tu contrato o tu zona lo limitan, pon el tuyo.`
+  }
+}
 
 /** Texto de la propuesta: dice el HECHO, sin inventar un 0 % cuando no tenemos el índice. */
 function textoPropuesta(p: ResultadoActualizacion, indice: string | null, descripcion: string | null): string {
@@ -96,6 +111,29 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
               <AplicarRenta contratoId={c.id} desde={p.aplicableDesde} rentaNuevaCent={p.rentaNueva} indice={p.indice} periodo={p.periodo} />
             )}
           </>
+        )}
+        {c.clausula.tipo === 'indice' && f.topeAplicable !== null && (
+          <div style={{ display: 'grid', gap: 8, marginBlock: 12 }}>
+            <p style={{ margin: 0, overflowWrap: 'anywhere' }}>
+              <strong>Tope de subida:</strong> {textoTope(f.topeAplicable)}
+            </p>
+            {f.topeAplicable.catalogo !== null && f.topeAplicable.origen !== 'catalogo' && f.topeAplicable.catalogo.pct !== null && (
+              <p className="suave" style={{ margin: 0, fontSize: 13 }}>
+                El de la ley de {f.topeAplicable.anio} que tenemos es el {pct(f.topeAplicable.catalogo.pct)}.
+              </p>
+            )}
+            <p className="suave" style={{ margin: 0, fontSize: 13 }}>
+              Los límites cambian por ley y por zona: puedes ajustarlo a tu contrato. Solo afecta a la próxima propuesta.
+              {f.topeAplicable.catalogo !== null && f.topeAplicable.catalogo.estado === 'por_verificar' ? ' El dato de la ley está pendiente de revisión fiscal.' : ''}
+            </p>
+            {f.puedeAltaBaja && (
+              <TopeRenta
+                contratoId={c.id}
+                modo={f.topePreferencia.modo}
+                pctPropio={f.topePreferencia.modo === 'propio' ? f.topePreferencia.pct : null}
+              />
+            )}
+          </div>
         )}
         {f.historial.length > 0 && (
           <>

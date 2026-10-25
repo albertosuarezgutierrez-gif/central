@@ -20,6 +20,8 @@
 import {
   calcularActualizacionRenta,
   esFecha,
+  topeAplicable,
+  type PreferenciaTope,
   type Contrato,
   type Fecha,
   type IndiceActualizacion,
@@ -30,11 +32,8 @@ import {
 /** Lo que el lector trae de `portal_patrimonio_indice` (ya convertido: `pct` number, `descargadoEn` Date). */
 export type FilaIndice = { indice: string; periodo: string; pct: number; descargadoEn: Date }
 
-/**
- * Tope legal a la subida, en %. `null` = sin tope codificado: los límites cambian por ley (2022-2024, IRAV desde 2025,
- * zonas tensionadas) y no se adivinan aquí. La pantalla lo dice: «confirma con tu asesor si hay límites en tu zona».
- */
-export const TOPE_LEGAL_PCT: number | null = null
+// El tope a la subida YA NO es una constante: sale del catálogo por año de `@central/module-patrimonio`
+// (`tope-renta.ts`, que revisa un agente fiscal) o de lo que el CLIENTE fijó en su contrato (24/10/2026).
 
 /** Meses de desfase máximo entre el periodo de referencia y el último índice que tenemos (regla 4). */
 export const MAX_MESES_DESFASE = 2
@@ -95,13 +94,20 @@ export function elegirVariacion(
  * Propuesta de actualización para HOY. Delega en el puro; aquí solo se elige la variación del índice del contrato para
  * el aniversario que toca. Sin cláusula, el puro devuelve `sin_clausula` antes de mirar índice alguno.
  */
-export function propuestaRenta(contrato: Contrato, filas: readonly FilaIndice[], hoy: Fecha): ResultadoActualizacion {
+export function propuestaRenta(
+  contrato: Contrato,
+  filas: readonly FilaIndice[],
+  hoy: Fecha,
+  tope: PreferenciaTope = { modo: 'defecto' },
+): ResultadoActualizacion {
   if (contrato.clausula.tipo === 'ninguna') return calcularActualizacionRenta({ contrato, hoy, variacion: null })
   // Primer cálculo sin variación: da el aniversario que toca (o `no_toca`/`terminado`, que no necesitan índice).
-  const previo = calcularActualizacionRenta({ contrato, hoy, variacion: null, topePct: TOPE_LEGAL_PCT })
+  const previo = calcularActualizacionRenta({ contrato, hoy, variacion: null })
   if (previo.estado !== 'sin_indice') return previo
   const variacion = elegirVariacion(filas, contrato.clausula.indice, previo.proximoAniversario)
-  return calcularActualizacionRenta({ contrato, hoy, variacion, topePct: TOPE_LEGAL_PCT })
+  // El tope es el del AÑO del aniversario: del cliente si lo fijó, si no el del catálogo.
+  const { pct } = topeAplicable(previo.proximoAniversario, tope)
+  return calcularActualizacionRenta({ contrato, hoy, variacion, topePct: pct })
 }
 
 export type ConfirmacionRenta = { desde: Fecha; rentaNuevaCent: number; indice: IndiceActualizacion; periodo: string }

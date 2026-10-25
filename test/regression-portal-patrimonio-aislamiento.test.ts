@@ -222,3 +222,35 @@ test('🚨 enlaces: lo que «ve» la identidad sale de carteraDeIdentidad y de S
   assert.doesNotMatch(api, /status:\s*403/)
   assert.doesNotMatch(leer(SEG_RUTA), /prisma/)
 })
+
+// ─── Calendario y push del patrimonio (24/10/2026, P13) ────────────────────────────────────────────────────────────
+const CAL_BD = 'apps/asegura-portal/lib/patrimonio/calendario-bd.ts'
+const PUSH_BD = 'apps/asegura-portal/lib/patrimonio/avisos-push-bd.ts'
+
+test('🚨 calendario-bd: calendarioDeIdentidad parte de accesosPatrimonio y calendarioDeClientes solo tiene DOS llamadores', () => {
+  const src = leer(CAL_BD)
+  assert.ok(!CRON_SIN_SESION.has(CAL_BD))
+  assert.match(cuerpo(src, 'calendarioDeIdentidad'), /accesosPatrimonio\(identidadId\)/)
+  assert.match(src, /titular: \{ clienteId: \{ in: \[\.\.\.clientesIds\] \}, archivadoEn: null \}/, 'el inmueble se busca DENTRO de los titulares pasados')
+  // Obligaciones y contratos cuelgan SOLO de los inmuebles ya acotados.
+  assert.match(src, /inmuebleId: \{ in: ids \}, archivadoEn: null/)
+  const ficheros = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'apps/asegura-portal'], { cwd: ROOT, encoding: 'utf8' })
+    .split('\n')
+    .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\.tsx?$/.test(f))
+  const llaman = ficheros.filter((f) => f !== CAL_BD && /\bcalendarioDeClientes\(/.test(leer(f)))
+  assert.deepEqual(llaman, [PUSH_BD], 'calendarioDeClientes lee por una lista de fichas: solo el push, que las acota por vínculo')
+})
+
+test('🚨 push del patrimonio: solo fichas PROPIAS que operan, sin vista de corredor, vivas; texto sin alias; sello solo si salió', () => {
+  const src = leer(PUSH_BD)
+  assert.match(src, /portalVinculo\.findMany\(\{ where: \{ identidadId \}/)
+  assert.match(src, /v\.origen !== 'corredor' && puedeAutorizar\(nivelDe\(v\.nivel\)\)/)
+  assert.match(src, /mergedIntoClienteId: null, activo: true/)
+  assert.match(src, /calendarioDeClientes\(vivas\.map/)
+  // Ni Dueño ni autorizaciones: lo dudoso cae fuera.
+  assert.doesNotMatch(src, /empresasDeFichas|portalAutorizacion|ALCANCE_PATRIMONIO/)
+  assert.match(src, /if \(algunaOk\) \{\s*await prisma\.portalAvisoLeido\.createMany/)
+  assert.match(src, /identidadId, clave: \{ startsWith: PREFIJO_PUSH_PATRIMONIO \}/)
+  assert.match(src, /motivoSinPush\(/)
+  assert.match(leer('apps/asegura-portal/app/api/cron/avisos-push/route.ts'), /avisarPatrimonioPush\(vapid, hoy\)/)
+})

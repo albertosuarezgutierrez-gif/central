@@ -6,7 +6,18 @@
 // `(…, titular_id)`. La PII del inquilino NO pasa por aquí: va por `inquilinos-puente.ts` (el rol no tiene ni las
 // columnas ni la clave). La renta aplicada es APPEND-ONLY: aquí solo hay `create`, nunca `update`/`delete`.
 import { Prisma } from '@prisma/client'
-import { puede, type Contrato, type IndiceActualizacion, type NivelPatrimonio, type ResultadoActualizacion } from '@central/module-patrimonio'
+import {
+  preferenciaDeColumnas,
+  proximoAniversarioActualizacion,
+  puede,
+  topeAplicable,
+  type Contrato,
+  type IndiceActualizacion,
+  type NivelPatrimonio,
+  type PreferenciaTope,
+  type ResultadoActualizacion,
+  type TopeAplicable,
+} from '@central/module-patrimonio'
 
 import { prisma } from '../db'
 import { getIdentidad } from '../session'
@@ -42,6 +53,11 @@ async function leerContrato(id: string, clientesIds: readonly string[]) {
 }
 type FilaLeida = NonNullable<Awaited<ReturnType<typeof leerContrato>>>
 
+/** Lo que el cliente dejó en las columnas del tope; sin nada (o roto) = el catálogo. */
+function topeDeFila(f: FilaLeida): PreferenciaTope {
+  return preferenciaDeColumnas(decimal(f.topeActualizacionPct), f.topeActualizacionSin)
+}
+
 function contratoPuro(f: FilaLeida): Contrato {
   const vivos = f.inquilinos.filter((ci) => ci.inquilino.archivadoEn === null)
   return contratoDeFila(f as FilaContrato, vivos.map((ci) => ci.inquilino.id), f.actualizaciones)
@@ -75,7 +91,7 @@ export function puertosContratos(identidadId: string): PuertosContratos {
     },
     async contrato(id, clientesIds) {
       const f = await leerContrato(id, clientesIds)
-      return f ? { clienteId: f.inmueble.titular.clienteId, contrato: contratoPuro(f) } : null
+      return f ? { clienteId: f.inmueble.titular.clienteId, contrato: contratoPuro(f), tope: topeDeFila(f) } : null
     },
     async inquilino(id, clientesIds) {
       const f = await prisma.portalPatrimonioInquilino.findFirst({
@@ -107,6 +123,21 @@ export function puertosContratos(identidadId: string): PuertosContratos {
       return c
     },
     indices: filasIndice,
+    async guardarTope({ contratoId, tope }) {
+      // `contratoId` viene de `p.contrato()` (ya dentro de los titulares autorizados); se repite el filtro por titular.
+      const acc = await accesosPatrimonio(identidadId)
+      if (acc.size === 0) return false
+      const r = await prisma.portalPatrimonioContrato.updateMany({
+        where: contratoDentro(contratoId, [...acc.keys()]),
+        data: {
+          topeActualizacionPct: tope.modo === 'propio' ? new Prisma.Decimal(tope.pct.toFixed(2)) : null,
+          topeActualizacionSin: tope.modo === 'sin_tope' ? true : null,
+          topeActualizacionPorIdentidadId: tope.modo === 'defecto' ? null : identidadId,
+          topeActualizacionEn: tope.modo === 'defecto' ? null : new Date(),
+        },
+      })
+      return r.count > 0
+    },
     async aplicarRenta({ contratoId, propuesta }) {
       try {
         const r = await prisma.portalPatrimonioRentaActualizacion.create({
@@ -149,6 +180,9 @@ export type FichaContrato = {
   inquilinos: InquilinoVista[]
   historial: RentaVista[]
   propuesta: ResultadoActualizacion
+  /** Lo que el cliente fijó y el tope que se aplicaría al aniversario que toca (con su fuente). */
+  topePreferencia: PreferenciaTope
+  topeAplicable: TopeAplicable | null
 }
 
 /** El contrato del id de la URL SOLO si cuelga de un titular autorizado. `null` = 404 (no existe o no es tuyo). */
@@ -186,7 +220,9 @@ export async function contratoAutorizado(identidadId: string, idPedido: string):
       topado: a.topado,
       notificada: a.notificadaEn !== null,
     })),
-    propuesta: await propuestaDeContrato(p, contrato),
+    propuesta: await propuestaDeContrato(p, contrato, topeDeFila(f)),
+    topePreferencia: topeDeFila(f),
+    topeAplicable: contrato.clausula.tipo === 'indice' ? topeAplicable(proximoAniversarioActualizacion(contrato), topeDeFila(f)) : null,
   }
 }
 

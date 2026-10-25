@@ -22,10 +22,13 @@ const SQL_DOCUMENTO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/20
 // Enlace inmueble ↔ póliza (24/10/2026, P10): columnas nuevas en dos tablas ya existentes; entra en el mismo espejo.
 const RUTA_ENLACE = 'apps/asegura-portal/prisma/sql/2026-10-24_portal_patrimonio_enlace_poliza.sql'
 const SQL_ENLACE = readFileSync(join(RAIZ, RUTA_ENLACE), 'utf8').replace(/--.*$/gm, '')
+// Tope de renta editable por el cliente (24/10/2026, P13/P14): columnas nuevas en `contrato`; mismo espejo.
+const SQL_TOPE = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-24_portal_patrimonio_tope_renta.sql'), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
   SQL_ENLACE,
+  SQL_TOPE,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
