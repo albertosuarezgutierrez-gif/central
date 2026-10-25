@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { MEDIADOR, FECHA_TEXTOS_LEGALES, VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
+import { MEDIADOR, fechaTextosLegales, versionTextosLegales } from '@central/module-seguros'
+
+import { senalesActivas } from '@/lib/patrimonio-senales-activas'
 
 export const metadata: Metadata = {
   title: 'Cookies — Grupo ASegura',
@@ -95,7 +97,7 @@ export default function Cookies() {
       </section>
 
       <p className="legal-version">
-        Versión {VERSION_TEXTOS_LEGALES} · última revisión {FECHA_TEXTOS_LEGALES}
+        Versión {versionTextosLegales(senalesActivas())} · última revisión {fechaTextosLegales(senalesActivas())}
       </p>
     </>
   )

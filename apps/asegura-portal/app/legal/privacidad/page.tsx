@@ -1,7 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { MEDIADOR, FECHA_TEXTOS_LEGALES, VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
+import { MEDIADOR, fechaTextosLegales, versionTextosLegales } from '@central/module-seguros'
+
+import { senalesActivas } from '@/lib/patrimonio-senales-activas'
+
+import { ApartadoSenalesPatrimonio } from './ApartadoSenalesPatrimonio'
 
 export const metadata: Metadata = {
   title: 'Política de privacidad — Grupo ASegura',
@@ -229,6 +233,8 @@ export default function Privacidad() {
         </p>
       </section>
 
+      {senalesActivas() && <ApartadoSenalesPatrimonio />}
+
       <section>
         <h2>4. Quién más ve tus datos</h2>
         <p>Solo quien hace falta para que el portal funcione:</p>
@@ -377,7 +383,7 @@ export default function Privacidad() {
       </section>
 
       <p className="legal-version">
-        Versión {VERSION_TEXTOS_LEGALES} · última revisión {FECHA_TEXTOS_LEGALES}
+        Versión {versionTextosLegales(senalesActivas())} · última revisión {fechaTextosLegales(senalesActivas())}
       </p>
     </>
   )

@@ -41,6 +41,25 @@ export const VERSION_TEXTOS_LEGALES = '2026-10-v1'
 export const FECHA_TEXTOS_LEGALES = '2026-10-13'
 
 /**
+ * Textos legales CON el apartado de «señales de patrimonio» (P15, BORRADOR 26/10/2026, sin aprobar por Alberto).
+ * 🚨 Solo rigen con `PATRIMONIO_SENALES_ACTIVAS=1`: con el interruptor apagado `versionTextosLegales(false)` devuelve
+ * EXACTAMENTE `VERSION_TEXTOS_LEGALES` y no cambia nada de lo que ve o firma nadie. Al activarlo, la versión y la fecha se
+ * sellan en las filas nuevas de `portal_consentimiento` (una firma sobre el texto viejo no acredita el nuevo).
+ * Texto: docs/legal/2026-10-26-borrador-p15-patrimonio.md.
+ */
+export const VERSION_TEXTOS_LEGALES_PATRIMONIO = '2026-11-v1'
+export const FECHA_TEXTOS_LEGALES_PATRIMONIO = '2026-10-26'
+
+/** La versión de los textos legales que rige: la base, o la ampliada si el apartado de patrimonio está activo. */
+export function versionTextosLegales(patrimonioActivo: boolean): string {
+  return patrimonioActivo ? VERSION_TEXTOS_LEGALES_PATRIMONIO : VERSION_TEXTOS_LEGALES
+}
+
+export function fechaTextosLegales(patrimonioActivo: boolean): string {
+  return patrimonioActivo ? FECHA_TEXTOS_LEGALES_PATRIMONIO : FECHA_TEXTOS_LEGALES
+}
+
+/**
  * Versión de los textos legales de la WEB PÚBLICA (`apps/asegura-web`).
  *
  * 🚨 Es una constante APARTE de `VERSION_TEXTOS_LEGALES` a propósito, y no por

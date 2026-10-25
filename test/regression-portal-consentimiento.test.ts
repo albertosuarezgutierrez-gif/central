@@ -28,7 +28,7 @@ test('el canje del código escribe la acreditación lds_art19', () => {
   const src = leer(RUTA)
   assert.match(src, /portalConsentimiento\.create/, 'el canje ya no registra nada')
   assert.match(src, /tipo: 'lds_art19'/)
-  assert.match(src, /versionTexto: VERSION_TEXTOS_LEGALES/, 'la fila tiene que sellar la versión del texto')
+  assert.match(src, /versionTexto: versionTextosLegales\(/, 'la fila tiene que sellar la versión del texto')
 })
 
 test('la fila se sella con la versión del texto, no con una cadena a mano', () => {

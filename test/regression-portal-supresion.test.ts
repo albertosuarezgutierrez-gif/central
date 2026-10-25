@@ -127,7 +127,7 @@ test('la identidad sale de la cookie y toda consulta filtra por ella', () => {
 test('la solicitud se sella con la versión de los textos que se le enseñó', () => {
   // Sin ella no se puede reconstruir QUÉ se le dijo que se iba a conservar.
   const src = leer(LIB_PORTAL)
-  assert.match(src, /versionTextos: VERSION_TEXTOS_LEGALES/)
+  assert.match(src, /versionTextos: versionTextosLegales\(/)
   assert.ok(!/versionTextos: '20\d\d/.test(src), 'la versión está escrita a mano en vez de importada')
 })
 

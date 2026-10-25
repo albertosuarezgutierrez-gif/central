@@ -341,6 +341,11 @@ export type { OpcionEntradaParte, VistaParte } from './parte-entrada.ts'
 export {
   TIPOS_CONSENTIMIENTO,
   TIPOS_QUE_SE_REGISTRAN,
+  TIPO_COMERCIAL_PATRIMONIO,
+  TEXTO_CONSENTIMIENTO_COMERCIAL_PATRIMONIO,
+  VERSION_TEXTO_COMERCIAL_PATRIMONIO,
+  tiposConsentimiento,
+  tiposQueSeRegistran,
   TEXTO_CONSENTIMIENTO_COMERCIAL,
   VERSION_TEXTO_COMERCIAL,
   TEXTO_CONSENTIMIENTO_AVISOS,
@@ -351,7 +356,7 @@ export {
   normalizarIp,
   normalizarUserAgent,
 } from './consentimiento.ts'
-export type { TipoConsentimiento, ConsentimientoGuardado, ConsentimientoConFecha } from './consentimiento.ts'
+export type { TipoConsentimiento, TipoConsentimientoPatrimonio, ConsentimientoGuardado, ConsentimientoConFecha } from './consentimiento.ts'
 
 // La carta de NO RENOVACIÓN (art. 22 LCS) sobre una póliza declarada. Lee su
 // cabecera: se compone y se enseña, NUNCA se envía desde el portal; y lo que

@@ -4,9 +4,12 @@ import { redirect } from 'next/navigation'
 import { patrimonioDeIdentidad } from '@/lib/patrimonio/inmuebles-bd'
 import { avisosPolizasSinInmueble, type AvisoPintable } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { precargaDeParametros, type ParametrosAlta } from '@/lib/patrimonio/precarga-alta'
+import { consentimientoPatrimonioVigente } from '@/lib/consentimiento-patrimonio'
+import { senalesActivas } from '@/lib/patrimonio-senales-activas'
 import { getIdentidad } from '@/lib/session'
 
 import { AvisoPolizaSinInmueble } from './AvisoPolizaSinInmueble'
+import { ConsentimientoPatrimonio } from './ConsentimientoPatrimonio'
 import { ListaInmuebles } from './ListaInmuebles'
 import { NuevoInmueble } from './NuevoInmueble'
 
@@ -22,6 +25,12 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
   if (!identidad) redirect('/')
   const titulares = await patrimonioDeIdentidad(identidad.id)
   const precarga = precargaDeParametros(await searchParams)
+  // P15 (borrador): la casilla y su aviso SOLO con el interruptor encendido. Apagado no se lee ni se pinta nada nuevo.
+  // Un fallo al leer el consentimiento no enseña la casilla (no se puede afirmar su estado).
+  let consentimientoPatrimonio: boolean | null | 'ilegible' | undefined
+  if (senalesActivas() && titulares.length > 0) {
+    consentimientoPatrimonio = await consentimientoPatrimonioVigente(identidad.id).catch(() => 'ilegible' as const)
+  }
   // Pólizas de hogar/comunidad sin inmueble (con el estado de sus peticiones, por el puente). Fallo = «no hemos podido
   // comprobarlo», nunca «no tienes ninguna».
   let sueltas: AvisoPintable[] | null = []
@@ -45,6 +54,10 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
           <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/rentabilidad">Rentabilidad</Link>
           {titulares.some((t) => t.puedeAlta) && <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/importar">Importar desde Excel</Link>}
         </p>
+      )}
+
+      {consentimientoPatrimonio !== undefined && consentimientoPatrimonio !== 'ilegible' && (
+        <ConsentimientoPatrimonio inicial={consentimientoPatrimonio} />
       )}
 
       {titulares.length === 0 ? (
