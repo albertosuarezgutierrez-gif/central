@@ -1,3 +1,5 @@
+// Turismos v0.6.25 (25/10/2026): «Código postal»/«Localidad» del tomador que reaparecen DESHABILITADOS y rellenos tras teclear el documento (el localizador
+// común los descarta = «no aparece») se leen y se deciden como bloqueados en vez de dejar el paso con hueco (trabajo real e3c52938).
 // Turismos v0.6.24 (22/10/2026): la lista blanca de «Guardar presupuesto» compara sin mayúsculas ni tildes (`innerText` aplica el `text-transform` del CSS y
 // el control de la barra se veía en el diagnóstico pero no casaba al pulsarlo) y el aviso dice por qué no se pulsó el abridor.
 // Turismos v0.6.23 (22/10/2026): el abridor usa el MISMO conjunto de controles y visibilidad que el diagnóstico (el «Guardar presupuesto» de la barra
@@ -2579,7 +2581,21 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
     }
     const campo = await esperar(op.etiqueta, op.bloqueTomador === true)
     if (typeof campo === 'string') {
-      huecos.push(campo)
+      // v0.6.25 (25/10/2026, trabajo real e3c52938 atascado en «Código postal (no aparece)»): tras teclear el documento el portal rehace el bloque del
+      // tomador y deja CP/Localidad DESHABILITADOS y rellenos; el localizador común descarta los deshabilitados («no aparece»). Si el campo reaparece
+      // bloqueado durante la espera, se LEE y se decide (nunca se teclea), con la misma espera al relleno que la localidad. Solo si sigue sin verse → hueco.
+      const finTarde = Date.now() + ESPERA_LOCALIDAD_MS
+      let tarde = await campoBloqueadoTurismos(marco, op.etiqueta, op.bloqueTomador === true)
+      while (!tarde && Date.now() < finTarde) {
+        await page.waitForTimeout(300)
+        tarde = await campoBloqueadoTurismos(marco, op.etiqueta, op.bloqueTomador === true)
+      }
+      while (tarde && tarde.valor.trim() === '' && Date.now() < finTarde) {
+        await page.waitForTimeout(300)
+        tarde = await campoBloqueadoTurismos(marco, op.etiqueta, op.bloqueTomador === true)
+      }
+      if (tarde) segunBloqueado(op.etiqueta, tarde.valor, op.valor, como, op.supuesto)
+      else huecos.push(campo)
       continue
     }
     const e0 = await estadoCampoTurismos(campo)
@@ -2936,7 +2952,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.24',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.25',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
