@@ -16,6 +16,7 @@ import { mapConConcurrencia } from '@/lib/concurrencia'
 import { TAM_PAGINA_PUSH, reunirAvisables } from '@/lib/criba-avisos-push'
 import { prisma } from '@/lib/db'
 import { PREFIJO_PEDIDA } from '@/lib/captacion-declarada'
+import { avisarPatrimonioPush, type ResultadoPushPatrimonio } from '@/lib/patrimonio/avisos-push-bd'
 import { obligacionesDebidasDeIdentidad, sinVencimientoAportadaDuplicado } from '@/lib/obligaciones-debidas'
 import { OPCIONES_AVISO, cargarVapid, topicAviso } from '@/lib/push-vapid'
 
@@ -220,5 +221,15 @@ export async function GET(req: Request) {
     }
   })
 
-  return NextResponse.json({ estado: 'ok', candidatas, avisadas, sinSuscripcion, sinExito, saltadas, fallidas, omitidasPorPreferencia })
+  // Vencimientos del calendario del patrimonio (24/10/2026, P13): fase aparte, con su propio sello. Si falla NO tumba
+  // lo ya enviado de las obligaciones de póliza (ya selladas): se declara en la respuesta.
+  let patrimonio: ResultadoPushPatrimonio | { error: string }
+  try {
+    patrimonio = await avisarPatrimonioPush(vapid, hoy)
+  } catch (e) {
+    console.error('[avisos-push] fase patrimonio:', e instanceof Error ? e.message : e)
+    patrimonio = { error: 'patrimonio_no_procesado' }
+  }
+
+  return NextResponse.json({ estado: 'ok', candidatas, avisadas, sinSuscripcion, sinExito, saltadas, fallidas, omitidasPorPreferencia, patrimonio })
 }

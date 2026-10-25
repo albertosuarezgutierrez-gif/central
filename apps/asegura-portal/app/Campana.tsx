@@ -251,6 +251,8 @@ function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
       return 'los cambios de tus pólizas'
     case 'vehiculos':
       return 'la ITV de tus vehículos'
+    case 'patrimonio':
+      return 'el calendario de tu patrimonio'
   }
 }
 

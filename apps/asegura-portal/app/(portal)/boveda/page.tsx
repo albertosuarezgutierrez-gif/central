@@ -22,6 +22,7 @@ import { leerMisDatos, reparosDeContacto } from '@/lib/mis-datos'
 import { peticionesPrecio } from '@/lib/mejorar-precio'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { pendientesDeTi } from '@/lib/pendiente-de-ti'
+import { patrimonioParaPendientes } from '@/lib/patrimonio/pendiente-bd'
 import { presupuestosPendientesDeIdentidad } from '@/lib/presupuesto'
 import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
@@ -234,6 +235,9 @@ export default async function Boveda({
     : polizasConBajaEnMarcha(firmas)
   const puedePedirBaja = !identidad.corredor
 
+  // Patrimonio (P13): `undefined` = sin patrimonio a la vista; `null` = no se pudo comprobar. Solo se lee para esta vista.
+  const patrimonioPendiente = vista === 'seguros' ? await patrimonioParaPendientes(identidad.id) : undefined
+
   const pendientes =
     vista === 'seguros'
       ? pendientesDeTi(
@@ -258,6 +262,7 @@ export default async function Boveda({
                 : contacto.estado === 'sin_ficha' || contacto.estado === 'varias_fichas'
                   ? false
                   : null,
+            patrimonio: patrimonioPendiente,
           },
           (r) => (RAMO[r] ?? r).toLowerCase(),
         )

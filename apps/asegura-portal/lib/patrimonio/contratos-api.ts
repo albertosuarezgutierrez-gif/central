@@ -14,11 +14,13 @@
 import {
   esFecha,
   puede,
+  validarTopeCliente,
   type AccionPatrimonio,
   type Contrato,
   type Fecha,
   type IndiceActualizacion,
   type NivelPatrimonio,
+  type PreferenciaTope,
   type ResultadoActualizacion,
 } from '@central/module-patrimonio'
 
@@ -186,7 +188,7 @@ export interface PuertosContratos {
   hoy(): Fecha
   /** Solo busca dentro de `clientesIds` (claves de `accesos()`). */
   inmueble(id: string, clientesIds: readonly string[]): Promise<EnTitular<{ titularId: string }> | null>
-  contrato(id: string, clientesIds: readonly string[]): Promise<EnTitular<{ contrato: Contrato }> | null>
+  contrato(id: string, clientesIds: readonly string[]): Promise<EnTitular<{ contrato: Contrato; tope: PreferenciaTope }> | null>
   inquilino(id: string, clientesIds: readonly string[]): Promise<EnTitular<{ inquilinoId: string }> | null>
   crearContrato(x: { titularId: string; inmuebleId: string; datos: DatosAltaContrato }): Promise<{ id: string }>
   /** Filas de la tabla de índices (lectura global: no es de ningún titular). */
@@ -196,6 +198,8 @@ export interface PuertosContratos {
     contratoId: string
     propuesta: Extract<ResultadoActualizacion, { estado: 'propuesta' }>
   }): Promise<{ ok: true; id: string } | { ok: false; motivo: 'duplicado' }>
+  /** Guarda el tope del cliente en SU contrato (ya autorizado). `defecto` limpia las columnas. */
+  guardarTope(x: { contratoId: string; tope: PreferenciaTope }): Promise<void>
   altaInquilinoPuente(x: { contratoId: string; datos: DatosAltaInquilino }): Promise<ResultadoPuenteAlta>
   piiInquilinoPuente(inquilinoId: string): Promise<ResultadoPuentePii>
 }
@@ -226,9 +230,13 @@ export async function responderAltaContrato(p: PuertosContratos, cuerpo: unknown
 }
 
 /** La propuesta de HOY para un contrato ya autorizado (la usan la página y el aplicar: una sola regla). */
-export async function propuestaDeContrato(p: Pick<PuertosContratos, 'hoy' | 'indices'>, c: Contrato): Promise<ResultadoActualizacion> {
+export async function propuestaDeContrato(
+  p: Pick<PuertosContratos, 'hoy' | 'indices'>,
+  c: Contrato,
+  tope: PreferenciaTope = { modo: 'defecto' },
+): Promise<ResultadoActualizacion> {
   const filas = c.clausula.tipo === 'indice' ? await p.indices(c.clausula.indice) : []
-  return propuestaRenta(c, filas, p.hoy())
+  return propuestaRenta(c, filas, p.hoy(), tope)
 }
 
 export async function responderAplicarRenta(p: PuertosContratos, contratoId: unknown, cuerpo: unknown): Promise<Respuesta> {
@@ -236,7 +244,7 @@ export async function responderAplicarRenta(p: PuertosContratos, contratoId: unk
   const c = await dentro(accesos, contratoId, 'alta_baja', (id, ids) => p.contrato(id, ids))
   if (!c) return NO_ENCONTRADO
   // El servidor RECALCULA: el cuerpo solo confirma lo que la persona vio.
-  const conf = confirmarAplicacion(cuerpo, await propuestaDeContrato(p, c.contrato))
+  const conf = confirmarAplicacion(cuerpo, await propuestaDeContrato(p, c.contrato, c.tope))
   if (!conf.ok) {
     return { status: conf.error === 'datos_invalidos' ? 400 : 409, body: { error: conf.error } }
   }
@@ -279,4 +287,27 @@ export async function responderPiiInquilino(p: PuertosContratos, inquilinoId: un
   if (r.estado === 'no_encontrado') return NO_ENCONTRADO
   if (r.estado === 'sin_puente') return { status: 503, body: { error: 'sin_puente' } }
   return { status: 502, body: { error: 'puente_fallido' } }
+}
+
+/** Cuerpo de `PUT /api/patrimonio/contratos/[id]/tope`: `{ modo: 'defecto' | 'propio' | 'sin_tope', pct? }`. */
+export function validarTope(cuerpo: unknown): V<PreferenciaTope> {
+  const b = obj(cuerpo)
+  if (b.modo === 'defecto') return { ok: true, datos: { modo: 'defecto' } }
+  if (b.modo === 'sin_tope') return { ok: true, datos: { modo: 'sin_tope' } }
+  if (b.modo !== 'propio') return { ok: false, campo: 'modo' }
+  // Acepta 2.5 y «2,5»; un texto que no es un número no se convierte en 0.
+  const bruto = typeof b.pct === 'string' && /^\d{1,3}([.,]\d{1,2})?$/.test(b.pct.trim()) ? Number(b.pct.trim().replace(',', '.')) : b.pct
+  const pct = validarTopeCliente(bruto)
+  return pct === null ? { ok: false, campo: 'pct' } : { ok: true, datos: { modo: 'propio', pct } }
+}
+
+/** El cliente fija (o quita) el tope de actualización de SU contrato. Solo Total (`alta_baja`); ajeno = 404. */
+export async function responderTopeRenta(p: PuertosContratos, contratoId: unknown, cuerpo: unknown): Promise<Respuesta> {
+  const accesos = await p.accesos()
+  const c = await dentro(accesos, contratoId, 'alta_baja', (id, ids) => p.contrato(id, ids))
+  if (!c) return NO_ENCONTRADO
+  const v = validarTope(cuerpo)
+  if (!v.ok) return { status: 400, body: { error: 'datos_invalidos', campo: v.campo } }
+  await p.guardarTope({ contratoId: c.contrato.id, tope: v.datos })
+  return { status: 200, body: { ok: true } }
 }

@@ -60,3 +60,21 @@ test('los presupuestos por elegir salen por fecha de caducidad', () => {
   )
   assert.deepEqual(r.items.map((i) => i.clave), ['presupuesto:pronto', 'presupuesto:tarde'])
 })
+
+test('🪤 patrimonio: vencido (urgente), por vencer, sin fecha y sin revisar; sin comprobar se DECLARA; ausente no dice nada', () => {
+  const r = pendientesDeTi({ ...vacia, patrimonio: { vencidas: 2, porVencer: 1, sinFecha: 1, sinRevisar: 3 } }, ramo)
+  assert.deepEqual(r.items.map((i) => i.clave), ['patrimonio:vencidas', 'patrimonio:por_vencer', 'patrimonio:sin_fecha', 'patrimonio:sin_revisar'])
+  assert.equal(r.items[0].urgente, true)
+  assert.equal(r.items.filter((i) => i.urgente).length, 1)
+  assert.deepEqual(r.sinComprobar, [])
+
+  const ilegible = pendientesDeTi({ ...vacia, patrimonio: null }, ramo)
+  assert.deepEqual(ilegible, { items: [], sinComprobar: ['tu patrimonio'] })
+
+  // Calendario leído pero seguros sin leer: se declara el hueco y NO se inventa «sin revisar».
+  const mixto = pendientesDeTi({ ...vacia, patrimonio: { vencidas: 0, porVencer: 0, sinFecha: 0, sinRevisar: null } }, ramo)
+  assert.deepEqual(mixto, { items: [], sinComprobar: ['los seguros de tus inmuebles'] })
+
+  assert.deepEqual(pendientesDeTi(vacia, ramo), { items: [], sinComprobar: [] })
+  assert.deepEqual(pendientesDeTi({ ...vacia, patrimonio: { vencidas: 0, porVencer: 0, sinFecha: 0, sinRevisar: 0 } }, ramo), { items: [], sinComprobar: [] })
+})

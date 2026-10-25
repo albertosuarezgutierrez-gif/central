@@ -14,6 +14,8 @@ import { peticionesDeIdentidad } from '@/lib/peticiones'
 import { partesAvisoDeIdentidad } from '@/lib/partes-aviso'
 import { polizasNuevasDeIdentidad } from '@/lib/polizas-nuevas'
 import { polizasModificadasDeIdentidad } from '@/lib/polizas-modificadas'
+import { avisosDePatrimonio } from '@/lib/patrimonio/calendario'
+import { calendarioDeIdentidad } from '@/lib/patrimonio/calendario-bd'
 import { requireIdentidad } from '@/lib/session'
 import { vehiculosParaAvisoDeIdentidad } from '@/lib/vehiculos-aviso'
 
@@ -43,7 +45,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos, antelacion, carnetSilenciado, vehiculos, itvSilenciada] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos, antelacion, carnetSilenciado, vehiculos, itvSilenciada, patrimonio] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -72,6 +74,8 @@ export async function GET() {
     // Decimotercera y decimocuarta (21/10/2026): los vehículos para el aviso de ITV y su interruptor.
     vehiculosParaAvisoDeIdentidad(identidad.id),
     avisoItvSilenciado(identidad.id),
+    // Decimoquinta (24/10/2026): el calendario del patrimonio. Sin patrimonio → `null` de la lectura = «nada que mirar».
+    calendarioDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -91,6 +95,7 @@ export async function GET() {
   if (carnetSilenciado.status === 'rejected') console.error('[avisos] interruptor del carné ilegible: se avisa', carnetSilenciado.reason)
   if (vehiculos.status === 'rejected') console.error('[avisos] vehículos ilegibles', vehiculos.reason)
   if (itvSilenciada.status === 'rejected') console.error('[avisos] interruptor de la ITV ilegible: se avisa', itvSilenciada.reason)
+  if (patrimonio.status === 'rejected') console.error('[avisos] calendario del patrimonio ilegible', patrimonio.reason)
   // `null` del puente = no se pudo mirar (no «no hay»).
   const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
@@ -117,6 +122,8 @@ export async function GET() {
     carnetsSilenciados: carnetSilenciado.status === 'fulfilled' ? carnetSilenciado.value : false,
     vehiculos: vehiculos.status === 'fulfilled' ? vehiculos.value : null,
     itvSilenciada: itvSilenciada.status === 'fulfilled' ? itvSilenciada.value : false,
+    // Leída sin patrimonio (`null` de la lectura) = lista vacía; fallo de lectura = fuente ilegible (`null`), nunca «0».
+    patrimonio: patrimonio.status === 'fulfilled' ? (patrimonio.value === null ? [] : avisosDePatrimonio(patrimonio.value.vencimientos)) : null,
     hoy: new Date(),
   })
 

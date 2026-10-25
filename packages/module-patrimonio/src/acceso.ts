@@ -103,6 +103,12 @@ export const ACCIONES_PATRIMONIO = [
    * Gestión). Solo ESCRIBE la decisión: la póliza se busca dentro de lo que la identidad ve (adaptador).
    */
   'enlazar_seguro',
+  /**
+   * Pedir precio de seguro para un inmueble sin cobertura (P14, 24/10/2026): crea una petición a la correduría en
+   * nombre del titular. Solo `total` (el titular o quien tiene todo el patrimonio); NUNCA el inquilino ni un acceso de
+   * gestión: es una petición comercial en nombre de otra persona.
+   */
+  'pedir_precio',
   /** Autorizar a un tercero: NUNCA por nivel (ver `puedeAutorizarPatrimonio`). */
   'autorizar_tercero',
 ] as const
@@ -111,7 +117,7 @@ export type AccionPatrimonio = (typeof ACCIONES_PATRIMONIO)[number]
 
 const TABLA: Readonly<Record<NivelPatrimonio, ReadonlySet<AccionPatrimonio>>> = Object.freeze({
   gestion: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'enlazar_seguro']),
-  total: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'alta_baja', 'ver_pii_inquilino', 'enlazar_seguro']),
+  total: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'alta_baja', 'ver_pii_inquilino', 'enlazar_seguro', 'pedir_precio']),
 })
 
 /** Tabla de §4. Nivel o acción desconocidos (o `undefined`: el titular no está en el mapa) → `false`. */

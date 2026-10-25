@@ -13,6 +13,7 @@ import {
   resumenSegurosPatrimonio,
   type EstadoDecisionSeguro,
   type OrigenEnlace,
+  type PrimaSeguroInmueble,
   type ResumenSegurosPatrimonio,
   type TipoPolizaEnlace,
 } from '@central/module-patrimonio'
@@ -22,9 +23,12 @@ import { prisma } from '../db'
 import { DECLARADA_NO_ELIMINADA } from '../declaradas-eliminadas'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
+import { primasDeEnlaces } from './rentabilidad'
+import { capitalContinenteDeCartera, capitalContinenteDeDeclarada } from './capital-continente'
 import { estadosDeInmuebles, type InmuebleDeSeguros, type PolizaVisible, type PuertosSegurosInmueble } from './seguros-inmueble-api'
 
 const fechaIso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
+const eurosACent = (e: number | null) => (typeof e === 'number' && Number.isFinite(e) && e > 0 ? Math.round(e * 100) : null)
 
 /** La dirección que el cliente escribió en una declarada de hogar/comercio/comunidad (`datos_ramo.direccion`). */
 function direccionDeclarada(datosRamo: unknown): string | null {
@@ -43,6 +47,10 @@ export function visiblesDeCartera(c: CarteraPortal): PolizaVisible[] {
         tipo: 'cartera', id: p.id, compania: p.compania || null, ramo: p.ramo, ubicacion: p.bien.ubicacion,
         referenciaCatastral: null, vence: fechaIso(p.fechaVencimiento),
         vigente: esCarteraEnVigor({ ...p.procedencia, estado: p.estado, sustituidaAt: p.sustituidaAt }),
+        // `coberturas`/`prima` `null` = no visible a este nivel: no consta (nunca 0). La prima dudosa ya viene `null`.
+        capitalContinenteCent: capitalContinenteDeCartera(p.coberturas),
+        costeAnualCent: eurosACent(p.prima?.bruta ?? p.prima?.anual ?? null),
+        desde: fechaIso(p.fechaEfectoActual),
       })
     }
   }
@@ -52,6 +60,8 @@ export function visiblesDeCartera(c: CarteraPortal): PolizaVisible[] {
 type FilaDeclaradaVisible = {
   id: string; compania: string | null; ramo: string | null; fechaVencimiento: Date | null; vigenteDeclarada: string | null
   eliminadaEn: Date | null; referenciaCatastral: string | null; datosRamo: unknown
+  /** Solo la rentabilidad la pide; `Decimal` de Prisma (`toString()`), euros. */
+  primaAnual?: { toString(): string } | null
 }
 
 /** Las declaradas PROPIAS (quien llama ya las leyó con `identidadId` en el `where`). */
@@ -61,6 +71,10 @@ export function visiblesDeDeclaradas(filas: readonly FilaDeclaradaVisible[], hoy
     ubicacion: direccionDeclarada(d.datosRamo), referenciaCatastral: d.referenciaCatastral,
     vence: fechaIso(d.fechaVencimiento),
     vigente: declaradaVigente(d, hoy),
+    capitalContinenteCent: capitalContinenteDeDeclarada(d.datosRamo),
+    costeAnualCent: d.primaAnual === undefined || d.primaAnual === null ? null : eurosACent(Number(d.primaAnual.toString())),
+    // La declarada no guarda el efecto: la anualidad es la que termina en su vencimiento.
+    desde: null,
   }))
 }
 
@@ -86,6 +100,33 @@ export async function resumenPatrimonio(identidadId: string, visibles: readonly 
   return resumenSegurosPatrimonio(estadosDeInmuebles(inmuebles, filas, visibles))
 }
 
+/**
+ * Primas de las pólizas ENLAZADAS a esos inmuebles (rentabilidad, P14). Los ids de inmueble se vuelven a acotar DENTRO de
+ * los titulares autorizados (los que pida quien llama no se fían). `null` = cartera o declaradas ilegibles (la
+ * rentabilidad dirá «el número no incluye seguros»). Lanza si la BD falla.
+ */
+export async function primasDeInmuebles(
+  identidadId: string,
+  inmuebleIds: readonly string[],
+  periodo: { desde: string; hasta: string },
+): Promise<PrimaSeguroInmueble[] | null> {
+  if ((await getIdentidad())?.id !== identidadId) return null
+  const acc = await accesosPatrimonio(identidadId)
+  if (acc.size === 0 || inmuebleIds.length === 0) return []
+  const propios = await prisma.portalPatrimonioInmueble.findMany({
+    where: { id: { in: [...inmuebleIds] }, archivadoEn: null, titular: { clienteId: { in: [...acc.keys()] }, archivadoEn: null } },
+    select: { id: true },
+  })
+  if (propios.length === 0) return []
+  const filas = await prisma.portalPatrimonioInmueblePoliza.findMany({
+    where: { inmuebleId: { in: propios.map((i) => i.id) }, archivadoEn: null },
+    select: { id: true, inmuebleId: true, polizaId: true, polizaDeclaradaId: true, estado: true, origen: true },
+  })
+  const vis = await puertosSegurosInmueble(identidadId).visibles()
+  if (vis.cartera === null || vis.declaradas === null) return null
+  return primasDeEnlaces(filas, [...vis.cartera, ...vis.declaradas], periodo)
+}
+
 export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmueble {
   let accesos: Awaited<ReturnType<typeof accesosPatrimonio>> | null = null
   const misAccesos = async () => (accesos ??= await accesosPatrimonio(identidadId))
@@ -99,7 +140,7 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
       where: { id: idPedido, archivadoEn: null, titular: { clienteId: { in: [...acc.keys()] }, archivadoEn: null } },
       select: {
         id: true, alias: true, referenciaCatastral: true, cp: true, via: true, numero: true, enComunidad: true,
-        sinSeguroDeclaradoEn: true, titular: { select: { clienteId: true } },
+        sinSeguroDeclaradoEn: true, valorReconstruccionEstimadoCent: true, titular: { select: { clienteId: true } },
       },
     })
     if (!fila) return null
@@ -116,6 +157,7 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
       return {
         id: f.id, alias: f.alias, nivel: r.nivel, enComunidad: f.enComunidad, sinSeguroDeclaradoEn: f.sinSeguroDeclaradoEn,
         referenciaCatastral: f.referenciaCatastral, cp: f.cp, via: f.via, numero: f.numero,
+        valorReconstruccionCent: f.valorReconstruccionEstimadoCent === null ? null : Number(f.valorReconstruccionEstimadoCent),
       }
     },
 
@@ -137,7 +179,7 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
           where: { identidadId, ...DECLARADA_NO_ELIMINADA },
           select: {
             id: true, compania: true, ramo: true, fechaVencimiento: true, vigenteDeclarada: true, eliminadaEn: true,
-            referenciaCatastral: true, datosRamo: true,
+            referenciaCatastral: true, datosRamo: true, primaAnual: true,
           },
         }),
       ])

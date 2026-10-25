@@ -1774,6 +1774,12 @@ model PortalPatrimonioContrato {
   fianzaDevueltaEn       DateTime? @map("fianza_devuelta_en") @db.Date
   seguroInquilinoExigido Boolean?  @map("seguro_inquilino_exigido")
   seguroInquilinoVence   DateTime? @map("seguro_inquilino_vence") @db.Date
+  /// Tope (%) fijado por el cliente; null = rige el catálogo del año (`tope-renta.ts`). 0 es un tope real.
+  topeActualizacionPct   Decimal?  @map("tope_actualizacion_pct") @db.Decimal(5, 2)
+  /// El cliente dijo «sin tope». Incompatible con `topeActualizacionPct` (CHECK en BD).
+  topeActualizacionSin   Boolean?  @map("tope_actualizacion_sin")
+  topeActualizacionPorIdentidadId String? @map("tope_actualizacion_por_identidad_id") @db.Uuid
+  topeActualizacionEn    DateTime? @map("tope_actualizacion_en") @db.Timestamptz(6)
   creadoEn               DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn          DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
   creadoPorIdentidadId   String?   @map("creado_por_identidad_id") @db.Uuid

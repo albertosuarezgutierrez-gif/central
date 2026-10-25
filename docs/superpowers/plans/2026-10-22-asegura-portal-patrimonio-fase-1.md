@@ -108,12 +108,14 @@
 - Pendiente: chip «N cosas pendientes» por familia (de `pendientesDeTi`) y `?familia=` en `/boveda`; medir a 320 px
   con Playwright sobre `.portal-contenido`.
 
-## P13 — Calendario y avisos (antiguo 10; sonnet)
+## P13 — Calendario y avisos (antiguo 10; sonnet) ✅ código (24/10/2026) · ⏳ SQL del tope SIN APLICAR
+- Hecho: `lib/patrimonio/calendario{,-bd}.ts` + `/patrimonio/calendario`, fuente `patrimonio` en la campana (`aviso-patrimonio.ts` en module-seguros-portal), «Pendiente de ti» (con `sinComprobar`), push en `avisos-push` (`avisos-push-bd.ts`: solo fichas PROPIAS que operan; sello en `portal_aviso_leido`). **Tope de renta editable** por el cliente: catálogo por año `module-patrimonio/src/tope-renta.ts` (revisión anual por el agente fiscal) + `PUT /api/patrimonio/contratos/[id]/tope` + SQL `2026-10-24_portal_patrimonio_tope_renta.sql` (aplicar ANTES del despliegue). Pendiente: edición de obligaciones de inmueble por el cliente (no hay API aún).
 - `lib/patrimonio/calendario.ts` (adaptador de `calendarioPatrimonio`), fuente `patrimonio` en `lib/avisos.ts`/«Pendiente de ti»
   (con `sinComprobar`), push en `api/cron/avisos-push`, y «inmueble sin revisar» en «Pendiente de ti».
   Tests: fuente ilegible → `!`, nunca «0».
 
-## P14 — Rentabilidad + infraseguro + «Pedir precio» (antiguo 11, corregido; sonnet, puente: architect)
+## P14 — Rentabilidad + infraseguro + «Pedir precio» (antiguo 11, corregido; sonnet, puente: architect) ✅ código (24/10/2026; pendiente revisión agente-architect del puente)
+- Hecho: `/patrimonio/rentabilidad`, infraseguro con el capital de la póliza enlazada (`capital-continente.ts`), acción `pedir_precio` (solo Total), `POST /api/patrimonio/inmuebles/[id]/pedir-precio` → puente `apps/asegura /api/portal/patrimonio/pedir-precio` (`patrimonio-pedir-precio-{reglas,portal}.ts`, NO `lead-declarada`). Sin SQL nuevo; la señal `promovida` espera a P16.
 - `patrimonio/rentabilidad/page.tsx`; infraseguro con el capital de la póliza ENLAZADA; CTA «Pedir precio» del inmueble
   sin seguro → PUENTE `apps/asegura /api/portal/patrimonio/pedir-precio` (a imagen de `mejorar-precio-portal.ts`:
   candado, `info_riesgo.origen='portal:patrimonio'`, gestión, historial), NO `lead-declarada.ts`. Solo titular o Total,

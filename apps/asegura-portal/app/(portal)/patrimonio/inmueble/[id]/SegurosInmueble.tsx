@@ -4,12 +4,16 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { eur } from '@/lib/dinero'
 import type { PolizaPintable, SegurosDeInmueble } from '@/lib/patrimonio/seguros-inmueble-api'
 
 const ERRORES: Record<string, string> = {
   no_encontrado: 'Ese seguro ya no está disponible para este inmueble. Recarga la página.',
   ya_existe: 'Ese seguro ya está enlazado a este inmueble.',
   sin_comprobar: 'Ahora no hemos podido comprobar tus seguros. Vuelve a intentarlo en un rato.',
+  no_aplica: 'Este inmueble ya no figura sin seguro. Recarga la página.',
+  sin_puente: 'Ahora mismo no podemos enviar la petición. Vuelve a intentarlo más tarde.',
+  puente_fallido: 'No hemos podido enviar la petición. Inténtalo de nuevo en un rato.',
   demasiadas_peticiones: 'Demasiados cambios seguidos. Prueba más tarde.',
   sin_sesion: 'Tu sesión ha caducado. Vuelve a entrar.',
   modo_corredor: 'En la vista de corredor no se puede cambiar nada.',
@@ -29,6 +33,35 @@ function nombrePoliza(p: PolizaPintable): string {
   return `${partes.join(' · ')}${tipo}`
 }
 
+const pctEs = (r: number) => `${Math.round(r * 100)} %`
+
+/** La alerta de infraseguro: dice el hecho y lo que no sabemos; nunca «todo bien» sin dato. */
+function textoInfraseguro(d: SegurosDeInmueble): { texto: string; aviso: boolean } | null {
+  const a = d.infraseguro
+  if (a === null) return null
+  const cap = d.capitalContinenteCent === null ? null : eur(d.capitalContinenteCent / 100)
+  const val = d.valorEstimadoCent === null ? null : eur(d.valorEstimadoCent / 100)
+  switch (a.estado) {
+    case 'infraseguro':
+      return {
+        aviso: true,
+        texto: `⚠ Posible infraseguro: el capital asegurado del edificio (${cap}) es el ${pctEs(a.ratio)} de lo que costaría reconstruirlo según nuestra estimación (${val}). Si hay un siniestro, la aseguradora podría pagarte solo la parte proporcional. Es una estimación: pídenos que lo revisemos.`,
+      }
+    case 'ok':
+      return { aviso: false, texto: `Capital del edificio asegurado: ${cap}, el ${pctEs(a.ratio)} del valor de reconstrucción estimado (${val}).` }
+    case 'sin_dato':
+      return {
+        aviso: false,
+        texto:
+          a.motivo === 'sin_valor_estimado'
+            ? 'No podemos comprobar si el capital del edificio es suficiente: no tenemos los metros cuadrados del Catastro.'
+            : a.motivo === 'sin_capital'
+              ? 'No podemos comprobar si el capital del edificio es suficiente: no consta el capital de continente de tu seguro.'
+              : 'El edificio suele estar en el seguro de la comunidad: no podemos comprobar si el capital de tu parte es suficiente.',
+      }
+  }
+}
+
 function vigencia(p: PolizaPintable): string {
   if (p.vigente === false) return 'ya no está en vigor'
   if (p.vigente === null) return 'no hemos podido comprobar si sigue en vigor'
@@ -46,6 +79,7 @@ export function SegurosInmueble({ datos: d, soloLectura = false }: { datos: Segu
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [elegida, setElegida] = useState('')
+  const [precio, setPrecio] = useState<null | 'pedido' | 'ya_pedido'>(null)
 
   async function enviar(cuerpo: Record<string, unknown>) {
     setEnviando(true)
@@ -70,6 +104,26 @@ export function SegurosInmueble({ datos: d, soloLectura = false }: { datos: Segu
     }
   }
 
+  async function pedirPrecio() {
+    setEnviando(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/patrimonio/inmuebles/${datos.inmuebleId}/pedir-precio`, { method: 'POST' })
+      const j = (await res.json().catch(() => ({}))) as { error?: string; yaExistia?: boolean }
+      if (!res.ok) {
+        setError(ERRORES[j.error ?? ''] ?? 'No se ha podido enviar. Inténtalo de nuevo.')
+        return
+      }
+      setPrecio(j.yaExistia ? 'ya_pedido' : 'pedido')
+    } catch {
+      setError('No se ha podido enviar. Revisa tu conexión.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const infra = textoInfraseguro(datos)
+
   const enlazar = (p: { tipo: string; id: string }, estado: 'confirmado' | 'rechazado', origen?: string) =>
     enviar({ accion: 'enlazar', tipo: p.tipo, polizaId: p.id, estado, origen })
 
@@ -87,6 +141,33 @@ export function SegurosInmueble({ datos: d, soloLectura = false }: { datos: Segu
         {datos.estado === 'con_seguro_no_vigente' && <>⚠ El seguro que enlazaste ya no está en vigor.</>}
         {datos.estado === 'sin_mirar' && <>¿Tiene seguro? Revísalo: enlaza el que tenga o dinos que no tiene.</>}
       </p>
+      {infra && (
+        <p className={infra.aviso ? 'aviso-linea' : 'suave'} role={infra.aviso ? 'status' : undefined} style={{ margin: 0, fontSize: infra.aviso ? undefined : 14, overflowWrap: 'anywhere' }}>
+          {infra.texto}
+        </p>
+      )}
+      {datos.puedePedirPrecio && !soloLectura && (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {precio === null ? (
+            <>
+              <p className="suave" style={{ margin: 0, fontSize: 14 }}>
+                Si quieres, pedimos precio de un seguro para este inmueble. Solo te contactaremos por esta petición que haces tú.
+              </p>
+              <div style={fila}>
+                <button type="button" className="boton" style={boton} disabled={enviando} onClick={pedirPrecio}>
+                  Pedir precio
+                </button>
+              </div>
+            </>
+          ) : (
+            <p role="status" style={{ margin: 0 }}>
+              {precio === 'ya_pedido'
+                ? 'Ya habías pedido precio para este inmueble: el equipo de Grupo ASegura lo tiene en marcha.'
+                : 'Hecho. El equipo de Grupo ASegura ha recibido tu petición y se pondrá en contacto contigo para darte precio.'}
+            </p>
+          )}
+        </div>
+      )}
       {datos.estado === 'sin_seguro' && datos.enComunidad === true && (
         <p className="suave" style={{ margin: 0, fontSize: 14 }}>
           El edificio suele estar en el seguro de la comunidad: aquí hablamos del contenido y de tu responsabilidad como propietario.
