@@ -1,32 +1,33 @@
 {
  "sesion": "d927d5c4-f162-59b3-8b4b-71eb8e3fa263",
  "inicio": "2026-10-25T19:27:56.386Z",
- "fin": "2026-10-25T20:04:21.033Z",
- "llamadas": 161,
+ "fin": "2026-10-25T20:44:58.098Z",
+ "llamadas": 173,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 35,
-   "chars_in": 5518,
-   "chars_out": 110488,
+   "llamadas": 36,
+   "chars_in": 5619,
+   "chars_out": 112294,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 27,
     "Glob": 2,
-    "Read": 6
+    "Read": 7
    }
   },
   "otro": {
-   "llamadas": 4,
-   "chars_in": 10056,
-   "chars_out": 372,
+   "llamadas": 8,
+   "chars_in": 11190,
+   "chars_out": 82034,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 2,
-    "ToolSearch": 2
+    "SubagentHandback": 3,
+    "ToolSearch": 3,
+    "ReadNotifications": 2
    }
   },
   "agente:rastreador-codigo": {
@@ -87,14 +88,49 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 1,
-   "chars_in": 73,
-   "chars_out": 239,
+   "llamadas": 2,
+   "chars_in": 289,
+   "chars_out": 347,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 1
+    "mcp__claude-code-remote__subscribe_pr_activity": 1,
+    "mcp__claude-code-remote__send_later": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 816,
+   "chars_out": 407,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__apply_migration": 1
+   }
+  },
+  "sql": {
+   "llamadas": 3,
+   "chars_in": 555,
+   "chars_out": 3190,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 3
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1319,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
    }
   }
  }
