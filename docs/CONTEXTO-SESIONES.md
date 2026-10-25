@@ -12,6 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/10/2026)** — agentes-entrenador, pasada semanal 18→25/10: poda de bitácora (16 entradas), 0 cambios de prompt (patrones de datos/infra, no de prompt). Backlog PRs `claude/*`: 13 (era 11), más antiguo #3755 (27/09). Solo docs.
 **(24/10/2026)** — Portal patrimonio: huecos cerrados (archivado solo lectura, sin gastos en archivados, recibo de renovación ligado, calle por validar, `generarFechasRecurrente`) + P10-P12: enlace inmueble↔póliza (SQL `2026-10-24_portal_patrimonio_enlace_poliza.sql`), página `/inicio`, barra móvil. En archivado la sección Seguros se ve en solo lectura.
 Decisiones de Alberto: interés legítimo informado para las señales; Palacio Busto Tavera = empresa; Antonio con acceso Total pendiente de aceptar; pantalla de módulos en /correduria; tope de renta editable + aviso anual.
 `REVOKE DELETE` sobre documentos a `prisma_seguros` APLICADO. Sin commitear (squash en el índice); tsc portal y tests patrimonio/seguros-portal/regression-portal verdes.
