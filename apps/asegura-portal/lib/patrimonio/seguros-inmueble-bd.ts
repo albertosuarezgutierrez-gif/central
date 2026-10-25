@@ -27,7 +27,7 @@ import { accesosPatrimonio } from './accesos'
 import { cacheDeCatastro, debeConsultarCatastro } from './catastro-inmueble'
 import { primasDeEnlaces } from './rentabilidad'
 import { capitalContinenteDeCartera, capitalContinenteDeDeclarada } from './capital-continente'
-import { estadosDeInmuebles, type InmuebleDeSeguros, type PolizaVisible, type PuertosSegurosInmueble } from './seguros-inmueble-api'
+import { estadosDeInmuebles, type FilaEnlace, type InmuebleDeSeguros, type PolizaVisible, type PuertosSegurosInmueble } from './seguros-inmueble-api'
 
 const fechaIso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
 const eurosACent = (e: number | null) => (typeof e === 'number' && Number.isFinite(e) && e > 0 ? Math.round(e * 100) : null)
@@ -174,6 +174,18 @@ async function conCatastroAlDia<T extends FilaConCatastro>(f: T): Promise<T> {
     console.error('[patrimonio] caché del Catastro no actualizada:', e instanceof Error ? e.message : 'error')
     return f
   }
+}
+
+/**
+ * Enlaces VIVOS (sin archivar) de esos inmuebles, acotados DENTRO de los titulares que pasa quien llama (que salen de
+ * `accesosPatrimonio`). Para «¿Esto lo cubre tu seguro?» (`cubre-seguro-bd.ts`): la tabla puente tiene UNA puerta, esta.
+ */
+export async function enlacesVivosDeInmuebles(titularIds: readonly string[], inmuebleIds: readonly string[]): Promise<(FilaEnlace & { inmuebleId: string })[]> {
+  if (titularIds.length === 0 || inmuebleIds.length === 0) return []
+  return prisma.portalPatrimonioInmueblePoliza.findMany({
+    where: { inmuebleId: { in: [...inmuebleIds] }, archivadoEn: null, inmueble: { titularId: { in: [...titularIds] }, archivadoEn: null } },
+    select: { id: true, inmuebleId: true, polizaId: true, polizaDeclaradaId: true, estado: true, origen: true },
+  })
 }
 
 export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmueble {

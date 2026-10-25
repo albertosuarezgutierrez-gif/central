@@ -22,6 +22,9 @@ import { leerMisDatos, reparosDeContacto } from '@/lib/mis-datos'
 import { peticionesPrecio } from '@/lib/mejorar-precio'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { pendientesDeTi } from '@/lib/pendiente-de-ti'
+import { esFecha } from '@central/module-patrimonio'
+import { prellenadoDeUrl } from '@/lib/patrimonio/cubre-seguro'
+import { fechaMadrid } from '@/lib/patrimonio/dia-madrid'
 import { patrimonioParaPendientes } from '@/lib/patrimonio/pendiente-bd'
 import { presupuestosPendientesDeIdentidad } from '@/lib/presupuesto'
 import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
@@ -63,6 +66,7 @@ import {
   agruparCartera,
   avisoPartesConservados,
   consentimientoVigente,
+  DESCRIPCION_MAX,
   precargasDeRecordatorio,
   VERSION_TEXTO_COMERCIAL,
   nombreDePila,
@@ -485,6 +489,17 @@ export default async function Boveda({
   // depende además el ORDEN de la pantalla: un id inventado en la barra de
   // direcciones no puede reordenar nada ni sugerir que hay una póliza detrás.
   const polizaEnLista = entradaValida(opcionesParte, polizaInicial)
+  // «¿Esto lo cubre tu seguro?» (25/10/2026): descripción y fecha de partida del parte. Solo valen CON una póliza de la
+  // lista; se sanean aquí (fecha real y no futura, texto recortado) y la persona los puede cambiar antes de enviar.
+  const prellenado =
+    polizaEnLista === null
+      ? null
+      : prellenadoDeUrl(
+          { descripcion: parametros.descripcion, fecha: parametros.fecha },
+          fechaMadrid(new Date()),
+          DESCRIPCION_MAX,
+          esFecha,
+        )
 
   // El plazo del art. 16 LCS se calcula AQUÍ, en el servidor, y no en el
   // componente de cliente: `plazoComunicacion` necesita un «hoy», y un «hoy»
@@ -911,6 +926,7 @@ export default async function Boveda({
             corredor={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }}
             partes={partesEnviados}
             polizaInicial={polizaEnLista}
+            prellenado={prellenado}
             identidadId={identidad.id}
           />
           <VistaPorPoliza

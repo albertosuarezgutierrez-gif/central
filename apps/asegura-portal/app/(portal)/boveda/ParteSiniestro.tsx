@@ -745,6 +745,7 @@ export function ParteSiniestro({
   corredor,
   partes,
   polizaInicial,
+  prellenado,
   identidadId,
 }: {
   /**
@@ -771,6 +772,11 @@ export function ParteSiniestro({
    * selector. Igual para cualquier póliza: no hay rama por tipo.
    */
   polizaInicial?: string | null
+  /**
+   * Descripción y fecha de PARTIDA (25/10/2026, «¿Esto lo cubre tu seguro?»): ya saneadas por la página. Solo cuentan con
+   * `polizaInicial` válida, solo rellenan el formulario inicial y la persona los cambia antes de enviar. No tocan el envío.
+   */
+  prellenado?: { descripcion: string; fechaHecho: string } | null
 }) {
   const router = useRouter()
   // Prefijo único para los `id`/`name`: puede haber más de un grupo de radios en
@@ -807,7 +813,7 @@ export function ParteSiniestro({
     if (polizaValida === null) return VACIO
     const matricula = polizas.find((p) => p.valor === polizaValida)?.matriculaPropia
     const vehiculo = matricula ? { ...VEHICULO_VACIO, matriculaPropia: matricula } : VEHICULO_VACIO
-    return { ...VACIO, poliza: polizaValida, vehiculo }
+    return { ...VACIO, poliza: polizaValida, vehiculo, descripcion: prellenado?.descripcion ?? '', fechaHecho: prellenado?.fechaHecho ?? '' }
   })
   const [estado, setEstado] = useState<Estado>('reposo')
   const [errores, setErrores] = useState<Partial<Record<Campo, string>>>({})

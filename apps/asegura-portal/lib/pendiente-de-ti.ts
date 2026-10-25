@@ -38,7 +38,17 @@ export type EntradaPendientes = {
    * `sinComprobar`, nunca «nada pendiente»). `sinRevisar` = inmuebles sin mirar si tienen seguro; `sinFecha` = vencimientos
    * de los que no sabemos cuándo tocan.
    */
-  patrimonio?: { vencidas: number; porVencer: number; sinFecha: number; sinRevisar: number | null } | null
+  patrimonio?: {
+    vencidas: number
+    porVencer: number
+    sinFecha: number
+    sinRevisar: number | null
+    /**
+     * «¿Esto lo cubre tu seguro?» (25/10/2026): reparaciones confirmadas sin descartar, por desenlace. Ausente = esta
+     * superficie no lo consulta; `null` = no se pudo leer (va a `sinComprobar`, nunca «nada que mirar»).
+     */
+    reparaciones?: { cubre: number; sinSeguro: number; sinComprobar: number } | null
+  } | null
 }
 
 export type PendientesDeTi = { items: ItemPendiente[]; sinComprobar: string[] }
@@ -164,6 +174,28 @@ export function pendientesDeTi(e: EntradaPendientes, ramo: (r: string) => string
         href: '/patrimonio',
         urgente: false,
       })
+    }
+    if (p.reparaciones === null) sinComprobar.push('si tu seguro cubre alguna reparación de tus inmuebles')
+    else if (p.reparaciones !== undefined) {
+      const { cubre, sinSeguro } = p.reparaciones
+      if (cubre > 0) {
+        items.push({
+          clave: 'patrimonio:reparaciones_cubre',
+          titulo: cubre === 1 ? 'Puede que tu seguro cubra una reparación' : `Puede que tu seguro cubra ${cubre} reparaciones`,
+          detalle: 'Es un aviso, no una garantía. Si quieres, puedes dar parte desde ahí.',
+          href: '/patrimonio/gastos#cubre-seguro',
+          urgente: false,
+        })
+      }
+      if (sinSeguro > 0) {
+        items.push({
+          clave: 'patrimonio:reparaciones_sin_seguro',
+          titulo: sinSeguro === 1 ? 'Has pagado una reparación en una vivienda sin seguro de hogar visible' : `Has pagado ${sinSeguro} reparaciones en viviendas sin seguro de hogar visible`,
+          detalle: 'No vemos seguro de hogar en esa vivienda. Enlázalo en la ficha del inmueble si lo tienes.',
+          href: '/patrimonio/gastos#cubre-seguro',
+          urgente: false,
+        })
+      }
     }
   }
 
