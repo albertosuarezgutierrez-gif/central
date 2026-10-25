@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-24T10:05:40Z",
+  "generadoEn": "2026-10-25T07:55:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -867,7 +867,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-web": {
         "estado": "no",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2051,11 +2051,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 35
       },
       "asegura-web": {
         "estado": "no",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 299
+        "evidencias": 300
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 157
+        "evidencias": 159
       },
       "asegura-web": {
         "estado": "usado",
@@ -2433,7 +2433,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 123
+        "evidencias": 125
       },
       "asegura-web": {
         "estado": "usado",
@@ -3025,7 +3025,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 21
+        "evidencias": 22
       },
       "asegura-portal": {
         "presente": false,
@@ -4110,6 +4110,7 @@
       "core-catastro",
       "core-fiscal",
       "core-identity",
+      "module-patrimonio",
       "module-seguros",
       "module-seguros-pii"
     ],
@@ -4418,6 +4419,7 @@
       "/api/portal/mejorar-precio",
       "/api/portal/nota",
       "/api/portal/patrimonio/inquilino",
+      "/api/portal/patrimonio/pedir-precio",
       "/api/portal/personas-poliza",
       "/api/portal/presupuesto",
       "/api/portal/solicitud-datos",
@@ -4493,11 +4495,13 @@
       "/api/patrimonio/contratos",
       "/api/patrimonio/contratos/[id]/inquilinos",
       "/api/patrimonio/contratos/[id]/renta",
+      "/api/patrimonio/contratos/[id]/tope",
       "/api/patrimonio/derramas",
       "/api/patrimonio/documentos",
       "/api/patrimonio/documentos/[id]",
       "/api/patrimonio/facturas",
       "/api/patrimonio/inmuebles",
+      "/api/patrimonio/inmuebles/[id]/pedir-precio",
       "/api/patrimonio/inmuebles/[id]/seguros",
       "/api/patrimonio/inquilinos/[id]",
       "/api/patrimonio/plantillas",
@@ -7157,7 +7161,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1789,
+    "apis": 1792,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
