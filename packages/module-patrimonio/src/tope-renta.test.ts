@@ -12,6 +12,7 @@ import {
   validarTopeCliente,
 } from './tope-renta.ts'
 import type { Contrato } from './tipos.ts'
+import type { Fecha } from './fechas.ts'
 
 test('el catálogo: un año por entrada, sin repetidos, con fuente y fecha de revisión (para el agente fiscal)', () => {
   const anios = CATALOGO_TOPE_RENTA.map((t) => t.anio)
@@ -46,8 +47,8 @@ test('el cliente manda sobre el catálogo; «sin tope» quita el del catálogo; 
   const p = topeAplicable('2024-03-01', { modo: 'propio', pct: 1.5 })
   assert.deepEqual([p.pct, p.origen], [1.5, 'cliente'])
   assert.equal(p.catalogo?.pct, 3)
-  const s = topeAplicable('2024-03-01', { modo: 'sin_tope' })
-  assert.deepEqual([s.pct, s.origen], [null, 'cliente_sin_tope'])
+  const s = topeAplicable('2026-03-01', { modo: 'sin_tope' })
+  assert.deepEqual([s.pct, s.origen, s.limitadoPorLey], [null, 'cliente_sin_tope', false])
   // Un 0 % del cliente es un tope real (la renta no sube), no «sin tope».
   assert.equal(topeAplicable('2026-11-01', { modo: 'propio', pct: 0 }).pct, 0)
 })
@@ -75,12 +76,29 @@ test('extremo a extremo con la actualización: el tope del cliente cambia la pro
     rentaMensual: 100_000, clausula: { tipo: 'indice', indice: 'IPC' }, actualizaciones: [], fianza: null, seguroInquilino: null,
   }
   const base = { contrato, hoy: '2024-02-15', variacion: { indice: 'IPC' as const, pct: 5, periodo: '2024-01' } }
-  const resultado = (pref: Parameters<typeof topeAplicable>[1]) => {
-    const r = calcularActualizacionRenta({ ...base, topePct: topeAplicable('2024-03-01', pref).pct })
+  const resultado = (pref: Parameters<typeof topeAplicable>[1], aniv = '2024-03-01' as Fecha) => {
+    const r = calcularActualizacionRenta({ ...base, topePct: topeAplicable(aniv, pref).pct })
     assert.equal(r.estado, 'propuesta')
     return r.estado === 'propuesta' ? [r.rentaNueva, r.topado] : []
   }
   assert.deepEqual(resultado({ modo: 'defecto' }), [103_000, true])
-  assert.deepEqual(resultado({ modo: 'propio', pct: 4 }), [104_000, true])
-  assert.deepEqual(resultado({ modo: 'sin_tope' }), [105_000, false])
+  // 2024 hay tope legal (3 %): ni un 4 % ni «sin tope» del cliente lo superan.
+  assert.deepEqual(resultado({ modo: 'propio', pct: 4 }), [103_000, true])
+  assert.deepEqual(resultado({ modo: 'sin_tope' }), [103_000, true])
+  assert.deepEqual(resultado({ modo: 'propio', pct: 1 }), [101_000, true])
+  // Sin tope legal codificado (2026) manda el cliente.
+  assert.deepEqual(resultado({ modo: 'propio', pct: 4 }, '2026-03-01'), [104_000, true])
+  assert.deepEqual(resultado({ modo: 'sin_tope' }, '2026-03-01'), [105_000, false])
+})
+
+test('tope legal imperativo: min(cliente, legal); «sin tope» y un valor mayor NO lo anulan; sin legal manda el cliente', () => {
+  const a = topeAplicable('2023-03-01', { modo: 'sin_tope' })
+  assert.deepEqual([a.pct, a.origen, a.limitadoPorLey], [2, 'legal', true])
+  const b = topeAplicable('2024-03-01', { modo: 'propio', pct: 5 })
+  assert.deepEqual([b.pct, b.origen, b.limitadoPorLey], [3, 'legal', true])
+  const c = topeAplicable('2024-03-01', { modo: 'propio', pct: 1 })
+  assert.deepEqual([c.pct, c.origen, c.limitadoPorLey], [1, 'cliente', false])
+  const d = topeAplicable('2026-03-01', { modo: 'sin_tope' })
+  assert.deepEqual([d.pct, d.origen, d.limitadoPorLey], [null, 'cliente_sin_tope', false])
+  assert.equal(topeAplicable('2026-03-01', { modo: 'propio', pct: 9 }).pct, 9)
 })

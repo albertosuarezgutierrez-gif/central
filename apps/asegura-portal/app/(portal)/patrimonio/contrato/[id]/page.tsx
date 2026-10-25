@@ -26,6 +26,8 @@ function textoTope(t: TopeAplicable): string {
       return `${pct(t.pct as number)} (el que tú has fijado).`
     case 'cliente_sin_tope':
       return 'sin tope (así lo has indicado).'
+    case 'legal':
+      return `${pct(t.pct as number)} (límite legal de ${t.anio}: no se puede superar, así que tu valor se ha limitado a él${t.catalogo ? `; ${t.catalogo.norma}` : ''}).`
     case 'catalogo':
       return `${pct(t.pct as number)} (límite legal de ${t.anio} que tenemos anotado${t.catalogo ? `, según ${t.catalogo.norma}` : ''}).`
     case 'sin_catalogo':
@@ -117,7 +119,7 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
             <p style={{ margin: 0, overflowWrap: 'anywhere' }}>
               <strong>Tope de subida:</strong> {textoTope(f.topeAplicable)}
             </p>
-            {f.topeAplicable.catalogo !== null && f.topeAplicable.origen !== 'catalogo' && f.topeAplicable.catalogo.pct !== null && (
+            {f.topeAplicable.catalogo !== null && f.topeAplicable.origen !== 'catalogo' && f.topeAplicable.origen !== 'legal' && f.topeAplicable.catalogo.pct !== null && (
               <p className="suave" style={{ margin: 0, fontSize: 13 }}>
                 El de la ley de {f.topeAplicable.anio} que tenemos es el {pct(f.topeAplicable.catalogo.pct)}.
               </p>
