@@ -54,7 +54,7 @@ export default async function CalendarioPatrimonioPage() {
       ) : datos.vencimientos.length === 0 ? (
         <section className="seccion">
           <p style={{ margin: 0 }}>
-            Todavía no hay nada en el calendario. Los contratos que anotes aparecen aquí con su fin, su fianza y su actualización de renta.
+            Todavía no hay nada en el calendario. Los contratos que anotes aparecen aquí con su fin, su fianza y su actualización de renta, y también los recordatorios que añadas en la ficha de cada inmueble (IBI, comunidad, caldera…).
           </p>
         </section>
       ) : (
@@ -69,6 +69,7 @@ export default async function CalendarioPatrimonioPage() {
                 <div className="suave" style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
                   {v.inmueble} · {cuando(v.dias, v.vence)}
                 </div>
+                {v.detalle && <div style={{ fontSize: 14, overflowWrap: 'anywhere' }}>{v.detalle}</div>}
                 {v.estado === 'sin_dato' && v.falta && <div style={{ fontSize: 14 }}>{v.falta}</div>}
                 <Link
                   href={v.contratoId ? `/patrimonio/contrato/${v.contratoId}` : `/patrimonio/inmueble/${v.inmuebleId}`}

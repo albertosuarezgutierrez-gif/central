@@ -109,6 +109,8 @@ export const ACCIONES_PATRIMONIO = [
    * gestión: es una petición comercial en nombre de otra persona.
    */
   'pedir_precio',
+  /** Alta/edición/«hecha»/archivado de obligaciones y recordatorios PROPIOS de un inmueble (25/10/2026): nivel >= Gestión. */
+  'gestionar_obligaciones',
   /** Autorizar a un tercero: NUNCA por nivel (ver `puedeAutorizarPatrimonio`). */
   'autorizar_tercero',
 ] as const
@@ -116,8 +118,8 @@ export const ACCIONES_PATRIMONIO = [
 export type AccionPatrimonio = (typeof ACCIONES_PATRIMONIO)[number]
 
 const TABLA: Readonly<Record<NivelPatrimonio, ReadonlySet<AccionPatrimonio>>> = Object.freeze({
-  gestion: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'enlazar_seguro']),
-  total: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'alta_baja', 'ver_pii_inquilino', 'enlazar_seguro', 'pedir_precio']),
+  gestion: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'enlazar_seguro', 'gestionar_obligaciones']),
+  total: new Set<AccionPatrimonio>(['ver', 'gestionar_gastos_documentos', 'alta_baja', 'ver_pii_inquilino', 'enlazar_seguro', 'pedir_precio', 'gestionar_obligaciones']),
 })
 
 /** Tabla de §4. Nivel o acción desconocidos (o `undefined`: el titular no está en el mapa) → `false`. */

@@ -254,3 +254,47 @@ test('🚨 push del patrimonio: solo fichas PROPIAS que operan, sin vista de cor
   assert.match(src, /motivoSinPush\(/)
   assert.match(leer('apps/asegura-portal/app/api/cron/avisos-push/route.ts'), /avisarPatrimonioPush\(vapid, hoy\)/)
 })
+
+// ─── Obligaciones propias del inmueble (25/10/2026) ────────────────────────────────────────────────────────────────
+const OBL_BD = 'apps/asegura-portal/lib/patrimonio/obligaciones-bd.ts'
+const OBL_API = 'apps/asegura-portal/lib/patrimonio/obligaciones-api.ts'
+const OBL_RUTA = 'apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/obligaciones/route.ts'
+
+/** Escrituras sobre la tabla: cada una tiene que acotar por inmueble Y (las updateMany) por `categoria` no nula. */
+function escriturasObligacion(src: string): { op: string; cuerpo: string }[] {
+  return [...src.matchAll(/portalPatrimonioObligacion\.(updateMany|create)\(\{([\s\S]*?)\n {6}\}\)/g)].map((m) => ({ op: m[1], cuerpo: m[2] }))
+}
+
+test('🚨 obligaciones propias: solo obligaciones-bd escribe la tabla; autoriza el inmueble; solo filas propias; sin DELETE', () => {
+  const ficheros = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'apps/asegura-portal'], { cwd: ROOT, encoding: 'utf8' })
+    .split('\n')
+    .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\.tsx?$/.test(f))
+  const escriben = ficheros.filter((f) => /portalPatrimonioObligacion\.(create|update|updateMany|upsert|delete|deleteMany)\(/.test(leer(f)))
+  assert.deepEqual(escriben, [OBL_BD], 'la escritura de obligaciones tiene UNA puerta')
+  const src = leer(OBL_BD)
+  assert.ok(!CRON_SIN_SESION.has(OBL_BD))
+  assert.match(src, /\baccesosPatrimonio\(identidadId\)/)
+  assert.match(src, /titular: \{ clienteId: \{ in: \[\.\.\.acc\.keys\(\)\] \}, archivadoEn: null \}/, 'el inmueble se busca DENTRO de los titulares autorizados')
+  assert.match(src, /getIdentidad\(\)\)\?\.id === identidadId/, 'la sesión tiene que ser la de identidadId')
+  const ops = escriturasObligacion(src)
+  assert.ok(ops.length >= 4, 'brazo de control: el detector tiene que ver crear/actualizar/avanzar/archivar')
+  for (const { op, cuerpo } of ops) {
+    assert.match(cuerpo, /inmuebleId/, `${op} sin inmuebleId`)
+    if (op === 'updateMany') assert.match(cuerpo, /categoria: \{ not: null \}/, 'updateMany sin acotar a propias: editaría las precargadas')
+  }
+  assert.match(src, /findMany\(\{\s*where: \{ inmuebleId, archivadoEn: null, categoria: \{ not: null \} \}/)
+  assert.doesNotMatch(src, /\.delete\(|\.deleteMany\(|\$queryRaw|\$executeRaw/, 'sin DELETE ni SQL crudo')
+  // La API: 404 (nunca 403), nivel por la tabla de acciones, archivado = solo lectura.
+  const api = leer(OBL_API)
+  assert.match(api, /inm === null \|\| !puede\(inm\.nivel, 'gestionar_obligaciones'\)\) return NO_ENCONTRADO/)
+  assert.match(api, /if \(inm\.archivado\) return \{ status: 409/)
+  assert.doesNotMatch(api, /status:\s*403/)
+  assert.doesNotMatch(leer(OBL_RUTA), /prisma/)
+})
+
+test('el detector de escrituras de obligaciones muerde (brazo sintético)', () => {
+  const mal = 'await prisma.portalPatrimonioObligacion.updateMany({\n        where: { id },\n        data: {},\n      })'
+  const o = escriturasObligacion(mal)
+  assert.equal(o.length, 1)
+  assert.doesNotMatch(o[0].cuerpo, /inmuebleId/)
+})

@@ -6,6 +6,8 @@ import { puede } from '@central/module-patrimonio'
 import { eur } from '@/lib/dinero'
 import { contratosDelInmueble } from '@/lib/patrimonio/contratos-bd'
 import { inmuebleAutorizado } from '@/lib/patrimonio/inmuebles-bd'
+import { obligacionesDeInmueble, type ObligacionesDeInmueble } from '@/lib/patrimonio/obligaciones-api'
+import { puertosObligaciones } from '@/lib/patrimonio/obligaciones-bd'
 import { segurosDeInmueble, type SegurosDeInmueble } from '@/lib/patrimonio/seguros-inmueble-api'
 import { puertosSegurosInmueble } from '@/lib/patrimonio/seguros-inmueble-bd'
 import { ETIQUETA_USO } from '@/lib/patrimonio/usos'
@@ -13,6 +15,7 @@ import { getIdentidad } from '@/lib/session'
 
 import { Documentos } from './Documentos'
 import { NuevoContrato } from './NuevoContrato'
+import { ObligacionesPropias } from './ObligacionesPropias'
 import { SegurosInmueble } from './SegurosInmueble'
 
 export const dynamic = 'force-dynamic'
@@ -33,11 +36,16 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
   if (ficha === null) notFound()
   const i = ficha.inmueble
   // Archivado: los contratos vivos no se listan (sus páginas dan 404) y no se ofrece ninguna alta.
-  const [contratos, seguros] = await Promise.all([
+  const [contratos, seguros, recordatorios] = await Promise.all([
     ficha.archivado ? Promise.resolve([]) : contratosDelInmueble(identidad.id, i.id),
     // Un fallo leyendo los seguros no tumba la ficha: la sección dice «no hemos podido comprobarlo».
     segurosDeInmueble(puertosSegurosInmueble(identidad.id), i.id).catch((e: unknown): SegurosDeInmueble | null | 'error' => {
       console.error('[patrimonio/inmueble] seguros:', e instanceof Error ? e.message : e)
+      return 'error'
+    }),
+    // Igual para los recordatorios: un fallo no tumba la ficha ni se pinta como «no tienes ninguno».
+    obligacionesDeInmueble(puertosObligaciones(identidad.id), i.id).catch((e: unknown): ObligacionesDeInmueble | null | 'error' => {
+      console.error('[patrimonio/inmueble] obligaciones:', e instanceof Error ? e.message : e)
       return 'error'
     }),
   ])
@@ -80,6 +88,17 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
           <p className="aviso-linea" role="status">Ahora no hemos podido comprobar los seguros de este inmueble. Vuelve a intentarlo en un rato.</p>
         ) : (
           <SegurosInmueble datos={seguros} soloLectura={ficha.archivado} />
+        )}
+      </section>
+      <section className="seccion" aria-labelledby="recordatorios-inmueble">
+        <h2 id="recordatorios-inmueble">Recordatorios y obligaciones</h2>
+        <p className="suave" style={{ marginTop: 0, fontSize: 14 }}>
+          IBI, comunidad, revisión de la caldera… Los verás en el <Link href="/patrimonio/calendario">calendario</Link> y te avisaremos desde la campana.
+        </p>
+        {recordatorios === 'error' || recordatorios === null ? (
+          <p className="aviso-linea" role="status">Ahora no hemos podido leer los recordatorios de este inmueble. Vuelve a intentarlo en un rato.</p>
+        ) : (
+          <ObligacionesPropias datos={recordatorios} />
         )}
       </section>
       {!ficha.archivado && (

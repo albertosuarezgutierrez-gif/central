@@ -11,6 +11,7 @@
 import { diasEntre, sumarDias, sumarMeses, type Fecha } from './fechas.ts'
 import { finEfectivo } from './contrato.ts'
 import { proximoAniversarioActualizacion } from './actualizacion-renta.ts'
+import { CATALOGO_CATEGORIAS, type CategoriaObligacionPropia } from './obligacion-propia.ts'
 import type { Contrato } from './tipos.ts'
 
 export type TipoObligacion =
@@ -63,6 +64,13 @@ export interface ObligacionInmueble {
   vence: Fecha | null
   /** Periodicidad propia en meses (manda sobre el catálogo). */
   periodicidadMeses: number | null
+  /**
+   * Recordatorio PROPIO del cliente (`obligacion-propia.ts`): su categoría manda sobre el `tipo` (siempre `otra`) para la
+   * etiqueta y los días de aviso. Ausente/`null` = obligación del catálogo de siempre.
+   */
+  categoria?: CategoriaObligacionPropia | null
+  /** Texto libre del cliente (solo recordatorios propios). `null`/ausente = no escribió nada. */
+  descripcion?: string | null
 }
 
 export type EstadoObligacion = 'vencida' | 'avisar' | 'sin_dato' | 'al_dia' | 'cumplida'
@@ -81,6 +89,8 @@ export interface Vencimiento {
   dias: number | null
   /** Qué falta cuando es `sin_dato`. */
   falta: string | null
+  /** Texto libre del cliente en un recordatorio propio. Ausente/`null` = no hay. */
+  detalle?: string | null
 }
 
 export function estadoPorFecha(vence: Fecha | null, avisarDesde: Fecha | null, hoy: Fecha): EstadoObligacion {
@@ -94,12 +104,13 @@ function vencimiento(
   base: Omit<Vencimiento, 'estado' | 'dias' | 'avisarDesde' | 'etiqueta'>,
   hoy: Fecha,
   avisoDias?: number,
+  etiqueta?: string,
 ): Vencimiento {
   const regla = CATALOGO_OBLIGACIONES[base.tipo]
   const avisarDesde = base.vence ? sumarDias(base.vence, -(avisoDias ?? regla.avisoDias)) : null
   return {
     ...base,
-    etiqueta: regla.etiqueta,
+    etiqueta: etiqueta ?? regla.etiqueta,
     avisarDesde,
     estado: estadoPorFecha(base.vence, avisarDesde, hoy),
     dias: base.vence ? diasEntre(hoy, base.vence) : null,
@@ -108,6 +119,7 @@ function vencimiento(
 
 export function vencimientoDeObligacion(o: ObligacionInmueble, hoy: Fecha): Vencimiento | null {
   if (o.aplica === false) return null
+  if (o.categoria) return vencimientoDePropia(o, o.categoria, hoy)
   const per = o.periodicidadMeses ?? CATALOGO_OBLIGACIONES[o.tipo].periodicidadMeses
   let vence: Fecha | null = o.vence
   if (!vence && o.ultima && per) vence = sumarMeses(o.ultima, per)
@@ -120,6 +132,28 @@ export function vencimientoDeObligacion(o: ObligacionInmueble, hoy: Fecha): Venc
   return vencimiento(
     { clave: `${o.id}:${vence ?? 'sin_fecha'}`, tipo: o.tipo, inmuebleId: o.inmuebleId, contratoId: null, vence, falta },
     hoy,
+  )
+}
+
+/**
+ * Recordatorio propio: la fecha es del cliente y SIEMPRE existe. Una fila propia sin fecha (no debería existir: CHECK en
+ * BD) sale `sin_dato`, nunca «al día». La clave lleva la fecha: al pasar al siguiente ciclo es otro aviso.
+ */
+function vencimientoDePropia(o: ObligacionInmueble, categoria: CategoriaObligacionPropia, hoy: Fecha): Vencimiento {
+  const regla = CATALOGO_CATEGORIAS[categoria]
+  return vencimiento(
+    {
+      clave: `${o.id}:${o.vence ?? 'sin_fecha'}`,
+      tipo: o.tipo,
+      inmuebleId: o.inmuebleId,
+      contratoId: null,
+      vence: o.vence,
+      falta: o.vence ? null : 'Falta la fecha de este recordatorio.',
+      detalle: o.descripcion ?? null,
+    },
+    hoy,
+    regla.avisoDias,
+    regla.etiqueta,
   )
 }
 
