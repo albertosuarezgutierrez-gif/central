@@ -13,6 +13,23 @@
 //   3. Subir `REVISION_TOPE_RENTA.ultimaRevision` y `siguienteRevision`.
 // Un test avisa (con `hoy` inyectado, nunca con reloj real) si el año de «hoy» no tiene entrada.
 //
+// ⚠️ INTENTO DE VERIFICACIÓN 25/10/2026: el sandbox NO alcanza boe.es ni ine.es (DNS/proxy 403), así que NINGUNA entrada
+// se ha leído en la fuente primaria y todas siguen `por_verificar`. Lo que sí se vio (WebSearch, secundario): el art. 46 RDL 6/2022
+// es la norma base (2 %), con prórrogas por RDL 11/2022 (hasta 31/12/2022) y RDL 20/2022 (hasta 31/12/2023), y la Ley 12/2023
+// retoca el art. 46 para 2024 (3 %). Discrepancias a cerrar con el BOE: (a) la entrada 2024 cita RDL 8/2023 y no la Ley 12/2023;
+// (b) el matiz gran tenedor/pequeño tenedor de 2022-2023 (tope sobre IGC vs. pacto) NO está modelado: este catálogo es un único
+// % por año; (c) el «desde» exacto del 2 % (30/03 o 1/04/2022) y el «hasta» de cada prórroga.
+// 2025+: el límite NO es un % fijo sino el IRAV del INE (LAU art. 18.1, redacción Ley 12/2023): por eso `pct: null` ahí significa
+// «el límite es el IRAV», no «sin límite». La propuesta de actualización ya usa el IRAV como índice cuando el contrato lo pacta
+// (`actualizacion-renta.ts:1,9`, `indices-ine.ts:8,102`); el IRAV no entra aquí como tope %.
+//
+// 🧭 «SIN TOPE» DEL CLIENTE vs TOPE LEGAL VIGENTE (2022-2024) — recomendación jurídica (NO implementada; la lógica no cambia):
+// un tope legal imperativo (art. 46 RDL 6/2022 y prórrogas, orden público en vivienda habitual) NO es renunciable por el
+// arrendador-cliente: reclamar de más expone a devolución. Lo correcto: en años con `pct` legal y `estado` verificado,
+// «sin tope» no debería anular el catálogo (avisar y aplicar el legal; el `propio` solo puede ser MENOR o igual que el legal).
+// «Sin tope» solo vale donde no hay tope legal codificado (2025+, salvo zonas tensionadas).
+// Hoy `topeAplicable` deja que «sin_tope» lo anule: revisar con el agente fiscal antes de activar datos verificados.
+//
 // Función PURA: `hoy` entra como parámetro. El % es el tope a la SUBIDA de la renta; una variación negativa no se topa.
 import { esFecha, type Fecha } from './fechas.ts'
 
@@ -55,12 +72,12 @@ export const CATALOGO_TOPE_RENTA: readonly TopeCatalogo[] = Object.freeze([
   },
   {
     anio: 2025, pct: null,
-    norma: 'Sin tope codificado: el límite anti-crisis acabó el 31/12/2024; desde 2025 rige lo pactado (IPC) o el IRAV (Ley 12/2023). Pendiente de revisión fiscal.',
+    norma: 'Sin tope codificado: el límite anti-crisis acabó el 31/12/2024; desde 2025 el límite no es un % fijo: es el IRAV del INE (LAU art. 18, Ley 12/2023) o el índice pactado. `pct: null` = el límite es el IRAV. Pendiente de BOE/INE.',
     fuente: 'pendiente', revisadoEn: '2026-10-24', estado: 'por_verificar',
   },
   {
     anio: 2026, pct: null,
-    norma: 'Sin tope codificado: rige lo pactado o el IRAV; las zonas tensionadas (Ley 12/2023) pueden limitarlo. Pendiente de revisión fiscal.',
+    norma: 'Sin % codificado: el límite es el IRAV (o el índice pactado); las zonas tensionadas (Ley 12/2023) pueden limitarlo. Pendiente de revisión fiscal.',
     fuente: 'pendiente', revisadoEn: '2026-10-24', estado: 'por_verificar',
   },
   {
