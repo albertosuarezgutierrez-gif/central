@@ -32,15 +32,19 @@
  * otorgada»: `necesitaRegistro()` sirve para acreditaciones, no para esto.
  */
 
-/** Los tres tipos del CHECK de `seguros.portal_consentimiento.tipo`. */
-export const TIPOS_CONSENTIMIENTO = ['avisos', 'comercial', 'lds_art19'] as const
+/**
+ * Los tipos del CHECK de `seguros.portal_consentimiento.tipo` (espejo EXACTO de
+ * `apps/asegura/prisma/sql/2026-10-26_portal_consentimiento_oposicion.sql`; un cepo los compara).
+ */
+export const TIPOS_CONSENTIMIENTO = ['avisos', 'comercial', 'lds_art19', 'oposicion_senales_patrimonio'] as const
 export type TipoConsentimiento = (typeof TIPOS_CONSENTIMIENTO)[number]
 
 /**
  * Los tipos que el portal ESCRIBE hoy. `avisos` entró el 13/10/2026 CON su
- * pantalla (ver cabecera).
+ * pantalla (ver cabecera); `oposicion_senales_patrimonio` el 26/10/2026 con la suya
+ * («Configuración → Privacidad» y «Patrimonio», `OposicionSenalesPatrimonio.tsx`).
  */
-export const TIPOS_QUE_SE_REGISTRAN: readonly TipoConsentimiento[] = ['lds_art19', 'comercial', 'avisos']
+export const TIPOS_QUE_SE_REGISTRAN: readonly TipoConsentimiento[] = ['lds_art19', 'comercial', 'avisos', 'oposicion_senales_patrimonio']
 
 /**
  * El texto que se enseña junto al botón de activar los avisos en el dispositivo,
@@ -71,25 +75,26 @@ export const TEXTO_CONSENTIMIENTO_COMERCIAL =
   'Quiero que la correduría revise los seguros que tengo guardados aquí y me contacte, cuando se acerque un vencimiento, con una propuesta sin compromiso. Puedo retirarlo cuando quiera desde esta misma pantalla.'
 
 /**
- * 🚨 BORRADOR P15 (26/10/2026) — `comercial_patrimonio`: el consentimiento a que la correduría revise los seguros de los
- * inmuebles del cliente y le proponga cubrir lo que falte. NO está en `TIPOS_CONSENTIMIENTO` (CHECK actual de la BD) ni en
- * `TIPOS_QUE_SE_REGISTRAN`: solo existe con `PATRIMONIO_SENALES_ACTIVAS=1` (`tiposConsentimiento(true)`,
- * `tiposQueSeRegistran(true)`). Sin el interruptor, nada de lo anterior cambia. Casilla NUNCA premarcada, independiente de
- * `comercial`; retirar = fila nueva con `otorgado:false` (append-only). Texto pendiente de aprobación de Alberto
- * (docs/legal/2026-10-26-borrador-p15-patrimonio.md): hasta entonces la versión lleva el sufijo `-borrador`.
+ * 🚨 `oposicion_senales_patrimonio` (P15 publicado, 26/10/2026): el DERECHO DE OPOSICIÓN (art. 21 RGPD) a la revisión de
+ * los seguros de los inmuebles. Alberto decidió la base «interés legítimo informado» (art. 6.1.f): las señales se
+ * calculan para todo cliente con patrimonio SALVO que se haya opuesto. No hay casilla de consentimiento previo.
+ *
+ * Semántica de `otorgado` en ESTE tipo (ojo, es la inversa de un consentimiento): `true` = «me opongo» (ejerce el
+ * derecho) · `false` = «retiro mi oposición». Append-only como el resto: retirar es una fila nueva, nunca un UPDATE ni
+ * un DELETE. El estado vigente es la ÚLTIMA fila (`oposicionVigente`), y NO depende de la versión del texto: una
+ * oposición no caduca porque cambie la redacción (sería quitarle a alguien un derecho que ya ejerció).
  */
-export const TIPO_COMERCIAL_PATRIMONIO = 'comercial_patrimonio' as const
-export type TipoConsentimientoPatrimonio = typeof TIPO_COMERCIAL_PATRIMONIO
-export const VERSION_TEXTO_COMERCIAL_PATRIMONIO = '2026-11-p1-borrador'
-export const TEXTO_CONSENTIMIENTO_COMERCIAL_PATRIMONIO =
-  'Quiero que Grupo ASegura revise los seguros de los inmuebles que llevo en esta herramienta y me proponga, sin compromiso, cubrir lo que falte. Puedo retirarlo cuando quiera desde esta misma pantalla.'
+export const TIPO_OPOSICION_SENALES = 'oposicion_senales_patrimonio' as const
+export const VERSION_TEXTO_OPOSICION_SENALES = '2026-10-o1'
+export const TEXTO_OPOSICION_SENALES =
+  'No quiero que Grupo ASegura revise los seguros de los inmuebles que llevo en «Patrimonio». Puedo retirar esta oposición cuando quiera desde esta misma pantalla.'
 
-export function tiposConsentimiento(patrimonioActivo: boolean): readonly (TipoConsentimiento | TipoConsentimientoPatrimonio)[] {
-  return patrimonioActivo ? [...TIPOS_CONSENTIMIENTO, TIPO_COMERCIAL_PATRIMONIO] : TIPOS_CONSENTIMIENTO
-}
-
-export function tiposQueSeRegistran(patrimonioActivo: boolean): readonly (TipoConsentimiento | TipoConsentimientoPatrimonio)[] {
-  return patrimonioActivo ? [...TIPOS_QUE_SE_REGISTRAN, TIPO_COMERCIAL_PATRIMONIO] : TIPOS_QUE_SE_REGISTRAN
+/**
+ * ¿Está esta identidad OPUESTA hoy? `true` = sí · `false` = se opuso y lo retiró · `null` = nunca se ha opuesto.
+ * Solo `true` impide calcular (`puedeCalcularSenales` de `@central/module-patrimonio`).
+ */
+export function oposicionVigente(guardados: readonly ConsentimientoConFecha[]): boolean | null {
+  return consentimientoVigente(guardados, TIPO_OPOSICION_SENALES)
 }
 
 /** Una fila con su momento, para saber cuál es la última. */
@@ -107,7 +112,7 @@ export type ConsentimientoConFecha = ConsentimientoGuardado & { creadoEn: Date }
  */
 export function consentimientoVigente(
   guardados: readonly ConsentimientoConFecha[],
-  tipo: TipoConsentimiento | TipoConsentimientoPatrimonio,
+  tipo: TipoConsentimiento,
   versionActual?: string,
 ): boolean | null {
   let ultima: ConsentimientoConFecha | null = null

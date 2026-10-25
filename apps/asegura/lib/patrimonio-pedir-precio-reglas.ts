@@ -8,8 +8,10 @@
 //    declarada. Esto crea una oportunidad como `mejorar-precio-portal.ts`.
 //  · NO manda nada a nadie: crea la oportunidad y una tarea para la correduría. El contacto con el cliente lo decide
 //    Alberto (el cliente lo pidió: es petición expresa) y sale de la correduría, no de aquí.
-//  · NO escribe la dirección, la referencia catastral ni nada del inmueble en la tarea: solo el alias que puso el
-//    cliente (que va a `info_riesgo` por id, no por texto). Telegram, solo ids.
+//  · NO escribe en la tarea la dirección, la referencia catastral NI EL ALIAS que puso el cliente (26/10/2026: un alias
+//    como «Piso de mamá» identifica a una persona; la tarea queda en `gestiones`, que no se suprime por fila). Solo datos no
+//    personales: tipo de inmueble + municipio + tipo de petición; el enlace a la ficha (`cliente_id`/`oportunidad_id`)
+//    ya identifica, y el inmueble va a `info_riesgo` por id. Telegram, solo ids.
 
 export const ORIGEN_PORTAL_PATRIMONIO = 'portal:patrimonio'
 /**
@@ -140,9 +142,41 @@ const QUE: Partial<Record<TipoPedirPrecio, string>> = {
 
 const limpia = (t: string, n: number) => t.replace(/\s+/g, ' ').trim().slice(0, n)
 
-/** Texto de la tarea: el alias que puso el cliente y el motivo. Sin dirección, ref. catastral ni nº de póliza. */
-export function textoTareaPrecioPatrimonio(x: { tipo: TipoPedirPrecio; alias: string; ramo: string; rentaCent?: number | null; compania?: string | null; vence?: string | null }): string {
-  const alias = limpia(x.alias, 80)
+const USO_LEGIBLE: Readonly<Record<string, string>> = {
+  vivienda: 'vivienda', local: 'local', oficina: 'oficina', nave: 'nave', garaje: 'garaje', trastero: 'trastero',
+}
+
+/** Tipo de inmueble en llano. Un uso fuera del catálogo o sin dato es «inmueble» (no se inventa uno). */
+export function usoLegible(uso: string | null): string {
+  return (uso && USO_LEGIBLE[uso.trim().toLowerCase()]) || 'inmueble'
+}
+
+/**
+ * Municipio sacado de `direccion_normalizada` («CL PARRA LA 12, 41003 SEVILLA (SEVILLA)», `componerDireccionNormalizada`
+ * del portal y `componerDireccion` de la importación). Solo si el último tramo lleva un CP de 5 cifras delante: sin CP no se
+ * distingue el municipio de un trozo de calle, y entonces `null` (= no consta; la tarea lo dice, no lo inventa).
+ */
+export function municipioDeDireccion(direccion: string | null): string | null {
+  if (!direccion) return null
+  const m = /,\s*\d{5}\s+([^,()]+?)\s*(?:\([^()]*\))?\s*$/.exec(direccion)
+  const municipio = m?.[1] ? limpia(m[1], 60) : ''
+  return municipio === '' ? null : municipio
+}
+
+/**
+ * Texto de la tarea: tipo de inmueble + municipio + tipo de petición. 🚨 SIN el alias del cliente, la dirección, la ref.
+ * catastral ni el nº de póliza (ver cabecera): quien la trabaja abre la ficha enlazada.
+ */
+export function textoTareaPrecioPatrimonio(x: {
+  tipo: TipoPedirPrecio
+  uso: string | null
+  municipio: string | null
+  ramo: string
+  rentaCent?: number | null
+  compania?: string | null
+  vence?: string | null
+}): string {
+  const inmueble = `${usoLegible(x.uso)} ${x.municipio ? `en ${limpia(x.municipio, 60)}` : '(municipio no consta)'}`
   const pidio = 'Lo ha pedido él desde Patrimonio en el portal.'
   switch (x.tipo) {
     case 'comparar_externa': {
@@ -152,12 +186,12 @@ export function textoTareaPrecioPatrimonio(x: { tipo: TipoPedirPrecio; alias: st
     }
     case 'impago_alquiler': {
       const r = eurosEs(x.rentaCent ?? null)
-      return `Seguro de impago de alquiler / defensa jurídica del arrendador: el inmueble «${alias}» tiene un contrato de alquiler vivo${r ? ` (renta ${r}/mes)` : ''}. ${pidio}`
+      return `Seguro de impago de alquiler / defensa jurídica del arrendador: ${inmueble} con un contrato de alquiler vivo${r ? ` (renta ${r}/mes)` : ''}. ${pidio}`
     }
     case 'hipoteca':
-      return `Revisar los seguros de hogar y vida ligados a la hipoteca: el cliente dice que el inmueble «${alias}» tiene hipoteca y quiere ver si se pueden mejorar. ${pidio}`
+      return `Revisar los seguros de hogar y vida ligados a la hipoteca: ${inmueble}, el cliente dice que tiene hipoteca y quiere ver si se pueden mejorar. ${pidio}`
     default:
-      return `Pedir precio de seguro de ${x.ramo}: el inmueble «${alias}» ${QUE[x.tipo] ?? ''}. ${pidio}`
+      return `Pedir precio de seguro de ${x.ramo}: ${inmueble}, ${QUE[x.tipo] ?? ''}. ${pidio}`
   }
 }
 

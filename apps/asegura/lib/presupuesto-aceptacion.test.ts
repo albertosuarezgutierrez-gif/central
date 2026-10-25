@@ -56,6 +56,10 @@ test('🪤 lo firmado cita lo que el cliente tuvo delante: recuento del presupue
   assert.match(src, /count\(\*\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id and x\.oculta_at is null\) as "nOpciones"/)
   assert.match(src, /count\(distinct lower\(trim\(x\.compania\)\)\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id and x\.oculta_at is null\) as "nCompanias"/)
   assert.match(src, /versionTextos: VERSION_TEXTOS_LEGALES/)
+  // La versión VIGENTE sale de la constante única de `@central/module-seguros` (desde 26/10/2026 no hay variante con
+  // interruptor): ni un literal copiado ni una segunda constante «de patrimonio».
+  assert.doesNotMatch(src, /versionTextos: ['"`]20\d\d-/)
+  assert.doesNotMatch(src, /VERSION_TEXTOS_LEGALES_PATRIMONIO|versionTextosLegales\(/)
   assert.match(src, /informacionMediador: `\$\{MEDIADOR\.identidad\.portal\}\/legal\/mediador`/)
 })
 

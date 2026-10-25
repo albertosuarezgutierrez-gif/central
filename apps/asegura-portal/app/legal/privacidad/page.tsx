@@ -1,9 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { MEDIADOR, fechaTextosLegales, versionTextosLegales } from '@central/module-seguros'
-
-import { senalesActivas } from '@/lib/patrimonio-senales-activas'
+import { MEDIADOR, FECHA_TEXTOS_LEGALES, VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
 
 import { ApartadoSenalesPatrimonio } from './ApartadoSenalesPatrimonio'
 
@@ -233,7 +231,7 @@ export default function Privacidad() {
         </p>
       </section>
 
-      {senalesActivas() && <ApartadoSenalesPatrimonio />}
+      <ApartadoSenalesPatrimonio />
 
       <section>
         <h2>4. Quién más ve tus datos</h2>
@@ -311,6 +309,10 @@ export default function Privacidad() {
             relación con la correduría.
           </li>
           <li>
+            Las señales de la revisión de los seguros de tus inmuebles, 24 meses desde que se cierran o
+            desde su última actualización (apartado 3 bis).
+          </li>
+          <li>
             La documentación de la mediación, durante los plazos que nos exige la normativa de
             seguros y la de prevención del blanqueo de capitales, y mientras puedan derivarse
             responsabilidades del contrato.
@@ -383,7 +385,7 @@ export default function Privacidad() {
       </section>
 
       <p className="legal-version">
-        Versión {versionTextosLegales(senalesActivas())} · última revisión {fechaTextosLegales(senalesActivas())}
+        Versión {VERSION_TEXTOS_LEGALES} · última revisión {FECHA_TEXTOS_LEGALES}
       </p>
     </>
   )

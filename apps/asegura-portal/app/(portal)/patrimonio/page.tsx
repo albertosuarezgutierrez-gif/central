@@ -4,12 +4,11 @@ import { redirect } from 'next/navigation'
 import { patrimonioDeIdentidad } from '@/lib/patrimonio/inmuebles-bd'
 import { avisosPolizasSinInmueble, type AvisoPintable } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { precargaDeParametros, type ParametrosAlta } from '@/lib/patrimonio/precarga-alta'
-import { consentimientoPatrimonioVigente } from '@/lib/consentimiento-patrimonio'
-import { senalesActivas } from '@/lib/patrimonio-senales-activas'
+import { oposicionSenalesVigente } from '@/lib/oposicion-senales'
 import { getIdentidad } from '@/lib/session'
 
 import { AvisoPolizaSinInmueble } from './AvisoPolizaSinInmueble'
-import { ConsentimientoPatrimonio } from './ConsentimientoPatrimonio'
+import { OposicionSenalesPatrimonio } from '../configuracion/OposicionSenalesPatrimonio'
 import { ListaInmuebles } from './ListaInmuebles'
 import { NuevoInmueble } from './NuevoInmueble'
 
@@ -25,11 +24,11 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
   if (!identidad) redirect('/')
   const titulares = await patrimonioDeIdentidad(identidad.id)
   const precarga = precargaDeParametros(await searchParams)
-  // P15 (borrador): la casilla y su aviso SOLO con el interruptor encendido. Apagado no se lee ni se pinta nada nuevo.
-  // Un fallo al leer el consentimiento no enseña la casilla (no se puede afirmar su estado).
-  let consentimientoPatrimonio: boolean | null | 'ilegible' | undefined
-  if (senalesActivas() && titulares.length > 0) {
-    consentimientoPatrimonio = await consentimientoPatrimonioVigente(identidad.id).catch(() => 'ilegible' as const)
+  // P15 publicado (interés legítimo informado): con algún titular se INFORMA aquí, antes de calcular, y se ofrece oponerse.
+  // No depende del interruptor del motor. Un fallo al leer la oposición no enseña la casilla (no se puede afirmar su estado).
+  let oposicion: boolean | null | 'ilegible' | undefined
+  if (titulares.length > 0) {
+    oposicion = await oposicionSenalesVigente(identidad.id).catch(() => 'ilegible' as const)
   }
   // Pólizas de hogar/comunidad sin inmueble (con el estado de sus peticiones, por el puente). Fallo = «no hemos podido
   // comprobarlo», nunca «no tienes ninguna».
@@ -56,8 +55,19 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
         </p>
       )}
 
-      {consentimientoPatrimonio !== undefined && consentimientoPatrimonio !== 'ilegible' && (
-        <ConsentimientoPatrimonio inicial={consentimientoPatrimonio} />
+      {oposicion !== undefined && (
+        <section className="seccion" aria-labelledby="oposicion-senales-titulo">
+          <p className="antetitulo">Revisión de seguros de tus inmuebles</p>
+          <h2 id="oposicion-senales-titulo">Revisamos si a tus inmuebles les falta algún seguro</h2>
+          {oposicion === 'ilegible' ? (
+            <p className="suave" style={{ margin: 0 }}>
+              No hemos podido comprobar ahora si te has opuesto a esta revisión. Vuelve a intentarlo en un rato o
+              cámbialo en <a href="/configuracion#privacidad">Configuración</a>.
+            </p>
+          ) : (
+            <OposicionSenalesPatrimonio inicial={oposicion} conAviso />
+          )}
+        </section>
       )}
 
       {titulares.length === 0 ? (

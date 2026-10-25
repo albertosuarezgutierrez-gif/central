@@ -35,29 +35,17 @@
  * nadie puede decir después QUÉ se aceptó. Se sube a mano cada vez que cambie
  * el fondo de cualquiera de las páginas legales (no por una errata).
  */
-export const VERSION_TEXTOS_LEGALES = '2026-10-v1'
-
-/** Fecha de la última revisión de fondo de los textos legales (ISO, UTC). */
-export const FECHA_TEXTOS_LEGALES = '2026-10-13'
+export const VERSION_TEXTOS_LEGALES = '2026-10-v2'
 
 /**
- * Textos legales CON el apartado de «señales de patrimonio» (P15, BORRADOR 26/10/2026, sin aprobar por Alberto).
- * 🚨 Solo rigen con `PATRIMONIO_SENALES_ACTIVAS=1`: con el interruptor apagado `versionTextosLegales(false)` devuelve
- * EXACTAMENTE `VERSION_TEXTOS_LEGALES` y no cambia nada de lo que ve o firma nadie. Al activarlo, la versión y la fecha se
- * sellan en las filas nuevas de `portal_consentimiento` (una firma sobre el texto viejo no acredita el nuevo).
- * Texto: docs/legal/2026-10-26-borrador-p15-patrimonio.md.
+ * Fecha de la última revisión de fondo de los textos legales (ISO, UTC).
+ * `2026-10-v2` (26/10/2026): la política de privacidad del portal publica el apartado «3 bis» (revisión de los seguros
+ * de los inmuebles, base interés legítimo, derecho de oposición). Al subirla, cada cliente vuelve a acreditar la
+ * información precontractual (`lds_art19`) en su siguiente entrada con código (`necesitaRegistro`).
+ * 🚨 Constante ÚNICA: el portal, las solicitudes de supresión, el export RGPD y la aceptación de presupuestos de
+ * `apps/asegura` la importan de aquí; nadie copia el literal.
  */
-export const VERSION_TEXTOS_LEGALES_PATRIMONIO = '2026-11-v1'
-export const FECHA_TEXTOS_LEGALES_PATRIMONIO = '2026-10-26'
-
-/** La versión de los textos legales que rige: la base, o la ampliada si el apartado de patrimonio está activo. */
-export function versionTextosLegales(patrimonioActivo: boolean): string {
-  return patrimonioActivo ? VERSION_TEXTOS_LEGALES_PATRIMONIO : VERSION_TEXTOS_LEGALES
-}
-
-export function fechaTextosLegales(patrimonioActivo: boolean): string {
-  return patrimonioActivo ? FECHA_TEXTOS_LEGALES_PATRIMONIO : FECHA_TEXTOS_LEGALES
-}
+export const FECHA_TEXTOS_LEGALES = '2026-10-26'
 
 /**
  * Versión de los textos legales de la WEB PÚBLICA (`apps/asegura-web`).

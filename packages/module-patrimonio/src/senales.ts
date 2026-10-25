@@ -1,15 +1,17 @@
 // MOTOR DE SEÑALES de patrimonio (P16, 26/10/2026) — PURO, sin BD, red ni reloj (`hoy` se inyecta).
 // Spec: docs/superpowers/specs/2026-10-24-portal-inicio-herramientas-oportunidades.md §3. Borrador legal: docs/legal/2026-10-26-borrador-p15-patrimonio.md.
 //
-// 🚨 APAGADO POR DEFECTO. Nada de esto se calcula, se guarda ni se muestra salvo que `PATRIMONIO_SENALES_ACTIVAS=1`
-// (`patrimonioSenalesActivas`) Y la identidad tenga `comercial_patrimonio` VIGENTE (`puedeCalcularSenales`).
+// 🚨 APAGADO POR DEFECTO. Nada de esto se calcula ni se guarda salvo que `PATRIMONIO_SENALES_ACTIVAS=1`
+// (`patrimonioSenalesActivas`). Encendido, la base legal es el INTERÉS LEGÍTIMO INFORMADO (decisión de Alberto, 26/10/2026;
+// política de privacidad del portal, apartado «3 bis»): se calcula para toda ficha con patrimonio SALVO que alguna identidad
+// que la opera se haya OPUESTO (`oposicion_senales_patrimonio`, `puedeCalcularSenales`).
 // Una SEÑAL es un hecho calculado que solo ve Alberto; NO es una oportunidad ni autoriza contacto alguno.
 //
 // 🚨 `null` = no se sabe. Una señal exige un hecho AFIRMADO: `sin_mirar`, un contrato sin dato de impago o una póliza
 // externa sin vigencia comprobada NO generan señal (regla de la casa: dato que no hay ≠ dato que no se ha mirado).
 // 🚨 El INQUILINO jamás es lead: ninguna entrada de este módulo lleva datos de inquilino.
 
-import { diasEntre, sumarDias, type Fecha } from './fechas.ts'
+import { diasEntre, sumarDias, sumarMeses, type Fecha } from './fechas.ts'
 import type { AlertaInfraseguro } from './infraseguro.ts'
 import type { EstadoSeguroInmueble } from './enlace-seguro.ts'
 
@@ -184,36 +186,64 @@ export function calcularSenales(x: {
 export type PermisoContacto = 'pedido' | 'consentido' | 'sin_permiso' | 'opuesto'
 
 /**
- * Qué permiso hay sobre una FICHA. El consentimiento es por IDENTIDAD y la señal por FICHA: llegan los vigentes de
- * TODAS las identidades que la operan como propia (`true` / `false` / `null` = nunca se le preguntó o el texto es de
- * otra versión). Gana la más restrictiva: una oposición basta, incluso por encima de una petición anterior.
+ * Qué permiso hay para CONTACTAR sobre una FICHA (la señal no lo da: calcular ≠ contactar). Llegan los estados vigentes de
+ * TODAS las identidades que la operan como propia:
+ *  · `oposiciones` — `oposicion_senales_patrimonio` (`true` opuesta · `false` retiró la oposición · `null` nunca).
+ *  · `comerciales` — el consentimiento `comercial` («me contactéis con una propuesta») sobre la versión vigente de su texto
+ *    (`true` · `false` retirado · `null` nunca / otra versión).
+ * Gana la más restrictiva: una oposición basta, incluso por encima de una petición anterior. `comercial === false` NO es
+ * oposición a las señales: es «sin permiso» para contactar.
  */
-export function permisoContacto(x: { peticionAbierta: boolean; consentimientos: readonly (boolean | null)[] }): PermisoContacto {
-  if (x.consentimientos.some((c) => c === false)) return 'opuesto'
+export function permisoContacto(x: {
+  peticionAbierta: boolean
+  oposiciones: readonly (boolean | null)[]
+  comerciales: readonly (boolean | null)[]
+}): PermisoContacto {
+  if (x.oposiciones.some((o) => o === true)) return 'opuesto'
   if (x.peticionAbierta) return 'pedido'
-  if (x.consentimientos.some((c) => c === true)) return 'consentido'
+  if (x.comerciales.some((c) => c === true)) return 'consentido'
   return 'sin_permiso'
 }
 
 /**
- * Política de cálculo vigente. `con_consentimiento` (encargo del 26/10/2026): solo se calcula con `comercial_patrimonio`
- * vigente. `interes_legitimo` (decisión de Alberto sobre la base legal): se calcula salvo oposición. Cambiarla es una
- * línea Y la activación del texto de privacidad correspondiente (ver el borrador P15).
+ * Política de cálculo vigente: `interes_legitimo` (decisión de Alberto, 26/10/2026). Se calcula salvo oposición. La
+ * variante «con consentimiento previo» se descartó; volver a ella exige otro texto de privacidad y otra casilla.
  */
-export const POLITICA_CALCULO: 'con_consentimiento' | 'interes_legitimo' = 'con_consentimiento'
+export const POLITICA_CALCULO = 'interes_legitimo' as const
 
 /**
- * ¿Se pueden calcular señales de esta ficha? Interruptor apagado → NUNCA, pase lo que pase con los consentimientos.
+ * ¿Se pueden calcular señales de esta ficha? Interruptor apagado → NUNCA. Encendido → SÍ salvo que alguna identidad que la
+ * opera tenga la oposición VIGENTE (`true`). `null` (nunca se opuso) y `false` (retiró la oposición) no impiden. Sin
+ * identidades (`[]`) se calcula: nadie se ha opuesto.
  */
-export function puedeCalcularSenales(x: {
-  interruptor: boolean
-  consentimientos: readonly (boolean | null)[]
-  politica?: typeof POLITICA_CALCULO
-}): boolean {
+export function puedeCalcularSenales(x: { interruptor: boolean; oposiciones: readonly (boolean | null)[] }): boolean {
   if (!x.interruptor) return false
-  if (x.consentimientos.some((c) => c === false)) return false
-  if ((x.politica ?? POLITICA_CALCULO) === 'interes_legitimo') return true
-  return x.consentimientos.some((c) => c === true)
+  return !x.oposiciones.some((o) => o === true)
+}
+
+// ─── Retención ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Plazo de conservación de una señal (decisión de Alberto, 26/10/2026): 24 meses desde su CIERRE (descartada, promovida y
+ * cerrada, resuelta, retirada: `cerradaEn`) o, si sigue viva, desde su última actualización (`ultimaVezEn`: el motor la
+ * refresca cada día mientras la condición se da; si deja de refrescarse es que no hay actividad). Pasado el plazo, el
+ * cron la BORRA. Es mayor que `DIAS_TRAS_DESCARTE`: borrar una descartada nunca la hace volver antes de los 180 días.
+ */
+export const MESES_RETENCION_SENALES = 24
+
+/** Fecha de corte: lo anterior (estrictamente) a este día se purga. */
+export function corteRetencionSenales(hoy: Fecha): Fecha {
+  return sumarMeses(hoy, -MESES_RETENCION_SENALES)
+}
+
+/**
+ * ¿Toca borrar esta señal? Cerrada → cuenta `cerradaEn`; viva → cuenta `ultimaVezEn`. Sin la fecha que toca (dato roto)
+ * NO se borra (estado conservador: no se destruye lo que no se sabe fechar; se ve en la cola y se revisa).
+ */
+export function debePurgarseSenal(x: { cerradaEn: Fecha | null; ultimaVezEn: Fecha | null; hoy: Fecha }): boolean {
+  const referencia = x.cerradaEn ?? x.ultimaVezEn
+  if (referencia === null) return false
+  return referencia < corteRetencionSenales(x.hoy)
 }
 
 // ─── Regla de los 180 días y reconciliación ────────────────────────────────────────────────────────────────────
@@ -239,7 +269,7 @@ export interface PlanSenales {
   refrescar: { id: string; senal: SenalCalculada }[]
   /** La condición ya no se da. */
   resolver: string[]
-  /** Se ha perdido el permiso (oposición, o sin consentimiento): las abiertas se retiran. */
+  /** Se ha perdido el permiso (oposición, o la ficha ya no está viva): las abiertas se retiran. */
   retirar: string[]
 }
 

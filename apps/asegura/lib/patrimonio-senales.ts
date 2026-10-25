@@ -3,9 +3,10 @@
 // docs/legal/2026-10-26-borrador-p15-patrimonio.md.
 //
 // 🚨 APAGADO por defecto (`PATRIMONIO_SENALES_ACTIVAS`): `ejecutarSenalesPatrimonio` y `colaSenalesPatrimonio` pasan por
-// `soloConInterruptor`; apagado no tocan la BD. Encendido, SOLO se calcula para una ficha si alguna identidad que la opera
-// como propia tiene `comercial_patrimonio` VIGENTE sobre la versión actual del texto y NINGUNA lo ha retirado
-// (`puedeCalcularSenales`). Sin permiso: se retiran las abiertas y no se escribe nada nuevo.
+// `soloConInterruptor`; apagado no tocan la BD. Encendido, base legal = INTERÉS LEGÍTIMO INFORMADO (decisión de Alberto,
+// 26/10/2026): se calcula para toda ficha con patrimonio SALVO que alguna identidad que la opera como propia tenga la
+// OPOSICIÓN vigente (`oposicion_senales_patrimonio`, `puedeCalcularSenales`). Opuesta: se retiran las abiertas y no se
+// escribe nada nuevo. Retención: `MESES_RETENCION_SENALES` (el cron borra lo caducado, `purgarSenalesCaducadas`).
 // 🚨 Nada de esto envía NADA: ni correo, ni Telegram, ni mensaje. Escribe solo `portal_patrimonio_senal`.
 // 🚨 No lee NINGUNA tabla de inquilino (`portal_patrimonio_inquilino*`, `portal_patrimonio_aviso_inquilino`,
 // `portal_patrimonio_enlace_inquilino`) ni filas de importación: de un contrato solo lee su id y si terminó. Cepo
@@ -13,10 +14,11 @@
 // Las tablas `portal_patrimonio_*` no están en `prisma/asegura.prisma` (las modela el portal): SQL crudo parametrizado.
 import {
   RELACION_DUENO,
-  TIPO_COMERCIAL_PATRIMONIO,
-  VERSION_TEXTO_COMERCIAL_PATRIMONIO,
+  TIPO_OPOSICION_SENALES,
+  VERSION_TEXTO_COMERCIAL,
   capitalDeCobertura,
   consentimientoVigente,
+  oposicionVigente,
   puedeAutorizar,
   NIVELES,
   type Nivel,
@@ -25,6 +27,7 @@ import { sqlCarteraEnVigor } from '@central/module-seguros'
 import {
   ROTULO_SENAL,
   calcularSenales,
+  corteRetencionSenales,
   declaradaVigente,
   esTipoSenal,
   estadoSeguroInmueble,
@@ -69,6 +72,8 @@ export type ResumenSenales = {
   refrescadas: number
   resueltas: number
   retiradas: number
+  /** Señales borradas por caducar el plazo de conservación (en ensayo: las que se borrarían). */
+  purgadas: number
 }
 
 // ─── Permiso por ficha ─────────────────────────────────────────────────────────────────────────────────────────
@@ -88,16 +93,24 @@ async function identidadesDeFicha(correduriaId: string, fichaId: string): Promis
   return [...new Set(vinculos.filter((v) => v.origen !== 'corredor' && puedeAutorizar(nivelDe(v.nivel))).map((v) => v.identidadId))]
 }
 
-/** `comercial_patrimonio` vigente de cada identidad (`null` = nunca / otra versión del texto). */
-async function consentimientosDe(identidades: readonly string[]): Promise<(boolean | null)[]> {
+/** Oposición vigente de cada identidad (`true` opuesta · `false` la retiró · `null` nunca). No depende de la versión del texto. */
+async function oposicionesDe(identidades: readonly string[]): Promise<(boolean | null)[]> {
   if (identidades.length === 0) return []
   const filas = await prismaAsegura().portalConsentimiento.findMany({
-    where: { identidadId: { in: [...identidades] }, tipo: TIPO_COMERCIAL_PATRIMONIO },
+    where: { identidadId: { in: [...identidades] }, tipo: TIPO_OPOSICION_SENALES },
     select: { identidadId: true, tipo: true, otorgado: true, versionTexto: true, creadoEn: true },
   })
-  return identidades.map((id) =>
-    consentimientoVigente(filas.filter((f) => f.identidadId === id), TIPO_COMERCIAL_PATRIMONIO, VERSION_TEXTO_COMERCIAL_PATRIMONIO),
-  )
+  return identidades.map((id) => oposicionVigente(filas.filter((f) => f.identidadId === id)))
+}
+
+/** Consentimiento `comercial` vigente (sobre la versión ACTUAL de su texto) de cada identidad: el permiso para CONTACTAR. */
+async function comercialesDe(identidades: readonly string[]): Promise<(boolean | null)[]> {
+  if (identidades.length === 0) return []
+  const filas = await prismaAsegura().portalConsentimiento.findMany({
+    where: { identidadId: { in: [...identidades] }, tipo: 'comercial' },
+    select: { identidadId: true, tipo: true, otorgado: true, versionTexto: true, creadoEn: true },
+  })
+  return identidades.map((id) => consentimientoVigente(filas.filter((f) => f.identidadId === id), 'comercial', VERSION_TEXTO_COMERCIAL))
 }
 
 // ─── Lectura de una ficha ──────────────────────────────────────────────────────────────────────────────────────
@@ -279,7 +292,7 @@ async function aplicar(correduriaId: string, fichaId: string, plan: ReturnType<t
     }
     for (const id of plan.retirar) {
       await tx.$executeRaw(Prisma.sql`
-        update portal_patrimonio_senal set estado = 'retirada', cerrada_en = now(), cerrada_por = 'motor', motivo = 'sin permiso vigente'
+        update portal_patrimonio_senal set estado = 'retirada', cerrada_en = now(), cerrada_por = 'motor', motivo = 'oposición del cliente o ficha no viva'
         where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'abierta'`)
     }
   })
@@ -305,13 +318,13 @@ export async function ejecutarSenalesPatrimonio(opts: { forzarContar?: boolean }
       where correduria_id = ${correduria.id}::uuid and estado in ('abierta', 'promovida')`)
     const fichas = [...new Set([...conTitular.map((t) => t.cliente_id), ...conSenales.map((s) => s.cliente_id)])]
 
-    const resumen: ResumenSenales = { estado: 'ok', ensayo, fichas: fichas.length, sinPermiso: 0, insertadas: 0, refrescadas: 0, resueltas: 0, retiradas: 0 }
+    const resumen: ResumenSenales = { estado: 'ok', ensayo, fichas: fichas.length, sinPermiso: 0, insertadas: 0, refrescadas: 0, resueltas: 0, retiradas: 0, purgadas: 0 }
 
     for (const fichaId of fichas) {
       const viva = await db.cliente.findFirst({ where: { id: fichaId, correduriaId: correduria.id, mergedIntoClienteId: null, activo: true }, select: { id: true } })
       const identidades = viva ? await identidadesDeFicha(correduria.id, fichaId) : []
-      const consentimientos = await consentimientosDe(identidades)
-      const permitido = viva !== null && puedeCalcularSenales({ interruptor: true, consentimientos })
+      const oposiciones = await oposicionesDe(identidades)
+      const permitido = viva !== null && puedeCalcularSenales({ interruptor: true, oposiciones })
       if (!permitido) resumen.sinPermiso++
 
       const existentes = (await db.$queryRaw<{ id: string; clave: string; estado: string; cerrada_en: Date | null }[]>(Prisma.sql`
@@ -333,8 +346,28 @@ export async function ejecutarSenalesPatrimonio(opts: { forzarContar?: boolean }
       resumen.retiradas += plan.retirar.length
       if (!ensayo) await aplicar(correduria.id, fichaId, plan, titularDe)
     }
+    resumen.purgadas = await purgarSenalesCaducadas(correduria.id, hoy, ensayo)
     return resumen
   })
+}
+
+/**
+ * Retención (`MESES_RETENCION_SENALES`, regla pura `debePurgarseSenal`, este SQL es su espejo): se BORRAN las señales
+ * cerradas antes del corte y las vivas cuya última actualización es anterior al corte. `prisma_seguros` tiene DELETE sobre
+ * la tabla (privilegios por defecto del schema; el portal NO lo tiene, ni se le da). Sin fecha → no se borra (no ocurre: el
+ * CHECK `portal_patrimonio_senal_cierre` y el `NOT NULL` de `ultima_vez_en` lo impiden). En ensayo solo cuenta.
+ */
+async function purgarSenalesCaducadas(correduriaId: string, hoy: string, ensayo: boolean): Promise<number> {
+  const corte = corteRetencionSenales(hoy)
+  const caducada = Prisma.sql`correduria_id = ${correduriaId}::uuid and (
+      (cerrada_en is not null and (cerrada_en at time zone 'Europe/Madrid')::date < ${corte}::date)
+      or (cerrada_en is null and (ultima_vez_en at time zone 'Europe/Madrid')::date < ${corte}::date))`
+  const db = prismaAsegura()
+  if (ensayo) {
+    const r = await db.$queryRaw<{ n: number }[]>(Prisma.sql`select count(*)::int as n from portal_patrimonio_senal where ${caducada}`)
+    return r[0]?.n ?? 0
+  }
+  return db.$executeRaw(Prisma.sql`delete from portal_patrimonio_senal where ${caducada}`)
 }
 
 // ─── La cola para /correduria ──────────────────────────────────────────────────────────────────────────────────
@@ -382,7 +415,9 @@ export async function colaSenalesPatrimonio(): Promise<ColaSenales> {
     for (const f of fichas) {
       const identidades = await identidadesDeFicha(correduria.id, f)
       const peticion = await peticionAbierta(correduria.id, f)
-      permisoPorFicha.set(f, permisoContacto({ peticionAbierta: peticion, consentimientos: await consentimientosDe(identidades) }))
+      permisoPorFicha.set(f, permisoContacto({
+        peticionAbierta: peticion, oposiciones: await oposicionesDe(identidades), comerciales: await comercialesDe(identidades),
+      }))
     }
     const senales: SenalCola[] = []
     for (const f of filas) {

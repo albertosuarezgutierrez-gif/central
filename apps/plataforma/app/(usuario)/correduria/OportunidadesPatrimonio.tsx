@@ -1,7 +1,7 @@
 'use client'
 
-// «Hoy» → cola «Patrimonio» (P16, 26/10/2026). Señales calculadas sobre los inmuebles de clientes que han dado
-// `comercial_patrimonio`. Spec: docs/superpowers/specs/2026-10-24-portal-inicio-herramientas-oportunidades.md §3.5.
+// «Hoy» → cola «Patrimonio» (P16, 26/10/2026). Señales calculadas sobre los inmuebles de clientes con patrimonio que NO se
+// han opuesto (interés legítimo informado; los opuestos no salen). Spec: docs/superpowers/specs/2026-10-24-portal-inicio-herramientas-oportunidades.md §3.5.
 //
 // 🚨 Una señal NO es una oportunidad ni autoriza contacto: esta cola NO envía nada a nadie. Tres estados que no se
 // colapsan: APAGADO (el motor no corre: se dice, no se pinta «0»), vacío de verdad y error de lectura.
@@ -85,13 +85,13 @@ export default function OportunidadesPatrimonio() {
   return (
     <Bloque
       titulo={senales.length > 0 ? `Patrimonio · ${senales.length} señal(es)` : 'Patrimonio · sin señales'}
-      sub="Inmuebles de clientes que han pedido o consentido la revisión. Una señal no es una oportunidad ni autoriza a contactar: decide tú, envío a envío."
+      sub="Inmuebles de clientes que no se han opuesto a la revisión. Una señal no es una oportunidad ni autoriza a contactar: decide tú, envío a envío."
       Icono={Building2}
       tono={senales.length > 0 ? 'aviso' : 'neutral'}
     >
       {aviso && <p style={{ ...pMuted, marginBottom: 8 }} aria-live="polite">{aviso}</p>}
       {senales.length === 0 ? (
-        <p style={pMuted}>No hay señales abiertas de clientes con permiso.</p>
+        <p style={pMuted}>No hay señales abiertas.</p>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
