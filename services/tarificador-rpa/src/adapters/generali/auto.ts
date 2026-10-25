@@ -202,8 +202,13 @@ export const GENERALI_AUTO_ACTIVO = true
  * salía «sin controles visibles». Ahora un marco que cambia de URL cuenta como abierto (rama=marco), la espera es de 15 s, si el marco abierto no trae
  * buscador se pulsa UNA vez la pestaña «Selección personas…» (por `ctx.pulsar`; nunca «Confirmar» ni «Alta») y el diagnóstico lista TODOS los marcos
  * (URL sin query, nombre, nº de controles) y los controles de los abiertos. Se escanean marcos anidados y ventanas nuevas del contexto.
+ * 0.2.24 (25/10/2026, prueba real con 0.2.23): se pulsó la pestaña «Selección personas…» y el marco `emiAutosGenB028.do` sigue con 23 controles SIN «Buscar»
+ * (tipo de documento, NIF, nombre, apellidos, sexo, fechas, permiso, nacionalidad, email, móvil, «Cancelar», «Confirmar» y 3 enlaces sin texto: posibles iconos).
+ * El recorrido no basta para ver el patrón real. Esta versión (1) reconoce botones-imagen/enlaces-icono con title/alt/aria-label «Buscar/Consultar/lupa»,
+ * (2) vuelca en el atasco, primero lo pulsable (rótulo, title/alt, imagen, función del onclick, clase del enlace y de su contenedor) y las cabeceras de tabla,
+ * y (3) anota cuántos controles había antes y después de pulsar la pestaña. «Confirmar»/«Alta» siguen sin pulsarse nunca.
  */
-export const VERSION_GENERALI_AUTO = '0.2.23'
+export const VERSION_GENERALI_AUTO = '0.2.24'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -1641,26 +1646,33 @@ export async function rellenarInteresadoGenerali(marco: Raiz, form: Parameters<t
 const JS_CONTROLES_ABIERTO = `(() => {
   const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
   const out = [];
-  document.querySelectorAll('input,select,textarea,button,a').forEach((e) => {
+  document.querySelectorAll('input,select,textarea,button,a,img[onclick],th').forEach((e) => {
     if (!vis(e)) return;
     const tag = e.tagName.toLowerCase();
-    const tipo = tag === 'select' || tag === 'textarea' ? tag : (e.getAttribute('type') || (tag === 'input' ? 'text' : tag)).toLowerCase();
+    if (tag === 'th') { out.push({ tag: 'th', tipo: 'th', id: '', rotulo: String(e.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 30), ro: false }); return; }
+    const tipo = tag === 'select' || tag === 'textarea' || tag === 'img' ? tag : (e.getAttribute('type') || (tag === 'input' ? 'text' : tag)).toLowerCase();
     if (tipo === 'hidden') return;
-    const boton = tag === 'button' || tag === 'a' || ['button', 'submit', 'image', 'reset'].indexOf(tipo) > -1;
+    const boton = tag === 'button' || tag === 'a' || tag === 'img' || ['button', 'submit', 'image', 'reset'].indexOf(tipo) > -1;
     const enCelda = !!e.closest('td');
     let rot = '';
+    let extra = '';
     if (!enCelda) {
-      if (boton) rot = e.value || e.textContent || e.title || '';
-      else { const l = e.labels && e.labels[0]; rot = (l ? l.textContent : '') || e.getAttribute('placeholder') || e.title || ''; }
+      if (boton) {
+        const im = e.querySelector ? e.querySelector('img') : null;
+        rot = e.value || e.textContent || e.title || e.getAttribute('alt') || e.getAttribute('aria-label') || (im ? (im.getAttribute('alt') || im.title || '') : '') || '';
+        const oc = String(e.getAttribute('onclick') || '').replace(/\\s+/g, ' ').trim();
+        const fn = oc.match(/[A-Za-z_$][\\w$]*\\(/);
+        extra = tag === 'input' ? '' : (e.title ? 't=' + String(e.title).slice(0, 25) + ' ' : '') + (im ? 'img ' : '') + (fn ? 'oc=' + fn[0] + ' ' : '') + (tag === 'a' && e.className ? 'c=' + String(e.className).slice(0, 25) + ' ' : '') + (tag === 'a' && e.parentElement && e.parentElement.className ? 'pc=' + String(e.parentElement.className).slice(0, 20) : '');
+      } else { const l = e.labels && e.labels[0]; rot = (l ? l.textContent : '') || e.getAttribute('placeholder') || e.title || ''; }
     }
-    out.push({ tag: tag, tipo: tipo, id: String(e.id || '').slice(0, 60), rotulo: String(rot).replace(/\\s+/g, ' ').trim().slice(0, 40), ro: !!(e.disabled || e.readOnly) });
+    out.push({ tag: tag, tipo: tipo, id: String(e.id || '').slice(0, 60), rotulo: (String(rot).replace(/\\s+/g, ' ').trim() + (extra.trim() ? ' {' + extra.trim() + '}' : '')).slice(0, 90), ro: !!(e.disabled || e.readOnly) });
   });
   const filas = Array.from(document.querySelectorAll('tr')).filter((tr) => vis(tr) && tr.querySelector('td')).length;
-  return { controles: out.slice(0, 50), filas: filas };
+  return { controles: out.slice(0, 80), filas: filas };
 })()`
 
 const SEL_CAMPO_TEXTO = 'input:not([type]), input[type=text], input[type=search], input[type=number]'
-const SEL_ACCION = 'input[type=button], input[type=submit], button, a'
+const SEL_ACCION = 'input[type=button], input[type=submit], input[type=image], button, a, img[onclick]'
 const RE_DOCUMENTO_CAMPO = /nif|cif|docum|identif|\bdni\b|\bnie\b/i
 const RE_PERSONA_CAMPO = /nombre|apell/i
 const RE_DOC_PARECE = /^(?:[XYZ]?\d{7,8}[A-Z]|[A-Z]\d{7}[A-Z0-9])$/
@@ -1678,7 +1690,7 @@ type FilaPersonas = { loc: Locator; celdas: string[]; controles: string[]; oncli
 const paginaDe = (r: Raiz): Page => (typeof (r as Frame).page === 'function' ? (r as Frame).page() : (r as Page))
 
 async function rotuloDe(l: Locator): Promise<string> {
-  return normalizarRotuloGenerali(await l.evaluate((e) => (e as HTMLInputElement).value || e.textContent || e.getAttribute('title') || '').catch(() => ''))
+  return normalizarRotuloGenerali(await l.evaluate((e) => (e as HTMLInputElement).value || e.textContent || e.getAttribute('title') || e.getAttribute('alt') || e.getAttribute('aria-label') || (e.querySelector('img')?.getAttribute('alt') ?? '') || (e.querySelector('img')?.getAttribute('title') ?? '') || '').catch(() => ''))
 }
 
 /** ¿Hay un buscador (UN campo de documento editable ajeno al interesado + UN botón Buscar/Consultar) o una pantalla de ALTA? Solo lee. */
@@ -1740,8 +1752,9 @@ async function inventarioPersonas(raices: readonly RaizAbierta[]): Promise<strin
   if (leidos.length === 0) return 'sin marcos'
   const indice = indiceMarcosGenerali(leidos.map((x) => ({ rama: x.r.rama, url: x.r.marco.url(), nombre: x.r.marco.name() || null, controles: x.controles.length })))
   const nuevas = leidos.filter((x) => x.r.nuevo && !/vimeo/i.test(x.r.marco.url()))
-  const detalle = (nuevas.length > 0 ? nuevas : leidos.filter((x) => x.controles.length > 0 && !/vimeo/i.test(x.r.marco.url())).slice(0, 1)).slice(0, 3)
-  const partes = detalle.map((x) => `[${x.r.rama}] ${resumenControlesAbiertoGenerali(x.controles, x.filas, Math.floor(650 / detalle.length))}`)
+  const conControles = nuevas.filter((x) => x.controles.length > 0)
+  const detalle = (conControles.length > 0 ? conControles : nuevas.length > 0 ? nuevas : leidos.filter((x) => x.controles.length > 0 && !/vimeo/i.test(x.r.marco.url())).slice(0, 1)).slice(0, 2)
+  const partes = detalle.map((x) => `[${x.r.rama}] ${resumenControlesAbiertoGenerali(x.controles, x.filas, Math.floor(1200 / detalle.length))}`)
   return `marcos: ${indice} | ${partes.join(' | ') || 'sin controles visibles'}`
 }
 
@@ -1836,6 +1849,8 @@ export async function elegirPersonaTomadorGenerali(
   let finAbrir = Date.now() + (esperas.abrirMs ?? ESPERA_ABRIR_PERSONAS_MS)
   const cargadas = new Set<Page>()
   let tabPulsada = false
+  let tabMarco: Frame | null = null
+  let tabAntes = 0
   let raices: RaizAbierta[] = []
   const donde: { h: Hallazgo | null } = { h: null }
   for (;;) {
@@ -1853,6 +1868,8 @@ export async function elegirPersonaTomadorGenerali(
         const tab = await pestanaSeleccionPersonas(r.marco)
         if (!tab) continue
         tabPulsada = true
+        tabMarco = r.marco
+        tabAntes = ((await r.marco.evaluate(JS_CONTROLES_ABIERTO).catch(() => null)) as { controles: unknown[] } | null)?.controles.length ?? 0
         await ctx.pulsar(tab)
         finAbrir = Date.now() + (esperas.abrirMs ?? ESPERA_ABRIR_PERSONAS_MS)
         break
@@ -1863,7 +1880,7 @@ export async function elegirPersonaTomadorGenerali(
   }
   const inv = await inventarioPersonas(raices)
   const hallazgo = donde.h
-  if (!hallazgo) return parar('se pulsó «Personas» y no se encontró un buscador con campo de documento y botón «Buscar/Consultar»', `rama=${raices.find((r) => r.nuevo)?.rama ?? 'nada_nuevo'}, sin_buscador${tabPulsada ? ', pestaña_seleccion_pulsada' : ''}`, `controles: ${inv}`)
+  if (!hallazgo) return parar('se pulsó «Personas» y no se encontró un buscador con campo de documento y botón «Buscar/Consultar»', `rama=${raices.find((r) => r.nuevo)?.rama ?? 'nada_nuevo'}, sin_buscador${tabPulsada ? ', pestaña_seleccion_pulsada' : ''}`, ...(tabMarco ? [`pestaña: controles ${tabAntes}→${((await tabMarco.evaluate(JS_CONTROLES_ABIERTO).catch(() => null)) as { controles: unknown[] } | null)?.controles.length ?? '?'}`] : []), `controles: ${inv}`)
   if (hallazgo.tipo === 'alta') return parar('«Personas» abrió una pantalla de ALTA de persona, no un buscador', `rama=${hallazgo.rama}, alta`, `controles: ${inv}`)
 
   // 2. Buscar el NIF del tomador.

@@ -18,7 +18,7 @@ const ESPERAS = { abrirMs: 4_000, resultadosMs: 2_500, vueltaMs: 2_000 }
 const BASE = 'https://www.generali.es/emi_genAutosFormWeb/'
 const PORTAL = 'https://www.generali.es/arq_genernetPortalFormWeb/CorredorPortal.po?mediatorCode=' + MEDIADOR_GENERALI
 
-test('v0.2.23 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.23'))
+test('v0.2.23 · versión (vigente 0.2.24)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.24'))
 
 test('v0.2.23 · puras: URL sin datos, pestaña y índice de marcos', () => {
   assert.equal(urlSinDatosGenerali('https://www.generali.es/mot_motorWeb/mvc/selVehiculo;jsessionid=ABC123:1x?nif=00000000T#x'), 'www.generali.es/mot_motorWeb/mvc/selVehiculo')
@@ -30,7 +30,7 @@ test('v0.2.23 · puras: URL sin datos, pestaña y índice de marcos', () => {
     { rama: 'marco', url: `https://www.generali.es/x.do?n=${NIF}`, nombre: 'mainFrame', controles: 13 },
     { rama: 'capa', url: 'https://player.vimeo.com/video/1', nombre: 'video0', controles: 9 },
   ])
-  assert.match(i, /marco www\.generali\.es\/x\.do#mainFrame \(13\)/)
+  assert.match(i, /marco x\.do#mainFrame \(13\)/)
   assert.ok(!i.includes(NIF) && !/vimeo/.test(i))
 })
 
@@ -139,7 +139,7 @@ test('v0.2.23 · sin buscador ni pestaña: atasco que lista los marcos (URL sin 
         const m = (e as Error).message
         assert.match(m, /no se encontró un buscador/)
         assert.match(m, /rama=marco, sin_buscador/)
-        assert.match(m, /marcos: .*www\.generali\.es\/emi_genAutosFormWeb\/Datos\.do#mainFrame \(\d+\)/)
+        assert.match(m, /marcos: .*emi_genAutosFormWeb\/Datos\.do#mainFrame \(\d+\)/)
         assert.match(m, /input\/text#personas_intere_nifcif/)
         assert.match(m, /input\/button#confirmar «Confirmar»/)
         assert.doesNotMatch(m, /sin controles visibles/)

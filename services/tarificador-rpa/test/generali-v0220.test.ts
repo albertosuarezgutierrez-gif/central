@@ -20,7 +20,7 @@ import type { ContextoPortal } from '../src/adaptador.ts'
 const P = 'reg1063A_personas_'
 const ctl = (sufijo: string, extra: Partial<ControlPersonasGenerali> = {}): ControlPersonasGenerali => ({ id: `${P}${sufijo}`, tag: 'input', tipo: 'text', visible: true, habilitado: true, editable: true, vacio: true, ...extra })
 
-test('v0.2.20 · versión (vigente 0.2.23)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.23'))
+test('v0.2.20 · versión (vigente 0.2.24)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.24'))
 
 test('v0.2.20 · motivo por campo', () => {
   const base = { existe: true, visible: true, habilitado: true, editable: true, vacio: true }
