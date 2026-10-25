@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-25T18:35:49Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-25T19:00:57Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1793 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1797 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-identity, core-push, core-telegram, module-documental, module-patrimonio, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** Facturación / VeriFactu, Escáner / OCR, Notificaciones (push)
 - **Tablas (50):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_aviso_cima, seguros.portal_aviso_leido, seguros.portal_aviso_silenciado, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_invitacion_enlace, seguros.portal_invitacion_enlace_uso, seguros.portal_mensaje, seguros.portal_modulo, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_patrimonio_aviso_inquilino, seguros.portal_patrimonio_comunidad, seguros.portal_patrimonio_contrato, seguros.portal_patrimonio_contrato_inquilino, seguros.portal_patrimonio_derrama, seguros.portal_patrimonio_documento, seguros.portal_patrimonio_enlace_inquilino, seguros.portal_patrimonio_gasto, seguros.portal_patrimonio_importacion…
-- **Rutas API:** 94
+- **Rutas API:** 98
 ### asegura-web
 - **Módulos que usa:** core-consent, module-seguros, module-seguros-portal
 - **Capacidades:** —
