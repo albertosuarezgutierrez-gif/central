@@ -1,25 +1,26 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-24T09:18:55.402Z",
- "llamadas": 12595,
+ "fin": "2026-10-25T07:26:09.093Z",
+ "llamadas": 12603,
  "categorias": {
   "otro": {
-   "llamadas": 1509,
-   "chars_in": 185999,
-   "chars_out": 10854919,
+   "llamadas": 1511,
+   "chars_in": 186264,
+   "chars_out": 10855609,
    "errores": 0,
    "archivos_citados": 61,
    "chars_citados": 9364356,
    "tools": {
     "ToolSearch": 315,
     "SubagentHandback": 10,
-    "SendMessage": 66,
+    "SendMessage": 67,
     "ReadNotifications": 870,
     "Monitor": 232,
     "AskUserQuestion": 8,
     "TaskStop": 2,
-    "WebSearch": 6
+    "WebSearch": 6,
+    "ListAgents": 1
    }
   },
   "agente:rastreador-codigo": {
@@ -80,14 +81,14 @@
    }
   },
   "bash": {
-   "llamadas": 6932,
-   "chars_in": 5063673,
-   "chars_out": 21042416,
+   "llamadas": 6938,
+   "chars_in": 5075071,
+   "chars_out": 21047188,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 6932
+    "Bash": 6938
    }
   },
   "mcp:Vercel": {
