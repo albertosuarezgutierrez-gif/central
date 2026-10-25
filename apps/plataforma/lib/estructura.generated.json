@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-25T19:44:56Z",
+  "generadoEn": "2026-10-25T20:31:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 64
+        "evidencias": 63
       },
       "asegura-web": {
         "estado": "no",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 301
+        "evidencias": 302
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 163
+        "evidencias": 164
       },
       "asegura-web": {
         "estado": "usado",
@@ -4461,7 +4461,6 @@
       "/api/configuracion/avisos",
       "/api/configuracion/bienvenida",
       "/api/consentimiento",
-      "/api/consentimiento-patrimonio",
       "/api/contacto-compania/[compania]",
       "/api/cron/avisos-cima",
       "/api/cron/avisos-push",
@@ -4498,6 +4497,7 @@
       "/api/mis-datos/cuenta",
       "/api/mis-datos/cuenta/codigo",
       "/api/modulos",
+      "/api/oposicion-senales-patrimonio",
       "/api/patrimonio/codigo-postal",
       "/api/patrimonio/comunidades",
       "/api/patrimonio/contratos",

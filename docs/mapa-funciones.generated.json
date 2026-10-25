@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-25T19:44:56Z",
-  "sha": "6b6421935ae83e4ef9e786c5d1fe0c87762f68bb",
+  "generadoEn": "2026-10-25T20:31:45Z",
+  "sha": "02a4fb53b0c609eb39bdb799a37bd2048eb2e4f3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5670,6 +5670,27 @@
       "hash": "49122b06510b"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/configuracion/OposicionSenalesPatrimonio.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "OposicionSenalesPatrimonio"
+      ],
+      "funciones": [
+        {
+          "nombre": "OposicionSenalesPatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inicial, conAviso = false }: { inicial: boolean | null; conAviso?: boolean }",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "la casilla «No quiero…» solo nace marcada si CONSTA la oposición (`useState(inicial === true)`); retirar es el mismo control, sin confirmaciones; si el guardado falla vuelve a como estaba y lo dice."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "507890ce6af8"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/configuracion/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5682,7 +5703,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 23,
+          "linea": 26,
           "resumen": "«Configuración» (13/10/2026, fase A): los avisos y lo que has consentido. · Avisos: el interruptor de ESTE dispositivo (`ActivarPush`), qué novedades avisar (`PreferenciasAvisos`, antes en la campana)"
         },
         {
@@ -5691,7 +5712,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 71
+          "linea": 82
         },
         {
           "nombre": "Consentimientos",
@@ -5699,13 +5720,13 @@
           "exportada": false,
           "params": "{ filas }: { filas: ConsentimientoListado[] | null }",
           "retorno": null,
-          "linea": 83,
+          "linea": 94,
           "resumen": "`null` = no se han podido leer (se dice); `[]` = no consta ninguno (también se dice, distinto)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e1d0703fbd7"
+      "hash": "7ea37fb24a4f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/FlotaEmpresa.tsx",
@@ -6068,27 +6089,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "aa2561add9da"
-    },
-    {
-      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/ConsentimientoPatrimonio.tsx",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "ConsentimientoPatrimonio"
-      ],
-      "funciones": [
-        {
-          "nombre": "ConsentimientoPatrimonio",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ inicial }: { inicial: boolean | null }",
-          "retorno": null,
-          "linea": 14,
-          "resumen": "Aviso + casilla de la revisión de seguros de los inmuebles (P15, BORRADOR 26/10/2026). Solo se monta con `PATRIMONIO_SENALES_ACTIVAS=1` (la página decide). Texto: docs/legal/2026-10-26-borrador-p15-pa"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "1aac14957d38"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/contrato/[id]/ContratoAcciones.tsx",
@@ -6862,13 +6862,13 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<ParametrosAlta> }",
           "retorno": null,
-          "linea": 23,
+          "linea": 22,
           "resumen": "«Patrimonio» (Fase 1, 22/10/2026): los inmuebles por titular. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `patrimonioDeIdentidad`): se ven SOLO los titulares a los que esta sesión tiene acceso. "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e988c0185df"
+      "hash": "4ad1f13ce941"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/fiscal/page.tsx",
@@ -7108,7 +7108,7 @@
           "exportada": false,
           "params": "destino: string, enlace: string",
           "retorno": "Promise<",
-          "linea": 34,
+          "linea": 33,
           "resumen": "`null` = vale; si no, el error que se devuelve (401). Un solo mensaje para «no existe» y «no es tu correo»."
         },
         {
@@ -7117,7 +7117,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 55
+          "linea": 54
         },
         {
           "nombre": "abrirSesion",
@@ -7125,7 +7125,7 @@
           "exportada": false,
           "params": "req: Request, tipo: 'whatsapp' | 'email', destino: string, valorHash: string, codigoId: string | null, irA: string",
           "retorno": null,
-          "linea": 121,
+          "linea": 120,
           "resumen": "Lo común a los dos canjes (código o enlace directo), ya validados: identidad, acreditación del art. 173 RDL 3/2020, rastro del acceso, vínculo con la ficha, aviso de primer acceso y sesión. `codigoId`"
         }
       ],
@@ -7134,7 +7134,7 @@
         "zod"
       ],
       "rutaApi": "/api/acceso/verificar",
-      "hash": "0173970f6bb9"
+      "hash": "f60cdd9e580b"
     },
     {
       "ruta": "apps/asegura-portal/app/api/anulacion/route.ts",
@@ -7415,27 +7415,6 @@
       "tablas": [],
       "rutaApi": "/api/configuracion/bienvenida",
       "hash": "8e625a2642b0"
-    },
-    {
-      "ruta": "apps/asegura-portal/app/api/consentimiento-patrimonio/route.ts",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "POST"
-      ],
-      "funciones": [
-        {
-          "nombre": "POST",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: Request",
-          "retorno": null,
-          "linea": 30,
-          "resumen": "La casilla `comercial_patrimonio` (P15, BORRADOR, 26/10/2026), en las dos direcciones: dar y retirar. 🚨 Con `PATRIMONIO_SENALES_ACTIVAS` apagado esta ruta NO EXISTE (404 antes de mirar la sesión, el "
-        }
-      ],
-      "tablas": [],
-      "rutaApi": "/api/consentimiento-patrimonio",
-      "hash": "a838c112262c"
     },
     {
       "ruta": "apps/asegura-portal/app/api/consentimiento/route.ts",
@@ -8317,6 +8296,27 @@
       "tablas": [],
       "rutaApi": "/api/modulos",
       "hash": "0be3a1c10b80"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/oposicion-senales-patrimonio/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 32,
+          "resumen": "Derecho de OPOSICIÓN (art. 21 RGPD) a la revisión de los seguros de los inmuebles (P15 publicado, 26/10/2026; base: interés legítimo informado). En las dos direcciones: `{ opuesto: true }` = me opongo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/oposicion-senales-patrimonio",
+      "hash": "34045baa276f"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/codigo-postal/route.ts",
@@ -10509,13 +10509,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24,
+          "linea": 22,
           "resumen": "Condiciones de uso del portal. La mitad del valor de esta página está en el apartado «lo que este portal NO hace». Un asegurado que cree haber dado el parte porque lo escribió aquí, y no lo ha comunic"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53596241e927"
+      "hash": "98b35d3395a0"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/cookies/page.tsx",
@@ -10530,13 +10530,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 29,
+          "linea": 27,
           "resumen": "Aviso de cookies del portal. 🚨 Esta página dice que hay UNA cookie. Es verdad hoy —`asegura_portal_session` es la única que se emite, y no hay ningún script de terceros en el `<head>`— y por eso NO h"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ef631b063278"
+      "hash": "f7ad86b6f61b"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/layout.tsx",
@@ -10572,18 +10572,17 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 29,
+          "linea": 27,
           "resumen": "Información precontractual del mediador (art. 173 RDL 3/2020). Es OBLIGATORIA y tiene que estar disponible antes de que el cliente entregue ningún dato, así que esta página vive fuera de la sesión: si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4a9aa972c99e"
+      "hash": "1d707ac672dc"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/privacidad/ApartadoSenalesPatrimonio.tsx",
       "ambito": "apps/asegura-portal",
-      "resumen": "Apartado de la política de privacidad sobre la revisión de seguros de los inmuebles (P15, BORRADOR 26/10/2026). Solo se pinta con `PATRIMONIO_SENALES_ACTIVAS=1` (lo decide `page.tsx`) y entra con `VERSION_TEXTOS_LEGALES_PATRIMONIO`. Texto y notas para Alberto: docs/legal/2026-10-26-borrador-p15-patr",
       "exporta": [
         "ApartadoSenalesPatrimonio"
       ],
@@ -10594,13 +10593,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 13,
-          "resumen": "Apartado de la política de privacidad sobre la revisión de seguros de los inmuebles (P15, BORRADOR 26/10/2026). Solo se pinta con `PATRIMONIO_SENALES_ACTIVAS=1` (lo decide `page.tsx`) y entra con `VER"
+          "linea": 18,
+          "resumen": "Apartado de la política de privacidad sobre la revisión de seguros de los inmuebles (P15, PUBLICADO 26/10/2026). Variante «interés legítimo informado» (decisión de Alberto). Entra con `VERSION_TEXTOS_"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1b36512de4a"
+      "hash": "157b41f8de36"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/privacidad/page.tsx",
@@ -10615,13 +10614,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 42,
+          "linea": 40,
           "resumen": "Política de privacidad DEL PORTAL. No es la de la web pública ni una copia de ella: describe lo que hace ESTA aplicación, que trata cosas que la web no (documentos que el asegurado sube y que lee un m"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "59e9bb5b00e9"
+      "hash": "a240c0930bc6"
     },
     {
       "ruta": "apps/asegura-portal/app/manifest.ts",
@@ -12800,27 +12799,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9c3cbe040857"
-    },
-    {
-      "ruta": "apps/asegura-portal/lib/consentimiento-patrimonio.ts",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "consentimientoPatrimonioVigente"
-      ],
-      "funciones": [
-        {
-          "nombre": "consentimientoPatrimonioVigente",
-          "kind": "function",
-          "exportada": true,
-          "params": "identidadId: string",
-          "retorno": "Promise<boolean | null>",
-          "linea": 11,
-          "resumen": "Estado VIGENTE de `comercial_patrimonio` de esta identidad (última fila sobre la versión actual del texto). `null` = nunca se le ha preguntado, o su última fila es de otra versión del texto: la casill"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "7a8abc1a4e0e"
     },
     {
       "ruta": "apps/asegura-portal/lib/contactos-propios.ts",
@@ -15823,6 +15801,27 @@
       "hash": "9927fe78322d"
     },
     {
+      "ruta": "apps/asegura-portal/lib/oposicion-senales.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "oposicionSenalesVigente"
+      ],
+      "funciones": [
+        {
+          "nombre": "oposicionSenalesVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<boolean | null>",
+          "linea": 11,
+          "resumen": "Oposición VIGENTE a la revisión de los seguros de los inmuebles (`oposicion_senales_patrimonio`, P15 publicado, 26/10/2026): `true` = se ha opuesto · `false` = se opuso y lo retiró · `null` = nunca se"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "95a7252d8f34"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/parte-borrador.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "Borrador del parte de siniestro, guardado en ESTE dispositivo. Quien da un parte lo hace con prisa y desde el móvil: una llamada, la app que se cierra, la batería. Sin borrador, lo escrito se pierde y hay que empezar de cero justo en el peor momento. 🚨 Tres decisiones que no se tocan sin pensarlo: ",
@@ -16098,27 +16097,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b06dcc7a2890"
-    },
-    {
-      "ruta": "apps/asegura-portal/lib/patrimonio-senales-activas.ts",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "senalesActivas"
-      ],
-      "funciones": [
-        {
-          "nombre": "senalesActivas",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": "boolean",
-          "linea": 9,
-          "resumen": "Interruptor de las «señales de patrimonio» (P15/P16, 26/10/2026). APAGADO por defecto: solo `PATRIMONIO_SENALES_ACTIVAS=1` enciende. Apagado, el portal NO enseña la casilla `comercial_patrimonio`, ni "
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "f0102fb6d4dc"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/accesos.ts",
@@ -21243,7 +21221,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 55,
+          "linea": 53,
           "resumen": "Normaliza el motivo que escribe la persona. La cadena vacía se convierte en `null` a propósito: `''` es el valor de cajón que se cuela por `IS NULL`, `??` y `COALESCE`, y dejaría al corredor leyendo «"
         },
         {
@@ -21252,7 +21230,7 @@
           "exportada": false,
           "params": "f: { id: string recibidaEn: Date estado: string prorrogadaEn: Date | null prorrogaMotivo: string | null resueltaEn: Date | null respuesta: string | null motivo: string | null }",
           "retorno": "SolicitudDelPortal",
-          "linea": 93
+          "linea": 91
         },
         {
           "nombre": "acuseDe",
@@ -21260,7 +21238,7 @@
           "exportada": false,
           "params": "s: SolicitudDelPortal",
           "retorno": "Acuse",
-          "linea": 138
+          "linea": 136
         },
         {
           "nombre": "registrarSupresion",
@@ -21268,7 +21246,7 @@
           "exportada": true,
           "params": "identidadId: string, entrada: { motivo?: string | null; ip?: string | null; userAgent?: string | null },",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 153,
+          "linea": 151,
           "resumen": "Registra la solicitud. **El instante que se guarda es el de ahora**, no el de cuando el corredor la abra: si el mes del art. 12.3 arrancara al mirarla, no mirarla nunca sería una forma de no incumplir"
         },
         {
@@ -21277,7 +21255,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<SolicitudDelPortal[]>",
-          "linea": 211,
+          "linea": 209,
           "resumen": "Lo que ve la persona en su pantalla: sus solicitudes, la más reciente primero."
         },
         {
@@ -21286,7 +21264,7 @@
           "exportada": true,
           "params": "identidadId: string, id: string",
           "retorno": "Promise<SolicitudDelPortal | null>",
-          "linea": 229,
+          "linea": 227,
           "resumen": "Retirarla. La retira QUIEN LA PIDIÓ, y **no se colapsa con «denegada»**: una dice «me he arrepentido» y la otra «me han dicho que no». Confundirlas borra el único rastro de quién decidió qué. No se bo"
         },
         {
@@ -21295,13 +21273,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SolicitudDelPortal[] | null>",
-          "linea": 246,
+          "linea": 244,
           "resumen": "Lo mismo, resolviendo la identidad **por la cookie** (`lib/session`), que es la puerta única del portal. Es la que usa la pantalla: así el `identidadId` no viaja nunca por un parámetro que alguien pue"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2df8c4cf34f6"
+      "hash": "0046e61fc7a0"
     },
     {
       "ruta": "apps/asegura-portal/lib/tabla-coberturas.ts",
@@ -24806,13 +24784,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 20,
+          "linea": 21,
           "resumen": "GET /api/cron/senales-patrimonio — el motor de señales de patrimonio (P16, 26/10/2026). Diario, 06:30 UTC (`vercel.json`). 🚨 APAGADO por defecto: sin `PATRIMONIO_SENALES_ACTIVAS=1` responde `{estado:"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/senales-patrimonio",
-      "hash": "a06ada535d38"
+      "hash": "7ac81d835209"
     },
     {
       "ruta": "apps/asegura/app/api/cron/siniestros-vinculo/route.ts",
@@ -51379,7 +51357,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "abrirPeticion",
@@ -51387,7 +51365,7 @@
           "exportada": false,
           "params": "correduriaId: string, a: Apertura",
           "retorno": "Promise<ResultadoPedirPrecio>",
-          "linea": 84
+          "linea": 85
         },
         {
           "nombre": "pedirPrecioPatrimonio",
@@ -51395,7 +51373,7 @@
           "exportada": true,
           "params": "correduriaId: string, d: PeticionPedirPrecio",
           "retorno": "Promise<ResultadoPedirPrecio>",
-          "linea": 137
+          "linea": 138
         },
         {
           "nombre": "compararExterna",
@@ -51403,7 +51381,7 @@
           "exportada": false,
           "params": "correduriaId: string, d: Extract<PeticionPedirPrecio, { tipo: 'comparar_externa' }>",
           "retorno": "Promise<ResultadoPedirPrecio>",
-          "linea": 145,
+          "linea": 146,
           "resumen": "Póliza DECLARADA por el cliente (de otra correduría): es de la identidad (`identidad_id`, no eliminada), no de la cartera. La ficha es la ÚNICA en la que la identidad puede operar; con varias no se ad"
         },
         {
@@ -51412,7 +51390,7 @@
           "exportada": false,
           "params": "correduriaId: string, d: Exclude<PeticionPedirPrecio, { tipo: 'comparar_externa' }>",
           "retorno": "Promise<ResultadoPedirPrecio>",
-          "linea": 168
+          "linea": 169
         },
         {
           "nombre": "peticionesPedirPrecioAbiertas",
@@ -51420,7 +51398,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string",
           "retorno": "Promise<PeticionInmuebleAbierta[] | 'sin_ficha'>",
-          "linea": 255,
+          "linea": 257,
           "resumen": "Las peticiones «Pedir precio» ABIERTAS de las fichas de esta identidad (25/10/2026), para que el portal no vuelva a ofrecer el botón y diga «Precio pedido el dd/mm». Solo lectura. La ficha sale de `po"
         }
       ],
@@ -51438,7 +51416,7 @@
         "portal_poliza_declarada"
       ],
       "rutaApi": null,
-      "hash": "19a7835f8344"
+      "hash": "8fca7a2e67b3"
     },
     {
       "ruta": "apps/asegura/lib/patrimonio-pedir-precio-reglas.ts",
@@ -51457,6 +51435,8 @@
         "aplicaHipoteca",
         "aplicaCompararExterna",
         "eurosEs",
+        "usoLegible",
+        "municipioDeDireccion",
         "textoTareaPrecioPatrimonio",
         "textoHistorialPedirPrecio",
         "identidadDeConsulta",
@@ -51469,7 +51449,7 @@
           "exportada": true,
           "params": "tipo: TipoPedirPrecio",
           "retorno": "string",
-          "linea": 34,
+          "linea": 36,
           "resumen": "`info_riesgo.origen` de la oportunidad: los tipos nuevos llevan `portal:patrimonio:<tipo>` (origen claro en /correduria)."
         },
         {
@@ -51478,7 +51458,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is string",
-          "linea": 44
+          "linea": 46
         },
         {
           "nombre": "validarPedirPrecio",
@@ -51486,7 +51466,7 @@
           "exportada": true,
           "params": "cuerpo: unknown",
           "retorno": "",
-          "linea": 46
+          "linea": 48
         },
         {
           "nombre": "objetoDePeticion",
@@ -51494,7 +51474,7 @@
           "exportada": true,
           "params": "d: PeticionPedirPrecio",
           "retorno": "",
-          "linea": 67,
+          "linea": 69,
           "resumen": "Qué objeto identifica la petición (idempotencia 120 días POR TIPO: el origen ya lleva el tipo en los nuevos)."
         },
         {
@@ -51503,7 +51483,7 @@
           "exportada": true,
           "params": "uso: string | null",
           "retorno": "'hogar' | 'comercio'",
-          "linea": 74,
+          "linea": 76,
           "resumen": "Ramo (`tipo_seguro`) que se pide según el uso del inmueble. Lo que no se sabe clasificar es `hogar` (lo revisa Alberto)."
         },
         {
@@ -51512,7 +51492,7 @@
           "exportada": true,
           "params": "tipo: TipoPedirPrecio, uso: string | null",
           "retorno": "RamoPedido",
-          "linea": 81,
+          "linea": 83,
           "resumen": "Ramo (`tipo_seguro`) de la petición: `comunidad` pide el ramo comunidades sea cual sea el uso del inmueble."
         },
         {
@@ -51521,7 +51501,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 86,
+          "linea": 88,
           "resumen": "¿Un ramo de póliza (texto libre de cartera o declarada) es de comunidad?"
         },
         {
@@ -51530,7 +51510,7 @@
           "exportada": true,
           "params": "x: { enComunidad: boolean | null; tipoCatastro: string | null; presidenteComunidad: boolean | null }",
           "retorno": "boolean",
-          "linea": 93,
+          "linea": 95,
           "resumen": "Asegura no se fía de lo que el portal dijo de la comunidad: el inmueble tiene que ser un piso en edificio (la persona lo marcó en comunidad o el Catastro lo dice) Y la persona haber marcado que es pre"
         },
         {
@@ -51539,7 +51519,7 @@
           "exportada": true,
           "params": "tipo: TipoPedirPrecio, vigencias: readonly (boolean | null)[]",
           "retorno": "boolean",
-          "linea": 103,
+          "linea": 105,
           "resumen": "¿Sigue habiendo un seguro en vigor enlazado? El portal ya lo comprobó, pero asegura no se fía: si hay una póliza confirmada en vigor, el inmueble NO está sin seguro y no se abre ninguna petición. `vig"
         },
         {
@@ -51548,7 +51528,7 @@
           "exportada": true,
           "params": "x: { terminadoEn: string | null; hoy: string }",
           "retorno": "boolean",
-          "linea": 109,
+          "linea": 111,
           "resumen": "Impago de alquiler: el contrato tiene que seguir vivo (sin `terminado_en` pasado). `hoy` y `terminadoEn` en `YYYY-MM-DD`."
         },
         {
@@ -51557,7 +51537,7 @@
           "exportada": true,
           "params": "hipoteca: string | null",
           "retorno": "boolean",
-          "linea": 114,
+          "linea": 116,
           "resumen": "Hipoteca: solo si el cliente dijo que SÍ la tiene. `no`, `no_se` y sin contestar (`null`) no abren nada."
         },
         {
@@ -51566,7 +51546,7 @@
           "exportada": true,
           "params": "vigente: boolean",
           "retorno": "boolean",
-          "linea": 122,
+          "linea": 124,
           "resumen": "Comparar una póliza de otra correduría: sirve con o sin vencimiento (el botón manual existe siempre). Solo se descarta la que el cliente ya marcó como no vigente o la ya vencida sin confirmar (`declar"
         },
         {
@@ -51575,7 +51555,7 @@
           "exportada": true,
           "params": "cent: number | null",
           "retorno": "string | null",
-          "linea": 127,
+          "linea": 129,
           "resumen": "`2.162,49€` (formato de la casa). `null` = no consta."
         },
         {
@@ -51584,7 +51564,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 133
+          "linea": 135
         },
         {
           "nombre": "limpia",
@@ -51592,16 +51572,34 @@
           "exportada": false,
           "params": "t: string, n: number",
           "retorno": null,
-          "linea": 141
+          "linea": 143
+        },
+        {
+          "nombre": "usoLegible",
+          "kind": "function",
+          "exportada": true,
+          "params": "uso: string | null",
+          "retorno": "string",
+          "linea": 150,
+          "resumen": "Tipo de inmueble en llano. Un uso fuera del catálogo o sin dato es «inmueble» (no se inventa uno)."
+        },
+        {
+          "nombre": "municipioDeDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion: string | null",
+          "retorno": "string | null",
+          "linea": 159,
+          "resumen": "Municipio sacado de `direccion_normalizada` («CL PARRA LA 12, 41003 SEVILLA (SEVILLA)», `componerDireccionNormalizada` del portal y `componerDireccion` de la importación). Solo si el último tramo llev"
         },
         {
           "nombre": "textoTareaPrecioPatrimonio",
           "kind": "function",
           "exportada": true,
-          "params": "x: { tipo: TipoPedirPrecio; alias: string; ramo: string; rentaCent?: number | null; compania?: string | null; vence?: string | null }",
+          "params": "x: { tipo: TipoPedirPrecio uso: string | null municipio: string | null ramo: string rentaCent?: number | null compania?: string | null vence?: string | null }",
           "retorno": "string",
-          "linea": 144,
-          "resumen": "Texto de la tarea: el alias que puso el cliente y el motivo. Sin dirección, ref. catastral ni nº de póliza."
+          "linea": 170,
+          "resumen": "Texto de la tarea: tipo de inmueble + municipio + tipo de petición. 🚨 SIN el alias del cliente, la dirección, la ref. catastral ni el nº de póliza (ver cabecera): quien la trabaja abre la ficha enlaz"
         },
         {
           "nombre": "textoHistorialPedirPrecio",
@@ -51609,7 +51607,7 @@
           "exportada": true,
           "params": "tipo: TipoPedirPrecio",
           "retorno": "string",
-          "linea": 165,
+          "linea": 199,
           "resumen": "Nota de la ficha (`historial_interno`) por tipo."
         },
         {
@@ -51618,7 +51616,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "string | null",
-          "linea": 178,
+          "linea": 212,
           "resumen": "`GET /api/portal/patrimonio/pedir-precio?identidadId=` (25/10/2026): solo la identidad, nada más. Un `clienteId` o un `inmuebleId` en la query se IGNORA: la ficha sale de `portal_vinculo` en asegura, "
         },
         {
@@ -51627,13 +51625,13 @@
           "exportada": true,
           "params": "x: { oportunidadId: string; inmuebleId?: string | null; tipo?: TipoPedirPrecio }",
           "retorno": "string",
-          "linea": 190,
+          "linea": 224,
           "resumen": "Telegram a Alberto: SOLO ids (sin nombre ni dirección)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "909359eda52d"
+      "hash": "3767ec00da1f"
     },
     {
       "ruta": "apps/asegura/lib/patrimonio-senales-gate.ts",
@@ -51682,7 +51680,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 53
+          "linea": 56
         },
         {
           "nombre": "hoyMadrid",
@@ -51690,7 +51688,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 54
+          "linea": 57
         },
         {
           "nombre": "dia",
@@ -51698,7 +51696,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 55
+          "linea": 58
         },
         {
           "nombre": "sinTildes",
@@ -51706,7 +51704,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": null,
-          "linea": 58,
+          "linea": 61,
           "resumen": "Espejo de `apps/asegura-portal/lib/patrimonio/capital-continente.ts` (un cepo compara las dos expresiones)."
         },
         {
@@ -51715,7 +51713,7 @@
           "exportada": false,
           "params": "ramo: string | null",
           "retorno": null,
-          "linea": 60
+          "linea": 63
         },
         {
           "nombre": "esImpago",
@@ -51723,7 +51721,7 @@
           "exportada": false,
           "params": "ramo: string | null",
           "retorno": null,
-          "linea": 61
+          "linea": 64
         },
         {
           "nombre": "identidadesDeFicha",
@@ -51731,17 +51729,26 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 77,
+          "linea": 82,
           "resumen": "Identidades que operan la ficha como propia: vínculos que operan (sin la vista de corredor) a la ficha y a su(s) Dueño(s)."
         },
         {
-          "nombre": "consentimientosDe",
+          "nombre": "oposicionesDe",
           "kind": "function",
           "exportada": false,
           "params": "identidades: readonly string[]",
           "retorno": "Promise<(boolean | null)[]>",
-          "linea": 92,
-          "resumen": "`comercial_patrimonio` vigente de cada identidad (`null` = nunca / otra versión del texto)."
+          "linea": 97,
+          "resumen": "Oposición vigente de cada identidad (`true` opuesta · `false` la retiró · `null` nunca). No depende de la versión del texto."
+        },
+        {
+          "nombre": "comercialesDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidades: readonly string[]",
+          "retorno": "Promise<(boolean | null)[]>",
+          "linea": 107,
+          "resumen": "Consentimiento `comercial` vigente (sobre la versión ACTUAL de su texto) de cada identidad: el permiso para CONTACTAR."
         },
         {
           "nombre": "capitalesDeCartera",
@@ -51749,7 +51756,7 @@
           "exportada": false,
           "params": "correduriaId: string, polizaIds: readonly string[]",
           "retorno": "Promise<Map<string, number | null>>",
-          "linea": 118,
+          "linea": 131,
           "resumen": "Capital de continente de las pólizas de CARTERA (`poliza_coberturas`): solo la cobertura que ES el continente y sin ambigüedad."
         },
         {
@@ -51758,7 +51765,7 @@
           "exportada": false,
           "params": "datosRamo: unknown",
           "retorno": "number | null",
-          "linea": 141
+          "linea": 154
         },
         {
           "nombre": "entradasDeFicha",
@@ -51766,7 +51773,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string, identidades: readonly string[], hoy: string,",
           "retorno": "Promise<",
-          "linea": 149,
+          "linea": 162,
           "resumen": "Las entradas del motor para UNA ficha. Solo lee tablas del titular, sus inmuebles, contratos (id y fin), enlaces y declaradas."
         },
         {
@@ -51775,7 +51782,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string, identidades: readonly string[]",
           "retorno": "Promise<DeclaradaParaSenal[]>",
-          "linea": 233
+          "linea": 246
         },
         {
           "nombre": "aplicar",
@@ -51783,7 +51790,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string, plan: ReturnType<typeof planificarSenales>, titularDe: Map<string, string>",
           "retorno": "Promise<void>",
-          "linea": 258
+          "linea": 271
         },
         {
           "nombre": "ejecutarSenalesPatrimonio",
@@ -51791,7 +51798,16 @@
           "exportada": true,
           "params": "opts: { forzarContar?: boolean } = {}",
           "retorno": "Promise<ResumenSenales | Apagado>",
-          "linea": 290
+          "linea": 303
+        },
+        {
+          "nombre": "purgarSenalesCaducadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, hoy: string, ensayo: boolean",
+          "retorno": "Promise<number>",
+          "linea": 360,
+          "resumen": "Retención (`MESES_RETENCION_SENALES`, regla pura `debePurgarseSenal`, este SQL es su espejo): se BORRAN las señales cerradas antes del corte y las vivas cuya última actualización es anterior al corte."
         },
         {
           "nombre": "colaSenalesPatrimonio",
@@ -51799,7 +51815,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<ColaSenales>",
-          "linea": 365,
+          "linea": 398,
           "resumen": "Las señales ABIERTAS para la cola «Patrimonio». Apagado: `{estado:'apagado'}` sin leer la BD (la pantalla lo dice). Las de permiso `opuesto` NO salen. El nombre de la ficha viene de `clientes.nombre` "
         },
         {
@@ -51808,7 +51824,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 406,
+          "linea": 441,
           "resumen": "¿Tiene la ficha una petición «Pedir precio» abierta del portal (origen `portal:patrimonio*`)?"
         },
         {
@@ -51817,7 +51833,7 @@
           "exportada": true,
           "params": "id: string, motivo: string, actor: string",
           "retorno": "Promise<ResultadoDescarte>",
-          "linea": 421,
+          "linea": 456,
           "resumen": "«Descartar» desde la cola. Arranca el reloj de 180 días. Solo una señal ABIERTA; el motivo es obligatorio."
         }
       ],
@@ -51833,7 +51849,7 @@
         "portal_poliza_declarada"
       ],
       "rutaApi": null,
-      "hash": "b2ffd21dabee"
+      "hash": "d357b4bb68de"
     },
     {
       "ruta": "apps/asegura/lib/personas-portal-entradas.ts",
@@ -52546,7 +52562,7 @@
           "exportada": false,
           "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string",
           "retorno": null,
-          "linea": 216,
+          "linea": 217,
           "resumen": "La ficha dueña del presupuesto para ESE acceso. Mismos desenlaces que `fichaPropiaDeRecurso`. 🚨 Con el token de una PERSONA DE CONTACTO (correo a un tercero, 21/10/2026) es `sin_permiso`: el token re"
         },
         {
@@ -52555,7 +52571,7 @@
           "exportada": false,
           "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string",
           "retorno": "Promise<Base>",
-          "linea": 224
+          "linea": 225
         },
         {
           "nombre": "datosDe",
@@ -52563,7 +52579,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "Extract<DatosCotizados,",
-          "linea": 245
+          "linea": 246
         },
         {
           "nombre": "cuentaDe",
@@ -52571,7 +52587,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, f: Fila",
           "retorno": "Promise<",
-          "linea": 269,
+          "linea": 270,
           "resumen": "La cuenta de la ficha; la de la póliza solo si es SUYA y está en vigor (si no, ni su máscara se enseña)."
         },
         {
@@ -52580,7 +52596,7 @@
           "exportada": true,
           "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string, entrada: EntradaCuenta | null = null,",
           "retorno": "Promise<ResultadoPreparar>",
-          "linea": 284,
+          "linea": 285,
           "resumen": "Lo que el cliente va a firmar con esa opción. No escribe nada."
         },
         {
@@ -52589,7 +52605,7 @@
           "exportada": false,
           "params": "email: string",
           "retorno": "string",
-          "linea": 309
+          "linea": 310
         },
         {
           "nombre": "pedirCodigoAceptacion",
@@ -52597,7 +52613,7 @@
           "exportada": true,
           "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string",
           "retorno": "Promise<ResultadoCodigo>",
-          "linea": 314
+          "linea": 315
         },
         {
           "nombre": "firmarAceptacion",
@@ -52605,7 +52621,7 @@
           "exportada": true,
           "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, opcionId: string, datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean cuenta: EntradaCuent",
           "retorno": "Promise<ResultadoFirma>",
-          "linea": 376
+          "linea": 377
         },
         {
           "nombre": "urlPlataforma",
@@ -52613,7 +52629,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 569
+          "linea": 570
         },
         {
           "nombre": "propio",
@@ -52621,7 +52637,7 @@
           "exportada": false,
           "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string",
           "retorno": "Promise<Propio |",
-          "linea": 579,
+          "linea": 580,
           "resumen": "El presupuesto, solo si es de la ficha de esta identidad. Mismo reparto que `base`, sin opción."
         },
         {
@@ -52630,7 +52646,7 @@
           "exportada": true,
           "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string",
           "retorno": "Promise<ResultadoDatos>",
-          "linea": 600,
+          "linea": 601,
           "resumen": "Los datos con los que se calculó el precio, para el bloque «Revisa tus datos». No escribe nada."
         },
         {
@@ -52639,7 +52655,7 @@
           "exportada": true,
           "params": "correduriaId: string, acceso: AccesoPortal, presupuestoId: string, textoCrudo: string,",
           "retorno": "Promise<ResultadoReporte>",
-          "linea": 632,
+          "linea": 633,
           "resumen": "«Hay un dato que no es correcto»: queda en `presupuesto_evento` (append-only; con él la firma desde el portal queda cerrada, ver `datosDe`) y en el historial interno de la ficha. El aviso a Alberto lo"
         }
       ],
@@ -52659,7 +52675,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "29f99be2d2fc"
+      "hash": "2fee056bd0a8"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-actividad-servicio.ts",
@@ -117999,7 +118015,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb2e84f51b0e"
+      "hash": "c7b2f4402a4f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/page.tsx",
@@ -213741,7 +213757,7 @@
     {
       "ruta": "packages/module-patrimonio/src/senales.ts",
       "ambito": "packages/module-patrimonio",
-      "resumen": "MOTOR DE SEÑALES de patrimonio (P16, 26/10/2026) — PURO, sin BD, red ni reloj (`hoy` se inyecta). Spec: docs/superpowers/specs/2026-10-24-portal-inicio-herramientas-oportunidades.md §3. Borrador legal: docs/legal/2026-10-26-borrador-p15-patrimonio.md. 🚨 APAGADO POR DEFECTO. Nada de esto se calcula,",
+      "resumen": "MOTOR DE SEÑALES de patrimonio (P16, 26/10/2026) — PURO, sin BD, red ni reloj (`hoy` se inyecta). Spec: docs/superpowers/specs/2026-10-24-portal-inicio-herramientas-oportunidades.md §3. Borrador legal: docs/legal/2026-10-26-borrador-p15-patrimonio.md. 🚨 APAGADO POR DEFECTO. Nada de esto se calcula ",
       "exporta": [
         "patrimonioSenalesActivas",
         "esTipoSenal",
@@ -213751,6 +213767,8 @@
         "calcularSenales",
         "permisoContacto",
         "puedeCalcularSenales",
+        "corteRetencionSenales",
+        "debePurgarseSenal",
         "puedeRecrearseTrasCierre",
         "planificarSenales"
       ],
@@ -213761,7 +213779,7 @@
           "exportada": true,
           "params": "valor: string | null | undefined",
           "retorno": "boolean",
-          "linea": 22,
+          "linea": 24,
           "resumen": "Solo el valor exacto `1` enciende. Vacío, `true`, `on`, espacios… = apagado (fail-closed)."
         },
         {
@@ -213770,7 +213788,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is TipoSenal",
-          "linea": 37
+          "linea": 39
         },
         {
           "nombre": "ramoDeUso",
@@ -213778,7 +213796,7 @@
           "exportada": true,
           "params": "uso: string",
           "retorno": "'hogar' | 'comercio' | null",
-          "linea": 104,
+          "linea": 106,
           "resumen": "Ramo que se ofrece para un uso. `null` = ese uso (garaje, trastero, otro) no tiene seguro propio que proponer."
         },
         {
@@ -213787,7 +213805,7 @@
           "exportada": false,
           "params": "i: Pick<InmuebleParaSenal, 'id' | 'referenciaCatastral'>",
           "retorno": "string",
-          "linea": 110
+          "linea": 112
         },
         {
           "nombre": "senalesDeInmueble",
@@ -213795,7 +213813,7 @@
           "exportada": true,
           "params": "x: { clienteId: string; hoy: Fecha; inmueble: InmuebleParaSenal }",
           "retorno": "SenalCalculada[]",
-          "linea": 121,
+          "linea": 123,
           "resumen": "Las señales que hoy se dan para UNA ficha (su titular). Determinista, sin efectos. Por entrada, UNA regla por tipo: · `inmueble_sin_seguro` — el cliente DECLARÓ que no tiene (`sin_seguro`). `sin_mirar"
         },
         {
@@ -213804,7 +213822,7 @@
           "exportada": true,
           "params": "x: { clienteId: string; hoy: Fecha; declaradas: readonly DeclaradaParaSenal[] }",
           "retorno": "SenalCalculada[]",
-          "linea": 154,
+          "linea": 156,
           "resumen": "Pólizas DECLARADAS de otra compañía que vencen pronto: señal propia (no cuelga de un inmueble)."
         },
         {
@@ -213813,25 +213831,43 @@
           "exportada": true,
           "params": "x: { clienteId: string hoy: Fecha inmuebles: readonly InmuebleParaSenal[] declaradas: readonly DeclaradaParaSenal[] }",
           "retorno": "SenalCalculada[]",
-          "linea": 170
+          "linea": 172
         },
         {
           "nombre": "permisoContacto",
           "kind": "function",
           "exportada": true,
-          "params": "x: { peticionAbierta: boolean; consentimientos: readonly (boolean | null)[] }",
+          "params": "x: { peticionAbierta: boolean oposiciones: readonly (boolean | null)[] comerciales: readonly (boolean | null)[] }",
           "retorno": "PermisoContacto",
-          "linea": 191,
-          "resumen": "Qué permiso hay sobre una FICHA. El consentimiento es por IDENTIDAD y la señal por FICHA: llegan los vigentes de TODAS las identidades que la operan como propia (`true` / `false` / `null` = nunca se l"
+          "linea": 197,
+          "resumen": "Qué permiso hay para CONTACTAR sobre una FICHA (la señal no lo da: calcular ≠ contactar). Llegan los estados vigentes de TODAS las identidades que la operan como propia: · `oposiciones` — `oposicion_s"
         },
         {
           "nombre": "puedeCalcularSenales",
           "kind": "function",
           "exportada": true,
-          "params": "x: { interruptor: boolean consentimientos: readonly (boolean | null)[] politica?: typeof POLITICA_CALCULO }",
+          "params": "x: { interruptor: boolean; oposiciones: readonly (boolean | null)[] }",
           "retorno": "boolean",
-          "linea": 208,
-          "resumen": "¿Se pueden calcular señales de esta ficha? Interruptor apagado → NUNCA, pase lo que pase con los consentimientos."
+          "linea": 219,
+          "resumen": "¿Se pueden calcular señales de esta ficha? Interruptor apagado → NUNCA. Encendido → SÍ salvo que alguna identidad que la opera tenga la oposición VIGENTE (`true`). `null` (nunca se opuso) y `false` (r"
+        },
+        {
+          "nombre": "corteRetencionSenales",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: Fecha",
+          "retorno": "Fecha",
+          "linea": 235,
+          "resumen": "Fecha de corte: lo anterior (estrictamente) a este día se purga."
+        },
+        {
+          "nombre": "debePurgarseSenal",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { cerradaEn: Fecha | null; ultimaVezEn: Fecha | null; hoy: Fecha }",
+          "retorno": "boolean",
+          "linea": 243,
+          "resumen": "¿Toca borrar esta señal? Cerrada → cuenta `cerradaEn`; viva → cuenta `ultimaVezEn`. Sin la fecha que toca (dato roto) NO se borra (estado conservador: no se destruye lo que no se sabe fechar; se ve en"
         },
         {
           "nombre": "puedeRecrearseTrasCierre",
@@ -213839,7 +213875,7 @@
           "exportada": true,
           "params": "x: { estado: EstadoSenal; cerradaEn: Fecha | null; hoy: Fecha }",
           "retorno": "boolean",
-          "linea": 230,
+          "linea": 260,
           "resumen": "Una señal descartada no vuelve hasta pasados `DIAS_TRAS_DESCARTE` días; las demás cerradas sí pueden volver."
         },
         {
@@ -213848,13 +213884,13 @@
           "exportada": true,
           "params": "x: { calculadas: readonly SenalCalculada[] existentes: readonly FilaSenalExistente[] permitido: boolean hoy: Fecha }",
           "retorno": "PlanSenales",
-          "linea": 251,
+          "linea": 281,
           "resumen": "Qué hacer con las señales de UNA ficha. `existentes` trae las vivas y, de las cerradas, las que haya (se usa la MÁS RECIENTE por clave). Sin permiso: no se inserta nada y las ABIERTAS se retiran. Las "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "af85207543af"
+      "hash": "446b758a037e"
     },
     {
       "ruta": "packages/module-patrimonio/src/tipos.ts",
@@ -215906,8 +215942,7 @@
       "ambito": "packages/module-seguros-portal",
       "resumen": "Registro de consentimientos y acreditaciones del portal (`seguros.portal_consentimiento`). 🚨 La tabla admite tres tipos, pero NO son la misma cosa y por eso no se escriben igual: - **`lds_art19`** — no es un consentimiento del RGPD: es la **acreditación de que se facilitó la información precontract",
       "exporta": [
-        "tiposConsentimiento",
-        "tiposQueSeRegistran",
+        "oposicionVigente",
         "consentimientoVigente",
         "necesitaRegistro",
         "normalizarIp",
@@ -215915,28 +215950,21 @@
       ],
       "funciones": [
         {
-          "nombre": "tiposConsentimiento",
+          "nombre": "oposicionVigente",
           "kind": "function",
           "exportada": true,
-          "params": "patrimonioActivo: boolean",
-          "retorno": "readonly (TipoConsentimiento | TipoConsentimientoPatrimonio)[]",
-          "linea": 87
-        },
-        {
-          "nombre": "tiposQueSeRegistran",
-          "kind": "function",
-          "exportada": true,
-          "params": "patrimonioActivo: boolean",
-          "retorno": "readonly (TipoConsentimiento | TipoConsentimientoPatrimonio)[]",
-          "linea": 91
+          "params": "guardados: readonly ConsentimientoConFecha[]",
+          "retorno": "boolean | null",
+          "linea": 96,
+          "resumen": "¿Está esta identidad OPUESTA hoy? `true` = sí · `false` = se opuso y lo retiró · `null` = nunca se ha opuesto. Solo `true` impide calcular (`puedeCalcularSenales` de `@central/module-patrimonio`)."
         },
         {
           "nombre": "consentimientoVigente",
           "kind": "function",
           "exportada": true,
-          "params": "guardados: readonly ConsentimientoConFecha[], tipo: TipoConsentimiento | TipoConsentimientoPatrimonio, versionActual?: string,",
+          "params": "guardados: readonly ConsentimientoConFecha[], tipo: TipoConsentimiento, versionActual?: string,",
           "retorno": "boolean | null",
-          "linea": 108,
+          "linea": 113,
           "resumen": "Estado VIGENTE de un consentimiento revocable: lo que dice la fila más reciente de ese tipo. `null` = nunca se le ha preguntado (no es «no»: la pantalla tiene que enseñar la casilla, no dar por hecho "
         },
         {
@@ -215945,7 +215973,7 @@
           "exportada": true,
           "params": "guardados: readonly ConsentimientoGuardado[], tipo: TipoConsentimiento, versionTexto: string,",
           "retorno": "boolean",
-          "linea": 143,
+          "linea": 148,
           "resumen": "¿Hay que escribir una fila nueva para este tipo y esta versión de texto? Sí cuando no consta ninguna fila otorgada de ese tipo **con esa versión exacta**. Dos consecuencias buscadas: - Entrar cien vec"
         },
         {
@@ -215954,7 +215982,7 @@
           "exportada": true,
           "params": "cabecera: string | null | undefined",
           "retorno": "string | null",
-          "linea": 164,
+          "linea": 169,
           "resumen": "Primera IP utilizable de una cabecera `X-Forwarded-For`, o `null`. La columna es `inet` de Postgres: meterle una cadena que no sea una IP hace fallar el INSERT entero, y con él —al ir en la misma tran"
         },
         {
@@ -215963,7 +215991,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "boolean",
-          "linea": 186
+          "linea": 191
         },
         {
           "nombre": "esIpv6",
@@ -215971,7 +215999,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "boolean",
-          "linea": 192
+          "linea": 197
         },
         {
           "nombre": "normalizarUserAgent",
@@ -215979,12 +216007,12 @@
           "exportada": true,
           "params": "ua: string | null | undefined",
           "retorno": "string | null",
-          "linea": 204
+          "linea": 209
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3a140abec718"
+      "hash": "2372b363e993"
     },
     {
       "ruta": "packages/module-seguros-portal/src/contacto-propio.ts",
@@ -229959,8 +229987,6 @@
       "ambito": "packages/module-seguros",
       "resumen": "Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al cliente final: información precontractual del art. 173 del Real Decreto-ley 3/2020 (distribución de seguros), pies de página legales y políticas. Vive en `@central/module-seguros` y no en una app porque los DOS lados de la",
       "exporta": [
-        "versionTextosLegales",
-        "fechaTextosLegales",
         "lineaIdentificacion",
         "remitenteCorreo",
         "telefonoLegible",
@@ -229968,29 +229994,12 @@
       ],
       "funciones": [
         {
-          "nombre": "versionTextosLegales",
-          "kind": "function",
-          "exportada": true,
-          "params": "patrimonioActivo: boolean",
-          "retorno": "string",
-          "linea": 54,
-          "resumen": "La versión de los textos legales que rige: la base, o la ampliada si el apartado de patrimonio está activo."
-        },
-        {
-          "nombre": "fechaTextosLegales",
-          "kind": "function",
-          "exportada": true,
-          "params": "patrimonioActivo: boolean",
-          "retorno": "string",
-          "linea": 58
-        },
-        {
           "nombre": "lineaIdentificacion",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 283,
+          "linea": 271,
           "resumen": "Una línea con la identificación mínima del mediador, para pies de página donde no cabe la ficha entera. Es lo que el art. 173 RDL 3/2020 exige que el cliente vea SIEMPRE, no solo si entra en una págin"
         },
         {
@@ -229999,7 +230008,7 @@
           "exportada": true,
           "params": "env?: string | undefined | null",
           "retorno": "string",
-          "linea": 337
+          "linea": 325
         },
         {
           "nombre": "telefonoLegible",
@@ -230007,7 +230016,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 363,
+          "linea": 351,
           "resumen": "El teléfono, escrito como se lee: `+34 637 34 99 90`. Existe como función y no como una segunda constante para que **no puedan divergir**: dos cadenas con el mismo número escritas a mano acaban siendo"
         },
         {
@@ -230016,13 +230025,13 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 376,
+          "linea": 364,
           "resumen": "Enlace de WhatsApp al mediador, con el primer mensaje ya escrito. `wa.me` quiere el número **sin `+` y sin espacios**; con el `+` delante abre la app pero deja el chat en blanco, que es un fallo que n"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d5a40ab133e"
+      "hash": "2b8b6dd2d414"
     },
     {
       "ruta": "packages/module-seguros/src/mensaje-presupuesto.ts",
@@ -246107,7 +246116,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5165,
-    "funciones": 19762
+    "archivos": 5164,
+    "funciones": 19764
   }
 }
