@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-25 · mercado-booking** · hizo: 24/568 ventanas de mercado (25-nov, 5-8 dic, 20-dic, 24-dic; aforos 2/4/5/12) → 237 comps `booking_mcp` + 4/4 ventanas de escaparate propio (Busto Reform 178,52€/2n · Dúplex 358,14€/3n · House 1959€/4n · Luxury Busto 478,64€/3n). 0 sin respuesta; 3 anuncios propios (House Sevillana, aforo 12) mandados al ingest y apartados a escaparate. Mediana/noche aforo 12: 25-nov ~270€, 6-dic ~680€, 20-dic ~340€. Latido ok:true. Pendiente: el tope dejó fuera 544 ventanas; mes 2026-10 sin bucket; eventos 7-nov y 16-nov y 25-dic sin medir 8-15 días.
+
 - **2026-10-25 · agentes-entrenador** · hizo: pasada semanal (rango 18/10→25/10, 16 entradas podadas: mercado-booking ×6, facturas-correo ×6, trading-analista ×3, pricing-agente ×1); preflight canal 200; 0 PRs de prompt, 0 carril-1. Sin patrón de PROMPT: (1) facturas-correo: Anthropic 180€ vs 2×170€ y Si Que Brilla 1.128,48€ sin cargo siguen `sin_revisar` → decisión de Alberto; (2) `gmail-adjuntos` CONNECTION_CLOSED de nuevo (Vía B cubre); (3) trading-analista: 2ª fuente de precios solo llega al 20/10 (dato/infra, no prompt); `canal-aviso.sh` >128 KB sin arreglar de código (ya 4 pasadas). Backlog PRs `claude/*` abiertos: 13 (era 11); 2+ semanas: 7, el más antiguo #3755 (27/09), todos docs-only salvo #4493 (histéresis pricing, dinero real, sin mergear desde 11/10) y #4723 (blog asegura, no draft). dudas: —; fallos: —; PRs/commits: este PR
 
 <!-- Los agentes insertan aquí. Ejemplo:
