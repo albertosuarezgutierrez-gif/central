@@ -40,7 +40,7 @@ export async function calendarioDeClientes(clientesIds: readonly string[]): Prom
   const [obligaciones, contratos] = await Promise.all([
     prisma.portalPatrimonioObligacion.findMany({
       where: { inmuebleId: { in: ids }, archivadoEn: null },
-      select: { id: true, inmuebleId: true, tipo: true, aplica: true, ultima: true, vence: true, periodicidadMeses: true },
+      select: { id: true, inmuebleId: true, tipo: true, aplica: true, ultima: true, vence: true, periodicidadMeses: true, categoria: true, descripcion: true },
       take: 2000,
     }),
     prisma.portalPatrimonioContrato.findMany({

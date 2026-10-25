@@ -24,11 +24,15 @@ const RUTA_ENLACE = 'apps/asegura-portal/prisma/sql/2026-10-24_portal_patrimonio
 const SQL_ENLACE = readFileSync(join(RAIZ, RUTA_ENLACE), 'utf8').replace(/--.*$/gm, '')
 // Tope de renta editable por el cliente (24/10/2026, P13/P14): columnas nuevas en `contrato`; mismo espejo.
 const SQL_TOPE = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-24_portal_patrimonio_tope_renta.sql'), 'utf8').replace(/--.*$/gm, '')
+// Obligaciones PROPIAS del cliente (25/10/2026): columna `categoria` en la tabla de obligaciones ya existente.
+const RUTA_PROPIA = 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_obligacion_propia.sql'
+const SQL_PROPIA = readFileSync(join(RAIZ, RUTA_PROPIA), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
   SQL_ENLACE,
   SQL_TOPE,
+  SQL_PROPIA,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
@@ -270,4 +274,27 @@ test('🚨 enlace inmueble ↔ póliza (24/10/2026): estado/origen cerrados, «n
   }
   // Los consentimientos de patrimonio son del paso legal (P15), no de este SQL.
   assert.doesNotMatch(SQL_ENLACE, /portal_consentimiento/)
+})
+
+test('🚨 obligaciones propias (25/10/2026): SQL aditivo, sin borrados, columna por GRANT y crm_seguros sin nada', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_PROPIA), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  assert.doesNotMatch(SQL_PROPIA, /\bDELETE\b|\bTRUNCATE\b/i)
+  assert.match(SQL_PROPIA, /^BEGIN;/m)
+  assert.match(SQL_PROPIA, /^COMMIT;/m)
+  assert.match(SQL_PROPIA, /ADD COLUMN IF NOT EXISTS categoria text/)
+  assert.match(SQL_PROPIA, /REVOKE ALL ON seguros\.portal_patrimonio_obligacion FROM crm_seguros/)
+  for (const priv of ['SELECT', 'INSERT', 'UPDATE'] as const) {
+    assert.ok(concedidas(priv, 'portal_patrimonio_obligacion')!.has('categoria'), `${priv} de categoria`)
+  }
+  // Una propia no se mete en el CHECK de `tipo` (no se puede ampliar sin borrar la restricción): usa 'otra'.
+  assert.match(SQL_PROPIA, /tipo = 'otra' AND vence IS NOT NULL/)
+  // El catálogo de la BD es el del módulo, ni más ni menos.
+  const m = /categoria IN \(([^)]*)\)/.exec(SQL_PROPIA)
+  assert.ok(m)
+  const bd = m[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+  const mod = readFileSync(join(RAIZ, 'packages/module-patrimonio/src/obligacion-propia.ts'), 'utf8')
+  const enModulo = /CATEGORIAS_OBLIGACION_PROPIA = \[([^\]]*)\]/.exec(mod)
+  assert.ok(enModulo)
+  assert.deepEqual(bd, enModulo[1].split(',').map((x) => x.trim().replace(/'/g, '')))
 })

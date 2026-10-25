@@ -28,6 +28,9 @@ export const TEXTO_SOLICITUD_MODULO =
   'Al pedirlo, avisamos a tu corredor de Grupo ASegura para que se ponga en contacto contigo y te lo active. ' +
   'Es gratis para nuestros clientes y no te compromete a nada. No se activa solo: lo activamos a mano.'
 
+export const TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO =
+  'Activado, pero solo se abre con una póliza vigente a tu nombre en Grupo ASegura. Escríbenos y lo vemos.'
+
 export type FichaModulo = {
   id: ModuloPortal
   nombre: string
@@ -105,6 +108,29 @@ export type ContextoModulos = { accesoFlota: boolean | null; accesoPatrimonio: b
 
 export type FilaModulo = { modulo: string; estado: string; solicitadoEn: Date }
 
+/**
+ * Patrimonio y alquileres: ¿esta identidad puede usar `/patrimonio`? UNA sola función para el acceso (lib/patrimonio/accesos.ts),
+ * el menú y la tarjeta de `/herramientas`/`/inicio` (25/10/2026). Se suma a la regla de fase 1 (póliza viva = `titulares > 0`,
+ * que sigue mandando): sin titulares, nunca.
+ *  - Fila `activo` de `portal_modulo` ('alquileres') → abre.
+ *  - Fila solo `retirado` → CIERRA (retirar tiene que cerrar), aunque haya inmuebles.
+ *  - Sin fila vigente (ninguna, o solo `solicitado`) → solo si YA tiene inmuebles creados (pilotos previos al módulo:
+ *    no se quita a nadie lo que tenía); sin inmuebles, necesita el módulo activo.
+ *  - `filas`/`tieneInmuebles` `null` (la lectura falló) → fail-closed salvo fila activa legible: nunca se inventa acceso.
+ */
+export function accesoPatrimonioPorModulo(c: {
+  titulares: number
+  filas: readonly { modulo: string; estado: string }[] | null
+  tieneInmuebles: boolean | null
+}): boolean {
+  if (c.titulares <= 0) return false
+  if (c.filas === null) return false
+  const mias = c.filas.filter((f) => f.modulo === 'alquileres')
+  if (mias.some((f) => f.estado === 'activo')) return true
+  if (mias.some((f) => f.estado === 'retirado') && !mias.some((f) => f.estado === 'solicitado')) return false
+  return c.tieneInmuebles === true
+}
+
 export type AccionModulo =
   | { tipo: 'abrir'; href: string }
   | { tipo: 'solicitar' }
@@ -137,6 +163,8 @@ export function accionModulo(
   if (disp === 'disponible' && ficha.hrefPortal !== null) return { tipo: 'abrir', href: ficha.hrefPortal }
   if (disp === null || ctx.filas === null) return { tipo: 'sin_comprobar' }
   const fila = filaVigente(ctx.filas, id)
+  // Activado por el corredor pero sin acceso real (p. ej. sin póliza viva): no se manda a una pantalla vacía.
+  if (fila?.estado === 'activo' && id === 'alquileres') return { tipo: 'activo', texto: TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO }
   if (fila?.estado === 'activo') {
     return ficha.hrefPortal !== null ? { tipo: 'abrir', href: ficha.hrefPortal } : { tipo: 'activo', texto: ficha.textoActivo }
   }

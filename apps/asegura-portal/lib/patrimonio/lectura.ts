@@ -16,6 +16,7 @@
 // Fechas `@db.Date`: Prisma las da como `Date` a medianoche UTC; se leen en UTC (`YYYY-MM-DD`), nunca con
 // `getDate()` del huso local (Vercel corre en UTC, el portátil en Madrid).
 import {
+  CATEGORIAS_OBLIGACION_PROPIA,
   esCategoriaGasto,
   type Centimos,
   type Contrato,
@@ -350,6 +351,9 @@ export type FilaObligacion = {
   ultima: Date | null
   vence: Date | null
   periodicidadMeses: number | null
+  /** Recordatorio propio (catálogo cerrado). Ausente/`null` = obligación de siempre. */
+  categoria?: string | null
+  descripcion?: string | null
 }
 
 /** `aplica` `null` = no se sabe (sale `sin_dato`), no «no aplica». */
@@ -362,5 +366,8 @@ export function obligacionDeFila(f: FilaObligacion): ObligacionInmueble {
     ultima: fechaDe(f.ultima),
     vence: fechaDe(f.vence),
     periodicidadMeses: f.periodicidadMeses,
+    categoria: f.categoria === undefined || f.categoria === null ? null : deLista(CATEGORIAS_OBLIGACION_PROPIA, f.categoria, 'obligacion.categoria'),
+    // Solo un recordatorio propio enseña su texto; '' = no escribió nada.
+    descripcion: f.categoria ? (f.descripcion?.trim() || null) : null,
   }
 }

@@ -2010,6 +2010,9 @@ model PortalPatrimonioObligacion {
   actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
   creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
   archivadoEn          DateTime? @map("archivado_en") @db.Timestamptz(6)
+  /// Recordatorio PROPIO del cliente (catálogo cerrado, `obligacion-propia.ts`). NULL = obligación de siempre.
+  /// Requiere `2026-10-25_portal_patrimonio_obligacion_propia.sql` aplicado ANTES del despliegue.
+  categoria            String?
 
   inmueble PortalPatrimonioInmueble @relation(fields: [inmuebleId], references: [id])
 
