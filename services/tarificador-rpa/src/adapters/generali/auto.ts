@@ -64,6 +64,8 @@ import {
   RE_ALTA_PERSONA_GENERALI,
   RE_BUSCAR_PERSONA_GENERALI,
   RE_ELEGIR_FILA_GENERALI,
+  RE_PESTANA_SELECCION_PERSONAS_GENERALI,
+  indiceMarcosGenerali,
   resumenControlesAbiertoGenerali,
   type ControlAbiertoGenerali,
   PREFIJO_ID_INTERESADO_GENERALI,
@@ -194,8 +196,14 @@ export const GENERALI_AUTO_ACTIVO = true
  * marco o capa), y SOLO si hay un buscador con campo de documento y botón «Buscar/Consultar» se teclea el NIF del tomador, se busca y, si sale
  * EXACTAMENTE una fila y su documento coincide, se elige (por `ctx.pulsar`). 0 o varias filas, o una pantalla de ALTA: PARA sin crear nada. Después se
  * verifica que `interesado_nifcif`/`nombre` ya traen valor. El mensaje lleva la rama tomada y el inventario SANEADO de lo abierto (sin valores).
+ * 0.2.23 (25/10/2026, prueba real con 0.2.22: «sin_buscador … sin controles visibles»). El recorrido muestra que «Personas» NO abre ventana: el marco
+ * `mainFrame` NAVEGA en el sitio (selVehiculo2.do → emiAutosGenB028.do, «Interesado / Tomador») con las pestañas «Selección personas que intervienen» y
+ * «Datos personas»; el escaneo lo trataba como «capa» sin alta y el inventario solo contaba los marcos NUEVOS (vacíos: modalFrame, errorIF…), por eso
+ * salía «sin controles visibles». Ahora un marco que cambia de URL cuenta como abierto (rama=marco), la espera es de 15 s, si el marco abierto no trae
+ * buscador se pulsa UNA vez la pestaña «Selección personas…» (por `ctx.pulsar`; nunca «Confirmar» ni «Alta») y el diagnóstico lista TODOS los marcos
+ * (URL sin query, nombre, nº de controles) y los controles de los abiertos. Se escanean marcos anidados y ventanas nuevas del contexto.
  */
-export const VERSION_GENERALI_AUTO = '0.2.22'
+export const VERSION_GENERALI_AUTO = '0.2.23'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -1656,7 +1664,7 @@ const SEL_ACCION = 'input[type=button], input[type=submit], button, a'
 const RE_DOCUMENTO_CAMPO = /nif|cif|docum|identif|\bdni\b|\bnie\b/i
 const RE_PERSONA_CAMPO = /nombre|apell/i
 const RE_DOC_PARECE = /^(?:[XYZ]?\d{7,8}[A-Z]|[A-Z]\d{7}[A-Z0-9])$/
-const ESPERA_ABRIR_PERSONAS_MS = 8_000
+const ESPERA_ABRIR_PERSONAS_MS = 15_000
 const ESPERA_RESULTADOS_PERSONAS_MS = 7_000
 const ESPERA_VUELTA_PERSONAS_MS = 8_000
 const pausaMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
@@ -1696,29 +1704,54 @@ async function analizarAbiertoPersonas(m: Frame, nuevo: boolean): Promise<{ tipo
     if (RE_BUSCAR_PERSONA_GENERALI.test(r)) buscar.push(acciones.nth(i))
     else if (nuevo && RE_ALTA_PERSONA_GENERALI.test(r)) altas++
   }
+  // v0.2.23: con el formulario de la persona y el buscador en la misma pantalla hay VARIOS campos de documento: vale el que comparte con «Buscar» el ancestro común MÁS CERCANO (si empata, no se adivina).
+  if (documentos.length > 1 && buscar.length === 1) {
+    const prof: number[] = []
+    for (const d of documentos) {
+      const h = await d.elementHandle().catch(() => null)
+      prof.push(h ? ((await buscar[0]!.evaluate((bt, dd) => { let n = 0; for (let x: Element | null = bt; x; x = x.parentElement) { n++; if (x.contains(dd as Node)) return n } return 0 }, h).catch(() => 0)) as number) : 0)
+    }
+    const validos = prof.filter((n) => n > 0)
+    const min = validos.length ? Math.min(...validos) : 0
+    const mejores = documentos.filter((_, i) => prof[i] === min)
+    if (min > 0 && mejores.length === 1) return { tipo: 'buscador', b: { marco: m, documento: mejores[0]!, buscar: buscar[0]! } }
+  }
   if (documentos.length === 1 && buscar.length === 1) return { tipo: 'buscador', b: { marco: m, documento: documentos[0]!, buscar: buscar[0]! } }
   if (nuevo && documentos.length === 0 && (altas > 0 || camposPersona >= 2)) return { tipo: 'alta' }
   return null
 }
 
-/** Marcos de lo que abrió «Personas»: ventanas nuevas, marcos nuevos y, al final, los de siempre (capa). */
-function raicesTrasPersonas(page: Page, antesP: ReadonlySet<Page>, antesF: ReadonlySet<Frame>, sinBuscador: ReadonlySet<Frame>): RaizAbierta[] {
+/** Marcos de lo que abrió «Personas»: ventanas nuevas, marcos nuevos o que NAVEGARON (URL distinta) y, al final, los de siempre (capa). `page.frames()` ya incluye los anidados. */
+function raicesTrasPersonas(page: Page, antesP: ReadonlySet<Page>, antesF: ReadonlyMap<Frame, string>, conBuscador: ReadonlySet<Frame>): RaizAbierta[] {
   const out: RaizAbierta[] = []
   for (const p of page.context().pages()) if (!antesP.has(p) && !p.isClosed()) for (const f of p.frames()) if (!f.isDetached()) out.push({ rama: 'ventana', marco: f, nuevo: true })
-  for (const f of page.frames()) if (!antesF.has(f) && !f.isDetached()) out.push({ rama: 'marco', marco: f, nuevo: true })
-  for (const f of page.frames()) if (antesF.has(f) && !f.isDetached() && !sinBuscador.has(f)) out.push({ rama: 'capa', marco: f, nuevo: false })
+  for (const f of page.frames()) if (!f.isDetached() && (!antesF.has(f) || antesF.get(f) !== f.url())) out.push({ rama: 'marco', marco: f, nuevo: true })
+  for (const f of page.frames()) if (antesF.get(f) === f.url() && !f.isDetached() && !conBuscador.has(f)) out.push({ rama: 'capa', marco: f, nuevo: false })
   return out
 }
 
+/** Inventario SANEADO: índice de TODOS los marcos (rama, URL sin datos, nombre, nº de controles) + controles de los abiertos (nuevos/navegados; si no hay, los de siempre con controles). */
 async function inventarioPersonas(raices: readonly RaizAbierta[]): Promise<string> {
-  const nuevas = raices.filter((r) => r.nuevo)
-  if (nuevas.length === 0) return 'no se detectó ventana ni marco nuevo'
-  const partes: string[] = []
-  for (const r of nuevas.slice(0, 3)) {
+  const leidos: { r: RaizAbierta; controles: ControlAbiertoGenerali[]; filas: number }[] = []
+  for (const r of raices.slice(0, 16)) {
     const l = ((await r.marco.evaluate(JS_CONTROLES_ABIERTO).catch(() => null)) as { controles: ControlAbiertoGenerali[]; filas: number } | null) ?? { controles: [], filas: 0 }
-    partes.push(`[${r.rama}] ${resumenControlesAbiertoGenerali(l.controles, l.filas, Math.floor(650 / Math.min(nuevas.length, 3)))}`)
+    leidos.push({ r, controles: l.controles, filas: l.filas })
   }
-  return partes.join(' | ')
+  if (leidos.length === 0) return 'sin marcos'
+  const indice = indiceMarcosGenerali(leidos.map((x) => ({ rama: x.r.rama, url: x.r.marco.url(), nombre: x.r.marco.name() || null, controles: x.controles.length })))
+  const nuevas = leidos.filter((x) => x.r.nuevo && !/vimeo/i.test(x.r.marco.url()))
+  const detalle = (nuevas.length > 0 ? nuevas : leidos.filter((x) => x.controles.length > 0 && !/vimeo/i.test(x.r.marco.url())).slice(0, 1)).slice(0, 3)
+  const partes = detalle.map((x) => `[${x.r.rama}] ${resumenControlesAbiertoGenerali(x.controles, x.filas, Math.floor(650 / detalle.length))}`)
+  return `marcos: ${indice} | ${partes.join(' | ') || 'sin controles visibles'}`
+}
+
+/** La pestaña «Selección personas (que intervienen)» del marco abierto: solo si hay exactamente UNA. */
+async function pestanaSeleccionPersonas(m: Frame): Promise<Locator | null> {
+  const enlaces = m.locator('a, input[type=button], button').filter({ visible: true })
+  const n = Math.min(await enlaces.count().catch(() => 0), 60)
+  const hallados: Locator[] = []
+  for (let i = 0; i < n; i++) if (RE_PESTANA_SELECCION_PERSONAS_GENERALI.test(await rotuloDe(enlaces.nth(i)))) hallados.push(enlaces.nth(i))
+  return hallados.length === 1 ? hallados[0]! : null
 }
 
 /** Filas de resultado: con algún control o un documento, sin campos de texto (las de maquetación y los encabezados no cuentan). */
@@ -1794,29 +1827,43 @@ export async function elegirPersonaTomadorGenerali(
   if (!boton) return parar('el interesado es de solo lectura y no se halla el botón «Personas» (roles_lnkPers)', 'rama=sin_boton')
 
   const antesP = new Set(page.context().pages())
-  const antesF = new Set(page.frames())
-  const sinBuscador = new Set<Frame>()
-  for (const f of page.frames()) if (!f.isDetached() && (await analizarAbiertoPersonas(f, false)) !== null) sinBuscador.add(f)
+  const antesF = new Map<Frame, string>(page.frames().map((f) => [f, f.url()] as [Frame, string]))
+  const conBuscador = new Set<Frame>()
+  for (const f of page.frames()) if (!f.isDetached() && (await analizarAbiertoPersonas(f, false)) !== null) conBuscador.add(f)
   await ctx.pulsar(boton)
 
   // 1. Esperar a que aparezca lo que abre.
-  const finAbrir = Date.now() + (esperas.abrirMs ?? ESPERA_ABRIR_PERSONAS_MS)
+  let finAbrir = Date.now() + (esperas.abrirMs ?? ESPERA_ABRIR_PERSONAS_MS)
   const cargadas = new Set<Page>()
+  let tabPulsada = false
   let raices: RaizAbierta[] = []
   const donde: { h: Hallazgo | null } = { h: null }
   for (;;) {
     for (const p of page.context().pages()) if (!antesP.has(p) && !cargadas.has(p)) { cargadas.add(p); await p.waitForLoadState('domcontentloaded', { timeout: 3_000 }).catch(() => undefined) }
-    raices = raicesTrasPersonas(page, antesP, antesF, sinBuscador)
+    raices = raicesTrasPersonas(page, antesP, antesF, conBuscador)
     for (const r of raices) {
       const a = await analizarAbiertoPersonas(r.marco, r.nuevo)
       if (a) { donde.h = { ...a, rama: r.rama }; break }
     }
-    if (donde.h || Date.now() >= finAbrir) break
+    if (donde.h) break
+    // El marco abierto no trae buscador pero sí la pestaña «Selección personas…»: se pulsa UNA vez (nunca «Confirmar» ni «Alta») y se sigue esperando.
+    if (!tabPulsada) {
+      for (const r of raices) {
+        if (!r.nuevo) continue
+        const tab = await pestanaSeleccionPersonas(r.marco)
+        if (!tab) continue
+        tabPulsada = true
+        await ctx.pulsar(tab)
+        finAbrir = Date.now() + (esperas.abrirMs ?? ESPERA_ABRIR_PERSONAS_MS)
+        break
+      }
+    }
+    if (Date.now() >= finAbrir) break
     await pausaMs(400)
   }
   const inv = await inventarioPersonas(raices)
   const hallazgo = donde.h
-  if (!hallazgo) return parar('se pulsó «Personas» y no se encontró un buscador con campo de documento y botón «Buscar/Consultar»', `rama=${raices.find((r) => r.nuevo)?.rama ?? 'nada_nuevo'}, sin_buscador`, `controles: ${inv}`)
+  if (!hallazgo) return parar('se pulsó «Personas» y no se encontró un buscador con campo de documento y botón «Buscar/Consultar»', `rama=${raices.find((r) => r.nuevo)?.rama ?? 'nada_nuevo'}, sin_buscador${tabPulsada ? ', pestaña_seleccion_pulsada' : ''}`, `controles: ${inv}`)
   if (hallazgo.tipo === 'alta') return parar('«Personas» abrió una pantalla de ALTA de persona, no un buscador', `rama=${hallazgo.rama}, alta`, `controles: ${inv}`)
 
   // 2. Buscar el NIF del tomador.
