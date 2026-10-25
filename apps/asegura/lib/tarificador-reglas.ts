@@ -96,8 +96,27 @@ function validarFormaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo
 // lo tiene legible y válido y se guarda el riesgo sin él (`riesgoParaEncolar`); se descifra e inyecta al ENTREGAR el
 // trabajo `en_curso` al worker (`trabajoParaWorker` → `aplicarNifTomador`), solo en la respuesta, nunca escrito en BD.
 
-/** Compañías cuyo bot busca al tomador por NIF (hoy solo Mapfre). */
-export const COMPANIAS_CON_NIF_TOMADOR = ['mapfre'] as const
+/**
+ * Compañías cuyo bot busca al tomador por NIF (auto/moto). Mapfre (14/10/2026) y Generali (25/10/2026: sin el documento su bot
+ * se para en «rama=sin_nif»; solo lo usa para BUSCAR la persona ya existente en su portal, nunca da de alta).
+ */
+export const COMPANIAS_CON_NIF_TOMADOR = ['mapfre', 'generali'] as const
+
+/** Ramos en que cada una lo recibe. Generali solo auto: su moto no tiene bot declarado y no se descifra un NIF para un rechazo. */
+const RAMOS_CON_NIF_TOMADOR: Record<(typeof COMPANIAS_CON_NIF_TOMADOR)[number], readonly string[]> = { mapfre: ['auto', 'moto'], generali: ['auto'] }
+
+/**
+ * Compañías que además reciben nombre, apellidos y nacimiento de la ficha (`datosTomador`) para DAR DE ALTA al tomador que no
+ * conocen. Lista APARTE del NIF a propósito (minimización RGPD, 25/10/2026): Generali solo busca por NIF, así que no recibe
+ * `datosTomador` ni se le rechaza por una ficha sin nacimiento. Añadir aquí una compañía = mandarle más datos personales.
+ */
+export const COMPANIAS_CON_DATOS_TOMADOR = ['mapfre'] as const
+
+/** Nombre de la compañía para los motivos de rechazo («Generali busca al tomador por NIF»). Sin nombre conocido, la clave. PURA. */
+function nombreCompaniaNif(compania: string): string {
+  const c = claveCompania(compania)
+  return c === 'mapfre' ? 'Mapfre' : c === 'generali' ? 'Generali' : c
+}
 
 /** Lectura del NIF de la ficha: `sin_nif` = la ficha no lo tiene; `ilegible` = cifrado que no abre (no se ha podido mirar). */
 export type LecturaNifFicha = { estado: 'ok'; documento: string } | { estado: 'sin_nif' } | { estado: 'ilegible' } | { estado: 'no_valido' }
@@ -123,10 +142,11 @@ export function lecturaNifFicha(guardado: string | null | undefined, descifrar: 
 
 const esObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 
-/** ¿Este trabajo necesita que asegura ponga el NIF del tomador? Mapfre + auto/moto + el riesgo no trae documento. PURA. */
+/** ¿Este trabajo necesita que asegura ponga el NIF del tomador? Mapfre/Generali + auto/moto + el riesgo no trae documento. PURA. */
 export function necesitaNifTomador(compania: string, ramo: string, riesgo: unknown): boolean {
-  if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
-  if (ramo !== 'auto' && ramo !== 'moto') return false
+  const c = claveCompania(compania)
+  if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(c)) return false
+  if (!RAMOS_CON_NIF_TOMADOR[c as (typeof COMPANIAS_CON_NIF_TOMADOR)[number]].includes(ramo)) return false
   if (!esObj(riesgo)) return true
   const doc = (v: unknown) => typeof v === 'string' && v.trim() !== ''
   return !doc(riesgo.documentoTomador) && !(esObj(riesgo.tomador) && doc(riesgo.tomador.documentoIdentidad))
@@ -137,8 +157,8 @@ export type NifTomadorAplicado = { ok: true; riesgo: unknown } | { ok: false; st
 /**
  * Aplica la regla al riesgo que se va a encolar. PURA (la lectura de la ficha la trae quien llama, solo si hace falta):
  *   · compañía que no busca por NIF → el riesgo SIN `documentoTomador` (no se guarda un dato personal que nadie usa);
- *   · Mapfre y el riesgo ya trae documento → tal cual;
- *   · Mapfre sin documento → el de la ficha; sin NIF / ilegible / no válido → rechazo claro SIN encolar.
+ *   · Mapfre/Generali y el riesgo ya trae documento → tal cual;
+ *   · Mapfre/Generali sin documento → el de la ficha; sin NIF / ilegible / no válido → rechazo claro SIN encolar.
  * Ningún motivo lleva el documento.
  */
 export function aplicarNifTomador(compania: string, ramo: string, riesgo: unknown, leer: () => LecturaNifFicha): NifTomadorAplicado {
@@ -153,8 +173,9 @@ export function aplicarNifTomador(compania: string, ramo: string, riesgo: unknow
   const l = leer()
   if (l.estado === 'ok') return { ok: true, riesgo: { ...(esObj(riesgo) ? riesgo : {}), documentoTomador: l.documento } }
   if (l.estado === 'ilegible') return { ok: false, status: 503, motivo: 'nif_tomador_ilegible: el NIF de la ficha del cliente no se puede descifrar (clave de la cartera); no se encola' }
-  if (l.estado === 'no_valido') return { ok: false, status: 422, motivo: 'nif_tomador_no_valido: el NIF/CIF de la ficha del cliente no es válido; corrígelo en la ficha (Mapfre busca al tomador por NIF)' }
-  return { ok: false, status: 422, motivo: 'falta_nif_tomador: la ficha del cliente no tiene NIF/CIF y Mapfre busca al tomador por NIF; complétalo en la ficha' }
+  const quien = nombreCompaniaNif(compania)
+  if (l.estado === 'no_valido') return { ok: false, status: 422, motivo: `nif_tomador_no_valido: el NIF/CIF de la ficha del cliente no es válido; corrígelo en la ficha (${quien} busca al tomador por NIF)` }
+  return { ok: false, status: 422, motivo: `falta_nif_tomador: la ficha del cliente no tiene NIF/CIF y ${quien} busca al tomador por NIF; complétalo en la ficha` }
 }
 
 /**
@@ -356,7 +377,7 @@ export function lecturaTomadorFicha(fila: FilaTomadorFicha | null, descifrar: (v
  * bloque `tomador` (DNI y nacimiento) no basta: lo pone asegura igual, así que no cuenta. PURA (el entorno entra).
  */
 export function necesitaDatosTomador(compania: string, ramo: string, riesgo: unknown, env: Record<string, string | undefined> = process.env): boolean {
-  if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
+  if (!(COMPANIAS_CON_DATOS_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
   if (ramo === 'hogar') return companiasHogarRpa(env).includes(claveCompania(compania))
   if (ramo !== 'auto' && ramo !== 'moto') return false
   return !(esObj(riesgo) && esObj(riesgo.tomador))
@@ -368,13 +389,13 @@ function enumerar(l: readonly string[]): string {
 }
 
 /**
- * Como `aplicarNifTomador` para nombre, apellidos y nacimiento (`datosTomador`). PURA. Otra compañía → el riesgo SIN
+ * Como `aplicarNifTomador` para nombre, apellidos y nacimiento (`datosTomador`). PURA. Otra compañía (Generali incluida: solo NIF) → el riesgo SIN
  * `datosTomador`; Mapfre auto/moto sin bloque `tomador` → los de la ficha, o rechazo 422 `falta_datos_tomador` («falta X en
  * la ficha»), o 503 `datos_tomador_ilegibles`. Ningún motivo lleva valores.
  */
 export function aplicarDatosTomador(compania: string, ramo: string, riesgo: unknown, leer: () => LecturaDatosTomador): NifTomadorAplicado {
   if (!necesitaDatosTomador(compania, ramo, riesgo)) {
-    if (esObj(riesgo) && 'datosTomador' in riesgo && !(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) {
+    if (esObj(riesgo) && 'datosTomador' in riesgo && !(COMPANIAS_CON_DATOS_TOMADOR as readonly string[]).includes(claveCompania(compania))) {
       const { datosTomador: _fuera, ...resto } = riesgo
       return { ok: true, riesgo: resto }
     }

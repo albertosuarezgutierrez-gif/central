@@ -1,4 +1,8 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.17 (25/10/2026, run real 0.8.16: en «Coberturas» se veía «Ir a generar proyecto» y NO se pulsó — el portal lo repite, uno por producto, y se exigía
+//   UNO solo): ahora se pulsa el único de `app-coberturas` o el primero visible y habilitado (también en la última vuelta de espera); en la vista/diálogo
+//   siguiente (escaneado también dentro de diálogos) se pulsa UNA vez «Generar Proyecto» o «Guardar proyecto» (texto entero, lista blanca estricta; nunca
+//   «Contratar»/«Emitir»/«Verificación» ni casillas). Si no hay nº, el aviso lista los controles visibles de esa segunda pantalla.
 // v0.8.16 (22/10/2026, run real: en «Coberturas» solo se veía «Ir a generar proyecto», sin «Generar Proyecto»): si no aparece el botón y hay UN
 //   «Ir a generar proyecto» (texto ENTERO exacto, `permitirIrAGenerarProyectoMapfre` del guard, una vez por trabajo) se pulsa (solo navega),
 //   se espera a la vista siguiente y ahí va la única pulsación de «Generar Proyecto». «Contratar» y el paso 6 siguen bloqueados.
@@ -1554,7 +1558,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.16',
+  version: '0.8.17',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
