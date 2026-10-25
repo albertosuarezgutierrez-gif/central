@@ -1004,6 +1004,28 @@ export const RE_ALTA_PERSONA_GENERALI = /^(alta|nuevo|nueva persona|nueva|crear|
 /** Rótulos (normalizados) del control que elige una fila del resultado. */
 export const RE_ELEGIR_FILA_GENERALI = /^(seleccionar|elegir|seleccion|sel|escoger|seleccionar persona)$/
 
+/** Rótulo (normalizado) de la pestaña que lleva a la SELECCIÓN/búsqueda de personas dentro de la pantalla «Interesado / Tomador» (v0.2.23). */
+export const RE_PESTANA_SELECCION_PERSONAS_GENERALI = /^seleccion personas( que intervienen)?$/
+
+/** URL sin query, hash ni `;jsessionid` (nunca datos): `host/ruta`. `about:blank` se deja tal cual. PURA. */
+export function urlSinDatosGenerali(url: string | null | undefined): string {
+  const t = String(url ?? '')
+  try {
+    const u = new URL(t)
+    if (!u.host) return t.split(/[?#]/)[0]!.slice(0, 90)
+    return `${u.host}${u.pathname}`.replace(/;[^/]*/g, '').slice(0, 90)
+  } catch {
+    return t.split(/[?#]/)[0]!.replace(/;.*/, '').slice(0, 90)
+  }
+}
+
+/** Índice compacto de TODOS los marcos vistos (rama, URL sin datos, nombre y nº de controles), sin vídeos. Tope `max` marcos. PURA. */
+export function indiceMarcosGenerali(marcos: readonly { rama: string; url: string; nombre: string | null; controles: number }[], max = 8): string {
+  const utiles = marcos.filter((m) => !/vimeo/i.test(m.url))
+  const partes = utiles.slice(0, max).map((m) => `${m.rama} ${urlSinDatosGenerali(m.url)}${m.nombre ? `#${sanearFragmentoGenerali(m.nombre).slice(0, 30)}` : ''} (${m.controles})`)
+  return `${partes.join(' ; ') || 'sin marcos'}${utiles.length > max ? ` ; +${utiles.length - max}` : ''}`
+}
+
 /** Minúsculas, sin tildes ni espacios sobrantes. PURA. */
 export function normalizarRotuloGenerali(t: string | null | undefined): string {
   return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.:]+$/g, '').replace(/\s+/g, ' ').trim()
