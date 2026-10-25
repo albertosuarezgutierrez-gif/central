@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
  * 🚨 Inmueble ajeno o nivel que no es Total (gestión, inquilino): 404 (nunca 403). La vista de corredor no pasa por el
  * middleware (POST vetado). Esto no envía ningún correo ni mensaje al cliente.
  */
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   let identidad
   try {
     identidad = await requireIdentidad()
@@ -30,9 +30,10 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const { id } = await ctx.params
   const puertos = {
     ...puertosSegurosInmueble(identidad.id),
-    pedirPorPuente: (x: { inmuebleId: string; tipo: 'inmueble_sin_seguro' | 'seguro_no_vigente' }) =>
+    pedirPorPuente: (x: { inmuebleId: string; tipo: 'inmueble_sin_seguro' | 'seguro_no_vigente' | 'comunidad' }) =>
       pedirPrecioPorPuente({ identidadId: identidad.id, ...x }),
   }
-  const r = await responderPedirPrecio(puertos, id)
+  const cuerpo = await req.json().catch(() => null)
+  const r = await responderPedirPrecio(puertos, id, cuerpo)
   return NextResponse.json(r.body, { status: r.status })
 }

@@ -45,6 +45,7 @@ function puertos(o: {
     crearEnlace: async (x) => { escritos.push(['crear', x]); return 'ok' },
     archivarEnlace: async (i, e) => { escritos.push(['archivar', i, e]); return e === ENL },
     declararSinSeguro: async (i, v) => { escritos.push(['sin_seguro', i, v]) },
+    declararPresidenteComunidad: async (i, v) => { escritos.push(['presidente', i, v]) },
   }
   return { p, escritos }
 }
@@ -215,4 +216,44 @@ test('🚨 «Pedir precio»: solo nivel Total y solo con el inmueble sin seguro 
   assert.equal((await segurosDeInmueble(asegurado.p, INM))!.puedePedirPrecio, false)
   const caducado = puertos({ filas: enlazada, cartera: [{ ...hogar, vigente: false }], inm: inmueble({ nivel: 'total' }) })
   assert.equal((await segurosDeInmueble(caducado.p, INM))!.puedePedirPrecio, true)
+})
+
+// ─── Infraseguro estimado sin pedir datos (25/10/2026) ──────────────────────
+const vigenteConCapital = (capitalContinenteCent: number | null): PolizaVisible => ({ ...hogar, capitalContinenteCent } as PolizaVisible)
+const filaMia: FilaEnlace[] = [{ id: 'e', polizaId: P_MIA, polizaDeclaradaId: null, estado: 'confirmado', origen: 'manual' }]
+
+test('estimación por m² del Catastro: capital < estimación × 0,9 → infraseguro, dicho como estimación (por verificar)', async () => {
+  // 100 m² de vivienda unifamiliar × 1.100 €/m² = 110.000 €; el seguro cubre 80.000 € (72 %).
+  const { p } = puertos({ inm: inmueble({ enComunidad: false, uso: 'vivienda', superficieCatastroM2: 100, tipoCatastro: 'unifamiliar' }), filas: filaMia, cartera: [vigenteConCapital(8_000_000)] })
+  const s = (await segurosDeInmueble(p, INM))!
+  assert.equal(s.valorEstimadoCent, 11_000_000)
+  assert.equal(s.infraseguro?.estado, 'infraseguro')
+  assert.deepEqual(s.estimacionContinente, { superficieM2: 100, eurPorM2: 1100, porVerificar: true })
+})
+
+test('🚨 sin superficie o sin capital: sin_dato, nunca ok; con capital suficiente: ok', async () => {
+  const sinM2 = puertos({ inm: inmueble({ enComunidad: false, uso: 'vivienda', superficieCatastroM2: null }), filas: filaMia, cartera: [vigenteConCapital(99_000_000)] })
+  const a = (await segurosDeInmueble(sinM2.p, INM))!
+  assert.deepEqual(a.infraseguro, { estado: 'sin_dato', motivo: 'sin_valor_estimado' })
+  assert.equal(a.estimacionContinente, null)
+  const sinCap = puertos({ inm: inmueble({ enComunidad: false, uso: 'vivienda', superficieCatastroM2: 100 }), filas: filaMia, cartera: [vigenteConCapital(null)] })
+  assert.deepEqual((await segurosDeInmueble(sinCap.p, INM))!.infraseguro, { estado: 'sin_dato', motivo: 'sin_capital' })
+  const ok = puertos({ inm: inmueble({ enComunidad: false, uso: 'vivienda', superficieCatastroM2: 100 }), filas: filaMia, cartera: [vigenteConCapital(10_000_000)] })
+  assert.equal((await segurosDeInmueble(ok.p, INM))!.infraseguro?.estado, 'ok')
+})
+
+test('el valor que dio la persona gana a la estimación', async () => {
+  const { p } = puertos({ inm: inmueble({ enComunidad: false, uso: 'vivienda', superficieCatastroM2: 100, valorReconstruccionCent: 5_000_000 }), filas: filaMia, cartera: [vigenteConCapital(4_000_000)] })
+  const s = (await segurosDeInmueble(p, INM))!
+  assert.equal(s.valorEstimadoCent, 5_000_000)
+  assert.equal(s.estimacionContinente, null)
+})
+
+test('presidente_comunidad: se escribe sobre el inmueble ya autorizado; valor no booleano → 400; ajeno → 404', async () => {
+  const { p, escritos } = puertos({ inm: inmueble({ nivel: 'total' }) })
+  assert.equal((await responderSegurosInmueble(p, INM, { accion: 'presidente_comunidad', valor: true })).status, 200)
+  assert.deepEqual(escritos, [['presidente', INM, true]])
+  assert.equal((await responderSegurosInmueble(p, INM, { accion: 'presidente_comunidad', valor: 'si' })).status, 400)
+  assert.equal((await responderSegurosInmueble(p, '99999999-9999-4999-8999-999999999999', { accion: 'presidente_comunidad', valor: true })).status, 404)
+  assert.equal(escritos.length, 1)
 })

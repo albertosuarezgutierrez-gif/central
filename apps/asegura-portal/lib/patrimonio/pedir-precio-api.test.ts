@@ -25,6 +25,7 @@ function puertos(o: { inm?: InmuebleDeSeguros; filas?: FilaEnlace[]; cartera?: P
     crearEnlace: async () => 'ok',
     archivarEnlace: async () => true,
     declararSinSeguro: async () => {},
+    declararPresidenteComunidad: async () => {},
     pedirPorPuente: async (x) => {
       llamadas.push(x)
       return o.puente ?? { estado: 'ok', pedidoEl: '2026-10-24', yaExistia: false }
@@ -87,4 +88,45 @@ test('🚨 cableado: el cliente del puente no manda clienteId, no usa lead-decla
   const ruta = quita(readFileSync(new URL('../../app/api/patrimonio/inmuebles/[id]/pedir-precio/route.ts', import.meta.url), 'utf8'))
   assert.doesNotMatch(ruta, /prisma|lead-declarada|clienteId/)
   assert.match(ruta, /requireIdentidad\(\)/)
+})
+
+// ─── Seguro de la comunidad (25/10/2026) ────────────────────────────────────
+const comunidadOk = (x: Partial<InmuebleDeSeguros> = {}) =>
+  inmueble({ enComunidad: true, presidenteComunidad: true, sinSeguroDeclaradoEn: null, ...x })
+const dComunidad: PolizaVisible = { tipo: 'cartera', id: P, compania: 'Mapfre', ramo: 'comunidades', ubicacion: null, referenciaCatastral: null, vence: '2027-01-01', vigente: true }
+
+test('comunidad: piso + presidente marcado + sin póliza de comunidad → puente con tipo comunidad (aunque el piso tenga su hogar)', async () => {
+  const a = puertos({ inm: comunidadOk() })
+  assert.equal((await responderPedirPrecio(a.p, INM, { tipo: 'comunidad' })).status, 201)
+  assert.deepEqual(a.llamadas, [{ inmuebleId: INM, tipo: 'comunidad' }])
+  const hogarVigente: PolizaVisible = { ...dComunidad, ramo: 'hogar' }
+  const b = puertos({ inm: comunidadOk(), filas: [{ id: 'e', polizaId: P, polizaDeclaradaId: null, estado: 'confirmado', origen: 'manual' }], cartera: [hogarVigente] })
+  assert.equal((await responderPedirPrecio(b.p, INM, { tipo: 'comunidad' })).status, 201)
+})
+
+test('🚨 comunidad: sin presidente, sin piso, con póliza de comunidad en vigor o nivel que no es Total → no llega al puente', async () => {
+  const casos = [
+    puertos({ inm: comunidadOk({ presidenteComunidad: null }) }),
+    puertos({ inm: comunidadOk({ presidenteComunidad: false }) }),
+    puertos({ inm: comunidadOk({ enComunidad: false, tipoCatastro: 'unifamiliar' }) }),
+    puertos({ inm: comunidadOk({ enComunidad: null, tipoCatastro: null }) }),
+    puertos({ inm: comunidadOk(), filas: [{ id: 'e', polizaId: P, polizaDeclaradaId: null, estado: 'confirmado', origen: 'manual' }], cartera: [dComunidad] }),
+  ]
+  for (const c of casos) assert.deepEqual(await responderPedirPrecio(c.p, INM, { tipo: 'comunidad' }), { status: 409, body: { error: 'no_aplica' } })
+  const g = puertos({ inm: comunidadOk({ nivel: 'gestion' }) })
+  assert.deepEqual(await responderPedirPrecio(g.p, INM, { tipo: 'comunidad' }), { status: 404, body: { error: 'no_encontrado' } })
+  assert.equal([...casos, g].reduce((n, c) => n + c.llamadas.length, 0), 0)
+})
+
+test('comunidad: el Catastro dice piso aunque la persona no marcara comunidad; sin saber si la póliza sigue en vigor, no se ofrece', async () => {
+  const catastro = puertos({ inm: comunidadOk({ enComunidad: null, tipoCatastro: 'piso' }) })
+  assert.equal((await responderPedirPrecio(catastro.p, INM, { tipo: 'comunidad' })).status, 201)
+  const dudosa = puertos({ inm: comunidadOk(), filas: [{ id: 'e', polizaId: P, polizaDeclaradaId: null, estado: 'confirmado', origen: 'manual' }], cartera: [{ ...dComunidad, vigente: null }] })
+  assert.equal((await responderPedirPrecio(dudosa.p, INM, { tipo: 'comunidad' })).status, 409)
+})
+
+test('el cuerpo no manda: otro tipo o basura se ignora y decide el servidor (sin seguro → inmueble_sin_seguro)', async () => {
+  const a = puertos()
+  await responderPedirPrecio(a.p, INM, { tipo: 'seguro_no_vigente', clienteId: 'x' })
+  assert.deepEqual(a.llamadas, [{ inmuebleId: INM, tipo: 'inmueble_sin_seguro' }])
 })

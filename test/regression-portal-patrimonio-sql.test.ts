@@ -27,12 +27,15 @@ const SQL_TOPE = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10
 // Obligaciones PROPIAS del cliente (25/10/2026): columna `categoria` en la tabla de obligaciones ya existente.
 const RUTA_PROPIA = 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_obligacion_propia.sql'
 const SQL_PROPIA = readFileSync(join(RAIZ, RUTA_PROPIA), 'utf8').replace(/--.*$/gm, '')
+// Caché del Catastro y presidente de comunidad (25/10/2026): columnas nuevas en `inmueble`; mismo espejo.
+const SQL_CATASTRO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_catastro_comunidad.sql'), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
   SQL_ENLACE,
   SQL_TOPE,
   SQL_PROPIA,
+  SQL_CATASTRO,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'

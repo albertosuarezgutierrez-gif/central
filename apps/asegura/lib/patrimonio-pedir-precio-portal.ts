@@ -26,8 +26,10 @@ import { fichasDeIdentidad } from './contacto-portal'
 import { puedePatrimonio } from './patrimonio-inquilino-portal'
 import {
   ORIGEN_PORTAL_PATRIMONIO,
+  aplicaComunidad,
   aplicaPedirPrecio,
-  ramoDeUso,
+  esRamoComunidad,
+  ramoDePeticion,
   textoAvisoPedirPrecio,
   textoTareaPrecioPatrimonio,
   type PeticionPedirPrecio,
@@ -44,15 +46,16 @@ export type ResultadoPedirPrecio =
 
 const hoyMadrid = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
 
-const ABIERTA = Prisma.sql`o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+const ABIERTA = (comunidad: boolean) => Prisma.sql`o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
   and o.info_riesgo->>'origen' = ${ORIGEN_PORTAL_PATRIMONIO}
+  and ((o.info_riesgo->>'tipo' = 'comunidad') = ${comunidad})
   and o.created_at > now() - make_interval(days => ${DIAS_PETICION_VIVA}::int)`
 
 export async function pedirPrecioPatrimonio(correduriaId: string, d: PeticionPedirPrecio): Promise<ResultadoPedirPrecio> {
   const db = prismaAsegura()
   // La ficha dueña sale del inmueble, nunca del cuerpo. Archivado o de otra correduría = como si no existiera.
-  const [inm] = await db.$queryRaw<{ cliente_id: string; alias: string; uso: string | null }[]>(Prisma.sql`
-    select t.cliente_id::text as cliente_id, i.alias, i.uso
+  const [inm] = await db.$queryRaw<{ cliente_id: string; alias: string; uso: string | null; en_comunidad: boolean | null; catastro_tipo_vivienda: string | null; presidente_comunidad: boolean | null }[]>(Prisma.sql`
+    select t.cliente_id::text as cliente_id, i.alias, i.uso, i.en_comunidad, i.catastro_tipo_vivienda, i.presidente_comunidad
     from portal_patrimonio_inmueble i
     join portal_patrimonio_titular t on t.id = i.titular_id
     where i.id = ${d.inmuebleId}::uuid and i.archivado_en is null
@@ -65,15 +68,24 @@ export async function pedirPrecioPatrimonio(correduriaId: string, d: PeticionPed
   const enlaces = await db.$queryRaw<{
     cartera_id: string | null; en_vigor: boolean | null
     declarada_id: string | null; declarada_viva_id: string | null; fecha_vencimiento: Date | null; vigente_declarada: string | null
+    ramo_cartera: string | null; ramo_declarada: string | null
   }[]>(Prisma.sql`
     select e.poliza_id::text as cartera_id, (${Prisma.raw(sqlCarteraEnVigor('p'))}) as en_vigor,
-           e.poliza_declarada_id::text as declarada_id, d.id::text as declarada_viva_id, d.fecha_vencimiento, d.vigente_declarada
+           e.poliza_declarada_id::text as declarada_id, d.id::text as declarada_viva_id, d.fecha_vencimiento, d.vigente_declarada, p.tipo::text as ramo_cartera, d.ramo as ramo_declarada
     from portal_patrimonio_inmueble_poliza e
     left join polizas p on p.id = e.poliza_id and p.correduria_id = ${correduriaId}::uuid
     left join portal_poliza_declarada d on d.id = e.poliza_declarada_id and ${sqlDeclaradaViva('d')}
     where e.inmueble_id = ${d.inmuebleId}::uuid and e.archivado_en is null and e.estado = 'confirmado'`)
   const hoy = new Date()
-  const vigencias = enlaces.map((e): boolean | null => {
+  const esComunidad = d.tipo === 'comunidad'
+  if (esComunidad && !aplicaComunidad({ enComunidad: inm.en_comunidad, tipoCatastro: inm.catastro_tipo_vivienda, presidenteComunidad: inm.presidente_comunidad })) {
+    return { estado: 'no_aplica' }
+  }
+  // Para la comunidad solo cuentan los seguros de ramo comunidad; para el resto, todos los enlazados.
+  const considerados = esComunidad
+    ? enlaces.filter((e) => esRamoComunidad(e.cartera_id !== null ? e.ramo_cartera : e.ramo_declarada))
+    : enlaces
+  const vigencias = considerados.map((e): boolean | null => {
     if (e.cartera_id !== null) return e.en_vigor === null ? null : e.en_vigor
     if (e.declarada_id !== null) {
       // El `join` solo trae las NO eliminadas: si la fila no llega, la quitó el cliente → no está en vigor.
@@ -84,16 +96,16 @@ export async function pedirPrecioPatrimonio(correduriaId: string, d: PeticionPed
   })
   if (!aplicaPedirPrecio(d.tipo, vigencias)) return { estado: 'no_aplica' }
 
-  const ramo = ramoDeUso(inm.uso)
+  const ramo = ramoDePeticion(d.tipo, inm.uso)
   const hoyIso = hoyMadrid()
   const r = await db.$transaction(async (tx) => {
     // Un doble clic son dos peticiones a la vez: el candado las pone en fila.
-    await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`${ORIGEN_PORTAL_PATRIMONIO}:${inm.cliente_id}:${d.inmuebleId}`}))`)
+    await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`${ORIGEN_PORTAL_PATRIMONIO}:${d.tipo === 'comunidad' ? 'comunidad:' : ''}${inm.cliente_id}:${d.inmuebleId}`}))`)
     const [ya] = await tx.$queryRaw<{ pedidoEl: string }[]>(Prisma.sql`
       select to_char(o.created_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "pedidoEl"
       from oportunidades o
       where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${inm.cliente_id}::uuid
-        and o.info_riesgo->>'inmuebleId' = ${d.inmuebleId} and ${ABIERTA}
+        and o.info_riesgo->>'inmuebleId' = ${d.inmuebleId} and ${ABIERTA(esComunidad)}
       order by o.created_at limit 1`)
     if (ya) return { pedidoEl: ya.pedidoEl, yaExistia: true, oportunidadId: null as string | null }
 

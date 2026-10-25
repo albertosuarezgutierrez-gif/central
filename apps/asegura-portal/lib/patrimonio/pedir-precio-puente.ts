@@ -11,7 +11,7 @@ import { PORTAL_PUENTE_TIEMPO_MS } from '../puente-config.ts'
 
 const RUTA = '/api/portal/patrimonio/pedir-precio'
 
-export type TipoPedirPrecio = 'inmueble_sin_seguro' | 'seguro_no_vigente'
+export type TipoPedirPrecio = 'inmueble_sin_seguro' | 'seguro_no_vigente' | 'comunidad'
 
 export type ResultadoPuentePedirPrecio =
   | { estado: 'ok'; pedidoEl: string; yaExistia: boolean }

@@ -41,14 +41,17 @@ function textoInfraseguro(d: SegurosDeInmueble): { texto: string; aviso: boolean
   if (a === null) return null
   const cap = d.capitalContinenteCent === null ? null : eur(d.capitalContinenteCent / 100)
   const val = d.valorEstimadoCent === null ? null : eur(d.valorEstimadoCent / 100)
+  // De dónde sale la estimación, para que se vea que no es un dato: m² del Catastro × coste por m² (aún por verificar).
+  const e = d.estimacionContinente
+  const base = e === null ? '' : `: ${e.superficieM2.toLocaleString('es-ES')} m² del Catastro × ${eur(e.eurPorM2)}/m²`
   switch (a.estado) {
     case 'infraseguro':
       return {
         aviso: true,
-        texto: `⚠ Posible infraseguro: el capital asegurado del edificio (${cap}) es el ${pctEs(a.ratio)} de lo que costaría reconstruirlo según nuestra estimación (${val}). Si hay un siniestro, la aseguradora podría pagarte solo la parte proporcional. Es una estimación: pídenos que lo revisemos.`,
+        texto: `⚠ Posible infraseguro: el capital asegurado del edificio (${cap}) es el ${pctEs(a.ratio)} de lo que costaría reconstruirlo según nuestra estimación (${val}${base}). Si hay un siniestro, la aseguradora podría pagarte solo la parte proporcional. Es solo una estimación: pídenos que lo revisemos.`,
       }
     case 'ok':
-      return { aviso: false, texto: `Capital del edificio asegurado: ${cap}, el ${pctEs(a.ratio)} del valor de reconstrucción estimado (${val}).` }
+      return { aviso: false, texto: `Capital del edificio asegurado: ${cap}, el ${pctEs(a.ratio)} del valor de reconstrucción estimado (${val}${base}). Es solo una estimación.` }
     case 'sin_dato':
       return {
         aviso: false,
@@ -80,6 +83,7 @@ export function SegurosInmueble({ datos: d, soloLectura = false }: { datos: Segu
   const [error, setError] = useState<string | null>(null)
   const [elegida, setElegida] = useState('')
   const [precio, setPrecio] = useState<null | 'pedido' | 'ya_pedido'>(null)
+  const [precioComunidad, setPrecioComunidad] = useState<null | 'pedido' | 'ya_pedido'>(null)
 
   async function enviar(cuerpo: Record<string, unknown>) {
     setEnviando(true)
@@ -104,17 +108,22 @@ export function SegurosInmueble({ datos: d, soloLectura = false }: { datos: Segu
     }
   }
 
-  async function pedirPrecio() {
+  async function pedirPrecio(tipo?: 'comunidad') {
     setEnviando(true)
     setError(null)
     try {
-      const res = await fetch(`/api/patrimonio/inmuebles/${datos.inmuebleId}/pedir-precio`, { method: 'POST' })
+      const res = await fetch(`/api/patrimonio/inmuebles/${datos.inmuebleId}/pedir-precio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tipo ? { tipo } : {}),
+      })
       const j = (await res.json().catch(() => ({}))) as { error?: string; yaExistia?: boolean }
       if (!res.ok) {
         setError(ERRORES[j.error ?? ''] ?? 'No se ha podido enviar. Inténtalo de nuevo.')
         return
       }
-      setPrecio(j.yaExistia ? 'ya_pedido' : 'pedido')
+      if (tipo === 'comunidad') setPrecioComunidad(j.yaExistia ? 'ya_pedido' : 'pedido')
+      else setPrecio(j.yaExistia ? 'ya_pedido' : 'pedido')
     } catch {
       setError('No se ha podido enviar. Revisa tu conexión.')
     } finally {
@@ -154,7 +163,7 @@ export function SegurosInmueble({ datos: d, soloLectura = false }: { datos: Segu
                 Si quieres, pedimos precio de un seguro para este inmueble. Solo te contactaremos por esta petición que haces tú.
               </p>
               <div style={fila}>
-                <button type="button" className="boton" style={boton} disabled={enviando} onClick={pedirPrecio}>
+                <button type="button" className="boton" style={boton} disabled={enviando} onClick={() => pedirPrecio()}>
                   Pedir precio
                 </button>
               </div>
@@ -164,6 +173,40 @@ export function SegurosInmueble({ datos: d, soloLectura = false }: { datos: Segu
               {precio === 'ya_pedido'
                 ? 'Ya habías pedido precio para este inmueble: el equipo de Grupo ASegura lo tiene en marcha.'
                 : 'Hecho. El equipo de Grupo ASegura ha recibido tu petición y se pondrá en contacto contigo para darte precio.'}
+            </p>
+          )}
+        </div>
+      )}
+      {datos.enPisoEnEdificio === true && datos.puedeEnlazar && !soloLectura && (
+        <label style={{ ...fila, minHeight: 44, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={datos.presidenteComunidad === true}
+            disabled={enviando}
+            onChange={(e) => enviar({ accion: 'presidente_comunidad', valor: e.target.checked })}
+            style={{ width: 20, height: 20 }}
+          />
+          <span style={{ flex: '1 1 220px', minWidth: 0 }}>Soy el presidente o el administrador de la comunidad de este edificio</span>
+        </label>
+      )}
+      {datos.ofreceComunidad && !soloLectura && (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {precioComunidad === null ? (
+            <>
+              <p className="suave" style={{ margin: 0, fontSize: 14 }}>
+                Como presidente o administrador, puedes pedirnos precio para el seguro de la comunidad. Solo te contactaremos por esta petición que haces tú.
+              </p>
+              <div style={fila}>
+                <button type="button" className="boton" style={boton} disabled={enviando} onClick={() => pedirPrecio('comunidad')}>
+                  Seguro de la comunidad
+                </button>
+              </div>
+            </>
+          ) : (
+            <p role="status" style={{ margin: 0 }}>
+              {precioComunidad === 'ya_pedido'
+                ? 'Ya habías pedido precio para el seguro de la comunidad: el equipo de Grupo ASegura lo tiene en marcha.'
+                : 'Hecho. El equipo de Grupo ASegura ha recibido tu petición del seguro de la comunidad y se pondrá en contacto contigo.'}
             </p>
           )}
         </div>

@@ -3,8 +3,11 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import {
+  aplicaComunidad,
   aplicaPedirPrecio,
   identidadDeConsulta,
+  esRamoComunidad,
+  ramoDePeticion,
   ramoDeUso,
   textoAvisoPedirPrecio,
   textoTareaPrecioPatrimonio,
@@ -72,4 +75,36 @@ test('GET de peticiones abiertas: solo identidadId; clienteId/inmuebleId de la q
   const get = ruta.slice(ruta.indexOf('export async function GET'), ruta.indexOf('export const POST'))
   assert.match(get, /puentePortalAutorizado\(req\)/)
   assert.doesNotMatch(get, /clienteId|searchParams/)
+})
+
+test('comunidad (25/10/2026): tipo válido en el cuerpo, ramo comunidades pase lo que pase con el uso, y texto de tarea', () => {
+  assert.deepEqual(validarPedirPrecio({ identidadId: U, inmuebleId: I, tipo: 'comunidad' }), { ok: true, datos: { identidadId: U, inmuebleId: I, tipo: 'comunidad' } })
+  assert.equal(ramoDePeticion('comunidad', 'vivienda'), 'comunidades')
+  assert.equal(ramoDePeticion('comunidad', 'local'), 'comunidades')
+  assert.equal(ramoDePeticion('inmueble_sin_seguro', 'local'), 'comercio')
+  assert.equal(ramoDePeticion('seguro_no_vigente', null), 'hogar')
+  const t = textoTareaPrecioPatrimonio({ tipo: 'comunidad', alias: 'Piso Socorro', ramo: 'comunidades' })
+  assert.match(t, /comunidades/)
+  assert.match(t, /«Piso Socorro»/)
+  assert.doesNotMatch(t, /no tiene seguro/)
+})
+
+test('🚨 comunidad: asegura exige presidente marcado Y piso (comunidad o Catastro); null nunca aplica', () => {
+  assert.equal(aplicaComunidad({ enComunidad: true, tipoCatastro: null, presidenteComunidad: true }), true)
+  assert.equal(aplicaComunidad({ enComunidad: null, tipoCatastro: 'piso', presidenteComunidad: true }), true)
+  assert.equal(aplicaComunidad({ enComunidad: true, tipoCatastro: 'piso', presidenteComunidad: null }), false)
+  assert.equal(aplicaComunidad({ enComunidad: true, tipoCatastro: 'piso', presidenteComunidad: false }), false)
+  assert.equal(aplicaComunidad({ enComunidad: false, tipoCatastro: 'unifamiliar', presidenteComunidad: true }), false)
+  assert.equal(aplicaComunidad({ enComunidad: null, tipoCatastro: null, presidenteComunidad: true }), false)
+})
+
+test('comunidad: ramo de póliza de comunidad reconocido; con una en vigor o dudosa no aplica; sin ninguna sí', () => {
+  assert.equal(esRamoComunidad('comunidades'), true)
+  assert.equal(esRamoComunidad(' Comunidad '), true)
+  assert.equal(esRamoComunidad('hogar'), false)
+  assert.equal(esRamoComunidad(null), false)
+  assert.equal(aplicaPedirPrecio('comunidad', []), true)
+  assert.equal(aplicaPedirPrecio('comunidad', [false]), true)
+  assert.equal(aplicaPedirPrecio('comunidad', [true]), false)
+  assert.equal(aplicaPedirPrecio('comunidad', [null]), false)
 })

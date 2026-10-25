@@ -18,14 +18,20 @@ export interface PuertosPedirPrecio extends PuertosSegurosInmueble {
 
 const NO_ENCONTRADO: Respuesta = { status: 404, body: { error: 'no_encontrado' } }
 
-export async function responderPedirPrecio(p: PuertosPedirPrecio, idPedido: unknown): Promise<Respuesta> {
+/**
+ * `cuerpo`: lo ÚNICO que se lee es `tipo === 'comunidad'` («Seguro de la comunidad»); cualquier otra cosa se ignora y el
+ * servidor decide el tipo desde el estado que recalcula. `comunidad` solo si el servidor también ve que se ofrece
+ * (piso + presidente marcado + sin póliza de comunidad en vigor + nivel total): si no, 409 `no_aplica`.
+ */
+export async function responderPedirPrecio(p: PuertosPedirPrecio, idPedido: unknown, cuerpo?: unknown): Promise<Respuesta> {
   const s = await segurosDeInmueble(p, idPedido)
   if (s === null) return NO_ENCONTRADO
   // `puedePedirPrecio` ya exige nivel `total` Y el estado: aquí se separan para no confundir un permiso con un estado.
   const inm = await p.inmueble(s.inmuebleId)
   if (inm === null || inm.nivel !== 'total') return NO_ENCONTRADO
-  if (!s.puedePedirPrecio) return { status: 409, body: { error: 'no_aplica' } }
-  const tipo: TipoPedirPrecio = s.estado === 'sin_seguro' ? 'inmueble_sin_seguro' : 'seguro_no_vigente'
+  const pideComunidad = cuerpo !== null && typeof cuerpo === 'object' && (cuerpo as Record<string, unknown>).tipo === 'comunidad'
+  if (pideComunidad ? !s.ofreceComunidad : !s.puedePedirPrecio) return { status: 409, body: { error: 'no_aplica' } }
+  const tipo: TipoPedirPrecio = pideComunidad ? 'comunidad' : s.estado === 'sin_seguro' ? 'inmueble_sin_seguro' : 'seguro_no_vigente'
   const r = await p.pedirPorPuente({ inmuebleId: s.inmuebleId, tipo })
   switch (r.estado) {
     case 'ok':

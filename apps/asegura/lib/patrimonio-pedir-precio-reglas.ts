@@ -12,7 +12,9 @@
 //    cliente (que va a `info_riesgo` por id, no por texto). Telegram, solo ids.
 
 export const ORIGEN_PORTAL_PATRIMONIO = 'portal:patrimonio'
-export const TIPOS_PEDIR_PRECIO = ['inmueble_sin_seguro', 'seguro_no_vigente'] as const
+// `comunidad` (25/10/2026): «Seguro de la comunidad» para quien marcó que preside/administra la comunidad de un piso en
+// edificio; ramo `comunidades`. No depende de que el piso tenga su propio seguro: solo de que no haya YA uno de comunidad.
+export const TIPOS_PEDIR_PRECIO = ['inmueble_sin_seguro', 'seguro_no_vigente', 'comunidad'] as const
 export type TipoPedirPrecio = (typeof TIPOS_PEDIR_PRECIO)[number]
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -32,10 +34,30 @@ export function ramoDeUso(uso: string | null): 'hogar' | 'comercio' {
   return uso === 'local' || uso === 'oficina' || uso === 'nave' ? 'comercio' : 'hogar'
 }
 
+export type RamoPedido = 'hogar' | 'comercio' | 'comunidades'
+
+/** Ramo (`tipo_seguro`) de la petición: `comunidad` pide el ramo comunidades sea cual sea el uso del inmueble. */
+export function ramoDePeticion(tipo: TipoPedirPrecio, uso: string | null): RamoPedido {
+  return tipo === 'comunidad' ? 'comunidades' : ramoDeUso(uso)
+}
+
+/** ¿Un ramo de póliza (texto libre de cartera o declarada) es de comunidad? */
+export const esRamoComunidad = (ramo: string | null | undefined): boolean => ['comunidad', 'comunidades'].includes((ramo ?? '').trim().toLowerCase())
+
+/**
+ * Asegura no se fía de lo que el portal dijo de la comunidad: el inmueble tiene que ser un piso en edificio (la persona lo
+ * marcó en comunidad o el Catastro lo dice) Y la persona haber marcado que es presidente/administrador. `null` = no consta
+ * = no aplica.
+ */
+export function aplicaComunidad(x: { enComunidad: boolean | null; tipoCatastro: string | null; presidenteComunidad: boolean | null }): boolean {
+  return x.presidenteComunidad === true && (x.enComunidad === true || x.tipoCatastro === 'piso')
+}
+
 /**
  * ¿Sigue habiendo un seguro en vigor enlazado? El portal ya lo comprobó, pero asegura no se fía: si hay una póliza
  * confirmada en vigor, el inmueble NO está sin seguro y no se abre ninguna petición. `vigencias`: una por enlace
- * CONFIRMADO vivo (`true` en vigor · `false` no · `null` no se pudo saber).
+ * CONFIRMADO vivo (`true` en vigor · `false` no · `null` no se pudo saber). Para `comunidad` el llamador pasa SOLO las
+ * vigencias de las pólizas de ramo comunidad (la póliza de hogar del piso no impide pedir la de la comunidad).
  */
 export function aplicaPedirPrecio(tipo: TipoPedirPrecio, vigencias: readonly (boolean | null)[]): boolean {
   if (vigencias.some((v) => v === true || v === null)) return false // en vigor, o no se sabe: no se afirma «sin seguro»
@@ -45,10 +67,11 @@ export function aplicaPedirPrecio(tipo: TipoPedirPrecio, vigencias: readonly (bo
 const QUE: Record<TipoPedirPrecio, string> = {
   inmueble_sin_seguro: 'no tiene seguro (lo ha dicho el cliente)',
   seguro_no_vigente: 'tiene el seguro caducado',
+  comunidad: 'está en una comunidad que preside o administra el cliente y no consta su seguro de comunidad en vigor',
 }
 
 /** Texto de la tarea: el alias que puso el cliente y el motivo. Sin dirección, ref. catastral ni nº de póliza. */
-export function textoTareaPrecioPatrimonio(x: { tipo: TipoPedirPrecio; alias: string; ramo: 'hogar' | 'comercio' }): string {
+export function textoTareaPrecioPatrimonio(x: { tipo: TipoPedirPrecio; alias: string; ramo: RamoPedido }): string {
   const alias = x.alias.replace(/\s+/g, ' ').trim().slice(0, 80)
   return `Pedir precio de seguro de ${x.ramo}: el inmueble «${alias}» ${QUE[x.tipo]}. Lo ha pedido él desde Patrimonio en el portal.`
 }

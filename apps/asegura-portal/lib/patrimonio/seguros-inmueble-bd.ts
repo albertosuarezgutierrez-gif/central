@@ -24,6 +24,7 @@ import { prisma } from '../db'
 import { DECLARADA_NO_ELIMINADA } from '../declaradas-eliminadas'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
+import { cacheDeCatastro, debeConsultarCatastro } from './catastro-inmueble'
 import { primasDeEnlaces } from './rentabilidad'
 import { capitalContinenteDeCartera, capitalContinenteDeDeclarada } from './capital-continente'
 import { estadosDeInmuebles, type InmuebleDeSeguros, type PolizaVisible, type PuertosSegurosInmueble } from './seguros-inmueble-api'
@@ -148,6 +149,33 @@ export async function primasDeInmuebles(
   return primasDeEnlaces(filas, [...vis.cartera, ...vis.declaradas], periodo)
 }
 
+type FilaConCatastro = {
+  id: string; uso: string; referenciaCatastral: string | null
+  catastroSuperficieM2: unknown; catastroTipoVivienda: string | null; catastroConsultadoEn: Date | null; catastroEstado: string | null
+}
+
+/**
+ * Caché del Catastro (25/10/2026): si la del inmueble ya caducó, se pregunta UNA vez y se guarda; si no, no se llama. El
+ * fallo de la consulta o del guardado nunca tumba la ficha: se sigue con lo que había (estimación = «sin dato»). Solo se
+ * llama con una fila que YA salió de un titular autorizado.
+ */
+async function conCatastroAlDia<T extends FilaConCatastro>(f: T): Promise<T> {
+  const ahora = new Date()
+  if (!debeConsultarCatastro({ referenciaCatastral: f.referenciaCatastral, uso: f.uso, estado: f.catastroEstado, consultadoEn: f.catastroConsultadoEn, ahora })) return f
+  try {
+    const { bajarCatastro } = await import('@central/core-catastro/http')
+    const c = cacheDeCatastro(await bajarCatastro(f.referenciaCatastral as string).catch(() => null))
+    await prisma.portalPatrimonioInmueble.updateMany({
+      where: { id: f.id, archivadoEn: null },
+      data: { catastroSuperficieM2: c.superficieM2, catastroTipoVivienda: c.tipoVivienda, catastroConsultadoEn: ahora, catastroEstado: c.estado },
+    })
+    return { ...f, catastroSuperficieM2: c.superficieM2, catastroTipoVivienda: c.tipoVivienda, catastroConsultadoEn: ahora, catastroEstado: c.estado } as T
+  } catch (e) {
+    console.error('[patrimonio] caché del Catastro no actualizada:', e instanceof Error ? e.message : 'error')
+    return f
+  }
+}
+
 export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmueble {
   let accesos: Awaited<ReturnType<typeof accesosPatrimonio>> | null = null
   const misAccesos = async () => (accesos ??= await accesosPatrimonio(identidadId))
@@ -162,6 +190,8 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
       select: {
         id: true, alias: true, referenciaCatastral: true, cp: true, via: true, numero: true, enComunidad: true,
         sinSeguroDeclaradoEn: true, valorReconstruccionEstimadoCent: true, titular: { select: { clienteId: true } },
+        uso: true, catastroSuperficieM2: true, catastroTipoVivienda: true, catastroConsultadoEn: true, catastroEstado: true,
+        presidenteComunidad: true,
       },
     })
     if (!fila) return null
@@ -174,11 +204,15 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
       if (!(await sesionEsLaMia())) return null
       const r = await inmuebleAutorizadoId(idPedido)
       if (!r) return null
-      const f = r.fila
+      const f = await conCatastroAlDia(r.fila)
       return {
         id: f.id, alias: f.alias, nivel: r.nivel, enComunidad: f.enComunidad, sinSeguroDeclaradoEn: f.sinSeguroDeclaradoEn,
         referenciaCatastral: f.referenciaCatastral, cp: f.cp, via: f.via, numero: f.numero,
         valorReconstruccionCent: f.valorReconstruccionEstimadoCent === null ? null : Number(f.valorReconstruccionEstimadoCent),
+        uso: f.uso,
+        superficieCatastroM2: f.catastroSuperficieM2 === null ? null : Number(f.catastroSuperficieM2),
+        tipoCatastro: f.catastroTipoVivienda === 'piso' || f.catastroTipoVivienda === 'unifamiliar' ? f.catastroTipoVivienda : null,
+        presidenteComunidad: f.presidenteComunidad,
       }
     },
 
@@ -251,6 +285,11 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
         data: { archivadoEn: new Date() },
       })
       return r.count === 1
+    },
+
+    async declararPresidenteComunidad(inmuebleId, valor) {
+      if (!(await sesionEsLaMia()) || !(await inmuebleAutorizadoId(inmuebleId))) return
+      await prisma.portalPatrimonioInmueble.updateMany({ where: { id: inmuebleId, archivadoEn: null }, data: { presidenteComunidad: valor } })
     },
 
     async declararSinSeguro(inmuebleId, valor) {
