@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auditado } from '@/lib/auditoria'
 
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
@@ -18,7 +19,7 @@ export const runtime = 'nodejs'
  * ningún dato de contacto: solo el sello. `sin_ficha` y `varias_fichas` son
  * 409 —no hay una ficha suya donde sellarlo, y eso lo resuelve el corredor—.
  */
-export async function POST(req: Request) {
+async function POSTSin(req: Request) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -41,3 +42,5 @@ export async function POST(req: Request) {
     )
   }
 }
+
+export const POST = auditado(POSTSin)

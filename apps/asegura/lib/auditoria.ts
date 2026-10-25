@@ -14,7 +14,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { prismaAsegura, aseguraConfigurada } from './asegura-db'
 import { operadorAutorizado } from './operador'
-import { CABECERA_ACTOR, idsDeEscritura, leerActor } from './actor'
+import { puentePortalAutorizado } from './puente-portal'
+import { actorPortal, CABECERA_ACTOR, idsDeEscritura, leerActor, type Actor } from './actor'
 import { cambiosParaGuardar, type Cambio } from './cambios'
 
 const MS_TECHO_INSERCION = 3_000
@@ -33,7 +34,10 @@ type Manejador<C> = (req: Request, ctx: C) => Promise<Response> | Response
 
 export function auditado<C>(manejador: Manejador<C>): (req: Request, ctx: C) => Promise<Response> {
   return async (req, ctx) => {
-    const autorizado = operadorAutorizado(req)
+    // Dos credenciales distintas, dos canales: el Bearer de operador (plataforma) y el del puente
+    // del portal. Aquí SOLO se decide si se deja traza; quién pasa lo decide cada ruta.
+    const canal: 'operador' | 'portal' | null = operadorAutorizado(req) ? 'operador' : puentePortalAutorizado(req) ? 'portal' : null
+    const autorizado = canal !== null
     // El cuerpo se copia ANTES de que la ruta lo consuma, y solo si es JSON: una subida de
     // documento (multipart) duplicaría el PDF en memoria para no sacar de ahí ningún id.
     const esJson = (req.headers.get('content-type') ?? '').includes('application/json')
@@ -46,20 +50,23 @@ export function auditado<C>(manejador: Manejador<C>): (req: Request, ctx: C) => 
       estado = res.status
       return res
     } finally {
-      if (autorizado) await registrarEscritura(req, copia, estado, Date.now() - t0, store.cambios)
+      if (autorizado) await registrarEscritura(req, copia, canal, estado, Date.now() - t0, store.cambios)
     }
   }
 }
 
-async function registrarEscritura(req: Request, copia: Request | null, estado: number, duracionMs: number, anotados: Cambio[]): Promise<void> {
+async function registrarEscritura(req: Request, copia: Request | null, canal: 'operador' | 'portal', estado: number, duracionMs: number, anotados: Cambio[]): Promise<void> {
   try {
     if (!aseguraConfigurada()) return
     let cuerpo: unknown = null
     if (copia) cuerpo = await copia.json().catch(() => null)
-    const actor = leerActor(req.headers.get(CABECERA_ACTOR))
+    const idsObj = idsDeEscritura(req.url, cuerpo)
+    // Puente del portal: `x-actor` no es de fiar (el portal es público); el actor es la identidad
+    // del cuerpo (UUID validado) o, sin ella, `portal`. Sin PII: nunca un correo ni un nombre.
+    const actor: Actor = canal === 'portal' ? actorPortal(idsObj) : leerActor(req.headers.get(CABECERA_ACTOR))
     const actorId = actor.tipo === 'desconocido' ? actor.motivo : actor.id
     const ruta = new URL(req.url).pathname
-    const ids = JSON.stringify(idsDeEscritura(req.url, cuerpo))
+    const ids = JSON.stringify(idsObj)
     const cambios = JSON.stringify(cambiosParaGuardar(anotados))
     // Con techo: la escritura YA se hizo (a veces una emisión pagada). Si el pooler se cuelga,
     // perder la fila de auditoría es mejor que perder la respuesta y que el corredor reintente.
