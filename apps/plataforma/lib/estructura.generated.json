@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-25T08:03:46Z",
+  "generadoEn": "2026-10-25T18:35:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 37
       },
       "asegura-web": {
         "estado": "no",
@@ -4501,6 +4501,7 @@
       "/api/patrimonio/documentos/[id]",
       "/api/patrimonio/facturas",
       "/api/patrimonio/inmuebles",
+      "/api/patrimonio/inmuebles/[id]/obligaciones",
       "/api/patrimonio/inmuebles/[id]/pedir-precio",
       "/api/patrimonio/inmuebles/[id]/seguros",
       "/api/patrimonio/inquilinos/[id]",
@@ -7161,7 +7162,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1792,
+    "apis": 1793,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

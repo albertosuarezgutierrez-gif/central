@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-25T08:03:46Z",
-  "sha": "c2e5a8d308fccd905e4c00d16d55d47ac25eb85e",
+  "generadoEn": "2026-10-25T18:35:49Z",
+  "sha": "36b0193ac71ced30d62ab84c28a68b9cef102601",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6028,7 +6028,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56b91813d380"
+      "hash": "aa2561add9da"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/contrato/[id]/ContratoAcciones.tsx",
@@ -6128,7 +6128,7 @@
           "exportada": false,
           "params": "p: ResultadoActualizacion, indice: string | null, descripcion: string | null",
           "retorno": "string",
-          "linea": 37,
+          "linea": 39,
           "resumen": "Texto de la propuesta: dice el HECHO, sin inventar un 0 % cuando no tenemos el índice."
         },
         {
@@ -6137,13 +6137,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 61,
+          "linea": 63,
           "resumen": "Ficha del contrato. 🚨 El id de la URL NO consulta por sí solo: `contratoAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver. Si no existe o no es tuyo: 404 (nunca 403). La PII de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53d07e6e765b"
+      "hash": "629f6e1a0962"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/contrato/[id]/TopeRenta.tsx",
@@ -6440,6 +6440,38 @@
       "hash": "16b22366c3f0"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/ObligacionesPropias.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "ObligacionesPropias"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 42
+        },
+        {
+          "nombre": "ObligacionesPropias",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ datos }: { datos: ObligacionesDeInmueble }",
+          "retorno": null,
+          "linea": 54,
+          "resumen": "«Recordatorios» de la ficha del inmueble (25/10/2026): IBI, comunidad, caldera… que el cliente anota. Salen en el calendario, la campana y «Pendiente de ti». Solo Gestión/Total pueden tocar; archivado"
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "db2be2092456"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -6452,7 +6484,7 @@
           "exportada": false,
           "params": "v: boolean | null",
           "retorno": null,
-          "linea": 21
+          "linea": 24
         },
         {
           "nombre": "InmueblePage",
@@ -6460,13 +6492,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 28,
+          "linea": 31,
           "resumen": "Ficha del inmueble. 🚨 El id de la URL NO consulta por sí solo: `inmuebleAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver (`accesosPatrimonio`). Si no existe o no es tuyo: 404 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3640d357982"
+      "hash": "9ffedb2e52f5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/SegurosInmueble.tsx",
@@ -8106,6 +8138,36 @@
       "tablas": [],
       "rutaApi": "/api/patrimonio/facturas",
       "hash": "b35e91222d6c"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/obligaciones/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "`GET /api/patrimonio/inmuebles/[id]/obligaciones` — los recordatorios propios del inmueble. `POST` — `{accion:'crear', categoria, vence, periodicidad, descripcion?}` · `{accion:'editar', obligacionId,"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 33
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/inmuebles/[id]/obligaciones",
+      "hash": "09502c130c9f"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/pedir-precio/route.ts",
@@ -15017,13 +15079,13 @@
           "exportada": true,
           "params": "pedido: unknown, accesos: AccesosPatrimonio",
           "retorno": "string | null",
-          "linea": 105,
+          "linea": 122,
           "resumen": "El titular pedido (URL/cuerpo) SOLO si está dentro de los accesos ya resueltos. `null` = no existe o no es suyo: la ruta contesta 404 en los dos casos, a propósito."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "64e09ad20546"
+      "hash": "0795786db3c8"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/alta-inmueble.ts",
@@ -15133,7 +15195,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ab8356b4673e"
+      "hash": "f20b98f56937"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/calendario.ts",
@@ -16610,7 +16672,7 @@
           "exportada": false,
           "params": "campo: string, valor: unknown",
           "retorno": "never",
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "deLista",
@@ -16618,7 +16680,7 @@
           "exportada": false,
           "params": "lista: readonly T[], v: unknown, campo: string",
           "retorno": "T",
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "centimos",
@@ -16626,7 +16688,7 @@
           "exportada": true,
           "params": "v: bigint | null",
           "retorno": "Centimos | null",
-          "linea": 52,
+          "linea": 53,
           "resumen": "Céntimos de la BD (`bigint`) → `number` exacto. `null` → `null`. Fuera de rango → error, nunca redondeo."
         },
         {
@@ -16635,7 +16697,7 @@
           "exportada": false,
           "params": "v: bigint, campo: string",
           "retorno": "Centimos",
-          "linea": 62,
+          "linea": 63,
           "resumen": "Igual que `centimos` para una columna NOT NULL: un `null` aquí es una fila rota."
         },
         {
@@ -16644,7 +16706,7 @@
           "exportada": true,
           "params": "d: Date | null",
           "retorno": "Fecha | null",
-          "linea": 68,
+          "linea": 69,
           "resumen": "Columna `date` → `YYYY-MM-DD` en UTC. `null` → `null`."
         },
         {
@@ -16653,7 +16715,7 @@
           "exportada": false,
           "params": "d: Date, campo: string",
           "retorno": "Fecha",
-          "linea": 74
+          "linea": 75
         },
         {
           "nombre": "decimal",
@@ -16661,7 +16723,7 @@
           "exportada": true,
           "params": "v: DecimalLike | null",
           "retorno": "number | null",
-          "linea": 80,
+          "linea": 81,
           "resumen": "`numeric` → `number`. `null` → `null`. Un texto no numérico es una fila rota."
         },
         {
@@ -16670,7 +16732,7 @@
           "exportada": true,
           "params": "f: FilaTitular, ficha: FichaTitular",
           "retorno": "Titular",
-          "linea": 98,
+          "linea": 99,
           "resumen": "`nif` va SIEMPRE `null`: el rol del portal no lee `clientes.dni` (GRANT por columnas, spec §7). Es «el portal no lo sabe», no «no tiene NIF»: la pantalla no puede decir que falta."
         },
         {
@@ -16679,7 +16741,7 @@
           "exportada": true,
           "params": "f: { via: string | null; direccionNormalizada: string | null }",
           "retorno": "boolean | null",
-          "linea": 131,
+          "linea": 132,
           "resumen": "«Calle por validar» (sin columna nueva): el alta guarda `via` SOLO si la calle casó con el callejero del Catastro (`alta-inmueble.ts`); `via = null` con dirección = texto libre que nadie ha validado. "
         },
         {
@@ -16688,7 +16750,7 @@
           "exportada": true,
           "params": "f: FilaInmueble",
           "retorno": "Inmueble",
-          "linea": 136
+          "linea": 137
         },
         {
           "nombre": "inquilinoDeFila",
@@ -16696,7 +16758,7 @@
           "exportada": true,
           "params": "f: FilaInquilino",
           "retorno": "Inquilino",
-          "linea": 164,
+          "linea": 165,
           "resumen": "`nif` y `email` van SIEMPRE `null`: están CIFRADOS y el rol del portal ni los tiene concedidos ni tiene la clave (spec §7). Se leen por el puente de `apps/asegura` cuando el nivel es `total`, no aquí."
         },
         {
@@ -16705,7 +16767,7 @@
           "exportada": true,
           "params": "f: FilaContrato, inquilinoIds: readonly string[], actualizaciones: readonly FilaRentaActualizacion[],",
           "retorno": "Contrato",
-          "linea": 195,
+          "linea": 196,
           "resumen": "`inquilinoIds` y `actualizaciones` las trae quien lee (puente y tabla append-only) del MISMO contrato. Fianza: sin importe, depósito ni devolución anotados → `null` («no consta»), no una fianza de 0 €"
         },
         {
@@ -16714,7 +16776,7 @@
           "exportada": true,
           "params": "f: FilaPlantillaGasto",
           "retorno": "PlantillaGasto",
-          "linea": 261,
+          "linea": 262,
           "resumen": "`importe` `null` = variable (espera la factura), NUNCA 0."
         },
         {
@@ -16723,7 +16785,7 @@
           "exportada": true,
           "params": "f: FilaGasto",
           "retorno": "Gasto",
-          "linea": 292,
+          "linea": 293,
           "resumen": "`categoria`, `base` y `total` `null` = no consta (un gasto sin total NO es de 0 €)."
         },
         {
@@ -16732,7 +16794,7 @@
           "exportada": true,
           "params": "f: FilaDerrama, titularId: string",
           "retorno": "Derrama",
-          "linea": 318,
+          "linea": 319,
           "resumen": "La derrama cuelga de la comunidad; el titular lo pone quien la leyó DENTRO de un titular autorizado."
         },
         {
@@ -16741,13 +16803,76 @@
           "exportada": true,
           "params": "f: FilaObligacion",
           "retorno": "ObligacionInmueble",
-          "linea": 356,
+          "linea": 360,
           "resumen": "`aplica` `null` = no se sabe (sale `sin_dato`), no «no aplica»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45956f1d4b4b"
+      "hash": "804ae4298ddf"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/obligaciones-api.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — OBLIGACIONES Y RECORDATORIOS PROPIOS de un inmueble: lógica de la sección de la ficha y de `POST /api/patrimonio/inmuebles/[id]/obligaciones`, SIN prisma ni sesión (puertos inyectados, `hoy` inyectado) para poder probar el aislamiento con `node --test`. Los puertos reales e",
+      "exporta": [
+        "obligacionesDeInmueble",
+        "responderObligaciones",
+        "mesesAGuardar"
+      ],
+      "funciones": [
+        {
+          "nombre": "obligacionesDeInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosObligaciones, idPedido: unknown",
+          "retorno": "Promise<ObligacionesDeInmueble | null>",
+          "linea": 71,
+          "resumen": "Todo lo que pinta la sección de la ficha. `null` = 404. Leer exige poder `ver` (cualquier nivel reconocido)."
+        },
+        {
+          "nombre": "responderObligaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosObligaciones, idPedido: unknown, cuerpo: unknown, hoy: Fecha",
+          "retorno": "Promise<Respuesta>",
+          "linea": 93,
+          "resumen": "`POST /api/patrimonio/inmuebles/[id]/obligaciones`. Acciones: `crear` · `editar` (+`obligacionId`) · `hecha` (+`obligacionId`) · `archivar` (+`obligacionId`). `hoy` (`YYYY-MM-DD`, día de Madrid) lo po"
+        },
+        {
+          "nombre": "mesesAGuardar",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: PeriodicidadPropia",
+          "retorno": "number | null",
+          "linea": 133,
+          "resumen": "Lo que se guarda en `periodicidad_meses` para una periodicidad validada."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8ed897b0d2da"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/obligaciones-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — puertos con BD de las OBLIGACIONES PROPIAS de un inmueble (`obligaciones-api.ts`). 🚨 TODA función parte de `accesosPatrimonio(identidadId)` (cookie + `portal_vinculo`) y la sesión tiene que ser la de `identidadId`. El inmueble se busca DENTRO de los titulares autorizados; ",
+      "exporta": [
+        "puertosObligaciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "puertosObligaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "PuertosObligaciones",
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1ae9b940fd8a"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/pedir-precio-api.ts",
@@ -209626,13 +209751,13 @@
           "exportada": true,
           "params": "nivel: NivelPatrimonio | null | undefined, accion: AccionPatrimonio",
           "retorno": "boolean",
-          "linea": 124,
+          "linea": 126,
           "resumen": "Tabla de §4. Nivel o acción desconocidos (o `undefined`: el titular no está en el mapa) → `false`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9717ad23cf88"
+      "hash": "0e652731b390"
     },
     {
       "ruta": "packages/module-patrimonio/src/actualizacion-renta.ts",
@@ -209693,15 +209818,15 @@
           "exportada": true,
           "params": "vence: Fecha | null, avisarDesde: Fecha | null, hoy: Fecha",
           "retorno": "EstadoObligacion",
-          "linea": 86
+          "linea": 96
         },
         {
           "nombre": "vencimiento",
           "kind": "function",
           "exportada": false,
-          "params": "base: Omit<Vencimiento, 'estado' | 'dias' | 'avisarDesde' | 'etiqueta'>, hoy: Fecha, avisoDias?: number,",
+          "params": "base: Omit<Vencimiento, 'estado' | 'dias' | 'avisarDesde' | 'etiqueta'>, hoy: Fecha, avisoDias?: number, etiqueta?: string,",
           "retorno": "Vencimiento",
-          "linea": 93
+          "linea": 103
         },
         {
           "nombre": "vencimientoDeObligacion",
@@ -209709,7 +209834,16 @@
           "exportada": true,
           "params": "o: ObligacionInmueble, hoy: Fecha",
           "retorno": "Vencimiento | null",
-          "linea": 109
+          "linea": 120
+        },
+        {
+          "nombre": "vencimientoDePropia",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: ObligacionInmueble, categoria: CategoriaObligacionPropia, hoy: Fecha",
+          "retorno": "Vencimiento",
+          "linea": 142,
+          "resumen": "Recordatorio propio: la fecha es del cliente y SIEMPRE existe. Una fila propia sin fecha (no debería existir: CHECK en BD) sale `sin_dato`, nunca «al día». La clave lleva la fecha: al pasar al siguien"
         },
         {
           "nombre": "vencimientosDeContrato",
@@ -209717,7 +209851,7 @@
           "exportada": true,
           "params": "c: Contrato, hoy: Fecha, op: OpcionesContrato = {}",
           "retorno": "Vencimiento[]",
-          "linea": 132,
+          "linea": 166,
           "resumen": "Obligaciones que nacen de un CONTRATO (fin, fianza, seguro del inquilino, actualización de renta)."
         },
         {
@@ -209726,7 +209860,7 @@
           "exportada": true,
           "params": "vs: readonly Vencimiento[]",
           "retorno": "Vencimiento[]",
-          "linea": 174,
+          "linea": 208,
           "resumen": "Ordena para la pantalla: vencidas → a avisar → sin dato → al día → cumplidas; dentro, por fecha."
         },
         {
@@ -209735,12 +209869,12 @@
           "exportada": true,
           "params": "entrada: { obligaciones: readonly ObligacionInmueble[]; contratos: readonly Contrato[] }, hoy: Fecha, op: OpcionesContrato = {},",
           "retorno": "Vencimiento[]",
-          "linea": 183
+          "linea": 217
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8ab4893dc314"
+      "hash": "459cc5a7e3fa"
     },
     {
       "ruta": "packages/module-patrimonio/src/contrato.ts",
@@ -210413,6 +210547,66 @@
       "hash": "affc02ccafde"
     },
     {
+      "ruta": "packages/module-patrimonio/src/obligacion-propia.ts",
+      "ambito": "packages/module-patrimonio",
+      "resumen": "Obligaciones y recordatorios PROPIOS de un inmueble, que escribe el cliente (25/10/2026): IBI, comunidad, revisión de la caldera, ITE, fin de seguro… Entran en el calendario igual que las derivadas de contrato (`calendario.ts`). Reglas PURAS: catálogo cerrado + texto libre opcional, periodicidad (ún",
+      "exporta": [
+        "esCategoriaObligacionPropia",
+        "esPeriodicidadPropia",
+        "periodicidadDeMeses",
+        "validarObligacionPropia",
+        "trasMarcarHecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCategoriaObligacionPropia",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is CategoriaObligacionPropia",
+          "linea": 32
+        },
+        {
+          "nombre": "esPeriodicidadPropia",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is PeriodicidadPropia",
+          "linea": 47
+        },
+        {
+          "nombre": "periodicidadDeMeses",
+          "kind": "function",
+          "exportada": true,
+          "params": "meses: number | null",
+          "retorno": "PeriodicidadPropia | null",
+          "linea": 52,
+          "resumen": "Lo guardado → periodicidad. Un número que no es 1/3/12 NO se interpreta (`null` = no se sabe leerlo)."
+        },
+        {
+          "nombre": "validarObligacionPropia",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: unknown",
+          "retorno": "ResultadoValidacionPropia",
+          "linea": 81,
+          "resumen": "Valida el cuerpo de un alta/edición. Nada se normaliza «a lo que parece»: lo que no encaja se rechaza con su campo."
+        },
+        {
+          "nombre": "trasMarcarHecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "vence: Fecha, periodicidadMeses: number | null, hoy: Fecha",
+          "retorno": "TrasHecha | null",
+          "linea": 110,
+          "resumen": "Qué pasa al marcar «hecha». Recurrente: salta al próximo ciclo (si llevaba varios sin marcar, al primero que aún no ha pasado). Una periodicidad que no entendemos (`null`) NO se adivina: devuelve `nul"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dc3c216f5bea"
+    },
+    {
       "ruta": "packages/module-patrimonio/src/rentabilidad.ts",
       "ambito": "packages/module-patrimonio",
       "resumen": "Rentabilidad por inmueble y periodo: renta devengada − gastos confirmados − seguros. Se apoya en `calcularRentabilidad` de @central/module-contabilidad: se le pasan Apuntes con CÉNTIMOS como `base_imponible` (la función solo suma y resta; su `round2` no toca un entero) y `entidad_id` = inmueble. Reg",
@@ -210490,7 +210684,7 @@
           "exportada": true,
           "params": "anio: number",
           "retorno": "TopeCatalogo | null",
-          "linea": 74,
+          "linea": 91,
           "resumen": "La entrada del año, o `null` si el catálogo no lo cubre."
         },
         {
@@ -210499,7 +210693,7 @@
           "exportada": true,
           "params": "hoy: Fecha",
           "retorno": "boolean",
-          "linea": 79,
+          "linea": 96,
           "resumen": "¿El catálogo ya no cubre el año de `hoy`? Es la señal de que toca la revisión anual."
         },
         {
@@ -210508,7 +210702,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 99,
+          "linea": 119,
           "resumen": "% de tope válido: número finito entre 0 y 100 con, como mucho, dos decimales. Si no, `null`."
         },
         {
@@ -210517,7 +210711,7 @@
           "exportada": true,
           "params": "aplicableDesde: Fecha, pref: PreferenciaTope",
           "retorno": "TopeAplicable",
-          "linea": 109,
+          "linea": 129,
           "resumen": "El tope que se aplica a una actualización con efecto en `aplicableDesde`: el del cliente si lo fijó; «sin tope» si lo quitó; el del catálogo del AÑO del aniversario si no tocó nada. Un año sin entrada"
         },
         {
@@ -210526,13 +210720,13 @@
           "exportada": true,
           "params": "pct: number | null, sin: boolean | null",
           "retorno": "PreferenciaTope",
-          "linea": 127,
+          "linea": 156,
           "resumen": "La preferencia desde las dos columnas de la BD (`tope_actualizacion_pct`, `tope_actualizacion_sin`): `sin` gana; si no, `pct` válido; si no, el defecto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8684a813b930"
+      "hash": "cd175e57fd1e"
     },
     {
       "ruta": "packages/module-pesca/src/pesca.ts",
@@ -213623,6 +213817,7 @@
       "exporta": [
         "esModuloPortal",
         "disponibilidadModulo",
+        "accesoPatrimonioPorModulo",
         "accionModulo",
         "tarjetasModulos",
         "admiteSolicitud",
@@ -213635,7 +213830,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is ModuloPortal",
-          "linea": 78,
+          "linea": 81,
           "resumen": "¿Es un id del catálogo? Para validar lo que llega del navegador."
         },
         {
@@ -213644,8 +213839,17 @@
           "exportada": true,
           "params": "id: ModuloPortal, ctx: ContextoModulos",
           "retorno": "DisponibilidadModulo | null",
-          "linea": 90,
+          "linea": 93,
           "resumen": "Disponibilidad de un módulo para ESTA persona. - Flota: `disponible` si ya lleva la flota de alguna sociedad (dueño o jefe), `bajo_solicitud` si no, y `null` si no se ha podido comprobar (no se adivin"
+        },
+        {
+          "nombre": "accesoPatrimonioPorModulo",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { titulares: number filas: readonly { modulo: string; estado: string }[] | null tieneInmuebles: boolean | null }",
+          "retorno": "boolean",
+          "linea": 121,
+          "resumen": "Patrimonio y alquileres: ¿esta identidad puede usar `/patrimonio`? UNA sola función para el acceso (lib/patrimonio/accesos.ts), el menú y la tarjeta de `/herramientas`/`/inicio` (25/10/2026). Se suma "
         },
         {
           "nombre": "filaVigente",
@@ -213653,7 +213857,7 @@
           "exportada": false,
           "params": "filas: readonly FilaModulo[], id: ModuloPortal",
           "retorno": "FilaModulo | null",
-          "linea": 126,
+          "linea": 152,
           "resumen": "La fila VIGENTE de un módulo: la no retirada (el índice único parcial de la BD garantiza que hay como mucho una). Una retirada no cuenta: se puede volver a pedir."
         },
         {
@@ -213662,7 +213866,7 @@
           "exportada": true,
           "params": "id: ModuloPortal, ctx: ContextoModulos & { filas: readonly FilaModulo[] | null },",
           "retorno": "AccionModulo",
-          "linea": 130
+          "linea": 156
         },
         {
           "nombre": "tarjetasModulos",
@@ -213670,7 +213874,7 @@
           "exportada": true,
           "params": "ctx: ContextoModulos & { filas: readonly FilaModulo[] | null }",
           "retorno": "TarjetaModulo[]",
-          "linea": 148,
+          "linea": 176,
           "resumen": "Las tarjetas de `/herramientas`, en el orden del catálogo."
         },
         {
@@ -213679,7 +213883,7 @@
           "exportada": true,
           "params": "a: AccionModulo",
           "retorno": "boolean",
-          "linea": 157,
+          "linea": 185,
           "resumen": "¿La acción de la tarjeta permite escribir una fila `solicitado`? Lo usa la ruta, no solo el botón."
         },
         {
@@ -213688,13 +213892,13 @@
           "exportada": true,
           "params": "c: { identidadId: string nombre: string | null vinculada: boolean modulo: ModuloPortal }",
           "retorno": "string",
-          "linea": 165,
+          "linea": 193,
           "resumen": "El aviso de Telegram a Alberto (HTML de Telegram: el nombre lo tecleó la persona, se escapa). `vinculada=false` = el nombre no lo ha comprobado nadie (no hay ficha de la cartera detrás)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7f73f6fc35ac"
+      "hash": "328ce424a632"
     },
     {
       "ruta": "packages/module-seguros-portal/src/obligacion.ts",
@@ -242655,7 +242859,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5096,
-    "funciones": 19476
+    "archivos": 5101,
+    "funciones": 19491
   }
 }
