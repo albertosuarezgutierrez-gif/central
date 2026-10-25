@@ -3777,10 +3777,18 @@ export const CASILLAS_GUARDAR_PRESUPUESTO_TURISMOS: Readonly<Record<string, bool
 export const MS_CONFIRMA_GUARDADO_TURISMOS = 15_000
 
 const planoTurismos = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim()
+/**
+ * v0.6.24 (22/10/2026): clave de comparación de la lista blanca = sin mayúsculas ni tildes. `innerText` aplica `text-transform`
+ * del CSS («GUARDAR PRESUPUESTO») mientras que `textContent` (lo que enseña el diagnóstico) no: con la comparación exacta el
+ * «Guardar presupuesto» de la barra se veía en el inventario y NUNCA se pulsaba. Sigue siendo texto ENTERO (no «contiene»).
+ */
+const claveGuardarTurismos = (t: string | null | undefined) => planoTurismos(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const CLAVES_GUARDAR_PRESUPUESTO_TURISMOS: readonly string[] = Object.freeze(BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.map(claveGuardarTurismos))
+const esTextoGuardarTurismos = (t: string | null | undefined) => CLAVES_GUARDAR_PRESUPUESTO_TURISMOS.includes(claveGuardarTurismos(t))
 
 /** ¿Este botón se puede pulsar para GUARDAR el presupuesto? Texto entero en la lista blanca Y la lista única lo ve como guardar. PURA. */
 export function esBotonGuardarPresupuestoTurismos(descripciones: readonly (string | null | undefined)[]): boolean {
-  if (!BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.includes(planoTurismos(descripciones[0]))) return false
+  if (!esTextoGuardarTurismos(descripciones[0])) return false
   try {
     comprobarBoton(descripciones, { permitirGuardarPresupuesto: true })
   } catch {
@@ -3847,12 +3855,15 @@ export type EstadoFormularioGuardarTurismos = {
   desplegados?: number
   /** v0.6.22: veces que se pulsó el «Guardar presupuesto» de la barra para abrir el formulario. */
   abiertos?: number
+  /** v0.6.24: por qué NO se pulsó el «Guardar presupuesto» de la pantalla para abrir el formulario (sin datos personales). */
+  abridor?: string
 }
 
 /** Solo lectura del DOM del marco (no pulsa nada). Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`). */
 async function estadoFormularioGuardarTurismos(marco: Frame): Promise<EstadoFormularioGuardarTurismos> {
   return marco
     .evaluate(({ host, textos }) => {
+      // `textos` ya viene normalizado (minúsculas, sin tildes): se compara contra el texto de pantalla normalizado igual.
       const hosts = document.querySelectorAll(host).length
       const forms = Array.from(document.querySelectorAll(`${host} form`))
       let conBotonVisible = 0
@@ -3864,7 +3875,7 @@ async function estadoFormularioGuardarTurismos(marco: Frame): Promise<EstadoForm
           const cs = getComputedStyle(b)
           if (!(r.width > 0 && r.height > 0 && cs.visibility !== 'hidden')) continue
           const t = (b.innerText || '').replace(/\s+/g, ' ').trim()
-          if (textos.includes(t)) hay = true
+          if (textos.includes((t).replace(/\s+/g, ' ').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())) hay = true
           else if (t !== '') otrosBotones.push(t.slice(0, 40))
         }
         if (hay) conBotonVisible++
@@ -3874,7 +3885,7 @@ async function estadoFormularioGuardarTurismos(marco: Frame): Promise<EstadoForm
         if (b.closest(host)) continue
         const r = b.getBoundingClientRect()
         const cs = getComputedStyle(b)
-        if (r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && textos.includes((b.innerText || '').replace(/\s+/g, ' ').trim())) botonesGuardarFuera++
+        if (r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && textos.includes((b.innerText || '').replace(/\s+/g, ' ').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())) botonesGuardarFuera++
       }
       // v0.6.21: etiquetas de TODOS los botones/enlaces a la vista (iconos aparte; solo-icono → aria-label/title), en crudo: se sanean fuera.
       const controles: string[] = []
@@ -3889,7 +3900,7 @@ async function estadoFormularioGuardarTurismos(marco: Frame): Promise<EstadoForm
         if (t) controles.push(String(t))
       }
       return { hosts, formularios: forms.length, conBotonVisible, botonesGuardarFuera, otrosBotones: otrosBotones.slice(0, 3), controles }
-    }, { host: SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS, textos: [...BOTONES_GUARDAR_PRESUPUESTO_TURISMOS] })
+    }, { host: SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS, textos: [...CLAVES_GUARDAR_PRESUPUESTO_TURISMOS] })
     .then(({ controles, ...resto }) => ({ ...resto, controlesVisibles: etiquetasControlesSaneadas(controles) }))
     .catch(() => ({ hosts: 0, formularios: 0, conBotonVisible: 0, botonesGuardarFuera: 0, otrosBotones: [], controlesVisibles: [] as string[] }))
 }
@@ -3902,7 +3913,7 @@ export function motivoFormularioGuardarTurismos(e: EstadoFormularioGuardarTurism
   if (e.conBotonVisible === 1) return null
   if (e.conBotonVisible > 1) return `hay ${e.conBotonVisible} formularios «Guardar el presupuesto» con botón a la vista (ambiguo: no se pulsa ninguno)`
   const fuera = e.botonesGuardarFuera > 0 ? `; hay ${e.botonesGuardarFuera} botón(es) «Guardar presupuesto» FUERA del formulario (sin mapear: el bot no lo pulsa)` : ''
-  const desplegados = (e.desplegados ? `; se desplegó ${e.desplegados} panel(es) plegado(s) sin que apareciera` : '') + (e.abiertos ? `; se pulsó el «Guardar presupuesto» de la pantalla para abrirlo y siguió sin verse` : '')
+  const desplegados = (e.desplegados ? `; se desplegó ${e.desplegados} panel(es) plegado(s) sin que apareciera` : '') + (e.abiertos ? `; se pulsó el «Guardar presupuesto» de la pantalla para abrirlo y siguió sin verse` : e.abridor ? `; no se pulsó el «Guardar presupuesto» de la pantalla: ${e.abridor}` : '')
   // v0.6.21: qué hay en pantalla (etiquetas de botones/enlaces, sin datos personales) para ver dónde está de verdad el guardado.
   const cola = `${fuera}${desplegados}${sufijoControlesVisibles(e.controlesVisibles)}`
   if (e.hosts === 0) return `el bloque «Guardar el presupuesto» no aparece en la pantalla de precios (esperado y desplazada la pantalla)${cola}`
@@ -3925,7 +3936,7 @@ const SEL_PANEL_PLEGABLE = 'nx-expansion-panel, nx-accordion-item, mat-expansion
 export function esExpansorGuardarTurismosPermitido(descripciones: readonly (string | null | undefined)[]): boolean {
   const etiqueta = planoTurismos(etiquetaEfectivaControl({ texto: descripciones[0], aria: descripciones[1], title: descripciones[2], valor: descripciones[3] }))
   if (etiqueta.length > 40) return false
-  if (BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.includes(etiqueta)) return false
+  if (esTextoGuardarTurismos(etiqueta)) return false
   try {
     comprobarBoton(descripciones, { permitirGuardarPresupuesto: true })
   } catch {
@@ -4007,49 +4018,66 @@ async function desplegarBloqueGuardarTurismos(marco: Frame, guard: GuardEmision)
 // emisión, el guard la aborta) y se espera a que el formulario se vea (en línea o en diálogo). Nunca el paso Revisión/Pago/Confirmación.
 export const MAX_APERTURAS_GUARDAR_TURISMOS = 1
 
-/** Marca (`data-rpa-abrir`) el ÚNICO control visible y habilitado con el texto exacto de la lista blanca. Devuelve cuántos candidatos hay. Solo lectura. */
-async function marcarAbridorGuardarTurismos(marco: Frame): Promise<number> {
+/**
+ * Marca (`data-rpa-abrir`) el ÚNICO control visible y habilitado con el texto exacto de la lista blanca (sin mayúsculas ni tildes).
+ * Devuelve cuántos candidatos hay y, de los controles con ese texto que quedaron FUERA, cuántos por cada motivo (para el aviso). Solo lectura.
+ */
+async function marcarAbridorGuardarTurismos(marco: Frame): Promise<{ hojas: number; excluidos: { submit: number; deshabilitado: number; enBloque: number; oculto: number } }> {
   return marco
     .evaluate(({ textos, host }) => {
       document.querySelectorAll('[data-rpa-abrir]').forEach((n) => n.removeAttribute('data-rpa-abrir'))
       const cand: Element[] = []
+      const excluidos = { submit: 0, deshabilitado: 0, enBloque: 0, oculto: 0 }
       // v0.6.23: MISMO conjunto y MISMA visibilidad que el listado de controles del diagnóstico (`estadoFormularioGuardarTurismos`) + `nx-button`.
       // Sin la exclusión general de `closest('form')`: Allianz envuelve toda la pantalla en un <form> y el «Guardar presupuesto» de la barra
       // vive dentro (un <button> sin `type` es «submit» en el DOM; en la barra no envía el formulario del bloque, y el guard vigila la red).
       for (const b of Array.from(document.querySelectorAll('button, a, [role="button"], [role="tab"], input[type="button"], input[type="submit"], nx-button'))) {
-        // Fuera: deshabilitados, los submit EXPLÍCITOS (type="submit"/input submit) y todo lo que viva DENTRO del propio bloque de guardado.
-        if (b.getAttribute('type') === 'submit' || (b as HTMLButtonElement).disabled || b.getAttribute('aria-disabled') === 'true') continue
-        if (b.closest(host)) continue
-        const r = b.getBoundingClientRect()
-        if (!(r.width > 0 && r.height > 0) || getComputedStyle(b).visibility === 'hidden') continue
         const c = b.cloneNode(true) as HTMLElement
         c.querySelectorAll('nx-icon, svg, i, .nx-icon').forEach((x) => x.remove())
         const t = (c.textContent || '').replace(/\s+/g, ' ').trim() || b.getAttribute('aria-label') || b.getAttribute('title') || (b as HTMLInputElement).value || ''
-        if (textos.includes(String(t).replace(/\s+/g, ' ').trim())) cand.push(b)
+        if (!textos.includes((String(t)).replace(/\s+/g, ' ').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())) continue
+        // Fuera: deshabilitados, los submit EXPLÍCITOS (type="submit"/input submit) y todo lo que viva DENTRO del propio bloque de guardado.
+        if (b.getAttribute('type') === 'submit') { excluidos.submit++; continue }
+        if ((b as HTMLButtonElement).disabled || b.getAttribute('aria-disabled') === 'true') { excluidos.deshabilitado++; continue }
+        if (b.closest(host)) { excluidos.enBloque++; continue }
+        const r = b.getBoundingClientRect()
+        if (!(r.width > 0 && r.height > 0) || getComputedStyle(b).visibility === 'hidden') { excluidos.oculto++; continue }
+        cand.push(b)
       }
       const hojas = cand.filter((e) => !cand.some((o) => o !== e && e.contains(o)))
       if (hojas.length === 1) hojas[0]!.setAttribute('data-rpa-abrir', '1')
-      return hojas.length
-    }, { textos: [...BOTONES_GUARDAR_PRESUPUESTO_TURISMOS], host: SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS })
-    .catch(() => 0)
+      return { hojas: hojas.length, excluidos }
+    }, { textos: [...CLAVES_GUARDAR_PRESUPUESTO_TURISMOS], host: SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS })
+    .catch(() => ({ hojas: 0, excluidos: { submit: 0, deshabilitado: 0, enBloque: 0, oculto: 0 } }))
 }
 
-/** Pulsa UNA vez (por trabajo) el control «Guardar presupuesto» que abre el formulario oculto. `true` = se pulsó. Solo relanza la violación REAL del guard. */
-async function abrirFormularioGuardarTurismos(marco: Frame, guard: GuardEmision): Promise<boolean> {
+/** Texto corto y SIN datos personales de por qué el abridor no se pulsó (va al aviso). PURA. */
+export function notaAbridorGuardarTurismos(hojas: number, ex: { submit: number; deshabilitado: number; enBloque: number; oculto: number }): string {
+  const partes = [ex.submit ? `${ex.submit} de tipo «submit»` : '', ex.deshabilitado ? `${ex.deshabilitado} deshabilitado(s)` : '', ex.enBloque ? `${ex.enBloque} dentro del propio bloque` : '', ex.oculto ? `${ex.oculto} sin verse` : ''].filter(Boolean)
+  const fuera = partes.length ? ` (fuera: ${partes.join(', ')})` : ''
+  if (hojas === 0) return `no hay ningún control «Guardar presupuesto» pulsable en la pantalla${fuera}`
+  if (hojas > 1) return `hay ${hojas} controles «Guardar presupuesto» pulsables (ambiguo: no se pulsa ninguno)${fuera}`
+  return `el control «Guardar presupuesto» no pasó la guardia`
+}
+
+/** Pulsa UNA vez (por trabajo) el control «Guardar presupuesto» que abre el formulario oculto. `pulsado` = se pulsó; si no, `nota` dice por qué. Solo relanza la violación REAL del guard. */
+async function abrirFormularioGuardarTurismos(marco: Frame, guard: GuardEmision): Promise<{ pulsado: boolean; nota: string | null }> {
   guard.comprobar()
   const page = marco.page()
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   let hechos = 0
   for (let i = 1; i <= MAX_APERTURAS_GUARDAR_TURISMOS; i++) if (usados.has(`allianz:abrir-guardar:${i}`)) hechos++
-  if (hechos >= MAX_APERTURAS_GUARDAR_TURISMOS) return false
-  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return false
+  if (hechos >= MAX_APERTURAS_GUARDAR_TURISMOS) return { pulsado: false, nota: null }
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { pulsado: false, nota: null }
+  let nota: string | null = null
   try {
     await exigirSinCuentaBancaria(page)
-    if ((await marcarAbridorGuardarTurismos(marco)) !== 1) return false
+    const m = await marcarAbridorGuardarTurismos(marco)
+    if (m.hojas !== 1) return { pulsado: false, nota: notaAbridorGuardarTurismos(m.hojas, m.excluidos) }
     const el = marco.locator('[data-rpa-abrir="1"]')
-    if ((await el.count()) !== 1) return false
+    if ((await el.count()) !== 1) return { pulsado: false, nota: 'el control marcado dejó de existir' }
     const desc = await descripcion(el)
-    if (!esBotonGuardarPresupuestoTurismos(desc)) return false
+    if (!esBotonGuardarPresupuestoTurismos(desc)) return { pulsado: false, nota: 'el control «Guardar presupuesto» no pasó la guardia (texto o atributos)' }
     usados.add(`allianz:abrir-guardar:${hechos + 1}`)
     AVANCES_USADOS.set(guard, usados)
     const alDialogo = (d: Dialog) => {
@@ -4063,12 +4091,13 @@ async function abrirFormularioGuardarTurismos(marco: Frame, guard: GuardEmision)
     }
     guard.comprobar()
     await page.waitForTimeout(500)
-    return true
+    return { pulsado: true, nota: null }
   } catch (e) {
     if (e instanceof ErrorFronteraEmision) throw e
     guard.comprobar()
+    nota = 'el clic en «Guardar presupuesto» falló (el portal no lo dejó pulsar)'
   }
-  return false
+  return { pulsado: false, nota }
 }
 
 export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS, esperaFormMs = MS_APARECE_FORM_GUARDAR_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
@@ -4085,6 +4114,7 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
   let estadoForm = await estadoFormularioGuardarTurismos(marco)
   let desplegados = 0
   let abiertos = 0
+  let notaAbridor: string | null = null
   for (let vuelta = 0; estadoForm.conBotonVisible !== 1 && Date.now() < hasta; vuelta++) {
     guard.comprobar()
     if (estadoForm.hosts > 0) await marco.locator(SEL_HOST_GUARDAR_PRESUPUESTO_TURISMOS).first().scrollIntoViewIfNeeded({ timeout: 1_000 }).catch(() => {})
@@ -4097,22 +4127,26 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
       estadoForm = await estadoFormularioGuardarTurismos(marco)
     }
     // v0.6.22: sigue oculto tras desplegar → el «Guardar presupuesto» visible de la pantalla lo abre (una vez; en línea o en diálogo).
-    if (estadoForm.conBotonVisible !== 1 && estadoForm.hosts > 0 && estadoForm.formularios > 0 && vuelta >= 2 && (await abrirFormularioGuardarTurismos(marco, guard))) {
-      abiertos++
-      for (let k = 0; k < 6 && estadoForm.conBotonVisible !== 1; k++) {
-        await page.waitForTimeout(400)
-        estadoForm = await estadoFormularioGuardarTurismos(marco)
+    if (estadoForm.conBotonVisible !== 1 && estadoForm.hosts > 0 && estadoForm.formularios > 0 && vuelta >= 2 && abiertos === 0) {
+      const ap = await abrirFormularioGuardarTurismos(marco, guard)
+      notaAbridor = ap.pulsado ? null : (ap.nota ?? notaAbridor)
+      if (ap.pulsado) {
+        abiertos++
+        for (let k = 0; k < 6 && estadoForm.conBotonVisible !== 1; k++) {
+          await page.waitForTimeout(400)
+          estadoForm = await estadoFormularioGuardarTurismos(marco)
+        }
       }
     }
   }
-  estadoForm = { ...estadoForm, desplegados, abiertos }
+  estadoForm = { ...estadoForm, desplegados, abiertos, abridor: notaAbridor ?? undefined }
   const motivoForm = motivoFormularioGuardarTurismos(estadoForm)
   if (motivoForm) return { estado: 'no_guardado', motivo: motivoForm }
   let form: Locator | null = null
   for (let i = 0; i < (await forms.count()); i++) {
     const botonesForm = forms.nth(i).locator('button').filter({ visible: true })
     for (let j = 0; j < (await botonesForm.count()); j++) {
-      if (BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.includes(planoTurismos(await botonesForm.nth(j).innerText().catch(() => '')))) form = forms.nth(i)
+      if (esTextoGuardarTurismos(await botonesForm.nth(j).innerText().catch(() => ''))) form = forms.nth(i)
     }
   }
   if (!form) return { estado: 'no_guardado', motivo: 'el formulario «Guardar el presupuesto» desapareció antes de usarlo' }
@@ -4121,7 +4155,7 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
   const candidatos: Locator[] = []
   for (let i = 0; i < (await botones.count()); i++) {
     const b = botones.nth(i)
-    if (BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.includes(planoTurismos(await b.innerText().catch(() => '')))) candidatos.push(b)
+    if (esTextoGuardarTurismos(await b.innerText().catch(() => ''))) candidatos.push(b)
   }
   if (candidatos.length !== 1) return { estado: 'no_guardado', motivo: candidatos.length === 0 ? 'no aparece el botón «Guardar presupuesto»' : 'más de un botón de guardar' }
   const boton = candidatos[0]!
