@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-25T18:35:49Z",
-  "sha": "36b0193ac71ced30d62ab84c28a68b9cef102601",
+  "generadoEn": "2026-10-25T19:04:58Z",
+  "sha": "09451ded19fb16e023906d4cddedcf19e4e11f81",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3369,7 +3369,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 55,
+          "linea": 61,
           "resumen": "La ficha de una póliza que ha AÑADIDO el cliente. Nace el 05/09/2026 de *«mis seguros y mis pólizas es lo mismo»*: al fundir la pestaña «Mis pólizas» dentro de «Mis seguros», estas pólizas pasan a ser"
         }
       ],
@@ -3377,7 +3377,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "e4c6c4311691"
+      "hash": "005a45735dd9"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/anadida/[id]/RevisarPoliza.tsx",
@@ -4308,7 +4308,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 111
+          "linea": 117
         },
         {
           "nombre": "Titular",
@@ -4316,7 +4316,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, bajasAbiertas = null, bajasParaMejorar = null, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date /** Solo en «mias»:",
           "retorno": null,
-          "linea": 963,
+          "linea": 991,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -4325,7 +4325,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], /** De `polizasParaParte`: la única fuente de si se puede dar parte de ella. */ puedeParte: boolean, titular?: string, /** El titular tal como figura, para el mensaje a la compañía (propi",
           "retorno": "PolizaOpcionParte",
-          "linea": 1028,
+          "linea": 1056,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -4333,7 +4333,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "8899bea97145"
+      "hash": "59d960275a70"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -4488,7 +4488,7 @@
           "nombre": "ParteSiniestro",
           "kind": "function",
           "exportada": true,
-          "params": "{ polizas: opciones, corredor, partes, polizaInicial, identidadId, }: { /** * TODAS las pólizas de esta sesión (propias, ajenas, donde figura, aportadas), * cada una con `puedeParte`. Las de `puedeParte: false` dan sus teléfonos de * compañ",
+          "params": "{ polizas: opciones, corredor, partes, polizaInicial, prellenado, identidadId, }: { /** * TODAS las pólizas de esta sesión (propias, ajenas, donde figura, aportadas), * cada una con `puedeParte`. Las de `puedeParte: false` dan sus teléfonos",
           "retorno": null,
           "linea": 743
         },
@@ -4498,7 +4498,7 @@
           "exportada": false,
           "params": "{ uid, nombre, etiqueta, ayuda, valor, deshabilitado, onCambio, }: { uid: string nombre: string etiqueta: string ayuda?: string valor: Triestado deshabilitado: boolean onCambio: (v: Triestado) => void }",
           "retorno": null,
-          "linea": 1865,
+          "linea": 1871,
           "resumen": "Un tri-estado pintado como tres radios. Radios y no un `<select>`: las tres respuestas tienen que verse a la vez para que «No lo sé» sea visiblemente la que está marcada de salida. Y no un checkbox, n"
         },
         {
@@ -4507,7 +4507,7 @@
           "exportada": false,
           "params": "{ uid, valor, deshabilitado, onCambio, onZona, }: { uid: string valor: FormVehiculo deshabilitado: boolean onCambio: (campo: Exclude<keyof FormVehiculo, 'zonasDano'>, valor: string) => void onZona: (codigo: string) => void }",
           "retorno": null,
-          "linea": 1927,
+          "linea": 1933,
           "resumen": "«Tu vehículo»: tu matrícula y la zona del daño — solo para auto/moto, y solo con terceros de por medio (ver `mostrarVehiculo` en `ParteSiniestro`). Los datos del OTRO vehículo van en la lista repetibl"
         },
         {
@@ -4516,7 +4516,7 @@
           "exportada": false,
           "params": "{ seleccion, deshabilitado, onCambio, etiquetaId, }: { seleccion: readonly string[] deshabilitado: boolean onCambio: (codigo: string) => void etiquetaId: string }",
           "retorno": null,
-          "linea": 1995,
+          "linea": 2001,
           "resumen": "El selector de zonas: nueve botones reales en un grid con forma de coche (delantera arriba, trasera abajo), no una silueta dibujada a mano — mismo patrón que usan las apps de las aseguradoras (Mapfre,"
         },
         {
@@ -4525,7 +4525,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string",
-          "linea": 2051,
+          "linea": 2057,
           "resumen": "Primeros 60 caracteres de un texto, para recordar de qué va un borrador sin volcarlo entero."
         },
         {
@@ -4534,7 +4534,7 @@
           "exportada": false,
           "params": "{ poliza, corredor, }: { poliza: PolizaOpcionParte | null corredor?: { tel: string; numero: string } }",
           "retorno": null,
-          "linea": 2067,
+          "linea": 2073,
           "resumen": "«¿Necesitas ayuda ahora mismo?», con la póliza ya elegida. 🚨 Grúa, cerrajero o fontanero de urgencia los manda la ASISTENCIA de la compañía, no un parte nuestro: el parte se tramita en horas o días, "
         },
         {
@@ -4543,7 +4543,7 @@
           "exportada": false,
           "params": "{ uid, opciones, valor, deshabilitado, onCambio, }: { uid: string opciones: readonly (keyof typeof ETIQUETA_TIPO_SINIESTRO)[] valor: string deshabilitado: boolean onCambio: (v: string) => void }",
           "retorno": null,
-          "linea": 2109,
+          "linea": 2115,
           "resumen": "Qué tipo de siniestro es: un desplegable con la lista del RAMO de la póliza (`tipo-siniestro.ts`), solo si el ramo tiene catálogo. Opcional: «Sin marcar» es la opción de salida y viaja como `null` (no"
         },
         {
@@ -4552,7 +4552,7 @@
           "exportada": false,
           "params": "{ uid, campos, ctx, valores, deshabilitado, onCambio, }: { uid: string campos: readonly CampoParte[] ctx: ContextoParte valores: Record<string, ValorRamoForm> deshabilitado: boolean onCambio: (id: string, v: ValorRamoForm) => void }",
           "retorno": null,
-          "linea": 2164,
+          "linea": 2170,
           "resumen": "Los campos del RAMO de la póliza (`parte-ramo.ts`), con las MISMAS piezas del resto del formulario: `Triple` para sí/no/no lo sé, `<select className=\"campo\">` para una opción, `button.opcion[aria-pres"
         },
         {
@@ -4561,7 +4561,7 @@
           "exportada": false,
           "params": "{ uid, campo, filas, deshabilitado, onCambio, }: { uid: string campo: CampoParteLista filas: FilaLista[] deshabilitado: boolean onCambio: (filas: FilaLista[]) => void }",
           "retorno": null,
-          "linea": 2295,
+          "linea": 2301,
           "resumen": "Una lista repetible (afectados, vehículos contrarios, heridos): cada fila es un `fieldset.editor-campo.grupo` con sus campos y un «Quitar»; debajo, «Añadir». El tope de filas es el del servidor (`maxE"
         },
         {
@@ -4570,7 +4570,7 @@
           "exportada": false,
           "params": "{ uid, ficheros, deshabilitado, onElegir, }: { uid: string ficheros: readonly Elegido[] deshabilitado: boolean onElegir: (e: React.ChangeEvent<HTMLInputElement>) => void }",
           "retorno": null,
-          "linea": 2395,
+          "linea": 2401,
           "resumen": "Hueco propio para el parte amistoso (declaración amistosa de accidente), solo en auto/moto con terceros. Es el papel que más acelera la tramitación y en la lista general se pierde entre las fotos del "
         },
         {
@@ -4579,7 +4579,7 @@
           "exportada": false,
           "params": "{ uid, ficheros, deshabilitado, onElegir, onQuitar, }: { uid: string ficheros: readonly Elegido[] deshabilitado: boolean onElegir: (e: React.ChangeEvent<HTMLInputElement>) => void onQuitar: (clave: string) => void }",
           "retorno": null,
-          "linea": 2446
+          "linea": 2452
         },
         {
           "nombre": "ListaFicheros",
@@ -4587,7 +4587,7 @@
           "exportada": false,
           "params": "{ ficheros, onQuitar, }: { ficheros: readonly Elegido[] onQuitar: ((clave: string) => void) | null }",
           "retorno": null,
-          "linea": 2543,
+          "linea": 2549,
           "resumen": "Los ficheros elegidos, uno por línea, CADA UNO con su estado. 🚨 Es el corazón de «subir 5 y que fallen 2 deja 3 subidos y 2 explicados». Un fichero rechazado —por la revisión local o por el servidor—"
         },
         {
@@ -4596,7 +4596,7 @@
           "exportada": false,
           "params": "{ parteId, adjuntos, }: { parteId: string adjuntos: AdjuntoEnviado[] | null | undefined }",
           "retorno": null,
-          "linea": 2608,
+          "linea": 2614,
           "resumen": "Los ficheros que ya viajaron con un parte enviado, con su enlace de descarga. 🚨 CUATRO estados, y la diferencia entre los tres primeros es toda la regla de la casa («dato que NO hay ≠ dato que NO se "
         },
         {
@@ -4605,7 +4605,7 @@
           "exportada": false,
           "params": "{ partes }: { partes: readonly ParteEnviado[] }",
           "retorno": null,
-          "linea": 2655,
+          "linea": 2661,
           "resumen": "Los partes que ya ha mandado esta persona."
         }
       ],
@@ -4614,7 +4614,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "fe26cc0cb793"
+      "hash": "6cbd732d11e5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PasoRenovacion.tsx",
@@ -4745,7 +4745,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 64,
+          "linea": 67,
           "resumen": "La ficha de UNA póliza de la cartera. ───────────────────────────────────────────────────────────────────────────── 🚨 EL ID DE LA URL NO CONSULTA NADA. Esta es la línea entera de esta página. Una rut"
         },
         {
@@ -4754,13 +4754,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 434,
+          "linea": 454,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e5fb814da7a5"
+      "hash": "07b6f1fa5d5b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -5887,7 +5887,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0937ef09a432"
+      "hash": "7380a60aa632"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/layout.tsx",
@@ -5994,6 +5994,45 @@
       "hash": "1414b3149d9d"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/AvisoPolizaSinInmueble.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "hrefAltaDesdePoliza",
+        "AvisoPolizaSinInmueble"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "hrefAltaDesdePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Pick<AvisoUI, 'tipo' | 'id' | 'ubicacion' | 'referenciaCatastral' | 'titularClienteId'>",
+          "retorno": "string",
+          "linea": 26,
+          "resumen": "Enlace al alta PRERRELLENADA: CP, calle y referencia catastral. Municipio y provincia salen del CP en el formulario."
+        },
+        {
+          "nombre": "AvisoPolizaSinInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ aviso }: { aviso: AvisoUI }",
+          "retorno": null,
+          "linea": 41,
+          "resumen": "«Esta póliza protege una vivienda que no tienes en tu patrimonio». Con inmueble que casa: «Enlazar» (mismo flujo de propuestas que la ficha del inmueble: el servidor recalcula el origen). Sin él: «Aña"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "19e1dfba400d"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/calendario/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -6095,7 +6134,7 @@
           "exportada": false,
           "params": "f: string | null",
           "retorno": null,
-          "linea": 17
+          "linea": 19
         },
         {
           "nombre": "cent",
@@ -6103,7 +6142,7 @@
           "exportada": false,
           "params": "c: number | null",
           "retorno": null,
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "pct",
@@ -6111,7 +6150,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "textoTope",
@@ -6119,7 +6158,7 @@
           "exportada": false,
           "params": "t: TopeAplicable",
           "retorno": "string",
-          "linea": 23,
+          "linea": 25,
           "resumen": "De dónde sale el tope que se aplica: del cliente, de la ley del año o «no lo tenemos» (nunca un 0 %)."
         },
         {
@@ -6128,7 +6167,7 @@
           "exportada": false,
           "params": "p: ResultadoActualizacion, indice: string | null, descripcion: string | null",
           "retorno": "string",
-          "linea": 39,
+          "linea": 41,
           "resumen": "Texto de la propuesta: dice el HECHO, sin inventar un 0 % cuando no tenemos el índice."
         },
         {
@@ -6137,13 +6176,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 63,
+          "linea": 65,
           "resumen": "Ficha del contrato. 🚨 El id de la URL NO consulta por sí solo: `contratoAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver. Si no existe o no es tuyo: 404 (nunca 403). La PII de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "629f6e1a0962"
+      "hash": "c97f515c55e5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/contrato/[id]/TopeRenta.tsx",
@@ -6190,6 +6229,43 @@
       ],
       "rutaApi": null,
       "hash": "a163ec66d5e0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/CubreSeguro.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CubreSeguro"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "Aviso",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ a }: { a: AvisoCubre }",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "CubreSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ avisos }: { avisos: AvisoCubre[] }",
+          "retorno": null,
+          "linea": 76,
+          "resumen": "«¿Esto lo cubre tu seguro?»: reparaciones confirmadas de los últimos 12 meses sin descartar. ~50 + «Ver más»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "511ca53d3c80"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/GastosTitular.tsx",
@@ -6285,13 +6361,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 15,
+          "linea": 17,
           "resumen": "«Gastos fijos» (paso 6, 22/10/2026): plantillas de gasto por inmueble/titular, comunidad y derramas. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `gastosDeIdentidad`): solo los titulares a los qu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "af1fde95a903"
+      "hash": "549817ee8931"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/RevisarFactura.tsx",
@@ -6416,6 +6492,27 @@
       "hash": "e501e94154a0"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/HipotecaInmueble.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "HipotecaInmueble"
+      ],
+      "funciones": [
+        {
+          "nombre": "HipotecaInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inmuebleId, inicial }: { inmuebleId: string; inicial: RespuestaHipoteca | null }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "«¿Tiene hipoteca?»: una DECLARACIÓN del cliente (no pide nada a nadie). Solo con «Sí» aparece la tarjeta con el botón; sin contestar (o «No»/«No lo sé») no se ofrece nada. `inicial` `null` = todavía n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "70c425e49063"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/NuevoContrato.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -6484,7 +6581,7 @@
           "exportada": false,
           "params": "v: boolean | null",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "InmueblePage",
@@ -6492,13 +6589,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 31,
+          "linea": 32,
           "resumen": "Ficha del inmueble. 🚨 El id de la URL NO consulta por sí solo: `inmuebleAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver (`accesosPatrimonio`). Si no existe o no es tuyo: 404 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9ffedb2e52f5"
+      "hash": "dd4536e51ec3"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/SegurosInmueble.tsx",
@@ -6547,7 +6644,7 @@
           "exportada": false,
           "params": "p: PolizaPintable",
           "retorno": "string",
-          "linea": 65
+          "linea": 68
         },
         {
           "nombre": "SegurosInmueble",
@@ -6555,7 +6652,7 @@
           "exportada": true,
           "params": "{ datos: d, soloLectura = false }: { datos: SegurosDeInmueble; soloLectura?: boolean }",
           "retorno": null,
-          "linea": 75,
+          "linea": 78,
           "resumen": "«Seguros» de la ficha del inmueble (24/10/2026, spec §2). Tres estados + dos derivados; nunca «no tiene seguro» salvo que el cliente lo haya DICHO. Las propuestas no se escriben solas: «Sí, es este» /"
         }
       ],
@@ -6564,7 +6661,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e1c8163d00fe"
+      "hash": "8fc31868b89f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/ListaInmuebles.tsx",
@@ -6598,9 +6695,9 @@
           "nombre": "NuevoInmueble",
           "kind": "function",
           "exportada": true,
-          "params": "{ titulares }: { titulares: { clienteId: string; nombre: string }[] }",
+          "params": "{ titulares, precarga }: { titulares: { clienteId: string; nombre: string }[]; precarga?: PrecargaAlta | null }",
           "retorno": null,
-          "linea": 21,
+          "linea": 30,
           "resumen": "Alta de un inmueble. `titulares` = solo aquellos donde el nivel permite el alta (lo filtra el servidor)."
         }
       ],
@@ -6609,7 +6706,28 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d5ef61599ebd"
+      "hash": "6e4cfde21efc"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/OfertaBoton.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "OfertaBoton"
+      ],
+      "funciones": [
+        {
+          "nombre": "OfertaBoton",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tipo, objeto, titulo, texto, boton, }: { tipo: TipoOferta /** Ids del objeto pedido; el servidor los busca dentro de lo que ve esta sesión. */ objeto: { inmuebleId?: string; contratoId?: string; polizaDeclaradaId?: string } titulo: string",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Tarjeta con UN botón: el cliente pide (`POST /api/patrimonio/ofertas`). 🚨 Nada se envía sin pulsarlo, y pulsarlo solo crea una petición que la correduría ve en su pantalla (no manda correo ni mensaje"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f3d2f007b9a2"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/page.tsx",
@@ -6622,15 +6740,68 @@
           "nombre": "PatrimonioPage",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: Promise<ParametrosAlta> }",
           "retorno": null,
-          "linea": 17,
+          "linea": 20,
           "resumen": "«Patrimonio» (Fase 1, 22/10/2026): los inmuebles por titular. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `patrimonioDeIdentidad`): se ven SOLO los titulares a los que esta sesión tiene acceso. "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55a5222d15d3"
+      "hash": "f0e574b00968"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/fiscal/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "FiscalPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "cent",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: number | null",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ k, v, fuerte }: { k: string; v: string; fuerte?: boolean }",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "Informe",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ inf }: { inf: InformeFiscal }",
+          "retorno": null,
+          "linea": 26
+        },
+        {
+          "nombre": "FiscalPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<{ anio?: string | string[] }> }",
+          "retorno": null,
+          "linea": 83,
+          "resumen": "«Informe fiscal del alquiler» (25/10/2026): por inmueble arrendado y año, la rentabilidad reclasificada con el criterio del IRPF. 🚨 Todo parte de `rentabilidadDeIdentidad` (→ `accesosPatrimonio`); le"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "17855cb9b261"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/page.tsx",
@@ -6645,7 +6816,7 @@
           "exportada": false,
           "params": "c: number",
           "retorno": null,
-          "linea": 13
+          "linea": 12
         },
         {
           "nombre": "fechaEs",
@@ -6653,7 +6824,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": null,
-          "linea": 14
+          "linea": 13
         },
         {
           "nombre": "Datos",
@@ -6661,7 +6832,7 @@
           "exportada": false,
           "params": "{ d }: { d: RentabilidadDeIdentidad }",
           "retorno": null,
-          "linea": 27
+          "linea": 15
         },
         {
           "nombre": "RentabilidadPage",
@@ -6669,13 +6840,13 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ anio?: string | string[] }> }",
           "retorno": null,
-          "linea": 87,
+          "linea": 75,
           "resumen": "«Rentabilidad» del patrimonio (24/10/2026, P14): renta devengada − gastos confirmados − seguros, por inmueble y año. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `rentabilidadDeIdentidad`). Una l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e53921ccbe09"
+      "hash": "eb113bfb2eea"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/resumen/ImprimirResumen.tsx",
@@ -8020,6 +8191,27 @@
       "hash": "0165fbbfc2eb"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/cubre-seguro/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`POST /api/patrimonio/cubre-seguro` `{ gasto }` — «no me interesa este aviso»: se recuerda en `portal_aviso_leido`. 🚨 La identidad sale SOLO de la cookie; el gasto se busca DENTRO de los avisos visib"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/cubre-seguro",
+      "hash": "35c10b383a28"
+    },
+    {
       "ruta": "apps/asegura-portal/app/api/patrimonio/derramas/route.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -8140,6 +8332,27 @@
       "hash": "b35e91222d6c"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/hipoteca/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`POST /api/patrimonio/inmuebles/[id]/hipoteca` — `{ valor: 'si' | 'no' | 'no_se' }`: ¿tiene hipoteca este inmueble? Es una DECLARACIÓN del cliente (no pide nada a nadie ni avisa a la correduría). 🚨 E"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/inmuebles/[id]/hipoteca",
+      "hash": "8c1f76257661"
+    },
+    {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/obligaciones/route.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -8180,7 +8393,7 @@
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
-          "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
           "linea": 19,
           "resumen": "`POST /api/patrimonio/inmuebles/<id>/pedir-precio` — «Pedir precio» de un inmueble SIN seguro (o con el seguro caducado). Va por el PUENTE a `apps/asegura` (`/api/portal/patrimonio/pedir-precio`): el "
@@ -8188,7 +8401,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/inmuebles/[id]/pedir-precio",
-      "hash": "fa0d99ddffc1"
+      "hash": "853f848f16df"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/seguros/route.ts",
@@ -8272,6 +8485,27 @@
       "hash": "54b79aadcfbb"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/ofertas/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "`POST /api/patrimonio/ofertas` — el cliente PULSA «Compárala» (póliza de otra correduría), «Protege la renta» (contrato de alquiler) o «Revisa mis seguros de la hipoteca». Cuerpo: `{ tipo, inmuebleId?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/ofertas",
+      "hash": "b925d06ea57f"
+    },
+    {
       "ruta": "apps/asegura-portal/app/api/patrimonio/plantillas/route.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -8300,6 +8534,27 @@
       "tablas": [],
       "rutaApi": "/api/patrimonio/plantillas",
       "hash": "e8ca9c205ead"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/rentabilidad/fiscal/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`GET /api/patrimonio/rentabilidad/fiscal?anio=` — CSV del informe fiscal. 🚨 La identidad sale SOLO de la cookie y todo parte de `rentabilidadDeIdentidad` (→ `accesosPatrimonio`): sin patrimonio a la "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/rentabilidad/fiscal",
+      "hash": "b1a1c8e002a0"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/vias/route.ts",
@@ -13807,7 +14062,7 @@
           "nombre": "textoPatrimonio",
           "kind": "function",
           "exportada": true,
-          "params": "p: FuentePatrimonio, vinculada: boolean",
+          "params": "p: FuentePatrimonio, vinculada: boolean, sinInmueble: number | null = null",
           "retorno": "",
           "linea": 139
         },
@@ -13817,7 +14072,7 @@
           "exportada": true,
           "params": "f: ProximaFecha[] | null",
           "retorno": "",
-          "linea": 165
+          "linea": 172
         },
         {
           "nombre": "textoFlota",
@@ -13825,12 +14080,12 @@
           "exportada": true,
           "params": "empresas: number | null",
           "retorno": "",
-          "linea": 171
+          "linea": 178
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ba70c23e81e0"
+      "hash": "622f6acd76f1"
     },
     {
       "ruta": "apps/asegura-portal/lib/inicio.ts",
@@ -13846,7 +14101,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 39
+          "linea": 42
         },
         {
           "nombre": "valor",
@@ -13854,7 +14109,7 @@
           "exportada": false,
           "params": "r: PromiseSettledResult<T>, fuente: string",
           "retorno": "T | null",
-          "linea": 43
+          "linea": 46
         },
         {
           "nombre": "iso",
@@ -13862,7 +14117,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": null,
-          "linea": 49
+          "linea": 52
         },
         {
           "nombre": "resumenInicio",
@@ -13870,13 +14125,13 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<ResumenInicio | null>",
-          "linea": 52,
+          "linea": 55,
           "resumen": "`null` = no hay sesión o no es la de `identidadId`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "584a3cdf81e3"
+      "hash": "2214025d9661"
     },
     {
       "ruta": "apps/asegura-portal/lib/intervinientes.ts",
@@ -15329,6 +15584,37 @@
       "hash": "06cca1ccc0fd"
     },
     {
+      "ruta": "apps/asegura-portal/lib/patrimonio/catastro-inmueble.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — caché del Catastro en el inmueble, reglas PURAS (sin red ni BD ni reloj: `ahora` entra). La superficie construida alimenta la ESTIMACIÓN del capital de continente mínimo (`estimarContinenteMinimo` de `@central/module-patrimonio`). Para no llamar al Catastro en cada pintado,",
+      "exporta": [
+        "debeConsultarCatastro",
+        "cacheDeCatastro"
+      ],
+      "funciones": [
+        {
+          "nombre": "debeConsultarCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { referenciaCatastral: string | null uso: string estado: string | null consultadoEn: Date | null ahora: Date }",
+          "retorno": "boolean",
+          "linea": 25
+        },
+        {
+          "nombre": "cacheDeCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosCatastro | null",
+          "retorno": "CacheCatastro",
+          "linea": 40,
+          "resumen": "Lo que se guarda a partir de la respuesta del Catastro. `null` (no contestó) → `no_responde`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "697f1a783d54"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/patrimonio/contratos-api.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "PATRIMONIO (22/10/2026, paso 9) — lógica PURA (puertos inyectados, sin prisma ni sesión) de contratos, inquilinos y actualización de renta: `POST /api/patrimonio/contratos`, `POST /api/patrimonio/contratos/[id]/{inquilinos,renta}` y `GET /api/patrimonio/inquilinos/[id]`. La BD real está en `contrato",
@@ -15564,6 +15850,180 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "99884c4b449f"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/cubre-seguro-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — «¿Esto lo cubre tu seguro?» con BD. Reglas puras: `cubre-seguro.ts`. 🚨 Parte de `accesosPatrimonio(identidadId)` (cookie + `portal_vinculo`): los gastos salen SOLO de los titulares autorizados y vivos; los enlaces, SOLO de los inmuebles de esos titulares; las pólizas, de l",
+      "exporta": [
+        "avisosCubreSeguro",
+        "descartarAvisoCubre"
+      ],
+      "funciones": [
+        {
+          "nombre": "dia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "avisosCubreSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<AvisoCubre[] | null | undefined>",
+          "linea": 22
+        },
+        {
+          "nombre": "descartarAvisoCubre",
+          "kind": "function",
+          "exportada": true,
+          "params": "gastoId: string",
+          "retorno": "Promise<'ok' | 'sin_sesion' | 'no_encontrado'>",
+          "linea": 98,
+          "resumen": "Sella «no me interesa este aviso» para la sesión. `no_encontrado` = el gasto no está entre los avisos visibles (404)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5af624046c64"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/cubre-seguro.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — «¿Esto lo cubre tu seguro?». PURO (sin prisma, sin sesión, sin reloj: `hoy` entra). Cuando un gasto CONFIRMADO del inmueble es una reparación de las que suele cubrir un seguro de hogar (agua, cristales, electricidad, cerrajería, tormenta…), se avisa. Tres piezas: 1. `clasif",
+      "exporta": [
+        "normalizarTexto",
+        "clasificarReparacion",
+        "coberturaHogar",
+        "descripcionDeGasto",
+        "hrefDarParte",
+        "prellenadoDeUrl",
+        "claveDescarte",
+        "esClaveDescarte",
+        "esUuid",
+        "resumirCubre",
+        "desdeVentana"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 34,
+          "resumen": "Minúsculas, sin tildes y con espacios simples: «Fontanería» y «fontaneria» son lo mismo."
+        },
+        {
+          "nombre": "clasificarReparacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "g: GastoParaClasificar",
+          "retorno": "TipoReparacion | null",
+          "linea": 59,
+          "resumen": "¿Es una reparación que un seguro de hogar suele cubrir? `null` = no (o no se sabe: sin concepto no se adivina). Una categoría fuera de las admitidas nunca; un servicio programado sin palabra de avería"
+        },
+        {
+          "nombre": "esHogar",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "ramo: string | null",
+          "retorno": null,
+          "linea": 75
+        },
+        {
+          "nombre": "coberturaHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "enlaces: readonly FilaEnlace[], visibles: readonly PolizaVisible[] | null, puedeParteCartera: ReadonlySet<string>,",
+          "retorno": "CoberturaHogar",
+          "linea": 85,
+          "resumen": "La póliza de hogar ENLAZADA (confirmada) y en vigor del inmueble. · `visibles === null` (cartera o declaradas ilegibles) → `sin_comprobar`. · Hogar vigente y visible → `cubre`. Con varias, la de venci"
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 119
+        },
+        {
+          "nombre": "descripcionDeGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { tipo: TipoReparacion; concepto: string; inmuebleAlias: string; fecha: string }",
+          "retorno": "string",
+          "linea": 122,
+          "resumen": "Texto de partida del parte. Solo hechos del gasto; lo que ha pasado lo cuenta la persona."
+        },
+        {
+          "nombre": "hrefDarParte",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { polizaValor: string; descripcion: string; fecha: string }",
+          "retorno": "string",
+          "linea": 128,
+          "resumen": "`/boveda?vista=siniestro&poliza=…&descripcion=…&fecha=…` — `poliza` es solo una sugerencia que el parte revalida."
+        },
+        {
+          "nombre": "prellenadoDeUrl",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: { descripcion?: unknown; fecha?: unknown }, hoy: string, max: number, esFechaReal: (v: unknown) => boolean,",
+          "retorno": "PrellenadoParte | null",
+          "linea": 139,
+          "resumen": "Lo que `/boveda` acepta de la URL para prellenar el parte. Nada de esto se fía: la fecha tiene que ser real y no futura (`hoy` entra), la descripción se recorta a `max` y se le quitan los caracteres d"
+        },
+        {
+          "nombre": "claveDescarte",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "gastoId: string",
+          "retorno": null,
+          "linea": 155
+        },
+        {
+          "nombre": "esClaveDescarte",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "clave: string",
+          "retorno": null,
+          "linea": 156
+        },
+        {
+          "nombre": "esUuid",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is string",
+          "linea": 157
+        },
+        {
+          "nombre": "resumirCubre",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: readonly AvisoCubre[]",
+          "retorno": "ResumenCubre",
+          "linea": 177,
+          "resumen": "Cuenta los avisos NO descartados por desenlace."
+        },
+        {
+          "nombre": "desdeVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string",
+          "retorno": "string",
+          "linea": 189,
+          "resumen": "Ventana: reparaciones de los últimos 12 meses (el plazo para comunicar un siniestro es de 7 días, pero la factura llega tarde)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b1aa22ee9c9a"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/dia-madrid.ts",
@@ -16154,6 +16614,58 @@
       "hash": "cc2cadf30967"
     },
     {
+      "ruta": "apps/asegura-portal/lib/patrimonio/fiscal.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — informe fiscal ANUAL del alquiler, por inmueble arrendado. PURO (sin prisma, sin sesión, sin reloj). No calcula nada que la rentabilidad no calcule: parte de `ResultadoRentabilidad` (`rentabilidadPorInmueble` de `@central/module-patrimonio`: renta devengada, gastos confirma",
+      "exporta": [
+        "informeFiscal",
+        "celdaCsv",
+        "importeCsv",
+        "csvFiscal"
+      ],
+      "funciones": [
+        {
+          "nombre": "informeFiscal",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoRentabilidad, meta: readonly MetaInmueble[], periodo: { anio: number; enCurso: boolean }, amortizacion: ReadonlyMap<string, number | null> = new Map(),",
+          "retorno": "InformeFiscal",
+          "linea": 76,
+          "resumen": "`amortizacion`: por inmueble, céntimos ANUALES si hay dato; ausente o `null` = sin dato. Un número ≤ 0 tampoco es un dato."
+        },
+        {
+          "nombre": "celdaCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 120,
+          "resumen": "Celda segura: comillas dobles escapadas y, si empieza por `= + - @` o control, se antepone `'` (inyección de fórmulas)."
+        },
+        {
+          "nombre": "importeCsv",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "c: number | null",
+          "retorno": null,
+          "linea": 127,
+          "resumen": "Céntimos → `1234,56` (coma decimal, sin separador de miles: Excel en español lo lee como número). `null` → vacío."
+        },
+        {
+          "nombre": "csvFiscal",
+          "kind": "function",
+          "exportada": true,
+          "params": "inf: InformeFiscal",
+          "retorno": "string",
+          "linea": 132,
+          "resumen": "CSV con `;` y BOM (para Excel), una fila por concepto. Lo que no consta sale con «sin dato», jamás 0."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "84b5b00c6631"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/patrimonio/gastos-api.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "PATRIMONIO (22/10/2026, paso 6) — lógica PURA (puertos inyectados, sin prisma ni sesión) de comunidades, plantillas de gasto fijo y derramas: `GET/POST /api/patrimonio/{plantillas,comunidades,derramas}`. La BD real está en `gastos-bd.ts`. 🚨 El `titular` del cuerpo es una PETICIÓN: se busca DENTRO d",
@@ -16551,7 +17063,7 @@
           "exportada": false,
           "params": "f: { nombre: string; apellidos: string | null }",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "listarTitulares",
@@ -16559,7 +17071,7 @@
           "exportada": false,
           "params": "identidadId: string, ids: readonly string[], accesos: AccesosMapa",
           "retorno": "Promise<TitularLista[]>",
-          "linea": 20,
+          "linea": 21,
           "resumen": "Los titulares que ve esta identidad, con sus inmuebles (sin archivados)."
         },
         {
@@ -16568,7 +17080,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "PuertosInmuebles",
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "patrimonioDeIdentidad",
@@ -16576,7 +17088,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<TitularLista[]>",
-          "linea": 110,
+          "linea": 111,
           "resumen": "Para la página de la lista. Vacío = esta identidad no tiene patrimonio (la página lo dice)."
         },
         {
@@ -16585,13 +17097,13 @@
           "exportada": true,
           "params": "identidadId: string, idPedido: string",
           "retorno": "Promise<FichaInmueble | null>",
-          "linea": 133,
+          "linea": 136,
           "resumen": "El inmueble del id de la URL SOLO si cuelga de un titular autorizado. `null` = 404 (no existe o no es tuyo). Un inmueble ARCHIVADO se devuelve con `archivado: true` (solo lectura); el titular archivad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2165e32a4c46"
+      "hash": "0e57dc980445"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/inquilinos-puente.ts",
@@ -16875,6 +17387,169 @@
       "hash": "1ae9b940fd8a"
     },
     {
+      "ruta": "apps/asegura-portal/lib/patrimonio/ofertas-api.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — lógica PURA de las ofertas que PULSA el cliente: `POST /api/patrimonio/ofertas` (`comparar_externa` · `impago_alquiler` · `hipoteca`) y `POST /api/patrimonio/inmuebles/[id]/hipoteca` («¿tiene hipoteca?»). Puertos inyectados (sin prisma ni sesión) para probar el aislamiento ",
+      "exporta": [
+        "responderOferta",
+        "responderHipoteca"
+      ],
+      "funciones": [
+        {
+          "nombre": "INVALIDO",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "campo: string",
+          "retorno": "Respuesta",
+          "linea": 23
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown>",
+          "linea": 38
+        },
+        {
+          "nombre": "uuid",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is string",
+          "linea": 39
+        },
+        {
+          "nombre": "desenlace",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: ResultadoPuentePedirPrecio",
+          "retorno": "Respuesta",
+          "linea": 41
+        },
+        {
+          "nombre": "responderOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosOfertas, cuerpo: unknown",
+          "retorno": "Promise<Respuesta>",
+          "linea": 57,
+          "resumen": "`POST /api/patrimonio/ofertas`. Cuerpo: `{ tipo, inmuebleId?, contratoId?, polizaDeclaradaId? }` con `tipo` de lista cerrada."
+        },
+        {
+          "nombre": "responderHipoteca",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosOfertas, idPedido: unknown, cuerpo: unknown",
+          "retorno": "Promise<Respuesta>",
+          "linea": 90,
+          "resumen": "`POST /api/patrimonio/inmuebles/[id]/hipoteca`. Cuerpo: `{ valor: 'si' | 'no' | 'no_se' }`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e5463508fcc3"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/ofertas-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — puertos con BD de las ofertas que pulsa el cliente (`ofertas-api.ts`). 🚨 TODA función parte de `accesosPatrimonio(identidadId)` y la sesión tiene que ser la de `identidadId`. El inmueble se busca DENTRO de los titulares autorizados, el contrato DENTRO de ese inmueble y la ",
+      "exporta": [
+        "puertosOfertas"
+      ],
+      "funciones": [
+        {
+          "nombre": "puertosOfertas",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "PuertosOfertas",
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8426268c1e01"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/ofertas.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — OFERTAS que el cliente PULSA: comparar una póliza de otra correduría, proteger la renta de un alquiler y revisar los seguros de la hipoteca. Reglas PURAS (sin prisma ni sesión) de qué se enseña y con qué texto. 🚨 Regla legal: aquí solo hay tarjetas con un BOTÓN. El cliente",
+      "exporta": [
+        "esTipoOferta",
+        "esRespuestaHipoteca",
+        "textoCompararExterna",
+        "diasHastaVencer",
+        "itemsCompararPendientes",
+        "tituloProtegeRenta"
+      ],
+      "funciones": [
+        {
+          "nombre": "esTipoOferta",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is TipoOferta",
+          "linea": 17
+        },
+        {
+          "nombre": "esRespuestaHipoteca",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is RespuestaHipoteca",
+          "linea": 22
+        },
+        {
+          "nombre": "dm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "textoCompararExterna",
+          "kind": "function",
+          "exportada": true,
+          "params": "vence: string | null",
+          "retorno": "string",
+          "linea": 34,
+          "resumen": "Texto de la tarjeta de una póliza DECLARADA. Con vencimiento: «Vence el dd/mm. ¿Te la comparamos?». Sin vencimiento NO se ofrece por fecha (no se inventa ninguna): queda el botón manual con un texto q"
+        },
+        {
+          "nombre": "diasHastaVencer",
+          "kind": "function",
+          "exportada": true,
+          "params": "vence: string | null, hoy: string",
+          "retorno": "number | null",
+          "linea": 39,
+          "resumen": "Días hasta el vencimiento (negativo = pasado), o `null` si no consta."
+        },
+        {
+          "nombre": "itemsCompararPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "declaradas: readonly DeclaradaParaOferta[], hoy: string",
+          "retorno": "ItemComparar[]",
+          "linea": 59,
+          "resumen": "«Pendiente de ti»: las pólizas declaradas que vencen en ≤ 60 días (ni pasadas ni sin fecha). Sin vencimiento no entran (no se avisa «por fecha» de lo que no tiene), y una no vigente tampoco. Ordenadas"
+        },
+        {
+          "nombre": "tituloProtegeRenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "rentaEur: string | null",
+          "retorno": "string",
+          "linea": 75,
+          "resumen": "Título de la tarjeta de impago: con la renta del contrato, o sin cifra si no consta (nunca 0)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "98939f9f4032"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/patrimonio/pedir-precio-api.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "PATRIMONIO (24/10/2026, P14) — lógica PURA de `POST /api/patrimonio/inmuebles/[id]/pedir-precio` («Pedir precio» del inmueble sin seguro), con puertos inyectados (sin prisma ni sesión) para probar el aislamiento con `node --test`. 🚨 Reglas (spec 24/10/2026 §3.3): · El inmueble de la URL se busca DE",
@@ -16886,35 +17561,56 @@
           "nombre": "responderPedirPrecio",
           "kind": "function",
           "exportada": true,
-          "params": "p: PuertosPedirPrecio, idPedido: unknown",
+          "params": "p: PuertosPedirPrecio, idPedido: unknown, cuerpo?: unknown",
           "retorno": "Promise<Respuesta>",
-          "linea": 21
+          "linea": 26,
+          "resumen": "`cuerpo`: lo ÚNICO que se lee es `tipo === 'comunidad'` («Seguro de la comunidad»); cualquier otra cosa se ignora y el servidor decide el tipo desde el estado que recalcula. `comunidad` solo si el ser"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d0e9e79affcb"
+      "hash": "75d39bdd6c7b"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/pedir-precio-puente.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "PATRIMONIO (24/10/2026, P14) — el PUENTE de «Pedir precio» a `apps/asegura` (`/api/portal/patrimonio/pedir-precio`), a imagen de `inquilinos-puente.ts`. NO es `lead-declarada.ts` (que modela pólizas aportadas con vencimiento). El portal NO escribe en `oportunidades` (es del lado de la correduría y s",
       "exporta": [
+        "interpretarPeticionesAbiertas",
+        "peticionesPedirPrecioPorPuente",
         "pedirPrecioPorPuente"
       ],
       "funciones": [
         {
+          "nombre": "interpretarPeticionesAbiertas",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, j: unknown",
+          "retorno": "",
+          "linea": 47,
+          "resumen": "Interpreta la respuesta del GET de peticiones abiertas. PURA. Cualquier cosa que no sea un 200 `ok` con la lista bien formada es `null` = «no hemos podido comprobarlo» (jamás una lista vacía: eso dirí"
+        },
+        {
+          "nombre": "peticionesPedirPrecioPorPuente",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<",
+          "linea": 60,
+          "resumen": "Peticiones «Pedir precio» abiertas de esta identidad. `null` = sin puente, corte o respuesta rara (no se afirma nada)."
+        },
+        {
           "nombre": "pedirPrecioPorPuente",
           "kind": "function",
           "exportada": true,
-          "params": "x: { identidadId: string; inmuebleId: string; tipo: TipoPedirPrecio }",
+          "params": "x: PeticionPuentePedirPrecio",
           "retorno": "Promise<ResultadoPuentePedirPrecio>",
-          "linea": 24
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d0eba92f00bf"
+      "hash": "5dbfe9ae0954"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/pendiente-bd.ts",
@@ -16930,12 +17626,64 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<EntradaPendientes['patrimonio']>",
-          "linea": 13
+          "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "655b50ce83bf"
+      "hash": "dc019025c284"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/poliza-sin-inmueble-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — puerto con BD del aviso «esta póliza protege una vivienda que no tienes en tu patrimonio» (sentido póliza → inmueble; las reglas son PURAS en `@central/module-patrimonio` `poliza-sin-inmueble.ts`). 🚨 Parte de `accesosPatrimonio(identidadId)` (cookie + `portal_vinculo`): si",
+      "exporta": [
+        "avisosPolizasSinInmueble"
+      ],
+      "funciones": [
+        {
+          "nombre": "avisosPolizasSinInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, opciones: { conPeticiones: boolean; cartera?: CarteraPortal | null; declaradas?: readonly FilaDeclarada[] | null },",
+          "retorno": "Promise<AvisoPintable[]>",
+          "linea": 50,
+          "resumen": "Las pólizas de hogar/comunidad de esta identidad que no cuelgan de ningún inmueble. `[]` = no hay (o no se ofrece: sin patrimonio, sin nivel). Lanza si la BD falla: quien pinta lo convierte en «no hem"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "38ac0d7bde97"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/precarga-alta.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (25/10/2026) — saneado PURO de los parámetros de la URL del alta prerrellenada desde una póliza (`/patrimonio?alta=1&cp=&dir=&rc=&poliza=tipo:id&titular=`). 🚨 Todo lo que viene de la URL es una PETICIÓN, nunca un dato de confianza: aquí solo se valida la FORMA. El titular se busca luego ",
+      "exporta": [
+        "precargaDeParametros"
+      ],
+      "funciones": [
+        {
+          "nombre": "uno",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | string[] | undefined",
+          "retorno": "string",
+          "linea": 19
+        },
+        {
+          "nombre": "precargaDeParametros",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParametrosAlta",
+          "retorno": "PrecargaAltaSaneada | null",
+          "linea": 22,
+          "resumen": "`null` = no se pide un alta prerrellenada (falta `alta=1`). Cada campo malformado queda vacío; nunca lanza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3d995f871ed9"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/rentabilidad-bd.ts",
@@ -17007,7 +17755,7 @@
           "exportada": false,
           "params": "tipo: TipoPolizaEnlace, id: string",
           "retorno": null,
-          "linea": 135
+          "linea": 159
         },
         {
           "nombre": "pintable",
@@ -17015,7 +17763,7 @@
           "exportada": false,
           "params": "p: PolizaVisible",
           "retorno": "PolizaPintable",
-          "linea": 137
+          "linea": 161
         },
         {
           "nombre": "tipoDeFila",
@@ -17023,7 +17771,7 @@
           "exportada": false,
           "params": "f: FilaEnlace",
           "retorno": "",
-          "linea": 142
+          "linea": 166
         },
         {
           "nombre": "enlazable",
@@ -17031,7 +17779,7 @@
           "exportada": false,
           "params": "p: PolizaVisible",
           "retorno": "boolean",
-          "linea": 149,
+          "linea": 173,
           "resumen": "Enlazable a mano: ramo de inmueble, o un ramo que no sabemos clasificar (`otros`/vacío): no se esconde."
         },
         {
@@ -17040,7 +17788,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 154
+          "linea": 178
         },
         {
           "nombre": "estadoDeFilas",
@@ -17048,7 +17796,7 @@
           "exportada": false,
           "params": "filas: readonly FilaEnlace[], porClave: ReadonlyMap<string, PolizaVisible>, sinSeguroDeclaradoEn: Date | null,",
           "retorno": "EstadoSeguroInmueble",
-          "linea": 157,
+          "linea": 181,
           "resumen": "El estado de UN inmueble desde sus filas vivas y lo que esta identidad ve. La misma regla en la ficha y en Inicio."
         },
         {
@@ -17057,7 +17805,7 @@
           "exportada": true,
           "params": "inmuebles: readonly { id: string; sinSeguroDeclaradoEn: Date | null }[], filas: readonly (FilaEnlace & { inmuebleId: string })[], visibles: readonly PolizaVisible[],",
           "retorno": "EstadoSeguroInmueble[]",
-          "linea": 175,
+          "linea": 199,
           "resumen": "Los estados de TODOS los inmuebles que ve la identidad (tarjeta «Patrimonio» de Inicio). `visibles` `null` = la cartera no se pudo leer: los enlaces de cartera quedan «sin comprobar», nunca «sin segur"
         },
         {
@@ -17066,7 +17814,7 @@
           "exportada": true,
           "params": "p: PuertosSegurosInmueble, idPedido: unknown",
           "retorno": "Promise<SegurosDeInmueble | null>",
-          "linea": 187,
+          "linea": 211,
           "resumen": "Todo lo que pinta la sección «Seguros» de la ficha. `null` = 404."
         },
         {
@@ -17075,13 +17823,13 @@
           "exportada": true,
           "params": "p: PuertosSegurosInmueble, idPedido: unknown, cuerpo: unknown",
           "retorno": "Promise<Respuesta>",
-          "linea": 251,
-          "resumen": "`POST /api/patrimonio/inmuebles/[id]/seguros`. Acciones: `enlazar`, `quitar`, `sin_seguro`."
+          "linea": 298,
+          "resumen": "`POST /api/patrimonio/inmuebles/[id]/seguros`. Acciones: `enlazar`, `quitar`, `sin_seguro`, `presidente_comunidad`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df3ced5c856b"
+      "hash": "de2a1fc50c28"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/seguros-inmueble-bd.ts",
@@ -17091,7 +17839,9 @@
         "visiblesDeCartera",
         "visiblesDeDeclaradas",
         "resumenPatrimonio",
+        "inmueblesYEnlacesDeIdentidad",
         "primasDeInmuebles",
+        "enlacesVivosDeInmuebles",
         "puertosSegurosInmueble"
       ],
       "funciones": [
@@ -17101,7 +17851,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": null,
-          "linea": 30
+          "linea": 32
         },
         {
           "nombre": "eurosACent",
@@ -17109,7 +17859,7 @@
           "exportada": false,
           "params": "e: number | null",
           "retorno": null,
-          "linea": 31
+          "linea": 33
         },
         {
           "nombre": "direccionDeclarada",
@@ -17117,7 +17867,7 @@
           "exportada": false,
           "params": "datosRamo: unknown",
           "retorno": "string | null",
-          "linea": 34,
+          "linea": 36,
           "resumen": "La dirección que el cliente escribió en una declarada de hogar/comercio/comunidad (`datos_ramo.direccion`)."
         },
         {
@@ -17126,7 +17876,7 @@
           "exportada": true,
           "params": "c: CarteraPortal",
           "retorno": "PolizaVisible[]",
-          "linea": 41,
+          "linea": 43,
           "resumen": "Las pólizas de la cartera que ve esta identidad, A SU NIVEL (la dirección llega `null` donde no la ve)."
         },
         {
@@ -17135,7 +17885,7 @@
           "exportada": true,
           "params": "filas: readonly FilaDeclaradaVisible[], hoy: Date",
           "retorno": "PolizaVisible[]",
-          "linea": 68,
+          "linea": 70,
           "resumen": "Las declaradas PROPIAS (quien llama ya las leyó con `identidadId` en el `where`)."
         },
         {
@@ -17144,8 +17894,17 @@
           "exportada": true,
           "params": "identidadId: string, visibles: readonly PolizaVisible[]",
           "retorno": "Promise<ResumenSegurosPatrimonio | null>",
-          "linea": 86,
+          "linea": 88,
           "resumen": "Tarjeta «Patrimonio» de Inicio: el estado de seguro de cada inmueble que ve esta identidad, contado. `null` = esta identidad no tiene patrimonio a la vista (`accesosPatrimonio` vacío). `visibles` lo t"
+        },
+        {
+          "nombre": "inmueblesYEnlacesDeIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": null,
+          "linea": 110,
+          "resumen": "Inmuebles vivos de los titulares autorizados y sus enlaces vivos, para el aviso «póliza sin inmueble» (25/10/2026). La tabla puente tiene UNA puerta (este fichero): `poliza-sin-inmueble-bd.ts` pasa po"
         },
         {
           "nombre": "primasDeInmuebles",
@@ -17153,8 +17912,26 @@
           "exportada": true,
           "params": "identidadId: string, inmuebleIds: readonly string[], periodo: { desde: string; hasta: string },",
           "retorno": "Promise<PrimaSeguroInmueble[] | null>",
-          "linea": 108,
+          "linea": 130,
           "resumen": "Primas de las pólizas ENLAZADAS a esos inmuebles (rentabilidad, P14). Los ids de inmueble se vuelven a acotar DENTRO de los titulares autorizados (los que pida quien llama no se fían). `null` = carter"
+        },
+        {
+          "nombre": "conCatastroAlDia",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: T",
+          "retorno": "Promise<T>",
+          "linea": 162,
+          "resumen": "Caché del Catastro (25/10/2026): si la del inmueble ya caducó, se pregunta UNA vez y se guarda; si no, no se llama. El fallo de la consulta o del guardado nunca tumba la ficha: se sigue con lo que hab"
+        },
+        {
+          "nombre": "enlacesVivosDeInmuebles",
+          "kind": "function",
+          "exportada": true,
+          "params": "titularIds: readonly string[], inmuebleIds: readonly string[]",
+          "retorno": "Promise<(FilaEnlace &",
+          "linea": 183,
+          "resumen": "Enlaces VIVOS (sin archivar) de esos inmuebles, acotados DENTRO de los titulares que pasa quien llama (que salen de `accesosPatrimonio`). Para «¿Esto lo cubre tu seguro?» (`cubre-seguro-bd.ts`): la ta"
         },
         {
           "nombre": "puertosSegurosInmueble",
@@ -17162,12 +17939,12 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "PuertosSegurosInmueble",
-          "linea": 130
+          "linea": 191
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "294266d9f55b"
+      "hash": "de84b33b8ba1"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/tipo-fichero.ts",
@@ -17213,7 +17990,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 46
+          "linea": 63
         },
         {
           "nombre": "pendientesDeTi",
@@ -17221,12 +17998,12 @@
           "exportada": true,
           "params": "e: EntradaPendientes, ramo: (r: string) => string",
           "retorno": "PendientesDeTi",
-          "linea": 50
+          "linea": 67
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "86f2df8a193b"
+      "hash": "9c8be2780111"
     },
     {
       "ruta": "apps/asegura-portal/lib/personas-poliza.ts",
@@ -27890,11 +28667,23 @@
     {
       "ruta": "apps/asegura/app/api/portal/patrimonio/pedir-precio/route.ts",
       "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 29,
+          "resumen": "la ficha se resuelve aquí por `portal_vinculo`, jamás desde la query (un `clienteId` en la URL se ignora)."
+        }
+      ],
       "tablas": [],
       "rutaApi": "/api/portal/patrimonio/pedir-precio",
-      "hash": "bd911a9c81ce"
+      "hash": "339adb17f12c"
     },
     {
       "ruta": "apps/asegura/app/api/portal/personas-poliza/route.ts",
@@ -49330,9 +50119,10 @@
     {
       "ruta": "apps/asegura/lib/patrimonio-pedir-precio-portal.ts",
       "ambito": "apps/asegura",
-      "resumen": "«Pedir precio» desde Patrimonio del portal (24/10/2026, P14): el cliente pide que le pasen precio de seguro para un inmueble SIN seguro (o con el seguro caducado). Convierte la petición en una OPORTUNIDAD (`fuente = 'portal'`, `info_riesgo.origen = 'portal:patrimonio'`) con una gestión `llamada` de ",
+      "resumen": "«Pedir precio» desde Patrimonio del portal (24/10/2026, P14; ampliado 25/10/2026): el cliente PULSA un botón y pide que le pasen precio / comparen / revisen un seguro. Cinco tipos, UN solo puente (lista cerrada en `patrimonio-pedir-precio-reglas.ts`): `inmueble_sin_seguro`, `seguro_no_vigente`, `com",
       "exporta": [
-        "pedirPrecioPatrimonio"
+        "pedirPrecioPatrimonio",
+        "peticionesPedirPrecioAbiertas"
       ],
       "funciones": [
         {
@@ -49341,7 +50131,15 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 44
+          "linea": 62
+        },
+        {
+          "nombre": "abrirPeticion",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, a: Apertura",
+          "retorno": "Promise<ResultadoPedirPrecio>",
+          "linea": 84
         },
         {
           "nombre": "pedirPrecioPatrimonio",
@@ -49349,7 +50147,33 @@
           "exportada": true,
           "params": "correduriaId: string, d: PeticionPedirPrecio",
           "retorno": "Promise<ResultadoPedirPrecio>",
-          "linea": 50
+          "linea": 137
+        },
+        {
+          "nombre": "compararExterna",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, d: Extract<PeticionPedirPrecio, { tipo: 'comparar_externa' }>",
+          "retorno": "Promise<ResultadoPedirPrecio>",
+          "linea": 145,
+          "resumen": "Póliza DECLARADA por el cliente (de otra correduría): es de la identidad (`identidad_id`, no eliminada), no de la cartera. La ficha es la ÚNICA en la que la identidad puede operar; con varias no se ad"
+        },
+        {
+          "nombre": "porInmueble",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, d: Exclude<PeticionPedirPrecio, { tipo: 'comparar_externa' }>",
+          "retorno": "Promise<ResultadoPedirPrecio>",
+          "linea": 168
+        },
+        {
+          "nombre": "peticionesPedirPrecioAbiertas",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, identidadId: string",
+          "retorno": "Promise<PeticionInmuebleAbierta[] | 'sin_ficha'>",
+          "linea": 255,
+          "resumen": "Las peticiones «Pedir precio» ABIERTAS de las fichas de esta identidad (25/10/2026), para que el portal no vuelva a ofrecer el botón y diga «Precio pedido el dd/mm». Solo lectura. La ficha sale de `po"
         }
       ],
       "tablas": [
@@ -49358,33 +50182,72 @@
         "oportunidad_historial",
         "oportunidades",
         "polizas",
+        "portal_patrimonio_contrato",
         "portal_patrimonio_inmueble",
         "portal_patrimonio_inmueble_poliza",
+        "portal_patrimonio_renta_actualizacion",
         "portal_patrimonio_titular",
         "portal_poliza_declarada"
       ],
       "rutaApi": null,
-      "hash": "50d828b398c9"
+      "hash": "19a7835f8344"
     },
     {
       "ruta": "apps/asegura/lib/patrimonio-pedir-precio-reglas.ts",
       "ambito": "apps/asegura",
       "resumen": "«Pedir precio» del patrimonio (24/10/2026, P14) — reglas PURAS del puente `POST /api/portal/patrimonio/pedir-precio`. Sin BD ni red: el cuerpo, el ramo que se pide y el texto de la tarea. 🚨 Lo que NO acepta ni escribe, a propósito: · NO acepta `clienteId`, titular ni ficha: llegan `identidadId` + `",
       "exporta": [
+        "origenPedirPrecio",
         "validarPedirPrecio",
+        "objetoDePeticion",
         "ramoDeUso",
+        "ramoDePeticion",
+        "esRamoComunidad",
+        "aplicaComunidad",
         "aplicaPedirPrecio",
+        "aplicaImpagoAlquiler",
+        "aplicaHipoteca",
+        "aplicaCompararExterna",
+        "eurosEs",
         "textoTareaPrecioPatrimonio",
+        "textoHistorialPedirPrecio",
+        "identidadDeConsulta",
         "textoAvisoPedirPrecio"
       ],
       "funciones": [
+        {
+          "nombre": "origenPedirPrecio",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoPedirPrecio",
+          "retorno": "string",
+          "linea": 34,
+          "resumen": "`info_riesgo.origen` de la oportunidad: los tipos nuevos llevan `portal:patrimonio:<tipo>` (origen claro en /correduria)."
+        },
+        {
+          "nombre": "valida",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is string",
+          "linea": 44
+        },
         {
           "nombre": "validarPedirPrecio",
           "kind": "function",
           "exportada": true,
           "params": "cuerpo: unknown",
           "retorno": "",
-          "linea": 22
+          "linea": 46
+        },
+        {
+          "nombre": "objetoDePeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: PeticionPedirPrecio",
+          "retorno": "",
+          "linea": 67,
+          "resumen": "Qué objeto identifica la petición (idempotencia 120 días POR TIPO: el origen ya lleva el tipo en los nuevos)."
         },
         {
           "nombre": "ramoDeUso",
@@ -49392,8 +50255,35 @@
           "exportada": true,
           "params": "uso: string | null",
           "retorno": "'hogar' | 'comercio'",
-          "linea": 31,
+          "linea": 74,
           "resumen": "Ramo (`tipo_seguro`) que se pide según el uso del inmueble. Lo que no se sabe clasificar es `hogar` (lo revisa Alberto)."
+        },
+        {
+          "nombre": "ramoDePeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoPedirPrecio, uso: string | null",
+          "retorno": "RamoPedido",
+          "linea": 81,
+          "resumen": "Ramo (`tipo_seguro`) de la petición: `comunidad` pide el ramo comunidades sea cual sea el uso del inmueble."
+        },
+        {
+          "nombre": "esRamoComunidad",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 86,
+          "resumen": "¿Un ramo de póliza (texto libre de cartera o declarada) es de comunidad?"
+        },
+        {
+          "nombre": "aplicaComunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { enComunidad: boolean | null; tipoCatastro: string | null; presidenteComunidad: boolean | null }",
+          "retorno": "boolean",
+          "linea": 93,
+          "resumen": "Asegura no se fía de lo que el portal dijo de la comunidad: el inmueble tiene que ser un piso en edificio (la persona lo marcó en comunidad o el Catastro lo dice) Y la persona haber marcado que es pre"
         },
         {
           "nombre": "aplicaPedirPrecio",
@@ -49401,31 +50291,101 @@
           "exportada": true,
           "params": "tipo: TipoPedirPrecio, vigencias: readonly (boolean | null)[]",
           "retorno": "boolean",
-          "linea": 40,
+          "linea": 103,
           "resumen": "¿Sigue habiendo un seguro en vigor enlazado? El portal ya lo comprobó, pero asegura no se fía: si hay una póliza confirmada en vigor, el inmueble NO está sin seguro y no se abre ninguna petición. `vig"
+        },
+        {
+          "nombre": "aplicaImpagoAlquiler",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { terminadoEn: string | null; hoy: string }",
+          "retorno": "boolean",
+          "linea": 109,
+          "resumen": "Impago de alquiler: el contrato tiene que seguir vivo (sin `terminado_en` pasado). `hoy` y `terminadoEn` en `YYYY-MM-DD`."
+        },
+        {
+          "nombre": "aplicaHipoteca",
+          "kind": "function",
+          "exportada": true,
+          "params": "hipoteca: string | null",
+          "retorno": "boolean",
+          "linea": 114,
+          "resumen": "Hipoteca: solo si el cliente dijo que SÍ la tiene. `no`, `no_se` y sin contestar (`null`) no abren nada."
+        },
+        {
+          "nombre": "aplicaCompararExterna",
+          "kind": "function",
+          "exportada": true,
+          "params": "vigente: boolean",
+          "retorno": "boolean",
+          "linea": 122,
+          "resumen": "Comparar una póliza de otra correduría: sirve con o sin vencimiento (el botón manual existe siempre). Solo se descarta la que el cliente ya marcó como no vigente o la ya vencida sin confirmar (`declar"
+        },
+        {
+          "nombre": "eurosEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "cent: number | null",
+          "retorno": "string | null",
+          "linea": 127,
+          "resumen": "`2.162,49€` (formato de la casa). `null` = no consta."
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": null,
+          "linea": 133
+        },
+        {
+          "nombre": "limpia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string, n: number",
+          "retorno": null,
+          "linea": 141
         },
         {
           "nombre": "textoTareaPrecioPatrimonio",
           "kind": "function",
           "exportada": true,
-          "params": "x: { tipo: TipoPedirPrecio; alias: string; ramo: 'hogar' | 'comercio' }",
+          "params": "x: { tipo: TipoPedirPrecio; alias: string; ramo: string; rentaCent?: number | null; compania?: string | null; vence?: string | null }",
           "retorno": "string",
-          "linea": 51,
+          "linea": 144,
           "resumen": "Texto de la tarea: el alias que puso el cliente y el motivo. Sin dirección, ref. catastral ni nº de póliza."
+        },
+        {
+          "nombre": "textoHistorialPedirPrecio",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoPedirPrecio",
+          "retorno": "string",
+          "linea": 165,
+          "resumen": "Nota de la ficha (`historial_interno`) por tipo."
+        },
+        {
+          "nombre": "identidadDeConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string",
+          "retorno": "string | null",
+          "linea": 178,
+          "resumen": "`GET /api/portal/patrimonio/pedir-precio?identidadId=` (25/10/2026): solo la identidad, nada más. Un `clienteId` o un `inmuebleId` en la query se IGNORA: la ficha sale de `portal_vinculo` en asegura, "
         },
         {
           "nombre": "textoAvisoPedirPrecio",
           "kind": "function",
           "exportada": true,
-          "params": "x: { oportunidadId: string; inmuebleId: string }",
+          "params": "x: { oportunidadId: string; inmuebleId?: string | null; tipo?: TipoPedirPrecio }",
           "retorno": "string",
-          "linea": 57,
+          "linea": 190,
           "resumen": "Telegram a Alberto: SOLO ids (sin nombre ni dirección)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "409cd7be0a7f"
+      "hash": "909359eda52d"
     },
     {
       "ruta": "apps/asegura/lib/personas-portal-entradas.ts",
@@ -59595,12 +60555,21 @@
           "linea": 68
         },
         {
+          "nombre": "nombreCompaniaNif",
+          "kind": "function",
+          "exportada": false,
+          "params": "compania: string",
+          "retorno": "string",
+          "linea": 116,
+          "resumen": "Nombre de la compañía para los motivos de rechazo («Generali busca al tomador por NIF»). Sin nombre conocido, la clave. PURA."
+        },
+        {
           "nombre": "lecturaNifFicha",
           "kind": "function",
           "exportada": true,
           "params": "guardado: string | null | undefined, descifrar: (v: string) => string",
           "retorno": "LecturaNifFicha",
-          "linea": 109,
+          "linea": 128,
           "resumen": "NIF de la ficha → lectura. `v1:` se descifra con `descifrar` (la clave de la cartera); si lanza → `ilegible` (nunca «no hay»). En claro (legado) → tal cual. Tiene que ser DNI/NIE/CIF válido (letra de "
         },
         {
@@ -59609,7 +60578,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 124
+          "linea": 143
         },
         {
           "nombre": "necesitaNifTomador",
@@ -59617,8 +60586,8 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown",
           "retorno": "boolean",
-          "linea": 127,
-          "resumen": "¿Este trabajo necesita que asegura ponga el NIF del tomador? Mapfre + auto/moto + el riesgo no trae documento. PURA."
+          "linea": 146,
+          "resumen": "¿Este trabajo necesita que asegura ponga el NIF del tomador? Mapfre/Generali + auto/moto + el riesgo no trae documento. PURA."
         },
         {
           "nombre": "aplicarNifTomador",
@@ -59626,8 +60595,8 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, leer: () => LecturaNifFicha",
           "retorno": "NifTomadorAplicado",
-          "linea": 144,
-          "resumen": "· Mapfre sin documento → el de la ficha; sin NIF / ilegible / no válido → rechazo claro SIN encolar. Ningún motivo lleva el documento."
+          "linea": 164,
+          "resumen": "· Mapfre/Generali sin documento → el de la ficha; sin NIF / ilegible / no válido → rechazo claro SIN encolar. Ningún motivo lleva el documento."
         },
         {
           "nombre": "riesgoSinNifTomador",
@@ -59635,7 +60604,7 @@
           "exportada": true,
           "params": "riesgo: T",
           "retorno": "T",
-          "linea": 164,
+          "linea": 185,
           "resumen": "El riesgo que se GUARDA en la cola: nunca con `documentoTomador` (es el campo que pone asegura desde la ficha, y se inyecta solo al entregar el trabajo al worker). Lo demás, tal cual. PURA."
         },
         {
@@ -59644,7 +60613,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown",
           "retorno": "string | null",
-          "linea": 178,
+          "linea": 199,
           "resumen": "`faltaCompaniaAnterior` sobre un riesgo sin validar (lectura defensiva: `aniosAseguradoAnterior` y `companiaAnterior`). PURA."
         },
         {
@@ -59653,7 +60622,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador, /** Hogar (19/10/2026): DNI/NIE y nacimiento de la ficha. Sin función = fail-closed (503 ilegible), nunca «no hace falta». */ leer",
           "retorno": "",
-          "linea": 190,
+          "linea": 211,
           "resumen": "Al ENCOLAR: el riesgo que se GUARDA, tras comprobar que la ficha permitirá al worker recibir el NIF. Misma regla y mismos rechazos que `aplicarNifTomador`, pero el riesgo devuelto es SIEMPRE `riesgoSi"
         },
         {
@@ -59662,7 +60631,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, env: Record<string, string | undefined> = process.env",
           "retorno": "boolean",
-          "linea": 244,
+          "linea": 265,
           "resumen": "¿El bot de este trabajo necesita el tomador de la ficha? Hogar de una compañía de `companiasHogarRpa()` (todas lo piden). PURA (el entorno entra)."
         },
         {
@@ -59671,7 +60640,7 @@
           "exportada": true,
           "params": "fila: FilaTomadorFicha | null, descifrar: (v: string) => string",
           "retorno": "LecturaTomadorHogar",
-          "linea": 249,
+          "linea": 270,
           "resumen": "Ficha → tomador de hogar, con TRES estados por campo. Lo cifrado (`v1:`) se abre con `descifrar`; si lanza → `ilegible`. PURA."
         },
         {
@@ -59680,7 +60649,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, leer: () => LecturaTomadorHogar",
           "retorno": "NifTomadorAplicado",
-          "linea": 278,
+          "linea": 299,
           "resumen": "Pone `tomador` (de la ficha) en el riesgo de Hogar de Allianz; otro ramo o compañía, tal cual. 422 `falta_datos_tomador` / 503 `datos_tomador_ilegibles`. PURA."
         },
         {
@@ -59689,7 +60658,7 @@
           "exportada": true,
           "params": "v: string",
           "retorno": "string | null",
-          "linea": 301,
+          "linea": 322,
           "resumen": "«2026-10-05» o «05/10/2026» → ISO real; cualquier otra cosa → `null` (no se adivina un orden). PURA."
         },
         {
@@ -59698,7 +60667,7 @@
           "exportada": true,
           "params": "fila: FilaTomadorFicha | null, descifrar: (v: string) => string",
           "retorno": "LecturaDatosTomador",
-          "linea": 318,
+          "linea": 339,
           "resumen": "Ficha → datos del tomador para el alta. PURA. Lo cifrado (`v1:`) se abre con `descifrar`; si lanza → `ilegible` (nunca «falta»). Empresa = `tipo_persona = juridica`, o sin tipo y con CIF: razón social"
         },
         {
@@ -59707,7 +60676,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, env: Record<string, string | undefined> = process.env",
           "retorno": "boolean",
-          "linea": 358,
+          "linea": 379,
           "resumen": "¿Hacen falta los datos del tomador de la ficha? Mapfre + auto/moto + el riesgo no trae su bloque `tomador`; o (21/10/2026) Mapfre + hogar con el interruptor abierto (`companiasHogarRpa`): su bot da de"
         },
         {
@@ -59716,7 +60685,7 @@
           "exportada": false,
           "params": "l: readonly string[]",
           "retorno": "string",
-          "linea": 366,
+          "linea": 387,
           "resumen": "Texto «el nombre, el primer apellido y la fecha de nacimiento». PURA."
         },
         {
@@ -59725,8 +60694,8 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, leer: () => LecturaDatosTomador",
           "retorno": "NifTomadorAplicado",
-          "linea": 375,
-          "resumen": "Como `aplicarNifTomador` para nombre, apellidos y nacimiento (`datosTomador`). PURA. Otra compañía → el riesgo SIN `datosTomador`; Mapfre auto/moto sin bloque `tomador` → los de la ficha, o rechazo 42"
+          "linea": 396,
+          "resumen": "Como `aplicarNifTomador` para nombre, apellidos y nacimiento (`datosTomador`). PURA. Otra compañía (Generali incluida: solo NIF) → el riesgo SIN `datosTomador`; Mapfre auto/moto sin bloque `tomador` →"
         },
         {
           "nombre": "tipoFalloNifTomador",
@@ -59734,7 +60703,7 @@
           "exportada": true,
           "params": "status: 422 | 503",
           "retorno": "'datos' | 'infra'",
-          "linea": 390,
+          "linea": 411,
           "resumen": "Al ENTREGAR: un NIF que ya no se puede poner es fallo `datos` (la ficha) o `infra` si es ilegible (la clave: «no se sabe»)."
         },
         {
@@ -59743,7 +60712,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "boolean",
-          "linea": 395,
+          "linea": 416,
           "resumen": "Interruptor general. APAGADO salvo `TARIFICADOR_RPA_ACTIVO=1` exacto (fail-closed)."
         },
         {
@@ -59752,7 +60721,7 @@
           "exportada": true,
           "params": "leaseHasta: Date | null, ahora: Date",
           "retorno": "boolean",
-          "linea": 411,
+          "linea": 432,
           "resumen": "¿El lease de un trabajo `en_curso` ya venció? `null` (no debería existir: CHECK `trabajo_en_curso_con_lease`) = «no se sabe» → NO vencido: el estado conservador es seguir contándolo como ocupado antes"
         },
         {
@@ -59761,7 +60730,7 @@
           "exportada": true,
           "params": "filas: readonly T[], ahora: Date",
           "retorno": "",
-          "linea": 417,
+          "linea": 438,
           "resumen": "Reparte los `en_curso` de una compañía: los vivos ocupan hueco; los vencidos se dan por fallo de infra."
         },
         {
@@ -59770,7 +60739,7 @@
           "exportada": true,
           "params": "max: number | null, vivos: number",
           "retorno": "number",
-          "linea": 425,
+          "linea": 446,
           "resumen": "Huecos libres bajo `max_concurrencia`. Sin integración autorizada (`null`) o con un tope raro → 0 (fail-closed)."
         },
         {
@@ -59779,7 +60748,7 @@
           "exportada": true,
           "params": "p: { correduriaId: string; clienteId: string; compania: string; ramo: string }",
           "retorno": "string",
-          "linea": 435,
+          "linea": 456,
           "resumen": "Clave de deduplicación al ENCOLAR: un mismo cliente no pide dos veces el mismo riesgo a la misma compañía y ramo. El riesgo NO va en la clave (se compara en SQL como `jsonb`, que ya es igualdad semánt"
         },
         {
@@ -59788,7 +60757,7 @@
           "exportada": true,
           "params": "motivo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 461,
+          "linea": 482,
           "resumen": "¿Es una pausa de las que pueden caducar sola? Texto desconocido o vacío → `false` (conservador)."
         },
         {
@@ -59797,7 +60766,7 @@
           "exportada": true,
           "params": "pausadaAt: Date | null | undefined, ahora: Date",
           "retorno": "boolean",
-          "linea": 466,
+          "linea": 487,
           "resumen": "¿Esta pausa sin reanudar ya caducó? Hora ilegible/futura → NO caducada (conservador: sigue bloqueando)."
         },
         {
@@ -59806,7 +60775,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "string",
-          "linea": 473,
+          "linea": 494,
           "resumen": "Qué decirle a quien pide algo que ya existe: el estado REAL del trabajo que bloquea (no siempre «en marcha»)."
         },
         {
@@ -59815,7 +60784,7 @@
           "exportada": true,
           "params": "f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null; terminadoAt?: Date | null; conPrecio?: boolean; actualizadoAt?: Date | null }, ahora: Date, maxIntentos: number,",
           "retorno": "boolean",
-          "linea": 493,
+          "linea": 514,
           "resumen": "¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope"
         },
         {
@@ -59824,7 +60793,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "",
-          "linea": 525
+          "linea": 546
         },
         {
           "nombre": "peticionMaquina",
@@ -59832,7 +60801,7 @@
           "exportada": true,
           "params": "cfg: ConfigFly, jobId: string, vistaExplorador?: string | null",
           "retorno": "",
-          "linea": 540,
+          "linea": 561,
           "resumen": "La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que re"
         },
         {
@@ -59841,7 +60810,7 @@
           "exportada": true,
           "params": "e: Record<string, unknown>",
           "retorno": "MetaWorker",
-          "linea": 601,
+          "linea": 622,
           "resumen": "Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas (p. ej. un dato personal) se descarta ENTERA y el resultado del trabajo se guarda igua"
         },
         {
@@ -59850,7 +60819,7 @@
           "exportada": true,
           "params": "trabajoId: string, motivo: unknown",
           "retorno": "string",
-          "linea": 614
+          "linea": 635
         },
         {
           "nombre": "obj",
@@ -59858,7 +60827,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 623
+          "linea": 644
         },
         {
           "nombre": "base64",
@@ -59866,7 +60835,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], max: number",
           "retorno": "Buffer | null",
-          "linea": 626
+          "linea": 647
         },
         {
           "nombre": "esPdf",
@@ -59874,7 +60843,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 638
+          "linea": 659
         },
         {
           "nombre": "esPng",
@@ -59882,7 +60851,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 639
+          "linea": 660
         },
         {
           "nombre": "esJpeg",
@@ -59890,7 +60859,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 640
+          "linea": 661
         },
         {
           "nombre": "mimeCaptura",
@@ -59898,7 +60867,7 @@
           "exportada": true,
           "params": "b: Buffer | null | undefined",
           "retorno": "'image/png' | 'image/jpeg' | null",
-          "linea": 646,
+          "linea": 667,
           "resumen": "Tipo de una captura del tarificador por sus BYTES (no por lo que diga el worker): PNG (fallo genérico, emisión) o JPEG (atasco/hueco, 21/10/2026). Otra cosa → `null` (se rechaza). PURA."
         },
         {
@@ -59907,7 +60876,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string[] | null",
-          "linea": 654,
+          "linea": 675,
           "resumen": "`error.atascoOpciones` del trabajo → lista de textos o `null` (no se miró / forma rara). Tres estados: `[]` = se miró y no había. PURA."
         },
         {
@@ -59916,7 +60885,7 @@
           "exportada": true,
           "params": "trabajoId: string, mime: 'image/png' | 'image/jpeg'",
           "retorno": "string",
-          "linea": 660,
+          "linea": 681,
           "resumen": "Nombre del documento de una captura de fallo: `fallo-<8 hex>.png|jpg` (lo reconoce la purga de evidencia). PURA."
         },
         {
@@ -59925,7 +60894,7 @@
           "exportada": true,
           "params": "entrada: unknown",
           "retorno": "",
-          "linea": 664
+          "linea": 685
         },
         {
           "nombre": "capturaConDatos",
@@ -59933,13 +60902,13 @@
           "exportada": true,
           "params": "f: { captura_con_datos?: string | null; con_cliente?: boolean | null }",
           "retorno": "boolean",
-          "linea": 763,
+          "linea": 784,
           "resumen": "¿La captura puede llevar datos del tomador? FAIL-CLOSED: solo es «sin datos» si el worker lo marcó expresamente (`'false'`) Y el trabajo no tiene cliente. Sin marca (bot antiguo) o con cliente → se tr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b7e566cceb0"
+      "hash": "f70bdd7b98c4"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-relanzar-reglas.ts",
@@ -209947,6 +210916,57 @@
       "hash": "aa1af75d2bb4"
     },
     {
+      "ruta": "packages/module-patrimonio/src/coste-reconstruccion.ts",
+      "ambito": "packages/module-patrimonio",
+      "resumen": "Capital de continente MÍNIMO estimado de un inmueble SIN pedir datos al cliente (25/10/2026): superficie construida del Catastro (m²) × coste de reconstrucción (€/m²) del catálogo de abajo, por tipo de inmueble. PURO: la superficie entra ya leída (la cachea el portal en el inmueble); aquí no hay red",
+      "exporta": [
+        "claveCoste",
+        "estimarContinenteMinimo",
+        "esPisoEnEdificio",
+        "ofreceSeguroComunidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "claveCoste",
+          "kind": "function",
+          "exportada": true,
+          "params": "uso: string, tipoVivienda: 'piso' | 'unifamiliar' | null | undefined",
+          "retorno": "ClaveCoste | null",
+          "linea": 45,
+          "resumen": "`uso` del inmueble del portal (`USOS_INMUEBLE`) + lo que el Catastro dijo de la vivienda → clave del catálogo."
+        },
+        {
+          "nombre": "estimarContinenteMinimo",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { superficieM2: number | null | undefined uso: string tipoVivienda?: 'piso' | 'unifamiliar' | null }",
+          "retorno": "ContinenteMinimoEstimado | null",
+          "linea": 63
+        },
+        {
+          "nombre": "esPisoEnEdificio",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { enComunidad: boolean | null; tipoCatastro: 'piso' | 'unifamiliar' | null }",
+          "retorno": "boolean | null",
+          "linea": 79,
+          "resumen": "¿Es un piso en edificio en división horizontal? `null` = no se sabe (no se supone)."
+        },
+        {
+          "nombre": "ofreceSeguroComunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { esPiso: boolean | null presidente: boolean | null polizaComunidadVigente: boolean | null }",
+          "retorno": "boolean",
+          "linea": 90,
+          "resumen": "«Seguro de la comunidad» (Encargo B): se ofrece al presidente/administrador de una comunidad cuando el inmueble es un piso en edificio y NO hay ya una póliza de comunidad en vigor enlazada. Todo `null"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a522046eb64f"
+    },
+    {
       "ruta": "packages/module-patrimonio/src/enlace-inquilino.ts",
       "ambito": "packages/module-patrimonio",
       "resumen": "El enlace del INQUILINO (spec §5.9): sin cuenta del portal; el enlace dice QUÉ contrato, el código al correo dice QUIÉN (patrón de las invitaciones). Aquí: el estado del enlace y la LISTA BLANCA de lo que ve. 🚨 FAIL-CLOSED. Solo `vigente` enseña algo. Un enlace anulado, de otro contrato, de un inqu",
@@ -210528,7 +211548,7 @@
     {
       "ruta": "packages/module-patrimonio/src/infraseguro.ts",
       "ambito": "packages/module-patrimonio",
-      "resumen": "Alerta de infraseguro de un inmueble (spec §5.8): capital de continente asegurado vs valor de reconstrucción ESTIMADO con los m² del Catastro (`capitalContinenteSugerido` de module-tarificacion, que calcula el adaptador). La comparación y el umbral (80 %) NO se duplican: son `avisoInfraseguro`/`UMBR",
+      "resumen": "Alerta de infraseguro de un inmueble (spec §5.8): capital de continente asegurado vs valor de reconstrucción ESTIMADO con los m² del Catastro (`capitalContinenteSugerido` de module-tarificacion, que calcula el adaptador). El umbral es PROPIO del portal desde el 25/10/2026: aviso si capital < estimac",
       "exporta": [
         "alertaInfraseguro"
       ],
@@ -210544,7 +211564,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "affc02ccafde"
+      "hash": "805282e2d45d"
     },
     {
       "ruta": "packages/module-patrimonio/src/obligacion-propia.ts",
@@ -210607,6 +211627,57 @@
       "hash": "dc3c216f5bea"
     },
     {
+      "ruta": "packages/module-patrimonio/src/poliza-sin-inmueble.ts",
+      "ambito": "packages/module-patrimonio",
+      "resumen": "Enlace PÓLIZA → INMUEBLE (sentido inverso al de `enlace-seguro.ts`, 25/10/2026): las pólizas de hogar o comunidad del cliente (cartera viva o declaradas por él) que NO cuelgan de ningún inmueble de su patrimonio. Es lo que vende: «esta póliza protege una vivienda que no tienes en tu patrimonio». Reg",
+      "exporta": [
+        "esRamoDeVivienda",
+        "polizasSinInmueble",
+        "precargaDeUbicacion",
+        "estadoPeticionAviso"
+      ],
+      "funciones": [
+        {
+          "nombre": "esRamoDeVivienda",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 23,
+          "resumen": "Familia «hogar/comunidad»: el bien es una vivienda o un edificio. (Comercio, alquiler, decenal… no: otro encargo.)"
+        },
+        {
+          "nombre": "polizasSinInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { polizas: readonly PolizaParaAvisoInmueble[] inmuebles: readonly InmuebleParaAvisoPoliza[] enlaces: readonly EnlaceParaAvisoPoliza[] }",
+          "retorno": "AvisoPolizaSinInmueble[]",
+          "linea": 74
+        },
+        {
+          "nombre": "precargaDeUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "ubicacion: string | null",
+          "retorno": "",
+          "linea": 126,
+          "resumen": "Prerrelleno del alta desde una ubicación en texto libre («CALLE SOCORRO 24, 41003 SEVILLA»): el CP (5 cifras sueltas) y la calle con número (lo que va ANTES del CP, sin comas ni guiones finales). Muni"
+        },
+        {
+          "nombre": "estadoPeticionAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { tipo: TipoPolizaEnlace polizaId: string inmuebleId: string | null deMejorarPrecio: readonly PeticionPolizaAbierta[] | null dePedirPrecio: readonly PeticionInmuebleAbierta[] | null }",
+          "retorno": "EstadoPeticionAviso",
+          "linea": 155,
+          "resumen": "¿Hay ya una petición abierta («mejorar precio» de la póliza, «pedir precio» del inmueble)? `null` = la fuente no se pudo leer. Cartera → hace falta la de pólizas; con inmueble candidato → la de inmueb"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d4c83317da3b"
+    },
+    {
       "ruta": "packages/module-patrimonio/src/rentabilidad.ts",
       "ambito": "packages/module-patrimonio",
       "resumen": "Rentabilidad por inmueble y periodo: renta devengada − gastos confirmados − seguros. Se apoya en `calcularRentabilidad` de @central/module-contabilidad: se le pasan Apuntes con CÉNTIMOS como `base_imponible` (la función solo suma y resta; su `round2` no toca un entero) y `entidad_id` = inmueble. Reg",
@@ -210621,7 +211692,7 @@
           "exportada": true,
           "params": "p: PrimaSeguroInmueble, desde: Fecha, hasta: Fecha",
           "retorno": "Centimos | null",
-          "linea": 66,
+          "linea": 71,
           "resumen": "Parte de la prima anual que cae en `[desde, hasta]`, por días de la anualidad. `null` si la prima no consta."
         },
         {
@@ -210630,7 +211701,7 @@
           "exportada": false,
           "params": "id: string, tipo: 'ingreso' | 'gasto', fecha: Fecha, importe: Centimos, entidad: string, categoria: string",
           "retorno": "Apunte",
-          "linea": 76
+          "linea": 81
         },
         {
           "nombre": "rentabilidadPorInmueble",
@@ -210638,12 +211709,12 @@
           "exportada": true,
           "params": "e: EntradaRentabilidad",
           "retorno": "ResultadoRentabilidad",
-          "linea": 84
+          "linea": 89
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7c46902b3290"
+      "hash": "a28084692f2b"
     },
     {
       "ruta": "packages/module-patrimonio/src/tipos.ts",
@@ -242859,7 +243930,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5101,
-    "funciones": 19491
+    "archivos": 5121,
+    "funciones": 19580
   }
 }
