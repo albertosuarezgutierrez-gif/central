@@ -72,7 +72,7 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 - **Los datos de comisiones ya existen parseados, no los re-parsees.** `cuenta_efectivo`,
   `liquidaciones` y `poliza_recibos` (con `prima_neta`, `comision_bruta`, `comision_liquida`,
   `situacion`) los rellena el **JAR oficial de TIREA** en la BD de la correduría; se leen por
-  `ASEGURA_DATABASE_URL` (SELECT-only). `apps/plataforma/lib/cima.ts` habla SOAP contra un endpoint
+  `ASEGURA_DATABASE_URL` (SELECT-only). un cliente SOAP de CIMA (borrado, ya no existe en el repo) habla contra un endpoint
   nunca validado, con parser adivinado y códigos de compañía equivocados (los reales son `C0058`
   Mapfre, `C0109` Allianz, `C0468` Occident, `C0613` Reale): **no te apoyes en él**.
 - **Cobertura DESIGUAL por compañía — no supongas que CIMA lo trae todo (medido 01/09/2026).** Mapfre

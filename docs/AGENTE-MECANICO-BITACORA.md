@@ -12,6 +12,7 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (25/10/2026) Lint de enlaces de agentes: corregidas 3 rutas inexistentes en SKILL.md (agente-correduria, central-maestro, rrhh-compliance-calendar) — agente-mecanico — ok (lint 0 ERROR/0 AVISO; regression-lint-agentes 4/4 pass)
 - (10/10/2026) Prioridad bot→Avant2: TARIFICADOR-MATRIZ.md (regla arriba, filas Hogar/Auto/Moto), spec riesgo-unificado (orden del cotizador) y comentario en registro-ramos.ts (sin tocar tests) + entrada CONTEXTO-SESIONES — agente-mecanico — ok (solo docs y un comentario; sin tsc: solo comentario y otro agente toca plataforma con Prisma; registro-ramos.test.ts 5/5 pass)
 - (10/10/2026) Cepo figuras multi: escáner de apps/ y packages/ para `on conflict (oportunidad_id, rol)` sin predicado (+ entrada CONTEXTO-SESIONES) — agente-mecanico — ok (7/7 pass; rojo comprobado quitando el predicado de oportunidad-riesgo.ts:509 y restaurado; tsc asegura exit 0)
 - (10/10/2026) Docs: 3 F4 de CONTEXTO-SESIONES.md marcadas como aplicadas + entrada fase 0 de ramos; spec riesgo unificado (auto+moto embebidos, RAMOS_PRESUPUESTO) — agente-mecanico — ok (solo docs, sin tsc)

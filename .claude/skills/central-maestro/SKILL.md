@@ -52,7 +52,7 @@ Preguntar por «la correduría» es ambiguo y las dos respuestas viven en sitios
 **🏷️ Nombres — los tres son correctos, cada uno en su capa** (esto causó dos planes duplicados el
 20/08/2026): app/carpeta/Vercel = **`apps/asegura`** (la marca), schema y rol de BD = **`seguros`** /
 `prisma_seguros` (el dominio), módulo compartido si aparece = `packages/module-seguros`. **Hubo un
-`docs/ASEGURA-MIGRACION.md` que planificaba lo mismo con otro nombre: se fundió en
+un plan de migración (ya borrado) que planificaba lo mismo con otro nombre: se fundió en
 `docs/TRASPASO-CORREDURIA.md` y se borró.** Si lees `apps/seguros` en algún sitio, es residuo previo
 a la fusión.
 
