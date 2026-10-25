@@ -65,6 +65,7 @@ function puertos(accesos: [string, NivelPatrimonio][], over: Partial<PuertosCont
     indices: async () => indices,
     async guardarTope(x) {
       llamadas.topes.push(x)
+      return true
     },
     async aplicarRenta(x) {
       llamadas.aplicar.push(x)
@@ -205,6 +206,11 @@ test('🚨 tope: solo Total y dentro de los accesos; ajeno o con nivel Gestión 
   const gestion = puertos([[MIO, 'gestion']])
   assert.equal((await responderTopeRenta(gestion.p, C_MIO, { modo: 'sin_tope' })).status, 404)
   assert.equal(llamadas.topes.length + gestion.llamadas.topes.length, 0)
+})
+
+test('tope: si la BD no cambia ninguna fila responde la misma 404 (no un 200 falso)', async () => {
+  const { p } = puertos([[MIO, 'total']], { guardarTope: async () => false })
+  assert.equal((await responderTopeRenta(p, C_MIO, { modo: 'sin_tope' })).status, 404)
 })
 
 test('tope: valida el cuerpo y guarda lo que el cliente dijo (coma decimal incluida); un texto no es 0', async () => {

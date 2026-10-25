@@ -126,8 +126,8 @@ export function puertosContratos(identidadId: string): PuertosContratos {
     async guardarTope({ contratoId, tope }) {
       // `contratoId` viene de `p.contrato()` (ya dentro de los titulares autorizados); se repite el filtro por titular.
       const acc = await accesosPatrimonio(identidadId)
-      if (acc.size === 0) return
-      await prisma.portalPatrimonioContrato.updateMany({
+      if (acc.size === 0) return false
+      const r = await prisma.portalPatrimonioContrato.updateMany({
         where: contratoDentro(contratoId, [...acc.keys()]),
         data: {
           topeActualizacionPct: tope.modo === 'propio' ? new Prisma.Decimal(tope.pct.toFixed(2)) : null,
@@ -136,6 +136,7 @@ export function puertosContratos(identidadId: string): PuertosContratos {
           topeActualizacionEn: tope.modo === 'defecto' ? null : new Date(),
         },
       })
+      return r.count > 0
     },
     async aplicarRenta({ contratoId, propuesta }) {
       try {

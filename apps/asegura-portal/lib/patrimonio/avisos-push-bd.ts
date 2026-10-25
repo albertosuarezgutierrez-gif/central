@@ -23,13 +23,13 @@ import {
 import { mapConConcurrencia } from '../concurrencia'
 import { prisma } from '../db'
 import { OPCIONES_AVISO, topicAviso, type VapidCargada } from '../push-vapid'
+import { MAX_PAGINAS_PUSH, TAM_PAGINA_PUSH } from '../criba-avisos-push'
 import { avisosDePatrimonio } from './calendario'
 import { calendarioDeClientes } from './calendario-bd'
 
 /** Prefijo del sello en `portal_aviso_leido`. Cambiarlo reenvía todo lo que esté en ventana. */
 export const PREFIJO_PUSH_PATRIMONIO = 'patrimonio-push-'
 const CONCURRENCIA = 5
-const MAX_IDENTIDADES = 300
 
 export type ResultadoPushPatrimonio = { identidades: number; candidatas: number; avisadas: number; sinExito: number; fallidas: number; omitidasPorPreferencia: number }
 
@@ -40,10 +40,22 @@ const nivelDe = (v: string): Nivel => ((NIVELES as readonly string[]).includes(v
 
 export async function avisarPatrimonioPush(vapid: VapidCargada, hoy: Date): Promise<ResultadoPushPatrimonio> {
   const r: ResultadoPushPatrimonio = { identidades: 0, candidatas: 0, avisadas: 0, sinExito: 0, fallidas: 0, omitidasPorPreferencia: 0 }
-  const subs = await prisma.portalPushSuscripcion.findMany({ orderBy: { identidadId: 'asc' }, take: MAX_IDENTIDADES * 5 })
+  // Se pagina por cursor (id) todas las suscripciones: leer siempre las mismas primeras dejaba fuera a las demás identidades.
+  const subs: Awaited<ReturnType<typeof prisma.portalPushSuscripcion.findMany>> = []
+  let cursorId: string | null = null
+  for (let pagina = 0; pagina < MAX_PAGINAS_PUSH * 10; pagina += 1) {
+    const filas: typeof subs = await prisma.portalPushSuscripcion.findMany({
+      orderBy: [{ identidadId: 'asc' }, { id: 'asc' }],
+      take: TAM_PAGINA_PUSH,
+      ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    })
+    subs.push(...filas)
+    if (filas.length < TAM_PAGINA_PUSH) break
+    cursorId = filas[filas.length - 1]!.id
+  }
   const porIdentidad = new Map<string, typeof subs>()
   for (const s of subs) porIdentidad.set(s.identidadId, [...(porIdentidad.get(s.identidadId) ?? []), s])
-  const lotes = [...porIdentidad.entries()].slice(0, MAX_IDENTIDADES)
+  const lotes = [...porIdentidad.entries()]
   r.identidades = lotes.length
 
   await mapConConcurrencia(lotes, CONCURRENCIA, async ([identidadId, suscripciones]) => {

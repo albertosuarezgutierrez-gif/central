@@ -87,7 +87,7 @@ export async function pedirPrecioPatrimonio(correduriaId: string, d: PeticionPed
   const hoyIso = hoyMadrid()
   const r = await db.$transaction(async (tx) => {
     // Un doble clic son dos peticiones a la vez: el candado las pone en fila.
-    await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`${ORIGEN_PORTAL_PATRIMONIO}:${inm.cliente_id}:${d.inmuebleId}:${ramo}`}))`)
+    await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`${ORIGEN_PORTAL_PATRIMONIO}:${inm.cliente_id}:${d.inmuebleId}`}))`)
     const [ya] = await tx.$queryRaw<{ pedidoEl: string }[]>(Prisma.sql`
       select to_char(o.created_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "pedidoEl"
       from oportunidades o
@@ -112,20 +112,17 @@ export async function pedirPrecioPatrimonio(correduriaId: string, d: PeticionPed
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
       values (${correduriaId}::uuid, ${o!.id}::uuid, 'creada_portal', null, 'en_negociacion',
               ${JSON.stringify({ inmuebleId: d.inmuebleId, tipo: d.tipo })}::jsonb, ${ACTOR})`)
+    // Dentro de la misma transacción: si la bitácora falla, falla todo (no queda una oportunidad sin su rastro).
+    await tx.$executeRaw(Prisma.sql`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${inm.cliente_id}::uuid, cast('contacto' as tipo_historial_interno),
+              ${'Pidió desde Patrimonio (portal) que le pasen precio de seguro para uno de sus inmuebles.'})`)
     return { pedidoEl: hoyIso, yaExistia: false, oportunidadId: o!.id }
   })
 
   if (!r.yaExistia && r.oportunidadId) {
-    // Best-effort: la oportunidad y la tarea ya están; tumbar la respuesta por la bitácora o el aviso le diría al
+    // Best-effort: la oportunidad y la tarea ya están; tumbar la respuesta por el aviso le diría al
     // cliente que no se guardó lo que sí.
-    try {
-      await db.$executeRaw(Prisma.sql`
-        insert into historial_interno (correduria_id, cliente_id, tipo, texto)
-        values (${correduriaId}::uuid, ${inm.cliente_id}::uuid, cast('contacto' as tipo_historial_interno),
-                ${'Pidió desde Patrimonio (portal) que le pasen precio de seguro para uno de sus inmuebles.'})`)
-    } catch (e) {
-      console.error('[pedir-precio-patrimonio] historial_interno no se pudo anotar:', e instanceof Error ? e.message : e)
-    }
     try {
       await tgSend(textoAvisoPedirPrecio({ oportunidadId: r.oportunidadId, inmuebleId: d.inmuebleId }), { html: false })
     } catch (e) {

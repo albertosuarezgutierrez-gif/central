@@ -199,7 +199,7 @@ export interface PuertosContratos {
     propuesta: Extract<ResultadoActualizacion, { estado: 'propuesta' }>
   }): Promise<{ ok: true; id: string } | { ok: false; motivo: 'duplicado' }>
   /** Guarda el tope del cliente en SU contrato (ya autorizado). `defecto` limpia las columnas. */
-  guardarTope(x: { contratoId: string; tope: PreferenciaTope }): Promise<void>
+  guardarTope(x: { contratoId: string; tope: PreferenciaTope }): Promise<boolean>
   altaInquilinoPuente(x: { contratoId: string; datos: DatosAltaInquilino }): Promise<ResultadoPuenteAlta>
   piiInquilinoPuente(inquilinoId: string): Promise<ResultadoPuentePii>
 }
@@ -308,6 +308,7 @@ export async function responderTopeRenta(p: PuertosContratos, contratoId: unknow
   if (!c) return NO_ENCONTRADO
   const v = validarTope(cuerpo)
   if (!v.ok) return { status: 400, body: { error: 'datos_invalidos', campo: v.campo } }
-  await p.guardarTope({ contratoId: c.contrato.id, tope: v.datos })
+  // 0 filas cambiadas (ya no es suyo / desapareció) = la misma 404 que lo ajeno, nunca un 200 falso.
+  if (!(await p.guardarTope({ contratoId: c.contrato.id, tope: v.datos }))) return NO_ENCONTRADO
   return { status: 200, body: { ok: true } }
 }
