@@ -4100,7 +4100,68 @@ async function abrirFormularioGuardarTurismos(marco: Frame, guard: GuardEmision)
   return { pulsado: false, nota }
 }
 
-export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS, esperaFormMs = MS_APARECE_FORM_GUARDAR_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
+export const MS_HABILITA_GUARDAR_TURISMOS = 5_000
+/** Correo/teléfono del tomador, SOLO en tiempo de ejecución y solo si el riesgo los trae (nunca literales en el código). */
+export type ContactoGuardarTurismos = { email?: string | null; telefono?: string | null }
+const sinTildesGuardar = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+/** Qué dato del bot encaja con la etiqueta de un campo vacío. PURA. Personales/bancarios/consentimiento → null (no se teclean). */
+export function datoParaCampoGuardarTurismos(etiqueta: string): 'texto' | 'email' | 'telefono' | null {
+  const t = sinTildesGuardar(etiqueta).replace(/\s+/g, ' ').trim()
+  if (/iban|bic|cuenta|banc|nif|dni|nie|cif|documento|apellid|matricul|direccion|fecha|nacimiento/.test(t)) return null
+  if (/e-?mail|correo/.test(t)) return 'email'
+  if (/telefono|movil|celular|\btlf\b/.test(t)) return 'telefono'
+  if (/descripci|referencia|observaci|comentario|asunto|titulo|nombre (del )?(presupuesto|proyecto)|nombre presupuesto/.test(t)) return 'texto'
+  return null
+}
+const SEL_CAMPOS_TEXTO_GUARDAR = 'input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=button]):not([type=submit]), textarea'
+async function etiquetaDeCampoGuardar(c: Locator): Promise<string> {
+  return c.evaluate((n) => {
+    const e = n as HTMLInputElement
+    return (e.labels?.[0]?.textContent ?? n.getAttribute('aria-label') ?? n.getAttribute('placeholder') ?? '').replace(/\s+/g, ' ').replace(/\*/g, '').trim()
+  }).catch(() => '')
+}
+async function rellenarObligatoriosGuardarTurismos(form: Locator, marco: Frame, identificador: string, contacto: ContactoGuardarTurismos | null): Promise<void> {
+  const campos = form.locator(SEL_CAMPOS_TEXTO_GUARDAR).filter({ visible: true })
+  const n = await campos.count()
+  for (let i = 0; i < n; i++) {
+    const c = campos.nth(i)
+    if (!(await c.isEnabled().catch(() => false)) || !(await c.isEditable().catch(() => false))) continue
+    if (planoTurismos(await c.inputValue().catch(() => 'x')) !== '') continue
+    const dato = datoParaCampoGuardarTurismos(await etiquetaDeCampoGuardar(c))
+    const valor = dato === 'texto' ? identificador : dato === 'email' ? contacto?.email : dato === 'telefono' ? contacto?.telefono : null
+    if (!dato || !valor || planoTurismos(valor) === '') continue
+    await exigirCampoNoBancario(c)
+    await c.fill(valor, { timeout: 5_000 })
+  }
+  void marco
+}
+/** Etiquetas SANEADAS (sin valores) de lo que el formulario aún pide: campos vacíos y casillas obligatorias/de consentimiento sin marcar. */
+async function etiquetasPendientesGuardarTurismos(form: Locator): Promise<string[]> {
+  const crudas = await form.evaluate((f) => {
+    const out: string[] = []
+    // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página): todo en línea.
+    for (const n of Array.from(f.querySelectorAll('input, textarea, select'))) {
+      const e = n as HTMLInputElement
+      const t = (e.type ?? '').toLowerCase()
+      if (['hidden', 'button', 'submit', 'radio'].includes(t) || e.disabled) continue
+      const st = getComputedStyle(e)
+      if (st.display === 'none' || st.visibility === 'hidden') continue
+      const l = (e.labels?.[0]?.textContent ?? e.getAttribute('aria-label') ?? e.getAttribute('placeholder') ?? '').replace(/\s+/g, ' ').replace(/\*/g, '').trim()
+      if (t === 'checkbox') {
+        const obligatoria = e.required || e.getAttribute('aria-required') === 'true' || /acept|consent|lopd|proteccion de datos|protección de datos|privacidad|condiciones|autoriz|conforme/i.test(l)
+        if (!e.checked && obligatoria && l !== '') out.push(`${l} (casilla de consentimiento: no se marca)`)
+      } else if (e.value.trim() === '' && l !== '') out.push(l)
+    }
+    return out
+  }).catch(() => [] as string[])
+  // Casillas (su etiqueta puede ser larga): se saneán aparte; el resto, con el saneador común.
+  const sufijo = ' (casilla de consentimiento: no se marca)'
+  const casillas = crudas.filter((c) => c.endsWith(sufijo)).map((c) => c.slice(0, -sufijo.length)).filter((l) => l.length <= 120 && redactarDatosPersonales(l) === l && !/@|\d{5,}/.test(l)).map((l) => l + sufijo)
+  const campos = etiquetasControlesSaneadas(crudas.filter((c) => !c.endsWith(sufijo)), 12)
+  return [...campos, ...casillas].slice(0, 12)
+}
+
+export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS, esperaFormMs = MS_APARECE_FORM_GUARDAR_TURISMOS, contacto: ContactoGuardarTurismos | null = null, esperaHabilitaMs = MS_HABILITA_GUARDAR_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_guardado', motivo: 'otra ventana de red abierta' }
   if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) return { estado: 'no_guardado', motivo: 'fuera de la app de Allianz AUTOS' }
@@ -4184,11 +4245,15 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
       }
       if ((await input.isChecked()) !== quiero) return { estado: 'no_guardado', motivo: `la casilla «${etiqueta}» no quedó ${quiero ? 'marcada' : 'desmarcada'}` }
     }
-    // Obligatorios vacíos (nombre, documento…): el bot NO los teclea. Botón deshabilitado → se dice cuáles (solo etiquetas).
+    // v0.6.26 (25/10/2026, trabajo real e3c52938: el formulario abría pero «Guardar presupuesto» seguía deshabilitado): se rellenan los
+    // obligatorios VACÍOS con lo que el bot ya tiene (nombre/descripción del presupuesto = el identificador; correo/teléfono del tomador
+    // solo si el riesgo los trae). Nombres de persona, documentos, cuentas y casillas de consentimiento NUNCA. Se espera a que se habilite.
+    await rellenarObligatoriosGuardarTurismos(form, marco, identificador, contacto)
+    const hastaHabilita = Date.now() + esperaHabilitaMs
+    while (!(await boton.isEnabled().catch(() => false)) && Date.now() < hastaHabilita) await page.waitForTimeout(250)
     if (!(await boton.isEnabled().catch(() => false))) {
-      const vacios = await form.locator('input[required], input[aria-required=true]').evaluateAll((ns) =>
-        ns.filter((n) => (n as HTMLInputElement).value.trim() === '').map((n) => ((n as HTMLInputElement).labels?.[0]?.textContent ?? n.getAttribute('aria-label') ?? '').replace(/\s+/g, ' ').trim()).filter((x) => x !== ''))
-      return { estado: 'no_guardado', motivo: vacios.length ? `el portal pide ${vacios.map((v) => `«${v}»`).join(', ')} (el bot no los rellena)` : 'el botón «Guardar presupuesto» está deshabilitado' }
+      const pendientes = await etiquetasPendientesGuardarTurismos(form)
+      return { estado: 'no_guardado', motivo: pendientes.length ? `el botón «Guardar presupuesto» está deshabilitado: el formulario aún pide ${pendientes.map((v) => `«${v}»`).join(', ')} (el bot no los rellena)` : 'el botón «Guardar presupuesto» está deshabilitado y no se ve qué campo falta' }
     }
     // v0.6.14 (revisión de seguridad): RELECTURA de las 4 casillas justo antes del clic. Angular puede volver a marcar «Envío a
     // cliente/agente» o «Mostrar en eCliente» al cambiar otra (p. ej. «Todos los paquetes»): si alguna no está en su estado
