@@ -14,8 +14,7 @@ pendientes de implementar. Sesión efímera, solo lectura y generación de infor
 
 ## Paso 1 — Leer el roadmap
 
-Lee `/home/user/central/docs/ROADMAP-rrhh.md` (o `apps/rrhh/docs/ROADMAP-rrhh.md` si no
-existe en la raíz de docs).
+Lee `/home/user/central/docs/ROADMAP-rrhh.md`.
 
 ## Paso 2 — Filtrar y clasificar
 
