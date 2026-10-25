@@ -35,7 +35,7 @@ const ERRORES: Record<string, string> = {
   falta_fichero: 'Elige un fichero.',
   fichero_vacio: 'El fichero está vacío.',
   fichero_demasiado_grande: 'El fichero pasa de 5 MB.',
-  formato_no_admitido: 'Solo admitimos Excel (.xlsx) o CSV. Si es un .xls antiguo, guárdalo como .xlsx.',
+  formato_no_admitido: 'Solo admitimos CSV. En Excel: Archivo → Guardar como → «CSV (delimitado por comas)» y sube ese fichero.',
   fichero_ilegible: 'No hemos podido abrir el fichero. ¿Está dañado o protegido con contraseña?',
   sin_filas: 'No hemos encontrado filas con datos debajo de la cabecera.',
   sin_cabeceras: 'La primera fila tiene que llevar los nombres de las columnas.',
@@ -182,15 +182,15 @@ export function Importador({ titulares }: { titulares: { clienteId: string; nomb
           </select>
         </label>
         <label style={etiqueta}>
-          Fichero (.xlsx o .csv, hasta 5 MB y 500 filas)
-          <input type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => setFichero(e.target.files?.[0] ?? null)} style={{ minHeight: 44 }} />
+          Fichero CSV (hasta 5 MB y 500 filas). ¿Tienes un Excel? Guárdalo como CSV: Archivo → Guardar como → CSV
+          <input type="file" accept=".csv,text/csv" onChange={(e) => setFichero(e.target.files?.[0] ?? null)} style={{ minHeight: 44 }} />
         </label>
         <p className="suave" style={{ margin: 0, fontSize: 13 }}>
           ¿No tienes hoja? Descarga una plantilla:{' '}
           {TIPOS.map((t, i) => (
             <span key={t.v}>{i > 0 && ' · '}<a href={`/api/patrimonio/importaciones/plantilla?tipo=${t.v}`}>{t.t}</a></span>
           ))}
-          . Solo se lee la primera hoja. No guardamos el fichero, y las columnas con NIF, correo, teléfono, IBAN o inquilino se ignoran:
+          . No guardamos el fichero, y las columnas con NIF, correo, teléfono, IBAN o inquilino se ignoran:
           esos datos no se importan.
         </p>
         {aviso}

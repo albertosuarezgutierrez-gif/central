@@ -1,11 +1,10 @@
-// IMPORTAR PATRIMONIO (P18, 26/10/2026) — lee un .xlsx o .csv EN MEMORIA y devuelve cabeceras + filas. Sin prisma ni sesión.
+// IMPORTAR PATRIMONIO (P18, 26/10/2026) — lee un .csv EN MEMORIA y devuelve cabeceras + filas. Sin prisma ni sesión.
 //
-// Lo que entra es un fichero de un desconocido: tope de tamaño ANTES de abrirlo, solo .xlsx (zip) o texto (nada de .xls
-// binario, que abre más superficie), solo la PRIMERA hoja, a lo sumo `MAX_FILAS_IMPORTACION` filas y
-// `MAX_COLUMNAS_IMPORTACION` columnas, sin fórmulas ni estilos. El fichero no se guarda: solo su hash.
+// Lo que entra es un fichero de un desconocido: tope de tamaño ANTES de abrirlo, solo TEXTO CSV (ni .xlsx ni .xls: no hay
+// librería de hojas sin CVE que admitamos en un portal público), a lo sumo `MAX_FILAS_IMPORTACION` filas y
+// `MAX_COLUMNAS_IMPORTACION` columnas. El fichero no se guarda: solo su hash.
 // Las columnas con datos personales (NIF, correo, teléfono, IBAN, inquilino) se TIRAN aquí, antes de que nada las toque.
 import { createHash } from 'node:crypto'
-import * as XLSX from 'xlsx'
 import {
   MAX_BYTES_IMPORTACION,
   MAX_COLUMNAS_IMPORTACION,
@@ -81,26 +80,9 @@ export function leerFichero(bytes: Uint8Array): ResultadoLectura {
   const hash = sha256(bytes)
   let bruta: unknown[][]
   if (ES_OLE(bytes)) return { ok: false, motivo: 'formato' }
-  if (ES_ZIP(bytes)) {
-    try {
-      const libro = XLSX.read(bytes, {
-        type: 'array',
-        cellDates: true,
-        cellFormula: false,
-        cellHTML: false,
-        cellStyles: false,
-        bookVBA: false,
-        // Tope de filas leídas: cabecera + 500 + 1 para detectar el exceso.
-        sheetRows: MAX_FILAS_IMPORTACION + 2,
-      })
-      const nombre = libro.SheetNames[0]
-      const hoja = nombre ? libro.Sheets[nombre] : undefined
-      if (!hoja) return { ok: false, motivo: 'sin_filas' }
-      bruta = XLSX.utils.sheet_to_json<unknown[]>(hoja, { header: 1, raw: true, defval: null, blankrows: true })
-    } catch {
-      return { ok: false, motivo: 'ilegible' }
-    }
-  } else {
+  // Un .xlsx (zip) NO se abre: sin librería de hojas con CVE en un portal público. La persona lo guarda como CSV.
+  if (ES_ZIP(bytes)) return { ok: false, motivo: 'formato' }
+  {
     const texto = decodificar(bytes)
     if (texto === null) return { ok: false, motivo: 'formato' }
     bruta = parsearCsv(texto)

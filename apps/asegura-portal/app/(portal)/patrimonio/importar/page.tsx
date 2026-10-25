@@ -9,7 +9,7 @@ import { Importador } from './Importador'
 export const dynamic = 'force-dynamic'
 
 /**
- * «Importar desde Excel» (P18, 26/10/2026): el cliente sube un .xlsx/.csv de inmuebles, contratos o gastos, corrige el
+ * «Importar desde Excel» (P18, 26/10/2026): el cliente sube un CSV de inmuebles, contratos o gastos, corrige el
  * mapeo de columnas, ve una vista previa fila a fila con sus errores y SOLO al confirmar se crea. 🚨 Solo los titulares con
  * nivel Total (alta y baja); el resto no ve esta pantalla (la API devuelve 404 igualmente).
  */

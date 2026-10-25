@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 /**
- * `POST /api/patrimonio/importaciones` (multipart: `titular`, `fichero`, `tipo?`) — sube un .xlsx/.csv de inmuebles,
+ * `POST /api/patrimonio/importaciones` (multipart: `titular`, `fichero`, `tipo?`) — sube un CSV (guardado desde Excel) de inmuebles,
  * contratos o gastos, lo lee EN MEMORIA (no se guarda el fichero) y deja una PROPUESTA con autodetección de columnas.
  * No crea nada del patrimonio: eso es `.../[id]/confirmar`.
  *

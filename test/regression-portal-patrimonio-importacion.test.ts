@@ -116,17 +116,16 @@ test('rutas: ninguna toca prisma; la identidad sale de la sesión; la subida cor
   assert.doesNotMatch(leer(RUTAS[4]), /prisma|findMany/, 'la plantilla no consulta la BD')
 })
 
-test('🚨 lector: topes antes de abrir, solo .xlsx/texto, sin fórmulas, y las columnas con datos personales se tiran al leer', () => {
+test('🚨 lector: solo CSV (sin librería de hojas), topes antes de leer y las columnas con datos personales se tiran al leer', () => {
   const src = leer(LECTURA)
-  assert.ok(src.indexOf('MAX_BYTES_IMPORTACION') < src.indexOf('XLSX.read('), 'el tope de tamaño va ANTES de abrir el fichero')
-  assert.match(src, /sheetRows: MAX_FILAS_IMPORTACION \+ 2/)
-  assert.match(src, /cellFormula: false/)
+  assert.doesNotMatch(src, /xlsx|exceljs/i, 'sin librería de hojas de cálculo en un portal público')
+  assert.match(src, /ES_ZIP\(bytes\)\) return \{ ok: false, motivo: 'formato' \}/, '.xlsx fuera')
   assert.match(src, /ES_OLE\(bytes\)\) return \{ ok: false, motivo: 'formato' \}/, '.xls antiguo fuera')
-  assert.match(src, /SheetNames\[0\]/, 'solo la primera hoja')
+  assert.ok(src.indexOf('MAX_BYTES_IMPORTACION') < src.indexOf('parsearCsv('), 'el tope de tamaño va ANTES de leer')
   assert.match(src, /esColumnaSensible\(n\)/)
   assert.match(src, /sensibles\[k\] \? null/, 'la columna sensible se vacía en cada fila')
   assert.doesNotMatch(src, /prisma|\.\.\/db/, 'el lector no ve la BD')
-  // La app no guarda el fichero: ni documentos ni bytes.
+  assert.doesNotMatch(readFileSync(join(ROOT, 'apps/asegura-portal/package.json'), 'utf8'), /"xlsx"|"exceljs"/)
   assert.doesNotMatch(leer(BD), /contenido|portalPatrimonioDocumento|documentoId/)
 })
 
