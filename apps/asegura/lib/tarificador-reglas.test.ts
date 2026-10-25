@@ -797,3 +797,48 @@ test('fichaTomador: su módulo solo toma de codeoscopic/ los TROCEADORES puros (
   assert.deepEqual(deCodeoscopic, ['./codeoscopic/desde-cartera.ts', './codeoscopic/direccion.ts'])
   assert.ok(!/CODEOSCOPIC_|fetch\(|prisma|process\.env/.test(src), 'puro: sin env, red ni BD')
 })
+
+// ─── NIF del tomador para Generali auto (25/10/2026): SOLO el documento (minimización RGPD) ─────────────────────────────
+// Su bot se paraba en «rama=sin_nif»: solo usa el NIF para BUSCAR a la persona ya existente en su portal (nunca da de alta),
+// así que recibe `documentoTomador` y NADA más de la ficha (ni `datosTomador` ni `fichaTomador`). Datos ficticios.
+const RIESGO_GENERALI = { ...RIESGO_MOTO, ramo: 'auto' }
+
+test('NIF Generali: auto sin documento lo necesita; con documento o en otro ramo, no', () => {
+  assert.equal(necesitaNifTomador('generali', 'auto', RIESGO_GENERALI), true)
+  assert.equal(necesitaNifTomador(' Generali ', 'auto', RIESGO_GENERALI), true)
+  assert.equal(necesitaNifTomador('generali', 'auto', { ...RIESGO_GENERALI, documentoTomador: NIF }), false)
+  assert.equal(necesitaNifTomador('generali', 'hogar', {}), false)
+  assert.equal(necesitaNifTomador('generali', 'moto', RIESGO_MOTO), false, 'Generali moto no tiene bot declarado: no se descifra el NIF')
+})
+
+test('NIF Generali · minimización: ni nombre/apellidos/nacimiento (datosTomador) ni ficha completa (fichaTomador)', () => {
+  assert.equal(necesitaDatosTomador('generali', 'auto', RIESGO_GENERALI), false)
+  assert.equal(necesitaFichaTomador('generali', 'auto'), false)
+  // Un `datosTomador` que viniera se QUITA (no se manda un dato personal que su bot no necesita).
+  assert.deepEqual(aplicarDatosTomador('generali', 'auto', { ...RIESGO_GENERALI, datosTomador: DATOS_TOMADOR }, noLeer), { ok: true, riesgo: RIESGO_GENERALI })
+  // Mapfre sigue recibiéndolos (da de alta al tomador que no conoce).
+  assert.equal(necesitaDatosTomador('mapfre', 'auto', RIESGO_GENERALI), true)
+})
+
+test('NIF Generali · ENCOLAR: comprueba el NIF de la ficha, NO lee los datos del alta y guarda el riesgo SIN documento', () => {
+  const ok = riesgoParaEncolar('generali', 'auto', RIESGO_GENERALI, () => ({ estado: 'ok', documento: NIF }), noLeer)
+  assert.ok(ok.ok, !ok.ok ? ok.motivo : '')
+  assert.ok(ok.ok && !JSON.stringify(ok.riesgo).includes('00000000') && !('documentoTomador' in (ok.riesgo as object)))
+  for (const [estado, status] of [['sin_nif', 422], ['no_valido', 422], ['ilegible', 503]] as const) {
+    const r = riesgoParaEncolar('generali', 'auto', RIESGO_GENERALI, () => ({ estado }), noLeer)
+    assert.ok(!r.ok && r.status === status && /nif_tomador/.test(r.motivo), estado)
+    assert.ok(!JSON.stringify(r).includes('00000000'), 'el motivo no lleva documento')
+    if (status === 422) assert.ok(!r.ok && r.motivo.includes('Generali busca al tomador por NIF') && !r.motivo.includes('Mapfre'), estado)
+  }
+  // Mapfre conserva su texto.
+  const m = aplicarNifTomador('mapfre', 'auto', RIESGO_GENERALI, () => ({ estado: 'sin_nif' }))
+  assert.ok(!m.ok && m.motivo.includes('Mapfre busca al tomador por NIF'))
+})
+
+test('NIF Generali · ENTREGA: el worker recibe documentoTomador (lo que lee su bot) y nada más de la ficha', () => {
+  const guardado = riesgoParaEncolar('generali', 'auto', RIESGO_GENERALI, () => ({ estado: 'ok', documento: NIF }), noLeer)
+  assert.ok(guardado.ok)
+  const alWorker = aplicarNifTomador('generali', 'auto', guardado.ok && guardado.riesgo, () => ({ estado: 'ok', documento: NIF }))
+  assert.deepEqual(alWorker.ok && alWorker.riesgo, { ...RIESGO_GENERALI, documentoTomador: NIF })
+  assert.equal(aplicarFichaTomador('generali', 'auto', alWorker.ok && alWorker.riesgo, noLeer), alWorker.ok && alWorker.riesgo, 'sin fichaTomador')
+})

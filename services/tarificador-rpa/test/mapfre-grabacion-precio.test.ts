@@ -147,7 +147,7 @@ const TARJETA = (producto: string, prima: string) => `<prima-producto><section><
 /** v0.8.14 · qué hace el portal al pulsar «Generar Proyecto»: pinta el nº en «Proyectos» (input de solo lectura), nada, o un diálogo de pago. */
 type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago'; texto?: string; previo?: string; donde?: 'pie' | 'icono' | 'aria' | 'enlace' | 'tarde' | 'oculto' | 'ninguno'
   /** v0.8.16 · «Ir a generar proyecto» (enlace) + «Contratar» en la botonera: `navega` abre la vista con «Generar Proyecto»; `inerte` no hace nada. */
-  ir?: 'navega' | 'inerte' }
+  ir?: 'navega' | 'inerte' | 'dialogo' | 'duplicado' }
 /** v0.8.15 · dónde y cómo pinta el portal el botón «Generar Proyecto» (por defecto: <button> dentro de `app-coberturas`). */
 const BOTON_PROYECTO = (o: ProyectoFixture | undefined) => {
   const t = o?.texto ?? 'Generar Proyecto'
@@ -162,7 +162,7 @@ const BOTON_PROYECTO = (o: ProyectoFixture | undefined) => {
   }
 }
 const IR_PROYECTO = (o: ProyectoFixture | undefined) =>
-  o?.ir ? '<a role="button" id="irProy" onclick="irProyecto()">Ir a generar proyecto</a><button id="contratar" onclick="window.__contratar=(window.__contratar||0)+1">Contratar</button>' : ''
+  o?.ir ? `<a role="button" id="irProy" onclick="irProyecto()">${o.ir === 'duplicado' ? 'IR A GENERAR PROYECTO' : 'Ir a generar proyecto'}</a>${o.ir === 'duplicado' ? '<a role="button" onclick="irProyecto()">Ir a generar proyecto</a>' : ''}<button id="contratar" onclick="window.__contratar=(window.__contratar||0)+1">Contratar</button>` : ''
 const PIE_PROYECTO = (o: ProyectoFixture | undefined) =>
   o?.donde === 'pie' ? `<button onclick="generarProyecto()">${o.texto ?? 'Generar Proyecto'}</button>` : o?.donde === 'tarde' ? '<span id="pieTarde"></span><script>setTimeout(()=>{document.getElementById("pieTarde").innerHTML=\'<button onclick="generarProyecto()">Generar Proyecto</button>\'},1200)</script>' : ''
 const NSEI = (o: { filas?: Array<[string, string, string?, string?]>; polizaObligatoria?: boolean; club?: string | null; primas?: string; interruptor?: boolean | null; cpAsincrono?: boolean; errorEn?: 'matriculacion' | null; sinUsoAmbito?: boolean; proyecto?: ProyectoFixture } = {}) => `<!doctype html><body>
@@ -196,8 +196,10 @@ function continuar(){window.__continuar=(window.__continuar||0)+1;const h=[...do
  h[i].setAttribute('aria-selected','false');h[i+1].setAttribute('aria-selected','true');
  if(PASO_COBERTURAS(i+1)){${o.club === null ? 'calcular()' : `setTimeout(()=>document.getElementById('ov').insertAdjacentHTML('beforeend', ${JSON.stringify(CLUB(o.club ?? undefined))}),80)`}}}
 function PASO_COBERTURAS(i){return i===3}
-function irProyecto(){window.__ir=(window.__ir||0)+1;if(${JSON.stringify(o.proyecto?.ir ?? null)}!=='navega')return;setTimeout(()=>{document.querySelector('app-proyecto').insertAdjacentHTML('beforebegin','<div id="vistaProy"><button onclick="generarProyecto()">Generar Proyecto</button></div>')},300)}
-function generarProyecto(){window.__proyecto=(window.__proyecto||0)+1;const tras=${JSON.stringify(o.proyecto?.tras ?? 'numero')};const ov=document.getElementById('ov');ov.insertAdjacentHTML('beforeend','<mat-dialog-container id="gen">Generando proyecto</mat-dialog-container>');
+function irProyecto(){window.__ir=(window.__ir||0)+1;const ir=${JSON.stringify(o.proyecto?.ir ?? null)};if(ir==='inerte')return;
+ if(ir==='dialogo'){setTimeout(()=>{document.getElementById('ov').insertAdjacentHTML('beforeend','<mat-dialog-container id="dlgProy"><p>Proyecto de seguro</p><label><input type="checkbox" id="consent" onclick="window.__consent=1"> Acepto el tratamiento de datos</label><button onclick="window.__verif=1">Verificación</button><button onclick="window.__contratar=(window.__contratar||0)+1">Contratar</button><button onclick="generarProyecto()">Guardar proyecto</button></mat-dialog-container>')},300);return}
+ setTimeout(()=>{document.querySelector('app-proyecto').insertAdjacentHTML('beforebegin','<div id="vistaProy"><button onclick="generarProyecto()">Generar Proyecto</button></div>')},300)}
+function generarProyecto(){window.__proyecto=(window.__proyecto||0)+1;const dp=document.getElementById('dlgProy');if(dp)dp.remove();const tras=${JSON.stringify(o.proyecto?.tras ?? 'numero')};const ov=document.getElementById('ov');ov.insertAdjacentHTML('beforeend','<mat-dialog-container id="gen">Generando proyecto</mat-dialog-container>');
  setTimeout(()=>{document.getElementById('gen').remove();if(tras==='mudo')return;if(tras==='dialogoPago'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Para continuar debe realizar el pago</p><button onclick="window.__pagado=1">Aceptar</button></mat-dialog-container>');return}
  const h=[...document.querySelectorAll('mat-step-header')];h[3].setAttribute('aria-selected','false');h[4].setAttribute('aria-selected','true');
  document.querySelector('app-proyecto').innerHTML='<mat-form-field><mat-label>Nº Proyecto</mat-label><input readonly value="9876543210"></mat-form-field><mat-select><span>Castellano</span></mat-select>'},300)}
@@ -671,7 +673,7 @@ test('v0.8.16 · tras «Ir a generar proyecto» el botón sigue ausente → moti
   await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
   const r = await generarProyectoMapfre(page, guard, 500, 1_500)
   assert.equal(r.estado, 'no_generado')
-  if (r.estado === 'no_generado') assert.match(r.motivo, /^se pulsó «Ir a generar proyecto» y sigue sin aparecer el botón «Generar Proyecto»; controles a la vista: .*«Continuar»/)
+  if (r.estado === 'no_generado') assert.match(r.motivo, /^se pulsó «Ir a generar proyecto» y sigue sin aparecer el botón «Generar Proyecto» ni «Guardar proyecto»; controles a la vista: .*«Continuar»/)
   assert.equal(await marca(page, '__ir'), 1)
   assert.equal(await marca(page, '__proyecto'), null)
   assert.equal(await marca(page, '__contratar'), null)
@@ -694,7 +696,9 @@ test('v0.8.16 · «Ir a generar proyecto» (PURA): SOLO el texto entero exacto p
   assert.doesNotThrow(() => comprobarBoton(['Ir a generar proyecto'], { permitirIrAGenerarProyectoMapfre: true }))
   const c = (etiqueta: string, o: Partial<ControlProyectoMapfre> = {}): ControlProyectoMapfre => ({ etiqueta, visible: true, habilitado: true, enCoberturas: true, ...o })
   assert.deepEqual(decidirBotonIrAGenerarProyectoMapfre([c('Contratar'), c('Ir a generar proyecto')]), { indice: 1 })
-  assert.equal(decidirBotonIrAGenerarProyectoMapfre([c('Ir a generar proyecto'), c('Ir a generar proyecto')]), null, 'dos → ninguno')
+  assert.deepEqual(decidirBotonIrAGenerarProyectoMapfre([c('Ir a generar proyecto', { enCoberturas: false }), c('IR A GENERAR PROYECTO')]), { indice: 1 }, 'repetido: gana el único de Coberturas, sin mayúsculas/acentos')
+  assert.deepEqual(decidirBotonIrAGenerarProyectoMapfre([c('Ir a generar proyecto'), c('Ir a generar proyecto')]), { indice: 0 }, 'repetido sin desempate: el primero visible y habilitado (v0.8.17)')
+  assert.deepEqual(decidirBotonIrAGenerarProyectoMapfre([c('Ir a generar proyecto', { habilitado: false }), c('Ir a generar proyecto')]), { indice: 1 })
   assert.equal(decidirBotonIrAGenerarProyectoMapfre([c('Ir a generar proyecto', { habilitado: false })]), null)
   assert.equal(decidirBotonIrAGenerarProyectoMapfre([c('Ir a generar proyecto', { visible: false }), c('Ir a generar')]), null)
 })
@@ -737,4 +741,45 @@ test('«Generar Proyecto»: una violación REAL del guard SÍ se relanza (fail-c
   await assert.rejects(() => generarProyectoMapfre(page, guard, 500), EmisionBloqueadaError)
   assert.equal(await marca(page, '__proyecto'), null)
   await context.close()
+})
+
+test('v0.8.17 · «Ir a generar proyecto» repetido (uno por producto, en mayúsculas) → se pulsa UNA vez y se llega a «Generar Proyecto»', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { donde: 'ninguno', ir: 'duplicado' } }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  const r = await generarProyectoMapfre(page, guard, 4_000, 4_000)
+  assert.deepEqual(r, { estado: 'generado', numero: '9876543210' })
+  assert.equal(await marca(page, '__ir'), 1, 'una sola pulsación de navegación')
+  assert.equal(await marca(page, '__proyecto'), 1)
+  assert.equal(await marca(page, '__contratar'), null)
+  await context.close()
+})
+
+test('v0.8.17 · tras «Ir a generar proyecto» sale un DIÁLOGO con «Guardar proyecto» (+ «Contratar», «Verificación» y una casilla): solo se pulsa «Guardar proyecto»', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { donde: 'ninguno', ir: 'dialogo' } }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  const r = await generarProyectoMapfre(page, guard, 4_000, 4_000)
+  assert.deepEqual(r, { estado: 'generado', numero: '9876543210' })
+  assert.equal(await marca(page, '__ir'), 1)
+  assert.equal(await marca(page, '__proyecto'), 1, 'una sola pulsación final')
+  assert.equal(await marca(page, '__contratar'), null, '«Contratar» nunca')
+  assert.equal(await marca(page, '__verif'), null, '«Verificación» nunca')
+  assert.equal(await marca(page, '__consent'), null, 'ninguna casilla de consentimiento')
+  await context.close()
+})
+
+test('v0.8.17 · «Guardar proyecto» SOLO vale en la pantalla tras «Ir a generar proyecto», con texto entero sin tildes/mayúsculas (PURA)', () => {
+  const c = (etiqueta: string, o: Partial<ControlProyectoMapfre> = {}): ControlProyectoMapfre => ({ etiqueta, visible: true, habilitado: true, enCoberturas: false, ...o })
+  assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Contratar'), c('GUARDAR  Proyecto')], true), { indice: 1 })
+  assert.ok('motivo' in decidirBotonGenerarProyectoMapfre([c('Guardar proyecto')], false), 'en Coberturas no vale')
+  const sin = decidirBotonGenerarProyectoMapfre([c('Contratar'), c('Verificación')], true)
+  assert.ok('motivo' in sin && /^no aparece el botón «Generar Proyecto» ni «Guardar proyecto»/.test(sin.motivo))
+  for (const t of ['Guardar', 'Guardar proyecto y contratar', 'Emitir proyecto', 'Contratar', 'Verificación', 'Guardar presupuesto']) {
+    assert.equal(esBotonGenerarProyectoMapfre([t], true), false, t)
+    assert.ok('motivo' in decidirBotonGenerarProyectoMapfre([c(t)], true), t)
+  }
+  assert.equal(esBotonGenerarProyectoMapfre(['Guardar proyecto'], true), true)
+  assert.equal(esBotonGenerarProyectoMapfre(['Guardar proyecto']), false)
+  assert.equal(esBotonGenerarProyectoMapfre(['Guardar proyecto', null, null, null, 'btnContratar'], true), false, 'un id de contratar lo tumba')
 })
