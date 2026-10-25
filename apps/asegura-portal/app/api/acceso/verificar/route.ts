@@ -3,8 +3,9 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { MAX_INTENTOS, destinoSeguro, estadoCodigo, estadoEnlace, hashTokenEnlace, necesitaRegistro, normalizarIp, normalizarUserAgent, tokenEnlaceValido } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
-import { COOKIE_REF_CAMPANA, VERSION_TEXTOS_LEGALES, refDeCabeceraCookie } from '@central/module-seguros'
+import { COOKIE_REF_CAMPANA, refDeCabeceraCookie, versionTextosLegales } from '@central/module-seguros'
 import { prisma } from '@/lib/db'
+import { senalesActivas } from '@/lib/patrimonio-senales-activas'
 import { avisarPrimerAcceso } from '@/lib/aviso-acceso'
 import { COOKIE_NAME, COOKIE_OPTS, crearSesion, hashCanal, hashCodigo } from '@/lib/auth'
 import { getIp, rateLimit } from '@/lib/rate-limit'
@@ -143,7 +144,7 @@ async function abrirSesion(req: Request, tipo: 'whatsapp' | 'email', destino: st
     where: { identidadId, tipo: 'lds_art19' },
     select: { tipo: true, otorgado: true, versionTexto: true },
   })
-  const registrar = necesitaRegistro(yaAcreditado, 'lds_art19', VERSION_TEXTOS_LEGALES)
+  const registrar = necesitaRegistro(yaAcreditado, 'lds_art19', versionTextosLegales(senalesActivas()))
 
   // Va DENTRO de la transacción del canje a propósito: si no se puede dejar
   // constancia, tampoco se consume el código. El usuario reintenta y no queda un
@@ -185,7 +186,7 @@ async function abrirSesion(req: Request, tipo: 'whatsapp' | 'email', destino: st
               identidadId,
               tipo: 'lds_art19',
               otorgado: true,
-              versionTexto: VERSION_TEXTOS_LEGALES,
+              versionTexto: versionTextosLegales(senalesActivas()),
               ip: normalizarIp(req.headers.get('x-forwarded-for')),
               userAgent: normalizarUserAgent(req.headers.get('user-agent')),
             },

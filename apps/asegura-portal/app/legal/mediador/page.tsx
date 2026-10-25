@@ -4,9 +4,11 @@ import {
   MEDIADOR,
   CANALES_RECLAMACION,
   PUNTOS_PRECONTRACTUALES,
-  FECHA_TEXTOS_LEGALES,
-  VERSION_TEXTOS_LEGALES,
+  fechaTextosLegales,
+  versionTextosLegales,
 } from '@central/module-seguros'
+
+import { senalesActivas } from '@/lib/patrimonio-senales-activas'
 
 export const metadata: Metadata = {
   title: 'Información del mediador — Grupo ASegura',
@@ -108,7 +110,7 @@ export default function InfoMediador() {
       </section>
 
       <p className="legal-version">
-        Versión {VERSION_TEXTOS_LEGALES} · última revisión {FECHA_TEXTOS_LEGALES}
+        Versión {versionTextosLegales(senalesActivas())} · última revisión {fechaTextosLegales(senalesActivas())}
       </p>
     </>
   )

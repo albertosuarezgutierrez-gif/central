@@ -52,3 +52,13 @@ export function idsDeEscritura(url: string, cuerpo: unknown): Record<string, str
   }
   return ids
 }
+
+/**
+ * Actor de una llamada autorizada por el puente del portal. Se guarda como `sistema` (la tabla
+ * `auditoria` solo admite humano/agente/sistema/desconocido y no hace falta migrar) con id
+ * `portal:<identidadId>`, o `portal` si el cuerpo no trae una identidad con forma de UUID.
+ */
+export function actorPortal(ids: Record<string, string>): Actor {
+  const identidad = ids.identidadId
+  return { tipo: 'sistema', id: identidad && UUID.test(identidad) ? `portal:${identidad}` : 'portal' }
+}

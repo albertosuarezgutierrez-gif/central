@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auditado } from '@/lib/auditoria'
 
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { solicitarCambioCuenta } from '@/lib/cambio-cuenta'
@@ -16,7 +17,7 @@ export const runtime = 'nodejs'
  * 🚨 Como `/api/portal/contacto`: no acepta `clienteId` (la ficha sale del vínculo de la identidad) y
  * la respuesta no devuelve el IBAN, solo la máscara.
  */
-export async function POST(req: Request) {
+async function POSTSin(req: Request) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -39,3 +40,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('portal/cuenta', e) }, { status: 503 })
   }
 }
+
+export const POST = auditado(POSTSin)

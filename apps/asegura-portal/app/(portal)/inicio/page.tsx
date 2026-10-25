@@ -5,6 +5,7 @@ import { MEDIADOR, nombreDePila, telefonoLegible } from '@central/module-seguros
 
 import { resumenInicio } from '@/lib/inicio'
 import {
+  chipPendientes,
   nombreAccesibleFamilia,
   textoCalendario,
   textoFlota,
@@ -19,7 +20,7 @@ import { HuecosProteccion } from '../boveda/HuecosProteccion'
 export const dynamic = 'force-dynamic'
 
 /** Una tarjeta = UN enlace con nombre accesible completo (spec §1.5). */
-function Tarjeta({ href, titulo, lineas, aviso, cta, etiqueta, ancha }: {
+function Tarjeta({ href, titulo, lineas, aviso, cta, etiqueta, ancha, chip }: {
   href: string
   titulo: string
   lineas: string[]
@@ -27,6 +28,8 @@ function Tarjeta({ href, titulo, lineas, aviso, cta, etiqueta, ancha }: {
   cta?: string | null
   etiqueta: string
   ancha?: boolean
+  /** «N pendientes»: lo que esta tarjeta pide al cliente ahora. */
+  chip?: string | null
 }) {
   const cuerpo = (
     <>
@@ -35,6 +38,7 @@ function Tarjeta({ href, titulo, lineas, aviso, cta, etiqueta, ancha }: {
         <span aria-hidden="true">›</span>
       </span>
       {lineas.map((l) => <span key={l} className="inicio-tarjeta-linea">{l}</span>)}
+      {chip && <span className="inicio-tarjeta-aviso"><span aria-hidden="true">⚠ </span>{chip}</span>}
       {aviso?.map((l) => <span key={l} className="inicio-tarjeta-aviso"><span aria-hidden="true">⚠ </span>{l}</span>)}
       {cta && <span className="inicio-tarjeta-cta">{cta}</span>}
     </>
@@ -80,7 +84,7 @@ export default async function InicioPage() {
             const txt = textoTarjetaFamilia(t, tel)
             return (
               <Tarjeta key={t.familia} href={txt.href} titulo={t.nombre} lineas={txt.lineas} cta={txt.cta}
-                etiqueta={nombreAccesibleFamilia(t, txt)} />
+                chip={chipPendientes(t)} etiqueta={nombreAccesibleFamilia(t, txt)} />
             )
           })}
         </ul>

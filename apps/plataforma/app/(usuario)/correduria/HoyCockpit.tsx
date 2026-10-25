@@ -12,6 +12,7 @@ import Aprobaciones from './Aprobaciones'
 import Anulaciones from './Anulaciones'
 import CartasMediador from './CartasMediador'
 import BajasPue from './BajasPue'
+import OportunidadesPatrimonio from './OportunidadesPatrimonio'
 
 /**
  * El cockpit de «Gestión» (antes «Hoy»; pieza 1-4 de ASegura OS). Desde el 13/10/2026 NO lleva la franja de
@@ -84,6 +85,7 @@ export default function HoyCockpit({
       <Anulaciones />
       <CartasMediador />
       <BajasPue onContador={setNBajasPue} />
+      <OportunidadesPatrimonio />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>

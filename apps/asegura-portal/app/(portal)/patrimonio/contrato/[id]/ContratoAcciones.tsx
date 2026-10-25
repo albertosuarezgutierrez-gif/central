@@ -15,6 +15,7 @@ const ERRORES: Record<string, string> = {
   sin_clausula: 'El contrato no pacta actualización de la renta.',
   sin_indice: 'Todavía no tenemos el índice de referencia.',
   ya_aplicada: 'Esa actualización ya estaba aplicada.',
+  ya_en_contrato: 'Esa persona ya figura en este contrato.',
 }
 const mensaje = (e: string | undefined) => ERRORES[e ?? ''] ?? 'No hemos podido hacerlo. Inténtalo de nuevo.'
 const etiqueta: React.CSSProperties = { display: 'grid', gap: 4, fontSize: 13, fontWeight: 600, minWidth: 0 }
@@ -73,6 +74,8 @@ export function AltaInquilino({ contratoId }: { contratoId: string }) {
   const [telefono, setTelefono] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Ya hay alguien con ese documento: se propone reutilizarlo (nunca se duplica en silencio).
+  const [duplicado, setDuplicado] = useState<{ id: string; nombre: string } | null>(null)
 
   if (!abierto) {
     return (
@@ -82,27 +85,33 @@ export function AltaInquilino({ contratoId }: { contratoId: string }) {
     )
   }
 
-  async function enviar(e: React.FormEvent) {
-    e.preventDefault()
+  async function enviar(e: React.FormEvent | null, reutilizarId: string | null = null) {
+    e?.preventDefault()
     setEnviando(true)
     setError(null)
     try {
       const res = await fetch(`/api/patrimonio/contratos/${contratoId}/inquilinos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, papel, nombre, nif, email, telefono }),
+        body: JSON.stringify({ tipo, papel, nombre, nif, email, telefono, reutilizarId }),
       })
-      const j = (await res.json().catch(() => ({}))) as { error?: string; campo?: string; motivo?: string }
+      const j = (await res.json().catch(() => ({}))) as { error?: string; campo?: string; motivo?: string; id?: string; nombre?: string }
       if (res.ok) {
         // Se vacía el formulario: la PII no se queda en la memoria de la página.
         setNif('')
         setEmail('')
         setTelefono('')
         setNombre('')
+        setDuplicado(null)
         setAbierto(false)
         router.refresh()
         return
       }
+      if (res.status === 409 && j.error === 'inquilino_duplicado' && typeof j.id === 'string') {
+        setDuplicado({ id: j.id, nombre: j.nombre ?? '' })
+        return
+      }
+      setDuplicado(null)
       setError(j.error === 'datos_invalidos' ? (j.motivo ?? `Revisa el campo «${j.campo ?? ''}».`) : mensaje(j.error))
     } catch {
       setError('No hemos podido conectar. Vuelve a intentarlo.')
@@ -143,6 +152,22 @@ export function AltaInquilino({ contratoId }: { contratoId: string }) {
         enviamos nada hasta que tú lo pidas.
       </p>
       {error && <p className="error-linea" role="alert" style={{ margin: 0 }}>{error}</p>}
+      {duplicado && (
+        <div role="alert" style={{ display: 'grid', gap: 8 }}>
+          <p style={{ margin: 0 }}>
+            Ya tienes a {duplicado.nombre ? <strong>{duplicado.nombre}</strong> : 'una persona'} con ese mismo documento. ¿Es la misma? Reutilízala
+            y no se duplica.
+          </p>
+          <div style={fila}>
+            <button type="button" className="boton" style={{ minHeight: 44 }} disabled={enviando} onClick={() => void enviar(null, duplicado.id)}>
+              Usar la que ya tengo
+            </button>
+            <button type="button" className="boton boton-secundario" style={{ minHeight: 44 }} disabled={enviando} onClick={() => setDuplicado(null)}>
+              Corregir el documento
+            </button>
+          </div>
+        </div>
+      )}
       <div style={fila}>
         <button type="submit" className="boton" style={{ minHeight: 44 }} disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar inquilino'}</button>
         <button type="button" className="boton boton-secundario" style={{ minHeight: 44 }} disabled={enviando} onClick={() => setAbierto(false)}>Cancelar</button>

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auditado } from '@/lib/auditoria'
 
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
@@ -29,7 +30,7 @@ function statusDe(estado: string): number {
   return 409 // conflicto · sin_ficha · varias_fichas
 }
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHSin(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -54,7 +55,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function DELETESin(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -72,3 +73,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('portal/contactos/[id]', e) }, { status: 503 })
   }
 }
+
+export const PATCH = auditado(PATCHSin)
+export const DELETE = auditado(DELETESin)

@@ -5,7 +5,11 @@ import { revisarCopy } from '@central/module-seguros'
 
 import {
   TEXTO_CONSENTIMIENTO_COMERCIAL,
+  TEXTO_CONSENTIMIENTO_COMERCIAL_PATRIMONIO,
   TIPOS_CONSENTIMIENTO,
+  TIPO_COMERCIAL_PATRIMONIO,
+  tiposConsentimiento,
+  tiposQueSeRegistran,
   TIPOS_QUE_SE_REGISTRAN,
   TEXTO_CONSENTIMIENTO_AVISOS,
   VERSION_TEXTO_AVISOS,
@@ -130,4 +134,29 @@ test('el user agent se recorta y el vacío es null', () => {
   assert.equal(normalizarUserAgent('   '), null)
   assert.equal(normalizarUserAgent('Mozilla/5.0'), 'Mozilla/5.0')
   assert.equal(normalizarUserAgent('x'.repeat(1000))?.length, USER_AGENT_MAX)
+})
+
+test('P15 borrador: con el interruptor apagado los tipos son EXACTAMENTE los de siempre', () => {
+  assert.deepEqual([...tiposConsentimiento(false)], ['avisos', 'comercial', 'lds_art19'])
+  assert.deepEqual([...tiposQueSeRegistran(false)], ['lds_art19', 'comercial', 'avisos'])
+  assert.ok(!(TIPOS_CONSENTIMIENTO as readonly string[]).includes(TIPO_COMERCIAL_PATRIMONIO))
+})
+
+test('P15 borrador: comercial_patrimonio solo existe con el interruptor encendido', () => {
+  assert.ok(tiposConsentimiento(true).includes(TIPO_COMERCIAL_PATRIMONIO))
+  assert.ok(tiposQueSeRegistran(true).includes(TIPO_COMERCIAL_PATRIMONIO))
+})
+
+test('P15 borrador: el texto de la casilla pasa el revisor de copy y dice cómo retirarlo', () => {
+  assert.deepEqual(revisarCopy(TEXTO_CONSENTIMIENTO_COMERCIAL_PATRIMONIO), [])
+  assert.match(TEXTO_CONSENTIMIENTO_COMERCIAL_PATRIMONIO, /retirarlo cuando quiera/)
+  assert.match(TEXTO_CONSENTIMIENTO_COMERCIAL_PATRIMONIO, /Grupo ASegura/)
+})
+
+test('P15 borrador: el estado vigente de comercial_patrimonio es la última fila y otra versión del texto vale null', () => {
+  const f = (otorgado: boolean, dia: number, versionTexto = 'v1') => ({ tipo: 'comercial_patrimonio', otorgado, versionTexto, creadoEn: new Date(2026, 9, dia) })
+  assert.equal(consentimientoVigente([f(true, 1), f(false, 2)], 'comercial_patrimonio', 'v1'), false)
+  assert.equal(consentimientoVigente([f(false, 1), f(true, 2)], 'comercial_patrimonio', 'v1'), true)
+  assert.equal(consentimientoVigente([f(true, 1, 'v0')], 'comercial_patrimonio', 'v1'), null)
+  assert.equal(consentimientoVigente([], 'comercial_patrimonio', 'v1'), null)
 })

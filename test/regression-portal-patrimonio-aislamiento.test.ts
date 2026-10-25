@@ -87,7 +87,12 @@ const PASA_POR_ACCESOS = /\baccesosPatrimonio\(/
  * El ÚNICO fichero que puede tocar el patrimonio sin `accesosPatrimonio`: el adaptador del cron de gastos (lo ejecuta
  * `CRON_SECRET`, no una persona). Añadir algo aquí es una decisión, no un trámite.
  */
-const CRON_SIN_SESION = new Set(['apps/asegura-portal/lib/patrimonio/generar-gastos-bd.ts'])
+const CRON_SIN_SESION = new Set([
+  'apps/asegura-portal/lib/patrimonio/generar-gastos-bd.ts',
+  // P17 (26/10/2026): el INQUILINO no es titular. Su frontera son SUS accesos (`portal_patrimonio_inquilino_acceso` por la
+  // `identidadId` de la cookie), vigilada por `test/regression-portal-inquilino-acceso.test.ts`.
+  'apps/asegura-portal/lib/inquilino/inquilino-bd.ts',
+])
 
 function sinAccesos(ficheros: ReadonlyArray<{ f: string; src: string }>): string[] {
   return ficheros

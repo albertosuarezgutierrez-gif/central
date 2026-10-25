@@ -70,6 +70,28 @@ export const VERSION_TEXTO_COMERCIAL = '2026-09-c1'
 export const TEXTO_CONSENTIMIENTO_COMERCIAL =
   'Quiero que la correduría revise los seguros que tengo guardados aquí y me contacte, cuando se acerque un vencimiento, con una propuesta sin compromiso. Puedo retirarlo cuando quiera desde esta misma pantalla.'
 
+/**
+ * 🚨 BORRADOR P15 (26/10/2026) — `comercial_patrimonio`: el consentimiento a que la correduría revise los seguros de los
+ * inmuebles del cliente y le proponga cubrir lo que falte. NO está en `TIPOS_CONSENTIMIENTO` (CHECK actual de la BD) ni en
+ * `TIPOS_QUE_SE_REGISTRAN`: solo existe con `PATRIMONIO_SENALES_ACTIVAS=1` (`tiposConsentimiento(true)`,
+ * `tiposQueSeRegistran(true)`). Sin el interruptor, nada de lo anterior cambia. Casilla NUNCA premarcada, independiente de
+ * `comercial`; retirar = fila nueva con `otorgado:false` (append-only). Texto pendiente de aprobación de Alberto
+ * (docs/legal/2026-10-26-borrador-p15-patrimonio.md): hasta entonces la versión lleva el sufijo `-borrador`.
+ */
+export const TIPO_COMERCIAL_PATRIMONIO = 'comercial_patrimonio' as const
+export type TipoConsentimientoPatrimonio = typeof TIPO_COMERCIAL_PATRIMONIO
+export const VERSION_TEXTO_COMERCIAL_PATRIMONIO = '2026-11-p1-borrador'
+export const TEXTO_CONSENTIMIENTO_COMERCIAL_PATRIMONIO =
+  'Quiero que Grupo ASegura revise los seguros de los inmuebles que llevo en esta herramienta y me proponga, sin compromiso, cubrir lo que falte. Puedo retirarlo cuando quiera desde esta misma pantalla.'
+
+export function tiposConsentimiento(patrimonioActivo: boolean): readonly (TipoConsentimiento | TipoConsentimientoPatrimonio)[] {
+  return patrimonioActivo ? [...TIPOS_CONSENTIMIENTO, TIPO_COMERCIAL_PATRIMONIO] : TIPOS_CONSENTIMIENTO
+}
+
+export function tiposQueSeRegistran(patrimonioActivo: boolean): readonly (TipoConsentimiento | TipoConsentimientoPatrimonio)[] {
+  return patrimonioActivo ? [...TIPOS_QUE_SE_REGISTRAN, TIPO_COMERCIAL_PATRIMONIO] : TIPOS_QUE_SE_REGISTRAN
+}
+
 /** Una fila con su momento, para saber cuál es la última. */
 export type ConsentimientoConFecha = ConsentimientoGuardado & { creadoEn: Date }
 
@@ -85,7 +107,7 @@ export type ConsentimientoConFecha = ConsentimientoGuardado & { creadoEn: Date }
  */
 export function consentimientoVigente(
   guardados: readonly ConsentimientoConFecha[],
-  tipo: TipoConsentimiento,
+  tipo: TipoConsentimiento | TipoConsentimientoPatrimonio,
   versionActual?: string,
 ): boolean | null {
   let ultima: ConsentimientoConFecha | null = null

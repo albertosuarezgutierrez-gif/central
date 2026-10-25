@@ -1,4 +1,5 @@
 import { after, NextResponse } from 'next/server'
+import { auditado } from '@/lib/auditoria'
 
 import { tipoDocumento } from '@central/module-seguros'
 
@@ -29,7 +30,7 @@ export const maxDuration = 120
  * puerto de operador (por eso este endpoint no lo acepta ni lo menciona). Sin ficha vinculada, lo
  * único que puede escribir es un lead NUEVO (por el DNI del documento) con su fichero.
  */
-export async function POST(req: Request) {
+async function POSTSin(req: Request) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -84,3 +85,5 @@ export async function POST(req: Request) {
     )
   }
 }
+
+export const POST = auditado(POSTSin)
