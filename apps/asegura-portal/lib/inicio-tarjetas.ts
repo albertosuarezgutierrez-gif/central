@@ -136,7 +136,7 @@ export function nombreAccesibleFamilia(t: TarjetaFamilia, texto: { lineas: strin
 /** `null` = no se pudo comprobar; `'no_disponible'` = esta identidad no tiene patrimonio a la vista. */
 export type FuentePatrimonio = ResumenSegurosPatrimonio | 'no_disponible' | null
 
-export function textoPatrimonio(p: FuentePatrimonio, vinculada: boolean): { lineas: string[]; aviso: boolean; cta: string | null; href: string } {
+export function textoPatrimonio(p: FuentePatrimonio, vinculada: boolean, sinInmueble: number | null = null): { lineas: string[]; aviso: boolean; cta: string | null; href: string } {
   if (p === null) return { lineas: ['Ahora no hemos podido comprobar tu patrimonio.'], aviso: false, cta: 'Volver a intentarlo', href: '/inicio' }
   if (p === 'no_disponible') {
     // Fase 1 (Alberto, 24/10/2026): Patrimonio solo para clientes. Sin ficha: aporta tu primera póliza.
@@ -144,8 +144,15 @@ export function textoPatrimonio(p: FuentePatrimonio, vinculada: boolean): { line
       ? { lineas: ['Lleva tus pisos y locales con sus seguros. Pídenos que te lo activemos.'], aviso: false, cta: 'Ver herramientas', href: '/herramientas' }
       : { lineas: ['Disponible para clientes de Grupo ASegura.'], aviso: false, cta: 'Aporta tu primera póliza', href: '/boveda' }
   }
+  // `null` = no se pudo comprobar: no se dice nada (ni «tienes» ni «no tienes»).
+  const suelta = sinInmueble !== null && sinInmueble > 0
+    ? `${sinInmueble === 1 ? '1 póliza de hogar o comunidad protege' : `${sinInmueble} pólizas de hogar o comunidad protegen`} una vivienda que aún no figura en tu patrimonio`
+    : null
   if (p.inmuebles === 0) {
-    return { lineas: ['Lleva aquí tus pisos y locales: gastos, contratos y sus seguros.'], aviso: false, cta: 'Añadir inmueble', href: '/patrimonio' }
+    return {
+      lineas: ['Lleva aquí tus pisos y locales: gastos, contratos y sus seguros.', ...(suelta ? [suelta] : [])],
+      aviso: suelta !== null, cta: suelta ? null : 'Añadir inmueble', href: '/patrimonio',
+    }
   }
   const detalle = [
     p.sinSeguroQueNosConste > 0 ? `${p.sinSeguroQueNosConste} sin seguro que nos conste` : null,
@@ -153,8 +160,8 @@ export function textoPatrimonio(p: FuentePatrimonio, vinculada: boolean): { line
     p.sinComprobar > 0 ? `${p.sinComprobar} sin comprobar` : null,
   ].filter((x): x is string => x !== null)
   return {
-    lineas: [plural(p.inmuebles, 'inmueble', 'inmuebles'), ...(detalle.length > 0 ? [detalle.join(' · ')] : [])],
-    aviso: p.sinSeguroQueNosConste > 0 || p.sinRevisar > 0,
+    lineas: [plural(p.inmuebles, 'inmueble', 'inmuebles'), ...(detalle.length > 0 ? [detalle.join(' · ')] : []), ...(suelta ? [suelta] : [])],
+    aviso: p.sinSeguroQueNosConste > 0 || p.sinRevisar > 0 || suelta !== null,
     cta: null,
     href: '/patrimonio',
   }

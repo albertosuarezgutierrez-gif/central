@@ -27,12 +27,19 @@ const SQL_TOPE = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10
 // Obligaciones PROPIAS del cliente (25/10/2026): columna `categoria` en la tabla de obligaciones ya existente.
 const RUTA_PROPIA = 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_obligacion_propia.sql'
 const SQL_PROPIA = readFileSync(join(RAIZ, RUTA_PROPIA), 'utf8').replace(/--.*$/gm, '')
+// Caché del Catastro y presidente de comunidad (25/10/2026): columnas nuevas en `inmueble`; mismo espejo.
+const SQL_CATASTRO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_catastro_comunidad.sql'), 'utf8').replace(/--.*$/gm, '')
+// «¿Tiene hipoteca?» (25/10/2026): columna `hipoteca` en el inmueble; mismo espejo.
+const RUTA_HIPOTECA = 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_hipoteca.sql'
+const SQL_HIPOTECA = readFileSync(join(RAIZ, RUTA_HIPOTECA), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
   SQL_ENLACE,
   SQL_TOPE,
   SQL_PROPIA,
+  SQL_CATASTRO,
+  SQL_HIPOTECA,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
@@ -297,4 +304,20 @@ test('🚨 obligaciones propias (25/10/2026): SQL aditivo, sin borrados, columna
   const enModulo = /CATEGORIAS_OBLIGACION_PROPIA = \[([^\]]*)\]/.exec(mod)
   assert.ok(enModulo)
   assert.deepEqual(bd, enModulo[1].split(',').map((x) => x.trim().replace(/'/g, '')))
+})
+
+test('🚨 hipoteca (25/10/2026): SQL aditivo sin borrados, columna por GRANT, catálogo igual al del código y crm_seguros sin nada', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_HIPOTECA), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  assert.doesNotMatch(SQL_HIPOTECA, /\bDELETE\b|\bTRUNCATE\b/i)
+  assert.match(SQL_HIPOTECA, /^BEGIN;/m)
+  assert.match(SQL_HIPOTECA, /^COMMIT;/m)
+  assert.match(SQL_HIPOTECA, /ADD COLUMN IF NOT EXISTS hipoteca text/)
+  assert.match(SQL_HIPOTECA, /REVOKE ALL ON seguros\.portal_patrimonio_inmueble FROM crm_seguros/)
+  const bd = /hipoteca IN \(([^)]*)\)/.exec(SQL_HIPOTECA)
+  assert.ok(bd)
+  const enCodigo = /RESPUESTAS_HIPOTECA = \[([^\]]*)\]/.exec(readFileSync(join(RAIZ, 'apps/asegura-portal/lib/patrimonio/ofertas.ts'), 'utf8'))
+  assert.ok(enCodigo)
+  const limpia = (t: string) => t.split(',').map((x) => x.trim().replace(/'/g, ''))
+  assert.deepEqual(limpia(bd[1]), limpia(enCodigo[1]))
 })

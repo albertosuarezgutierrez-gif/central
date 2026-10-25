@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
+import { esRamoDeVivienda } from '@central/module-patrimonio'
 import { esRamoInmueble } from '@central/module-seguros-portal'
 import { carteraDeIdentidad, polizasParaParte, type PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
@@ -11,12 +12,14 @@ import { documentosDePoliza } from '@/lib/documentos-poliza'
 import { fechaEs } from '@/lib/fechas'
 import { rolesLegibles } from '@/lib/intervinientes'
 import { partesDeIdentidad } from '@/lib/partes-siniestro'
+import { avisosPolizasSinInmueble } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { personasDePoliza } from '@/lib/personas-poliza'
 import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { getIdentidad } from '@/lib/session'
 
 import { EvolucionPrima } from '../../EvolucionPrima'
 import { SeguimientoDeParte } from '../../SeguimientoParte'
+import { AvisoPolizaSinInmueble } from '../../../patrimonio/AvisoPolizaSinInmueble'
 import { PersonasDeTuPoliza, TercerosDeTusSiniestros } from '../../PersonasPoliza'
 import {
   AvisoReciboDevuelto,
@@ -125,6 +128,14 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   const propia = nivelPropio !== null && p.figuraTitular === undefined
   const evolucionPrima = await evolucionDePrimaDePoliza('cartera', p.id, propia)
   const hrefRevisarPrecio = propia && nivelPropio !== null && puedeOfrecerMejorarPrecio(p, nivelPropio, null) ? `/boveda/mejorar/${p.id}` : null
+  // Hogar/comunidad que no cuelga de ningún inmueble del patrimonio. Solo ese ramo mira (y llama al puente); si la lectura
+  // falla, la ficha no se cae y no afirma nada. Solo la ve quien tiene patrimonio y nivel (lo decide el adaptador).
+  const avisoSinInmueble = esRamoDeVivienda(p.ramo)
+    ? await avisosPolizasSinInmueble(identidad.id, { conPeticiones: true, cartera }).then(
+        (l) => l.find((a) => a.tipo === 'cartera' && a.id === p.id) ?? null,
+        () => null,
+      )
+    : null
   const seguimientos = seguimientosDePartes(partesPoliza, cartera)
   const partesConEstado = partesPoliza.flatMap((x) => {
     const seg = seguimientos.get(x.id) ?? null
@@ -154,6 +165,15 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
         {p.numeroPoliza && ` · Póliza ${p.numeroPoliza}`}
         {deOtro && ` · de ${deOtro}`}
       </p>
+      {avisoSinInmueble && (
+        <AvisoPolizaSinInmueble
+          aviso={{
+            tipo: avisoSinInmueble.tipo, id: avisoSinInmueble.id, ubicacion: avisoSinInmueble.ubicacion,
+            referenciaCatastral: avisoSinInmueble.referenciaCatastral, propuesta: avisoSinInmueble.propuesta,
+            peticion: avisoSinInmueble.peticion, titularClienteId: avisoSinInmueble.titularClienteId,
+          }}
+        />
+      )}
       {p.figuraTitular && (
         <p className="suave" style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.5, overflowWrap: 'anywhere' }}>
           {p.figuraTitular.roles.length > 0

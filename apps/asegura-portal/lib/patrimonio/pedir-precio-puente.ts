@@ -7,11 +7,27 @@
 //
 // Fallos que NO se colapsan: `sin_puente` (faltan envs) ≠ `error` (no ha salido: reintentar). Ninguno se le enseña a la
 // persona como «pedido».
-import { PORTAL_PUENTE_TIEMPO_MS } from '../puente-config'
+import { PORTAL_PUENTE_TIEMPO_MS } from '../puente-config.ts'
 
 const RUTA = '/api/portal/patrimonio/pedir-precio'
 
-export type TipoPedirPrecio = 'inmueble_sin_seguro' | 'seguro_no_vigente'
+/** Un tipo por línea (fácil de fusionar). Espejo de `TIPOS_PEDIR_PRECIO` de `apps/asegura`, que lo vuelve a validar. */
+export type TipoPedirPrecio =
+  | 'inmueble_sin_seguro'
+  | 'seguro_no_vigente'
+  | 'comunidad'
+  | 'comparar_externa'
+  | 'impago_alquiler'
+  | 'hipoteca'
+
+/** Lo que viaja: `comparar_externa` lleva la póliza declarada; `impago_alquiler`, inmueble + contrato; el resto, el inmueble. */
+export type PeticionPuentePedirPrecio = {
+  identidadId: string
+  tipo: TipoPedirPrecio
+  inmuebleId?: string
+  contratoId?: string
+  polizaDeclaradaId?: string
+}
 
 export type ResultadoPuentePedirPrecio =
   | { estado: 'ok'; pedidoEl: string; yaExistia: boolean }
@@ -21,7 +37,49 @@ export type ResultadoPuentePedirPrecio =
   | { estado: 'sin_puente' }
   | { estado: 'error'; causa: string }
 
-export async function pedirPrecioPorPuente(x: { identidadId: string; inmuebleId: string; tipo: TipoPedirPrecio }): Promise<ResultadoPuentePedirPrecio> {
+const FECHA = /^\d{4}-\d{2}-\d{2}$/
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Interpreta la respuesta del GET de peticiones abiertas. PURA. Cualquier cosa que no sea un 200 `ok` con la lista bien
+ * formada es `null` = «no hemos podido comprobarlo» (jamás una lista vacía: eso diría «no hay petición»).
+ */
+export function interpretarPeticionesAbiertas(status: number, j: unknown): { inmuebleId: string; pedidoEl: string }[] | null {
+  const o = (typeof j === 'object' && j !== null ? j : {}) as Record<string, unknown>
+  if (status !== 200 || o.estado !== 'ok' || !Array.isArray(o.peticiones)) return null
+  const out: { inmuebleId: string; pedidoEl: string }[] = []
+  for (const f of o.peticiones) {
+    const r = (typeof f === 'object' && f !== null ? f : {}) as Record<string, unknown>
+    if (typeof r.inmuebleId !== 'string' || !UUID.test(r.inmuebleId) || typeof r.pedidoEl !== 'string' || !FECHA.test(r.pedidoEl)) return null
+    out.push({ inmuebleId: r.inmuebleId, pedidoEl: r.pedidoEl })
+  }
+  return out
+}
+
+/** Peticiones «Pedir precio» abiertas de esta identidad. `null` = sin puente, corte o respuesta rara (no se afirma nada). */
+export async function peticionesPedirPrecioPorPuente(identidadId: string): Promise<{ inmuebleId: string; pedidoEl: string }[] | null> {
+  const base = process.env.ASEGURA_PUENTE_URL
+  const secret = process.env.ASEGURA_PORTAL_PUENTE_SECRET
+  if (!base || !secret) return null
+  const control = new AbortController()
+  const reloj = setTimeout(() => control.abort(), PORTAL_PUENTE_TIEMPO_MS)
+  try {
+    const res = await fetch(`${base.replace(/\/+$/, '')}${RUTA}?identidadId=${encodeURIComponent(identidadId)}`, {
+      method: 'GET',
+      headers: { authorization: `Bearer ${secret}` },
+      cache: 'no-store',
+      signal: control.signal,
+    })
+    return interpretarPeticionesAbiertas(res.status, await res.json().catch(() => null))
+  } catch (e) {
+    console.error('[portal/pedir-precio] no se pudieron leer las peticiones abiertas:', e instanceof Error && e.name === 'AbortError' ? 'timeout' : 'red')
+    return null
+  } finally {
+    clearTimeout(reloj)
+  }
+}
+
+export async function pedirPrecioPorPuente(x: PeticionPuentePedirPrecio): Promise<ResultadoPuentePedirPrecio> {
   const base = process.env.ASEGURA_PUENTE_URL
   const secret = process.env.ASEGURA_PORTAL_PUENTE_SECRET
   if (!base || !secret) return { estado: 'sin_puente' }
@@ -31,7 +89,7 @@ export async function pedirPrecioPorPuente(x: { identidadId: string; inmuebleId:
     const res = await fetch(`${base.replace(/\/+$/, '')}${RUTA}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${secret}` },
-      body: JSON.stringify({ identidadId: x.identidadId, inmuebleId: x.inmuebleId, tipo: x.tipo }),
+      body: JSON.stringify({ identidadId: x.identidadId, tipo: x.tipo, inmuebleId: x.inmuebleId, contratoId: x.contratoId, polizaDeclaradaId: x.polizaDeclaradaId }),
       cache: 'no-store',
       signal: control.signal,
     })

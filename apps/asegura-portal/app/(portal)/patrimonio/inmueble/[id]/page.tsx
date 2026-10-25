@@ -14,6 +14,7 @@ import { ETIQUETA_USO } from '@/lib/patrimonio/usos'
 import { getIdentidad } from '@/lib/session'
 
 import { Documentos } from './Documentos'
+import { HipotecaInmueble } from './HipotecaInmueble'
 import { NuevoContrato } from './NuevoContrato'
 import { ObligacionesPropias } from './ObligacionesPropias'
 import { SegurosInmueble } from './SegurosInmueble'
@@ -90,6 +91,12 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
           <SegurosInmueble datos={seguros} soloLectura={ficha.archivado} />
         )}
       </section>
+      {!ficha.archivado && puede(ficha.nivel, 'pedir_precio') && (
+        <section className="seccion" aria-labelledby="hipoteca-inmueble">
+          <h2 id="hipoteca-inmueble">Hipoteca</h2>
+          <HipotecaInmueble inmuebleId={i.id} inicial={ficha.hipoteca} />
+        </section>
+      )}
       <section className="seccion" aria-labelledby="recordatorios-inmueble">
         <h2 id="recordatorios-inmueble">Recordatorios y obligaciones</h2>
         <p className="suave" style={{ marginTop: 0, fontSize: 14 }}>

@@ -13,6 +13,9 @@
 //  · Jamás se enseña el nº de póliza ni la prima: la póliza se identifica por compañía + bien (regla del portal).
 import {
   alertaInfraseguro,
+  esPisoEnEdificio,
+  estimarContinenteMinimo,
+  ofreceSeguroComunidad,
   esEstadoDecisionSeguro,
   esRamoDeInmueble,
   estadoSeguroInmueble,
@@ -73,6 +76,14 @@ export type InmuebleDeSeguros = InmuebleParaEnlace & {
   sinSeguroDeclaradoEn: Date | null
   /** Valor de reconstrucción estimado (céntimos). `null`/ausente = sin m² del Catastro: no se estima. */
   valorReconstruccionCent?: number | null
+  /** Uso del inmueble (`USOS_INMUEBLE`); decide la fila del catálogo de coste de reconstrucción. */
+  uso?: string
+  /** m² construidos que contestó el Catastro (caché). `null`/ausente = no se sabe. */
+  superficieCatastroM2?: number | null
+  /** Lo que el Catastro dice de la vivienda (caché). `null`/ausente = no se sabe. */
+  tipoCatastro?: 'piso' | 'unifamiliar' | null
+  /** La persona dice que preside/administra la comunidad. `null`/ausente = no lo ha dicho. */
+  presidenteComunidad?: boolean | null
 }
 
 export interface PuertosSegurosInmueble {
@@ -93,6 +104,8 @@ export interface PuertosSegurosInmueble {
   /** Archiva un enlace VIVO de ese inmueble. `false` = no existe ahí. */
   archivarEnlace(inmuebleId: string, enlaceId: string): Promise<boolean>
   declararSinSeguro(inmuebleId: string, valor: boolean): Promise<void>
+  /** «Soy presidente/administrador de la comunidad» de ESE inmueble ya autorizado. */
+  declararPresidenteComunidad(inmuebleId: string, valor: boolean): Promise<void>
 }
 
 export type EnlacePintable = {
@@ -121,6 +134,17 @@ export type SegurosDeInmueble = {
   infraseguro: AlertaInfraseguro | null
   capitalContinenteCent: number | null
   valorEstimadoCent: number | null
+  /**
+   * De dónde sale el valor estimado cuando es la ESTIMACIÓN por m² del Catastro (siempre una estimación; `porVerificar`
+   * mientras el catálogo de €/m² no lo confirme Alberto). `null` = el valor es el que dio la persona, o no hay.
+   */
+  estimacionContinente: { superficieM2: number; eurPorM2: number; porVerificar: boolean } | null
+  /** La persona preside/administra la comunidad (`null` = no lo ha dicho). */
+  presidenteComunidad: boolean | null
+  /** Es un piso en edificio (comunidad marcada o Catastro). `null` = no se sabe. */
+  enPisoEnEdificio: boolean | null
+  /** «Seguro de la comunidad»: presidente + piso + sin póliza de comunidad en vigor. Pide precio con tipo `comunidad`. */
+  ofreceComunidad: boolean
   /** «Pedir precio»: inmueble sin seguro (o con el seguro caducado) y nivel `total`. */
   puedePedirPrecio: boolean
   /** Alguna fuente (cartera o declaradas) no se ha podido leer: la pantalla lo dice. */
@@ -221,7 +245,26 @@ export async function segurosDeInmueble(p: PuertosSegurosInmueble, idPedido: unk
   // El capital del propio inmueble: el mayor de sus pólizas en vigor que NO son de comunidad (su continente es el edificio).
   const capitales = vigentes.filter((v) => !esComunidad(v)).map((v) => v.capitalContinenteCent).filter((c): c is number => typeof c === 'number' && c > 0)
   const capital = capitales.length > 0 ? Math.max(...capitales) : null
-  const valorEstimado = typeof inm.valorReconstruccionCent === 'number' ? inm.valorReconstruccionCent : null
+  const dadoPorLaPersona = typeof inm.valorReconstruccionCent === 'number' ? inm.valorReconstruccionCent : null
+  // Sin valor propio, la estimación por m² del Catastro (cacheada en el inmueble): superficie × €/m² del catálogo.
+  const est = dadoPorLaPersona === null && inm.uso !== undefined
+    ? estimarContinenteMinimo({ superficieM2: inm.superficieCatastroM2, uso: inm.uso, tipoVivienda: inm.tipoCatastro ?? null })
+    : null
+  const valorEstimado = dadoPorLaPersona ?? est?.capitalCent ?? null
+  // ¿Hay una póliza de comunidad EN VIGOR enlazada? `null` = alguna no se pudo comprobar (no se ofrece nada).
+  const comunidadesEnlazadas = filas
+    .filter((f) => f.estado === 'confirmado')
+    .map((f) => {
+      const par = tipoDeFila(f)
+      return par ? porClave.get(clave(par.tipo, par.id)) : undefined
+    })
+  const polizaComunidadVigente: boolean | null =
+    vis.cartera === null || vis.declaradas === null
+      ? null
+      : comunidadesEnlazadas.some((v) => v === undefined || (esComunidad(v) && v.vigente === null))
+        ? null
+        : comunidadesEnlazadas.some((v) => v !== undefined && esComunidad(v) && v.vigente === true)
+  const enPiso = esPisoEnEdificio({ enComunidad: inm.enComunidad, tipoCatastro: inm.tipoCatastro ?? null })
   const infraseguro =
     vigentes.length === 0
       ? null
@@ -242,12 +285,16 @@ export async function segurosDeInmueble(p: PuertosSegurosInmueble, idPedido: unk
     infraseguro,
     capitalContinenteCent: capital,
     valorEstimadoCent: valorEstimado,
+    estimacionContinente: est === null ? null : { superficieM2: est.superficieM2, eurPorM2: est.eurPorM2, porVerificar: est.porVerificar },
+    presidenteComunidad: inm.presidenteComunidad ?? null,
+    enPisoEnEdificio: enPiso,
+    ofreceComunidad: puede(inm.nivel, 'pedir_precio') && ofreceSeguroComunidad({ esPiso: enPiso, presidente: inm.presidenteComunidad ?? null, polizaComunidadVigente }),
     puedePedirPrecio: puede(inm.nivel, 'pedir_precio') && (estado === 'sin_seguro' || estado === 'con_seguro_no_vigente'),
     sinComprobar: vis.cartera === null || vis.declaradas === null,
   }
 }
 
-/** `POST /api/patrimonio/inmuebles/[id]/seguros`. Acciones: `enlazar`, `quitar`, `sin_seguro`. */
+/** `POST /api/patrimonio/inmuebles/[id]/seguros`. Acciones: `enlazar`, `quitar`, `sin_seguro`, `presidente_comunidad`. */
 export async function responderSegurosInmueble(p: PuertosSegurosInmueble, idPedido: unknown, cuerpo: unknown): Promise<Respuesta> {
   if (typeof idPedido !== 'string' || !UUID.test(idPedido)) return NO_ENCONTRADO
   const inm = await p.inmueble(idPedido)
@@ -259,6 +306,12 @@ export async function responderSegurosInmueble(p: PuertosSegurosInmueble, idPedi
   if (c.accion === 'sin_seguro') {
     if (typeof c.valor !== 'boolean') return { status: 400, body: { error: 'datos_invalidos', campo: 'valor' } }
     await p.declararSinSeguro(inm.id, c.valor)
+    return { status: 200, body: { ok: true } }
+  }
+
+  if (c.accion === 'presidente_comunidad') {
+    if (typeof c.valor !== 'boolean') return { status: 400, body: { error: 'datos_invalidos', campo: 'valor' } }
+    await p.declararPresidenteComunidad(inm.id, c.valor)
     return { status: 200, body: { ok: true } }
   }
 

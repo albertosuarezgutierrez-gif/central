@@ -8,6 +8,8 @@
 //  · objeto      = leído; `sinRevisar: null` si los seguros no se pudieron leer (cartera o declaradas caídas).
 import type { EntradaPendientes } from '../pendiente-de-ti'
 import { calendarioDeIdentidad } from './calendario-bd'
+import { resumirCubre } from './cubre-seguro'
+import { avisosCubreSeguro } from './cubre-seguro-bd'
 import { puertosSegurosInmueble, resumenPatrimonio } from './seguros-inmueble-bd'
 
 export async function patrimonioParaPendientes(identidadId: string): Promise<EntradaPendientes['patrimonio']> {
@@ -31,5 +33,14 @@ export async function patrimonioParaPendientes(identidadId: string): Promise<Ent
   } catch (e) {
     console.error('[pendiente-de-ti] seguros del patrimonio ilegibles:', e instanceof Error ? e.message : e)
   }
-  return { ...cal.resumen, sinRevisar }
+
+  // «¿Esto lo cubre tu seguro?»: ilegible → `null` (sinComprobar), nunca «nada que mirar».
+  let reparaciones: { cubre: number; sinSeguro: number; sinComprobar: number } | null = null
+  try {
+    const avisos = await avisosCubreSeguro(identidadId)
+    if (avisos) reparaciones = resumirCubre(avisos)
+  } catch (e) {
+    console.error('[pendiente-de-ti] reparaciones ilegibles:', e instanceof Error ? e.message : e)
+  }
+  return { ...cal.resumen, sinRevisar, reparaciones }
 }

@@ -1,28 +1,16 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import type { AvisoRentabilidad } from '@central/module-patrimonio'
-
 import { eur } from '@/lib/dinero'
 import { rentabilidadDeIdentidad, type RentabilidadDeIdentidad } from '@/lib/patrimonio/rentabilidad-bd'
 import { PRIMER_ANIO } from '@/lib/patrimonio/rentabilidad'
+import { AVISO } from '@/lib/patrimonio/rentabilidad-textos'
 import { getIdentidad } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
 const cent = (c: number) => eur(c / 100)
 const fechaEs = (f: string) => f.split('-').reverse().join('/')
-
-/** Cada aviso dice el HECHO y lo que no sabemos: ninguno se calla para que el número parezca limpio. */
-const AVISO: Record<AvisoRentabilidad, string> = {
-  seguros_sin_leer: 'Ahora no hemos podido leer tus seguros: este número NO incluye el coste de los seguros.',
-  sin_seguro_conocido: 'No tiene ningún seguro enlazado. Si lo tiene, enlázalo en la ficha del inmueble; si no, pídenos precio desde allí.',
-  prima_sin_dato: 'Hay un seguro enlazado del que no conocemos la prima (o no lo ves tú): su coste no está incluido.',
-  posible_doble_seguro: 'Hay una factura de seguro y además un seguro enlazado: puede que el coste esté contado dos veces. Revísalo.',
-  iva_sin_dato: 'No sabemos si deduces el IVA: los gastos se cuentan con IVA incluido.',
-  gasto_sin_importe: 'Hay gastos confirmados sin importe: no se han contado.',
-  sin_contrato: 'No tiene contrato anotado: no hay ingresos que contar.',
-}
 
 function Datos({ d }: { d: RentabilidadDeIdentidad }) {
   const r = d.resultado
@@ -121,6 +109,11 @@ export default async function RentabilidadPage({ searchParams }: { searchParams:
           </p>
           <Datos d={datos} />
         </>
+      )}
+      {datos && (
+        <p style={{ marginTop: 16 }}>
+          <Link href={`/patrimonio/rentabilidad/fiscal?anio=${datos.periodo.anio}`} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }}>Informe fiscal de {datos.periodo.anio}</Link>
+        </p>
       )}
       <p style={{ marginTop: 24 }}>
         <Link href="/patrimonio">← Todo el patrimonio</Link>

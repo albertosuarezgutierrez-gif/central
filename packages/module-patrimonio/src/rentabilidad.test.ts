@@ -104,3 +104,20 @@ test('primaProrrateada: fuera de la anualidad 0, prima null → null', () => {
   assert.equal(primaProrrateada(p, '2026-01-01', '2026-12-31'), 36_500)
   assert.equal(primaProrrateada({ ...p, primaAnual: null }, '2026-01-01', '2026-01-31'), null)
 })
+
+test('gastosPorCategoria: desglosa lo que suma en `gastos`; el seguro va aparte y sin categoría = SIN_CATEGORIA', () => {
+  const r = rentabilidadPorInmueble(base({
+    primas: [],
+    gastos: [
+      gasto({ categoria: 'COMUNIDAD', total: 5_000 }),
+      gasto({ categoria: 'COMUNIDAD', total: 2_500 }),
+      gasto({ categoria: 'IMPUESTOS', total: 40_000 }),
+      gasto({ categoria: null, total: 700 }),
+      gasto({ categoria: 'SEGURO', total: 30_000 }),
+    ],
+  }))
+  const i = r.inmuebles[0]
+  assert.deepEqual(i.gastosPorCategoria, { COMUNIDAD: 7_500, IMPUESTOS: 40_000, SIN_CATEGORIA: 700 })
+  assert.equal(Object.values(i.gastosPorCategoria).reduce((a, b) => a + b, 0), i.gastos)
+  assert.equal(i.seguros, 30_000)
+})

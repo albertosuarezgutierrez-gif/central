@@ -8,18 +8,18 @@ const e = (p: Partial<EntradaInfraseguro> = {}): EntradaInfraseguro => ({
   capitalContinente: 10_000_000, valorEstimado: 10_000_000, enComunidad: false, polizaComunidadEnlazada: false, ...p,
 })
 
-test('el umbral es el de tarificación (0,8), no uno propio', () => {
-  assert.equal(UMBRAL_INFRASEGURO, 0.8)
+test('el umbral del portal es 0,9 (capital < estimación × 0,9)', () => {
+  assert.equal(UMBRAL_INFRASEGURO, 0.9)
 })
 
-test('capital ≥ 80 % del valor → ok con ratio', () => {
+test('capital ≥ 90 % del valor → ok con ratio', () => {
   assert.deepEqual(alertaInfraseguro(e()), { estado: 'ok', ratio: 1 })
-  assert.deepEqual(alertaInfraseguro(e({ capitalContinente: 8_000_000 })), { estado: 'ok', ratio: 0.8 })
+  assert.deepEqual(alertaInfraseguro(e({ capitalContinente: 9_000_000 })), { estado: 'ok', ratio: 0.9 })
 })
 
-test('capital < 80 % → infraseguro con ratio y faltante hasta el valor entero', () => {
-  assert.deepEqual(alertaInfraseguro(e({ capitalContinente: 7_999_999 })), {
-    estado: 'infraseguro', ratio: 0.7999999, faltante: 2_000_001,
+test('capital < 90 % → infraseguro con ratio y faltante hasta el valor entero', () => {
+  assert.deepEqual(alertaInfraseguro(e({ capitalContinente: 8_999_999 })), {
+    estado: 'infraseguro', ratio: 0.8999999, faltante: 1_000_001,
   })
 })
 

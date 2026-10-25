@@ -14,6 +14,7 @@ import {
   type EstadoDecisionSeguro,
   type OrigenEnlace,
   type PrimaSeguroInmueble,
+  type NivelPatrimonio,
   type ResumenSegurosPatrimonio,
   type TipoPolizaEnlace,
 } from '@central/module-patrimonio'
@@ -23,9 +24,10 @@ import { prisma } from '../db'
 import { DECLARADA_NO_ELIMINADA } from '../declaradas-eliminadas'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
+import { cacheDeCatastro, debeConsultarCatastro } from './catastro-inmueble'
 import { primasDeEnlaces } from './rentabilidad'
 import { capitalContinenteDeCartera, capitalContinenteDeDeclarada } from './capital-continente'
-import { estadosDeInmuebles, type InmuebleDeSeguros, type PolizaVisible, type PuertosSegurosInmueble } from './seguros-inmueble-api'
+import { estadosDeInmuebles, type FilaEnlace, type InmuebleDeSeguros, type PolizaVisible, type PuertosSegurosInmueble } from './seguros-inmueble-api'
 
 const fechaIso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
 const eurosACent = (e: number | null) => (typeof e === 'number' && Number.isFinite(e) && e > 0 ? Math.round(e * 100) : null)
@@ -101,6 +103,26 @@ export async function resumenPatrimonio(identidadId: string, visibles: readonly 
 }
 
 /**
+ * Inmuebles vivos de los titulares autorizados y sus enlaces vivos, para el aviso «póliza sin inmueble» (25/10/2026).
+ * La tabla puente tiene UNA puerta (este fichero): `poliza-sin-inmueble-bd.ts` pasa por aquí. Los ids de inmueble salen de la
+ * consulta de titulares autorizados, nunca de la request. Lanza si la BD falla.
+ */
+export async function inmueblesYEnlacesDeIdentidad(identidadId: string) {
+  if ((await getIdentidad())?.id !== identidadId) return { acc: new Map<string, NivelPatrimonio>(), inmuebles: [], filas: [] }
+  const acc = await accesosPatrimonio(identidadId)
+  if (acc.size === 0) return { acc, inmuebles: [], filas: [] }
+  const inmuebles = await prisma.portalPatrimonioInmueble.findMany({
+    where: { archivadoEn: null, titular: { clienteId: { in: [...acc.keys()] }, archivadoEn: null } },
+    select: { id: true, referenciaCatastral: true, cp: true, via: true, numero: true, titular: { select: { clienteId: true } } },
+  })
+  const filas = inmuebles.length === 0 ? [] : await prisma.portalPatrimonioInmueblePoliza.findMany({
+    where: { inmuebleId: { in: inmuebles.map((i) => i.id) }, archivadoEn: null },
+    select: { inmuebleId: true, polizaId: true, polizaDeclaradaId: true, estado: true },
+  })
+  return { acc, inmuebles, filas }
+}
+
+/**
  * Primas de las pólizas ENLAZADAS a esos inmuebles (rentabilidad, P14). Los ids de inmueble se vuelven a acotar DENTRO de
  * los titulares autorizados (los que pida quien llama no se fían). `null` = cartera o declaradas ilegibles (la
  * rentabilidad dirá «el número no incluye seguros»). Lanza si la BD falla.
@@ -127,6 +149,45 @@ export async function primasDeInmuebles(
   return primasDeEnlaces(filas, [...vis.cartera, ...vis.declaradas], periodo)
 }
 
+type FilaConCatastro = {
+  id: string; uso: string; referenciaCatastral: string | null
+  catastroSuperficieM2: unknown; catastroTipoVivienda: string | null; catastroConsultadoEn: Date | null; catastroEstado: string | null
+}
+
+/**
+ * Caché del Catastro (25/10/2026): si la del inmueble ya caducó, se pregunta UNA vez y se guarda; si no, no se llama. El
+ * fallo de la consulta o del guardado nunca tumba la ficha: se sigue con lo que había (estimación = «sin dato»). Solo se
+ * llama con una fila que YA salió de un titular autorizado.
+ */
+async function conCatastroAlDia<T extends FilaConCatastro>(f: T): Promise<T> {
+  const ahora = new Date()
+  if (!debeConsultarCatastro({ referenciaCatastral: f.referenciaCatastral, uso: f.uso, estado: f.catastroEstado, consultadoEn: f.catastroConsultadoEn, ahora })) return f
+  try {
+    const { bajarCatastro } = await import('@central/core-catastro/http')
+    const c = cacheDeCatastro(await bajarCatastro(f.referenciaCatastral as string).catch(() => null))
+    await prisma.portalPatrimonioInmueble.updateMany({
+      where: { id: f.id, archivadoEn: null },
+      data: { catastroSuperficieM2: c.superficieM2, catastroTipoVivienda: c.tipoVivienda, catastroConsultadoEn: ahora, catastroEstado: c.estado },
+    })
+    return { ...f, catastroSuperficieM2: c.superficieM2, catastroTipoVivienda: c.tipoVivienda, catastroConsultadoEn: ahora, catastroEstado: c.estado } as T
+  } catch (e) {
+    console.error('[patrimonio] caché del Catastro no actualizada:', e instanceof Error ? e.message : 'error')
+    return f
+  }
+}
+
+/**
+ * Enlaces VIVOS (sin archivar) de esos inmuebles, acotados DENTRO de los titulares que pasa quien llama (que salen de
+ * `accesosPatrimonio`). Para «¿Esto lo cubre tu seguro?» (`cubre-seguro-bd.ts`): la tabla puente tiene UNA puerta, esta.
+ */
+export async function enlacesVivosDeInmuebles(titularIds: readonly string[], inmuebleIds: readonly string[]): Promise<(FilaEnlace & { inmuebleId: string })[]> {
+  if (titularIds.length === 0 || inmuebleIds.length === 0) return []
+  return prisma.portalPatrimonioInmueblePoliza.findMany({
+    where: { inmuebleId: { in: [...inmuebleIds] }, archivadoEn: null, inmueble: { titularId: { in: [...titularIds] }, archivadoEn: null } },
+    select: { id: true, inmuebleId: true, polizaId: true, polizaDeclaradaId: true, estado: true, origen: true },
+  })
+}
+
 export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmueble {
   let accesos: Awaited<ReturnType<typeof accesosPatrimonio>> | null = null
   const misAccesos = async () => (accesos ??= await accesosPatrimonio(identidadId))
@@ -141,6 +202,8 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
       select: {
         id: true, alias: true, referenciaCatastral: true, cp: true, via: true, numero: true, enComunidad: true,
         sinSeguroDeclaradoEn: true, valorReconstruccionEstimadoCent: true, titular: { select: { clienteId: true } },
+        uso: true, catastroSuperficieM2: true, catastroTipoVivienda: true, catastroConsultadoEn: true, catastroEstado: true,
+        presidenteComunidad: true,
       },
     })
     if (!fila) return null
@@ -153,11 +216,15 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
       if (!(await sesionEsLaMia())) return null
       const r = await inmuebleAutorizadoId(idPedido)
       if (!r) return null
-      const f = r.fila
+      const f = await conCatastroAlDia(r.fila)
       return {
         id: f.id, alias: f.alias, nivel: r.nivel, enComunidad: f.enComunidad, sinSeguroDeclaradoEn: f.sinSeguroDeclaradoEn,
         referenciaCatastral: f.referenciaCatastral, cp: f.cp, via: f.via, numero: f.numero,
         valorReconstruccionCent: f.valorReconstruccionEstimadoCent === null ? null : Number(f.valorReconstruccionEstimadoCent),
+        uso: f.uso,
+        superficieCatastroM2: f.catastroSuperficieM2 === null ? null : Number(f.catastroSuperficieM2),
+        tipoCatastro: f.catastroTipoVivienda === 'piso' || f.catastroTipoVivienda === 'unifamiliar' ? f.catastroTipoVivienda : null,
+        presidenteComunidad: f.presidenteComunidad,
       }
     },
 
@@ -230,6 +297,11 @@ export function puertosSegurosInmueble(identidadId: string): PuertosSegurosInmue
         data: { archivadoEn: new Date() },
       })
       return r.count === 1
+    },
+
+    async declararPresidenteComunidad(inmuebleId, valor) {
+      if (!(await sesionEsLaMia()) || !(await inmuebleAutorizadoId(inmuebleId))) return
+      await prisma.portalPatrimonioInmueble.updateMany({ where: { id: inmuebleId, archivadoEn: null }, data: { presidenteComunidad: valor } })
     },
 
     async declararSinSeguro(inmuebleId, valor) {

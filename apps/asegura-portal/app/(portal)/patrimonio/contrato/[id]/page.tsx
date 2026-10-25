@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
-import { estadoContrato, rentaVigente, type ResultadoActualizacion, type TopeAplicable } from '@central/module-patrimonio'
+import { estadoContrato, puede, rentaVigente, type ResultadoActualizacion, type TopeAplicable } from '@central/module-patrimonio'
 
 import { eur } from '@/lib/dinero'
 import { contratoAutorizado } from '@/lib/patrimonio/contratos-bd'
@@ -10,6 +10,8 @@ import { getIdentidad } from '@/lib/session'
 
 import { AltaInquilino, AplicarRenta, VerDatosInquilino } from './ContratoAcciones'
 import { TopeRenta } from './TopeRenta'
+import { OfertaBoton } from '../../OfertaBoton'
+import { TEXTO_PROTEGE_RENTA, tituloProtegeRenta } from '@/lib/patrimonio/ofertas'
 
 export const dynamic = 'force-dynamic'
 
@@ -99,6 +101,19 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
           ))}
         </dl>
       </section>
+
+      {estadoContrato(c, hoy) !== 'terminado' && puede(f.nivel, 'pedir_precio') && (
+        <section className="seccion" aria-labelledby="protege-renta">
+          <h2 id="protege-renta">Protege la renta</h2>
+          <OfertaBoton
+            tipo="impago_alquiler"
+            objeto={{ inmuebleId: f.inmueble.id, contratoId: c.id }}
+            titulo={tituloProtegeRenta(rentaVigente(c, hoy) > 0 ? cent(rentaVigente(c, hoy)) : null)}
+            texto={TEXTO_PROTEGE_RENTA}
+            boton="Quiero proteger la renta"
+          />
+        </section>
+      )}
 
       <section className="seccion">
         <h2>Actualización de la renta</h2>

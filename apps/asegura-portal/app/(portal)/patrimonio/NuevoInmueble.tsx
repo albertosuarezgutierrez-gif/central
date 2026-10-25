@@ -15,17 +15,27 @@ const ERRORES: Record<string, string> = {
   sin_sesion: 'Tu sesión ha caducado. Vuelve a entrar.',
 }
 
+/** Alta prerrellenada desde una póliza (`?alta=1&cp=&dir=&rc=&poliza=tipo:id`, ya saneada por la página). */
+export type PrecargaAlta = {
+  cp: string
+  direccion: string
+  referenciaCatastral: string
+  titular: string
+  poliza: { tipo: 'cartera' | 'declarada'; id: string } | null
+}
+
 const etiqueta: React.CSSProperties = { display: 'grid', gap: 4, fontSize: 13, fontWeight: 600, minWidth: 0 }
 
 /** Alta de un inmueble. `titulares` = solo aquellos donde el nivel permite el alta (lo filtra el servidor). */
-export function NuevoInmueble({ titulares }: { titulares: { clienteId: string; nombre: string }[] }) {
+export function NuevoInmueble({ titulares, precarga }: { titulares: { clienteId: string; nombre: string }[]; precarga?: PrecargaAlta | null }) {
   const router = useRouter()
-  const [abierto, setAbierto] = useState(false)
-  const [titular, setTitular] = useState(titulares[0]?.clienteId ?? '')
+  const [abierto, setAbierto] = useState(precarga != null)
+  // Titular de la precarga solo si es uno de los que el servidor ya filtró por nivel de alta; si no, el primero.
+  const [titular, setTitular] = useState(titulares.find((t) => t.clienteId === precarga?.titular)?.clienteId ?? titulares[0]?.clienteId ?? '')
   const [alias, setAlias] = useState('')
   const [uso, setUso] = useState<(typeof USOS_INMUEBLE)[number]>('vivienda')
-  const [dir, setDir] = useState<ValorDireccion>(DIRECCION_VACIA)
-  const [refCat, setRefCat] = useState('')
+  const [dir, setDir] = useState<ValorDireccion>(precarga ? { ...DIRECCION_VACIA, cp: precarga.cp, direccion: precarga.direccion } : DIRECCION_VACIA)
+  const [refCat, setRefCat] = useState(precarga?.referenciaCatastral ?? '')
   // Tri-estado: '' = no lo sé (null), nunca «no» por defecto.
   const [comunidad, setComunidad] = useState<'' | 'si' | 'no'>('')
   const [enviando, setEnviando] = useState(false)
@@ -52,6 +62,16 @@ export function NuevoInmueble({ titulares }: { titulares: { clienteId: string; n
       })
       const j = (await res.json().catch(() => ({}))) as { id?: string; error?: string; campo?: string }
       if (res.ok && j.id) {
+        // Alta desde una póliza: se enlaza con el flujo de P10 (el servidor busca la póliza DENTRO de lo que ves; si
+        // falla, el inmueble ya existe y su ficha propondrá el enlace por dirección). Origen `manual`: el CHECK de
+        // `origen` no admite valor nuevo sin DROP.
+        if (precarga?.poliza) {
+          await fetch(`/api/patrimonio/inmuebles/${j.id}/seguros`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'enlazar', tipo: precarga.poliza.tipo, polizaId: precarga.poliza.id, estado: 'confirmado', origen: 'manual' }),
+          }).catch(() => null)
+        }
         router.push(`/patrimonio/inmueble/${j.id}`)
         router.refresh()
         return

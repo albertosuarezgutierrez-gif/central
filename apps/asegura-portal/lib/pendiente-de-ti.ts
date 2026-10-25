@@ -9,6 +9,8 @@
  * `sinComprobar` y nunca se lee como «no tienes nada pendiente».
  */
 
+import type { ItemComparar } from './patrimonio/ofertas'
+
 export type ItemPendiente = {
   clave: string
   titulo: string
@@ -38,7 +40,22 @@ export type EntradaPendientes = {
    * `sinComprobar`, nunca «nada pendiente»). `sinRevisar` = inmuebles sin mirar si tienen seguro; `sinFecha` = vencimientos
    * de los que no sabemos cuándo tocan.
    */
-  patrimonio?: { vencidas: number; porVencer: number; sinFecha: number; sinRevisar: number | null } | null
+  patrimonio?: {
+    vencidas: number
+    porVencer: number
+    sinFecha: number
+    sinRevisar: number | null
+    /**
+     * «¿Esto lo cubre tu seguro?» (25/10/2026): reparaciones confirmadas sin descartar, por desenlace. Ausente = esta
+     * superficie no lo consulta; `null` = no se pudo leer (va a `sinComprobar`, nunca «nada que mirar»).
+     */
+    reparaciones?: { cubre: number; sinSeguro: number; sinComprobar: number } | null
+  } | null
+  /**
+   * Pólizas que el cliente DECLARÓ (de otra correduría) y vencen en ≤ 60 días (`itemsCompararPendientes`). Ausente o vacío = nada.
+   * Es el aviso del vencimiento de SU póliza (informativo); «Compárala» es un botón de la ficha, no se pide desde aquí.
+   */
+  declaradasPorVencer?: ItemComparar[]
 }
 
 export type PendientesDeTi = { items: ItemPendiente[]; sinComprobar: string[] }
@@ -165,6 +182,33 @@ export function pendientesDeTi(e: EntradaPendientes, ramo: (r: string) => string
         urgente: false,
       })
     }
+    if (p.reparaciones === null) sinComprobar.push('si tu seguro cubre alguna reparación de tus inmuebles')
+    else if (p.reparaciones !== undefined) {
+      const { cubre, sinSeguro } = p.reparaciones
+      if (cubre > 0) {
+        items.push({
+          clave: 'patrimonio:reparaciones_cubre',
+          titulo: cubre === 1 ? 'Puede que tu seguro cubra una reparación' : `Puede que tu seguro cubra ${cubre} reparaciones`,
+          detalle: 'Es un aviso, no una garantía. Si quieres, puedes dar parte desde ahí.',
+          href: '/patrimonio/gastos#cubre-seguro',
+          urgente: false,
+        })
+      }
+      if (sinSeguro > 0) {
+        items.push({
+          clave: 'patrimonio:reparaciones_sin_seguro',
+          titulo: sinSeguro === 1 ? 'Has pagado una reparación en una vivienda sin seguro de hogar visible' : `Has pagado ${sinSeguro} reparaciones en viviendas sin seguro de hogar visible`,
+          detalle: 'No vemos seguro de hogar en esa vivienda. Enlázalo en la ficha del inmueble si lo tienes.',
+          href: '/patrimonio/gastos#cubre-seguro',
+          urgente: false,
+        })
+      }
+    }
+  }
+
+  // 6. Sus pólizas de otra correduría que vencen pronto: el aviso es de SU vencimiento; la petición es el botón de la ficha.
+  for (const c of e.declaradasPorVencer ?? []) {
+    items.push({ clave: `comparar:${c.id}`, titulo: c.titulo, detalle: c.detalle, href: c.href, urgente: false })
   }
 
   return { items, sinComprobar }

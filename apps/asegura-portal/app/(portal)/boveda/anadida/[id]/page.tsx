@@ -10,14 +10,20 @@ import { evolucionDePrimaDePoliza } from '@/lib/evolucion-prima'
 import { clavePedida, estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
 import { entradaDesdeFila, hayClaveIA, huellaRevision } from '@/lib/revision-poliza'
 import { leerRevisionDeSesion } from '@/lib/revision-poliza-bd'
+import { esRamoDeVivienda } from '@central/module-patrimonio'
+import { avisosPolizasSinInmueble } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { fechaEs } from '@/lib/fechas'
+import { textoCompararExterna } from '@/lib/patrimonio/ofertas'
+import { declaradaVigente as declaradaVigenteOferta } from '@central/module-patrimonio'
 import { getIdentidad } from '@/lib/session'
 
+import { AvisoPolizaSinInmueble } from '../../../patrimonio/AvisoPolizaSinInmueble'
 import { BienDeclarada, IconoRamo, RAMO } from '../../PolizaVista'
 import { CaptacionDeclarada } from '../../CaptacionDeclarada'
 import { EvolucionPrima } from '../../EvolucionPrima'
 import { EditarPoliza } from '../../EditarPoliza'
 import { EliminarPoliza } from '../../EliminarPoliza'
+import { OfertaBoton } from '../../../patrimonio/OfertaBoton'
 import { RevisarPoliza } from './RevisarPoliza'
 import { avisoPartesConservados, etiquetaProcedencia } from '@central/module-seguros-portal'
 
@@ -109,6 +115,15 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
   // «Evolución de la prima»: solo las PROPIAS (el cron observa solo las aportadas de cada identidad).
   const evolucionPrima = await evolucionDePrimaDePoliza('aportada', p.id, acceso.propia)
 
+  // Hogar/comunidad que no cuelga de ningún inmueble del patrimonio. Solo las PROPIAS (el aviso lista las declaradas de
+  // esta identidad); si la lectura falla, la ficha no se cae y no afirma nada.
+  const avisoSinInmueble = acceso.propia && esRamoDeVivienda(p.ramo)
+    ? await avisosPolizasSinInmueble(identidad.id, { conPeticiones: true }).then(
+        (l) => l.find((a) => a.tipo === 'declarada' && a.id === p.id) ?? null,
+        () => null,
+      )
+    : null
+
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
   const objeto =
     p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
@@ -135,6 +150,16 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
         {deOtro && <span className="chip">{puedeEditar ? 'Puedes corregirla' : 'Solo lectura'}</span>}
         <span className="chip">{etiquetaProcedencia(p.procedencia)}</span>
       </div>
+
+      {avisoSinInmueble && (
+        <AvisoPolizaSinInmueble
+          aviso={{
+            tipo: avisoSinInmueble.tipo, id: avisoSinInmueble.id, ubicacion: avisoSinInmueble.ubicacion,
+            referenciaCatastral: avisoSinInmueble.referenciaCatastral, propuesta: avisoSinInmueble.propuesta,
+            peticion: avisoSinInmueble.peticion, titularClienteId: avisoSinInmueble.titularClienteId,
+          }}
+        />
+      )}
 
       {/* 🚨 El aviso que justifica que esta ficha sea distinta de la de la
           cartera. Para el cliente las dos son «un seguro»; la diferencia real es
@@ -247,6 +272,21 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           una póliza APORTADA, por lo mismo que «quitarla» — una de la cartera
           la media la correduría y ahí se habla con Alberto, no se manda una
           carta sola. La carta se compone y se enseña; no se envía desde aquí. */}
+      {/* «Comparar» (25/10/2026): solo en las PROPIAS y vigentes. Con vencimiento dice cuándo vence; sin él no se ofrece por
+          fecha pero el botón manual sigue. El botón es la petición: nada se manda sin pulsarlo. */}
+      {!deOtro && declaradaVigenteOferta(p, new Date()) && (
+        <section className="seccion" aria-labelledby="comparar-titulo">
+          <h2 id="comparar-titulo">¿Quieres que te la comparemos?</h2>
+          <OfertaBoton
+            tipo="comparar_externa"
+            objeto={{ polizaDeclaradaId: p.id }}
+            titulo={textoCompararExterna(p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null)}
+            texto="Miramos si podemos mejorarte el precio o las coberturas de esta póliza."
+            boton="Compárala"
+          />
+        </section>
+      )}
+
       {!deOtro && (
       <section className="seccion" aria-labelledby="carta-titulo">
         <h2 id="carta-titulo">Si no quieres renovarla</h2>

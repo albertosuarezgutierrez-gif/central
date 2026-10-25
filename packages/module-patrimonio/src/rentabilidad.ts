@@ -35,6 +35,11 @@ export interface RentabilidadInmueble {
   ingresos: Centimos
   /** Gastos confirmados SIN seguros. */
   gastos: Centimos
+  /**
+   * Esos mismos gastos (los que suman en `gastos`) desglosados por categoría; sin categoría = `SIN_CATEGORIA`. Las
+   * facturas de SEGURO y las primas enlazadas NO están aquí: van en `seguros`. Suma de valores = `gastos`.
+   */
+  gastosPorCategoria: Record<string, Centimos>
   seguros: Centimos
   beneficio: Centimos
   /** % sobre ingresos con un decimal; `null` sin ingresos. */
@@ -87,6 +92,7 @@ export function rentabilidadPorInmueble(e: EntradaRentabilidad): ResultadoRentab
   const seguros = new Map<string, Centimos>()
   const avisos = new Map<string, Set<AvisoRentabilidad>>()
   const sinConfirmar = new Map<string, number>()
+  const porCategoria = new Map<string, Map<string, Centimos>>()
   const conPrima = new Set<string>()
   const conFacturaSeguro = new Set<string>()
   const ids = new Set(e.inmuebles.map((i) => i.id))
@@ -131,6 +137,11 @@ export function rentabilidadPorInmueble(e: EntradaRentabilidad): ResultadoRentab
     if (g.categoria === 'SEGURO') {
       seguros.set(g.inmuebleId, (seguros.get(g.inmuebleId) ?? 0) + importe)
       conFacturaSeguro.add(g.inmuebleId)
+    } else {
+      const cat = g.categoria ?? 'SIN_CATEGORIA'
+      const m = porCategoria.get(g.inmuebleId) ?? new Map<string, Centimos>()
+      m.set(cat, (m.get(cat) ?? 0) + importe)
+      porCategoria.set(g.inmuebleId, m)
     }
     apuntes.push(apunte(`gasto:${g.id}`, 'gasto', g.fecha, importe, g.inmuebleId, g.categoria ?? 'SIN_CATEGORIA'))
   }
@@ -167,6 +178,7 @@ export function rentabilidadPorInmueble(e: EntradaRentabilidad): ResultadoRentab
       inmuebleId: inm.id,
       ingresos,
       gastos: gastosTotales - seg,
+      gastosPorCategoria: Object.fromEntries(porCategoria.get(inm.id) ?? []),
       seguros: seg,
       beneficio: r?.beneficio ?? 0,
       margenPct: r?.margen_pct ?? null,
