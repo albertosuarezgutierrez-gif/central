@@ -1,3 +1,5 @@
+// Turismos v0.6.24 (22/10/2026): la lista blanca de «Guardar presupuesto» compara sin mayúsculas ni tildes (`innerText` aplica el `text-transform` del CSS y
+// el control de la barra se veía en el diagnóstico pero no casaba al pulsarlo) y el aviso dice por qué no se pulsó el abridor.
 // Turismos v0.6.23 (22/10/2026): el abridor usa el MISMO conjunto de controles y visibilidad que el diagnóstico (el «Guardar presupuesto» de la barra
 // vive dentro del <form> que envuelve la pantalla: ya no se excluye todo `closest('form')`, solo el propio bloque y los submit explícitos).
 // Turismos v0.6.22 (22/10/2026): si el formulario sigue OCULTO y hay UN control visible «Guardar presupuesto» (barra) fuera de formularios, se pulsa UNA vez por trabajo
@@ -2934,7 +2936,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.23',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.24',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

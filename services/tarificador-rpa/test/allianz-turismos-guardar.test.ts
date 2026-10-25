@@ -9,6 +9,7 @@ import type { OfertaNormalizada } from '@central/module-tarificacion'
 import {
   BOTONES_GUARDAR_PRESUPUESTO_TURISMOS,
   motivoFormularioGuardarTurismos,
+  notaAbridorGuardarTurismos,
   confirmacionGuardadoNueva,
   esBotonGuardarPresupuestoTurismos,
   esExpansorGuardarTurismosPermitido,
@@ -49,7 +50,7 @@ test('ofertas: guardado → referenciaPortal + aviso; no guardado → solo aviso
   assert.equal(n!.referenciaPortal, null)
   assert.equal(n!.primaAnualEur, 100)
   assert.match(n!.avisos.at(-1)!, /NO guardado/)
-  assert.equal(allianzAuto.version, '0.6.23')
+  assert.equal(allianzAuto.version, '0.6.24')
 })
 
 // ── Navegador: carcasa ePAC + app de Turismos con el formulario de guardado ──
@@ -84,6 +85,8 @@ type Opc = {
   /** v0.6.23 · toda la pantalla (barra incluida) dentro de UN <form> (como el Angular real); la barra es `<button>` SIN type o `<nx-button role=button>`. */
   envuelto?: boolean
   barra?: 'sinTipo' | 'nx'
+  /** v0.6.24 · inventario real del 22/10 (barra con «Vista Ampliada», «Guardar presupuesto», «Datos del vehículo») y CSS `text-transform: uppercase`: `innerText` sale «GUARDAR PRESUPUESTO», `textContent` no. */
+  mayusculas?: boolean
 }
 const ABRE_PLEGADO = (o: Opc) => {
   if (!o.plegado) return ''
@@ -98,10 +101,11 @@ const BARRA = (o: Opc) => {
   if (o.barra === 'nx') return `<nx-button role="button" id="barra" onclick="${clic}"><nx-icon></nx-icon>Guardar presupuesto</nx-button>`
   return `<button ${o.barra === 'sinTipo' ? '' : 'type="button" '}id="barra" onclick="${clic}"><nx-icon></nx-icon>Guardar presupuesto</button>`
 }
+const INVENTARIO_BARRA = (o: Opc) => (o.mayusculas ? '<button type="button" id="vista2" onclick="window.__vista=1">Vista Ampliada</button><button type="button" id="dv" onclick="window.__dv=1">Datos del vehículo</button>' : '')
 const hostBloque = (o: Opc) => (o.bloque === 'sin' ? 'div' : 'nx-mt-save-proposal')
 const caja = (id: string, texto: string, marcada: boolean) =>
   `<nx-checkbox><input type="checkbox" id="${id}" ${marcada ? 'checked' : ''}><label for="${id}"><span></span><div>${texto}</div></label></nx-checkbox>`
-const app = (o: Opc) => `<!doctype html><html><body><div id="appArea">
+const app = (o: Opc) => `<!doctype html><html><head>${o.mayusculas ? '<style>button{text-transform:uppercase}</style>' : ''}</head><body><div id="appArea">
 <nx-multi-step-item role="tab" aria-selected="true">Selección de paquete</nx-multi-step-item>
 <p>Precio 100,00 €</p>
 <nx-mt-person-information><nx-x-common-header text="¿Quién es el tomador?"></nx-x-common-header>
@@ -110,7 +114,7 @@ const app = (o: Opc) => `<!doctype html><html><body><div id="appArea">
 </nx-mt-person-information>
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-1"><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div>OTRA</div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>X</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>Y</div></nx-data-display></nx-selectable-card>
 <nx-selectable-card><input type="radio" id="a-nx-selectable-card-2" checked><nx-data-display label="Marca del vehículo"><nx-data-display-label>Marca del vehículo</nx-data-display-label><div> MARCA </div></nx-data-display><nx-data-display label="Modelo"><nx-data-display-label>Modelo</nx-data-display-label><div>MODELO</div></nx-data-display><nx-data-display label="Versión"><nx-data-display-label>Versión</nx-data-display-label><div>  </div></nx-data-display></nx-selectable-card>
-${o.abridor ? `<nav><a role="tab" onclick="window.__pago=1">Pago</a>${BARRA(o)}</nav>` : ''}
+${o.abridor ? `<nav><a role="tab" onclick="window.__pago=1">Pago</a>${INVENTARIO_BARRA(o)}${BARRA(o)}</nav>` : ''}
 ${o.botonFuera ? '<button type="button" id="fuera" onclick="window.__fuera=1">Guardar presupuesto</button>' : ''}
 ${ABRE_PLEGADO(o)}<${hostBloque(o)} id="bloque" style="${o.bloque === 'tarde' || o.bloque === 'oculto' || !!o.abridor ? 'display:none' : ''}"><form novalidate style="${o.bloque === 'altoCero' ? 'height:0;overflow:visible' : ''}">
   <h3>Guardar el presupuesto</h3>
@@ -387,6 +391,43 @@ test('v0.6.23: TODA la pantalla dentro de un <form>; «Guardar presupuesto» de 
         await context.close()
       }
     }
+  }
+})
+
+test('v0.6.24: inventario real (Vista Ampliada, Guardar presupuesto, Datos del vehículo) con el texto en MAYÚSCULAS por CSS (innerText ≠ textContent) → se abre, se guarda; nada ajeno se pulsa', async () => {
+  for (const abridor of ['linea', 'dialogo'] as const) {
+    const { context, guard, marco } = await abrir({ abridor, mayusculas: true, envuelto: true })
+    try {
+      const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 2_000, 9_000)
+      assert.deepEqual(r, { estado: 'guardado', identificador: 'GA-20261022-ABCDEF12', referencia: '123456789' }, abridor)
+      const w = await marco.evaluate(() => { const x = window as unknown as { __abierto?: number; __pago?: number; __vista?: number; __dv?: number }; return { a: x.__abierto ?? 0, p: x.__pago ?? 0, v: x.__vista ?? 0, d: x.__dv ?? 0 } })
+      assert.deepEqual(w, { a: 1, p: 0, v: 0, d: 0 }, `${abridor}: una apertura; «Pago», «Vista Ampliada» y «Datos del vehículo» intactos`)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('v0.6.24: la whitelist de guardar no depende de mayúsculas/tildes (PURA); «Guardar y emitir» sigue fuera', () => {
+  for (const t of ['GUARDAR PRESUPUESTO', 'guardar presupuesto', 'Guardar  Presupuesto', 'GUARDAR PROYECTO']) assert.equal(esBotonGuardarPresupuestoTurismos([t]), true, t)
+  for (const t of ['GUARDAR Y EMITIR', 'GUARDAR PRESUPUESTO Y EMITIR', 'GUARDAR', 'EMITIR']) assert.equal(esBotonGuardarPresupuestoTurismos([t]), false, t)
+  assert.equal(esBotonGuardarPresupuestoTurismos(['GUARDAR PRESUPUESTO', null, null, null, 'btnEmitir']), false)
+})
+
+test('v0.6.24: nota del abridor (PURA) y aviso cuando el control está deshabilitado o es «submit»', async () => {
+  const ex0 = { submit: 0, deshabilitado: 0, enBloque: 0, oculto: 0 }
+  assert.equal(notaAbridorGuardarTurismos(0, ex0), 'no hay ningún control «Guardar presupuesto» pulsable en la pantalla')
+  assert.equal(notaAbridorGuardarTurismos(0, { ...ex0, submit: 1, enBloque: 2 }), 'no hay ningún control «Guardar presupuesto» pulsable en la pantalla (fuera: 1 de tipo «submit», 2 dentro del propio bloque)')
+  assert.match(notaAbridorGuardarTurismos(2, ex0), /hay 2 controles .*ambiguo/)
+  const e = { hosts: 1, formularios: 1, conBotonVisible: 0, botonesGuardarFuera: 0, otrosBotones: [] as string[], abridor: 'no hay ningún control «Guardar presupuesto» pulsable en la pantalla' }
+  assert.match(motivoFormularioGuardarTurismos(e)!, /OCULTO.*; no se pulsó el «Guardar presupuesto» de la pantalla: no hay ningún control/)
+  const { context, guard, marco } = await abrir({ abridor: 'inerte', barra: 'sinTipo', botonFuera: true })
+  try {
+    const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261022-ABCDEF12', 500, 5_000)
+    assert.equal(r.estado, 'no_guardado')
+    if (r.estado === 'no_guardado') assert.match(r.motivo, /no se pulsó el «Guardar presupuesto» de la pantalla: hay 2 controles/)
+  } finally {
+    await context.close()
   }
 })
 
