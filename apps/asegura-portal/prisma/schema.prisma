@@ -1977,6 +1977,14 @@ model PortalPatrimonioImportacion {
   creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn        DateTime  @default(dbgenerated("now()")) @map("actualizado_en") @db.Timestamptz(6)
   creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
+  /// 'inmueble' | 'contrato' | 'gasto'. null = aún sin decidir. Requiere `2026-10-26_portal_patrimonio_importacion_fichero.sql`.
+  tipo                 String?
+  /// sha-256 del fichero subido (el fichero NO se guarda): evita dos importaciones abiertas del mismo fichero.
+  ficheroHash          String?   @map("fichero_hash") @db.Char(64)
+  ficheroNombre        String?   @map("fichero_nombre")
+  filasTotal           Int?      @map("filas_total")
+  /// Recuento al confirmar (auditoría): creadas, yaExistian, repetidas, apartadas, porValidar.
+  resultado            Json?
 
   titular PortalPatrimonioTitular           @relation(fields: [titularId], references: [id])
   filas   PortalPatrimonioImportacionFila[]
