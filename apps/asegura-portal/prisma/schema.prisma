@@ -2050,12 +2050,58 @@ model PortalPatrimonioEnlaceInquilino {
   caducaEn             DateTime? @map("caduca_en") @db.Timestamptz(6)
   anuladoEn            DateTime? @map("anulado_en") @db.Timestamptz(6)
   ultimoUsoEn          DateTime? @map("ultimo_uso_en") @db.Timestamptz(6)
+  /// Nombre con el que el propietario se presenta al inquilino (lo ÚNICO suyo que ve). null = enlace anterior a P17.
+  contactoNombre       String?   @map("contacto_nombre")
   creadoEn             DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
   creadoPorIdentidadId String?   @map("creado_por_identidad_id") @db.Uuid
 
   contrato PortalPatrimonioContrato @relation(fields: [contratoId], references: [id])
 
   @@map("portal_patrimonio_enlace_inquilino")
+  @@schema("seguros")
+}
+
+/// P17: la identidad del inquilino ligada a UN contrato. Nace al canjear el enlace (un enlace, un uso: `enlaceId` único);
+/// después solo se REVOCA (por el propietario o por el inquilino). Sin relaciones Prisma: el aislamiento lo dan el código y la FK.
+model PortalPatrimonioInquilinoAcceso {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enlaceId    String    @unique @map("enlace_id") @db.Uuid
+  contratoId  String    @map("contrato_id") @db.Uuid
+  inquilinoId String    @map("inquilino_id") @db.Uuid
+  identidadId String    @map("identidad_id") @db.Uuid
+  aceptadoEn  DateTime  @default(dbgenerated("now()")) @map("aceptado_en") @db.Timestamptz(6)
+  revocadoEn  DateTime? @map("revocado_en") @db.Timestamptz(6)
+  revocadoPor String?   @map("revocado_por")
+
+  @@map("portal_patrimonio_inquilino_acceso")
+  @@schema("seguros")
+}
+
+/// P17: consentimiento comercial PROPIO del inquilino. APPEND-ONLY: el último gesto manda; sin consentimiento vigente, cero ofertas.
+model PortalPatrimonioInquilinoConsentimiento {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accesoId     String   @map("acceso_id") @db.Uuid
+  identidadId  String   @map("identidad_id") @db.Uuid
+  concedido    Boolean
+  versionTexto String   @map("version_texto")
+  creadoEn     DateTime @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_patrimonio_inquilino_consentimiento")
+  @@schema("seguros")
+}
+
+/// P17: documentos de un inquilino que el propietario marca como compartidos con él. Retirar = sello `retiradoEn`.
+model PortalPatrimonioReciboCompartido {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titularId                String    @map("titular_id") @db.Uuid
+  contratoId               String    @map("contrato_id") @db.Uuid
+  inquilinoId              String    @map("inquilino_id") @db.Uuid
+  documentoId              String    @map("documento_id") @db.Uuid
+  compartidoPorIdentidadId String?   @map("compartido_por_identidad_id") @db.Uuid
+  creadoEn                 DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  retiradoEn               DateTime? @map("retirado_en") @db.Timestamptz(6)
+
+  @@map("portal_patrimonio_recibo_compartido")
   @@schema("seguros")
 }
 

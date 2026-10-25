@@ -35,6 +35,7 @@ const SQL_HIPOTECA = readFileSync(join(RAIZ, RUTA_HIPOTECA), 'utf8').replace(/--
 // Importar desde Excel/CSV (26/10/2026, P18): columnas nuevas en `importacion`; mismo espejo.
 const RUTA_IMPORTACION = 'apps/asegura-portal/prisma/sql/2026-10-26_portal_patrimonio_importacion_fichero.sql'
 const SQL_IMPORTACION = readFileSync(join(RAIZ, RUTA_IMPORTACION), 'utf8').replace(/--.*$/gm, '')
+const SQL_INQUILINO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-26_portal_patrimonio_inquilino_acceso.sql'), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
@@ -44,6 +45,7 @@ const SQL = [
   SQL_CATASTRO,
   SQL_HIPOTECA,
   SQL_IMPORTACION,
+  SQL_INQUILINO,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
