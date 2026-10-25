@@ -17,6 +17,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-25 · facturas-correo** · hizo: Vía B sana (última copia 23/10); archivado recibo GitHub 8,36 USD en 10-Octubre + fila facturas_drive (fuera_del_feed); Endesa Socorro 24/10 (P26CON044354751) → PDF-pendiente (solo enlace, cargo aún no en banco, último mov 23/10); descartados Vercel Oct-23 (reemisiones de facturas de agosto + abonos de céntimos) e ITV (cita, no gasto); dudas: Anthropic 180€ (05/10) y Sique Brilla 1.128,48€ (03/10) sin cargo en banco; fallos: —; PRs/commits: —
 - **2026-10-25 · agentes-entrenador** · hizo: pasada semanal (rango 18/10→25/10, 16 entradas podadas: mercado-booking ×6, facturas-correo ×6, trading-analista ×3, pricing-agente ×1); preflight canal 200; 0 PRs de prompt, 0 carril-1. Sin patrón de PROMPT: (1) facturas-correo: Anthropic 180€ vs 2×170€ y Si Que Brilla 1.128,48€ sin cargo siguen `sin_revisar` → decisión de Alberto; (2) `gmail-adjuntos` CONNECTION_CLOSED de nuevo (Vía B cubre); (3) trading-analista: 2ª fuente de precios solo llega al 20/10 (dato/infra, no prompt); `canal-aviso.sh` >128 KB sin arreglar de código (ya 4 pasadas). Backlog PRs `claude/*` abiertos: 13 (era 11); 2+ semanas: 7, el más antiguo #3755 (27/09), todos docs-only salvo #4493 (histéresis pricing, dinero real, sin mergear desde 11/10) y #4723 (blog asegura, no draft). dudas: —; fallos: —; PRs/commits: este PR
 
 <!-- Los agentes insertan aquí. Ejemplo:
