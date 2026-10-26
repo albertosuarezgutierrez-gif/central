@@ -89,3 +89,25 @@ export async function escribirModulo(
   })
   return { ok: true, cambios: ops.length }
 }
+
+/**
+ * Pólizas EN VIGOR por ficha (para la cola «Solicitudes del portal»). `null` = no se ha podido contar (NUNCA «0»);
+ * una ficha sin pólizas en vigor sale con 0.
+ */
+export async function polizasEnVigorPorCliente(correduriaId: string, clienteIds: string[]): Promise<Map<string, number> | null> {
+  const ids = [...new Set(clienteIds)]
+  if (ids.length === 0) return new Map()
+  try {
+    const db = prismaAsegura()
+    const filas = await db.$queryRaw<{ id: string; n: number }[]>`
+      select p.cliente_id::text as id, count(*)::int as n from polizas p
+       where p.correduria_id = ${correduriaId}::uuid and p.cliente_id = any(${ids}::uuid[])
+         and p.merged_into_poliza_id is null and ${Prisma.raw(sqlCarteraEnVigor('p'))}
+       group by p.cliente_id`
+    const m = new Map<string, number>(ids.map((i) => [i, 0]))
+    for (const f of filas) m.set(f.id, f.n)
+    return m
+  } catch {
+    return null
+  }
+}

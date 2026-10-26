@@ -13,6 +13,7 @@ import Anulaciones from './Anulaciones'
 import CartasMediador from './CartasMediador'
 import BajasPue from './BajasPue'
 import OportunidadesPatrimonio from './OportunidadesPatrimonio'
+import SolicitudesPortal from './SolicitudesPortal'
 
 /**
  * El cockpit de «Gestión» (antes «Hoy»; pieza 1-4 de ASegura OS). Desde el 13/10/2026 NO lleva la franja de
@@ -85,6 +86,7 @@ export default function HoyCockpit({
       <Anulaciones />
       <CartasMediador />
       <BajasPue onContador={setNBajasPue} />
+      <SolicitudesPortal />
       <OportunidadesPatrimonio />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}

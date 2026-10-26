@@ -118,3 +118,23 @@ export function textoHistorialModulo(modulo: ModuloPortal, accion: 'activar' | '
   const nombre = CATALOGO_MODULOS[modulo].nombre
   return `${accion === 'activar' ? 'Módulo del portal activado' : 'Módulo del portal retirado'}: ${nombre} (${actor})`
 }
+
+export type VistaSolicitud = { moduloNombre: string; puedeActivar: boolean; motivoNoActivar: string | null }
+
+/**
+ * Cola «Solicitudes del portal» de /correduria → Hoy: lo que cada fila `solicitado` enseña. Misma regla que la ficha
+ * (`puedeActivar`), con una identidad ya conocida (la fila existe). `clienteId` null = identidad sin ficha vinculada:
+ * no hay a quién activar (`escribirModulo` trabaja por ficha). `polizasEnVigor` null = no se ha podido mirar (≠ 0).
+ * El servidor vuelve a decidir al escribir; esto solo pinta el botón.
+ */
+export function vistaSolicitud(modulo: string, clienteId: string | null, polizasEnVigor: number | null): VistaSolicitud {
+  if (!esModuloPortal(modulo)) {
+    return { moduloNombre: modulo, puedeActivar: false, motivoNoActivar: 'Módulo que ya no está en el catálogo del portal.' }
+  }
+  const moduloNombre = CATALOGO_MODULOS[modulo].nombre
+  if (clienteId === null) {
+    return { moduloNombre, puedeActivar: false, motivoNoActivar: 'Esta petición no está vinculada a ninguna ficha de cliente: vincúlala antes de activar.' }
+  }
+  const d = puedeActivar(modulo, { identidades: 1, polizasEnVigor })
+  return d.puede ? { moduloNombre, puedeActivar: true, motivoNoActivar: null } : { moduloNombre, puedeActivar: false, motivoNoActivar: d.motivo }
+}

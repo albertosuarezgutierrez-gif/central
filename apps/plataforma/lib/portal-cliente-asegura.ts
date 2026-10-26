@@ -550,3 +550,8 @@ export function modulosPortalAsegura(clienteId: string): Promise<Reenvio> {
 export function escribirModuloPortalAsegura(entrada: { clienteId: string; modulo: string; accion: 'activar' | 'retirar'; actor: string }): Promise<Reenvio> {
   return llamar('/api/operador/cliente/portal-modulos', { method: 'POST', body: JSON.stringify(entrada) })
 }
+
+/** `GET /api/operador/portal-modulos` — la cola de módulos que los clientes piden desde el portal (solo `solicitado`). Solo lectura. */
+export function solicitudesPortalAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/portal-modulos', { method: 'GET' })
+}
