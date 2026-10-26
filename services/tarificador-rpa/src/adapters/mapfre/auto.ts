@@ -979,14 +979,21 @@ export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locato
     .locator('body')
     .evaluate((body, args) => {
       const reCompania = new RegExp(args.reCompania, 'i')
-      const salida: { et: string; tipo: string; id: string; off: boolean }[] = []
+      const salida: { et: string; tipo: string; id: string; off: boolean; padre: string }[] = []
+      // v0.8.26: `<label><mat-label>` anida dos etiquetas con el mismo texto → el mismo control salía dos veces. Se cuenta por NODO.
+      const vistos = new Set<Element>()
       for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
         const t = (e.textContent ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
         const clave = reCompania.test(e.textContent ?? '') ? 'compania' : args.etiquetas.find((x) => t === x)
         if (!clave || salida.length >= 12) continue
         const ff = e.closest('mat-form-field') ?? e.parentElement
         const c = ff ? ff.querySelector('mat-select, input, textarea, mat-checkbox, mat-slide-toggle') : null
-        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false }); continue }
+        if (c && vistos.has(c)) continue
+        if (c) vistos.add(c)
+        let p: Element | null = c ?? e
+        while (p && !/^app-/i.test(p.tagName)) p = p.parentElement
+        const nombrePadre = p ? p.tagName.toLowerCase() : 'sin-componente-app'
+        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false, padre: nombrePadre }); continue }
         const tag = c.tagName.toLowerCase()
         const tipoInput = (c.getAttribute('type') ?? '').toLowerCase()
         const tipo = tag === 'input' ? (tipoInput === 'checkbox' ? 'checkbox' : c.getAttribute('aria-autocomplete') || c.hasAttribute('matautocomplete') || c.getAttribute('role') === 'combobox' ? 'mat-autocomplete' : 'input') : tag === 'mat-select' || tag === 'mat-checkbox' || tag === 'mat-slide-toggle' ? tag.replace('mat-checkbox', 'checkbox') : tag
@@ -995,6 +1002,7 @@ export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locato
           tipo,
           id: c.getAttribute('formcontrolname') ?? c.getAttribute('name') ?? c.id ?? '',
           off: (c as HTMLInputElement).disabled === true || c.getAttribute('aria-disabled') === 'true' || /disabled/.test(ff?.className ?? ''),
+          padre: nombrePadre,
         })
       }
       return salida
@@ -1003,7 +1011,9 @@ export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locato
   if (!crudo) return 'no se pudo leer'
   if (crudo.length === 0) return 'ninguna de las etiquetas conocidas'
   const lista = crudo.map((c) => `«${c.et}» ${c.tipo}${c.id ? `[${c.id.replace(/[^\w-]/g, '').slice(0, 30)}]` : ''} ${c.off ? 'deshabilitado' : 'habilitado'}`)
-  return `${lista.join('; ')}; opciones de los desplegables: no leídas (panel cerrado, sin lector de opciones)`
+  const companias = crudo.filter((c) => c.et === 'compania')
+  const distintos = companias.length > 1 ? `; «compania»: ${companias.length} nodos distintos (contenedores: ${companias.map((c) => c.padre).join(', ')})` : ''
+  return `${lista.join('; ')}${distintos}; opciones de los desplegables: no leídas (panel cerrado, sin lector de opciones)`
 }
 
 /** Etiqueta exacta «Compañia/Compañía» (con o sin asterisco): NO casa «Compañía anterior» de otros bloques ni textos largos. */
@@ -1016,12 +1026,29 @@ const PATRON_ETIQUETA_COMPANIA = regexEtiquetaExacta(CONCEPTOS_LECTURA.compania_
  * cuanto a clics: no pulsa nada.
  */
 export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>): Promise<Locator | null> {
-  const campos = raiz.locator('mat-form-field').filter({ has: raiz.locator('mat-label, label').filter({ hasText: PATRON_ETIQUETA_COMPANIA }) }).locator('mat-select')
-  if ((await campos.count().catch(() => 0)) !== 1) return null
-  const uno = campos.first()
-  if (!(await uno.isVisible().catch(() => false))) return null
-  if ((await uno.getAttribute('aria-disabled').catch(() => null)) === 'true') return null
-  return uno
+  // v0.8.26: UN solo evaluate que recoge los NODOS mat-select tras la etiqueta «Compañia» y los deduplica por identidad (Set): un mismo
+  // mat-select alcanzable por dos caminos (label + mat-label anidados, form-fields anidados) cuenta UNO. Sin escribir en el DOM: se
+  // devuelve su posición entre todos los mat-select y se re-localiza con `nth`.
+  const r = await raiz
+    .locator('body')
+    .evaluate((body, fuente) => {
+      const re = new RegExp(fuente, 'i')
+      const nodos = new Set<Element>()
+      for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
+        if (!re.test(e.textContent ?? '')) continue
+        const ff = e.closest('mat-form-field') ?? e.parentElement
+        if (ff) for (const s of Array.from(ff.querySelectorAll('mat-select'))) nodos.add(s)
+      }
+      if (nodos.size !== 1) return { n: nodos.size, idx: -1, ok: false }
+      const nodo = Array.from(nodos)[0]
+      const estilo = getComputedStyle(nodo)
+      const visible = nodo.getClientRects().length > 0 && estilo.visibility !== 'hidden' && estilo.display !== 'none'
+      const off = nodo.getAttribute('aria-disabled') === 'true'
+      return { n: 1, idx: Array.from(body.querySelectorAll('mat-select')).indexOf(nodo), ok: visible && !off }
+    }, PATRON_ETIQUETA_COMPANIA.source)
+    .catch(() => null)
+  if (!r || r.n !== 1 || !r.ok || r.idx < 0) return null
+  return raiz.locator('mat-select').nth(r.idx)
 }
 
 /**
@@ -1754,7 +1781,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.25',
+  version: '0.8.26',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

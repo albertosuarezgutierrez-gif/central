@@ -19,7 +19,9 @@ import { ErrorFronteraEmision, pulsarEscapeAvisoModal, type CompaniaDescargaProy
 export const DESCARGA_PROYECTO_ACTIVA: Readonly<Record<CompaniaDescargaProyecto, boolean>> = { allianz: true, mapfre: true, generali: true }
 
 /** Espera al PDF tras el clic. */
-export const TOPE_DESCARGA_PROYECTO_MS = 30_000
+export const TOPE_DESCARGA_PROYECTO_MS = 20_000
+/** v0.6.31: tope TOTAL de la descarga (buscar + abrir menú + clic + PDF): pase lo que pase, el precio sigue y el aviso dice «tiempo agotado». */
+export const TOPE_TOTAL_DESCARGA_PROYECTO_MS = 25_000
 /** Tamaño razonable de un PDF de presupuesto: más pequeño no es un documento; más grande lo rechazaría asegura (`MAX_BYTES_ADJUNTO`, 4 MiB). */
 export const MIN_BYTES_PDF_PROYECTO = 100
 export const MAX_BYTES_PDF_PROYECTO = 4 * 1024 * 1024
@@ -41,6 +43,36 @@ export type ResultadoDescargaProyecto = { pdf: PdfRef | null; aviso: string | nu
  * `guardado`: el proyecto ya está guardado en la compañía (admite «Imprimir»/«Descargar» a secas, salvo Generali).
  */
 export async function descargarProyectoAuto(
+  page: Page,
+  ctx: Partial<Pick<ContextoPortal, 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
+  compania: CompaniaDescargaProyecto,
+  nombre: string,
+  guardado: boolean,
+  topeMs = TOPE_DESCARGA_PROYECTO_MS,
+  topeTotalMs = TOPE_TOTAL_DESCARGA_PROYECTO_MS,
+): Promise<ResultadoDescargaProyecto> {
+  // Un diálogo nativo del portal durante la descarga se descarta (nunca se acepta) para que no bloquee la página.
+  const alDialogo = (d: { dismiss: () => Promise<void> }) => { d.dismiss().catch(() => {}) }
+  try { page.on('dialog', alDialogo) } catch { /* página de prueba sin eventos */ }
+  let reloj: ReturnType<typeof setTimeout> | undefined
+  try {
+    const interna = descargarProyectoAutoInterna(page, ctx, compania, nombre, guardado, topeMs)
+    interna.catch(() => {}) // si pierde la carrera, su error tardío no debe quedar sin atender
+    const agotado = new Promise<ResultadoDescargaProyecto>((resolver) => {
+      reloj = setTimeout(() => {
+        const motivo = 'sin PDF (tiempo agotado)'
+        ctx.log?.(`pdf: ${NOMBRE_COMPANIA[compania]}: ${motivo}`)
+        resolver({ pdf: null, aviso: `PDF del proyecto no descargado en ${NOMBRE_COMPANIA[compania]}: ${motivo}` })
+      }, topeTotalMs)
+    })
+    return await Promise.race([interna, agotado])
+  } finally {
+    clearTimeout(reloj)
+    try { page.off('dialog', alDialogo) } catch { /* idem */ }
+  }
+}
+
+async function descargarProyectoAutoInterna(
   page: Page,
   ctx: Partial<Pick<ContextoPortal, 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   compania: CompaniaDescargaProyecto,

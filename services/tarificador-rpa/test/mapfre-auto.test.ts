@@ -651,5 +651,5 @@ test('v0.8.8 · opcionesFilasVehiculo: una opción por fila con denominación ·
   assert.equal(indiceFilaMapfre88(filas, { seleccionVehiculo: { marca: 'MARCA', modelo: 'X' } }), null, 'marca+modelo casan con las 3: ambiguo')
   assert.equal(indiceFilaMapfre88(filas, { eleccionVersion: { codigo: null, etiqueta: ops[1]!.etiqueta } }), 1, 'la etiqueta de la bandeja distingue la fila')
   assert.equal(indiceFilaMapfre88(filas, { seleccionVehiculo: { marca: 'MARCA', modelo: 'X', cilindradaCc: 1968 } }), 2, 'una única candidata por cilindrada: inequívoca')
-  assert.equal(mapfreAuto.version, '0.8.25')
+  assert.equal(mapfreAuto.version, '0.8.26')
 })

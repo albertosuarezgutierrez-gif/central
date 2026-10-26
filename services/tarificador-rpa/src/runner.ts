@@ -71,6 +71,12 @@ const TOPE_GLOBAL_MS = 4 * 60_000
 /** Techo absoluto del trabajo (dos intentos + espera), por si el lease no llega legible. */
 const TOPE_TRABAJO_MS = 5 * 60_000 + 30_000
 const TOPE_PASO_MS = 30_000
+/** v0.6.31: tope de cada lectura de la página tras el timeout del intento (login visible, evidencia). */
+const TOPE_REPORTE_MS = 10_000
+function topeReporte<T>(p: Promise<T>, defecto: T, ms = TOPE_REPORTE_MS): Promise<T> {
+  let reloj: ReturnType<typeof setTimeout> | undefined
+  return Promise.race([p, new Promise<T>((r) => { reloj = setTimeout(() => r(defecto), ms) })]).finally(() => clearTimeout(reloj))
+}
 const PAUSA_MIN_MS = 800
 const PAUSA_MAX_MS = 2_500
 // Pausa corta antes de cada acción (campo o pulsación): ritmo humano.
@@ -433,11 +439,15 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       error = guard.violacion() ?? rv.error
     }
 
-    const loginVisible = await page
-      .locator('input[type="password"]')
-      .filter({ visible: true })
-      .count()
-      .then((n) => n > 0, () => false)
+    // v0.6.31: cada lectura posterior al timeout lleva su tope (10 s): el reporte SIEMPRE sale aunque la página esté colgada.
+    const loginVisible = await topeReporte(
+      page
+        .locator('input[type="password"]')
+        .filter({ visible: true })
+        .count()
+        .then((n) => n > 0, () => false),
+      false,
+    )
     // Una pantalla de código/SMS manda sobre cualquier otra clasificación (un timeout de selector, p. ej.): no se reintenta.
     if (clasificar(error).tipo === 'portal') {
       await exigirSinVerificacion(page, k.compania).catch((e: unknown) => { error = e })
@@ -461,7 +471,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     const actual = abiertas.at(-1) ?? page
     // Recorrido: la pantalla donde se paró (hueco de mapa → «pantalla_no_reconocida», con su diálogo si lo hay), antes de la evidencia.
     await capturar(pideInventarioDom(error) ? 'pantalla_no_reconocida' : 'fallo')
-    const { captura, html } = await capturarEvidencia(actual)
+    const { captura, html } = await topeReporte((async () => await capturarEvidencia(actual))().catch(() => ({ url: '', captura: null, html: null })), { url: '', captura: null, html: null })
     // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos de TODAS las pestañas (la más
     // reciente primero, por el tope de tamaño), incluidos los de otro origen (solo lectura, saneado y ≤60 KB;
     // inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.

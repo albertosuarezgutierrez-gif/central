@@ -1614,17 +1614,21 @@ const normalizarOcultoDescarga = (x: string | null | undefined): string => Strin
 
 /** Quita de un texto lo que parece dato personal (emails, cifras largas) y colapsa espacios. PURA. */
 export function sanearTextoDiagnosticoDescarga(x: string): string {
-  return x.replace(/[^\s"'<>()]*@[^\s"'<>()]*/g, '@').replace(/\d{4,}/g, '#').replace(/\s+/g, ' ').trim()
+  // v0.6.31: sin cuantificadores abiertos (`[^…]*@[^…]*` era cuadrático sobre JS minificado sin espacios y colgaba el hilo): ≤64 a cada lado del «@»,
+  // y el texto se recorta a una ventana pequeña ANTES (nunca se sanea un atributo entero).
+  return x.slice(0, 400).replace(/[^\s"'<>()]{0,64}@[^\s"'<>()]{0,64}/g, '@').replace(/\d{4,}/g, '#').replace(/\s+/g, ' ').trim()
 }
 
-/** Extracto de ±30 caracteres alrededor de la palabra `palabra` dentro de `valor` (saneado antes de recortar; si la palabra desaparece al sanear, solo «…»). PURA. */
+/** Extracto de ±40 caracteres alrededor de la palabra `palabra` dentro de `valor`. v0.6.31: se RECORTA primero (la ventana) y solo ella se sanea; si la palabra desaparece al sanear, solo «…». PURA. */
 export function extractoSaneadoDescarga(valor: string, palabra: string): string {
-  const v = sanearTextoDiagnosticoDescarga(normalizarOcultoDescarga(valor))
+  const v = normalizarOcultoDescarga(valor)
   const i = v.indexOf(palabra)
   if (i < 0) return '…'
-  const ini = Math.max(0, i - 30)
-  const fin = Math.min(v.length, i + palabra.length + 30)
-  return `${ini > 0 ? '…' : ''}${v.slice(ini, fin)}${fin < v.length ? '…' : ''}`
+  const ini = Math.max(0, i - 40)
+  const fin = Math.min(v.length, i + palabra.length + 40)
+  const ventana = sanearTextoDiagnosticoDescarga(v.slice(ini, fin))
+  if (!ventana.includes(palabra)) return '…'
+  return `${ini > 0 ? '…' : ''}${ventana.slice(0, 200)}${fin < v.length ? '…' : ''}`
 }
 
 /** ¿Es un disparador de menú/desplegable (aria-haspopup, aria-expanded, dropdown, mat-menu-trigger)? PURA. */
