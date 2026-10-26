@@ -5,6 +5,8 @@ import { avisoTraza, leerResultadoWorker } from '@/lib/tarificador-reglas'
 import { eleccionIaActiva } from '@/lib/tarificador-eleccion-reglas'
 import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
 import { presupuestoTrasTrabajoRpa } from '@/lib/presupuesto-rpa'
+import { extraerCoberturasTrasTrabajo } from '@/lib/proyecto-auto'
+import { trasResultadoRpa } from '@/lib/tras-rpa'
 import { avisarFalloBotLead } from '@/lib/tarificacion-lead-fallo'
 import { esFalloTerminal } from '@/lib/tarificacion-lead-puro'
 import { hiloTrasPrecioRpa } from '@/lib/propuesta-lead'
@@ -64,9 +66,9 @@ export async function POST(req: Request) {
     }
     if (l.r.tipo === 'ok' && r.estadoTrabajo === 'ok' && r.tarificacionId) {
       const trabajoId = l.r.trabajoId
-      after(() => presupuestoTrasTrabajoRpa(trabajoId).then((p) => {
-        if (p.estado === 'error') console.error('[tarificador] presupuesto tras RPA', trabajoId, p.motivo)
-      }))
+      // 26/10/2026: el BORRADOR va primero y la extracción de coberturas del PDF corre aparte con tope (lib/tras-rpa.ts):
+      // una IA lenta nunca bloquea el borrador ni el Telegram a Alberto.
+      after(() => trasResultadoRpa(trabajoId, { borrador: presupuestoTrasTrabajoRpa, extraer: extraerCoberturasTrasTrabajo, error: console.error }))
       // F4: si la oportunidad vino de un lead de correo, su hilo pasa a `tarificada` (la propuesta la monta el triaje).
       after(() => hiloTrasPrecioRpa(trabajoId))
     }

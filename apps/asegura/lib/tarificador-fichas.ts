@@ -20,6 +20,7 @@ import {
 import { prisma } from './tenant'
 import { extraerFichaCompleta, extraerSoloPresupuesto, textoDeProyecto } from './tarificador-fichas-ia'
 import { datosProyecto, elegirFichaValidada, esSinTablaFichas } from './tarificador-fichas-reglas'
+import { riesgoParaVerificar, validezDelPdf, verificarProyectoPdf, type VerificacionPdf } from './proyecto-pdf-reglas'
 
 export class SinTablaFichasError extends Error {
   constructor() { super('sin_tabla_fichas') }
@@ -155,18 +156,35 @@ export type ResultadoExtraccion =
   | { estado: 'sin_pdf'; mensaje: string }
   | { estado: 'sin_texto'; mensaje: string }
   | { estado: 'error_ia'; mensaje: string }
-  | { estado: 'ok'; modo: 'ficha_y_presupuesto' | 'solo_presupuesto'; fichaId: string | null; fichaEstado: string | null; avisos: AvisoExtraccion[]; condicionadoCambiado: boolean | null; citasAusentes: string[]; valores: ValoresPresupuesto }
+  | { estado: 'ok'; modo: 'ficha_y_presupuesto' | 'solo_presupuesto'; fichaId: string | null; fichaEstado: string | null; avisos: AvisoExtraccion[]; condicionadoCambiado: boolean | null; citasAusentes: string[]; valores: ValoresPresupuesto; verificacion?: VerificacionPdf | null }
+
+/** Matrícula y fecha de efecto del riesgo de la tarificación (de lo que persiste tras la purga). Falla en silencio: `null` = no se comprueba. */
+async function riesgoDeTarificacion(correduriaId: string, tarificacionId: string): Promise<{ matricula: string | null; fechaEfecto: string | null }> {
+  try {
+    const f = (await prisma.$queryRaw<{ fecha_efecto: Date | null; info_riesgo: unknown }[]>`
+      select t.fecha_efecto, o.info_riesgo
+      from seguros.tarificaciones t
+      left join seguros.oportunidades o on o.id = t.oportunidad_id and o.correduria_id = t.correduria_id
+      where t.id = ${tarificacionId}::uuid and t.correduria_id = ${correduriaId}::uuid`)[0]
+    return f ? riesgoParaVerificar(f.info_riesgo, f.fecha_efecto ? f.fecha_efecto.toISOString().slice(0, 10) : null) : { matricula: null, fechaEfecto: null }
+  } catch {
+    return { matricula: null, fechaEfecto: null }
+  }
+}
 
 const PRESUPUESTO_VACIO: ValoresPresupuesto = { primaTotalEur: null, primaNetaEur: null, capitales: {}, franquiciaGeneral: null }
 
 async function guardarPresupuesto(p: {
   correduriaId: string; tarificacionId: string; documentoId: string | null; fichaId: string | null; valores: ValoresPresupuesto
   avisos: unknown[]; textoLegible: boolean; condicionadoCambiado: boolean | null; citasAusentes: string[]; actor: string
+  /** Verificación PDF ↔ tarificado y validez que dice el PDF (26/10/2026). Va en `valores.proyectoPdf` (jsonb: sin SQL nuevo). */
+  proyectoPdf?: { verificacion: VerificacionPdf; validoHasta: string | null; validezDias: number | null } | null
 }): Promise<void> {
+  const valoresJson = p.proyectoPdf ? { ...p.valores, proyectoPdf: p.proyectoPdf } : p.valores
   await prisma.$executeRaw`
     insert into seguros.tarificador_coberturas_presupuesto
       (correduria_id, tarificacion_id, documento_id, ficha_id, valores, avisos, texto_legible, condicionado_cambiado, citas_ausentes, extraido_por)
-    values (${p.correduriaId}::uuid, ${p.tarificacionId}::uuid, ${p.documentoId}::uuid, ${p.fichaId}::uuid, ${JSON.stringify(p.valores)}::jsonb,
+    values (${p.correduriaId}::uuid, ${p.tarificacionId}::uuid, ${p.documentoId}::uuid, ${p.fichaId}::uuid, ${JSON.stringify(valoresJson)}::jsonb,
             ${JSON.stringify(p.avisos)}::jsonb, ${p.textoLegible}, ${p.condicionadoCambiado}, ${JSON.stringify(p.citasAusentes)}::jsonb, ${p.actor})
     on conflict (tarificacion_id) do update set
       documento_id = excluded.documento_id, ficha_id = excluded.ficha_id, valores = excluded.valores, avisos = excluded.avisos,
@@ -205,6 +223,14 @@ export async function extraerCoberturas(correduriaId: string, tarificacionId: st
       return { estado: 'sin_texto' as const, mensaje }
     }
 
+    // VERIFICACIÓN PDF ↔ tarificado (26/10/2026): se calcula con el texto; la prima del PDF se completa tras la IA.
+    const riesgo = await riesgoDeTarificacion(correduriaId, tarificacionId)
+    const validez = validezDelPdf(texto.texto)
+    const proyectoPdfDe = (primaPdfEur: number | null) => ({
+      verificacion: verificarProyectoPdf({ texto: texto.texto, primaEur: d.primaAnualEur, primaPdfEur, matricula: riesgo.matricula, fechaEfecto: riesgo.fechaEfecto }),
+      validoHasta: validez.validoHasta, validezDias: validez.validezDias,
+    })
+
     // ¿Hay ficha VALIDADA de este producto (cualquier versión)?
     const validadas = d.producto === null ? [] : await prisma.$queryRaw<{ id: string; version: string | null; condiciones: unknown }[]>`
       select id::text as id, version, condiciones from seguros.tarificador_fichas
@@ -219,10 +245,12 @@ export async function extraerCoberturas(correduriaId: string, tarificacionId: st
       await guardarPresupuesto({
         correduriaId, tarificacionId, documentoId: d.documentoId, fichaId: elegida.ficha.id, valores: r.presupuesto, avisos: r.avisos,
         textoLegible: true, condicionadoCambiado: elegida.cambiado, citasAusentes: elegida.citasAusentes, actor,
+        proyectoPdf: proyectoPdfDe(r.presupuesto.primaTotalEur?.valor ?? null),
       })
       return {
         estado: 'ok' as const, modo: 'solo_presupuesto' as const, fichaId: elegida.ficha.id, fichaEstado: 'validada', avisos: r.avisos,
         condicionadoCambiado: elegida.cambiado, citasAusentes: elegida.citasAusentes, valores: r.presupuesto,
+        verificacion: proyectoPdfDe(r.presupuesto.primaTotalEur?.valor ?? null).verificacion,
       }
     }
 
@@ -260,10 +288,12 @@ export async function extraerCoberturas(correduriaId: string, tarificacionId: st
     await guardarPresupuesto({
       correduriaId, tarificacionId, documentoId: d.documentoId, fichaId, valores: v.presupuesto, avisos,
       textoLegible: true, condicionadoCambiado: null, citasAusentes: [], actor,
+      proyectoPdf: proyectoPdfDe(v.presupuesto.primaTotalEur?.valor ?? null),
     })
     return {
       estado: 'ok' as const, modo: 'ficha_y_presupuesto' as const, fichaId, fichaEstado, avisos: v.avisos,
       condicionadoCambiado: null, citasAusentes: [], valores: v.presupuesto,
+      verificacion: proyectoPdfDe(v.presupuesto.primaTotalEur?.valor ?? null).verificacion,
     }
   })
 }

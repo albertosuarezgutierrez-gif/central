@@ -19,6 +19,7 @@ import { COSTE_COTIZACION_CENTS } from './codeoscopic/config'
 import { numeroLeido, ofertaNormalizadaDeFila } from './documentos/oferta-leida'
 import { leerOportunidadParaOfertas, ofertasDeOportunidad } from './oportunidad-ofertas'
 import { huellaComparativa, ultimoEstudioGuardado } from './comparativa-guardada'
+import { infoOfertasBot, type InfoOfertaBot } from './proyecto-comparativa'
 
 import { MAX_AVANT2_EN_CUADRO } from './estudio-avant2'
 export { MAX_AVANT2_EN_CUADRO }
@@ -47,6 +48,8 @@ export type ResultadoComparativaOportunidad =
       guardado: { presupuestoId: string; generadoAt: string | null; vigente: boolean; etiqueta: string | null; narrativa: { resumen: string; recomendacion: string; fuente: string } | null } | null
       avant2: Avant2Guardada | null
       polizaCartera: 'incluida' | 'no_aplica' | 'ya_hay_actual' | 'no_encontrada'
+      /** Por cada precio de bot: nº de proyecto, caducidad, verificación del PDF y «limpio / con supuestos» (26/10/2026). */
+      ofertasBot: InfoOfertaBot[]
     }
   | { estado: 'no_encontrado' }
 
@@ -89,6 +92,13 @@ export async function comparativaDeOportunidad(correduriaId: string, oportunidad
   })
 
   const g = await ultimoEstudioGuardado(correduriaId, op.id)
+  // Una lectura accesoria: si falla, la comparativa sale igual (sin la caducidad ni las marcas) y se dice en el log.
+  let ofertasBot: InfoOfertaBot[] = []
+  try {
+    ofertasBot = await infoOfertasBot(correduriaId, filas, new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }))
+  } catch (e) {
+    console.error('[comparativa] proyectos de bot no legibles:', e instanceof Error ? e.message.slice(0, 200) : 'error')
+  }
   return {
     estado: 'ok',
     oportunidad: { id: op.id, ramo: op.ramo, ramoOferta: op.ramoOferta, polizaId: op.polizaId },
@@ -108,6 +118,7 @@ export async function comparativaDeOportunidad(correduriaId: string, oportunidad
       : null,
     avant2,
     polizaCartera,
+    ofertasBot,
   }
 }
 

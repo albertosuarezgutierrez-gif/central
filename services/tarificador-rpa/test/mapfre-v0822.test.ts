@@ -89,8 +89,8 @@ const ctxClase = (elegidos: Elegidos) => ({
 const valor = (page: Page, sel: string) => page.locator(sel).inputValue()
 const pulsado = (page: Page) => page.evaluate(() => (window as unknown as Record<string, unknown>).__proyecto ?? null)
 
-test('v0.8.22 · la versión del bot es 0.8.22', () => {
-  assert.equal(mapfreAuto.version, '0.8.22')
+test('v0.8.22 · la versión del bot es 0.8.23', () => {
+  assert.equal(mapfreAuto.version, '0.8.23')
 })
 
 test('v0.8.22 · clasificación por formcontrolname/etiqueta/placeholder, nunca por ids mat-input-N', () => {

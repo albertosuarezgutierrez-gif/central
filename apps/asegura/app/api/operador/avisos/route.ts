@@ -12,7 +12,7 @@ export const maxDuration = 30
  * GET — banda de avisos de «Mi mesa» (13/10/2026): cada cola con plazo o urgente, reducida a
  * {n, plazo más cercano, urgentes}. SOLO LECTURA.
  *   { estado:'ok', hoy, colas: { partes|supresiones|quejas|cambios_cuenta|recibos_lcs|aprobaciones|bajas_pue|
- *     anulaciones|recibos_sin_confirmar|correos_compania_sin_resolver: {estado:'ok', n, plazo, urgentes} | {estado:'error'} } }
+ *     anulaciones|recibos_sin_confirmar|correos_compania_sin_resolver|proyectos_caducan: {estado:'ok', n, plazo, urgentes} | {estado:'error'} } }
  * Por cola: `ok` con n = 0 = comprobado y no hay; `error` = no se ha podido comprobar (nunca «0»).
  * La ingesta de CIMA no va aquí: la compone plataforma con su veredicto (`veredictoIngesta`).
  */

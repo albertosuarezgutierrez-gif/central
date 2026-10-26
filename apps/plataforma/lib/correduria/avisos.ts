@@ -29,6 +29,7 @@ export const COLAS_AVISO = [
   'anulaciones',
   'recibos_sin_confirmar',
   'correos_compania_sin_resolver',
+  'proyectos_caducan',
 ] as const
 export type ColaAviso = (typeof COLAS_AVISO)[number]
 export type TipoAviso = ColaAviso | 'ingesta' | 'puerto'
@@ -65,6 +66,8 @@ export const HREF_AVISO: Record<TipoAviso, string> = {
   recibos_sin_confirmar: '/correduria?s=gestion',
   // La bandeja vive en Mi mesa (no en Gestión): es lo único de la banda que se trabaja en la propia mesa.
   correos_compania_sin_resolver: '/correduria/mesa#correos-compania',
+  // Los proyectos viven en las oportunidades abiertas (Gestión las lista).
+  proyectos_caducan: '/correduria?s=gestion',
   ingesta: '/correduria?s=ingesta',
   puerto: '/correduria?s=gestion',
 }
@@ -80,6 +83,7 @@ const ROTULO: Record<ColaAviso, [string, string, string]> = {
   bajas_pue: ['baja de Allianz firmada sin tramitar en el PUE', 'bajas de Allianz firmadas sin tramitar en el PUE', 'las bajas de Allianz'],
   anulaciones: ['anulación con el plazo encima', 'anulaciones con el plazo encima', 'las anulaciones en curso'],
   correos_compania_sin_resolver: ['aviso de compañía por correo sin resolver (no se ha escrito en la cartera)', 'avisos de compañías por correo sin resolver (no se ha escrito en la cartera)', 'los avisos de compañías por correo'],
+  proyectos_caducan: ['proyecto guardado en la compañía caduca en 5 días o menos (renuévalo o reténtalo antes de enviarlo)', 'proyectos guardados en la compañía caducan en 5 días o menos (renuévalos o reténtalos antes de enviarlos)', 'los proyectos guardados que caducan'],
   recibos_sin_confirmar: ['recibo vencido sin confirmar el cobro (míralo en el portal de la compañía)', 'recibos vencidos sin confirmar el cobro (míralos en el portal de la compañía)', 'los recibos vencidos'],
 }
 
@@ -242,12 +246,13 @@ const TITULO_COLA: Record<TipoAviso, string> = {
   partes: 'Partes del portal', supresiones: 'Supresiones RGPD', quejas: 'Quejas', cambios_cuenta: 'Cambios de cuenta',
   recibos_lcs: 'Recibos devueltos (art. 15 LCS)', aprobaciones: 'Esperan tu OK', bajas_pue: 'Bajas de Allianz (PUE)',
   anulaciones: 'Anulaciones', recibos_sin_confirmar: 'Recibos sin confirmar', correos_compania_sin_resolver: 'Avisos de compañías por correo',
+  proyectos_caducan: 'Proyectos que caducan',
   ingesta: 'Ingesta de CIMA', puerto: 'Puerto de asegura',
 }
 
 const POS_TIPO: readonly TipoCampana[] = [
   'puerto', 'supresiones', 'quejas', 'partes', 'recibos_lcs', 'solicitudes_portal', 'leads_nuevos', 'permisos_portal',
-  'aprobaciones', 'bajas_pue', 'anulaciones', 'cambios_cuenta', 'recibos_sin_confirmar', 'correos_compania_sin_resolver',
+  'aprobaciones', 'bajas_pue', 'anulaciones', 'cambios_cuenta', 'recibos_sin_confirmar', 'correos_compania_sin_resolver', 'proyectos_caducan',
   'cartas_mediador', 'diferencias_cima', 'oportunidades_patrimonio', 'ingesta',
 ]
 

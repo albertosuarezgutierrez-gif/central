@@ -46,7 +46,7 @@ import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorCodigoSmsPendiente, ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
 import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, pulsarConfirmarDatosPersonasGenerali, pulsarSiguienteValoracionGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, generarProyectoMapfre, companiaActualTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
-  guardarPresupuestoTurismosAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
+  guardarPresupuestoTurismosAllianz, buscarBotonDescargaProyecto, pulsarDescargaProyectoAuto, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
 import { puertoCodigoHttp, relevarCodigoSmsGenerali, type Relevo } from './relevo-sms.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
@@ -215,6 +215,15 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña de «Generar Proyecto» no es de este trabajo')
         await ctx.pausaAccion()
         return generarProyectoMapfre(pagina, guard, undefined, undefined, completar)
+      },
+      buscarDescargaProyectoAuto: async (pagina, compania, guardado) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'descarga del proyecto: la pestaña no es de este trabajo')
+        return buscarBotonDescargaProyecto(pagina, guard, compania, guardado)
+      },
+      pulsarDescargaProyectoAuto: async (pagina, boton, compania, guardado) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'descarga del proyecto: la pestaña no es de este trabajo')
+        await ctx.pausaAccion()
+        await pulsarDescargaProyectoAuto(pagina, guard, boton, compania, guardado)
       },
       elegirTomadorMapfre: async (pagina, nif) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo del tomador no es de este trabajo')
