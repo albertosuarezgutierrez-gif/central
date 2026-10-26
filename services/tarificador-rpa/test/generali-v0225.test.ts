@@ -39,7 +39,7 @@ const B028 = `${BASE}emiAutosGenB028.do`
 const PORTAL = 'https://www.generali.es/arq_genernetPortalFormWeb/CorredorPortal.po?mediatorCode=' + MEDIADOR_GENERALI
 const ESPERAS = { abrirMs: 3_000, autocompletarMs: 300, trasConfirmarMs: 2_500 }
 
-test('v0.2.25 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.25'))
+test('v0.2.25 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.26'))
 
 test('v0.2.25 · puras: URL del marco, tipo de documento, opciones (NIF/NIE, sexo, carné, España) y pestaña activa', () => {
   assert.ok(urlDatosPersonasGenerali(B028))
@@ -62,7 +62,8 @@ test('v0.2.25 · puras: URL del marco, tipo de documento, opciones (NIF/NIE, sex
   assert.equal(opcionEspanaGenerali([{ valor: '', texto: '' }, { valor: '724', texto: 'España' }, { valor: '250', texto: 'Francia' }]), 1)
   assert.deepEqual(pestanaDatosPersonasActivaGenerali([{ tipo: 'seleccion', activa: false }, { tipo: 'datos', activa: true }], true), { ok: true, por: 'marca' })
   assert.equal(pestanaDatosPersonasActivaGenerali([{ tipo: 'seleccion', activa: true }, { tipo: 'datos', activa: false }], true).ok, false)
-  assert.equal(pestanaDatosPersonasActivaGenerali([{ tipo: 'seleccion', activa: true }, { tipo: 'datos', activa: true }], true).ok, false, 'las dos marcadas: no se sabe')
+  assert.deepEqual(pestanaDatosPersonasActivaGenerali([{ tipo: 'seleccion', activa: true }, { tipo: 'datos', activa: false }, { tipo: 'datos', activa: true }], true), { ok: true, por: 'marca' }, 'v0.2.26: dos «Datos personas», una marcada; la marca de «Selección» es de otro nivel')
+  assert.equal(pestanaDatosPersonasActivaGenerali([{ tipo: 'seleccion', activa: true }, { tipo: 'datos', activa: false }, { tipo: 'datos', activa: false }], true).ok, false, 'v0.2.26: ningún «Datos personas» marcado')
   assert.deepEqual(pestanaDatosPersonasActivaGenerali([{ tipo: 'seleccion', activa: false }, { tipo: 'datos', activa: false }], true), { ok: true, por: 'contenido' })
   assert.equal(pestanaDatosPersonasActivaGenerali([{ tipo: 'seleccion', activa: false }], true).ok, false, 'sin pestaña «Datos personas»')
 })
@@ -107,7 +108,7 @@ after(async () => {
 
 type Opciones = {
   /** Marca de activa en la pestaña: 'datos' (por defecto), 'seleccion' o ninguna. */
-  activa?: 'datos' | 'seleccion' | 'ninguna'
+  activa?: 'datos' | 'seleccion' | 'ninguna' | 'real' | 'real-sin-datos'
   /** Al salir del NIF el portal pone este nombre (autocompletado). */
   autoNombre?: string
   /** NIF que ya trae la pantalla. */
@@ -125,7 +126,12 @@ const vehiculo = (e: Estado, destino: string) => `<input id="${P}roles_lnkPers" 
 const opcion = (v: string, t: string) => `<option value="${v}">${t}</option>`
 const datos = (o: Opciones, mensaje = '') => {
   const cls = (t: 'datos' | 'seleccion') => ((o.activa ?? 'datos') === t ? ' class="pestanaActiva"' : ' class="pestana"')
-  return `<ul><li${cls('seleccion')}><a href="#">Selección personas que intervienen</a></li><li${cls('datos')}><a href="#">Datos personas</a></li></ul>
+  // v0.2.26: DOM real (diagnóstico 0.2.24): DOS enlaces «Datos personas», `current` en el CONTENEDOR del segundo y «Selección…» con `current` en el propio enlace.
+  const real = o.activa === 'real' || o.activa === 'real-sin-datos'
+  const menu = real
+    ? `<ul><li class="opc"><a class="current" href="#">Selección personas que intervienen</a></li><li><a href="#">Datos personas</a></li><li class="mclick"><a class="NOLINK" href="#">&nbsp;</a></li><li class="${o.activa === 'real' ? 'current' : 'otra'}"><a href="#">Datos personas</a></li></ul>`
+    : `<ul><li${cls('seleccion')}><a href="#">Selección personas que intervienen</a></li><li${cls('datos')}><a href="#">Datos personas</a></li></ul>`
+  return `${menu}<a href="#">Selección personas que intervienen</a></li><li${cls('datos')}>
   ${mensaje ? `<div class="mensajeError">${mensaje}</div>` : ''}
   <form id="f" action="${BASE}Confirmado.do" method="get">
   <select id="${I}ynidcl" name="ynidcl">${opcion('', 'Seleccione')}${opcion('1', 'NIF')}${opcion('2', 'NIE')}${opcion('3', 'CIF')}</select>
@@ -306,6 +312,33 @@ test('v0.2.25 · cepo del guard: NIF vacío → no se pulsa; sin marca de pesta�
     assert.equal(r.dialogo, null)
     for (let i = 0; i < 30 && estado.confirmar === 0; i++) await new Promise((x) => setTimeout(x, 100))
     assert.equal(estado.confirmar, 1)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.26 · DOM real: dos «Datos personas», `current` en el contenedor del segundo y «Selección…» con `current` en el enlace → SE pulsa «Confirmar» una vez', async () => {
+  const { marco, page, guard, estado, cerrar } = await abrir({ activa: 'real' })
+  try {
+    await irADatos(marco, guard)
+    await marco.locator(`[id="${I}nifcif"]`).fill(NIF)
+    const r = await pulsarConfirmarDatosPersonasGenerali(page, guard, 100)
+    assert.equal(r.dialogo, null)
+    for (let i = 0; i < 30 && estado.confirmar === 0; i++) await new Promise((x) => setTimeout(x, 100))
+    assert.equal(estado.confirmar, 1)
+    await assert.rejects(() => pulsarConfirmarDatosPersonasGenerali(page, guard, 100), EmisionBloqueadaError, 'una vez por trabajo')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.26 · cepo: mismo DOM real pero «Datos personas» SIN `current` en ninguna parte (solo «Selección…») → sigue bloqueando', async () => {
+  const { marco, page, guard, estado, cerrar } = await abrir({ activa: 'real-sin-datos' })
+  try {
+    await irADatos(marco, guard)
+    await marco.locator(`[id="${I}nifcif"]`).fill(NIF)
+    await assert.rejects(() => pulsarConfirmarDatosPersonasGenerali(page, guard, 100), (e: unknown) => e instanceof EmisionBloqueadaError && /fuera de la pestaña «Datos personas»/.test((e as Error).message))
+    assert.equal(estado.confirmar, 0)
   } finally {
     await cerrar()
   }

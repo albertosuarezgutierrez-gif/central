@@ -1102,13 +1102,12 @@ export function tipoPestanaPersonasGenerali(rotulo: string | null | undefined): 
  * se infiere del CONTENIDO: el campo NIF de «Datos personas» está visible. Cualquier otra cosa → no.
  */
 export function pestanaDatosPersonasActivaGenerali(pestanas: readonly PestanaPersonasLeida[], nifVisible: boolean): { ok: true; por: 'marca' | 'contenido' } | { ok: false; motivo: string } {
+  // v0.2.26: el portal real repite el enlace «Datos personas» (uno con `current` en su CONTENEDOR) y marca «Selección personas…» con `current`
+  // en el propio enlace (nivel de menú, no subpestaña). Basta con que ALGÚN «Datos personas» esté marcado; la marca de «Selección» se ignora.
   const datos = pestanas.filter((p) => p.tipo === 'datos')
-  if (datos.length !== 1) return { ok: false, motivo: `pestañas «${PESTANA_DATOS_PERSONAS_GENERALI}» visibles: ${datos.length} (hace falta una)` }
-  const marcadas = pestanas.filter((p) => p.activa)
-  if (marcadas.length > 0) {
-    if (datos[0]!.activa && !pestanas.some((p) => p.tipo === 'seleccion' && p.activa)) return { ok: true, por: 'marca' }
-    return { ok: false, motivo: 'la pestaña marcada como activa no es «Datos personas»' }
-  }
+  if (datos.length === 0) return { ok: false, motivo: `pestañas «${PESTANA_DATOS_PERSONAS_GENERALI}» visibles: 0 (hace falta al menos una)` }
+  if (datos.some((p) => p.activa)) return { ok: true, por: 'marca' }
+  if (pestanas.some((p) => p.activa)) return { ok: false, motivo: 'la pestaña marcada como activa no es «Datos personas»' }
   return nifVisible ? { ok: true, por: 'contenido' } : { ok: false, motivo: 'sin pestaña marcada y sin el NIF de «Datos personas» visible' }
 }
 
