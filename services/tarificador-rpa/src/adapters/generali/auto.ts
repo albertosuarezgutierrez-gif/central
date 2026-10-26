@@ -42,6 +42,7 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
 import { esUrlOktaSmsGenerali } from '../../guard.ts'
@@ -250,7 +251,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * entiende también tablas (cabecera «Prima/Importe/Total…» + celda con importe, una línea por celda) y el atasco VUELCA, saneado, las pestañas
  * (¿marcada?), las tablas con cabeceras y filas con «€» y los botones, para ver si el clic cambió la pantalla. Sin pulsar nada nuevo.
  */
-export const VERSION_GENERALI_AUTO = '0.2.31'
+export const VERSION_GENERALI_AUTO = '0.2.33'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -2382,6 +2383,14 @@ async function esperarPrecioGenerali(page: Page, ignorar: readonly number[], ms 
  * guard y lectura del precio. Devuelve la oferta o PARA (`ErrorMapaIncompletoGenerali`) con el registro de donde se quedó; el
  * runner guarda además el HTML redactado, el inventario de estructura y el recorrido.
  */
+/**
+ * v0.2.33: PDF del presupuesto tras leer el precio (Generali AÚN no guarda el proyecto: botón «Imprimir/Descargar presupuesto» con el objeto en el
+ * rótulo; el «Imprimir» a secas no vale hasta que guarde). Sin botón / sin PDF → aviso en la oferta y el precio igual. Interruptor: `DESCARGA_PROYECTO_ACTIVA.generali`.
+ */
+export async function conPdfPresupuestoGenerali(page: Page, ctx: ContextoPortal, ofertas: OfertaNormalizada[]): Promise<OfertaNormalizada[]> {
+  return ofertasConPdfProyecto(ofertas, await descargarProyectoAuto(page, ctx, 'generali', 'presupuesto-generali-auto.pdf', false))
+}
+
 export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number } = {}): Promise<ResultadoAdaptador> {
   const paso = <T>(n: Parameters<ContextoPortal['paso']>[0], fn: () => Promise<T>): Promise<T> => (typeof ctx.paso === 'function' ? ctx.paso(n, fn) : fn())
   const ant = conAntecedentesFavorables(form)
@@ -2417,7 +2426,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     return m.tipo === 'unico' ? m : l
   }
   const lectura = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
-  if (lectura.tipo === 'unico') return { ofertas: [ofertaGenerali(lectura.eur, texto, lectura.avisos)] }
+  if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, lectura.avisos)]) }
   // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
   let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
   const avanceSiguiente: string[] = []
@@ -2433,7 +2442,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
         break
       }
       lecturaFinal = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
-      if (lecturaFinal.tipo === 'unico') return { ofertas: [ofertaGenerali(lecturaFinal.eur, texto, lecturaFinal.avisos)] }
+      if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, lecturaFinal.avisos)]) }
     }
   }
   const despues = await leerPantallaPagina(page)

@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { compararOfertas, ofertaDeAvant2, type PrecioAvant2 } from '@central/module-seguros'
-import { filasPrecios, interpretarComparativa, precioOpcion } from './comparativa-asegura.ts'
+import { filasPrecios, interpretarComparativa, leerOfertasBot, precioOpcion, preciosConSupuestos, textoProyecto, textoVerificacionPdf } from './comparativa-asegura.ts'
 
 const precio = (id: string, categoria: string, primaEur: number, meses: number | null): PrecioAvant2 => ({
   id, compania: 'Compañía Uno', producto: null, modalidad: null, categoria, primaEur, franquiciaEur: null, firmeza: 'estimado', frecuenciaPago: null, meses, garantias: null,
@@ -37,4 +37,24 @@ test('un 404 solo es «no existe» si el puerto lo dice; si no, es error (ruta/d
   assert.equal(nulo.estado, 'error')
   assert.match(nulo.estado === 'error' ? nulo.motivo : '', /404/)
   assert.equal(interpretarComparativa(404, {}).estado, 'error')
+})
+
+test('proyecto de bot (26/10/2026): texto con nº, guardado y caducidad; desconocida no se inventa', () => {
+  assert.equal(textoProyecto({ referencia: 'P-1', guardadoEn: '2026-10-20', caduca: '2026-11-19' }), 'Proyecto nº P-1 · guardado el 20/10 · caduca el 19/11')
+  assert.equal(textoProyecto({ referencia: 'P-1', guardadoEn: '2026-10-20', caduca: null }), 'Proyecto nº P-1 · guardado el 20/10 · caducidad desconocida')
+  assert.equal(textoProyecto({ referencia: null, guardadoEn: null, caduca: null }), 'Proyecto sin nº · fecha de guardado desconocida · caducidad desconocida')
+})
+
+test('ofertasBot: forma rara descartada, puerto anterior = lista vacía, y «con supuestos» se lista para corregir', () => {
+  assert.deepEqual(leerOfertasBot(undefined), [])
+  const l = leerOfertasBot([
+    { ofertaId: 'a', referencia: 'P-1', estadoCaducidad: 'caduca_pronto', verificacion: { estado: 'discrepancia', discrepancias: ['prima'] }, precio: { estado: 'con_supuestos', supuestos: ['Precio con supuestos: uso diario.'] } },
+    { ofertaId: 'b', precio: { estado: 'limpio', supuestos: [] } },
+    { sinId: true },
+  ])
+  assert.equal(l.length, 2)
+  assert.equal(l[1].verificacion, null)
+  assert.deepEqual(preciosConSupuestos([{ id: 'a', etiqueta: 'Compañía A' }, { id: 'b', etiqueta: 'Compañía B' }], l), [{ etiqueta: 'Compañía A', supuestos: ['Precio con supuestos: uso diario.'] }])
+  assert.equal(textoVerificacionPdf(l[0].verificacion), 'El PDF no cuadra con lo tarificado: prima')
+  assert.equal(textoVerificacionPdf(null), 'PDF sin comprobar contra lo tarificado')
 })

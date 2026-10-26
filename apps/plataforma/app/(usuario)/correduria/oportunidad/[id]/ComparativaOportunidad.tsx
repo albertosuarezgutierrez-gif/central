@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import type { EstadoTriple } from '@central/module-seguros'
-import { TEXTO_ESTADO3, filasPrecios, type LecturaComparativa } from '@/lib/correduria/comparativa-asegura'
+import { TEXTO_ESTADO3, filasPrecios, preciosConSupuestos, textoProyecto, textoVerificacionPdf, type LecturaComparativa } from '@/lib/correduria/comparativa-asegura'
 import { CeldaCompania } from '../../CeldaCompania'
 
 const FILAS_INICIO = 40
@@ -44,8 +44,10 @@ export default function ComparativaOportunidad({ lectura, onRecargar }: { lectur
       </section>
     )
   }
-  const { comparacion: c, guardado, polizaCartera } = lectura.datos
+  const { comparacion: c, guardado, polizaCartera, ofertasBot } = lectura.datos
   const filas = filasPrecios(c)
+  const proyectoDe = new Map(ofertasBot.map((p) => [p.ofertaId, p]))
+  const porCorregir = preciosConSupuestos(filas, ofertasBot)
   const etiquetaDe = new Map(filas.map((f) => [f.id, f.etiqueta]))
   const matriz = todas ? c.filas : c.filas.slice(0, FILAS_INICIO)
 
@@ -71,6 +73,19 @@ export default function ComparativaOportunidad({ lectura, onRecargar }: { lectur
               <div style={{ fontSize: 13, fontWeight: 600, overflowWrap: 'anywhere' }}>{f.etiqueta}</div>
               <div style={{ fontSize: 18, fontWeight: 700, overflowWrap: 'anywhere' }}>{f.precio.texto}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{f.fuente}{f.estimado ? ' · precio estimado' : ''}{!f.precio.comparable && f.precio.texto !== 'No figura' ? ' · no se compara como anual' : ''}</div>
+              {proyectoDe.get(f.id) && (() => {
+                const p = proyectoDe.get(f.id)!
+                const fallo = p.verificacion?.estado === 'discrepancia' || p.estadoCaducidad === 'caducado'
+                return (
+                  <div style={{ display: 'grid', gap: 2, fontSize: 12, overflowWrap: 'anywhere' }}>
+                    <span style={{ color: p.estadoCaducidad === 'caduca_pronto' || p.estadoCaducidad === 'caducado' ? 'var(--warning)' : 'var(--muted)', fontWeight: p.estadoCaducidad === 'vigente' || p.estadoCaducidad === 'desconocida' ? 400 : 700 }}>
+                      {textoProyecto(p)}{p.estadoCaducidad === 'caducado' ? ' (caducado)' : ''}
+                    </span>
+                    <span style={{ color: fallo ? 'var(--warning)' : 'var(--muted)' }}>{textoVerificacionPdf(p.verificacion)}</span>
+                    {p.precio && <span style={{ fontWeight: 600, color: p.precio.estado === 'limpio' ? 'var(--positive)' : 'var(--warning)' }}>{p.precio.estado === 'limpio' ? 'Limpio' : 'Con supuestos'}</span>}
+                  </div>
+                )
+              })()}
               {(f.motivos.length > 0 || f.reservas.length > 0) && (
                 <details style={{ fontSize: 12 }}>
                   <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>Por qué este puesto{f.reservas.length ? ` · ${f.reservas.length} reservas` : ''}</summary>
@@ -84,6 +99,19 @@ export default function ComparativaOportunidad({ lectura, onRecargar }: { lectur
           ))}
         </div>
       )}
+      {ofertasBot.length > 0 && (
+        porCorregir.length > 0 ? (
+          <div role="status" style={{ border: '1px solid var(--warning)', borderRadius: 8, padding: 10, display: 'grid', gap: 4, fontSize: 13, minWidth: 0 }}>
+            <strong>Antes de enviar: corrige los supuestos de {porCorregir.length === 1 ? 'este precio' : `estos ${porCorregir.length} precios`}</strong>
+            {porCorregir.map((x) => (
+              <div key={x.etiqueta} style={{ overflowWrap: 'anywhere' }}>
+                <span style={{ fontWeight: 600 }}>{x.etiqueta}</span>
+                <ul style={{ margin: '2px 0 0', paddingLeft: 18, color: 'var(--muted)', fontSize: 12 }}>{x.supuestos.map((t, i) => <li key={i}>{t}</li>)}</ul>
+              </div>
+            ))}
+          </div>
+        ) : null
+      )}
       {c.ranking && <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>{c.ranking.criterio}</p>}
 
       <div style={{ display: 'grid', gap: 4 }}>
@@ -91,7 +119,7 @@ export default function ComparativaOportunidad({ lectura, onRecargar }: { lectur
         {guardado?.narrativa ? (
           <>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{guardado.etiqueta ?? 'Resumen'}{guardado.vigente ? '' : ' · de un presupuesto anterior: las ofertas han cambiado desde entonces'}</span>
-            <p style={{ margin: 0, fontSize: 13, overflowWrap: 'anywhere' }}>{guardado.narrativa.resumen}</p>
+            <p style={{ margin: 0, fontSize: 13, overflowWrap: 'anywhere', whiteSpace: 'pre-line' }}>{guardado.narrativa.resumen}</p>
             <p style={{ margin: 0, fontSize: 13, overflowWrap: 'anywhere' }}>{guardado.narrativa.recomendacion}</p>
           </>
         ) : (

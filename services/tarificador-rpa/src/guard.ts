@@ -1515,6 +1515,155 @@ export function sufijoControlesVisibles(etiquetas: readonly string[] | undefined
   return etiquetas && etiquetas.length > 0 ? `; controles a la vista: ${etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
 }
 
+// ─────────── Descarga del PDF del proyecto/presupuesto guardado en AUTO (26/10/2026: Allianz 0.6.28, Mapfre 0.8.23, Generali 0.2.33) ───────────
+// Alberto confirma que todas las compañías dejan descargar el presupuesto ANTES de emitir. Pantalla real de auto NO capturada: buscador
+// CONSERVADOR. Solo botones/enlaces cuyo texto/aria/title/tooltip casan con imprimir|descargar|pdf|documento + proyecto|presupuesto|oferta, o
+// imprimir/descargar/pdf a secas si el proyecto ya está guardado (y la compañía lo admite). NUNCA emitir/contratar/grabar póliza/pagar/firmar/
+// formalizar/enviar (al cliente, por email…). El clic va por `pulsarDescargaProyectoAuto` (guard, comprobarBoton, frontera bancaria); nada más.
+
+export type CompaniaDescargaProyecto = 'allianz' | 'mapfre' | 'generali'
+
+/** Regla propia de cada compañía. `soloConObjeto`: aun con el proyecto guardado se exige «proyecto/presupuesto/oferta» en el rótulo (Generali aún no guarda). */
+export const REGLAS_DESCARGA_PROYECTO: Readonly<Record<CompaniaDescargaProyecto, { readonly soloConObjeto: boolean }>> = {
+  allianz: { soloConObjeto: false },
+  mapfre: { soloConObjeto: false },
+  generali: { soloConObjeto: true },
+}
+
+const RE_PROHIBIDO_ROTULO_DESCARGA = /\b(emit\w*|contrat\w*|grabar\w*|pagar|pagos?|firm\w*|formaliz\w*|enviar|envio|envia\w*|e-?mail|mail|correo|sms|whatsapp|send|share|compartir|cliente|anular|elimin\w*|borrar|cancelar|aceptar|confirmar|recibos?|domicili\w*|poliza|solicitud)\b/
+const RE_PROHIBIDO_OCULTO_DESCARGA = /(emit|contrat|grabar|pagar|pago|firm|formaliz|enviar|email|mail|sms|anul|elimin|borrar)/
+const RE_AJENO_DESCARGA = /\b(condicion\w*|condicionado|clausulad\w*|manual\w*|ayuda|aplicacion|app|tarifa\w*|bases|politica\w*|privacidad|protocolo|precontractual\w*|ipid|informativ\w*|informacion|extracto|cuestionario|licencia|factura\w*|carta|mandato|catalogo|folleto)\b/
+const RE_VERBO_SUELTO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf)\b/
+const RE_VERBO_CON_OBJETO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf|documento)\b/
+const RE_OBJETO_DESCARGA = /\b(proyecto|presupuesto|oferta|propuesta)s?\b/
+
+function sinTildesDescarga(x: string | null | undefined): string {
+  return String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+/**
+ * ¿Este control (descripción de `descripcion`: 0 texto, 1 aria-label, 2 title, 3 value, 4 id, 5 name, 6 href, 7 onclick, 8 formaction, 9 ng-click,
+ * 10 data-ng-click, 11 tooltip, resto = ancestros) es el botón de descargar/imprimir el proyecto/presupuesto? Rótulos = texto/aria/title/value/tooltip
+ * (el icono `print`/`picture_as_pdf` cuenta); lo prohibido se mira en TODO, incluidos id y manejadores. PURA.
+ */
+export function esBotonDescargaProyecto(desc: readonly (string | null | undefined)[], compania: CompaniaDescargaProyecto, guardado: boolean): boolean {
+  return puntuarBotonDescargaProyecto(desc, compania, guardado) > 0
+}
+
+/** 0 = no es · 1 = imprimir/descargar/pdf a secas (con el proyecto guardado) · 2 = verbo + proyecto/presupuesto/oferta. PURA. */
+export function puntuarBotonDescargaProyecto(desc: readonly (string | null | undefined)[], compania: CompaniaDescargaProyecto, guardado: boolean): 0 | 1 | 2 {
+  const rotulos = [desc[0], desc[1], desc[2], desc[3], desc[11]].map(sinTildesDescarga).filter((t) => t !== '' && t.length <= 120)
+  if (rotulos.length === 0) return 0
+  const junto = rotulos.join(' | ')
+  if (RE_PROHIBIDO_ROTULO_DESCARGA.test(junto) || RE_AJENO_DESCARGA.test(junto)) return 0
+  const ocultos = desc.slice(4).map((x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()).join(' | ')
+  if (RE_PROHIBIDO_OCULTO_DESCARGA.test(ocultos)) return 0
+  if (RE_VERBO_CON_OBJETO_DESCARGA.test(junto) && RE_OBJETO_DESCARGA.test(junto)) return 2
+  if (guardado && !REGLAS_DESCARGA_PROYECTO[compania].soloConObjeto && RE_VERBO_SUELTO_DESCARGA.test(junto)) return 1
+  return 0
+}
+
+export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolean; habilitado: boolean }
+
+/** Qué control pulsar (el de mejor puntuación; a igualdad, el primero en pantalla) o por qué ninguno. Visible y habilitado. PURA. */
+export function decidirBotonDescargaProyecto(controles: readonly ControlDescargaProyecto[], compania: CompaniaDescargaProyecto, guardado: boolean): { indice: number } | { motivo: string; definitivo: boolean } {
+  const cand = controles.map((c, i) => ({ c, i, p: puntuarBotonDescargaProyecto(c.desc, compania, guardado) })).filter((x) => x.p > 0)
+  if (cand.length === 0) return { motivo: 'no aparece ningún botón de imprimir/descargar el presupuesto o proyecto', definitivo: false }
+  const visibles = cand.filter((x) => x.c.visible)
+  if (visibles.length === 0) return { motivo: `hay ${cand.length} botón(es) de descarga pero OCULTO(s) (puede estar plegado)`, definitivo: false }
+  const habilitados = visibles.filter((x) => x.c.habilitado)
+  if (habilitados.length === 0) return { motivo: 'el botón de descarga está deshabilitado', definitivo: false }
+  const mejor = Math.max(...habilitados.map((x) => x.p))
+  return { indice: habilitados.find((x) => x.p === mejor)!.i }
+}
+
+const SEL_CONTROLES_DESCARGA = 'button, a, [role="button"], [role="menuitem"], nx-button, input[type="button"], input[type="submit"], [ng-click], [data-ng-click], [onclick]'
+
+/** Lee los botones/enlaces de TODOS los marcos, marca cada uno con `data-rpa-dl` y devuelve sus datos (+ marco). Solo lectura (salvo la marca). */
+async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDescargaProyecto & { marco: Frame; marca: number })[]> {
+  const salida: (ControlDescargaProyecto & { marco: Frame; marca: number })[] = []
+  for (const marco of marcosVivos(page)) {
+    // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+    const l = await marco
+      .evaluate((sel) => {
+        document.querySelectorAll('[data-rpa-dl]').forEach((n) => n.removeAttribute('data-rpa-dl'))
+        const out: { desc: (string | null)[]; visible: boolean; habilitado: boolean; marca: number }[] = []
+        for (const n of Array.from(document.querySelectorAll(sel))) {
+          if (out.length >= 300) break
+          if (n.querySelector('button, a, [role="button"], input[type="button"], input[type="submit"]')) continue
+          const h = n as HTMLElement & { value?: unknown; href?: unknown; name?: unknown; disabled?: boolean }
+          const r = h.getBoundingClientRect()
+          const cs = getComputedStyle(h)
+          const visible = r.width > 0 && r.height > 0 && cs.visibility === 'visible' && cs.display !== 'none'
+          const anc: (string | null)[] = []
+          let p: Element | null = h.parentElement
+          for (let i = 0; p && i < 3; i++) {
+            anc.push(p.getAttribute('onclick'), p.getAttribute('ng-click'), p.getAttribute('data-ng-click'), p.tagName === 'A' ? p.getAttribute('href') : null)
+            p = p.parentElement
+          }
+          const marca = out.length
+          h.setAttribute('data-rpa-dl', String(marca))
+          out.push({
+            desc: [
+              h.innerText ?? h.textContent ?? '', h.getAttribute('aria-label'), h.getAttribute('title'), typeof h.value === 'string' ? h.value : null,
+              h.id || null, typeof h.name === 'string' ? h.name : null, typeof h.href === 'string' ? h.href : h.getAttribute('href'),
+              h.getAttribute('onclick'), h.getAttribute('formaction'), h.getAttribute('ng-click'), h.getAttribute('data-ng-click'), h.getAttribute('mattooltip'), ...anc,
+            ],
+            visible,
+            habilitado: !(h.disabled === true || h.hasAttribute('disabled') || h.getAttribute('aria-disabled') === 'true' || /\bmat(?:-mdc)?-button-disabled\b/.test(h.className?.toString?.() ?? '')),
+            marca,
+          })
+        }
+        return out
+      }, SEL_CONTROLES_DESCARGA)
+      .catch(() => [])
+    for (const x of l) salida.push({ ...x, marco })
+  }
+  return salida
+}
+
+export type BusquedaDescargaProyecto = { boton: Locator; etiqueta: string } | { motivo: string }
+
+/**
+ * Busca (SIN pulsar) el botón de descargar el proyecto/presupuesto hasta `esperaMs`. Sin él → `motivo` con las etiquetas saneadas de lo que hay
+ * a la vista (sin datos personales). Nunca lanza salvo una violación del guard (`guard.comprobar()`).
+ */
+export async function buscarBotonDescargaProyecto(page: Page, guard: GuardEmision, compania: CompaniaDescargaProyecto, guardado: boolean, esperaMs = 6_000): Promise<BusquedaDescargaProyecto> {
+  const hasta = Date.now() + esperaMs
+  for (;;) {
+    guard.comprobar()
+    const controles = await escanearControlesDescargaProyecto(page)
+    const d = decidirBotonDescargaProyecto(controles, compania, guardado)
+    if ('indice' in d) {
+      const c = controles[d.indice]!
+      const boton = c.marco.locator(`[data-rpa-dl="${c.marca}"]`)
+      if ((await boton.count().catch(() => 0)) === 1) return { boton, etiqueta: etiquetaEfectivaControl({ texto: c.desc[0], aria: c.desc[1], title: c.desc[2], valor: c.desc[3] }) }
+      return { motivo: 'el botón de descarga cambió de sitio antes de pulsarlo' }
+    }
+    if (Date.now() >= hasta) {
+      const vis = etiquetasControlesSaneadas(controles.filter((c) => c.visible).map((c) => etiquetaEfectivaControl({ texto: c.desc[0], aria: c.desc[1], title: c.desc[2], valor: c.desc[3] })))
+      return { motivo: `${d.motivo}${sufijoControlesVisibles(vis)}` }
+    }
+    await page.waitForTimeout(500)
+  }
+}
+
+/**
+ * El clic de descargar el proyecto/presupuesto (ÚNICA puerta). Guard limpio, sin otra ventana de red abierta, frontera bancaria, UN control,
+ * `comprobarBoton` + la lista de arriba sobre la descripción VIVA. No abre ventana de red de guardado: aquí no se guarda nada.
+ */
+export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision, boton: Locator, compania: CompaniaDescargaProyecto, guardado: boolean): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'descarga del proyecto con otra ventana de red abierta')
+  await exigirSinCuentaBancaria(page)
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: no hay exactamente un control')
+  const desc = await descripcion(boton)
+  comprobarBoton(desc)
+  if (!esBotonDescargaProyecto(desc, compania, guardado)) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: el control vivo no pasa la lista blanca')
+  await boton.click({ timeout: 8_000 })
+  guard.comprobar()
+}
+
 // ─────────── Mapfre NSEI «Generar Proyecto» (v0.8.14, endurecido en 0.8.15; 22/10/2026, AUTORIZADO por Alberto: un proyecto no es póliza) ───────────
 // Tras LEER las primas en «Coberturas», el bot pulsa «Generar Proyecto» (crea un nº de proyecto en Mapfre para rescatarlo si el
 // cliente acepta) y lee ese nº («Proyectos», paso 5 de la grabación del 15/10/2026). NUNCA «Ir a generar», «Contratar» ni nada del
@@ -3838,8 +3987,47 @@ export const MAX_SIGUIENTE_VALORACION_GENERALI = 3
 export const ID_SIGUIENTE_VALORACION_GENERALI = 'siguiente'
 /** Textos de emisión que, visibles en la página o en un diálogo, impiden pulsar «Siguiente». PURA. */
 export function textoEmisionGenerali(texto: string): boolean {
-  const t = String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  return /\b(emitir|contratar|grabar (la )?poliza|pagar|firmar|formalizar)\b/.test(t)
+  return casaEmisionGenerali(texto) !== null
+}
+
+const RE_EMISION_GENERALI = /\b(emitir|contratar|grabar (la )?poliza|pagar|firmar|formalizar)\b/
+const sinTildesMinus = (x: string) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+/**
+ * v0.2.32: lo que casó del patrón de emisión, para el motivo del bloqueo: la palabra y un contexto corto (±25 caracteres, espacios colapsados,
+ * cifras largas enmascaradas: sin datos personales). `null` = no casa. PURA.
+ */
+export function casaEmisionGenerali(texto: string): string | null {
+  const t = sinTildesMinus(texto)
+  const m = RE_EMISION_GENERALI.exec(t)
+  if (!m) return null
+  const ctx = t.slice(Math.max(0, m.index - 25), m.index + m[0].length + 25).replace(/\s+/g, ' ').replace(/\d{4,}/g, '#').trim()
+  return `«${m[0]}» en «…${ctx}…»`
+}
+
+/** Líneas que cierran la sección «Envío Documentación Precontractual» (encabezados y botones del marco de garantías). */
+const RE_FIN_SECCION_PRECONTRACTUAL = /^(garantias y capitales opcionales|bonus-malus|modalidades de seguro|historial siniestral|comparar|volver|(« ?)?inicio|(‹ ?)?anterior|siguiente)\b/
+
+/** v0.2.32: palabras de contexto de la prosa de la sección precontractual (documentación/envío al cliente); sin ellas una línea con verbo de emisión sigue a la vista. */
+const RE_PROSA_PRECONTRACTUAL = /documentacion|precontractual|informacion|enviar|envio|cliente|tomador|correo|email|e-mail/
+
+/**
+ * v0.2.32: quita del texto de «Garantías y Capitales opcionales» la sección «Envío Documentación Precontractual» (desde su encabezado hasta el
+ * siguiente encabezado/botón conocido) y la frase «documentación precontractual». Dentro de la sección solo se excusa PROSA (más de 4 palabras que habla de documentación/envío/cliente): una línea corta
+ * o sin ese contexto con verbo de emisión («Emitir póliza», «Pulse para emitir la póliza») sigue a la vista y bloquea. PURA.
+ */
+export function sinSeccionPrecontractualGenerali(texto: string): string {
+  const lineas = String(texto ?? '').split(/\r?\n/)
+  const fuera: string[] = []
+  let dentro = false
+  for (const l of lineas) {
+    const n = sinTildesMinus(l).replace(/\s+/g, ' ').trim()
+    if (!dentro && /^envio documentacion precontractual\b/.test(n)) { dentro = true; continue }
+    if (dentro && RE_FIN_SECCION_PRECONTRACTUAL.test(n)) dentro = false
+    if (dentro && !(casaEmisionGenerali(l) !== null && !(n.split(' ').length > 4 && RE_PROSA_PRECONTRACTUAL.test(n)))) continue
+    fuera.push(l)
+  }
+  return fuera.join('\n').replace(/documentaci[oó]n precontractual/gi, '')
 }
 
 /**
@@ -3887,8 +4075,11 @@ export async function pulsarSiguienteValoracionGenerali(page: Page, guard: Guard
     if (leerPrecioGenerali(textoMarco).tipo !== 'ninguno') throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali en «Garantías y Capitales opcionales» con un precio ya legible (no hace falta avanzar)')
   }
   for (const f of marcosVivos(page)) {
-    const t = (await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string
-    if (textoEmisionGenerali(t)) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con textos de emisión/contratación/pago/firma en la página o en un diálogo')
+    const t0 = (await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string
+    // v0.2.32: en «Garantías y Capitales opcionales» (marco B028) la sección «Envío Documentación Precontractual» no cuenta como emisión.
+    const t = f === marco && esPantallaGarantiasCapitalesGenerali(t0) ? sinSeccionPrecontractualGenerali(t0) : t0
+    const casa = casaEmisionGenerali(t)
+    if (casa !== null) throw new EmisionBloqueadaError('fase', `«Siguiente» de Generali con textos de emisión/contratación/pago/firma en la página o en un diálogo (casó ${casa.slice(0, 140)})`)
   }
   const boton = marco.locator(`[id="${ID_SIGUIENTE_VALORACION_GENERALI}"]`).filter({ visible: true })
   if ((await boton.count()) !== 1) throw new ErrorMapaGuardGenerali('el botón #siguiente de la valoración (no hay exactamente uno visible)')

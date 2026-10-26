@@ -196,7 +196,8 @@ test('cableado: el precio RPA guarda sus coberturas, el resultado dispara el bor
   assert.match(ins, /sobreCoberturasRpa\(o\.coberturas/)
   assert.match(ins, /referencia_vendor, avisos, coberturas\s*\)/)
   const ruta = readFileSync(join(lib, '..', 'app/api/tarificador/resultado/route.ts'), 'utf8')
-  assert.match(ruta, /after\(\(\) => presupuestoTrasTrabajoRpa\(trabajoId\)/)
+  // 26/10/2026: el `after` primero extrae las coberturas del PDF (idempotente, nunca lanza) y DESPUÉS prepara el borrador.
+  assert.match(ruta, /after\(async \(\) => \{[\s\S]*extraerCoberturasTrasTrabajo\(trabajoId\)[\s\S]*await presupuestoTrasTrabajoRpa\(trabajoId\)/)
   const srv = readFileSync(join(lib, 'presupuesto-rpa.ts'), 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n')
   assert.doesNotMatch(srv, /envio-presupuesto|avisarPresupuesto|enviadoAt:\s*(new Date|ahora)|enlaceGeneradoAt:\s*(new Date|ahora)|core-email|whatsapp/i, 'el borrador del bot no envía nada al cliente')
   assert.doesNotMatch(srv, /estado: 'revisada'|revisadaAt:\s*(ahora|new Date)/, 'el bot no revisa ofertas: eso es de Alberto')

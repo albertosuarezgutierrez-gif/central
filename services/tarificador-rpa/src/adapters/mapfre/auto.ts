@@ -127,6 +127,7 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/intranet/index.ts'
 import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
@@ -1627,7 +1628,7 @@ export async function precioDesdeObjetoAsegurado(
   nsei: Page,
   form: FormularioAuto,
   vehiculo: VehiculoConfirmado,
-  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'generarProyectoMapfre'>>,
+  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
@@ -1662,7 +1663,9 @@ export async function precioDesdeObjetoAsegurado(
     ? await ctx.generarProyectoMapfre(nsei, (p) => completarFormularioProyectoMapfre(p, form, ctx))
     : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
-  return { ofertas: ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), proyecto), vehiculoConfirmado: vehiculo }
+  // v0.8.23: PDF del proyecto guardado (botón «Imprimir/Descargar proyecto»); si no llega, aviso y el precio/proyecto se devuelven igual.
+  const pdfProyecto = await descargarProyectoAuto(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado !== 'no_generado')
+  return { ofertas: ofertasConPdfProyecto(ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), proyecto), pdfProyecto), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -1675,7 +1678,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.22',
+  version: '0.8.23',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

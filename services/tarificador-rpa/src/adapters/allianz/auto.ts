@@ -174,6 +174,7 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
 import { elegirPoblacionPorLocalidades } from './poblacion-localidad.ts'
 import { casarCompaniaActual, indiceOpcionGenerica, normalizarCompania, mensajeCompaniaAmbigua, PREFIJO_SUPUESTO_COMPANIA_GENERICA, supuestoCompaniaGenerica } from '../../compania-actual.ts'
 import { conRespaldoIA, registrarAtasco, sugerirOpcion, type PeticionResolver } from '../../formador.ts'
@@ -1842,7 +1843,7 @@ export const RE_BOTON_SIGUIENTE_TURISMOS = /^\s*siguiente\s*$/i
 export const botonSiguienteTurismos = (marco: Pick<Frame, 'locator'>): Locator => botonTurismos(marco, RE_BOTON_SIGUIENTE_TURISMOS)
 
 /** `formador` (opcional): solo para el atasco de «Matrícula» (candidatos con pista, se aprende al elegir). */
-export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos' | 'guardarPresupuestoTurismos' | 'trabajoId'>>
+export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos' | 'guardarPresupuestoTurismos' | 'trabajoId' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>
 
 const ESPERA_CONTROL_TURISMOS_MS = 8_000
 /** Espera por campo del resto del paso (la pantalla ya está pintada tras la consulta: no se acumulan 8 s por hueco). */
@@ -2892,7 +2893,9 @@ export async function recorrerPasosTurismos(
         // 18/10/2026: CP, localidad y vehículo que Allianz usó, leídos del portal (guard.ts, solo lectura); null = no se leyó.
         const usados = await leerDatosUsadosTurismosAllianz(marco).catch(() => null)
         // v0.6.14: el vehículo de catálogo que Allianz dejó MARCADO viaja también como `seleccionVehiculo` (Generali lo usa).
-        return { ofertas: conDatosUsados(ofertasConPresupuestoTurismos(ofertas, guardado), usados), seleccionVehiculo: seleccionVehiculoConfirmada(usados?.vehiculo) }
+        // v0.6.28: PDF del presupuesto guardado (botón «Imprimir/Descargar presupuesto»); si no llega, aviso y el precio se devuelve igual.
+        const pdfPresupuesto = await descargarProyectoAuto(page, ctx, 'allianz', 'presupuesto-allianz-turismos.pdf', guardado.estado === 'guardado')
+        return { ofertas: conDatosUsados(ofertasConPdfProyecto(ofertasConPresupuestoTurismos(ofertas, guardado), pdfPresupuesto), usados), seleccionVehiculo: seleccionVehiculoConfirmada(usados?.vehiculo) }
       }
       if (Date.now() >= fin) break
       await page.waitForTimeout(300)
@@ -2965,7 +2968,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.27',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.28',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

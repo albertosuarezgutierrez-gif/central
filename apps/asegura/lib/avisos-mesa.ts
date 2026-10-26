@@ -16,6 +16,7 @@ import { bajasPendientesPue } from './baja-pue'
 import { anulacionesAbiertas } from './anulaciones'
 import { colaRetencion } from './cartera-impagados'
 import { eventosCorreoSinResolver } from './correo-evento-bd'
+import { infoOfertasBot } from './proyecto-comparativa'
 import {
   COLAS_AVISO, itemParte, recibosConRelojSinRescate, recibosSinConfirmar, resumirCola,
   type ColaAviso, type LecturaCola,
@@ -65,7 +66,7 @@ export async function avisosMesa(
     },
   )
 
-  const [partes, supresiones, quejas, cambios, recLcs, aprob, pue, anul, recSin, correos] = await Promise.all([
+  const [partes, supresiones, quejas, cambios, recLcs, aprob, pue, anul, recSin, correos, proyectos] = await Promise.all([
     leer('partes', async () => {
       // «Sin atender» = `enviado` (nadie lo ha mirado): la misma regla que `partesSinAtender` de plataforma.
       const filas = await db.portalParteSiniestro.findMany({ where: { estado: 'enviado' }, select: { fechaHecho: true }, take: 500 })
@@ -118,9 +119,23 @@ export async function avisosMesa(
       const filas = await eventosCorreoSinResolver(correduriaId)
       return resumirCola(filas.map((f) => ({ plazo: f.plazo })), hoy)
     }),
+    leer('proyectos_caducan', async () => {
+      // Proyectos guardados en la compañía (precios de bot de oportunidades abiertas, no descartados) que caducan en ≤5 días
+      // (26/10/2026). Caducidad desconocida NO avisa: no se sabe, y se dice en la oportunidad. Solo lectura.
+      const filas = await db.$queryRaw<{ id: string; compania: string | null; datosExtra: unknown }[]>(Prisma.sql`
+        select f.id::text as id, f.compania, f.datos_extra as "datosExtra"
+        from oportunidad_oferta f
+        join oportunidades o on o.id = f.oportunidad_id and o.correduria_id = f.correduria_id
+        where f.correduria_id = ${correduriaId}::uuid and f.estado::text <> 'descartada'
+          and f.datos_extra->>'origen' = 'rpa' and f.created_at > now() - interval '90 days'
+          and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+        limit 500`)
+      const info = await infoOfertasBot(correduriaId, filas, hoy)
+      return resumirCola(info.filter((i) => i.estadoCaducidad === 'caduca_pronto').map((i) => ({ plazo: i.caduca })), hoy)
+    }),
   ])
 
-  const colas = { partes, supresiones, quejas, cambios_cuenta: cambios, recibos_lcs: recLcs, aprobaciones: aprob, bajas_pue: pue, anulaciones: anul, recibos_sin_confirmar: recSin, correos_compania_sin_resolver: correos }
+  const colas = { partes, supresiones, quejas, cambios_cuenta: cambios, recibos_lcs: recLcs, aprobaciones: aprob, bajas_pue: pue, anulaciones: anul, recibos_sin_confirmar: recSin, correos_compania_sin_resolver: correos, proyectos_caducan: proyectos }
   // Red: si alguien añade una cola a COLAS_AVISO y no la lee aquí, sale como «no se pudo comprobar».
   for (const k of COLAS_AVISO) if (!colas[k]) (colas as Record<ColaAviso, LecturaCola>)[k] = ERROR
   return { hoy, colas }

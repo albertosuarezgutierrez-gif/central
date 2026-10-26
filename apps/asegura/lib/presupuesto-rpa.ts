@@ -26,6 +26,7 @@ import { prismaAsegura } from './asegura-db'
 import { registrarErrorCartera } from './error-cartera'
 import { iaTexto } from './ia'
 import { generarNarrativa, type Narrativa } from './estudio-ia'
+import { conResumenCoberturas, resumenCoberturasCliente } from './resumen-coberturas-cliente'
 import { huellaComparativa, narrativaConReutilizacion } from './comparativa-guardada'
 import { ofertaNormalizadaDeFila } from './documentos/oferta-leida'
 import { caducidadOfertas, type FilaOferta } from './ofertas-reglas'
@@ -177,9 +178,11 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   const huella = huellaComparativa({ ramo: op.ramoOferta, ofertas: comparacion.ofertas, superficieM2: op.superficieM2, recomendadaId: null })
   const tope = decidirIaAuto(await gastoIaAuto(correduriaId))
   // Mismas ofertas y cifras que un estudio ya escrito → se reutiliza su resumen (no gasta el tope de IA).
-  const { narrativa, reutilizadaDe } = await narrativaConReutilizacion(
+  const { narrativa: narrativaBase, reutilizadaDe } = await narrativaConReutilizacion(
     correduriaId, op.id, huella, false, (): Promise<Narrativa> => generarNarrativa(comparacion, null, tope.usar ? iaTexto : null),
   )
+  // 26/10/2026: resumen de 3 líneas de las coberturas (solo lo que la matriz prueba; sin diferencias → se omite). No envía nada.
+  const narrativa = { ...narrativaBase, resumen: conResumenCoberturas(narrativaBase.resumen, resumenCoberturasCliente(comparacion)) }
   const sinIa = reutilizadaDe ? null : !tope.usar ? tope.motivo : narrativa.fuente === 'ia' ? null : narrativa.descartada ?? 'la IA no dio un resumen válido'
   const analisis = await analisisRecomendador(correduriaId, op.id, ahora)
 

@@ -6,7 +6,7 @@ import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
 import type { OpcionesMatSelect } from './mat-select.ts'
-import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, ResultadoProyectoMapfre, SelectorAvancePestana } from './guard.ts'
+import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, ResultadoProyectoMapfre, SelectorAvancePestana, CompaniaDescargaProyecto, BusquedaDescargaProyecto } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -90,6 +90,13 @@ export type ContextoPortal = ContextoTarificacion & {
    * Proyecto» y lee el nº de proyecto, por `generarProyectoMapfre` (guard.ts). Nunca lanza por «no se pudo» (salvo violación del guard).
    */
   generarProyectoMapfre?: (pagina: Page, completar?: (pagina: Page) => Promise<string | null>) => Promise<ResultadoProyectoMapfre>
+  /**
+   * AUTO (26/10/2026): busca (sin pulsar) y pulsa el botón de DESCARGAR/IMPRIMIR el presupuesto o proyecto ya guardado
+   * (`descarga-proyecto-auto.ts`), por `buscarBotonDescargaProyecto` / `pulsarDescargaProyectoAuto` de guard.ts (lista blanca estrecha;
+   * nunca emitir/contratar/pagar/firmar/enviar). Sin ellas el adaptador deja el aviso «PDF del proyecto no descargado» y el precio igual.
+   */
+  buscarDescargaProyectoAuto?: (pagina: Page, compania: CompaniaDescargaProyecto, guardado: boolean) => Promise<BusquedaDescargaProyecto>
+  pulsarDescargaProyectoAuto?: (pagina: Page, boton: Locator, compania: CompaniaDescargaProyecto, guardado: boolean) => Promise<void>
   /**
    * Allianz HOGAR (14/10/2026): marca UNA opción del riesgo (madera, tipo de vivienda, régimen, uso) de la pantalla «Vivienda»
    * por `marcarOpcionRiesgoHogarAllianz` de guard.ts (lista cerrada de etiquetas EXACTAS, marco de la app de Hogar,

@@ -5,6 +5,7 @@ import { avisoTraza, leerResultadoWorker } from '@/lib/tarificador-reglas'
 import { eleccionIaActiva } from '@/lib/tarificador-eleccion-reglas'
 import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
 import { presupuestoTrasTrabajoRpa } from '@/lib/presupuesto-rpa'
+import { extraerCoberturasTrasTrabajo } from '@/lib/proyecto-auto'
 import { avisarFalloBotLead } from '@/lib/tarificacion-lead-fallo'
 import { esFalloTerminal } from '@/lib/tarificacion-lead-puro'
 import { hiloTrasPrecioRpa } from '@/lib/propuesta-lead'
@@ -64,9 +65,13 @@ export async function POST(req: Request) {
     }
     if (l.r.tipo === 'ok' && r.estadoTrabajo === 'ok' && r.tarificacionId) {
       const trabajoId = l.r.trabajoId
-      after(() => presupuestoTrasTrabajoRpa(trabajoId).then((p) => {
+      // 26/10/2026: primero las coberturas del PDF del proyecto (idempotente, nunca lanza), luego el borrador, que ya las usa.
+      after(async () => {
+        const e = await extraerCoberturasTrasTrabajo(trabajoId)
+        if (e.estado === 'fallo') console.error('[tarificador] coberturas tras RPA', trabajoId, e.motivo)
+        const p = await presupuestoTrasTrabajoRpa(trabajoId)
         if (p.estado === 'error') console.error('[tarificador] presupuesto tras RPA', trabajoId, p.motivo)
-      }))
+      })
       // F4: si la oportunidad vino de un lead de correo, su hilo pasa a `tarificada` (la propuesta la monta el triaje).
       after(() => hiloTrasPrecioRpa(trabajoId))
     }
