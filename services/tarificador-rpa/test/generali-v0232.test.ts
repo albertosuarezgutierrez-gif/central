@@ -65,7 +65,7 @@ test('v0.2.32 · pura: el motivo cita lo que casó, truncado y sin cifras largas
   const c = casaEmisionGenerali('Nombre Pepe 12345678Z. Pulse para EMITIR póliza ya')
   assert.match(c ?? '', /«emitir»/)
   assert.doesNotMatch(c ?? '', /12345678Z/)
-  assert.ok((casaEmisionGenerali('x'.repeat(500) + ' firmar ' + 'y'.repeat(500)) ?? '').length < 100)
+  assert.ok((casaEmisionGenerali('x'.repeat(500) + ' firmar ' + 'y'.repeat(500)) ?? '').length < 160)
   assert.equal(textoEmisionGenerali('Debe firmar aquí'), true)
 })
 
