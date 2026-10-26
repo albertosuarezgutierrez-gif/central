@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Wordmark from '@/components/Wordmark'
-import { LogoAsegura, PieAsegura } from '@/components/MarcaAsegura'
+import { CoMarca, PieAsegura } from '@/components/MarcaAsegura'
 import { estiloMarcaEmpresa } from '@/lib/marca-asegura'
 
 type Opcion = { empleado_id: string; empresa_nombre: string; necesita_pin: boolean }
@@ -72,7 +72,7 @@ export default function EntrarEmpleado({ marcaAsegura = false }: { marcaAsegura?
   return (
     <main className={`flex min-h-screen flex-col items-center p-4${marcaAsegura ? ' marca-asegura' : ''}`} style={estiloMarcaEmpresa(marcaAsegura, null) as React.CSSProperties}>
       <div className="my-auto w-full max-w-sm rounded-[18px] border border-line bg-card p-6 text-center sm:p-7">
-        {marcaAsegura ? <LogoAsegura alto={40} color="var(--accent)" /> : <Wordmark className="text-2xl" />}
+        {marcaAsegura ? <CoMarca alto={30} /> : <Wordmark className="text-2xl" />}
         <h1 className="mt-3 text-xl">Acceso empleado</h1>
 
         {paso === 'email' && (

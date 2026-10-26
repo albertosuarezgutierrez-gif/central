@@ -6,7 +6,7 @@ import MaterialEmpleado from '@/components/MaterialEmpleado'
 import ActivarPush from '@/components/ActivarPush'
 import Wordmark from '@/components/Wordmark'
 import { estiloMarcaEmpresa } from '@/lib/marca-asegura'
-import { LogoAsegura, PieAsegura } from '@/components/MarcaAsegura'
+import { CoMarca, PieAsegura } from '@/components/MarcaAsegura'
 import TarjetaSeguros from '@/components/TarjetaSeguros'
 
 type Carpeta = { id: string; etiqueta: string }
@@ -81,21 +81,30 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
 
   return (
     <main className={`mx-auto max-w-[520px] lg:max-w-5xl${marcaAsegura ? ' marca-asegura' : ''}`} style={estiloMarcaEmpresa(marcaAsegura, branding?.color_primario) as React.CSSProperties}>
+      {marcaAsegura ? (
+        <header className="asegura-cabecera mb-4">
+          <CoMarca logoUrl={branding?.logo_url} nombre={branding?.nombre} alto={26} />
+          <span className="asegura-cabecera-etiqueta">Portal del empleado</span>
+          <button type="button" className="min-h-[44px] bg-transparent px-3 text-xs text-ink-3 underline hover:bg-transparent"
+            onClick={async () => { await fetch('/api/e/salir', { method: 'POST' }); location.href = '/e/entrar?m=asegura' }}>
+            Salir de este dispositivo
+          </button>
+        </header>
+      ) : (
       <header className="mb-4 flex flex-col items-center gap-2 border-b border-line bg-accent px-4 pb-5 pt-6 text-center text-white lg:flex-row lg:justify-between lg:gap-4 lg:px-8 lg:text-left">
-        {marcaAsegura
-          ? <LogoAsegura alto={36} color="#fff" />
-          : branding?.logo_url
+        {branding?.logo_url
           ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="max-h-20 w-auto max-w-[220px] object-contain" />
           : <Wordmark claro className="text-2xl" />}
-        {!marcaAsegura && branding?.nombre && (
+        {branding?.nombre && (
           <p className="mt-1 text-xs font-semibold uppercase tracking-widest opacity-80">{branding.nombre}</p>
         )}
         <span className="mt-1 rounded-full bg-white/20 px-3 py-0.5 text-xs font-medium text-white">Portal del empleado</span>
         <button type="button" className="min-h-[44px] bg-transparent px-3 text-xs text-white/80 underline"
-          onClick={async () => { await fetch('/api/e/salir', { method: 'POST' }); location.href = marcaAsegura ? '/e/entrar?m=asegura' : '/e/entrar' }}>
+          onClick={async () => { await fetch('/api/e/salir', { method: 'POST' }); location.href = '/e/entrar' }}>
           Salir de este dispositivo
         </button>
       </header>
+      )}
       <div className="p-4">
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px]">
