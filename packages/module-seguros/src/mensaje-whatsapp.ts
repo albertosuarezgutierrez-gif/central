@@ -57,6 +57,7 @@
 // —como lo publicado en redes— no se corrige con un commit.
 import { MEDIADOR } from './mediador.ts'
 import { nombreDePila } from './nombre-de-pila.ts'
+import { nombreRamoParaCliente, type RamoSolicitud } from './solicitud-datos.ts'
 
 /**
  * Cómo se presenta. Sale de `MEDIADOR` y no de un literal: el nombre comercial
@@ -154,4 +155,39 @@ const RAMO_COLOQUIAL: Record<string, string> = {
 export function ramoColoquial(ramo: string | null): string | null {
   if (!ramo) return null
   return RAMO_COLOQUIAL[ramo.trim().toLowerCase().replace(/[\s-]+/g, '_')] ?? null
+}
+
+/** Cuántos datos como máximo se listan cuando no hay enlace: un WhatsApp no es un formulario. */
+const MAX_DATOS_SIN_ENLACE = 8
+
+/**
+ * El WhatsApp para pedir a un lead o cliente lo necesario para tarificar (30/10/2026). Lo abre Alberto, lo revisa y lo
+ * envía él: nada sale solo.
+ *
+ *   · Con `url` (el enlace al formulario `/datos` de esa oportunidad): lo manda y ya.
+ *   · Sin `url` (no se pudo emitir, o ya había uno vivo cuyo token no se puede repetir): lista los datos mínimos del
+ *     ramo, sacados del catálogo (`datosMinimosSolicitud`), nunca a mano.
+ *   · En los dos, pide una foto de la póliza actual o del último recibo (compañía y vencimiento).
+ *
+ * 🚨 Sin datos del cliente (ni DNI, ni IBAN, ni nº de póliza): el mensaje se reenvía y puede acabar en cualquier chat.
+ * No promete precio ni ahorro («revisar y comparar»): lo vigila `copy-regulado`.
+ */
+export function mensajeDatosTarificarWhatsapp(d: { nombre: string | null; ramo: RamoSolicitud; url: string | null; datosMinimos: readonly string[] }): string {
+  const pila = nombreDePila(d.nombre)
+  const lineas = [
+    `${pila ? `Hola ${pila}` : 'Hola'}, soy ${NOMBRE_PILA_MEDIADOR}, de ${MARCA_WEB}.`,
+    '',
+    `Quiero revisar ${nombreRamoParaCliente(d.ramo)} y comparar opciones, sin compromiso.`,
+  ]
+  if (d.url) {
+    lineas.push('', `Para eso necesito unos datos; te lleva dos minutos: ${d.url}`)
+  } else {
+    const datos = d.datosMinimos.slice(0, MAX_DATOS_SIN_ENLACE)
+    if (datos.length > 0) {
+      lineas.push('', 'Para eso necesito que me digas:', ...datos.map((x) => `- ${x}`))
+      if (d.datosMinimos.length > datos.length) lineas.push('- y algún dato más, que te voy preguntando')
+    }
+  }
+  lineas.push('', 'Y si puedes, mándame una foto de tu póliza actual o del último recibo: así veo con qué compañía estás y cuándo vence.', '', 'Si no quieres que te escriba más, dímelo y no lo vuelvo a hacer. ¡Gracias!')
+  return lineas.join('\n')
 }

@@ -139,3 +139,42 @@ test('con WhatsApp permitido el primer contacto y el recordatorio son por WhatsA
   // Sin teléfono no hay WhatsApp aunque se pida.
   assert.equal(textoPasoLead(p('primer_contacto'), 'solo_correo', true), 'Primer correo')
 })
+
+// ─── WhatsApp para pedir lo necesario para tarificar (30/10/2026) ───────────
+import { mensajeDatosTarificarWhatsapp } from './mensaje-whatsapp.ts'
+import { datosMinimosSolicitud, RAMOS_SOLICITUD } from './solicitud-datos.ts'
+
+test('datos para tarificar CON enlace: saluda por el nombre de pila, lleva el enlace y pide la foto de la póliza', () => {
+  const m = mensajeDatosTarificarWhatsapp({ nombre: 'Mari Angeles Pérez', ramo: 'hogar', url: 'https://x/datos/abc', datosMinimos: ['Dirección'] })
+  assert.match(m, /^Hola Mari, soy Alberto, de GrupoASegura\.es\./)
+  assert.match(m, /revisar tu seguro de hogar/)
+  assert.match(m, /https:\/\/x\/datos\/abc/)
+  assert.match(m, /foto de tu póliza actual o del último recibo/)
+  // Con enlace no se repite la lista: el formulario ya la lleva.
+  assert.doesNotMatch(m, /^- /m)
+})
+
+test('datos para tarificar SIN enlace: lista los mínimos del catálogo (nunca a mano) y sin nombre saluda a secas', () => {
+  const minimos = datosMinimosSolicitud('auto')
+  assert.ok(minimos.length > 0)
+  const m = mensajeDatosTarificarWhatsapp({ nombre: null, ramo: 'auto', url: null, datosMinimos: minimos })
+  assert.match(m, /^Hola, soy Alberto/)
+  assert.match(m, /el seguro de tu coche/)
+  assert.match(m, /Matrícula/)
+  assert.doesNotMatch(m, /https?:\/\//)
+  assert.doesNotMatch(m, /undefined|null|\?\?/)
+})
+
+test('🪤 datos para tarificar: ni DNI/IBAN en la lista, no promete precio, lleva la baja, lista acotada y todos los ramos valen', () => {
+  for (const ramo of RAMOS_SOLICITUD) {
+    const minimos = datosMinimosSolicitud(ramo)
+    assert.ok(!minimos.some((x) => /\bDNI\b|\bNIE\b|IBAN/i.test(x)), `${ramo}: pide DNI/IBAN por WhatsApp`)
+    for (const url of [null, 'https://x/datos/abc']) {
+      const m = mensajeDatosTarificarWhatsapp({ nombre: 'Ana', ramo, url, datosMinimos: minimos })
+      assert.deepEqual(revisarCopy(m), [], `${ramo}: ${explicarInfracciones(revisarCopy(m))}`)
+      assert.match(m, /Si no quieres que te escriba más/)
+      assert.ok(m.split('\n').filter((l) => l.startsWith('- ')).length <= 9, `${ramo}: lista demasiado larga`)
+      assert.doesNotMatch(m, /undefined|\[object/)
+    }
+  }
+})

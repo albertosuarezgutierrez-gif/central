@@ -171,7 +171,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           aportaba aquella vista (figura en, declaradas, histórico plegado) y los siniestros. */}
       {tab === 'resumen' && (
         <>
-          <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} />
+          <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} telefono={contacto.telefono ?? null} nombre={ficha.nombre} />
           <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
           {/* Ancla de «ver siniestros →» (Pendiente); `scrollMarginTop` por si hay cabecera pegada. */}
           <div id="siniestros" style={{ scrollMarginTop: 16 }}>

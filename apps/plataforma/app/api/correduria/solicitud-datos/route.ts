@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic'
  *   POST { oportunidadId, personaId? } → crea el enlace (url + mensaje solo al crearlo); con
  *                                       `personaId`, de OTRA persona del riesgo (un familiar)
  *   POST { accion:'anular', id }      → el enlace deja de funcionar
+ *   POST { accion:'whatsapp', oportunidadId, conEnlace } → anota «Datos pedidos por WhatsApp» (no cuenta como contacto)
  */
 export async function GET(req: NextRequest) {
   const guarda = await exigirCorreduria()
@@ -27,7 +28,9 @@ export async function POST(req: NextRequest) {
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const cuerpo = b?.accion === 'anular'
     ? { accion: 'anular', id: typeof b.id === 'string' ? b.id : '' }
-    : {
+    : b?.accion === 'whatsapp'
+      ? { accion: 'whatsapp', oportunidadId: typeof b.oportunidadId === 'string' ? b.oportunidadId : '', conEnlace: b.conEnlace === true, actor: guarda.session.email }
+      : {
         oportunidadId: typeof b?.oportunidadId === 'string' ? b.oportunidadId : '',
         ...(typeof b?.personaId === 'string' && b.personaId.trim() !== '' ? { personaId: b.personaId.trim() } : {}),
         actor: guarda.session.email,

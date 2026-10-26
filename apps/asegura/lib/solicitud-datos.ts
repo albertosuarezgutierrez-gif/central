@@ -287,6 +287,35 @@ export async function anularSolicitud(correduriaId: string, id: string): Promise
   return n > 0 ? { ok: true } : { ok: false, estado: 'conflicto', motivo: 'No está pendiente.', status: 409 }
 }
 
+/** Acción del historial: se abrió el WhatsApp para pedir los datos. Informativa: NO es contacto (no es respuesta del cliente). */
+export const ACCION_DATOS_PEDIDOS_WHATSAPP = 'datos_pedidos_whatsapp'
+
+/**
+ * Deja constancia de que Alberto ha abierto el WhatsApp con la petición de datos (30/10/2026). NO envía nada (lo envía él
+ * desde su teléfono) y NO cuenta como contacto: ni crea gestión ni anota en la ficha, porque lo que cuenta es que el
+ * cliente RESPONDA, no que se abra el chat. Solo una fila del historial, sobre una oportunidad abierta.
+ */
+export async function registrarDatosPedidosWhatsapp(
+  correduriaId: string,
+  oportunidadId: string,
+  actor: string,
+  conEnlace: boolean,
+): Promise<{ ok: true } | Fallo> {
+  if (!UUID.test(oportunidadId)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
+  return prismaAsegura().$transaction(async (tx) => {
+    const [o] = await tx.$queryRaw<{ estado: string }[]>(Prisma.sql`
+      select estado::text as estado from oportunidades
+      where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+    if (!o) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
+    if (o.estado === 'ganada' || o.estado === 'perdida') return { ok: false as const, estado: 'conflicto' as const, motivo: `La oportunidad está ${o.estado}.`, status: 409 as const }
+    await tx.$executeRaw(Prisma.sql`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${ACCION_DATOS_PEDIDOS_WHATSAPP}, cast(${o.estado} as estado_comercial),
+              cast(${o.estado} as estado_comercial), ${JSON.stringify({ conEnlace })}::jsonb, ${actor})`)
+    return { ok: true as const }
+  })
+}
+
 // ─── Lado del portal (por token, sin identidad) ──────────────────────────────
 
 export type SolicitudPublica =
