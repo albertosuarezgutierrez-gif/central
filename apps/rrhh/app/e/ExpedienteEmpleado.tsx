@@ -5,7 +5,9 @@ import FichajeEmpleado from '@/components/FichajeEmpleado'
 import MaterialEmpleado from '@/components/MaterialEmpleado'
 import ActivarPush from '@/components/ActivarPush'
 import Wordmark from '@/components/Wordmark'
-import { estiloMarca } from '@/lib/branding'
+import { estiloMarcaEmpresa } from '@/lib/marca-asegura'
+import { CoMarca, PieAsegura } from '@/components/MarcaAsegura'
+import TarjetaSeguros from '@/components/TarjetaSeguros'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; estado_firma: string; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null; resumen?: string | null }
@@ -15,7 +17,7 @@ type Branding = { nombre: string; color_primario: string | null; logo_url: strin
 
 const CONSENTIMIENTO = 'He leído el documento y lo firmo electrónicamente. Acepto que esta firma electrónica avanzada (Reglamento eIDAS, art. 26) queda vinculada a mi identidad y al contenido del documento, y tiene la misma validez que mi firma manuscrita.'
 
-export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }) {
+export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, marcaAsegura = false, urlSeguros = null }: { marcaAsegura?: boolean; urlSeguros?: string | null; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [avisos, setAvisos] = useState<Avisos | null>(avisosIniciales ?? null)
   const [verAvisos, setVerAvisos] = useState(false)
@@ -78,7 +80,17 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
   }
 
   return (
-    <main className="mx-auto max-w-[520px] lg:max-w-5xl" style={estiloMarca(branding?.color_primario) as React.CSSProperties}>
+    <main className={`mx-auto max-w-[520px] lg:max-w-5xl${marcaAsegura ? ' marca-asegura' : ''}`} style={estiloMarcaEmpresa(marcaAsegura, branding?.color_primario) as React.CSSProperties}>
+      {marcaAsegura ? (
+        <header className="asegura-cabecera mb-4">
+          <CoMarca logoUrl={branding?.logo_url} nombre={branding?.nombre} alto={26} />
+          <span className="asegura-cabecera-etiqueta">Portal del empleado</span>
+          <button type="button" className="min-h-[44px] bg-transparent px-3 text-xs text-ink-3 underline hover:bg-transparent"
+            onClick={async () => { await fetch('/api/e/salir', { method: 'POST' }); location.href = '/e/entrar?m=asegura' }}>
+            Salir de este dispositivo
+          </button>
+        </header>
+      ) : (
       <header className="mb-4 flex flex-col items-center gap-2 border-b border-line bg-accent px-4 pb-5 pt-6 text-center text-white lg:flex-row lg:justify-between lg:gap-4 lg:px-8 lg:text-left">
         {branding?.logo_url
           ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="max-h-20 w-auto max-w-[220px] object-contain" />
@@ -92,10 +104,12 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
           Salir de este dispositivo
         </button>
       </header>
+      )}
       <div className="p-4">
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="contents lg:col-start-1 lg:block">
+      {marcaAsegura && urlSeguros && <TarjetaSeguros url={urlSeguros} />}
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
 
       {avisos && avisos.avisos.length > 0 && (
@@ -220,6 +234,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
         </div>
       )}
       </div>
+      {marcaAsegura && <PieAsegura />}
     </main>
   )
 }

@@ -48,8 +48,9 @@ test('lo que se enseña se filtra por la cartera de HOY, no por una foto guardad
   // 🚨 La regla que evita que un imán de nevera mienta a los seis meses: se
   // parte de lo que su dueño puede ver ahora y la selección solo filtra.
   const src = leer(PAGINA)
-  assert.match(src, /carteraDeIdentidad\(hoja\.identidadId\)/, 'la hoja tiene que releer la cartera viva')
-  assert.match(src, /polizasDeLaHoja\(/, 'la selección FILTRA lo leído; no se pinta la selección guardada')
+  assert.match(src, /candidatasEnVivo\(hoja\.identidadId\)/, 'la hoja tiene que releer la cartera viva')
+  assert.match(leer(LIB), /carteraDeIdentidad\(identidadId\)/, 'y esa relectura es `carteraDeIdentidad`')
+  assert.match(src, /polizasQueEnsenaLaHoja\(/, 'la selección FILTRA lo leído; no se pinta la selección guardada')
 })
 
 test('el token se guarda HASHEADO, nunca en claro', () => {
@@ -69,7 +70,7 @@ test('los ids del formulario NO se insertan: se filtran contra lo que esa identi
   const src = leer(LIB)
   assert.match(src, /const elegibles = await polizasElegibles\(identidadId\)/)
   assert.match(src, /idsCartera\.has\(id\)/, 'cada id elegido tiene que existir en lo que esa identidad ve')
-  assert.match(src, /idsDeclaradas\.has\(id\)/)
+  assert.doesNotMatch(src, /polizaDeclaradaId: id\b/, 'las añadidas a mano ya no entran en la hoja (26/10/2026)')
 })
 
 test('una selección que se queda VACÍA no crea una hoja: sería «todas»', () => {

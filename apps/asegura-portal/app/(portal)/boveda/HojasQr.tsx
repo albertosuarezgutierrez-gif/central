@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { fechaEs } from '@/lib/fechas'
 import type { HojaResumen } from '@/lib/hojas'
-
-type Opcion = { id: string; etiqueta: string }
+import type { OpcionHoja } from '@/lib/hojas-elegibles'
 
 /**
  * Crear y anular la HOJA de la nevera.
@@ -27,18 +26,13 @@ type Opcion = { id: string; etiqueta: string }
  *    la nevera y hay que tirarlo, o alguien lo escaneará y creerá que el móvil
  *    falla.
  */
-export function HojasQr({
-  hojas,
-  cartera,
-  declaradas,
-}: {
-  hojas: HojaResumen[]
-  cartera: Opcion[]
-  declaradas: Opcion[]
-}) {
+export function HojasQr({ hojas, cartera }: { hojas: HojaResumen[]; cartera: OpcionHoja[] }) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
-  const [todas, setTodas] = useState(true)
+  // «Todas» = todas las PROPIAS. Sin ninguna propia (solo ve las de su empresa o su familia), no
+  // se ofrece: crearía una hoja vacía.
+  const hayPropias = cartera.some((o) => o.propia)
+  const [todas, setTodas] = useState(hayPropias)
   const [elegidas, setElegidas] = useState<Set<string>>(new Set())
   const [nombre, setNombre] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -46,7 +40,7 @@ export function HojasQr({
   // El enlace recién creado. Solo vive aquí, en memoria, hasta que se recarga.
   const [nuevo, setNuevo] = useState<string | null>(null)
 
-  const opciones = [...cartera, ...declaradas]
+  const opciones = cartera
   const vivas = hojas.filter((h) => h.anuladaEn === null)
 
   function alternar(id: string) {
@@ -148,9 +142,11 @@ export function HojasQr({
                       más enseña de todas sería exactamente al revés. */}
                   {h.cuantasElegidas === null
                     ? 'Todas tus pólizas'
-                    : h.cuantasElegidas === 1
-                      ? '1 póliza'
-                      : `${h.cuantasElegidas} pólizas`}
+                    : h.cuantasElegidas === 0
+                      ? 'Ninguna póliza que enseñar (las añadidas por ti ya no salen en la hoja)'
+                      : h.cuantasElegidas === 1
+                        ? '1 póliza'
+                        : `${h.cuantasElegidas} pólizas`}
                   {' · '}
                   {h.anuladaEn
                     ? `anulada el ${fechaEs(h.anuladaEn)}`
@@ -175,7 +171,8 @@ export function HojasQr({
 
       {opciones.length === 0 ? (
         <p className="suave" style={{ margin: '12px 0 0', fontSize: 13 }}>
-          Cuando tengas alguna póliza aquí podrás crear tu hoja.
+          Cuando haya alguna póliza en vigor que lleve la correduría —tuya, de tu empresa o de quien te
+          dé acceso— podrás crear tu hoja. Las pólizas que añades tú no van en la hoja.
         </p>
       ) : !abierto ? (
         <button type="button" className="boton auto" onClick={() => setAbierto(true)} style={{ marginTop: 12 }}>
@@ -202,20 +199,26 @@ export function HojasQr({
 
           <fieldset>
             <legend>Qué pólizas lleva</legend>
-            <div className="opciones">
-              <label className="opcion">
-                <input type="radio" checked={todas} onChange={() => setTodas(true)} />
-                <span>
-                  Todas mis pólizas
-                  {/* 🚨 Punto 1: se dice, no se descubre. */}
-                  <span className="tenue"> — también las que contrate más adelante</span>
-                </span>
-              </label>
-              <label className="opcion">
-                <input type="radio" checked={!todas} onChange={() => setTodas(false)} />
-                <span>Solo las que elija</span>
-              </label>
-            </div>
+            {hayPropias && (
+              <div className="opciones">
+                <label className="opcion">
+                  <input type="radio" checked={todas} onChange={() => setTodas(true)} />
+                  <span>
+                    Todas mis pólizas
+                    {/* 🚨 Punto 1: se dice, no se descubre. Y «mis» es literal: las de tu empresa o
+                        tu familia solo entran si las eliges una a una. */}
+                    <span className="tenue">
+                      {' '}
+                      — también las que contrate más adelante; las de otras personas o empresas, solo si las eliges
+                    </span>
+                  </span>
+                </label>
+                <label className="opcion">
+                  <input type="radio" checked={!todas} onChange={() => setTodas(false)} />
+                  <span>Solo las que elija</span>
+                </label>
+              </div>
+            )}
 
             {!todas && (
               <ul className="opciones">
@@ -223,7 +226,12 @@ export function HojasQr({
                   <li key={o.id}>
                     <label className="opcion">
                       <input type="checkbox" checked={elegidas.has(o.id)} onChange={() => alternar(o.id)} />
-                      <span>{o.etiqueta}</span>
+                      {/* De quién es cada una, dicho siempre: el coche de la empresa y el propio
+                          pueden ser de la misma compañía y del mismo modelo. */}
+                      <span>
+                        {o.etiqueta}
+                        <span className="tenue"> · {o.propia ? 'tuya' : `de ${o.titular}`}</span>
+                      </span>
                     </label>
                   </li>
                 ))}

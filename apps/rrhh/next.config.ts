@@ -13,6 +13,15 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   // Deliberado (deuda de tipos heredada): el build de Vercel no bloquea por tipos.
   // El gate REAL de tipos es el job `typecheck` de .github/workflows/tests.yml (tsc --noEmit).
-  typescript: { ignoreBuildErrors: true }
+  typescript: { ignoreBuildErrors: true },
+  // Portal del Empleado: datos personales. Ninguna ruta se indexa (también las que no pasen por metadata).
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+    ]
+  },
 }
 export default nextConfig

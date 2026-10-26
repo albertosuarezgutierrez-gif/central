@@ -6,6 +6,7 @@ import { Ico, FILA } from '../../iconos'
 import type { RamoSolicitud } from '@central/module-seguros'
 import { interpretarSolicitudesDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
 import { enlaceWhatsappConMensaje } from '@/lib/telefono-wa'
+import { resultadoPedirDatos } from '@/lib/correduria/pedir-datos'
 import { fmt } from './piezas'
 import { RespuestasSolicitud } from './RespuestasSolicitud'
 
@@ -16,7 +17,8 @@ import { RespuestasSolicitud } from './RespuestasSolicitud'
  * lo ha completado llega por Telegram (actividad del cliente) y como tarea de hoy.
  *
  * El enlace solo se ve al crearlo: asegura guarda su huella, no el enlace. Si se
- * pierde, se anula y se crea otro.
+ * pierde, «Renovar enlace» (26/10/2026, `reemitir`) le da uno nuevo a la MISMA solicitud: lo que el cliente tuviera a
+ * medias y el plazo se conservan, y el anterior deja de funcionar. «Anular enlace» sigue para cerrarlo de verdad.
  */
 /** Pantalla de pedir precio de cada ramo (25/10/2026: el enlace vale para todos; el atajo, solo donde hay pantalla). */
 const PANTALLA_TARIFICAR: Partial<Record<RamoSolicitud, string>> = {
@@ -51,16 +53,12 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
 
   async function crear() {
     setOcupado(true); setAviso(null); setCopiado(false)
-    const r = await post({ oportunidadId })
+    // Con una viva, asegura RENUEVA su enlace (misma solicitud, nada se pierde); sin ella, la crea.
+    const r = await post({ oportunidadId, reemitir: true })
     setOcupado(false)
-    const url = typeof r.json?.url === 'string' ? r.json.url : null
-    if ((r.status === 201 || r.status === 200) && url) {
-      setNuevo({ url, mensaje: typeof r.json?.mensaje === 'string' ? r.json.mensaje : url, caduca: String(r.json?.caduca ?? '') })
-    } else if (r.status === 200) {
-      setAviso('Ya hay un enlace sin contestar para esta oportunidad. Si no lo tienes, anúlalo y crea otro.')
-    } else {
-      setAviso(`No se ha creado: ${typeof r.json?.motivo === 'string' ? r.json.motivo : `HTTP ${r.status}`}`)
-    }
+    const res = resultadoPedirDatos(r.status, r.json)
+    if (res.ok) setNuevo({ url: res.url, mensaje: res.mensaje, caduca: res.caduca })
+    setAviso(res.aviso)
     void cargar()
   }
 
@@ -115,6 +113,7 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
       {!nuevo && pendiente && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ ...FILA, color: 'var(--muted)' }}><Ico i={Link2} size={13} /> Datos pedidos por enlace; sin contestar (caduca el {fmt(pendiente.caduca.slice(0, 10))}).</span>
+          <button type="button" disabled={ocupado} onClick={() => void crear()} title="Da un enlace nuevo a esta misma petición: lo que el cliente tenga a medias se conserva y el anterior deja de funcionar" style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>{ocupado ? 'Renovando…' : 'Renovar enlace'}</button>
           <button type="button" disabled={ocupado} onClick={() => void anular(pendiente.id)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Anular enlace</button>
         </div>
       )}

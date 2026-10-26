@@ -15,6 +15,8 @@ export const runtime = 'nodejs'
  *   GET  ?oportunidadId=            → sus solicitudes (respuestas descifradas)
  *   POST { oportunidadId, actor }   → crea el enlace (o dice que ya hay uno vivo: su token no se puede
  *                                     volver a dar, solo guardamos el hash) · 201 con `token` si es nuevo
+ *   POST { oportunidadId, reemitir: true, actor } → igual, pero con una viva le da token NUEVO (misma solicitud,
+ *                                     mismo borrador y plazo; el enlace anterior deja de valer) · 200 con `url`
  *   POST { accion:'anular', id }    → el enlace deja de funcionar
  *   POST { accion:'whatsapp', oportunidadId, actor, conEnlace } → anota «Datos pedidos por WhatsApp» (informativo: no cuenta como contacto)
  */
@@ -50,12 +52,13 @@ export const POST = auditado(async (req: Request) => {
       return NextResponse.json(r.ok ? { estado: 'ok' } : r, { status: r.ok ? 200 : r.status })
     }
     const personaId = typeof b?.personaId === 'string' && b.personaId.trim() !== '' ? b.personaId.trim() : null
-    const r = await crearSolicitud(correduria.id, typeof b?.oportunidadId === 'string' ? b.oportunidadId : '', actor, personaId)
+    // `reemitir` (botón WhatsApp): con una viva, token nuevo para la MISMA solicitud (el enlace anterior deja de valer).
+    const r = await crearSolicitud(correduria.id, typeof b?.oportunidadId === 'string' ? b.oportunidadId : '', actor, personaId, { reemitir: b?.reemitir === true })
     if (!r.ok) return NextResponse.json(r, { status: r.status })
-    // La URL completa solo existe al crear (el token no se guarda en claro).
+    // La URL completa solo existe al crear o reemitir (el token no se guarda en claro).
     const url = r.token ? urlPortalSolicitud(r.token) : null
     return NextResponse.json(
-      { estado: 'ok', id: r.id, nueva: r.nueva, ramo: r.ramo, caduca: r.caduca, tercero: r.tercero, url, mensaje: url ? mensajeSolicitud(r.ramo, url, r.tercero) : null },
+      { estado: 'ok', id: r.id, nueva: r.nueva, reemitida: r.reemitida, ramo: r.ramo, caduca: r.caduca, tercero: r.tercero, url, mensaje: url ? mensajeSolicitud(r.ramo, url, r.tercero) : null },
       { status: r.nueva ? 201 : 200 },
     )
   } catch (e) {

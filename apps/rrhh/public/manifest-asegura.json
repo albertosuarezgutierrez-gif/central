@@ -1,0 +1,17 @@
+{
+  "name": "Grupo ASegura · Portal del Empleado",
+  "short_name": "Grupo ASegura",
+  "description": "Tu portal del empleado, herramienta gratuita de Grupo ASegura.",
+  "lang": "es",
+  "start_url": "/e/entrar?m=asegura",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fcfcfc",
+  "theme_color": "#3364ee",
+  "icons": [
+    { "src": "/brand/icono-asegura-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icono-asegura-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icono-asegura-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/brand/icono-asegura.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

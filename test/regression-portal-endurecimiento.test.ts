@@ -4,7 +4,8 @@
 //     intento con una escritura condicionada ANTES de comparar.
 //  2. `/api/acceso/verificar` no tenía tope por IP.
 //  3. La hoja del QR (pública con el token) enseñaba también las pólizas que
-//     OTROS te autorizaron a ver: te lo consintieron a ti, no a quien escanee.
+//     OTROS te autorizaron a ver. Derogado el 26/10/2026 por Alberto: ahora se
+//     ofrecen a propósito, desde la misma lectura que la bóveda (ver el test).
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -35,10 +36,17 @@ test('verificar lleva tope por IP antes de tocar la BD', () => {
   assert.ok(bd === -1 || tope < bd, 'el tope va antes de cualquier consulta')
 })
 
-test('la hoja del QR solo enseña las pólizas PROPIAS', () => {
+test('la hoja del QR parte de la MISMA lectura que la bóveda y «todas» = solo las propias (26/10/2026)', () => {
+  // Deroga el brazo del 24/09 («solo propias»): Alberto decidió que la hoja ofrezca cualquier póliza
+  // viva que quien la genera VE. Lo que no se puede perder: una sola fuente de acceso
+  // (`carteraDeIdentidad` → `candidatasDeLaHoja`), releída en vivo, y «todas» sin las ajenas.
   const pagina = sinComentarios(leer('apps/asegura-portal/app/hoja/[token]/page.tsx'))
   const hojas = sinComentarios(leer('apps/asegura-portal/lib/hojas.ts'))
-  assert.doesNotMatch(pagina, /cartera\.autorizadas/, 'la página pública no puede leer las autorizadas')
-  assert.doesNotMatch(hojas, /cartera\.autorizadas/, 'el selector de la hoja no puede ofrecer las autorizadas')
-  assert.match(pagina, /cartera\.propias/, 'la hoja sigue enseñando las propias')
+  const modulo = sinComentarios(leer('packages/module-seguros-portal/src/hoja-qr.ts'))
+  assert.match(pagina, /candidatasEnVivo\(hoja\.identidadId\)/, 'la página pública relee la cartera de quien la generó')
+  assert.match(pagina, /polizasQueEnsenaLaHoja\(/, 'la selección se aplica con la regla de «todas» = propias')
+  assert.equal((hojas.match(/carteraDeIdentidad\(identidadId\)/g) ?? []).length, 2, 'selector y página: la MISMA lectura')
+  assert.equal((hojas.match(/candidatasDeLaHoja|elegiblesDeCartera/g) ?? []).length >= 2, true)
+  assert.match(modulo, /seleccion\.todas \? candidatas\.filter\(\(c\) => c\.propia\)/, '«todas» no arrastra las ajenas')
+  assert.doesNotMatch(pagina, /declaradasDeIdentidad|portalPolizaDeclarada/, 'las añadidas a mano no van en la hoja')
 })

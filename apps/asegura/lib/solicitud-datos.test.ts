@@ -44,3 +44,36 @@ test('los documentos del enlace se archivan en su ficha y lo leído no toca la f
   assert.match(sub, /documentos_subidos < \$\{MAX_DOCS_SOLICITUD\}/, 'el tope se reserva de forma atómica en el UPDATE')
   assert.ok(sub.indexOf('documentos_subidos < ${MAX_DOCS_SOLICITUD}') < sub.indexOf('leerDocSolicitud('), 'la plaza se reserva antes de gastar IA')
 })
+
+// 26/10/2026 (lead de hogar de Beatriz): el botón WhatsApp salía SIN enlace porque ya había una solicitud viva y su
+// token no se puede repetir. Ahora `reemitir` rota el token de ESA solicitud.
+test('reemitir: rota el token de la MISMA solicitud viva (sin insertar otra) y deja rastro en el historial', () => {
+  const ins = src.slice(src.indexOf('export async function insertarSolicitud'), src.indexOf('function camposDeFila'))
+  const rama = ins.slice(ins.indexOf('if (viva && p.reemitir === true)'), ins.indexOf('if (viva) return'))
+  assert.ok(rama.length > 0, 'la rama de reemitir va ANTES de devolver la viva sin token')
+  assert.match(rama, /update solicitud_datos set token_hash = \$\{hashToken\(token\)\}\s+where id = \$\{viva\.id\}::uuid and correduria_id = \$\{correduriaId\}::uuid and estado = 'pendiente' and caduca_at > now\(\)/)
+  // Solo cambia la huella: ni plazo, ni campos, ni borrador, ni `creada_por` (un enlace a ciegas sigue a ciegas).
+  const update = rama.slice(rama.indexOf('update solicitud_datos'), rama.indexOf('where id'))
+  assert.doesNotMatch(update, /caduca_at|campos|borrador|creada_por|estado|respuestas|lecturas/)
+  assert.doesNotMatch(rama, /insert into solicitud_datos/)
+  assert.match(rama, /insert into oportunidad_historial[\s\S]*ACCION_ENLACE_REEMITIDO/)
+  assert.match(rama, /reemitida: true, token \}/)
+})
+
+test('reemitir solo lo pide el corredor (puerto operador); el lead web anónimo nunca rota un enlace', () => {
+  const ruta = readFileSync(new URL('../app/api/operador/solicitud-datos/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /\{ reemitir: b\?\.reemitir === true \}/)
+  const lead = readFileSync(new URL('./lead-web-solicitud.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(lead, /reemitir/)
+})
+
+test('hogar pregunta solo lo que falta: TODO el lado del portal usa `camposVigentes` (lo que se enseña es lo que se acepta)', () => {
+  const portal = src.slice(src.indexOf('// ─── Lado del portal'))
+  assert.doesNotMatch(portal, /camposDeFila\(/, 'pintar, documento, validar y borrador: con lo sabido oculto')
+  for (const fn of ['export async function solicitudPorToken', 'export async function subirDocumentoSolicitud', 'export async function responderSolicitud', 'export async function guardarBorradorSolicitud']) {
+    const cuerpo = portal.slice(portal.indexOf(fn), portal.indexOf('\n}\n', portal.indexOf(fn)))
+    assert.match(cuerpo, /await camposVigentes\(f\)/, fn)
+  }
+  const cv = src.slice(src.indexOf('async function camposVigentes'), src.indexOf('function estadoEfectivo'))
+  assert.match(cv, /camposHogarSinLoSabido\(campos, await viviendaSabidaDeOportunidad\(f\.correduriaId, f\.oportunidadId\)\)/)
+})

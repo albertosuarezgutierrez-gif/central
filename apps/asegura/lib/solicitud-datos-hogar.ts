@@ -146,6 +146,28 @@ async function anotarEnRiesgo(correduriaId: string, oportunidadId: string, propu
   }
 }
 
+/**
+ * Lo que ya se sabe de la vivienda de la oportunidad (26/10/2026), para que el enlace pregunte SOLO lo que falta
+ * (`camposHogarSinLoSabido`): lo mismo que enseña la pantalla del riesgo (lo estructurado o, sin él, la precarga de la
+ * póliza). Solo para OCULTAR preguntas: nada de esto viaja a la página. `null` = no se ha podido leer (o la oportunidad
+ * ya no es de hogar) → se pregunta todo. Nunca lanza.
+ */
+export async function viviendaSabidaDeOportunidad(correduriaId: string, oportunidadId: string): Promise<Record<string, unknown> | null> {
+  try {
+    const db = prismaAsegura()
+    const [op] = await db.$queryRaw<{ tipo: string; info: unknown; polizaId: string | null }[]>(Prisma.sql`
+      select tipo::text as tipo, info_riesgo as info, poliza_id::text as "polizaId" from oportunidades
+      where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
+    if (!op || op.tipo !== 'hogar') return null
+    const info = op.info !== null && typeof op.info === 'object' && !Array.isArray(op.info) ? (op.info as Record<string, unknown>) : {}
+    const precarga = info.datosVivienda === undefined ? await precargaDePolizaDeOportunidad(db, correduriaId, op.polizaId, 'hogar') : null
+    return leerBloqueDeRamo('hogar', info, precarga).datos
+  } catch (e) {
+    console.warn('[solicitud-datos-hogar] vivienda sabida sin leer (se pregunta todo):', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
 export async function trasCompletarHogar(p: {
   correduriaId: string
   oportunidadId: string

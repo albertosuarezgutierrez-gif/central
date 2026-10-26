@@ -1165,6 +1165,7 @@ export {
   type ColumnaFichaSolicitud,
   type DestinoCampoSolicitud,
 } from './solicitud-destinos.ts'
+export { DIRECCION_SABIDA_MINIMA, TIPOS_SABIDOS_SIN_REJAS, camposHogarSinLoSabido, clavesSabidasHogar } from './solicitud-sabido-hogar.ts'
 export {
   ID_GARAJE_SOLICITUD,
   PLAN_POR_BLOQUE,
