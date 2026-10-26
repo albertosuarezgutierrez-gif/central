@@ -10,7 +10,7 @@ import {
 } from '../src/adapters/generali/reglas.ts'
 import { VERSION_GENERALI_AUTO } from '../src/adapters/generali/auto.ts'
 
-test('v0.2.19 · versión vigente (0.2.24)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.24'))
+test('v0.2.19 · versión vigente (0.2.25)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.25'))
 
 test('v0.2.19 · lector: importe dos líneas por debajo de la etiqueta y etiquetas nuevas', () => {
   assert.deepEqual(leerPrecioGenerali('Prima total\nEUR\n1.234,56 €'), { tipo: 'unico', eur: 1234.56, linea: 'Prima total 1.234,56 €' })
