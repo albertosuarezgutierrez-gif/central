@@ -69,3 +69,11 @@ test('la ruta filtra por correduría en las tres lecturas, no lee NIF/IBAN/direc
   assert.doesNotMatch(src, /\b(dni|nif|iban|direccion|domicilio)\b/i)
   assert.doesNotMatch(src, /export async function (POST|PUT|PATCH|DELETE)/)
 })
+
+test('la ruta excluye las autorizaciones caducadas sin aceptar y ordena desc para que el tope no deje fuera lo reciente', () => {
+  const fuente = readFileSync(join(import.meta.dirname, '../app/api/operador/portal-permisos/route.ts'), 'utf8')
+  const src = fuente.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
+  assert.match(src, /aceptadoEn: null, revocadoEn: null, OR: \[\{ caducaEn: null \}, \{ caducaEn: \{ gt: ahora \} \}\]/)
+  assert.match(src, /orderBy: \{ otorgadoEn: 'desc' \}/)
+  assert.doesNotMatch(src, /orderBy: \{ otorgadoEn: 'asc' \}/)
+})
