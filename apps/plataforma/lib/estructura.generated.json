@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-26T06:18:34Z",
+  "generadoEn": "2026-10-26T08:03:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -435,7 +435,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "asegura-web": {
         "estado": "no",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 16
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 306
+        "evidencias": 310
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 165
+        "evidencias": 168
       },
       "asegura-web": {
         "estado": "usado",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 240
+        "evidencias": 239
       },
       "rrhh": {
         "estado": "no",
@@ -2429,7 +2429,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 45
+        "evidencias": 46
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2591,11 +2591,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 64
+        "evidencias": 65
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "asegura-web": {
         "estado": "no",
@@ -3025,7 +3025,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 22
+        "evidencias": 23
       },
       "asegura-portal": {
         "presente": false,
@@ -4181,6 +4181,7 @@
       "/api/cron/revision-anual",
       "/api/cron/senales-patrimonio",
       "/api/cron/siniestros-vinculo",
+      "/api/cron/solicitudes-abandonadas",
       "/api/cron/tarificador-cola",
       "/api/cron/tarificador-humo",
       "/api/cron/tarificador-humo-informe",
@@ -4338,6 +4339,7 @@
       "/api/operador/poliza/intervinientes",
       "/api/operador/poliza/traer-pdf",
       "/api/operador/portal-modulos",
+      "/api/operador/portal-permisos",
       "/api/operador/portal/invitaciones",
       "/api/operador/presupuesto",
       "/api/operador/presupuesto/destinatarios",
@@ -4426,6 +4428,7 @@
       "/api/portal/personas-poliza",
       "/api/portal/presupuesto",
       "/api/portal/solicitud-datos",
+      "/api/portal/solicitud-datos/borrador",
       "/api/portal/solicitud-datos/documento",
       "/api/publico/campana/baja",
       "/api/publico/recaptacion/baja",
@@ -4467,9 +4470,11 @@
       "/api/cron/avisos-push",
       "/api/cron/patrimonio-gastos",
       "/api/datos",
+      "/api/datos/borrador",
       "/api/datos/codigo-postal",
       "/api/datos/documento",
       "/api/datos/vias",
+      "/api/datos/vivienda",
       "/api/documento/dni",
       "/api/documentos/archivar",
       "/api/documentos/escanear",
@@ -7192,7 +7197,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1817,
+    "apis": 1822,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
