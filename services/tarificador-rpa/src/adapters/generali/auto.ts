@@ -109,6 +109,11 @@ import {
   esOpcionNoLoSeGenerali,
   grupoCombustibleGenerali,
   potenciaExactaGenerali,
+  textoVersionRiesgoGenerali,
+  avisoDeducidoDeVersionGenerali,
+  opcionCombustibleDeVersionGenerali,
+  opcionPotenciaDeVersionGenerali,
+  combustiblePotenciaRellenosGenerali,
   resumenCoincideConFilaGenerali,
   resumenCamposSelectorGenerali,
   type CampoSelectorGenerali,
@@ -257,7 +262,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.35'
+export const VERSION_GENERALI_AUTO = '0.2.36'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -1561,6 +1566,22 @@ async function elegirFilaTablaGenerali(page: Page, selector: Raiz, ficha: FichaV
 }
 
 /**
+ * v0.2.36: texto de la versión de la que deducir combustible/potencia: la que elegiría el desplegable «Versión» del propio portal (por la regla de
+ * siempre, antes de tocar combustible y potencia) y, si no hay desplegable o no decide sola, el texto de la versión del riesgo. Nunca lanza. PURA salvo nada.
+ */
+function textoVersionDeducibleGenerali(desplegable: { opciones: string[] } | null, form: FormFichaGenerali, otras: readonly string[]): string | null {
+  const reales = (desplegable?.opciones ?? []).filter((o) => !esOpcionVaciaCatalogo(o))
+  if (reales.length > 0) {
+    try {
+      return reales[decidirVersionDesplegableGenerali(reales, form, otras).indice] ?? null
+    } catch {
+      /* la versión no sale sola: se mira el texto del riesgo */
+    }
+  }
+  return textoVersionRiesgoGenerali(form)
+}
+
+/**
  * Tras el modelo: si el selector enseña combustible / Potencia / Versión / tabla, los elige EN ESE ORDEN (v0.2.17: combustible → potencia →
  * recarga → versión del desplegable con verificación estable; la tabla, si la hay, con su «Resumen») y devuelve las claves de campos que
  * explicó. `null` = no hay nada de eso (modelo con una sola versión) o hay campos que el bot no conoce: el llamador sigue como 0.2.13.
@@ -1576,24 +1597,41 @@ async function resolverFichaVersionGenerali(page: Page, selector: Raiz, campos: 
   if (ajenos.length > 0) return null
   const otras: string[] = [...(combustible?.opciones ?? []), ...(potencia0?.opciones ?? [])]
   let actuales: readonly CampoSelectorGenerali[] = campos
+  // v0.2.36: lo que el riesgo no trae (combustible / CV) se DEDUCE del texto de la versión (siglas de motor, CV suelto) y solo se marca si casa EXACTO con una opción del portal.
+  const versionDeducible = combustibleRiesgoGenerali(form) === null || cvRiesgoGenerali(form) === null ? textoVersionDeducibleGenerali(desplegable0, form, otras) : null
+  let deducidoCombustible = false
+  let deducidoPotencia = false
   if (combustible) {
     if (!ctx.elegirCombustibleGenerali) throw new ErrorMapaIncompletoGenerali('la puerta guardada del combustible del selector (`elegirCombustibleGenerali`) en el contexto del runner', false)
-    const d = decidirCombustibleGenerali(combustible.opciones, combustibleRiesgoGenerali(form))
-    if (d.tipo === 'sin_opcion') throw new ErrorMapaIncompletoGenerali(`el combustible del selector de vehículos: ${d.motivo}; NO se pulsa «Confirmar»`, false)
-    if (d.supuesto) avisos?.push(d.supuesto)
-    await ctx.elegirCombustibleGenerali(combustible.grupo, d.texto)
+    const deducido = combustibleRiesgoGenerali(form) === null ? opcionCombustibleDeVersionGenerali(combustible.opciones, versionDeducible) : null
+    if (deducido) {
+      deducidoCombustible = true
+      await ctx.elegirCombustibleGenerali(combustible.grupo, deducido)
+    } else {
+      const d = decidirCombustibleGenerali(combustible.opciones, combustibleRiesgoGenerali(form))
+      if (d.tipo === 'sin_opcion') throw new ErrorMapaIncompletoGenerali(`el combustible del selector de vehículos: ${d.motivo}; NO se pulsa «Confirmar»`, false)
+      if (d.supuesto) avisos?.push(d.supuesto)
+      await ctx.elegirCombustibleGenerali(combustible.grupo, d.texto)
+    }
     // El combustible puede recargar por AJAX las potencias y las versiones: se releen estables.
     actuales = await camposSelectorEstables(page, selector)
   }
   const potencia = combustible ? grupoPotenciaGenerali(actuales) ?? potencia0 : potencia0
   if (potencia) {
     if (!ctx.elegirPotenciaGenerali) throw new ErrorMapaIncompletoGenerali('la puerta guardada de la potencia del selector (`elegirPotenciaGenerali`) en el contexto del runner', false)
-    const p = decidirPotenciaGenerali(potencia.opciones, form)
-    if (p.supuesto) avisos?.push(p.supuesto)
-    await ctx.elegirPotenciaGenerali(potencia.grupo, p.texto)
+    const deducida = cvRiesgoGenerali(form) === null ? opcionPotenciaDeVersionGenerali(potencia.opciones, versionDeducible) : null
+    if (deducida) {
+      deducidoPotencia = true
+      await ctx.elegirPotenciaGenerali(potencia.grupo, deducida)
+    } else {
+      const p = decidirPotenciaGenerali(potencia.opciones, form)
+      if (p.supuesto) avisos?.push(p.supuesto)
+      await ctx.elegirPotenciaGenerali(potencia.grupo, p.texto)
+    }
     otras.push(...potencia.opciones)
     explicados.add(`grupo|${potencia.grupo}`)
   }
+  if (versionDeducible && (deducidoCombustible || deducidoPotencia)) avisos?.push(avisoDeducidoDeVersionGenerali(versionDeducible, deducidoCombustible, deducidoPotencia))
   if (desplegable0) {
     // v0.2.17: la potencia puede filtrar la lista de versiones por AJAX: se espera a que se estabilice antes de elegir.
     if (potencia || combustible) actuales = await camposSelectorEstables(page, selector)
@@ -2587,22 +2625,28 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const obligatorios = avisosObligatorioGenerali(textoFinal)
   const importes = fragmentosImportesGenerali(textoFinal)
   const volcado = await volcarResultadosGenerali(page)
-  const modalidades = resumenModalidadesGenerali(await volcarModalidadesGenerali(page), 620)
-  const diagnostico = `${resumenDiagnosticoImportesGenerali(await volcarDiagnosticoImportesGenerali(page), 260)}. ${modalidades}`
+  const volImportes = await volcarDiagnosticoImportesGenerali(page)
+  const volModalidades = await volcarModalidadesGenerali(page)
   const diagModalidades = await volcarDiagnosticoModalidadesGenerali(page)
   const navegacionMarcos = await volcarNavegacionGenerali(page)
-  const que = lecturaFinal.tipo === 'varios'
+  // v0.2.36: si combustible y potencia llevan dato (no «No lo sé»), el error lo dice: descarta la hipótesis de que Generali no calcula por eso.
+  const rellenos = combustiblePotenciaRellenosGenerali(supuestos) ? '; con combustible y potencia rellenos' : ''
+  const que = (lecturaFinal.tipo === 'varios'
     ? `${lecturaFinal.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lecturaFinal.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
-    : 'ningún importe legible con «prima/precio/importe/total/cuota/recibo»'
-  // El runner corta el mensaje a 2000: lo que más importa (avisos, diagnóstico de tablas/importes) va PRIMERO y la navegación, el resto y la pantalla, después
-  // y con presupuesto decreciente hasta que todo quepa (v0.2.30: el diagnóstico va ANTES de la navegación).
-  const compuesto = (nav: number, res: number, pan: number, imp: number, amp = 900): string =>
-    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${diagnostico}. ${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tomador.slice(0, nav > 0 ? 300 : 120)}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
+    : 'ningún importe legible con «prima/precio/importe/total/cuota/recibo»') + rellenos
+  // El runner corta el mensaje a 2000: lo que más importa (avisos y el bloque «Marcos (N)» COMPLETO, con ruta y tablas de cada marco) va PRIMERO; después el diagnóstico de
+  // importes/modalidades, la navegación, el resto y la pantalla, con presupuesto decreciente hasta que todo quepa. Lo primero que se recorta es el inventario del tomador
+  // y el mapa provisional (v0.2.36); la estructura de la tabla se recorta dentro del bloque de marcos antes que la lista.
+  const compuesto = (nav: number, res: number, pan: number, imp: number, amp: number, tom: number, mapa: number, dImp: number, dMod: number): string =>
+    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
   const LIMITE = 1_900 - 'generali/auto: mapa incompleto: faltan '.length
-  let mensaje = compuesto(300, 360, 450, 8, 900)
-  for (const [nav, res, pan, imp, amp] of [[450, 260, 300, 5, 800], [350, 180, 200, 3, 650], [250, 120, 100, 2, 500], [150, 80, 60, 1, 350], [0, 0, 0, 0, 250]] as const) {
+  let mensaje = compuesto(300, 360, 450, 8, 1_500, 120, 80, 260, 620)
+  for (const [nav, res, pan, imp, amp, tom, mapa, dImp, dMod] of [
+    [300, 360, 450, 8, 1_500, 0, 0, 260, 620], [250, 260, 300, 5, 1_500, 0, 0, 200, 450], [150, 180, 200, 3, 1_500, 0, 0, 160, 320], [0, 120, 100, 2, 1_500, 0, 0, 120, 220],
+    [0, 0, 0, 1, 1_400, 0, 0, 100, 150], [0, 0, 0, 0, 1_200, 0, 0, 60, 80],
+  ] as const) {
     if (mensaje.length <= LIMITE) break
-    mensaje = compuesto(nav, res, pan, imp, amp)
+    mensaje = compuesto(nav, res, pan, imp, amp, tom, mapa, dImp, dMod)
   }
   throw new ErrorMapaIncompletoGenerali(mensaje.slice(0, LIMITE))
 }

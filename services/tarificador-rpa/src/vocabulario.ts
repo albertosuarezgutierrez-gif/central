@@ -52,6 +52,7 @@ const GEN_MODALIDADES = o('generali', '26/10/2026', 'tabla «Modalidades de Segu
 const GEN_DIAG = o('generali', '26/10/2026', 'diagnóstico de importes sin datos personales, Generali 0.2.3x')
 const GEN_RIESGO = o('generali', '18/10/2026', 'mapa provisional de «Datos de Valoración»')
 const GEN_SIGUIENTE = o('generali', '26/10/2026', '«Siguiente ›» de Valoración Riesgo, Generali 0.2.29')
+const GEN_COMBUSTIBLE = o('generali', '26/10/2026', 'siglas de motor que delatan el combustible en el texto de la versión, Generali 0.2.36')
 const GEN_EMISION = o('generali', '26/10/2026', 'textos de emisión en página o diálogo, Generali 0.2.29-0.2.34')
 const MAP_COMPANIA = o('mapfre', '26/10/2026', 'Figuras sin app-historial-siniestralidad, Mapfre 0.8.24')
 const MAP_PROYECTO = o('mapfre', '22/10/2026', 'Generar Proyecto / Ir a generar proyecto / Guardar proyecto, Mapfre 0.8.x')
@@ -194,6 +195,21 @@ export const CONCEPTOS_LECTURA = congelarProfundo({
       etiqueta_exacta: [
         t('siniestros ultimos 5 anos', GEN_RIESGO), t('n siniestros ultimos 5 anos', GEN_RIESGO), t('numero de siniestros', GEN_RIESGO),
         t('siniestros con culpa ultimos 5 anos', GEN_RIESGO),
+      ],
+    },
+  },
+  /** Siglas de motor que dicen el combustible en el texto de una versión (v0.2.36). Normalizadas (sin guiones: «d 4d», «t gdi»). */
+  combustible_motor: {
+    clase: 'lectura', id: 'combustible_motor', ramos: ['auto', 'moto'], descripcion: 'Siglas de motor en el texto de la versión que delatan el combustible (diésel o gasolina).',
+    grupos: {
+      diesel: [
+        t('crdi', GEN_COMBUSTIBLE), t('crd', GEN_COMBUSTIBLE), t('tdi', GEN_COMBUSTIBLE), t('hdi', GEN_COMBUSTIBLE), t('dci', GEN_COMBUSTIBLE),
+        t('cdi', GEN_COMBUSTIBLE), t('d 4d', GEN_COMBUSTIBLE), t('jtd', GEN_COMBUSTIBLE), t('tdci', GEN_COMBUSTIBLE), t('bluehdi', GEN_COMBUSTIBLE),
+        t('multijet', GEN_COMBUSTIBLE),
+      ],
+      gasolina: [
+        t('tsi', GEN_COMBUSTIBLE), t('tfsi', GEN_COMBUSTIBLE), t('gti', GEN_COMBUSTIBLE), t('vtec', GEN_COMBUSTIBLE), t('mpi', GEN_COMBUSTIBLE),
+        t('t gdi', GEN_COMBUSTIBLE), t('gdi', GEN_COMBUSTIBLE), t('fsi', GEN_COMBUSTIBLE),
       ],
     },
   },
@@ -452,7 +468,7 @@ export function lecturaDeEtiqueta(n: string, ramo?: Ramo): IdLectura | null {
   const sin = sinAdornos(n)
   for (const [id, c] of Object.entries(CONCEPTOS_LECTURA) as [IdLectura, Concepto][]) {
     if (ramo && c.ramos && !c.ramos.includes(ramo)) continue
-    if (id === 'precio' || id === 'precio_cuota' || id === 'precio_total' || id === 'importe_ajeno' || id === 'precio_cabecera_tabla' || id === 'dinero_diagnostico') continue // por palabra, más abajo
+    if (id === 'precio' || id === 'precio_cuota' || id === 'precio_total' || id === 'importe_ajeno' || id === 'precio_cabecera_tabla' || id === 'dinero_diagnostico' || id === 'combustible_motor') continue // por palabra, más abajo
     if (esRotuloExacto(sin, terminosDe(c))) return id
   }
   // Cabeceras compuestas: «Recibo Anual» de una columna, «Prima total anual»… (más específico primero).
