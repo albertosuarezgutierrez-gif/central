@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { COBALTO_ASEGURA, PIE_ASEGURA, empresaConMarcaAsegura, estiloMarcaEmpresa, paletaEmpresa, urlPortalAsegura,
-  ENV_EMPRESAS_MARCA_ASEGURA, MANIFEST_ASEGURA, MANIFEST_BASE, WEB_ASEGURA, marcaAseguraDeEmpresa, manifestParaMarca, metadataMarcaAsegura, themeColorMarca } from './marca-asegura'
+  ENV_EMPRESAS_MARCA_ASEGURA, MANIFEST_ASEGURA, MANIFEST_BASE, WEB_ASEGURA, marcaAseguraDeEmpresa, manifestParaMarca, metadataMarcaAsegura, themeColorMarca, marcaPorHost, marcaDePeticion } from './marca-asegura'
 import { estiloMarca } from './branding'
 
 const A = '11111111-1111-1111-1111-111111111111'
@@ -89,5 +89,24 @@ describe('app instalable con identidad Grupo ASegura', () => {
     const pie = readFileSync(join(__dirname, '..', 'components', 'MarcaAsegura.tsx'), 'utf8')
     expect(pie).toContain('target="_blank"')
     expect(pie).toContain('rel="noopener noreferrer"')
+  })
+})
+
+describe('marca por host (/ y /login, sin empresa conocida)', () => {
+  it('el dominio propio lleva la marca (puerto y mayúsculas ignorados)', () => {
+    expect(marcaPorHost('empleados.grupoasegura.es')).toBe(true)
+    expect(marcaPorHost('Empleados.GrupoASegura.es:443')).toBe(true)
+  })
+  it('vercel.app, localhost, otros dominios y vacío no la llevan', () => {
+    for (const h of ['central-rrhh.vercel.app', 'localhost:3000', 'grupoasegura.es', 'empleados.grupoasegura.es.evil.com', '', null, undefined]) {
+      expect(marcaPorHost(h)).toBe(false)
+      expect(marcaDePeticion(h, undefined)).toBe(false)
+    }
+  })
+  it('?m=asegura la fuerza en preview/local; otro valor no', () => {
+    expect(marcaDePeticion('localhost:3000', 'asegura')).toBe(true)
+    expect(marcaDePeticion('central-rrhh.vercel.app', ['asegura'])).toBe(true)
+    expect(marcaDePeticion('localhost:3000', 'otra')).toBe(false)
+    expect(marcaDePeticion('empleados.grupoasegura.es', undefined)).toBe(true)
   })
 })

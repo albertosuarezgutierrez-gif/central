@@ -2,6 +2,7 @@
 // Se activa SIN migración: lista de empresa_id en la env RRHH_EMPRESAS_MARCA_ASEGURA (separados por coma).
 // Solo toca el portal del empleado (/e y /e/entrar); el panel /admin y el resto de empresas no cambian.
 import { derivarPaleta, type Paleta } from './branding'
+import { HOST_CANONICO } from './host-canonico'
 
 export const ENV_EMPRESAS_MARCA_ASEGURA = 'RRHH_EMPRESAS_MARCA_ASEGURA'
 export const COBALTO_ASEGURA = '#3364ee'
@@ -73,4 +74,16 @@ export function metadataMarcaAsegura(marcaAsegura: boolean) {
 /** Color de la barra del navegador: cobalto con marca, el de siempre sin ella (`undefined` = hereda del layout). */
 export function themeColorMarca(marcaAsegura: boolean): string | undefined {
   return marcaAsegura ? COBALTO_ASEGURA : undefined
+}
+
+// ── Rutas sin empresa conocida (/ y /login): la marca la da el host o ?m=asegura ───────────────────
+/** ¿El host de la petición es el dominio propio del portal (empleados.grupoasegura.es)? Ignora puerto y mayúsculas. */
+export function marcaPorHost(host: string | null | undefined): boolean {
+  return (host ?? '').trim().toLowerCase().split(':')[0] === HOST_CANONICO
+}
+
+/** Marca en / y /login: host propio, o `?m=asegura` (preview/local). `m` puede venir como array en searchParams. */
+export function marcaDePeticion(host: string | null | undefined, m?: string | string[] | null): boolean {
+  const v = Array.isArray(m) ? m[0] : m
+  return v === 'asegura' || marcaPorHost(host)
 }
