@@ -27,8 +27,8 @@ import { test } from 'node:test'
 const ROOT = join(import.meta.dirname, '..')
 const MODULO = 'packages/module-seguros-portal/src/recordatorio-precarga.ts'
 const ITV = 'packages/module-seguros-portal/src/itv.ts'
-const PANTALLA = 'apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx'
-const PAGINA = 'apps/asegura-portal/app/(portal)/boveda/page.tsx'
+const PANTALLA = 'apps/asegura-portal/app/(portal)/herramientas/calendario/Recordatorios.tsx'
+const PAGINA = 'apps/asegura-portal/app/(portal)/herramientas/calendario/page.tsx'
 
 /** Copiado de `regression-portal-parte-siniestro.test.ts`: escanea en vez de
  *  usar un regex porque un `'https://…'` dentro de una cadena truncaría media

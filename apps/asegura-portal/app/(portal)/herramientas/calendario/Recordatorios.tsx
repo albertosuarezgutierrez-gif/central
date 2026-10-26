@@ -11,7 +11,7 @@ import {
 import { fechaEs } from '@/lib/fechas'
 import type { RecordatorioVista } from '@/lib/recordatorios'
 
-import type { PolizaOpcionParte } from './ParteSiniestro'
+import type { PolizaOpcionParte } from '../../boveda/ParteSiniestro'
 
 /**
  * «Tus recordatorios» — la pestaña de recordatorios que el CLIENTE se pone a
@@ -69,11 +69,12 @@ export function Recordatorios({
   precargas,
   carnetsIlegibles,
 }: {
-  recordatorios: RecordatorioVista[]
+  /** `null` = NO se han podido leer (≠ `[]`, «no tienes ninguno»): se dice, no se pinta vacío. */
+  recordatorios: RecordatorioVista[] | null
   /** Para poder decir «ITV del Ibiza» en vez de «ITV»: Alberto, 13/09/2026
    *  («lo lógico es asignarlo al bien asegurado»). La MISMA lista que ya arma
    *  `page.tsx` para `ParteSiniestro` — matrícula/dirección, no nº de póliza. */
-  polizas: readonly PolizaOpcionParte[]
+  polizas: readonly Pick<PolizaOpcionParte, 'valor' | 'etiqueta'>[]
   /** Lo que ya sabemos y se le puede ofrecer hecho (21/09/2026). Lo compone
    *  `precargasDeRecordatorio()` en el SERVIDOR: aquí no se calcula ninguna
    *  fecha ni se decide de qué calidad es un dato. */
@@ -209,7 +210,7 @@ export function Recordatorios({
   }
 
   return (
-    <section className="seccion" aria-labelledby="recordatorios-titulo">
+    <section id="tus-recordatorios" className="seccion" aria-labelledby="recordatorios-titulo">
       <p className="antetitulo">Que no se te pase nada</p>
       <h2 id="recordatorios-titulo">Tus recordatorios</h2>
       <p className="supresion-intro">
@@ -380,13 +381,24 @@ export function Recordatorios({
         </form>
       )}
 
-      {recordatorios.length === 0 && !abierto && (
+      {recordatorios === null && (
+        <p className="aviso-linea" role="status">
+          Ahora no hemos podido leer tus recordatorios. Vuelve a intentarlo en un rato; no significa que no tengas ninguno.
+        </p>
+      )}
+
+      {recordatorios !== null && recordatorios.length === 0 && !abierto && (
         <p className="suave" style={{ fontSize: 14 }}>
           Todavía no tienes ningún recordatorio propio. Añade uno de arriba o toca «Personalizado».
         </p>
       )}
 
-      {recordatorios.length > 0 && (
+      {/* Las fechas ya salen en el calendario de arriba; aquí se GESTIONAN (quitar). Plegado: son filas que no hace falta ver siempre. */}
+      {recordatorios !== null && recordatorios.length > 0 && (
+        <details>
+          <summary style={{ minHeight: 44, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            Gestionar mis recordatorios ({recordatorios.length})
+          </summary>
         <ul className="lista-recordatorios">
           {recordatorios.map((r) => {
             // `r.poliza` puede apuntar a una póliza que ya no está en la lista
@@ -416,6 +428,7 @@ export function Recordatorios({
             )
           })}
         </ul>
+        </details>
       )}
     </section>
   )

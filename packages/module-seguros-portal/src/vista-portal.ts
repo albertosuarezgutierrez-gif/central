@@ -112,7 +112,7 @@ export interface PestanaPortal {
  *   Inicio · Seguros · Herramientas · Contactos · Cuenta
  *
  * «Seguros» es el ÚNICO sitio de «Mis seguros» y recoge, como sub-vistas, Recibos, Siniestros y Mi QR
- * (`SUBVISTAS_SEGUROS`). «Herramientas» recoge Patrimonio, Flota, el calendario (`?vista=recordatorios`), Mi resumen
+ * (`SUBVISTAS_SEGUROS`). «Herramientas» recoge Patrimonio, Flota, el CALENDARIO ÚNICO (`/herramientas/calendario`; `?vista=recordatorios` sigue en `VISTAS_BOVEDA` solo para REDIRIGIR ahí), Mi resumen
  * y el catálogo solicitable. «Cuenta» recoge Datos (`?vista=datos`) y Configuración. Las rutas viejas siguen vivas:
  * solo cambia el menú. Una vista de la bóveda que no estuviera en `vistas` de ninguna entrada sería una pantalla a la
  * que no se llega desde el menú: lo vigila `vista-portal.test.ts`.

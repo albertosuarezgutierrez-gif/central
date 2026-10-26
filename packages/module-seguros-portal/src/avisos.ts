@@ -21,6 +21,7 @@ import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
 import type { ParteParaAviso } from './parte-aviso.ts'
 import { textoPolizaModificada, type PolizaModificadaParaAviso } from './poliza-cambios.ts'
 import { itvParaAviso, textoAvisoItv, type VehiculoParaAviso } from './aviso-itv.ts'
+import { RUTA_CALENDARIO } from './calendario-unico.ts'
 import { patrimonioSeAvisa, textoAvisoPatrimonio, type PatrimonioParaAviso } from './aviso-patrimonio.ts'
 
 export const TIPOS_AVISO = [
@@ -351,15 +352,15 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   // Renovar el carné se hace en la DGT, no en el portal — igual que un
   // vencimiento de póliza, el aviso enlaza a la bóveda a secas.
   carnet_en_ventana: '/boveda',
-  // 🚨 El caducado lleva a «Recordatorios», NO a «Mis datos»: el carné no se
+  // 🚨 El caducado lleva al CALENDARIO (antes «Recordatorios»), NO a «Mis datos»: el carné no se
   // pinta en esa pantalla (ahí van dirección, contactos, consentimiento y
   // supresión), así que el enlace mandaría a alguien a buscar un dato que no
-  // está. En «Recordatorios» sí aparece, porque es de donde sale su precarga.
-  carnet_caducado: '/boveda?vista=recordatorios',
+  // está. En el calendario sí aparece, porque es de donde sale su precarga.
+  carnet_caducado: RUTA_CALENDARIO,
   // Donde se ve el carné y se dice qué falta: «Mis datos → Tus carnés de conducir».
   carnet_sin_nacimiento: '/boveda?vista=datos',
-  // «Recordatorios» ofrece la ITV precargada con su fecha: el sitio donde se deja puesto el aviso propio.
-  itv_en_ventana: '/boveda?vista=recordatorios',
+  // El calendario ofrece la ITV precargada con su fecha: el sitio donde se deja puesto el aviso propio.
+  itv_en_ventana: RUTA_CALENDARIO,
   // «Pendiente de tu firma» vive en la bóveda (vista de seguros), que es donde se firma.
   anulacion_por_firmar: '/boveda',
   felicitacion: '/boveda',
@@ -369,8 +370,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   parte_actualizado: '/boveda?vista=siniestro',
   // El detalle de la póliza (precio, fechas, documentos) vive en «Mis seguros».
   poliza_modificada: '/boveda',
-  // El calendario del patrimonio es donde se ve y se actualiza la fecha.
-  patrimonio_en_ventana: '/patrimonio/calendario',
+  // El calendario (único, 26/10/2026) trae las fechas del patrimonio; la ficha del inmueble es donde se actualiza.
+  patrimonio_en_ventana: RUTA_CALENDARIO,
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })

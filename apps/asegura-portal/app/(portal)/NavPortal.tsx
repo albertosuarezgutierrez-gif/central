@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
-import { pestanasPortal, seccionActiva } from '@central/module-seguros-portal'
+import { pestanasPortal, seccionActiva, type SeccionPortal } from '@central/module-seguros-portal'
 
 import { WHATSAPP_PATH } from '../whatsapp-icono'
 import { CargandoEnlace } from './CargandoEnlace'
@@ -48,7 +48,9 @@ import { CargandoEnlace } from './CargandoEnlace'
  * de la ruta y del parámetro, y no baja como prop desde cada página — así el
  * `layout` puede pintar la navegación una sola vez para todas.
  */
-export function NavPortal({ llamar, whatsapp }: {
+export function NavPortal({ visibles, llamar, whatsapp }: {
+  /** Las entradas que se ofrecen a esta sesión (`menuDeSesion`). Sin ella, las cinco. Solo visibilidad. */
+  visibles?: readonly SeccionPortal[]
   llamar?: { tel: string; numero: string }
   /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */
   whatsapp?: string
@@ -61,7 +63,7 @@ export function NavPortal({ llamar, whatsapp }: {
   // 26/10/2026: la entrada activa la decide `seccionActiva` (la misma regla que la cabecera): la ruta manda y, en
   // `/boveda`, el `?vista=` dice a cuál de las cinco pertenece (Recibos y Siniestros son «Seguros»; Datos, «Cuenta»).
   const activa = seccionActiva(ruta, params.get('vista'))
-  const pestanas = pestanasPortal()
+  const pestanas = pestanasPortal().filter((p) => visibles === undefined || visibles.includes(p.id))
 
   // 🚨 El cajón se DERIVA de en qué pantalla se abrió, no es un booleano suelto:
   // se guarda la ruta+parámetro del momento en que se abrió y está abierto solo

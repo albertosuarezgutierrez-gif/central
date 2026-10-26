@@ -58,7 +58,7 @@ test('una primera ITV a 20 días avisa en el tramo 30, con fecha firme (sin «es
   assert.match(a!.detalle, new RegExp(`^Vence el ${dmy}\\. Pide cita en una estación ITV; circular sin ITV en vigor es sancionable y puede complicar un siniestro\\.`))
   assert.doesNotMatch(a!.detalle + a!.titulo, /estimad/i)
   assert.equal(a!.descartable, true)
-  assert.equal(a!.href, '/boveda?vista=recordatorios')
+  assert.equal(a!.href, '/herramientas/calendario')
   assert.ok(a!.clave.endsWith(`@${iso(f)}#30`), a!.clave)
   assert.equal(esClaveDescartable(a!.clave), true)
 })

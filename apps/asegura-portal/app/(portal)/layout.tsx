@@ -5,6 +5,7 @@ import { NavPortal } from './NavPortal'
 import { BandaCorredor } from './BandaCorredor'
 import { BienvenidaAvisos } from './BienvenidaAvisos'
 import { SALUDO_CLIENTE } from '../WhatsappFlotante'
+import { menuDeSesion } from '@/lib/menu-portal'
 
 /**
  * El armazón de las pantallas con sesión.
@@ -23,14 +24,18 @@ import { SALUDO_CLIENTE } from '../WhatsappFlotante'
  * `.portal-nav`: desde el 19/09/2026 esa clase es un cajón `position: fixed`,
  * que no ocupa sitio en el flujo y por tanto no reservaría nada.
  */
-export default function PortalLayout({ children }: { children: React.ReactNode }) {
-  // 26/10/2026: el menú son cinco entradas fijas (`pestanasPortal()`); «Patrimonio» ya no es una entrada condicional:
-  // vive en «Herramientas», cuyas tarjetas SÍ respetan lo que cada cliente tiene activo (`lib/modulos.ts`).
+export default async function PortalLayout({ children }: { children: React.ReactNode }) {
+  // 26/10/2026: el menú son cinco entradas (`pestanasPortal()`) y se OFRECEN según quién mira (`menuDeSesion`):
+  // quien solo tiene accesos que otros le dieron ve Inicio · Seguros · Cuenta; «Herramientas» y «Contactos» salen
+  // cuando su alcance abre algo en ellas. Es solo visibilidad: cada pantalla sigue decidiendo su acceso por código.
+  // `null` (sin sesión, o lectura caída) = el menú completo: no se esconde nada por no haber podido comprobarlo.
+  const menu = await menuDeSesion().catch(() => null)
   return (
     <div className="portal-shell">
       <BandaCorredor />
       <Suspense fallback={<div className="portal-nav-hueco" aria-hidden />}>
         <NavPortal
+          visibles={menu?.visibles}
           llamar={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }}
           whatsapp={whatsappUrl(SALUDO_CLIENTE)}
         />

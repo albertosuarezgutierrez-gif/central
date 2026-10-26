@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { menuDeSesion } from '@/lib/menu-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { PaginaPortal } from '../../PaginaPortal'
@@ -16,6 +17,9 @@ export const dynamic = 'force-dynamic'
 export default async function CuentaPage() {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  // «Contactos» no está en el menú de quien solo tiene accesos que le han dado (`menuDeSesion`): se ofrece aquí, para que
+  // nadie se quede sin forma de ver —o dejar— un acceso. Solo visibilidad: la ruta `/autorizaciones` no cambia.
+  const menu = await menuDeSesion().catch(() => null)
 
   return (
     <PaginaPortal antetitulo="Cuenta" titulo="Mi" acento="cuenta">
@@ -42,6 +46,18 @@ export default async function CuentaPage() {
             <p style={{ marginTop: 0 }}>Cómo y cuándo te avisamos, y lo que nos has autorizado.</p>
           </TarjetaPortal>
         </li>
+        {menu?.contactosEnCuenta && (
+          <li>
+            <TarjetaPortal
+              id="cuenta-contactos"
+              antetitulo="Accesos"
+              titulo="Quién ve qué"
+              accion={<Link className="boton" href="/autorizaciones">Ver los accesos</Link>}
+            >
+              <p style={{ marginTop: 0 }}>Los seguros que otras personas te han dejado ver, y cómo dejar de verlos.</p>
+            </TarjetaPortal>
+          </li>
+        )}
       </ul>
     </PaginaPortal>
   )

@@ -117,7 +117,7 @@ test('todo ilegible manda sobre el «+» aunque haya avisos de relleno', () => {
 
 test('cada tipo tiene destino, y es una pantalla del portal', () => {
   for (const [tipo, href] of Object.entries(HREF_POR_TIPO)) {
-    assert.match(href, /^\/(autorizaciones|boveda|patrimonio)/, `${tipo} lleva a ${href}, que no es una pantalla del portal`)
+    assert.match(href, /^\/(autorizaciones|boveda|patrimonio|herramientas)/, `${tipo} lleva a ${href}, que no es una pantalla del portal`)
     assert.ok(!/\/api\//.test(href), `${tipo} apunta a una API: la campana enlaza pantallas, no ejecuta acciones`)
   }
 })
@@ -256,7 +256,7 @@ test('🚨 un carné YA CADUCADO avisa: antes el aviso desaparecía justo al cad
   assert.equal(r.avisos[0]!.tipo, 'carnet_caducado')
   // Lleva a «Recordatorios», que es donde el carné se ve; «Mis datos» no lo
   // pinta, así que ahí el enlace mandaría a buscar algo que no está.
-  assert.equal(r.avisos[0]!.href, '/boveda?vista=recordatorios')
+  assert.equal(r.avisos[0]!.href, '/herramientas/calendario')
 })
 
 test('🚨 el aviso de caducado NO acusa: dice lo que nos consta y ofrece corregirlo', () => {

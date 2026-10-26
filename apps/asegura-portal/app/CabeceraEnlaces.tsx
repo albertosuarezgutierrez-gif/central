@@ -15,13 +15,14 @@ import { seccionActiva } from '@central/module-seguros-portal'
  * lleva las mismas entradas y la cabecera no tiene sitio (a 320 px el logotipo y los botones de la derecha ocupan todo).
  * El layout raíz solo la monta con sesión (`CabeceraEnlacesSesion`).
  */
-export function CabeceraEnlaces() {
+export function CabeceraEnlaces({ herramientas = true }: { herramientas?: boolean }) {
   const ruta = usePathname()
   const params = useSearchParams()
   const activa = seccionActiva(ruta, params.get('vista'))
   return (
     <nav className="cabecera-enlaces" aria-label="Herramientas y seguros">
-      <Link href="/herramientas" aria-current={activa === 'herramientas' ? 'page' : undefined}>Herramientas</Link>
+      {/* Solo se ofrece si la sesión tiene algo en Herramientas (`menuDeSesion`); es visibilidad, no acceso. */}
+      {herramientas && <Link href="/herramientas" aria-current={activa === 'herramientas' ? 'page' : undefined}>Herramientas</Link>}
       <Link href="/boveda" aria-current={activa === 'seguros' ? 'page' : undefined}>Seguros</Link>
     </nav>
   )
