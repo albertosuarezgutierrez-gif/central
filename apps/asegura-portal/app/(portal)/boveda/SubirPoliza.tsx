@@ -10,6 +10,7 @@ import { eur } from '@/lib/dinero'
 import { motivosDesfase } from '@/lib/documento-desfasado'
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
 import { fechaEs } from '@/lib/fechas'
+import { TEXTO_SERVICIO_ALTA } from '@/lib/alta-servicio'
 
 import { AnadirPoliza, type PolizaGuardada } from './AnadirPoliza'
 import { PasoRenovacion } from './PasoRenovacion'
@@ -238,6 +239,11 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
           </h2>
         </summary>
         <div className="plegable-cartera-cuerpo">
+          {/* El SERVICIO que pide quien sube la póliza (base: lo solicita él, sin casilla). Las ofertas de
+              otros seguros son aparte: casilla `ConsentimientoComercial`, desmarcada de partida. */}
+          <p className="suave" data-testid="servicio-alta" style={{ fontSize: 14, margin: '0 0 10px' }}>
+            {TEXTO_SERVICIO_ALTA}
+          </p>
           {/* 19/09/2026: el párrafo entero (4 líneas) empujaba los dos botones
               fuera de la primera pantalla del móvil — justo lo que Alberto pidió
               reducir. Se pliega, pero no desaparece: sigue siendo información que

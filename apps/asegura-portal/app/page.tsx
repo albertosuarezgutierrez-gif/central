@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { Entrada } from './Entrada'
 import { getIdentidad } from '@/lib/session'
 import { COOKIE_REF_CAMPANA, hayMarcaDeCampana } from '@/lib/bienvenida-campana'
+import { esOrigenRrhh } from '@/lib/entrada-rrhh'
 
 // Lee la cookie, así que no se puede prerenderizar. Explícito para que nadie
 // lo convierta en estático más adelante: si esta página se cachea, todo el
@@ -32,12 +33,12 @@ export const dynamic = 'force-dynamic'
  * y el usuario se encontraría un `ya_usado` que parece culpa suya. Arreglar la
  * puerta quita la fricción sin abrir esa puerta trasera.
  */
-export default async function Raiz({ searchParams }: { searchParams: Promise<{ r?: string | string[] }> }) {
+export default async function Raiz({ searchParams }: { searchParams: Promise<{ r?: string | string[]; origen?: string | string[] }> }) {
   // La puerta única: la identidad sale de la cookie, nunca de la petición.
   const identidad = await getIdentidad()
   if (identidad) redirect('/inicio')
   // Bienvenida solo para quien viene del correo de campaña (`?r=` o su cookie). Sin sesión, por definición.
-  const { r } = await searchParams
+  const { r, origen } = await searchParams
   const jar = await cookies()
-  return <Entrada bienvenida={hayMarcaDeCampana(r, jar.get(COOKIE_REF_CAMPANA)?.value)} />
+  return <Entrada bienvenida={hayMarcaDeCampana(r, jar.get(COOKIE_REF_CAMPANA)?.value)} desdeRrhh={esOrigenRrhh(origen)} />
 }

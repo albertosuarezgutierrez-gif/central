@@ -23,6 +23,7 @@ import { TEXTO_CONSENTIMIENTO_COMERCIAL } from '@central/module-seguros-portal'
  *    Dejarla marcada tras un error sería enseñar un consentimiento que no
  *    existe en la BD.
  */
+// PENDIENTE revisión abogado/DPD (texto de la casilla: `TEXTO_CONSENTIMIENTO_COMERCIAL` del módulo; el párrafo de arriba)
 export function ConsentimientoComercial({ inicial, compacto = false }: {
   inicial: boolean | null
   /**

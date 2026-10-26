@@ -87,3 +87,11 @@
   .tabla-cards td[colspan] { display: block; text-align: left; }
   .tabla-cards td:empty { display: none; }
 }
+
+/* Marca Grupo ASegura (portal del empleado): Quicksand 600-700 en titulares/menús/botones, Nunito Sans en cuerpo, sin cursivas. */
+.marca-asegura { font-family: var(--font-nunito), system-ui, sans-serif; }
+.marca-asegura *, .marca-asegura *::before, .marca-asegura *::after { font-style: normal; }
+.marca-asegura h1, .marca-asegura h2, .marca-asegura h3, .marca-asegura button, .marca-asegura nav a,
+.marca-asegura a[class*="min-h-[44px]"], .marca-asegura .btn {
+  font-family: var(--font-quicksand), var(--font-nunito), system-ui, sans-serif; font-weight: 700;
+}

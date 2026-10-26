@@ -1,7 +1,9 @@
 'use client'
 import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
+import { destinoValido } from '@central/module-seguros-portal'
 import { textoFalloEnlace } from '@/lib/entrada-enlace'
 import { BIENVENIDA_CAMPANA } from '@/lib/bienvenida-campana'
+import { SUBTITULO_RRHH, emailDeEntrada } from '@/lib/entrada-rrhh'
 
 
 /**
@@ -15,7 +17,7 @@ import { BIENVENIDA_CAMPANA } from '@/lib/bienvenida-campana'
  * no se caía: la puerta no miraba. Ahora `page.tsx` es un componente de
  * servidor que resuelve la sesión y solo monta esto si NO la hay.
  */
-export function Entrada({ bienvenida = false }: { bienvenida?: boolean }) {
+export function Entrada({ bienvenida = false, desdeRrhh = false }: { bienvenida?: boolean; desdeRrhh?: boolean }) {
   const [destino, setDestino] = useState('')
   const [codigo, setCodigo] = useState('')
   const [fase, setFase] = useState<'pedir' | 'verificar'>('pedir')
@@ -56,6 +58,20 @@ export function Entrada({ bienvenida = false }: { bienvenida?: boolean }) {
     setDesdeEnlace(true)
     // El código no se queda en la barra ni en el historial más de lo necesario.
     window.history.replaceState(null, '', window.location.pathname)
+  }, [])
+
+  // `?email=` del Portal del Empleado (`lib/entrada-rrhh.ts`): solo PRERRELLENA el campo si tiene forma de
+  // correo. No pide el código ni canjea nada; la persona pulsa «Enviarme un código». Efecto aparte y después
+  // del del enlace de acceso: si ese ya fijó un destino (`?d=`), manda ese (solo rellena si sigue vacío).
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const e = emailDeEntrada(q.get('email'), destinoValido)
+    if (q.has('email')) {
+      q.delete('email')
+      const resto = q.toString()
+      window.history.replaceState(null, '', window.location.pathname + (resto ? `?${resto}` : '') + window.location.hash)
+    }
+    if (e) setDestino((previo) => previo || e)
   }, [])
 
   // El `?r=` del correo de campaña («presentación de la app», `lib/presentacion-app.ts`): solo ATRIBUYE
@@ -197,6 +213,11 @@ export function Entrada({ bienvenida = false }: { bienvenida?: boolean }) {
             <p className="suave" style={{ marginTop: 0 }}>
               Todos tus seguros en un sitio. Gratis, seas cliente o no.
             </p>
+            {desdeRrhh && fase === 'pedir' && (
+              <p className="suave" data-testid="subtitulo-rrhh" style={{ marginTop: 0 }}>
+                {SUBTITULO_RRHH}
+              </p>
+            )}
           </>
         )}
 
