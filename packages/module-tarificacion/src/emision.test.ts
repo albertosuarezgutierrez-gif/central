@@ -159,6 +159,11 @@ describe('emisión · token y canje', () => {
     expect(t).not.toContain(token)
     expect(sinTokens(`x ${token} y`)).not.toContain(token)
   })
+  it('sinTokens redacta un token sin dígitos (base64url aleatorio puede no traerlos)', () => {
+    const tok = 'Ab'.repeat(10) + '_' + 'Cd'.repeat(10) + 'xY'
+    expect(tok).toHaveLength(43)
+    expect(sinTokens(`x ${tok} y`)).toBe('x [TOKEN] y')
+  })
   it('sinTokens redacta tokens de 43 chars que empiezan o acaban en - o _ (el \\b antiguo los dejaba pasar)', () => {
     // Sintéticos, compuestos en runtime (no literales) para no disparar gitleaks.
     const casos = [
