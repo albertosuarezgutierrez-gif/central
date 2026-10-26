@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-26T10:31:04Z",
+  "generadoEn": "2026-10-26T11:08:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -787,7 +787,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "sivra": {
         "estado": "no",
@@ -5841,9 +5841,9 @@
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
       "/api/admin/solicitudes/[id]/justificante",
+      "/api/auth/acceso/solicitar",
+      "/api/auth/acceso/verificar",
       "/api/auth/cambiar-empresa",
-      "/api/auth/cambiar-password",
-      "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/seleccionar-empresa",
       "/api/cron/alerta-fichajes-abiertos",
