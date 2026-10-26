@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic'
  * /api/correduria/solicitud-datos — el enlace para que el cliente complete sus datos
  * (24/09/2026). Reenvía al puerto de asegura; el `actor` lo pone el servidor.
  *   GET  ?oportunidadId=              → sus solicitudes (con respuestas)
- *   POST { oportunidadId, personaId? } → crea el enlace (url + mensaje solo al crearlo); con
- *                                       `personaId`, de OTRA persona del riesgo (un familiar)
+ *   POST { oportunidadId, personaId?, reemitir? } → crea el enlace (url + mensaje solo al crearlo); con
+ *                                       `personaId`, de OTRA persona del riesgo (un familiar); con `reemitir`, si ya
+ *                                       había uno vivo le da token nuevo (el anterior deja de valer) y devuelve su url
  *   POST { accion:'anular', id }      → el enlace deja de funcionar
  *   POST { accion:'whatsapp', oportunidadId, conEnlace } → anota «Datos pedidos por WhatsApp» (no cuenta como contacto)
  */
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
       : {
         oportunidadId: typeof b?.oportunidadId === 'string' ? b.oportunidadId : '',
         ...(typeof b?.personaId === 'string' && b.personaId.trim() !== '' ? { personaId: b.personaId.trim() } : {}),
+        ...(b?.reemitir === true ? { reemitir: true } : {}),
         actor: guarda.session.email,
       }
   const r = await accionSolicitudDatosAsegura(cuerpo)

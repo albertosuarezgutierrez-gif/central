@@ -62,6 +62,8 @@ async function enviar(url: string, metodo: 'POST' | 'PATCH', body: Record<string
 const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   // 30/10/2026: se abrió el WhatsApp con la petición de datos. Informativo: no cuenta como contacto hasta que el cliente responda.
   datos_pedidos_whatsapp: 'Datos pedidos por WhatsApp',
+  // 26/10/2026: el botón WhatsApp le dio token nuevo al enlace vivo (el anterior dejó de valer; lo tecleado se conserva).
+  datos_enlace_reemitido: 'Enlace de datos renovado (el anterior ya no vale)',
   creada_mano: 'Abierta a mano desde la ficha',
   creada_portal: 'Pedida por el cliente desde su portal',
   // Lead del formulario web de auto/moto (06/10/2026, `lib/lead-web-solicitud.ts` de asegura): nace con su enlace de datos.

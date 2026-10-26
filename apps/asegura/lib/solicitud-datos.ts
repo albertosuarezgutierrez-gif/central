@@ -24,6 +24,7 @@ import {
   camposSolicitud,
   camposAlDia,
   camposAPreguntar,
+  camposHogarSinLoSabido,
   nombreRamoSolicitud,
   conIdentidad,
   contrastarConDocumentos,
@@ -56,7 +57,7 @@ import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 import { oportunidadDesdeFichero, oportunidadDesdeLectura } from './oportunidad-documento'
 import { leerPoliza } from './documentos/extraer-poliza'
-import { trasCompletarHogar } from './solicitud-datos-hogar'
+import { trasCompletarHogar, viviendaSabidaDeOportunidad } from './solicitud-datos-hogar'
 import { trasCompletarRiesgo } from './solicitud-datos-riesgo'
 import { enlaceACiegas, politicaDocEnlace } from './enlace-ciego'
 import { viasValidadas, zonaCpServidor } from './solicitud-datos-direccion'
@@ -112,9 +113,13 @@ export async function crearSolicitud(
   oportunidadId: string,
   actor: string,
   personaId: string | null = null,
-  /** `fichaCiega`: se pide todo como si la ficha no supiera nada (lead web de una ficha que ya existía). */
-  opciones: { fichaCiega?: boolean } = {},
-): Promise<{ ok: true; id: string; token: string | null; nueva: boolean; ramo: RamoSolicitud; caduca: string; tercero: boolean } | Fallo> {
+  /**
+   * `fichaCiega`: se pide todo como si la ficha no supiera nada (lead web de una ficha que ya existía).
+   * `reemitir` (26/10/2026): si ya hay una viva, se le da un token NUEVO a esa MISMA solicitud (el anterior deja de valer)
+   * y se devuelve; sin esto, la viva sale sin token. Solo lo pide el botón WhatsApp del corredor.
+   */
+  opciones: { fichaCiega?: boolean; reemitir?: boolean } = {},
+): Promise<{ ok: true; id: string; token: string | null; nueva: boolean; reemitida: boolean; ramo: RamoSolicitud; caduca: string; tercero: boolean } | Fallo> {
   if (!UUID.test(oportunidadId)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
   const db = prismaAsegura()
   const [o] = await db.$queryRaw<{ clienteId: string; ramo: string; estado: string }[]>(Prisma.sql`
@@ -138,12 +143,12 @@ export async function crearSolicitud(
   const campos = opciones.fichaCiega ? camposSolicitud(ramo, NADA_CONOCIDO) : await camposParaPersona(correduriaId, persona, ramo)
   if (!campos) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha de esa persona.', status: 404 }
   const r = await prismaAsegura().$transaction((tx) =>
-    insertarSolicitud(tx, { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero, estadoOportunidad: o.estado }))
+    insertarSolicitud(tx, { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero, estadoOportunidad: o.estado, reemitir: opciones.reemitir === true }))
   // RGPD: la pendiente caducada que `insertarSolicitud` acaba de anular no guarda su borrador. FUERA de la transacción:
   // sin la columna, un error dentro la abortaría entera.
   if (r.nueva) await limpiarBorradoresMuertos(prismaAsegura(), { oportunidadId, clienteId: persona, correduriaId })
-  // El token solo existe en claro al crearla: una viva no lo puede devolver (solo guardamos su hash).
-  return { ok: true, id: r.id, token: r.token, nueva: r.nueva, ramo, caduca: r.caduca.toISOString(), tercero }
+  // El token solo existe en claro al crearla o al reemitirla: una viva sin reemitir no lo puede devolver (solo guardamos su hash).
+  return { ok: true, id: r.id, token: r.token, nueva: r.nueva, reemitida: r.reemitida, ramo, caduca: r.caduca.toISOString(), tercero }
 }
 
 /** Qué se le pide a esa persona según lo que ya hay en su ficha. `null` = no se encuentra la ficha. */
@@ -161,22 +166,41 @@ export async function camposParaPersona(correduriaId: string, personaId: string,
   })
 }
 
+/** Acción del historial: a una solicitud viva se le dio un token nuevo (el enlace anterior dejó de valer). */
+export const ACCION_ENLACE_REEMITIDO = 'datos_enlace_reemitido'
+
 /**
  * La escritura de la solicitud, DENTRO de la transacción que le pasen (la propia de `crearSolicitud`, o la
  * del alta de la oportunidad del lead web: así o quedan las dos o ninguna). Una viva por persona y
- * oportunidad: si ya la hay, la devuelve sin token. `token` en claro solo si es nueva.
+ * oportunidad: si ya la hay, la devuelve sin token. `token` en claro solo si es nueva o reemitida.
+ *
+ * `reemitir` (26/10/2026, Alberto: «el botón WhatsApp tiene que dar SIEMPRE un enlace»): con una viva, ROTA su token —
+ * la MISMA fila (ni duplicado ni otra viva), mismo `creada_por` (un enlace a ciegas sigue a ciegas), mismos campos, plazo,
+ * borrador y documentos; solo cambia `token_hash`, así que el enlace anterior pasa a «muerta». Queda en el historial.
  */
 export async function insertarSolicitud(
   tx: Prisma.TransactionClient,
-  p: { correduriaId: string; oportunidadId: string; personaId: string; ramo: RamoSolicitud; campos: CampoSolicitud[]; actor: string; tercero: boolean; estadoOportunidad: string },
-): Promise<{ id: string; caduca: Date; nueva: boolean; token: string | null }> {
+  p: { correduriaId: string; oportunidadId: string; personaId: string; ramo: RamoSolicitud; campos: CampoSolicitud[]; actor: string; tercero: boolean; estadoOportunidad: string; reemitir?: boolean },
+): Promise<{ id: string; caduca: Date; nueva: boolean; reemitida: boolean; token: string | null }> {
   const { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero } = p
   await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`solicitud:${oportunidadId}:${persona}`}))`)
   const [viva] = await tx.$queryRaw<{ id: string; caduca: Date }[]>(Prisma.sql`
     select id::text as id, caduca_at as caduca from solicitud_datos
     where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${persona}::uuid
       and estado = 'pendiente' and caduca_at > now()`)
-  if (viva) return { id: viva.id, caduca: viva.caduca, nueva: false, token: null }
+  if (viva && p.reemitir === true) {
+    const token = randomBytes(32).toString('base64url')
+    const n = await tx.$executeRaw(Prisma.sql`
+      update solicitud_datos set token_hash = ${hashToken(token)}
+      where id = ${viva.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente' and caduca_at > now()`)
+    if (n === 0) return { id: viva.id, caduca: viva.caduca, nueva: false, reemitida: false, token: null }
+    await tx.$executeRaw(Prisma.sql`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${ACCION_ENLACE_REEMITIDO}, cast(${p.estadoOportunidad} as estado_comercial),
+              cast(${p.estadoOportunidad} as estado_comercial), ${JSON.stringify({ solicitudId: viva.id, tercero })}::jsonb, ${actor})`)
+    return { id: viva.id, caduca: viva.caduca, nueva: false, reemitida: true, token }
+  }
+  if (viva) return { id: viva.id, caduca: viva.caduca, nueva: false, reemitida: false, token: null }
   // Una pendiente ya caducada deja sitio (índice «una viva por oportunidad»).
   await tx.$executeRaw(Prisma.sql`
     update solicitud_datos set estado = 'anulada'
@@ -192,7 +216,7 @@ export async function insertarSolicitud(
     insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
     values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'datos_pedidos', cast(${p.estadoOportunidad} as estado_comercial),
             cast(${p.estadoOportunidad} as estado_comercial), ${JSON.stringify({ solicitudId: n.id, campos: campos.length, tercero })}::jsonb, ${actor})`)
-  return { id: n.id, caduca: n.caduca, nueva: true, token }
+  return { id: n.id, caduca: n.caduca, nueva: true, reemitida: false, token }
 }
 
 /**
@@ -203,6 +227,18 @@ export async function insertarSolicitud(
 function camposDeFila(f: { ramo: string; campos: CampoSolicitud[] }): CampoSolicitud[] {
   const ramo = ramoSolicitud(f.ramo)
   return conIdentidad(ramo ? camposAlDia(ramo, f.campos) : f.campos)
+}
+
+/**
+ * Lo que el enlace enseña Y acepta HOY (26/10/2026): `camposDeFila` menos, en hogar, lo que ya se sabe de la vivienda de
+ * la oportunidad (`camposHogarSinLoSabido`: se OCULTA la pregunta, su valor nunca viaja; vale también a ciegas). Se
+ * calcula en cada lectura: si Alberto completa la vivienda tras mandar el enlace, la pregunta desaparece. Sin poder leer
+ * la vivienda, se pregunta todo. Lo mismo al pintar, al guardar el borrador, al leer un documento y al validar.
+ */
+async function camposVigentes(f: { ramo: string; campos: CampoSolicitud[]; correduriaId: string; oportunidadId: string }): Promise<CampoSolicitud[]> {
+  const campos = camposDeFila(f)
+  if (ramoSolicitud(f.ramo) !== 'hogar') return campos
+  return camposHogarSinLoSabido(campos, await viviendaSabidaDeOportunidad(f.correduriaId, f.oportunidadId))
 }
 
 function estadoEfectivo(estado: string, caduca: Date): SolicitudResumen['estado'] {
@@ -363,14 +399,15 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   // Datos de un TERCERO: no se rellena nada. El enlace puede ir al cliente, y el DNI de su padre no
   // es suyo para verlo (a diferencia del propio, que Alberto decidió traer relleno).
   // El borrador es lo que ESTE enlace tecleó (no sale de la ficha): vale también a ciegas y, sin datos personales, para un tercero.
-  const borrador = await leerBorrador(f)
+  const vigentes = await camposVigentes(f)
+  const borrador = await leerBorrador(f, vigentes)
   // De un tercero, sin sus datos personales (DNI, nacimiento, carné…): la regla de tercero no rellena nada, y el
   // enlace puede abrirlo otro. Lo del riesgo sí vuelve.
-  if (f.tercero) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: true, borrador: borradorParaTercero(borrador) }
+  if (f.tercero) return { estado: 'ok', ramo, campos: vigentes, tercero: true, borrador: borradorParaTercero(borrador) }
   // Enlace del formulario web ANÓNIMO: nada de la ficha, ni su DNI (ver `ACTOR_ENLACE_WEB`).
-  if (enlaceACiegas(f.creadaPor)) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: false, borrador }
+  if (enlaceACiegas(f.creadaPor)) return { estado: 'ok', ramo, campos: vigentes, tercero: false, borrador }
   const id = await identidadFicha(f)
-  const campos = camposDeFila(f).map((c) => {
+  const campos = vigentes.map((c) => {
     const actual = c.clave === 'dni' ? id.dni : c.clave === 'fechaNacimiento' ? id.fechaNacimiento : null
     return actual ? { ...c, actual } : c
   })
@@ -429,6 +466,7 @@ export async function subirDocumentoSolicitud(
 
   // Enlace a ciegas (formulario web): ni contraseñas de la ficha, ni oportunidades; se archiva para revisión.
   const politica = politicaDocEnlace(f.creadaPor)
+  const vigentes = await camposVigentes(f)
   // Primero se lee (para saber qué es y archivarlo con su tipo); si la IA falla, se archiva como «otro».
   const opcionesLector = politica.probarContrasenasFicha ? { contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId) } : {}
   // Póliza actual: el lector de pólizas (texto por la pasarela `iaTexto`, con su tope). Lo leído pasa por la misma
@@ -442,8 +480,8 @@ export async function subirDocumentoSolicitud(
     ? (polizaLeida.fase === 'ninguno' ? { ok: false, motivo: polizaLeida.motivo } : { ok: true, bruto: polizaLeida.bruto ?? null })
     : await conPlazo(leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre, opcionesLector), PLAZO_LECTURA_DOCUMENTO_MS, () => ({ ok: false as const, motivo: 'La lectura del documento ha superado el plazo.' }))
   const leido: { tipo: TipoDocSolicitud; valores: Record<string, Respuesta> } = polizaLeida
-    ? { tipo: 'poliza', valores: valoresDePolizaLeida(polizaLeida, camposDeFila(f)) }
-    : lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, camposDeFila(f)) : { tipo: 'otro', valores: {} }
+    ? { tipo: 'poliza', valores: valoresDePolizaLeida(polizaLeida, vigentes) }
+    : lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, vigentes) : { tipo: 'otro', valores: {} }
   const g = await guardarDocumento(f.correduriaId, {
     clienteId: f.clienteId,
     tipo: tipoArchivoDocSolicitud(leido.tipo),
@@ -516,7 +554,7 @@ export async function responderSolicitud(
   if (!f) return { ok: false, estado: 'muerta' }
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
-  const campos = camposDeFila(f)
+  const campos = await camposVigentes(f)
   // Dirección: provincia/municipio contra la tabla del CP y la calle «oficial» solo si el callejero la confirma.
   const vias = campos.some((c) => c.tipo === 'direccion') ? await viasValidadas(campos, entrada) : new Map<string, ViaValidada>()
   const v = validarRespuestas(campos, entrada, new Date(), { zonaCp: zonaCpServidor, viaValidada: (clave) => vias.get(clave) ?? null })
@@ -632,13 +670,13 @@ export async function responderSolicitud(
 // `null` y guardar contesta `sin_migracion` sin error para el cliente; el formulario funciona igual, sin borrador.
 
 /** Lo guardado de esa solicitud. `null` = nada, ilegible o sin la columna (nunca lanza: el formulario se abre igual). */
-async function leerBorrador(f: FilaToken): Promise<BorradorSolicitud | null> {
+async function leerBorrador(f: FilaToken, campos: readonly CampoSolicitud[]): Promise<BorradorSolicitud | null> {
   try {
     const [fila] = await prismaAsegura().$queryRaw<{ borrador: string | null }[]>(Prisma.sql`
       select borrador from solicitud_datos where id = ${f.id}::uuid`)
     if (!fila?.borrador) return null
     // Se vuelve a limpiar contra los campos VIGENTES: una pregunta retirada no reaparece.
-    return limpiarBorrador(camposDeFila(f), JSON.parse(decryptField(fila.borrador)))
+    return limpiarBorrador(campos, JSON.parse(decryptField(fila.borrador)))
   } catch (e) {
     if (!esColumnaAusente(e)) console.warn('[solicitud-datos] borrador ilegible:', e instanceof Error ? e.message : e)
     return null
@@ -660,7 +698,7 @@ export async function guardarBorradorSolicitud(token: string, entrada: unknown, 
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
   if (f.tercero && !consentimiento) return { ok: false, estado: 'sin_consentimiento' }
-  const campos = camposDeFila(f)
+  const campos = await camposVigentes(f)
   const borrador = limpiarBorrador(campos, entrada)
   if (!borrador) return { ok: false, estado: 'invalido' }
   const ultimoPaso = ultimoPasoDe(campos, borrador)
