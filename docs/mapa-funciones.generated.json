@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T08:34:14Z",
-  "sha": "96851b10577c372beae5107a964c9141f60f9465",
+  "generadoEn": "2026-10-26T09:03:09Z",
+  "sha": "8c1dd4236bb89a4b8ef8684ad1e36eb2c26443a8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28532,7 +28532,7 @@
         "next"
       ],
       "rutaApi": "/api/operador/portal-permisos",
-      "hash": "7c82e90ec56e"
+      "hash": "51b57b76f5f2"
     },
     {
       "ruta": "apps/asegura/app/api/operador/portal/invitaciones/route.ts",
@@ -52164,7 +52164,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "hoyMadrid",
@@ -52172,7 +52172,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "dia",
@@ -52180,7 +52180,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 58
+          "linea": 59
         },
         {
           "nombre": "sinTildes",
@@ -52188,7 +52188,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": null,
-          "linea": 61,
+          "linea": 62,
           "resumen": "Espejo de `apps/asegura-portal/lib/patrimonio/capital-continente.ts` (un cepo compara las dos expresiones)."
         },
         {
@@ -52197,7 +52197,7 @@
           "exportada": false,
           "params": "ramo: string | null",
           "retorno": null,
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "esImpago",
@@ -52205,7 +52205,7 @@
           "exportada": false,
           "params": "ramo: string | null",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         },
         {
           "nombre": "identidadesDeFicha",
@@ -52213,7 +52213,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 82,
+          "linea": 83,
           "resumen": "Identidades que operan la ficha como propia: vínculos que operan (sin la vista de corredor) a la ficha y a su(s) Dueño(s)."
         },
         {
@@ -52222,7 +52222,7 @@
           "exportada": false,
           "params": "identidades: readonly string[]",
           "retorno": "Promise<(boolean | null)[]>",
-          "linea": 97,
+          "linea": 98,
           "resumen": "Oposición vigente de cada identidad (`true` opuesta · `false` la retiró · `null` nunca). No depende de la versión del texto."
         },
         {
@@ -52231,7 +52231,7 @@
           "exportada": false,
           "params": "identidades: readonly string[]",
           "retorno": "Promise<(boolean | null)[]>",
-          "linea": 107,
+          "linea": 108,
           "resumen": "Consentimiento `comercial` vigente (sobre la versión ACTUAL de su texto) de cada identidad: el permiso para CONTACTAR."
         },
         {
@@ -52240,7 +52240,7 @@
           "exportada": false,
           "params": "correduriaId: string, polizaIds: readonly string[]",
           "retorno": "Promise<Map<string, number | null>>",
-          "linea": 131,
+          "linea": 132,
           "resumen": "Capital de continente de las pólizas de CARTERA (`poliza_coberturas`): solo la cobertura que ES el continente y sin ambigüedad."
         },
         {
@@ -52249,7 +52249,7 @@
           "exportada": false,
           "params": "datosRamo: unknown",
           "retorno": "number | null",
-          "linea": 154
+          "linea": 155
         },
         {
           "nombre": "entradasDeFicha",
@@ -52257,7 +52257,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string, identidades: readonly string[], hoy: string,",
           "retorno": "Promise<",
-          "linea": 162,
+          "linea": 163,
           "resumen": "Las entradas del motor para UNA ficha. Solo lee tablas del titular, sus inmuebles, contratos (id y fin), enlaces y declaradas."
         },
         {
@@ -52266,7 +52266,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string, identidades: readonly string[]",
           "retorno": "Promise<DeclaradaParaSenal[]>",
-          "linea": 246
+          "linea": 247
         },
         {
           "nombre": "aplicar",
@@ -52274,7 +52274,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string, plan: ReturnType<typeof planificarSenales>, titularDe: Map<string, string>",
           "retorno": "Promise<void>",
-          "linea": 271
+          "linea": 272
         },
         {
           "nombre": "ejecutarSenalesPatrimonio",
@@ -52282,7 +52282,7 @@
           "exportada": true,
           "params": "opts: { forzarContar?: boolean } = {}",
           "retorno": "Promise<ResumenSenales | Apagado>",
-          "linea": 303
+          "linea": 304
         },
         {
           "nombre": "purgarSenalesCaducadas",
@@ -52290,7 +52290,7 @@
           "exportada": false,
           "params": "correduriaId: string, hoy: string, ensayo: boolean",
           "retorno": "Promise<number>",
-          "linea": 360,
+          "linea": 367,
           "resumen": "Retención (`MESES_RETENCION_SENALES`, regla pura `debePurgarseSenal`, este SQL es su espejo): se BORRAN las señales cerradas antes del corte y las vivas cuya última actualización es anterior al corte."
         },
         {
@@ -52299,7 +52299,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<ColaSenales>",
-          "linea": 398,
+          "linea": 405,
           "resumen": "Las señales ABIERTAS para la cola «Patrimonio». Apagado: `{estado:'apagado'}` sin leer la BD (la pantalla lo dice). Las de permiso `opuesto` NO salen. El nombre de la ficha viene de `clientes.nombre` "
         },
         {
@@ -52308,7 +52308,7 @@
           "exportada": false,
           "params": "correduriaId: string, fichaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 441,
+          "linea": 448,
           "resumen": "¿Tiene la ficha una petición «Pedir precio» abierta del portal (origen `portal:patrimonio*`)?"
         },
         {
@@ -52317,7 +52317,7 @@
           "exportada": true,
           "params": "id: string, motivo: string, actor: string",
           "retorno": "Promise<ResultadoDescarte>",
-          "linea": 456,
+          "linea": 463,
           "resumen": "«Descartar» desde la cola. Arranca el reloj de 180 días. Solo una señal ABIERTA; el motivo es obligatorio."
         }
       ],
@@ -52333,7 +52333,111 @@
         "portal_poliza_declarada"
       ],
       "rutaApi": null,
-      "hash": "d357b4bb68de"
+      "hash": "ec145e4239c1"
+    },
+    {
+      "ruta": "apps/asegura/lib/patrimonio-supresion-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Supresión (art. 17 RGPD) y señales de patrimonio — reglas PURAS (§0.2 de docs/legal/2026-10-26-borrador-p15-patrimonio.md). Al atender una supresión se BORRAN las filas de `portal_patrimonio_senal` de las fichas del suprimido. Aquí solo se decide QUÉ fichas y QUÉ ids; el SQL está en `patrimonio-supr",
+      "exporta": [
+        "fichasASuprimir",
+        "idsDeSenalesASuprimir",
+        "fichaSuprimida",
+        "hayQueRegistrarOposicion",
+        "constanciaSenales"
+      ],
+      "funciones": [
+        {
+          "nombre": "fichasASuprimir",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteIdSolicitud: string | null, vinculos: readonly VinculoParaSupresion[]",
+          "retorno": "string[]",
+          "linea": 13,
+          "resumen": "Fichas cuyas señales se borran: la ficha de la solicitud (si la hay) y las que la identidad opera COMO PROPIAS (vínculo que autoriza y que no es la vista del corredor, igual que `identidadesDeFicha`)."
+        },
+        {
+          "nombre": "idsDeSenalesASuprimir",
+          "kind": "function",
+          "exportada": true,
+          "params": "senales: readonly SenalParaSupresion[], correduriaId: string, fichas: readonly string[],",
+          "retorno": "string[]",
+          "linea": 19,
+          "resumen": "Ids a borrar: SOLO de esta correduría y SOLO de las fichas indicadas (defensa en profundidad sobre el `where` del SQL)."
+        },
+        {
+          "nombre": "fichaSuprimida",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichaId: string, identidades: readonly string[], supresiones: readonly SupresionParaExcluir[]",
+          "retorno": "boolean",
+          "linea": 34,
+          "resumen": "¿Hay una supresión atendida de esta ficha, o de alguna identidad que la opera? El cron NO calcula entonces."
+        },
+        {
+          "nombre": "hayQueRegistrarOposicion",
+          "kind": "function",
+          "exportada": true,
+          "params": "oposicionVigente: boolean | null",
+          "retorno": "boolean",
+          "linea": 41,
+          "resumen": "¿Hay que escribir la oposición? Solo si no hay ya una VIGENTE (`true`); `false` (la retiró) y `null` (nunca) sí."
+        },
+        {
+          "nombre": "constanciaSenales",
+          "kind": "function",
+          "exportada": true,
+          "params": "borradas: number | null, oposicion: 'registrada' | 'ya_vigente' | 'error' = 'ya_vigente'",
+          "retorno": "string",
+          "linea": 46,
+          "resumen": "Frase para el registro de la supresión (`portal_supresion.respuesta`). `null` = no se pudo borrar: se dice, no se calla."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8de4ba307191"
+    },
+    {
+      "ruta": "apps/asegura/lib/patrimonio-supresion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Supresión (art. 17 RGPD) → borra también las señales de patrimonio (§0.2 del borrador P15). Mismo patrón de BD que la purga de retención de `patrimonio-senales.ts`: SQL crudo parametrizado con `prisma_seguros` (tiene DELETE; el portal no). Corre SIEMPRE, con el interruptor `PATRIMONIO_SENALES_ACTIVA",
+      "exporta": [
+        "borrarSenalesDeSupresion",
+        "registrarOposicionPorSupresion"
+      ],
+      "funciones": [
+        {
+          "nombre": "nivelDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "Nivel",
+          "linea": 17
+        },
+        {
+          "nombre": "borrarSenalesDeSupresion",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { correduriaId: string identidadId: string clienteId: string | null }",
+          "retorno": "Promise<number>",
+          "linea": 20,
+          "resumen": "Devuelve cuántas señales se han borrado. Lanza si la BD falla (el llamador lo registra como «no borradas»)."
+        },
+        {
+          "nombre": "registrarOposicionPorSupresion",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, supresionId: string",
+          "retorno": "Promise<'registrada' | 'ya_vigente'>",
+          "linea": 55,
+          "resumen": "Tras atender una supresión, la identidad queda OPUESTA a nuevas señales (fila append-only en `portal_consentimiento`, `otorgado = true`, versión vigente de la constante única). La tabla no tiene colum"
+        }
+      ],
+      "tablas": [
+        "portal_patrimonio_senal"
+      ],
+      "rutaApi": null,
+      "hash": "57b794f78fc7"
     },
     {
       "ruta": "apps/asegura/lib/personas-portal-entradas.ts",
@@ -58049,7 +58153,7 @@
           "exportada": true,
           "params": "incluirResueltas = false",
           "retorno": "Promise<ResultadoCola>",
-          "linea": 75
+          "linea": 77
         },
         {
           "nombre": "resolverSupresion",
@@ -58057,7 +58161,7 @@
           "exportada": true,
           "params": "entrada: { id: string estado: Exclude<EstadoSupresion, 'recibida' | 'retirada'> respuesta?: string | null prorrogaMotivo?: string | null actor: string }",
           "retorno": "Promise<ResultadoResolver>",
-          "linea": 154,
+          "linea": 156,
           "resumen": "Contestar una solicitud, o prorrogarla. 🚨 **La respuesta es obligatoria y no tiene valor por defecto.** El art. 12.4 obliga a motivar la negativa, aunque sea parcial — y la parcial es el caso NORMAL "
         },
         {
@@ -58066,13 +58170,13 @@
           "exportada": false,
           "params": "f: { id: string identidadId: string clienteId: string | null recibidaEn: Date estado: string prorrogadaEn: Date | null prorrogaMotivo: string | null resueltaEn: Date | null respuesta: string | null resueltaPor: string | null motivo: string ",
           "retorno": "Promise<SupresionEnCola | null>",
-          "linea": 206,
+          "linea": 232,
           "resumen": "La misma proyección que la cola, para una sola fila. Se comparte a propósito: dos formas del mismo objeto acaban dando plazos distintos de la misma solicitud."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c1077b8d8e89"
+      "hash": "71fbccda2c1f"
     },
     {
       "ruta": "apps/asegura/lib/sustituciones-auto.ts",
@@ -215340,7 +215444,7 @@
           "nombre": "puedeCalcularSenales",
           "kind": "function",
           "exportada": true,
-          "params": "x: { interruptor: boolean; oposiciones: readonly (boolean | null)[] }",
+          "params": "x: { interruptor: boolean oposiciones: readonly (boolean | null)[] /** Hay una supresión (art. 17) atendida, total o parcial, de la ficha o de alguna identidad que la opera: NUNCA se calcula. */ suprimida?: boolean }",
           "retorno": "boolean",
           "linea": 219,
           "resumen": "¿Se pueden calcular señales de esta ficha? Interruptor apagado → NUNCA. Encendido → SÍ salvo que alguna identidad que la opera tenga la oposición VIGENTE (`true`). `null` (nunca se opuso) y `false` (r"
@@ -215351,7 +215455,7 @@
           "exportada": true,
           "params": "hoy: Fecha",
           "retorno": "Fecha",
-          "linea": 235,
+          "linea": 241,
           "resumen": "Fecha de corte: lo anterior (estrictamente) a este día se purga."
         },
         {
@@ -215360,7 +215464,7 @@
           "exportada": true,
           "params": "x: { cerradaEn: Fecha | null; ultimaVezEn: Fecha | null; hoy: Fecha }",
           "retorno": "boolean",
-          "linea": 243,
+          "linea": 249,
           "resumen": "¿Toca borrar esta señal? Cerrada → cuenta `cerradaEn`; viva → cuenta `ultimaVezEn`. Sin la fecha que toca (dato roto) NO se borra (estado conservador: no se destruye lo que no se sabe fechar; se ve en"
         },
         {
@@ -215369,7 +215473,7 @@
           "exportada": true,
           "params": "x: { estado: EstadoSenal; cerradaEn: Fecha | null; hoy: Fecha }",
           "retorno": "boolean",
-          "linea": 260,
+          "linea": 266,
           "resumen": "Una señal descartada no vuelve hasta pasados `DIAS_TRAS_DESCARTE` días; las demás cerradas sí pueden volver."
         },
         {
@@ -215378,13 +215482,13 @@
           "exportada": true,
           "params": "x: { calculadas: readonly SenalCalculada[] existentes: readonly FilaSenalExistente[] permitido: boolean hoy: Fecha }",
           "retorno": "PlanSenales",
-          "linea": 281,
+          "linea": 287,
           "resumen": "Qué hacer con las señales de UNA ficha. `existentes` trae las vivas y, de las cerradas, las que haya (se usa la MÁS RECIENTE por clave). Sin permiso: no se inserta nada y las ABIERTAS se retiran. Las "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "446b758a037e"
+      "hash": "a527395d50ad"
     },
     {
       "ruta": "packages/module-patrimonio/src/tipos.ts",
@@ -248152,7 +248256,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5195,
-    "funciones": 19945
+    "archivos": 5197,
+    "funciones": 19953
   }
 }
