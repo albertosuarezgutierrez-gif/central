@@ -11,6 +11,21 @@ import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'play
 import { ErrorTarificador } from './errores.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
 import {
+  BLOQUEO,
+  CONCEPTOS_ACCION,
+  RE_EXCLUIR_DESCARGA,
+  RE_OBJETO_DESCARGA,
+  RE_OBJETO_PROPUESTA,
+  RE_VERBO_DESCARGA,
+  RE_VERBO_DESCARGA_CON_OBJETO,
+  regexBloqueoRotulo,
+  regexPalabras,
+  regexRotuloConAdornos,
+  rotuloMayus,
+  terminoPropio,
+  type Termino,
+} from './vocabulario.ts'
+import {
   ID_CONFIRMAR_DATOS_PERSONAS_GENERALI,
   MEDIADOR_GENERALI,
   PREFIJO_ID_DATOS_PERSONAS_GENERALI,
@@ -1530,14 +1545,18 @@ export const REGLAS_DESCARGA_PROYECTO: Readonly<Record<CompaniaDescargaProyecto,
   generali: { soloConObjeto: true },
 }
 
-const RE_PROHIBIDO_ROTULO_DESCARGA = /\b(emit\w*|contrat\w*|grabar\w*|pagar|pagos?|firm\w*|formaliz\w*|enviar|envio|envia\w*|e-?mail|mail|correo|sms|whatsapp|send|share|compartir|cliente|anular|elimin\w*|borrar|cancelar|aceptar|confirmar|recibos?|domicili\w*|poliza|solicitud)\b/
-const RE_PROHIBIDO_OCULTO_DESCARGA = /(emit|contrat|grabar|pagar|pago|firm|formaliz|enviar|email|mail|sms|anul|elimin|borrar)/
-const RE_AJENO_DESCARGA = /\b(condicion\w*|condicionado|clausulad\w*|manual\w*|ayuda|aplicacion|app|tarifa\w*|bases|politica\w*|privacidad|protocolo|precontractual\w*|ipid|informativ\w*|informacion|extracto|cuestionario|licencia|factura\w*|carta|mandato|catalogo|folleto)\b/
-const RE_VERBO_SUELTO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf)\b/
-const RE_VERBO_CON_OBJETO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf|documento)\b/
-const RE_OBJETO_DESCARGA = /\b(proyecto|presupuesto|oferta)s?\b/
+// 26/10/2026: los términos (verbos, objetos, documentos ajenos y la lista negra) viven en `vocabulario.ts`, por concepto y con su origen.
+// Aquí solo se añaden los que ESTE fichero es el único autorizado a nombrar (guardián de la raíz) y se aplica la regla de cada compañía.
+/** Términos de la lista negra que solo puede nombrar `guard.ts`. El guard los suma a `BLOQUEO` de `vocabulario.ts` (script de candidatos y test los leen de aquí). */
+export const TERMINOS_BLOQUEO_SOLO_GUARD: readonly Termino[] = Object.freeze([terminoPropio('aceptar', 'allianz+mapfre+generali', '26/10/2026', 'rótulo de descarga: nunca un control de aceptación')])
+
+const RE_PROHIBIDO_ROTULO_DESCARGA = regexBloqueoRotulo(TERMINOS_BLOQUEO_SOLO_GUARD)
+const RE_PROHIBIDO_OCULTO_DESCARGA = regexPalabras(BLOQUEO.atributo_interno, { limites: false })
+const RE_AJENO_DESCARGA = RE_EXCLUIR_DESCARGA
+const RE_VERBO_SUELTO_DESCARGA = RE_VERBO_DESCARGA
+const RE_VERBO_CON_OBJETO_DESCARGA = RE_VERBO_DESCARGA_CON_OBJETO
 /** v0.6.29 (Allianz: «Descargar propuesta», tras «Guardar presupuesto»): «propuesta» SOLO junto a imprimir/descargar/pdf (nunca con «documento» suelto); la lista negra sigue mandando. */
-const RE_OBJETO_PROPUESTA_DESCARGA = /\bpropuestas?\b/
+const RE_OBJETO_PROPUESTA_DESCARGA = RE_OBJETO_PROPUESTA
 
 function sinTildesDescarga(x: string | null | undefined): string {
   return String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -1696,7 +1715,7 @@ export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision
 // lanza `guard.comprobar()`) se relanza: fail-closed, el trabajo cae entero.
 
 /** Texto EXACTO (sin tildes, mayúsculas, espacios colapsados) del único botón que se pulsa. */
-export const TEXTO_GENERAR_PROYECTO_MAPFRE = 'GENERAR PROYECTO'
+export const TEXTO_GENERAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.generar_proyecto, 'rotulos', 'generar proyecto')
 /** Cuánto se espera a leer el nº de proyecto tras el clic (modal «Generando proyecto» incluido). */
 export const MS_PROYECTO_MAPFRE = 45_000
 const SEL_DIALOGOS_MAPFRE = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
@@ -1721,7 +1740,7 @@ export function esBotonGenerarProyectoMapfre(descripciones: readonly (string | n
 }
 
 /** v0.8.17: texto EXACTO del botón final alternativo de la pantalla/diálogo que abre «Ir a generar proyecto» (solo allí, nunca en «Coberturas»). */
-export const TEXTO_GUARDAR_PROYECTO_MAPFRE = 'GUARDAR PROYECTO'
+export const TEXTO_GUARDAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.guardar_proyecto, 'rotulos', 'guardar proyecto')
 
 /** ¿Es el texto de un botón final permitido? «Generar Proyecto» siempre; «Guardar proyecto» solo con `conGuardar` (pantalla tras «Ir a generar proyecto»). Sin tildes/mayúsculas. PURA. */
 export function esEtiquetaFinalProyectoMapfre(etiqueta: string | null | undefined, conGuardar = false): boolean {
@@ -1730,7 +1749,7 @@ export function esEtiquetaFinalProyectoMapfre(etiqueta: string | null | undefine
 }
 
 /** v0.8.16: texto EXACTO del único control de navegación que se pulsa si «Generar Proyecto» no está en «Coberturas». */
-export const TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE = 'IR A GENERAR PROYECTO'
+export const TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.ir_a_generar_proyecto, 'rotulos', 'ir a generar proyecto')
 
 /**
  * v0.8.16 (22/10/2026, run real: en «Coberturas» solo había «Ir a generar proyecto», que lleva a la vista del botón «Generar Proyecto»).
@@ -4009,7 +4028,7 @@ export function textoEmisionGenerali(texto: string): boolean {
   return casaEmisionGenerali(texto) !== null
 }
 
-const RE_EMISION_GENERALI = /\b(emitir|contratar|grabar (la )?poliza|pagar|firmar|formalizar)\b/
+const RE_EMISION_GENERALI = regexPalabras(BLOQUEO.emision_pagina)
 const sinTildesMinus = (x: string) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 /**
@@ -4061,12 +4080,15 @@ export function sinSeccionPrecontractualGenerali(texto: string): string {
   return fuera.join('\n').replace(/documentaci[oó]n precontractual/gi, '')
 }
 
+/** 26/10/2026: el término «siguiente» sale de `vocabulario.ts` (concepto `avanzar`); aquí solo los adornos admitidos al final (`›`, `>`, `»`, espacios, NBSP). */
+const RE_SIGUIENTE_GENERALI = regexRotuloConAdornos(CONCEPTOS_ACCION.avanzar.grupos.siguiente[0]!)
+
 /**
  * v0.2.29: texto del botón «Siguiente» tal como lo pinta Generali: «Siguiente ›» (prueba real con 0.2.28). Tras normalizar, la palabra EXACTA
  * «Siguiente» seguida solo de adornos al final (`›`, `>`, `»`, espacios, incl. NBSP). Nada antes, nada de otras palabras. PURA.
  */
 export function esTextoSiguienteGenerali(texto: string): boolean {
-  return /^SIGUIENTE[\s ›>»]*$/.test(textoMenu(String(texto ?? '').replace(/ /g, ' ')))
+  return RE_SIGUIENTE_GENERALI.test(textoMenu(String(texto ?? '').replace(/ /g, ' ')))
 }
 
 /** Prefijo de los ids del bloque «Interesado / Tomador» del formulario de valoración. */

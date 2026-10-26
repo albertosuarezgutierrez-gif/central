@@ -46,6 +46,7 @@ import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-pro
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
 import { esUrlOktaSmsGenerali } from '../../guard.ts'
+import { CONCEPTOS_LECTURA, alternativa, terminosDe } from '../../vocabulario.ts'
 import {
   AVISO_MATRICULA_PROVINCIAL,
   claveEtiquetaRiesgoGenerali,
@@ -550,11 +551,14 @@ const JS_IMPORTES_INPUT = `(() => {
 })()`
 
 /** Importes en TABLAS: columna con cabecera «prima/importe/total/precio…» + celda con importe → «cabecera fila» y el valor en la línea siguiente. */
+// 26/10/2026: las cabeceras de precio salen de `vocabulario.ts` (conceptos de lectura `precio_cabecera_tabla` y, en «Garantías y Capitales opcionales», `precio_cuota`).
+const ALT_CABECERA_PRECIO = alternativa(terminosDe(CONCEPTOS_LECTURA.precio_cabecera_tabla))
+const ALT_CABECERA_PRECIO_GARANTIAS = `${ALT_CABECERA_PRECIO}|${alternativa(terminosDe(CONCEPTOS_LECTURA.precio_cuota))}`
 const JS_IMPORTES_TABLA = `(() => {
   const out = [];
   const reImp = /^[€\\s]*\\d[\\d.]*(,\\d{1,2})?\\s*(€|eur|euros)?$/i;
   const gar = /garant[ií]as y capitales opcionales/i.test(document.body ? document.body.innerText || '' : '');
-  const reCab = gar ? /prima|precio|importe|total|recibo|anual|contado|pagar|cuota/i : /prima|precio|importe|total|recibo|anual|contado|pagar/i;
+  const reCab = gar ? /${ALT_CABECERA_PRECIO_GARANTIAS}/i : /${ALT_CABECERA_PRECIO}/i;
   document.querySelectorAll('table').forEach((t) => {
     const filas = Array.from(t.rows || []);
     let cab = null;
@@ -664,6 +668,10 @@ export async function volcarDiagnosticoImportesGenerali(page: Page): Promise<Dia
  * si está marcada (control marcado de la fila o clase de seleccionada) y los valores de las celdas de importe (texto de la celda y value de
  * inputs/selects de dentro). SOLO LEE: no pulsa nada. Más los botones del marco (texto/id/value) para el diagnóstico.
  */
+// 26/10/2026: las cabeceras de la tabla salen de `vocabulario.ts` (conceptos de lectura `modalidades`, `recibo_anual`, `prima_anualidad`).
+const CABECERA_MODALIDADES = CONCEPTOS_LECTURA.modalidades.grupos.rotulos[0].texto
+const CABECERA_RECIBO_ANUAL = CONCEPTOS_LECTURA.recibo_anual.grupos.rotulos[0].texto
+const CABECERA_PRIMA_ANUALIDAD = CONCEPTOS_LECTURA.prima_anualidad.grupos.rotulos[0].texto
 const JS_MODALIDADES = `(() => {
   const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
   const txt = (e) => String(e.textContent || '').replace(/\\s+/g, ' ').trim();
@@ -700,9 +708,9 @@ const JS_MODALIDADES = `(() => {
       const cs = Array.from(r.cells || []);
       const h = cs.map((c) => (c.querySelector('table') ? '' : norm(txt(c))));
       const ini = colIni(cs);
-      const m = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('modalidades de seguro') >= 0);
-      const ra = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('recibo anual') >= 0);
-      const pa = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('prima anualidad') >= 0);
+      const m = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('${CABECERA_MODALIDADES}') >= 0);
+      const ra = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('${CABECERA_RECIBO_ANUAL}') >= 0);
+      const pa = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('${CABECERA_PRIMA_ANUALIDAD}') >= 0);
       if (m >= 0 && (ra >= 0 || pa >= 0)) { idx = { m: ini[m], ra: ra >= 0 ? ini[ra] : -1, pa: pa >= 0 ? ini[pa] : -1 }; res.encontrada = true; cabN = cs.length; cabFila = r; }
     });
     if (!idx) return;
@@ -727,7 +735,7 @@ const JS_MODALIDADES = `(() => {
       vistas.add(r);
       const cs = Array.from(r.cells || []);
       if (cs.length === 0 || cs.some((c) => c.querySelector('table'))) return;
-      if (norm(txt(r)).indexOf('modalidades de seguro') >= 0) return;
+      if (norm(txt(r)).indexOf('${CABECERA_MODALIDADES}') >= 0) return;
       if (formas.length < 3) formas.push(cs.length + 'c[' + cs.slice(0, 10).map(tipoCelda).join(',') + ']');
       // Filas de otras tablas: solo las que tienen un control de elegir una sola opción (la fila de una modalidad), no cualquier tabla con cifras.
       if (soloConElegir && !Array.from(r.querySelectorAll('input')).some((i) => /^ra/i.test(i.type || ''))) return;

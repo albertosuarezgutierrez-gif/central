@@ -15,6 +15,7 @@ import {
   type Combustible,
   type FormularioAuto,
 } from '@central/module-tarificacion'
+import { CONCEPTOS_LECTURA, regexPalabras, terminosDe, textosMayus, type Concepto } from '../../vocabulario.ts'
 
 /**
  * Código del MEDIADOR que se elige en la cascada de «Seleccionar mediador» (Alberto, 18/10/2026). Es el código de la
@@ -724,11 +725,13 @@ export function resumenPantallaGenerali(p: PantallaLeida, max = 1400): string {
  * de TEXTO vacío y único por etiqueta; lo demás se registra y no se toca.
  */
 export const ETIQUETAS_RIESGO_GENERALI = Object.freeze({
-  fechaNacimiento: ['FECHA DE NACIMIENTO', 'FECHA NACIMIENTO', 'F NACIMIENTO'],
-  fechaCarne: ['FECHA DE CARNE', 'FECHA CARNE', 'FECHA DE CARNET', 'FECHA CARNET', 'FECHA EXPEDICION CARNE', 'FECHA EXPEDICION CARNET', 'FECHA DE EXPEDICION DEL CARNE', 'FECHA DE EXPEDICION DEL CARNET', 'FECHA EXPEDICION PERMISO', 'FECHA DE EXPEDICION DEL PERMISO'],
-  codigoPostal: ['CODIGO POSTAL', 'C P', 'CP'],
-  aniosAsegurado: ['ANOS ASEGURADO', 'ANOS ASEGURADOS', 'ANOS DE ASEGURAMIENTO', 'ANOS ASEGURADO ANTERIOR', 'ANOS EN LA COMPANIA ANTERIOR'],
-  siniestros: ['SINIESTROS ULTIMOS 5 ANOS', 'N SINIESTROS ULTIMOS 5 ANOS', 'NUMERO DE SINIESTROS', 'SINIESTROS CON CULPA ULTIMOS 5 ANOS'],
+  // 26/10/2026: los sinónimos salen de `vocabulario.ts` (conceptos de lectura `fecha_nacimiento`, `fecha_carne`, `codigo_postal`, `anios_asegurado`,
+  // `siniestros_5_anios`): lo que se aprenda ahí vale para los demás bots. Aquí solo en MAYÚSCULAS, como las compara `claveEtiquetaRiesgoGenerali`.
+  fechaNacimiento: textosMayus(CONCEPTOS_LECTURA.fecha_nacimiento as Concepto, 'etiqueta_exacta'),
+  fechaCarne: textosMayus(CONCEPTOS_LECTURA.fecha_carne as Concepto, 'etiqueta_exacta'),
+  codigoPostal: textosMayus(CONCEPTOS_LECTURA.codigo_postal as Concepto, 'etiqueta_exacta'),
+  aniosAsegurado: textosMayus(CONCEPTOS_LECTURA.anios_asegurado as Concepto, 'etiqueta_exacta'),
+  siniestros: textosMayus(CONCEPTOS_LECTURA.siniestros_5_anios as Concepto, 'etiqueta_exacta'),
 } as const)
 export type ClaveRiesgoGenerali = keyof typeof ETIQUETAS_RIESGO_GENERALI
 
@@ -766,10 +769,13 @@ export function valorRiesgoGenerali(
 
 /** Importes en formato español (1.234,56 € · 1234,56€ · € 1.234,56 · 1.234 €), dentro de una línea. */
 const RE_IMPORTE_EN_LINEA = /(?:€\s*)?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?\s*(?:€|eur(?:os)?\b)?|(?:€\s*)?\d+(?:,\d{1,2})\s*(?:€|eur(?:os)?\b)?|(?:€\s*)?\d+\s*(?:€|eur(?:os)?\b)|€\s*\d+/gi
-const RE_LINEA_PRECIO = /\b(PRIMA|PRIMAS|PRECIO|IMPORTE|TOTAL|A PAGAR|RECIBO|COSTE|CONTADO|ANUAL)\b/
-const RE_LINEA_TOTAL = /\bTOTAL\b/
+// 26/10/2026: los rótulos de precio salen de `vocabulario.ts` (conceptos de lectura `precio`, `precio_total`, `importe_ajeno`…), con su origen. El texto
+// de aquí está en MAYÚSCULAS sin tildes (`normalizarCatalogo`): `mayus` construye los mismos patrones que antes.
+const MAYUS = { mayus: true } as const
+const RE_LINEA_PRECIO = regexPalabras(terminosDe(CONCEPTOS_LECTURA.precio), MAYUS)
+const RE_LINEA_TOTAL = regexPalabras(terminosDe(CONCEPTOS_LECTURA.precio_total), MAYUS)
 /** Líneas con importes que NO son el precio (capitales, franquicias, valores del vehículo, límites). */
-const RE_LINEA_NO_PRECIO = /\b(FRANQUICIA|CAPITAL|SUMA ASEGURADA|LIMITE|VALOR|ACCESORIOS|INDEMNIZACION|KM|KILOMETROS)\b/
+const RE_LINEA_NO_PRECIO = regexPalabras(terminosDe(CONCEPTOS_LECTURA.importe_ajeno), MAYUS)
 /** Horquilla sensata de una prima anual de turismo: fuera de ella no se cree el número. */
 export const PRIMA_MIN_GENERALI_EUR = 30
 export const PRIMA_MAX_GENERALI_EUR = 20_000
@@ -797,9 +803,9 @@ export function esPantallaGarantiasCapitalesGenerali(texto: string): boolean {
 /** v0.2.30: marca que `JS_IMPORTES_TABLA` pone delante de la etiqueta de una fila marcada/seleccionada. */
 export const MARCA_FILA_SELECCIONADA_GENERALI = '[SEL]'
 /** v0.2.30: etiquetas extra (solo en la pantalla de garantías): cuota. «Prima neta/total», «recibo», «anual», «a pagar» ya contaban. */
-const RE_LINEA_PRECIO_GARANTIAS = /\b(CUOTA|CUOTAS)\b/
+const RE_LINEA_PRECIO_GARANTIAS = regexPalabras(terminosDe(CONCEPTOS_LECTURA.precio_cuota), MAYUS)
 /** v0.2.30: línea de prima total anual (la que se elige si hay varias). */
-const RE_LINEA_TOTAL_ANUAL = /\b(TOTAL ANUAL|ANUAL TOTAL|PRIMA ANUAL|CUOTA ANUAL)\b/
+const RE_LINEA_TOTAL_ANUAL = regexPalabras(terminosDe(CONCEPTOS_LECTURA.precio_total_anual), MAYUS)
 
 /**
  * Lector TOLERANTE del precio en el texto visible de «Garantías y Resultados» (sin captura de esa pantalla, v0.2.0). Busca
@@ -987,7 +993,8 @@ export function resumenVolcadoResultadosGenerali(v: readonly VolcadoMarcoResulta
 /** Lo que lee el navegador de un marco: cabeceras de las tablas visibles e importes con su etiqueta de fila/celda. */
 export type DiagnosticoImportesMarcoGenerali = { cabeceras: string[][]; importes: { etiqueta: string; importe: string }[] }
 /** Vocabulario de etiquetas de dinero/garantías que SÍ se enseñan; cualquier otra etiqueta (podría ser un nombre) sale como «(otra)». */
-const RE_VOCABULARIO_IMPORTE_GENERALI = /\b(PRIMA|PRIMAS|CUOTA|CUOTAS|RECIBO|RECIBOS|TOTAL|NETA|NETO|ANUAL|ANUALES|SEMESTRAL|TRIMESTRAL|MENSUAL|CONTADO|FRACCIONADO|PAGAR|IMPORTE|PRECIO|IMPUESTO|IMPUESTOS|RECARGO|RECARGOS|CONSORCIO|TASA|TASAS|DESCUENTO|BONIFICACION|BONUS|MALUS|COMISION|FRANQUICIA|CAPITAL|CAPITALES|GARANTIA|GARANTIAS|COBERTURA|COBERTURAS|MODALIDAD|OPCION|CONCEPTO|DESCRIPCION|TODO RIESGO|TERCEROS|AMPLIADO|BASICO|COMPLETO|LUNAS|ROTURA|ROBO|INCENDIO|ASISTENCIA|DEFENSA|OCUPANTES|ACCIDENTES|SEGURO|SEGUROS|COLISION|COLISIONES|AVERIAS)\b/
+// 26/10/2026: la lista blanca sale de `vocabulario.ts` (concepto de lectura `dinero_diagnostico`).
+const RE_VOCABULARIO_IMPORTE_GENERALI = regexPalabras(terminosDe(CONCEPTOS_LECTURA.dinero_diagnostico), { mayus: true })
 const RE_ETIQUETA_LIMPIA_GENERALI = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .\/()%-]{1,40}$/
 
 /** Etiqueta saneada: solo letras, corta y del vocabulario de dinero/garantías; si no, «(otra)». PURA. */

@@ -132,6 +132,7 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
+import { CONCEPTOS_LECTURA, regexEtiquetaExacta } from '../../vocabulario.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/intranet/index.ts'
 import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
@@ -964,7 +965,7 @@ export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Pr
 }
 
 /** Etiqueta exacta «Compañia/Compañía» (con o sin asterisco): NO casa «Compañía anterior» de otros bloques ni textos largos. */
-const PATRON_ETIQUETA_COMPANIA = /^\s*compa(?:ñ|n)(?:í|i)a\s*\*?\s*$/i
+const PATRON_ETIQUETA_COMPANIA = regexEtiquetaExacta(CONCEPTOS_LECTURA.compania_anterior.grupos.etiqueta_exacta[0])
 
 /**
  * v0.8.24 · Alternativa por etiqueta para el desplegable de compañía anterior cuando no existe el selector de
