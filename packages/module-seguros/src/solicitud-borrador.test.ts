@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { CLAVE_NO_LO_SE, NADA_CONOCIDO, TRAMOS_CONTENIDO, TRAMOS_CONTINENTE, camposSolicitud } from './solicitud-datos.ts'
-import { MAX_BORRADOR_CARACTERES, limpiarBorrador, tramoDeCapital, ultimoPasoDe, valoresDePolizaLeida } from './solicitud-borrador.ts'
+import { CLAVES_PERSONALES_BORRADOR, MAX_BORRADOR_CARACTERES, borradorParaTercero, limpiarBorrador, tramoDeCapital, ultimoPasoDe, valoresDePolizaLeida } from './solicitud-borrador.ts'
 
 const HOY = new Date('2026-10-26T10:00:00Z')
 const hogar = camposSolicitud('hogar', NADA_CONOCIDO)
@@ -109,4 +109,13 @@ test('último paso: la sección del último campo contestado, con su posición; 
   assert.match(q!, /^La vivienda /)
   // Sin secciones (moto): la pregunta.
   assert.match(ultimoPasoDe(moto, { matricula: '1234BCD' })!, /^Matrícula \(pregunta/)
+})
+
+test('TERCERO: el borrador que vuelve no trae DNI, nacimiento ni otro dato personal (tampoco en «No lo sé»); lo del riesgo sí', () => {
+  const b = { dni: '12345678Z', fechaNacimiento: '1980-02-01', tipoCarnet: 'A2', fechaCarnet: '2015-03-15', codigoPostal: '41003', matricula: '1234ABC', marca: 'Yamaha', _noLoSe: ['fechaCarnet', 'kmAnuales'] }
+  const t = borradorParaTercero(b)
+  assert.deepEqual(t, { matricula: '1234ABC', marca: 'Yamaha', _noLoSe: ['kmAnuales'] })
+  for (const k of CLAVES_PERSONALES_BORRADOR) assert.ok(!(k in (t ?? {})), k)
+  assert.equal(borradorParaTercero({ dni: '12345678Z', _noLoSe: ['fechaNacimiento'] }), null, 'solo datos personales = nada que devolver')
+  assert.equal(borradorParaTercero(null), null)
 })

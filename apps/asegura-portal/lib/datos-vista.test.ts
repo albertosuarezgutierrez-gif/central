@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { camposSolicitud, NADA_CONOCIDO } from '@central/module-seguros'
-import { esencialesPendientes, opcionesVisibles, textoTarjetaVivienda, visibleSegunCatastro, type ContextoVista } from './datos-vista.ts'
+import { esencialesPendientes, opcionesVisibles, textoTarjetaVivienda, valoresConfirmadosCatastro, visibleSegunCatastro, type ContextoVista } from './datos-vista.ts'
 
 const campos = camposSolicitud('hogar', NADA_CONOCIDO)
 const por = (k: string) => campos.find((c) => c.clave === k)!
@@ -37,11 +37,31 @@ test('casa: el tipo se pregunta solo entre adosada e independiente', () => {
 
 test('rejas: en piso o ático no se preguntan; en bajo, casa o sin saber el tipo, sí', () => {
   const r = por('ventanasSeguras')
-  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK }), '2'), false)
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK, confirmado: true }), '2'), false)
   assert.equal(visibleSegunCatastro(r, ctx({ catastro: { ...OK, tipo: 'planta_baja' } }), '0'), true)
   assert.equal(visibleSegunCatastro(r, ctx({}), ''), true)
   assert.equal(visibleSegunCatastro(r, ctx({ tipoElegido: 'adosada' }), ''), true)
   assert.equal(visibleSegunCatastro(r, ctx({ tipoElegido: 'atico' }), ''), false)
+})
+
+test('«Corregir»: las condicionales (rejas) usan SOLO lo que declara el cliente; hasta que elija, se muestran', () => {
+  const r = por('ventanasSeguras')
+  // El Catastro dice «piso», pero el cliente pulsa «Corregir»: hasta que elija el tipo, las rejas se preguntan.
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK, confirmado: false }), '2'), true)
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK, confirmado: false, tipoElegido: 'planta_baja' }), '0'), true)
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK, confirmado: false, tipoElegido: 'piso' }), '2'), false)
+  // Sin contestar aún la tarjeta, tampoco se da por bueno el tipo del Catastro.
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK }), '2'), true)
+})
+
+test('tarjeta confirmada: viajan los valores que VIO (tipo, m², año) de las preguntas ocultas; sin confirmar, nada', () => {
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: OK, confirmado: true }), '2'), { tipoVivienda: 'piso', metrosCuadrados: '85', anioConstruccion: '1998' })
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: { ...OK, metros: 84.6, anio: null }, confirmado: true }), '2'), { tipoVivienda: 'piso', metrosCuadrados: '85' }, 'el año visible lo contesta él')
+  // Casa: el tipo lo elige él (adosada o independiente); m² y año sí viajan.
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: { ...OK, tipo: 'unifamiliar' }, confirmado: true }), ''), { metrosCuadrados: '85', anioConstruccion: '1998' })
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: OK, confirmado: false }), '2'), {})
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: OK }), '2'), {})
+  assert.equal(textoTarjetaVivienda({ ...OK, tipo: 'atico' }, 'AT'), 'Ático · AT · 85 m² · 1998', '«último piso» no es «ático»')
 })
 
 test('esenciales que dependen del Catastro: sin contestar ni «No lo sé» no se envía', () => {

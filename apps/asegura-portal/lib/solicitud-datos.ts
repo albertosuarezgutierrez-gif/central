@@ -3,7 +3,7 @@
  * Por TOKEN y sin identidad (decisión de Alberto): la página no enseña nada del
  * cliente, solo pide. El portal no escribe en la cartera: lo manda por el puente.
  */
-import { CLAVE_NO_LO_SE, SUBCLAVES_DIRECCION, claveDireccion, ramoSolicitud, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
+import { CLAVE_NO_LO_SE, SUBCLAVES_DIRECCION, claveDireccion, ramoSolicitud, validarRespuestas, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
 export type SolicitudLeida =
@@ -96,19 +96,24 @@ export async function leerSolicitud(token: string): Promise<SolicitudLeida> {
 // del puente se recuerda unos minutos por instancia para no llamar a asegura en cada tecla.
 const VIVO_MS = 10 * 60_000
 const MAX_VIVOS = 300
-const vivos = new Map<string, number>()
+const vivos = new Map<string, { hasta: number; ramo: RamoSolicitud }>()
 
 export const RE_TOKEN_SOLICITUD = /^[A-Za-z0-9_-]{40,60}$/
 
-export async function tokenSolicitudVivo(token: string, ahora = Date.now()): Promise<boolean> {
-  if (!RE_TOKEN_SOLICITUD.test(token)) return false
-  const hasta = vivos.get(token)
-  if (hasta !== undefined && hasta > ahora) return true
+/** El ramo de la solicitud del token si está VIVA; `null` = no vale (muerta, completada, rara o el puente no responde). */
+export async function ramoSolicitudViva(token: string, ahora = Date.now()): Promise<RamoSolicitud | null> {
+  if (!RE_TOKEN_SOLICITUD.test(token)) return null
+  const v = vivos.get(token)
+  if (v !== undefined && v.hasta > ahora) return v.ramo
   const s = await leerSolicitud(token)
-  if (s.estado !== 'ok') return false
+  if (s.estado !== 'ok') return null
   if (vivos.size >= MAX_VIVOS) vivos.delete(vivos.keys().next().value as string)
-  vivos.set(token, ahora + VIVO_MS)
-  return true
+  vivos.set(token, { hasta: ahora + VIVO_MS, ramo: s.ramo })
+  return s.ramo
+}
+
+export async function tokenSolicitudVivo(token: string, ahora = Date.now()): Promise<boolean> {
+  return (await ramoSolicitudViva(token, ahora)) !== null
 }
 
 // ─── Documentos que sube el cliente (24/09/2026) ─────────────────────────────
@@ -118,14 +123,39 @@ export type DocSubido =
   | { estado: 'ok'; etiqueta: string; valores: Record<string, string | boolean>; aviso: string | null; dePoliza: boolean }
   | { estado: 'fallo'; texto: string }
 
-/** Lo que devuelve la subida. Solo se proponen valores de texto/sí-no: lo demás se ignora. */
-export function interpretarDocSubido(status: number, json: unknown): DocSubido {
+/**
+ * Un valor leído de un documento (o de la póliza actual) → valor del formulario, pasado por la MISMA validación del campo
+ * que al enviar (26/10/2026): números (m², año, años sin siniestros, capitales) y fechas de la póliza entran si el campo
+ * los acepta, y salen como el formulario los lleva (número → texto; fecha → AAAA-MM-DD). Lo que no valida, o no es de un
+ * campo pedido, se tira: un valor dudoso propuesto al cliente se lo acaba aceptando sin mirar. `null` = no vale.
+ */
+function valorParaCampo(c: CampoSolicitud, x: unknown): string | boolean | null {
+  if (c.tipo === 'direccion') return null
+  if (typeof x !== 'string' && typeof x !== 'boolean' && !(typeof x === 'number' && Number.isFinite(x))) return null
+  const r = validarRespuestas([{ ...c, obligatorio: true, siMarcado: undefined, admiteNoLoSe: false }], { [c.clave]: x })
+  if (!r.ok) return null
+  const v = r.respuestas[c.clave]
+  if (typeof v === 'boolean' || typeof v === 'string') return v
+  if (typeof v === 'number') return String(v)
+  return null
+}
+
+/**
+ * Lo que devuelve la subida. Con `campos` (el formulario), cada valor se valida como su campo; sin ellos (llamadas
+ * antiguas), solo texto/sí-no y números como texto.
+ */
+export function interpretarDocSubido(status: number, json: unknown, campos?: readonly CampoSolicitud[]): DocSubido {
   const o = json !== null && typeof json === 'object' && !Array.isArray(json) ? (json as Record<string, unknown>) : null
   if (status === 200 && o?.ok === true) {
     const valores: Record<string, string | boolean> = {}
     const v = o.valores && typeof o.valores === 'object' && !Array.isArray(o.valores) ? (o.valores as Record<string, unknown>) : {}
+    const porClave = campos ? new Map(campos.map((c) => [c.clave, c])) : null
     for (const [k, x] of Object.entries(v)) {
-      if (typeof x === 'string' || typeof x === 'boolean') valores[k] = x
+      if (porClave) {
+        const c = porClave.get(k)
+        const valor = c ? valorParaCampo(c, x) : null
+        if (valor !== null) valores[k] = valor
+      } else if (typeof x === 'string' || typeof x === 'boolean') valores[k] = x
       else if (typeof x === 'number' && Number.isFinite(x)) valores[k] = String(x)
     }
     return {
@@ -145,13 +175,19 @@ export function interpretarDocSubido(status: number, json: unknown): DocSubido {
   return { estado: 'fallo', texto: 'No se ha podido subir. Vuelve a probar en un momento.' }
 }
 
+/** Cuánto espera el portal a asegura al subir un documento / la póliza actual (el `maxDuration` de la ruta es 120 s). */
+export const TOPE_PUENTE_DOCUMENTO_MS = 55_000
+export const TOPE_PUENTE_POLIZA_MS = 110_000
+
 /** Reenvía el fichero al puente de asegura (multipart). `null` = el puente no respondió. */
 export async function subirDocPuente(token: string, fichero: File, consentimiento = false, clase: 'documento' | 'poliza' = 'documento'): Promise<{ status: number; json: unknown } | null> {
   const p = puente()
   if (!p) return null
   const control = new AbortController()
-  // La póliza actual pasa por el lector de pólizas (visión hasta ~90 s): más margen que un DNI.
-  const reloj = setTimeout(() => control.abort(), clase === 'poliza' ? 110_000 : 55_000)
+  // La póliza actual pasa por el lector de pólizas: más margen que un DNI. Asegura CORTA su lectura antes
+  // (`PLAZO_LECTURA_*_MS` de `apps/asegura/lib/solicitud-plazos.ts`, con margen: cepo `solicitud-plazos.test.ts`), así que
+  // el puente siempre recibe respuesta y el cliente no ve «fallo» con el fichero ya archivado en su ficha.
+  const reloj = setTimeout(() => control.abort(), clase === 'poliza' ? TOPE_PUENTE_POLIZA_MS : TOPE_PUENTE_DOCUMENTO_MS)
   try {
     const form = new FormData()
     form.set('token', token)

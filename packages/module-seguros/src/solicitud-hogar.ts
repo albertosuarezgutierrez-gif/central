@@ -83,7 +83,7 @@ export function textoCatastroSolicitud(c: CatastroSolicitud | null): string {
 }
 
 /** Lo que el Catastro DEDUCE del tipo de vivienda (`deducirViviendaCatastro` de module-tarificacion), sin confirmar. */
-export type ViviendaDeducidaSolicitud = { tipo: string | null; aviso?: string | null }
+export type ViviendaDeducidaSolicitud = { tipo: string | null; aviso?: string | null; ultimoPiso?: string | null }
 
 /**
  * Lo que se propone escribir en `datosVivienda` (claves de `ESPEC_VIVIENDA`), sin nulls: solo lo que se sabe.
@@ -128,7 +128,11 @@ export function viviendaDeSolicitud(
     if (id) out[campo] = id
   }
   const tipo = typeof r.tipoVivienda === 'string' ? r.tipoVivienda : confirma ? deducida?.tipo ?? null : null
-  const idTipo = idViviendaDeOpcion('tipoVivienda', tipo)
+  // «Último piso» NO es «ático» (26/10/2026): un piso que el Catastro deduce como el último de la parcela, confirmado por
+  // el cliente, se anota como planta + `ultimoPiso = true`. Y NO como «planta intermedia» (`MiddleFloor`): ese id sería falso.
+  const ultimoPiso = confirma && tipo === 'piso' && deducida?.ultimoPiso === 'ultimo'
+  if (ultimoPiso) out.ultimoPiso = true
+  const idTipo = ultimoPiso ? null : idViviendaDeOpcion('tipoVivienda', tipo)
   if (idTipo) out.tipoVivienda = idTipo
   if (r.alarma === false) out.alarma = ALARMA_ID_CODEOSCOPIC.no
   for (const k of ['propietarioEsTomador', 'urbanizacionCerrada', 'conMadera', 'puertaPrincipalBlindada', 'ventanasSeguras', 'vigilante'] as const) {
@@ -180,7 +184,7 @@ export const CLAVES_BLOQUE_CATASTRO = ['referenciaCatastral', 'catastroReferenci
 
 /** Campos que se escriben uno a uno, solo si estaban vacíos (lo que escribió la correduría manda). */
 export const CLAVES_SUELTAS_VIVIENDA = [
-  'capitalContenido', 'capitalContinente', 'uso', 'ocupacion', 'tipoVivienda', 'alarma', 'habitaciones', 'anioUltimaReforma',
+  'capitalContenido', 'capitalContinente', 'uso', 'ocupacion', 'tipoVivienda', 'ultimoPiso', 'alarma', 'habitaciones', 'anioUltimaReforma',
   'propietarioEsTomador', 'urbanizacionCerrada', 'conMadera', 'puertaPrincipalBlindada', 'ventanasSeguras', 'vigilante',
   'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos',
 ] as const

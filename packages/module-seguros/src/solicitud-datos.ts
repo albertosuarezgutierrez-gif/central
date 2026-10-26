@@ -126,19 +126,68 @@ export type CampoSolicitud = {
   catastro?: 'tarjeta' | 'tipo_vivienda' | 'metros' | 'anio' | 'ventanas'
 }
 
-/** Claves que nunca admiten «No lo sé»: identidad y lo que el vendor exige sí o sí (y la ley para identificar). */
-const SIN_NO_LO_SE = new Set(['dni', 'fechaNacimiento', 'codigoPostal', 'matricula', 'descripcionRiesgo', 'confirmaCatastro'])
+/**
+ * Claves que NUNCA admiten «No lo sé» (26/10/2026, revisión del PR #5068): identidad, lo que la ley pide para
+ * identificar y lo ESENCIAL que el vendor (`revisarDatos*` de asegura) o la compañía exigen para tarificar. Un «No lo
+ * sé» ahí es un presupuesto que no se puede hacer: se contesta o no se envía. Manda sobre lo guardado en un enlace ya
+ * enviado (`camposAlDia` → `conNiveles`), que pudo guardarse con `admiteNoLoSe: true`.
+ */
+export const SIN_NO_LO_SE: ReadonlySet<string> = new Set([
+  // Identidad y riesgo genérico.
+  'dni', 'fechaNacimiento', 'codigoPostal', 'descripcionRiesgo', 'confirmaCatastro',
+  // Auto y moto (`revisarDatosAuto`/`revisarDatosMoto`: código de vehículo = marca + modelo, matriculación, carné, garaje).
+  'matricula', 'marca', 'modelo', 'fechaMatriculacion', 'fechaCarnet', 'tipoCarnet', 'garaje',
+  // Hogar (`revisarDatosHogar`: tipo, m², año, habitaciones, régimen, uso, alarma y los cuatro sí/no).
+  'tipoVivienda', 'metrosCuadrados', 'anioConstruccion', 'habitaciones', 'regimen', 'usoVivienda', 'alarma',
+  'propietarioEsTomador', 'urbanizacionCerrada', 'puertaPrincipalBlindada', 'ventanasSeguras', 'tramoContenido',
+  // Personas y mascota: lo que la compañía pide para dar precio (cuántos, a qué se dedica; raza y PPP).
+  'personasAsegurar', 'profesion', 'razaMascota', 'ppp',
+])
+
+/**
+ * Claves que, si se piden, son OBLIGATORIAS para tarificar aunque un enlace ya enviado las guardara como opcionales
+ * (la fecha de matriculación se pedía «si no la sabes, déjala en blanco»; el vendor la exige).
+ */
+const OBLIGATORIAS_TARIFICAR: Readonly<Record<string, { ayuda?: string }>> = {
+  fechaMatriculacion: { ayuda: 'Está en el permiso de circulación (casilla B).' },
+}
 
 /** Clave reservada en las respuestas: los campos que el cliente marcó «No lo sé», separados por comas. */
 export const CLAVE_NO_LO_SE = '_noLoSe'
 
-/** Nivel y «No lo sé» por defecto, iguales en todos los ramos. */
+/** Nivel y «No lo sé» por defecto, iguales en todos los ramos. `SIN_NO_LO_SE` manda sobre lo guardado. */
 export function conNiveles(campos: readonly CampoSolicitud[]): CampoSolicitud[] {
-  return campos.map((c) => ({
-    ...c,
-    nivel: c.nivel ?? (c.obligatorio ? 'esencial' : 'opcional'),
-    admiteNoLoSe: c.admiteNoLoSe ?? (c.tipo !== 'direccion' && !SIN_NO_LO_SE.has(c.clave)),
-  }))
+  return campos.map((c) => {
+    const forzada = Object.hasOwn(OBLIGATORIAS_TARIFICAR, c.clave) ? OBLIGATORIAS_TARIFICAR[c.clave] : null
+    const base: CampoSolicitud = forzada && !c.obligatorio ? { ...c, obligatorio: true, nivel: 'esencial', ...(forzada.ayuda ? { ayuda: forzada.ayuda } : {}) } : c
+    return {
+      ...base,
+      nivel: base.nivel ?? (base.obligatorio ? 'esencial' : 'opcional'),
+      admiteNoLoSe: base.tipo === 'direccion' || SIN_NO_LO_SE.has(base.clave) ? false : (base.admiteNoLoSe ?? true),
+    }
+  })
+}
+
+const CATASTRO_TIPO_M2_ANIO = new Set(['tipo_vivienda', 'metros', 'anio'])
+const TIPOS_SIN_REJAS = new Set(['piso', 'atico'])
+
+/**
+ * Hogar: los esenciales que dependen del Catastro (`catastro`) no son `obligatorio` (el servidor no ve la tarjeta), pero
+ * tampoco admiten «No lo sé». ¿Hay que exigirlos en ESTA respuesta?
+ *  - tipo, m² y año: sí, salvo que el cliente CONFIRMÓ la tarjeta del Catastro (entonces viajan con la confirmación; si
+ *    aun así faltan, quedan `null` y salen «a preguntar» en `camposAPreguntar`).
+ *  - rejas (`ventanas`): sí, salvo en un piso o ático (no se pregunta) o si confirmó sin tipo (el Catastro lo sabe).
+ */
+function exigidoPorCatastro(c: CampoSolicitud, entrada: Record<string, unknown>): boolean {
+  if (!c.catastro || !SIN_NO_LO_SE.has(c.clave)) return false
+  const confirmo = entrada.confirmaCatastro === true
+  if (CATASTRO_TIPO_M2_ANIO.has(c.catastro)) return !confirmo
+  if (c.catastro === 'ventanas') {
+    const tipo = typeof entrada.tipoVivienda === 'string' && entrada.tipoVivienda !== '' ? entrada.tipoVivienda : null
+    if (tipo !== null) return !TIPOS_SIN_REJAS.has(tipo)
+    return !confirmo
+  }
+  return false
 }
 
 /**
@@ -303,7 +352,7 @@ function camposVehiculo(ramo: 'auto' | 'moto', conocido: ConocidoFicha): CampoSo
     { clave: 'matricula', etiqueta: 'Matrícula', tipo: 'texto', obligatorio: true },
     { clave: 'marca', etiqueta: 'Marca', tipo: 'texto', obligatorio: true },
     { clave: 'modelo', etiqueta: 'Modelo y versión', tipo: 'texto', obligatorio: true, ayuda: moto ? 'Por ejemplo: Yamaha MT-07 o Honda PCX 125.' : 'Por ejemplo: Seat León 1.5 TSI.' },
-    { clave: 'fechaMatriculacion', etiqueta: 'Fecha de primera matriculación', tipo: 'fecha', obligatorio: false, ayuda: 'Está en el permiso de circulación. Si no la sabes, déjala en blanco.' },
+    { clave: 'fechaMatriculacion', etiqueta: 'Fecha de primera matriculación', tipo: 'fecha', obligatorio: true, ayuda: 'Está en el permiso de circulación (casilla B).' },
     { clave: 'garaje', etiqueta: '¿Dónde duerme?', tipo: 'opcion', obligatorio: true, opciones: GARAJES_SOLICITUD },
     { clave: 'kmAnuales', etiqueta: 'Kilómetros al año, aproximados', tipo: 'numero', obligatorio: false },
     { clave: 'tieneSeguro', etiqueta: '¿Está asegurada ahora?', tipo: 'si_no', obligatorio: true },
@@ -452,9 +501,12 @@ export function camposAPreguntar(campos: readonly CampoSolicitud[], respuestas: 
   for (const c of campos) {
     if (c.tipo === 'direccion' || c.catastro === 'tarjeta') continue
     if (c.siMarcado && respuestas[c.siMarcado] !== true) continue
+    // Rejas: en un piso o ático no se preguntan (tampoco a la llamada).
+    if (c.catastro === 'ventanas' && typeof respuestas.tipoVivienda === 'string' && TIPOS_SIN_REJAS.has(respuestas.tipoVivienda)) continue
     const v = respuestas[c.clave]
     if (noLoSe.has(c.clave)) noLoSabe.push(c.etiqueta)
-    else if ((v === null || v === undefined) && !c.catastro) sinContestar.push(c.etiqueta)
+    // Lo del Catastro (tipo, m², año, rejas) que quedó a `null` también: el Catastro no lo dio o no se pudo confirmar.
+    else if (v === null || v === undefined) sinContestar.push(c.etiqueta)
   }
   return { noLoSabe, sinContestar }
 }
@@ -579,7 +631,8 @@ export function validarRespuestas(
   const hoyIso = hoy.toISOString().slice(0, 10)
   // «No lo sé» (26/10/2026): llega como lista en `_noLoSe`; solo vale en campos que lo admiten. Es `null`, nunca false ni 0.
   const pedidos = Array.isArray(entrada[CLAVE_NO_LO_SE]) ? (entrada[CLAVE_NO_LO_SE] as unknown[]).filter((x): x is string => typeof x === 'string') : []
-  const noLoSe = campos.filter((c) => c.admiteNoLoSe === true && pedidos.includes(c.clave) && !(c.siMarcado && entrada[c.siMarcado] !== true)).map((c) => c.clave)
+  // Un esencial para tarificar (`SIN_NO_LO_SE`) nunca, aunque el campo que llega diga otra cosa.
+  const noLoSe = campos.filter((c) => c.admiteNoLoSe === true && !SIN_NO_LO_SE.has(c.clave) && c.tipo !== 'direccion' && pedidos.includes(c.clave) && !(c.siMarcado && entrada[c.siMarcado] !== true)).map((c) => c.clave)
   for (const c of campos) {
     if (noLoSe.includes(c.clave)) { respuestas[c.clave] = null; continue }
     if (c.tipo === 'direccion') {
@@ -593,7 +646,7 @@ export function validarRespuestas(
     const v = entrada[c.clave]
     const vacio = v === undefined || v === null || (typeof v === 'string' && v.trim() === '')
     if (vacio) {
-      if (c.obligatorio) errores[c.clave] = 'Falta este dato.'
+      if (c.obligatorio || exigidoPorCatastro(c, entrada)) errores[c.clave] = 'Falta este dato.'
       else respuestas[c.clave] = null
       continue
     }

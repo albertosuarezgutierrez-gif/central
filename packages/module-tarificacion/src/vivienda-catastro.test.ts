@@ -55,11 +55,21 @@ describe('deducirViviendaCatastro', () => {
   it('unifamiliar por la ficha → unifamiliar (adosada o independiente lo dice el cliente)', () => {
     expect(deducirViviendaCatastro({ tipoFicha: 'unifamiliar', inmuebles: P(null), plantaDeclarada: null }).tipo).toBe('unifamiliar')
   })
-  it('piso: bajo → planta_baja; último → atico; intermedio → piso', () => {
+  it('piso: bajo → planta_baja; intermedio → piso', () => {
     const inm = P('00', '01', '02')
     expect(deducirViviendaCatastro({ tipoFicha: 'piso', inmuebles: inm, plantaDeclarada: '0' }).tipo).toBe('planta_baja')
-    expect(deducirViviendaCatastro({ tipoFicha: 'piso', inmuebles: inm, plantaDeclarada: '2' }).tipo).toBe('atico')
     expect(deducirViviendaCatastro({ tipoFicha: 'piso', inmuebles: inm, plantaDeclarada: '1' }).tipo).toBe('piso')
+  })
+  it('«último piso» NO es «ático»: un último numérico es piso + ultimoPiso; solo «AT» del Catastro es ático', () => {
+    const ultimo = deducirViviendaCatastro({ tipoFicha: 'piso', inmuebles: P('00', '01', '02'), plantaDeclarada: '2' })
+    expect(ultimo.tipo).toBe('piso')
+    expect(ultimo.ultimoPiso).toBe('ultimo')
+    const at = deducirViviendaCatastro({ tipoFicha: 'piso', inmuebles: P('00', '01', 'AT'), plantaDeclarada: 'AT' })
+    expect(at.tipo).toBe('atico')
+    expect(at.ultimoPiso).toBe('ultimo')
+    // Con ático en la parcela, el último numérico ya no es el último.
+    const bajoAtico = deducirViviendaCatastro({ tipoFicha: 'piso', inmuebles: P('00', '01', 'AT'), plantaDeclarada: '1' })
+    expect(bajoAtico).toMatchObject({ tipo: 'piso', ultimoPiso: 'no_ultimo' })
   })
   it('sin ficha, varios inmuebles = división horizontal = piso; uno solo sin ficha = no se sabe', () => {
     expect(deducirViviendaCatastro({ tipoFicha: null, inmuebles: P('00', '01'), plantaDeclarada: '0' }).tipo).toBe('planta_baja')

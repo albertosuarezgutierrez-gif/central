@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { viaSigueVigente } from '@central/core-catastro'
 import { CLAVE_NO_LO_SE, ayudaDocumentosSolicitud, claveDireccion, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
-import { borradorConContenido, esencialesPendientes, estadoDesdeBorrador, opcionesVisibles, textoTarjetaVivienda, visibleSegunCatastro } from '@/lib/datos-vista'
+import { borradorConContenido, esencialesPendientes, estadoDesdeBorrador, opcionesVisibles, textoTarjetaVivienda, valoresConfirmadosCatastro, visibleSegunCatastro } from '@/lib/datos-vista'
 import type { ViviendaCatastroPublica } from '@/lib/vivienda-catastro'
 import { DIRECCION_VACIA, DireccionCp, type ValorDireccion } from '@/app/(portal)/patrimonio/DireccionCp'
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
@@ -172,7 +172,7 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
       } catch {
         /* sin conexión */
       }
-      const r = interpretarDocSubido(status, json)
+      const r = interpretarDocSubido(status, json, campos)
       if (r.estado === 'fallo') {
         fijar({ estado: 'fallo', texto: r.texto })
         continue
@@ -207,6 +207,8 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
     // Catastro) no se manda.
     const aLaVista = new Set(visibles.map((c) => c.clave))
     const enviados = Object.fromEntries(Object.entries(valores).filter(([k]) => aLaVista.has(k) && !noLoSe.has(k) && (k !== 'confirmaCatastro' || confirmacionVigente)))
+    // Confirmó la tarjeta del Catastro: viajan los valores que VIO (tipo, m², año), no se vuelve a consultar en asegura.
+    if (confirmacionVigente) Object.assign(enviados, valoresConfirmadosCatastro(campos, contexto, planta))
     let status = 0
     let json: Record<string, unknown> | null = null
     try {

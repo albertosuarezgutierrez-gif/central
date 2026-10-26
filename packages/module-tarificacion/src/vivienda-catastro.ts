@@ -9,7 +9,8 @@
 //     🚨 `Consulta_DNPLOC` NO trae el uso de cada inmueble (fixture real `module-subastas/test/fixture-dnploc.xml`): se
 //     descartan solo los que traen un uso NO residencial; los que no lo traen cuentan (no se puede saber más sin pedir
 //     la ficha de cada piso).
-//   - Último piso = la declarada es la máxima residencial, o es «AT».
+//   - Último piso = la declarada es la máxima residencial, o es «AT». Tipo «ático» SOLO si es «AT»: un último piso
+//     numérico es «piso» con `ultimoPiso: 'ultimo'` (se anota como planta + `ultimoPiso = true`).
 //   - Declarada que NO existe en el Catastro (declara 2º y solo hay 00 y 01) → nada se deduce y se avisa para revisar.
 //   - Sin plantas en el Catastro → nada se deduce (la pregunta se muestra).
 import { normPlantaCatastro } from './riesgo-oportunidad.ts'
@@ -80,5 +81,7 @@ export function deducirViviendaCatastro(e: {
   if (u === 'sin_plantas' || u === 'sin_planta_declarada') return { tipo: null, ultimoPiso: u, aviso: null }
   const d = plantaResidencial(e.plantaDeclarada)
   if (d?.t === 'num' && d.n === 0) return { tipo: 'planta_baja', ultimoPiso: u, aviso: null }
-  return { tipo: u === 'ultimo' ? 'atico' : 'piso', ultimoPiso: u, aviso: null }
+  // 26/10/2026 (revisión del PR #5068): «último piso» NO es «ático». Solo es ático si el Catastro dice AT (y esa es la
+  // planta declarada); un último piso NUMÉRICO es un piso, con `ultimoPiso: 'ultimo'` para quien lo anote.
+  return { tipo: d?.t === 'atico' ? 'atico' : 'piso', ultimoPiso: u, aviso: null }
 }

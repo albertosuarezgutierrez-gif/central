@@ -3,7 +3,8 @@
 -- `solicitud_datos` no tenía dónde guardar respuestas a medias: `respuestas` solo existe en una COMPLETADA (CHECK
 -- `solicitud_completa_con_respuestas`), y un borrador nunca cuenta como completado. Por eso, columnas propias:
 --   - `borrador`          text, CIFRADO (encryptField, como `respuestas`): lo que el cliente lleva escrito con ESE enlace.
---                         Se devuelve solo al mismo token y se borra al completar.
+--                         Se devuelve solo al mismo token (a un tercero, sin sus datos personales) y se borra
+--                         (con `borrador_at`) al completar, al anular, al caducar y en la purga diaria (`purga-rgpd`).
 --   - `borrador_at`       cuándo se guardó por última vez.
 --   - `ultimo_paso`       la sección (o pregunta) más avanzada con respuesta: SOLO etiquetas de la casa
 --                         («Seguridad (pregunta 14 de 30)»), nunca un valor del cliente. Para el aviso de abandono.
@@ -14,6 +15,8 @@
 -- `sin_migracion`, que el navegador calla), y el cron `/api/cron/solicitudes-abandonadas` contesta 503 `sin_migracion`.
 -- Idempotente. NO aplicado: lo aplica Alberto.
 BEGIN;
+-- Un ALTER espera un lock exclusivo de la tabla: si hay tráfico, mejor fallar en 5 s que encolar a todo el formulario detrás.
+SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE seguros.solicitud_datos ADD COLUMN IF NOT EXISTS borrador text;
 ALTER TABLE seguros.solicitud_datos ADD COLUMN IF NOT EXISTS borrador_at timestamptz;

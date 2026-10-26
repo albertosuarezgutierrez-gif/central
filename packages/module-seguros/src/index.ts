@@ -1076,6 +1076,7 @@ export {
   TRAMOS_CONTENIDO,
   TRAMOS_CONTINENTE,
   CLAVE_NO_LO_SE,
+  SIN_NO_LO_SE,
   importeDeTramo,
   conNiveles,
   camposAlDia,
@@ -1129,6 +1130,8 @@ export {
 } from './solicitud-hogar.ts'
 export {
   MAX_BORRADOR_CARACTERES,
+  CLAVES_PERSONALES_BORRADOR,
+  borradorParaTercero,
   clavesBorrador,
   limpiarBorrador,
   tramoDeCapital,

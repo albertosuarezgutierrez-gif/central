@@ -117,3 +117,20 @@ test('TRAMOS: todo tramo tiene mapeo (importe que el modelo acepta, o null decla
     assert.ok(tramos.some((t) => t.valor === 'calcular' && t.importe === null), `${clave}: falta «que me lo calculen»`)
   }
 })
+
+test('ÚLTIMO PISO ≠ ÁTICO: un último piso numérico confirmado se anota como planta + `ultimoPiso` (campo del modelo), nunca como ático ni planta intermedia', () => {
+  assert.ok(camposDelBloque('datosVivienda').includes('ultimoPiso'), '`datosVivienda` no tiene `ultimoPiso`')
+  const r = { confirmaCatastro: true, tipoVivienda: 'piso', viviendaCp: '41003', viviendaCalle: 'Calle Socorro', viviendaNumero: '24', viviendaPlanta: '2' }
+  const out = viviendaDeSolicitud(r, null, AHORA, { tipo: 'piso', ultimoPiso: 'ultimo' })
+  assert.equal(out.ultimoPiso, true)
+  assert.equal(out.planta, '2')
+  assert.ok(!('tipoVivienda' in out), 'ni «ático» ni «MiddleFloor» (planta intermedia): no se sabe el id')
+  assert.ok(validarDatosViviendaRiesgo(out, { hoy: AHORA.slice(0, 10) }).ok, 'el modelo lo acepta')
+  assert.ok('ultimoPiso' in planEscrituraVivienda(null, out).escribir, 'el plan lo deja pasar')
+  // Sin confirmar la tarjeta, o un piso intermedio: nada de último piso.
+  assert.ok(!('ultimoPiso' in viviendaDeSolicitud({ ...r, confirmaCatastro: false }, null, AHORA, { tipo: 'piso', ultimoPiso: 'ultimo' })))
+  assert.equal(viviendaDeSolicitud(r, null, AHORA, { tipo: 'piso', ultimoPiso: 'no_ultimo' }).tipoVivienda, 'MiddleFloor')
+  // Todo lo que propone el enlace existe en `datosVivienda` (ningún nombre propio).
+  const campos = new Set(camposDelBloque('datosVivienda'))
+  for (const k of Object.keys(out)) assert.ok(campos.has(k), `${k} no existe en datosVivienda`)
+})

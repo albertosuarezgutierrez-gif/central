@@ -19,7 +19,8 @@ export type ContextoVista = {
   tipoElegido: string | null
 }
 
-const TIPO_TEXTO: Record<string, string> = { piso: 'Piso', planta_baja: 'Bajo', atico: 'Ático o último piso', unifamiliar: 'Casa' }
+// «Último piso» NO es «ático» (26/10/2026): el Catastro solo dice «ático» si la planta es AT; un último piso numérico es «Piso».
+const TIPO_TEXTO: Record<string, string> = { piso: 'Piso', planta_baja: 'Bajo', atico: 'Ático', unifamiliar: 'Casa' }
 
 /** «Piso · 2º · 85 m² · 1998». `null` = no hay nada que enseñar (no sale la tarjeta). */
 export function textoTarjetaVivienda(v: ViviendaCatastroPublica | null, planta: string): string | null {
@@ -46,7 +47,9 @@ export function visibleSegunCatastro(c: CampoSolicitud, ctx: ContextoVista, plan
     case 'metros': return !(confirmado && v?.metros !== null && v?.metros !== undefined)
     case 'anio': return !(confirmado && v?.anio !== null && v?.anio !== undefined)
     case 'ventanas': {
-      const tipo = ctx.tipoElegido ?? v?.tipo ?? null
+      // Lo del Catastro solo cuenta si lo CONFIRMÓ. Si pulsó «Corregir» (o aún no ha contestado la tarjeta), solo vale lo
+      // que ha declarado él; hasta que elija el tipo, las rejas se preguntan.
+      const tipo = ctx.tipoElegido ?? (confirmado ? v?.tipo ?? null : null)
       return !(tipo === 'piso' || tipo === 'atico')
     }
   }
@@ -59,6 +62,27 @@ export function opcionesVisibles(c: CampoSolicitud, ctx: ContextoVista): CampoSo
     return c.opciones.filter((o) => o.valor === 'adosada' || o.valor === 'independiente')
   }
   return c.opciones
+}
+
+const TIPOS_CATASTRO_OPCION = new Set(['piso', 'planta_baja', 'atico'])
+
+/**
+ * Lo que el cliente VIO en la tarjeta del Catastro y CONFIRMÓ (26/10/2026): viaja con `confirmaCatastro` para que asegura
+ * no dependa de volver a consultar el Catastro. Solo las preguntas `catastro` que quedaron OCULTAS por la confirmación
+ * (las visibles las contesta él) y solo lo que la tarjeta enseñaba. `unifamiliar` no es una opción (adosada o
+ * independiente la elige el cliente): no viaja.
+ */
+export function valoresConfirmadosCatastro(campos: readonly CampoSolicitud[], ctx: ContextoVista, planta: string): Record<string, string> {
+  const v = ctx.catastro?.estado === 'ok' ? ctx.catastro : null
+  if (ctx.confirmado !== true || !v) return {}
+  const out: Record<string, string> = {}
+  for (const c of campos) {
+    if (visibleSegunCatastro(c, ctx, planta)) continue
+    if (c.catastro === 'tipo_vivienda' && v.tipo && TIPOS_CATASTRO_OPCION.has(v.tipo)) out[c.clave] = v.tipo
+    else if (c.catastro === 'metros' && v.metros !== null && v.metros > 0) out[c.clave] = String(Math.round(v.metros))
+    else if (c.catastro === 'anio' && v.anio !== null) out[c.clave] = String(v.anio)
+  }
+  return out
 }
 
 /**

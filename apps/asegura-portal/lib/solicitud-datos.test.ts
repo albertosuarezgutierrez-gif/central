@@ -104,3 +104,28 @@ test('formulario: botón de póliza con `clase=poliza`, guardado con pausa al se
   const doc = readFileSync(new URL('../app/api/datos/documento/route.ts', import.meta.url), 'utf8')
   assert.match(doc, /form\?\.get\('clase'\) === 'poliza' \? 'poliza' : 'documento'/)
 })
+
+test('póliza leída: números y fechas (m², año, años sin siniestros, capitales) entran con la MISMA validación del campo', async () => {
+  const { camposSolicitud, NADA_CONOCIDO } = await import('@central/module-seguros')
+  const hogar = camposSolicitud('hogar', NADA_CONOCIDO)
+  const r = interpretarDocSubido(200, {
+    ok: true, dePoliza: true, etiqueta: 'Póliza',
+    valores: { metrosCuadrados: 85, anioConstruccion: 1998, tramoContenido: '15000_30000', vencimientoActual: '2027-03-01', companiaActual: 'Mapfre', tieneSeguro: true,
+      habitaciones: 999, anioUltimaReforma: -3, inventado: 5, vivienda: 'Calle Socorro' },
+  }, hogar)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.valores, { metrosCuadrados: '85', anioConstruccion: '1998', tramoContenido: '15000_30000', vencimientoActual: '2027-03-01', companiaActual: 'Mapfre', tieneSeguro: true })
+  const moto = camposSolicitud('moto', NADA_CONOCIDO)
+  const m = interpretarDocSubido(200, { ok: true, valores: { aniosSinSiniestros: 7, fechaMatriculacion: '10/05/2018', kmAnuales: 'mucho' } }, moto)
+  assert.deepEqual(m.estado === 'ok' && m.valores, { aniosSinSiniestros: '7', fechaMatriculacion: '2018-05-10' })
+})
+
+test('/api/datos/vivienda: el token tiene que ser de una solicitud de HOGAR (403 si no), antes de consultar el Catastro', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/api/datos/vivienda/route.ts', import.meta.url), 'utf8')
+  const guarda = src.search(/if \(ramo !== 'hogar'\) return NextResponse\.json\(\{ error: 'no_es_hogar' \}, \{ status: 403 \}\)/)
+  assert.ok(guarda > 0, 'falta la guarda de ramo hogar con 403')
+  assert.ok(src.indexOf('await ramoSolicitudViva(') < guarda)
+  assert.ok(guarda < src.indexOf('await viviendaCatastro('), 'la guarda va antes de consultar el Catastro')
+})

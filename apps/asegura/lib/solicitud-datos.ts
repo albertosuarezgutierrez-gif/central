@@ -34,6 +34,7 @@ import {
   validarRespuestas,
   valoresDePolizaLeida,
   limpiarBorrador,
+  borradorParaTercero,
   ultimoPasoDe,
   type BorradorSolicitud,
   type CampoSolicitud,
@@ -59,6 +60,8 @@ import { trasCompletarHogar } from './solicitud-datos-hogar'
 import { enlaceACiegas, politicaDocEnlace } from './enlace-ciego'
 import { viasValidadas, zonaCpServidor } from './solicitud-datos-direccion'
 import { esColumnaAusente } from './pg-error'
+import { PLAZO_LECTURA_DOCUMENTO_MS, PLAZO_LECTURA_POLIZA_MS, conPlazo } from './solicitud-plazos.ts'
+import { limpiarBorradoresMuertos } from './solicitud-borrador-purga.ts'
 
 // `creada_por = 'web'` = enlace del formulario ANÓNIMO, «a ciegas» (regla y porqué en `enlace-ciego.ts`).
 export { ACTOR_ENLACE_WEB } from './enlace-ciego'
@@ -135,6 +138,9 @@ export async function crearSolicitud(
   if (!campos) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha de esa persona.', status: 404 }
   const r = await prismaAsegura().$transaction((tx) =>
     insertarSolicitud(tx, { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero, estadoOportunidad: o.estado }))
+  // RGPD: la pendiente caducada que `insertarSolicitud` acaba de anular no guarda su borrador. FUERA de la transacción:
+  // sin la columna, un error dentro la abortaría entera.
+  if (r.nueva) await limpiarBorradoresMuertos(prismaAsegura(), { oportunidadId, clienteId: persona, correduriaId })
   // El token solo existe en claro al crearla: una viva no lo puede devolver (solo guardamos su hash).
   return { ok: true, id: r.id, token: r.token, nueva: r.nueva, ramo, caduca: r.caduca.toISOString(), tercero }
 }
@@ -276,6 +282,8 @@ export async function anularSolicitud(correduriaId: string, id: string): Promise
   const n = await prismaAsegura().$executeRaw(Prisma.sql`
     update solicitud_datos set estado = 'anulada'
     where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`)
+  // RGPD: un enlace anulado no guarda lo que se tecleó a medias (aparte: sin la columna, no falla).
+  if (n > 0) await limpiarBorradoresMuertos(prismaAsegura(), { id, correduriaId })
   return n > 0 ? { ok: true } : { ok: false, estado: 'conflicto', motivo: 'No está pendiente.', status: 409 }
 }
 
@@ -324,9 +332,11 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   if (!ramo) return { estado: 'muerta' }
   // Datos de un TERCERO: no se rellena nada. El enlace puede ir al cliente, y el DNI de su padre no
   // es suyo para verlo (a diferencia del propio, que Alberto decidió traer relleno).
-  // El borrador es lo que ESTE enlace tecleó (no sale de la ficha): vale también a ciegas y para un tercero.
+  // El borrador es lo que ESTE enlace tecleó (no sale de la ficha): vale también a ciegas y, sin datos personales, para un tercero.
   const borrador = await leerBorrador(f)
-  if (f.tercero) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: true, borrador }
+  // De un tercero, sin sus datos personales (DNI, nacimiento, carné…): la regla de tercero no rellena nada, y el
+  // enlace puede abrirlo otro. Lo del riesgo sí vuelve.
+  if (f.tercero) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: true, borrador: borradorParaTercero(borrador) }
   // Enlace del formulario web ANÓNIMO: nada de la ficha, ni su DNI (ver `ACTOR_ENLACE_WEB`).
   if (enlaceACiegas(f.creadaPor)) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: false, borrador }
   const id = await identidadFicha(f)
@@ -393,10 +403,14 @@ export async function subirDocumentoSolicitud(
   const opcionesLector = politica.probarContrasenasFicha ? { contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId) } : {}
   // Póliza actual: el lector de pólizas (texto por la pasarela `iaTexto`, con su tope). Lo leído pasa por la misma
   // validación del formulario (`valoresDePolizaLeida`) y nunca trae DNI ni nacimiento (sale el tomador).
-  const polizaLeida = clase === 'poliza' ? await leerPoliza(fichero.contenido, fichero.mime, fichero.nombre, opcionesLector) : null
+  // Con PLAZO (`solicitud-plazos.ts`): asegura corta antes que el puente del portal; pasado el plazo se archiva igual y se
+  // dice «no lo hemos podido leer» (el cliente nunca ve «fallo» con el fichero ya en su ficha).
+  const polizaLeida = clase === 'poliza'
+    ? await conPlazo(leerPoliza(fichero.contenido, fichero.mime, fichero.nombre, opcionesLector), PLAZO_LECTURA_POLIZA_MS, () => ({ fase: 'ninguno' as const, motivo: 'La lectura de la póliza ha superado el plazo.' }))
+    : null
   const lectura: { ok: true; bruto: unknown } | { ok: false; motivo: string } = polizaLeida
     ? (polizaLeida.fase === 'ninguno' ? { ok: false, motivo: polizaLeida.motivo } : { ok: true, bruto: polizaLeida.bruto ?? null })
-    : await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre, opcionesLector)
+    : await conPlazo(leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre, opcionesLector), PLAZO_LECTURA_DOCUMENTO_MS, () => ({ ok: false as const, motivo: 'La lectura del documento ha superado el plazo.' }))
   const leido: { tipo: TipoDocSolicitud; valores: Record<string, Respuesta> } = polizaLeida
     ? { tipo: 'poliza', valores: valoresDePolizaLeida(polizaLeida, camposDeFila(f)) }
     : lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, camposDeFila(f)) : { tipo: 'otro', valores: {} }
@@ -540,7 +554,8 @@ export async function responderSolicitud(
               ${`${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO} ${ramoTexto}. Ya se puede tarificar.${textoAPreguntar(campos, v.respuestas)}`})`)
     return true
   })
-  if (hecho) await borrarBorrador(f.id)
+  // Completada (el borrador sobra: no se guarda dos veces) o anulada por oportunidad cerrada: el borrador se borra.
+  await limpiarBorradoresMuertos(prismaAsegura(), { id: f.id, correduriaId: f.correduriaId })
   if (hecho && ramoLeido === 'hogar') {
     // Catastro → riesgo de la oportunidad → Telegram con el resumen, tras contestar al cliente. Nunca tumba la respuesta.
     const respuestas = v.respuestas
@@ -613,11 +628,3 @@ export async function guardarBorradorSolicitud(token: string, entrada: unknown, 
   }
 }
 
-/** Al completar, el borrador sobra (RGPD: no se guarda dos veces). Sin la columna, nada que borrar. Nunca lanza. */
-async function borrarBorrador(id: string): Promise<void> {
-  try {
-    await prismaAsegura().$executeRaw(Prisma.sql`update solicitud_datos set borrador = null where id = ${id}::uuid and borrador is not null`)
-  } catch (e) {
-    if (!esColumnaAusente(e)) console.warn('[solicitud-datos] no se pudo borrar el borrador:', e instanceof Error ? e.message : e)
-  }
-}

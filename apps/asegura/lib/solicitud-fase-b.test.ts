@@ -48,7 +48,7 @@ test('borrador: sin la columna se lee como «nada» (el formulario se abre igual
   assert.match(leer, /catch \(e\) \{[\s\S]*return null/)
   assert.match(leer, /limpiarBorrador\(camposDeFila\(f\)/)
   const responder = tramo('export async function responderSolicitud', 'if (hecho && ramoLeido === \'hogar\')')
-  assert.match(responder, /if \(hecho\) await borrarBorrador\(f\.id\)/)
+  assert.match(responder, /await limpiarBorradoresMuertos\(prismaAsegura\(\), \{ id: f\.id, correduriaId: f\.correduriaId \}\)/)
 })
 
 // ─── 3. Abandono ─────────────────────────────────────────────────────────────
@@ -99,4 +99,9 @@ test('SQL de la fase B: columnas nuevas, idempotente, sin tocar el CHECK de comp
     assert.match(sql, new RegExp(`ADD COLUMN IF NOT EXISTS ${c}`))
   }
   assert.doesNotMatch(sql, /DROP CONSTRAINT|ALTER COLUMN|UPDATE /i)
+})
+
+test('TERCERO: el borrador que se devuelve pasa por `borradorParaTercero` (sin DNI, nacimiento ni otro dato personal)', () => {
+  const t = tramo('export async function solicitudPorToken', 'export type ResultadoDocSolicitud')
+  assert.match(t, /if \(f\.tercero\) return \{ estado: 'ok', ramo, campos: camposDeFila\(f\), tercero: true, borrador: borradorParaTercero\(borrador\) \}/)
 })

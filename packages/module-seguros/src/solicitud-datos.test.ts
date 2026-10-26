@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { RAMOS_SOLICITUD, camposAPreguntar, camposAlDia, camposSolicitud, casaZonaCp, conIdentidad, grupoSolicitud, tituloSolicitud, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
+import type { RamoSolicitud } from './solicitud-datos.ts'
 
 const nadaConocido = { dni: false, fechaNacimiento: false, codigoPostal: false, carnetMoto: false, carnetCoche: false }
 const todoConocido = { dni: true, fechaNacimiento: true, codigoPostal: true, carnetMoto: true, carnetCoche: true }
@@ -28,7 +29,7 @@ test('valida y normaliza; un error por campo; lo no pedido se ignora', () => {
   const campos = camposSolicitud('moto', nadaConocido)
   const bien = validarRespuestas(campos, {
     dni: '12345678z', fechaNacimiento: '01/02/1990', codigoPostal: '41003', tipoCarnet: 'A2', fechaCarnet: '15/03/2015',
-    matricula: '1234 abc', marca: 'Yamaha', modelo: 'MT-07', garaje: 'calle', tieneSeguro: false, colado: 'x',
+    matricula: '1234 abc', marca: 'Yamaha', modelo: 'MT-07', fechaMatriculacion: '10/05/2018', garaje: 'calle', tieneSeguro: false, colado: 'x',
   }, HOY)
   assert.ok(bien.ok)
   if (bien.ok) {
@@ -163,10 +164,11 @@ const VIVIENDA_OK = {
   viviendaViaTipo: 'CL', viviendaViaNombre: 'Socorro',
 }
 const HOGAR_OK = { dni: '12345678Z', fechaNacimiento: '01/02/1980', ...VIVIENDA_OK, regimen: 'propietario', usoVivienda: 'habitual', alarma: false, hipoteca: false, tieneSeguro: false,
-  tipoVivienda: 'piso', habitaciones: '3', propietarioEsTomador: true, urbanizacionCerrada: false, puertaPrincipalBlindada: true, ventanasSeguras: false }
+  tipoVivienda: 'piso', metrosCuadrados: '85', anioConstruccion: '1998', habitaciones: '3', propietarioEsTomador: true, urbanizacionCerrada: false, puertaPrincipalBlindada: true, ventanasSeguras: false }
 
 test('HOGAR valida: lo que se deja en blanco es null (nunca 0 ni «»), y lo que cuelga de un «no» también', () => {
-  const r = validarRespuestas(camposSolicitud('hogar', todoConocido), HOGAR_OK, HOY)
+  // Confirmó la tarjeta del Catastro sin que viajaran m² ni año (portal antiguo): quedan null, no es un error.
+  const r = validarRespuestas(camposSolicitud('hogar', todoConocido), { ...HOGAR_OK, confirmaCatastro: true, metrosCuadrados: undefined, anioConstruccion: undefined }, HOY)
   assert.ok(r.ok, JSON.stringify(r))
   if (!r.ok) return
   assert.equal(r.respuestas.tramoContenido, null)
@@ -175,7 +177,7 @@ test('HOGAR valida: lo que se deja en blanco es null (nunca 0 ni «»), y lo que
   assert.equal(r.respuestas.fechaEfecto, null)
   assert.equal(r.respuestas.viviendaPlanta, null)
   // 26/10/2026: lo opcional sin contestar es null; nunca false ni 0.
-  for (const k of ['conMadera', 'vigilante', 'anioUltimaReforma', 'tramoContinente', 'metrosCuadrados', 'anioConstruccion', 'confirmaCatastro', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos']) {
+  for (const k of ['conMadera', 'vigilante', 'anioUltimaReforma', 'tramoContinente', 'metrosCuadrados', 'anioConstruccion', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos']) {
     assert.equal(r.respuestas[k], null, k)
   }
   assert.equal(r.respuestas.habitaciones, 3)
@@ -254,21 +256,93 @@ test('NIVELES y «No lo sé» en TODOS los ramos: esencial = obligatorio por def
   }
 })
 
-test('«No lo sé» en un esencial: se acepta como null (nunca false ni 0) y queda anotado; en el DNI no vale', () => {
+test('«No lo sé» en lo que NO es esencial para tarificar: se acepta como null (nunca false ni 0) y queda anotado; en el DNI no vale', () => {
   const campos = camposSolicitud('hogar', todoConocido)
-  const r = validarRespuestas(campos, { ...HOGAR_OK, alarma: undefined, habitaciones: undefined, _noLoSe: ['alarma', 'habitaciones', 'dni'] }, HOY)
+  const r = validarRespuestas(campos, { ...HOGAR_OK, hipoteca: undefined, conMadera: undefined, _noLoSe: ['hipoteca', 'conMadera', 'dni'] }, HOY)
   assert.ok(r.ok, JSON.stringify(r))
   if (!r.ok) return
-  assert.equal(r.respuestas.alarma, null)
-  assert.equal(r.respuestas.habitaciones, null)
-  assert.equal(r.respuestas._noLoSe, 'habitaciones,alarma')
+  assert.equal(r.respuestas.hipoteca, null)
+  assert.equal(r.respuestas.conMadera, null)
+  assert.equal(r.respuestas._noLoSe, 'hipoteca,conMadera')
   assert.equal(r.respuestas.dni, '12345678Z')
-  const sinMarcar = validarRespuestas(campos, { ...HOGAR_OK, alarma: undefined }, HOY)
+  const sinMarcar = validarRespuestas(campos, { ...HOGAR_OK, hipoteca: undefined }, HOY)
   assert.ok(!sinMarcar.ok)
   const a = camposAPreguntar(campos, r.respuestas)
-  assert.ok(a.noLoSabe.includes('¿Tiene alarma conectada?'))
+  assert.ok(a.noLoSabe.includes('¿Tiene hipoteca?'))
   assert.ok(a.sinContestar.includes('Joyas guardadas en caja fuerte, en €'))
   assert.ok(!a.sinContestar.some((x) => /banco/i.test(x)), 'lo que cuelga de un «no» no se pregunta')
+})
+
+// 26/10/2026 (revisión del PR #5068): «No lo sé» nunca en lo esencial para tarificar.
+const ESENCIALES_VEHICULO = ['marca', 'modelo', 'fechaMatriculacion', 'fechaCarnet', 'tipoCarnet', 'garaje', 'matricula']
+const ESENCIALES_HOGAR = ['tipoVivienda', 'metrosCuadrados', 'anioConstruccion', 'habitaciones', 'regimen', 'usoVivienda', 'alarma', 'propietarioEsTomador', 'urbanizacionCerrada', 'puertaPrincipalBlindada', 'ventanasSeguras', 'tramoContenido']
+
+test('NO LO SÉ: ningún esencial para tarificar lo ofrece (auto, moto, hogar, personas, mascota), ni en un enlace YA ENVIADO', () => {
+  const casos: [RamoSolicitud, string[]][] = [
+    ['moto', ESENCIALES_VEHICULO], ['auto', ESENCIALES_VEHICULO.filter((k) => k !== 'tipoCarnet')], ['hogar', ESENCIALES_HOGAR],
+    ['salud', ['personasAsegurar']], ['accidentes', ['profesion']], ['mascotas', ['razaMascota', 'ppp']],
+  ]
+  for (const [ramo, claves] of casos) {
+    const campos = camposSolicitud(ramo, nadaConocido)
+    for (const k of claves) {
+      const c = campos.find((x) => x.clave === k)
+      assert.ok(c, `${ramo}.${k} no se pide`)
+      assert.equal(c.admiteNoLoSe, false, `${ramo}.${k} ofrece «No lo sé»`)
+      assert.equal(c.nivel, 'esencial', `${ramo}.${k} no es esencial`)
+    }
+  }
+  // Enlace ya ENVIADO (campos guardados con «No lo sé» y la matriculación opcional): `camposAlDia` lo corrige.
+  const guardados = camposSolicitud('moto', nadaConocido).map((c) => ({ ...c, admiteNoLoSe: true, ...(c.clave === 'fechaMatriculacion' ? { obligatorio: false, nivel: 'opcional' as const } : {}) }))
+  const al = camposAlDia('moto', guardados)
+  for (const k of ESENCIALES_VEHICULO) assert.equal(al.find((c) => c.clave === k)?.admiteNoLoSe, false, `enviado: ${k}`)
+  const fm = al.find((c) => c.clave === 'fechaMatriculacion')
+  assert.equal(fm?.obligatorio, true)
+  assert.equal(fm?.nivel, 'esencial')
+  assert.equal(al.find((c) => c.clave === 'kmAnuales')?.admiteNoLoSe, true, 'lo opcional sigue admitiéndolo')
+})
+
+test('NO LO SÉ: validarRespuestas rechaza null en los esenciales, también si llega marcado «No lo sé» o con el campo guardado viejo', () => {
+  const MOTO = { dni: '12345678Z', fechaNacimiento: '01/02/1990', codigoPostal: '41003', tipoCarnet: 'A2', fechaCarnet: '15/03/2015', matricula: '1234ABC', marca: 'Yamaha', modelo: 'MT-07', fechaMatriculacion: '10/05/2018', garaje: 'calle', tieneSeguro: false }
+  const guardados = camposSolicitud('moto', nadaConocido).map((c) => ({ ...c, admiteNoLoSe: true, ...(c.clave === 'fechaMatriculacion' ? { obligatorio: false } : {}) }))
+  for (const campos of [camposSolicitud('moto', nadaConocido), camposAlDia('moto', guardados), guardados]) {
+    assert.ok(validarRespuestas(campos, MOTO, HOY).ok)
+    for (const k of ['marca', 'modelo', 'fechaCarnet', 'tipoCarnet', 'garaje']) {
+      const r = validarRespuestas(campos, { ...MOTO, [k]: undefined, _noLoSe: [k] }, HOY)
+      assert.ok(!r.ok && r.errores[k], `${k}: «No lo sé» no vale`)
+    }
+  }
+  for (const campos of [camposSolicitud('moto', nadaConocido), camposAlDia('moto', guardados)]) {
+    const r = validarRespuestas(campos, { ...MOTO, fechaMatriculacion: '', _noLoSe: ['fechaMatriculacion'] }, HOY)
+    assert.ok(!r.ok && r.errores.fechaMatriculacion, 'la matriculación es obligatoria')
+  }
+  // Hogar: tipo, m², año y rejas se exigen salvo que confirmara la tarjeta del Catastro.
+  const hogar = camposSolicitud('hogar', todoConocido)
+  for (const k of ['tipoVivienda', 'metrosCuadrados', 'anioConstruccion', 'habitaciones', 'alarma']) {
+    const r = validarRespuestas(hogar, { ...HOGAR_OK, [k]: undefined, _noLoSe: [k] }, HOY)
+    assert.ok(!r.ok && r.errores[k], `hogar.${k}`)
+  }
+  const bajo = validarRespuestas(hogar, { ...HOGAR_OK, tipoVivienda: 'planta_baja', ventanasSeguras: undefined }, HOY)
+  assert.ok(!bajo.ok && bajo.errores.ventanasSeguras, 'en un bajo las rejas se exigen')
+  assert.ok(validarRespuestas(hogar, { ...HOGAR_OK, tipoVivienda: 'piso', ventanasSeguras: undefined }, HOY).ok, 'en un piso no se preguntan')
+})
+
+test('CATASTRO: si tras confirmar la tarjeta tipo, m² o año quedan null, salen «a preguntar»; las rejas de un piso no', () => {
+  const hogar = camposSolicitud('hogar', todoConocido)
+  const r = validarRespuestas(hogar, { ...HOGAR_OK, confirmaCatastro: true, tipoVivienda: undefined, metrosCuadrados: undefined, anioConstruccion: undefined, ventanasSeguras: undefined }, HOY)
+  assert.ok(r.ok, JSON.stringify(r))
+  if (!r.ok) return
+  const a = camposAPreguntar(hogar, r.respuestas)
+  for (const k of ['tipoVivienda', 'metrosCuadrados', 'anioConstruccion', 'ventanasSeguras']) {
+    assert.ok(a.sinContestar.includes(hogar.find((c) => c.clave === k)!.etiqueta), `${k} a preguntar`)
+  }
+  // Con los valores que vio y confirmó, nada de eso queda a preguntar; y en un piso las rejas tampoco.
+  const conValores = validarRespuestas(hogar, { ...HOGAR_OK, confirmaCatastro: true, tipoVivienda: 'piso', metrosCuadrados: '85', anioConstruccion: '1998', ventanasSeguras: undefined }, HOY)
+  assert.ok(conValores.ok)
+  if (!conValores.ok) return
+  const b = camposAPreguntar(hogar, conValores.respuestas)
+  for (const k of ['tipoVivienda', 'metrosCuadrados', 'anioConstruccion', 'ventanasSeguras']) {
+    assert.ok(!b.sinContestar.includes(hogar.find((c) => c.clave === k)!.etiqueta), `${k} no a preguntar`)
+  }
 })
 
 test('C: un enlace de hogar YA CREADO toma las preguntas vigentes al pintarse (los campos se guardan al crear)', () => {

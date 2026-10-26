@@ -133,6 +133,31 @@ export function limpiarBorrador(campos: readonly CampoSolicitud[], entrada: unkn
   return JSON.stringify(out).length > MAX_BORRADOR_CARACTERES ? null : out
 }
 
+/**
+ * Datos de la PERSONA que un enlace de TERCERO no devuelve (26/10/2026, revisión del PR #5068). La regla de tercero
+ * no trae nada relleno (el enlace puede reenviarse y abrirlo otro), así que lo que se tecleó de esa persona tampoco
+ * vuelve al reabrir: identidad, carné, CP, salud y profesión. Lo del riesgo (vehículo, vivienda, capitales) sí vuelve.
+ */
+export const CLAVES_PERSONALES_BORRADOR: ReadonlySet<string> = new Set([
+  'dni', 'fechaNacimiento', 'tipoCarnet', 'fechaCarnet', 'codigoPostal', 'fumador', 'profesion', 'edades',
+])
+
+/** El borrador de un enlace de tercero, sin los datos personales (también fuera de la lista de «No lo sé»). */
+export function borradorParaTercero(borrador: BorradorSolicitud | null): BorradorSolicitud | null {
+  if (!borrador) return null
+  const out: BorradorSolicitud = {}
+  for (const [k, v] of Object.entries(borrador)) {
+    if (CLAVES_PERSONALES_BORRADOR.has(k)) continue
+    if (k === CLAVE_NO_LO_SE && Array.isArray(v)) {
+      const lista = v.filter((x) => !CLAVES_PERSONALES_BORRADOR.has(x))
+      if (lista.length > 0) out[k] = lista
+      continue
+    }
+    out[k] = v
+  }
+  return Object.keys(out).length > 0 ? out : null
+}
+
 // ─── 3. Hasta dónde llegó ────────────────────────────────────────────────────
 
 /**

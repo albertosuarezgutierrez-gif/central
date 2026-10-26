@@ -39,7 +39,7 @@ export type EntradaAvisoDatosHogar = {
   respuestas: Record<string, Respuesta>
   catastro: CatastroSolicitud | null
   /** Tipo de vivienda deducido del Catastro (26/10/2026); `null`/ausente = no se dedujo. */
-  deducida?: { tipo: string | null; aviso: string | null } | null
+  deducida?: { tipo: string | null; aviso: string | null; ultimoPiso?: string | null } | null
   /** Campos que se pidieron: para listar lo que queda «a preguntar» (vacíos y «No lo sé»). */
   campos?: readonly CampoSolicitud[]
   /** Enlace a la ficha en plataforma (`/correduria/cliente/<id>`). */
@@ -83,7 +83,8 @@ export function textoAvisoDatosHogar(e: EntradaAvisoDatosHogar): string {
   const d = direccionDeRespuestas(r)
   lineas.push(`📍 ${d ? escapeHtml(direccionLegible(d)) : 'sin dirección'}${d && !(d.viaTipo && d.viaNombre) ? ' (calle escrita a mano, por validar)' : ''}`)
   lineas.push(`🗺️ ${escapeHtml(textoCatastroSolicitud(e.catastro))}`)
-  lineas.push(`🏠 Tipo: ${tipoTexto(r, e.deducida ?? null)}`)
+  // «Último piso» ≠ «ático» (26/10/2026): un último piso numérico es un piso, y se dice aparte.
+  lineas.push(`🏠 Tipo: ${tipoTexto(r, e.deducida ?? null)}${e.deducida?.ultimoPiso === 'ultimo' && (r.tipoVivienda ?? e.deducida.tipo) === 'piso' ? ' · último piso del edificio (Catastro)' : ''}`)
   if (e.deducida?.aviso) lineas.push(escapeHtml(e.deducida.aviso))
   lineas.push(`🏷️ ${etiqueta(REGIMENES_HOGAR_SOLICITUD, r.regimen)} · ${etiqueta(USOS_HOGAR_SOLICITUD, r.usoVivienda)} · habitaciones: ${typeof r.habitaciones === 'number' ? r.habitaciones : 'sin dato'}`)
   lineas.push(`🛋️ Contenido: ${capitalTexto(r.valorContenido, TRAMOS_CONTENIDO, r.tramoContenido)} · continente: ${capitalTexto(null, TRAMOS_CONTINENTE, r.tramoContinente)}`)
