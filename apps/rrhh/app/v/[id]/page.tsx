@@ -13,7 +13,7 @@ const fmtFecha = (iso: string) => {
 
 async function urlAbsoluta(path: string): Promise<string> {
   const h = await headers()
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'central-rrhh.vercel.app'
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'empleados.grupoasegura.es'
   const proto = h.get('x-forwarded-proto') ?? 'https'
   return `${proto}://${host}${path}`
 }
