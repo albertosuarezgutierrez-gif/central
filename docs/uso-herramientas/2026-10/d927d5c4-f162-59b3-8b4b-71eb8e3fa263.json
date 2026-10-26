@@ -1,33 +1,34 @@
 {
  "sesion": "d927d5c4-f162-59b3-8b4b-71eb8e3fa263",
  "inicio": "2026-10-25T19:27:56.386Z",
- "fin": "2026-10-25T20:44:58.098Z",
- "llamadas": 173,
+ "fin": "2026-10-26T05:36:45.683Z",
+ "llamadas": 233,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 36,
-   "chars_in": 5619,
-   "chars_out": 112294,
+   "llamadas": 38,
+   "chars_in": 5874,
+   "chars_out": 172195,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 27,
     "Glob": 2,
-    "Read": 7
+    "Read": 9
    }
   },
   "otro": {
-   "llamadas": 8,
-   "chars_in": 11190,
-   "chars_out": 82034,
+   "llamadas": 18,
+   "chars_in": 21319,
+   "chars_out": 113061,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 3,
-    "ToolSearch": 3,
-    "ReadNotifications": 2
+    "SubagentHandback": 5,
+    "ToolSearch": 6,
+    "ReadNotifications": 6,
+    "SendMessage": 1
    }
   },
   "agente:rastreador-codigo": {
@@ -42,37 +43,39 @@
    }
   },
   "bash": {
-   "llamadas": 112,
-   "chars_in": 123331,
-   "chars_out": 445630,
+   "llamadas": 157,
+   "chars_in": 183087,
+   "chars_out": 692143,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 112
+    "Bash": 157
    }
   },
   "mcp:github": {
-   "llamadas": 2,
-   "chars_in": 2543,
-   "chars_out": 4212,
+   "llamadas": 4,
+   "chars_in": 2742,
+   "chars_out": 4975,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__update_pull_request": 1
    }
   },
   "agente:agente-architect": {
-   "llamadas": 1,
-   "chars_in": 4908,
-   "chars_out": 5117,
+   "llamadas": 2,
+   "chars_in": 6568,
+   "chars_out": 6987,
    "errores": 0,
    "archivos_citados": 9,
    "chars_citados": 180982,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   },
   "escritura": {
