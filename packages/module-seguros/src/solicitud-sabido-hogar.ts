@@ -14,6 +14,9 @@
  *    año ya se saben.
  *  - Una pregunta de la que cuelgan otras (`siMarcado`) solo se oculta si su valor sabido es `false` (las hijas no
  *    aplican) o si TODAS sus hijas también se saben: si no, la hija no se podría enseñar.
+ *  - Lo sabido y oculto cuenta como RESPONDIDO para lo que depende de ello: con el tipo sabido de piso o ático (`MiddleFloor`,
+ *    `piso`, `atico`) las rejas no aplican y no se piden (ni se exigen al validar: no están en los campos). Con otro tipo,
+ *    o uno sin reconocer, se preguntan (y `exigidoPorCatastro` las exige). Nada de esto viaja a la página.
  *  - DNI y nacimiento no tienen destino en `datosVivienda`: no se tocan aquí.
  */
 import { DESTINOS_HOGAR } from './solicitud-destinos.ts'
@@ -28,6 +31,9 @@ function conocido(v: unknown): boolean {
   if (typeof v === 'number') return Number.isFinite(v)
   return typeof v === 'boolean'
 }
+
+/** Valores de `datosVivienda.tipoVivienda` en los que las rejas no aplican (piso intermedio y ático; ver `TIPOS_SIN_REJAS`). */
+export const TIPOS_SABIDOS_SIN_REJAS: ReadonlySet<string> = new Set(['MiddleFloor', 'piso', 'atico'])
 
 function valorSabido(c: CampoSolicitud, vivienda: Readonly<Record<string, unknown>>): unknown {
   const d = Object.hasOwn(DESTINOS_HOGAR, c.clave) ? DESTINOS_HOGAR[c.clave] : undefined
@@ -45,6 +51,12 @@ export function clavesSabidasHogar(campos: readonly CampoSolicitud[], vivienda: 
       continue
     }
     if (conocido(valorSabido(c, vivienda))) ocultas.add(c.clave)
+  }
+  // Tipo sabido de piso/ático: las rejas no aplican (como si el cliente hubiera elegido «piso»).
+  const tipo = campos.find((c) => c.catastro === 'tipo_vivienda')
+  const tipoSabido = tipo && ocultas.has(tipo.clave) ? valorSabido(tipo, vivienda) : undefined
+  if (typeof tipoSabido === 'string' && TIPOS_SABIDOS_SIN_REJAS.has(tipoSabido)) {
+    for (const c of campos) if (c.catastro === 'ventanas') ocultas.add(c.clave)
   }
   // De quien cuelgan otras: fuera solo si su «no» las anula o si todas ellas también se saben.
   for (const c of campos) {

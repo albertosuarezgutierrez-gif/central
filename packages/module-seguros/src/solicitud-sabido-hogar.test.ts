@@ -9,7 +9,8 @@ const HOGAR = camposSolicitud('hogar', NADA_CONOCIDO)
 /** Cliente antiguo de hogar: dirección y vivienda sabidas, faltan rejas y alarma (el caso de Alberto). */
 const SIN_REJAS_NI_ALARMA: Record<string, unknown> = {
   cp: '41003', provincia: 'Sevilla', municipio: 'Sevilla', tipoViaId: 'CL', nombreVia: 'SOCORRO', numeroVia: '24', planta: '1', puertaVivienda: 'A',
-  tipoVivienda: 'MiddleFloor', metrosCuadrados: 90, anioConstruccion: 1975, habitaciones: 3, uso: 'Owner', propietarioEsTomador: true,
+  // Un bajo: las rejas aplican (en un piso no se preguntan; ver el test del tipo sabido).
+  tipoVivienda: 'planta_baja', metrosCuadrados: 90, anioConstruccion: 1975, habitaciones: 3, uso: 'Owner', propietarioEsTomador: true,
   ocupacion: 'MainResidence', urbanizacionCerrada: false, puertaPrincipalBlindada: true, capitalContenido: 30000, capitalContinente: 120000,
   hipoteca: false, conMadera: false, anioUltimaReforma: 2010, vigilante: false, joyasEnCajaFuerte: 0, joyasFueraDeCaja: 0, objetosDeValor: 0,
   perrosPeligrosos: 0,
@@ -62,4 +63,27 @@ test('`false` y `0` son respuestas: se ocultan', () => {
   const s = clavesSabidasHogar(HOGAR, { ...SIN_REJAS_NI_ALARMA, alarma: false, perrosPeligrosos: 0 })
   assert.ok(s.has('alarma'))
   assert.ok(s.has('perrosPeligrosos'))
+})
+
+// Revisión del PR #5091: el tipo sabido (oculto) es un piso y las rejas no se saben → en un piso las rejas no aplican:
+// ni se enseñan ni se exigen (antes salían y eran obligatorias porque faltaba `entrada.tipoVivienda`).
+test('tipo sabido «piso» (MiddleFloor/piso/atico) y rejas sin saber: las rejas no se piden ni se exigen', () => {
+  for (const tipoVivienda of ['MiddleFloor', 'piso', 'atico']) {
+    const quedan = camposHogarSinLoSabido(HOGAR, { ...SIN_REJAS_NI_ALARMA, tipoVivienda })
+    const claves = quedan.map((c) => c.clave)
+    assert.ok(!claves.includes('tipoVivienda'), tipoVivienda)
+    assert.ok(!claves.includes('ventanasSeguras'), `${tipoVivienda}: en un piso las rejas no se preguntan`)
+    assert.ok(claves.includes('alarma'))
+    const v = validarRespuestas(quedan, { dni: '12345678Z', fechaNacimiento: '1980-01-01', alarma: false, tieneSeguro: false }, new Date())
+    assert.equal(v.ok, true, `${tipoVivienda}: ${JSON.stringify(v)}`)
+  }
+})
+
+test('tipo sabido que SÍ lleva rejas (bajo, casa) o sin reconocer: las rejas se preguntan y se exigen', () => {
+  for (const tipoVivienda of ['planta_baja', 'adosada', 'independiente', 'UnIdRaro']) {
+    const quedan = camposHogarSinLoSabido(HOGAR, { ...SIN_REJAS_NI_ALARMA, tipoVivienda })
+    assert.ok(quedan.some((c) => c.clave === 'ventanasSeguras'), tipoVivienda)
+    const v = validarRespuestas(quedan, { dni: '12345678Z', fechaNacimiento: '1980-01-01', alarma: false, tieneSeguro: false }, new Date())
+    assert.equal(v.ok, false, tipoVivienda)
+  }
 })
