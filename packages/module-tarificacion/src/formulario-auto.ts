@@ -155,6 +155,10 @@ export type FichaTomadorAuto = {
   fechaCarnet: string | null
   /** Tipo de ese carné («B», «A2»…). `null` si no hay `fechaCarnet`. */
   tipoCarnet: string | null
+  /** Correo del tomador (26/10/2026, Mapfre: el proyecto no se guarda sin él). Ausente/`null` = no consta. */
+  email?: string | null
+  /** Móvil español del tomador, 9 dígitos sin prefijo (26/10/2026, Mapfre). Ausente/`null` = no consta. */
+  telefono?: string | null
 }
 export type TipoTomadorFicha = 'fisica' | 'juridica'
 
@@ -235,11 +239,23 @@ export function validarFichaTomadorAuto(entrada: unknown, hoy: Date = new Date()
     if (typeof e.tipoCarnet === 'string' && /^[A-Z][A-Z0-9]{0,3}$/.test(e.tipoCarnet.trim().toUpperCase())) tipoCarnet = e.tipoCarnet.trim().toUpperCase()
     else errores.push('fichaTomador.tipoCarnet: tipo de carné («B», «A2»…) o null')
   }
+  let email: string | null = null
+  if (!nada(e.email)) {
+    const m = typeof e.email === 'string' ? e.email.trim() : ''
+    if (m.length <= 200 && /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(m)) email = m.toLowerCase()
+    else errores.push('fichaTomador.email: no parece un correo (o null)')
+  }
+  let telefono: string | null = null
+  if (!nada(e.telefono)) {
+    const t = typeof e.telefono === 'string' ? e.telefono.replace(/[\s.\-()]/g, '').replace(/^(\+34|0034)/, '') : ''
+    if (/^[6-9]\d{8}$/.test(t)) telefono = t
+    else errores.push('fichaTomador.telefono: teléfono español de 9 dígitos (o null)')
+  }
   if (tipo === 'juridica' && (fechaNacimiento !== null || fechaCarnet !== null)) errores.push('fichaTomador: una empresa no tiene fecha de nacimiento ni carné')
   if (tipoCarnet !== null && fechaCarnet === null) errores.push('fichaTomador.tipoCarnet: solo con fechaCarnet')
   if (fechaNacimiento !== null && fechaCarnet !== null && fechaCarnet <= fechaNacimiento) errores.push('fichaTomador.fechaCarnet: no puede ser anterior al nacimiento')
   if (errores.length) return { ok: false, errores }
-  return { ok: true, valor: { tipo, documento, codigoPostal, localidad, direccion, fechaNacimiento, fechaCarnet, tipoCarnet } }
+  return { ok: true, valor: { tipo, documento, codigoPostal, localidad, direccion, fechaNacimiento, fechaCarnet, tipoCarnet, ...(email !== null ? { email } : {}), ...(telefono !== null ? { telefono } : {}) } }
 }
 
 /** CP del TOMADOR para el portal: el del bloque `tomador` o, si no, el de `fichaTomador`. `null` = no consta. PURO. */
@@ -400,6 +416,8 @@ export function secretosDelRiesgo(riesgo: unknown): string[] {
       const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto(k))
       if (f) for (const x of [`${f[1]}-${f[2]}-${f[3]}`, `${f[3]}/${f[2]}/${f[1]}`, `${f[3]}-${f[2]}-${f[1]}`, `${f[3]}.${f[2]}.${f[1]}`]) out.add(x)
     }
+    // Contacto (26/10/2026): correo y móvil del tomador, secretos del trabajo (el redactor no los deja pasar a logs/trazas).
+    for (const k of [ft.email, ft.telefono]) { const x = texto(k); if (x.length >= 4) out.add(x) }
     const via = texto(obj(ft.direccion)?.nombreVia)
     if (via.length >= 4) { out.add(via); out.add(via.toUpperCase()) }
   }

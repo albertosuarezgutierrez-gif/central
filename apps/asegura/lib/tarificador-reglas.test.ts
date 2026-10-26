@@ -570,7 +570,7 @@ test('Datos tomador: encolarTrabajo los COMPRUEBA (leerTomadorFicha) y trabajoPa
   assert.match(fn, /leerTomadorFicha\(e\.correduriaId, clienteId\)/)
   // `riesgoEntrada` (18/10/2026) = el riesgo de la petición, con el vehículo encadenado de Generali si toca (tarificador-espera-vehiculo.ts).
   // 19/10/2026: + el tomador de Hogar (DNI/NIE y nacimiento de la ficha) como 6.º argumento.
-  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, riesgoEntrada, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\), \(\) => lecturaTomadorHogar\(fichaHogar, decryptField\), \(\) => fichaTomadorAutoDeFicha\(filaFichaAuto, decryptField, e\.ramo\)\)/)
+  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, riesgoEntrada, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\), \(\) => lecturaTomadorHogar\(fichaHogar, decryptField\), \(\) => fichaTomadorAutoDeFicha\(filaFichaAuto, decryptField, e\.ramo, new Date\(\), e\.compania\)\)/)
   // 20/10/2026: + la ficha de Allianz auto/moto (7.º argumento) para juzgar los obligatorios de origen ficha; solo en memoria.
   assert.match(fn, /necesitaFichaTomador\(e\.compania, e\.ramo\) \? await leerFichaTomadorAuto\(e\.correduriaId, clienteId\)/)
   assert.match(fn, /let riesgoEntrada: RiesgoComunidad \| FormularioAuto \| FormularioHogarSinTomador = e\.riesgo\n/)
@@ -710,10 +710,13 @@ const FILA_FT = {
   fechaNacimiento: 'v1:02/01/1980', tipoPersona: 'fisica', carnets: [{ tipo: 'B', fechaCarnet: 'v1:1999-03-04' }, { tipo: 'A2', fechaCarnet: 'v1:2005-06-07' }],
 }
 
-test('fichaTomador: solo Allianz auto/moto la recibe', () => {
+test('fichaTomador: solo Allianz y Mapfre (auto/moto) la reciben', () => {
   assert.equal(necesitaFichaTomador('allianz', 'auto'), true)
   assert.equal(necesitaFichaTomador('Allianz', 'moto'), true)
-  assert.equal(necesitaFichaTomador('mapfre', 'auto'), false)
+  assert.equal(necesitaFichaTomador('mapfre', 'auto'), true)
+  assert.equal(necesitaFichaTomador('mapfre', 'moto'), true)
+  assert.equal(necesitaFichaTomador('mapfre', 'hogar'), false)
+  assert.equal(necesitaFichaTomador('generali', 'auto'), false)
   assert.equal(necesitaFichaTomador('allianz', 'comunidades'), false)
 })
 
@@ -772,7 +775,7 @@ test('fichaTomador: aplicar — Allianz con ficha la añade; otra compañía o s
   const ft = fichaTomadorAutoDeFicha(FILA_FT, descFt, 'auto', HOY_FT)
   assert.deepEqual(aplicarFichaTomador('allianz', 'auto', RIESGO_MOTO, () => ft), { ...RIESGO_MOTO, fichaTomador: ft })
   assert.deepEqual(aplicarFichaTomador('allianz', 'auto', { ...RIESGO_MOTO, fichaTomador: ft }, () => null), RIESGO_MOTO)
-  assert.deepEqual(aplicarFichaTomador('mapfre', 'auto', { ...RIESGO_MOTO, fichaTomador: ft }, noLeer), RIESGO_MOTO)
+  assert.deepEqual(aplicarFichaTomador('generali', 'auto', { ...RIESGO_MOTO, fichaTomador: ft }, noLeer), RIESGO_MOTO)
   assert.deepEqual(riesgoSinNifTomador({ a: 1, fichaTomador: ft }), { a: 1 })
   // Lo que se entrega lo acepta el validador del worker y conserva el bloque.
   const v = validarEntradaRamo('auto', { ...RIESGO_MOTO, ramo: 'auto', fichaTomador: ft })
@@ -862,4 +865,14 @@ test('Tomador Generali · ENTREGA: el worker recibe documentoTomador + datosToma
   const alWorker = aplicarDatosTomador('generali', 'auto', conNif.ok && conNif.riesgo, datosOk)
   assert.deepEqual(alWorker.ok && alWorker.riesgo, { ...RIESGO_GENERALI, documentoTomador: NIF, datosTomador: DATOS_TOMADOR })
   assert.equal(aplicarFichaTomador('generali', 'auto', alWorker.ok && alWorker.riesgo, noLeer), alWorker.ok && alWorker.riesgo, 'sin fichaTomador')
+})
+
+// Mapfre auto/moto recibe nombre del tomador (`datosTomador`) y, con la ficha, también su contacto (`fichaTomador`, ver tarificador-ficha-tomador.test.ts).
+test('Mapfre auto con datos de tomador sintéticos: se COMPRUEBAN al encolar y no se guardan en el riesgo', () => {
+  const r = riesgoParaEncolar('mapfre', 'auto', { ...RIESGO_MOTO, ramo: 'auto', datosTomador: DATOS_TOMADOR }, () => ({ estado: 'ok', documento: NIF }), datosOk)
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.equal('datosTomador' in (r.riesgo as object), false)
+    assert.equal('fichaTomador' in (r.riesgo as object), false)
+  }
 })

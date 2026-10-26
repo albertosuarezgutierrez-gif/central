@@ -61,6 +61,9 @@ import {
   PESTANAS_VALORACION_GENERALI,
   resumenVolcadoResultadosGenerali,
   resumenDiagnosticoImportesGenerali,
+  leerModalidadesGenerali,
+  resumenModalidadesGenerali,
+  type VolcadoModalidadesGenerali,
   type DiagnosticoImportesMarcoGenerali,
   resumenNavegacionGenerali,
   type NavegacionMarcoGenerali,
@@ -247,7 +250,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * entiende también tablas (cabecera «Prima/Importe/Total…» + celda con importe, una línea por celda) y el atasco VUELCA, saneado, las pestañas
  * (¿marcada?), las tablas con cabeceras y filas con «€» y los botones, para ver si el clic cambió la pantalla. Sin pulsar nada nuevo.
  */
-export const VERSION_GENERALI_AUTO = '0.2.30'
+export const VERSION_GENERALI_AUTO = '0.2.31'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -653,6 +656,69 @@ export async function volcarDiagnosticoImportesGenerali(page: Page): Promise<Dia
     if (v && (v.cabeceras.length > 0 || v.importes.length > 0)) out.push(v)
   }
   return out
+}
+
+/**
+ * v0.2.31: tabla «Modalidades de Seguro» (cabeceras «Modalidades de Seguro» + «Recibo Anual»/«Prima Anualidad») de un marco: por fila la modalidad,
+ * si está marcada (control marcado de la fila o clase de seleccionada) y los valores de las celdas de importe (texto de la celda y value de
+ * inputs/selects de dentro). SOLO LEE: no pulsa nada. Más los botones del marco (texto/id/value) para el diagnóstico.
+ */
+const JS_MODALIDADES = `(() => {
+  const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const txt = (e) => String(e.textContent || '').replace(/\\s+/g, ' ').trim();
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim().toLowerCase();
+  const valores = (c) => {
+    const out = [txt(c)];
+    c.querySelectorAll('input[type=text], input[type=number], input[type=hidden], input:not([type]), select, textarea').forEach((i) => {
+      const t = (i.getAttribute('type') || 'text').toLowerCase();
+      if (['button', 'submit', 'image', 'reset', 'checkbox'].includes(t)) return;
+      if (i.tagName === 'SELECT') { const o = i.selectedIndex >= 0 ? i.options[i.selectedIndex] : null; out.push(o ? (o.value || txt(o)) : ''); return; }
+      out.push(String(i.value || ''));
+    });
+    return out;
+  };
+  const res = { encontrada: false, filas: [], botones: [] };
+  document.querySelectorAll('table').forEach((t) => {
+    if (res.encontrada || !vis(t)) return;
+    let idx = null;
+    Array.from(t.rows || []).forEach((r) => {
+      const cs = Array.from(r.cells || []);
+      if (!idx) {
+        const h = cs.map((c) => (c.querySelector('table') ? '' : norm(txt(c))));
+        const m = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('modalidades de seguro') >= 0);
+        const ra = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('recibo anual') >= 0);
+        const pa = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('prima anualidad') >= 0);
+        if (m >= 0 && (ra >= 0 || pa >= 0)) { idx = { m: m, ra: ra, pa: pa }; res.encontrada = true; }
+        return;
+      }
+      if (res.filas.length >= 12 || cs.length <= Math.max(idx.m, idx.ra, idx.pa)) return;
+      if (cs.some((c) => c.querySelector('table'))) return;
+      const nombre = valores(cs[idx.m]).filter((x) => x !== '')[0] || '';
+      const recibo = idx.ra >= 0 ? valores(cs[idx.ra]) : [];
+      const prima = idx.pa >= 0 ? valores(cs[idx.pa]) : [];
+      if (!nombre && recibo.every((x) => x === '') && prima.every((x) => x === '')) return;
+      const clase = String(r.className || '') + ' ' + String(cs[idx.m].className || '');
+      const marcada = !!r.querySelector('input:checked') || (/selected|seleccionad|marcad|current|activ/i.test(clase) && !/inactiv|noselec|unselect|desmarcad/i.test(clase));
+      res.filas.push({ modalidad: nombre, marcada: marcada, recibo: recibo, prima: prima });
+    });
+  });
+  if (res.encontrada) {
+    document.querySelectorAll('input[type=button], input[type=submit], button').forEach((e) => {
+      if (res.botones.length >= 12 || !vis(e)) return;
+      res.botones.push({ texto: txt(e).slice(0, 30), id: e.id || '', value: String(e.getAttribute('value') || '').slice(0, 30) });
+    });
+  }
+  return res;
+})()`
+
+/** v0.2.31: tabla de modalidades del primer marco que la tenga (solo lee; nunca lanza). */
+export async function volcarModalidadesGenerali(page: Page): Promise<VolcadoModalidadesGenerali | null> {
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const v = (await f.evaluate(JS_MODALIDADES).catch(() => null)) as VolcadoModalidadesGenerali | null
+    if (v?.encontrada) return v
+  }
+  return null
 }
 
 const JS_NAVEGACION_GENERALI = `(() => {
@@ -2344,7 +2410,13 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const lAntes = leerPrecioGenerali(await textoPagina(page))
   const ignorar = lAntes.tipo === 'unico' ? [lAntes.eur] : lAntes.tipo === 'varios' ? lAntes.candidatos.map((c) => c.eur) : []
   await paso('tarificar', () => ctx.pulsarSubpestanaGenerali!(SUBPESTANA_PRECIO_GENERALI))
-  const lectura = await paso('lectura_primas', () => esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS))
+  // v0.2.31: si el texto no da precio único, se lee la tabla «Modalidades de Seguro» (Recibo Anual de la modalidad marcada). Solo lee.
+  const conModalidades = async (l: Awaited<ReturnType<typeof esperarPrecioGenerali>>): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>>> => {
+    if (l.tipo === 'unico') return l
+    const m = leerModalidadesGenerali((await volcarModalidadesGenerali(page))?.filas ?? [])
+    return m.tipo === 'unico' ? m : l
+  }
+  const lectura = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
   if (lectura.tipo === 'unico') return { ofertas: [ofertaGenerali(lectura.eur, texto, lectura.avisos)] }
   // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
   let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
@@ -2360,7 +2432,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
         avanceSiguiente.push(`Siguiente×${i} no pulsado: ${(e instanceof Error ? e.message : String(e)).slice(0, 160)}`)
         break
       }
-      lecturaFinal = await paso('lectura_primas', () => esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS))
+      lecturaFinal = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
       if (lecturaFinal.tipo === 'unico') return { ofertas: [ofertaGenerali(lecturaFinal.eur, texto, lecturaFinal.avisos)] }
     }
   }
@@ -2369,7 +2441,8 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const obligatorios = avisosObligatorioGenerali(textoFinal)
   const importes = fragmentosImportesGenerali(textoFinal)
   const volcado = await volcarResultadosGenerali(page)
-  const diagnostico = resumenDiagnosticoImportesGenerali(await volcarDiagnosticoImportesGenerali(page), 430)
+  const modalidades = resumenModalidadesGenerali(await volcarModalidadesGenerali(page), 620)
+  const diagnostico = `${resumenDiagnosticoImportesGenerali(await volcarDiagnosticoImportesGenerali(page), 260)}. ${modalidades}`
   const navegacionMarcos = await volcarNavegacionGenerali(page)
   const que = lecturaFinal.tipo === 'varios'
     ? `${lecturaFinal.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lecturaFinal.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
@@ -2377,10 +2450,10 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // El runner corta el mensaje a 2000: lo que más importa (avisos, diagnóstico de tablas/importes) va PRIMERO y la navegación, el resto y la pantalla, después
   // y con presupuesto decreciente hasta que todo quepa (v0.2.30: el diagnóstico va ANTES de la navegación).
   const compuesto = (nav: number, res: number, pan: number, imp: number): string =>
-    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${diagnostico}. Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ${tomador.slice(0, 500)}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
+    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${diagnostico}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tomador.slice(0, nav > 0 ? 300 : 120)}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
   const LIMITE = 1_900 - 'generali/auto: mapa incompleto: faltan '.length
-  let mensaje = compuesto(650, 360, 450, 8)
-  for (const [nav, res, pan, imp] of [[450, 260, 300, 5], [350, 180, 200, 3], [250, 120, 100, 2], [150, 80, 60, 1]] as const) {
+  let mensaje = compuesto(300, 360, 450, 8)
+  for (const [nav, res, pan, imp] of [[450, 260, 300, 5], [350, 180, 200, 3], [250, 120, 100, 2], [150, 80, 60, 1], [0, 0, 0, 0]] as const) {
     if (mensaje.length <= LIMITE) break
     mensaje = compuesto(nav, res, pan, imp)
   }

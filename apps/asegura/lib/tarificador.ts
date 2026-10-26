@@ -205,7 +205,7 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   // Allianz auto/moto (20/10/2026): la ficha completa (NIF…) se lee para EVALUAR los obligatorios de origen ficha (NIF del tomador de
   // Allianz moto); lo guardado sigue sin ella, se inyecta al entregar.
   const filaFichaAuto = necesitaFichaTomador(e.compania, e.ramo) ? await leerFichaTomadorAuto(e.correduriaId, clienteId) : null
-  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField), () => lecturaTomadorHogar(fichaHogar, decryptField), () => fichaTomadorAutoDeFicha(filaFichaAuto, decryptField, e.ramo))
+  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField), () => lecturaTomadorHogar(fichaHogar, decryptField), () => fichaTomadorAutoDeFicha(filaFichaAuto, decryptField, e.ramo, new Date(), e.compania))
   if (!guardar.ok) return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }
 
   // Sin duplicados (13/10/2026; `ok` con precio <10 min, 15/10/2026): mismo cliente (ficha) + compañía + ramo + oportunidad/póliza + riesgo
@@ -265,8 +265,8 @@ async function leerTomadorFicha(correduriaId: string, clienteId: string): Promis
  */
 async function leerFichaTomadorAuto(correduriaId: string, clienteId: string): Promise<FilaFichaTomadorAuto | null> {
   try {
-    const filas = await prisma.$queryRaw<{ dni: string | null; direccion: string | null; codigo_postal: string | null; ciudad: string | null; provincia: string | null; fecha_nacimiento: string | null; tipo_persona: string | null }[]>`
-      select dni, direccion, codigo_postal, ciudad, provincia, fecha_nacimiento, tipo_persona::text as tipo_persona
+    const filas = await prisma.$queryRaw<{ dni: string | null; direccion: string | null; codigo_postal: string | null; ciudad: string | null; provincia: string | null; fecha_nacimiento: string | null; tipo_persona: string | null; telefono: string | null; email: string | null }[]>`
+      select dni, direccion, codigo_postal, ciudad, provincia, fecha_nacimiento, telefono, email, tipo_persona::text as tipo_persona
       from seguros.clientes
       where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
     const f = filas[0]
@@ -277,7 +277,18 @@ async function leerFichaTomadorAuto(correduriaId: string, clienteId: string): Pr
       where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
       .then((ks) => ks.map((k) => ({ tipo: k.tipo, fechaCarnet: k.fecha_carnet })))
       .catch(() => null)
-    return { dni: f.dni, direccion: f.direccion, codigoPostal: f.codigo_postal, ciudad: f.ciudad, provincia: f.provincia, fechaNacimiento: f.fecha_nacimiento, tipoPersona: f.tipo_persona, carnets }
+    // Contacto (Mapfre, 26/10/2026): columna espejo + tablas hijas, el principal primero. Si la lectura falla, listas vacías
+    // («sin contacto»: el bot lo avisa y no guarda el proyecto), nunca un dato inventado.
+    const telefonos = await prisma.$queryRaw<{ telefono: string | null }[]>`
+      select telefono from seguros.cliente_telefonos
+      where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid order by es_principal desc, created_at`
+      .then((ts) => ts.map((t) => t.telefono)).catch(() => [])
+    const emails = await prisma.$queryRaw<{ email: string | null }[]>`
+      select email from seguros.cliente_emails
+      where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid order by es_principal desc, created_at`
+      .then((es) => es.map((x) => x.email)).catch(() => [])
+    const ordenados = (hijos: (string | null)[], espejo: string | null): string[] => [...hijos, espejo].filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+    return { dni: f.dni, direccion: f.direccion, codigoPostal: f.codigo_postal, ciudad: f.ciudad, provincia: f.provincia, fechaNacimiento: f.fecha_nacimiento, tipoPersona: f.tipo_persona, carnets, telefonos: ordenados(telefonos, f.telefono), emails: ordenados(emails, f.email) }
   } catch {
     return null
   }
@@ -519,7 +530,7 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
   // tres estados. Igual que el NIF: solo en la respuesta, nunca en BD. No falla el trabajo: lo que no consta es hueco del bot.
   if (modo !== 'exploracion' && modo !== 'humo' && necesitaFichaTomador(f.compania, f.ramo)) {
     const fila = f.cliente_id ? await leerFichaTomadorAuto(f.correduria_id, f.cliente_id) : null
-    const conFicha = aplicarFichaTomador(f.compania, f.ramo, riesgo, () => fichaTomadorAutoDeFicha(fila, decryptField, f.ramo))
+    const conFicha = aplicarFichaTomador(f.compania, f.ramo, riesgo, () => fichaTomadorAutoDeFicha(fila, decryptField, f.ramo, new Date(), f.compania))
     riesgo = conFicha
   }
   // Compañía actual del vehículo (Allianz auto, 18/10/2026): si el riesgo no la trae, la del cliente (su póliza de la competencia
