@@ -76,6 +76,22 @@
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
+- **2026-10-26 · pasada semanal — sin hallazgos nuevos, sin ruido.** Solo WebSearch (sin keys de
+  proveedor; sin acceso a catálogos). **Gemini 2.5 Flash:** la fecha 16/10/2026 ya pasó; Google
+  matiza que sus fechas son "mínimas" y que 2.5 queda limitado a usuarios previamente activos, sin
+  fecha de corte efectiva confirmada ([deprecations](https://ai.google.dev/gemini-api/docs/deprecations?authuser=0));
+  sucesores citados: 3.5 Flash-Lite / 3.8 Flash. Las listas `contexto`/`registral` ya llevan
+  `gemini-3.8-flash` delante (28/09), así que no hay swap pendiente; comprobar con key el id que
+  elige el cron. **Groq** `openai/gpt-oss-120b` sin deprecación (destino recomendado por Groq);
+  precio $0,15/$0,60 y límites del free tier siguen contradictorios entre fuentes, sin zanjar
+  (pendiente de `GROQ_API_KEY`; decisión de Alberto sobre presupuesto abierta desde 21/09).
+  **OpenRouter** `deepseek/deepseek-v4.1-flash` vivo (tarifa punta $0,30/$1,20, valle la mitad).
+  **Visión NIM** `llama-3.2-11b-vision-instruct`: sin aviso de EOL en la página de lifecycle de NVIDIA
+  ([EOL notices](https://docs.nvidia.com/ai-enterprise/lifecycle/latest/eol-notices.html)); riesgo
+  abierto sin verificar con llamada real. Kimi/Cerebras/embeddings sin novedades. Descubrimiento
+  (Paso 2): nada cruza el listón (`qwen3.7-flash` sigue sin mini-eval; comparativas de octubre solo
+  citan flagships o modelos ya conocidos). Preflight Telegram 200.
+
 - **2026-10-12 · pasada semanal — sin hallazgos nuevos, sin ruido.** Solo WebSearch (sin keys de
   proveedor; WebFetch a catálogos bloqueado por el proxy). **Gemini 2.5 Flash** se apaga el 16/10/2026
   en Gemini API (Vertex 20/10) ([foro Google](https://discuss.ai.google.dev/t/gemini-2-5-flash-deprecated-without-warning-earlier-than-shutdown-date/174217)):
