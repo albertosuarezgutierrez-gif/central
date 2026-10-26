@@ -24,6 +24,9 @@ import {
   type ControlProyectoMapfre,
   exigirSinCuentaBancaria,
   generarProyectoMapfre,
+  formaReferenciaProyecto,
+  errorPortalSaneado,
+  sufijoDiagnosticoProyectoMapfre,
   instalarGuardEmision,
   numeroProyectoMapfreNuevo,
   pulsar,
@@ -145,7 +148,7 @@ const TARJETA = (producto: string, prima: string) => `<prima-producto><section><
 
 /** Una página NSEI con TODOS los componentes a la vez (como la SPA): el stepper manda. Mat-select con overlay CDK. */
 /** v0.8.14 · qué hace el portal al pulsar «Generar Proyecto»: pinta el nº en «Proyectos» (input de solo lectura), nada, o un diálogo de pago. */
-type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago'; texto?: string; previo?: string; donde?: 'duplicado' | 'pie' | 'icono' | 'aria' | 'enlace' | 'tarde' | 'oculto' | 'ninguno'
+type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago' | 'validacion'; texto?: string; previo?: string; donde?: 'duplicado' | 'pie' | 'icono' | 'aria' | 'enlace' | 'tarde' | 'oculto' | 'ninguno'
   /** v0.8.16 · «Ir a generar proyecto» (enlace) + «Contratar» en la botonera: `navega` abre la vista con «Generar Proyecto»; `inerte` no hace nada. */
   ir?: 'navega' | 'inerte' | 'dialogo' | 'duplicado' }
 /** v0.8.15 · dónde y cómo pinta el portal el botón «Generar Proyecto» (por defecto: <button> dentro de `app-coberturas`). */
@@ -201,7 +204,7 @@ function irProyecto(){window.__ir=(window.__ir||0)+1;const ir=${JSON.stringify(o
  if(ir==='dialogo'){setTimeout(()=>{document.getElementById('ov').insertAdjacentHTML('beforeend','<mat-dialog-container id="dlgProy"><p>Proyecto de seguro</p><label><input type="checkbox" id="consent" onclick="window.__consent=1"> Acepto el tratamiento de datos</label><button onclick="window.__verif=1">Verificación</button><button onclick="window.__contratar=(window.__contratar||0)+1">Contratar</button><button onclick="generarProyecto()">Guardar proyecto</button></mat-dialog-container>')},300);return}
  setTimeout(()=>{document.querySelector('app-proyecto').insertAdjacentHTML('beforebegin','<div id="vistaProy"><button onclick="generarProyecto()">Generar Proyecto</button></div>')},300)}
 function generarProyecto(){window.__proyecto=(window.__proyecto||0)+1;const dp=document.getElementById('dlgProy');if(dp)dp.remove();const tras=${JSON.stringify(o.proyecto?.tras ?? 'numero')};const ov=document.getElementById('ov');ov.insertAdjacentHTML('beforeend','<mat-dialog-container id="gen">Generando proyecto</mat-dialog-container>');
- setTimeout(()=>{document.getElementById('gen').remove();if(tras==='mudo')return;if(tras==='dialogoPago'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Para continuar debe realizar el pago</p><button onclick="window.__pagado=1">Aceptar</button></mat-dialog-container>');return}
+ setTimeout(()=>{document.getElementById('gen').remove();if(tras==='mudo')return;if(tras==='validacion'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Revise los datos: falta el campo obligatorio del conductor habitual. Proyecto pendiente 2026/000123</p><button onclick="window.__ok=1">Entendido</button></mat-dialog-container>');return}if(tras==='dialogoPago'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Para continuar debe realizar el pago</p><button onclick="window.__pagado=1">Aceptar</button></mat-dialog-container>');return}
  const h=[...document.querySelectorAll('mat-step-header')];h[3].setAttribute('aria-selected','false');h[4].setAttribute('aria-selected','true');
  document.querySelector('app-proyecto').innerHTML='<mat-form-field><mat-label>Nº Proyecto</mat-label><input readonly value="9876543210"></mat-form-field><mat-select><span>Castellano</span></mat-select>'},300)}
 function cerrarClub(){document.querySelector('mat-dialog-container').remove();calcular()}
@@ -803,4 +806,48 @@ test('v0.8.17 · «Guardar proyecto» SOLO vale en la pantalla tras «Ir a gener
   assert.equal(esBotonGenerarProyectoMapfre(['Guardar proyecto'], true), true)
   assert.equal(esBotonGenerarProyectoMapfre(['Guardar proyecto']), false)
   assert.equal(esBotonGenerarProyectoMapfre(['Guardar proyecto', null, null, null, 'btnContratar'], true), false, 'un id de contratar lo tumba')
+})
+
+test('v0.8.19 · el aviso de «Generar Proyecto» lleva la causa: forma del nº sin datos, error saneado y sufijo del portal (PURAS)', () => {
+  assert.equal(formaReferenciaProyecto('Proyecto 2026/000123 · Nº AB-1234567'), 'Proyecto 9999/999999 · Nº AA-9999999')
+  assert.equal(formaReferenciaProyecto('Generar Proyecto'), 'Generar Proyecto', 'sin cifras no se toca')
+  const e = new Error('locator.click: Timeout 30000ms exceeded.\nCall log:\n  - <div class="cdk-overlay-backdrop"> intercepts pointer events\n  - retrying click action')
+  const t = errorPortalSaneado(e)
+  assert.match(t, /Timeout 30000ms exceeded/)
+  assert.match(t, /intercepts pointer events/)
+  assert.equal(sufijoDiagnosticoProyectoMapfre(null), '')
+  assert.equal(sufijoDiagnosticoProyectoMapfre({ dialogos: [], mensajes: [], proyecto: [], controles: [] }), '')
+  const suf = sufijoDiagnosticoProyectoMapfre({ dialogos: ['Revise los datos'], mensajes: ['Campo obligatorio'], proyecto: ['Nº Proyecto: 9999999999'], controles: ['Entendido'] })
+  assert.match(suf, /diálogos: «Revise los datos»; mensajes del portal: «Campo obligatorio»; texto con «proyecto» .*«Nº Proyecto: 9999999999»; controles a la vista: «Entendido»/)
+})
+
+test('v0.8.19 · tras el clic sale un diálogo de VALIDACIÓN del portal → el aviso lo cita (texto saneado, forma del nº) y NO se toca nada del diálogo', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { tras: 'validacion' } }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  const r = await generarProyectoMapfre(page, guard, 1_500)
+  assert.equal(r.estado, 'sin_numero')
+  if (r.estado === 'sin_numero') {
+    assert.match(r.motivo, /diálogos: «Revise los datos: falta el campo obligatorio del conductor habitual/)
+    assert.match(r.motivo, /controles a la vista: .*«Entendido»/)
+    assert.doesNotMatch(r.motivo, /000123/, 'el valor del nº no se copia')
+  }
+  assert.equal(await marca(page, '__ok'), null, 'el diálogo no se cierra: ningún botón pulsado')
+  assert.equal(await marca(page, '__contratar'), null)
+  await context.close()
+})
+
+test('v0.8.19 · el clic FALLA con un error genérico del navegador (capa encima) → motivo con «el clic no llegó a darse» + el error, no el genérico mudo', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  await page.evaluate(() => document.body.insertAdjacentHTML('beforeend', '<div id="capa" style="position:fixed;inset:0;z-index:99999;background:transparent"></div>'))
+  page.setDefaultTimeout(1_200)
+  const r = await generarProyectoMapfre(page, guard, 1_500)
+  assert.equal(r.estado, 'no_generado')
+  if (r.estado === 'no_generado') {
+    assert.match(r.motivo, /^el portal no dejó completar el proyecto \[el clic no llegó a darse; error: .*(Timeout|intercepts)/)
+  }
+  assert.equal(await marca(page, '__proyecto'), null)
+  await context.close()
 })
