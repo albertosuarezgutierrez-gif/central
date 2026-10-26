@@ -216,8 +216,14 @@ export const POLITICA_CALCULO = 'interes_legitimo' as const
  * opera tenga la oposición VIGENTE (`true`). `null` (nunca se opuso) y `false` (retiró la oposición) no impiden. Sin
  * identidades (`[]`) se calcula: nadie se ha opuesto.
  */
-export function puedeCalcularSenales(x: { interruptor: boolean; oposiciones: readonly (boolean | null)[] }): boolean {
+export function puedeCalcularSenales(x: {
+  interruptor: boolean
+  oposiciones: readonly (boolean | null)[]
+  /** Hay una supresión (art. 17) atendida, total o parcial, de la ficha o de alguna identidad que la opera: NUNCA se calcula. */
+  suprimida?: boolean
+}): boolean {
   if (!x.interruptor) return false
+  if (x.suprimida === true) return false
   return !x.oposiciones.some((o) => o === true)
 }
 

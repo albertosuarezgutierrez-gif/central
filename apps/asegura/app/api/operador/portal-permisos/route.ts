@@ -37,7 +37,8 @@ export async function GET(req: Request) {
         where: {
           correduriaId: correduria.id,
           OR: [
-            { aceptadoEn: null, revocadoEn: null },
+            // Sin aceptar y SIN caducar: una caducada no es trabajo y, con el tope, desplazaría a las vivas.
+            { aceptadoEn: null, revocadoEn: null, OR: [{ caducaEn: null }, { caducaEn: { gt: ahora } }] },
             { aceptadoEn: { gte: desde } },
             { revocadoEn: { gte: desde } },
           ],
@@ -46,7 +47,8 @@ export async function GET(req: Request) {
           id: true, otorganteClienteId: true, autorizadoClienteId: true, autorizadoIdentidadId: true, alcance: true,
           otorgadoEn: true, aceptadoEn: true, caducaEn: true, revocadoEn: true, revocadoPor: true,
         },
-        orderBy: { otorgadoEn: 'asc' },
+        // desc: si se llega al tope, lo que se queda fuera es lo más viejo, nunca lo reciente.
+        orderBy: { otorgadoEn: 'desc' },
         take: TOPE,
       }),
       db.portalPeticionAcceso.findMany({
