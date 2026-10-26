@@ -4,6 +4,8 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { operadorAutorizado } from '@/lib/operador'
+import { polizasEnVigorPorCliente } from '@/lib/portal-modulos-cartera'
+import { vistaSolicitud } from '@/lib/portal-modulos-operador'
 import { prisma } from '@/lib/tenant'
 
 export const dynamic = 'force-dynamic'
@@ -63,10 +65,21 @@ export async function GET(req: Request) {
          AND (c.id IS NULL OR c.correduria_id = ${correduria.id}::uuid)
        ORDER BY m.solicitado_en ASC
        LIMIT 500`
+    // Campos AÑADIDOS (el contrato anterior no cambia): `moduloNombre`, `puedeActivar`, `motivoNoActivar` para la cola
+    // «Solicitudes del portal» de plataforma. Solo se cuentan pólizas de las solicitadas con ficha; si el conteo falla,
+    // `polizasEnVigor` = null y el botón sale desactivado con «no se ha podido comprobar», nunca «0».
+    const conteo = await polizasEnVigorPorCliente(
+      correduria.id,
+      filas.filter((f) => f.estado === 'solicitado' && f.cliente_id).map((f) => f.cliente_id as string),
+    )
     return NextResponse.json({
       estado: 'ok',
       resumen: { pendientes: filas.filter((f) => f.estado === 'solicitado').length },
-      filas: filas.map((f) => ({ ...f, fichas: Number(f.fichas) })),
+      filas: filas.map((f) => ({
+        ...f,
+        fichas: Number(f.fichas),
+        ...vistaSolicitud(f.modulo, f.cliente_id, f.cliente_id ? (conteo ? (conteo.get(f.cliente_id) ?? 0) : null) : null),
+      })),
     })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/portal-modulos', e) })

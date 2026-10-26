@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { estadoDelModulo, fichasModulos, planDeEscritura, puedeActivar, textoHistorialModulo, type FilaModuloCliente } from './portal-modulos-operador.ts'
+import { vistaSolicitud, estadoDelModulo, fichasModulos, planDeEscritura, puedeActivar, textoHistorialModulo, type FilaModuloCliente } from './portal-modulos-operador.ts'
 
 const fila = (o: Partial<FilaModuloCliente>): FilaModuloCliente => ({ id: 'f1', identidadId: 'i1', modulo: 'alquileres', estado: 'activo', ...o })
 
@@ -60,4 +60,16 @@ test('fichas: catálogo entero en orden; sin filas leídas no se pinta nada', ()
 test('historial: dice módulo, acción y quién', () => {
   assert.match(textoHistorialModulo('alquileres', 'activar', 'a@b.es'), /activado: Patrimonio y alquileres \(a@b\.es\)/)
   assert.match(textoHistorialModulo('flota', 'retirar', 'x'), /retirado: Flota/)
+})
+
+test('vistaSolicitud: nombre legible, y el motivo cuando no se puede activar', () => {
+  const ok = vistaSolicitud('alquileres', 'c1', 2)
+  assert.deepEqual([ok.moduloNombre, ok.puedeActivar, ok.motivoNoActivar], ['Patrimonio y alquileres', true, null])
+  const sin = vistaSolicitud('alquileres', 'c1', 0)
+  assert.ok(!sin.puedeActivar && /póliza en vigor/.test(sin.motivoNoActivar ?? ''))
+  const nulo = vistaSolicitud('alquileres', 'c1', null)
+  assert.ok(!nulo.puedeActivar && /No se han podido comprobar/.test(nulo.motivoNoActivar ?? ''))
+  assert.equal(vistaSolicitud('flota', 'c1', 0).puedeActivar, true)
+  assert.ok(!vistaSolicitud('flota', null, null).puedeActivar)
+  assert.ok(!vistaSolicitud('inventado', 'c1', 3).puedeActivar)
 })
