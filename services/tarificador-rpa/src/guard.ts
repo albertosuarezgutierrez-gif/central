@@ -1757,7 +1757,9 @@ async function buscarBotonGenerarProyectoMapfre(page: Page, guard: GuardEmision,
     return { estado: 'no_generado', motivo: 'el botón final de proyecto cambió de sitio antes de pulsarlo' }
   }
   const visibles = etiquetasControlesSaneadas(controles.filter((c) => c.visible).map((c) => c.etiqueta))
-  return { estado: 'no_generado', motivo: `${decision.motivo}${sufijoControlesVisibles(visibles)}` }
+  // v0.8.20: si lo único que impide pulsar es que está deshabilitado, el aviso nombra los campos obligatorios que faltan (sin valores).
+  const campos = /deshabilitado/.test(decision.motivo) ? `; campos obligatorios vacíos o inválidos: ${describirCamposObligatoriosMapfre(await leerCamposObligatoriosMapfre(page))}` : ''
+  return { estado: 'no_generado', motivo: `${decision.motivo}${campos}${sufijoControlesVisibles(visibles)}` }
 }
 
 /**
@@ -1775,6 +1777,8 @@ async function pulsarGenerarProyectoMapfre(page: Page, guard: GuardEmision, boto
   if (!(cual === 'ir' ? esBotonIrAGenerarProyectoMapfre(desc) : esBotonGenerarProyectoMapfre(desc, conGuardar))) throw new EmisionBloqueadaError('boton', `«${cual === 'ir' ? 'Ir a generar proyecto' : 'Generar Proyecto'}»: el control vivo no pasa la lista blanca`)
   const origen = await boton.evaluate((el) => el.ownerDocument.location.origin).catch(() => null)
   if (!origen || !/^https?:\/\//.test(origen)) throw new EmisionBloqueadaError('fase', '«Generar Proyecto»: sin origen http(s) conocido')
+  // v0.8.20: deshabilitado → no se espera 30 s al clic: se lee qué campos obligatorios faltan (solo lectura, sin valores) y se avisa.
+  if (cual === 'generar' && (await botonDeshabilitadoMapfre(boton))) throw new BotonProyectoDeshabilitadoError(describirCamposObligatoriosMapfre(await leerCamposObligatoriosMapfre(page)))
   const abrir = ABRIR_GUARDADO.get(guard)
   if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de guardado')
   let dialogo: string | null = null
@@ -1888,6 +1892,80 @@ export async function diagnosticoPantallaProyectoMapfre(page: Page): Promise<Dia
   return { dialogos, mensajes, proyecto, controles: etiquetasControlesSaneadas(etiquetas) }
 }
 
+// ─────────── v0.8.20 (26/10/2026): «Generar Proyecto» DESHABILITADO → diagnóstico de campos obligatorios, sin esperar 30 s ───────────
+// Solo lectura. NUNCA se copia el VALOR de un campo (datos personales): solo etiqueta, tipo, id/formcontrolname, si está vacío y el mat-error.
+
+export type CampoObligatorioMapfre = { etiqueta: string; tipo: string; id: string; calendario: boolean; vacio: boolean; error: string }
+
+/** Texto corto y saneado (sin datos personales) para el aviso. PURA. */
+function cortoSaneado(t: string | null | undefined, max: number): string {
+  return textoDialogoPortalSeguro((t ?? '').replace(/\s+/g, ' ').trim()).slice(0, max)
+}
+
+/** Cola legible de los campos obligatorios/ inválidos (máx. 8; los vacíos primero). Sin valores. PURA. */
+export function describirCamposObligatoriosMapfre(campos: readonly CampoObligatorioMapfre[]): string {
+  if (campos.length === 0) return 'no se identificó ningún campo obligatorio vacío o inválido en el formulario visible'
+  const orden = [...campos].sort((a, b) => Number(b.vacio) - Number(a.vacio)).slice(0, 8)
+  const trozos = orden.map((c) => {
+    const partes = [c.tipo || 'campo', c.id ? `id ${cortoSaneado(c.id, 40)}` : '', c.vacio ? 'vacío' : 'con valor no válido', c.calendario ? 'con selector de fecha' : ''].filter((x) => x !== '')
+    return `«${cortoSaneado(c.etiqueta, 40) || 'sin etiqueta'}» (${partes.join(', ')}${c.error ? `; mat-error: «${cortoSaneado(c.error, 60)}»` : ''})`
+  })
+  return `${campos.length > orden.length ? `${campos.length} campos (se citan ${orden.length})` : `${campos.length} campo${campos.length === 1 ? '' : 's'}`}: ${trozos.join(', ')}`
+}
+
+/** Lee (sin escribir ni pulsar) los campos obligatorios vacíos o inválidos del formulario visible. Nunca lanza ni devuelve valores. */
+export async function leerCamposObligatoriosMapfre(page: Page): Promise<CampoObligatorioMapfre[]> {
+  const bruto = await page
+    .evaluate(() => {
+      const out: { etiqueta: string; tipo: string; id: string; calendario: boolean; vacio: boolean; error: string }[] = []
+      // (sin funciones auxiliares con nombre: el empaquetador inyectaría `__name`, que no existe en la página)
+      for (const n of Array.from(document.querySelectorAll('input, select, mat-select, textarea'))) {
+        const h = n as HTMLInputElement
+        const tipoAttr = (h.getAttribute('type') ?? '').toLowerCase()
+        if (tipoAttr === 'hidden') continue
+        const campo = h.closest('mat-form-field')
+        const r = h.getBoundingClientRect()
+        const cs = getComputedStyle(h)
+        if (!(r.width > 0 && r.height > 0) || cs.visibility !== 'visible' || cs.display === 'none') continue
+        const cl = h.classList
+        const obligatorio = h.hasAttribute('required') || h.getAttribute('aria-required') === 'true'
+        const invalido = h.getAttribute('aria-invalid') === 'true' || cl.contains('ng-invalid') || (campo?.classList.contains('mat-form-field-invalid') ?? false) || (campo?.classList.contains('ng-invalid') ?? false)
+        if (!obligatorio && !invalido) continue
+        const esSelect = n.tagName === 'MAT-SELECT' || n.tagName === 'SELECT'
+        const vacio = n.tagName === 'MAT-SELECT'
+          ? cl.contains('mat-select-empty') || cl.contains('mat-mdc-select-empty') || n.querySelector('.mat-select-placeholder, .mat-mdc-select-placeholder') !== null
+          : (h.value ?? '') === ''
+        const id = h.getAttribute('formcontrolname') || h.id || h.getAttribute('name') || ''
+        const idLabel = h.id ? document.querySelector(`label[for="${h.id}"]`) : null
+        const etiqueta = [campo?.querySelector('mat-label'), idLabel, campo?.querySelector('label')].map((x) => (x?.textContent ?? '').replace(/\s+/g, ' ').trim()).find((x) => x !== '') || h.getAttribute('aria-label') || h.getAttribute('placeholder') || ''
+        const error = Array.from((campo ?? document.createElement('div')).querySelectorAll('mat-error, .mat-error')).map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim()).filter((t) => t !== '').join(' / ')
+        const calendario = campo !== null && (campo.querySelector('mat-datepicker-toggle, [aria-label="Open calendar"]') !== null || h.hasAttribute('matdatepicker') || h.hasAttribute('ng-reflect-mat-datepicker'))
+        out.push({ etiqueta, tipo: n.tagName === 'MAT-SELECT' ? 'mat-select' : esSelect ? 'select' : n.tagName === 'TEXTAREA' ? 'textarea' : tipoAttr || 'input', id, calendario, vacio, error })
+      }
+      return out
+    })
+    .catch(() => [] as CampoObligatorioMapfre[])
+  return bruto.slice(0, 40)
+}
+
+/** ¿El control está deshabilitado (disabled / aria-disabled / clase de botón deshabilitado)? Solo lectura. */
+async function botonDeshabilitadoMapfre(boton: Locator): Promise<boolean> {
+  return boton
+    .evaluate((el) => {
+      const h = el as HTMLElement & { disabled?: boolean }
+      return h.disabled === true || h.hasAttribute('disabled') || h.getAttribute('aria-disabled') === 'true' || h.classList.contains('mat-button-disabled') || h.classList.contains('mat-mdc-button-disabled')
+    })
+    .catch(() => false)
+}
+
+/** «Generar Proyecto» estaba deshabilitado: no se pulsa. Lleva el diagnóstico de campos (sin valores). */
+export class BotonProyectoDeshabilitadoError extends Error {
+  constructor(readonly campos: string) {
+    super('boton_proyecto_deshabilitado')
+    this.name = 'BotonProyectoDeshabilitadoError'
+  }
+}
+
 /** Comprobaciones previas al clic (solo lectura). Devuelve el botón elegido o el motivo de no pulsar. Puede lanzar por errores del portal. */
 async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaBotonMs: number): Promise<{ boton: Locator; conGuardar: boolean } | { estado: 'no_generado'; motivo: string }> {
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_generado', motivo: 'otra ventana de red abierta' }
@@ -1986,9 +2064,9 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
     guard.comprobar()
     // v0.8.19: el motivo genérico no decía NADA (dos runs reales). Ahora lleva la causa: error del navegador saneado, si el clic llegó a darse,
     // y lo que el portal muestra (diálogos/mensajes de validación, líneas de «proyecto» con la FORMA del nº, controles a la vista).
-    const generico = !(e instanceof ErrorFronteraEmision || e instanceof GuardadoConDialogoError || e instanceof EmisionBloqueadaError)
-    const base = e instanceof ErrorFronteraEmision ? 'hay un campo de cuenta bancaria a la vista' : e instanceof GuardadoConDialogoError ? 'el portal abrió un diálogo del navegador (no se acepta)' : e instanceof EmisionBloqueadaError ? 'el guard no autorizó el control' : 'el portal no dejó completar el proyecto'
-    const causa = generico ? ` [${pulsado ? 'tras el clic' : 'el clic no llegó a darse'}; error: ${errorPortalSaneado(e)}]` : ''
+    const generico = !(e instanceof ErrorFronteraEmision || e instanceof GuardadoConDialogoError || e instanceof EmisionBloqueadaError || e instanceof BotonProyectoDeshabilitadoError)
+    const base = e instanceof ErrorFronteraEmision ? 'hay un campo de cuenta bancaria a la vista' : e instanceof GuardadoConDialogoError ? 'el portal abrió un diálogo del navegador (no se acepta)' : e instanceof EmisionBloqueadaError ? 'el guard no autorizó el control' : e instanceof BotonProyectoDeshabilitadoError ? 'el botón «Generar Proyecto» está deshabilitado (no se pulsó)' : 'el portal no dejó completar el proyecto'
+    const causa = e instanceof BotonProyectoDeshabilitadoError ? ` [campos obligatorios vacíos o inválidos: ${e.campos}]` : generico ? ` [${pulsado ? 'tras el clic' : 'el clic no llegó a darse'}; error: ${errorPortalSaneado(e)}]` : ''
     const motivo = `${base}${causa}${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}`
     return pulsado ? { estado: 'sin_numero', motivo } : { estado: 'no_generado', motivo }
   }
