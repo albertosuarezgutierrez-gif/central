@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-26T11:08:10Z",
+  "generadoEn": "2026-10-26T13:16:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 63
+        "evidencias": 62
       },
       "asegura-web": {
         "estado": "no",
@@ -2325,7 +2325,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 174
+        "evidencias": 179
       },
       "asegura-web": {
         "estado": "usado",
@@ -2433,7 +2433,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 133
+        "evidencias": 138
       },
       "asegura-web": {
         "estado": "usado",
@@ -5841,6 +5841,7 @@
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
       "/api/admin/solicitudes/[id]/justificante",
+      "/api/auth/acceso/password",
       "/api/auth/acceso/solicitar",
       "/api/auth/acceso/verificar",
       "/api/auth/cambiar-empresa",
@@ -7199,7 +7200,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1824,
+    "apis": 1825,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
