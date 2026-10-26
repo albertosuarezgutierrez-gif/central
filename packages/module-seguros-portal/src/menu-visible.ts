@@ -1,8 +1,10 @@
 // QUÉ ENTRADAS DEL MENÚ VE CADA PERSONA (26/10/2026, decisión de Alberto: «menú adaptado por tipo»).
 //
-// 🚨 Es SOLO VISIBILIDAD. Ninguna pantalla se fía de este fichero para negar nada: cada una sigue resolviendo su
-// acceso por CÓDIGO (`accesosPatrimonio`, `accesosFlota`, `carteraDeIdentidad`…). Aquí se decide únicamente si se
-// OFRECE el enlace; que no se ofrezca no cierra la ruta (y que se ofrezca no la abre).
+// 🚨 Las entradas son VISIBILIDAD: los DATOS de cada pantalla los sigue aislando su CÓDIGO (`accesosPatrimonio`,
+// `accesosFlota`, `carteraDeIdentidad`…); que se ofrezca un enlace no abre nada de nadie. La excepción, desde el
+// 26/10/2026, es `puertaAbierta()` (al final): con la MISMA regla, el calendario y conceder accesos RECHAZAN en servidor a
+// quien el menú no se los ofrece (autorizado puro que escribe la URL a mano). No es aislamiento entre clientes —ese ya lo
+// da cada lectura—: es que la puerta y el enlace digan lo mismo.
 //
 // Lo que hay en el código (comprobado, no supuesto) y de lo que sale cada brazo:
 //   - Los tres niveles que se conceden (`ver_economico` «Consulta», `gestion`, `total`; con `poliza_id` opcional)
@@ -112,4 +114,44 @@ export function contactosVisibles(h: HechosMenu): boolean {
 /** ¿Hay que ofrecer el enlace a «Contactos» dentro de «Cuenta» porque el menú no lo trae? */
 export function contactosEnCuenta(h: HechosMenu): boolean {
   return !contactosVisibles(h)
+}
+
+/**
+ * Las puertas que CIERRAN en servidor lo que el menú no ofrece (26/10/2026). Solo dos, a propósito:
+ *   - `calendario`: `/herramientas/calendario` y su escritura (`POST /api/recordatorios`). Misma regla que el menú
+ *     (`herramientasVisibles().calendario`: titular o patrimonio a la vista).
+ *   - `conceder`: dar o ampliar un acceso (`POST /api/autorizaciones`). Regla: ser titular (`esTitular`). Es más ancha
+ *     que `puedeConceder` A PROPÓSITO: el dueño de una empresa concede desde ella aunque su vínculo propio no opere
+ *     (`fichasOtorgablesDe`), y `conceder()` sigue decidiendo ficha a ficha; esta puerta solo echa a quien no tiene
+ *     NINGUNA ficha ni póliza propia, que `conceder()` ya rechazaría.
+ *
+ * `/autorizaciones` (ver, aceptar, revocar/renunciar) NO tiene puerta: el menú no la oculta, la muda a «Cuenta»
+ * (`contactosEnCuenta`) para que el autorizado pueda ver y DEJAR lo que le dieron.
+ *
+ * Tres estados → dos modos:
+ *   - `lectura` (página): igual que el menú, lo dudoso ABRE. Enlace ofrecido ⇔ página que abre; la página solo enseña
+ *     lo que esta identidad ya ve en otras pantallas, así que abrir con una lectura caída no expone nada.
+ *   - `escritura` (API): lo dudoso CIERRA. Se evalúa la MISMA regla con cada `null` tomado como «no» — no es afirmar que
+ *     no hay (nada se pinta con ello), es no escribir sin haberlo comprobado.
+ */
+export type PuertaPortal = 'calendario' | 'conceder'
+export type ModoPuerta = 'lectura' | 'escritura'
+
+/** Los hechos con cada «no se pudo comprobar» tomado como «no». SOLO para decidir una escritura, nunca para pintar. */
+function sinDudas(h: HechosMenu): HechosMenu {
+  const n = (v: number | null): number => (v === null ? 0 : v)
+  return {
+    fichasPropias: n(h.fichasPropias),
+    polizasAportadas: n(h.polizasAportadas),
+    patrimonio: n(h.patrimonio),
+    flota: n(h.flota),
+    puedeConceder: h.puedeConceder === true,
+    porAceptar: n(h.porAceptar),
+  }
+}
+
+export function puertaAbierta(h: HechosMenu, puerta: PuertaPortal, modo: ModoPuerta): boolean {
+  const hechos = modo === 'escritura' ? sinDudas(h) : h
+  if (puerta === 'calendario') return herramientasVisibles(hechos).calendario
+  return seOfrece(esTitular(hechos))
 }

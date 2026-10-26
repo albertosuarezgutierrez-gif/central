@@ -11,6 +11,7 @@ import {
   entradasVisibles,
   esTitular,
   herramientasVisibles,
+  puertaAbierta,
   type HechosMenu,
 } from './menu-visible.ts'
 
@@ -112,4 +113,61 @@ test('CEPO de supuestos: ningún nivel que se concede es el alcance de una herra
   // concedible los abre, este test falla y hay que revisar `HechosMenu` antes de seguir.
   assert.ok(!(ALCANCES_CONCEDIBLES as readonly string[]).includes(ALCANCE_FLOTA))
   for (const a of ALCANCES_CONCEDIBLES) assert.ok(!String(a).startsWith('patrimonio'), `${a} parece de patrimonio`)
+})
+
+// ─── Las puertas de servidor (26/10/2026): la MISMA regla que el menú, y lo dudoso cierra solo al escribir ───
+
+test('puerta: el autorizado puro no entra al calendario (ni a leer ni a escribir) ni concede', () => {
+  assert.equal(puertaAbierta(AUTORIZADO, 'calendario', 'lectura'), false)
+  assert.equal(puertaAbierta(AUTORIZADO, 'calendario', 'escritura'), false)
+  assert.equal(puertaAbierta(AUTORIZADO, 'conceder', 'escritura'), false)
+})
+
+test('puerta: el autorizado puro con algo POR ACEPTAR sigue sin calendario (Contactos no tiene puerta)', () => {
+  const h = { ...AUTORIZADO, porAceptar: 1 }
+  assert.equal(puertaAbierta(h, 'calendario', 'lectura'), false)
+  assert.equal(puertaAbierta(h, 'conceder', 'escritura'), false)
+  assert.equal(contactosVisibles(h), true)
+})
+
+test('puerta: el titular entra al calendario y concede, en los dos modos', () => {
+  for (const modo of ['lectura', 'escritura'] as const) {
+    assert.equal(puertaAbierta(TITULAR, 'calendario', modo), true)
+    assert.equal(puertaAbierta(TITULAR, 'conceder', modo), true)
+  }
+})
+
+test('puerta: quien solo aportó una póliza (sin ficha) es titular: calendario sí', () => {
+  const h = { ...AUTORIZADO, polizasAportadas: 2 }
+  assert.equal(puertaAbierta(h, 'calendario', 'escritura'), true)
+})
+
+test('puerta: titular cuyo vínculo NO opera (dueño de empresa) puede intentar conceder; lo decide conceder()', () => {
+  const h = { ...AUTORIZADO, fichasPropias: 1, puedeConceder: false }
+  assert.equal(contactosVisibles(h), false)
+  assert.equal(puertaAbierta(h, 'conceder', 'escritura'), true)
+})
+
+test('puerta: sin ser titular pero con patrimonio a la vista, el calendario abre (sus fechas van ahí)', () => {
+  const h = { ...AUTORIZADO, patrimonio: 1 }
+  assert.equal(puertaAbierta(h, 'calendario', 'lectura'), true)
+  assert.equal(puertaAbierta(h, 'calendario', 'escritura'), true)
+  assert.equal(puertaAbierta(h, 'conceder', 'escritura'), false)
+})
+
+test('puerta: lectura caída → la PÁGINA abre (como el menú) y la ESCRITURA cierra', () => {
+  assert.equal(puertaAbierta(HECHOS_DESCONOCIDOS, 'calendario', 'lectura'), true)
+  assert.equal(puertaAbierta(HECHOS_DESCONOCIDOS, 'calendario', 'escritura'), false)
+  assert.equal(puertaAbierta(HECHOS_DESCONOCIDOS, 'conceder', 'escritura'), false)
+  // Una sola lectura caída basta para cerrar la escritura si lo demás no abre.
+  const h = { ...AUTORIZADO, fichasPropias: null }
+  assert.equal(puertaAbierta(h, 'calendario', 'lectura'), true)
+  assert.equal(puertaAbierta(h, 'calendario', 'escritura'), false)
+  // Pero un hecho SABIDO que abre manda aunque otro esté caído.
+  assert.equal(puertaAbierta({ ...h, polizasAportadas: 1 }, 'calendario', 'escritura'), true)
+})
+
+test('puerta y menú dicen lo mismo en lectura: calendario ⇔ herramientasVisibles().calendario', () => {
+  const casos: HechosMenu[] = [AUTORIZADO, TITULAR, HECHOS_DESCONOCIDOS, { ...AUTORIZADO, patrimonio: 1 }, { ...AUTORIZADO, flota: 3 }, { ...AUTORIZADO, fichasPropias: null }]
+  for (const h of casos) assert.equal(puertaAbierta(h, 'calendario', 'lectura'), herramientasVisibles(h).calendario)
 })
