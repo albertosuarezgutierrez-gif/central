@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T10:31:04Z",
-  "sha": "7fbcad40318d0e48f903ebf5c11aa721f48f9659",
+  "generadoEn": "2026-10-26T11:08:10Z",
+  "sha": "e3b520f6ba5d64ca71163fc9b6ef70159f125181",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -194354,7 +194354,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4d9eb377d104"
+      "hash": "9dfaffd58313"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/page.tsx",
@@ -194853,22 +194853,48 @@
       "ruta": "apps/rrhh/app/admin/layout.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
+        "generateMetadata",
+        "generateViewport",
         "AdminLayout"
       ],
       "funciones": [
+        {
+          "nombre": "marcaDeSesion",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "generateMetadata",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Metadata>",
+          "linea": 13
+        },
+        {
+          "nombre": "generateViewport",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Viewport>",
+          "linea": 14
+        },
         {
           "nombre": "AdminLayout",
           "kind": "function",
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 13,
+          "linea": 24,
           "resumen": "Marco común del panel: branding de la empresa ACTIVA de la sesión, leído en servidor una vez. 🚨 Esto NO es la barrera de seguridad: un layout no se re-ejecuta en cada navegación cliente y los route h"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f6e514fba13"
+      "hash": "602049f1492d"
     },
     {
       "ruta": "apps/rrhh/app/admin/material/page.tsx",
@@ -196461,6 +196487,51 @@
       "hash": "ec47ba9d3ef6"
     },
     {
+      "ruta": "apps/rrhh/app/api/auth/acceso/solicitar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "Paso 1 de `/login` (responsable): pide un código para un email. PÚBLICA y SIN SESIÓN. 🚨 Respuesta idéntica sea o no responsable (no se enumeran responsables): el correo se manda con `after()`, DESPUÉ"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/auth/acceso/solicitar",
+      "hash": "2bc83954cd88"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/auth/acceso/verificar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "Paso 2 de `/login`: canjea el código del responsable. Una empresa → sesión `rrhh_session` (`typ:'responsable'` + jti, sesión única); varias → cookie `rrhh_pending` (5 min) y el selector de siempre (`/"
+        }
+      ],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
+      "rutaApi": "/api/auth/acceso/verificar",
+      "hash": "d020d4209469"
+    },
+    {
       "ruta": "apps/rrhh/app/api/auth/cambiar-empresa/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -196482,53 +196553,6 @@
       ],
       "rutaApi": "/api/auth/cambiar-empresa",
       "hash": "8d0c07dc6a7d"
-    },
-    {
-      "ruta": "apps/rrhh/app/api/auth/cambiar-password/route.ts",
-      "ambito": "apps/rrhh",
-      "exporta": [
-        "POST"
-      ],
-      "funciones": [
-        {
-          "nombre": "POST",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: Request",
-          "retorno": null,
-          "linea": 8,
-          "resumen": "POST { actual, nueva } — el responsable cambia su propia contraseña."
-        }
-      ],
-      "tablas": [
-        "next",
-        "rrhh"
-      ],
-      "rutaApi": "/api/auth/cambiar-password",
-      "hash": "865a343b5267"
-    },
-    {
-      "ruta": "apps/rrhh/app/api/auth/login/route.ts",
-      "ambito": "apps/rrhh",
-      "exporta": [
-        "POST"
-      ],
-      "funciones": [
-        {
-          "nombre": "POST",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: Request",
-          "retorno": null,
-          "linea": 6
-        }
-      ],
-      "tablas": [
-        "next",
-        "rrhh"
-      ],
-      "rutaApi": "/api/auth/login",
-      "hash": "c9290a37fcca"
     },
     {
       "ruta": "apps/rrhh/app/api/auth/logout/route.ts",
@@ -197154,8 +197178,8 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 22,
-          "resumen": "POST { empresa, color?, responsable_nombre, responsable_email, password } — alta empresa+responsable."
+          "linea": 25,
+          "resumen": "POST { empresa, color?, responsable_nombre, responsable_email } — alta empresa+responsable. 26/10/2026: el responsable entra por CÓDIGO al correo (/login), sin contraseña. `password` se IGNORA si lleg"
         }
       ],
       "tablas": [
@@ -197163,7 +197187,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/operador/empresas",
-      "hash": "047f68b96004"
+      "hash": "db0d3238f1d7"
     },
     {
       "ruta": "apps/rrhh/app/api/operador/logos/route.ts",
@@ -197528,57 +197552,125 @@
       ],
       "funciones": [
         {
+          "nombre": "msg",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e?: string",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "post",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, body: unknown",
+          "retorno": null,
+          "linea": 23
+        },
+        {
           "nombre": "LoginForm",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 6
+          "linea": 28
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd72cdaf5da9"
+      "hash": "bfa461387ad0"
     },
     {
       "ruta": "apps/rrhh/app/login/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
+        "generateMetadata",
+        "generateViewport",
         "Login"
       ],
       "funciones": [
         {
+          "nombre": "marca",
+          "kind": "function",
+          "exportada": false,
+          "params": "searchParams: SP",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "generateMetadata",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: SP }",
+          "retorno": "Promise<Metadata>",
+          "linea": 12
+        },
+        {
+          "nombre": "generateViewport",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: SP }",
+          "retorno": "Promise<Viewport>",
+          "linea": 15
+        },
+        {
           "nombre": "Login",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: SP }",
           "retorno": null,
-          "linea": 3
+          "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "19f88b8e1640"
+      "hash": "712457235867"
     },
     {
       "ruta": "apps/rrhh/app/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
+        "generateMetadata",
+        "generateViewport",
         "Home"
       ],
       "funciones": [
         {
+          "nombre": "marca",
+          "kind": "function",
+          "exportada": false,
+          "params": "searchParams: SP",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "generateMetadata",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: SP }",
+          "retorno": "Promise<Metadata>",
+          "linea": 12
+        },
+        {
+          "nombre": "generateViewport",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: SP }",
+          "retorno": "Promise<Viewport>",
+          "linea": 15
+        },
+        {
           "nombre": "Home",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: SP }",
           "retorno": null,
-          "linea": 3
+          "linea": 22
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "359d2309c278"
+      "hash": "6d0fcb9f34ea"
     },
     {
       "ruta": "apps/rrhh/app/robots.ts",
@@ -197635,7 +197727,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c42f7d054790"
+      "hash": "427d4b9d663a"
     },
     {
       "ruta": "apps/rrhh/components/ActivarPush.tsx",
@@ -197716,15 +197808,15 @@
           "nombre": "AdminShell",
           "kind": "function",
           "exportada": true,
-          "params": "{ children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
+          "params": "{ children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje, marcaAsegura = false }: { marcaAsegura?: boolean; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaj",
           "retorno": null,
-          "linea": 11,
+          "linea": 13,
           "resumen": "Marco del panel del responsable: sidebar + contenido. Presentacional puro: lo monta UNA vez `app/admin/layout.tsx` con el branding de la empresa de la sesión. NO es barrera de seguridad: cada page sig"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "447e23cc10d5"
+      "hash": "6b23d2826952"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -198196,6 +198288,8 @@
         "emailValido",
         "hashEmailAcceso",
         "hashCodigoAcceso",
+        "pedirCodigo",
+        "canjearCodigo",
         "solicitarCodigoAcceso",
         "verificarCodigoAcceso",
         "completarAcceso",
@@ -198224,17 +198318,35 @@
           "nombre": "hashEmailAcceso",
           "kind": "arrow",
           "exportada": true,
-          "params": "emailNormalizado: string",
+          "params": "emailNormalizado: string, p: PropositoOtp = 'empleado'",
           "retorno": null,
-          "linea": 47
+          "linea": 60
         },
         {
           "nombre": "hashCodigoAcceso",
           "kind": "arrow",
           "exportada": true,
-          "params": "codigo: string",
+          "params": "codigo: string, p: PropositoOtp = 'empleado'",
           "retorno": null,
-          "linea": 48
+          "linea": 61
+        },
+        {
+          "nombre": "pedirCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoOtp, entrada: { email: unknown; ip: string }, proposito: PropositoOtp, ahora = new Date(),",
+          "retorno": "Promise<",
+          "linea": 106,
+          "resumen": "Valida el email, aplica los topes y escribe SIEMPRE la fila (exista o no el destinatario: los contadores no son un oráculo). Devuelve el código en claro SOLO al llamante, que decide si hay a quién man"
+        },
+        {
+          "nombre": "canjearCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoOtp, entrada: { email: unknown; codigo: unknown }, proposito: PropositoOtp, ahora = new Date(),",
+          "retorno": "Promise<",
+          "linea": 127,
+          "resumen": "Reserva intento → compara → gasta. `ok` = el código era bueno y lo ha gastado ESTA petición."
         },
         {
           "nombre": "solicitarCodigoAcceso",
@@ -198242,7 +198354,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, enviar: EnviarCodigo, entrada: { email: unknown; ip: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoSolicitar>",
-          "linea": 90,
+          "linea": 162,
           "resumen": "`envio` es la tarea de mandar el correo (o `null` si el email no es de nadie): la ruta la lanza con `after()` para que la respuesta NO espere al SMTP. `null` y no-`null` producen la MISMA respuesta HT"
         },
         {
@@ -198251,7 +198363,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, entrada: { email: unknown; codigo: unknown }, ahora = new Date(),",
           "retorno": "Promise<ResultadoVerificar>",
-          "linea": 121
+          "linea": 185
         },
         {
           "nombre": "completarAcceso",
@@ -198259,7 +198371,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, compararPin: (pin: string, hash: string) => Promise<boolean>, ticket: { otp_id: string; empleados: string[] }, entrada: { email: unknown; empleado_id: unknown; pin: unknown },",
           "retorno": "Promise<ResultadoCompletar>",
-          "linea": 159
+          "linea": 208
         },
         {
           "nombre": "correoCodigo",
@@ -198267,13 +198379,97 @@
           "exportada": true,
           "params": "c: CorreoCodigo",
           "retorno": "",
-          "linea": 184,
+          "linea": 233,
           "resumen": "Asunto y cuerpo (texto plano, sobrio). Puro para poder testearlo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f0df7959879b"
+      "hash": "2c0096096dfd"
+    },
+    {
+      "ruta": "apps/rrhh/lib/acceso-responsable-repo.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Adaptador Prisma de `acceso-responsable.ts`. Los códigos van a la MISMA tabla que los del empleado (`rrhh.acceso_otps`, puertos de `repoAcceso`); los separa el propósito en el hash, no la tabla.",
+      "exporta": [
+        "enviarCodigoResponsable"
+      ],
+      "funciones": [
+        {
+          "nombre": "enviarCodigoResponsable",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "c",
+          "retorno": null,
+          "linea": 35,
+          "resumen": "Envío real. `false` si no hay transporte o falla (al que pide no se le dice: anti-enumeración)."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "0786a5a39bdb"
+    },
+    {
+      "ruta": "apps/rrhh/lib/acceso-responsable.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Acceso del RESPONSABLE (panel /admin) por EMAIL + CÓDIGO de 6 dígitos, SIN contraseña (26/10/2026, decisión de Alberto: igual que el empleado en /e/entrar y que el portal de seguros). No hay lógica de código propia: usa el núcleo de `acceso-email.ts` (`pedirCodigo`/`canjearCodigo`, mismos topes, mis",
+      "exporta": [
+        "solicitarCodigoResponsable",
+        "verificarCodigoResponsable",
+        "remitente",
+        "correoCodigoResponsable"
+      ],
+      "funciones": [
+        {
+          "nombre": "solicitarCodigoResponsable",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoResponsable, enviar: EnviarCodigoResponsable, entrada: { email: unknown; ip: string; marcaAsegura: boolean; url: string }, ahora = new Date(),",
+          "retorno": "Promise<",
+          "linea": 29,
+          "resumen": "── Paso 1 ──────────────────────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "verificarCodigoResponsable",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoResponsable, entrada: { email: unknown; codigo: unknown }, ahora = new Date(),",
+          "retorno": "Promise<ResultadoVerificarResponsable>",
+          "linea": 48
+        },
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 61,
+          "resumen": "── Correo ──────────────────────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "remitente",
+          "kind": "function",
+          "exportada": true,
+          "params": "mailFrom: string, marcaAsegura: boolean",
+          "retorno": "string",
+          "linea": 64,
+          "resumen": "Remitente: misma dirección verificada de `MAIL_FROM`; con marca, el nombre visible es «Grupo ASegura»."
+        },
+        {
+          "nombre": "correoCodigoResponsable",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CorreoCodigoResponsable",
+          "retorno": "",
+          "linea": 71,
+          "resumen": "Asunto, texto y HTML (sobrio; sin imágenes: Gmail no pinta SVG). Puro para testearlo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "31909cb76347"
     },
     {
       "ruta": "apps/rrhh/lib/ai.ts",
@@ -198632,7 +198828,6 @@
       "ambito": "apps/rrhh",
       "exporta": [
         "hashPassword",
-        "verifyPassword",
         "firmarSesion",
         "firmarPendiente",
         "verificarPendiente",
@@ -198645,15 +198840,8 @@
           "exportada": true,
           "params": "plain: string",
           "retorno": null,
-          "linea": 13
-        },
-        {
-          "nombre": "verifyPassword",
-          "kind": "function",
-          "exportada": true,
-          "params": "plain: string, hash: string",
-          "retorno": null,
-          "linea": 14
+          "linea": 16,
+          "resumen": "26/10/2026: el responsable entra por CÓDIGO al correo (`lib/acceso-responsable.ts`), sin contraseña. `usuarios_rrhh.pass_hash` sigue en BD (NOT NULL): el alta guarda un hash de un valor aleatorio que "
         },
         {
           "nombre": "firmarSesion",
@@ -198661,7 +198849,7 @@
           "exportada": true,
           "params": "s: Omit<Sesion, 'jti'>",
           "retorno": "Promise<",
-          "linea": 16
+          "linea": 18
         },
         {
           "nombre": "firmarPendiente",
@@ -198669,7 +198857,8 @@
           "exportada": true,
           "params": "usuario_id: string",
           "retorno": "Promise<string>",
-          "linea": 27
+          "linea": 30,
+          "resumen": "Token del selector de empresa (5 min), tras canjear el código de `/login` con ≥2 empresas."
         },
         {
           "nombre": "verificarPendiente",
@@ -198677,7 +198866,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<string>",
-          "linea": 35
+          "linea": 38
         },
         {
           "nombre": "verificarSesion",
@@ -198685,12 +198874,12 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<Sesion>",
-          "linea": 41
+          "linea": 44
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5c4005461983"
+      "hash": "bbb5dd6b9b2e"
     },
     {
       "ruta": "apps/rrhh/lib/avisos-admin-reglas.ts",
@@ -198835,7 +199024,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "68723f8d83fa"
+      "hash": "5a77e45871a6"
     },
     {
       "ruta": "apps/rrhh/lib/avisos.ts",
@@ -200149,6 +200338,27 @@
       "hash": "1a75aa84f2a4"
     },
     {
+      "ruta": "apps/rrhh/lib/host-canonico.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Host canónico del Portal del Empleado. En producción solo se usa desde este dominio; el resto de hosts (central-rrhh.vercel.app) redirigen. /api, estáticos y PWA quedan exentos (crons de Vercel, webhooks y la pasarela de plataforma llaman por el dominio de vercel).",
+      "exporta": [
+        "destinoCanonico"
+      ],
+      "funciones": [
+        {
+          "nombre": "destinoCanonico",
+          "kind": "function",
+          "exportada": true,
+          "params": "entorno: string | undefined, host: string | null | undefined, pathname: string, search = ''",
+          "retorno": "string | null",
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "14318a0ee9ee"
+    },
+    {
       "ruta": "apps/rrhh/lib/informes/cabecera.ts",
       "ambito": "apps/rrhh",
       "resumen": "Texto de cabecera de un informe (título, filtros aplicados, fecha de generación). Módulo PURO.",
@@ -200798,7 +201008,9 @@
         "marcaAseguraDeEmpresa",
         "manifestParaMarca",
         "metadataMarcaAsegura",
-        "themeColorMarca"
+        "themeColorMarca",
+        "marcaPorHost",
+        "marcaDePeticion"
       ],
       "funciones": [
         {
@@ -200807,7 +201019,7 @@
           "exportada": true,
           "params": "empresaId: string | null | undefined, lista: string | null | undefined",
           "retorno": "boolean",
-          "linea": 14,
+          "linea": 15,
           "resumen": "¿Esta empresa lleva la marca Grupo ASegura? `lista` = valor de la env (coma-separado)."
         },
         {
@@ -200816,7 +201028,7 @@
           "exportada": true,
           "params": "marcaAsegura: boolean, colorEmpresa: string | null | undefined",
           "retorno": "Paleta | null",
-          "linea": 21,
+          "linea": 22,
           "resumen": "Paleta efectiva: cobalto ASegura si la empresa lleva la marca; si no, la derivada de su color (o null)."
         },
         {
@@ -200825,7 +201037,7 @@
           "exportada": true,
           "params": "marcaAsegura: boolean, colorEmpresa: string | null | undefined",
           "retorno": "Record<string, string>",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Variables CSS del contenedor del portal. Sin marca ASegura devuelve lo de siempre (color de la empresa)."
         },
         {
@@ -200834,7 +201046,7 @@
           "exportada": true,
           "params": "email: string | null | undefined, base?: string | null",
           "retorno": "string",
-          "linea": 36,
+          "linea": 37,
           "resumen": "Enlace de la tarjeta «Mis seguros». 🚨 REGLA LEGAL: solo viajan `email` (si lo hay) y `origen`. Ningún otro dato del empleado (nombre, DNI, domicilio, empresa_id…) se añade jamás a esta URL."
         },
         {
@@ -200843,7 +201055,7 @@
           "exportada": true,
           "params": "empresaId: string | null | undefined",
           "retorno": "boolean",
-          "linea": 53,
+          "linea": 54,
           "resumen": "¿Esta empresa lleva la marca? Lee la env (una sola fuente para /e, /e/[token] y sus metadatos)."
         },
         {
@@ -200852,7 +201064,7 @@
           "exportada": true,
           "params": "marcaAsegura: boolean",
           "retorno": "string",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Manifest que enlaza el layout de la ruta: el de Grupo ASegura solo con marca; si no, el de siempre."
         },
         {
@@ -200861,7 +201073,7 @@
           "exportada": true,
           "params": "marcaAsegura: boolean",
           "retorno": null,
-          "linea": 63,
+          "linea": 64,
           "resumen": "Metadatos de la ruta con marca (Next los fusiona sobre los del layout). Sin marca → `{}`: nada cambia."
         },
         {
@@ -200870,13 +201082,31 @@
           "exportada": true,
           "params": "marcaAsegura: boolean",
           "retorno": "string | undefined",
-          "linea": 74,
+          "linea": 75,
           "resumen": "Color de la barra del navegador: cobalto con marca, el de siempre sin ella (`undefined` = hereda del layout)."
+        },
+        {
+          "nombre": "marcaPorHost",
+          "kind": "function",
+          "exportada": true,
+          "params": "host: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 81,
+          "resumen": "¿El host de la petición es el dominio propio del portal (empleados.grupoasegura.es)? Ignora puerto y mayúsculas."
+        },
+        {
+          "nombre": "marcaDePeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "host: string | null | undefined, m?: string | string[] | null",
+          "retorno": "boolean",
+          "linea": 86,
+          "resumen": "Marca en / y /login: host propio, o `?m=asegura` (preview/local). `m` puede venir como array en searchParams."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "77dda9aef22c"
+      "hash": "29f6ef8c9947"
     },
     {
       "ruta": "apps/rrhh/lib/material-repo.ts",
@@ -201322,6 +201552,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0937f3bb525c"
+    },
+    {
+      "ruta": "apps/rrhh/lib/otp-fake.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Repo de códigos EN MEMORIA (solo tests) con la semántica atómica del SQL de `acceso-email-repo.ts`. No lleva `.test.` en el nombre para poder importarlo desde varios tests.",
+      "exporta": [
+        "fakeOtp"
+      ],
+      "funciones": [
+        {
+          "nombre": "fakeOtp",
+          "kind": "function",
+          "exportada": true,
+          "params": "inicio = new Date()",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "97d302698e71"
     },
     {
       "ruta": "apps/rrhh/lib/plantillas-prl.tsx",
@@ -202007,6 +202258,27 @@
       ],
       "rutaApi": null,
       "hash": "7b8f1b198c75"
+    },
+    {
+      "ruta": "apps/rrhh/middleware.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "middleware"
+      ],
+      "funciones": [
+        {
+          "nombre": "middleware",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 5,
+          "resumen": "Portal del Empleado: en producción solo se usa desde empleados.grupoasegura.es."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2a1878815df7"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/agente/page.tsx",
@@ -249165,7 +249437,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5213,
-    "funciones": 20030
+    "archivos": 5218,
+    "funciones": 20053
   }
 }
