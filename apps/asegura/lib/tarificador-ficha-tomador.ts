@@ -20,7 +20,14 @@ const esObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 // al ENTREGAR (nunca en BD) y no bloquean nada: lo que no consta va `null` y el bot lo deja como hueco.
 
 /** Compañías cuyo bot recibe `fichaTomador` (auto y moto). Otra compañía no ve la ficha (minimización). */
-export const COMPANIAS_CON_FICHA_TOMADOR = ['allianz'] as const
+export const COMPANIAS_CON_FICHA_TOMADOR = ['allianz', 'mapfre'] as const
+
+/**
+ * Compañías a las que SOLO se les manda el contacto del tomador (`email` + `telefono` móvil) dentro de `fichaTomador`, con el resto
+ * de campos a `null` (minimización RGPD: el NIF y los datos de alta de Mapfre ya salen por `documentoTomador`/`datosTomador`).
+ * Mapfre (26/10/2026, autorizado por Alberto): su formulario del proyecto no deja guardarlo sin móvil y correo del tomador.
+ */
+export const COMPANIAS_FICHA_SOLO_CONTACTO = ['mapfre'] as const
 
 /** Fila de la ficha TAL CUAL está en BD (lo cifrado, cifrado) + sus carnés (`cliente_carnets_conducir`, fecha cifrada; `null` = no se pudieron leer). */
 export type FilaFichaTomadorAuto = {
@@ -32,11 +39,34 @@ export type FilaFichaTomadorAuto = {
   fechaNacimiento: string | null
   tipoPersona: string | null
   carnets: { tipo: string; fechaCarnet: string | null }[] | null
+  /** Teléfonos de la ficha TAL CUAL (cifrados), el principal primero (columna + `cliente_telefonos`). Ausente = no se pidieron. */
+  telefonos?: string[]
+  /** Correos de la ficha TAL CUAL (cifrados), el principal primero (columna + `cliente_emails`). Ausente = no se pidieron. */
+  emails?: string[]
 }
 
-/** ¿Este trabajo recibe `fichaTomador`? Allianz + auto/moto. PURA. */
+/** ¿Este trabajo recibe `fichaTomador`? Allianz o Mapfre + auto/moto. PURA. */
 export function necesitaFichaTomador(compania: string, ramo: string): boolean {
   return (COMPANIAS_CON_FICHA_TOMADOR as readonly string[]).includes(claveCompania(compania)) && (ramo === 'auto' || ramo === 'moto')
+}
+
+/**
+ * Correo y MÓVIL del tomador de la ficha (el primero legible y válido de cada lista, el principal primero). Un teléfono fijo
+ * (8/9…) no sirve para el campo «Teléfono móvil» de Mapfre: solo 6 o 7. Lo que no se puede abrir o no es válido → `null`
+ * («no se sabe»), nunca un relleno. PURA.
+ */
+function contactoDeFicha(fila: FilaFichaTomadorAuto, abrir: (v: string | null) => string | null): { email: string | null; telefono: string | null } {
+  let email: string | null = null
+  for (const crudo of fila.emails ?? []) {
+    const m = abrir(crudo)
+    if (m !== null && m.length <= 200 && /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(m)) { email = m.toLowerCase(); break }
+  }
+  let telefono: string | null = null
+  for (const crudo of fila.telefonos ?? []) {
+    const t = abrir(crudo)?.replace(/[\s.\-()]/g, '').replace(/^(\+34|0034)/, '') ?? null
+    if (t !== null && /^[67]\d{8}$/.test(t)) { telefono = t; break }
+  }
+  return { email, telefono }
 }
 
 /**
@@ -46,7 +76,7 @@ export function necesitaFichaTomador(compania: string, ramo: string): boolean {
  * `tipo_persona = juridica`; sin tipo, el que diga el documento (CIF → juridica, DNI/NIE → fisica); sin ninguno, `null`.
  * Una empresa no lleva nacimiento ni carné. `null` = no hay ficha.
  */
-export function fichaTomadorAutoDeFicha(fila: FilaFichaTomadorAuto | null, descifrar: (v: string) => string, ramo: string, hoy: Date = new Date()): FichaTomadorAuto | null {
+export function fichaTomadorAutoDeFicha(fila: FilaFichaTomadorAuto | null, descifrar: (v: string) => string, ramo: string, hoy: Date = new Date(), compania: string = 'allianz'): FichaTomadorAuto | null {
   if (!fila) return null
   const abrir = (v: string | null): string | null => {
     if (typeof v !== 'string' || v.trim() === '') return null
@@ -59,6 +89,12 @@ export function fichaTomadorAutoDeFicha(fila: FilaFichaTomadorAuto | null, desci
     if (typeof claro !== 'string' || claro.startsWith('v1:')) return null
     const t = claro.replace(/\s+/g, ' ').trim()
     return t === '' ? null : t
+  }
+  if ((COMPANIAS_FICHA_SOLO_CONTACTO as readonly string[]).includes(claveCompania(compania))) {
+    const contacto = contactoDeFicha(fila, abrir)
+    if (contacto.email === null && contacto.telefono === null) return null
+    const v = validarFichaTomadorAuto({ tipo: null, documento: null, codigoPostal: null, localidad: null, direccion: null, fechaNacimiento: null, fechaCarnet: null, tipoCarnet: null, ...contacto }, hoy)
+    return v.ok ? v.valor : null
   }
   const corto = (v: string | null | undefined, max: number): string | null => {
     const t = typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : ''

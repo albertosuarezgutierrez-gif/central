@@ -1021,6 +1021,104 @@ export function resumenDiagnosticoImportesGenerali(d: readonly DiagnosticoImport
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
+// ───────────────────────── v0.2.31 · tabla «Modalidades de Seguro» (Recibo Anual / Prima Anualidad) ─────────────────────────
+
+/** Fila de la tabla de modalidades: nombre de producto, ¿marcada?, y los valores crudos (texto de celda primero, luego value de inputs/selects). */
+export type FilaModalidadGenerali = { modalidad: string; marcada: boolean; recibo: string[]; prima: string[] }
+/** Lo que lee el navegador de la tabla de modalidades de un marco (más los botones del marco, para el diagnóstico). */
+export type VolcadoModalidadesGenerali = { encontrada: boolean; filas: FilaModalidadGenerali[]; botones: { texto: string; id: string; value: string }[] }
+
+/** «1.234,56» · «1234,56» · «1234.56» · «1,234.56» (con o sin «€») → número. Un entero solo cuenta con «€». `null` si no es un importe. PURA. */
+export function importeFlexibleEur(texto: string): number | null {
+  const t = String(texto ?? '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
+  const m = /^(?:€\s*)?([\d.,]+)\s*(€|eur(?:os)?)?$/i.exec(t)
+  if (!m) return null
+  const num = m[1]!
+  const conEuro = /€|eur/i.test(t)
+  let n: string | null = null
+  if (/^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(num)) n = num.replace(/\./g, '').replace(',', '.')
+  else if (/^\d{1,3}(?:,\d{3})+\.\d{1,2}$/.test(num)) n = num.replace(/,/g, '')
+  else if (/^\d+[,.]\d{1,2}$/.test(num)) n = num.replace(',', '.')
+  else if (/^\d+$/.test(num) && conEuro) n = num
+  if (n === null) return null
+  const v = Number(n)
+  return Number.isFinite(v) ? Math.round(v * 100) / 100 : null
+}
+
+/** 1234.5 → «1.234,50 €». PURA. */
+export function formatoEurGenerali(eur: number): string {
+  const [e, d] = eur.toFixed(2).split('.')
+  return `${e!.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${d} €`
+}
+
+/**
+ * Precio desde la tabla de modalidades: «Recibo Anual» de la modalidad MARCADA; sin marcada y con varias filas con importe, la más
+ * barata y las demás como aviso «Otras modalidades: X 1.234,56 €; …». Importes fuera de la horquilla de una prima (o en `ignorar`)
+ * no cuentan; todas vacías → `ninguno`. Dos marcadas con importes distintos → `varios` (no se elige a ciegas). PURA.
+ */
+export function leerModalidadesGenerali(filas: readonly FilaModalidadGenerali[], ignorar: readonly number[] = []): LecturaPrecioGenerali {
+  const nombre = (f: FilaModalidadGenerali) => sanearFragmentoGenerali(f.modalidad).slice(0, 40) || '(sin nombre)'
+  const cands: { eur: number; modalidad: string; marcada: boolean }[] = []
+  for (const f of filas) {
+    let eur: number | null = null
+    for (const v of f.recibo) {
+      const x = importeFlexibleEur(v)
+      if (x !== null && x >= PRIMA_MIN_GENERALI_EUR && x <= PRIMA_MAX_GENERALI_EUR && !ignorar.includes(x)) {
+        eur = x
+        break
+      }
+    }
+    if (eur !== null) cands.push({ eur, modalidad: nombre(f), marcada: f.marcada })
+  }
+  if (cands.length === 0) return { tipo: 'ninguno' }
+  const marcadas = cands.filter((c) => c.marcada)
+  if (marcadas.length > 0) {
+    const eurs = [...new Set(marcadas.map((c) => c.eur))]
+    if (eurs.length > 1) return { tipo: 'varios', candidatos: marcadas.map((c) => ({ eur: c.eur, linea: `${c.modalidad} Recibo Anual` })) }
+    return { tipo: 'unico', eur: marcadas[0]!.eur, linea: `${marcadas[0]!.modalidad} Recibo Anual` }
+  }
+  const orden = [...cands].sort((a, b) => a.eur - b.eur)
+  const el = orden[0]!
+  const otras = orden.slice(1).filter((c) => c.eur !== el.eur || c.modalidad !== el.modalidad)
+  const avisos = [`Modalidad no marcada en la tabla: se toma la más barata (${el.modalidad})`]
+  if (otras.length > 0) avisos.push(`Otras modalidades: ${otras.map((c) => `${c.modalidad} ${formatoEurGenerali(c.eur)}`).join('; ')}`)
+  return { tipo: 'unico', eur: el.eur, linea: `${el.modalidad} Recibo Anual`, avisos }
+}
+
+/** Contenido crudo de una celda de importe, saneado: solo dígitos/separadores/€ (máx. 20); con letras «(texto)»; vacío «∅». PURA. */
+export function crudoImporteSeguroGenerali(valores: readonly string[]): string {
+  const vistos: string[] = []
+  for (const v of valores) {
+    const x = String(v ?? '').replace(/[ \s]+/g, ' ').trim()
+    const s = x === '' ? '∅' : /^[\d.,\s€]*(?:eur(?:os)?)?$/i.test(x) ? x.slice(0, 20) : '(texto)'
+    if (!vistos.includes(s)) vistos.push(s)
+  }
+  const sin = vistos.length > 1 ? vistos.filter((s) => s !== '∅') : vistos
+  return sin.join('+') || '∅'
+}
+
+/**
+ * Diagnóstico de la tabla de modalidades: por fila nombre (saneado), ¿marcada? y el crudo de «Recibo Anual» (RA) y «Prima Anualidad» (PA),
+ * más los botones del marco (texto/id/value). Sin datos personales. Truncado a `max`. PURA.
+ */
+export function resumenModalidadesGenerali(v: VolcadoModalidadesGenerali | null, max = 600): string {
+  if (!v || !v.encontrada) return 'Modalidades: tabla no localizada'
+  const filas = v.filas.slice(0, 8).map((f) => `«${sanearFragmentoGenerali(f.modalidad).slice(0, 30) || '(sin nombre)'}»${f.marcada ? '[marcada]' : ''} RA=${crudoImporteSeguroGenerali(f.recibo)} PA=${crudoImporteSeguroGenerali(f.prima)}`)
+  const botones = v.botones.slice(0, 10).map((b) => {
+    const t = sanearFragmentoGenerali(b.texto).slice(0, 20)
+    const id = sanearFragmentoGenerali(b.id).slice(0, 24)
+    const val = sanearFragmentoGenerali(b.value).slice(0, 20)
+    return [t, id && `#${id}`, val && val !== t ? `v=${val}` : ''].filter(Boolean).join(' ')
+  })
+  const base = `Modalidades (${v.filas.length}f): ${filas.join(' ; ') || 'sin filas'}`
+  const bot = ` · Botones: ${botones.join(', ') || '—'}`
+  const t = base + bot
+  if (t.length <= max) return t
+  // Si no cabe, se recortan primero los botones y después las filas.
+  const rec = base.length >= max ? base : `${base}${bot}`
+  return `${rec.slice(0, max - 1)}…`
+}
+
 // ───────────────────────── v0.2.28 · inventario de controles de navegación de TODOS los marcos ─────────────────────────
 
 /** Control de navegación leído (botón/enlace/imagen con acción). Solo etiquetas y ids: nunca valores de campos de datos. */
