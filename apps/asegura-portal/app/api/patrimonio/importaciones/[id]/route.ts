@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { responderMapear, responderVer } from '@/lib/patrimonio/importacion-api'
 import { puertosImportacion } from '@/lib/patrimonio/importacion-bd'
 import { rateLimit } from '@/lib/rate-limit'
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -21,6 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   const { id } = await params
   const r = await responderVer(puertosImportacion(identidad.id), id)
   return NextResponse.json(r.body, { status: r.status })
@@ -33,6 +35,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'escritura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   const tope = rateLimit(`patrimonio-importar-mapeo:${identidad.id}`, 120, 60 * 60 * 1000)
   if (!tope.allowed) {
     return NextResponse.json({ error: 'demasiadas_peticiones' }, { status: 429, headers: { 'retry-after': String(tope.retryAfter ?? 60) } })

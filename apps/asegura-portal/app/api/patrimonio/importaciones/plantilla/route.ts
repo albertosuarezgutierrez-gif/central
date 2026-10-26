@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { esTipoImportacion, plantillaCsv } from '@central/module-patrimonio'
 
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -16,6 +17,7 @@ export async function GET(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   const tipo = new URL(req.url).searchParams.get('tipo')
   if (!esTipoImportacion(tipo)) return NextResponse.json({ error: 'datos_invalidos', campo: 'tipo' }, { status: 400 })
   return new Response(plantillaCsv(tipo), {

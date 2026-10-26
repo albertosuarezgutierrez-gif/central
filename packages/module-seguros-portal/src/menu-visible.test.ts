@@ -171,3 +171,68 @@ test('puerta y menú dicen lo mismo en lectura: calendario ⇔ herramientasVisib
   const casos: HechosMenu[] = [AUTORIZADO, TITULAR, HECHOS_DESCONOCIDOS, { ...AUTORIZADO, patrimonio: 1 }, { ...AUTORIZADO, flota: 3 }, { ...AUTORIZADO, fichasPropias: null }]
   for (const h of casos) assert.equal(puertaAbierta(h, 'calendario', 'lectura'), herramientasVisibles(h).calendario)
 })
+
+// ─── Las puertas de «Herramientas» (26/10/2026): cada una ES su campo de herramientasVisibles() ───
+
+const PUERTAS_HERRAMIENTAS = ['herramientas', 'resumen', 'patrimonio', 'flota', 'catalogo'] as const
+
+test('puerta: el autorizado puro no entra a ninguna herramienta, ni a leer ni a escribir', () => {
+  for (const p of PUERTAS_HERRAMIENTAS) {
+    for (const modo of ['lectura', 'escritura'] as const) assert.equal(puertaAbierta(AUTORIZADO, p, modo), false, `${p} ${modo}`)
+  }
+  // Algo por aceptar en «Contactos» no abre ninguna herramienta.
+  for (const p of PUERTAS_HERRAMIENTAS) assert.equal(puertaAbierta({ ...AUTORIZADO, porAceptar: 2 }, p, 'lectura'), false, p)
+})
+
+test('puerta: el titular entra en Herramientas, Mi resumen y el catálogo; Patrimonio y Flota, solo si los tiene (como el menú)', () => {
+  for (const modo of ['lectura', 'escritura'] as const) {
+    assert.equal(puertaAbierta(TITULAR, 'herramientas', modo), true)
+    assert.equal(puertaAbierta(TITULAR, 'resumen', modo), true)
+    assert.equal(puertaAbierta(TITULAR, 'catalogo', modo), true)
+    assert.equal(puertaAbierta(TITULAR, 'patrimonio', modo), false)
+    assert.equal(puertaAbierta(TITULAR, 'flota', modo), false)
+    assert.equal(puertaAbierta({ ...TITULAR, patrimonio: 1, flota: 1 }, 'patrimonio', modo), true)
+    assert.equal(puertaAbierta({ ...TITULAR, patrimonio: 1, flota: 1 }, 'flota', modo), true)
+  }
+})
+
+test('puerta: patrimonio o flota por alcance (sin nada propio) abren SU herramienta, no el resumen ni el catálogo', () => {
+  const conPatrimonio = { ...AUTORIZADO, patrimonio: 1 }
+  // `flota` incluye el nombramiento de jefe de flota por aceptar (se acepta dentro de /flota): `hechosDeMenu` los suma.
+  const conFlota = { ...AUTORIZADO, flota: 1 }
+  for (const modo of ['lectura', 'escritura'] as const) {
+    assert.equal(puertaAbierta(conPatrimonio, 'patrimonio', modo), true)
+    assert.equal(puertaAbierta(conPatrimonio, 'herramientas', modo), true)
+    assert.equal(puertaAbierta(conPatrimonio, 'flota', modo), false)
+    assert.equal(puertaAbierta(conFlota, 'flota', modo), true)
+    assert.equal(puertaAbierta(conFlota, 'herramientas', modo), true)
+    assert.equal(puertaAbierta(conFlota, 'patrimonio', modo), false)
+    for (const h of [conPatrimonio, conFlota]) {
+      assert.equal(puertaAbierta(h, 'resumen', modo), false)
+      assert.equal(puertaAbierta(h, 'catalogo', modo), false)
+    }
+  }
+})
+
+test('puerta de herramientas: lectura caída ABRE la página y CIERRA la escritura', () => {
+  for (const p of PUERTAS_HERRAMIENTAS) {
+    assert.equal(puertaAbierta(HECHOS_DESCONOCIDOS, p, 'lectura'), true, p)
+    assert.equal(puertaAbierta(HECHOS_DESCONOCIDOS, p, 'escritura'), false, p)
+  }
+  // El patrimonio sin comprobar no se escribe aunque sea titular.
+  assert.equal(puertaAbierta({ ...TITULAR, patrimonio: null }, 'patrimonio', 'lectura'), true)
+  assert.equal(puertaAbierta({ ...TITULAR, patrimonio: null }, 'patrimonio', 'escritura'), false)
+})
+
+test('puerta y menú dicen lo mismo en lectura, herramienta a herramienta', () => {
+  const casos: HechosMenu[] = [
+    AUTORIZADO, TITULAR, HECHOS_DESCONOCIDOS, { ...AUTORIZADO, patrimonio: 1 }, { ...AUTORIZADO, flota: 3 },
+    { ...AUTORIZADO, fichasPropias: null }, { ...AUTORIZADO, polizasAportadas: 1 }, { ...AUTORIZADO, flota: null },
+  ]
+  for (const h of casos) {
+    const ver = herramientasVisibles(h)
+    assert.equal(puertaAbierta(h, 'herramientas', 'lectura'), ver.alguna)
+    assert.equal(puertaAbierta(h, 'herramientas', 'lectura'), entradasVisibles(h).includes('herramientas'))
+    for (const p of ['resumen', 'patrimonio', 'flota', 'catalogo'] as const) assert.equal(puertaAbierta(h, p, 'lectura'), ver[p], p)
+  }
+})

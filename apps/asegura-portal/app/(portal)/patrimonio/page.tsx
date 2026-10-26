@@ -5,6 +5,7 @@ import { patrimonioDeIdentidad } from '@/lib/patrimonio/inmuebles-bd'
 import { avisosPolizasSinInmueble, type AvisoPintable } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { precargaDeParametros, type ParametrosAlta } from '@/lib/patrimonio/precarga-alta'
 import { oposicionSenalesVigente } from '@/lib/oposicion-senales'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { AvisoPolizaSinInmueble } from './AvisoPolizaSinInmueble'
@@ -23,6 +24,7 @@ export const dynamic = 'force-dynamic'
 export default async function PatrimonioPage({ searchParams }: { searchParams: Promise<ParametrosAlta> }) {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const titulares = await patrimonioDeIdentidad(identidad.id)
   const precarga = precargaDeParametros(await searchParams)
   // P15 publicado (interés legítimo informado): con algún titular se INFORMA aquí, antes de calcular, y se ofrece oponerse.

@@ -7,6 +7,8 @@ import { fechaEs } from '@/lib/fechas'
 import { URL_PORTAL_EMPLEADO, agruparHerramientas } from '@/lib/herramientas'
 import { menuDeSesion } from '@/lib/menu-portal'
 import { tarjetasDeSesion } from '@/lib/modulos'
+import { puertaDeSesion } from '@/lib/puertas-portal'
+import { getIdentidad } from '@/lib/session'
 
 import { PaginaPortal } from '../../PaginaPortal'
 import { TarjetaPortal } from '../../TarjetaPortal'
@@ -28,6 +30,9 @@ const ETIQUETA_DISPONIBILIDAD = {
  * el reparto en `lib/herramientas.ts`.
  */
 export default async function HerramientasPage() {
+  const identidad = await getIdentidad()
+  if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('herramientas', 'lectura'))) redirect('/inicio')
   const tarjetas = await tarjetasDeSesion()
   if (tarjetas === null) redirect('/')
   const { propias, solicitables, rrhh } = agruparHerramientas(tarjetas)

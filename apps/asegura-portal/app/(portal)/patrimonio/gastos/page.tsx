@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { avisosCubreSeguro } from '@/lib/patrimonio/cubre-seguro-bd'
 import { gastosDeIdentidad } from '@/lib/patrimonio/gastos-bd'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { CubreSeguro } from './CubreSeguro'
@@ -17,6 +18,7 @@ export const dynamic = 'force-dynamic'
 export default async function GastosPage() {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const titulares = await gastosDeIdentidad(identidad.id)
   // Un extra: si no se lee, se dice; nunca rompe la pantalla ni se toma por «no hay avisos».
   const cubre = await avisosCubreSeguro(identidad.id).catch((e: unknown) => {

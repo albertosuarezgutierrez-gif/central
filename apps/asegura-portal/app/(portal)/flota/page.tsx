@@ -5,6 +5,7 @@ import { TEXTO_JEFE_FLOTA } from '@central/module-seguros-portal'
 
 import { empresasDeFlota, flotaDeEmpresa, nombramientosPendientes } from '@/lib/flota'
 import { fechaEs } from '@/lib/fechas'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { FlotaEmpresa, NombramientoPendiente } from './FlotaEmpresa'
@@ -32,6 +33,7 @@ export default async function FlotaPage({
 }) {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('flota', 'lectura'))) redirect('/inicio')
   const pedida = (await searchParams).empresa
 
   if (pedida !== undefined) {

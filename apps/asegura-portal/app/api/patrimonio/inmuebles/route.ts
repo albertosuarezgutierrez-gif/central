@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { responderAlta, responderLista } from '@/lib/patrimonio/inmuebles-api'
 import { puertosInmuebles } from '@/lib/patrimonio/inmuebles-bd'
 import { rateLimit } from '@/lib/rate-limit'
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -23,6 +24,7 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   const r = await responderLista(puertosInmuebles(identidad.id))
   return NextResponse.json(r.body, { status: r.status })
 }
@@ -34,6 +36,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'escritura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   // Tope en memoria por identidad (corta el bucle, no es el límite real).
   const tope = rateLimit(`patrimonio-inmueble:${identidad.id}`, 30, 60 * 60 * 1000)
   if (!tope.allowed) {
