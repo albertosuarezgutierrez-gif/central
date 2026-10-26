@@ -45,3 +45,11 @@ test('lo no contestado es «sin dato» (nunca «no» ni 0), y una hipoteca que n
   assert.match(t, /no respondió/)
   assert.match(t, /No se han podido pasar al riesgo/)
 })
+
+test('choques con lo guardado y bloque confirmado: se dicen en el aviso', () => {
+  const t = textoAvisoDatosHogar({ ...BASE, conflictos: ['dirección distinta de la guardada: revisar (no se ha tocado la guardada)'], anotados: 2 })
+  assert.match(t, /⚠️ dirección distinta de la guardada: revisar/)
+  const c = textoAvisoDatosHogar({ ...BASE, confirmado: true, anotados: 0 })
+  assert.match(c, /confirmados: no se han tocado/)
+  assert.doesNotMatch(c, /pasados al riesgo/)
+})

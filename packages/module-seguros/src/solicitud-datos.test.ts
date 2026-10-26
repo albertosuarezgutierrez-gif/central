@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { RAMOS_SOLICITUD, camposSolicitud, conIdentidad, grupoSolicitud, tituloSolicitud, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
+import { RAMOS_SOLICITUD, camposSolicitud, casaZonaCp, conIdentidad, grupoSolicitud, tituloSolicitud, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
 
 const nadaConocido = { dni: false, fechaNacimiento: false, codigoPostal: false, carnetMoto: false, carnetCoche: false }
 const todoConocido = { dni: true, fechaNacimiento: true, codigoPostal: true, carnetMoto: true, carnetCoche: true }
@@ -173,7 +173,9 @@ test('HOGAR valida: lo que se deja en blanco es null (nunca 0 ni «»), y lo que
   assert.equal(r.respuestas.fechaEfecto, null)
   assert.equal(r.respuestas.viviendaPlanta, null)
   assert.equal(r.respuestas.viviendaCp, '41003')
-  assert.equal(r.respuestas.viviendaViaNombre, 'SOCORRO')
+  // Sin validación del servidor, la calle que manda el cliente NO es oficial («por validar»).
+  assert.equal(r.respuestas.viviendaViaNombre, null)
+  assert.equal(r.respuestas.viviendaViaTipo, null)
   assert.equal(r.respuestas.alarma, false)
 })
 
@@ -211,4 +213,26 @@ test('el mensaje nombra el riesgo de cada ramo, sin datos del cliente', () => {
   assert.match(mensajeSolicitud('hogar', url), /presupuesto de tu seguro de hogar/)
   assert.match(mensajeSolicitud('mascotas', url, true), /el seguro de la mascota/)
   assert.equal(mensajeSolicitud('moto', url), `Hola, soy Alberto de Grupo ASegura. Para prepararte el presupuesto de tu moto necesito unos datos; te lleva dos minutos: ${url}`)
+})
+
+test('la calle es OFICIAL solo si el servidor la validó contra el callejero (y casa con la que manda el cliente)', () => {
+  const campos = camposSolicitud('hogar', todoConocido)
+  const ok = validarRespuestas(campos, HOGAR_OK, HOY, { viaValidada: () => ({ tipo: 'CL', nombre: 'SOCORRO' }) })
+  assert.ok(ok.ok && ok.respuestas.viviendaViaTipo === 'CL' && ok.respuestas.viviendaViaNombre === 'SOCORRO')
+  const otra = validarRespuestas(campos, HOGAR_OK, HOY, { viaValidada: () => ({ tipo: 'AV', nombre: 'SOCORRO' }) })
+  assert.ok(otra.ok && otra.respuestas.viviendaViaTipo === null && otra.respuestas.viviendaViaNombre === null)
+  const sinValidar = validarRespuestas(campos, HOGAR_OK, HOY, { viaValidada: () => null })
+  assert.ok(sinValidar.ok && sinValidar.respuestas.viviendaViaNombre === null)
+})
+
+test('provincia y municipio tienen que ser los del CP (si la tabla lo sabe)', () => {
+  const campos = camposSolicitud('hogar', todoConocido)
+  const zona = () => ({ provincias: ['Sevilla'], municipios: ['Sevilla'] })
+  assert.ok(validarRespuestas(campos, { ...HOGAR_OK, viviendaMunicipio: 'sevilla' }, HOY, { zonaCp: zona }).ok)
+  const mal = validarRespuestas(campos, { ...HOGAR_OK, viviendaProvincia: 'Madrid', viviendaMunicipio: 'Espartinas' }, HOY, { zonaCp: zona })
+  assert.ok(!mal.ok && mal.errores.viviendaProvincia && mal.errores.viviendaMunicipio)
+  // La tabla no conoce el CP: no se contrasta.
+  assert.ok(validarRespuestas(campos, { ...HOGAR_OK, viviendaMunicipio: 'Otro' }, HOY, { zonaCp: () => ({ provincias: null, municipios: null }) }).ok)
+  // Grafías bilingües: «Alicante/Alacant».
+  assert.deepEqual(casaZonaCp('alicante', 'Alacant', { provincias: ['Alicante'], municipios: ['Alicante/Alacant'] }), { provincia: true, municipio: true })
 })

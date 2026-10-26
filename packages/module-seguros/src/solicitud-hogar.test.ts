@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { direccionDeRespuestas, direccionLegible, soloHuecos, textoCatastroSolicitud, viviendaDeSolicitud } from './solicitud-hogar.ts'
+import { direccionDeRespuestas, direccionLegible, planEscrituraVivienda, plantaLegible, textoCatastroSolicitud, viviendaDeSolicitud } from './solicitud-hogar.ts'
 
 const R = {
   viviendaCp: '41003', viviendaProvincia: 'SEVILLA', viviendaMunicipio: 'SEVILLA', viviendaCalle: 'Calle Socorro', viviendaNumero: '24',
@@ -31,9 +31,55 @@ test('vivienda: lo que no se sabe no se escribe (contenido en blanco ≠ 0) y el
   assert.equal(con.catastroConsultadoAt, AHORA)
 })
 
-test('solo huecos: lo que la correduría ya tenía no se pisa', () => {
-  assert.deepEqual(soloHuecos({ cp: '41001', municipio: null, planta: '' }, { cp: '41003', municipio: 'SEVILLA', planta: '2' }), { municipio: 'SEVILLA', planta: '2' })
-  assert.deepEqual(soloHuecos(null, { cp: '41003' }), { cp: '41003' })
+const PROP = {
+  cp: '41003', provincia: 'SEVILLA', municipio: 'SEVILLA', nombreVia: 'SOCORRO', numeroVia: '24', planta: '2', puertaVivienda: 'B', direccion: 'CL SOCORRO 24, 2º B',
+  referenciaCatastral: '1234567AB1234C0001XY', catastroReferencia: '1234567AB1234C0001XY', metrosCuadrados: 90, anioConstruccion: 1975,
+  hipoteca: true, bancoHipoteca: 'Caixabank', capitalContenido: 30000,
+}
+
+test('por BLOQUES: con todo vacío se escribe todo', () => {
+  const p = planEscrituraVivienda(null, PROP)
+  assert.deepEqual(p.conflictos, [])
+  assert.equal(p.escribir.cp, '41003')
+  assert.equal(p.escribir.referenciaCatastral, '1234567AB1234C0001XY')
+})
+
+test('dirección: si había otra, NO se mezcla campo a campo (ni el municipio vacío se rellena) y se avisa', () => {
+  const p = planEscrituraVivienda({ cp: '41001', municipio: null, nombreVia: 'SIERPES', numeroVia: '3' }, PROP)
+  for (const k of ['cp', 'municipio', 'provincia', 'nombreVia', 'numeroVia', 'planta', 'puertaVivienda', 'direccion']) assert.equal(k in p.escribir, false, k)
+  assert.match(p.conflictos.join(' '), /dirección distinta de la guardada: revisar/)
+  // La misma dirección (otra grafía) no es conflicto, y no se reescribe.
+  const igual = planEscrituraVivienda({ cp: '41003', nombreVia: 'Socorro', numeroVia: '24', planta: '2º' }, PROP)
+  assert.equal(igual.conflictos.some((c) => /dirección/.test(c)), false)
+  assert.equal('cp' in igual.escribir, false)
+})
+
+test('Catastro: otra referencia previa → nada del Catastro y aviso; la misma → solo los metadatos y lo que falte', () => {
+  const otra = planEscrituraVivienda({ referenciaCatastral: '9999999ZZ9999Z0001AA' }, PROP)
+  for (const k of ['referenciaCatastral', 'metrosCuadrados', 'anioConstruccion', 'catastroReferencia']) assert.equal(k in otra.escribir, false, k)
+  assert.match(otra.conflictos.join(' '), /referencia catastral distinta/)
+  const misma = planEscrituraVivienda({ referenciaCatastral: '1234567ab1234c0001xy', metrosCuadrados: 85 }, PROP)
+  assert.equal('metrosCuadrados' in misma.escribir, false, 'los m² que escribió la correduría mandan')
+  assert.equal(misma.escribir.anioConstruccion, 1975)
+  assert.equal(misma.escribir.catastroReferencia, '1234567AB1234C0001XY')
+})
+
+test('hipoteca y banco van juntos; el contenido solo si no estaba; un bloque CONFIRMADO no se toca', () => {
+  const p = planEscrituraVivienda({ hipoteca: false, capitalContenido: 20000 }, PROP)
+  assert.equal('hipoteca' in p.escribir || 'bancoHipoteca' in p.escribir, false)
+  assert.match(p.conflictos.join(' '), /hipoteca declarada distinta/)
+  assert.equal('capitalContenido' in p.escribir, false)
+  const conf = planEscrituraVivienda(null, PROP, '2026-10-20T10:00:00Z')
+  assert.deepEqual(conf, { escribir: {}, conflictos: [], confirmado: true })
+})
+
+test('planta legible: «º» solo a un número pelado', () => {
+  assert.equal(plantaLegible('2'), '2º')
+  assert.equal(plantaLegible('2º'), '2º')
+  assert.equal(plantaLegible('Bajo'), 'Bajo')
+  assert.equal(plantaLegible(' '), null)
+  const d = direccionDeRespuestas({ viviendaCp: '41003', viviendaCalle: 'Socorro', viviendaNumero: '24', viviendaPlanta: 'Bajo', viviendaPuerta: 'A' })
+  assert.equal(direccionLegible(d!), 'Socorro 24, Bajo A · 41003')
 })
 
 test('el texto del Catastro distingue «no respondió» de «no existe» y de «varios»', () => {

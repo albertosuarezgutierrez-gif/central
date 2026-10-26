@@ -42,10 +42,17 @@ export function direccionDeRespuestas(r: Record<string, Respuesta>, clave = 'viv
   return d.cp === null && d.calle === null ? null : d
 }
 
+/** «2» → «2º»; «2º», «Bajo», «Ático» o «Entreplanta» se dejan tal cual (el «º» solo a un número pelado). */
+export function plantaLegible(planta: string | null): string | null {
+  if (planta === null || planta.trim() === '') return null
+  const p = planta.trim()
+  return /^\d+$/.test(p) ? `${p}º` : p
+}
+
 /** Una línea legible: «CL SOCORRO 24, 2º B · 41003 SEVILLA (SEVILLA)». */
 export function direccionLegible(d: DireccionDeclarada): string {
   const via = d.viaTipo && d.viaNombre ? `${d.viaTipo} ${d.viaNombre}` : d.calle ?? ''
-  const interior = [d.planta ? `${d.planta}º` : null, d.puerta].filter(Boolean).join(' ')
+  const interior = [plantaLegible(d.planta), d.puerta].filter(Boolean).join(' ')
   const primera = [via, d.numero].filter(Boolean).join(' ') + (interior ? `, ${interior}` : '')
   const zona = [d.cp, d.municipio].filter(Boolean).join(' ') + (d.provincia && d.provincia !== d.municipio ? ` (${d.provincia})` : '')
   return [primera.trim(), zona.trim()].filter((x) => x !== '').join(' · ')
@@ -114,12 +121,70 @@ export function viviendaDeSolicitud(r: Record<string, Respuesta>, catastro: Cata
   return out
 }
 
-/** Solo los huecos: lo que `actual` ya tiene (≠ null) manda y no se pisa. */
-export function soloHuecos(actual: Record<string, unknown> | null, propuesta: Record<string, string | number | boolean>): Record<string, string | number | boolean> {
-  const out: Record<string, string | number | boolean> = {}
-  for (const [k, v] of Object.entries(propuesta)) {
-    const a = actual?.[k]
-    if (a === null || a === undefined || a === '') out[k] = v
+/**
+ * Qué se escribe en `datosVivienda` (25/10/2026, revisión del PR #5057): por BLOQUES atómicos, nunca campo a campo.
+ *   - Bloque DIRECCIÓN (cp, provincia, municipio, vía, número, planta, puerta, texto): solo si la guardada está vacía
+ *     ENTERA. Si había otra y la declarada es distinta → no se escribe y se avisa («dirección distinta de la guardada»).
+ *   - Bloque CATASTRO (referencia, m², año y la consulta): solo si no hay referencia previa o es la MISMA. Los m² y el
+ *     año, además, solo donde no había (lo que escribió la correduría manda). Otra referencia → no se escribe y se avisa.
+ *   - Hipoteca + banco: juntos, solo si ninguno estaba. Contenido: solo si no estaba.
+ *   - Bloque CONFIRMADO por Alberto (`confirmadoAt`): NO se toca nada; lo declarado queda en la solicitud y en el aviso.
+ * `actual` = lo que la pantalla del riesgo enseña (lo estructurado o, sin ello, la precarga de la póliza).
+ */
+export const CLAVES_BLOQUE_DIRECCION = ['cp', 'provincia', 'municipio', 'municipioId', 'tipoViaId', 'nombreVia', 'numeroVia', 'planta', 'puertaVivienda', 'direccion'] as const
+export const CLAVES_BLOQUE_CATASTRO = ['referenciaCatastral', 'catastroReferencia', 'catastroConsultadoAt', 'usoCatastral', 'metrosCuadrados', 'catastroMetrosCuadrados', 'anioConstruccion', 'catastroAnioConstruccion'] as const
+
+export type PlanVivienda = {
+  escribir: Record<string, string | number | boolean>
+  /** Lo que NO se ha escrito por chocar con lo guardado (frases para el aviso). */
+  conflictos: string[]
+  /** El bloque estaba confirmado: no se ha tocado nada. */
+  confirmado: boolean
+}
+
+const vacio = (v: unknown) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '')
+const norm = (v: unknown) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[\s.,º°ª-]/g, '')
+const refNorm = (v: unknown) => String(v ?? '').replace(/[\s-]/g, '').toUpperCase()
+
+export function planEscrituraVivienda(actual: Record<string, unknown> | null, propuesta: Record<string, string | number | boolean>, confirmadoAt: string | null = null): PlanVivienda {
+  if (confirmadoAt) return { escribir: {}, conflictos: [], confirmado: true }
+  const a = actual ?? {}
+  const escribir: Record<string, string | number | boolean> = {}
+  const conflictos: string[] = []
+  const de = (claves: readonly string[]) => Object.fromEntries(claves.flatMap((k) => (k in propuesta ? [[k, propuesta[k]]] : [])))
+
+  // Dirección.
+  const dir = de(CLAVES_BLOQUE_DIRECCION)
+  if (Object.keys(dir).length > 0) {
+    if (CLAVES_BLOQUE_DIRECCION.every((k) => vacio(a[k]))) Object.assign(escribir, dir)
+    else {
+      // Misma dirección (CP + vía + número, sin tildes, espacios ni «º») = nada que hacer; si no, conflicto.
+      const misma = ['cp', 'nombreVia', 'numeroVia'].every((k) => !(k in dir) || vacio(a[k]) || norm(a[k]) === norm(dir[k]))
+        && (!('planta' in dir) || vacio(a.planta) || norm(a.planta) === norm(dir.planta))
+        && (!('puertaVivienda' in dir) || vacio(a.puertaVivienda) || norm(a.puertaVivienda) === norm(dir.puertaVivienda))
+      if (!misma) conflictos.push('dirección distinta de la guardada: revisar (no se ha tocado la guardada)')
+    }
   }
-  return out
+
+  // Catastro.
+  const cat = de(CLAVES_BLOQUE_CATASTRO)
+  if (Object.keys(cat).length > 0) {
+    const previa = vacio(a.referenciaCatastral) ? null : refNorm(a.referenciaCatastral)
+    if (previa === null || previa === refNorm(cat.referenciaCatastral)) {
+      for (const [k, v] of Object.entries(cat)) {
+        if ((k === 'metrosCuadrados' || k === 'anioConstruccion' || k === 'referenciaCatastral') && !vacio(a[k])) continue
+        escribir[k] = v
+      }
+    } else {
+      conflictos.push('referencia catastral distinta de la guardada: revisar (no se han tocado los datos del Catastro)')
+    }
+  }
+
+  // Hipoteca + banco, juntos.
+  const hip = de(['hipoteca', 'bancoHipoteca'])
+  if (Object.keys(hip).length > 0 && vacio(a.hipoteca) && vacio(a.bancoHipoteca)) Object.assign(escribir, hip)
+  else if ('hipoteca' in hip && !vacio(a.hipoteca) && a.hipoteca !== hip.hipoteca) conflictos.push('hipoteca declarada distinta de la guardada: revisar')
+
+  if ('capitalContenido' in propuesta && vacio(a.capitalContenido)) escribir.capitalContenido = propuesta.capitalContenido
+  return { escribir, conflictos, confirmado: false }
 }

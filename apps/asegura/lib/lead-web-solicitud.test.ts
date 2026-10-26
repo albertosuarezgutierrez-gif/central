@@ -37,11 +37,11 @@ const sqlRamos = readFileSync(new URL('../prisma/sql/2026-10-25_solicitud_datos_
 
 test('un enlace del formulario web (actor `web`) NUNCA trae el DNI ni el nacimiento de la ficha', () => {
   const f = sol.slice(sol.indexOf('export async function solicitudPorToken'), sol.indexOf('export type ResultadoDocSolicitud'))
-  const ciego = f.indexOf('if (f.creadaPor === ACTOR_ENLACE_WEB) return')
+  const ciego = f.indexOf('if (enlaceACiegas(f.creadaPor)) return')
   const relleno = f.indexOf('await identidadFicha(f)')
   assert.ok(ciego > 0 && relleno > ciego, 'la salida a ciegas va ANTES de leer la identidad de la ficha')
   assert.match(sol, /creada_por as "creadaPor"/)
-  assert.match(sol, /export const ACTOR_ENLACE_WEB = 'web'/)
+  assert.match(sol, /export \{ ACTOR_ENLACE_WEB \} from '\.\/enlace-ciego'/)
 })
 
 test('ficha que ya existía: campos a ciegas (NADA_CONOCIDO) en las dos ramas, y solo con el actor web', () => {

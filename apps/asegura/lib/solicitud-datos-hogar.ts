@@ -5,8 +5,10 @@
  * 1. Catastro con la dirección declarada (`inmueblesPorDireccion`, calle OFICIAL si la eligió del callejero):
  *    solo un inmueble INEQUÍVOCO (`inmuebleUnicoCatastro`: el único que casa con CP/planta/puerta) da referencia,
  *    m² y año. Varios, ninguno o caído → sin datos del Catastro, y el aviso dice cuál fue.
- * 2. Lo declarado + el Catastro se escribe en `info_riesgo.datosVivienda` SOLO en los huecos y SIN confirmar, por
- *    `calcularEdicionRiesgo` (el mismo cálculo que la pantalla del riesgo). La ficha del cliente no se toca.
+ * 2. Lo declarado + el Catastro se escribe en `info_riesgo.datosVivienda` por BLOQUES atómicos (`planEscrituraVivienda`:
+ *    dirección solo si la guardada está vacía entera; Catastro solo sin referencia previa o con la misma) y SIN confirmar,
+ *    por `calcularEdicionRiesgo` con la precarga de la póliza. Un bloque confirmado por Alberto no se toca. Los choques
+ *    van al aviso. La ficha del cliente no se toca.
  * 3. Telegram a Alberto con el resumen (`textoAvisoDatosHogar`).
  *
  * Ni la dirección ni la referencia van a ningún log: solo el motivo.
@@ -16,9 +18,12 @@ import { tgSend } from '@central/core-telegram'
 import { bajarCatastro, inmueblesPorDireccion } from '@central/core-catastro/http'
 import { precalificarHogar } from '@central/core-catastro'
 import {
+  CLAVES_BLOQUE_CATASTRO,
+  CLAVES_BLOQUE_DIRECCION,
   calcularEdicionRiesgo,
   direccionDeRespuestas,
-  soloHuecos,
+  leerBloqueDeRamo,
+  planEscrituraVivienda,
   viviendaDeSolicitud,
   type CatastroSolicitud,
   type Respuesta,
@@ -26,6 +31,7 @@ import {
 import { inmuebleUnicoCatastro } from '@central/module-tarificacion'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+import { precargaDePolizaDeOportunidad } from './oportunidad-riesgo'
 import { textoAvisoDatosHogar } from './aviso-datos-hogar.ts'
 import { enlaceFichaCliente, URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
 import { partirDireccion, siglaDeTipoVia } from './codeoscopic/direccion.ts'
@@ -68,41 +74,65 @@ export async function catastroDeSolicitud(r: Record<string, Respuesta>): Promise
   return r2
 }
 
-/** Escribe en los huecos de `datosVivienda` (sin confirmar). Devuelve cuántos campos, o `null` si no se pudo. */
-async function anotarEnRiesgo(correduriaId: string, oportunidadId: string, propuesta: Record<string, string | number | boolean>): Promise<number | null> {
+export type ResultadoAnotar = {
+  /** Campos escritos; `null` = no se pudo (error o la oportunidad ya no es de hogar). */
+  anotados: number | null
+  /** Lo que no se escribió por chocar con lo guardado. */
+  conflictos: string[]
+  /** El bloque de la vivienda estaba confirmado por Alberto: no se ha tocado. */
+  confirmado: boolean
+}
+
+/** A qué bloque atómico pertenece cada campo (si uno no valida, cae su bloque ENTERO, no solo él). */
+function bloqueDe(campo: string): string {
+  if ((CLAVES_BLOQUE_DIRECCION as readonly string[]).includes(campo)) return 'direccion'
+  if ((CLAVES_BLOQUE_CATASTRO as readonly string[]).includes(campo)) return 'catastro'
+  if (campo === 'hipoteca' || campo === 'bancoHipoteca') return 'hipoteca'
+  return campo
+}
+
+/**
+ * Escribe en `datosVivienda` por BLOQUES (`planEscrituraVivienda`), sin confirmar, partiendo de lo que enseña la
+ * pantalla del riesgo: lo estructurado o, sin ello, la PRECARGA de la póliza (que así no se pierde). Bloque confirmado =
+ * no se toca.
+ */
+async function anotarEnRiesgo(correduriaId: string, oportunidadId: string, propuesta: Record<string, string | number | boolean>): Promise<ResultadoAnotar> {
   try {
     return await prismaAsegura().$transaction(async (tx) => {
-      const [op] = await tx.$queryRaw<{ tipo: string; info: unknown }[]>(Prisma.sql`
-        select tipo::text as tipo, info_riesgo as info from oportunidades
+      const [op] = await tx.$queryRaw<{ tipo: string; info: unknown; polizaId: string | null }[]>(Prisma.sql`
+        select tipo::text as tipo, info_riesgo as info, poliza_id::text as "polizaId" from oportunidades
         where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid for update`)
-      if (!op || op.tipo !== 'hogar') return null
+      if (!op || op.tipo !== 'hogar') return { anotados: null, conflictos: [], confirmado: false }
       const info = op.info !== null && typeof op.info === 'object' && !Array.isArray(op.info) ? (op.info as Record<string, unknown>) : {}
-      const actual = info.datosVivienda !== null && typeof info.datosVivienda === 'object' ? (info.datosVivienda as Record<string, unknown>) : null
-      let parcial = soloHuecos(actual, propuesta)
+      const precarga = info.datosVivienda === undefined ? await precargaDePolizaDeOportunidad(tx, correduriaId, op.polizaId, 'hogar') : null
+      const visto = leerBloqueDeRamo('hogar', info, precarga).datos
+      const confirmadoAt = typeof visto.confirmadoAt === 'string' && visto.confirmadoAt !== '' ? visto.confirmadoAt : null
+      const plan = planEscrituraVivienda(visto, propuesta, confirmadoAt)
+      if (plan.confirmado) return { anotados: 0, conflictos: [], confirmado: true }
+      let parcial = plan.escribir
       const ahora = new Date().toISOString()
-      // Un campo que no valide se descarta (y se reintenta una vez sin él): no tumba al resto.
-      for (let intento = 0; intento < 2 && Object.keys(parcial).length > 0; intento++) {
-        const e = calcularEdicionRiesgo({ ramo: 'hogar', clave: 'datosVivienda', info, parcial, confirmar: false, ahora, precarga: null })
+      for (let intento = 0; intento < 3 && Object.keys(parcial).length > 0; intento++) {
+        const e = calcularEdicionRiesgo({ ramo: 'hogar', clave: 'datosVivienda', info, parcial, confirmar: false, ahora, precarga })
         if (e.ok) {
-          if (!e.hayQueEscribir) return 0
+          if (!e.hayQueEscribir) return { anotados: 0, conflictos: plan.conflictos, confirmado: false }
           await tx.$executeRaw(Prisma.sql`
             update oportunidades set info_riesgo = ${JSON.stringify(e.infoNueva)}::jsonb, updated_at = now()
             where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
           await tx.$executeRaw(Prisma.sql`
             insert into oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
             values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'datos_enlace_riesgo',
-                    ${JSON.stringify({ campos: e.cambios.map((c) => c.campo) })}::jsonb, 'el cliente, por el enlace')`)
-          return e.cambios.length
+                    ${JSON.stringify({ campos: e.cambios.map((c) => c.campo), conflictos: plan.conflictos })}::jsonb, 'el cliente, por el enlace')`)
+          return { anotados: e.cambios.length, conflictos: plan.conflictos, confirmado: false }
         }
-        const malos = new Set((e.errores ?? []).map((x) => x.campo))
-        if (malos.size === 0) return null
-        parcial = Object.fromEntries(Object.entries(parcial).filter(([k]) => !malos.has(k)))
+        const malos = new Set((e.errores ?? []).map((x) => bloqueDe(x.campo)))
+        if (malos.size === 0) return { anotados: null, conflictos: plan.conflictos, confirmado: false }
+        parcial = Object.fromEntries(Object.entries(parcial).filter(([k]) => !malos.has(bloqueDe(k))))
       }
-      return 0
+      return { anotados: 0, conflictos: plan.conflictos, confirmado: false }
     })
   } catch (err) {
     console.error('[solicitud-datos-hogar] no se pudo anotar en el riesgo:', err instanceof Error ? err.message : err)
-    return null
+    return { anotados: null, conflictos: [], confirmado: false }
   }
 }
 
@@ -117,9 +147,9 @@ export async function trasCompletarHogar(p: {
   try {
     const catastro = await catastroDeSolicitud(p.respuestas)
     const propuesta = viviendaDeSolicitud(p.respuestas, catastro, new Date().toISOString())
-    const anotados = await anotarEnRiesgo(p.correduriaId, p.oportunidadId, propuesta)
-    const enlace = `${enlaceFichaCliente(p.clienteId, process.env.PLATAFORMA_URL?.trim() || URL_PLATAFORMA_DEFECTO)}`
-    await tgSend(textoAvisoDatosHogar({ respuestas: p.respuestas, catastro, enlaceFicha: enlace, tercero: p.tercero, anotados }))
+    const r = await anotarEnRiesgo(p.correduriaId, p.oportunidadId, propuesta)
+    const enlace = enlaceFichaCliente(p.clienteId, process.env.PLATAFORMA_URL?.trim() || URL_PLATAFORMA_DEFECTO)
+    await tgSend(textoAvisoDatosHogar({ respuestas: p.respuestas, catastro, enlaceFicha: enlace, tercero: p.tercero, anotados: r.anotados, conflictos: r.conflictos, confirmado: r.confirmado }))
   } catch (e) {
     console.error('[solicitud-datos-hogar] aviso tras completar falló:', e instanceof Error ? e.message : e)
   }

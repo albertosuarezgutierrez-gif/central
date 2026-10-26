@@ -36,6 +36,7 @@ import {
   type RamoSolicitud,
   type Respuesta,
   type TipoDocSolicitud,
+  type ViaValidada,
 } from '@central/module-seguros'
 import { PREFIJO_HISTORIAL_DATOS_PRESUPUESTO } from '@central/module-seguros-portal'
 import { decryptField, encryptField } from '@central/module-seguros-pii'
@@ -48,13 +49,11 @@ import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 import { oportunidadDesdeFichero } from './oportunidad-documento'
 import { trasCompletarHogar } from './solicitud-datos-hogar'
+import { enlaceACiegas, politicaDocEnlace } from './enlace-ciego'
+import { viasValidadas, zonaCpServidor } from './solicitud-datos-direccion'
 
-/**
- * `creada_por` de las solicitudes que genera el formulario web ANÓNIMO (lead web, 06/10/2026 y 25/10/2026). Un
- * enlace así NUNCA trae datos de la ficha relleno (ni DNI ni nacimiento) ni pregunta según lo que la ficha ya sabe:
- * el formulario lo pudo rellenar cualquiera con el email de un cliente y su propio móvil.
- */
-export const ACTOR_ENLACE_WEB = 'web'
+// `creada_por = 'web'` = enlace del formulario ANÓNIMO, «a ciegas» (regla y porqué en `enlace-ciego.ts`).
+export { ACTOR_ENLACE_WEB } from './enlace-ciego'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TOKEN = /^[A-Za-z0-9_-]{40,60}$/
@@ -304,7 +303,7 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   // es suyo para verlo (a diferencia del propio, que Alberto decidió traer relleno).
   if (f.tercero) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: true }
   // Enlace del formulario web ANÓNIMO: nada de la ficha, ni su DNI (ver `ACTOR_ENLACE_WEB`).
-  if (f.creadaPor === ACTOR_ENLACE_WEB) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: false }
+  if (enlaceACiegas(f.creadaPor)) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: false }
   const id = await identidadFicha(f)
   const campos = conIdentidad(f.campos).map((c) => {
     const actual = c.clave === 'dni' ? id.dni : c.clave === 'fechaNacimiento' ? id.fechaNacimiento : null
@@ -356,10 +355,11 @@ export async function subirDocumentoSolicitud(
     returning documentos_subidos as n`)
   if (reservada.length === 0) return { ok: false, estado: 'tope', motivo: `Como máximo ${MAX_DOCS_SOLICITUD} documentos por enlace.` }
 
+  // Enlace a ciegas (formulario web): ni contraseñas de la ficha, ni oportunidades; se archiva para revisión.
+  const politica = politicaDocEnlace(f.creadaPor)
   // Primero se lee (para saber qué es y archivarlo con su tipo); si la IA falla, se archiva como «otro».
-  const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre, {
-    contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId),
-  })
+  const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre,
+    politica.probarContrasenasFicha ? { contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId) } : {})
   const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, conIdentidad(f.campos)) : { tipo: 'otro' as const, valores: {} }
   const g = await guardarDocumento(f.correduriaId, {
     clienteId: f.clienteId,
@@ -367,7 +367,7 @@ export async function subirDocumentoSolicitud(
     nombre: fichero.nombre,
     mime: fichero.mime,
     contenido: fichero.contenido,
-    notas: `${etiquetaDocSolicitud(leido.tipo)} · subido por el cliente en el enlace de datos del presupuesto`,
+    notas: `${politica.notaRevision ? `${politica.notaRevision} · ` : ''}${etiquetaDocSolicitud(leido.tipo)} · subido por el cliente en el enlace de datos del presupuesto`,
     subidoPor: 'cliente',
   })
   if (!g.ok) return { ok: false, estado: g.status === 415 ? 'invalido' : 'error', motivo: g.motivo }
@@ -384,7 +384,7 @@ export async function subirDocumentoSolicitud(
   // Todo documento de seguro abre o completa su oportunidad (29/09/2026), tras contestar al cliente.
   // Si es su póliza actual, completa la del presupuesto (misma ficha y ramo: se deduplica). Un DNI,
   // un carné o los papeles del coche ya están clasificados y no traen datos de seguro: no se relee.
-  if (leido.tipo === 'poliza' || leido.tipo === 'otro') {
+  if (politica.abrirOportunidad && (leido.tipo === 'poliza' || leido.tipo === 'otro')) {
     const { correduriaId, clienteId } = f
     const fich = { contenido: fichero.contenido, mime: fichero.mime, nombre: fichero.nombre }
     try {
@@ -413,7 +413,10 @@ export async function responderSolicitud(
   if (!f) return { ok: false, estado: 'muerta' }
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
-  const v = validarRespuestas(conIdentidad(f.campos), entrada)
+  const campos = conIdentidad(f.campos)
+  // Dirección: provincia/municipio contra la tabla del CP y la calle «oficial» solo si el callejero la confirma.
+  const vias = campos.some((c) => c.tipo === 'direccion') ? await viasValidadas(campos, entrada) : new Map<string, ViaValidada>()
+  const v = validarRespuestas(campos, entrada, new Date(), { zonaCp: zonaCpServidor, viaValidada: (clave) => vias.get(clave) ?? null })
   if (!v.ok) return { ok: false, estado: 'errores', errores: v.errores }
   // Datos de otra persona: sin su permiso (o ser ella) no se guardan (RGPD, art. 6 y 14).
   if (f.tercero && consentimiento !== true) {
@@ -484,9 +487,13 @@ export async function responderSolicitud(
     const { correduriaId, oportunidadId, tercero } = f
     try {
       after(async () => {
-        const [o] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>(Prisma.sql`
-          select cliente_id::text as "clienteId" from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
-        await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, tercero })
+        try {
+          const [o] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>(Prisma.sql`
+            select cliente_id::text as "clienteId" from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
+          await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, tercero })
+        } catch (e) {
+          console.error('[solicitud-datos] aviso de hogar tras completar falló:', e instanceof Error ? e.message : e)
+        }
       })
     } catch (e) {
       console.error('[solicitud-datos] no se pudo programar el aviso de hogar:', e instanceof Error ? e.message : e)

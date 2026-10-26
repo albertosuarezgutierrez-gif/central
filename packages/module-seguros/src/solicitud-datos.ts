@@ -354,7 +354,35 @@ function textoCorto(v: unknown, max: number): string | null {
  * La calle oficial del callejero (`ViaTipo`/`ViaNombre`) solo se guarda si viene entera; si no, `null` = «por validar».
  * Un campo vacío es `null` (nunca '' ni 0).
  */
-function validarDireccion(c: CampoSolicitud, entrada: Record<string, unknown>): { respuestas: Record<string, Respuesta>; errores: Record<string, string> } {
+/** Qué dice la tabla oficial de un CP. `null` en un campo = la tabla no lo sabe (no se puede contrastar: se acepta). */
+export type ZonaCp = { provincias: string[] | null; municipios: string[] | null }
+
+/** La calle OFICIAL que el SERVIDOR ha comprobado contra el callejero para ese campo; `null` = sin validar. */
+export type ViaValidada = { tipo: string; nombre: string } | null
+
+export type OpcionesValidacion = {
+  /** Tabla CP → provincia(s)/municipios (en el servidor, `@central/core-direccion`). Sin ella no se contrasta. */
+  zonaCp?: (cp: string) => ZonaCp
+  /** Calle validada por el servidor contra el callejero, por clave del campo `direccion`. Sin ella, ninguna es oficial. */
+  viaValidada?: (clave: string) => ViaValidada
+}
+
+const plano = (s: string): string => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim()
+
+/** ¿Provincia y municipio casan con lo que dice la tabla del CP? Lo que la tabla no sabe no se contrasta. */
+export function casaZonaCp(provincia: string, municipio: string, zona: ZonaCp): { provincia: boolean; municipio: boolean } {
+  const igual = (a: string, b: string) => {
+    const pa = plano(a), pb = plano(b)
+    // «Alicante/Alacant»: vale cualquiera de las dos grafías.
+    return pa === pb || pb.split('/').map((x) => x.trim()).includes(pa)
+  }
+  return {
+    provincia: !zona.provincias || zona.provincias.length === 0 || zona.provincias.some((p) => igual(provincia, p)),
+    municipio: !zona.municipios || zona.municipios.length === 0 || zona.municipios.some((m) => igual(municipio, m)),
+  }
+}
+
+function validarDireccion(c: CampoSolicitud, entrada: Record<string, unknown>, opciones: OpcionesValidacion): { respuestas: Record<string, Respuesta>; errores: Record<string, string> } {
   const k = (sub: SubclaveDireccion) => claveDireccion(c.clave, sub)
   const respuestas: Record<string, Respuesta> = {}
   const errores: Record<string, string> = {}
@@ -380,10 +408,24 @@ function validarDireccion(c: CampoSolicitud, entrada: Record<string, unknown>): 
   }
   respuestas[k('Planta')] = textoCorto(entrada[k('Planta')], 10)
   respuestas[k('Puerta')] = textoCorto(entrada[k('Puerta')], 10)
+  // Provincia y municipio tienen que ser los del CP (el navegador los rellena, pero lo que llega lo manda cualquiera).
+  const cp = respuestas[k('Cp')]
+  const prov = respuestas[k('Provincia')]
+  const mun = respuestas[k('Municipio')]
+  if (opciones.zonaCp && typeof cp === 'string' && typeof prov === 'string' && typeof mun === 'string') {
+    const casa = casaZonaCp(prov, mun, opciones.zonaCp(cp))
+    if (!casa.provincia) errores[k('Provincia')] = 'La provincia no es la de ese código postal.'
+    if (!casa.municipio) errores[k('Municipio')] = 'Ese municipio no es de ese código postal.'
+  }
+  // La calle OFICIAL solo si la ha validado el SERVIDOR contra el callejero; lo que mande el cliente no la hace oficial.
+  // Sin validar: `null` = «por validar» (la calle escrita queda en `Calle`).
   const viaTipo = textoCorto(entrada[k('ViaTipo')], 10)
   const viaNombre = textoCorto(entrada[k('ViaNombre')], 80)
-  respuestas[k('ViaTipo')] = viaTipo && viaNombre ? viaTipo.toUpperCase() : null
-  respuestas[k('ViaNombre')] = viaTipo && viaNombre ? viaNombre.toUpperCase() : null
+  const valida = opciones.viaValidada?.(c.clave) ?? null
+  const coincide = valida !== null && viaTipo !== null && viaNombre !== null
+    && plano(valida.tipo) === plano(viaTipo) && plano(valida.nombre) === plano(viaNombre)
+  respuestas[k('ViaTipo')] = coincide ? plano(valida.tipo) : null
+  respuestas[k('ViaNombre')] = coincide ? plano(valida.nombre) : null
   return { respuestas, errores }
 }
 
@@ -395,6 +437,7 @@ export function validarRespuestas(
   campos: readonly CampoSolicitud[],
   entrada: Record<string, unknown>,
   hoy: Date = new Date(),
+  opciones: OpcionesValidacion = {},
 ): ValidacionSolicitud {
   const errores: Record<string, string> = {}
   const respuestas: Record<string, Respuesta> = {}
@@ -402,7 +445,7 @@ export function validarRespuestas(
   for (const c of campos) {
     if (c.tipo === 'direccion') {
       // Escalares por subclave; `siMarcado` no aplica a una dirección.
-      const d = validarDireccion(c, entrada)
+      const d = validarDireccion(c, entrada, opciones)
       Object.assign(respuestas, d.respuestas)
       Object.assign(errores, d.errores)
       continue

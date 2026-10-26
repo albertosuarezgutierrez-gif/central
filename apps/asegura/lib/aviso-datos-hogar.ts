@@ -39,6 +39,10 @@ export type EntradaAvisoDatosHogar = {
   tercero: boolean
   /** Qué se ha podido escribir en el riesgo de la oportunidad (`null` = no se pudo). */
   anotados: number | null
+  /** Lo que NO se escribió por chocar con lo guardado (dirección o referencia distintas…). */
+  conflictos?: string[]
+  /** Los datos de la vivienda estaban confirmados por Alberto: no se han tocado. */
+  confirmado?: boolean
 }
 
 /** `true` si el seguro es para el certificado del banco: es lo que más prisa corre y lo que más se equivoca. */
@@ -75,7 +79,9 @@ export function textoAvisoDatosHogar(e: EntradaAvisoDatosHogar): string {
   lineas.push(`📅 Efecto deseado: ${efecto ?? 'sin fecha'}`)
   const comentario = txt(r.comentario)
   if (comentario) lineas.push(`💬 ${escapeHtml(comentario.slice(0, 300))}`)
-  if (e.anotados === null) lineas.push('⚠️ No se han podido pasar al riesgo de la oportunidad: están en «Datos pedidos».')
+  for (const c of e.conflictos ?? []) lineas.push(`⚠️ ${escapeHtml(c)}`)
+  if (e.confirmado) lineas.push('🔒 Datos de la vivienda confirmados: no se han tocado (lo declarado está en «Datos pedidos»).')
+  else if (e.anotados === null) lineas.push('⚠️ No se han podido pasar al riesgo de la oportunidad: están en «Datos pedidos».')
   else if (e.anotados > 0) lineas.push(`✍️ ${e.anotados} dato${e.anotados === 1 ? '' : 's'} pasados al riesgo (sin confirmar; lo que ya tenías no se ha tocado).`)
   lineas.push(`👉 <a href="${escapeHtml(e.enlaceFicha)}">abrir ficha</a>`)
   return lineas.join('\n')
