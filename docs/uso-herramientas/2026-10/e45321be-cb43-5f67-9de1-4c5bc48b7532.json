@@ -1,0 +1,42 @@
+{
+ "sesion": "e45321be-cb43-5f67-9de1-4c5bc48b7532",
+ "inicio": "2026-10-26T09:21:23.851Z",
+ "fin": "2026-10-26T09:22:14.783Z",
+ "llamadas": 7,
+ "categorias": {
+  "otro": {
+   "llamadas": 4,
+   "chars_in": 494,
+   "chars_out": 497,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 3
+   }
+  },
+  "mcp:idealista": {
+   "llamadas": 1,
+   "chars_in": 58,
+   "chars_out": 10806,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__idealista__property_detail": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 4249,
+   "chars_out": 4691,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
+   }
+  }
+ }
+}
