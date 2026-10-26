@@ -1,8 +1,8 @@
 {
  "sesion": "e26fe98d-1900-5f3d-9722-92f2980b9bef",
  "inicio": "2026-10-26T21:07:24.050Z",
- "fin": "2026-10-26T21:07:28.909Z",
- "llamadas": 7,
+ "fin": "2026-10-26T22:01:18.464Z",
+ "llamadas": 48,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 1,
@@ -27,26 +27,88 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 4,
-   "chars_in": 323,
-   "chars_out": 5828,
+   "llamadas": 17,
+   "chars_in": 1811,
+   "chars_out": 21267,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Glob": 2,
-    "Grep": 2
+    "Glob": 8,
+    "Grep": 8,
+    "Read": 1
    }
   },
   "otro": {
-   "llamadas": 1,
-   "chars_in": 53,
-   "chars_out": 100,
+   "llamadas": 16,
+   "chars_in": 11743,
+   "chars_out": 81718,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1
+    "ToolSearch": 4,
+    "WebSearch": 7,
+    "SubagentHandback": 2,
+    "ReadNotifications": 3
+   }
+  },
+  "mcp:OpenSEO": {
+   "llamadas": 2,
+   "chars_in": 524,
+   "chars_out": 2559,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__OpenSEO__list_projects": 1,
+    "mcp__OpenSEO__get_keyword_metrics": 1
+   }
+  },
+  "bash": {
+   "llamadas": 5,
+   "chars_in": 1338,
+   "chars_out": 7291,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 5
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 4747,
+   "chars_out": 9746,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 711,
+   "chars_out": 9435,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 1107534,
+   "tools": {
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 2
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 2,
+   "chars_in": 251,
+   "chars_out": 347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1,
+    "mcp__claude-code-remote__send_later": 1
    }
   }
  }
