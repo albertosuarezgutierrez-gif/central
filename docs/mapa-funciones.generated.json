@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T06:18:34Z",
-  "sha": "e272c5f1e819ab388ee9e3c9f154f36d291da170",
+  "generadoEn": "2026-10-26T07:26:50Z",
+  "sha": "ec73cb9a8fc22a0340639a9b1a77d8ef796447fb",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7562,6 +7562,27 @@
       "hash": "5b119fbb1f9f"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/datos/borrador/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "POST /api/datos/borrador { token, borrador, consentimiento } — guardado automático del enlace de datos (26/10/2026). Público y sin sesión, como el enlace: lo protege el token. El navegador lo manda co"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/datos/borrador",
+      "hash": "cee1d97c1a7a"
+    },
+    {
       "ruta": "apps/asegura-portal/app/api/datos/codigo-postal/route.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -7601,7 +7622,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/datos/documento",
-      "hash": "37f95d0c23f9"
+      "hash": "918de460afd6"
     },
     {
       "ruta": "apps/asegura-portal/app/api/datos/route.ts",
@@ -7644,6 +7665,27 @@
       "tablas": [],
       "rutaApi": "/api/datos/vias",
       "hash": "0c23d9da102a"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/datos/vivienda/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "`GET /api/datos/vivienda?token=&provincia=&municipio=&sigla=&calle=&numero=&planta=&puerta=&cp=` → `{ estado, tipo, metros, anio }` (26/10/2026): lo que el Catastro dice de la vivienda, para la tarjet"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/datos/vivienda",
+      "hash": "41def131469a"
     },
     {
       "ruta": "apps/asegura-portal/app/api/documento/dni/route.ts",
@@ -9973,16 +10015,16 @@
           "exportada": false,
           "params": "clave: string, d: ValorDireccionDatos",
           "retorno": "Record<string, string>",
-          "linea": 14,
+          "linea": 16,
           "resumen": "De lo que hay en pantalla a las subclaves escalares que valida asegura (`claveDireccion`)."
         },
         {
           "nombre": "Formulario",
           "kind": "function",
           "exportada": true,
-          "params": "{ token, campos, ramo, tercero = false }: { token: string; campos: CampoSolicitud[]; ramo: RamoSolicitud; tercero?: boolean }",
+          "params": "{ token, campos, ramo, tercero = false, borrador = null }: { token: string; campos: CampoSolicitud[]; ramo: RamoSolicitud; tercero?: boolean; borrador?: BorradorLeido | null }",
           "retorno": null,
-          "linea": 33,
+          "linea": 40,
           "resumen": "El formulario del enlace de datos. Pinta los campos que manda asegura y nada más."
         }
       ],
@@ -9990,7 +10032,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d88bfdea10f2"
+      "hash": "234850ca4caf"
     },
     {
       "ruta": "apps/asegura-portal/app/datos/[token]/page.tsx",
@@ -10005,13 +10047,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 15,
+          "linea": 14,
           "resumen": "«Completa tus datos para el presupuesto» (24/09/2026). PÚBLICA y sin código, por decisión de Alberto: el cliente suele haber escrito por WhatsApp y puede no tener correo. Por eso aquí NO se enseña nad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db81d688953b"
+      "hash": "2aaae2a0c689"
     },
     {
       "ruta": "apps/asegura-portal/app/Entrada.tsx",
@@ -13249,6 +13291,88 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3bb3ce893adc"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/datos-vista.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Qué enseña el formulario del enlace de datos (26/10/2026). PURO, para poder probarlo sin navegador. - Dos niveles: primero los ESENCIALES (lo mínimo para dar precio), luego el aviso «Con esto ya podemos calcular tu precio…» y los OPCIONALES. Enviar solo los esenciales completa igual. - Hogar: lo que",
+      "exporta": [
+        "textoTarjetaVivienda",
+        "visibleSegunCatastro",
+        "opcionesVisibles",
+        "valoresConfirmadosCatastro",
+        "esencialesPendientes",
+        "estadoDesdeBorrador",
+        "borradorConContenido"
+      ],
+      "funciones": [
+        {
+          "nombre": "textoTarjetaVivienda",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: ViviendaCatastroPublica | null, planta: string",
+          "retorno": "string | null",
+          "linea": 26,
+          "resumen": "«Piso · 2º · 85 m² · 1998». `null` = no hay nada que enseñar (no sale la tarjeta)."
+        },
+        {
+          "nombre": "visibleSegunCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CampoSolicitud, ctx: ContextoVista, planta: string",
+          "retorno": "boolean",
+          "linea": 39,
+          "resumen": "¿Se enseña este campo, según lo que dice el Catastro? (El `siMarcado` lo mira quien llama.)"
+        },
+        {
+          "nombre": "opcionesVisibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CampoSolicitud, ctx: ContextoVista",
+          "retorno": "CampoSolicitud['opciones']",
+          "linea": 59,
+          "resumen": "Opciones del tipo de vivienda: si el Catastro dice «casa», solo las de casa."
+        },
+        {
+          "nombre": "valoresConfirmadosCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[], ctx: ContextoVista, planta: string",
+          "retorno": "Record<string, string>",
+          "linea": 75,
+          "resumen": "Lo que el cliente VIO en la tarjeta del Catastro y CONFIRMÓ (26/10/2026): viaja con `confirmaCatastro` para que asegura no dependa de volver a consultar el Catastro. Solo las preguntas `catastro` que "
+        },
+        {
+          "nombre": "esencialesPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "visibles: readonly CampoSolicitud[], valores: Record<string, unknown>, noLoSe: ReadonlySet<string>",
+          "retorno": "string[]",
+          "linea": 92,
+          "resumen": "Esenciales visibles sin contestar (ni «No lo sé»): el formulario no se envía y los marca. Los obligatorios los vuelve a mirar el servidor; esto cubre los esenciales que dependen del Catastro (que el s"
+        },
+        {
+          "nombre": "estadoDesdeBorrador",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[], borrador: Record<string, string | boolean | string[]> | null",
+          "retorno": "EstadoInicial",
+          "linea": 120,
+          "resumen": "El borrador guardado → estado inicial del formulario. Sin borrador, lo que trae la ficha (`actual`: DNI y nacimiento). Con borrador, lo escrito por el cliente MANDA sobre `actual` (es lo último que te"
+        },
+        {
+          "nombre": "borradorConContenido",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[], borrador: Record<string, unknown>",
+          "retorno": "boolean",
+          "linea": 146,
+          "resumen": "¿Hay algo que guardar? Un formulario en blanco (o solo con lo que traía la ficha) no crea borrador."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eb22b15c49af"
     },
     {
       "ruta": "apps/asegura-portal/lib/declarada-ajena.ts",
@@ -21151,21 +21275,33 @@
       "ambito": "apps/asegura-portal",
       "resumen": "El enlace «completa tus datos para el presupuesto» (24/09/2026), lado portal. Por TOKEN y sin identidad (decisión de Alberto): la página no enseña nada del cliente, solo pide. El portal no escribe en la cartera: lo manda por el puente. /",
       "exporta": [
+        "interpretarBorrador",
         "interpretarSolicitud",
         "llamarPuenteSolicitud",
         "leerSolicitud",
+        "ramoSolicitudViva",
         "tokenSolicitudVivo",
         "interpretarDocSubido",
-        "subirDocPuente"
+        "subirDocPuente",
+        "guardarBorradorPuente"
       ],
       "funciones": [
+        {
+          "nombre": "interpretarBorrador",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, campos: readonly CampoSolicitud[]",
+          "retorno": "BorradorLeido | null",
+          "linea": 23,
+          "resumen": "El borrador que devuelve el puente → solo valores escalares (o la lista de «No lo sé») y solo de claves que existen en el formulario. Una forma rara = sin borrador (el formulario se abre en blanco, nu"
+        },
         {
           "nombre": "interpretarSolicitud",
           "kind": "function",
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SolicitudLeida",
-          "linea": 17,
+          "linea": 40,
           "resumen": "Lo que devuelve el puente. Una forma rara es `error` (no «muerta»: no se sabe)."
         },
         {
@@ -21174,7 +21310,7 @@
           "exportada": false,
           "params": "",
           "retorno": "",
-          "linea": 34
+          "linea": 57
         },
         {
           "nombre": "llamarPuenteSolicitud",
@@ -21182,7 +21318,7 @@
           "exportada": true,
           "params": "init: { metodo: 'GET'; token: string } | { metodo: 'POST'; token: string; respuestas: unknown; consentimiento?: boolean }",
           "retorno": "Promise<",
-          "linea": 41
+          "linea": 64
         },
         {
           "nombre": "leerSolicitud",
@@ -21190,7 +21326,16 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<SolicitudLeida>",
-          "linea": 66
+          "linea": 89
+        },
+        {
+          "nombre": "ramoSolicitudViva",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, ahora = Date.now()",
+          "retorno": "Promise<RamoSolicitud | null>",
+          "linea": 104,
+          "resumen": "El ramo de la solicitud del token si está VIVA; `null` = no vale (muerta, completada, rara o el puente no responde)."
         },
         {
           "nombre": "tokenSolicitudVivo",
@@ -21198,30 +21343,48 @@
           "exportada": true,
           "params": "token: string, ahora = Date.now()",
           "retorno": "Promise<boolean>",
-          "linea": 80
+          "linea": 115
+        },
+        {
+          "nombre": "valorParaCampo",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CampoSolicitud, x: unknown",
+          "retorno": "string | boolean | null",
+          "linea": 132,
+          "resumen": "Un valor leído de un documento (o de la póliza actual) → valor del formulario, pasado por la MISMA validación del campo que al enviar (26/10/2026): números (m², año, años sin siniestros, capitales) y "
         },
         {
           "nombre": "interpretarDocSubido",
           "kind": "function",
           "exportada": true,
-          "params": "status: number, json: unknown",
+          "params": "status: number, json: unknown, campos?: readonly CampoSolicitud[]",
           "retorno": "DocSubido",
-          "linea": 98,
-          "resumen": "Lo que devuelve la subida. Solo se proponen valores de texto/sí-no: lo demás se ignora."
+          "linea": 147,
+          "resumen": "Lo que devuelve la subida. Con `campos` (el formulario), cada valor se valida como su campo; sin ellos (llamadas antiguas), solo texto/sí-no y números como texto."
         },
         {
           "nombre": "subirDocPuente",
           "kind": "function",
           "exportada": true,
-          "params": "token: string, fichero: File, consentimiento = false",
+          "params": "token: string, fichero: File, consentimiento = false, clase: 'documento' | 'poliza' = 'documento'",
           "retorno": "Promise<",
-          "linea": 124,
+          "linea": 183,
           "resumen": "Reenvía el fichero al puente de asegura (multipart). `null` = el puente no respondió."
+        },
+        {
+          "nombre": "guardarBorradorPuente",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, borrador: unknown, consentimiento = false",
+          "retorno": "Promise<",
+          "linea": 216,
+          "resumen": "Reenvía el borrador al puente. `null` = el puente no respondió (el formulario sigue igual: es solo un borrador)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bd27aeacfd4d"
+      "hash": "29ddbd986d6b"
     },
     {
       "ruta": "apps/asegura-portal/lib/sugerencia.ts",
@@ -22153,6 +22316,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "595e8207f002"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/vivienda-catastro.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "«¿Es esta tu vivienda?» (26/10/2026) en el ENLACE de datos de hogar: con la dirección que va escribiendo el cliente se consulta el Catastro (libre y público) para ENSEÑARLE lo que dice —tipo, planta, m², año— en vez de preguntárselo. Si confirma, esas preguntas no se hacen; si corrige o el Catastro ",
+      "exporta": [
+        "viviendaCatastro"
+      ],
+      "funciones": [
+        {
+          "nombre": "viviendaCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: ConsultaVivienda",
+          "retorno": "Promise<ViviendaCatastroPublica>",
+          "linea": 27
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2c3a38802ee3"
     },
     {
       "ruta": "apps/asegura-portal/middleware.ts",
@@ -24825,13 +25009,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 24,
-          "resumen": "· anonimiza los prospectos web sin acuerdo al año (la fila se queda, con marca). Reglas y guardas en `lib/purga-rgpd.ts` (cepo `lib/purga-rgpd.test.ts`). Cerrojos: `CRON_SECRET` por Bearer · MODO INFO"
+          "linea": 26,
+          "resumen": "· borra el borrador (cifrado) de los enlaces de datos caducados, anulados o completados (siempre, también en informe). Reglas y guardas en `lib/purga-rgpd.ts` (cepo `lib/purga-rgpd.test.ts`). Cerrojos"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/purga-rgpd",
-      "hash": "dc532c746210"
+      "hash": "a7433316d334"
     },
     {
       "ruta": "apps/asegura/app/api/cron/revision-anual/route.ts",
@@ -24895,6 +25079,27 @@
       "tablas": [],
       "rutaApi": "/api/cron/siniestros-vinculo",
       "hash": "611ea88f4af9"
+    },
+    {
+      "ruta": "apps/asegura/app/api/cron/solicitudes-abandonadas/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "`?contar=1` fuerza el ensayo). Sin el SQL `2026-10-26_solicitud_datos_borrador.sql` → 503 `sin_migracion`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/solicitudes-abandonadas",
+      "hash": "e859eecd5211"
     },
     {
       "ruta": "apps/asegura/app/api/cron/tarificador-cola/route.ts",
@@ -29998,6 +30203,25 @@
       "hash": "d8ec7f6a895d"
     },
     {
+      "ruta": "apps/asegura/app/api/portal/solicitud-datos/borrador/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "POSTSin",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "POST { token, borrador, consentimiento } — guardado automático del enlace de datos (26/10/2026, fase B). Por TOKEN y sin identidad, como el enlace. Guarda CIFRADO lo que el cliente lleva escrito; nunc"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/portal/solicitud-datos/borrador",
+      "hash": "3cf9d618165c"
+    },
+    {
       "ruta": "apps/asegura/app/api/portal/solicitud-datos/documento/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -30008,13 +30232,13 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": null,
-          "linea": 22,
-          "resumen": "POST (multipart: token, documento) — el cliente sube un documento por el enlace de datos (24/09/2026). Se archiva en su ficha y la IA propone los campos que faltan. 200 { tipo, etiqueta, valores, avis"
+          "linea": 23,
+          "resumen": "POST (multipart: token, documento[, clase=poliza]) — el cliente sube un documento por el enlace de datos (24/09/2026). Se archiva en su ficha y la IA propone los campos que faltan. `clase=poliza` (26/"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/portal/solicitud-datos/documento",
-      "hash": "b6835a9bdcc6"
+      "hash": "02efb58f7b22"
     },
     {
       "ruta": "apps/asegura/app/api/portal/solicitud-datos/route.ts",
@@ -31600,6 +31824,37 @@
       "hash": "fed677d3712f"
     },
     {
+      "ruta": "apps/asegura/lib/aviso-abandono-solicitud.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Aviso a ALBERTO (Telegram) de los enlaces de datos `/datos/<token>` pendientes y SIN COMPLETAR a las 24 h (26/10/2026, fase B). PURO. Para que llame o reenvíe el enlace a tiempo. NUNCA se escribe al cliente (ni correo, ni WhatsApp): el aviso es solo interno. No lleva ningún dato del cliente: ramo, h",
+      "exporta": [
+        "tocaAvisoAbandono",
+        "textoAvisoAbandono"
+      ],
+      "funciones": [
+        {
+          "nombre": "tocaAvisoAbandono",
+          "kind": "function",
+          "exportada": true,
+          "params": "creada: Date, ahora: Date = new Date()",
+          "retorno": "boolean",
+          "linea": 26,
+          "resumen": "¿Toca avisar ya? Creada hace ≥ 24 h (la consulta lo filtra igual; esto lo deja escrito y probado)."
+        },
+        {
+          "nombre": "textoAvisoAbandono",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly SolicitudAbandonada[]",
+          "retorno": "string",
+          "linea": 30
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "74475f1db815"
+    },
+    {
       "ruta": "apps/asegura/lib/aviso-acceso.ts",
       "ambito": "apps/asegura",
       "resumen": "Avisar por correo a quien tiene una autorización PENDIENTE. El texto y el envío viven en `lib/correo-aviso-acceso.ts`; aquí está la BD y las cuatro comprobaciones que deciden si se manda algo: 1. **Las dos fichas son de esta correduría.** Un id que llega por el puerto no es prueba de nada. 2. **Hay ",
@@ -31738,7 +31993,7 @@
           "exportada": false,
           "params": "v: Respuesta | undefined",
           "retorno": "string | null",
-          "linea": 23
+          "linea": 28
         },
         {
           "nombre": "txt",
@@ -31746,7 +32001,7 @@
           "exportada": false,
           "params": "v: Respuesta | undefined",
           "retorno": "string | null",
-          "linea": 28
+          "linea": 33
         },
         {
           "nombre": "siNo",
@@ -31754,7 +32009,7 @@
           "exportada": false,
           "params": "v: Respuesta | undefined",
           "retorno": "string",
-          "linea": 29
+          "linea": 34
         },
         {
           "nombre": "etiqueta",
@@ -31762,7 +32017,25 @@
           "exportada": false,
           "params": "lista: readonly { valor: string; etiqueta: string }[], v: Respuesta | undefined",
           "retorno": "string",
-          "linea": 30
+          "linea": 35
+        },
+        {
+          "nombre": "tipoTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: Record<string, Respuesta>, d: { tipo: string | null } | null",
+          "retorno": "string",
+          "linea": 58,
+          "resumen": "El tipo: lo que dijo el cliente, o lo deducido del Catastro (y si lo confirmó)."
+        },
+        {
+          "nombre": "capitalTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "importe: Respuesta | undefined, tramos: readonly { valor: string; etiqueta: string; importe: number | null }[], tramo: Respuesta | undefined",
+          "retorno": "string",
+          "linea": 68,
+          "resumen": "Un capital: el importe tecleado (enlaces de antes) o el tramo elegido con lo que se anota."
         },
         {
           "nombre": "esParaBanco",
@@ -31770,7 +32043,7 @@
           "exportada": true,
           "params": "r: Record<string, Respuesta>",
           "retorno": "boolean",
-          "linea": 49,
+          "linea": 76,
           "resumen": "`true` si el seguro es para el certificado del banco: es lo que más prisa corre y lo que más se equivoca."
         },
         {
@@ -31779,12 +32052,12 @@
           "exportada": true,
           "params": "e: EntradaAvisoDatosHogar",
           "retorno": "string",
-          "linea": 53
+          "linea": 80
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "96f68754ca48"
+      "hash": "562990385a56"
     },
     {
       "ruta": "apps/asegura/lib/aviso-web-reglas.ts",
@@ -57240,6 +57513,29 @@
       "hash": "65464fcce2e6"
     },
     {
+      "ruta": "apps/asegura/lib/solicitud-borrador-purga.ts",
+      "ambito": "apps/asegura",
+      "resumen": "RGPD del borrador del enlace de datos (26/10/2026, revisión del PR #5068). El borrador (lo que el cliente teclea a medias, CIFRADO) solo tiene sentido en una solicitud PENDIENTE y viva. Al completarla, al anularla (a mano, por oportunidad cerrada o porque una nueva sustituye a la caducada) y al cadu",
+      "exporta": [
+        "limpiarBorradoresMuertos"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpiarBorradoresMuertos",
+          "kind": "function",
+          "exportada": true,
+          "params": "db: DbBorradorPurga, f: FiltroBorradorPurga",
+          "retorno": "Promise<ResultadoBorradorPurga>",
+          "linea": 26
+        }
+      ],
+      "tablas": [
+        "solicitud_datos"
+      ],
+      "rutaApi": null,
+      "hash": "9f5fdfa6c86f"
+    },
+    {
       "ruta": "apps/asegura/lib/solicitud-compania-bd.ts",
       "ambito": "apps/asegura",
       "resumen": "apps/asegura/lib/solicitud-compania-bd.ts Seguimiento de una SOLICITUD en la compañía de principio a fin (F1 del agente de correo, 21/10/2026, spec §4.1). Una fila por (correduría, compañía DGS, nº de solicitud) en `seguros.solicitud_compania`; cada correo es un hito (`correo_evento_entrante.solicit",
@@ -57347,16 +57643,16 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T | 'tope'>",
-          "linea": 41
+          "linea": 42
         },
         {
           "nombre": "catastroDeSolicitud",
           "kind": "function",
           "exportada": true,
           "params": "r: Record<string, Respuesta>",
-          "retorno": "Promise<CatastroSolicitud>",
-          "linea": 48,
-          "resumen": "El Catastro para la dirección declarada. Nunca lanza."
+          "retorno": "Promise<CatastroYDeduccion>",
+          "linea": 54,
+          "resumen": "El Catastro para la dirección declarada + el TIPO de vivienda deducido (26/10/2026: división horizontal, planta declarada contra las de la parcela → piso / bajo / último; ficha → unifamiliar). Nunca l"
         },
         {
           "nombre": "bloqueDe",
@@ -57364,7 +57660,7 @@
           "exportada": false,
           "params": "campo: string",
           "retorno": "string",
-          "linea": 87,
+          "linea": 97,
           "resumen": "A qué bloque atómico pertenece cada campo (si uno no valida, cae su bloque ENTERO, no solo él)."
         },
         {
@@ -57373,16 +57669,16 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string, propuesta: Record<string, string | number | boolean>",
           "retorno": "Promise<ResultadoAnotar>",
-          "linea": 99,
+          "linea": 109,
           "resumen": "Escribe en `datosVivienda` por BLOQUES (`planEscrituraVivienda`), sin confirmar, partiendo de lo que enseña la pantalla del riesgo: lo estructurado o, sin ello, la PRECARGA de la póliza (que así no se"
         },
         {
           "nombre": "trasCompletarHogar",
           "kind": "function",
           "exportada": true,
-          "params": "p: { correduriaId: string oportunidadId: string /** Ficha del CLIENTE de la oportunidad (la del enlace en plataforma). */ clienteId: string respuestas: Record<string, Respuesta> tercero: boolean }",
+          "params": "p: { correduriaId: string oportunidadId: string /** Ficha del CLIENTE de la oportunidad (la del enlace en plataforma). */ clienteId: string respuestas: Record<string, Respuesta> /** Los campos que se pidieron (para listar lo que queda «a pr",
           "retorno": "Promise<void>",
-          "linea": 139
+          "linea": 149
         }
       ],
       "tablas": [
@@ -57390,7 +57686,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "6a42ca294c0d"
+      "hash": "1d234f6f951d"
     },
     {
       "ruta": "apps/asegura/lib/solicitud-datos.ts",
@@ -57406,7 +57702,9 @@
         "anularSolicitud",
         "solicitudPorToken",
         "subirDocumentoSolicitud",
-        "responderSolicitud"
+        "textoAPreguntar",
+        "responderSolicitud",
+        "guardarBorradorSolicitud"
       ],
       "funciones": [
         {
@@ -57415,7 +57713,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "string",
-          "linea": 63,
+          "linea": 74,
           "resumen": "El enlace del portal para un token en claro. Solo se construye al crear la solicitud (el token no se guarda)."
         },
         {
@@ -57424,7 +57722,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "string",
-          "linea": 68
+          "linea": 79
         },
         {
           "nombre": "crearSolicitud",
@@ -57432,7 +57730,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, actor: string, personaId: string | null = null, /** `fichaCiega`: se pide todo como si la ficha no supiera nada (lead web de una ficha que ya existía). */ opciones: { fichaCiega?: boolean } = {},",
           "retorno": "Promise<",
-          "linea": 98,
+          "linea": 109,
           "resumen": "Crea (o devuelve la viva) la solicitud de datos de una oportunidad ABIERTA de moto/coche. `personaId` (29/09/2026): los datos de OTRA persona del riesgo (un familiar que es figura); sin él, los del cl"
         },
         {
@@ -57441,7 +57739,7 @@
           "exportada": true,
           "params": "correduriaId: string, personaId: string, ramo: RamoSolicitud",
           "retorno": "Promise<CampoSolicitud[] | null>",
-          "linea": 135,
+          "linea": 149,
           "resumen": "Qué se le pide a esa persona según lo que ya hay en su ficha. `null` = no se encuentra la ficha."
         },
         {
@@ -57450,8 +57748,17 @@
           "exportada": true,
           "params": "tx: Prisma.TransactionClient, p: { correduriaId: string; oportunidadId: string; personaId: string; ramo: RamoSolicitud; campos: CampoSolicitud[]; actor: string; tercero: boolean; estadoOportunidad: string },",
           "retorno": "Promise<",
-          "linea": 154,
+          "linea": 168,
           "resumen": "La escritura de la solicitud, DENTRO de la transacción que le pasen (la propia de `crearSolicitud`, o la del alta de la oportunidad del lead web: así o quedan las dos o ninguna). Una viva por persona "
+        },
+        {
+          "nombre": "camposDeFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: { ramo: string; campos: CampoSolicitud[] }",
+          "retorno": "CampoSolicitud[]",
+          "linea": 202,
+          "resumen": "Los campos que se enseñan Y se aceptan de una solicitud guardada (26/10/2026): los guardados al crearla, puestos al día (`camposAlDia`: hogar toma las preguntas vigentes; todos, nivel y «No lo sé») y "
         },
         {
           "nombre": "estadoEfectivo",
@@ -57459,7 +57766,7 @@
           "exportada": false,
           "params": "estado: string, caduca: Date",
           "retorno": "SolicitudResumen['estado']",
-          "linea": 183
+          "linea": 207
         },
         {
           "nombre": "descifrarLecturas",
@@ -57467,7 +57774,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "LecturaDocSolicitud[] | null",
-          "linea": 188
+          "linea": 212
         },
         {
           "nombre": "descifrarRespuestas",
@@ -57475,7 +57782,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "",
-          "linea": 199
+          "linea": 223
         },
         {
           "nombre": "solicitudesDeOportunidad",
@@ -57483,7 +57790,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string",
           "retorno": "Promise<SolicitudResumen[] | null>",
-          "linea": 211,
+          "linea": 235,
           "resumen": "Las solicitudes de una oportunidad (más reciente primero), para plataforma."
         },
         {
@@ -57492,7 +57799,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<",
-          "linea": 252,
+          "linea": 280,
           "resumen": "Anula una pendiente (el enlace deja de funcionar)."
         },
         {
@@ -57501,7 +57808,7 @@
           "exportada": false,
           "params": "token: string",
           "retorno": "Promise<FilaToken | null>",
-          "linea": 270
+          "linea": 301
         },
         {
           "nombre": "identidadFicha",
@@ -57509,7 +57816,7 @@
           "exportada": false,
           "params": "f: FilaToken",
           "retorno": "Promise<",
-          "linea": 280,
+          "linea": 311,
           "resumen": "DNI y nacimiento de su ficha, para traerlos rellenos. Si no se pueden leer, se piden en blanco."
         },
         {
@@ -57518,17 +57825,26 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<SolicitudPublica>",
-          "linea": 295,
+          "linea": 326,
           "resumen": "Lo que ve la página pública: el ramo y los campos a pedir. Del cliente, SOLO su DNI y su fecha de nacimiento, rellenos para que los confirme o corrija (decisión de Alberto, 24/09/2026: «es su DNI, no "
         },
         {
           "nombre": "subirDocumentoSolicitud",
           "kind": "function",
           "exportada": true,
-          "params": "token: string, fichero: { nombre: string; mime: string; contenido: Buffer }, consentimiento = false,",
+          "params": "token: string, fichero: { nombre: string; mime: string; contenido: Buffer }, consentimiento = false, /** * `poliza` (26/10/2026, fase B): el botón «sube tu póliza actual» del bloque del seguro actual. Se lee con el LECTOR * DE PÓLIZAS (`lee",
           "retorno": "Promise<ResultadoDocSolicitud>",
-          "linea": 327,
+          "linea": 363,
           "resumen": "El cliente sube un documento por el enlace (DNI, carné, papeles del vehículo, su póliza). 1) Se ARCHIVA en su ficha (`seguros.documentos`, subido por el cliente) — aunque luego no se pueda leer: el pa"
+        },
+        {
+          "nombre": "textoAPreguntar",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[], respuestas: Record<string, Respuesta>",
+          "retorno": "string",
+          "linea": 470,
+          "resumen": "«A preguntar» para el historial (y por él, el aviso de actividad), en TODOS los ramos (26/10/2026): etiquetas de lo que marcó «No lo sé» y de lo que dejó vacío. Nunca valores. Recortado para no inunda"
         },
         {
           "nombre": "responderSolicitud",
@@ -57536,8 +57852,26 @@
           "exportada": true,
           "params": "token: string, entrada: Record<string, unknown>, consentimiento = false,",
           "retorno": "Promise<",
-          "linea": 407,
+          "linea": 480,
           "resumen": "El cliente manda sus datos. Una sola vez; lo que no se pidió se ignora."
+        },
+        {
+          "nombre": "leerBorrador",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaToken",
+          "retorno": "Promise<BorradorSolicitud | null>",
+          "linea": 587,
+          "resumen": "Lo guardado de esa solicitud. `null` = nada, ilegible o sin la columna (nunca lanza: el formulario se abre igual)."
+        },
+        {
+          "nombre": "guardarBorradorSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, entrada: unknown, consentimiento = false",
+          "retorno": "Promise<ResultadoBorrador>",
+          "linea": 609,
+          "resumen": "Guarda el borrador (lo sustituye entero) y el último paso alcanzado (`ultimoPasoDe`: solo etiquetas de la casa). Solo en una solicitud PENDIENTE y viva; la condición va en el propio UPDATE (una comple"
         }
       ],
       "tablas": [
@@ -57551,7 +57885,62 @@
         "solicitud_datos"
       ],
       "rutaApi": null,
-      "hash": "f1d004780779"
+      "hash": "21d5a4e3cc0f"
+    },
+    {
+      "ruta": "apps/asegura/lib/solicitud-plazos.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Plazos de LECTURA del enlace de datos (26/10/2026, revisión del PR #5068). El portal espera a asegura un tope fijo (`TOPE_PUENTE_*_MS` de `apps/asegura-portal/lib/solicitud-datos.ts`); si asegura tardara más, el portal cortaría el puente y el cliente vería «fallo» con el fichero YA archivado en su f",
+      "exporta": [
+        "conPlazo"
+      ],
+      "funciones": [
+        {
+          "nombre": "conPlazo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Promise<T>, ms: number, alVencer: () => T",
+          "retorno": "Promise<T>",
+          "linea": 17,
+          "resumen": "La promesa, o `alVencer()` si no acaba en `ms`. Nunca lanza por el plazo (si la promesa lanza, lanza igual)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7a92bdfda861"
+    },
+    {
+      "ruta": "apps/asegura/lib/solicitudes-abandonadas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Pasada del cron `/api/cron/solicitudes-abandonadas` (26/10/2026, fase B del enlace de datos). Busca enlaces PENDIENTES (vivos, de una oportunidad abierta) creados hace ≥ 24 h y sin sello `aviso_abandono_at`, avisa a Alberto por Telegram (`tgSend`) y SELLA justo tras el envío: una sola vez por solici",
+      "exporta": [
+        "avisoAbandonoActivo",
+        "pasadaSolicitudesAbandonadas"
+      ],
+      "funciones": [
+        {
+          "nombre": "avisoAbandonoActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 15
+        },
+        {
+          "nombre": "pasadaSolicitudesAbandonadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opts: { forzarContar?: boolean } = {}",
+          "retorno": "Promise<ResultadoAbandono>",
+          "linea": 25
+        }
+      ],
+      "tablas": [
+        "oportunidades",
+        "solicitud_datos"
+      ],
+      "rutaApi": null,
+      "hash": "89c076f38d23"
     },
     {
       "ruta": "apps/asegura/lib/supresiones.ts",
@@ -224816,7 +225205,7 @@
           "exportada": true,
           "params": "",
           "retorno": "DatosViviendaRiesgo",
-          "linea": 118
+          "linea": 121
         },
         {
           "nombre": "leerDatosVivienda",
@@ -224824,7 +225213,7 @@
           "exportada": true,
           "params": "bruto: unknown",
           "retorno": "DatosViviendaRiesgo | null",
-          "linea": 122
+          "linea": 125
         },
         {
           "nombre": "validarDatosViviendaRiesgo",
@@ -224832,7 +225221,7 @@
           "exportada": true,
           "params": "parcial: unknown, opciones: { hoy?: string } = {}",
           "retorno": "ValidacionVivienda",
-          "linea": 134,
+          "linea": 137,
           "resumen": "Valida una edición PARCIAL (solo las claves que vienen). Vacío/`null` = borrar ese dato. Año de reforma no anterior al de construcción se comprueba en `incoherenciaVivienda` (cuenta lo ya guardado)."
         },
         {
@@ -224841,7 +225230,7 @@
           "exportada": true,
           "params": "d: DatosViviendaRiesgo",
           "retorno": "string | null",
-          "linea": 140
+          "linea": 143
         },
         {
           "nombre": "faltanDatosVivienda",
@@ -224849,7 +225238,7 @@
           "exportada": true,
           "params": "datos: Partial<DatosViviendaRiesgo> | null | undefined",
           "retorno": "CampoVivienda[]",
-          "linea": 153,
+          "linea": 156,
           "resumen": "Lo que FALTA para pedir precio: la referencia catastral (la pantalla de precio no avanza sin ella) y los obligatorios de `revisarDatosHogar` que son de la vivienda. `null` (sin ficha) = «falta todo». "
         },
         {
@@ -224858,7 +225247,7 @@
           "exportada": true,
           "params": "faltan: readonly CampoVivienda[] | null | undefined",
           "retorno": "string | null",
-          "linea": 173
+          "linea": 176
         },
         {
           "nombre": "aplicarEdicionVivienda",
@@ -224866,7 +225255,7 @@
           "exportada": true,
           "params": "actual: DatosViviendaRiesgo | null, valor: Partial<Omit<DatosViviendaRiesgo, 'confirmadoAt'>>, opciones: { confirmar: boolean; ahora: string },",
           "retorno": "",
-          "linea": 179
+          "linea": 182
         },
         {
           "nombre": "motivoNoConfirmableVivienda",
@@ -224874,7 +225263,7 @@
           "exportada": true,
           "params": "d: DatosViviendaRiesgo",
           "retorno": "string | null",
-          "linea": 189,
+          "linea": 192,
           "resumen": "Sin nada que afirmar no hay nada que confirmar: un sello sobre una ficha vacía afirmaría lo que no se ha mirado."
         },
         {
@@ -224883,7 +225272,7 @@
           "exportada": true,
           "params": "datos: unknown",
           "retorno": "Partial<Omit<DatosViviendaRiesgo, 'confirmadoAt'>>",
-          "linea": 199,
+          "linea": 202,
           "resumen": "Precarga desde `polizas.datos_especificos` cuando la oportunidad nace de una póliza (sin inventar: lo que no hay, `null`; el cifrado (`v1:`) y los valores de cajón, también). La dirección de la póliza"
         },
         {
@@ -224892,7 +225281,7 @@
           "exportada": true,
           "params": "cuerpo: unknown, catastro?: { metrosCuadrados?: number | null; anioConstruccion?: number | null; codigoPostal?: string | null } | null, opciones: { hoy?: string } = {},",
           "retorno": "Partial<Omit<DatosViviendaRiesgo, 'confirmadoAt'>>",
-          "linea": 238,
+          "linea": 245,
           "resumen": "Lo que una cotización de hogar con `?oportunidad=` deja anotado en el riesgo (write-back). Lee el cuerpo de `hogar-nuevo` (`referencia`, `resueltos`, `correcciones`) y, si viene, lo que dio el Catastr"
         },
         {
@@ -224901,7 +225290,7 @@
           "exportada": true,
           "params": "d: DatosViviendaRiesgo | null,",
           "retorno": "",
-          "linea": 289,
+          "linea": 296,
           "resumen": "De lo que el riesgo sabe a lo que la pantalla de precio (`hogar-nuevo`) recibe ya puesto: los catálogos y los ids van a `resueltos`; el resto, a `correcciones` por su nombre de `DatosHogar`. Lo del Ca"
         },
         {
@@ -224910,13 +225299,13 @@
           "exportada": true,
           "params": "d: Pick<DatosViviendaRiesgo, 'direccion' | 'tipoViaId' | 'nombreVia' | 'numeroVia' | 'municipio' | 'provincia'> | null | undefined, tipoViaNombre?: string | null,",
           "retorno": "",
-          "linea": 317,
+          "linea": 324,
           "resumen": "Con qué se rellena el buscador del Catastro de `hogar-nuevo` cuando el riesgo NO tiene referencia catastral (07/10/2026). Antes solo salía `direccion` (texto libre, a veces ni existía aunque hubiera c"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c31f8c517974"
+      "hash": "7e7a1d1dd2fa"
     },
     {
       "ruta": "packages/module-seguros/src/declaracion-emision.ts",
@@ -235052,6 +235441,93 @@
       "hash": "a07e804ddcd2"
     },
     {
+      "ruta": "packages/module-seguros/src/solicitud-borrador.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Enlace de datos `/datos/<token>`, FASE B (26/10/2026). Tres piezas PURAS: 1. `valoresDePolizaLeida`: lo que el lector de pólizas de asegura (`leerPoliza`) sacó de la póliza ACTUAL que sube el cliente → valores para los campos del formulario QUE SE PIDIERON, cada uno pasado por la misma validación qu",
+      "exporta": [
+        "tramoDeCapital",
+        "valoresDePolizaLeida",
+        "clavesBorrador",
+        "limpiarBorrador",
+        "borradorParaTercero",
+        "ultimoPasoDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "tramoDeCapital",
+          "kind": "function",
+          "exportada": true,
+          "params": "tramos: readonly TramoCapital[], capital: unknown",
+          "retorno": "string | null",
+          "linea": 30,
+          "resumen": "El tramo que CUBRE un capital: el de techo más bajo que no se queda corto (asegurar de menos es infraseguro, art. 30 LCS). Por encima de todos los techos, el tramo abierto. `null` = no hay capital uti"
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 49
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 50
+        },
+        {
+          "nombre": "valoresDePolizaLeida",
+          "kind": "function",
+          "exportada": true,
+          "params": "lectura: PolizaLeidaSolicitud, campos: readonly CampoSolicitud[], hoy: Date = new Date(),",
+          "retorno": "Record<string, Respuesta>",
+          "linea": 52
+        },
+        {
+          "nombre": "clavesBorrador",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[]",
+          "retorno": "Set<string>",
+          "linea": 102,
+          "resumen": "Claves que puede llevar un borrador: las pedidas, las subclaves de cada dirección y la lista de «No lo sé»."
+        },
+        {
+          "nombre": "limpiarBorrador",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[], entrada: unknown",
+          "retorno": "BorradorSolicitud | null",
+          "linea": 116,
+          "resumen": "Lo que manda el navegador → borrador guardable. Solo claves pedidas; texto (recortado), sí/no y la lista de «No lo sé» (solo de claves pedidas). Vacíos fuera. `null` = no es un objeto o pasa del tope "
+        },
+        {
+          "nombre": "borradorParaTercero",
+          "kind": "function",
+          "exportada": true,
+          "params": "borrador: BorradorSolicitud | null",
+          "retorno": "BorradorSolicitud | null",
+          "linea": 146,
+          "resumen": "El borrador de un enlace de tercero, sin los datos personales (también fuera de la lista de «No lo sé»)."
+        },
+        {
+          "nombre": "ultimoPasoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[], borrador: BorradorSolicitud",
+          "retorno": "string | null",
+          "linea": 168,
+          "resumen": "El último paso alcanzado: la sección (o, sin secciones, la pregunta) del ÚLTIMO campo, en el orden del formulario, que tiene algo contestado en el borrador. Con «(n de m)» para dar idea del avance. `n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "48944e8ffae6"
+    },
+    {
       "ruta": "packages/module-seguros/src/solicitud-compania.ts",
       "ambito": "packages/module-seguros",
       "resumen": "packages/module-seguros/src/solicitud-compania.ts «En la compañía» (20/10/2026): una oportunidad cuyo proyecto/solicitud está en el portal de la compañía, a la espera de que lo libere (suscripción, documentación, prima). PURO: decide, no escribe. 🚨 «En la compañía» NO es un valor del enum `estado_c",
@@ -235133,9 +235609,13 @@
         "nombreRamoSolicitud",
         "tituloSolicitud",
         "ayudaDocumentosSolicitud",
+        "conNiveles",
+        "importeDeTramo",
         "claveDireccion",
         "conIdentidad",
         "camposSolicitud",
+        "camposAlDia",
+        "camposAPreguntar",
         "casaZonaCp",
         "validarRespuestas",
         "mensajeSolicitud",
@@ -235189,12 +235669,39 @@
           "resumen": "Qué documentos tiene sentido subir en el enlace, para el texto de ayuda."
         },
         {
+          "nombre": "conNiveles",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[]",
+          "retorno": "CampoSolicitud[]",
+          "linea": 159,
+          "resumen": "Nivel y «No lo sé» por defecto, iguales en todos los ramos. `SIN_NO_LO_SE` manda sobre lo guardado."
+        },
+        {
+          "nombre": "exigidoPorCatastro",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CampoSolicitud, entrada: Record<string, unknown>",
+          "retorno": "boolean",
+          "linea": 181,
+          "resumen": "Hogar: los esenciales que dependen del Catastro (`catastro`) no son `obligatorio` (el servidor no ve la tarjeta), pero tampoco admiten «No lo sé». ¿Hay que exigirlos en ESTA respuesta? - tipo, m² y añ"
+        },
+        {
+          "nombre": "importeDeTramo",
+          "kind": "function",
+          "exportada": true,
+          "params": "tramos: readonly TramoCapital[], valor: unknown",
+          "retorno": "number | null",
+          "linea": 214,
+          "resumen": "El importe que se anota por un tramo; `null` = sin techo o «que me lo calculen» (no se sabe)."
+        },
+        {
           "nombre": "claveDireccion",
           "kind": "function",
           "exportada": true,
           "params": "clave: string, sub: SubclaveDireccion",
           "retorno": "string",
-          "linea": 117
+          "linea": 225
         },
         {
           "nombre": "camposIdentidadTomador",
@@ -235202,7 +235709,7 @@
           "exportada": false,
           "params": "grupo: GrupoSolicitud",
           "retorno": "CampoSolicitud[]",
-          "linea": 164,
+          "linea": 285,
           "resumen": "Identidad para lo que no es un vehículo: quien contrata (el tomador); una empresa o comunidad da su CIF."
         },
         {
@@ -235211,7 +235718,7 @@
           "exportada": true,
           "params": "campos: readonly CampoSolicitud[]",
           "retorno": "CampoSolicitud[]",
-          "linea": 180,
+          "linea": 301,
           "resumen": "Los campos de un enlace ya creado + DNI y nacimiento si le faltan (los enlaces anteriores al 24/09/2026 no los pedían cuando la ficha ya los tenía)."
         },
         {
@@ -235220,7 +235727,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "CampoSolicitud[]",
-          "linea": 188,
+          "linea": 309,
           "resumen": "Seguro actual del riesgo: si lo tiene, compañía y vencimiento (el vencimiento sí puede ser futuro)."
         },
         {
@@ -235229,7 +235736,7 @@
           "exportada": false,
           "params": "conocido: ConocidoFicha, etiqueta: string",
           "retorno": "CampoSolicitud[]",
-          "linea": 211
+          "linea": 332
         },
         {
           "nombre": "camposVehiculo",
@@ -235237,7 +235744,7 @@
           "exportada": false,
           "params": "ramo: 'auto' | 'moto', conocido: ConocidoFicha",
           "retorno": "CampoSolicitud[]",
-          "linea": 216,
+          "linea": 337,
           "resumen": "Lo de antes, sin tocar: auto y moto."
         },
         {
@@ -235246,8 +235753,8 @@
           "exportada": false,
           "params": "",
           "retorno": "CampoSolicitud[]",
-          "linea": 251,
-          "resumen": "HOGAR (25/10/2026): la dirección por la regla de la casa (CP → provincia → municipio → calle del Catastro → número), régimen, uso, contenido, alarma, hipoteca (→ banco/certificado + entidad), seguro a"
+          "linea": 374,
+          "resumen": "HOGAR (25/10/2026; ampliado el 26/10/2026). Las preguntas salen del contrato de datos de hogar (`contrato-datos.ts`, que cubre `revisarDatosHogar` de Codeoscopic y el bot de Allianz) y SOLO las que el"
         },
         {
           "nombre": "camposPersonas",
@@ -235255,7 +235762,7 @@
           "exportada": false,
           "params": "ramo: RamoSolicitud, conocido: ConocidoFicha",
           "retorno": "CampoSolicitud[]",
-          "linea": 269
+          "linea": 418
         },
         {
           "nombre": "camposMascota",
@@ -235263,7 +235770,7 @@
           "exportada": false,
           "params": "conocido: ConocidoFicha",
           "retorno": "CampoSolicitud[]",
-          "linea": 289
+          "linea": 438
         },
         {
           "nombre": "camposGenerico",
@@ -235271,7 +235778,7 @@
           "exportada": false,
           "params": "conocido: ConocidoFicha",
           "retorno": "CampoSolicitud[]",
-          "linea": 303
+          "linea": 452
         },
         {
           "nombre": "camposSolicitud",
@@ -235279,8 +235786,26 @@
           "exportada": true,
           "params": "ramo: RamoSolicitud, conocido: ConocidoFicha",
           "retorno": "CampoSolicitud[]",
-          "linea": 318,
+          "linea": 467,
           "resumen": "Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe (salvo DNI y nacimiento). DECLARATIVO por grupo de ramo; auto y moto, igual que antes del 25/10/2026."
+        },
+        {
+          "nombre": "camposAlDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoSolicitud, guardados: readonly CampoSolicitud[]",
+          "retorno": "CampoSolicitud[]",
+          "linea": 484,
+          "resumen": "Los campos de un enlace YA CREADO, puestos al día (26/10/2026). Los campos se GUARDAN al crear el enlace (`solicitud_datos.campos`); sin esto, un enlace pendiente de antes no vería las preguntas nueva"
+        },
+        {
+          "nombre": "camposAPreguntar",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[], respuestas: Record<string, Respuesta>",
+          "retorno": "",
+          "linea": 497,
+          "resumen": "Lo que queda «a preguntar» en la llamada (etiquetas, nunca valores): los campos visibles sin respuesta (opcionales vacíos) y los marcados «No lo sé». Lo que cuelga de un «no» (`siMarcado`) no cuenta."
         },
         {
           "nombre": "fechaIso",
@@ -235288,7 +235813,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string | null",
-          "linea": 333
+          "linea": 520
         },
         {
           "nombre": "textoCorto",
@@ -235296,7 +235821,7 @@
           "exportada": false,
           "params": "v: unknown, max: number",
           "retorno": "string | null",
-          "linea": 346
+          "linea": 533
         },
         {
           "nombre": "plano",
@@ -235304,7 +235829,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 370
+          "linea": 557
         },
         {
           "nombre": "casaZonaCp",
@@ -235312,7 +235837,7 @@
           "exportada": true,
           "params": "provincia: string, municipio: string, zona: ZonaCp",
           "retorno": "",
-          "linea": 373,
+          "linea": 560,
           "resumen": "¿Provincia y municipio casan con lo que dice la tabla del CP? Lo que la tabla no sabe no se contrasta."
         },
         {
@@ -235321,7 +235846,7 @@
           "exportada": false,
           "params": "c: CampoSolicitud, entrada: Record<string, unknown>, opciones: OpcionesValidacion",
           "retorno": "",
-          "linea": 385
+          "linea": 572
         },
         {
           "nombre": "validarRespuestas",
@@ -235329,7 +235854,7 @@
           "exportada": true,
           "params": "campos: readonly CampoSolicitud[], entrada: Record<string, unknown>, hoy: Date = new Date(), opciones: OpcionesValidacion = {},",
           "retorno": "ValidacionSolicitud",
-          "linea": 436,
+          "linea": 623,
           "resumen": "Valida lo que manda el cliente contra los campos que se le pidieron. Solo se guardan las claves pedidas (lo demás se ignora) y cada error viene por campo."
         },
         {
@@ -235338,7 +235863,7 @@
           "exportada": true,
           "params": "ramo: RamoSolicitud, url: string, tercero = false",
           "retorno": "string",
-          "linea": 522,
+          "linea": 715,
           "resumen": "Texto listo para pegar en WhatsApp o en un correo. Sin datos del cliente: solo el enlace."
         },
         {
@@ -235347,7 +235872,7 @@
           "exportada": true,
           "params": "t: TipoDocSolicitud",
           "retorno": "string",
-          "linea": 544
+          "linea": 737
         },
         {
           "nombre": "tipoArchivoDocSolicitud",
@@ -235355,7 +235880,7 @@
           "exportada": true,
           "params": "t: TipoDocSolicitud",
           "retorno": "'dni' | 'permiso_circulacion' | 'ficha_tecnica' | 'poliza' | 'otro'",
-          "linea": 556,
+          "linea": 749,
           "resumen": "Tipo con el que se ARCHIVA en `seguros.documentos` (esa lista no tiene carné)."
         },
         {
@@ -235364,7 +235889,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 567
+          "linea": 760
         },
         {
           "nombre": "normalizarLecturaSolicitud",
@@ -235372,7 +235897,7 @@
           "exportada": true,
           "params": "bruto: unknown, ramo: RamoSolicitud, campos: readonly CampoSolicitud[], hoy: Date = new Date(),",
           "retorno": "",
-          "linea": 576,
+          "linea": 769,
           "resumen": "Lo que devolvió la IA → valores para los campos QUE SE PIDIERON, cada uno pasado por la misma validación que el formulario. Lo que no valida se tira: un valor dudoso propuesto al cliente se lo acaba a"
         },
         {
@@ -235381,7 +235906,7 @@
           "exportada": false,
           "params": "v: Respuesta",
           "retorno": "string",
-          "linea": 630
+          "linea": 823
         },
         {
           "nombre": "contrastarConDocumentos",
@@ -235389,13 +235914,79 @@
           "exportada": true,
           "params": "respuestas: Record<string, Respuesta>, lecturas: readonly LecturaDocSolicitud[],",
           "retorno": "DiscrepanciaSolicitud[]",
-          "linea": 636,
+          "linea": 829,
           "resumen": "Lo que el cliente mandó contra lo que dicen sus propios papeles. Solo avisa (no bloquea): el papel puede estar mal leído y el cliente puede tener razón."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "08f9a1655b8d"
+      "hash": "97d3f903df05"
+    },
+    {
+      "ruta": "packages/module-seguros/src/solicitud-destinos.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Dónde acaba cada respuesta del enlace de datos (26/10/2026). PURO. Alberto: «los campos del formulario, la ficha del cliente, lo que trae CIMA y lo que pide Codeoscopic tienen que coincidir». Cada campo de `camposSolicitud(ramo)` declara aquí su DESTINO: - `riesgo`: un campo del bloque de `info_ries",
+      "exporta": [
+        "camposDelBloque",
+        "destinoCampoSolicitud",
+        "idViviendaDeOpcion"
+      ],
+      "funciones": [
+        {
+          "nombre": "camposDelBloque",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: ClaveDatosRiesgo",
+          "retorno": "readonly string[]",
+          "linea": 37,
+          "resumen": "Los campos que tiene cada bloque de `info_riesgo`."
+        },
+        {
+          "nombre": "R",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "campo: string",
+          "retorno": "DestinoCampoSolicitud",
+          "linea": 47
+        },
+        {
+          "nombre": "F",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "columna: ColumnaFichaSolicitud",
+          "retorno": "DestinoCampoSolicitud",
+          "linea": 48
+        },
+        {
+          "nombre": "HUECO",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "DestinoCampoSolicitud",
+          "linea": 49
+        },
+        {
+          "nombre": "destinoCampoSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoSolicitud, clave: string",
+          "retorno": "DestinoCampoSolicitud | null",
+          "linea": 148,
+          "resumen": "El destino declarado de un campo del enlace en ese ramo; `null` = sin declarar (el cepo lo marca)."
+        },
+        {
+          "nombre": "idViviendaDeOpcion",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: keyof typeof OPCIONES_HOGAR_A_VIVIENDA, valor: unknown",
+          "retorno": "string | null",
+          "linea": 192,
+          "resumen": "El id de Codeoscopic de una opción de hogar; `null` = sin id atestiguado (no se escribe)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d393daab0fac"
     },
     {
       "ruta": "packages/module-seguros/src/solicitud-hogar.ts",
@@ -235416,7 +236007,7 @@
           "exportada": false,
           "params": "v: Respuesta | undefined",
           "retorno": "string | null",
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "direccionDeRespuestas",
@@ -235424,7 +236015,7 @@
           "exportada": true,
           "params": "r: Record<string, Respuesta>, clave = 'vivienda'",
           "retorno": "DireccionDeclarada | null",
-          "linea": 30,
+          "linea": 31,
           "resumen": "La dirección declarada en un campo `direccion` (por defecto `vivienda`). `null` si no hay ni CP ni calle."
         },
         {
@@ -235433,7 +236024,7 @@
           "exportada": true,
           "params": "planta: string | null",
           "retorno": "string | null",
-          "linea": 46,
+          "linea": 47,
           "resumen": "«2» → «2º»; «2º», «Bajo», «Ático» o «Entreplanta» se dejan tal cual (el «º» solo a un número pelado)."
         },
         {
@@ -235442,7 +236033,7 @@
           "exportada": true,
           "params": "d: DireccionDeclarada",
           "retorno": "string",
-          "linea": 53,
+          "linea": 54,
           "resumen": "Una línea legible: «CL SOCORRO 24, 2º B · 41003 SEVILLA (SEVILLA)»."
         },
         {
@@ -235451,16 +236042,16 @@
           "exportada": true,
           "params": "c: CatastroSolicitud | null",
           "retorno": "string",
-          "linea": 66
+          "linea": 67
         },
         {
           "nombre": "viviendaDeSolicitud",
           "kind": "function",
           "exportada": true,
-          "params": "r: Record<string, Respuesta>, catastro: CatastroSolicitud | null, ahoraIso: string",
+          "params": "r: Record<string, Respuesta>, catastro: CatastroSolicitud | null, ahoraIso: string, deducida: ViviendaDeducidaSolicitud | null = null,",
           "retorno": "Record<string, string | number | boolean>",
-          "linea": 88,
-          "resumen": "Lo que se propone escribir en `datosVivienda` (claves de `ESPEC_VIVIENDA`), sin nulls: solo lo que se sabe. `ahoraIso` sella la consulta al Catastro cuando la hubo."
+          "linea": 97,
+          "resumen": "Lo que se propone escribir en `datosVivienda` (claves de `ESPEC_VIVIENDA`), sin nulls: solo lo que se sabe. `ahoraIso` sella la consulta al Catastro cuando la hubo. 26/10/2026 — DECLARADO vs CATASTRO:"
         },
         {
           "nombre": "vacio",
@@ -235468,7 +236059,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 145
+          "linea": 200
         },
         {
           "nombre": "norm",
@@ -235476,7 +236067,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 146
+          "linea": 201
         },
         {
           "nombre": "refNorm",
@@ -235484,7 +236075,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 147
+          "linea": 202
         },
         {
           "nombre": "planEscrituraVivienda",
@@ -235492,12 +236083,12 @@
           "exportada": true,
           "params": "actual: Record<string, unknown> | null, propuesta: Record<string, string | number | boolean>, confirmadoAt: string | null = null",
           "retorno": "PlanVivienda",
-          "linea": 149
+          "linea": 204
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8a29da3be6b7"
+      "hash": "dc1a9d1764e1"
     },
     {
       "ruta": "packages/module-seguros/src/supuestos-auto.ts",
@@ -245039,6 +245630,64 @@
       "hash": "8c42e90c8ea8"
     },
     {
+      "ruta": "packages/module-tarificacion/src/vivienda-catastro.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Qué tipo de vivienda es, DEDUCIDO del Catastro (26/10/2026, Alberto: «no preguntes nada que se pueda deducir de la dirección y del Catastro»). PURO: entran la lista del portal (`Consulta_DNPLOC`), lo que dice la ficha del inmueble (`caracterizarVivienda` de core-catastro) y la planta DECLARADA; sale",
+      "exporta": [
+        "plantaResidencial",
+        "ultimoPisoCatastro",
+        "deducirViviendaCatastro"
+      ],
+      "funciones": [
+        {
+          "nombre": "plantaResidencial",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "PlantaCatastro | null",
+          "linea": 22,
+          "resumen": "Una planta del Catastro (o declarada) normalizada; `null` = se ignora (sótano, semisótano, negativa o desconocida)."
+        },
+        {
+          "nombre": "igual",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: PlantaCatastro, b: PlantaCatastro",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "residencial",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "i: InmueblePlanta",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "ultimoPisoCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "declarada: unknown, inmuebles: readonly InmueblePlanta[]",
+          "retorno": "UltimoPiso",
+          "linea": 41,
+          "resumen": "¿La planta declarada es el último piso de la parcela? Ver las reglas en la cabecera."
+        },
+        {
+          "nombre": "deducirViviendaCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { tipoFicha: 'piso' | 'unifamiliar' | null inmuebles: readonly InmueblePlanta[] plantaDeclarada: unknown }",
+          "retorno": "ViviendaDeducida",
+          "linea": 66,
+          "resumen": "sin él, varios inmuebles residenciales en la parcela = división horizontal = piso. Un solo inmueble sin ficha: no se sabe."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bc6a8745c2d0"
+    },
+    {
       "ruta": "packages/module-trading/src/backtest.ts",
       "ambito": "packages/module-trading",
       "exporta": [
@@ -246826,7 +247475,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5175,
-    "funciones": 19828
+    "archivos": 5188,
+    "funciones": 19880
   }
 }
