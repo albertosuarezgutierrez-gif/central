@@ -1,21 +1,21 @@
 {
  "sesion": "61330d95-48dd-567a-a5d9-b73a196dfb30",
  "inicio": "2026-10-22T06:19:10.637Z",
- "fin": "2026-10-25T20:32:25.904Z",
- "llamadas": 3335,
+ "fin": "2026-10-26T05:41:19.974Z",
+ "llamadas": 3355,
  "categorias": {
   "otro": {
-   "llamadas": 319,
-   "chars_in": 257792,
-   "chars_out": 1866665,
+   "llamadas": 321,
+   "chars_in": 261141,
+   "chars_out": 1867507,
    "errores": 0,
    "archivos_citados": 26,
    "chars_citados": 376873,
    "tools": {
     "ToolSearch": 54,
-    "SubagentHandback": 77,
+    "SubagentHandback": 78,
     "SendMessage": 16,
-    "ReadNotifications": 141,
+    "ReadNotifications": 142,
     "Monitor": 23,
     "TaskStop": 2,
     "AskUserQuestion": 4,
@@ -23,16 +23,16 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 63,
-   "chars_in": 9749,
-   "chars_out": 353702,
+   "llamadas": 79,
+   "chars_in": 11946,
+   "chars_out": 404765,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 32,
-    "Read": 30,
-    "Glob": 1
+    "Grep": 40,
+    "Read": 37,
+    "Glob": 2
    }
   },
   "mcp:Supabase": {
@@ -59,14 +59,14 @@
    }
   },
   "sql": {
-   "llamadas": 155,
-   "chars_in": 88222,
-   "chars_out": 289349,
+   "llamadas": 156,
+   "chars_in": 88531,
+   "chars_out": 290000,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 155
+    "mcp__Supabase__execute_sql": 156
    }
   },
   "agente:general-purpose": {
@@ -136,14 +136,14 @@
    }
   },
   "agente:rastreador-codigo": {
-   "llamadas": 1,
-   "chars_in": 1556,
-   "chars_out": 1766,
+   "llamadas": 2,
+   "chars_in": 2497,
+   "chars_out": 1914,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   },
   "agente:Explore": {
