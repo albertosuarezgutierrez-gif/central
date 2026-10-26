@@ -1500,6 +1500,123 @@ export async function esperarPrimasMapfre(nsei: Page, ctx: Pick<ContextoPortal, 
   }
 }
 
+// ───────────────────────── v0.8.22 · formulario de «Generar Proyecto» ─────────────────────────
+// Tras «Ir a generar proyecto» NSEI pinta un formulario con campos OBLIGATORIOS que el flujo de precio no toca: contacto del tomador
+// (Teléfono móvil, Email, nombre) y la vista de «Clase» (carné), «Valido desde» y «1ª Matriculación», que ya se habían tecleado en
+// Figuras / Objeto asegurado pero aquí el control es otro (Angular los vuelve a validar) y puede quedar `ng-invalid` con texto.
+// Se re-confirma cada uno con el MISMO camino que el resto del adaptador (fill → input, blur → change nativo → esperar al validador) y,
+// si sigue inválido, se vuelve a teclear el dato DEL RIESGO. Nada se inventa: sin dato → aviso y no se pulsa. Ningún botón nuevo.
+
+/** Interruptor del relleno del contacto del tomador en el formulario del proyecto (por defecto ACTIVADO; ponlo a false para apagarlo). */
+export const MAPFRE_PROYECTO_CONTACTO = true
+
+export type ContactoProyectoMapfre = { email: string | null; telefono: string | null; nombre: string | null }
+
+/** Contacto del tomador SOLO si el riesgo lo trae (`fichaTomador.email/telefono`, como Allianz/Generali; nombre de `tomador`/`datosTomador`). null = no consta. PURA. */
+export function contactoProyectoMapfre(f: object): ContactoProyectoMapfre {
+  const txt = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+  const ficha = (f as { fichaTomador?: unknown }).fichaTomador
+  const o = typeof ficha === 'object' && ficha !== null && !Array.isArray(ficha) ? (ficha as Record<string, unknown>) : {}
+  const email = txt(o.email)
+  const tel = txt(o.telefono)?.replace(/[\s.-]/g, '').replace(/^(\+34|0034)/, '') ?? null
+  const t = tomadorParaAlta(f as FormularioAuto)
+  const nombre = t && t.tipo === 'fisica' ? txt(t.nombre) : null
+  return { email: email !== null && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null, telefono: tel !== null && /^[6-7]\d{8}$/.test(tel) ? tel : null, nombre }
+}
+
+export type DescCampoProyecto = { etiqueta: string; control: string; placeholder: string; tipo: string; invalido: boolean; vacio: boolean }
+export type ClaveCampoProyecto = 'telefono' | 'email' | 'nombre' | 'matriculacion' | 'valido'
+
+/** Qué es un campo del formulario del proyecto, por formcontrolname/etiqueta/placeholder/aria-label (nunca por ids dinámicos mat-input-N). null = no se sabe → no se toca. PURA. */
+export function clasificarCampoProyecto(d: DescCampoProyecto): ClaveCampoProyecto | null {
+  const t = plano(`${d.etiqueta} ${d.control} ${d.placeholder}`).toLowerCase()
+  if (/valido desde|fechaexpedicion/.test(t)) return 'valido'
+  if (/matriculacion|datematriculacion/.test(t)) return 'matriculacion'
+  if (/e-?mail|correo/.test(t)) return 'email'
+  if (/movil|nummovil/.test(t)) return 'telefono'
+  if (/apellid/.test(t)) return null
+  if (/(^|[^a-z])nombre([^a-z]|$)/.test(t)) return 'nombre'
+  return null
+}
+
+const SEL_CAMPOS_PROYECTO = 'mat-form-field input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit])'
+
+/** Re-teclea `valor` como lo hace el resto del adaptador (fill → input; blur → change nativo del navegador) y espera al validador. Devuelve si quedó sin error de Angular. */
+async function confirmarCampoProyecto(raiz: Page, campo: Locator, valor: string, etiqueta: string): Promise<boolean> {
+  await comprobarCampo(campo)
+  if (!(await esperarEditable(campo))) throw new ErrorTarificador('portal', `mapfre/auto: el campo «${etiqueta}» del proyecto no es editable`)
+  await campo.fill('')
+  await campo.fill(valor)
+  await campo.blur().catch(() => undefined)
+  await esperarCampoAsentado(raiz, campo)
+  return !(await campo.evaluate((el) => el.classList.contains('ng-invalid') || el.getAttribute('aria-invalid') === 'true').catch(() => true))
+}
+
+/**
+ * Completa y valida el formulario de «Generar Proyecto» (v0.8.22). `null` = listo para pulsar; texto = aviso (NO se pulsa).
+ * Orden: 1) avisa si falta un dato OBLIGATORIO del tomador que el riesgo no trae (sin rellenar nada a medias); 2) contacto vacío →
+ * dato del riesgo; 3) fechas con texto pero `ng-invalid` → re-confirmar el texto del portal y, si sigue mal, teclear la fecha del
+ * riesgo (dd/mm/aaaa); 4) «Clase» inválida/ vacía → `ctx.elegirMatSelect` con la clase del riesgo. Nunca lanza por "no se pudo".
+ */
+export async function completarFormularioProyectoMapfre(page: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'elegirMatSelect'>, contactoActivo: boolean = MAPFRE_PROYECTO_CONTACTO): Promise<string | null> {
+  try {
+    const campos = page.locator(SEL_CAMPOS_PROYECTO).locator('visible=true')
+    const n = await campos.count()
+    const descs: DescCampoProyecto[] = await campos.evaluateAll((els) =>
+      els.map((e) => {
+        const h = e as HTMLInputElement
+        const ff = h.closest('mat-form-field')
+        const etiqueta = ((ff?.querySelector('mat-label') ?? (h.id ? document.querySelector(`label[for="${h.id}"]`) : null) ?? ff?.querySelector('label'))?.textContent ?? '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim()
+        return { etiqueta, control: h.getAttribute('formcontrolname') || h.getAttribute('name') || h.id || '', placeholder: h.getAttribute('placeholder') || h.getAttribute('aria-label') || '', tipo: h.type, invalido: h.classList.contains('ng-invalid') || h.getAttribute('aria-invalid') === 'true', vacio: (h.value ?? '') === '' }
+      }),
+    )
+    const c = contactoProyectoMapfre(f)
+    const dato = { telefono: c.telefono, email: c.email, nombre: c.nombre } as const
+    const nombreDe = { telefono: 'teléfono móvil', email: 'email', nombre: 'nombre' } as const
+    // 1) Faltas ANTES de escribir nada.
+    if (contactoActivo) {
+      const faltan = descs.flatMap((d) => { const k = clasificarCampoProyecto(d); return d.vacio && (k === 'telefono' || k === 'email' || k === 'nombre') && dato[k] === null ? [nombreDe[k]] : [] })
+      if (faltan.length > 0) return `falta ${[...new Set(faltan)].join(' y ')} del tomador para guardar el proyecto en Mapfre (el riesgo no lo trae: no se inventa ni se pulsa «Generar Proyecto»)`
+    }
+    // 2-3) Campos de texto.
+    for (let i = 0; i < n; i++) {
+      const d = descs[i]
+      const k = d ? clasificarCampoProyecto(d) : null
+      if (!d || k === null) continue
+      const campo = campos.nth(i)
+      if (k === 'telefono' || k === 'email' || k === 'nombre') {
+        const valor = dato[k]
+        if (!contactoActivo || !d.vacio || valor === null) continue
+        if (!(await confirmarCampoProyecto(page, campo, valor, nombreDe[k]))) return `el portal no validó «${nombreDe[k]}» del tomador al guardar el proyecto en Mapfre`
+        continue
+      }
+      // Fechas: solo si Angular las marca inválidas (o vacías). Primero el MISMO texto del portal; si no basta, la fecha del riesgo.
+      if (!d.invalido && !d.vacio) continue
+      const riesgo = k === 'valido' ? f.conductor?.fechaCarne : f.fechaMatriculacion
+      const esperada = typeof riesgo === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(riesgo) ? fechaEs(riesgo) : null
+      const actual = (await campo.inputValue().catch(() => '')).trim()
+      if (actual !== '' && /^\d{2}\/\d{2}\/\d{4}$/.test(actual) && (await confirmarCampoProyecto(page, campo, actual, d.etiqueta || k))) continue
+      if (esperada === null) return `la fecha ${k === 'valido' ? '«Valido desde» (carné)' : 'de 1ª matriculación'} está ${actual === '' ? 'vacía' : 'inválida'} en el proyecto de Mapfre y el riesgo no trae el dato (no se inventa ni se pulsa «Generar Proyecto»)`
+      if (!(await confirmarCampoProyecto(page, campo, esperada, d.etiqueta || k))) return `el portal no validó la fecha ${k === 'valido' ? '«Valido desde»' : 'de 1ª matriculación'} (dd/mm/aaaa) en el proyecto de Mapfre`
+    }
+    // 4) Clase del permiso: mat-select con ng-invalid o vacío.
+    const clase = page.locator('mat-form-field').filter({ hasText: patronEtiqueta('Clase') }).locator('mat-select').first()
+    if ((await clase.count().catch(() => 0)) > 0) {
+      const malo = await clase.evaluate((el) => el.classList.contains('ng-invalid') || el.getAttribute('aria-invalid') === 'true' || el.classList.contains('mat-select-empty') || el.classList.contains('mat-mdc-select-empty')).catch(() => false)
+      if (malo) {
+        const textos = textosMapfreDe('clasePermiso', clasePermisoNsei(f as FormularioAuto & DatosMatSelectMapfre).clase)
+        if (textos === null) return 'la «Clase» del carné está inválida en el proyecto de Mapfre y el riesgo no trae la clase del permiso (no se inventa ni se pulsa «Generar Proyecto»)'
+        if (!ctx.elegirMatSelect) return 'la «Clase» del carné está inválida en el proyecto de Mapfre y el contexto no trae la función guardada para elegirla'
+        await ctx.elegirMatSelect(clase, textos, { etiqueta: 'clase del permiso' })
+      }
+    }
+    return null
+  } catch (e) {
+    if (e instanceof EmisionBloqueadaError) throw e
+    return `no se pudo completar el formulario del proyecto en Mapfre: ${redactarDatosPersonales(e instanceof Error ? e.message : String(e)).slice(0, 160)}`
+  }
+}
+
 /**
  * Del paso 2 (vehículo ya confirmado) al PRECIO: CP de circulación + uso/ámbito → «Continuar» → licencia del tomador (clase
  * de permiso y «Valido desde»), siniestros y compañía anterior (+ comprobación del nº de póliza anterior) → «Continuar» del
@@ -1542,7 +1659,7 @@ export async function precioDesdeObjetoAsegurado(
   const usados = { codigoPostal: cpPortal, localidad: null, vehiculo: { marca: null, modelo: null, version: null, denominacion: vehiculo?.denominacion ?? null } }
   // v0.8.14: «Generar Proyecto» DESPUÉS de leer (el precio ya está a salvo). Una violación del guard se relanza (fail-closed).
   const proyecto: ResultadoProyecto = ctx.generarProyectoMapfre
-    ? await ctx.generarProyectoMapfre(nsei)
+    ? await ctx.generarProyectoMapfre(nsei, (p) => completarFormularioProyectoMapfre(p, form, ctx))
     : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
   return { ofertas: ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), proyecto), vehiculoConfirmado: vehiculo }
@@ -1558,7 +1675,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.21',
+  version: '0.8.22',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

@@ -65,15 +65,15 @@ async function hastaCoberturas(deshabilitado: boolean, caeAlEscanear = false): P
   return { context, page, guard }
 }
 
-test('v0.8.20 · la versión del bot es 0.8.21', () => {
-  assert.equal(mapfreAuto.version, '0.8.21')
+test('v0.8.20 · la versión del bot es 0.8.22', () => {
+  assert.equal(mapfreAuto.version, '0.8.22')
 })
 
-test('v0.8.20 · describirCamposObligatoriosMapfre (PURA): vacíos primero, tope de 8, sin campos → lo dice', () => {
+test('v0.8.20 · describirCamposObligatoriosMapfre (PURA): vacíos primero, tope de 12, sin campos → lo dice', () => {
   assert.match(describirCamposObligatoriosMapfre([]), /no se identificó ningún campo/)
   const c = (n: number, vacio: boolean) => ({ etiqueta: `Campo ${n}`, tipo: 'input', id: `c${n}`, calendario: false, vacio, error: '' })
-  const t = describirCamposObligatoriosMapfre([c(1, false), ...Array.from({ length: 10 }, (_, i) => c(i + 2, true))])
-  assert.match(t, /^11 campos \(se citan 8\)/)
+  const t = describirCamposObligatoriosMapfre([c(1, false), ...Array.from({ length: 14 }, (_, i) => c(i + 2, true))])
+  assert.match(t, /^15 campos \(se citan 12\)/)
   assert.doesNotMatch(t, /Campo 1»/, 'el que tiene valor no válido va después de los vacíos y queda fuera del tope')
 })
 

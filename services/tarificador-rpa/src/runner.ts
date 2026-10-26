@@ -211,10 +211,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo «Club MAPFRE» no es de este trabajo')
         return cerrarClubMapfre(pagina, guard)
       },
-      generarProyectoMapfre: async (pagina) => {
+      generarProyectoMapfre: async (pagina, completar) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña de «Generar Proyecto» no es de este trabajo')
         await ctx.pausaAccion()
-        return generarProyectoMapfre(pagina, guard)
+        return generarProyectoMapfre(pagina, guard, undefined, undefined, completar)
       },
       elegirTomadorMapfre: async (pagina, nif) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo del tomador no es de este trabajo')

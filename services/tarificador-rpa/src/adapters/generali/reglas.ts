@@ -784,9 +784,22 @@ export function importeEspanolEur(texto: string): number | null {
 }
 
 export type LecturaPrecioGenerali =
-  | { tipo: 'unico'; eur: number; linea: string }
+  | { tipo: 'unico'; eur: number; linea: string; avisos?: string[] }
   | { tipo: 'ninguno' }
   | { tipo: 'varios'; candidatos: { eur: number; linea: string }[] }
+
+/** v0.2.30: encabezado de la pantalla de `emiAutosGenB028.do` que sigue a «Valoración Riesgo» (prueba real con 0.2.29). */
+export const ENCABEZADO_GARANTIAS_CAPITALES_GENERALI = 'GARANTIAS Y CAPITALES OPCIONALES'
+/** v0.2.30: ¿el texto visible es la pantalla «Garantías y Capitales opcionales»? PURA. */
+export function esPantallaGarantiasCapitalesGenerali(texto: string): boolean {
+  return normalizarCatalogo(String(texto ?? '').replace(/\s+/g, ' ')).includes(ENCABEZADO_GARANTIAS_CAPITALES_GENERALI)
+}
+/** v0.2.30: marca que `JS_IMPORTES_TABLA` pone delante de la etiqueta de una fila marcada/seleccionada. */
+export const MARCA_FILA_SELECCIONADA_GENERALI = '[SEL]'
+/** v0.2.30: etiquetas extra (solo en la pantalla de garantías): cuota. «Prima neta/total», «recibo», «anual», «a pagar» ya contaban. */
+const RE_LINEA_PRECIO_GARANTIAS = /\b(CUOTA|CUOTAS)\b/
+/** v0.2.30: línea de prima total anual (la que se elige si hay varias). */
+const RE_LINEA_TOTAL_ANUAL = /\b(TOTAL ANUAL|ANUAL TOTAL|PRIMA ANUAL|CUOTA ANUAL)\b/
 
 /**
  * Lector TOLERANTE del precio en el texto visible de «Garantías y Resultados» (sin captura de esa pantalla, v0.2.0). Busca
@@ -794,22 +807,28 @@ export type LecturaPrecioGenerali =
  * la MISMA línea o en la siguiente (etiqueta y valor en celdas distintas). Manda «total» si lo hay. Un único importe distinto
  * dentro de la horquilla → ese; varios → `varios` (el adaptador PARA con la lista: nunca elige uno); ninguno → `ninguno`.
  * `ignorar`: importes que ya estaban en la pantalla ANTES de pulsar la subpestaña (no son el precio). PURA.
+ *
+ * v0.2.30: SOLO si el texto es la pantalla «Garantías y Capitales opcionales» (emiAutosGenB028) se acepta además «cuota»; con varios
+ * importes se prefiere la línea de prima TOTAL ANUAL y, si aún hay varios, la de la modalidad marcada (`[SEL]`): ese es el precio y
+ * las demás van en `avisos`. Fuera de esa pantalla el comportamiento es el de siempre.
  */
 export function leerPrecioGenerali(texto: string, ignorar: readonly number[] = []): LecturaPrecioGenerali {
-  const lineas = String(texto ?? '').replace(/ /g, ' ').split(/\r?\n/).map((l) => l.replace(/\s+/g, ' ').trim()).filter((l) => l !== '')
+  const garantias = esPantallaGarantiasCapitalesGenerali(texto)
+  const lineas = String(texto ?? '').replace(/ /g, ' ').split(/\r?\n/).map((l) => l.replace(/\s+/g, ' ').trim()).filter((l) => l !== '')
   const importesDe = (l: string) => [...l.matchAll(RE_IMPORTE_EN_LINEA)].map((m) => importeEspanolEur(m[0])).filter((n): n is number => n !== null)
+  const esLineaPrecio = (n: string) => RE_LINEA_PRECIO.test(n) || (garantias && RE_LINEA_PRECIO_GARANTIAS.test(n))
   const total: { eur: number; linea: string }[] = []
   const otros: { eur: number; linea: string }[] = []
   for (let i = 0; i < lineas.length; i++) {
     const l = lineas[i]!
     const n = normalizarCatalogo(l)
-    if (!RE_LINEA_PRECIO.test(n) || RE_LINEA_NO_PRECIO.test(n)) continue
+    if (!esLineaPrecio(n) || RE_LINEA_NO_PRECIO.test(n)) continue
     let imps = importesDe(l)
     let linea = l
     // Etiqueta y valor en celdas distintas (v0.2.19): el importe puede estar en una de las 2 líneas siguientes.
     for (let k = 1; k <= 2 && imps.length === 0; k++) {
       const sig = lineas[i + k]
-      if (!sig || sig.length > 30 || RE_LINEA_PRECIO.test(normalizarCatalogo(sig))) break
+      if (!sig || sig.length > 30 || esLineaPrecio(normalizarCatalogo(sig))) break
       imps = importesDe(sig)
       if (imps.length > 0) linea = `${l} ${sig}`
     }
@@ -821,7 +840,23 @@ export function leerPrecioGenerali(texto: string, ignorar: readonly number[] = [
   const base = total.length > 0 ? total : otros
   const distintos = [...new Map(base.map((c) => [c.eur, c])).values()]
   if (distintos.length === 0) return { tipo: 'ninguno' }
-  if (distintos.length === 1) return { tipo: 'unico', eur: distintos[0]!.eur, linea: distintos[0]!.linea }
+  if (distintos.length === 1) return { tipo: 'unico', eur: distintos[0]!.eur, linea: distintos[0]!.linea.replace(MARCA_FILA_SELECCIONADA_GENERALI, '').trim() }
+  if (garantias) {
+    const resumen = (c: { eur: number; linea: string }) => `${c.eur} € («${c.linea.replace(MARCA_FILA_SELECCIONADA_GENERALI, '').trim().slice(0, 50)}»)`
+    const elegir = (cs: { eur: number; linea: string }[], motivo: string): LecturaPrecioGenerali | null => {
+      const eurs = [...new Set(cs.map((c) => c.eur))]
+      if (eurs.length !== 1) return null
+      const el = cs[0]!
+      const otrosC = distintos.filter((c) => c.eur !== el.eur)
+      return { tipo: 'unico', eur: el.eur, linea: el.linea.replace(MARCA_FILA_SELECCIONADA_GENERALI, '').trim(), avisos: [`Varios importes en la pantalla de garantías; elegido ${motivo}. Otros: ${otrosC.map(resumen).join(' · ')}`] }
+    }
+    const anuales = distintos.filter((c) => RE_LINEA_TOTAL_ANUAL.test(normalizarCatalogo(c.linea)))
+    const porAnual = elegir(anuales, 'el de la prima total anual')
+    if (porAnual) return porAnual
+    const marcados = (anuales.length > 0 ? anuales : distintos).filter((c) => c.linea.includes(MARCA_FILA_SELECCIONADA_GENERALI))
+    const porMarca = elegir(marcados, 'el de la modalidad marcada')
+    if (porMarca) return porMarca
+  }
   return { tipo: 'varios', candidatos: distintos.slice(0, 12) }
 }
 
@@ -944,6 +979,45 @@ export function resumenVolcadoResultadosGenerali(v: readonly VolcadoMarcoResulta
     return `${m.ruta.split(';')[0]!.split('/').slice(-1)[0]} · pestañas ${pest || '—'} · tablas ${tabs || 'ninguna'} · botones ${bot || '—'}`
   })
   const t = partes.join(' || ')
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+// ───────────────────────── v0.2.30 · diagnóstico de tablas e importes del marco (sin datos personales) ─────────────────────────
+
+/** Lo que lee el navegador de un marco: cabeceras de las tablas visibles e importes con su etiqueta de fila/celda. */
+export type DiagnosticoImportesMarcoGenerali = { cabeceras: string[][]; importes: { etiqueta: string; importe: string }[] }
+/** Vocabulario de etiquetas de dinero/garantías que SÍ se enseñan; cualquier otra etiqueta (podría ser un nombre) sale como «(otra)». */
+const RE_VOCABULARIO_IMPORTE_GENERALI = /\b(PRIMA|PRIMAS|CUOTA|CUOTAS|RECIBO|RECIBOS|TOTAL|NETA|NETO|ANUAL|ANUALES|SEMESTRAL|TRIMESTRAL|MENSUAL|CONTADO|FRACCIONADO|PAGAR|IMPORTE|PRECIO|IMPUESTO|IMPUESTOS|RECARGO|RECARGOS|CONSORCIO|TASA|TASAS|DESCUENTO|BONIFICACION|BONUS|MALUS|COMISION|FRANQUICIA|CAPITAL|CAPITALES|GARANTIA|GARANTIAS|COBERTURA|COBERTURAS|MODALIDAD|OPCION|CONCEPTO|DESCRIPCION|TODO RIESGO|TERCEROS|AMPLIADO|BASICO|COMPLETO|LUNAS|ROTURA|ROBO|INCENDIO|ASISTENCIA|DEFENSA|OCUPANTES|ACCIDENTES|SEGURO|SEGUROS|COLISION|COLISIONES|AVERIAS)\b/
+const RE_ETIQUETA_LIMPIA_GENERALI = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .\/()%-]{1,40}$/
+
+/** Etiqueta saneada: solo letras, corta y del vocabulario de dinero/garantías; si no, «(otra)». PURA. */
+export function etiquetaImporteSegura(t: string): string {
+  const x = String(t ?? '').replace(/[ \s]+/g, ' ').trim()
+  return RE_ETIQUETA_LIMPIA_GENERALI.test(x) && RE_VOCABULARIO_IMPORTE_GENERALI.test(normalizarCatalogo(x)) ? x : '(otra)'
+}
+
+/**
+ * Resumen de una línea de las tablas (cabeceras) y de los textos con importe del marco: «Tablas: [Cab|Cab] · Importes: Etiqueta 1.234,56 € ; …».
+ * Máx. `maxEntradas` importes, etiquetas SOLO del vocabulario de dinero (nunca nombres, NIF, matrículas ni fechas: las cabeceras/etiquetas con
+ * cifras o fuera del vocabulario salen como «(otra)») y el importe solo si tiene forma de importe. Truncado a `max`. PURA.
+ */
+export function resumenDiagnosticoImportesGenerali(d: readonly DiagnosticoImportesMarcoGenerali[], max = 450, maxEntradas = 10): string {
+  const tablas = d.flatMap((m) => m.cabeceras).slice(0, 4).map((c) => `[${c.slice(0, 8).map(etiquetaImporteSegura).join('|')}]`)
+  const vistos = new Set<string>()
+  const imps: string[] = []
+  for (const m of d) {
+    for (const i of m.importes) {
+      const importe = String(i.importe ?? '').replace(/[ \s]+/g, ' ').trim()
+      if (!/^€?\s?\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?\s?€?$|^€?\s?\d+(?:,\d{1,2})?\s?€?$/.test(importe) || !/[,€]/.test(importe)) continue
+      const e = `${etiquetaImporteSegura(i.etiqueta)} ${importe}`
+      if (vistos.has(e)) continue
+      vistos.add(e)
+      imps.push(e)
+      if (imps.length >= maxEntradas) break
+    }
+    if (imps.length >= maxEntradas) break
+  }
+  const t = `Tablas: ${tablas.join(' ') || 'ninguna'} · Importes: ${imps.join(' ; ') || 'ninguno'}`
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
