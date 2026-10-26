@@ -2893,7 +2893,7 @@ export async function recorrerPasosTurismos(
         // 18/10/2026: CP, localidad y vehículo que Allianz usó, leídos del portal (guard.ts, solo lectura); null = no se leyó.
         const usados = await leerDatosUsadosTurismosAllianz(marco).catch(() => null)
         // v0.6.14: el vehículo de catálogo que Allianz dejó MARCADO viaja también como `seleccionVehiculo` (Generali lo usa).
-        // v0.6.28: PDF del presupuesto guardado (botón «Imprimir/Descargar presupuesto»); si no llega, aviso y el precio se devuelve igual.
+        // v0.6.28: PDF del presupuesto guardado (botón «Imprimir/Descargar presupuesto»; v0.6.29: también «Descargar propuesta»); si no llega, aviso y el precio se devuelve igual.
         const pdfPresupuesto = await descargarProyectoAuto(page, ctx, 'allianz', 'presupuesto-allianz-turismos.pdf', guardado.estado === 'guardado')
         return { ofertas: conDatosUsados(ofertasConPdfProyecto(ofertasConPresupuestoTurismos(ofertas, guardado), pdfPresupuesto), usados), seleccionVehiculo: seleccionVehiculoConfirmada(usados?.vehiculo) }
       }
@@ -2968,7 +2968,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.28',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.29',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

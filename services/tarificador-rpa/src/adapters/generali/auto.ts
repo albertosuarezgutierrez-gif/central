@@ -251,7 +251,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * entiende también tablas (cabecera «Prima/Importe/Total…» + celda con importe, una línea por celda) y el atasco VUELCA, saneado, las pestañas
  * (¿marcada?), las tablas con cabeceras y filas con «€» y los botones, para ver si el clic cambió la pantalla. Sin pulsar nada nuevo.
  */
-export const VERSION_GENERALI_AUTO = '0.2.33'
+export const VERSION_GENERALI_AUTO = '0.2.34'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -668,40 +668,92 @@ const JS_MODALIDADES = `(() => {
   const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
   const txt = (e) => String(e.textContent || '').replace(/\\s+/g, ' ').trim();
   const norm = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim().toLowerCase();
+  // v0.2.34: cualquier campo con valor (texto, número, teléfono, oculto, sin tipo…), nunca casillas, botones ni opciones de elegir una sola.
   const valores = (c) => {
     const out = [txt(c)];
-    c.querySelectorAll('input[type=text], input[type=number], input[type=hidden], input:not([type]), select, textarea').forEach((i) => {
+    c.querySelectorAll('input, select, textarea').forEach((i) => {
       const t = (i.getAttribute('type') || 'text').toLowerCase();
-      if (['button', 'submit', 'image', 'reset', 'checkbox'].includes(t)) return;
+      if (i.tagName === 'INPUT' && !/^(text|number|hidden|tel|search|email|url|)$/.test(t)) return;
       if (i.tagName === 'SELECT') { const o = i.selectedIndex >= 0 ? i.options[i.selectedIndex] : null; out.push(o ? (o.value || txt(o)) : ''); return; }
       out.push(String(i.value || ''));
     });
     return out;
   };
-  const res = { encontrada: false, filas: [], botones: [] };
+  const colIni = (cs) => { let p = 0; return cs.map((c) => { const i = p; p += Math.max(1, c.colSpan || 1); return i; }); };
+  const celdaEn = (cs, col) => { const ini = colIni(cs); for (let k = 0; k < cs.length; k++) { if (col >= ini[k] && col < ini[k] + Math.max(1, cs[k].colSpan || 1)) return cs[k]; } return null; };
+  const esImp = (v) => /\\d/.test(v) && (/€|eur/i.test(v) || /[.,]\\d{1,2}\\s*$/.test(v)) && /^[\\d.,\\s€eurEUR]+$/.test(v);
+  const tipoCelda = (c) => {
+    const i = c.querySelector('input, select, textarea');
+    if (i) return i.tagName.toLowerCase() + ':' + (i.getAttribute('type') || '');
+    const v = txt(c);
+    return v === '' ? '0' : esImp(v) ? 'imp' : /[A-Za-z]/.test(v) ? 'txt' : 'num';
+  };
+  const res = { encontrada: false, filas: [], botones: [], forma: '' };
   document.querySelectorAll('table').forEach((t) => {
     if (res.encontrada || !vis(t)) return;
+    const filasT = Array.from(t.rows || []);
     let idx = null;
-    Array.from(t.rows || []).forEach((r) => {
+    let cabN = 0;
+    let cabFila = null;
+    filasT.forEach((r) => {
+      if (idx) return;
       const cs = Array.from(r.cells || []);
-      if (!idx) {
-        const h = cs.map((c) => (c.querySelector('table') ? '' : norm(txt(c))));
-        const m = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('modalidades de seguro') >= 0);
-        const ra = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('recibo anual') >= 0);
-        const pa = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('prima anualidad') >= 0);
-        if (m >= 0 && (ra >= 0 || pa >= 0)) { idx = { m: m, ra: ra, pa: pa }; res.encontrada = true; }
-        return;
-      }
-      if (res.filas.length >= 12 || cs.length <= Math.max(idx.m, idx.ra, idx.pa)) return;
-      if (cs.some((c) => c.querySelector('table'))) return;
-      const nombre = valores(cs[idx.m]).filter((x) => x !== '')[0] || '';
-      const recibo = idx.ra >= 0 ? valores(cs[idx.ra]) : [];
-      const prima = idx.pa >= 0 ? valores(cs[idx.pa]) : [];
-      if (!nombre && recibo.every((x) => x === '') && prima.every((x) => x === '')) return;
-      const clase = String(r.className || '') + ' ' + String(cs[idx.m].className || '');
-      const marcada = !!r.querySelector('input:checked') || (/selected|seleccionad|marcad|current|activ/i.test(clase) && !/inactiv|noselec|unselect|desmarcad/i.test(clase));
-      res.filas.push({ modalidad: nombre, marcada: marcada, recibo: recibo, prima: prima });
+      const h = cs.map((c) => (c.querySelector('table') ? '' : norm(txt(c))));
+      const ini = colIni(cs);
+      const m = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('modalidades de seguro') >= 0);
+      const ra = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('recibo anual') >= 0);
+      const pa = h.findIndex((x) => x.length > 0 && x.length < 40 && x.indexOf('prima anualidad') >= 0);
+      if (m >= 0 && (ra >= 0 || pa >= 0)) { idx = { m: ini[m], ra: ra >= 0 ? ini[ra] : -1, pa: pa >= 0 ? ini[pa] : -1 }; res.encontrada = true; cabN = cs.length; cabFila = r; }
     });
+    if (!idx) return;
+    // Filas de datos: las de esta tabla tras la cabecera, las de tablas ANIDADAS dentro de ella y las de las tablas HERMANAS que la siguen (cabecera y cuerpo en tablas distintas).
+    let tras = false;
+    const propias = [];
+    filasT.forEach((r) => { if (r === cabFila) { tras = true; return; } if (tras) propias.push(r); });
+    const extra = [];
+    const anidadas = Array.from(t.querySelectorAll('table')).filter((x) => vis(x));
+    anidadas.forEach((x) => Array.from(x.rows || []).forEach((r) => extra.push(r)));
+    let hermanas = 0;
+    Array.from(document.querySelectorAll('table')).forEach((x) => {
+      if (hermanas >= 3 || x === t || t.contains(x) || x.contains(t) || !vis(x)) return;
+      if (!(t.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING)) return;
+      hermanas++;
+      Array.from(x.rows || []).forEach((r) => extra.push(r));
+    });
+    const formas = [];
+    const vistas = new Set();
+    const procesa = (lista, soloConElegir) => lista.forEach((r) => {
+      if (res.filas.length >= 12 || vistas.has(r)) return;
+      vistas.add(r);
+      const cs = Array.from(r.cells || []);
+      if (cs.length === 0 || cs.some((c) => c.querySelector('table'))) return;
+      if (norm(txt(r)).indexOf('modalidades de seguro') >= 0) return;
+      if (formas.length < 3) formas.push(cs.length + 'c[' + cs.slice(0, 10).map(tipoCelda).join(',') + ']');
+      // Filas de otras tablas: solo las que tienen un control de elegir una sola opción (la fila de una modalidad), no cualquier tabla con cifras.
+      if (soloConElegir && !Array.from(r.querySelectorAll('input')).some((i) => /^ra/i.test(i.type || ''))) return;
+      const total = colIni(cs).slice(-1)[0] + Math.max(1, cs[cs.length - 1].colSpan || 1);
+      const mapea = !soloConElegir && total > Math.max(idx.m, idx.ra, idx.pa);
+      const clase = String(r.className || '');
+      const marcada = !!r.querySelector('input:checked') || (/selected|seleccionad|marcad|current|activ/i.test(clase) && !/inactiv|noselec|unselect|desmarcad/i.test(clase));
+      if (mapea) {
+        const cm = celdaEn(cs, idx.m);
+        const nombre = cm ? valores(cm).filter((x) => x !== '')[0] || '' : '';
+        const cr = idx.ra >= 0 ? celdaEn(cs, idx.ra) : null;
+        const cp = idx.pa >= 0 ? celdaEn(cs, idx.pa) : null;
+        const recibo = cr ? valores(cr) : [];
+        const prima = cp ? valores(cp) : [];
+        if (nombre || recibo.some((x) => x !== '') || prima.some((x) => x !== '')) { res.filas.push({ modalidad: nombre, marcada: marcada, recibo: recibo, prima: prima }); return; }
+      }
+      // Sin columnas fiables (otra estructura): las cifras con forma de importe de la fila, de izquierda a derecha (la primera es el Recibo Anual).
+      const todos = [];
+      cs.forEach((c) => valores(c).forEach((v) => { const x = String(v).replace(/\\s+/g, ' ').trim(); if (x !== '' && esImp(x)) todos.push(x); }));
+      if (todos.length === 0) return;
+      const nom = cs.map((c) => txt(c)).filter((x) => x !== '' && /[A-Za-z]{3}/.test(x) && !esImp(x))[0] || '';
+      res.filas.push({ modalidad: nom, marcada: marcada, recibo: todos, prima: [], porFila: true });
+    });
+    procesa(propias, false);
+    if (res.filas.length === 0) procesa(extra, true);
+    res.forma = 'cab ' + cabN + 'c; filas propias ' + Math.max(0, filasT.length - 1) + '; anidadas ' + anidadas.length + '; hermanas ' + hermanas + '; ' + formas.join(' ');
   });
   if (res.encontrada) {
     document.querySelectorAll('input[type=button], input[type=submit], button').forEach((e) => {
@@ -2434,11 +2486,17 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   else if (lecturaFinal.tipo !== 'ninguno') avanceSiguiente.push(`Siguiente no intentado: la lectura ya era «${lecturaFinal.tipo}» (no «ninguno»)`)
   if (ctx.pulsarSiguienteGenerali) {
     for (let i = 1; i <= 3 && lecturaFinal.tipo === 'ninguno'; i++) {
+      // v0.2.34: con la tabla «Modalidades de Seguro» ya a la vista esta ES la pantalla de resultados: no se avanza hacia la contratación aunque la lectura falle
+      // (se para con el diagnóstico de la forma de la tabla, mejor que pulsar «Siguiente» a ciegas).
+      if ((await volcarModalidadesGenerali(page))?.encontrada) {
+        avanceSiguiente.push(`Siguiente×${i} no intentado: la tabla de modalidades ya está a la vista y no se avanza más allá de los resultados`)
+        break
+      }
       try {
         const r = await paso('tarificar', () => ctx.pulsarSiguienteGenerali!())
         avanceSiguiente.push(`Siguiente×${i}${r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
       } catch (e) {
-        avanceSiguiente.push(`Siguiente×${i} no pulsado: ${(e instanceof Error ? e.message : String(e)).slice(0, 160)}`)
+        avanceSiguiente.push(`Siguiente×${i} no pulsado: ${(e instanceof Error ? e.message : String(e)).slice(0, 260)}`)
         break
       }
       lecturaFinal = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))

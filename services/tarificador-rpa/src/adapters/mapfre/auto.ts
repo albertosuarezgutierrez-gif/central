@@ -68,6 +68,10 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.24 (26/10/2026, trabajo e886d7d9 con 0.8.23): «Figuras» de COCHE sin `app-historial-siniestralidad` (solo etiquetas «Compañia»,
+//   «Procedencia Siniestralidad», «Expuestos/Años», «Siniestros», «Bonus Malus»). 0.8.23 solo añadió el PDF tras «Generar Proyecto»:
+//   no toca Figuras → el portal pinta otra variante. La compañía anterior se busca por etiqueta «Compañia» (`selectCompaniaPorEtiqueta`:
+//   un mat-select visible y habilitado); sin él, el hueco de siempre (sin elegir valores a ciegas).
 // v0.8.11 (20/10/2026, HTML del fallo ff13b5d3 leído): en MOTO «Figuras» solo trae `app-tomador` (datos-basicos, datos-direccion,
 //   datos-licencia: clase y «Valido desde») y NO existe `app-historial-siniestralidad`. «Procedencia Siniestralidad», «Expuestos/Años»,
 //   «Siniestros» y «Bonus Malus» son de `app-info-descuentos` (paso Coberturas, ya montado en el DOM), con los inputs DESHABILITADOS:
@@ -959,6 +963,24 @@ export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Pr
   return crudo.bloque ? `el bloque app-historial-siniestralidad trae ${controles.length} controles (${controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}`
 }
 
+/** Etiqueta exacta «Compañia/Compañía» (con o sin asterisco): NO casa «Compañía anterior» de otros bloques ni textos largos. */
+const PATRON_ETIQUETA_COMPANIA = /^\s*compa(?:ñ|n)(?:í|i)a\s*\*?\s*$/i
+
+/**
+ * v0.8.24 · Alternativa por etiqueta para el desplegable de compañía anterior cuando no existe el selector de
+ * `app-historial-siniestralidad`: el `mat-form-field` cuya `mat-label`/`label` es exactamente «Compañia». Devuelve el mat-select SOLO
+ * si es único, visible y habilitado (los de `app-info-descuentos` los calcula el portal y vienen deshabilitados). Solo lectura. PURA en
+ * cuanto a clics: no pulsa nada.
+ */
+export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>): Promise<Locator | null> {
+  const campos = raiz.locator('mat-form-field').filter({ has: raiz.locator('mat-label, label').filter({ hasText: PATRON_ETIQUETA_COMPANIA }) }).locator('mat-select')
+  if ((await campos.count().catch(() => 0)) !== 1) return null
+  const uno = campos.first()
+  if (!(await uno.isVisible().catch(() => false))) return null
+  if ((await uno.getAttribute('aria-disabled').catch(() => null)) === 'true') return null
+  return uno
+}
+
 /**
  * Rellena los `mat-select` del plan que ya tienen valor mapeado (`escribibles` de tipo `mat-select`), por la capa común
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
@@ -968,8 +990,19 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
   const hechos: string[] = []
   for (const op of plan.escribibles) {
     if (op.tipo !== 'mat-select') continue
-    const sel = raiz.locator(op.sel).first()
-    if (!(await apareceEn(raiz, op.sel, op.opcional ? esperaOpcionalMs : 0))) {
+    let sel = raiz.locator(op.sel).first()
+    let ausente = !(await apareceEn(raiz, op.sel, op.opcional ? esperaOpcionalMs : 0))
+    // v0.8.24: sin `app-historial-siniestralidad` (trabajo e886d7d9: «Figuras» pinta «Compañia», «Procedencia Siniestralidad»…), la
+    // compañía anterior se busca por su ETIQUETA. Solo si hay UN mat-select visible y habilitado; si no, sigue el hueco de siempre.
+    if (ausente && op.sel === SEL_HISTORIAL.companiaAnterior) {
+      const porEtiqueta = await selectCompaniaPorEtiqueta(raiz)
+      if (porEtiqueta) {
+        sel = porEtiqueta
+        ausente = false
+        respaldo.formador?.log('mapfre_compania_por_etiqueta', {})
+      }
+    }
+    if (ausente) {
       // Opcional que este flujo no pinta (v0.8.1): se sigue sin tocar nada. Obligatorio que no aparece → ATASCO + hueco.
       if (op.opcional) {
         respaldo.formador?.log('mapfre_select_ausente', { etiqueta: op.etiqueta })
@@ -1678,7 +1711,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.23',
+  version: '0.8.24',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

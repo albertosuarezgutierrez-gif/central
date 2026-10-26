@@ -1024,9 +1024,10 @@ export function resumenDiagnosticoImportesGenerali(d: readonly DiagnosticoImport
 // ───────────────────────── v0.2.31 · tabla «Modalidades de Seguro» (Recibo Anual / Prima Anualidad) ─────────────────────────
 
 /** Fila de la tabla de modalidades: nombre de producto, ¿marcada?, y los valores crudos (texto de celda primero, luego value de inputs/selects). */
-export type FilaModalidadGenerali = { modalidad: string; marcada: boolean; recibo: string[]; prima: string[] }
+/** `porFila` (v0.2.34): la tabla no dejó localizar las columnas; `recibo` trae las cifras con forma de importe de la fila, de izquierda a derecha. */
+export type FilaModalidadGenerali = { modalidad: string; marcada: boolean; recibo: string[]; prima: string[]; porFila?: boolean }
 /** Lo que lee el navegador de la tabla de modalidades de un marco (más los botones del marco, para el diagnóstico). */
-export type VolcadoModalidadesGenerali = { encontrada: boolean; filas: FilaModalidadGenerali[]; botones: { texto: string; id: string; value: string }[] }
+export type VolcadoModalidadesGenerali = { encontrada: boolean; filas: FilaModalidadGenerali[]; botones: { texto: string; id: string; value: string }[]; /** v0.2.34: forma de la tabla (nº de celdas y tipo de cada una, sin textos). */ forma?: string }
 
 /** «1.234,56» · «1234,56» · «1234.56» · «1,234.56» (con o sin «€») → número. Un entero solo cuenta con «€». `null` si no es un importe. PURA. */
 export function importeFlexibleEur(texto: string): number | null {
@@ -1051,6 +1052,9 @@ export function formatoEurGenerali(eur: number): string {
   return `${e!.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${d} €`
 }
 
+/** v0.2.34: aviso cuando el importe sale de la primera cifra de la fila y no de la columna «Recibo Anual» localizada. */
+const AVISO_POR_FILA_GENERALI = 'Importe tomado de la primera cifra de la fila de la modalidad (columnas de la tabla no localizadas): revisar en la emisión'
+
 /**
  * Precio desde la tabla de modalidades: «Recibo Anual» de la modalidad MARCADA; sin marcada y con varias filas con importe, la más
  * barata y las demás como aviso «Otras modalidades: X 1.234,56 €; …». Importes fuera de la horquilla de una prima (o en `ignorar`)
@@ -1058,7 +1062,7 @@ export function formatoEurGenerali(eur: number): string {
  */
 export function leerModalidadesGenerali(filas: readonly FilaModalidadGenerali[], ignorar: readonly number[] = []): LecturaPrecioGenerali {
   const nombre = (f: FilaModalidadGenerali) => sanearFragmentoGenerali(f.modalidad).slice(0, 40) || '(sin nombre)'
-  const cands: { eur: number; modalidad: string; marcada: boolean }[] = []
+  const cands: { eur: number; modalidad: string; marcada: boolean; porFila: boolean }[] = []
   for (const f of filas) {
     let eur: number | null = null
     for (const v of f.recibo) {
@@ -1068,19 +1072,20 @@ export function leerModalidadesGenerali(filas: readonly FilaModalidadGenerali[],
         break
       }
     }
-    if (eur !== null) cands.push({ eur, modalidad: nombre(f), marcada: f.marcada })
+    if (eur !== null) cands.push({ eur, modalidad: nombre(f), marcada: f.marcada, porFila: f.porFila === true })
   }
   if (cands.length === 0) return { tipo: 'ninguno' }
   const marcadas = cands.filter((c) => c.marcada)
   if (marcadas.length > 0) {
     const eurs = [...new Set(marcadas.map((c) => c.eur))]
     if (eurs.length > 1) return { tipo: 'varios', candidatos: marcadas.map((c) => ({ eur: c.eur, linea: `${c.modalidad} Recibo Anual` })) }
-    return { tipo: 'unico', eur: marcadas[0]!.eur, linea: `${marcadas[0]!.modalidad} Recibo Anual` }
+    return { tipo: 'unico', eur: marcadas[0]!.eur, linea: `${marcadas[0]!.modalidad} Recibo Anual`, ...(marcadas[0]!.porFila ? { avisos: [AVISO_POR_FILA_GENERALI] } : {}) }
   }
   const orden = [...cands].sort((a, b) => a.eur - b.eur)
   const el = orden[0]!
   const otras = orden.slice(1).filter((c) => c.eur !== el.eur || c.modalidad !== el.modalidad)
   const avisos = [`Modalidad no marcada en la tabla: se toma la más barata (${el.modalidad})`]
+  if (el.porFila) avisos.push(AVISO_POR_FILA_GENERALI)
   if (otras.length > 0) avisos.push(`Otras modalidades: ${otras.map((c) => `${c.modalidad} ${formatoEurGenerali(c.eur)}`).join('; ')}`)
   return { tipo: 'unico', eur: el.eur, linea: `${el.modalidad} Recibo Anual`, avisos }
 }
@@ -1110,7 +1115,7 @@ export function resumenModalidadesGenerali(v: VolcadoModalidadesGenerali | null,
     const val = sanearFragmentoGenerali(b.value).slice(0, 20)
     return [t, id && `#${id}`, val && val !== t ? `v=${val}` : ''].filter(Boolean).join(' ')
   })
-  const base = `Modalidades (${v.filas.length}f): ${filas.join(' ; ') || 'sin filas'}`
+  const base = `Modalidades (${v.filas.length}f): ${filas.join(' ; ') || `sin filas${v.forma ? ` [forma: ${v.forma.replace(/[^\w\s:;,\[\]]/g, '').slice(0, 160)}]` : ''}`}`
   const bot = ` · Botones: ${botones.join(', ') || '—'}`
   const t = base + bot
   if (t.length <= max) return t

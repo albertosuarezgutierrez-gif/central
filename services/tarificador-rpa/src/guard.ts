@@ -1535,7 +1535,9 @@ const RE_PROHIBIDO_OCULTO_DESCARGA = /(emit|contrat|grabar|pagar|pago|firm|forma
 const RE_AJENO_DESCARGA = /\b(condicion\w*|condicionado|clausulad\w*|manual\w*|ayuda|aplicacion|app|tarifa\w*|bases|politica\w*|privacidad|protocolo|precontractual\w*|ipid|informativ\w*|informacion|extracto|cuestionario|licencia|factura\w*|carta|mandato|catalogo|folleto)\b/
 const RE_VERBO_SUELTO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf)\b/
 const RE_VERBO_CON_OBJETO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf|documento)\b/
-const RE_OBJETO_DESCARGA = /\b(proyecto|presupuesto|oferta|propuesta)s?\b/
+const RE_OBJETO_DESCARGA = /\b(proyecto|presupuesto|oferta)s?\b/
+/** v0.6.29 (Allianz: «Descargar propuesta», tras «Guardar presupuesto»): «propuesta» SOLO junto a imprimir/descargar/pdf (nunca con «documento» suelto); la lista negra sigue mandando. */
+const RE_OBJETO_PROPUESTA_DESCARGA = /\bpropuestas?\b/
 
 function sinTildesDescarga(x: string | null | undefined): string {
   return String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -1559,8 +1561,21 @@ export function puntuarBotonDescargaProyecto(desc: readonly (string | null | und
   const ocultos = desc.slice(4).map((x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()).join(' | ')
   if (RE_PROHIBIDO_OCULTO_DESCARGA.test(ocultos)) return 0
   if (RE_VERBO_CON_OBJETO_DESCARGA.test(junto) && RE_OBJETO_DESCARGA.test(junto)) return 2
+  if (RE_VERBO_SUELTO_DESCARGA.test(junto) && RE_OBJETO_PROPUESTA_DESCARGA.test(junto)) return 2
   if (guardado && !REGLAS_DESCARGA_PROYECTO[compania].soloConObjeto && RE_VERBO_SUELTO_DESCARGA.test(junto)) return 1
   return 0
+}
+
+/**
+ * v0.6.29: ¿el RÓTULO de este control pasaría la lista blanca pero un atributo interno (id, name, href, manejadores, ancestros) casa con la lista negra?
+ * Devuelve SOLO la palabra de la lista negra que casó (nunca el valor del atributo) o `null`. Es diagnóstico: no autoriza nada. PURA.
+ */
+export function rechazoOcultoDescargaProyecto(desc: readonly (string | null | undefined)[], compania: CompaniaDescargaProyecto, guardado: boolean): string | null {
+  if (puntuarBotonDescargaProyecto(desc, compania, guardado) > 0) return null
+  const sinOcultos = [desc[0], desc[1], desc[2], desc[3], desc[11]]
+  if (puntuarBotonDescargaProyecto(sinOcultos, compania, guardado) === 0) return null
+  const ocultos = desc.slice(4).map((x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()).join(' | ')
+  return RE_PROHIBIDO_OCULTO_DESCARGA.exec(ocultos)?.[0] ?? null
 }
 
 export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolean; habilitado: boolean }
@@ -1568,7 +1583,11 @@ export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolea
 /** Qué control pulsar (el de mejor puntuación; a igualdad, el primero en pantalla) o por qué ninguno. Visible y habilitado. PURA. */
 export function decidirBotonDescargaProyecto(controles: readonly ControlDescargaProyecto[], compania: CompaniaDescargaProyecto, guardado: boolean): { indice: number } | { motivo: string; definitivo: boolean } {
   const cand = controles.map((c, i) => ({ c, i, p: puntuarBotonDescargaProyecto(c.desc, compania, guardado) })).filter((x) => x.p > 0)
-  if (cand.length === 0) return { motivo: 'no aparece ningún botón de imprimir/descargar el presupuesto o proyecto', definitivo: false }
+  if (cand.length === 0) {
+    const bloqueados = controles.map((c) => rechazoOcultoDescargaProyecto(c.desc, compania, guardado)).filter((x): x is string => x !== null)
+    const nota = bloqueados.length > 0 ? ` (hay ${bloqueados.length} control(es) con rótulo de descarga que NO se pulsan porque un atributo interno casa con la lista negra: «${[...new Set(bloqueados)].join('», «')}»)` : ''
+    return { motivo: `no aparece ningún botón de imprimir/descargar el presupuesto o proyecto${nota}`, definitivo: false }
+  }
   const visibles = cand.filter((x) => x.c.visible)
   if (visibles.length === 0) return { motivo: `hay ${cand.length} botón(es) de descarga pero OCULTO(s) (puede estar plegado)`, definitivo: false }
   const habilitados = visibles.filter((x) => x.c.habilitado)
@@ -3994,14 +4013,18 @@ const RE_EMISION_GENERALI = /\b(emitir|contratar|grabar (la )?poliza|pagar|firma
 const sinTildesMinus = (x: string) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 /**
- * v0.2.32: lo que casó del patrón de emisión, para el motivo del bloqueo: la palabra y un contexto corto (±25 caracteres, espacios colapsados,
+ * v0.2.32: lo que casó del patrón de emisión, para el motivo del bloqueo: la palabra y un contexto corto (±60 caracteres dentro de su línea, espacios colapsados,
  * cifras largas enmascaradas: sin datos personales). `null` = no casa. PURA.
  */
 export function casaEmisionGenerali(texto: string): string | null {
   const t = sinTildesMinus(texto)
   const m = RE_EMISION_GENERALI.exec(t)
   if (!m) return null
-  const ctx = t.slice(Math.max(0, m.index - 25), m.index + m[0].length + 25).replace(/\s+/g, ' ').replace(/\d{4,}/g, '#').trim()
+  // v0.2.34: el contexto no cruza el salto de línea (la LÍNEA de la página donde está la palabra) y llega a ±60 caracteres: con ±25 no se veía de qué texto era.
+  const ini = Math.max(t.lastIndexOf('\n', m.index) + 1, m.index - 60)
+  const finLinea = t.indexOf('\n', m.index)
+  const fin = Math.min(finLinea < 0 ? t.length : finLinea, m.index + m[0].length + 60)
+  const ctx = t.slice(ini, fin).replace(/\s+/g, ' ').replace(/\d{4,}/g, '#').trim()
   return `«${m[0]}» en «…${ctx}…»`
 }
 
@@ -4087,7 +4110,7 @@ export async function pulsarSiguienteValoracionGenerali(page: Page, guard: Guard
     // v0.2.32: en «Garantías y Capitales opcionales» (marco B028) la sección «Envío Documentación Precontractual» no cuenta como emisión.
     const t = f === marco && esPantallaGarantiasCapitalesGenerali(t0) ? sinSeccionPrecontractualGenerali(t0) : t0
     const casa = casaEmisionGenerali(t)
-    if (casa !== null) throw new EmisionBloqueadaError('fase', `«Siguiente» de Generali con textos de emisión/contratación/pago/firma en la página o en un diálogo (casó ${casa.slice(0, 140)})`)
+    if (casa !== null) throw new EmisionBloqueadaError('fase', `«Siguiente» de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
   }
   const boton = marco.locator(`[id="${ID_SIGUIENTE_VALORACION_GENERALI}"]`).filter({ visible: true })
   if ((await boton.count()) !== 1) throw new ErrorMapaGuardGenerali('el botón #siguiente de la valoración (no hay exactamente uno visible)')
