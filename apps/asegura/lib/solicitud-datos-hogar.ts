@@ -16,7 +16,7 @@
  */
 import { tgSend } from '@central/core-telegram'
 import { bajarCatastro, inmueblesPorDireccion } from '@central/core-catastro/http'
-import { precalificarHogar } from '@central/core-catastro'
+import { caracterizarVivienda, precalificarHogar } from '@central/core-catastro'
 import {
   CLAVES_BLOQUE_CATASTRO,
   CLAVES_BLOQUE_DIRECCION,
@@ -25,10 +25,11 @@ import {
   leerBloqueDeRamo,
   planEscrituraVivienda,
   viviendaDeSolicitud,
+  type CampoSolicitud,
   type CatastroSolicitud,
   type Respuesta,
 } from '@central/module-seguros'
-import { inmuebleUnicoCatastro } from '@central/module-tarificacion'
+import { deducirViviendaCatastro, inmuebleUnicoCatastro, type ViviendaDeducida } from '@central/module-tarificacion'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { precargaDePolizaDeOportunidad } from './oportunidad-riesgo'
@@ -44,32 +45,41 @@ const conTope = <T,>(p: Promise<T>, ms: number): Promise<T | 'tope'> =>
     p.then((x) => { clearTimeout(t); resolve(x) }, () => { clearTimeout(t); resolve('tope') })
   })
 
-/** El Catastro para la dirección declarada. Nunca lanza. */
-export async function catastroDeSolicitud(r: Record<string, Respuesta>): Promise<CatastroSolicitud> {
+export type CatastroYDeduccion = { catastro: CatastroSolicitud; deducida: ViviendaDeducida | null }
+
+/**
+ * El Catastro para la dirección declarada + el TIPO de vivienda deducido (26/10/2026: división horizontal, planta
+ * declarada contra las de la parcela → piso / bajo / último; ficha → unifamiliar). Nunca lanza.
+ */
+export async function catastroDeSolicitud(r: Record<string, Respuesta>): Promise<CatastroYDeduccion> {
   const d = direccionDeRespuestas(r)
   // La sigla: la del callejero si la eligió; si la escribió a mano, la que se deduzca del texto (o no se busca).
   const libre = d && !d.viaNombre ? partirDireccion(d.calle) : null
   const sigla = d?.viaTipo ?? (libre?.tipoVia ? siglaDeTipoVia(libre.tipoVia) : null)
   const calle = d?.viaNombre ?? libre?.nombre ?? null
-  if (!d || !d.provincia || !d.municipio || !calle || !d.numero || !sigla) return { estado: 'sin_direccion' }
-  const consulta = (async (): Promise<CatastroSolicitud> => {
+  if (!d || !d.provincia || !d.municipio || !calle || !d.numero || !sigla) return { catastro: { estado: 'sin_direccion' }, deducida: null }
+  const consulta = (async (): Promise<CatastroYDeduccion> => {
     const lista = await inmueblesPorDireccion({
       provincia: d.provincia!.toUpperCase(), municipio: d.municipio!.toUpperCase(), sigla, calle, numero: d.numero!,
       ...(d.viaNombre ? { viaOficial: d.viaNombre } : {}),
     })
-    if (lista === null) return { estado: 'via_ambigua' }
-    if (lista.inmuebles.length === 0) return { estado: 'no_encontrado' }
+    if (lista === null) return { catastro: { estado: 'via_ambigua' }, deducida: null }
+    if (lista.inmuebles.length === 0) return { catastro: { estado: 'no_encontrado' }, deducida: null }
     const e = inmuebleUnicoCatastro(lista.inmuebles, { planta: d.planta, puerta: d.puerta, codigoPostal: d.cp })
-    if (e.estado !== 'unico') return { estado: e.estado }
+    if (e.estado !== 'unico') {
+      // Sin el inmueble concreto aún se puede deducir por la parcela (varios inmuebles = piso) y la planta declarada.
+      return { catastro: { estado: e.estado }, deducida: deducirViviendaCatastro({ tipoFicha: null, inmuebles: lista.inmuebles, plantaDeclarada: d.planta }) }
+    }
     const datos = await bajarCatastro(e.refCompleta)
-    if (datos === null) return { estado: 'no_encontrado' }
+    if (datos === null) return { catastro: { estado: 'no_encontrado' }, deducida: null }
     const p = precalificarHogar(datos)
-    return { estado: 'ok', referencia: e.refCompleta, metrosCuadrados: p.datos.metrosCuadrados, anioConstruccion: p.datos.anioConstruccion, uso: p.datos.uso }
+    const deducida = deducirViviendaCatastro({ tipoFicha: caracterizarVivienda(datos)?.tipo ?? null, inmuebles: lista.inmuebles, plantaDeclarada: d.planta })
+    return { catastro: { estado: 'ok', referencia: e.refCompleta, metrosCuadrados: p.datos.metrosCuadrados, anioConstruccion: p.datos.anioConstruccion, uso: p.datos.uso }, deducida }
   })()
   const r2 = await conTope(consulta, TOPE_CATASTRO_MS)
   if (r2 === 'tope') {
     console.warn('[solicitud-datos-hogar] Catastro sin respuesta a tiempo')
-    return { estado: 'error' }
+    return { catastro: { estado: 'error' }, deducida: null }
   }
   return r2
 }
@@ -142,14 +152,19 @@ export async function trasCompletarHogar(p: {
   /** Ficha del CLIENTE de la oportunidad (la del enlace en plataforma). */
   clienteId: string
   respuestas: Record<string, Respuesta>
+  /** Los campos que se pidieron (para listar lo que queda «a preguntar»). */
+  campos: readonly CampoSolicitud[]
   tercero: boolean
 }): Promise<void> {
   try {
-    const catastro = await catastroDeSolicitud(p.respuestas)
-    const propuesta = viviendaDeSolicitud(p.respuestas, catastro, new Date().toISOString())
+    const { catastro, deducida } = await catastroDeSolicitud(p.respuestas)
+    const propuesta = viviendaDeSolicitud(p.respuestas, catastro, new Date().toISOString(), deducida)
     const r = await anotarEnRiesgo(p.correduriaId, p.oportunidadId, propuesta)
     const enlace = enlaceFichaCliente(p.clienteId, process.env.PLATAFORMA_URL?.trim() || URL_PLATAFORMA_DEFECTO)
-    await tgSend(textoAvisoDatosHogar({ respuestas: p.respuestas, catastro, enlaceFicha: enlace, tercero: p.tercero, anotados: r.anotados, conflictos: r.conflictos, confirmado: r.confirmado }))
+    await tgSend(textoAvisoDatosHogar({
+      respuestas: p.respuestas, catastro, deducida, campos: p.campos, enlaceFicha: enlace, tercero: p.tercero,
+      anotados: r.anotados, conflictos: r.conflictos, confirmado: r.confirmado,
+    }))
   } catch (e) {
     console.error('[solicitud-datos-hogar] aviso tras completar falló:', e instanceof Error ? e.message : e)
   }

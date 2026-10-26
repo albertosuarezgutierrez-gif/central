@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { RAMOS_SOLICITUD, camposSolicitud, casaZonaCp, conIdentidad, grupoSolicitud, tituloSolicitud, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
+import { RAMOS_SOLICITUD, camposAPreguntar, camposAlDia, camposSolicitud, casaZonaCp, conIdentidad, grupoSolicitud, tituloSolicitud, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
 
 const nadaConocido = { dni: false, fechaNacimiento: false, codigoPostal: false, carnetMoto: false, carnetCoche: false }
 const todoConocido = { dni: true, fechaNacimiento: true, codigoPostal: true, carnetMoto: true, carnetCoche: true }
@@ -148,8 +148,9 @@ test('HOGAR: dirección CP-primero, régimen, uso, contenido, alarma, hipoteca �
   assert.equal(por('vivienda')?.obligatorio, true)
   assert.deepEqual(por('regimen')?.opciones?.map((o) => o.valor), ['propietario', 'inquilino'])
   assert.deepEqual(por('usoVivienda')?.opciones?.map((o) => o.valor), ['habitual', 'secundaria', 'alquilada'])
-  assert.equal(por('valorContenido')?.tipo, 'numero')
-  assert.equal(por('valorContenido')?.obligatorio, false)
+  assert.equal(por('tramoContenido')?.tipo, 'opcion')
+  assert.equal(por('tramoContenido')?.obligatorio, false)
+  assert.equal(por('valorContenido'), undefined, 'el contenido va por tramos desde el 26/10/2026')
   assert.equal(por('alarma')?.tipo, 'si_no')
   assert.equal(por('paraBanco')?.siMarcado, 'hipoteca')
   assert.equal(por('entidadHipoteca')?.siMarcado, 'hipoteca')
@@ -161,17 +162,23 @@ const VIVIENDA_OK = {
   viviendaCp: '41003', viviendaProvincia: 'SEVILLA', viviendaMunicipio: 'SEVILLA', viviendaCalle: 'Calle Socorro', viviendaNumero: '24',
   viviendaViaTipo: 'CL', viviendaViaNombre: 'Socorro',
 }
-const HOGAR_OK = { dni: '12345678Z', fechaNacimiento: '01/02/1980', ...VIVIENDA_OK, regimen: 'propietario', usoVivienda: 'habitual', alarma: false, hipoteca: false, tieneSeguro: false }
+const HOGAR_OK = { dni: '12345678Z', fechaNacimiento: '01/02/1980', ...VIVIENDA_OK, regimen: 'propietario', usoVivienda: 'habitual', alarma: false, hipoteca: false, tieneSeguro: false,
+  tipoVivienda: 'piso', habitaciones: '3', propietarioEsTomador: true, urbanizacionCerrada: false, puertaPrincipalBlindada: true, ventanasSeguras: false }
 
 test('HOGAR valida: lo que se deja en blanco es null (nunca 0 ni «»), y lo que cuelga de un «no» también', () => {
   const r = validarRespuestas(camposSolicitud('hogar', todoConocido), HOGAR_OK, HOY)
   assert.ok(r.ok, JSON.stringify(r))
   if (!r.ok) return
-  assert.equal(r.respuestas.valorContenido, null)
+  assert.equal(r.respuestas.tramoContenido, null)
   assert.equal(r.respuestas.paraBanco, null)
   assert.equal(r.respuestas.entidadHipoteca, null)
   assert.equal(r.respuestas.fechaEfecto, null)
   assert.equal(r.respuestas.viviendaPlanta, null)
+  // 26/10/2026: lo opcional sin contestar es null; nunca false ni 0.
+  for (const k of ['conMadera', 'vigilante', 'anioUltimaReforma', 'tramoContinente', 'metrosCuadrados', 'anioConstruccion', 'confirmaCatastro', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos']) {
+    assert.equal(r.respuestas[k], null, k)
+  }
+  assert.equal(r.respuestas.habitaciones, 3)
   assert.equal(r.respuestas.viviendaCp, '41003')
   // Sin validación del servidor, la calle que manda el cliente NO es oficial («por validar»).
   assert.equal(r.respuestas.viviendaViaNombre, null)
@@ -235,4 +242,41 @@ test('provincia y municipio tienen que ser los del CP (si la tabla lo sabe)', ()
   assert.ok(validarRespuestas(campos, { ...HOGAR_OK, viviendaMunicipio: 'Otro' }, HOY, { zonaCp: () => ({ provincias: null, municipios: null }) }).ok)
   // Grafías bilingües: «Alicante/Alacant».
   assert.deepEqual(casaZonaCp('alicante', 'Alacant', { provincias: ['Alicante'], municipios: ['Alicante/Alacant'] }), { provincia: true, municipio: true })
+})
+
+test('NIVELES y «No lo sé» en TODOS los ramos: esencial = obligatorio por defecto; identidad y dirección nunca admiten «No lo sé»', () => {
+  for (const ramo of RAMOS_SOLICITUD) {
+    for (const c of camposSolicitud(ramo, todoConocido)) {
+      assert.ok(c.nivel === 'esencial' || c.nivel === 'opcional', `${ramo}.${c.clave} sin nivel`)
+      if (c.obligatorio) assert.equal(c.nivel, 'esencial', `${ramo}.${c.clave}`)
+      if (c.clave === 'dni' || c.clave === 'fechaNacimiento' || c.tipo === 'direccion') assert.equal(c.admiteNoLoSe, false, `${ramo}.${c.clave}`)
+    }
+  }
+})
+
+test('«No lo sé» en un esencial: se acepta como null (nunca false ni 0) y queda anotado; en el DNI no vale', () => {
+  const campos = camposSolicitud('hogar', todoConocido)
+  const r = validarRespuestas(campos, { ...HOGAR_OK, alarma: undefined, habitaciones: undefined, _noLoSe: ['alarma', 'habitaciones', 'dni'] }, HOY)
+  assert.ok(r.ok, JSON.stringify(r))
+  if (!r.ok) return
+  assert.equal(r.respuestas.alarma, null)
+  assert.equal(r.respuestas.habitaciones, null)
+  assert.equal(r.respuestas._noLoSe, 'habitaciones,alarma')
+  assert.equal(r.respuestas.dni, '12345678Z')
+  const sinMarcar = validarRespuestas(campos, { ...HOGAR_OK, alarma: undefined }, HOY)
+  assert.ok(!sinMarcar.ok)
+  const a = camposAPreguntar(campos, r.respuestas)
+  assert.ok(a.noLoSabe.includes('¿Tiene alarma conectada?'))
+  assert.ok(a.sinContestar.includes('Joyas guardadas en caja fuerte, en €'))
+  assert.ok(!a.sinContestar.some((x) => /banco/i.test(x)), 'lo que cuelga de un «no» no se pregunta')
+})
+
+test('C: un enlace de hogar YA CREADO toma las preguntas vigentes al pintarse (los campos se guardan al crear)', () => {
+  const viejo = [{ clave: 'dni', etiqueta: 'DNI', tipo: 'texto', obligatorio: true }, { clave: 'valorContenido', etiqueta: 'Contenido', tipo: 'numero', obligatorio: false }] as const
+  const al = camposAlDia('hogar', [...viejo])
+  assert.ok(al.some((c) => c.clave === 'puertaPrincipalBlindada'))
+  assert.ok(!al.some((c) => c.clave === 'valorContenido'), 'sustituido por tramoContenido')
+  const moto = camposAlDia('moto', [{ clave: 'matricula', etiqueta: 'Matrícula', tipo: 'texto', obligatorio: true }])
+  assert.equal(moto.length, 1)
+  assert.equal(moto[0].nivel, 'esencial')
 })

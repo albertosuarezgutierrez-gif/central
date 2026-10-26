@@ -281,6 +281,9 @@ importers:
       '@central/module-seguros-portal':
         specifier: workspace:*
         version: link:../../packages/module-seguros-portal
+      '@central/module-tarificacion':
+        specifier: workspace:*
+        version: link:../../packages/module-tarificacion
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)

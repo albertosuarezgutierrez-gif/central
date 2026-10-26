@@ -22,6 +22,8 @@ import {
   MAX_DOCS_SOLICITUD,
   NADA_CONOCIDO,
   camposSolicitud,
+  camposAlDia,
+  camposAPreguntar,
   nombreRamoSolicitud,
   conIdentidad,
   contrastarConDocumentos,
@@ -180,6 +182,16 @@ export async function insertarSolicitud(
   return { id: n.id, caduca: n.caduca, nueva: true, token }
 }
 
+/**
+ * Los campos que se enseñan Y se aceptan de una solicitud guardada (26/10/2026): los guardados al crearla, puestos al
+ * día (`camposAlDia`: hogar toma las preguntas vigentes; todos, nivel y «No lo sé») y con DNI y nacimiento si faltan.
+ * Lo mismo al pintar, al leer un documento y al validar.
+ */
+function camposDeFila(f: { ramo: string; campos: CampoSolicitud[] }): CampoSolicitud[] {
+  const ramo = ramoSolicitud(f.ramo)
+  return conIdentidad(ramo ? camposAlDia(ramo, f.campos) : f.campos)
+}
+
 function estadoEfectivo(estado: string, caduca: Date): SolicitudResumen['estado'] {
   if (estado === 'pendiente' && caduca.getTime() <= Date.now()) return 'caducada'
   return estado === 'completada' || estado === 'anulada' ? estado : 'pendiente'
@@ -233,7 +245,11 @@ export async function solicitudesDeOportunidad(correduriaId: string, oportunidad
         estado: estadoEfectivo(f.estado, f.caduca),
         caduca: f.caduca.toISOString(),
         completada: f.completada ? f.completada.toISOString() : null,
-        campos: f.campos,
+        // Al día (hogar: preguntas vigentes), pero de una completada solo lo que se contestó de verdad: validar guarda
+        // TODAS las claves pedidas (null incluido), así que una clave ausente es una pregunta que entonces no existía.
+        campos: d.respuestas
+          ? camposDeFila(f).filter((c) => c.tipo === 'direccion' || Object.hasOwn(d.respuestas!, c.clave))
+          : camposDeFila(f),
         ...d,
         // `null` = no se ha podido leer qué subió (≠ «no subió nada»).
         documentos: lecturas === null ? null : lecturas.flatMap((l) => (l.tipo === 'ficha' ? [] : [{ id: l.documentoId, tipo: l.tipo }])),
@@ -301,11 +317,11 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   if (!ramo) return { estado: 'muerta' }
   // Datos de un TERCERO: no se rellena nada. El enlace puede ir al cliente, y el DNI de su padre no
   // es suyo para verlo (a diferencia del propio, que Alberto decidió traer relleno).
-  if (f.tercero) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: true }
+  if (f.tercero) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: true }
   // Enlace del formulario web ANÓNIMO: nada de la ficha, ni su DNI (ver `ACTOR_ENLACE_WEB`).
-  if (enlaceACiegas(f.creadaPor)) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: false }
+  if (enlaceACiegas(f.creadaPor)) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: false }
   const id = await identidadFicha(f)
-  const campos = conIdentidad(f.campos).map((c) => {
+  const campos = camposDeFila(f).map((c) => {
     const actual = c.clave === 'dni' ? id.dni : c.clave === 'fechaNacimiento' ? id.fechaNacimiento : null
     return actual ? { ...c, actual } : c
   })
@@ -360,7 +376,7 @@ export async function subirDocumentoSolicitud(
   // Primero se lee (para saber qué es y archivarlo con su tipo); si la IA falla, se archiva como «otro».
   const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre,
     politica.probarContrasenasFicha ? { contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId) } : {})
-  const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, conIdentidad(f.campos)) : { tipo: 'otro' as const, valores: {} }
+  const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, camposDeFila(f)) : { tipo: 'otro' as const, valores: {} }
   const g = await guardarDocumento(f.correduriaId, {
     clienteId: f.clienteId,
     tipo: tipoArchivoDocSolicitud(leido.tipo),
@@ -403,6 +419,19 @@ export async function subirDocumentoSolicitud(
   return { ok: true, tipo: leido.tipo, etiqueta: etiquetaDocSolicitud(leido.tipo), valores: leido.valores, aviso }
 }
 
+/**
+ * «A preguntar» para el historial (y por él, el aviso de actividad), en TODOS los ramos (26/10/2026): etiquetas de lo
+ * que marcó «No lo sé» y de lo que dejó vacío. Nunca valores. Recortado para no inundar el aviso.
+ */
+export function textoAPreguntar(campos: readonly CampoSolicitud[], respuestas: Record<string, Respuesta>): string {
+  const a = camposAPreguntar(campos, respuestas)
+  const partes = [
+    a.noLoSabe.length > 0 ? `No lo sabe: ${a.noLoSabe.join(' · ')}` : '',
+    a.sinContestar.length > 0 ? `Sin contestar: ${a.sinContestar.join(' · ')}` : '',
+  ].filter(Boolean)
+  return partes.length === 0 ? '' : ` A preguntar en la llamada — ${partes.join('. ')}`.slice(0, 700)
+}
+
 /** El cliente manda sus datos. Una sola vez; lo que no se pidió se ignora. */
 export async function responderSolicitud(
   token: string,
@@ -413,7 +442,7 @@ export async function responderSolicitud(
   if (!f) return { ok: false, estado: 'muerta' }
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
-  const campos = conIdentidad(f.campos)
+  const campos = camposDeFila(f)
   // Dirección: provincia/municipio contra la tabla del CP y la calle «oficial» solo si el callejero la confirma.
   const vias = campos.some((c) => c.tipo === 'direccion') ? await viasValidadas(campos, entrada) : new Map<string, ViaValidada>()
   const v = validarRespuestas(campos, entrada, new Date(), { zonaCp: zonaCpServidor, viaValidada: (clave) => vias.get(clave) ?? null })
@@ -478,7 +507,7 @@ export async function responderSolicitud(
     await tx.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${f.correduriaId}::uuid, ${f.clienteId}::uuid, cast('gestion' as tipo_historial_interno),
-              ${`${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO} ${ramoTexto}. Ya se puede tarificar.`})`)
+              ${`${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO} ${ramoTexto}. Ya se puede tarificar.${textoAPreguntar(campos, v.respuestas)}`})`)
     return true
   })
   if (hecho && ramoLeido === 'hogar') {
@@ -490,7 +519,7 @@ export async function responderSolicitud(
         try {
           const [o] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>(Prisma.sql`
             select cliente_id::text as "clienteId" from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
-          await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, tercero })
+          await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, campos, tercero })
         } catch (e) {
           console.error('[solicitud-datos] aviso de hogar tras completar falló:', e instanceof Error ? e.message : e)
         }

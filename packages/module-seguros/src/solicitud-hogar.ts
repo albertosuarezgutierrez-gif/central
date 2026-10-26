@@ -9,7 +9,8 @@
  * - Lo que sale de aquí es DECLARADO: se escribe en `info_riesgo.datosVivienda` sin confirmar y solo en los huecos
  *   (lo que la correduría ya tenía escrito manda). Nunca en la ficha del cliente.
  */
-import { claveDireccion, type Respuesta } from './solicitud-datos.ts'
+import { TRAMOS_CONTENIDO, TRAMOS_CONTINENTE, claveDireccion, importeDeTramo, type Respuesta } from './solicitud-datos.ts'
+import { ALARMA_ID_CODEOSCOPIC, idViviendaDeOpcion } from './solicitud-destinos.ts'
 
 export type DireccionDeclarada = {
   cp: string | null
@@ -81,11 +82,24 @@ export function textoCatastroSolicitud(c: CatastroSolicitud | null): string {
   }
 }
 
+/** Lo que el Catastro DEDUCE del tipo de vivienda (`deducirViviendaCatastro` de module-tarificacion), sin confirmar. */
+export type ViviendaDeducidaSolicitud = { tipo: string | null; aviso?: string | null }
+
 /**
  * Lo que se propone escribir en `datosVivienda` (claves de `ESPEC_VIVIENDA`), sin nulls: solo lo que se sabe.
  * `ahoraIso` sella la consulta al Catastro cuando la hubo.
+ *
+ * 26/10/2026 — DECLARADO vs CATASTRO: lo del Catastro va SIEMPRE a sus gemelos (`catastroMetrosCuadrados`,
+ * `catastroAnioConstruccion`, referencia); a `metrosCuadrados`/`anioConstruccion`/`tipoVivienda` (lo que se tarifica)
+ * solo pasa si el cliente lo CONFIRMÓ en la tarjeta «¿Es esta tu vivienda?» (`confirmaCatastro`). Si lo corrigió o el
+ * Catastro no respondió, va lo que él teclea. Todo sin confirmar por la correduría.
  */
-export function viviendaDeSolicitud(r: Record<string, Respuesta>, catastro: CatastroSolicitud | null, ahoraIso: string): Record<string, string | number | boolean> {
+export function viviendaDeSolicitud(
+  r: Record<string, Respuesta>,
+  catastro: CatastroSolicitud | null,
+  ahoraIso: string,
+  deducida: ViviendaDeducidaSolicitud | null = null,
+): Record<string, string | number | boolean> {
   const out: Record<string, string | number | boolean> = {}
   const d = direccionDeRespuestas(r)
   if (d) {
@@ -100,7 +114,33 @@ export function viviendaDeSolicitud(r: Record<string, Respuesta>, catastro: Cata
     const legible = direccionLegible(d)
     if (legible) out.direccion = legible.slice(0, 200)
   }
-  if (typeof r.valorContenido === 'number' && r.valorContenido > 0) out.capitalContenido = r.valorContenido
+  const confirma = r.confirmaCatastro === true
+  const anioTope = Number(ahoraIso.slice(0, 4)) + 1
+  const anioValido = (v: Respuesta | undefined): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1500 && v <= anioTope
+  // Capitales: el número de antes (`valorContenido`) o el TECHO del tramo; sin techo / «que me lo calculen» = no se escribe.
+  const contenido = typeof r.valorContenido === 'number' && r.valorContenido > 0 ? r.valorContenido : importeDeTramo(TRAMOS_CONTENIDO, r.tramoContenido)
+  if (contenido !== null) out.capitalContenido = contenido
+  const continente = importeDeTramo(TRAMOS_CONTINENTE, r.tramoContinente)
+  if (continente !== null) out.capitalContinente = continente
+  // Catálogos: solo id ATESTIGUADO. El tipo: lo que tecleó el cliente; si no, lo deducido y CONFIRMADO por él.
+  for (const [clave, campo] of [['regimen', 'uso'], ['usoVivienda', 'ocupacion']] as const) {
+    const id = idViviendaDeOpcion(clave, r[clave])
+    if (id) out[campo] = id
+  }
+  const tipo = typeof r.tipoVivienda === 'string' ? r.tipoVivienda : confirma ? deducida?.tipo ?? null : null
+  const idTipo = idViviendaDeOpcion('tipoVivienda', tipo)
+  if (idTipo) out.tipoVivienda = idTipo
+  if (r.alarma === false) out.alarma = ALARMA_ID_CODEOSCOPIC.no
+  for (const k of ['propietarioEsTomador', 'urbanizacionCerrada', 'conMadera', 'puertaPrincipalBlindada', 'ventanasSeguras', 'vigilante'] as const) {
+    const v = r[k]
+    if (typeof v === 'boolean') out[k] = v
+  }
+  if (typeof r.habitaciones === 'number' && Number.isInteger(r.habitaciones) && r.habitaciones >= 1) out.habitaciones = r.habitaciones
+  if (anioValido(r.anioUltimaReforma)) out.anioUltimaReforma = r.anioUltimaReforma
+  for (const k of ['joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos'] as const) {
+    const v = r[k]
+    if (typeof v === 'number' && v >= 0) out[k] = v
+  }
   if (typeof r.hipoteca === 'boolean') out.hipoteca = r.hipoteca
   const banco = txt(r.entidadHipoteca)
   if (r.hipoteca === true && banco) out.bancoHipoteca = banco.slice(0, 80)
@@ -110,14 +150,17 @@ export function viviendaDeSolicitud(r: Record<string, Respuesta>, catastro: Cata
     out.catastroConsultadoAt = ahoraIso
     if (catastro.uso) out.usoCatastral = catastro.uso.slice(0, 60)
     if (catastro.metrosCuadrados !== null && catastro.metrosCuadrados > 0) {
-      out.metrosCuadrados = catastro.metrosCuadrados
       out.catastroMetrosCuadrados = catastro.metrosCuadrados
+      if (confirma) out.metrosCuadrados = catastro.metrosCuadrados
     }
     if (catastro.anioConstruccion !== null && catastro.anioConstruccion >= 1500) {
-      out.anioConstruccion = catastro.anioConstruccion
       out.catastroAnioConstruccion = catastro.anioConstruccion
+      if (confirma) out.anioConstruccion = catastro.anioConstruccion
     }
   }
+  // Lo tecleado por el cliente (corrigió, o el Catastro no lo dio) manda sobre lo deducido.
+  if (typeof r.metrosCuadrados === 'number' && r.metrosCuadrados > 0) out.metrosCuadrados = r.metrosCuadrados
+  if (anioValido(r.anioConstruccion)) out.anioConstruccion = r.anioConstruccion
   return out
 }
 
@@ -127,12 +170,20 @@ export function viviendaDeSolicitud(r: Record<string, Respuesta>, catastro: Cata
  *     ENTERA. Si había otra y la declarada es distinta → no se escribe y se avisa («dirección distinta de la guardada»).
  *   - Bloque CATASTRO (referencia, m², año y la consulta): solo si no hay referencia previa o es la MISMA. Los m² y el
  *     año, además, solo donde no había (lo que escribió la correduría manda). Otra referencia → no se escribe y se avisa.
- *   - Hipoteca + banco: juntos, solo si ninguno estaba. Contenido: solo si no estaba.
+ *   - Hipoteca + banco: juntos, solo si ninguno estaba. Sueltos (`CLAVES_SUELTAS_VIVIENDA`: contenido, régimen, uso,
+ *     tipo, protecciones, capitales, joyas…): cada uno solo si no estaba.
  *   - Bloque CONFIRMADO por Alberto (`confirmadoAt`): NO se toca nada; lo declarado queda en la solicitud y en el aviso.
  * `actual` = lo que la pantalla del riesgo enseña (lo estructurado o, sin ello, la precarga de la póliza).
  */
 export const CLAVES_BLOQUE_DIRECCION = ['cp', 'provincia', 'municipio', 'municipioId', 'tipoViaId', 'nombreVia', 'numeroVia', 'planta', 'puertaVivienda', 'direccion'] as const
 export const CLAVES_BLOQUE_CATASTRO = ['referenciaCatastral', 'catastroReferencia', 'catastroConsultadoAt', 'usoCatastral', 'metrosCuadrados', 'catastroMetrosCuadrados', 'anioConstruccion', 'catastroAnioConstruccion'] as const
+
+/** Campos que se escriben uno a uno, solo si estaban vacíos (lo que escribió la correduría manda). */
+export const CLAVES_SUELTAS_VIVIENDA = [
+  'capitalContenido', 'capitalContinente', 'uso', 'ocupacion', 'tipoVivienda', 'alarma', 'habitaciones', 'anioUltimaReforma',
+  'propietarioEsTomador', 'urbanizacionCerrada', 'conMadera', 'puertaPrincipalBlindada', 'ventanasSeguras', 'vigilante',
+  'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos',
+] as const
 
 export type PlanVivienda = {
   escribir: Record<string, string | number | boolean>
@@ -166,9 +217,11 @@ export function planEscrituraVivienda(actual: Record<string, unknown> | null, pr
     }
   }
 
-  // Catastro.
+  // Catastro. Sin referencia en la propuesta, los m²/año son DECLARADOS (el Catastro no respondió): van sueltos.
   const cat = de(CLAVES_BLOQUE_CATASTRO)
-  if (Object.keys(cat).length > 0) {
+  if (Object.keys(cat).length > 0 && !('referenciaCatastral' in cat)) {
+    for (const k of ['metrosCuadrados', 'anioConstruccion'] as const) if (k in cat && vacio(a[k])) escribir[k] = cat[k]
+  } else if (Object.keys(cat).length > 0) {
     const previa = vacio(a.referenciaCatastral) ? null : refNorm(a.referenciaCatastral)
     if (previa === null || previa === refNorm(cat.referenciaCatastral)) {
       for (const [k, v] of Object.entries(cat)) {
@@ -185,6 +238,7 @@ export function planEscrituraVivienda(actual: Record<string, unknown> | null, pr
   if (Object.keys(hip).length > 0 && vacio(a.hipoteca) && vacio(a.bancoHipoteca)) Object.assign(escribir, hip)
   else if ('hipoteca' in hip && !vacio(a.hipoteca) && a.hipoteca !== hip.hipoteca) conflictos.push('hipoteca declarada distinta de la guardada: revisar')
 
-  if ('capitalContenido' in propuesta && vacio(a.capitalContenido)) escribir.capitalContenido = propuesta.capitalContenido
+  // Sueltos (contenido y, desde el 26/10/2026, las preguntas nuevas): solo donde no había nada.
+  for (const k of CLAVES_SUELTAS_VIVIENDA) if (k in propuesta && vacio(a[k])) escribir[k] = propuesta[k]
   return { escribir, conflictos, confirmado: false }
 }

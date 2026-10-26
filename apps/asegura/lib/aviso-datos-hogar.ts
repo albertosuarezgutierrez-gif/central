@@ -11,7 +11,12 @@
 import { escapeHtml } from '@central/core-telegram'
 import {
   REGIMENES_HOGAR_SOLICITUD,
+  TIPOS_VIVIENDA_SOLICITUD,
+  TRAMOS_CONTENIDO,
+  TRAMOS_CONTINENTE,
   USOS_HOGAR_SOLICITUD,
+  camposAPreguntar,
+  type CampoSolicitud,
   direccionDeRespuestas,
   direccionLegible,
   textoCatastroSolicitud,
@@ -33,6 +38,10 @@ const etiqueta = (lista: readonly { valor: string; etiqueta: string }[], v: Resp
 export type EntradaAvisoDatosHogar = {
   respuestas: Record<string, Respuesta>
   catastro: CatastroSolicitud | null
+  /** Tipo de vivienda deducido del Catastro (26/10/2026); `null`/ausente = no se dedujo. */
+  deducida?: { tipo: string | null; aviso: string | null } | null
+  /** Campos que se pidieron: para listar lo que queda «a preguntar» (vacíos y «No lo sé»). */
+  campos?: readonly CampoSolicitud[]
   /** Enlace a la ficha en plataforma (`/correduria/cliente/<id>`). */
   enlaceFicha: string
   /** Los datos son de otra persona del riesgo (con su consentimiento). */
@@ -43,6 +52,24 @@ export type EntradaAvisoDatosHogar = {
   conflictos?: string[]
   /** Los datos de la vivienda estaban confirmados por Alberto: no se han tocado. */
   confirmado?: boolean
+}
+
+/** El tipo: lo que dijo el cliente, o lo deducido del Catastro (y si lo confirmó). */
+function tipoTexto(r: Record<string, Respuesta>, d: { tipo: string | null } | null): string {
+  const del = (v: unknown) => TIPOS_VIVIENDA_SOLICITUD.find((o) => o.valor === v)?.etiqueta ?? (v === 'unifamiliar' ? 'Casa (adosada o independiente)' : null)
+  const dicho = del(r.tipoVivienda)
+  if (dicho) return `${dicho} (declarado)`
+  const deducido = d ? del(d.tipo) : null
+  if (!deducido) return 'sin dato'
+  return `${deducido} (Catastro, ${r.confirmaCatastro === true ? 'confirmado por el cliente' : 'sin confirmar'})`
+}
+
+/** Un capital: el importe tecleado (enlaces de antes) o el tramo elegido con lo que se anota. */
+function capitalTexto(importe: Respuesta | undefined, tramos: readonly { valor: string; etiqueta: string; importe: number | null }[], tramo: Respuesta | undefined): string {
+  if (typeof importe === 'number') return eur(importe)
+  const t = tramos.find((x) => x.valor === tramo)
+  if (!t) return 'sin dato'
+  return t.importe === null ? `${t.etiqueta} (a calcular)` : `${t.etiqueta} (se anota ${eur(t.importe)})`
 }
 
 /** `true` si el seguro es para el certificado del banco: es lo que más prisa corre y lo que más se equivoca. */
@@ -56,8 +83,11 @@ export function textoAvisoDatosHogar(e: EntradaAvisoDatosHogar): string {
   const d = direccionDeRespuestas(r)
   lineas.push(`📍 ${d ? escapeHtml(direccionLegible(d)) : 'sin dirección'}${d && !(d.viaTipo && d.viaNombre) ? ' (calle escrita a mano, por validar)' : ''}`)
   lineas.push(`🗺️ ${escapeHtml(textoCatastroSolicitud(e.catastro))}`)
-  lineas.push(`🏷️ ${etiqueta(REGIMENES_HOGAR_SOLICITUD, r.regimen)} · ${etiqueta(USOS_HOGAR_SOLICITUD, r.usoVivienda)}`)
-  lineas.push(`🛋️ Contenido: ${typeof r.valorContenido === 'number' ? eur(r.valorContenido) : 'sin dato'} · alarma: ${siNo(r.alarma)}`)
+  lineas.push(`🏠 Tipo: ${tipoTexto(r, e.deducida ?? null)}`)
+  if (e.deducida?.aviso) lineas.push(escapeHtml(e.deducida.aviso))
+  lineas.push(`🏷️ ${etiqueta(REGIMENES_HOGAR_SOLICITUD, r.regimen)} · ${etiqueta(USOS_HOGAR_SOLICITUD, r.usoVivienda)} · habitaciones: ${typeof r.habitaciones === 'number' ? r.habitaciones : 'sin dato'}`)
+  lineas.push(`🛋️ Contenido: ${capitalTexto(r.valorContenido, TRAMOS_CONTENIDO, r.tramoContenido)} · continente: ${capitalTexto(null, TRAMOS_CONTINENTE, r.tramoContinente)}`)
+  lineas.push(`🔐 Alarma: ${siNo(r.alarma)} · puerta blindada: ${siNo(r.puertaPrincipalBlindada)} · rejas: ${siNo(r.ventanasSeguras)} · urb. cerrada: ${siNo(r.urbanizacionCerrada)}`)
   if (r.hipoteca === true) {
     const banco = txt(r.entidadHipoteca)
     if (esParaBanco(r)) {
@@ -79,6 +109,11 @@ export function textoAvisoDatosHogar(e: EntradaAvisoDatosHogar): string {
   lineas.push(`📅 Efecto deseado: ${efecto ?? 'sin fecha'}`)
   const comentario = txt(r.comentario)
   if (comentario) lineas.push(`💬 ${escapeHtml(comentario.slice(0, 300))}`)
+  if (e.campos) {
+    const a = camposAPreguntar(e.campos, r)
+    if (a.noLoSabe.length > 0) lineas.push(`❓ No lo sabe (a preguntar): ${escapeHtml(a.noLoSabe.join(' · ').slice(0, 600))}`)
+    if (a.sinContestar.length > 0) lineas.push(`📞 Sin contestar (a preguntar): ${escapeHtml(a.sinContestar.join(' · ').slice(0, 600))}`)
+  }
   for (const c of e.conflictos ?? []) lineas.push(`⚠️ ${escapeHtml(c)}`)
   if (e.confirmado) lineas.push('🔒 Datos de la vivienda confirmados: no se han tocado (lo declarado está en «Datos pedidos»).')
   else if (e.anotados === null) lineas.push('⚠️ No se han podido pasar al riesgo de la oportunidad: están en «Datos pedidos».')

@@ -105,6 +105,65 @@ export type CampoSolicitud = {
   soloFutura?: boolean
   /** Número: tope (por defecto 1.000.000). */
   max?: number
+  /**
+   * Título del bloque al que pertenece (26/10/2026): el formulario pinta un encabezado cada vez que cambia. Solo
+   * agrupa; no cambia la validación. Los enlaces guardados antes no lo traen (= sin encabezados).
+   */
+  seccion?: string
+  /**
+   * 26/10/2026 (menos abandono): `esencial` = lo mínimo para tarificar (vendor o compañía), va primero; `opcional` =
+   * afina el precio, va después del aviso «Con esto ya podemos calcular tu precio…». Lo pone `camposSolicitud`
+   * (por defecto: obligatorio → esencial).
+   */
+  nivel?: 'esencial' | 'opcional'
+  /** Admite «No lo sé» (= `null`, «no se sabe»; nunca false ni 0). Nunca en identidad ni dirección. */
+  admiteNoLoSe?: boolean
+  /**
+   * Hogar: depende de lo que el Catastro diga de la dirección (consulta en vivo del formulario).
+   * `tarjeta` = «¿Es esta tu vivienda?»; `tipo_vivienda`, `metros`, `anio` = solo si el Catastro no lo da (o se corrige);
+   * `ventanas` = solo en bajo o casa (o si no se sabe el tipo).
+   */
+  catastro?: 'tarjeta' | 'tipo_vivienda' | 'metros' | 'anio' | 'ventanas'
+}
+
+/** Claves que nunca admiten «No lo sé»: identidad y lo que el vendor exige sí o sí (y la ley para identificar). */
+const SIN_NO_LO_SE = new Set(['dni', 'fechaNacimiento', 'codigoPostal', 'matricula', 'descripcionRiesgo', 'confirmaCatastro'])
+
+/** Clave reservada en las respuestas: los campos que el cliente marcó «No lo sé», separados por comas. */
+export const CLAVE_NO_LO_SE = '_noLoSe'
+
+/** Nivel y «No lo sé» por defecto, iguales en todos los ramos. */
+export function conNiveles(campos: readonly CampoSolicitud[]): CampoSolicitud[] {
+  return campos.map((c) => ({
+    ...c,
+    nivel: c.nivel ?? (c.obligatorio ? 'esencial' : 'opcional'),
+    admiteNoLoSe: c.admiteNoLoSe ?? (c.tipo !== 'direccion' && !SIN_NO_LO_SE.has(c.clave)),
+  }))
+}
+
+/**
+ * CAPITALES POR TRAMOS (26/10/2026). Cada tramo se anota en `datosVivienda` por su TECHO (asegurar de menos es
+ * infraseguro, regla proporcional del art. 30 LCS); el abierto por arriba y «que me lo calculen» → `null` (no se sabe:
+ * lo calcula la correduría, p. ej. con `recommend-limits` de Codeoscopic). Nunca se inventa un número sin techo.
+ */
+export type TramoCapital = { valor: string; etiqueta: string; importe: number | null }
+export const TRAMOS_CONTENIDO: readonly TramoCapital[] = [
+  { valor: 'hasta_15000', etiqueta: 'Menos de 15.000€', importe: 15_000 },
+  { valor: '15000_30000', etiqueta: 'Entre 15.000€ y 30.000€', importe: 30_000 },
+  { valor: '30000_60000', etiqueta: 'Entre 30.000€ y 60.000€', importe: 60_000 },
+  { valor: 'mas_60000', etiqueta: 'Más de 60.000€', importe: null },
+  { valor: 'calcular', etiqueta: 'No lo sé: que me lo calculen', importe: null },
+]
+export const TRAMOS_CONTINENTE: readonly TramoCapital[] = [
+  { valor: 'hasta_80000', etiqueta: 'Menos de 80.000€', importe: 80_000 },
+  { valor: '80000_150000', etiqueta: 'Entre 80.000€ y 150.000€', importe: 150_000 },
+  { valor: '150000_250000', etiqueta: 'Entre 150.000€ y 250.000€', importe: 250_000 },
+  { valor: 'mas_250000', etiqueta: 'Más de 250.000€', importe: null },
+  { valor: 'calcular', etiqueta: 'No lo sé: que me lo calculen', importe: null },
+]
+/** El importe que se anota por un tramo; `null` = sin techo o «que me lo calculen» (no se sabe). */
+export function importeDeTramo(tramos: readonly TramoCapital[], valor: unknown): number | null {
+  return tramos.find((t) => t.valor === valor)?.importe ?? null
 }
 
 /**
@@ -153,6 +212,19 @@ export const USOS_HOGAR_SOLICITUD = [
   { valor: 'habitual', etiqueta: 'Vivienda habitual (vivo en ella)' },
   { valor: 'secundaria', etiqueta: 'Segunda residencia' },
   { valor: 'alquilada', etiqueta: 'La tengo alquilada a otros' },
+] as const
+
+/**
+ * Tipo de vivienda (26/10/2026). Los cinco de Allianz Hogar y del contrato de datos (`contrato-datos.ts`: «piso,
+ * ático, bajo, adosado o casa independiente»), con las claves canónicas del bot (`TIPOS_VIVIENDA` de
+ * `@central/module-tarificacion`). `planta_baja` = bajo o piso con ventanas a menos de 3 m del suelo (así lo agrupa Allianz).
+ */
+export const TIPOS_VIVIENDA_SOLICITUD = [
+  { valor: 'piso', etiqueta: 'Piso (planta intermedia)' },
+  { valor: 'planta_baja', etiqueta: 'Bajo, o piso con ventanas a menos de 3 m del suelo' },
+  { valor: 'atico', etiqueta: 'Ático' },
+  { valor: 'adosada', etiqueta: 'Casa adosada o pareada' },
+  { valor: 'independiente', etiqueta: 'Casa independiente' },
 ] as const
 
 const CAMPOS_IDENTIDAD_SOLICITUD: readonly CampoSolicitud[] = [
@@ -244,25 +316,53 @@ function camposVehiculo(ramo: 'auto' | 'moto', conocido: ConocidoFicha): CampoSo
 }
 
 /**
- * HOGAR (25/10/2026): la dirección por la regla de la casa (CP → provincia → municipio → calle del Catastro →
- * número), régimen, uso, contenido, alarma, hipoteca (→ banco/certificado + entidad), seguro actual y efecto.
- * Con la dirección, al completar se consulta el Catastro (m², año, referencia) para tarificar sin reteclear.
+ * HOGAR (25/10/2026; ampliado el 26/10/2026). Las preguntas salen del contrato de datos de hogar
+ * (`contrato-datos.ts`, que cubre `revisarDatosHogar` de Codeoscopic y el bot de Allianz) y SOLO las que el cliente
+ * sabe contestar: lo de catálogo que la correduría decide (asentamiento, calidad, materiales, puertas secundarias,
+ * ubicación) no se pregunta, y m² y año los da el Catastro con la dirección. Cada respuesta tiene su campo en
+ * `datosVivienda` (ver `DESTINOS_HOGAR` en `solicitud-destinos.ts`, con su cepo). Lo que no se contesta es `null`.
  */
 function camposHogar(): CampoSolicitud[] {
+  const en = (seccion: string, cs: readonly CampoSolicitud[]): CampoSolicitud[] => cs.map((c) => ({ ...c, seccion }))
+  const ES = 'esencial' as const
+  const OP = 'opcional' as const
   return [
-    ...camposIdentidadTomador('hogar'),
-    { clave: 'vivienda', etiqueta: 'Dirección de la vivienda', tipo: 'direccion', obligatorio: true, ayuda: 'Empieza por el código postal: la provincia y el municipio salen solos.' },
-    { clave: 'regimen', etiqueta: '¿Eres propietario o inquilino?', tipo: 'opcion', obligatorio: true, opciones: REGIMENES_HOGAR_SOLICITUD },
-    { clave: 'usoVivienda', etiqueta: '¿Qué uso tiene la vivienda?', tipo: 'opcion', obligatorio: true, opciones: USOS_HOGAR_SOLICITUD },
-    {
-      clave: 'valorContenido', etiqueta: 'Valor aproximado de lo que hay dentro (muebles, electrodomésticos, ropa…), en €', tipo: 'numero', obligatorio: false,
-      max: 10_000_000, ayuda: 'Si no lo sabes, déjalo en blanco y lo calculamos contigo.',
-    },
-    { clave: 'alarma', etiqueta: '¿Tiene alarma conectada?', tipo: 'si_no', obligatorio: true },
-    ...CAMPOS_HIPOTECA,
-    ...camposSeguroActual('¿La vivienda tiene seguro ahora?'),
-    CAMPO_FECHA_EFECTO,
-    CAMPO_COMENTARIO,
+    ...en('Quién contrata', camposIdentidadTomador('hogar')),
+    ...en('La vivienda', [
+      { clave: 'vivienda', etiqueta: 'Dirección de la vivienda', tipo: 'direccion', obligatorio: true, ayuda: 'Empieza por el código postal: la provincia y el municipio salen solos. Si es un bajo, pon 0 en la planta.' },
+      // Lo que da el Catastro (tipo, m², año) no se pregunta: se ENSEÑA para que lo confirme. Solo si no responde o se corrige.
+      { clave: 'confirmaCatastro', etiqueta: '¿Es esta tu vivienda?', tipo: 'si_no', obligatorio: false, nivel: ES, catastro: 'tarjeta', admiteNoLoSe: false },
+      { clave: 'tipoVivienda', etiqueta: '¿Qué tipo de vivienda es?', tipo: 'opcion', obligatorio: false, nivel: ES, catastro: 'tipo_vivienda', opciones: TIPOS_VIVIENDA_SOLICITUD },
+      { clave: 'metrosCuadrados', etiqueta: 'Metros cuadrados construidos, aproximados', tipo: 'numero', obligatorio: false, nivel: ES, catastro: 'metros', max: 100_000 },
+      { clave: 'anioConstruccion', etiqueta: 'Año de construcción del edificio, aproximado', tipo: 'numero', obligatorio: false, nivel: ES, catastro: 'anio', max: 2100 },
+      { clave: 'habitaciones', etiqueta: '¿Cuántas habitaciones tiene?', tipo: 'numero', obligatorio: true, max: 60, ayuda: 'Sin contar salón, cocina ni baños.' },
+      { clave: 'regimen', etiqueta: '¿Eres propietario o inquilino?', tipo: 'opcion', obligatorio: true, opciones: REGIMENES_HOGAR_SOLICITUD },
+      { clave: 'propietarioEsTomador', etiqueta: '¿La vivienda es de quien contrata el seguro?', tipo: 'si_no', obligatorio: true },
+      { clave: 'usoVivienda', etiqueta: '¿Qué uso tiene la vivienda?', tipo: 'opcion', obligatorio: true, opciones: USOS_HOGAR_SOLICITUD },
+      { clave: 'urbanizacionCerrada', etiqueta: '¿Está en una urbanización cerrada?', tipo: 'si_no', obligatorio: true },
+    ]),
+    ...en('Seguridad', [
+      { clave: 'alarma', etiqueta: '¿Tiene alarma conectada?', tipo: 'si_no', obligatorio: true },
+      { clave: 'puertaPrincipalBlindada', etiqueta: '¿La puerta de entrada es blindada o acorazada?', tipo: 'si_no', obligatorio: true },
+      // Rejas: solo en un bajo o en una casa (en un piso alto no se pregunta), o si aún no se sabe el tipo.
+      { clave: 'ventanasSeguras', etiqueta: '¿Las ventanas tienen rejas o cierres de seguridad?', tipo: 'si_no', obligatorio: false, nivel: ES, catastro: 'ventanas', ayuda: 'Las que se pueden alcanzar desde la calle, el patio o la terraza.' },
+    ]),
+    ...en('Lo que quieres asegurar', [
+      { clave: 'tramoContenido', etiqueta: '¿Cuánto vale lo que hay dentro (muebles, electrodomésticos, ropa…)?', tipo: 'opcion', obligatorio: false, nivel: ES, opciones: TRAMOS_CONTENIDO, admiteNoLoSe: false },
+      { clave: 'tramoContinente', etiqueta: 'Si eres el dueño: ¿cuánto costaría volver a construirla?', tipo: 'opcion', obligatorio: false, nivel: OP, opciones: TRAMOS_CONTINENTE, admiteNoLoSe: false, ayuda: 'No es el precio de venta: es lo que costaría levantarla de nuevo.' },
+    ]),
+    ...en('Hipoteca y seguro actual', [...CAMPOS_HIPOTECA, ...camposSeguroActual('¿La vivienda tiene seguro ahora?'), CAMPO_FECHA_EFECTO]),
+    // Para afinar el precio (opcionales): aparecen después del aviso «Con esto ya podemos calcular tu precio».
+    ...en('Para afinar el precio', [
+      { clave: 'conMadera', etiqueta: '¿La estructura del edificio lleva madera?', tipo: 'si_no', obligatorio: false, ayuda: 'Vigas o forjados de madera.' },
+      { clave: 'anioUltimaReforma', etiqueta: 'Si se ha reformado, ¿en qué año?', tipo: 'numero', obligatorio: false, max: 2100 },
+      { clave: 'vigilante', etiqueta: '¿Hay vigilante de seguridad?', tipo: 'si_no', obligatorio: false },
+      { clave: 'joyasEnCajaFuerte', etiqueta: 'Joyas guardadas en caja fuerte, en €', tipo: 'numero', obligatorio: false, max: 100_000, ayuda: 'Solo si quieres cubrirlas.' },
+      { clave: 'joyasFueraDeCaja', etiqueta: 'Joyas fuera de caja fuerte, en €', tipo: 'numero', obligatorio: false, max: 100_000 },
+      { clave: 'objetosDeValor', etiqueta: 'Otros objetos de valor (arte, colecciones…), en €', tipo: 'numero', obligatorio: false, max: 100_000_000 },
+      { clave: 'perrosPeligrosos', etiqueta: '¿Cuántos perros de raza potencialmente peligrosa (PPP) viven en casa?', tipo: 'numero', obligatorio: false, max: 20 },
+      CAMPO_COMENTARIO,
+    ]),
   ]
 }
 
@@ -317,16 +417,51 @@ function camposGenerico(conocido: ConocidoFicha): CampoSolicitud[] {
  */
 export function camposSolicitud(ramo: RamoSolicitud, conocido: ConocidoFicha): CampoSolicitud[] {
   switch (grupoSolicitud(ramo)) {
-    case 'vehiculo': return camposVehiculo(ramo as 'auto' | 'moto', conocido)
-    case 'hogar': return camposHogar()
-    case 'personas': return camposPersonas(ramo, conocido)
-    case 'mascota': return camposMascota(conocido)
-    default: return camposGenerico(conocido)
+    case 'vehiculo': return conNiveles(camposVehiculo(ramo as 'auto' | 'moto', conocido))
+    case 'hogar': return conNiveles(camposHogar())
+    case 'personas': return conNiveles(camposPersonas(ramo, conocido))
+    case 'mascota': return conNiveles(camposMascota(conocido))
+    default: return conNiveles(camposGenerico(conocido))
   }
+}
+
+/**
+ * Los campos de un enlace YA CREADO, puestos al día (26/10/2026). Los campos se GUARDAN al crear el enlace
+ * (`solicitud_datos.campos`); sin esto, un enlace pendiente de antes no vería las preguntas nuevas. En hogar los campos no
+ * dependen de la ficha, así que un enlace pendiente toma la lista vigente (más lo guardado que ya no exista, por si acaso).
+ * En el resto de ramos solo se añaden nivel y «No lo sé» (lo que se pide depende de la ficha al crearlo). Se usa igual al
+ * pintar y al validar: lo que se enseña es lo que se acepta.
+ */
+export function camposAlDia(ramo: RamoSolicitud, guardados: readonly CampoSolicitud[]): CampoSolicitud[] {
+  if (grupoSolicitud(ramo) !== 'hogar') return conNiveles(guardados)
+  const vigentes = camposSolicitud(ramo, NADA_CONOCIDO)
+  const claves = new Set(vigentes.map((c) => c.clave))
+  // `valorContenido` (número) lo sustituye `tramoContenido`: no se pide dos veces.
+  const sobrantes = guardados.filter((c) => !claves.has(c.clave) && c.clave !== 'valorContenido')
+  return [...vigentes, ...conNiveles(sobrantes)]
+}
+
+/**
+ * Lo que queda «a preguntar» en la llamada (etiquetas, nunca valores): los campos visibles sin respuesta (opcionales
+ * vacíos) y los marcados «No lo sé». Lo que cuelga de un «no» (`siMarcado`) no cuenta.
+ */
+export function camposAPreguntar(campos: readonly CampoSolicitud[], respuestas: Record<string, Respuesta>): { noLoSabe: string[]; sinContestar: string[] } {
+  const noLoSe = new Set(String(respuestas[CLAVE_NO_LO_SE] ?? '').split(',').filter(Boolean))
+  const noLoSabe: string[] = []
+  const sinContestar: string[] = []
+  for (const c of campos) {
+    if (c.tipo === 'direccion' || c.catastro === 'tarjeta') continue
+    if (c.siMarcado && respuestas[c.siMarcado] !== true) continue
+    const v = respuestas[c.clave]
+    if (noLoSe.has(c.clave)) noLoSabe.push(c.etiqueta)
+    else if ((v === null || v === undefined) && !c.catastro) sinContestar.push(c.etiqueta)
+  }
+  return { noLoSabe, sinContestar }
 }
 
 export type Respuesta = string | number | boolean | null
 export type ValidacionSolicitud =
+  /** `respuestas[CLAVE_NO_LO_SE]` = los marcados «No lo sé» (comas), solo si hay alguno. */
   | { ok: true; respuestas: Record<string, Respuesta> }
   | { ok: false; errores: Record<string, string> }
 
@@ -442,7 +577,11 @@ export function validarRespuestas(
   const errores: Record<string, string> = {}
   const respuestas: Record<string, Respuesta> = {}
   const hoyIso = hoy.toISOString().slice(0, 10)
+  // «No lo sé» (26/10/2026): llega como lista en `_noLoSe`; solo vale en campos que lo admiten. Es `null`, nunca false ni 0.
+  const pedidos = Array.isArray(entrada[CLAVE_NO_LO_SE]) ? (entrada[CLAVE_NO_LO_SE] as unknown[]).filter((x): x is string => typeof x === 'string') : []
+  const noLoSe = campos.filter((c) => c.admiteNoLoSe === true && pedidos.includes(c.clave) && !(c.siMarcado && entrada[c.siMarcado] !== true)).map((c) => c.clave)
   for (const c of campos) {
+    if (noLoSe.includes(c.clave)) { respuestas[c.clave] = null; continue }
     if (c.tipo === 'direccion') {
       // Escalares por subclave; `siMarcado` no aplica a una dirección.
       const d = validarDireccion(c, entrada, opciones)
@@ -512,6 +651,7 @@ export function validarRespuestas(
       }
     }
   }
+  if (noLoSe.length > 0) respuestas[CLAVE_NO_LO_SE] = noLoSe.join(',')
   return Object.keys(errores).length > 0 ? { ok: false, errores } : { ok: true, respuestas }
 }
 

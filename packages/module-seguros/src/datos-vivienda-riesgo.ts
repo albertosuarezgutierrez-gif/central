@@ -218,6 +218,10 @@ export function precargaViviendaDePoliza(datos: unknown): Partial<Omit<DatosVivi
     // `anioConstruccionCima` es el de la compañía (Antigüedad del EIAC): no se precarga como dato declarado.
     anioConstruccion: n('anioConstruccion'),
     referenciaCatastral: t('referenciaCatastral'),
+    // 26/10/2026: los capitales que trae la póliza de CIMA (`continente`/`contenido`, los mismos que lee
+    // `hogarDeDatos` para Codeoscopic) faltaban en la precarga.
+    capitalContinente: n('continente'),
+    capitalContenido: n('contenido'),
   }
   for (const k of Object.keys(candidato)) if (candidato[k] === null) delete candidato[k]
   for (let i = 0; i < CAMPOS_VIVIENDA.length; i++) {
