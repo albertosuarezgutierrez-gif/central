@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T11:08:10Z",
-  "sha": "e3b520f6ba5d64ca71163fc9b6ef70159f125181",
+  "generadoEn": "2026-10-26T13:00:53Z",
+  "sha": "0a1228f332ff7580166e4479000282b3f1235a7f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3230,13 +3230,13 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 41,
+          "linea": 42,
           "resumen": "«Quién puede ver mis seguros» — la pantalla donde José deja que su mujer María vea la póliza del coche, y donde María acepta o rechaza lo que le han dado. ─────────────────────────────────────────────"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5d314caa950d"
+      "hash": "92a44a9678c2"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/autorizaciones/SeccionPlegable.tsx",
@@ -4308,7 +4308,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 119
+          "linea": 113
         },
         {
           "nombre": "Titular",
@@ -4316,7 +4316,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, bajasAbiertas = null, bajasParaMejorar = null, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date /** Solo en «mias»:",
           "retorno": null,
-          "linea": 1002,
+          "linea": 978,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -4325,7 +4325,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], /** De `polizasParaParte`: la única fuente de si se puede dar parte de ella. */ puedeParte: boolean, titular?: string, /** El titular tal como figura, para el mensaje a la compañía (propi",
           "retorno": "PolizaOpcionParte",
-          "linea": 1067,
+          "linea": 1043,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -4333,7 +4333,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "5d58ebd68bf9"
+      "hash": "05777890a6d4"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -5003,7 +5003,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6b69378e3f7e"
+      "hash": "93b3f39b9ab9"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/CompararIA.tsx",
@@ -5127,7 +5127,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e4938537e94f"
+      "hash": "f7bd2e34551a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/EstudioCliente.tsx",
@@ -5339,7 +5339,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a64bb584780f"
+      "hash": "f82df0b0c840"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/TodasLasOpciones.tsx",
@@ -5557,6 +5557,27 @@
       "hash": "3142dddcacfa"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/SubNavSeguros.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "SubNavSeguros"
+      ],
+      "funciones": [
+        {
+          "nombre": "SubNavSeguros",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ vista, familias, familia }: { vista: VistaBoveda; familias: FamiliaSeguro[]; familia: FamiliaSeguro | null }",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "La navegación DENTRO de «Seguros» (26/10/2026, menú de cinco): Seguros · Recibos · Siniestros · Mi QR eran cuatro entradas del menú y ahora son chips de esta pantalla. Debajo, en «Seguros», las famili"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bad26c635e31"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/TusDatos.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5703,7 +5724,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 26,
+          "linea": 27,
           "resumen": "«Configuración» (13/10/2026, fase A): los avisos y lo que has consentido. · Avisos: el interruptor de ESTE dispositivo (`ActivarPush`), qué novedades avisar (`PreferenciasAvisos`, antes en la campana)"
         },
         {
@@ -5712,7 +5733,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 82
+          "linea": 83
         },
         {
           "nombre": "Consentimientos",
@@ -5720,13 +5741,34 @@
           "exportada": false,
           "params": "{ filas }: { filas: ConsentimientoListado[] | null }",
           "retorno": null,
-          "linea": 94,
+          "linea": 95,
           "resumen": "`null` = no se han podido leer (se dice); `[]` = no consta ninguno (también se dice, distinto)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7ea37fb24a4f"
+      "hash": "d780c43401a7"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/cuenta/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CuentaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "CuentaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "«Cuenta» (26/10/2026, menú de cinco): lo que es de la PERSONA y no de sus seguros. Datos de contacto (que siguen viviendo en `/boveda?vista=datos`, con su derecho de supresión), Configuración (avisos "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "db956f4d07e3"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/FlotaEmpresa.tsx",
@@ -5830,13 +5872,13 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 27,
+          "linea": 28,
           "resumen": "«Tu flota» (05/10/2026) — el mínimo de empresa del piloto. Sin `?empresa=`: índice de las sociedades cuya flota puede ver esta identidad (dueño o jefe de flota) y los nombramientos que tiene pendiente"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dba48a8e1e55"
+      "hash": "988ab0d1fbc5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/BotonSolicitarModulo.tsx",
@@ -5872,13 +5914,31 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 25,
-          "resumen": "«Herramientas» (Fase 0, 22/10/2026): el catálogo de módulos gratis para clientes. Tarjeta por módulo con lo que hace y un botón según su estado (Abrir / Solicitar / Apuntarme). Pedir deja una fila `so"
+          "linea": 29,
+          "resumen": "«Herramientas» (26/10/2026, menú de cinco): LA ventana de las herramientas. Patrimonio, Flota, el calendario y Mi resumen (lo que antes estaba repartido entre Inicio y el menú), el Portal del Empleado"
+        },
+        {
+          "nombre": "TarjetaModuloPortal",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ t }: { t: TarjetaModulo }",
+          "retorno": null,
+          "linea": 114,
+          "resumen": "Una tarjeta del catálogo (Patrimonio, Flota): qué es, con qué seguros tiene que ver y su botón según el estado."
+        },
+        {
+          "nombre": "SolicitudModulo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ t }: { t: TarjetaModulo }",
+          "retorno": null,
+          "linea": 131,
+          "resumen": "Lo que cuelga del botón de pedir: el texto, el botón o el estado de lo ya pedido. Nada si ya se abre."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27c28885f779"
+      "hash": "a1e8ebb92f60"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/page.tsx",
@@ -5888,27 +5948,65 @@
       ],
       "funciones": [
         {
-          "nombre": "Tarjeta",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ href, titulo, lineas, aviso, cta, etiqueta, ancha, chip }: { href: string titulo: string lineas: string[] aviso?: string[] cta?: string | null etiqueta: string ancha?: boolean /** «N pendientes»: lo que esta tarjeta pide al cliente ahora.",
-          "retorno": null,
-          "linea": 23,
-          "resumen": "Una tarjeta = UN enlace con nombre accesible completo (spec §1.5)."
-        },
-        {
           "nombre": "InicioPage",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 62,
-          "resumen": "«Inicio» (24/10/2026, spec §1): primero los seguros (por familia), después las herramientas. Una sola sugerencia comercial, cerrable. Cada fuente se lee aparte (`lib/inicio.ts`): la que falla dice «no"
+          "linea": 24,
+          "resumen": "«Inicio» (26/10/2026, decisión de Alberto): SOLO lo pendiente. Vencimientos, recibos pendientes, avisos, huecos de protección y siniestros abiertos; nada más. Ya NO lleva la lista de seguros por famil"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9d840a2a1693"
+      "hash": "6b69e925e3d7"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/inicio/PendienteInicio.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "PendienteInicio"
+      ],
+      "funciones": [
+        {
+          "nombre": "IconoAviso",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ peligro }: { peligro?: boolean }",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "Triángulo de aviso (trazo, hereda el color): sustituye al «⚠» de texto. Nunca va solo: el texto dice lo mismo."
+        },
+        {
+          "nombre": "IconoTodoAlDia",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 31,
+          "resumen": "Escudo con visto (el de «Seguros» de la barra inferior): el estado vacío amable."
+        },
+        {
+          "nombre": "Lista",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ items }: { items: ItemPendiente[] }",
+          "retorno": null,
+          "linea": 40
+        },
+        {
+          "nombre": "PendienteInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ pendiente, huecos }: { pendiente: Pendiente; huecos: ReactNode }",
+          "retorno": null,
+          "linea": 66,
+          "resumen": "Lo pendiente de «Inicio»: vencimientos, recibos, avisos, siniestros abiertos y la sugerencia de huecos. Cliente porque los AVISOS salen de `/api/avisos` (la fuente de la campana: una sola lista, no un"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dd451bd0f8f0"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/layout.tsx",
@@ -5923,13 +6021,13 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 28,
+          "linea": 26,
           "resumen": "El armazón de las pantallas con sesión. 🚨 **Vive en el `layout` y no en cada página**, y eso es lo que arregla el fallo que se veía: hasta ahora cada página abría su propio `<main>` con un `maxWidth:"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "598492f38e76"
+      "hash": "ec630aec3d1f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/loading.tsx",
@@ -5963,7 +6061,7 @@
           "nombre": "NavPortal",
           "kind": "function",
           "exportada": true,
-          "params": "{ llamar, whatsapp, patrimonio }: { /** `accesosPatrimonio` no vacío (lo calcula el layout): sin titulares no hay entrada. */ patrimonio?: boolean llamar?: { tel: string; numero: string } /** El enlace `wa.me` ya compuesto en el servidor (v",
+          "params": "{ llamar, whatsapp }: { llamar?: { tel: string; numero: string } /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */ whatsapp?: string }",
           "retorno": null,
           "linea": 51,
           "resumen": "La navegación del portal: **un solo `<nav>` con dos formas**. 🚨 El mismo DOM se pinta como cajón (drawer) en el móvil y como lateral vertical en el escritorio; lo decide `globals.css` (`.portal-nav`)"
@@ -5974,7 +6072,7 @@
           "exportada": false,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 306,
+          "linea": 267,
           "resumen": "── Iconos de la barra inferior ───────────────────────────────────────────── SVG en línea y no una librería: el portal no carga ninguna de iconos y una dependencia nueva por cinco dibujos no compensa."
         },
         {
@@ -5983,7 +6081,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 314
+          "linea": 275
         },
         {
           "nombre": "IconoInicio",
@@ -5991,15 +6089,15 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 315
+          "linea": 276
         },
         {
-          "nombre": "IconoSiniestros",
+          "nombre": "IconoHerramientas",
           "kind": "arrow",
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 316
+          "linea": 277
         },
         {
           "nombre": "IconoMas",
@@ -6007,12 +6105,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 317
+          "linea": 278
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1414b3149d9d"
+      "hash": "fb75232e41bd"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/AvisoPolizaSinInmueble.tsx",
@@ -6273,7 +6371,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "9862f0deb735"
+      "hash": "831bde9660e2"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/CubreSeguro.tsx",
@@ -6542,7 +6640,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "8c82b2b143cf"
+      "hash": "4ae202158c32"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/importar/page.tsx",
@@ -6863,13 +6961,13 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<ParametrosAlta> }",
           "retorno": null,
-          "linea": 22,
+          "linea": 23,
           "resumen": "«Patrimonio» (Fase 1, 22/10/2026): los inmuebles por titular. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `patrimonioDeIdentidad`): se ven SOLO los titulares a los que esta sesión tiene acceso. "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4ad1f13ce941"
+      "hash": "89746535f152"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/fiscal/page.tsx",
@@ -7003,7 +7101,7 @@
           "exportada": false,
           "params": "r: string | null",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "etiquetaGestionada",
@@ -7011,7 +7109,7 @@
           "exportada": false,
           "params": "p: PolizaPortal",
           "retorno": "string",
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "ResumenPage",
@@ -7019,7 +7117,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 38,
+          "linea": 39,
           "resumen": "«Mi resumen {año}» (13/10/2026): lo pagado en seguros y los siniestros del año, para la declaración de la renta. Lee SOLO lo autorizado a esta identidad: `carteraDeIdentidad` (parte de `portal_vinculo"
         }
       ],
@@ -7027,7 +7125,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "79bc62ad8158"
+      "hash": "a2da73fe03ab"
     },
     {
       "ruta": "apps/asegura-portal/app/ActivarPush.tsx",
@@ -9916,6 +10014,48 @@
       "hash": "d0cb0a0f4271"
     },
     {
+      "ruta": "apps/asegura-portal/app/CabeceraEnlaces.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CabeceraEnlaces"
+      ],
+      "funciones": [
+        {
+          "nombre": "CabeceraEnlaces",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "Los dos botones de la cabecera, «Herramientas» y «Seguros» (26/10/2026, decisión de Alberto): la MISMA cabecera que lleva el Portal del Empleado (`apps/rrhh`), donde «Herramientas» es el propio RRHH y"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "07ca4e834ad4"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/CabeceraEnlacesSesion.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CabeceraEnlacesSesion"
+      ],
+      "funciones": [
+        {
+          "nombre": "CabeceraEnlacesSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "`CabeceraEnlaces` solo con sesión, igual que `SalirDelPortal` (misma comprobación: se VERIFICA el token, no se mira que la cookie exista; sin BD). La cabecera la ven también la entrada y las páginas l"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c71fff10cc42"
+    },
+    {
       "ruta": "apps/asegura-portal/app/Campana.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -10235,7 +10375,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c27553c30a2"
+      "hash": "ebe6ebfbbb66"
     },
     {
       "ruta": "apps/asegura-portal/app/inquilino/[token]/page.tsx",
@@ -10250,7 +10390,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 23,
+          "linea": 25,
           "resumen": "La pantalla del ENLACE que el propietario le pasa a su inquilino (P17). Pública a propósito (el inquilino no ha entrado nunca). 🚨 EL TOKEN NO ABRE SESIÓN. Dice QUÉ contrato; el código de un solo uso "
         },
         {
@@ -10265,7 +10405,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0e2cb148620f"
+      "hash": "23f22292e31f"
     },
     {
       "ruta": "apps/asegura-portal/app/instalacion.tsx",
@@ -10628,12 +10768,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 61
+          "linea": 62
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "580d60439787"
+      "hash": "8c9cf850b864"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/condiciones/page.tsx",
@@ -10838,7 +10978,7 @@
           "exportada": false,
           "params": "f: string | null",
           "retorno": null,
-          "linea": 14
+          "linea": 16
         },
         {
           "nombre": "MiAlquilerContratoPage",
@@ -10846,13 +10986,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ contratoId: string }> }",
           "retorno": null,
-          "linea": 20,
+          "linea": 22,
           "resumen": "El contrato del inquilino. 🚨 El `contratoId` de la URL es una PETICIÓN: `responderMiContrato` lo busca DENTRO de los accesos vivos de la identidad de la cookie; otro contrato, uno revocado o uno inex"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9127f1470059"
+      "hash": "1b20e501515d"
     },
     {
       "ruta": "apps/asegura-portal/app/mi-alquiler/page.tsx",
@@ -10867,13 +11007,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 13,
+          "linea": 15,
           "resumen": "Los contratos que ESTA identidad ve como inquilino (accesos vivos). Uno solo → directo a él."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2dbe7d8418d0"
+      "hash": "4e2f342cd24b"
     },
     {
       "ruta": "apps/asegura-portal/app/page.tsx",
@@ -10895,6 +11035,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c54af6a3007a"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/PaginaPortal.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "EncabezadoPortal",
+        "PaginaPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "EncabezadoPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titulo, acento, antetitulo, saludo, idTitulo }: PropsEncabezado",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "Solo el encabezado (saludo · antetítulo · `<h1>`), para las pantallas que ya tienen su propio cuerpo."
+        },
+        {
+          "nombre": "PaginaPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ suelta, estrecha, children, ...encabezado }: PropsEncabezado & { /** Fuera del armazón del portal: abre su propio `<main>`. */ suelta?: boolean /** Solo con `suelta`: columna estrecha (formularios y enlaces) en vez de la ancha. */ estrech",
+          "retorno": null,
+          "linea": 46
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "90e40c133416"
     },
     {
       "ruta": "apps/asegura-portal/app/PieLegal.tsx",
@@ -11138,6 +11308,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "34726ae61076"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/TarjetaPortal.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "TarjetaPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "TarjetaPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ id, antetitulo, titulo, nivel = 2, chip, tono, accion, children, }: { id?: string antetitulo?: ReactNode titulo?: ReactNode nivel?: 2 | 3 chip?: ReactNode tono?: 'aviso' | 'peligro' accion?: ReactNode children?: ReactNode }",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "La tarjeta ÚNICA del portal (26/10/2026): `.seccion` (mismo radio ×1.8, mismo padding, misma sombra que el resto de la bóveda) con su `.antetitulo`, el titular en `--display` y un hueco para el estado"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c858308f084d"
     },
     {
       "ruta": "apps/asegura-portal/app/tema.ts",
@@ -14360,7 +14551,8 @@
       "exporta": [
         "familiaDeParametro",
         "enFamilia",
-        "titularesDeFamilia"
+        "titularesDeFamilia",
+        "familiasPresentes"
       ],
       "funciones": [
         {
@@ -14387,11 +14579,20 @@
           "retorno": "T[]",
           "linea": 17,
           "resumen": "Los titulares con SOLO las pólizas de la familia (sin familia = los mismos, sin tocar)."
+        },
+        {
+          "nombre": "familiasPresentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulares: readonly { tipoPersona: string; polizas: { ramo: string | null }[] }[], declaradas: readonly { ramo: string | null; titularTipo: string | null }[],",
+          "retorno": "FamiliaSeguro[]",
+          "linea": 30,
+          "resumen": "Las familias que HAY entre las pólizas a la vista, en el orden de `FAMILIAS_SEGURO` (26/10/2026: los chips de «Seguros» sustituyen a las tarjetas por familia de Inicio). Solo las que tienen algo: un c"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1fc83eb44c97"
+      "hash": "d08b8c8d0e14"
     },
     {
       "ruta": "apps/asegura-portal/lib/fechas.ts",
@@ -14551,6 +14752,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2609f813e310"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/herramientas.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "«Herramientas» del portal (26/10/2026): cómo se reparten las tarjetas del catálogo en la pantalla. PURO (sin BD). Menú de cinco: «Herramientas» recoge Patrimonio, Flota, el calendario, Mi resumen y el catálogo solicitable. El estado de cada módulo (¿lo tiene activo? ¿lo ha pedido?) sale de `tarjetas",
+      "exporta": [
+        "agruparHerramientas"
+      ],
+      "funciones": [
+        {
+          "nombre": "agruparHerramientas",
+          "kind": "function",
+          "exportada": true,
+          "params": "tarjetas: readonly TarjetaModulo[]",
+          "retorno": "GrupoHerramientas",
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "40f816b83a60"
     },
     {
       "ruta": "apps/asegura-portal/lib/historial-companias.ts",
@@ -14929,114 +15151,56 @@
       "hash": "77b9ad50e9cf"
     },
     {
-      "ruta": "apps/asegura-portal/lib/inicio-tarjetas.ts",
+      "ruta": "apps/asegura-portal/lib/inicio-pendientes.ts",
       "ambito": "apps/asegura-portal",
-      "resumen": "«Inicio» del portal (24/10/2026, spec `docs/superpowers/specs/2026-10-24-portal-inicio-herramientas-oportunidades.md` §1): las tarjetas, calculadas PURAS (sin BD ni sesión) para probarlas con `node --test`. La lectura vive en `lib/inicio.ts`; la pantalla en `app/(portal)/inicio/page.tsx`. 🚨 Tres es",
+      "resumen": "«Inicio» = SOLO lo pendiente (26/10/2026, decisión de Alberto): vencimientos, recibos pendientes, siniestros abiertos (avisos y huecos de protección se suman en la pantalla). Calculado PURO, sin BD ni sesión, para probarlo con `node --test`. La lectura vive en `lib/inicio.ts`; la pantalla en `app/(p",
       "exporta": [
-        "estadoVinculoInicio",
-        "tarjetasFamilias",
-        "textoTarjetaFamilia",
-        "chipPendientes",
-        "nombreAccesibleFamilia",
-        "textoPatrimonio",
-        "textoCalendario",
-        "textoFlota"
+        "pendienteInicio",
+        "hayPendiente"
       ],
       "funciones": [
-        {
-          "nombre": "estadoVinculoInicio",
-          "kind": "function",
-          "exportada": true,
-          "params": "c: { fichas: number; vinculo: string | null } | null",
-          "retorno": "EstadoVinculoInicio",
-          "linea": 53,
-          "resumen": "El vínculo leído de `CarteraPortal`, sin inventar: `null` (no consta) se dice como «aún no vemos»."
-        },
-        {
-          "nombre": "tarjetasFamilias",
-          "kind": "function",
-          "exportada": true,
-          "params": "e: EntradaFamilias",
-          "retorno": "TarjetaFamilia[]",
-          "linea": 66,
-          "resumen": "Las tarjetas de «Tus seguros»: Personales y Patrimoniales siempre; «De tu empresa» solo si hay empresa a la vista (o alguna póliza de empresa); «Otros» solo si tiene algo. Una fuente ilegible no se co"
-        },
         {
           "nombre": "fechaEs",
           "kind": "arrow",
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 102
+          "linea": 53
         },
         {
-          "nombre": "plural",
-          "kind": "arrow",
+          "nombre": "cuando",
+          "kind": "function",
           "exportada": false,
-          "params": "n: number, uno: string, varios: string",
-          "retorno": null,
-          "linea": 103
-        },
-        {
-          "nombre": "textoTarjetaFamilia",
-          "kind": "function",
-          "exportada": true,
-          "params": "t: TarjetaFamilia, telefono: string",
-          "retorno": "",
-          "linea": 106,
-          "resumen": "Las líneas de texto de una tarjeta de familia y a dónde lleva. La tarjeta entera es UN enlace."
-        },
-        {
-          "nombre": "chipPendientes",
-          "kind": "function",
-          "exportada": true,
-          "params": "t: TarjetaFamilia",
-          "retorno": "string | null",
-          "linea": 135,
-          "resumen": "El chip «N pendientes» de una tarjeta. `null` = nada que decir (sin pendientes, o la tarjeta no tiene seguros)."
-        },
-        {
-          "nombre": "nombreAccesibleFamilia",
-          "kind": "function",
-          "exportada": true,
-          "params": "t: TarjetaFamilia, texto: { lineas: string[]; cta: string | null }",
+          "params": "dias: number | null, iso: string",
           "retorno": "string",
-          "linea": 141,
-          "resumen": "Nombre accesible completo de la tarjeta (spec §1.5): todo lo que dice, en una frase."
+          "linea": 55
         },
         {
-          "nombre": "textoPatrimonio",
+          "nombre": "pendienteInicio",
           "kind": "function",
           "exportada": true,
-          "params": "p: FuentePatrimonio, vinculada: boolean, sinInmueble: number | null = null",
-          "retorno": "",
-          "linea": 151
+          "params": "e: { /** La cartera. `null` = no se pudo leer. */ polizas: PolizaPendiente[] | null /** Las aportadas. `null` = no se pudieron leer. */ declaradas?: DeclaradaPendiente[] | null hoy: string }",
+          "retorno": "PendienteInicio",
+          "linea": 61
         },
         {
-          "nombre": "textoCalendario",
+          "nombre": "hayPendiente",
           "kind": "function",
           "exportada": true,
-          "params": "f: ProximaFecha[] | null",
-          "retorno": "",
-          "linea": 184
-        },
-        {
-          "nombre": "textoFlota",
-          "kind": "function",
-          "exportada": true,
-          "params": "empresas: number | null",
-          "retorno": "",
-          "linea": 190
+          "params": "p: PendienteInicio",
+          "retorno": "boolean",
+          "linea": 157,
+          "resumen": "¿Hay algo que enseñar? (sin contar avisos ni huecos, que la pantalla suma)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d4fa81dcf851"
+      "hash": "98c767d78bf6"
     },
     {
       "ruta": "apps/asegura-portal/lib/inicio.ts",
       "ambito": "apps/asegura-portal",
-      "resumen": "«Inicio» (24/10/2026, spec §1.3): la LECTURA de la pantalla, una fuente por tarjeta con `Promise.allSettled`. Las tarjetas se calculan puras en `lib/inicio-tarjetas.ts`. 🔒 La identidad sale de la COOKIE (`getIdentidad()`), nunca de un parámetro de quien llama sin comprobar: si la sesión no es la de",
+      "resumen": "«Inicio» (26/10/2026: SOLO lo pendiente, decisión de Alberto): la LECTURA de la pantalla, una fuente por bloque con `Promise.allSettled`. Lo pendiente se calcula puro en `lib/inicio-pendientes.ts`; los avisos los trae el navegador de `/api/avisos` (la misma fuente que la campana: una sola lista) y l",
       "exporta": [
         "resumenInicio"
       ],
@@ -15047,7 +15211,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 43
+          "linea": 30
         },
         {
           "nombre": "valor",
@@ -15055,7 +15219,7 @@
           "exportada": false,
           "params": "r: PromiseSettledResult<T>, fuente: string",
           "retorno": "T | null",
-          "linea": 47
+          "linea": 34
         },
         {
           "nombre": "iso",
@@ -15063,7 +15227,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": null,
-          "linea": 53
+          "linea": 40
         },
         {
           "nombre": "resumenInicio",
@@ -15071,13 +15235,13 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<ResumenInicio | null>",
-          "linea": 56,
+          "linea": 43,
           "resumen": "`null` = no hay sesión o no es la de `identidadId`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "78ae23af5d38"
+      "hash": "8ef19095e7c1"
     },
     {
       "ruta": "apps/asegura-portal/lib/inquilino/inquilino-api.ts",
@@ -194299,7 +194463,7 @@
           "exportada": false,
           "params": "mes: string",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "CalendarioClient",
@@ -194307,12 +194471,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f72515120df"
+      "hash": "24d79e4a04d8"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/page.tsx",
@@ -194347,14 +194511,14 @@
           "exportada": true,
           "params": "{ convenio, analisis, analisisFecha, branding }: { convenio: { codigo: string; nombre: string } analisis: Analisis | null analisisFecha: string | null branding: Branding }",
           "retorno": null,
-          "linea": 12
+          "linea": 14
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "9dfaffd58313"
+      "hash": "f1c8c64ee4a5"
     },
     {
       "ruta": "apps/rrhh/app/admin/cuenta/page.tsx",
@@ -194428,7 +194592,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "92c6a6824c6a"
+      "hash": "b2ff65ee0345"
     },
     {
       "ruta": "apps/rrhh/app/admin/documentos/page.tsx",
@@ -194569,7 +194733,7 @@
           "exportada": false,
           "params": "fecha: string | null | undefined",
           "retorno": "number | null",
-          "linea": 11
+          "linea": 13
         },
         {
           "nombre": "EmpleadosClient",
@@ -194577,14 +194741,14 @@
           "exportada": true,
           "params": "{ inicial, nombreUsuario, nombreEmpresa }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string }",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "2627ddac843a"
+      "hash": "8e4be409e55f"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -194610,28 +194774,6 @@
       "hash": "4b5add25ad05"
     },
     {
-      "ruta": "apps/rrhh/app/admin/empresa/EmpresaClient.tsx",
-      "ambito": "apps/rrhh",
-      "exporta": [
-        "EmpresaClient"
-      ],
-      "funciones": [
-        {
-          "nombre": "EmpresaClient",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 10
-        }
-      ],
-      "tablas": [
-        "react"
-      ],
-      "rutaApi": null,
-      "hash": "7dc7cd0e7e37"
-    },
-    {
       "ruta": "apps/rrhh/app/admin/empresa/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -194644,12 +194786,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 5
+          "linea": 6,
+          "resumen": "La documentación de empresa vive en Ajustes (/admin/cuenta): esta pantalla era un duplicado exacto (26/10/2026). Se conserva la ruta para los marcadores y enlaces antiguos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2241b8274422"
+      "hash": "116135453b27"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/FichajesClient.tsx",
@@ -194664,7 +194807,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 25
+          "linea": 27
         },
         {
           "nombre": "fmtFecha",
@@ -194672,7 +194815,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 28
+          "linea": 30
         },
         {
           "nombre": "fmtISO",
@@ -194680,7 +194823,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 31
+          "linea": 33
         },
         {
           "nombre": "FichajesClient",
@@ -194688,14 +194831,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 36
+          "linea": 38
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "bb6ca5d4710e"
+      "hash": "d8de1d8fe227"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -194827,7 +194970,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3f929f0fcba9"
+      "hash": "5156befb6f3f"
     },
     {
       "ruta": "apps/rrhh/app/admin/informes/page.tsx",
@@ -194853,48 +194996,22 @@
       "ruta": "apps/rrhh/app/admin/layout.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
-        "generateMetadata",
-        "generateViewport",
         "AdminLayout"
       ],
       "funciones": [
-        {
-          "nombre": "marcaDeSesion",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": null,
-          "linea": 10
-        },
-        {
-          "nombre": "generateMetadata",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": "Promise<Metadata>",
-          "linea": 13
-        },
-        {
-          "nombre": "generateViewport",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": "Promise<Viewport>",
-          "linea": 14
-        },
         {
           "nombre": "AdminLayout",
           "kind": "function",
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 24,
-          "resumen": "Marco común del panel: branding de la empresa ACTIVA de la sesión, leído en servidor una vez. 🚨 Esto NO es la barrera de seguridad: un layout no se re-ejecuta en cada navegación cliente y los route h"
+          "linea": 16,
+          "resumen": "Marco común del panel: logo de la empresa ACTIVA de la sesión, leído en servidor una vez. La marca es SIEMPRE Grupo ASegura (no cambia al cambiar de empresa: solo cambia el logo del cliente). 🚨 Esto "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "602049f1492d"
+      "hash": "1dcf76af13c7"
     },
     {
       "ruta": "apps/rrhh/app/admin/material/page.tsx",
@@ -195022,12 +195139,12 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Obra[] }",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "305a94e0e733"
+      "hash": "0d4a69af4965"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/page.tsx",
@@ -195051,6 +195168,27 @@
       ],
       "rutaApi": null,
       "hash": "3be5ca56be20"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page_"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page_",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Inicio del responsable (antes `/admin` daba 404): lo que espera una acción, de un vistazo. Solo lectura, con el `empresa_id` de la sesión y sin tablas nuevas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "25e4e539f53a"
     },
     {
       "ruta": "apps/rrhh/app/admin/prl/page.tsx",
@@ -195083,12 +195221,21 @@
       ],
       "funciones": [
         {
+          "nombre": "ResultadoOk",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empleadoId, onClose, children }: { empleadoId: string; onClose: () => void; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 64,
+          "resumen": "Resultado «documento generado» común a los cuatro modales de PRL."
+        },
+        {
           "nombre": "PrlPanel",
           "kind": "function",
           "exportada": true,
           "params": "{ empleados }: { empleados: Empleado[] }",
           "retorno": null,
-          "linea": 60
+          "linea": 76
         },
         {
           "nombre": "ModalAutorizacionMaquinaria",
@@ -195096,7 +195243,7 @@
           "exportada": false,
           "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
           "retorno": null,
-          "linea": 98
+          "linea": 114
         },
         {
           "nombre": "ModalEntregaEpis",
@@ -195104,7 +195251,7 @@
           "exportada": false,
           "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
           "retorno": null,
-          "linea": 266
+          "linea": 264
         },
         {
           "nombre": "ModalInformacionRiesgos",
@@ -195112,7 +195259,7 @@
           "exportada": false,
           "params": "{ empleados, onClose }: { empleados: Empleado[]; onClose: () => void }",
           "retorno": null,
-          "linea": 362
+          "linea": 350
         },
         {
           "nombre": "ModalAcuerdoConfidencialidad",
@@ -195120,14 +195267,14 @@
           "exportada": false,
           "params": "{ tipo, empleados, onClose, }: { tipo: 'acuerdo_con_acceso' | 'acuerdo_sin_acceso' empleados: Empleado[] onClose: () => void }",
           "retorno": null,
-          "linea": 446
+          "linea": 424
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "de83ecca87b3"
+      "hash": "9f8ae3836e4e"
     },
     {
       "ruta": "apps/rrhh/app/admin/solicitudes/page.tsx",
@@ -195162,14 +195309,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: S[] }",
           "retorno": null,
-          "linea": 15
+          "linea": 19
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "4837b1bdc55e"
+      "hash": "7e74a5fd36ff"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/asistente/route.ts",
@@ -196487,6 +196634,27 @@
       "hash": "ec47ba9d3ef6"
     },
     {
+      "ruta": "apps/rrhh/app/api/auth/acceso/password/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "superados, la cuenta queda bloqueada con la MISMA respuesta. 🚨 Respuesta uniforme: fuera de la lista, inexistente, sin contraseña válida, errónea o bloqueado dan el mismo 401 `credenciales_invalidas`"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/auth/acceso/password",
+      "hash": "8d068f2dc3dd"
+    },
+    {
       "ruta": "apps/rrhh/app/api/auth/acceso/solicitar/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -196505,7 +196673,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/auth/acceso/solicitar",
-      "hash": "2bc83954cd88"
+      "hash": "6f4804ea9422"
     },
     {
       "ruta": "apps/rrhh/app/api/auth/acceso/verificar/route.ts",
@@ -196520,16 +196688,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 14,
-          "resumen": "Paso 2 de `/login`: canjea el código del responsable. Una empresa → sesión `rrhh_session` (`typ:'responsable'` + jti, sesión única); varias → cookie `rrhh_pending` (5 min) y el selector de siempre (`/"
+          "linea": 12,
+          "resumen": "Paso 2 de `/login`: canjea el código del responsable. Una empresa (o la última recordada, si sigue autorizada) → sesión `rrhh_session` (`typ:'responsable'` + jti, sesión única); varias sin recordada →"
         }
       ],
-      "tablas": [
-        "next",
-        "rrhh"
-      ],
+      "tablas": [],
       "rutaApi": "/api/auth/acceso/verificar",
-      "hash": "d020d4209469"
+      "hash": "cf4bbca330a3"
     },
     {
       "ruta": "apps/rrhh/app/api/auth/cambiar-empresa/route.ts",
@@ -196552,7 +196717,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/auth/cambiar-empresa",
-      "hash": "8d0c07dc6a7d"
+      "hash": "31efb0a161c0"
     },
     {
       "ruta": "apps/rrhh/app/api/auth/logout/route.ts",
@@ -196567,12 +196732,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 3
+          "linea": 13,
+          "resumen": "«Salir» del responsable: además de borrar la cookie, invalida el token EN EL SERVIDOR rotando `session_jti` a un valor aleatorio nuevo (solo si el token es el vigente), así una copia de la cookie deja"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/auth/logout",
-      "hash": "f2a566f3c831"
+      "hash": "7fbf95219570"
     },
     {
       "ruta": "apps/rrhh/app/api/auth/seleccionar-empresa/route.ts",
@@ -196587,7 +196753,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [
@@ -196595,7 +196761,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/auth/seleccionar-empresa",
-      "hash": "6d32ef336b9e"
+      "hash": "cdbe6e51279f"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/alerta-fichajes-abiertos/route.ts",
@@ -197187,7 +197353,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/operador/empresas",
-      "hash": "db0d3238f1d7"
+      "hash": "b69044880d8c"
     },
     {
       "ruta": "apps/rrhh/app/api/operador/logos/route.ts",
@@ -197293,7 +197459,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3f22869faed"
+      "hash": "15d5f77d32fd"
     },
     {
       "ruta": "apps/rrhh/app/ayuda/ubicacion/page.tsx",
@@ -197308,12 +197474,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 14
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1b6311773202"
+      "hash": "ebd3e151f27c"
     },
     {
       "ruta": "apps/rrhh/app/e/[token]/LoginEmpleado.tsx",
@@ -197326,57 +197492,37 @@
           "nombre": "LoginEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "{ token, branding, marcaAsegura = false }: { token: string; branding: Branding | null; marcaAsegura?: boolean }",
+          "params": "{ token, branding }: { token: string; branding: Branding | null }",
           "retorno": null,
-          "linea": 10
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "79c06878315b"
+      "hash": "d446c6e5eacc"
     },
     {
       "ruta": "apps/rrhh/app/e/[token]/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
-        "generateMetadata",
-        "generateViewport",
         "Page"
       ],
       "funciones": [
-        {
-          "nombre": "generateMetadata",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ params }: { params: Promise<{ token: string }> }",
-          "retorno": "Promise<Metadata>",
-          "linea": 18,
-          "resumen": "Empresa con marca Grupo ASegura → manifest/título/iconos/color de Grupo ASegura. Sin marca: lo del layout."
-        },
-        {
-          "nombre": "generateViewport",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ params }: { params: Promise<{ token: string }> }",
-          "retorno": "Promise<Viewport>",
-          "linea": 22
-        },
         {
           "nombre": "Page",
           "kind": "function",
           "exportada": true,
           "params": "{ params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 28
+          "linea": 16
         }
       ],
       "tablas": [
-        "next",
         "react",
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "779e2b963542"
+      "hash": "33c8d6cebdde"
     },
     {
       "ruta": "apps/rrhh/app/e/entrar/EntrarEmpleado.tsx",
@@ -197386,72 +197532,46 @@
       ],
       "funciones": [
         {
-          "nombre": "msg",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "e?: string",
-          "retorno": null,
-          "linea": 23
-        },
-        {
-          "nombre": "post",
+          "nombre": "ElegirEmpleado",
           "kind": "function",
           "exportada": false,
-          "params": "url: string, body: unknown",
+          "params": "{ ctx }: { ctx: ContextoElegir }",
           "retorno": null,
-          "linea": 25
+          "linea": 15
         },
         {
           "nombre": "EntrarEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "{ marcaAsegura = false }: { marcaAsegura?: boolean }",
+          "params": "",
           "retorno": null,
-          "linea": 30
+          "linea": 57
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9c53230fb30f"
+      "hash": "b1445d2cb385"
     },
     {
       "ruta": "apps/rrhh/app/e/entrar/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
-        "generateMetadata",
-        "generateViewport",
         "Page"
       ],
       "funciones": [
         {
-          "nombre": "generateMetadata",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ searchParams }: { searchParams: Promise<{ m?: string | string[] }> }",
-          "retorno": "Promise<Metadata>",
-          "linea": 14,
-          "resumen": "Entrada del Portal del Empleado por email + código. Neutra (sin branding): aún no sabemos de qué empresa es quien escribe, y mostrarla delataría que el email existe. Con `?m=asegura` (enlace que da la"
-        },
-        {
-          "nombre": "generateViewport",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ searchParams }: { searchParams: Promise<{ m?: string | string[] }> }",
-          "retorno": "Promise<Viewport>",
-          "linea": 18
-        },
-        {
           "nombre": "Page",
           "kind": "function",
           "exportada": true,
-          "params": "{ searchParams }: { searchParams: Promise<{ m?: string | string[] }> }",
+          "params": "",
           "retorno": null,
-          "linea": 24
+          "linea": 7,
+          "resumen": "Entrada del Portal del Empleado por email + código. Marca Grupo ASegura siempre (26/10/2026); sin empresa conocida (mostrarla delataría que el email existe). Metadatos y manifest: los del layout raíz."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9dbb1365ae84"
+      "hash": "a5365b5af1a5"
     },
     {
       "ruta": "apps/rrhh/app/e/ExpedienteEmpleado.tsx",
@@ -197464,57 +197584,31 @@
           "nombre": "ExpedienteEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "{ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, marcaAsegura = false, urlSeguros = null }: { marcaAsegura?: boolean; urlSeguros?: string | null; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Br",
+          "params": "{ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, urlSeguros }: { urlSeguros: string; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | nu",
           "retorno": null,
-          "linea": 20
+          "linea": 22
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "4d8131befdbf"
+      "hash": "64cbb98f9f48"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
-        "generateMetadata",
-        "generateViewport",
         "Page"
       ],
       "funciones": [
-        {
-          "nombre": "marcaDeSesion",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": "Promise<boolean>",
-          "linea": 15
-        },
-        {
-          "nombre": "generateMetadata",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": "Promise<Metadata>",
-          "linea": 18
-        },
-        {
-          "nombre": "generateViewport",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": "Promise<Viewport>",
-          "linea": 19
-        },
         {
           "nombre": "Page",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24
+          "linea": 14
         }
       ],
       "tablas": [
@@ -197522,7 +197616,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "b842f7c4328c"
+      "hash": "d19825b139e0"
     },
     {
       "ruta": "apps/rrhh/app/layout.tsx",
@@ -197537,12 +197631,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "25c82e11ac49"
+      "hash": "f64e33b49175"
     },
     {
       "ruta": "apps/rrhh/app/login/LoginForm.tsx",
@@ -197552,125 +197646,68 @@
       ],
       "funciones": [
         {
-          "nombre": "msg",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "e?: string",
-          "retorno": null,
-          "linea": 21
-        },
-        {
-          "nombre": "post",
+          "nombre": "ElegirEmpresa",
           "kind": "function",
           "exportada": false,
-          "params": "url: string, body: unknown",
+          "params": "{ ctx }: { ctx: ContextoElegir }",
           "retorno": null,
-          "linea": 23
+          "linea": 11
         },
         {
           "nombre": "LoginForm",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ conPassword = false }: { conPassword?: boolean }",
           "retorno": null,
-          "linea": 28
+          "linea": 37,
+          "resumen": "`conPassword`: el servidor dice si hay correos con contraseña (`RRHH_LOGIN_PASSWORD_EMAILS`); si no, ni se ofrece."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bfa461387ad0"
+      "hash": "99e90c3f706f"
     },
     {
       "ruta": "apps/rrhh/app/login/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
-        "generateMetadata",
-        "generateViewport",
         "Login"
       ],
       "funciones": [
         {
-          "nombre": "marca",
-          "kind": "function",
-          "exportada": false,
-          "params": "searchParams: SP",
-          "retorno": null,
-          "linea": 8
-        },
-        {
-          "nombre": "generateMetadata",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ searchParams }: { searchParams: SP }",
-          "retorno": "Promise<Metadata>",
-          "linea": 12
-        },
-        {
-          "nombre": "generateViewport",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ searchParams }: { searchParams: SP }",
-          "retorno": "Promise<Viewport>",
-          "linea": 15
-        },
-        {
           "nombre": "Login",
           "kind": "function",
           "exportada": true,
-          "params": "{ searchParams }: { searchParams: SP }",
+          "params": "",
           "retorno": null,
-          "linea": 20
+          "linea": 9,
+          "resumen": "Marca Grupo ASegura siempre. Aún no se sabe de qué empresa es quien entra: co-marca sin logo de cliente."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "712457235867"
+      "hash": "17aad18e28cb"
     },
     {
       "ruta": "apps/rrhh/app/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
-        "generateMetadata",
-        "generateViewport",
         "Home"
       ],
       "funciones": [
         {
-          "nombre": "marca",
-          "kind": "function",
-          "exportada": false,
-          "params": "searchParams: SP",
-          "retorno": null,
-          "linea": 8
-        },
-        {
-          "nombre": "generateMetadata",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ searchParams }: { searchParams: SP }",
-          "retorno": "Promise<Metadata>",
-          "linea": 12
-        },
-        {
-          "nombre": "generateViewport",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ searchParams }: { searchParams: SP }",
-          "retorno": "Promise<Viewport>",
-          "linea": 15
-        },
-        {
           "nombre": "Home",
           "kind": "function",
           "exportada": true,
-          "params": "{ searchParams }: { searchParams: SP }",
+          "params": "",
           "retorno": null,
-          "linea": 22
+          "linea": 6,
+          "resumen": "Portada: marca Grupo ASegura siempre (26/10/2026). Metadatos, manifest y color de barra vienen del layout raíz."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d0fcb9f34ea"
+      "hash": "173355ba74fa"
     },
     {
       "ruta": "apps/rrhh/app/robots.ts",
@@ -197727,7 +197764,45 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "427d4b9d663a"
+      "hash": "9d091b1be165"
+    },
+    {
+      "ruta": "apps/rrhh/components/AccesoOtp.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "mensajeError",
+        "post",
+        "AccesoOtp"
+      ],
+      "funciones": [
+        {
+          "nombre": "mensajeError",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "e: string | undefined, extra: Record<string, string> = {}",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "post",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string, body: unknown",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "AccesoOtp",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ solicitarUrl, verificarUrl, passwordUrl, irAPorDefecto, textos, erroresExtra, conRecordar = false, ayuda, renderElegir }: { solicitarUrl: string verificarUrl: string /** Si se pasa, aparece «Entrar con contraseña» (solo responsables). */ ",
+          "retorno": null,
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "af8265bedf0e"
     },
     {
       "ruta": "apps/rrhh/components/ActivarPush.tsx",
@@ -197770,9 +197845,9 @@
           "nombre": "esActivo",
           "kind": "function",
           "exportada": true,
-          "params": "pathname: string | null, href: string",
+          "params": "pathname: string | null, href: string, exacto = false",
           "retorno": "boolean",
-          "linea": 50,
+          "linea": 54,
           "resumen": "¿El enlace `href` es la sección activa de `pathname`? (incluye subrutas: /admin/empleados/123)."
         },
         {
@@ -197781,7 +197856,7 @@
           "exportada": false,
           "params": "{ d }: { d: string }",
           "retorno": null,
-          "linea": 57
+          "linea": 62
         },
         {
           "nombre": "AdminNav",
@@ -197789,13 +197864,13 @@
           "exportada": true,
           "params": "{ tieneFichaje }: { tieneFichaje?: boolean }",
           "retorno": null,
-          "linea": 70,
+          "linea": 75,
           "resumen": "Menú del panel. En móvil: una fila horizontal con scroll (los grupos son `display:contents` y sus cabeceras se ocultan). En escritorio: columna agrupada con cabeceras pequeñas."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db2548f334d6"
+      "hash": "ef57045e8112"
     },
     {
       "ruta": "apps/rrhh/components/AdminShell.tsx",
@@ -197808,15 +197883,15 @@
           "nombre": "AdminShell",
           "kind": "function",
           "exportada": true,
-          "params": "{ children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje, marcaAsegura = false }: { marcaAsegura?: boolean; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaj",
+          "params": "{ children, logoUrl, nombreEmpresa, tieneFichaje, urlSeguros, empresas, empresaActualId }: { children: React.ReactNode logoUrl?: string | null nombreEmpresa?: string | null tieneFichaje?: boolean urlSeguros: string empresas: { id: string; n",
           "retorno": null,
-          "linea": 13,
-          "resumen": "Marco del panel del responsable: sidebar + contenido. Presentacional puro: lo monta UNA vez `app/admin/layout.tsx` con el branding de la empresa de la sesión. NO es barrera de seguridad: cada page sig"
+          "linea": 10,
+          "resumen": "Marco del panel del responsable: cabecera común (Herramientas · Seguros, selector de empresa) + menú lateral + contenido. Presentacional puro: lo monta UNA vez `app/admin/layout.tsx`. NO es barrera de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6b23d2826952"
+      "hash": "f92ccdc32b69"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -197872,33 +197947,57 @@
           "exportada": true,
           "params": "{ avisos }: { avisos: Aviso[] }",
           "retorno": null,
-          "linea": 7,
+          "linea": 9,
           "resumen": "Fallos de envío de correo de los últimos 7 días (solo del panel: el empleado nunca lo ve)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8cf39986c31d"
+      "hash": "7f4a3051d8fc"
     },
     {
-      "ruta": "apps/rrhh/components/CambiadorEmpresa.tsx",
+      "ruta": "apps/rrhh/components/AvisoSeguros.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
-        "CambiadorEmpresa"
+        "AvisoSeguros"
       ],
       "funciones": [
         {
-          "nombre": "CambiadorEmpresa",
+          "nombre": "AvisoSeguros",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 6
+          "linea": 12,
+          "resumen": "Aviso pequeño, SOLO la primera vez: «Mis seguros» ya no es una tarjeta del cuerpo, está en la cabecera («Seguros»). El recuerdo vive en localStorage (conveniencia por dispositivo): si no está disponib"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "087f6e31481f"
+      "hash": "85b1da4997a0"
+    },
+    {
+      "ruta": "apps/rrhh/components/CabeceraApp.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "CabeceraApp"
+      ],
+      "funciones": [
+        {
+          "nombre": "CabeceraApp",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ perfil, logoUrl, nombreEmpresa, urlSeguros, empresas = [], empresaActualId }: { perfil: 'empleado' | 'responsable' logoUrl?: string | null nombreEmpresa?: string | null urlSeguros: string empresas?: Empresa[] empresaActualId?: string }",
+          "retorno": null,
+          "linea": 12
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "c875dbae6aa4"
     },
     {
       "ruta": "apps/rrhh/components/ChatPanel.tsx",
@@ -198034,7 +198133,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a5e1e8c474d9"
+      "hash": "650c1295341c"
     },
     {
       "ruta": "apps/rrhh/components/MaterialAdminLista.tsx",
@@ -198099,6 +198198,28 @@
       "hash": "4e81cac607af"
     },
     {
+      "ruta": "apps/rrhh/components/PestanasSolicitudes.tsx",
+      "ambito": "apps/rrhh",
+      "resumen": "Solicitudes y Calendario son dos vistas de lo mismo: una sola entrada de menú con dos pestañas.",
+      "exporta": [
+        "PestanasSolicitudes"
+      ],
+      "funciones": [
+        {
+          "nombre": "PestanasSolicitudes",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ activa }: { activa: 'lista' | 'calendario' }",
+          "retorno": null,
+          "linea": 2,
+          "resumen": "Solicitudes y Calendario son dos vistas de lo mismo: una sola entrada de menú con dos pestañas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ff983e98a31d"
+    },
+    {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -198150,26 +198271,55 @@
       "hash": "98465d07f792"
     },
     {
-      "ruta": "apps/rrhh/components/TarjetaSeguros.tsx",
+      "ruta": "apps/rrhh/components/ui/Aviso.tsx",
       "ambito": "apps/rrhh",
-      "resumen": "«Mis seguros»: captación voluntaria. Solo viaja el email (y origen) en el enlace; nada de casillas ni consentimientos aquí.",
       "exporta": [
-        "TarjetaSeguros"
+        "Aviso"
       ],
       "funciones": [
         {
-          "nombre": "TarjetaSeguros",
+          "nombre": "Aviso",
           "kind": "function",
           "exportada": true,
-          "params": "{ url }: { url: string }",
+          "params": "{ tono = 'info', titulo, role, className = '', children }: { tono?: TonoAviso; titulo?: ReactNode; role?: 'alert' | 'status'; className?: string; children?: ReactNode }",
           "retorno": null,
-          "linea": 3,
-          "resumen": "«Mis seguros»: captación voluntaria. Solo viaja el email (y origen) en el enlace; nada de casillas ni consentimientos aquí."
+          "linea": 21,
+          "resumen": "Aviso en línea (info / ok / aviso / alerta) con tokens del tema: ni `amber-*` ni `red-*` crudos, ni emojis."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55e0cdd6882b"
+      "hash": "bfcb375d98c6"
+    },
+    {
+      "ruta": "apps/rrhh/components/ui/Boton.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "claseBoton",
+        "Boton"
+      ],
+      "funciones": [
+        {
+          "nombre": "claseBoton",
+          "kind": "function",
+          "exportada": true,
+          "params": "variante: VarianteBoton = 'primario', extra = ''",
+          "retorno": "string",
+          "linea": 15
+        },
+        {
+          "nombre": "Boton",
+          "kind": "function",
+          "exportada": true,
+          "params": "props: Comun & ( | (ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined }) | (AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) )",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "Botón del panel. Con `href` se pinta como enlace con el mismo aspecto (no hay que repetir las clases a mano)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "71864220aab7"
     },
     {
       "ruta": "apps/rrhh/components/ui/Card.tsx",
@@ -198191,6 +198341,48 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c7a88d894035"
+    },
+    {
+      "ruta": "apps/rrhh/components/ui/Chip.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Chip"
+      ],
+      "funciones": [
+        {
+          "nombre": "Chip",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tono = 'neutro', className = '', children }: { tono?: TonoChip; className?: string; children: ReactNode }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "Etiqueta de estado (pastilla). Sustituye a los `rounded-full bg-…/10` hechos a mano en cada pantalla."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6beb2970a607"
+    },
+    {
+      "ruta": "apps/rrhh/components/ui/Modal.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Modal"
+      ],
+      "funciones": [
+        {
+          "nombre": "Modal",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titulo, onCerrar, pie, ancho = 'md', children }: { titulo?: ReactNode onCerrar: () => void pie?: ReactNode ancho?: 'sm' | 'md' | 'lg' children?: ReactNode }",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Diálogo modal único del panel y del portal del empleado (antes cada pantalla repetía el cascarón `fixed inset-0 …`). Fondo oscurecido, cierra con Escape y al pulsar fuera, ≤95 vw, scroll interno. El c"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "600ad476cade"
     },
     {
       "ruta": "apps/rrhh/components/ui/Page.tsx",
@@ -198235,26 +198427,38 @@
       "hash": "04aeeef7380f"
     },
     {
-      "ruta": "apps/rrhh/components/Wordmark.tsx",
+      "ruta": "apps/rrhh/lib/abrir-sesion-responsable.ts",
       "ambito": "apps/rrhh",
-      "resumen": "Logotipo tipográfico iarrhh: \"ia\" tinta fuerte, punto teal, \"rrhh\" medio.",
+      "resumen": "Pegamento (con Prisma y Next) que comparten el canje del código y la contraseña opcional: a partir de UN responsable ya identificado, o abre la sesión (una empresa, o la última recordada si sigue autorizada) o devuelve el selector.",
       "exporta": [
-        "Wordmark"
+        "emitirSesionResponsable",
+        "abrirSesionResponsable"
       ],
       "funciones": [
         {
-          "nombre": "Wordmark",
+          "nombre": "emitirSesionResponsable",
           "kind": "function",
           "exportada": true,
-          "params": "{ className = \"\", claro = false }: { className?: string; claro?: boolean }",
-          "retorno": null,
-          "linea": 2,
-          "resumen": "Logotipo tipográfico iarrhh: \"ia\" tinta fuerte, punto teal, \"rrhh\" medio."
+          "params": "res: NextResponse, usuario_id: string, empresa_id: string, recordar: boolean",
+          "retorno": "Promise<void>",
+          "linea": 14,
+          "resumen": "Emite la sesión de `usuario_id` en `empresa_id` (sesión única por jti) y recuerda la empresa."
+        },
+        {
+          "nombre": "abrirSesionResponsable",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, r: { usuario_id: string; empresas: { id: string; nombre: string }[] }, recordar: boolean,",
+          "retorno": "Promise<NextResponse>",
+          "linea": 21
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "rrhh"
+      ],
       "rutaApi": null,
-      "hash": "c5e24d6730e1"
+      "hash": "33cb98640ca4"
     },
     {
       "ruta": "apps/rrhh/lib/acceso-email-repo.ts",
@@ -198288,6 +198492,7 @@
         "emailValido",
         "hashEmailAcceso",
         "hashCodigoAcceso",
+        "hashEmailFalloPassword",
         "pedirCodigo",
         "canjearCodigo",
         "solicitarCodigoAcceso",
@@ -198331,12 +198536,21 @@
           "linea": 61
         },
         {
+          "nombre": "hashEmailFalloPassword",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "emailNormalizado: string",
+          "retorno": null,
+          "linea": 67,
+          "resumen": "Clave de los FALLOS de contraseña del responsable (`acceso-password-repo.ts`): mismas filas de `rrhh.acceso_otps`, pero con un prefijo de dominio propio, así que nunca casa con el `email_hash` de un c"
+        },
+        {
           "nombre": "pedirCodigo",
           "kind": "function",
           "exportada": true,
           "params": "repo: RepoOtp, entrada: { email: unknown; ip: string }, proposito: PropositoOtp, ahora = new Date(),",
           "retorno": "Promise<",
-          "linea": 106,
+          "linea": 112,
           "resumen": "Valida el email, aplica los topes y escribe SIEMPRE la fila (exista o no el destinatario: los contadores no son un oráculo). Devuelve el código en claro SOLO al llamante, que decide si hay a quién man"
         },
         {
@@ -198345,7 +198559,7 @@
           "exportada": true,
           "params": "repo: RepoOtp, entrada: { email: unknown; codigo: unknown }, proposito: PropositoOtp, ahora = new Date(),",
           "retorno": "Promise<",
-          "linea": 127,
+          "linea": 133,
           "resumen": "Reserva intento → compara → gasta. `ok` = el código era bueno y lo ha gastado ESTA petición."
         },
         {
@@ -198354,7 +198568,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, enviar: EnviarCodigo, entrada: { email: unknown; ip: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoSolicitar>",
-          "linea": 162,
+          "linea": 168,
           "resumen": "`envio` es la tarea de mandar el correo (o `null` si el email no es de nadie): la ruta la lanza con `after()` para que la respuesta NO espere al SMTP. `null` y no-`null` producen la MISMA respuesta HT"
         },
         {
@@ -198363,7 +198577,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, entrada: { email: unknown; codigo: unknown }, ahora = new Date(),",
           "retorno": "Promise<ResultadoVerificar>",
-          "linea": 185
+          "linea": 191
         },
         {
           "nombre": "completarAcceso",
@@ -198371,7 +198585,7 @@
           "exportada": true,
           "params": "repo: RepoAcceso, compararPin: (pin: string, hash: string) => Promise<boolean>, ticket: { otp_id: string; empleados: string[] }, entrada: { email: unknown; empleado_id: unknown; pin: unknown },",
           "retorno": "Promise<ResultadoCompletar>",
-          "linea": 208
+          "linea": 214
         },
         {
           "nombre": "correoCodigo",
@@ -198379,29 +198593,110 @@
           "exportada": true,
           "params": "c: CorreoCodigo",
           "retorno": "",
-          "linea": 233,
+          "linea": 239,
           "resumen": "Asunto y cuerpo (texto plano, sobrio). Puro para poder testearlo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c0096096dfd"
+      "hash": "5c0bab8b9845"
+    },
+    {
+      "ruta": "apps/rrhh/lib/acceso-password-repo.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Adaptador Prisma de `acceso-password.ts`. Los FALLOS de contraseña se cuentan en BD (los ven todas las instancias) y SIN migración: van a `rrhh.acceso_otps`, separados de los códigos así: · `email_hash` = `hashEmailFalloPassword(email)` (prefijo HMAC propio): nunca casa con el de un código, luego ni",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "0a76d5bb4d04"
+    },
+    {
+      "ruta": "apps/rrhh/lib/acceso-password.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Contraseña OPCIONAL del responsable (26/10/2026): alternativa al código por correo, solo en /login. Se valida con bcrypt contra `usuarios_rrhh.pass_hash` (el hash de siempre; Pilar conserva su `$2a$`). 🚨 LISTA BLANCA (revisión del 26/10/2026): antes de #5103 el operador fijaba una contraseña CONOCI",
+      "exporta": [
+        "comparaBcrypt",
+        "normalizarEmail",
+        "correosConPassword",
+        "passwordHabilitada",
+        "verificarPasswordResponsable"
+      ],
+      "funciones": [
+        {
+          "nombre": "comparaBcrypt",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "plano, hash",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "normalizarEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 45
+        },
+        {
+          "nombre": "correosConPassword",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | undefined = process.env.RRHH_LOGIN_PASSWORD_EMAILS",
+          "retorno": "Set<string>",
+          "linea": 52,
+          "resumen": "Correos autorizados a entrar con contraseña. Variable ausente o vacía → conjunto vacío (nadie)."
+        },
+        {
+          "nombre": "passwordHabilitada",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | undefined = process.env.RRHH_LOGIN_PASSWORD_EMAILS",
+          "retorno": "boolean",
+          "linea": 57,
+          "resumen": "¿Se ofrece «Entrar con contraseña»? Solo el booleano sale al cliente, NUNCA la lista."
+        },
+        {
+          "nombre": "verificarPasswordResponsable",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoPassword, entrada: { email: unknown; password: unknown; ip: string }, opciones: { permitidos?: Set<string>; comparar?: Comparar; ahora?: Date } = {},",
+          "retorno": "Promise<ResultadoPassword>",
+          "linea": 63
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "91e1fc108a5b"
     },
     {
       "ruta": "apps/rrhh/lib/acceso-responsable-repo.ts",
       "ambito": "apps/rrhh",
       "resumen": "Adaptador Prisma de `acceso-responsable.ts`. Los códigos van a la MISMA tabla que los del empleado (`rrhh.acceso_otps`, puertos de `repoAcceso`); los separa el propósito en el hash, no la tabla.",
       "exporta": [
+        "empresasAutorizadas",
         "enviarCodigoResponsable"
       ],
       "funciones": [
+        {
+          "nombre": "empresasAutorizadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "usuarioId: string",
+          "retorno": "Promise<",
+          "linea": 32,
+          "resumen": "Empresas en las que puede entrar: SOLO las de `rrhh.usuario_empresas` (la misma fuente que revalida `getSesion` en cada petición). Ya no hay respaldo a `usuarios_rrhh.empresa_id`: con él, retirar la ú"
+        },
         {
           "nombre": "enviarCodigoResponsable",
           "kind": "arrow",
           "exportada": true,
           "params": "c",
           "retorno": null,
-          "linea": 35,
+          "linea": 40,
           "resumen": "Envío real. `false` si no hay transporte o falla (al que pide no se le dice: anti-enumeración)."
         }
       ],
@@ -198409,7 +198704,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "0786a5a39bdb"
+      "hash": "b719c7416d6a"
     },
     {
       "ruta": "apps/rrhh/lib/acceso-responsable.ts",
@@ -198831,6 +199126,7 @@
         "firmarSesion",
         "firmarPendiente",
         "verificarPendiente",
+        "verificarPendienteDetalle",
         "verificarSesion"
       ],
       "funciones": [
@@ -198840,7 +199136,7 @@
           "exportada": true,
           "params": "plain: string",
           "retorno": null,
-          "linea": 16,
+          "linea": 18,
           "resumen": "26/10/2026: el responsable entra por CÓDIGO al correo (`lib/acceso-responsable.ts`), sin contraseña. `usuarios_rrhh.pass_hash` sigue en BD (NOT NULL): el alta guarda un hash de un valor aleatorio que "
         },
         {
@@ -198849,15 +199145,15 @@
           "exportada": true,
           "params": "s: Omit<Sesion, 'jti'>",
           "retorno": "Promise<",
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "firmarPendiente",
           "kind": "function",
           "exportada": true,
-          "params": "usuario_id: string",
+          "params": "usuario_id: string, recordar = false",
           "retorno": "Promise<string>",
-          "linea": 30,
+          "linea": 32,
           "resumen": "Token del selector de empresa (5 min), tras canjear el código de `/login` con ≥2 empresas."
         },
         {
@@ -198866,7 +199162,16 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<string>",
-          "linea": 38
+          "linea": 40
+        },
+        {
+          "nombre": "verificarPendienteDetalle",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string",
+          "retorno": "Promise<",
+          "linea": 45,
+          "resumen": "Como `verificarPendiente`, más si pidió «Recordar este dispositivo» en el paso anterior."
         },
         {
           "nombre": "verificarSesion",
@@ -198874,12 +199179,12 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<Sesion>",
-          "linea": 44
+          "linea": 51
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bbb5dd6b9b2e"
+      "hash": "85533492482f"
     },
     {
       "ruta": "apps/rrhh/lib/avisos-admin-reglas.ts",
@@ -199872,6 +200177,29 @@
       ],
       "rutaApi": null,
       "hash": "d339d9f73d3c"
+    },
+    {
+      "ruta": "apps/rrhh/lib/empresas-usuario.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Datos del responsable que necesita la cabecera: su correo (para el enlace «Seguros») y sus empresas (selector de Pilar).",
+      "exporta": [
+        "datosCabeceraResponsable"
+      ],
+      "funciones": [
+        {
+          "nombre": "datosCabeceraResponsable",
+          "kind": "function",
+          "exportada": true,
+          "params": "usuarioId: string",
+          "retorno": "Promise<",
+          "linea": 7
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "7537532de6cf"
     },
     {
       "ruta": "apps/rrhh/lib/envio-documentos.ts",
@@ -200945,6 +201273,66 @@
       "hash": "4ea2f016811d"
     },
     {
+      "ruta": "apps/rrhh/lib/inicio-admin-reglas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Reglas PURAS del Inicio del responsable (`/admin`, 26/10/2026): de los contadores de pendientes a las tarjetas que se pintan. 🚨 `null` = «no se ha podido comprobar» (la consulta falló), NUNCA «0 pendientes»: una pantalla que dice «todo al día» porque una consulta falló es peor que no decir nada.",
+      "exporta": [
+        "tarjetasInicio"
+      ],
+      "funciones": [
+        {
+          "nombre": "plural",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number, uno: string, varios: string",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "tarjetasInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosInicio",
+          "retorno": "Tarjeta[]",
+          "linea": 21
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d55fecabd553"
+    },
+    {
+      "ruta": "apps/rrhh/lib/inicio-admin.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Lecturas del Inicio del responsable (`/admin`). Solo SELECT sobre tablas que ya existen (sin migración), siempre con el `empresa_id` de la SESIÓN. Cada bloque falla por separado a `null` («no se sabe»), nunca a 0.",
+      "exporta": [
+        "datosInicio"
+      ],
+      "funciones": [
+        {
+          "nombre": "seguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "etiqueta: string, f: () => Promise<T>",
+          "retorno": "Promise<T | null>",
+          "linea": 7
+        },
+        {
+          "nombre": "datosInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, tieneFichaje: boolean",
+          "retorno": "Promise<DatosInicio>",
+          "linea": 11
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "678d15eb532b"
+    },
+    {
       "ruta": "apps/rrhh/lib/instalar-app.ts",
       "ambito": "apps/rrhh",
       "resumen": "Sugerencia de «instalar» el portal en la pantalla de inicio (rrhh tiene manifest + sw.js). Android: solo si el navegador lanzó `beforeinstallprompt` (botón «Instalar»). iOS: solo en Safari y fuera del modo standalone (no hay API: se explica «Compartir > Añadir…»).",
@@ -200999,114 +201387,24 @@
     {
       "ruta": "apps/rrhh/lib/marca-asegura.ts",
       "ambito": "apps/rrhh",
-      "resumen": "Marca de correduría «Grupo ASegura» para el Portal del Empleado. PURO (sin BD) → testeable. Se activa SIN migración: lista de empresa_id en la env RRHH_EMPRESAS_MARCA_ASEGURA (separados por coma). Solo toca el portal del empleado (/e y /e/entrar); el panel /admin y el resto de empresas no cambian.",
+      "resumen": "Marca «Grupo ASegura» del Portal del Empleado. PURO (sin BD) → testeable. 26/10/2026 (decisión de Alberto): la marca es SIEMPRE Grupo ASegura, para todas las empresas. Se acabó el doble diseño (beige/teal/serif) y su gating por la env `RRHH_EMPRESAS_MARCA_ASEGURA`, por host y por `?m=`. 🚨 Esa env Y",
       "exporta": [
-        "empresaConMarcaAsegura",
-        "paletaEmpresa",
-        "estiloMarcaEmpresa",
-        "urlPortalAsegura",
-        "marcaAseguraDeEmpresa",
-        "manifestParaMarca",
-        "metadataMarcaAsegura",
-        "themeColorMarca",
-        "marcaPorHost",
-        "marcaDePeticion"
+        "urlPortalAsegura"
       ],
       "funciones": [
-        {
-          "nombre": "empresaConMarcaAsegura",
-          "kind": "function",
-          "exportada": true,
-          "params": "empresaId: string | null | undefined, lista: string | null | undefined",
-          "retorno": "boolean",
-          "linea": 15,
-          "resumen": "¿Esta empresa lleva la marca Grupo ASegura? `lista` = valor de la env (coma-separado)."
-        },
-        {
-          "nombre": "paletaEmpresa",
-          "kind": "function",
-          "exportada": true,
-          "params": "marcaAsegura: boolean, colorEmpresa: string | null | undefined",
-          "retorno": "Paleta | null",
-          "linea": 22,
-          "resumen": "Paleta efectiva: cobalto ASegura si la empresa lleva la marca; si no, la derivada de su color (o null)."
-        },
-        {
-          "nombre": "estiloMarcaEmpresa",
-          "kind": "function",
-          "exportada": true,
-          "params": "marcaAsegura: boolean, colorEmpresa: string | null | undefined",
-          "retorno": "Record<string, string>",
-          "linea": 27,
-          "resumen": "Variables CSS del contenedor del portal. Sin marca ASegura devuelve lo de siempre (color de la empresa)."
-        },
         {
           "nombre": "urlPortalAsegura",
           "kind": "function",
           "exportada": true,
           "params": "email: string | null | undefined, base?: string | null",
           "retorno": "string",
-          "linea": 37,
-          "resumen": "Enlace de la tarjeta «Mis seguros». 🚨 REGLA LEGAL: solo viajan `email` (si lo hay) y `origen`. Ningún otro dato del empleado (nombre, DNI, domicilio, empresa_id…) se añade jamás a esta URL."
-        },
-        {
-          "nombre": "marcaAseguraDeEmpresa",
-          "kind": "function",
-          "exportada": true,
-          "params": "empresaId: string | null | undefined",
-          "retorno": "boolean",
-          "linea": 54,
-          "resumen": "¿Esta empresa lleva la marca? Lee la env (una sola fuente para /e, /e/[token] y sus metadatos)."
-        },
-        {
-          "nombre": "manifestParaMarca",
-          "kind": "function",
-          "exportada": true,
-          "params": "marcaAsegura: boolean",
-          "retorno": "string",
-          "linea": 59,
-          "resumen": "Manifest que enlaza el layout de la ruta: el de Grupo ASegura solo con marca; si no, el de siempre."
-        },
-        {
-          "nombre": "metadataMarcaAsegura",
-          "kind": "function",
-          "exportada": true,
-          "params": "marcaAsegura: boolean",
-          "retorno": null,
-          "linea": 64,
-          "resumen": "Metadatos de la ruta con marca (Next los fusiona sobre los del layout). Sin marca → `{}`: nada cambia."
-        },
-        {
-          "nombre": "themeColorMarca",
-          "kind": "function",
-          "exportada": true,
-          "params": "marcaAsegura: boolean",
-          "retorno": "string | undefined",
-          "linea": 75,
-          "resumen": "Color de la barra del navegador: cobalto con marca, el de siempre sin ella (`undefined` = hereda del layout)."
-        },
-        {
-          "nombre": "marcaPorHost",
-          "kind": "function",
-          "exportada": true,
-          "params": "host: string | null | undefined",
-          "retorno": "boolean",
-          "linea": 81,
-          "resumen": "¿El host de la petición es el dominio propio del portal (empleados.grupoasegura.es)? Ignora puerto y mayúsculas."
-        },
-        {
-          "nombre": "marcaDePeticion",
-          "kind": "function",
-          "exportada": true,
-          "params": "host: string | null | undefined, m?: string | string[] | null",
-          "retorno": "boolean",
-          "linea": 86,
-          "resumen": "Marca en / y /login: host propio, o `?m=asegura` (preview/local). `m` puede venir como array en searchParams."
+          "linea": 22,
+          "resumen": "Enlace «Seguros». 🚨 REGLA LEGAL: solo viajan `email` (si lo hay) y `origen`. Ningún otro dato del empleado ni de la empresa (nombre, DNI, domicilio, empresa_id…) se añade jamás a esta URL: los datos "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "29f6ef8c9947"
+      "hash": "3e588c891fc5"
     },
     {
       "ruta": "apps/rrhh/lib/material-repo.ts",
@@ -201683,7 +201981,7 @@
           "nombre": "pushResponsables",
           "kind": "function",
           "exportada": true,
-          "params": "empresaId: string, titulo: string, cuerpo: string, url = '/admin/empleados'",
+          "params": "empresaId: string, titulo: string, cuerpo: string, url = '/admin'",
           "retorno": null,
           "linea": 36,
           "resumen": "Push a los responsables de RR.HH. de una empresa (best-effort, no-op sin VAPID)."
@@ -201712,7 +202010,7 @@
         "web"
       ],
       "rutaApi": null,
-      "hash": "691966a2b219"
+      "hash": "f0fc8022e507"
     },
     {
       "ruta": "apps/rrhh/lib/rate-limit.ts",
@@ -201825,6 +202123,99 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c8c933a9e10b"
+    },
+    {
+      "ruta": "apps/rrhh/lib/sesion-responsable-reglas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Reglas PURAS de la sesión del responsable (26/10/2026): duración con «Recordar este dispositivo», última empresa recordada (Pilar, varias empresas) y enmascarado de correos para los logs. Sin BD ni Next → testeable.",
+      "exporta": [
+        "diasSesion",
+        "opcionesCookieSesion",
+        "leerCookie",
+        "empresaDeEntrada",
+        "enmascararEmail"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "recordar: boolean | null | undefined",
+          "retorno": "number",
+          "linea": 11
+        },
+        {
+          "nombre": "opcionesCookieSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "recordar: boolean | null | undefined",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Opciones de la cookie de sesión: la caducidad de la cookie y la del JWT salen del MISMO valor."
+        },
+        {
+          "nombre": "leerCookie",
+          "kind": "function",
+          "exportada": true,
+          "params": "cabecera: string | null | undefined, nombre: string",
+          "retorno": "string | null",
+          "linea": 24,
+          "resumen": "Lee una cookie de la cabecera `Cookie` (sin depender de `next/headers`, para poder usarla en rutas y tests)."
+        },
+        {
+          "nombre": "empresaDeEntrada",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresas: { id: string }[], recordada: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 39,
+          "resumen": "Empresa a la que entrar sin preguntar: la única que tiene, o la recordada SI sigue entre las autorizadas. `null` = hay que elegir. Una cookie manipulada o de una empresa ya revocada no cuenta nunca."
+        },
+        {
+          "nombre": "enmascararEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "email: unknown",
+          "retorno": "string",
+          "linea": 47,
+          "resumen": "`pilar@ejemplo.es` → `p***@e***.es`. Para logs de diagnóstico: nunca el correo entero."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fad53a9e5ff7"
+    },
+    {
+      "ruta": "apps/rrhh/lib/sesion-responsable-vigencia.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Vigencia de la sesión del RESPONSABLE en el servidor (revisión del 26/10/2026). Las sesiones duran 30 o 90 días («Recordar este dispositivo»), así que el JWT solo no basta: en CADA petición se mira en BD que 1. `usuarios_rrhh.session_jti` sigue siendo el del token (sesión única; «Salir» lo ROTA a un",
+      "exporta": [
+        "motivoRechazoSesion",
+        "revocarSesionResponsable"
+      ],
+      "funciones": [
+        {
+          "nombre": "motivoRechazoSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: Pick<Sesion, 'jti'>, fila: EstadoSesionResponsable | null",
+          "retorno": "MotivoRechazo | null",
+          "linea": 22,
+          "resumen": "`null` = vigente; si no, por qué no."
+        },
+        {
+          "nombre": "revocarSesionResponsable",
+          "kind": "function",
+          "exportada": true,
+          "params": "repo: RepoSesionResponsable, s: Pick<Sesion, 'usuario_id' | 'jti'>",
+          "retorno": "Promise<void>",
+          "linea": 31,
+          "resumen": "«Salir»: invalida el token EN EL SERVIDOR rotando el jti a uno aleatorio nuevo (nunca a NULL)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0db369d5f1e0"
     },
     {
       "ruta": "apps/rrhh/lib/solicitudes-tipos.ts",
@@ -202138,8 +202529,8 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Sesion>",
-          "linea": 13,
-          "resumen": "Lee la sesión del responsable desde la cookie. Sesión única por jti (fail-open ante BD)."
+          "linea": 38,
+          "resumen": "Lee la sesión del responsable desde la cookie y la revalida EN BD en cada petición: jti vigente (sesión única, «Salir» lo rota; NULL no vale) y empresa del token todavía en `usuario_empresas`. 🚨 Fail"
         }
       ],
       "tablas": [
@@ -202147,7 +202538,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "95ca5cbf6b86"
+      "hash": "a73942241e32"
     },
     {
       "ruta": "apps/rrhh/lib/ubicacion-fichaje.ts",
@@ -202279,6 +202670,25 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2a1878815df7"
+    },
+    {
+      "ruta": "apps/rrhh/tailwind.config.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "token",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "variable: string",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Colores del tema = variables de `@central/brand` (las emite `emitirRootCss(MARCA_ASEGURA)` en app/layout.tsx). 🚨 Van como `color-mix(... <alpha-value> ...)`: Tailwind sustituye el marcador por el 0.4"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d038994ace0b"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/agente/page.tsx",
@@ -221988,6 +222398,7 @@
       "exporta": [
         "vistaDeBoveda",
         "pestanasPortal",
+        "seccionActiva",
         "hrefDeVista"
       ],
       "funciones": [
@@ -222006,8 +222417,17 @@
           "exportada": true,
           "params": "",
           "retorno": "PestanaPortal[]",
-          "linea": 136,
-          "resumen": "Las pestañas, en orden. 📌 Son CINCO desde el 09/09/2026 («Mis datos»). Eran cuatro desde el 07/09/2026, y la que volvió entonces no era «Mis pólizas»: eran «Recibos» y el historial de siniestros, que"
+          "linea": 123,
+          "resumen": "El menú: CINCO entradas (26/10/2026, decisión de Alberto; eran 9 en el módulo y 12 en pantalla). Inicio · Seguros · Herramientas · Contactos · Cuenta «Seguros» es el ÚNICO sitio de «Mis seguros» y rec"
+        },
+        {
+          "nombre": "seccionActiva",
+          "kind": "function",
+          "exportada": true,
+          "params": "ruta: string, vistaCruda?: string | string[] | null",
+          "retorno": "SeccionPortal | null",
+          "linea": 160,
+          "resumen": "Qué entrada del menú está activa para una ruta (y, en `/boveda`, para su `?vista=`). `null` = ninguna (una ruta pública o desconocida). Pura: la usan la barra, el lateral y la cabecera, para que las t"
         },
         {
           "nombre": "hrefDeVista",
@@ -222015,13 +222435,13 @@
           "exportada": true,
           "params": "vista: VistaBoveda",
           "retorno": "string",
-          "linea": 185,
+          "linea": 178,
           "resumen": "La vista por defecto se enlaza como `/boveda` a secas, sin `?vista=seguros`. No es cosmética: si la pestaña activa llevara el parámetro, `/boveda` y `/boveda?vista=seguros` serían la misma pantalla co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "751c8a656fb1"
+      "hash": "f7501e0192b2"
     },
     {
       "ruta": "packages/module-seguros/src/aceptacion-presupuesto.ts",
@@ -249437,7 +249857,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5218,
-    "funciones": 20053
+    "archivos": 5241,
+    "funciones": 20068
   }
 }
