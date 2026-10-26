@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T08:03:28Z",
-  "sha": "a6ab44597ceb2853601009dbbb51aaae3aa48ba0",
+  "generadoEn": "2026-10-26T08:34:14Z",
+  "sha": "96851b10577c372beae5107a964c9141f60f9465",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -29047,13 +29047,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 20,
+          "linea": 21,
           "resumen": "«Pídele los datos al cliente» (24/09/2026), lado corredor. GET ?oportunidadId= → sus solicitudes (respuestas descifradas) POST { oportunidadId, actor } → crea el enlace (o dice que ya hay uno vivo: su"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/solicitud-datos",
-      "hash": "2770e5f921da"
+      "hash": "1af20680975a"
     },
     {
       "ruta": "apps/asegura/app/api/operador/supresiones/route.ts",
@@ -57783,6 +57783,7 @@
         "insertarSolicitud",
         "solicitudesDeOportunidad",
         "anularSolicitud",
+        "registrarDatosPedidosWhatsapp",
         "solicitudPorToken",
         "subirDocumentoSolicitud",
         "textoAPreguntar",
@@ -57886,12 +57887,21 @@
           "resumen": "Anula una pendiente (el enlace deja de funcionar)."
         },
         {
+          "nombre": "registrarDatosPedidosWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, oportunidadId: string, actor: string, conEnlace: boolean,",
+          "retorno": "Promise<",
+          "linea": 298,
+          "resumen": "Deja constancia de que Alberto ha abierto el WhatsApp con la petición de datos (30/10/2026). NO envía nada (lo envía él desde su teléfono) y NO cuenta como contacto: ni crea gestión ni anota en la fic"
+        },
+        {
           "nombre": "porToken",
           "kind": "function",
           "exportada": false,
           "params": "token: string",
           "retorno": "Promise<FilaToken | null>",
-          "linea": 301
+          "linea": 330
         },
         {
           "nombre": "identidadFicha",
@@ -57899,7 +57909,7 @@
           "exportada": false,
           "params": "f: FilaToken",
           "retorno": "Promise<",
-          "linea": 311,
+          "linea": 340,
           "resumen": "DNI y nacimiento de su ficha, para traerlos rellenos. Si no se pueden leer, se piden en blanco."
         },
         {
@@ -57908,7 +57918,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<SolicitudPublica>",
-          "linea": 326,
+          "linea": 355,
           "resumen": "Lo que ve la página pública: el ramo y los campos a pedir. Del cliente, SOLO su DNI y su fecha de nacimiento, rellenos para que los confirme o corrija (decisión de Alberto, 24/09/2026: «es su DNI, no "
         },
         {
@@ -57917,7 +57927,7 @@
           "exportada": true,
           "params": "token: string, fichero: { nombre: string; mime: string; contenido: Buffer }, consentimiento = false, /** * `poliza` (26/10/2026, fase B): el botón «sube tu póliza actual» del bloque del seguro actual. Se lee con el LECTOR * DE PÓLIZAS (`lee",
           "retorno": "Promise<ResultadoDocSolicitud>",
-          "linea": 363,
+          "linea": 392,
           "resumen": "El cliente sube un documento por el enlace (DNI, carné, papeles del vehículo, su póliza). 1) Se ARCHIVA en su ficha (`seguros.documentos`, subido por el cliente) — aunque luego no se pueda leer: el pa"
         },
         {
@@ -57926,7 +57936,7 @@
           "exportada": true,
           "params": "campos: readonly CampoSolicitud[], respuestas: Record<string, Respuesta>",
           "retorno": "string",
-          "linea": 470,
+          "linea": 499,
           "resumen": "«A preguntar» para el historial (y por él, el aviso de actividad), en TODOS los ramos (26/10/2026): etiquetas de lo que marcó «No lo sé» y de lo que dejó vacío. Nunca valores. Recortado para no inunda"
         },
         {
@@ -57935,7 +57945,7 @@
           "exportada": true,
           "params": "token: string, entrada: Record<string, unknown>, consentimiento = false,",
           "retorno": "Promise<",
-          "linea": 480,
+          "linea": 509,
           "resumen": "El cliente manda sus datos. Una sola vez; lo que no se pidió se ignora."
         },
         {
@@ -57944,7 +57954,7 @@
           "exportada": false,
           "params": "f: FilaToken",
           "retorno": "Promise<BorradorSolicitud | null>",
-          "linea": 587,
+          "linea": 616,
           "resumen": "Lo guardado de esa solicitud. `null` = nada, ilegible o sin la columna (nunca lanza: el formulario se abre igual)."
         },
         {
@@ -57953,7 +57963,7 @@
           "exportada": true,
           "params": "token: string, entrada: unknown, consentimiento = false",
           "retorno": "Promise<ResultadoBorrador>",
-          "linea": 609,
+          "linea": 638,
           "resumen": "Guarda el borrador (lo sustituye entero) y el último paso alcanzado (`ultimoPasoDe`: solo etiquetas de la casa). Solo en una solicitud PENDIENTE y viva; la condición va en el propio UPDATE (una comple"
         }
       ],
@@ -57968,7 +57978,7 @@
         "solicitud_datos"
       ],
       "rutaApi": null,
-      "hash": "21d5a4e3cc0f"
+      "hash": "d8823242ae2c"
     },
     {
       "ruta": "apps/asegura/lib/solicitud-plazos.ts",
@@ -112054,7 +112064,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aa77d99cbd46"
+      "hash": "b565ffadf400"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PanelDatosCliente.tsx",
@@ -112778,7 +112788,7 @@
           "exportada": true,
           "params": "{ id, telefono = null, onCambio }: { id: string; telefono?: string | null; onCambio?: () => void }",
           "retorno": null,
-          "linea": 101
+          "linea": 103
         },
         {
           "nombre": "FormPerder",
@@ -112786,7 +112796,7 @@
           "exportada": false,
           "params": "{ enviando, onEnviar, onCancelar }: { enviando: boolean; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 223
+          "linea": 225
         },
         {
           "nombre": "FormAparcar",
@@ -112794,7 +112804,7 @@
           "exportada": false,
           "params": "{ enviando, hoy, onEnviar, onCancelar }: { enviando: boolean; hoy: string; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 263
+          "linea": 265
         },
         {
           "nombre": "Tareas",
@@ -112802,7 +112812,7 @@
           "exportada": false,
           "params": "{ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, onCambio }: { oportunidadId: string; tareas: TareaSeguimiento[]; descartadas: number; fueCliente: boolean | null; cerrada: boolean; hoy: string; onCambio: () => void }",
           "retorno": null,
-          "linea": 293
+          "linea": 295
         }
       ],
       "tablas": [
@@ -112810,7 +112820,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "abbfdd95e509"
+      "hash": "4c3072af69b0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/SegurosCliente.tsx",
@@ -112823,9 +112833,9 @@
           "nombre": "SegurosCliente",
           "kind": "function",
           "exportada": true,
-          "params": "{ reparto, siniestros, clienteId, hoy }: { reparto: RepartoSeguros siniestros: SiniestroCartera[] | null clienteId: string hoy: Date }",
+          "params": "{ reparto, siniestros, clienteId, hoy, telefono = null, nombre = null }: { reparto: RepartoSeguros siniestros: SiniestroCartera[] | null clienteId: string hoy: Date /** Para el botón «WhatsApp» de las oportunidades: el móvil de la ficha y s",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "Los seguros del cliente en tres cubos, cada uno una tarjeta que se pincha entera (24/09/2026): «con nosotros» → su póliza; «oportunidad» → su seguimiento de venta; «ya no existe», plegado al final. Lo"
         },
         {
@@ -112834,7 +112844,7 @@
           "exportada": false,
           "params": "{ titulo, nota, id, children }: { titulo: string; nota?: string; id?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 91
+          "linea": 95
         },
         {
           "nombre": "Rejilla",
@@ -112842,7 +112852,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 103
+          "linea": 107
         },
         {
           "nombre": "Vacio",
@@ -112850,7 +112860,7 @@
           "exportada": false,
           "params": "{ children, aviso }: { children: React.ReactNode; aviso?: boolean }",
           "retorno": null,
-          "linea": 107
+          "linea": 111
         },
         {
           "nombre": "dias",
@@ -112858,7 +112868,7 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": "number",
-          "linea": 117
+          "linea": 121
         },
         {
           "nombre": "textoVence",
@@ -112866,7 +112876,7 @@
           "exportada": false,
           "params": "fecha: string | null | undefined, hoy: Date, fuente = 'anotado', opciones: { vencidaSiPasada?: boolean; anual?: boolean } = {}",
           "retorno": "string",
-          "linea": 133,
+          "linea": 137,
           "resumen": "pasado o sin fecha → «vencimiento desconocido», con lo último que se anotó solo como contexto."
         },
         {
@@ -112875,7 +112885,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string",
-          "linea": 149
+          "linea": 153
         },
         {
           "nombre": "avisosOportunidad",
@@ -112883,7 +112893,7 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente, hoy: Date",
           "retorno": "Aviso[]",
-          "linea": 153
+          "linea": 157
         },
         {
           "nombre": "TarjetaSeguro",
@@ -112891,7 +112901,7 @@
           "exportada": false,
           "params": "{ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: Ctx; eliminable?: boolean }",
           "retorno": null,
-          "linea": 169
+          "linea": 173
         },
         {
           "nombre": "Chip",
@@ -112899,12 +112909,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 368
+          "linea": 378
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "045760148a89"
+      "hash": "fb89bb58c4b9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -113379,6 +113389,35 @@
       ],
       "rutaApi": null,
       "hash": "090d3a452f4c"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/WhatsappDatos.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "WhatsappDatos"
+      ],
+      "funciones": [
+        {
+          "nombre": "post",
+          "kind": "function",
+          "exportada": false,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<",
+          "linea": 15,
+          "resumen": "«WhatsApp» de la tarjeta de Oportunidades (30/10/2026): le pide al lead o cliente lo necesario para tarificar. NO envía nada: emite el enlace al formulario `/datos` de esa oportunidad (el mismo mecani"
+        },
+        {
+          "nombre": "WhatsappDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ oportunidadId, ramo, telefono, nombre }: { oportunidadId: string; ramo: string | null; telefono: string | null; nombre: string | null }",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4e57bf6171d9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/nuevo/page.tsx",
@@ -132843,7 +132882,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15,
+          "linea": 16,
           "resumen": "/api/correduria/solicitud-datos — el enlace para que el cliente complete sus datos (24/09/2026). Reenvía al puerto de asegura; el `actor` lo pone el servidor. GET ?oportunidadId= → sus solicitudes (co"
         },
         {
@@ -132852,12 +132891,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         }
       ],
       "tablas": [],
       "rutaApi": "/api/correduria/solicitud-datos",
-      "hash": "e7660ad9b6d9"
+      "hash": "babf7d38089a"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/solicitudes-portal/route.ts",
@@ -158700,6 +158739,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e0a88147a318"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/whatsapp-datos.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "motivoSinWhatsapp",
+        "prepararWhatsappDatos"
+      ],
+      "funciones": [
+        {
+          "nombre": "motivoSinWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "telefono: string | null | undefined, ramo: string | null",
+          "retorno": "string | null",
+          "linea": 15,
+          "resumen": "Por qué NO se puede preparar el WhatsApp (el botón sale desactivado con este motivo; nunca un `wa.me` vacío). `null` = se puede."
+        },
+        {
+          "nombre": "prepararWhatsappDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { telefono: string | null | undefined; nombre: string | null | undefined; ramo: string | null; url: string | null }",
+          "retorno": "WhatsappDatos",
+          "linea": 26,
+          "resumen": "El WhatsApp listo para abrir. `url` = el enlace al formulario `/datos` recién emitido; `null` (no se pudo emitir, o ya había uno vivo cuyo token no se puede repetir) → el mensaje lista los datos mínim"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "257fbd3fc886"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/whatsapp-embedded-signup.ts",
@@ -231624,7 +231694,8 @@
       "exporta": [
         "mensajePresentacionWhatsapp",
         "mensajeRenovacionLeadWhatsapp",
-        "ramoColoquial"
+        "ramoColoquial",
+        "mensajeDatosTarificarWhatsapp"
       ],
       "funciones": [
         {
@@ -231633,7 +231704,7 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "string",
-          "linea": 83,
+          "linea": 84,
           "resumen": "El mensaje ya escrito para abrir WhatsApp con un lead: quién eres, qué le ofreces y dónde entra. ── Por qué UN solo enlace, y por qué es el portal ───────────────────────── La web pública (`MEDIADOR.i"
         },
         {
@@ -231642,7 +231713,7 @@
           "exportada": true,
           "params": "d: { nombre: string | null; ramo: string | null; mesAniversario: number | null }",
           "retorno": "string",
-          "linea": 122,
+          "linea": 123,
           "resumen": "El WhatsApp de SEGUIMIENTO a un lead de Vencimientos. Lo abre Alberto con un clic y lo envía él desde su teléfono: nada sale solo. Texto dictado por Alberto el 30/09/2026 («Hola {nombre}, soy Alberto,"
         },
         {
@@ -231651,12 +231722,21 @@
           "exportada": true,
           "params": "ramo: string | null",
           "retorno": "string | null",
-          "linea": 154
+          "linea": 155
+        },
+        {
+          "nombre": "mensajeDatosTarificarWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { nombre: string | null; ramo: RamoSolicitud; url: string | null; datosMinimos: readonly string[] }",
+          "retorno": "string",
+          "linea": 175,
+          "resumen": "El WhatsApp para pedir a un lead o cliente lo necesario para tarificar (30/10/2026). Lo abre Alberto, lo revisa y lo envía él: nada sale solo. · Con `url` (el enlace al formulario `/datos` de esa opor"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c93ceb4c5e56"
+      "hash": "2bbccd6e37e8"
     },
     {
       "ruta": "packages/module-seguros/src/necesidades-idd.ts",
@@ -236195,6 +236275,8 @@
         "camposAPreguntar",
         "casaZonaCp",
         "validarRespuestas",
+        "datosMinimosSolicitud",
+        "nombreRamoParaCliente",
         "mensajeSolicitud",
         "etiquetaDocSolicitud",
         "tipoArchivoDocSolicitud",
@@ -236435,12 +236517,30 @@
           "resumen": "Valida lo que manda el cliente contra los campos que se le pidieron. Solo se guardan las claves pedidas (lo demás se ignora) y cada error viene por campo."
         },
         {
+          "nombre": "datosMinimosSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoSolicitud",
+          "retorno": "string[]",
+          "linea": 718,
+          "resumen": "Lo mínimo para tarificar un ramo, con las etiquetas del propio catálogo (`camposSolicitud`, nivel esencial): para el WhatsApp SIN enlace (30/10/2026). Nunca una lista escrita a mano: si el catálogo ca"
+        },
+        {
+          "nombre": "nombreRamoParaCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoSolicitud",
+          "retorno": "string",
+          "linea": 725,
+          "resumen": "«el seguro de tu coche», «tu seguro de hogar»: el riesgo como se lo dice uno al cliente."
+        },
+        {
           "nombre": "mensajeSolicitud",
           "kind": "function",
           "exportada": true,
           "params": "ramo: RamoSolicitud, url: string, tercero = false",
           "retorno": "string",
-          "linea": 715,
+          "linea": 734,
           "resumen": "Texto listo para pegar en WhatsApp o en un correo. Sin datos del cliente: solo el enlace."
         },
         {
@@ -236449,7 +236549,7 @@
           "exportada": true,
           "params": "t: TipoDocSolicitud",
           "retorno": "string",
-          "linea": 737
+          "linea": 756
         },
         {
           "nombre": "tipoArchivoDocSolicitud",
@@ -236457,7 +236557,7 @@
           "exportada": true,
           "params": "t: TipoDocSolicitud",
           "retorno": "'dni' | 'permiso_circulacion' | 'ficha_tecnica' | 'poliza' | 'otro'",
-          "linea": 749,
+          "linea": 768,
           "resumen": "Tipo con el que se ARCHIVA en `seguros.documentos` (esa lista no tiene carné)."
         },
         {
@@ -236466,7 +236566,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 760
+          "linea": 779
         },
         {
           "nombre": "normalizarLecturaSolicitud",
@@ -236474,7 +236574,7 @@
           "exportada": true,
           "params": "bruto: unknown, ramo: RamoSolicitud, campos: readonly CampoSolicitud[], hoy: Date = new Date(),",
           "retorno": "",
-          "linea": 769,
+          "linea": 788,
           "resumen": "Lo que devolvió la IA → valores para los campos QUE SE PIDIERON, cada uno pasado por la misma validación que el formulario. Lo que no valida se tira: un valor dudoso propuesto al cliente se lo acaba a"
         },
         {
@@ -236483,7 +236583,7 @@
           "exportada": false,
           "params": "v: Respuesta",
           "retorno": "string",
-          "linea": 823
+          "linea": 842
         },
         {
           "nombre": "contrastarConDocumentos",
@@ -236491,13 +236591,13 @@
           "exportada": true,
           "params": "respuestas: Record<string, Respuesta>, lecturas: readonly LecturaDocSolicitud[],",
           "retorno": "DiscrepanciaSolicitud[]",
-          "linea": 829,
+          "linea": 848,
           "resumen": "Lo que el cliente mandó contra lo que dicen sus propios papeles. Solo avisa (no bloquea): el papel puede estar mal leído y el cliente puede tener razón."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "97d3f903df05"
+      "hash": "fc95d8402d72"
     },
     {
       "ruta": "packages/module-seguros/src/solicitud-destinos.ts",
@@ -248052,7 +248152,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5193,
-    "funciones": 19937
+    "archivos": 5195,
+    "funciones": 19945
   }
 }
