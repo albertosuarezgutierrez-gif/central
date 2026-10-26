@@ -9,18 +9,19 @@ import { MOTIVOS_PERDIDA_UI } from '@/lib/seguimiento-asegura'
 import { COMPANIAS_SOLICITUD, ROTULO_COMPANIA_SOLICITUD, type CompaniaSolicitud } from '@central/module-seguros'
 import type { Expediente, Expedientes } from '@/lib/correduria/expedientes'
 import {
-  atajosAparcar, BLOQUES_MESA, cuandoRelativo, fechaCorta, masDias, repartirMesaCompleta, soloDia, TITULO_BLOQUE, VACIO_BLOQUE,
-  type BloqueMesa,
+  atajosAparcar, cuandoRelativo, fechaCorta, masDias, origenInsignia, repartirMesaCompleta, SECCIONES_MESA, soloDia, textoAntiguedad,
+  textoVencimiento, TITULO_SECCION, VACIO_SECCION, type SeccionMesa,
 } from '@/lib/correduria/mesa'
 import Secciones from '../Secciones'
 import AccionesContacto from '../AccionesContacto'
 import AccionesCabecera from '../AccionesCabecera'
 import BuscadorCartera from '../BuscadorCartera'
-import CorreosCompania from './CorreosCompania'
+import CorreosCompania, { type CuentaCorreos } from './CorreosCompania'
 import { PerdidasPorRevisar, TareasSueltas } from './BloquesSueltos'
 import NuevaTarea from './NuevaTarea'
 
 const PAGINA = 50
+const TONO_ORIGEN = { Portal: 'info', Correo: 'aviso', Web: 'info', Presupuesto: 'aviso', Cartera: 'neutral' } as const
 const AMBIGUO = 'No se ha podido confirmar si se guardó: recarga para verlo antes de repetirlo.'
 const ROTULO_CLASE: Record<Expediente['clase'], string> = {
   venta_nueva: 'Venta nueva', mejora_renovacion: 'Mejora de renovación', rescate: 'Rescate',
@@ -60,6 +61,7 @@ export default function MesaClient() {
   const [recargando, setRecargando] = useState(false)
   const [errorRecarga, setErrorRecarga] = useState<string | null>(null)
   const [nueva, setNueva] = useState(false)
+  const [correos, setCorreos] = useState<CuentaCorreos | null>(null)
   const peticion = useRef(0)
   const router = useRouter()
 
@@ -133,14 +135,19 @@ export default function MesaClient() {
             </p>
           )}
           {recargando && <p aria-live="polite" style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Actualizando…</p>}
-          {BLOQUES_MESA.map(b => (
-            <Fragment key={b}>
-              {/* Lo que no es expediente va antes de «Aparcadas» (que es lo único que va plegado). */}
-              {b === 'aparcadas' && <TareasSueltas lectura={mesa.sueltas} truncado={mesa.sueltasTruncado} hoy={hoy} onCambio={cargar} />}
-              {b === 'aparcadas' && <PerdidasPorRevisar lectura={mesa.perdidas} conExpediente={mesa.perdidasConExpediente} onCambio={cargar} />}
-              {/* Avisos de compañías leídos del correo: su propia lectura (no espera ni depende de los expedientes). */}
-              {b === 'aparcadas' && <CorreosCompania />}
-              <Bloque bloque={b} filas={mesa.bloques[b]} hoy={hoy} onCambio={cargar} />
+          {SECCIONES_MESA.map(sc => (
+            <Fragment key={sc}>
+              <Seccion seccion={sc} filas={mesa.bloques[sc]} hoy={hoy} onCambio={cargar} />
+              {/* Lo que no es expediente va tras «Aparcadas»: todo plegado, con su contador. */}
+              {sc === 'aparcadas' && <SueltasPlegable mesa={mesa} hoy={hoy} onCambio={cargar} />}
+              {sc === 'aparcadas' && <PerdidasPlegable mesa={mesa} onCambio={cargar} />}
+              {/* Avisos de compañías leídos del correo: su propia lectura (siempre montada para tener el contador). */}
+              {sc === 'aparcadas' && (
+                <Plegable titulo="Correos de compañía" cuenta={correos === null ? '…' : `${correos.n}${correos.truncado ? '+' : ''}`}
+                  rojo={correos && correos.pendientes > 0 ? `${correos.pendientes} sin resolver` : null} montarSiempre ancla="correos-compania">
+                  <CorreosCompania sinCabecera onCuenta={setCorreos} />
+                </Plegable>
+              )}
             </Fragment>
           ))}
         </>
@@ -149,25 +156,71 @@ export default function MesaClient() {
   )
 }
 
-function Bloque({ bloque, filas, hoy, onCambio }: { bloque: BloqueMesa; filas: Expediente[]; hoy: string; onCambio: () => Promise<void> }) {
-  const plegable = bloque === 'aparcadas' || bloque === 'sinTocar'
+/** Cabecera plegable con contador (y, si hay, un aviso en rojo). El contenido se monta al abrir, salvo `montarSiempre`. */
+function Plegable({ titulo, cuenta, rojo, montarSiempre, ancla, children }: {
+  titulo: string; cuenta: string; rojo?: string | null; montarSiempre?: boolean; ancla?: string; children: React.ReactNode
+}) {
+  const [abierto, setAbierto] = useState(false)
+  // Un enlace con ancla (p. ej. el aviso `/correduria/mesa#correos-compania`) tiene que abrir el plegable y llevar hasta él.
+  useEffect(() => {
+    if (!ancla || typeof window === 'undefined' || window.location.hash !== `#${ancla}`) return
+    setAbierto(true)
+    const t = window.setTimeout(() => document.getElementById(ancla)?.scrollIntoView({ block: 'start' }), 150)
+    return () => window.clearTimeout(t)
+  }, [ancla])
+  return (
+    <section aria-label={titulo} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      <button type="button" aria-expanded={abierto} onClick={() => setAbierto(a => !a)}
+        style={{ ...btnStyle('sutil'), minHeight: 44, justifyContent: 'flex-start', flexWrap: 'wrap', padding: '0 4px', fontFamily: 'var(--font-titulos, inherit)', fontSize: 16, fontWeight: 700, color: 'var(--text)', textAlign: 'left' }}>
+        {abierto ? '▾' : '▸'} {titulo} · ({cuenta})
+        {rojo && <span style={{ color: 'var(--negative)', fontSize: 14, marginLeft: 8 }}>{rojo}</span>}
+      </button>
+      {montarSiempre ? <div hidden={!abierto}>{children}</div> : abierto && children}
+    </section>
+  )
+}
+
+function SueltasPlegable({ mesa, hoy, onCambio }: { mesa: NonNullable<ReturnType<typeof repartirMesaCompleta>>; hoy: string; onCambio: () => Promise<void> }) {
+  const l = mesa.sueltas
+  if (l.estado === 'ok' && l.filas.length === 0 && !mesa.sueltasTruncado) return null
+  const vencidas = l.estado === 'ok' ? l.filas.filter(t => t.vencida).length : 0
+  return (
+    <Plegable titulo="Tareas sueltas" cuenta={l.estado === 'ok' ? `${l.filas.length}${mesa.sueltasTruncado ? '+' : ''}` : '!'}
+      rojo={vencidas > 0 ? `${vencidas} vencida${vencidas === 1 ? '' : 's'}` : l.estado === 'no_leido' ? 'no se ha podido leer' : null}>
+      <TareasSueltas lectura={l} truncado={mesa.sueltasTruncado} hoy={hoy} onCambio={onCambio} sinCabecera />
+    </Plegable>
+  )
+}
+
+function PerdidasPlegable({ mesa, onCambio }: { mesa: NonNullable<ReturnType<typeof repartirMesaCompleta>>; onCambio: () => Promise<void> }) {
+  const l = mesa.perdidas
+  if (l.estado === 'ok' && l.filas.length === 0 && !(mesa.perdidasConExpediente && mesa.perdidasConExpediente > 0)) return null
+  return (
+    <Plegable titulo="Pérdidas por revisar" cuenta={l.estado === 'ok' ? String(l.filas.length) : '!'} rojo={l.estado === 'no_leido' ? 'no se ha podido leer' : null}>
+      <PerdidasPorRevisar lectura={l} conExpediente={mesa.perdidasConExpediente} onCambio={onCambio} sinCabecera />
+    </Plegable>
+  )
+}
+
+function Seccion({ seccion, filas, hoy, onCambio }: { seccion: SeccionMesa; filas: Expediente[]; hoy: string; onCambio: () => Promise<void> }) {
+  const plegable = seccion !== 'entreManos'
   const [abierto, setAbierto] = useState(!plegable)
   const [limite, setLimite] = useState(PAGINA)
   const visibles = filas.slice(0, limite)
   return (
-    <section aria-label={TITULO_BLOQUE[bloque]} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+    <section aria-label={TITULO_SECCION[seccion]} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
       {plegable ? (
         <button type="button" aria-expanded={abierto} onClick={() => setAbierto(a => !a)}
-          style={{ ...btnStyle('sutil'), justifyContent: 'flex-start', padding: '0 4px', fontFamily: 'var(--font-titulos, inherit)', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
-          {abierto ? '▾' : '▸'} {TITULO_BLOQUE[bloque]} · ({filas.length})
+          style={{ ...btnStyle('sutil'), minHeight: 44, justifyContent: 'flex-start', textAlign: 'left', padding: '0 4px', fontFamily: 'var(--font-titulos, inherit)', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
+          {abierto ? '▾' : '▸'} {TITULO_SECCION[seccion]} · ({filas.length})
         </button>
       ) : (
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{TITULO_BLOQUE[bloque]} · {filas.length}</h2>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{TITULO_SECCION[seccion]} · {filas.length}</h2>
       )}
-      {abierto && filas.length === 0 && <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)' }}>{VACIO_BLOQUE[bloque]}</p>}
-      {abierto && visibles.map(e => <Fila key={e.id} e={e} bloque={bloque} hoy={hoy} onCambio={onCambio} />)}
+      {abierto && filas.length === 0 && <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)' }}>{VACIO_SECCION[seccion]}</p>}
+      {abierto && visibles.map(e => <Fila key={e.id} e={e} seccion={seccion} hoy={hoy} onCambio={onCambio} />)}
       {abierto && filas.length > limite && (
-        <div><button type="button" style={btnStyle('secundario')} onClick={() => setLimite(l => l + PAGINA)}>Ver {Math.min(PAGINA, filas.length - limite)} más (quedan {filas.length - limite})</button></div>
+        <div><button type="button" style={{ ...btnStyle('secundario'), minHeight: 44 }} onClick={() => setLimite(l => l + PAGINA)}>Ver {Math.min(PAGINA, filas.length - limite)} más (quedan {filas.length - limite})</button></div>
       )}
     </section>
   )
@@ -175,12 +228,11 @@ function Bloque({ bloque, filas, hoy, onCambio }: { bloque: BloqueMesa; filas: E
 
 type Panel = null | 'perder' | 'aparcar' | 'notas' | 'solicitud'
 
-function Fila({ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa; hoy: string; onCambio: () => Promise<void> }) {
+function Fila({ e, seccion, hoy, onCambio }: { e: Expediente; seccion: SeccionMesa; hoy: string; onCambio: () => Promise<void> }) {
   const [panel, setPanel] = useState<Panel>(null)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const aparcada = bloque === 'aparcadas'
-  const vencida = bloque === 'hoy'
+  const aparcada = seccion === 'aparcadas'
   const puedeGanar = !aparcada && (e.estado === 'en_negociacion' || e.estado === 'pendiente_cliente')
 
   const ejecutar = async (body: Record<string, unknown>) => {
@@ -215,18 +267,30 @@ function Fila({ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa;
 
   const pa = e.proximaAccion
   const fechaAccion = soloDia(pa?.fecha ?? null)
+  const vencida = fechaAccion !== null && fechaAccion <= hoy
+  const insignia = origenInsignia(e)
+  const vence = textoVencimiento(e, hoy)
+  const antig = textoAntiguedad(e, hoy)
 
   return (
     <article style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, padding: 14, opacity: enviando ? 0.7 : 1 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <strong style={{ fontSize: 16, overflowWrap: 'anywhere' }}>{e.ramo ?? 'Sin ramo'}</strong>
+        <Badge tono={TONO_CLASE[e.clase]}>{ROTULO_CLASE[e.clase]}</Badge>
+        {insignia && <Badge tono={TONO_ORIGEN[insignia]}>{insignia}</Badge>}
+        {e.delVolcado && <span title="Viene del volcado del CRM anterior" style={{ fontSize: 11, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 999, padding: '1px 8px' }}>del CRM anterior</span>}
+        <span style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 14 }}>{e.prima === null ? '—' : eur(e.prima)}</span>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 10px', minWidth: 0, fontSize: 14 }}>
         <Link href={`/correduria/cliente/${e.clienteId}`} style={{ fontWeight: 700, color: 'var(--primary)', overflowWrap: 'anywhere' }}>
           {e.cliente ?? 'Cliente sin nombre'}
         </Link>
-        {e.ramo && <span style={{ fontSize: 13, color: 'var(--muted)' }}>· {e.ramo}</span>}
         <AccionesContacto telefono={e.contacto?.telefono} email={e.contacto?.email} quien={e.cliente ?? 'el cliente'} tam="md" />
-        <Badge tono={TONO_CLASE[e.clase]}>{ROTULO_CLASE[e.clase]}</Badge>
-        {e.delVolcado && <span title="Viene del volcado del CRM anterior" style={{ fontSize: 11, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 999, padding: '1px 8px' }}>del CRM anterior</span>}
-        <span style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 14 }}>{e.prima === null ? '—' : eur(e.prima)}</span>
+        <span style={{ color: 'var(--muted)', fontSize: 13 }}>{e.estadoVisible === 'esperando_cliente' ? 'Esperando cliente' : e.estadoVisible === 'aparcada' ? 'Aparcada' : 'Abierta'}</span>
+        {vence && <span style={{ fontWeight: 600, fontSize: 13, color: (e.vencimiento ?? '') <= hoy ? 'var(--negative)' : 'var(--warning)' }}>{vence}</span>}
+        {antig && <span style={{ color: 'var(--muted)', fontSize: 13 }}>{antig}</span>}
+        {e.presupuestos !== null && e.presupuestos > 0 && <Badge tono="positivo">Presupuesto hecho{e.presupuestos > 1 ? ` (${e.presupuestos})` : ''}</Badge>}
       </div>
 
       <div style={{ fontSize: 14, display: 'flex', flexWrap: 'wrap', gap: '2px 10px', minWidth: 0 }}>

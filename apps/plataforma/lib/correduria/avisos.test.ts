@@ -76,7 +76,10 @@ test('cada aviso lleva a una pestaña que existe (los enlaces no caen en una sec
       assert.equal(href, '/correduria/mesa#correos-compania')
       const bandeja = readFileSync(join(import.meta.dirname, '../../app/(usuario)/correduria/mesa/CorreosCompania.tsx'), 'utf8')
       assert.match(bandeja, /id="correos-compania"/)
-      assert.match(readFileSync(join(import.meta.dirname, '../../app/(usuario)/correduria/mesa/MesaClient.tsx'), 'utf8'), /<CorreosCompania \/>/)
+      // La bandeja va dentro de un plegable: el plegable tiene que abrirse con esa ancla (si no, el aviso llevaría a nada).
+      const mesa = readFileSync(join(import.meta.dirname, '../../app/(usuario)/correduria/mesa/MesaClient.tsx'), 'utf8')
+      assert.match(mesa, /<CorreosCompania[ />]/)
+      assert.match(mesa, /ancla="correos-compania"/)
       continue
     }
     const m = /^\/correduria\?s=([a-z_]+)$/.exec(href)

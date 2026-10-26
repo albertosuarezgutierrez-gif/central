@@ -103,8 +103,12 @@ export function esExpedienteDeTrabajo(o: { estado: string; delVolcado: boolean }
 
 // ── «Trabajada» (Mi mesa, 20/10/2026) ───────────────────────────────────────
 
-/** Orígenes (`info_riesgo.origen`) de una renovación/aviso que entra SOLA, sin que Alberto haga nada. */
-const ORIGENES_RENOVACION_AUTO: ReadonlySet<string> = new Set(['renovacion_cartera', 'web:aviso-vencimiento', 'portal:mejorar-precio'])
+/**
+ * Orígenes (`info_riesgo.origen`) de una renovación que entra SOLA, sin que nadie la pida. `web:aviso-vencimiento` y
+ * `portal:mejorar-precio` YA NO están (26/10/2026): los pide el propio cliente, así que son petición explícita y Mi mesa
+ * los trata como «cliente esperando respuesta», no como ruido del vencimiento.
+ */
+const ORIGENES_RENOVACION_AUTO: ReadonlySet<string> = new Set(['renovacion_cartera'])
 
 /**
  * `oportunidad_historial.accion` que escribe el SISTEMA solo (alta, import, aviso o lectura automática de un correo…),

@@ -178,8 +178,11 @@ test('trabajada: cada señal de renovación automática la marca (fuente, import
   const base = { fuente: 'otros', origen: null, conImportRef: false, estado: 'competencia', contactada: false }
   assert.equal(esTrabajada({ ...base, fuente: 'renovacion' }), false)
   assert.equal(esTrabajada({ ...base, conImportRef: true }), false)
-  for (const o of ['renovacion_cartera', 'web:aviso-vencimiento', 'portal:mejorar-precio']) {
-    assert.equal(esTrabajada({ ...base, origen: o }), false, o)
+  assert.equal(esTrabajada({ ...base, origen: 'renovacion_cartera' }), false)
+  // Petición explícita del cliente (aviso web, «mejórame el precio»): NO es renovación automática, cuenta como trabajada.
+  for (const o of ['web:aviso-vencimiento', 'portal:mejorar-precio']) {
+    assert.equal(esRenovacionAutomatica({ ...base, origen: o }), false, o)
+    assert.equal(esTrabajada({ ...base, origen: o }), true, o)
   }
   assert.equal(esRenovacionAutomatica({ ...base, origen: 'otro_origen' }), false)
 })

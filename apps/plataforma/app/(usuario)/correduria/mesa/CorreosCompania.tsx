@@ -25,7 +25,10 @@ const fechaEs = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}
  * cada uno. Los SIN RESOLVER van primero y destacados: la póliza no casó y NO se escribió nada en la cartera.
  * La banda de avisos enlaza aquí (`#correos-compania`). ≤50 + «Ver más»; recarga sin desmontar.
  */
-export default function CorreosCompania() {
+export type CuentaCorreos = { n: number; truncado: boolean; pendientes: number }
+
+/** `sinCabecera`: la pantalla ya pone el título (plegable). `onCuenta`: el contador para ese título (`null` = no leído). */
+export default function CorreosCompania({ sinCabecera, onCuenta }: { sinCabecera?: boolean; onCuenta?: (c: CuentaCorreos | null) => void } = {}) {
   const [lectura, setLectura] = useState<LecturaCorreosCompania | null>(null)
   const [cargando, setCargando] = useState(true)
   const [limite, setLimite] = useState(PAGINA)
@@ -85,7 +88,12 @@ export default function CorreosCompania() {
     }
   }, [])
 
-  const cabecera = (n: string | null) => <h2 style={TITULO}>Correos de compañía{n ? ` · ${n}` : ''}</h2>
+  useEffect(() => {
+    onCuenta?.(lectura && lectura.estado === 'ok' ? { n: lectura.filas.length, truncado: lectura.truncado, pendientes: lectura.filas.filter(pideMirar).length } : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lectura])
+
+  const cabecera = (n: string | null) => (sinCabecera ? null : <h2 style={TITULO}>Correos de compañía{n ? ` · ${n}` : ''}</h2>)
 
   if (lectura === null) {
     return (

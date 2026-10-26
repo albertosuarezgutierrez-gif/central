@@ -1,79 +1,205 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  atajosAparcar, bloqueDe, cuandoRelativo, fechaCorta, masDias, repartirMesa, repartirMesaCompleta, ordenarTareasSueltas, ordenarPerdidas, BLOQUES_MESA,
+  atajosAparcar, cuandoRelativo, fechaCorta, masDias, repartirMesa, repartirMesaCompleta, ordenarTareasSueltas, ordenarPerdidas,
+  seccionMesa, motivosEntreManos, esSubida, esPeticion, SECCIONES_MESA, origenInsignia, textoVencimiento, textoAntiguedad,
 } from './mesa.ts'
 import type { Expediente, Expedientes, PerdidaPorRevisar, TareaSuelta } from './expedientes.ts'
 
-const HOY = '2026-10-13'
+const HOY = '2026-10-26'
+const dia = (n: number) => masDias(HOY, n)
+
+/**
+ * Expediente NEUTRO: ningún brazo de «Entre manos» lo sube (creado hace 60 d, sin contacto humano que CONSTA, sin
+ * vencimiento, siguiente paso futuro) → «Leads antiguos sin contacto». Cada test añade UNA cosa y comprueba que sube.
+ */
 const exp = (o: Partial<Expediente> = {}): Expediente => ({
   id: 'e1', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', clase: 'venta_nueva', estadoVisible: 'abierta', estado: 'en_negociacion',
   delVolcado: false, aparcadaHasta: null, aparcadaMotivo: null,
-  proximaAccion: { tareaId: 't1', texto: 'Llamar', tipo: 'llamada', fecha: '2026-10-20' },
-  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, contacto: null, trabajada: true, solicitudCompania: null, ...o,
+  proximaAccion: { tareaId: 't1', texto: 'Llamar', tipo: 'llamada', fecha: dia(7) },
+  prima: 100, fechaFinVigencia: null, notas: null, creada: dia(-60), rescate: null, contacto: null, trabajada: true, solicitudCompania: null,
+  origen: 'ficha:manual', ultimoContacto: null, contactoConsta: true, presupuestos: null, vencimiento: null, ...o,
 })
 const con = (p: Partial<NonNullable<Expediente['proximaAccion']>> | null): Partial<Expediente> =>
-  ({ proximaAccion: p === null ? null : { tareaId: 't', texto: '', tipo: 'llamada', fecha: '2026-10-20', ...p } })
+  ({ proximaAccion: p === null ? null : { tareaId: 't', texto: '', tipo: 'llamada', fecha: dia(7), ...p } })
+const SOL = { numero: '170000001', compania: 'occident', estado: 'PRIMA / PROY * PTE DOCUMENTACION', url: 'https://portaloccident.gco.global/x?idSubscripcio=00170000001', at: null }
+const sec = (o: Partial<Expediente>) => seccionMesa(exp(o), HOY)
 
-test('bloques: hoy y vencido incluye hoy y fechas pasadas, no mañana', () => {
-  assert.equal(bloqueDe(exp(con({ fecha: HOY })), HOY), 'hoy')
-  assert.equal(bloqueDe(exp(con({ fecha: '2026-09-01' })), HOY), 'hoy')
-  assert.equal(bloqueDe(exp(con({ fecha: '2026-10-14' })), HOY), 'abiertas')
+test('neutro: sin ningún brazo y con contacto que CONSTA que no existe → Leads antiguos sin contacto', () => {
+  assert.equal(sec({}), 'leadsAntiguos')
 })
 
-test('bloques: sin fecha o sin próxima acción NO es hoy', () => {
-  assert.equal(bloqueDe(exp(con({ fecha: null })), HOY), 'abiertas')
-  assert.equal(bloqueDe(exp(con(null)), HOY), 'abiertas')
+// ── Un test por brazo del OR de «Entre manos» ───────────────────────────────────────────────────────
+test('brazo (a): contacto humano ≤30 d sube, también un lead antiguo y una renovación de cartera; a 31 d no', () => {
+  assert.equal(sec({ ultimoContacto: `${dia(-30)}T10:00:00.000Z` }), 'entreManos')
+  assert.equal(sec({ ultimoContacto: `${dia(-31)}T10:00:00.000Z` }), 'leadsAntiguos')
+  assert.equal(sec({ delVolcado: true, ultimoContacto: dia(-5) }), 'entreManos')
+  assert.equal(sec({ trabajada: false, origen: 'renovacion_cartera', ultimoContacto: dia(-5) }), 'entreManos')
+  assert.deepEqual(motivosEntreManos(exp({ ultimoContacto: dia(-5) }), HOY), ['contacto'])
 })
 
-test('bloques: una aparcada nunca sale fuera de Aparcadas, aunque su acción esté vencida', () => {
-  const e = exp({ estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10', ...con({ fecha: '2026-09-01' }) })
-  assert.equal(bloqueDe(e, HOY), 'aparcadas')
+test('brazo (b): petición explícita (correo:lead, web:*, portal:* incl. mejorar-precio y aviso-vencimiento)', () => {
+  for (const origen of ['correo:lead', 'web:lead', 'web:aviso-vencimiento', 'portal:mejorar-precio', 'portal:patrimonio']) {
+    assert.equal(sec({ origen }), 'entreManos', origen)
+    assert.equal(esPeticion({ origen }), true, origen)
+  }
+  // Un origen que no es petición no sube por sí solo.
+  assert.equal(sec({ origen: 'renovacion_cartera' }), 'leadsAntiguos')
 })
 
-test('bloques: renovación automática sin contacto va a «Renovaciones sin tocar», no a Hoy/Abiertas/Esperando', () => {
-  assert.equal(bloqueDe(exp({ trabajada: false, ...con({ fecha: HOY }) }), HOY), 'sinTocar')
-  assert.equal(bloqueDe(exp({ trabajada: false }), HOY), 'sinTocar')
-  assert.equal(bloqueDe(exp({ trabajada: false, estadoVisible: 'abierta' }), HOY), 'sinTocar')
-  // Una renovación pasada a «esperando cliente» la marca asegura como trabajada (estado ≠ competencia): sale en Esperando.
-  assert.equal(bloqueDe(exp({ trabajada: true, estadoVisible: 'esperando_cliente' }), HOY), 'esperando')
-  // Trabajada, o sin dato (null: versión vieja de asegura), NO se esconde.
-  assert.equal(bloqueDe(exp({ trabajada: true, ...con({ fecha: HOY }) }), HOY), 'hoy')
-  assert.equal(bloqueDe(exp({ trabajada: null, ...con({ fecha: HOY }) }), HOY), 'hoy')
-  // Un rescate nunca se esconde; una aparcada sigue en Aparcadas.
-  assert.equal(bloqueDe(exp({ trabajada: false, clase: 'rescate' }), HOY), 'rescates')
-  assert.equal(bloqueDe(exp({ trabajada: false, estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10' }), HOY), 'aparcadas')
+test('brazo (b): una póliza SUBIDA al portal NO es petición (documento:portal / portal:declarada)', () => {
+  for (const origen of ['documento:portal', 'portal:declarada']) {
+    assert.equal(esSubida({ origen }), true, origen)
+    assert.equal(esPeticion({ origen }), false, origen)
+    assert.equal(motivosEntreManos(exp({ origen, vencimiento: dia(200) }), HOY).includes('peticion'), false, origen)
+  }
 })
 
-test('bloques: rescate y esperando cliente', () => {
-  assert.equal(bloqueDe(exp({ clase: 'rescate' }), HOY), 'rescates')
-  assert.equal(bloqueDe(exp({ estadoVisible: 'esperando_cliente' }), HOY), 'esperando')
-  assert.equal(bloqueDe(exp({ clase: 'rescate', ...con({ fecha: HOY }) }), HOY), 'hoy')
+test('brazo (c): siguiente paso vencido (hoy incluido) sube; mañana no', () => {
+  assert.equal(sec(con({ fecha: HOY })), 'entreManos')
+  assert.equal(sec(con({ fecha: dia(-90) })), 'entreManos')
+  assert.equal(sec(con({ fecha: dia(1) })), 'leadsAntiguos')
+  assert.equal(sec(con(null)), 'leadsAntiguos')
+  assert.equal(sec(con({ fecha: null })), 'leadsAntiguos')
 })
 
-test('repartir: cada expediente en UN solo bloque y no se pierde ninguno', () => {
+test('brazo (d): nº de solicitud en la compañía o esperando cliente', () => {
+  assert.equal(sec({ solicitudCompania: SOL }), 'entreManos')
+  assert.equal(sec({ estadoVisible: 'esperando_cliente', estado: 'pendiente_cliente' }), 'entreManos')
+  // Una renovación sin contacto pero con nº de solicitud ya la marca asegura como trabajada: sale de «sin tocar».
+  assert.equal(sec({ solicitudCompania: SOL, trabajada: true, origen: 'renovacion_cartera' }), 'entreManos')
+})
+
+test('brazo (e): rescate / retención con plazo de recibo', () => {
+  assert.equal(sec({ clase: 'rescate' }), 'entreManos')
+  assert.equal(sec({ clase: 'rescate', trabajada: false }), 'entreManos')
+})
+
+test('brazo (f): vencimiento de póliza ≤60 d (también ya vencida) sube; a 61 d no; null no esconde ni sube', () => {
+  assert.equal(sec({ vencimiento: dia(60) }), 'entreManos')
+  assert.equal(sec({ vencimiento: dia(-3) }), 'entreManos')
+  assert.equal(sec({ vencimiento: dia(61) }), 'leadsAntiguos')
+  assert.equal(sec({ vencimiento: null }), 'leadsAntiguos')
+  // Aplica a cualquier operación, también a una renovación de cartera sin tocar.
+  assert.equal(sec({ trabajada: false, origen: 'renovacion_cartera', vencimiento: dia(45) }), 'entreManos')
+})
+
+test('brazo (g): creada ≤21 d y no subida; una subida reciente no sube por esto', () => {
+  assert.equal(sec({ creada: `${dia(-21)}T08:00:00.000Z` }), 'entreManos')
+  assert.equal(motivosEntreManos(exp({ creada: dia(-22) }), HOY).includes('reciente'), false)
+  assert.equal(motivosEntreManos(exp({ creada: dia(-21) }), HOY).includes('reciente'), true)
+  assert.equal(sec({ creada: dia(-2), origen: 'documento:portal', vencimiento: dia(200) }), 'subidas')
+})
+
+// ── Secciones plegadas ──────────────────────────────────────────────────────────────────────────────
+test('plegada «Pólizas subidas»: subida por el cliente con vencimiento >60 d; a ≤60 d sube sola a Entre manos', () => {
+  assert.equal(sec({ origen: 'documento:portal', vencimiento: dia(61) }), 'subidas')
+  assert.equal(sec({ origen: 'portal:declarada', vencimiento: dia(300), creada: dia(-100) }), 'subidas')
+  assert.equal(sec({ origen: 'documento:portal', vencimiento: dia(60) }), 'entreManos')
+  // Vencimiento que no se sabe: no se esconde.
+  assert.equal(sec({ origen: 'documento:portal', vencimiento: null }), 'entreManos')
+})
+
+test('plegada «Leads antiguos»: del volcado, o sin contacto >30 d y creados hace >30 d; con contacto desconocido NO', () => {
+  assert.equal(sec({ delVolcado: true, creada: dia(-127) }), 'leadsAntiguos')
+  assert.equal(sec({ ultimoContacto: dia(-80), creada: dia(-90) }), 'leadsAntiguos')
+  assert.equal(sec({ creada: dia(-31) }), 'leadsAntiguos')
+  assert.equal(sec({ creada: dia(-30) }), 'entreManos', 'creada hace 30 d no es «>30»')
+  // asegura vieja (no manda ultimoContacto): `null` es «no se sabe» → no se esconde.
+  assert.equal(sec({ contactoConsta: false }), 'entreManos')
+  // La antigüedad no sale de fechaFinVigencia (la del volcado está mal).
+  assert.equal(sec({ fechaFinVigencia: '2023-01-01', creada: dia(-5) }), 'entreManos')
+})
+
+test('plegada «Renovaciones de cartera sin tocar»: trabajada===false salvo contacto, petición, rescate o vencimiento ≤60 d', () => {
+  const ren = { trabajada: false, origen: 'renovacion_cartera' }
+  assert.equal(sec(ren), 'renovaciones')
+  // Su tarea vencida y su alta reciente son ruido del vencimiento: no la suben.
+  assert.equal(sec({ ...ren, ...con({ fecha: dia(-10) }), creada: dia(-3) }), 'renovaciones')
+  assert.equal(sec({ ...ren, vencimiento: dia(90) }), 'renovaciones')
+  assert.equal(sec({ ...ren, trabajada: null }), 'leadsAntiguos', 'sin dato de trabajada no se manda a «sin tocar»')
+})
+
+test('aparcada: nunca sale fuera de Aparcadas, aunque cumpla todos los brazos', () => {
+  const e = exp({ estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10', clase: 'rescate', origen: 'web:lead', vencimiento: dia(5), ...con({ fecha: dia(-9) }) })
+  assert.equal(seccionMesa(e, HOY), 'aparcadas')
+})
+
+test('nulos: origen, ultimoContacto y vencimiento null (no se sabe) no esconden nada', () => {
+  assert.equal(sec({ origen: null, contactoConsta: false, ultimoContacto: null, vencimiento: null }), 'entreManos')
+})
+
+// ── Reparto y orden ─────────────────────────────────────────────────────────────────────────────────
+test('repartir: cada expediente en UNA sección y no se pierde ninguno', () => {
   const lista = [
     exp({ id: 'a', ...con({ fecha: HOY }) }), exp({ id: 'b' }), exp({ id: 'c', estadoVisible: 'esperando_cliente' }),
     exp({ id: 'd', clase: 'rescate' }), exp({ id: 'e', estadoVisible: 'aparcada', aparcadaHasta: '2027-01-01' }),
-    exp({ id: 'f', clase: 'rescate', estadoVisible: 'esperando_cliente' }),
+    exp({ id: 'f', origen: 'documento:portal', vencimiento: dia(200) }), exp({ id: 'g', trabajada: false }),
   ]
   const r = repartirMesa(lista, HOY)
-  const ids = BLOQUES_MESA.flatMap(b => r[b].map(x => x.id))
+  const ids = SECCIONES_MESA.flatMap(b => r[b].map(x => x.id))
   assert.equal(ids.length, lista.length)
   assert.equal(new Set(ids).size, lista.length)
-  assert.deepEqual(r.hoy.map(x => x.id), ['a'])
-  assert.deepEqual(r.rescates.map(x => x.id).sort(), ['d', 'f'])
+  assert.deepEqual(r.leadsAntiguos.map(x => x.id), ['b'])
+  assert.deepEqual(r.subidas.map(x => x.id), ['f'])
+  assert.deepEqual(r.renovaciones.map(x => x.id), ['g'])
+  assert.deepEqual(r.aparcadas.map(x => x.id), ['e'])
+  assert.deepEqual(r.entreManos.map(x => x.id).sort(), ['a', 'c', 'd'])
 })
 
-test('orden: fecha más antigua primero, sin fecha al final, prima mayor, prima null última', () => {
+test('orden de Entre manos: vencido (más antiguo) → petición sin contacto → vence ≤60 (cercano) → recién → con contacto → pelota de otro', () => {
   const r = repartirMesa([
-    exp({ id: 'x', ...con({ fecha: '2026-10-25' }), prima: 50 }),
-    exp({ id: 'y', ...con({ fecha: null }), prima: 999 }),
-    exp({ id: 'z', ...con({ fecha: '2026-10-25' }), prima: 300 }),
-    exp({ id: 'n', ...con({ fecha: '2026-10-25' }), prima: null }),
-    exp({ id: 'w', ...con({ fecha: '2026-10-15' }), prima: 1 }),
+    exp({ id: 'pelota', clienteId: 'k1', solicitudCompania: SOL }),
+    exp({ id: 'contacto', clienteId: 'k2', ultimoContacto: dia(-3) }),
+    exp({ id: 'reciente', clienteId: 'k3', creada: dia(-5) }),
+    exp({ id: 'vence50', clienteId: 'k4', vencimiento: dia(50) }),
+    exp({ id: 'vence10', clienteId: 'k5', vencimiento: dia(10) }),
+    exp({ id: 'peticion', clienteId: 'k6', origen: 'web:lead' }),
+    exp({ id: 'vencidoReciente', clienteId: 'k7', ...con({ fecha: dia(-2) }) }),
+    exp({ id: 'vencidoAntiguo', clienteId: 'k8', ...con({ fecha: dia(-40) }) }),
   ], HOY)
-  assert.deepEqual(r.abiertas.map(x => x.id), ['w', 'z', 'x', 'n', 'y'])
+  assert.deepEqual(r.entreManos.map(x => x.id), ['vencidoAntiguo', 'vencidoReciente', 'peticion', 'vence10', 'vence50', 'reciente', 'contacto', 'pelota'])
+})
+
+test('orden: empate → prima mayor, prima null al final; luego id', () => {
+  const r = repartirMesa([
+    exp({ id: 'n', clienteId: 'k1', prima: null, ...con({ fecha: dia(-1) }) }),
+    exp({ id: 'x', clienteId: 'k2', prima: 50, ...con({ fecha: dia(-1) }) }),
+    exp({ id: 'z', clienteId: 'k3', prima: 300, ...con({ fecha: dia(-1) }) }),
+  ], HOY)
+  assert.deepEqual(r.entreManos.map(x => x.id), ['z', 'x', 'n'])
+})
+
+test('agrupa por clienteId (nunca por nombre): las del mismo cliente juntas, dos clientes homónimos no se funden', () => {
+  const r = repartirMesa([
+    exp({ id: 'a1', clienteId: 'A', cliente: 'Ana', ...con({ fecha: dia(-9) }) }),
+    exp({ id: 'b1', clienteId: 'B', cliente: 'Ana', ...con({ fecha: dia(-5) }) }),
+    exp({ id: 'a2', clienteId: 'A', cliente: 'Ana', ...con({ fecha: dia(-1) }) }),
+  ], HOY)
+  assert.deepEqual(r.entreManos.map(x => x.id), ['a1', 'a2', 'b1'])
+})
+
+test('tarjeta: insignia de origen, «vence en X d» y antigüedad; lo que no consta no se inventa', () => {
+  assert.equal(origenInsignia(exp({ origen: 'portal:mejorar-precio' })), 'Portal')
+  assert.equal(origenInsignia(exp({ origen: 'documento:portal' })), 'Portal')
+  assert.equal(origenInsignia(exp({ origen: 'correo:lead' })), 'Correo')
+  assert.equal(origenInsignia(exp({ origen: 'web:lead' })), 'Web')
+  assert.equal(origenInsignia(exp({ origen: 'renovacion_cartera' })), 'Cartera')
+  assert.equal(origenInsignia(exp({ origen: null, delVolcado: true })), 'Cartera')
+  assert.equal(origenInsignia(exp({ origen: null })), null)
+  assert.equal(textoVencimiento(exp({ vencimiento: dia(12) }), HOY), 'vence en 12 d')
+  assert.equal(textoVencimiento(exp({ vencimiento: HOY }), HOY), 'vence hoy')
+  assert.equal(textoVencimiento(exp({ vencimiento: dia(-3) }), HOY), 'vencida hace 3 d')
+  assert.equal(textoVencimiento(exp({ vencimiento: null }), HOY), null)
+  assert.equal(textoAntiguedad(exp({ creada: dia(-5) }), HOY), 'entró hace 5 d')
+  assert.equal(textoAntiguedad(exp({ creada: `${HOY}T09:00:00Z` }), HOY), 'entró hoy')
+})
+
+test('subidas: por vencimiento, la más cercana primero', () => {
+  const r = repartirMesa([
+    exp({ id: 'l', origen: 'documento:portal', vencimiento: dia(300) }), exp({ id: 'k', origen: 'documento:portal', vencimiento: dia(100) }),
+  ], HOY)
+  assert.deepEqual(r.subidas.map(x => x.id), ['k', 'l'])
 })
 
 test('aparcadas: la que vuelve antes primero', () => {
@@ -86,8 +212,8 @@ test('aparcadas: la que vuelve antes primero', () => {
 
 test('fechas: relativo, corta y atajos de aparcar', () => {
   assert.equal(cuandoRelativo(HOY, HOY), 'hoy')
-  assert.equal(cuandoRelativo('2026-10-10', HOY), 'hace 3 d')
-  assert.equal(cuandoRelativo('2026-10-14', HOY), 'mañana')
+  assert.equal(cuandoRelativo(dia(-3), HOY), 'hace 3 d')
+  assert.equal(cuandoRelativo(dia(1), HOY), 'mañana')
   assert.equal(cuandoRelativo(null, HOY), 'sin fecha')
   assert.equal(cuandoRelativo('2026-12-02T10:00:00Z', HOY), '2 dic')
   assert.equal(fechaCorta('2027-03-15', HOY), '15 mar 2027')
@@ -100,7 +226,7 @@ test('fechas: relativo, corta y atajos de aparcar', () => {
 
 const suelta = (o: Partial<TareaSuelta> = {}): TareaSuelta => ({
   tareaId: 't1', clienteId: 'c1', cliente: 'Ana', polizaId: null, siniestroId: null, tipo: 'llamada', estado: 'pendiente',
-  texto: 'Llamar', fecha: '2026-10-13', origen: null, contacto: null, ...o,
+  texto: 'Llamar', fecha: HOY, origen: null, contacto: null, ...o,
 })
 const perdida = (o: Partial<PerdidaPorRevisar> = {}): PerdidaPorRevisar => ({
   id: 'p1', tipo: 'baja', titulo: 'Baja', clienteId: 'c1', cliente: 'Ana', polizaId: 'z1', polizaNumero: '1', aseguradora: null,
@@ -114,8 +240,8 @@ const datos = (o: Partial<Ok> = {}): Ok => ({
 
 test('tareas sueltas: vencida = fecha <= hoy; sin fecha NO es vencida y va al final', () => {
   const r = ordenarTareasSueltas([
-    suelta({ tareaId: 'd', fecha: null }), suelta({ tareaId: 'c', fecha: '2026-10-20' }),
-    suelta({ tareaId: 'b', fecha: '2026-10-13T08:00:00Z' }), suelta({ tareaId: 'a', fecha: '2026-09-30' }),
+    suelta({ tareaId: 'd', fecha: null }), suelta({ tareaId: 'c', fecha: dia(7) }),
+    suelta({ tareaId: 'b', fecha: `${HOY}T08:00:00Z` }), suelta({ tareaId: 'a', fecha: '2026-09-30' }),
   ], HOY)
   assert.deepEqual(r.map(t => t.tareaId), ['a', 'b', 'c', 'd'])
   assert.deepEqual(r.map(t => t.vencida), [true, true, false, false])
@@ -143,7 +269,7 @@ test('mesa completa: reparte expedientes, sueltas y pérdidas sin perder ninguna
     tareasSueltas: [suelta({ tareaId: 's1' }), suelta({ tareaId: 's2', fecha: null })], tareasSueltasTruncado: true,
     perdidasPorRevisar: [perdida({ id: 'p1' }), perdida({ id: 'p2', cliente: 'Zoe' })],
   }), HOY)
-  assert.equal(BLOQUES_MESA.reduce((n, b) => n + r.bloques[b].length, 0), 2)
+  assert.equal(SECCIONES_MESA.reduce((n, b) => n + r.bloques[b].length, 0), 2)
   assert.equal(r.sueltas.estado === 'ok' ? r.sueltas.filas.length : -1, 2)
   assert.equal(r.sueltasTruncado, true)
   assert.equal(r.perdidas.estado === 'ok' ? r.perdidas.filas.length : -1, 2)
@@ -160,21 +286,3 @@ test('motivoFalloTareaSuelta: 2xx = guardado; 409/404 dicen su motivo; 5xx = amb
   assert.notEqual(m(200, { estado: 'error' }), null)
 })
 
-// «En la compañía» (20/10/2026).
-const SOL = { numero: '170000001', compania: 'occident', estado: 'PRIMA / PROY * PTE DOCUMENTACION', url: 'https://portaloccident.gco.global/x?idSubscripcio=00170000001', at: null }
-
-test('bloques: con nº de solicitud en la compañía → «En la compañía», antes de Abiertas', () => {
-  assert.equal(bloqueDe(exp({ solicitudCompania: SOL }), HOY), 'compania')
-  assert.equal(bloqueDe(exp({ solicitudCompania: SOL, estadoVisible: 'esperando_cliente' }), HOY), 'compania')
-  assert.ok(BLOQUES_MESA.indexOf('compania') < BLOQUES_MESA.indexOf('abiertas'))
-})
-
-test('bloques: en la compañía con la tarea de HOY (p. ej. enviar documentación) → Hoy; aparcada → Aparcadas', () => {
-  assert.equal(bloqueDe(exp({ solicitudCompania: SOL, ...con({ fecha: HOY }) }), HOY), 'hoy')
-  assert.equal(bloqueDe(exp({ solicitudCompania: SOL, estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10' }), HOY), 'aparcadas')
-})
-
-test('bloques: una renovación sin contacto pero con nº de solicitud NO va a «sin tocar»', () => {
-  assert.equal(bloqueDe(exp({ solicitudCompania: SOL, trabajada: false }), HOY), 'compania')
-  assert.equal(bloqueDe(exp({ solicitudCompania: null, trabajada: false }), HOY), 'sinTocar')
-})

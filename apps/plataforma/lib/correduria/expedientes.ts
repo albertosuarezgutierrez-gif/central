@@ -61,6 +61,19 @@ export type Expediente = {
    */
   trabajada: boolean | null
   /**
+   * Cómo entró (`info_riesgo.origen`: `correo:lead`, `web:*`, `portal:*`, `documento:portal`, `renovacion_cartera`…).
+   * `null` = no consta (o asegura aún no lo manda): Mi mesa NO lo esconde.
+   */
+  origen: string | null
+  /** Último contacto humano (ISO). `null` = no consta / ninguno registrado / asegura aún no lo manda: no se supone «hace mucho». */
+  ultimoContacto: string | null
+  /** `false` = asegura aún no manda `ultimoContacto` (versión anterior): `null` ahí es «no se sabe», no «sin contacto». */
+  contactoConsta: boolean
+  /** Presupuestos (ofertas no descartadas) de la operación. `null` = no consta. */
+  presupuestos: number | null
+  /** Vencimiento de la póliza (aaaa-mm-dd). `null` = no se sabe: la operación NO se esconde por eso. */
+  vencimiento: string | null
+  /**
    * «En la compañía» (20/10/2026): nº de solicitud en el portal de la compañía. `null` = no lo lleva (o asegura aún no
    * lo manda). `estado`/`url` `null` = la compañía aún no ha escrito. La `url` ya viene validada de asegura y aquí se
    * vuelve a exigir `https://` (se pinta como enlace).
@@ -193,6 +206,11 @@ function fila(v: unknown): Expediente | null {
     rescate: tipoRescate ? { tipo: tipoRescate, recibo: recibo(resc?.recibo) } : null,
     contacto: contacto(r.contacto),
     trabajada: typeof r.trabajada === 'boolean' ? r.trabajada : null,
+    origen: texto(r.origen),
+    ultimoContacto: texto(r.ultimoContacto),
+    contactoConsta: 'ultimoContacto' in r,
+    presupuestos: entero(r.presupuestos),
+    vencimiento: texto(r.vencimiento),
     solicitudCompania: solicitud(r.solicitudCompania),
   }
 }
