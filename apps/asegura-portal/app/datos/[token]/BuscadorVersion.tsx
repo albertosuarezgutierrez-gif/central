@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { claveVehiculo, type SubclaveVehiculo } from '@central/module-seguros'
 
 type Opcion = { id: string; nombre: string }
@@ -23,10 +23,26 @@ export default function BuscadorVersion({ token, clave, valores, poner, quitar, 
 }) {
   const k = (sub: SubclaveVehiculo) => claveVehiculo(clave, sub)
   const v = (sub: SubclaveVehiculo) => (typeof valores[k(sub)] === 'string' ? (valores[k(sub)] as string) : '')
-  const [abierto, setAbierto] = useState(() => v('Codigo') !== '')
+  const [abierto, setAbierto] = useState(() => v('MarcaId') !== '')
   const [listas, setListas] = useState<Partial<Record<Paso, Opcion[]>>>({})
   const [cargando, setCargando] = useState<Paso | null>(null)
   const [fallo, setFallo] = useState(false)
+
+  // Revisión del PR #5080: al reabrir un borrador con la versión ya elegida, las listas se cargan en cascada (gratis) para
+  // que los desplegables no salgan vacíos y se pueda cambiar. Una vez, al montar.
+  const repoblado = useRef(false)
+  useEffect(() => {
+    if (repoblado.current || !abierto || v('MarcaId') === '') return
+    repoblado.current = true
+    const marcaId = v('MarcaId'), modeloId = v('ModeloId'), motor = v('MotorId')
+    void (async () => {
+      await cargar('marcas')
+      await cargar('modelos', { marcaId })
+      if (modeloId) await cargar('motores')
+      if (modeloId && motor) await cargar('versiones', { marcaId, modeloId, motor })
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierto])
 
   async function cargar(paso: Paso, extra: Record<string, string> = {}) {
     setCargando(paso)
@@ -74,7 +90,7 @@ export default function BuscadorVersion({ token, clave, valores, poner, quitar, 
     return (
       <div className="editor-campo" style={{ minWidth: 0 }}>
         <button type="button" className="boton-tenue" style={{ minHeight: 44, width: 'auto', justifySelf: 'start' }} disabled={deshabilitado}
-          onClick={() => { setAbierto(true); if (!listas.marcas) void cargar('marcas') }}>
+          onClick={() => { setAbierto(true); if (!listas.marcas && v('MarcaId') === '') void cargar('marcas') }}>
           🔎 Buscar mi versión exacta (opcional)
         </button>
         {ayuda && <span className="editor-ayuda">{ayuda}</span>}
@@ -98,10 +114,10 @@ export default function BuscadorVersion({ token, clave, valores, poner, quitar, 
           </label>
         )
       })}
-      {v('Codigo') !== '' && <span className="editor-ayuda">✅ Versión elegida. Ya no hace falta nada más del coche.</span>}
+      {v('Codigo') !== '' && <span className="editor-ayuda">✅ Versión elegida{v('Version') ? `: ${v('Version')}` : ''}. Ya no hace falta nada más del coche.</span>}
       {fallo && <span className="editor-ayuda">Ahora no podemos mostrar el catálogo. No pasa nada: con la marca y el modelo de arriba nos basta.</span>}
       <button type="button" className="boton-tenue" style={{ minHeight: 44, width: 'auto', justifySelf: 'start' }} disabled={deshabilitado}
-        onClick={() => { vaciarDesde('marcas'); setAbierto(false) }}>
+        onClick={() => { vaciarDesde('marcas'); repoblado.current = true; setAbierto(false) }}>
         No la encuentro / quitar
       </button>
     </fieldset>

@@ -42,3 +42,24 @@ export function consultaCatalogoPortal(
 }
 
 const NOMBRE_MOTOR_MOTO: Record<string, string> = { Gasoline: 'Gasolina', Diesel: 'Diésel', Others: 'Otro (eléctrica, híbrida…)' }
+
+const plano = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim()
+
+/**
+ * ¿La marca y el modelo en TEXTO que mandó el cliente son los de los ids del catálogo que eligió? (revisión del PR #5080).
+ * El buscador rellena el texto con el nombre del catálogo; si luego lo cambió a mano, los ids ya no son de su coche.
+ * Marca: igual (sin tildes, mayúsculas ni signos). Modelo: igual o empezando por el del catálogo («Ibiza 1.0 TSI» con
+ * «Ibiza»): el campo es «Modelo y versión». Sin texto, o un id que no está en la lista → `false`.
+ */
+export function textosCasanConCatalogo(
+  texto: { marca: unknown; modelo: unknown },
+  elegido: { marcaId: string; modeloId: string },
+  listas: { marcas: readonly { id: string; nombre: string }[]; modelos: readonly { id: string; nombre: string }[] },
+): boolean {
+  if (typeof texto.marca !== 'string' || typeof texto.modelo !== 'string') return false
+  const marca = listas.marcas.find((o) => o.id === elegido.marcaId)?.nombre
+  const modelo = listas.modelos.find((o) => o.id === elegido.modeloId)?.nombre
+  if (!marca || !modelo) return false
+  const tm = plano(texto.modelo), cm = plano(modelo)
+  return plano(texto.marca) === plano(marca) && cm !== '' && (tm === cm || tm.startsWith(`${cm} `))
+}

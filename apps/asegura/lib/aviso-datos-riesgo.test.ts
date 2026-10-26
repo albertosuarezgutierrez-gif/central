@@ -40,3 +40,10 @@ test('salud, mascotas, comercio y un libre: cada uno su línea; lo que queda a p
   assert.match(rc, /No lo sabe \(a preguntar\)/)
   assert.match(rc, /confirmados: no se han tocado/)
 })
+
+test('#5080: si se reescribió algo que ya había, el aviso NO dice «no se ha tocado»', () => {
+  const t = textoAvisoDatosRiesgo({ ...BASE, ramo: 'auto', cambiados: ['marca'], respuestas: {} })
+  assert.ok(!t.includes('no se ha tocado'))
+  assert.match(t, /se ha cambiado lo que ya había en: marca/)
+  assert.match(textoAvisoDatosRiesgo({ ...BASE, ramo: 'auto', cambiados: [], respuestas: {} }), /lo que ya tenías no se ha tocado/)
+})

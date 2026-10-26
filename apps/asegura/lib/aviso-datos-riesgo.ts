@@ -45,6 +45,8 @@ export type EntradaAvisoDatosRiesgo = {
   anotados: number | null
   conflictos?: string[]
   confirmado?: boolean
+  /** Campos del riesgo que YA tenían valor y se han reescrito (revisión del PR #5080): entonces no se dice «no se ha tocado». */
+  cambiados?: string[]
   /** Vehículo: la versión del catálogo que eligió, comprobada contra el catálogo (`false` = no casa: no se escribió). */
   catalogoComprobado?: boolean | null
   /** Vehículo: código DGS de la compañía actual, si se resolvió sin duda. */
@@ -106,7 +108,10 @@ export function textoAvisoDatosRiesgo(e: EntradaAvisoDatosRiesgo): string {
   for (const c of e.conflictos ?? []) l.push(`⚠️ ${escapeHtml(c)}`)
   if (e.confirmado) l.push('🔒 Datos del riesgo confirmados: no se han tocado (lo declarado está en «Datos pedidos»).')
   else if (e.anotados === null) l.push('⚠️ No se han podido pasar al riesgo de la oportunidad: están en «Datos pedidos».')
-  else if (e.anotados > 0) l.push(`✍️ ${e.anotados} dato${e.anotados === 1 ? '' : 's'} pasados al riesgo (sin confirmar; lo que ya tenías no se ha tocado).`)
+  else if (e.anotados > 0) {
+    const cambiados = e.cambiados ?? []
+    l.push(`✍️ ${e.anotados} dato${e.anotados === 1 ? '' : 's'} pasados al riesgo (sin confirmar; ${cambiados.length === 0 ? 'lo que ya tenías no se ha tocado' : `⚠️ se ha cambiado lo que ya había en: ${escapeHtml(cambiados.join(', '))}`}).`)
+  }
   l.push(`👉 <a href="${escapeHtml(e.enlaceFicha)}">abrir ficha</a>`)
   return l.join('\n')
 }

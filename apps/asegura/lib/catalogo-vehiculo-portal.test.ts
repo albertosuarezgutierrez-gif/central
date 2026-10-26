@@ -19,3 +19,16 @@ test('solo marca → modelo → combustible → versión, de coche o de moto; na
   assert.equal(q({ ramo: 'auto', paso: 'modelos', marcaId: '../x?y' }), null)
   assert.ok(q({ ramo: 'auto', paso: 'versiones', marcaId: '7', modeloId: '88', motor: 'Gasolina/Híbrido' }), 'un combustible del catálogo con barra y tilde sí')
 })
+
+test('#5080: los ids del catálogo solo valen si la marca y el modelo en texto son los suyos', async () => {
+  const { textosCasanConCatalogo } = await import('./catalogo-vehiculo-portal.ts')
+  const listas = { marcas: [{ id: '7', nombre: 'SEAT' }], modelos: [{ id: '88', nombre: 'Ibiza' }] }
+  const el = { marcaId: '7', modeloId: '88' }
+  assert.equal(textosCasanConCatalogo({ marca: 'Seat', modelo: 'IBIZA' }, el, listas), true)
+  assert.equal(textosCasanConCatalogo({ marca: 'Seat', modelo: 'Ibiza 1.0 TSI' }, el, listas), true)
+  assert.equal(textosCasanConCatalogo({ marca: 'Opel', modelo: 'Ibiza' }, el, listas), false, 'cambió la marca a mano')
+  assert.equal(textosCasanConCatalogo({ marca: 'Seat', modelo: 'Ibizanova' }, el, listas), false)
+  assert.equal(textosCasanConCatalogo({ marca: 'Seat', modelo: 'León' }, el, listas), false)
+  assert.equal(textosCasanConCatalogo({ marca: 'Seat', modelo: 'Ibiza' }, { marcaId: '7', modeloId: '99' }, listas), false, 'id fuera de la lista')
+  assert.equal(textosCasanConCatalogo({ marca: null, modelo: 'Ibiza' }, el, listas), false)
+})

@@ -53,14 +53,15 @@ export const ESPEC_CAPITAL = [
 /** Tope de `numeroAsegurados`: el tomador + `MAX_ASEGURADOS_PERSONAS` (10, cardinalidad del rol `asegurado`). */
 export const MAX_NUMERO_ASEGURADOS = 11
 
-/** «45, 43 y 12» → «45, 43, 12». Cada edad 0-120; como mucho `MAX_NUMERO_ASEGURADOS`. Otra cosa → `null` (no se adivina). */
+/**
+ * «45 años, 43 y 12» → «45, 43, 12». TOLERANTE (revisión del PR #5080): se sacan los números del texto (cada edad 0-120;
+ * un número mayor, como un año «1980», no es una edad y se salta) y solo es `null` si no hay NINGUNO válido. Como mucho
+ * `MAX_NUMERO_ASEGURADOS` (los de más no caben en el ramo: tomador + 10).
+ */
 export function edadesNormalizadas(v: unknown): string | null {
   if (typeof v !== 'string') return null
-  const trozos = v.split(/\s*(?:,|;|\by\b|\/|\s)\s*/i).map((x) => x.trim()).filter((x) => x !== '')
-  if (trozos.length === 0 || trozos.length > MAX_NUMERO_ASEGURADOS) return null
-  const n = trozos.map((x) => (/^\d{1,3}$/.test(x) ? Number(x) : NaN))
-  if (n.some((x) => !Number.isInteger(x) || x > 120)) return null
-  return n.join(', ')
+  const n = (v.match(/\d+/g) ?? []).map(Number).filter((x) => Number.isInteger(x) && x <= 120)
+  return n.length === 0 ? null : n.slice(0, MAX_NUMERO_ASEGURADOS).join(', ')
 }
 
 /**

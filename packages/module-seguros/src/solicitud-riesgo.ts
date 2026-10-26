@@ -235,18 +235,39 @@ export function planEscrituraRiesgo(clave: ClaveDatosRiesgo, actual: Record<stri
     const esIdentidad = clave === 'datosVehiculo' && b.claves.includes('marca')
     const esCatalogo = b.claves === CATALOGO_VEHICULO
     if (otroVehiculo) continue
-    if (esIdentidad && conVersion) continue
+    const choque = b.choque !== null && b.choque.en.some((k) => k in de && !vacio(a[k]) && !igual(a[k], de[k]))
+    if (esIdentidad && conVersion) {
+      // No se escribe (borraría la versión elegida), pero un vehículo distinto se dice y frena lo demás.
+      if (choque && b.choque) { conflictos.push(b.choque.texto); chocaIdentidad = true }
+      continue
+    }
     // El catálogo es de la marca/modelo declarados: si esos chocan con lo guardado, tampoco.
     if (esCatalogo && chocaIdentidad) continue
-    if (b.claves.every((k) => vacio(a[k]))) { Object.assign(escribir, de); continue }
-    const choca = b.choque && b.choque.en.some((k) => k in de && !vacio(a[k]) && !igual(a[k], de[k]))
-    if (choca && b.choque) conflictos.push(b.choque.texto)
-    if (choca && esIdentidad) chocaIdentidad = true
+    if (b.claves.every((k) => vacio(a[k]))) {
+      Object.assign(escribir, de)
+      // Revisión del PR #5080: un código de versión NUEVO hace que `aplicarEdicionVehiculo` borre marca y modelo si no
+      // vienen en la misma edición. Viajan siempre con el catálogo: lo guardado si lo había (no se pisa), si no lo declarado.
+      if (esCatalogo) {
+        for (const k of ['marca', 'modelo'] as const) {
+          const v = !vacio(a[k]) ? a[k] : propuesta[k]
+          if (typeof v === 'string' && v.trim() !== '') escribir[k] = v
+        }
+      }
+      continue
+    }
+    if (choque && b.choque) conflictos.push(b.choque.texto)
+    if (choque && (esIdentidad || esCatalogo)) chocaIdentidad = true
   }
   if (otroVehiculo) conflictos.unshift('matrícula declarada distinta de la guardada: es otro vehículo, no se ha tocado nada del vehículo (revisar)')
+  // Revisión del PR #5080: si el vehículo declarado (marca, modelo o versión) no es el guardado, tampoco se escribe
+  // ningún dato suelto del vehículo (matrícula, km, garaje, matriculación): serían de OTRO coche.
+  const vehiculoDudoso = clave === 'datosVehiculo' && chocaIdentidad
+  if (vehiculoDudoso && cfg.sueltos.some((x) => x.clave in propuesta)) {
+    conflictos.push('el vehículo declarado no es el guardado: no se ha escrito ningún dato del vehículo (matrícula, km, garaje ni matriculación)')
+  }
   for (const s of cfg.sueltos) {
     if (!(s.clave in propuesta)) continue
-    if (otroVehiculo) continue
+    if (otroVehiculo || vehiculoDudoso) continue
     if (vacio(a[s.clave])) escribir[s.clave] = propuesta[s.clave]
     else if (s.choque && !igual(a[s.clave], propuesta[s.clave])) conflictos.push(s.choque)
   }

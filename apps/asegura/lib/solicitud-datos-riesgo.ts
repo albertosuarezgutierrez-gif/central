@@ -4,7 +4,8 @@
  * falle se dice en el aviso.
  *
  * 1. Lo declarado → propuesta del bloque del ramo (`propuestaRiesgoDeSolicitud`, PURO).
- * 2. Vehículo: la versión del catálogo que eligió el cliente se COMPRUEBA contra el catálogo de Codeoscopic (GET gratis,
+ * 2. Vehículo: la versión del catálogo que eligió el cliente (y que su marca/modelo en texto sean los de esos ids) se
+ *    COMPRUEBA contra el catálogo de Codeoscopic (GET gratis,
  *    con el interruptor de tarificación apagado: no gasta nada); si no casa o no se puede leer, los ids no se escriben
  *    (marca y modelo en texto, sí). La compañía actual en texto → su código DGS solo si casa con UNA del directorio.
  * 3. Se escribe por BLOQUES (`planEscrituraRiesgo`), sin confirmar, por `calcularEdicionRiesgo`: lo que ya había manda,
@@ -32,6 +33,7 @@ import { precargaDePolizaDeOportunidad } from './oportunidad-riesgo'
 import { textoAvisoDatosRiesgo } from './aviso-datos-riesgo.ts'
 import { enlaceFichaCliente, URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
 import { resolverCatalogo } from './retarificar-cartera'
+import { textosCasanConCatalogo } from './catalogo-vehiculo-portal.ts'
 
 const CATALOGO_VEHICULO = ['codigoVehiculo', 'marcaId', 'modeloId', 'motorId', 'version'] as const
 
@@ -42,17 +44,24 @@ const CATALOGO_VEHICULO = ['codigoVehiculo', 'marcaId', 'modeloId', 'motorId', '
 export async function versionEnCatalogo(ramo: 'auto' | 'moto', p: PropuestaRiesgo): Promise<boolean | null> {
   const [marcaId, modeloId, motor, codigo] = [p.marcaId, p.modeloId, p.motorId, p.codigoVehiculo].map((x) => (typeof x === 'string' ? x : ''))
   if (!marcaId || !modeloId || !motor || !codigo) return false
+  const moto = ramo === 'moto'
   try {
-    const r = await resolverCatalogo(new URLSearchParams({ tipo: ramo === 'moto' ? 'versiones-moto' : 'versiones', marcaId, modeloId, motor }))
-    if (r.estado === 'invalido') return false
-    if (r.estado !== 'ok') return null
-    return r.opciones.some((o) => o.id === codigo)
+    const [vs, ms, mds] = await Promise.all([
+      resolverCatalogo(new URLSearchParams({ tipo: moto ? 'versiones-moto' : 'versiones', marcaId, modeloId, motor })),
+      resolverCatalogo(new URLSearchParams({ tipo: moto ? 'marcas-moto' : 'marcas' })),
+      resolverCatalogo(new URLSearchParams({ tipo: moto ? 'modelos-moto' : 'modelos', marcaId })),
+    ])
+    if (vs.estado === 'invalido') return false
+    if (vs.estado !== 'ok' || ms.estado !== 'ok' || mds.estado !== 'ok') return null
+    if (!vs.opciones.some((o) => o.id === codigo)) return false
+    // Revisión del PR #5080: la marca y el modelo en texto tienen que ser los de esos ids (si los cambió a mano, no).
+    return textosCasanConCatalogo({ marca: p.marca, modelo: p.modelo }, { marcaId, modeloId }, { marcas: ms.opciones, modelos: mds.opciones })
   } catch {
     return null
   }
 }
 
-type ResultadoAnotar = { anotados: number | null; conflictos: string[]; confirmado: boolean }
+type ResultadoAnotar = { anotados: number | null; conflictos: string[]; confirmado: boolean; cambiados?: string[] }
 
 /** A qué bloque atómico pertenece cada campo (si uno no valida, cae su bloque ENTERO). */
 function bloqueDe(clave: ClaveDatosRiesgo, campo: string): string {
@@ -91,7 +100,7 @@ async function anotarEnRiesgo(correduriaId: string, oportunidadId: string, ramo:
             insert into oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
             values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'datos_enlace_riesgo',
                     ${JSON.stringify({ campos: e.cambios.map((c) => c.campo), conflictos: plan.conflictos })}::jsonb, 'el cliente, por el enlace')`)
-          return { anotados: e.cambios.length, conflictos: plan.conflictos, confirmado: false }
+          return { anotados: e.cambios.length, conflictos: plan.conflictos, confirmado: false, cambiados: e.cambios.filter((c) => c.antes !== null).map((c) => c.campo) }
         }
         const malos = new Set((e.errores ?? []).map((x) => bloqueDe(clave, x.campo)))
         if (malos.size === 0) return { anotados: null, conflictos: plan.conflictos, confirmado: false }
@@ -149,7 +158,7 @@ export async function trasCompletarRiesgo(p: {
     const enlace = enlaceFichaCliente(p.clienteId, process.env.PLATAFORMA_URL?.trim() || URL_PLATAFORMA_DEFECTO)
     await tgSend(textoAvisoDatosRiesgo({
       ramo: p.ramo, respuestas: p.respuestas, campos: p.campos, enlaceFicha: enlace, tercero: p.tercero,
-      anotados: r.anotados, conflictos: r.conflictos, confirmado: r.confirmado, catalogoComprobado, companiaDgs,
+      anotados: r.anotados, conflictos: r.conflictos, confirmado: r.confirmado, cambiados: r.cambiados ?? [], catalogoComprobado, companiaDgs,
     }))
   } catch (e) {
     console.error('[solicitud-datos-riesgo] aviso tras completar falló:', e instanceof Error ? e.message : e)

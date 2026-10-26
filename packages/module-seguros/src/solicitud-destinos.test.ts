@@ -254,3 +254,38 @@ test('FASE 2: el buscador del catálogo va entero o no va (ids sueltos no se esc
   const v = validarRespuestas(campos.filter((c) => c.clave === 'versionCatalogo'), { versionCatalogoMarcaId: '7', versionCatalogoModeloId: '88', versionCatalogoCodigo: 'ABC' })
   assert.ok(v.ok && v.respuestas.versionCatalogoCodigo === null, 'sin motor no hay cadena: todo a null')
 })
+
+// ─── Revisión del PR #5080 ──────────────────────────────────────────────────────────────────────────────────────────
+
+const CAT = { versionCatalogoMarcaId: '7', versionCatalogoModeloId: '88', versionCatalogoMotorId: 'Gasoline', versionCatalogoCodigo: 'ABC123', versionCatalogoVersion: '1.0 TSI' }
+
+test('#5080 BLOQUEANTE: marca/modelo guardados en texto + la misma versión elegida del catálogo → marca y modelo NO quedan null', () => {
+  const guardado = { matricula: '1234BCD', marca: 'SEAT', modelo: 'Ibiza' }
+  const p = propuestaRiesgoDeSolicitud('auto', { matricula: '1234BCD', marca: 'Seat', modelo: 'Ibiza', ...CAT })!
+  const plan = planEscrituraRiesgo('datosVehiculo', guardado, p.propuesta)
+  assert.equal(plan.escribir.codigoVehiculo, 'ABC123')
+  const e = calcularEdicionRiesgo({ ramo: 'auto', clave: 'datosVehiculo', info: { datosVehiculo: guardado }, parcial: plan.escribir, confirmar: false, ahora: AHORA, hoy: AHORA.slice(0, 10) })
+  assert.ok(e.ok)
+  if (!e.ok) return
+  assert.equal(e.datos.marca, 'SEAT', 'la marca guardada no se borra ni se pisa')
+  assert.equal(e.datos.modelo, 'Ibiza')
+  assert.equal(e.datos.codigoVehiculo, 'ABC123')
+  assert.ok(!e.cambios.some((c) => c.campo === 'marca' || c.campo === 'modelo'), 'marca y modelo no cambian')
+  // Sin nada guardado, marca y modelo viajan con el catálogo (lo declarado).
+  const vacio = planEscrituraRiesgo('datosVehiculo', null, p.propuesta)
+  assert.equal(vacio.escribir.marca, 'Seat')
+})
+
+test('#5080: si el vehículo declarado choca con el guardado, ningún dato suelto del vehículo se escribe, y se avisa', () => {
+  const p = propuestaRiesgoDeSolicitud('auto', { matricula: '1234BCD', marca: 'Opel', modelo: 'Corsa', kmAnuales: 9000, garaje: 'calle', fechaMatriculacion: '2019-05-17' })!.propuesta
+  // Sin matrícula guardada (no es «otro vehículo» por matrícula), pero marca/modelo distintos.
+  const plan = planEscrituraRiesgo('datosVehiculo', { marca: 'SEAT', modelo: 'Ibiza' }, p)
+  for (const k of ['matricula', 'kmAnuales', 'garaje', 'fechaMatriculacion', 'marca', 'modelo']) assert.ok(!(k in plan.escribir), k)
+  assert.ok(plan.conflictos.some((c) => /no se ha escrito ningún dato del vehículo/.test(c)))
+  // Con una versión ya elegida y otra marca declarada: tampoco.
+  const conVersion = planEscrituraRiesgo('datosVehiculo', { marca: 'SEAT', modelo: 'Ibiza', codigoVehiculo: 'X1' }, p)
+  assert.ok(!('kmAnuales' in conVersion.escribir))
+  // Otra versión del catálogo para el mismo vehículo: igual.
+  const otraVersion = planEscrituraRiesgo('datosVehiculo', { codigoVehiculo: 'X1' }, propuestaRiesgoDeSolicitud('auto', { kmAnuales: 9000, ...CAT })!.propuesta)
+  assert.deepEqual(otraVersion.escribir, {})
+})

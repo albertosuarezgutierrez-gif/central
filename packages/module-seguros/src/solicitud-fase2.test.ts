@@ -41,12 +41,15 @@ test('libre: los campos de accidentes y mascotas solo en su ramo; especie cerrad
   assert.equal(leerDatosRiesgoLibre({ fechaNacimientoAnimal: 'ayer' })!.fechaNacimientoAnimal, null)
 })
 
-test('edades: «45, 43 y 12» → «45, 43, 12»; lo que no son edades, null', () => {
+test('edades (tolerante): se sacan los números del texto; solo es null si no hay NINGUNA edad válida', () => {
+  assert.equal(edadesNormalizadas('45 años, 43'), '45, 43')
+  assert.equal(edadesNormalizadas('mi mujer 43, yo 45 y los niños 12 y 9'), '43, 45, 12, 9')
+  assert.equal(edadesNormalizadas('nací en 1980, tengo 46'), '46', 'un año no es una edad')
   assert.equal(edadesNormalizadas('45, 43 y 12'), '45, 43, 12')
   assert.equal(edadesNormalizadas('45 43'), '45, 43')
   assert.equal(edadesNormalizadas('cuarenta'), null)
   assert.equal(edadesNormalizadas('130'), null)
-  assert.equal(edadesNormalizadas(Array(12).fill('30').join(',')), null, 'más de 11 personas no cabe (tomador + 10)')
+  assert.equal(edadesNormalizadas(Array(12).fill('30').join(',')), Array(11).fill('30').join(', '), 'como mucho 11 (tomador + 10)')
 })
 
 test('formulario: el buscador del catálogo es una ayuda (sin «No lo sé», fuera de «a preguntar», en el borrador por subclaves)', () => {
@@ -63,6 +66,11 @@ test('formulario: el buscador del catálogo es una ayuda (sin «No lo sé», fue
   const salud = camposSolicitud('salud', NADA_CONOCIDO).filter((x) => x.clave === 'edades')
   const mal = validarRespuestas(salud, { edades: 'muchas' })
   assert.equal(mal.ok, false)
-  const bien = validarRespuestas(salud, { edades: '45 y 12' })
+  const bien = validarRespuestas(salud, { edades: '45 años y 12' })
   assert.ok(bien.ok && bien.respuestas.edades === '45, 12')
+  // Un enlace YA ENVIADO guardó el campo tal cual (sin nivel ni «No lo sé»): la validación es la misma, por clave.
+  const guardado = [{ clave: 'edades', etiqueta: 'Edad de cada una', tipo: 'texto' as const, obligatorio: false, ayuda: 'Por ejemplo: 45, 43, 12 y 9.' }]
+  const viejo = validarRespuestas(guardado, { edades: 'tengo 45 años; mi hija, 12' })
+  assert.ok(viejo.ok && viejo.respuestas.edades === '45, 12', JSON.stringify(viejo))
+  assert.equal(validarRespuestas(guardado, { edades: 'no sé' }).ok, false)
 })

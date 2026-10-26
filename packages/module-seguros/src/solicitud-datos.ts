@@ -772,7 +772,7 @@ export function validarRespuestas(
           else errores[c.clave] = r.motivo
         } else if (c.clave === 'edades') {
           const e = edadesNormalizadas(s)
-          if (e === null) errores[c.clave] = `Pon las edades separadas por comas (por ejemplo: 45, 43, 12), como mucho ${MAX_NUMERO_ASEGURADOS}.`
+          if (e === null) errores[c.clave] = 'Pon al menos una edad en número (por ejemplo: 45, 43, 12).'
           else respuestas[c.clave] = e
         } else if (c.clave === 'matricula') {
           const m = s.toUpperCase().replace(/[^A-Z0-9]/g, '')
