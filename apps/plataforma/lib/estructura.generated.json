@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-26T08:34:14Z",
+  "generadoEn": "2026-10-26T09:21:32Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 18
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 310
+        "evidencias": 314
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 168
+        "evidencias": 170
       },
       "asegura-web": {
         "estado": "usado",
@@ -2429,7 +2429,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 46
+        "evidencias": 47
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3025,7 +3025,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 23
+        "evidencias": 24
       },
       "asegura-portal": {
         "presente": false,
@@ -4430,6 +4430,7 @@
       "/api/portal/solicitud-datos",
       "/api/portal/solicitud-datos/borrador",
       "/api/portal/solicitud-datos/documento",
+      "/api/portal/solicitud-datos/vehiculo",
       "/api/publico/campana/baja",
       "/api/publico/recaptacion/baja",
       "/api/tarificador/codigo-sms",
@@ -4473,6 +4474,7 @@
       "/api/datos/borrador",
       "/api/datos/codigo-postal",
       "/api/datos/documento",
+      "/api/datos/vehiculo",
       "/api/datos/vias",
       "/api/datos/vivienda",
       "/api/documento/dni",
@@ -7197,7 +7199,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1822,
+    "apis": 1824,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
