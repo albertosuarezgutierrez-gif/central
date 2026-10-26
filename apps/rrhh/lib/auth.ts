@@ -10,8 +10,10 @@ const secret = new TextEncoder().encode(
 
 export type Sesion = { usuario_id: string; empresa_id: string; jti: string }
 
+// 26/10/2026: el responsable entra por CÓDIGO al correo (`lib/acceso-responsable.ts`), sin contraseña.
+// `usuarios_rrhh.pass_hash` sigue en BD (NOT NULL): el alta guarda un hash de un valor aleatorio que
+// nadie conoce, y ya no existe ninguna ruta que compare contraseñas.
 export async function hashPassword(plain: string) { return bcrypt.hash(plain, 10) }
-export async function verifyPassword(plain: string, hash: string) { return bcrypt.compare(plain, hash) }
 
 export async function firmarSesion(s: Omit<Sesion, 'jti'>): Promise<{ token: string; jti: string }> {
   const jti = crypto.randomUUID()
@@ -24,8 +26,9 @@ export async function firmarSesion(s: Omit<Sesion, 'jti'>): Promise<{ token: str
   return { token, jti }
 }
 
+/** Token del selector de empresa (5 min), tras canjear el código de `/login` con ≥2 empresas. */
 export async function firmarPendiente(usuario_id: string): Promise<string> {
-  return new SignJWT({ pendiente: true })
+  return new SignJWT({ typ: 'responsable_pendiente', pendiente: true })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(usuario_id)
     .setExpirationTime('5m')
@@ -34,7 +37,7 @@ export async function firmarPendiente(usuario_id: string): Promise<string> {
 
 export async function verificarPendiente(token: string): Promise<string> {
   const { payload } = await jwtVerify(token, secret)
-  if (!payload.pendiente) throw new Error('Token no pendiente')
+  if (payload.typ !== 'responsable_pendiente' || !payload.pendiente) throw new Error('Token no pendiente')
   return String(payload.sub)
 }
 

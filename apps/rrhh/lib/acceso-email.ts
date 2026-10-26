@@ -44,8 +44,21 @@ export function emailValido(email: unknown): string | null {
 function hmac(valor: string): string {
   return createHmac('sha256', requireSecret('JWT_SECRET', 'rrhh-dev-secret-change-in-prod')).update(valor).digest('hex')
 }
-export const hashEmailAcceso = (emailNormalizado: string) => hmac(`rrhh-acceso-email:${emailNormalizado}`)
-export const hashCodigoAcceso = (codigo: string) => hmac(`rrhh-acceso-codigo:${codigo}`)
+/**
+ * PROPÓSITO del código (26/10/2026: los responsables de `/login` entran también por código).
+ * 🚨 Separación empleado↔responsable: el propósito entra en el prefijo de dominio de AMBOS hashes.
+ * Una fila pedida en `/e/entrar` se guarda bajo `hashEmailAcceso(email,'empleado')`, y `/login` la
+ * busca bajo `hashEmailAcceso(email,'responsable')`: no la encuentra («sin_codigo»); y aunque la
+ * encontrara, el hash del código tampoco casaría. Misma tabla `rrhh.acceso_otps`, sin migración.
+ * Los prefijos de 'empleado' son los de siempre (no invalida códigos vivos). Cepo: auth-separacion.test.ts.
+ */
+export type PropositoOtp = 'empleado' | 'responsable'
+const PREFIJO: Record<PropositoOtp, { email: string; codigo: string }> = {
+  empleado: { email: 'rrhh-acceso-email', codigo: 'rrhh-acceso-codigo' },
+  responsable: { email: 'rrhh-acceso-responsable-email', codigo: 'rrhh-acceso-responsable-codigo' },
+}
+export const hashEmailAcceso = (emailNormalizado: string, p: PropositoOtp = 'empleado') => hmac(`${PREFIJO[p].email}:${emailNormalizado}`)
+export const hashCodigoAcceso = (codigo: string, p: PropositoOtp = 'empleado') => hmac(`${PREFIJO[p].codigo}:${codigo}`)
 
 // ── Puertos ─────────────────────────────────────────────────────────────────────────────────
 export type OtpFila = { id: string; codigo_hash: string; creada_at: Date; intentos: number; usado_at: Date | null }
@@ -54,7 +67,8 @@ export type Candidato = {
   pin_hash: string | null; sesion_version: number
 }
 
-export interface RepoAcceso {
+/** Puerto de la tabla de códigos (`rrhh.acceso_otps`), común a empleados y responsables. */
+export interface RepoOtp {
   contarRecientesPorEmail(emailHash: string, desde: Date): Promise<number>
   contarRecientesPorIp(ip: string, desde: Date): Promise<number>
   crearOtp(f: { email_hash: string; codigo_hash: string; ip: string }): Promise<void>
@@ -63,6 +77,9 @@ export interface RepoAcceso {
   reservarIntento(otpId: string, max: number): Promise<boolean>
   /** UPDATE … SET usado_at=now() WHERE id AND usado_at IS NULL. ¿Lo gastó ESTA petición? */
   gastarOtp(otpId: string): Promise<boolean>
+}
+
+export interface RepoAcceso extends RepoOtp {
   /** Igual que `reservarIntento` pero sobre `intentos_pin` de una fila YA gastada. */
   reservarIntentoPin(otpId: string, max: number): Promise<boolean>
   /** Empleados ACTIVOS cuyo email normalizado es este (de cualquier empresa). */
@@ -75,6 +92,61 @@ export type CorreoCodigo = {
   destinos?: { empleado_id: string; empresa_id: string; nombre: string }[]
 }
 export type EnviarCodigo = (c: CorreoCodigo) => Promise<boolean>
+
+// ── Núcleo común (empleado y responsable): pedir y canjear un código de un propósito ─────────
+export type ErrorPedir =
+  | { ok: false; error: 'email_invalido'; status: 400 }
+  | { ok: false; error: 'demasiadas_peticiones'; status: 429; retryAfter: number }
+
+/**
+ * Valida el email, aplica los topes y escribe SIEMPRE la fila (exista o no el destinatario: los
+ * contadores no son un oráculo). Devuelve el código en claro SOLO al llamante, que decide si hay
+ * a quién mandarlo. A la BD va el hash con el prefijo del propósito.
+ */
+export async function pedirCodigo(
+  repo: RepoOtp, entrada: { email: unknown; ip: string }, proposito: PropositoOtp, ahora = new Date(),
+): Promise<{ ok: true; email: string; codigo: string } | ErrorPedir> {
+  const email = emailValido(entrada.email)
+  if (!email) return { ok: false, error: 'email_invalido', status: 400 }
+  const emailHash = hashEmailAcceso(email, proposito)
+  const desde = new Date(ahora.getTime() - HORA_MS)
+  if ((await repo.contarRecientesPorIp(entrada.ip, desde)) >= MAX_POR_IP_HORA
+    || (await repo.contarRecientesPorEmail(emailHash, desde)) >= MAX_POR_EMAIL_HORA) {
+    return { ok: false, error: 'demasiadas_peticiones', status: 429, retryAfter: HORA_MS / 1000 }
+  }
+  const codigo = generarCodigo()
+  await repo.crearOtp({ email_hash: emailHash, codigo_hash: hashCodigoAcceso(codigo, proposito), ip: entrada.ip })
+  return { ok: true, email, codigo }
+}
+
+export type ErrorCanjear =
+  | { ok: false; error: 'datos_invalidos'; status: 400 }
+  | { ok: false; error: Exclude<EstadoCodigo, 'valido'> | 'sin_codigo'; status: 401 }
+
+/** Reserva intento → compara → gasta. `ok` = el código era bueno y lo ha gastado ESTA petición. */
+export async function canjearCodigo(
+  repo: RepoOtp, entrada: { email: unknown; codigo: unknown }, proposito: PropositoOtp, ahora = new Date(),
+): Promise<{ ok: true; email: string; fila: OtpFila } | ErrorCanjear> {
+  const email = emailValido(entrada.email)
+  const codigo = typeof entrada.codigo === 'string' ? entrada.codigo.trim() : ''
+  if (!email || !/^\d{6}$/.test(codigo)) return { ok: false, error: 'datos_invalidos', status: 400 }
+
+  const fila = await repo.ultimoOtp(hashEmailAcceso(email, proposito))
+  // Hay fila para cualquier email que haya pedido código: «sin_codigo» solo dice «no lo has pedido».
+  if (!fila) return { ok: false, error: 'sin_codigo', status: 401 }
+
+  // 🚨 Se RESERVA el intento antes de comparar (ver asegura-portal `/api/acceso/verificar`).
+  if (!(await repo.reservarIntento(fila.id, MAX_INTENTOS))) {
+    return { ok: false, error: fila.usado_at ? 'ya_usado' : 'bloqueado', status: 401 }
+  }
+  const estado = estadoCodigo(
+    { codigoHash: fila.codigo_hash, creadoEn: fila.creada_at, intentos: fila.intentos, usadoEn: fila.usado_at },
+    hashCodigoAcceso(codigo, proposito), ahora,
+  )
+  if (estado !== 'valido') return { ok: false, error: estado, status: 401 }
+  if (!(await repo.gastarOtp(fila.id))) return { ok: false, error: 'ya_usado', status: 401 }
+  return { ok: true, email, fila }
+}
 
 // ── Paso 1: pedir código ───────────────────────────────────────────────────────────────────
 export type ResultadoSolicitar =
@@ -90,17 +162,9 @@ export type ResultadoSolicitar =
 export async function solicitarCodigoAcceso(
   repo: RepoAcceso, enviar: EnviarCodigo, entrada: { email: unknown; ip: string }, ahora = new Date(),
 ): Promise<ResultadoSolicitar> {
-  const email = emailValido(entrada.email)
-  if (!email) return { ok: false, error: 'email_invalido', status: 400 }
-  const emailHash = hashEmailAcceso(email)
-  const desde = new Date(ahora.getTime() - HORA_MS)
-  // Los contadores cuentan filas que se escriben para CUALQUIER email: no son un oráculo.
-  if ((await repo.contarRecientesPorIp(entrada.ip, desde)) >= MAX_POR_IP_HORA
-    || (await repo.contarRecientesPorEmail(emailHash, desde)) >= MAX_POR_EMAIL_HORA) {
-    return { ok: false, error: 'demasiadas_peticiones', status: 429, retryAfter: HORA_MS / 1000 }
-  }
-  const codigo = generarCodigo()
-  await repo.crearOtp({ email_hash: emailHash, codigo_hash: hashCodigoAcceso(codigo), ip: entrada.ip })
+  const p = await pedirCodigo(repo, entrada, 'empleado', ahora)
+  if (!p.ok) return p
+  const { email, codigo } = p
   const candidatos = await repo.candidatosPorEmail(email)
   if (candidatos.length === 0) return { ok: true, envio: null }
   const empresas = [...new Set(candidatos.map(c => c.empresa_nombre).filter(Boolean))]
@@ -121,24 +185,9 @@ export type ResultadoVerificar =
 export async function verificarCodigoAcceso(
   repo: RepoAcceso, entrada: { email: unknown; codigo: unknown }, ahora = new Date(),
 ): Promise<ResultadoVerificar> {
-  const email = emailValido(entrada.email)
-  const codigo = typeof entrada.codigo === 'string' ? entrada.codigo.trim() : ''
-  if (!email || !/^\d{6}$/.test(codigo)) return { ok: false, error: 'datos_invalidos', status: 400 }
-
-  const fila = await repo.ultimoOtp(hashEmailAcceso(email))
-  // Hay fila para cualquier email que haya pedido código: «sin_codigo» solo dice «no lo has pedido».
-  if (!fila) return { ok: false, error: 'sin_codigo', status: 401 }
-
-  // 🚨 Se RESERVA el intento antes de comparar (ver asegura-portal `/api/acceso/verificar`).
-  if (!(await repo.reservarIntento(fila.id, MAX_INTENTOS))) {
-    return { ok: false, error: fila.usado_at ? 'ya_usado' : 'bloqueado', status: 401 }
-  }
-  const estado = estadoCodigo(
-    { codigoHash: fila.codigo_hash, creadoEn: fila.creada_at, intentos: fila.intentos, usadoEn: fila.usado_at },
-    hashCodigoAcceso(codigo), ahora,
-  )
-  if (estado !== 'valido') return { ok: false, error: estado, status: 401 }
-  if (!(await repo.gastarOtp(fila.id))) return { ok: false, error: 'ya_usado', status: 401 }
+  const c = await canjearCodigo(repo, entrada, 'empleado', ahora)
+  if (!c.ok) return c
+  const { email, fila } = c
 
   const candidatos = await repo.candidatosPorEmail(email)
   // Código válido pero ya no hay empleado activo con ese email (baja en esos 10 min).

@@ -30,7 +30,11 @@ El god-panel de plataforma crea empresas vía HTTP:
 
 ## Estructura de rutas
 ```
-/login              → autenticación responsable (usuario_rrhh; selector si tiene >1 empresa)
+/login              → responsable SIN contraseña (26/10/2026): correo → código de 6 dígitos → [selector si >1 empresa]
+                      → `rrhh_session` (`typ:'responsable'`+jti). `lib/acceso-responsable.ts` usa el núcleo de
+                      `acceso-email.ts` (`pedirCodigo`/`canjearCodigo`, misma tabla `acceso_otps`) con propósito
+                      'responsable' en el prefijo de los HMAC: un código de /e/entrar no abre /login ni al revés.
+                      Rutas `/api/auth/acceso/{solicitar,verificar}`. `pass_hash` sigue en BD pero no se usa.
 /admin/             → dashboard del responsable
 /admin/empleados    → CRUD empleados
 /admin/solicitudes  → gestión de solicitudes (vacaciones, permisos…)
@@ -123,8 +127,8 @@ El build de Vercel ignora errores de tipos (`typescript.ignoreBuildErrors: true`
 real es el job `typecheck` de `.github/workflows/tests.yml`.
 
 ## Comportamientos establecidos
-- **Login:** nunca muestra branding de empresa — siempre neutro `ia·rrhh`. El branding entra solo dentro del panel.
-- **Multi-empresa:** `rrhh.usuario_empresas` (N:N). Login con 1 empresa → sesión directa. Login con N → selector. Ya autenticado → `CambiadorEmpresa` en sidebar.
+- **Login:** nunca muestra branding de EMPRESA; en el host propio (`marcaPorHost`) lleva la marca Grupo ASegura (pantalla y correo del código), fuera de él neutro `ia·rrhh`.
+- **Multi-empresa:** `rrhh.usuario_empresas` (N:N). Código con 1 empresa → sesión directa. Login con N → selector. Ya autenticado → `CambiadorEmpresa` en sidebar.
 - **Fichajes sin obra:** si `obra_id` es null pero hay coordenadas GPS, la columna Obra muestra `📍 Ver mapa` (enlace a Google Maps con `lat_entrada,lng_entrada`).
 - **Crons:** deben llevar `Authorization: Bearer CRON_SECRET` (sin User-Agent bypass).
 
