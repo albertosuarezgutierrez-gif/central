@@ -100,7 +100,7 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
       <section className="seccion" aria-labelledby="recordatorios-inmueble">
         <h2 id="recordatorios-inmueble">Recordatorios y obligaciones</h2>
         <p className="suave" style={{ marginTop: 0, fontSize: 14 }}>
-          IBI, comunidad, revisión de la caldera… Los verás en el <Link href="/patrimonio/calendario">calendario</Link> y te avisaremos desde la campana.
+          IBI, comunidad, revisión de la caldera… Los verás en el <Link href="/herramientas/calendario">calendario</Link> y te avisaremos desde la campana.
         </p>
         {recordatorios === 'error' || recordatorios === null ? (
           <p className="aviso-linea" role="status">Ahora no hemos podido leer los recordatorios de este inmueble. Vuelve a intentarlo en un rato.</p>

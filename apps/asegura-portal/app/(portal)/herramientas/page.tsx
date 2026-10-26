@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { TEXTO_SOLICITUD_MODULO, type TarjetaModulo } from '@central/module-seguros-portal'
+import { HECHOS_DESCONOCIDOS, TEXTO_SOLICITUD_MODULO, herramientasVisibles, type TarjetaModulo } from '@central/module-seguros-portal'
 
 import { fechaEs } from '@/lib/fechas'
 import { URL_PORTAL_EMPLEADO, agruparHerramientas } from '@/lib/herramientas'
+import { menuDeSesion } from '@/lib/menu-portal'
 import { tarjetasDeSesion } from '@/lib/modulos'
 
 import { PaginaPortal } from '../../PaginaPortal'
@@ -30,7 +31,9 @@ export default async function HerramientasPage() {
   const tarjetas = await tarjetasDeSesion()
   if (tarjetas === null) redirect('/')
   const { propias, solicitables, rrhh } = agruparHerramientas(tarjetas)
-  const hayPatrimonio = propias.some((t) => t.id === 'alquileres')
+  // Qué se ofrece a ESTA persona (26/10/2026): quien solo tiene un alcance de flota no ve el catálogo, ni «Mi resumen»
+  // (calculado sobre pólizas propias). Solo visibilidad; sin lectura (`null`) se ofrece todo.
+  const ver = (await menuDeSesion().catch(() => null))?.herramientas ?? herramientasVisibles(HECHOS_DESCONOCIDOS)
 
   return (
     <PaginaPortal antetitulo="Herramientas" titulo="Tus" acento="herramientas">
@@ -44,35 +47,34 @@ export default async function HerramientasPage() {
             <TarjetaModuloPortal t={t} />
           </li>
         ))}
-        <li>
-          <TarjetaPortal
-            id="herr-calendario"
-            antetitulo="Fechas"
-            titulo="Calendario"
-            accion={
-              <>
-                <Link className="boton" href="/boveda?vista=recordatorios">Abrir el calendario</Link>
-                {hayPatrimonio && (
-                  <Link className="boton secundario" href="/patrimonio/calendario">Calendario del patrimonio</Link>
-                )}
-              </>
-            }
-          >
-            <p style={{ marginTop: 0 }}>
-              Los vencimientos de tus seguros y tus propios recordatorios (ITV, carnet, caldera…) en un sitio.
-            </p>
-          </TarjetaPortal>
-        </li>
-        <li>
-          <TarjetaPortal
-            id="herr-resumen"
-            antetitulo="Cada año"
-            titulo="Mi resumen"
-            accion={<Link className="boton" href="/resumen">Ver mi resumen</Link>}
-          >
-            <p style={{ marginTop: 0 }}>Tu año en seguros, para la renta.</p>
-          </TarjetaPortal>
-        </li>
+        {ver.calendario && (
+          <li>
+            <TarjetaPortal
+              id="herr-calendario"
+              antetitulo="Fechas"
+              titulo="Calendario"
+              accion={<Link className="boton" href="/herramientas/calendario">Abrir el calendario</Link>}
+            >
+              <p style={{ marginTop: 0 }}>
+                Vencimientos de tus seguros, recibos, avisos, las fechas de tu patrimonio y tus propios recordatorios
+                (ITV, carnet, caldera…), en un solo sitio.
+              </p>
+            </TarjetaPortal>
+          </li>
+        )}
+        {ver.resumen && (
+          <li>
+            <TarjetaPortal
+              id="herr-resumen"
+              antetitulo="Cada año"
+              titulo="Mi resumen"
+              accion={<Link className="boton" href="/resumen">Ver mi resumen</Link>}
+            >
+              <p style={{ marginTop: 0 }}>Tu año en seguros, para la renta.</p>
+            </TarjetaPortal>
+          </li>
+        )}
+        {ver.catalogo && (
         <li>
           <TarjetaPortal
             id="herr-rrhh"
@@ -92,9 +94,10 @@ export default async function HerramientasPage() {
             {rrhh && <SolicitudModulo t={rrhh} />}
           </TarjetaPortal>
         </li>
+        )}
       </ul>
 
-      {solicitables.length > 0 && (
+      {ver.catalogo && solicitables.length > 0 && (
         <>
           <h2 style={{ marginTop: 0 }}>Para pedir</h2>
           <ul className="rejilla-portal">

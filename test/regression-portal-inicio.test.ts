@@ -173,6 +173,6 @@ test('🚨 Herramientas: tarjeta «Portal del Empleado (RRHH)» que enlaza a emp
   assert.match(p, /Portal del Empleado \(RRHH\)/)
   assert.match(p, /href=\{URL_PORTAL_EMPLEADO\}[^>]*rel="noopener noreferrer"/, 'enlace externo sin noopener')
   // Calendario y Mi resumen viven aquí (ya no en Inicio ni como entradas del menú).
-  assert.match(p, /\/boveda\?vista=recordatorios/)
+  assert.match(p, /\/herramientas\/calendario/)
   assert.match(p, /href="\/resumen"/)
 })

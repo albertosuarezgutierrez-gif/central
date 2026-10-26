@@ -150,7 +150,7 @@ export function pendientesDeTi(e: EntradaPendientes, ramo: (r: string) => string
         clave: 'patrimonio:vencidas',
         titulo: p.vencidas === 1 ? 'Tienes un vencimiento pasado en tu patrimonio' : `Tienes ${p.vencidas} vencimientos pasados en tu patrimonio`,
         detalle: 'Míralos en el calendario.',
-        href: '/patrimonio/calendario',
+        href: '/herramientas/calendario',
         urgente: true,
       })
     }
@@ -159,7 +159,7 @@ export function pendientesDeTi(e: EntradaPendientes, ramo: (r: string) => string
         clave: 'patrimonio:por_vencer',
         titulo: p.porVencer === 1 ? 'Se acerca un vencimiento de tu patrimonio' : `Se acercan ${p.porVencer} vencimientos de tu patrimonio`,
         detalle: null,
-        href: '/patrimonio/calendario',
+        href: '/herramientas/calendario',
         urgente: false,
       })
     }
@@ -168,7 +168,7 @@ export function pendientesDeTi(e: EntradaPendientes, ramo: (r: string) => string
         clave: 'patrimonio:sin_fecha',
         titulo: p.sinFecha === 1 ? 'Dinos cuándo te toca una revisión de tu patrimonio' : `Dinos cuándo te tocan ${p.sinFecha} revisiones de tu patrimonio`,
         detalle: 'No sabemos la fecha, así que no podemos avisarte.',
-        href: '/patrimonio/calendario',
+        href: '/herramientas/calendario',
         urgente: false,
       })
     }

@@ -88,7 +88,7 @@ export async function avisarPatrimonioPush(vapid: VapidCargada, hoy: Date): Prom
 
       for (const a of pendientes) {
         const { title, body } = textoPushPatrimonio(a)
-        const payload = { title, body, icon: '/icono-app', data: { url: '/patrimonio/calendario' } }
+        const payload = { title, body, icon: '/icono-app', data: { url: '/herramientas/calendario' } }
         let algunaOk = false
         for (const s of suscripciones) {
           const res = await sendWebPush(vapid, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.authKey } }, payload, {

@@ -50,8 +50,8 @@ test('el push no lleva alias ni dirección del inmueble', () => {
 test('composición en avisosDe: un aviso por vencimiento, descartable, con enlace al calendario y clave por ciclo', () => {
   const r = deP({ patrimonio: [venc(), venc({ clave: 'ob2:2026-10-20', estado: 'vencida', vence: '2026-10-20', dias: -4 })] })
   assert.equal(r.length, 2)
-  assert.ok(r.every((a) => a.href === '/patrimonio/calendario' && a.descartable))
-  assert.equal(HREF_POR_TIPO.patrimonio_en_ventana, '/patrimonio/calendario')
+  assert.ok(r.every((a) => a.href === '/herramientas/calendario' && a.descartable))
+  assert.equal(HREF_POR_TIPO.patrimonio_en_ventana, '/herramientas/calendario')
   assert.notEqual(r[0]!.clave, r[1]!.clave)
   assert.ok(r[0]!.clave.includes('@2026-11-10#avisar'))
   assert.equal(esClaveDescartable(r[0]!.clave), true)

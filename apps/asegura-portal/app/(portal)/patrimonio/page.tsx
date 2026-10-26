@@ -50,7 +50,7 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
       {titulares.length > 0 && (
         <p style={{ margin: '0 0 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/gastos">Gastos fijos, comunidad y derramas</Link>
-          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/calendario">Calendario y avisos</Link>
+          <Link className="boton-tenue" style={{ minHeight: 44 }} href="/herramientas/calendario">Calendario y avisos</Link>
           <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/rentabilidad">Rentabilidad</Link>
           {titulares.some((t) => t.puedeAlta) && <Link className="boton-tenue" style={{ minHeight: 44 }} href="/patrimonio/importar">Importar desde Excel</Link>}
         </p>

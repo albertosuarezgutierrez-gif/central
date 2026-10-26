@@ -398,6 +398,32 @@ export {
 } from './vista-portal.ts'
 export type { VistaBoveda, PestanaPortal, SeccionPortal } from './vista-portal.ts'
 export {
+  HECHOS_DESCONOCIDOS,
+  esTitular,
+  entradasVisibles,
+  herramientasVisibles,
+  contactosVisibles,
+  contactosEnCuenta,
+} from './menu-visible.ts'
+export type { HechosMenu, HerramientasVisibles } from './menu-visible.ts'
+export {
+  componerCalendario,
+  diasHastaDia,
+  avisosDeFechaIncompletos,
+  ORIGENES_CALENDARIO,
+  RUTA_CALENDARIO,
+  TOPE_VER_MAS_CALENDARIO,
+  TIPOS_AVISO_CON_FECHA,
+  FUENTES_AVISO_CON_FECHA,
+} from './calendario-unico.ts'
+export type {
+  OrigenCalendario,
+  EntradaCalendarioCruda,
+  EntradaCalendario,
+  FuenteCalendario,
+  CalendarioCompuesto,
+} from './calendario-unico.ts'
+export {
   ESTADOS_SINIESTRO,
   siniestroAbierto,
   etiquetaEstadoSiniestro,
