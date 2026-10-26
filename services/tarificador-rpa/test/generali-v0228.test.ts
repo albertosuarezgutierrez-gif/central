@@ -12,7 +12,7 @@ import { ErrorMapaIncompletoGenerali, VERSION_GENERALI_AUTO, hastaPrecioGenerali
 import { instalarGuardEmision, pulsar, pulsarSiguienteValoracionGenerali, type GuardEmision } from '../src/guard.ts'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.28 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.28'))
+test('v0.2.28 · versión (superada por 0.2.29)', () => assert.match(VERSION_GENERALI_AUTO, /^0\.2\.(28|29)$/))
 
 let browser: Browser
 before(async () => {
