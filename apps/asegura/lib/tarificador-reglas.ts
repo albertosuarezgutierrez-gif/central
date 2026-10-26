@@ -98,7 +98,7 @@ function validarFormaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo
 
 /**
  * Compañías cuyo bot busca al tomador por NIF (auto/moto). Mapfre (14/10/2026) y Generali (25/10/2026: sin el documento su bot
- * se para en «rama=sin_nif»; solo lo usa para BUSCAR la persona ya existente en su portal, nunca da de alta).
+ * se para en «rama=sin_nif»; desde el 26/10/2026 lo teclea en «Datos personas» con los `datosTomador`).
  */
 export const COMPANIAS_CON_NIF_TOMADOR = ['mapfre', 'generali'] as const
 
@@ -107,10 +107,27 @@ const RAMOS_CON_NIF_TOMADOR: Record<(typeof COMPANIAS_CON_NIF_TOMADOR)[number], 
 
 /**
  * Compañías que además reciben nombre, apellidos y nacimiento de la ficha (`datosTomador`) para DAR DE ALTA al tomador que no
- * conocen. Lista APARTE del NIF a propósito (minimización RGPD, 25/10/2026): Generali solo busca por NIF, así que no recibe
- * `datosTomador` ni se le rechaza por una ficha sin nacimiento. Añadir aquí una compañía = mandarle más datos personales.
+ * conocen. Lista APARTE del NIF a propósito (minimización RGPD): añadir aquí una compañía = mandarle más datos personales.
+ * Generali (26/10/2026, autorizado por Alberto): su pantalla «Interesado / Tomador › Datos personas» (`emiAutosGenB028.do`) no
+ * tiene buscador; el bot rellena ahí nombre, apellidos y nacimiento y pulsa «Confirmar» por su puerta del guard. Solo AUTO.
+ * Sin sexo, email ni móvil: la ficha no los manda (el sexo sale del conductor si es el tomador; el contacto, solo del riesgo).
  */
-export const COMPANIAS_CON_DATOS_TOMADOR = ['mapfre'] as const
+export const COMPANIAS_CON_DATOS_TOMADOR = ['mapfre', 'generali'] as const
+
+/** Ramos en que cada una los recibe. Generali solo auto (su moto no tiene bot). Mapfre hogar, además, solo con su interruptor. */
+const RAMOS_CON_DATOS_TOMADOR: Record<(typeof COMPANIAS_CON_DATOS_TOMADOR)[number], readonly string[]> = { mapfre: ['auto', 'moto', 'hogar'], generali: ['auto'] }
+
+/** ¿Esta compañía y este ramo pueden recibir `datosTomador`? (Lista + ramo; el interruptor de hogar y el bloque `tomador` los mira `necesitaDatosTomador`.) PURA. */
+function recibeDatosTomador(compania: string, ramo: string): boolean {
+  const c = claveCompania(compania)
+  if (!(COMPANIAS_CON_DATOS_TOMADOR as readonly string[]).includes(c)) return false
+  return RAMOS_CON_DATOS_TOMADOR[c as (typeof COMPANIAS_CON_DATOS_TOMADOR)[number]].includes(ramo)
+}
+
+/** Para qué usa la compañía los datos del alta (motivo del rechazo `falta_datos_tomador`). PURA. */
+function usoDatosTomador(compania: string): string {
+  return claveCompania(compania) === 'generali' ? 'Generali da de alta al tomador con ellos en «Datos personas»' : `${nombreCompaniaNif(compania)} da de alta al tomador nuevo con ellos`
+}
 
 /** Nombre de la compañía para los motivos de rechazo («Generali busca al tomador por NIF»). Sin nombre conocido, la clave. PURA. */
 function nombreCompaniaNif(compania: string): string {
@@ -372,12 +389,12 @@ export function lecturaTomadorFicha(fila: FilaTomadorFicha | null, descifrar: (v
 }
 
 /**
- * ¿Hacen falta los datos del tomador de la ficha? Mapfre + auto/moto + el riesgo no trae su bloque `tomador`; o (21/10/2026) Mapfre +
+ * ¿Hacen falta los datos del tomador de la ficha? Mapfre auto/moto o Generali auto (26/10/2026) + el riesgo no trae su bloque `tomador`; o (21/10/2026) Mapfre +
  * hogar con el interruptor abierto (`companiasHogarRpa`): su bot da de alta al tomador que no conoce con nombre y apellidos. En hogar el
  * bloque `tomador` (DNI y nacimiento) no basta: lo pone asegura igual, así que no cuenta. PURA (el entorno entra).
  */
 export function necesitaDatosTomador(compania: string, ramo: string, riesgo: unknown, env: Record<string, string | undefined> = process.env): boolean {
-  if (!(COMPANIAS_CON_DATOS_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
+  if (!recibeDatosTomador(compania, ramo)) return false
   if (ramo === 'hogar') return companiasHogarRpa(env).includes(claveCompania(compania))
   if (ramo !== 'auto' && ramo !== 'moto') return false
   return !(esObj(riesgo) && esObj(riesgo.tomador))
@@ -389,13 +406,13 @@ function enumerar(l: readonly string[]): string {
 }
 
 /**
- * Como `aplicarNifTomador` para nombre, apellidos y nacimiento (`datosTomador`). PURA. Otra compañía (Generali incluida: solo NIF) → el riesgo SIN
- * `datosTomador`; Mapfre auto/moto sin bloque `tomador` → los de la ficha, o rechazo 422 `falta_datos_tomador` («falta X en
+ * Como `aplicarNifTomador` para nombre, apellidos y nacimiento (`datosTomador`). PURA. Otra compañía u otro ramo (Generali moto/hogar) → el riesgo SIN
+ * `datosTomador`; Mapfre auto/moto o Generali auto sin bloque `tomador` → los de la ficha, o rechazo 422 `falta_datos_tomador` («falta X en
  * la ficha»), o 503 `datos_tomador_ilegibles`. Ningún motivo lleva valores.
  */
 export function aplicarDatosTomador(compania: string, ramo: string, riesgo: unknown, leer: () => LecturaDatosTomador): NifTomadorAplicado {
   if (!necesitaDatosTomador(compania, ramo, riesgo)) {
-    if (esObj(riesgo) && 'datosTomador' in riesgo && !(COMPANIAS_CON_DATOS_TOMADOR as readonly string[]).includes(claveCompania(compania))) {
+    if (esObj(riesgo) && 'datosTomador' in riesgo && !recibeDatosTomador(compania, ramo)) {
       const { datosTomador: _fuera, ...resto } = riesgo
       return { ok: true, riesgo: resto }
     }
@@ -404,7 +421,7 @@ export function aplicarDatosTomador(compania: string, ramo: string, riesgo: unkn
   const l = leer()
   if (l.estado === 'ok') return { ok: true, riesgo: { ...(esObj(riesgo) ? riesgo : {}), datosTomador: l.datos } }
   if (l.estado === 'ilegible') return { ok: false, status: 503, motivo: 'datos_tomador_ilegibles: los datos de la ficha del cliente no se pueden descifrar (clave de la cartera); no se encola' }
-  return { ok: false, status: 422, motivo: `falta_datos_tomador: falta ${enumerar(l.faltan)} en la ficha del cliente (Mapfre da de alta al tomador nuevo con ellos); complétalo en la ficha` }
+  return { ok: false, status: 422, motivo: `falta_datos_tomador: falta ${enumerar(l.faltan)} en la ficha del cliente (${usoDatosTomador(compania)}); complétalo en la ficha` }
 }
 
 /** Al ENTREGAR: un NIF que ya no se puede poner es fallo `datos` (la ficha) o `infra` si es ilegible (la clave: «no se sabe»). */

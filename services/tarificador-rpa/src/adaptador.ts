@@ -133,6 +133,11 @@ export type ContextoPortal = ContextoTarificacion & {
   marcarPlacasEspecialesGenerali?: () => Promise<void>
   /** Generali (v0.2.6): «Confirmar» del selector de vehículos (solo confirma el vehículo) por `pulsarConfirmarVehiculoGenerali` de guard.ts (una vez). */
   confirmarVehiculoGenerali?: () => Promise<void>
+  /**
+   * Generali (v0.2.25, autorizado por Alberto el 26/10/2026): «Confirmar» de «Interesado / Tomador › Datos personas» (marco
+   * `emiAutosGenB028.do`) por `pulsarConfirmarDatosPersonasGenerali` de guard.ts (una vez). Devuelve el diálogo nativo (cancelado), saneado.
+   */
+  confirmarDatosPersonasGenerali?: () => Promise<{ dialogo: string | null }>
   /** Generali (v0.2.7): abre «Todas las marcas» por su disparador (`abrirDesplegableMarcaGenerali` de guard.ts; id `buscamarca`, una vez). */
   abrirDesplegableMarcaGenerali?: (base: string) => Promise<void>
   /** Generali (v0.2.7): pulsa el `li` de la marca elegida (`elegirMarcaListaGenerali` de guard.ts; texto exacto, una vez). */
