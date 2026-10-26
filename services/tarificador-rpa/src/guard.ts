@@ -14,6 +14,8 @@ import {
   ID_CONFIRMAR_DATOS_PERSONAS_GENERALI,
   MEDIADOR_GENERALI,
   PREFIJO_ID_DATOS_PERSONAS_GENERALI,
+  esPantallaGarantiasCapitalesGenerali,
+  leerPrecioGenerali,
   mensajesValidacionGenerali,
   opcionMediadorGenerali,
   pestanaDatosPersonasActivaGenerali,
@@ -1733,15 +1735,26 @@ async function escanearControlesProyectoMapfre(page: Page, incluirDialogos = fal
  * Busca el botón «Generar Proyecto» esperando (y desplazando la pantalla, sin clics) hasta `esperaMs`. Devuelve el control o el
  * motivo legible, con la lista saneada de botones/enlaces a la vista para saber qué hay en pantalla. Solo lectura.
  */
-async function buscarBotonGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs: number, conIr = false, pantallaFinal = false): Promise<{ boton: Locator } | { ir: Locator } | { estado: 'no_generado'; motivo: string }> {
+async function buscarBotonGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs: number, conIr = false, pantallaFinal = false, completar?: CompletarProyectoMapfre): Promise<{ boton: Locator } | { ir: Locator } | { estado: 'no_generado'; motivo: string }> {
   const hasta = Date.now() + esperaMs
   let controles: ControlProyectoMapfre[] = []
+  let completado = false
   let decision: ReturnType<typeof decidirBotonGenerarProyectoMapfre>
   for (let vuelta = 0; ; vuelta++) {
     guard.comprobar()
     // v0.8.17: en la pantalla final (tras «Ir a generar proyecto») el botón puede estar en un diálogo y puede llamarse «Guardar proyecto».
     controles = await escanearControlesProyectoMapfre(page, pantallaFinal)
     decision = decidirBotonGenerarProyectoMapfre(controles, pantallaFinal)
+    // v0.8.22: el botón está ahí pero DESHABILITADO → el adaptador completa/valida el formulario del proyecto (UNA vez) y se vuelve a mirar.
+    // Un aviso (falta un dato del tomador…) → no se pulsa nada. Sin `completar`, el comportamiento es el de siempre.
+    if (completar && !completado && 'motivo' in decision && /deshabilitado/.test(decision.motivo)) {
+      completado = true
+      const aviso = await completar(page)
+      guard.comprobar()
+      if (aviso !== null) return { estado: 'no_generado', motivo: aviso }
+      await page.waitForTimeout(400)
+      continue
+    }
     if ('indice' in decision) break
     // v0.8.16: sin «Generar Proyecto» pero con «Ir a generar proyecto» a la vista (tras una vuelta de gracia, o en la última) → ese es el camino.
     if (conIr && (vuelta >= 1 || Date.now() >= hasta)) {
@@ -1900,7 +1913,7 @@ export async function diagnosticoPantallaProyectoMapfre(page: Page): Promise<Dia
 // ─────────── v0.8.20 (26/10/2026): «Generar Proyecto» DESHABILITADO → diagnóstico de campos obligatorios, sin esperar 30 s ───────────
 // Solo lectura. NUNCA se copia el VALOR de un campo (datos personales): solo etiqueta, tipo, id/formcontrolname, si está vacío y el mat-error.
 
-export type CampoObligatorioMapfre = { etiqueta: string; tipo: string; id: string; calendario: boolean; vacio: boolean; error: string }
+export type CampoObligatorioMapfre = { etiqueta: string; tipo: string; id: string; calendario: boolean; vacio: boolean; error: string; control?: string; pista?: string }
 
 /** Texto corto y saneado (sin datos personales) para el aviso. PURA. */
 function cortoSaneado(t: string | null | undefined, max: number): string {
@@ -1910,9 +1923,12 @@ function cortoSaneado(t: string | null | undefined, max: number): string {
 /** Cola legible de los campos obligatorios/ inválidos (máx. 8; los vacíos primero). Sin valores. PURA. */
 export function describirCamposObligatoriosMapfre(campos: readonly CampoObligatorioMapfre[]): string {
   if (campos.length === 0) return 'no se identificó ningún campo obligatorio vacío o inválido en el formulario visible'
-  const orden = [...campos].sort((a, b) => Number(b.vacio) - Number(a.vacio)).slice(0, 8)
+  const orden = [...campos].sort((a, b) => Number(b.vacio) - Number(a.vacio)).slice(0, 12)
   const trozos = orden.map((c) => {
-    const partes = [c.tipo || 'campo', c.id ? `id ${cortoSaneado(c.id, 40)}` : '', c.vacio ? 'vacío' : 'con valor no válido', c.calendario ? 'con selector de fecha' : ''].filter((x) => x !== '')
+    // v0.8.22: un campo SIN etiqueta (ids mat-input-N dinámicos) se nombra por su formcontrolname y por el texto del label/placeholder más cercano.
+    const control = cortoSaneado(c.control, 40)
+    const pista = cortoSaneado(c.pista, 40)
+    const partes = [c.tipo || 'campo', c.id ? `id ${cortoSaneado(c.id, 40)}` : '', control && control !== cortoSaneado(c.id, 40) ? `control ${control}` : '', pista ? `cerca: «${pista}»` : '', c.vacio ? 'vacío' : 'con valor no válido', c.calendario ? 'con selector de fecha' : ''].filter((x) => x !== '')
     return `«${cortoSaneado(c.etiqueta, 40) || 'sin etiqueta'}» (${partes.join(', ')}${c.error ? `; mat-error: «${cortoSaneado(c.error, 60)}»` : ''})`
   })
   return `${campos.length > orden.length ? `${campos.length} campos (se citan ${orden.length})` : `${campos.length} campo${campos.length === 1 ? '' : 's'}`}: ${trozos.join(', ')}`
@@ -1925,7 +1941,7 @@ export async function leerCamposObligatoriosMapfre(page: Page): Promise<CampoObl
   for (const marco of page.frames()) {
     const parte = await marco
     .evaluate(() => {
-      const out: { etiqueta: string; tipo: string; id: string; calendario: boolean; vacio: boolean; error: string }[] = []
+      const out: { etiqueta: string; tipo: string; id: string; calendario: boolean; vacio: boolean; error: string; control: string; pista: string }[] = []
       // (sin funciones auxiliares con nombre: el empaquetador inyectaría `__name`, que no existe en la página)
       for (const n of Array.from(document.querySelectorAll('input, select, mat-select, textarea'))) {
         const h = n as HTMLInputElement
@@ -1948,7 +1964,20 @@ export async function leerCamposObligatoriosMapfre(page: Page): Promise<CampoObl
         const etiqueta = [campo?.querySelector('mat-label'), idLabel, campo?.querySelector('label')].map((x) => (x?.textContent ?? '').replace(/\s+/g, ' ').trim()).find((x) => x !== '') || h.getAttribute('aria-label') || h.getAttribute('placeholder') || ''
         const error = Array.from((campo ?? document.createElement('div')).querySelectorAll('mat-error, .mat-error')).map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim()).filter((t) => t !== '').join(' / ')
         const calendario = campo !== null && (campo.querySelector('mat-datepicker-toggle, [aria-label="Open calendar"]') !== null || h.hasAttribute('matdatepicker') || h.hasAttribute('ng-reflect-mat-datepicker'))
-        out.push({ etiqueta, tipo: n.tagName === 'MAT-SELECT' ? 'mat-select' : esSelect ? 'select' : n.tagName === 'TEXTAREA' ? 'textarea' : tipoAttr || 'input', id, calendario, vacio, error })
+        // v0.8.22: sin etiqueta → formcontrolname/name y el texto del label más cercano (label/mat-label/legend de un ancestro próximo) o placeholder/aria-label. NUNCA el valor.
+        const control = h.getAttribute('formcontrolname') || h.getAttribute('ng-reflect-name') || h.getAttribute('ng-reflect-form-control-name') || h.getAttribute('name') || ''
+        let pista = h.getAttribute('placeholder') || h.getAttribute('aria-label') || ''
+        if (pista === '' && etiqueta === '') {
+          let anc: Element | null = h.parentElement
+          for (let i = 0; i < 5 && anc !== null && pista === ''; i++, anc = anc.parentElement) {
+            // Solo ancestros con ESTE control como único (si no, el label sería el de otro campo).
+            if (anc.querySelectorAll('input, mat-select, select, textarea').length > 1) break
+            const l = anc.querySelector('label, mat-label, legend')
+            pista = (l?.textContent ?? '').replace(/\s+/g, ' ').trim()
+            if (pista === '' && anc.previousElementSibling && !/^(INPUT|MAT-SELECT|SELECT|MAT-FORM-FIELD)$/.test(anc.previousElementSibling.tagName) && anc.previousElementSibling.querySelector('input, mat-select, select, textarea') === null) { const t = (anc.previousElementSibling.textContent ?? '').replace(/\s+/g, ' ').trim(); if (t.length <= 30 && !/[\d@]/.test(t)) pista = t }
+          }
+        }
+        out.push({ etiqueta, tipo: n.tagName === 'MAT-SELECT' ? 'mat-select' : esSelect ? 'select' : n.tagName === 'TEXTAREA' ? 'textarea' : tipoAttr || 'input', id, calendario, vacio, error, control, pista })
       }
       return out
     })
@@ -1970,6 +1999,9 @@ async function botonDeshabilitadoMapfre(boton: Locator): Promise<boolean> {
     .catch(() => false)
 }
 
+/** v0.8.22 · Función del adaptador que completa el formulario del proyecto ANTES del clic. `null` = listo; texto = aviso (no se pulsa). */
+export type CompletarProyectoMapfre = (page: Page) => Promise<string | null>
+
 /** «Generar Proyecto» estaba deshabilitado: no se pulsa. Lleva el diagnóstico de campos (sin valores). */
 export class BotonProyectoDeshabilitadoError extends Error {
   constructor(readonly campos: string) {
@@ -1979,7 +2011,7 @@ export class BotonProyectoDeshabilitadoError extends Error {
 }
 
 /** Comprobaciones previas al clic (solo lectura). Devuelve el botón elegido o el motivo de no pulsar. Puede lanzar por errores del portal. */
-async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaBotonMs: number): Promise<{ boton: Locator; conGuardar: boolean } | { estado: 'no_generado'; motivo: string }> {
+async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaBotonMs: number, completar?: CompletarProyectoMapfre): Promise<{ boton: Locator; conGuardar: boolean } | { estado: 'no_generado'; motivo: string }> {
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_generado', motivo: 'otra ventana de red abierta' }
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('mapfre:proyecto')) return { estado: 'no_generado', motivo: '«Generar Proyecto» ya se pulsó en este trabajo' }
@@ -1990,7 +2022,7 @@ async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, es
   const conPrima = await page.locator('app-coberturas prima-producto').filter({ hasText: /\d\s*€/ }).count().catch(() => 0)
   if (conPrima === 0) return { estado: 'no_generado', motivo: 'no hay primas a la vista en «Coberturas»' }
   // v0.8.15: el botón puede estar en el pie del paso (fuera de `app-coberturas`), ser <a>/[role=button]/solo icono o pintarse tarde.
-  const buscado = await buscarBotonGenerarProyectoMapfre(page, guard, esperaBotonMs, !usados.has('mapfre:ir-generar'))
+  const buscado = await buscarBotonGenerarProyectoMapfre(page, guard, esperaBotonMs, !usados.has('mapfre:ir-generar'), false, completar)
   if ('estado' in buscado) return buscado
   let boton: Locator
   let conGuardar = false
@@ -2012,7 +2044,7 @@ async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, es
     }
     // v0.8.17: la vista/diálogo siguiente puede traer «Generar Proyecto» o «Guardar proyecto» (lista blanca estricta, solo esos dos textos
     // enteros); se escanea también dentro de diálogos. Si un diálogo visible habla de emitir/contratar/firmar/pagar, no se pulsa nada.
-    const tras = await buscarBotonGenerarProyectoMapfre(page, guard, esperaBotonMs, false, true)
+    const tras = await buscarBotonGenerarProyectoMapfre(page, guard, esperaBotonMs, false, true, completar)
     if ('estado' in tras) return { estado: 'no_generado', motivo: `se pulsó «Ir a generar proyecto» y ${tras.motivo.replace(/^no aparece el botón «Generar Proyecto» ni «Guardar proyecto»/, 'sigue sin aparecer el botón «Generar Proyecto» ni «Guardar proyecto»')}` }
     if (!('boton' in tras)) return { estado: 'no_generado', motivo: 'se pulsó «Ir a generar proyecto» y no se localizó el botón final' }
     // Texto del diálogo SIN sus botones/enlaces (un «Contratar» que no se pulsa no debe impedir el guardado; sí un texto que hable de pagar/emitir).
@@ -2033,13 +2065,13 @@ async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, es
  * «Generar Proyecto» de Mapfre NSEI con las reglas de arriba. Nunca lanza por «no se pudo» (tampoco por un error del portal antes
  * o después del clic: desconexión, timeout…): lo devuelve. Solo relanza la violación REAL del guard (`guard.comprobar()`).
  */
-export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs = MS_PROYECTO_MAPFRE, esperaBotonMs = Math.min(MS_BUSCA_BOTON_PROYECTO_MAPFRE, esperaMs)): Promise<ResultadoProyectoMapfre> {
+export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esperaMs = MS_PROYECTO_MAPFRE, esperaBotonMs = Math.min(MS_BUSCA_BOTON_PROYECTO_MAPFRE, esperaMs), completar?: CompletarProyectoMapfre): Promise<ResultadoProyectoMapfre> {
   guard.comprobar()
   let boton: Locator
   let conGuardar = false
   let antes: string
   try {
-    const prep = await prepararGenerarProyectoMapfre(page, guard, esperaBotonMs)
+    const prep = await prepararGenerarProyectoMapfre(page, guard, esperaBotonMs, completar)
     if ('estado' in prep) return prep
     boton = prep.boton
     conGuardar = prep.conGuardar
@@ -3840,11 +3872,20 @@ export async function pulsarSiguienteValoracionGenerali(page: Page, guard: Guard
   if (n >= MAX_SIGUIENTE_VALORACION_GENERALI) throw new EmisionBloqueadaError('fase', `«Siguiente» de la valoración de Generali ya se pulsó ${n} veces en este trabajo`)
   await exigirSinCuentaBancaria(page)
   const nif = marco.locator(`[id="${PREFIJO_ID_INTERESADO_VALORACION_GENERALI}nifcif"]`).filter({ visible: true })
-  if ((await nif.count()) !== 1) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali sin el formulario de valoración (no hay tomador visible)')
-  if ((await nif.inputValue().catch(() => '')).trim() === '') throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con el tomador sin confirmar (NIF vacío)')
-  if ((await marco.locator(`[id="${ID_CONFIRMAR_DATOS_PERSONAS_GENERALI}"]`).filter({ visible: true }).count()) > 0) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con «Datos personas» abierto (no es la valoración)')
-  const pest = marco.getByText(/^\s*(Datos de Valoración|Valoración Riesgo)\s*$/).filter({ visible: true })
-  if ((await pest.count()) < 1) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali fuera de «Valoración Riesgo»/«Datos de Valoración»')
+  // v0.2.30: segunda pantalla del mismo marco, «Garantías y Capitales opcionales» (sin el formulario de valoración): «Siguiente» solo SIN precio legible
+  // y con el tomador ya confirmado en este trabajo. Sigue exigiendo el resto (marco único, un #siguiente nativo, sin textos de emisión, máx. 3).
+  if ((await nif.count()) === 1) {
+    if ((await nif.inputValue().catch(() => '')).trim() === '') throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con el tomador sin confirmar (NIF vacío)')
+    if ((await marco.locator(`[id="${ID_CONFIRMAR_DATOS_PERSONAS_GENERALI}"]`).filter({ visible: true }).count()) > 0) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con «Datos personas» abierto (no es la valoración)')
+    const pest = marco.getByText(/^\s*(Datos de Valoración|Valoración Riesgo)\s*$/).filter({ visible: true })
+    if ((await pest.count()) < 1) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali fuera de «Valoración Riesgo»/«Datos de Valoración»')
+  } else {
+    const textoMarco = (await marco.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string
+    if ((await nif.count()) !== 0 || !esPantallaGarantiasCapitalesGenerali(textoMarco)) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali sin el formulario de valoración (no hay tomador visible)')
+    if (!usados.has('generali:confirmar-datos-personas')) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali en «Garantías y Capitales opcionales» sin el tomador confirmado en este trabajo')
+    if ((await marco.locator(`[id="${ID_CONFIRMAR_DATOS_PERSONAS_GENERALI}"]`).filter({ visible: true }).count()) > 0) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con «Datos personas» abierto (no es la valoración)')
+    if (leerPrecioGenerali(textoMarco).tipo !== 'ninguno') throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali en «Garantías y Capitales opcionales» con un precio ya legible (no hace falta avanzar)')
+  }
   for (const f of marcosVivos(page)) {
     const t = (await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string
     if (textoEmisionGenerali(t)) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con textos de emisión/contratación/pago/firma en la página o en un diálogo')

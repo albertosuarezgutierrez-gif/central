@@ -89,7 +89,7 @@ export type ContextoPortal = ContextoTarificacion & {
    * Mapfre NSEI (v0.8.14, 22/10/2026, autorizado por Alberto: un proyecto no es póliza): tras LEER las primas, pulsa «Generar
    * Proyecto» y lee el nº de proyecto, por `generarProyectoMapfre` (guard.ts). Nunca lanza por «no se pudo» (salvo violación del guard).
    */
-  generarProyectoMapfre?: (pagina: Page) => Promise<ResultadoProyectoMapfre>
+  generarProyectoMapfre?: (pagina: Page, completar?: (pagina: Page) => Promise<string | null>) => Promise<ResultadoProyectoMapfre>
   /**
    * Allianz HOGAR (14/10/2026): marca UNA opción del riesgo (madera, tipo de vivienda, régimen, uso) de la pantalla «Vivienda»
    * por `marcarOpcionRiesgoHogarAllianz` de guard.ts (lista cerrada de etiquetas EXACTAS, marco de la app de Hogar,

@@ -60,6 +60,8 @@ import {
   fragmentosImportesGenerali,
   PESTANAS_VALORACION_GENERALI,
   resumenVolcadoResultadosGenerali,
+  resumenDiagnosticoImportesGenerali,
+  type DiagnosticoImportesMarcoGenerali,
   resumenNavegacionGenerali,
   type NavegacionMarcoGenerali,
   type ControlNavegacionGenerali,
@@ -245,7 +247,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * entiende también tablas (cabecera «Prima/Importe/Total…» + celda con importe, una línea por celda) y el atasco VUELCA, saneado, las pestañas
  * (¿marcada?), las tablas con cabeceras y filas con «€» y los botones, para ver si el clic cambió la pantalla. Sin pulsar nada nuevo.
  */
-export const VERSION_GENERALI_AUTO = '0.2.29'
+export const VERSION_GENERALI_AUTO = '0.2.30'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -547,7 +549,8 @@ const JS_IMPORTES_INPUT = `(() => {
 const JS_IMPORTES_TABLA = `(() => {
   const out = [];
   const reImp = /^[€\\s]*\\d[\\d.]*(,\\d{1,2})?\\s*(€|eur|euros)?$/i;
-  const reCab = /prima|precio|importe|total|recibo|anual|contado|pagar/i;
+  const gar = /garant[ií]as y capitales opcionales/i.test(document.body ? document.body.innerText || '' : '');
+  const reCab = gar ? /prima|precio|importe|total|recibo|anual|contado|pagar|cuota/i : /prima|precio|importe|total|recibo|anual|contado|pagar/i;
   document.querySelectorAll('table').forEach((t) => {
     const filas = Array.from(t.rows || []);
     let cab = null;
@@ -557,9 +560,10 @@ const JS_IMPORTES_TABLA = `(() => {
       if (esCab) { cab = cs.map((c) => (c.textContent || '').replace(/\\s+/g, ' ').trim()); return; }
       if (!cab) return;
       const et = ((cs[0] && cs[0].textContent) || '').replace(/\\s+/g, ' ').trim().slice(0, 40);
+      const sel = gar && (/selected|seleccionad|current|activ|marcad/i.test(String(r.className || '')) || !!r.querySelector('input:checked') || cs.some((c) => /selected|seleccionad|marcad/i.test(String(c.className || ''))));
       cs.forEach((c, i) => {
         const v = (c.textContent || '').replace(/\\s+/g, ' ').trim();
-        if (i > 0 && cab[i] && reCab.test(cab[i]) && reImp.test(v) && /[,€]/.test(v)) out.push(cab[i].slice(0, 40) + ' ' + et + '\\n' + v);
+        if (i > 0 && cab[i] && reCab.test(cab[i]) && reImp.test(v) && /[,€]/.test(v)) out.push((sel ? '[SEL] ' : '') + cab[i].slice(0, 40) + ' ' + et + '\\n' + v);
       });
     });
   });
@@ -601,6 +605,52 @@ export async function volcarResultadosGenerali(page: Page): Promise<VolcadoMarco
     if (f.isDetached()) continue
     const v = (await f.evaluate(`${JS_VOLCADO_RESULTADOS}(${JSON.stringify([...PESTANAS_VALORACION_GENERALI])})`).catch(() => null)) as VolcadoMarcoResultadosGenerali | null
     if (v && (v.pestanas.length > 0 || v.tablas.length > 0)) out.push(v)
+  }
+  return out
+}
+
+/** v0.2.30: cabeceras de las tablas visibles e importes con la etiqueta de su fila/celda (sin filtrar aquí: el saneo es `resumenDiagnosticoImportesGenerali`). SOLO LEE. */
+const JS_DIAGNOSTICO_IMPORTES = `(() => {
+  const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const txt = (e) => String(e.textContent || '').replace(/\\s+/g, ' ').trim();
+  const reImp = /^€?\\s?\\d[\\d.]*(,\\d{1,2})?\\s?€?$/;
+  const cabeceras = [];
+  const importes = [];
+  document.querySelectorAll('table').forEach((t) => {
+    if (!vis(t)) return;
+    const filas = Array.from(t.rows || []);
+    let cab = null;
+    filas.forEach((r) => {
+      const cs = Array.from(r.cells || []);
+      if (cs.length === 0) return;
+      if (!cab && (cs.every((c) => c.tagName === 'TH') || !cs.some((c) => /\\d/.test(txt(c))))) { cab = cs.map((c) => txt(c).slice(0, 40)); if (cabeceras.length < 6) cabeceras.push(cab.slice(0, 8)); return; }
+      const et = txt(cs[0]).slice(0, 40);
+      cs.forEach((c, i) => {
+        const v = txt(c);
+        if (v && reImp.test(v) && /[,€]/.test(v) && importes.length < 60) importes.push({ etiqueta: (i > 0 ? (cab && cab[i] ? cab[i] + ' ' : '') + et : (cab && cab[i]) || ''), importe: v });
+      });
+    });
+  });
+  document.querySelectorAll('td,th,span,div,li,label,p,b,strong,dt,dd,font').forEach((e) => {
+    if (e.children.length > 0 || e.closest('table') || !vis(e) || importes.length >= 60) return;
+    const v = txt(e);
+    const m = /€?\\s?\\d{1,3}(?:\\.\\d{3})*,\\d{1,2}\\s?€?|€\\s?\\d+(?:,\\d{1,2})?|\\d+(?:,\\d{1,2})?\\s?€/.exec(v);
+    if (!m) return;
+    let et = v.replace(m[0], '').trim();
+    if (!et && e.previousElementSibling) et = txt(e.previousElementSibling);
+    if (!et && e.parentElement && e.parentElement.children.length <= 4) et = txt(e.parentElement).replace(m[0], '').trim();
+    importes.push({ etiqueta: et.slice(0, 40), importe: m[0].trim() });
+  });
+  return { cabeceras: cabeceras, importes: importes };
+})()`
+
+/** v0.2.30: diagnóstico saneado de las tablas y los importes de TODOS los marcos (solo lee; nunca lanza). */
+export async function volcarDiagnosticoImportesGenerali(page: Page): Promise<DiagnosticoImportesMarcoGenerali[]> {
+  const out: DiagnosticoImportesMarcoGenerali[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const v = (await f.evaluate(JS_DIAGNOSTICO_IMPORTES).catch(() => null)) as DiagnosticoImportesMarcoGenerali | null
+    if (v && (v.cabeceras.length > 0 || v.importes.length > 0)) out.push(v)
   }
   return out
 }
@@ -2222,7 +2272,7 @@ export async function elegirPersonaTomadorGenerali(
 }
 
 /** Oferta de Generali con el importe del lector tolerante: avisos claros de lo que NO se sabe y de lo SUPUESTO. */
-export function ofertaGenerali(eur: number, supuestos: string | null): OfertaNormalizada {
+export function ofertaGenerali(eur: number, supuestos: string | null, avisosLectura: readonly string[] = []): OfertaNormalizada {
   return {
     compania: 'generali',
     producto: 'Auto · Turismos (Ramo UV)',
@@ -2238,6 +2288,7 @@ export function ofertaGenerali(eur: number, supuestos: string | null): OfertaNor
     desglose: null,
     avisos: [
       'Importe leído de «Garantías y Resultados» con un lector tolerante (bot 0.2.0, sin captura de esa pantalla): compruébalo en el portal; no consta la modalidad ni si es anual.',
+      ...avisosLectura,
       ...(supuestos ? [supuestos] : []),
     ],
   }
@@ -2294,7 +2345,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const ignorar = lAntes.tipo === 'unico' ? [lAntes.eur] : lAntes.tipo === 'varios' ? lAntes.candidatos.map((c) => c.eur) : []
   await paso('tarificar', () => ctx.pulsarSubpestanaGenerali!(SUBPESTANA_PRECIO_GENERALI))
   const lectura = await paso('lectura_primas', () => esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS))
-  if (lectura.tipo === 'unico') return { ofertas: [ofertaGenerali(lectura.eur, texto)] }
+  if (lectura.tipo === 'unico') return { ofertas: [ofertaGenerali(lectura.eur, texto, lectura.avisos)] }
   // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
   let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
   const avanceSiguiente: string[] = []
@@ -2310,7 +2361,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
         break
       }
       lecturaFinal = await paso('lectura_primas', () => esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS))
-      if (lecturaFinal.tipo === 'unico') return { ofertas: [ofertaGenerali(lecturaFinal.eur, texto)] }
+      if (lecturaFinal.tipo === 'unico') return { ofertas: [ofertaGenerali(lecturaFinal.eur, texto, lecturaFinal.avisos)] }
     }
   }
   const despues = await leerPantallaPagina(page)
@@ -2318,12 +2369,22 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const obligatorios = avisosObligatorioGenerali(textoFinal)
   const importes = fragmentosImportesGenerali(textoFinal)
   const volcado = await volcarResultadosGenerali(page)
-  const navegacion = resumenNavegacionGenerali(await volcarNavegacionGenerali(page), 650)
+  const diagnostico = resumenDiagnosticoImportesGenerali(await volcarDiagnosticoImportesGenerali(page), 430)
+  const navegacionMarcos = await volcarNavegacionGenerali(page)
   const que = lecturaFinal.tipo === 'varios'
     ? `${lecturaFinal.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lecturaFinal.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
-    : 'ningún importe legible con «prima/precio/importe/total»'
-  // El runner corta el mensaje a 2000: lo que más importa (avisos, tomador/personas) va PRIMERO y la pantalla, al final y corta.
-  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}Navegación: ${navegacion}. ${tomador}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, 360)}. Pantalla: ${resumenPantallaGenerali(despues, 450)}`)
+    : 'ningún importe legible con «prima/precio/importe/total/cuota/recibo»'
+  // El runner corta el mensaje a 2000: lo que más importa (avisos, diagnóstico de tablas/importes) va PRIMERO y la navegación, el resto y la pantalla, después
+  // y con presupuesto decreciente hasta que todo quepa (v0.2.30: el diagnóstico va ANTES de la navegación).
+  const compuesto = (nav: number, res: number, pan: number, imp: number): string =>
+    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${diagnostico}. Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ${tomador.slice(0, 500)}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
+  const LIMITE = 1_900 - 'generali/auto: mapa incompleto: faltan '.length
+  let mensaje = compuesto(650, 360, 450, 8)
+  for (const [nav, res, pan, imp] of [[450, 260, 300, 5], [350, 180, 200, 3], [250, 120, 100, 2], [150, 80, 60, 1]] as const) {
+    if (mensaje.length <= LIMITE) break
+    mensaje = compuesto(nav, res, pan, imp)
+  }
+  throw new ErrorMapaIncompletoGenerali(mensaje.slice(0, LIMITE))
 }
 
 /**
