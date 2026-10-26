@@ -961,7 +961,49 @@ export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Pr
   const etiquetas = [...new Set(crudo.etiquetas.map(limpia).filter((t) => (crudo.bloque ? t !== '' : /siniestr|compañ|compan|anterior|bonus|proced|expuest/i.test(t))))].slice(0, 12)
   const controles = crudo.controles.slice(0, 20).map((c) => `${c.tag}${c.id ? `[${c.id.slice(0, 40)}]` : ''}${limpia(c.et) ? `«${limpia(c.et)}»` : ''}${c.off ? '(deshabilitado)' : ''}`)
   const et = etiquetas.length ? ` etiquetas: ${etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
-  return crudo.bloque ? `el bloque app-historial-siniestralidad trae ${controles.length} controles (${controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}`
+  // v0.8.25: sin el bloque, qué CONTROL hay tras cada etiqueta de siniestralidad (tipo, formcontrolname, deshabilitado).
+  const porEtiqueta = crudo.bloque ? '' : `; controles por etiqueta: ${await describirControlesSiniestralidad(raiz)}`
+  return crudo.bloque ? `el bloque app-historial-siniestralidad trae ${controles.length} controles (${controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}${porEtiqueta}`
+}
+
+/** v0.8.25 · Las cinco etiquetas de la variante de «Figuras» sin `app-historial-siniestralidad` (vistas el 26/10/2026; «Compañia» sale de `vocabulario.ts`). */
+const ETIQUETAS_SINIESTRALIDAD_FIGURAS = ['procedencia siniestralidad', 'expuestos/anos', 'siniestros', 'modificacion manual niveles bonus malus'] as const
+
+/**
+ * v0.8.25 · Por cada etiqueta de siniestralidad («Compañia», «Procedencia Siniestralidad», «Expuestos/Años», «Siniestros», «Modificación Manual
+ * Niveles Bonus Malus»): tipo de control (mat-select/mat-autocomplete/input/checkbox), formcontrolname/name/id y si está deshabilitado. SOLO LEE,
+ * nunca valores ni opciones (el panel de un mat-select no está en el DOM cerrado y este adaptador no tiene lector de opciones sin elegir).
+ */
+export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locator'>): Promise<string> {
+  const crudo = await raiz
+    .locator('body')
+    .evaluate((body, args) => {
+      const reCompania = new RegExp(args.reCompania, 'i')
+      const salida: { et: string; tipo: string; id: string; off: boolean }[] = []
+      for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
+        const t = (e.textContent ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
+        const clave = reCompania.test(e.textContent ?? '') ? 'compania' : args.etiquetas.find((x) => t === x)
+        if (!clave || salida.length >= 12) continue
+        const ff = e.closest('mat-form-field') ?? e.parentElement
+        const c = ff ? ff.querySelector('mat-select, input, textarea, mat-checkbox, mat-slide-toggle') : null
+        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false }); continue }
+        const tag = c.tagName.toLowerCase()
+        const tipoInput = (c.getAttribute('type') ?? '').toLowerCase()
+        const tipo = tag === 'input' ? (tipoInput === 'checkbox' ? 'checkbox' : c.getAttribute('aria-autocomplete') || c.hasAttribute('matautocomplete') || c.getAttribute('role') === 'combobox' ? 'mat-autocomplete' : 'input') : tag === 'mat-select' || tag === 'mat-checkbox' || tag === 'mat-slide-toggle' ? tag.replace('mat-checkbox', 'checkbox') : tag
+        salida.push({
+          et: clave,
+          tipo,
+          id: c.getAttribute('formcontrolname') ?? c.getAttribute('name') ?? c.id ?? '',
+          off: (c as HTMLInputElement).disabled === true || c.getAttribute('aria-disabled') === 'true' || /disabled/.test(ff?.className ?? ''),
+        })
+      }
+      return salida
+    }, { reCompania: PATRON_ETIQUETA_COMPANIA.source, etiquetas: [...ETIQUETAS_SINIESTRALIDAD_FIGURAS] })
+    .catch(() => null)
+  if (!crudo) return 'no se pudo leer'
+  if (crudo.length === 0) return 'ninguna de las etiquetas conocidas'
+  const lista = crudo.map((c) => `«${c.et}» ${c.tipo}${c.id ? `[${c.id.replace(/[^\w-]/g, '').slice(0, 30)}]` : ''} ${c.off ? 'deshabilitado' : 'habilitado'}`)
+  return `${lista.join('; ')}; opciones de los desplegables: no leídas (panel cerrado, sin lector de opciones)`
 }
 
 /** Etiqueta exacta «Compañia/Compañía» (con o sin asterisco): NO casa «Compañía anterior» de otros bloques ni textos largos. */
@@ -1712,7 +1754,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.24',
+  version: '0.8.25',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

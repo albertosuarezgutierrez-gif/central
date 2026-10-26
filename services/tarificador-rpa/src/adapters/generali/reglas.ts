@@ -1131,6 +1131,20 @@ export function resumenModalidadesGenerali(v: VolcadoModalidadesGenerali | null,
   return `${rec.slice(0, max - 1)}…`
 }
 
+/** v0.2.35: por marco, URL sin query, nº de tablas, cuántas contienen «Recibo Anual»/«Prima Anualidad» y la estructura saneada de la tabla de modalidades. */
+export type DiagnosticoModalidadesMarcoGenerali = { url: string; tablas: number; conRecibo: number; estructura: string }
+
+/** Resumen del diagnóstico ampliado de modalidades: «Marcos N: [i] ruta tablas=T recibo=R estructura: …». Saneado y truncado a `max`. PURA. */
+export function resumenDiagnosticoModalidadesGenerali(d: readonly DiagnosticoModalidadesMarcoGenerali[], max = 700): string {
+  const partes = d.map((m, i) => {
+    const ruta = sanearFragmentoGenerali(String(m.url ?? '').split(/[?#;]/)[0]!.replace(/^https?:\/\/[^/]+/, '')).slice(-60)
+    const est = m.estructura ? ` estructura: ${sanearFragmentoGenerali(m.estructura).slice(0, 600)}` : ''
+    return `[${i}] ${ruta || '/'} tablas=${m.tablas} con-Recibo/Prima=${m.conRecibo}${est}`
+  })
+  const t = `Marcos (${d.length}): ${partes.join(' | ') || 'ninguno'}`
+  return t.length > max ? `${t.slice(0, Math.max(0, max - 1))}…` : t
+}
+
 // ───────────────────────── v0.2.28 · inventario de controles de navegación de TODOS los marcos ─────────────────────────
 
 /** Control de navegación leído (botón/enlace/imagen con acción). Solo etiquetas y ids: nunca valores de campos de datos. */

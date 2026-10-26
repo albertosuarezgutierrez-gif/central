@@ -13,7 +13,7 @@ import { EmisionBloqueadaError } from '@central/module-tarificacion'
 import type { OfertaNormalizada, PdfRef } from '@central/module-tarificacion'
 import type { ContextoPortal } from './adaptador.ts'
 import { esperarPdf, esPdf } from './descarga-pdf.ts'
-import { ErrorFronteraEmision, type CompaniaDescargaProyecto } from './guard.ts'
+import { ErrorFronteraEmision, pulsarEscapeAvisoModal, type CompaniaDescargaProyecto } from './guard.ts'
 
 /** Interruptor por compañía (constante): `false` apaga la descarga SIN tocar nada más. Por defecto, activadas. */
 export const DESCARGA_PROYECTO_ACTIVA: Readonly<Record<CompaniaDescargaProyecto, boolean>> = { allianz: true, mapfre: true, generali: true }
@@ -56,7 +56,20 @@ export async function descargarProyectoAuto(
   if (!DESCARGA_PROYECTO_ACTIVA[compania]) return { pdf: null, aviso: null }
   if (!ctx.buscarDescargaProyectoAuto || !ctx.pulsarDescargaProyectoAuto || !ctx.adjuntarPdf) return sin('el runner no trae la puerta guardada de descarga')
   try {
-    const b = await ctx.buscarDescargaProyectoAuto(page, compania, guardado)
+    let b = await ctx.buscarDescargaProyectoAuto(page, compania, guardado)
+    if (!('boton' in b) && b.menu) {
+      // v0.6.30: disparador de menú «Descargar propuesta»: UN clic (por la misma puerta guardada) solo para ABRIRLO; luego se busca de nuevo y solo vale una
+      // opción que pase la lista blanca (rótulo Y atributos sin sms/email/enviar/firma…). Sin opción así: se cierra con Escape y no se pulsa nada más.
+      const etiquetaMenu = b.menu.etiqueta.slice(0, 40)
+      await ctx.pulsarDescargaProyectoAuto(page, b.menu.boton, compania, guardado)
+      await page.waitForTimeout(600)
+      const b2 = await ctx.buscarDescargaProyectoAuto(page, compania, guardado)
+      if (!('boton' in b2)) {
+        await pulsarEscapeAvisoModal(page)
+        return sin(`se abrió el menú «${etiquetaMenu}» pero no hay ninguna opción de descarga/PDF/imprimir sin bloqueo (no se pulsó nada más): ${b2.motivo}`)
+      }
+      b = b2
+    }
     if (!('boton' in b)) return sin(b.motivo)
     const espera = esperarPdf(page, topeMs)
     try {

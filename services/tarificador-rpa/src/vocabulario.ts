@@ -25,6 +25,18 @@ export type Origen = Readonly<{ compania: string; fecha: string; nota?: string }
 /** Un término. `texto` en minúsculas y SIN tildes (salvo los de `regexEtiquetaExacta`, que conservan la tilde para reconstruir el patrón). `prefijo`: admite sufijo de palabra (`imprim` → imprimir, imprimible). `plural`: admite `s` final. */
 export type Termino = Readonly<{ texto: string; origen: Origen; prefijo?: boolean; plural?: boolean; ramos?: readonly Ramo[] }>
 
+/** Congelado PROFUNDO: `Object.freeze` solo cubre el primer nivel; las listas internas (BLOQUEO, grupos de cada concepto) se congelan también. Mismo tipo que `Object.freeze`. */
+function congelarProfundo<T extends { [k: string]: U | null | undefined | object }, U extends string | bigint | number | boolean | symbol>(x: T): Readonly<T> {
+  congelarRecursivo(x)
+  return x
+}
+
+function congelarRecursivo(x: unknown): void {
+  if (x === null || typeof x !== 'object') return
+  for (const v of Object.values(x)) congelarRecursivo(v)
+  Object.freeze(x)
+}
+
 const o = (compania: string, fecha: string, nota?: string): Origen => Object.freeze(nota ? { compania, fecha, nota } : { compania, fecha })
 const t = (texto: string, origen: Origen, extra: { prefijo?: boolean; plural?: boolean; ramos?: readonly Ramo[] } = {}): Termino => Object.freeze({ texto, origen, ...extra })
 
@@ -67,7 +79,7 @@ export type Concepto<Id extends string = string, G extends string = string> = Re
 const gen = o('generali', '18/10/2026')
 
 /** CONCEPTOS DE LECTURA: etiquetas que el bot solo lee o localiza. */
-export const CONCEPTOS_LECTURA = Object.freeze({
+export const CONCEPTOS_LECTURA = congelarProfundo({
   /** Línea de la pantalla que puede llevar el precio (lector tolerante de Generali). */
   precio: {
     clase: 'lectura', id: 'precio', descripcion: 'Líneas de la pantalla que pueden llevar el precio (prima, importe, recibo, anual…).',
@@ -189,7 +201,7 @@ export const CONCEPTOS_LECTURA = Object.freeze({
 export type IdLectura = keyof typeof CONCEPTOS_LECTURA
 
 /** CONCEPTOS DE ACCIÓN: rótulos de botones que el bot pulsa SIEMPRE por el guard. Estar aquí no autoriza ningún clic. */
-export const CONCEPTOS_ACCION = Object.freeze({
+export const CONCEPTOS_ACCION = congelarProfundo({
   avanzar: {
     clase: 'accion', id: 'avanzar', descripcion: 'Avanzar entre pantallas: texto ENTERO (el «Siguiente ›» de Generali admite adornos al final).',
     grupos: { continuar: [t('continuar', MAP_CONTINUAR)], siguiente: [t('siguiente', GEN_SIGUIENTE)] },
@@ -243,7 +255,7 @@ export type IdAccion = keyof typeof CONCEPTOS_ACCION
  * `atributo_interno` se compara por SUBCADENA (ids, name, href, manejadores); los demás, por palabra entera.
  * Los términos de control de alta/credenciales que solo puede nombrar `guard.ts` NO están aquí: los suma el guard (`TERMINOS_BLOQUEO_SOLO_GUARD`).
  */
-export const BLOQUEO = Object.freeze({
+export const BLOQUEO = congelarProfundo({
   emision: [
     t('emit', DESCARGA_BLOQUEO, { prefijo: true }), t('contrat', DESCARGA_BLOQUEO, { prefijo: true }), t('grabar', DESCARGA_BLOQUEO, { prefijo: true }),
     t('pagar', DESCARGA_BLOQUEO), t('pago', DESCARGA_BLOQUEO, { plural: true }), t('firm', DESCARGA_BLOQUEO, { prefijo: true }),

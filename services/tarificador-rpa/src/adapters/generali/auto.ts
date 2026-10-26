@@ -65,6 +65,9 @@ import {
   resumenDiagnosticoImportesGenerali,
   leerModalidadesGenerali,
   resumenModalidadesGenerali,
+  resumenDiagnosticoModalidadesGenerali,
+  importeFlexibleEur,
+  type DiagnosticoModalidadesMarcoGenerali,
   type VolcadoModalidadesGenerali,
   type DiagnosticoImportesMarcoGenerali,
   resumenNavegacionGenerali,
@@ -252,7 +255,9 @@ export const GENERALI_AUTO_ACTIVO = true
  * entiende también tablas (cabecera «Prima/Importe/Total…» + celda con importe, una línea por celda) y el atasco VUELCA, saneado, las pestañas
  * (¿marcada?), las tablas con cabeceras y filas con «€» y los botones, para ver si el clic cambió la pantalla. Sin pulsar nada nuevo.
  */
-export const VERSION_GENERALI_AUTO = '0.2.34'
+/** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
+const ESPERA_MODALIDADES_GENERALI_MS = 30_000
+export const VERSION_GENERALI_AUTO = '0.2.35'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -736,6 +741,8 @@ const JS_MODALIDADES = `(() => {
       const cs = Array.from(r.cells || []);
       if (cs.length === 0 || cs.some((c) => c.querySelector('table'))) return;
       if (norm(txt(r)).indexOf('${CABECERA_MODALIDADES}') >= 0) return;
+      // v0.2.35: la fila del paginador («<< anterior siguiente >>») no es una modalidad: se descarta antes de mapear columnas.
+      if (/<<|>>|\u00ab|\u00bb|\u2039|\u203a/.test(txt(r))) return;
       if (formas.length < 3) formas.push(cs.length + 'c[' + cs.slice(0, 10).map(tipoCelda).join(',') + ']');
       // Filas de otras tablas: solo las que tienen un control de elegir una sola opción (la fila de una modalidad), no cualquier tabla con cifras.
       if (soloConElegir && !Array.from(r.querySelectorAll('input')).some((i) => /^ra/i.test(i.type || ''))) return;
@@ -772,14 +779,77 @@ const JS_MODALIDADES = `(() => {
   return res;
 })()`
 
-/** v0.2.31: tabla de modalidades del primer marco que la tenga (solo lee; nunca lanza). */
+/** v0.2.31: tabla de modalidades de los marcos (solo lee; nunca lanza). v0.2.35: de TODOS los marcos, con preferencia por el que trae filas. */
 export async function volcarModalidadesGenerali(page: Page): Promise<VolcadoModalidadesGenerali | null> {
+  let primero: VolcadoModalidadesGenerali | null = null
   for (const f of page.frames()) {
     if (f.isDetached()) continue
     const v = (await f.evaluate(JS_MODALIDADES).catch(() => null)) as VolcadoModalidadesGenerali | null
-    if (v?.encontrada) return v
+    if (!v?.encontrada) continue
+    if (v.filas.length > 0) return v
+    primero ??= v
   }
-  return null
+  return primero
+}
+
+/** v0.2.35: ¿alguna fila trae una cifra con forma de dinero (Recibo Anual o Prima Anualidad)? PURA en el sentido de no tocar la página. */
+function hayImporteEnFilasGenerali(v: VolcadoModalidadesGenerali | null): boolean {
+  return !!v?.filas.some((f) => [...f.recibo, ...f.prima].some((x) => importeFlexibleEur(x) !== null))
+}
+
+/**
+ * v0.2.35: las filas con precio de «Modalidades de Seguro» llegan por carga asíncrona. Con la cabecera ya a la vista se sondea (hasta `ms`, 800 ms entre lecturas,
+ * todos los marcos) a que aparezca una fila con importe; sin cabecera no se espera (no es esta pantalla). Devuelve la última lectura. SOLO LEE.
+ */
+export async function esperarModalidadesGenerali(page: Page, ms: number): Promise<VolcadoModalidadesGenerali | null> {
+  const fin = Date.now() + ms
+  let v = await volcarModalidadesGenerali(page)
+  while (v?.encontrada && !hayImporteEnFilasGenerali(v) && Date.now() < fin) {
+    await page.waitForTimeout(800)
+    v = await volcarModalidadesGenerali(page)
+  }
+  return v
+}
+
+/**
+ * v0.2.35: diagnóstico ampliado cuando la tabla de modalidades no trae importes: por marco la URL sin query, nº de tablas, cuántas contienen «Recibo Anual»/«Prima Anualidad»
+ * y, del marco de la tabla de modalidades, su estructura saneada (solo etiquetas y atributos name/id/class; texto solo de cabeceras e importes), truncada a ~600. SOLO LEE.
+ */
+const JS_DIAG_MODALIDADES = `(() => {
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim().toLowerCase();
+  const cabs = ['${CABECERA_MODALIDADES}', '${CABECERA_RECIBO_ANUAL}', '${CABECERA_PRIMA_ANUALIDAD}'];
+  const esImp = (v) => /\\d/.test(v) && (/€|eur/i.test(v) || /[.,]\\d{1,2}\\s*$/.test(v)) && /^[\\d.,\\s€eurEUR]+$/.test(v);
+  const saneaAttr = (v) => String(v || '').replace(/[^\\w-]/g, '').slice(0, 20);
+  const forma = (e) => {
+    if (e.nodeType === 3) {
+      const t = String(e.textContent || '').replace(/\\s+/g, ' ').trim();
+      if (t === '') return '';
+      const padre = e.parentNode && e.parentNode.tagName ? e.parentNode.tagName.toLowerCase() : '';
+      return (padre === 'th' || cabs.some((c) => norm(t).indexOf(c) >= 0) || esImp(t)) ? t.slice(0, 30) : '';
+    }
+    if (e.nodeType !== 1) return '';
+    const tag = e.tagName.toLowerCase();
+    if (tag === 'script' || tag === 'style') return '';
+    let a = '';
+    ['name', 'id', 'class'].forEach((n) => { const v = e.getAttribute(n); if (v) a += ' ' + n + '=' + saneaAttr(v); });
+    return '<' + tag + a + '>' + Array.from(e.childNodes).map(forma).join('') + '</' + tag + '>';
+  };
+  const tablas = Array.from(document.querySelectorAll('table'));
+  const conRecibo = tablas.filter((t) => { const x = norm(t.textContent); return x.indexOf('${CABECERA_RECIBO_ANUAL}') >= 0 || x.indexOf('${CABECERA_PRIMA_ANUALIDAD}') >= 0; }).length;
+  let estructura = '';
+  const mod = tablas.find((t) => Array.from(t.querySelectorAll('th,td')).some((c) => { const x = norm(c.textContent); return x.length > 0 && x.length < 40 && x.indexOf('${CABECERA_MODALIDADES}') >= 0; }));
+  if (mod) estructura = forma(mod).slice(0, 600);
+  return { url: String(location.href).split(/[?#;]/)[0], tablas: tablas.length, conRecibo: conRecibo, estructura: estructura };
+})()`
+
+export async function volcarDiagnosticoModalidadesGenerali(page: Page): Promise<DiagnosticoModalidadesMarcoGenerali[]> {
+  const out: DiagnosticoModalidadesMarcoGenerali[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const v = (await f.evaluate(JS_DIAG_MODALIDADES).catch(() => null)) as DiagnosticoModalidadesMarcoGenerali | null
+    if (v) out.push(v)
+  }
+  return out
 }
 
 const JS_NAVEGACION_GENERALI = `(() => {
@@ -2451,7 +2521,7 @@ export async function conPdfPresupuestoGenerali(page: Page, ctx: ContextoPortal,
   return ofertasConPdfProyecto(ofertas, await descargarProyectoAuto(page, ctx, 'generali', 'presupuesto-generali-auto.pdf', false))
 }
 
-export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number } = {}): Promise<ResultadoAdaptador> {
+export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number } = {}): Promise<ResultadoAdaptador> {
   const paso = <T>(n: Parameters<ContextoPortal['paso']>[0], fn: () => Promise<T>): Promise<T> => (typeof ctx.paso === 'function' ? ctx.paso(n, fn) : fn())
   const ant = conAntecedentesFavorables(form)
   for (const x of ant.supuestos) if (!supuestos.includes(x)) supuestos.push(x)
@@ -2482,7 +2552,8 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // v0.2.31: si el texto no da precio único, se lee la tabla «Modalidades de Seguro» (Recibo Anual de la modalidad marcada). Solo lee.
   const conModalidades = async (l: Awaited<ReturnType<typeof esperarPrecioGenerali>>): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>>> => {
     if (l.tipo === 'unico') return l
-    const m = leerModalidadesGenerali((await volcarModalidadesGenerali(page))?.filas ?? [])
+    // v0.2.35: con la cabecera a la vista y sin importes se sondea hasta ~30 s (carga asíncrona); en pruebas, `esperaPrecioMs` acota también esta espera.
+    const m = leerModalidadesGenerali((await esperarModalidadesGenerali(page, opciones.esperaModalidadesMs ?? opciones.esperaPrecioMs ?? ESPERA_MODALIDADES_GENERALI_MS))?.filas ?? [])
     return m.tipo === 'unico' ? m : l
   }
   const lectura = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
@@ -2518,19 +2589,20 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const volcado = await volcarResultadosGenerali(page)
   const modalidades = resumenModalidadesGenerali(await volcarModalidadesGenerali(page), 620)
   const diagnostico = `${resumenDiagnosticoImportesGenerali(await volcarDiagnosticoImportesGenerali(page), 260)}. ${modalidades}`
+  const diagModalidades = await volcarDiagnosticoModalidadesGenerali(page)
   const navegacionMarcos = await volcarNavegacionGenerali(page)
   const que = lecturaFinal.tipo === 'varios'
     ? `${lecturaFinal.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lecturaFinal.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
     : 'ningún importe legible con «prima/precio/importe/total/cuota/recibo»'
   // El runner corta el mensaje a 2000: lo que más importa (avisos, diagnóstico de tablas/importes) va PRIMERO y la navegación, el resto y la pantalla, después
   // y con presupuesto decreciente hasta que todo quepa (v0.2.30: el diagnóstico va ANTES de la navegación).
-  const compuesto = (nav: number, res: number, pan: number, imp: number): string =>
-    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${diagnostico}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tomador.slice(0, nav > 0 ? 300 : 120)}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
+  const compuesto = (nav: number, res: number, pan: number, imp: number, amp = 900): string =>
+    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${diagnostico}. ${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tomador.slice(0, nav > 0 ? 300 : 120)}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
   const LIMITE = 1_900 - 'generali/auto: mapa incompleto: faltan '.length
-  let mensaje = compuesto(300, 360, 450, 8)
-  for (const [nav, res, pan, imp] of [[450, 260, 300, 5], [350, 180, 200, 3], [250, 120, 100, 2], [150, 80, 60, 1], [0, 0, 0, 0]] as const) {
+  let mensaje = compuesto(300, 360, 450, 8, 900)
+  for (const [nav, res, pan, imp, amp] of [[450, 260, 300, 5, 800], [350, 180, 200, 3, 650], [250, 120, 100, 2, 500], [150, 80, 60, 1, 350], [0, 0, 0, 0, 250]] as const) {
     if (mensaje.length <= LIMITE) break
-    mensaje = compuesto(nav, res, pan, imp)
+    mensaje = compuesto(nav, res, pan, imp, amp)
   }
   throw new ErrorMapaIncompletoGenerali(mensaje.slice(0, LIMITE))
 }

@@ -91,6 +91,20 @@ test('la lista de bloqueo nombra lo que tiene que nombrar (cepo: quitar un verbo
   assert.deepEqual([...GRUPOS_BLOQUEO_ROTULO], ['emision', 'envio_externo', 'destructivo', 'economico_ajeno'])
 })
 
+test('BLOQUEO y sus listas internas están congeladas en PROFUNDIDAD: un push no altera la lista (cepo: quitar congelarProfundo lo tumba)', () => {
+  assert.ok(Object.isFrozen(BLOQUEO), 'BLOQUEO no está congelado')
+  for (const [grupo, lista] of Object.entries(BLOQUEO)) {
+    assert.ok(Object.isFrozen(lista), `la lista «${grupo}» de BLOQUEO no está congelada`)
+    const antes = lista.length
+    try {
+      ;(lista as Termino[]).push(lista[0]!)
+    } catch {
+      // En modo estricto (ESM) el push lanza TypeError: también vale.
+    }
+    assert.equal(lista.length, antes, `push alteró la lista «${grupo}» de BLOQUEO`)
+  }
+})
+
 // ───────────────────────── (b) clasificación ─────────────────────────
 
 test('(b) «Descargar propuesta» → acción de descarga; «Contratar propuesta» → bloqueado', () => {
