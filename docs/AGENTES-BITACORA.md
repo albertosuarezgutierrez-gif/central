@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-26 · pricing-agente** · hizo: ciclo semanal 4 pisos, 13 ventanas/piso → comps Booking house=128, busto=130, luxury=130, duplex=130; medición ciclo 19/10 (con income busto 7, duplex 5, house 5, luxury 9; luxury +2 ventas); 16 propuestas dry-run en fechas calientes (breaker no saltó); aprendizaje id 86; dudas: —; fallos: —; PRs/commits: —
+
 - **2026-10-25 · mercado-booking** · hizo: 24/568 ventanas de mercado (25-nov, 5-8 dic, 20-dic, 24-dic; aforos 2/4/5/12) → 237 comps `booking_mcp` + 4/4 ventanas de escaparate propio (Busto Reform 178,52€/2n · Dúplex 358,14€/3n · House 1959€/4n · Luxury Busto 478,64€/3n). 0 sin respuesta; 3 anuncios propios (House Sevillana, aforo 12) mandados al ingest y apartados a escaparate. Mediana/noche aforo 12: 25-nov ~270€, 6-dic ~680€, 20-dic ~340€. Latido ok:true. Pendiente: el tope dejó fuera 544 ventanas; mes 2026-10 sin bucket; eventos 7-nov y 16-nov y 25-dic sin medir 8-15 días.
 
 - **2026-10-25 · facturas-correo** · hizo: Vía B sana (última copia 23/10); archivado recibo GitHub 8,36 USD en 10-Octubre + fila facturas_drive (fuera_del_feed); Endesa Socorro 24/10 (P26CON044354751) → PDF-pendiente (solo enlace, cargo aún no en banco, último mov 23/10); descartados Vercel Oct-23 (reemisiones de facturas de agosto + abonos de céntimos) e ITV (cita, no gasto); dudas: Anthropic 180€ (05/10) y Sique Brilla 1.128,48€ (03/10) sin cargo en banco; fallos: —; PRs/commits: —
