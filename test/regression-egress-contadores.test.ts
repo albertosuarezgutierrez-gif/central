@@ -13,7 +13,7 @@ test('ni «Gestión» ni «Mi mesa» bajan la lista de leads del volcado para pi
   // Desde el 13/10/2026 la franja de «llamadas hoy» se quitó (los 3.674 leads se trabajan en «Prospección»).
   // Lo que se vigila sigue siendo lo mismo: ninguna pantalla de la correduría puede traer `leads-competencia`
   // entera solo para contar; si vuelve un contador de llamadas, va por `/api/correduria/contador?c=llamadas`.
-  for (const f of ['HoyCockpit.tsx', 'CorreduriaClient.tsx', 'mesa/MesaClient.tsx', 'mesa/BandaAvisos.tsx', 'mesa/BloquesSueltos.tsx']) {
+  for (const f of ['HoyCockpit.tsx', 'CorreduriaClient.tsx', 'mesa/MesaClient.tsx', 'mesa/BandaAvisos.tsx', 'mesa/BloquesSueltos.tsx', 'CampanaAvisos.tsx']) {
     assert.doesNotMatch(leer(dir + f), /leads-competencia/, `${f} baja la lista de leads del volcado`)
   }
 })

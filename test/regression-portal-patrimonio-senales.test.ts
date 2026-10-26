@@ -258,6 +258,6 @@ test('las dos copias de «qué es el continente» (portal y asegura) coinciden',
   assert.equal(re(ADAPTADOR), portal)
 })
 
-test('la cola «Patrimonio» está montada en «Hoy»', () => {
-  assert.match(leer('apps/plataforma/app/(usuario)/correduria/HoyCockpit.tsx'), /<OportunidadesPatrimonio \/>/)
+test('la cola «Patrimonio» está montada en la campana (antes en «Hoy»; desde el 26/10/2026 es aviso puntual)', () => {
+  assert.match(leer('apps/plataforma/app/(usuario)/correduria/CampanaAvisos.tsx'), /<OportunidadesPatrimonio \/>/)
 })

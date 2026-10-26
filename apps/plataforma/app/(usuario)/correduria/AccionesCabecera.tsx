@@ -1,6 +1,7 @@
 'use client'
 import { Plus, Wrench, Building2, MoreHorizontal, FileUp, CalendarClock, BookUser, Bot, MessageCircle, ClipboardCheck } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import CampanaAvisos from './CampanaAvisos'
 
 /**
  * Las acciones de la cabecera de /correduria: UNA visible y el resto en un menú.
@@ -48,6 +49,10 @@ import { btnStyle } from '@/components/ui'
 export default function AccionesCabecera() {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      {/* 🔔 Notificaciones (26/10/2026): leads nuevos, permisos del portal, solicitudes, plazos legales… Solo icono
+          (44px) con contador: no añade una fila de botones en móvil. Ver CampanaAvisos.tsx. */}
+      <CampanaAvisos />
+
       {/* Pantalla de PLATAFORMA (desde el 28/09/2026 ya no redirige a asegura). */}
       <a href="/correduria/subir-poliza" style={{ ...btnStyle('primario'), textDecoration: 'none' }}>
         <FileUp size={15} strokeWidth={1.75} aria-hidden /> Subir póliza

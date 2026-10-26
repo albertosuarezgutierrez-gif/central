@@ -35,6 +35,8 @@ export type LeadWebPendiente = {
   diasDesdeAlta: number
   tieneTelefono: boolean
   tieneEmail: boolean
+  /** `lead_estado` de la ficha (nace `nuevo`; el análisis de WhatsApp lo avanza). Lo usa la campana de plataforma. */
+  leadEstado: string | null
 }
 
 export type ConversionLeadsWeb = {
@@ -57,6 +59,7 @@ type FilaSql = {
   tiene_telefono: boolean
   tiene_email: boolean
   tiene_poliza_final: boolean
+  lead_estado: string | null
 }
 
 const LIMITE_PENDIENTES = 200
@@ -89,7 +92,8 @@ export async function conversionLeadsWeb(correduriaId: string): Promise<Conversi
         where p.cliente_id = coalesce(c.merged_into_cliente_id, c.id)
           and p.correduria_id = c.correduria_id
           and p.merged_into_poliza_id is null
-      ), false) as tiene_poliza_final
+      ), false) as tiene_poliza_final,
+      c.lead_estado::text as lead_estado
     from clientes c
     where c.correduria_id = ${correduriaId}::uuid
       and c.fuente = 'web'::fuente_origen
@@ -110,6 +114,7 @@ export async function conversionLeadsWeb(correduriaId: string): Promise<Conversi
       diasDesdeAlta: Math.max(0, Math.floor((hoy - new Date(f.created_at).getTime()) / 86_400_000)),
       tieneTelefono: f.tiene_telefono === true,
       tieneEmail: f.tiene_email === true,
+      leadEstado: f.lead_estado ?? null,
     }))
 
   return {
