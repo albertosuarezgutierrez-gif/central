@@ -25,15 +25,15 @@ import { randomBytes } from 'node:crypto'
 import {
   BYTES_TOKEN_HOJA,
   MAX_HOJAS_VIVAS,
-  declaradaEnVigorParaHoja,
+  candidatasDeLaHoja,
   normalizarTokenHoja,
-  polizaEnVigorParaHoja,
+  type CandidataHoja,
   type SeleccionHoja,
 } from '@central/module-seguros-portal'
 
-import { carteraDeIdentidad, type PolizaPortal } from './cartera-lectura'
+import { carteraALaVista, carteraDeIdentidad, type PolizaPortal } from './cartera-lectura'
 import { prisma } from './db'
-import { cuentaElegidasVivas, DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
+import { elegiblesDeCartera, type OpcionHoja } from './hojas-elegibles'
 import { hashCanal } from './auth'
 import { getIdentidad } from './session'
 
@@ -53,7 +53,10 @@ export type HojaResumen = {
   creadaEn: Date
   anuladaEn: Date | null
   ultimoUsoEn: Date | null
-  /** `null` = TODAS (y las futuras). Un número = cuántas eligió. */
+  /**
+   * `null` = TODAS las propias (y las futuras). Un número = cuántas pólizas de la cartera eligió
+   * (0 = las que eligió eran AÑADIDAS a mano, que desde el 26/10/2026 ya no salen en la hoja).
+   */
   cuantasElegidas: number | null
 }
 
@@ -89,16 +92,6 @@ export async function hojasDeIdentidad(identidadId: string): Promise<HojaResumen
       polizas: { select: { polizaId: true, polizaDeclaradaId: true } },
     },
   })
-  // Una declarada eliminada sigue como fila de la selección pero ya no se enseña
-  // (ni en el QR): no cuenta. Se cruza con las vivas.
-  const vivas = new Set(
-    (
-      await prisma.portalPolizaDeclarada.findMany({
-        where: { identidadId, ...DECLARADA_NO_ELIMINADA },
-        select: { id: true },
-      })
-    ).map((d) => d.id),
-  )
   return filas.map((h) => ({
     id: h.id,
     nombre: h.nombre,
@@ -108,81 +101,33 @@ export async function hojasDeIdentidad(identidadId: string): Promise<HojaResumen
     // 🚨 Cero filas = TODAS, no «ninguna». Es el vocabulario de la tabla y
     // colapsarlo aquí en un 0 haría que la pantalla dijera «0 pólizas» de la
     // hoja que más enseña de todas.
-    cuantasElegidas: h.polizas.length === 0 ? null : cuentaElegidasVivas(h.polizas, vivas),
+    // Las filas de pólizas AÑADIDAS (de antes del 26/10/2026) siguen en la tabla pero ya no se enseñan.
+    cuantasElegidas: h.polizas.length === 0 ? null : h.polizas.filter((f) => f.polizaId !== null).length,
   }))
 }
 
 /**
- * Todo lo que esa identidad puede meter hoy en una hoja: su cartera y lo que
- * aportó — **ya filtrado a lo que está en vigor** (regla 5 de `hoja-qr.ts`).
- * Una póliza vencida no se ofrece ni con «todas»: no tiene sentido en un papel
- * pensado para un percance de HOY.
+ * Todo lo que esa identidad puede meter hoy en una hoja — **ya filtrado a lo que está en vigor**
+ * (regla 5 de `hoja-qr.ts`) y con el TITULAR de cada póliza (regla 6).
+ *
+ * 🔒 Sale de `carteraDeIdentidad()`, la MISMA lectura que pinta la bóveda: sus propias, las de las
+ * fichas que la autorizan (vigentes, no revocadas, respetando `poliza_id`), las de sus empresas y
+ * aquellas donde figura. Aquí no hay ninguna regla de acceso propia. Las pólizas que la persona
+ * AÑADIÓ a mano no se ofrecen (26/10/2026): la hoja es solo cartera viva.
  */
-export async function polizasElegibles(
-  identidadId: string,
-): Promise<{ cartera: { id: string; etiqueta: string }[]; declaradas: { id: string; etiqueta: string }[] }> {
-  const hoy = new Date()
-  const [cartera, declaradas] = await Promise.all([
-    carteraDeIdentidad(identidadId),
-    prisma.portalPolizaDeclarada.findMany({
-      where: { identidadId, ...DECLARADA_NO_ELIMINADA },
-      orderBy: { creadaEn: 'desc' },
-      take: 50,
-      select: { id: true, compania: true, ramo: true, numeroPoliza: true, fechaVencimiento: true },
-    }),
-  ])
-  const dePoliza = (p: PolizaPortal) =>
-    [p.compania, p.ramo, p.numeroPoliza ? `nº ${p.numeroPoliza}` : null].filter(Boolean).join(' · ')
-  return {
-    // Solo las PROPIAS: la hoja es pública para quien tenga el papel, y quien te
-    // autorizó a ver su póliza te lo consintió a TI, no a quien lo escanee.
-    cartera: cartera.propias.flatMap((t) =>
-      t.polizas.filter(polizaEnVigorParaHoja).map((p) => ({ id: p.id, etiqueta: dePoliza(p) })),
-    ),
-    declaradas: declaradas
-      .filter((d) => declaradaEnVigorParaHoja(d, hoy))
-      .map((d) => ({
-        id: d.id,
-        etiqueta:
-          [d.compania ?? 'Compañía sin identificar', d.ramo, d.numeroPoliza ? `nº ${d.numeroPoliza}` : null]
-            .filter(Boolean)
-            .join(' · ') + ' · añadida por ti',
-      })),
-  }
-}
-
-/** Lo que la HOJA necesita de una póliza aportada. Ni prima, ni documentos. */
-export type DeclaradaEnHoja = {
-  id: string
-  compania: string | null
-  ramo: string | null
-  numeroPoliza: string | null
-  matricula: string | null
-  fechaVencimiento: Date | null
+export async function polizasElegibles(identidadId: string): Promise<{ cartera: OpcionHoja[] }> {
+  const cartera = carteraALaVista(await carteraDeIdentidad(identidadId), { soloSiYaCubre: true })
+  return { cartera: elegiblesDeCartera(cartera) }
 }
 
 /**
- * Las pólizas aportadas de una identidad, con lo justo que va en la hoja.
- *
- * 📌 Vive aquí y no en la página del QR a propósito: esa página es pública y no
- * tiene sesión, así que si consultara Prisma directamente el cepo de
- * aislamiento la marcaría —y con razón, porque una consulta sin `identidadId`
- * a la vista es indistinguible de un olvido. Aquí el filtro está donde se ve.
+ * Lo que la página PÚBLICA del QR enseña de la cartera de quien la generó, leído EN VIVO con su
+ * acceso de HOY. La regla es la misma que la del selector (`candidatasDeLaHoja`); la selección la
+ * aplica la página con `polizasQueEnsenaLaHoja`.
  */
-export async function declaradasDeIdentidad(identidadId: string): Promise<DeclaradaEnHoja[]> {
-  return prisma.portalPolizaDeclarada.findMany({
-    where: { identidadId, ...DECLARADA_NO_ELIMINADA },
-    orderBy: { creadaEn: 'desc' },
-    take: 50,
-    select: {
-      id: true,
-      compania: true,
-      ramo: true,
-      numeroPoliza: true,
-      matricula: true,
-      fechaVencimiento: true,
-    },
-  })
+export async function candidatasEnVivo(identidadId: string, hoy: Date = new Date()): Promise<CandidataHoja<PolizaPortal>[]> {
+  const cartera = carteraALaVista(await carteraDeIdentidad(identidadId), { soloSiYaCubre: true }, hoy)
+  return candidatasDeLaHoja<PolizaPortal>(cartera)
 }
 
 /**
@@ -201,17 +146,16 @@ export async function crearHoja(
   // filtra. Los ids del formulario nunca se insertan tal cual.
   const elegibles = await polizasElegibles(identidadId)
   const idsCartera = new Set(elegibles.cartera.map((p) => p.id))
-  const idsDeclaradas = new Set(elegibles.declaradas.map((p) => p.id))
-  if (idsCartera.size === 0 && idsDeclaradas.size === 0) return { ok: false, error: 'nada_visible' }
+  if (idsCartera.size === 0) return { ok: false, error: 'nada_visible' }
+  // «Todas» = todas las PROPIAS (regla 6): sin ninguna propia, una hoja «de todas» nacería vacía.
+  if (seleccion.todas && !elegibles.cartera.some((p) => p.propia)) return { ok: false, error: 'nada_visible' }
 
   let filas: FilaSeleccion[] = []
   if (!seleccion.todas) {
+    // Solo pólizas de la cartera que HOY ve: un id ajeno, de una póliza añadida o de un
+    // desconocido no está en `idsCartera` y se cae.
     filas = seleccion.polizaIds.flatMap((id): FilaSeleccion[] =>
-      idsCartera.has(id)
-        ? [{ polizaId: id, polizaDeclaradaId: null }]
-        : idsDeclaradas.has(id)
-          ? [{ polizaId: null, polizaDeclaradaId: id }]
-          : [],
+      idsCartera.has(id) ? [{ polizaId: id, polizaDeclaradaId: null }] : [],
     )
     // Todo lo elegido era ajeno o ya no existe. NO se crea una hoja vacía, que
     // en el vocabulario de la tabla significaría «todas» — exactamente al revés
@@ -253,7 +197,7 @@ export async function anularHoja(identidadId: string, id: string): Promise<boole
 export type HojaAbierta = {
   anuladaEn: Date | null
   identidadId: string
-  /** `null` = todas las de su dueño. */
+  /** `{ todas: true }` = todas las PROPIAS de su dueño. */
   seleccion: SeleccionHoja
 }
 

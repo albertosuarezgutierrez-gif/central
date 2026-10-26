@@ -1,17 +1,16 @@
 import {
-  declaradaEnVigorParaHoja,
   etiquetaRamo,
   loQueVeQuienEscanea,
   normalizarTokenHoja,
-  polizaEnVigorParaHoja,
-  polizasDeLaHoja,
+  polizasQueEnsenaLaHoja,
 } from '@central/module-seguros-portal'
 
 import { canalDeCompania, textoSoloRamos, type CanalCompania } from '@central/module-seguros-portal'
 import { companiasConCanal } from '@/lib/canales-compania'
-import { carteraALaVista, carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
+import { registrarUso } from '@/lib/autorizaciones'
+import { type PolizaPortal } from '@/lib/cartera-lectura'
 import { fechaEs } from '@/lib/fechas'
-import { declaradasDeIdentidad, hojaPorToken, sellarUso, type DeclaradaEnHoja } from '@/lib/hojas'
+import { candidatasEnVivo, hojaPorToken, sellarUso } from '@/lib/hojas'
 
 import { MEDIADOR } from '@central/module-seguros'
 import { MarcaAsegura } from '@/app/MarcaAsegura'
@@ -117,30 +116,19 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
   // La cartera de SU DUEÑO, no la de quien mira: aquí no hay sesión, y la
   // autorización es el token. Solo se lee si la hoja existe y está viva.
   let visibles: PolizaPortal[] = []
-  let declaradas: DeclaradaEnHoja[] = []
+  let autorizacionesUsadas: string[] = []
   if (hoja && hoja.anuladaEn === null) {
-    const hoy = new Date()
-    const [cartera, misDeclaradas] = await Promise.all([
-      carteraDeIdentidad(hoja.identidadId).then((c) => carteraALaVista(c, { soloSiYaCubre: true }, hoy)),
-      declaradasDeIdentidad(hoja.identidadId),
-    ])
-    // 🚨 Regla 5 de `hoja-qr.ts`: solo lo que sigue en vigor. «Todas mis
-    // pólizas» arrastra las FUTURAS (regla 3), no las que ya vencieron. Se
-    // filtra AQUÍ, en vivo, con el mismo criterio que el selector de crear —
-    // así una póliza que vence DESPUÉS de crear el QR desaparece sola, igual
-    // que la que deja de ser suya.
-    // Y solo las PROPIAS (24/09/2026): esta página la abre cualquiera con el
-    // papel, y una autorización se concedió a una identidad, no a su QR. Con
-    // «todas», además, una autorización nueva aparecería sola en hojas ya impresas.
-    const suyas = cartera.propias
-      .flatMap((t) => t.polizas)
-      .filter(polizaEnVigorParaHoja)
-    const declaradasEnVigor = misDeclaradas.filter((d) => declaradaEnVigorParaHoja(d, hoy))
-    visibles = polizasDeLaHoja(suyas, hoja.seleccion)
-    declaradas = polizasDeLaHoja(declaradasEnVigor, hoja.seleccion)
+    // 🚨 Regla 5 y 6 de `hoja-qr.ts`, en vivo y con la MISMA lectura que la bóveda de quien la
+    // generó (`carteraDeIdentidad`): solo lo que sigue en vigor y lo que HOY puede ver. Una póliza
+    // que vence, que deja de ser suya o cuya autorización se revoca DESPUÉS de crear el QR
+    // desaparece sola del papel ya impreso. «Todas» = solo las PROPIAS (una autorización nueva no
+    // aparece sola en una nevera); una ajena entra solo si se eligió. Las AÑADIDAS a mano no van.
+    const enLaHoja = polizasQueEnsenaLaHoja(await candidatasEnVivo(hoja.identidadId), hoja.seleccion)
+    visibles = enLaHoja.map((c) => c.poliza)
+    autorizacionesUsadas = [...new Set(enLaHoja.flatMap((c) => c.autorizacionIds))]
   }
 
-  const total = visibles.length + declaradas.length
+  const total = visibles.length
   const que = loQueVeQuienEscanea(hoja, total)
 
   if (que !== 'hoja') {
@@ -157,7 +145,7 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
           {que === 'anulada'
             ? 'Esta hoja se anuló y ya no muestra información. Si es tuya, entra en tu portal y crea una nueva.'
             : que === 'vacia'
-              ? 'Esta hoja está activa, pero ninguna de las pólizas que llevaba sigue en vigor a día de hoy.'
+              ? 'Esta hoja está activa, pero ninguna de las pólizas que llevaba sigue en vigor, o disponible para quien la creó, a día de hoy.'
               : 'Este enlace no corresponde a ninguna hoja. Comprueba que el código se ha leído entero.'}
         </p>
         <p className="suave">
@@ -171,6 +159,9 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
   // página: que no se pueda anotar la visita no es razón para dejar a alguien
   // sin sus datos en el arcén.
   if (token && hoja) await sellarUso(hoja.identidadId, token)
+  // Quien autorizó ve en su registro de accesos que su póliza se ha enseñado por la hoja de quien
+  // la generó. `registrarUso` no lanza: un fallo del registro no deja a nadie sin la hoja.
+  if (hoja && autorizacionesUsadas.length > 0) await registrarUso(hoja.identidadId, autorizacionesUsadas)
 
   const companias = await companiasConCanal()
 
@@ -239,31 +230,6 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
           )
         })}
 
-        {declaradas.map((d) => (
-          <li key={d.id} className="hoja-poliza">
-            <h2>{d.compania ?? 'Compañía sin identificar'}</h2>
-            <p className="hoja-ramo">{d.ramo ? etiquetaRamo(d.ramo) : 'Tipo de seguro sin indicar'}</p>
-            {d.matricula && <p className="hoja-bien">{d.matricula}</p>}
-            <dl>
-              {d.numeroPoliza && (
-                <>
-                  <dt>Póliza</dt>
-                  <dd>{d.numeroPoliza}</dd>
-                </>
-              )}
-              <dt>Vencimiento</dt>
-              <dd className={d.fechaVencimiento === null ? 'sin-dato' : undefined}>
-                {fechaEs(d.fechaVencimiento) ?? 'no nos consta'}
-              </dd>
-            </dl>
-            {/* 🚨 Sin teléfonos: esta la añadió el cliente y la correduría no la
-                gestiona, así que no tenemos su compañía cruzada ni la hemos
-                verificado. Un número aquí sería inventado. */}
-            <p className="hoja-nota">
-              Esta la añadiste tú y no la lleva la correduría: llama directamente a tu compañía.
-            </p>
-          </li>
-        ))}
       </ul>
 
       <p className="hoja-pie">

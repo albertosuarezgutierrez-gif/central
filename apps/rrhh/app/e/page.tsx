@@ -8,8 +8,18 @@ import { getBranding } from '@/lib/empresa'
 import { listarAvisosEmpleado } from '@/lib/avisos'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { ENV_EMPRESAS_MARCA_ASEGURA, empresaConMarcaAsegura, urlPortalAsegura } from '@/lib/marca-asegura'
+import { ENV_EMPRESAS_MARCA_ASEGURA, empresaConMarcaAsegura, urlPortalAsegura, marcaAseguraDeEmpresa, metadataMarcaAsegura, themeColorMarca } from '@/lib/marca-asegura'
+import type { Metadata, Viewport } from 'next'
 import ExpedienteEmpleado from './ExpedienteEmpleado'
+
+async function marcaDeSesion(): Promise<boolean> {
+  try { return marcaAseguraDeEmpresa((await getSesionEmpleado()).empresa_id) } catch { return false }
+}
+export async function generateMetadata(): Promise<Metadata> { return metadataMarcaAsegura(await marcaDeSesion()) }
+export async function generateViewport(): Promise<Viewport> {
+  const themeColor = themeColorMarca(await marcaDeSesion())
+  return themeColor ? { themeColor } : {}
+}
 
 export default async function Page() {
   let s

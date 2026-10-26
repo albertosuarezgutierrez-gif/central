@@ -9,6 +9,8 @@ import {
   estadoHoja,
   seleccionHoja,
   polizasDeLaHoja,
+  candidatasDeLaHoja,
+  polizasQueEnsenaLaHoja,
   polizaEnVigorParaHoja,
   declaradaEnVigorParaHoja,
   loQueVeQuienEscanea,
@@ -104,4 +106,52 @@ test('regla 5, para una DECLARADA: sin estado, decide solo la fecha', () => {
   assert.equal(declaradaEnVigorParaHoja({ fechaVencimiento: new Date('2026-09-08T00:00:00Z') }, hoy), false)
   // Sin fecha registrada: no se sabe, así que se incluye (no es «ha vencido»).
   assert.equal(declaradaEnVigorParaHoja({ fechaVencimiento: null }, hoy), true)
+})
+
+// ─── Regla 6 (26/10/2026): todo lo que la persona VE, con su titular ─────────
+
+const pol = (id: string, vigencia: 'vigente' | 'no_vigente' | 'pendiente' = 'vigente') => ({ id, vigencia })
+
+test('🚨 una póliza de ficha AUTORIZADA es candidata, con su titular y su autorización', () => {
+  const c = candidatasDeLaHoja({
+    propias: [{ nombre: 'Pilar', polizas: [pol('mia')] }],
+    autorizadas: [{ nombre: 'Global2', polizas: [pol('coche')], autorizacion: { ids: ['aut1'] } }],
+    intervinientes: [{ nombre: 'Víctor', polizas: [pol('toyota')] }],
+  })
+  assert.deepEqual(
+    c.map((x) => [x.id, x.titular, x.propia, [...x.autorizacionIds]]),
+    [
+      ['mia', 'Pilar', true, []],
+      ['coche', 'Global2', false, ['aut1']],
+      ['toyota', 'Víctor', false, []],
+    ],
+  )
+})
+
+test('una póliza vencida no es candidata por ninguna vía; la de vigor desconocido sí', () => {
+  const c = candidatasDeLaHoja({
+    propias: [{ nombre: 'A', polizas: [pol('v', 'no_vigente'), pol('p', 'pendiente')] }],
+    autorizadas: [{ nombre: 'B', polizas: [pol('w', 'no_vigente')] }],
+    intervinientes: [],
+  })
+  assert.deepEqual(c.map((x) => x.id), ['p'])
+})
+
+test('una póliza que llega por dos vías sale UNA vez, como propia', () => {
+  const c = candidatasDeLaHoja({
+    propias: [{ nombre: 'A', polizas: [pol('x')] }],
+    autorizadas: [{ nombre: 'B', polizas: [pol('x')], autorizacion: { ids: ['a'] } }],
+    intervinientes: [{ nombre: 'C', polizas: [pol('x')] }],
+  })
+  assert.deepEqual(c.map((x) => [x.id, x.propia]), [['x', true]])
+})
+
+test('🚨 «todas» = solo las PROPIAS: una ajena entra solo si se eligió', () => {
+  const c = [
+    { id: 'mia', propia: true },
+    { id: 'ajena', propia: false },
+  ]
+  assert.deepEqual(polizasQueEnsenaLaHoja(c, { todas: true }).map((x) => x.id), ['mia'])
+  assert.deepEqual(polizasQueEnsenaLaHoja(c, { todas: false, polizaIds: ['ajena'] }).map((x) => x.id), ['ajena'])
+  assert.deepEqual(polizasQueEnsenaLaHoja(c, { todas: false, polizaIds: ['desconocida'] }), [])
 })

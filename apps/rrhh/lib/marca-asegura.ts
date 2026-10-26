@@ -38,3 +38,39 @@ export function urlPortalAsegura(email: string | null | undefined, base?: string
   const e = (email ?? '').trim()
   return `${raiz}/?${e ? `email=${encodeURIComponent(e)}&` : ''}origen=rrhh`
 }
+
+// ── Entorno 100 % Grupo ASegura: co-marca, pie y app instalable ─────────────────────────────────────
+export const WEB_ASEGURA = 'https://grupoasegura.es'
+export const WEB_ASEGURA_TEXTO = 'grupoasegura.es'
+export const MANIFEST_BASE = '/manifest.json'
+export const MANIFEST_ASEGURA = '/manifest-asegura.json'
+export const ICONO_APPLE_ASEGURA = '/brand/icono-asegura-180.png'
+export const TITULO_ASEGURA = 'Grupo ASegura · Portal del empleado'
+/** Entrada de la app instalada con marca; `?m=asegura` hace que /e/entrar lleve la marca sin conocer la empresa. */
+export const ENTRADA_ASEGURA = '/e/entrar?m=asegura'
+
+/** ¿Esta empresa lleva la marca? Lee la env (una sola fuente para /e, /e/[token] y sus metadatos). */
+export function marcaAseguraDeEmpresa(empresaId: string | null | undefined): boolean {
+  return empresaConMarcaAsegura(empresaId, process.env[ENV_EMPRESAS_MARCA_ASEGURA])
+}
+
+/** Manifest que enlaza el layout de la ruta: el de Grupo ASegura solo con marca; si no, el de siempre. */
+export function manifestParaMarca(marcaAsegura: boolean): string {
+  return marcaAsegura ? MANIFEST_ASEGURA : MANIFEST_BASE
+}
+
+/** Metadatos de la ruta con marca (Next los fusiona sobre los del layout). Sin marca → `{}`: nada cambia. */
+export function metadataMarcaAsegura(marcaAsegura: boolean) {
+  if (!marcaAsegura) return {}
+  return {
+    title: TITULO_ASEGURA,
+    manifest: MANIFEST_ASEGURA,
+    icons: { icon: '/brand/icono-asegura.svg', apple: ICONO_APPLE_ASEGURA },
+    appleWebApp: { capable: true, title: 'Grupo ASegura', statusBarStyle: 'default' as const },
+  }
+}
+
+/** Color de la barra del navegador: cobalto con marca, el de siempre sin ella (`undefined` = hereda del layout). */
+export function themeColorMarca(marcaAsegura: boolean): string | undefined {
+  return marcaAsegura ? COBALTO_ASEGURA : undefined
+}
