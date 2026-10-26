@@ -58,6 +58,9 @@ import {
   type ControlPersonasGenerali,
   camposInteresadoGenerali,
   fragmentosImportesGenerali,
+  PESTANAS_VALORACION_GENERALI,
+  resumenVolcadoResultadosGenerali,
+  type VolcadoMarcoResultadosGenerali,
   filaCoincideDocumentoGenerali,
   ID_BOTON_PERSONAS_GENERALI,
   normalizarRotuloGenerali,
@@ -225,7 +228,14 @@ export const GENERALI_AUTO_ACTIVO = true
  * que autocomplete el portal al salir del NIF, y pulsa «Confirmar» SOLO por `ctx.confirmarDatosPersonasGenerali` (guard: #confirmar, marco
  * emiAutosGenB028.do, pestaña «Datos personas»). Cualquier otro «Confirmar» de Generali lo rechaza `pulsar`. Nunca casillas ni emisión.
  */
-export const VERSION_GENERALI_AUTO = '0.2.26'
+/**
+ * 0.2.27 (26/10/2026, prueba real con 0.2.26: pasa el tomador pero «Garantías y Resultados» no da precio). El inventario final seguía siendo el
+ * formulario de «Valoración Riesgo» (`emiAutosGenB028.do`: pestañas «Valoración Riesgo · Datos de Valoración · Garantías y Resultados», botones
+ * `siguiente`/`cancelar`, enlace «Paso con datos incompletos») y NINGÚN texto con «€»: el precio NO estaba visible tras el clic. El lector ahora
+ * entiende también tablas (cabecera «Prima/Importe/Total…» + celda con importe, una línea por celda) y el atasco VUELCA, saneado, las pestañas
+ * (¿marcada?), las tablas con cabeceras y filas con «€» y los botones, para ver si el clic cambió la pantalla. Sin pulsar nada nuevo.
+ */
+export const VERSION_GENERALI_AUTO = '0.2.27'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -523,14 +533,77 @@ const JS_IMPORTES_INPUT = `(() => {
   return out;
 })()`
 
+/** Importes en TABLAS: columna con cabecera «prima/importe/total/precio…» + celda con importe → «cabecera fila» y el valor en la línea siguiente. */
+const JS_IMPORTES_TABLA = `(() => {
+  const out = [];
+  const reImp = /^[€\\s]*\\d[\\d.]*(,\\d{1,2})?\\s*(€|eur|euros)?$/i;
+  const reCab = /prima|precio|importe|total|recibo|anual|contado|pagar/i;
+  document.querySelectorAll('table').forEach((t) => {
+    const filas = Array.from(t.rows || []);
+    let cab = null;
+    filas.forEach((r) => {
+      const cs = Array.from(r.cells || []);
+      const esCab = cs.length > 0 && cs.every((c) => c.tagName === 'TH') || (!cab && cs.some((c) => reCab.test(c.textContent || '')) && !cs.some((c) => reImp.test((c.textContent || '').trim())));
+      if (esCab) { cab = cs.map((c) => (c.textContent || '').replace(/\\s+/g, ' ').trim()); return; }
+      if (!cab) return;
+      const et = ((cs[0] && cs[0].textContent) || '').replace(/\\s+/g, ' ').trim().slice(0, 40);
+      cs.forEach((c, i) => {
+        const v = (c.textContent || '').replace(/\\s+/g, ' ').trim();
+        if (i > 0 && cab[i] && reCab.test(cab[i]) && reImp.test(v) && /[,€]/.test(v)) out.push(cab[i].slice(0, 40) + ' ' + et + '\\n' + v);
+      });
+    });
+  });
+  return out;
+})()`
+
+/** Volcado SOLO LECTURA de pestañas, tablas y botones (sin celdas que no tengan «€», para no sacar datos personales). */
+const JS_VOLCADO_RESULTADOS = `((nombres) => {
+  const vis = (e) => !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length);
+  const txt = (e) => (e.textContent || '').replace(/\\s+/g, ' ').trim();
+  const pestanas = [];
+  document.querySelectorAll('a, li, td, span, div, input[type=button]').forEach((e) => {
+    const t = e.tagName === 'INPUT' ? (e.value || '') : (e.children.length === 0 || e.tagName === 'A' ? txt(e) : '');
+    if (!nombres.includes(t) || !vis(e)) return;
+    const c = (e.className || '') + ' ' + ((e.parentElement && e.parentElement.className) || '');
+    pestanas.push({ texto: t.slice(0, 40), marcada: /current|active|selected|activ/i.test(String(c)) || e.getAttribute('aria-selected') === 'true' });
+  });
+  const tablas = [];
+  document.querySelectorAll('table').forEach((t) => {
+    if (!vis(t) || tablas.length >= 6) return;
+    const filas = Array.from(t.rows || []);
+    const cab = filas.length ? Array.from(filas[0].cells || []).map((c) => txt(c).slice(0, 30)) : [];
+    const euro = filas.filter((r) => /€|eur\\b/i.test(r.textContent || '')).slice(0, 4).map((r) => Array.from(r.cells || []).map((c) => txt(c).slice(0, 30)).filter((x) => /€|\\d,\\d{2}|^[A-Za-zÁÉÍÓÚáéíóúñ ]{2,24}$/.test(x)).slice(0, 6));
+    if (cab.length || euro.length) tablas.push({ cabeceras: cab.slice(0, 8), filas: filas.length, filasEuro: euro });
+  });
+  const botones = [];
+  document.querySelectorAll('input[type=button], input[type=submit], button').forEach((e) => {
+    if (!vis(e) || botones.length >= 8) return;
+    const t = (e.value || txt(e) || e.id || '').slice(0, 30);
+    if (t) botones.push(t);
+  });
+  return { ruta: location.pathname, pestanas, tablas, botones };
+})`
+
+/** Volcado saneado de «Garantías y Resultados» (o de lo que haya tras el clic) por marco, para el atasco. Nunca lanza. */
+export async function volcarResultadosGenerali(page: Page): Promise<VolcadoMarcoResultadosGenerali[]> {
+  const out: VolcadoMarcoResultadosGenerali[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const v = (await f.evaluate(`${JS_VOLCADO_RESULTADOS}(${JSON.stringify([...PESTANAS_VALORACION_GENERALI])})`).catch(() => null)) as VolcadoMarcoResultadosGenerali | null
+    if (v && (v.pestanas.length > 0 || v.tablas.length > 0)) out.push(v)
+  }
+  return out
+}
+
 /** Texto visible de todos los marcos (para el lector tolerante del precio). */
-async function textoPagina(page: Page): Promise<string> {
+export async function textoPagina(page: Page): Promise<string> {
   const partes: string[] = []
   for (const f of page.frames()) {
     if (f.isDetached()) continue
     partes.push(await f.locator('body').innerText({ timeout: 2_000 }).catch(() => ''))
     // Importes en `<input>` (innerText no los ve): «etiqueta valor» con la etiqueta del id/name/aria/label.
     partes.push(((await f.evaluate(JS_IMPORTES_INPUT).catch(() => [])) as string[]).join('\n'))
+    partes.push(((await f.evaluate(JS_IMPORTES_TABLA).catch(() => [])) as string[]).join('\n'))
   }
   return partes.join('\n')
 }
@@ -2174,15 +2247,32 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   await paso('tarificar', () => ctx.pulsarSubpestanaGenerali!(SUBPESTANA_PRECIO_GENERALI))
   const lectura = await paso('lectura_primas', () => esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS))
   if (lectura.tipo === 'unico') return { ofertas: [ofertaGenerali(lectura.eur, texto)] }
+  // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
+  let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
+  const avanceSiguiente: string[] = []
+  if (ctx.pulsarSiguienteGenerali) {
+    for (let i = 1; i <= 3 && lecturaFinal.tipo === 'ninguno'; i++) {
+      try {
+        const r = await paso('tarificar', () => ctx.pulsarSiguienteGenerali!())
+        avanceSiguiente.push(`Siguiente×${i}${r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
+      } catch (e) {
+        avanceSiguiente.push(`Siguiente×${i} no pulsado: ${(e instanceof Error ? e.message : String(e)).slice(0, 160)}`)
+        break
+      }
+      lecturaFinal = await paso('lectura_primas', () => esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS))
+      if (lecturaFinal.tipo === 'unico') return { ofertas: [ofertaGenerali(lecturaFinal.eur, texto)] }
+    }
+  }
   const despues = await leerPantallaPagina(page)
   const textoFinal = await textoPagina(page)
   const obligatorios = avisosObligatorioGenerali(textoFinal)
   const importes = fragmentosImportesGenerali(textoFinal)
-  const que = lectura.tipo === 'varios'
-    ? `${lectura.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lectura.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
+  const volcado = await volcarResultadosGenerali(page)
+  const que = lecturaFinal.tipo === 'varios'
+    ? `${lecturaFinal.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lecturaFinal.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
     : 'ningún importe legible con «prima/precio/importe/total»'
   // El runner corta el mensaje a 2000: lo que más importa (avisos, tomador/personas) va PRIMERO y la pantalla, al final y corta.
-  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${tomador}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Pantalla: ${resumenPantallaGenerali(despues, 450)}`)
+  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${tomador}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}Resultados: ${resumenVolcadoResultadosGenerali(volcado, 360)}. Pantalla: ${resumenPantallaGenerali(despues, 450)}`)
 }
 
 /**

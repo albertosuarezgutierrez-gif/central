@@ -919,6 +919,34 @@ export function fragmentosImportesGenerali(texto: string, max = 8): string[] {
   return out
 }
 
+// ───────────────────────── v0.2.27 · volcado de «Garantías y Resultados» (pestañas, tablas con «€», botones) ─────────────────────────
+
+/** Volcado SANEADO de un marco tras pulsar «Garantías y Resultados»: pestañas (¿marcada?), tablas (cabeceras + filas con «€») y botones. */
+export type VolcadoMarcoResultadosGenerali = {
+  ruta: string
+  pestanas: { texto: string; marcada: boolean }[]
+  tablas: { cabeceras: string[]; filas: number; filasEuro: string[][] }[]
+  botones: string[]
+}
+
+/** Pestañas del bloque «Valoración Riesgo» cuyo estado interesa al diagnóstico. */
+export const PESTANAS_VALORACION_GENERALI = Object.freeze(['Valoración Riesgo', 'Datos de Valoración', 'Garantías y Resultados'] as const)
+
+/**
+ * Resumen de una línea del volcado (saneado, sin datos personales): «ruta · pestañas(*=marcada) · tablas[cabeceras | filas con €] ·
+ * botones». Dice si el clic en «Garantías y Resultados» cambió la pantalla o no. PURA.
+ */
+export function resumenVolcadoResultadosGenerali(v: readonly VolcadoMarcoResultadosGenerali[], max = 600): string {
+  const partes = v.map((m) => {
+    const pest = m.pestanas.map((p) => `${sanearFragmentoGenerali(p.texto)}${p.marcada ? '*' : ''}`).join(',')
+    const tabs = m.tablas.map((t) => `[${t.cabeceras.map(sanearFragmentoGenerali).join('|')}] ${t.filas}f${t.filasEuro.length ? ` €: ${t.filasEuro.map((f) => f.map(sanearFragmentoGenerali).join('|')).join(' ; ')}` : ''}`).join(' ')
+    const bot = m.botones.map(sanearFragmentoGenerali).join(',')
+    return `${m.ruta.split(';')[0]!.split('/').slice(-1)[0]} · pestañas ${pest || '—'} · tablas ${tabs || 'ninguna'} · botones ${bot || '—'}`
+  })
+  const t = partes.join(' || ')
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
 // ───────────────────────── v0.2.20 · «Personas» (pestaña del tomador) + inventario saneado del bloque ─────────────────────────
 
 /** Texto EXACTO de la pestaña (botón) que muestra «Personas que intervienen › Interesado / Tomador» (inventario del trabajo 304ac3a2). */

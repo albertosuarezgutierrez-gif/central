@@ -1842,6 +1842,52 @@ async function textoProyectoMapfre(page: Page): Promise<string> {
     .catch(() => '')
 }
 
+// ─────────── Diagnóstico del «Generar Proyecto» de Mapfre (v0.8.19, 26/10/2026) ───────────
+// Solo lectura y SIN datos personales: textos de diálogos/mensajes por `textoDialogoPortalSeguro` (nombres → [nombre], cifras tapadas),
+// las líneas que hablan de «proyecto» con las cifras sustituidas por su FORMA (9999999999, 2026/AA99) y etiquetas de controles saneadas.
+
+export type DiagnosticoProyectoMapfre = { dialogos: string[]; mensajes: string[]; proyecto: string[]; controles: string[] }
+
+/** Forma de una referencia sin su valor: cada dígito → 9, cada letra → A («2026/000123» → «9999/999999»). PURA. */
+export function formaReferenciaProyecto(texto: string): string {
+  return texto.replace(/[A-Za-z0-9][A-Za-z0-9/.-]*/g, (t) => ((t.match(/\d/g) ?? []).length >= 4 ? t.replace(/\d/g, '9').replace(/[A-Za-z]/g, 'A') : t))
+}
+
+/** Primera(s) línea(s) de un error del navegador (Playwright: «locator.click: Timeout… / <div> intercepts pointer events»), saneadas y cortas. PURA. */
+export function errorPortalSaneado(e: unknown): string {
+  const bruto = e instanceof Error ? e.message : String(e)
+  const lineas = bruto.split('\n').map((l) => l.trim()).filter((l) => l !== '')
+  const elegidas = lineas.filter((l, i) => i < 2 || /intercept|not enabled|not visible|detached|outside|closed|navigat|destroyed/i.test(l)).slice(0, 4)
+  return elegidas.map((l) => textoDialogoPortalSeguro(l.slice(0, 160))).join(' | ').slice(0, 400) || 'sin detalle'
+}
+
+/** Cola del motivo con lo que mostraba el portal (vacía si no hay nada). PURA. */
+export function sufijoDiagnosticoProyectoMapfre(d: DiagnosticoProyectoMapfre | null | undefined): string {
+  if (!d) return ''
+  const trozos: string[] = []
+  if (d.dialogos.length > 0) trozos.push(`diálogos: ${d.dialogos.map((t) => `«${t}»`).join(', ')}`)
+  if (d.mensajes.length > 0) trozos.push(`mensajes del portal: ${d.mensajes.map((t) => `«${t}»`).join(', ')}`)
+  if (d.proyecto.length > 0) trozos.push(`texto con «proyecto» (cifras como 9): ${d.proyecto.map((t) => `«${t}»`).join(', ')}`)
+  const ctl = sufijoControlesVisibles(d.controles).replace(/^; /, '')
+  if (ctl) trozos.push(ctl)
+  return trozos.length > 0 ? `; ${trozos.join('; ')}` : ''
+}
+
+const SEL_MENSAJES_MAPFRE = 'mat-error, [role="alert"], [role="status"], mat-snack-bar-container, simple-snack-bar, .mat-snack-bar-container, .mat-mdc-snack-bar-container, .toast, .alert, .mat-error, .error-message'
+
+/** Lee (sin pulsar nada) lo que el portal muestra ahora. Nunca lanza. */
+export async function diagnosticoPantallaProyectoMapfre(page: Page): Promise<DiagnosticoProyectoMapfre> {
+  const limpiar = (ts: string[], max: number) => [...new Set(ts.map((t) => formaReferenciaProyecto(textoDialogoPortalSeguro(t)).slice(0, 160)).filter((t) => t !== ''))].slice(0, max)
+  const dialogos = limpiar(await page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').allInnerTexts().catch(() => [] as string[]), 3)
+  const mensajes = limpiar(await page.locator(SEL_MENSAJES_MAPFRE).locator('visible=true').allInnerTexts().catch(() => [] as string[]), 4)
+  const texto = await textoProyectoMapfre(page)
+  const proyecto = [...new Set(texto.split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter((l) => l !== '' && l.length <= 120 && /proyecto/i.test(l) && !/objeto asegurado/i.test(l) && !/\b(?:sr|sra|don|doña|cliente|tomador|asegurado|titular)\b/i.test(l)).map((l) => redactarDatosPersonales(formaReferenciaProyecto(l)).slice(0, 100)))].slice(0, 4)
+  const etiquetas = await page
+    .evaluate(() => Array.from(document.querySelectorAll('button, a, [role="button"]')).filter((n) => { const r = (n as HTMLElement).getBoundingClientRect(); return r.width > 0 && r.height > 0 }).map((n) => ((n as HTMLElement).innerText || n.getAttribute('aria-label') || '').trim()))
+    .catch(() => [] as string[])
+  return { dialogos, mensajes, proyecto, controles: etiquetasControlesSaneadas(etiquetas) }
+}
+
 /** Comprobaciones previas al clic (solo lectura). Devuelve el botón elegido o el motivo de no pulsar. Puede lanzar por errores del portal. */
 async function prepararGenerarProyectoMapfre(page: Page, guard: GuardEmision, esperaBotonMs: number): Promise<{ boton: Locator; conGuardar: boolean } | { estado: 'no_generado'; motivo: string }> {
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_generado', motivo: 'otra ventana de red abierta' }
@@ -1938,12 +1984,17 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
     }, 'generar', conGuardar)
   } catch (e) {
     guard.comprobar()
-    const motivo = e instanceof ErrorFronteraEmision ? 'hay un campo de cuenta bancaria a la vista' : e instanceof GuardadoConDialogoError ? 'el portal abrió un diálogo del navegador (no se acepta)' : e instanceof EmisionBloqueadaError ? 'el guard no autorizó el control' : 'el portal no dejó completar el proyecto'
+    // v0.8.19: el motivo genérico no decía NADA (dos runs reales). Ahora lleva la causa: error del navegador saneado, si el clic llegó a darse,
+    // y lo que el portal muestra (diálogos/mensajes de validación, líneas de «proyecto» con la FORMA del nº, controles a la vista).
+    const generico = !(e instanceof ErrorFronteraEmision || e instanceof GuardadoConDialogoError || e instanceof EmisionBloqueadaError)
+    const base = e instanceof ErrorFronteraEmision ? 'hay un campo de cuenta bancaria a la vista' : e instanceof GuardadoConDialogoError ? 'el portal abrió un diálogo del navegador (no se acepta)' : e instanceof EmisionBloqueadaError ? 'el guard no autorizó el control' : 'el portal no dejó completar el proyecto'
+    const causa = generico ? ` [${pulsado ? 'tras el clic' : 'el clic no llegó a darse'}; error: ${errorPortalSaneado(e)}]` : ''
+    const motivo = `${base}${causa}${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}`
     return pulsado ? { estado: 'sin_numero', motivo } : { estado: 'no_generado', motivo }
   }
   if (numero) return { estado: 'generado', numero }
   if (peligro !== null) return { estado: 'sin_numero', motivo: `tras pulsar salió un diálogo que menciona «${peligro}»: el bot no toca nada más` }
-  return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s` }
+  return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}` }
 }
 
 /**
@@ -3624,6 +3675,87 @@ export async function pulsarConfirmarDatosPersonasGenerali(page: Page, guard: Gu
   if (textoMenu(textoControl(desc)) !== textoMenu('Confirmar')) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
   comprobarBoton(desc)
   usados.add('generali:confirmar-datos-personas')
+  AVANCES_USADOS.set(guard, usados)
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= `${d.type()}: ${mensajesValidacionGenerali([d.message()])[0] ?? '(sin texto)'}`
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    try {
+      await boton.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+    } catch (e) {
+      if ((e as { name?: string } | null)?.name !== 'TimeoutError') throw e
+      guard.comprobar()
+      await boton.evaluate((el) => (el as HTMLElement).click())
+    }
+    guard.comprobar()
+    const fin = Date.now() + esperaDialogoMs
+    while (dialogo === null && Date.now() < fin) await page.waitForTimeout(150)
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+  guard.comprobar()
+  return { dialogo }
+}
+
+// ─────────── v0.2.27: «Siguiente» de «Valoración Riesgo» de Generali (hacia «Garantías y Resultados») ───────────
+// La pestaña «Garantías y Resultados» no cambió la pantalla (prueba real con 0.2.26): el avance real es el botón «Siguiente» (#siguiente) del
+// marco `emiAutosGenB028.do`. Puerta acotada: solo ese marco (único), solo con el formulario de valoración (tomador `reg1063A_personas_interesado_nifcif`
+// RELLENO, sin `#confirmar` de «Datos personas» visible, pestaña «Datos de Valoración»/«Valoración Riesgo» visible), exactamente un `#siguiente`
+// visible, botón nativo de texto EXACTO «Siguiente», `comprobarBoton`, y NUNCA si la página o un diálogo muestran emitir/contratar/grabar póliza/
+// pagar/firmar. Máximo `MAX_SIGUIENTE_VALORACION_GENERALI` veces por trabajo. «Paso con datos incompletos» no se pulsa. Un diálogo nativo se CANCELA.
+
+/** Veces máximas por trabajo que se puede pulsar «Siguiente» de la valoración de Generali. */
+export const MAX_SIGUIENTE_VALORACION_GENERALI = 3
+/** Id del botón «Siguiente» del formulario de valoración (inventario real del trabajo 0.2.26). */
+export const ID_SIGUIENTE_VALORACION_GENERALI = 'siguiente'
+/** Textos de emisión que, visibles en la página o en un diálogo, impiden pulsar «Siguiente». PURA. */
+export function textoEmisionGenerali(texto: string): boolean {
+  const t = String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  return /\b(emitir|contratar|grabar (la )?poliza|pagar|firmar|formalizar)\b/.test(t)
+}
+
+/** Prefijo de los ids del bloque «Interesado / Tomador» del formulario de valoración. */
+const PREFIJO_ID_INTERESADO_VALORACION_GENERALI = 'reg1063A_personas_interesado_'
+
+const JS_TEXTOS_AVISO_GENERALI = `(() => {
+  const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const cuerpo = document.body ? document.body.innerText || '' : '';
+  const dlg = Array.from(document.querySelectorAll('[role=dialog],[role=alertdialog],.modal,.ui-dialog,.ui-dialog-content')).filter(vis).map((e) => e.innerText || '').join('\\n');
+  return cuerpo + '\\n' + dlg;
+})()`
+
+export async function pulsarSiguienteValoracionGenerali(page: Page, guard: GuardEmision, esperaDialogoMs = 1_500): Promise<{ dialogo: string | null }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con una ventana de red abierta')
+  const marcos = marcosVivos(page).filter((f) => urlDatosPersonasGenerali(f.url()))
+  if (marcos.length !== 1) throw new EmisionBloqueadaError('fase', `«Siguiente» de Generali fuera de emiAutosGenB028.do (${marcos.length} marcos; hace falta exactamente uno)`)
+  const marco = marcos[0]!
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  let n = 0
+  while (usados.has(`generali:siguiente-valoracion:${n + 1}`)) n++
+  if (n >= MAX_SIGUIENTE_VALORACION_GENERALI) throw new EmisionBloqueadaError('fase', `«Siguiente» de la valoración de Generali ya se pulsó ${n} veces en este trabajo`)
+  await exigirSinCuentaBancaria(page)
+  const nif = marco.locator(`[id="${PREFIJO_ID_INTERESADO_VALORACION_GENERALI}nifcif"]`).filter({ visible: true })
+  if ((await nif.count()) !== 1) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali sin el formulario de valoración (no hay tomador visible)')
+  if ((await nif.inputValue().catch(() => '')).trim() === '') throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con el tomador sin confirmar (NIF vacío)')
+  if ((await marco.locator(`[id="${ID_CONFIRMAR_DATOS_PERSONAS_GENERALI}"]`).filter({ visible: true }).count()) > 0) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con «Datos personas» abierto (no es la valoración)')
+  const pest = marco.getByText(/^\s*(Datos de Valoración|Valoración Riesgo)\s*$/).filter({ visible: true })
+  if ((await pest.count()) < 1) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali fuera de «Valoración Riesgo»/«Datos de Valoración»')
+  for (const f of marcosVivos(page)) {
+    const t = (await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string
+    if (textoEmisionGenerali(t)) throw new EmisionBloqueadaError('fase', '«Siguiente» de Generali con textos de emisión/contratación/pago/firma en la página o en un diálogo')
+  }
+  const boton = marco.locator(`[id="${ID_SIGUIENTE_VALORACION_GENERALI}"]`).filter({ visible: true })
+  if ((await boton.count()) !== 1) throw new ErrorMapaGuardGenerali('el botón #siguiente de la valoración (no hay exactamente uno visible)')
+  const clase = await boton.evaluate((e) => `${e.tagName.toLowerCase()}:${(e.getAttribute('type') ?? '').toLowerCase()}`)
+  if (!['input:button', 'input:submit', 'button:', 'button:button', 'button:submit'].includes(clase)) throw new EmisionBloqueadaError('boton', `#siguiente no es un botón (${clase})`)
+  const desc = await descripcion(boton)
+  if (textoMenu(textoControl(desc)) !== 'SIGUIENTE') throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
+  comprobarBoton(desc)
+  usados.add(`generali:siguiente-valoracion:${n + 1}`)
   AVANCES_USADOS.set(guard, usados)
   let dialogo: string | null = null
   const alDialogo = (d: Dialog) => {
