@@ -9,17 +9,20 @@
  *   - `ficha`: una columna de `clientes` (o su tabla de carnés), las mismas que mira `camposParaPersona` en auto/moto;
  *   - `solo_solicitud`: HUECO declarado — el modelo no tiene dónde guardarlo y se queda en las respuestas de la
  *     solicitud («Datos pedidos») y en el aviso. Es una decisión escrita, no un olvido: el cepo
- *     (`solicitud-destinos.test.ts`) falla con un campo sin declarar o con un destino que el bloque no tiene, y
- *     prohíbe que una pregunta NUEVA de hogar caiga aquí.
+ *     (`solicitud-destinos.test.ts`) falla con un campo sin declarar, con un destino que el bloque (de ESE ramo) no
+ *     tiene, con un hueco fuera de `HUECOS_PERMITIDOS` o sin motivo escrito, y con un destino `riesgo` que la
+ *     propuesta del ramo no llega a escribir.
+ * Fase 2 (26/10/2026): ya no quedan huecos de RIESGO; solo el seguro actual fuera de auto/moto, la fecha de efecto, el
+ * comentario y el «para el banco» de hogar, cada uno con su porqué.
  *
  * Las opciones de hogar que van a un CATÁLOGO de Codeoscopic (régimen, uso, tipo de vivienda, alarma) se traducen
  * SOLO a ids atestiguados en el repo (`IDS_CODEOSCOPIC_HOGAR_ATESTIGUADOS`: los de `DEFECTOS_HOGAR` y
  * `ETIQUETAS_ID_HOGAR`). Un valor sin id atestiguado NO se escribe en `datosVivienda` (queda `null` = «no se sabe»
  * para el cotizador) y se ve en el aviso: nunca se adivina un id.
  */
-import { CAMPOS_CAPITAL } from './datos-capital-riesgo.ts'
+import { CAMPOS_CAPITAL, admiteDatosCapital, camposCapitalDelRamo } from './datos-capital-riesgo.ts'
 import { CAMPOS_COMERCIO } from './datos-comercio-riesgo.ts'
-import { CAMPOS_LIBRE } from './datos-riesgo-libre.ts'
+import { CAMPOS_LIBRE, camposLibreDelRamo } from './datos-riesgo-libre.ts'
 import { claveDatosDeRamo, type ClaveDatosRiesgo } from './datos-riesgo-ramo.ts'
 import { CAMPOS_VEHICULO } from './datos-vehiculo-riesgo.ts'
 import { CAMPOS_VIVIENDA } from './datos-vivienda-riesgo.ts'
@@ -33,14 +36,17 @@ export type DestinoCampoSolicitud =
   | { en: 'ficha'; columna: ColumnaFichaSolicitud }
   | { en: 'solo_solicitud'; motivo: string }
 
-/** Los campos que tiene cada bloque de `info_riesgo`. */
-export function camposDelBloque(clave: ClaveDatosRiesgo): readonly string[] {
+/**
+ * Los campos que tiene cada bloque de `info_riesgo`. Con `ramo`, solo los que ESE ramo usa (capital y libre tienen campos
+ * propios de vida, de salud/decesos, de accidentes y de mascotas: los de otro ramo se rechazan al validar).
+ */
+export function camposDelBloque(clave: ClaveDatosRiesgo, ramo?: RamoSolicitud): readonly string[] {
   switch (clave) {
     case 'datosVehiculo': return CAMPOS_VEHICULO
     case 'datosVivienda': return CAMPOS_VIVIENDA
-    case 'datosCapital': return CAMPOS_CAPITAL
+    case 'datosCapital': return ramo && admiteDatosCapital(ramo) ? camposCapitalDelRamo(ramo) : CAMPOS_CAPITAL
     case 'datosComercio': return CAMPOS_COMERCIO
-    case 'datosRiesgoLibre': return CAMPOS_LIBRE
+    case 'datosRiesgoLibre': return ramo ? camposLibreDelRamo(ramo) : CAMPOS_LIBRE
   }
 }
 
@@ -48,16 +54,23 @@ const R = (campo: string): DestinoCampoSolicitud => ({ en: 'riesgo', campo })
 const F = (columna: ColumnaFichaSolicitud): DestinoCampoSolicitud => ({ en: 'ficha', columna })
 const HUECO = (motivo: string): DestinoCampoSolicitud => ({ en: 'solo_solicitud', motivo })
 
-const SEGURO_ACTUAL = HUECO('seguro actual: el bloque del riesgo no tiene compañía ni vencimiento anteriores')
+/**
+ * Los HUECOS que quedan (26/10/2026, fase 2): cada uno con su porqué. El cepo (`solicitud-destinos.test.ts`) solo admite
+ * `solo_solicitud` para las claves de `HUECOS_PERMITIDOS` y con un motivo de verdad (no vacío ni de relleno).
+ */
+const SEGURO_ACTUAL = HUECO('seguro actual fuera de auto/moto: Codeoscopic solo pide seguro anterior en auto y moto (`previousInsurance`) y el bloque del riesgo de este ramo no lo tiene; queda en «Datos pedidos» y en el aviso, para la renovación')
 const COMUNES: Readonly<Record<string, DestinoCampoSolicitud>> = {
   dni: F('dni'),
   fechaNacimiento: F('fecha_nacimiento'),
   tieneSeguro: SEGURO_ACTUAL,
   companiaActual: SEGURO_ACTUAL,
   vencimientoActual: SEGURO_ACTUAL,
-  fechaEfecto: HUECO('fecha de efecto: es de la petición de precio, no del riesgo'),
-  comentario: HUECO('texto libre para la correduría'),
+  fechaEfecto: HUECO('fecha de efecto: es de la PETICIÓN de precio (`effectiveDate`, caduca), no un dato del riesgo; se teclea al pedir precio'),
+  comentario: HUECO('comentario del cliente para la correduría: texto libre que se lee en el aviso; no es un dato del riesgo'),
 }
+
+/** Claves que pueden quedarse en la solicitud (con su motivo). Cualquier otra tiene que tener campo en el riesgo o la ficha. */
+export const HUECOS_PERMITIDOS: ReadonlySet<string> = new Set(['tieneSeguro', 'companiaActual', 'vencimientoActual', 'fechaEfecto', 'comentario', 'paraBanco'])
 
 /**
  * HOGAR → `datosVivienda`. Mismos nombres que `DatosHogar` (petición de Codeoscopic) y que la precarga de CIMA
@@ -101,60 +114,76 @@ export const PREGUNTAS_HOGAR_26_10 = [
   'tramoContenido', 'tramoContinente', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos',
 ] as const
 
-const VEHICULO: Readonly<Record<string, DestinoCampoSolicitud>> = {
+/**
+ * AUTO/MOTO → `datosVehiculo`. Nombres de `DatosAuto`/`DatosMoto` (asegura); el seguro actual y el historial viajan a
+ * Codeoscopic según `MAPEO_HISTORIAL_CODEOSCOPIC`. `versionCatalogo` = el buscador del catálogo (ids + versión).
+ */
+export const DESTINOS_VEHICULO: Readonly<Record<string, DestinoCampoSolicitud>> = {
   codigoPostal: R('cpCirculacion'),
   tipoCarnet: F('cliente_carnets_conducir'),
   fechaCarnet: F('cliente_carnets_conducir'),
   matricula: R('matricula'),
   marca: R('marca'),
   modelo: R('modelo'),
+  versionCatalogo: R('codigoVehiculo'),
   fechaMatriculacion: R('fechaMatriculacion'),
   kmAnuales: R('kmAnuales'),
   garaje: R('garaje'),
-  aniosSinSiniestros: HUECO('historial de siniestros: `datosVehiculo` no lo tiene (Codeoscopic lo pide en el bloque del seguro anterior)'),
+  tieneSeguro: R('aseguradoAntes'),
+  companiaActual: R('companiaAnterior'),
+  vencimientoActual: R('vencimientoAnterior'),
+  aniosSinSiniestros: R('aniosSinSiniestros'),
 }
 
-const HIPOTECA_PERSONAS = HUECO('hipoteca en vida: `datosCapital` no tiene hipoteca ni banco')
-const PERSONAS_CAPITAL: Readonly<Record<string, DestinoCampoSolicitud>> = {
+/** VIDA, SALUD, DECESOS → `datosCapital` (hipoteca vinculada en vida; cuántos y qué edades en salud y decesos). */
+export const DESTINOS_CAPITAL: Readonly<Record<string, DestinoCampoSolicitud>> = {
   codigoPostal: F('codigo_postal'),
   capitalDeseado: R('capital'),
   fumador: R('fumador'),
-  hipoteca: HIPOTECA_PERSONAS,
-  paraBanco: HIPOTECA_PERSONAS,
-  entidadHipoteca: HIPOTECA_PERSONAS,
-  personasAsegurar: HUECO('número de asegurados: `datosCapital.asegurados` exige nombre, apellidos, nacimiento y sexo de cada uno'),
-  edades: HUECO('edades sueltas: `datosCapital.asegurados` exige la persona entera'),
-  profesion: HUECO('profesión en texto: `datosCapital.profesion` es un código CNO-11'),
+  hipoteca: R('hipoteca'),
+  paraBanco: R('vinculadaHipoteca'),
+  entidadHipoteca: R('bancoHipoteca'),
+  capitalPendienteHipoteca: R('capitalPendienteHipoteca'),
+  personasAsegurar: R('numeroAsegurados'),
+  edades: R('edadesAsegurados'),
 }
 
-const LIBRE: Readonly<Record<string, DestinoCampoSolicitud>> = {
+/**
+ * Los LIBRES → `datosRiesgoLibre`. Accidentes se queda aquí (no `datosCapital`): `datos-riesgo-ramo.ts` lo manda al libre
+ * porque Codeoscopic no tiene API de accidentes (se cotiza fuera), y su profesión es texto, no el CNO-11 de vida.
+ */
+export const DESTINOS_LIBRE: Readonly<Record<string, DestinoCampoSolicitud>> = {
   codigoPostal: F('codigo_postal'),
   descripcionRiesgo: R('descripcion'),
-  profesion: HUECO('profesión (accidentes): `datosRiesgoLibre` no tiene profesión'),
-  personasAsegurar: HUECO('número de asegurados: `datosRiesgoLibre` no lo tiene'),
-  edades: HUECO('edades: `datosRiesgoLibre` no las tiene'),
-  razaMascota: HUECO('mascota: `datosRiesgoLibre` no tiene raza'),
-  fechaNacimientoMascota: HUECO('mascota: `datosRiesgoLibre` no tiene fecha de nacimiento del animal'),
-  ppp: HUECO('mascota: `datosRiesgoLibre` no tiene PPP'),
-  microchip: HUECO('mascota: `datosRiesgoLibre` no tiene microchip'),
+  profesion: R('profesion'),
+  especieMascota: R('especie'),
+  razaMascota: R('raza'),
+  fechaNacimientoMascota: R('fechaNacimientoAnimal'),
+  ppp: R('ppp'),
+  microchip: R('microchip'),
 }
 
-const COMERCIO: Readonly<Record<string, DestinoCampoSolicitud>> = {
+/** COMERCIO → `datosComercio`: la descripción es la actividad (`Actividad.DescripcionActividad` de CIMA). */
+export const DESTINOS_COMERCIO: Readonly<Record<string, DestinoCampoSolicitud>> = {
   codigoPostal: F('codigo_postal'),
-  descripcionRiesgo: HUECO('descripción libre: `datosComercio` tiene campos estructurados (actividad, superficies…), no un texto'),
+  descripcionRiesgo: R('actividad'),
 }
 
 /** El destino declarado de un campo del enlace en ese ramo; `null` = sin declarar (el cepo lo marca). */
 export function destinoCampoSolicitud(ramo: RamoSolicitud, clave: string): DestinoCampoSolicitud | null {
-  if (Object.hasOwn(COMUNES, clave)) return COMUNES[clave]
-  const grupo = grupoSolicitud(ramo)
+  const tabla = tablaDestinos(ramo)
+  // Lo del ramo manda (el seguro actual de un coche tiene campo; el de un hogar, no).
+  if (Object.hasOwn(tabla, clave)) return tabla[clave]
+  return Object.hasOwn(COMUNES, clave) ? COMUNES[clave] : null
+}
+
+function tablaDestinos(ramo: RamoSolicitud): Readonly<Record<string, DestinoCampoSolicitud>> {
   const bloque = claveDatosDeRamo(ramo)
-  const tabla = grupo === 'vehiculo' ? VEHICULO
-    : grupo === 'hogar' ? DESTINOS_HOGAR
-    : bloque === 'datosCapital' ? PERSONAS_CAPITAL
-    : bloque === 'datosComercio' ? COMERCIO
-    : LIBRE
-  return Object.hasOwn(tabla, clave) ? tabla[clave] : null
+  if (grupoSolicitud(ramo) === 'vehiculo') return DESTINOS_VEHICULO
+  if (grupoSolicitud(ramo) === 'hogar') return DESTINOS_HOGAR
+  if (bloque === 'datosCapital') return DESTINOS_CAPITAL
+  if (bloque === 'datosComercio') return DESTINOS_COMERCIO
+  return DESTINOS_LIBRE
 }
 
 // ─── Opciones de hogar → valor de `datosVivienda` ────────────────────────────────────────────────────────────────

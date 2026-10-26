@@ -23,6 +23,8 @@ export type TipoCampoRiesgo =
   | { t: 'bool' }
   /** Código numérico de N cifras (p. ej. la profesión CNO-11 de nivel 4: `2612`). */
   | { t: 'codigo'; digitos: number }
+  /** Fecha aaaa-mm-dd real, desde 1900; futura solo con `futura` (un vencimiento). */
+  | { t: 'fecha'; futura?: boolean }
 
 export type EspecCampo = { clave: string; etiqueta: string; tipo: TipoCampoRiesgo }
 export type Espec = readonly EspecCampo[]
@@ -34,6 +36,14 @@ export type CambioCampo = { campo: string; antes: ValorCampo; despues: ValorCamp
 const RE_CP = /^\d{5}$/
 const RE_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/
 const RE_REF20 = /^[0-9A-Z]{20}$/
+const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
+
+/** ¿`f` es una fecha aaaa-mm-dd que existe? */
+export function fechaRealIso(f: string): boolean {
+  if (!RE_FECHA.test(f)) return false
+  const d = new Date(`${f}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === f
+}
 
 /** «1.250,50» / «15.000» / «12000» / 12000 → número; cualquier otra cosa → NaN. */
 export function numeroDesdeTexto(v: unknown): number {
@@ -134,6 +144,16 @@ export function validarParcial(
         else mal('sí o no.')
         break
       }
+      case 'fecha': {
+        const x = texto(v, 10)
+        if (x === 'invalido') mal('fecha no válida.')
+        else if (x === null) valor[c.clave] = null
+        else if (!fechaRealIso(x)) mal('usa el formato aaaa-mm-dd con una fecha que exista.')
+        else if (x < '1900-01-01') mal('anterior a 1900.')
+        else if (!t.futura && x > opciones.hoy) mal('no puede ser futura.')
+        else valor[c.clave] = x
+        break
+      }
       case 'codigo': {
         const x = texto(typeof v === 'number' ? String(v) : v, 20)
         if (x === 'invalido' || (x !== null && !new RegExp(`^\\d{${t.digitos}}$`).test(x))) mal(`${t.digitos} cifras.`)
@@ -172,6 +192,9 @@ export function leerBloque(spec: Espec, bruto: unknown): Record<string, ValorCam
         break
       case 'bool':
         out[c.clave] = typeof v === 'boolean' ? v : null
+        break
+      case 'fecha':
+        out[c.clave] = typeof v === 'string' && fechaRealIso(v.trim()) ? v.trim() : null
         break
     }
   }

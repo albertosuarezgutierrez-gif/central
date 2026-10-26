@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { viaSigueVigente } from '@central/core-catastro'
-import { CLAVE_NO_LO_SE, ayudaDocumentosSolicitud, claveDireccion, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
+import { CLAVE_NO_LO_SE, ayudaDocumentosSolicitud, claveDireccion, subclavesDeCampo, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
+import BuscadorVersion from './BuscadorVersion'
 import { borradorConContenido, esencialesPendientes, estadoDesdeBorrador, opcionesVisibles, textoTarjetaVivienda, valoresConfirmadosCatastro, visibleSegunCatastro } from '@/lib/datos-vista'
 import type { ViviendaCatastroPublica } from '@/lib/vivienda-catastro'
 import { DIRECCION_VACIA, DireccionCp, type ValorDireccion } from '@/app/(portal)/patrimonio/DireccionCp'
@@ -146,6 +147,8 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
   }
   const visible = (c: CampoSolicitud) => (!c.siMarcado || valores[c.siMarcado] === true) && visibleSegunCatastro(c, contexto, planta)
   const visibles = campos.filter(visible)
+  // Auto/moto: el buscador de la versión exacta (catálogo gratis de Codeoscopic) se pinta debajo de «Modelo», no suelto.
+  const buscador = campos.find((c) => c.tipo === 'vehiculo_catalogo') ?? null
   const marcarNoLoSe = (clave: string, si: boolean) => {
     setNoLoSe((p) => { const n = new Set(p); if (si) n.add(clave); else n.delete(clave); return n })
     if (si) setValores((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== clave)))
@@ -205,7 +208,8 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
     setErrores({})
     // Solo viaja lo que está a la vista: una respuesta de una pregunta que se ha ocultado (p. ej. tras confirmar el
     // Catastro) no se manda.
-    const aLaVista = new Set(visibles.map((c) => c.clave))
+    // El buscador del catálogo se contesta con subclaves (ids de la versión): viajan con él.
+    const aLaVista = new Set(visibles.flatMap((c) => (c.tipo === 'vehiculo_catalogo' ? subclavesDeCampo(c) ?? [] : [c.clave])))
     const enviados = Object.fromEntries(Object.entries(valores).filter(([k]) => aLaVista.has(k) && !noLoSe.has(k) && (k !== 'confirmaCatastro' || confirmacionVigente)))
     // Confirmó la tarjeta del Catastro: viajan los valores que VIO (tipo, m², año), no se vuelve a consultar en asegura.
     if (confirmacionVigente) Object.assign(enviados, valoresConfirmadosCatastro(campos, contexto, planta))
@@ -380,6 +384,13 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
         {leidos.has(c.clave) && !leidosPoliza.has(c.clave) && <span className="editor-ayuda">📄 Leído de tu documento: compruébalo.</span>}
         {c.actual && !leidos.has(c.clave) && !leidosPoliza.has(c.clave) && <span className="editor-ayuda">Es el que tenemos en tu ficha: si no es correcto, cámbialo.</span>}
         {c.clave === 'tieneSeguro' && valores.tieneSeguro !== false && subidaPoliza}
+        {c.clave === 'modelo' && buscador && (
+          <BuscadorVersion
+            token={token} clave={buscador.clave} valores={valores} ayuda={buscador.ayuda} deshabilitado={estado.tipo === 'enviando'}
+            poner={(cambios) => setValores((p) => ({ ...p, ...cambios }))}
+            quitar={(claves) => setValores((p) => Object.fromEntries(Object.entries(p).filter(([k]) => !claves.includes(k))))}
+          />
+        )}
         {c.ayuda && <span className="editor-ayuda">{c.ayuda}</span>}
         {err && <span className="editor-error" role="alert">{err}</span>}
       </div>
@@ -431,7 +442,7 @@ export default function Formulario({ token, campos, ramo, tercero = false, borra
         )}
       </div>
       {(['esencial', 'opcional'] as const).map((nivel) => {
-        const grupo = visibles.filter((c) => (c.nivel ?? (c.obligatorio ? 'esencial' : 'opcional')) === nivel)
+        const grupo = visibles.filter((c) => c.tipo !== 'vehiculo_catalogo' && (c.nivel ?? (c.obligatorio ? 'esencial' : 'opcional')) === nivel)
         if (grupo.length === 0) return null
         return (
           <div key={nivel} className="datos-nivel">

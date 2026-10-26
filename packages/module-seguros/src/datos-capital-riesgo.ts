@@ -11,6 +11,16 @@
  * `person-roles` (lo dice la pantalla de precio, gratis): aquí son opcionales. «Duración» de vida se quitó el
  * 03/10/2026 (`TermLifeRisk_V1` no tiene campo): ya no se ofrece ni se anota; si hay una guardada, se conserva
  * (sin tocarla) pero no se enseña.
+ *
+ * 26/10/2026 (fase 2 del enlace de datos), sin exigir la persona entera:
+ *   · vida → HIPOTECA VINCULADA: `hipoteca` (tiene), `vinculadaHipoteca` (el banco la pide / es beneficiario),
+ *     `bancoHipoteca` (mismo nombre que en `datosVivienda`) y `capitalPendienteHipoteca` (lo que queda por pagar: el capital
+ *     que el banco exige cubrir). Nota de expediente: no viaja a Codeoscopic (`TermLifeRisk_V1` no lo tiene).
+ *   · salud y decesos → `numeroAsegurados` (cuántas personas, CONTANDO al tomador si se asegura) y `edadesAsegurados`
+ *     («45, 43, 12»). 🚨 NO es `asegurados` (la lista de personas ENTERAS, que es la que viaja como `insureds[1..]`):
+ *     cardinalidad del rol `asegurado` en salud/decesos = hasta `MAX_ASEGURADOS_PERSONAS` (10) además del tomador, así que
+ *     `numeroAsegurados` ≤ `MAX_NUMERO_ASEGURADOS` (11). Lo que el cliente da sin nombres se queda aquí; las personas se
+ *     dan de alta en «Intervinientes».
  */
 import {
   aplicarEdicionBloque, leerBloque, validarParcial, vaciosDe,
@@ -30,7 +40,29 @@ export const ESPEC_CAPITAL = [
   { clave: 'modalidadDeseada', etiqueta: 'Modalidad deseada', tipo: { t: 'texto', max: 80 } },
   { clave: 'profesion', etiqueta: 'Profesión (código CNO-11)', tipo: { t: 'codigo', digitos: 4 } },
   { clave: 'fumador', etiqueta: '¿Fuma?', tipo: { t: 'bool' } },
+  // Vida: hipoteca vinculada (26/10/2026).
+  { clave: 'hipoteca', etiqueta: '¿Tiene hipoteca?', tipo: { t: 'bool' } },
+  { clave: 'vinculadaHipoteca', etiqueta: 'Vinculada a la hipoteca (la pide el banco)', tipo: { t: 'bool' } },
+  { clave: 'bancoHipoteca', etiqueta: 'Banco de la hipoteca', tipo: { t: 'texto', max: 80 } },
+  { clave: 'capitalPendienteHipoteca', etiqueta: 'Capital pendiente de la hipoteca (€)', tipo: { t: 'numero', min: 0, max: 100_000_000 } },
+  // Salud y decesos: cuántos y qué edades, sin la persona entera (26/10/2026).
+  { clave: 'numeroAsegurados', etiqueta: 'Número de asegurados', tipo: { t: 'entero', min: 1, max: 11 } },
+  { clave: 'edadesAsegurados', etiqueta: 'Edades de los asegurados', tipo: { t: 'texto', max: 120 } },
 ] as const satisfies Espec
+
+/** Tope de `numeroAsegurados`: el tomador + `MAX_ASEGURADOS_PERSONAS` (10, cardinalidad del rol `asegurado`). */
+export const MAX_NUMERO_ASEGURADOS = 11
+
+/**
+ * «45 años, 43 y 12» → «45, 43, 12». TOLERANTE (revisión del PR #5080): se sacan los números del texto (cada edad 0-120;
+ * un número mayor, como un año «1980», no es una edad y se salta) y solo es `null` si no hay NINGUNO válido. Como mucho
+ * `MAX_NUMERO_ASEGURADOS` (los de más no caben en el ramo: tomador + 10).
+ */
+export function edadesNormalizadas(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const n = (v.match(/\d+/g) ?? []).map(Number).filter((x) => Number.isInteger(x) && x <= 120)
+  return n.length === 0 ? null : n.slice(0, MAX_NUMERO_ASEGURADOS).join(', ')
+}
 
 /**
  * Un asegurado además del tomador (`insureds[1..]` de salud y decesos). 🔒 SIN DNI/NIE ni nacionalidad: en la cartera el
@@ -47,7 +79,7 @@ export type AseguradoAdicional = {
 }
 export const MAX_ASEGURADOS = 10
 
-export type CampoCapital = 'capital' | 'duracionAnios' | 'modalidadDeseada' | 'profesion' | 'fumador' | 'asegurados'
+export type CampoCapital = (typeof ESPEC_CAPITAL)[number]['clave'] | 'asegurados'
 export type DatosCapitalRiesgo = {
   capital: number | null
   /** Heredado, no se ofrece. */
@@ -55,24 +87,45 @@ export type DatosCapitalRiesgo = {
   modalidadDeseada: string | null
   profesion: string | null
   fumador: boolean | null
+  hipoteca: boolean | null
+  vinculadaHipoteca: boolean | null
+  bancoHipoteca: string | null
+  capitalPendienteHipoteca: number | null
+  /** Personas a asegurar, contando al tomador si se asegura. NO es la lista `asegurados`. */
+  numeroAsegurados: number | null
+  /** «45, 43, 12» (`edadesNormalizadas`). */
+  edadesAsegurados: string | null
   /** `null` = sin mirar; `[]` = revisado, ninguno. */
   asegurados: AseguradoAdicional[] | null
   confirmadoAt: string | null
 }
 
-export const CAMPOS_CAPITAL: readonly CampoCapital[] = ['capital', 'duracionAnios', 'modalidadDeseada', 'profesion', 'fumador', 'asegurados']
+export const CAMPOS_CAPITAL: readonly CampoCapital[] = [...ESPEC_CAPITAL.map((c) => c.clave), 'asegurados']
 export const ETIQUETA_CAMPO_CAPITAL: Record<CampoCapital, string> = {
   capital: 'Capital asegurado',
   duracionAnios: 'Duración (años)',
   modalidadDeseada: 'Modalidad deseada',
   profesion: 'Profesión (código CNO-11)',
   fumador: '¿Fuma?',
+  hipoteca: '¿Tiene hipoteca?',
+  vinculadaHipoteca: 'Vinculada a la hipoteca (la pide el banco)',
+  bancoHipoteca: 'Banco de la hipoteca',
+  capitalPendienteHipoteca: 'Capital pendiente de la hipoteca',
+  numeroAsegurados: 'Número de asegurados',
+  edadesAsegurados: 'Edades de los asegurados',
   asegurados: 'Asegurados además del tomador',
 }
 
+/** La hipoteca vinculada de vida: se escribe y se compara en bloque. */
+export const CAMPOS_HIPOTECA_CAPITAL = ['hipoteca', 'vinculadaHipoteca', 'bancoHipoteca', 'capitalPendienteHipoteca'] as const
+/** Cuántos y qué edades (salud y decesos). */
+export const CAMPOS_PERSONAS_CAPITAL = ['numeroAsegurados', 'edadesAsegurados'] as const
+
 /** Qué campos se ofrecen en cada ramo (la duración ya no existe en ninguno). */
 export function camposCapitalDelRamo(ramo: RamoCapital): readonly CampoCapital[] {
-  return ramo === 'vida' ? ['capital', 'profesion', 'fumador'] : ramo === 'salud' ? ['capital', 'modalidadDeseada', 'asegurados'] : ['capital', 'asegurados']
+  return ramo === 'vida' ? ['capital', 'profesion', 'fumador', ...CAMPOS_HIPOTECA_CAPITAL]
+    : ramo === 'salud' ? ['capital', 'modalidadDeseada', ...CAMPOS_PERSONAS_CAPITAL, 'asegurados']
+    : ['capital', ...CAMPOS_PERSONAS_CAPITAL, 'asegurados']
 }
 
 const esObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -169,6 +222,11 @@ export function validarDatosCapitalRiesgo(parcial: unknown, opciones: { hoy?: st
   if (!esObj(parcial)) return v as { ok: false; errores: ErrorCampo[] }
   const errores: ErrorCampo[] = v.ok ? [] : [...v.errores]
   const valor: Record<string, unknown> = v.ok ? { ...v.valor } : {}
+  if (typeof valor.edadesAsegurados === 'string') {
+    const e = edadesNormalizadas(valor.edadesAsegurados)
+    if (e === null) errores.push({ campo: 'edadesAsegurados', motivo: `Edades de los asegurados: números de 0 a 120 separados por comas (como mucho ${MAX_NUMERO_ASEGURADOS}).` })
+    else valor.edadesAsegurados = e
+  }
   if (Object.prototype.hasOwnProperty.call(parcial, 'asegurados')) {
     const a = validarAseguradosAdicionales(parcial.asegurados === undefined ? null : parcial.asegurados, { hoy })
     if (a.ok) valor.asegurados = a.valor
@@ -222,7 +280,7 @@ export function aplicarEdicionCapital(
 }
 
 export function motivoNoConfirmableCapital(d: DatosCapitalRiesgo): string | null {
-  const alguno = d.capital !== null || d.duracionAnios !== null || d.modalidadDeseada !== null || d.profesion !== null || d.fumador !== null || d.asegurados !== null
+  const alguno = CAMPOS_CAPITAL.some((k) => d[k] !== null && d[k] !== undefined)
   return alguno ? null : 'No se puede confirmar un capital sin ningún dato.'
 }
 

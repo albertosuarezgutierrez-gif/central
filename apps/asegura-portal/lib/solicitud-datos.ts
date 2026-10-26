@@ -3,7 +3,7 @@
  * Por TOKEN y sin identidad (decisión de Alberto): la página no enseña nada del
  * cliente, solo pide. El portal no escribe en la cartera: lo manda por el puente.
  */
-import { CLAVE_NO_LO_SE, SUBCLAVES_DIRECCION, claveDireccion, ramoSolicitud, validarRespuestas, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
+import { CLAVE_NO_LO_SE, ramoSolicitud, subclavesDeCampo, validarRespuestas, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
 export type SolicitudLeida =
@@ -24,7 +24,8 @@ export function interpretarBorrador(v: unknown, campos: readonly CampoSolicitud[
   if (v === null || typeof v !== 'object' || Array.isArray(v)) return null
   const claves = new Set<string>([CLAVE_NO_LO_SE])
   for (const c of campos) {
-    if (c.tipo === 'direccion') for (const s of SUBCLAVES_DIRECCION) claves.add(claveDireccion(c.clave, s))
+    const subs = subclavesDeCampo(c)
+    if (subs) for (const s of subs) claves.add(s)
     else claves.add(c.clave)
   }
   const out: BorradorLeido = {}
@@ -114,6 +115,40 @@ export async function ramoSolicitudViva(token: string, ahora = Date.now()): Prom
 
 export async function tokenSolicitudVivo(token: string, ahora = Date.now()): Promise<boolean> {
   return (await ramoSolicitudViva(token, ahora)) !== null
+}
+
+// ─── Buscador del catálogo de vehículos (26/10/2026, fase 2) ────────────────
+// Marca → modelo → combustible → versión, con los GET gratis del catálogo de Codeoscopic que sirve asegura. Solo con un
+// token VIVO de auto o moto (lo comprueba la ruta); el portal no habla con Codeoscopic.
+
+export type OpcionCatalogo = { id: string; nombre: string }
+
+/** Lo que devuelve el puente → opciones, o `null` (no se pudo: el formulario sigue con marca y modelo en texto). */
+export function interpretarCatalogo(status: number, json: unknown): OpcionCatalogo[] | null {
+  const o = json !== null && typeof json === 'object' && !Array.isArray(json) ? (json as Record<string, unknown>) : null
+  if (status !== 200 || o?.estado !== 'ok' || !Array.isArray(o.opciones)) return null
+  return o.opciones.flatMap((x) => {
+    const y = x !== null && typeof x === 'object' ? (x as Record<string, unknown>) : {}
+    return typeof y.id === 'string' && typeof y.nombre === 'string' ? [{ id: y.id, nombre: y.nombre.slice(0, 160) }] : []
+  })
+}
+
+export async function catalogoVehiculoPuente(params: URLSearchParams): Promise<{ status: number; json: unknown } | null> {
+  const p = puente()
+  if (!p) return null
+  const control = new AbortController()
+  const reloj = setTimeout(() => control.abort(), PORTAL_PUENTE_TIEMPO_MS)
+  try {
+    const res = await fetch(`${p.base}/api/portal/solicitud-datos/vehiculo?${params.toString()}`, {
+      headers: { authorization: `Bearer ${p.secret}` }, cache: 'no-store', signal: control.signal,
+    })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  } catch (e) {
+    console.error('[portal/datos-vehiculo] el puente no respondió:', e instanceof Error ? e.message : e)
+    return null
+  } finally {
+    clearTimeout(reloj)
+  }
 }
 
 // ─── Documentos que sube el cliente (24/09/2026) ─────────────────────────────

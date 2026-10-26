@@ -12,6 +12,7 @@
  */
 import { normalizarCp, normalizarDni, normalizarFechaNacimiento } from './cliente-edicion.ts'
 import { RAMOS_OPORTUNIDAD, type RamoOportunidad } from './oportunidad-seguimiento.ts'
+import { MAX_NUMERO_ASEGURADOS, edadesNormalizadas } from './datos-capital-riesgo.ts'
 
 /**
  * 25/10/2026 (Alberto: «el lead web de CUALQUIER ramo, igual que coche/moto»): el enlace vale para
@@ -86,7 +87,13 @@ export function ayudaDocumentosSolicitud(ramo: RamoSolicitud): string {
   return 'Tu DNI y, si ya tienes un seguro de esto, la póliza o el último recibo.'
 }
 
-export type TipoCampo = 'texto' | 'fecha' | 'opcion' | 'numero' | 'si_no' | 'texto_largo' | 'direccion'
+/**
+ * `vehiculo_catalogo` (26/10/2026, fase 2): el buscador marca → modelo → combustible → versión del catálogo GRATIS de
+ * Codeoscopic (los mismos GET que la pantalla de precio). Es una AYUDA: lo que manda es marca y modelo en texto; si el
+ * cliente encuentra su versión, viajan los ids (`SUBCLAVES_VEHICULO`) y asegura los comprueba contra el catálogo antes
+ * de escribirlos. Nunca es obligatorio ni admite «No lo sé».
+ */
+export type TipoCampo = 'texto' | 'fecha' | 'opcion' | 'numero' | 'si_no' | 'texto_largo' | 'direccion' | 'vehiculo_catalogo'
 
 export type CampoSolicitud = {
   clave: string
@@ -141,7 +148,9 @@ export const SIN_NO_LO_SE: ReadonlySet<string> = new Set([
   'tipoVivienda', 'metrosCuadrados', 'anioConstruccion', 'habitaciones', 'regimen', 'usoVivienda', 'alarma',
   'propietarioEsTomador', 'urbanizacionCerrada', 'puertaPrincipalBlindada', 'ventanasSeguras', 'tramoContenido',
   // Personas y mascota: lo que la compañía pide para dar precio (cuántos, a qué se dedica; raza y PPP).
-  'personasAsegurar', 'profesion', 'razaMascota', 'ppp',
+  'personasAsegurar', 'profesion', 'razaMascota', 'ppp', 'especieMascota',
+  // El buscador del catálogo es una ayuda opcional: ni «No lo sé» ni obligatorio.
+  'versionCatalogo',
 ])
 
 /**
@@ -163,7 +172,7 @@ export function conNiveles(campos: readonly CampoSolicitud[]): CampoSolicitud[] 
     return {
       ...base,
       nivel: base.nivel ?? (base.obligatorio ? 'esencial' : 'opcional'),
-      admiteNoLoSe: base.tipo === 'direccion' || SIN_NO_LO_SE.has(base.clave) ? false : (base.admiteNoLoSe ?? true),
+      admiteNoLoSe: base.tipo === 'direccion' || base.tipo === 'vehiculo_catalogo' || SIN_NO_LO_SE.has(base.clave) ? false : (base.admiteNoLoSe ?? true),
     }
   })
 }
@@ -226,6 +235,20 @@ export function claveDireccion(clave: string, sub: SubclaveDireccion): string {
   return `${clave}${sub}`
 }
 
+/** Subclaves del buscador del catálogo de vehículos: los ids de la cascada y el texto de la versión elegida. */
+export const SUBCLAVES_VEHICULO = ['MarcaId', 'ModeloId', 'MotorId', 'Codigo', 'Version'] as const
+export type SubclaveVehiculo = (typeof SUBCLAVES_VEHICULO)[number]
+export function claveVehiculo(clave: string, sub: SubclaveVehiculo): string {
+  return `${clave}${sub}`
+}
+
+/** Las claves escalares con las que se contesta un campo compuesto (dirección, buscador del catálogo); `null` = simple. */
+export function subclavesDeCampo(c: Pick<CampoSolicitud, 'clave' | 'tipo'>): string[] | null {
+  if (c.tipo === 'direccion') return SUBCLAVES_DIRECCION.map((s) => claveDireccion(c.clave, s))
+  if (c.tipo === 'vehiculo_catalogo') return SUBCLAVES_VEHICULO.map((s) => claveVehiculo(c.clave, s))
+  return null
+}
+
 /** Lo que la ficha YA tiene: eso no se le vuelve a pedir. */
 export type ConocidoFicha = {
   dni: boolean
@@ -247,7 +270,7 @@ export const CARNETS_MOTO_SOLICITUD = [
 ] as const
 
 export const GARAJES_SOLICITUD = [
-  { valor: 'garaje_privado', etiqueta: 'Garaje particular' },
+  { valor: 'garaje_privado', etiqueta: 'Garaje particular (solo para tu vehículo)' },
   { valor: 'garaje_comunitario', etiqueta: 'Garaje comunitario' },
   { valor: 'calle', etiqueta: 'En la calle' },
 ] as const
@@ -352,6 +375,8 @@ function camposVehiculo(ramo: 'auto' | 'moto', conocido: ConocidoFicha): CampoSo
     { clave: 'matricula', etiqueta: 'Matrícula', tipo: 'texto', obligatorio: true },
     { clave: 'marca', etiqueta: 'Marca', tipo: 'texto', obligatorio: true },
     { clave: 'modelo', etiqueta: 'Modelo y versión', tipo: 'texto', obligatorio: true, ayuda: moto ? 'Por ejemplo: Yamaha MT-07 o Honda PCX 125.' : 'Por ejemplo: Seat León 1.5 TSI.' },
+    // Ayuda del catálogo de Codeoscopic (gratis): el formulario la pinta junto a marca y modelo.
+    { clave: 'versionCatalogo', etiqueta: 'Busca tu versión exacta', tipo: 'vehiculo_catalogo', obligatorio: false, nivel: 'opcional', admiteNoLoSe: false, ayuda: 'Si la encuentras, el precio sale más ajustado. Si no, con la marca y el modelo nos basta.' },
     { clave: 'fechaMatriculacion', etiqueta: 'Fecha de primera matriculación', tipo: 'fecha', obligatorio: true, ayuda: 'Está en el permiso de circulación (casilla B).' },
     { clave: 'garaje', etiqueta: '¿Dónde duerme?', tipo: 'opcion', obligatorio: true, opciones: GARAJES_SOLICITUD },
     { clave: 'kmAnuales', etiqueta: 'Kilómetros al año, aproximados', tipo: 'numero', obligatorio: false },
@@ -422,12 +447,14 @@ function camposPersonas(ramo: RamoSolicitud, conocido: ConocidoFicha): CampoSoli
       { clave: 'capitalDeseado', etiqueta: '¿Qué capital quieres asegurar? (€)', tipo: 'numero', obligatorio: false, max: 10_000_000, ayuda: 'Si no lo sabes, déjalo en blanco y lo vemos juntos.' },
       { clave: 'fumador', etiqueta: '¿Fumas?', tipo: 'si_no', obligatorio: true },
       ...CAMPOS_HIPOTECA,
+      // Hipoteca vinculada (26/10/2026): el capital que queda por pagar es el que el banco pide cubrir.
+      { clave: 'capitalPendienteHipoteca', etiqueta: '¿Cuánto queda por pagar de la hipoteca? (€)', tipo: 'numero', obligatorio: false, siMarcado: 'hipoteca', max: 10_000_000, ayuda: 'Aproximado: viene en el último recibo del banco.' },
     )
   } else if (ramo === 'accidentes') {
     c.push({ clave: 'profesion', etiqueta: '¿A qué te dedicas?', tipo: 'texto', obligatorio: true })
   } else {
     c.push(
-      { clave: 'personasAsegurar', etiqueta: '¿Cuántas personas quieres asegurar?', tipo: 'numero', obligatorio: true, max: 30 },
+      { clave: 'personasAsegurar', etiqueta: '¿Cuántas personas quieres asegurar?', tipo: 'numero', obligatorio: true, max: MAX_NUMERO_ASEGURADOS, ayuda: 'Contándote a ti si también te aseguras.' },
       { clave: 'edades', etiqueta: 'Edad de cada una', tipo: 'texto', obligatorio: false, ayuda: 'Por ejemplo: 45, 43, 12 y 9.' },
     )
   }
@@ -439,11 +466,34 @@ function camposMascota(conocido: ConocidoFicha): CampoSolicitud[] {
   return [
     ...camposIdentidadTomador('mascota'),
     ...campoCp(conocido, 'Tu código postal'),
+    { clave: 'especieMascota', etiqueta: '¿Qué animal es?', tipo: 'opcion', obligatorio: true, opciones: ESPECIES_MASCOTA_SOLICITUD },
     { clave: 'razaMascota', etiqueta: 'Raza (o «mestizo»)', tipo: 'texto', obligatorio: true },
     { clave: 'fechaNacimientoMascota', etiqueta: 'Fecha de nacimiento del animal, aproximada', tipo: 'fecha', obligatorio: false },
     { clave: 'ppp', etiqueta: '¿Es de raza potencialmente peligrosa (PPP)?', tipo: 'si_no', obligatorio: true },
     { clave: 'microchip', etiqueta: 'Número de microchip', tipo: 'texto', obligatorio: false },
     ...camposSeguroActual('¿Tiene seguro ahora?'),
+    CAMPO_FECHA_EFECTO,
+    CAMPO_COMENTARIO,
+  ]
+}
+
+export const ESPECIES_MASCOTA_SOLICITUD = [
+  { valor: 'perro', etiqueta: 'Perro' },
+  { valor: 'gato', etiqueta: 'Gato' },
+  { valor: 'otro', etiqueta: 'Otro' },
+] as const
+
+/**
+ * COMERCIO (26/10/2026, fase 2): la descripción es la ACTIVIDAD del negocio (`datosComercio.actividad`, la
+ * `Actividad.DescripcionActividad` de CIMA), no un texto libre sin destino. Misma clave que antes (`descripcionRiesgo`)
+ * para que los enlaces ya enviados sigan valiendo.
+ */
+function camposComercio(conocido: ConocidoFicha): CampoSolicitud[] {
+  return [
+    ...camposIdentidadTomador('generico'),
+    ...campoCp(conocido, 'Código postal del negocio'),
+    { clave: 'descripcionRiesgo', etiqueta: '¿A qué se dedica tu negocio?', tipo: 'texto', obligatorio: true, ayuda: 'Por ejemplo: bar de tapas, peluquería, tienda de ropa.' },
+    ...camposSeguroActual('¿Tienes ya un seguro de esto?'),
     CAMPO_FECHA_EFECTO,
     CAMPO_COMENTARIO,
   ]
@@ -470,7 +520,7 @@ export function camposSolicitud(ramo: RamoSolicitud, conocido: ConocidoFicha): C
     case 'hogar': return conNiveles(camposHogar())
     case 'personas': return conNiveles(camposPersonas(ramo, conocido))
     case 'mascota': return conNiveles(camposMascota(conocido))
-    default: return conNiveles(camposGenerico(conocido))
+    default: return conNiveles(ramo === 'comercio' ? camposComercio(conocido) : camposGenerico(conocido))
   }
 }
 
@@ -499,7 +549,8 @@ export function camposAPreguntar(campos: readonly CampoSolicitud[], respuestas: 
   const noLoSabe: string[] = []
   const sinContestar: string[] = []
   for (const c of campos) {
-    if (c.tipo === 'direccion' || c.catastro === 'tarjeta') continue
+    // El buscador del catálogo es una ayuda: la marca y el modelo en texto ya son la respuesta.
+    if (c.tipo === 'direccion' || c.tipo === 'vehiculo_catalogo' || c.catastro === 'tarjeta') continue
     if (c.siMarcado && respuestas[c.siMarcado] !== true) continue
     // Rejas: en un piso o ático no se preguntan (tampoco a la llamada).
     if (c.catastro === 'ventanas' && typeof respuestas.tipoVivienda === 'string' && TIPOS_SIN_REJAS.has(respuestas.tipoVivienda)) continue
@@ -616,6 +667,28 @@ function validarDireccion(c: CampoSolicitud, entrada: Record<string, unknown>, o
   return { respuestas, errores }
 }
 
+const RE_ID_CATALOGO = /^(?!.*\.\.)[\p{L}\p{N}._ /()+-]{1,40}$/u
+
+/**
+ * El buscador del catálogo: la cadena ENTERA (marca, modelo, combustible y versión) o nada. Ids con forma de id; la versión
+ * en texto, recortada. Que sean ids REALES del catálogo lo comprueba asegura al escribir el riesgo (GET gratis).
+ */
+function validarVehiculoCatalogo(clave: string, entrada: Record<string, unknown>): Record<string, Respuesta> {
+  const k = (sub: SubclaveVehiculo) => claveVehiculo(clave, sub)
+  const id = (sub: SubclaveVehiculo): string | null => {
+    const v = entrada[k(sub)]
+    return typeof v === 'string' && RE_ID_CATALOGO.test(v.trim()) ? v.trim() : null
+  }
+  const ids = { MarcaId: id('MarcaId'), ModeloId: id('ModeloId'), MotorId: id('MotorId'), Codigo: id('Codigo') }
+  const entera = Object.values(ids).every((x) => x !== null)
+  const out: Record<string, Respuesta> = {}
+  for (const sub of SUBCLAVES_VEHICULO) out[k(sub)] = null
+  if (!entera) return out
+  for (const [sub, v] of Object.entries(ids)) out[k(sub as SubclaveVehiculo)] = v
+  out[k('Version')] = textoCorto(entrada[k('Version')], 120)
+  return out
+}
+
 /**
  * Valida lo que manda el cliente contra los campos que se le pidieron. Solo se
  * guardan las claves pedidas (lo demás se ignora) y cada error viene por campo.
@@ -640,6 +713,11 @@ export function validarRespuestas(
       const d = validarDireccion(c, entrada, opciones)
       Object.assign(respuestas, d.respuestas)
       Object.assign(errores, d.errores)
+      continue
+    }
+    if (c.tipo === 'vehiculo_catalogo') {
+      // Ayuda: lo que no encaja se descarta sin error (la marca y el modelo en texto siguen valiendo).
+      Object.assign(respuestas, validarVehiculoCatalogo(c.clave, entrada))
       continue
     }
     if (c.siMarcado && entrada[c.siMarcado] !== true) { respuestas[c.clave] = null; continue }
@@ -692,6 +770,10 @@ export function validarRespuestas(
           const r = normalizarCp(s)
           if (r.ok) respuestas[c.clave] = r.valor
           else errores[c.clave] = r.motivo
+        } else if (c.clave === 'edades') {
+          const e = edadesNormalizadas(s)
+          if (e === null) errores[c.clave] = 'Pon al menos una edad en número (por ejemplo: 45, 43, 12).'
+          else respuestas[c.clave] = e
         } else if (c.clave === 'matricula') {
           const m = s.toUpperCase().replace(/[^A-Z0-9]/g, '')
           if (m.length < 4 || m.length > 10 || !/\d/.test(m) || !/[A-Z]/.test(m)) errores[c.clave] = 'Revisa la matrícula.'

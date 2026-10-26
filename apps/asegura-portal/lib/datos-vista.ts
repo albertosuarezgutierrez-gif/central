@@ -7,7 +7,7 @@
  *   `catastro` aparecen si el Catastro no lo da, si aún no ha contestado, o si el cliente pulsa «Corregir».
  * - Rejas (`ventanas`): solo en un bajo o en una casa; en un piso alto, no. Sin tipo conocido, se pregunta.
  */
-import { CLAVE_NO_LO_SE, claveDireccion, type CampoSolicitud } from '@central/module-seguros'
+import { CLAVE_NO_LO_SE, claveDireccion, subclavesDeCampo, type CampoSolicitud } from '@central/module-seguros'
 import type { ViviendaCatastroPublica } from './vivienda-catastro.ts'
 
 export type ContextoVista = {
@@ -91,7 +91,7 @@ export function valoresConfirmadosCatastro(campos: readonly CampoSolicitud[], ct
  */
 export function esencialesPendientes(visibles: readonly CampoSolicitud[], valores: Record<string, unknown>, noLoSe: ReadonlySet<string>): string[] {
   return visibles
-    .filter((c) => c.nivel === 'esencial' && c.tipo !== 'direccion' && !c.obligatorio)
+    .filter((c) => c.nivel === 'esencial' && c.tipo !== 'direccion' && c.tipo !== 'vehiculo_catalogo' && !c.obligatorio)
     .filter((c) => !noLoSe.has(c.clave))
     .filter((c) => valores[c.clave] === undefined || valores[c.clave] === '' || valores[c.clave] === null)
     .map((c) => c.clave)
@@ -133,6 +133,11 @@ export function estadoDesdeBorrador(campos: readonly CampoSolicitud[], borrador:
         viaOficial: tipo && nombre ? { tipo, nombre } : null,
         numero: t('Numero'), planta: t('Planta'), puerta: t('Puerta'),
       }
+      continue
+    }
+    if (c.tipo === 'vehiculo_catalogo') {
+      // El buscador del catálogo: sus subclaves (ids de la versión) vuelven tal cual.
+      for (const k of subclavesDeCampo(c) ?? []) { const x = borrador[k]; if (typeof x === 'string') valores[k] = x }
       continue
     }
     const v = borrador[c.clave]

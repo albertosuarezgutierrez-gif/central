@@ -220,7 +220,14 @@ test('capital: en vida falta el capital; en salud y decesos no falta nada; null 
   assert.ok(validarDatosCapitalRiesgo({ capital: '120.000', profesion: '2612', fumador: false }, { hoy: HOY, ramo: 'vida' }).ok)
   assert.equal(validarDatosCapitalRiesgo({ capital: 1, duracionAnios: 20 }, { hoy: HOY, ramo: 'vida' }).ok, false, 'la duración se quitó de vida (03/10/2026): ya no se acepta')
   assert.ok(validarDatosCapitalRiesgo({ duracionAnios: null }, { hoy: HOY, ramo: 'vida' }).ok, 'borrar una heredada sí se admite')
-  assert.deepEqual(camposCapitalDelRamo('vida'), ['capital', 'profesion', 'fumador'])
+  // 26/10/2026: + la hipoteca vinculada (enlace de datos, fase 2).
+  assert.deepEqual(camposCapitalDelRamo('vida'), ['capital', 'profesion', 'fumador', 'hipoteca', 'vinculadaHipoteca', 'bancoHipoteca', 'capitalPendienteHipoteca'])
+  assert.equal(validarDatosCapitalRiesgo({ hipoteca: true }, { hoy: HOY, ramo: 'salud' }).ok, false, 'la hipoteca vinculada es de vida')
+  assert.equal(validarDatosCapitalRiesgo({ numeroAsegurados: 3 }, { hoy: HOY, ramo: 'vida' }).ok, false, 'el número de asegurados es de salud y decesos')
+  assert.equal(validarDatosCapitalRiesgo({ numeroAsegurados: 12 }, { hoy: HOY, ramo: 'salud' }).ok, false, 'tomador + 10 asegurados como mucho')
+  const ed = validarDatosCapitalRiesgo({ edadesAsegurados: '45 y 12' }, { hoy: HOY, ramo: 'decesos' })
+  assert.ok(ed.ok && ed.valor.edadesAsegurados === '45, 12')
+  assert.equal(validarDatosCapitalRiesgo({ edadesAsegurados: 'cuarenta' }, { hoy: HOY, ramo: 'decesos' }).ok, false)
   assert.equal(validarDatosCapitalRiesgo({ duracionAnios: 20 }, { hoy: HOY, ramo: 'salud' }).ok, false, 'la duración no existe en salud')
   assert.equal(validarDatosCapitalRiesgo({ duracionAnios: 0 }, { hoy: HOY }).ok, false)
   // Profesión: 4 cifras (CNO-11 nivel 4); fumador: sí/no/null. Ni la profesión ni el fumador existen en salud/decesos.
