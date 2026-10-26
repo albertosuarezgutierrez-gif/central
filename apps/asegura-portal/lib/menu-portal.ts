@@ -33,6 +33,8 @@ import { accesosPatrimonio } from './patrimonio/accesos'
 import { getIdentidad } from './session'
 
 export type MenuDeSesion = {
+  /** Los hechos tal cual (tres estados), para `puertaAbierta()` en `lib/puertas-portal.ts`. */
+  hechos: HechosMenu
   visibles: SeccionPortal[]
   herramientas: HerramientasVisibles
   /** «Contactos» no está en el menú de esta persona: se ofrece dentro de «Cuenta». */
@@ -107,6 +109,7 @@ export const menuDeSesion = cache(async (): Promise<MenuDeSesion | null> => {
   if (!identidad) return null
   const hechos = await hechosDeMenu(identidad.id)
   return {
+    hechos,
     visibles: entradasVisibles(hechos),
     herramientas: herramientasVisibles(hechos),
     contactosEnCuenta: contactosEnCuenta(hechos),

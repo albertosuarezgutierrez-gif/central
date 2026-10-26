@@ -26,6 +26,7 @@ import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { calendarioDeIdentidad } from '@/lib/patrimonio/calendario-bd'
 import { fechaMadrid } from '@/lib/patrimonio/dia-madrid'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { PaginaPortal } from '../../../PaginaPortal'
@@ -62,6 +63,9 @@ function motivo(e: unknown): string {
 export default async function CalendarioPage() {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  // La misma regla que oculta «Calendario» en el menú (autorizado puro: no es suyo). Modo `lectura`: una lectura caída
+  // ABRE, como el enlace — esta página solo enseña lo que la identidad ya ve en otras pantallas.
+  if (!(await puertaDeSesion('calendario', 'lectura'))) redirect('/inicio')
 
   const [carteraR, declaradasR, recordatoriosR, carnetsR, patrimonioR, avisosR] = await Promise.allSettled([
     carteraDeIdentidad(identidad.id).then(carteraALaVista),

@@ -404,8 +404,9 @@ export {
   herramientasVisibles,
   contactosVisibles,
   contactosEnCuenta,
+  puertaAbierta,
 } from './menu-visible.ts'
-export type { HechosMenu, HerramientasVisibles } from './menu-visible.ts'
+export type { HechosMenu, HerramientasVisibles, ModoPuerta, PuertaPortal } from './menu-visible.ts'
 export {
   componerCalendario,
   diasHastaDia,

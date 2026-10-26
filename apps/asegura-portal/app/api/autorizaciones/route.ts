@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { ampliarAcceso, autorizacionesDeIdentidad, conceder, type ErrorConceder } from '@/lib/autorizaciones'
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -98,6 +99,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  // Conceder y ampliar son del TITULAR: el autorizado puro no tiene nada propio que ceder. Lectura caída → NO. Quién
+  // concede qué ficha lo sigue decidiendo `conceder()`/`ampliarAcceso()`; esto solo cierra la puerta que el menú no ofrece.
+  if (!(await puertaDeSesion('conceder', 'escritura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
 
   let cuerpo: unknown
   try {
