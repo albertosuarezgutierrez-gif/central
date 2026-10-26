@@ -4011,6 +4011,12 @@ const RE_FIN_SECCION_PRECONTRACTUAL = /^(garantias y capitales opcionales|bonus-
 /** v0.2.32: palabras de contexto de la prosa de la sección precontractual (documentación/envío al cliente); sin ellas una línea con verbo de emisión sigue a la vista. */
 const RE_PROSA_PRECONTRACTUAL = /documentacion|precontractual|informacion|enviar|envio|cliente|tomador|correo|email|e-mail/
 
+/** Línea que `JS_TEXTOS_AVISO_GENERALI` pone antes del texto de los diálogos/modales visibles: la sección precontractual termina ahí. */
+const MARCA_DIALOGO_GENERALI = '[[DIALOGO]]'
+
+/** Verbos de emisión que, como núcleo de una PREGUNTA, nunca son prosa informativa. */
+const RE_VERBO_PREGUNTA_EMISION = /\b(emit|contrat|pag|firm|formaliz)\w*/
+
 /**
  * v0.2.32: quita del texto de «Garantías y Capitales opcionales» la sección «Envío Documentación Precontractual» (desde su encabezado hasta el
  * siguiente encabezado/botón conocido) y la frase «documentación precontractual». Dentro de la sección solo se excusa PROSA (más de 4 palabras que habla de documentación/envío/cliente): una línea corta
@@ -4023,8 +4029,10 @@ export function sinSeccionPrecontractualGenerali(texto: string): string {
   for (const l of lineas) {
     const n = sinTildesMinus(l).replace(/\s+/g, ' ').trim()
     if (!dentro && /^envio documentacion precontractual\b/.test(n)) { dentro = true; continue }
-    if (dentro && RE_FIN_SECCION_PRECONTRACTUAL.test(n)) dentro = false
-    if (dentro && !(casaEmisionGenerali(l) !== null && !(n.split(' ').length > 4 && RE_PROSA_PRECONTRACTUAL.test(n)))) continue
+    if (dentro && (RE_FIN_SECCION_PRECONTRACTUAL.test(n) || n.startsWith(MARCA_DIALOGO_GENERALI.toLowerCase()))) dentro = false
+    // Prosa excusable: >4 palabras con contexto de documentación/envío, SIN «póliza» y que no sea una PREGUNTA con verbo de emisión («¿Desea emitir…?»).
+    const prosa = n.split(' ').length > 4 && RE_PROSA_PRECONTRACTUAL.test(n) && !/poliza/.test(n) && !(/[¿?]/.test(n) && RE_VERBO_PREGUNTA_EMISION.test(n))
+    if (dentro && !(casaEmisionGenerali(l) !== null && !prosa)) continue
     fuera.push(l)
   }
   return fuera.join('\n').replace(/documentaci[oó]n precontractual/gi, '')
@@ -4045,7 +4053,7 @@ const JS_TEXTOS_AVISO_GENERALI = `(() => {
   const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
   const cuerpo = document.body ? document.body.innerText || '' : '';
   const dlg = Array.from(document.querySelectorAll('[role=dialog],[role=alertdialog],.modal,.ui-dialog,.ui-dialog-content')).filter(vis).map((e) => e.innerText || '').join('\\n');
-  return cuerpo + '\\n' + dlg;
+  return dlg ? cuerpo + '\\n[[DIALOGO]]\\n' + dlg : cuerpo + '\\n';
 })()`
 
 export async function pulsarSiguienteValoracionGenerali(page: Page, guard: GuardEmision, esperaDialogoMs = 1_500): Promise<{ dialogo: string | null }> {

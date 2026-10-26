@@ -1664,7 +1664,7 @@ export async function precioDesdeObjetoAsegurado(
     : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
   // v0.8.23: PDF del proyecto guardado (botón «Imprimir/Descargar proyecto»); si no llega, aviso y el precio/proyecto se devuelven igual.
-  const pdfProyecto = await descargarProyectoAuto(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado !== 'no_generado')
+  const pdfProyecto = await descargarProyectoAuto(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
   return { ofertas: ofertasConPdfProyecto(ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), proyecto), pdfProyecto), vehiculoConfirmado: vehiculo }
 }
 

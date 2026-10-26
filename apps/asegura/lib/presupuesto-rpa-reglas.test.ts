@@ -196,8 +196,12 @@ test('cableado: el precio RPA guarda sus coberturas, el resultado dispara el bor
   assert.match(ins, /sobreCoberturasRpa\(o\.coberturas/)
   assert.match(ins, /referencia_vendor, avisos, coberturas\s*\)/)
   const ruta = readFileSync(join(lib, '..', 'app/api/tarificador/resultado/route.ts'), 'utf8')
-  // 26/10/2026: el `after` primero extrae las coberturas del PDF (idempotente, nunca lanza) y DESPUÉS prepara el borrador.
-  assert.match(ruta, /after\(async \(\) => \{[\s\S]*extraerCoberturasTrasTrabajo\(trabajoId\)[\s\S]*await presupuestoTrasTrabajoRpa\(trabajoId\)/)
+  // 26/10/2026: el `after` delega en `trasResultadoRpa`: el borrador se lanza PRIMERO y la extracción va aparte con tope.
+  assert.match(ruta, /after\(\(\) => trasResultadoRpa\(trabajoId, \{ borrador: presupuestoTrasTrabajoRpa, extraer: extraerCoberturasTrasTrabajo/)
+  assert.doesNotMatch(ruta, /await extraerCoberturasTrasTrabajo/, 'la extracción nunca se espera antes del borrador')
+  const tras = readFileSync(join(lib, 'tras-rpa.ts'), 'utf8')
+  assert.ok(tras.indexOf('deps.borrador(trabajoId)') < tras.indexOf('deps.extraer(trabajoId)'), 'el borrador se lanza antes que la extracción')
+  assert.match(tras, /Promise\.race\(\[pExtraccion, tope\]\)/)
   const srv = readFileSync(join(lib, 'presupuesto-rpa.ts'), 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n')
   assert.doesNotMatch(srv, /envio-presupuesto|avisarPresupuesto|enviadoAt:\s*(new Date|ahora)|enlaceGeneradoAt:\s*(new Date|ahora)|core-email|whatsapp/i, 'el borrador del bot no envía nada al cliente')
   assert.doesNotMatch(srv, /estado: 'revisada'|revisadaAt:\s*(ahora|new Date)/, 'el bot no revisa ofertas: eso es de Alberto')

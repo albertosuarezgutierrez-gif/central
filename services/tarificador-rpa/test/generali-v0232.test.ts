@@ -77,6 +77,15 @@ test('v0.2.32 · pura: la sección precontractual (prosa) se quita; un botón co
   assert.equal(textoEmisionGenerali(sinSeccionPrecontractualGenerali('Envío Documentación Precontractual\nTexto largo para firmar algo\nSiguiente ›\nPagar el recibo ahora mismo')), true)
 })
 
+test('v0.2.32 · pura: una PREGUNTA de emisión o una línea con «póliza» tras la sección bloquea; un diálogo cierra la sección', () => {
+  const cab = 'Envío Documentación Precontractual\nEl mediador deberá firmar y entregar al cliente la documentación precontractual antes de contratar el seguro.\n'
+  assert.equal(textoEmisionGenerali(sinSeccionPrecontractualGenerali(cab)), false)
+  assert.equal(textoEmisionGenerali(sinSeccionPrecontractualGenerali(cab + '¿Desea emitir la póliza y enviar la documentación al tomador?')), true)
+  assert.equal(textoEmisionGenerali(sinSeccionPrecontractualGenerali(cab + 'Debe firmar la póliza y enviar la documentación al cliente por correo')), true)
+  assert.equal(textoEmisionGenerali(sinSeccionPrecontractualGenerali(cab + '¿Desea contratar y enviar la documentación al cliente ahora?')), true)
+  assert.equal(textoEmisionGenerali(sinSeccionPrecontractualGenerali(cab + '[[DIALOGO]]\nDebe firmar y enviar la documentación al cliente por correo electrónico')), true)
+})
+
 test('v0.2.32 · con la sección «Envío Documentación Precontractual» y nada más → «Siguiente» se pulsa; «Comparar» no', async () => {
   const { page, guard, cerrar } = await abrir(PRECONTRACTUAL)
   try {

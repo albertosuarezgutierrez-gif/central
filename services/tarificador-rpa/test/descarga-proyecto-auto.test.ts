@@ -218,3 +218,10 @@ test('sin las puertas guardadas del runner → aviso, no rompe', async () => {
     await context.close()
   }
 })
+
+test('Mapfre: el «Imprimir» a secas solo si el proyecto quedó GENERADO (no con sin_numero ni no_generado)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../src/adapters/mapfre/auto.ts', import.meta.url), 'utf8')
+  assert.match(src, /descargarProyectoAuto\(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto\.pdf', proyecto\.estado === 'generado'\)/)
+  assert.doesNotMatch(src, /'proyecto-mapfre-auto\.pdf', proyecto\.estado !== /)
+})
