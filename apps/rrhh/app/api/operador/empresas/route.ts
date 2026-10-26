@@ -41,7 +41,9 @@ export async function POST(req: Request) {
   const id = await prisma.$transaction(async (tx) => {
     const er = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.empresas (nombre, marca_color, logo_path) VALUES (${empresa}, ${color}, ${logoUrl}) RETURNING id`)
     const empresaId = er[0].id as string
-    await tx.$executeRaw(Prisma.sql`INSERT INTO rrhh.usuarios_rrhh (empresa_id, email, pass_hash, nombre) VALUES (${empresaId}::uuid, ${email}, ${pass_hash}, ${responsableNombre})`)
+    const ur = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.usuarios_rrhh (empresa_id, email, pass_hash, nombre) VALUES (${empresaId}::uuid, ${email}, ${pass_hash}, ${responsableNombre}) RETURNING id`)
+    // `usuario_empresas` es la ÚNICA fuente de autorización (login y `getSesion` en cada petición): sin esta fila no entra.
+    await tx.$executeRaw(Prisma.sql`INSERT INTO rrhh.usuario_empresas (usuario_id, empresa_id) VALUES (${ur[0].id}::uuid, ${empresaId}::uuid) ON CONFLICT DO NOTHING`)
     return empresaId
   })
   return NextResponse.json({ id, responsable_email: email }, { status: 201 })

@@ -1,4 +1,7 @@
 'use client'
+import Modal from '@/components/ui/Modal'
+import Aviso from '@/components/ui/Aviso'
+import Boton from '@/components/ui/Boton'
 import { useState } from 'react'
 import Card from '@/components/ui/Card'
 
@@ -56,6 +59,19 @@ const DOCUMENTOS = [
     icono: '🔒',
   },
 ]
+
+/** Resultado «documento generado» común a los cuatro modales de PRL. */
+function ResultadoOk({ empleadoId, onClose, children }: { empleadoId: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="py-4 text-center">
+      <Aviso tono="ok" titulo="Documento generado" className="mb-4 text-left">{children}</Aviso>
+      <div className="flex flex-wrap justify-center gap-2">
+        <Boton href={`/admin/empleados/${empleadoId}`}>Ver expediente del empleado</Boton>
+        <Boton variante="secundario" onClick={onClose}>Cerrar</Boton>
+      </div>
+    </div>
+  )
+}
 
 export default function PrlPanel({ empleados }: { empleados: Empleado[] }) {
   const [modal, setModal] = useState<string | null>(null)
@@ -148,26 +164,9 @@ function ModalAutorizacionMaquinaria({ empleados, onClose }: { empleados: Emplea
   }
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4">
-      <div onClick={e => e.stopPropagation()} className="w-full max-w-lg rounded-[18px] border border-line bg-card p-5 overflow-y-auto max-h-[90vh]">
+    <Modal onCerrar={onClose} ancho="lg">
         {ok ? (
-          <div className="text-center py-6">
-            <div className="text-4xl mb-3">✅</div>
-            <h2 className="text-base font-semibold mb-2">Documento generado</h2>
-            <p className="text-ink-2 text-sm mb-4">
-              El documento está listo para que lo firmes desde el expediente del empleado.<br />
-              Una vez firmado por la empresa, el empleado lo recibirá en su portal.
-            </p>
-            <div className="flex gap-2 justify-center">
-              <a
-                href={`/admin/empleados/${empleadoId}`}
-                className="inline-block px-4 py-2 text-sm"
-              >
-                Ver expediente del empleado
-              </a>
-              <button onClick={onClose} className="bg-paper-2 text-ink-2 hover:bg-line">Cerrar</button>
-            </div>
-          </div>
+          <ResultadoOk empleadoId={empleadoId} onClose={onClose}>El documento está listo para que lo firmes desde el expediente del empleado. Una vez firmado por la empresa, el empleado lo recibirá en su portal.</ResultadoOk>
         ) : (
           <>
             <h2 className="mb-1 text-base font-semibold">Autorización uso de maquinaria</h2>
@@ -247,8 +246,7 @@ function ModalAutorizacionMaquinaria({ empleados, onClose }: { empleados: Emplea
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -301,18 +299,9 @@ function ModalEntregaEpis({ empleados, onClose }: { empleados: Empleado[]; onClo
   }
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4">
-      <div onClick={e => e.stopPropagation()} className="w-full max-w-lg rounded-[18px] border border-line bg-card p-5 overflow-y-auto max-h-[90vh]">
+    <Modal onCerrar={onClose} ancho="lg">
         {ok ? (
-          <div className="text-center py-6">
-            <div className="text-4xl mb-3">✅</div>
-            <h2 className="text-base font-semibold mb-2">Documento generado</h2>
-            <p className="text-ink-2 text-sm mb-4">El recibo de EPIs está listo para firmar desde el expediente del empleado.</p>
-            <div className="flex gap-2 justify-center">
-              <a href={`/admin/empleados/${empleadoId}`} className="inline-block px-4 py-2 text-sm">Ver expediente del empleado</a>
-              <button onClick={onClose} className="bg-paper-2 text-ink-2 hover:bg-line">Cerrar</button>
-            </div>
-          </div>
+          <ResultadoOk empleadoId={empleadoId} onClose={onClose}>El recibo de EPIs está listo para firmar desde el expediente del empleado.</ResultadoOk>
         ) : (
           <>
             <h2 className="mb-1 text-base font-semibold">Entrega de EPIs</h2>
@@ -354,8 +343,7 @@ function ModalEntregaEpis({ empleados, onClose }: { empleados: Empleado[]; onClo
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -391,18 +379,9 @@ function ModalInformacionRiesgos({ empleados, onClose }: { empleados: Empleado[]
   }
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4">
-      <div onClick={e => e.stopPropagation()} className="w-full max-w-md rounded-[18px] border border-line bg-card p-5">
+    <Modal onCerrar={onClose} ancho="lg">
         {ok ? (
-          <div className="text-center py-6">
-            <div className="text-4xl mb-3">✅</div>
-            <h2 className="text-base font-semibold mb-2">Documento generado</h2>
-            <p className="text-ink-2 text-sm mb-4">La ficha de riesgos está lista para firmar desde el expediente del empleado.</p>
-            <div className="flex gap-2 justify-center">
-              <a href={`/admin/empleados/${empleadoId}`} className="inline-block px-4 py-2 text-sm">Ver expediente del empleado</a>
-              <button onClick={onClose} className="bg-paper-2 text-ink-2 hover:bg-line">Cerrar</button>
-            </div>
-          </div>
+          <ResultadoOk empleadoId={empleadoId} onClose={onClose}>La ficha de riesgos está lista para firmar desde el expediente del empleado.</ResultadoOk>
         ) : (
           <>
             <h2 className="mb-1 text-base font-semibold">Información de riesgos (art. 18)</h2>
@@ -438,8 +417,7 @@ function ModalInformacionRiesgos({ empleados, onClose }: { empleados: Empleado[]
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -477,23 +455,9 @@ function ModalAcuerdoConfidencialidad({
   }
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4">
-      <div onClick={e => e.stopPropagation()} className="w-full max-w-md rounded-[18px] border border-line bg-card p-5">
+    <Modal onCerrar={onClose} ancho="lg">
         {ok ? (
-          <div className="text-center py-6">
-            <div className="text-4xl mb-3">✅</div>
-            <h2 className="text-base font-semibold mb-2">Documento generado</h2>
-            <p className="text-ink-2 text-sm mb-4">
-              El acuerdo está listo para firma. Fírmalo desde el expediente del empleado.<br />
-              Una vez firmado por la empresa, el empleado lo recibirá en su portal.
-            </p>
-            <div className="flex gap-2 justify-center">
-              <a href={`/admin/empleados/${empleadoId}`} className="inline-block px-4 py-2 text-sm">
-                Ver expediente del empleado
-              </a>
-              <button onClick={onClose} className="bg-paper-2 text-ink-2 hover:bg-line">Cerrar</button>
-            </div>
-          </div>
+          <ResultadoOk empleadoId={empleadoId} onClose={onClose}>El acuerdo está listo para firma. Fírmalo desde el expediente del empleado. Una vez firmado por la empresa, el empleado lo recibirá en su portal.</ResultadoOk>
         ) : (
           <>
             <h2 className="mb-1 text-base font-semibold">{titulo}</h2>
@@ -528,7 +492,6 @@ function ModalAcuerdoConfidencialidad({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }

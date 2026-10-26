@@ -11,6 +11,7 @@ import { AvisoPolizaSinInmueble } from './AvisoPolizaSinInmueble'
 import { OposicionSenalesPatrimonio } from '../configuracion/OposicionSenalesPatrimonio'
 import { ListaInmuebles } from './ListaInmuebles'
 import { NuevoInmueble } from './NuevoInmueble'
+import { EncabezadoPortal } from '../../PaginaPortal'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,7 +45,7 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <h1>Patrimonio</h1>
+      <EncabezadoPortal antetitulo="Herramientas" titulo="Mi" acento="patrimonio" />
       <p className="suave" style={{ marginTop: 0 }}>Tus inmuebles y los de quien te ha dado acceso, por titular.</p>
       {titulares.length > 0 && (
         <p style={{ margin: '0 0 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>

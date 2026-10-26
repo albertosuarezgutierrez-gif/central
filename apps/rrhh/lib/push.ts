@@ -33,7 +33,7 @@ async function enviarA(subs: Sub[], titulo: string, cuerpo: string, url: string)
 }
 
 /** Push a los responsables de RR.HH. de una empresa (best-effort, no-op sin VAPID). */
-export async function pushResponsables(empresaId: string, titulo: string, cuerpo: string, url = '/admin/empleados') {
+export async function pushResponsables(empresaId: string, titulo: string, cuerpo: string, url = '/admin') {
   try {
     const subs = await prisma.$queryRaw<Sub[]>(Prisma.sql`
       SELECT endpoint, p256dh, auth FROM rrhh.push_subscriptions

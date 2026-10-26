@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import Aviso from '@/components/ui/Aviso'
+import Boton from '@/components/ui/Boton'
 
 type Aviso = { id: string; texto: string; creado_at: string }
 
@@ -19,15 +21,12 @@ export default function AvisosAdminBanner({ avisos }: { avisos: Aviso[] }) {
     } catch { setError(true) }
   }
   return (
-    <section role="alert" className="mb-4 rounded-[10px] border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-      <p className="font-semibold">Hay correos que no se han podido enviar</p>
+    <Aviso tono="aviso" titulo="Hay correos que no se han podido enviar" className="mb-4">
       <ul className="mt-2 list-disc space-y-1 pl-5">
         {lista.map(a => <li key={a.id} className="break-words">{a.texto}</li>)}
       </ul>
-      {error && <p className="mt-2 text-red-700">No se pudo marcar como visto. Inténtalo de nuevo.</p>}
-      <button type="button" onClick={marcar} className="mt-3 min-h-[44px] rounded-[10px] border border-amber-400 bg-white px-4 py-2 font-semibold">
-        Marcar como visto
-      </button>
-    </section>
+      {error && <p className="mt-2 text-alert">No se pudo marcar como visto. Inténtalo de nuevo.</p>}
+      <Boton variante="secundario" onClick={marcar} className="mt-3">Marcar como visto</Boton>
+    </Aviso>
   )
 }

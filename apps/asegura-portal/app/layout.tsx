@@ -2,6 +2,7 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 
 import './globals.css'
 import type { ReactNode } from 'react'
+import { CabeceraEnlacesSesion } from './CabeceraEnlacesSesion'
 import { CampanaAvisos } from './CampanaAvisos'
 import { InstalarEnBarra } from './InstalarEnBarra'
 import { InterruptorTema } from './InterruptorTema'
@@ -105,6 +106,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </span>
           </a>
           <span className="marca-coletilla">Correduría de seguros</span>
+          {/* 26/10/2026: «Herramientas» y «Seguros», como en la cabecera del Portal del Empleado. Solo con sesión. */}
+          <CabeceraEnlacesSesion />
           {/* Las acciones de la cabecera van sueltas y no en un menú:
               esconder cosas detrás de un botón cuesta un toque más, un
               componente más y, en esta pantalla, que gente de 50-70 años no

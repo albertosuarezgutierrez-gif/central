@@ -145,7 +145,7 @@ export function Importador({ titulares }: { titulares: { clienteId: string; nomb
     }
   }
 
-  const aviso = error && <p role="alert" style={{ color: 'var(--rojo, #b00020)', margin: 0 }}>{error}</p>
+  const aviso = error && <p role="alert" style={{ color: 'var(--danger)', margin: 0 }}>{error}</p>
 
   if (hecho) {
     return (

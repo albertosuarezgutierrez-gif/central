@@ -897,6 +897,9 @@ importers:
 
   apps/rrhh:
     dependencies:
+      '@central/brand':
+        specifier: file:../../packages/brand
+        version: link:../../packages/brand
       '@central/core-ai':
         specifier: file:../../packages/core-ai
         version: link:../../packages/core-ai

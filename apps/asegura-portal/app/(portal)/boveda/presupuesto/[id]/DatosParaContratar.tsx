@@ -48,7 +48,7 @@ export function DatosParaContratar({ datos, corredor }: { datos: ResultadoDatosP
         {datos.datos.map((d) => (
           <li key={d.campo} style={{ display: 'grid', gap: 2, overflowWrap: 'anywhere' }}>
             <strong style={{ fontSize: 14 }}>{d.etiqueta}</strong>
-            <span style={{ fontSize: 14, color: d.estado === 'falta' && d.aporta !== 'corredor' ? 'var(--negative, #b42318)' : 'inherit' }}>
+            <span style={{ fontSize: 14, color: d.estado === 'falta' && d.aporta !== 'corredor' ? 'var(--danger)' : 'inherit' }}>
               {fraseDato(d)}
             </span>
           </li>

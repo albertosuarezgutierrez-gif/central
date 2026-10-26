@@ -19,6 +19,7 @@ import {
 import { getIdentidad } from '@/lib/session'
 
 import { ImprimirResumen } from './ImprimirResumen'
+import { EncabezadoPortal } from '../../PaginaPortal'
 
 export const dynamic = 'force-dynamic'
 
@@ -110,7 +111,7 @@ export default async function ResumenPage({
       <div className="solo-pantalla resumen-pantalla">
         <p className="antetitulo">Declaración de la renta</p>
       </div>
-      <h1>Mi resumen {anio}</h1>
+      <EncabezadoPortal titulo="Mi" acento={`resumen ${anio}`} />
       <p className="suave" style={{ marginTop: 0 }}>No sustituye a los justificantes de la compañía.</p>
       {titulares && <p className="suave" style={{ marginTop: 0 }}>Titular: {titulares}</p>}
 

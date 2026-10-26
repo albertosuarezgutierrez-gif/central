@@ -7,6 +7,8 @@ import { puertosInquilino } from '@/lib/inquilino/inquilino-bd'
 import { getIdentidad } from '@/lib/session'
 
 import { EntrarConCodigo } from '../../invitacion/[token]/Invitacion'
+import { PaginaPortal } from '../../PaginaPortal'
+import { TarjetaPortal } from '../../TarjetaPortal'
 import { AceptarEnlace } from './AceptarEnlace'
 
 export const dynamic = 'force-dynamic'
@@ -31,25 +33,23 @@ export default async function EnlaceInquilinoPage({ params }: { params: Promise<
     const puertos = puertosInquilino('00000000-0000-0000-0000-000000000000')
     if (!(await enlaceVigente(puertos, token))) return <EnlaceMuerto />
     return (
-      <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
-        <div className="seccion">
-          <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Tu contrato de alquiler</h1>
+      <PaginaPortal suelta estrecha antetitulo="Inquilino" titulo="Tu contrato de" acento="alquiler">
+        <TarjetaPortal>
           <p className="suave" style={{ marginTop: 0 }}>
             Tu propietario te ha dado un enlace para que veas tu contrato de alquiler. <strong>Entra con tu correo</strong>: te
             mandamos un código de un solo uso. No hace falta contraseña.
           </p>
           <EntrarConCodigo />
-        </div>
-      </main>
+        </TarjetaPortal>
+      </PaginaPortal>
     )
   }
 
   if (!(await enlaceVigente(puertosInquilino(identidad.id), token))) return <EnlaceMuerto />
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem' }}>
-      <div className="seccion">
-        <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Tu contrato de alquiler</h1>
+    <PaginaPortal suelta estrecha antetitulo="Inquilino" titulo="Tu contrato de" acento="alquiler">
+      <TarjetaPortal>
         <p style={{ marginTop: 0 }}>
           Tu propietario te invita a ver aquí <strong>solo tu contrato</strong>: la renta, las fechas y los recibos que él decida
           compartir contigo. También podrás subir justificantes (por ejemplo, el recibo de tu seguro de hogar).
@@ -61,22 +61,21 @@ export default async function EnlaceInquilinoPage({ params }: { params: Promise<
           <li>No te mostraremos ninguna oferta a menos que lo pidas tú, más adelante y de forma opcional.</li>
         </ul>
         <AceptarEnlace token={token} />
-      </div>
-    </main>
+      </TarjetaPortal>
+    </PaginaPortal>
   )
 }
 
 /** UNA sola página para los cuatro finales del enlace (no existe, anulado, ya usado, caducado). */
 function EnlaceMuerto() {
   return (
-    <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
-      <div className="seccion">
-        <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Este enlace ya no vale</h1>
+    <PaginaPortal suelta estrecha antetitulo="Inquilino" titulo="Este enlace" acento="ya no vale">
+      <TarjetaPortal>
         <p style={{ marginTop: 0 }}>Pide a tu propietario que te dé un enlace nuevo.</p>
         <p className="suave" style={{ marginBottom: 0 }}>
           Si ya aceptaste uno, entra con tu correo y verás tu contrato: <Link href="/mi-alquiler">Ir a mi alquiler</Link>
         </p>
-      </div>
-    </main>
+      </TarjetaPortal>
+    </PaginaPortal>
   )
 }

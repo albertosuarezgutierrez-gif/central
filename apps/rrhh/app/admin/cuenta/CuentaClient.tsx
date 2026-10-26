@@ -4,6 +4,8 @@ import Page from '@/components/ui/Page'
 import { CATEGORIAS, MESES, etiquetaCategoria, pideAnio, pideMes, sufijoPeriodo } from '@/lib/categorias-empresa'
 import Card from '@/components/ui/Card'
 import Tabla from '@/components/ui/Tabla'
+import Boton from '@/components/ui/Boton'
+import { COBALTO_ASEGURA } from '@/lib/marca-asegura'
 
 type Analisis = { resumen?: string; dias_permisos?: Record<string, number | string>; jornada_anual_horas?: number | string | null; vacaciones?: number | string | null; fuente?: string | null; _meta?: { aviso?: string; con_busqueda?: boolean } }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
@@ -20,7 +22,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   const [nom, setNom] = useState(convenio.nombre)
   const [convMsg, setConvMsg] = useState('')
 
-  const [color, setColor] = useState(branding.color_primario ?? '#2b6a6e')
+  const [color, setColor] = useState(branding.color_primario ?? COBALTO_ASEGURA)
   const [logoUrl, setLogoUrl] = useState(branding.logo_url)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [brandMsg, setBrandMsg] = useState('')
@@ -113,16 +115,16 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   }
 
   return (
-    <Page titulo="Mi cuenta" ancho="formulario">
+    <Page titulo="Ajustes de empresa" subtitulo="Logo, convenio y documentación de la empresa" ancho="formulario">
 
       <Card as="section" className="my-3 max-w-sm">
-        <h2 className="mb-2 text-base">Identidad corporativa (marca blanca)</h2>
+        <h2 className="mb-2 text-base">Logo y color de la empresa</h2>
         <form onSubmit={guardarMarca} className="grid grid-cols-1 gap-2.5">
-          <label className="text-ink-2 text-sm">Color corporativo</label>
+          <label className="text-ink-2 text-sm">Color corporativo (para los PDF que generes, p. ej. PRL)</label>
           <div className="flex items-center gap-2">
-            <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#2b6a6e'}
+            <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : COBALTO_ASEGURA}
               onChange={e => setColor(e.target.value)} className="h-10 w-12 p-1" aria-label="Color corporativo" />
-            <input value={color} onChange={e => setColor(e.target.value)} placeholder="#2b6a6e" className="min-w-0 flex-1" />
+            <input value={color} onChange={e => setColor(e.target.value)} placeholder={COBALTO_ASEGURA} className="min-w-0 flex-1" />
             <span className="inline-block h-9 w-9 shrink-0 rounded-lg border border-line" style={{ background: color }} aria-hidden />
           </div>
 
@@ -142,7 +144,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
           <button type="submit" disabled={guardandoBrand}>{guardandoBrand ? 'Guardando…' : 'Guardar marca'}</button>
           {brandMsg && <p className="text-ok text-sm">{brandMsg}</p>}
         </form>
-        <p className="text-ink-3 mt-2 text-xs">El logo y el color se aplican al <strong>Portal del Empleado</strong> que ven tus trabajadores. Deja el color vacío para usar el de iarrhh.</p>
+        <p className="text-ink-3 mt-2 text-xs">Tu logo aparece en el Portal del Empleado de tus trabajadores junto a «con Grupo ASegura». La interfaz usa siempre el diseño de Grupo ASegura; el color solo se aplica a los documentos PDF que generas.</p>
       </Card>
 
       <Card as="section" className="my-3 max-w-sm">
@@ -158,7 +160,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
         <div className="mt-3 border-t border-line pt-3">
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={analizar} disabled={analizando || !cod} className="bg-paper-2 text-accent-ink hover:bg-line">
-              {analizando ? 'Analizando…' : '🤖 Analizar convenio con IA'}
+              {analizando ? 'Analizando…' : 'Analizar convenio con IA'}
             </button>
             {fecha && <span className="text-ink-3 text-xs">Actualizado: {new Date(fecha).toLocaleString('es-ES')}</span>}
           </div>
@@ -180,7 +182,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
               {datos.vacaciones != null && <p className="text-xs">· Vacaciones: <strong>{String(datos.vacaciones)}</strong></p>}
               {datos.jornada_anual_horas != null && <p className="text-xs">· Jornada anual: <strong>{String(datos.jornada_anual_horas)}</strong></p>}
               {datos.fuente && <p className="text-ink-3 text-xs">Fuente: {datos.fuente}</p>}
-              <p className="text-alert text-xs">⚠️ {datos._meta?.aviso ?? 'Datos orientativos; verifícalos con el texto oficial del convenio.'}</p>
+              <p className="text-alert text-xs">{datos._meta?.aviso ?? 'Datos orientativos; verifícalos con el texto oficial del convenio.'}</p>
             </div>
           )}
         </div>
@@ -231,8 +233,8 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
                     <td data-label="Fecha" className="px-3 py-2.5 text-xs tabular-nums text-ink-3">{new Date(d.subido_at).toLocaleDateString('es-ES')}</td>
                     <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="rounded px-2 py-0.5 text-xs bg-paper-2 text-ink-2 hover:bg-line no-underline">Descargar</a>}
-                        <button onClick={() => borrarDoc(d.id, d.nombre)} className="px-2 py-0.5 text-xs text-alert bg-paper-2 hover:bg-line">🗑️</button>
+                        {d.url && <Boton href={d.url} variante="secundario" target="_blank" rel="noopener noreferrer">Descargar</Boton>}
+                        <Boton variante="peligroSuave" aria-label={`Borrar ${d.nombre}`} onClick={() => borrarDoc(d.id, d.nombre)}>Borrar</Boton>
                       </div>
                     </td>
                   </tr>

@@ -4,6 +4,8 @@ import assert from 'node:assert/strict'
 import {
   hrefDeVista,
   pestanasPortal,
+  seccionActiva,
+  SUBVISTAS_SEGUROS,
   VISTAS_BOVEDA,
   VISTA_BOVEDA_POR_DEFECTO,
   vistaDeBoveda,
@@ -46,36 +48,23 @@ test('la vista por defecto se enlaza SIN parámetro', () => {
   assert.equal(hrefDeVista('siniestro'), '/boveda?vista=siniestro')
 })
 
-test('las pestañas son ocho, en orden, y «Contactos» y «Configuración» son otra ruta', () => {
-  // Eran tres hasta el 07/09/2026. Vuelven a ser cuatro con «Recibos», que
-  // Alberto echó de menos tres veces sobre su propio portal, y el argumento en
-  // contra («casi siempre dirá cero») se midió antes de tocar nada: 55 de los
-  // 80 titulares tienen algún recibo no anulado. Ver `pestanasPortal()`.
-  // Cinco desde el 09/09/2026: «Mis datos» (teléfono, correo, dirección de
-  // contacto y el derecho de supresión), que antes colgaba al final de «Mis
-  // seguros» y solo lo encontraba quien bajara del todo. Seis el mismo día:
-  // «Mi QR» (la hoja de la nevera), enterrada en el mismo sitio. Y siete desde
-  // el 13/09/2026: «Recordatorios» (ITV, carnet, caldera… propios del cliente,
-  // sin póliza detrás). «Mensajes» se retiró el 26/09/2026. Ocho desde el
-  // 13/10/2026: «Configuración» (avisos y consentimientos), otra ruta.
-  // Nueve desde el 24/10/2026: «Inicio» (`/inicio`) delante de todo, otra ruta.
+test('el menú son CINCO entradas, en orden, y solo «Seguros» apunta a una vista de la bóveda', () => {
+  // Eran 9 en el módulo (y 12 en pantalla) hasta el 26/10/2026: Alberto decidió Inicio · Seguros · Herramientas ·
+  // Contactos · Cuenta. Mi QR, Recibos y Siniestros pasan DENTRO de Seguros (`SUBVISTAS_SEGUROS`); Recordatorios a
+  // Herramientas (el calendario); Datos y Configuración a Cuenta.
   const p = pestanasPortal()
-  assert.equal(p.length, 9)
-  assert.deepEqual(
-    p.map((x) => x.etiqueta),
-    ['Inicio', 'Seguros', 'Mi QR', 'Recibos', 'Siniestros', 'Recordatorios', 'Contactos', 'Datos', 'Configuración'],
-  )
-  assert.equal(p[0].vista, null)
-  assert.equal(p[0].href, '/inicio')
-  assert.equal(p[8].vista, null)
-  assert.equal(p[8].href, '/configuracion')
-  assert.equal(p[2].vista, 'hoja')
-  assert.equal(p[2].href, '/boveda?vista=hoja')
-  assert.equal(p[6].vista, null)
-  assert.equal(p[6].href, '/autorizaciones')
-  assert.equal(p[7].vista, 'datos')
+  assert.equal(p.length, 5)
+  assert.deepEqual(p.map((x) => x.etiqueta), ['Inicio', 'Seguros', 'Herramientas', 'Contactos', 'Cuenta'])
+  assert.deepEqual(p.map((x) => x.href), ['/inicio', '/boveda', '/herramientas', '/autorizaciones', '/cuenta'])
+  assert.deepEqual(p.map((x) => x.vista), [null, 'seguros', null, null, null])
   assert.equal(vistaDeBoveda('datos'), 'datos')
   assert.equal(vistaDeBoveda('hoja'), 'hoja')
+})
+
+test('las sub-vistas de Seguros son Seguros, Recibos, Siniestros y Mi QR, y todas pertenecen a esa entrada', () => {
+  assert.deepEqual(SUBVISTAS_SEGUROS.map((s) => s.etiqueta), ['Seguros', 'Recibos', 'Siniestros', 'Mi QR'])
+  const seguros = pestanasPortal().find((x) => x.id === 'seguros')!
+  for (const s of SUBVISTAS_SEGUROS) assert.ok(seguros.vistas.includes(s.vista), s.vista)
 })
 
 test('🚨 el id de la vista de siniestros NO cambia al cambiar su etiqueta', () => {
@@ -85,9 +74,9 @@ test('🚨 el id de la vista de siniestros NO cambia al cambiar su etiqueta', ()
   // `seguros` por el comportamiento de `vistaDeBoveda()`: sin error, sin aviso
   // y sin que nadie se entere.
   assert.equal(vistaDeBoveda('siniestro'), 'siniestro')
-  const p = pestanasPortal().find((x) => x.etiqueta === 'Siniestros')
-  assert.equal(p?.vista, 'siniestro')
-  assert.equal(p?.href, '/boveda?vista=siniestro')
+  const s = SUBVISTAS_SEGUROS.find((x) => x.etiqueta === 'Siniestros')
+  assert.equal(s?.vista, 'siniestro')
+  assert.equal(hrefDeVista('siniestro'), '/boveda?vista=siniestro')
 })
 
 test('no hay dos pestañas que se lean como la misma cosa', () => {
@@ -116,19 +105,39 @@ test('un enlace viejo a la pestaña que ya no existe cae donde vive su contenido
   assert.equal(vistaDeBoveda('polizas'), 'seguros')
 })
 
-test('todo panel declarado tiene su pestaña, y toda pestaña de panel su vista', () => {
-  // El cepo que importa: añadir una vista a `VISTAS_BOVEDA` sin ponerla en la
-  // barra deja una pantalla a la que no se llega desde ningún sitio, y quitar
-  // una pestaña sin quitar la vista deja una pantalla huérfana. Los dos fallos
-  // son mudos.
-  const conPanel = pestanasPortal().filter((p) => p.vista !== null).map((p) => p.vista)
-  assert.deepEqual([...conPanel].sort(), [...VISTAS_BOVEDA].sort())
+test('todo panel declarado cuelga de UNA entrada del menú, y ninguna entrada reclama un panel que no existe', () => {
+  // El cepo que importa: añadir una vista a `VISTAS_BOVEDA` sin colgarla de una entrada deja una pantalla a la que
+  // no se llega desde ningún sitio, y quitar la vista sin quitarla de la entrada deja una referencia muerta. Los dos
+  // fallos son mudos. Y una vista en DOS entradas marcaría dos secciones activas a la vez.
+  const reclamadas = pestanasPortal().flatMap((p) => [...p.vistas])
+  assert.deepEqual([...reclamadas].sort(), [...VISTAS_BOVEDA].sort())
 })
 
-test('el href de cada pestaña con panel coincide con hrefDeVista', () => {
-  // Si divergen, la pestaña activa no se marcaría como activa: se vería la
-  // barra sin ninguna resaltada, que es peor que no tener barra.
+test('el href de la entrada que apunta a una vista coincide con hrefDeVista', () => {
+  // Si divergen, la entrada activa no se marcaría como activa.
   for (const p of pestanasPortal()) {
     if (p.vista !== null) assert.equal(p.href, hrefDeVista(p.vista))
   }
+})
+
+test('seccionActiva: cada ruta y cada vista caen en UNA entrada del menú', () => {
+  assert.equal(seccionActiva('/inicio'), 'inicio')
+  assert.equal(seccionActiva('/boveda'), 'seguros')
+  assert.equal(seccionActiva('/boveda', 'recibos'), 'seguros')
+  assert.equal(seccionActiva('/boveda', 'siniestro'), 'seguros')
+  assert.equal(seccionActiva('/boveda', 'hoja'), 'seguros')
+  assert.equal(seccionActiva('/boveda', 'recordatorios'), 'herramientas')
+  assert.equal(seccionActiva('/boveda', 'datos'), 'cuenta')
+  assert.equal(seccionActiva('/boveda', 'basura'), 'seguros')
+  assert.equal(seccionActiva('/boveda/poliza/abc'), 'seguros')
+  assert.equal(seccionActiva('/herramientas'), 'herramientas')
+  assert.equal(seccionActiva('/patrimonio/inmueble/1'), 'herramientas')
+  assert.equal(seccionActiva('/flota'), 'herramientas')
+  assert.equal(seccionActiva('/resumen'), 'herramientas')
+  assert.equal(seccionActiva('/autorizaciones'), 'contactos')
+  assert.equal(seccionActiva('/configuracion'), 'cuenta')
+  assert.equal(seccionActiva('/cuenta'), 'cuenta')
+  assert.equal(seccionActiva('/legal/privacidad'), null)
+  // Un prefijo parecido no cuenta: `/flotante` no es `/flota`.
+  assert.equal(seccionActiva('/flotante'), null)
 })

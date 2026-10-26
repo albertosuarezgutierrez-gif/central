@@ -373,12 +373,12 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
                     No se enviará a {paso.anulacion.compania} hasta que la nueva póliza esté emitida.
                   </p>
                   {paso.anulacion.carta && (
-                    <div style={{ whiteSpace: 'pre-wrap', fontSize: 12, margin: '8px 0 0', padding: 8, background: 'var(--background)', borderRadius: 4, lineHeight: 1.4, overflowWrap: 'anywhere' }}>
+                    <div style={{ whiteSpace: 'pre-wrap', fontSize: 12, margin: '8px 0 0', padding: 8, background: 'var(--panel2)', borderRadius: 4, lineHeight: 1.4, overflowWrap: 'anywhere' }}>
                       {paso.anulacion.carta}
                     </div>
                   )}
                   {paso.anulacion.advertencia && (
-                    <p style={{ fontSize: 12, margin: '6px 0 0', color: 'var(--alarma)', fontWeight: 500 }}>
+                    <p style={{ fontSize: 12, margin: '6px 0 0', color: 'var(--danger)', fontWeight: 500 }}>
                       {paso.anulacion.advertencia}
                     </p>
                   )}

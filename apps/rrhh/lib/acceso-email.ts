@@ -59,6 +59,12 @@ const PREFIJO: Record<PropositoOtp, { email: string; codigo: string }> = {
 }
 export const hashEmailAcceso = (emailNormalizado: string, p: PropositoOtp = 'empleado') => hmac(`${PREFIJO[p].email}:${emailNormalizado}`)
 export const hashCodigoAcceso = (codigo: string, p: PropositoOtp = 'empleado') => hmac(`${PREFIJO[p].codigo}:${codigo}`)
+/**
+ * Clave de los FALLOS de contraseña del responsable (`acceso-password-repo.ts`): mismas filas de `rrhh.acceso_otps`, pero
+ * con un prefijo de dominio propio, así que nunca casa con el `email_hash` de un código (ni de empleado ni de responsable)
+ * y no suma a sus topes.
+ */
+export const hashEmailFalloPassword = (emailNormalizado: string) => hmac(`rrhh-password-fallo-email:${emailNormalizado}`)
 
 // ── Puertos ─────────────────────────────────────────────────────────────────────────────────
 export type OtpFila = { id: string; codigo_hash: string; creada_at: Date; intentos: number; usado_at: Date | null }

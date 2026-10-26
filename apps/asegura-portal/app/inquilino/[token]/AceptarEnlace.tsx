@@ -40,7 +40,7 @@ export function AceptarEnlace({ token }: { token: string }) {
         {enviando ? 'Abriendo…' : 'Ver mi contrato'}
       </button>
       {error && (
-        <p role="alert" style={{ color: 'var(--error, #b00020)' }}>
+        <p role="alert" style={{ color: 'var(--danger)' }}>
           {error}
         </p>
       )}

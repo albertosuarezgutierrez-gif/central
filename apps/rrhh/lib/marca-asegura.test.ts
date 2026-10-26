@@ -1,36 +1,55 @@
-import { describe, it, expect, afterEach } from 'vitest'
-import { readFileSync, existsSync } from 'node:fs'
+import { describe, it, expect } from 'vitest'
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { COBALTO_ASEGURA, PIE_ASEGURA, empresaConMarcaAsegura, estiloMarcaEmpresa, paletaEmpresa, urlPortalAsegura,
-  ENV_EMPRESAS_MARCA_ASEGURA, MANIFEST_ASEGURA, MANIFEST_BASE, WEB_ASEGURA, marcaAseguraDeEmpresa, manifestParaMarca, metadataMarcaAsegura, themeColorMarca, marcaPorHost, marcaDePeticion } from './marca-asegura'
-import { estiloMarca } from './branding'
+import { MARCA_ASEGURA } from '@central/brand'
+import { COBALTO_ASEGURA, PIE_ASEGURA, urlPortalAsegura, MANIFEST_PORTAL, MANIFEST_ASEGURA, WEB_ASEGURA } from './marca-asegura'
+import * as marca from './marca-asegura'
 
-const A = '11111111-1111-1111-1111-111111111111'
-const B = '22222222-2222-2222-2222-222222222222'
+const RAIZ = join(__dirname, '..')
+const leer = (...p: string[]) => readFileSync(join(RAIZ, ...p), 'utf8')
+function fuentes(dir: string): { ruta: string; src: string }[] {
+  return readdirSync(dir).flatMap(n => {
+    const p = join(dir, n)
+    if (statSync(p).isDirectory()) return fuentes(p)
+    return /\.(tsx?|css)$/.test(n) && !/\.test\./.test(n) ? [{ ruta: p.replace(RAIZ + '/', ''), src: readFileSync(p, 'utf8') }] : []
+  })
+}
 
-describe('marca Grupo ASegura', () => {
-  it('solo las empresas de la lista llevan la marca', () => {
-    const lista = ` ${A.toUpperCase()} , 33333333-3333-3333-3333-333333333333`
-    expect(empresaConMarcaAsegura(A, lista)).toBe(true)
-    expect(empresaConMarcaAsegura(B, lista)).toBe(false)
-    expect(empresaConMarcaAsegura(A, '')).toBe(false)
-    expect(empresaConMarcaAsegura(A, undefined)).toBe(false)
-    expect(empresaConMarcaAsegura('', lista)).toBe(false)
-  })
-  it('con marca → paleta cobalto ASegura (ignora el color de la empresa)', () => {
-    expect(paletaEmpresa(true, '#1B3461')?.accent).toBe(COBALTO_ASEGURA)
-    expect(estiloMarcaEmpresa(true, null)['--accent']).toBe('#3364ee')
-  })
-  it('sin marca → la de siempre', () => {
-    expect(estiloMarcaEmpresa(false, '#1B3461')).toEqual(estiloMarca('#1B3461'))
-    expect(estiloMarcaEmpresa(false, null)).toEqual({})
+describe('marca ÚNICA Grupo ASegura (26/10/2026)', () => {
+  it('el cobalto sale de @central/brand, no se escribe a mano', () => {
+    expect(COBALTO_ASEGURA).toBe(MARCA_ASEGURA.paleta.primario)
+    expect(COBALTO_ASEGURA).toBe('#3364ee')
   })
   it('el pie se escribe exactamente «Grupo ASegura»', () => {
     expect(PIE_ASEGURA).toBe('Herramienta gratuita de Grupo ASegura')
   })
+  it('la marca ya no depende de la env, del host ni de ?m=: esas funciones no existen', () => {
+    for (const k of ['empresaConMarcaAsegura', 'marcaAseguraDeEmpresa', 'marcaPorHost', 'marcaDePeticion', 'estiloMarcaEmpresa', 'paletaEmpresa', 'ENV_EMPRESAS_MARCA_ASEGURA']) {
+      expect(k in marca).toBe(false)
+    }
+  })
+  it('nada del código lee RRHH_EMPRESAS_MARCA_ASEGURA (la env, si sigue puesta, no hace nada)', () => {
+    const lee = [...fuentes(join(RAIZ, 'app')), ...fuentes(join(RAIZ, 'components')), ...fuentes(join(RAIZ, 'lib'))]
+      .filter(f => /RRHH_EMPRESAS_MARCA_ASEGURA/.test(f.src.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, ''))).map(f => f.ruta)
+    expect(lee).toEqual([])
+  })
+  it('el layout raíz inyecta los tokens de @central/brand y no hay beige/teal/serif ni hex en el CSS', () => {
+    const layout = leer('app', 'layout.tsx')
+    expect(layout).toContain('emitirRootCss(MARCA_ASEGURA)')
+    expect(layout).not.toMatch(/Newsreader|Inter_Tight/)
+    const css = leer('app', 'globals.css')
+    expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
+    expect(css).not.toMatch(/serif\)|Newsreader|\.marca-asegura/)
+  })
+  it('ninguna pantalla pinta hex propios (salvo el QR de verificación, que necesita negro puro)', () => {
+    const malas = [...fuentes(join(RAIZ, 'app')), ...fuentes(join(RAIZ, 'components'))]
+      .filter(f => !f.ruta.includes('api/admin/prl') && !f.ruta.includes('app/v/'))
+      .filter(f => /#[0-9a-fA-F]{6}\b/.test(f.src)).map(f => f.ruta)
+    expect(malas).toEqual([])
+  })
 })
 
-describe('URL de la tarjeta «Mis seguros» (regla legal)', () => {
+describe('URL de «Seguros» (regla legal: solo email y origen)', () => {
   it('solo lleva email y origen', () => {
     const u = new URL(urlPortalAsegura('ana+prueba@ejemplo.es', 'https://clientes.grupoasegura.es/'))
     expect([...u.searchParams.keys()].sort()).toEqual(['email', 'origen'])
@@ -43,70 +62,42 @@ describe('URL de la tarjeta «Mis seguros» (regla legal)', () => {
     expect([...u.searchParams.keys()]).toEqual(['origen'])
     expect(u.origin).toBe('https://otro.example')
   })
+  it('la cabecera común (la usan /e y /admin) enlaza a Seguros en pestaña nueva y marca Herramientas como activa', () => {
+    const c = leer('components', 'CabeceraApp.tsx')
+    expect(c).toContain('aria-current="page"')
+    expect(c).toContain('target="_blank"')
+    expect(c).toContain('rel="noopener noreferrer"')
+    expect(leer('app', 'admin', 'layout.tsx')).toContain('urlPortalAsegura(usuario.email')
+    expect(leer('app', 'e', 'page.tsx')).toContain('urlPortalAsegura(r[0]?.email')
+  })
 })
 
 describe('app instalable con identidad Grupo ASegura', () => {
-  const prev = process.env[ENV_EMPRESAS_MARCA_ASEGURA]
-  afterEach(() => { if (prev === undefined) delete process.env[ENV_EMPRESAS_MARCA_ASEGURA]; else process.env[ENV_EMPRESAS_MARCA_ASEGURA] = prev })
-  const pub = (f: string) => join(__dirname, '..', 'public', f)
-
-  it('el manifest depende de la marca: con marca el de Grupo ASegura, sin marca el de siempre', () => {
-    expect(manifestParaMarca(true)).toBe(MANIFEST_ASEGURA)
-    expect(manifestParaMarca(false)).toBe(MANIFEST_BASE)
-    expect(metadataMarcaAsegura(true).manifest).toBe('/manifest-asegura.json')
-    expect(metadataMarcaAsegura(false)).toEqual({})   // sin marca: ningún metadato propio, queda lo del layout
-    expect(themeColorMarca(true)).toBe('#3364ee')
-    expect(themeColorMarca(false)).toBeUndefined()
+  const pub = (f: string) => join(RAIZ, 'public', f)
+  it('los dos manifest son de Grupo ASegura, cobalto, con iconos PNG existentes y start_url dentro del scope', () => {
+    for (const f of ['manifest.json', 'manifest-asegura.json']) {
+      const m = JSON.parse(readFileSync(pub(f), 'utf8'))
+      expect(m.name).toContain('Grupo ASegura')
+      expect(m.short_name).toBe('Grupo ASegura')
+      expect(m.theme_color).toBe(COBALTO_ASEGURA)
+      expect(m.start_url.startsWith('/e/entrar')).toBe(true)
+      expect(m.scope).toBe('/')
+      expect(m.icons.some((i: { purpose: string; sizes: string; type: string }) => i.purpose === 'maskable' && i.sizes === '512x512' && i.type === 'image/png')).toBe(true)
+      for (const i of m.icons) expect(existsSync(pub(i.src.slice(1)))).toBe(true)
+    }
+    expect(MANIFEST_PORTAL).toBe('/manifest.json')
+    expect(MANIFEST_ASEGURA).toBe('/manifest-asegura.json')
   })
-  it('/e/[token] y /e usan la marca solo si la empresa está en la env', () => {
-    process.env[ENV_EMPRESAS_MARCA_ASEGURA] = `${A}`
-    expect(marcaAseguraDeEmpresa(A)).toBe(true)
-    expect(marcaAseguraDeEmpresa(B)).toBe(false)
-    expect(marcaAseguraDeEmpresa(null)).toBe(false)   // token inválido: nunca marca (no delata nada)
-    delete process.env[ENV_EMPRESAS_MARCA_ASEGURA]
-    expect(marcaAseguraDeEmpresa(A)).toBe(false)
-    const tokenPage = readFileSync(join(__dirname, '..', 'app', 'e', '[token]', 'page.tsx'), 'utf8')
-    expect(tokenPage).toContain('marcaAseguraDeEmpresa(empresaId)')
-    expect(tokenPage).toContain('generateMetadata')
-  })
-  it('manifest-asegura.json: Grupo ASegura, cobalto, iconos PNG existentes y start_url dentro del scope', () => {
-    const m = JSON.parse(readFileSync(pub('manifest-asegura.json'), 'utf8'))
-    expect(m.name).toContain('Grupo ASegura')
-    expect(m.short_name).toBe('Grupo ASegura')
-    expect(m.theme_color).toBe('#3364ee')
-    expect(m.start_url.startsWith('/e/entrar')).toBe(true)
-    expect(m.scope).toBe('/')
-    expect(m.icons.some((i: { purpose: string; sizes: string; type: string }) => i.purpose === 'maskable' && i.sizes === '512x512' && i.type === 'image/png')).toBe(true)
-    for (const i of m.icons) expect(existsSync(pub(i.src.slice(1)))).toBe(true)
-  })
-  it('el manifest de las demás empresas no cambia', () => {
-    const m = JSON.parse(readFileSync(pub('manifest.json'), 'utf8'))
-    expect(m.short_name).toBe('RR.HH.')
-    expect(m.theme_color).toBe('#0f766e')
+  it('el layout raíz enlaza el manifest y los iconos de la marca para TODAS las rutas', () => {
+    const layout = leer('app', 'layout.tsx')
+    expect(layout).toContain('manifest: MANIFEST_PORTAL')
+    expect(layout).toContain('ICONO_APPLE_ASEGURA')
+    expect(layout).toContain('themeColor: COBALTO_ASEGURA')
   })
   it('el pie enlaza a la web pública de Grupo ASegura', () => {
     expect(WEB_ASEGURA).toBe('https://grupoasegura.es')
-    const pie = readFileSync(join(__dirname, '..', 'components', 'MarcaAsegura.tsx'), 'utf8')
+    const pie = leer('components', 'MarcaAsegura.tsx')
     expect(pie).toContain('target="_blank"')
     expect(pie).toContain('rel="noopener noreferrer"')
-  })
-})
-
-describe('marca por host (/ y /login, sin empresa conocida)', () => {
-  it('el dominio propio lleva la marca (puerto y mayúsculas ignorados)', () => {
-    expect(marcaPorHost('empleados.grupoasegura.es')).toBe(true)
-    expect(marcaPorHost('Empleados.GrupoASegura.es:443')).toBe(true)
-  })
-  it('vercel.app, localhost, otros dominios y vacío no la llevan', () => {
-    for (const h of ['central-rrhh.vercel.app', 'localhost:3000', 'grupoasegura.es', 'empleados.grupoasegura.es.evil.com', '', null, undefined]) {
-      expect(marcaPorHost(h)).toBe(false)
-      expect(marcaDePeticion(h, undefined)).toBe(false)
-    }
-  })
-  it('?m=asegura la fuerza en preview/local; otro valor no', () => {
-    expect(marcaDePeticion('localhost:3000', 'asegura')).toBe(true)
-    expect(marcaDePeticion('central-rrhh.vercel.app', ['asegura'])).toBe(true)
-    expect(marcaDePeticion('localhost:3000', 'otra')).toBe(false)
-    expect(marcaDePeticion('empleados.grupoasegura.es', undefined)).toBe(true)
   })
 })

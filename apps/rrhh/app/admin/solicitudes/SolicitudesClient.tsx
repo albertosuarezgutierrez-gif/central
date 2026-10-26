@@ -2,6 +2,10 @@
 import { useState } from 'react'
 import { tipoEtiqueta, tiposPorGrupo } from '@/lib/solicitudes-tipos'
 import Page from '@/components/ui/Page'
+import Aviso from '@/components/ui/Aviso'
+import Boton from '@/components/ui/Boton'
+import Chip, { type TonoChip } from '@/components/ui/Chip'
+import PestanasSolicitudes from '@/components/PestanasSolicitudes'
 
 type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; motivo: string | null; estado: string; empleado_nombre: string; tiene_justificante?: boolean }
 
@@ -10,7 +14,7 @@ const ESTADOS = ['solicitada', 'aprobada', 'rechazada']
 type Borrador = { tipo: string; fecha_inicio: string; fecha_fin: string; motivo: string; estado: string }
 const campo = 'min-h-[44px] w-full rounded-[10px] border border-line bg-paper px-2 text-sm'
 
-const COLOR: Record<string, string> = { solicitada: 'text-ink-3', aprobada: 'text-ok', rechazada: 'text-alert' }
+const TONO: Record<string, TonoChip> = { solicitada: 'aviso', aprobada: 'ok', rechazada: 'alerta' }
 
 export default function SolicitudesClient({ inicial }: { inicial: S[] }) {
   const [lista, setLista] = useState<S[]>(inicial)
@@ -55,21 +59,24 @@ export default function SolicitudesClient({ inicial }: { inicial: S[] }) {
   const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')
   return (
     <Page titulo="Solicitudes">
+      <PestanasSolicitudes activa="lista" />
       {aviso && (
-        <div className="mt-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          ⚠️ {aviso}
-          <button onClick={() => setAviso(null)} className="ml-3 text-xs underline bg-transparent p-0 text-amber-700 hover:text-amber-900">Cerrar</button>
-        </div>
+        <Aviso tono="aviso" className="mt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="min-w-0 break-words">{aviso}</span>
+            <Boton variante="secundario" onClick={() => setAviso(null)}>Cerrar</Boton>
+          </div>
+        </Aviso>
       )}
       <ul className="mt-3 grid list-none gap-2 p-0">
         {visibles.map(s => (
           <li key={s.id} className="rounded-card border border-line bg-card p-3">
             <strong>{s.empleado_nombre}</strong> · {tipoEtiqueta(s.tipo)} {rango(s) && <span>· {rango(s)}</span>}
-            <span className={`ml-2 ${COLOR[s.estado] ?? ''}`}>[{s.estado}]</span>
+            <Chip tono={TONO[s.estado] ?? 'neutro'} className="ml-2">{s.estado}</Chip>
             {s.motivo && <div className="text-ink-3 text-sm">{s.motivo}</div>}
             {s.tiene_justificante && (
               <a href={`/api/admin/solicitudes/${s.id}/justificante`} target="_blank" rel="noreferrer"
-                className="text-accent text-sm no-underline hover:underline">📎 Ver justificante</a>
+                className="text-accent text-sm no-underline hover:underline">Ver justificante</a>
             )}
             {editando === s.id && borrador ? (
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -98,18 +105,18 @@ export default function SolicitudesClient({ inicial }: { inicial: S[] }) {
                 </label>
                 {error && <div className="text-alert text-sm sm:col-span-2">{error}</div>}
                 <div className="flex flex-wrap gap-2 sm:col-span-2">
-                  <button className="min-h-[44px]" onClick={() => guardar(s.id)}>Guardar</button>
-                  <button className="min-h-[44px] bg-paper-2 text-ink-2 hover:bg-line" onClick={() => { setEditando(null); setBorrador(null) }}>Cancelar</button>
+                  <Boton onClick={() => guardar(s.id)}>Guardar</Boton>
+                  <Boton variante="secundario" onClick={() => { setEditando(null); setBorrador(null) }}>Cancelar</Boton>
                 </div>
               </div>
             ) : (
               <div className="mt-2 flex flex-wrap gap-2">
                 {s.estado === 'solicitada' && (<>
-                  <button className="min-h-[44px]" onClick={() => resolver(s.id, true)}>Aprobar</button>
-                  <button className="min-h-[44px] bg-paper-2 text-ink-2 hover:bg-line" onClick={() => resolver(s.id, false)}>Rechazar</button>
+                  <Boton onClick={() => resolver(s.id, true)}>Aprobar</Boton>
+                  <Boton variante="secundario" onClick={() => resolver(s.id, false)}>Rechazar</Boton>
                 </>)}
-                <button className="min-h-[44px] bg-paper-2 text-ink-2 hover:bg-line" onClick={() => abrirEdicion(s)}>Editar</button>
-                <button className="min-h-[44px] bg-paper-2 text-alert hover:bg-line" onClick={() => borrar(s)}>Borrar</button>
+                <Boton variante="secundario" onClick={() => abrirEdicion(s)}>Editar</Boton>
+                <Boton variante="peligroSuave" onClick={() => borrar(s)}>Borrar</Boton>
               </div>
             )}
           </li>

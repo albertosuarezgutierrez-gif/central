@@ -41,18 +41,12 @@ import Link from 'next/link'
 import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
-import {
-  carteraLeidaParaHuecos,
-  declaradaVigente,
-  estadoHuecos,
-  huecosDeProteccion,
-  PREFIJO_HUECOS,
-} from '@/lib/huecos-proteccion'
 import { FilaDeclarada } from './FilaDeclarada'
-import { HuecosProteccion } from './HuecosProteccion'
 import { DeclaradasEliminadas, LIMITE_ELIMINADAS } from './DeclaradasEliminadas'
 import { FiltroVigencia } from './FiltroVigencia'
-import { enFamilia, familiaDeParametro, titularesDeFamilia } from '@/lib/familia-filtro'
+import { enFamilia, familiaDeParametro, familiasPresentes, titularesDeFamilia } from '@/lib/familia-filtro'
+import { SubNavSeguros } from './SubNavSeguros'
+import { EncabezadoPortal } from '../../PaginaPortal'
 import { GrupoPlegable } from './GrupoPlegable'
 import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
@@ -392,28 +386,7 @@ export default async function Boveda({
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
 
-  // «Seguros que no nos constan» (13/10/2026): ramos básicos sin póliza VIGENTE entre las suyas (cartera
-  // propia + aportadas). Solo en «Mis seguros»; si no se pudo mirar la cartera o la marca, sin tarjeta.
-  let huecosTarjeta: ReturnType<typeof huecosDeProteccion> = []
-  let estadoTarjetaHuecos: ReturnType<typeof estadoHuecos> = 'oculta'
-  if (vista === 'seguros' && !identidad.corredor) {
-    const marcasHuecos = await prisma.portalAvisoLeido
-      .findMany({
-        where: { identidadId: identidad.id, clave: { startsWith: PREFIJO_HUECOS } },
-        select: { clave: true, creadoEn: true },
-      })
-      .catch(() => null)
-    if (marcasHuecos !== null) {
-      huecosTarjeta = huecosDeProteccion({
-        carteraLeida: carteraLeidaParaHuecos({ fichasVinculadas: cartera.propias.length, vinculo: cartera.vinculo }),
-        ramos: [
-          ...cartera.propias.flatMap((t) => t.polizas.filter(cuentaComoEnVigor).map((p) => p.ramo)),
-          ...declaradas.filter((d) => declaradaVigente(d.fechaVencimiento ? d.fechaVencimiento.toISOString().slice(0, 10) : null, hoyMadrid)).map((d) => d.ramo),
-        ],
-      })
-      estadoTarjetaHuecos = estadoHuecos({ huecos: huecosTarjeta, marcas: marcasHuecos, ahora: new Date() })
-    }
-  }
+  // «Seguros que no nos constan» (huecos de protección) se mudó a Inicio el 26/10/2026: UN solo sitio.
   const correduria = cartera.correduria ?? 'Grupo ASegura'
 
   // ── Los tres cajones (07/09/2026) ─────────────────────────────────────────
@@ -601,15 +574,20 @@ export default async function Boveda({
       {/* Va ANTES del h1 y no dentro: el titular sigue diciendo en qué pantalla
           estás —que es lo que lee un lector de pantalla al saltar por
           encabezados—, y el saludo es lo de al lado, no el encabezado. */}
-      <p className="saludo">
-        {pila ? `${saludo}, ${pila}` : saludo} <span aria-hidden="true">👋</span>
-      </p>
-      {/* El h1 dice en qué pestaña estás. Antes decía siempre «Mis seguros»,
-          también dentro de «Mis datos»: el titular contradecía a la nav justo
-          debajo (09/09/2026, aviso de Alberto). */}
-      <h1 id="titulo-vista">
-        Mis <em>{TITULO_VISTA[vista]}</em>
-      </h1>
+      <EncabezadoPortal
+        saludo={<>{pila ? `${saludo}, ${pila}` : saludo} <span aria-hidden="true">👋</span></>}
+        titulo="Mis"
+        acento={TITULO_VISTA[vista]}
+        idTitulo="titulo-vista"
+      />
+      {/* 26/10/2026 (menú de cinco): Recibos, Siniestros y Mi QR ya no son entradas del menú, son chips de «Seguros»;
+          y las familias (antes tarjetas de Inicio) son chips de la lista. Recordatorios (Herramientas) y Datos (Cuenta)
+          no llevan esta fila: cuelgan de otra entrada. */}
+      <SubNavSeguros
+        vista={vista}
+        familias={familiasPresentes([...cartera.propias, ...cartera.autorizadas], declaradas)}
+        familia={familia}
+      />
 
       {vista === 'seguros' && (
         <>
@@ -657,8 +635,6 @@ export default async function Boveda({
               contestado: a quien dijo que no no se le vuelve a preguntar en cada visita.
               Cambiarla (en los dos sentidos) sigue estando en «Mis datos». */}
           {consentimientoComercial === null && <ConsentimientoComercial inicial={consentimientoComercial} compacto />}
-
-          {estadoTarjetaHuecos !== 'oculta' && <HuecosProteccion huecos={huecosTarjeta} estado={estadoTarjetaHuecos} />}
 
       {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
           su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,

@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { solicitarCodigoResponsable } from '@/lib/acceso-responsable'
 import { enviarCodigoResponsable, repoResponsable } from '@/lib/acceso-responsable-repo'
-import { marcaPorHost } from '@/lib/marca-asegura'
+import { enmascararEmail } from '@/lib/sesion-responsable-reglas'
 import { basePortal } from '@/lib/avisos-reglas'
 import { getIp, rateLimit } from '@/lib/rate-limit'
 
@@ -17,13 +17,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'demasiadas_peticiones' }, { status: 429, headers: { 'retry-after': String(porIp.retryAfter ?? 60) } })
   }
   const body = await req.json().catch(() => null)
-  const marcaAsegura = marcaPorHost(req.headers.get('x-forwarded-host') ?? req.headers.get('host'))
   const url = `${basePortal(process.env.RRHH_PUBLIC_URL, new URL(req.url).origin)}/login`
-  const r = await solicitarCodigoResponsable(repoResponsable, enviarCodigoResponsable, { email: body?.email, ip, marcaAsegura, url })
+  const r = await solicitarCodigoResponsable(repoResponsable, enviarCodigoResponsable, { email: body?.email, ip, marcaAsegura: true, url })
   if (!r.ok) {
     const headers = r.status === 429 ? { 'retry-after': String(r.retryAfter) } : undefined
     return NextResponse.json({ error: r.error }, { status: r.status, headers })
   }
-  if (r.envio) after(async () => { await r.envio!() })
+  // Diagnóstico (SOLO en el log del servidor, nunca en la respuesta, que sigue siendo idéntica): correo enmascarado.
+  if (!r.envio) console.warn(`[acceso-responsable] el correo ${enmascararEmail(body?.email)} no casa con ningún responsable: no se envía código`)
+  else after(async () => {
+    const salio = await r.envio!()
+    if (!salio) console.error(`[acceso-responsable] ERROR: el código para ${enmascararEmail(body?.email)} NO se ha podido enviar (sin transporte de correo o fallo del proveedor)`)
+  })
   return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
 }

@@ -48,9 +48,11 @@ test('🚨 el adaptador parte de accesosPatrimonio, no ofrece sin patrimonio y l
   assert.match(src, /puede\(acc\.get\(i\.titular\.clienteId\), 'enlazar_seguro'\)/)
 })
 
-test('🚨 la ficha de la bóveda, Inicio y Patrimonio usan el aviso (y el alta desde póliza enlaza tras crear)', () => {
+test('🚨 Patrimonio usa el aviso (y el alta desde póliza enlaza tras crear)', () => {
   const nuevo = sinComentarios(readFileSync(new URL('../../app/(portal)/patrimonio/NuevoInmueble.tsx', import.meta.url), 'utf8'))
   assert.match(nuevo, /accion: 'enlazar'/)
+  // 26/10/2026: Inicio ya no lo cuenta (es SOLO lo pendiente: vencimientos, recibos, avisos, huecos y siniestros); la
+  // tarjeta de Patrimonio que lo decía salió de Inicio. El aviso vive en `/patrimonio` y en la ficha de la póliza.
   const inicio = readFileSync(new URL('../inicio.ts', import.meta.url), 'utf8')
-  assert.match(inicio, /avisosPolizasSinInmueble/)
+  assert.doesNotMatch(inicio, /avisosPolizasSinInmueble/)
 })
