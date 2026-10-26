@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T14:31:23Z",
-  "sha": "143a6dcf54d5aefe742ea159221ad5ffac147b1b",
+  "generadoEn": "2026-10-26T15:51:42Z",
+  "sha": "3f8c230afbea96f1b5e291cc84c99acf7e220bba",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5833,13 +5833,13 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "«Tu flota» (05/10/2026) — el mínimo de empresa del piloto. Sin `?empresa=`: índice de las sociedades cuya flota puede ver esta identidad (dueño o jefe de flota) y los nombramientos que tiene pendiente"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "988ab0d1fbc5"
+      "hash": "8d921cf2fb4e"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/BotonSolicitarModulo.tsx",
@@ -5981,7 +5981,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 30,
+          "linea": 32,
           "resumen": "«Herramientas» (26/10/2026, menú de cinco): LA ventana de las herramientas. Patrimonio, Flota, el calendario y Mi resumen (lo que antes estaba repartido entre Inicio y el menú), el Portal del Empleado"
         },
         {
@@ -5990,7 +5990,7 @@
           "exportada": false,
           "params": "{ t }: { t: TarjetaModulo }",
           "retorno": null,
-          "linea": 117,
+          "linea": 122,
           "resumen": "Una tarjeta del catálogo (Patrimonio, Flota): qué es, con qué seguros tiene que ver y su botón según el estado."
         },
         {
@@ -5999,13 +5999,13 @@
           "exportada": false,
           "params": "{ t }: { t: TarjetaModulo }",
           "retorno": null,
-          "linea": 134,
+          "linea": 139,
           "resumen": "Lo que cuelga del botón de pedir: el texto, el botón o el estado de lo ya pedido. Nada si ya se abre."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8cec86bde37f"
+      "hash": "be22a1627d9f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/page.tsx",
@@ -6327,7 +6327,7 @@
           "exportada": false,
           "params": "f: string | null",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "cent",
@@ -6335,7 +6335,7 @@
           "exportada": false,
           "params": "c: number | null",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "pct",
@@ -6343,7 +6343,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "textoTope",
@@ -6351,7 +6351,7 @@
           "exportada": false,
           "params": "t: TopeAplicable",
           "retorno": "string",
-          "linea": 26,
+          "linea": 27,
           "resumen": "De dónde sale el tope que se aplica: del cliente, de la ley del año o «no lo tenemos» (nunca un 0 %)."
         },
         {
@@ -6360,7 +6360,7 @@
           "exportada": false,
           "params": "p: ResultadoActualizacion, indice: string | null, descripcion: string | null",
           "retorno": "string",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Texto de la propuesta: dice el HECHO, sin inventar un 0 % cuando no tenemos el índice."
         },
         {
@@ -6369,13 +6369,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 66,
+          "linea": 67,
           "resumen": "Ficha del contrato. 🚨 El id de la URL NO consulta por sí solo: `contratoAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver. Si no existe o no es tuyo: 404 (nunca 403). La PII de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "874b9bb157f0"
+      "hash": "90f82dd4370b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/contrato/[id]/TopeRenta.tsx",
@@ -6555,13 +6555,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "«Gastos fijos» (paso 6, 22/10/2026): plantillas de gasto por inmueble/titular, comunidad y derramas. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `gastosDeIdentidad`): solo los titulares a los qu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "549817ee8931"
+      "hash": "5b26b7153cb0"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/RevisarFactura.tsx",
@@ -6706,13 +6706,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "«Importar desde Excel» (P18, 26/10/2026): el cliente sube un CSV de inmuebles, contratos o gastos, corrige el mapeo de columnas, ve una vista previa fila a fila con sus errores y SOLO al confirmar se "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ab76f356b26a"
+      "hash": "e9401657b416"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/Documentos.tsx",
@@ -6851,7 +6851,7 @@
           "exportada": false,
           "params": "v: boolean | null",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "InmueblePage",
@@ -6859,13 +6859,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 32,
+          "linea": 33,
           "resumen": "Ficha del inmueble. 🚨 El id de la URL NO consulta por sí solo: `inmuebleAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver (`accesosPatrimonio`). Si no existe o no es tuyo: 404 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e6bd830ea45e"
+      "hash": "d0aa30a644d9"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/SegurosInmueble.tsx",
@@ -7012,13 +7012,13 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<ParametrosAlta> }",
           "retorno": null,
-          "linea": 23,
+          "linea": 24,
           "resumen": "«Patrimonio» (Fase 1, 22/10/2026): los inmuebles por titular. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `patrimonioDeIdentidad`): se ven SOLO los titulares a los que esta sesión tiene acceso. "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5a1eb2a99bd2"
+      "hash": "c93f21f453fd"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/fiscal/page.tsx",
@@ -7033,7 +7033,7 @@
           "exportada": false,
           "params": "c: number | null",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "fechaEs",
@@ -7041,7 +7041,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "Fila",
@@ -7049,7 +7049,7 @@
           "exportada": false,
           "params": "{ k, v, fuerte }: { k: string; v: string; fuerte?: boolean }",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "Informe",
@@ -7057,7 +7057,7 @@
           "exportada": false,
           "params": "{ inf }: { inf: InformeFiscal }",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "FiscalPage",
@@ -7065,13 +7065,13 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ anio?: string | string[] }> }",
           "retorno": null,
-          "linea": 83,
+          "linea": 84,
           "resumen": "«Informe fiscal del alquiler» (25/10/2026): por inmueble arrendado y año, la rentabilidad reclasificada con el criterio del IRPF. 🚨 Todo parte de `rentabilidadDeIdentidad` (→ `accesosPatrimonio`); le"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "17855cb9b261"
+      "hash": "5e42bcc72dfc"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/page.tsx",
@@ -7086,7 +7086,7 @@
           "exportada": false,
           "params": "c: number",
           "retorno": null,
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "fechaEs",
@@ -7094,7 +7094,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "Datos",
@@ -7102,7 +7102,7 @@
           "exportada": false,
           "params": "{ d }: { d: RentabilidadDeIdentidad }",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         },
         {
           "nombre": "RentabilidadPage",
@@ -7110,13 +7110,13 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ anio?: string | string[] }> }",
           "retorno": null,
-          "linea": 75,
+          "linea": 76,
           "resumen": "«Rentabilidad» del patrimonio (24/10/2026, P14): renta devengada − gastos confirmados − seguros, por inmueble y año. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `rentabilidadDeIdentidad`). Una l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb113bfb2eea"
+      "hash": "110dd480e5a3"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/resumen/ImprimirResumen.tsx",
@@ -7152,7 +7152,7 @@
           "exportada": false,
           "params": "r: string | null",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "etiquetaGestionada",
@@ -7160,7 +7160,7 @@
           "exportada": false,
           "params": "p: PolizaPortal",
           "retorno": "string",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "ResumenPage",
@@ -7168,7 +7168,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 39,
+          "linea": 40,
           "resumen": "«Mi resumen {año}» (13/10/2026): lo pagado en seguros y los siniestros del año, para la declaración de la renta. Lee SOLO lo autorizado a esta identidad: `carteraDeIdentidad` (parte de `portal_vinculo"
         }
       ],
@@ -7176,7 +7176,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "a2da73fe03ab"
+      "hash": "b3ca94d10f69"
     },
     {
       "ruta": "apps/asegura-portal/app/ActivarPush.tsx",
@@ -7933,13 +7933,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 18,
+          "linea": 19,
           "resumen": "El dueño nombra jefe de flota a una persona relacionada con su sociedad. Nace PENDIENTE: esa persona lo acepta (o lo rechaza) desde su `/flota`, por la ruta de siempre (`POST /api/autorizaciones/[id]`"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/flota/jefe",
-      "hash": "6e81496837a3"
+      "hash": "9de5c2e0e6ca"
     },
     {
       "ruta": "apps/asegura-portal/app/api/flota/vehiculo/route.ts",
@@ -7954,13 +7954,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "Anota (o borra con `null`) la fecha de matriculación de un vehículo de la flota, que es de lo que sale la próxima ITV. Dueño o jefe de flota. El vehículo se busca DENTRO de la flota autorizada por la "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/flota/vehiculo",
-      "hash": "e85112dc66e1"
+      "hash": "b1ffbe981bb2"
     },
     {
       "ruta": "apps/asegura-portal/app/api/hojas/[id]/route.ts",
@@ -8544,13 +8544,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19,
+          "linea": 21,
           "resumen": "POST /api/modulos { modulo } — «Solicitar» / «Apuntarme» en `/herramientas` (Fase 0, 22/10/2026). 🚨 La identidad sale de la COOKIE (`lib/modulos.ts` → `lib/session`), nunca del cuerpo. El cuerpo solo"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/modulos",
-      "hash": "0be3a1c10b80"
+      "hash": "ba0bbc275bad"
     },
     {
       "ruta": "apps/asegura-portal/app/api/oposicion-senales-patrimonio/route.ts",
@@ -8607,13 +8607,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 18,
+          "linea": 19,
           "resumen": "`POST /api/patrimonio/comunidades` — alta de la comunidad de propietarios de UN titular y enlace de sus inmuebles (con coeficiente opcional; vacío = no consta). Estructura: solo nivel Total (`alta_baj"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/comunidades",
-      "hash": "325dd649267d"
+      "hash": "3dcdf8ac0196"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/[id]/enlace-inquilino/[enlaceId]/route.ts",
@@ -8628,13 +8628,13 @@
           "exportada": true,
           "params": "_req: Request, ctx: { params: Promise<{ id: string; enlaceId: string }> }",
           "retorno": null,
-          "linea": 15,
+          "linea": 16,
           "resumen": "`DELETE /api/patrimonio/contratos/<id>/enlace-inquilino/<enlaceId>` — el propietario ANULA el enlace y, si el inquilino ya entró, REVOCA su acceso. No borra nada (sellos). Ajeno: 404."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/contratos/[id]/enlace-inquilino/[enlaceId]",
-      "hash": "cb5d508b89ae"
+      "hash": "a6d7126c356b"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/[id]/enlace-inquilino/route.ts",
@@ -8650,7 +8650,7 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "`POST /api/patrimonio/contratos/<id>/enlace-inquilino` — el propietario (nivel Total) crea el ENLACE de su inquilino. Cuerpo: `{ inquilinoId, contacto }`. Devuelve el token UNA vez (en BD solo queda e"
         },
         {
@@ -8659,12 +8659,12 @@
           "exportada": true,
           "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 33
+          "linea": 35
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/contratos/[id]/enlace-inquilino",
-      "hash": "818598c568c7"
+      "hash": "e7019bbdb9c0"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/[id]/inquilinos/route.ts",
@@ -8679,13 +8679,13 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "`POST /api/patrimonio/contratos/<id>/inquilinos` — alta de un inquilino (o avalista) en un contrato (nivel Total). 🚨 El NIF, correo y teléfono NO se guardan en esta app: van por el PUENTE a `apps/ase"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/contratos/[id]/inquilinos",
-      "hash": "3aee011384d1"
+      "hash": "92cd02abf039"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/[id]/recibos-compartidos/route.ts",
@@ -8701,7 +8701,7 @@
           "exportada": true,
           "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 15,
+          "linea": 16,
           "resumen": "`GET /api/patrimonio/contratos/<id>/recibos-compartidos` — los documentos de los inquilinos del contrato y cuáles se comparten. `POST` `{ documentoId, compartir }` — marca o retira uno. Solo documento"
         },
         {
@@ -8710,12 +8710,12 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 27
+          "linea": 29
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/contratos/[id]/recibos-compartidos",
-      "hash": "d78255c8bbcc"
+      "hash": "3219628fd606"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/[id]/renta/route.ts",
@@ -8730,13 +8730,13 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "`POST /api/patrimonio/contratos/<id>/renta` — APLICA la actualización de renta propuesta (fila nueva, append-only). 🚨 El servidor RECALCULA la propuesta (contrato + tabla de índices); el cuerpo `{des"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/contratos/[id]/renta",
-      "hash": "7b082cad0655"
+      "hash": "265b9cbf1c5f"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/[id]/tope/route.ts",
@@ -8751,13 +8751,13 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "`PUT /api/patrimonio/contratos/<id>/tope` — el cliente fija o quita el tope de actualización de la renta de SU contrato (`{ modo: 'defecto' | 'propio' | 'sin_tope', pct? }`). Por defecto rige el catál"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/contratos/[id]/tope",
-      "hash": "67d4b26e013d"
+      "hash": "b073afb1fd45"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/contratos/route.ts",
@@ -8772,13 +8772,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "`POST /api/patrimonio/contratos` — alta de un contrato de larga estancia en un inmueble (nivel Total). 🚨 La identidad sale de la cookie; el `inmueble` del cuerpo se busca DENTRO de `accesosPatrimonio"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/contratos",
-      "hash": "0165fbbfc2eb"
+      "hash": "0b3ce3d3f7c3"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/cubre-seguro/route.ts",
@@ -8793,13 +8793,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "`POST /api/patrimonio/cubre-seguro` `{ gasto }` — «no me interesa este aviso»: se recuerda en `portal_aviso_leido`. 🚨 La identidad sale SOLO de la cookie; el gasto se busca DENTRO de los avisos visib"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/cubre-seguro",
-      "hash": "35c10b383a28"
+      "hash": "3db008b46638"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/derramas/route.ts",
@@ -8814,13 +8814,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 18,
+          "linea": 19,
           "resumen": "`POST /api/patrimonio/derramas` — alta de una derrama de la comunidad de UN titular en N cuotas (las cuotas las materializa el cron como gastos `propuesto`). Nivel Gestión o Total. 🚨 El `titular` del"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/derramas",
-      "hash": "7866eb9cfd21"
+      "hash": "57c24268be40"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/documentos/[id]/route.ts",
@@ -8836,7 +8836,7 @@
           "exportada": false,
           "params": "nombre: string",
           "retorno": "string",
-          "linea": 14,
+          "linea": 15,
           "resumen": "Nombre para la cabecera: ASCII de relleno + `filename*` UTF-8 (RFC 5987). `nombreSeguro` ya quitó comillas y control."
         },
         {
@@ -8845,7 +8845,7 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 24,
+          "linea": 25,
           "resumen": "`GET /api/patrimonio/documentos/<id>?titular=<ficha>` — DESCARGA. Nunca una URL pública: vuelve a comprobar acceso y rol, y responde siempre `attachment` con un MIME de la lista cerrada (PDF/JPG/PNG/W"
         },
         {
@@ -8854,12 +8854,12 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 53
+          "linea": 55
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/documentos/[id]",
-      "hash": "301720684ca6"
+      "hash": "485c4c73cb7c"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/documentos/route.ts",
@@ -8875,7 +8875,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 25,
+          "linea": 26,
           "resumen": "ajeno, inexistente o sin nivel = la misma 404. El tope por identidad va ANTES de leer el cuerpo; sin `content-length` numérico, 411; mayor que el máximo, 413 (también antes de leer)."
         },
         {
@@ -8884,12 +8884,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 47
+          "linea": 49
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/documentos",
-      "hash": "fecde9099ac5"
+      "hash": "e2b5eb9eb4b1"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/facturas/route.ts",
@@ -8905,7 +8905,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 25,
+          "linea": 26,
           "resumen": "`POST /api/patrimonio/facturas` (multipart: `titular`, `inmueble` opcional, `fichero`) — lee la factura con IA y deja un gasto `propuesto`; NO lo confirma. `PATCH` (JSON: `titular`, `gasto`, `accion: "
         },
         {
@@ -8914,12 +8914,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 58
+          "linea": 60
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/facturas",
-      "hash": "b35e91222d6c"
+      "hash": "2db125ab98a9"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/importaciones/[id]/confirmar/route.ts",
@@ -8934,13 +8934,13 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "`POST /api/patrimonio/importaciones/[id]/confirmar` — crea de verdad lo que la vista previa marca como «nueva», en UNA transacción. Confirmar dos veces no duplica (la segunda es 409 `cerrada`); una fi"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/importaciones/[id]/confirmar",
-      "hash": "753d35f4137d"
+      "hash": "1958744de79d"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/importaciones/[id]/descartar/route.ts",
@@ -8955,13 +8955,13 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 11,
+          "linea": 12,
           "resumen": "`POST /api/patrimonio/importaciones/[id]/descartar` — cierra la propuesta sin crear nada (la BD vacía sus datos)."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/importaciones/[id]/descartar",
-      "hash": "ba2437687a36"
+      "hash": "06d3a08c462f"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/importaciones/[id]/route.ts",
@@ -8977,7 +8977,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "`GET /api/patrimonio/importaciones/[id]` — la propuesta: columnas, vista previa fila a fila con sus errores y el resumen. `PATCH` — `{ tipo?, columnas: {campo: índice|null}, usoPorDefecto? }`: corrige"
         },
         {
@@ -8986,12 +8986,12 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 29
+          "linea": 31
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/importaciones/[id]",
-      "hash": "3eb51dcce06f"
+      "hash": "9110a8ee5803"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/importaciones/plantilla/route.ts",
@@ -9006,13 +9006,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "`GET /api/patrimonio/importaciones/plantilla?tipo=inmueble|contrato|gasto` — CSV con solo las cabeceras (`;` y BOM: se abre bien en Excel en español). Sin datos de nadie: no consulta la BD."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/importaciones/plantilla",
-      "hash": "1987a32ed710"
+      "hash": "e3bc34f74955"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/importaciones/route.ts",
@@ -9027,13 +9027,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 21,
+          "linea": 22,
           "resumen": "`POST /api/patrimonio/importaciones` (multipart: `titular`, `fichero`, `tipo?`) — sube un CSV (guardado desde Excel) de inmuebles, contratos o gastos, lo lee EN MEMORIA (no se guarda el fichero) y dej"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/importaciones",
-      "hash": "aa481efdf8fd"
+      "hash": "3684fb7bbce4"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/hipoteca/route.ts",
@@ -9048,13 +9048,13 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "`POST /api/patrimonio/inmuebles/[id]/hipoteca` — `{ valor: 'si' | 'no' | 'no_se' }`: ¿tiene hipoteca este inmueble? Es una DECLARACIÓN del cliente (no pide nada a nadie ni avisa a la correduría). 🚨 E"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/inmuebles/[id]/hipoteca",
-      "hash": "8c1f76257661"
+      "hash": "960a2222447c"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/obligaciones/route.ts",
@@ -9070,7 +9070,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 20,
+          "linea": 21,
           "resumen": "`GET /api/patrimonio/inmuebles/[id]/obligaciones` — los recordatorios propios del inmueble. `POST` — `{accion:'crear', categoria, vence, periodicidad, descripcion?}` · `{accion:'editar', obligacionId,"
         },
         {
@@ -9079,12 +9079,12 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 33
+          "linea": 35
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/inmuebles/[id]/obligaciones",
-      "hash": "09502c130c9f"
+      "hash": "c423fdce22fb"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/pedir-precio/route.ts",
@@ -9099,13 +9099,13 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 19,
+          "linea": 20,
           "resumen": "`POST /api/patrimonio/inmuebles/<id>/pedir-precio` — «Pedir precio» de un inmueble SIN seguro (o con el seguro caducado). Va por el PUENTE a `apps/asegura` (`/api/portal/patrimonio/pedir-precio`): el "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/inmuebles/[id]/pedir-precio",
-      "hash": "853f848f16df"
+      "hash": "f9934ba3c915"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/[id]/seguros/route.ts",
@@ -9121,7 +9121,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 19,
+          "linea": 20,
           "resumen": "`GET /api/patrimonio/inmuebles/[id]/seguros` — estado de seguro, enlaces, propuestas y enlazables del inmueble. `POST` — `{accion:'enlazar', tipo, polizaId, estado, origen?}` · `{accion:'quitar', enla"
         },
         {
@@ -9130,12 +9130,12 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 32
+          "linea": 34
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/inmuebles/[id]/seguros",
-      "hash": "ad75b6b17cc5"
+      "hash": "5acf56ce7f5e"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inmuebles/route.ts",
@@ -9151,7 +9151,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 19,
+          "linea": 20,
           "resumen": "`GET /api/patrimonio/inmuebles` — los titulares y inmuebles que ve ESTA sesión. `POST` — alta de un inmueble en un titular al que la sesión puede dar de alta (nivel Total). 🚨 La identidad sale de la "
         },
         {
@@ -9160,12 +9160,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 30
+          "linea": 32
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/inmuebles",
-      "hash": "ed523c9df4d0"
+      "hash": "da7eadd8899d"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/inquilinos/[id]/route.ts",
@@ -9180,13 +9180,13 @@
           "exportada": true,
           "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "`GET /api/patrimonio/inquilinos/<id>` — NIF, correo y teléfono del inquilino, descifrados por el PUENTE de `apps/asegura`. Solo nivel Total (`ver_pii_inquilino`); ajeno o sin nivel: 404. Se pide bajo "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/inquilinos/[id]",
-      "hash": "54b79aadcfbb"
+      "hash": "83b986827f35"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/ofertas/route.ts",
@@ -9201,13 +9201,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 18,
+          "linea": 19,
           "resumen": "`POST /api/patrimonio/ofertas` — el cliente PULSA «Compárala» (póliza de otra correduría), «Protege la renta» (contrato de alquiler) o «Revisa mis seguros de la hipoteca». Cuerpo: `{ tipo, inmuebleId?"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/ofertas",
-      "hash": "b925d06ea57f"
+      "hash": "1a0fa381ceae"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/plantillas/route.ts",
@@ -9223,7 +9223,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 19,
+          "linea": 20,
           "resumen": "`GET /api/patrimonio/plantillas` — plantillas de gasto fijo, comunidades y derramas de los titulares que ve ESTA sesión. `POST` — alta de una plantilla en un titular donde el nivel permite gestionar g"
         },
         {
@@ -9232,12 +9232,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 30
+          "linea": 32
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/plantillas",
-      "hash": "e8ca9c205ead"
+      "hash": "4f57c3ffdfcd"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/rentabilidad/fiscal/route.ts",
@@ -9252,13 +9252,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "`GET /api/patrimonio/rentabilidad/fiscal?anio=` — CSV del informe fiscal. 🚨 La identidad sale SOLO de la cookie y todo parte de `rentabilidadDeIdentidad` (→ `accesosPatrimonio`): sin patrimonio a la "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/rentabilidad/fiscal",
-      "hash": "b1a1c8e002a0"
+      "hash": "9dfa189c8ad3"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/vias/route.ts",
@@ -61486,16 +61486,25 @@
           "exportada": true,
           "params": "compania: string, ramo: string",
           "retorno": "boolean",
-          "linea": 38,
-          "resumen": "¿Este trabajo recibe `fichaTomador`? Allianz + auto/moto. PURA."
+          "linea": 49,
+          "resumen": "¿Este trabajo recibe `fichaTomador`? Allianz o Mapfre + auto/moto. PURA."
+        },
+        {
+          "nombre": "contactoDeFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "fila: FilaFichaTomadorAuto, abrir: (v: string | null) => string | null",
+          "retorno": "",
+          "linea": 58,
+          "resumen": "Correo y MÓVIL del tomador de la ficha (el primero legible y válido de cada lista, el principal primero). Un teléfono fijo (8/9…) no sirve para el campo «Teléfono móvil» de Mapfre: solo 6 o 7. Lo que "
         },
         {
           "nombre": "fichaTomadorAutoDeFicha",
           "kind": "function",
           "exportada": true,
-          "params": "fila: FilaFichaTomadorAuto | null, descifrar: (v: string) => string, ramo: string, hoy: Date = new Date()",
+          "params": "fila: FilaFichaTomadorAuto | null, descifrar: (v: string) => string, ramo: string, hoy: Date = new Date(), compania: string = 'allianz'",
           "retorno": "FichaTomadorAuto | null",
-          "linea": 49,
+          "linea": 79,
           "resumen": "Ficha → `fichaTomador`, campo a campo con TRES estados. PURA. Lo cifrado (`v1:`) se abre con `descifrar`; si lanza o devuelve el cifrado (sin clave) → ese campo `null` («no se sabe»), nunca vacío ni i"
         },
         {
@@ -61504,13 +61513,13 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, leer: () => FichaTomadorAuto | null",
           "retorno": "unknown",
-          "linea": 115,
+          "linea": 151,
           "resumen": "Al ENTREGAR: el riesgo con `fichaTomador` (Allianz auto/moto) o SIN él (otra compañía, o la ficha no se pudo leer: la clave ausente = «no se miró»). Nunca falla el trabajo: lo que falta lo deja el bot"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "526e64673e28"
+      "hash": "2a4d00de2ad0"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-fichas-ia.ts",
@@ -64570,7 +64579,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 287,
+          "linea": 298,
           "resumen": "DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`."
         },
         {
@@ -64579,7 +64588,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string | null, oportunidadId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 294,
+          "linea": 305,
           "resumen": "Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló."
         },
         {
@@ -64588,7 +64597,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 315,
+          "linea": 326,
           "resumen": "Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló."
         },
         {
@@ -64597,7 +64606,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 346,
+          "linea": 357,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -64606,7 +64615,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 403
+          "linea": 414
         },
         {
           "nombre": "lanzarPendientes",
@@ -64614,7 +64623,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 408,
+          "linea": 419,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -64623,7 +64632,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 433
+          "linea": 444
         },
         {
           "nombre": "destruirMaquina",
@@ -64631,7 +64640,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 447,
+          "linea": 458,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -64640,7 +64649,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 473,
+          "linea": 484,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -64649,7 +64658,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 565
+          "linea": 576
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -64657,7 +64666,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 714,
+          "linea": 725,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -64666,7 +64675,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 718
+          "linea": 729
         },
         {
           "nombre": "guardarAdjunto",
@@ -64674,7 +64683,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 775
+          "linea": 786
         },
         {
           "nombre": "guardarPasos",
@@ -64682,7 +64691,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 797,
+          "linea": 808,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -64691,7 +64700,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; capturaConDatos?: boolean; html: string | null } | null",
           "retorno": "Promise<",
-          "linea": 816,
+          "linea": 827,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -64700,7 +64709,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 960,
+          "linea": 971,
           "resumen": "4. lanza lo que quepa por compañía."
         },
         {
@@ -64709,7 +64718,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string",
           "retorno": "Promise<FilaOrigen[]>",
-          "linea": 1045,
+          "linea": 1056,
           "resumen": "Los `ok` de Allianz/Mapfre AUTO de la oportunidad (de ESTA correduría), los más recientes primero."
         },
         {
@@ -64718,7 +64727,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string, v: VehiculoEncadenado",
           "retorno": "Promise<number>",
-          "linea": 1058,
+          "linea": 1069,
           "resumen": "Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos."
         },
         {
@@ -64727,7 +64736,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 1079,
+          "linea": 1090,
           "resumen": "Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta. Sin vehículo: · Generali (no busca por matrícula): sin ningún origen vivo o pasadas 24 h → `cancel"
         }
       ],
@@ -64738,7 +64747,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "b92b6069281e"
+      "hash": "562794de5980"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -220344,7 +220353,7 @@
           "exportada": false,
           "params": "h: HechosMenu",
           "retorno": "HechosMenu",
-          "linea": 141,
+          "linea": 143,
           "resumen": "Los hechos con cada «no se pudo comprobar» tomado como «no». SOLO para decidir una escritura, nunca para pintar."
         },
         {
@@ -220353,12 +220362,12 @@
           "exportada": true,
           "params": "h: HechosMenu, puerta: PuertaPortal, modo: ModoPuerta",
           "retorno": "boolean",
-          "linea": 153
+          "linea": 155
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1c1ded4d1ea5"
+      "hash": "e5c6c99ca820"
     },
     {
       "ruta": "packages/module-seguros-portal/src/modulos.ts",
@@ -245357,7 +245366,7 @@
           "exportada": false,
           "params": "s: string, hoy: Date",
           "retorno": "boolean",
-          "linea": 167,
+          "linea": 171,
           "resumen": "Fecha ISO real y no futura."
         },
         {
@@ -245366,7 +245375,7 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFichaTomador",
-          "linea": 179,
+          "linea": 183,
           "resumen": "Valida el bloque `fichaTomador` (lo construye asegura; el worker lo repite). PURA. Cada campo: `null`/ausente → `null`; con valor → tiene que ser válido o es ERROR (nunca se «arregla» ni se convierte "
         },
         {
@@ -245375,7 +245384,7 @@
           "exportada": true,
           "params": "f: Pick<FormularioAuto, 'tomador' | 'fichaTomador'> | null | undefined",
           "retorno": "string | null",
-          "linea": 246,
+          "linea": 262,
           "resumen": "CP del TOMADOR para el portal: el del bloque `tomador` o, si no, el de `fichaTomador`. `null` = no consta. PURO."
         },
         {
@@ -245384,7 +245393,7 @@
           "exportada": true,
           "params": "f: Pick<FormularioAuto, 'tomador' | 'fichaTomador'> | null | undefined",
           "retorno": "string | null",
-          "linea": 252,
+          "linea": 268,
           "resumen": "Localidad del TOMADOR: `tomador.poblacion` o, si no, `fichaTomador.localidad`. `null` = no consta. PURO."
         },
         {
@@ -245393,7 +245402,7 @@
           "exportada": true,
           "params": "f: Pick<FormularioAuto, 'documentoTomador' | 'tomador' | 'fichaTomador'> | null | undefined",
           "retorno": "string | null",
-          "linea": 350,
+          "linea": 366,
           "resumen": "Documento del tomador que el robot teclea en el portal: `documentoTomador` (lo pone asegura) o, si no, el del bloque `tomador`. `null` = no consta. PURO; nunca se loguea."
         },
         {
@@ -245402,7 +245411,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "string[]",
-          "linea": 362,
+          "linea": 378,
           "resumen": "Formas en que el documento del tomador puede aparecer en un texto o en el HTML del portal (tal cual, con guion o espacio antes de la letra de control), más el NOMBRE, los APELLIDOS, la RAZÓN SOCIAL y "
         },
         {
@@ -245411,7 +245420,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 431,
+          "linea": 449,
           "resumen": "email (algo@algo.algo); teléfono español (9 dígitos que empiezan por 6, 7, 8 o 9, con espacios o guiones opcionales y prefijo +34 o 0034 opcional); IBAN (ES + 22 dígitos, con o sin espacios); y bastid"
         },
         {
@@ -245420,7 +245429,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 449
+          "linea": 467
         },
         {
           "nombre": "fechaIso",
@@ -245428,7 +245437,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "string | null",
-          "linea": 451
+          "linea": 469
         },
         {
           "nombre": "entero",
@@ -245436,7 +245445,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number",
           "retorno": "number | null",
-          "linea": 463
+          "linea": 481
         },
         {
           "nombre": "booleano",
@@ -245444,7 +245453,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "boolean | null",
-          "linea": 473
+          "linea": 491
         },
         {
           "nombre": "edad",
@@ -245452,7 +245461,7 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": null,
-          "linea": 482
+          "linea": 500
         },
         {
           "nombre": "validarFormularioAuto",
@@ -245460,12 +245469,12 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioAuto",
-          "linea": 489
+          "linea": 507
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "deadb98506ee"
+      "hash": "a4b33accee70"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-comercio.ts",
@@ -250212,6 +250221,6 @@
   ],
   "resumen": {
     "archivos": 5248,
-    "funciones": 20097
+    "funciones": 20098
   }
 }
