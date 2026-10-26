@@ -131,6 +131,87 @@ export function polizasDeLaHoja<T extends { id: string }>(
 }
 
 /**
+ * Lo que la hoja necesita de cada titular que la persona VE en su bóveda: el
+ * nombre (para decir de quién es cada póliza en el selector), sus pólizas y, si
+ * llega por autorización, qué autorizaciones lo abren (para anotar el uso).
+ */
+export type TitularParaHoja<P> = {
+  nombre: string
+  polizas: readonly P[]
+  autorizacion?: { ids: readonly string[] }
+}
+
+/** Una póliza que puede ir en la hoja, con su titular y por qué vía la ve quien la genera. */
+export type CandidataHoja<P> = {
+  id: string
+  poliza: P
+  /** Nombre del titular de la ficha de la que cuelga (la pantalla lo enseña al elegir). */
+  titular: string
+  /** `true` = ficha PROPIA de quien genera la hoja. Solo las propias entran con «todas». */
+  propia: boolean
+  /** Autorizaciones que abren esta póliza a quien genera la hoja (`[]` = propia, interviniente o dueño). */
+  autorizacionIds: readonly string[]
+}
+
+/**
+ * 6. **Entra todo lo que la persona VE en su bóveda, no solo lo suyo**
+ *    (Alberto, 26/10/2026: Pilar genera el QR de los coches de su empresa;
+ *    Alberto el de los coches de su familia). Se parte de la MISMA lectura que
+ *    pinta la bóveda (`carteraDeIdentidad`: propias, autorizadas —ya filtradas
+ *    por vigencia, revocación y `poliza_id`— e intervinientes), así que la hoja
+ *    no tiene reglas de acceso propias que se puedan desincronizar.
+ *
+ *    No hay escalada: lo que la hoja pública enseña (compañía, ramo, qué está
+ *    asegurado, nº de póliza, vencimiento y teléfonos de la compañía) es dato del
+ *    CONTRATO que cualquier nivel de acceso ya enseña, y sale del MISMO objeto ya
+ *    capado por nivel; nada de lo que exige `gestion` (partes, documentos) ni de
+ *    lo que nunca va a un tercero (DNI, IBAN, dirección, prima) pasa por ella.
+ *    Y se lee EN VIVO con el acceso de HOY: revocada la autorización, la póliza
+ *    desaparece de la hoja ya impresa en el siguiente escaneo.
+ *
+ * Solo pólizas de la CARTERA VIVA: las que la persona AÑADIÓ a mano no van (no
+ * son pólizas que la correduría tenga verificadas; Alberto, 26/10/2026, tras ver
+ * una «Generali» aportada en la hoja de una clienta). Sin repetidos: si una
+ * póliza llega por dos vías, gana la primera en este orden — propia,
+ * autorizada, interviniente.
+ */
+export function candidatasDeLaHoja<P extends { id: string; vigencia: Vigencia }>(c: {
+  propias: readonly TitularParaHoja<P>[]
+  autorizadas: readonly TitularParaHoja<P>[]
+  intervinientes: readonly TitularParaHoja<P>[]
+}): CandidataHoja<P>[] {
+  const vistas = new Set<string>()
+  const out: CandidataHoja<P>[] = []
+  const meter = (ts: readonly TitularParaHoja<P>[], propia: boolean) => {
+    for (const t of ts) {
+      for (const p of t.polizas) {
+        if (vistas.has(p.id) || !polizaEnVigorParaHoja(p)) continue
+        vistas.add(p.id)
+        out.push({ id: p.id, poliza: p, titular: t.nombre, propia, autorizacionIds: t.autorizacion?.ids ?? [] })
+      }
+    }
+  }
+  meter(c.propias, true)
+  meter(c.autorizadas, false)
+  meter(c.intervinientes, false)
+  return out
+}
+
+/**
+ * Qué enseña la hoja de lo que hoy puede ver quien la generó.
+ *
+ * 🚨 «Todas» = todas las PROPIAS (y las futuras propias), NUNCA las ajenas: una
+ * autorización nueva no puede aparecer sola en un papel que ya está pegado en
+ * una nevera. Una póliza ajena entra solo si se ELIGIÓ por su id.
+ */
+export function polizasQueEnsenaLaHoja<T extends { id: string; propia: boolean }>(
+  candidatas: readonly T[],
+  seleccion: SeleccionHoja,
+): T[] {
+  return polizasDeLaHoja(seleccion.todas ? candidatas.filter((c) => c.propia) : candidatas, seleccion)
+}
+
+/**
  * Si una póliza de la CARTERA sigue en vigor para esta hoja (regla 5).
  *
  * `pendiente` (vigor desconocido: estado vigente pero sin fecha de

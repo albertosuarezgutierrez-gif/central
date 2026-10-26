@@ -863,7 +863,7 @@ export default async function Boveda({
         <section className="seccion" aria-labelledby="hojas-titulo">
           <p className="antetitulo">Para llevar encima</p>
           <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
-          <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
+          <HojasQr hojas={hojas} cartera={elegibles.cartera} />
         </section>
       )}
 
