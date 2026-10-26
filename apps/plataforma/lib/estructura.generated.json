@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-25T20:31:45Z",
+  "generadoEn": "2026-10-26T05:54:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -431,11 +431,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 16
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-web": {
         "estado": "no",
@@ -538,12 +538,12 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-web": {
         "estado": "no",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 14
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 302
+        "evidencias": 306
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 164
+        "evidencias": 165
       },
       "asegura-web": {
         "estado": "usado",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 237
+        "evidencias": 240
       },
       "rrhh": {
         "estado": "no",
@@ -2591,7 +2591,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 63
+        "evidencias": 64
       },
       "asegura-portal": {
         "estado": "no",
@@ -4099,6 +4099,7 @@
     ],
     "module-seguros": [
       "core-ai",
+      "core-direccion",
       "module-seguros-pii",
       "module-seguros-portal",
       "module-tarificacion"
@@ -4466,7 +4467,9 @@
       "/api/cron/avisos-push",
       "/api/cron/patrimonio-gastos",
       "/api/datos",
+      "/api/datos/codigo-postal",
       "/api/datos/documento",
+      "/api/datos/vias",
       "/api/documento/dni",
       "/api/documentos/archivar",
       "/api/documentos/escanear",
@@ -5992,6 +5995,7 @@
       "alquiler_materiales"
     ],
     "asegura": [
+      "de",
       "if",
       "seguros._volcado_control",
       "seguros.acuerdo_comisiones",
@@ -7187,7 +7191,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1814,
+    "apis": 1816,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
