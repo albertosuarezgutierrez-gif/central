@@ -272,5 +272,5 @@ export function estadoTrasErrorEmision(): 'requiere_humano' {
 export function sinTokens(texto: string, tokens: readonly string[] = []): string {
   let t = String(texto)
   for (const k of tokens) if (k && k.length >= 16) t = t.split(k).join('[TOKEN]')
-  return t.replace(/(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/g, (m) => (/[0-9]/.test(m) && /[A-Za-z]/.test(m) ? '[TOKEN]' : m))
+  return t.replace(/(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/g, (m) => (/[A-Za-z]/.test(m) && (/[0-9]/.test(m) || (/[a-z]/.test(m) && /[A-Z]/.test(m))) ? '[TOKEN]' : m))
 }
