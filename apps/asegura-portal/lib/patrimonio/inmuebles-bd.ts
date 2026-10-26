@@ -55,6 +55,31 @@ async function listarTitulares(identidadId: string, ids: readonly string[], acce
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 }
 
+/**
+ * El titular de patrimonio de una ficha (nace la primera vez que se da de alta algo; correduría y tipo salen de la FICHA,
+ * nunca del cuerpo). `null` = la ficha no existe, está fusionada o dada de baja. 🚨 El llamador YA validó `clienteId`
+ * contra `accesosPatrimonio(identidadId)`.
+ */
+export async function titularParaAlta(identidadId: string, clienteId: string): Promise<{ id: string; archivadoEn: Date | null } | null> {
+  const ficha = await prisma.cliente.findFirst({
+    where: { id: clienteId, mergedIntoClienteId: null, activo: true },
+    select: { id: true, correduriaId: true, tipoPersona: true },
+  })
+  if (!ficha) return null
+  return (
+    (await prisma.portalPatrimonioTitular.findUnique({ where: { clienteId }, select: { id: true, archivadoEn: true } })) ??
+    (await prisma.portalPatrimonioTitular.create({
+      data: {
+        clienteId,
+        correduriaId: ficha.correduriaId,
+        tipo: ficha.tipoPersona === 'juridica' ? 'sociedad' : 'persona',
+        creadoPorIdentidadId: identidadId,
+      },
+      select: { id: true, archivadoEn: true },
+    }))
+  )
+}
+
 export function puertosInmuebles(identidadId: string): PuertosInmuebles {
   let cache: Awaited<ReturnType<typeof accesosPatrimonio>> | null = null
   const accesos = async () => (cache ??= await accesosPatrimonio(identidadId))
@@ -63,24 +88,8 @@ export function puertosInmuebles(identidadId: string): PuertosInmuebles {
     listar: (ids, acc) => listarTitulares(identidadId, ids, acc),
     async crear({ clienteId, datos }) {
       // `clienteId` ya viene validado contra `accesos()` por el handler; aquí solo se lee su ficha.
-      const ficha = await prisma.cliente.findFirst({
-        where: { id: clienteId, mergedIntoClienteId: null, activo: true },
-        select: { id: true, correduriaId: true, tipoPersona: true },
-      })
-      if (!ficha) return { ok: false, motivo: 'duplicado' }
-      // El titular nace la primera vez que se da de alta algo; correduría y tipo salen de la FICHA, nunca del cuerpo.
-      const titular =
-        (await prisma.portalPatrimonioTitular.findUnique({ where: { clienteId }, select: { id: true, archivadoEn: true } })) ??
-        (await prisma.portalPatrimonioTitular.create({
-          data: {
-            clienteId,
-            correduriaId: ficha.correduriaId,
-            tipo: ficha.tipoPersona === 'juridica' ? 'sociedad' : 'persona',
-            creadoPorIdentidadId: identidadId,
-          },
-          select: { id: true, archivadoEn: true },
-        }))
-      if (titular.archivadoEn !== null) return { ok: false, motivo: 'duplicado' }
+      const titular = await titularParaAlta(identidadId, clienteId)
+      if (titular === null || titular.archivadoEn !== null) return { ok: false, motivo: 'duplicado' }
       try {
         const i = await prisma.portalPatrimonioInmueble.create({
           data: {

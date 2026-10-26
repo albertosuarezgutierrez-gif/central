@@ -5,7 +5,11 @@ import { revisarCopy } from '@central/module-seguros'
 
 import {
   TEXTO_CONSENTIMIENTO_COMERCIAL,
+  TEXTO_OPOSICION_SENALES,
   TIPOS_CONSENTIMIENTO,
+  TIPO_OPOSICION_SENALES,
+  VERSION_TEXTO_OPOSICION_SENALES,
+  oposicionVigente,
   TIPOS_QUE_SE_REGISTRAN,
   TEXTO_CONSENTIMIENTO_AVISOS,
   VERSION_TEXTO_AVISOS,
@@ -20,15 +24,16 @@ import {
 test('los tipos son exactamente los del CHECK de la tabla', () => {
   // Si aquí se añade uno que la BD no acepta, el INSERT revienta EN PRODUCCIÓN
   // y se lleva por delante el canje del código (van en la misma transacción).
-  assert.deepEqual([...TIPOS_CONSENTIMIENTO], ['avisos', 'comercial', 'lds_art19'])
+  // `oposicion_senales_patrimonio` exige ANTES el SQL `apps/asegura/prisma/sql/2026-10-26_portal_consentimiento_oposicion.sql`.
+  assert.deepEqual([...TIPOS_CONSENTIMIENTO], ['avisos', 'comercial', 'lds_art19', 'oposicion_senales_patrimonio'])
 })
 
-test('se registran lds_art19, comercial y avisos (este último desde el 13/10/2026, con su pantalla)', () => {
+test('se registran lds_art19, comercial, avisos y la oposición a las señales (cada uno con su pantalla)', () => {
   // Guardián de una decisión, no de una implementación: escribir `avisos` sin
   // que la persona lo haya visto es fabricar una prueba. `comercial` entró
   // el 19/09/2026 CON su casilla (`ConsentimientoComercial.tsx`); `avisos`, con
   // la bienvenida y «Configuración» (cepo en `test/regression-portal-configuracion-avisos.test.ts`).
-  assert.deepEqual([...TIPOS_QUE_SE_REGISTRAN], ['lds_art19', 'comercial', 'avisos'])
+  assert.deepEqual([...TIPOS_QUE_SE_REGISTRAN], ['lds_art19', 'comercial', 'avisos', 'oposicion_senales_patrimonio'])
 })
 
 test('el texto de avisos dice qué se autoriza y cómo retirarlo, y tiene versión', () => {
@@ -130,4 +135,22 @@ test('el user agent se recorta y el vacío es null', () => {
   assert.equal(normalizarUserAgent('   '), null)
   assert.equal(normalizarUserAgent('Mozilla/5.0'), 'Mozilla/5.0')
   assert.equal(normalizarUserAgent('x'.repeat(1000))?.length, USER_AGENT_MAX)
+})
+
+test('P15 publicado: el texto de la oposición pasa el revisor de copy, dice cómo retirarla y tiene versión', () => {
+  assert.deepEqual(revisarCopy(TEXTO_OPOSICION_SENALES), [])
+  assert.match(TEXTO_OPOSICION_SENALES, /^No quiero/)
+  assert.match(TEXTO_OPOSICION_SENALES, /retirar esta oposición cuando quiera/)
+  assert.match(TEXTO_OPOSICION_SENALES, /Grupo ASegura/)
+  assert.match(VERSION_TEXTO_OPOSICION_SENALES, /^\d{4}-\d{2}-o\d+$/)
+})
+
+test('P15 publicado: la oposición vigente es la ÚLTIMA fila de su tipo, y NO caduca con la versión del texto', () => {
+  const f = (otorgado: boolean, dia: number, versionTexto = 'v1', tipo: string = TIPO_OPOSICION_SENALES) => ({ tipo, otorgado, versionTexto, creadoEn: new Date(Date.UTC(2026, 9, dia)) })
+  assert.equal(oposicionVigente([]), null, 'nunca se ha opuesto = null, no false')
+  assert.equal(oposicionVigente([f(true, 1)]), true)
+  assert.equal(oposicionVigente([f(true, 1), f(false, 2)]), false, 'la retirada es una fila nueva')
+  assert.equal(oposicionVigente([f(false, 2), f(true, 1)]), false, 'manda la fecha, no el orden de llegada')
+  assert.equal(oposicionVigente([f(true, 1, 'texto-viejo')]), true, 'una oposición sobre un texto anterior sigue en pie')
+  assert.equal(oposicionVigente([f(true, 1, 'v1', 'comercial')]), null, 'otro tipo no cuenta')
 })

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auditado } from '@/lib/auditoria'
 
 import { CAMPOS_CANAL_PROPIO, CAMPOS_CONTACTO_PROPIO } from '@central/module-seguros-portal'
 
@@ -37,7 +38,7 @@ const esCanal = (k: string): k is (typeof CAMPOS_CANAL_PROPIO)[number] =>
  * La respuesta no lleva ni un dato de la ficha (ver la cabecera de
  * `lib/contacto-portal.ts`): solo cómo salió.
  */
-export async function POST(req: Request) {
+async function POSTSin(req: Request) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -106,3 +107,5 @@ export async function GET(req: Request) {
     )
   }
 }
+
+export const POST = auditado(POSTSin)

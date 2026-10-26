@@ -7,7 +7,7 @@
     "build": "npm run prisma:generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test lib/*.test.ts lib/patrimonio/*.test.ts",
+    "test": "node --test lib/*.test.ts lib/patrimonio/*.test.ts lib/inquilino/*.test.ts",
     "prisma:generate": "prisma generate"
   },
   "dependencies": {

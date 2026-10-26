@@ -10,6 +10,7 @@ import { getIdentidad } from '@/lib/session'
 
 import { AltaInquilino, AplicarRenta, VerDatosInquilino } from './ContratoAcciones'
 import { TopeRenta } from './TopeRenta'
+import { EnlaceInquilino } from './EnlaceInquilino'
 import { OfertaBoton } from '../../OfertaBoton'
 import { TEXTO_PROTEGE_RENTA, tituloProtegeRenta } from '@/lib/patrimonio/ofertas'
 
@@ -185,6 +186,9 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
           </ul>
         )}
         {f.puedeAltaBaja && <AltaInquilino contratoId={c.id} />}
+        {f.puedeAltaBaja && f.inquilinos.length > 0 && (
+          <EnlaceInquilino contratoId={c.id} inquilinos={f.inquilinos.map((q) => ({ id: q.id, nombre: q.nombre }))} />
+        )}
       </section>
 
       <p style={{ marginTop: 24 }}>

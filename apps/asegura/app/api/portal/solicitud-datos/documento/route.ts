@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auditado } from '@/lib/auditoria'
 
 import { MAX_BYTES_DOCUMENTO } from '@central/module-seguros'
 
@@ -18,7 +19,7 @@ export const maxDuration = 120
  * (24/09/2026). Se archiva en su ficha y la IA propone los campos que faltan.
  *   200 { tipo, etiqueta, valores, aviso } · 410 muerta/completada · 409 tope · 415 fichero no válido
  */
-export async function POST(req: Request) {
+async function POSTSin(req: Request) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -39,3 +40,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('portal/solicitud-datos/documento', e) }, { status: 503 })
   }
 }
+
+export const POST = auditado(POSTSin)

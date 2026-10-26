@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+import { auditado } from '@/lib/auditoria'
+
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { caducidadesCarnetDeIdentidad, escribirCarnetPortal } from '@/lib/carnets-portal'
 import { leerOperacionCarnet, statusCarnetPortal } from '@/lib/carnets-portal-reglas'
@@ -52,9 +54,9 @@ export async function GET(req: Request) {
  * `invalido` 422 · `duplicado` 409 · `no_encontrado` 404 · `sin_permiso` 403 (ficha vinculada de solo consulta) · `sin_ficha` 409 · `error` 503. Solo dice cómo
  * salió: ni la fecha ni ningún dato de la ficha vuelven por aquí.
  */
-export const POST = escribir
-export const PATCH = escribir
-export const DELETE = escribir
+export const POST = auditado(escribir)
+export const PATCH = auditado(escribir)
+export const DELETE = auditado(escribir)
 
 async function escribir(req: Request) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

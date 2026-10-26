@@ -3,6 +3,8 @@ import Link from 'next/link'
 
 import { MEDIADOR, FECHA_TEXTOS_LEGALES, VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
 
+import { ApartadoSenalesPatrimonio } from './ApartadoSenalesPatrimonio'
+
 export const metadata: Metadata = {
   title: 'Política de privacidad — Grupo ASegura',
   description:
@@ -229,6 +231,8 @@ export default function Privacidad() {
         </p>
       </section>
 
+      <ApartadoSenalesPatrimonio />
+
       <section>
         <h2>4. Quién más ve tus datos</h2>
         <p>Solo quien hace falta para que el portal funcione:</p>
@@ -303,6 +307,10 @@ export default function Privacidad() {
           <li>
             Tu identidad del portal y lo que hayas declarado, mientras mantengas la cuenta y la
             relación con la correduría.
+          </li>
+          <li>
+            Las señales de la revisión de los seguros de tus inmuebles, 24 meses desde que se cierran o
+            desde su última actualización (apartado 3 bis).
           </li>
           <li>
             La documentación de la mediación, durante los plazos que nos exige la normativa de

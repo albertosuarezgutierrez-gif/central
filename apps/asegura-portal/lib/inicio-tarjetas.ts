@@ -20,13 +20,18 @@ export type PolizaInicio = {
   enVigor: boolean
   /** `YYYY-MM-DD` o `null` (no consta). */
   vence: string | null
+  /**
+   * Algo que esta póliza pide al cliente ahora (recibo devuelto en una póliza SUYA, o una aportada que vence pronto).
+   * Ausente = no pide nada que sepamos; nunca se infiere de un dato que no se ha leído.
+   */
+  pendiente?: boolean
 }
 
 /** Cómo salió el vínculo, ya reducido a lo que cambia la frase. */
 export type EstadoVinculoInicio = 'vinculada' | 'sin_vinculo' | 'ambiguo' | 'sin_comprobar'
 
 export type EstadoTarjeta =
-  | { tipo: 'con_seguros'; conNosotros: number; aportadas: number; proxima: string | null; inmuebles: number; vehiculos: number }
+  | { tipo: 'con_seguros'; conNosotros: number; aportadas: number; proxima: string | null; inmuebles: number; vehiculos: number; pendientes: number }
   | { tipo: 'vacia'; vinculo: EstadoVinculoInicio }
   | { tipo: 'sin_comprobar' }
 
@@ -59,11 +64,12 @@ export function estadoVinculoInicio(c: { fichas: number; vinculo: string | null 
  * falta podría aportar a la tarjeta, la tarjeta sale «sin comprobar».
  */
 export function tarjetasFamilias(e: EntradaFamilias): TarjetaFamilia[] {
-  const cuenta = new Map<FamiliaSeguro, { con: number; apo: number; proxima: string | null; inm: number; veh: number }>()
+  const cuenta = new Map<FamiliaSeguro, { con: number; apo: number; proxima: string | null; inm: number; veh: number; pend: number }>()
   const sumar = (p: PolizaInicio, deCartera: boolean) => {
     if (!p.enVigor) return
     const { familia, sublinea } = familiaSeguro(p.ramo, p.empresa)
-    const c = cuenta.get(familia) ?? { con: 0, apo: 0, proxima: null, inm: 0, veh: 0 }
+    const c = cuenta.get(familia) ?? { con: 0, apo: 0, proxima: null, inm: 0, veh: 0, pend: 0 }
+    if (p.pendiente === true) c.pend++
     if (deCartera) c.con++
     else c.apo++
     if (sublinea === 'inmuebles') c.inm++
@@ -81,7 +87,7 @@ export function tarjetasFamilias(e: EntradaFamilias): TarjetaFamilia[] {
     const c = cuenta.get(familia)
     const nombre = NOMBRE_FAMILIA[familia]
     if (c && c.con + c.apo > 0) {
-      return { familia, nombre, estado: { tipo: 'con_seguros', conNosotros: c.con, aportadas: c.apo, proxima: c.proxima, inmuebles: c.inm, vehiculos: c.veh } }
+      return { familia, nombre, estado: { tipo: 'con_seguros', conNosotros: c.con, aportadas: c.apo, proxima: c.proxima, inmuebles: c.inm, vehiculos: c.veh, pendientes: c.pend } }
     }
     if (faltaFuente || e.vinculo === 'sin_comprobar') return { familia, nombre, estado: { tipo: 'sin_comprobar' } }
     return { familia, nombre, estado: { tipo: 'vacia', vinculo: e.vinculo } }
@@ -109,7 +115,7 @@ export function textoTarjetaFamilia(t: TarjetaFamilia, telefono: string): { line
       lineas.push([s.inmuebles > 0 ? `Inmuebles ${s.inmuebles}` : null, s.vehiculos > 0 ? `Vehículos ${s.vehiculos}` : null].filter(Boolean).join(' · '))
     }
     if (s.proxima) lineas.push(`Renueva el ${fechaEs(s.proxima)}`)
-    return { lineas, cta: null, href: '/boveda' }
+    return { lineas, cta: null, href: `/boveda?familia=${t.familia}` }
   }
   switch (s.vinculo) {
     case 'ambiguo':
@@ -125,10 +131,16 @@ export function textoTarjetaFamilia(t: TarjetaFamilia, telefono: string): { line
   }
 }
 
+/** El chip «N pendientes» de una tarjeta. `null` = nada que decir (sin pendientes, o la tarjeta no tiene seguros). */
+export function chipPendientes(t: TarjetaFamilia): string | null {
+  if (t.estado.tipo !== 'con_seguros' || t.estado.pendientes <= 0) return null
+  return plural(t.estado.pendientes, 'pendiente', 'pendientes')
+}
+
 /** Nombre accesible completo de la tarjeta (spec §1.5): todo lo que dice, en una frase. */
 export function nombreAccesibleFamilia(t: TarjetaFamilia, texto: { lineas: string[]; cta: string | null }): string {
   const titulo = t.familia === 'empresa' ? 'Seguros de tu empresa' : t.familia === 'otros' ? 'Otros seguros' : `Seguros ${t.nombre.toLowerCase()}`
-  return [`${titulo}:`, ...texto.lineas, texto.cta].filter(Boolean).join(' ')
+  return [`${titulo}:`, ...texto.lineas, chipPendientes(t), texto.cta].filter(Boolean).join(' ')
 }
 
 // ─── Herramientas ─────────────────────────────────────────────────────────────────────────────────────────────────

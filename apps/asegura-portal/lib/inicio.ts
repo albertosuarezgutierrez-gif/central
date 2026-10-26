@@ -20,6 +20,7 @@ import {
   type ProximaFecha,
   type TarjetaFamilia,
 } from './inicio-tarjetas'
+import { itemsCompararPendientes } from './patrimonio/ofertas'
 import { avisosPolizasSinInmueble } from './patrimonio/poliza-sin-inmueble-bd'
 import { resumenPatrimonio, visiblesDeCartera, visiblesDeDeclaradas } from './patrimonio/seguros-inmueble-bd'
 import { getIdentidad } from './session'
@@ -88,6 +89,8 @@ export async function resumenInicio(identidadId: string): Promise<ResumenInicio 
   const vista = cartera ? carteraALaVista(cartera) : null
   const titulares = vista ? [...vista.propias, ...vista.autorizadas, ...vista.intervinientes] : []
 
+  // Solo las pólizas SUYAS: el recibo devuelto de una que le dejan ver lo paga su titular (como «Pendiente de ti»).
+  const propias = new Set(vista ? vista.propias.flatMap((t) => t.polizas.map((p) => p.id)) : [])
   const polizasCartera: PolizaInicio[] | null = vista
     ? (() => {
         const vistas = new Set<string>()
@@ -96,14 +99,35 @@ export async function resumenInicio(identidadId: string): Promise<ResumenInicio 
           for (const p of t.polizas) {
             if (vistas.has(p.id)) continue
             vistas.add(p.id)
-            out.push({ ramo: p.ramo, empresa: t.tipoPersona === 'juridica', enVigor: cuentaComoEnVigor(p), vence: iso(p.fechaVencimiento) })
+            out.push({
+              ramo: p.ramo,
+              empresa: t.tipoPersona === 'juridica',
+              enVigor: cuentaComoEnVigor(p),
+              vence: iso(p.fechaVencimiento),
+              pendiente: propias.has(p.id) && p.recibos != null && p.recibos.devueltos > 0,
+            })
           }
         }
         return out
       })()
     : null
+  // Aportadas que vencen pronto: la MISMA regla que «Pendiente de ti» (`itemsCompararPendientes`).
+  const porVencer = declaradas
+    ? new Set(
+        itemsCompararPendientes(
+          declaradas.map((d) => ({ id: d.id, vence: iso(d.fechaVencimiento), vigente: declaradaVigente(d, ahora), etiqueta: '' })),
+          hoy,
+        ).map((i) => i.id),
+      )
+    : null
   const polizasDeclaradas: PolizaInicio[] | null = declaradas
-    ? declaradas.map((d) => ({ ramo: d.ramo, empresa: d.titularTipo === 'empresa', enVigor: declaradaVigente(d, ahora), vence: iso(d.fechaVencimiento) }))
+    ? declaradas.map((d) => ({
+        ramo: d.ramo,
+        empresa: d.titularTipo === 'empresa',
+        enVigor: declaradaVigente(d, ahora),
+        vence: iso(d.fechaVencimiento),
+        pendiente: porVencer !== null && porVencer.has(d.id),
+      }))
     : null
 
   const vinculo = estadoVinculoInicio(cartera ? { fichas: titulares.length, vinculo: cartera.vinculo } : null)

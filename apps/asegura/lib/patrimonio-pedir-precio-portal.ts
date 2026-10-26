@@ -45,6 +45,7 @@ import {
   ramoDePeticion,
   textoAvisoPedirPrecio,
   textoHistorialPedirPrecio,
+  municipioDeDireccion,
   textoTareaPrecioPatrimonio,
   type PeticionPedirPrecio,
   type TipoPedirPrecio,
@@ -160,7 +161,7 @@ async function compararExterna(correduriaId: string, d: Extract<PeticionPedirPre
   const ramo = ramoDesdeTexto(dec.ramo) ?? 'otros'
   return abrirPeticion(correduriaId, {
     fichaId: f.clienteIds[0]!, tipo: d.tipo, ramo, inmuebleId: null,
-    tarea: textoTareaPrecioPatrimonio({ tipo: d.tipo, alias: '', ramo, compania: dec.compania, vence }),
+    tarea: textoTareaPrecioPatrimonio({ tipo: d.tipo, uso: null, municipio: null, ramo, compania: dec.compania, vence }),
     fechaFinVigencia: vence, ids: { polizaDeclaradaId: d.polizaDeclaradaId }, objeto: objetoDePeticion(d),
   })
 }
@@ -168,8 +169,9 @@ async function compararExterna(correduriaId: string, d: Extract<PeticionPedirPre
 async function porInmueble(correduriaId: string, d: Exclude<PeticionPedirPrecio, { tipo: 'comparar_externa' }>): Promise<ResultadoPedirPrecio> {
   const db = prismaAsegura()
   // La ficha dueña sale del inmueble, nunca del cuerpo. Archivado o de otra correduría = como si no existiera.
-  const [inm] = await db.$queryRaw<{ cliente_id: string; alias: string; uso: string | null; en_comunidad: boolean | null; catastro_tipo_vivienda: string | null; presidente_comunidad: boolean | null }[]>(Prisma.sql`
-    select t.cliente_id::text as cliente_id, i.alias, i.uso, i.en_comunidad, i.catastro_tipo_vivienda, i.presidente_comunidad
+  // Sin el alias: la tarea solo lleva tipo de inmueble + municipio (de `direccion_normalizada`) + tipo de petición.
+  const [inm] = await db.$queryRaw<{ cliente_id: string; uso: string | null; direccion_normalizada: string | null; en_comunidad: boolean | null; catastro_tipo_vivienda: string | null; presidente_comunidad: boolean | null }[]>(Prisma.sql`
+    select t.cliente_id::text as cliente_id, i.uso, i.direccion_normalizada, i.en_comunidad, i.catastro_tipo_vivienda, i.presidente_comunidad
     from portal_patrimonio_inmueble i
     join portal_patrimonio_titular t on t.id = i.titular_id
     where i.id = ${d.inmuebleId}::uuid and i.archivado_en is null
@@ -240,7 +242,7 @@ async function porInmueble(correduriaId: string, d: Exclude<PeticionPedirPrecio,
   if (d.tipo === 'impago_alquiler' && d.contratoId) ids.contratoId = d.contratoId
   return abrirPeticion(correduriaId, {
     fichaId: inm.cliente_id, tipo: d.tipo, ramo, inmuebleId: d.inmuebleId, ids, objeto: objetoDePeticion(d),
-    tarea: textoTareaPrecioPatrimonio({ tipo: d.tipo, alias: inm.alias, ramo, rentaCent }),
+    tarea: textoTareaPrecioPatrimonio({ tipo: d.tipo, uso: inm.uso, municipio: municipioDeDireccion(inm.direccion_normalizada), ramo, rentaCent }),
     fechaFinVigencia: null,
   })
 }

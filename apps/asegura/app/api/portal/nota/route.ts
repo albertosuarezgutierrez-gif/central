@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auditado } from '@/lib/auditoria'
 
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
@@ -25,7 +26,7 @@ const MAX_TEXTO = 2000
  * tragárselo: quien llama necesita saber que no ha quedado constancia en
  * ninguna ficha para no prometerle al cliente que sí.
  */
-export async function POST(req: Request) {
+async function POSTSin(req: Request) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -45,3 +46,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('portal/nota', e) }, { status: 503 })
   }
 }
+
+export const POST = auditado(POSTSin)

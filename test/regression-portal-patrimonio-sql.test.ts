@@ -32,6 +32,10 @@ const SQL_CATASTRO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/202
 // «¿Tiene hipoteca?» (25/10/2026): columna `hipoteca` en el inmueble; mismo espejo.
 const RUTA_HIPOTECA = 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_hipoteca.sql'
 const SQL_HIPOTECA = readFileSync(join(RAIZ, RUTA_HIPOTECA), 'utf8').replace(/--.*$/gm, '')
+// Importar desde Excel/CSV (26/10/2026, P18): columnas nuevas en `importacion`; mismo espejo.
+const RUTA_IMPORTACION = 'apps/asegura-portal/prisma/sql/2026-10-26_portal_patrimonio_importacion_fichero.sql'
+const SQL_IMPORTACION = readFileSync(join(RAIZ, RUTA_IMPORTACION), 'utf8').replace(/--.*$/gm, '')
+const SQL_INQUILINO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-26_portal_patrimonio_inquilino_acceso.sql'), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
@@ -40,6 +44,8 @@ const SQL = [
   SQL_PROPIA,
   SQL_CATASTRO,
   SQL_HIPOTECA,
+  SQL_IMPORTACION,
+  SQL_INQUILINO,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
@@ -320,4 +326,30 @@ test('🚨 hipoteca (25/10/2026): SQL aditivo sin borrados, columna por GRANT, c
   assert.ok(enCodigo)
   const limpia = (t: string) => t.split(',').map((x) => x.trim().replace(/'/g, ''))
   assert.deepEqual(limpia(bd[1]), limpia(enCodigo[1]))
+})
+
+test('🚨 importación Excel/CSV (26/10/2026): SQL aditivo sin borrados, columnas por GRANT, sin FK inventada y crm_seguros sin nada', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_IMPORTACION), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  assert.doesNotMatch(SQL_IMPORTACION, /\bDELETE\b|\bTRUNCATE\b/i)
+  assert.match(SQL_IMPORTACION, /^BEGIN;/m)
+  assert.match(SQL_IMPORTACION, /^COMMIT;/m)
+  assert.match(SQL_IMPORTACION, /REVOKE ALL ON seguros\.portal_patrimonio_importacion FROM crm_seguros/)
+  for (const c of ['tipo', 'fichero_hash', 'fichero_nombre', 'filas_total', 'resultado']) {
+    assert.ok(concedidas('SELECT', 'portal_patrimonio_importacion')!.has(c), `SELECT de ${c}`)
+  }
+  // `resultado` y `tipo` se actualizan; el hash y el nombre del fichero no se reescriben.
+  const upd = concedidas('UPDATE', 'portal_patrimonio_importacion')!
+  assert.ok(upd.has('resultado') && upd.has('tipo'))
+  assert.ok(!upd.has('fichero_hash') && !upd.has('fichero_nombre'))
+  // El catálogo de tipos de la BD es el del módulo.
+  const bd = /tipo IN \(([^)]*)\)/.exec(SQL_IMPORTACION)
+  assert.ok(bd)
+  const mod = /TIPOS_IMPORTACION = \[([^\]]*)\]/.exec(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/importacion.ts'), 'utf8'))
+  assert.ok(mod)
+  const limpia = (t: string) => t.split(',').map((x) => x.trim().replace(/'/g, ''))
+  assert.deepEqual(limpia(bd[1]), limpia(mod[1]))
+  // El tope de filas de la BD es el del código.
+  assert.match(SQL_IMPORTACION, /BETWEEN 1 AND 500/)
+  assert.match(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/importacion.ts'), 'utf8'), /MAX_FILAS_IMPORTACION = 500/)
 })

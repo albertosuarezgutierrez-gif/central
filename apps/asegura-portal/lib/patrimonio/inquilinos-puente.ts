@@ -62,6 +62,8 @@ export async function altaInquilinoPorPuente(
   if (r.status === 201 && estado === 'ok' && str(r.j?.id)) return { estado: 'ok', id: str(r.j?.id)! }
   if (estado === 'invalido') return { estado: 'invalido', campo: str(r.j?.campo), motivo: str(r.j?.motivo) ?? 'dato no válido' }
   if (estado === 'no_encontrado') return { estado: 'no_encontrado' }
+  if (r.status === 409 && estado === 'duplicado' && str(r.j?.id)) return { estado: 'duplicado', id: str(r.j?.id)!, nombre: str(r.j?.nombre) ?? '' }
+  if (r.status === 409 && estado === 'ya_en_contrato' && str(r.j?.id)) return { estado: 'ya_en_contrato', id: str(r.j?.id)! }
   if (estado === 'sin_clave') return { estado: 'sin_clave' }
   if (estado === 'sin_configurar') return { estado: 'sin_puente' }
   console.error(`[portal/patrimonio-inquilino] respuesta inesperada del puente: ${r.status} ${estado ?? 'sin estado'}`)

@@ -52,6 +52,7 @@ import { FilaDeclarada } from './FilaDeclarada'
 import { HuecosProteccion } from './HuecosProteccion'
 import { DeclaradasEliminadas, LIMITE_ELIMINADAS } from './DeclaradasEliminadas'
 import { FiltroVigencia } from './FiltroVigencia'
+import { enFamilia, familiaDeParametro, titularesDeFamilia } from '@/lib/familia-filtro'
 import { GrupoPlegable } from './GrupoPlegable'
 import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
@@ -71,6 +72,7 @@ import {
   DESCRIPCION_MAX,
   precargasDeRecordatorio,
   VERSION_TEXTO_COMERCIAL,
+  NOMBRE_FAMILIA,
   nombreDePila,
   saludoPorHora,
   vistaDeBoveda,
@@ -124,6 +126,8 @@ export default async function Boveda({
 }) {
   const parametros = await searchParams
   const vista = vistaDeBoveda(parametros.vista)
+  // `?familia=` (destino de las tarjetas de Inicio): solo filtra lo que se PINTA; fuera de la lista = sin filtro.
+  const familia = vista === 'seguros' ? familiaDeParametro(parametros.familia) : null
   // El botón «Dar parte de esta póliza» de la ficha llega con esto en la URL.
   // Es solo una SUGERENCIA de selección dentro de `opcionesParte`, que ya está
   // acotada a esta identidad — nunca una clave de consulta: `ParteSiniestro`
@@ -427,9 +431,10 @@ export default async function Boveda({
   // El reparto lo decide `agruparCartera`, que es puro y tiene su cepo: aquí no
   // se compara ningún `tipoPersona` a mano.
   const bloques = agruparCartera([
-    ...cartera.propias.map((t) => ({ ...t, propia: true })),
-    ...cartera.autorizadas.map((t) => ({ ...t, propia: false, representada: t.autorizacion?.via === 'dueno' })),
+    ...titularesDeFamilia(cartera.propias, familia).map((t) => ({ ...t, propia: true })),
+    ...titularesDeFamilia(cartera.autorizadas, familia).map((t) => ({ ...t, propia: false, representada: t.autorizacion?.via === 'dueno' })),
   ])
+  const declaradasVista = declaradas.filter((d) => enFamilia(d.ramo, d.titularTipo === 'empresa', familia))
   const bloqueMias = bloques.find((b) => b.grupo === 'mias') ?? null
   // «Tus seguros» ya tiene su sección propia abajo (con los estados vacíos y
   // las añadidas a mano), así que aquí quedan los OTROS cajones.
@@ -441,7 +446,7 @@ export default async function Boveda({
   // que se ve al abrir. Y cuenta TODAS, también las que el filtro de vigencia
   // esconde de salida — ese filtro ya declara por su cuenta cuántas oculta.
   const cuentaPropias =
-    (bloqueMias?.titulares ?? []).reduce((n, t) => n + t.polizas.length, 0) + declaradas.length
+    (bloqueMias?.titulares ?? []).reduce((n, t) => n + t.polizas.length, 0) + declaradasVista.length
 
   // Lo que se le ofrece al dar un parte. La lista sale SIEMPRE de la cartera ya
   // leída para esta identidad: ningún id de póliza entra desde la request.
@@ -674,6 +679,12 @@ export default async function Boveda({
           cartera» —no «Mis seguros»— justo para no repetir la palabra del h1 y
           de la pestaña, y lleva al lado cuántos seguros esconde. */}
       <GrupoPlegable titulo="Tu cartera" cuenta={cuentaPropias} abierto={cuentaPropias === 0}>
+        {familia !== null && (
+          <p className="suave" style={{ margin: '0 0 12px' }}>
+            Solo seguros: {NOMBRE_FAMILIA[familia].toLowerCase()}. <Link href="/boveda">Ver todos</Link>
+            {cuentaPropias === 0 && ' No nos consta ninguno de este tipo en tu cartera.'}
+          </p>
+        )}
         {!cartera.vinculada ? (
           cartera.vinculo === 'ambiguo' ? (
             // 🚨 A este NO se le puede decir que no le hemos encontrado nada: sí
@@ -723,9 +734,9 @@ export default async function Boveda({
             aspecto. No llevan `<h3>` de titular porque no lo tienen: son suyas
             por definición. Lo que las distingue es el chip «Añadida por ti» de
             cada fila, y eso no es cosmético — ver `FilaDeclarada`. */}
-        {declaradas.length > 0 && (
+        {declaradasVista.length > 0 && (
           <ul className="polizas">
-            {declaradas.map((d) => (
+            {declaradasVista.map((d) => (
               <FilaDeclarada
                 key={d.id}
                 p={{

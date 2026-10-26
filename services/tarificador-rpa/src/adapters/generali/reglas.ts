@@ -998,11 +998,33 @@ export function motivosInteresadoGenerali(campos: readonly { campo: string }[], 
 /** Id real del botón «Personas» que abre el buscador de personas (inventario del trabajo 304ac3a2). */
 export const ID_BOTON_PERSONAS_GENERALI = 'reg1063A_personas_roles_lnkPers'
 /** Rótulo (normalizado) del botón que lanza la búsqueda dentro del buscador de personas. */
-export const RE_BUSCAR_PERSONA_GENERALI = /^(buscar|consultar|buscar persona|consultar persona|busqueda|consulta|buscar cliente)$/
+export const RE_BUSCAR_PERSONA_GENERALI = /^(buscar|consultar|buscar persona|consultar persona|buscar personas|consultar personas|busqueda|consulta|buscar cliente|buscar por documento|lupa)$/
 /** Rótulos (normalizados) que delatan una pantalla de ALTA de persona: ahí no se crea nada. */
 export const RE_ALTA_PERSONA_GENERALI = /^(alta|nuevo|nueva persona|nueva|crear|crear persona|dar de alta|alta de persona|alta persona|nuevo cliente)$/
 /** Rótulos (normalizados) del control que elige una fila del resultado. */
 export const RE_ELEGIR_FILA_GENERALI = /^(seleccionar|elegir|seleccion|sel|escoger|seleccionar persona)$/
+
+/** Rótulo (normalizado) de la pestaña que lleva a la SELECCIÓN/búsqueda de personas dentro de la pantalla «Interesado / Tomador» (v0.2.23). */
+export const RE_PESTANA_SELECCION_PERSONAS_GENERALI = /^seleccion personas( que intervienen)?$/
+
+/** URL sin query, hash ni `;jsessionid` (nunca datos): `host/ruta`. `about:blank` se deja tal cual. PURA. */
+export function urlSinDatosGenerali(url: string | null | undefined): string {
+  const t = String(url ?? '')
+  try {
+    const u = new URL(t)
+    if (!u.host) return t.split(/[?#]/)[0]!.slice(0, 90)
+    return `${u.host}${u.pathname}`.replace(/;[^/]*/g, '').slice(0, 90)
+  } catch {
+    return t.split(/[?#]/)[0]!.replace(/;.*/, '').slice(0, 90)
+  }
+}
+
+/** Índice compacto de TODOS los marcos vistos (rama, URL sin datos, nombre y nº de controles), sin vídeos. Tope `max` marcos. PURA. */
+export function indiceMarcosGenerali(marcos: readonly { rama: string; url: string; nombre: string | null; controles: number }[], max = 8): string {
+  const utiles = marcos.filter((m) => !/vimeo/i.test(m.url) && (m.controles > 0 || m.rama !== 'capa'))
+  const partes = utiles.slice(0, max).map((m) => `${m.rama} ${urlSinDatosGenerali(m.url).replace(/^www\.generali\.es\//, '')}${m.nombre ? `#${sanearFragmentoGenerali(m.nombre).slice(0, 30)}` : ''} (${m.controles})`)
+  return `${partes.join(' ; ') || 'sin marcos'}${utiles.length > max ? ` ; +${utiles.length - max}` : ''}`
+}
 
 /** Minúsculas, sin tildes ni espacios sobrantes. PURA. */
 export function normalizarRotuloGenerali(t: string | null | undefined): string {
@@ -1023,13 +1045,15 @@ export function filaCoincideDocumentoGenerali(celdas: readonly string[], documen
 /** Control visible de la ventana/capa que abrió «Personas» (sin valores: solo tipo, id y rótulo de etiqueta/botón). */
 export type ControlAbiertoGenerali = { tag: string; tipo: string; id: string; rotulo: string; ro: boolean }
 
-/** Inventario compacto y SANEADO de lo que abrió «Personas»: etiquetas/ids/tipos, nunca valores. Tope `max`. PURA. */
+/** Inventario compacto y SANEADO de lo que abrió «Personas»: etiquetas/ids/tipos, nunca valores. Primero lo pulsable y las cabeceras (lo que delata el buscador), después los campos. Tope `max`. PURA. */
 export function resumenControlesAbiertoGenerali(controles: readonly ControlAbiertoGenerali[], filas: number, max = 650): string {
-  const partes = controles.map((c) => {
+  const fmt = (c: ControlAbiertoGenerali) => {
     const id = c.id.startsWith(PREFIJO_ID_PERSONAS_GENERALI) ? c.id.slice(PREFIJO_ID_PERSONAS_GENERALI.length) : c.id
-    const rot = c.rotulo ? ` «${sanearFragmentoGenerali(c.rotulo).slice(0, 30)}»` : ''
+    const rot = c.rotulo ? ` «${sanearFragmentoGenerali(c.rotulo).slice(0, 60)}»` : ''
     return `${c.tag}/${c.tipo}${c.ro ? ',ro' : ''}${id ? `#${sanearFragmentoGenerali(id).slice(0, 40)}` : ''}${rot}`
-  })
+  }
+  const esAccion = (c: ControlAbiertoGenerali) => ['a', 'button', 'img', 'th'].includes(c.tag) || ['button', 'submit', 'image', 'reset'].includes(c.tipo)
+  const partes = [...controles.filter(esAccion), ...controles.filter((c) => !esAccion(c))].map(fmt)
   const t = `${partes.join('; ') || 'sin controles visibles'}; filas:${filas}`
   return t.length > max ? `${t.slice(0, max)}…` : t
 }

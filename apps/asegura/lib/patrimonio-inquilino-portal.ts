@@ -25,7 +25,7 @@ import { NIVELES, RELACION_DUENO, empresasDelDueno, puedeAutorizar, type FichaDu
 
 import { prismaAsegura } from './asegura-db'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
-import { cifrarAltaInquilino, type AltaInquilinoPortal } from './patrimonio-inquilino-reglas'
+import { buscarDuplicadoPorNif, cifrarAltaInquilino, type AltaInquilinoPortal } from './patrimonio-inquilino-reglas'
 
 const nivelDe = (v: string): Nivel => ((NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta')
 
@@ -106,6 +106,10 @@ export type ResultadoAltaPuente =
   | { estado: 'ok'; id: string }
   | { estado: 'no_encontrado' }
   | { estado: 'sin_clave' }
+  /** Ya hay un inquilino del mismo titular con ese documento: se PROPONE reutilizarlo (no se escribe nada). */
+  | { estado: 'duplicado'; id: string; nombre: string }
+  /** El inquilino reutilizado ya figura en este contrato. */
+  | { estado: 'ya_en_contrato'; id: string }
 
 /** Alta del inquilino en el contrato. El titular sale del CONTRATO, nunca del cuerpo. */
 export async function altaInquilinoDesdePortal(correduriaId: string, d: AltaInquilinoPortal): Promise<ResultadoAltaPuente> {
@@ -123,6 +127,20 @@ export async function altaInquilinoDesdePortal(correduriaId: string, d: AltaInqu
   const pii = cifrarAltaInquilino(d)
   if (pii === null) return { estado: 'sin_clave' }
 
+  // Duplicado por DOCUMENTO normalizado (nunca por nombre), dentro del MISMO titular. El NIF va cifrado con IV aleatorio y
+  // no hay índice ciego del documento: se descifran los del titular aquí (hay pocos) y se comparan. lo que la persona acepta reutilizar (`reutilizarId`) se vuelve a derivar; un id del cuerpo no vale por sí solo.
+  if (d.nif !== null) {
+    const filas = await db.$queryRaw<{ id: string; nombre: string; tipo: string; nif_cifrado: string }[]>`
+      select id::text as id, nombre, tipo, nif_cifrado from portal_patrimonio_inquilino
+      where titular_id = ${c.titular_id}::uuid and archivado_en is null and nif_cifrado is not null
+      limit 500`
+    const dup = buscarDuplicadoPorNif(d.nif, filas.map((f) => ({ id: f.id, nombre: f.nombre, tipo: f.tipo, nif: descifrarCampo(f.nif_cifrado) })))
+    if (dup) {
+      if (d.reutilizarId !== dup.id) return { estado: 'duplicado', id: dup.id, nombre: dup.nombre }
+      return enlazarExistente(db, c.titular_id, d, dup.id)
+    }
+  }
+
   const id = await db.$transaction(async (tx) => {
     const [q] = await tx.$queryRaw<{ id: string }[]>`
       insert into portal_patrimonio_inquilino
@@ -137,6 +155,29 @@ export async function altaInquilinoDesdePortal(correduriaId: string, d: AltaInqu
     return q.id
   })
   return { estado: 'ok', id }
+}
+
+/** Reutiliza al inquilino existente en este contrato (mismo titular: lo garantiza la FK compuesta de la BD). */
+async function enlazarExistente(
+  db: ReturnType<typeof prismaAsegura>,
+  titularId: string,
+  d: AltaInquilinoPortal,
+  inquilinoId: string,
+): Promise<ResultadoAltaPuente> {
+  const [previo] = await db.$queryRaw<{ archivado_en: Date | null }[]>`
+    select archivado_en from portal_patrimonio_contrato_inquilino
+    where contrato_id = ${d.contratoId}::uuid and inquilino_id = ${inquilinoId}::uuid`
+  if (previo && previo.archivado_en === null) return { estado: 'ya_en_contrato', id: inquilinoId }
+  if (previo) {
+    await db.$executeRaw`
+      update portal_patrimonio_contrato_inquilino set archivado_en = null, papel = ${d.papel}, actualizado_en = now()
+      where contrato_id = ${d.contratoId}::uuid and inquilino_id = ${inquilinoId}::uuid`
+  } else {
+    await db.$executeRaw`
+      insert into portal_patrimonio_contrato_inquilino (titular_id, contrato_id, inquilino_id, papel, creado_por_identidad_id)
+      values (${titularId}::uuid, ${d.contratoId}::uuid, ${inquilinoId}::uuid, ${d.papel}, ${d.identidadId}::uuid)`
+  }
+  return { estado: 'ok', id: inquilinoId }
 }
 
 export type ResultadoPiiPuente =
@@ -156,6 +197,12 @@ export async function piiInquilinoParaPortal(correduriaId: string, identidadId: 
       and t.archivado_en is null and t.correduria_id = ${correduriaId}::uuid`
   if (!q) return { estado: 'no_encontrado' }
   if (!(await puedePatrimonio(correduriaId, identidadId, q.cliente_id, 'ver_pii_inquilino'))) return { estado: 'no_encontrado' }
+  // Traza de LECTURA (26/10/2026): quién (la identidad) y qué ficha (el inquilino), cuándo (`created_at`). Sin PII: solo ids.
+  // FAIL-CLOSED: si no queda constancia, no se entrega el dato (un fallo aquí sube a la ruta como 503).
+  await db.$executeRaw`
+    insert into auditoria (actor_tipo, actor_id, metodo, ruta, estado_http, ids)
+    values ('sistema', ${`portal:${identidadId}`}, 'GET', '/api/portal/patrimonio/inquilino', 200,
+            ${JSON.stringify({ identidadId, inquilinoId })}::jsonb)`
   const ilegibles: string[] = []
   const leer = (campo: string, v: string | null) => {
     if (campoIlegible(v)) ilegibles.push(campo)

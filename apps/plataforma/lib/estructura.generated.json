@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-25T19:04:58Z",
+  "generadoEn": "2026-10-25T20:31:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2051,11 +2051,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 8
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 50
+        "evidencias": 63
       },
       "asegura-web": {
         "estado": "no",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 300
+        "evidencias": 302
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 159
+        "evidencias": 164
       },
       "asegura-web": {
         "estado": "usado",
@@ -2429,11 +2429,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 44
+        "evidencias": 45
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 125
+        "evidencias": 129
       },
       "asegura-web": {
         "estado": "usado",
@@ -4178,6 +4178,7 @@
       "/api/cron/presentacion-app",
       "/api/cron/purga-rgpd",
       "/api/cron/revision-anual",
+      "/api/cron/senales-patrimonio",
       "/api/cron/siniestros-vinculo",
       "/api/cron/tarificador-cola",
       "/api/cron/tarificador-humo",
@@ -4328,6 +4329,7 @@
       "/api/operador/oportunidad/traspasar",
       "/api/operador/oportunidad/whatsapp",
       "/api/operador/oportunidades-aviso",
+      "/api/operador/oportunidades-patrimonio",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza-documento",
@@ -4473,6 +4475,11 @@
       "/api/hojas",
       "/api/hojas/[id]",
       "/api/huecos-proteccion",
+      "/api/inquilino/[contratoId]/consentimiento",
+      "/api/inquilino/[contratoId]/documento/[documentoId]",
+      "/api/inquilino/[contratoId]/justificantes",
+      "/api/inquilino/[contratoId]/revocar",
+      "/api/inquilino/canjear",
       "/api/invitaciones",
       "/api/invitaciones/[id]",
       "/api/invitaciones/familia",
@@ -4490,10 +4497,14 @@
       "/api/mis-datos/cuenta",
       "/api/mis-datos/cuenta/codigo",
       "/api/modulos",
+      "/api/oposicion-senales-patrimonio",
       "/api/patrimonio/codigo-postal",
       "/api/patrimonio/comunidades",
       "/api/patrimonio/contratos",
+      "/api/patrimonio/contratos/[id]/enlace-inquilino",
+      "/api/patrimonio/contratos/[id]/enlace-inquilino/[enlaceId]",
       "/api/patrimonio/contratos/[id]/inquilinos",
+      "/api/patrimonio/contratos/[id]/recibos-compartidos",
       "/api/patrimonio/contratos/[id]/renta",
       "/api/patrimonio/contratos/[id]/tope",
       "/api/patrimonio/cubre-seguro",
@@ -4501,6 +4512,11 @@
       "/api/patrimonio/documentos",
       "/api/patrimonio/documentos/[id]",
       "/api/patrimonio/facturas",
+      "/api/patrimonio/importaciones",
+      "/api/patrimonio/importaciones/[id]",
+      "/api/patrimonio/importaciones/[id]/confirmar",
+      "/api/patrimonio/importaciones/[id]/descartar",
+      "/api/patrimonio/importaciones/plantilla",
       "/api/patrimonio/inmuebles",
       "/api/patrimonio/inmuebles/[id]/hipoteca",
       "/api/patrimonio/inmuebles/[id]/obligaciones",
@@ -5446,6 +5462,7 @@
       "/api/correduria/oportunidad/tarea",
       "/api/correduria/oportunidad/traspasar",
       "/api/correduria/oportunidad/whatsapp",
+      "/api/correduria/oportunidades-patrimonio",
       "/api/correduria/partes",
       "/api/correduria/poliza",
       "/api/correduria/poliza/traer-pdf",
@@ -6071,6 +6088,7 @@
       "seguros.portal_alta_origen",
       "seguros.portal_aviso_enviado",
       "seguros.portal_enlace_directo",
+      "seguros.portal_patrimonio_senal",
       "seguros.portal_poliza_cambio",
       "seguros.portal_poliza_foto",
       "seguros.presupuesto",
@@ -6154,8 +6172,11 @@
       "seguros.portal_patrimonio_inmueble_comunidad",
       "seguros.portal_patrimonio_inmueble_poliza",
       "seguros.portal_patrimonio_inquilino",
+      "seguros.portal_patrimonio_inquilino_acceso",
+      "seguros.portal_patrimonio_inquilino_consentimiento",
       "seguros.portal_patrimonio_obligacion",
       "seguros.portal_patrimonio_plantilla_gasto",
+      "seguros.portal_patrimonio_recibo_compartido",
       "seguros.portal_patrimonio_renta_actualizacion",
       "seguros.portal_patrimonio_titular",
       "seguros.portal_peticion_acceso",
@@ -7166,7 +7187,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1797,
+    "apis": 1814,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

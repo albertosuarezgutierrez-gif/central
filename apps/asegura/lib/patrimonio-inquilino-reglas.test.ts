@@ -61,7 +61,7 @@ test('revisarAltaInquilino: reglas de la cartera para NIF/teléfono/correo, y NI
   const ok = revisarAltaInquilino({ ...base, nif: '12345678-z', telefono: '+34 600 000 000', email: ' Ana@X.es ' })
   assert.deepEqual(ok, {
     ok: true,
-    datos: { identidadId: ID, contratoId: C, tipo: 'persona', nombre: 'Ana', papel: 'titular', nif: '12345678Z', email: 'ana@x.es', telefono: '600000000' },
+    datos: { identidadId: ID, contratoId: C, tipo: 'persona', nombre: 'Ana', papel: 'titular', nif: '12345678Z', email: 'ana@x.es', telefono: '600000000', reutilizarId: null },
   })
   assert.equal(revisarAltaInquilino({ ...base, nif: '12345678A' }).ok, false)
   const cif = revisarAltaInquilino({ ...base, nif: 'B12345678' })
@@ -71,4 +71,27 @@ test('revisarAltaInquilino: reglas de la cartera para NIF/teléfono/correo, y NI
   // Sin identidad o contrato válidos no hay alta (no se acepta titular ni ficha del cuerpo).
   assert.equal(revisarAltaInquilino({ ...base, identidadId: 'x' }).ok, false)
   assert.equal(revisarAltaInquilino({ ...base, contratoId: undefined }).ok, false)
+})
+
+test('duplicado por DOCUMENTO normalizado, nunca por nombre', async () => {
+  const { buscarDuplicadoPorNif } = await import('./patrimonio-inquilino-reglas.ts')
+  const cs = [
+    { id: 'a', nombre: 'Juan García', tipo: 'persona', nif: '11111111H' },
+    { id: 'b', nombre: 'Ana Pérez', tipo: 'persona', nif: '12345678z' },
+    { id: 'c', nombre: 'Sin doc', tipo: 'persona', nif: null },
+  ]
+  assert.equal(buscarDuplicadoPorNif('12345678Z', cs)?.id, 'b')
+  assert.equal(buscarDuplicadoPorNif('12.345.678-Z', cs)?.id, 'b')
+  assert.equal(buscarDuplicadoPorNif(null, cs), null)
+  // mismo nombre, otro documento: son dos personas
+  assert.equal(buscarDuplicadoPorNif('00000000T', [{ id: 'x', nombre: 'Ana Pérez', tipo: 'persona', nif: '12345678Z' }]), null)
+})
+
+test('revisarAltaInquilino: reutilizarId solo UUID', () => {
+  const base = { identidadId: ID, contratoId: C, tipo: 'persona', nombre: 'Ana' }
+  const ok = revisarAltaInquilino({ ...base, reutilizarId: ID })
+  assert.ok(ok.ok && ok.datos.reutilizarId === ID)
+  assert.equal(revisarAltaInquilino({ ...base, reutilizarId: 'x' }).ok, false)
+  const sin = revisarAltaInquilino(base)
+  assert.ok(sin.ok && sin.datos.reutilizarId === null)
 })

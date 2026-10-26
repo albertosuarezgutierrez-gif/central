@@ -100,3 +100,23 @@ test('🚨 la renta aplicada es APPEND-ONLY: el portal solo inserta filas nuevas
   assert.doesNotMatch(src, /portalPatrimonioRentaActualizacion\.(update|updateMany|upsert|delete|deleteMany)\(/)
   assert.doesNotMatch(src, /\$executeRaw|\$queryRaw/)
 })
+
+test('🚨 leer la PII del inquilino deja traza en auditoria (ids, sin PII) ANTES de devolverla', () => {
+  const src = leer(ASEGURA_BD)
+  const i = src.indexOf('export async function piiInquilinoParaPortal')
+  assert.ok(i >= 0)
+  const cuerpo = src.slice(i)
+  const traza = cuerpo.search(/insert into auditoria[\s\S]*?'GET'/)
+  const devuelve = cuerpo.search(/estado: 'ok',\s*nif:/)
+  assert.ok(traza >= 0, 'la lectura de PII no deja traza en auditoria')
+  assert.ok(traza < devuelve, 'la traza tiene que escribirse antes de devolver el dato')
+  assert.match(cuerpo, /JSON\.stringify\(\{ identidadId, inquilinoId \}\)/)
+  assert.doesNotMatch(cuerpo.slice(traza, cuerpo.indexOf('::jsonb', traza)), /nif_cifrado|descifrarCampo|telefono|email/)
+})
+
+test('🚨 el alta compara el documento NORMALIZADO dentro del mismo titular y no crea duplicado sin que la persona lo acepte', () => {
+  const src = leer(ASEGURA_BD)
+  assert.match(src, /buscarDuplicadoPorNif\(d\.nif/)
+  assert.match(src, /where titular_id = \$\{c\.titular_id\}::uuid and archivado_en is null and nif_cifrado is not null/)
+  assert.match(src, /if \(d\.reutilizarId !== dup\.id\) return \{ estado: 'duplicado'/)
+})

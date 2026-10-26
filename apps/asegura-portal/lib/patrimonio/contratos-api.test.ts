@@ -106,7 +106,7 @@ test('validarAltaContrato: cláusula ⇔ índice, «otro» descrito, fianza vac�
 
 test('validarAltaInquilino: solo forma; PII vacía = null', () => {
   const v = validarAltaInquilino({ tipo: 'persona', nombre: '  Ana  López ', nif: '', email: 'a@b.es' })
-  assert.deepEqual(v, { ok: true, datos: { tipo: 'persona', nombre: 'Ana López', papel: 'titular', nif: null, email: 'a@b.es', telefono: null } })
+  assert.deepEqual(v, { ok: true, datos: { tipo: 'persona', nombre: 'Ana López', papel: 'titular', nif: null, email: 'a@b.es', telefono: null, reutilizarId: null } })
   assert.deepEqual(validarAltaInquilino({ tipo: 'x', nombre: 'A' }), { ok: false, campo: 'tipo' })
   assert.deepEqual(validarAltaInquilino({ tipo: 'persona', nombre: 'A', nif: 12 }), { ok: false, campo: 'nif' })
 })
@@ -171,7 +171,7 @@ test('🚨 alta de inquilino: la PII va SOLO al puente; contrato ajeno o Gestió
   const ok = await responderAltaInquilino(p, C_MIO, datos)
   assert.deepEqual(ok, { status: 201, body: { id: 'q1' } })
   assert.equal(llamadas.crear, 0, 'ningún puerto de BD de esta app recibe el inquilino')
-  assert.deepEqual(llamadas.puente, [{ contratoId: C_MIO, datos: { ...datos, papel: 'titular' } }])
+  assert.deepEqual(llamadas.puente, [{ contratoId: C_MIO, datos: { ...datos, papel: 'titular', reutilizarId: null } }])
   // La respuesta no devuelve la PII.
   assert.doesNotMatch(JSON.stringify(ok), /12345678Z|ana@x\.es|600000000/)
 })
@@ -236,4 +236,13 @@ test('el tope del cliente llega a la propuesta que se aplica: con 1 % topa, sin 
   // La propuesta con el 1 % no es la que vio con el defecto (2,95 %): el servidor la recalcula y no coincide.
   assert.deepEqual(r, { status: 409, body: { error: 'propuesta_cambiada' } })
   assert.equal(a.llamadas.aplicar.length, 0)
+})
+
+test('alta de inquilino: documento ya existente → 409 inquilino_duplicado con id y nombre (se propone reutilizar, no se duplica)', async () => {
+  const p = puertos([[MIO, 'total']], { altaInquilinoPuente: async () => ({ estado: 'duplicado', id: 'q9', nombre: 'Ana' }) }).p
+  assert.deepEqual(await responderAltaInquilino(p, C_MIO, { tipo: 'persona', nombre: 'Ana' }), {
+    status: 409,
+    body: { error: 'inquilino_duplicado', id: 'q9', nombre: 'Ana' },
+  })
+  assert.equal((await responderAltaInquilino(p, C_MIO, { tipo: 'persona', nombre: 'Ana', reutilizarId: 'no-uuid' })).status, 400)
 })
