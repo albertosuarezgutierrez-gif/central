@@ -8,7 +8,7 @@ operador (god-panel de plataforma) da de alta una empresa → los responsables d
 empleados, documentos, solicitudes y nóminas desde `/admin` → el empleado accede a su portal `/e`
 con token o PIN.
 
-- URL de producción: `central-rrhh.vercel.app` (proyecto Vercel `central-rrhh`)
+- URL de producción: `empleados.grupoasegura.es` (proyecto Vercel `central-rrhh`; `central-rrhh.vercel.app` redirige 308 salvo `/api/*`)
 - Root Directory Vercel: `apps/rrhh` · Install: `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`
 - Build: `prisma generate && next build`
 

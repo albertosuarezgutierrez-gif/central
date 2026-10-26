@@ -15,7 +15,7 @@ export type DatosAviso = {
 
 export type TextoAviso = { titulo: string; cuerpo: string; asunto: string; texto: string }
 
-const URL_DEFECTO = 'https://central-rrhh.vercel.app'
+const URL_DEFECTO = 'https://empleados.grupoasegura.es'
 
 /** Base pública del portal: env `RRHH_PUBLIC_URL` > origen de la petición > producción. Sin barra final. */
 export function basePortal(env: string | undefined, origen?: string | null): string {

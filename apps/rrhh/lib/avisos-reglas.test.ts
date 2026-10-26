@@ -20,7 +20,7 @@ describe('basePortal / enlacePortal', () => {
   it('prioriza la env, luego el origen, sin barra final', () => {
     expect(basePortal('https://rrhh.ejemplo.es/', 'https://otro')).toBe('https://rrhh.ejemplo.es')
     expect(basePortal(undefined, 'https://otro/')).toBe('https://otro')
-    expect(enlacePortal(basePortal(undefined, null))).toBe('https://central-rrhh.vercel.app/e')
+    expect(enlacePortal(basePortal(undefined, null))).toBe('https://empleados.grupoasegura.es/e')
   })
 })
 
