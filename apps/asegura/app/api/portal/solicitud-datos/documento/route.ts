@@ -15,8 +15,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 120
 
 /**
- * POST (multipart: token, documento) — el cliente sube un documento por el enlace de datos
- * (24/09/2026). Se archiva en su ficha y la IA propone los campos que faltan.
+ * POST (multipart: token, documento[, clase=poliza]) — el cliente sube un documento por el enlace de datos
+ * (24/09/2026). Se archiva en su ficha y la IA propone los campos que faltan. `clase=poliza` (26/10/2026): el botón
+ * de la póliza actual, leída con el lector de pólizas (compañía, vencimiento, capitales).
  *   200 { tipo, etiqueta, valores, aviso } · 410 muerta/completada · 409 tope · 415 fichero no válido
  */
 async function POSTSin(req: Request) {
@@ -32,7 +33,7 @@ async function POSTSin(req: Request) {
       nombre: fichero.name || 'documento',
       mime: fichero.type,
       contenido: Buffer.from(await fichero.arrayBuffer()),
-    }, form?.get('consentimiento') === '1')
+    }, form?.get('consentimiento') === '1', form?.get('clase') === 'poliza' ? 'poliza' : 'documento')
     if (r.ok) return NextResponse.json(r)
     const status = r.estado === 'tope' ? 409 : r.estado === 'invalido' ? 415 : r.estado === 'error' ? 503 : 410
     return NextResponse.json(r, { status })

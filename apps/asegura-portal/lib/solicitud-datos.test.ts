@@ -64,3 +64,43 @@ test('las ayudas de dirección del enlace exigen un token VIVO (no son un servic
   const { tokenSolicitudVivo } = await import('./solicitud-datos.ts')
   assert.equal(await tokenSolicitudVivo('corto'), false)
 })
+
+// ─── Fase B (26/10/2026): póliza actual, borrador y abandono ─────────────────
+
+test('borrador del puente: solo claves del formulario (y subclaves de dirección), escalares o la lista de «No lo sé»', async () => {
+  const { interpretarBorrador } = await import('./solicitud-datos.ts')
+  const campos = [
+    { clave: 'vivienda', etiqueta: 'Dirección', tipo: 'direccion', obligatorio: true },
+    { clave: 'alarma', etiqueta: 'Alarma', tipo: 'si_no', obligatorio: true },
+  ] as const
+  const b = interpretarBorrador({ viviendaCp: '41003', alarma: true, _noLoSe: ['alarma', 3], intruso: 'x', raro: { a: 1 } }, campos as never)
+  assert.deepEqual(b, { viviendaCp: '41003', alarma: true, _noLoSe: ['alarma'] })
+  assert.equal(interpretarBorrador(null, campos as never), null)
+  assert.equal(interpretarBorrador({ intruso: 'x' }, campos as never), null)
+  const ok = interpretarSolicitud(200, { estado: 'ok', ramo: 'hogar', campos: [...campos], borrador: { alarma: false } })
+  assert.deepEqual(ok.estado === 'ok' && ok.borrador, { alarma: false })
+  const sin = interpretarSolicitud(200, { estado: 'ok', ramo: 'hogar', campos: [...campos] })
+  assert.equal(sin.estado === 'ok' && sin.borrador, null)
+})
+
+test('subida de la póliza actual: se marca `dePoliza` solo si asegura lo dice', () => {
+  const p = interpretarDocSubido(200, { ok: true, etiqueta: 'Póliza', valores: { companiaActual: 'Allianz', tramoContenido: '15000_30000' }, aviso: null, dePoliza: true })
+  assert.equal(p.estado === 'ok' && p.dePoliza, true)
+  const d = interpretarDocSubido(200, { ok: true, etiqueta: 'DNI', valores: {}, aviso: null })
+  assert.equal(d.estado === 'ok' && d.dePoliza, false)
+})
+
+test('formulario: botón de póliza con `clase=poliza`, guardado con pausa al servidor (sin cookies), y un tercero solo con permiso', () => {
+  const f = readFileSync(new URL('../app/datos/[token]/Formulario.tsx', import.meta.url), 'utf8')
+  assert.match(f, /if \(clase === 'poliza'\) form\.set\('clase', 'poliza'\)/)
+  assert.match(f, /void subir\(ficheros, 'poliza'\)/)
+  assert.match(f, /fetch\('\/api\/datos\/borrador'/)
+  assert.match(f, /if \(tercero && !consiente\) return/)
+  assert.match(f, /setTimeout\([\s\S]*PAUSA_BORRADOR_MS\)/)
+  assert.doesNotMatch(f, /document\.cookie|localStorage|sessionStorage/)
+  const ruta = readFileSync(new URL('../app/api/datos/borrador/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /rateLimit\(`datos-borrador:/)
+  assert.match(ruta, /RE_TOKEN|\[A-Za-z0-9_-\]\{40,60\}/)
+  const doc = readFileSync(new URL('../app/api/datos/documento/route.ts', import.meta.url), 'utf8')
+  assert.match(doc, /form\?\.get\('clase'\) === 'poliza' \? 'poliza' : 'documento'/)
+})

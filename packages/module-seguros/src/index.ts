@@ -1128,6 +1128,17 @@ export {
   type DireccionDeclarada,
 } from './solicitud-hogar.ts'
 export {
+  MAX_BORRADOR_CARACTERES,
+  clavesBorrador,
+  limpiarBorrador,
+  tramoDeCapital,
+  ultimoPasoDe,
+  valoresDePolizaLeida,
+  type BorradorSolicitud,
+  type PolizaLeidaSolicitud,
+  type ValorBorrador,
+} from './solicitud-borrador.ts'
+export {
   ALARMA_ID_CODEOSCOPIC,
   DESTINOS_HOGAR,
   IDS_CODEOSCOPIC_HOGAR_ATESTIGUADOS,

@@ -4,8 +4,8 @@ import { subirDocPuente } from '@/lib/solicitud-datos'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-// Asegura guarda el fichero y lo lee con IA (hasta ~40 s).
-export const maxDuration = 60
+// Asegura guarda el fichero y lo lee con IA (hasta ~40 s; la póliza actual, con el lector de pólizas, hasta ~90 s).
+export const maxDuration = 120
 
 /** Por debajo del tope de cuerpo de Vercel (4,5 MB). Las fotos llegan ya encogidas del navegador. */
 const MAX_BYTES = 4_200_000
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   if (fichero.size > MAX_BYTES) {
     return NextResponse.json({ motivo: `«${fichero.name}» pesa demasiado (${(fichero.size / 1024 / 1024).toFixed(1)} MB). Sube una foto o un PDF de menos de 4 MB.` }, { status: 413 })
   }
-  const r = await subirDocPuente(token, fichero, form?.get('consentimiento') === '1')
+  const r = await subirDocPuente(token, fichero, form?.get('consentimiento') === '1', form?.get('clase') === 'poliza' ? 'poliza' : 'documento')
   if (!r) return NextResponse.json({ error: 'sin_puente' }, { status: 503 })
   return NextResponse.json(r.json ?? { error: `HTTP ${r.status}` }, { status: r.status })
 }

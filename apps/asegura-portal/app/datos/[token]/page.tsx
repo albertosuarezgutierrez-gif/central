@@ -39,7 +39,7 @@ export default async function DatosPresupuesto({ params }: { params: Promise<{ t
                 </p>
               </>
             )}
-            <Formulario token={token} campos={s.campos} ramo={s.ramo} tercero={s.tercero} />
+            <Formulario token={token} campos={s.campos} ramo={s.ramo} tercero={s.tercero} borrador={s.borrador} />
           </>
         )}
         {s.estado === 'completada' && (

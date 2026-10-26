@@ -7,7 +7,7 @@
  *   `catastro` aparecen si el Catastro no lo da, si aún no ha contestado, o si el cliente pulsa «Corregir».
  * - Rejas (`ventanas`): solo en un bajo o en una casa; en un piso alto, no. Sin tipo conocido, se pregunta.
  */
-import type { CampoSolicitud } from '@central/module-seguros'
+import { CLAVE_NO_LO_SE, claveDireccion, type CampoSolicitud } from '@central/module-seguros'
 import type { ViviendaCatastroPublica } from './vivienda-catastro.ts'
 
 export type ContextoVista = {
@@ -71,4 +71,59 @@ export function esencialesPendientes(visibles: readonly CampoSolicitud[], valore
     .filter((c) => !noLoSe.has(c.clave))
     .filter((c) => valores[c.clave] === undefined || valores[c.clave] === '' || valores[c.clave] === null)
     .map((c) => c.clave)
+}
+
+// ─── Borrador (guardado automático, 26/10/2026) ──────────────────────────────
+
+/** Una dirección como la lleva el formulario (`DireccionCp` + número, planta y puerta). */
+export type DireccionBorrador = {
+  cp: string; provincia: string; municipio: string; direccion: string
+  viaOficial: { tipo: string; nombre: string } | null
+  numero: string; planta: string; puerta: string
+}
+
+export type EstadoInicial = {
+  valores: Record<string, string | boolean>
+  noLoSe: string[]
+  direcciones: Record<string, DireccionBorrador>
+}
+
+/**
+ * El borrador guardado → estado inicial del formulario. Sin borrador, lo que trae la ficha (`actual`: DNI y
+ * nacimiento). Con borrador, lo escrito por el cliente MANDA sobre `actual` (es lo último que tecleó él).
+ * Las direcciones se rehacen desde sus subclaves; la calle oficial solo si vienen tipo y nombre.
+ */
+export function estadoDesdeBorrador(campos: readonly CampoSolicitud[], borrador: Record<string, string | boolean | string[]> | null): EstadoInicial {
+  const valores: Record<string, string | boolean> = Object.fromEntries(campos.flatMap((c) => (c.actual ? [[c.clave, c.actual]] : [])))
+  const direcciones: Record<string, DireccionBorrador> = {}
+  if (!borrador) return { valores, noLoSe: [], direcciones }
+  const claves = new Set(campos.map((c) => c.clave))
+  const noLoSe = Array.isArray(borrador[CLAVE_NO_LO_SE]) ? (borrador[CLAVE_NO_LO_SE] as string[]).filter((k) => claves.has(k)) : []
+  for (const c of campos) {
+    if (c.tipo === 'direccion') {
+      const t = (sub: Parameters<typeof claveDireccion>[1]) => { const v = borrador[claveDireccion(c.clave, sub)]; return typeof v === 'string' ? v : '' }
+      if (!['Cp', 'Provincia', 'Municipio', 'Calle', 'Numero', 'Planta', 'Puerta'].some((sub) => t(sub as 'Cp') !== '')) continue
+      const tipo = t('ViaTipo'), nombre = t('ViaNombre')
+      direcciones[c.clave] = {
+        cp: t('Cp'), provincia: t('Provincia'), municipio: t('Municipio'), direccion: t('Calle'),
+        viaOficial: tipo && nombre ? { tipo, nombre } : null,
+        numero: t('Numero'), planta: t('Planta'), puerta: t('Puerta'),
+      }
+      continue
+    }
+    const v = borrador[c.clave]
+    if (noLoSe.includes(c.clave)) { delete valores[c.clave]; continue }
+    if (typeof v === 'string' || typeof v === 'boolean') valores[c.clave] = v
+  }
+  return { valores, noLoSe, direcciones }
+}
+
+/** ¿Hay algo que guardar? Un formulario en blanco (o solo con lo que traía la ficha) no crea borrador. */
+export function borradorConContenido(campos: readonly CampoSolicitud[], borrador: Record<string, unknown>): boolean {
+  const actual = new Map(campos.flatMap((c) => (c.actual ? [[c.clave, c.actual] as const] : [])))
+  return Object.entries(borrador).some(([k, v]) => {
+    if (Array.isArray(v)) return v.length > 0
+    if (v === '' || v === null || v === undefined) return false
+    return actual.get(k) !== v
+  })
 }

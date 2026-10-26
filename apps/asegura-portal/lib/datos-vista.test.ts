@@ -49,3 +49,27 @@ test('esenciales que dependen del Catastro: sin contestar ni «No lo sé» no se
   assert.deepEqual(esencialesPendientes(vis, {}, new Set()), ['tipoVivienda', 'tramoContenido'])
   assert.deepEqual(esencialesPendientes(vis, { tramoContenido: 'calcular' }, new Set(['tipoVivienda'])), [])
 })
+
+// ─── Borrador (26/10/2026) ───────────────────────────────────────────────────
+test('borrador → estado inicial: lo escrito manda sobre la ficha; «No lo sé» vacía el valor; dirección por subclaves', async () => {
+  const { estadoDesdeBorrador, borradorConContenido } = await import('./datos-vista.ts')
+  const campos = [
+    { clave: 'dni', etiqueta: 'DNI', tipo: 'texto', obligatorio: true, actual: '12345678Z' },
+    { clave: 'vivienda', etiqueta: 'Dirección', tipo: 'direccion', obligatorio: true },
+    { clave: 'alarma', etiqueta: 'Alarma', tipo: 'si_no', obligatorio: true },
+    { clave: 'habitaciones', etiqueta: 'Habitaciones', tipo: 'numero', obligatorio: true },
+  ] as never
+  const sin = estadoDesdeBorrador(campos, null)
+  assert.deepEqual(sin.valores, { dni: '12345678Z' })
+  const e = estadoDesdeBorrador(campos, { dni: '87654321X', alarma: true, habitaciones: '3', _noLoSe: ['habitaciones'], viviendaCp: '41003', viviendaCalle: 'Calle Socorro', viviendaViaTipo: 'CL', viviendaViaNombre: 'SOCORRO', viviendaNumero: '24' })
+  assert.equal(e.valores.dni, '87654321X')
+  assert.equal(e.valores.alarma, true)
+  assert.equal(e.valores.habitaciones, undefined)
+  assert.deepEqual(e.noLoSe, ['habitaciones'])
+  assert.deepEqual(e.direcciones.vivienda.viaOficial, { tipo: 'CL', nombre: 'SOCORRO' })
+  assert.equal(e.direcciones.vivienda.numero, '24')
+  // Un formulario en blanco, o solo con lo de la ficha, no crea borrador.
+  assert.equal(borradorConContenido(campos, { dni: '12345678Z', _noLoSe: [] }), false)
+  assert.equal(borradorConContenido(campos, { dni: '12345678Z', alarma: false }), true)
+  assert.equal(borradorConContenido(campos, { _noLoSe: ['alarma'] }), true)
+})

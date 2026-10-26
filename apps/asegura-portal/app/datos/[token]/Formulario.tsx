@@ -2,11 +2,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { viaSigueVigente } from '@central/core-catastro'
 import { CLAVE_NO_LO_SE, ayudaDocumentosSolicitud, claveDireccion, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
-import { esencialesPendientes, opcionesVisibles, textoTarjetaVivienda, visibleSegunCatastro } from '@/lib/datos-vista'
+import { borradorConContenido, esencialesPendientes, estadoDesdeBorrador, opcionesVisibles, textoTarjetaVivienda, visibleSegunCatastro } from '@/lib/datos-vista'
 import type { ViviendaCatastroPublica } from '@/lib/vivienda-catastro'
 import { DIRECCION_VACIA, DireccionCp, type ValorDireccion } from '@/app/(portal)/patrimonio/DireccionCp'
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
-import { interpretarDocSubido } from '@/lib/solicitud-datos'
+import { interpretarDocSubido, type BorradorLeido } from '@/lib/solicitud-datos'
 
 /** Una dirección del formulario: CP → provincia → municipio → calle (con `DireccionCp`) + número, planta y puerta aparte. */
 type ValorDireccionDatos = ValorDireccion & { numero: string; planta: string; puerta: string }
@@ -29,23 +29,28 @@ function aplanarDireccion(clave: string, d: ValorDireccionDatos): Record<string,
 }
 
 type Estado = { tipo: 'editando' } | { tipo: 'enviando' } | { tipo: 'hecho' } | { tipo: 'fallo'; texto: string }
-type Subida = { id: number; nombre: string; estado: 'subiendo' | 'ok' | 'fallo'; texto: string }
+type Subida = { id: number; nombre: string; estado: 'subiendo' | 'ok' | 'fallo'; texto: string; clase: ClaseSubida }
+/** `poliza` = el botón del bloque «tu seguro actual» (lector de pólizas); `documento` = la subida general de arriba. */
+type ClaseSubida = 'documento' | 'poliza'
+/** Guardado automático: pausa sin teclear antes de mandar el borrador. */
+const PAUSA_BORRADOR_MS = 2500
+type EstadoBorrador = 'nada' | 'guardando' | 'guardado' | 'fallo'
 
 /** El formulario del enlace de datos. Pinta los campos que manda asegura y nada más. */
-export default function Formulario({ token, campos, ramo, tercero = false }: { token: string; campos: CampoSolicitud[]; ramo: RamoSolicitud; tercero?: boolean }) {
-  const [direcciones, setDirecciones] = useState<Record<string, ValorDireccionDatos>>({})
+export default function Formulario({ token, campos, ramo, tercero = false, borrador = null }: { token: string; campos: CampoSolicitud[]; ramo: RamoSolicitud; tercero?: boolean; borrador?: BorradorLeido | null }) {
+  // Al volver con el MISMO enlace, se sigue donde lo dejó (borrador guardado en el servidor, por token; sin cookies).
+  const [inicial] = useState(() => estadoDesdeBorrador(campos, borrador))
+  const [direcciones, setDirecciones] = useState<Record<string, ValorDireccionDatos>>(inicial.direcciones)
   const [consiente, setConsiente] = useState(false)
   const consienteRef = useRef(consiente)
   consienteRef.current = consiente
   // DNI y nacimiento llegan rellenos con lo de su ficha (`actual`): los confirma o los corrige.
-  const [valores, setValores] = useState<Record<string, string | boolean>>(
-    () => Object.fromEntries(campos.flatMap((c) => (c.actual ? [[c.clave, c.actual]] : []))),
-  )
+  const [valores, setValores] = useState<Record<string, string | boolean>>(inicial.valores)
   const valoresRef = useRef(valores)
   valoresRef.current = valores
   const [errores, setErrores] = useState<Record<string, string>>({})
   // «No lo sé» (26/10/2026): se guarda como null en el servidor (nunca false ni 0) y la correduría lo pregunta en la llamada.
-  const [noLoSe, setNoLoSe] = useState<Set<string>>(new Set())
+  const [noLoSe, setNoLoSe] = useState<Set<string>>(() => new Set(inicial.noLoSe))
   // Lo que el Catastro dice de la vivienda (hogar): se ENSEÑA en la tarjeta en vez de preguntarlo.
   // Ligado a la dirección consultada: si cambia, lo leído y lo confirmado de la anterior dejan de valer solos.
   const [lectura, setLectura] = useState<{ clave: string; v: ViviendaCatastroPublica } | null>(null)
@@ -53,10 +58,15 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
   const [estado, setEstado] = useState<Estado>({ tipo: 'editando' })
   const [subidas, setSubidas] = useState<Subida[]>([])
   const [leidos, setLeidos] = useState<Set<string>>(new Set())
+  // Lo que salió de su PÓLIZA actual (botón del seguro actual): se marca «leído de tu póliza» para que lo confirme.
+  const [leidosPoliza, setLeidosPoliza] = useState<Set<string>>(new Set())
+  const [guardadoBorrador, setGuardadoBorrador] = useState<EstadoBorrador>(borrador ? 'guardado' : 'nada')
   const siguienteId = useRef(0)
   const subiendo = subidas.some((x) => x.estado === 'subiendo')
   // Un tercero sin permiso marcado no puede subir nada: el servidor lo rechazaría igual.
   const sinPermiso = tercero && !consiente
+  // Ramos en los que la póliza trae capitales que el formulario pide (contenido/continente, capital de vida).
+  const grupoConCapitales = campos.some((c) => c.clave === 'tramoContenido' || c.clave === 'tramoContinente' || c.clave === 'capitalDeseado')
 
   // Hogar: con la calle OFICIAL y el número, se pregunta al Catastro (con pausa, para no consultar en cada tecla).
   // Cambiar la dirección invalida lo que se confirmó de la anterior.
@@ -81,6 +91,48 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
   const catastro = lectura && lectura.clave === claveCatastro ? lectura.v : null
   const confirmacionVigente = claveCatastro !== null && confirmadoPara === claveCatastro && typeof valores.confirmaCatastro === 'boolean'
 
+  // GUARDADO AUTOMÁTICO (26/10/2026): tras una pausa sin teclear, el borrador va al servidor (por token). Nunca
+  // completa nada: completar es solo «Enviar». Sin la columna en la BD (`sin_migracion`) se deja de intentar, en silencio.
+  // Un tercero, solo con su permiso marcado (como los documentos).
+  const borradorApagado = useRef(false)
+  const primeraVez = useRef(true)
+  const pendiente = useRef<string | null>(null)
+  useEffect(() => {
+    if (primeraVez.current) { primeraVez.current = false; return }
+    if (borradorApagado.current || estado.tipo === 'hecho' || estado.tipo === 'enviando') return
+    if (tercero && !consiente) return
+    const datos = {
+      ...valores,
+      [CLAVE_NO_LO_SE]: [...noLoSe],
+      ...Object.assign({}, ...campos.filter((c) => c.tipo === 'direccion' && direcciones[c.clave]).map((c) => aplanarDireccion(c.clave, direcciones[c.clave]))),
+    }
+    if (!borradorConContenido(campos, datos)) return
+    const cuerpo = JSON.stringify({ token, borrador: datos, consentimiento: consiente })
+    pendiente.current = cuerpo
+    const t = setTimeout(() => {
+      setGuardadoBorrador('guardando')
+      fetch('/api/datos/borrador', { method: 'POST', headers: { 'content-type': 'application/json' }, body: cuerpo })
+        .then(async (r) => {
+          const j = (await r.json().catch(() => null)) as { ok?: boolean; estado?: string } | null
+          if (pendiente.current === cuerpo) pendiente.current = null
+          if (j?.estado === 'sin_migracion' || r.status === 410) { borradorApagado.current = true; setGuardadoBorrador('nada'); return }
+          setGuardadoBorrador(r.ok && j?.ok === true ? 'guardado' : 'fallo')
+        })
+        .catch(() => setGuardadoBorrador('fallo'))
+    }, PAUSA_BORRADOR_MS)
+    return () => clearTimeout(t)
+  }, [valores, noLoSe, direcciones, consiente, estado.tipo, token, tercero, campos])
+  // Si cierra la pestaña antes de la pausa, lo pendiente sale igual (keepalive).
+  useEffect(() => {
+    const alSalir = () => {
+      if (!pendiente.current || borradorApagado.current) return
+      fetch('/api/datos/borrador', { method: 'POST', headers: { 'content-type': 'application/json' }, body: pendiente.current, keepalive: true }).catch(() => {})
+      pendiente.current = null
+    }
+    window.addEventListener('pagehide', alSalir)
+    return () => window.removeEventListener('pagehide', alSalir)
+  }, [])
+
   if (estado.tipo === 'hecho') {
     return <p><strong>¡Gracias!</strong> Ya tenemos tus datos. Te escribimos en cuanto tengamos el precio.</p>
   }
@@ -100,10 +152,10 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
   }
 
   /** Sube de uno en uno: si uno falla, los demás ya están dentro y se dice cuál. */
-  async function subir(ficheros: File[]) {
+  async function subir(ficheros: File[], clase: ClaseSubida = 'documento') {
     for (const original of ficheros) {
       const id = siguienteId.current++
-      setSubidas((p) => [...p, { id, nombre: original.name, estado: 'subiendo', texto: 'Subiendo y leyendo…' }])
+      setSubidas((p) => [...p, { id, nombre: original.name, estado: 'subiendo', texto: clase === 'poliza' ? 'Subiendo y leyendo tu póliza…' : 'Subiendo y leyendo…', clase }])
       const fijar = (cambio: Pick<Subida, 'estado' | 'texto'>) => setSubidas((p) => p.map((y) => (y.id === id ? { ...y, ...cambio } : y)))
       let status = 0
       let json: unknown = null
@@ -113,6 +165,7 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
         form.set('token', token)
         form.set('documento', fichero, fichero.name)
         form.set('consentimiento', consienteRef.current ? '1' : '0')
+        if (clase === 'poliza') form.set('clase', 'poliza')
         const res = await fetch('/api/datos/documento', { method: 'POST', body: form })
         status = res.status
         json = await res.json().catch(() => null)
@@ -130,10 +183,13 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
       const nuevos = Object.fromEntries(claves.map((k) => [k, r.valores[k]]))
       valoresRef.current = { ...actuales, ...nuevos }
       setValores((p) => ({ ...p, ...nuevos }))
-      setLeidos((p) => new Set([...p, ...claves]))
+      if (r.dePoliza) setLeidosPoliza((p) => new Set([...p, ...claves]))
+      else setLeidos((p) => new Set([...p, ...claves]))
       fijar({
         estado: 'ok',
-        texto: r.aviso ?? `${r.etiqueta}: ${claves.length} dato${claves.length === 1 ? '' : 's'} rellenado${claves.length === 1 ? '' : 's'}. Revísalo abajo.`,
+        texto: r.aviso ?? (r.dePoliza
+          ? `${claves.length} dato${claves.length === 1 ? '' : 's'} leído${claves.length === 1 ? '' : 's'} de tu póliza. Confírmalo${claves.length === 1 ? '' : 's'} abajo.`
+          : `${r.etiqueta}: ${claves.length} dato${claves.length === 1 ? '' : 's'} rellenado${claves.length === 1 ? '' : 's'}. Revísalo abajo.`),
       })
     }
   }
@@ -172,7 +228,7 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
     } catch {
       /* sin conexión */
     }
-    if (status === 200) return setEstado({ tipo: 'hecho' })
+    if (status === 200) { pendiente.current = null; return setEstado({ tipo: 'hecho' }) }
     if (status === 422 && json?.errores && typeof json.errores === 'object') {
       setErrores(json.errores as Record<string, string>)
       return setEstado({ tipo: 'fallo', texto: 'Revisa los campos marcados.' })
@@ -182,6 +238,39 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
     if (status === 429) return setEstado({ tipo: 'fallo', texto: 'Demasiados intentos. Espera unos minutos.' })
     setEstado({ tipo: 'fallo', texto: 'No se ha podido enviar. Vuelve a probar en un momento.' })
   }
+
+  // «Tu seguro actual» (26/10/2026, fase B): subir la póliza o una foto y prerrellenar compañía, vencimiento y
+  // capitales con el LECTOR DE PÓLIZAS de asegura. Lo leído se marca para que lo confirme; no se envía solo.
+  const subidasPoliza = subidas.filter((x) => x.clase === 'poliza')
+  const subidaPoliza = (
+    <div className="datos-subida" style={{ marginTop: 8 }}>
+      <span className="editor-ayuda">¿Tienes la póliza o el último recibo a mano? Súbelo y te rellenamos la compañía, el vencimiento{grupoConCapitales ? ' y los capitales' : ''}.</span>
+      <label htmlFor="docs-poliza" className="boton-tenue" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', justifySelf: 'start', cursor: subiendo ? 'wait' : sinPermiso ? 'not-allowed' : 'pointer', opacity: sinPermiso ? 0.5 : 1 }} aria-disabled={sinPermiso}>
+        {sinPermiso ? 'Marca antes el permiso de arriba' : subidasPoliza.some((x) => x.estado === 'subiendo') ? 'Leyendo tu póliza…' : '📄 Subir foto o PDF de mi póliza'}
+      </label>
+      <input
+        id="docs-poliza"
+        type="file"
+        accept="image/*,application/pdf"
+        disabled={subiendo || sinPermiso || estado.tipo === 'enviando'}
+        onChange={(e) => {
+          const ficheros = Array.from(e.target.files ?? []).slice(0, 1)
+          e.target.value = ''
+          void subir(ficheros, 'poliza')
+        }}
+        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden', pointerEvents: 'none' }}
+      />
+      {subidasPoliza.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+          {subidasPoliza.map((x) => (
+            <li key={x.id} className={x.estado === 'fallo' ? 'editor-error' : undefined} style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
+              {x.estado === 'ok' ? '✅' : x.estado === 'fallo' ? '⚠️' : '⏳'} {x.nombre}: {x.texto}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 
   const pintarCampo = (c: CampoSolicitud) => {
     const id = `c-${c.clave}`
@@ -285,8 +374,10 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
             <span>No lo sé</span>
           </label>
         )}
-        {leidos.has(c.clave) && <span className="editor-ayuda">📄 Leído de tu documento: compruébalo.</span>}
-        {c.actual && !leidos.has(c.clave) && <span className="editor-ayuda">Es el que tenemos en tu ficha: si no es correcto, cámbialo.</span>}
+        {leidosPoliza.has(c.clave) && <span className="editor-ayuda">📄 Leído de tu póliza: confírmalo o corrígelo.</span>}
+        {leidos.has(c.clave) && !leidosPoliza.has(c.clave) && <span className="editor-ayuda">📄 Leído de tu documento: compruébalo.</span>}
+        {c.actual && !leidos.has(c.clave) && !leidosPoliza.has(c.clave) && <span className="editor-ayuda">Es el que tenemos en tu ficha: si no es correcto, cámbialo.</span>}
+        {c.clave === 'tieneSeguro' && valores.tieneSeguro !== false && subidaPoliza}
         {c.ayuda && <span className="editor-ayuda">{c.ayuda}</span>}
         {err && <span className="editor-error" role="alert">{err}</span>}
       </div>
@@ -323,13 +414,13 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
           onChange={(e) => {
             const ficheros = Array.from(e.target.files ?? [])
             e.target.value = ''
-            void subir(ficheros)
+            void subir(ficheros, 'documento')
           }}
           style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden', pointerEvents: 'none' }}
         />
-        {subidas.length > 0 && (
+        {subidas.some((x) => x.clase === 'documento') && (
           <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
-            {subidas.map((x) => (
+            {subidas.filter((x) => x.clase === 'documento').map((x) => (
               <li key={x.id} className={x.estado === 'fallo' ? 'editor-error' : undefined} style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
                 {x.estado === 'ok' ? '✅' : x.estado === 'fallo' ? '⚠️' : '⏳'} {x.nombre}: {x.texto}
               </li>
@@ -358,8 +449,14 @@ export default function Formulario({ token, campos, ramo, tercero = false }: { t
       })}
       {estado.tipo === 'fallo' && <p className="editor-error" role="alert">{estado.texto}</p>}
       <p className="suave" style={{ margin: 0, fontSize: 13 }}>
-        Usamos estos datos solo para prepararte el presupuesto (Grupo ASegura, correduría de seguros).
+        Usamos estos datos solo para prepararte el presupuesto (Grupo ASegura, correduría de seguros). Lo que escribes se
+        guarda mientras lo rellenas para que puedas seguir otro día con este mismo enlace; al enviarlo, ese borrador se borra.
       </p>
+      {guardadoBorrador !== 'nada' && (
+        <p className="suave" role="status" aria-live="polite" style={{ margin: 0, fontSize: 13 }}>
+          {guardadoBorrador === 'guardando' ? 'Guardando…' : guardadoBorrador === 'guardado' ? '✓ Guardado: puedes seguir luego con este enlace.' : 'No se ha podido guardar el borrador; tus datos siguen aquí.'}
+        </p>
+      )}
       <button type="submit" className="boton" style={{ minHeight: 48 }} disabled={estado.tipo === 'enviando' || subiendo || sinPermiso}>
         {estado.tipo === 'enviando' ? 'Enviando…' : subiendo ? 'Leyendo los documentos…' : tercero ? 'Enviar los datos' : 'Enviar mis datos'}
       </button>
