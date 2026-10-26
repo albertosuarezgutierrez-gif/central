@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T17:36:31Z",
-  "sha": "4bb73388ed76cde108b43a27c7aabf6af8765f6f",
+  "generadoEn": "2026-10-26T18:46:29Z",
+  "sha": "f5b8d47f4938d0e3dc78a900a5102e2150ec9901",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3838,7 +3838,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d40d4819f04c"
+      "hash": "4147dadbbf9b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/EvolucionPrima.tsx",
@@ -4093,7 +4093,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb5859d32e8d"
+      "hash": "1b2b02ac4377"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/HuecosProteccion.tsx",
@@ -4634,7 +4634,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "250dfca56ec0"
+      "hash": "f832297d22cb"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PasoTitularEmpresa.tsx",
@@ -4654,7 +4654,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb72c1af5819"
+      "hash": "630af92c7a83"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PendienteDeTi.tsx",
@@ -5818,7 +5818,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "eed26bf772c6"
+      "hash": "f202fe06c6af"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/page.tsx",
@@ -5852,7 +5852,7 @@
           "nombre": "BotonSolicitarModulo",
           "kind": "function",
           "exportada": true,
-          "params": "{ modulo, rotulo }: { modulo: ModuloPortal; rotulo: string }",
+          "params": "{ modulo, rotulo, variante = 'boton', }: { modulo: ModuloPortal rotulo: string /** `enlace`: la solicitud como acción SECUNDARIA (texto subrayado de 44 px), no un segundo botón primario. */ variante?: 'boton' | 'enlace' }",
           "retorno": null,
           "linea": 15,
           "resumen": "Pide (o apunta a) un módulo. La identidad la pone la cookie; aquí solo viaja el id del módulo."
@@ -5860,7 +5860,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a1769ebc2860"
+      "hash": "f45cf58a95b1"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/calendario/ListaCalendario.tsx",
@@ -5990,22 +5990,22 @@
           "exportada": false,
           "params": "{ t }: { t: TarjetaModulo }",
           "retorno": null,
-          "linea": 122,
+          "linea": 127,
           "resumen": "Una tarjeta del catálogo (Patrimonio, Flota): qué es, con qué seguros tiene que ver y su botón según el estado."
         },
         {
-          "nombre": "SolicitudModulo",
+          "nombre": "EstadoSolicitud",
           "kind": "function",
           "exportada": false,
           "params": "{ t }: { t: TarjetaModulo }",
           "retorno": null,
-          "linea": 139,
-          "resumen": "Lo que cuelga del botón de pedir: el texto, el botón o el estado de lo ya pedido. Nada si ya se abre."
+          "linea": 153,
+          "resumen": "El estado de lo ya pedido (o activo, o sin comprobar). El botón de pedir NO va aquí: va en `.acciones` de la tarjeta."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "be22a1627d9f"
+      "hash": "12d07a897092"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/page.tsx",
@@ -6540,7 +6540,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4c8c444f969b"
+      "hash": "f8f001071289"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/page.tsx",
@@ -6636,7 +6636,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "26dbcc9af124"
+      "hash": "6ff6c0d23d2b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/importar/Importador.tsx",
@@ -6691,7 +6691,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4ae202158c32"
+      "hash": "7f31edb3a5ee"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/importar/page.tsx",
@@ -6804,7 +6804,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "16b22366c3f0"
+      "hash": "2a5d43f283ab"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/ObligacionesPropias.tsx",
@@ -6976,7 +6976,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6e4cfde21efc"
+      "hash": "08578da3b97b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/OfertaBoton.tsx",
@@ -10819,12 +10819,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 62
+          "linea": 66
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8c9cf850b864"
+      "hash": "586f1560a71d"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/condiciones/page.tsx",
@@ -11373,13 +11373,13 @@
           "exportada": true,
           "params": "{ id, antetitulo, titulo, nivel = 2, chip, tono, accion, children, }: { id?: string antetitulo?: ReactNode titulo?: ReactNode nivel?: 2 | 3 chip?: ReactNode tono?: 'aviso' | 'peligro' accion?: ReactNode children?: ReactNode }",
           "retorno": null,
-          "linea": 15,
+          "linea": 16,
           "resumen": "La tarjeta ÚNICA del portal (26/10/2026): `.seccion` (mismo radio ×1.8, mismo padding, misma sombra que el resto de la bóveda) con su `.antetitulo`, el titular en `--display` y un hueco para el estado"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c858308f084d"
+      "hash": "366db0eecbe0"
     },
     {
       "ruta": "apps/asegura-portal/app/tema.ts",
