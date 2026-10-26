@@ -99,3 +99,23 @@ test('«En la compañía» (20/10/2026): se lee la solicitud; sin campo = null (
   assert.equal(leer({ numero: '170000001', compania: 'occident', estado: null, url: 'javascript:alert(1)' })?.url, null)
   assert.equal(leer({ numero: '', compania: 'occident' }), null)
 })
+
+test('origen, ultimoContacto y vencimiento: se leen tolerantes (string|null); sin campo o mal tipo = null, nunca inventados', () => {
+  const ok = (f: object) => {
+    const r = interpretarExpedientes(200, { estado: 'ok', expedientes: [{ ...FILA, ...f }] })
+    assert.equal(r.estado, 'ok')
+    return r.estado === 'ok' ? r.expedientes[0] : (null as never)
+  }
+  const con = ok({ origen: 'web:lead', ultimoContacto: '2026-10-20T10:00:00.000Z', vencimiento: '2026-12-01' })
+  assert.equal(con.origen, 'web:lead')
+  assert.equal(con.ultimoContacto, '2026-10-20T10:00:00.000Z')
+  assert.equal(con.vencimiento, '2026-12-01')
+  const sin = ok({})
+  assert.deepEqual([sin.origen, sin.ultimoContacto, sin.vencimiento, sin.presupuestos], [null, null, null, null])
+  // Campo ausente (asegura vieja) ≠ campo `null` (asegura nueva: ningún contacto registrado).
+  assert.equal(sin.contactoConsta, false)
+  assert.equal(ok({ ultimoContacto: null }).contactoConsta, true)
+  assert.equal(ok({ presupuestos: 2 }).presupuestos, 2)
+  const mal = ok({ origen: 5, ultimoContacto: '', vencimiento: {} })
+  assert.deepEqual([mal.origen, mal.ultimoContacto, mal.vencimiento], [null, null, null])
+})

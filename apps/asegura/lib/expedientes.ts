@@ -31,12 +31,14 @@ import {
   type ClaseExpediente,
   type EstadoVisible,
   type HitoDevolucion,
+  vencimientoConRecibos,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { fugasPendientes, type FugaNueva } from './eventos-cartera'
 import { contactosDe } from './cartera-busqueda'
 import { contactoDeFila, type ContactoFila } from './expedientes-contacto'
+import { recibosVigenciaDe } from './recibos-vigencia'
 
 /**
  * Teléfono/email del cliente de la fila, para llamar · WhatsApp · correo desde Mi mesa (contrato en
@@ -92,6 +94,14 @@ export type Expediente = {
    * vencimiento…) SIN ningún contacto registrado: Mi mesa la manda a «Renovaciones sin tocar». Ver `esTrabajada()`.
    */
   trabajada: boolean
+  /** `info_riesgo.origen` (cómo entró). `null` = no consta: Mi mesa NO lo esconde. */
+  origen: string | null
+  /** Último contacto humano (historial no automático o llamada/WhatsApp cerrada), ISO. `null` = ninguno registrado. */
+  ultimoContacto: string | null
+  /** Ofertas (presupuestos) no descartadas de la operación. 0 = ninguna. */
+  presupuestos: number
+  /** Vencimiento de la póliza «con recibos» (aaaa-mm-dd). `null` = no se sabe (del volcado no se usa: está mal). */
+  vencimiento: string | null
   /**
    * «En la compañía» (20/10/2026): la oportunidad lleva nº de solicitud en el portal de la compañía. `null` = no lo
    * lleva (o la migración 2026-10-20 aún no está). `estado`/`url`/`at` `null` = la compañía aún no ha escrito (no
@@ -170,6 +180,11 @@ type Fila = {
   notas: string | null
   creada: Date
   contactada: boolean
+  /** Último contacto humano (mismo filtro que `contactada`). NULL = ninguno registrado. */
+  ultimoContacto: Date | null
+  presupuestos: number
+  polizaId: string | null
+  polizaVence: string | null
   solicitud: { numero: string | null; compania: string | null; estado: string | null; url: string | null; at: string | null }
   proxima: { tareaId: string; texto: string | null; tipo: string; fecha: string | null } | null
   recibo: { reciboId: string; idRecibo: string | null; importe: string | null; efecto: string | null; situacion: string | null } | null
@@ -208,6 +223,19 @@ export async function expedientesDeTrabajo(
             or exists (select 1 from gestiones gc
                        where gc.oportunidad_id = o.id and gc.correduria_id = o.correduria_id
                          and gc.tipo::text in (${Prisma.join([...TIPOS_GESTION_CONTACTO])}) and gc.estado::text = 'cerrada')) as contactada,
+           (select max(x.t) from (
+              select h.created_at as t from oportunidad_historial h
+               where h.oportunidad_id = o.id and h.correduria_id = o.correduria_id
+                 and h.accion not in (${Prisma.join([...ACCIONES_HISTORIAL_AUTOMATICAS])})
+              union all
+              select gc.updated_at as t from gestiones gc
+               where gc.oportunidad_id = o.id and gc.correduria_id = o.correduria_id
+                 and gc.tipo::text in (${Prisma.join([...TIPOS_GESTION_CONTACTO])}) and gc.estado::text = 'cerrada') x) as "ultimoContacto",
+           (select count(*)::int from oportunidad_oferta f
+             where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.estado <> 'descartada') as presupuestos,
+           o.poliza_id::text as "polizaId",
+           (select to_char(pz.fecha_vencimiento, 'YYYY-MM-DD') from polizas pz
+             where pz.id = o.poliza_id and pz.correduria_id = o.correduria_id) as "polizaVence",
            prox.j as proxima,
            rec.j as recibo
     from oportunidades o
@@ -246,6 +274,9 @@ export async function expedientesDeTrabajo(
     limit ${TECHO + 1}`)
 
   const hoyDate = new Date(`${hoyIso}T00:00:00Z`)
+  // Vencimiento de la póliza «con recibos» (Allianz no avanza `fecha_vencimiento`): UNA consulta por lote. Si falla,
+  // se queda la fecha de la póliza tal cual (no se inventa; ante la duda la operación sube a «Entre manos»).
+  const recibos = await recibosVigenciaDe(correduriaId, filas.flatMap((f) => (f.polizaId ? [f.polizaId] : []))).catch(() => new Map())
   const expedientes: Expediente[] = []
   const recuento = { abierta: 0, esperando_cliente: 0, aparcada: 0 }
   let descartadas = 0
@@ -297,6 +328,13 @@ export async function expedientesDeTrabajo(
       creada: f.creada.toISOString(),
       rescate,
       contacto: null,
+      origen: f.origen,
+      presupuestos: f.presupuestos,
+      ultimoContacto: f.ultimoContacto ? f.ultimoContacto.toISOString() : null,
+      // Del volcado, `fecha_fin_vigencia` está mal (2023): no es vencimiento. Con póliza manda la póliza (con recibos).
+      vencimiento: f.polizaVence
+        ? vencimientoConRecibos(f.polizaVence, recibos.get(f.polizaId ?? '') ?? [], hoyIso)?.slice(0, 10) ?? null
+        : f.delVolcado ? null : f.fechaFin,
       trabajada: esTrabajada({ fuente: f.fuente, origen: f.origen, conImportRef: f.delVolcado, estado: f.estado, conSolicitud: !!f.solicitud?.numero, contactada: f.contactada }),
       solicitudCompania: solicitudDeFila(f),
     })

@@ -21,7 +21,7 @@ const ROTULO_TIPO_TAREA: Record<string, string> = { llamada: 'Llamada', email: '
  * se muestran con su motivo. Sin diálogos de confirmación del navegador.
  * Tres estados: `no_leido` se DICE (no es «no hay»); vacío comprobado no ocupa sitio.
  */
-export function TareasSueltas({ lectura, truncado, hoy, onCambio }: { lectura: Lectura<TareaSueltaMesa>; truncado: boolean; hoy: string; onCambio: () => Promise<void> }) {
+export function TareasSueltas({ lectura, truncado, hoy, onCambio, sinCabecera }: { lectura: Lectura<TareaSueltaMesa>; truncado: boolean; hoy: string; onCambio: () => Promise<void>; sinCabecera?: boolean }) {
   const [limite, setLimite] = useState(PAGINA)
   const [ocupada, setOcupada] = useState<string | null>(null)
   const [fallo, setFallo] = useState<{ id: string; texto: string } | null>(null)
@@ -48,7 +48,7 @@ export function TareasSueltas({ lectura, truncado, hoy, onCambio }: { lectura: L
   if (lectura.estado === 'no_leido') {
     return (
       <section aria-label="Tareas sueltas" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
-        <h2 style={TITULO}>Tareas sueltas</h2>
+        {!sinCabecera && <h2 style={TITULO}>Tareas sueltas</h2>}
         <div role="alert" style={AVISO_LECTURA}>
           <strong>No se han podido leer las tareas sueltas.</strong>
           <span>Esto no significa que no haya: son tareas abiertas sin expediente y nadie más las va a mostrar.</span>
@@ -60,7 +60,7 @@ export function TareasSueltas({ lectura, truncado, hoy, onCambio }: { lectura: L
   const filas = lectura.filas
   return (
     <section aria-label="Tareas sueltas" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
-      <h2 style={TITULO}>Tareas sueltas · {filas.length}{truncado ? '+' : ''}</h2>
+      {!sinCabecera && <h2 style={TITULO}>Tareas sueltas · {filas.length}{truncado ? '+' : ''}</h2>}
       <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Tareas abiertas que no cuelgan de ningún expediente.</p>
       {truncado && <p style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>La lista está recortada: hay más tareas sueltas de las que se muestran.</p>}
       {filas.slice(0, limite).map(t => (
@@ -103,7 +103,9 @@ export function TareasSueltas({ lectura, truncado, hoy, onCambio }: { lectura: L
  * «Pérdidas por revisar»: póliza que CIMA da de baja (o que no renovará) SIN sustitución ni expediente. Se
  * resuelve con la acción de siempre (`PATCH /api/correduria/fugas`): «Perdida» con su motivo, o «No es pérdida».
  */
-export function PerdidasPorRevisar({ lectura, conExpediente, onCambio }: {
+export function PerdidasPorRevisar({ lectura, conExpediente, onCambio, sinCabecera }: {
+  /** La pantalla ya pone el título (plegable con contador). */
+  sinCabecera?: boolean
   lectura: Lectura<PerdidaPorRevisar>
   /** Pérdidas no listadas porque su póliza ya tiene expediente. `null` = no consta (no se supone 0). */
   conExpediente: number | null
@@ -118,7 +120,7 @@ export function PerdidasPorRevisar({ lectura, conExpediente, onCambio }: {
   if (lectura.estado === 'no_leido') {
     return (
       <section aria-label="Pérdidas por revisar" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
-        <h2 style={TITULO}>Pérdidas por revisar</h2>
+        {!sinCabecera && <h2 style={TITULO}>Pérdidas por revisar</h2>}
         <div role="alert" style={AVISO_LECTURA}>
           <strong>No se han podido leer las pérdidas de cartera por revisar.</strong>
           <span>Esto no significa que no haya: una póliza que se va sin sustitución es un cliente perdido o un error de CIMA.</span>
@@ -154,7 +156,7 @@ export function PerdidasPorRevisar({ lectura, conExpediente, onCambio }: {
 
   return (
     <section aria-label="Pérdidas por revisar" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
-      <h2 style={TITULO}>Pérdidas por revisar · {filas.length}</h2>
+      {!sinCabecera && <h2 style={TITULO}>Pérdidas por revisar · {filas.length}</h2>}
       <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
         Pólizas que CIMA da de baja o que no van a renovar, sin sustitución. Decide si es un cliente perdido o no.
         {conExpediente !== null && conExpediente > 0 ? ` ${conExpediente} más ya tienen su expediente abierto y no se listan aquí.` : ''}
