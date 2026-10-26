@@ -1713,7 +1713,11 @@ async function escanearControlesProyectoMapfre(page: Page, incluirDialogos = fal
             title: h.getAttribute('title'),
             valor: typeof h.value === 'string' ? h.value : null,
             visible,
-            habilitado: !(h.disabled === true || h.getAttribute('aria-disabled') === 'true' || h.hasAttribute('disabled')),
+            // v0.8.21: el nodo escaneado puede ser el <span> de texto de un mat-button: manda el <button>/<a> más cercano (Playwright lo hace igual).
+            habilitado: (() => {
+              const m = h.closest('button, a, [role="button"], [mat-button], [mat-raised-button], [mat-flat-button], [mat-stroked-button]') as (HTMLElement & { disabled?: boolean }) | null
+              return !([h, m].some((x) => x !== null && (x.disabled === true || x.hasAttribute('disabled') || x.getAttribute('aria-disabled') === 'true' || /\bmat(?:-mdc)?-button-disabled\b/.test(x.className?.toString?.() ?? ''))))
+            })(),
             enCoberturas: h.closest('app-coberturas') !== null,
           })
         }
@@ -1789,7 +1793,8 @@ async function pulsarGenerarProyectoMapfre(page: Page, guard: GuardEmision, boto
   page.on('dialog', alDialogo)
   abrir(origen, true)
   try {
-    await boton.click()
+    // v0.8.21: timeout corto (no los 30 s por defecto): un botón que no se deja pulsar se diagnostica enseguida.
+    await boton.click({ timeout: 8_000 })
     await trasClic()
     guard.comprobar()
     if (dialogo) throw new GuardadoConDialogoError(dialogo)
@@ -1915,7 +1920,10 @@ export function describirCamposObligatoriosMapfre(campos: readonly CampoObligato
 
 /** Lee (sin escribir ni pulsar) los campos obligatorios vacíos o inválidos del formulario visible. Nunca lanza ni devuelve valores. */
 export async function leerCamposObligatoriosMapfre(page: Page): Promise<CampoObligatorioMapfre[]> {
-  const bruto = await page
+  const bruto: CampoObligatorioMapfre[] = []
+  // v0.8.21: TODOS los frames (el formulario puede vivir en un iframe).
+  for (const marco of page.frames()) {
+    const parte = await marco
     .evaluate(() => {
       const out: { etiqueta: string; tipo: string; id: string; calendario: boolean; vacio: boolean; error: string }[] = []
       // (sin funciones auxiliares con nombre: el empaquetador inyectaría `__name`, que no existe en la página)
@@ -1929,7 +1937,7 @@ export async function leerCamposObligatoriosMapfre(page: Page): Promise<CampoObl
         if (!(r.width > 0 && r.height > 0) || cs.visibility !== 'visible' || cs.display === 'none') continue
         const cl = h.classList
         const obligatorio = h.hasAttribute('required') || h.getAttribute('aria-required') === 'true'
-        const invalido = h.getAttribute('aria-invalid') === 'true' || cl.contains('ng-invalid') || (campo?.classList.contains('mat-form-field-invalid') ?? false) || (campo?.classList.contains('ng-invalid') ?? false)
+        const invalido = h.getAttribute('aria-invalid') === 'true' || cl.contains('ng-invalid') || (campo?.classList.contains('mat-form-field-invalid') ?? false) || (campo?.classList.contains('mat-mdc-form-field-invalid') ?? false) || (campo?.classList.contains('ng-invalid') ?? false) || (campo?.querySelector('.ng-invalid, mat-error') ?? null) !== null
         if (!obligatorio && !invalido) continue
         const esSelect = n.tagName === 'MAT-SELECT' || n.tagName === 'SELECT'
         const vacio = n.tagName === 'MAT-SELECT'
@@ -1945,15 +1953,19 @@ export async function leerCamposObligatoriosMapfre(page: Page): Promise<CampoObl
       return out
     })
     .catch(() => [] as CampoObligatorioMapfre[])
+    bruto.push(...parte)
+    if (bruto.length >= 40) break
+  }
   return bruto.slice(0, 40)
 }
 
-/** ¿El control está deshabilitado (disabled / aria-disabled / clase de botón deshabilitado)? Solo lectura. */
+/** ¿El control está deshabilitado? Playwright `isEnabled()` + el estado del <button>/<a> más cercano (el locator puede ser su <span>) + atributos/clases. Solo lectura. */
 async function botonDeshabilitadoMapfre(boton: Locator): Promise<boolean> {
+  if (!(await boton.isEnabled({ timeout: 1_000 }).catch(() => true))) return true
   return boton
     .evaluate((el) => {
-      const h = el as HTMLElement & { disabled?: boolean }
-      return h.disabled === true || h.hasAttribute('disabled') || h.getAttribute('aria-disabled') === 'true' || h.classList.contains('mat-button-disabled') || h.classList.contains('mat-mdc-button-disabled')
+      const m = el.closest('button, a, [role="button"], [mat-button], [mat-raised-button], [mat-flat-button], [mat-stroked-button]') as (HTMLElement & { disabled?: boolean }) | null
+      return [el as HTMLElement & { disabled?: boolean }, m].some((x) => x !== null && (x.disabled === true || x.hasAttribute('disabled') || x.getAttribute('aria-disabled') === 'true' || /\bmat(?:-mdc)?-button-disabled\b/.test(x.className?.toString?.() ?? '')))
     })
     .catch(() => false)
 }
@@ -2065,8 +2077,11 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
     // v0.8.19: el motivo genérico no decía NADA (dos runs reales). Ahora lleva la causa: error del navegador saneado, si el clic llegó a darse,
     // y lo que el portal muestra (diálogos/mensajes de validación, líneas de «proyecto» con la FORMA del nº, controles a la vista).
     const generico = !(e instanceof ErrorFronteraEmision || e instanceof GuardadoConDialogoError || e instanceof EmisionBloqueadaError || e instanceof BotonProyectoDeshabilitadoError)
-    const base = e instanceof ErrorFronteraEmision ? 'hay un campo de cuenta bancaria a la vista' : e instanceof GuardadoConDialogoError ? 'el portal abrió un diálogo del navegador (no se acepta)' : e instanceof EmisionBloqueadaError ? 'el guard no autorizó el control' : e instanceof BotonProyectoDeshabilitadoError ? 'el botón «Generar Proyecto» está deshabilitado (no se pulsó)' : 'el portal no dejó completar el proyecto'
-    const causa = e instanceof BotonProyectoDeshabilitadoError ? ` [campos obligatorios vacíos o inválidos: ${e.campos}]` : generico ? ` [${pulsado ? 'tras el clic' : 'el clic no llegó a darse'}; error: ${errorPortalSaneado(e)}]` : ''
+    // v0.8.21: «not enabled» (o botón deshabilitado ahora) → SIEMPRE el diagnóstico de campos obligatorios, aunque el clic fallara por otro camino.
+    const deshab = generico && !pulsado && (/not enabled/i.test(e instanceof Error ? e.message : String(e)) || (await botonDeshabilitadoMapfre(boton).catch(() => false)))
+    const camposDeshab = deshab ? describirCamposObligatoriosMapfre(await leerCamposObligatoriosMapfre(page)) : ''
+    const base = deshab ? 'el botón «Generar Proyecto» está deshabilitado (no se pulsó)' : e instanceof ErrorFronteraEmision ? 'hay un campo de cuenta bancaria a la vista' : e instanceof GuardadoConDialogoError ? 'el portal abrió un diálogo del navegador (no se acepta)' : e instanceof EmisionBloqueadaError ? 'el guard no autorizó el control' : e instanceof BotonProyectoDeshabilitadoError ? 'el botón «Generar Proyecto» está deshabilitado (no se pulsó)' : 'el portal no dejó completar el proyecto'
+    const causa = e instanceof BotonProyectoDeshabilitadoError ? ` [campos obligatorios vacíos o inválidos: ${e.campos}]` : deshab ? ` [campos obligatorios vacíos o inválidos: ${camposDeshab}; error: ${errorPortalSaneado(e)}]` : generico ? ` [${pulsado ? 'tras el clic' : 'el clic no llegó a darse'}; error: ${errorPortalSaneado(e)}]` : ''
     const motivo = `${base}${causa}${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}`
     return pulsado ? { estado: 'sin_numero', motivo } : { estado: 'no_generado', motivo }
   }
@@ -3795,6 +3810,14 @@ export function textoEmisionGenerali(texto: string): boolean {
   return /\b(emitir|contratar|grabar (la )?poliza|pagar|firmar|formalizar)\b/.test(t)
 }
 
+/**
+ * v0.2.29: texto del botón «Siguiente» tal como lo pinta Generali: «Siguiente ›» (prueba real con 0.2.28). Tras normalizar, la palabra EXACTA
+ * «Siguiente» seguida solo de adornos al final (`›`, `>`, `»`, espacios, incl. NBSP). Nada antes, nada de otras palabras. PURA.
+ */
+export function esTextoSiguienteGenerali(texto: string): boolean {
+  return /^SIGUIENTE[\s ›>»]*$/.test(textoMenu(String(texto ?? '').replace(/ /g, ' ')))
+}
+
 /** Prefijo de los ids del bloque «Interesado / Tomador» del formulario de valoración. */
 const PREFIJO_ID_INTERESADO_VALORACION_GENERALI = 'reg1063A_personas_interesado_'
 
@@ -3831,7 +3854,7 @@ export async function pulsarSiguienteValoracionGenerali(page: Page, guard: Guard
   const clase = await boton.evaluate((e) => `${e.tagName.toLowerCase()}:${(e.getAttribute('type') ?? '').toLowerCase()}`)
   if (!['input:button', 'input:submit', 'button:', 'button:button', 'button:submit'].includes(clase)) throw new EmisionBloqueadaError('boton', `#siguiente no es un botón (${clase})`)
   const desc = await descripcion(boton)
-  if (textoMenu(textoControl(desc)) !== 'SIGUIENTE') throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
+  if (!esTextoSiguienteGenerali(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
   comprobarBoton(desc)
   usados.add(`generali:siguiente-valoracion:${n + 1}`)
   AVANCES_USADOS.set(guard, usados)
