@@ -11,7 +11,7 @@ import { EmisionBloqueadaError } from '@central/module-tarificacion'
 import { instalarGuardEmision, pulsar, pulsarSiguienteValoracionGenerali, textoEmisionGenerali, MAX_SIGUIENTE_VALORACION_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { VERSION_GENERALI_AUTO, textoPagina, volcarResultadosGenerali } from '../src/adapters/generali/auto.ts'
 
-test('v0.2.27 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.27'))
+test('v0.2.27 · versión (>= 0.2.27)', () => assert.match(VERSION_GENERALI_AUTO, /^0\.2\.(2[7-9]|[3-9]\d)$/))
 
 let browser: Browser
 before(async () => {

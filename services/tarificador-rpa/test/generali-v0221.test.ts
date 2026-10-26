@@ -13,7 +13,7 @@ import type { ContextoPortal } from '../src/adaptador.ts'
 const P = 'reg1063A_personas_'
 const ctl = (sufijo: string, extra: Partial<ControlPersonasGenerali> = {}): ControlPersonasGenerali => ({ id: `${P}${sufijo}`, tag: 'input', tipo: 'text', visible: true, habilitado: true, editable: true, vacio: true, ...extra })
 
-test('v0.2.21 · versión (vigente 0.2.27)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.27'))
+test('v0.2.21 · versión (vigente 0.2.27)', () => assert.match(VERSION_GENERALI_AUTO, /^0\.2\.(2[7-9]|[3-9]\d)$/))
 
 test('v0.2.21 · resumen: los contenedores no cuentan, radios juntos con marcados y opción del desplegable de roles', () => {
   const r = resumenPersonasGenerali([

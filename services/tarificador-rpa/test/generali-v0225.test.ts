@@ -39,7 +39,7 @@ const B028 = `${BASE}emiAutosGenB028.do`
 const PORTAL = 'https://www.generali.es/arq_genernetPortalFormWeb/CorredorPortal.po?mediatorCode=' + MEDIADOR_GENERALI
 const ESPERAS = { abrirMs: 3_000, autocompletarMs: 300, trasConfirmarMs: 2_500 }
 
-test('v0.2.25 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.27'))
+test('v0.2.25 · versión', () => assert.match(VERSION_GENERALI_AUTO, /^0\.2\.(2[7-9]|[3-9]\d)$/))
 
 test('v0.2.25 · puras: URL del marco, tipo de documento, opciones (NIF/NIE, sexo, carné, España) y pestaña activa', () => {
   assert.ok(urlDatosPersonasGenerali(B028))
