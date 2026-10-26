@@ -12,7 +12,7 @@ import {
 
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { borrarSenalesDeSupresion } from './patrimonio-supresion'
+import { borrarSenalesDeSupresion, registrarOposicionPorSupresion } from './patrimonio-supresion'
 import { constanciaSenales } from './patrimonio-supresion-reglas'
 
 /**
@@ -209,7 +209,13 @@ export async function resolverSupresion(entrada: {
     } catch {
       borradas = null
     }
-    respuestaFinal = `${respuesta}\n${constanciaSenales(borradas)}`
+    let oposicion: 'registrada' | 'ya_vigente' | 'error' = 'error'
+    try {
+      oposicion = await registrarOposicionPorSupresion(fila.identidadId, entrada.id)
+    } catch {
+      oposicion = 'error'
+    }
+    respuestaFinal = `${respuesta}\n${constanciaSenales(borradas, oposicion)}`
   }
 
   const resuelta = await db.portalSupresion.update({

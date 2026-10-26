@@ -25,8 +25,34 @@ export function idsDeSenalesASuprimir(
   return senales.filter((s) => s.correduriaId === correduriaId && permitidas.has(s.clienteId)).map((s) => s.id)
 }
 
+/** Estados de una supresión que la dan por ATENDIDA (la denegada no excluye nada). */
+export const ESTADOS_SUPRESION_ATENDIDA = ['resuelta_total', 'resuelta_parcial'] as const
+
+export type SupresionParaExcluir = { estado: string; clienteId: string | null; identidadId: string }
+
+/** ¿Hay una supresión atendida de esta ficha, o de alguna identidad que la opera? El cron NO calcula entonces. */
+export function fichaSuprimida(fichaId: string, identidades: readonly string[], supresiones: readonly SupresionParaExcluir[]): boolean {
+  return supresiones.some(
+    (s) => (ESTADOS_SUPRESION_ATENDIDA as readonly string[]).includes(s.estado) && (s.clienteId === fichaId || identidades.includes(s.identidadId)),
+  )
+}
+
+/** ¿Hay que escribir la oposición? Solo si no hay ya una VIGENTE (`true`); `false` (la retiró) y `null` (nunca) sí. */
+export function hayQueRegistrarOposicion(oposicionVigente: boolean | null): boolean {
+  return oposicionVigente !== true
+}
+
 /** Frase para el registro de la supresión (`portal_supresion.respuesta`). `null` = no se pudo borrar: se dice, no se calla. */
-export function constanciaSenales(borradas: number | null): string {
-  if (borradas === null) return 'Señales de patrimonio: NO se pudieron borrar automáticamente; revisar y borrar a mano.'
-  return `Señales de patrimonio borradas: ${borradas}.`
+export function constanciaSenales(borradas: number | null, oposicion: 'registrada' | 'ya_vigente' | 'error' = 'ya_vigente'): string {
+  const base =
+    borradas === null
+      ? 'Señales de patrimonio: NO se pudieron borrar automáticamente; revisar y borrar a mano.'
+      : `Señales de patrimonio borradas: ${borradas}.`
+  const op =
+    oposicion === 'registrada'
+      ? ' Oposición a nuevas señales registrada.'
+      : oposicion === 'error'
+        ? ' Oposición a nuevas señales NO registrada (la ficha queda excluida del cálculo por la supresión).'
+        : ' Ya tenía oposición vigente.'
+  return base + op
 }

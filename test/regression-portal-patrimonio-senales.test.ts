@@ -225,7 +225,7 @@ test('el motor no lee ninguna tabla de inquilino ni de importación', () => {
 
 test('el motor calcula salvo oposición vigente y retira las abiertas de quien se opone', () => {
   const src = sinComentarios(leer(ADAPTADOR))
-  assert.match(src, /puedeCalcularSenales\(\{ interruptor: true, oposiciones \}\)/)
+  assert.match(src, /puedeCalcularSenales\(\{ interruptor: true, oposiciones, suprimida: fichaSuprimida\(/)
   assert.match(src, /planificarSenales\(\{ calculadas, existentes, permitido, hoy \}\)/)
   assert.match(src, /oposicionVigente\(/)
   assert.match(src, /tipo: TIPO_OPOSICION_SENALES/)

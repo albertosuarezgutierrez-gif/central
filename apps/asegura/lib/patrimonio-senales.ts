@@ -52,6 +52,7 @@ import { correduriaUnica } from './cartera'
 import { sqlDeclaradaViva } from './declaradas-eliminadas'
 import { Prisma } from './generated/asegura-client'
 import { soloConInterruptor, type Apagado } from './patrimonio-senales-gate'
+import { ESTADOS_SUPRESION_ATENDIDA, fichaSuprimida } from './patrimonio-supresion-reglas'
 
 const nivelDe = (v: string): Nivel => ((NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta')
 const hoyMadrid = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
@@ -320,11 +321,17 @@ export async function ejecutarSenalesPatrimonio(opts: { forzarContar?: boolean }
 
     const resumen: ResumenSenales = { estado: 'ok', ensayo, fichas: fichas.length, sinPermiso: 0, insertadas: 0, refrescadas: 0, resueltas: 0, retiradas: 0, purgadas: 0 }
 
+    // Supresiones atendidas (art. 17): sus fichas / identidades NO se calculan (cubre la ficha sin identidad de portal).
+    const supresiones = (await db.portalSupresion.findMany({
+      where: { correduriaId: correduria.id, estado: { in: [...ESTADOS_SUPRESION_ATENDIDA] } },
+      select: { estado: true, clienteId: true, identidadId: true },
+    }))
+
     for (const fichaId of fichas) {
       const viva = await db.cliente.findFirst({ where: { id: fichaId, correduriaId: correduria.id, mergedIntoClienteId: null, activo: true }, select: { id: true } })
       const identidades = viva ? await identidadesDeFicha(correduria.id, fichaId) : []
       const oposiciones = await oposicionesDe(identidades)
-      const permitido = viva !== null && puedeCalcularSenales({ interruptor: true, oposiciones })
+      const permitido = viva !== null && puedeCalcularSenales({ interruptor: true, oposiciones, suprimida: fichaSuprimida(fichaId, identidades, supresiones) })
       if (!permitido) resumen.sinPermiso++
 
       const existentes = (await db.$queryRaw<{ id: string; clave: string; estado: string; cerrada_en: Date | null }[]>(Prisma.sql`
