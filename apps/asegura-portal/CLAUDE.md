@@ -92,7 +92,7 @@
 
 ## Menú, Inicio y diseño único (26/10/2026, Alberto)
 - **Menú de CINCO** (`pestanasPortal()` + `seccionActiva()`; `NavPortal` no teclea enlaces): Inicio · Seguros · Herramientas · Contactos · Cuenta. Recibos, Siniestros y Mi QR = chips dentro de Seguros (`SubNavSeguros`, con las familias); Patrimonio, Flota, Calendario, Mi resumen, catálogo y la tarjeta del Portal del Empleado (`lib/herramientas.ts`) = `/herramientas`; Datos y Configuración = `/cuenta`. Rutas viejas vivas. Cabecera con «Herramientas» y «Seguros» (`CabeceraEnlaces`, ≥720 px).
-- **Menú adaptado (26/10/2026):** `entradasVisibles()` (`menu-visible.ts`) = visibilidad; calendario y conceder cierran en servidor (`puertaAbierta()`). Autorizado puro: Inicio · Seguros · Cuenta.
+- **Menú adaptado (26/10/2026):** `entradasVisibles()` (`menu-visible.ts`) = visibilidad; `puertaAbierta()` cierra en servidor lo que no ofrece. Autorizado puro: Inicio · Seguros · Cuenta.
 - **UN calendario** (`/herramientas/calendario`, `componerCalendario()`): todas las fechas; fuente caída = «No hemos podido comprobar».
 - **Inicio = SOLO lo pendiente** (`lib/inicio-pendientes.ts` + `/api/avisos`); `HuecosProteccion` en UN solo sitio; vacío = «Todo al día»; fuente ilegible se dice.
 - **Diseño único:** `PaginaPortal`/`EncabezadoPortal` + `TarjetaPortal` (= `.seccion`) en todas las pantallas. Cepos: `regression-portal-inicio` y `regression-portal-sin-hex-en-tsx` (ni hex/`rgb()` ni `var(--inventado)` en `app/**/*.tsx`).

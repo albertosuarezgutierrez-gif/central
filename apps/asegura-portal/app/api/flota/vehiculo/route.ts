@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { guardarMatriculacion } from '@/lib/flota'
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
 import { requireIdentidad } from '@/lib/session'
 
 import { ESTADO_HTTP_FLOTA } from '../estado-http'
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('flota', 'escritura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   let cuerpo: unknown
   try {
     cuerpo = await req.json()

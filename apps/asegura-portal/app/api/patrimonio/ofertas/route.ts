@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { responderOferta } from '@/lib/patrimonio/ofertas-api'
 import { puertosOfertas } from '@/lib/patrimonio/ofertas-bd'
 import { rateLimit } from '@/lib/rate-limit'
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'escritura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   const tope = rateLimit(`patrimonio-ofertas:${identidad.id}`, 10, 60 * 60 * 1000)
   if (!tope.allowed) {
     return NextResponse.json({ error: 'demasiadas_peticiones' }, { status: 429, headers: { 'retry-after': String(tope.retryAfter ?? 60) } })

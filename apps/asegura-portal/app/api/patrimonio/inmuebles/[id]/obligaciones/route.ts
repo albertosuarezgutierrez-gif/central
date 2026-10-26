@@ -4,6 +4,7 @@ import { fechaMadrid } from '@/lib/patrimonio/dia-madrid'
 import { obligacionesDeInmueble, responderObligaciones } from '@/lib/patrimonio/obligaciones-api'
 import { puertosObligaciones } from '@/lib/patrimonio/obligaciones-bd'
 import { rateLimit } from '@/lib/rate-limit'
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -24,6 +25,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   const { id } = await params
   const datos = await obligacionesDeInmueble(puertosObligaciones(identidad.id), id)
   if (datos === null) return NextResponse.json({ error: 'no_encontrado' }, { status: 404 })
@@ -37,6 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'escritura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   // Tope en memoria por identidad (corta el bucle, no es el límite real).
   const tope = rateLimit(`patrimonio-obligaciones:${identidad.id}`, 60, 60 * 60 * 1000)
   if (!tope.allowed) {

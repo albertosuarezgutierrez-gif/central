@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { esModuloPortal } from '@central/module-seguros-portal'
 
 import { solicitarModuloDeSesion } from '@/lib/modulos'
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
+import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
@@ -17,6 +19,12 @@ export const runtime = 'nodejs'
  * En modo corredor `middleware.ts` ya veta el POST (403 `modo_corredor`).
  */
 export async function POST(req: Request) {
+  try {
+    await requireIdentidad()
+  } catch {
+    return NextResponse.json({ estado: 'sin_sesion' }, { status: 401 })
+  }
+  if (!(await puertaDeSesion('catalogo', 'escritura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   const cuerpo = (await req.json().catch(() => null)) as { modulo?: unknown } | null
   const modulo = cuerpo?.modulo
   if (!esModuloPortal(modulo)) return NextResponse.json({ estado: 'modulo_invalido' }, { status: 400 })

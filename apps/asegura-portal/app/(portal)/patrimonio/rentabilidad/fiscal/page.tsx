@@ -6,6 +6,7 @@ import { AVISO_ORIENTATIVO, informeFiscal, type InformeFiscal, type Tratamiento 
 import { PRIMER_ANIO } from '@/lib/patrimonio/rentabilidad'
 import { rentabilidadDeIdentidad } from '@/lib/patrimonio/rentabilidad-bd'
 import { AVISO } from '@/lib/patrimonio/rentabilidad-textos'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
@@ -83,6 +84,7 @@ function Informe({ inf }: { inf: InformeFiscal }) {
 export default async function FiscalPage({ searchParams }: { searchParams: Promise<{ anio?: string | string[] }> }) {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const { anio } = await searchParams
   let inf: InformeFiscal | null = null
   let fallo = false

@@ -4,6 +4,7 @@ import { MAX_BYTES_IMPORTACION } from '@central/module-patrimonio'
 import { responderSubir } from '@/lib/patrimonio/importacion-api'
 import { puertosImportacion } from '@/lib/patrimonio/importacion-bd'
 import { rateLimit } from '@/lib/rate-limit'
+import { SIN_ACCESO, puertaDeSesion } from '@/lib/puertas-portal'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+  if (!(await puertaDeSesion('patrimonio', 'escritura'))) return NextResponse.json(SIN_ACCESO, { status: 403 })
   // Tope en memoria por identidad (corta el bucle, no es el límite real: ese es el de BD).
   const tope = rateLimit(`patrimonio-importar:${identidad.id}`, 20, 60 * 60 * 1000)
   if (!tope.allowed) {

@@ -117,7 +117,9 @@ export function contactosEnCuenta(h: HechosMenu): boolean {
 }
 
 /**
- * Las puertas que CIERRAN en servidor lo que el menú no ofrece (26/10/2026). Solo dos, a propósito:
+ * Las puertas que CIERRAN en servidor lo que el menú no ofrece (26/10/2026). Las de «Herramientas» (`herramientas`
+ * = `alguna`, `resumen`, `patrimonio`, `flota`, `catalogo` = pedir un módulo) son el MISMO campo de
+ * `herramientasVisibles()`, sin regla propia. Y estas dos:
  *   - `calendario`: `/herramientas/calendario` y su escritura (`POST /api/recordatorios`). Misma regla que el menú
  *     (`herramientasVisibles().calendario`: titular o patrimonio a la vista).
  *   - `conceder`: dar o ampliar un acceso (`POST /api/autorizaciones`). Regla: ser titular (`esTitular`). Es más ancha
@@ -129,12 +131,12 @@ export function contactosEnCuenta(h: HechosMenu): boolean {
  * (`contactosEnCuenta`) para que el autorizado pueda ver y DEJAR lo que le dieron.
  *
  * Tres estados → dos modos:
- *   - `lectura` (página): igual que el menú, lo dudoso ABRE. Enlace ofrecido ⇔ página que abre; la página solo enseña
+ *   - `lectura` (página y GET de su API): igual que el menú, lo dudoso ABRE. Enlace ofrecido ⇔ página que abre; la página solo enseña
  *     lo que esta identidad ya ve en otras pantallas, así que abrir con una lectura caída no expone nada.
- *   - `escritura` (API): lo dudoso CIERRA. Se evalúa la MISMA regla con cada `null` tomado como «no» — no es afirmar que
+ *   - `escritura` (POST/PUT/PATCH/DELETE): lo dudoso CIERRA. Se evalúa la MISMA regla con cada `null` tomado como «no» — no es afirmar que
  *     no hay (nada se pinta con ello), es no escribir sin haberlo comprobado.
  */
-export type PuertaPortal = 'calendario' | 'conceder'
+export type PuertaPortal = 'calendario' | 'conceder' | 'herramientas' | 'resumen' | 'patrimonio' | 'flota' | 'catalogo'
 export type ModoPuerta = 'lectura' | 'escritura'
 
 /** Los hechos con cada «no se pudo comprobar» tomado como «no». SOLO para decidir una escritura, nunca para pintar. */
@@ -152,6 +154,7 @@ function sinDudas(h: HechosMenu): HechosMenu {
 
 export function puertaAbierta(h: HechosMenu, puerta: PuertaPortal, modo: ModoPuerta): boolean {
   const hechos = modo === 'escritura' ? sinDudas(h) : h
-  if (puerta === 'calendario') return herramientasVisibles(hechos).calendario
-  return seOfrece(esTitular(hechos))
+  if (puerta === 'conceder') return seOfrece(esTitular(hechos))
+  const ver = herramientasVisibles(hechos)
+  return puerta === 'herramientas' ? ver.alguna : ver[puerta]
 }

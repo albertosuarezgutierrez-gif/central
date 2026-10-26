@@ -11,6 +11,7 @@ import { puertosObligaciones } from '@/lib/patrimonio/obligaciones-bd'
 import { segurosDeInmueble, type SegurosDeInmueble } from '@/lib/patrimonio/seguros-inmueble-api'
 import { puertosSegurosInmueble } from '@/lib/patrimonio/seguros-inmueble-bd'
 import { ETIQUETA_USO } from '@/lib/patrimonio/usos'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { Documentos } from './Documentos'
@@ -32,6 +33,7 @@ const triestado = (v: boolean | null) => (v === null ? noConsta : v ? 'Sí' : 'N
 export default async function InmueblePage({ params }: { params: Promise<{ id: string }> }) {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const { id } = await params
   const ficha = await inmuebleAutorizado(identidad.id, id)
   if (ficha === null) notFound()

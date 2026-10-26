@@ -6,6 +6,7 @@ import { estadoContrato, puede, rentaVigente, type ResultadoActualizacion, type 
 import { eur } from '@/lib/dinero'
 import { contratoAutorizado } from '@/lib/patrimonio/contratos-bd'
 import { fechaMadrid } from '@/lib/patrimonio/dia-madrid'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { AltaInquilino, AplicarRenta, VerDatosInquilino } from './ContratoAcciones'
@@ -66,6 +67,7 @@ function textoPropuesta(p: ResultadoActualizacion, indice: string | null, descri
 export default async function ContratoPage({ params }: { params: Promise<{ id: string }> }) {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const { id } = await params
   const f = await contratoAutorizado(identidad.id, id)
   if (f === null) notFound()

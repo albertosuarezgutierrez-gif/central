@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { patrimonioDeIdentidad } from '@/lib/patrimonio/inmuebles-bd'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { Importador } from './Importador'
@@ -16,6 +17,7 @@ export const dynamic = 'force-dynamic'
 export default async function ImportarPage() {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const titulares = (await patrimonioDeIdentidad(identidad.id)).filter((t) => t.puedeAlta)
 
   return (

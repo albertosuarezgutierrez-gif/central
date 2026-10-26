@@ -5,6 +5,7 @@ import { eur } from '@/lib/dinero'
 import { rentabilidadDeIdentidad, type RentabilidadDeIdentidad } from '@/lib/patrimonio/rentabilidad-bd'
 import { PRIMER_ANIO } from '@/lib/patrimonio/rentabilidad'
 import { AVISO } from '@/lib/patrimonio/rentabilidad-textos'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
@@ -75,6 +76,7 @@ function Datos({ d }: { d: RentabilidadDeIdentidad }) {
 export default async function RentabilidadPage({ searchParams }: { searchParams: Promise<{ anio?: string | string[] }> }) {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const { anio } = await searchParams
   let datos: RentabilidadDeIdentidad | null = null
   let fallo = false

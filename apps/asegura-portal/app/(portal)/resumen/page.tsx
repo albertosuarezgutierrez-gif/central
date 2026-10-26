@@ -16,6 +16,7 @@ import {
   type PolizaAportadaEntrada,
   type PolizaGestionadaEntrada,
 } from '@/lib/resumen-anual'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { ImprimirResumen } from './ImprimirResumen'
@@ -43,6 +44,7 @@ export default async function ResumenPage({
 }) {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  if (!(await puertaDeSesion('resumen', 'lectura'))) redirect('/inicio')
   const hoy = new Date()
   const anio = anioDePeticion((await searchParams).anio, hoy)
 
