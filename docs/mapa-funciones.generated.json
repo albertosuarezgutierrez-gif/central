@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-25T20:31:45Z",
-  "sha": "02a4fb53b0c609eb39bdb799a37bd2048eb2e4f3",
+  "generadoEn": "2026-10-26T06:01:05Z",
+  "sha": "50123d77e39adae1660f71d1a9f2c88d68f440d0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6263,16 +6263,17 @@
           "nombre": "DireccionCp",
           "kind": "function",
           "exportada": true,
-          "params": "{ valor, onCambio, disabled }: { valor: ValorDireccion; onCambio: (v: ValorDireccion) => void; disabled?: boolean }",
+          "params": "{ valor, onCambio, disabled, rutas, calle }: { valor: ValorDireccion onCambio: (v: ValorDireccion) => void disabled?: boolean rutas?: { cp: (cp: string) => string; vias: (q: URLSearchParams) => string } calle?: { etiqueta: string; ejemplo: ",
           "retorno": null,
-          "linea": 31
+          "linea": 36,
+          "resumen": "`rutas` (25/10/2026): el enlace de datos del presupuesto (sin sesión) pregunta a `/api/datos/*` con su token; por defecto, las de patrimonio (con sesión). `calle`: el rótulo y el ejemplo del campo de "
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "a163ec66d5e0"
+      "hash": "9862f0deb735"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/CubreSeguro.tsx",
@@ -7561,6 +7562,27 @@
       "hash": "5b119fbb1f9f"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/datos/codigo-postal/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "`GET /api/datos/codigo-postal?token=&cp=41003` → `{ cp, municipios, provincia }` (25/10/2026). El primer peldaño de la dirección (CP primero) en el ENLACE de datos, que no tiene sesión: lo protege un "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/datos/codigo-postal",
+      "hash": "17e2085c1998"
+    },
+    {
       "ruta": "apps/asegura-portal/app/api/datos/documento/route.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -7601,6 +7623,27 @@
       "tablas": [],
       "rutaApi": "/api/datos",
       "hash": "0b6158345d50"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/datos/vias/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`GET /api/datos/vias?token=&provincia=&municipio=&q=` → `{ vias: [{ tipo, nombre }] }` (25/10/2026). Autocompletado de la calle con el callejero del Catastro en el ENLACE de datos (sin sesión): token "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/datos/vias",
+      "hash": "0c23d9da102a"
     },
     {
       "ruta": "apps/asegura-portal/app/api/documento/dni/route.ts",
@@ -9018,12 +9061,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 25
+          "linea": 17,
+          "resumen": "`GET /api/patrimonio/vias?provincia=&municipio=&q=` → `{ vias: [{ tipo, nombre }] }` (≤10). Autocompletado de la calle con el callejero REAL del Catastro; es una ayuda, nunca bloquea escribir. Porta `"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/patrimonio/vias",
-      "hash": "ee6a6b484ccd"
+      "hash": "9c370dbe7c35"
     },
     {
       "ruta": "apps/asegura-portal/app/api/peticiones/[id]/route.ts",
@@ -9924,12 +9968,21 @@
       ],
       "funciones": [
         {
+          "nombre": "aplanarDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string, d: ValorDireccionDatos",
+          "retorno": "Record<string, string>",
+          "linea": 14,
+          "resumen": "De lo que hay en pantalla a las subclaves escalares que valida asegura (`claveDireccion`)."
+        },
+        {
           "nombre": "Formulario",
           "kind": "function",
           "exportada": true,
-          "params": "{ token, campos, tercero = false }: { token: string; campos: CampoSolicitud[]; tercero?: boolean }",
+          "params": "{ token, campos, ramo, tercero = false }: { token: string; campos: CampoSolicitud[]; ramo: RamoSolicitud; tercero?: boolean }",
           "retorno": null,
-          "linea": 11,
+          "linea": 33,
           "resumen": "El formulario del enlace de datos. Pinta los campos que manda asegura y nada más."
         }
       ],
@@ -9937,7 +9990,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "7c44802c86e2"
+      "hash": "d88bfdea10f2"
     },
     {
       "ruta": "apps/asegura-portal/app/datos/[token]/page.tsx",
@@ -9952,13 +10005,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 14,
+          "linea": 15,
           "resumen": "«Completa tus datos para el presupuesto» (24/09/2026). PÚBLICA y sin código, por decisión de Alberto: el cliente suele haber escrito por WhatsApp y puede no tener correo. Por eso aquí NO se enseña nad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2ee295a394f6"
+      "hash": "db81d688953b"
     },
     {
       "ruta": "apps/asegura-portal/app/Entrada.tsx",
@@ -11854,6 +11907,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "89c68eb0a606"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/callejero-vias.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Autocompletado de la CALLE con el callejero real del Catastro, compartido por `/api/patrimonio/vias` (con sesión) y `/api/datos/vias` (enlace de datos, por token). Cada ruta pone su propia guarda y su tope; aquí solo la consulta y la caché en memoria por provincia+municipio+palabra. Fallo → 502/503 ",
+      "exporta": [
+        "buscarViasCallejero"
+      ],
+      "funciones": [
+        {
+          "nombre": "buscarViasCallejero",
+          "kind": "function",
+          "exportada": true,
+          "params": "provinciaEscrita: string, municipioEscrito: string, qEscrita: string, etiquetaLog: string",
+          "retorno": "Promise<RespuestaVias>",
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d7a594e5e628"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
@@ -21080,6 +21154,7 @@
         "interpretarSolicitud",
         "llamarPuenteSolicitud",
         "leerSolicitud",
+        "tokenSolicitudVivo",
         "interpretarDocSubido",
         "subirDocPuente"
       ],
@@ -21099,7 +21174,7 @@
           "exportada": false,
           "params": "",
           "retorno": "",
-          "linea": 32
+          "linea": 34
         },
         {
           "nombre": "llamarPuenteSolicitud",
@@ -21107,7 +21182,7 @@
           "exportada": true,
           "params": "init: { metodo: 'GET'; token: string } | { metodo: 'POST'; token: string; respuestas: unknown; consentimiento?: boolean }",
           "retorno": "Promise<",
-          "linea": 39
+          "linea": 41
         },
         {
           "nombre": "leerSolicitud",
@@ -21115,7 +21190,15 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<SolicitudLeida>",
-          "linea": 64
+          "linea": 66
+        },
+        {
+          "nombre": "tokenSolicitudVivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, ahora = Date.now()",
+          "retorno": "Promise<boolean>",
+          "linea": 80
         },
         {
           "nombre": "interpretarDocSubido",
@@ -21123,7 +21206,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "DocSubido",
-          "linea": 76,
+          "linea": 98,
           "resumen": "Lo que devuelve la subida. Solo se proponen valores de texto/sí-no: lo demás se ignora."
         },
         {
@@ -21132,13 +21215,13 @@
           "exportada": true,
           "params": "token: string, fichero: File, consentimiento = false",
           "retorno": "Promise<",
-          "linea": 102,
+          "linea": 124,
           "resumen": "Reenvía el fichero al puente de asegura (multipart). `null` = el puente no respondió."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f661c00b196e"
+      "hash": "bd27aeacfd4d"
     },
     {
       "ruta": "apps/asegura-portal/lib/sugerencia.ts",
@@ -28212,7 +28295,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 38
+          "linea": 40
         }
       ],
       "tablas": [
@@ -28221,7 +28304,7 @@
         "seguros"
       ],
       "rutaApi": "/api/operador/portal-modulos",
-      "hash": "600b8c939649"
+      "hash": "88c8a83078ad"
     },
     {
       "ruta": "apps/asegura/app/api/operador/portal/invitaciones/route.ts",
@@ -28721,7 +28804,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/solicitud-datos/lead-web",
-      "hash": "6817611e1eb5"
+      "hash": "8bad98c66bb0"
     },
     {
       "ruta": "apps/asegura/app/api/operador/solicitud-datos/route.ts",
@@ -29946,7 +30029,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19,
+          "linea": 22,
           "resumen": "El enlace de datos del cliente, visto desde el portal (24/09/2026). Por TOKEN y sin identidad (decisión de Alberto: enlace directo). Lo que devuelve NO lleva nada del cliente: el ramo y los campos a p"
         },
         {
@@ -29955,12 +30038,12 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": null,
-          "linea": 31
+          "linea": 34
         }
       ],
       "tablas": [],
       "rutaApi": "/api/portal/solicitud-datos",
-      "hash": "0939a5160934"
+      "hash": "c4b3f1210bd6"
     },
     {
       "ruta": "apps/asegura/app/api/publico/campana/baja/route.ts",
@@ -31639,6 +31722,69 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "58b79b2f67a3"
+    },
+    {
+      "ruta": "apps/asegura/lib/aviso-datos-hogar.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Aviso por Telegram cuando el cliente COMPLETA el enlace de datos de HOGAR (25/10/2026). PURO. El aviso general («📝 El cliente completó los datos para su presupuesto de …», por el aviso de actividad) sale para todos los ramos; este añade, solo para hogar, el resumen para tarificar sin abrir nada: di",
+      "exporta": [
+        "esParaBanco",
+        "textoAvisoDatosHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: Respuesta | undefined",
+          "retorno": "string | null",
+          "linea": 23
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: Respuesta | undefined",
+          "retorno": "string | null",
+          "linea": 28
+        },
+        {
+          "nombre": "siNo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: Respuesta | undefined",
+          "retorno": "string",
+          "linea": 29
+        },
+        {
+          "nombre": "etiqueta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "lista: readonly { valor: string; etiqueta: string }[], v: Respuesta | undefined",
+          "retorno": "string",
+          "linea": 30
+        },
+        {
+          "nombre": "esParaBanco",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Record<string, Respuesta>",
+          "retorno": "boolean",
+          "linea": 49,
+          "resumen": "`true` si el seguro es para el certificado del banco: es lo que más prisa corre y lo que más se equivoca."
+        },
+        {
+          "nombre": "textoAvisoDatosHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaAvisoDatosHogar",
+          "retorno": "string",
+          "linea": 53
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "96f68754ca48"
     },
     {
       "ruta": "apps/asegura/lib/aviso-web-reglas.ts",
@@ -46570,6 +46716,36 @@
       "hash": "6f1daebef049"
     },
     {
+      "ruta": "apps/asegura/lib/enlace-ciego.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Enlace de datos «a CIEGAS» (25/10/2026): el que genera el formulario web ANÓNIMO (`creada_por = 'web'`). Quien lo tiene no está verificado (pudo teclear el email de un cliente y su propio móvil), así que PURO y en un solo sitio: - la página no trae nada relleno de la ficha (`solicitudPorToken`); - u",
+      "exporta": [
+        "enlaceACiegas",
+        "politicaDocEnlace"
+      ],
+      "funciones": [
+        {
+          "nombre": "enlaceACiegas",
+          "kind": "function",
+          "exportada": true,
+          "params": "creadaPor: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 10
+        },
+        {
+          "nombre": "politicaDocEnlace",
+          "kind": "function",
+          "exportada": true,
+          "params": "creadaPor: string | null | undefined",
+          "retorno": "PoliticaDocEnlace",
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4115b89b82f0"
+    },
+    {
       "ruta": "apps/asegura/lib/enlace-poliza-oportunidad.ts",
       "ambito": "apps/asegura",
       "resumen": "apps/asegura/lib/enlace-poliza-oportunidad.ts Enlace póliza CIMA NUEVA ↔ oportunidad ABIERTA (F1 del agente de correo, 21/10/2026, spec §4.1 + §4.8). Corre DENTRO de `detectarYGuardar` (tras cada pull de CIMA), en su PROPIO punto de guardado, después del cierre por matrícula (`ganarOportunidadesEmit",
@@ -48919,35 +49095,44 @@
           "exportada": true,
           "params": "f: FichaLeadWeb",
           "retorno": "boolean",
-          "linea": 24
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20fdc5756333"
+      "hash": "0ed9296d7e5f"
     },
     {
       "ruta": "apps/asegura/lib/lead-web-solicitud.ts",
       "ambito": "apps/asegura",
-      "resumen": "Lead web de AUTO/MOTO (06/10/2026, Alberto: automático). Plataforma acaba de dar de alta la ficha con el formulario público y pide, en UNA llamada, el enlace `/datos/[token]` para el WhatsApp prellenado del aviso de Telegram: 1. La ficha tiene que ser apta (`fichaAptaParaEnlace`: recién creada por e",
+      "resumen": "Lead web de CUALQUIER ramo (06/10/2026 auto/moto; 25/10/2026 todos, Alberto: «igual que coche/moto»). Plataforma acaba de dar de alta la ficha con el formulario público y pide, en UNA llamada, el enlace `/datos/[token]` para el WhatsApp prellenado del aviso de Telegram: 1. La ficha tiene que ser apt",
       "exporta": [
         "solicitudParaLeadWeb"
       ],
       "funciones": [
         {
+          "nombre": "esCheckRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 35,
+          "resumen": "Postgres 23514 = CHECK violado: el de `solicitud_datos.ramo` sin el SQL del 25/10/2026 (solo admite auto/moto)."
+        },
+        {
           "nombre": "solicitudParaLeadWeb",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, clienteId: unknown, ramoEntrada: unknown, actor: string,",
+          "params": "correduriaId: string, clienteId: unknown, ramoEntrada: unknown, actor: string, /** La ficha ya existía (409 forzable del alta): oportunidad + enlace a CIEGAS (venta cruzada). */ existente = false,",
           "retorno": "Promise<ResultadoLeadWebSolicitud>",
-          "linea": 32
+          "linea": 45
         }
       ],
       "tablas": [
         "clientes"
       ],
       "rutaApi": null,
-      "hash": "56f466496221"
+      "hash": "0a20d3a03b70"
     },
     {
       "ruta": "apps/asegura/lib/leads-competencia.ts",
@@ -50197,6 +50382,7 @@
       "ambito": "apps/asegura",
       "resumen": "El riesgo como pantalla (29/09/2026, diseño docs/superpowers/specs/2026-09-29-riesgo-figuras-variantes-design.md). «Nosotros aseguramos riesgos: el riesgo no cambia, lo que cambia es la persona» (Alberto). Una oportunidad es un riesgo; dentro tiene FIGURAS (tomador, propietario, conductores) y VARIA",
       "exporta": [
+        "precargaDePolizaDeOportunidad",
         "leerRiesgo",
         "estadoFigurasMultiBD",
         "asignarFigura",
@@ -50233,7 +50419,7 @@
         {
           "nombre": "precargaDePolizaDeOportunidad",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "db: ConsultaSql, correduriaId: string, polizaId: string | null, ramo: string,",
           "retorno": "Promise<Record<string, unknown> | null>",
           "linea": 197,
@@ -50517,7 +50703,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "832a4882a3c6"
+      "hash": "db9a9e30fac8"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-seguimiento.ts",
@@ -52166,7 +52352,8 @@
       "resumen": "SQL de los módulos del portal de UN cliente (puerto de operador). Las reglas son puras: `portal-modulos-operador.ts`. Tabla: `seguros.portal_modulo` (`apps/asegura-portal/prisma/sql/2026-10-22_portal_modulos.sql`); la escritura necesita el GRANT de `prisma/sql/2026-10-24_portal_modulos_operador.sql`",
       "exporta": [
         "modulosDeFicha",
-        "escribirModulo"
+        "escribirModulo",
+        "polizasEnVigorPorCliente"
       ],
       "funciones": [
         {
@@ -52194,6 +52381,15 @@
           "retorno": "Promise<ResultadoEscritura>",
           "linea": 53,
           "resumen": "Activa/retira. El servidor RE-decide (el botón no manda) y deja una línea en `historial_interno`."
+        },
+        {
+          "nombre": "polizasEnVigorPorCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteIds: string[]",
+          "retorno": "Promise<Map<string, number> | null>",
+          "linea": 97,
+          "resumen": "una ficha sin pólizas en vigor sale con 0."
         }
       ],
       "tablas": [
@@ -52203,7 +52399,7 @@
         "portal_vinculo"
       ],
       "rutaApi": null,
-      "hash": "fe17da68bad7"
+      "hash": "770b947aff70"
     },
     {
       "ruta": "apps/asegura/lib/portal-modulos-operador.ts",
@@ -52214,7 +52410,8 @@
         "puedeActivar",
         "planDeEscritura",
         "fichasModulos",
-        "textoHistorialModulo"
+        "textoHistorialModulo",
+        "vistaSolicitud"
       ],
       "funciones": [
         {
@@ -52261,11 +52458,20 @@
           "retorno": "string",
           "linea": 117,
           "resumen": "La línea de `historial_interno` (tipo `gestion`) que deja una activación o retirada."
+        },
+        {
+          "nombre": "vistaSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "modulo: string, clienteId: string | null, polizasEnVigor: number | null",
+          "retorno": "VistaSolicitud",
+          "linea": 130,
+          "resumen": "Cola «Solicitudes del portal» de /correduria → Hoy: lo que cada fila `solicitado` enseña. Misma regla que la ficha (`puedeActivar`), con una identidad ya conocida (la fila existe). `clienteId` null = "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "696d76d136c1"
+      "hash": "37b2ad33d50e"
     },
     {
       "ruta": "apps/asegura/lib/presentacion-app-seleccion.ts",
@@ -57070,6 +57276,123 @@
       "hash": "c0696a0aa825"
     },
     {
+      "ruta": "apps/asegura/lib/solicitud-datos-direccion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lo que el SERVIDOR comprueba de una dirección del enlace de datos (revisión del PR #5057, 26/10/2026): - `zonaCpServidor`: provincia(s) y municipios oficiales del CP (`@central/core-direccion`, la misma tabla que la ruta `/api/datos/codigo-postal` del portal). `validarRespuestas` rechaza una provinc",
+      "exporta": [
+        "zonaCpServidor",
+        "viaEnCallejero",
+        "viasValidadas"
+      ],
+      "funciones": [
+        {
+          "nombre": "zonaCpServidor",
+          "kind": "function",
+          "exportada": true,
+          "params": "cp: string",
+          "retorno": "ZonaCp",
+          "linea": 17
+        },
+        {
+          "nombre": "plano",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "viaEnCallejero",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: { provincia: string; municipio: string; tipo: string; nombre: string }, listar: ListarVias = listarViasPorTermino,",
+          "retorno": "Promise<ViaValidada>",
+          "linea": 29,
+          "resumen": "¿Está esa calle (tipo + nombre) en el callejero de ese municipio? `null` = no se sabe / no está. Nunca lanza."
+        },
+        {
+          "nombre": "viasValidadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly CampoSolicitud[], entrada: Record<string, unknown>, listar?: ListarVias, topeMs = TOPE_VIAS_MS",
+          "retorno": "Promise<Map<string, ViaValidada>>",
+          "linea": 45,
+          "resumen": "Calles validadas por campo `direccion`. Con el tope agotado, las que falten quedan sin validar («por validar»)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "39f1c493bc83"
+    },
+    {
+      "ruta": "apps/asegura/lib/solicitud-datos-hogar.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Tras COMPLETAR el enlace de datos de HOGAR (25/10/2026): Catastro → riesgo de la oportunidad → Telegram. Corre en `after()` (la respuesta al cliente no espera al Catastro) y NUNCA lanza: lo que falle se dice en el aviso. 1. Catastro con la dirección declarada (`inmueblesPorDireccion`, calle OFICIAL ",
+      "exporta": [
+        "catastroDeSolicitud",
+        "trasCompletarHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "conTope",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "p: Promise<T>, ms: number",
+          "retorno": "Promise<T | 'tope'>",
+          "linea": 41
+        },
+        {
+          "nombre": "catastroDeSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Record<string, Respuesta>",
+          "retorno": "Promise<CatastroSolicitud>",
+          "linea": 48,
+          "resumen": "El Catastro para la dirección declarada. Nunca lanza."
+        },
+        {
+          "nombre": "bloqueDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "campo: string",
+          "retorno": "string",
+          "linea": 87,
+          "resumen": "A qué bloque atómico pertenece cada campo (si uno no valida, cae su bloque ENTERO, no solo él)."
+        },
+        {
+          "nombre": "anotarEnRiesgo",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, oportunidadId: string, propuesta: Record<string, string | number | boolean>",
+          "retorno": "Promise<ResultadoAnotar>",
+          "linea": 99,
+          "resumen": "Escribe en `datosVivienda` por BLOQUES (`planEscrituraVivienda`), sin confirmar, partiendo de lo que enseña la pantalla del riesgo: lo estructurado o, sin ello, la PRECARGA de la póliza (que así no se"
+        },
+        {
+          "nombre": "trasCompletarHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { correduriaId: string oportunidadId: string /** Ficha del CLIENTE de la oportunidad (la del enlace en plataforma). */ clienteId: string respuestas: Record<string, Respuesta> tercero: boolean }",
+          "retorno": "Promise<void>",
+          "linea": 139
+        }
+      ],
+      "tablas": [
+        "oportunidad_historial",
+        "oportunidades"
+      ],
+      "rutaApi": null,
+      "hash": "6a42ca294c0d"
+    },
+    {
       "ruta": "apps/asegura/lib/solicitud-datos.ts",
       "ambito": "apps/asegura",
       "resumen": "«Pídele los datos al cliente» (24/09/2026): enlace directo, sin código, para que el cliente complete lo que falta para presupuestar (moto o coche). Reglas puras (qué se pide, cómo se valida) en `@central/module-seguros`. Decisiones que no se tocan sin Alberto: - El token solo vive en claro en la res",
@@ -57092,7 +57415,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "string",
-          "linea": 54,
+          "linea": 63,
           "resumen": "El enlace del portal para un token en claro. Solo se construye al crear la solicitud (el token no se guarda)."
         },
         {
@@ -57101,15 +57424,15 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "string",
-          "linea": 59
+          "linea": 68
         },
         {
           "nombre": "crearSolicitud",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, oportunidadId: string, actor: string, personaId: string | null = null,",
+          "params": "correduriaId: string, oportunidadId: string, actor: string, personaId: string | null = null, /** `fichaCiega`: se pide todo como si la ficha no supiera nada (lead web de una ficha que ya existía). */ opciones: { fichaCiega?: boolean } = {},",
           "retorno": "Promise<",
-          "linea": 89,
+          "linea": 98,
           "resumen": "Crea (o devuelve la viva) la solicitud de datos de una oportunidad ABIERTA de moto/coche. `personaId` (29/09/2026): los datos de OTRA persona del riesgo (un familiar que es figura); sin él, los del cl"
         },
         {
@@ -57118,7 +57441,7 @@
           "exportada": true,
           "params": "correduriaId: string, personaId: string, ramo: RamoSolicitud",
           "retorno": "Promise<CampoSolicitud[] | null>",
-          "linea": 124,
+          "linea": 135,
           "resumen": "Qué se le pide a esa persona según lo que ya hay en su ficha. `null` = no se encuentra la ficha."
         },
         {
@@ -57127,7 +57450,7 @@
           "exportada": true,
           "params": "tx: Prisma.TransactionClient, p: { correduriaId: string; oportunidadId: string; personaId: string; ramo: RamoSolicitud; campos: CampoSolicitud[]; actor: string; tercero: boolean; estadoOportunidad: string },",
           "retorno": "Promise<",
-          "linea": 143,
+          "linea": 154,
           "resumen": "La escritura de la solicitud, DENTRO de la transacción que le pasen (la propia de `crearSolicitud`, o la del alta de la oportunidad del lead web: así o quedan las dos o ninguna). Una viva por persona "
         },
         {
@@ -57136,7 +57459,7 @@
           "exportada": false,
           "params": "estado: string, caduca: Date",
           "retorno": "SolicitudResumen['estado']",
-          "linea": 172
+          "linea": 183
         },
         {
           "nombre": "descifrarLecturas",
@@ -57144,7 +57467,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "LecturaDocSolicitud[] | null",
-          "linea": 177
+          "linea": 188
         },
         {
           "nombre": "descifrarRespuestas",
@@ -57152,7 +57475,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "",
-          "linea": 188
+          "linea": 199
         },
         {
           "nombre": "solicitudesDeOportunidad",
@@ -57160,7 +57483,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string",
           "retorno": "Promise<SolicitudResumen[] | null>",
-          "linea": 200,
+          "linea": 211,
           "resumen": "Las solicitudes de una oportunidad (más reciente primero), para plataforma."
         },
         {
@@ -57169,7 +57492,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<",
-          "linea": 241,
+          "linea": 252,
           "resumen": "Anula una pendiente (el enlace deja de funcionar)."
         },
         {
@@ -57178,7 +57501,7 @@
           "exportada": false,
           "params": "token: string",
           "retorno": "Promise<FilaToken | null>",
-          "linea": 259
+          "linea": 270
         },
         {
           "nombre": "identidadFicha",
@@ -57186,7 +57509,7 @@
           "exportada": false,
           "params": "f: FilaToken",
           "retorno": "Promise<",
-          "linea": 269,
+          "linea": 280,
           "resumen": "DNI y nacimiento de su ficha, para traerlos rellenos. Si no se pueden leer, se piden en blanco."
         },
         {
@@ -57195,7 +57518,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<SolicitudPublica>",
-          "linea": 284,
+          "linea": 295,
           "resumen": "Lo que ve la página pública: el ramo y los campos a pedir. Del cliente, SOLO su DNI y su fecha de nacimiento, rellenos para que los confirme o corrija (decisión de Alberto, 24/09/2026: «es su DNI, no "
         },
         {
@@ -57204,7 +57527,7 @@
           "exportada": true,
           "params": "token: string, fichero: { nombre: string; mime: string; contenido: Buffer }, consentimiento = false,",
           "retorno": "Promise<ResultadoDocSolicitud>",
-          "linea": 314,
+          "linea": 327,
           "resumen": "El cliente sube un documento por el enlace (DNI, carné, papeles del vehículo, su póliza). 1) Se ARCHIVA en su ficha (`seguros.documentos`, subido por el cliente) — aunque luego no se pueda leer: el pa"
         },
         {
@@ -57213,7 +57536,7 @@
           "exportada": true,
           "params": "token: string, entrada: Record<string, unknown>, consentimiento = false,",
           "retorno": "Promise<",
-          "linea": 393,
+          "linea": 407,
           "resumen": "El cliente manda sus datos. Una sola vez; lo que no se pidió se ignora."
         }
       ],
@@ -57228,7 +57551,7 @@
         "solicitud_datos"
       ],
       "rutaApi": null,
-      "hash": "2715c5aff580"
+      "hash": "f1d004780779"
     },
     {
       "ruta": "apps/asegura/lib/supresiones.ts",
@@ -111265,10 +111588,9 @@
           "nombre": "PedirDatos",
           "kind": "function",
           "exportada": true,
-          "params": "{ oportunidadId, clienteId, telefono = null, ramo }: { oportunidadId: string; clienteId: string; telefono?: string | null; ramo: 'moto' | 'auto' }",
+          "params": "{ oportunidadId, clienteId, telefono = null, ramo }: { oportunidadId: string; clienteId: string; telefono?: string | null; ramo: RamoSolicitud }",
           "retorno": null,
-          "linea": 20,
-          "resumen": "«Pídele los datos al cliente» (24/09/2026). Genera un enlace para mandarle por WhatsApp o correo; él rellena lo que falta (carné, matrícula, la moto…) y aquí aparece lo que ha contestado, con el acces"
+          "linea": 26
         }
       ],
       "tablas": [
@@ -111276,7 +111598,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "04dec9e68ed9"
+      "hash": "0ac79c4560a7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PedirPresupuestoBot.tsx",
@@ -111711,10 +112033,19 @@
           "nombre": "RespuestasSolicitud",
           "kind": "function",
           "exportada": true,
-          "params": "{ s, quien, tarificar }: { s: SolicitudDatos; quien: string; tarificar: { href: string; ramo: 'moto' | 'auto' } | null }",
+          "params": "{ s, quien, tarificar }: { s: SolicitudDatos; quien: string; tarificar: { href: string; ramo: RamoSolicitud } | null }",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "Lo que contestó una persona por el enlace de datos, con lo que subió y lo que no casa con sus papeles. `quien` = «El cliente» o el nombre del familiar; `tarificar` = el atajo a pedir precio (`null` do"
+        },
+        {
+          "nombre": "textoDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SolicitudDatos, clave: string",
+          "retorno": "string",
+          "linea": 47,
+          "resumen": "Una dirección contestada en subclaves (`viviendaCp`…), en una línea; sin la calle del callejero, «por validar»."
         },
         {
           "nombre": "Verificacion",
@@ -111722,13 +112053,13 @@
           "exportada": false,
           "params": "{ s }: { s: SolicitudDatos }",
           "retorno": null,
-          "linea": 50,
+          "linea": 58,
           "resumen": "Documentos que subió y lo que no casa con ellos. Sin contraste posible se dice; nunca «todo cuadra» por defecto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8aa8543a3c50"
+      "hash": "172d6af54d2c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/salud-nuevo/acciones.ts",
@@ -111872,7 +112203,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "masDias",
@@ -111880,7 +112211,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "fecha",
@@ -111888,7 +112219,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string",
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "enviar",
@@ -111896,7 +112227,7 @@
           "exportada": false,
           "params": "url: string, metodo: 'POST' | 'PATCH', body: Record<string, unknown>",
           "retorno": "Promise<string | null>",
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "SeguimientoOportunidad",
@@ -111904,7 +112235,7 @@
           "exportada": true,
           "params": "{ id, telefono = null, onCambio }: { id: string; telefono?: string | null; onCambio?: () => void }",
           "retorno": null,
-          "linea": 100
+          "linea": 101
         },
         {
           "nombre": "FormPerder",
@@ -111912,7 +112243,7 @@
           "exportada": false,
           "params": "{ enviando, onEnviar, onCancelar }: { enviando: boolean; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 221
+          "linea": 223
         },
         {
           "nombre": "FormAparcar",
@@ -111920,7 +112251,7 @@
           "exportada": false,
           "params": "{ enviando, hoy, onEnviar, onCancelar }: { enviando: boolean; hoy: string; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 261
+          "linea": 263
         },
         {
           "nombre": "Tareas",
@@ -111928,7 +112259,7 @@
           "exportada": false,
           "params": "{ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, onCambio }: { oportunidadId: string; tareas: TareaSeguimiento[]; descartadas: number; fueCliente: boolean | null; cerrada: boolean; hoy: string; onCambio: () => void }",
           "retorno": null,
-          "linea": 291
+          "linea": 293
         }
       ],
       "tablas": [
@@ -111936,7 +112267,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b832392bda70"
+      "hash": "abbfdd95e509"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/SegurosCliente.tsx",
@@ -114135,7 +114466,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "hora",
@@ -114143,7 +114474,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "cifraC",
@@ -114151,7 +114482,7 @@
           "exportada": false,
           "params": "c: Contador | null | undefined",
           "retorno": "string",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Un contador agregado: «n+» si alguna cola no se pudo leer (es un SUELO, no el total)."
         },
         {
@@ -114160,7 +114491,7 @@
           "exportada": true,
           "params": "{ ingesta, nIncidencias, nBlog, onIr, }: { ingesta: VistaIngesta | null /** Todas las colas de los bloques de debajo (las mismas que el badge de la pestaña). */ nIncidencias: Contador | null | undefined nBlog: N onIr: (s: Destino) => void }",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "FilaOk",
@@ -114168,12 +114499,12 @@
           "exportada": false,
           "params": "{ n, titulo, sub, onClick }: { n: N; titulo: string; sub: string; onClick: () => void }",
           "retorno": null,
-          "linea": 142
+          "linea": 144
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7153bcee076"
+      "hash": "75167f707c62"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/iconos.tsx",
@@ -120639,6 +120970,26 @@
       ],
       "rutaApi": null,
       "hash": "efa92c1663b8"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/SolicitudesPortal.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SolicitudesPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "SolicitudesPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fa6d49dcf912"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/subir-poliza/page.tsx",
@@ -131940,6 +132291,27 @@
       "hash": "e7660ad9b6d9"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/solicitudes-portal/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "GET — la cola «Solicitudes del portal» (peticiones de módulo `solicitado`). SOLO LECTURA: este proxy no exporta POST/PUT/PATCH/DELETE. Activar/Rechazar pasan por `/api/correduria/cliente/portal-modulo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/solicitudes-portal",
+      "hash": "0688cbc9438d"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/supresiones/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -136085,13 +136457,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 41,
+          "linea": 42,
           "resumen": "al usuario se le responde `{ok:true}` en los dos primeros sin distinguirlos (no se le revela si ya estaba en la cartera) y 502 en el tercero. Nunca se fuerza un duplicado desde aquí: si el teléfono/em"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/publico/correduria/lead",
-      "hash": "7b9af677ba96"
+      "hash": "1069bd313c3d"
     },
     {
       "ruta": "apps/plataforma/app/api/publico/disponibilidad/route.ts",
@@ -156854,6 +157226,64 @@
       "hash": "5deef4c47bc0"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/solicitudes-portal.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cola «Solicitudes del portal» de /correduria → Hoy (26/10/2026): las peticiones de módulo («Herramientas») que los clientes hacen desde el portal y esperan activación. Intérprete PURO de `GET /api/operador/portal-modulos` de asegura. 🚨 Tres estados, nunca colapsados: `ok` (la lista, puede estar vac",
+      "exporta": [
+        "leerSolicitud",
+        "interpretarSolicitudesPortal",
+        "fechaSolicitud",
+        "textoResultadoAccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 29
+        },
+        {
+          "nombre": "leerSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "SolicitudPortal | null",
+          "linea": 31
+        },
+        {
+          "nombre": "interpretarSolicitudesPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaSolicitudesPortal",
+          "linea": 58
+        },
+        {
+          "nombre": "fechaSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 75,
+          "resumen": "dd/mm/aaaa de un ISO (la fecha tal cual viene, sin convertir de zona)."
+        },
+        {
+          "nombre": "textoResultadoAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "accion: 'activar' | 'retirar', status: number, json: unknown",
+          "retorno": "",
+          "linea": 81,
+          "resumen": "Texto del aviso tras Activar/Rechazar según lo que contestó el POST (nunca «hecho» si no se sabe)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cac5bd346324"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/supuestos-auto.ts",
       "ambito": "apps/plataforma",
       "resumen": "LO QUE VIAJA al pedir precio de COCHE y de MOTO (Avant2 y bots), campo a campo y con su ORIGEN (15/10/2026). PURO, sin E/S. Antes cada pantalla lo calculaba a su manera: el cotizador (`AutoNuevo.tsx`) arrancaba su estado con `garajeInicial`, los 10.000 km, «compra = matriculación», `historialDeclara",
@@ -167679,9 +168109,9 @@
           "kind": "function",
           "exportada": true,
           "params": "tipoSeguro: TipoSeguroLead, resultado: ResultadoLead, telefono: string | null",
-          "retorno": "'auto' | 'moto' | null",
-          "linea": 349,
-          "resumen": "¿Se pide a asegura el enlace `/datos/[token]` para este lead? (06/10/2026, Alberto: automático.) SOLO ficha NUEVA, ramo auto/moto y un teléfono al que se pueda abrir WhatsApp (la misma regla que pinta"
+          "retorno": "PeticionEnlace | null",
+          "linea": 371,
+          "resumen": "¿Se pide a asegura el enlace `/datos/[token]` para este lead? (06/10/2026 auto/moto; 25/10/2026 TODOS los ramos y también la ficha que ya existía, decisión de Alberto: venta cruzada.) Hace falta una f"
         },
         {
           "nombre": "hostPortalCliente",
@@ -167689,7 +168119,7 @@
           "exportada": true,
           "params": "url: string | undefined = process.env.ASEGURA_PORTAL_URL",
           "retorno": "string",
-          "linea": 358,
+          "linea": 380,
           "resumen": "El host del portal del cliente: el de `ASEGURA_PORTAL_URL` si plataforma lo tiene, si no el de producción."
         },
         {
@@ -167698,7 +168128,7 @@
           "exportada": true,
           "params": "status: number, json: unknown, hostPortal: string = hostPortalCliente()",
           "retorno": "EnlaceDatos",
-          "linea": 374,
+          "linea": 396,
           "resumen": "Respuesta del puerto → enlace. Solo vale `https://<host del portal exacto>/datos/<token>`; todo lo demás (otro host, otra ruta, `url: null` de una viva, error, timeout) es «sin enlace» y el aviso sale"
         },
         {
@@ -167707,7 +168137,7 @@
           "exportada": true,
           "params": "id: string, base: string = process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_POR_DEFECTO",
           "retorno": "string",
-          "linea": 389
+          "linea": 413
         },
         {
           "nombre": "mensajeWhatsappLead",
@@ -167715,7 +168145,7 @@
           "exportada": true,
           "params": "a: { nombre: string; tipoSeguro?: TipoSeguroLead | null; urlDatos?: string | null }",
           "retorno": "string",
-          "linea": 419,
+          "linea": 443,
           "resumen": "Texto prellenado del WhatsApp al lead. Solo el nombre de pila (`nombreDePila` de `@central/module-seguros`: si duda —coma, inicial, empresa, vacío— saluda sin nombre). Los ramos de vehículo piden la d"
         },
         {
@@ -167724,13 +168154,13 @@
           "exportada": true,
           "params": "a: AvisoLead",
           "retorno": "string",
-          "linea": 447,
+          "linea": 504,
           "resumen": "HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ca24e44a874d"
+      "hash": "473822afb85e"
     },
     {
       "ruta": "apps/plataforma/lib/libro-registro-asegura.ts",
@@ -169673,7 +170103,8 @@
         "censoInvitacionesAsegura",
         "invitarLoteAsegura",
         "modulosPortalAsegura",
-        "escribirModuloPortalAsegura"
+        "escribirModuloPortalAsegura",
+        "solicitudesPortalAsegura"
       ],
       "funciones": [
         {
@@ -169897,11 +170328,20 @@
           "retorno": "Promise<Reenvio>",
           "linea": 550,
           "resumen": "`POST /api/operador/cliente/portal-modulos` — activa o retira un módulo. El `actor` lo pone el servidor."
+        },
+        {
+          "nombre": "solicitudesPortalAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 555,
+          "resumen": "`GET /api/operador/portal-modulos` — la cola de módulos que los clientes piden desde el portal (solo `solicitado`). Solo lectura."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6c4d0637daa8"
+      "hash": "167c9a4fc6b2"
     },
     {
       "ruta": "apps/plataforma/lib/portal-modulos-asegura.ts",
@@ -172951,7 +173391,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 89
+          "linea": 91
         },
         {
           "nombre": "texto",
@@ -172959,7 +173399,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 92
+          "linea": 94
         },
         {
           "nombre": "numero",
@@ -172967,7 +173407,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 95
+          "linea": 97
         },
         {
           "nombre": "uno",
@@ -172975,7 +173415,7 @@
           "exportada": false,
           "params": "lista: readonly T[], v: unknown",
           "retorno": "T | null",
-          "linea": 98
+          "linea": 100
         },
         {
           "nombre": "interpretarLead",
@@ -172983,7 +173423,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "LeadVencimiento | null",
-          "linea": 102
+          "linea": 104
         },
         {
           "nombre": "interpretarLeads",
@@ -172991,7 +173431,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LeadsVencimientos",
-          "linea": 145
+          "linea": 147
         },
         {
           "nombre": "leerDeclaracion",
@@ -172999,7 +173439,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "DeclaracionVista | null",
-          "linea": 205,
+          "linea": 207,
           "resumen": "Puro. Forma que no se entiende → `null` (no se inventa una declaración)."
         },
         {
@@ -173008,7 +173448,7 @@
           "exportada": true,
           "params": "o: { estado: string; polizaGanadaId?: string | null; declaracion?: DeclaracionVista | null }",
           "retorno": "string | null",
-          "linea": 218,
+          "linea": 220,
           "resumen": "El rótulo del estado de una declarada (`null` = no hay declaración que pintar). Nunca «En vigor»: eso es de CIMA."
         },
         {
@@ -173017,7 +173457,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaOportunidad",
-          "linea": 255
+          "linea": 257
         },
         {
           "nombre": "leerEmisionOportunidad",
@@ -173025,7 +173465,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EmisionOportunidad | null",
-          "linea": 365,
+          "linea": 367,
           "resumen": "Puro. Cualquier forma que no se entienda es `null` (nada que pintar), nunca un estado inventado."
         },
         {
@@ -173034,7 +173474,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "OportunidadesCliente",
-          "linea": 384
+          "linea": 386
         },
         {
           "nombre": "textoAltaOportunidad",
@@ -173042,7 +173482,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "",
-          "linea": 433,
+          "linea": 435,
           "resumen": "Qué pasa con la respuesta de «abrir oportunidad», en palabras."
         },
         {
@@ -173051,7 +173491,7 @@
           "exportada": true,
           "params": "c: CanalLead | null",
           "retorno": "string",
-          "linea": 453,
+          "linea": 455,
           "resumen": "`null` = no se sabe (asegura antigua): se dice, no se afirma «solo teléfono»."
         },
         {
@@ -173060,7 +173500,7 @@
           "exportada": true,
           "params": "m: string | null",
           "retorno": "string | null",
-          "linea": 490,
+          "linea": 492,
           "resumen": "Rótulo de un motivo leído del puerto; `null` si no es uno conocido (se enseña tal cual)."
         },
         {
@@ -173069,7 +173509,7 @@
           "exportada": true,
           "params": "v: string | null | undefined",
           "retorno": "RamoOportunidad | null",
-          "linea": 503,
+          "linea": 505,
           "resumen": "Ramo válido de `?ramo=` para preseleccionar en el alta; `null` si no es uno conocido."
         },
         {
@@ -173078,7 +173518,7 @@
           "exportada": true,
           "params": "tarificables: readonly { etiqueta: string }[]",
           "retorno": "readonly",
-          "linea": 507,
+          "linea": 509,
           "resumen": "Ramos que se trabajan con ofertas de compañías (sin tarificador): los de RAMOS_OPORTUNIDAD que no están entre los tarificables."
         },
         {
@@ -173087,7 +173527,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo?: RamoOportunidad | null",
           "retorno": "string",
-          "linea": 512,
+          "linea": 514,
           "resumen": "URL de «oportunidad nueva» de una ficha; sin ramo, el alta se abre sin ramo preseleccionado («Otro ramo»)."
         },
         {
@@ -173096,7 +173536,7 @@
           "exportada": true,
           "params": "r: string | null",
           "retorno": "string",
-          "linea": 516
+          "linea": 518
         },
         {
           "nombre": "parsearPrima",
@@ -173104,7 +173544,7 @@
           "exportada": true,
           "params": "t: string",
           "retorno": "number | null | 'invalido'",
-          "linea": 529,
+          "linea": 531,
           "resumen": "Prima tecleada en formato español. Solo se aceptan formas sin ambigüedad: «1.200» es mil doscientos, nunca 1,2; «1200», «1.200,50», «412,5» y «412.50» también. Lo que no encaja es `'invalido'`, no un "
         },
         {
@@ -173113,7 +173553,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "TareasDeHoy",
-          "linea": 559
+          "linea": 561
         },
         {
           "nombre": "colaLlamadas",
@@ -173121,7 +173561,7 @@
           "exportada": true,
           "params": "leads: readonly LeadVencimiento[]",
           "retorno": "LeadVencimiento[]",
-          "linea": 597,
+          "linea": 599,
           "resumen": "La cola de llamadas de hoy, en el orden de la lista (probabilidad × prima). Solo quien se puede llamar (teléfono y canal que lo permite) y a quien le toca ya: un primer contacto a quien se le puede es"
         },
         {
@@ -173130,7 +173570,7 @@
           "exportada": true,
           "params": "l: LeadVencimiento",
           "retorno": "",
-          "linea": 616,
+          "linea": 618,
           "resumen": "El WhatsApp de seguimiento de un lead, o `null` si no se le puede escribir por ahí. Lo abre Alberto y lo envía él desde su teléfono. 🚨 A TODOS con teléfono desde el 30/09/2026 (decisión de Alberto, a"
         },
         {
@@ -173139,7 +173579,7 @@
           "exportada": true,
           "params": "l: LeadVencimiento",
           "retorno": "string[]",
-          "linea": 631,
+          "linea": 633,
           "resumen": "Guion corto de la llamada, con lo que se sabe del lead. Lo que no consta no se inventa."
         },
         {
@@ -173148,7 +173588,7 @@
           "exportada": true,
           "params": "l: Pick<LeadVencimiento, 'intentos' | 'respondioAntes' | 'estado'>",
           "retorno": "TramoLead",
-          "linea": 675,
+          "linea": 677,
           "resumen": "Por enviar = nadie le ha escrito ni llamado en este ciclo · Esperando = se le contactó y no hay respuesta registrada · Respondió = contestó, o ya está interesado / con propuesta. Así, al mandarle el W"
         },
         {
@@ -173157,7 +173597,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string",
-          "linea": 683,
+          "linea": 685,
           "resumen": "Minúsculas, sin tildes ni signos: «Gutiérrez-Alcalá» casa con «gutierrez alcala»."
         },
         {
@@ -173166,7 +173606,7 @@
           "exportada": true,
           "params": "l: Pick<LeadVencimiento, 'cliente' | 'aseguradora' | 'ramo' | 'email' | 'telefono'>, consulta: string,",
           "retorno": "boolean",
-          "linea": 693,
+          "linea": 695,
           "resumen": "¿Casa el lead con lo tecleado en el buscador? (30/09/2026, Alberto: «un buscador aquí»). Busca en nombre, compañía, ramo, correo y teléfono; cada palabra tiene que aparecer en alguno («maria mapfre» ="
         },
         {
@@ -173175,7 +173615,7 @@
           "exportada": true,
           "params": "ultimoContactoEn: string | null, ahora: Date = new Date()",
           "retorno": "number | null",
-          "linea": 708
+          "linea": 710
         },
         {
           "nombre": "llamar",
@@ -173183,7 +173623,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit, timeoutMs = 15_000",
           "retorno": "Promise<Reenvio>",
-          "linea": 718
+          "linea": 720
         },
         {
           "nombre": "leadsCompetenciaAsegura",
@@ -173191,7 +173631,7 @@
           "exportada": true,
           "params": "dias: number",
           "retorno": "Promise<Reenvio>",
-          "linea": 735
+          "linea": 737
         },
         {
           "nombre": "oportunidadAsegura",
@@ -173199,7 +173639,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 738
+          "linea": 740
         },
         {
           "nombre": "oportunidadesClienteAsegura",
@@ -173207,7 +173647,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 741
+          "linea": 743
         },
         {
           "nombre": "accionOportunidadAsegura",
@@ -173215,7 +173655,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 744
+          "linea": 746
         },
         {
           "nombre": "anadirLeadAContactosAsegura",
@@ -173223,7 +173663,7 @@
           "exportada": true,
           "params": "clienteId: string, timeoutMs: number",
           "retorno": "Promise<Reenvio>",
-          "linea": 752,
+          "linea": 754,
           "resumen": "Lead de correo → Google Contacts al momento (19/10/2026): `POST /api/operador/google-contactos/lead` de asegura con la ficha recién dada de alta. Tiempo acotado (el lead del triaje tiene presupuesto);"
         },
         {
@@ -173232,7 +173672,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 755
+          "linea": 757
         },
         {
           "nombre": "cerrarTareaAsegura",
@@ -173240,7 +173680,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 758
+          "linea": 760
         },
         {
           "nombre": "cuerpoTareaSuelta",
@@ -173248,7 +173688,7 @@
           "exportada": true,
           "params": "b: Record<string, unknown>, actor: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 766,
+          "linea": 768,
           "resumen": "Cuerpo para «Hecho»/«Posponer N días» sobre una TAREA SUELTA (sin oportunidad) de Mi mesa: solo los campos que el puerto lee, con `suelta: true` (sin él, asegura va por la vía de oportunidad y da 404)"
         },
         {
@@ -173257,7 +173697,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 779
+          "linea": 781
         },
         {
           "nombre": "tareasVinculadasAsegura",
@@ -173265,7 +173705,7 @@
           "exportada": true,
           "params": "donde: { polizaId: string } | { clienteId: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 783,
+          "linea": 785,
           "resumen": "Tareas de una póliza o de un cliente (+ las de sus pólizas): se interpretan con `interpretarTareasVinculadas`."
         },
         {
@@ -173274,7 +173714,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 788,
+          "linea": 790,
           "resumen": "Alta de una tarea suelta colgada de una póliza y/o un cliente (el actor lo pone la ruta)."
         },
         {
@@ -173283,7 +173723,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 791
+          "linea": 793
         },
         {
           "nombre": "registrarWhatsappAsegura",
@@ -173291,7 +173731,7 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 796,
+          "linea": 798,
           "resumen": "Anota que se abrió el WhatsApp de seguimiento de un lead (no envía nada)."
         },
         {
@@ -173300,7 +173740,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 801,
+          "linea": 803,
           "resumen": "Clientes en vigor y leads de Vencimientos con su contacto, para el .vcf del móvil."
         },
         {
@@ -173309,7 +173749,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "",
-          "linea": 809,
+          "linea": 811,
           "resumen": "Lectura defensiva de la respuesta: `null` = no se pudo leer (el .vcf NO se genera vacío, que se importaría como «no tienes a nadie»)."
         },
         {
@@ -173318,7 +173758,7 @@
           "exportada": true,
           "params": "despuesDe: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 822,
+          "linea": 824,
           "resumen": "Cola de revisión de la sincronización con Google Contacts (50 por página, cursor `despuesDe`)."
         },
         {
@@ -173327,7 +173767,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 825
+          "linea": 827
         },
         {
           "nombre": "moteClienteAsegura",
@@ -173335,7 +173775,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 829,
+          "linea": 831,
           "resumen": "MOTE de la ficha (solo para la agenda de Google de Alberto; AISLADO: nunca en correos/portal/PDF)."
         },
         {
@@ -173344,7 +173784,7 @@
           "exportada": true,
           "params": "body: { clienteId: string; mote: string | null; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 832
+          "linea": 834
         },
         {
           "nombre": "ordenarAgendaGoogleAsegura",
@@ -173352,7 +173792,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 836,
+          "linea": 838,
           "resumen": "«Ordenar agenda»: informe SOLO LECTURA de la agenda de Google (lee la agenda entera: hasta ~2 min)."
         },
         {
@@ -173361,7 +173801,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 840,
+          "linea": 842,
           "resumen": "Estado de la conexión con Google Contacts (cuenta, simulada, activada)."
         },
         {
@@ -173370,7 +173810,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 844,
+          "linea": 846,
           "resumen": "Simulación SOLO LECTURA (lee la agenda entera de Google: hasta ~2 min)."
         },
         {
@@ -173379,7 +173819,7 @@
           "exportada": true,
           "params": "actor: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 848,
+          "linea": 850,
           "resumen": "«Simulación revisada: sincroniza». El `actor` lo pone quien llama desde la SESIÓN."
         },
         {
@@ -173388,7 +173828,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 852,
+          "linea": 854,
           "resumen": "Ticket de un solo uso (2 min) para arrancar el OAuth de Google desde el panel: asegura devuelve la URL de `conectar`."
         },
         {
@@ -173397,7 +173837,7 @@
           "exportada": true,
           "params": "borrarContactos: boolean",
           "retorno": "Promise<Reenvio>",
-          "linea": 856,
+          "linea": 858,
           "resumen": "Revoca en Google y borra token y vínculos; con `borrarContactos` borra antes los que CREÓ el CRM."
         },
         {
@@ -173406,7 +173846,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 861,
+          "linea": 863,
           "resumen": "Estado de la conexión de WhatsApp (Embedded Signup / Coexistence) y qué variables faltan en asegura."
         },
         {
@@ -173415,7 +173855,7 @@
           "exportada": true,
           "params": "body: { code: string; waba_id: string; phone_number_id: string; business_id: string | null }",
           "retorno": "Promise<Reenvio>",
-          "linea": 865,
+          "linea": 867,
           "resumen": "Cierre del Embedded Signup: asegura canjea el `code`, suscribe la WABA y pide las syncs (varias llamadas a Meta)."
         },
         {
@@ -173424,7 +173864,7 @@
           "exportada": true,
           "params": "eventoAt: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 869,
+          "linea": 871,
           "resumen": "El Telegram del evento de conexión `eventoAt` ya salió: asegura lo marca."
         },
         {
@@ -173433,7 +173873,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 873
+          "linea": 875
         },
         {
           "nombre": "expedientesAsegura",
@@ -173441,7 +173881,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 877,
+          "linea": 879,
           "resumen": "«Mis expedientes» (13/10/2026): se interpreta con `interpretarExpedientes` de `lib/correduria/expedientes.ts`."
         },
         {
@@ -173450,7 +173890,7 @@
           "exportada": true,
           "params": "dias = 30",
           "retorno": "Promise<Reenvio>",
-          "linea": 882,
+          "linea": 884,
           "resumen": "Bandeja «Correos de compañía» de Mi mesa: avisos de compañías leídos del correo (14/10/2026)."
         },
         {
@@ -173459,7 +173899,7 @@
           "exportada": true,
           "params": "body: { id: string; revisado: boolean }",
           "retorno": "Promise<Reenvio>",
-          "linea": 886,
+          "linea": 888,
           "resumen": "«Marcar como mirado» / «Deshacer» de la bandeja (14/10/2026)."
         },
         {
@@ -173468,7 +173908,7 @@
           "exportada": true,
           "params": "body: { mensajeId: string; nombre: string; mime: string; base64: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 891,
+          "linea": 893,
           "resumen": "`POST /api/operador/correo/documento`: UN PDF de un correo de compañía (asegura decide a qué ficha va, o sin asignar)."
         },
         {
@@ -173477,7 +173917,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 895,
+          "linea": 897,
           "resumen": "Adjuntos de correo SIN asignar (bandeja «Correos de compañía»)."
         },
         {
@@ -173486,7 +173926,7 @@
           "exportada": true,
           "params": "body: { id: string; clienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 899,
+          "linea": 901,
           "resumen": "Asignar a mano un adjunto sin asignar. El actor lo pone la ruta (sesión) y va el ÚLTIMO."
         },
         {
@@ -173495,7 +173935,7 @@
           "exportada": true,
           "params": "body: { id: string; clienteId: string; oportunidadId: string | null; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 903,
+          "linea": 905,
           "resumen": "«Asignar a cliente / oportunidad» de un aviso sin resolver. El actor lo pone la ruta (sesión) y va el ÚLTIMO."
         },
         {
@@ -173504,7 +173944,7 @@
           "exportada": true,
           "params": "eventoId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 907,
+          "linea": 909,
           "resumen": "Historial de una solicitud en la compañía, desde una fila de la bandeja."
         },
         {
@@ -173513,7 +173953,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 911,
+          "linea": 913,
           "resumen": "Cruce diario correo ↔ CIMA: decide, apunta y devuelve los avisos pendientes de salir."
         },
         {
@@ -173522,7 +173962,7 @@
           "exportada": true,
           "params": "avisados: string[]",
           "retorno": "Promise<Reenvio>",
-          "linea": 915,
+          "linea": 917,
           "resumen": "Marca como avisados (SOLO los que salieron por Telegram)."
         },
         {
@@ -173531,7 +173971,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 918
+          "linea": 920
         },
         {
           "nombre": "interpretarTomador",
@@ -173539,7 +173979,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TomadorLeido | undefined",
-          "linea": 964
+          "linea": 966
         },
         {
           "nombre": "interpretarLecturaOportunidad",
@@ -173547,7 +173987,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaDocumentoOportunidad",
-          "linea": 986,
+          "linea": 988,
           "resumen": "Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en `null` («no se leyó»), nunca en un valor plausible: una prima 0 o una fecha que no es fecha no rellenan nada. Si no se l"
         },
         {
@@ -173556,7 +173996,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 1020,
+          "linea": 1022,
           "resumen": "La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50»."
         },
         {
@@ -173565,7 +174005,7 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "EnlacePresupuesto | null",
-          "linea": 1033
+          "linea": 1035
         },
         {
           "nombre": "interpretarSolicitudesDatos",
@@ -173573,7 +174013,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SolicitudesDatos",
-          "linea": 1077
+          "linea": 1081
         },
         {
           "nombre": "valorLegible",
@@ -173581,16 +174021,16 @@
           "exportada": true,
           "params": "campo: SolicitudDatos['campos'][number], v: string | number | boolean | null | undefined",
           "retorno": "string",
-          "linea": 1122,
+          "linea": 1127,
           "resumen": "Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—»."
         },
         {
           "nombre": "solicitudLeadWebAsegura",
           "kind": "function",
           "exportada": true,
-          "params": "body: { clienteId: string; ramo: 'auto' | 'moto' }",
+          "params": "body: { clienteId: string; ramo: string; existente: boolean }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1139
+          "linea": 1144
         },
         {
           "nombre": "solicitudesDatosAsegura",
@@ -173598,7 +174038,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1142
+          "linea": 1147
         },
         {
           "nombre": "accionSolicitudDatosAsegura",
@@ -173606,7 +174046,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1145
+          "linea": 1150
         },
         {
           "nombre": "borradoresPresupuestoAsegura",
@@ -173614,7 +174054,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1150,
+          "linea": 1155,
           "resumen": "─── Borrador de presupuesto en servidor (05/10/2026, `lib/correduria/borrador-servidor.ts`) ──"
         },
         {
@@ -173623,7 +174063,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1153
+          "linea": 1158
         },
         {
           "nombre": "borrarBorradorPresupuestoAsegura",
@@ -173631,7 +174071,7 @@
           "exportada": true,
           "params": "clienteId: string, ramo: string, oportunidadId: string | null",
           "retorno": "Promise<Reenvio>",
-          "linea": 1156
+          "linea": 1161
         },
         {
           "nombre": "riesgoAsegura",
@@ -173639,7 +174079,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1162,
+          "linea": 1167,
           "resumen": "─── El riesgo como pantalla (29/09/2026) ───────────────────────────────────"
         },
         {
@@ -173648,7 +174088,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1169,
+          "linea": 1174,
           "resumen": "Edita/confirma los datos del riesgo de CUALQUIER ramo (30/09/2026): el cuerpo lleva exactamente una clave de datos (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoL"
         },
         {
@@ -173657,7 +174097,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1172
+          "linea": 1177
         },
         {
           "nombre": "quitarFiguraAsegura",
@@ -173665,7 +174105,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1175
+          "linea": 1180
         },
         {
           "nombre": "compararVariantesAsegura",
@@ -173673,7 +174113,7 @@
           "exportada": true,
           "params": "oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 1180,
+          "linea": 1185,
           "resumen": "Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis."
         },
         {
@@ -173682,7 +174122,7 @@
           "exportada": true,
           "params": "body: { polizaId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1185,
+          "linea": 1190,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio."
         },
         {
@@ -173691,7 +174131,7 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; nuevoClienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 1190,
+          "linea": 1195,
           "resumen": "«Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis."
         },
         {
@@ -173700,7 +174140,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1199,
+          "linea": 1204,
           "resumen": "`POST /api/operador/correo/lead`: SOLO tras el «✅ Enviar» de Alberto en Telegram (`clp_env`). 30 s: Resend puede reintentar un 429. Un 5xx o un corte = «no se sabe si salió» (`interpretarEnvioPeticion"
         },
         {
@@ -173709,7 +174149,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1208,
+          "linea": 1213,
           "resumen": "`POST /api/operador/correo/respuesta-lead`: `accion:'casar'` (¿de qué hilo/oportunidades es?) o `accion:'guardar'` (los datos leídos, para escribirlos sin pisar nada). Responde SOLO claves, nunca valo"
         },
         {
@@ -173718,7 +174158,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1213,
+          "linea": 1218,
           "resumen": "`POST /api/operador/correo/adjunto`: un adjunto del cliente, que asegura guarda CIFRADO (sin clave, no lo guarda)."
         },
         {
@@ -173727,7 +174167,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1221,
+          "linea": 1226,
           "resumen": "`POST /api/operador/correo/seguimiento-lead` (F5): `pendientes` (hilos vivos, sin email), `recordar` (UN recordatorio en el hilo; asegura re-decide el hito y pone el destinatario desde la ficha) o `ce"
         },
         {
@@ -173736,7 +174176,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1231,
+          "linea": 1236,
           "resumen": "`POST /api/operador/correo/tarificar-lead`: `accion:'revisar'` (gratis: qué bots llegarían a precio y qué les falta), `accion:'tarificar'` (encola los bots; SOLO tras `clp_tar`) o `accion:'ampliar_top"
         },
         {
@@ -173745,7 +174185,7 @@
           "exportada": true,
           "params": "r: Reenvio",
           "retorno": "ContactosLead",
-          "linea": 1245,
+          "linea": 1250,
           "resumen": "La respuesta del puerto de Contactos, en uno de sus seis estados. Lo que no se entiende es `error` con motivo (nunca «añadido» ni «ya estaba» por defecto: no se afirma lo que no se ha visto). Sin PII:"
         },
         {
@@ -173754,13 +174194,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 1262,
+          "linea": 1267,
           "resumen": "`POST /api/operador/correo/propuesta-lead`: `accion:'pendientes'`/`'revisar'` (gratis: comparativa, necesidades IDD y recomendada de los hilos con precio) o `accion:'enviar'` (SOLO tras «📤 Enviar» de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "623b7df25a35"
+      "hash": "739b43f5f6b7"
     },
     {
       "ruta": "apps/plataforma/lib/seguimiento-presupuestos-asegura.ts",
@@ -234671,8 +235111,14 @@
       "resumen": "«Pídele los datos al cliente» (24/09/2026). Alberto: un cliente de la base le escribe para un presupuesto de moto; él abre la oportunidad y le manda un enlace para que rellene lo que falta (fecha del carné, matrícula, la moto…); al completarlo le llega el aviso para tarificar. Aquí solo se decide QU",
       "exporta": [
         "ramoSolicitud",
+        "grupoSolicitud",
+        "nombreRamoSolicitud",
+        "tituloSolicitud",
+        "ayudaDocumentosSolicitud",
+        "claveDireccion",
         "conIdentidad",
         "camposSolicitud",
+        "casaZonaCp",
         "validarRespuestas",
         "mensajeSolicitud",
         "etiquetaDocSolicitud",
@@ -234687,7 +235133,59 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "RamoSolicitud | null",
-          "linea": 18
+          "linea": 26
+        },
+        {
+          "nombre": "grupoSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoSolicitud",
+          "retorno": "GrupoSolicitud",
+          "linea": 33
+        },
+        {
+          "nombre": "nombreRamoSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoSolicitud",
+          "retorno": "string",
+          "linea": 72,
+          "resumen": "«coche», «moto», «hogar»… para títulos, tareas e historial (texto de la casa, no del cliente)."
+        },
+        {
+          "nombre": "tituloSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoSolicitud, tercero: boolean",
+          "retorno": "string",
+          "linea": 77,
+          "resumen": "Título de la página del enlace."
+        },
+        {
+          "nombre": "ayudaDocumentosSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoSolicitud",
+          "retorno": "string",
+          "linea": 84,
+          "resumen": "Qué documentos tiene sentido subir en el enlace, para el texto de ayuda."
+        },
+        {
+          "nombre": "claveDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string, sub: SubclaveDireccion",
+          "retorno": "string",
+          "linea": 117
+        },
+        {
+          "nombre": "camposIdentidadTomador",
+          "kind": "function",
+          "exportada": false,
+          "params": "grupo: GrupoSolicitud",
+          "retorno": "CampoSolicitud[]",
+          "linea": 164,
+          "resumen": "Identidad para lo que no es un vehículo: quien contrata (el tomador); una empresa o comunidad da su CIF."
         },
         {
           "nombre": "conIdentidad",
@@ -234695,8 +235193,67 @@
           "exportada": true,
           "params": "campos: readonly CampoSolicitud[]",
           "retorno": "CampoSolicitud[]",
-          "linea": 69,
+          "linea": 180,
           "resumen": "Los campos de un enlace ya creado + DNI y nacimiento si le faltan (los enlaces anteriores al 24/09/2026 no los pedían cuando la ficha ya los tenía)."
+        },
+        {
+          "nombre": "camposSeguroActual",
+          "kind": "function",
+          "exportada": false,
+          "params": "pregunta: string",
+          "retorno": "CampoSolicitud[]",
+          "linea": 188,
+          "resumen": "Seguro actual del riesgo: si lo tiene, compañía y vencimiento (el vencimiento sí puede ser futuro)."
+        },
+        {
+          "nombre": "campoCp",
+          "kind": "function",
+          "exportada": false,
+          "params": "conocido: ConocidoFicha, etiqueta: string",
+          "retorno": "CampoSolicitud[]",
+          "linea": 211
+        },
+        {
+          "nombre": "camposVehiculo",
+          "kind": "function",
+          "exportada": false,
+          "params": "ramo: 'auto' | 'moto', conocido: ConocidoFicha",
+          "retorno": "CampoSolicitud[]",
+          "linea": 216,
+          "resumen": "Lo de antes, sin tocar: auto y moto."
+        },
+        {
+          "nombre": "camposHogar",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "CampoSolicitud[]",
+          "linea": 251,
+          "resumen": "HOGAR (25/10/2026): la dirección por la regla de la casa (CP → provincia → municipio → calle del Catastro → número), régimen, uso, contenido, alarma, hipoteca (→ banco/certificado + entidad), seguro a"
+        },
+        {
+          "nombre": "camposPersonas",
+          "kind": "function",
+          "exportada": false,
+          "params": "ramo: RamoSolicitud, conocido: ConocidoFicha",
+          "retorno": "CampoSolicitud[]",
+          "linea": 269
+        },
+        {
+          "nombre": "camposMascota",
+          "kind": "function",
+          "exportada": false,
+          "params": "conocido: ConocidoFicha",
+          "retorno": "CampoSolicitud[]",
+          "linea": 289
+        },
+        {
+          "nombre": "camposGenerico",
+          "kind": "function",
+          "exportada": false,
+          "params": "conocido: ConocidoFicha",
+          "retorno": "CampoSolicitud[]",
+          "linea": 303
         },
         {
           "nombre": "camposSolicitud",
@@ -234704,8 +235261,8 @@
           "exportada": true,
           "params": "ramo: RamoSolicitud, conocido: ConocidoFicha",
           "retorno": "CampoSolicitud[]",
-          "linea": 75,
-          "resumen": "Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe (salvo DNI y nacimiento)."
+          "linea": 318,
+          "resumen": "Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe (salvo DNI y nacimiento). DECLARATIVO por grupo de ramo; auto y moto, igual que antes del 25/10/2026."
         },
         {
           "nombre": "fechaIso",
@@ -234713,15 +235270,48 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string | null",
-          "linea": 112
+          "linea": 333
+        },
+        {
+          "nombre": "textoCorto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 346
+        },
+        {
+          "nombre": "plano",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 370
+        },
+        {
+          "nombre": "casaZonaCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "provincia: string, municipio: string, zona: ZonaCp",
+          "retorno": "",
+          "linea": 373,
+          "resumen": "¿Provincia y municipio casan con lo que dice la tabla del CP? Lo que la tabla no sabe no se contrasta."
+        },
+        {
+          "nombre": "validarDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CampoSolicitud, entrada: Record<string, unknown>, opciones: OpcionesValidacion",
+          "retorno": "",
+          "linea": 385
         },
         {
           "nombre": "validarRespuestas",
           "kind": "function",
           "exportada": true,
-          "params": "campos: readonly CampoSolicitud[], entrada: Record<string, unknown>, hoy: Date = new Date(),",
+          "params": "campos: readonly CampoSolicitud[], entrada: Record<string, unknown>, hoy: Date = new Date(), opciones: OpcionesValidacion = {},",
           "retorno": "ValidacionSolicitud",
-          "linea": 129,
+          "linea": 436,
           "resumen": "Valida lo que manda el cliente contra los campos que se le pidieron. Solo se guardan las claves pedidas (lo demás se ignora) y cada error viene por campo."
         },
         {
@@ -234730,7 +235320,7 @@
           "exportada": true,
           "params": "ramo: RamoSolicitud, url: string, tercero = false",
           "retorno": "string",
-          "linea": 206,
+          "linea": 522,
           "resumen": "Texto listo para pegar en WhatsApp o en un correo. Sin datos del cliente: solo el enlace."
         },
         {
@@ -234739,7 +235329,7 @@
           "exportada": true,
           "params": "t: TipoDocSolicitud",
           "retorno": "string",
-          "linea": 230
+          "linea": 544
         },
         {
           "nombre": "tipoArchivoDocSolicitud",
@@ -234747,7 +235337,7 @@
           "exportada": true,
           "params": "t: TipoDocSolicitud",
           "retorno": "'dni' | 'permiso_circulacion' | 'ficha_tecnica' | 'poliza' | 'otro'",
-          "linea": 242,
+          "linea": 556,
           "resumen": "Tipo con el que se ARCHIVA en `seguros.documentos` (esa lista no tiene carné)."
         },
         {
@@ -234756,7 +235346,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 253
+          "linea": 567
         },
         {
           "nombre": "normalizarLecturaSolicitud",
@@ -234764,7 +235354,7 @@
           "exportada": true,
           "params": "bruto: unknown, ramo: RamoSolicitud, campos: readonly CampoSolicitud[], hoy: Date = new Date(),",
           "retorno": "",
-          "linea": 262,
+          "linea": 576,
           "resumen": "Lo que devolvió la IA → valores para los campos QUE SE PIDIERON, cada uno pasado por la misma validación que el formulario. Lo que no valida se tira: un valor dudoso propuesto al cliente se lo acaba a"
         },
         {
@@ -234773,7 +235363,7 @@
           "exportada": false,
           "params": "v: Respuesta",
           "retorno": "string",
-          "linea": 316
+          "linea": 630
         },
         {
           "nombre": "contrastarConDocumentos",
@@ -234781,13 +235371,115 @@
           "exportada": true,
           "params": "respuestas: Record<string, Respuesta>, lecturas: readonly LecturaDocSolicitud[],",
           "retorno": "DiscrepanciaSolicitud[]",
-          "linea": 322,
+          "linea": 636,
           "resumen": "Lo que el cliente mandó contra lo que dicen sus propios papeles. Solo avisa (no bloquea): el papel puede estar mal leído y el cliente puede tener razón."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9ac70ef03329"
+      "hash": "08f9a1655b8d"
+    },
+    {
+      "ruta": "packages/module-seguros/src/solicitud-hogar.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Enlace de datos de HOGAR (25/10/2026): de lo que contestó el cliente (+ lo que diga el Catastro) a lo que la correduría necesita para tarificar sin reteclear. PURO. Reglas: - `null` = «no se sabe». Lo que el cliente dejó en blanco o el Catastro no publica NO se escribe (nunca 0 ni ''). - El Catastro",
+      "exporta": [
+        "direccionDeRespuestas",
+        "plantaLegible",
+        "direccionLegible",
+        "textoCatastroSolicitud",
+        "viviendaDeSolicitud",
+        "planEscrituraVivienda"
+      ],
+      "funciones": [
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: Respuesta | undefined",
+          "retorno": "string | null",
+          "linea": 27
+        },
+        {
+          "nombre": "direccionDeRespuestas",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Record<string, Respuesta>, clave = 'vivienda'",
+          "retorno": "DireccionDeclarada | null",
+          "linea": 30,
+          "resumen": "La dirección declarada en un campo `direccion` (por defecto `vivienda`). `null` si no hay ni CP ni calle."
+        },
+        {
+          "nombre": "plantaLegible",
+          "kind": "function",
+          "exportada": true,
+          "params": "planta: string | null",
+          "retorno": "string | null",
+          "linea": 46,
+          "resumen": "«2» → «2º»; «2º», «Bajo», «Ático» o «Entreplanta» se dejan tal cual (el «º» solo a un número pelado)."
+        },
+        {
+          "nombre": "direccionLegible",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DireccionDeclarada",
+          "retorno": "string",
+          "linea": 53,
+          "resumen": "Una línea legible: «CL SOCORRO 24, 2º B · 41003 SEVILLA (SEVILLA)»."
+        },
+        {
+          "nombre": "textoCatastroSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CatastroSolicitud | null",
+          "retorno": "string",
+          "linea": 66
+        },
+        {
+          "nombre": "viviendaDeSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Record<string, Respuesta>, catastro: CatastroSolicitud | null, ahoraIso: string",
+          "retorno": "Record<string, string | number | boolean>",
+          "linea": 88,
+          "resumen": "Lo que se propone escribir en `datosVivienda` (claves de `ESPEC_VIVIENDA`), sin nulls: solo lo que se sabe. `ahoraIso` sella la consulta al Catastro cuando la hubo."
+        },
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 145
+        },
+        {
+          "nombre": "norm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 146
+        },
+        {
+          "nombre": "refNorm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 147
+        },
+        {
+          "nombre": "planEscrituraVivienda",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: Record<string, unknown> | null, propuesta: Record<string, string | number | boolean>, confirmadoAt: string | null = null",
+          "retorno": "PlanVivienda",
+          "linea": 149
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8a29da3be6b7"
     },
     {
       "ruta": "packages/module-seguros/src/supuestos-auto.ts",
@@ -246116,7 +246808,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5164,
-    "funciones": 19764
+    "archivos": 5175,
+    "funciones": 19826
   }
 }

@@ -167,29 +167,29 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 385 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 387 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 374 | 62.544 | 54.328.080 | 0 | 0 |
-| `otro` | 369 | 14.701 | 32.765.531 | 19.979.821 | 0 |
-| `lectura-directa` | 316 | 9.945 | 28.435.219 | 0 | 0 |
-| `mcp:github` | 319 | 7.608 | 5.899.595 | 54.924.583 | 100 |
-| `sql` | 233 | 6.013 | 3.046.794 | 2.351.230 | 24 |
-| `escritura` | 232 | 5.563 | 79.226.407 | 0 | 0 |
+| `bash` | 376 | 62.807 | 54.579.498 | 0 | 0 |
+| `otro` | 371 | 14.743 | 32.834.692 | 19.979.821 | 0 |
+| `lectura-directa` | 318 | 10.001 | 28.503.386 | 0 | 0 |
+| `mcp:github` | 321 | 7.621 | 5.903.464 | 54.924.583 | 100 |
+| `sql` | 234 | 6.029 | 3.052.180 | 2.351.230 | 24 |
+| `escritura` | 233 | 5.575 | 79.535.029 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 57 | 1.369 | 1.524.729 | 0 | 101 |
-| `mcp:Vercel` | 79 | 1.349 | 1.207.391 | 237.328 | 39 |
+| `mcp:Vercel` | 79 | 1.354 | 1.208.218 | 237.328 | 39 |
 | `mcp:Booking-com` | 48 | 1.346 | 5.510.355 | 0 | 0 |
-| `agente:general-purpose` | 126 | 1.036 | 609.291 | 21.858.521 | 0 |
-| `mcp:claude-code-remote` | 61 | 752 | 66.000 | 20.519 | 0 |
+| `agente:general-purpose` | 127 | 1.038 | 609.587 | 22.131.154 | 0 |
+| `mcp:claude-code-remote` | 62 | 757 | 66.238 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 12 | 591 | 721.568 | 0 | 0 |
-| `mcp:Supabase` | 137 | 444 | 75.090 | 5.123 | 7 |
+| `mcp:Supabase` | 138 | 448 | 75.294 | 5.123 | 7 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
-| `agente:agente-architect` | 76 | 391 | 274.143 | 9.622.297 | 0 |
+| `agente:agente-architect` | 77 | 393 | 275.890 | 9.667.543 | 0 |
 | `mcp:Google-Drive` | 29 | 162 | 161.289 | 0 | 2 |
 | `agente:agente-mecanico` | 52 | 135 | 77.083 | 7.569.041 | 0 |
-| `agente:rastreador-codigo` | 56 | 109 | 34.904 | 1.399.460 | 0 |
+| `agente:rastreador-codigo` | 57 | 111 | 34.978 | 1.399.460 | 0 |
 | `mcp:OpenSEO` | 5 | 92 | 76.972 | 0 | 2 |
 | `mcp:Resend` | 9 | 88 | 78.484 | 0 | 0 |
 | `agente:Explore` | 39 | 86 | 42.159 | 2.194.162 | 0 |
