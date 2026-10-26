@@ -471,7 +471,7 @@ export {
   type RelacionFila,
   type RelacionFicha,
 } from './relaciones.ts'
-export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
+export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp, mensajeDatosTarificarWhatsapp } from './mensaje-whatsapp.ts'
 export { mensajeReciboDevueltoWhatsapp, resumenRiesgo, saludoSegunHora, type EntradaWhatsappDevuelto } from './mensaje-recibo-devuelto.ts'
 export { correoPresupuesto, correoPresupuestoTercero, type DatosAvisoTercero, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, mensajePresupuestoWhatsappTercero, enlaceWhatsappPresupuesto, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
@@ -1093,6 +1093,8 @@ export {
   contrastarConDocumentos,
   etiquetaDocSolicitud,
   mensajeSolicitud,
+  datosMinimosSolicitud,
+  nombreRamoParaCliente,
   normalizarLecturaSolicitud,
   tipoArchivoDocSolicitud,
   ramoSolicitud,

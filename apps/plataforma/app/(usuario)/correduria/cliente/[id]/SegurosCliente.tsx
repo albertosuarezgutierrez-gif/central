@@ -15,6 +15,7 @@ import EliminarDeOportunidades, { RecuperarLead } from './EliminarDeOportunidade
 import EditarVencimiento from './EditarVencimiento'
 import DescartarVolcado from './DescartarVolcado'
 import TarificarOportunidad from './TarificarOportunidad'
+import WhatsappDatos from './WhatsappDatos'
 import { destinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
 import { presentarDeclarada } from '@/lib/correduria/declarada-presentacion'
 
@@ -25,15 +26,18 @@ import { presentarDeclarada } from '@/lib/correduria/declarada-presentacion'
  * (recibo devuelto, siniestro abierto, vence pronto, oportunidad sin próximo
  * paso) va en la propia tarjeta: no se esconde detrás de un clic.
  */
-export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: {
+export default function SegurosCliente({ reparto, siniestros, clienteId, hoy, telefono = null, nombre = null }: {
   reparto: RepartoSeguros
   siniestros: SiniestroCartera[] | null
   clienteId: string
   hoy: Date
+  /** Para el botón «WhatsApp» de las oportunidades: el móvil de la ficha y su nombre (saludo). */
+  telefono?: string | null
+  nombre?: string | null
 }) {
   const abiertos = new Map<string, number>()
   for (const s of siniestros ?? []) if (s.abierto) abiertos.set(s.polizaId, (abiertos.get(s.polizaId) ?? 0) + 1)
-  const ctx: Ctx = { abiertos: siniestros === null ? null : abiertos, clienteId, hoy }
+  const ctx: Ctx = { abiertos: siniestros === null ? null : abiertos, clienteId, hoy, telefono, nombre }
   const { conNosotros, yaNoExiste, historicas, descartadas } = reparto
   // Un documento que no es póliza (p. ej. la ficha catastral) no es una oportunidad: ni se pinta ni cuenta.
   const oportunidades = reparto.oportunidades.filter(s => s.clase !== 'declarada' || !presentarDeclarada(s.declarada).excluir)
@@ -85,7 +89,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
   )
 }
 
-type Ctx = { abiertos: Map<string, number> | null; clienteId: string; hoy: Date }
+type Ctx = { abiertos: Map<string, number> | null; clienteId: string; hoy: Date; telefono: string | null; nombre: string | null }
 type Aviso = { texto: string; tono: 'malo' | 'aviso' | 'info' }
 
 function Cubo({ titulo, nota, id, children }: { titulo: string; nota?: string; id?: string; children: React.ReactNode }) {
@@ -350,12 +354,18 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
         : { ramo: s.oportunidad.ramo, tomadorId: ctx.clienteId, oportunidadId: s.oportunidad.id, polizaId: null })}
     />
   )
-  if (!quitar && !vencimiento && !accionesDerivada && !tarificar && !retarificarViva) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  // «WhatsApp» (30/10/2026): pide al lead lo necesario para tarificar. Solo con seguimiento abierto y un ramo con formulario.
+  const waOportunidad = eliminable && s.clase !== 'declarada' && abierta ? s.oportunidad : null
+  const whatsapp = waOportunidad
+    ? <WhatsappDatos oportunidadId={waOportunidad.id} ramo={waOportunidad.ramo} telefono={ctx.telefono} nombre={ctx.nombre} />
+    : null
+  if (!quitar && !vencimiento && !accionesDerivada && !tarificar && !retarificarViva && !whatsapp) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
   return (
     <div style={{ ...tarjetaSeguro, gap: 8 }}>
       <Link href={href} prefetch={false} style={{ display: 'grid', gap: 4, alignContent: 'start', color: 'inherit', textDecoration: 'none' }}>{cuerpo}</Link>
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'start' }}>
         {tarificar}
+        {whatsapp}
         {retarificarViva}
         {accionesDerivada}
         {!derivada && vencimiento}

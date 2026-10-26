@@ -708,6 +708,25 @@ export function validarRespuestas(
   return Object.keys(errores).length > 0 ? { ok: false, errores } : { ok: true, respuestas }
 }
 
+/** Claves que NO se piden por WhatsApp aunque sean esenciales: identidad (va por el formulario cifrado) o dato que depende de la pantalla. */
+const NO_POR_WHATSAPP = new Set(['dni', 'confirmaCatastro', 'tieneSeguro'])
+
+/**
+ * Lo mínimo para tarificar un ramo, con las etiquetas del propio catálogo (`camposSolicitud`, nivel esencial): para el
+ * WhatsApp SIN enlace (30/10/2026). Nunca una lista escrita a mano: si el catálogo cambia, cambia el mensaje.
+ */
+export function datosMinimosSolicitud(ramo: RamoSolicitud): string[] {
+  return camposSolicitud(ramo, NADA_CONOCIDO)
+    .filter((c) => c.nivel === 'esencial' && !NO_POR_WHATSAPP.has(c.clave))
+    .map((c) => c.etiqueta.replace(/\s*\?+$/, '').trim())
+}
+
+/** «el seguro de tu coche», «tu seguro de hogar»: el riesgo como se lo dice uno al cliente. */
+export function nombreRamoParaCliente(ramo: RamoSolicitud): string {
+  const tuyo = NOMBRE_RAMO[ramo].tuyo
+  return grupoSolicitud(ramo) === 'vehiculo' ? `el seguro de ${tuyo}` : tuyo
+}
+
 /** Días que vive un enlace sin completar. */
 export const DIAS_SOLICITUD = 14
 
