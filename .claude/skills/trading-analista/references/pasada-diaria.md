@@ -117,8 +117,14 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    contraste con la 2ª fuente. Sigue el protocolo igual.
    28 tesis y 16 resultados quedaron anulados por esto (`trading_tesis.anulado`); las tesis
    anuladas ni se puntúan, ni sirven de referencia de precio, ni salen en el panel.
+   `trading_watchlist.contract_id` guarda el id IBKR; úsalo en `get_price_history`/`get_price_snapshot` en vez de
+   `search_contracts` (cada búsqueda devuelve miles de líneas); si es NULL, búscalo UNA vez y guárdalo.
 4. `POST {PLATAFORMA_URL}/api/trading/analizar` con `{ fecha, nav, simbolos: [...] }`
    (Bearer `ALERTA_TOKEN`). Devuelve el `top` de ideas.
+   **📈 Velas opcionales (servidor):** si un símbolo va SIN `velas`, `/analizar` se las baja él (Yahoo,
+   ~120 diarias; `lib/trading/velas-servidor.ts`). Usa IBKR solo para saldo/cartera/operaciones y
+   evita así el volcado a mano (landmine de arriba). Vigila `sinVelas` (símbolos saltados: cántalos, no
+   son «sin señal») y `velasFuente` (`llamador`|`servidor`) en la respuesta. Las velas que mandes no se tocan.
 5. `POST {PLATAFORMA_URL}/api/trading/puntuar` con `{ hoy, precios }` (snapshot de cada símbolo con
    posición/tesis viva). Puntúa walk-forward, actualiza stats y aplica stops paper.
 5-bis. **🕳️ CANTA el stop viable de cada idea del top (20/08/2026).** La respuesta de `/analizar`

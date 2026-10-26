@@ -21,6 +21,7 @@ import { resumenPorDivisa, rentabilidadPosicion } from '@/lib/trading/cartera-re
 import { resumenPaper, resultadoPosicion } from '@/lib/trading/posiciones-paper'
 import { serieCartera, divisasDeTrack, type FilaTrack } from '@/lib/trading/cartera-track'
 import type { CarteraRealUI } from '@/lib/trading/cartera-real-io'
+import { carteraVsSpy, type ResultadoCarteraVsSpy } from '@/lib/trading/cartera-vs-spy'
 
 // Contenido del «Laboratorio de inversión», extraído de page.tsx para poder reutilizarlo tal cual en la
 // vista de invitado (/invitado/trading, solo lectura vía token — ver lib/trading-acceso.ts). Es 100%
@@ -57,6 +58,48 @@ function CurvaForward({ serie }: { serie: { m: number | null; b: number }[] }) {
 }
 function fechaCorta(d: Date): string {
   return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+// 💼 Cartera real vs S&P 500 (SPY): rentabilidad acumulada corregida por aportaciones desde el primer
+// punto completo del track (lógica pura en lib/trading/cartera-vs-spy.ts). Una divisa (EUR si hay);
+// el SPY sale de la misma fuente Stooq→Yahoo del resto de la página. Fallo/falta de dato → texto
+// «sin datos suficientes», nunca 0% ni verde/rojo.
+async function CarteraVsSpy({ filas }: { filas: FilaTrack[] }) {
+  const divisas = divisasDeTrack(filas)
+  const divisa = divisas.includes('EUR') ? 'EUR' : divisas[0]
+  const propias = filas.filter(f => f.divisa === divisa)
+  const primera = propias.filter(f => f.completo).map(f => f.fecha).sort()[0]
+  let r: ResultadoCarteraVsSpy | null = null
+  if (primera) {
+    try {
+      const desdeSpy = new Date(Date.parse(`${primera}T00:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10)
+      const hoy = new Date().toISOString().slice(0, 10)
+      const spy = await puntosDiarios('SPY', desdeSpy, hoy)
+      r = carteraVsSpy(propias.map(f => ({ fecha: f.fecha, valor: f.valor, invertido: f.invertido, completo: f.completo })), spy)
+    } catch { r = null }
+  }
+  const ok = r && r.estado === 'ok' ? r : null
+  const col = (n: number) => (n > 0 ? 'var(--positive)' : n < 0 ? 'var(--negative)' : 'var(--text)')
+  return (
+    <div style={{ ...card, padding: '10px 14px', marginTop: 10 }}>
+      <div style={{ fontWeight: 700, fontSize: 13 }}>📊 Cartera real vs S&amp;P 500 <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({divisa})</span></div>
+      {ok ? (
+        <>
+          <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
+            Desde {fechaCorta(new Date(`${ok.desde}T12:00:00Z`))} ({ok.dias} días), corregido por aportaciones: {ok.diferenciaPp >= 0 ? 'por delante' : 'por detrás'} del SPY por {Math.abs(ok.diferenciaPp).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pp.
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 20px', marginTop: 6, fontSize: 14 }}>
+            <span>Cartera <strong style={{ color: col(ok.rentCarteraPct) }}>{pct(ok.rentCarteraPct / 100)}</strong></span>
+            <span>SPY <strong style={{ color: col(ok.rentSpyPct) }}>{pct(ok.rentSpyPct / 100)}</strong></span>
+          </div>
+        </>
+      ) : (
+        <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
+          sin datos suficientes — hacen falta al menos 5 días completos de la cartera y el cierre del SPY de cada fecha (no es un 0%).
+        </div>
+      )}
+    </div>
+  )
 }
 
 // 📈 Evolución de la cartera REAL (dinero de Alberto): línea del VALOR de mercado contra la línea
@@ -590,7 +633,10 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                   ⚠️ No se pudo leer el histórico para la curva — es un fallo de lectura, no que no haya puntos.
                 </p>
               ) : trackCartera && trackCartera.length > 0 ? (
-                divisasDeTrack(trackCartera).map(d => <CurvaCarteraReal key={d} filas={trackCartera} divisa={d} />)
+                <>
+                  {divisasDeTrack(trackCartera).map(d => <CurvaCarteraReal key={d} filas={trackCartera} divisa={d} />)}
+                  <CarteraVsSpy filas={trackCartera} />
+                </>
               ) : trackCartera ? (
                 <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 8 }}>
                   📈 La curva de evolución empieza a construirse con la próxima pasada nocturna: hasta hoy solo

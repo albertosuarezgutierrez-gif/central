@@ -15,8 +15,9 @@ import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/tra
 import { PISCINA_VIVA } from '@/lib/trading/piscinas'
 import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
+import { velasDiariasServidor } from '@/lib/trading/velas-servidor'
 
-type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
+type Entrada = { simbolo: string; velas?: Vela[]; fundamentales?: Fundamentales; opsRecientes?: number; factorScore?: number }
 
 // El contraste de precios sale a internet una vez por símbolo (además de los fundamentales de Yahoo,
 // que ya lo hacían). Techo alto + presupuesto acotado dentro: lo que garantiza que la pasada VUELVE es
@@ -32,6 +33,20 @@ export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { fecha, nav, simbolos, indice, minFactorScore } = (await req.json()) as { fecha: string; nav: number; simbolos: Entrada[]; indice?: { cierres: number[] }; minFactorScore?: number }
   if (!fecha || !nav || !Array.isArray(simbolos)) return NextResponse.json({ error: 'payload inválido' }, { status: 400 })
+
+  // 📈 Velas opcionales: al símbolo SIN `velas` el servidor se las baja (Yahoo, 8 en paralelo); el que
+  // no las consigue se salta y sale en `sinVelas`. Las del llamador no se tocan. Nota: si el contraste
+  // cae al respaldo Yahoo, ese símbolo se contrasta contra su propia fuente (tautológico); con Stooq no.
+  const velasFuente: Record<string, 'llamador' | 'servidor'> = {}
+  const sinVelas: string[] = []
+  const faltan = simbolos.filter(s => !s.velas?.length)
+  for (const s of simbolos) if (s.velas?.length) velasFuente[s.simbolo] = 'llamador'
+  for (let i = 0; i < faltan.length; i += 8) {
+    await Promise.all(faltan.slice(i, i + 8).map(async s => {
+      const v = await velasDiariasServidor(s.simbolo, fecha)
+      if (v) { s.velas = v; velasFuente[s.simbolo] = 'servidor' } else sinVelas.push(s.simbolo)
+    }))
+  }
 
   // Contador de pasadas del día: los únicos anti-duplicado hacen INVISIBLE un reintento en los datos,
   // así que se cuenta aquí y se avisa UNA vez (al llegar a 2) si la rutina corre repetida. Best-effort.
@@ -107,7 +122,7 @@ export async function POST(req: NextRequest) {
   // el último cierre fuera de rango se salta ENTERO — no se le recorta el precio: no se le cree nada.
   // Sin referencia reciente no se juzga (símbolo nuevo): la guardia nunca inventa un veto.
   const cierresHoy = Object.fromEntries(
-    simbolos.filter(s => s.velas?.length).map(s => [s.simbolo, s.velas[s.velas.length - 1].cierre]),
+    simbolos.filter(s => s.velas?.length).map(s => [s.simbolo, s.velas![s.velas!.length - 1].cierre]),
   )
   // `anulado = false`: una tesis anulada lo está porque su `precio_ref` resultó ser de otra empresa.
   // Usarla de referencia sería medir el precio de hoy contra la mentira de anteayer — la guardia
@@ -166,11 +181,12 @@ export async function POST(req: NextRequest) {
   const ideas: Array<{ simbolo: string; estrategia: string; direccion: string; confianza: number; operada: boolean; motivo?: string; rvol?: number | null; volConfirma?: string; factorScore?: number; stopViable?: StopViable | null }> = []
 
   for (const s of simbolos) {
-    if (!s.velas?.length) continue
+    const velas = s.velas
+    if (!velas?.length) continue
     if (vetados.has(s.simbolo)) continue
-    const ind = indicadoresDe(s.velas)
-    const precioRef = s.velas[s.velas.length - 1].cierre
-    const volumenRel = rvol(s.velas.map(v => v.volumen))   // volumen de hoy vs su media
+    const ind = indicadoresDe(velas)
+    const precioRef = velas[velas.length - 1].cierre
+    const volumenRel = rvol(velas.map(v => v.volumen))   // volumen de hoy vs su media
     const señales = torneo(ind, s.fundamentales ?? {}, fecha, ajustes)
     const evEarn = earningsPor.get(s.simbolo) ?? { fecha: null, estado: 'sin_consultar' as EstadoEarnings }
 
@@ -206,7 +222,7 @@ export async function POST(req: NextRequest) {
     // que el aviso diga la distancia mínima y el tamaño máximo ANTES de que Alberto teclee la orden.
     // `null` cuando no hay historia suficiente — y entonces no se afirma nada sobre el riesgo.
     const distanciaStopPct = ((2 * (ind.atr14 ?? precioRef * 0.02)) / precioRef) * 100
-    const ev = evaluarStop(s.velas, distanciaStopPct)
+    const ev = evaluarStop(velas, distanciaStopPct)
     const stopViable = ev
       ? {
           distanciaPct: Number(distanciaStopPct.toFixed(2)),
@@ -296,6 +312,7 @@ export async function POST(req: NextRequest) {
   // desaparece del análisis sin decirlo se confunde con uno que hoy no dio señal.
   return NextResponse.json({
     fecha, top: ideas.slice(0, 5), total: ideas.length,
+    sinVelas, velasFuente,
     vetados: [...vetados], descartados, suplantados, divergentes,
     contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, desfasados: contraste.desfasados, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
   })
