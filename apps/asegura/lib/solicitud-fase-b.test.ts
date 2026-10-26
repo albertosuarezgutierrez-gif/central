@@ -17,7 +17,7 @@ test('póliza actual: se lee con el LECTOR DE PÓLIZAS existente (no uno nuevo),
   assert.match(f, /leerPoliza\(fichero\.contenido, fichero\.mime, fichero\.nombre, opcionesLector\)/)
   assert.match(f, /leerDocSolicitud\(fichero\.contenido, fichero\.mime, fichero\.nombre, opcionesLector\)/)
   // Lo leído pasa por la validación pura del formulario.
-  assert.match(f, /valoresDePolizaLeida\(polizaLeida, camposDeFila\(f\)\)/)
+  assert.match(f, /valoresDePolizaLeida\(polizaLeida, vigentes\)/)
 })
 
 test('póliza actual en un enlace a ciegas: tampoco abre oportunidad (la lectura se reutiliza solo dentro de la política)', () => {
@@ -46,7 +46,7 @@ test('borrador: CIFRADO, solo en una pendiente viva y NUNCA completa (no toca es
 test('borrador: sin la columna se lee como «nada» (el formulario se abre igual) y se borra al completar', () => {
   const leer = tramo('async function leerBorrador', 'export type ResultadoBorrador')
   assert.match(leer, /catch \(e\) \{[\s\S]*return null/)
-  assert.match(leer, /limpiarBorrador\(camposDeFila\(f\)/)
+  assert.match(leer, /limpiarBorrador\(campos,/)
   const responder = tramo('export async function responderSolicitud', 'if (hecho && ramoLeido === \'hogar\')')
   assert.match(responder, /await limpiarBorradoresMuertos\(prismaAsegura\(\), \{ id: f\.id, correduriaId: f\.correduriaId \}\)/)
 })
@@ -103,5 +103,5 @@ test('SQL de la fase B: columnas nuevas, idempotente, sin tocar el CHECK de comp
 
 test('TERCERO: el borrador que se devuelve pasa por `borradorParaTercero` (sin DNI, nacimiento ni otro dato personal)', () => {
   const t = tramo('export async function solicitudPorToken', 'export type ResultadoDocSolicitud')
-  assert.match(t, /if \(f\.tercero\) return \{ estado: 'ok', ramo, campos: camposDeFila\(f\), tercero: true, borrador: borradorParaTercero\(borrador\) \}/)
+  assert.match(t, /if \(f\.tercero\) return \{ estado: 'ok', ramo, campos: vigentes, tercero: true, borrador: borradorParaTercero\(borrador\) \}/)
 })
