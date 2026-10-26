@@ -1,0 +1,75 @@
+{
+ "sesion": "3d14d276-71a5-5077-91aa-c0cf195e7264",
+ "inicio": "2026-10-26T05:05:36.429Z",
+ "fin": "2026-10-26T05:06:36.410Z",
+ "llamadas": 40,
+ "categorias": {
+  "otro": {
+   "llamadas": 6,
+   "chars_in": 614,
+   "chars_out": 1190,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 5
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 181,
+   "chars_out": 62771,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 2
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 129,
+   "chars_out": 119,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  },
+  "sql": {
+   "llamadas": 13,
+   "chars_in": 3141,
+   "chars_out": 28360,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 13
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 7427,
+   "chars_out": 8311,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "mcp:Booking-com": {
+   "llamadas": 14,
+   "chars_in": 3414,
+   "chars_out": 267440,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking-com__accommodations_search": 14
+   }
+  }
+ }
+}
