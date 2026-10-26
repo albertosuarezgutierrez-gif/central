@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T10:31:04Z",
-  "sha": "7fbcad40318d0e48f903ebf5c11aa721f48f9659",
+  "generadoEn": "2026-10-26T11:00:27Z",
+  "sha": "f6d26f5d57c624538ddb4b8103f82767cdc28eca",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -194853,22 +194853,48 @@
       "ruta": "apps/rrhh/app/admin/layout.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
+        "generateMetadata",
+        "generateViewport",
         "AdminLayout"
       ],
       "funciones": [
+        {
+          "nombre": "marcaDeSesion",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "generateMetadata",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Metadata>",
+          "linea": 13
+        },
+        {
+          "nombre": "generateViewport",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Viewport>",
+          "linea": 14
+        },
         {
           "nombre": "AdminLayout",
           "kind": "function",
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 13,
+          "linea": 24,
           "resumen": "Marco común del panel: branding de la empresa ACTIVA de la sesión, leído en servidor una vez. 🚨 Esto NO es la barrera de seguridad: un layout no se re-ejecuta en cada navegación cliente y los route h"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f6e514fba13"
+      "hash": "602049f1492d"
     },
     {
       "ruta": "apps/rrhh/app/admin/material/page.tsx",
@@ -197544,41 +197570,93 @@
       "ruta": "apps/rrhh/app/login/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
+        "generateMetadata",
+        "generateViewport",
         "Login"
       ],
       "funciones": [
         {
+          "nombre": "marca",
+          "kind": "function",
+          "exportada": false,
+          "params": "searchParams: SP",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "generateMetadata",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: SP }",
+          "retorno": "Promise<Metadata>",
+          "linea": 12
+        },
+        {
+          "nombre": "generateViewport",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: SP }",
+          "retorno": "Promise<Viewport>",
+          "linea": 15
+        },
+        {
           "nombre": "Login",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: SP }",
           "retorno": null,
-          "linea": 3
+          "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "19f88b8e1640"
+      "hash": "712457235867"
     },
     {
       "ruta": "apps/rrhh/app/page.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
+        "generateMetadata",
+        "generateViewport",
         "Home"
       ],
       "funciones": [
         {
+          "nombre": "marca",
+          "kind": "function",
+          "exportada": false,
+          "params": "searchParams: SP",
+          "retorno": null,
+          "linea": 8
+        },
+        {
+          "nombre": "generateMetadata",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: SP }",
+          "retorno": "Promise<Metadata>",
+          "linea": 12
+        },
+        {
+          "nombre": "generateViewport",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: SP }",
+          "retorno": "Promise<Viewport>",
+          "linea": 15
+        },
+        {
           "nombre": "Home",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: SP }",
           "retorno": null,
-          "linea": 3
+          "linea": 22
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "359d2309c278"
+      "hash": "6d0fcb9f34ea"
     },
     {
       "ruta": "apps/rrhh/app/robots.ts",
@@ -197635,7 +197713,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c42f7d054790"
+      "hash": "427d4b9d663a"
     },
     {
       "ruta": "apps/rrhh/components/ActivarPush.tsx",
@@ -197716,15 +197794,15 @@
           "nombre": "AdminShell",
           "kind": "function",
           "exportada": true,
-          "params": "{ children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
+          "params": "{ children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje, marcaAsegura = false }: { marcaAsegura?: boolean; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaj",
           "retorno": null,
-          "linea": 11,
+          "linea": 13,
           "resumen": "Marco del panel del responsable: sidebar + contenido. Presentacional puro: lo monta UNA vez `app/admin/layout.tsx` con el branding de la empresa de la sesión. NO es barrera de seguridad: cada page sig"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "447e23cc10d5"
+      "hash": "6b23d2826952"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -198835,7 +198913,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "68723f8d83fa"
+      "hash": "5a77e45871a6"
     },
     {
       "ruta": "apps/rrhh/lib/avisos.ts",
@@ -200149,6 +200227,27 @@
       "hash": "1a75aa84f2a4"
     },
     {
+      "ruta": "apps/rrhh/lib/host-canonico.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Host canónico del Portal del Empleado. En producción solo se usa desde este dominio; el resto de hosts (central-rrhh.vercel.app) redirigen. /api, estáticos y PWA quedan exentos (crons de Vercel, webhooks y la pasarela de plataforma llaman por el dominio de vercel).",
+      "exporta": [
+        "destinoCanonico"
+      ],
+      "funciones": [
+        {
+          "nombre": "destinoCanonico",
+          "kind": "function",
+          "exportada": true,
+          "params": "entorno: string | undefined, host: string | null | undefined, pathname: string, search = ''",
+          "retorno": "string | null",
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "14318a0ee9ee"
+    },
+    {
       "ruta": "apps/rrhh/lib/informes/cabecera.ts",
       "ambito": "apps/rrhh",
       "resumen": "Texto de cabecera de un informe (título, filtros aplicados, fecha de generación). Módulo PURO.",
@@ -200798,7 +200897,9 @@
         "marcaAseguraDeEmpresa",
         "manifestParaMarca",
         "metadataMarcaAsegura",
-        "themeColorMarca"
+        "themeColorMarca",
+        "marcaPorHost",
+        "marcaDePeticion"
       ],
       "funciones": [
         {
@@ -200807,7 +200908,7 @@
           "exportada": true,
           "params": "empresaId: string | null | undefined, lista: string | null | undefined",
           "retorno": "boolean",
-          "linea": 14,
+          "linea": 15,
           "resumen": "¿Esta empresa lleva la marca Grupo ASegura? `lista` = valor de la env (coma-separado)."
         },
         {
@@ -200816,7 +200917,7 @@
           "exportada": true,
           "params": "marcaAsegura: boolean, colorEmpresa: string | null | undefined",
           "retorno": "Paleta | null",
-          "linea": 21,
+          "linea": 22,
           "resumen": "Paleta efectiva: cobalto ASegura si la empresa lleva la marca; si no, la derivada de su color (o null)."
         },
         {
@@ -200825,7 +200926,7 @@
           "exportada": true,
           "params": "marcaAsegura: boolean, colorEmpresa: string | null | undefined",
           "retorno": "Record<string, string>",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Variables CSS del contenedor del portal. Sin marca ASegura devuelve lo de siempre (color de la empresa)."
         },
         {
@@ -200834,7 +200935,7 @@
           "exportada": true,
           "params": "email: string | null | undefined, base?: string | null",
           "retorno": "string",
-          "linea": 36,
+          "linea": 37,
           "resumen": "Enlace de la tarjeta «Mis seguros». 🚨 REGLA LEGAL: solo viajan `email` (si lo hay) y `origen`. Ningún otro dato del empleado (nombre, DNI, domicilio, empresa_id…) se añade jamás a esta URL."
         },
         {
@@ -200843,7 +200944,7 @@
           "exportada": true,
           "params": "empresaId: string | null | undefined",
           "retorno": "boolean",
-          "linea": 53,
+          "linea": 54,
           "resumen": "¿Esta empresa lleva la marca? Lee la env (una sola fuente para /e, /e/[token] y sus metadatos)."
         },
         {
@@ -200852,7 +200953,7 @@
           "exportada": true,
           "params": "marcaAsegura: boolean",
           "retorno": "string",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Manifest que enlaza el layout de la ruta: el de Grupo ASegura solo con marca; si no, el de siempre."
         },
         {
@@ -200861,7 +200962,7 @@
           "exportada": true,
           "params": "marcaAsegura: boolean",
           "retorno": null,
-          "linea": 63,
+          "linea": 64,
           "resumen": "Metadatos de la ruta con marca (Next los fusiona sobre los del layout). Sin marca → `{}`: nada cambia."
         },
         {
@@ -200870,13 +200971,31 @@
           "exportada": true,
           "params": "marcaAsegura: boolean",
           "retorno": "string | undefined",
-          "linea": 74,
+          "linea": 75,
           "resumen": "Color de la barra del navegador: cobalto con marca, el de siempre sin ella (`undefined` = hereda del layout)."
+        },
+        {
+          "nombre": "marcaPorHost",
+          "kind": "function",
+          "exportada": true,
+          "params": "host: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 81,
+          "resumen": "¿El host de la petición es el dominio propio del portal (empleados.grupoasegura.es)? Ignora puerto y mayúsculas."
+        },
+        {
+          "nombre": "marcaDePeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "host: string | null | undefined, m?: string | string[] | null",
+          "retorno": "boolean",
+          "linea": 86,
+          "resumen": "Marca en / y /login: host propio, o `?m=asegura` (preview/local). `m` puede venir como array en searchParams."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "77dda9aef22c"
+      "hash": "29f6ef8c9947"
     },
     {
       "ruta": "apps/rrhh/lib/material-repo.ts",
@@ -202007,6 +202126,27 @@
       ],
       "rutaApi": null,
       "hash": "7b8f1b198c75"
+    },
+    {
+      "ruta": "apps/rrhh/middleware.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "middleware"
+      ],
+      "funciones": [
+        {
+          "nombre": "middleware",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 5,
+          "resumen": "Portal del Empleado: en producción solo se usa desde empleados.grupoasegura.es."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2a1878815df7"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/agente/page.tsx",
@@ -249165,7 +249305,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5213,
-    "funciones": 20030
+    "archivos": 5215,
+    "funciones": 20043
   }
 }
