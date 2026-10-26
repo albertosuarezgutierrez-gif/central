@@ -11,6 +11,21 @@ import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'play
 import { ErrorTarificador } from './errores.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
 import {
+  BLOQUEO,
+  CONCEPTOS_ACCION,
+  RE_EXCLUIR_DESCARGA,
+  RE_OBJETO_DESCARGA,
+  RE_OBJETO_PROPUESTA,
+  RE_VERBO_DESCARGA,
+  RE_VERBO_DESCARGA_CON_OBJETO,
+  regexBloqueoRotulo,
+  regexPalabras,
+  regexRotuloConAdornos,
+  rotuloMayus,
+  terminoPropio,
+  type Termino,
+} from './vocabulario.ts'
+import {
   ID_CONFIRMAR_DATOS_PERSONAS_GENERALI,
   MEDIADOR_GENERALI,
   PREFIJO_ID_DATOS_PERSONAS_GENERALI,
@@ -1530,14 +1545,18 @@ export const REGLAS_DESCARGA_PROYECTO: Readonly<Record<CompaniaDescargaProyecto,
   generali: { soloConObjeto: true },
 }
 
-const RE_PROHIBIDO_ROTULO_DESCARGA = /\b(emit\w*|contrat\w*|grabar\w*|pagar|pagos?|firm\w*|formaliz\w*|enviar|envio|envia\w*|e-?mail|mail|correo|sms|whatsapp|send|share|compartir|cliente|anular|elimin\w*|borrar|cancelar|aceptar|confirmar|recibos?|domicili\w*|poliza|solicitud)\b/
-const RE_PROHIBIDO_OCULTO_DESCARGA = /(emit|contrat|grabar|pagar|pago|firm|formaliz|enviar|email|mail|sms|anul|elimin|borrar)/
-const RE_AJENO_DESCARGA = /\b(condicion\w*|condicionado|clausulad\w*|manual\w*|ayuda|aplicacion|app|tarifa\w*|bases|politica\w*|privacidad|protocolo|precontractual\w*|ipid|informativ\w*|informacion|extracto|cuestionario|licencia|factura\w*|carta|mandato|catalogo|folleto)\b/
-const RE_VERBO_SUELTO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf)\b/
-const RE_VERBO_CON_OBJETO_DESCARGA = /\b(imprim\w*|descarg\w*|print\w*|download\w*|pdf|documento)\b/
-const RE_OBJETO_DESCARGA = /\b(proyecto|presupuesto|oferta)s?\b/
+// 26/10/2026: los términos (verbos, objetos, documentos ajenos y la lista negra) viven en `vocabulario.ts`, por concepto y con su origen.
+// Aquí solo se añaden los que ESTE fichero es el único autorizado a nombrar (guardián de la raíz) y se aplica la regla de cada compañía.
+/** Términos de la lista negra que solo puede nombrar `guard.ts`. El guard los suma a `BLOQUEO` de `vocabulario.ts` (script de candidatos y test los leen de aquí). */
+export const TERMINOS_BLOQUEO_SOLO_GUARD: readonly Termino[] = Object.freeze([terminoPropio('aceptar', 'allianz+mapfre+generali', '26/10/2026', 'rótulo de descarga: nunca un control de aceptación')])
+
+const RE_PROHIBIDO_ROTULO_DESCARGA = regexBloqueoRotulo(TERMINOS_BLOQUEO_SOLO_GUARD)
+const RE_PROHIBIDO_OCULTO_DESCARGA = regexPalabras(BLOQUEO.atributo_interno, { limites: false })
+const RE_AJENO_DESCARGA = RE_EXCLUIR_DESCARGA
+const RE_VERBO_SUELTO_DESCARGA = RE_VERBO_DESCARGA
+const RE_VERBO_CON_OBJETO_DESCARGA = RE_VERBO_DESCARGA_CON_OBJETO
 /** v0.6.29 (Allianz: «Descargar propuesta», tras «Guardar presupuesto»): «propuesta» SOLO junto a imprimir/descargar/pdf (nunca con «documento» suelto); la lista negra sigue mandando. */
-const RE_OBJETO_PROPUESTA_DESCARGA = /\bpropuestas?\b/
+const RE_OBJETO_PROPUESTA_DESCARGA = RE_OBJETO_PROPUESTA
 
 function sinTildesDescarga(x: string | null | undefined): string {
   return String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -1578,20 +1597,112 @@ export function rechazoOcultoDescargaProyecto(desc: readonly (string | null | un
   return RE_PROHIBIDO_OCULTO_DESCARGA.exec(ocultos)?.[0] ?? null
 }
 
-export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolean; habilitado: boolean }
+/** `attrs`: class, aria-controls, aria-haspopup, aria-expanded y data-* del control (solo para diagnóstico y para reconocer un disparador de menú). */
+export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolean; habilitado: boolean; attrs?: Readonly<Record<string, string>> }
 
-/** Qué control pulsar (el de mejor puntuación; a igualdad, el primero en pantalla) o por qué ninguno. Visible y habilitado. PURA. */
-export function decidirBotonDescargaProyecto(controles: readonly ControlDescargaProyecto[], compania: CompaniaDescargaProyecto, guardado: boolean): { indice: number } | { motivo: string; definitivo: boolean } {
-  const cand = controles.map((c, i) => ({ c, i, p: puntuarBotonDescargaProyecto(c.desc, compania, guardado) })).filter((x) => x.p > 0)
-  if (cand.length === 0) {
-    const bloqueados = controles.map((c) => rechazoOcultoDescargaProyecto(c.desc, compania, guardado)).filter((x): x is string => x !== null)
-    const nota = bloqueados.length > 0 ? ` (hay ${bloqueados.length} control(es) con rótulo de descarga que NO se pulsan porque un atributo interno casa con la lista negra: «${[...new Set(bloqueados)].join('», «')}»)` : ''
-    return { motivo: `no aparece ningún botón de imprimir/descargar el presupuesto o proyecto${nota}`, definitivo: false }
+const NOMBRES_ATRIBUTO_DESCARGA = ['texto', 'aria-label', 'title', 'value', 'id', 'name', 'href', 'onclick', 'formaction', 'ng-click', 'data-ng-click', 'mattooltip']
+const NOMBRES_ATRIBUTO_ANCESTRO = ['onclick', 'ng-click', 'data-ng-click', 'href']
+
+/** Nombre del atributo que ocupa el índice `i` de la descripción de un control de descarga (los ancestros llevan «ancestro N»). PURA. */
+export function nombreAtributoDescarga(i: number): string {
+  if (i < NOMBRES_ATRIBUTO_DESCARGA.length) return NOMBRES_ATRIBUTO_DESCARGA[i]!
+  const k = i - NOMBRES_ATRIBUTO_DESCARGA.length
+  return `ancestro ${Math.floor(k / 4) + 1} ${NOMBRES_ATRIBUTO_ANCESTRO[k % 4]!}`
+}
+
+const normalizarOcultoDescarga = (x: string | null | undefined): string => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+/** Quita de un texto lo que parece dato personal (emails, cifras largas) y colapsa espacios. PURA. */
+export function sanearTextoDiagnosticoDescarga(x: string): string {
+  return x.replace(/[^\s"'<>()]*@[^\s"'<>()]*/g, '@').replace(/\d{4,}/g, '#').replace(/\s+/g, ' ').trim()
+}
+
+/** Extracto de ±30 caracteres alrededor de la palabra `palabra` dentro de `valor` (saneado antes de recortar; si la palabra desaparece al sanear, solo «…»). PURA. */
+export function extractoSaneadoDescarga(valor: string, palabra: string): string {
+  const v = sanearTextoDiagnosticoDescarga(normalizarOcultoDescarga(valor))
+  const i = v.indexOf(palabra)
+  if (i < 0) return '…'
+  const ini = Math.max(0, i - 30)
+  const fin = Math.min(v.length, i + palabra.length + 30)
+  return `${ini > 0 ? '…' : ''}${v.slice(ini, fin)}${fin < v.length ? '…' : ''}`
+}
+
+/** ¿Es un disparador de menú/desplegable (aria-haspopup, aria-expanded, dropdown, mat-menu-trigger)? PURA. */
+export function esDisparadorMenuDescarga(attrs: Readonly<Record<string, string>> | undefined): boolean {
+  if (!attrs) return false
+  const hp = attrs['aria-haspopup']
+  if (hp !== undefined && hp !== 'false') return true
+  if (attrs['aria-expanded'] !== undefined) return true
+  const resto = Object.entries(attrs).filter(([k]) => k === 'class' || k === 'data-toggle' || k === 'data-bs-toggle' || k === 'matmenutriggerfor').map(([, v]) => v.toLowerCase()).join(' ')
+  return /dropdown|mat-menu-trigger|menu-trigger/.test(resto) || 'matmenutriggerfor' in attrs
+}
+
+/** v0.6.30: palabra de la lista negra que casa en class/aria-controls/data-*… del control (no en aria-haspopup/aria-expanded, que son true/false), con su atributo; `null` si ninguna. PURA. */
+export function bloqueoEnAtributosExtraDescarga(attrs: Readonly<Record<string, string>> | undefined): { palabra: string; atributo: string; valor: string } | null {
+  for (const [k, v] of Object.entries(attrs ?? {})) {
+    if (k === 'aria-haspopup' || k === 'aria-expanded') continue
+    const m = RE_PROHIBIDO_OCULTO_DESCARGA.exec(normalizarOcultoDescarga(v))
+    if (m) return { palabra: m[0], atributo: k, valor: v }
   }
+  return null
+}
+
+/**
+ * v0.6.30: diagnóstico de UN control con rótulo de descarga descartado por un atributo interno: qué palabra de la lista negra, en qué atributo
+ * (nombre) y un extracto saneado de ±30 caracteres, más si es disparador de menú. `null` si no es ese caso. No autoriza nada. PURA.
+ */
+export function detalleRechazoOcultoDescarga(c: ControlDescargaProyecto, compania: CompaniaDescargaProyecto, guardado: boolean): string | null {
+  if (puntuarBotonDescargaProyecto([c.desc[0], c.desc[1], c.desc[2], c.desc[3], c.desc[11]], compania, guardado) === 0) return null
+  const menu = esDisparadorMenuDescarga(c.attrs) ? ' [disparador de menú]' : ''
+  for (let i = 4; i < c.desc.length; i++) {
+    const v = c.desc[i]
+    if (!v) continue
+    const m = RE_PROHIBIDO_OCULTO_DESCARGA.exec(normalizarOcultoDescarga(v))
+    if (m) return `«${m[0]}» en ${nombreAtributoDescarga(i)} («${extractoSaneadoDescarga(v, m[0])}»)${menu}`
+  }
+  const e = bloqueoEnAtributosExtraDescarga(c.attrs)
+  return e ? `«${e.palabra}» en ${e.atributo} («${extractoSaneadoDescarga(e.valor, e.palabra)}»)${menu}` : null
+}
+
+/** v0.6.30: ¿pasa la lista blanca Y ni class/aria-controls/data-* casan la lista negra? Es lo que se pulsa como descarga. PURA. */
+export function esControlDescargableProyecto(c: ControlDescargaProyecto, compania: CompaniaDescargaProyecto, guardado: boolean): boolean {
+  return puntuarBotonDescargaProyecto(c.desc, compania, guardado) > 0 && bloqueoEnAtributosExtraDescarga(c.attrs) === null
+}
+
+/** Ligaduras de iconos de menú tal y como las deja `sinTildesDescarga` (el `_` ya es espacio). */
+const ICONOS_MENU_DESCARGA = /\b(arrow drop down|arrow drop up|expand more|expand less|keyboard arrow down|keyboard arrow up|more vert|more horiz)\b/g
+
+/**
+ * v0.6.30: ¿es este control un DISPARADOR DE MENÚ cuyo rótulo es «Descargar propuesta» y que solo se puede ABRIR (un clic) sin riesgo?
+ * Exige: visible, habilitado, disparador de menú (aria-haspopup/aria-expanded/dropdown), rótulo entero «Descargar propuesta» (iconos aparte) sin
+ * nada de bloqueo en NINGÚN rótulo, y que la lista negra de atributos solo case en id/name (o en class/aria-controls/data-*, que no van aquí):
+ * un href, onclick, formaction, ng-click o manejador de un ancestro con «sms»/«enviar»… lo descarta (pulsarlo podría enviar). PURA.
+ */
+export function puedeAbrirMenuDescarga(c: ControlDescargaProyecto, compania: CompaniaDescargaProyecto, guardado: boolean): boolean {
+  if (!c.visible || !c.habilitado || !esDisparadorMenuDescarga(c.attrs)) return false
+  const rotulo = [c.desc[0], c.desc[1], c.desc[2], c.desc[3]].map((x) => sinTildesDescarga(x).replace(ICONOS_MENU_DESCARGA, ' ').replace(/\s+/g, ' ').trim()).find((t) => t !== '')
+  if (rotulo !== 'descargar propuesta') return false
+  if (puntuarBotonDescargaProyecto([c.desc[0], c.desc[1], c.desc[2], c.desc[3], c.desc[11]], compania, guardado) === 0) return false
+  // Criterio de seguridad (coordinador, 26/10/2026): NINGÚN atributo (id, name, class, aria-controls, data-*, manejadores, href, ancestros) casa bloqueo.
+  for (let i = 4; i < c.desc.length; i++) {
+    if (i === 11) continue
+    if (RE_PROHIBIDO_OCULTO_DESCARGA.test(normalizarOcultoDescarga(c.desc[i]))) return false
+  }
+  return bloqueoEnAtributosExtraDescarga(c.attrs) === null
+}
+
+/** Qué control pulsar (el de mejor puntuación; a igualdad, el primero en pantalla) o por qué ninguno (+ `abrirMenu`: índice de un disparador de menú «Descargar propuesta» que se puede abrir). Visible y habilitado. PURA. */
+export function decidirBotonDescargaProyecto(controles: readonly ControlDescargaProyecto[], compania: CompaniaDescargaProyecto, guardado: boolean): { indice: number } | { motivo: string; definitivo: boolean; abrirMenu?: number } {
+  const cand = controles.map((c, i) => ({ c, i, p: esControlDescargableProyecto(c, compania, guardado) ? puntuarBotonDescargaProyecto(c.desc, compania, guardado) : 0 })).filter((x) => x.p > 0)
+  const bloqueados = [...new Set(controles.map((c) => detalleRechazoOcultoDescarga(c, compania, guardado)).filter((x): x is string => x !== null))]
+  const nota = bloqueados.length > 0 ? ` (hay ${bloqueados.length} control(es) con rótulo de descarga que NO se pulsan porque un atributo interno casa con la lista negra: ${bloqueados.join('; ')})` : ''
+  const abrir = controles.findIndex((c) => puedeAbrirMenuDescarga(c, compania, guardado))
+  const conMenu = abrir >= 0 ? { abrirMenu: abrir } : {}
+  if (cand.length === 0) return { motivo: `no aparece ningún botón de imprimir/descargar el presupuesto o proyecto${nota}`, definitivo: false, ...conMenu }
   const visibles = cand.filter((x) => x.c.visible)
-  if (visibles.length === 0) return { motivo: `hay ${cand.length} botón(es) de descarga pero OCULTO(s) (puede estar plegado)`, definitivo: false }
+  if (visibles.length === 0) return { motivo: `hay ${cand.length} botón(es) de descarga pero OCULTO(s) (puede estar plegado)${nota}`, definitivo: false, ...conMenu }
   const habilitados = visibles.filter((x) => x.c.habilitado)
-  if (habilitados.length === 0) return { motivo: 'el botón de descarga está deshabilitado', definitivo: false }
+  if (habilitados.length === 0) return { motivo: `el botón de descarga está deshabilitado${nota}`, definitivo: false }
   const mejor = Math.max(...habilitados.map((x) => x.p))
   return { indice: habilitados.find((x) => x.p === mejor)!.i }
 }
@@ -1606,7 +1717,7 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
     const l = await marco
       .evaluate((sel) => {
         document.querySelectorAll('[data-rpa-dl]').forEach((n) => n.removeAttribute('data-rpa-dl'))
-        const out: { desc: (string | null)[]; visible: boolean; habilitado: boolean; marca: number }[] = []
+        const out: { desc: (string | null)[]; visible: boolean; habilitado: boolean; marca: number; attrs: Record<string, string> }[] = []
         for (const n of Array.from(document.querySelectorAll(sel))) {
           if (out.length >= 300) break
           if (n.querySelector('button, a, [role="button"], input[type="button"], input[type="submit"]')) continue
@@ -1620,6 +1731,10 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
             anc.push(p.getAttribute('onclick'), p.getAttribute('ng-click'), p.getAttribute('data-ng-click'), p.tagName === 'A' ? p.getAttribute('href') : null)
             p = p.parentElement
           }
+          const attrs: Record<string, string> = {}
+          for (const a of Array.from(h.attributes)) {
+            if (a.name === 'class' || a.name === 'aria-controls' || a.name === 'aria-haspopup' || a.name === 'aria-expanded' || a.name === 'matmenutriggerfor' || (a.name.startsWith('data-') && a.name !== 'data-rpa-dl')) attrs[a.name] = a.value.slice(0, 200)
+          }
           const marca = out.length
           h.setAttribute('data-rpa-dl', String(marca))
           out.push({
@@ -1631,6 +1746,7 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
             visible,
             habilitado: !(h.disabled === true || h.hasAttribute('disabled') || h.getAttribute('aria-disabled') === 'true' || /\bmat(?:-mdc)?-button-disabled\b/.test(h.className?.toString?.() ?? '')),
             marca,
+            attrs,
           })
         }
         return out
@@ -1641,11 +1757,12 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
   return salida
 }
 
-export type BusquedaDescargaProyecto = { boton: Locator; etiqueta: string } | { motivo: string }
+export type BusquedaDescargaProyecto = { boton: Locator; etiqueta: string } | { motivo: string; menu?: { boton: Locator; etiqueta: string } }
 
 /**
  * Busca (SIN pulsar) el botón de descargar el proyecto/presupuesto hasta `esperaMs`. Sin él → `motivo` con las etiquetas saneadas de lo que hay
- * a la vista (sin datos personales). Nunca lanza salvo una violación del guard (`guard.comprobar()`).
+ * a la vista (sin datos personales) y, si hay un disparador de menú «Descargar propuesta» que solo se puede abrir (`puedeAbrirMenuDescarga`), `menu`.
+ * Nunca lanza salvo una violación del guard (`guard.comprobar()`).
  */
 export async function buscarBotonDescargaProyecto(page: Page, guard: GuardEmision, compania: CompaniaDescargaProyecto, guardado: boolean, esperaMs = 6_000): Promise<BusquedaDescargaProyecto> {
   const hasta = Date.now() + esperaMs
@@ -1661,10 +1778,29 @@ export async function buscarBotonDescargaProyecto(page: Page, guard: GuardEmisio
     }
     if (Date.now() >= hasta) {
       const vis = etiquetasControlesSaneadas(controles.filter((c) => c.visible).map((c) => etiquetaEfectivaControl({ texto: c.desc[0], aria: c.desc[1], title: c.desc[2], valor: c.desc[3] })))
-      return { motivo: `${d.motivo}${sufijoControlesVisibles(vis)}` }
+      const motivo = `${d.motivo}${sufijoControlesVisibles(vis)}`
+      if (d.abrirMenu !== undefined) {
+        const m = controles[d.abrirMenu]!
+        const boton = m.marco.locator(`[data-rpa-dl="${m.marca}"]`)
+        if ((await boton.count().catch(() => 0)) === 1) return { motivo, menu: { boton, etiqueta: etiquetaEfectivaControl({ texto: m.desc[0], aria: m.desc[1], title: m.desc[2], valor: m.desc[3] }) } }
+      }
+      return { motivo }
     }
     await page.waitForTimeout(500)
   }
+}
+
+/** Lee en VIVO los atributos de menú del control (misma lista que el escáner). Solo lectura. */
+async function atributosMenuVivos(boton: Locator): Promise<Record<string, string>> {
+  return boton
+    .evaluate((el) => {
+      const attrs: Record<string, string> = {}
+      for (const a of Array.from(el.attributes)) {
+        if (a.name === 'class' || a.name === 'aria-controls' || a.name === 'aria-haspopup' || a.name === 'aria-expanded' || a.name === 'matmenutriggerfor' || (a.name.startsWith('data-') && a.name !== 'data-rpa-dl')) attrs[a.name] = a.value.slice(0, 200)
+      }
+      return attrs
+    })
+    .catch(() => ({}))
 }
 
 /**
@@ -1678,7 +1814,11 @@ export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision
   if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: no hay exactamente un control')
   const desc = await descripcion(boton)
   comprobarBoton(desc)
-  if (!esBotonDescargaProyecto(desc, compania, guardado)) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: el control vivo no pasa la lista blanca')
+  const vivo = { desc, visible: true, habilitado: true, attrs: await atributosMenuVivos(boton) }
+  if (!esControlDescargableProyecto(vivo, compania, guardado)) {
+    // v0.6.30: único otro clic posible = ABRIR el menú «Descargar propuesta» (disparador de menú, sin bloqueo en rótulo ni en manejadores/href).
+    if (!puedeAbrirMenuDescarga(vivo, compania, guardado)) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: el control vivo no pasa la lista blanca')
+  }
   await boton.click({ timeout: 8_000 })
   guard.comprobar()
 }
@@ -1696,7 +1836,7 @@ export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision
 // lanza `guard.comprobar()`) se relanza: fail-closed, el trabajo cae entero.
 
 /** Texto EXACTO (sin tildes, mayúsculas, espacios colapsados) del único botón que se pulsa. */
-export const TEXTO_GENERAR_PROYECTO_MAPFRE = 'GENERAR PROYECTO'
+export const TEXTO_GENERAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.generar_proyecto, 'rotulos', 'generar proyecto')
 /** Cuánto se espera a leer el nº de proyecto tras el clic (modal «Generando proyecto» incluido). */
 export const MS_PROYECTO_MAPFRE = 45_000
 const SEL_DIALOGOS_MAPFRE = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
@@ -1721,7 +1861,7 @@ export function esBotonGenerarProyectoMapfre(descripciones: readonly (string | n
 }
 
 /** v0.8.17: texto EXACTO del botón final alternativo de la pantalla/diálogo que abre «Ir a generar proyecto» (solo allí, nunca en «Coberturas»). */
-export const TEXTO_GUARDAR_PROYECTO_MAPFRE = 'GUARDAR PROYECTO'
+export const TEXTO_GUARDAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.guardar_proyecto, 'rotulos', 'guardar proyecto')
 
 /** ¿Es el texto de un botón final permitido? «Generar Proyecto» siempre; «Guardar proyecto» solo con `conGuardar` (pantalla tras «Ir a generar proyecto»). Sin tildes/mayúsculas. PURA. */
 export function esEtiquetaFinalProyectoMapfre(etiqueta: string | null | undefined, conGuardar = false): boolean {
@@ -1730,7 +1870,7 @@ export function esEtiquetaFinalProyectoMapfre(etiqueta: string | null | undefine
 }
 
 /** v0.8.16: texto EXACTO del único control de navegación que se pulsa si «Generar Proyecto» no está en «Coberturas». */
-export const TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE = 'IR A GENERAR PROYECTO'
+export const TEXTO_IR_A_GENERAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.ir_a_generar_proyecto, 'rotulos', 'ir a generar proyecto')
 
 /**
  * v0.8.16 (22/10/2026, run real: en «Coberturas» solo había «Ir a generar proyecto», que lleva a la vista del botón «Generar Proyecto»).
@@ -4009,7 +4149,7 @@ export function textoEmisionGenerali(texto: string): boolean {
   return casaEmisionGenerali(texto) !== null
 }
 
-const RE_EMISION_GENERALI = /\b(emitir|contratar|grabar (la )?poliza|pagar|firmar|formalizar)\b/
+const RE_EMISION_GENERALI = regexPalabras(BLOQUEO.emision_pagina)
 const sinTildesMinus = (x: string) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 /**
@@ -4061,12 +4201,15 @@ export function sinSeccionPrecontractualGenerali(texto: string): string {
   return fuera.join('\n').replace(/documentaci[oó]n precontractual/gi, '')
 }
 
+/** 26/10/2026: el término «siguiente» sale de `vocabulario.ts` (concepto `avanzar`); aquí solo los adornos admitidos al final (`›`, `>`, `»`, espacios, NBSP). */
+const RE_SIGUIENTE_GENERALI = regexRotuloConAdornos(CONCEPTOS_ACCION.avanzar.grupos.siguiente[0]!)
+
 /**
  * v0.2.29: texto del botón «Siguiente» tal como lo pinta Generali: «Siguiente ›» (prueba real con 0.2.28). Tras normalizar, la palabra EXACTA
  * «Siguiente» seguida solo de adornos al final (`›`, `>`, `»`, espacios, incl. NBSP). Nada antes, nada de otras palabras. PURA.
  */
 export function esTextoSiguienteGenerali(texto: string): boolean {
-  return /^SIGUIENTE[\s ›>»]*$/.test(textoMenu(String(texto ?? '').replace(/ /g, ' ')))
+  return RE_SIGUIENTE_GENERALI.test(textoMenu(String(texto ?? '').replace(/ /g, ' ')))
 }
 
 /** Prefijo de los ids del bloque «Interesado / Tomador» del formulario de valoración. */

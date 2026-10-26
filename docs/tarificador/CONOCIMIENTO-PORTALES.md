@@ -79,6 +79,11 @@
 
 | Fecha | Compañía | Síntoma | Causa | Regla común / qué cambió | Test o cepo |
 |---|---|---|---|---|---|
+| 26/10/2026 | Mapfre | «Figuras» de coche sin `app-historial-siniestralidad`: solo etiquetas «Compañia», «Procedencia Siniestralidad», «Siniestros», «Bonus Malus»; el bot paraba sin compañía anterior (0.8.23) | El portal pinta otra variante de Figuras; el selector del bloque no existía | La compañía anterior se busca también por la ETIQUETA exacta «Compañia» (un `mat-select` visible y habilitado; si no, el hueco de siempre). La etiqueta es el concepto `compania_anterior` de `src/vocabulario.ts` | `test/mapfre-v0824.test.ts`, `test/vocabulario.test.ts` |
+| 26/10/2026 | Mapfre | «Generar Proyecto» no deja guardar el proyecto: faltan datos obligatorios en el formulario que abre «Ir a generar proyecto» (0.8.22) | Ese formulario pide el CONTACTO DEL TOMADOR (teléfono móvil, email, nombre) y revalida «Clase», «Valido desde» y «1ª Matriculación» con otro control | Se rellena el contacto SOLO si el riesgo lo trae (nunca se inventa; sin dato → aviso y no se pulsa); lo ya tecleado se re-confirma por el mismo camino. Interruptor `MAPFRE_PROYECTO_CONTACTO` | `test/mapfre-v0822.test.ts` |
+| 26/10/2026 | Allianz | No se descargaba el PDF tras «Guardar presupuesto»: el botón se llama «Descargar propuesta» (0.6.29) | El buscador de descarga solo conocía proyecto/presupuesto/oferta | «propuesta» cuenta SOLO junto a imprimir/descargar/pdf (nunca con «documento» suelto); la lista de bloqueo sigue mandando («Contratar propuesta» no pasa). Término en el concepto `descargar_documento` del vocabulario | `test/allianz-propuesta.test.ts`, `test/vocabulario.test.ts` |
+| 26/10/2026 | Generali | El precio salía de la pantalla de garantías con varias cifras (0.2.30); el importe de verdad está en la tabla «Modalidades de Seguro» (0.2.31) | Columnas «Recibo Anual» y «Prima Anualidad» por modalidad; la modalidad MARCADA es la elegida | Precio = «Recibo Anual» de la modalidad marcada; sin marcada y con varias filas, la más barata y las demás como aviso. Sin columnas localizables (0.2.34): primera cifra de la fila con aviso «revisar en la emisión». Cabeceras en el vocabulario (`recibo_anual`, `prima_anualidad`, `modalidades`) | `test/generali-v0231.test.ts`, `test/generali-v0234.test.ts` |
+| 26/10/2026 | Generali | La pestaña «Garantías y Resultados» no cambiaba la pantalla (0.2.26); el avance real es el botón «Siguiente ›» (0.2.28-0.2.29) | El botón se pinta con adorno («Siguiente ›») y el texto exacto «Siguiente» no casaba | Texto ENTERO «Siguiente» seguido solo de adornos finales (`›`, `>`, `»`, NBSP); nunca si la página o un diálogo muestran emitir/contratar/grabar póliza/pagar/firmar. Término en el concepto `avanzar` del vocabulario | `test/generali-v0229.test.ts`, `test/vocabulario.test.ts` |
 | 15/10/2026 | Mapfre | Presencia de campos dada por buena con elementos ocultos (mat-select de uso/ámbito en el DOM) | Contar sobre el DOM, no sobre lo visible (bots 0.8.2→0.8.5) | Contar presencia solo con elementos VISIBLES (`locator('visible=true')`) | — |
 | 15/10/2026 | Mapfre | Campo de texto recién escrito que el portal vacía | Escritura sin esperar a que el campo se asiente (bots 0.8.2→0.8.5) | Tras escribir: blur + esperar sin `ng-pending` ni spinner; si el portal lo vacía, error `portal` | — |
 | 15/10/2026 | Mapfre | `fill` sobre «siniestros» cuando el campo viene DESHABILITADO | No consta (bots 0.8.2→0.8.5) | Esperar a que sea editable antes de cada `fill`. Con 0 siniestros se deja como está; con >0 → atasco | — |
@@ -108,6 +113,25 @@
 | previa | Allianz | Un POST nuevo no lo vio la grabación | La grabación no registra la red | Ventana de red que aborta los no-GET fuera de la lista; si sale un POST nuevo, el trabajo muere hasta verlo | — |
 | previa | Allianz | Precio «Anual» distinto del portal | «Anual» = primer recibo prorrateado; «Sucesivos» = prima anual | Verificar el precio contra el portal con una cotización conocida antes de confiar en el lector | — |
 
+### Vocabulario común (26/10/2026)
+
+> Lo que aprende un bot sobre los RÓTULOS de un portal tiene que servir al siguiente bot y a otros ramos. Código: `services/tarificador-rpa/src/vocabulario.ts`
+> (puro, sin Playwright); candidatos nuevos: `services/tarificador-rpa/scripts/vocabulario-candidatos.ts`. Cepo: `test/vocabulario.test.ts`.
+
+- **Por concepto, no por compañía**, con ramo opcional (sin ramo = común). Cada término lleva su ORIGEN (compañía + fecha). Tres listas separadas y tipadas:
+  - **Lectura** (`CONCEPTOS_LECTURA`): etiquetas y cabeceras que el bot solo lee (precio, recibo anual, prima anualidad, compañía anterior, fechas, años asegurado…).
+  - **Acción** (`CONCEPTOS_ACCION`): rótulos de botones que se pulsan (avanzar, calcular, generar/guardar proyecto, descargar documento). Estar en la lista **no autoriza ningún clic**:
+    pulsar sigue siendo cosa de `pulsar()` y su familia en `guard.ts`.
+  - **Bloqueo** (`BLOQUEO`): emitir, contratar, pagar, firmar, formalizar, grabar póliza, enviar… **Siempre gana sobre una acción** (`clasificarRotulo` lo mira primero).
+    Los términos que solo puede nombrar `guard.ts` (guardián de la raíz) viven en `TERMINOS_BLOQUEO_SOLO_GUARD` y el guard los suma.
+- **Migrado ya** (mismo comportamiento, comprobado con regexes antiguos congelados en el test): descarga de proyecto/presupuesto/propuesta, «Siguiente ›», «Generar/Guardar/Ir a generar
+  proyecto» de Mapfre, etiquetas de precio y de «Datos de Valoración» de Generali, cabeceras de la tabla de modalidades y «Compañia» de Mapfre.
+- **Aprendizaje automático (propuesta, nunca runtime):** el script lee avisos (`seguros.tarificacion_precios.avisos`) y errores (`seguros.tarificacion_trabajos.error->>'mensaje'`; NUNCA
+  la columna `riesgo`), extrae los rótulos de «controles a la vista», «etiquetas:», «Botones:» y «Tablas:» que NO están en el vocabulario y los clasifica por concepto: lectura =
+  auto-aplicable, acción = requiere revisión, lo que casa el bloqueo = descartado. Una persona (o un PR draft) los añade a `vocabulario.ts`.
+- **Al dar de alta un bot:** parte del vocabulario (MANUAL-NUEVO-BOT.md, «Parte del vocabulario»); si el portal usa un sinónimo nuevo de un concepto conocido, se AÑADE al
+  vocabulario con su origen, no se copia en el adaptador (el test lo vigila: ≥3 términos de un concepto en un patrón fuera de `vocabulario.ts` rompen).
+
 ### Receta corta: añadir un producto
 
 > Versión completa y pasos de verificación: `docs/tarificador/MANUAL-NUEVO-BOT.md`.
@@ -129,19 +153,21 @@
 
 ### Auto
 
-| Clave canónica | Allianz | Mapfre (NSEI) |
-|---|---|---|
-| `efecto.fecha` | — | «Fecha Condiciones» (paso 1, datos básicos) |
-| `tomador.nif` | — | `codigoDocumento` (datos básicos, NIF/CIF con lupa) |
-| `vehiculo.matricula` | — | `matricula` (`app-datos-vehiculo`) |
-| `vehiculo.codigo_postal` | — | `cpCirculacion` (CP de circulación) |
-| `vehiculo.marca` / `vehiculo.modelo` | — | Sin separar: una sola «denominación comercial» (buscador `txtPredictivo`) |
-| `vehiculo.cilindrada_cc` | — | Columna «cc» del diálogo «Selección de vehículo» |
-| `conductor.fecha_nacimiento` | — | `fechaNacimiento` (`app-conductor-habitual`) |
-| `conductor.fecha_carne` | — | `fechaExpedicion` (`app-conductor-habitual`) |
-| `historial.siniestros_5_anios` | — | «Siniestros RC 5 últimos años» (`siniestros`) |
-| `historial.anios_asegurado` | — | `tiempoAntComp`: lo calcula el portal, llega DESHABILITADO; nunca se escribe |
-| `conductor.clase_permiso` | — | «Clase *» (acordeón «Permiso Conducir», paso 3 Figuras; `codigoTipoLicencia`): la que TIENE el conductor (dato real); si no consta y el vehículo exige más que B, el bot PARA. Mínimo DGT (`claseMinimaPermiso`): turismo/ciclomotor ≤50 cc «B»; ≤125 cc y ≤11 kW «B» con B ≥3 años (si no «A1»); ≤35 kW «A2»; más «A». Sintético por defecto «B» |
+| Clave canónica | Allianz | Mapfre (NSEI) | Generali (mediadores) |
+|---|---|---|---|
+| `efecto.fecha` | — | «Fecha Condiciones» (paso 1, datos básicos) | — |
+| `tomador.nif` | — | `codigoDocumento` (datos básicos, NIF/CIF con lupa) | `reg1063A_personas_interesado_nifcif` (bloque «Interesado / Tomador» de «Datos de Valoración») |
+| `vehiculo.matricula` | — | `matricula` (`app-datos-vehiculo`) | Con ASTERISCO entre cifras y letras («1234*BCD»), también en el campo de verificación (opcional) |
+| `vehiculo.codigo_postal` | — | `cpCirculacion` (CP de circulación) | «CODIGO POSTAL» · «C P» · «CP» (mapa provisional de «Datos de Valoración») |
+| `vehiculo.marca` / `vehiculo.modelo` | — | Sin separar: una sola «denominación comercial» (buscador `txtPredictivo`) | Desplegables de tipo, subtipo, marca, modelo y versión (el vehículo llega confirmado de Allianz/Mapfre; casado exacto → palabra entera → uno solo) |
+| `vehiculo.cilindrada_cc` | — | Columna «cc» del diálogo «Selección de vehículo» | — |
+| `conductor.fecha_nacimiento` | — | `fechaNacimiento` (`app-conductor-habitual`) | «FECHA DE NACIMIENTO» · «FECHA NACIMIENTO» · «F NACIMIENTO» |
+| `conductor.fecha_carne` | — | `fechaExpedicion` (`app-conductor-habitual`) | «FECHA DE CARNE/CARNET» · «FECHA EXPEDICION CARNE/CARNET/PERMISO» · «FECHA DE EXPEDICION DEL CARNE/CARNET/PERMISO» |
+| `historial.siniestros_5_anios` | — | «Siniestros RC 5 últimos años» (`siniestros`) | «SINIESTROS ULTIMOS 5 ANOS» · «N SINIESTROS ULTIMOS 5 ANOS» · «NUMERO DE SINIESTROS» · «SINIESTROS CON CULPA ULTIMOS 5 ANOS» |
+| `historial.anios_asegurado` | — | `tiempoAntComp`: lo calcula el portal, llega DESHABILITADO; nunca se escribe | «ANOS ASEGURADO(S)» · «ANOS DE ASEGURAMIENTO» · «ANOS ASEGURADO ANTERIOR» · «ANOS EN LA COMPANIA ANTERIOR» |
+| `conductor.clase_permiso` | — | «Clase *» (acordeón «Permiso Conducir», paso 3 Figuras; `codigoTipoLicencia`): la que TIENE el conductor (dato real); si no consta y el vehículo exige más que B, el bot PARA. Mínimo DGT (`claseMinimaPermiso`): turismo/ciclomotor ≤50 cc «B»; ≤125 cc y ≤11 kW «B» con B ≥3 años (si no «A1»); ≤35 kW «A2»; más «A». Sintético por defecto «B» | — |
+
+> Columna Generali: solo lo que consta en `services/tarificador-rpa/src/adapters/generali/` (etiquetas de `ETIQUETAS_RIESGO_GENERALI`, que ahora salen de `src/vocabulario.ts`). Los sinónimos de estas etiquetas viven en el **vocabulario común** (apartado de abajo): un bot nuevo parte de ahí.
 
 Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (`mat-select`; Mapfre: `uso`, `ambitoCirculacion`) y compañía anterior (`companiaAnterior`).
 
@@ -311,8 +337,14 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
   - Botón exacto de guardar en «Proyectos».
   - Cómo sale el PDF.
 
-## Generali (mediadores) — sin bot aún
+## Generali (mediadores) — bot Auto (Turismos) en marcha
 
+- **Bot:** `services/tarificador-rpa/src/adapters/generali/auto.ts` (reglas puras en `reglas.ts`; versión actual `VERSION_GENERALI_AUTO`, 0.2.34 el 26/10/2026).
+  Turismos (Ramo UV); moto, después. Mapa de pantallas: `services/tarificador-rpa/docs/generali-mapa-capturas.md`.
+- **Flujo:** login (Okta) → «Seleccionar mediador» (cascada; se elige el mediador de la correduría por código EXACTO) → menú NEGOCIO › EMISIÓN ›
+  CONTRATACIÓN › AUTOMÓVILES › TURISMOS → «Valoración Riesgo» / «Datos de Valoración» (vehículo por desplegables, tomador, conductor, antecedentes) →
+  «Siguiente ›» → «Garantías y Capitales opcionales» (precio). Hasta el precio; sin emitir. La entrada al menú y la confirmación del mediador solo van
+  por el guard (`entrarTurismosGenerali`, `confirmarMediadorGenerali`).
 - **SMS de confirmación cada 30 días** en el acceso. Decisión de Alberto: el bot pide el código por Telegram
   (solo a su chat, máx. 5 min, sin reenviar SMS, el código nunca se registra).
 - **«Equipo recordado»:** el bot conserva cifrado el equipo recordado (`services/tarificador-rpa/src/boveda-sesion.ts`).
