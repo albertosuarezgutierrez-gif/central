@@ -1621,6 +1621,14 @@ export function decidirBotonGenerarProyectoMapfre(controles: readonly ControlPro
     const en = elegidos.filter((x) => x.c.enCoberturas)
     if (en.length === 1) elegidos = en
   }
+  // v0.8.18: el portal real repite el MISMO botón (duplicado del DOM). Si todos los candidatos tienen exactamente el mismo texto, se pulsa uno determinista:
+  // el único habilitado; con varios, el único de `app-coberturas` (no hay otra noción de «producto elegido» en el DOM) o, si no, el primero visible y habilitado.
+  // Textos distintos (p. ej. «Generar Proyecto» y «Guardar proyecto» a la vez) siguen siendo ambiguos.
+  if (elegidos.length > 1 && elegidos.every((x) => sinTildesMayus(x.c.etiqueta) === sinTildesMayus(elegidos[0]!.c.etiqueta))) {
+    const hab = elegidos.filter((x) => x.c.habilitado)
+    if (hab.length > 0) elegidos = [hab[0]!]
+    else elegidos = [elegidos[0]!]
+  }
   if (elegidos.length > 1) return { motivo: `hay ${elegidos.length} botones finales de proyecto (ambiguo: no se pulsa ninguno)`, definitivo: true }
   const unico = elegidos[0]!
   if (!unico.c.habilitado) return { motivo: 'el botón «Generar Proyecto» está deshabilitado', definitivo: false }

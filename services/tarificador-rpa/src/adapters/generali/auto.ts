@@ -225,7 +225,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * que autocomplete el portal al salir del NIF, y pulsa «Confirmar» SOLO por `ctx.confirmarDatosPersonasGenerali` (guard: #confirmar, marco
  * emiAutosGenB028.do, pestaña «Datos personas»). Cualquier otro «Confirmar» de Generali lo rechaza `pulsar`. Nunca casillas ni emisión.
  */
-export const VERSION_GENERALI_AUTO = '0.2.25'
+export const VERSION_GENERALI_AUTO = '0.2.26'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
