@@ -3860,6 +3860,99 @@ h1 em {
   padding: 2rem 16px;
 }
 
+/* ── La carátula con la MARCA del portal (26/10/2026) ───────────────────────
+ * Alberto, con un enlace real de hogar: «letras en negro y no azul corporativo». La carátula vive FUERA del armazón
+ * `(portal)` (sin sesión), así que heredaba los tokens de `@central/brand` pero no los gestos que el armazón pone a
+ * su contenido, y el logo (`currentColor`) salía en el negro del texto. Aquí, con los MISMOS tokens: logotipo y titular
+ * en cobalto (`--primary`), Quicksand (`--display`) en titulares, etiquetas y botones, Nunito Sans en el cuerpo, y la
+ * atmósfera de la web. Vale para `/datos` y `/presupuesto`. */
+.caratula .entrada-marca { color: var(--primary); }
+.caratula .caratula-titulo,
+.caratula h1 {
+  font-size: 26px;
+  margin-top: 0;
+  color: var(--primary);
+}
+.caratula-datos { max-width: 560px; position: relative; }
+.caratula-datos::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 22rem;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in oklab, var(--brand) 7%, transparent), transparent);
+}
+.datos-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.datos-nivel, .datos-bloque { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.datos-seccion {
+  font-family: var(--display, var(--sans));
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 10px 0 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in oklab, var(--primary) 20%, var(--border));
+}
+.datos-form .editor-campo > label,
+.datos-form legend,
+.datos-subida-titulo,
+.datos-tarjeta-titulo {
+  font-family: var(--display, var(--sans));
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+.datos-form .boton,
+.datos-form .boton-tenue { font-family: var(--display, var(--sans)); }
+.datos-form .boton-tenue {
+  color: var(--primary);
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+}
+.datos-subida {
+  border: 1px dashed color-mix(in oklab, var(--primary) 55%, transparent);
+  border-radius: 12px;
+  padding: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  position: relative;
+  background: color-mix(in oklab, var(--primary) 4%, var(--surface));
+}
+.datos-tarjeta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  background: var(--primary-light);
+}
+.datos-tarjeta-dato { font-size: 17px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.datos-tarjeta-botones { display: grid; gap: 8px; }
+@media (min-width: 420px) { .datos-tarjeta-botones { grid-template-columns: 1fr 1fr; } }
+.datos-aviso-opcional {
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--primary) 8%, var(--surface));
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.datos-aviso-opcional strong { color: var(--primary); font-family: var(--display, var(--sans)); }
+.datos-nolose {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+  justify-self: start;
+}
+.datos-nolose input { width: 20px; height: 20px; }
+
 /* Una sola columna hasta que de verdad caben dos tarjetas legibles. `minmax(0,
  * 1fr)` y no `1fr`: la pista implícita de un grid se dimensiona con su
  * contenido más ancho, y un nombre de producto largo arrastraría la página

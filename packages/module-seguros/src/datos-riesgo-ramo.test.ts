@@ -126,6 +126,8 @@ test('precarga de póliza: solo lo que hay, sin cifrado ni valores de cajón; nu
   assert.deepEqual(v, { direccion: 'Calle Socorro 24', municipio: 'Sevilla', cp: '41003', metrosCuadrados: 290 })
   assert.deepEqual(precargaViviendaDePoliza({ direccion: 'v1:abc:def:ghi', cp: 'N/A' }), {})
   assert.deepEqual(precargaViviendaDePoliza(null), {})
+  // 26/10/2026: los capitales de la póliza de CIMA (texto del volcado) también; 0 o vacío = sin dato.
+  assert.deepEqual(precargaViviendaDePoliza({ continente: '61000', contenido: '0' }), { capitalContinente: 61000 })
   const bloque = leerBloqueDeRamo('hogar', {}, v)
   assert.equal(bloque.dePoliza, true)
   assert.equal(bloque.datos.confirmadoAt, null)

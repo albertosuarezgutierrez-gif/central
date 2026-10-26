@@ -1,0 +1,95 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { camposSolicitud, NADA_CONOCIDO } from '@central/module-seguros'
+import { esencialesPendientes, opcionesVisibles, textoTarjetaVivienda, valoresConfirmadosCatastro, visibleSegunCatastro, type ContextoVista } from './datos-vista.ts'
+
+const campos = camposSolicitud('hogar', NADA_CONOCIDO)
+const por = (k: string) => campos.find((c) => c.clave === k)!
+const OK = { estado: 'ok' as const, tipo: 'piso' as const, metros: 85, anio: 1998 }
+const ctx = (p: Partial<ContextoVista>): ContextoVista => ({ catastro: null, confirmado: null, tipoElegido: null, ...p })
+
+test('tarjeta: «Piso · 2º · 85 m² · 1998»; sin Catastro no sale', () => {
+  assert.equal(textoTarjetaVivienda(OK, '2'), 'Piso · 2º · 85 m² · 1998')
+  assert.equal(textoTarjetaVivienda({ ...OK, metros: 1250 }, '2'), 'Piso · 2º · 1.250 m² · 1998')
+  assert.equal(textoTarjetaVivienda({ ...OK, tipo: 'unifamiliar' }, ''), 'Casa · 85 m² · 1998')
+  assert.equal(textoTarjetaVivienda(null, '2'), null)
+  assert.equal(textoTarjetaVivienda({ estado: 'sin_datos', tipo: null, metros: null, anio: null }, '2'), null)
+  assert.equal(visibleSegunCatastro(por('confirmaCatastro'), ctx({}), '2'), false)
+  assert.equal(visibleSegunCatastro(por('confirmaCatastro'), ctx({ catastro: OK }), '2'), true)
+})
+
+test('lo que da el Catastro no se pregunta si se confirma; sin Catastro, o al corregir, sí', () => {
+  for (const k of ['tipoVivienda', 'metrosCuadrados', 'anioConstruccion']) {
+    assert.equal(visibleSegunCatastro(por(k), ctx({}), '2'), true, `${k} sin Catastro`)
+    assert.equal(visibleSegunCatastro(por(k), ctx({ catastro: OK }), '2'), true, `${k} sin confirmar aún`)
+    assert.equal(visibleSegunCatastro(por(k), ctx({ catastro: OK, confirmado: true }), '2'), false, `${k} confirmado`)
+    assert.equal(visibleSegunCatastro(por(k), ctx({ catastro: OK, confirmado: false }), '2'), true, `${k} corregir`)
+  }
+  // Catastro sin año: el año se pregunta aunque confirme.
+  assert.equal(visibleSegunCatastro(por('anioConstruccion'), ctx({ catastro: { ...OK, anio: null }, confirmado: true }), '2'), true)
+})
+
+test('casa: el tipo se pregunta solo entre adosada e independiente', () => {
+  const c = ctx({ catastro: { ...OK, tipo: 'unifamiliar' }, confirmado: true })
+  assert.equal(visibleSegunCatastro(por('tipoVivienda'), c, ''), true)
+  assert.deepEqual(opcionesVisibles(por('tipoVivienda'), c)?.map((o) => o.valor), ['adosada', 'independiente'])
+})
+
+test('rejas: en piso o ático no se preguntan; en bajo, casa o sin saber el tipo, sí', () => {
+  const r = por('ventanasSeguras')
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK, confirmado: true }), '2'), false)
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: { ...OK, tipo: 'planta_baja' } }), '0'), true)
+  assert.equal(visibleSegunCatastro(r, ctx({}), ''), true)
+  assert.equal(visibleSegunCatastro(r, ctx({ tipoElegido: 'adosada' }), ''), true)
+  assert.equal(visibleSegunCatastro(r, ctx({ tipoElegido: 'atico' }), ''), false)
+})
+
+test('«Corregir»: las condicionales (rejas) usan SOLO lo que declara el cliente; hasta que elija, se muestran', () => {
+  const r = por('ventanasSeguras')
+  // El Catastro dice «piso», pero el cliente pulsa «Corregir»: hasta que elija el tipo, las rejas se preguntan.
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK, confirmado: false }), '2'), true)
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK, confirmado: false, tipoElegido: 'planta_baja' }), '0'), true)
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK, confirmado: false, tipoElegido: 'piso' }), '2'), false)
+  // Sin contestar aún la tarjeta, tampoco se da por bueno el tipo del Catastro.
+  assert.equal(visibleSegunCatastro(r, ctx({ catastro: OK }), '2'), true)
+})
+
+test('tarjeta confirmada: viajan los valores que VIO (tipo, m², año) de las preguntas ocultas; sin confirmar, nada', () => {
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: OK, confirmado: true }), '2'), { tipoVivienda: 'piso', metrosCuadrados: '85', anioConstruccion: '1998' })
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: { ...OK, metros: 84.6, anio: null }, confirmado: true }), '2'), { tipoVivienda: 'piso', metrosCuadrados: '85' }, 'el año visible lo contesta él')
+  // Casa: el tipo lo elige él (adosada o independiente); m² y año sí viajan.
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: { ...OK, tipo: 'unifamiliar' }, confirmado: true }), ''), { metrosCuadrados: '85', anioConstruccion: '1998' })
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: OK, confirmado: false }), '2'), {})
+  assert.deepEqual(valoresConfirmadosCatastro(campos, ctx({ catastro: OK }), '2'), {})
+  assert.equal(textoTarjetaVivienda({ ...OK, tipo: 'atico' }, 'AT'), 'Ático · AT · 85 m² · 1998', '«último piso» no es «ático»')
+})
+
+test('esenciales que dependen del Catastro: sin contestar ni «No lo sé» no se envía', () => {
+  const vis = [por('tipoVivienda'), por('tramoContenido'), por('conMadera')]
+  assert.deepEqual(esencialesPendientes(vis, {}, new Set()), ['tipoVivienda', 'tramoContenido'])
+  assert.deepEqual(esencialesPendientes(vis, { tramoContenido: 'calcular' }, new Set(['tipoVivienda'])), [])
+})
+
+// ─── Borrador (26/10/2026) ───────────────────────────────────────────────────
+test('borrador → estado inicial: lo escrito manda sobre la ficha; «No lo sé» vacía el valor; dirección por subclaves', async () => {
+  const { estadoDesdeBorrador, borradorConContenido } = await import('./datos-vista.ts')
+  const campos = [
+    { clave: 'dni', etiqueta: 'DNI', tipo: 'texto', obligatorio: true, actual: '12345678Z' },
+    { clave: 'vivienda', etiqueta: 'Dirección', tipo: 'direccion', obligatorio: true },
+    { clave: 'alarma', etiqueta: 'Alarma', tipo: 'si_no', obligatorio: true },
+    { clave: 'habitaciones', etiqueta: 'Habitaciones', tipo: 'numero', obligatorio: true },
+  ] as never
+  const sin = estadoDesdeBorrador(campos, null)
+  assert.deepEqual(sin.valores, { dni: '12345678Z' })
+  const e = estadoDesdeBorrador(campos, { dni: '87654321X', alarma: true, habitaciones: '3', _noLoSe: ['habitaciones'], viviendaCp: '41003', viviendaCalle: 'Calle Socorro', viviendaViaTipo: 'CL', viviendaViaNombre: 'SOCORRO', viviendaNumero: '24' })
+  assert.equal(e.valores.dni, '87654321X')
+  assert.equal(e.valores.alarma, true)
+  assert.equal(e.valores.habitaciones, undefined)
+  assert.deepEqual(e.noLoSe, ['habitaciones'])
+  assert.deepEqual(e.direcciones.vivienda.viaOficial, { tipo: 'CL', nombre: 'SOCORRO' })
+  assert.equal(e.direcciones.vivienda.numero, '24')
+  // Un formulario en blanco, o solo con lo de la ficha, no crea borrador.
+  assert.equal(borradorConContenido(campos, { dni: '12345678Z', _noLoSe: [] }), false)
+  assert.equal(borradorConContenido(campos, { dni: '12345678Z', alarma: false }), true)
+  assert.equal(borradorConContenido(campos, { _noLoSe: ['alarma'] }), true)
+})

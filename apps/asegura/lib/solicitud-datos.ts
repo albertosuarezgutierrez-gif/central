@@ -22,6 +22,8 @@ import {
   MAX_DOCS_SOLICITUD,
   NADA_CONOCIDO,
   camposSolicitud,
+  camposAlDia,
+  camposAPreguntar,
   nombreRamoSolicitud,
   conIdentidad,
   contrastarConDocumentos,
@@ -30,6 +32,11 @@ import {
   ramoSolicitud,
   tipoArchivoDocSolicitud,
   validarRespuestas,
+  valoresDePolizaLeida,
+  limpiarBorrador,
+  borradorParaTercero,
+  ultimoPasoDe,
+  type BorradorSolicitud,
   type CampoSolicitud,
   type DiscrepanciaSolicitud,
   type LecturaDocSolicitud,
@@ -47,10 +54,14 @@ import { guardarDocumento } from './cartera-documentos'
 import { revisarDocumento } from '@central/module-seguros'
 import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
-import { oportunidadDesdeFichero } from './oportunidad-documento'
+import { oportunidadDesdeFichero, oportunidadDesdeLectura } from './oportunidad-documento'
+import { leerPoliza } from './documentos/extraer-poliza'
 import { trasCompletarHogar } from './solicitud-datos-hogar'
 import { enlaceACiegas, politicaDocEnlace } from './enlace-ciego'
 import { viasValidadas, zonaCpServidor } from './solicitud-datos-direccion'
+import { esColumnaAusente } from './pg-error'
+import { PLAZO_LECTURA_DOCUMENTO_MS, PLAZO_LECTURA_POLIZA_MS, conPlazo } from './solicitud-plazos.ts'
+import { limpiarBorradoresMuertos } from './solicitud-borrador-purga.ts'
 
 // `creada_por = 'web'` = enlace del formulario ANÓNIMO, «a ciegas» (regla y porqué en `enlace-ciego.ts`).
 export { ACTOR_ENLACE_WEB } from './enlace-ciego'
@@ -127,6 +138,9 @@ export async function crearSolicitud(
   if (!campos) return { ok: false, estado: 'no_encontrado', motivo: 'No se encuentra la ficha de esa persona.', status: 404 }
   const r = await prismaAsegura().$transaction((tx) =>
     insertarSolicitud(tx, { correduriaId, oportunidadId, personaId: persona, ramo, campos, actor, tercero, estadoOportunidad: o.estado }))
+  // RGPD: la pendiente caducada que `insertarSolicitud` acaba de anular no guarda su borrador. FUERA de la transacción:
+  // sin la columna, un error dentro la abortaría entera.
+  if (r.nueva) await limpiarBorradoresMuertos(prismaAsegura(), { oportunidadId, clienteId: persona, correduriaId })
   // El token solo existe en claro al crearla: una viva no lo puede devolver (solo guardamos su hash).
   return { ok: true, id: r.id, token: r.token, nueva: r.nueva, ramo, caduca: r.caduca.toISOString(), tercero }
 }
@@ -178,6 +192,16 @@ export async function insertarSolicitud(
     values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'datos_pedidos', cast(${p.estadoOportunidad} as estado_comercial),
             cast(${p.estadoOportunidad} as estado_comercial), ${JSON.stringify({ solicitudId: n.id, campos: campos.length, tercero })}::jsonb, ${actor})`)
   return { id: n.id, caduca: n.caduca, nueva: true, token }
+}
+
+/**
+ * Los campos que se enseñan Y se aceptan de una solicitud guardada (26/10/2026): los guardados al crearla, puestos al
+ * día (`camposAlDia`: hogar toma las preguntas vigentes; todos, nivel y «No lo sé») y con DNI y nacimiento si faltan.
+ * Lo mismo al pintar, al leer un documento y al validar.
+ */
+function camposDeFila(f: { ramo: string; campos: CampoSolicitud[] }): CampoSolicitud[] {
+  const ramo = ramoSolicitud(f.ramo)
+  return conIdentidad(ramo ? camposAlDia(ramo, f.campos) : f.campos)
 }
 
 function estadoEfectivo(estado: string, caduca: Date): SolicitudResumen['estado'] {
@@ -233,7 +257,11 @@ export async function solicitudesDeOportunidad(correduriaId: string, oportunidad
         estado: estadoEfectivo(f.estado, f.caduca),
         caduca: f.caduca.toISOString(),
         completada: f.completada ? f.completada.toISOString() : null,
-        campos: f.campos,
+        // Al día (hogar: preguntas vigentes), pero de una completada solo lo que se contestó de verdad: validar guarda
+        // TODAS las claves pedidas (null incluido), así que una clave ausente es una pregunta que entonces no existía.
+        campos: d.respuestas
+          ? camposDeFila(f).filter((c) => c.tipo === 'direccion' || Object.hasOwn(d.respuestas!, c.clave))
+          : camposDeFila(f),
         ...d,
         // `null` = no se ha podido leer qué subió (≠ «no subió nada»).
         documentos: lecturas === null ? null : lecturas.flatMap((l) => (l.tipo === 'ficha' ? [] : [{ id: l.documentoId, tipo: l.tipo }])),
@@ -254,6 +282,8 @@ export async function anularSolicitud(correduriaId: string, id: string): Promise
   const n = await prismaAsegura().$executeRaw(Prisma.sql`
     update solicitud_datos set estado = 'anulada'
     where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`)
+  // RGPD: un enlace anulado no guarda lo que se tecleó a medias (aparte: sin la columna, no falla).
+  if (n > 0) await limpiarBorradoresMuertos(prismaAsegura(), { id, correduriaId })
   return n > 0 ? { ok: true } : { ok: false, estado: 'conflicto', motivo: 'No está pendiente.', status: 409 }
 }
 
@@ -261,7 +291,8 @@ export async function anularSolicitud(correduriaId: string, id: string): Promise
 
 export type SolicitudPublica =
   /** `tercero`: los datos son de otra persona; la página pide el consentimiento y no rellena nada. */
-  | { estado: 'ok'; ramo: RamoSolicitud; campos: CampoSolicitud[]; tercero: boolean }
+  /** `borrador` (26/10/2026): lo que dejó a medias con este mismo enlace; `null` = nada guardado (o sin la columna). */
+  | { estado: 'ok'; ramo: RamoSolicitud; campos: CampoSolicitud[]; tercero: boolean; borrador: BorradorSolicitud | null }
   | { estado: 'muerta' }
   | { estado: 'completada' }
 
@@ -301,19 +332,24 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   if (!ramo) return { estado: 'muerta' }
   // Datos de un TERCERO: no se rellena nada. El enlace puede ir al cliente, y el DNI de su padre no
   // es suyo para verlo (a diferencia del propio, que Alberto decidió traer relleno).
-  if (f.tercero) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: true }
+  // El borrador es lo que ESTE enlace tecleó (no sale de la ficha): vale también a ciegas y, sin datos personales, para un tercero.
+  const borrador = await leerBorrador(f)
+  // De un tercero, sin sus datos personales (DNI, nacimiento, carné…): la regla de tercero no rellena nada, y el
+  // enlace puede abrirlo otro. Lo del riesgo sí vuelve.
+  if (f.tercero) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: true, borrador: borradorParaTercero(borrador) }
   // Enlace del formulario web ANÓNIMO: nada de la ficha, ni su DNI (ver `ACTOR_ENLACE_WEB`).
-  if (enlaceACiegas(f.creadaPor)) return { estado: 'ok', ramo, campos: conIdentidad(f.campos), tercero: false }
+  if (enlaceACiegas(f.creadaPor)) return { estado: 'ok', ramo, campos: camposDeFila(f), tercero: false, borrador }
   const id = await identidadFicha(f)
-  const campos = conIdentidad(f.campos).map((c) => {
+  const campos = camposDeFila(f).map((c) => {
     const actual = c.clave === 'dni' ? id.dni : c.clave === 'fechaNacimiento' ? id.fechaNacimiento : null
     return actual ? { ...c, actual } : c
   })
-  return { estado: 'ok', ramo, campos, tercero: false }
+  return { estado: 'ok', ramo, campos, tercero: false, borrador }
 }
 
 export type ResultadoDocSolicitud =
-  | { ok: true; tipo: TipoDocSolicitud; etiqueta: string; valores: Record<string, Respuesta>; aviso: string | null }
+  /** `dePoliza`: leído con el lector de pólizas (botón del seguro actual): el formulario lo marca «leído de tu póliza». */
+  | { ok: true; tipo: TipoDocSolicitud; etiqueta: string; valores: Record<string, Respuesta>; aviso: string | null; dePoliza?: true }
   | { ok: false; estado: 'muerta' | 'completada' | 'tope' | 'invalido' | 'error'; motivo?: string }
 
 /**
@@ -328,6 +364,12 @@ export async function subirDocumentoSolicitud(
   token: string,
   fichero: { nombre: string; mime: string; contenido: Buffer },
   consentimiento = false,
+  /**
+   * `poliza` (26/10/2026, fase B): el botón «sube tu póliza actual» del bloque del seguro actual. Se lee con el LECTOR
+   * DE PÓLIZAS (`leerPoliza`: compañía, vencimiento, capitales…) en vez del de papeles sueltos, y lo leído se propone
+   * en el formulario como «leído de tu póliza». Mismo archivo, mismo tope y mismas reglas del enlace a ciegas.
+   */
+  clase: 'documento' | 'poliza' = 'documento',
 ): Promise<ResultadoDocSolicitud> {
   const f = await porToken(token)
   if (!f) return { ok: false, estado: 'muerta' }
@@ -358,9 +400,20 @@ export async function subirDocumentoSolicitud(
   // Enlace a ciegas (formulario web): ni contraseñas de la ficha, ni oportunidades; se archiva para revisión.
   const politica = politicaDocEnlace(f.creadaPor)
   // Primero se lee (para saber qué es y archivarlo con su tipo); si la IA falla, se archiva como «otro».
-  const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre,
-    politica.probarContrasenasFicha ? { contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId) } : {})
-  const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, conIdentidad(f.campos)) : { tipo: 'otro' as const, valores: {} }
+  const opcionesLector = politica.probarContrasenasFicha ? { contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId) } : {}
+  // Póliza actual: el lector de pólizas (texto por la pasarela `iaTexto`, con su tope). Lo leído pasa por la misma
+  // validación del formulario (`valoresDePolizaLeida`) y nunca trae DNI ni nacimiento (sale el tomador).
+  // Con PLAZO (`solicitud-plazos.ts`): asegura corta antes que el puente del portal; pasado el plazo se archiva igual y se
+  // dice «no lo hemos podido leer» (el cliente nunca ve «fallo» con el fichero ya en su ficha).
+  const polizaLeida = clase === 'poliza'
+    ? await conPlazo(leerPoliza(fichero.contenido, fichero.mime, fichero.nombre, opcionesLector), PLAZO_LECTURA_POLIZA_MS, () => ({ fase: 'ninguno' as const, motivo: 'La lectura de la póliza ha superado el plazo.' }))
+    : null
+  const lectura: { ok: true; bruto: unknown } | { ok: false; motivo: string } = polizaLeida
+    ? (polizaLeida.fase === 'ninguno' ? { ok: false, motivo: polizaLeida.motivo } : { ok: true, bruto: polizaLeida.bruto ?? null })
+    : await conPlazo(leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre, opcionesLector), PLAZO_LECTURA_DOCUMENTO_MS, () => ({ ok: false as const, motivo: 'La lectura del documento ha superado el plazo.' }))
+  const leido: { tipo: TipoDocSolicitud; valores: Record<string, Respuesta> } = polizaLeida
+    ? { tipo: 'poliza', valores: valoresDePolizaLeida(polizaLeida, camposDeFila(f)) }
+    : lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, camposDeFila(f)) : { tipo: 'otro', valores: {} }
   const g = await guardarDocumento(f.correduriaId, {
     clienteId: f.clienteId,
     tipo: tipoArchivoDocSolicitud(leido.tipo),
@@ -387,20 +440,40 @@ export async function subirDocumentoSolicitud(
   if (politica.abrirOportunidad && (leido.tipo === 'poliza' || leido.tipo === 'otro')) {
     const { correduriaId, clienteId } = f
     const fich = { contenido: fichero.contenido, mime: fichero.mime, nombre: fichero.nombre }
+    const base = { correduriaId, clienteSube: clienteId, origen: 'solicitud', actor: 'el cliente, desde el enlace de datos' }
     try {
-      after(() => oportunidadDesdeFichero({ correduriaId, clienteSube: clienteId, origen: 'solicitud', actor: 'el cliente, desde el enlace de datos', fichero: fich }).then(() => undefined))
+      // Póliza ya leída por el lector de pólizas: se reutiliza la lectura (no se paga dos veces la IA).
+      if (polizaLeida) {
+        if (polizaLeida.fase !== 'ninguno') after(() => oportunidadDesdeLectura({ ...base, lectura: polizaLeida }).then(() => undefined))
+      } else {
+        after(() => oportunidadDesdeFichero({ ...base, fichero: fich }).then(() => undefined))
+      }
     } catch (e) {
       // Fuera de una petición `after()` lanza: la oportunidad no puede tumbar la subida.
       console.error('[solicitud-datos] no se pudo programar la oportunidad:', e instanceof Error ? e.message : e)
     }
   }
   if (!lectura.ok) console.warn('[solicitud-datos] documento sin leer:', lectura.motivo)
+  // El motivo del lector NO se enseña: puede hablar de «la ficha del cliente» o del DNI (es para el corredor).
   const aviso = !lectura.ok
     ? 'Guardado. No lo hemos podido leer; rellena los datos a mano.'
     : Object.keys(leido.valores).length === 0
       ? 'Guardado. No hemos sacado de aquí ningún dato de los que faltan.'
       : null
-  return { ok: true, tipo: leido.tipo, etiqueta: etiquetaDocSolicitud(leido.tipo), valores: leido.valores, aviso }
+  return { ok: true, tipo: leido.tipo, etiqueta: etiquetaDocSolicitud(leido.tipo), valores: leido.valores, aviso, ...(polizaLeida ? { dePoliza: true } : {}) }
+}
+
+/**
+ * «A preguntar» para el historial (y por él, el aviso de actividad), en TODOS los ramos (26/10/2026): etiquetas de lo
+ * que marcó «No lo sé» y de lo que dejó vacío. Nunca valores. Recortado para no inundar el aviso.
+ */
+export function textoAPreguntar(campos: readonly CampoSolicitud[], respuestas: Record<string, Respuesta>): string {
+  const a = camposAPreguntar(campos, respuestas)
+  const partes = [
+    a.noLoSabe.length > 0 ? `No lo sabe: ${a.noLoSabe.join(' · ')}` : '',
+    a.sinContestar.length > 0 ? `Sin contestar: ${a.sinContestar.join(' · ')}` : '',
+  ].filter(Boolean)
+  return partes.length === 0 ? '' : ` A preguntar en la llamada — ${partes.join('. ')}`.slice(0, 700)
 }
 
 /** El cliente manda sus datos. Una sola vez; lo que no se pidió se ignora. */
@@ -413,7 +486,7 @@ export async function responderSolicitud(
   if (!f) return { ok: false, estado: 'muerta' }
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
-  const campos = conIdentidad(f.campos)
+  const campos = camposDeFila(f)
   // Dirección: provincia/municipio contra la tabla del CP y la calle «oficial» solo si el callejero la confirma.
   const vias = campos.some((c) => c.tipo === 'direccion') ? await viasValidadas(campos, entrada) : new Map<string, ViaValidada>()
   const v = validarRespuestas(campos, entrada, new Date(), { zonaCp: zonaCpServidor, viaValidada: (clave) => vias.get(clave) ?? null })
@@ -478,9 +551,11 @@ export async function responderSolicitud(
     await tx.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${f.correduriaId}::uuid, ${f.clienteId}::uuid, cast('gestion' as tipo_historial_interno),
-              ${`${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO} ${ramoTexto}. Ya se puede tarificar.`})`)
+              ${`${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO} ${ramoTexto}. Ya se puede tarificar.${textoAPreguntar(campos, v.respuestas)}`})`)
     return true
   })
+  // Completada (el borrador sobra: no se guarda dos veces) o anulada por oportunidad cerrada: el borrador se borra.
+  await limpiarBorradoresMuertos(prismaAsegura(), { id: f.id, correduriaId: f.correduriaId })
   if (hecho && ramoLeido === 'hogar') {
     // Catastro → riesgo de la oportunidad → Telegram con el resumen, tras contestar al cliente. Nunca tumba la respuesta.
     const respuestas = v.respuestas
@@ -490,7 +565,7 @@ export async function responderSolicitud(
         try {
           const [o] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>(Prisma.sql`
             select cliente_id::text as "clienteId" from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
-          await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, tercero })
+          await trasCompletarHogar({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, respuestas, campos, tercero })
         } catch (e) {
           console.error('[solicitud-datos] aviso de hogar tras completar falló:', e instanceof Error ? e.message : e)
         }
@@ -501,3 +576,55 @@ export async function responderSolicitud(
   }
   return hecho ? { ok: true } : { ok: false, estado: 'muerta' }
 }
+
+// ─── Borrador por token (26/10/2026, fase B) ─────────────────────────────────
+// Guardado automático: el formulario manda lo que lleva (con pausa) y, al volver con el MISMO enlace, se lo devuelve.
+// CIFRADO como las respuestas. Nunca cuenta como completado: no toca `estado`, `respuestas` ni `completada_at`.
+// CÓDIGO ANTES QUE SQL (`prisma/sql/2026-10-26_solicitud_datos_borrador.sql`): sin las columnas, `leerBorrador` da
+// `null` y guardar contesta `sin_migracion` sin error para el cliente; el formulario funciona igual, sin borrador.
+
+/** Lo guardado de esa solicitud. `null` = nada, ilegible o sin la columna (nunca lanza: el formulario se abre igual). */
+async function leerBorrador(f: FilaToken): Promise<BorradorSolicitud | null> {
+  try {
+    const [fila] = await prismaAsegura().$queryRaw<{ borrador: string | null }[]>(Prisma.sql`
+      select borrador from solicitud_datos where id = ${f.id}::uuid`)
+    if (!fila?.borrador) return null
+    // Se vuelve a limpiar contra los campos VIGENTES: una pregunta retirada no reaparece.
+    return limpiarBorrador(camposDeFila(f), JSON.parse(decryptField(fila.borrador)))
+  } catch (e) {
+    if (!esColumnaAusente(e)) console.warn('[solicitud-datos] borrador ilegible:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+export type ResultadoBorrador =
+  | { ok: true; ultimoPaso: string | null }
+  | { ok: false; estado: 'muerta' | 'completada' | 'invalido' | 'sin_consentimiento' | 'sin_migracion' }
+
+/**
+ * Guarda el borrador (lo sustituye entero) y el último paso alcanzado (`ultimoPasoDe`: solo etiquetas de la casa).
+ * Solo en una solicitud PENDIENTE y viva; la condición va en el propio UPDATE (una completada no se reabre).
+ * De un TERCERO, solo con su consentimiento marcado (como los documentos).
+ */
+export async function guardarBorradorSolicitud(token: string, entrada: unknown, consentimiento = false): Promise<ResultadoBorrador> {
+  const f = await porToken(token)
+  if (!f) return { ok: false, estado: 'muerta' }
+  if (f.estado === 'completada') return { ok: false, estado: 'completada' }
+  if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
+  if (f.tercero && !consentimiento) return { ok: false, estado: 'sin_consentimiento' }
+  const campos = camposDeFila(f)
+  const borrador = limpiarBorrador(campos, entrada)
+  if (!borrador) return { ok: false, estado: 'invalido' }
+  const ultimoPaso = ultimoPasoDe(campos, borrador)
+  try {
+    const n = await prismaAsegura().$executeRaw(Prisma.sql`
+      update solicitud_datos set borrador = ${encryptField(JSON.stringify(borrador))}, borrador_at = now(),
+        ultimo_paso = ${ultimoPaso}
+      where id = ${f.id}::uuid and estado = 'pendiente' and caduca_at > now()`)
+    return n > 0 ? { ok: true, ultimoPaso } : { ok: false, estado: 'muerta' }
+  } catch (e) {
+    if (esColumnaAusente(e)) return { ok: false, estado: 'sin_migracion' }
+    throw e
+  }
+}
+

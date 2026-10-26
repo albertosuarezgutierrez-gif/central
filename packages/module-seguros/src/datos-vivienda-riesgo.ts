@@ -27,6 +27,9 @@ export const ESPEC_VIVIENDA = [
   { clave: 'nombreVia', etiqueta: 'Nombre de la calle', tipo: { t: 'texto', max: 80 } },
   { clave: 'numeroVia', etiqueta: 'Número', tipo: { t: 'texto', max: 10 } },
   { clave: 'planta', etiqueta: 'Planta', tipo: { t: 'texto', max: 10 } },
+  // 26/10/2026: último piso del edificio (deducido del Catastro y confirmado por el cliente). «Último piso» NO es «ático»:
+  // un último piso numérico se guarda como `planta` + `ultimoPiso = true`; ático solo si el Catastro dice AT. `null` = no se sabe.
+  { clave: 'ultimoPiso', etiqueta: 'Último piso del edificio', tipo: { t: 'bool' } },
   { clave: 'puertaVivienda', etiqueta: 'Puerta', tipo: { t: 'texto', max: 10 } },
   { clave: 'metrosCuadrados', etiqueta: 'Superficie (m²)', tipo: { t: 'numero', min: 0, max: 100_000, sobreMin: true } },
   { clave: 'anioConstruccion', etiqueta: 'Año de construcción', tipo: { t: 'entero', min: 1500, max: 'anioTope' } },
@@ -74,7 +77,7 @@ export const ESPEC_VIVIENDA = [
 
 export type CampoVivienda =
   | 'referenciaCatastral' | 'direccion' | 'cp' | 'municipio' | 'provincia' | 'municipioId' | 'tipoViaId' | 'nombreVia' | 'numeroVia'
-  | 'planta' | 'puertaVivienda' | 'metrosCuadrados' | 'anioConstruccion' | 'habitaciones' | 'anioUltimaReforma'
+  | 'planta' | 'ultimoPiso' | 'puertaVivienda' | 'metrosCuadrados' | 'anioConstruccion' | 'habitaciones' | 'anioUltimaReforma'
   | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma' | 'puertasSecundarias'
   | 'asentamiento' | 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador'
   | 'capitalContinente' | 'capitalContenido' | 'joyasEnCajaFuerte' | 'joyasFueraDeCaja' | 'objetosDeValor' | 'perrosPeligrosos'
@@ -89,7 +92,7 @@ export type DatosViviendaRiesgo = {
     | 'puertasSecundarias' | 'asentamiento' | 'bancoHipoteca' | 'catastroConsultadoAt' | 'usoCatastral' | 'catastroAnexos' | 'catastroReferencia'
     ? string | null
     : K extends 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador' | 'conMadera'
-      | 'hipoteca' | 'reformaTuberias' | 'reformaElectrica'
+      | 'hipoteca' | 'reformaTuberias' | 'reformaElectrica' | 'ultimoPiso'
       ? boolean | null
       : number | null
 } & { confirmadoAt: string | null }
@@ -218,6 +221,10 @@ export function precargaViviendaDePoliza(datos: unknown): Partial<Omit<DatosVivi
     // `anioConstruccionCima` es el de la compañía (Antigüedad del EIAC): no se precarga como dato declarado.
     anioConstruccion: n('anioConstruccion'),
     referenciaCatastral: t('referenciaCatastral'),
+    // 26/10/2026: los capitales que trae la póliza de CIMA (`continente`/`contenido`, los mismos que lee
+    // `hogarDeDatos` para Codeoscopic) faltaban en la precarga.
+    capitalContinente: n('continente'),
+    capitalContenido: n('contenido'),
   }
   for (const k of Object.keys(candidato)) if (candidato[k] === null) delete candidato[k]
   for (let i = 0; i < CAMPOS_VIVIENDA.length; i++) {

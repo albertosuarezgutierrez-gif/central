@@ -26,8 +26,21 @@ test('vivienda: lo que no se sabe no se escribe (contenido en blanco ≠ 0) y el
   const con = viviendaDeSolicitud({ ...R, valorContenido: 30000 }, { estado: 'ok', referencia: '1234567AB1234C0001XY', metrosCuadrados: 0, anioConstruccion: 1975, uso: 'Residencial' }, AHORA)
   assert.equal(con.capitalContenido, 30000)
   assert.equal(con.referenciaCatastral, '1234567AB1234C0001XY')
-  assert.equal(con.anioConstruccion, 1975)
-  assert.equal('metrosCuadrados' in con, false, '0 m² del Catastro = sin dato')
+  // 26/10/2026: sin confirmar, el Catastro va a sus gemelos y NO a lo declarado.
+  assert.equal(con.catastroAnioConstruccion, 1975)
+  assert.equal('anioConstruccion' in con, false)
+  assert.equal('catastroMetrosCuadrados' in con, false, '0 m² del Catastro = sin dato')
+  const conf = viviendaDeSolicitud({ ...R, confirmaCatastro: true }, { estado: 'ok', referencia: '1234567AB1234C0001XY', metrosCuadrados: 85, anioConstruccion: 1998, uso: 'Residencial' }, AHORA, { tipo: 'piso' })
+  assert.equal(conf.metrosCuadrados, 85)
+  assert.equal(conf.anioConstruccion, 1998)
+  assert.equal(conf.tipoVivienda, 'MiddleFloor')
+  const sinConf = viviendaDeSolicitud(R, { estado: 'ok', referencia: '1234567AB1234C0001XY', metrosCuadrados: 85, anioConstruccion: 1998, uso: 'Residencial' }, AHORA, { tipo: 'piso' })
+  assert.equal('tipoVivienda' in sinConf, false, 'lo deducido sin confirmar no pasa a lo declarado')
+  // Corrige: lo tecleado manda.
+  const corr = viviendaDeSolicitud({ ...R, confirmaCatastro: false, metrosCuadrados: 70, anioConstruccion: 1960, tipoVivienda: 'atico' }, { estado: 'ok', referencia: '1234567AB1234C0001XY', metrosCuadrados: 85, anioConstruccion: 1998, uso: 'Residencial' }, AHORA, { tipo: 'piso' })
+  assert.equal(corr.metrosCuadrados, 70)
+  assert.equal(corr.catastroMetrosCuadrados, 85)
+  assert.equal('tipoVivienda' in corr, false, 'ático: sin id atestiguado')
   assert.equal(con.catastroConsultadoAt, AHORA)
 })
 
@@ -88,4 +101,10 @@ test('el texto del Catastro distingue «no respondió» de «no existe» y de «
   assert.match(textoCatastroSolicitud({ estado: 'varios' }), /varios pisos/)
   assert.match(textoCatastroSolicitud({ estado: 'ok', referencia: 'X', metrosCuadrados: 90, anioConstruccion: null, uso: 'Comercial' }), /90 m² · año sin dato · ⚠️ uso catastral «Comercial»/)
   assert.equal(textoCatastroSolicitud(null), 'Catastro sin consultar')
+})
+
+test('m²/año DECLARADOS sin referencia (el Catastro no respondió) van sueltos y solo donde no había', () => {
+  const p = planEscrituraVivienda({ referenciaCatastral: '9999999ZZ9999Z0001AA', metrosCuadrados: null }, { metrosCuadrados: 70, anioConstruccion: 1960 })
+  assert.deepEqual(p.escribir, { metrosCuadrados: 70, anioConstruccion: 1960 })
+  assert.deepEqual(p.conflictos, [])
 })

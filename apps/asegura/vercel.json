@@ -75,6 +75,10 @@
       "schedule": "30 6 * * *"
     },
     {
+      "path": "/api/cron/solicitudes-abandonadas",
+      "schedule": "41 7-20 * * *"
+    },
+    {
       "path": "/api/cron/presentacion-app",
       "schedule": "47 8 * * 1-5"
     },

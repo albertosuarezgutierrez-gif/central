@@ -764,6 +764,15 @@ export {
   type ResultadoRiesgoOportunidad,
 } from './riesgo-oportunidad.ts'
 export {
+  deducirViviendaCatastro,
+  plantaResidencial,
+  ultimoPisoCatastro,
+  type InmueblePlanta,
+  type PlantaCatastro,
+  type UltimoPiso,
+  type ViviendaDeducida,
+} from './vivienda-catastro.ts'
+export {
   UMBRAL_CONSOLIDAR_APRENDIDO,
   UMBRAL_DESCARTAR_APRENDIDO,
   estadoAprendido,

@@ -64,3 +64,68 @@ test('las ayudas de dirección del enlace exigen un token VIVO (no son un servic
   const { tokenSolicitudVivo } = await import('./solicitud-datos.ts')
   assert.equal(await tokenSolicitudVivo('corto'), false)
 })
+
+// ─── Fase B (26/10/2026): póliza actual, borrador y abandono ─────────────────
+
+test('borrador del puente: solo claves del formulario (y subclaves de dirección), escalares o la lista de «No lo sé»', async () => {
+  const { interpretarBorrador } = await import('./solicitud-datos.ts')
+  const campos = [
+    { clave: 'vivienda', etiqueta: 'Dirección', tipo: 'direccion', obligatorio: true },
+    { clave: 'alarma', etiqueta: 'Alarma', tipo: 'si_no', obligatorio: true },
+  ] as const
+  const b = interpretarBorrador({ viviendaCp: '41003', alarma: true, _noLoSe: ['alarma', 3], intruso: 'x', raro: { a: 1 } }, campos as never)
+  assert.deepEqual(b, { viviendaCp: '41003', alarma: true, _noLoSe: ['alarma'] })
+  assert.equal(interpretarBorrador(null, campos as never), null)
+  assert.equal(interpretarBorrador({ intruso: 'x' }, campos as never), null)
+  const ok = interpretarSolicitud(200, { estado: 'ok', ramo: 'hogar', campos: [...campos], borrador: { alarma: false } })
+  assert.deepEqual(ok.estado === 'ok' && ok.borrador, { alarma: false })
+  const sin = interpretarSolicitud(200, { estado: 'ok', ramo: 'hogar', campos: [...campos] })
+  assert.equal(sin.estado === 'ok' && sin.borrador, null)
+})
+
+test('subida de la póliza actual: se marca `dePoliza` solo si asegura lo dice', () => {
+  const p = interpretarDocSubido(200, { ok: true, etiqueta: 'Póliza', valores: { companiaActual: 'Allianz', tramoContenido: '15000_30000' }, aviso: null, dePoliza: true })
+  assert.equal(p.estado === 'ok' && p.dePoliza, true)
+  const d = interpretarDocSubido(200, { ok: true, etiqueta: 'DNI', valores: {}, aviso: null })
+  assert.equal(d.estado === 'ok' && d.dePoliza, false)
+})
+
+test('formulario: botón de póliza con `clase=poliza`, guardado con pausa al servidor (sin cookies), y un tercero solo con permiso', () => {
+  const f = readFileSync(new URL('../app/datos/[token]/Formulario.tsx', import.meta.url), 'utf8')
+  assert.match(f, /if \(clase === 'poliza'\) form\.set\('clase', 'poliza'\)/)
+  assert.match(f, /void subir\(ficheros, 'poliza'\)/)
+  assert.match(f, /fetch\('\/api\/datos\/borrador'/)
+  assert.match(f, /if \(tercero && !consiente\) return/)
+  assert.match(f, /setTimeout\([\s\S]*PAUSA_BORRADOR_MS\)/)
+  assert.doesNotMatch(f, /document\.cookie|localStorage|sessionStorage/)
+  const ruta = readFileSync(new URL('../app/api/datos/borrador/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /rateLimit\(`datos-borrador:/)
+  assert.match(ruta, /RE_TOKEN|\[A-Za-z0-9_-\]\{40,60\}/)
+  const doc = readFileSync(new URL('../app/api/datos/documento/route.ts', import.meta.url), 'utf8')
+  assert.match(doc, /form\?\.get\('clase'\) === 'poliza' \? 'poliza' : 'documento'/)
+})
+
+test('póliza leída: números y fechas (m², año, años sin siniestros, capitales) entran con la MISMA validación del campo', async () => {
+  const { camposSolicitud, NADA_CONOCIDO } = await import('@central/module-seguros')
+  const hogar = camposSolicitud('hogar', NADA_CONOCIDO)
+  const r = interpretarDocSubido(200, {
+    ok: true, dePoliza: true, etiqueta: 'Póliza',
+    valores: { metrosCuadrados: 85, anioConstruccion: 1998, tramoContenido: '15000_30000', vencimientoActual: '2027-03-01', companiaActual: 'Mapfre', tieneSeguro: true,
+      habitaciones: 999, anioUltimaReforma: -3, inventado: 5, vivienda: 'Calle Socorro' },
+  }, hogar)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.valores, { metrosCuadrados: '85', anioConstruccion: '1998', tramoContenido: '15000_30000', vencimientoActual: '2027-03-01', companiaActual: 'Mapfre', tieneSeguro: true })
+  const moto = camposSolicitud('moto', NADA_CONOCIDO)
+  const m = interpretarDocSubido(200, { ok: true, valores: { aniosSinSiniestros: 7, fechaMatriculacion: '10/05/2018', kmAnuales: 'mucho' } }, moto)
+  assert.deepEqual(m.estado === 'ok' && m.valores, { aniosSinSiniestros: '7', fechaMatriculacion: '2018-05-10' })
+})
+
+test('/api/datos/vivienda: el token tiene que ser de una solicitud de HOGAR (403 si no), antes de consultar el Catastro', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/api/datos/vivienda/route.ts', import.meta.url), 'utf8')
+  const guarda = src.search(/if \(ramo !== 'hogar'\) return NextResponse\.json\(\{ error: 'no_es_hogar' \}, \{ status: 403 \}\)/)
+  assert.ok(guarda > 0, 'falta la guarda de ramo hogar con 403')
+  assert.ok(src.indexOf('await ramoSolicitudViva(') < guarda)
+  assert.ok(guarda < src.indexOf('await viviendaCatastro('), 'la guarda va antes de consultar el Catastro')
+})

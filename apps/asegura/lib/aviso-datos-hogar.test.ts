@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { camposSolicitud, NADA_CONOCIDO } from '@central/module-seguros'
 import { esParaBanco, textoAvisoDatosHogar, type EntradaAvisoDatosHogar } from './aviso-datos-hogar.ts'
 
 const BASE: EntradaAvisoDatosHogar = {
@@ -37,7 +38,8 @@ test('resumen: dirección, Catastro, régimen/uso, contenido en €, vencimiento
 test('lo no contestado es «sin dato» (nunca «no» ni 0), y una hipoteca que no es para el banco no lleva 🔴', () => {
   const r = { ...BASE.respuestas, valorContenido: null, alarma: null, paraBanco: false, tieneSeguro: null, fechaEfecto: null }
   const t = textoAvisoDatosHogar({ ...BASE, respuestas: r, catastro: { estado: 'error' }, anotados: null })
-  assert.match(t, /Contenido: sin dato · alarma: sin dato/)
+  assert.match(t, /Contenido: sin dato · continente: sin dato/)
+  assert.match(t, /Alarma: sin dato · puerta blindada: sin dato/)
   assert.doesNotMatch(t, /🔴/)
   assert.match(t, /no es para el banco/)
   assert.match(t, /Seguro actual: sin dato/)
@@ -52,4 +54,16 @@ test('choques con lo guardado y bloque confirmado: se dicen en el aviso', () => 
   const c = textoAvisoDatosHogar({ ...BASE, confirmado: true, anotados: 0 })
   assert.match(c, /confirmados: no se han tocado/)
   assert.doesNotMatch(c, /pasados al riesgo/)
+})
+
+test('26/10/2026: tipo deducido del Catastro (y si lo confirmó), aviso de planta, tramos y lo que queda «a preguntar»', () => {
+  const r = { ...BASE.respuestas, valorContenido: null, tramoContenido: '15000_30000', tramoContinente: 'calcular', confirmaCatastro: true, habitaciones: null, _noLoSe: 'habitaciones' }
+  const t = textoAvisoDatosHogar({ ...BASE, respuestas: r, deducida: { tipo: 'atico', aviso: null }, campos: camposSolicitud('hogar', NADA_CONOCIDO) })
+  assert.match(t, /Tipo: Ático \(Catastro, confirmado por el cliente\)/)
+  assert.match(t, /Contenido: Entre 15\.000€ y 30\.000€ \(se anota 30\.000,00€\) · continente: No lo sé: que me lo calculen \(a calcular\)/)
+  assert.match(t, /❓ No lo sabe \(a preguntar\): ¿Cuántas habitaciones tiene\?/)
+  assert.match(t, /📞 Sin contestar \(a preguntar\):.*Joyas guardadas en caja fuerte/)
+  const p = textoAvisoDatosHogar({ ...BASE, deducida: { tipo: null, aviso: '⚠️ planta declarada 2º no cuadra con el Catastro: revisar' } })
+  assert.match(p, /⚠️ planta declarada 2º no cuadra con el Catastro: revisar/)
+  assert.match(p, /Tipo: sin dato/)
 })
