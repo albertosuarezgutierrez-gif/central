@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import Wordmark from '@/components/Wordmark'
+import { LogoAsegura, PieAsegura } from '@/components/MarcaAsegura'
+import { estiloMarcaEmpresa } from '@/lib/marca-asegura'
 
 type Opcion = { empleado_id: string; empresa_nombre: string; necesita_pin: boolean }
 type Paso = 'email' | 'codigo' | 'elegir'
@@ -25,7 +27,7 @@ async function post(url: string, body: unknown) {
   return { ok: r.ok, j: await r.json().catch(() => ({})) }
 }
 
-export default function EntrarEmpleado() {
+export default function EntrarEmpleado({ marcaAsegura = false }: { marcaAsegura?: boolean }) {
   const [paso, setPaso] = useState<Paso>('email')
   const [email, setEmail] = useState('')
   const [codigo, setCodigo] = useState('')
@@ -68,9 +70,9 @@ export default function EntrarEmpleado() {
   const btn = 'min-h-[44px] w-full'
 
   return (
-    <main className="grid min-h-screen place-items-center p-4">
+    <main className={`grid min-h-screen place-items-center p-4${marcaAsegura ? ' marca-asegura' : ''}`} style={estiloMarcaEmpresa(marcaAsegura, null) as React.CSSProperties}>
       <div className="w-full max-w-sm rounded-[18px] border border-line bg-card p-6 text-center sm:p-7">
-        <Wordmark className="text-2xl" />
+        {marcaAsegura ? <LogoAsegura alto={40} color="var(--accent)" /> : <Wordmark className="text-2xl" />}
         <h1 className="mt-3 text-xl">Acceso empleado</h1>
 
         {paso === 'email' && (
@@ -123,6 +125,7 @@ export default function EntrarEmpleado() {
 
         {err && <p role="alert" className="mt-3 text-sm text-alert">{err}</p>}
       </div>
+    {marcaAsegura && <div className="absolute inset-x-0 bottom-0"><PieAsegura /></div>}
     </main>
   )
 }

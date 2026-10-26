@@ -5,6 +5,9 @@ export const metadata: Metadata = { title: 'Acceso empleado · ia·rrhh', robots
 
 // Entrada del Portal del Empleado por email + código. Neutra (sin branding): aún no sabemos de
 // qué empresa es quien escribe, y mostrarla delataría que el email existe.
-export default function Page() {
-  return <EntrarEmpleado />
+// Con `?m=asegura` (enlace que da la correduría a sus empresas) lleva la marca Grupo ASegura. No depende del
+// email ni de la empresa, así que no delata si un email existe.
+export default async function Page({ searchParams }: { searchParams: Promise<{ m?: string | string[] }> }) {
+  const { m } = await searchParams
+  return <EntrarEmpleado marcaAsegura={m === 'asegura'} />
 }
