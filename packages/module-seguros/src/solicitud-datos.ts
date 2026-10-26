@@ -11,15 +11,82 @@
  *     presupuestar y se verifica al emitir. NO se escribe en la ficha.
  */
 import { normalizarCp, normalizarDni, normalizarFechaNacimiento } from './cliente-edicion.ts'
+import { RAMOS_OPORTUNIDAD, type RamoOportunidad } from './oportunidad-seguimiento.ts'
 
-export const RAMOS_SOLICITUD = ['moto', 'auto'] as const
-export type RamoSolicitud = (typeof RAMOS_SOLICITUD)[number]
+/**
+ * 25/10/2026 (Alberto: «el lead web de CUALQUIER ramo, igual que coche/moto»): el enlace vale para
+ * todo ramo de oportunidad. Qué se pide lo decide la definición DECLARATIVA por grupo de ramo
+ * (`camposSolicitud`); auto y moto conservan exactamente lo de antes.
+ * 🚨 La BD tiene un CHECK de `ramo` en `seguros.solicitud_datos` (SQL `2026-10-25_solicitud_datos_todos_ramos.sql`):
+ * sin aplicarlo, solo auto/moto se pueden insertar (el resto falla con 23514 y se degrada a «sin enlace»).
+ */
+export const RAMOS_SOLICITUD = RAMOS_OPORTUNIDAD
+export type RamoSolicitud = RamoOportunidad
 
 export function ramoSolicitud(v: unknown): RamoSolicitud | null {
   return RAMOS_SOLICITUD.find((r) => r === v) ?? null
 }
 
-export type TipoCampo = 'texto' | 'fecha' | 'opcion' | 'numero' | 'si_no' | 'texto_largo'
+/** Cómo se agrupan los ramos para decidir qué se pide. */
+export type GrupoSolicitud = 'vehiculo' | 'hogar' | 'personas' | 'mascota' | 'generico'
+
+export function grupoSolicitud(ramo: RamoSolicitud): GrupoSolicitud {
+  if (ramo === 'auto' || ramo === 'moto') return 'vehiculo'
+  if (ramo === 'hogar') return 'hogar'
+  if (ramo === 'vida' || ramo === 'salud' || ramo === 'decesos' || ramo === 'accidentes') return 'personas'
+  if (ramo === 'mascotas') return 'mascota'
+  return 'generico'
+}
+
+/**
+ * Cómo se nombra el riesgo en los textos al cliente. `tuyo` = «tu coche»; `del` = «del coche» (para un tercero);
+ * `seguro` = «seguro de coche». Sin datos del cliente.
+ */
+const NOMBRE_RAMO: Record<RamoSolicitud, { tuyo: string; del: string; seguro: string }> = {
+  auto: { tuyo: 'tu coche', del: 'el coche', seguro: 'coche' },
+  moto: { tuyo: 'tu moto', del: 'la moto', seguro: 'moto' },
+  hogar: { tuyo: 'tu seguro de hogar', del: 'el seguro de hogar', seguro: 'hogar' },
+  vida: { tuyo: 'tu seguro de vida', del: 'el seguro de vida', seguro: 'vida' },
+  salud: { tuyo: 'tu seguro de salud', del: 'el seguro de salud', seguro: 'salud' },
+  decesos: { tuyo: 'tu seguro de decesos', del: 'el seguro de decesos', seguro: 'decesos' },
+  accidentes: { tuyo: 'tu seguro de accidentes', del: 'el seguro de accidentes', seguro: 'accidentes' },
+  mascotas: { tuyo: 'el seguro de tu mascota', del: 'el seguro de la mascota', seguro: 'mascota' },
+  responsabilidad_civil: { tuyo: 'tu seguro de responsabilidad civil', del: 'el seguro de responsabilidad civil', seguro: 'responsabilidad civil' },
+  comercio: { tuyo: 'el seguro de tu negocio', del: 'el seguro del negocio', seguro: 'comercio' },
+  comunidades: { tuyo: 'el seguro de tu comunidad', del: 'el seguro de la comunidad', seguro: 'comunidad' },
+  empresas: { tuyo: 'el seguro de tu empresa', del: 'el seguro de la empresa', seguro: 'empresa' },
+  rc_profesional: { tuyo: 'tu seguro de RC profesional', del: 'el seguro de RC profesional', seguro: 'RC profesional' },
+  dyo: { tuyo: 'tu seguro de D&O', del: 'el seguro de D&O', seguro: 'D&O' },
+  flotas: { tuyo: 'el seguro de tu flota', del: 'el seguro de la flota', seguro: 'flota' },
+  transporte_mercancias: { tuyo: 'tu seguro de transporte de mercancías', del: 'el seguro de transporte de mercancías', seguro: 'transporte de mercancías' },
+  ciberriesgos: { tuyo: 'tu seguro de ciberriesgos', del: 'el seguro de ciberriesgos', seguro: 'ciberriesgos' },
+  decenal: { tuyo: 'tu seguro decenal', del: 'el seguro decenal', seguro: 'decenal' },
+  embarcaciones: { tuyo: 'el seguro de tu embarcación', del: 'el seguro de la embarcación', seguro: 'embarcación' },
+  impago_alquiler: { tuyo: 'tu seguro de impago de alquiler', del: 'el seguro de impago de alquiler', seguro: 'impago de alquiler' },
+  viaje: { tuyo: 'tu seguro de viaje', del: 'el seguro de viaje', seguro: 'viaje' },
+  caucion: { tuyo: 'tu seguro de caución', del: 'el seguro de caución', seguro: 'caución' },
+  otros: { tuyo: 'tu seguro', del: 'el seguro', seguro: 'seguro' },
+}
+
+/** «coche», «moto», «hogar»… para títulos, tareas e historial (texto de la casa, no del cliente). */
+export function nombreRamoSolicitud(ramo: RamoSolicitud): string {
+  return NOMBRE_RAMO[ramo].seguro
+}
+
+/** Título de la página del enlace. */
+export function tituloSolicitud(ramo: RamoSolicitud, tercero: boolean): string {
+  if (tercero) return `Datos de la persona que figurará en ${grupoSolicitud(ramo) === 'vehiculo' ? 'el seguro de ' : ''}${NOMBRE_RAMO[ramo].del}`
+  if (grupoSolicitud(ramo) === 'vehiculo') return `Datos para tu presupuesto de ${NOMBRE_RAMO[ramo].seguro}`
+  return `Datos para el presupuesto de ${NOMBRE_RAMO[ramo].tuyo}`
+}
+
+/** Qué documentos tiene sentido subir en el enlace, para el texto de ayuda. */
+export function ayudaDocumentosSolicitud(ramo: RamoSolicitud): string {
+  if (grupoSolicitud(ramo) === 'vehiculo') return 'DNI, carné de conducir, permiso de circulación o ficha técnica (y tu póliza actual si la tienes).'
+  return 'Tu DNI y, si ya tienes un seguro de esto, la póliza o el último recibo.'
+}
+
+export type TipoCampo = 'texto' | 'fecha' | 'opcion' | 'numero' | 'si_no' | 'texto_largo' | 'direccion'
 
 export type CampoSolicitud = {
   clave: string
@@ -32,6 +99,23 @@ export type CampoSolicitud = {
   siMarcado?: string
   /** Lo que ya consta en su ficha: el formulario lo trae relleno y el cliente lo puede corregir. */
   actual?: string
+  /** Fecha: admite el futuro (vencimientos). Sin esto, una fecha futura no vale. */
+  admiteFutura?: boolean
+  /** Fecha: solo hoy o después (fecha de efecto deseada). */
+  soloFutura?: boolean
+  /** Número: tope (por defecto 1.000.000). */
+  max?: number
+}
+
+/**
+ * Un campo `direccion` se contesta con estas SUBCLAVES escalares (`<clave>Cp`, `<clave>Provincia`…): CP primero →
+ * provincia → municipio (de la lista del CP) → calle (callejero del Catastro) → número, planta y puerta.
+ * `ViaTipo`/`ViaNombre` = la calle OFICIAL elegida del callejero; ausentes = texto libre (queda «por validar»).
+ */
+export const SUBCLAVES_DIRECCION = ['Cp', 'Provincia', 'Municipio', 'Calle', 'Numero', 'Planta', 'Puerta', 'ViaTipo', 'ViaNombre'] as const
+export type SubclaveDireccion = (typeof SUBCLAVES_DIRECCION)[number]
+export function claveDireccion(clave: string, sub: SubclaveDireccion): string {
+  return `${clave}${sub}`
 }
 
 /** Lo que la ficha YA tiene: eso no se le vuelve a pedir. */
@@ -42,6 +126,9 @@ export type ConocidoFicha = {
   carnetMoto: boolean
   carnetCoche: boolean
 }
+
+/** Nada conocido: lo que se usa cuando el enlace no debe revelar qué tiene la ficha (lead web de una ficha que ya existía). */
+export const NADA_CONOCIDO: ConocidoFicha = { dni: false, fechaNacimiento: false, codigoPostal: false, carnetMoto: false, carnetCoche: false }
 
 export const CARNETS_MOTO_SOLICITUD = [
   { valor: 'A', etiqueta: 'A (sin límite de potencia)' },
@@ -57,10 +144,34 @@ export const GARAJES_SOLICITUD = [
   { valor: 'calle', etiqueta: 'En la calle' },
 ] as const
 
+export const REGIMENES_HOGAR_SOLICITUD = [
+  { valor: 'propietario', etiqueta: 'Propietario' },
+  { valor: 'inquilino', etiqueta: 'Inquilino' },
+] as const
+
+export const USOS_HOGAR_SOLICITUD = [
+  { valor: 'habitual', etiqueta: 'Vivienda habitual (vivo en ella)' },
+  { valor: 'secundaria', etiqueta: 'Segunda residencia' },
+  { valor: 'alquilada', etiqueta: 'La tengo alquilada a otros' },
+] as const
+
 const CAMPOS_IDENTIDAD_SOLICITUD: readonly CampoSolicitud[] = [
   { clave: 'dni', etiqueta: 'DNI o NIE del conductor principal', tipo: 'texto', obligatorio: true },
   { clave: 'fechaNacimiento', etiqueta: 'Fecha de nacimiento', tipo: 'fecha', obligatorio: true },
 ]
+
+/** Identidad para lo que no es un vehículo: quien contrata (el tomador); una empresa o comunidad da su CIF. */
+function camposIdentidadTomador(grupo: GrupoSolicitud): CampoSolicitud[] {
+  return [
+    { clave: 'dni', etiqueta: grupo === 'generico' ? 'DNI, NIE o CIF de quien contrata' : 'DNI o NIE de quien contrata', tipo: 'texto', obligatorio: true },
+    {
+      clave: 'fechaNacimiento', etiqueta: 'Fecha de nacimiento', tipo: 'fecha',
+      // Una empresa o una comunidad no nace: en los genéricos no se exige.
+      obligatorio: grupo !== 'generico',
+      ...(grupo === 'generico' ? { ayuda: 'Si contrata una empresa o una comunidad, déjala en blanco.' } : {}),
+    },
+  ]
+}
 
 /**
  * Los campos de un enlace ya creado + DNI y nacimiento si le faltan (los enlaces
@@ -71,16 +182,44 @@ export function conIdentidad(campos: readonly CampoSolicitud[]): CampoSolicitud[
   return [...faltan, ...campos]
 }
 
-/** Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe (salvo DNI y nacimiento). */
-export function camposSolicitud(ramo: RamoSolicitud, conocido: ConocidoFicha): CampoSolicitud[] {
+const CAMPO_COMENTARIO: CampoSolicitud = { clave: 'comentario', etiqueta: '¿Algo más que debamos saber?', tipo: 'texto_largo', obligatorio: false }
+
+/** Seguro actual del riesgo: si lo tiene, compañía y vencimiento (el vencimiento sí puede ser futuro). */
+function camposSeguroActual(pregunta: string): CampoSolicitud[] {
+  return [
+    { clave: 'tieneSeguro', etiqueta: pregunta, tipo: 'si_no', obligatorio: true },
+    { clave: 'companiaActual', etiqueta: 'Compañía actual', tipo: 'texto', obligatorio: false, siMarcado: 'tieneSeguro' },
+    { clave: 'vencimientoActual', etiqueta: 'Fecha en que vence', tipo: 'fecha', obligatorio: false, siMarcado: 'tieneSeguro', admiteFutura: true },
+  ]
+}
+
+const CAMPO_FECHA_EFECTO: CampoSolicitud = {
+  clave: 'fechaEfecto', etiqueta: '¿Desde qué día quieres el seguro?', tipo: 'fecha', obligatorio: false, soloFutura: true,
+  ayuda: 'Si no lo tienes claro, déjalo en blanco.',
+}
+
+/** Hipoteca → ¿el seguro lo pide el banco? + entidad. `null` = no contestado (nunca «no»). */
+const CAMPOS_HIPOTECA: readonly CampoSolicitud[] = [
+  { clave: 'hipoteca', etiqueta: '¿Tiene hipoteca?', tipo: 'si_no', obligatorio: true },
+  {
+    clave: 'paraBanco', etiqueta: '¿Necesitas el seguro para el banco (te piden un certificado)?', tipo: 'si_no', obligatorio: true, siMarcado: 'hipoteca',
+    ayuda: 'Si el banco es beneficiario de la póliza, hay que ponerlo en ella.',
+  },
+  { clave: 'entidadHipoteca', etiqueta: 'Banco de la hipoteca', tipo: 'texto', obligatorio: false, siMarcado: 'hipoteca' },
+]
+
+function campoCp(conocido: ConocidoFicha, etiqueta: string): CampoSolicitud[] {
+  return conocido.codigoPostal ? [] : [{ clave: 'codigoPostal', etiqueta, tipo: 'texto', obligatorio: true }]
+}
+
+/** Lo de antes, sin tocar: auto y moto. */
+function camposVehiculo(ramo: 'auto' | 'moto', conocido: ConocidoFicha): CampoSolicitud[] {
   const moto = ramo === 'moto'
   const campos: CampoSolicitud[] = []
   // DNI y nacimiento se piden SIEMPRE (Alberto, 24/09/2026): si la ficha los tiene, llegan
   // rellenos (`actual`) para que el cliente los confirme o los corrija.
   campos.push(...CAMPOS_IDENTIDAD_SOLICITUD)
-  if (!conocido.codigoPostal) {
-    campos.push({ clave: 'codigoPostal', etiqueta: `Código postal donde duerme ${moto ? 'la moto' : 'el coche'}`, tipo: 'texto', obligatorio: true })
-  }
+  campos.push(...campoCp(conocido, `Código postal donde duerme ${moto ? 'la moto' : 'el coche'}`))
   if (moto && !conocido.carnetMoto) {
     campos.push({ clave: 'tipoCarnet', etiqueta: 'Carné con el que la conduces', tipo: 'opcion', obligatorio: true, opciones: CARNETS_MOTO_SOLICITUD })
     campos.push({ clave: 'fechaCarnet', etiqueta: 'Fecha de expedición de ese carné', tipo: 'fecha', obligatorio: true, ayuda: 'Viene en el propio carné.' })
@@ -99,9 +238,91 @@ export function camposSolicitud(ramo: RamoSolicitud, conocido: ConocidoFicha): C
     { clave: 'companiaActual', etiqueta: 'Compañía actual', tipo: 'texto', obligatorio: false, siMarcado: 'tieneSeguro' },
     { clave: 'vencimientoActual', etiqueta: 'Fecha en que vence', tipo: 'fecha', obligatorio: false, siMarcado: 'tieneSeguro' },
     { clave: 'aniosSinSiniestros', etiqueta: 'Años sin partes con culpa', tipo: 'numero', obligatorio: false },
-    { clave: 'comentario', etiqueta: '¿Algo más que debamos saber?', tipo: 'texto_largo', obligatorio: false },
+    CAMPO_COMENTARIO,
   )
   return campos
+}
+
+/**
+ * HOGAR (25/10/2026): la dirección por la regla de la casa (CP → provincia → municipio → calle del Catastro →
+ * número), régimen, uso, contenido, alarma, hipoteca (→ banco/certificado + entidad), seguro actual y efecto.
+ * Con la dirección, al completar se consulta el Catastro (m², año, referencia) para tarificar sin reteclear.
+ */
+function camposHogar(): CampoSolicitud[] {
+  return [
+    ...camposIdentidadTomador('hogar'),
+    { clave: 'vivienda', etiqueta: 'Dirección de la vivienda', tipo: 'direccion', obligatorio: true, ayuda: 'Empieza por el código postal: la provincia y el municipio salen solos.' },
+    { clave: 'regimen', etiqueta: '¿Eres propietario o inquilino?', tipo: 'opcion', obligatorio: true, opciones: REGIMENES_HOGAR_SOLICITUD },
+    { clave: 'usoVivienda', etiqueta: '¿Qué uso tiene la vivienda?', tipo: 'opcion', obligatorio: true, opciones: USOS_HOGAR_SOLICITUD },
+    {
+      clave: 'valorContenido', etiqueta: 'Valor aproximado de lo que hay dentro (muebles, electrodomésticos, ropa…), en €', tipo: 'numero', obligatorio: false,
+      max: 10_000_000, ayuda: 'Si no lo sabes, déjalo en blanco y lo calculamos contigo.',
+    },
+    { clave: 'alarma', etiqueta: '¿Tiene alarma conectada?', tipo: 'si_no', obligatorio: true },
+    ...CAMPOS_HIPOTECA,
+    ...camposSeguroActual('¿La vivienda tiene seguro ahora?'),
+    CAMPO_FECHA_EFECTO,
+    CAMPO_COMENTARIO,
+  ]
+}
+
+function camposPersonas(ramo: RamoSolicitud, conocido: ConocidoFicha): CampoSolicitud[] {
+  const c: CampoSolicitud[] = [...camposIdentidadTomador('personas'), ...campoCp(conocido, 'Tu código postal')]
+  if (ramo === 'vida') {
+    c.push(
+      { clave: 'capitalDeseado', etiqueta: '¿Qué capital quieres asegurar? (€)', tipo: 'numero', obligatorio: false, max: 10_000_000, ayuda: 'Si no lo sabes, déjalo en blanco y lo vemos juntos.' },
+      { clave: 'fumador', etiqueta: '¿Fumas?', tipo: 'si_no', obligatorio: true },
+      ...CAMPOS_HIPOTECA,
+    )
+  } else if (ramo === 'accidentes') {
+    c.push({ clave: 'profesion', etiqueta: '¿A qué te dedicas?', tipo: 'texto', obligatorio: true })
+  } else {
+    c.push(
+      { clave: 'personasAsegurar', etiqueta: '¿Cuántas personas quieres asegurar?', tipo: 'numero', obligatorio: true, max: 30 },
+      { clave: 'edades', etiqueta: 'Edad de cada una', tipo: 'texto', obligatorio: false, ayuda: 'Por ejemplo: 45, 43, 12 y 9.' },
+    )
+  }
+  c.push(...camposSeguroActual('¿Tienes ya un seguro de esto?'), CAMPO_FECHA_EFECTO, CAMPO_COMENTARIO)
+  return c
+}
+
+function camposMascota(conocido: ConocidoFicha): CampoSolicitud[] {
+  return [
+    ...camposIdentidadTomador('mascota'),
+    ...campoCp(conocido, 'Tu código postal'),
+    { clave: 'razaMascota', etiqueta: 'Raza (o «mestizo»)', tipo: 'texto', obligatorio: true },
+    { clave: 'fechaNacimientoMascota', etiqueta: 'Fecha de nacimiento del animal, aproximada', tipo: 'fecha', obligatorio: false },
+    { clave: 'ppp', etiqueta: '¿Es de raza potencialmente peligrosa (PPP)?', tipo: 'si_no', obligatorio: true },
+    { clave: 'microchip', etiqueta: 'Número de microchip', tipo: 'texto', obligatorio: false },
+    ...camposSeguroActual('¿Tiene seguro ahora?'),
+    CAMPO_FECHA_EFECTO,
+    CAMPO_COMENTARIO,
+  ]
+}
+
+function camposGenerico(conocido: ConocidoFicha): CampoSolicitud[] {
+  return [
+    ...camposIdentidadTomador('generico'),
+    ...campoCp(conocido, 'Código postal del riesgo (o el tuyo)'),
+    { clave: 'descripcionRiesgo', etiqueta: '¿Qué quieres asegurar? Cuéntanoslo en pocas líneas', tipo: 'texto_largo', obligatorio: true },
+    ...camposSeguroActual('¿Tienes ya un seguro de esto?'),
+    CAMPO_FECHA_EFECTO,
+    CAMPO_COMENTARIO,
+  ]
+}
+
+/**
+ * Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe (salvo DNI y nacimiento).
+ * DECLARATIVO por grupo de ramo; auto y moto, igual que antes del 25/10/2026.
+ */
+export function camposSolicitud(ramo: RamoSolicitud, conocido: ConocidoFicha): CampoSolicitud[] {
+  switch (grupoSolicitud(ramo)) {
+    case 'vehiculo': return camposVehiculo(ramo as 'auto' | 'moto', conocido)
+    case 'hogar': return camposHogar()
+    case 'personas': return camposPersonas(ramo, conocido)
+    case 'mascota': return camposMascota(conocido)
+    default: return camposGenerico(conocido)
+  }
 }
 
 export type Respuesta = string | number | boolean | null
@@ -122,6 +343,92 @@ function fechaIso(v: string): string | null {
   return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
+function textoCorto(v: unknown, max: number): string | null {
+  if (typeof v !== 'string') return null
+  const s = v.replace(/\s+/g, ' ').trim()
+  return s === '' ? null : s.slice(0, max)
+}
+
+/**
+ * Una dirección (25/10/2026): CP válido, provincia y municipio presentes, calle y número. Planta y puerta, opcionales.
+ * La calle oficial del callejero (`ViaTipo`/`ViaNombre`) solo se guarda si viene entera; si no, `null` = «por validar».
+ * Un campo vacío es `null` (nunca '' ni 0).
+ */
+/** Qué dice la tabla oficial de un CP. `null` en un campo = la tabla no lo sabe (no se puede contrastar: se acepta). */
+export type ZonaCp = { provincias: string[] | null; municipios: string[] | null }
+
+/** La calle OFICIAL que el SERVIDOR ha comprobado contra el callejero para ese campo; `null` = sin validar. */
+export type ViaValidada = { tipo: string; nombre: string } | null
+
+export type OpcionesValidacion = {
+  /** Tabla CP → provincia(s)/municipios (en el servidor, `@central/core-direccion`). Sin ella no se contrasta. */
+  zonaCp?: (cp: string) => ZonaCp
+  /** Calle validada por el servidor contra el callejero, por clave del campo `direccion`. Sin ella, ninguna es oficial. */
+  viaValidada?: (clave: string) => ViaValidada
+}
+
+const plano = (s: string): string => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim()
+
+/** ¿Provincia y municipio casan con lo que dice la tabla del CP? Lo que la tabla no sabe no se contrasta. */
+export function casaZonaCp(provincia: string, municipio: string, zona: ZonaCp): { provincia: boolean; municipio: boolean } {
+  const igual = (a: string, b: string) => {
+    const pa = plano(a), pb = plano(b)
+    // «Alicante/Alacant»: vale cualquiera de las dos grafías.
+    return pa === pb || pb.split('/').map((x) => x.trim()).includes(pa)
+  }
+  return {
+    provincia: !zona.provincias || zona.provincias.length === 0 || zona.provincias.some((p) => igual(provincia, p)),
+    municipio: !zona.municipios || zona.municipios.length === 0 || zona.municipios.some((m) => igual(municipio, m)),
+  }
+}
+
+function validarDireccion(c: CampoSolicitud, entrada: Record<string, unknown>, opciones: OpcionesValidacion): { respuestas: Record<string, Respuesta>; errores: Record<string, string> } {
+  const k = (sub: SubclaveDireccion) => claveDireccion(c.clave, sub)
+  const respuestas: Record<string, Respuesta> = {}
+  const errores: Record<string, string> = {}
+  const cpBruto = textoCorto(entrada[k('Cp')], 5)
+  if (cpBruto === null) {
+    respuestas[k('Cp')] = null
+    if (c.obligatorio) errores[k('Cp')] = 'Falta el código postal.'
+  } else {
+    const r = normalizarCp(cpBruto)
+    if (r.ok) respuestas[k('Cp')] = r.valor
+    else errores[k('Cp')] = r.motivo
+  }
+  const req: [SubclaveDireccion, number, string][] = [
+    ['Provincia', 60, 'Falta la provincia.'],
+    ['Municipio', 80, 'Elige el municipio.'],
+    ['Calle', 120, 'Falta la calle.'],
+    ['Numero', 10, 'Falta el número.'],
+  ]
+  for (const [sub, max, motivo] of req) {
+    const t = textoCorto(entrada[k(sub)], max)
+    respuestas[k(sub)] = t
+    if (t === null && c.obligatorio) errores[k(sub)] = motivo
+  }
+  respuestas[k('Planta')] = textoCorto(entrada[k('Planta')], 10)
+  respuestas[k('Puerta')] = textoCorto(entrada[k('Puerta')], 10)
+  // Provincia y municipio tienen que ser los del CP (el navegador los rellena, pero lo que llega lo manda cualquiera).
+  const cp = respuestas[k('Cp')]
+  const prov = respuestas[k('Provincia')]
+  const mun = respuestas[k('Municipio')]
+  if (opciones.zonaCp && typeof cp === 'string' && typeof prov === 'string' && typeof mun === 'string') {
+    const casa = casaZonaCp(prov, mun, opciones.zonaCp(cp))
+    if (!casa.provincia) errores[k('Provincia')] = 'La provincia no es la de ese código postal.'
+    if (!casa.municipio) errores[k('Municipio')] = 'Ese municipio no es de ese código postal.'
+  }
+  // La calle OFICIAL solo si la ha validado el SERVIDOR contra el callejero; lo que mande el cliente no la hace oficial.
+  // Sin validar: `null` = «por validar» (la calle escrita queda en `Calle`).
+  const viaTipo = textoCorto(entrada[k('ViaTipo')], 10)
+  const viaNombre = textoCorto(entrada[k('ViaNombre')], 80)
+  const valida = opciones.viaValidada?.(c.clave) ?? null
+  const coincide = valida !== null && viaTipo !== null && viaNombre !== null
+    && plano(valida.tipo) === plano(viaTipo) && plano(valida.nombre) === plano(viaNombre)
+  respuestas[k('ViaTipo')] = coincide ? plano(valida.tipo) : null
+  respuestas[k('ViaNombre')] = coincide ? plano(valida.nombre) : null
+  return { respuestas, errores }
+}
+
 /**
  * Valida lo que manda el cliente contra los campos que se le pidieron. Solo se
  * guardan las claves pedidas (lo demás se ignora) y cada error viene por campo.
@@ -130,11 +437,19 @@ export function validarRespuestas(
   campos: readonly CampoSolicitud[],
   entrada: Record<string, unknown>,
   hoy: Date = new Date(),
+  opciones: OpcionesValidacion = {},
 ): ValidacionSolicitud {
   const errores: Record<string, string> = {}
   const respuestas: Record<string, Respuesta> = {}
   const hoyIso = hoy.toISOString().slice(0, 10)
   for (const c of campos) {
+    if (c.tipo === 'direccion') {
+      // Escalares por subclave; `siMarcado` no aplica a una dirección.
+      const d = validarDireccion(c, entrada, opciones)
+      Object.assign(respuestas, d.respuestas)
+      Object.assign(errores, d.errores)
+      continue
+    }
     if (c.siMarcado && entrada[c.siMarcado] !== true) { respuestas[c.clave] = null; continue }
     const v = entrada[c.clave]
     const vacio = v === undefined || v === null || (typeof v === 'string' && v.trim() === '')
@@ -150,7 +465,7 @@ export function validarRespuestas(
         break
       case 'numero': {
         const n = typeof v === 'number' ? v : Number(String(v).replace(/\./g, '').replace(',', '.'))
-        if (!Number.isFinite(n) || n < 0 || n > 1_000_000) errores[c.clave] = 'Pon un número.'
+        if (!Number.isFinite(n) || n < 0 || n > (c.max ?? 1_000_000)) errores[c.clave] = 'Pon un número.'
         else respuestas[c.clave] = Math.round(n)
         break
       }
@@ -167,7 +482,8 @@ export function validarRespuestas(
         }
         const f = typeof v === 'string' ? fechaIso(v) : null
         if (!f) errores[c.clave] = 'Fecha no válida: usa DD/MM/AAAA.'
-        else if (c.clave !== 'vencimientoActual' && f > hoyIso) errores[c.clave] = 'No puede ser una fecha futura.'
+        else if (c.soloFutura && f < hoyIso) errores[c.clave] = 'Tiene que ser hoy o una fecha futura.'
+        else if (!c.soloFutura && !c.admiteFutura && c.clave !== 'vencimientoActual' && f > hoyIso) errores[c.clave] = 'No puede ser una fecha futura.'
         else if (f < '1940-01-01') errores[c.clave] = 'Esa fecha es demasiado antigua.'
         else respuestas[c.clave] = f
         break
@@ -207,11 +523,9 @@ export function mensajeSolicitud(ramo: RamoSolicitud, url: string, tercero = fal
   if (tercero) {
     // Datos de OTRA persona (un familiar que figurará en el seguro). No se nombra a nadie: el
     // mensaje se reenvía y puede acabar en cualquier buzón.
-    const que = ramo === 'moto' ? 'la moto' : 'el coche'
-    return `Hola, soy Alberto de Grupo ASegura. Para el presupuesto de ${que} necesito los datos de la persona que figurará en el seguro; son dos minutos: ${url}`
+    return `Hola, soy Alberto de Grupo ASegura. Para el presupuesto de ${NOMBRE_RAMO[ramo].del} necesito los datos de la persona que figurará en el seguro; son dos minutos: ${url}`
   }
-  const que = ramo === 'moto' ? 'tu moto' : 'tu coche'
-  return `Hola, soy Alberto de Grupo ASegura. Para prepararte el presupuesto de ${que} necesito unos datos; te lleva dos minutos: ${url}`
+  return `Hola, soy Alberto de Grupo ASegura. Para prepararte el presupuesto de ${NOMBRE_RAMO[ramo].tuyo} necesito unos datos; te lleva dos minutos: ${url}`
 }
 
 // ─── Documentos que sube el cliente por el enlace (24/09/2026) ───────────────

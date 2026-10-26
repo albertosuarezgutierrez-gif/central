@@ -3,7 +3,7 @@
  * Por TOKEN y sin identidad (decisión de Alberto): la página no enseña nada del
  * cliente, solo pide. El portal no escribe en la cartera: lo manda por el puente.
  */
-import type { CampoSolicitud, RamoSolicitud } from '@central/module-seguros'
+import { ramoSolicitud, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config.ts'
 
 export type SolicitudLeida =
@@ -19,12 +19,14 @@ export function interpretarSolicitud(status: number, json: unknown): SolicitudLe
   if (status !== 200 || !o) return { estado: 'error' }
   if (o.estado === 'muerta') return { estado: 'muerta' }
   if (o.estado === 'completada') return { estado: 'completada' }
-  if (o.estado === 'ok' && (o.ramo === 'moto' || o.ramo === 'auto') && Array.isArray(o.campos)) {
+  // 25/10/2026: cualquier ramo de oportunidad (antes, solo moto/auto).
+  const ramo = ramoSolicitud(o.ramo)
+  if (o.estado === 'ok' && ramo && Array.isArray(o.campos)) {
     const campos = o.campos.filter(
       (c): c is CampoSolicitud =>
         c !== null && typeof c === 'object' && typeof (c as CampoSolicitud).clave === 'string' && typeof (c as CampoSolicitud).etiqueta === 'string',
     )
-    if (campos.length > 0) return { estado: 'ok', ramo: o.ramo, campos, tercero: o.tercero === true }
+    if (campos.length > 0) return { estado: 'ok', ramo, campos, tercero: o.tercero === true }
   }
   return { estado: 'error' }
 }
@@ -64,6 +66,26 @@ export async function llamarPuenteSolicitud(init: { metodo: 'GET'; token: string
 export async function leerSolicitud(token: string): Promise<SolicitudLeida> {
   const r = await llamarPuenteSolicitud({ metodo: 'GET', token })
   return r ? interpretarSolicitud(r.status, r.json) : { estado: 'error' }
+}
+
+// ─── ¿Token vivo? Para las ayudas de dirección del enlace (CP → municipios, callejero) ──
+// Esas rutas son públicas (como el enlace): sin un token VIVO no son un servicio anónimo del Catastro. La respuesta
+// del puente se recuerda unos minutos por instancia para no llamar a asegura en cada tecla.
+const VIVO_MS = 10 * 60_000
+const MAX_VIVOS = 300
+const vivos = new Map<string, number>()
+
+export const RE_TOKEN_SOLICITUD = /^[A-Za-z0-9_-]{40,60}$/
+
+export async function tokenSolicitudVivo(token: string, ahora = Date.now()): Promise<boolean> {
+  if (!RE_TOKEN_SOLICITUD.test(token)) return false
+  const hasta = vivos.get(token)
+  if (hasta !== undefined && hasta > ahora) return true
+  const s = await leerSolicitud(token)
+  if (s.estado !== 'ok') return false
+  if (vivos.size >= MAX_VIVOS) vivos.delete(vivos.keys().next().value as string)
+  vivos.set(token, ahora + VIVO_MS)
+  return true
 }
 
 // ─── Documentos que sube el cliente (24/09/2026) ─────────────────────────────

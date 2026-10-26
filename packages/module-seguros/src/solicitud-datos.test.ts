@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { camposSolicitud, conIdentidad, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
+import { RAMOS_SOLICITUD, camposSolicitud, casaZonaCp, conIdentidad, grupoSolicitud, tituloSolicitud, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
 
 const nadaConocido = { dni: false, fechaNacimiento: false, codigoPostal: false, carnetMoto: false, carnetCoche: false }
 const todoConocido = { dni: true, fechaNacimiento: true, codigoPostal: true, carnetMoto: true, carnetCoche: true }
@@ -106,4 +106,133 @@ test('el DNI y el nacimiento solo salen del DNI o del carné: la póliza y el pe
   // El DNI del propio carné sí se contrasta.
   const carne = [{ documentoId: 'd2', tipo: 'carnet' as const, valores: { dni: '12345678Z' } }]
   assert.equal(contrastarConDocumentos({ dni: '87654321X' }, carne).length, 1)
+})
+
+// ─── 25/10/2026: todos los ramos (definición declarativa por grupo) ──────────
+
+test('auto y moto piden EXACTAMENTE lo de antes (no se rompen al generalizar)', () => {
+  assert.deepEqual(camposSolicitud('moto', nadaConocido).map((c) => c.clave), [
+    'dni', 'fechaNacimiento', 'codigoPostal', 'tipoCarnet', 'fechaCarnet', 'matricula', 'marca', 'modelo', 'fechaMatriculacion',
+    'garaje', 'kmAnuales', 'tieneSeguro', 'companiaActual', 'vencimientoActual', 'aniosSinSiniestros', 'comentario',
+  ])
+  assert.deepEqual(camposSolicitud('auto', todoConocido).map((c) => c.clave), [
+    'dni', 'fechaNacimiento', 'matricula', 'marca', 'modelo', 'fechaMatriculacion',
+    'garaje', 'kmAnuales', 'tieneSeguro', 'companiaActual', 'vencimientoActual', 'aniosSinSiniestros', 'comentario',
+  ])
+  assert.equal(camposSolicitud('auto', nadaConocido)[0].etiqueta, 'DNI o NIE del conductor principal')
+})
+
+test('todo ramo de oportunidad tiene formulario: identidad, seguro actual y comentario; claves sin repetir', () => {
+  for (const r of RAMOS_SOLICITUD) {
+    const claves = camposSolicitud(r, nadaConocido).map((c) => c.clave)
+    assert.equal(new Set(claves).size, claves.length, `${r}: clave repetida`)
+    for (const k of ['dni', 'tieneSeguro', 'companiaActual', 'vencimientoActual', 'comentario']) assert.ok(claves.includes(k), `${r} sin ${k}`)
+    // Todo `siMarcado` apunta a un sí/no que existe.
+    for (const c of camposSolicitud(r, nadaConocido)) {
+      if (c.siMarcado) assert.equal(camposSolicitud(r, nadaConocido).find((x) => x.clave === c.siMarcado)?.tipo, 'si_no', `${r}.${c.clave}`)
+    }
+    assert.ok(tituloSolicitud(r, false).length > 10)
+  }
+  // Los títulos de auto/moto, como antes.
+  assert.equal(tituloSolicitud('moto', true), 'Datos de la persona que figurará en el seguro de la moto')
+  assert.equal(tituloSolicitud('auto', false), 'Datos para tu presupuesto de coche')
+  assert.equal(tituloSolicitud('hogar', false), 'Datos para el presupuesto de tu seguro de hogar')
+  assert.equal(grupoSolicitud('hogar'), 'hogar')
+  assert.equal(grupoSolicitud('comunidades'), 'generico')
+})
+
+test('HOGAR: dirección CP-primero, régimen, uso, contenido, alarma, hipoteca → banco/certificado + entidad, seguro actual y efecto', () => {
+  const campos = camposSolicitud('hogar', todoConocido)
+  const por = (k: string) => campos.find((c) => c.clave === k)
+  assert.equal(por('vivienda')?.tipo, 'direccion')
+  assert.equal(por('vivienda')?.obligatorio, true)
+  assert.deepEqual(por('regimen')?.opciones?.map((o) => o.valor), ['propietario', 'inquilino'])
+  assert.deepEqual(por('usoVivienda')?.opciones?.map((o) => o.valor), ['habitual', 'secundaria', 'alquilada'])
+  assert.equal(por('valorContenido')?.tipo, 'numero')
+  assert.equal(por('valorContenido')?.obligatorio, false)
+  assert.equal(por('alarma')?.tipo, 'si_no')
+  assert.equal(por('paraBanco')?.siMarcado, 'hipoteca')
+  assert.equal(por('entidadHipoteca')?.siMarcado, 'hipoteca')
+  assert.equal(por('vencimientoActual')?.siMarcado, 'tieneSeguro')
+  assert.equal(por('fechaEfecto')?.soloFutura, true)
+})
+
+const VIVIENDA_OK = {
+  viviendaCp: '41003', viviendaProvincia: 'SEVILLA', viviendaMunicipio: 'SEVILLA', viviendaCalle: 'Calle Socorro', viviendaNumero: '24',
+  viviendaViaTipo: 'CL', viviendaViaNombre: 'Socorro',
+}
+const HOGAR_OK = { dni: '12345678Z', fechaNacimiento: '01/02/1980', ...VIVIENDA_OK, regimen: 'propietario', usoVivienda: 'habitual', alarma: false, hipoteca: false, tieneSeguro: false }
+
+test('HOGAR valida: lo que se deja en blanco es null (nunca 0 ni «»), y lo que cuelga de un «no» también', () => {
+  const r = validarRespuestas(camposSolicitud('hogar', todoConocido), HOGAR_OK, HOY)
+  assert.ok(r.ok, JSON.stringify(r))
+  if (!r.ok) return
+  assert.equal(r.respuestas.valorContenido, null)
+  assert.equal(r.respuestas.paraBanco, null)
+  assert.equal(r.respuestas.entidadHipoteca, null)
+  assert.equal(r.respuestas.fechaEfecto, null)
+  assert.equal(r.respuestas.viviendaPlanta, null)
+  assert.equal(r.respuestas.viviendaCp, '41003')
+  // Sin validación del servidor, la calle que manda el cliente NO es oficial («por validar»).
+  assert.equal(r.respuestas.viviendaViaNombre, null)
+  assert.equal(r.respuestas.viviendaViaTipo, null)
+  assert.equal(r.respuestas.alarma, false)
+})
+
+test('HOGAR: con hipoteca hay que decir si es para el banco; la dirección exige CP válido, municipio, calle y número', () => {
+  const campos = camposSolicitud('hogar', todoConocido)
+  const conHipoteca = validarRespuestas(campos, { ...HOGAR_OK, hipoteca: true }, HOY)
+  assert.ok(!conHipoteca.ok && conHipoteca.errores.paraBanco)
+  const banco = validarRespuestas(campos, { ...HOGAR_OK, hipoteca: true, paraBanco: true, entidadHipoteca: ' Caixabank ' }, HOY)
+  assert.ok(banco.ok && banco.respuestas.paraBanco === true && banco.respuestas.entidadHipoteca === 'Caixabank')
+  const mal = validarRespuestas(campos, { ...HOGAR_OK, viviendaCp: '99999', viviendaMunicipio: '', viviendaNumero: ' ' }, HOY)
+  assert.ok(!mal.ok)
+  if (!mal.ok) for (const k of ['viviendaCp', 'viviendaMunicipio', 'viviendaNumero']) assert.ok(mal.errores[k], k)
+  // Calle oficial a medias = texto libre (por validar), no media vía.
+  const media = validarRespuestas(campos, { ...HOGAR_OK, viviendaViaNombre: '' }, HOY)
+  assert.ok(media.ok && media.respuestas.viviendaViaTipo === null && media.respuestas.viviendaViaNombre === null)
+})
+
+test('fecha de efecto: hoy o futura; el vencimiento del seguro actual admite futuro', () => {
+  const campos = camposSolicitud('hogar', todoConocido)
+  const pasada = validarRespuestas(campos, { ...HOGAR_OK, fechaEfecto: '01/01/2026' }, HOY)
+  assert.ok(!pasada.ok && pasada.errores.fechaEfecto)
+  const futura = validarRespuestas(campos, { ...HOGAR_OK, fechaEfecto: '2026-11-01', tieneSeguro: true, companiaActual: 'Mapfre', vencimientoActual: '15/12/2026' }, HOY)
+  assert.ok(futura.ok && futura.respuestas.fechaEfecto === '2026-11-01' && futura.respuestas.vencimientoActual === '2026-12-15')
+})
+
+test('genéricos: una empresa o comunidad da CIF y no tiene que dar fecha de nacimiento', () => {
+  const r = validarRespuestas(camposSolicitud('comunidades', nadaConocido), {
+    dni: 'H41000000', codigoPostal: '41003', descripcionRiesgo: 'Comunidad de 12 vecinos', tieneSeguro: false,
+  }, HOY)
+  assert.ok(r.ok, JSON.stringify(r))
+})
+
+test('el mensaje nombra el riesgo de cada ramo, sin datos del cliente', () => {
+  const url = 'https://clientes.grupoasegura.es/datos/abc'
+  assert.match(mensajeSolicitud('hogar', url), /presupuesto de tu seguro de hogar/)
+  assert.match(mensajeSolicitud('mascotas', url, true), /el seguro de la mascota/)
+  assert.equal(mensajeSolicitud('moto', url), `Hola, soy Alberto de Grupo ASegura. Para prepararte el presupuesto de tu moto necesito unos datos; te lleva dos minutos: ${url}`)
+})
+
+test('la calle es OFICIAL solo si el servidor la validó contra el callejero (y casa con la que manda el cliente)', () => {
+  const campos = camposSolicitud('hogar', todoConocido)
+  const ok = validarRespuestas(campos, HOGAR_OK, HOY, { viaValidada: () => ({ tipo: 'CL', nombre: 'SOCORRO' }) })
+  assert.ok(ok.ok && ok.respuestas.viviendaViaTipo === 'CL' && ok.respuestas.viviendaViaNombre === 'SOCORRO')
+  const otra = validarRespuestas(campos, HOGAR_OK, HOY, { viaValidada: () => ({ tipo: 'AV', nombre: 'SOCORRO' }) })
+  assert.ok(otra.ok && otra.respuestas.viviendaViaTipo === null && otra.respuestas.viviendaViaNombre === null)
+  const sinValidar = validarRespuestas(campos, HOGAR_OK, HOY, { viaValidada: () => null })
+  assert.ok(sinValidar.ok && sinValidar.respuestas.viviendaViaNombre === null)
+})
+
+test('provincia y municipio tienen que ser los del CP (si la tabla lo sabe)', () => {
+  const campos = camposSolicitud('hogar', todoConocido)
+  const zona = () => ({ provincias: ['Sevilla'], municipios: ['Sevilla'] })
+  assert.ok(validarRespuestas(campos, { ...HOGAR_OK, viviendaMunicipio: 'sevilla' }, HOY, { zonaCp: zona }).ok)
+  const mal = validarRespuestas(campos, { ...HOGAR_OK, viviendaProvincia: 'Madrid', viviendaMunicipio: 'Espartinas' }, HOY, { zonaCp: zona })
+  assert.ok(!mal.ok && mal.errores.viviendaProvincia && mal.errores.viviendaMunicipio)
+  // La tabla no conoce el CP: no se contrasta.
+  assert.ok(validarRespuestas(campos, { ...HOGAR_OK, viviendaMunicipio: 'Otro' }, HOY, { zonaCp: () => ({ provincias: null, municipios: null }) }).ok)
+  // Grafías bilingües: «Alicante/Alacant».
+  assert.deepEqual(casaZonaCp('alicante', 'Alacant', { provincias: ['Alicante'], municipios: ['Alicante/Alacant'] }), { provincia: true, municipio: true })
 })

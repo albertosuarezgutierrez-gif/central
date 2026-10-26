@@ -1,14 +1,37 @@
 'use client'
 import { useRef, useState } from 'react'
-import type { CampoSolicitud } from '@central/module-seguros'
+import { viaSigueVigente } from '@central/core-catastro'
+import { ayudaDocumentosSolicitud, claveDireccion, type CampoSolicitud, type RamoSolicitud } from '@central/module-seguros'
+import { DIRECCION_VACIA, DireccionCp, type ValorDireccion } from '@/app/(portal)/patrimonio/DireccionCp'
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
 import { interpretarDocSubido } from '@/lib/solicitud-datos'
+
+/** Una dirección del formulario: CP → provincia → municipio → calle (con `DireccionCp`) + número, planta y puerta aparte. */
+type ValorDireccionDatos = ValorDireccion & { numero: string; planta: string; puerta: string }
+const DIRECCION_DATOS_VACIA: ValorDireccionDatos = { ...DIRECCION_VACIA, numero: '', planta: '', puerta: '' }
+
+/** De lo que hay en pantalla a las subclaves escalares que valida asegura (`claveDireccion`). */
+function aplanarDireccion(clave: string, d: ValorDireccionDatos): Record<string, string> {
+  const via = viaSigueVigente(d.direccion, d.viaOficial) ? d.viaOficial : null
+  return {
+    [claveDireccion(clave, 'Cp')]: d.cp,
+    [claveDireccion(clave, 'Provincia')]: d.provincia,
+    [claveDireccion(clave, 'Municipio')]: d.municipio,
+    [claveDireccion(clave, 'Calle')]: d.direccion,
+    [claveDireccion(clave, 'Numero')]: d.numero,
+    [claveDireccion(clave, 'Planta')]: d.planta,
+    [claveDireccion(clave, 'Puerta')]: d.puerta,
+    [claveDireccion(clave, 'ViaTipo')]: via?.tipo ?? '',
+    [claveDireccion(clave, 'ViaNombre')]: via?.nombre ?? '',
+  }
+}
 
 type Estado = { tipo: 'editando' } | { tipo: 'enviando' } | { tipo: 'hecho' } | { tipo: 'fallo'; texto: string }
 type Subida = { id: number; nombre: string; estado: 'subiendo' | 'ok' | 'fallo'; texto: string }
 
 /** El formulario del enlace de datos. Pinta los campos que manda asegura y nada más. */
-export default function Formulario({ token, campos, tercero = false }: { token: string; campos: CampoSolicitud[]; tercero?: boolean }) {
+export default function Formulario({ token, campos, ramo, tercero = false }: { token: string; campos: CampoSolicitud[]; ramo: RamoSolicitud; tercero?: boolean }) {
+  const [direcciones, setDirecciones] = useState<Record<string, ValorDireccionDatos>>({})
   const [consiente, setConsiente] = useState(false)
   const consienteRef = useRef(consiente)
   consienteRef.current = consiente
@@ -83,7 +106,14 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
       const res = await fetch('/api/datos', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token, respuestas: valores, consentimiento: consiente }),
+        body: JSON.stringify({
+          token,
+          respuestas: {
+            ...valores,
+            ...Object.assign({}, ...campos.filter((c) => c.tipo === 'direccion').map((c) => aplanarDireccion(c.clave, direcciones[c.clave] ?? DIRECCION_DATOS_VACIA))),
+          },
+          consentimiento: consiente,
+        }),
       })
       status = res.status
       json = (await res.json().catch(() => null)) as Record<string, unknown> | null
@@ -116,7 +146,7 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
       <div className="editor-campo" style={{ border: '1px dashed currentColor', borderRadius: 12, padding: 14, minWidth: 0, overflowWrap: 'anywhere', position: 'relative' }}>
         <span style={{ fontWeight: 600 }}>📎 Súbenos tus documentos y te rellenamos el formulario</span>
         <span className="editor-ayuda">
-          DNI, carné de conducir, permiso de circulación o ficha técnica (y tu póliza actual si la tienes). Foto o PDF, uno o varios. Los guardamos para tu contratación.
+          {ayudaDocumentosSolicitud(ramo)} Foto o PDF, uno o varios. Los guardamos para tu contratación.
         </span>
         {/* El input nativo se oculta (su rótulo lo pone el navegador y no se adapta); se pulsa por la etiqueta. */}
         <label htmlFor="docs" className="boton-tenue" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', justifySelf: 'start', cursor: subiendo ? 'wait' : sinPermiso ? 'not-allowed' : 'pointer', opacity: sinPermiso ? 0.5 : 1 }} aria-disabled={sinPermiso}>
@@ -148,6 +178,34 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
       {campos.filter(visible).map((c) => {
         const id = `c-${c.clave}`
         const err = errores[c.clave]
+        if (c.tipo === 'direccion') {
+          const d = direcciones[c.clave] ?? DIRECCION_DATOS_VACIA
+          const fijar = (cambio: Partial<ValorDireccionDatos>) => setDirecciones((p) => ({ ...p, [c.clave]: { ...(p[c.clave] ?? DIRECCION_DATOS_VACIA), ...cambio } }))
+          const erroresDir = (['Cp', 'Provincia', 'Municipio', 'Calle', 'Numero'] as const).map((sub) => errores[claveDireccion(c.clave, sub)]).filter(Boolean)
+          const tk = encodeURIComponent(token)
+          return (
+            <fieldset key={c.clave} className="editor-campo" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              <legend style={{ fontWeight: 600, marginBottom: 6 }}>{c.etiqueta}</legend>
+              {c.ayuda && <span className="editor-ayuda">{c.ayuda}</span>}
+              <DireccionCp
+                valor={d}
+                onCambio={(v) => fijar(v)}
+                disabled={estado.tipo === 'enviando'}
+                rutas={{ cp: (cp) => `/api/datos/codigo-postal?token=${tk}&cp=${cp}`, vias: (q) => `/api/datos/vias?token=${tk}&${q}` }}
+                calle={{ etiqueta: 'Calle', ejemplo: 'Calle San Vicente' }}
+              />
+              <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 96px), 1fr))', marginTop: 10 }}>
+                {([['numero', 'Número', true], ['planta', 'Planta', false], ['puerta', 'Puerta', false]] as const).map(([k, rotulo, oblig]) => (
+                  <label key={k} style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 600, minWidth: 0 }}>
+                    <span>{rotulo}{!oblig && <span className="suave"> (opcional)</span>}</span>
+                    <input className="campo" maxLength={10} value={d[k]} disabled={estado.tipo === 'enviando'} onChange={(e) => fijar({ [k]: e.target.value })} />
+                  </label>
+                ))}
+              </div>
+              {erroresDir.map((x, i) => <span key={i} className="editor-error" role="alert">{x}</span>)}
+            </fieldset>
+          )
+        }
         return (
           <div key={c.clave} className="editor-campo">
             <label htmlFor={id}>

@@ -28,7 +28,18 @@ export const DIRECCION_VACIA: ValorDireccion = { cp: '', provincia: '', municipi
 
 const etiqueta: React.CSSProperties = { display: 'grid', gap: 4, fontSize: 13, fontWeight: 600, minWidth: 0 }
 
-export function DireccionCp({ valor, onCambio, disabled }: { valor: ValorDireccion; onCambio: (v: ValorDireccion) => void; disabled?: boolean }) {
+/**
+ * `rutas` (25/10/2026): el enlace de datos del presupuesto (sin sesión) pregunta a `/api/datos/*` con su token; por
+ * defecto, las de patrimonio (con sesión). `calle`: el rótulo y el ejemplo del campo de la calle (en el enlace, el número
+ * va aparte).
+ */
+export function DireccionCp({ valor, onCambio, disabled, rutas, calle }: {
+  valor: ValorDireccion
+  onCambio: (v: ValorDireccion) => void
+  disabled?: boolean
+  rutas?: { cp: (cp: string) => string; vias: (q: URLSearchParams) => string }
+  calle?: { etiqueta: string; ejemplo: string }
+}) {
   const [lectura, setLectura] = useState<LecturaCp>({ estado: 'vacio' })
   const [sugeridas, setSugeridas] = useState<ViaCatastro[]>([])
   const [abierto, setAbierto] = useState(false)
@@ -39,6 +50,9 @@ export function DireccionCp({ valor, onCambio, disabled }: { valor: ValorDirecci
   // El padre es la fuente de verdad, pero los efectos necesitan el último valor sin relanzarse.
   const ultimo = useRef(valor)
   ultimo.current = valor
+  // Las rutas pueden llegar como objeto nuevo en cada render: por ref, para no relanzar las consultas.
+  const rutasRef = useRef(rutas)
+  rutasRef.current = rutas
 
   const est = estadoDireccion({ cp: valor.cp, provincia: valor.provincia, municipio: valor.municipio, lectura })
   const viaVigente = viaSigueVigente(valor.direccion, valor.viaOficial) ? valor.viaOficial : null
@@ -50,7 +64,7 @@ export function DireccionCp({ valor, onCambio, disabled }: { valor: ValorDirecci
     }
     let vivo = true
     setLectura({ estado: 'consultando' })
-    fetch(`/api/patrimonio/codigo-postal?cp=${valor.cp}`)
+    fetch(rutasRef.current ? rutasRef.current.cp(valor.cp) : `/api/patrimonio/codigo-postal?cp=${valor.cp}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((j: { municipios: string[] | null; provincia: string | null }) => {
         if (!vivo) return
@@ -78,7 +92,8 @@ export function DireccionCp({ valor, onCambio, disabled }: { valor: ValorDirecci
     let vivo = true
     const ctl = new AbortController()
     const t = setTimeout(() => {
-      fetch(`/api/patrimonio/vias?${new URLSearchParams({ provincia: valor.provincia, municipio: valor.municipio, q: valor.direccion })}`, { signal: ctl.signal })
+      const q = new URLSearchParams({ provincia: valor.provincia, municipio: valor.municipio, q: valor.direccion })
+      fetch(rutasRef.current ? rutasRef.current.vias(q) : `/api/patrimonio/vias?${q}`, { signal: ctl.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((j: { vias: ViaCatastro[] }) => {
           if (vivo) {
@@ -162,9 +177,9 @@ export function DireccionCp({ valor, onCambio, disabled }: { valor: ValorDirecci
       </label>
       <div ref={cajaRef} style={{ ...etiqueta, gridColumn: '1 / -1', position: 'relative' }}>
         <label htmlFor={`${idLista}-calle`} style={{ display: 'grid', gap: 4 }}>
-          Calle y número
+          {calle?.etiqueta ?? 'Calle y número'}
           <input
-            id={`${idLista}-calle`} className="campo" placeholder={est.puedeBuscarCalle ? 'Calle San Vicente 40, 2º 14' : 'Primero el código postal'}
+            id={`${idLista}-calle`} className="campo" placeholder={est.puedeBuscarCalle ? (calle?.ejemplo ?? 'Calle San Vicente 40, 2º 14') : 'Primero el código postal'}
             value={valor.direccion} required autoComplete="off" disabled={disabled || !est.puedeBuscarCalle}
             role="combobox" aria-expanded={abierto && sugeridas.length > 0} aria-controls={idLista} aria-autocomplete="list"
             aria-activedescendant={activa >= 0 ? `${idLista}-${activa}` : undefined}

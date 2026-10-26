@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { hostPortalCliente, interpretarEnlaceDatos, LINEA_TOPE_LEADS_WEB, mensajeWhatsappLead, ramoEnlaceDatos, textoTelegramLead, TIPOS_SEGURO_LEAD, type AvisoLead } from './leads-web.ts'
+import { hostPortalCliente, interpretarEnlaceDatos, LINEA_ENLACE_FICHA_EXISTENTE, LINEA_TOPE_LEADS_WEB, mensajeWhatsappLead, RAMO_OPORTUNIDAD_DE_LEAD, ramoEnlaceDatos, textoTelegramLead, TIPOS_SEGURO_LEAD, type AvisoLead } from './leads-web.ts'
 
 const base: AvisoLead = {
   nombre: 'MARÍA josé',
@@ -100,13 +100,16 @@ const URL_OK = `https://clientes.grupoasegura.es/datos/${'a'.repeat(43)}`
 const MOVIL = '612 34 56 78'
 const HOST = 'clientes.grupoasegura.es'
 
-test('enlace: solo ficha NUEVA, ramo auto/moto y un móvil con WhatsApp', () => {
+test('enlace (25/10/2026): TODO ramo, ficha nueva o existente (esta, a ciegas), y un móvil con WhatsApp', () => {
   const nueva = { estado: 'nueva', id: 'x' } as const
-  assert.equal(ramoEnlaceDatos('auto', nueva, MOVIL), 'auto')
-  assert.equal(ramoEnlaceDatos('moto', nueva, '+34 712 345 678'), 'moto')
-  for (const t of ['hogar', 'flota', 'patinete-electrico', 'otros'] as const) assert.equal(ramoEnlaceDatos(t, nueva, MOVIL), null, t)
-  // Ficha que ya existía: NUNCA (la página enseñaría su DNI a quien tecleó su email).
-  assert.equal(ramoEnlaceDatos('auto', { estado: 'existente', id: 'x', nombre: 'Ana' }, MOVIL), null)
+  assert.deepEqual(ramoEnlaceDatos('auto', nueva, MOVIL), { ramo: 'auto', existente: false })
+  assert.deepEqual(ramoEnlaceDatos('moto', nueva, '+34 712 345 678'), { ramo: 'moto', existente: false })
+  assert.deepEqual(ramoEnlaceDatos('hogar', nueva, MOVIL), { ramo: 'hogar', existente: false })
+  assert.deepEqual(ramoEnlaceDatos('flota', nueva, MOVIL), { ramo: 'flotas', existente: false })
+  assert.deepEqual(ramoEnlaceDatos('seguro-perro', nueva, MOVIL), { ramo: 'mascotas', existente: false })
+  assert.deepEqual(ramoEnlaceDatos('patinete-electrico', nueva, MOVIL), { ramo: 'otros', existente: false })
+  // Ficha que ya existía: SÍ (venta cruzada), marcada para que asegura lo genere a ciegas.
+  assert.deepEqual(ramoEnlaceDatos('hogar', { estado: 'existente', id: 'x', nombre: 'Ana' }, MOVIL), { ramo: 'hogar', existente: true })
   assert.equal(ramoEnlaceDatos('auto', { estado: 'no_registrado', motivo: 'red' }, MOVIL), null)
   assert.equal(ramoEnlaceDatos('moto', { estado: 'rechazado', motivo: 'x' }, MOVIL), null)
 })
@@ -161,8 +164,33 @@ test('WhatsApp sin enlace (null o ausente): el texto de siempre, idéntico', () 
     assert.ok(antes.includes('¿me puedes enviar una foto del permiso de circulación'))
     assert.ok(!antes.includes('formulario'))
   }
-  // Otro ramo con URL (no debería darse): la URL no se cuela.
-  assert.ok(!mensajeWhatsappLead({ nombre: 'Luis', tipoSeguro: 'hogar', urlDatos: URL_OK }).includes('/datos/'))
+  // Sin enlace, el resto de ramos también conserva su texto de siempre.
+  assert.ok(!mensajeWhatsappLead({ nombre: 'Luis', tipoSeguro: 'hogar' }).includes('/datos/'))
+})
+
+test('WhatsApp con enlace en TODO ramo: el enlace va dentro, con el riesgo nombrado y sin inventar nada del cliente', () => {
+  for (const t of TIPOS_SEGURO_LEAD) {
+    const m = mensajeWhatsappLead({ nombre: 'Luis', tipoSeguro: t, urlDatos: URL_OK })
+    assert.ok(m.includes(URL_OK), t)
+    assert.ok(m.includes('rellena este formulario'), t)
+  }
+  assert.equal(
+    mensajeWhatsappLead({ nombre: 'Luis', tipoSeguro: 'hogar', urlDatos: URL_OK }),
+    `Hola Luis, soy Alberto, de Grupo ASegura, tu persona de contacto. He visto tu solicitud de seguro de hogar. Para prepararte la propuesta, rellena este formulario (2 minutos: la dirección, si es tuya o alquilada, si hay hipoteca y tu seguro actual si lo tienes; puedes subir tu póliza): ${URL_OK}. Si lo prefieres, dime cuándo te viene bien que te llame. Gracias.`,
+  )
+  // Que el lead pida hogar no dice nada del banco: no se afirma certificado ni hipoteca.
+  assert.doesNotMatch(mensajeWhatsappLead({ nombre: 'Luis', tipoSeguro: 'hogar', urlDatos: URL_OK }), /certificado|tu hipoteca|tu banco/i)
+  assert.match(mensajeWhatsappLead({ nombre: 'Luis', tipoSeguro: 'comunidades', urlDatos: URL_OK }), /solicitud de seguro para tu comunidad\. Para prepararte la propuesta, rellena este formulario \(2 minutos\):/)
+  assert.equal(Object.keys(RAMO_OPORTUNIDAD_DE_LEAD).length, TIPOS_SEGURO_LEAD.length)
+})
+
+test('aviso de una ficha que YA EXISTÍA con enlace: pide comprobar el teléfono antes de mandarlo', () => {
+  const ex = { ...base, tipoSeguro: 'hogar' as const, ficha: { id: 'f1', nueva: false, nombre: 'Ana Pérez' }, urlDatos: URL_OK }
+  const t = textoTelegramLead(ex)
+  assert.ok(t.includes(LINEA_ENLACE_FICHA_EXISTENTE))
+  assert.ok(t.includes(encodeURIComponent(URL_OK)))
+  assert.ok(!textoTelegramLead({ ...ex, urlDatos: null }).includes(LINEA_ENLACE_FICHA_EXISTENTE))
+  assert.ok(!textoTelegramLead({ ...base, ficha: { id: 'n', nueva: true, nombre: 'Ana' }, urlDatos: URL_OK }).includes(LINEA_ENLACE_FICHA_EXISTENTE), 'ficha nueva: sin la línea')
 })
 
 test('aviso: el enlace viaja dentro del WhatsApp; el tope se dice en una línea', () => {

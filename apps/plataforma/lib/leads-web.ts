@@ -22,7 +22,7 @@
 // Test: `lib/leads-web.test.ts` (junto al módulo; no existe `test/regression-leads-web.test.ts`).
 
 import { escapeHtml } from '@central/core-telegram'
-import { nombreDePila, normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
+import { nombreDePila, normalizarEmail, normalizarNombre, normalizarTelefono, type RamoOportunidad } from '@central/module-seguros'
 import type { ResultadoEscritura } from './cliente-edicion-asegura'
 import { enlaceWhatsappConMensaje, urlWhatsapp } from './telefono-wa.ts'
 
@@ -336,20 +336,42 @@ export function interpretarAltaLead(r: ResultadoEscritura): ResultadoLead {
   }
 }
 
-// ─── Enlace al formulario de datos (auto/moto) ───────────────────────────────
+// ─── Enlace al formulario de datos (todos los ramos, 25/10/2026) ─────────────
+
+/** Ramo de OPORTUNIDAD de cada opción del formulario web. Completo por tipo: un ramo web nuevo no compila sin el suyo. */
+export const RAMO_OPORTUNIDAD_DE_LEAD: Record<TipoSeguroLead, RamoOportunidad> = {
+  auto: 'auto',
+  moto: 'moto',
+  hogar: 'hogar',
+  vida: 'vida',
+  salud: 'salud',
+  comunidades: 'comunidades',
+  comercio: 'comercio',
+  flota: 'flotas',
+  'responsabilidad-civil': 'responsabilidad_civil',
+  decesos: 'decesos',
+  'seguro-perro': 'mascotas',
+  'impago-alquiler': 'impago_alquiler',
+  // Sin ramo propio: «otros» (la etiqueta del aviso sigue diciendo «patinete eléctrico»).
+  'patinete-electrico': 'otros',
+  otros: 'otros',
+}
+
+export type PeticionEnlace = { ramo: RamoOportunidad; existente: boolean }
 
 /**
- * ¿Se pide a asegura el enlace `/datos/[token]` para este lead? (06/10/2026, Alberto: automático.)
- * SOLO ficha NUEVA, ramo auto/moto y un teléfono al que se pueda abrir WhatsApp (la misma regla que
- * pinta la línea 📲 del aviso: `urlWhatsapp`). Sin móvil, o con un fijo, el enlace no le llegaría
- * nunca: no se crea ni oportunidad ni token. Una ficha que ya existía NUNCA: el formulario es anónimo,
- * el enlace va al teléfono tecleado y la página trae rellenos el DNI y el nacimiento de la ficha
- * (quien escribiera el email de un cliente y su propio móvil los vería). Asegura lo comprueba otra vez.
+ * ¿Se pide a asegura el enlace `/datos/[token]` para este lead? (06/10/2026 auto/moto; 25/10/2026 TODOS los ramos y
+ * también la ficha que ya existía, decisión de Alberto: venta cruzada.)
+ * Hace falta una ficha (nueva o existente) y un teléfono al que se pueda abrir WhatsApp (la misma regla que pinta la
+ * línea 📲 del aviso: `urlWhatsapp`). Sin móvil, o con un fijo, el enlace no le llegaría nunca: no se crea nada.
+ * Ficha que YA EXISTÍA: el formulario es anónimo y el enlace va al teléfono TECLEADO, así que asegura lo genera a
+ * CIEGAS (`existente: true`: la página no trae nada de su ficha ni pregunta según lo que sabe) y el aviso pide a
+ * Alberto comprobar que ese teléfono es del cliente antes de mandarlo.
  */
-export function ramoEnlaceDatos(tipoSeguro: TipoSeguroLead, resultado: ResultadoLead, telefono: string | null): 'auto' | 'moto' | null {
-  if (resultado.estado !== 'nueva') return null
+export function ramoEnlaceDatos(tipoSeguro: TipoSeguroLead, resultado: ResultadoLead, telefono: string | null): PeticionEnlace | null {
+  if (resultado.estado !== 'nueva' && resultado.estado !== 'existente') return null
   if (!telefono || urlWhatsapp(telefono) === null) return null
-  return tipoSeguro === 'auto' || tipoSeguro === 'moto' ? tipoSeguro : null
+  return { ramo: RAMO_OPORTUNIDAD_DE_LEAD[tipoSeguro], existente: resultado.estado === 'existente' }
 }
 
 export const HOST_PORTAL_POR_DEFECTO = 'clientes.grupoasegura.es'
@@ -380,6 +402,8 @@ export function interpretarEnlaceDatos(status: number, json: unknown, hostPortal
   return { estado: 'ok', url: o.url }
 }
 
+export const LINEA_ENLACE_FICHA_EXISTENTE = '🔎 Formulario a ciegas (no trae nada de su ficha). Antes de mandarlo, comprueba que ese teléfono es suyo.'
+
 export const LINEA_TOPE_LEADS_WEB = '⚠️ tope diario de leads web alcanzado: formulario no generado'
 
 // ─── Aviso Telegram ──────────────────────────────────────────────────────────
@@ -404,7 +428,7 @@ export type AvisoLead = {
   /** Por qué no hay ficha (solo si `ficha === null`). */
   motivo?: string
   base?: string
-  /** Enlace al formulario de datos (auto/moto, ficha nueva). Sin él, el WhatsApp pide las fotos. */
+  /** Enlace al formulario de datos (cualquier ramo). Sin él, el WhatsApp de siempre (fotos o llamada). */
   urlDatos?: string | null
   /** El tope diario de oportunidades web impidió generar el enlace: se dice en el aviso. */
   topeLeadsWeb?: boolean
@@ -423,11 +447,17 @@ export function mensajeWhatsappLead(a: { nombre: string; tipoSeguro?: TipoSeguro
   const t = a.tipoSeguro ?? null
   if (t === 'auto' || t === 'moto') {
     const ramo = ETIQUETA_TIPO_SEGURO[t].toLowerCase()
-    // Con enlace (ficha nueva): el formulario sin login del portal. Sin él, las fotos por WhatsApp.
+    // Con enlace: el formulario sin login del portal. Sin él, las fotos por WhatsApp.
     if (a.urlDatos) {
       return `${intro} He visto tu solicitud de seguro de ${ramo}. Para prepararte la propuesta, rellena este formulario (2 minutos, puedes subir foto del permiso de circulación y del carné): ${a.urlDatos}. Si lo prefieres, mándamelas por aquí. Gracias.`
     }
     return `${intro} He visto tu solicitud de seguro de ${ramo}. Para prepararte la propuesta, ¿me puedes enviar una foto del permiso de circulación, una foto del carné de conducir (por delante y por detrás) y tu código postal? Gracias.`
+  }
+  // 25/10/2026: el resto de ramos, con enlace, también al formulario. Qué pide se dice sin inventar nada del cliente
+  // (si hay hipoteca o es para el banco lo contesta él en el formulario).
+  if (t && a.urlDatos) {
+    const que = QUE_PIDE_FORMULARIO[t]
+    return `${intro} He visto tu solicitud de ${SOLICITUD_DE[t]}. Para prepararte la propuesta, rellena este formulario (2 minutos${que ? `: ${que}` : ''}): ${a.urlDatos}. Si lo prefieres, dime cuándo te viene bien que te llame. Gracias.`
   }
   if (t === 'flota') {
     return `${intro} He visto tu solicitud de seguro para tu flota de vehículos. Para prepararte la propuesta, ¿me puedes enviar una foto del permiso de circulación de cada vehículo, una foto del carné de conducir de los conductores (por delante y por detrás) y tu código postal? Gracias.`
@@ -441,6 +471,33 @@ export function mensajeWhatsappLead(a: { nombre: string; tipoSeguro?: TipoSeguro
     return `${intro} He visto tu solicitud: ${ETIQUETA_TIPO_SEGURO[t].toLowerCase()}. ¿Cuándo te viene bien que te llame, o me puedes pasar los datos para estudiarlo? Gracias.`
   }
   return `${intro} He visto tu solicitud. ¿Cuándo te viene bien que te llame, o me puedes pasar los datos para estudiarlo? Gracias.`
+}
+
+/** «He visto tu solicitud de …» para los ramos que no son auto/moto. */
+const SOLICITUD_DE: Record<TipoSeguroLead, string> = {
+  auto: 'seguro de auto',
+  moto: 'seguro de moto',
+  hogar: 'seguro de hogar',
+  vida: 'seguro de vida',
+  salud: 'seguro de salud',
+  comunidades: 'seguro para tu comunidad',
+  comercio: 'seguro para tu negocio',
+  flota: 'seguro para tu flota de vehículos',
+  'responsabilidad-civil': 'seguro de responsabilidad civil',
+  decesos: 'seguro de decesos',
+  'seguro-perro': 'seguro para tu perro',
+  'impago-alquiler': 'seguro de impago de alquiler',
+  'patinete-electrico': 'seguro para tu patinete eléctrico',
+  otros: 'seguro',
+}
+
+/** Qué le va a pedir el formulario, en pocas palabras (coincide con `camposSolicitud` de `@central/module-seguros`). */
+const QUE_PIDE_FORMULARIO: Partial<Record<TipoSeguroLead, string>> = {
+  hogar: 'la dirección, si es tuya o alquilada, si hay hipoteca y tu seguro actual si lo tienes; puedes subir tu póliza',
+  vida: 'el capital, si fumas y si es para una hipoteca',
+  salud: 'cuántas personas y sus edades',
+  decesos: 'cuántas personas y sus edades',
+  'seguro-perro': 'la raza y la edad',
 }
 
 /** HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`. */
@@ -463,6 +520,8 @@ export function textoTelegramLead(a: AvisoLead): string {
         ? `🆕 Ficha nueva (lead): <a href="${url}">abrir ficha</a>`
         : `♻️ Ya estaba en la cartera como <b>${escapeHtml(a.ficha.nombre)}</b> (contacto anotado en su historial): <a href="${url}">abrir ficha</a>`,
     )
+    // Venta cruzada (25/10/2026): el formulario va al teléfono TECLEADO en una web anónima.
+    if (!a.ficha.nueva && a.urlDatos) lineas.push(LINEA_ENLACE_FICHA_EXISTENTE)
   } else {
     lineas.push(`⚠️ <b>NO se ha podido registrar en la cartera</b>${a.motivo ? ` (${escapeHtml(a.motivo)})` : ''}. Estos datos son el único rastro: dale de alta a mano.`)
   }

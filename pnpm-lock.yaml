@@ -145,6 +145,9 @@ importers:
       '@central/core-catastro':
         specifier: workspace:*
         version: link:../../packages/core-catastro
+      '@central/core-direccion':
+        specifier: workspace:*
+        version: link:../../packages/core-direccion
       '@central/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email

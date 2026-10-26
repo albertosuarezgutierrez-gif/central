@@ -194,7 +194,7 @@ type ConsultaSql = { $queryRaw: typeof prisma.$queryRaw }
  * asegurado): solo para los ramos donde el bien vive ahí (vivienda, comercio y libres) y solo si la oportunidad tiene
  * póliza. Una lectura que falla es «sin precarga» (`null`), nunca un dato inventado ni un error de pantalla.
  */
-async function precargaDePolizaDeOportunidad(
+export async function precargaDePolizaDeOportunidad(
   db: ConsultaSql,
   correduriaId: string,
   polizaId: string | null,

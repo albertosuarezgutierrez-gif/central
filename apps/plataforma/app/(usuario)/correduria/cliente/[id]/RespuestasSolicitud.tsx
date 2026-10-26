@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { Ico, FILA } from '../../iconos'
+import { direccionDeRespuestas, direccionLegible, nombreRamoSolicitud, type RamoSolicitud } from '@central/module-seguros'
 import { valorLegible, type SolicitudDatos } from '@/lib/seguimiento-asegura'
 import { fmt } from './piezas'
 
@@ -13,7 +14,7 @@ import { fmt } from './piezas'
  * papeles. `quien` = «El cliente» o el nombre del familiar; `tarificar` = el atajo a pedir precio
  * (`null` donde ya hay otro camino, como la pantalla del riesgo).
  */
-export function RespuestasSolicitud({ s, quien, tarificar }: { s: SolicitudDatos; quien: string; tarificar: { href: string; ramo: 'moto' | 'auto' } | null }) {
+export function RespuestasSolicitud({ s, quien, tarificar }: { s: SolicitudDatos; quien: string; tarificar: { href: string; ramo: RamoSolicitud } | null }) {
   return (
     <details open>
       <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontWeight: 600, color: 'var(--positive)' }}>
@@ -23,10 +24,10 @@ export function RespuestasSolicitud({ s, quien, tarificar }: { s: SolicitudDatos
         <div style={{ color: 'var(--negative)' }}>Sus respuestas no se pueden descifrar aquí (clave de datos personales).</div>
       ) : (
         <dl style={{ margin: '4px 0', display: 'grid', gridTemplateColumns: 'minmax(0, max-content) minmax(0, 1fr)', gap: '4px 12px' }}>
-          {s.campos.filter((c) => s.respuestas && c.clave in s.respuestas).map((c) => (
+          {s.campos.filter((c) => s.respuestas && (c.tipo === 'direccion' || c.clave in s.respuestas)).map((c) => (
             <div key={c.clave} style={{ display: 'contents' }}>
               <dt style={{ color: 'var(--muted)' }}>{c.etiqueta}</dt>
-              <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{valorLegible(c, s.respuestas?.[c.clave])}</dd>
+              <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{c.tipo === 'direccion' ? textoDireccion(s, c.clave) : valorLegible(c, s.respuestas?.[c.clave])}</dd>
             </div>
           ))}
         </dl>
@@ -34,12 +35,19 @@ export function RespuestasSolicitud({ s, quien, tarificar }: { s: SolicitudDatos
       <Verificacion s={s} />
       {tarificar && (
         <Link href={tarificar.href} style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
-          Tarificar {tarificar.ramo === 'moto' ? 'moto' : 'coche'} →
+          Tarificar {nombreRamoSolicitud(tarificar.ramo)} →
         </Link>
       )}
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Declarado por {quien === 'El cliente' ? 'el cliente' : quien} por el enlace: se verifica al emitir.</div>
     </details>
   )
+}
+
+/** Una dirección contestada en subclaves (`viviendaCp`…), en una línea; sin la calle del callejero, «por validar». */
+function textoDireccion(s: SolicitudDatos, clave: string): string {
+  const d = s.respuestas ? direccionDeRespuestas(s.respuestas, clave) : null
+  if (!d) return '—'
+  return `${direccionLegible(d)}${d.viaTipo && d.viaNombre ? '' : ' (calle escrita a mano, por validar)'}`
 }
 
 const DOC_LEGIBLE: Record<string, string> = {

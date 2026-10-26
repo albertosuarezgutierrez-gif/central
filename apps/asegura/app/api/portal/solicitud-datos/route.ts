@@ -8,6 +8,9 @@ import { responderSolicitud, solicitudPorToken } from '@/lib/solicitud-datos'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// Al completar un enlace de HOGAR, `after()` consulta el Catastro (tope 12 s), escribe el riesgo y avisa por Telegram;
+// la validación de la calle contra el callejero (≤3,5 s) va antes de contestar. 60 s de margen, como en las rutas de Catastro.
+export const maxDuration = 60
 
 /**
  * El enlace de datos del cliente, visto desde el portal (24/09/2026). Por TOKEN y sin identidad

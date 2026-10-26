@@ -13,6 +13,7 @@
   "dependencies": {
     "@central/core-ai": "workspace:*",
     "@central/core-catastro": "workspace:*",
+    "@central/core-direccion": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-firma": "workspace:*",
     "@central/core-identity": "workspace:*",

@@ -7,6 +7,8 @@
  * teléfono) cualquiera podría escribir el email de un cliente y su propio móvil y ver sus datos. Por
  * eso el enlace automático es SOLO para una ficha recién nacida del formulario, sin DNI ni
  * nacimiento: no hay nada suyo que enseñar.
+ * 25/10/2026 (venta cruzada): una ficha que YA existía también recibe enlace, pero por otro camino
+ * (`existente: true` en `lead-web-solicitud.ts`): a CIEGAS, sin nada relleno (`ACTOR_ENLACE_WEB`).
  */
 export const TOPE_DIARIO_LEADS_WEB = 20
 /** Ventana en la que una ficha cuenta como «recién creada por el formulario». */
