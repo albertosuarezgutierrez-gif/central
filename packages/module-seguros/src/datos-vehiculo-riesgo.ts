@@ -70,6 +70,19 @@ export type DatosVehiculoRiesgo = {
   tipoVehiculo: TipoVehiculo | null
   /** Cilindrada en cc (entero). `null` = pendiente; un 0 no es una cilindrada. */
   cilindradaCc: number | null
+  // ── Seguro actual e historial (26/10/2026, enlace de datos fase 2). Nombres de `DatosAuto`/`DatosMoto` de asegura;
+  //    su sitio en la petición de Codeoscopic, en `MAPEO_HISTORIAL_CODEOSCOPIC`. Opcionales en el tipo: lo guardado
+  //    antes no los trae (= `null`, no se sabe).
+  /** ¿Está asegurado ahora? `false` = dice que no (no «nunca tuvo seguro»: eso no se pregunta). */
+  aseguradoAntes?: boolean | null
+  /** Compañía actual TAL COMO LA DICE el cliente (texto); el código DGS va aparte, solo si se resuelve sin duda. */
+  companiaAnterior?: string | null
+  /** Código DGS de esa compañía (`C0058`). */
+  companiaAnteriorCodigo?: string | null
+  /** Vencimiento del seguro actual (aaaa-mm-dd, puede ser futuro): la fecha de efecto natural del nuevo. */
+  vencimientoAnterior?: string | null
+  /** Años sin siniestros con culpa DECLARADOS (entero ≥ 0; el 0 es un dato). */
+  aniosSinSiniestros?: number | null
   /** Instante (ISO) en que la corredora dijo «estos datos están bien». Cualquier edición posterior lo borra. */
   confirmadoAt: string | null
 }
@@ -81,7 +94,41 @@ export const CAMPOS_VEHICULO: readonly CampoVehiculo[] = [
   'matricula', 'marca', 'modelo', 'version', 'codigoVehiculo', 'marcaId', 'modeloId', 'motorId',
   'fechaMatriculacion', 'fechaCompra', 'kmAnuales', 'garaje', 'cpCirculacion', 'municipioCirculacion',
   'municipioCirculacionId', 'municipioCirculacionCp', 'remolqueLigero', 'tipoVehiculo', 'cilindradaCc',
+  'aseguradoAntes', 'companiaAnterior', 'companiaAnteriorCodigo', 'vencimientoAnterior', 'aniosSinSiniestros',
 ]
+
+/** El seguro actual y el historial: se escriben y se comparan en bloque (son de la MISMA póliza). */
+export const CAMPOS_HISTORIAL_VEHICULO = ['aseguradoAntes', 'companiaAnterior', 'companiaAnteriorCodigo', 'vencimientoAnterior', 'aniosSinSiniestros'] as const
+
+/**
+ * Dónde viaja cada campo del historial en la petición de Codeoscopic (`peticion-auto.ts`/`peticion-moto.ts` de asegura:
+ * `DatosAuto.aseguradoAntes` → `risk.previouslyInsured`, etc.). `null` = no viaja: la compañía en texto se resuelve a su
+ * código DGS (catálogo `/car/insurance-companies`, gratis) y el vencimiento solo sirve para la fecha de efecto.
+ */
+export const MAPEO_HISTORIAL_CODEOSCOPIC: Readonly<Record<(typeof CAMPOS_HISTORIAL_VEHICULO)[number], string | null>> = {
+  aseguradoAntes: 'risk.previouslyInsured',
+  companiaAnteriorCodigo: 'risk.previousInsurance.previousCompany.code',
+  aniosSinSiniestros: 'risk.previousInsurance.yearsWithoutAccidents',
+  companiaAnterior: null,
+  vencimientoAnterior: null,
+}
+
+/**
+ * El historial del riesgo con los nombres de `DatosAuto`/`DatosMoto` (lo que la pantalla de precio precarga). Solo lo que
+ * se sabe: una clave ausente = no consta (nunca `false` ni 0 por defecto). Sin seguro declarado, ni compañía ni años.
+ */
+export function historialParaCotizar(d: Partial<DatosVehiculoRiesgo> | null | undefined): { aseguradoAntes?: boolean; companiaAnteriorCodigo?: string; aniosSinSiniestros?: number } {
+  const out: { aseguradoAntes?: boolean; companiaAnteriorCodigo?: string; aniosSinSiniestros?: number } = {}
+  if (typeof d?.aseguradoAntes !== 'boolean') return out
+  out.aseguradoAntes = d.aseguradoAntes
+  if (!d.aseguradoAntes) return out
+  if (typeof d.companiaAnteriorCodigo === 'string' && RE_DGS.test(d.companiaAnteriorCodigo)) out.companiaAnteriorCodigo = d.companiaAnteriorCodigo
+  if (typeof d.aniosSinSiniestros === 'number' && Number.isInteger(d.aniosSinSiniestros) && d.aniosSinSiniestros >= 0) out.aniosSinSiniestros = d.aniosSinSiniestros
+  return out
+}
+
+const RE_DGS = /^[CM]\d{4}$/
+export const ANIOS_SIN_SINIESTROS_MAXIMO = 70
 
 export const ETIQUETA_CAMPO_VEHICULO: Record<CampoVehiculo, string> = {
   matricula: 'Matrícula',
@@ -103,13 +150,19 @@ export const ETIQUETA_CAMPO_VEHICULO: Record<CampoVehiculo, string> = {
   remolqueLigero: 'Remolque ligero',
   tipoVehiculo: 'Tipo de vehículo',
   cilindradaCc: 'Cilindrada',
+  aseguradoAntes: '¿Tiene seguro ahora?',
+  companiaAnterior: 'Compañía actual',
+  companiaAnteriorCodigo: 'Compañía actual (código DGS)',
+  vencimientoAnterior: 'Vencimiento del seguro actual',
+  aniosSinSiniestros: 'Años sin siniestros',
 }
 
 export function datosVehiculoVacios(): DatosVehiculoRiesgo {
   return {
     matricula: null, marca: null, modelo: null, version: null, codigoVehiculo: null, marcaId: null, modeloId: null,
     motorId: null, fechaMatriculacion: null, fechaCompra: null, kmAnuales: null, garaje: null, cpCirculacion: null,
-    municipioCirculacion: null, municipioCirculacionId: null, municipioCirculacionCp: null, remolqueLigero: null, tipoVehiculo: null, cilindradaCc: null, confirmadoAt: null,
+    municipioCirculacion: null, municipioCirculacionId: null, municipioCirculacionCp: null, remolqueLigero: null, tipoVehiculo: null, cilindradaCc: null,
+    aseguradoAntes: null, companiaAnterior: null, companiaAnteriorCodigo: null, vencimientoAnterior: null, aniosSinSiniestros: null, confirmadoAt: null,
   }
 }
 
@@ -176,7 +229,7 @@ export function validarDatosVehiculoRiesgo(parcial: unknown, opciones: { hoy?: s
       else valor.matricula = m
     }
   }
-  for (const [k, max] of [['marca', 60], ['modelo', 80], ['version', 120], ['municipioCirculacion', 80]] as const) {
+  for (const [k, max] of [['marca', 60], ['modelo', 80], ['version', 120], ['municipioCirculacion', 80], ['companiaAnterior', 80]] as const) {
     if (!tiene(k)) continue
     const t = texto(e[k], max)
     if (t === 'invalido') mal(k, `${ETIQUETA_CAMPO_VEHICULO[k]}: texto no válido o demasiado largo.`)
@@ -197,6 +250,35 @@ export function validarDatosVehiculoRiesgo(parcial: unknown, opciones: { hoy?: s
     else if (t < FECHA_MINIMA) mal(k, `${ETIQUETA_CAMPO_VEHICULO[k]}: anterior a 1900.`)
     else if (t > hoy) mal(k, `${ETIQUETA_CAMPO_VEHICULO[k]}: no puede ser futura.`)
     else valor[k] = t
+  }
+  if (tiene('companiaAnteriorCodigo')) {
+    const t = texto(e.companiaAnteriorCodigo, 10)
+    if (t === 'invalido' || (t !== null && !RE_DGS.test(t.toUpperCase()))) mal('companiaAnteriorCodigo', 'Compañía actual: código DGS (C0058).')
+    else valor.companiaAnteriorCodigo = t === null ? null : t.toUpperCase()
+  }
+  if (tiene('vencimientoAnterior')) {
+    // Un vencimiento PUEDE ser futuro (es lo normal): solo se exige que exista y sea de este siglo.
+    const t = texto(e.vencimientoAnterior, 10)
+    if (t === 'invalido') mal('vencimientoAnterior', 'Vencimiento del seguro actual: fecha no válida.')
+    else if (t === null) valor.vencimientoAnterior = null
+    else if (!fechaReal(t)) mal('vencimientoAnterior', 'Vencimiento del seguro actual: usa el formato aaaa-mm-dd con una fecha que exista.')
+    else if (t < '2000-01-01') mal('vencimientoAnterior', 'Vencimiento del seguro actual: anterior a 2000.')
+    else valor.vencimientoAnterior = t
+  }
+  if (tiene('aseguradoAntes')) {
+    const v = e.aseguradoAntes
+    if (v === null || v === undefined) valor.aseguradoAntes = null
+    else if (typeof v === 'boolean') valor.aseguradoAntes = v
+    else mal('aseguradoAntes', '¿Tiene seguro ahora?: sí o no.')
+  }
+  if (tiene('aniosSinSiniestros')) {
+    const v = e.aniosSinSiniestros
+    if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) valor.aniosSinSiniestros = null
+    else {
+      const n = typeof v === 'number' ? v : typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v.trim()) : NaN
+      if (!Number.isInteger(n) || n < 0 || n > ANIOS_SIN_SINIESTROS_MAXIMO) mal('aniosSinSiniestros', `Años sin siniestros: un entero de 0 a ${ANIOS_SIN_SINIESTROS_MAXIMO}.`)
+      else valor.aniosSinSiniestros = n
+    }
   }
   if (tiene('kmAnuales')) {
     const v = e.kmAnuales
@@ -305,6 +387,11 @@ export function leerDatosVehiculo(bruto: unknown): DatosVehiculoRiesgo | null {
     remolqueLigero: typeof o.remolqueLigero === 'boolean' ? o.remolqueLigero : null,
     tipoVehiculo: tipoVehiculoDeTexto(o.tipoVehiculo),
     cilindradaCc: (() => { const c = n('cilindradaCc'); return c !== null && Number.isInteger(c) && c > 0 && c <= CILINDRADA_MAXIMA_CC ? c : null })(),
+    aseguradoAntes: typeof o.aseguradoAntes === 'boolean' ? o.aseguradoAntes : null,
+    companiaAnterior: s('companiaAnterior'),
+    companiaAnteriorCodigo: (() => { const c = s('companiaAnteriorCodigo'); return c !== null && RE_DGS.test(c) ? c : null })(),
+    vencimientoAnterior: (() => { const f = s('vencimientoAnterior'); return f !== null && fechaReal(f) ? f : null })(),
+    aniosSinSiniestros: (() => { const a = n('aniosSinSiniestros'); return a !== null && Number.isInteger(a) && a >= 0 && a <= ANIOS_SIN_SINIESTROS_MAXIMO ? a : null })(),
     confirmadoAt: iso !== null && RE_ISO.test(iso) ? iso : null,
   }
 }

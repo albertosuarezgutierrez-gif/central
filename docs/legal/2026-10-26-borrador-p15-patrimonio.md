@@ -17,7 +17,7 @@
 >   pedido» o el consentimiento `comercial` (`permisoContacto`).
 > - Conservación (decisión §0.3): 24 meses desde el cierre o desde la última actualización (`MESES_RETENCION_SENALES`); el cron
 >   diario las BORRA.
-> - Sigue pendiente: §0.2 (supresión) y lo de §0.7. El interruptor `PATRIMONIO_SENALES_ACTIVAS` sigue APAGADO.
+> - §0.2 (supresión) HECHO (26/10/2026): `resolverSupresion` (total/parcial) borra las señales de las fichas del suprimido y deja constancia en la respuesta (`apps/asegura/lib/patrimonio-supresion.ts`). Sigue pendiente lo de §0.7. El interruptor `PATRIMONIO_SENALES_ACTIVAS` sigue APAGADO.
 
 ## 0. Decisiones que necesito de Alberto antes de encender nada
 
@@ -27,7 +27,7 @@
    `packages/module-patrimonio/src/senales.ts`. Pasar a interés legítimo es **una línea** (`'interes_legitimo'`: se calcula salvo
    oposición, y `comercial_patrimonio = false` pasa a ser la oposición) **más** sustituir el apartado de la política por la
    variante B de abajo y rehacer la casilla como «No quiero…» (hoy es un «sí» explícito). **Hasta que decida, rige A.**
-2. **Supresión (art. 17):** `ALCANCE_SUPRESION` (`packages/module-seguros-portal/src/supresion.ts`) no menciona las señales.
+2. **Supresión (art. 17) — HECHO 26/10/2026 (ver cabecera):** `ALCANCE_SUPRESION` (`packages/module-seguros-portal/src/supresion.ts`) no menciona las señales.
    Propuesta: tratarlas como `suprimible` (se borran las filas de `portal_patrimonio_senal` de la ficha cuando se atiende una
    supresión). No está hecho; **hay que decidirlo y cablearlo antes de activar**, y por eso el texto de privacidad no promete
    un plazo de conservación concreto.

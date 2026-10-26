@@ -111,13 +111,13 @@ test('el DNI y el nacimiento solo salen del DNI o del carné: la póliza y el pe
 
 // ─── 25/10/2026: todos los ramos (definición declarativa por grupo) ──────────
 
-test('auto y moto piden EXACTAMENTE lo de antes (no se rompen al generalizar)', () => {
+test('auto y moto piden EXACTAMENTE lo de antes (no se rompen al generalizar) + el buscador del catálogo (26/10/2026)', () => {
   assert.deepEqual(camposSolicitud('moto', nadaConocido).map((c) => c.clave), [
-    'dni', 'fechaNacimiento', 'codigoPostal', 'tipoCarnet', 'fechaCarnet', 'matricula', 'marca', 'modelo', 'fechaMatriculacion',
+    'dni', 'fechaNacimiento', 'codigoPostal', 'tipoCarnet', 'fechaCarnet', 'matricula', 'marca', 'modelo', 'versionCatalogo', 'fechaMatriculacion',
     'garaje', 'kmAnuales', 'tieneSeguro', 'companiaActual', 'vencimientoActual', 'aniosSinSiniestros', 'comentario',
   ])
   assert.deepEqual(camposSolicitud('auto', todoConocido).map((c) => c.clave), [
-    'dni', 'fechaNacimiento', 'matricula', 'marca', 'modelo', 'fechaMatriculacion',
+    'dni', 'fechaNacimiento', 'matricula', 'marca', 'modelo', 'versionCatalogo', 'fechaMatriculacion',
     'garaje', 'kmAnuales', 'tieneSeguro', 'companiaActual', 'vencimientoActual', 'aniosSinSiniestros', 'comentario',
   ])
   assert.equal(camposSolicitud('auto', nadaConocido)[0].etiqueta, 'DNI o NIE del conductor principal')

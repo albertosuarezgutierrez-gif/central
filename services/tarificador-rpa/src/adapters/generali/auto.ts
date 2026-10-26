@@ -60,6 +60,9 @@ import {
   fragmentosImportesGenerali,
   PESTANAS_VALORACION_GENERALI,
   resumenVolcadoResultadosGenerali,
+  resumenNavegacionGenerali,
+  type NavegacionMarcoGenerali,
+  type ControlNavegacionGenerali,
   type VolcadoMarcoResultadosGenerali,
   filaCoincideDocumentoGenerali,
   ID_BOTON_PERSONAS_GENERALI,
@@ -229,13 +232,20 @@ export const GENERALI_AUTO_ACTIVO = true
  * emiAutosGenB028.do, pestaña «Datos personas»). Cualquier otro «Confirmar» de Generali lo rechaza `pulsar`. Nunca casillas ni emisión.
  */
 /**
+ * 0.2.28 (26/10/2026, prueba real con 0.2.27: tras «Confirmar» de «Datos personas» el bot queda en `emiAutosGenB028.do` con botones solo «Vehículo»/«Personas»
+ * y pestañas de sección, SIN «Datos de Valoración» ni `#siguiente`; el motivo del gate de «Siguiente» no llegó porque el runner corta el mensaje a 2000
+ * y «Avance» iba al final). El atasco pone ahora al PRINCIPIO el motivo del gate (también si no se intentó) y el inventario de controles de
+ * navegación de TODOS los marcos (botones/enlaces/imágenes con acción, pestañas y cuál está activa), sin valores de campos. El gate NO se amplía:
+ * en esa pantalla no hay ningún «Siguiente» que pulsar.
+ */
+/**
  * 0.2.27 (26/10/2026, prueba real con 0.2.26: pasa el tomador pero «Garantías y Resultados» no da precio). El inventario final seguía siendo el
  * formulario de «Valoración Riesgo» (`emiAutosGenB028.do`: pestañas «Valoración Riesgo · Datos de Valoración · Garantías y Resultados», botones
  * `siguiente`/`cancelar`, enlace «Paso con datos incompletos») y NINGÚN texto con «€»: el precio NO estaba visible tras el clic. El lector ahora
  * entiende también tablas (cabecera «Prima/Importe/Total…» + celda con importe, una línea por celda) y el atasco VUELCA, saneado, las pestañas
  * (¿marcada?), las tablas con cabeceras y filas con «€» y los botones, para ver si el clic cambió la pantalla. Sin pulsar nada nuevo.
  */
-export const VERSION_GENERALI_AUTO = '0.2.27'
+export const VERSION_GENERALI_AUTO = '0.2.28'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -591,6 +601,44 @@ export async function volcarResultadosGenerali(page: Page): Promise<VolcadoMarco
     if (f.isDetached()) continue
     const v = (await f.evaluate(`${JS_VOLCADO_RESULTADOS}(${JSON.stringify([...PESTANAS_VALORACION_GENERALI])})`).catch(() => null)) as VolcadoMarcoResultadosGenerali | null
     if (v && (v.pestanas.length > 0 || v.tablas.length > 0)) out.push(v)
+  }
+  return out
+}
+
+const JS_NAVEGACION_GENERALI = `(() => {
+  const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const cl = (e) => (typeof e.className === 'string' ? e.className : '');
+  const controles = [];
+  document.querySelectorAll('input[type=button],input[type=submit],input[type=image],button,a[onclick],a[href^="javascript"],img[onclick]').forEach((e) => {
+    if (controles.length >= 40) return;
+    const tag = e.tagName.toLowerCase();
+    const tipo = (e.getAttribute('type') || '').toLowerCase();
+    const texto = tag === 'input' ? (e.getAttribute('value') || e.getAttribute('alt') || e.getAttribute('title') || '') : (e.textContent || e.getAttribute('alt') || e.getAttribute('title') || '');
+    controles.push({ tag: tag, tipo: tipo, id: e.id || '', name: e.getAttribute('name') || '', texto: String(texto).replace(/\\s+/g, ' ').trim().slice(0, 40), visible: vis(e) });
+  });
+  const pestanas = [];
+  document.querySelectorAll('[role=tab],[class*=tab] li,[class*=tab] a,[class*=pest] li,[class*=pest] a,ul.tabs li').forEach((e) => {
+    if (pestanas.length >= 20 || !vis(e)) return;
+    if (Array.from(e.children).some((c) => c.tagName === 'LI' || c.tagName === 'UL')) return;
+    const t = String(e.textContent || '').replace(/\\s+/g, ' ').trim();
+    if (!t || t.length > 40 || pestanas.some((p) => p.texto === t)) return;
+    let activa = false;
+    for (let x = e, n = 0; x && n < 3 && !activa; x = x.parentElement, n++) {
+      if (x.getAttribute('aria-selected') === 'true' || x.getAttribute('aria-current')) activa = true;
+      if (cl(x).split(/\\s+/).some((k) => !/inactiv|noactiv|desactiv|unselect|nosel/i.test(k) && /^(activ|selected|current|on|sel)|activ|selected|current/i.test(k))) activa = true;
+    }
+    pestanas.push({ texto: t, activa: activa });
+  });
+  return { controles: controles, pestanas: pestanas };
+})()`
+
+/** Controles de navegación y pestañas de TODOS los marcos (solo lee; sin valores de campos de datos). */
+export async function volcarNavegacionGenerali(page: Page): Promise<NavegacionMarcoGenerali[]> {
+  const out: NavegacionMarcoGenerali[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const v = (await f.evaluate(JS_NAVEGACION_GENERALI).catch(() => null)) as { controles: ControlNavegacionGenerali[]; pestanas: { texto: string; activa: boolean }[] } | null
+    if (v && (v.controles.length > 0 || v.pestanas.length > 0)) out.push({ marco: f.name(), ruta: f.url(), pestanas: v.pestanas, controles: v.controles })
   }
   return out
 }
@@ -2250,6 +2298,8 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
   let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
   const avanceSiguiente: string[] = []
+  if (!ctx.pulsarSiguienteGenerali) avanceSiguiente.push('Siguiente no intentado: el contexto del runner no trae la puerta guardada')
+  else if (lecturaFinal.tipo !== 'ninguno') avanceSiguiente.push(`Siguiente no intentado: la lectura ya era «${lecturaFinal.tipo}» (no «ninguno»)`)
   if (ctx.pulsarSiguienteGenerali) {
     for (let i = 1; i <= 3 && lecturaFinal.tipo === 'ninguno'; i++) {
       try {
@@ -2268,11 +2318,12 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const obligatorios = avisosObligatorioGenerali(textoFinal)
   const importes = fragmentosImportesGenerali(textoFinal)
   const volcado = await volcarResultadosGenerali(page)
+  const navegacion = resumenNavegacionGenerali(await volcarNavegacionGenerali(page), 650)
   const que = lecturaFinal.tipo === 'varios'
     ? `${lecturaFinal.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lecturaFinal.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
     : 'ningún importe legible con «prima/precio/importe/total»'
   // El runner corta el mensaje a 2000: lo que más importa (avisos, tomador/personas) va PRIMERO y la pantalla, al final y corta.
-  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${tomador}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}Resultados: ${resumenVolcadoResultadosGenerali(volcado, 360)}. Pantalla: ${resumenPantallaGenerali(despues, 450)}`)
+  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}Navegación: ${navegacion}. ${tomador}. Mapa provisional: ${hechos.join(',') || 'nada'}. Textos con «€»: ${importes.length ? importes.map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, 360)}. Pantalla: ${resumenPantallaGenerali(despues, 450)}`)
 }
 
 /**

@@ -204,3 +204,9 @@ test('plan: la misma clave calculada dos veces se inserta una sola', () => {
   const s = sin()[0]!
   assert.equal(planificarSenales({ calculadas: [s, s], existentes: [], permitido: true, hoy: HOY }).insertar.length, 1)
 })
+
+test('puedeCalcularSenales: una supresión atendida (suprimida) impide calcular aunque no haya oposición', () => {
+  assert.equal(puedeCalcularSenales({ interruptor: true, oposiciones: [] }), true)
+  assert.equal(puedeCalcularSenales({ interruptor: true, oposiciones: [], suprimida: true }), false)
+  assert.equal(puedeCalcularSenales({ interruptor: true, oposiciones: [], suprimida: false }), true)
+})

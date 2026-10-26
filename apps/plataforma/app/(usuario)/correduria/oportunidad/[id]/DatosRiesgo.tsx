@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import {
   AVISO_COMERCIO, AVISO_RIESGO_LIBRE, BIENES_COMERCIO, CATALOGO_HOGAR_DE_CAMPO, COMPANIAS_COMERCIO, ESPEC_POR_COMPANIA, ETIQUETA_COMPANIA_COMERCIO, ESPEC_CAPITAL, ESPEC_COMERCIO, ESPEC_LIBRE, ESPEC_VIVIENDA,
-  ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_CAMPO_LIBRE, ETIQUETA_CAMPO_VIVIENDA, ETIQUETA_REGIMEN_LOCAL,
+  ESPECIES_MASCOTA, camposLibreDelRamo, ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_CAMPO_LIBRE, ETIQUETA_CAMPO_VIVIENDA, ETIQUETA_REGIMEN_LOCAL,
   MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, numeroDesdeTexto, provinciaPorCp, camposCapitalDelRamo, soloLoQueCambia, textoFaltanComercio,
   type AseguradoAdicional, type CampoCapital, type CompaniaComercio, type PorCompaniaComercio, type CampoFaltaComercio, type CampoVivienda, type CapitalComercio, type EspecCampo, type MedidaComercio, type RamoCapital,
 } from '@central/module-seguros'
@@ -691,8 +691,9 @@ function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: strin
       )
     }
     if (v === null || v === undefined) return sinDato
-    if (k === 'capital') return euros(v) ?? sinDato
+    if (k === 'capital' || k === 'capitalPendienteHipoteca') return euros(v) ?? sinDato
     if (k === 'fumador') return v === true ? 'Fuma' : v === false ? 'No fuma' : sinDato
+    if (typeof v === 'boolean') return v ? 'Sí' : 'No'
     if (k === 'profesion') { const n = nombreProfesion(v); return n ? `${String(v)} · ${n}` : String(v) }
     return String(v)
   }
@@ -730,11 +731,11 @@ function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: strin
         <div style={{ display: 'grid', gap: 10, minWidth: 0 }}>
           <div style={REJILLA}>
             {campos.filter((k) => k !== 'asegurados').map((k) => {
-              if (k === 'fumador') {
+              if (k === 'fumador' || k === 'hipoteca' || k === 'vinculadaHipoteca') {
                 return (
                   <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_CAPITAL[k]}
                     <select value={E.form[k] ?? ''} onChange={E.set(k)} style={campoCss}>
-                      <option value="">Sin dato</option><option value="no">No fuma</option><option value="si">Fuma</option>
+                      <option value="">Sin dato</option><option value="no">{k === 'fumador' ? 'No fuma' : 'No'}</option><option value="si">{k === 'fumador' ? 'Fuma' : 'Sí'}</option>
                     </select>
                   </label>
                 )
@@ -765,8 +766,9 @@ function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: strin
               }
               return (
                 <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_CAPITAL[k]}
-                  <input value={E.form[k] ?? ''} onChange={E.set(k)} inputMode={k === 'modalidadDeseada' ? undefined : 'decimal'}
-                    placeholder={k === 'capital' ? 'p. ej. 150.000' : undefined} maxLength={k === 'modalidadDeseada' ? 80 : undefined} style={campoCss} />
+                  <input value={E.form[k] ?? ''} onChange={E.set(k)} inputMode={k === 'modalidadDeseada' || k === 'bancoHipoteca' || k === 'edadesAsegurados' ? undefined : 'decimal'}
+                    placeholder={k === 'capital' || k === 'capitalPendienteHipoteca' ? 'p. ej. 150.000' : k === 'edadesAsegurados' ? 'p. ej. 45, 43, 12' : undefined}
+                    maxLength={k === 'modalidadDeseada' || k === 'bancoHipoteca' ? 80 : k === 'edadesAsegurados' ? 120 : undefined} style={campoCss} />
                 </label>
               )
             })}
@@ -1030,9 +1032,12 @@ function DatosComercio(props: Props & { d: Record<string, unknown>; faltan: stri
 
 function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boolean }) {
   const { d, dePoliza } = props
-  const E = useEdicion('datosRiesgoLibre', props, ESPEC_LIBRE, d, 'los datos del riesgo')
-  const claves = ['descripcion', 'direccion', 'capital', 'notas'] as const
   const ramo = props.riesgo.oportunidad.ramo
+  // 26/10/2026: accidentes (profesión) y mascotas (el animal) tienen campos propios; el resto, los cuatro de siempre.
+  const claves = camposLibreDelRamo(ramo)
+  const spec = ESPEC_LIBRE.filter((c) => (claves as readonly string[]).includes(c.clave))
+  const E = useEdicion('datosRiesgoLibre', props, spec, d, 'los datos del riesgo')
+  const extras = claves.filter((k) => !['descripcion', 'direccion', 'capital', 'notas'].includes(k))
   return (
     <Marco
       titulo="Datos del riesgo"
@@ -1050,7 +1055,7 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
               <div key={k} style={{ display: 'grid', gap: 2, minWidth: 0 }}>
                 <dt style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ETIQUETA_CAMPO_LIBRE[k]}</dt>
                 <dd style={{ margin: 0, fontWeight: 600, overflowWrap: 'anywhere', whiteSpace: k === 'notas' ? 'pre-wrap' : undefined }}>
-                  {v === null || v === undefined ? sinDato : k === 'capital' ? euros(v) ?? sinDato : String(v)}
+                  {v === null || v === undefined ? sinDato : k === 'capital' ? euros(v) ?? sinDato : typeof v === 'boolean' ? (v ? 'Sí' : 'No') : k === 'fechaNacimientoAnimal' ? fechaEs(String(v)) ?? String(v) : String(v)}
                 </dd>
               </div>
             )
@@ -1062,6 +1067,30 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
           <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.descripcion}<input value={E.form.descripcion ?? ''} onChange={E.set('descripcion')} maxLength={300} style={campoCss} /></label>
           <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.direccion}<input value={E.form.direccion ?? ''} onChange={E.set('direccion')} maxLength={200} style={campoCss} /></label>
           <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.capital}<input inputMode="decimal" value={E.form.capital ?? ''} onChange={E.set('capital')} placeholder="p. ej. 300.000" style={campoCss} /></label>
+          {extras.map((k) => {
+            if (k === 'ppp') {
+              return (
+                <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE[k]}
+                  <select value={E.form[k] ?? ''} onChange={E.set(k)} style={campoCss}><option value="">Sin dato</option><option value="no">No</option><option value="si">Sí</option></select>
+                </label>
+              )
+            }
+            if (k === 'especie') {
+              return (
+                <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE[k]}
+                  <select value={E.form[k] ?? ''} onChange={E.set(k)} style={campoCss}>
+                    <option value="">Sin dato</option>
+                    {ESPECIES_MASCOTA.map((x) => <option key={x} value={x}>{x[0].toUpperCase() + x.slice(1)}</option>)}
+                  </select>
+                </label>
+              )
+            }
+            return (
+              <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE[k]}
+                <input value={E.form[k] ?? ''} onChange={E.set(k)} type={k === 'fechaNacimientoAnimal' ? 'date' : 'text'} maxLength={k === 'microchip' ? 20 : 120} style={campoCss} />
+              </label>
+            )
+          })}
           <label style={{ ...etiquetaCss, gridColumn: '1 / -1' }}>{ETIQUETA_CAMPO_LIBRE.notas}
             <textarea value={E.form.notas ?? ''} onChange={E.set('notas')} maxLength={1000} rows={3} style={{ ...campoCss, minHeight: 88, resize: 'vertical' }} />
           </label>

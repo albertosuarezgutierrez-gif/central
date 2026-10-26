@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { Ico, FILA } from '../../iconos'
-import { direccionDeRespuestas, direccionLegible, nombreRamoSolicitud, type RamoSolicitud } from '@central/module-seguros'
+import { claveVehiculo, direccionDeRespuestas, direccionLegible, nombreRamoSolicitud, type RamoSolicitud } from '@central/module-seguros'
 import { valorLegible, type SolicitudDatos } from '@/lib/seguimiento-asegura'
 import { fmt } from './piezas'
 
@@ -24,10 +24,10 @@ export function RespuestasSolicitud({ s, quien, tarificar }: { s: SolicitudDatos
         <div style={{ color: 'var(--negative)' }}>Sus respuestas no se pueden descifrar aquí (clave de datos personales).</div>
       ) : (
         <dl style={{ margin: '4px 0', display: 'grid', gridTemplateColumns: 'minmax(0, max-content) minmax(0, 1fr)', gap: '4px 12px' }}>
-          {s.campos.filter((c) => s.respuestas && (c.tipo === 'direccion' || c.clave in s.respuestas)).map((c) => (
+          {s.campos.filter((c) => s.respuestas && (c.tipo === 'direccion' || c.clave in s.respuestas || (c.tipo === 'vehiculo_catalogo' && typeof s.respuestas[claveVehiculo(c.clave, 'Codigo')] === 'string'))).map((c) => (
             <div key={c.clave} style={{ display: 'contents' }}>
               <dt style={{ color: 'var(--muted)' }}>{c.etiqueta}</dt>
-              <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{c.tipo === 'direccion' ? textoDireccion(s, c.clave) : valorLegible(c, s.respuestas?.[c.clave])}</dd>
+              <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>{c.tipo === 'direccion' ? textoDireccion(s, c.clave) : c.tipo === 'vehiculo_catalogo' ? textoVersion(s, c.clave) : valorLegible(c, s.respuestas?.[c.clave])}</dd>
             </div>
           ))}
         </dl>
@@ -44,6 +44,14 @@ export function RespuestasSolicitud({ s, quien, tarificar }: { s: SolicitudDatos
 }
 
 /** Una dirección contestada en subclaves (`viviendaCp`…), en una línea; sin la calle del callejero, «por validar». */
+/** La versión del catálogo que eligió en el enlace (26/10/2026): su nombre y su código; asegura la comprueba al anotarla. */
+function textoVersion(s: SolicitudDatos, clave: string): string {
+  const r = s.respuestas ?? {}
+  const nombre = r[claveVehiculo(clave, 'Version')]
+  const codigo = r[claveVehiculo(clave, 'Codigo')]
+  return `${typeof nombre === 'string' ? nombre : 'Versión elegida'} (catálogo, código ${String(codigo)})`
+}
+
 function textoDireccion(s: SolicitudDatos, clave: string): string {
   const d = s.respuestas ? direccionDeRespuestas(s.respuestas, clave) : null
   if (!d) return '—'

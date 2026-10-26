@@ -947,6 +947,28 @@ export function resumenVolcadoResultadosGenerali(v: readonly VolcadoMarcoResulta
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
+// ───────────────────────── v0.2.28 · inventario de controles de navegación de TODOS los marcos ─────────────────────────
+
+/** Control de navegación leído (botón/enlace/imagen con acción). Solo etiquetas y ids: nunca valores de campos de datos. */
+export type ControlNavegacionGenerali = { tag: string; tipo: string; id: string; name: string; texto: string; visible: boolean }
+/** Marco con sus controles de navegación y pestañas (`activa`: marcada como seleccionada). */
+export type NavegacionMarcoGenerali = { marco: string; ruta: string; pestanas: { texto: string; activa: boolean }[]; controles: ControlNavegacionGenerali[] }
+
+/**
+ * Resumen saneado y truncado: «marco(ruta) · pestañas(*=activa) · tag:tipo#id/name «texto» (v|o)». PURA. `v` = visible, `o` = oculto.
+ * Los controles visibles van primero (son los pulsables).
+ */
+export function resumenNavegacionGenerali(nav: readonly NavegacionMarcoGenerali[], max = 600): string {
+  const partes = nav.map((m) => {
+    const pest = m.pestanas.map((p) => `${sanearFragmentoGenerali(p.texto).slice(0, 40)}${p.activa ? '*' : ''}`).join(',')
+    const ord = [...m.controles].sort((a, b) => Number(b.visible) - Number(a.visible))
+    const ctl = ord.map((c) => `${c.tag}${c.tipo ? `:${c.tipo}` : ''}${c.id ? `#${c.id.slice(0, 30)}` : ''}${c.name && c.name !== c.id ? `/${c.name.slice(0, 20)}` : ''} «${sanearFragmentoGenerali(c.texto).slice(0, 30)}» ${c.visible ? 'v' : 'o'}`).join('; ')
+    return `${sanearFragmentoGenerali(m.marco || '(sin nombre)').slice(0, 20)}(${m.ruta.split(/[?;]/)[0]!.split('/').slice(-1)[0]}) · pestañas ${pest || '—'} · ${ctl || 'sin controles'}`
+  })
+  const t = partes.join(' || ')
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
 // ───────────────────────── v0.2.20 · «Personas» (pestaña del tomador) + inventario saneado del bloque ─────────────────────────
 
 /** Texto EXACTO de la pestaña (botón) que muestra «Personas que intervienen › Interesado / Tomador» (inventario del trabajo 304ac3a2). */

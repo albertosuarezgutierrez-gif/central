@@ -12,6 +12,8 @@ import {
 
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { borrarSenalesDeSupresion, registrarOposicionPorSupresion } from './patrimonio-supresion'
+import { constanciaSenales } from './patrimonio-supresion-reglas'
 
 /**
  * La cola de solicitudes del **derecho de supresión (art. 17 RGPD)** que llegan
@@ -192,9 +194,33 @@ export async function resolverSupresion(entrada: {
 
   if (respuesta === '') return { estado: 'error', motivo: 'sin_respuesta' }
 
+  // Atendida (total o parcial): las señales de patrimonio de sus fichas se borran y queda constancia en la respuesta
+  // (§0.2 del borrador P15). Denegada: no se borra nada. Si el borrado falla NO se bloquea la respuesta (el plazo legal
+  // corre) pero la constancia lo dice para que se borre a mano.
+  let respuestaFinal = respuesta
+  if (entrada.estado === 'resuelta_total' || entrada.estado === 'resuelta_parcial') {
+    let borradas: number | null = null
+    try {
+      borradas = await borrarSenalesDeSupresion({
+        correduriaId: fila.correduriaId,
+        identidadId: fila.identidadId,
+        clienteId: fila.clienteId,
+      })
+    } catch {
+      borradas = null
+    }
+    let oposicion: 'registrada' | 'ya_vigente' | 'error' = 'error'
+    try {
+      oposicion = await registrarOposicionPorSupresion(fila.identidadId, entrada.id)
+    } catch {
+      oposicion = 'error'
+    }
+    respuestaFinal = `${respuesta}\n${constanciaSenales(borradas, oposicion)}`
+  }
+
   const resuelta = await db.portalSupresion.update({
     where: { id: entrada.id },
-    data: { estado: entrada.estado, resueltaEn: new Date(), respuesta, resueltaPor: entrada.actor },
+    data: { estado: entrada.estado, resueltaEn: new Date(), respuesta: respuestaFinal, resueltaPor: entrada.actor },
   })
   anotarCambio({ entidad: 'supresion', id: entrada.id, campo: 'estado', antes: fila.estado, despues: entrada.estado })
   anotarCambio({ entidad: 'supresion', id: entrada.id, campo: 'respuesta' })

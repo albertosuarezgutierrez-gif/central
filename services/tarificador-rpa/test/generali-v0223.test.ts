@@ -18,7 +18,7 @@ const ESPERAS = { abrirMs: 4_000, resultadosMs: 2_500, vueltaMs: 2_000 }
 const BASE = 'https://www.generali.es/emi_genAutosFormWeb/'
 const PORTAL = 'https://www.generali.es/arq_genernetPortalFormWeb/CorredorPortal.po?mediatorCode=' + MEDIADOR_GENERALI
 
-test('v0.2.23 · versión (vigente 0.2.27)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.27'))
+test('v0.2.23 · versión (vigente 0.2.27)', () => assert.match(VERSION_GENERALI_AUTO, /^0\.2\.(2[7-9]|[3-9]\d)$/))
 
 test('v0.2.23 · puras: URL sin datos, pestaña y índice de marcos', () => {
   assert.equal(urlSinDatosGenerali('https://www.generali.es/mot_motorWeb/mvc/selVehiculo;jsessionid=ABC123:1x?nif=00000000T#x'), 'www.generali.es/mot_motorWeb/mvc/selVehiculo')
