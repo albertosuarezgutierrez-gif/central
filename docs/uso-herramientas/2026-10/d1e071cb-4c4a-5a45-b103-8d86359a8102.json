@@ -1,0 +1,20 @@
+{
+ "sesion": "d1e071cb-4c4a-5a45-b103-8d86359a8102",
+ "inicio": "2026-10-26T13:44:03.528Z",
+ "fin": "2026-10-26T13:44:16.991Z",
+ "llamadas": 2,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 504,
+   "chars_out": 574,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "PushNotification": 1
+   }
+  }
+ }
+}
