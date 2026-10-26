@@ -109,3 +109,26 @@ test('🚨 una póliza AÑADIDA a mano (oportunidad, no cartera) no puede colars
   }
   assert.doesNotMatch(lib, /polizaDeclaradaId: id\b/, 'crearHoja vuelve a insertar ids de pólizas añadidas')
 })
+
+test('🚨 una póliza de INMUEBLE se identifica por su dirección, nunca por el nº (Mi QR, 26/10/2026)', () => {
+  const hogar = poliza('casa', {
+    compania: 'Occident',
+    ramo: 'hogar',
+    numeroPoliza: '548969197',
+    bien: { cosa: null, ubicacion: 'Calle Socorro 24, 41003 Sevilla', ubicacionCifrada: false },
+  } as Partial<PolizaPortal>)
+  const e = elegiblesDeCartera({ propias: [titular('a', 'Alberto', [hogar])], autorizadas: [], intervinientes: [] })
+  assert.equal(e[0]?.etiqueta, 'Occident · Hogar · Calle Socorro 24, 41003 Sevilla')
+  assert.doesNotMatch(e[0]?.etiqueta ?? '', /548969197|nº/)
+})
+
+test('inmueble cuya dirección NO es visible (tercero persona física): cae a nº solo como último recurso, sin inventar', () => {
+  const hogar = poliza('casa2', {
+    compania: 'Occident',
+    ramo: 'hogar',
+    numeroPoliza: '548969197',
+    bien: { cosa: null, ubicacion: null, ubicacionCifrada: false },
+  } as Partial<PolizaPortal>)
+  const e = elegiblesDeCartera({ propias: [], autorizadas: [titular('m', 'Su madre', [hogar], { tipoPersona: 'fisica' })], intervinientes: [] })
+  assert.equal(e[0]?.etiqueta, 'Occident · Hogar · nº 548969197')
+})
