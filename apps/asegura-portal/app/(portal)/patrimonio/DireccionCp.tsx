@@ -194,7 +194,7 @@ export function DireccionCp({ valor, onCambio, disabled, rutas, calle }: {
           <ul id={idLista} role="listbox" aria-label="Calles del Catastro" style={{
             position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, margin: '2px 0 0', padding: 0, listStyle: 'none',
             background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 'min(60vh, 480px)', overflowY: 'auto',
-            boxShadow: '0 6px 18px rgba(0,0,0,.15)',
+            boxShadow: 'var(--shadow-float)',
           }}>
             {sugeridas.map((v, i) => (
               <li key={`${v.tipo}|${v.nombre}`} id={`${idLista}-${i}`} role="option" aria-selected={i === activa}

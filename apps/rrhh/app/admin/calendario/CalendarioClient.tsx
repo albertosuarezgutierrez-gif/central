@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Page from '@/components/ui/Page'
+import PestanasSolicitudes from '@/components/PestanasSolicitudes'
 import Card from '@/components/ui/Card'
 import { tipoEtiqueta } from '@/lib/solicitudes-tipos'
 
@@ -40,6 +41,7 @@ export default function CalendarioClient() {
 
   return (
     <Page titulo="Calendario de ausencias">
+      <PestanasSolicitudes activa="calendario" />
       <div className="mb-4 flex items-center gap-3 lg:max-w-md">
         <button onClick={() => navMes(-1)} className="min-h-[44px] min-w-[44px] bg-paper-2 text-ink-2 hover:bg-line px-2 py-1 text-sm">‹</button>
         <h2 className="flex-1 text-center text-xl capitalize">{mesLabel(mes)}</h2>

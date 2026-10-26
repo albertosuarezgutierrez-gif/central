@@ -6,6 +6,8 @@ import { puertosInquilino } from '@/lib/inquilino/inquilino-bd'
 import { getIdentidad } from '@/lib/session'
 
 import { EntrarConCodigo } from '../invitacion/[token]/Invitacion'
+import { PaginaPortal } from '../PaginaPortal'
+import { TarjetaPortal } from '../TarjetaPortal'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,22 +16,20 @@ export default async function MiAlquilerPage() {
   const identidad = await getIdentidad()
   if (identidad === null) {
     return (
-      <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
-        <div className="seccion">
-          <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mi alquiler</h1>
+      <PaginaPortal suelta estrecha antetitulo="Inquilino" titulo="Mi" acento="alquiler">
+        <TarjetaPortal>
           <p className="suave" style={{ marginTop: 0 }}>Entra con tu correo: te mandamos un código de un solo uso.</p>
           <EntrarConCodigo />
-        </div>
-      </main>
+        </TarjetaPortal>
+      </PaginaPortal>
     )
   }
   const r = await responderMisContratos(puertosInquilino(identidad.id))
   const contratos = (r.body.contratos ?? []) as Array<{ contratoId: string; inmueble: string | null }>
   if (contratos.length === 1) redirect(`/mi-alquiler/${contratos[0].contratoId}`)
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem' }}>
-      <div className="seccion">
-        <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mi alquiler</h1>
+    <PaginaPortal suelta estrecha antetitulo="Inquilino" titulo="Mi" acento="alquiler">
+      <TarjetaPortal>
         {contratos.length === 0 ? (
           <p>
             No tienes ningún contrato de alquiler abierto en esta cuenta. Si tu propietario te ha dado un enlace, ábrelo de nuevo; si ya
@@ -44,7 +44,7 @@ export default async function MiAlquilerPage() {
             ))}
           </ul>
         )}
-      </div>
-    </main>
+      </TarjetaPortal>
+    </PaginaPortal>
   )
 }

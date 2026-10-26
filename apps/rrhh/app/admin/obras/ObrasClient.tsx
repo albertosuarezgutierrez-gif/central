@@ -1,4 +1,5 @@
 'use client'
+import Boton from '@/components/ui/Boton'
 import { useState } from 'react'
 import Page from '@/components/ui/Page'
 import Tabla from '@/components/ui/Tabla'
@@ -102,14 +103,14 @@ export default function ObrasClient({ inicial }: { inicial: Obra[] }) {
                     <td data-label="Coords" className="px-3 py-2 font-mono text-xs text-ink-3">{o.lat != null ? `${o.lat}, ${o.lng}` : '—'}</td>
                     <td data-label="Radio" className="px-3 py-2 text-xs">{o.radio_m} m</td>
                     <td data-label="Estado" className="px-3 py-2">
-                      <button onClick={() => toggleActiva(o)} className={`rounded-full px-2 py-0.5 text-xs ${o.activa ? 'bg-ok/20 text-ok' : 'bg-paper-2 text-ink-3'}`}>
+                      <button onClick={() => toggleActiva(o)} className={`rounded-full px-3 text-xs ${o.activa ? 'bg-ok/15 text-ok hover:bg-ok/25' : 'bg-paper-2 text-ink-3 hover:bg-line'}`}>
                         {o.activa ? 'Activa' : 'Inactiva'}
                       </button>
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1">
-                        <button onClick={() => abrirEdicion(o)} className="px-2 py-1.5 text-xs min-h-[36px]">✏️</button>
-                        <button onClick={() => borrar(o)} className="bg-paper-2 text-alert px-2 py-1.5 text-xs min-h-[36px]">🗑️</button>
+                        <Boton variante="secundario" aria-label={`Editar ${o.nombre}`} onClick={() => abrirEdicion(o)}>Editar</Boton>
+                        <Boton variante="peligroSuave" aria-label={`Borrar ${o.nombre}`} onClick={() => borrar(o)}>Borrar</Boton>
                       </div>
                     </td>
                   </>

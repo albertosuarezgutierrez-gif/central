@@ -52,7 +52,7 @@ export function SubirDni({ corredor }: { corredor: boolean }) {
         />
       </label>
       {corredor && <span style={{ fontSize: 13 }}>Vista de corredor: el DNI lo sube el cliente.</span>}
-      {aviso && <span role="status" style={{ fontSize: 13, color: 'var(--negative, #b42318)' }}>{aviso}</span>}
+      {aviso && <span role="status" style={{ fontSize: 13, color: 'var(--danger)' }}>{aviso}</span>}
     </div>
   )
 }

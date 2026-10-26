@@ -90,6 +90,12 @@
 - `GET /corredor/[token]` (1 uso, 10 min, `portal_vista_corredor`): identidad dedicada `IDENTIDAD_CORREDOR_ID` sin canales + vínculo temporal `origen='corredor'` (asegura lo EXCLUYE de «ya entra»); claim `corredor` 4 h; `middleware.ts` veta `POST/PATCH/DELETE` de `/api/*` con 403 `modo_corredor` salvo `/api/salir` y `/api/acceso/*`; importa `lib/auth-cookie.ts` (edge), no `lib/auth.ts`. El `middleware` NO resuelve sesión.
 - PWA (`app/manifest.ts`, `app/icono-app/route.tsx` 512 px, `public/sw.js`, `RegistrarSW.tsx`, `InstalarBoton.tsx`): el SW NO CACHEA NADA (datos personales; `lib/pwa.test.ts`); iOS no dispara `beforeinstallprompt` → instrucciones con glifo; colores del manifiesto en hex.
 
+## Menú, Inicio y diseño único (26/10/2026, Alberto)
+- **Menú de CINCO** (`pestanasPortal()` + `seccionActiva()`; `NavPortal` no teclea enlaces): Inicio · Seguros · Herramientas · Contactos · Cuenta. Recibos, Siniestros y Mi QR = chips dentro de Seguros (`SubNavSeguros`, con las familias); Patrimonio, Flota, Calendario, Mi resumen, catálogo y la tarjeta del Portal del Empleado (`lib/herramientas.ts`) = `/herramientas`; Datos y Configuración = `/cuenta`. Rutas viejas vivas. Cabecera con «Herramientas» y «Seguros» (`CabeceraEnlaces`, ≥720 px).
+- **Inicio = SOLO lo pendiente** (`lib/inicio-pendientes.ts` + `/api/avisos`); `HuecosProteccion` en UN solo sitio; vacío = «Todo al día»; fuente ilegible se dice.
+- **Diseño único:** `PaginaPortal`/`EncabezadoPortal` + `TarjetaPortal` (= `.seccion`) en todas las pantallas. Cepos: `regression-portal-inicio` y `regression-portal-sin-hex-en-tsx` (ni hex/`rgb()` ni `var(--inventado)` en `app/**/*.tsx`).
+- **WhatsApp:** glifo oficial, número de `MEDIADOR`; móvil = pestaña de la barra, escritorio = `WhatsappFlotante`.
+
 ## Arquitectura (resumen)
 - Next 15 App Router, React 19, Prisma 5 multiSchema; lógica PURA en `packages/module-seguros-portal/src/*` (`acceso`, `procedencia`, `codigo`, `poliza-leida`, `destino`, …). Compone `@central/module-seguros`, `-seguros-pii` (`computeEmailLookupHash`), `core-ai`, `core-email`, `core-identity`, `core-catastro`.
 - Vercel: Root `apps/asegura-portal`, región `fra1`, `ignoreCommand` obligatorio con `--sin-previews`; cambiar una env solo llega con el siguiente commit que toque la app. CI: está en la matriz `Typecheck · asegura-portal`.

@@ -157,7 +157,7 @@ export default function InformesClient({ tieneFichaje }: { tieneFichaje?: boolea
         <button type="button" className="min-h-[44px] flex-1 sm:flex-none" disabled={cargando} onClick={ver}>{cargando ? 'Calculando…' : 'Ver informe'}</button>
         <button type="button" className={`flex-1 sm:flex-none ${BTN_SEC}`} disabled={!!descargando} onClick={() => descargar('xlsx')}>{descargando === 'xlsx' ? 'Generando…' : '⬇ Excel'}</button>
         <button type="button" className={`flex-1 sm:flex-none ${BTN_SEC}`} disabled={!!descargando} onClick={() => descargar('pdf')}>{descargando === 'pdf' ? 'Generando…' : '⬇ PDF'}</button>
-        <button type="button" className={`flex-1 sm:flex-none ${BTN_SEC}`} disabled={!!descargando} onClick={() => descargar('csv')}>{descargando === 'csv' ? 'Generando…' : '⬇ CSV'}</button>
+        <button type="button" className={`flex-1 sm:flex-none ${BTN_SEC}`} disabled={!!descargando} onClick={() => descargar('csv')}>{descargando === 'csv' ? 'Generando…' : 'CSV'}</button>
       </div>
 
       {error && <p className="mb-4 rounded-card border border-alert/40 bg-alert/10 p-3 text-sm text-alert">{error}</p>}
@@ -233,7 +233,7 @@ function Resultado({ vista, cabecera, visibles, onVerMas }: { vista: Vista; cabe
         <h2 className="text-lg">{cabecera.titulo}</h2>
         <p className="text-xs text-ink-3">{cabecera.filtros.length ? cabecera.filtros.join(' · ') : 'Sin filtros'}{cabecera.agrupacion ? ` · ${cabecera.agrupacion}` : ''} · {cabecera.generado}</p>
         {vista.truncado && (
-          <p className="mt-2 text-sm text-alert">⚠ Hay más de {numeroEs(vista.limite, 0)} filas: el informe (y sus totales) se limita a las primeras {numeroEs(vista.limite, 0)}. Filtra más para verlo completo.</p>
+          <p className="mt-2 text-sm text-alert">Hay más de {numeroEs(vista.limite, 0)} filas: el informe (y sus totales) se limita a las primeras {numeroEs(vista.limite, 0)}. Filtra más para verlo completo.</p>
         )}
         <div className="mt-3"><Metricas metricas={metricasCab} /></div>
       </Card>

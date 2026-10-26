@@ -4458,57 +4458,133 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
 .estudio-importe-grande { font-size: 34px; }
 @media (max-width: 380px) { .estudio-importe-grande { font-size: 28px; } }
 
-/* ─── Inicio (24/10/2026): tarjetas de seguros por familia y de herramientas ───────────────────────────────────
- * Una columna por defecto (el scroller es `.portal-contenido`); 2 o más desde 600 px con `auto-fit`. Cada tarjeta es
- * UN enlace ≥44 px con foco visible; el aviso lleva icono Y texto (nada solo con color). Cobalto solo en la acción. */
-.inicio-rejilla {
+/* ─── Diseño único (26/10/2026): `PaginaPortal` + `TarjetaPortal` ─────────────────────────────────────────────────
+ * Sustituye a las `.inicio-*` (tarjeta propia, radio ×1.2, sin antetítulo). La tarjeta ES `.seccion`; aquí solo lo que
+ * la distingue dentro de una rejilla. Cobalto en el acento del titular (`h1 em`) y en la acción; el aviso lleva icono
+ * Y texto (nada solo con color). Todo con tokens de marca: ni un hex. */
+.rejilla-portal {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   grid-template-columns: minmax(0, 1fr);
-  margin: 0 0 24px;
+  margin: 0 0 32px;
   padding: 0;
   list-style: none;
 }
-@media (min-width: 600px) {
-  .inicio-rejilla { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+@media (min-width: 720px) {
+  .rejilla-portal { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
 }
-@media (min-width: 1024px) {
-  .inicio-ancha { grid-column: span 2; }
-}
-.inicio-tarjeta {
-  display: grid;
-  gap: 4px;
-  min-height: 44px;
+.rejilla-portal > li { min-width: 0; }
+.tarjeta-portal {
   min-width: 0;
-  height: 100%;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 1.2);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  color: var(--text);
-  text-decoration: none;
+  margin-bottom: 0;
   overflow-wrap: anywhere;
 }
-.inicio-tarjeta:hover { background: var(--surface-hover); }
-.inicio-tarjeta:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
-.inicio-tarjeta-titulo {
+.rejilla-portal > li > .tarjeta-portal { height: 100%; display: flex; flex-direction: column; }
+.rejilla-portal > li > .tarjeta-portal > .tarjeta-portal-accion { margin-top: auto; }
+.tarjeta-portal-cabecera {
   display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  font-family: var(--display, var(--serif));
-  font-weight: 700;
-  font-size: 17px;
 }
-.inicio-tarjeta-linea { margin: 0; font-size: 15px; }
-.inicio-tarjeta-aviso { margin: 0; font-size: 15px; color: var(--warn); }
-.inicio-tarjeta-cta {
-  margin-top: 4px;
-  font-family: var(--display, var(--serif));
-  font-weight: 700;
-  color: var(--brand-ink);
+.tarjeta-portal-titulos { min-width: 0; flex: 1 1 12rem; }
+.tarjeta-portal > p:first-of-type { margin-top: 0; }
+.tarjeta-portal-accion { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+.tarjeta-aviso { border-left: 4px solid var(--warn); }
+.tarjeta-peligro { border-left: 4px solid var(--danger); }
+.tarjeta-portal .boton {
+  width: auto;
+  min-height: 44px;
+  text-decoration: none;
 }
-.inicio-mas { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
-@media (prefers-reduced-motion: no-preference) {
-  .inicio-tarjeta { transition: background-color 120ms var(--curva); }
+/* Una lista de cosas pendientes dentro de una tarjeta: cada fila es un enlace de ≥44 px. */
+.lista-pendiente { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.lista-pendiente a {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  align-content: center;
+  padding: 8px 4px;
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+}
+.lista-pendiente a:hover { background: var(--surface-hover); }
+.lista-pendiente a:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.lista-pendiente-titulo { font-weight: 700; }
+.lista-pendiente-detalle { font-size: 14px; color: var(--muted); }
+.icono-aviso { width: 18px; height: 18px; flex: 0 0 auto; vertical-align: -3px; margin-right: 6px; color: var(--warn); }
+.icono-aviso.peligro { color: var(--danger); }
+/* El estado vacío amable de Inicio. */
+.vacio-amable { text-align: center; }
+.vacio-amable .icono-grande { width: 48px; height: 48px; color: var(--brand); margin: 0 auto 8px; display: block; }
+.vacio-amable .tarjeta-portal-accion { justify-content: center; }
+
+/* Pantallas FUERA del armazón del portal (`/mi-alquiler`, `/inquilino`): sin menú, con el mismo aire y titular. */
+.pagina-portal-suelta {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+  display: grid;
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+.pagina-portal-estrecha { max-width: 480px; }
+.pagina-portal-suelta h1 { overflow-wrap: anywhere; }
+.pagina-portal-suelta > .seccion { margin-bottom: 16px; }
+
+/* Sub-navegación de «Seguros»: Seguros · Recibos · Siniestros · Mi QR (antes cuatro entradas del menú). Chips-enlace. */
+.subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+}
+.subnav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--display, var(--serif));
+  font-weight: 600;
+  text-decoration: none;
+}
+.subnav a:hover { background: var(--surface-hover); }
+.subnav a[aria-current='page'] {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.subnav a:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+/* Los dos botones de la cabecera, iguales que en el Portal del Empleado: «Herramientas» y «Seguros». Desde 720 px (con el monograma, el logotipo y los botones de la derecha no caben antes);
+ * por debajo, la barra inferior ya los lleva (no se duplica en el móvil, donde la cabecera no tiene sitio). */
+.cabecera-enlaces { display: none; gap: 8px; align-items: center; margin-left: auto; }
+.cabecera-enlaces a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-family: var(--display, var(--serif));
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.cabecera-enlaces a:hover { background: var(--surface-hover); }
+.cabecera-enlaces a[aria-current='page'] { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.cabecera-enlaces a:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+@media (min-width: 720px) {
+  .cabecera-enlaces { display: flex; }
+  .cabecera-enlaces + .marca-acciones { margin-left: 12px; }
+  /* Con sesión, los dos botones ocupan el sitio de la coletilla (el `auto` pasa a ellos). */
+  .marca-barra:has(.cabecera-enlaces) .marca-coletilla { display: none; }
 }

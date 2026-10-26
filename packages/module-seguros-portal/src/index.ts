@@ -392,9 +392,11 @@ export {
   VISTA_BOVEDA_POR_DEFECTO,
   vistaDeBoveda,
   pestanasPortal,
+  seccionActiva,
+  SUBVISTAS_SEGUROS,
   hrefDeVista,
 } from './vista-portal.ts'
-export type { VistaBoveda, PestanaPortal } from './vista-portal.ts'
+export type { VistaBoveda, PestanaPortal, SeccionPortal } from './vista-portal.ts'
 export {
   ESTADOS_SINIESTRO,
   siniestroAbierto,

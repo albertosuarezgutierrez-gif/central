@@ -4,10 +4,12 @@ import SolicitudesEmpleado from '@/components/SolicitudesEmpleado'
 import FichajeEmpleado from '@/components/FichajeEmpleado'
 import MaterialEmpleado from '@/components/MaterialEmpleado'
 import ActivarPush from '@/components/ActivarPush'
-import Wordmark from '@/components/Wordmark'
-import { estiloMarcaEmpresa } from '@/lib/marca-asegura'
-import { CoMarca, PieAsegura } from '@/components/MarcaAsegura'
-import TarjetaSeguros from '@/components/TarjetaSeguros'
+import { PieAsegura } from '@/components/MarcaAsegura'
+import CabeceraApp from '@/components/CabeceraApp'
+import AvisoSeguros from '@/components/AvisoSeguros'
+import Modal from '@/components/ui/Modal'
+import Boton from '@/components/ui/Boton'
+import Chip from '@/components/ui/Chip'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; estado_firma: string; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null; resumen?: string | null }
@@ -17,7 +19,7 @@ type Branding = { nombre: string; color_primario: string | null; logo_url: strin
 
 const CONSENTIMIENTO = 'He leído el documento y lo firmo electrónicamente. Acepto que esta firma electrónica avanzada (Reglamento eIDAS, art. 26) queda vinculada a mi identidad y al contenido del documento, y tiene la misma validez que mi firma manuscrita.'
 
-export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, marcaAsegura = false, urlSeguros = null }: { marcaAsegura?: boolean; urlSeguros?: string | null; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }) {
+export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales, urlSeguros }: { urlSeguros: string; visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [avisos, setAvisos] = useState<Avisos | null>(avisosIniciales ?? null)
   const [verAvisos, setVerAvisos] = useState(false)
@@ -80,36 +82,13 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
   }
 
   return (
-    <main className={`mx-auto max-w-[520px] lg:max-w-5xl${marcaAsegura ? ' marca-asegura' : ''}`} style={estiloMarcaEmpresa(marcaAsegura, branding?.color_primario) as React.CSSProperties}>
-      {marcaAsegura ? (
-        <header className="asegura-cabecera mb-4">
-          <CoMarca logoUrl={branding?.logo_url} nombre={branding?.nombre} alto={26} />
-          <span className="asegura-cabecera-etiqueta">Portal del empleado</span>
-          <button type="button" className="min-h-[44px] bg-transparent px-3 text-xs text-ink-3 underline hover:bg-transparent"
-            onClick={async () => { await fetch('/api/e/salir', { method: 'POST' }); location.href = '/e/entrar?m=asegura' }}>
-            Salir de este dispositivo
-          </button>
-        </header>
-      ) : (
-      <header className="mb-4 flex flex-col items-center gap-2 border-b border-line bg-accent px-4 pb-5 pt-6 text-center text-white lg:flex-row lg:justify-between lg:gap-4 lg:px-8 lg:text-left">
-        {branding?.logo_url
-          ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="max-h-20 w-auto max-w-[220px] object-contain" />
-          : <Wordmark claro className="text-2xl" />}
-        {branding?.nombre && (
-          <p className="mt-1 text-xs font-semibold uppercase tracking-widest opacity-80">{branding.nombre}</p>
-        )}
-        <span className="mt-1 rounded-full bg-white/20 px-3 py-0.5 text-xs font-medium text-white">Portal del empleado</span>
-        <button type="button" className="min-h-[44px] bg-transparent px-3 text-xs text-white/80 underline"
-          onClick={async () => { await fetch('/api/e/salir', { method: 'POST' }); location.href = '/e/entrar' }}>
-          Salir de este dispositivo
-        </button>
-      </header>
-      )}
+    <main className="mx-auto max-w-[520px] lg:max-w-5xl">
+      <CabeceraApp perfil="empleado" logoUrl={branding?.logo_url} nombreEmpresa={branding?.nombre} urlSeguros={urlSeguros} />
       <div className="p-4">
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="contents lg:col-start-1 lg:block">
-      {marcaAsegura && urlSeguros && <TarjetaSeguros url={urlSeguros} />}
+      <AvisoSeguros />
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
 
       {avisos && avisos.avisos.length > 0 && (
@@ -118,7 +97,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
             className="flex min-h-[44px] w-full items-center justify-between gap-2 bg-transparent p-0 text-left text-ink">
             <span className="text-base font-semibold">Avisos</span>
             {avisos.sin_ver > 0
-              ? <span className="rounded-full bg-alert px-2.5 py-0.5 text-xs font-bold text-white">{avisos.sin_ver} sin ver</span>
+              ? <span className="rounded-full bg-alert px-2.5 py-0.5 text-xs font-bold text-card">{avisos.sin_ver} sin ver</span>
               : <span className="text-xs text-ink-3">{verAvisos ? 'Ocultar' : 'Ver'}</span>}
           </button>
           {(verAvisos || avisos.sin_ver > 0) && (
@@ -133,9 +112,9 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
                       <span>{new Date(a.creado_at).toLocaleDateString('es-ES')}</span>
                       {d?.url && <a href={d.url} target="_blank" rel="noreferrer" onClick={() => marcarVisto(d.id)} className="text-accent no-underline hover:underline">Abrir documento</a>}
                       {d && d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion' && (
-                        <button type="button" onClick={() => abrirFirma(d)} className="ml-auto min-h-[44px] px-3 text-xs">Firmar</button>
+                        <Boton onClick={() => abrirFirma(d)} className="ml-auto">Firmar</Boton>
                       )}
-                      {d && d.estado_firma === 'firmado' && <span className="text-ok">✔ Firmado</span>}
+                      {d && d.estado_firma === 'firmado' && <Chip tono="ok">Firmado</Chip>}
                     </div>
                   </li>
                 )
@@ -178,17 +157,17 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
                 : <span>{d.nombre}</span>}
               <span className="text-ink-3 text-xs">· {etiqueta(d.carpeta)}</span>
               {d.estado_firma === 'pendiente_empresa' && (
-                <span className="text-warn text-xs font-medium">· En espera de firma empresa</span>
+                <Chip tono="aviso">En espera de firma empresa</Chip>
               )}
               {d.estado_firma === 'pendiente' && d.firmado_empresa_nombre && (
-                <span className="text-ok text-xs">· ✔ Firmado por empresa</span>
+                <Chip tono="ok">Firmado por empresa</Chip>
               )}
-              {d.estado_firma === 'firmado' && <span className="text-ok text-xs font-semibold">· ✔ Firmado por ambas partes</span>}
+              {d.estado_firma === 'firmado' && <Chip tono="ok">Firmado por ambas partes</Chip>}
               {d.estado_firma === 'firmado' && (
                 <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="text-accent text-xs no-underline hover:underline">· Verificar</a>
               )}
               {d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion' && (
-                <button onClick={() => abrirFirma(d)} className="ml-auto px-3 py-1.5 text-xs">Firmar</button>
+                <Boton onClick={() => abrirFirma(d)} className="ml-auto">Firmar</Boton>
               )}
               {d.resumen && <p className="w-full text-xs text-ink-3">{d.resumen}</p>}
             </li>
@@ -200,41 +179,36 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
       </div>
 
       {firmarDoc && (
-        <div onClick={() => setFirmarDoc(null)} className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4">
-          <div onClick={e => e.stopPropagation()} className="w-full max-w-sm rounded-[18px] border border-line bg-card p-5">
-            <h2 className="text-base">Firmar documento</h2>
-            <p className="mt-1 text-sm font-medium">{firmarDoc.nombre}</p>
-            {firmarDoc.firmado_empresa_nombre && (
-              <p className="mt-2 rounded-lg bg-ok/10 px-3 py-2 text-xs text-ok">
-                ✔ La empresa ya firmó este documento ({firmarDoc.firmado_empresa_nombre})
-              </p>
-            )}
-            <p className="mt-3 text-xs leading-relaxed text-ink-2">{CONSENTIMIENTO}</p>
-            {otp?.enviado && (
-              <>
-                <label className="mt-3 block text-xs text-ink-2">
-                  Código enviado a tu email{otp.email_parcial ? ` (${otp.email_parcial})` : ''}:
-                </label>
-                <input className="mt-1 w-full tracking-widest" value={codigo} inputMode="numeric" maxLength={6}
-                  onChange={e => setCodigo(e.target.value.replace(/\D/g, ''))} placeholder="6 dígitos" />
-              </>
-            )}
-            <label className="mt-3 block text-xs text-ink-2">Escribe tu nombre completo para firmar:</label>
-            <input className="mt-1 w-full" value={nombreFirma} onChange={e => setNombreFirma(e.target.value)} placeholder="Nombre y apellidos" />
-            {firmaError && <p className="mt-2 text-alert text-sm">{firmaError}</p>}
-            <div className="mt-4 flex gap-2">
-              <button onClick={confirmarFirma}
-                disabled={firmando || !nombreFirma.trim() || (!!otp?.enviado && codigo.length !== 6)}
-                className="flex-1">
-                {firmando ? 'Firmando…' : 'Firmar'}
-              </button>
-              <button onClick={() => setFirmarDoc(null)} className="bg-paper-2 text-ink-2 hover:bg-line">Cancelar</button>
-            </div>
-          </div>
-        </div>
+        <Modal titulo="Firmar documento" ancho="sm" onCerrar={() => setFirmarDoc(null)}
+          pie={<>
+            <Boton variante="secundario" onClick={() => setFirmarDoc(null)}>Cancelar</Boton>
+            <Boton onClick={confirmarFirma} disabled={firmando || !nombreFirma.trim() || (!!otp?.enviado && codigo.length !== 6)}>
+              {firmando ? 'Firmando…' : 'Firmar'}
+            </Boton>
+          </>}>
+          <p className="text-sm font-medium">{firmarDoc.nombre}</p>
+          {firmarDoc.firmado_empresa_nombre && (
+            <p className="mt-2 rounded-lg bg-ok/10 px-3 py-2 text-xs text-ok">
+              La empresa ya firmó este documento ({firmarDoc.firmado_empresa_nombre})
+            </p>
+          )}
+          <p className="mt-3 text-xs leading-relaxed text-ink-2">{CONSENTIMIENTO}</p>
+          {otp?.enviado && (
+            <>
+              <label className="mt-3 block text-xs text-ink-2">
+                Código enviado a tu email{otp.email_parcial ? ` (${otp.email_parcial})` : ''}:
+              </label>
+              <input className="mt-1 w-full tracking-widest" value={codigo} inputMode="numeric" maxLength={6}
+                onChange={e => setCodigo(e.target.value.replace(/\D/g, ''))} placeholder="6 dígitos" />
+            </>
+          )}
+          <label className="mt-3 block text-xs text-ink-2">Escribe tu nombre completo para firmar:</label>
+          <input className="mt-1 w-full" value={nombreFirma} onChange={e => setNombreFirma(e.target.value)} placeholder="Nombre y apellidos" />
+          {firmaError && <p role="alert" className="mt-2 text-alert text-sm">{firmaError}</p>}
+        </Modal>
       )}
       </div>
-      {marcaAsegura && <PieAsegura />}
+      <PieAsegura />
     </main>
   )
 }

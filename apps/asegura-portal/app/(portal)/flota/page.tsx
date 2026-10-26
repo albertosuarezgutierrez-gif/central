@@ -8,6 +8,7 @@ import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
 
 import { FlotaEmpresa, NombramientoPendiente } from './FlotaEmpresa'
+import { EncabezadoPortal } from '../../PaginaPortal'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,8 +39,7 @@ export default async function FlotaPage({
     if (flota === null) notFound()
     return (
       <>
-        <p className="antetitulo">Tu sociedad</p>
-        <h1>Flota de {flota.empresa.nombre}</h1>
+        <EncabezadoPortal antetitulo="Tu sociedad" titulo="Flota de" acento={flota.empresa.nombre} />
         <p className="suave" style={{ marginTop: 0 }}>
           {flota.papel === 'dueno'
             ? 'Los vehículos de la sociedad con su seguro en vigor. Ves esto porque constas como dueño.'
@@ -72,7 +72,7 @@ export default async function FlotaPage({
 
   return (
     <>
-      <h1>Tu flota</h1>
+      <EncabezadoPortal antetitulo="Herramientas" titulo="Tu" acento="flota" />
       <p className="suave" style={{ marginTop: 0 }}>
         Los vehículos de las sociedades que llevas: seguro, vencimiento y próxima ITV.
       </p>

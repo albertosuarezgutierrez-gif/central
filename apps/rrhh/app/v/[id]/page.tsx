@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import QRCode from 'qrcode'
-import Wordmark from '@/components/Wordmark'
+import { CoMarca, PieAsegura } from '@/components/MarcaAsegura'
 import { verificarDocumento } from '@/lib/verificacion'
 import { etiquetaMetodo } from '@/lib/firma-publica'
 
@@ -26,13 +26,12 @@ export default async function VerificarPage({ params }: { params: Promise<{ id: 
     <main className="mx-auto grid min-h-screen max-w-[520px] place-items-center p-4">
       <div className="w-full">
         <header className="mb-4 text-center">
-          <Wordmark className="text-2xl" />
+          <CoMarca alto={26} />
           <p className="text-ink-3 mt-1 text-sm">Verificación de firma electrónica</p>
         </header>
 
         {!firma ? (
           <section className="rounded-card border border-line bg-card p-5 text-center">
-            <p className="text-2xl">🔎</p>
             <h1 className="mt-2 text-base">Documento no encontrado</h1>
             <p className="text-ink-3 mt-1 text-sm">
               No hay ninguna firma registrada para este enlace. Comprueba que el código es correcto.
@@ -41,7 +40,7 @@ export default async function VerificarPage({ params }: { params: Promise<{ id: 
         ) : (
           <section className="rounded-card border border-line bg-card p-5">
             <div className="flex items-center gap-2">
-              <span className="text-ok text-xl">✔</span>
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ok"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01l-3-3" /></svg>
               <h1 className="text-base font-semibold">Firma verificada</h1>
             </div>
             <p className="text-ink-3 mt-1 text-sm">
@@ -80,7 +79,8 @@ export default async function VerificarPage({ params }: { params: Promise<{ id: 
                     type: 'svg',
                     margin: 1,
                     width: 160,
-                    color: { dark: '#1a1a1a', light: '#ffffff' },
+                    // Un QR necesita contraste máximo negro/blanco para leerse: no es color de marca.
+                    color: { dark: '#000000', light: '#ffffff' },
                   }),
                 }}
               />
@@ -94,6 +94,7 @@ export default async function VerificarPage({ params }: { params: Promise<{ id: 
         <p className="text-ink-3 mt-3 text-center text-xs">
           Verificación pública — no se muestran datos personales del firmante más allá de su nombre.
         </p>
+        <PieAsegura />
       </div>
     </main>
   )

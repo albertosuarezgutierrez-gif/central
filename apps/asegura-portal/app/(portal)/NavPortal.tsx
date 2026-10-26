@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
-import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
+import { pestanasPortal, seccionActiva } from '@central/module-seguros-portal'
 
 import { WHATSAPP_PATH } from '../whatsapp-icono'
 import { CargandoEnlace } from './CargandoEnlace'
@@ -48,9 +48,7 @@ import { CargandoEnlace } from './CargandoEnlace'
  * de la ruta y del parámetro, y no baja como prop desde cada página — así el
  * `layout` puede pintar la navegación una sola vez para todas.
  */
-export function NavPortal({ llamar, whatsapp, patrimonio }: {
-  /** `accesosPatrimonio` no vacío (lo calcula el layout): sin titulares no hay entrada. */
-  patrimonio?: boolean
+export function NavPortal({ llamar, whatsapp }: {
   llamar?: { tel: string; numero: string }
   /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */
   whatsapp?: string
@@ -60,15 +58,10 @@ export function NavPortal({ llamar, whatsapp, patrimonio }: {
   // `loading.tsx`, y los dos a la vez serían dos indicadores para una sola espera.
   const mismaRuta = (href: string) => href.split('?')[0] === ruta
   const params = useSearchParams()
-  // `/autorizaciones` es otra RUTA, no un panel de la bóveda; por eso la ruta
-  // manda sobre el parámetro y no al revés.
-  const enBoveda = ruta === '/boveda'
-  const activa = enBoveda ? vistaDeBoveda(params.get('vista') ?? undefined) : null
+  // 26/10/2026: la entrada activa la decide `seccionActiva` (la misma regla que la cabecera): la ruta manda y, en
+  // `/boveda`, el `?vista=` dice a cuál de las cinco pertenece (Recibos y Siniestros son «Seguros»; Datos, «Cuenta»).
+  const activa = seccionActiva(ruta, params.get('vista'))
   const pestanas = pestanasPortal()
-  // Las pestañas que son otra RUTA (Contactos, Mensajes) se casan por su href: con dos,
-  // «no estoy en la bóveda» encendería las dos a la vez.
-  const esActivaDe = (p: { vista: string | null; href: string }) =>
-    p.vista === null ? ruta === p.href || ruta.startsWith(`${p.href}/`) : enBoveda && p.vista === activa
 
   // 🚨 El cajón se DERIVA de en qué pantalla se abrió, no es un booleano suelto:
   // se guarda la ruta+parámetro del momento en que se abrió y está abierto solo
@@ -141,7 +134,7 @@ export function NavPortal({ llamar, whatsapp, patrimonio }: {
           </button>
         </div>
         {pestanas.map((p) => {
-          const esActiva = esActivaDe(p)
+          const esActiva = activa === p.id
           return (
             <Link
               key={p.href}
@@ -160,38 +153,6 @@ export function NavPortal({ llamar, whatsapp, patrimonio }: {
             </Link>
           )
         })}
-        {/* «Mi resumen» (13/10/2026): resumen anual para la renta. Otra RUTA; no está en `pestanasPortal()`. */}
-        <Link
-          href="/resumen"
-          className="portal-nav-item"
-          aria-current={ruta === '/resumen' ? 'page' : undefined}
-          data-activa={ruta === '/resumen' ? 'si' : undefined}
-          onClick={cerrar}
-        >
-          Mi resumen
-        </Link>
-        {patrimonio && (
-          <Link
-            href="/patrimonio"
-            className="portal-nav-item"
-            aria-current={ruta.startsWith('/patrimonio') ? 'page' : undefined}
-            data-activa={ruta.startsWith('/patrimonio') ? 'si' : undefined}
-            onClick={cerrar}
-          >
-            Patrimonio
-          </Link>
-        )}
-        {/* «Herramientas» (22/10/2026): módulos gratis para clientes (flota, RRHH, alquileres). Otra RUTA,
-            como «Mi resumen»; no está en `pestanasPortal()`. Ver `app/(portal)/herramientas/page.tsx`. */}
-        <Link
-          href="/herramientas"
-          className="portal-nav-item"
-          aria-current={ruta === '/herramientas' ? 'page' : undefined}
-          data-activa={ruta === '/herramientas' ? 'si' : undefined}
-          onClick={cerrar}
-        >
-          Herramientas
-        </Link>
         {/* Llamar al corredor, a un toque desde cualquier sección (24/09/2026). El
             número llega del servidor (`MEDIADOR`): importar `@central/module-seguros`
             aquí arrastraría la cartera entera al bundle del navegador. */}
@@ -221,7 +182,7 @@ export function NavPortal({ llamar, whatsapp, patrimonio }: {
         {TABBAR.map(({ href, Icono }) => {
           const p = pestanas.find((x) => x.href === href)
           if (!p) return null
-          const esActiva = !abierto && esActivaDe(p)
+          const esActiva = !abierto && activa === p.id
           return (
             <Link
               key={href}
@@ -313,12 +274,13 @@ function Svg({ children }: { children: ReactNode }) {
 }
 const IconoSeguros = () => <Svg><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m9 12 2 2 4-4" /></Svg>
 const IconoInicio = () => <Svg><path d="M3.5 11 12 4l8.5 7" /><path d="M5.5 9.5V20h13V9.5" /><path d="M10 20v-5h4v5" /></Svg>
-const IconoSiniestros = () => <Svg><path d="M12 4 2.8 20h18.4L12 4Z" /><path d="M12 10v4.5M12 17.5v.01" /></Svg>
+const IconoHerramientas = () => <Svg><path d="M14.5 6.5a4 4 0 0 0 4.9 4.9L20 12l-8 8a2.1 2.1 0 0 1-3-3l8-8-.5-.5a4 4 0 0 0-4.9-4.9l2.4 2.4-1.8 1.8-2.4-2.4Z" /></Svg>
 const IconoMas = () => <Svg><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18" cy="12" r="1.2" /></Svg>
 
 /**
- * 24/10/2026 (decisión de Alberto): `Inicio · Seguros · Siniestros · WhatsApp · Más`. «Inicio» sustituye a «Recibos»,
- * que sigue en el cajón («Más») y en cada tarjeta de seguro. Cinco huecos es el máximo a 320 px (44 px cada uno).
+ * 26/10/2026 (decisión de Alberto, menú de cinco): `Inicio · Seguros · Herramientas · WhatsApp · Más`. «Siniestros»,
+ * «Recibos» y «Mi QR» ya no son entradas: viven DENTRO de «Seguros» (sub-navegación de la bóveda). «Más» abre el cajón
+ * con las cinco (Contactos y Cuenta incluidas) y «Llamar»/«Salir». Cinco huecos es el máximo a 320 px (44 px cada uno).
  *
  * Las tres secciones de la barra inferior (la cuarta es WhatsApp), por `href` contra `pestanasPortal()` — la
  * etiqueta y la ruta salen de ahí, no se teclean dos veces: renombrar una
@@ -328,5 +290,5 @@ const IconoMas = () => <Svg><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy=
 const TABBAR = [
   { href: '/inicio', Icono: IconoInicio },
   { href: '/boveda', Icono: IconoSeguros },
-  { href: '/boveda?vista=siniestro', Icono: IconoSiniestros },
+  { href: '/herramientas', Icono: IconoHerramientas },
 ] as const

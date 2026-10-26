@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@central/brand": "file:../../packages/brand",
     "@central/core-ai": "file:../../packages/core-ai",
     "@central/module-nominas": "file:../../packages/module-nominas",
     "@central/core-email": "file:../../packages/core-email",

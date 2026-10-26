@@ -4,6 +4,7 @@ import { getIdentidad } from '@/lib/session'
 
 import { SeccionPlegable } from './SeccionPlegable'
 import { Autorizaciones } from './Autorizaciones'
+import { EncabezadoPortal } from '../../PaginaPortal'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +59,7 @@ export default async function AutorizacionesPage({
       {/* 08/09/2026: «Contactos». La pantalla es la misma —quién ve lo tuyo,
           qué ves tú, y a quién invitas—; lo que cambió es el nombre, porque
           Alberto pidió «una pestaña de contactos» y esto ya lo era. */}
-      <h1>Mis contactos</h1>
+      <EncabezadoPortal titulo="Mis" acento="contactos" />
       <p className="suave" style={{ marginTop: 0 }}>
         Quién ve tus seguros, cuáles ves tú y a quién has invitado.
       </p>

@@ -7,6 +7,8 @@ import { eur } from '@/lib/dinero'
 import { getIdentidad } from '@/lib/session'
 
 import { EntrarConCodigo } from '../../invitacion/[token]/Invitacion'
+import { PaginaPortal } from '../../PaginaPortal'
+import { TarjetaPortal } from '../../TarjetaPortal'
 import { MiAlquiler, type DatosMiAlquiler } from './MiAlquiler'
 
 export const dynamic = 'force-dynamic'
@@ -22,13 +24,12 @@ export default async function MiAlquilerContratoPage({ params }: { params: Promi
   const identidad = await getIdentidad()
   if (identidad === null) {
     return (
-      <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
-        <div className="seccion">
-          <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mi alquiler</h1>
+      <PaginaPortal suelta estrecha antetitulo="Inquilino" titulo="Mi" acento="alquiler">
+        <TarjetaPortal>
           <p className="suave" style={{ marginTop: 0 }}>Entra con tu correo: te mandamos un código de un solo uso.</p>
           <EntrarConCodigo />
-        </div>
-      </main>
+        </TarjetaPortal>
+      </PaginaPortal>
     )
   }
   const r = await responderMiContrato(puertosInquilino(identidad.id), contratoId)
@@ -37,9 +38,8 @@ export default async function MiAlquilerContratoPage({ params }: { params: Promi
   const v = d.vista
 
   return (
-    <main style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1rem', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
-      <section className="seccion">
-        <h1 style={{ fontSize: '1.5rem', marginTop: 0, overflowWrap: 'anywhere' }}>{v.inmueble ?? 'Mi contrato de alquiler'}</h1>
+    <PaginaPortal suelta antetitulo="Mi alquiler" titulo={v.inmueble ?? 'Mi contrato de alquiler'}>
+      <TarjetaPortal>
         <p className="suave" style={{ marginTop: 0 }}>Tu propietario se presenta como: <strong>{v.contacto}</strong></p>
         <dl style={{ display: 'grid', gap: 8, margin: 0 }}>
           <div>
@@ -64,11 +64,11 @@ export default async function MiAlquilerContratoPage({ params }: { params: Promi
             </div>
           )}
         </dl>
-      </section>
+      </TarjetaPortal>
       <MiAlquiler contratoId={contratoId} datos={d} />
       <p style={{ margin: 0, fontSize: 14 }}>
         <Link href="/mi-alquiler">Mis contratos</Link>
       </p>
-    </main>
+    </PaginaPortal>
   )
 }

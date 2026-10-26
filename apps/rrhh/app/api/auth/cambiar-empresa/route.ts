@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getSesion } from '@/lib/tenant'
-import { firmarSesion } from '@/lib/auth'
+import { emitirSesionResponsable } from '@/lib/abrir-sesion-responsable'
 
 export async function POST(req: Request) {
   let s
@@ -16,10 +16,8 @@ export async function POST(req: Request) {
     WHERE usuario_id = ${s.usuario_id}::uuid AND empresa_id = ${empresa_id}::uuid LIMIT 1`)
   if (!ok.length) return NextResponse.json({ error: 'Empresa no autorizada' }, { status: 403 })
 
-  const { token, jti } = await firmarSesion({ usuario_id: s.usuario_id, empresa_id })
-  await prisma.$executeRaw(Prisma.sql`UPDATE rrhh.usuarios_rrhh SET session_jti = ${jti} WHERE id = ${s.usuario_id}::uuid`)
-
+  // Conserva «Recordar este dispositivo» y recuerda la empresa elegida para la próxima entrada.
   const res = NextResponse.json({ ok: true })
-  res.cookies.set('rrhh_session', token, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30 })
+  await emitirSesionResponsable(res, s.usuario_id, empresa_id, s.recordar === true)
   return res
 }

@@ -87,92 +87,85 @@ export function vistaDeBoveda(crudo: string | string[] | undefined): VistaBoveda
     : VISTA_BOVEDA_POR_DEFECTO
 }
 
-/** Una pestaña de la barra de navegación del portal. */
+/** Las cinco secciones del menú (26/10/2026). */
+export type SeccionPortal = 'inicio' | 'seguros' | 'herramientas' | 'contactos' | 'cuenta'
+
+/** Una entrada del menú del portal. */
 export interface PestanaPortal {
-  /** Identificador estable; `null` cuando la pestaña es otra ruta. */
+  id: SeccionPortal
+  /**
+   * La vista de la bóveda a la que apunta el `href`, o `null` cuando la entrada es otra ruta. Solo «Seguros» la lleva
+   * (`seguros`); las demás vistas de la bóveda cuelgan de una entrada por `vistas`.
+   */
   vista: VistaBoveda | null
   etiqueta: string
   href: string
+  /** Las vistas de `/boveda` que pertenecen a esta entrada (para marcarla activa). */
+  vistas: readonly VistaBoveda[]
+  /** Las rutas (y sus hijas) que pertenecen a esta entrada. `/boveda` se decide por `vistas`, no por aquí. */
+  rutas: readonly string[]
 }
 
 /**
- * Las pestañas, en orden.
+ * El menú: CINCO entradas (26/10/2026, decisión de Alberto; eran 9 en el módulo y 12 en pantalla).
  *
- * 📌 Son CINCO desde el 09/09/2026 («Mis datos»). Eran cuatro desde el
- * 07/09/2026, y la que volvió entonces no era «Mis pólizas»: eran
- * «Recibos» y el historial de siniestros, que Alberto echó de menos tres veces
- * seguidas mirando su propio portal.
+ *   Inicio · Seguros · Herramientas · Contactos · Cuenta
  *
- * 🚨 Esto MATIZA el argumento que había escrito aquí («una pestaña que casi
- * siempre dice cero parece un producto a medio hacer»), que se midió en vez de
- * discutirse. Sobre la cartera viva del 07/09/2026, de los 80 titulares:
- *   · **55 (69 %) tienen algún recibo no anulado** → para recibos el argumento
- *     era sencillamente falso.
- *   · **31 (39 %) tienen algún siniestro** → aquí sí acierta a medias, y por
- *     eso el vacío de esa pestaña dice «no nos consta ninguno» (que NO es «no
- *     has tenido ninguno»), en vez de quedarse en blanco.
- * Lo que sigue siendo cierto es lo de «Mis pólizas»: aquella no aportaba una
- * pantalla, aportaba un sinónimo. Estas dos aportan datos que ya existen y que
- * solo encontraba quien entrase póliza a póliza.
+ * «Seguros» es el ÚNICO sitio de «Mis seguros» y recoge, como sub-vistas, Recibos, Siniestros y Mi QR
+ * (`SUBVISTAS_SEGUROS`). «Herramientas» recoge Patrimonio, Flota, el calendario (`?vista=recordatorios`), Mi resumen
+ * y el catálogo solicitable. «Cuenta» recoge Datos (`?vista=datos`) y Configuración. Las rutas viejas siguen vivas:
+ * solo cambia el menú. Una vista de la bóveda que no estuviera en `vistas` de ninguna entrada sería una pantalla a la
+ * que no se llega desde el menú: lo vigila `vista-portal.test.ts`.
  *
- * ⚠️ Y con cuatro vuelve el riesgo que las dejó en tres: en el móvil de Alberto
- * la última salía **cortada** («Qu…»). Las etiquetas de ahora son más cortas
- * («Recibos», «Siniestros») y el carril reparte el ancho por debajo de 380 px,
- * pero eso **se mide con Playwright antes de darlo por bueno**, no se supone.
- *
- * «Contactos» no es un panel, es la otra ruta (`/autorizaciones`). Va en la
- * misma barra porque para quien la usa es «otra sección», no «otra página web».
- *
- * 🚨 **«Seguros» y «Datos», no «Mis seguros» ni «Mis datos» (12/09/2026).**
- * El h1 de la bóveda es «Mis <em>X</em>» — la pestaña activa da el nombre y el
- * h1 da el «mis» (Alberto: «sigue apareciendo mis seguros dos veces»). Con la
- * etiqueta completa, la pestaña de «seguros» y el h1 de esa misma pantalla
- * decían la frase EXACTA una encima de la otra; en «hoja»/«recibos»/
- * «siniestro» ya no pasaba porque la pestaña usa una palabra distinta a la del
- * h1 («Mi QR» / «Mis QR», «Recibos» / «Mis recibos»). Se corrige quitando el
- * posesivo de la pestaña en los dos únicos casos donde coincidía letra por
- * letra, no añadiendo uno a las demás.
+ * 🚨 «Inicio» no es «Mi resumen» (el resumen anual para la renta, `/resumen`, que vive en Herramientas). Y «Seguros»,
+ * no «Mis seguros»: el h1 de la bóveda es «Mis <em>X</em>» y el posesivo lo pone él (12/09/2026).
  */
 export function pestanasPortal(): PestanaPortal[] {
   return [
-    // 24/10/2026: «Inicio» (`/inicio`), la PRIMERA: seguros por familia y debajo las herramientas. Otra RUTA, no
-    // un panel de la bóveda. 🚨 No es «Mi resumen» (el resumen anual para la renta, `/resumen`): son dos cosas.
-    { vista: null, etiqueta: 'Inicio', href: '/inicio' },
-    { vista: 'seguros', etiqueta: 'Seguros', href: '/boveda' },
-    // 09/09/2026: acceso directo a la hoja/QR de la nevera, antes enterrada
-    // al final de «Mis seguros». «Mi QR» y no «Hoja» ni «QR de acceso»: es la
-    // palabra que ya usa el propio botón de crearla, y no compite con
-    // ninguna otra pestaña.
-    { vista: 'hoja', etiqueta: 'Mi QR', href: '/boveda?vista=hoja' },
-    { vista: 'recibos', etiqueta: 'Recibos', href: '/boveda?vista=recibos' },
-    // 🚨 «Siniestros» y no «Un siniestro»: la pestaña ya no es solo el
-    // formulario para declarar uno, es también el historial de los que la
-    // compañía nos ha informado. Y el cepo de sinónimos obliga a que sea UNA
-    // palabra en la barra: «Siniestros» + «Un parte» serían dos puertas para
-    // lo mismo, que es exactamente lo que mató a «Mis pólizas».
-    { vista: 'siniestro', etiqueta: 'Siniestros', href: '/boveda?vista=siniestro' },
-    // 13/09/2026: recordatorios propios (ITV, carnet, caldera, extintores…),
-    // sobre el mismo motor de `portal_obligacion` que las pólizas pero sin
-    // póliza detrás. Va justo después de «Siniestros» porque es la misma
-    // familia — «cosas con fecha» — y antes de «Contactos»/«Datos», que son
-    // sobre la relación y la persona, no sobre vencimientos.
-    // 🚨 NO «Avisos»: ya es la palabra de la campana de notificaciones
-    // (`Campana.tsx` → `/api/avisos`), que es otra cosa — lo que la
-    // correduría te avisa, no lo que tú te apuntas.
-    { vista: 'recordatorios', etiqueta: 'Recordatorios', href: '/boveda?vista=recordatorios' },
-    // 08/09/2026: «Quién me ve» → «Contactos». Alberto pidió «una pestaña de
-    // contactos» y la pantalla ya era eso: la gente a la que das acceso, la que
-    // te lo da y la que invitas. La ruta NO cambia: los enlaces guardados a
-    // `/autorizaciones` siguen llegando.
-    { vista: null, etiqueta: 'Contactos', href: '/autorizaciones' },
-    // 09/09/2026: «Mis datos», la última. Es sobre la persona, no sobre sus
-    // seguros, y por eso va al final: quien entra viene a mirar pólizas, y su
-    // ficha es lo que se toca una vez al mudarse o cambiar de número.
-    { vista: 'datos', etiqueta: 'Datos', href: '/boveda?vista=datos' },
-    // 13/10/2026: «Configuración» (avisos: este dispositivo, qué, por dónde, cuándo y «no
-    // molestar»; y lo consentido). Otra RUTA, como «Contactos». La última: se toca una vez.
-    { vista: null, etiqueta: 'Configuración', href: '/configuracion' },
+    { id: 'inicio', vista: null, etiqueta: 'Inicio', href: '/inicio', vistas: [], rutas: ['/inicio'] },
+    {
+      id: 'seguros',
+      vista: 'seguros',
+      etiqueta: 'Seguros',
+      href: '/boveda',
+      vistas: ['seguros', 'recibos', 'siniestro', 'hoja'],
+      rutas: [],
+    },
+    {
+      id: 'herramientas',
+      vista: null,
+      etiqueta: 'Herramientas',
+      href: '/herramientas',
+      vistas: ['recordatorios'],
+      rutas: ['/herramientas', '/patrimonio', '/flota', '/resumen'],
+    },
+    // «Contactos» = la ruta `/autorizaciones` (los enlaces guardados siguen llegando).
+    { id: 'contactos', vista: null, etiqueta: 'Contactos', href: '/autorizaciones', vistas: [], rutas: ['/autorizaciones'] },
+    { id: 'cuenta', vista: null, etiqueta: 'Cuenta', href: '/cuenta', vistas: ['datos'], rutas: ['/cuenta', '/configuracion'] },
   ]
+}
+
+/** Las sub-vistas de «Seguros», en orden: lo que antes eran cuatro entradas del menú. */
+export const SUBVISTAS_SEGUROS: ReadonlyArray<{ vista: VistaBoveda; etiqueta: string }> = [
+  { vista: 'seguros', etiqueta: 'Seguros' },
+  { vista: 'recibos', etiqueta: 'Recibos' },
+  { vista: 'siniestro', etiqueta: 'Siniestros' },
+  { vista: 'hoja', etiqueta: 'Mi QR' },
+]
+
+/**
+ * Qué entrada del menú está activa para una ruta (y, en `/boveda`, para su `?vista=`). `null` = ninguna (una ruta
+ * pública o desconocida). Pura: la usan la barra, el lateral y la cabecera, para que las tres digan lo mismo.
+ */
+export function seccionActiva(ruta: string, vistaCruda?: string | string[] | null): SeccionPortal | null {
+  const pestanas = pestanasPortal()
+  if (ruta === '/boveda') {
+    const v = vistaDeBoveda(vistaCruda ?? undefined)
+    return pestanas.find((p) => p.vistas.includes(v))?.id ?? null
+  }
+  // Las rutas hijas de la bóveda (póliza, presupuesto, carta…) son «Seguros».
+  if (ruta.startsWith('/boveda/')) return 'seguros'
+  return pestanas.find((p) => p.rutas.some((r) => ruta === r || ruta.startsWith(`${r}/`)))?.id ?? null
 }
 
 /**

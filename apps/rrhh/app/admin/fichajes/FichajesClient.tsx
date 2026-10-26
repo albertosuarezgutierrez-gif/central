@@ -1,4 +1,6 @@
 'use client'
+import Boton from '@/components/ui/Boton'
+import Chip from '@/components/ui/Chip'
 import { useState, useEffect, Fragment } from 'react'
 import Page from '@/components/ui/Page'
 import Tabla from '@/components/ui/Tabla'
@@ -145,7 +147,7 @@ export default function FichajesClient() {
           onClick={exportarCSV} disabled={exportando || fichajes.length === 0}
           className="min-h-[44px] bg-paper-2 text-ink-2 text-xs px-3 py-1.5 rounded border border-line lg:justify-self-end"
         >
-          {exportando ? 'Exportando…' : '⬇ Exportar CSV (ITSS)'}
+          {exportando ? 'Exportando…' : 'Exportar CSV (ITSS)'}
         </button>
       </div>
 
@@ -154,9 +156,9 @@ export default function FichajesClient() {
           <p className="mb-2 text-sm font-medium text-ok">En jornada ahora ({activos.length})</p>
           <div className="flex flex-wrap gap-2">
             {activos.map(f => (
-              <span key={f.id} className="rounded-full bg-ok/20 px-2 py-0.5 text-xs text-ok">
-                {f.empleado_nombre} · desde {fmt(f.entrada_at)}{f.obra_nombre ? ` · ${f.obra_nombre}` : f.lat_entrada != null ? ' · 📍' : ''}
-              </span>
+              <Chip key={f.id} tono="ok">
+                {f.empleado_nombre} · desde {fmt(f.entrada_at)}{f.obra_nombre ? ` · ${f.obra_nombre}` : f.lat_entrada != null ? ' · con ubicación' : ''}
+              </Chip>
             ))}
           </div>
         </div>
@@ -207,30 +209,28 @@ export default function FichajesClient() {
                       <td className="px-3 py-2.5 font-medium">{f.empleado_nombre ?? '—'}</td>
                       <td data-label="Fecha" className="px-3 py-2.5 text-ink-2">{fmtFecha(f.entrada_at)}</td>
                       <td data-label="Entrada" className="px-3 py-2.5 tabular-nums">{fmt(f.entrada_at)}</td>
-                      <td data-label="Salida" className="px-3 py-2.5 tabular-nums">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
+                      <td data-label="Salida" className="px-3 py-2.5 tabular-nums">{f.salida_at ? fmt(f.salida_at) : <Chip tono="ok">activo</Chip>}</td>
                       <td data-label="Horas" className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
                       <td data-label="Obra" className="px-3 py-2.5 text-xs">
                         {f.obra_nombre
                           ? <span className="text-ink-2">{f.obra_nombre}</span>
                           : f.lat_entrada != null && f.lng_entrada != null
-                            ? <a href={`https://maps.google.com/?q=${f.lat_entrada},${f.lng_entrada}`} target="_blank" rel="noopener noreferrer" className="text-accent no-underline hover:underline">📍 Ver mapa</a>
+                            ? <a href={`https://maps.google.com/?q=${f.lat_entrada},${f.lng_entrada}`} target="_blank" rel="noopener noreferrer" className="text-accent no-underline hover:underline">Ver mapa</a>
                             : <span className="text-ink-3">—</span>}
                         {textoPrecision(f.precision_entrada_m) && (
                           <span className="ml-1 text-ink-3" title="Precisión del GPS al fichar la entrada">{textoPrecision(f.precision_entrada_m)}</span>
                         )}
                         {tramoSinUbicacion(f) && (
-                          <span className="ml-1 inline-block rounded-full bg-warn/20 px-1.5 text-warn">{tramoSinUbicacion(f)}</span>
+                          <Chip tono="aviso" className="ml-1">{tramoSinUbicacion(f)}</Chip>
                         )}
                       </td>
                       <td className="px-3 py-2.5 flex gap-1">
-                        <button
+                        <Boton variante="secundario" title="Corregir" aria-label="Corregir fichaje"
                           onClick={() => { setEditId(f.id); setEditSalida(''); setEditObs(f.observaciones ?? ''); setEditMotivo(''); setErrorEdit(''); setAuditId(null) }}
-                          className="px-2 py-1.5 text-xs min-h-[36px]" title="Corregir"
-                        >✏️</button>
-                        <button
+                        >Corregir</Boton>
+                        <Boton variante="fantasma" title="Ver historial de cambios" aria-label="Ver historial de cambios"
                           onClick={() => verAuditoria(f.id)}
-                          className="px-2 py-1.5 text-xs text-ink-3 min-h-[36px]" title="Ver historial de cambios"
-                        >🕓</button>
+                        >Historial</Boton>
                       </td>
                     </>
                   )}
@@ -253,7 +253,7 @@ export default function FichajesClient() {
                               {' → '}
                               <span>{a.valor_despues ?? '—'}</span>
                               {' · Motivo: '}
-                              <span className="italic">{a.motivo}</span>
+                              <span>{a.motivo}</span>
                             </div>
                           ))}
                         </div>
@@ -291,8 +291,8 @@ export default function FichajesClient() {
             <p className="text-sm font-medium">Permitir fichar sin ubicación (emergencia)</p>
             <p className="text-xs text-ink-3">Si el GPS del móvil falla, el empleado podrá fichar igualmente. El fichaje queda marcado y lo verás aquí.</p>
             {sinUbic === null && <p className="mt-1 text-xs text-ink-3">Cargando…</p>}
-            {sinUbic === 'error' && <p className="mt-1 text-xs text-red-600">No se ha podido leer el ajuste.</p>}
-            {msgSinUbic && <p role="status" className={`mt-1 text-xs ${msgSinUbic.startsWith('Guardado') ? 'text-ink-2' : 'text-red-600'}`}>{msgSinUbic}</p>}
+            {sinUbic === 'error' && <p className="mt-1 text-xs text-alert">No se ha podido leer el ajuste.</p>}
+            {msgSinUbic && <p role="status" className={`mt-1 text-xs ${msgSinUbic.startsWith('Guardado') ? 'text-ink-2' : 'text-alert'}`}>{msgSinUbic}</p>}
           </div>
         </div>
         <p className="mb-2 text-xs text-ink-3">Últimos 30 días: veces que el móvil del empleado no dio su ubicación al fichar.</p>

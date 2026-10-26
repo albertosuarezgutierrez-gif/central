@@ -25,7 +25,7 @@ export function CoMarca({ logoUrl, nombre, alto = 26, className = '' }: { logoUr
       {cliente}
       <div className="asegura-con">
         {cliente && <span className="asegura-con-texto">con</span>}
-        <LogoAsegura alto={alto} color="var(--accent)" />
+        <LogoAsegura alto={alto} color="var(--brand)" />
       </div>
     </div>
   )
@@ -34,7 +34,7 @@ export function CoMarca({ logoUrl, nombre, alto = 26, className = '' }: { logoUr
 /** Pie común: «Herramienta gratuita de Grupo ASegura · grupoasegura.es» (enlace en pestaña nueva) + instalar la app. */
 export function PieAsegura() {
   return (
-    <footer className="marca-asegura-pie mt-6 px-4 pb-6 text-center text-xs text-ink-3">
+    <footer className="mt-6 px-4 pb-6 text-center text-xs text-ink-3">
       <InstalarApp />
       <p>
         {PIE_ASEGURA} · <a href={WEB_ASEGURA} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center text-accent underline">{WEB_ASEGURA_TEXTO}</a>

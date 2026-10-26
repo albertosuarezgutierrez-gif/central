@@ -5,8 +5,6 @@ import { NavPortal } from './NavPortal'
 import { BandaCorredor } from './BandaCorredor'
 import { BienvenidaAvisos } from './BienvenidaAvisos'
 import { SALUDO_CLIENTE } from '../WhatsappFlotante'
-import { accesosPatrimonio } from '@/lib/patrimonio/accesos'
-import { getIdentidad } from '@/lib/session'
 
 /**
  * El armazón de las pantallas con sesión.
@@ -25,16 +23,9 @@ import { getIdentidad } from '@/lib/session'
  * `.portal-nav`: desde el 19/09/2026 esa clase es un cajón `position: fixed`,
  * que no ocupa sitio en el flujo y por tanto no reservaría nada.
  */
-export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  // «Patrimonio» en el menú SOLO si esta sesión tiene algún titular (`accesosPatrimonio`). Un fallo de lectura
-  // no inventa la entrada: sin comprobar = no se enseña.
-  let conPatrimonio = false
-  try {
-    const identidad = await getIdentidad()
-    conPatrimonio = identidad !== null && (await accesosPatrimonio(identidad.id)).size > 0
-  } catch {
-    conPatrimonio = false
-  }
+export default function PortalLayout({ children }: { children: React.ReactNode }) {
+  // 26/10/2026: el menú son cinco entradas fijas (`pestanasPortal()`); «Patrimonio» ya no es una entrada condicional:
+  // vive en «Herramientas», cuyas tarjetas SÍ respetan lo que cada cliente tiene activo (`lib/modulos.ts`).
   return (
     <div className="portal-shell">
       <BandaCorredor />
@@ -42,7 +33,6 @@ export default async function PortalLayout({ children }: { children: React.React
         <NavPortal
           llamar={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }}
           whatsapp={whatsappUrl(SALUDO_CLIENTE)}
-          patrimonio={conPatrimonio}
         />
       </Suspense>
       <main className="portal-contenido">

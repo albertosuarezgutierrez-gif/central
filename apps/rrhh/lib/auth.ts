@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
+import { diasSesion } from '@/lib/sesion-responsable-reglas'
 
 const secret = new TextEncoder().encode(
   process.env.JWT_SECRET
@@ -8,7 +9,8 @@ const secret = new TextEncoder().encode(
       : 'rrhh-dev-secret-change-in-prod')
 )
 
-export type Sesion = { usuario_id: string; empresa_id: string; jti: string }
+/** `recordar` = entró con «Recordar este dispositivo» (90 días en vez de 30); se conserva al cambiar de empresa. */
+export type Sesion = { usuario_id: string; empresa_id: string; jti: string; recordar?: boolean }
 
 // 26/10/2026: el responsable entra por CÓDIGO al correo (`lib/acceso-responsable.ts`), sin contraseña.
 // `usuarios_rrhh.pass_hash` sigue en BD (NOT NULL): el alta guarda un hash de un valor aleatorio que
@@ -17,18 +19,18 @@ export async function hashPassword(plain: string) { return bcrypt.hash(plain, 10
 
 export async function firmarSesion(s: Omit<Sesion, 'jti'>): Promise<{ token: string; jti: string }> {
   const jti = crypto.randomUUID()
-  const token = await new SignJWT({ typ: 'responsable', empresa_id: s.empresa_id })
+  const token = await new SignJWT({ typ: 'responsable', empresa_id: s.empresa_id, ...(s.recordar === true ? { rec: true } : {}) })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(s.usuario_id)
     .setJti(jti)
-    .setExpirationTime('30d')
+    .setExpirationTime(`${diasSesion(s.recordar)}d`)
     .sign(secret)
   return { token, jti }
 }
 
 /** Token del selector de empresa (5 min), tras canjear el código de `/login` con ≥2 empresas. */
-export async function firmarPendiente(usuario_id: string): Promise<string> {
-  return new SignJWT({ typ: 'responsable_pendiente', pendiente: true })
+export async function firmarPendiente(usuario_id: string, recordar = false): Promise<string> {
+  return new SignJWT({ typ: 'responsable_pendiente', pendiente: true, ...(recordar ? { rec: true } : {}) })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(usuario_id)
     .setExpirationTime('5m')
@@ -36,9 +38,14 @@ export async function firmarPendiente(usuario_id: string): Promise<string> {
 }
 
 export async function verificarPendiente(token: string): Promise<string> {
+  return (await verificarPendienteDetalle(token)).usuario_id
+}
+
+/** Como `verificarPendiente`, más si pidió «Recordar este dispositivo» en el paso anterior. */
+export async function verificarPendienteDetalle(token: string): Promise<{ usuario_id: string; recordar: boolean }> {
   const { payload } = await jwtVerify(token, secret)
   if (payload.typ !== 'responsable_pendiente' || !payload.pendiente) throw new Error('Token no pendiente')
-  return String(payload.sub)
+  return { usuario_id: String(payload.sub), recordar: payload.rec === true }
 }
 
 export async function verificarSesion(token: string): Promise<Sesion> {
@@ -52,5 +59,5 @@ export async function verificarSesion(token: string): Promise<Sesion> {
   if (payload.typ !== 'responsable' || typeof payload.jti !== 'string' || !payload.jti || payload.pendiente) {
     throw new Error('No es una sesión de responsable')
   }
-  return { usuario_id: String(payload.sub), empresa_id: String(payload.empresa_id), jti: String(payload.jti) }
+  return { usuario_id: String(payload.sub), empresa_id: String(payload.empresa_id), jti: String(payload.jti), ...(payload.rec === true ? { recordar: true } : {}) }
 }

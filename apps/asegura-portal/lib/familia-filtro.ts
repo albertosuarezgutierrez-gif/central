@@ -21,3 +21,18 @@ export function titularesDeFamilia<T extends { tipoPersona: string; polizas: { r
   if (familia === null) return [...titulares]
   return titulares.map((t) => ({ ...t, polizas: t.polizas.filter((p) => enFamilia(p.ramo, t.tipoPersona === 'juridica', familia)) }))
 }
+
+/**
+ * Las familias que HAY entre las pólizas a la vista, en el orden de `FAMILIAS_SEGURO` (26/10/2026: los chips de
+ * «Seguros» sustituyen a las tarjetas por familia de Inicio). Solo las que tienen algo: un chip que lleva a una lista
+ * vacía es una puerta falsa. Es una VISTA, no un permiso: sale de lo que la sesión ya puede ver.
+ */
+export function familiasPresentes(
+  titulares: readonly { tipoPersona: string; polizas: { ramo: string | null }[] }[],
+  declaradas: readonly { ramo: string | null; titularTipo: string | null }[],
+): FamiliaSeguro[] {
+  const hay = new Set<FamiliaSeguro>()
+  for (const t of titulares) for (const p of t.polizas) hay.add(familiaSeguro(p.ramo, t.tipoPersona === 'juridica').familia)
+  for (const d of declaradas) hay.add(familiaSeguro(d.ramo, d.titularTipo === 'empresa').familia)
+  return FAMILIAS_SEGURO.filter((f) => hay.has(f))
+}

@@ -16,7 +16,7 @@ self.addEventListener('push', (e) => {
   try { data = e.data ? e.data.json() : {} } catch { data = { title: 'RR.HH.', body: e.data && e.data.text() } }
   const title = data.title || 'RR.HH.'
   e.waitUntil(self.registration.showNotification(title, {
-    body: data.body || '', icon: '/icon.svg', badge: '/icon.svg', data: { url: data.url || '/' },
+    body: data.body || '', icon: '/brand/icono-asegura-192.png', badge: '/brand/icono-asegura-192.png', data: { url: data.url || '/' },
   }))
 })
 

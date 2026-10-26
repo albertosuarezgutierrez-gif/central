@@ -292,7 +292,7 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
                       <span key={id} className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-1 text-xs text-accent-ink">
                         {e ? nombreEmp(e) : id.slice(0, 8)}{m && <span className="opacity-70">· IA por {m === 'nif' ? 'DNI' : 'nombre'}</span>}
                         {!bloqueado && it.fase !== 'subiendo' && <button type="button" aria-label="Quitar" onClick={() => onForm({ destinatarios: f.destinatarios.filter(x => x !== id) })}
-                          className="min-h-[28px] bg-transparent px-1 text-accent-ink">×</button>}
+                          className="min-h-[44px] min-w-[44px] bg-transparent px-1 text-accent-ink hover:bg-transparent">×</button>}
                       </span>
                     )
                   })}

@@ -34,11 +34,34 @@ describe('POST /api/auth/acceso/solicitar', () => {
     expect(enviar.mock.calls[0][0]).toMatchObject({ to: 'pilar@ejemplo.es', marcaAsegura: true, url: 'https://empleados.grupoasegura.es/login' })
   })
 
-  it('host ajeno → sin marca; RRHH_PUBLIC_URL manda en el enlace', async () => {
+  it('la marca es siempre Grupo ASegura (también en host ajeno); RRHH_PUBLIC_URL manda en el enlace', async () => {
     process.env.RRHH_PUBLIC_URL = 'https://rrhh.ejemplo.es/'
     await pedir('pilar@ejemplo.es', '1.1.1.3', 'central-rrhh.vercel.app')
     await tareas[0]()
-    expect(enviar.mock.calls[0][0]).toMatchObject({ marcaAsegura: false, url: 'https://rrhh.ejemplo.es/login' })
+    expect(enviar.mock.calls[0][0]).toMatchObject({ marcaAsegura: true, url: 'https://rrhh.ejemplo.es/login' })
+  })
+
+  it('diagnóstico en el log del servidor con el correo ENMASCARADO; la respuesta no cambia', async () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const r = await pedir('nadie@ejemplo.es', '1.1.1.9')
+    expect(await r.text()).toBe(JSON.stringify({ ok: true }))
+    expect(aviso).toHaveBeenCalledTimes(1)
+    const linea = String(aviso.mock.calls[0][0])
+    expect(linea).toContain('n***@e***.es')
+    expect(linea).not.toContain('nadie')
+    aviso.mockRestore()
+  })
+
+  it('si el envío falla, queda un error claro en el log (sin el correo entero)', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+    enviar.mockResolvedValueOnce(false)
+    await pedir('pilar@ejemplo.es', '1.1.1.10')
+    await tareas[0]()
+    const linea = String(err.mock.calls[0]?.[0])
+    expect(linea).toContain('NO se ha podido enviar')
+    expect(linea).toContain('p***@e***.es')
+    expect(linea).not.toContain('pilar')
+    err.mockRestore()
   })
 
   it('tope en memoria por IP antes de tocar la BD', async () => {

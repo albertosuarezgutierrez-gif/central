@@ -7,6 +7,7 @@ import { getIdentidad } from '@/lib/session'
 import { ActivarPush, PreferenciasAvisos } from '../../ActivarPush'
 import { AjustesAvisos } from './AjustesAvisos'
 import { OposicionSenalesPatrimonio } from './OposicionSenalesPatrimonio'
+import { EncabezadoPortal } from '../../PaginaPortal'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +32,7 @@ export default async function ConfiguracionPage() {
 
   return (
     <>
-      <h1>Configuración</h1>
+      <EncabezadoPortal antetitulo="Cuenta" titulo="Mi" acento="configuración" />
       <p className="suave" style={{ marginTop: 0 }}>
         Cómo y cuándo te avisamos, y lo que nos has autorizado.
       </p>

@@ -3,7 +3,7 @@
 Esto es solo análisis: no se ha tocado código. [Seguro] = lo he leído en el código · [Probable] = deducido · [Suposición] = depende de Alberto o del abogado.
 
 ## 0. Lo que hay hoy y condiciona el diseño
-- **rrhh, responsable:** entra con email + **contraseña bcrypt** (`app/api/auth/login`), no con OTP. [Seguro]
+- **rrhh, responsable:** entra con **correo + código de 6 cifras** (`/api/auth/acceso/{solicitar,verificar}`). La contraseña bcrypt es **opcional y solo para los correos de `RRHH_LOGIN_PASSWORD_EMAILS`** (sin la variable, nadie entra con contraseña ni se ofrece el botón; `/api/auth/acceso/password`). [Seguro, 26/10/2026]
 - **rrhh, empleado:** entra con OTP, o por **enlace/token sin email verificado** (`/e/[token]`) + PIN. [Seguro]
 - **Un solo `JWT_SECRET`** para cuatro tipos de token, separados por `typ`. [Seguro]
 - **Un único rol:** `usuarios_rrhh` (email UNIQUE global) + `usuario_empresas` N:N. **`rrhh.empresas` no tiene NIF.** [Seguro]

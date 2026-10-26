@@ -3,10 +3,10 @@
 import { describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import EmpresaClient from '@/app/admin/empresa/EmpresaClient'
+import CuentaClient from '@/app/admin/cuenta/CuentaClient'
 
 const marcado = () => renderToStaticMarkup(
-  <EmpresaClient />
+  <CuentaClient convenio={{ codigo: '', nombre: '' }} analisis={null} analisisFecha={null} branding={{ nombre: 'Demo', color_primario: null, logo_url: null }} />
 )
 
 describe('desplegable de categorías de documento de empresa', () => {

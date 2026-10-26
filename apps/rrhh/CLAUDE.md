@@ -30,16 +30,25 @@ El god-panel de plataforma crea empresas vía HTTP:
 
 ## Estructura de rutas
 ```
-/login              → responsable SIN contraseña (26/10/2026): correo → código de 6 dígitos → [selector si >1 empresa]
+/login              → responsable (26/10/2026): correo → código de 6 dígitos (o «Entrar con contraseña» OPCIONAL, SOLO para los
+                      correos de la env `RRHH_LOGIN_PASSWORD_EMAILS` —sin ella, nadie y sin botón—: bcrypt contra `pass_hash`,
+                      `lib/acceso-password.ts`, respuesta uniforme siempre tras un bcrypt, topes EN BD 5 fallos/15 min por correo
+                      y 30 por IP en `acceso_otps` con prefijo propio (`lib/acceso-password-repo.ts`), `/api/auth/acceso/password`) → [selector si >1 empresa, salvo que la última recordada siga autorizada]
+                      → casilla «Recordar este dispositivo» = sesión de 90 días en vez de 30 (cookie y JWT, claim `rec`).
+                      Formulario compartido con /e/entrar: `components/AccesoOtp.tsx`.
                       → `rrhh_session` (`typ:'responsable'`+jti). `lib/acceso-responsable.ts` usa el núcleo de
                       `acceso-email.ts` (`pedirCodigo`/`canjearCodigo`, misma tabla `acceso_otps`) con propósito
                       'responsable' en el prefijo de los HMAC: un código de /e/entrar no abre /login ni al revés.
-                      Rutas `/api/auth/acceso/{solicitar,verificar}`. `pass_hash` sigue en BD pero no se usa.
-/admin/             → dashboard del responsable
+                      Rutas `/api/auth/acceso/{solicitar,verificar}`. Los `pass_hash` heredados (pre-#5103) NO valen fuera de la lista.
+                      `getSesion` revalida EN BD cada petición (fail-closed): jti vigente (NULL no vale; «Salir» lo rota) y
+                      empresa del token en `usuario_empresas` (ÚNICA fuente; el alta inserta la fila). `lib/sesion-responsable-vigencia.ts`.
+/admin              → Inicio del responsable: pendientes (solicitudes por aprobar, firmas, avisos/correos fallidos, fichajes
+                      abiertos). `lib/inicio-admin.ts` (SELECT, `null` = «no se sabe») + `lib/inicio-admin-reglas.ts` (puro)
 /admin/empleados    → CRUD empleados
 /admin/solicitudes  → gestión de solicitudes (vacaciones, permisos…)
 /admin/calendario   → calendario de vacaciones/permisos aprobados
-/admin/cuenta       → datos de la empresa + documentación de empresa (CIF, escritura, TC2…)
+/admin/cuenta       → AJUSTES de empresa: logo/color de PDF, convenio y documentación de empresa (CIF, escritura, TC2…).
+                      `/admin/empresa` solo redirige aquí (era un duplicado). `/admin/calendario` es una pestaña de Solicitudes.
 /admin/fichajes     → control de presencia en tiempo real + corrección manual
 /admin/obras        → CRUD de centros de trabajo (geovalla lat/lng/radio para fichaje)
 /admin/prl          → documentos de Prevención de Riesgos Laborales (autorización maquinaria,
@@ -110,9 +119,18 @@ El god-panel de plataforma crea empresas vía HTTP:
 - `lib/documental.ts` — gestión documental vía `@central/module-documental`.
 - `lib/push.ts` — Web Push vía `@central/core-push` (si se activa).
 - `lib/branding.ts` — personalización (logo, color) por empresa. `color_primario` en `rrhh.empresas` → Mariscos González `#1B3461`.
-- `components/CambiadorEmpresa.tsx` — selector de empresa en sidebar (auto-carga, visible solo si ≥2 empresas). Se auto-incluye en `AdminShell`.
+- `components/CabeceraApp.tsx` — cabecera COMÚN de `/e` y `/admin` (26/10/2026): «[logo cliente] con Grupo ASegura» · selector de
+  empresa (≥2, `<select>` de 44 px) · botones «Herramientas» (esta app, activa) y «Seguros» (`urlPortalAsegura`: SOLO el correo +
+  `origen=rrhh`; los datos de RR.HH. no se usan comercialmente) · Salir. Se recuerda la última empresa en la cookie
+  `rrhh_ultima_empresa` (`lib/sesion-responsable-reglas.ts`, siempre revalidada contra `usuario_empresas`).
+- **Marca ÚNICA Grupo ASegura (26/10/2026):** `app/layout.tsx` inyecta `emitirRootCss(MARCA_ASEGURA)` de `@central/brand`; Tailwind lee
+  esas variables (`tailwind.config.ts`, con canal alfa vía `color-mix`). Sin beige/teal/serif ni hex a mano. 🚨 La env
+  `RRHH_EMPRESAS_MARCA_ASEGURA` YA NO SE LEE (puede seguir puesta sin efecto). El color de la empresa solo pinta sus PDF; la UI
+  cambia solo el logo. Cepos: `lib/tema-tailwind.test.ts` (compila el tema; falla con clases sin CSS, paleta cruda, `italic`,
+  `min-h` < 44 px) y `lib/marca-asegura.test.ts`.
+- Capa `components/ui/`: `Page`, `Card`, `Tabla`, `Boton` (≥44 px), `Chip`, `Modal`, `Aviso`. Usarlas antes de repetir clases.
 - **Marco del panel (20/10/2026):** `app/admin/layout.tsx` monta `AdminShell` UNA vez con el branding de la empresa de la
-  sesión; el menú (`components/AdminNav.tsx`, agrupado Personas/Documentos/Tiempo/Empresa) marca la ruta activa con
+  sesión; el menú (`components/AdminNav.tsx`, Inicio + Personas/Documentos/Tiempo/Empresa) marca la ruta activa con
   `usePathname`. 🚨 El layout NO es barrera: cada `page.tsx` sigue llamando a `getSesion()` y filtrando por su
   `empresa_id` (cepo `lib/admin-guardas.test.ts`). Pantallas nuevas: `components/ui/Page` (título/acciones;
   `ancho="formulario"` = max-w-2xl), `Card` y `Tabla` (envuelve `.tabla-cards`) — no repetir las clases a mano.
@@ -127,8 +145,10 @@ El build de Vercel ignora errores de tipos (`typescript.ignoreBuildErrors: true`
 real es el job `typecheck` de `.github/workflows/tests.yml`.
 
 ## Comportamientos establecidos
-- **Login:** nunca muestra branding de EMPRESA; en el host propio (`marcaPorHost`) lleva la marca Grupo ASegura (pantalla y correo del código), fuera de él neutro `ia·rrhh`.
-- **Multi-empresa:** `rrhh.usuario_empresas` (N:N). Código con 1 empresa → sesión directa. Login con N → selector. Ya autenticado → `CambiadorEmpresa` en sidebar.
+- **Login:** nunca muestra branding de EMPRESA (aún no se sabe cuál); siempre la marca Grupo ASegura (pantalla y correo del código).
+  `/api/auth/acceso/solicitar` deja en el log un `console.warn` (correo ENMASCARADO) si no casa con ningún responsable y un
+  `console.error` si el envío falla; la respuesta al usuario es siempre la misma.
+- **Multi-empresa:** `rrhh.usuario_empresas` (N:N). Código con 1 empresa → sesión directa. Login con N → selector. Ya autenticado → selector en `CabeceraApp`.
 - **Fichajes sin obra:** si `obra_id` es null pero hay coordenadas GPS, la columna Obra muestra `📍 Ver mapa` (enlace a Google Maps con `lat_entrada,lng_entrada`).
 - **Crons:** deben llevar `Authorization: Bearer CRON_SECRET` (sin User-Agent bypass).
 

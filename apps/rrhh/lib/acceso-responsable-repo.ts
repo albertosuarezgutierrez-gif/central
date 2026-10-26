@@ -14,21 +14,26 @@ export const repoResponsable: RepoResponsable = {
   reservarIntento: repoAcceso.reservarIntento,
   gastarOtp: repoAcceso.gastarOtp,
   async responsablePorEmail(email) {
-    const u = (await prisma.$queryRaw<{ id: string; nombre: string; empresa_id: string }[]>(Prisma.sql`
-      SELECT id::text AS id, nombre, empresa_id::text AS empresa_id FROM rrhh.usuarios_rrhh
-      WHERE lower(trim(email)) = ${email} LIMIT 1`))[0]
+    // Determinista (ORDER BY): si hubiera duplicados por mayúsculas/espacios, siempre la MISMA fila, la más antigua
+    // (la misma que mira la contraseña en `acceso-password-repo.ts`).
+    const u = (await prisma.$queryRaw<{ id: string; nombre: string }[]>(Prisma.sql`
+      SELECT id::text AS id, nombre FROM rrhh.usuarios_rrhh
+      WHERE lower(trim(email)) = ${email} ORDER BY creada_at ASC, id ASC LIMIT 1`))[0]
     if (!u) return null
-    // Igual que el login anterior: las de usuario_empresas; si no hay ninguna, la empresa del alta.
-    let empresas = await prisma.$queryRaw<{ id: string; nombre: string }[]>(Prisma.sql`
-      SELECT e.id::text AS id, e.nombre FROM rrhh.empresas e
-      JOIN rrhh.usuario_empresas ue ON ue.empresa_id = e.id
-      WHERE ue.usuario_id = ${u.id}::uuid ORDER BY e.nombre ASC`)
-    if (empresas.length === 0) {
-      empresas = await prisma.$queryRaw<{ id: string; nombre: string }[]>(Prisma.sql`
-        SELECT id::text AS id, nombre FROM rrhh.empresas WHERE id = ${u.empresa_id}::uuid`)
-    }
-    return { usuario_id: u.id, nombre: u.nombre, empresas }
+    return { usuario_id: u.id, nombre: u.nombre, empresas: await empresasAutorizadas(u.id) }
   },
+}
+
+/**
+ * Empresas en las que puede entrar: SOLO las de `rrhh.usuario_empresas` (la misma fuente que revalida `getSesion` en cada
+ * petición). Ya no hay respaldo a `usuarios_rrhh.empresa_id`: con él, retirar la última empresa de `usuario_empresas`
+ * no cortaba el acceso. El alta (`/api/operador/empresas`) inserta la fila de `usuario_empresas`.
+ */
+export async function empresasAutorizadas(usuarioId: string): Promise<{ id: string; nombre: string }[]> {
+  return prisma.$queryRaw<{ id: string; nombre: string }[]>(Prisma.sql`
+    SELECT e.id::text AS id, e.nombre FROM rrhh.empresas e
+    JOIN rrhh.usuario_empresas ue ON ue.empresa_id = e.id
+    WHERE ue.usuario_id = ${usuarioId}::uuid ORDER BY e.nombre ASC, e.id ASC`)
 }
 
 /** Envío real. `false` si no hay transporte o falla (al que pide no se le dice: anti-enumeración). */
