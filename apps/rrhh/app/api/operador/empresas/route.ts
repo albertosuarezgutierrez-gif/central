@@ -18,7 +18,10 @@ export async function GET(req: Request) {
   return NextResponse.json({ empresas: JSON.parse(JSON.stringify(empresas)) })
 }
 
-// POST { empresa, color?, responsable_nombre, responsable_email, password } — alta empresa+responsable.
+// POST { empresa, color?, responsable_nombre, responsable_email } — alta empresa+responsable.
+// 26/10/2026: el responsable entra por CÓDIGO al correo (/login), sin contraseña. `password` se
+// IGNORA si llega (el adaptador de plataforma aún la manda); `pass_hash` es NOT NULL en BD y se
+// rellena con el hash de un valor aleatorio que nadie conoce.
 export async function POST(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const b = await req.json().catch(() => ({}))
@@ -27,18 +30,14 @@ export async function POST(req: Request) {
   const logoUrl = b.logo_url ? String(b.logo_url).trim() : null
   const responsableNombre = String(b.responsable_nombre ?? '').trim()
   const email = String(b.responsable_email ?? '').trim().toLowerCase()
-  const password = String(b.password ?? '')
   if (!empresa || !responsableNombre || !email) {
     return NextResponse.json({ error: 'Faltan datos (empresa, responsable y email)' }, { status: 400 })
-  }
-  if (password.length < 8) {
-    return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
   }
 
   const dup = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT 1 FROM rrhh.usuarios_rrhh WHERE email = ${email} LIMIT 1`)
   if (dup.length) return NextResponse.json({ error: 'Ya existe un usuario con ese email' }, { status: 409 })
 
-  const pass_hash = await hashPassword(password)
+  const pass_hash = await hashPassword(crypto.randomUUID() + crypto.randomUUID())
   const id = await prisma.$transaction(async (tx) => {
     const er = await tx.$queryRaw<any[]>(Prisma.sql`INSERT INTO rrhh.empresas (nombre, marca_color, logo_path) VALUES (${empresa}, ${color}, ${logoUrl}) RETURNING id`)
     const empresaId = er[0].id as string

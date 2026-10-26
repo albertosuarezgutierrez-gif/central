@@ -15,10 +15,6 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   analisisFecha: string | null
   branding: Branding
 }) {
-  const [actual, setActual] = useState('')
-  const [nueva, setNueva] = useState('')
-  const [msg, setMsg] = useState('')
-  const [error, setError] = useState('')
 
   const [cod, setCod] = useState(convenio.codigo)
   const [nom, setNom] = useState(convenio.nombre)
@@ -105,16 +101,6 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
     if (j.ok && j.datos) { setDatos(j.datos); setFecha(new Date().toISOString()); setAnalisisMsg('Convenio analizado') }
     else setAnalisisMsg(j.mensaje ?? j.error ?? 'No se pudo analizar')
     setAnalizando(false)
-  }
-
-  async function enviar(e: React.FormEvent) {
-    e.preventDefault(); setMsg(''); setError('')
-    const r = await fetch('/api/auth/cambiar-password', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ actual, nueva }),
-    })
-    if (r.ok) { setActual(''); setNueva(''); setMsg('Contraseña actualizada') }
-    else setError((await r.json()).error ?? 'Error')
   }
 
   async function guardarConvenio(e: React.FormEvent) {
@@ -258,16 +244,6 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
         )}
       </Card>
 
-      <Card as="section" className="my-3 max-w-sm">
-        <h2 className="mb-2 text-base">Cambiar contraseña</h2>
-        <form onSubmit={enviar} className="grid grid-cols-1 gap-2.5">
-          <input type="password" placeholder="Contraseña actual" value={actual} onChange={e => setActual(e.target.value)} />
-          <input type="password" placeholder="Nueva contraseña (mín. 8)" value={nueva} onChange={e => setNueva(e.target.value)} minLength={8} />
-          <button type="submit">Guardar</button>
-          {msg && <p className="text-ok text-sm">{msg}</p>}
-          {error && <p className="text-alert text-sm">{error}</p>}
-        </form>
-      </Card>
     </Page>
   )
 }
