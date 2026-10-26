@@ -1083,6 +1083,10 @@ export {
   camposAPreguntar,
   type TramoCapital,
   SUBCLAVES_DIRECCION,
+  SUBCLAVES_VEHICULO,
+  ESPECIES_MASCOTA_SOLICITUD,
+  claveVehiculo,
+  subclavesDeCampo,
   ayudaDocumentosSolicitud,
   claveDireccion,
   grupoSolicitud,
@@ -1108,6 +1112,7 @@ export {
   type ValidacionSolicitud,
   type GrupoSolicitud,
   type SubclaveDireccion,
+  type SubclaveVehiculo,
   type OpcionesValidacion,
   type ViaValidada,
   type ZonaCp,
@@ -1147,12 +1152,29 @@ export {
   IDS_CODEOSCOPIC_HOGAR_ATESTIGUADOS,
   OPCIONES_HOGAR_A_VIVIENDA,
   PREGUNTAS_HOGAR_26_10,
+  DESTINOS_CAPITAL,
+  DESTINOS_COMERCIO,
+  DESTINOS_LIBRE,
+  DESTINOS_VEHICULO,
+  HUECOS_PERMITIDOS,
   camposDelBloque,
   destinoCampoSolicitud,
   idViviendaDeOpcion,
   type ColumnaFichaSolicitud,
   type DestinoCampoSolicitud,
 } from './solicitud-destinos.ts'
+export {
+  ID_GARAJE_SOLICITUD,
+  PLAN_POR_BLOQUE,
+  capitalDeSolicitud,
+  comercioDeSolicitud,
+  libreDeSolicitud,
+  planEscrituraRiesgo,
+  propuestaRiesgoDeSolicitud,
+  vehiculoDeSolicitud,
+  type PlanRiesgo,
+  type PropuestaRiesgo,
+} from './solicitud-riesgo.ts'
 export {
   EIAC_SITUACION_SINIESTRO,
   EIAC_ACCION_SINIESTRO,
@@ -1352,7 +1374,7 @@ export type { AhorroFrenteActual, MotivoPrioritario, ObjetivoPrioritario, PrimaA
 export { costePack, cuadroPack, decidirFamiliaAllianz, tienePolizaAllianzEnVigor } from './pack-vehiculos.ts'
 export type { CuadroPack, DecisionFamiliaAllianz, FilaPack, LadoPack, PolizaParaFamilia, PrecioPack } from './pack-vehiculos.ts'
 export {
-  CAMPOS_VEHICULO, CAMPOS_MUNICIPIO_ELEGIDO, CILINDRADA_MAXIMA_CC, ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
+  CAMPOS_VEHICULO, CAMPOS_HISTORIAL_VEHICULO, MAPEO_HISTORIAL_CODEOSCOPIC, ANIOS_SIN_SINIESTROS_MAXIMO, historialParaCotizar, CAMPOS_MUNICIPIO_ELEGIDO, CILINDRADA_MAXIMA_CC, ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
   datosVehiculoVacios, faltanDatosVehiculo, fusionarInfoRiesgo, hoyMadridVehiculo, incoherenciaFechasVehiculo,
   leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, tipoVehiculoDeTexto, validarDatosVehiculoRiesgo,
 } from './datos-vehiculo-riesgo.ts'
@@ -1373,13 +1395,13 @@ export {
 } from './datos-vivienda-riesgo.ts'
 export type { CampoCatalogoVivienda, CampoVivienda, DatosViviendaRiesgo, ValidacionVivienda } from './datos-vivienda-riesgo.ts'
 export {
-  CAMPOS_CAPITAL, ESPEC_CAPITAL, ETIQUETA_CAMPO_CAPITAL, MAX_ASEGURADOS, admiteDatosCapital, aplicarEdicionCapital, camposCapitalDelRamo,
+  CAMPOS_CAPITAL, CAMPOS_HIPOTECA_CAPITAL, CAMPOS_PERSONAS_CAPITAL, MAX_NUMERO_ASEGURADOS, edadesNormalizadas, ESPEC_CAPITAL, ETIQUETA_CAMPO_CAPITAL, MAX_ASEGURADOS, admiteDatosCapital, aplicarEdicionCapital, camposCapitalDelRamo,
   datosCapitalDeCotizacion, datosCapitalVacios, faltanDatosCapital, leerDatosCapital, motivoNoConfirmableCapital,
   textoAseguradosAdicionales, textoFaltanCapital, validarAseguradosAdicionales, validarDatosCapitalRiesgo,
 } from './datos-capital-riesgo.ts'
 export type { AseguradoAdicional, CampoCapital, DatosCapitalRiesgo, RamoCapital, ValidacionCapital, ValorEdicionCapital } from './datos-capital-riesgo.ts'
 export {
-  AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
+  AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, CAMPOS_MASCOTA_LIBRE, ESPECIES_MASCOTA, camposLibreDelRamo, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
   datosRiesgoLibreVacios, faltanDatosRiesgoLibre, leerDatosRiesgoLibre, motivoNoConfirmableLibre, precargaLibreDePoliza,
   validarDatosRiesgoLibre,
 } from './datos-riesgo-libre.ts'

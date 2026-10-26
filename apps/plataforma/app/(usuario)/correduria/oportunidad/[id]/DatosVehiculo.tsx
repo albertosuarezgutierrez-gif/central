@@ -107,6 +107,11 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
     [ETIQUETA_CAMPO_VEHICULO.fechaCompra, conSupuesto(fechaEs(d.fechaCompra) ?? sinDato, viajan?.fechaCompra)],
     [ETIQUETA_CAMPO_VEHICULO.kmAnuales, conSupuesto(d.kmAnuales !== null ? `${d.kmAnuales.toLocaleString('es-ES')} km` : sinDato, viajan?.km)],
     [ETIQUETA_CAMPO_VEHICULO.garaje, conSupuesto(nombreGaraje(d.garaje) ?? sinDato, garajes === null ? undefined : viajan?.garaje)],
+    // Seguro actual e historial (26/10/2026: lo declara el cliente en el enlace de datos; lo usa la pantalla de precio).
+    [ETIQUETA_CAMPO_VEHICULO.aseguradoAntes, d.aseguradoAntes === true ? 'Sí' : d.aseguradoAntes === false ? 'No' : sinDato],
+    [ETIQUETA_CAMPO_VEHICULO.companiaAnterior, d.companiaAnterior ? `${d.companiaAnterior}${d.companiaAnteriorCodigo ? ` (${d.companiaAnteriorCodigo})` : ''}` : sinDato],
+    [ETIQUETA_CAMPO_VEHICULO.vencimientoAnterior, fechaEs(d.vencimientoAnterior ?? null) ?? sinDato],
+    [ETIQUETA_CAMPO_VEHICULO.aniosSinSiniestros, typeof d.aniosSinSiniestros === 'number' ? String(d.aniosSinSiniestros) : sinDato],
   ]
 
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [k]: e.target.value }))

@@ -11,10 +11,9 @@
  */
 import {
   CLAVE_NO_LO_SE,
-  SUBCLAVES_DIRECCION,
   TRAMOS_CONTENIDO,
   TRAMOS_CONTINENTE,
-  claveDireccion,
+  subclavesDeCampo,
   validarRespuestas,
   type CampoSolicitud,
   type Respuesta,
@@ -102,7 +101,8 @@ const MAX_VALOR = 1000
 export function clavesBorrador(campos: readonly CampoSolicitud[]): Set<string> {
   const s = new Set<string>([CLAVE_NO_LO_SE])
   for (const c of campos) {
-    if (c.tipo === 'direccion') for (const sub of SUBCLAVES_DIRECCION) s.add(claveDireccion(c.clave, sub))
+    const subs = subclavesDeCampo(c)
+    if (subs) for (const sub of subs) s.add(sub)
     else s.add(c.clave)
   }
   return s
@@ -169,7 +169,8 @@ export function ultimoPasoDe(campos: readonly CampoSolicitud[], borrador: Borrad
   const noLoSe = new Set(Array.isArray(borrador[CLAVE_NO_LO_SE]) ? (borrador[CLAVE_NO_LO_SE] as string[]) : [])
   const contestado = (c: CampoSolicitud): boolean => {
     if (noLoSe.has(c.clave)) return true
-    if (c.tipo === 'direccion') return SUBCLAVES_DIRECCION.some((s) => borrador[claveDireccion(c.clave, s)] !== undefined)
+    const subs = subclavesDeCampo(c)
+    if (subs) return subs.some((s) => borrador[s] !== undefined)
     return borrador[c.clave] !== undefined
   }
   let ultimo = -1

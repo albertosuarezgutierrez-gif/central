@@ -85,7 +85,9 @@ test('hogar sin referencia: el buscador del Catastro parte de la calle del riesg
 
 test('vida: la duración ya no se ofrece, ni se pinta, ni se siembra; profesión y fumador sí', () => {
   const mod = activas(leer('packages/module-seguros/src/datos-capital-riesgo.ts'))
-  assert.match(mod, /ramo === 'vida' \? \['capital', 'profesion', 'fumador'\]/)
+  // 26/10/2026: + la hipoteca vinculada (`CAMPOS_HIPOTECA_CAPITAL`); la duración sigue fuera.
+  assert.match(mod, /ramo === 'vida' \? \['capital', 'profesion', 'fumador', \.\.\.CAMPOS_HIPOTECA_CAPITAL\]/)
+  assert.doesNotMatch(mod.match(/export const CAMPOS_HIPOTECA_CAPITAL = [^\n]*/)?.[0] ?? '', /duracionAnios/)
   const d = activas(leer(DIR + 'DatosRiesgo.tsx'))
   assert.doesNotMatch(d, /duracionAnios|Duración/, 'la pantalla del riesgo no habla de duración')
   assert.doesNotMatch(activas(leer(DIR + 'variante.ts')), /duracionAnios/)

@@ -57,6 +57,7 @@ import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 import { oportunidadDesdeFichero, oportunidadDesdeLectura } from './oportunidad-documento'
 import { leerPoliza } from './documentos/extraer-poliza'
 import { trasCompletarHogar } from './solicitud-datos-hogar'
+import { trasCompletarRiesgo } from './solicitud-datos-riesgo'
 import { enlaceACiegas, politicaDocEnlace } from './enlace-ciego'
 import { viasValidadas, zonaCpServidor } from './solicitud-datos-direccion'
 import { esColumnaAusente } from './pg-error'
@@ -556,6 +557,24 @@ export async function responderSolicitud(
   })
   // Completada (el borrador sobra: no se guarda dos veces) o anulada por oportunidad cerrada: el borrador se borra.
   await limpiarBorradoresMuertos(prismaAsegura(), { id: f.id, correduriaId: f.correduriaId })
+  if (hecho && ramoLeido && ramoLeido !== 'hogar') {
+    // Fase 2 (26/10/2026): el resto de ramos también pasa lo declarado a su bloque del riesgo y avisa con el resumen.
+    const respuestas = v.respuestas
+    const { correduriaId, oportunidadId, tercero } = f
+    try {
+      after(async () => {
+        try {
+          const [o] = await prismaAsegura().$queryRaw<{ clienteId: string }[]>(Prisma.sql`
+            select cliente_id::text as "clienteId" from oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
+          await trasCompletarRiesgo({ correduriaId, oportunidadId, clienteId: o?.clienteId ?? f.clienteId, ramo: ramoLeido, respuestas, campos, tercero })
+        } catch (e) {
+          console.error('[solicitud-datos] aviso del riesgo tras completar falló:', e instanceof Error ? e.message : e)
+        }
+      })
+    } catch (e) {
+      console.error('[solicitud-datos] no se pudo programar el aviso del riesgo:', e instanceof Error ? e.message : e)
+    }
+  }
   if (hecho && ramoLeido === 'hogar') {
     // Catastro → riesgo de la oportunidad → Telegram con el resumen, tras contestar al cliente. Nunca tumba la respuesta.
     const respuestas = v.respuestas

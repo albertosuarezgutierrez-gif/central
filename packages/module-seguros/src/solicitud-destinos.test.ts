@@ -3,11 +3,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { RAMOS_OPORTUNIDAD } from './oportunidad-seguimiento.ts'
-import { claveDatosDeRamo } from './datos-riesgo-ramo.ts'
+import { calcularEdicionRiesgo, claveDatosDeRamo } from './datos-riesgo-ramo.ts'
+import { GARAJES_CONOCIDOS } from './garajes.ts'
+import { ID_GARAJE_SOLICITUD, planEscrituraRiesgo, propuestaRiesgoDeSolicitud } from './solicitud-riesgo.ts'
 import { validarDatosViviendaRiesgo } from './datos-vivienda-riesgo.ts'
-import { NADA_CONOCIDO, TRAMOS_CONTENIDO, TRAMOS_CONTINENTE, camposSolicitud, conIdentidad, validarRespuestas, type ConocidoFicha } from './solicitud-datos.ts'
+import { GARAJES_SOLICITUD, NADA_CONOCIDO, TRAMOS_CONTENIDO, TRAMOS_CONTINENTE, camposSolicitud, claveVehiculo, conIdentidad, grupoSolicitud, validarRespuestas, type CampoSolicitud, type ConocidoFicha, type RamoSolicitud } from './solicitud-datos.ts'
 import {
-  ALARMA_ID_CODEOSCOPIC, DESTINOS_HOGAR, IDS_CODEOSCOPIC_HOGAR_ATESTIGUADOS, OPCIONES_HOGAR_A_VIVIENDA, PREGUNTAS_HOGAR_26_10,
+  ALARMA_ID_CODEOSCOPIC, DESTINOS_HOGAR, HUECOS_PERMITIDOS, IDS_CODEOSCOPIC_HOGAR_ATESTIGUADOS, OPCIONES_HOGAR_A_VIVIENDA, PREGUNTAS_HOGAR_26_10,
   camposDelBloque, destinoCampoSolicitud,
 } from './solicitud-destinos.ts'
 import { CLAVES_BLOQUE_DIRECCION, CLAVES_SUELTAS_VIVIENDA, planEscrituraVivienda, viviendaDeSolicitud } from './solicitud-hogar.ts'
@@ -15,18 +17,35 @@ import { CLAVES_BLOQUE_DIRECCION, CLAVES_SUELTAS_VIVIENDA, planEscrituraVivienda
 const TODO: ConocidoFicha = { dni: true, fechaNacimiento: true, codigoPostal: true, carnetMoto: true, carnetCoche: true }
 const COLUMNAS = new Set(['dni', 'fecha_nacimiento', 'codigo_postal', 'cliente_carnets_conducir'])
 
+/**
+ * Un hueco (`solo_solicitud`) solo vale con un MOTIVO de verdad: «qué: por qué», de al menos 40 caracteres. Un motivo de
+ * relleno («pendiente», «TODO», «-») o vacío es un olvido disfrazado de decisión.
+ */
+function motivoValido(m: string): boolean {
+  const t = m.trim()
+  return t.length >= 40 && t.includes(':') && !/^(pendiente|todo|tbd|n\/a|-+|\.+)\b/i.test(t)
+}
+
+test('motivoValido: el cepo distingue un motivo escrito de uno de relleno', () => {
+  assert.equal(motivoValido(''), false)
+  assert.equal(motivoValido('pendiente'), false)
+  assert.equal(motivoValido('TODO: ya lo pensaremos más adelante con calma y cuidado'), false)
+  assert.equal(motivoValido('comentario del cliente: texto libre que se lee en el aviso, no es del riesgo'), true)
+})
+
 test('TODO ramo: cada campo del enlace tiene destino declarado, y el del riesgo existe en el bloque de su ramo', () => {
   const malos: string[] = []
   for (const ramo of RAMOS_OPORTUNIDAD) {
     const bloque = claveDatosDeRamo(ramo)
-    const campos = new Set(camposDelBloque(bloque))
+    const campos = new Set(camposDelBloque(bloque, ramo))
     for (const conocido of [NADA_CONOCIDO, TODO]) {
       for (const c of conIdentidad(camposSolicitud(ramo, conocido))) {
         const d = destinoCampoSolicitud(ramo, c.clave)
         if (d === null) malos.push(`${ramo}.${c.clave}: sin destino declarado`)
         else if (d.en === 'riesgo' && !campos.has(d.campo)) malos.push(`${ramo}.${c.clave} → ${bloque}.${d.campo}: ese campo no existe`)
         else if (d.en === 'ficha' && !COLUMNAS.has(d.columna)) malos.push(`${ramo}.${c.clave} → clientes.${d.columna}: columna desconocida`)
-        else if (d.en === 'solo_solicitud' && d.motivo.trim() === '') malos.push(`${ramo}.${c.clave}: hueco sin motivo`)
+        else if (d.en === 'solo_solicitud' && !HUECOS_PERMITIDOS.has(c.clave)) malos.push(`${ramo}.${c.clave}: hueco no permitido (dale campo en ${bloque} o en la ficha)`)
+        else if (d.en === 'solo_solicitud' && !motivoValido(d.motivo)) malos.push(`${ramo}.${c.clave}: hueco sin motivo escrito («${d.motivo}»)`)
       }
     }
   }
@@ -133,4 +152,105 @@ test('ÚLTIMO PISO ≠ ÁTICO: un último piso numérico confirmado se anota com
   // Todo lo que propone el enlace existe en `datosVivienda` (ningún nombre propio).
   const campos = new Set(camposDelBloque('datosVivienda'))
   for (const k of Object.keys(out)) assert.ok(campos.has(k), `${k} no existe en datosVivienda`)
+})
+
+// ─── Fase 2 (26/10/2026): el resto de ramos escribe DE VERDAD en su bloque ─────────────────────────────────────────
+
+/** Una respuesta válida para cada campo (lo que contestaría un cliente que lo sabe todo). */
+function respuestaDe(c: CampoSolicitud): Record<string, unknown> {
+  if (c.tipo === 'vehiculo_catalogo') {
+    return { [claveVehiculo(c.clave, 'MarcaId')]: '7', [claveVehiculo(c.clave, 'ModeloId')]: '88', [claveVehiculo(c.clave, 'MotorId')]: 'Gasoline', [claveVehiculo(c.clave, 'Codigo')]: 'ABC123', [claveVehiculo(c.clave, 'Version')]: '1.0 TSI 95 CV' }
+  }
+  const texto: Record<string, string> = {
+    dni: '12345678Z', codigoPostal: '41003', matricula: '1234 BCD', edades: '45, 43 y 12', microchip: '941 000 012 345 678',
+    marca: 'Seat', modelo: 'Ibiza', companiaActual: 'Mapfre', entidadHipoteca: 'Caixabank', profesion: 'Fontanero', razaMascota: 'Mestizo',
+  }
+  const numero: Record<string, number> = { personasAsegurar: 3, kmAnuales: 12000, aniosSinSiniestros: 0, capitalDeseado: 150000, capitalPendienteHipoteca: 90000 }
+  switch (c.tipo) {
+    case 'si_no': return { [c.clave]: true }
+    case 'numero': return { [c.clave]: numero[c.clave] ?? 1 }
+    case 'fecha': return { [c.clave]: c.clave === 'fechaNacimiento' ? '01/02/1980' : c.soloFutura ? '2030-01-01' : c.clave === 'vencimientoActual' ? '2027-03-01' : '2020-05-17' }
+    case 'opcion': return { [c.clave]: c.opciones?.[0]?.valor }
+    case 'texto_largo': return { [c.clave]: c.clave === 'descripcionRiesgo' ? 'Responsabilidad civil de una actividad de jardinería con dos empleados' : 'Gracias' }
+    default: return { [c.clave]: texto[c.clave] ?? 'Texto' }
+  }
+}
+
+const NO_HOGAR = RAMOS_OPORTUNIDAD.filter((r) => grupoSolicitud(r as RamoSolicitud) !== 'hogar')
+
+test('FASE 2, todo ramo menos hogar: con todo contestado, CADA destino `riesgo` llega a la propuesta y el modelo la acepta', () => {
+  const malos: string[] = []
+  for (const ramo of NO_HOGAR) {
+    for (const conocido of [NADA_CONOCIDO, TODO]) {
+      const campos = conIdentidad(camposSolicitud(ramo, conocido))
+      const entrada = Object.assign({}, ...campos.map(respuestaDe))
+      const v = validarRespuestas(campos, entrada, new Date(AHORA))
+      if (!v.ok) { malos.push(`${ramo}: no valida ${JSON.stringify(v.errores)}`); continue }
+      const p = propuestaRiesgoDeSolicitud(ramo, v.respuestas)
+      if (!p) { malos.push(`${ramo}: sin propuesta`); continue }
+      assert.equal(p.clave, claveDatosDeRamo(ramo))
+      for (const c of campos) {
+        const d = destinoCampoSolicitud(ramo, c.clave)
+        if (d?.en === 'riesgo' && !(d.campo in p.propuesta)) malos.push(`${ramo}.${c.clave} → ${p.clave}.${d.campo}: no se escribe`)
+      }
+      // Sobre un riesgo vacío, el plan lo deja pasar entero y el modelo del bloque lo acepta.
+      const plan = planEscrituraRiesgo(p.clave, null, p.propuesta)
+      assert.deepEqual(plan.escribir, p.propuesta, `${ramo}: el plan recorta sobre un riesgo vacío`)
+      const e = calcularEdicionRiesgo({ ramo, clave: p.clave, info: {}, parcial: plan.escribir, confirmar: false, ahora: AHORA, hoy: AHORA.slice(0, 10) })
+      if (!e.ok) malos.push(`${ramo}: el modelo rechaza ${JSON.stringify(e.errores)}`)
+    }
+  }
+  assert.deepEqual([...new Set(malos)], [])
+})
+
+test('FASE 2: lo no contestado y «No lo sé» NO se escriben (null = no se sabe)', () => {
+  assert.deepEqual(propuestaRiesgoDeSolicitud('moto', { matricula: null, tieneSeguro: null, aniosSinSiniestros: null, garaje: null })?.propuesta, {})
+  assert.deepEqual(propuestaRiesgoDeSolicitud('vida', { capitalDeseado: null, fumador: null, hipoteca: null, paraBanco: true })?.propuesta, {})
+  assert.deepEqual(propuestaRiesgoDeSolicitud('salud', { personasAsegurar: null, edades: null })?.propuesta, {})
+  assert.deepEqual(propuestaRiesgoDeSolicitud('mascotas', { especieMascota: null, ppp: null })?.propuesta, {})
+  // Lo que cuelga de un «no» no se escribe: sin seguro no hay compañía; sin hipoteca no hay banco.
+  assert.deepEqual(propuestaRiesgoDeSolicitud('auto', { tieneSeguro: false, companiaActual: 'Mapfre' })?.propuesta, { aseguradoAntes: false })
+  assert.deepEqual(propuestaRiesgoDeSolicitud('vida', { hipoteca: false, paraBanco: true, entidadHipoteca: 'BBVA' })?.propuesta, { hipoteca: false })
+  // El 0 declarado es un dato.
+  assert.equal(propuestaRiesgoDeSolicitud('auto', { aniosSinSiniestros: 0 })?.propuesta.aniosSinSiniestros, 0)
+})
+
+test('FASE 2: el plan escribe por bloques, solo donde no había, y nunca sobre un bloque confirmado', () => {
+  const p = propuestaRiesgoDeSolicitud('auto', { matricula: '1234BCD', marca: 'Seat', modelo: 'Ibiza', tieneSeguro: true, companiaActual: 'Mapfre', aniosSinSiniestros: 4, kmAnuales: 9000 })!.propuesta
+  // Confirmado: nada.
+  assert.deepEqual(planEscrituraRiesgo('datosVehiculo', {}, p, '2026-10-01T10:00:00Z'), { escribir: {}, conflictos: [], confirmado: true })
+  // Otro seguro guardado: el bloque del historial no se toca y se avisa; lo demás, sí.
+  const otro = planEscrituraRiesgo('datosVehiculo', { companiaAnterior: 'Allianz', aseguradoAntes: true }, p)
+  assert.ok(!('companiaAnterior' in otro.escribir) && !('aniosSinSiniestros' in otro.escribir), 'el historial va en bloque')
+  assert.equal(otro.escribir.kmAnuales, 9000)
+  assert.equal(otro.conflictos.length, 1)
+  // Otra matrícula = otro vehículo: no se toca nada del vehículo.
+  const otraMat = planEscrituraRiesgo('datosVehiculo', { matricula: '9999ZZZ' }, p)
+  assert.deepEqual(otraMat.escribir, {})
+  assert.match(otraMat.conflictos[0] ?? '', /otro vehículo/)
+  // Con una versión ya elegida, marca/modelo en texto no se escriben (borrarían esa versión).
+  assert.ok(!('marca' in planEscrituraRiesgo('datosVehiculo', { codigoVehiculo: 'X1' }, p).escribir))
+  // Lo que ya escribió la correduría manda (suelto): no se pisa ni se avisa.
+  assert.ok(!('kmAnuales' in planEscrituraRiesgo('datosVehiculo', { kmAnuales: 20000 }, p).escribir))
+  // Capital: la hipoteca en bloque.
+  const h = propuestaRiesgoDeSolicitud('vida', { hipoteca: true, paraBanco: true, entidadHipoteca: 'BBVA', capitalPendienteHipoteca: 80000, fumador: false })!.propuesta
+  const ph = planEscrituraRiesgo('datosCapital', { bancoHipoteca: 'Santander' }, h)
+  assert.deepEqual(ph.escribir, { fumador: false })
+  assert.equal(ph.conflictos.length, 1)
+})
+
+test('FASE 2: garaje → solo ids de Codeoscopic VISTOS, y cada opción del enlace tiene el suyo', () => {
+  for (const o of GARAJES_SOLICITUD) {
+    const id = (ID_GARAJE_SOLICITUD as Record<string, string>)[o.valor]
+    assert.ok(id, `${o.valor} sin id`)
+    assert.ok(Object.hasOwn(GARAJES_CONOCIDOS, id), `${o.valor} → ${id}: id no visto`)
+  }
+})
+
+test('FASE 2: el buscador del catálogo va entero o no va (ids sueltos no se escriben)', () => {
+  const r = { versionCatalogoMarcaId: '7', versionCatalogoModeloId: '88', versionCatalogoMotorId: null, versionCatalogoCodigo: 'ABC', versionCatalogoVersion: null }
+  assert.ok(!('codigoVehiculo' in propuestaRiesgoDeSolicitud('auto', r)!.propuesta))
+  const campos = camposSolicitud('auto', NADA_CONOCIDO)
+  const v = validarRespuestas(campos.filter((c) => c.clave === 'versionCatalogo'), { versionCatalogoMarcaId: '7', versionCatalogoModeloId: '88', versionCatalogoCodigo: 'ABC' })
+  assert.ok(v.ok && v.respuestas.versionCatalogoCodigo === null, 'sin motor no hay cadena: todo a null')
 })

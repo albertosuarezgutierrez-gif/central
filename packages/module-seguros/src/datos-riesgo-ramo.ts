@@ -263,7 +263,7 @@ export function calcularEdicionRiesgo(e: {
     return cierre(datos, faltanDatosComercio(datos), cambios)
   }
 
-  const val = validarDatosRiesgoLibre(e.parcial ?? {}, { hoy: e.hoy })
+  const val = validarDatosRiesgoLibre(e.parcial ?? {}, { hoy: e.hoy, ramo: e.ramo })
   if (!val.ok) return ko(val.errores)
   const actual = leerDatosRiesgoLibre(info.datosRiesgoLibre) ?? (e.precarga ? aplicarEdicionLibre(null, e.precarga as never, op0()).datos : null)
   const { datos, cambios } = aplicarEdicionLibre(actual, val.valor, op)
