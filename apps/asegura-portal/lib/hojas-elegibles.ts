@@ -5,7 +5,7 @@
 // bóveda— y solo la recorre (`candidatasDeLaHoja`, regla 6 de `hoja-qr.ts`). Si una póliza no está en
 // esa cartera (autorización revocada, acotada a otra póliza, ficha sin relación), aquí no puede
 // aparecer. Las pólizas AÑADIDAS a mano no entran: la hoja es solo cartera viva.
-import { candidatasDeLaHoja, etiquetaRamo } from '@central/module-seguros-portal'
+import { candidatasDeLaHoja, coberturaEspecificaDeRamo, etiquetaRamo } from '@central/module-seguros-portal'
 
 import type { CarteraPortal, PolizaPortal } from './cartera-lectura.ts'
 
@@ -19,8 +19,19 @@ export type OpcionHoja = {
   propia: boolean
 }
 
-export function etiquetaPolizaHoja(p: Pick<PolizaPortal, 'compania' | 'ramo' | 'numeroPoliza' | 'bien'>): string {
-  const que = p.bien.cosa ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : null)
+/**
+ * Qué identifica la póliza: la MISMA cadena que el titular de «Mis seguros» (`tituloDePoliza`): cosa (matrícula…)
+ * → ubicación (inmueble) → cobertura que especializa el ramo; el nº solo de último recurso. `ubicacion` ya llega
+ * capada por nivel y por `direccionRiesgo` (`cartera-lectura.ts`): aquí no se decide quién la ve.
+ */
+export function etiquetaPolizaHoja(
+  p: Pick<PolizaPortal, 'compania' | 'ramo' | 'numeroPoliza' | 'bien'> & { coberturas?: { lista?: readonly unknown[] } | null },
+): string {
+  const que =
+    p.bien.cosa ??
+    p.bien.ubicacion ??
+    coberturaEspecificaDeRamo(p.ramo, (p.coberturas?.lista ?? []) as Parameters<typeof coberturaEspecificaDeRamo>[1]) ??
+    (p.numeroPoliza ? `nº ${p.numeroPoliza}` : null)
   return [p.compania, etiquetaRamo(p.ramo), que].filter(Boolean).join(' · ')
 }
 

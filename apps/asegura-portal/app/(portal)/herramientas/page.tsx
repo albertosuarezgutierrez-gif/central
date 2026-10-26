@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { HECHOS_DESCONOCIDOS, TEXTO_SOLICITUD_MODULO, herramientasVisibles, type TarjetaModulo } from '@central/module-seguros-portal'
+import { HECHOS_DESCONOCIDOS, TEXTO_SOLICITUD_MODULO, herramientasVisibles, hrefDeVista, type TarjetaModulo } from '@central/module-seguros-portal'
 
 import { fechaEs } from '@/lib/fechas'
 import { URL_PORTAL_EMPLEADO, agruparHerramientas } from '@/lib/herramientas'
@@ -52,6 +52,21 @@ export default async function HerramientasPage() {
             <TarjetaModuloPortal t={t} />
           </li>
         ))}
+        {/* Mi QR: el mismo destino que el chip de Seguros. Se ofrece siempre que se ve esta pantalla: el chip de
+            «Seguros» no tiene condición propia (`SUBVISTAS_SEGUROS`) y la hoja solo enseña lo que la bóveda ya ve. */}
+        <li>
+          <TarjetaPortal
+            id="herr-qr"
+            antetitulo="Para casa y el coche"
+            titulo="Mi QR para la nevera y la guantera"
+            accion={<Link className="boton" href={hrefDeVista('hoja')}>Ver mi QR</Link>}
+          >
+            <p style={{ marginTop: 0 }}>
+              Una hoja con un código QR para pegar en la nevera o dejar en la guantera: quien la escanee llega a tus
+              seguros y a cómo avisarnos en un siniestro.
+            </p>
+          </TarjetaPortal>
+        </li>
         {ver.calendario && (
           <li>
             <TarjetaPortal
