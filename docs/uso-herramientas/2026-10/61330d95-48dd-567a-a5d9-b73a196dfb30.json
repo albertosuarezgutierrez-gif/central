@@ -1,21 +1,21 @@
 {
  "sesion": "61330d95-48dd-567a-a5d9-b73a196dfb30",
  "inicio": "2026-10-22T06:19:10.637Z",
- "fin": "2026-10-26T06:59:54.183Z",
- "llamadas": 3437,
+ "fin": "2026-10-26T07:50:01.543Z",
+ "llamadas": 3618,
  "categorias": {
   "otro": {
-   "llamadas": 330,
-   "chars_in": 270315,
-   "chars_out": 1941583,
+   "llamadas": 339,
+   "chars_in": 286069,
+   "chars_out": 1984286,
    "errores": 0,
    "archivos_citados": 26,
    "chars_citados": 376873,
    "tools": {
-    "ToolSearch": 55,
-    "SubagentHandback": 81,
+    "ToolSearch": 56,
+    "SubagentHandback": 85,
     "SendMessage": 16,
-    "ReadNotifications": 147,
+    "ReadNotifications": 151,
     "Monitor": 23,
     "TaskStop": 2,
     "AskUserQuestion": 4,
@@ -23,15 +23,15 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 79,
-   "chars_in": 11946,
-   "chars_out": 404765,
+   "llamadas": 84,
+   "chars_in": 12587,
+   "chars_out": 453172,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 40,
-    "Read": 37,
+    "Read": 42,
     "Glob": 2
    }
   },
@@ -48,91 +48,91 @@
    }
   },
   "bash": {
-   "llamadas": 2216,
-   "chars_in": 1285841,
-   "chars_out": 10950849,
+   "llamadas": 2351,
+   "chars_in": 1362361,
+   "chars_out": 11537182,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 2216
+    "Bash": 2351
    }
   },
   "sql": {
-   "llamadas": 156,
-   "chars_in": 88531,
-   "chars_out": 290000,
+   "llamadas": 161,
+   "chars_in": 92359,
+   "chars_out": 308779,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 156
+    "mcp__Supabase__execute_sql": 161
    }
   },
   "agente:general-purpose": {
-   "llamadas": 42,
-   "chars_in": 94732,
-   "chars_out": 95380,
+   "llamadas": 45,
+   "chars_in": 102077,
+   "chars_out": 103289,
    "errores": 0,
-   "archivos_citados": 122,
-   "chars_citados": 23523180,
+   "archivos_citados": 129,
+   "chars_citados": 24715863,
    "tools": {
-    "Agent": 42
+    "Agent": 45
    }
   },
   "mcp:github": {
-   "llamadas": 78,
-   "chars_in": 33157,
-   "chars_out": 201463,
+   "llamadas": 83,
+   "chars_in": 35372,
+   "chars_out": 212960,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 15665,
    "tools": {
     "mcp__github__list_pull_requests": 2,
-    "mcp__github__create_pull_request": 14,
-    "mcp__github__pull_request_read": 23,
-    "mcp__github__update_pull_request": 15,
+    "mcp__github__create_pull_request": 15,
+    "mcp__github__pull_request_read": 25,
+    "mcp__github__update_pull_request": 16,
     "mcp__github__actions_list": 4,
-    "mcp__github__merge_pull_request": 14,
+    "mcp__github__merge_pull_request": 15,
     "mcp__github__get_job_logs": 2,
     "mcp__github__add_issue_comment": 3,
     "mcp__github__actions_run_trigger": 1
    }
   },
   "agente:agente-architect": {
-   "llamadas": 24,
-   "chars_in": 65211,
-   "chars_out": 70190,
+   "llamadas": 25,
+   "chars_in": 67528,
+   "chars_out": 72717,
    "errores": 0,
-   "archivos_citados": 80,
-   "chars_citados": 4620041,
+   "archivos_citados": 81,
+   "chars_citados": 4652792,
    "tools": {
-    "Agent": 24
+    "Agent": 25
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 27,
-   "chars_in": 2060,
-   "chars_out": 4966,
+   "llamadas": 28,
+   "chars_in": 2133,
+   "chars_out": 5205,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 14,
+    "mcp__claude-code-remote__subscribe_pr_activity": 15,
     "mcp__claude-code-remote__send_later": 1,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 12
    }
   },
   "escritura": {
-   "llamadas": 451,
-   "chars_in": 1826961,
-   "chars_out": 9483998,
+   "llamadas": 468,
+   "chars_in": 1923214,
+   "chars_out": 9776166,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 307,
-    "Edit": 144
+    "Write": 318,
+    "Edit": 150
    }
   },
   "agente:rastreador-codigo": {
