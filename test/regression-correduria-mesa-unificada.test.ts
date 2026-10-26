@@ -24,9 +24,27 @@ test('«Gestión» sigue montando las colas administrativas con plazo (los aviso
   for (const c of ['<PartesPortal', '<Supresiones', '<CambiosCuenta', '<Quejas', '<Retencion', '<Sustituciones', '<DiferenciasCima', '<DescuadresComisiones', '<AvisoIngesta', '<HoyCockpit']) {
     assert.ok(g.includes(c), `«Gestión» ya no monta ${c}`)
   }
-  // Anulaciones, cartas, bajas PUE y aprobaciones cuelgan del cockpit.
+  // Anulaciones, bajas PUE y aprobaciones (TRABAJO) cuelgan del cockpit.
   const cockpit = leer('HoyCockpit.tsx')
-  for (const c of ['<Anulaciones', '<CartasMediador', '<BajasPue', '<Aprobaciones']) assert.ok(cockpit.includes(c), `el cockpit ya no monta ${c}`)
+  for (const c of ['<Anulaciones', '<BajasPue', '<Aprobaciones']) assert.ok(cockpit.includes(c), `el cockpit ya no monta ${c}`)
+})
+
+test('campana (26/10/2026): lo que es aviso puntual sale de «Gestión» y de «Mi mesa» y vive en la campana de la cabecera', () => {
+  const cockpit = leer('HoyCockpit.tsx')
+  for (const c of ['<CartasMediador', '<SolicitudesPortal', '<OportunidadesPatrimonio', '/api/correduria/actividad']) {
+    assert.ok(!cockpit.includes(c), `el cockpit vuelve a pintar ${c}, que ya está en la campana`)
+  }
+  // La ingesta en el cockpit solo si está en ROJO.
+  assert.match(cockpit, /estado\.tono === 'malo' && \(/)
+  const cabecera = leer('AccionesCabecera.tsx')
+  assert.ok(cabecera.includes('<CampanaAvisos />'), 'la cabecera (Mi mesa y Gestión) ya no monta la campana')
+  const campana = leer('CampanaAvisos.tsx')
+  for (const c of ['<SolicitudesPortal />', '<OportunidadesPatrimonio />', '<CartasMediador />']) assert.ok(campana.includes(c), `la campana ya no ofrece la cola completa ${c}`)
+  // Error ≠ 0: la campana distingue «no se pudo comprobar» de «no hay nada», y refresca solo con la pestaña visible.
+  assert.match(campana, /lectura\.estado === 'error'/)
+  assert.match(campana, /No se han podido comprobar las notificaciones/)
+  assert.match(campana, /document\.visibilityState === 'visible'/)
+  // Quejas, supresiones y partes con plazo legal: en la campana Y siguen en «Gestión» (los vigila el test de arriba).
 })
 
 test('lo que ya vive en «Mi mesa» NO se pinta también en «Gestión» (ni en su cockpit)', () => {
@@ -51,9 +69,10 @@ test('la barra: Mi mesa primero, Prospección enlaza a /vencimientos, y /corredu
   assert.match(page, /if \(iniciaEnLaMesa\(s\)\) redirect\('\/correduria\/mesa'\)/)
 })
 
-test('«Mi mesa» monta la banda, las tareas sueltas y las pérdidas por revisar, y la banda no oculta un «no se pudo comprobar»', () => {
+test('«Mi mesa» monta las tareas sueltas y las pérdidas por revisar (la banda pasó a la campana), y la banda no oculta un «no se pudo comprobar»', () => {
   const mesa = leer('mesa/MesaClient.tsx')
-  for (const c of ['<BandaAvisos />', '<TareasSueltas', '<PerdidasPorRevisar', '<Secciones activa="mesa"']) assert.ok(mesa.includes(c), `«Mi mesa» ya no monta ${c}`)
+  for (const c of ['<AccionesCabecera />', '<TareasSueltas', '<PerdidasPorRevisar', '<Secciones activa="mesa"']) assert.ok(mesa.includes(c), `«Mi mesa» ya no monta ${c}`)
+  assert.ok(!mesa.includes('<BandaAvisos'), '«Mi mesa» vuelve a pintar la banda de avisos, que ya está en la campana')
   const banda = leer('mesa/BandaAvisos.tsx')
   assert.match(banda, /banda\.estado === 'error'/, 'la banda no distingue «no se pudo comprobar» de «no hay avisos»')
   assert.match(banda, /No se han podido comprobar los avisos/)

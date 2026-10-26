@@ -15,6 +15,8 @@ export type LeadWebPendiente = {
   diasDesdeAlta: number
   tieneTelefono: boolean
   tieneEmail: boolean
+  /** `lead_estado` de la ficha (`nuevo` = nadie lo ha movido). `null` = el puerto no lo manda (versión anterior). */
+  leadEstado: string | null
 }
 
 export type ConversionLeadsWeb =
@@ -66,6 +68,7 @@ function leerPendientes(v: unknown): LeadWebPendiente[] {
       diasDesdeAlta: dias,
       tieneTelefono: booleano(o.tieneTelefono),
       tieneEmail: booleano(o.tieneEmail),
+      leadEstado: cadena(o.leadEstado),
     })
   }
   return out

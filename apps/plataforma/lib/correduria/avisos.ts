@@ -10,6 +10,13 @@
  * línea lo dice (no nueve).
  */
 import { tituloIngesta, veredictoIngesta, type VistaIngesta } from './ingesta-pantalla.ts'
+import type { LecturaSolicitudesPortal, SolicitudPortal } from './solicitudes-portal.ts'
+import type { ResultadoLeads } from '../leads-asegura.ts'
+import type { ConversionLeadsWeb } from '../leads-web-conversion-asegura.ts'
+import type { LecturaOportunidadesPatrimonio } from './oportunidades-patrimonio.ts'
+import type { LecturaPorTramitar } from '../carta-mediador-asegura.ts'
+import type { LecturaSincroCima } from '../cima-sincro-asegura.ts'
+import { textoPermiso, type LecturaPermisosPortal } from './permisos-portal.ts'
 
 export const COLAS_AVISO = [
   'partes',
@@ -163,4 +170,282 @@ export function componerAvisos(status: number, json: unknown, ingesta: VistaInge
   const ing = avisoDeIngesta(ingesta)
   if (ing) avisos.push(ing)
   return { estado: 'ok', hoy, avisos: ordenarAvisos(avisos) }
+}
+
+// ═══ La CAMPANA de /correduria (26/10/2026) ═══════════════════════════════════════════════════════════════════
+// Alberto: «veo mucho lío en mi mesa; pon una campanita para notificaciones: leads nuevos, avisos de permisos…».
+// La banda de «Mi mesa» se va a la campana de `AccionesCabecera`, y con ella lo que era aviso puntual en «Gestión».
+// Fuente ÚNICA: `GET /api/correduria/avisos` (este mismo contrato, campo `campana`). PURO: la ruta lee cada fuente con
+// su intérprete de siempre y aquí se agrupa, se cuenta y se ordena.
+//
+// 🚨 Las reglas que este bloque existe para no romper:
+//   · Error de una fuente ≠ 0: el grupo sale `error` («No se ha podido comprobar …») y el contador lleva «+» (o «!» si
+//     no se pudo contar nada). Nunca desaparece como si estuviera vacío.
+//   · Lo que tiene PLAZO LEGAL (supresiones RGPD, quejas, partes, recibos del art. 15 LCS) va PRIMERO, marcado.
+//   · Comprobado y vacío = no ocupa sitio. Apagado (Patrimonio) = no aparece.
+//   · Máx. `MAX_ITEMS_GRUPO` filas por tipo (el resto, «ver todo»). Sin «leído»: lo pendiente cuenta hasta que se atiende.
+
+export const MAX_ITEMS_GRUPO = 20
+
+export const TIPOS_NUEVOS_CAMPANA = [
+  'solicitudes_portal', 'leads_nuevos', 'permisos_portal', 'oportunidades_patrimonio', 'cartas_mediador', 'diferencias_cima',
+] as const
+export type TipoCampana = TipoAviso | (typeof TIPOS_NUEVOS_CAMPANA)[number]
+
+/** Lo que corre un plazo que pone la LEY (RGPD, reglamento de quejas, LCS): arriba y en rojo. */
+export const PLAZO_LEGAL: ReadonlySet<TipoCampana> = new Set<TipoCampana>(['supresiones', 'quejas', 'partes', 'recibos_lcs'])
+
+export type ItemCampana = {
+  id: string
+  texto: string
+  detalle: string | null
+  /** Dónde se actúa. `null` = no hay pantalla a la que ir (p. ej. persona sin ficha). */
+  href: string | null
+  /** Solo en `solicitudes_portal`: lo que hace falta para Activar/Rechazar desde el panel. */
+  solicitud?: SolicitudPortal
+}
+
+export type GrupoCampana = {
+  tipo: TipoCampana
+  titulo: string
+  /** `parcial` = se contó una parte; alguna sub-fuente no se pudo leer. */
+  estado: 'ok' | 'parcial' | 'error'
+  /** Pendientes que cuentan. `null` = no se ha podido contar. */
+  n: number | null
+  plazoLegal: boolean
+  nivel: NivelAviso
+  /** La línea resumen («2 quejas abiertas · plazo …» / «No se han podido comprobar …»). */
+  texto: string
+  plazo: string | null
+  diasRestantes: number | null
+  /** «Ver todo»: dónde vive la lista entera. `null` = la lista entera se abre en el propio panel (o no hay más). */
+  href: string | null
+  items: ItemCampana[]
+  /** Filas que no caben en `items` (ver todo). */
+  mas: number
+  /** Movimientos que se enseñan pero NO cuentan (permisos aceptados/revocados recientes). */
+  informativos: number
+}
+
+export type Campana = {
+  hoy: string
+  /** Suma de pendientes legibles. */
+  total: number
+  /** Alguna fuente no se pudo leer entera: `total` es un SUELO. */
+  parcial: boolean
+  /** Lo que pinta el icono: «» (nada), «3», «3+», «!». */
+  contador: string
+  grupos: GrupoCampana[]
+}
+
+const TITULO_COLA: Record<TipoAviso, string> = {
+  partes: 'Partes del portal', supresiones: 'Supresiones RGPD', quejas: 'Quejas', cambios_cuenta: 'Cambios de cuenta',
+  recibos_lcs: 'Recibos devueltos (art. 15 LCS)', aprobaciones: 'Esperan tu OK', bajas_pue: 'Bajas de Allianz (PUE)',
+  anulaciones: 'Anulaciones', recibos_sin_confirmar: 'Recibos sin confirmar', correos_compania_sin_resolver: 'Avisos de compañías por correo',
+  ingesta: 'Ingesta de CIMA', puerto: 'Puerto de asegura',
+}
+
+const POS_TIPO: readonly TipoCampana[] = [
+  'puerto', 'supresiones', 'quejas', 'partes', 'recibos_lcs', 'solicitudes_portal', 'leads_nuevos', 'permisos_portal',
+  'aprobaciones', 'bajas_pue', 'anulaciones', 'cambios_cuenta', 'recibos_sin_confirmar', 'correos_compania_sin_resolver',
+  'cartas_mediador', 'diferencias_cima', 'oportunidades_patrimonio', 'ingesta',
+]
+
+const fichaHref = (id: string | null): string | null => (id ? `/correduria/cliente/${encodeURIComponent(id)}` : null)
+const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`
+
+function grupoBase(tipo: TipoCampana, titulo: string): Omit<GrupoCampana, 'estado' | 'n' | 'nivel' | 'texto'> {
+  return { tipo, titulo, plazoLegal: PLAZO_LEGAL.has(tipo), plazo: null, diasRestantes: null, href: null, items: [], mas: 0, informativos: 0 }
+}
+
+function grupoError(tipo: TipoCampana, titulo: string, que: string, motivo: string | null, href: string | null = null): GrupoCampana {
+  return {
+    ...grupoBase(tipo, titulo), href, estado: 'error', n: null, nivel: 'no_comprobado',
+    texto: `No se ha podido comprobar ${que}${motivo ? ` (${motivo})` : ''}. No significa que no haya.`,
+  }
+}
+
+function recortar(items: ItemCampana[]): { items: ItemCampana[]; mas: number } {
+  return { items: items.slice(0, MAX_ITEMS_GRUPO), mas: Math.max(0, items.length - MAX_ITEMS_GRUPO) }
+}
+
+/** Una línea de la banda (cola de asegura, ingesta o puerto) → su grupo. Sin filas: el enlace lleva a donde se trabaja. */
+export function grupoDeAviso(a: Aviso): GrupoCampana {
+  return {
+    ...grupoBase(a.tipo, TITULO_COLA[a.tipo]),
+    estado: a.nivel === 'no_comprobado' ? 'error' : 'ok',
+    // La ingesta en rojo se DICE (urgente) pero no es un pendiente que sumar: cuenta 0 (y «+» si no se pudo comprobar).
+    n: a.nivel === 'no_comprobado' ? null : a.tipo === 'ingesta' ? 0 : a.n,
+    nivel: a.nivel, texto: a.texto, plazo: a.plazo, diasRestantes: a.diasRestantes, href: a.href,
+  }
+}
+
+export function grupoSolicitudes(l: LecturaSolicitudesPortal): GrupoCampana | null {
+  const t = 'Solicitudes del portal'
+  if (l.estado === 'sin_configurar') return grupoError('solicitudes_portal', t, 'las solicitudes del portal', 'falta conectar el puerto de asegura')
+  if (l.estado === 'error') return grupoError('solicitudes_portal', t, 'las solicitudes del portal', l.motivo)
+  if (l.solicitudes.length === 0) return null
+  const n = l.solicitudes.length
+  return {
+    ...grupoBase('solicitudes_portal', t), estado: 'ok', n, nivel: 'aviso',
+    texto: plural(n, 'herramienta pedida desde el portal', 'herramientas pedidas desde el portal'),
+    ...recortar(l.solicitudes.map((s) => ({
+      id: s.id, texto: `${s.cliente} · ${s.moduloNombre}`,
+      detalle: s.puedeActivar ? null : s.motivoNoActivar, href: fichaHref(s.clienteId), solicitud: s,
+    }))),
+  }
+}
+
+/**
+ * Leads nuevos: los criterios de «nuevo» que YA existen, no uno inventado.
+ *   · Portal: la póliza de otra compañía que el cliente subió y es trabajo de HOY (`urgente`, `leadUrgente()` del módulo).
+ *   · Web: lead `fuente='web'` sin convertir (los `pendientes` de la conversión) cuyo `lead_estado` sigue en `nuevo`
+ *     (nadie lo ha movido). `null` = el puerto no lo manda: se cuenta como nuevo (no consta que se haya atendido).
+ */
+export function grupoLeads(portal: ResultadoLeads, web: ConversionLeadsWeb): GrupoCampana | null {
+  const t = 'Leads nuevos'
+  const items: ItemCampana[] = []
+  const fallos: string[] = []
+  if (portal.ok) {
+    for (const l of portal.leads.filter((x) => x.urgente)) {
+      const acc = l.fechaAccionable ? l.fechaAccionable.toISOString().slice(0, 10) : null
+      items.push({
+        id: `portal:${l.id}`,
+        texto: `Póliza de ${l.compania ?? 'otra compañía'}${l.ramo ? ` (${l.ramo})` : ''} subida al portal`,
+        detalle: l.senalCarta === 'enviada' ? 'Ha enviado la carta de no renovación a su compañía' : acc ? `Llama antes del ${fechaEs(acc)}` : null,
+        href: fichaHref(l.clienteId),
+      })
+    }
+    if (portal.ilegibles > 0) fallos.push(`${portal.ilegibles} del portal ilegibles`)
+  } else fallos.push('los del portal')
+  if (web.estado === 'ok') {
+    for (const p of web.pendientes.filter((x) => x.leadEstado === null || x.leadEstado === 'nuevo')) {
+      items.push({
+        id: `web:${p.clienteId}`, texto: `${p.nombre} · entró por la web`,
+        detalle: p.diasDesdeAlta === 0 ? 'hoy' : `hace ${p.diasDesdeAlta} d`, href: fichaHref(p.clienteId),
+      })
+    }
+  } else fallos.push('los de la web')
+  if (!portal.ok && web.estado !== 'ok') return grupoError('leads_nuevos', t, 'los leads nuevos', null, '/correduria?s=clientes')
+  if (items.length === 0 && fallos.length === 0) return null
+  const n = items.length
+  return {
+    ...grupoBase('leads_nuevos', t), href: '/correduria?s=clientes',
+    estado: fallos.length > 0 ? 'parcial' : 'ok', n, nivel: fallos.length > 0 ? 'no_comprobado' : 'aviso',
+    texto: `${plural(n, 'lead nuevo sin atender', 'leads nuevos sin atender')}${fallos.length > 0 ? ` · no se han podido comprobar ${fallos.join(' ni ')}` : ''}`,
+    ...recortar(items),
+  }
+}
+
+export function grupoPermisos(l: LecturaPermisosPortal): GrupoCampana | null {
+  const t = 'Permisos del portal'
+  if (l.estado === 'sin_configurar') return grupoError('permisos_portal', t, 'los permisos del portal', 'falta conectar el puerto de asegura')
+  if (l.estado === 'error') return grupoError('permisos_portal', t, 'los permisos del portal', l.motivo)
+  if (l.movimientos.length === 0) return null
+  const resumen = [
+    l.pendientes > 0 ? plural(l.pendientes, 'permiso esperando respuesta', 'permisos esperando respuesta') : null,
+    l.recientes > 0 ? `${plural(l.recientes, 'cambio', 'cambios')} en los últimos 7 días` : null,
+  ].filter(Boolean).join(' · ')
+  return {
+    ...grupoBase('permisos_portal', t), estado: l.truncado ? 'parcial' : 'ok', n: l.pendientes, nivel: 'aviso', texto: resumen,
+    informativos: l.recientes,
+    ...recortar(l.movimientos.map((m) => ({
+      id: m.id, texto: textoPermiso(m),
+      detalle: `${m.evento === 'aceptada' || m.evento === 'revocada' ? 'el' : 'desde el'} ${fechaEs(m.fecha.slice(0, 10))}`,
+      href: fichaHref(m.deClienteId ?? m.aClienteId),
+    }))),
+  }
+}
+
+export function grupoPatrimonio(l: LecturaOportunidadesPatrimonio): GrupoCampana | null {
+  const t = 'Oportunidades de Patrimonio'
+  if (l.estado === 'apagado') return null
+  if (l.estado === 'sin_configurar') return grupoError('oportunidades_patrimonio', t, 'las oportunidades de Patrimonio', 'falta conectar el puerto de asegura')
+  if (l.estado === 'error') return grupoError('oportunidades_patrimonio', t, 'las oportunidades de Patrimonio', l.motivo)
+  if (l.senales.length === 0) return null
+  const n = l.senales.length
+  return {
+    ...grupoBase('oportunidades_patrimonio', t), estado: 'ok', n, nivel: 'aviso',
+    texto: plural(n, 'oportunidad abierta en Patrimonio', 'oportunidades abiertas en Patrimonio'),
+    ...recortar(l.senales.map((s) => ({ id: s.id, texto: `${s.cliente} · ${s.rotulo}`, detalle: s.inmueble, href: fichaHref(s.clienteId) }))),
+  }
+}
+
+export function grupoCartas(l: LecturaPorTramitar): GrupoCampana | null {
+  const t = 'Cartas del mediador'
+  if (l.estado !== 'ok') return grupoError('cartas_mediador', t, 'las cartas de nombramiento', l.causa)
+  if (l.cartas.length === 0) return null
+  const n = l.cartas.length
+  return {
+    ...grupoBase('cartas_mediador', t), estado: 'ok', n, nivel: 'aviso',
+    texto: plural(n, 'carta de nombramiento por tramitar', 'cartas de nombramiento por tramitar'),
+    ...recortar(l.cartas.map((c) => ({
+      id: c.id, texto: `${c.cliente ?? 'Cliente sin nombre'} · ${c.compania ?? 'compañía sin dato'}`,
+      detalle: c.estado === 'firmada' ? (c.enCola ? 'Firmada · su correo espera tu OK' : 'Firmada · falta enviarla a la compañía') : 'Enviada · esperando a la compañía',
+      href: `/correduria/poliza/${encodeURIComponent(c.polizaId)}`,
+    }))),
+  }
+}
+
+export function grupoCima(l: LecturaSincroCima): GrupoCampana | null {
+  const t = 'Diferencias con CIMA'
+  const g = '/correduria?s=gestion'
+  if (l.estado === 'no_desplegado') return grupoError('diferencias_cima', t, 'las diferencias con CIMA', 'asegura aún no lo tiene desplegado', g)
+  if (l.estado === 'sin_configurar') return grupoError('diferencias_cima', t, 'las diferencias con CIMA', 'falta conectar el puerto de asegura', g)
+  if (l.estado === 'error') return grupoError('diferencias_cima', t, 'las diferencias con CIMA', l.motivo, g)
+  const n = l.discrepancias.reduce((s, f) => s + f.diferencias.length, 0)
+  if (n === 0) return null
+  return {
+    ...grupoBase('diferencias_cima', t), href: g, estado: 'ok', n, nivel: 'aviso',
+    texto: plural(n, 'dato de ficha distinto del de CIMA', 'datos de ficha distintos de los de CIMA'),
+    ...recortar(l.discrepancias.map((f) => ({
+      id: f.clienteId, texto: f.nombre, detalle: plural(f.diferencias.length, 'campo distinto', 'campos distintos'), href: fichaHref(f.clienteId),
+    }))),
+  }
+}
+
+const NIVEL_POS: Record<NivelAviso, number> = { urgente: 0, no_comprobado: 1, aviso: 2 }
+
+/** Plazo legal primero (el plazo más cercano arriba); luego urgente → no comprobado → aviso; empate, orden fijo del tipo. */
+export function ordenarGrupos(gs: readonly GrupoCampana[]): GrupoCampana[] {
+  return [...gs].sort((a, b) =>
+    (a.plazoLegal ? 0 : 1) - (b.plazoLegal ? 0 : 1)
+    || NIVEL_POS[a.nivel] - NIVEL_POS[b.nivel]
+    || (a.plazo ?? '9999-12-31').localeCompare(b.plazo ?? '9999-12-31')
+    || POS_TIPO.indexOf(a.tipo) - POS_TIPO.indexOf(b.tipo))
+}
+
+/** El número del icono. Error ≠ 0: con algo ilegible el total es un suelo («3+»); sin nada contado y algo ilegible, «!». */
+export function contadorCampana(gs: readonly GrupoCampana[]): { total: number; parcial: boolean; contador: string } {
+  let total = 0
+  let parcial = false
+  for (const g of gs) {
+    if (g.estado !== 'ok') parcial = true
+    if (g.n !== null) total += g.n
+  }
+  return { total, parcial, contador: total > 0 ? `${total}${parcial ? '+' : ''}` : parcial ? '!' : '' }
+}
+
+export type FuentesCampana = {
+  avisos: Avisos
+  solicitudes: LecturaSolicitudesPortal
+  leadsPortal: ResultadoLeads
+  leadsWeb: ConversionLeadsWeb
+  permisos: LecturaPermisosPortal
+  patrimonio: LecturaOportunidadesPatrimonio
+  cartas: LecturaPorTramitar
+  cima: LecturaSincroCima
+}
+
+export function componerCampana(f: FuentesCampana): Campana {
+  const grupos = [
+    ...f.avisos.avisos.map(grupoDeAviso),
+    grupoSolicitudes(f.solicitudes),
+    grupoLeads(f.leadsPortal, f.leadsWeb),
+    grupoPermisos(f.permisos),
+    grupoPatrimonio(f.patrimonio),
+    grupoCartas(f.cartas),
+    grupoCima(f.cima),
+  ].filter((g): g is GrupoCampana => g !== null)
+  return { hoy: f.avisos.hoy, ...contadorCampana(grupos), grupos: ordenarGrupos(grupos) }
 }

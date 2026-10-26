@@ -16,7 +16,6 @@ import Secciones from '../Secciones'
 import AccionesContacto from '../AccionesContacto'
 import AccionesCabecera from '../AccionesCabecera'
 import BuscadorCartera from '../BuscadorCartera'
-import BandaAvisos from './BandaAvisos'
 import CorreosCompania from './CorreosCompania'
 import { PerdidasPorRevisar, TareasSueltas } from './BloquesSueltos'
 import NuevaTarea from './NuevaTarea'
@@ -106,8 +105,8 @@ export default function MesaClient() {
       <Secciones activa="mesa" contadores={{}} onCambiar={s => router.push(`/correduria?s=${s}`)} />
       <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)' }}>Lo que traes entre manos, de todos los clientes.</p>
 
-      {/* Avisos con plazo: arriba y sin esperar a los expedientes (un plazo legal no espera a que cargue la lista). */}
-      <BandaAvisos />
+      {/* Los avisos con plazo (antes `BandaAvisos`, aquí mismo) viven desde el 26/10/2026 en la campana de la cabecera
+          (`AccionesCabecera` → `CampanaAvisos`): Alberto veía «mucho lío en mi mesa». El componente sigue existiendo. */}
 
       {datos === null && <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)' }}>Cargando tu mesa…</p>}
 
