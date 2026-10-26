@@ -19,7 +19,7 @@ const BASE = 'https://www.generali.es/emi_genAutosFormWeb/'
 const PORTAL = 'https://www.generali.es/arq_genernetPortalFormWeb/CorredorPortal.po?mediatorCode=' + MEDIADOR_GENERALI
 const PNG = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
 
-test('v0.2.24 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.24'))
+test('v0.2.24 · versión (vigente 0.2.26)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.26'))
 
 test('v0.2.24 · puras: «lupa»/«buscar personas» casan; «aceptar», «confirmar» y «alta» NO; el resumen pone lo pulsable antes que los campos', () => {
   for (const t of ['Buscar', 'lupa', 'Buscar personas', 'Consultar']) assert.ok(RE_BUSCAR_PERSONA_GENERALI.test(normalizarRotuloGenerali(t)), t)

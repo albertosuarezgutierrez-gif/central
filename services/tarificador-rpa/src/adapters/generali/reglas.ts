@@ -1057,3 +1057,198 @@ export function resumenControlesAbiertoGenerali(controles: readonly ControlAbier
   const t = `${partes.join('; ') || 'sin controles visibles'}; filas:${filas}`
   return t.length > max ? `${t.slice(0, max)}…` : t
 }
+
+// ───────────────────────── v0.2.25 · «Interesado / Tomador › Datos personas» (emiAutosGenB028.do): alta del tomador ─────────────────────────
+// Prueba real 0.2.24: «Personas» navega el marco `mainFrame` a `emiAutosGenB028.do`, pestaña «Datos personas», SIN buscador. Controles reales:
+// select#personas_intere_ynidcl (tipo de documento), #personas_intere_nifcif, _nombre, _papell, _sapell, select _ysexo, _ffnain (nacimiento),
+// _ffcain (carné), select _ycarnc (tipo de carné), select _pnacld (nacionalidad), _yemail, _movtom, «Volver» (#cancelar) y «Confirmar» (#confirmar).
+// Alberto (26/10/2026) AUTORIZA rellenar los VACÍOS con los datos del riesgo y pulsar ESE «Confirmar» (puerta acotada en guard.ts). Nada más.
+
+/** Último segmento EXACTO de la ruta del marco «Interesado / Tomador» (sin `;jsessionid`). */
+export const PAGINA_DATOS_PERSONAS_GENERALI = 'emiAutosGenB028.do'
+/** Prefijo de los ids de la pestaña «Datos personas». */
+export const PREFIJO_ID_DATOS_PERSONAS_GENERALI = 'personas_intere_'
+/** Id del único «Confirmar» autorizado (el de «Datos personas»). */
+export const ID_CONFIRMAR_DATOS_PERSONAS_GENERALI = 'confirmar'
+/** Texto EXACTO de la pestaña activa exigida. */
+export const PESTANA_DATOS_PERSONAS_GENERALI = 'Datos personas'
+
+/** ¿`url` es la del marco «Interesado / Tomador» de www.generali.es? Origen exacto y último segmento `emiAutosGenB028.do`. PURA. */
+export function urlDatosPersonasGenerali(url: string | null | undefined): boolean {
+  try {
+    const u = new URL(String(url ?? ''))
+    if (u.origin !== 'https://www.generali.es' || u.username || u.password) return false
+    const ultimo = u.pathname.split('/').pop() ?? ''
+    return ultimo.split(';')[0] === PAGINA_DATOS_PERSONAS_GENERALI
+  } catch {
+    return false
+  }
+}
+
+/** Pestaña leída del DOM: `activa` = lleva marca explícita (aria-selected/aria-current o clase de activa/seleccionada en ella o en sus 2 ancestros); `false` = sin marca. */
+export type PestanaPersonasLeida = { tipo: 'datos' | 'seleccion'; activa: boolean }
+
+/** Rótulo de pestaña → tipo (texto EXACTO normalizado). PURA. */
+export function tipoPestanaPersonasGenerali(rotulo: string | null | undefined): 'datos' | 'seleccion' | null {
+  const t = normalizarRotuloGenerali(rotulo)
+  if (t === normalizarRotuloGenerali(PESTANA_DATOS_PERSONAS_GENERALI)) return 'datos'
+  if (RE_PESTANA_SELECCION_PERSONAS_GENERALI.test(t)) return 'seleccion'
+  return null
+}
+
+/**
+ * ¿La pestaña ACTIVA es «Datos personas»? PURA. Exige la pestaña «Datos personas» (exactamente una). Con marca explícita en alguna pestaña,
+ * vale solo si la marcada es «Datos personas» (y ninguna «Selección…» lo está). Sin marca en ninguna (el portal no la pinta en el DOM),
+ * se infiere del CONTENIDO: el campo NIF de «Datos personas» está visible. Cualquier otra cosa → no.
+ */
+export function pestanaDatosPersonasActivaGenerali(pestanas: readonly PestanaPersonasLeida[], nifVisible: boolean): { ok: true; por: 'marca' | 'contenido' } | { ok: false; motivo: string } {
+  // v0.2.26: el portal real repite el enlace «Datos personas» (uno con `current` en su CONTENEDOR) y marca «Selección personas…» con `current`
+  // en el propio enlace (nivel de menú, no subpestaña). Basta con que ALGÚN «Datos personas» esté marcado; la marca de «Selección» se ignora.
+  const datos = pestanas.filter((p) => p.tipo === 'datos')
+  if (datos.length === 0) return { ok: false, motivo: `pestañas «${PESTANA_DATOS_PERSONAS_GENERALI}» visibles: 0 (hace falta al menos una)` }
+  if (datos.some((p) => p.activa)) return { ok: true, por: 'marca' }
+  if (pestanas.some((p) => p.activa)) return { ok: false, motivo: 'la pestaña marcada como activa no es «Datos personas»' }
+  return nifVisible ? { ok: true, por: 'contenido' } : { ok: false, motivo: 'sin pestaña marcada y sin el NIF de «Datos personas» visible' }
+}
+
+/** Documento → tipo para el desplegable: DNI (8 cifras + letra) = `nif`; NIE (X/Y/Z + 7 cifras + letra) = `nie`; otro (CIF, pasaporte) = `null`. PURA. */
+export function tipoDocumentoGenerali(doc: string | null | undefined): 'nif' | 'nie' | null {
+  const d = documentoNormalizadoGenerali(doc)
+  if (/^\d{8}[A-Z]$/.test(d)) return 'nif'
+  if (/^[XYZ]\d{7}[A-Z]$/.test(d)) return 'nie'
+  return null
+}
+
+/** ¿La opción puesta de un `<select>` es «vacía» (sin valor o un rótulo de «seleccione»)? PURA. */
+export function opcionSelectVaciaGenerali(o: { valor: string; texto: string } | null | undefined): boolean {
+  if (!o) return true
+  if (String(o.valor ?? '').trim() === '') return true
+  const t = normalizarRotuloGenerali(o.texto)
+  return t === '' || /^-+$/.test(t) || /^(seleccion[ae]|elija|elegir|escoja)\b/.test(t)
+}
+
+type Opcion = { valor: string; texto: string }
+const unico = (idx: number[]): number | null => (idx.length === 1 ? idx[0]! : null)
+const indicesDe = (ops: readonly Opcion[], f: (t: string, v: string) => boolean): number[] =>
+  ops.map((o, i) => (!opcionSelectVaciaGenerali(o) && f(normalizarRotuloGenerali(o.texto), normalizarRotuloGenerali(o.valor)) ? i : -1)).filter((i) => i >= 0)
+
+/**
+ * Opción del «Tipo de documento» para un DNI (`nif`) o un NIE (`nie`). Vale la ÚNICA opción que nombra ese tipo (NIF/DNI o NIE) y no es de
+ * empresa (CIF, jurídica); si hay varias, la única cuyo rótulo es EXACTAMENTE el tipo. Ninguna o ambigua → `null` (no se adivina). PURA.
+ */
+export function opcionTipoDocumentoGenerali(opciones: readonly Opcion[], tipo: 'nif' | 'nie'): number | null {
+  const re = tipo === 'nif' ? /\b(nif|dni)\b/ : /\bnie\b/
+  const c = indicesDe(opciones, (t) => re.test(t) && !/\bcif\b|juridic|empresa|sociedad/.test(t))
+  if (c.length <= 1) return unico(c)
+  const exactas = c.filter((i) => {
+    const t = normalizarRotuloGenerali(opciones[i]!.texto)
+    return tipo === 'nif' ? t === 'nif' || t === 'dni' : t === 'nie'
+  })
+  return unico(exactas)
+}
+
+/** Opción de «Sexo» (`hombre`/`mujer`): por rótulo (hombre/varón/masculino · mujer/femenino) o por valor H/V/M/F de una letra. Única o `null`. PURA. */
+export function opcionSexoGenerali(opciones: readonly Opcion[], sexo: 'hombre' | 'mujer'): number | null {
+  const reT = sexo === 'hombre' ? /^(hombre|varon|masculino)$/ : /^(mujer|femenino)$/
+  const porTexto = indicesDe(opciones, (t) => reT.test(t))
+  if (porTexto.length > 0) return unico(porTexto)
+  const reV = sexo === 'hombre' ? /^(h|v)$/ : /^(m|f)$/
+  // Por valor solo si las letras del select son inequívocas (no «M» de masculino frente a «F»: H/M o V/M o M/F se distinguen por el par).
+  const valores = opciones.filter((o) => !opcionSelectVaciaGenerali(o)).map((o) => normalizarRotuloGenerali(o.valor))
+  if (sexo === 'mujer' && valores.includes('m') && valores.includes('f')) return null
+  return unico(indicesDe(opciones, (_t, v) => reV.test(v)))
+}
+
+/** Opción del «Tipo de carné» para la clase (`b`, `a2`…): rótulo o valor EXACTO, o rótulo que empieza por la clase seguida de espacio/guion/paréntesis. Única o `null`. PURA. */
+export function opcionTipoCarneGenerali(opciones: readonly Opcion[], clase: string | null | undefined): number | null {
+  const c = normalizarRotuloGenerali(clase)
+  if (!/^[a-z][a-z0-9]{0,3}$/.test(c)) return null
+  const exactas = indicesDe(opciones, (t, v) => t === c || v === c || t === `clase ${c}` || t === `permiso ${c}`)
+  if (exactas.length > 0) return unico(exactas)
+  const esc = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return unico(indicesDe(opciones, (t) => new RegExp(`^${esc}(\\s*[-(:]|\\s)`).test(t)))
+}
+
+/** Opción «España» de la nacionalidad (rótulo exacto «España»/«Española», sin tildes). Única o `null`. PURA. */
+export function opcionEspanaGenerali(opciones: readonly Opcion[]): number | null {
+  return unico(indicesDe(opciones, (t) => t === 'espana' || t === 'espanola'))
+}
+
+/** Lo que el bot puede teclear en «Datos personas» (solo lo que trae el riesgo; nada inventado). */
+export type PlanDatosPersonasGenerali = {
+  documento: string
+  tipoDocumento: 'nif' | 'nie'
+  nombre: string | null
+  apellido1: string | null
+  apellido2: string | null
+  /** dd/mm/aaaa */
+  fechaNacimiento: string | null
+  /** dd/mm/aaaa (ficha o conductor si el tomador ES el conductor). */
+  fechaCarne: string | null
+  tipoCarne: string | null
+  sexo: 'hombre' | 'mujer' | null
+  /** «España» por defecto solo con DNI español (y solo si el desplegable está vacío). */
+  espana: boolean
+  email: string | null
+  movil: string | null
+}
+
+type FormDatosPersonas = {
+  documentoTomador?: string | null
+  tomadorEsConductor?: boolean | null
+  clasePermiso?: string | null
+  tomador?: { tipo?: string | null; nombre?: string | null; apellido1?: string | null; apellido2?: string | null; documentoIdentidad?: string | null; fechaNacimiento?: string | null; email?: string | null; telefono?: string | null } | null
+  datosTomador?: { tipo: string; nombre?: string; apellido1?: string; apellido2?: string | null; fechaNacimiento?: string } | null
+  fichaTomador?: { documento?: string | null; fechaNacimiento?: string | null; fechaCarnet?: string | null; tipoCarnet?: string | null; email?: string | null; telefono?: string | null } | null
+  conductor?: { fechaNacimiento?: string | null; fechaCarne?: string | null; sexo?: string | null } | null
+}
+
+/**
+ * Plan de «Datos personas» (persona FÍSICA con DNI/NIE). PURA. Nombre/apellidos/nacimiento: `datosTomador` (ficha) o el bloque `tomador`.
+ * Del CONDUCTOR (nacimiento, carné, sexo y clase de permiso) solo si `tomadorEsConductor === true` (sin dato, no se supone que sea él).
+ * Email/móvil solo si el riesgo los trae (`tomador` o `fichaTomador`). Empresa, CIF/pasaporte o sin documento → `{ error }` (sin valores).
+ */
+export function planDatosPersonasGenerali(form: FormDatosPersonas): PlanDatosPersonasGenerali | { error: string } {
+  if (form.datosTomador?.tipo === 'juridica' || form.tomador?.tipo === 'juridica') return { error: 'el tomador es persona jurídica (la pestaña «Datos personas» no tiene mapa de empresa)' }
+  const limpio = (x: string | null | undefined) => {
+    const v = String(x ?? '').replace(/\s+/g, ' ').trim()
+    return v === '' ? null : v
+  }
+  const documento = documentoNormalizadoGenerali(form.documentoTomador ?? form.tomador?.documentoIdentidad ?? form.fichaTomador?.documento)
+  if (documento === '') return { error: 'el riesgo no trae el NIF/NIE del tomador' }
+  const tipoDocumento = tipoDocumentoGenerali(documento)
+  if (!tipoDocumento) return { error: 'el documento del tomador no es un DNI ni un NIE (CIF o pasaporte: sin mapa)' }
+  const dt = form.datosTomador?.tipo === 'fisica' ? form.datosTomador : null
+  const t = form.tomador ?? null
+  const esConductor = form.tomadorEsConductor === true
+  const cond = esConductor ? form.conductor ?? null : null
+  const sexo = cond?.sexo === 'hombre' || cond?.sexo === 'mujer' ? cond.sexo : null
+  const fechaCarneIso = form.fichaTomador?.fechaCarnet ?? cond?.fechaCarne ?? null
+  return {
+    documento,
+    tipoDocumento,
+    nombre: limpio(dt?.nombre ?? t?.nombre),
+    apellido1: limpio(dt?.apellido1 ?? t?.apellido1),
+    apellido2: limpio(dt?.apellido2 ?? t?.apellido2),
+    fechaNacimiento: fechaGenerali(dt?.fechaNacimiento ?? t?.fechaNacimiento ?? form.fichaTomador?.fechaNacimiento ?? cond?.fechaNacimiento),
+    fechaCarne: fechaGenerali(fechaCarneIso),
+    // Clase del carné: la de la ficha o, si el tomador conduce, la del permiso del conductor; solo con fecha de carné.
+    tipoCarne: fechaCarneIso ? limpio(form.fichaTomador?.tipoCarnet ?? (esConductor ? form.clasePermiso : null)) : null,
+    sexo,
+    espana: tipoDocumento === 'nif',
+    email: limpio(t?.email ?? form.fichaTomador?.email),
+    movil: limpio(t?.telefono ?? form.fichaTomador?.telefono),
+  }
+}
+
+/** Mensajes de validación del portal tras «Confirmar», SANEADOS (sin documentos, fechas, correos ni teléfonos), sin repetir, ≤`max`. PURA. */
+export function mensajesValidacionGenerali(textos: readonly string[], max = 6): string[] {
+  const out: string[] = []
+  for (const x of textos) {
+    const t = sanearFragmentoGenerali(String(x ?? '')).trim().slice(0, 140)
+    if (t.length < 3 || out.includes(t)) continue
+    out.push(t)
+    if (out.length >= max) break
+  }
+  return out
+}

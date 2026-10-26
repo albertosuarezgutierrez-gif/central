@@ -145,7 +145,7 @@ const TARJETA = (producto: string, prima: string) => `<prima-producto><section><
 
 /** Una página NSEI con TODOS los componentes a la vez (como la SPA): el stepper manda. Mat-select con overlay CDK. */
 /** v0.8.14 · qué hace el portal al pulsar «Generar Proyecto»: pinta el nº en «Proyectos» (input de solo lectura), nada, o un diálogo de pago. */
-type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago'; texto?: string; previo?: string; donde?: 'pie' | 'icono' | 'aria' | 'enlace' | 'tarde' | 'oculto' | 'ninguno'
+type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago'; texto?: string; previo?: string; donde?: 'duplicado' | 'pie' | 'icono' | 'aria' | 'enlace' | 'tarde' | 'oculto' | 'ninguno'
   /** v0.8.16 · «Ir a generar proyecto» (enlace) + «Contratar» en la botonera: `navega` abre la vista con «Generar Proyecto»; `inerte` no hace nada. */
   ir?: 'navega' | 'inerte' | 'dialogo' | 'duplicado' }
 /** v0.8.15 · dónde y cómo pinta el portal el botón «Generar Proyecto» (por defecto: <button> dentro de `app-coberturas`). */
@@ -157,6 +157,7 @@ const BOTON_PROYECTO = (o: ProyectoFixture | undefined) => {
     case 'aria': return `<button ${clic} aria-label="${t}"><mat-icon>description</mat-icon></button>`
     case 'enlace': return `<a role="button" ${clic}>${t}</a>`
     case 'oculto': return `<div style="display:none"><button ${clic}>${t}</button></div>`
+    case 'duplicado': return `<button ${clic}>${t}</button><button ${clic}>${t}</button>`
     case 'pie': case 'tarde': case 'ninguno': return ''
     default: return `<button ${clic}>${t}</button>`
   }
@@ -623,7 +624,15 @@ test('v0.8.15 · decisión del botón (PURA): texto exacto, varios → el de Cob
   const c = (etiqueta: string, o: Partial<ControlProyectoMapfre> = {}): ControlProyectoMapfre => ({ etiqueta, visible: true, habilitado: true, enCoberturas: false, ...o })
   assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Continuar'), c('GENERAR  proyecto')]), { indice: 1 })
   assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Generar Proyecto'), c('Generar Proyecto', { enCoberturas: true })]), { indice: 1 })
-  assert.match((decidirBotonGenerarProyectoMapfre([c('Generar Proyecto'), c('Generar Proyecto')]) as { motivo: string }).motivo, /ambiguo/)
+  // v0.8.18: botón DUPLICADO con el mismo texto → determinista (primero visible y habilitado; el de Coberturas si es único)
+  assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Generar Proyecto'), c('Generar Proyecto')]), { indice: 0 })
+  assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Generar Proyecto', { habilitado: false }), c('Generar Proyecto')]), { indice: 1 })
+  assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Generar Proyecto', { visible: false }), c('Generar Proyecto'), c('Generar Proyecto')]), { indice: 1 })
+  assert.deepEqual(decidirBotonGenerarProyectoMapfre([c('Generar Proyecto'), c('Generar Proyecto', { enCoberturas: true }), c('Generar Proyecto')]), { indice: 1 })
+  const dd = decidirBotonGenerarProyectoMapfre([c('Generar Proyecto', { habilitado: false }), c('Generar Proyecto', { habilitado: false })])
+  assert.ok('motivo' in dd && /deshabilitado/.test(dd.motivo) && !dd.definitivo, 'duplicados todos deshabilitados: se espera, no se pulsa')
+  // cepo: textos DISTINTOS a la vez siguen ambiguos
+  assert.match((decidirBotonGenerarProyectoMapfre([c('Generar Proyecto'), c('Guardar proyecto')], true) as { motivo: string }).motivo, /ambiguo/)
   for (const falsos of ['Ir a generar', 'Ir a generar proyecto', 'Generar Proyecto y contratar', 'Guardar proyecto', '']) {
     const d = decidirBotonGenerarProyectoMapfre([c(falsos)])
     assert.ok('motivo' in d && /^no aparece el botón/.test(d.motivo), falsos)
@@ -740,6 +749,18 @@ test('«Generar Proyecto»: una violación REAL del guard SÍ se relanza (fail-c
   await page.evaluate(() => fetch('https://otro.ejemplo.test/emitirPoliza', { method: 'POST', body: 'x=1' }).catch(() => null))
   await assert.rejects(() => generarProyectoMapfre(page, guard, 500), EmisionBloqueadaError)
   assert.equal(await marca(page, '__proyecto'), null)
+  await context.close()
+})
+
+test('v0.8.18 · «Generar Proyecto» DUPLICADO en el DOM (mismo texto, dos botones) → se pulsa UNO, una sola vez; Contratar/Verificación intactos', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { donde: 'duplicado' } }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  const r = await generarProyectoMapfre(page, guard, 4_000)
+  assert.equal(r.estado, 'generado')
+  assert.equal(await marca(page, '__proyecto'), 1, 'una sola pulsación')
+  assert.equal(await marca(page, '__contratar'), null)
+  assert.equal(await marca(page, '__verif'), null)
   await context.close()
 })
 

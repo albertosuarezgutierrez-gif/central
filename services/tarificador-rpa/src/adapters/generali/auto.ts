@@ -115,6 +115,16 @@ import {
   type MarcoMediador,
   rolesGenerali,
   urlConMediador,
+  documentoNormalizadoGenerali,
+  mensajesValidacionGenerali,
+  opcionEspanaGenerali,
+  opcionSelectVaciaGenerali,
+  opcionSexoGenerali,
+  opcionTipoCarneGenerali,
+  opcionTipoDocumentoGenerali,
+  planDatosPersonasGenerali,
+  PREFIJO_ID_DATOS_PERSONAS_GENERALI,
+  urlDatosPersonasGenerali,
   esPortalCorredorGenerali,
   vehiculoBuscadoGenerali,
   type VehiculoBuscado,
@@ -208,7 +218,14 @@ export const GENERALI_AUTO_ACTIVO = true
  * (2) vuelca en el atasco, primero lo pulsable (rótulo, title/alt, imagen, función del onclick, clase del enlace y de su contenedor) y las cabeceras de tabla,
  * y (3) anota cuántos controles había antes y después de pulsar la pestaña. «Confirmar»/«Alta» siguen sin pulsarse nunca.
  */
-export const VERSION_GENERALI_AUTO = '0.2.24'
+/**
+ * 0.2.25 (26/10/2026, prueba real con 0.2.24 + AUTORIZACIÓN de Alberto): «Personas» navega `mainFrame` a `emiAutosGenB028.do`, pestaña «Datos
+ * personas», SIN buscador. Ahora el bot rellena ahí SOLO los campos vacíos con los datos del riesgo (`planDatosPersonasGenerali`: NIF/NIE,
+ * nombre, apellidos, nacimiento; carné y sexo del conductor solo si es el tomador; España con DNI; email/móvil solo si vienen) respetando lo
+ * que autocomplete el portal al salir del NIF, y pulsa «Confirmar» SOLO por `ctx.confirmarDatosPersonasGenerali` (guard: #confirmar, marco
+ * emiAutosGenB028.do, pestaña «Datos personas»). Cualquier otro «Confirmar» de Generali lo rechaza `pulsar`. Nunca casillas ni emisión.
+ */
+export const VERSION_GENERALI_AUTO = '0.2.26'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -1816,6 +1833,157 @@ async function interesadoRellenoGenerali(marco: Raiz): Promise<boolean> {
   return true
 }
 
+// ───────────────────────── v0.2.25 · «Interesado / Tomador › Datos personas»: alta del tomador + «Confirmar» por el guard ─────────────────────────
+
+/** Espera tras teclear el NIF: el portal puede autocompletar el resto al salir del campo (se respeta lo que ponga). */
+const ESPERA_AUTOCOMPLETAR_NIF_MS = 1_500
+/** Espera tras «Confirmar» de «Datos personas» a que el portal vuelva (o pinte su validación). */
+const ESPERA_TRAS_CONFIRMAR_PERSONAS_MS = 15_000
+
+/** Mensajes de validación visibles del marco (clases/ids de error/aviso/mensaje y líneas «Es obligatorio…»). Textos crudos: se SANEAN al usarlos. Sin funciones con nombre (tsx). */
+const JS_MENSAJES_DATOS_PERSONAS = `(() => {
+  const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const out = [];
+  document.querySelectorAll('[class*="error" i],[class*="aviso" i],[class*="alert" i],[class*="mensaje" i],[class*="msg" i],[class*="valida" i],[id*="error" i],[id*="mensaje" i],[id*="msg" i],[role=alert]').forEach((e) => {
+    if (!vis(e) || /^(INPUT|SELECT|TEXTAREA|SCRIPT|STYLE)$/.test(e.tagName)) return;
+    const t = String(e.innerText || e.textContent || '').replace(/\\s+/g, ' ').trim();
+    if (t.length >= 3 && t.length <= 200 && out.indexOf(t) < 0) out.push(t);
+  });
+  String(document.body ? document.body.innerText : '').split(/\\n/).forEach((l) => {
+    const t = l.replace(/\\s+/g, ' ').trim();
+    if (/^(es obligatori[oa]|falta|debe (informar|indicar)|campo obligatorio|el campo|formato|fecha (no valida|incorrecta|erronea))/i.test(t) && t.length <= 160 && out.indexOf(t) < 0) out.push(t);
+  });
+  return out.slice(0, 12);
+})()`
+
+/** ¿Es el marco «Interesado / Tomador» (`emiAutosGenB028.do`) con el NIF de «Datos personas» visible? Solo lee. */
+async function esDatosPersonasGenerali(m: Frame): Promise<boolean> {
+  if (m.isDetached() || !urlDatosPersonasGenerali(m.url())) return false
+  return (await m.locator(`[id="${PREFIJO_ID_DATOS_PERSONAS_GENERALI}nifcif"]`).filter({ visible: true }).count().catch(() => 0)) === 1
+}
+
+type FormDatosPersonasGenerali = Parameters<typeof camposInteresadoGenerali>[0] & Parameters<typeof planDatosPersonasGenerali>[0]
+
+/**
+ * v0.2.25 · «Personas» abrió «Interesado / Tomador › Datos personas» (`emiAutosGenB028.do`, sin buscador). Rellena SOLO los campos VACÍOS con
+ * los datos del riesgo (`planDatosPersonasGenerali`): tipo de documento (NIF/NIE), NIF (y espera el autocompletado del portal al salir del
+ * campo: lo que ponga se respeta), nombre, apellidos, nacimiento, carné/sexo (del conductor solo si el tomador ES el conductor), nacionalidad
+ * España (DNI y desplegable vacío) y email/móvil solo si el riesgo los trae. Un NIF ya puesto que NO es el del tomador → para. Nunca toca
+ * casillas (el checkbox `#campofocus` tampoco). Con NIF, nombre y primer apellido puestos, pulsa «Confirmar» SOLO por la puerta acotada del
+ * guard (`ctx.confirmarDatosPersonasGenerali`) y espera la vuelta; una validación del portal o un diálogo → atasco SANEADO (sin valores).
+ */
+export async function altaDatosPersonasGenerali(
+  marco: Raiz,
+  m: Frame,
+  form: FormDatosPersonasGenerali,
+  ctx: ContextoPortal,
+  esperas: { autocompletarMs?: number; trasConfirmarMs?: number } = {},
+): Promise<{ hechos: string[]; diag: string }> {
+  const inventario = async () => inventarioPersonas([{ rama: 'marco', marco: m, nuevo: true }])
+  const hechos: string[] = []
+  const omitidos: string[] = []
+  const parar = async (que: string, rama: string, conInventario = true): Promise<never> => {
+    const confirmado = hechos.includes('datos_personas.confirmar')
+    throw new ErrorMapaIncompletoGenerali(
+      `la persona del tomador en «Datos personas»: ${que}. ${confirmado ? 'Se pulsó «Confirmar» una vez; no se repite.' : 'No se pulsa «Confirmar».'} Datos-personas: rama=datos_personas, ${rama}; hecho: ${hechos.join(',') || 'nada'}${omitidos.length ? `; omitido: ${omitidos.join(', ')}` : ''}${conInventario ? `; controles: ${await inventario()}` : ''}`,
+    )
+  }
+  const plan = planDatosPersonasGenerali(form)
+  if ('error' in plan) return parar(plan.error, 'sin_plan')
+  const ctl = (c: string) => m.locator(`[id="${PREFIJO_ID_DATOS_PERSONAS_GENERALI}${c}"]`)
+  /** El control si es ÚNICO, visible, habilitado y editable; si no, `null` con su motivo en `omitidos`. */
+  const usable = async (c: string): Promise<Locator | null> => {
+    const total = await ctl(c).count().catch(() => 0)
+    const l = ctl(c).filter({ visible: true })
+    const n = await l.count().catch(() => 0)
+    if (n !== 1) {
+      omitidos.push(`${c}:${total === 0 ? 'no_existe' : n === 0 ? 'oculto' : 'varios'}`)
+      return null
+    }
+    const el = l.first()
+    if (!(await el.isEnabled().catch(() => false))) { omitidos.push(`${c}:deshabilitado`); return null }
+    if (!(await esSelectNativo(el)) && !(await el.isEditable().catch(() => false))) { omitidos.push(`${c}:solo_lectura`); return null }
+    return el
+  }
+  const escribirSiVacio = async (c: string, valor: string | null): Promise<void> => {
+    if (!valor) return
+    const el = await usable(c)
+    if (!el) return
+    if ((await el.inputValue().catch(() => 'x')).trim() !== '') { omitidos.push(`${c}:con_valor`); return }
+    await escribir(el, valor, ctx)
+    hechos.push(`datos_personas.${c}`)
+  }
+  const elegirSiVacio = async (c: string, elegir: (ops: { valor: string; texto: string }[]) => number | null): Promise<void> => {
+    const el = await usable(c)
+    if (!el) return
+    if (!(await esSelectNativo(el))) { omitidos.push(`${c}:no_es_select`); return }
+    if (!opcionSelectVaciaGenerali(await leerOpcionSeleccionada(el))) { omitidos.push(`${c}:con_valor`); return }
+    const i = elegir(await opcionesSelect(el).catch(() => []))
+    if (i === null) { omitidos.push(`${c}:sin_opcion_clara`); return }
+    await elegirIndice(el, i, ctx)
+    hechos.push(`datos_personas.${c}`)
+  }
+
+  // 1. Tipo de documento, antes del NIF (el portal puede validar el NIF contra él).
+  await elegirSiVacio('ynidcl', (ops) => opcionTipoDocumentoGenerali(ops, plan.tipoDocumento))
+  // 2. NIF: vacío → se teclea y se espera el autocompletado; con valor → tiene que ser EL MISMO documento.
+  const nifVisible = ctl('nifcif').filter({ visible: true })
+  if ((await nifVisible.count().catch(() => 0)) !== 1) return parar('el campo NIF no es único y visible', 'sin_nif_campo')
+  const nifActual = (await nifVisible.first().inputValue().catch(() => '')).trim()
+  if (nifActual === '') {
+    const el = await usable('nifcif')
+    if (!el) return parar('el campo NIF está vacío y no es editable', 'nif_no_editable')
+    await escribir(el, plan.documento, ctx)
+    hechos.push('datos_personas.nifcif')
+    await pausaMs(esperas.autocompletarMs ?? ESPERA_AUTOCOMPLETAR_NIF_MS)
+  } else if (documentoNormalizadoGenerali(nifActual) !== plan.documento) {
+    return parar('el NIF que ya trae la pantalla NO es el del tomador; no se sobrescribe ni se confirma otra persona', 'nif_distinto')
+  } else omitidos.push('nifcif:con_valor')
+  // 3. El resto, solo si está VACÍO (lo que autocompletó el portal se respeta).
+  await escribirSiVacio('nombre', plan.nombre)
+  await escribirSiVacio('papell', plan.apellido1)
+  await escribirSiVacio('sapell', plan.apellido2)
+  if (plan.sexo) await elegirSiVacio('ysexo', (ops) => opcionSexoGenerali(ops, plan.sexo!))
+  await escribirSiVacio('ffnain', plan.fechaNacimiento)
+  await escribirSiVacio('ffcain', plan.fechaCarne)
+  if (plan.tipoCarne) await elegirSiVacio('ycarnc', (ops) => opcionTipoCarneGenerali(ops, plan.tipoCarne))
+  if (plan.espana) await elegirSiVacio('pnacld', (ops) => opcionEspanaGenerali(ops))
+  await escribirSiVacio('yemail', plan.email)
+  await escribirSiVacio('movtom', plan.movil)
+
+  // 4. Mínimo antes de confirmar: el NIF del tomador, nombre y primer apellido (puestos por el bot o por el portal).
+  const valor = async (c: string) => (await ctl(c).filter({ visible: true }).first().inputValue().catch(() => '')).trim()
+  if (documentoNormalizadoGenerali(await valor('nifcif')) !== plan.documento) return parar('tras rellenar, el NIF de la pantalla no es el del tomador', 'nif_tras_rellenar')
+  const faltan = [(await valor('nombre')) === '' ? 'nombre' : null, (await valor('papell')) === '' ? 'primer apellido' : null].filter((x): x is string => x !== null)
+  if (faltan.length) return parar(`falta ${faltan.join(' y ')} (ni el riesgo ni el portal lo ponen)`, 'incompleto')
+  if (!ctx.confirmarDatosPersonasGenerali) return parar('falta la puerta guardada de «Confirmar» de «Datos personas» en el contexto del runner', 'sin_puerta')
+
+  // 5. «Confirmar» SOLO por el guard (marco emiAutosGenB028.do, pestaña «Datos personas», #confirmar, una vez).
+  const { dialogo } = await ctx.confirmarDatosPersonasGenerali()
+  hechos.push('datos_personas.confirmar')
+  if (dialogo) return parar(`el portal abrió un diálogo al confirmar (se canceló): «${dialogo}»`, 'dialogo', false)
+
+  // 6. Esperar la vuelta: el interesado relleno (verificado) o fuera de emiAutosGenB028.do sin mensajes; si la pantalla sigue con su validación → atasco.
+  const fin = Date.now() + (esperas.trasConfirmarMs ?? ESPERA_TRAS_CONFIRMAR_PERSONAS_MS)
+  let mensajes: string[] = []
+  let previos = ''
+  for (;;) {
+    await pausaMs(500)
+    if (await interesadoRellenoGenerali(marco)) return { hechos, diag: `rama=datos_personas, confirmado, verificado; ${hechos.join(',')}${omitidos.length ? `; omitido: ${omitidos.join(', ')}` : ''}` }
+    const enPantalla = !m.isDetached() && urlDatosPersonasGenerali(m.url())
+    mensajes = enPantalla ? mensajesValidacionGenerali(((await m.evaluate(JS_MENSAJES_DATOS_PERSONAS).catch(() => [])) as string[]) ?? []) : []
+    if (!enPantalla && Date.now() >= fin) return { hechos, diag: `rama=datos_personas, confirmado, fuera_de_B028_sin_verificar; ${hechos.join(',')}` }
+    const clave = mensajes.join('|')
+    if (enPantalla && mensajes.length > 0 && clave === previos) break
+    previos = clave
+    if (Date.now() >= fin) break
+  }
+  return parar(
+    mensajes.length ? `el portal no aceptó los datos: ${mensajes.map((x) => `«${x}»`).join(' · ')}` : 'tras «Confirmar» la pantalla no volvió a «Datos de Valoración» ni dio un mensaje legible',
+    mensajes.length ? 'validacion' : 'sin_vuelta',
+  )
+}
+
 /**
  * v0.2.22 · Si tras el rellenado normal el «Interesado / Tomador» sigue READONLY y VACÍO, pulsa UNA vez «Personas» (`ctx.pulsar`), espera lo que abre
  * (ventana nueva, marco o capa), busca el NIF del tomador y elige la fila SOLO si es la única y su documento coincide. Nunca crea una persona
@@ -1824,9 +1992,9 @@ async function interesadoRellenoGenerali(marco: Raiz): Promise<boolean> {
  */
 export async function elegirPersonaTomadorGenerali(
   marco: Raiz,
-  form: Parameters<typeof camposInteresadoGenerali>[0],
+  form: FormDatosPersonasGenerali,
   ctx: ContextoPortal,
-  esperas: { abrirMs?: number; resultadosMs?: number; vueltaMs?: number } = {},
+  esperas: { abrirMs?: number; resultadosMs?: number; vueltaMs?: number; autocompletarMs?: number; trasConfirmarMs?: number } = {},
 ): Promise<{ hechos: string[]; diag: string } | null> {
   if (!(await interesadoSoloLecturaVacioGenerali(marco))) return null
   const page = paginaDe(marco)
@@ -1853,6 +2021,7 @@ export async function elegirPersonaTomadorGenerali(
   let tabAntes = 0
   let raices: RaizAbierta[] = []
   const donde: { h: Hallazgo | null } = { h: null }
+  let datosPersonas: Frame | null = null
   for (;;) {
     for (const p of page.context().pages()) if (!antesP.has(p) && !cargadas.has(p)) { cargadas.add(p); await p.waitForLoadState('domcontentloaded', { timeout: 3_000 }).catch(() => undefined) }
     raices = raicesTrasPersonas(page, antesP, antesF, conBuscador)
@@ -1861,6 +2030,11 @@ export async function elegirPersonaTomadorGenerali(
       if (a) { donde.h = { ...a, rama: r.rama }; break }
     }
     if (donde.h) break
+    // v0.2.25: sin buscador, «Interesado / Tomador › Datos personas» (emiAutosGenB028.do) → alta con los datos del riesgo + «Confirmar» por el guard.
+    for (const r of raices) {
+      if (r.nuevo && (await esDatosPersonasGenerali(r.marco))) { datosPersonas = r.marco; break }
+    }
+    if (datosPersonas) break
     // El marco abierto no trae buscador pero sí la pestaña «Selección personas…»: se pulsa UNA vez (nunca «Confirmar» ni «Alta») y se sigue esperando.
     if (!tabPulsada) {
       for (const r of raices) {
@@ -1877,6 +2051,10 @@ export async function elegirPersonaTomadorGenerali(
     }
     if (Date.now() >= finAbrir) break
     await pausaMs(400)
+  }
+  if (datosPersonas) {
+    const r = await altaDatosPersonasGenerali(marco, datosPersonas, form, ctx, esperas)
+    return { hechos: ['tomador.datos_personas', ...r.hechos], diag: r.diag }
   }
   const inv = await inventarioPersonas(raices)
   const hallazgo = donde.h

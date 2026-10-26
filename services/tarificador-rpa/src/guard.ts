@@ -10,7 +10,17 @@
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
 import { ErrorTarificador } from './errores.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
-import { MEDIADOR_GENERALI, opcionMediadorGenerali } from './adapters/generali/reglas.ts'
+import {
+  ID_CONFIRMAR_DATOS_PERSONAS_GENERALI,
+  MEDIADOR_GENERALI,
+  PREFIJO_ID_DATOS_PERSONAS_GENERALI,
+  mensajesValidacionGenerali,
+  opcionMediadorGenerali,
+  pestanaDatosPersonasActivaGenerali,
+  tipoPestanaPersonasGenerali,
+  urlDatosPersonasGenerali,
+  type PestanaPersonasLeida,
+} from './adapters/generali/reglas.ts'
 import {
   EmisionBloqueadaError,
   MaquinaFases,
@@ -620,9 +630,25 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   guard.comprobar()
   await exigirSinCuentaBancaria(boton.page())
   // La MISMA descripción que el resto de puertas: control + ng-click + manejadores de sus ancestros cercanos.
-  comprobarBoton(await descripcion(boton))
+  const desc = await descripcion(boton)
+  comprobarBoton(desc)
+  // Generali (26/10/2026): un «Confirmar» de www.generali.es NUNCA por la vía genérica; solo por sus puertas acotadas
+  // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`).
+  if (confirmarDeGenerali(desc, await boton.evaluate(() => location.href).catch(() => ''))) throw new EmisionBloqueadaError('boton', 'Confirmar (Generali: solo por su puerta del guard)')
   await boton.click()
   guard.comprobar()
+}
+
+/** ¿Es un «Confirmar» (texto/valor/aria/title EXACTO, sin mayúsculas/tildes) de un marco de www.generali.es? PURA. */
+export function confirmarDeGenerali(desc: readonly (string | null)[], url: string): boolean {
+  let origen = ''
+  try {
+    origen = new URL(url).origin
+  } catch {
+    origen = ''
+  }
+  if (origen !== 'https://www.generali.es') return false
+  return [desc[0], desc[1], desc[2], desc[3]].some((x) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase() === 'confirmar')
 }
 
 // ─────────── Controles CONTEXTUALES de ePAC «Comunidades 2020» (guardados por fase) ───────────
@@ -1594,6 +1620,14 @@ export function decidirBotonGenerarProyectoMapfre(controles: readonly ControlPro
   if (elegidos.length > 1) {
     const en = elegidos.filter((x) => x.c.enCoberturas)
     if (en.length === 1) elegidos = en
+  }
+  // v0.8.18: el portal real repite el MISMO botón (duplicado del DOM). Si todos los candidatos tienen exactamente el mismo texto, se pulsa uno determinista:
+  // el único habilitado; con varios, el único de `app-coberturas` (no hay otra noción de «producto elegido» en el DOM) o, si no, el primero visible y habilitado.
+  // Textos distintos (p. ej. «Generar Proyecto» y «Guardar proyecto» a la vez) siguen siendo ambiguos.
+  if (elegidos.length > 1 && elegidos.every((x) => sinTildesMayus(x.c.etiqueta) === sinTildesMayus(elegidos[0]!.c.etiqueta))) {
+    const hab = elegidos.filter((x) => x.c.habilitado)
+    if (hab.length > 0) elegidos = [hab[0]!]
+    else elegidos = [elegidos[0]!]
   }
   if (elegidos.length > 1) return { motivo: `hay ${elegidos.length} botones finales de proyecto (ambiguo: no se pulsa ninguno)`, definitivo: true }
   const unico = elegidos[0]!
@@ -3517,6 +3551,102 @@ export async function marcarPlacasEspecialesGenerali(page: Page, guard: GuardEmi
   comprobarBoton(desc)
   await etiqueta.click()
   guard.comprobar()
+}
+
+// ─────────── v0.2.25: «Confirmar» de «Interesado / Tomador › Datos personas» de Generali (Alberto, 26/10/2026) ───────────
+// Alberto AUTORIZA que el bot rellene los datos del tomador y pulse «Confirmar» en ESA pantalla (marco `emiAutosGenB028.do`, pestaña
+// «Datos personas»). Puerta acotada: solo `#confirmar`, solo en ese marco (único), solo con la pestaña «Datos personas» activa y el NIF
+// relleno, una vez por trabajo, texto EXACTO «Confirmar» y `comprobarBoton`. Un diálogo nativo que salga se CANCELA (nunca se acepta) y
+// se devuelve saneado. Cualquier otro «Confirmar» de Generali sigue prohibido (`pulsar` lo rechaza).
+
+/** Lee las pestañas «Datos personas» / «Selección personas…» VISIBLES del marco (la más interna) y si llevan marca de activa. Solo lee. */
+const JS_PESTANAS_PERSONAS_GENERALI = `(() => {
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[.:]+$/g, '').replace(/\\s+/g, ' ').trim();
+  const vis = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const RE = /^(datos personas|seleccion personas( que intervienen)?)$/;
+  const out = [];
+  document.querySelectorAll('a,li,td,th,span,div,button,input[type=button],input[type=submit],[role=tab]').forEach((e) => {
+    if (!vis(e)) return;
+    const t = norm(e.tagName === 'INPUT' ? e.value : e.textContent);
+    if (!RE.test(t)) return;
+    for (const c of Array.from(e.children)) if (norm(c.tagName === 'INPUT' ? c.value : c.textContent) === t) return;
+    let activa = false;
+    for (let x = e, n = 0; x && n < 3 && !activa; x = x.parentElement, n++) {
+      if (x.getAttribute('aria-selected') === 'true' || x.getAttribute('aria-current') === 'page' || x.getAttribute('aria-current') === 'true') activa = true;
+      const cl = typeof x.className === 'string' ? x.className : '';
+      if (cl.split(/\\s+/).some((k) => !/inactiv|noactiv|desactiv|unselect|nosel/i.test(k) && (/activ|selected|seleccionad|current/i.test(k) || /^(on|sel)$/i.test(k)))) activa = true;
+    }
+    out.push({ texto: t, activa: activa });
+  });
+  return out.slice(0, 12);
+})()`
+
+/** Pestañas de personas del marco, ya clasificadas. Solo lee. */
+export async function leerPestanasPersonasGenerali(marco: Frame): Promise<PestanaPersonasLeida[]> {
+  const crudas = ((await marco.evaluate(JS_PESTANAS_PERSONAS_GENERALI).catch(() => [])) as { texto: string; activa: boolean }[]) ?? []
+  const out: PestanaPersonasLeida[] = []
+  for (const c of crudas) {
+    const tipo = tipoPestanaPersonasGenerali(c.texto)
+    if (tipo) out.push({ tipo, activa: !!c.activa })
+  }
+  return out
+}
+
+/** Espera tras «Confirmar» de «Datos personas» por si el portal abre un diálogo nativo (validación). */
+export const ESPERA_DIALOGO_DATOS_PERSONAS_GENERALI_MS = 1_500
+
+/**
+ * «Confirmar» de «Interesado / Tomador › Datos personas» de Generali, UNA vez por trabajo (autorizado por Alberto el 26/10/2026):
+ * guard limpio y sin ventanas de red; marco `emiAutosGenB028.do` de www.generali.es ÚNICO; en él el NIF del tomador visible y RELLENO;
+ * pestaña activa «Datos personas» (`pestanaDatosPersonasActivaGenerali`); exactamente un `#confirmar` visible, botón nativo, texto
+ * EXACTO «Confirmar»; `comprobarBoton` sobre su descripción completa. Devuelve el diálogo nativo que saliera (tipo + texto SANEADO),
+ * que se CANCELA. Cualquier hueco → no se pulsa.
+ */
+export async function pulsarConfirmarDatosPersonasGenerali(page: Page, guard: GuardEmision, esperaDialogoMs = ESPERA_DIALOGO_DATOS_PERSONAS_GENERALI_MS): Promise<{ dialogo: string | null }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Confirmar» de «Datos personas» de Generali con una ventana de red abierta')
+  const marcos = marcosVivos(page).filter((f) => urlDatosPersonasGenerali(f.url()))
+  if (marcos.length !== 1) throw new EmisionBloqueadaError('fase', `«Confirmar» de Generali fuera de «Interesado / Tomador» (${marcos.length} marcos emiAutosGenB028.do; hace falta exactamente uno)`)
+  const marco = marcos[0]!
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:confirmar-datos-personas')) throw new EmisionBloqueadaError('fase', '«Confirmar» de «Datos personas» de Generali ya se pulsó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const nif = marco.locator(`[id="${PREFIJO_ID_DATOS_PERSONAS_GENERALI}nifcif"]`).filter({ visible: true })
+  if ((await nif.count()) !== 1) throw new EmisionBloqueadaError('fase', '«Confirmar» de Generali sin el NIF de «Datos personas» visible (no es esa pestaña)')
+  if ((await nif.inputValue().catch(() => '')).trim() === '') throw new EmisionBloqueadaError('fase', '«Confirmar» de «Datos personas» de Generali con el NIF vacío')
+  const p = pestanaDatosPersonasActivaGenerali(await leerPestanasPersonasGenerali(marco), true)
+  if (!p.ok) throw new EmisionBloqueadaError('fase', `«Confirmar» de Generali fuera de la pestaña «Datos personas» (${p.motivo})`)
+  const boton = marco.locator(`[id="${ID_CONFIRMAR_DATOS_PERSONAS_GENERALI}"]`).filter({ visible: true })
+  if ((await boton.count()) !== 1) throw new ErrorMapaGuardGenerali('el botón #confirmar de «Datos personas» (no hay exactamente uno visible)')
+  const clase = await boton.evaluate((e) => `${e.tagName.toLowerCase()}:${(e.getAttribute('type') ?? '').toLowerCase()}`)
+  if (!['input:button', 'input:submit', 'button:', 'button:button', 'button:submit'].includes(clase)) throw new EmisionBloqueadaError('boton', `#confirmar no es un botón (${clase})`)
+  const desc = await descripcion(boton)
+  if (textoMenu(textoControl(desc)) !== textoMenu('Confirmar')) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
+  comprobarBoton(desc)
+  usados.add('generali:confirmar-datos-personas')
+  AVANCES_USADOS.set(guard, usados)
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= `${d.type()}: ${mensajesValidacionGenerali([d.message()])[0] ?? '(sin texto)'}`
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    try {
+      await boton.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+    } catch (e) {
+      if ((e as { name?: string } | null)?.name !== 'TimeoutError') throw e
+      guard.comprobar()
+      await boton.evaluate((el) => (el as HTMLElement).click())
+    }
+    guard.comprobar()
+    const fin = Date.now() + esperaDialogoMs
+    while (dialogo === null && Date.now() < fin) await page.waitForTimeout(150)
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+  guard.comprobar()
+  return { dialogo }
 }
 
 // ─────────── v0.2.14: potencia y fila de versión del selector de vehículos ───────────

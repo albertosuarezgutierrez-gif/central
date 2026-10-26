@@ -21,7 +21,7 @@ const NIF = '00000000T'
 const FORM = { documentoTomador: NIF, datosTomador: { tipo: 'fisica' as const, nombre: 'Ana', apellido1: 'Pérez', apellido2: 'Gil', fechaNacimiento: '1980-05-17' }, conductor: { fechaCarne: '2000-06-01' } }
 const ESPERAS = { abrirMs: 3_000, resultadosMs: 2_500, vueltaMs: 1_500 }
 
-test('v0.2.22 · versión (vigente 0.2.24)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.24'))
+test('v0.2.22 · versión (vigente 0.2.26)', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.26'))
 
 test('v0.2.22 · puras: documento exacto por celda y resumen saneado sin valores', () => {
   assert.equal(documentoNormalizadoGenerali(' 0000.0000-t '), '00000000T')
