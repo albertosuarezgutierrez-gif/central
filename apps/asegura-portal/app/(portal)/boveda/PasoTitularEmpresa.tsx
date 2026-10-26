@@ -143,7 +143,7 @@ export function PasoTitularEmpresa({ polizaId, nombre, cif, preseleccion = null,
             </label>
           ))}
           {error && <p className="editor-error" role="alert">{error}</p>}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="acciones">
             <button type="button" className="boton" onClick={() => guardar(rol)} disabled={guardando || rol === null} style={{ minHeight: 44 }}>
               {guardando ? 'Guardando…' : 'Guardar'}
             </button>

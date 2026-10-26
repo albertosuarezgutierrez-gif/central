@@ -2507,26 +2507,7 @@ h1 em {
   cursor: progress;
 }
 
-/* `.acciones` tampoco existía (existen `.alta-acciones` y `.editor-acciones`). */
-.acciones {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  /* 🚨 Sin estas dos líneas el par sale ESCALONADO y de dos alturas: el
-     `align-items: stretch` por defecto estira uno a la altura de la fila y
-     `.boton.auto` le suma su `margin-top: 10px` al otro (ese margen se
-     escribió para un botón que sigue a un párrafo, no para una rejilla).
-     Medido a 600 px: 44 px contra 54, y 10 px de desfase. */
-  align-items: start;
-}
-.acciones > .boton {
-  margin-top: 0;
-}
-@media (min-width: 420px) {
-  .acciones {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+/* `.acciones`: el contenedor ÚNICO de botones; su regla vive junto a las tarjetas (`.tarjeta-portal`). */
 
 /* El formulario, con la forma de la casa: la etiqueta FUERA y el control
    dentro. `.campo` puesto sobre un <label> o un <fieldset> se queda en
@@ -3790,7 +3771,9 @@ h1 em {
    * raíz) y era él el que quedaba debajo de la barra. `:has` para no reservar el hueco en las
    * páginas públicas, que no tienen barra. */
   body:has(.portal-tabbar) {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    /* Alto de la barra (60 + 1 del filete + la zona segura) MÁS 16 px de aire: el último botón de cada pantalla
+     * queda por encima de ella, no pegado (PWA instalada, 26/10/2026). */
+    padding-bottom: calc(77px + env(safe-area-inset-bottom, 0px));
   }
   /* La pestaña «WhatsApp» de la barra sustituye al botón flotante: dos en la misma pantalla
    * es uno de más. Fuera del portal (páginas públicas) y en escritorio el flotante sigue. */
@@ -4480,7 +4463,7 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
   overflow-wrap: anywhere;
 }
 .rejilla-portal > li > .tarjeta-portal { height: 100%; display: flex; flex-direction: column; }
-.rejilla-portal > li > .tarjeta-portal > .tarjeta-portal-accion { margin-top: auto; }
+.rejilla-portal > li > .tarjeta-portal > .tarjeta-portal-accion { margin-top: auto; padding-top: 16px; }
 .tarjeta-portal-cabecera {
   display: flex;
   flex-wrap: wrap;
@@ -4490,14 +4473,48 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
 }
 .tarjeta-portal-titulos { min-width: 0; flex: 1 1 12rem; }
 .tarjeta-portal > p:first-of-type { margin-top: 0; }
-.tarjeta-portal-accion { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
 .tarjeta-aviso { border-left: 4px solid var(--warn); }
 .tarjeta-peligro { border-left: 4px solid var(--danger); }
-.tarjeta-portal .boton {
-  width: auto;
+/* ── `.acciones`: el contenedor ÚNICO de botones (26/10/2026, Alberto: «los botones se pisan») ─────────────────────
+ * Una tarjeta con dos botones pintaba «Solicitar» (suelto en el cuerpo, `width:100%`) pegado a «Abrir…» (en su
+ * contenedor): sin `gap` porque cada uno vivía en un padre distinto. Ahora TODO botón de una tarjeta va dentro de
+ * `.acciones` (`TarjetaPortal` lo pone solo): flex con `gap` en las dos direcciones. Hasta 480 px, columna y botones a
+ * ancho completo; desde 481 px, fila con los botones a su ancho. Como mucho UN primario (`.boton`); el resto, `.secundario`
+ * (contorno) o `.enlace-boton`. `.acciones-nota` es la línea de texto/enlace que va DEBAJO, siempre en su propia fila.
+ * `align-items:stretch` en columna: sin él un `<a>` salía a su ancho y otro a todo el ancho (la captura de Alberto). */
+.acciones {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px 12px;
+  margin-top: 0;
+}
+.acciones > .boton,
+.acciones > .boton-tenue,
+.acciones > .boton-secundario {
+  width: 100%;
+  margin-top: 0;
   min-height: 44px;
   text-decoration: none;
 }
+.acciones > .acciones-nota,
+.acciones > [role='alert'] {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.acciones > [role='alert'] { color: inherit; }
+.acciones-nota .enlace-boton { font-size: inherit; min-height: 44px; padding-inline: 4px; }
+@media (min-width: 481px) {
+  .acciones { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .acciones > .boton,
+  .acciones > .boton-tenue,
+  .acciones > .boton-secundario { width: auto; }
+  .acciones > .acciones-nota,
+  .acciones > [role='alert'] { flex: 1 0 100%; }
+}
+.tarjeta-portal-accion { margin-top: 16px; }
+.tarjeta-portal .boton { text-decoration: none; }
 /* Una lista de cosas pendientes dentro de una tarjeta: cada fila es un enlace de ≥44 px. */
 .lista-pendiente { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .lista-pendiente a {
@@ -4519,7 +4536,8 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
 /* El estado vacío amable de Inicio. */
 .vacio-amable { text-align: center; }
 .vacio-amable .icono-grande { width: 48px; height: 48px; color: var(--brand); margin: 0 auto 8px; display: block; }
-.vacio-amable .tarjeta-portal-accion { justify-content: center; }
+.vacio-amable .tarjeta-portal-accion { justify-content: center; align-items: center; }
+.vacio-amable .tarjeta-portal-accion > .boton { width: auto; }
 
 /* Pantallas FUERA del armazón del portal (`/mi-alquiler`, `/inquilino`): sin menú, con el mismo aire y titular. */
 .pagina-portal-suelta {

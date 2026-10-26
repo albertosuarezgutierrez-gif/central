@@ -245,7 +245,7 @@ export function HojasQr({ hojas, cartera }: { hojas: HojaResumen[]; cartera: Opc
             papel, o alguien lo escaneará y pensará que le falla el móvil.
           </p>
 
-          <div className="acciones">
+          <div className="acciones" style={{ marginTop: 12 }}>
             <button type="button" className="boton auto" onClick={crear} disabled={enviando}>
               {enviando ? 'Creando…' : 'Crear la hoja'}
             </button>

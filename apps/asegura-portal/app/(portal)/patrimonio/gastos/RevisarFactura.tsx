@@ -130,7 +130,7 @@ function Revision({ s, clienteId, inmuebles, fin }: { s: Subida; clienteId: stri
         <label style={etiqueta}>Retención de IRPF, en € (opcional)<input className="campo" inputMode="decimal" value={retencion} disabled={ocupado} onChange={(e) => setRetencion(e.target.value)} /></label>
         <label style={etiqueta}>Total a pagar, en € (base + IVA − retención)<input className="campo" inputMode="decimal" value={total} required disabled={ocupado} onChange={(e) => setTotal(e.target.value)} /></label>
         {error && <p className="error-linea" role="alert" style={{ margin: 0 }}>{error}</p>}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="acciones">
           <button type="submit" className="boton" style={boton} disabled={ocupado}>{ocupado ? 'Guardando…' : 'Confirmar gasto'}</button>
           <button type="button" className="boton boton-secundario" style={boton} disabled={ocupado} onClick={() => void resolver({ accion: 'descartar' })}>Descartar factura</button>
         </div>
@@ -234,7 +234,7 @@ export function RevisarFactura({ clienteId, inmuebles }: { clienteId: string; in
         <input className="campo" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required disabled={subiendo} onChange={(e) => setFichero(e.target.files?.[0] ?? null)} />
       </label>
       {error && <p className="error-linea" role="alert" style={{ margin: 0 }}>{error}</p>}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div className="acciones">
         <button type="submit" className="boton" style={boton} disabled={subiendo}>{subiendo ? 'Leyendo la factura…' : 'Leer factura'}</button>
         <button type="button" className="boton boton-secundario" style={boton} disabled={subiendo} onClick={cerrar}>Cancelar</button>
       </div>

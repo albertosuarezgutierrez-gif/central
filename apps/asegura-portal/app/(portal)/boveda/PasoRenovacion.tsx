@@ -125,7 +125,7 @@ export function PasoRenovacion({ polizaId, motivos, onCerrar, onGuardado }: Prop
           />
         </div>
         {error && <p className="editor-error" role="alert">{error}</p>}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="acciones">
           <button type="submit" className="boton" disabled={guardando || !algoQueGuardar || primaMal} style={{ minHeight: 44 }}>
             {guardando ? 'Guardando…' : 'Guardar'}
           </button>

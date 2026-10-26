@@ -306,7 +306,7 @@ export function NombramientoPendiente({ autorizacionId, empresa, otorgadoEn }: {
         Verás sus vehículos con seguro en vigor, el vencimiento y la próxima ITV, y podrás anotar fechas de
         matriculación. No verás el resto de seguros de la sociedad. Al aceptar queda constancia de tu nombre.
       </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div className="acciones">
         <button type="button" className="boton" style={{ width: 'auto', flex: '1 1 140px' }} disabled={enCurso} onClick={() => void actuar('aceptar')}>
           Aceptar
         </button>

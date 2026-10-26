@@ -80,25 +80,30 @@ export default async function HerramientasPage() {
           </li>
         )}
         {ver.catalogo && (
-        <li>
-          <TarjetaPortal
-            id="herr-rrhh"
-            antetitulo="Para tu plantilla"
-            titulo="Portal del Empleado (RRHH)"
-            chip={rrhh?.disponibilidad ? <span className="chip">{ETIQUETA_DISPONIBILIDAD[rrhh.disponibilidad]}</span> : undefined}
-            accion={
-              <a className="boton" href={URL_PORTAL_EMPLEADO} target="_blank" rel="noopener noreferrer">
-                Abrir el Portal del Empleado
-              </a>
-            }
-          >
-            <p style={{ marginTop: 0 }}>
-              Fichaje, vacaciones, nóminas y documentos de tu plantilla, cada empleado con su acceso. Es otra aplicación,
-              con su propia dirección y su propio acceso.
-            </p>
-            {rrhh && <SolicitudModulo t={rrhh} />}
-          </TarjetaPortal>
-        </li>
+          <li>
+            <TarjetaPortal
+              id="herr-rrhh"
+              antetitulo="Para tu plantilla"
+              titulo="Portal del Empleado (RRHH)"
+              accion={
+                <>
+                  <a className="boton" href={URL_PORTAL_EMPLEADO} target="_blank" rel="noopener noreferrer">
+                    Abrir el Portal del Empleado
+                  </a>
+                  {rrhh && (rrhh.accion.tipo === 'solicitar' || rrhh.accion.tipo === 'apuntarse') && (
+                    <div className="acciones-nota">
+                      ¿Tu empresa aún no lo tiene? <BotonSolicitarModulo modulo={rrhh.id} rotulo="Solicítalo" variante="enlace" />
+                    </div>
+                  )}
+                </>
+              }
+            >
+              <p style={{ marginTop: 0 }}>
+                Fichaje, vacaciones, nóminas y documentos de tu plantilla. Es otra aplicación, con su propio acceso.
+              </p>
+              {rrhh && <EstadoSolicitud t={rrhh} />}
+            </TarjetaPortal>
+          </li>
         )}
       </ul>
 
@@ -120,35 +125,33 @@ export default async function HerramientasPage() {
 
 /** Una tarjeta del catálogo (Patrimonio, Flota): qué es, con qué seguros tiene que ver y su botón según el estado. */
 function TarjetaModuloPortal({ t }: { t: TarjetaModulo }) {
+  const a = t.accion
+  const pide = a.tipo === 'solicitar' || a.tipo === 'apuntarse'
   return (
     <TarjetaPortal
       id={`modulo-${t.id}`}
       antetitulo={t.id === 'flota' ? 'Empresa' : 'Inmuebles'}
       titulo={t.nombre}
       chip={t.disponibilidad !== null ? <span className="chip">{ETIQUETA_DISPONIBILIDAD[t.disponibilidad]}</span> : undefined}
-      accion={t.accion.tipo === 'abrir' ? <Link className="boton" href={t.accion.href}>Abrir</Link> : undefined}
+      accion={
+        a.tipo === 'abrir' ? (
+          <Link className="boton" href={a.href}>Abrir</Link>
+        ) : pide ? (
+          <BotonSolicitarModulo modulo={t.id} rotulo={a.tipo === 'apuntarse' ? 'Apuntarme' : 'Solicitar'} />
+        ) : undefined
+      }
     >
       <p style={{ marginTop: 0, marginBottom: 4 }}>{t.descripcion}</p>
       <p className="suave" style={{ marginTop: 0, fontSize: 14 }}>Relacionado con: {t.seguros}</p>
-      <SolicitudModulo t={t} />
+      {pide && <p className="suave" style={{ fontSize: 14 }}>{TEXTO_SOLICITUD_MODULO}</p>}
+      <EstadoSolicitud t={t} />
     </TarjetaPortal>
   )
 }
 
-/** Lo que cuelga del botón de pedir: el texto, el botón o el estado de lo ya pedido. Nada si ya se abre. */
-function SolicitudModulo({ t }: { t: TarjetaModulo }) {
+/** El estado de lo ya pedido (o activo, o sin comprobar). El botón de pedir NO va aquí: va en `.acciones` de la tarjeta. */
+function EstadoSolicitud({ t }: { t: TarjetaModulo }) {
   const a = t.accion
-  if (a.tipo === 'solicitar' || a.tipo === 'apuntarse') {
-    return (
-      <>
-        <p className="suave" style={{ fontSize: 14 }}>
-          {TEXTO_SOLICITUD_MODULO}
-          {t.id === 'rrhh' && ' Si aún no tienes acceso, pídelo aquí y te enviaremos el acceso cuando lo activemos.'}
-        </p>
-        <BotonSolicitarModulo modulo={t.id} rotulo={a.tipo === 'apuntarse' ? 'Apuntarme' : 'Solicitar'} />
-      </>
-    )
-  }
   if (a.tipo === 'solicitado') {
     return (
       <p className="aviso-linea" role="status" style={{ marginBottom: 0 }}>

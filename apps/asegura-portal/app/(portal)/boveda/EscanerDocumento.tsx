@@ -167,7 +167,7 @@ export function EscanerDocumento({ polizaFija }: { polizaFija?: string } = {}) {
           </div>
           {ia && legible && <p className="editor-ayuda" role="status" aria-live="polite">Lo hemos leído de tu documento; revisa que sea correcto. No es un dato confirmado por tu compañía.</p>}
           {tipo === 'carta_impago' && <p className="editor-error" role="alert">Contacta con tu corredor: una carta de impago puede acabar en la baja de la póliza.</p>}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="acciones">
             <button type="button" className="boton" style={{ minHeight: 44 }} onClick={() => void archivar()} disabled={tipo === '' || fase === 'archivando'}>
               {fase === 'archivando' ? 'Guardando…' : 'Confirmar y guardar'}
             </button>

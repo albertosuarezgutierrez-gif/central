@@ -12,7 +12,16 @@ const ERRORES: Record<string, string> = {
 }
 
 /** Pide (o apunta a) un módulo. La identidad la pone la cookie; aquí solo viaja el id del módulo. */
-export function BotonSolicitarModulo({ modulo, rotulo }: { modulo: ModuloPortal; rotulo: string }) {
+export function BotonSolicitarModulo({
+  modulo,
+  rotulo,
+  variante = 'boton',
+}: {
+  modulo: ModuloPortal
+  rotulo: string
+  /** `enlace`: la solicitud como acción SECUNDARIA (texto subrayado de 44 px), no un segundo botón primario. */
+  variante?: 'boton' | 'enlace'
+}) {
   const router = useRouter()
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +51,7 @@ export function BotonSolicitarModulo({ modulo, rotulo }: { modulo: ModuloPortal;
 
   return (
     <>
-      <button type="button" className="boton" onClick={pedir} disabled={enviando} aria-busy={enviando}>
+      <button type="button" className={variante === 'enlace' ? 'enlace-boton' : 'boton'} onClick={pedir} disabled={enviando} aria-busy={enviando}>
         {enviando ? 'Enviando…' : rotulo}
       </button>
       {error && <p role="alert" className="aviso-linea">{error}</p>}
