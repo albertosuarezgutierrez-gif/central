@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-26T13:16:33Z",
-  "sha": "2f3505390180f741429216f7e11509e80d95b049",
+  "generadoEn": "2026-10-26T14:31:23Z",
+  "sha": "143a6dcf54d5aefe742ea159221ad5ffac147b1b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4308,7 +4308,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 113
+          "linea": 111
         },
         {
           "nombre": "Titular",
@@ -4316,7 +4316,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, bajasAbiertas = null, bajasParaMejorar = null, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date /** Solo en «mias»:",
           "retorno": null,
-          "linea": 978,
+          "linea": 902,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -4325,7 +4325,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], /** De `polizasParaParte`: la única fuente de si se puede dar parte de ella. */ puedeParte: boolean, titular?: string, /** El titular tal como figura, para el mensaje a la compañía (propi",
           "retorno": "PolizaOpcionParte",
-          "linea": 1043,
+          "linea": 967,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -4333,7 +4333,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "05777890a6d4"
+      "hash": "3cb9f3ffcd19"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -5372,45 +5372,6 @@
       "hash": "9f7266572190"
     },
     {
-      "ruta": "apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "Recordatorios"
-      ],
-      "funciones": [
-        {
-          "nombre": "opcionRepiteDe",
-          "kind": "function",
-          "exportada": false,
-          "params": "meses: number | null",
-          "retorno": "string",
-          "linea": 45
-        },
-        {
-          "nombre": "Recordatorios",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ recordatorios, polizas, precargas, carnetsIlegibles, }: { recordatorios: RecordatorioVista[] /** Para poder decir «ITV del Ibiza» en vez de «ITV»: Alberto, 13/09/2026 * («lo lógico es asignarlo al bien asegurado»). La MISMA lista que ya a",
-          "retorno": null,
-          "linea": 66
-        },
-        {
-          "nombre": "etiquetaMeses",
-          "kind": "function",
-          "exportada": false,
-          "params": "meses: number",
-          "retorno": "string",
-          "linea": 424
-        }
-      ],
-      "tablas": [
-        "next",
-        "react"
-      ],
-      "rutaApi": null,
-      "hash": "e8dc742b6443"
-    },
-    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/RestaurarPoliza.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5762,13 +5723,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16,
+          "linea": 17,
           "resumen": "«Cuenta» (26/10/2026, menú de cinco): lo que es de la PERSONA y no de sus seguros. Datos de contacto (que siguen viviendo en `/boveda?vista=datos`, con su derecho de supresión), Configuración (avisos "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db956f4d07e3"
+      "hash": "271fcc102e3b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/FlotaEmpresa.tsx",
@@ -5902,6 +5863,112 @@
       "hash": "a1769ebc2860"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/herramientas/calendario/ListaCalendario.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "ListaCalendario"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "cuando",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EntradaCalendario",
+          "retorno": "string",
+          "linea": 31
+        },
+        {
+          "nombre": "ListaCalendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ entradas, tope }: { entradas: EntradaCalendario[]; tope: number }",
+          "retorno": null,
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4cfa91c6e4fe"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/herramientas/calendario/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CalendarioPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "motivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "string",
+          "linea": 48
+        },
+        {
+          "nombre": "CalendarioPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 63,
+          "resumen": "«Calendario» (26/10/2026, Alberto: «un solo Calendario»): LA vista de fechas del portal, en Herramientas. Junta lo que antes estaba en tres sitios —la pestaña «Recordatorios» de la bóveda, la tarjeta "
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "8ebfd4c5bfbe"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/herramientas/calendario/Recordatorios.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Recordatorios"
+      ],
+      "funciones": [
+        {
+          "nombre": "opcionRepiteDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "meses: number | null",
+          "retorno": "string",
+          "linea": 45
+        },
+        {
+          "nombre": "Recordatorios",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ recordatorios, polizas, precargas, carnetsIlegibles, }: { /** `null` = NO se han podido leer (≠ `[]`, «no tienes ninguno»): se dice, no se pinta vacío. */ recordatorios: RecordatorioVista[] | null /** Para poder decir «ITV del Ibiza» en v",
+          "retorno": null,
+          "linea": 66
+        },
+        {
+          "nombre": "etiquetaMeses",
+          "kind": "function",
+          "exportada": false,
+          "params": "meses: number",
+          "retorno": "string",
+          "linea": 437
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "354525f2ac51"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5914,7 +5981,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 29,
+          "linea": 30,
           "resumen": "«Herramientas» (26/10/2026, menú de cinco): LA ventana de las herramientas. Patrimonio, Flota, el calendario y Mi resumen (lo que antes estaba repartido entre Inicio y el menú), el Portal del Empleado"
         },
         {
@@ -5923,7 +5990,7 @@
           "exportada": false,
           "params": "{ t }: { t: TarjetaModulo }",
           "retorno": null,
-          "linea": 114,
+          "linea": 117,
           "resumen": "Una tarjeta del catálogo (Patrimonio, Flota): qué es, con qué seguros tiene que ver y su botón según el estado."
         },
         {
@@ -5932,13 +5999,13 @@
           "exportada": false,
           "params": "{ t }: { t: TarjetaModulo }",
           "retorno": null,
-          "linea": 131,
+          "linea": 134,
           "resumen": "Lo que cuelga del botón de pedir: el texto, el botón o el estado de lo ya pedido. Nada si ya se abre."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a1e8ebb92f60"
+      "hash": "8cec86bde37f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/page.tsx",
@@ -6021,13 +6088,13 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 26,
+          "linea": 27,
           "resumen": "El armazón de las pantallas con sesión. 🚨 **Vive en el `layout` y no en cada página**, y eso es lo que arregla el fallo que se veía: hasta ahora cada página abría su propio `<main>` con un `maxWidth:"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ec630aec3d1f"
+      "hash": "259ba1db8612"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/loading.tsx",
@@ -6061,7 +6128,7 @@
           "nombre": "NavPortal",
           "kind": "function",
           "exportada": true,
-          "params": "{ llamar, whatsapp }: { llamar?: { tel: string; numero: string } /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */ whatsapp?: string }",
+          "params": "{ visibles, llamar, whatsapp }: { /** Las entradas que se ofrecen a esta sesión (`menuDeSesion`). Sin ella, las cinco. Solo visibilidad. */ visibles?: readonly SeccionPortal[] llamar?: { tel: string; numero: string } /** El enlace `wa.me` y",
           "retorno": null,
           "linea": 51,
           "resumen": "La navegación del portal: **un solo `<nav>` con dos formas**. 🚨 El mismo DOM se pinta como cajón (drawer) en el móvil y como lateral vertical en el escritorio; lo decide `globals.css` (`.portal-nav`)"
@@ -6072,7 +6139,7 @@
           "exportada": false,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 267,
+          "linea": 269,
           "resumen": "── Iconos de la barra inferior ───────────────────────────────────────────── SVG en línea y no una librería: el portal no carga ninguna de iconos y una dependencia nueva por cinco dibujos no compensa."
         },
         {
@@ -6081,7 +6148,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 275
+          "linea": 277
         },
         {
           "nombre": "IconoInicio",
@@ -6089,7 +6156,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 276
+          "linea": 278
         },
         {
           "nombre": "IconoHerramientas",
@@ -6097,7 +6164,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 277
+          "linea": 279
         },
         {
           "nombre": "IconoMas",
@@ -6105,12 +6172,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 278
+          "linea": 280
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb75232e41bd"
+      "hash": "6494fe27805f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/AvisoPolizaSinInmueble.tsx",
@@ -6155,38 +6222,22 @@
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/calendario/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
-        "CalendarioPatrimonioPage"
+        "CalendarioPatrimonioRedirige"
       ],
       "funciones": [
         {
-          "nombre": "fechaEs",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "f: string",
-          "retorno": null,
-          "linea": 9
-        },
-        {
-          "nombre": "cuando",
-          "kind": "function",
-          "exportada": false,
-          "params": "dias: number | null, vence: string | null",
-          "retorno": "string",
-          "linea": 18
-        },
-        {
-          "nombre": "CalendarioPatrimonioPage",
+          "nombre": "CalendarioPatrimonioRedirige",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 30,
-          "resumen": "«Calendario y avisos» del patrimonio (24/10/2026, P13). 🚨 Todo parte de `accesosPatrimonio()` (dentro de `calendarioDeIdentidad`): solo los inmuebles de los titulares que esta sesión ve. Una lectura "
+          "linea": 10,
+          "resumen": "`/patrimonio/calendario` ya no es una pantalla (26/10/2026, «un solo Calendario»): sus fechas están en el calendario único de Herramientas, con los vencimientos, los recibos, los avisos y los recordat"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aa2561add9da"
+      "hash": "8a1c04db5e07"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/contrato/[id]/ContratoAcciones.tsx",
@@ -6814,7 +6865,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd4536e51ec3"
+      "hash": "e6bd830ea45e"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/SegurosInmueble.tsx",
@@ -6967,7 +7018,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "89746535f152"
+      "hash": "5a1eb2a99bd2"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/fiscal/page.tsx",
@@ -7320,7 +7371,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "string | null",
-          "linea": 50,
+          "linea": 51,
           "resumen": "Las cabeceras de procedencia, para poder demostrar el consentimiento (art. 7.1 RGPD). `null` cuando no vienen: **no se inventa una IP**. 🚨 `x-forwarded-for` es una LISTA (`cliente, proxy1, proxy2`) y"
         },
         {
@@ -7329,7 +7380,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "string | null",
-          "linea": 60
+          "linea": 61
         },
         {
           "nombre": "GET",
@@ -7337,7 +7388,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 65
+          "linea": 66
         },
         {
           "nombre": "POST",
@@ -7345,13 +7396,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 94,
+          "linea": 95,
           "resumen": "José concede: «que María pueda ver los seguros de esta ficha mía». Nace PENDIENTE de que ella acepte. Si la ficha que cede es una SOCIEDAD, lo que se concede puede ser además representación (`partes`,"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/autorizaciones",
-      "hash": "29340668717e"
+      "hash": "432d5f79cb95"
     },
     {
       "ruta": "apps/asegura-portal/app/api/avisos/leido/route.ts",
@@ -9778,7 +9829,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 25,
+          "linea": 26,
           "resumen": "Alta de un recordatorio PROPIO (ITV, carnet, caldera… o texto libre), y opcionalmente colgado de UNA póliza (para poder decir «ITV del Ibiza» en vez de «ITV» a secas — Alberto, 13/09/2026: «lo lógico "
         }
       ],
@@ -9786,7 +9837,7 @@
         "next"
       ],
       "rutaApi": "/api/recordatorios",
-      "hash": "9535051e89a4"
+      "hash": "8c65e89c2052"
     },
     {
       "ruta": "apps/asegura-portal/app/api/salir/route.ts",
@@ -10024,7 +10075,7 @@
           "nombre": "CabeceraEnlaces",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ herramientas = true }: { herramientas?: boolean }",
           "retorno": null,
           "linea": 18,
           "resumen": "Los dos botones de la cabecera, «Herramientas» y «Seguros» (26/10/2026, decisión de Alberto): la MISMA cabecera que lleva el Portal del Empleado (`apps/rrhh`), donde «Herramientas» es el propio RRHH y"
@@ -10032,7 +10083,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07ca4e834ad4"
+      "hash": "cc7dd1e1e350"
     },
     {
       "ruta": "apps/asegura-portal/app/CabeceraEnlacesSesion.tsx",
@@ -10047,13 +10098,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "`CabeceraEnlaces` solo con sesión, igual que `SalirDelPortal` (misma comprobación: se VERIFICA el token, no se mira que la cookie exista; sin BD). La cabecera la ven también la entrada y las páginas l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c71fff10cc42"
+      "hash": "49fd2d277272"
     },
     {
       "ruta": "apps/asegura-portal/app/Campana.tsx",
@@ -12184,6 +12235,86 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "89c68eb0a606"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/calendario-portal.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El CALENDARIO ÚNICO (26/10/2026): de lo que ya lee el portal a las filas que compone `componerCalendario` (`@central/module-seguros-portal`, pura). PURO: sin prisma, sin sesión, sin reloj. Quien llama ya acotó cada lista a lo que ESTA sesión ve (cartera por `portal_vinculo`/`portal_autorizacion`, pa",
+      "exporta": [
+        "diaIso",
+        "vencimientosDeSeguros",
+        "recibosPendientes",
+        "fechasDePatrimonio",
+        "fechasDeRecordatorios",
+        "avisosConFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "diaIso",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date | null | undefined",
+          "retorno": "string | null",
+          "linea": 27,
+          "resumen": "`YYYY-MM-DD` de una columna `date` (medianoche UTC) o `null`."
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "vencimientosDeSeguros",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulares: readonly TitularParaCalendario<P>[], titulo: (p: P) => string,",
+          "retorno": "EntradaCalendarioCruda[]",
+          "linea": 46,
+          "resumen": "Los vencimientos de los seguros que la sesión ve. Fuera lo que la compañía da por terminado (`no_vigente`) y las ya sustituidas. 🚨 Una renovación sin confirmar NO es «vencida»: no se sabe si renovó, "
+        },
+        {
+          "nombre": "recibosPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulares: readonly TitularParaCalendario<P>[], titulo: (p: P) => string,",
+          "retorno": "EntradaCalendarioCruda[]",
+          "linea": 79,
+          "resumen": "Los recibos que piden algo: al cobro y devueltos. Solo de las pólizas cuyo bloque de recibos SE VE en este nivel (`recibos === null` = no visible: se omite, no se dice «sin recibos»). Un anulado no en"
+        },
+        {
+          "nombre": "fechasDePatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "vs: readonly VencimientoPatrimonioParaCalendario[]",
+          "retorno": "EntradaCalendarioCruda[]",
+          "linea": 119,
+          "resumen": "Las fechas del patrimonio. Lo ya hecho (`cumplida`) no es una fecha por delante y no entra."
+        },
+        {
+          "nombre": "fechasDeRecordatorios",
+          "kind": "function",
+          "exportada": true,
+          "params": "rs: readonly RecordatorioParaCalendario[]",
+          "retorno": "EntradaCalendarioCruda[]",
+          "linea": 141,
+          "resumen": "Los recordatorios propios. El enlace lleva al editor (`#tus-recordatorios`), que está en la misma pantalla."
+        },
+        {
+          "nombre": "avisosConFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: readonly Aviso[]",
+          "retorno": "EntradaCalendarioCruda[]",
+          "linea": 152,
+          "resumen": "Los avisos de la campana que son una fecha (los demás no son calendario). Sin fecha propia: el texto la lleva."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0c43807e25da"
     },
     {
       "ruta": "apps/asegura-portal/lib/callejero-vias.ts",
@@ -15943,6 +16074,46 @@
       "hash": "5e80e420ba35"
     },
     {
+      "ruta": "apps/asegura-portal/lib/menu-portal.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Qué entradas del menú se OFRECEN a esta sesión (26/10/2026, «menú adaptado por tipo»). Lee los hechos con la BD y deja la decisión a la regla pura (`entradasVisibles` & co. de `@central/module-seguros-portal/menu-visible`). 🚨 SOLO VISIBILIDAD. Esto no abre ni cierra ninguna pantalla: cada una sigue",
+      "exporta": [
+        "hechosDeMenu"
+      ],
+      "funciones": [
+        {
+          "nombre": "nivelDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "Nivel",
+          "linea": 44
+        },
+        {
+          "nombre": "leyo",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: PromiseSettledResult<T>, que: string",
+          "retorno": "T | null",
+          "linea": 48
+        },
+        {
+          "nombre": "hechosDeMenu",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<HechosMenu>",
+          "linea": 55,
+          "resumen": "Los hechos de ESTA identidad. Cada uno `null` si su lectura falló."
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "6e1bef5d95a3"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/mis-datos.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "«Mis datos» — el portal manda a asegura lo que el cliente escribió, y le pide lo que la ficha tiene para que pueda verlo; y «Comprueba tus datos de contacto» — el aviso automático que le pregunta si sigue siendo lo mismo. ─── Por qué el portal NO lo escribe (ni lo lee) él mismo ─────────────────── `",
@@ -16682,7 +16853,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e20de93e38a"
+      "hash": "ae4de90f320a"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/calendario-bd.ts",
@@ -19642,7 +19813,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9c8be2780111"
+      "hash": "37f2b362ad9d"
     },
     {
       "ruta": "apps/asegura-portal/lib/personas-poliza.ts",
@@ -20893,6 +21064,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9db5d31ec4e4"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/puertas-portal.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Las PUERTAS de servidor que cierran lo que el menú no ofrece (26/10/2026): un autorizado puro que escribe a mano `/herramientas/calendario` vuelve a `/inicio`, y su `POST` a `/api/recordatorios` o `/api/autorizaciones` es un 403. La regla NO está aquí: es `puertaAbierta()` de `@central/module-seguro",
+      "exporta": [
+        "puertaDeSesion"
+      ],
+      "funciones": [
+        {
+          "nombre": "puertaDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "puerta: PuertaPortal, modo: ModoPuerta",
+          "retorno": "Promise<boolean>",
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "75789cbc2ace"
     },
     {
       "ruta": "apps/asegura-portal/lib/push-estado.ts",
@@ -218161,7 +218353,7 @@
           "exportada": true,
           "params": "faltan: number | null",
           "retorno": "(typeof UMBRALES_AVISO_CARNET)[number] | null",
-          "linea": 71,
+          "linea": 72,
           "resumen": "El tramo en el que está un carné al que le faltan `faltan` días: el MENOR umbral que aún no se ha pasado (`faltan` 45 → 90, 30 → 30, 8 → 30, 7 → 7, 1 → 7, 0 → 0). `null` fuera de ventana (más de 90, o"
         },
         {
@@ -218170,7 +218362,7 @@
           "exportada": true,
           "params": "a: Pick<Aviso, 'tipo' | 'id'>, ciclo?: string",
           "retorno": "string",
-          "linea": 145,
+          "linea": 146,
           "resumen": "La clave con la que se sella un aviso leído: `tipo:id`, y con la fecha del ciclo cuando la fila se reutiliza año tras año (vencimiento de la cartera, carné). Si CIMA corrige la fecha dentro de la vent"
         },
         {
@@ -218179,7 +218371,7 @@
           "exportada": true,
           "params": "clave: string",
           "retorno": "boolean",
-          "linea": 150,
+          "linea": 151,
           "resumen": "¿Es una clave de un aviso descartable? La ruta que sella no acepta otra cosa."
         },
         {
@@ -218188,7 +218380,7 @@
           "exportada": false,
           "params": "polizaId: string | null | undefined, porDefecto: string",
           "retorno": "string",
-          "linea": 158,
+          "linea": 159,
           "resumen": "Enlace a la ficha de UNA póliza de la cartera, o la bóveda si no se sabe cuál."
         },
         {
@@ -218197,7 +218389,7 @@
           "exportada": true,
           "params": "c: Pick<CarnetParaAviso, 'tipo' | 'titular'>",
           "retorno": "string",
-          "linea": 239,
+          "linea": 240,
           "resumen": "«tu carné de conducir (B)» o, con titular, «el carné de conducir (B) de Ana Pérez»."
         },
         {
@@ -218206,7 +218398,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 244
+          "linea": 245
         },
         {
           "nombre": "diaIso",
@@ -218214,7 +218406,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 380,
+          "linea": 381,
           "resumen": "`YYYY-MM-DD` en UTC. Se usa para el id por ciclo de una obligación: tiene que ser estable (el mismo ciclo, la misma clave) y no depender del huso."
         },
         {
@@ -218223,7 +218415,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 385
+          "linea": 386
         },
         {
           "nombre": "entraEnVentanaCarnet",
@@ -218231,7 +218423,7 @@
           "exportada": true,
           "params": "fechaCaducidad: string, hoy: Date",
           "retorno": "boolean",
-          "linea": 390,
+          "linea": 391,
           "resumen": "`YYYY-MM-DD` dentro de la ventana del carné (90 días), a fecha `hoy`. Mismo criterio que `entraEnVentana()`: solo futuro."
         },
         {
@@ -218240,7 +218432,7 @@
           "exportada": false,
           "params": "fechaCaducidad: string, hoy: Date",
           "retorno": "number | null",
-          "linea": 406,
+          "linea": 407,
           "resumen": "Días que faltan para que caduque (negativos si YA caducó), o `null` si la fecha no es una fecha. Se saca aparte porque lo necesitan las dos ventanas y con dos parseos acabarían discrepando en el borde"
         },
         {
@@ -218249,7 +218441,7 @@
           "exportada": false,
           "params": "fechaCaducidad: string, hoy: Date",
           "retorno": "string | null",
-          "linea": 424,
+          "linea": 425,
           "resumen": "El día del carné en castellano, o `null` si la fecha no es una fecha. 🚨 Devuelve `null` en vez de lanzar, y se llama DESPUÉS de que una de las dos ventanas haya dicho que sí. Formatearlo antes —que e"
         },
         {
@@ -218258,7 +218450,7 @@
           "exportada": true,
           "params": "fechaCaducidad: string, hoy: Date",
           "retorno": "boolean",
-          "linea": 436,
+          "linea": 437,
           "resumen": "El carné YA caducó y la fecha es lo bastante reciente como para afirmarlo. 🚨 Es EXCLUYENTE con `entraEnVentanaCarnet` por construcción (aquella exige `faltan >= 0` y esta `faltan < 0`): un mismo carn"
         },
         {
@@ -218267,7 +218459,7 @@
           "exportada": true,
           "params": "n: number, ilegibles: number, fuentes: number",
           "retorno": "string | null",
-          "linea": 447,
+          "linea": 448,
           "resumen": "· ninguna legible → `!` (no se sabe nada)."
         },
         {
@@ -218276,12 +218468,12 @@
           "exportada": true,
           "params": "x: EntradaAvisos",
           "retorno": "Avisos",
-          "linea": 453
+          "linea": 454
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f23d7006264"
+      "hash": "c7ed98812737"
     },
     {
       "ruta": "packages/module-seguros-portal/src/bien-asegurado.ts",
@@ -218399,6 +218591,71 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c0b076a5fbe5"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/calendario-unico.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "EL CALENDARIO ÚNICO del portal (26/10/2026, Alberto): hasta hoy había TRES «calendarios» —la pestaña «Recordatorios» de la bóveda, la tarjeta «Calendario» de Inicio y `/patrimonio/calendario`— más la campana «Avisos». Ahora es UNA vista (Herramientas → Calendario) que junta vencimientos de seguros, ",
+      "exporta": [
+        "diasHastaDia",
+        "avisosDeFechaIncompletos",
+        "componerCalendario"
+      ],
+      "funciones": [
+        {
+          "nombre": "epochDia",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "number | null",
+          "linea": 59
+        },
+        {
+          "nombre": "diasHastaDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | null, hoy: string",
+          "retorno": "number | null",
+          "linea": 68,
+          "resumen": "Días que faltan desde `hoy` hasta `fecha`; negativo si ya pasó; `null` si alguna no es una fecha."
+        },
+        {
+          "nombre": "tramoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "dias: number | null",
+          "retorno": "EntradaCalendario['tramo']",
+          "linea": 76
+        },
+        {
+          "nombre": "completar",
+          "kind": "function",
+          "exportada": false,
+          "params": "origen: OrigenCalendario, e: EntradaCalendarioCruda, hoy: string",
+          "retorno": "EntradaCalendario",
+          "linea": 83
+        },
+        {
+          "nombre": "avisosDeFechaIncompletos",
+          "kind": "function",
+          "exportada": true,
+          "params": "fuentesIlegibles: readonly string[]",
+          "retorno": "boolean",
+          "linea": 105,
+          "resumen": "¿Los avisos de fecha de la campana están incompletos porque alguna de sus fuentes no se leyó?"
+        },
+        {
+          "nombre": "componerCalendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { hoy: string fuentes: Record<OrigenCalendario, FuenteCalendario> /** Fuentes que SÍ trajeron datos pero a medias (p. ej. a la campana le falló una fuente): se declaran igual. */ incompletas?: readonly OrigenCalendario[] }",
+          "retorno": "CalendarioCompuesto",
+          "linea": 109
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "054fb480e5ee"
     },
     {
       "ruta": "packages/module-seguros-portal/src/campos-ramo.ts",
@@ -220005,6 +220262,103 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4cfae716f3de"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/menu-visible.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "QUÉ ENTRADAS DEL MENÚ VE CADA PERSONA (26/10/2026, decisión de Alberto: «menú adaptado por tipo»). 🚨 Las entradas son VISIBILIDAD: los DATOS de cada pantalla los sigue aislando su CÓDIGO (`accesosPatrimonio`, `accesosFlota`, `carteraDeIdentidad`…); que se ofrezca un enlace no abre nada de nadie. La",
+      "exporta": [
+        "esTitular",
+        "entradasVisibles",
+        "herramientasVisibles",
+        "contactosVisibles",
+        "contactosEnCuenta",
+        "puertaAbierta"
+      ],
+      "funciones": [
+        {
+          "nombre": "algunoPositivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "valores: ReadonlyArray<number | null>",
+          "retorno": "boolean | null",
+          "linea": 52,
+          "resumen": "`true` si hay al menos uno > 0; `null` si ninguno es > 0 pero alguno no se pudo comprobar; `false` si todos son 0."
+        },
+        {
+          "nombre": "seOfrece",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: boolean | null",
+          "retorno": "boolean",
+          "linea": 59,
+          "resumen": "`true` solo si SE SABE que no (todos comprobados y a cero); lo dudoso se ofrece."
+        },
+        {
+          "nombre": "esTitular",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: HechosMenu",
+          "retorno": "boolean | null",
+          "linea": 67,
+          "resumen": "¿La persona es TITULAR de algo propio (ficha en la cartera o póliza que ella aportó)? Quien solo tiene accesos que otros le han dado no lo es."
+        },
+        {
+          "nombre": "entradasVisibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: HechosMenu",
+          "retorno": "SeccionPortal[]",
+          "linea": 72,
+          "resumen": "Las entradas del menú de cinco que se OFRECEN, en el orden de `pestanasPortal()`."
+        },
+        {
+          "nombre": "herramientasVisibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: HechosMenu",
+          "retorno": "HerramientasVisibles",
+          "linea": 95
+        },
+        {
+          "nombre": "contactosVisibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: HechosMenu",
+          "retorno": "boolean",
+          "linea": 107,
+          "resumen": "¿Se ofrece «Contactos» en el menú? Si puede conceder, o si tiene algo por aceptar; lo dudoso se ofrece."
+        },
+        {
+          "nombre": "contactosEnCuenta",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: HechosMenu",
+          "retorno": "boolean",
+          "linea": 115,
+          "resumen": "¿Hay que ofrecer el enlace a «Contactos» dentro de «Cuenta» porque el menú no lo trae?"
+        },
+        {
+          "nombre": "sinDudas",
+          "kind": "function",
+          "exportada": false,
+          "params": "h: HechosMenu",
+          "retorno": "HechosMenu",
+          "linea": 141,
+          "resumen": "Los hechos con cada «no se pudo comprobar» tomado como «no». SOLO para decidir una escritura, nunca para pintar."
+        },
+        {
+          "nombre": "puertaAbierta",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: HechosMenu, puerta: PuertaPortal, modo: ModoPuerta",
+          "retorno": "boolean",
+          "linea": 153
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1c1ded4d1ea5"
     },
     {
       "ruta": "packages/module-seguros-portal/src/modulos.ts",
@@ -222441,7 +222795,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f7501e0192b2"
+      "hash": "8b6730dfd6d5"
     },
     {
       "ruta": "packages/module-seguros/src/aceptacion-presupuesto.ts",
@@ -249857,7 +250211,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5241,
-    "funciones": 20068
+    "archivos": 5248,
+    "funciones": 20097
   }
 }
