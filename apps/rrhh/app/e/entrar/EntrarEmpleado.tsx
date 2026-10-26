@@ -70,8 +70,8 @@ export default function EntrarEmpleado({ marcaAsegura = false }: { marcaAsegura?
   const btn = 'min-h-[44px] w-full'
 
   return (
-    <main className={`grid min-h-screen place-items-center p-4${marcaAsegura ? ' marca-asegura' : ''}`} style={estiloMarcaEmpresa(marcaAsegura, null) as React.CSSProperties}>
-      <div className="w-full max-w-sm rounded-[18px] border border-line bg-card p-6 text-center sm:p-7">
+    <main className={`flex min-h-screen flex-col items-center p-4${marcaAsegura ? ' marca-asegura' : ''}`} style={estiloMarcaEmpresa(marcaAsegura, null) as React.CSSProperties}>
+      <div className="my-auto w-full max-w-sm rounded-[18px] border border-line bg-card p-6 text-center sm:p-7">
         {marcaAsegura ? <LogoAsegura alto={40} color="var(--accent)" /> : <Wordmark className="text-2xl" />}
         <h1 className="mt-3 text-xl">Acceso empleado</h1>
 
@@ -125,7 +125,7 @@ export default function EntrarEmpleado({ marcaAsegura = false }: { marcaAsegura?
 
         {err && <p role="alert" className="mt-3 text-sm text-alert">{err}</p>}
       </div>
-    {marcaAsegura && <div className="absolute inset-x-0 bottom-0"><PieAsegura /></div>}
+    {marcaAsegura && <div className="mt-auto w-full"><PieAsegura /></div>}
     </main>
   )
 }
