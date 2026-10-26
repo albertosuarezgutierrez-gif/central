@@ -79,7 +79,7 @@ function Formulario({ titulo, children, error, enviando, onSubmit, onCancelar }:
       <h3 style={{ margin: 0 }}>{titulo}</h3>
       {children}
       {error && <p className="error-linea" role="alert" style={{ margin: 0 }}>{error}</p>}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div className="acciones">
         <button type="submit" className="boton" style={{ minHeight: 44 }} disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar'}</button>
         <button type="button" className="boton boton-secundario" style={{ minHeight: 44 }} disabled={enviando} onClick={onCancelar}>Cancelar</button>
       </div>

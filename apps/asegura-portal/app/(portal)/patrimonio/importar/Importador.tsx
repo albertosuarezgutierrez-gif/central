@@ -280,7 +280,7 @@ export function Importador({ titulares }: { titulares: { clienteId: string; nomb
           <button type="button" className="boton-tenue" style={{ minHeight: 44 }} onClick={() => setVerTodas(true)}>Ver las {filasVisibles.length - mostradas.length} restantes</button>
         )}
         {aviso}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="acciones">
           <button type="button" className="boton" style={{ minHeight: 44 }} disabled={ocupado || !abierta || vista.faltan.length > 0} onClick={() => accion('confirmar')}>
             {ocupado ? 'Trabajando…' : r && r.nuevas > 0 ? `Confirmar y crear ${r.nuevas}` : 'Confirmar'}
           </button>

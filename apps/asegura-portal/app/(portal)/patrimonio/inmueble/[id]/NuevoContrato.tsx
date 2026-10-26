@@ -114,7 +114,7 @@ export function NuevoContrato({ inmuebleId }: { inmuebleId: string }) {
         </select>
       </label>
       {error && <p className="error-linea" role="alert" style={{ margin: 0 }}>{error}</p>}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div className="acciones">
         <button type="submit" className="boton" style={{ minHeight: 44 }} disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar contrato'}</button>
         <button type="button" className="boton boton-secundario" style={{ minHeight: 44 }} disabled={enviando} onClick={() => setAbierto(false)}>Cancelar</button>
       </div>

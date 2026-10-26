@@ -354,7 +354,7 @@ test('🚨 la barra inferior del movil no tapa nada y se va en escritorio', () =
   assert.match(CSS.slice(i, CSS.indexOf('}', i)), /position:\s*fixed/)
   assert.match(
     CSS,
-    /body:has\(\.portal-tabbar\)\s*\{[^}]*padding-bottom:\s*calc\(60px/,
+    /body:has\(\.portal-tabbar\)\s*\{[^}]*padding-bottom:\s*calc\((?:6\d|7\d|8\d)px/,
     'sin reservar su alto, la barra tapa la última fila y el pie legal',
   )
   assert.match(

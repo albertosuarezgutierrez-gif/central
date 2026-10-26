@@ -57,6 +57,10 @@ const APPLE = {
   appleWebApp: { capable: true, title: 'Mis seguros', statusBarStyle: 'default' as const },
   icons: { apple: [{ url: '/icono-app', sizes: '512x512', type: 'image/png' }] },
 }
+// Viewport (26/10/2026): `theme-color` = el primario de marca (la barra del sistema de la PWA instalada, como el manifest).
+// SIN `viewport-fit=cover` a propósito: con él el contenido pasaría por debajo de la barra de inicio de iOS y habría que
+// repartir `env(safe-area-inset-*)` por cabecera y barra inferior; sin él el sistema ya deja la zona segura fuera.
+export const viewport = { width: 'device-width', initialScale: 1, themeColor: MARCA.paleta.primario }
 export const metadata = { title: 'Mis seguros — Grupo ASegura', robots: { index: false, follow: false }, ...APPLE }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
