@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   title: "iarrhh · Portal del Empleado",
   manifest: "/manifest.json",
   icons: { icon: "/icon.svg" },
+  // Datos personales: no indexar (ver también app/robots.ts y X-Robots-Tag en next.config.ts).
+  robots: { index: false, follow: false },
 }
 
 export const viewport: Viewport = { themeColor: "#2B6A6E" }

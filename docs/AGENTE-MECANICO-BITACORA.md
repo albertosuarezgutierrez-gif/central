@@ -76,3 +76,4 @@
 | 20/10/2026 | solo CLAUDE.md: regla permanente «Direcciones postales» (CP → provincia → calle Catastro → número) en Reglas globales | agente-mecanico | ok (sin tsc: solo docs) |
 | 20/10/2026 | docs: «cliente vivo» de ialimp reajustado en CLAUDE.md raíz y apps/ialimp/CLAUDE.md (sin uso humano desde 29/08/2026; sincronización iCal/Smoobu viva) | agente-mecanico | ok (sin tsc: solo docs) |
 | 26/10/2026 | rrhh: proporción del logo ASegura y pie del login en flujo (PR #5089) | agente-mecanico | ok (vitest 6/6, tsc rrhh ok) |
+| 26/10/2026 | rrhh: noindex (robots.ts, X-Robots-Tag, metadata) + test | agente-mecanico | ok (vitest 3/3; incidente: respaldo cp falló y hubo que restaurar next.config a mano) |
