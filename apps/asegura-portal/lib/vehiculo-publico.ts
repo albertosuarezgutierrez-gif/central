@@ -67,7 +67,9 @@ async function entradaDePersona(a: VehiculoAbierto, identidadDueno: string, hoy:
     canal: enVigor ? canalDeCompania(p.compania, companiasConCanal()) : null,
     semaforos: {
       itv: semaforoItv(itv),
-      seguro: semaforoSeguro(p === null ? null : { noVigente: p.vigencia === 'no_vigente', fechaVencimiento: dia(p.fechaVencimiento) }, hoy),
+      // La MISMA regla de «en vigor» que la bóveda (`cuentaComoEnVigor`): una renovación sin confirmar no es vencida,
+      // y una póliza terminada no dice «sin seguro» (puede estar asegurado en otra parte) → «no lo sabemos».
+      seguro: semaforoSeguro(p === null ? null : { enVigor, fechaVencimiento: dia(p.fechaVencimiento) }, hoy),
     },
     recordatorios: null,
   }
@@ -86,7 +88,7 @@ async function entradaDeEmpresa(a: VehiculoAbierto, empresaId: string, hoy: Date
     semaforos: {
       itv: semaforoItv(v?.itv ?? null),
       // La flota solo trae pólizas EN VIGOR: lo que no está es «no lo sabemos», nunca «vencido».
-      seguro: semaforoSeguro(v ? { noVigente: false, fechaVencimiento: v.vencimiento.fecha } : null, hoy),
+      seguro: semaforoSeguro(v ? { enVigor: true, fechaVencimiento: v.vencimiento.fecha } : null, hoy),
     },
     recordatorios: null,
   }

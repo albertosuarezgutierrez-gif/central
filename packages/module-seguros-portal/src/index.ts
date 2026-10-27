@@ -761,7 +761,7 @@ export type {
   TipoRecordatorioVehiculo,
   VistaPublicaVehiculo,
 } from './vehiculo-publico.ts'
-export { MAX_ETIQUETAS_LOTE, ambitoDeDefecto, empresasGestionables, esUuid, resolverGestionVehiculo } from './vehiculo-acceso.ts'
+export { MAX_ETIQUETAS_LOTE, ambitoDeDefecto, candidatosDelLote, instanteDelLote, empresasGestionables, esUuid, resolverGestionVehiculo } from './vehiculo-acceso.ts'
 export type { AmbitoDueno, BienParaGestion, GestionVehiculo } from './vehiculo-acceso.ts'
 
 // Preferencias de avisos (13/10/2026): canal, antelación y «no molestar» de «Configuración».

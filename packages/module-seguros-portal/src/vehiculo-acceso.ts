@@ -83,3 +83,33 @@ export function esUuid(v: unknown): v is string {
 
 /** Cuántas etiquetas se generan, como mucho, en una impresión en lote (la pantalla pliega a 50). */
 export const MAX_ETIQUETAS_LOTE = 100
+
+/** El inicio de un lote de etiquetas: ausente → ahora; ISO válido y no futuro (5 min de margen de reloj) → ese; si no, `null` (400). */
+export function instanteDelLote(v: unknown, ahora: Date = new Date()): Date | null {
+  if (v === undefined || v === null) return ahora
+  if (typeof v !== 'string') return null
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime()) || d.getTime() > ahora.getTime() + 5 * 60_000) return null
+  return d
+}
+
+/**
+ * Qué vehículos entran en una pasada de la impresión en LOTE (revisión 27/10/2026).
+ *
+ * 🚨 Una pasada NUNCA vuelve a anular lo creado desde que empezó el lote: con más de `MAX_ETIQUETAS_LOTE` vehículos
+ * y «reimprimir», la segunda pasada cogía los mismos 100 y anulaba las etiquetas recién impresas. Entran: los que no
+ * tienen etiqueta viva y, solo si se pidió reimprimir, los que la tienen ANTERIOR a `inicioLote`. Orden: sin etiqueta
+ * primero y después la más vieja (estable entre pasadas).
+ */
+export function candidatosDelLote<T>(
+  vehiculos: readonly T[],
+  qrVivoCreadoEn: (v: T) => Date | null,
+  o: { reimprimir: boolean; inicioLote: Date },
+): T[] {
+  return vehiculos
+    .filter((v) => {
+      const c = qrVivoCreadoEn(v)
+      return c === null || (o.reimprimir && c.getTime() < o.inicioLote.getTime())
+    })
+    .sort((a, b) => (qrVivoCreadoEn(a)?.getTime() ?? 0) - (qrVivoCreadoEn(b)?.getTime() ?? 0))
+}

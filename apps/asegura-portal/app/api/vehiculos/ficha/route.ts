@@ -10,7 +10,7 @@ import { DATOS_INVALIDOS, NO_ENCONTRADO, SIN_SESION, cuerpoJson } from '../comun
 
 export const runtime = 'nodejs'
 
-const ESTADO_FICHA = { no_encontrada: 404, no_es_vehiculo: 400, es_de_empresa: 409, sin_matricula: 409, datos_invalidos: 400 } as const
+const ESTADO_FICHA = { no_encontrada: 404, no_es_vehiculo: 400, no_vigente: 409, es_de_empresa: 409, sin_matricula: 409, datos_invalidos: 400 } as const
 
 /**
  * La FICHA del vehículo al que se le va a colgar un QR, creada bajo demanda e idempotente.

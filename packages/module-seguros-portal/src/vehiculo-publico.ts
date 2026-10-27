@@ -130,20 +130,23 @@ export function semaforoItv(itv: ItvVehiculo | null): Semaforo {
 
 /** La póliza del vehículo tal como la necesita el semáforo. `null` = NO la hemos encontrado (≠ «sin seguro»). */
 export type PolizaParaSemaforo = {
-  /** `true` = la póliza que nos consta NO está en vigor (un hecho, no una duda). */
-  noVigente: boolean
+  /**
+   * `cuentaComoEnVigor()` de quien lee (incluye la «renovación sin confirmar»: la compañía la sigue dando en vigor).
+   * `false` = la que nos consta terminó, y eso NO dice que el vehículo vaya sin seguro (puede estar en otra parte).
+   */
+  enVigor: boolean
   /** `YYYY-MM-DD…` ya corregido por recibos; `null` = la compañía no lo ha informado. */
   fechaVencimiento: string | null
 }
 
 /**
- * El semáforo PÚBLICO del seguro. Póliza no encontrada → `no_sabemos` (puede estar asegurado en otra parte).
- * Sin fecha o con la renovación sin confirmar (en vigor según la compañía, fecha ya pasada) → `no_sabemos`:
- * el portal nunca llama vencido a lo que la compañía sigue dando en vigor.
+ * El semáforo PÚBLICO del seguro (revisión 27/10/2026). 🚨 Nunca dice «Vencido» de un vehículo: a un tercero solo
+ * le podemos afirmar lo que tenemos EN VIGOR. Póliza no encontrada o solo terminadas → `no_sabemos` (puede estar
+ * asegurado en otra compañía o correduría). Sin fecha o con la renovación sin confirmar (en vigor según la compañía,
+ * fecha ya pasada) → `no_sabemos`: el portal nunca llama vencido a lo que la compañía sigue dando en vigor.
  */
 export function semaforoSeguro(p: PolizaParaSemaforo | null, hoy: Date): Semaforo {
-  if (p === null) return 'no_sabemos'
-  if (p.noVigente === true) return 'vencido'
+  if (p === null || p.enVigor !== true) return 'no_sabemos'
   const v = vencimientoFlota(p.fechaVencimiento, hoy)
   if (v.estado === 'vigente') return 'al_dia'
   if (v.estado === 'pronto') return 'vence_pronto'

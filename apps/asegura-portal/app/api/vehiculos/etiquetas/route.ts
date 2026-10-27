@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { MAX_ETIQUETAS_LOTE } from '@central/module-seguros-portal'
+import { MAX_ETIQUETAS_LOTE, candidatosDelLote, instanteDelLote } from '@central/module-seguros-portal'
 
 import { enlaceDeVehiculo } from '@/lib/enlace-hoja'
 import { asegurarVehiculosDeFlota } from '@/lib/flota'
@@ -36,6 +36,11 @@ export async function POST(req: Request) {
     return NextResponse.json(DATOS_INVALIDOS, { status: 400 })
   }
   const reimprimir = c.reimprimir === true
+  // 🚨 Reimprimir en VARIAS pasadas (más de MAX_ETIQUETAS_LOTE): el cliente manda el instante en que empezó el lote
+  // y fuera queda TODO lo que se creó desde entonces. Sin esto, la segunda pasada volvía a coger los mismos 100 y
+  // anulaba las etiquetas que se acababan de imprimir. Sin `inicioLote` (primera pasada) vale el instante de ahora.
+  const inicioLote = instanteDelLote(c.inicioLote)
+  if (inicioLote === null) return NextResponse.json(DATOS_INVALIDOS, { status: 400 })
 
   const r = await asegurarVehiculosDeFlota({ identidadId: identidad.id, empresaId: c.empresaId, polizaIds: 'todos' })
   if (!r.ok) return NextResponse.json({ error: r.error, mensaje: r.mensaje }, { status: ESTADO_HTTP_FLOTA[r.error] })
@@ -43,7 +48,10 @@ export async function POST(req: Request) {
 
   // Un vehículo con dos pólizas (cambio de compañía) es UNA etiqueta.
   const porBien = new Map(r.vehiculos.map((v) => [v.bienId, v]))
-  const candidatos = [...porBien.values()].filter((v) => reimprimir || !estado?.porClave.get(v.matricula)?.qr)
+  const candidatos = candidatosDelLote([...porBien.values()], (v) => estado?.porClave.get(v.matricula)?.qr?.creadoEn ?? null, {
+    reimprimir,
+    inicioLote,
+  })
   const lote = candidatos.slice(0, MAX_ETIQUETAS_LOTE)
   const gestion = await puedeGestionarVehiculos(identidad.id, lote.map((v) => v.bienId))
 
@@ -67,7 +75,10 @@ export async function POST(req: Request) {
       sinMatricula: r.sinMatricula,
       pendientes: candidatos.length - lote.length,
       fallidas,
+      // El cliente lo devuelve en la siguiente pasada del mismo lote.
+      inicioLote: inicioLote.toISOString(),
     },
     { status: 201 },
   )
 }
+

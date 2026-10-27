@@ -207,11 +207,17 @@ test('🚨 §7-5: sin fecha de matriculación la ITV es `no_sabemos`, NUNCA `al_
 
 test('🚨 §7-5: póliza no encontrada ≠ «sin seguro»; sin fecha o renovación sin confirmar → `no_sabemos`', () => {
   assert.equal(semaforoSeguro(null, HOY), 'no_sabemos')
-  assert.equal(semaforoSeguro({ noVigente: false, fechaVencimiento: null }, HOY), 'no_sabemos')
-  assert.equal(semaforoSeguro({ noVigente: false, fechaVencimiento: dia(-3) }, HOY), 'no_sabemos')
-  assert.equal(semaforoSeguro({ noVigente: false, fechaVencimiento: dia(10) }, HOY), 'vence_pronto')
-  assert.equal(semaforoSeguro({ noVigente: false, fechaVencimiento: dia(200) }, HOY), 'al_dia')
-  assert.equal(semaforoSeguro({ noVigente: true, fechaVencimiento: dia(-40) }, HOY), 'vencido')
+  assert.equal(semaforoSeguro({ enVigor: true, fechaVencimiento: null }, HOY), 'no_sabemos')
+  assert.equal(semaforoSeguro({ enVigor: true, fechaVencimiento: dia(-3) }, HOY), 'no_sabemos')
+  assert.equal(semaforoSeguro({ enVigor: true, fechaVencimiento: dia(10) }, HOY), 'vence_pronto')
+  assert.equal(semaforoSeguro({ enVigor: true, fechaVencimiento: dia(200) }, HOY), 'al_dia')
+  // 🚨 Solo pólizas terminadas ≠ «sin seguro» (revisión 27/10): no se afirma «Vencido» de un vehículo.
+  assert.equal(semaforoSeguro({ enVigor: false, fechaVencimiento: dia(-40) }, HOY), 'no_sabemos')
+  assert.equal(semaforoSeguro({ enVigor: false, fechaVencimiento: dia(200) }, HOY), 'no_sabemos')
+  // Renovación sin confirmar: la compañía la da en vigor con la fecha pasada → nunca «Vencido».
+  assert.equal(semaforoSeguro({ enVigor: true, fechaVencimiento: dia(-40) }, HOY), 'no_sabemos')
+  // Un valor raro en `enVigor` no da color.
+  assert.equal(semaforoSeguro({ enVigor: 'si' as unknown as boolean, fechaVencimiento: dia(200) }, HOY), 'no_sabemos')
 })
 
 test('recordatorios: solo tipos de la lista y sin título; un tipo desconocido no sale', () => {

@@ -107,6 +107,8 @@ test('el token se crea con los mismos bytes que la hoja y se guarda hasheado; la
   const crear = cuerpo(src, 'crearQrVehiculo')
   assert.match(crear, /\$transaction\(async \(tx\) => \{\s*await tx\.portalVehiculoQr\.updateMany\(\{\s*where: \{ bienId: g\.bienId, anuladoEn: null \}/)
   assert.match(cuerpo(src, 'anularQrVehiculo'), /where: \{ id: qrId\.trim\(\), bienId: g\.bienId, anuladoEn: null \}/)
+  // Un id de la URL que no es uuid es 404, no un 500 de Prisma.
+  assert.match(cuerpo(src, 'anularQrVehiculo'), /if \(!\(await esLaSesion\(identidadId\)\) \|\| !esUuid\(qrId\)\) return false/)
 })
 
 // ─── §7-6: aislamiento ───────────────────────────────────────────────────────
@@ -141,6 +143,10 @@ test('🚨 la lectura de la flota SIN sesión solo se usa desde la lectura públ
   assert.match(pub, /entradaDeEmpresa\(a, a\.bien\.clienteId, hoy\)/, 'la empresa sale del bien que abrió el token')
   assert.match(pub, /entradaDePersona\(a, a\.bien\.identidadId, hoy\)/, 'la persona, también')
   assert.doesNotMatch(pub, /prisma\s*\./, 'la lectura pública no hace consultas propias')
+  // Revisión 27/10: «en vigor» es `cuentaComoEnVigor` (renovación sin confirmar incluida), nunca `vigencia` a pelo.
+  assert.match(pub, /const enVigor = p !== null && cuentaComoEnVigor\(p\)/)
+  assert.match(pub, /semaforoSeguro\(p === null \? null : \{ enVigor, fechaVencimiento: dia\(p\.fechaVencimiento\) \}, hoy\)/)
+  assert.doesNotMatch(pub, /vigencia === 'no_vigente'/)
 })
 
 // ─── §7-4 (dueño) y §7-7: toda ruta pasa por la frontera ─────────────────────
@@ -224,6 +230,9 @@ test('🚨 §7-9: `asegurarVehiculoDePoliza` parte de las PROPIAS de la sesión,
   assert.match(leer(ACCESO), /for \(const t of cartera\.propias\)/, 'solo las PROPIAS: ni autorizadas ni intervinientes')
   assert.doesNotMatch(leer(ACCESO), /cartera\.(autorizadas|intervinientes)/)
   assert.match(f, /error: 'es_de_empresa'/)
+  // Revisión 27/10: la API también rechaza la póliza vencida (misma regla que la pantalla).
+  assert.match(f, /if \(p\.vigencia === 'no_vigente'\) \{\s*return \{ ok: false, error: 'no_vigente'/)
+  assert.match(crudo(`${APP}/app/(portal)/boveda/poliza/[id]/page.tsx`), /esRamoFlota\(p\.ramo\) && p\.vigencia !== 'no_vigente'/)
   assert.match(f, /if \(clave === null\) \{\s*return \{ ok: false, error: 'sin_matricula'/)
   // La matrícula de la póliza MANDA; la del cuerpo solo si la compañía no la informa.
   assert.match(f, /const clave = deLaPoliza \?\? claveVehiculo\(/)
@@ -242,7 +251,10 @@ test('la flota: la ficha de empresa se crea por la empresa AUTORIZADA y el lote 
   // Reimprimir en lote anula las pegadas: solo con `reimprimir: true` explícito.
   const lote = leer(`${APP}/app/api/vehiculos/etiquetas/route.ts`)
   assert.match(lote, /const reimprimir = c\.reimprimir === true/)
-  assert.match(lote, /reimprimir \|\| !estado\?\.porClave\.get\(v\.matricula\)\?\.qr/)
+  // Varias pasadas: la selección es la pura (`candidatosDelLote`, con su test) con el inicio del lote.
+  assert.match(lote, /const inicioLote = instanteDelLote\(c\.inicioLote\)/)
+  assert.match(lote, /candidatosDelLote\(\[\.\.\.porBien\.values\(\)\], \(v\) => estado\?\.porClave\.get\(v\.matricula\)\?\.qr\?\.creadoEn \?\? null, \{\s*reimprimir,\s*inicioLote,/)
+  assert.match(crudo(`${APP}/app/(portal)/flota/FlotaEmpresa.tsx`), /\.\.\.\(inicioLote \? \{ inicioLote \} : \{\}\)/, 'la pantalla devuelve el inicio del lote')
   assert.match(lote, /\.slice\(0, MAX_ETIQUETAS_LOTE\)/)
 })
 
@@ -270,4 +282,31 @@ test('la pantalla DICE que el QR se ve una vez, que reimprimir anula la pegada y
   // La etiqueta: QR, matrícula y marca. Nada más.
   const etiqueta = src.slice(src.indexOf('export function EtiquetaVehiculo'), src.indexOf('function VistaPrevia'))
   assert.doesNotMatch(etiqueta, /compania|numeroPoliza|nombre|telefono/i)
+})
+
+// ─── Revisión 27/10: defaults de Prisma ↔ GRANT INSERT ───────────────────────
+// Prisma RELLENA en el cliente todo `@default(...)` que no sea `dbgenerated` (`now()`, `true`…), así que la sentencia
+// INSERT nombra esa columna: si el GRANT INSERT por columnas no la incluye, la creación entera muere con 42501
+// (precedente: `2026-09-21_portal_presupuesto_grants.sql`, `ocurrido_at`). Lo que debe poner Postgres va como
+// `@default(dbgenerated("…"))`.
+test('🚨 todo @default no dbgenerated de los modelos del QR está en su GRANT INSERT (si no, 42501 al crear)', () => {
+  const schema = crudo(`${APP}/prisma/schema.prisma`)
+  const sql = leer(SQL).replace(/--.*$/gm, '')
+  for (const [modelo, tabla] of [
+    ['PortalVehiculoQr', 'portal_vehiculo_qr'],
+    ['PortalVehiculoPublico', 'portal_vehiculo_publico'],
+  ] as const) {
+    const cuerpoModelo = new RegExp(`^model ${modelo} \\{([\\s\\S]*?)^\\}`, 'm').exec(schema)?.[1]
+    assert.ok(cuerpoModelo, `no encuentro el modelo ${modelo}`)
+    const grant = new RegExp(`GRANT INSERT \\(([^)]*)\\)\\s*ON seguros\\.${tabla} TO prisma_asegura_portal`).exec(sql)?.[1]
+    assert.ok(grant, `no encuentro el GRANT INSERT de ${tabla}`)
+    const concedidas = new Set(grant.split(',').map((c) => c.trim()))
+    const conDefectoCliente = cuerpoModelo
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//') && /@default\((?!dbgenerated)/.test(l))
+      .map((l) => /@map\("([a-z_]+)"\)/.exec(l)?.[1] ?? l.trim().split(/\s+/)[0]!)
+    assert.ok(conDefectoCliente.length > 0 || modelo === 'PortalVehiculoQr', `${modelo}: el cepo no ve ningún default`)
+    const faltan = conDefectoCliente.filter((c) => !concedidas.has(c))
+    assert.deepEqual(faltan, [], `${modelo}: defaults que Prisma mete en el INSERT sin GRANT (usa dbgenerated): ${faltan.join(', ')}`)
+  }
 })

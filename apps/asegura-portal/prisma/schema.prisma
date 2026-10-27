@@ -1455,7 +1455,9 @@ model PortalVehiculoQr {
   bienId                String    @map("bien_id") @db.Uuid
   tokenHash             String    @unique @map("token_hash")
   creadoPorIdentidadId  String?   @map("creado_por_identidad_id") @db.Uuid
-  creadoEn              DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  /// `dbgenerated`, NO `now()`: Prisma rellena `@default(now())` en el cliente y nombraría la columna en el
+  /// INSERT, que el GRANT no concede (42501). Lo pone Postgres.
+  creadoEn              DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
   ultimoUsoEn           DateTime? @map("ultimo_uso_en") @db.Timestamptz(6)
   anuladoEn             DateTime? @map("anulado_en") @db.Timestamptz(6)
   anuladoPorIdentidadId String?   @map("anulado_por_identidad_id") @db.Uuid

@@ -166,7 +166,10 @@ function EtiquetasFlota({ empresaId, defecto }: { empresaId: string; defecto: In
   const [reimprimir, setReimprimir] = useState(false)
   const [enCurso, setEnCurso] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lote, setLote] = useState<{ etiquetas: Etiqueta[]; yaTenian: number; sinMatricula: number; pendientes: number; fallidas: number } | null>(null)
+  const [lote, setLote] = useState<{ etiquetas: Etiqueta[]; yaTenian: number; sinMatricula: number; pendientes: number; fallidas: number; inicioLote?: string } | null>(null)
+  // El instante en que empezó ESTE lote: se devuelve en cada pasada para que el servidor no vuelva a anular lo que se
+  // acaba de imprimir. Se olvida al cambiar la casilla (es otro lote).
+  const [inicioLote, setInicioLote] = useState<string | null>(null)
 
   const generar = async () => {
     setEnCurso(true)
@@ -175,11 +178,14 @@ function EtiquetasFlota({ empresaId, defecto }: { empresaId: string; defecto: In
       const r = await fetch('/api/vehiculos/etiquetas', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ empresaId, reimprimir }),
+        body: JSON.stringify({ empresaId, reimprimir, ...(inicioLote ? { inicioLote } : {}) }),
       })
       const j = (await r.json().catch(() => null)) as (typeof lote & { mensaje?: string }) | null
       if (!r.ok || !j) setError(j?.mensaje ?? 'No se han podido generar las etiquetas. Vuelve a intentarlo.')
-      else setLote(j)
+      else {
+        setLote(j)
+        if (j.inicioLote && inicioLote === null) setInicioLote(j.inicioLote)
+      }
     } catch {
       setError('No se han podido generar las etiquetas: comprueba tu conexión.')
     } finally {
@@ -203,7 +209,10 @@ function EtiquetasFlota({ empresaId, defecto }: { empresaId: string; defecto: In
         </details>
       )}
       <label htmlFor={idReimprimir} className="qr-vehiculo-interruptor">
-        <input id={idReimprimir} type="checkbox" checked={reimprimir} disabled={enCurso} onChange={(e) => setReimprimir(e.target.checked)} />
+        <input id={idReimprimir} type="checkbox" checked={reimprimir} disabled={enCurso} onChange={(e) => {
+            setReimprimir(e.target.checked)
+            setInicioLote(null)
+          }} />
         <span>
           Reimprimir también las que ya tienen etiqueta. <strong>Las pegadas dejarán de valer.</strong>
         </span>

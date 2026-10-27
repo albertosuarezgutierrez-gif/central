@@ -16,6 +16,7 @@ import {
   BYTES_TOKEN_HOJA,
   ambitoDeDefecto,
   claveVehiculo,
+  esUuid,
   interruptoresEfectivos,
   type AmbitoDueno,
   type GestionVehiculo,
@@ -77,7 +78,8 @@ export async function crearQrVehiculo(identidadId: string, g: GestionVehiculo): 
 
 /** Anular la etiqueta. Idempotente y con el bien DENTRO del where. `false` = no existe, no es de este bien o ya estaba anulada. */
 export async function anularQrVehiculo(identidadId: string, g: GestionVehiculo, qrId: unknown): Promise<boolean> {
-  if (!(await esLaSesion(identidadId)) || typeof qrId !== 'string' || qrId.trim() === '') return false
+  // Un id que no es uuid no llega a la BD (Prisma lanzaría con `@db.Uuid` → 500): es «no encontrado» (404).
+  if (!(await esLaSesion(identidadId)) || !esUuid(qrId)) return false
   const r = await prisma.portalVehiculoQr.updateMany({
     where: { id: qrId.trim(), bienId: g.bienId, anuladoEn: null },
     data: { anuladoEn: new Date(), anuladoPorIdentidadId: identidadId },

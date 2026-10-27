@@ -93,7 +93,7 @@ export async function puedeGestionarDefecto(identidadId: string, pedido: unknown
   return ambitoDeDefecto(pedido, identidadId, quiereEmpresa ? await accesosFlota(identidadId) : new Map())
 }
 
-export type ErrorFicha = 'no_encontrada' | 'no_es_vehiculo' | 'es_de_empresa' | 'sin_matricula' | 'datos_invalidos'
+export type ErrorFicha = 'no_encontrada' | 'no_es_vehiculo' | 'no_vigente' | 'es_de_empresa' | 'sin_matricula' | 'datos_invalidos'
 export type ResultadoFicha = { ok: true; bienId: string } | { ok: false; error: ErrorFicha; mensaje: string }
 
 /** La póliza PROPIA (no de una sociedad) con ese id, buscada dentro de la cartera ya leída. */
@@ -138,6 +138,11 @@ export async function asegurarVehiculoDePoliza(
     return { ok: false, error: 'es_de_empresa', mensaje: 'Este vehículo es de una sociedad: su QR se crea desde «Flota».' }
   }
   if (!esRamoFlota(p.ramo)) return { ok: false, error: 'no_es_vehiculo', mensaje: 'Esta póliza no es de un coche ni de una moto.' }
+  // La MISMA regla que la pantalla (`/boveda/poliza/[id]` solo ofrece el QR si no está vencida): la API no se fía de
+  // que el botón no se pinte.
+  if (p.vigencia === 'no_vigente') {
+    return { ok: false, error: 'no_vigente', mensaje: 'Esta póliza ya no está en vigor: el QR se crea desde la póliza que cubre hoy el vehículo.' }
+  }
 
   const deLaPoliza = claveVehiculo(p.bien.matricula)
   const clave = deLaPoliza ?? claveVehiculo(typeof datos.matricula === 'string' ? datos.matricula : null)
