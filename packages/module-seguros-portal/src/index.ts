@@ -817,3 +817,5 @@ export type { AccionModulo, ContextoModulos, DisponibilidadModulo, EstadoModulo,
 export { FAMILIAS_SEGURO, NOMBRE_FAMILIA, familiaSeguro } from './familia-seguro.ts'
 export type { ClaseSeguro, FamiliaSeguro, SublineaPatrimonial } from './familia-seguro.ts'
 export * from './aviso-patrimonio.ts'
+export { MANUALES_MODULOS, manualDeModulo, modulosSinManual, rutaManual } from './manuales.ts'
+export type { ManualModulo } from './manuales.ts'

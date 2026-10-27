@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { rutaManual } from '@central/module-seguros-portal'
+
 import { patrimonioDeIdentidad } from '@/lib/patrimonio/inmuebles-bd'
 import { canjearRecomendaciones } from '@/lib/patrimonio/recomendacion-bd'
 import { avisosPolizasSinInmueble, type AvisoPintable } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
@@ -10,6 +12,8 @@ import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { AvisoPolizaSinInmueble } from './AvisoPolizaSinInmueble'
+import { AvisoManual } from '../herramientas/AvisoManual'
+import { EnlaceComoFunciona } from '../herramientas/EnlaceComoFunciona'
 import { OposicionSenalesPatrimonio } from '../configuracion/OposicionSenalesPatrimonio'
 import { InvitaPropietario } from './InvitaPropietario'
 import { ListaInmuebles } from './ListaInmuebles'
@@ -53,9 +57,16 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
   return (
     <>
       <EncabezadoPortal antetitulo="Herramientas" titulo="Mi" acento="patrimonio" />
+      <AvisoManual modulo="alquileres" />
+      <EnlaceComoFunciona modulo="alquileres" aparte />
       <p className="suave" style={{ marginTop: 0 }}>Tus inmuebles y los de quien te ha dado acceso, por titular. Entra en uno para ver sus seguros, contratos y gastos.</p>
       {titulares.length === 0 ? (
-        <section className="seccion"><p style={{ margin: 0 }}>No tienes ningún patrimonio asignado en este portal.</p></section>
+        <section className="seccion">
+          <p style={{ margin: 0 }}>No tienes ningún patrimonio asignado en este portal.</p>
+          <p className="suave" style={{ margin: '8px 0 0' }}>
+            ¿No sabes por dónde empezar? Mira <Link href={rutaManual('alquileres')} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>cómo funciona Patrimonio</Link>.
+          </p>
+        </section>
       ) : (
         <>
           {titulares.map((t) => (

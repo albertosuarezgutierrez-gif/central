@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
+import { rutaManual } from '@central/module-seguros-portal'
+
 import { ordenarConUnidades } from '@/lib/patrimonio/edificio-vista'
 import { ETIQUETA_USO, type UsoInmueble } from '@/lib/patrimonio/usos'
 
@@ -15,7 +17,14 @@ export function ListaInmuebles({ inmuebles }: { inmuebles: Fila[] }) {
   const [visibles, setVisibles] = useState(PAGINA_INMUEBLES)
   // Edificio sin división horizontal (27/10/2026): sus unidades van detrás de él, sangradas.
   const ordenadas = ordenarConUnidades(inmuebles)
-  if (inmuebles.length === 0) return <p className="suave" style={{ margin: 0 }}>Todavía no hay inmuebles dados de alta.</p>
+  if (inmuebles.length === 0) {
+    return (
+      <p className="suave" style={{ margin: 0 }}>
+        Todavía no hay inmuebles dados de alta. Empieza con «Añadir inmueble»; si necesitas ayuda, mira{' '}
+        <Link href={rutaManual('alquileres')} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>cómo funciona Patrimonio</Link>.
+      </p>
+    )
+  }
   return (
     <>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
