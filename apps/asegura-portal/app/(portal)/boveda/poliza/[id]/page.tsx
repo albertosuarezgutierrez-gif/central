@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
 import { esRamoDeVivienda } from '@central/module-patrimonio'
-import { esRamoInmueble } from '@central/module-seguros-portal'
+import { claveVehiculo, esRamoFlota, esRamoInmueble } from '@central/module-seguros-portal'
 import { carteraDeIdentidad, polizasParaParte, type PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
 import { evolucionDePrimaDePoliza } from '@/lib/evolucion-prima'
@@ -16,8 +16,11 @@ import { avisosPolizasSinInmueble } from '@/lib/patrimonio/poliza-sin-inmueble-b
 import { personasDePoliza } from '@/lib/personas-poliza'
 import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { getIdentidad } from '@/lib/session'
+import { fichaDeVehiculoDePoliza } from '@/lib/vehiculo-acceso'
+import { estadoQrParaVista, estadoQrParticular } from '@/lib/vehiculo-qr'
 
 import { EvolucionPrima } from '../../EvolucionPrima'
+import { QrVehiculo } from '../../../QrVehiculo'
 import { SeguimientoDeParte } from '../../SeguimientoParte'
 import { AvisoPolizaSinInmueble } from '../../../patrimonio/AvisoPolizaSinInmueble'
 import { PersonasDeTuPoliza, TercerosDeTusSiniestros } from '../../PersonasPoliza'
@@ -79,11 +82,14 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   let figuraComo: string[] | null = null
   /** Nivel de la ficha PROPIA donde está la póliza; `null` = no es propia. */
   let nivelPropio: string | null = null
+  /** Si la ficha PROPIA es una sociedad: su vehículo lleva el QR desde «Flota», no desde aquí. */
+  let propiaDeEmpresa = false
   for (const t of cartera.propias) {
     const encontrada = t.polizas.find((p) => p.id === id)
     if (encontrada) {
       poliza = encontrada
       nivelPropio = t.nivel
+      propiaDeEmpresa = t.tipoPersona === 'juridica'
     }
   }
   if (!poliza) {
@@ -136,6 +142,18 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
         () => null,
       )
     : null
+  // El QR del VEHÍCULO (27/10/2026, F1): solo en una póliza PROPIA de persona, de coche o moto y no vencida. La
+  // ficha del vehículo se busca por la identidad de la sesión (nunca por el id de la URL). Si no se puede leer,
+  // el bloque se calla: la ficha no se cae por esto.
+  const qrVehiculo =
+    propia && !propiaDeEmpresa && esRamoFlota(p.ramo) && p.vigencia !== 'no_vigente'
+      ? await fichaDeVehiculoDePoliza(identidad.id, p)
+          .then((f) => estadoQrParticular(identidad.id, f?.id ?? null, p.bien.matricula))
+          .catch((e: unknown) => {
+            console.error('[portal/poliza] no se pudo leer el QR del vehículo:', e instanceof Error ? e.message : e)
+            return null
+          })
+      : null
   const seguimientos = seguimientosDePartes(partesPoliza, cartera)
   const partesConEstado = partesPoliza.flatMap((x) => {
     const seg = seguimientos.get(x.id) ?? null
@@ -410,6 +428,18 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {qrVehiculo && (
+        <section className="seccion" aria-labelledby="qr-vehiculo-titulo">
+          <h2 id="qr-vehiculo-titulo">QR del vehículo</h2>
+          <QrVehiculo
+            origen={{ tipo: 'poliza', polizaId: p.id }}
+            estado={estadoQrParaVista(qrVehiculo)}
+            pideMatricula={claveVehiculo(p.bien.matricula) === null}
+            ambitoDefecto={{ ambito: 'persona' }}
+          />
         </section>
       )}
 

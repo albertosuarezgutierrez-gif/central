@@ -15,6 +15,7 @@ function v(id: string, itv: VehiculoFlota['itv'], estadoVenc: VehiculoFlota['ven
     ramo: 'auto',
     vencimiento: { fecha: estadoVenc === 'sin_fecha' ? null : '2027-01-01', diasHasta: estadoVenc === 'sin_fecha' ? null : 120, estado: estadoVenc },
     itv,
+    numeroPoliza: null,
     matriculacionDeclarada: null,
   }
 }
