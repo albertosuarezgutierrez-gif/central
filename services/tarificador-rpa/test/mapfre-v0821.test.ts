@@ -66,7 +66,7 @@ async function hastaCoberturas(deshabilitado: boolean, caeAlEscanear = false): P
 }
 
 test('v0.8.21 · la versión del bot es 0.8.28', () => {
-  assert.equal(mapfreAuto.version, '0.8.30')
+  assert.equal(mapfreAuto.version, '0.8.31')
 })
 
 test('v0.8.21 · mat-button con <button disabled> interno y texto en <span>: no espera 30 s, no pulsa y nombra el campo obligatorio y su mat-error, sin valores', async () => {

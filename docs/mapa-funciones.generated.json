@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T12:55:38Z",
-  "sha": "a38b75ad5f867497cebb6b2ddf891d46122f689e",
+  "generadoEn": "2026-10-27T16:09:50Z",
+  "sha": "6924d90efd270635c47dd5b24e3d205eafb62476",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6058,13 +6058,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24,
+          "linea": 27,
           "resumen": "«Inicio» (26/10/2026, decisión de Alberto): SOLO lo pendiente. Vencimientos, recibos pendientes, avisos, huecos de protección y siniestros abiertos; nada más. Ya NO lleva la lista de seguros por famil"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6b69e925e3d7"
+      "hash": "9327f2c8dfa0"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/PendienteInicio.tsx",
@@ -6103,7 +6103,7 @@
           "nombre": "PendienteInicio",
           "kind": "function",
           "exportada": true,
-          "params": "{ pendiente, huecos }: { pendiente: Pendiente; huecos: ReactNode }",
+          "params": "{ pendiente, huecos, patrimonioPendiente = false }: { pendiente: Pendiente; huecos: ReactNode; patrimonioPendiente?: boolean }",
           "retorno": null,
           "linea": 66,
           "resumen": "Lo pendiente de «Inicio»: vencimientos, recibos, avisos, siniestros abiertos y la sugerencia de huecos. Cliente porque los AVISOS salen de `/api/avisos` (la fuente de la campana: una sola lista, no un"
@@ -6111,7 +6111,28 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd451bd0f8f0"
+      "hash": "578cd24cdec9"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/inicio/TarjetaPatrimonio.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "TarjetaPatrimonio"
+      ],
+      "funciones": [
+        {
+          "nombre": "TarjetaPatrimonio",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ resumen }: { resumen: { inmuebles: number | null; pendientes: number | null; puedeConfirmar: boolean } | null }",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "«Mi patrimonio» en Inicio (27/10/2026): nº de inmuebles y gastos por confirmar. `null` = no se sabe: nunca se pinta 0 ni «0 pendientes» sobre una cifra que no se ha podido leer. `resumen === null` = n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d536f35ebd7d"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/layout.tsx",
@@ -6500,77 +6521,131 @@
       "hash": "511ca53d3c80"
     },
     {
-      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/GastosTitular.tsx",
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/GastosPiezas.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
-        "GastosTitular"
+        "fechaEs",
+        "Plegable",
+        "useEnvio",
+        "Formulario",
+        "NuevaPlantilla",
+        "NuevaComunidad",
+        "NuevaDerrama",
+        "FilaPlantilla",
+        "FilaComunidad",
+        "FilaDerrama",
+        "FilaGasto"
       ],
       "funciones": [
         {
           "nombre": "fechaEs",
           "kind": "arrow",
-          "exportada": false,
+          "exportada": true,
           "params": "iso: string",
           "retorno": null,
-          "linea": 30
+          "linea": 33
         },
         {
           "nombre": "Plegable",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "{ filas, vacio, pinta }: { filas: T[]; vacio: string; pinta: (f: T) => React.ReactNode }",
           "retorno": null,
-          "linea": 33,
+          "linea": 36,
           "resumen": "Plegado perezoso: ~50 filas y «Ver más»."
         },
         {
           "nombre": "useEnvio",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "url: string, alTerminar: () => void",
           "retorno": null,
-          "linea": 49,
+          "linea": 52,
           "resumen": "Envío común: POST JSON y `router.refresh()` sin desmontar."
         },
         {
           "nombre": "Formulario",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "{ titulo, children, error, enviando, onSubmit, onCancelar }: { titulo: string; children: React.ReactNode; error: string | null; enviando: boolean; onSubmit: () => void; onCancelar: () => void }",
           "retorno": null,
-          "linea": 74
+          "linea": 77
         },
         {
           "nombre": "NuevaPlantilla",
           "kind": "function",
-          "exportada": false,
-          "params": "{ t, cerrar }: { t: TitularGastos; cerrar: () => void }",
+          "exportada": true,
+          "params": "{ t, cerrar, inmuebleFijo }: { t: TitularGastos; cerrar: () => void; inmuebleFijo?: string }",
           "retorno": null,
-          "linea": 90
+          "linea": 94,
+          "resumen": "`inmuebleFijo`: desde la ficha del piso, el inmueble viene puesto y no se pregunta."
         },
         {
           "nombre": "NuevaComunidad",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "{ t, cerrar }: { t: TitularGastos; cerrar: () => void }",
           "retorno": null,
-          "linea": 140
+          "linea": 151
         },
         {
           "nombre": "NuevaDerrama",
           "kind": "function",
-          "exportada": false,
-          "params": "{ t, cerrar }: { t: TitularGastos; cerrar: () => void }",
+          "exportada": true,
+          "params": "{ t, cerrar, inmuebleFijo }: { t: TitularGastos; cerrar: () => void; inmuebleFijo?: string }",
           "retorno": null,
-          "linea": 182
+          "linea": 193
         },
         {
-          "nombre": "GastosTitular",
+          "nombre": "catTxt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: string | null",
+          "retorno": null,
+          "linea": 226
+        },
+        {
+          "nombre": "FilaPlantilla",
           "kind": "function",
           "exportada": true,
-          "params": "{ titular: t }: { titular: TitularGastos }",
+          "params": "{ p, conInmueble }: { p: PlantillaFila; conInmueble?: boolean }",
           "retorno": null,
-          "linea": 213
+          "linea": 229,
+          "resumen": "Fila de un gasto fijo. `conInmueble` solo en la vista del titular entero."
+        },
+        {
+          "nombre": "FilaComunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ c }: { c: ComunidadFila }",
+          "retorno": null,
+          "linea": 243
+        },
+        {
+          "nombre": "FilaDerrama",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ d }: { d: DerramaFila }",
+          "retorno": null,
+          "linea": 256
+        },
+        {
+          "nombre": "AccionesGasto",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ clienteId, g }: { clienteId: string; g: GastoFila }",
+          "retorno": null,
+          "linea": 269,
+          "resumen": "Confirmar / descartar un gasto propuesto. Importe sin saber → se pide antes de confirmar (nunca se inventa un 0)."
+        },
+        {
+          "nombre": "FilaGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ g, clienteId, puedeGestionar }: { g: GastoFila; clienteId?: string; puedeGestionar?: boolean }",
+          "retorno": null,
+          "linea": 318,
+          "resumen": "Un gasto ya generado: «Por confirmar» (propuesto) o «Confirmado». Importe `null` = sin saber, nunca 0. `puedeGestionar` + `clienteId`: solo entonces el propuesto lleva «Confirmar» / «Descartar»."
         }
       ],
       "tablas": [
@@ -6578,7 +6653,62 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f8f001071289"
+      "hash": "46324af1828c"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/GastosTitular.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "DetalleGrupo",
+        "GastosTitular"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuenta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number, uno: string, varios: string",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "resumen",
+          "kind": "function",
+          "exportada": false,
+          "params": "g: GrupoGastos",
+          "retorno": "string",
+          "linea": 17,
+          "resumen": "Resumen de una línea de lo que cuelga de un grupo: solo cuenta lo que hay (nunca «0 …»)."
+        },
+        {
+          "nombre": "DetalleGrupo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ g, clienteId, puedeGestionar }: { g: GrupoGastos; clienteId: string; puedeGestionar: boolean }",
+          "retorno": null,
+          "linea": 28,
+          "resumen": "Detalle de un grupo (inmueble o generales): se monta solo al abrirlo."
+        },
+        {
+          "nombre": "Grupo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ g, clienteId, puedeGestionar }: { g: GrupoGastos; clienteId: string; puedeGestionar: boolean }",
+          "retorno": null,
+          "linea": 40
+        },
+        {
+          "nombre": "GastosTitular",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titular: t }: { titular: TitularGastos }",
+          "retorno": null,
+          "linea": 64
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1de629bb5ed4"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/gastos/page.tsx",
@@ -6615,7 +6745,7 @@
           "exportada": false,
           "params": "c: number | null",
           "retorno": null,
-          "linea": 32,
+          "linea": 33,
           "resumen": "Céntimos → texto editable en español («1234,56»); `null` → vacío (no se sabe, no «0»)."
         },
         {
@@ -6624,7 +6754,7 @@
           "exportada": false,
           "params": "j: RespuestaApi",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "Dato",
@@ -6632,7 +6762,7 @@
           "exportada": false,
           "params": "{ k, v }: { k: string; v: string }",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         },
         {
           "nombre": "Revision",
@@ -6640,7 +6770,7 @@
           "exportada": false,
           "params": "{ s, clienteId, inmuebles, fin }: { s: Subida; clienteId: string; inmuebles: { id: string; alias: string }[]; fin: () => void }",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "fechaEs",
@@ -6648,7 +6778,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 142
+          "linea": 143
         },
         {
           "nombre": "FacturasPendientes",
@@ -6656,7 +6786,7 @@
           "exportada": true,
           "params": "{ clienteId, inmuebles, pendientes }: { clienteId: string; inmuebles: { id: string; alias: string }[]; pendientes: FacturaPendiente[] }",
           "retorno": null,
-          "linea": 148,
+          "linea": 149,
           "resumen": "Facturas ya subidas y leídas que quedaron sin confirmar (se cerró la revisión): reabre la misma revisión con lo guardado. Solo se pinta para titulares con nivel de gestión (el servidor ya las filtra p"
         },
         {
@@ -6665,7 +6795,7 @@
           "exportada": true,
           "params": "{ clienteId, inmuebles }: { clienteId: string; inmuebles: { id: string; alias: string }[] }",
           "retorno": null,
-          "linea": 185,
+          "linea": 186,
           "resumen": "Subir factura → ver propuesta y motivos → corregir → confirmar. El gasto no existe como confirmado hasta el último paso."
         }
       ],
@@ -6674,7 +6804,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6c05a7c72c50"
+      "hash": "51c8956ec502"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/importar/Importador.tsx",
@@ -6885,6 +7015,27 @@
       "hash": "e501e94154a0"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/GastosDeEstePiso.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GastosDeEstePiso"
+      ],
+      "funciones": [
+        {
+          "nombre": "GastosDeEstePiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titular: t, inmuebleId, alias }: { titular: TitularGastos; inmuebleId: string; alias: string }",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "«Gastos de este piso» (ficha del inmueble): lo mismo que `/patrimonio/gastos` pero filtrado por ESTE inmueble, con el inmueble ya puesto en «Añadir gasto fijo», «Subir factura» y «Añadir derrama». Sol"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "211b224e9f84"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/HipotecaInmueble.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -6974,7 +7125,7 @@
           "exportada": false,
           "params": "v: boolean | null",
           "retorno": null,
-          "linea": 27
+          "linea": 31
         },
         {
           "nombre": "InmueblePage",
@@ -6982,13 +7133,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 34,
+          "linea": 38,
           "resumen": "Ficha del inmueble. 🚨 El id de la URL NO consulta por sí solo: `inmuebleAutorizado()` lo busca DENTRO de los titulares que esta sesión puede ver (`accesosPatrimonio`). Si no existe o no es tuyo: 404 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f8adda7087aa"
+      "hash": "56a610167321"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/inmueble/[id]/SegurosInmueble.tsx",
@@ -7202,7 +7353,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d4fde3da1c7"
+      "hash": "0efe5fc5dc57"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/fiscal/page.tsx",
@@ -9286,6 +9437,27 @@
       "tablas": [],
       "rutaApi": "/api/patrimonio/facturas",
       "hash": "2db125ab98a9"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/patrimonio/gastos/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "`PATCH /api/patrimonio/gastos` (JSON: `titular`, `gasto`, `accion: confirmar|descartar`, `importeCent` opcional) — resuelve un gasto `propuesto` generado por el cron (plantilla/derrama). Nivel Gestión"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/patrimonio/gastos",
+      "hash": "3811a20f29b0"
     },
     {
       "ruta": "apps/asegura-portal/app/api/patrimonio/importaciones/[id]/confirmar/route.ts",
@@ -19349,7 +19521,7 @@
           "exportada": false,
           "params": "accesos: AccesosMapa, cuerpo: unknown, accion: Accion",
           "retorno": "string | null",
-          "linea": 206,
+          "linea": 213,
           "resumen": "Titular DENTRO de los accesos y con el nivel que da la acción; si no, `null` (la 404 única)."
         },
         {
@@ -19358,7 +19530,7 @@
           "exportada": true,
           "params": "p: PuertosGastos",
           "retorno": "Promise<Respuesta>",
-          "linea": 212
+          "linea": 219
         },
         {
           "nombre": "alta",
@@ -19366,7 +19538,7 @@
           "exportada": false,
           "params": "p: PuertosGastos, cuerpo: unknown, accion: Accion, validar: (c: unknown) => V<T>, crear: (x: { clienteId: string; datos: T }) => Promise<ResultadoCrear>,",
           "retorno": "Promise<Respuesta>",
-          "linea": 218
+          "linea": 225
         },
         {
           "nombre": "responderAltaPlantilla",
@@ -19374,7 +19546,7 @@
           "exportada": true,
           "params": "p: PuertosGastos, c: unknown",
           "retorno": null,
-          "linea": 235
+          "linea": 242
         },
         {
           "nombre": "responderAltaComunidad",
@@ -19382,7 +19554,7 @@
           "exportada": true,
           "params": "p: PuertosGastos, c: unknown",
           "retorno": null,
-          "linea": 236
+          "linea": 243
         },
         {
           "nombre": "responderAltaDerrama",
@@ -19390,12 +19562,12 @@
           "exportada": true,
           "params": "p: PuertosGastos, c: unknown",
           "retorno": null,
-          "linea": 237
+          "linea": 244
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "35e775ec33c3"
+      "hash": "c1b5030d5685"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/gastos-bd.ts",
@@ -19404,7 +19576,9 @@
       "exporta": [
         "titularDe",
         "puertosGastos",
-        "gastosDeIdentidad"
+        "gastosDeIdentidad",
+        "gastosDeTitular",
+        "patrimonioParaInicio"
       ],
       "funciones": [
         {
@@ -19413,7 +19587,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "aFecha",
@@ -19421,7 +19595,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 20
+          "linea": 22
         },
         {
           "nombre": "nombreDe",
@@ -19429,7 +19603,7 @@
           "exportada": false,
           "params": "f: { nombre: string; apellidos: string | null }",
           "retorno": null,
-          "linea": 21
+          "linea": 23
         },
         {
           "nombre": "num",
@@ -19437,7 +19611,7 @@
           "exportada": false,
           "params": "v: bigint | number | null",
           "retorno": null,
-          "linea": 22
+          "linea": 24
         },
         {
           "nombre": "titularDe",
@@ -19445,7 +19619,7 @@
           "exportada": true,
           "params": "clienteId: string, identidadId: string",
           "retorno": "Promise<",
-          "linea": 25,
+          "linea": 27,
           "resumen": "El titular (fila `portal_patrimonio_titular`) de una ficha YA autorizada; nace la primera vez que se da de alta algo."
         },
         {
@@ -19454,7 +19628,7 @@
           "exportada": false,
           "params": "identidadId: string, ids: readonly string[], accesos: AccesosMapa",
           "retorno": "Promise<TitularGastos[]>",
-          "linea": 40
+          "linea": 42
         },
         {
           "nombre": "codigoPrisma",
@@ -19462,7 +19636,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 142
+          "linea": 165
         },
         {
           "nombre": "puertosGastos",
@@ -19470,7 +19644,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "PuertosGastos",
-          "linea": 144
+          "linea": 167
         },
         {
           "nombre": "gastosDeIdentidad",
@@ -19478,13 +19652,181 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<TitularGastos[]>",
-          "linea": 265,
+          "linea": 288,
           "resumen": "Para la página de gastos. Vacío = esta identidad no tiene patrimonio."
+        },
+        {
+          "nombre": "gastosDeTitular",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, clienteId: string",
+          "retorno": "Promise<TitularGastos | null>",
+          "linea": 298,
+          "resumen": "Los gastos de UN titular para la ficha de su inmueble. 🚨 Sale de `gastosDeIdentidad` (accesos de la sesión): un `clienteId` que no está entre los autorizados da `null`. El filtro por inmueble lo hace"
+        },
+        {
+          "nombre": "patrimonioParaInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<",
+          "linea": 308,
+          "resumen": "Tarjeta «Mi patrimonio» de Inicio. `undefined` = sin patrimonio a la vista (no se pinta nada); `null` = no se pudo leer el acceso; objeto con `inmuebles`/`pendientes` `null` = esa cifra no se pudo lee"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "94cb2d6e7eec"
+      "hash": "1357a02c5635"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/gastos-resolver-api.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (27/10/2026) — confirmar o descartar un gasto `propuesto` GENERADO (cron mensual de plantillas, cuotas de derrama). Las facturas leídas con IA tienen su propio PATCH (`facturas-api.ts`). Reglas PURAS con puertos, sin prisma. · Solo quien puede GESTIONAR ese titular (`gestionar_gastos_docu",
+      "exporta": [
+        "responderResolverGasto"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: unknown",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "responderResolverGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PuertosResolverGasto, cuerpo: unknown",
+          "retorno": "Promise<Respuesta>",
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1004de4b850f"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/gastos-resolver-bd.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (27/10/2026) — adaptador con BD de `gastos-resolver-api.ts`. 🚨 Como `facturas-bd.ts`: parte de `accesosPatrimonio(identidadId)`; `titular_id` se resuelve aquí desde la ficha ya autorizada y toda lectura/escritura lleva `titularId` + `origen in (plantilla, derrama)` en el `where` (id ajen",
+      "exporta": [
+        "puertosResolverGasto"
+      ],
+      "funciones": [
+        {
+          "nombre": "puertosResolverGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, ahora: () => Date = () => new Date()",
+          "retorno": "PuertosResolverGasto",
+          "linea": 13
+        }
+      ],
+      "tablas": [
+        "para"
+      ],
+      "rutaApi": null,
+      "hash": "44ff84b48a32"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/patrimonio/gastos-vista.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "PATRIMONIO (27/10/2026) — reglas PURAS de cómo se cruzan gastos e inmuebles (sin prisma ni React: se usan desde el cliente, el servidor y los tests). Solo `import type`. · Al añadir un gasto fijo el inmueble es OBLIGATORIO: nunca «Sin inmueble» por defecto. Un único inmueble viene preseleccionado; c",
+      "exporta": [
+        "inmuebleInicial",
+        "eleccionDeInmueble",
+        "agruparPorInmueble",
+        "gruposDeInmueble",
+        "pendientesDeInicio",
+        "textoPendientesInicio",
+        "textoInmueblesInicio",
+        "titularDeInmueble"
+      ],
+      "funciones": [
+        {
+          "nombre": "inmuebleInicial",
+          "kind": "function",
+          "exportada": true,
+          "params": "inmuebles: readonly { id: string }[], prefijado?: string | null",
+          "retorno": "string",
+          "linea": 18,
+          "resumen": "Valor inicial del desplegable: con UN solo inmueble, ese; con varios, vacío (hay que elegir); sin ninguno, la única opción posible (`GENERAL`). Con un `prefijado` válido, ese."
+        },
+        {
+          "nombre": "eleccionDeInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "inmuebles: readonly { id: string }[], elegido: string",
+          "retorno": "EleccionInmueble",
+          "linea": 30,
+          "resumen": "Qué inmueble se manda al servidor. `elegido` vacío NO vale (salvo que el titular no tenga ningún inmueble: entonces solo cabe un gasto general). `GENERAL` → `null` explícito. Un id que no es de este t"
+        },
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "inmuebleId: string | null, alias: string",
+          "retorno": "GrupoGastos",
+          "linea": 49
+        },
+        {
+          "nombre": "agruparPorInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: Pick<TitularGastos, 'inmuebles' | 'plantillas' | 'comunidades' | 'derramas' | 'gastos' | 'facturasPendientes'>",
+          "retorno": "GrupoGastos[]",
+          "linea": 58,
+          "resumen": "sin ningún piso enlazado, en generales."
+        },
+        {
+          "nombre": "gruposDeInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: Parameters<typeof agruparPorInmueble>[0], inmuebleId: string",
+          "retorno": "GrupoGastos",
+          "linea": 76,
+          "resumen": "Lo que cuelga de UN inmueble (ficha del piso). Id desconocido → grupo vacío con ese id."
+        },
+        {
+          "nombre": "pendientesDeInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "PendientesInicio",
+          "linea": 83
+        },
+        {
+          "nombre": "textoPendientesInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 88
+        },
+        {
+          "nombre": "textoInmueblesInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "string | null",
+          "linea": 96,
+          "resumen": "Nº de inmuebles en Inicio: `null` = no se sabe (no se pinta 0)."
+        },
+        {
+          "nombre": "titularDeInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: TitularGastos, inmuebleId: string",
+          "retorno": "TitularGastos",
+          "linea": 105,
+          "resumen": "El titular reducido a UN inmueble (para mandar al navegador solo lo de esa ficha). Conserva sus datos y permisos; los gastos generales (sin piso) se quedan fuera: no son de este piso."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ebc6d3847366"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/generar-gastos-bd.ts",
@@ -61695,12 +62037,21 @@
           "resumen": "Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE del cliente en ese ramo + su ficha, como el botón (formulario + «completar d"
         },
         {
+          "nombre": "riesgoHogarDeOportunidadDelCliente",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, ahora: Date",
+          "retorno": "Promise<ReconstruccionRiesgo>",
+          "linea": 206,
+          "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
+        },
+        {
           "nombre": "revisarInterno",
           "kind": "function",
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 204
+          "linea": 217
         },
         {
           "nombre": "publico",
@@ -61708,7 +62059,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 229
+          "linea": 242
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -61716,7 +62067,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 233
+          "linea": 246
         },
         {
           "nombre": "tarificarLead",
@@ -61724,7 +62075,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 249
+          "linea": 262
         },
         {
           "nombre": "ampliarTopeLead",
@@ -61732,7 +62083,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 351,
+          "linea": 364,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -61741,7 +62092,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 378,
+          "linea": 391,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -61750,7 +62101,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 425,
+          "linea": 438,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -61759,7 +62110,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "791f5dd09dc6"
+      "hash": "ee39e61e0414"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -66229,6 +66580,7 @@
       "ambito": "apps/asegura",
       "exporta": [
         "decidirRelanzar",
+        "riesgoHogarDeRiesgoOportunidad",
         "conCompaniaActualUnica",
         "conVehiculoDeOrigen",
         "decidirRiesgoProbar"
@@ -66240,7 +66592,16 @@
           "exportada": true,
           "params": "e: EntradaRelanzar",
           "retorno": "DecisionRelanzar",
-          "linea": 28
+          "linea": 29
+        },
+        {
+          "nombre": "riesgoHogarDeRiesgoOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RiesgoParaBotsHogar, ahora = new Date()",
+          "retorno": "ReconstruccionRiesgo",
+          "linea": 61,
+          "resumen": "HOGAR (27/10/2026): el riesgo se arma como cuando Alberto pulsa «pedir precio» en la oportunidad de hogar de plataforma: `datosVivienda` de la oportunidad MÁS RECIENTE del cliente (`leerRiesgo`, el mi"
         },
         {
           "nombre": "conCompaniaActualUnica",
@@ -66248,7 +66609,7 @@
           "exportada": true,
           "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, actual: string | null",
           "retorno": "ReconstruccionRiesgo",
-          "linea": 57,
+          "linea": 71,
           "resumen": "Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre auto con cambio de seguro) con la compañía que deduce la cartera (`companiaActualUnica`: solo con exactamente una póliza de auto en v"
         },
         {
@@ -66257,7 +66618,7 @@
           "exportada": true,
           "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, filas: readonly FilaOrigen[]",
           "retorno": "ReconstruccionRiesgo",
-          "linea": 69,
+          "linea": 83,
           "resumen": "nada personal se copia. Sin origen, otra compañía/ramo, o ya con vehículo → mismo objeto. PURA."
         },
         {
@@ -66266,13 +66627,13 @@
           "exportada": true,
           "params": "e: { reconstruccion: ReconstruccionRiesgo; previo: unknown | null; soloPurgados: boolean; validar: (riesgo: unknown) => ValidacionProbar<E> }",
           "retorno": "DecisionProbar<E>",
-          "linea": 86,
+          "linea": 100,
           "resumen": "Qué riesgo se reencola. Orden: 1) el reconstruido de la oportunidad+ficha, si valida; 2) el del último trabajo, si valida (no purgado); 3) rechazo que dice QUÉ falta (solo etiquetas de campo, nunca va"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b7c9e2cd2f6c"
+      "hash": "aed57306ea86"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-robustez.ts",
@@ -194175,106 +194536,20 @@
       "ambito": "apps/plataforma",
       "resumen": "«Bots (gratis)» de HOGAR (19/10/2026) — lo PURO: de los datos de la vivienda de la oportunidad (`info_riesgo.datosVivienda`) y de las elecciones del corredor al `riesgo` de hogar que valida asegura (`ramo: 'hogar'`, sin tomador). Mismo patrón que moto y coche (`tarificador-moto-formulario.ts`, `tari",
       "exporta": [
-        "formularioBotHogar",
         "tomadorDeRiesgoHogar",
-        "datosViviendaParaBot",
-        "eleccionesInicialesHogar",
         "faltanFichaTomadorParaHogar",
         "avisoFichaTomadorParaHogar",
         "riesgoHogarSinTomador"
       ],
       "funciones": [
         {
-          "nombre": "txt",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: string | null | undefined",
-          "retorno": "string | null",
-          "linea": 66
-        },
-        {
-          "nombre": "clave",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: string | null | undefined, lista: readonly string[]",
-          "retorno": "string | null",
-          "linea": 67
-        },
-        {
-          "nombre": "formularioBotHogar",
-          "kind": "function",
-          "exportada": true,
-          "params": "e: EntradaBotHogar, hoy: Date = new Date()",
-          "retorno": "FormularioBotHogar",
-          "linea": 76,
-          "resumen": "Vivienda + elecciones → `riesgo` de hogar, o QUÉ falta (en castellano, sin valores). El tomador NO va: lo pone asegura desde la ficha. Lo que arma pasa por el MISMO validador que asegura (`validarForm"
-        },
-        {
-          "nombre": "obj",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "Record<string, unknown> | null",
-          "linea": 137
-        },
-        {
-          "nombre": "num",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "number | null",
-          "linea": 138
-        },
-        {
-          "nombre": "str",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "string | null",
-          "linea": 139
-        },
-        {
-          "nombre": "bool",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "boolean | null",
-          "linea": 140
-        },
-        {
-          "nombre": "noNeg",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "number | null",
-          "linea": 141
-        },
-        {
           "nombre": "tomadorDeRiesgoHogar",
           "kind": "function",
           "exportada": true,
           "params": "r: RiesgoParaBotsHogar & { oportunidad: { clienteId: string } }",
           "retorno": "string",
-          "linea": 161,
+          "linea": 47,
           "resumen": "Id de la ficha del tomador (la figura `tomador`; sin ella, el cliente de la oportunidad)."
-        },
-        {
-          "nombre": "datosViviendaParaBot",
-          "kind": "function",
-          "exportada": true,
-          "params": "r: RiesgoParaBotsHogar",
-          "retorno": "DatosViviendaBot",
-          "linea": 166,
-          "resumen": "`datosVivienda` de la oportunidad (ya leídos) → vivienda del bloque. Sin el bloque de vivienda → todo `null` («no se sabe»). PURA."
-        },
-        {
-          "nombre": "eleccionesInicialesHogar",
-          "kind": "function",
-          "exportada": true,
-          "params": "r: RiesgoParaBotsHogar, catalogos: CatalogosHogarLeidos = {}",
-          "retorno": "Record<string, string>",
-          "linea": 194,
-          "resumen": "el resto, '' («Elegir…»). La madera: sí/no solo si se contestó (`null` = '' = sin contestar). Ojo: en Codeoscopic `ocupacion` es el USO de la vivienda y `uso` el RÉGIMEN. PURA."
         },
         {
           "nombre": "faltanFichaTomadorParaHogar",
@@ -194282,7 +194557,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsHogar, 'figuras'>",
           "retorno": "string[] | null",
-          "linea": 211,
+          "linea": 55,
           "resumen": "Lo que a la FICHA del tomador le falta para que asegura pueda entregar al bot su DNI/NIE y su nacimiento (lo comprueba al encolar: 422 `falta_datos_tomador`, sin gastar máquina). `null` = no se pudo l"
         },
         {
@@ -194291,7 +194566,7 @@
           "exportada": true,
           "params": "faltan: readonly string[] | null, bot = 'Allianz Hogar'",
           "retorno": "string | null",
-          "linea": 226,
+          "linea": 70,
           "resumen": "«Falta el DNI/NIE y la fecha de nacimiento en la ficha del tomador…» o `null` si no falta nada (o no se sabe). `bot` = el nombre del bot que los pide (21/10/2026: también Mapfre Hogar, que los toma ig"
         },
         {
@@ -194300,13 +194575,13 @@
           "exportada": true,
           "params": "riesgo: Record<string, unknown>",
           "retorno": "Record<string, unknown>",
-          "linea": 236,
+          "linea": 80,
           "resumen": "Riesgo de hogar para encolar sin datos del tomador (19/10/2026): quita `tomador` y cualquier dni/nif/nie/documento/nacimiento (en cualquier nivel) que el navegador haya mandado. El DNI y el nacimiento"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "09b0d22b4efd"
+      "hash": "40792550aea3"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-moto-formulario.ts",
@@ -250946,6 +251221,104 @@
       "hash": "49c2c690dcc3"
     },
     {
+      "ruta": "packages/module-tarificacion/src/hogar-bot-formulario.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Constructor PURO del riesgo de HOGAR para los bots (movido desde apps/plataforma/lib/tarificador-hogar-formulario.ts el 27/10/2026 para que apps/asegura («Probar» autónomo) use EXACTAMENTE el mismo constructor que el botón «pedir precio» de la oportunidad; plataforma lo re-exporta). Mismo patrón que",
+      "exporta": [
+        "formularioBotHogar",
+        "datosViviendaParaBot",
+        "eleccionesInicialesHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 44
+        },
+        {
+          "nombre": "clave",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null | undefined, lista: readonly string[]",
+          "retorno": "string | null",
+          "linea": 45
+        },
+        {
+          "nombre": "formularioBotHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaBotHogar, hoy: Date = new Date()",
+          "retorno": "FormularioBotHogar",
+          "linea": 54,
+          "resumen": "Vivienda + elecciones → `riesgo` de hogar, o QUÉ falta (en castellano, sin valores). El tomador NO va: lo pone asegura desde la ficha. Lo que arma pasa por el MISMO validador que asegura (`validarForm"
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 113
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 114
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 115
+        },
+        {
+          "nombre": "bool",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean | null",
+          "linea": 116
+        },
+        {
+          "nombre": "noNeg",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 117
+        },
+        {
+          "nombre": "datosViviendaParaBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RiesgoParaBotsHogar",
+          "retorno": "DatosViviendaBot",
+          "linea": 127,
+          "resumen": "`datosVivienda` de la oportunidad (ya leídos) → vivienda del bloque. Sin el bloque de vivienda → todo `null` («no se sabe»). PURA."
+        },
+        {
+          "nombre": "eleccionesInicialesHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RiesgoParaBotsHogar, catalogos: CatalogosHogarLeidos = {}",
+          "retorno": "Record<string, string>",
+          "linea": 155,
+          "resumen": "el resto, '' («Elegir…»). La madera: sí/no solo si se contestó (`null` = '' = sin contestar). Ojo: en Codeoscopic `ocupacion` es el USO de la vivienda y `uso` el RÉGIMEN. PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ac9a7557aef5"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/importes.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "Importes en el formato de los portales españoles (puntos de miles, coma decimal). PURO. Fail-closed: lo que no es un importe inequívoco devuelve `null` (nunca 0, nunca «lo más parecido»).",
@@ -254889,7 +255262,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5341,
-    "funciones": 20485
+    "archivos": 5349,
+    "funciones": 20514
   }
 }

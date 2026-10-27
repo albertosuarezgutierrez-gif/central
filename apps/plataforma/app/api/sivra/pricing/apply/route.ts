@@ -9,7 +9,7 @@ import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
-import { sueloFinde } from "@/lib/sivra/pricing-suelo-finde"
+import { sueloFinde, sueloFindePropietario } from "@/lib/sivra/pricing-suelo-finde"
 import {
   primaFindeFecha, pisosConPrimaFinde, primaPiso, factorSemanaPiso, factorSemanaFecha, urgenciaCombinada, type RitmoFinde,
 } from "@/lib/sivra/pricing-ritmo-finde"
@@ -132,6 +132,7 @@ export async function POST(req: NextRequest) {
     occupancy_global: number; demand_baseline: number; demand_k: number
     channel_markup: number; cuota_fija: number; noches_ref: number; canal_recargo_uh: number
     max_change_pct: number; min_price: number | null; max_price: number | null
+    min_price_finde: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
     liga_encarece: boolean | null; sample_liga: number
     flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number; antelacion_k: number
@@ -236,6 +237,10 @@ export async function POST(req: NextRequest) {
       GREATEST(COALESCE(s.noches_ref, 2), 1)::int AS noches_ref,
       s.max_change_pct::float8 AS max_change_pct,
       s.min_price, s.max_price,
+      -- Por JSON y no s.min_price_finde: así esta lectura no revienta si el código llega a
+      -- producción antes que prisma/sql/2026-10-27_pricing_min_price_finde.sql (columna ausente
+      -- → NULL → sin efecto). Una vez aplicada da exactamente el mismo valor.
+      NULLIF(to_jsonb(s)->>'min_price_finde', '')::int AS min_price_finde,
       mkt.sample_n, mkt.market_age_days,
       COALESCE(s.events_enabled, true) AS events_enabled,
       COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
@@ -962,6 +967,9 @@ export async function POST(req: NextRequest) {
     // la respuesta a propósito: un precio que baja por el techo debe poder distinguirse de uno que
     // baja porque el mercado del mes se hundió.
     const techoAcotadas: { fecha: string; techo: number; origen: "fecha" | "mes" }[] = []
+    // Noches vie/sáb que el suelo del propietario (`min_price_finde`) SUBIÓ: si no se cuentan, un
+    // suelo que manda se confunde en el parte con un precio que el motor eligió.
+    const sueloFindeSubidas: { fecha: string; desde: number; suelo: number }[] = []
     // Fechas recortadas por el TECHO POR ADR PROPIO. Viajan a la respuesta a proposito: si
     // este rail muerde en fechas normales, la senal es que el ancla de mercado se ha vuelto a
     // ir de liga — no que el rail este haciendo bien su trabajo en silencio.
@@ -1336,6 +1344,15 @@ export async function POST(req: NextRequest) {
           if (tAdr.escaladoEvento != null && acA.liberaCongelacion) liberaAdrEvento = true
         }
       }
+      // 🧱 Suelo vie/sáb del PROPIETARIO (`min_price_finde`, ver pricing-suelo-finde.ts). Va aquí,
+      // DESPUÉS de primas, raíl y techos de mercado/ADR, porque es una regla de negocio y no una
+      // estimación: ningún techo derivado del mercado la perfora. Solo max_price le gana (ya va
+      // dentro del helper). Como va después del raíl, una noche por debajo sube de golpe.
+      const sFindeProp = sueloFindePropietario({ fecha: date, minPriceFinde: r.min_price_finde, maxPrice: r.max_price })
+      if (sFindeProp != null && target < sFindeProp) {
+        sueloFindeSubidas.push({ fecha: date, desde: target, suelo: sFindeProp })
+        target = sFindeProp
+      }
       const liberaTecho = acote.liberaCongelacion
       // 🔓 Segunda llave (27/08/2026). El techo solo abre donde hay mercado MEDIDO de la fecha, y
       // eso es una cuarta parte del calendario: 249 de 279 noches congeladas no podían salir nunca.
@@ -1411,7 +1428,9 @@ export async function POST(req: NextRequest) {
       // bajando la misma semana) porque el objetivo fluctúa a diario (mercado/ocupación/velocity)
       // y cualquier ±1€ se escribía. Un cambio <3% no se escribe — salvo que el precio actual
       // esté por debajo del suelo del propietario (eso se corrige siempre).
+      // El suelo vie/sáb del propietario cuenta igual: 570 con suelo 578 se corrige aunque sea un 1,4%.
       if (old != null && (r.min_price == null || old >= r.min_price)
+          && (sFindeProp == null || old >= sFindeProp)
           && Math.abs(target - old) / old < 0.03) continue
       // Idea #3 — min-stay en noches de evento fuerte y lejanas, salvo hueco suelto entre reservas
       // (que sería imposible de cubrir con 2-3 noches). Solo lo escribimos si ya vamos a tocar la
@@ -1555,6 +1574,10 @@ export async function POST(req: NextRequest) {
       // Fechas recortadas por el techo de mercado medido en esta pasada (y de dónde salió el techo).
       techo_mercado: techoAcotadas.length > 0
         ? { fechas: techoAcotadas.length, sample: techoAcotadas.slice(0, 5) }
+        : undefined,
+      // Noches vie/sáb cuyo objetivo subió al suelo del propietario (`min_price_finde`).
+      suelo_finde_propietario: r.min_price_finde != null
+        ? { suelo: r.min_price_finde, fechas: sueloFindeSubidas.length, sample: sueloFindeSubidas.slice(0, 5) }
         : undefined,
       // Fechas recortadas por el techo por ADR propio (03/09/2026). Ver `pricing-techo-adr.ts`.
       techo_adr: adrAcotadas.length > 0
