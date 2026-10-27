@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T16:09:50Z",
-  "sha": "6924d90efd270635c47dd5b24e3d205eafb62476",
+  "generadoEn": "2026-10-27T16:53:43Z",
+  "sha": "e39fdbf361cd8caea09301d2153c927364a89a97",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -143892,7 +143892,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "76f0ed1f465e"
+      "hash": "685ff2da16c0"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -189176,7 +189176,8 @@
       "resumen": "lib/sivra/pricing-suelo-finde.ts — SUELO de fin de semana cuando la fecha NO tiene mercado medido. POR QUÉ (27/09/2026, reserva de House Sevillana 29-31/01/2027 por 600€). El finde solo se encarecía por el ancla de la FECHA exacta (`pricing-ancla-fecha.ts`), que exige ≥5 comps fiables de ESE día. Si",
       "exporta": [
         "esNocheFinde",
-        "sueloFinde"
+        "sueloFinde",
+        "sueloFindePropietario"
       ],
       "funciones": [
         {
@@ -189196,11 +189197,20 @@
           "retorno": "number | null",
           "linea": 41,
           "resumen": "Suelo del finde en base (sin markup), o `null` si no aplica."
+        },
+        {
+          "nombre": "sueloFindePropietario",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: { fecha: string minPriceFinde: number | null maxPrice: number | null }",
+          "retorno": "number | null",
+          "linea": 65,
+          "resumen": "Suelo vie/sáb del propietario en base (sin markup), o `null` si no aplica."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d682ed0deb4b"
+      "hash": "4bd08cb86e11"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-techo-adr.ts",
@@ -255263,6 +255273,6 @@
   ],
   "resumen": {
     "archivos": 5349,
-    "funciones": 20514
+    "funciones": 20515
   }
 }
