@@ -4,11 +4,12 @@ import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
-import { encolarTrabajo, lanzarPendientes } from '@/lib/tarificador'
+import { encolarTrabajo, lanzarPendientes, leerCompaniaActualUnicaCliente } from '@/lib/tarificador'
 import { leerRiesgoParaReencolar } from '@/lib/tarificador-lectura'
 import { riesgoParaReencolar } from '@/lib/tarificador-lectura-reglas'
 import { riesgoDesdeOportunidadDelCliente } from '@/lib/tarificacion-lead'
-import { decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
+import { conCompaniaActualUnica, decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
+import { necesitaCompaniaActual } from '@/lib/tarificador-compania-actual'
 import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
 
 export const runtime = 'nodejs'
@@ -43,7 +44,12 @@ export const POST = auditado(async (req: Request) => {
     const leido = await leerRiesgoParaReencolar(correduria.id, clienteId, compania, ramo)
     // Purga (13/10/2026): el riesgo del trabajo cerrado ya no lleva matrícula ni conductor. Como el botón de plataforma, el
     // riesgo se arma de la oportunidad del cliente + su ficha; el del último trabajo solo es respaldo si aún está completo.
-    const reconstruccion = await riesgoDesdeOportunidadDelCliente(correduria.id, clienteId, ramo)
+    const reconstruida = await riesgoDesdeOportunidadDelCliente(correduria.id, clienteId, ramo)
+    // Compañía actual (Allianz/Mapfre auto con cambio de seguro): si falta, de la póliza de auto en vigor de la cartera SOLO si es
+    // una (cero o varias → sigue faltando y sale 422). Nunca pisa lo que ya trae; la purga no se toca.
+    const reconstruccion = reconstruida.riesgo !== null && necesitaCompaniaActual(compania, ramo, reconstruida.riesgo)
+      ? conCompaniaActualUnica(reconstruida, compania, ramo, await leerCompaniaActualUnicaCliente(correduria.id, clienteId))
+      : reconstruida
     const previo = leido.riesgo === null ? null : riesgoParaReencolar(leido.riesgo)
     const d = decidirRiesgoProbar({ reconstruccion, previo, soloPurgados: leido.soloPurgados, validar: (riesgo) => validarEntradaRamo(ramo, riesgo, compania) })
     if (!d.ok) return NextResponse.json({ estado: 'rechazado', motivo: d.motivo, ...(d.errores ? { errores: d.errores } : {}) }, { status: d.status })

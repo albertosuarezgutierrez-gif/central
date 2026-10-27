@@ -48,6 +48,18 @@ export function companiaActualDeCliente(competencia: unknown, polizas: readonly 
   return enVigor[0]?.nombre ?? null
 }
 
+/**
+ * Variante ESTRICTA para «probar» (riesgo reconstruido, sin nadie delante que lo revise): la compañía de la póliza de AUTO en vigor
+ * de la cartera SOLO si hay exactamente UNA (con nombre útil). Cero o varias → `null` (queda sin rellenar; nunca se elige entre dos).
+ * Si la oportunidad ya declara una compañía actual (`poliza_competencia.aseguradora`), esa manda. PURA.
+ */
+export function companiaActualUnica(competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null): string | null {
+  const deOportunidad = esObj(competencia) ? nombreCompaniaUtil(competencia.aseguradora) : null
+  if (deOportunidad) return deOportunidad
+  const enVigor = (polizas ?? []).filter((p) => p.tipo === 'auto' && esCarteraEnVigor({ importRef: p.importRef, eiacXmlHash: p.eiacXmlHash, estado: p.estado, sustituidaAt: p.sustituidaAt }))
+  return enVigor.length === 1 ? nombreCompaniaUtil(enVigor[0]!.aseguradora) ?? nombreCompaniaUtil(enVigor[0]!.companiaDeclarada) : null
+}
+
 const vacio = (v: unknown): boolean => typeof v !== 'string' || v.trim() === ''
 
 /** Tope de `companiaAnterior` en el validador del formulario (`MAX_COMPANIA_ANTERIOR`): por encima, el validador da ERROR y tumba el trabajo. */

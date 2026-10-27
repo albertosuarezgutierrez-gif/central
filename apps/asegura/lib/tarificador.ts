@@ -28,7 +28,7 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
-import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
+import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, companiaActualUnica, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
 import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
@@ -301,8 +301,16 @@ async function leerDniFicha(correduriaId: string, clienteId: string): Promise<st
   return filas[0]?.dni ?? null
 }
 
+/** Como `leerCompaniaActualCliente` pero ESTRICTA (`companiaActualUnica`): solo con exactamente una póliza de auto en vigor. Para «probar». */
+export async function leerCompaniaActualUnicaCliente(correduriaId: string, clienteId: string): Promise<string | null> {
+  return leerCompaniaActualCliente(correduriaId, clienteId, null, companiaActualUnica)
+}
+
 /** Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló. */
-async function leerCompaniaActualCliente(correduriaId: string, clienteId: string | null, oportunidadId: string | null): Promise<string | null> {
+async function leerCompaniaActualCliente(
+  correduriaId: string, clienteId: string | null, oportunidadId: string | null,
+  decidir: (competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null) => string | null = companiaActualDeCliente,
+): Promise<string | null> {
   try {
     const comp = oportunidadId
       ? await prisma.$queryRaw<{ pc: unknown }[]>`
@@ -316,7 +324,7 @@ async function leerCompaniaActualCliente(correduriaId: string, clienteId: string
           where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null`
       : []
     const ps: PolizaParaCompaniaActual[] = polizas.map((p) => ({ tipo: p.tipo, aseguradora: p.aseguradora, companiaDeclarada: p.compania_declarada, estado: p.estado, importRef: p.import_ref, eiacXmlHash: p.eiac_xml_hash, sustituidaAt: p.sustituida_at, fechaEfecto: p.fecha_efecto }))
-    return companiaActualDeCliente(comp[0]?.pc ?? null, ps)
+    return decidir(comp[0]?.pc ?? null, ps)
   } catch {
     return null
   }

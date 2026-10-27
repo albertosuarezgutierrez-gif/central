@@ -1,3 +1,5 @@
+import { aplicarCompaniaActual } from './tarificador-compania-actual.ts'
+
 // Reglas PURAS de «relanzar» un trabajo del tarificador RPA por el puerto de operador (15/10/2026). Sin BD ni red.
 // Relanzar = el MISMO trabajo (mismo riesgo, que sigue en la fila) vuelve a `pendiente`. Pensado para que una sesión de
 // Claude itere arreglo→prueba sin la pantalla de Alberto. Solo TARIFICAR: emisión y exploración nunca se relanzan por aquí.
@@ -45,6 +47,17 @@ export function decidirRelanzar(e: EntradaRelanzar): DecisionRelanzar {
 export type ReconstruccionRiesgo =
   | { riesgo: unknown; bloqueos: readonly string[]; repreguntar: readonly string[] }
   | { riesgo: null; motivo: 'sin_oportunidad' | 'discrepancias' | 'sin_formulario' }
+
+/**
+ * Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre auto con cambio de seguro) con la compañía que deduce la cartera
+ * (`companiaActualUnica`: solo con exactamente una póliza de auto en vigor). `actual` null → mismo objeto. No pisa lo que ya trae.
+ * Sin reconstrucción no hace nada. PURA; después sigue pasando por `validar`.
+ */
+export function conCompaniaActualUnica(r: ReconstruccionRiesgo, compania: string, ramo: string, actual: string | null): ReconstruccionRiesgo {
+  if (r.riesgo === null || actual === null) return r
+  const riesgo = aplicarCompaniaActual(compania, ramo, r.riesgo, actual)
+  return riesgo === r.riesgo ? r : { ...r, riesgo }
+}
 
 type ValidacionProbar<E extends { riesgo: unknown } = { riesgo: unknown }> = { ok: true; entrada: E } | { ok: false; mensaje: string; errores?: readonly string[] }
 
