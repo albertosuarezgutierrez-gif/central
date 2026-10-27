@@ -4374,7 +4374,16 @@ export async function pulsarRecalcularGenerali(page: Page, guard: GuardEmision):
     if (casa !== null) throw new EmisionBloqueadaError('fase', `«Recalcular» de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
   }
   const control = marco.getByText(new RegExp(`^\\s*${TEXTO_RECALCULAR_GENERALI}\\s*$`)).filter({ visible: true })
-  const n = await control.count()
+  let n = await control.count()
+  // v0.2.40: la botonera es un menú «Acciones» (`ul.dropdown`): si el enlace no está a la vista se SOBREVUELA el rótulo «Acciones» (un hover no pulsa nada) y se vuelve a contar.
+  if (n === 0) {
+    const titulo = marco.getByText(/^\s*Acciones\s*$/).filter({ visible: true })
+    if ((await titulo.count()) === 1) {
+      await titulo.hover({ timeout: 1_500 }).catch(() => undefined)
+      await page.waitForTimeout(400)
+      n = await control.count()
+    }
+  }
   if (n !== 1) throw new ErrorMapaGuardGenerali(`la acción «${TEXTO_RECALCULAR_GENERALI}» (${n} controles visibles con ese texto; hace falta exactamente uno)`)
   const desc = await descripcion(control, true)
   if (!recalcularGeneraliPermitido(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
@@ -4393,6 +4402,8 @@ export async function pulsarRecalcularGenerali(page: Page, guard: GuardEmision):
     guard.comprobar()
     const fin = Date.now() + 1_500
     while (dialogo === null && Date.now() < fin) await page.waitForTimeout(150)
+    // v0.2.40: «link('calcular')» recarga el marco; se espera (acotado) a que termine antes de releer la tabla.
+    await marco.waitForLoadState('load', { timeout: 10_000 }).catch(() => undefined)
   } finally {
     page.off('dialog', alDialogo)
   }

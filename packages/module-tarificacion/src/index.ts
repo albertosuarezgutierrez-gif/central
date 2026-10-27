@@ -168,6 +168,12 @@ export {
   type ValidacionFormularioHogarSinTomador,
 } from './formulario-hogar.ts'
 
+// Constructor del riesgo de HOGAR para los bots (movido de plataforma el 27/10/2026; lo usan «pedir precio» y «Probar» de asegura).
+export {
+  formularioBotHogar, datosViviendaParaBot, eleccionesInicialesHogar,
+  type CampoDeFichaHogar, type CatalogosHogarLeidos, type DatosViviendaBot, type EleccionesHogar, type EntradaBotHogar, type FormularioBotHogar, type RiesgoParaBotsHogar,
+} from './hogar-bot-formulario.ts'
+
 // Ayudas puras de la oportunidad de HOGAR (20/10/2026): capital sugerido, infraseguro, discrepancias Catastro, antigüedad, bots por uso.
 export {
   COSTE_RECONSTRUCCION_EUR_M2, REGLAS_USO_COMPANIA, UMBRAL_INFRASEGURO, TOLERANCIA_M2, ANTIGUEDAD_PREGUNTAR_REFORMAS, USOS_FILTRO_BOTS,

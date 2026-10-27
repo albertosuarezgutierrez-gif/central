@@ -257,6 +257,14 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.40 (27/10/2026, prueba real con 0.2.39, trabajo 86fd856c). CAUSA PROBADA (pasos del trabajo + HTML redactado): «Recalcular» NUNCA se llegó a evaluar. La puerta de 0.2.39 solo miraba la tabla
+ * «Modalidades de Seguro» justo tras la primera lectura; en esa prueba la tabla aún NO estaba a la vista (25 s de lectura sin tabla), el bot pulsó «Siguiente×1» (2 s) y SOLO entonces apareció la
+ * tabla, vacía; el bucle de «Siguiente» ve la tabla a la vista, no avanza más y el código seguía sin volver a mirar «Recalcular»: el error no lo decía porque no hubo ni intento ni motivo.
+ * El botón existe en el HTML: `<ul id="Menu2" class="MP dropdown"><li>Acciones</li><li onclick="link('calcular')"><a class="btn">Recalcular</a></li><li onclick="link('grabarCalcRap')">Guardar Cálculo`.
+ * Ahora: (1) «Recalcular» se evalúa tras la lectura y OTRA vez al salir del bucle de «Siguiente» (una vez por trabajo); (2) el resultado («Recalcular×1», «no pulsado: motivo» o «no intentado: motivo»)
+ * va SIEMPRE justo después de la frase del precio, al principio del mensaje (el runner corta a 2000); (3) la puerta del guard sobrevuela «Acciones» si el enlace no está visible y espera la recarga del marco.
+ */
+/**
  * 0.2.39 (27/10/2026, prueba real con 0.2.38: «Garantías y Resultados» llega por fin, pero el precio no sale). CAUSA (HTML redactado del fallo, no la captura): la tabla
  * «Modalidades de Seguro» (`reg1063E_gridmodseg`) está pintada con su cabecera y el `<tbody>` VACÍO (ni filas ni paginador con datos): Generali NO ha calculado todavía.
  * No es carga lenta (el bot esperó ~55 s), ni otro marco, ni un texto sin «prima/precio»: no hay ningún importe en toda la página (un solo «€», ajeno). `Siguiente`/`Inicio`
@@ -280,7 +288,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.39'
+export const VERSION_GENERALI_AUTO = '0.2.40'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2708,26 +2716,36 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   }
   let lectura = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
   if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, lectura.avisos)]) }
-  // v0.2.39: tabla de modalidades a la vista y vacía = el portal no ha calculado: «Recalcular» (acción de la botonera, no guarda ni emite) UNA vez por la puerta del guard.
+  // v0.2.39/v0.2.40: tabla de modalidades a la vista y vacía = el portal no ha calculado: «Recalcular» (acción de la botonera, no guarda ni emite) UNA vez por la puerta del guard.
+  // v0.2.40: se evalúa DESPUÉS de cada lectura y de cada «Siguiente» (en la prueba real con 0.2.39 la tabla vacía aparecía solo tras «Siguiente×1» y el bloque de antes ya había pasado).
   const avanceRecalcular: string[] = []
-  if (modalidadesSinCalcularGenerali(await volcarModalidadesGenerali(page))) {
+  let recalcularIntentado = false
+  const recalcularSiHaceFalta = async (): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>> | null> => {
+    if (recalcularIntentado || !modalidadesSinCalcularGenerali(await volcarModalidadesGenerali(page))) return null
+    recalcularIntentado = true
     const puerta = ctx.pulsarRecalcularGenerali
-    if (typeof puerta !== 'function') avanceRecalcular.push('Recalcular no intentado: la tabla de modalidades está vacía y el contexto del runner no trae la puerta guardada')
-    else {
-      try {
-        const r = await paso('tarificar', async () => puerta())
-        avanceRecalcular.push(`Recalcular×1${r && r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
-        lectura = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
-      } catch (e) {
-        if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e
-        avanceRecalcular.push(`Recalcular no pulsado: ${(e instanceof Error ? e.message : String(e)).slice(0, 260)}`)
-      }
+    if (typeof puerta !== 'function') {
+      avanceRecalcular.push('Recalcular no intentado: la tabla de modalidades está vacía y el contexto del runner no trae la puerta guardada')
+      return null
     }
+    try {
+      const r = await paso('tarificar', async () => puerta())
+      avanceRecalcular.push(`Recalcular×1${r && r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
+      return await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
+    } catch (e) {
+      if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e
+      avanceRecalcular.push(`Recalcular no pulsado: ${(e instanceof Error ? e.message : String(e)).slice(0, 260)}`)
+      return null
+    }
+  }
+  const trasRecalcular = await recalcularSiHaceFalta()
+  if (trasRecalcular) {
+    lectura = trasRecalcular
     if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, lectura.avisos)]) }
   }
   // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
   let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
-  const avanceSiguiente: string[] = [...avanceRecalcular]
+  const avanceSiguiente: string[] = []
   if (!ctx.pulsarSiguienteGenerali) avanceSiguiente.push('Siguiente no intentado: el contexto del runner no trae la puerta guardada')
   else if (lecturaFinal.tipo !== 'ninguno') avanceSiguiente.push(`Siguiente no intentado: la lectura ya era «${lecturaFinal.tipo}» (no «ninguno»)`)
   if (ctx.pulsarSiguienteGenerali) {
@@ -2749,6 +2767,12 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
       if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, lecturaFinal.avisos)]) }
     }
   }
+  // v0.2.40: la tabla vacía puede aparecer SOLO tras «Siguiente» (o al terminar el bucle): «Recalcular» se evalúa también aquí, una sola vez por trabajo.
+  const trasSiguiente = await recalcularSiHaceFalta()
+  if (trasSiguiente) {
+    lecturaFinal = trasSiguiente
+    if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, lecturaFinal.avisos)]) }
+  }
   const despues = await leerPantallaPagina(page)
   const textoFinal = await textoPagina(page)
   const obligatorios = avisosObligatorioGenerali(textoFinal)
@@ -2757,6 +2781,9 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const volImportes = await volcarDiagnosticoImportesGenerali(page)
   const volModalidades = await volcarModalidadesGenerali(page)
   const diagModalidades = await volcarDiagnosticoModalidadesGenerali(page)
+  if (avanceRecalcular.length === 0) {
+    avanceRecalcular.push(`Recalcular no intentado: ${!volModalidades?.encontrada ? 'la tabla de modalidades no estaba a la vista' : hayImporteEnFilasGenerali(volModalidades) ? 'la tabla de modalidades ya traía importes' : 'la tabla de modalidades no estaba vacía según la lectura previa'}`)
+  }
   const navegacionMarcos = await volcarNavegacionGenerali(page)
   // v0.2.36: si combustible y potencia llevan dato (no «No lo sé»), el error lo dice: descarta la hipótesis de que Generali no calcula por eso.
   const rellenos = combustiblePotenciaRellenosGenerali(supuestos) ? '; con combustible y potencia rellenos' : ''
@@ -2767,7 +2794,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // importes/modalidades, la navegación, el resto y la pantalla, con presupuesto decreciente hasta que todo quepa. Lo primero que se recorta es el inventario del tomador
   // y el mapa provisional (v0.2.36); la estructura de la tabla se recorta dentro del bloque de marcos antes que la lista.
   const compuesto = (nav: number, res: number, pan: number, imp: number, amp: number, tom: number, mapa: number, dImp: number, dMod: number): string =>
-    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
+    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Recalcular: ${avanceRecalcular.join(' · ')}. ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
   const LIMITE = 1_900 - 'generali/auto: mapa incompleto: faltan '.length
   let mensaje = compuesto(300, 360, 450, 8, 1_500, 120, 80, 260, 620)
   for (const [nav, res, pan, imp, amp, tom, mapa, dImp, dMod] of [

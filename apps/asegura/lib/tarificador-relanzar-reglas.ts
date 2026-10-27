@@ -1,3 +1,4 @@
+import { formularioBotHogar, datosViviendaParaBot, eleccionesInicialesHogar, type RiesgoParaBotsHogar } from '@central/module-tarificacion'
 import { aplicarCompaniaActual } from './tarificador-compania-actual.ts'
 import { necesitaVehiculoEncadenado, riesgoConVehiculo, tieneVehiculo, vehiculoDeOrigenes, type FilaOrigen } from './tarificador-espera-vehiculo.ts'
 
@@ -48,6 +49,19 @@ export function decidirRelanzar(e: EntradaRelanzar): DecisionRelanzar {
 export type ReconstruccionRiesgo =
   | { riesgo: unknown; bloqueos: readonly string[]; repreguntar: readonly string[] }
   | { riesgo: null; motivo: 'sin_oportunidad' | 'discrepancias' | 'sin_formulario' }
+  /** Hogar: el constructor del botón «pedir precio» dice QUÉ falta (etiquetas de campo, nunca valores) → 422 `riesgo_incompleto`. */
+  | { riesgo: null; motivo: 'faltan_datos'; faltan: readonly string[] }
+
+/**
+ * HOGAR (27/10/2026): el riesgo se arma como cuando Alberto pulsa «pedir precio» en la oportunidad de hogar de plataforma:
+ * `datosVivienda` de la oportunidad MÁS RECIENTE del cliente (`leerRiesgo`, el mismo que lee la pantalla) → `datosViviendaParaBot` +
+ * `eleccionesInicialesHogar` (solo lo que casa exactamente) → `formularioBotHogar`. Todo en `@central/module-tarificacion`: el
+ * mismo código que el botón. Lo que falta sale como etiquetas de campo (422), nunca un valor supuesto. El tomador lo pone el encolado.
+ */
+export function riesgoHogarDeRiesgoOportunidad(r: RiesgoParaBotsHogar, ahora = new Date()): ReconstruccionRiesgo {
+  const f = formularioBotHogar({ ...datosViviendaParaBot(r), ...eleccionesInicialesHogar(r) }, ahora)
+  return f.ok ? { riesgo: f.riesgo, bloqueos: [], repreguntar: [] } : { riesgo: null, motivo: 'faltan_datos', faltan: f.faltan }
+}
 
 /**
  * Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre auto con cambio de seguro) con la compañía que deduce la cartera
@@ -95,6 +109,8 @@ export function decidirRiesgoProbar<E extends { riesgo: unknown }>(e: { reconstr
     faltan = v.errores ?? [v.mensaje]
   } else if ('motivo' in r && r.motivo === 'discrepancias') {
     return { ok: false, status: 409, motivo: 'oportunidad_con_discrepancias' }
+  } else if ('motivo' in r && r.motivo === 'faltan_datos') {
+    faltan = r.faltan
   }
   if (e.previo !== null && e.previo !== undefined) {
     const v = e.validar(e.previo)
