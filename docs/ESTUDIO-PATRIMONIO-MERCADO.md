@@ -102,7 +102,7 @@ RC 5731022TG3453B0001AK, sin división horizontal, 12 pisos. Borrador de WhatsAp
    anual consolidada, solo por recibo → calcularla; mientras tanto, por nº de pólizas).
 4. ✅ **Volcado inicial semiautomático** (#5134): el cliente sube su Excel o sus PDF → la IA propone edificio, pisos, inquilinos,
    rentas y gastos → el cliente confirma. Leer el xlsx de forma segura en el servidor (la librería anterior se quitó por un CVE).
-5. 🛠️ **Inquilinos como canal** — modelo «el inquilino PIDE precio» construido 27/10 (sin desplegar; textos legales en BORRADOR, pendientes de abogado): botón en «Mi alquiler» → tarea para Alberto (ficha de lead nueva); casilla aparte, no premarcada, para otras ofertas; el propietario no lo ve. Privacidad `2026-10-v3` (apartado 3 ter).
+5. ✅ **Inquilinos como canal** — modelo «el inquilino PIDE precio» MERGEADO 27/10 (#5151) y revisado por el abogado (OK 27/10): botón en «Mi alquiler» → tarea para Alberto (ficha de lead nueva); casilla aparte, no premarcada, para otras ofertas; el propietario no lo ve. Privacidad `2026-10-v3` (apartado 3 ter).
 6. ⏳ **Señales automáticas** (motor ya hecho; espera el OK legal a los textos de P15): contrato nuevo → impago; piso vacío →
    vivienda desocupada; infraseguro → revisar el continente; hipoteca → vida vinculada.
 7. ✅ **Informe anual para el gestor** (#5134, CSV + imprimible): PDF por inmueble con ingresos y gastos clasificados para la renta (exportar datos, no asesorar).
