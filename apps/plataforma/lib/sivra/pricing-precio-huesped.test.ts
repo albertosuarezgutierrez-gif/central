@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   precioHuesped, baseDondeLaCuotaMandaya, TOPE_CARO,
-  VENTANA_DIAS_MERCADO, MIN_COMPS_FECHA, MIN_VENTAS_PRECIO, vendeAlPrecio,
+  VENTANA_DIAS_MERCADO, MIN_COMPS_FECHA, MIN_VENTAS_PRECIO, vendeAlPrecio, fechasEventoParaVentas,
   type FechaHuesped,
 } from './pricing-precio-huesped.ts'
 
@@ -278,4 +278,26 @@ test('🚨 finde subido por la PRIMA de ritmo (>1) → caro_vendiendo; 1 o null 
   }
   // La prima no convierte en «caro_vendiendo» una noche que no está sobre el mercado.
   assert.equal(precioHuesped([{ ...con(1.2), baseAplicada: 300 }], P1).fechas[0].estado === 'caro_vendiendo', false)
+})
+
+// ─── Ventas: las noches de EVENTO no entran en la mediana ───────────────────────────────────────
+
+test('fechasEventoParaVentas: Feria 2026 (EVENTS) y Semana Santa derivada entran; un sábado normal de abril, no', () => {
+  const ev = fechasEventoParaVentas('2025-01-01', '2027-12-31')
+  assert.ok(ev.includes('2026-04-24'))       // Feria (EVENTS, 3,50)
+  assert.ok(ev.includes('2026-04-03'))       // Viernes Santo (derivada de la Pascua)
+  assert.ok(ev.includes('2025-04-18'))       // Semana Santa 2025: derivada aunque EVENTS no llegue
+  assert.ok(!ev.includes('2026-04-11'))      // sábado normal de abril
+  assert.ok(ev.every(d => d >= '2025-01-01' && d <= '2027-12-31'))
+})
+
+test('la CTE de ventas va por NOCHES, excluye eventos, respeta historico_desde y cuenta RESERVAS', () => {
+  const src = readFileSync(new URL('../../app/api/sivra/pricing/canal/route.ts', import.meta.url), 'utf8')
+  const cte = src.slice(src.indexOf('ev_noches AS'), src.indexOf('mkt AS ('))
+  assert.match(cte, /generate_series\(/)
+  assert.match(cte, /ISODOW FROM g\.d/)
+  assert.match(cte, /NOT IN \(SELECT d FROM ev_noches\)/)
+  assert.match(cte, /historico_desde/)
+  assert.match(cte, /COUNT\(DISTINCT i\.id\)/)
+  assert.match(cte, /FACTOR_EVENTO_MINIMO/)
 })

@@ -16,7 +16,7 @@ import {
 import {
   precioHuesped, baseDondeLaCuotaMandaya,
   VENTANA_DIAS_MERCADO, MIN_COMPS_FECHA,
-  type ResumenHuesped, type VeredictoHuesped, type FechaHuesped,
+  type ResumenHuesped, type VeredictoHuesped, type FechaHuesped, fechasEventoParaVentas,
 } from "@/lib/sivra/pricing-precio-huesped"
 import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
 import { FACTOR_EVENTO_MINIMO } from "@/lib/sivra/mercado-ventanas"
@@ -136,7 +136,7 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
            -- Estancia típica REAL del piso: entre esas noches se reparte la cuota fija. Mediana, no
            -- media: una reserva de 14 noches no puede decidir cómo se tarifa un fin de semana.
            (SELECT percentile_disc(0.5) WITHIN GROUP (ORDER BY i.nights)
-              FROM incomes i
+              FROM incomes AS i
              WHERE i."propertyId" = s.property_id AND i.nights > 0
                AND i.date >= CURRENT_DATE - 365)::int AS noches_mediana
     FROM pricing_settings s
@@ -319,6 +319,11 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
   /** true = no se pudo leer el ritmo de findes con algún piso habilitado: sus findes van «no se sabe». */
   ritmoIlegible: boolean
 }> {
+  // Fechas de evento del histórico (12 meses atrás hasta el horizonte) para sacarlas de las ventas.
+  const fechasEvento = fechasEventoParaVentas(
+    new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10),
+    new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10),
+  )
   const filas = await prisma.$queryRaw<{
     property_id: string; fecha: string; base: number; med: number | null; comps: number
     v_n: number | null; v_med: number | null
@@ -345,16 +350,30 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
         AND ${Prisma.raw(sqlCompPlausible("m."))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     ),
-    -- Ventas REALES del piso (12 meses) por mes del año y tipo de noche (vie/sáb vs resto): €/noche
-    -- huésped = amount_gross / nights. El cruce con el precio de la fecha se hace en TS (depende del guest).
+    -- Noches de EVENTO (no representan un día normal): tabla de eventos de la ciudad + calendario fijo
+    -- del motor (pricing_eventos_auto sólo cubre desde jul-2026). Misma condición que más abajo.
+    ev_noches AS (
+      SELECT rate_date AS d FROM pricing_eventos_auto
+      WHERE estado <> 'descartado' AND factor >= ${FACTOR_EVENTO_MINIMO}
+      UNION
+      SELECT unnest(${fechasEvento}::date[])
+    ),
+    -- Ventas REALES del piso (12 meses) por mes del año y tipo de NOCHE (vie/sáb vs resto), noche a
+    -- noche (no por día de entrada), sin noches de evento y desde pricing_settings.historico_desde.
+    -- €/noche huésped = amount_gross / nights. n = RESERVAS distintas (no noches). El cruce con el
+    -- precio de la fecha se hace en TS (depende del guest).
     ventas AS (
-      SELECT "propertyId" AS property_id,
-             EXTRACT(MONTH FROM "checkIn")::int AS mes,
-             (EXTRACT(ISODOW FROM "checkIn") IN (5, 6)) AS finde,
-             COUNT(*)::int AS n,
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY amount_gross / nights)::float8 AS med
-      FROM incomes
-      WHERE "checkIn" >= CURRENT_DATE - 365 AND nights > 0 AND amount_gross > 0
+      SELECT i."propertyId" AS property_id,
+             EXTRACT(MONTH FROM g.d)::int AS mes,
+             (EXTRACT(ISODOW FROM g.d) IN (5, 6)) AS finde,
+             COUNT(DISTINCT i.id)::int AS n,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY i.amount_gross / i.nights)::float8 AS med
+      FROM incomes AS i
+      LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+      CROSS JOIN LATERAL generate_series(i."checkIn"::date, i."checkIn"::date + (i.nights - 1), interval '1 day') AS g(d)
+      WHERE i."checkIn" >= CURRENT_DATE - 365 AND i.nights > 0 AND i.amount_gross > 0
+        AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
+        AND g.d::date NOT IN (SELECT d FROM ev_noches)
       GROUP BY 1, 2, 3
     ),
     mkt AS (

@@ -43,6 +43,9 @@
 //
 // Módulo PURO (sin BD ni `@/`), testeable con `node --test`.
 
+import { EVENTS } from '../pricing-calendar.ts'
+import { calendarioEntre } from './eventos-calendario.ts'
+import { FACTOR_EVENTO_MINIMO } from './mercado-ventanas.ts'
 import { guestDesdeBase, fijoPorNoche, markupEnFecha, type ParametrosCanal } from './pricing-canal.ts'
 
 export interface FechaHuesped {
@@ -94,6 +97,22 @@ export type EstadoHuesped = 'sin_mercado' | 'ok' | 'caro' | 'caro_vendiendo' | '
  * mes del año, con mediana de €/noche huésped ≥ el precio huésped de esa fecha. `null` = no se sabe.
  */
 export const MIN_VENTAS_PRECIO = 3
+
+/**
+ * Noches de EVENTO (Feria, Semana Santa, congresos…) para EXCLUIR de las ventas que deciden
+ * `vendeAlPrecio`: la mediana de un finde normal no puede contaminarse con 1.010€ de una noche de
+ * Feria (medido: House, abril vie/sáb). `pricing_eventos_auto` sólo cubre desde jul-2026, así que
+ * el histórico se completa con el calendario fijo del motor (`EVENTS`) y la Semana Santa derivada
+ * de la Pascua (`calendarioEntre`). Misma condición que el resto: factor >= FACTOR_EVENTO_MINIMO.
+ * El SQL la une a `pricing_eventos_auto` (estado <> 'descartado'). Un año sin datos de Feria en la
+ * tabla (p. ej. 2025) no se inventa: esas noches cuentan como normales (hueco conocido).
+ */
+export function fechasEventoParaVentas(desde: string, hasta: string): string[] {
+  const s = new Set<string>()
+  for (const [d, f] of Object.entries(EVENTS)) if (f >= FACTOR_EVENTO_MINIMO && d >= desde && d <= hasta) s.add(d)
+  for (const n of calendarioEntre(desde, hasta).noches) if (n.factor >= FACTOR_EVENTO_MINIMO) s.add(n.fecha)
+  return [...s].sort()
+}
 
 /** true/false si hay muestra suficiente; null si no se sabe (sin histórico leído o muestra corta). */
 export function vendeAlPrecio(
