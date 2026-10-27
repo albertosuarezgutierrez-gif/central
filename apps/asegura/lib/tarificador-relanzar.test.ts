@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { decidirRelanzar, ESTADOS_RELANZABLES, MAX_RELANZAMIENTOS_24H } from './tarificador-relanzar-reglas.ts'
+import { decidirRelanzar, decidirRiesgoProbar, ESTADOS_RELANZABLES, MAX_RELANZAMIENTOS_24H } from './tarificador-relanzar-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
 const leer = (rel: string) => readFileSync(join(APP, rel), 'utf8')
@@ -83,4 +83,57 @@ test('workflow relanzar: manual, uuid validado, secreto solo en env y por stdin,
   assert.match(wf, /--config -/, 'el Bearer no puede ir en la línea de órdenes')
   assert.match(wf, /IN\("estado","motivo"/, 'la salida tiene que filtrarse a claves sin PII')
   assert.ok(!/echo[^\n]*\$ASEGURA_OPERADOR_SECRET/.test(wf), 'el secreto no se imprime')
+})
+
+// ─── probar con el trabajo anterior purgado ───────────────────────────────────────────────────────────────────────
+const validarSi = (completo: (r: any) => boolean) => (r: unknown) => completo(r) ? { ok: true as const, entrada: { riesgo: r } } : { ok: false as const, mensaje: 'riesgo inválido', errores: ['matricula', 'conductor.fechaCarne'] }
+const rec = { riesgo: { ramo: 'auto', matricula: 'X', conductor: {} }, bloqueos: [] as string[], repreguntar: [] as string[] }
+const sinOp = { riesgo: null, motivo: 'sin_oportunidad' as const }
+
+test('probar: con el último trabajo purgado, el riesgo sale de la oportunidad+ficha (origen oportunidad)', () => {
+  const d = decidirRiesgoProbar({ reconstruccion: rec, previo: null, soloPurgados: true, validar: validarSi((r) => r.matricula === 'X') })
+  assert.ok(d.ok && d.origen === 'oportunidad')
+})
+
+test('probar: si lo reconstruido no valida y el trabajo previo sigue completo, respaldo en el previo', () => {
+  const d = decidirRiesgoProbar({ reconstruccion: rec, previo: { matricula: 'Y' }, soloPurgados: false, validar: validarSi((r) => r.matricula === 'Y') })
+  assert.ok(d.ok && d.origen === 'trabajo_previo')
+  const s = decidirRiesgoProbar({ reconstruccion: sinOp, previo: { matricula: 'Y' }, soloPurgados: false, validar: validarSi((r) => r.matricula === 'Y') })
+  assert.ok(s.ok && s.origen === 'trabajo_previo')
+})
+
+test('probar: ni oportunidad ni previo válido → 422 con los CAMPOS que faltan (sin valores); no se inventa nada', () => {
+  const d = decidirRiesgoProbar({ reconstruccion: rec, previo: null, soloPurgados: true, validar: validarSi(() => false) })
+  assert.deepEqual(d, { ok: false, status: 422, motivo: 'riesgo_incompleto', errores: ['matricula', 'conductor.fechaCarne'] })
+  const p = decidirRiesgoProbar({ reconstruccion: sinOp, previo: { x: 1 }, soloPurgados: false, validar: validarSi(() => false) })
+  assert.ok(!p.ok && p.status === 422 && p.motivo === 'riesgo_previo_invalido')
+})
+
+test('probar: sin oportunidad ni trabajos → 409 sin_riesgo_previo; solo purgados → 409 origen_purgado', () => {
+  const v = validarSi(() => true)
+  assert.deepEqual(decidirRiesgoProbar({ reconstruccion: sinOp, previo: null, soloPurgados: false, validar: v }), { ok: false, status: 409, motivo: 'sin_riesgo_previo' })
+  assert.deepEqual(decidirRiesgoProbar({ reconstruccion: sinOp, previo: null, soloPurgados: true, validar: v }), { ok: false, status: 409, motivo: 'origen_purgado' })
+})
+
+test('probar: bloqueos (otro conductor/titular), dudas del cliente y discrepancias sin elegir NO se lanzan ni caen al previo', () => {
+  const v = validarSi(() => true)
+  const b = decidirRiesgoProbar({ reconstruccion: { ...rec, bloqueos: ['conductor'] }, previo: { a: 1 }, soloPurgados: false, validar: v })
+  assert.ok(!b.ok && b.status === 409 && b.motivo === 'oportunidad_no_tarificable')
+  const q = decidirRiesgoProbar({ reconstruccion: { ...rec, repreguntar: ['garaje'] }, previo: { a: 1 }, soloPurgados: false, validar: v })
+  assert.ok(!q.ok && q.motivo === 'oportunidad_con_dudas')
+  const x = decidirRiesgoProbar({ reconstruccion: { riesgo: null, motivo: 'discrepancias' }, previo: { a: 1 }, soloPurgados: false, validar: v })
+  assert.ok(!x.ok && x.motivo === 'oportunidad_con_discrepancias')
+})
+
+test('ruta probar: conserva Bearer, RPA activo, validación con compañía y encolarTrabajo (dedupe); usa el reconstructor compartido', () => {
+  const src = leer('app/api/operador/tarificador/probar/route.ts')
+  assert.match(src, /operadorAutorizado\(req\)/)
+  assert.match(src, /rpaActivo\(process\.env\)/)
+  assert.match(src, /decidirRiesgoProbar\(/)
+  assert.match(src, /riesgoDesdeOportunidadDelCliente\(/)
+  assert.match(src, /validarEntradaRamo\(ramo, riesgo, compania\)/, 'la validación tiene que llevar la compañía (faltanParaTarificar + ramo admitido)')
+  assert.match(src, /encolarTrabajo\(/)
+  const lead = leer('lib/tarificacion-lead.ts')
+  assert.match(lead, /export async function riesgoDesdeOportunidadDelCliente/)
+  assert.match(lead, /formularioDeOportunidad\(/, 'revisarInterno y el reconstructor comparten el constructor')
 })

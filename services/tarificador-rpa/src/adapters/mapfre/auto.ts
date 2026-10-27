@@ -68,6 +68,9 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.28 (27/10/2026): el respaldo por etiqueta de «Compañia» se leía UNA sola vez al salir de la espera (0 ms si el campo no es opcional): con el control
+//   aún sin pintar o deshabilitado daba null y el hueco decía «no aparece» aunque el diagnóstico, segundos después, lo veía habilitado. Ahora SONDEA
+//   (`selectCompaniaPorEtiqueta(raiz, pulsar, esperaMs)`) y el diagnóstico LEE las opciones al abrir el panel (por `pulsar` guardado, cierre por el telón).
 // v0.8.24 (26/10/2026, trabajo e886d7d9 con 0.8.23): «Figuras» de COCHE sin `app-historial-siniestralidad` (solo etiquetas «Compañia»,
 //   «Procedencia Siniestralidad», «Expuestos/Años», «Siniestros», «Bonus Malus»). 0.8.23 solo añadió el PDF tras «Generar Proyecto»:
 //   no toca Figuras → el portal pinta otra variante. La compañía anterior se busca por etiqueta «Compañia» (`selectCompaniaPorEtiqueta`:
@@ -710,6 +713,8 @@ const CP = /^\d{5}$/
 
 /** Espera activa antes de dar por ausente un desplegable opcional (uso/ámbito): el flujo los pinta a veces con retraso. */
 export const ESPERA_OPCIONAL_MS = 2_500
+/** v0.8.28 · Espera máxima del respaldo por etiqueta de «Compañia» (control sin pintar / aún deshabilitado). */
+export const ESPERA_COMPANIA_ETIQUETA_MS = 6_000
 
 /**
  * ¿Aparece `sel` VISIBLE dentro de `ms`? Sondeo cada 250 ms (espera activa); `ms` 0 = una sola mirada. Solo lectura.
@@ -932,7 +937,7 @@ async function campoPorEtiquetaPortal(raiz: Pick<Frame, 'locator'>, sel: string,
  * tag, formcontrolname/name/id, deshabilitado, interruptor). Si `app-historial-siniestralidad` no existe, las etiquetas de la
  * pantalla que hablan de siniestralidad/compañía. Para que el hueco de «compañía anterior» en MOTO diga qué pinta el portal.
  */
-export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Promise<string> {
+export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>, leer?: LectorOpcionesMatSelect): Promise<string> {
   // Sin funciones con nombre dentro del `evaluate` (tsx/esbuild las envuelve en `__name`, que no existe en la página): el texto
   // crudo se limpia aquí, en Node.
   const crudo = await raiz
@@ -962,7 +967,7 @@ export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Pr
   const controles = crudo.controles.slice(0, 20).map((c) => `${c.tag}${c.id ? `[${c.id.slice(0, 40)}]` : ''}${limpia(c.et) ? `«${limpia(c.et)}»` : ''}${c.off ? '(deshabilitado)' : ''}`)
   const et = etiquetas.length ? ` etiquetas: ${etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
   // v0.8.25: sin el bloque, qué CONTROL hay tras cada etiqueta de siniestralidad (tipo, formcontrolname, deshabilitado).
-  const porEtiqueta = crudo.bloque ? '' : `; controles por etiqueta: ${await describirControlesSiniestralidad(raiz)}`
+  const porEtiqueta = crudo.bloque ? '' : `; controles por etiqueta: ${await describirControlesSiniestralidad(raiz, leer)}`
   return crudo.bloque ? `el bloque app-historial-siniestralidad trae ${controles.length} controles (${controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}${porEtiqueta}`
 }
 
@@ -974,7 +979,7 @@ const ETIQUETAS_SINIESTRALIDAD_FIGURAS = ['procedencia siniestralidad', 'expuest
  * Niveles Bonus Malus»): tipo de control (mat-select/mat-autocomplete/input/checkbox), formcontrolname/name/id y si está deshabilitado. SOLO LEE,
  * nunca valores ni opciones (el panel de un mat-select no está en el DOM cerrado y este adaptador no tiene lector de opciones sin elegir).
  */
-export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locator'>): Promise<string> {
+export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locator'>, leer?: LectorOpcionesMatSelect): Promise<string> {
   const crudo = await raiz
     .locator('body')
     .evaluate((body, args) => {
@@ -1013,7 +1018,27 @@ export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locato
   const lista = crudo.map((c) => `«${c.et}» ${c.tipo}${c.id ? `[${c.id.replace(/[^\w-]/g, '').slice(0, 30)}]` : ''} ${c.off ? 'deshabilitado' : 'habilitado'}`)
   const companias = crudo.filter((c) => c.et === 'compania')
   const distintos = companias.length > 1 ? `; «compania»: ${companias.length} nodos distintos (contenedores: ${companias.map((c) => c.padre).join(', ')})` : ''
-  return `${lista.join('; ')}${distintos}; opciones de los desplegables: no leídas (panel cerrado, sin lector de opciones)`
+  const opciones = leer ? await leerOpcionesCompania(raiz, leer) : null
+  const txtOpc = opciones === null ? 'no leídas (panel cerrado, sin lector de opciones)' : opciones.length ? `«compania»: ${opciones.map((o) => `«${o}»`).join(', ')}` : '«compania»: el panel no mostró opciones'
+  return `${lista.join('; ')}${distintos}; opciones de los desplegables: ${txtOpc}`
+}
+
+/** v0.8.28 · `ctx.leerOpcionesMatSelect` (runner → mat-select.ts, por el guard): abre el desplegable, lee sus opciones y lo cierra. NO elige. */
+export type LectorOpcionesMatSelect = (select: Locator) => Promise<string[] | null>
+
+/**
+ * v0.8.28 · Opciones (nombres de compañías, nunca datos personales) del ÚNICO mat-select «Compañia» habilitado y visible, leídas con el lector
+ * guardado del contexto: este fichero NO pulsa nada. `null` = no se pudo / no procede (varios, deshabilitado, oculto, sin lector). Nunca lanza.
+ */
+export async function leerOpcionesCompania(raiz: Pick<Frame, 'locator'>, leer: LectorOpcionesMatSelect): Promise<string[] | null> {
+  try {
+    const sel = await selectCompaniaPorEtiqueta(raiz, undefined, 0)
+    if (!sel) return null
+    const textos = await leer(sel)
+    return textos === null ? null : [...new Set(textos.map((t) => t.replace(/\s+/g, ' ').trim().slice(0, 60)).filter((t) => t !== ''))].slice(0, 40)
+  } catch {
+    return null
+  }
 }
 
 /** Etiqueta exacta «Compañia/Compañía» (con o sin asterisco): NO casa «Compañía anterior» de otros bloques ni textos largos. */
@@ -1033,7 +1058,7 @@ export async function desplegarAcordeonGuardado(raiz: Pick<Frame, 'locator'>, pu
  * si es único, visible y habilitado (los de `app-info-descuentos` los calcula el portal y vienen deshabilitados). Solo lectura. PURA en
  * cuanto a clics: no pulsa nada.
  */
-export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>): Promise<Locator | null> {
+export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>, esperaMs: number = 0): Promise<Locator | null> {
   // v0.8.26: UN solo evaluate que recoge los NODOS mat-select tras la etiqueta «Compañia» y los deduplica por identidad (Set): un mismo
   // mat-select alcanzable por dos caminos (label + mat-label anidados, form-fields anidados) cuenta UNO. Sin escribir en el DOM: se
   // devuelve su posición entre todos los mat-select y se re-localiza con `nth`.
@@ -1054,22 +1079,33 @@ export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pu
         const nodo = Array.from(nodos)[0]
         const estilo = getComputedStyle(nodo)
         const visible = nodo.getClientRects().length > 0 && estilo.visibility !== 'hidden' && estilo.display !== 'none'
-        const off = nodo.getAttribute('aria-disabled') === 'true'
+        const off = nodo.getAttribute('aria-disabled') === 'true' || nodo.classList.contains('mat-select-disabled')
         const panel = nodo.closest('mat-expansion-panel')
         const plegado = panel !== null && !panel.classList.contains('mat-expanded')
         const cabecera = plegado ? panel.querySelector('mat-expansion-panel-header') : null
         return { n: 1, idx: Array.from(body.querySelectorAll('mat-select')).indexOf(nodo), ok: visible && !off, off, cab: !visible && cabecera ? Array.from(body.querySelectorAll('mat-expansion-panel-header')).indexOf(cabecera) : -1 }
       }, PATRON_ETIQUETA_COMPANIA.source)
       .catch(() => null)
+  // v0.8.28: sondeo hasta `esperaMs` mientras el control aún no esté (n=0), esté deshabilitado o esté oculto sin acordeón que desplegar: la pantalla
+  // de «Figuras» termina de pintar después de que el stepper diga «listo». Más de un candidato (n>1) NO se espera: es ambiguo, no tardío.
+  const hasta = Date.now() + Math.max(0, esperaMs)
   let r = await leer()
-  if (r && r.n === 1 && !r.ok && !r.off && r.cab >= 0 && r.idx >= 0 && pulsar) {
-    await desplegarAcordeonGuardado(raiz, pulsar, r.cab).catch(() => undefined)
-    const fin = Date.now() + 3_000
-    for (;;) {
-      r = await leer()
-      if (!r || r.ok || Date.now() >= fin) break
-      await new Promise((res) => setTimeout(res, 250))
+  let desplegado = false
+  for (;;) {
+    if (r && r.n === 1 && !r.ok && !r.off && r.cab >= 0 && r.idx >= 0 && pulsar && !desplegado) {
+      desplegado = true
+      await desplegarAcordeonGuardado(raiz, pulsar, r.cab).catch(() => undefined)
+      const fin = Date.now() + 3_000
+      for (;;) {
+        r = await leer()
+        if (!r || r.ok || Date.now() >= fin) break
+        await new Promise((res) => setTimeout(res, 250))
+      }
     }
+    const tardio = !r || r.n === 0 || (r.n === 1 && !r.ok)
+    if (!tardio || r?.ok || Date.now() >= hasta) break
+    await new Promise((res) => setTimeout(res, 250))
+    r = await leer()
   }
   if (!r || r.n !== 1 || !r.ok || r.idx < 0) return null
   return raiz.locator('mat-select').nth(r.idx)
@@ -1080,7 +1116,7 @@ export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pu
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
  * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
  */
-export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'> & Partial<Pick<ContextoPortal, 'pulsar'>>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
+export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesMatSelect'>>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
   const hechos: string[] = []
   for (const op of plan.escribibles) {
     if (op.tipo !== 'mat-select') continue
@@ -1089,7 +1125,7 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
     // v0.8.24: sin `app-historial-siniestralidad` (trabajo e886d7d9: «Figuras» pinta «Compañia», «Procedencia Siniestralidad»…), la
     // compañía anterior se busca por su ETIQUETA. Solo si hay UN mat-select visible y habilitado; si no, sigue el hueco de siempre.
     if (ausente && op.sel === SEL_HISTORIAL.companiaAnterior) {
-      const porEtiqueta = await selectCompaniaPorEtiqueta(raiz, ctx.pulsar)
+      const porEtiqueta = await selectCompaniaPorEtiqueta(raiz, ctx.pulsar, esperaOpcionalMs > 0 ? Math.max(esperaOpcionalMs, ESPERA_COMPANIA_ETIQUETA_MS) : 0)
       if (porEtiqueta) {
         sel = porEtiqueta
         ausente = false
@@ -1103,7 +1139,7 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
         continue
       }
       await registrarAtasco(respaldo.page, respaldo.formador, { clave: claveCampo(op.etiqueta), tipo: 'campo', etiqueta: op.etiqueta, descripcion: `Desplegable «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI: no aparece en la pantalla` }).catch(() => undefined)
-      const bloque = op.sel === SEL_HISTORIAL.companiaAnterior ? ` — ${redactarDatosPersonales(await describirBloqueHistorial(raiz))}` : ''
+      const bloque = op.sel === SEL_HISTORIAL.companiaAnterior ? ` — ${redactarDatosPersonales(await describirBloqueHistorial(raiz, ctx.leerOpcionesMatSelect))}` : ''
       throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)${bloque}`, true)
     }
     if (!ctx.elegirMatSelect) throw new ErrorMapaIncompleto('la función guardada «elegir opción de mat-select» en el contexto del runner')
@@ -1805,7 +1841,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.27',
+  version: '0.8.28',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

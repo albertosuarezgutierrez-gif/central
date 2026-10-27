@@ -35,3 +35,46 @@ export function decidirRelanzar(e: EntradaRelanzar): DecisionRelanzar {
   }
   return { ok: true }
 }
+
+// ─── «Probar tarificación» con el trabajo anterior CERRADO (purgado) ─────────────────────────────────────────────
+// Al cerrarse un trabajo su riesgo pierde matrícula y conductor (lista blanca de `module-tarificacion`). El botón de plataforma
+// no copia nada: arma el riesgo con el formulario + la ficha. `probar` hace lo mismo desde lo que PERSISTE en asegura: la
+// oportunidad del cliente (`info_riesgo.datosVehiculo`, `datosContrato`) + la ficha, con el MISMO constructor que el triaje
+// de leads (`formularioBotDesdeLead`). El riesgo del último trabajo solo sirve de respaldo y solo si aún está completo.
+
+export type ReconstruccionRiesgo =
+  | { riesgo: unknown; bloqueos: readonly string[]; repreguntar: readonly string[] }
+  | { riesgo: null; motivo: 'sin_oportunidad' | 'discrepancias' | 'sin_formulario' }
+
+type ValidacionProbar<E extends { riesgo: unknown } = { riesgo: unknown }> = { ok: true; entrada: E } | { ok: false; mensaje: string; errores?: readonly string[] }
+
+export type DecisionProbar<E extends { riesgo: unknown } = { riesgo: unknown }> =
+  | { ok: true; origen: 'oportunidad' | 'trabajo_previo'; entrada: E }
+  | { ok: false; status: 409 | 422; motivo: string; errores?: readonly string[] }
+
+/**
+ * Qué riesgo se reencola. Orden: 1) el reconstruido de la oportunidad+ficha, si valida; 2) el del último trabajo, si valida
+ * (no purgado); 3) rechazo que dice QUÉ falta (solo etiquetas de campo, nunca valores). `validar` es `validarEntradaRamo` con
+ * ramo y compañía ya puestos. PURA.
+ */
+export function decidirRiesgoProbar<E extends { riesgo: unknown }>(e: { reconstruccion: ReconstruccionRiesgo; previo: unknown | null; soloPurgados: boolean; validar: (riesgo: unknown) => ValidacionProbar<E> }): DecisionProbar<E> {
+  const r = e.reconstruccion
+  let faltan: readonly string[] | undefined
+  if (r.riesgo !== null) {
+    // El bot solo tarifica al propio cliente como conductor y titular; una duda del texto del cliente se repregunta antes.
+    if (r.bloqueos.length) return { ok: false, status: 409, motivo: 'oportunidad_no_tarificable', errores: r.bloqueos }
+    if (r.repreguntar.length) return { ok: false, status: 409, motivo: 'oportunidad_con_dudas', errores: r.repreguntar }
+    const v = e.validar(r.riesgo)
+    if (v.ok) return { ok: true, origen: 'oportunidad', entrada: v.entrada }
+    faltan = v.errores ?? [v.mensaje]
+  } else if ('motivo' in r && r.motivo === 'discrepancias') {
+    return { ok: false, status: 409, motivo: 'oportunidad_con_discrepancias' }
+  }
+  if (e.previo !== null && e.previo !== undefined) {
+    const v = e.validar(e.previo)
+    if (v.ok) return { ok: true, origen: 'trabajo_previo', entrada: v.entrada }
+    return { ok: false, status: 422, motivo: faltan ? 'riesgo_incompleto' : 'riesgo_previo_invalido', errores: faltan ?? v.errores ?? [] }
+  }
+  if (faltan) return { ok: false, status: 422, motivo: 'riesgo_incompleto', errores: faltan }
+  return { ok: false, status: 409, motivo: e.soloPurgados ? 'origen_purgado' : 'sin_riesgo_previo' }
+}

@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { DIAS_RETENCION_RECORRIDO, purgarRecorridosCaducados, purgarRiesgoTrabajos, type DbPurga } from './tarificador-purga.ts'
 import { validarEntradaRamo } from './tarificador-reglas.ts'
+import { decidirRiesgoProbar } from './tarificador-relanzar-reglas.ts'
 import { riesgoPrevioRenovacion } from './tarificador-ops-reglas.ts'
 import { primeroReutilizable } from './tarificador-lectura-reglas.ts'
 import { decidirAccionBandeja, riesgoSinDatosPersonales } from '@central/module-tarificacion'
@@ -204,7 +205,35 @@ test('encolar · un riesgo de moto PURGADO no se puede volver a encolar («Proba
   const v = validarEntradaRamo('moto', riesgoSinDatosPersonales(MOTO, 'moto'))
   assert.equal(v.ok, false)
   if (!v.ok) assert.ok(v.errores?.some((e) => e.startsWith('matricula: obligatoria')))
-  assert.match(trozo('app/api/operador/tarificador/probar/route.ts', 'const valida = validarEntradaRamo'), /riesgo_previo_invalido', errores: valida\.errores \?\? \[\] \}, \{ status: 422 \}/)
+  // «Probar»: la validación vive en decidirRiesgoProbar; la ruta solo encola lo que ESA decisión aprobó.
+  const ruta = leer('app/api/operador/tarificador/probar/route.ts')
+  const t = trozo('app/api/operador/tarificador/probar/route.ts', 'const d = decidirRiesgoProbar(', 'lanzarPendientes(')
+  assert.match(t, /validar: \(riesgo\) => validarEntradaRamo\(ramo, riesgo, compania\)/, 'la ruta inyecta validarEntradaRamo(ramo, riesgo, compania)')
+  assert.match(t, /if \(!d\.ok\) return NextResponse\.json\(\{ estado: 'rechazado', motivo: d\.motivo, \.\.\.\(d\.errores \? \{ errores: d\.errores \} : \{\}\) \}, \{ status: d\.status \}\)/)
+  assert.ok(t.indexOf('if (!d.ok)') < t.indexOf('encolarTrabajo('), 'se encola ANTES de comprobar d.ok')
+  assert.equal(ruta.split('encolarTrabajo({').length - 1, 1, 'la ruta solo encola por un camino')
+  assert.match(t, /\.\.\.valida\.entrada/, 'se encola la entrada ya validada, no el riesgo crudo')
+  assert.ok(!/riesgo: leido\.riesgo|\.\.\.leido\.riesgo/.test(ruta), 'la ruta encola el riesgo leído sin validar')
+  // decidirRiesgoProbar: valida CADA candidato (reconstruido y previo) y nunca da ok sin pasar por validar.
+  const f = trozo('lib/tarificador-relanzar-reglas.ts', 'export function decidirRiesgoProbar', '\n}\n')
+  assert.match(f, /const v = e\.validar\(r\.riesgo\)\n\s+if \(v\.ok\) return \{ ok: true, origen: 'oportunidad', entrada: v\.entrada \}/)
+  assert.match(f, /const v = e\.validar\(e\.previo\)\n\s+if \(v\.ok\) return \{ ok: true, origen: 'trabajo_previo', entrada: v\.entrada \}/)
+  assert.equal(f.split('ok: true').length - 1, 2, 'hay un ok:true que no sale de validar')
+  assert.match(f, /status: 422, motivo: faltan \? 'riesgo_incompleto' : 'riesgo_previo_invalido'/)
+})
+test('encolar · «Probar» (decidirRiesgoProbar + validarEntradaRamo real): un riesgo PURGADO nunca sale ok', () => {
+  const validar = (riesgo: unknown) => validarEntradaRamo('moto', riesgo, 'mapfre')
+  const sinOp = { riesgo: null, motivo: 'sin_oportunidad' } as const
+  const purgado = riesgoSinDatosPersonales(MOTO, 'moto')
+  // previo purgado (aún presente) → 422 con lo que falta
+  const a = decidirRiesgoProbar({ reconstruccion: sinOp, previo: purgado, soloPurgados: false, validar })
+  assert.equal(a.ok, false)
+  if (!a.ok) { assert.equal(a.status, 422); assert.ok(a.errores?.some((e) => e.startsWith('matricula: obligatoria'))) }
+  // solo purgados (no hay previo reutilizable) → 409 origen_purgado
+  assert.deepEqual(decidirRiesgoProbar({ reconstruccion: sinOp, previo: null, soloPurgados: true, validar }), { ok: false, status: 409, motivo: 'origen_purgado' })
+  // reconstruido purgado + previo purgado → nunca ok
+  const c = decidirRiesgoProbar({ reconstruccion: { riesgo: purgado, bloqueos: [], repreguntar: [] }, previo: purgado, soloPurgados: false, validar })
+  assert.equal(c.ok, false)
 })
 test('encolar · la ruta de asegura valida ANTES de encolar y responde 400 con los errores', () => {
   const t = trozo('app/api/operador/tarificador/encolar/route.ts', 'const valida = validarEntradaRamo', 'const actor =')
@@ -246,7 +275,8 @@ const PLANTILLAS: [string, string, string, string | undefined, RegExp][] = [
   ['precarga previoCliente', 'lib/tarificador-oportunidad.ts', 'let previoCliente', 'return {', /proyectarUltimoRiesgo\(primeroReutilizable\(us\)\.fila\)/],
   ['modal último riesgo', 'lib/tarificador-lectura.ts', 'export async function leerUltimoRiesgo', 'type FilaTrabajo', /primeroReutilizable\(f\)\.fila/],
   ['«Probar» (lectura)', 'lib/tarificador-lectura.ts', 'export async function leerRiesgoParaReencolar', undefined, /primeroReutilizable\(f\)/],
-  ['«Probar» (ruta)', 'app/api/operador/tarificador/probar/route.ts', 'const leido =', 'const valida', /if \(leido\.soloPurgados\) return NextResponse\.json\(\{ estado: 'rechazado', motivo: 'origen_purgado'/],
+  ['«Probar» (ruta)', 'app/api/operador/tarificador/probar/route.ts', 'const leido =', 'const valida', /previo = leido\.riesgo === null \? null : riesgoParaReencolar\(leido\.riesgo\)[\s\S]*soloPurgados: leido\.soloPurgados/],
+  ['«Probar» (decisión)', 'lib/tarificador-relanzar-reglas.ts', 'export function decidirRiesgoProbar', undefined, /motivo: e\.soloPurgados \? 'origen_purgado' : 'sin_riesgo_previo'/],
   ['explorador con datos reales', 'lib/tarificador-explorador.ts', 'if (e.trabajoOrigenId) {', 'clienteId = f.cliente_id', /if \(riesgoYaPurgado\(f\)\) return \{ estado: 'rechazado', status: 409, motivo: `\$\{MOTIVO_ORIGEN_PURGADO\}/],
 ]
 for (const [nombre, fichero, desde, hasta, re] of PLANTILLAS) {

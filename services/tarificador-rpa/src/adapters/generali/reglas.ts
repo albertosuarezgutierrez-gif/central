@@ -417,6 +417,32 @@ export function resumenCamposSelectorGenerali(campos: readonly CampoSelectorGene
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
+// ───────────── v0.2.38: estado del selector ANTES de «Confirmar» (prueba real 27/10/2026 con 0.2.37: «Confirmar» sin validar y sin mensajes) ─────────────
+
+/** Un control visible del selector con su estado, SIN valores (solo etiquetas): `vacio` = sin elección/texto; `requerido` = marcado como obligatorio por el portal. */
+export type EstadoControlSelectorGenerali = { clave: string; etiqueta: string; tipo: string; vacio: boolean; requerido: boolean }
+export type EstadoSelectorGenerali = { controles: EstadoControlSelectorGenerali[]; filas: number; filasSeleccionadas: number }
+
+/**
+ * Lo que impide pulsar «Confirmar» con sentido: un grupo que el bot rellenó (combustible / potencia) que quedó SIN marcar (el AJAX de la versión
+ * lo repintó), el desplegable «Versión» vuelto a «Seleccione una», o una tabla de versiones sin fila seleccionada. `claves` = campos que el bot explicó.
+ * Devuelve las etiquetas (sin valores). Los demás vacíos solo van al diagnóstico. PURA.
+ */
+export function vaciosAntesDeConfirmarGenerali(estado: EstadoSelectorGenerali, claves: ReadonlySet<string>): string[] {
+  const out = estado.controles.filter((c) => c.vacio && claves.has(c.clave)).map((c) => `${c.etiqueta || '(sin etiqueta)'} [${c.tipo}]`)
+  if (estado.filas > 0 && estado.filasSeleccionadas === 0) out.push('fila de la tabla de versiones [sin seleccionar]')
+  return out
+}
+
+/** «vacíos/obligatorios: «X» [tipo] vacío·obligatorio …; versión: elegida|SIN elegir|no hay desplegable; tabla: n filas (m marcadas)». Solo etiquetas. PURA. */
+export function resumenEstadoSelectorGenerali(estado: EstadoSelectorGenerali, max = 700): string {
+  const lista = estado.controles.filter((c) => c.vacio || c.requerido).map((c) => `«${c.etiqueta || '(sin etiqueta)'}» [${c.tipo}] ${c.vacio ? 'vacío' : 'relleno'}${c.requerido ? '·obligatorio' : ''}`)
+  const ver = estado.controles.find((c) => c.tipo === 'desplegable' && /^versi[oó]n(es)?\s*:?\s*$/i.test(c.etiqueta.trim()))
+  const v = ver ? (ver.vacio ? 'SIN elegir' : 'elegida') : 'no hay desplegable'
+  const t = `campos vacíos/obligatorios: ${lista.length ? lista.join(' ; ') : '(ninguno)'}; versión: ${v}; tabla de versiones: ${estado.filas} filas (${estado.filasSeleccionadas} marcadas)`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
 // ───────────── v0.2.14: ficha de versión del selector (Potencia · Versión · tabla Código | Modelo | Versión · Resumen) ─────────────
 
 /** Una fila de la tabla de versiones (catálogo, sin datos personales). */

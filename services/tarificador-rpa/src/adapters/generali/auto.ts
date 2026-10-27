@@ -116,7 +116,10 @@ import {
   combustiblePotenciaRellenosGenerali,
   resumenCoincideConFilaGenerali,
   resumenCamposSelectorGenerali,
+  resumenEstadoSelectorGenerali,
+  vaciosAntesDeConfirmarGenerali,
   type CampoSelectorGenerali,
+  type EstadoSelectorGenerali,
   type FichaVersionGenerali,
   type FilaVersionGenerali,
   elegirOpcionCatalogo,
@@ -247,6 +250,13 @@ export const GENERALI_AUTO_ACTIVO = true
  * emiAutosGenB028.do, pestaña «Datos personas»). Cualquier otro «Confirmar» de Generali lo rechaza `pulsar`. Nunca casillas ni emisión.
  */
 /**
+ * 0.2.38 (27/10/2026, prueba real con 0.2.37: tras elegir versión el selector SEGUÍA ABIERTO tras «Confirmar», sin mensajes). Causa NO confirmada (el portal real
+ * no se abre desde el contenedor): hipótesis de trabajo = un campo que el bot rellenó (combustible/potencia, ahora con dato real desde 0.2.36) o la versión quedó
+ * vacío por el AJAX posterior y el portal rechaza «Confirmar» en silencio. Ahora: (1) ANTES de «Confirmar» se relee el estado (sin valores) y, si un grupo
+ * elegido, la versión o la fila de la tabla dejó de estar puesto, se PARA sin pulsar; (2) si el desplegable «Versión» ya trae una elegida no se deduce nada;
+ * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
+ */
+/**
  * 0.2.28 (26/10/2026, prueba real con 0.2.27: tras «Confirmar» de «Datos personas» el bot queda en `emiAutosGenB028.do` con botones solo «Vehículo»/«Personas»
  * y pestañas de sección, SIN «Datos de Valoración» ni `#siguiente`; el motivo del gate de «Siguiente» no llegó porque el runner corta el mensaje a 2000
  * y «Avance» iba al final). El atasco pone ahora al PRINCIPIO el motivo del gate (también si no se intentó) y el inventario de controles de
@@ -262,7 +272,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.37'
+export const VERSION_GENERALI_AUTO = '0.2.38'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -485,6 +495,57 @@ const JS_CAMPOS_SELECTOR = `(() => {${JS_COMUN}
 /** Controles del selector de vehículos (solo lectura): sirve para detectar campos NUEVOS tras elegir marca/modelo. */
 export async function leerCamposSelector(raiz: Raiz): Promise<CampoSelectorGenerali[]> {
   return ((await raiz.evaluate(JS_CAMPOS_SELECTOR).catch(() => [])) as CampoSelectorGenerali[] | null) ?? []
+}
+
+/** v0.2.38: estado (vacío / obligatorio) de los controles visibles del selector, SIN valores. Mismas claves que `JS_CAMPOS_SELECTOR`. */
+const JS_ESTADO_SELECTOR = `(() => {${JS_COMUN}
+  const TEXTO = ['text', 'email', 'tel', 'number', 'date', 'search', 'url', ''];
+  const REQ = (el) => {
+    if (el.required || el.getAttribute('aria-required') === 'true') return true;
+    const l = el.labels && el.labels[0] ? T(el.labels[0]) : '';
+    if (/\\*\\s*$/.test(l)) return true;
+    const c = el.closest('.ui-selectonemenu,.ui-inputfield,td,div');
+    return !!c && (/ui-state-error|ui-invalid/.test(c.className || '') || /\\brequired\\b/i.test(c.className || ''));
+  };
+  const out = [];
+  const grupos = new Map();
+  for (const el of Array.from(document.querySelectorAll('input,select,textarea'))) {
+    const tag = el.tagName.toLowerCase();
+    const ta = (el.getAttribute('type') || '').toLowerCase();
+    if (tag === 'input' && ['hidden', 'button', 'submit', 'image', 'reset', 'password'].includes(ta)) continue;
+    if (el.id && /_(focus|filter)$/.test(el.id)) continue;
+    if (tag === 'select') {
+      const m = /^(.*)_input$/.exec(el.id || '');
+      const combo = m ? document.getElementById(m[1]) : null;
+      const pf = !!combo && combo.getAttribute('role') === 'combobox';
+      if (!(pf ? VIS(combo) : VIS(el))) continue;
+      const etiqueta = (pf ? ETQ(combo) : ETQ(el)).slice(0, 80);
+      const o = el.options[el.selectedIndex];
+      const txt = o ? T(o) : '';
+      const lab = pf && document.getElementById(m[1] + '_label') ? T(document.getElementById(m[1] + '_label')) : txt;
+      const vacio = !o || el.value === '' || el.value === 'null' || /^seleccion/i.test(txt) || /^seleccion/i.test(lab);
+      out.push({ clave: pf ? m[1] : (el.id || 'select|' + etiqueta), etiqueta, tipo: pf ? 'desplegable' : 'select', vacio, requerido: REQ(pf ? combo : el) });
+    } else if (tag === 'input' && !TEXTO.includes(ta)) {
+      if (!(VIS(el) || (el.labels && el.labels[0] && VIS(el.labels[0])))) continue;
+      const g = el.name || el.id || ta;
+      let e = grupos.get(g);
+      if (!e) { e = { clave: 'grupo|' + g, etiqueta: g.slice(0, 80), tipo: ta === 'checkbox' ? 'casilla' : 'grupo', vacio: true, requerido: false }; grupos.set(g, e); out.push(e); }
+      if (el.checked) e.vacio = false;
+      if (REQ(el)) e.requerido = true;
+    } else {
+      if (!VIS(el)) continue;
+      out.push({ clave: el.id || 'texto|' + ETQ(el).slice(0, 80), etiqueta: ETQ(el).slice(0, 80), tipo: 'texto', vacio: String(el.value || '').trim() === '', requerido: REQ(el) });
+    }
+    if (out.length >= 80) break;
+  }
+  return out;
+})()`
+
+/** Estado del selector (controles vacíos/obligatorios + filas de la tabla de versiones), sin valores. Solo lee. */
+export async function leerEstadoSelector(raiz: Raiz): Promise<EstadoSelectorGenerali> {
+  const controles = ((await raiz.evaluate(JS_ESTADO_SELECTOR).catch(() => [])) as EstadoSelectorGenerali['controles'] | null) ?? []
+  const f = await leerFichaVersion(raiz)
+  return { controles, filas: f.filas.length, filasSeleccionadas: f.filas.filter((x) => x.seleccionada).length }
 }
 
 /** Un paso de scroll en TODOS los contenedores con scroll del marco (el formulario tiene el suyo). `true` = alguno bajó. */
@@ -1624,7 +1685,9 @@ async function resolverFichaVersionGenerali(page: Page, selector: Raiz, campos: 
   const otras: string[] = [...(combustible?.opciones ?? []), ...(potencia0?.opciones ?? [])]
   let actuales: readonly CampoSelectorGenerali[] = campos
   // v0.2.36: lo que el riesgo no trae (combustible / CV) se DEDUCE del texto de la versión (siglas de motor, CV suelto) y solo se marca si casa EXACTO con una opción del portal.
-  const versionDeducible = combustibleRiesgoGenerali(form) === null || cvRiesgoGenerali(form) === null ? textoVersionDeducibleGenerali(desplegable0, form, otras) : null
+  // v0.2.38: si el desplegable «Versión» YA trae una elegida por el portal, no se deduce nada (no se pisa lo que el portal ya filtró).
+  const versionYaElegida = desplegable0 ? (await leerEstadoSelector(selector)).controles.some((c) => c.clave === desplegable0.clave && !c.vacio) : false
+  const versionDeducible = !versionYaElegida && (combustibleRiesgoGenerali(form) === null || cvRiesgoGenerali(form) === null) ? textoVersionDeducibleGenerali(desplegable0, form, otras) : null
   let deducidoCombustible = false
   let deducidoPotencia = false
   if (combustible) {
@@ -1793,7 +1856,9 @@ export async function esperarTrasConfirmarGenerali(page: Page, selector: Raiz, e
       const b = [...new Set(botones)].join(' · ').slice(0, 600) || '(ninguno)'
       const m = marcos.join(' | ').slice(0, 400)
       if (c === 'validacion') {
-        throw new ErrorMapaIncompletoGenerali(`la pantalla que sigue a «Confirmar» en el selector de vehículos: el selector SIGUE ABIERTO tras ${Math.round(transcurridoMs / 1000)} s y el portal no lo validó. Mensajes de validación visibles: ${mensajes.length > 0 ? mensajes.map((x) => `«${x}»`).join(' · ') : '(ninguno visible)'}. Botones vistos: ${b}. Marcos: ${m}`)
+        // v0.2.38: estado del selector SIN valores (qué campos están vacíos/obligatorios y si hay versión elegida).
+        const estado = await leerEstadoSelector(selector).then((e) => resumenEstadoSelectorGenerali(e)).catch(() => '(no se pudo leer)')
+        throw new ErrorMapaIncompletoGenerali(`la pantalla que sigue a «Confirmar» en el selector de vehículos: el selector SIGUE ABIERTO tras ${Math.round(transcurridoMs / 1000)} s y el portal no lo validó. Mensajes de validación visibles: ${mensajes.length > 0 ? mensajes.map((x) => `«${x}»`).join(' · ') : '(ninguno visible)'}. Estado del selector: ${estado}. Botones vistos: ${b}. Marcos: ${m}`)
       }
       throw new ErrorMapaIncompletoGenerali(`la pantalla que sigue a «Confirmar» en el selector de vehículos (no es «Identificación del vehículo»; el selector se cerró pero no apareció tras ${Math.round(transcurridoMs / 1000)} s; su captura y su inventario los deja el runner). Botones vistos: ${b}. Marcos: ${m}`)
     }
@@ -1826,6 +1891,13 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
       await recorrerScroll(page, selector)
       const p = await leerPantalla(selector)
       throw new ErrorMapaIncompletoGenerali(`los campos nuevos que salen en el selector de vehículos tras elegir combustible, potencia y versión (no se pulsa «Confirmar»): ${resumenCamposSelectorGenerali(restantes)}. Botones vistos: ${p.botones.join(' · ').slice(0, 400) || '(ninguno)'}`)
+    }
+    // v0.2.38: lo que el bot eligió (combustible, potencia, versión, fila) tiene que SEGUIR puesto: el AJAX de la versión puede repintar los grupos. Si no, se PARA sin «Confirmar».
+    const estado = await leerEstadoSelector(selector)
+    const vacios = vaciosAntesDeConfirmarGenerali(estado, explicados)
+    if (vacios.length > 0) {
+      await recorrerScroll(page, selector)
+      throw new ErrorMapaIncompletoGenerali(`lo elegido en el selector de vehículos dejó de estar puesto antes de «Confirmar» (se vació tras elegir la versión): ${vacios.join(' · ')}. Estado del selector: ${resumenEstadoSelectorGenerali(estado)}; NO se pulsa «Confirmar»`)
     }
     await verificarModeloAntesDeConfirmar(page, selector, modelo, menu.base, elegida)
     await ctx.confirmarVehiculoGenerali()

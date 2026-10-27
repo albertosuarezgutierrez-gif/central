@@ -2934,7 +2934,7 @@ export function ofertasConPresupuestoTurismos(ofertas: readonly OfertaNormalizad
         ? `${AVISO_PRESUPUESTO_GUARDADO}: nº ${r.referencia} (identificador ${r.identificador}).`
         : `${AVISO_PRESUPUESTO_GUARDADO}: identificador ${r.identificador} (el portal no enseñó número).`
       : r.estado === 'sin_confirmar'
-        ? `Se pulsó «Guardar presupuesto» (identificador ${r.identificador}) pero el portal no lo confirmó: compruébalo en Allianz.`
+        ? `Se pulsó «Guardar presupuesto» (identificador ${r.identificador}) pero el portal no lo confirmó: compruébalo en Allianz.${r.diagnostico ? ` Diagnóstico: ${r.diagnostico}.` : ''}`
         : `Presupuesto NO guardado en Allianz: ${r.motivo}.`
   const ref = r.estado === 'guardado' ? (r.referencia ?? r.identificador) : null
   return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso] }))
@@ -2968,7 +2968,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.33',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.34',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
