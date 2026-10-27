@@ -80,12 +80,14 @@ test('vistaSolicitud: nombre legible; con ficha se activa sin mirar pólizas; si
 
 // ── Activación SIN ficha (27/10/2026): ficha de prospecto + vínculo `autorizacion_corredor` ──
 test('🚨 activación sin ficha: solo a quien PIDIÓ ese módulo, sin ficha y que no es el corredor', () => {
-  assert.deepEqual(decidirProspecto({ filaVigente: 'solicitado', vinculosPropios: 0, esCorredor: false }), { crear: true })
+  assert.deepEqual(decidirProspecto({ filaVigente: 'solicitado', vinculosPropios: 0, esCorredor: false, ultimoVinculo: null }), { crear: true })
   for (const [e, re] of [
-    [{ filaVigente: null, vinculosPropios: 0, esCorredor: false }, /no ha pedido/],
-    [{ filaVigente: 'activo', vinculosPropios: 0, esCorredor: false }, /ya está activado/],
-    [{ filaVigente: 'solicitado', vinculosPropios: 1, esCorredor: false }, /ya tiene una ficha/],
-    [{ filaVigente: 'solicitado', vinculosPropios: 0, esCorredor: true }, /vista de corredor/],
+    [{ filaVigente: null, vinculosPropios: 0, esCorredor: false, ultimoVinculo: null }, /no ha pedido/],
+    [{ filaVigente: 'activo', vinculosPropios: 0, esCorredor: false, ultimoVinculo: null }, /ya está activado/],
+    [{ filaVigente: 'solicitado', vinculosPropios: 1, esCorredor: false, ultimoVinculo: null }, /ya tiene una ficha/],
+    [{ filaVigente: 'solicitado', vinculosPropios: 0, esCorredor: true, ultimoVinculo: null }, /vista de corredor/],
+    // Su email casa con varias fichas: ya está en la cartera; un prospecto sería otra ficha más.
+    [{ filaVigente: 'solicitado', vinculosPropios: 0, esCorredor: false, ultimoVinculo: 'ambiguo' }, /vincúlala a mano/],
   ] as const) {
     const d = decidirProspecto(e)
     assert.ok(!d.crear && d.status === 409 && re.test(d.motivo), JSON.stringify(e))
@@ -142,6 +144,8 @@ test('🚨 la escritura por identidad: candado, re-decide en la transacción, cr
   }
   // La fila tiene que ser de ESA identidad y de ESE módulo (no se activa a cualquiera por id).
   assert.match(tx, /where identidad_id = \$\{identidadId\}::uuid and modulo = \$\{modulo\} and estado <> 'retirado'/)
+  assert.match(tx, /ultimoVinculo: ident\.ultimoVinculo/)
+  assert.match(tx, /anotarCambio\(\{ entidad: 'cliente', id: creada\.id, campo: 'activo', antes: null, despues: true \}\)/)
   assert.match(f, /if \(esViolacionDelCheck\(e\)\) return \{ ok: false, status: 503, estado: 'sin_migracion'/)
 })
 

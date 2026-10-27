@@ -200,3 +200,91 @@ export function renovacionResuelta(e: {
   if (!antes || !ahora || !e.enVigor) return null
   return ahora > antes ? 'renovada' : null
 }
+
+// ── Plan de aperturas (puro) y lectura del consentimiento con respaldo (27/10/2026) ──────────────────────────────
+
+export type Apertura = {
+  tipo: 'renovacion' | 'declarada'
+  clienteId: string
+  /** Póliza de cartera (renovación) o declarada del portal. */
+  origenId: string
+  ramo: string
+  vence: string
+  dias: number
+  fechaAccion: string
+  /** Solo declaradas: último día útil (vencimiento − 1 mes, art. 22 LCS). */
+  fechaUtil: string | null
+  texto: string
+  numeroPoliza: string | null
+  prima: string | null
+}
+
+export type FilaRenovacion = {
+  polizaId: string; clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null
+  vence: string | null; prima: string | null; importRef: string | null; eiacXmlHash: string | null; estado: string
+  sustituidaAt: Date | null; yaAbierta: boolean; yaEsteCiclo: boolean
+}
+
+export type FilaDeclarada = {
+  declaradaId: string; identidadId: string; clienteId: string | null; ramo: string | null; compania: string | null
+  numeroPoliza: string | null; vence: string | null; yaAbierta: boolean; yaEsteCiclo: boolean; yaEnCartera: boolean
+}
+
+export type NoAbiertas = Record<'renovacion' | 'declarada', Partial<Record<MotivoNoAbrir, number>>>
+
+function contar(m: Partial<Record<MotivoNoAbrir, number>>, k: MotivoNoAbrir) {
+  m[k] = (m[k] ?? 0) + 1
+}
+
+/** Qué se abre hoy con lo leído. Una identidad que no está en `consentimiento` cuenta como «no consta» (`null`). */
+export function decidirAperturas(
+  renov: readonly FilaRenovacion[],
+  decl: readonly FilaDeclarada[],
+  consentimiento: ReadonlyMap<string, boolean | null>,
+  hoy: string,
+): { aperturas: Apertura[]; noAbiertas: NoAbiertas } {
+  const aperturas: Apertura[] = []
+  const noAbiertas: NoAbiertas = { renovacion: {}, declarada: {} }
+  for (const f of renov) {
+    const d = decidirRenovacion({ ...f }, hoy)
+    if (!d.abrir) { contar(noAbiertas.renovacion, d.motivo); continue }
+    aperturas.push({
+      tipo: 'renovacion', clienteId: f.clienteId, origenId: f.polizaId, ramo: f.ramo, vence: d.vence, dias: d.dias,
+      fechaAccion: d.fechaAccion, fechaUtil: null, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: f.prima,
+    })
+  }
+  for (const f of decl) {
+    const d = decidirDeclarada({ ...f, consentimientoComercial: consentimiento.get(f.identidadId) ?? null }, hoy)
+    if (!d.abrir || !f.clienteId) { contar(noAbiertas.declarada, d.abrir ? 'sin_vincular' : d.motivo); continue }
+    aperturas.push({
+      tipo: 'declarada', clienteId: f.clienteId, origenId: f.declaradaId, ramo: tipoDeRamoDeclarado(f.ramo), vence: d.vence,
+      dias: d.dias, fechaAccion: d.fechaAccion, fechaUtil: d.fechaUtil ?? null, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: null,
+    })
+  }
+  return { aperturas, noAbiertas }
+}
+
+export type Savepoint = { abrir: () => Promise<void>; liberar: () => Promise<void>; deshacer: () => Promise<void> }
+
+/**
+ * Lee el consentimiento y, si FALLA, devuelve un mapa VACÍO (ninguna declarada abre) y lo deja en el log: un fallo de esta
+ * lectura no puede tumbar las renovaciones de cartera. Con `sp` (dentro de una transacción) la lectura va en su savepoint y
+ * se deshace al fallar, para que la transacción siga viva.
+ */
+export async function consentimientoOVacio(
+  leer: () => Promise<Map<string, boolean | null>>,
+  sp?: Savepoint,
+): Promise<Map<string, boolean | null>> {
+  try {
+    if (sp) await sp.abrir()
+    const m = await leer()
+    if (sp) await sp.liberar()
+    return m
+  } catch (e) {
+    console.error('[expedientes-auto] no se pudo leer portal_consentimiento: ninguna declarada se abre en esta pasada:', e instanceof Error ? e.message : e)
+    if (sp) {
+      try { await sp.deshacer() } catch (e2) { console.error('[expedientes-auto] rollback del savepoint del consentimiento falló:', e2 instanceof Error ? e2.message : e2) }
+    }
+    return new Map()
+  }
+}

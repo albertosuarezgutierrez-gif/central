@@ -11,6 +11,7 @@
 import { IDENTIDAD_CORREDOR_ID, ORIGEN_VINCULO_AUTORIZACION, ORIGEN_VINCULO_CORREDOR } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 import { Prisma } from './generated/asegura-client'
 import {
   decidirProspecto,
@@ -143,8 +144,8 @@ export async function escribirModuloPorIdentidad(
   try {
     const clienteId = await db.$transaction(async (tx) => {
       await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`portal-prospecto:${identidadId}`}))`)
-      const [ident] = await tx.$queryRaw<{ nombre: string | null }[]>`
-        select nombre from portal_identidad where id = ${identidadId}::uuid`
+      const [ident] = await tx.$queryRaw<{ nombre: string | null; ultimoVinculo: string | null }[]>`
+        select nombre, ultimo_vinculo as "ultimoVinculo" from portal_identidad where id = ${identidadId}::uuid`
       if (!ident) throw new NoPermitido(409, 'Esa identidad del portal no existe.')
       const [fila] = await tx.$queryRaw<{ id: string; estado: string }[]>`
         select id::text as id, estado from portal_modulo
@@ -157,6 +158,7 @@ export async function escribirModuloPorIdentidad(
         filaVigente: fila ? (fila.estado === 'activo' ? 'activo' : 'solicitado') : null,
         vinculosPropios: v?.n ?? 0,
         esCorredor: identidadId === IDENTIDAD_CORREDOR_ID,
+        ultimoVinculo: ident.ultimoVinculo,
       })
       if (!d.crear) throw new NoPermitido(d.status, d.motivo)
 
@@ -165,6 +167,8 @@ export async function escribirModuloPorIdentidad(
         data: { correduriaId, nombre: p.nombre, apellidos: p.apellidos, tipo: p.tipo, segmento: p.segmento, fuente: p.fuente, activo: p.activo, notas: p.notas },
         select: { id: true },
       })
+      // Auditoría del alta (como `altaLeadSinContacto`): el `auditado()` de la ruta la recoge.
+      anotarCambio({ entidad: 'cliente', id: creada.id, campo: 'activo', antes: null, despues: true })
       await tx.$executeRaw`
         insert into portal_vinculo (identidad_id, correduria_id, cliente_id, nivel, origen)
         values (${identidadId}::uuid, ${correduriaId}::uuid, ${creada.id}::uuid, 'gestionar', ${ORIGEN_VINCULO_AUTORIZACION})`

@@ -24,12 +24,16 @@ import { sqlPrimaDeRecibo, sqlVencimientoConRecibos } from './recibos-vigencia'
 import {
   ORIGEN_DECLARADA_PORTAL,
   ORIGEN_RENOVACION_CARTERA,
-  decidirDeclarada,
-  decidirRenovacion,
+  consentimientoOVacio,
+  decidirAperturas,
   renovacionResuelta,
-  tipoDeRamoDeclarado,
+  type Apertura,
+  type FilaDeclarada,
+  type FilaRenovacion,
   type MotivoNoAbrir,
 } from './expedientes-auto-reglas'
+
+export type { Apertura }
 
 type Db = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
@@ -37,22 +41,6 @@ const ACTOR = 'sistema:expedientes-auto'
 const ABIERTA = Prisma.sql`o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')`
 /** Nº de póliza comparable: sin separadores, en mayúsculas y sin ceros a la izquierda. */
 const numNorm = (col: Prisma.Sql) => Prisma.sql`ltrim(upper(regexp_replace(coalesce(${col}, ''), '[^A-Za-z0-9]', '', 'g')), '0')`
-
-export type Apertura = {
-  tipo: 'renovacion' | 'declarada'
-  clienteId: string
-  /** Póliza de cartera (renovación) o declarada del portal. */
-  origenId: string
-  ramo: string
-  vence: string
-  dias: number
-  fechaAccion: string
-  /** Solo declaradas: último día útil (vencimiento − 1 mes, art. 22 LCS). */
-  fechaUtil: string | null
-  texto: string
-  numeroPoliza: string | null
-  prima: string | null
-}
 
 export type PlanExpedientesAuto = {
   hoy: string
@@ -63,23 +51,14 @@ export type PlanExpedientesAuto = {
   cierres: { id: string; motivo: 'renovada' | 'sustituida' }[]
 }
 
-type FilaRenovacion = {
-  polizaId: string; clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null
-  vence: string | null; prima: string | null; importRef: string | null; eiacXmlHash: string | null; estado: string
-  sustituidaAt: Date | null; yaAbierta: boolean; yaEsteCiclo: boolean
-}
-
-type FilaDeclarada = {
-  declaradaId: string; identidadId: string; clienteId: string | null; ramo: string | null; compania: string | null
-  numeroPoliza: string | null; vence: string | null; yaAbierta: boolean; yaEsteCiclo: boolean; yaEnCartera: boolean
-}
-
-function contar(m: Partial<Record<MotivoNoAbrir, number>>, k: MotivoNoAbrir) {
-  m[k] = (m[k] ?? 0) + 1
-}
-
 /** Lo que abriría y cerraría hoy, SIN escribir nada. */
-export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: string): Promise<PlanExpedientesAuto> {
+export async function planExpedientesAuto(
+  db: Db,
+  correduriaId: string,
+  hoy: string,
+  /** `true` cuando `db` es la transacción del detector: la lectura del consentimiento va en su propio savepoint. */
+  enTransaccion = false,
+): Promise<PlanExpedientesAuto> {
   const vencSql = sqlVencimientoConRecibos('p', hoy)
   const renov = await db.$queryRaw<FilaRenovacion[]>(Prisma.sql`
     with base as (
@@ -148,28 +127,22 @@ export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: str
     order by d.fecha_vencimiento`)
 
   // 🚨 Gate legal (27/10/2026): el consentimiento `comercial` de quien declaró. La tabla es append-only y manda la ÚLTIMA
-  // fila sobre el texto vigente (`consentimientoVigente`). Si la lectura falla, se propaga (la pasada lo registra): nunca
-  // se trata como «consiente».
-  const consentimiento = await consentimientosComerciales(db, [...new Set(decl.map((f) => f.identidadId))])
+  // fila sobre el texto vigente (`consentimientoVigente`). Si la lectura FALLA no se cae la pasada: mapa vacío (ninguna
+  // declarada abre: «no consta» nunca es «consiente») y las renovaciones de cartera siguen. Dentro de la transacción del
+  // detector la lectura va en su savepoint: un error de Postgres abortaría la transacción entera aunque se capture aquí.
+  const ids = [...new Set(decl.map((f) => f.identidadId))]
+  const consentimiento = await consentimientoOVacio(
+    () => consentimientosComerciales(db, ids),
+    enTransaccion
+      ? {
+          abrir: async () => { await db.$executeRaw(Prisma.sql`savepoint consentimiento_expedientes`) },
+          liberar: async () => { await db.$executeRaw(Prisma.sql`release savepoint consentimiento_expedientes`) },
+          deshacer: async () => { await db.$executeRaw(Prisma.sql`rollback to savepoint consentimiento_expedientes`) },
+        }
+      : undefined,
+  )
 
-  const aperturas: Apertura[] = []
-  const noAbiertas: PlanExpedientesAuto['noAbiertas'] = { renovacion: {}, declarada: {} }
-  for (const f of renov) {
-    const d = decidirRenovacion({ ...f }, hoy)
-    if (!d.abrir) { contar(noAbiertas.renovacion, d.motivo); continue }
-    aperturas.push({
-      tipo: 'renovacion', clienteId: f.clienteId, origenId: f.polizaId, ramo: f.ramo, vence: d.vence, dias: d.dias,
-      fechaAccion: d.fechaAccion, fechaUtil: null, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: f.prima,
-    })
-  }
-  for (const f of decl) {
-    const d = decidirDeclarada({ ...f, consentimientoComercial: consentimiento.get(f.identidadId) ?? null }, hoy)
-    if (!d.abrir || !f.clienteId) { contar(noAbiertas.declarada, d.abrir ? 'sin_vincular' : d.motivo); continue }
-    aperturas.push({
-      tipo: 'declarada', clienteId: f.clienteId, origenId: f.declaradaId, ramo: tipoDeRamoDeclarado(f.ramo), vence: d.vence,
-      dias: d.dias, fechaAccion: d.fechaAccion, fechaUtil: d.fechaUtil ?? null, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: null,
-    })
-  }
+  const { aperturas, noAbiertas } = decidirAperturas(renov, decl, consentimiento, hoy)
 
   // Cierre de las renovaciones abiertas solas que ya se resolvieron (renovó, o la sustituyó otra).
   const abiertas = await db.$queryRaw<{ id: string; venceExp: string | null; venceActual: string | null; enVigor: boolean; sustituida: boolean }[]>(Prisma.sql`
@@ -220,7 +193,7 @@ export type ResultadoExpedientesAuto = {
  * comprobar, con la fila ya escrita por otra vía en la misma transacción, que no hay otra de ese ciclo.
  */
 export async function generarExpedientesAuto(tx: Db, correduriaId: string, hoy: string): Promise<ResultadoExpedientesAuto> {
-  const plan = await planExpedientesAuto(tx, correduriaId, hoy)
+  const plan = await planExpedientesAuto(tx, correduriaId, hoy, true)
   const abiertas: ResultadoExpedientesAuto['abiertas'] = []
   for (const a of plan.aperturas) {
     const info = a.tipo === 'renovacion'

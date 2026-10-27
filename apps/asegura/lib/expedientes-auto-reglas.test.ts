@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  decidirDeclarada, decidirRenovacion, enVentanaExpediente, enVentanaRenovacion, renovacionResuelta, tipoDeRamoDeclarado,
+  consentimientoOVacio, decidirAperturas, decidirDeclarada, decidirRenovacion, enVentanaExpediente, enVentanaRenovacion, renovacionResuelta, tipoDeRamoDeclarado,
   type CandidatoDeclarada, type CandidatoRenovacion,
 } from './expedientes-auto-reglas.ts'
 
@@ -108,10 +108,42 @@ test('🚨 declarada CON consentimiento: se abre UNA vez, con fecha útil = venc
 
 test('🚨 la lectura pasa el consentimiento REAL (comercial, texto vigente) y por defecto «no consta» (null), nunca «sí»', () => {
   assert.match(SRC, /consentimientoVigente\(fs, 'comercial', VERSION_TEXTO_COMERCIAL\)/)
-  assert.match(SRC, /decidirDeclarada\(\{ \.\.\.f, consentimientoComercial: consentimiento\.get\(f\.identidadId\) \?\? null \}, hoy\)/)
+  assert.match(SRC, /decidirAperturas\(renov, decl, consentimiento, hoy\)/)
+  // Identidad sin filas leídas = «no consta» (null) → no abre.
+  const fd = { declaradaId: 'd1', identidadId: 'i1', clienteId: 'c1', ramo: 'hogar', compania: 'X', numeroPoliza: null, vence: sumar(55), yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false }
+  assert.equal(decidirAperturas([], [fd], new Map(), HOY).aperturas.length, 0)
+  assert.equal(decidirAperturas([], [fd], new Map([['i1', true]]), HOY).aperturas.length, 1)
   assert.match(SRC, /where c\.tipo = 'comercial' and c\.identidad_id = any\(/)
   // Sin envíos salientes: este fichero no importa ningún canal de correo/mensajería.
   assert.doesNotMatch(SRC, /core-email|core-telegram|createMailTransporter|sendMail|whatsapp/i)
+})
+
+test('🚨 si FALLA la lectura del consentimiento: mapa vacío y savepoint deshecho; las renovaciones SÍ se abren, las declaradas NO', async () => {
+  const pasos: string[] = []
+  const sp = { abrir: async () => { pasos.push('abrir') }, liberar: async () => { pasos.push('liberar') }, deshacer: async () => { pasos.push('deshacer') } }
+  const errorOriginal = console.error
+  console.error = () => {}
+  let m: Map<string, boolean | null>
+  try {
+    m = await consentimientoOVacio(async () => { throw new Error('permission denied for table portal_consentimiento') }, sp)
+  } finally {
+    console.error = errorOriginal
+  }
+  assert.equal(m.size, 0)
+  assert.deepEqual(pasos, ['abrir', 'deshacer'])
+  const fr = { polizaId: 'p1', clienteId: 'c1', ramo: 'auto', compania: 'Mapfre', numeroPoliza: '1', vence: sumar(45), prima: null,
+    importRef: null, eiacXmlHash: 'h', estado: 'en_vigor', sustituidaAt: null, yaAbierta: false, yaEsteCiclo: false }
+  const fd = { declaradaId: 'd1', identidadId: 'i1', clienteId: 'c1', ramo: 'hogar', compania: 'X', numeroPoliza: null, vence: sumar(55), yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false }
+  const r = decidirAperturas([fr], [fd], m, HOY)
+  assert.deepEqual(r.aperturas.map((a) => a.tipo), ['renovacion'])
+  assert.deepEqual(r.noAbiertas.declarada, { sin_consentimiento: 1 })
+  // Lectura buena: libera el savepoint y devuelve lo leído.
+  const ok = await consentimientoOVacio(async () => new Map([['i1', true]]), sp)
+  assert.equal(ok.get('i1'), true)
+  assert.deepEqual(pasos.slice(2), ['abrir', 'liberar'])
+  // La pasada del detector (en transacción) usa el savepoint.
+  assert.match(SRC, /planExpedientesAuto\(tx, correduriaId, hoy, true\)/)
+  assert.match(SRC, /rollback to savepoint consentimiento_expedientes/)
 })
 
 test('ramo declarado desconocido → «otros» (nunca un cast que tumbe el lote)', () => {

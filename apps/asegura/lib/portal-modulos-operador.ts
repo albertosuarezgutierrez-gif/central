@@ -168,6 +168,11 @@ export type EstadoIdentidadSinFicha = {
   vinculosPropios: number
   /** Es la identidad dedicada de la vista de corredor (nunca es una persona). */
   esCorredor: boolean
+  /**
+   * `portal_identidad.ultimo_vinculo` (el sello del último intento de vincular al entrar). `ambiguo` = su email casa con
+   * VARIAS fichas: la persona ya está en la cartera y no se sabe en cuál; un prospecto sería una tercera ficha. `null` = no consta.
+   */
+  ultimoVinculo: string | null
 }
 
 export type DecisionProspecto =
@@ -176,10 +181,18 @@ export type DecisionProspecto =
 
 /**
  * ¿Se crea la ficha de prospecto y se activa? Solo para una identidad que ha PEDIDO ese módulo (no se activa a cualquier
- * identidad por id), que no es la del corredor y que no tiene ya ficha (con ficha se activa desde su ficha: no se duplica).
+ * identidad por id), que no es la del corredor, que no tiene ya ficha (con ficha se activa desde su ficha: no se duplica) y
+ * cuyo email no casa con varias fichas (`ambiguo`: ya está en la cartera, se vincula a mano).
  */
 export function decidirProspecto(e: EstadoIdentidadSinFicha): DecisionProspecto {
   if (e.esCorredor) return { crear: false, status: 409, motivo: 'Esa es la identidad de la vista de corredor: no es un cliente.' }
+  if (e.ultimoVinculo === 'ambiguo') {
+    return {
+      crear: false,
+      status: 409,
+      motivo: 'Su email casa con varias fichas de la cartera: vincúlala a mano a la ficha buena y activa desde ella (no se crea otra ficha).',
+    }
+  }
   if (e.vinculosPropios > 0) {
     return { crear: false, status: 409, motivo: 'Esta persona ya tiene una ficha vinculada: actívalo desde su ficha.' }
   }
