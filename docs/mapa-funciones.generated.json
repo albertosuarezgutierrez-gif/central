@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T18:33:21Z",
-  "sha": "158943815e51aca6edd451ec6181186e14c8bde6",
+  "generadoEn": "2026-10-27T19:01:56Z",
+  "sha": "7a49201f8ae1b93163741aa1b5e1232b6ce2ceb0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5798,7 +5798,7 @@
           "exportada": false,
           "params": "{ empresaId, jefes, candidatos, textoJefe }: { empresaId: string; jefes: Jefe[]; candidatos: Candidato[]; textoJefe: string }",
           "retorno": null,
-          "linea": 306
+          "linea": 307
         },
         {
           "nombre": "FlotaEmpresa",
@@ -5806,7 +5806,7 @@
           "exportada": true,
           "params": "props: { empresaId: string papel: PapelFlota recortada: boolean vehiculos: VehiculoFlota[] jefes: Jefe[] | null candidatos: Candidato[] | null textoJefe: string /** Estado del QR de cada vehículo por matrícula. `null` = no se pudo leer o no",
           "retorno": null,
-          "linea": 390
+          "linea": 391
         },
         {
           "nombre": "NombramientoPendiente",
@@ -5814,7 +5814,7 @@
           "exportada": true,
           "params": "{ autorizacionId, empresa, otorgadoEn }: { autorizacionId: string; empresa: string | null; otorgadoEn: string | null }",
           "retorno": null,
-          "linea": 419,
+          "linea": 420,
           "resumen": "Un nombramiento pendiente: aceptarlo o rechazarlo, por la ruta de siempre de las autorizaciones."
         }
       ],
@@ -5823,7 +5823,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "c2c20abe1344"
+      "hash": "e306b442d551"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/page.tsx",
@@ -5838,13 +5838,42 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 31,
+          "linea": 33,
           "resumen": "«Tu flota» (05/10/2026) — el mínimo de empresa del piloto. Sin `?empresa=`: índice de las sociedades cuya flota puede ver esta identidad (dueño o jefe de flota) y los nombramientos que tiene pendiente"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dc2bc408c985"
+      "hash": "cd1209555c17"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/herramientas/AvisoManual.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "AvisoManual"
+      ],
+      "funciones": [
+        {
+          "nombre": "clave",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "modulo: ModuloPortal",
+          "retorno": null,
+          "linea": 7
+        },
+        {
+          "nombre": "AvisoManual",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ modulo }: { modulo: ModuloPortal }",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Aviso ÚNICO al entrar por primera vez a una herramienta (28/10/2026): «aquí tienes cómo funciona». Se descarta una vez y no vuelve en este navegador. `localStorage` solo es una comodidad de ESTE naveg"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "afb551dffd93"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/BotonSolicitarModulo.tsx",
@@ -5974,6 +6003,48 @@
       "hash": "354525f2ac51"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/herramientas/como-funciona/[modulo]/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "ComoFuncionaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "ComoFuncionaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ modulo: string }> }",
+          "retorno": null,
+          "linea": 28,
+          "resumen": "«Cómo funciona» de una herramienta (28/10/2026). Mismo guard que `/herramientas`: sesión (`getIdentidad`) y la puerta de «Herramientas» (`puertaDeSesion('herramientas')`). El id de la URL solo elige u"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "478a8862d666"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/herramientas/EnlaceComoFunciona.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "EnlaceComoFunciona"
+      ],
+      "funciones": [
+        {
+          "nombre": "EnlaceComoFunciona",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ modulo, aparte = false }: { modulo: ModuloPortal; aparte?: boolean }",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "El enlace «Cómo funciona» a la página del manual de una herramienta (28/10/2026). Un solo componente para la tarjeta de Herramientas y la cabecera de cada herramienta; la ruta sale de `rutaManual()` ("
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0fdbf3a6d2d1"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5986,7 +6057,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 37,
+          "linea": 38,
           "resumen": "«Herramientas» (26/10/2026, menú de cinco): LA ventana de las herramientas, en DOS bloques (27/10/2026): · «Herramientas que puedes activar» = los MÓDULOS (Patrimonio, Flota, Portal del Empleado…): aq"
         },
         {
@@ -5995,7 +6066,7 @@
           "exportada": false,
           "params": "{ t, hrefFlota }: { t: TarjetaModulo; hrefFlota: string }",
           "retorno": null,
-          "linea": 156,
+          "linea": 158,
           "resumen": "Una tarjeta del catálogo (Patrimonio, Flota): qué es, con qué seguros tiene que ver y su botón según el estado. El rótulo pequeño es `t.antetitulo` (del catálogo). «Abrir» de Flota va a `hrefFlota` (d"
         },
         {
@@ -6004,13 +6075,13 @@
           "exportada": false,
           "params": "{ t }: { t: TarjetaModulo }",
           "retorno": null,
-          "linea": 183,
+          "linea": 188,
           "resumen": "El estado de lo ya pedido (o activo, o sin comprobar). El botón de pedir NO va aquí: va en `.acciones` de la tarjeta."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e9bf5d3ec17"
+      "hash": "3742b28c3b7a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/page.tsx",
@@ -7269,13 +7340,13 @@
           "exportada": true,
           "params": "{ inmuebles }: { inmuebles: Fila[] }",
           "retorno": null,
-          "linea": 14,
+          "linea": 16,
           "resumen": "Plegado perezoso: ~50 filas y «Ver más». Nada monta cientos de filas de golpe."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f9070b3cd32c"
+      "hash": "8a34132f65f7"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/NuevoInmueble.tsx",
@@ -7335,13 +7406,13 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<ParametrosAlta> }",
           "retorno": null,
-          "linea": 26,
+          "linea": 30,
           "resumen": "«Patrimonio» (Fase 1, 22/10/2026): los inmuebles por titular. 🚨 Todo parte de `accesosPatrimonio()` (dentro de `patrimonioDeIdentidad`): se ven SOLO los titulares a los que esta sesión tiene acceso. "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0efe5fc5dc57"
+      "hash": "e2d0c71be0f5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/rentabilidad/fiscal/page.tsx",
@@ -38280,7 +38351,7 @@
           "exportada": true,
           "params": "correduriaId: string, supId: string, lapId: string, deAbsorbida: unknown, confirmarSinDni: boolean, actor: string, conservar?: unknown,",
           "retorno": "Promise<ResultadoFusion>",
-          "linea": 263,
+          "linea": 268,
           "resumen": "Fusiona `lapId` en `supId`. Recompara en el momento (no se fía de lo que vio la pantalla) y exige que cada grupo elegido siga siendo «distinto». `confirmarSinDni`: si una de las dos no tiene DNI (o lo"
         },
         {
@@ -38289,13 +38360,13 @@
           "exportada": false,
           "params": "correduriaId: string, supId: string, campos: CampoFusion[], deAbsorbida: GrupoFusion[], actor: string",
           "retorno": "Promise<void>",
-          "linea": 327,
+          "linea": 332,
           "resumen": "La decisión sobre la identidad que difería, en el historial de la ficha que se queda (05/10/2026). La función SQL solo dice «Elegido de la otra: …»; esto dice también lo que se DESCARTÓ. Nombre y apel"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "28df48ff7e1b"
+      "hash": "8bcad40575fb"
     },
     {
       "ruta": "apps/asegura/lib/cartera-historial-riesgo.ts",
@@ -226029,6 +226100,48 @@
       "hash": "befbd54f685e"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/manuales.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "«Cómo funciona» de cada herramienta del portal (28/10/2026): el manual corto que se abre desde la tarjeta de «Herramientas» y desde la cabecera de cada herramienta. Contenido PURO (sin BD ni red), junto al catálogo. 🚨 Cada frase es una afirmación sobre lo que hace la pantalla HOY. Si cambia la pant",
+      "exporta": [
+        "manualDeModulo",
+        "rutaManual",
+        "modulosSinManual"
+      ],
+      "funciones": [
+        {
+          "nombre": "manualDeModulo",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: unknown",
+          "retorno": "ManualModulo | null",
+          "linea": 128,
+          "resumen": "El manual de un módulo, o `null` si el id no es del catálogo (para validar lo que llega de una URL)."
+        },
+        {
+          "nombre": "rutaManual",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: ModuloPortal",
+          "retorno": "string",
+          "linea": 133,
+          "resumen": "Dónde se abre el manual de un módulo dentro del portal. Una sola fuente para tarjetas, cabeceras y avisos."
+        },
+        {
+          "nombre": "modulosSinManual",
+          "kind": "function",
+          "exportada": true,
+          "params": "manuales: Partial<Record<string, ManualModulo>> = MANUALES_MODULOS",
+          "retorno": "ModuloPortal[]",
+          "linea": 138,
+          "resumen": "Los módulos del catálogo SIN manual útil (ausente o con algún bloque vacío). Lo usa el cepo; vacío = todo cubierto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "598c9611ed86"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/mejorar-precio.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "«Quiero que me mejores el precio» (Fase 1 de ASegura OS, pieza 1-5). El cliente ve en su portal lo que le renueva pronto y, con un botón, pide que se lo mire la correduría. Es la venta que INICIA EL CLIENTE, la más barata que existe. Lo que pide acaba en la cartera como una oportunidad con su tarea ",
@@ -256300,7 +256413,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5366,
-    "funciones": 20603
+    "archivos": 5370,
+    "funciones": 20610
   }
 }
