@@ -27,6 +27,8 @@ export const EFECTO_LECTURA: Record<string, string> = {
   antelacion: 'pierde la palanca de antelación (last-minute vs con meses)',
   prior_estacional: 'pierde el suelo/techo histórico (ADR de 6 años)',
   velocidad_reservas: 'pierde la señal de ritmo (≥2 reservas en 7 días = precio corto)',
+  ultima_escritura: 'no descongela por antigüedad ni reconoce sus propios saltos (llaves de pricing-descongelar): degrada a lo de antes del 27/08/2026',
+  ritmo_finde: 'sin prima vie/sáb por ritmo propio: los findes se tarifan con la demanda del MES (y el centinela del canal vuelve a llamarlos «caros»)',
 }
 
 /**

@@ -71,9 +71,21 @@ export interface FechaHuesped {
    * `vendeAlPrecio` null (comportamiento de siempre) · `{n:0}` = se miró y no hay ventas · dato.
    */
   ventas?: { n: number; med: number | null } | null
+  /**
+   * Prima vie/sáb por ritmo propio que el motor APLICÓ a esta noche (`pricing-ritmo-finde.ts`, la
+   * misma lectura que `apply`). TRES estados: `null`/ausente = no se ha podido saber (lectura caída,
+   * o evento sin comprobar en un piso habilitado) · `1` = se miró y no aplica (piso fuera de
+   * `SIVRA_PRIMA_FINDE_PISOS`, entre semana, evento o sin prima) · `>1` = prima aplicada. Con prima,
+   * «sobre mercado» está RESPALDADO por el ritmo de reservas y pasa a `caro_vendiendo`: si no, el
+   * aviso acusaría de caro justo el finde que el motor ha subido a propósito.
+   */
+  primaFinde?: number | null
 }
 
-/** `caro_vendiendo` = sobre el mercado, pero el piso vende noches comparables a ese precio. */
+/**
+ * `caro_vendiendo` = sobre el mercado, pero respaldado: el piso vende noches comparables a ese
+ * precio, o es un vie/sáb subido por la prima de ritmo propio (`primaFinde > 1`).
+ */
 export type EstadoHuesped = 'sin_mercado' | 'ok' | 'caro' | 'caro_vendiendo' | 'barato'
 
 /**
@@ -97,6 +109,8 @@ export interface VeredictoHuesped {
   baseAplicada: number
   /** `null` = no se sabe si se vende a ese precio (ver `vendeAlPrecio`) */
   vendeAlPrecio: boolean | null
+  /** prima vie/sáb aplicada (ver `FechaHuesped.primaFinde`): `null` no se sabe · 1 no aplica · >1 prima */
+  primaFinde: number | null
   /** lo que ve el huésped por esa noche con la base aplicada */
   guest: number
   medMercadoGuest: number | null
@@ -198,12 +212,14 @@ export function precioHuesped(
         ? Number(f.medMercadoGuest) : null
       const ratio = mercado != null ? Number((guest / mercado).toFixed(3)) : null
       const vende = vendeAlPrecio(f.ventas, guest)
+      const prima = f.primaFinde == null || !Number.isFinite(Number(f.primaFinde)) ? null : Number(f.primaFinde)
+      const respaldada = vende === true || (prima != null && prima > 1)
       const estado: EstadoHuesped = ratio == null ? 'sin_mercado'
-        : ratio > topeCaro ? (vende === true ? 'caro_vendiendo' : 'caro')
+        : ratio > topeCaro ? (respaldada ? 'caro_vendiendo' : 'caro')
         : ratio < sueloBarato ? 'barato'
         : 'ok'
       return {
-        fecha: f.fecha, baseAplicada: Number(f.baseAplicada), vendeAlPrecio: vende, guest, medMercadoGuest: mercado, ratio,
+        fecha: f.fecha, baseAplicada: Number(f.baseAplicada), vendeAlPrecio: vende, primaFinde: prima, guest, medMercadoGuest: mercado, ratio,
         pesoCuota: guest > 0 ? Number((fijo / guest).toFixed(3)) : 0,
         estado,
         hayEvento: f.hayEvento ?? null,

@@ -260,3 +260,22 @@ test('🚨 el aviso del route: texto «esas fechas», suelo solo si la base est�
   assert.ok(fuente.includes('se venden a ese precio'))
   assert.ok(fuente.includes('FROM incomes'))
 })
+
+test('🚨 finde subido por la PRIMA de ritmo (>1) → caro_vendiendo; 1 o null (no se sabe) → caro como siempre', () => {
+  const con = (prima: number | null | undefined): FechaHuesped =>
+    ({ fecha: '2027-05-08', baseAplicada: 800, medMercadoGuest: 400, hayEvento: false, ventas: null, primaFinde: prima })
+  const r = precioHuesped([con(1.2)], P1)
+  assert.equal(r.fechas[0].estado, 'caro_vendiendo')
+  assert.equal(r.fechas[0].primaFinde, 1.2)
+  assert.equal(r.caras, 0)
+  assert.equal(r.carasVendiendo, 1)
+  assert.equal(r.avisar, false)
+  for (const p of [1, null, undefined]) {
+    const x = precioHuesped([con(p)], P1)
+    assert.equal(x.fechas[0].estado, 'caro', `primaFinde=${p}`)
+    assert.equal(x.fechas[0].primaFinde, p ?? null)
+    assert.equal(x.avisar, true)
+  }
+  // La prima no convierte en «caro_vendiendo» una noche que no está sobre el mercado.
+  assert.equal(precioHuesped([{ ...con(1.2), baseAplicada: 300 }], P1).fechas[0].estado === 'caro_vendiendo', false)
+})

@@ -20,6 +20,8 @@ import {
 } from "@/lib/sivra/pricing-precio-huesped"
 import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
 import { FACTOR_EVENTO_MINIMO } from "@/lib/sivra/mercado-ventanas"
+import { pisosConPrimaFinde, primaFindeCentinela, type RitmoFinde } from "@/lib/sivra/pricing-ritmo-finde"
+import { leerRitmoFinde } from "@/lib/sivra/pricing-ritmo-finde-lectura"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -314,6 +316,8 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
   huesped: Map<string, ResumenHuesped>
   /** true = no se ha podido leer `pricing_eventos_auto`: `hayEvento` va como «no se sabe». */
   eventosIlegibles: boolean
+  /** true = no se pudo leer el ritmo de findes con algún piso habilitado: sus findes van «no se sabe». */
+  ritmoIlegible: boolean
 }> {
   const filas = await prisma.$queryRaw<{
     property_id: string; fecha: string; base: number; med: number | null; comps: number
@@ -391,6 +395,17 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
     GROUP BY rate_date`).catch(() => { eventosIlegibles = true; return [] })
   const conEvento = new Set(evRows.map(e => e.fecha))
 
+  // El MISMO «hoy» con el que `apply` cuenta los días vista (`new Date()` formateado en UTC): si
+  // aquí fuera otro, entre las 22:00 y las 24:00 UTC una fecha tarifada sin recargo se juzgaría con él.
+  const hoyMotor = new Date().toISOString().slice(0, 10)
+  // 🏁 Prima vie/sáb por ritmo propio: MISMA lectura y MISMA función que `apply` (no se duplica la
+  // lógica). Un finde subido a propósito por la prima no es «caro», es `caro_vendiendo`. Si la
+  // lectura cae, `null` = no se sabe → el veredicto queda como siempre (caro), y se declara.
+  let ritmoIlegible = false
+  const ritmo: Map<string, RitmoFinde> | null = await leerRitmoFinde(hoyMotor)
+    .catch(() => { ritmoIlegible = true; return null })
+  const pisosPrima = pisosConPrimaFinde(process.env.SIVRA_PRIMA_FINDE_PISOS)
+
   const porPiso = new Map<string, FechaHuesped[]>()
   for (const f of filas) {
     const l = porPiso.get(f.property_id) ?? []
@@ -403,12 +418,13 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
       hayEvento: eventosIlegibles ? null : conEvento.has(f.fecha),
       // La consulta ya leyó `incomes`: sin fila de ventas = se miró y no hay (n=0 → vendeAlPrecio null).
       ventas: { n: f.v_n ?? 0, med: f.v_med != null ? Number(f.v_med) : null },
+      primaFinde: primaFindeCentinela({
+        fecha: f.fecha, pid: f.property_id, ritmo, habilitados: pisosPrima,
+        hayEvento: eventosIlegibles ? null : conEvento.has(f.fecha),
+      }),
     })
     porPiso.set(f.property_id, l)
   }
-  // El MISMO «hoy» con el que `apply` cuenta los días vista (`new Date()` formateado en UTC): si
-  // aquí fuera otro, entre las 22:00 y las 24:00 UTC una fecha tarifada sin recargo se juzgaría con él.
-  const hoyMotor = new Date().toISOString().slice(0, 10)
   const salida = new Map<string, ResumenHuesped>()
   for (const p of pisos) {
     const fechas = porPiso.get(p.property_id)
@@ -417,7 +433,7 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
       ultimaHora: { recargo: p.recargo_uh_cfg, hoy: hoyMotor },
     }))
   }
-  return { huesped: salida, eventosIlegibles }
+  return { huesped: salida, eventosIlegibles, ritmoIlegible: ritmoIlegible && pisosPrima.size > 0 }
 }
 
 /** Cómo se rotula una noche en el aviso. Los tres estados de `hayEvento`, sin colapsar ninguno. */
@@ -500,6 +516,10 @@ export async function GET(req: NextRequest) {
       if (c.eventosIlegibles) {
         avisosCentinela.push(
           "pricing_eventos_auto ilegible: las fechas caras NO se han podido separar entre evento y noche normal")
+      }
+      if (c.ritmoIlegible) {
+        avisosCentinela.push(
+          "ritmo de findes ilegible: los vie/sáb de los pisos con prima pueden salir «caros» aunque los subiera el motor a propósito")
       }
     } catch (e) {
       avisosCentinela.push(`centinela del precio al huésped ilegible (${String(e).slice(0, 60)}): esta pasada NO lo ha mirado`)
@@ -606,7 +626,7 @@ export async function GET(req: NextRequest) {
             `  peor: ${p0?.fecha} (${etiquetaEvento(p0)}) ${eur(p0?.guest ?? 0)}/noche contra ` +
             `${eur(p0?.medMercadoGuest ?? 0)} de mercado de esas fechas ` +
             `(mediana ±${VENTANA_DIAS_MERCADO} días, ×${p0?.ratio})` +
-            (h.carasVendiendo ? `\n  ${h.carasVendiendo} fecha(s) sobre mercado pero se venden a ese precio` : "") +
+            (h.carasVendiendo ? `\n  ${h.carasVendiendo} fecha(s) sobre mercado pero respaldadas (se venden a ese precio o prima de finde por ritmo)` : "") +
             (cerca ? `\n  Por debajo de ${eur(suelo ?? 0)} de base, la cuota fija ya es la mitad de lo que paga el ` +
               `huésped: bajar más NO abarata la noche, hay que tocar otra palanca (mín. de noches, oferta del portal).` : "")
         }).join("\n"))
