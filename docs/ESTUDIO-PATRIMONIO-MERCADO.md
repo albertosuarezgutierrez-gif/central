@@ -76,3 +76,6 @@ en temporada (110/mes media anual, probablemente concentrado en abril-junio).
   hay que dar de alta a cada propietario (fricción) y nuestra comisión se factura con IVA.
   Comisión: un % sobre la renta choca con competidores que cobran gratis. Mejor una cuota fija por recibo o meterlo
   en el nivel de pago. El ingreso grande es el **seguro de impago**, que se ofrece justo cuando se activa el cobro.
+- ✅ **Decisión de Alberto (27/10/2026):** aprobado el modelo de dos niveles (básico gratis; plus gratis con sus
+  seguros en Grupo ASegura). El **cobro de rentas con Stripe queda como idea para MÁS ADELANTE**: reutilizar el
+  Stripe Connect que ya funciona en ia-rest (cliente Saboga) cuando Patrimonio tenga tracción. No se construye ahora.
