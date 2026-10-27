@@ -1,8 +1,8 @@
 {
  "sesion": "957270f5-f49e-5302-a163-011ebf581077",
  "inicio": "2026-10-26T08:55:19.756Z",
- "fin": "2026-10-26T19:01:01.868Z",
- "llamadas": 1253,
+ "fin": "2026-10-26T19:01:13.592Z",
+ "llamadas": 1254,
  "categorias": {
   "agente:general-purpose": {
    "llamadas": 21,
@@ -16,9 +16,9 @@
    }
   },
   "otro": {
-   "llamadas": 155,
-   "chars_in": 140865,
-   "chars_out": 1043449,
+   "llamadas": 156,
+   "chars_in": 140867,
+   "chars_out": 1044230,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -26,7 +26,7 @@
     "ToolSearch": 37,
     "SubagentHandback": 36,
     "SendMessage": 7,
-    "ReadNotifications": 66,
+    "ReadNotifications": 67,
     "SendUserFile": 4,
     "AskUserQuestion": 2,
     "Monitor": 3
