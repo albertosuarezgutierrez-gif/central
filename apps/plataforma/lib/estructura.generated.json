@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-27T09:11:22Z",
+  "generadoEn": "2026-10-27T11:31:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -459,7 +459,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 11
       },
       "rrhh": {
         "estado": "no",
@@ -567,7 +567,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "no",
@@ -621,7 +621,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "usado",
@@ -728,8 +728,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 3
       },
       "rrhh": {
         "estado": "no",
@@ -1053,7 +1053,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 38
+        "evidencias": 41
       },
       "rrhh": {
         "estado": "usado",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 241
+        "evidencias": 244
       },
       "rrhh": {
         "estado": "no",
@@ -3701,7 +3701,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 6
+        "evidencias": 44
       },
       "rrhh": {
         "presente": false,
@@ -5663,6 +5663,9 @@
       "/api/publico/correduria/consentimiento",
       "/api/publico/correduria/lead",
       "/api/publico/disponibilidad",
+      "/api/publico/factura/[token]",
+      "/api/publico/factura/[token]/cp",
+      "/api/publico/factura/[token]/vias",
       "/api/sivra/conciliar-booking",
       "/api/sivra/domotica/acceso/[id]",
       "/api/sivra/domotica/acceso/[id]/abrir",
@@ -5685,8 +5688,13 @@
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
       "/api/sivra/extras/webhook",
+      "/api/sivra/facturas",
       "/api/sivra/facturas-control",
       "/api/sivra/facturas-limpieza",
+      "/api/sivra/facturas/[id]",
+      "/api/sivra/facturas/[id]/pdf",
+      "/api/sivra/facturas/reservas",
+      "/api/sivra/facturas/solicitud",
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
@@ -6459,6 +6467,9 @@
       "sivra_codigos_acceso",
       "sivra_extras_catalogo",
       "sivra_extras_reserva",
+      "sivra_factura_series",
+      "sivra_factura_solicitudes",
+      "sivra_facturas_huesped",
       "sivra_ordenes_limpieza",
       "sobre",
       "subastas",
@@ -7214,7 +7225,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1838,
+    "apis": 1846,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
