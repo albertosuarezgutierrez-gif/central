@@ -483,3 +483,46 @@ test('🚨 prisma_seguros (27/10/2026): sin lo que asegura no usa, SELECT donde 
   assert.deepEqual(escritas, [], 'apps/asegura escribe en una tabla que este SQL deja en solo SELECT')
   for (const t of soloLee) assert.match(sql, new RegExp(`GRANT SELECT ON[^;]*seguros\\.${t}\\b[^;]*TO prisma_seguros`))
 })
+
+// ─── Tabla NUEVA `portal_patrimonio_*` ⇒ recorte a `prisma_seguros` en su MISMO SQL (28/10/2026) ───────────────────────
+// Los default privileges del schema `seguros` le dan a `prisma_seguros` (apps/asegura) SELECT/INSERT/UPDATE/DELETE en TODA
+// tabla nueva. No se cambian (romperían las tablas de asegura), así que cada SQL posterior al 27/10 que cree una tabla del
+// portal tiene que recortarla él. Los anteriores se recortaron con `revocar_heredados` y quedan exentos.
+const DIR_SQL_PORTAL = join(RAIZ, 'apps/asegura-portal/prisma/sql')
+
+/** Tablas `portal_patrimonio_*` creadas (sin comentarios) que NO tienen un REVOKE de escritura (o ALL) a `prisma_seguros`. */
+export function tablasSinRecorteSeguros(sqlCrudo: string): string[] {
+  const sql = sqlCrudo.replace(/--.*$/gm, '')
+  const creadas = [...sql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:"?seguros"?\.)?"?(portal_patrimonio_\w+?)"?\s*\(/gi)].map((m) => m[1])
+  const revokes = sql.split(';').filter((s) => /^\s*REVOKE\b/i.test(s) && /\bFROM\s+prisma_seguros\b/i.test(s))
+  return creadas.filter((t) => !revokes.some((r) => {
+    const m = /^\s*REVOKE\s+([\s\S]+?)\s+ON\s+(?:TABLE\s+)?([\s\S]+?)\s+FROM\b/i.exec(r)
+    if (!m) return false
+    const ontabla = m[2].split(',').some((x) => x.trim().replace(/"/g, '').replace(/^seguros\./i, '') === t)
+    const privs = m[1].toUpperCase()
+    const escritura = /^ALL(\s+PRIVILEGES)?$/.test(privs.trim()) || ['INSERT', 'UPDATE', 'DELETE'].every((p) => new RegExp(`\\b${p}\\b`).test(privs))
+    return ontabla && escritura
+  }))
+}
+
+test('🚨 SQL del portal desde 28/10/2026: toda tabla portal_patrimonio_* nueva recorta la escritura de prisma_seguros', () => {
+  const nuevos = readdirSync(DIR_SQL_PORTAL).filter((f) => /^\d{4}-\d{2}-\d{2}_.*\.sql$/.test(f) && f.slice(0, 10) >= '2026-10-28')
+  const fallos: string[] = []
+  for (const f of nuevos) {
+    for (const t of tablasSinRecorteSeguros(readFileSync(join(DIR_SQL_PORTAL, f), 'utf8'))) {
+      fallos.push(`${f}: crea seguros.${t} sin \`REVOKE ALL ON seguros.${t} FROM prisma_seguros\` (o REVOKE INSERT, UPDATE, DELETE ...)`)
+    }
+  }
+  assert.deepEqual(fallos, [], 'Los default privileges de `seguros` dan a prisma_seguros (apps/asegura) SELECT/INSERT/UPDATE/DELETE en toda tabla nueva; '
+    + 'no se cambian porque romperían las tablas de asegura. Cada SQL que cree una tabla portal_patrimonio_* debe recortarla en el mismo fichero:\n' + fallos.join('\n'))
+})
+
+test('el detector del recorte distingue REVOKE bueno, ausente y sobre otra tabla', () => {
+  const crea = 'CREATE TABLE IF NOT EXISTS seguros.portal_patrimonio_x (id int);\n'
+  assert.deepEqual(tablasSinRecorteSeguros(crea), ['portal_patrimonio_x'])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + '-- REVOKE ALL ON seguros.portal_patrimonio_x FROM prisma_seguros;'), ['portal_patrimonio_x'])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + 'REVOKE ALL ON seguros.portal_patrimonio_y FROM prisma_seguros;'), ['portal_patrimonio_x'])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + 'REVOKE SELECT ON seguros.portal_patrimonio_x FROM prisma_seguros;'), ['portal_patrimonio_x'])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + 'REVOKE ALL ON seguros.portal_patrimonio_x FROM prisma_seguros;'), [])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + 'REVOKE INSERT, UPDATE, DELETE ON seguros.portal_patrimonio_x FROM prisma_seguros;'), [])
+})
