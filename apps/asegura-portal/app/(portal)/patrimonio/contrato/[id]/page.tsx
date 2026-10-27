@@ -194,7 +194,7 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
       </section>
 
       <p style={{ marginTop: 24 }}>
-        <Link href={`/patrimonio/inmueble/${f.inmueble.id}`}>← Volver al inmueble</Link>
+        <Link href={`/patrimonio/inmueble/${f.inmueble.id}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>← Volver al inmueble</Link>
       </p>
     </>
   )

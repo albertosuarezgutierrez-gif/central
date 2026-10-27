@@ -12,6 +12,7 @@ const CATEGORIAS: [string, string][] = [
   ['ite', 'ITE del edificio'],
   ['fin_seguro', 'Fin del seguro'],
   ['basuras', 'Tasa de basuras'],
+  ['hipoteca', 'Hipoteca (cuota o vencimiento)'],
   ['otro', 'Otro (cuéntanos cuál)'],
 ]
 const PERIODICIDADES: [string, string][] = [
@@ -31,6 +32,7 @@ const ERRORES: Record<string, string> = {
   demasiadas_peticiones: 'Demasiados cambios seguidos. Prueba más tarde.',
   sin_sesion: 'Tu sesión ha caducado. Vuelve a entrar.',
   modo_corredor: 'En la vista de corredor no se puede cambiar nada.',
+  categoria_no_disponible: 'Ese tipo de recordatorio todavía no se puede guardar. Elige «Otro» y escribe cuál es.',
 }
 const CAMPOS: Record<string, string> = {
   categoria: 'Elige de qué se trata.',
@@ -48,7 +50,7 @@ type Formulario = { id: string | null; categoria: string; vence: string; periodi
 const VACIO: Formulario = { id: null, categoria: '', vence: '', periodicidad: 'anual', descripcion: '' }
 
 /**
- * «Recordatorios» de la ficha del inmueble (25/10/2026): IBI, comunidad, caldera… que el cliente anota. Salen en el
+ * «Recordatorios» de la ficha del inmueble (25/10/2026): IBI, comunidad, caldera, hipoteca… que el cliente anota. Salen en el
  * calendario, la campana y «Pendiente de ti». Solo Gestión/Total pueden tocar; archivado = solo lectura.
  */
 export function ObligacionesPropias({ datos }: { datos: ObligacionesDeInmueble }) {

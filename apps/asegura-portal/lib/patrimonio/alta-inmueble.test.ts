@@ -63,3 +63,28 @@ test('formulario: sin CP no se busca calle; el CP da provincia y municipio únic
   assert.equal(lista.eligeMunicipioDeLista, true)
   assert.deepEqual(aplicarLecturaCp({ municipios: null, provincia: null }, { provincia: 'P', municipio: 'M' }), { provincia: 'P', municipio: 'M' })
 })
+
+test('edificio (27/10/2026): nace con N unidades de nombres editables y su criterio de reparto', () => {
+  const ed = { ...base, alias: 'Busto Tavera 22', uso: 'edificio', referenciaCatastral: '5731022TG3453B0001AK' }
+  const r = validarAltaInmueble({ ...ed, unidades: [' Bajo A ', '1º A', '1º B'], repartoCriterio: 'm2' })
+  assert.ok(r.ok)
+  assert.deepEqual(r.datos.unidades, ['Bajo A', '1º A', '1º B'])
+  assert.equal(r.datos.repartoCriterio, 'm2')
+  assert.equal(r.datos.referenciaCatastral, '5731022TG3453B0001AK')
+  // Sin unidades ni criterio: un edificio vacío (se añaden luego) y sin reparto elegido (null, no «m²» por defecto).
+  const vacio = validarAltaInmueble(ed)
+  assert.ok(vacio.ok)
+  assert.deepEqual(vacio.datos.unidades, [])
+  assert.equal(vacio.datos.repartoCriterio, null)
+})
+
+test('edificio: unidades solo en un edificio, sin nombres vacíos ni repetidos, y con tope', () => {
+  const ed = { ...base, uso: 'edificio' }
+  assert.deepEqual(validarAltaInmueble({ ...base, unidades: ['Piso 1'] }), { ok: false, campo: 'unidades' })
+  assert.deepEqual(validarAltaInmueble({ ...ed, unidades: ['Piso 1', ' '] }), { ok: false, campo: 'unidades' })
+  assert.deepEqual(validarAltaInmueble({ ...ed, unidades: ['Piso 1', 'piso 1'] }), { ok: false, campo: 'unidades' })
+  assert.deepEqual(validarAltaInmueble({ ...ed, unidades: 'Piso 1' }), { ok: false, campo: 'unidades' })
+  assert.deepEqual(validarAltaInmueble({ ...ed, unidades: Array.from({ length: 201 }, (_, k) => `P${k}`) }), { ok: false, campo: 'unidades' })
+  assert.deepEqual(validarAltaInmueble({ ...ed, repartoCriterio: 'a_partes_iguales' }), { ok: false, campo: 'repartoCriterio' })
+  assert.deepEqual(validarAltaInmueble({ ...base, repartoCriterio: 'm2' }), { ok: false, campo: 'repartoCriterio' })
+})

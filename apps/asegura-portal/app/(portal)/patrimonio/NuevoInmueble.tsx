@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { MAX_UNIDADES_EDIFICIO, nombresUnidades } from '@central/module-patrimonio'
+
 import { ETIQUETA_USO, USOS_INMUEBLE } from '@/lib/patrimonio/usos'
 
 import { DIRECCION_VACIA, DireccionCp, type ValorDireccion } from './DireccionCp'
@@ -38,6 +40,14 @@ export function NuevoInmueble({ titulares, precarga }: { titulares: { clienteId:
   const [refCat, setRefCat] = useState(precarga?.referenciaCatastral ?? '')
   // Tri-estado: '' = no lo sé (null), nunca «no» por defecto.
   const [comunidad, setComunidad] = useState<'' | 'si' | 'no'>('')
+  // Edificio sin división horizontal (27/10/2026): N unidades con nombres editables y el criterio de reparto ('' = después).
+  const [unidades, setUnidades] = useState<string[]>([])
+  const [criterio, setCriterio] = useState<'' | 'm2' | 'porcentaje'>('')
+  const cambiarNumero = (v: string) => {
+    const n = Math.max(0, Math.min(MAX_UNIDADES_EDIFICIO, Math.trunc(Number(v) || 0)))
+    // Conserva los nombres ya editados y completa con «Piso k».
+    setUnidades((prev) => (n <= prev.length ? prev.slice(0, n) : [...prev, ...nombresUnidades(n).slice(prev.length)]))
+  }
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,6 +68,7 @@ export function NuevoInmueble({ titulares, precarga }: { titulares: { clienteId:
           titular, alias, uso, ...dir,
           referenciaCatastral: refCat.trim() === '' ? null : refCat,
           enComunidad: comunidad === '' ? null : comunidad === 'si',
+          ...(uso === 'edificio' ? { unidades: unidades.map((u) => u.trim()), repartoCriterio: criterio === '' ? null : criterio } : {}),
         }),
       })
       const j = (await res.json().catch(() => ({}))) as { id?: string; error?: string; campo?: string }
@@ -76,7 +87,7 @@ export function NuevoInmueble({ titulares, precarga }: { titulares: { clienteId:
         router.refresh()
         return
       }
-      setError(j.error === 'datos_invalidos' ? `Revisa el campo «${j.campo ?? ''}».` : (ERRORES[j.error ?? ''] ?? 'No hemos podido guardarlo. Inténtalo de nuevo.'))
+      setError(j.error === 'datos_invalidos' ? (j.campo === 'unidades' ? 'Revisa los nombres de las unidades: ninguno vacío ni repetido.' : `Revisa el campo «${j.campo ?? ''}».`) : (ERRORES[j.error ?? ''] ?? 'No hemos podido guardarlo. Inténtalo de nuevo.'))
     } catch {
       setError('No hemos podido conectar. Vuelve a intentarlo.')
     } finally {
@@ -102,8 +113,31 @@ export function NuevoInmueble({ titulares, precarga }: { titulares: { clienteId:
           {USOS_INMUEBLE.map((u) => <option key={u} value={u}>{ETIQUETA_USO[u]}</option>)}
         </select>
       </label>
+      {uso === 'edificio' && (
+        <fieldset style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)', minWidth: 0 }}>
+          <legend style={{ fontWeight: 600, fontSize: 13, padding: 0 }}>Unidades del edificio</legend>
+          <p className="suave" style={{ margin: 0, fontSize: 13 }}>
+            Cada piso o local es una unidad con su contrato, su inquilino, sus gastos y su rentabilidad. Comparten la referencia catastral del edificio.
+          </p>
+          <label style={etiqueta}>¿Cuántas unidades tiene? (puedes añadir más luego)
+            <input className="campo" type="number" inputMode="numeric" min={0} max={MAX_UNIDADES_EDIFICIO} value={unidades.length} disabled={enviando} onChange={(e) => cambiarNumero(e.target.value)} />
+          </label>
+          {unidades.map((u, k) => (
+            <label key={k} style={etiqueta}>Nombre de la unidad {k + 1}
+              <input className="campo" value={u} maxLength={80} required disabled={enviando} onChange={(e) => setUnidades((prev) => prev.map((x, j) => (j === k ? e.target.value : x)))} />
+            </label>
+          ))}
+          <label style={etiqueta}>¿Cómo repartimos los gastos del edificio (IBI, seguro, comunes) entre las unidades?
+            <select className="campo" value={criterio} disabled={enviando} onChange={(e) => setCriterio(e.target.value as typeof criterio)}>
+              <option value="">Lo decido después (mientras, no se reparten)</option>
+              <option value="m2">Por los m² de cada unidad</option>
+              <option value="porcentaje">Por un porcentaje que fijo yo</option>
+            </select>
+          </label>
+        </fieldset>
+      )}
       <DireccionCp valor={dir} onCambio={setDir} disabled={enviando} />
-      <label style={etiqueta}>Referencia catastral (opcional, 20 caracteres)
+      <label style={etiqueta}>Referencia catastral (opcional, 20 caracteres){uso === 'edificio' ? ' — la del edificio entero' : ''}
         <input className="campo" value={refCat} maxLength={20} disabled={enviando} onChange={(e) => setRefCat(e.target.value.toUpperCase())} />
       </label>
       <label style={etiqueta}>¿Está en una comunidad de propietarios?

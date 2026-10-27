@@ -2,7 +2,7 @@
 // Protege: ilegible ≠ «sin módulos»; solo un `true` explícito habilita el botón; «ok» solo si asegura confirma.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarModulos, textoEscritura } from '../apps/plataforma/lib/portal-modulos-asegura.ts'
+import { interpretarModulos, notaModulo, textoEscritura } from '../apps/plataforma/lib/portal-modulos-asegura.ts'
 
 const m = (o: Record<string, unknown> = {}) => ({
   id: 'alquileres', nombre: 'Patrimonio y alquileres', descripcion: 'x', estado: 'inactivo',
@@ -37,4 +37,14 @@ test('escritura: ok solo con 200 + estado ok; el 409 enseña el motivo de asegur
   assert.deepEqual(c, { ok: false, texto: 'Solo con póliza en vigor.' })
   assert.equal(textoEscritura(200, { estado: 'error' }, 'activar', 'x').ok, false)
   assert.match(textoEscritura(500, { estado: 'error', causa: 'permisos' }, 'activar', 'x').texto, /2026-10-24_portal_modulos_operador/)
+})
+
+test('nota de Patrimonio (27/10/2026): dice que va ligado al email de entrada, que avise si cambia y que puede tener más; el resto sin nota', () => {
+  const n = notaModulo('alquileres') ?? ''
+  assert.match(n, /email con el que el cliente entra/)
+  assert.match(n, /cambia de email tiene que avisar/)
+  assert.match(n, /más emails en su ficha/)
+  assert.match(n, /póliza en vigor en CIMA/)
+  assert.equal(notaModulo('flota'), null)
+  assert.equal(notaModulo('rrhh'), null)
 })

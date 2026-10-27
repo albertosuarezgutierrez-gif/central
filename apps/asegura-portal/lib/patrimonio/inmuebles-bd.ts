@@ -4,12 +4,12 @@
 // id de la URL NUNCA consultan por sí solos: se buscan DENTRO de lo autorizado. Sin RLS, un `where` de menos devuelve
 // el patrimonio de cualquiera. Los puertos de `inmuebles-api.ts` no ven prisma.
 import { Prisma } from '@prisma/client'
-import { puede } from '@central/module-patrimonio'
+import { puede, rcEfectiva } from '@central/module-patrimonio'
 
 import { prisma } from '../db'
 import { accesosPatrimonio } from './accesos'
 import type { AccesosMapa, PuertosInmuebles, TitularLista } from './inmuebles-api'
-import { calleSinValidar, inmuebleDeFila, type FilaInmueble } from './lectura'
+import { calleSinValidar, decimal, inmuebleDeFila, type FilaInmueble } from './lectura'
 import { esRespuestaHipoteca, type RespuestaHipoteca } from './ofertas'
 import { getIdentidad } from '../session'
 
@@ -48,7 +48,7 @@ async function listarTitulares(identidadId: string, ids: readonly string[], acce
         puedeAlta: puede(nivel, 'alta_baja'),
         inmuebles: (inmueblesDe.get(f.id) ?? []).map((i) => {
           const m = inmuebleDeFila(i as FilaInmueble)
-          return { id: m.id, alias: m.alias, uso: m.uso, direccion: m.direccion, calleSinValidar: calleSinValidar(i), superficieM2: m.superficieM2 }
+          return { id: m.id, alias: m.alias, uso: m.uso, direccion: m.direccion, calleSinValidar: calleSinValidar(i), superficieM2: m.superficieM2, inmueblePadreId: m.inmueblePadreId ?? null }
         }),
       }
     })
@@ -91,21 +91,29 @@ export function puertosInmuebles(identidadId: string): PuertosInmuebles {
       const titular = await titularParaAlta(identidadId, clienteId)
       if (titular === null || titular.archivadoEn !== null) return { ok: false, motivo: 'duplicado' }
       try {
-        const i = await prisma.portalPatrimonioInmueble.create({
-          data: {
-            titularId: titular.id,
-            alias: datos.alias,
-            uso: datos.uso,
-            referenciaCatastral: datos.referenciaCatastral,
-            cp: datos.cp,
-            via: datos.via,
-            numero: datos.numero,
-            resto: datos.resto,
-            direccionNormalizada: datos.direccionNormalizada,
-            enComunidad: datos.enComunidad,
-            creadoPorIdentidadId: identidadId,
-          },
-          select: { id: true },
+        const comun = {
+          titularId: titular.id,
+          cp: datos.cp,
+          via: datos.via,
+          numero: datos.numero,
+          resto: datos.resto,
+          direccionNormalizada: datos.direccionNormalizada,
+          enComunidad: datos.enComunidad,
+          creadoPorIdentidadId: identidadId,
+        }
+        // Edificio sin división horizontal (27/10/2026): el edificio y sus N unidades en UNA transacción (todo o nada). Las
+        // unidades heredan dirección y titular del edificio; la referencia catastral NO se copia (se hereda al leer).
+        const i = await prisma.$transaction(async (tx) => {
+          const creado = await tx.portalPatrimonioInmueble.create({
+            data: { ...comun, alias: datos.alias, uso: datos.uso, referenciaCatastral: datos.referenciaCatastral, repartoCriterio: datos.repartoCriterio },
+            select: { id: true },
+          })
+          if (datos.uso === 'edificio' && datos.unidades.length > 0) {
+            await tx.portalPatrimonioInmueble.createMany({
+              data: datos.unidades.map((alias) => ({ ...comun, alias, uso: 'vivienda', inmueblePadreId: creado.id })),
+            })
+          }
+          return creado
         })
         return { ok: true, id: i.id }
       } catch (e) {
@@ -136,6 +144,12 @@ export type FichaInmueble = {
   calleSinValidar: boolean | null
   /** «¿Tiene hipoteca?» que dijo el cliente. `null` = no lo ha dicho (que NO es «no tiene»). */
   hipoteca: RespuestaHipoteca | null
+  /** Para ENSEÑAR: la RC propia o, en una unidad, la del edificio (`rcEfectiva`). `null` = no consta. */
+  referenciaCatastralEfectiva: string | null
+  /** UNIDAD: el edificio del que cuelga (misma ficha, mismo titular). La RC de la unidad es la del edificio. */
+  edificio: { id: string; alias: string; referenciaCatastral: string | null } | null
+  /** EDIFICIO: sus unidades vivas. `[]` en un edificio sin unidades todavía; vacío también en un inmueble que no es edificio. */
+  unidades: { id: string; alias: string; uso: string; superficieM2: number | null; repartoPorcentaje: number | null }[]
 }
 
 /**
@@ -153,7 +167,23 @@ export async function inmuebleAutorizado(identidadId: string, idPedido: string):
   if (!fila) return null
   const nivel = accesos.get(fila.titular.clienteId)
   if (!nivel) return null
-  const ficha = await prisma.cliente.findUnique({ where: { id: fila.titular.clienteId }, select: { nombre: true, apellidos: true } })
+  const [ficha, padre, unidades] = await Promise.all([
+    prisma.cliente.findUnique({ where: { id: fila.titular.clienteId }, select: { nombre: true, apellidos: true } }),
+    // Padre y unidades SIEMPRE dentro del MISMO titular ya autorizado (la FK compuesta lo garantiza también en la BD).
+    fila.inmueblePadreId === null
+      ? Promise.resolve(null)
+      : prisma.portalPatrimonioInmueble.findFirst({
+          where: { id: fila.inmueblePadreId, titularId: fila.titularId },
+          select: { id: true, alias: true, referenciaCatastral: true },
+        }),
+    fila.uso !== 'edificio'
+      ? Promise.resolve([])
+      : prisma.portalPatrimonioInmueble.findMany({
+          where: { inmueblePadreId: fila.id, titularId: fila.titularId, archivadoEn: null },
+          select: { id: true, alias: true, uso: true, superficieM2: true, repartoPorcentaje: true },
+          orderBy: { alias: 'asc' },
+        }),
+  ])
   return {
     inmueble: inmuebleDeFila(fila as FilaInmueble),
     clienteId: fila.titular.clienteId,
@@ -163,5 +193,8 @@ export async function inmuebleAutorizado(identidadId: string, idPedido: string):
     archivado: fila.archivadoEn !== null,
     calleSinValidar: calleSinValidar(fila),
     hipoteca: esRespuestaHipoteca(fila.hipoteca) ? fila.hipoteca : null,
+    referenciaCatastralEfectiva: rcEfectiva({ referenciaCatastral: fila.referenciaCatastral, inmueblePadreId: fila.inmueblePadreId }, padre),
+    edificio: padre === null ? null : { id: padre.id, alias: padre.alias, referenciaCatastral: padre.referenciaCatastral === null ? null : padre.referenciaCatastral.trim() || null },
+    unidades: unidades.map((u) => ({ id: u.id, alias: u.alias, uso: u.uso, superficieM2: decimal(u.superficieM2), repartoPorcentaje: decimal(u.repartoPorcentaje) })),
   }
 }

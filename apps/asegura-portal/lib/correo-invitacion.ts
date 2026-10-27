@@ -105,6 +105,12 @@ export type DatosCorreoInvitacion = {
    * es un acto entre dos personas, no una comunicación comercial (art. 21 LSSI).
    */
   abreAcceso: boolean
+  /**
+   * 27/10/2026: la invitación es a su PATRIMONIO (inmuebles y alquileres), no a sus seguros. `'gestion'` = gestionarlo sin altas
+   * ni bajas; `'total'` = todo. Ausente o `null` = invitación a los seguros (lo de siempre). Tampoco aquí va ningún dato del
+   * patrimonio (ni direcciones ni rentas): solo QUÉ se ofrece.
+   */
+  patrimonio?: 'gestion' | 'total' | null
   /** Lo que escribió quien invita, ya recortado por el módulo puro. */
   mensaje: string | null
   enlace: string
@@ -133,17 +139,28 @@ export function cuerpoInvitacion(d: DatosCorreoInvitacion): CuerpoCorreo {
   // línea. Sin nombre, el «Hola:» de siempre: no se inventa uno.
   const saludo = d.invitado !== null && unaLinea(d.invitado) !== '' ? `Hola, ${unaLinea(d.invitado)}:` : 'Hola:'
 
-  const asunto = d.abreAcceso
-    ? `${quien} te invita a ver sus seguros`
-    : `${quien} te invita a Mis Seguros, el portal de Grupo ASegura`
+  const patrimonio = d.patrimonio === 'gestion' || d.patrimonio === 'total' ? d.patrimonio : null
+  const quePatrimonio =
+    patrimonio === 'total'
+      ? 'llevar todo su patrimonio (sus inmuebles y alquileres)'
+      : 'ayudarle a gestionar su patrimonio (sus inmuebles y alquileres)'
+
+  const asunto =
+    patrimonio !== null
+      ? `${quien} te invita a gestionar su patrimonio`
+      : d.abreAcceso
+        ? `${quien} te invita a ver sus seguros`
+        : `${quien} te invita a Mis Seguros, el portal de Grupo ASegura`
 
   const lineas = [
     saludo,
     '',
-    d.abreAcceso
-      ? `${quien} te ha invitado a consultar sus seguros en Mis Seguros, el portal de Grupo ASegura.`
-      : `${quien} te ha invitado a Mis Seguros, el portal gratuito de Grupo ASegura. ` +
-        'No se comparte contigo ningún seguro suyo: tendrás tu propio espacio para tener a mano los tuyos.',
+    patrimonio !== null
+      ? `${quien} te ha invitado a ${quePatrimonio} en Mis Seguros, el portal de Grupo ASegura.`
+      : d.abreAcceso
+        ? `${quien} te ha invitado a consultar sus seguros en Mis Seguros, el portal de Grupo ASegura.`
+        : `${quien} te ha invitado a Mis Seguros, el portal gratuito de Grupo ASegura. ` +
+          'No se comparte contigo ningún seguro suyo: tendrás tu propio espacio para tener a mano los tuyos.',
   ]
   // El texto de otra persona va entrecomillado y en su propio bloque: que se
   // vea que lo escribió quien invita y no nosotros.
@@ -166,7 +183,10 @@ export function cuerpoInvitacion(d: DatosCorreoInvitacion): CuerpoCorreo {
   const html =
     `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;line-height:1.5">` +
     `<p>${esc(saludo)}</p>` +
-    (d.abreAcceso
+    (patrimonio !== null
+      ? `<p><strong>${esc(quien)}</strong> te ha invitado a ${quePatrimonio} en ` +
+        `<strong>Mis Seguros</strong>, el portal de Grupo ASegura.</p>`
+      : d.abreAcceso
       ? `<p><strong>${esc(quien)}</strong> te ha invitado a consultar sus seguros en ` +
         `<strong>Mis Seguros</strong>, el portal de Grupo ASegura.</p>`
       : `<p><strong>${esc(quien)}</strong> te ha invitado a <strong>Mis Seguros</strong>, el portal ` +

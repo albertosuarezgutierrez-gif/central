@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { fechaMadrid, inicioDiaMadrid } from './dia-madrid.ts'
+import { fechaMadrid, inicioDiaMadrid, inicioMesMadrid } from './dia-madrid.ts'
 
 const iso = (d: Date) => d.toISOString()
 
@@ -30,4 +30,11 @@ test('cambios de hora: el día del cambio (29/03 y 25/10/2026) empieza a mediano
   assert.equal(iso(inicioDiaMadrid(new Date('2026-03-29T12:00:00Z'))), '2026-03-28T23:00:00.000Z') // aún UTC+1 a las 00:00
   assert.equal(iso(inicioDiaMadrid(new Date('2026-10-25T12:00:00Z'))), '2026-10-24T22:00:00.000Z') // aún UTC+2 a las 00:00
   assert.equal(iso(inicioDiaMadrid(new Date('2026-10-26T12:00:00Z'))), '2026-10-25T23:00:00.000Z') // ya UTC+1
+})
+
+test('inicio del MES de Madrid: octubre (UTC+2) y enero (UTC+1); a las 00:30 del día 1 de Madrid ya es el mes nuevo', () => {
+  assert.equal(iso(inicioMesMadrid(new Date('2026-10-27T10:00:00Z'))), '2026-09-30T22:00:00.000Z')
+  assert.equal(iso(inicioMesMadrid(new Date('2026-01-15T10:00:00Z'))), '2025-12-31T23:00:00.000Z')
+  // 30/11 23:30Z = 01/12 00:30 en Madrid: ya es diciembre.
+  assert.equal(iso(inicioMesMadrid(new Date('2026-11-30T23:30:00Z'))), '2026-11-30T23:00:00.000Z')
 })

@@ -7,6 +7,7 @@ import {
   TIPOS_AVISO_CON_FECHA,
   avisosDeFechaIncompletos,
   ORIGENES_CALENDARIO,
+  agruparPorMes,
   componerCalendario,
   diasHastaDia,
   type EntradaCalendarioCruda,
@@ -122,4 +123,22 @@ test('avisosDeFechaIncompletos: solo cuentan las fuentes de las que salen avisos
 test('los tipos y fuentes de «con fecha» existen en el catálogo de la campana', () => {
   for (const t of TIPOS_AVISO_CON_FECHA) assert.ok((TIPOS_AVISO as readonly string[]).includes(t), t)
   for (const f of FUENTES_AVISO_CON_FECHA) assert.ok((FUENTES_AVISO as readonly string[]).includes(f), f)
+})
+
+test('agruparPorMes: vencido primero, un grupo por mes en orden, sin fecha al final y sin inventar mes', () => {
+  const c = componerCalendario({
+    hoy: HOY,
+    fuentes: fuentes({
+      seguro: [e('a', '2026-12-05'), e('b', '2026-11-20'), e('c', '2026-12-30'), e('v', '2026-01-01'), e('s', null), e('x', 'basura')],
+    }),
+  })
+  const g = agruparPorMes(c.entradas)
+  assert.deepEqual(g.map((x) => [x.clave, x.entradas.map((y) => y.clave)]), [
+    ['vencidas', ['v']],
+    ['2026-11', ['b']],
+    ['2026-12', ['a', 'c']],
+    ['sin_fecha', ['s', 'x']],
+  ])
+  assert.equal(g[1]!.titulo, 'noviembre de 2026')
+  assert.deepEqual(agruparPorMes([]), [])
 })

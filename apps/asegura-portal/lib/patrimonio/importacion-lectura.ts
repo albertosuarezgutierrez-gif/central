@@ -1,18 +1,23 @@
 // IMPORTAR PATRIMONIO (P18, 26/10/2026) — lee un .csv EN MEMORIA y devuelve cabeceras + filas. Sin prisma ni sesión.
 //
-// Lo que entra es un fichero de un desconocido: tope de tamaño ANTES de abrirlo, solo TEXTO CSV (ni .xlsx ni .xls: no hay
-// librería de hojas sin CVE que admitamos en un portal público), a lo sumo `MAX_FILAS_IMPORTACION` filas y
-// `MAX_COLUMNAS_IMPORTACION` columnas. El fichero no se guarda: solo su hash.
+// Lo que entra es un fichero de un desconocido: tope de tamaño ANTES de abrirlo, TEXTO CSV o .xlsx (27/10/2026: con el
+// lector PROPIO `xlsx-lectura.ts`, sin librería de hojas —la anterior se quitó por un CVE—, con topes de zip, XML, filas y
+// columnas; el .xls antiguo (OLE) sigue fuera), a lo sumo `MAX_FILAS_IMPORTACION` filas y `MAX_COLUMNAS_IMPORTACION`
+// columnas. El fichero no se guarda: solo su hash.
 // Las columnas con datos personales (NIF, correo, teléfono, IBAN, inquilino) se TIRAN aquí, antes de que nada las toque.
+// El VOLCADO (`leerHojaVolcado`) conserva el NOMBRE del inquilino y tira solo los identificadores (`esColumnaIdentificador`).
 import { createHash } from 'node:crypto'
 import {
   MAX_BYTES_IMPORTACION,
   MAX_COLUMNAS_IMPORTACION,
   MAX_FILAS_IMPORTACION,
+  esColumnaIdentificador,
   esColumnaSensible,
   parsearCsv,
   type Celda,
 } from '@central/module-patrimonio'
+
+import { leerXlsx } from './xlsx-lectura.ts'
 
 export type Hoja = {
   cabeceras: string[]
@@ -51,7 +56,10 @@ function limpiar(c: unknown): Celda {
   return t === '' ? null : t.slice(0, 500)
 }
 
-export function organizarHoja(bruta: readonly (readonly unknown[])[]): { ok: true; hoja: Hoja } | { ok: false; motivo: MotivoLectura } {
+export function organizarHoja(
+  bruta: readonly (readonly unknown[])[],
+  esSensible: (cabecera: string) => boolean = esColumnaSensible,
+): { ok: true; hoja: Hoja } | { ok: false; motivo: MotivoLectura } {
   const filas = bruta.map((f) => f.map(limpiar))
   while (filas.length > 0 && filas[filas.length - 1].every((c) => c === null)) filas.pop()
   const i = filas.findIndex((f) => f.some((c) => c !== null))
@@ -64,7 +72,7 @@ export function organizarHoja(bruta: readonly (readonly unknown[])[]): { ok: tru
   if (datos.length === 0) return { ok: false, motivo: 'sin_filas' }
   if (datos.length > MAX_FILAS_IMPORTACION) return { ok: false, motivo: 'demasiadas_filas' }
   const nombres = cab.map((c, k) => (c === null ? `Columna ${k + 1}` : String(c)))
-  const sensibles = nombres.map((n) => esColumnaSensible(n))
+  const sensibles = nombres.map((n) => esSensible(n))
   // Las columnas sensibles se vacían pero se conservan en su sitio (los índices del fichero no se mueven).
   const hoja: Hoja = {
     cabeceras: nombres,
@@ -74,19 +82,31 @@ export function organizarHoja(bruta: readonly (readonly unknown[])[]): { ok: tru
   return { ok: true, hoja }
 }
 
-export function leerFichero(bytes: Uint8Array): ResultadoLectura {
+function leerConFiltro(bytes: Uint8Array, esSensible: (c: string) => boolean): ResultadoLectura {
   if (bytes.length === 0) return { ok: false, motivo: 'vacio' }
   if (bytes.length > MAX_BYTES_IMPORTACION) return { ok: false, motivo: 'demasiado_grande' }
   const hash = sha256(bytes)
   let bruta: unknown[][]
   if (ES_OLE(bytes)) return { ok: false, motivo: 'formato' }
-  // Un .xlsx (zip) NO se abre: sin librería de hojas con CVE en un portal público. La persona lo guarda como CSV.
-  if (ES_ZIP(bytes)) return { ok: false, motivo: 'formato' }
-  {
+  if (ES_ZIP(bytes)) {
+    // .xlsx con el lector propio (topes de zip/XML/filas; fórmulas sin evaluar; macros sin abrir).
+    const x = leerXlsx(bytes)
+    if (!x.ok) return { ok: false, motivo: x.motivo }
+    bruta = x.filas
+  } else {
     const texto = decodificar(bytes)
     if (texto === null) return { ok: false, motivo: 'formato' }
     bruta = parsearCsv(texto)
   }
-  const r = organizarHoja(bruta)
+  const r = organizarHoja(bruta, esSensible)
   return r.ok ? { ok: true, hoja: r.hoja, hash } : r
+}
+
+export function leerFichero(bytes: Uint8Array): ResultadoLectura {
+  return leerConFiltro(bytes, esColumnaSensible)
+}
+
+/** Volcado inicial: igual, pero conserva el nombre del inquilino; NIF, correo, teléfono e IBAN se vacían al leer. */
+export function leerHojaVolcado(bytes: Uint8Array): ResultadoLectura {
+  return leerConFiltro(bytes, esColumnaIdentificador)
 }

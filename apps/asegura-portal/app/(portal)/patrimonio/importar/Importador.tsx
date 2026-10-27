@@ -33,6 +33,7 @@ const POR_PAGINA = 50
 const ERRORES: Record<string, string> = {
   no_encontrado: 'No tienes permiso para importar en ese titular, o la importación ya no existe.',
   falta_fichero: 'Elige un fichero.',
+  fichero_ya_importado: 'Este fichero ya está en una importación abierta: termínala, descártala o usa otro.',
   fichero_vacio: 'El fichero está vacío.',
   fichero_demasiado_grande: 'El fichero pasa de 5 MB.',
   formato_no_admitido: 'Solo admitimos CSV. En Excel: Archivo → Guardar como → «CSV (delimitado por comas)» y sube ese fichero.',

@@ -1688,6 +1688,15 @@ model PortalPatrimonioInmueble {
   /// 🚨 NULL = no lo ha dicho, que NO es «no tiene». Solo `si` ofrece revisar los seguros de la hipoteca (y solo si pulsa).
   /// ⚠️ Declarada ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
   hipoteca                          String?
+  /// EDIFICIO sin división horizontal (27/10/2026, `prisma/sql/2026-10-27_portal_patrimonio_edificio_unidades.sql`): la UNIDAD
+  /// cuelga del edificio. NULL = inmueble suelto o el propio edificio. En la BD es FK COMPUESTA `(inmueble_padre_id, titular_id)`
+  /// (nunca de otro titular) + trigger de un nivel; aquí va como escalar a propósito (sin relación Prisma que la «simplifique»).
+  /// ⚠️ Declaradas ANTES de que existan en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
+  inmueblePadreId                   String?   @map("inmueble_padre_id") @db.Uuid
+  /// Solo en un edificio: 'm2' | 'porcentaje'. NULL = sin elegir → no se reparte (y se dice).
+  repartoCriterio                   String?   @map("reparto_criterio")
+  /// Solo en una unidad: su % del reparto (0–100). NULL = no fijado.
+  repartoPorcentaje                 Decimal?  @map("reparto_porcentaje") @db.Decimal(5, 2)
 
   titular      PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
   comunidades  PortalPatrimonioInmuebleComunidad[]
@@ -1985,6 +1994,10 @@ model PortalPatrimonioImportacion {
   filasTotal           Int?      @map("filas_total")
   /// Recuento al confirmar (auditoría): creadas, yaExistian, repetidas, apartadas, porValidar.
   resultado            Json?
+  /// VOLCADO inicial (27/10/2026, `2026-10-27_portal_patrimonio_volcado.sql`): la IA propone la estructura (tipo NULL, CHECK).
+  /// Cada volcado = una lectura con IA del cupo mensual del titular.
+  /// ⚠️ Declarada ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
+  volcado              Boolean   @default(dbgenerated("false"))
 
   titular PortalPatrimonioTitular           @relation(fields: [titularId], references: [id])
   filas   PortalPatrimonioImportacionFila[]
@@ -2150,3 +2163,21 @@ model PortalPatrimonioInmueblePoliza {
 
 /// Mensajes cliente ↔ corredor (ASegura OS §Q.7, 24/09/2026). Un hilo por póliza (NULL = general).
 /// El rol solo tiene SELECT, INSERT y UPDATE(leido_at): lo escrito no se edita ni se borra.
+
+/// RECOMENDACIÓN ENTRE PROPIETARIOS (27/10/2026, punto 9 del estudio). La identidad del invitado es su CORREO y aquí solo vive el
+/// HASH (`hashCanal`). El portal no envía nada: la persona comparte ella el texto. Registra quién recomendó a quién y cuándo (para el
+/// panel de conversión); la recompensa (cupo de IA «amplio» 90 días) se CALCULA desde `canjeadaEn`, no se guarda. Sin relaciones
+/// Prisma: el aislamiento lo da el código (`recomendadorIdentidadId` = la cookie). SQL `2026-10-27_portal_patrimonio_recomendacion.sql` SIN aplicar.
+model PortalPatrimonioRecomendacion {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recomendadorIdentidadId String    @map("recomendador_identidad_id") @db.Uuid
+  correoHash              String    @map("correo_hash")
+  creadoEn                DateTime  @default(dbgenerated("now()")) @map("creado_en") @db.Timestamptz(6)
+  caducaEn                DateTime  @map("caduca_en") @db.Timestamptz(6)
+  anuladoEn               DateTime? @map("anulado_en") @db.Timestamptz(6)
+  canjeadaPorIdentidadId  String?   @map("canjeada_por_identidad_id") @db.Uuid
+  canjeadaEn              DateTime? @map("canjeada_en") @db.Timestamptz(6)
+
+  @@map("portal_patrimonio_recomendacion")
+  @@schema("seguros")
+}

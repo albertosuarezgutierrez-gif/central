@@ -11,7 +11,7 @@
 // no en memoria. Contar e insertar es UN solo paso atómico (`reservarPropuesta`: bloqueo por identidad + recuento + fila
 // `propuesto` vacía) y va ANTES de la IA: subidas simultáneas no pueden pasar el tope. La lectura rellena después esa fila
 // (`completarPropuesta`). El tipo del fichero lo deciden sus BYTES (`tipo-fichero.ts`), no el MIME del navegador.
-import { esCategoriaGasto, esFecha, puede, type CategoriaGasto } from '@central/module-patrimonio'
+import { MENSAJE_CUPO_IA_AGOTADO, cupoMensualIa, esCategoriaGasto, esFecha, puede, type CategoriaGasto, type ValorCliente } from '@central/module-patrimonio'
 
 import { eurosACentimos, type AccesosMapa, type Respuesta } from './gastos-api.ts'
 import { cuadre, PROPUESTA_VACIA, TOLERANCIA_CENT, type FuenteFactura, type PropuestaFactura } from './factura-propuesta.ts'
@@ -53,13 +53,17 @@ export interface PuertosFacturas {
   reservarPropuesta(x: {
     clienteId: string
     inmuebleId: string | null
+    /** Facturas/mes con lectura IA de este titular (`cupoMensualIa`). Agotado: la reserva sale con `cupoAgotado` y NO se lee. */
+    cupoMes: number
     /**
      * El fichero ya validado por sus bytes. Si hay inmueble, se guarda como DOCUMENTO del inmueble (carpeta facturas) en la
      * MISMA transacción que la reserva (todo o nada) y el gasto lleva su `documentoId`. Sin inmueble no hay owner al que
      * colgarlo: no se guarda (`documentoId: null`) y la lectura sigue igual.
      */
     fichero: { nombre: string; mime: TipoFactura; contenido: Buffer }
-  }): Promise<{ ok: true; id: string; documentoId?: string | null } | { ok: false; motivo: 'tope' | 'no_encontrado' }>
+  }): Promise<{ ok: true; id: string; documentoId?: string | null; cupoAgotado?: boolean } | { ok: false; motivo: 'tope' | 'no_encontrado' }>
+  /** Lo que vale el grupo del titular para la correduría (pólizas en vigor / comisión). `null` en un campo = no se sabe. Lanza = no se sabe nada. */
+  valorCliente(clienteId: string): Promise<ValorCliente>
   leer(f: FicheroFactura): Promise<ResultadoLectura>
   /** Rellena la fila reservada con lo leído (importes nulos si no se leyeron). Solo toca una fila `propuesto` de ESE titular. */
   completarPropuesta(x: { clienteId: string; gastoId: string; lectura: ResultadoLectura }): Promise<void>
@@ -91,16 +95,24 @@ export async function responderSubidaFactura(p: PuertosFacturas, c: CamposSubida
   const mime = tipoRealFactura(c.fichero.contenido)
   if (mime === null) return { status: 415, body: { error: 'formato_no_admitido' } }
   // Tope diario ANTES de gastar IA, contado en BD y reservado en el mismo paso (el limitador en memoria de la ruta solo frena ráfagas).
-  const reserva = await p.reservarPropuesta({ clienteId, inmuebleId, fichero: { nombre: nombreSeguro(c.fichero.nombre) || 'factura', mime, contenido: c.fichero.contenido } })
+  // El valor del cliente fija el cupo mensual. Si no se puede averiguar, `null`/`null` = «no se sabe» = tramo intermedio.
+  const valor = await p.valorCliente(clienteId).catch((): ValorCliente => ({ comisionAnualCent: null, polizasEnVigor: null }))
+  const reserva = await p.reservarPropuesta({ clienteId, inmuebleId, cupoMes: cupoMensualIa(valor).max, fichero: { nombre: nombreSeguro(c.fichero.nombre) || 'factura', mime, contenido: c.fichero.contenido } })
   if (!reserva.ok) return reserva.motivo === 'tope' ? { status: 429, body: { error: 'tope_diario' } } : NO_ENCONTRADO
+  const cupoAgotado = reserva.cupoAgotado === true
   let lectura: ResultadoLectura
-  try {
-    lectura = await p.leer({ ...c.fichero, mime })
-  } catch {
-    lectura = { propuesta: PROPUESTA_VACIA, motivos: ['La lectura automática ha fallado. Rellena los datos a mano.'], fuente: 'none' }
+  if (cupoAgotado) {
+    // Sin IA: la factura se queda subida y se rellena a mano.
+    lectura = { propuesta: PROPUESTA_VACIA, motivos: [MENSAJE_CUPO_IA_AGOTADO], fuente: 'none' }
+  } else {
+    try {
+      lectura = await p.leer({ ...c.fichero, mime })
+    } catch {
+      lectura = { propuesta: PROPUESTA_VACIA, motivos: ['La lectura automática ha fallado. Rellena los datos a mano.'], fuente: 'none' }
+    }
   }
   await p.completarPropuesta({ clienteId, gastoId: reserva.id, lectura })
-  return { status: 201, body: { id: reserva.id, titular: clienteId, inmueble: inmuebleId, documento: reserva.documentoId ?? null, fuente: lectura.fuente, propuesta: lectura.propuesta, motivos: lectura.motivos } }
+  return { status: 201, body: { id: reserva.id, titular: clienteId, inmueble: inmuebleId, documento: reserva.documentoId ?? null, fuente: lectura.fuente, propuesta: lectura.propuesta, motivos: lectura.motivos, cupo_agotado: cupoAgotado } }
 }
 
 type V = { ok: true; datos: DatosConfirmacion } | { ok: false; campo: string; motivo?: 'no_cuadra' }

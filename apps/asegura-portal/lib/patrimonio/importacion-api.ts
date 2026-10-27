@@ -68,7 +68,7 @@ export interface PuertosImportacion {
     nombre: string | null
     mapeo: MapeoGuardado
     filas: { n: number; crudo: Celda[]; problema: string | null }[]
-  }): Promise<{ ok: true; id: string; nueva: boolean } | { ok: false }>
+  }): Promise<{ ok: true; id: string; nueva: boolean } | { ok: false; motivo?: 'fichero_ya_importado' }>
   /** SOLO una importación de ESTA identidad cuyo titular está en `accesos()`; si no, `null`. */
   leer(id: string): Promise<ImportacionLeida | null>
   contexto(clienteId: string, tipo: TipoImportacion): Promise<ContextoImportacion>
@@ -199,7 +199,7 @@ export async function responderSubir(p: PuertosImportacion, x: EntradaSubida): P
     mapeo: { cabeceras: hoja.cabeceras, columnas: propuesta.mapeo.columnas, usoPorDefecto: null },
     filas: guardables,
   })
-  if (!r.ok) return NO_ENCONTRADO
+  if (!r.ok) return r.motivo === 'fichero_ya_importado' ? { status: 409, body: { error: 'fichero_ya_importado' } } : NO_ENCONTRADO
   return { status: r.nueva ? 201 : 200, body: { id: r.id, nueva: r.nueva, descartadas: hoja.descartadas } }
 }
 
