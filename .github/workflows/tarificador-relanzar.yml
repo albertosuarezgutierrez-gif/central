@@ -92,6 +92,6 @@ jobs:
             -H 'content-type: application/json' -H 'x-actor: agente:claude-actions' --data "$cuerpo") || http="000"
           echo "HTTP ${http} · accion=${ACCION}"
           # Solo claves sin PII, con valores acotados; lo demás no se imprime.
-          jq -c 'if type == "object" then with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle"))) | map_values(if type == "string" then .[0:300] else . end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
+          jq -c 'if type == "object" then (with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle"))) | map_values(if type == "string" then .[0:300] else . end)) + (if (.errores | type) == "array" then {campos: [.errores[] | tostring | split(":")[0] | .[0:60]]} else {} end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
           rm -f respuesta.json
           case "$http" in 2*) exit 0 ;; *) exit 1 ;; esac
