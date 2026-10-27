@@ -35,3 +35,6 @@ export function conEnlace(reply: string, lang: string, url: string): string {
   if (!reply || reply.includes(url)) return reply
   return `${reply.trimEnd()}\n\n${lineaEnlace(lang, url)}`
 }
+
+/** Lo que ve el huésped si vuelve a abrir/enviar el formulario: sus datos ya están y no se reescriben desde aquí. */
+export const TEXTO_YA_RECIBIDA = 'Ya recibimos tus datos de facturación. Si hay algún error, contesta al mensaje de tu reserva y lo corregimos. / We have already received your invoicing details. If anything is wrong, just reply to your booking message and we will correct it.'

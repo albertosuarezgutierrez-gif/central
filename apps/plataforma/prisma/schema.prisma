@@ -576,7 +576,8 @@ model SeoCorreduriaCambio {
 model SivraFacturaSerie {
   id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   cuentaId        String                @map("cuenta_id") @db.Uuid
-  prefijo         String
+  /// Opcional: "" = número «2026-046» (formato Smoobu).
+  prefijo         String                @default("")
   anio            Int
   /// NULL = número inicial pendiente de Alberto → no se emite (fail-closed).
   siguienteNumero Int?                  @map("siguiente_numero")
@@ -637,6 +638,8 @@ model SivraFacturaHuesped {
   receptor            Json
   /// Total pagado por el huésped, IVA INCLUIDO (incomes.amount_gross).
   total               Decimal                @db.Decimal(12, 2)
+  /// true = el total lo puso Alberto a mano: un reenvío de datos NO lo recalcula desde amount_gross.
+  totalManual         Boolean                @default(false) @map("total_manual")
   base                Decimal?               @db.Decimal(12, 2)
   tipoIva             Decimal?               @map("tipo_iva") @db.Decimal(5, 2)
   cuota               Decimal?               @db.Decimal(12, 2)

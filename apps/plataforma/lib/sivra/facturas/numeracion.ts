@@ -41,13 +41,14 @@ export function evaluarSerie(serie: SerieConfig | null, anio: number): EstadoSer
   if (serie.siguienteNumero === null || !Number.isSafeInteger(serie.siguienteNumero) || serie.siguienteNumero < 1) faltan.push('numero')
   if (serie.tipoIva === null || !tipoIvaValido(serie.tipoIva)) faltan.push('iva')
   else if (serie.tipoIva === 0 && (serie.mencionIva ?? '').trim().length < 10) faltan.push('mencion')
-  if (faltan.length) return { ok: false, faltan, motivo: `falta configurar IVA/serie: ${faltan.map((f) => TEXTO_FALTA[f]).join(', ')} (serie ${serie.prefijo} ${anio})` }
+  if (faltan.length) return { ok: false, faltan, motivo: `falta configurar IVA/serie: ${faltan.map((f) => TEXTO_FALTA[f]).join(', ')} (serie ${[serie.prefijo, anio].filter(Boolean).join(' ')})` }
   return { ok: true, serie: serie as SerieConfig & { siguienteNumero: number; tipoIva: number } }
 }
 
-/** «HS-2026-0001». Ancho mínimo 4; si se pasa de 9999 crece sin cortar. */
+/** «2026-046» (formato de Smoobu, sin prefijo) o «HS-2026-046» con prefijo. Ancho mínimo 3; si se pasa de 999 crece sin cortar. */
 export function formatearNumero(prefijo: string, anio: number, numero: number): string {
-  return `${prefijo}-${anio}-${String(numero).padStart(4, '0')}`
+  const cuerpo = `${anio}-${String(numero).padStart(3, '0')}`
+  return prefijo ? `${prefijo}-${cuerpo}` : cuerpo
 }
 
 export type FacturaParaEmitir = { estado: string; numeroCompleto: string | null; total: number }

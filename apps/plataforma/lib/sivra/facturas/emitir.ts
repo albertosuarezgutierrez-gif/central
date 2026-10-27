@@ -8,7 +8,8 @@
 //      (siguiente + 1, condicionado al valor leído). Si algo falla, rollback de los dos: no hay hueco ni duplicado.
 //      El trigger de la BD vuelve a comprobar correlatividad e inmutabilidad.
 // ENVIAR (fuera de la transacción): reclamo atómico (`envio_en_curso_at`) para que dos pulsaciones no manden dos
-// correos; si el correo falla, la factura queda EMITIDA y NO enviada, con `envio_error`, y se reintenta con 🔁.
+// correos; si el correo falla, la factura queda EMITIDA y NO enviada, con `envio_error`, y se reintenta con 🔁. Un
+// reclamo colgado sin `envio_error` = «no se sabe si salió» (`dudoso`): nunca se reintenta solo.
 //
 // TODO(VeriFactu, fuera de v1): aquí, dentro de la transacción de emisión, iría la huella encadenada
 // (`verifactu_huella`) y su envío a la AEAT. `calcularHuella` de core-fiscal fija TipoFactura=F2 (simplificada):
@@ -21,28 +22,35 @@ import { EMISOR_FACTURAS_HUESPED, type Emisor } from './emisor'
 import { fechaMadrid, planEmision, evaluarSerie, type SerieConfig } from './numeracion'
 import { generarPdfFactura } from './pdf'
 import { type Receptor } from './receptor'
+import { mensajeVigente } from './telegram'
 import { eur } from '@/lib/dinero'
 
 export type ResultadoEmision =
   | { estado: 'emitida'; numeroCompleto: string }
   | { estado: 'ya_emitida'; numeroCompleto: string | null; enviada: boolean }
   | { estado: 'bloqueada'; motivo: string }
+  | { estado: 'obsoleta' }
   | { estado: 'no_existe' }
 
 type FilaFactura = {
   id: string; cuenta_id: string; estado: string; numero_completo: string | null; total: number
-  concepto: string; emisor: unknown; receptor: unknown; desde: Date | null; hasta: Date | null
+  concepto: string; emisor: unknown; receptor: unknown; desde: Date | null; hasta: Date | null; telegram_message_id: bigint | null
 }
 type FilaSerie = { id: string; prefijo: string; anio: number; siguiente_numero: number | null; tipo_iva: number | null; mencion_iva: string | null; activa: boolean }
 
-export async function emitirFactura(facturaId: string, ahora: Date = new Date()): Promise<ResultadoEmision> {
+/**
+ * `mensajeId`: message_id del ✅ pulsado. Se compara con `telegram_message_id` BAJO el FOR UPDATE: si el borrador se
+ * regeneró (datos nuevos → mensaje nuevo), el ✅ viejo no emite (`obsoleta`). Así se emite lo que Alberto VIO.
+ */
+export async function emitirFactura(facturaId: string, mensajeId: number | null, ahora: Date = new Date()): Promise<ResultadoEmision> {
   return prisma.$transaction(async (tx) => {
     const [f] = await tx.$queryRaw<FilaFactura[]>(Prisma.sql`
       SELECT id::text, cuenta_id::text, estado, numero_completo, total::float8 AS total, concepto, emisor, receptor,
-             fecha_operacion_desde AS desde, fecha_operacion_hasta AS hasta
+             fecha_operacion_desde AS desde, fecha_operacion_hasta AS hasta, telegram_message_id
         FROM sivra_facturas_huesped WHERE id = ${facturaId}::uuid FOR UPDATE`)
     if (!f) return { estado: 'no_existe' } as const
     if (f.estado !== 'borrador') return { estado: 'ya_emitida', numeroCompleto: f.numero_completo, enviada: f.estado === 'enviada' } as const
+    if (!mensajeVigente(f.telegram_message_id, mensajeId)) return { estado: 'obsoleta' } as const
 
     const { anio, iso } = fechaMadrid(ahora)
     const [s] = await tx.$queryRaw<FilaSerie[]>(Prisma.sql`
@@ -79,6 +87,9 @@ export type ResultadoEnvio =
   | { estado: 'enviada'; email: string }
   | { estado: 'ya_enviada' }
   | { estado: 'en_curso' }
+  /** Un envío empezó y no dejó ni éxito ni error (función cortada, o el correo salió y falló el UPDATE final): NO se
+   *  sabe si el huésped lo recibió. No se reintenta solo; reenviar es decisión de Alberto (`forzar`). */
+  | { estado: 'dudoso' }
   | { estado: 'no_emitida' }
   | { estado: 'fallida'; motivo: string }
 
@@ -101,18 +112,22 @@ export function cuerpoCorreo(numero: string, total: number, piso: string): { asu
   }
 }
 
-export async function enviarFactura(facturaId: string): Promise<ResultadoEnvio> {
-  // Reclamo atómico: solo una pulsación envía. Un reclamo de hace >10 min se da por muerto (función cortada).
+export async function enviarFactura(facturaId: string, opts: { forzar?: boolean } = {}): Promise<ResultadoEnvio> {
+  // Reclamo atómico: solo una pulsación envía. Un reclamo que quedó colgado (sin éxito ni `envio_error`) NO se vuelve
+  // a reclamar solo: el correo pudo salir y fallar el UPDATE final → reenviar duplicaría. Solo con `forzar` (Alberto,
+  // avisado) y si lleva >10 min colgado.
   const [r] = await prisma.$queryRaw<Array<{ numero_completo: string; total: number; receptor: Receptor; pdf: Buffer; property_id: string }>>(Prisma.sql`
     UPDATE sivra_facturas_huesped
        SET envio_en_curso_at = now(), envio_intentos = envio_intentos + 1
      WHERE id = ${facturaId}::uuid AND estado = 'emitida'
-       AND (envio_en_curso_at IS NULL OR envio_en_curso_at < now() - interval '10 minutes')
+       AND (envio_en_curso_at IS NULL
+            OR (${opts.forzar === true} AND envio_en_curso_at < now() - interval '10 minutes'))
      RETURNING numero_completo, total::float8 AS total, receptor, pdf, property_id`)
   if (!r) {
-    const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: facturaId }, select: { estado: true } })
+    const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: facturaId }, select: { estado: true, envioEnCursoAt: true } })
     if (!f || f.estado === 'borrador') return { estado: 'no_emitida' }
-    return f.estado === 'enviada' ? { estado: 'ya_enviada' } : { estado: 'en_curso' }
+    if (f.estado === 'enviada') return { estado: 'ya_enviada' }
+    return f.envioEnCursoAt && f.envioEnCursoAt.getTime() < Date.now() - 10 * 60_000 ? { estado: 'dudoso' } : { estado: 'en_curso' }
   }
   const fallo = async (motivo: string): Promise<ResultadoEnvio> => {
     await prisma.$executeRaw(Prisma.sql`UPDATE sivra_facturas_huesped SET envio_en_curso_at = NULL, envio_error = ${motivo.slice(0, 500)} WHERE id = ${facturaId}::uuid AND estado = 'emitida'`)

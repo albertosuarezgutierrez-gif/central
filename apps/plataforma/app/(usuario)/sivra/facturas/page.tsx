@@ -46,6 +46,7 @@ export default function FacturasHuespedesPage() {
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [visibles, setVisibles] = useState(PASO)
+  const [borradoresVisibles, setBorradoresVisibles] = useState(PASO)
   const [aviso, setAviso] = useState<string | null>(null)
 
   const query = useCallback(() => {
@@ -63,7 +64,7 @@ export default function FacturasHuespedesPage() {
       const r = await fetch(`/api/sivra/facturas?${query()}`, { cache: 'no-store' })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || `Error ${r.status}`)
-      setDatos(j); setVisibles(PASO)
+      setDatos(j); setVisibles(PASO); setBorradoresVisibles(PASO)
     } catch (e) {
       // Un fallo de lectura NO es «no hay facturas»: se dice y se conserva lo que había.
       setError(e instanceof Error ? e.message : 'No se ha podido leer el libro')
@@ -73,13 +74,19 @@ export default function FacturasHuespedesPage() {
   }, [query])
   useEffect(() => { void cargar() }, [cargar])
 
-  async function accion(id: string, a: 'proponer' | 'reenviar') {
+  async function accion(id: string, a: 'proponer' | 'reenviar', forzar = false) {
     setAviso(null)
-    const r = await fetch(`/api/sivra/facturas/${id}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: a }) })
+    const r = await fetch(`/api/sivra/facturas/${id}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: a, ...(forzar ? { forzar: true } : {}) }) })
     const j = await r.json().catch(() => ({}))
+    // Envío DUDOSO: pudo salir ya (se cortó sin registrar éxito ni error). Reenviar es decisión de Alberto, avisado.
+    if (a === 'reenviar' && !forzar && j.resultado?.estado === 'dudoso') {
+      if (window.confirm('No sé si el correo de esta factura llegó a salir (el envío anterior se cortó sin registrar éxito ni error). Mira primero el buzón de enviados. ¿Reenviar igualmente? El huésped podría recibirla dos veces.')) return accion(id, a, true)
+      setAviso('No se ha reenviado: el envío anterior es dudoso. Comprueba el buzón de enviados.')
+      return
+    }
     setAviso(a === 'proponer'
       ? (j.propuesta === 'enviada' ? 'Borrador enviado a Telegram.' : j.propuesta === 'silenciada' ? 'El aviso «Factura de huésped para aprobar» está silenciado en /telegram.' : j.error || 'No se ha podido proponer.')
-      : (j.ok ? 'Correo enviado.' : `No se ha enviado: ${j.resultado?.motivo ?? j.error ?? 'error'}`))
+      : (j.ok ? 'Correo enviado.' : j.resultado?.estado === 'en_curso' ? 'El envío está en curso: espera unos minutos.' : `No se ha enviado: ${j.resultado?.motivo ?? j.error ?? 'error'}`))
     void cargar()
   }
 
@@ -180,8 +187,8 @@ export default function FacturasHuespedesPage() {
       <section style={{ ...cardStyle, marginBottom: 16 }}>
         <h2 style={{ fontSize: 16, margin: '0 0 12px' }}>Borradores pendientes de aprobar</h2>
         {datos && datos.borradores.length === 0 && <p style={{ color: 'var(--muted)' }}>Ninguno.</p>}
-        <div style={{ display: 'grid', gap: 8 }}>
-          {(datos?.borradores ?? []).map((f) => (
+        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+          {(datos?.borradores ?? []).slice(0, borradoresVisibles).map((f) => (
             <div key={f.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
               <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                 <strong>{f.receptorNombre}</strong> · {f.piso} · reserva {f.reservationId}
@@ -191,6 +198,11 @@ export default function FacturasHuespedesPage() {
             </div>
           ))}
         </div>
+        {(datos?.borradores.length ?? 0) > borradoresVisibles && (
+          <button type="button" onClick={() => setBorradoresVisibles((v) => v + PASO)} style={{ ...btnStyle('secundario'), marginTop: 12, minHeight: 44, width: '100%' }}>
+            Ver más ({(datos?.borradores.length ?? 0) - borradoresVisibles} restantes)
+          </button>
+        )}
       </section>
 
       <AltaManual onHecho={() => void cargar()} />

@@ -8,9 +8,10 @@
 
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { escapeHtml, tgSendDocument } from '@central/core-telegram'
+import { escapeHtml, tgEditMessage, tgSendDocument } from '@central/core-telegram'
 import { tgAviso, tgAvisoBotones } from '@/lib/telegram/avisos'
-import { EMISOR_FACTURAS_HUESPED } from './emisor'
+import { aceptaDatos, elegirTotal } from './borrador'
+import { EMISOR_FACTURAS_HUESPED, cuentaPuedeFacturar } from './emisor'
 import { desglosarDesdeTotal } from './importes'
 import { evaluarSerie, fechaMadrid, type SerieConfig } from './numeracion'
 import { generarPdfFactura } from './pdf'
@@ -54,6 +55,20 @@ export async function cuentaDePiso(propertyId: string): Promise<string | null> {
   return filas.length === 1 ? filas[0].cuenta_id : null
 }
 
+/** ¿Es la cuenta de Alberto (el emisor fijo)? Ante cualquier duda o fallo, false (fail-closed). */
+async function esCuentaEmisora(cuentaId: string): Promise<boolean> {
+  try {
+    const cuentas = await prisma.$queryRaw<{ id: string; email: string | null; nombre: string }[]>(Prisma.sql`SELECT id::text AS id, email, nombre FROM cuentas`)
+    return cuentaPuedeFacturar(
+      cuentaId,
+      cuentas.map((c) => ({ id: c.id, email: c.email, esDemo: /\[seed-demo\]/i.test(c.nombre) })),
+      { facturaCuentaId: process.env.FACTURAS_CUENTA_ID, gmailUser: process.env.GMAIL_USER },
+    )
+  } catch {
+    return false
+  }
+}
+
 export type ResultadoSolicitud =
   | { ok: true; solicitudId: string; token: string; url: string; nueva: boolean }
   | { ok: false; motivo: string }
@@ -68,6 +83,11 @@ export async function asegurarSolicitud(reservationId: string, origen: 'agente' 
   const cuentaId = await cuentaDePiso(reserva.propertyId)
   if (!cuentaId) return { ok: false, motivo: `el piso ${reserva.propertyId} no está enlazado a una sola cuenta` }
   if (cuentaEsperada && cuentaEsperada !== cuentaId) return { ok: false, motivo: 'reserva no encontrada' }
+  // El emisor es Alberto: solo su cuenta factura. Otra cuenta no crea solicitud (se registra, no se adivina).
+  if (!(await esCuentaEmisora(cuentaId))) {
+    console.warn(`[facturas-huesped] solicitud NO creada: la cuenta ${cuentaId} (piso ${reserva.propertyId}) no es la del emisor`)
+    return { ok: false, motivo: 'esta cuenta no puede emitir facturas a huéspedes (el emisor es la cuenta de Alberto)' }
+  }
 
   const viva = await prisma.sivraFacturaSolicitud.findFirst({ where: { reservationId, estado: { not: 'cancelada' } } })
   if (viva) {
@@ -110,7 +130,7 @@ export async function vistaPublica(token: string): Promise<VistaPublica> {
 
 export type ResultadoBorrador =
   | { ok: true; facturaId: string; propuesta: 'enviada' | 'silenciada' | 'fallida' }
-  | { ok: false; motivo: string; codigo: 'no_valida' | 'caducada' | 'ya_emitida' | 'sin_importe' | 'sin_reserva' }
+  | { ok: false; motivo: string; codigo: 'no_valida' | 'caducada' | 'ya_emitida' | 'ya_recibida' | 'sin_importe' | 'sin_reserva' }
 
 /** Guarda los datos fiscales (ya validados con `validarReceptor`) y prepara el borrador + aviso a Alberto. */
 export async function completarSolicitud(
@@ -121,19 +141,28 @@ export async function completarSolicitud(
   const s = 'token' in sel
     ? await prisma.sivraFacturaSolicitud.findUnique({ where: { token: sel.token } })
     : await prisma.sivraFacturaSolicitud.findFirst({ where: { id: sel.solicitudId, cuentaId: sel.cuentaId } })
-  if (!s || s.estado === 'cancelada') return { ok: false, motivo: 'enlace no válido', codigo: 'no_valida' }
-  if ('token' in sel && s.expiraAt < new Date()) return { ok: false, motivo: 'enlace caducado', codigo: 'caducada' }
+  if (!s) return { ok: false, motivo: 'enlace no válido', codigo: 'no_valida' }
+  const via = 'token' in sel ? 'publico' : 'alberto'
+  const acepta = aceptaDatos(via, s.estado)
+  if (!acepta.ok) return acepta.codigo === 'ya_recibida'
+    ? { ok: false, motivo: 'ya recibimos los datos de esta reserva', codigo: 'ya_recibida' }
+    : { ok: false, motivo: 'enlace no válido', codigo: 'no_valida' }
+  if (via === 'publico' && s.expiraAt < new Date()) return { ok: false, motivo: 'enlace caducado', codigo: 'caducada' }
   const yaEmitida = await prisma.sivraFacturaHuesped.findFirst({ where: { reservationId: s.reservationId, tipo: 'ordinaria', estado: { notIn: ['borrador', 'rectificada'] } }, select: { id: true } })
   if (yaEmitida) return { ok: false, motivo: 'la factura de esta reserva ya está emitida', codigo: 'ya_emitida' }
 
-  await prisma.sivraFacturaSolicitud.update({
-    where: { id: s.id },
+  // El huésped solo completa una vez: el UPDATE va condicionado a 'pendiente' (dos envíos a la vez → gana uno).
+  const n = await prisma.sivraFacturaSolicitud.updateMany({
+    where: { id: s.id, estado: via === 'publico' ? 'pendiente' : { not: 'cancelada' } },
     data: {
       estado: 'completada', completadaAt: new Date(), updatedAt: new Date(),
       receptorTipo: receptor.tipo, receptorNombre: receptor.nombre, receptorNif: receptor.nif,
       receptorPais: receptor.pais, receptorEmail: receptor.email, receptorDireccion: receptor.direccion as unknown as Prisma.InputJsonValue,
     },
   })
+  if (n.count !== 1) return via === 'publico'
+    ? { ok: false, motivo: 'ya recibimos los datos de esta reserva', codigo: 'ya_recibida' }
+    : { ok: false, motivo: 'enlace no válido', codigo: 'no_valida' }
   return prepararBorrador(s.id, receptor, opts)
 }
 
@@ -159,9 +188,15 @@ async function prepararBorrador(solicitudId: string, receptor: Receptor, opts: {
   const s = await prisma.sivraFacturaSolicitud.findUniqueOrThrow({ where: { id: solicitudId } })
   const reserva = await leerReserva(s.reservationId)
   if (!reserva) return { ok: false, motivo: 'reserva no encontrada', codigo: 'sin_reserva' }
-  const total = opts.totalManual && opts.totalManual > 0 ? Math.round(opts.totalManual * 100) / 100 : reserva.total
-  if (total === null) {
-    // Sin importe no hay borrador (y el ✅ no podría emitir nada). Se avisa a Alberto para que lo ponga a mano.
+  const existente = await prisma.sivraFacturaHuesped.findFirst({ where: { reservationId: s.reservationId, tipo: 'ordinaria', estado: { not: 'rectificada' } } })
+  if (existente && existente.estado !== 'borrador') return { ok: false, motivo: 'la factura de esta reserva ya está emitida', codigo: 'ya_emitida' }
+  const elegido = elegirTotal({
+    totalManual: opts.totalManual, totalReserva: reserva.total,
+    existente: existente ? { total: Number(existente.total), manual: existente.totalManual } : null,
+  })
+  if (elegido === null) {
+    // Sin importe no hay borrador (y el ✅ no podría emitir nada). Tampoco hay uno anterior (elegirTotal lo habría
+    // conservado): los datos quedan en la solicitud y Alberto pone el importe a mano.
     await tgAviso('huespedes.factura-borrador',
       `🧾 Factura de huésped: ${escapeHtml(reserva.piso)} · reserva ${escapeHtml(reserva.reservationId)}\n⛔ <b>No sé el importe</b> (amount_gross vacío o 0 en incomes). Ponlo a mano en /sivra/facturas.`)
     return { ok: false, motivo: 'importe de la reserva desconocido', codigo: 'sin_importe' }
@@ -170,29 +205,33 @@ async function prepararBorrador(solicitudId: string, receptor: Receptor, opts: {
   const datos = {
     cuentaId: s.cuentaId, solicitudId: s.id, reservationId: s.reservationId, propertyId: s.propertyId,
     concepto, emisor: { ...EMISOR_FACTURAS_HUESPED } as Prisma.InputJsonValue, receptor: receptor as unknown as Prisma.InputJsonValue,
-    total: new Prisma.Decimal(total.toFixed(2)),
+    total: new Prisma.Decimal(elegido.total.toFixed(2)), totalManual: elegido.manual,
     fechaOperacionDesde: reserva.desde ? new Date(`${reserva.desde}T00:00:00Z`) : null,
     fechaOperacionHasta: reserva.hasta ? new Date(`${reserva.hasta}T00:00:00Z`) : null,
   }
-  const existente = await prisma.sivraFacturaHuesped.findFirst({ where: { reservationId: s.reservationId, tipo: 'ordinaria', estado: { not: 'rectificada' } } })
   let facturaId: string
+  let mensajeAnterior: bigint | null = null
   if (existente) {
-    if (existente.estado !== 'borrador') return { ok: false, motivo: 'la factura de esta reserva ya está emitida', codigo: 'ya_emitida' }
-    // Solo se pisa si SIGUE siendo borrador (una emisión concurrente gana).
-    const n = await prisma.sivraFacturaHuesped.updateMany({ where: { id: existente.id, estado: 'borrador' }, data: { ...datos, updatedAt: new Date() } })
+    // Solo se pisa si SIGUE siendo borrador (una emisión concurrente gana). El ✅ del mensaje anterior MUERE aquí
+    // (telegram_message_id = NULL): el ✅ solo vale para el mensaje que enseña estos datos.
+    const n = await prisma.sivraFacturaHuesped.updateMany({ where: { id: existente.id, estado: 'borrador' }, data: { ...datos, telegramMessageId: null, updatedAt: new Date() } })
     if (n.count !== 1) return { ok: false, motivo: 'la factura de esta reserva ya está emitida', codigo: 'ya_emitida' }
     facturaId = existente.id
+    mensajeAnterior = existente.telegramMessageId
   } else {
     facturaId = (await prisma.sivraFacturaHuesped.create({ data: datos })).id
   }
-  const propuesta = await proponerEnTelegram(facturaId)
+  const propuesta = await proponerEnTelegram(facturaId, mensajeAnterior)
   return { ok: true, facturaId, propuesta }
 }
 
+const TEXTO_SUSTITUIDO = '♻️ <i>Este borrador de factura se ha sustituido por uno nuevo: revisa y aprueba el ÚLTIMO mensaje.</i>'
+
 /** Borrador → aviso a Alberto con resumen, PDF de revisión y botones ✅/✏️. */
-export async function proponerEnTelegram(facturaId: string): Promise<'enviada' | 'silenciada' | 'fallida'> {
+export async function proponerEnTelegram(facturaId: string, anterior?: bigint | null): Promise<'enviada' | 'silenciada' | 'fallida'> {
   const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: facturaId } })
   if (!f || f.estado !== 'borrador') return 'fallida'
+  const previo = anterior !== undefined ? anterior : f.telegramMessageId
   const reserva = await leerReserva(f.reservationId)
   const receptor = f.receptor as unknown as Receptor
   const total = Number(f.total)
@@ -209,6 +248,8 @@ export async function proponerEnTelegram(facturaId: string): Promise<'enviada' |
   const msgId = await tgAvisoBotones('huespedes.factura-borrador', texto, botonesPropuesta(f.id))
   if (msgId === null) return 'silenciada'
   await prisma.sivraFacturaHuesped.updateMany({ where: { id: f.id, estado: 'borrador' }, data: { telegramMessageId: BigInt(msgId) } })
+  // El mensaje anterior ya no vale (su ✅ lo rechaza `emitirFactura`): se le quitan los botones para que no confunda.
+  if (previo !== null && Number(previo) !== msgId) await tgEditMessage(Number(previo), TEXTO_SUSTITUIDO).catch(() => false)
   try {
     const pdf = await generarPdfFactura({
       numeroCompleto: null, fechaExpedicion: null, emisor: EMISOR_FACTURAS_HUESPED, receptor, concepto: f.concepto,

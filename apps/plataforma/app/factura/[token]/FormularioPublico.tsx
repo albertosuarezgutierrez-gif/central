@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import DatosFiscalesForm, { type DatosFiscales, type RespuestaEnvio } from '@/components/factura/DatosFiscalesForm'
 
-export default function FormularioPublico({ token, yaCompletada }: { token: string; yaCompletada: boolean }) {
+export default function FormularioPublico({ token }: { token: string }) {
   const [hecho, setHecho] = useState(false)
   const base = `/api/publico/factura/${encodeURIComponent(token)}`
   async function enviar(d: DatosFiscales): Promise<RespuestaEnvio> {
@@ -16,13 +16,10 @@ export default function FormularioPublico({ token, yaCompletada }: { token: stri
     return <p role="status" style={{ fontSize: 16 }}>¡Gracias! Hemos recibido tus datos: te enviaremos la factura por correo. / Thank you! We have received your details and will email you the invoice.</p>
   }
   return (
-    <>
-      {yaCompletada && <p style={{ color: 'var(--muted)', fontSize: 14 }}>Ya nos enviaste tus datos. Si los vuelves a enviar, sustituyen a los anteriores. / You already sent your details; sending again replaces them.</p>}
-      <DatosFiscalesForm
-        urlCp={(cp) => `${base}/cp?cp=${encodeURIComponent(cp)}`}
-        urlVias={(provincia, municipio, q) => `${base}/vias?${new URLSearchParams({ provincia, municipio, q })}`}
-        onEnviar={enviar}
-      />
-    </>
+    <DatosFiscalesForm
+      urlCp={(cp) => `${base}/cp?cp=${encodeURIComponent(cp)}`}
+      urlVias={(provincia, municipio, q) => `${base}/vias?${new URLSearchParams({ provincia, municipio, q })}`}
+      onEnviar={enviar}
+    />
   )
 }

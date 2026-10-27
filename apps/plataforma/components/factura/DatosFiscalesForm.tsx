@@ -244,6 +244,7 @@ export default function DatosFiscalesForm({ urlCp, urlVias, onEnviar, textoBoton
           </label>
           <label style={etiqueta}>Piso, puerta… (opcional)
             <input style={input} value={resto} onChange={(e) => setResto(e.target.value)} maxLength={60} />
+            {err('direccion.resto')}
           </label>
           <div role="status" style={{ ...ancho, fontSize: 12, color: lectura.estado === 'error' ? 'var(--warning)' : 'var(--muted)' }}>
             {lectura.estado === 'consultando' ? 'Consultando el código postal…'
@@ -264,6 +265,7 @@ export default function DatosFiscalesForm({ urlCp, urlVias, onEnviar, textoBoton
           </label>
           <label style={etiqueta}>{t('Código postal', 'Postcode')}
             <input style={input} value={cpExt} onChange={(e) => setCpExt(e.target.value)} autoComplete="postal-code" maxLength={12} />
+            {err('direccion.cp')}
           </label>
         </div>
       )}

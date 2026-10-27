@@ -30,7 +30,8 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public.sivra_factura_series (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   cuenta_id        uuid NOT NULL REFERENCES public.cuentas(id) ON DELETE RESTRICT,
-  prefijo          text NOT NULL CHECK (prefijo ~ '^[A-Z0-9]{1,8}$'),
+  -- Prefijo OPCIONAL: '' = número «2026-046» (formato de Smoobu); con prefijo, «HS-2026-046».
+  prefijo          text NOT NULL DEFAULT '' CHECK (prefijo ~ '^[A-Z0-9]{0,8}$'),
   anio             integer NOT NULL CHECK (anio BETWEEN 2024 AND 2100),
   -- NULL = número inicial PENDIENTE de Alberto (no se emite). Una vez emitida la primera, lo sube la app.
   siguiente_numero integer CHECK (siguiente_numero IS NULL OR siguiente_numero >= 1),
@@ -92,6 +93,8 @@ CREATE TABLE IF NOT EXISTS public.sivra_facturas_huesped (
   receptor         jsonb NOT NULL,
   -- TOTAL que pagó el huésped, IVA INCLUIDO (de `incomes.amount_gross`). Base y cuota se derivan del total al emitir.
   total            numeric(12,2) NOT NULL CHECK (total > 0),
+  -- true = total puesto a mano por Alberto: un reenvío de datos del huésped NO lo recalcula desde amount_gross.
+  total_manual     boolean NOT NULL DEFAULT false,
   base             numeric(12,2),
   tipo_iva         numeric(5,2),
   cuota            numeric(12,2),
@@ -224,6 +227,7 @@ COMMIT;
 -- ── Configuración PENDIENTE DE ALBERTO (no se ejecuta: plantilla) ────────────────────────────────────────────────
 -- Cuenta de Alberto = la dueña de los negocios con ref_ext = prop_* (medido el 27/10/2026: una sola cuenta).
 -- INSERT INTO public.sivra_factura_series (cuenta_id, prefijo, anio, siguiente_numero, tipo_iva, mencion_iva)
--- SELECT s.cuenta_id, 'HS', 2026, <NUMERO_INICIAL>, <TIPO_IVA>, <MENCION_SI_IVA_0>
+-- SELECT s.cuenta_id, '', 2026, 46, 0,
+--        'Operación exenta de IVA según el artículo 20.Uno.23º de la Ley 37/1992 del IVA (arrendamiento de vivienda sin servicios propios de la industria hotelera).'
 --   FROM public.negocios n JOIN public.sociedades s ON s.id = n.sociedad_id WHERE n.ref_ext = 'prop_house_sevillana';
 -- Cada año nuevo necesita su fila (sin ella, el ✅ avisa «falta configurar la serie de <año>»).

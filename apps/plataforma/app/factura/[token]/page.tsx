@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { tokenConForma } from '@/lib/sivra/facturas/enlace'
+import { TEXTO_YA_RECIBIDA, tokenConForma } from '@/lib/sivra/facturas/enlace'
 import { vistaPublica } from '@/lib/sivra/facturas/servicio'
 import FormularioPublico from './FormularioPublico'
 
@@ -29,7 +29,9 @@ export default async function Page({ params }: { params: Promise<{ token: string
       <p style={{ color: 'var(--muted)', margin: '0 0 20px' }}>{v.piso} · {fecha(v.desde)} → {fecha(v.hasta)}</p>
       {v.emitida
         ? <p>Tu factura ya está emitida y enviada por correo. Si necesitas cambiar algo, escríbenos. / Your invoice has already been issued and emailed. If something needs changing, please message us.</p>
-        : <FormularioPublico token={token} yaCompletada={v.completada} />}
+        : v.completada
+          ? <p role="status">{TEXTO_YA_RECIBIDA}</p>
+          : <FormularioPublico token={token} />}
     </main>
   )
 }

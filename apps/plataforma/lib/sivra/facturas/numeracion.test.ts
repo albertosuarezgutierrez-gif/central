@@ -28,7 +28,10 @@ test('fail-closed: sin serie, sin número inicial o sin IVA NO se emite y el mot
 })
 
 test('formato del número', () => {
-  assert.equal(formatearNumero('HS', 2026, 1), 'HS-2026-0001')
+  assert.equal(formatearNumero('', 2026, 46), '2026-046')
+  assert.equal(formatearNumero('', 2026, 1), '2026-001')
+  assert.equal(formatearNumero('', 2026, 1000), '2026-1000')
+  assert.equal(formatearNumero('HS', 2026, 46), 'HS-2026-046')
   assert.equal(formatearNumero('HS', 2026, 12345), 'HS-2026-12345')
 })
 
@@ -36,15 +39,15 @@ test('plan: asigna el siguiente, sube el contador y desglosa', () => {
   const p = planEmision({ estado: 'borrador', numeroCompleto: null, total: 110 }, evaluarSerie({ ...SERIE, siguienteNumero: 37 }, 2026))
   assert.equal(p.accion, 'emitir')
   if (p.accion === 'emitir') {
-    assert.equal(p.numero, 37); assert.equal(p.siguiente, 38); assert.equal(p.numeroCompleto, 'HS-2026-0037')
+    assert.equal(p.numero, 37); assert.equal(p.siguiente, 38); assert.equal(p.numeroCompleto, 'HS-2026-037')
     assert.deepEqual(p.importes, { total: 110, base: 100, cuota: 10, tipoIva: 10 })
   }
 })
 
 test('idempotencia: una factura que no es borrador NUNCA se vuelve a numerar (aunque la serie esté lista)', () => {
   for (const estado of ['emitida', 'enviada', 'rectificada']) {
-    const p = planEmision({ estado, numeroCompleto: 'HS-2026-0004', total: 100 }, evaluarSerie(SERIE, 2026))
-    assert.deepEqual(p, { accion: 'ya_emitida', numeroCompleto: 'HS-2026-0004', estado })
+    const p = planEmision({ estado, numeroCompleto: 'HS-2026-004', total: 100 }, evaluarSerie(SERIE, 2026))
+    assert.deepEqual(p, { accion: 'ya_emitida', numeroCompleto: 'HS-2026-004', estado })
   }
 })
 

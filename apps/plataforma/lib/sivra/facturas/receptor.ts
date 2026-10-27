@@ -44,8 +44,21 @@ export type ResultadoReceptor = { ok: true; receptor: Receptor } | { ok: false; 
 /** Texto de una caja: sin caracteres de control, espacios colapsados, recortado. `''` si no es texto. */
 function limpio(v: unknown, max: number): string {
   if (typeof v !== 'string') return ''
-  return v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
+  return v.normalize('NFC').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
 }
+
+// El PDF usa Helvetica estándar (WinAnsi = Windows-1252). Lo que no está ahí saldría «?» en una factura INMUTABLE, así
+// que se rechaza al validar (no se incrustan fuentes): Latin-1 imprimible + los 27 extra de Windows-1252 (€, Š, Œ, …).
+const EXTRA_WIN1252 = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ\u2018\u2019\u201c\u201d•–—˜™š›œžŸ'
+export function enWinAnsi(t: string): boolean {
+  for (const c of t.normalize('NFC')) {
+    const n = c.codePointAt(0)!
+    if ((n >= 0x20 && n <= 0x7e) || (n >= 0xa0 && n <= 0xff) || EXTRA_WIN1252.includes(c)) continue
+    return false
+  }
+  return true
+}
+export const ERROR_ALFABETO = 'Escríbelo con el alfabeto latino, sin caracteres como ł, ő, α, я, 中 / Please write it in Latin characters'
 
 const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]{2,}$/
 const ID_EXT = /^[A-Z0-9][A-Z0-9 .\-/]{3,24}$/
@@ -99,6 +112,12 @@ export function validarReceptor(entrada: unknown): ResultadoReceptor {
     if (ciudad.length < 2) errores['direccion.ciudad'] = 'Escribe la ciudad'
     direccion = { pais, lineas, ciudad, cp }
   }
+
+  // Lo que va impreso en la factura: fuera de WinAnsi se rechaza (si no, saldría «???»).
+  const impresos: Array<[string, string]> = [['nombre', nombre], ['nif', nif]]
+  if (direccion && 'via' in direccion) impresos.push(['direccion.provincia', direccion.provincia], ['direccion.municipio', direccion.municipio], ['direccion.via', direccion.via], ['direccion.resto', direccion.resto ?? ''])
+  else if (direccion) impresos.push(['direccion.lineas', direccion.lineas], ['direccion.ciudad', direccion.ciudad], ['direccion.cp', direccion.cp ?? ''])
+  for (const [k, v] of impresos) if (!enWinAnsi(v)) errores[k] = ERROR_ALFABETO
 
   if (Object.keys(errores).length || !tipo || !direccion) return { ok: false, errores }
   return { ok: true, receptor: { tipo, nombre, nif, pais, email, direccion } }

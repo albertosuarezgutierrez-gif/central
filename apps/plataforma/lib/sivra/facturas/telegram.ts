@@ -33,6 +33,17 @@ export function decidirBotonFactura(
   return { ok: true, accion: action, facturaId: args[0], quien: String(cb.from?.id) }
 }
 
+/**
+ * ¿El ✅ pulsado es el del mensaje VIGENTE del borrador? El ✅ emite lo que hay en BD: solo vale si el mensaje que vio
+ * Alberto es el último que se le mandó con esos datos (al regenerar el borrador, `telegram_message_id` pasa a NULL y
+ * luego al del mensaje nuevo). Sin dato por cualquiera de los lados → NO (fail-closed).
+ */
+export function mensajeVigente(guardado: bigint | number | null | undefined, pulsado: number | null | undefined): boolean {
+  if (guardado === null || guardado === undefined || pulsado === null || pulsado === undefined) return false
+  if (!Number.isSafeInteger(pulsado)) return false
+  return BigInt(guardado) === BigInt(pulsado)
+}
+
 export function botonesPropuesta(facturaId: string): { texto: string; callback: string }[][] {
   return [[
     { texto: '✅ Emitir y enviar', callback: `${PREFIJO_FACTURA_HUESPED}_emi:${facturaId}` },

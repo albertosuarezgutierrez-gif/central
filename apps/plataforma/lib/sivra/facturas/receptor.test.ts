@@ -58,3 +58,25 @@ test('email y tipo obligatorios; basura no revienta', () => {
   assert.equal(validarReceptor({ ...ES, nif: '28823484E', tipo: 'otro' }).ok, false)
   for (const x of [null, undefined, 42, 'texto', []]) assert.equal(validarReceptor(x).ok, false)
 })
+
+test('lo que va impreso fuera de WinAnsi (Helvetica) se rechaza con mensaje claro; latino con tildes sí vale', () => {
+  const EXT = { tipo: 'particular', nombre: 'Jean Dupont', nif: 'FR12345678901', pais: 'FR', email: 'j@d.fr', direccion: { lineas: '12 rue de la Paix', ciudad: 'Paris', cp: '75002' } }
+  assert.equal(validarReceptor(EXT).ok, true)
+  assert.equal(validarReceptor({ ...EXT, nombre: 'Søren Ærø Œuvre Muñoz' }).ok, true)
+  for (const [campo, valor, clave] of [
+    ['nombre', '山田 太郎', 'nombre'], ['nombre', 'Γιώργος Παπαδόπουλος', 'nombre'], ['nombre', 'Иван Петров', 'nombre'],
+    ['nombre', 'דוד כהן', 'nombre'], ['nombre', 'Paweł Łukasz', 'nombre'],
+  ] as const) {
+    const r = validarReceptor({ ...EXT, [campo]: valor })
+    assert.equal(r.ok, false, valor)
+    if (!r.ok) assert.match(r.errores[clave], /alfabeto latino/, valor)
+  }
+  for (const [k, v] of [['lineas', 'Тверская 1'], ['ciudad', '東京'], ['cp', '١٢٣٤٥']] as const) {
+    const r = validarReceptor({ ...EXT, direccion: { ...EXT.direccion, [k]: v } })
+    assert.equal(r.ok, false, v)
+    if (!r.ok) assert.match(r.errores[`direccion.${k}`], /alfabeto latino/, v)
+  }
+  const es = validarReceptor({ ...ES, direccion: { ...ES.direccion, resto: 'Ático 中' } })
+  assert.equal(es.ok, false)
+  if (!es.ok) assert.ok(es.errores['direccion.resto'])
+})

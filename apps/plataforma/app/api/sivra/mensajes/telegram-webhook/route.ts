@@ -1050,7 +1050,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId && d.accion !== 'cor') await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
       after(async () => {
-        const r = await resolverBotonFactura(d).catch((e) => {
+        const r = await resolverBotonFactura(d, mensajeId ?? null).catch((e) => {
           console.error('[tg] factura huésped:', e instanceof Error ? e.message : e)
           return { linea: '⚠️ <i>No sé si se ha emitido (fallo interno): mira /sivra/facturas antes de repetir.</i>', botones: undefined }
         })
