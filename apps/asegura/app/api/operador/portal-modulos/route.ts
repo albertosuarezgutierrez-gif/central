@@ -4,7 +4,6 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { operadorAutorizado } from '@/lib/operador'
-import { polizasEnVigorPorCliente } from '@/lib/portal-modulos-cartera'
 import { vistaSolicitud } from '@/lib/portal-modulos-operador'
 import { prisma } from '@/lib/tenant'
 
@@ -65,20 +64,16 @@ export async function GET(req: Request) {
          AND (c.id IS NULL OR c.correduria_id = ${correduria.id}::uuid)
        ORDER BY m.solicitado_en ASC
        LIMIT 500`
-    // Campos AÑADIDOS (el contrato anterior no cambia): `moduloNombre`, `puedeActivar`, `motivoNoActivar` para la cola
-    // «Solicitudes del portal» de plataforma. Solo se cuentan pólizas de las solicitadas con ficha; si el conteo falla,
-    // `polizasEnVigor` = null y el botón sale desactivado con «no se ha podido comprobar», nunca «0».
-    const conteo = await polizasEnVigorPorCliente(
-      correduria.id,
-      filas.filter((f) => f.estado === 'solicitado' && f.cliente_id).map((f) => f.cliente_id as string),
-    )
+    // Campos AÑADIDOS (el contrato anterior no cambia): `moduloNombre`, `puedeActivar`, `motivoNoActivar` y `creaProspecto`
+    // para la cola «Solicitudes del portal» de plataforma. Desde el 27/10/2026 no se cuentan pólizas (activar = autorizar)
+    // y una fila sin ficha (`cliente_id` null) SÍ se puede activar: el POST por `identidadId` crea la ficha de prospecto.
     return NextResponse.json({
       estado: 'ok',
       resumen: { pendientes: filas.filter((f) => f.estado === 'solicitado').length },
       filas: filas.map((f) => ({
         ...f,
         fichas: Number(f.fichas),
-        ...vistaSolicitud(f.modulo, f.cliente_id, f.cliente_id ? (conteo ? (conteo.get(f.cliente_id) ?? 0) : null) : null),
+        ...vistaSolicitud(f.modulo, f.cliente_id),
       })),
     })
   } catch (e) {

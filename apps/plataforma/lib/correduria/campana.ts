@@ -48,9 +48,15 @@ function solicitud(v: unknown): SolicitudPortal | null {
   const motivo = texto(o.motivoNoActivar)
   if (!o.puedeActivar && !motivo) return null
   const clienteId = texto(o.clienteId)
+  // 27/10/2026: sin ficha se activa por identidad (asegura crea la ficha de prospecto); misma guarda que `leerSolicitud`.
+  const identidadId = texto(o.identidadId)
+  const creaProspecto = o.creaProspecto === true && clienteId === null
+  if (creaProspecto && !identidadId) return null
+  const puede = o.puedeActivar && (clienteId !== null || creaProspecto)
   return {
-    id, modulo, moduloNombre: texto(o.moduloNombre) ?? modulo, clienteId, cliente, sinFicha: clienteId === null,
-    solicitadoEn, puedeActivar: o.puedeActivar, motivoNoActivar: o.puedeActivar ? null : motivo,
+    id, modulo, moduloNombre: texto(o.moduloNombre) ?? modulo, clienteId, identidadId, creaProspecto, cliente, sinFicha: clienteId === null,
+    solicitadoEn, puedeActivar: puede,
+    motivoNoActivar: puede ? null : (motivo ?? 'Sin ficha vinculada: vincúlala antes de activar.'),
   }
 }
 

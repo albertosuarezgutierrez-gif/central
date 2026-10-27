@@ -4,7 +4,8 @@
 // 🚨 Tres estados, nunca colapsados: `ok` (la lista, puede estar vacía de verdad), `sin_configurar` y `error`
 // («no se ha podido leer» ≠ «no hay solicitudes»). Una fila ilegible NO se esconde: si falta una, la lista no es la lista.
 // Activar/Rechazar reutilizan el POST de `/api/correduria/cliente/portal-modulos` (revalida en servidor, auditado,
-// deja `historial_interno`); aquí no hay escritura. Rechazar = `retirar`.
+// deja `historial_interno`); aquí no hay escritura. Rechazar = `retirar`. 27/10/2026: una fila SIN ficha se activa por
+// `identidadId` y asegura crea una ficha de PROSPECTO (`creaProspecto`); Rechazar sin ficha sigue sin poder hacerse aquí.
 
 export type SolicitudPortal = {
   id: string
@@ -12,6 +13,10 @@ export type SolicitudPortal = {
   moduloNombre: string
   /** Ficha vinculada (para el enlace y para escribir). `null` = identidad sin ficha. */
   clienteId: string | null
+  /** La identidad del portal que lo pidió. Con `clienteId` null, Activar va por aquí (27/10/2026: crea ficha de prospecto). */
+  identidadId: string | null
+  /** `true` = activar crea una ficha de PROSPECTO (sin póliza, no es cliente). La pantalla lo avisa antes de pulsar. */
+  creaProspecto: boolean
   /** Ficha si hay vínculo; si no, lo que tecleó la persona al entrar al portal (sin comprobar). */
   cliente: string
   /** `true` = `cliente` es lo tecleado en el portal, no la ficha. */
@@ -38,20 +43,27 @@ export function leerSolicitud(v: unknown): SolicitudPortal | null {
   const solicitadoEn = cadena(o.solicitado_en)
   if (!id || !modulo || !solicitadoEn || typeof o.puedeActivar !== 'boolean') return null
   const clienteId = cadena(o.cliente_id)
+  const identidadId = cadena(o.identidad_id)
   const ficha = cadena(o.cliente)
   const motivo = cadena(o.motivoNoActivar)
   // Sin motivo no se puede explicar un botón apagado: fila ilegible, no se inventa un texto.
   if (!o.puedeActivar && !motivo) return null
+  // Activar sin ficha necesita la identidad: sin ella, el botón no tendría a quién activar (fila ilegible, no se inventa).
+  const creaProspecto = o.creaProspecto === true && clienteId === null
+  if (creaProspecto && !identidadId) return null
   return {
     id,
     modulo,
     moduloNombre: cadena(o.moduloNombre) ?? modulo,
     clienteId,
+    identidadId,
+    creaProspecto,
     cliente: (clienteId ? ficha : null) ?? cadena(o.nombre) ?? 'Cliente sin nombre',
     sinFicha: clienteId === null,
     solicitadoEn,
-    puedeActivar: o.puedeActivar,
-    motivoNoActivar: o.puedeActivar ? null : motivo,
+    // Sin ficha solo se activa si asegura dice que crea el prospecto (un puerto viejo no lo dice: botón apagado).
+    puedeActivar: o.puedeActivar && (clienteId !== null || creaProspecto),
+    motivoNoActivar: o.puedeActivar ? (clienteId !== null || creaProspecto ? null : 'Sin ficha vinculada: vincúlala antes de activar.') : motivo,
   }
 }
 
@@ -77,10 +89,29 @@ export function fechaSolicitud(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso
 }
 
+/**
+ * El cuerpo del POST de Activar/Rechazar (27/10/2026), UNA regla para la cola y la campana: con ficha, por `clienteId`; sin
+ * ficha, solo ACTIVAR y solo si asegura dijo `creaProspecto` (por `identidadId`). `null` = no hay nada que mandar.
+ */
+export function cuerpoAccion(s: SolicitudPortal, accion: 'activar' | 'retirar'): Record<string, string> | null {
+  if (s.clienteId) return { clienteId: s.clienteId, modulo: s.modulo, accion }
+  if (accion === 'activar' && s.creaProspecto && s.identidadId) return { identidadId: s.identidadId, modulo: s.modulo, accion }
+  return null
+}
+
+/** La pregunta antes de activar a alguien sin ficha (se crea una ficha de prospecto). `null` = no hace falta preguntar. */
+export function confirmacionProspecto(s: SolicitudPortal, accion: 'activar' | 'retirar'): string | null {
+  if (accion !== 'activar' || s.clienteId || !s.creaProspecto) return null
+  return `${s.cliente} no tiene ficha. Al activar «${s.moduloNombre}» se crea una ficha de PROSPECTO (sin póliza: no cuenta como cliente). ¿Seguir?`
+}
+
 /** Texto del aviso tras Activar/Rechazar según lo que contestó el POST (nunca «hecho» si no se sabe). */
 export function textoResultadoAccion(accion: 'activar' | 'retirar', status: number, json: unknown): { ok: boolean; texto: string } {
   const j = (json ?? null) as { estado?: string; motivo?: string } | null
   if (status === 200 && j?.estado === 'ok') return { ok: true, texto: accion === 'activar' ? 'Activado.' : 'Rechazada.' }
+  if (status === 503 && j?.estado === 'sin_migracion') {
+    return { ok: false, texto: 'NO se ha activado: falta aplicar en la base el SQL 2026-10-27_portal_acceso_por_autorizacion.sql. No se ha creado ninguna ficha.' }
+  }
   const que = accion === 'activar' ? 'activado' : 'rechazado'
   return { ok: false, texto: `NO se ha ${que}: ${j?.motivo ?? (j?.estado ? j.estado : `HTTP ${status}`)}.` }
 }

@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs'
 import {
   CATALOGO_MODULOS,
   TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO,
+  TEXTO_SOLICITUD_MODULO,
+  VERSION_CONDICIONES_MODULOS,
   accesoPatrimonioPorModulo,
   ESTADOS_MODULO,
   MODULOS_PORTAL,
@@ -132,25 +134,37 @@ test('el aviso de Telegram escapa el nombre y dice si está sin vincular', () =>
 })
 
 // ── Patrimonio: el acceso exige el módulo alquileres activo (25/10/2026) ──
+// 27/10/2026 (Alberto, REESCRITO A PROPÓSITO): el acceso es la AUTORIZACIÓN de la correduría (fila `activo`), tenga o no
+// póliza con nosotros. Antes este bloque exigía `titulares: 0 → false` («sin póliza viva, nunca»); esa regla se quita del
+// puro. «Sin ficha titular no hay nada que abrir» sigue en `accesosPatrimonio` (cepo regression-portal-patrimonio-modulo).
 const fila = (estado: string, modulo = 'alquileres') => ({ modulo, estado })
 
-test('patrimonio: sin póliza viva (titulares 0) nunca, ni con módulo activo', () => {
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 0, filas: [fila('activo')], tieneInmuebles: true }), false)
+test('🚨 patrimonio (27/10/2026): el módulo ACTIVO abre sin exigir póliza viva (la autorización es de la correduría)', () => {
+  assert.equal(accesoPatrimonioPorModulo({ filas: [fila('activo')], tieneInmuebles: false }), true)
+  // La firma ya no admite el recuento de titulares: nadie puede volver a colar «póliza viva» por aquí sin tocar este cepo.
+  assert.equal(accesoPatrimonioPorModulo.length, 1)
+  assert.doesNotMatch(String(accesoPatrimonioPorModulo), /titulares/)
 })
 test('patrimonio: activo abre; sin fila y sin inmuebles no; sin fila con inmuebles (piloto) si', () => {
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('activo')], tieneInmuebles: false }), true)
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [], tieneInmuebles: false }), false)
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [], tieneInmuebles: true }), true)
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('solicitado')], tieneInmuebles: false }), false)
+  assert.equal(accesoPatrimonioPorModulo({ filas: [fila('activo')], tieneInmuebles: false }), true)
+  assert.equal(accesoPatrimonioPorModulo({ filas: [], tieneInmuebles: false }), false)
+  assert.equal(accesoPatrimonioPorModulo({ filas: [], tieneInmuebles: true }), true)
+  assert.equal(accesoPatrimonioPorModulo({ filas: [fila('solicitado')], tieneInmuebles: false }), false)
 })
 test('patrimonio: retirar CIERRA aunque haya inmuebles; pedirlo de nuevo no cierra', () => {
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('retirado')], tieneInmuebles: true }), false)
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('retirado'), fila('solicitado')], tieneInmuebles: true }), true)
+  assert.equal(accesoPatrimonioPorModulo({ filas: [fila('retirado')], tieneInmuebles: true }), false)
+  assert.equal(accesoPatrimonioPorModulo({ filas: [fila('retirado'), fila('solicitado')], tieneInmuebles: true }), true)
 })
 test('patrimonio: flota activa no abre; lectura fallida = cerrado', () => {
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [fila('activo', 'flota')], tieneInmuebles: false }), false)
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: null, tieneInmuebles: true }), false)
-  assert.equal(accesoPatrimonioPorModulo({ titulares: 1, filas: [], tieneInmuebles: null }), false)
+  assert.equal(accesoPatrimonioPorModulo({ filas: [fila('activo', 'flota')], tieneInmuebles: false }), false)
+  assert.equal(accesoPatrimonioPorModulo({ filas: null, tieneInmuebles: true }), false)
+  assert.equal(accesoPatrimonioPorModulo({ filas: [], tieneInmuebles: null }), false)
+})
+test('«Solicitar» (27/10/2026): dice que lo autoriza la correduría y que no exige seguros con nosotros; versión nueva', () => {
+  assert.match(TEXTO_SOLICITUD_MODULO, /lo autoriza la correduría/)
+  assert.match(TEXTO_SOLICITUD_MODULO, /no exige que tengas ningún seguro con nosotros/)
+  assert.doesNotMatch(TEXTO_SOLICITUD_MODULO, /para nuestros clientes/)
+  assert.ok(VERSION_CONDICIONES_MODULOS >= '2026-10-27', 'el texto cambió: la versión sellada tiene que subir')
 })
 test('tarjeta alquileres: activo sin acceso real NO manda a /patrimonio', () => {
   const a = accionModulo('alquileres', { accesoFlota: false, accesoPatrimonio: false, filas: [{ modulo: 'alquileres', estado: 'activo', solicitadoEn: HOY }] })

@@ -44,7 +44,9 @@ test('nota de Patrimonio (27/10/2026): dice que va ligado al email de entrada, q
   assert.match(n, /email con el que el cliente entra/)
   assert.match(n, /cambia de email tiene que avisar/)
   assert.match(n, /más emails en su ficha/)
-  assert.match(n, /póliza en vigor en CIMA/)
+  // 27/10/2026 (Alberto, REESCRITO A PROPÓSITO): activar = autorizar; ya no exige póliza en vigor en CIMA.
+  assert.match(n, /no exige póliza con nosotros/)
+  assert.doesNotMatch(n, /exige póliza en vigor/)
   assert.equal(notaModulo('flota'), null)
   assert.equal(notaModulo('rrhh'), null)
 })

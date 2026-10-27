@@ -7,7 +7,12 @@
 //     (13/10/2026) amplió el 60→30 inicial para no dejar fuera las que ya están a menos de un mes.
 //   · Póliza DECLARADA en el portal (de otra compañía): misma ventana; su primera acción sigue la regla
 //     única de toda oportunidad (`fechaAvisoOportunidad`, 45 días antes): el expediente se ve desde los
-//     60, pero a un seguro que no es nuestro no se le llama antes de tiempo.
+//     60, pero a un seguro que no es nuestro no se le llama antes de tiempo. Su FECHA ÚTIL (el último día en que el
+//     tomador puede oponerse a la prórroga) es un mes antes del vencimiento (`DIAS_PREAVISO_TOMADOR`, la misma de
+//     `leadDeclarada`) y viaja en el expediente.
+//     🚨 GATE LEGAL (Alberto, 27/10/2026): una declarada SOLO se convierte en oportunidad si la persona tiene el
+//     consentimiento `comercial` VIGENTE sobre el texto actual (`consentimientoVigente(…, 'comercial',
+//     VERSION_TEXTO_COMERCIAL)`). Sin él no se crea nada: la lista de leads (`leads-portal.ts`) sigue igual.
 //
 // 🚨 Sin duplicar: no se abre si ya hay una oportunidad ABIERTA (aparcadas incluidas) de esa póliza o de
 // ese riesgo, ni si ESTE ciclo ya tuvo la suya (aunque se cerrara: si Alberto la dio por perdida el día 50,
@@ -75,9 +80,12 @@ export type MotivoNoAbrir =
   | 'ya_tratada_este_ciclo'
   | 'sin_vincular'
   | 'ya_en_cartera'
+  /** Declarada sin consentimiento `comercial` vigente (27/10/2026): no se crea oportunidad. */
+  | 'sin_consentimiento'
 
 export type DecisionApertura =
-  | { abrir: true; vence: string; dias: number; fechaAccion: string; texto: string }
+  /** `fechaUtil` (solo declaradas): último día útil = vencimiento − `DIAS_PREAVISO_TOMADOR` (art. 22 LCS). */
+  | { abrir: true; vence: string; dias: number; fechaAccion: string; texto: string; fechaUtil?: string }
   | { abrir: false; motivo: MotivoNoAbrir; dias: number | null }
 
 // ── Renovación de cartera propia ────────────────────────────────────────────
@@ -134,9 +142,18 @@ export type CandidatoDeclarada = {
    * Es NUESTRA: «pásale precio» sería ofrecerle lo que ya se le vendió (la misma regla que `leadDeclarada`).
    */
   yaEnCartera: boolean
+  /**
+   * Consentimiento `comercial` VIGENTE de quien la declaró, sobre `VERSION_TEXTO_COMERCIAL` (`consentimientoVigente`).
+   * Tres estados y SOLO `true` abre: `false` = dijo que no (o lo retiró) · `null` = nunca se le preguntó, o marcó un texto
+   * viejo, o no se pudo leer. Ante la duda, no se crea nada.
+   */
+  consentimientoComercial: boolean | null
 }
 
 export function decidirDeclarada(c: CandidatoDeclarada, hoy: string): DecisionApertura {
+  // 🚨 Gate legal PRIMERO: sin consentimiento comercial vigente no se mira nada más (ni se cuenta como «tarde»).
+  // ⚖️ Interés legítimo (art. 6.1.f) NO se usa como base para esto hasta que lo valide el abogado.
+  if (c.consentimientoComercial !== true) return { abrir: false, motivo: 'sin_consentimiento', dias: null }
   const vence = valida(c.vence)
   if (!vence) return { abrir: false, motivo: 'sin_vencimiento', dias: null }
   const dias = diasEntre(hoy, vence)
@@ -147,12 +164,14 @@ export function decidirDeclarada(c: CandidatoDeclarada, hoy: string): DecisionAp
   if (c.yaEsteCiclo) return { abrir: false, motivo: 'ya_tratada_este_ciclo', dias }
   if (c.yaAbierta) return { abrir: false, motivo: 'ya_abierta', dias }
   const que = [c.ramo ?? 'seguro', c.compania ? `con ${c.compania}` : null].filter(Boolean).join(' ')
+  const fechaUtil = sumarDias(vence, -DIAS_PREAVISO_TOMADOR)
   return {
     abrir: true,
     vence,
     dias,
     fechaAccion: fechaAvisoOportunidad(vence, hoy),
-    texto: `Declaró en el portal su ${que}, que vence el ${fechaEs(vence)}: pásale precio antes de que renueve.`,
+    fechaUtil,
+    texto: `Declaró en el portal su ${que}, que vence el ${fechaEs(vence)}: pásale precio antes del ${fechaEs(fechaUtil)} (fecha útil: hasta entonces puede no renovar, art. 22 LCS).`,
   }
 }
 
@@ -180,4 +199,92 @@ export function renovacionResuelta(e: {
   const ahora = valida(e.venceActual)
   if (!antes || !ahora || !e.enVigor) return null
   return ahora > antes ? 'renovada' : null
+}
+
+// ── Plan de aperturas (puro) y lectura del consentimiento con respaldo (27/10/2026) ──────────────────────────────
+
+export type Apertura = {
+  tipo: 'renovacion' | 'declarada'
+  clienteId: string
+  /** Póliza de cartera (renovación) o declarada del portal. */
+  origenId: string
+  ramo: string
+  vence: string
+  dias: number
+  fechaAccion: string
+  /** Solo declaradas: último día útil (vencimiento − 1 mes, art. 22 LCS). */
+  fechaUtil: string | null
+  texto: string
+  numeroPoliza: string | null
+  prima: string | null
+}
+
+export type FilaRenovacion = {
+  polizaId: string; clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null
+  vence: string | null; prima: string | null; importRef: string | null; eiacXmlHash: string | null; estado: string
+  sustituidaAt: Date | null; yaAbierta: boolean; yaEsteCiclo: boolean
+}
+
+export type FilaDeclarada = {
+  declaradaId: string; identidadId: string; clienteId: string | null; ramo: string | null; compania: string | null
+  numeroPoliza: string | null; vence: string | null; yaAbierta: boolean; yaEsteCiclo: boolean; yaEnCartera: boolean
+}
+
+export type NoAbiertas = Record<'renovacion' | 'declarada', Partial<Record<MotivoNoAbrir, number>>>
+
+function contar(m: Partial<Record<MotivoNoAbrir, number>>, k: MotivoNoAbrir) {
+  m[k] = (m[k] ?? 0) + 1
+}
+
+/** Qué se abre hoy con lo leído. Una identidad que no está en `consentimiento` cuenta como «no consta» (`null`). */
+export function decidirAperturas(
+  renov: readonly FilaRenovacion[],
+  decl: readonly FilaDeclarada[],
+  consentimiento: ReadonlyMap<string, boolean | null>,
+  hoy: string,
+): { aperturas: Apertura[]; noAbiertas: NoAbiertas } {
+  const aperturas: Apertura[] = []
+  const noAbiertas: NoAbiertas = { renovacion: {}, declarada: {} }
+  for (const f of renov) {
+    const d = decidirRenovacion({ ...f }, hoy)
+    if (!d.abrir) { contar(noAbiertas.renovacion, d.motivo); continue }
+    aperturas.push({
+      tipo: 'renovacion', clienteId: f.clienteId, origenId: f.polizaId, ramo: f.ramo, vence: d.vence, dias: d.dias,
+      fechaAccion: d.fechaAccion, fechaUtil: null, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: f.prima,
+    })
+  }
+  for (const f of decl) {
+    const d = decidirDeclarada({ ...f, consentimientoComercial: consentimiento.get(f.identidadId) ?? null }, hoy)
+    if (!d.abrir || !f.clienteId) { contar(noAbiertas.declarada, d.abrir ? 'sin_vincular' : d.motivo); continue }
+    aperturas.push({
+      tipo: 'declarada', clienteId: f.clienteId, origenId: f.declaradaId, ramo: tipoDeRamoDeclarado(f.ramo), vence: d.vence,
+      dias: d.dias, fechaAccion: d.fechaAccion, fechaUtil: d.fechaUtil ?? null, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: null,
+    })
+  }
+  return { aperturas, noAbiertas }
+}
+
+export type Savepoint = { abrir: () => Promise<void>; liberar: () => Promise<void>; deshacer: () => Promise<void> }
+
+/**
+ * Lee el consentimiento y, si FALLA, devuelve un mapa VACÍO (ninguna declarada abre) y lo deja en el log: un fallo de esta
+ * lectura no puede tumbar las renovaciones de cartera. Con `sp` (dentro de una transacción) la lectura va en su savepoint y
+ * se deshace al fallar, para que la transacción siga viva.
+ */
+export async function consentimientoOVacio(
+  leer: () => Promise<Map<string, boolean | null>>,
+  sp?: Savepoint,
+): Promise<Map<string, boolean | null>> {
+  try {
+    if (sp) await sp.abrir()
+    const m = await leer()
+    if (sp) await sp.liberar()
+    return m
+  } catch (e) {
+    console.error('[expedientes-auto] no se pudo leer portal_consentimiento: ninguna declarada se abre en esta pasada:', e instanceof Error ? e.message : e)
+    if (sp) {
+      try { await sp.deshacer() } catch (e2) { console.error('[expedientes-auto] rollback del savepoint del consentimiento falló:', e2 instanceof Error ? e2.message : e2) }
+    }
+    return new Map()
+  }
 }

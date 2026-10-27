@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  decidirDeclarada, decidirRenovacion, enVentanaExpediente, enVentanaRenovacion, renovacionResuelta, tipoDeRamoDeclarado,
+  consentimientoOVacio, decidirAperturas, decidirDeclarada, decidirRenovacion, enVentanaExpediente, enVentanaRenovacion, renovacionResuelta, tipoDeRamoDeclarado,
   type CandidatoDeclarada, type CandidatoRenovacion,
 } from './expedientes-auto-reglas.ts'
 
@@ -15,7 +15,8 @@ const ren = (o: Partial<CandidatoRenovacion> = {}): CandidatoRenovacion => ({
   vence: sumar(45), ramo: 'auto', compania: 'Mapfre', numeroPoliza: '123', yaAbierta: false, yaEsteCiclo: false, ...o,
 })
 const dec = (o: Partial<CandidatoDeclarada> = {}): CandidatoDeclarada => ({
-  declaradaId: 'd1', clienteId: 'c1', vence: sumar(55), ramo: 'hogar', compania: 'Allianz', yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false, ...o,
+  declaradaId: 'd1', clienteId: 'c1', vence: sumar(55), ramo: 'hogar', compania: 'Allianz', yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false,
+  consentimientoComercial: true, ...o,
 })
 
 test('ventana 60→30 días, bordes incluidos (art. 22 LCS: dos meses la compañía, un mes el tomador)', () => {
@@ -81,6 +82,68 @@ test('declarada sin vínculo a ficha: no se abre (no hay a quién llamar) y se d
   assert.equal(decidirDeclarada(dec({ yaEsteCiclo: true }), HOY).abrir, false)
   // Su nº ya está en nuestra cartera: es NUESTRA, no se le «pasa precio» (misma regla que `leadDeclarada`).
   assert.deepEqual(decidirDeclarada(dec({ yaEnCartera: true }), HOY), { abrir: false, motivo: 'ya_en_cartera', dias: 55 })
+})
+
+// ── Gate legal (Alberto, 27/10/2026): declarada → oportunidad SOLO con consentimiento comercial vigente ──
+test('🚨 declarada SIN consentimiento comercial vigente: NO se crea oportunidad (ni con «no», ni sin preguntar)', () => {
+  for (const c of [false, null] as const) {
+    assert.deepEqual(decidirDeclarada(dec({ consentimientoComercial: c }), HOY), { abrir: false, motivo: 'sin_consentimiento', dias: null }, String(c))
+  }
+  // El gate va antes que todo: aunque esté en ventana, vinculada y sin abrir.
+  assert.equal(decidirDeclarada(dec({ consentimientoComercial: null, vence: sumar(40) }), HOY).abrir, false)
+})
+
+test('🚨 declarada CON consentimiento: se abre UNA vez, con fecha útil = vencimiento − 1 mes; el ciclo siguiente no la repite', () => {
+  const r = decidirDeclarada(dec({ vence: sumar(55) }), HOY)
+  assert.equal(r.abrir, true)
+  if (!r.abrir) return
+  assert.equal(r.fechaUtil, sumar(25))
+  assert.match(r.texto, new RegExp(`antes del ${sumar(25).split('-').reverse().join('/')}`))
+  // La primera llamada sigue siendo ANTES de la fecha útil (no se llama el último día).
+  assert.ok(r.fechaAccion <= r.fechaUtil!)
+  // Una sola vez: con la de este ciclo ya creada (o una abierta), no se vuelve a abrir.
+  assert.deepEqual(decidirDeclarada(dec({ yaEsteCiclo: true }), HOY), { abrir: false, motivo: 'ya_tratada_este_ciclo', dias: 55 })
+  assert.deepEqual(decidirDeclarada(dec({ yaAbierta: true }), HOY), { abrir: false, motivo: 'ya_abierta', dias: 55 })
+})
+
+test('🚨 la lectura pasa el consentimiento REAL (comercial, texto vigente) y por defecto «no consta» (null), nunca «sí»', () => {
+  assert.match(SRC, /consentimientoVigente\(fs, 'comercial', VERSION_TEXTO_COMERCIAL\)/)
+  assert.match(SRC, /decidirAperturas\(renov, decl, consentimiento, hoy\)/)
+  // Identidad sin filas leídas = «no consta» (null) → no abre.
+  const fd = { declaradaId: 'd1', identidadId: 'i1', clienteId: 'c1', ramo: 'hogar', compania: 'X', numeroPoliza: null, vence: sumar(55), yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false }
+  assert.equal(decidirAperturas([], [fd], new Map(), HOY).aperturas.length, 0)
+  assert.equal(decidirAperturas([], [fd], new Map([['i1', true]]), HOY).aperturas.length, 1)
+  assert.match(SRC, /where c\.tipo = 'comercial' and c\.identidad_id = any\(/)
+  // Sin envíos salientes: este fichero no importa ningún canal de correo/mensajería.
+  assert.doesNotMatch(SRC, /core-email|core-telegram|createMailTransporter|sendMail|whatsapp/i)
+})
+
+test('🚨 si FALLA la lectura del consentimiento: mapa vacío y savepoint deshecho; las renovaciones SÍ se abren, las declaradas NO', async () => {
+  const pasos: string[] = []
+  const sp = { abrir: async () => { pasos.push('abrir') }, liberar: async () => { pasos.push('liberar') }, deshacer: async () => { pasos.push('deshacer') } }
+  const errorOriginal = console.error
+  console.error = () => {}
+  let m: Map<string, boolean | null>
+  try {
+    m = await consentimientoOVacio(async () => { throw new Error('permission denied for table portal_consentimiento') }, sp)
+  } finally {
+    console.error = errorOriginal
+  }
+  assert.equal(m.size, 0)
+  assert.deepEqual(pasos, ['abrir', 'deshacer'])
+  const fr = { polizaId: 'p1', clienteId: 'c1', ramo: 'auto', compania: 'Mapfre', numeroPoliza: '1', vence: sumar(45), prima: null,
+    importRef: null, eiacXmlHash: 'h', estado: 'en_vigor', sustituidaAt: null, yaAbierta: false, yaEsteCiclo: false }
+  const fd = { declaradaId: 'd1', identidadId: 'i1', clienteId: 'c1', ramo: 'hogar', compania: 'X', numeroPoliza: null, vence: sumar(55), yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false }
+  const r = decidirAperturas([fr], [fd], m, HOY)
+  assert.deepEqual(r.aperturas.map((a) => a.tipo), ['renovacion'])
+  assert.deepEqual(r.noAbiertas.declarada, { sin_consentimiento: 1 })
+  // Lectura buena: libera el savepoint y devuelve lo leído.
+  const ok = await consentimientoOVacio(async () => new Map([['i1', true]]), sp)
+  assert.equal(ok.get('i1'), true)
+  assert.deepEqual(pasos.slice(2), ['abrir', 'liberar'])
+  // La pasada del detector (en transacción) usa el savepoint.
+  assert.match(SRC, /planExpedientesAuto\(tx, correduriaId, hoy, true\)/)
+  assert.match(SRC, /rollback to savepoint consentimiento_expedientes/)
 })
 
 test('ramo declarado desconocido → «otros» (nunca un cast que tumbe el lote)', () => {
