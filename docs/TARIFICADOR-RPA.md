@@ -272,10 +272,45 @@ Encolar moto desde plataforma: sin `poblacion` en el riesgo, se toma `ciudad` de
 ## Decisiones de Alberto
 - **Allianz NO se avisa** del acceso automatizado: riesgo de bloqueo asumido (volumen bajo, ritmo humano).
 - Todo lo hacen agentes, ahorrando tokens.
-- **Nunca desplegar imagen desde una rama sin su OK** (preview/producción: la imagen de Fly es única).
 - Auto/hogar/moto/vida/salud/decesos se quedan en **Avant2** (la API de Codeoscopic no cubre comunidades/RC/comercio).
+- (27/10/2026) Se tarifica SIEMPRE en pago ANUAL; la forma de pago la cambia el cliente al contratar.
+- (27/10/2026) «Envío e-mail» del portal (Generali) nunca en «Sí» sin OK de Alberto (comunicación a tercero). «Verificación del riesgo» (Generali): pendiente de su decisión; mientras, el bot se para y la nombra.
+- (27/10/2026) Pruebas de imagen de rama sin mergear: solo con interruptor en BD que enciende Alberto (sustituye en ese caso a «Nunca desplegar imagen desde una rama sin su OK»: el interruptor ES el OK; producción solo `main-*`).
+- (27/10/2026) Allianz auto con compañía actual = Allianz (Allianz→Allianz): no se tarifica por bot (el portal no la ofrece); error de datos claro, se hace a mano.
 
 ## PLAN
+
+**Fase 1 · Auto y hogar de punta a punta (en curso 27/10)**
+- [hecho] Allianz auto precio; [pendiente] guardar proyecto + PDF (0.6.34 espera confirmación más larga, sin verificar en real).
+- [hecho 27/10] Allianz hogar precio (3 modalidades).
+- [en curso] Mapfre auto: 0.8.33 deja de buscar «compañía anterior» cuando el portal no la pide (la toma de su consulta de historial) y avisa en la oferta.
+- [en curso] Generali auto: el portal no calcula por «datos incompletos»; 0.2.42 nombra los campos que faltan; forma de pago anual por defecto.
+- [pendiente] Mapfre hogar: encender flag + fila companias_integracion + env TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre; 3-5 vueltas reales.
+- [pendiente] Generali hogar: no hay bot; construirlo con capturas de Alberto + atascos (modo grabación).
+- [pendiente] Flujo completo tras precio: PDF → análisis de coberturas → comparativa → borrador al cliente (Alberto emite a mano).
+
+**Fase 2 · Ciclo de prueba rápido (en curso 27/10)**
+- Volcado completo en cada atasco (todos los marcos, errores visibles, botones, obligatorios vacíos, sin valores) para cerrar huecos en una vuelta.
+- Imagen del bot desde la BD (la apunta el workflow de imagen al construir en main; sin cambiar la env de Vercel ni redesplegar; no se vuelve atrás salvo forzar).
+- Descartar un atasco no cuenta como fallo para la pausa automática.
+- Prueba con imagen de rama (`rama-*`) por `probar`, solo con interruptor de Alberto; se anota en el trabajo qué imagen corrió.
+- `probar` autónomo para hogar (riesgo desde la oportunidad con los catálogos vivos de Codeoscopic).
+
+**Fase 3 · Formas de pago y recargo por fraccionar (idea Alberto 27/10)**
+- Tabla `seguros.condiciones_fraccionamiento` (compañía, ramo, frecuencia, recargo %, permite: sí/no/no se sabe, fuente, fecha). Nunca inventar: «no se sabe» ≠ «no».
+- Lectura pasiva en cada tarificación de lo que la pantalla ya muestra: Generali auto (Recibo Anual / 1er Semestral / 1er Trimestral), Mapfre hogar (bloques anual/semestral/trimestral/mensual). Allianz moto (sección FRACCIONAMIENTOS).
+- Donde la pantalla solo muestra la forma elegida (Allianz auto/hogar): tras guardar el precio ANUAL, cambiar el desplegable de forma de pago y recalcular (puerta de guard con lista blanca, límite de tiempo, se deja en anual antes de guardar proyecto/PDF; nunca el botón «Pago fraccionado»). Por compañía y desactivable.
+- El dato bueno es el del riesgo concreto (recibo mínimo, ramos que solo admiten anual); la tabla general es respaldo «estimado».
+- Borrador / presupuesto: «Anual X € · Semestral 2×Y € (+Z %) · Trimestral 4×W € (+V %)», con coste total del año (transparencia IDD); omitir lo desconocido.
+
+**Fase 4 · Presupuesto propio por URL dinámica**
+- Presupuesto de Grupo ASegura en una URL viva: el cliente elige forma de pago y se filtran/ordenan al momento las compañías que la permiten por coste anual real; «a consultar» si no se sabe.
+- Escala con cada compañía nueva.
+
+**Fase 5 · Más ramos y compañías**
+- Repetir el patrón (mapa → atascos con volcado → cierre) en cada ramo/compañía; tarea semanal de actualización de vocabulario (pendiente).
+
+Comunidades / RC / Comercio (anterior):
 1. Confirmar Allianz Comunidades con una **cotización real desde Oportunidades** (PDF + sesión).
 2. Comunidades con **Occident (Catalana Occidente)** vía grabador → comparador.
 3. RC con Occident.
@@ -284,4 +319,4 @@ Encolar moto desde plataforma: sin `poblacion` en el riesgo, se toma `ciudad` de
 Por qué (cartera, 06/10): 103 pólizas en vigor de estos ramos/compañías; Occident ~46; Comunidades 4; RC 12; **13 pólizas Allianz sin prima cargada → revisar.**
 
 ## Pendientes en vivo
-Cotización real de punta a punta (paso 1) · validar umbrales de infraseguro · revisar las 13 pólizas Allianz sin prima · rotar la contraseña de Occident que viajó en claro en un correo de Codeoscopic (08/06) · confirmar que los fly secrets llegan a las máquinas de la API de Machines.
+Generali: decisión de Alberto sobre "Verificación del riesgo" · Capturas de Generali "Garantías y Resultados" con precio · Capturas del recorrido de Hogar en Genernet + OK de RPA en Generali hogar · Cotización real de punta a punta (paso 1) · validar umbrales de infraseguro · revisar las 13 pólizas Allianz sin prima · rotar la contraseña de Occident que viajó en claro en un correo de Codeoscopic (08/06) · confirmar que los fly secrets llegan a las máquinas de la API de Machines.

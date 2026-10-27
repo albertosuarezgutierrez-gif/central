@@ -11,6 +11,7 @@ import {
   atascoCaducado,
   candidatosVisibles,
   debeCortarBot,
+  cuentaComoFalloBot,
   decidirAtasco,
   elegirCandidatoAtasco,
   estadoAprendido,
@@ -76,6 +77,17 @@ describe('corte por compañía/ramo', () => {
     expect(m).toContain('quita la pausa')
     expect(motivoCorte([f('portal'), f('infra'), f('portal')], { compania: 'mapfre', ramo: 'hogar' })).toContain('error del bot')
     expect(motivoCorte([f('portal')], { compania: 'mapfre', ramo: 'hogar' })).toBeNull()
+  })
+  it('un trabajo cerrado por el barrido de un atasco (caducado/huérfano) NO cuenta como fallo del bot y rompe la racha', () => {
+    const a = (cierreAtasco: string) => ({ estado: 'error_definitivo', tipoError: 'portal', cierreAtasco })
+    expect(debeCortarBot([a('huerfano'), a('huerfano'), a('caducado')])).toBe(false)
+    expect(debeCortarBot([f('portal'), a('huerfano'), f('portal'), f('portal')])).toBe(false)
+    expect(motivoCorte([a('huerfano'), f('portal'), f('infra')], { compania: 'mapfre', ramo: 'auto' })).toBeNull()
+    expect(cuentaComoFalloBot(a('caducado'))).toBe(false)
+    // Sin marca (null/ausente/vacía) sigue contando: no se debilita el corte normal.
+    expect(cuentaComoFalloBot({ estado: 'error_definitivo', tipoError: 'portal', cierreAtasco: null })).toBe(true)
+    expect(cuentaComoFalloBot({ estado: 'error_definitivo', tipoError: 'infra', cierreAtasco: ' ' })).toBe(true)
+    expect(debeCortarBot([{ ...f('portal'), cierreAtasco: null }, f('infra'), f('portal')])).toBe(true)
   })
 })
 

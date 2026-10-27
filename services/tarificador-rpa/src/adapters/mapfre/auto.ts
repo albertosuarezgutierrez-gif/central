@@ -68,6 +68,11 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.33 (27/10/2026, ejecución real 68c03964 con 0.8.32): la hipótesis de 0.8.32 era ERRÓNEA. El `mat-select[compania]` de «Datos básicos» es la ENTIDAD EMISORA de
+//   Mapfre (única opción real «MAPFRE ESPAÑA…»), no la compañía anterior: no se toca nunca (el flujo pasaba Datos básicos sin tocarlo hasta 0.8.31; se retira
+//   `companiaAnteriorEnDatosBasicos`). Con 0.8.31 ya se vio que no existe `app-historial-siniestralidad` y que procedencia/expuestos/siniestros están deshabilitados:
+//   en este flujo Mapfre NO pide la compañía anterior al mediador (la toma de su consulta de historial). Sin ningún control habilitado y visible para ella NO se
+//   atasca: se continúa y la oferta lleva el AVISO `AVISO_COMPANIA_ANTERIOR_NO_PEDIDA` (+ la siniestralidad leída). Con un control visible se rellena como siempre.
 // v0.8.32 (27/10/2026, ejecución real 8ef7a5dc con 0.8.31; diagnóstico de 0.8.30/31 por fin con el DÓNDE): (1) el único «Compañia» habilitado es
 //   `mat-select[compania]` de `app-datos-basicos` (paso 1), oculto por `.mat-horizontal-stepper-content` visibility:hidden en cuanto se pasa de paso: diferirlo a
 //   Coberturas (0.8.30/31) no podía funcionar. Ahora se elige en «Datos básicos» antes de «Continuar» (`companiaAnteriorEnDatosBasicos`: mismo helper
@@ -1500,7 +1505,7 @@ export async function altaTomadorNuevo(nsei: Page, f: FormularioAuto, ctx: Pick<
  * `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a su campo: nunca a logs, mensajes ni
  * resultado. Lo resuelto por el respaldo se confirma tras llegar al paso 2.
  */
-export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect'>>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<boolean> {
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect'>>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<void> {
   const nif = documentoTomadorDe(f)
   if (nif === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
   const r = await campoConRespaldo(nsei, SEL_TOMADOR.documento, { page: nsei, formador: ctx.formador, etiqueta: 'NIF/CIF', descripcion: 'Campo del documento (NIF/CIF) del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor)' })
@@ -1543,32 +1548,26 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
   if (reaccion === 'indeterminado') await huecoTomador(nsei, ctx, 'NIF/CIF', 'la reacción de Mapfre al NIF/CIF del tomador (ni autorrelleno ni aviso de «no existe ningún registro» en la espera)')
   if (reaccion === 'nuevo') await altaTomadorNuevo(nsei, f, ctx)
   else await exigirSinCamposObligatorios(nsei, ctx, 'con el tomador autorrellenado por Mapfre')
-  // v0.8.32: la compañía anterior («Compañia», app-datos-basicos) vive AQUÍ; en los pasos siguientes el stepper la oculta. Antes de «Continuar».
-  const companiaElegida = await companiaAnteriorEnDatosBasicos(nsei, f, ctx)
+  // v0.8.33: el «Compañia» de «Datos básicos» es la ENTIDAD EMISORA de Mapfre, no la compañía anterior: este paso nunca lo toca (pasaba sin tocarlo hasta 0.8.31).
   await continuar(nsei, ctx, 'datosBasicos')
   await r.confirmar().catch(() => undefined)
-  return companiaElegida
 }
 
+/** v0.8.33 · AVISO que queda en la oferta cuando «Figuras»/«Coberturas» no traen ningún control de compañía anterior (la toma Mapfre de su consulta de historial). */
+export const AVISO_COMPANIA_ANTERIOR_NO_PEDIDA = 'Compañía anterior y siniestralidad no las pide Mapfre en esta pantalla: las toma de su consulta de historial; revísalo en la emisión.'
+
 /**
- * v0.8.32 · Ejecución real 27/10/2026 (trabajo 8ef7a5dc): el único «Compañia» habilitado cuelga de `app-datos-basicos` (paso 1) y el stepper lo oculta
- * (`visibility:hidden`) en cuanto se pasa a otro paso: en «Figuras»/«Coberturas» no hay nada que elegir. Se elige aquí, con el MISMO helper
- * (`rellenarMatSelects` → `ctx.elegirMatSelect`, casado de la capa común) y el nombre del riesgo. Solo si el riesgo trae compañía anterior (años > 0)
- * y el desplegable es visible, habilitado y ÚNICO en este paso; si no aparece no se inventa nada: devuelve `false` y «Figuras» sigue su camino
- * (hueco con diagnóstico si tampoco está allí). Sin pulsaciones nuevas.
+ * v0.8.33 · Ejecución real 27/10/2026 (trabajo 68c03964 con 0.8.32): el `mat-select[compania]` de «Datos básicos» es la ENTIDAD EMISORA de Mapfre
+ * (única opción real «MAPFRE ESPAÑA…»), NO la compañía anterior: nunca se usa para ella. En este flujo Mapfre no pide la compañía anterior al mediador
+ * (no hay `app-historial-siniestralidad` y procedencia/expuestos/siniestros vienen deshabilitados). `true` = NO hay ningún control habilitado, visible
+ * y único para ella (ni el selector del historial ni uno por etiqueta): se continúa con un AVISO en vez de atascar. Si hay un control así, o 2+
+ * habilitados (ambiguo), devuelve `false` y rige lo de siempre (casado exacto y atasco si no casa). Solo lectura; los clics, por `pulsar` guardado.
  */
-export async function companiaAnteriorEnDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'formador'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect'>>, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<boolean> {
-  const g = conAntecedentesFavorables(f).formulario as FormularioAuto & DatosMatSelectMapfre
-  const nombre = typeof g.companiaAnterior === 'string' ? g.companiaAnterior.trim() : ''
-  if (!((g.aniosAseguradoAnterior ?? 0) > 0) || nombre === '' || nombre.length > 80) return false
-  if (!(await selectCompaniaPorEtiqueta(nsei, ctx.pulsar, esperaMs))) {
-    ctx.formador?.log('mapfre_compania_no_en_datos_basicos', {})
-    return false
-  }
-  const op: OperacionNsei = { sel: SEL_HISTORIAL.companiaAnterior, etiqueta: 'compañía anterior', tipo: 'mat-select', valor: nombre, paso: 'datosBasicos', opciones: [nombre] }
-  await rellenarMatSelects(nsei, { escribibles: [op], pendientes: [] }, { elegirMatSelect: ctx.elegirMatSelect, pulsar: ctx.pulsar, leerOpcionesMatSelect: ctx.leerOpcionesMatSelect } as never, { page: nsei, formador: ctx.formador }, 0)
-  ctx.formador?.log('mapfre_compania_en_datos_basicos', {})
-  return true
+export async function companiaAnteriorSinControl(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<boolean> {
+  if (await apareceEn(raiz, SEL_HISTORIAL.companiaAnterior, esperaMs)) return false
+  if (await selectCompaniaPorEtiqueta(raiz, pulsar, esperaMs > 0 ? Math.max(esperaMs, ESPERA_COMPANIA_ETIQUETA_MS) : 0)) return false
+  const habilitados = ((await leerControlesSiniestralidad(raiz)) ?? []).filter((c) => c.et === 'compania' && c.tipo === 'mat-select' && !c.off)
+  return habilitados.length <= 1
 }
 
 // ───────────────────────── paso 3 (historial) y paso 4 (Coberturas): grabación 15/10/2026 ─────────────────────────
@@ -1897,7 +1896,6 @@ export async function precioDesdeObjetoAsegurado(
   ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
-  companiaYaElegida = false,
 ): Promise<ResultadoAdaptador> {
   // v0.8.7: MOTO por el mismo plan que el coche (antes: hueco de mapa «el plan de campos de MOTO en NSEI»).
   // Antecedentes favorables (18/10/2026) también para el interruptor de compañía anterior de `historialAnterior`.
@@ -1913,8 +1911,11 @@ export async function precioDesdeObjetoAsegurado(
   const sinHist = await planFigurasSinHistorial(nsei, f, plan, ctx.formador)
   const planFig = sinHist.plan
   await rellenarCamposTexto(nsei, planDelPaso(planFig, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
-  // v0.8.32: la compañía anterior, si ya se eligió en «Datos básicos» (donde vive), no se vuelve a buscar aquí.
-  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso && !(companiaYaElegida && o.sel === SEL_HISTORIAL.companiaAnterior)), pendientes: [] }, ctx, respaldo)
+  // v0.8.33: si Mapfre no pinta ningún control de compañía anterior (la toma de su consulta de historial), no se atasca: se sigue con un AVISO en la oferta.
+  const tieneOpCompania = planDelPaso(planFig, 'figuras').escribibles.some((o) => o.sel === SEL_HISTORIAL.companiaAnterior)
+  const sinControlCompania = tieneOpCompania && (await companiaAnteriorSinControl(nsei, ctx.pulsar))
+  if (sinControlCompania) ctx.formador?.log('mapfre_compania_anterior_no_pedida', {})
+  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso && !(sinControlCompania && o.sel === SEL_HISTORIAL.companiaAnterior)), pendientes: [] }, ctx, respaldo)
   const diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
@@ -1927,7 +1928,7 @@ export async function precioDesdeObjetoAsegurado(
   exigirPasoCompleto(planFig, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
-  const avisosExtra = fijaMapfre ? [avisoSiniestralidadMapfre(await leerSiniestralidadMapfre(nsei), Number.isInteger(form.siniestrosUltimos5Anios) ? form.siniestrosUltimos5Anios : null)] : []
+  const avisosExtra = [...(sinControlCompania ? [AVISO_COMPANIA_ANTERIOR_NO_PEDIDA] : []), ...(fijaMapfre ? [avisoSiniestralidadMapfre(await leerSiniestralidadMapfre(nsei), Number.isInteger(form.siniestrosUltimos5Anios) ? form.siniestrosUltimos5Anios : null)] : [])]
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
@@ -1952,7 +1953,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.32',
+  version: '0.8.33',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
@@ -1965,14 +1966,14 @@ export const mapfreAuto = {
     await login(page, ctx)
     await ctx.trasLogin()
     const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, formador: ctx.formador, credenciales: ctx.credenciales, log: ctx.log })
-    const companiaYaElegida = await pasoDatosBasicos(nsei, form, ctx)
+    await pasoDatosBasicos(nsei, form, ctx)
     const { vehiculo: vehiculoConfirmado, supuestoVersion } = await consultarVehiculoPorMatriculaConSupuesto(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form)
     ctx.log('vehiculo confirmado')
     // 18/10/2026: los antecedentes SUPUESTOS (favorables) van detrás del supuesto del vehículo, en el mismo aviso.
     // Conductor = tomador sin `tomadorEsConductor` (solo pasa con la fecha de nacimiento de la ficha igual: `exigirConductorEsTomador`):
     // SUPUESTO declarado, no dato.
     const conductor = supuestoConductorTomador(form)
-    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]), companiaYaElegida)
+    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
   },
 } as const
 

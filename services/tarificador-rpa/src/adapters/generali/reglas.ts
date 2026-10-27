@@ -1023,6 +1023,92 @@ export function avisosObligatorioGenerali(texto: string): string[] {
   return [...vistos].slice(0, 8)
 }
 
+/**
+ * v0.2.42: estado del cálculo en el marco de «Valoración Riesgo» (`emiAutosGenB028.do`), SIN valores de campos: avisos del bloque `#areaErrores`
+ * de Genernet, campos marcados obligatorios («*») que siguen vacíos, botones/enlaces visibles y si el marco seguía cargando.
+ */
+export interface EstadoCalculoGenerali {
+  /** Textos de `#areaErrores li` (p. ej. «El paso anterior no tiene los datos completos», «No se puede calcular con datos incompletos»). */
+  avisos: string[]
+  /** Etiquetas de los campos obligatorios vacíos del marco a la vista (sin valores). */
+  obligatoriosVacios: string[]
+  /** `name` de los controles de esos obligatorios vacíos (sin valores): para saber cuáles son decisión de Alberto. */
+  nombresVacios?: string[]
+  /** Botones/enlaces visibles del marco (rótulos). */
+  botones: string[]
+  /** ¿Algún marco seguía cargando (`loading.html` visible o `document.readyState` ≠ complete)? null = no se pudo saber. */
+  cargando: boolean | null
+}
+
+/** v0.2.42: opciones de «Forma de pago a contratar» que el robot puede pedir (texto EXACTO del portal). */
+export const FORMAS_PAGO_GENERALI = ['Anual', 'Semestral', 'Trimestral'] as const
+
+/**
+ * v0.2.42 (decisión de Alberto, 27/10/2026): forma de pago a elegir. ANUAL por defecto; si el riesgo trae una explícita (`formaPago` o
+ * `fraccionamiento`), esa, si es exactamente anual/semestral/trimestral (sin mayúsculas/tildes); otra cosa → `error` (no se adivina). PURA.
+ */
+export function formaPagoPedidaGenerali(form: unknown): { etiqueta: (typeof FORMAS_PAGO_GENERALI)[number]; porDefecto: boolean } | { error: string } {
+  const f = (form ?? {}) as { formaPago?: unknown; fraccionamiento?: unknown }
+  const bruto = f.formaPago ?? f.fraccionamiento
+  if (bruto === null || bruto === undefined || String(bruto).trim() === '') return { etiqueta: 'Anual', porDefecto: true }
+  const t = String(bruto).normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+  const e = FORMAS_PAGO_GENERALI.find((x) => x.toLowerCase() === t)
+  return e ? { etiqueta: e, porDefecto: false } : { error: `la forma de pago del riesgo «${String(bruto).slice(0, 30)}» no es ${FORMAS_PAGO_GENERALI.join('/')}` }
+}
+
+/** v0.2.42: índice de la opción cuyo texto es EXACTAMENTE `etiqueta` (solo se recortan espacios); -1 si no hay exactamente una. PURA. */
+export function opcionExactaGenerali(opciones: readonly string[], etiqueta: string): number {
+  const i = opciones.map((o) => String(o ?? '').replace(/\s+/g, ' ').trim()).flatMap((o, k) => (o === etiqueta ? [k] : []))
+  return i.length === 1 ? i[0]! : -1
+}
+
+/**
+ * v0.2.42 (decisión de Alberto): obligatorios de «Garantías y Resultados» que el robot NO decide (por el `name` del control): «Envío e-mail»
+ * (`opcEnvio`) y «Verificación del riesgo» (`verifRiesgo`). PURA.
+ */
+export function decisionesPendientesGenerali(nombres: readonly string[]): string[] {
+  const out: string[] = []
+  if (nombres.some((n) => /opcEnvio|opcenv/i.test(n))) out.push('Envío e-mail')
+  if (nombres.some((n) => /verifRiesgo|zvriep/i.test(n))) out.push('Verificación del riesgo')
+  return out
+}
+
+/** v0.2.42: ¿los avisos del portal dicen que faltan datos («datos incompletos», «no tiene los datos completos»)? Entonces Generali NO calcula. PURA. */
+export function portalDatosIncompletosGenerali(avisos: readonly string[]): boolean {
+  return avisos.some((a) => /datos\s+incompletos|no\s+tiene\s+los\s+datos\s+completos|paso\s+anterior\s+no\s+tiene/i.test(a))
+}
+
+/** v0.2.42: etiquetas de los campos obligatorios VACÍOS de una pantalla leída (sin «*», saneadas, sin repetir, máx. 12). PURA. */
+export function obligatoriosVaciosGenerali(campos: readonly { etiqueta: string; obligatorio: boolean; valor: string }[]): string[] {
+  const out: string[] = []
+  for (const c of campos) {
+    if (!c.obligatorio || c.valor !== 'vacío') continue
+    const e = sanearFragmentoGenerali(String(c.etiqueta ?? '').replace(/\*\s*$/, '')).trim().slice(0, 60)
+    if (e && !out.includes(e)) out.push(e)
+    if (out.length >= 12) break
+  }
+  return out
+}
+
+/**
+ * v0.2.42: bloque del atasco con el estado del cálculo (va JUSTO tras «Recalcular», el runner corta a 2000). Avisos y etiquetas pasan por
+ * `sanearFragmentoGenerali`; nunca hay valores de campos. `vaciosValoracion` = obligatorios vacíos de «Datos de Valoración» al salir de ella. PURA.
+ */
+export function resumenEstadoCalculoGenerali(e: EstadoCalculoGenerali | null, vaciosValoracion: readonly string[], max = 600): string {
+  const s = (x: string, n: number) => sanearFragmentoGenerali(x).trim().slice(0, n)
+  const avisos = [...new Set((e?.avisos ?? []).map((a) => s(a, 120)).filter(Boolean))].slice(0, 6)
+  const partes: string[] = []
+  partes.push(`Avisos del portal (areaErrores): ${avisos.length ? avisos.map((a) => `«${a}»`).join(' · ') : '(ninguno visible)'}`)
+  if (portalDatosIncompletosGenerali(avisos)) partes.push('el portal da los datos por INCOMPLETOS y no calcula hasta completarlos')
+  partes.push(`obligatorios vacíos en «Datos de Valoración»: ${vaciosValoracion.length ? vaciosValoracion.map((x) => s(x, 60)).join(' · ') : '(ninguno detectado)'}`)
+  const vacios = (e?.obligatoriosVacios ?? []).map((x) => s(x, 60)).filter(Boolean)
+  partes.push(`obligatorios vacíos en «Garantías y Resultados»: ${vacios.length ? vacios.join(' · ') : '(ninguno detectado)'}`)
+  partes.push(`cargando: ${e?.cargando === true ? 'sí' : e?.cargando === false ? 'no' : '¿?'}`)
+  const botones = (e?.botones ?? []).map((x) => s(x, 30)).filter(Boolean)
+  partes.push(`botones/enlaces del marco: ${botones.length ? botones.join(' · ') : '(ninguno)'}`)
+  return `Estado del cálculo: ${partes.join('; ')}`.slice(0, max)
+}
+
 /** Quita lo que puede ser dato personal de un fragmento de texto (NIF/NIE/CIF, fechas, correos, teléfonos, matrículas, CP). PURA. */
 export function sanearFragmentoGenerali(t: string): string {
   return String(t ?? '')

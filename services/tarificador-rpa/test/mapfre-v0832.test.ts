@@ -6,8 +6,8 @@ import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { chromium, type Browser, type Locator, type Page } from 'playwright'
-import { avisoSiniestralidadMapfre, companiaAnteriorEnDatosBasicos, leerSiniestralidadMapfre, mapfreAuto, ofertasDesdePrimasMapfre, siniestralidadFijadaPorMapfre } from '../src/adapters/mapfre/auto.ts'
+import { chromium, type Browser, type Page } from 'playwright'
+import { avisoSiniestralidadMapfre, leerSiniestralidadMapfre, mapfreAuto, ofertasDesdePrimasMapfre, siniestralidadFijadaPorMapfre } from '../src/adapters/mapfre/auto.ts'
 
 let browser: Browser
 before(async () => {
@@ -39,37 +39,8 @@ const INFO = (siniestros: string, off = true) => `<app-coberturas><app-info-desc
 <mat-form-field><label><mat-label>Expuestos/Años</mat-label></label><input formcontrolname="expuestos" value="5" ${off ? 'disabled' : ''}></mat-form-field>
 <mat-form-field><label><mat-label>Siniestros</mat-label></label><input formcontrolname="siniestros" value="${siniestros}" ${off ? 'disabled' : ''}></mat-form-field>
 </div></mat-expansion-panel></mat-accordion></app-info-descuentos></app-coberturas>`
-const FORM = { ramo: 'auto', aniosAseguradoAnterior: 3, companiaAnterior: 'ZZ Seguros' } as never
-const ctxElegir = (elegidas: string[][]) => ({ formador: undefined, elegirMatSelect: async (_s: Locator, o: string[]) => { elegidas.push(o); return { texto: o[0], origen: 'coincidencia' as const } } }) as never
 
-test('v0.8.32 · la versión del bot es 0.8.32', () => assert.equal(mapfreAuto.version, '0.8.32'))
-
-test('«Compañia» visible en «Datos básicos»: se elige AHÍ con el helper común y el nombre exacto del riesgo', async () => {
-  const page = await pagina(PASO_1(true))
-  const elegidas: string[][] = []
-  assert.equal(await companiaAnteriorEnDatosBasicos(page, FORM, ctxElegir(elegidas), 0), true)
-  assert.deepEqual(elegidas, [['ZZ Seguros']])
-})
-
-test('«Compañia» de Datos básicos OCULTO por el stepper (otro paso): no se elige, no se atasca, devuelve false', async () => {
-  const page = await pagina(PASO_1(false))
-  const elegidas: string[][] = []
-  assert.equal(await companiaAnteriorEnDatosBasicos(page, FORM, ctxElegir(elegidas), 0), false)
-  assert.deepEqual(elegidas, [])
-})
-
-test('sin compañía anterior en el riesgo (0 años o sin nombre) no se toca el desplegable', async () => {
-  const page = await pagina(PASO_1(true))
-  const elegidas: string[][] = []
-  assert.equal(await companiaAnteriorEnDatosBasicos(page, { ramo: 'auto', aniosAseguradoAnterior: 0 } as never, ctxElegir(elegidas), 0), false)
-  assert.equal(await companiaAnteriorEnDatosBasicos(page, { ramo: 'auto', aniosAseguradoAnterior: 3, companiaAnterior: '  ' } as never, ctxElegir(elegidas), 0), false)
-  assert.deepEqual(elegidas, [])
-})
-
-test('visible pero el contexto no trae `elegirMatSelect`: hueco (nunca se omite en silencio)', async () => {
-  const page = await pagina(PASO_1(true))
-  await assert.rejects(companiaAnteriorEnDatosBasicos(page, FORM, { formador: undefined } as never, 0), /elegir opción de mat-select/)
-})
+test('v0.8.32 · la versión del bot es 0.8.33 (o posterior)', () => assert.equal(mapfreAuto.version, '0.8.33'))
 
 test('siniestralidad DESHABILITADA tras acordeón plegado = la fija Mapfre; habilitada o ausente = no', async () => {
   assert.equal(await siniestralidadFijadaPorMapfre(await pagina(`<body>${INFO('2')}</body>`)), true)
@@ -97,11 +68,8 @@ test('el aviso viaja en CADA oferta (avisosExtra), sin pasar por supuestos', () 
   assert.ok(o[0]!.avisos.includes('AVISO-PRUEBA'))
 })
 
-test('cableado: Datos básicos elige la compañía ANTES de «Continuar»; Figuras no la repite ni difiere nada; la siniestralidad fijada por Mapfre no se escribe', () => {
+test('cableado: la siniestralidad fijada por Mapfre no se escribe y se avisa; la compañía anterior ya NO se elige en Datos básicos (retirado en 0.8.33)', () => {
   const src = readFileSync(new URL('../src/adapters/mapfre/auto.ts', import.meta.url), 'utf8')
-  assert.match(src, /const companiaElegida = await companiaAnteriorEnDatosBasicos\(nsei, f, ctx\)\s*await continuar\(nsei, ctx, 'datosBasicos'\)/)
-  assert.match(src, /!\(companiaYaElegida && o\.sel === SEL_HISTORIAL\.companiaAnterior\)/)
-  assert.match(src, /const companiaYaElegida = await pasoDatosBasicos\(nsei, form, ctx\)/)
   assert.match(src, /if \(fijaMapfre\) ctx\.formador\?\.log\('mapfre_siniestralidad_fijada_por_mapfre'[^\n]*\n\s*else await rellenarCamposTexto\(nsei, \{ escribibles: opsSiniestros/)
   assert.match(src, /avisoSiniestralidadMapfre\(await leerSiniestralidadMapfre\(nsei\)/)
   assert.doesNotMatch(src, /rellenarTextosDiferidos|rellenarTextosSiniestralidad|companiaHabilitadaOculta|const diferidos|diferidosTexto/)
