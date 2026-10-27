@@ -23,7 +23,8 @@
 // `cancelacion_vista_at` (≥ la real): sobrecuenta esperadas → ritmo a la baja = lado prudente.
 // La señal HISTÓRICA no las cuenta: una noche cancelada no se vendió.
 //
-// 🚦 DESPLIEGUE GRADUAL: la prima solo se APLICA a los pisos de `SIVRA_PRIMA_FINDE_PISOS`
+// 🚦 DESPLIEGUE GRADUAL: la prima (y el factor dom-jue de más abajo) solo se APLICA a los pisos de
+// `SIVRA_PRIMA_FINDE_PISOS`
 // (property_id separados por comas; vacía/ausente = ninguno). Se calcula para todos (parte).
 //
 // Tres estados, como manda el CLAUDE.md raíz: `prima: null` = sin muestra (no se sabe → SIN
@@ -93,12 +94,112 @@ export type RitmoFinde = {
   esperadasFuturas: number
   /** noches vie/sáb pasadas que solo estaban «en libro» por una reserva luego cancelada */
   nochesCanceladasHist: number
+  /** Factor dom-jue a la baja de última hora (`factorRitmoSemana`). Ausente = no calculado → sin efecto. */
+  semana?: RitmoSemana
 }
 
 const DIA = 86_400_000
 const aDia = (iso: string) => Math.floor(Date.parse(iso.slice(0, 10) + "T00:00:00Z") / DIA)
 const aIso = (n: number) => new Date(n * DIA).toISOString().slice(0, 10)
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x))
+
+/** Lo que se mide de UN tipo de noche (vie/sáb o dom-jue). Lo comparten la prima y el factor entre semana. */
+type CurvaNoches = {
+  /** noche (día) del tipo en [desde, hasta] → antelación con que se vendió (null = desconocida) */
+  vendidas: Map<number, number | null>
+  /** reservas con alguna noche PASADA del tipo y antelación conocida (la muestra) */
+  reservasTipo: number
+  /** noches pasadas del tipo en la ventana, y cuántas se vendieron */
+  totalHist: number
+  vendHist: number
+  /** antelaciones conocidas de las noches pasadas vendidas */
+  leadsHist: number[]
+  /** noche pasada → tramos (antelación vista, antelación reserva] en que estuvo en libro por una cancelada */
+  enLibro: Map<number, [number, number][]>
+}
+
+function curvaNoches(
+  reservas: ReservaRitmo[], canceladas: CanceladaRitmo[], h: number, desde: number, hasta: number,
+  esTipo: (iso: string) => boolean,
+): CurvaNoches {
+  // Noche → antelación (días entre la reserva y ESA noche). Un Map y no un array: dos filas que
+  // cubren la misma noche (duplicado de importación) cuentan UNA noche vendida, con la antelación
+  // más larga conocida. `null` = vendida con antelación desconocida.
+  const vendidas = new Map<number, number | null>()
+  const conTipo = new Set<number>()
+  reservas.forEach((r, idx) => {
+    const n = Math.floor(Number(r.nights))
+    if (!r.checkIn || !(n > 0)) return
+    const ci = aDia(r.checkIn)
+    if (!Number.isFinite(ci)) return
+    const rv = r.reservedAt ? aDia(r.reservedAt) : NaN
+    for (let d = ci; d < ci + n; d++) {
+      if (d < desde || d > hasta) continue
+      if (!esTipo(aIso(d))) continue
+      const lead = Number.isFinite(rv) && rv <= d ? d - rv : null
+      const prev = vendidas.get(d)
+      if (prev === undefined || (lead != null && (prev == null || lead > prev))) vendidas.set(d, lead)
+      if (d < h && lead != null) conTipo.add(idx)
+    }
+  })
+
+  let totalHist = 0, vendHist = 0
+  const leadsHist: number[] = []
+  for (let d = desde; d < h; d++) {
+    if (!esTipo(aIso(d))) continue
+    totalHist++
+    if (vendidas.has(d)) {
+      vendHist++
+      const l = vendidas.get(d)
+      if (l != null) leadsHist.push(l)
+    }
+  }
+
+  // Canceladas pasadas: por noche, los tramos [antelación de la vista, antelación de la reserva]
+  // en los que estuvo en libro. En libro a distancia k ⇔ vistaLead < k ≤ lead.
+  const enLibro = new Map<number, [number, number][]>()
+  for (const c of canceladas) {
+    const n = Math.floor(Number(c.nights))
+    if (!c.checkIn || !(n > 0) || !c.reservedAt) continue
+    const ci = aDia(c.checkIn), rv = aDia(c.reservedAt)
+    const vi = c.vistaAt ? aDia(c.vistaAt) : NaN
+    if (!Number.isFinite(ci) || !Number.isFinite(rv)) continue
+    for (let d = ci; d < ci + n; d++) {
+      if (d < desde || d >= h || rv > d || !esTipo(aIso(d))) continue
+      const l = enLibro.get(d) ?? []
+      l.push([Number.isFinite(vi) ? d - vi : -Infinity, d - rv])
+      enLibro.set(d, l)
+    }
+  }
+  return { vendidas, reservasTipo: conTipo.size, totalHist, vendHist, leadsHist, enLibro }
+}
+
+/** Noches pasadas que a distancia k solo estaban en libro por una cancelada. */
+function extraCanceladas(c: CurvaNoches, k: number): number {
+  let x = 0
+  for (const [d, tramos] of c.enLibro) {
+    if (c.vendidas.has(d)) { const l = c.vendidas.get(d); if (l == null || l >= k) continue }
+    if (tramos.some(([vl, ld]) => vl < k && k <= ld)) x++
+  }
+  return x
+}
+
+/**
+ * Noches del tipo en (h, h+dias] vendidas frente a esperadas a estas alturas: cada noche «debería»
+ * estar vendida con probabilidad occ × P(antelación ≥ distancia), más las que a esa distancia
+ * estaban en libro por una reserva luego cancelada (simetría con el futuro, ver cabecera).
+ */
+function ritmoTramo(c: CurvaNoches, h: number, dias: number, esTipo: (iso: string) => boolean) {
+  const occ = c.vendHist / c.totalHist
+  const cuotaGE = (dd: number) => c.leadsHist.filter(l => l >= dd).length / c.leadsHist.length
+  let esperadas = 0, vendidas = 0
+  for (let d = h + 1; d <= h + dias; d++) {
+    if (!esTipo(aIso(d))) continue
+    esperadas += occ * cuotaGE(d - h) + (c.enLibro.size ? extraCanceladas(c, d - h) / c.totalHist : 0)
+    if (c.vendidas.has(d)) vendidas++
+  }
+  return { occ, cuotaGE, esperadas, vendidas }
+}
 
 /**
  * Prima vie/sáb de un piso. `hoy` = 'YYYY-MM-DD' INYECTADO (nunca el reloj de aquí dentro).
@@ -118,90 +219,20 @@ export function primaRitmoFinde(
   const minEsp = o.minEsperadas ?? MIN_ESPERADAS
 
   const h = aDia(hoy)
-  const desde = h - ventana
-  const hasta = h + horizonte
-
-  // Noche → antelación (días entre la reserva y ESA noche). Un Map y no un array: dos filas que
-  // cubren la misma noche (duplicado de importación) cuentan UNA noche vendida, con la antelación
-  // más larga conocida. `null` = vendida con antelación desconocida.
-  const vendidas = new Map<number, number | null>()
-  const reservasConFinde = new Set<number>()
-  reservas.forEach((r, idx) => {
-    const n = Math.floor(Number(r.nights))
-    if (!r.checkIn || !(n > 0)) return
-    const ci = aDia(r.checkIn)
-    if (!Number.isFinite(ci)) return
-    const rv = r.reservedAt ? aDia(r.reservedAt) : NaN
-    for (let d = ci; d < ci + n; d++) {
-      if (d < desde || d > hasta) continue
-      if (!esNocheFinde(aIso(d))) continue
-      const lead = Number.isFinite(rv) && rv <= d ? d - rv : null
-      const prev = vendidas.get(d)
-      if (prev === undefined || (lead != null && (prev == null || lead > prev))) vendidas.set(d, lead)
-      if (d < h && lead != null) reservasConFinde.add(idx)
-    }
-  })
-
-  let totalHist = 0, vendHist = 0
-  const leadsHist: number[] = []
-  for (let d = desde; d < h; d++) {
-    if (!esNocheFinde(aIso(d))) continue
-    totalHist++
-    if (vendidas.has(d)) {
-      vendHist++
-      const l = vendidas.get(d)
-      if (l != null) leadsHist.push(l)
-    }
-  }
-
-  // Canceladas pasadas: por noche vie/sáb, los tramos [antelación de la vista, antelación de la
-  // reserva] en los que estuvo en libro. En libro a distancia k ⇔ vistaLead < k ≤ lead.
-  const enLibro = new Map<number, [number, number][]>()
-  for (const c of canceladas) {
-    const n = Math.floor(Number(c.nights))
-    if (!c.checkIn || !(n > 0) || !c.reservedAt) continue
-    const ci = aDia(c.checkIn), rv = aDia(c.reservedAt)
-    const vi = c.vistaAt ? aDia(c.vistaAt) : NaN
-    if (!Number.isFinite(ci) || !Number.isFinite(rv)) continue
-    for (let d = ci; d < ci + n; d++) {
-      if (d < desde || d >= h || rv > d || !esNocheFinde(aIso(d))) continue
-      const l = enLibro.get(d) ?? []
-      l.push([Number.isFinite(vi) ? d - vi : -Infinity, d - rv])
-      enLibro.set(d, l)
-    }
-  }
-  /** noches pasadas que a distancia k solo estaban en libro por una cancelada */
-  const extraCanceladas = (k: number) => {
-    let x = 0
-    for (const [d, tramos] of enLibro) {
-      if (vendidas.has(d)) { const l = vendidas.get(d); if (l == null || l >= k) continue }
-      if (tramos.some(([vl, ld]) => vl < k && k <= ld)) x++
-    }
-    return x
-  }
+  const c = curvaNoches(reservas, canceladas, h, h - ventana, h + horizonte, esNocheFinde)
 
   const base: RitmoFinde = {
-    prima: null, motivo: "sin_muestra", reservasFinde: reservasConFinde.size,
+    prima: null, motivo: "sin_muestra", reservasFinde: c.reservasTipo,
     ocupacionFinde: null, cuotaAnticipada: null, ritmo: null, vendidasFuturas: 0, esperadasFuturas: 0,
-    nochesCanceladasHist: enLibro.size,
+    nochesCanceladasHist: c.enLibro.size,
   }
-  if (reservasConFinde.size < minReservas || totalHist === 0 || leadsHist.length === 0) return base
+  if (c.reservasTipo < minReservas || c.totalHist === 0 || c.leadsHist.length === 0) return base
 
-  const occ = vendHist / totalHist
-  const cuotaGE = (dd: number) => leadsHist.filter(l => l >= dd).length / leadsHist.length
+  // Ritmo sobre el horizonte entero (ver `ritmoTramo`); la señal histórica sale de la misma curva.
+  const { occ, cuotaGE, esperadas, vendidas: vendFut } = ritmoTramo(c, h, horizonte, esNocheFinde)
   const cuotaAnt = cuotaGE(X)
   const senalHist = occ * cuotaAnt
   const A = clamp((senalHist - sBaja) / (sAlta - sBaja), 0, 1)
-
-  // Ritmo: cada noche vie/sáb futura «debería» estar vendida ya con probabilidad
-  // occ × P(antelación ≥ distancia), más las que a esa distancia estaban en libro por una reserva
-  // luego cancelada (simetría con el futuro, ver cabecera). La suma es lo esperado.
-  let esperadas = 0, vendFut = 0
-  for (let d = h + 1; d <= hasta; d++) {
-    if (!esNocheFinde(aIso(d))) continue
-    esperadas += occ * cuotaGE(d - h) + (enLibro.size ? extraCanceladas(d - h) / totalHist : 0)
-    if (vendidas.has(d)) vendFut++
-  }
   const ritmo = esperadas >= minEsp ? vendFut / esperadas : null
 
   let intensidad = A
@@ -212,12 +243,134 @@ export function primaRitmoFinde(
   const prima = Number((1 + (primaMax - 1) * intensidad).toFixed(3))
 
   return {
-    prima, motivo: "evaluada", reservasFinde: reservasConFinde.size,
+    prima, motivo: "evaluada", reservasFinde: c.reservasTipo,
     ocupacionFinde: Number(occ.toFixed(3)), cuotaAnticipada: Number(cuotaAnt.toFixed(3)),
     ritmo: ritmo == null ? null : Number(ritmo.toFixed(3)),
     vendidasFuturas: vendFut, esperadasFuturas: Number(esperadas.toFixed(2)),
-    nochesCanceladasHist: enLibro.size,
+    nochesCanceladasHist: c.enLibro.size,
   }
+}
+
+// ── ENTRE SEMANA (dom-jue) a la BAJA, solo a ÚLTIMA HORA (27/10/2026) ─────────────────────────
+//
+// Medido en House ese día: dom-jue al 35 % en 12 meses a 412 €/noche vendida, antelación mediana 13
+// días; el huésped veía 450-560 € en nov-feb con 10-30 % vendido. Bajar entre semana a MESES vista
+// sería un error (esas noches se reservan tarde: ir «por detrás» a 90 días es lo normal). La palanca
+// es la última hora: el factor solo existe DENTRO de la ventana de antelación típica del piso
+// (p75 de la antelación de sus noches dom-jue, mín. 7 d, máx. 45 d) y solo si las noches dom-jue de
+// esa ventana van por DETRÁS de lo que el histórico diría a esa misma distancia. Misma curva y
+// misma simetría de canceladas que la prima vie/sáb (`curvaNoches`/`ritmoTramo`).
+//
+// Tres estados: `factor: null` = no se sabe (muestra < 10 reservas dom-jue, o tramo sin esperadas
+// suficientes para juzgar) → SIN efecto · `1` = evaluado y va al día o por delante · <1 = baja.
+// Rango [FACTOR_SEMANA_MIN, 1]. Con la urgencia (`lastminute_k`) NO se multiplica: el motor aplica
+// la MÁS FUERTE de las dos (ver `apply`), porque las dos bajan la misma noche por la misma razón.
+
+/** Factor mínimo (−15 %). */
+export const FACTOR_SEMANA_MIN = 0.85
+/** Reservas con noche dom-jue (y antelación conocida) para opinar. */
+export const MIN_RESERVAS_SEMANA = 10
+/** Percentil de la antelación dom-jue que marca la ventana de última hora… */
+export const PCTL_VENTANA_SEMANA = 0.75
+/** …con estos límites en días. El máximo impide que un piso de antelación larga baje a meses vista. */
+export const VENTANA_SEMANA_MIN = 7
+export const VENTANA_SEMANA_MAX = 45
+/** Ritmo (vendidas/esperadas) con el que ya se aplica el factor mínimo. */
+export const RITMO_SEMANA_BAJO = 0.5
+
+export type RitmoSemanaOpts = {
+  factorMin?: number
+  ventanaDias?: number
+  minReservas?: number
+  pctl?: number
+  ventanaMin?: number
+  ventanaMax?: number
+  ritmoBajo?: number
+  minEsperadas?: number
+}
+
+export type RitmoSemana = {
+  /** null = no se sabe (SIN efecto). 1 = evaluado, sin bajada. <1 = bajada en la ventana. */
+  factor: number | null
+  motivo: "sin_muestra" | "sin_ritmo" | "evaluada"
+  reservasSemana: number
+  /** días vista hasta los que actúa (p75 acotado); null sin muestra */
+  ventanaDias: number | null
+  ocupacionSemana: number | null
+  ritmo: number | null
+  vendidasVentana: number
+  esperadasVentana: number
+}
+
+const pctl = (xs: number[], p: number) => {
+  const s = [...xs].sort((a, b) => a - b)
+  return s[Math.min(s.length - 1, Math.max(0, Math.ceil(p * s.length) - 1))]
+}
+
+/** Factor dom-jue de un piso. Mismas entradas que `primaRitmoFinde` (hoy INYECTADO). */
+export function factorRitmoSemana(
+  reservas: ReservaRitmo[], hoy: string, o: RitmoSemanaOpts = {}, canceladas: CanceladaRitmo[] = [],
+): RitmoSemana {
+  const fMin = o.factorMin ?? FACTOR_SEMANA_MIN
+  const ventanaHist = o.ventanaDias ?? VENTANA_HISTORICA_DIAS
+  const minReservas = o.minReservas ?? MIN_RESERVAS_SEMANA
+  const minEsp = o.minEsperadas ?? MIN_ESPERADAS
+  const rBajo = o.ritmoBajo ?? RITMO_SEMANA_BAJO
+  const esSemana = (iso: string) => !esNocheFinde(iso)
+
+  const h = aDia(hoy)
+  const vMax = o.ventanaMax ?? VENTANA_SEMANA_MAX
+  const c = curvaNoches(reservas, canceladas, h, h - ventanaHist, h + vMax, esSemana)
+  const base: RitmoSemana = {
+    factor: null, motivo: "sin_muestra", reservasSemana: c.reservasTipo, ventanaDias: null,
+    ocupacionSemana: null, ritmo: null, vendidasVentana: 0, esperadasVentana: 0,
+  }
+  if (c.reservasTipo < minReservas || c.totalHist === 0 || c.leadsHist.length === 0) return base
+
+  const W = clamp(Math.ceil(pctl(c.leadsHist, o.pctl ?? PCTL_VENTANA_SEMANA)), o.ventanaMin ?? VENTANA_SEMANA_MIN, vMax)
+  const t = ritmoTramo(c, h, W, esSemana)
+  const medido = {
+    ...base, ventanaDias: W, ocupacionSemana: Number(t.occ.toFixed(3)),
+    vendidasVentana: t.vendidas, esperadasVentana: Number(t.esperadas.toFixed(2)),
+  }
+  if (t.esperadas < minEsp) return { ...medido, motivo: "sin_ritmo" }
+  const ritmo = t.vendidas / t.esperadas
+  const deficit = clamp((1 - ritmo) / (1 - rBajo), 0, 1)
+  return {
+    ...medido, motivo: "evaluada", ritmo: Number(ritmo.toFixed(3)),
+    factor: Number((1 - (1 - fMin) * deficit).toFixed(3)),
+  }
+}
+
+/**
+ * Factor dom-jue que SE APLICA al piso. Mismo gate que la prima: piso no habilitado → 1 ·
+ * habilitado sin lectura/muestra → null (sin efecto) · habilitado y medido → el factor.
+ */
+export function factorSemanaPiso(r: RitmoFinde | null | undefined, pid: string, habilitados: Set<string>): number | null {
+  if (!habilitados.has(pid)) return 1
+  return r?.semana?.factor ?? null
+}
+
+/**
+ * Factor que aplica a UNA fecha: solo noches dom-jue, dentro de la ventana (0 ≤ díasVista ≤ ventana)
+ * y sin evento (ni víspera: `factorEvento > 1` ya protege). Fuera de eso, 1. Nunca por debajo del mínimo.
+ */
+export function factorSemanaFecha(p: {
+  fecha: string; diasVista: number; factor: number | null; ventanaDias: number | null; factorEvento: number
+}): number {
+  if (p.factor == null || !(p.factor < 1) || p.ventanaDias == null) return 1
+  if (esNocheFinde(p.fecha)) return 1
+  if (!Number.isFinite(p.diasVista) || p.diasVista < 0 || p.diasVista > p.ventanaDias) return 1
+  if (Number(p.factorEvento) > 1) return 1
+  return Math.max(p.factor, FACTOR_SEMANA_MIN)
+}
+
+/**
+ * Urgencia combinada: la MÁS FUERTE de la urgencia (`factorLastMinute`) y el factor dom-jue, nunca su
+ * producto (las dos bajan la misma noche por la misma razón: se acerca sin venderse).
+ */
+export function urgenciaCombinada(lastminute: number, semana: number): number {
+  return Math.min(1, lastminute, semana)
 }
 
 /** Filas de BD (las de `leerRitmoFinde`) → prima por piso. Puro: lo comparten `apply` y `canal`. */
@@ -237,7 +390,10 @@ export function ritmoFindePorPiso(
     cs.get(x.pid)!.push({ checkIn: x.ci, nights: Number(x.nights), reservedAt: x.rv, vistaAt: x.vista })
   }
   const out = new Map<string, RitmoFinde>()
-  for (const [pid, r] of rs) out.set(pid, primaRitmoFinde(r, hoy, {}, cs.get(pid) ?? []))
+  for (const [pid, r] of rs) {
+    const c = cs.get(pid) ?? []
+    out.set(pid, { ...primaRitmoFinde(r, hoy, {}, c), semana: factorRitmoSemana(r, hoy, {}, c) })
+  }
   return out
 }
 

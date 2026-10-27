@@ -10,7 +10,9 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { sueloFinde } from "@/lib/sivra/pricing-suelo-finde"
-import { primaFindeFecha, pisosConPrimaFinde, primaPiso, type RitmoFinde } from "@/lib/sivra/pricing-ritmo-finde"
+import {
+  primaFindeFecha, pisosConPrimaFinde, primaPiso, factorSemanaPiso, factorSemanaFecha, urgenciaCombinada, type RitmoFinde,
+} from "@/lib/sivra/pricing-ritmo-finde"
 import { leerRitmoFinde } from "@/lib/sivra/pricing-ritmo-finde-lectura"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
 import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
@@ -969,6 +971,9 @@ export async function POST(req: NextRequest) {
     const rFinde = ritmoFinde.get(r.property_id) ?? null
     const primaFindeHabilitada = pisosPrimaFinde.has(r.property_id)
     const primadasFinde: { fecha: string; prima: number }[] = []
+    // Noches dom-jue en las que el factor de última hora por ritmo BAJÓ más que la urgencia (mismo gate).
+    const fSemanaPiso = factorSemanaPiso(rFinde, r.property_id, pisosPrimaFinde)
+    const bajadasSemana: { fecha: string; factor: number; lastminute: number }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -1184,7 +1189,18 @@ export async function POST(req: NextRequest) {
         },
         { k: Number(r.lastminute_k) },
       )
-      if (lm.factor < 1) target = Math.round(target * lm.factor)
+      // 📉 Factor dom-jue por RITMO propio (pricing-ritmo-finde.ts): solo dentro de la ventana de
+      // antelación típica del piso y si las noches dom-jue van por detrás. NO se multiplica con la
+      // urgencia: las dos bajan la misma noche porque se acerca sin venderse, así que manda la más
+      // fuerte (`urgenciaCombinada`). Va antes del raíl y de min_price: ambos siguen mandando.
+      const fSem = factorSemanaFecha({
+        // Con premio de anticipación en la misma noche (antelacion_k>0) no se baja: señales opuestas.
+        fecha: date, diasVista: daysOut, factor: antic.factor > 1 ? 1 : fSemanaPiso,
+        ventanaDias: rFinde?.semana?.ventanaDias ?? null, factorEvento: evFactor,
+      })
+      if (fSem < lm.factor) bajadasSemana.push({ fecha: date, factor: fSem, lastminute: Number(lm.factor.toFixed(4)) })
+      const urg = urgenciaCombinada(lm.factor, fSem)
+      if (urg < 1) target = Math.round(target * urg)
 
       // Suelo del raíl del día: lo captura también el techo de mercado de más abajo, para que un
       // precio inflado DESCIENDA a velocidad de raíl (varias pasadas), nunca de golpe.
@@ -1492,6 +1508,12 @@ export async function POST(req: NextRequest) {
       ritmo_finde: rFinde
         ? { ...rFinde, habilitada: primaFindeHabilitada, noches: primadasFinde.length, muestra: primadasFinde.slice(0, 6) }
         : { prima: null, habilitada: primaFindeHabilitada, motivo: lecturasCaidas.some(l => l.nombre === 'ritmo_finde') ? 'lectura_caida' : 'sin_reservas' },
+      // Factor dom-jue de última hora (pricing-ritmo-finde.ts), mismo gate que la prima. `factor: null`
+      // = sin muestra o sin ritmo juzgable (NO se aplicó nada). `noches` = fechas en las que bajó MÁS
+      // que la urgencia (donde la urgencia ya bajaba más, manda ella y no cuenta aquí).
+      ritmo_semana: rFinde?.semana
+        ? { ...rFinde.semana, habilitada: primaFindeHabilitada, noches: bajadasSemana.length, muestra: bajadasSemana.slice(0, 6) }
+        : { factor: null, habilitada: primaFindeHabilitada, motivo: lecturasCaidas.some(l => l.nombre === 'ritmo_finde') ? 'lectura_caida' : 'sin_reservas' },
       // Los límites del parte se componen con los factores GLOBALES del piso (los mismos que
       // `baseTargetGlobal`): por fecha llevan el `dqDate` de esa fecha, que aquí no existe.
       bounds: {
