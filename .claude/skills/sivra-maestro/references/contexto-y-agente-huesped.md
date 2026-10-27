@@ -340,7 +340,12 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 - **Aviso Smoobu:** transaccional, autorizado por el ✅/🔁 de esa factura (no es el agente: su regla «solo ✅ Enviar»
   no cambia). Solo en la transición a `enviada` (1 fila) + no se repite si `mensajes_enviados` ya tiene el texto.
   Fail-open: si Smoobu falla, la factura sigue enviada y Telegram dice «⚠️ aviso en Smoobu no enviado: <motivo>».
-- **Pendiente:** VeriFactu (huella F1), rectificativas, lectura de Gmail (respuestas del huésped).
+- **Estado (27/10/2026):** en producción. 1ª factura real **2026-046** (Noemí Prieto, reserva 149826486, 244,86€,
+  IVA 0): emitida, correo enviado y aviso Smoobu OK; la serie va por **47**. Alberto decidió **mantener el ✅** (nada se
+  emite sin él). Alta sin sesión (p. ej. desde una sesión de Claude): INSERT en `sivra_factura_solicitudes` con token
+  de **43 car. base64url** (`tokenConForma`) y POST a `/api/publico/factura/<token>` con los datos → borrador a Telegram.
+- **Pendiente:** VeriFactu (huella F1), rectificativas, lectura de Gmail (respuestas del huésped). Alberto: no numerar
+  más en Smoobu; confirmar la exención con su gestor (si hay servicios hoteleros → IVA 10 %).
 
 ## Mensajes PROGRAMADOS a huéspedes (31/08/2026 — sustituto de los automáticos de Smoobu)
 Ciclo de reserva NUESTRO (confirmación → acceso a 7 días → víspera con códigos → bienvenida →
