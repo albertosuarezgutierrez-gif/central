@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/10/2026, 9)** — Patrimonio: #5134 MERGEADO (hoja de ruta §7: 8 de 10 hechos; faltan P5 consentimiento inquilino —borrador entregado, revisión legal— y P6 OK legal P15). Permisos heredados de `prisma_seguros` recortados en prod (SQL revocar_heredados; backup_seguros intacto). NO cambiar default privileges de `seguros` (romperían asegura): cepo #5143 exige REVOKE en cada SQL nuevo de portal_patrimonio_*. `/acc.bak` sigue (lo borra Alberto).
+
 **(27/10/2026, 8)** — ✅ Los 5 SQL de patrimonio (hipoteca, edificio_unidades, invitacion_patrimonio, volcado, recomendacion) APLICADOS en producción por orden de Alberto, verificados (CHECK, FK, triggers, GRANT; crm_seguros sin permisos). PR #5134 sale de draft. Abierto: `prisma_seguros` y `backup_seguros` heredan permisos por defecto del schema en las tablas portal_patrimonio_* (incl. correo_hash de recomendación): decidir si se revocan.
 
 **(27/10/2026, 7)** — Patrimonio (Alberto: «haz tú todo»): informe anual para el gestor (CSV + imprimible), «invita a otro propietario» (cupo IA amplio 90 días a ambos), panel de conversión en /correduria (Más → Referencia) con endpoint asegura `/api/operador/patrimonio-conversion`, y 409 `fichero_ya_importado`. QUINTO SQL pendiente: `2026-10-27_portal_patrimonio_recomendacion.sql` (sin DROP). Aplicar los 5 SQL quedó BLOQUEADO para Claude (despliegue a producción): los aplica Alberto o lo pide explícitamente. `/acc.bak` (copia suelta de accesos.ts) no se pudo borrar: lo borra Alberto. Pendientes: P5 consentimiento, P6 OK legal P15; coste IA del panel es estimado.
