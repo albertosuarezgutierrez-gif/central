@@ -8,6 +8,7 @@ import { Prisma } from './generated/asegura-client'
 import { sqlCarteraEnVigor } from '@central/module-seguros'
 import {
   fichasModulos,
+  identidadesQueActivan,
   planDeEscritura,
   puedeActivar,
   textoHistorialModulo,
@@ -15,16 +16,18 @@ import {
   type FichaModuloOperador,
   type FilaModuloCliente,
   type ModuloPortal,
+  type VinculoDeFicha,
 } from './portal-modulos-operador'
 
 type Lectura = { identidades: string[]; filas: FilaModuloCliente[]; polizasEnVigor: number }
 
 async function leer(correduriaId: string, clienteId: string): Promise<Lectura> {
   const db = prismaAsegura()
-  const vinc = await db.$queryRaw<{ id: string }[]>`
-    select identidad_id::text as id from portal_vinculo
+  const vinc = await db.$queryRaw<VinculoDeFicha[]>`
+    select identidad_id::text as "identidadId", nivel, origen from portal_vinculo
      where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid`
-  const identidades = [...new Set(vinc.map((v) => v.id))]
+  // Sin la vista temporal del corredor ni vínculos que no operan: la misma regla que el portal (`accesosPatrimonio`).
+  const identidades = identidadesQueActivan(vinc)
   const filas = identidades.length === 0 ? [] : await db.$queryRaw<FilaModuloCliente[]>`
     select id::text as id, identidad_id::text as "identidadId", modulo, estado
       from portal_modulo where identidad_id = any(${identidades}::uuid[])`
