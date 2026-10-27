@@ -1,34 +1,34 @@
 {
  "sesion": "50350e0f-0da8-56ab-9d14-57bc872dc2c7",
  "inicio": "2026-10-27T15:11:01.234Z",
- "fin": "2026-10-27T15:42:47.602Z",
- "llamadas": 83,
+ "fin": "2026-10-27T16:45:03.192Z",
+ "llamadas": 202,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 27,
-   "chars_in": 3787,
-   "chars_out": 138837,
+   "llamadas": 29,
+   "chars_in": 4013,
+   "chars_out": 185151,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 15,
     "Glob": 2,
-    "Read": 10
+    "Read": 12
    }
   },
   "otro": {
-   "llamadas": 16,
-   "chars_in": 12561,
-   "chars_out": 100192,
+   "llamadas": 20,
+   "chars_in": 16653,
+   "chars_out": 129959,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 6,
+    "SubagentHandback": 7,
     "ToolSearch": 3,
     "SendMessage": 1,
-    "ReadNotifications": 6
+    "ReadNotifications": 9
    }
   },
   "agente:rastreador-codigo": {
@@ -55,37 +55,37 @@
    }
   },
   "bash": {
-   "llamadas": 23,
-   "chars_in": 25607,
-   "chars_out": 128232,
+   "llamadas": 120,
+   "chars_in": 121796,
+   "chars_out": 673741,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 23
+    "Bash": 120
    }
   },
   "escritura": {
-   "llamadas": 3,
-   "chars_in": 42982,
-   "chars_out": 1246504,
+   "llamadas": 17,
+   "chars_in": 160059,
+   "chars_out": 1542509,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 2,
-    "Edit": 1
+    "Write": 14,
+    "Edit": 3
    }
   },
   "agente:general-purpose": {
-   "llamadas": 3,
-   "chars_in": 7284,
-   "chars_out": 3547,
+   "llamadas": 4,
+   "chars_in": 9097,
+   "chars_out": 5570,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 2,
+   "chars_citados": 45918,
    "tools": {
-    "Agent": 3
+    "Agent": 4
    }
   },
   "agente:agente-mecanico": {
@@ -130,6 +130,17 @@
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase__execute_sql": 5
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 2194,
+   "chars_out": 2404,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 45918,
+   "tools": {
+    "Agent": 1
    }
   }
  }
