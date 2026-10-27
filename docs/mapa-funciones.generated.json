@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T16:09:50Z",
-  "sha": "6924d90efd270635c47dd5b24e3d205eafb62476",
+  "generadoEn": "2026-10-27T17:18:15Z",
+  "sha": "69cdcdffadeb5269361f3332c631405f20274922",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3474,13 +3474,13 @@
           "exportada": true,
           "params": "{ lectura }: { lectura: LecturaMisDatos }",
           "retorno": null,
-          "linea": 29,
+          "linea": 28,
           "resumen": "«Comprueba tus datos de contacto» — el aviso AUTOMÁTICO en la pestaña principal, no en «Mis datos». Dictado de Alberto (08/09/2026): «tiene que ser automático, un aviso en la intranet; yo no interveng"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5951c30c9636"
+      "hash": "a7b24a081d38"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/BuscarInmueble.tsx",
@@ -3827,13 +3827,13 @@
           "exportada": true,
           "params": "{ identidadId }: { identidadId: string }",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "La puerta a «Tu flota» desde «Mis seguros» (05/10/2026). Componente de SERVIDOR con su propia lectura, y solo aparece si esta identidad lleva la flota de alguna sociedad (dueño o jefe de flota) o tien"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fc263e3bf4e3"
+      "hash": "0c1d3d79db12"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/EnviarACompania.tsx",
@@ -3974,7 +3974,7 @@
           "exportada": true,
           "params": "{ anulaciones, firmadas, enRevision = [], consentimiento, corredor }: { anulaciones: AnulacionPendiente[] firmadas: AnulacionFirmada[] /** Bajas que pidió el cliente y revisamos: aún no se pueden firmar. */ enRevision?: AnulacionEnRevision[",
           "retorno": null,
-          "linea": 23,
+          "linea": 22,
           "resumen": "«Pendiente de tu firma» (ASegura OS, pieza 2-d-2): la carta de anulación que el corredor ha preparado y que solo sale hacia la compañía con la firma del tomador. Reglas: - La carta se enseña ENTERA an"
         },
         {
@@ -3983,7 +3983,7 @@
           "exportada": false,
           "params": "{ r }: { r: AnulacionEnRevision }",
           "retorno": null,
-          "linea": 62
+          "linea": 61
         },
         {
           "nombre": "Firmada",
@@ -3991,7 +3991,7 @@
           "exportada": false,
           "params": "{ f }: { f: AnulacionFirmada }",
           "retorno": null,
-          "linea": 76
+          "linea": 75
         },
         {
           "nombre": "hora",
@@ -3999,7 +3999,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 98
+          "linea": 97
         },
         {
           "nombre": "fecha",
@@ -4007,7 +4007,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 102
+          "linea": 101
         },
         {
           "nombre": "Tarjeta",
@@ -4015,12 +4015,12 @@
           "exportada": false,
           "params": "{ a, consentimiento, corredor }: { a: AnulacionPendiente; consentimiento: string; corredor: boolean }",
           "retorno": null,
-          "linea": 113
+          "linea": 112
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "323ae73283c2"
+      "hash": "c570245524a6"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/GestionContactos.tsx",
@@ -4346,7 +4346,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 111
+          "linea": 102
         },
         {
           "nombre": "Titular",
@@ -4354,7 +4354,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, bajasAbiertas = null, bajasParaMejorar = null, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date /** Solo en «mias»:",
           "retorno": null,
-          "linea": 902,
+          "linea": 815,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -4363,7 +4363,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], /** De `polizasParaParte`: la única fuente de si se puede dar parte de ella. */ puedeParte: boolean, titular?: string, /** El titular tal como figura, para el mensaje a la compañía (propi",
           "retorno": "PolizaOpcionParte",
-          "linea": 967,
+          "linea": 880,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -4371,7 +4371,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "3cb9f3ffcd19"
+      "hash": "d8162337f5ab"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -4693,36 +4693,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "630af92c7a83"
-    },
-    {
-      "ruta": "apps/asegura-portal/app/(portal)/boveda/PendienteDeTi.tsx",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "avisarPendienteResuelto",
-        "PendienteDeTi"
-      ],
-      "funciones": [
-        {
-          "nombre": "avisarPendienteResuelto",
-          "kind": "function",
-          "exportada": true,
-          "params": "clave: 'contacto' | 'anulacion', id?: string",
-          "retorno": "void",
-          "linea": 10
-        },
-        {
-          "nombre": "PendienteDeTi",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ items: iniciales, anulaciones, sinComprobar, }: { items: ItemPendiente[] /** Cuántas anulaciones quedan por firmar: la fila se quita al firmar la última. */ anulaciones: number sinComprobar: string[] }",
-          "retorno": null,
-          "linea": 19,
-          "resumen": "«Pendiente de ti» (§Q.4): arriba de «Mis seguros», una sola lista de lo que necesitamos de la persona. Cada fila lleva a donde se hace. Sin nada pendiente no pinta nada; lo que no se ha podido comprob"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "9176acda3120"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PersonasPoliza.tsx",
@@ -5597,27 +5567,6 @@
       "hash": "10d7ac4fc60d"
     },
     {
-      "ruta": "apps/asegura-portal/app/(portal)/boveda/TusVencimientos.tsx",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "TusVencimientos"
-      ],
-      "funciones": [
-        {
-          "nombre": "TusVencimientos",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ vencimientos: filas, peticiones }: { vencimientos: Vencimiento[] peticiones: PeticionAbierta[] | null }",
-          "retorno": null,
-          "linea": 26,
-          "resumen": "«Tus vencimientos» (pieza 1-5 de ASegura OS, maqueta aprobada el 23/09/2026): lo SUYO que renueva en los próximos 60 días, con el botón «Quiero que me mejores el precio». Es la venta que inicia el pro"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "355f1e62508a"
-    },
-    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/VistaPorPoliza.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5630,13 +5579,13 @@
           "exportada": true,
           "params": "{ bloques, incluye, resumen, bloque, vacio, }: { bloques: readonly BloqueCartera<TitularConPolizas>[] /** Qué pólizas entran. Las que no, se omiten enteras (ver cabecera). */ incluye: (p: PolizaPortal) => boolean /** * Lo que la cabecera di",
           "retorno": null,
-          "linea": 87,
+          "linea": 88,
           "resumen": "El armazón de las pestañas «Recibos» y «Siniestros»: la MISMA lista de pólizas que la bóveda, con el bloque correspondiente debajo de cada una. ── Por qué existen esas pestañas (07/09/2026) ──────────"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9bc0a198c160"
+      "hash": "ca69ebf089bd"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/CargandoEnlace.tsx",
@@ -5783,7 +5732,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string | null",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "enviar",
@@ -5791,7 +5740,7 @@
           "exportada": false,
           "params": "url: string, cuerpo: unknown",
           "retorno": "Promise<string | null>",
-          "linea": 36
+          "linea": 37
         },
         {
           "nombre": "ChipVencimiento",
@@ -5799,7 +5748,7 @@
           "exportada": false,
           "params": "{ v }: { v: VencimientoFlota }",
           "retorno": null,
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "TextoItv",
@@ -5807,7 +5756,7 @@
           "exportada": false,
           "params": "{ itv }: { itv: ItvVehiculo }",
           "retorno": null,
-          "linea": 61
+          "linea": 62
         },
         {
           "nombre": "EditarMatriculacion",
@@ -5815,15 +5764,15 @@
           "exportada": false,
           "params": "{ empresaId, v }: { empresaId: string; v: VehiculoFlota }",
           "retorno": null,
-          "linea": 86
+          "linea": 87
         },
         {
           "nombre": "ListaVehiculos",
           "kind": "function",
           "exportada": false,
-          "params": "{ empresaId, vehiculos, recortada }: { empresaId: string; vehiculos: VehiculoFlota[]; recortada: boolean }",
+          "params": "{ empresaId, papel, vehiculos, recortada }: { empresaId: string; papel: PapelFlota; vehiculos: VehiculoFlota[]; recortada: boolean }",
           "retorno": null,
-          "linea": 138
+          "linea": 139
         },
         {
           "nombre": "JefesDeFlota",
@@ -5831,7 +5780,7 @@
           "exportada": false,
           "params": "{ empresaId, jefes, candidatos, textoJefe }: { empresaId: string; jefes: Jefe[]; candidatos: Candidato[]; textoJefe: string }",
           "retorno": null,
-          "linea": 179
+          "linea": 187
         },
         {
           "nombre": "FlotaEmpresa",
@@ -5839,7 +5788,7 @@
           "exportada": true,
           "params": "props: { empresaId: string papel: PapelFlota recortada: boolean vehiculos: VehiculoFlota[] jefes: Jefe[] | null candidatos: Candidato[] | null textoJefe: string }",
           "retorno": null,
-          "linea": 263
+          "linea": 271
         },
         {
           "nombre": "NombramientoPendiente",
@@ -5847,7 +5796,7 @@
           "exportada": true,
           "params": "{ autorizacionId, empresa, otorgadoEn }: { autorizacionId: string; empresa: string | null; otorgadoEn: string | null }",
           "retorno": null,
-          "linea": 288,
+          "linea": 296,
           "resumen": "Un nombramiento pendiente: aceptarlo o rechazarlo, por la ruta de siempre de las autorizaciones."
         }
       ],
@@ -5856,7 +5805,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f202fe06c6af"
+      "hash": "3686dfdfa7f8"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/page.tsx",
@@ -5871,13 +5820,13 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 29,
+          "linea": 30,
           "resumen": "«Tu flota» (05/10/2026) — el mínimo de empresa del piloto. Sin `?empresa=`: índice de las sociedades cuya flota puede ver esta identidad (dueño o jefe de flota) y los nombramientos que tiene pendiente"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d921cf2fb4e"
+      "hash": "2b7bd746ca9c"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/BotonSolicitarModulo.tsx",
@@ -5913,7 +5862,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "cuando",
@@ -5921,7 +5870,7 @@
           "exportada": false,
           "params": "e: EntradaCalendario",
           "retorno": "string",
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "ListaCalendario",
@@ -5929,12 +5878,12 @@
           "exportada": true,
           "params": "{ entradas, tope }: { entradas: EntradaCalendario[]; tope: number }",
           "retorno": null,
-          "linea": 38
+          "linea": 39
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0459a24f9f8a"
+      "hash": "0461afeee6f8"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/calendario/page.tsx",
@@ -5949,7 +5898,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 48
+          "linea": 51
         },
         {
           "nombre": "CalendarioPage",
@@ -5957,7 +5906,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 63,
+          "linea": 66,
           "resumen": "«Calendario» (26/10/2026, Alberto: «un solo Calendario»): LA vista de fechas del portal, en Herramientas. Junta lo que antes estaba en tres sitios —la pestaña «Recordatorios» de la bóveda, la tarjeta "
         }
       ],
@@ -5965,7 +5914,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "49754145f56d"
+      "hash": "27f3cc79363a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/calendario/Recordatorios.tsx",
@@ -6019,17 +5968,17 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 32,
-          "resumen": "«Herramientas» (26/10/2026, menú de cinco): LA ventana de las herramientas. Patrimonio, Flota, el calendario y Mi resumen (lo que antes estaba repartido entre Inicio y el menú), el Portal del Empleado"
+          "linea": 37,
+          "resumen": "«Herramientas» (26/10/2026, menú de cinco): LA ventana de las herramientas, en DOS bloques (27/10/2026): · «Herramientas que puedes activar» = los MÓDULOS (Patrimonio, Flota, Portal del Empleado…): aq"
         },
         {
           "nombre": "TarjetaModuloPortal",
           "kind": "function",
           "exportada": false,
-          "params": "{ t }: { t: TarjetaModulo }",
+          "params": "{ t, hrefFlota }: { t: TarjetaModulo; hrefFlota: string }",
           "retorno": null,
-          "linea": 142,
-          "resumen": "Una tarjeta del catálogo (Patrimonio, Flota): qué es, con qué seguros tiene que ver y su botón según el estado."
+          "linea": 156,
+          "resumen": "Una tarjeta del catálogo (Patrimonio, Flota): qué es, con qué seguros tiene que ver y su botón según el estado. El rótulo pequeño es `t.antetitulo` (del catálogo). «Abrir» de Flota va a `hrefFlota` (d"
         },
         {
           "nombre": "EstadoSolicitud",
@@ -6037,13 +5986,13 @@
           "exportada": false,
           "params": "{ t }: { t: TarjetaModulo }",
           "retorno": null,
-          "linea": 168,
+          "linea": 183,
           "resumen": "El estado de lo ya pedido (o activo, o sin comprobar). El botón de pedir NO va aquí: va en `.acciones` de la tarjeta."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7eb6504af2c8"
+      "hash": "740b647d42fe"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/page.tsx",
@@ -6058,13 +6007,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 27,
+          "linea": 31,
           "resumen": "«Inicio» (26/10/2026, decisión de Alberto): SOLO lo pendiente. Vencimientos, recibos pendientes, avisos, huecos de protección y siniestros abiertos; nada más. Ya NO lleva la lista de seguros por famil"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9327f2c8dfa0"
+      "hash": "cc04ae948092"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/PendienteInicio.tsx",
@@ -6079,7 +6028,7 @@
           "exportada": false,
           "params": "{ peligro }: { peligro?: boolean }",
           "retorno": null,
-          "linea": 21,
+          "linea": 22,
           "resumen": "Triángulo de aviso (trazo, hereda el color): sustituye al «⚠» de texto. Nunca va solo: el texto dice lo mismo."
         },
         {
@@ -6088,7 +6037,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 31,
+          "linea": 32,
           "resumen": "Escudo con visto (el de «Seguros» de la barra inferior): el estado vacío amable."
         },
         {
@@ -6097,21 +6046,42 @@
           "exportada": false,
           "params": "{ items }: { items: ItemPendiente[] }",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         },
         {
           "nombre": "PendienteInicio",
           "kind": "function",
           "exportada": true,
-          "params": "{ pendiente, huecos, patrimonioPendiente = false }: { pendiente: Pendiente; huecos: ReactNode; patrimonioPendiente?: boolean }",
+          "params": "{ pendiente, huecos, tarjetasPendientes = false, deTi = null, }: { pendiente: Pendiente huecos: ReactNode tarjetasPendientes?: boolean /** Lo que antes enseñaba «Pendiente de ti» en la bóveda (firmas, presupuestos, contacto, patrimonio). `n",
           "retorno": null,
-          "linea": 66,
+          "linea": 67,
           "resumen": "Lo pendiente de «Inicio»: vencimientos, recibos, avisos, siniestros abiertos y la sugerencia de huecos. Cliente porque los AVISOS salen de `/api/avisos` (la fuente de la campana: una sola lista, no un"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "578cd24cdec9"
+      "hash": "6b1a48ab5b90"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/inicio/TarjetaFlota.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "TarjetaFlota"
+      ],
+      "funciones": [
+        {
+          "nombre": "TarjetaFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ entrada }: { entrada: EntradaFlotaInicio | null }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "«Mi flota» en Inicio (27/10/2026), como `TarjetaPatrimonio`: lo PENDIENTE de la flota (ITV próximas, seguros de vehículos que vencen, nombramientos de jefe de flota por aceptar); el trabajo diario est"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "de7585d90769"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/TarjetaPatrimonio.tsx",
@@ -6127,12 +6097,12 @@
           "params": "{ resumen }: { resumen: { inmuebles: number | null; pendientes: number | null; puedeConfirmar: boolean } | null }",
           "retorno": null,
           "linea": 11,
-          "resumen": "«Mi patrimonio» en Inicio (27/10/2026): nº de inmuebles y gastos por confirmar. `null` = no se sabe: nunca se pinta 0 ni «0 pendientes» sobre una cifra que no se ha podido leer. `resumen === null` = n"
+          "resumen": "«Mi patrimonio» en Inicio (27/10/2026): nº de inmuebles y facturas/gastos por confirmar (los mismos «por confirmar» de la lista de gastos). `null` = no se sabe: nunca se pinta 0 ni «0 pendientes» sobr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d536f35ebd7d"
+      "hash": "38d820777038"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/layout.tsx",
@@ -6189,7 +6159,7 @@
           "exportada": true,
           "params": "{ visibles, llamar, whatsapp }: { /** Las entradas que se ofrecen a esta sesión (`menuDeSesion`). Sin ella, las cinco. Solo visibilidad. */ visibles?: readonly SeccionPortal[] llamar?: { tel: string; numero: string } /** El enlace `wa.me` y",
           "retorno": null,
-          "linea": 51,
+          "linea": 53,
           "resumen": "La navegación del portal: **un solo `<nav>` con dos formas**. 🚨 El mismo DOM se pinta como cajón (drawer) en el móvil y como lateral vertical en el escritorio; lo decide `globals.css` (`.portal-nav`)"
         },
         {
@@ -6198,7 +6168,7 @@
           "exportada": false,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 269,
+          "linea": 271,
           "resumen": "── Iconos de la barra inferior ───────────────────────────────────────────── SVG en línea y no una librería: el portal no carga ninguna de iconos y una dependencia nueva por cinco dibujos no compensa."
         },
         {
@@ -6207,7 +6177,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 277
+          "linea": 279
         },
         {
           "nombre": "IconoInicio",
@@ -6215,7 +6185,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 278
+          "linea": 280
         },
         {
           "nombre": "IconoHerramientas",
@@ -6223,7 +6193,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 279
+          "linea": 281
         },
         {
           "nombre": "IconoMas",
@@ -6231,12 +6201,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 280
+          "linea": 282
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6494fe27805f"
+      "hash": "2ea78665e354"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/patrimonio/AvisoPolizaSinInmueble.tsx",
@@ -7621,7 +7591,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "b3ca94d10f69"
+      "hash": "46b2d2ace884"
     },
     {
       "ruta": "apps/asegura-portal/app/ActivarPush.tsx",
@@ -13049,6 +13019,7 @@
         "vencimientosDeSeguros",
         "recibosPendientes",
         "fechasDePatrimonio",
+        "fechasDeFlota",
         "fechasDeRecordatorios",
         "avisosConFecha"
       ],
@@ -13059,7 +13030,7 @@
           "exportada": true,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 32,
+          "linea": 33,
           "resumen": "`YYYY-MM-DD` de una columna `date` (medianoche UTC) o `null`."
         },
         {
@@ -13068,7 +13039,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         },
         {
           "nombre": "vencimientosDeSeguros",
@@ -13076,7 +13047,7 @@
           "exportada": true,
           "params": "titulares: readonly TitularParaCalendario<P>[], titulo: (p: P) => string,",
           "retorno": "EntradaCalendarioCruda[]",
-          "linea": 53,
+          "linea": 54,
           "resumen": "Los vencimientos de los seguros que la sesión ve. Fuera lo que la compañía da por terminado (`no_vigente`) y las ya sustituidas. 🚨 Una renovación sin confirmar NO es «vencida»: no se sabe si renovó, "
         },
         {
@@ -13085,7 +13056,7 @@
           "exportada": true,
           "params": "titulares: readonly TitularParaCalendario<P>[], titulo: (p: P) => string,",
           "retorno": "EntradaCalendarioCruda[]",
-          "linea": 94,
+          "linea": 95,
           "resumen": "Los recibos que piden algo: al cobro y devueltos. Solo de las pólizas cuyo bloque de recibos SE VE en este nivel (`recibos === null` = no visible: se omite, no se dice «sin recibos»). Un anulado no en"
         },
         {
@@ -13094,8 +13065,17 @@
           "exportada": true,
           "params": "vs: readonly VencimientoPatrimonioParaCalendario[]",
           "retorno": "EntradaCalendarioCruda[]",
-          "linea": 134,
+          "linea": 135,
           "resumen": "Las fechas del patrimonio. Lo ya hecho (`cumplida`) no es una fecha por delante y no entra."
+        },
+        {
+          "nombre": "fechasDeFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "sociedades: readonly SociedadFlotaInicio[]",
+          "retorno": "EntradaCalendarioCruda[] | null",
+          "linea": 155,
+          "resumen": "La ITV de los vehículos de la flota de la empresa (27/10/2026). Solo los que tienen una ITV CALCULADA: es un cálculo sobre una inspección que no hemos visto (el detalle lo dice), nunca «ITV al día». U"
         },
         {
           "nombre": "fechasDeRecordatorios",
@@ -13103,7 +13083,7 @@
           "exportada": true,
           "params": "rs: readonly RecordatorioParaCalendario[]",
           "retorno": "EntradaCalendarioCruda[]",
-          "linea": 156,
+          "linea": 183,
           "resumen": "Los recordatorios propios. El enlace lleva al editor (`#tus-recordatorios`), que está en la misma pantalla."
         },
         {
@@ -13112,13 +13092,13 @@
           "exportada": true,
           "params": "avisos: readonly Aviso[]",
           "retorno": "EntradaCalendarioCruda[]",
-          "linea": 167,
+          "linea": 194,
           "resumen": "Los avisos de la campana que son una fecha (los demás no son calendario). Sin fecha propia: el texto la lleva."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f7088c323436"
+      "hash": "e12f7c23e122"
     },
     {
       "ruta": "apps/asegura-portal/lib/callejero-vias.ts",
@@ -15583,6 +15563,75 @@
       "hash": "e25d5668c8cc"
     },
     {
+      "ruta": "apps/asegura-portal/lib/flota-destino.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "A dónde lleva «Flota» (27/10/2026). PURO: sin BD ni sesión. Lo usan el atajo de «Seguros» (`EnlaceFlota`), el «Abrir» de Herramientas y la tarjeta «Mi flota» de Inicio: una sola regla, no tres copias que se separen. Con UNA sola sociedad y ningún nombramiento por aceptar se salta el índice y se va d",
+      "exporta": [
+        "destinoFlota"
+      ],
+      "funciones": [
+        {
+          "nombre": "destinoFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresas: readonly { id: string }[] | null, pendientes: number | null",
+          "retorno": "string",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ee6d4d87f323"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/flota-inicio.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "La tarjeta «Mi flota» de Inicio (27/10/2026): qué se cuenta y qué se dice. PURO: sin BD, sin sesión, sin reloj (los vehículos ya traen su ITV y su vencimiento calculados por `vehiculosDeFlota`). La lectura vive en `flotaParaInicio` (`lib/flota.ts`); la tarjeta, en `app/(portal)/inicio/TarjetaFlota.t",
+      "exporta": [
+        "resumenFlotaInicio",
+        "textosFlotaInicio",
+        "flotaImpideTodoAlDia"
+      ],
+      "funciones": [
+        {
+          "nombre": "resumenFlotaInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaFlotaInicio",
+          "retorno": "ResumenFlotaInicio",
+          "linea": 43
+        },
+        {
+          "nombre": "plural",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number, uno: string, varios: string",
+          "retorno": null,
+          "linea": 60
+        },
+        {
+          "nombre": "textosFlotaInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResumenFlotaInicio",
+          "retorno": "TextosFlotaInicio",
+          "linea": 71
+        },
+        {
+          "nombre": "flotaImpideTodoAlDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaFlotaInicio | null | undefined",
+          "retorno": "boolean",
+          "linea": 125,
+          "resumen": "¿La tarjeta de Inicio impide decir «Todo al día»? Sí si algo pide atención Y si no se pudo comprobar algo (un «todo al día» sobre lo que no se ha mirado sería falso). `undefined` = no hay tarjeta de f"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6cbc937ad4d9"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/flota.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "La FLOTA de una empresa (05/10/2026) — lectura y escritura con la BD. Las reglas viven puras en `flota.ts` de `@central/module-seguros-portal` (con su test). Aquí solo se leen las filas y se aplican, y la frontera es UNA: 🚨 Toda consulta parte de `accesosFlota(identidadId)`, que se resuelve desde l",
@@ -15590,6 +15639,8 @@
         "accesosFlota",
         "empresasDeFlota",
         "flotaDeEmpresa",
+        "flotaParaCalendario",
+        "flotaParaInicio",
         "nombramientosPendientes",
         "nombrarJefeFlota",
         "guardarMatriculacion"
@@ -15601,7 +15652,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 50
+          "linea": 51
         },
         {
           "nombre": "tipoDe",
@@ -15609,7 +15660,7 @@
           "exportada": false,
           "params": "t: string | null",
           "retorno": "TipoFicha",
-          "linea": 54
+          "linea": 55
         },
         {
           "nombre": "accesosFlota",
@@ -15617,7 +15668,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<Map<string, PapelFlota>>",
-          "linea": 65,
+          "linea": 66,
           "resumen": "Las empresas cuya flota puede ver ESTA identidad, con su papel. Vacío si la sesión no es la de `identidadId` (no se confía a ciegas en el parámetro)."
         },
         {
@@ -15626,7 +15677,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<EmpresaFlota[]>",
-          "linea": 113,
+          "linea": 114,
           "resumen": "Las empresas con flota visible, con nombre, para el índice de `/flota`."
         },
         {
@@ -15635,7 +15686,7 @@
           "exportada": false,
           "params": "empresaId: string",
           "retorno": "Promise<",
-          "linea": 146,
+          "linea": 147,
           "resumen": "Las pólizas de la flota de UNA empresa ya autorizada, como entradas puras."
         },
         {
@@ -15644,7 +15695,7 @@
           "exportada": false,
           "params": "empresaId: string, excluir: ReadonlySet<string>",
           "retorno": "Promise<CandidatoJefe[]>",
-          "linea": 221,
+          "linea": 222,
           "resumen": "Personas relacionadas con la empresa en la cartera a las que el dueño puede nombrar jefe de flota."
         },
         {
@@ -15653,8 +15704,35 @@
           "exportada": true,
           "params": "identidadId: string, empresaPedida: unknown",
           "retorno": "Promise<FlotaVista | null>",
-          "linea": 248,
+          "linea": 249,
           "resumen": "La flota de una empresa para ESTA identidad. `null` = no existe o no es suya (la ruta contesta 404 en los dos casos, a propósito)."
+        },
+        {
+          "nombre": "flotasDeIdentidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string",
+          "retorno": "Promise<SociedadFlotaInicio[] | null>",
+          "linea": 324,
+          "resumen": "Las flotas de TODAS las sociedades que ve esta identidad, en UNA pasada (27/10/2026): para la tarjeta «Mi flota» de Inicio y las ITV del calendario. Sin N+1 sobre vehículos ni filas: los accesos se re"
+        },
+        {
+          "nombre": "flotaParaCalendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<SociedadFlotaInicio[] | null>",
+          "linea": 350,
+          "resumen": "Las flotas para el CALENDARIO (ITV). `null` = no se pudo comprobar (ni los accesos ni alguna sociedad)."
+        },
+        {
+          "nombre": "flotaParaInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<EntradaFlotaInicio | null | undefined>",
+          "linea": 360,
+          "resumen": "La tarjeta «Mi flota» de Inicio. `undefined` = sin flota ni nombramientos a la vista (no se pinta nada); `null` = no se pudo comprobar nada (se dice); objeto = lo leído, con `nombramientos: null` si s"
         },
         {
           "nombre": "nombramientosPendientes",
@@ -15662,7 +15740,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<InvitacionFlota[]>",
-          "linea": 317,
+          "linea": 377,
           "resumen": "Nombramientos de jefe de flota que ESTA identidad tiene pendientes de aceptar."
         },
         {
@@ -15671,7 +15749,7 @@
           "exportada": true,
           "params": "datos: { identidadId: string empresaId: unknown candidatoId: unknown aceptaTexto: unknown }",
           "retorno": "Promise<ResultadoFlota>",
-          "linea": 358,
+          "linea": 418,
           "resumen": "El dueño nombra jefe de flota a una persona RELACIONADA con la empresa en la cartera. Nace PENDIENTE (doble aceptación): no abre nada hasta que esa persona lo acepta en su portal. Ni la empresa ni el "
         },
         {
@@ -15680,13 +15758,13 @@
           "exportada": true,
           "params": "datos: { identidadId: string empresaId: unknown polizaId: unknown fecha: unknown }",
           "retorno": "Promise<ResultadoFlota>",
-          "linea": 407,
+          "linea": 467,
           "resumen": "Anota (o borra, con `null`) la fecha de matriculación de un vehículo de la flota. La escriben el dueño y el jefe de flota. El vehículo se identifica por la póliza que lo trae, buscada DENTRO de la flo"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2609f813e310"
+      "hash": "436c7d83f699"
     },
     {
       "ruta": "apps/asegura-portal/lib/herramientas.ts",
@@ -16087,6 +16165,36 @@
       "hash": "77b9ad50e9cf"
     },
     {
+      "ruta": "apps/asegura-portal/lib/inicio-extra.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "«Pendiente de ti» de INICIO (27/10/2026): la LECTURA de lo que antes pintaba `/boveda` (firmas de anulación, presupuestos, confirmar el contacto, patrimonio). La regla es `pendientesDeTiEnInicio` (`lib/pendiente-de-ti.ts`, pura y con test). 🔒 La identidad sale de la COOKIE: si la sesión no es la de",
+      "exporta": [
+        "pendientesDeTiParaInicio"
+      ],
+      "funciones": [
+        {
+          "nombre": "ok",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: PromiseSettledResult<T>, fuente: string",
+          "retorno": "T | null",
+          "linea": 20
+        },
+        {
+          "nombre": "pendientesDeTiParaInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, conPatrimonio: boolean",
+          "retorno": "Promise<PendientesDeTi | null>",
+          "linea": 27,
+          "resumen": "`conPatrimonio`: solo si la sesión tiene la puerta de Patrimonio abierta (si no, no se lee). `null` = no hay sesión."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7d59003fe971"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/inicio-pendientes.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "«Inicio» = SOLO lo pendiente (26/10/2026, decisión de Alberto): vencimientos, recibos pendientes, siniestros abiertos (avisos y huecos de protección se suman en la pantalla). Calculado PURO, sin BD ni sesión, para probarlo con `node --test`. La lectura vive en `lib/inicio.ts`; la pantalla en `app/(p",
@@ -16115,7 +16223,7 @@
           "nombre": "pendienteInicio",
           "kind": "function",
           "exportada": true,
-          "params": "e: { /** La cartera. `null` = no se pudo leer. */ polizas: PolizaPendiente[] | null /** Las aportadas. `null` = no se pudieron leer. */ declaradas?: DeclaradaPendiente[] | null hoy: string }",
+          "params": "e: { /** La cartera. `null` = no se pudo leer. */ polizas: PolizaPendiente[] | null /** Las aportadas. `null` = no se pudieron leer. */ declaradas?: DeclaradaPendiente[] | null /** * Pólizas con una baja EN MARCHA (`polizasConBajaEnMarcha(f",
           "retorno": "PendienteInicio",
           "linea": 61
         },
@@ -16125,13 +16233,13 @@
           "exportada": true,
           "params": "p: PendienteInicio",
           "retorno": "boolean",
-          "linea": 157,
+          "linea": 169,
           "resumen": "¿Hay algo que enseñar? (sin contar avisos ni huecos, que la pantalla suma)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "98c767d78bf6"
+      "hash": "5feb9b15c85f"
     },
     {
       "ruta": "apps/asegura-portal/lib/inicio.ts",
@@ -16147,7 +16255,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 30
+          "linea": 32
         },
         {
           "nombre": "valor",
@@ -16155,7 +16263,7 @@
           "exportada": false,
           "params": "r: PromiseSettledResult<T>, fuente: string",
           "retorno": "T | null",
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "iso",
@@ -16163,7 +16271,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": null,
-          "linea": 40
+          "linea": 42
         },
         {
           "nombre": "resumenInicio",
@@ -16171,13 +16279,13 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<ResumenInicio | null>",
-          "linea": 43,
+          "linea": 45,
           "resumen": "`null` = no hay sesión o no es la de `identidadId`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8ef19095e7c1"
+      "hash": "1c8fc193da15"
     },
     {
       "ruta": "apps/asegura-portal/lib/inquilino/inquilino-api.ts",
@@ -19670,13 +19778,13 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<",
-          "linea": 308,
+          "linea": 313,
           "resumen": "Tarjeta «Mi patrimonio» de Inicio. `undefined` = sin patrimonio a la vista (no se pinta nada); `null` = no se pudo leer el acceso; objeto con `inmuebles`/`pendientes` `null` = esa cifra no se pudo lee"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1357a02c5635"
+      "hash": "8e875697925d"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/gastos-resolver-api.ts",
@@ -19811,7 +19919,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "string | null",
-          "linea": 96,
+          "linea": 98,
           "resumen": "Nº de inmuebles en Inicio: `null` = no se sabe (no se pinta 0)."
         },
         {
@@ -19820,13 +19928,13 @@
           "exportada": true,
           "params": "t: TitularGastos, inmuebleId: string",
           "retorno": "TitularGastos",
-          "linea": 105,
+          "linea": 107,
           "resumen": "El titular reducido a UN inmueble (para mandar al navegador solo lo de esa ficha). Conserva sus datos y permisos; los gastos generales (sin piso) se quedan fuera: no son de este piso."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ebc6d3847366"
+      "hash": "d933104c2f4c"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/generar-gastos-bd.ts",
@@ -21741,7 +21849,8 @@
       "ambito": "apps/asegura-portal",
       "resumen": "«Pendiente de ti» (ASegura OS §Q.4): una sola lista, arriba de «Mis seguros», con lo que la correduría necesita del cliente. PURO: la página lee y esto decide qué se dice y en qué orden. Sustituye al «te mando un correo y espero»: hasta hoy un presupuesto solo se abría desde el enlace del correo, y ",
       "exporta": [
-        "pendientesDeTi"
+        "pendientesDeTi",
+        "pendientesDeTiEnInicio"
       ],
       "funciones": [
         {
@@ -21759,11 +21868,20 @@
           "params": "e: EntradaPendientes, ramo: (r: string) => string",
           "retorno": "PendientesDeTi",
           "linea": 67
+        },
+        {
+          "nombre": "pendientesDeTiEnInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Pick<EntradaPendientes, 'anulaciones' | 'presupuestos' | 'contactoPorConfirmar' | 'patrimonio'>, ramo: (r: string) => string,",
+          "retorno": "PendientesDeTi",
+          "linea": 224,
+          "resumen": "«Pendiente de ti» en INICIO (27/10/2026). Lo pendiente vive en UN solo sitio: lo que antes pintaba `/boveda` (firmas de anulación, presupuestos, confirmar el contacto, patrimonio) se pinta ahora en In"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "37f2b362ad9d"
+      "hash": "bdf1ef0b018f"
     },
     {
       "ruta": "apps/asegura-portal/lib/personas-poliza.ts",
@@ -61940,7 +62058,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 29
+          "linea": 31
         },
         {
           "nombre": "sinTabla",
@@ -61948,7 +62066,7 @@
           "exportada": false,
           "params": "err: unknown",
           "retorno": null,
-          "linea": 30
+          "linea": 32
         },
         {
           "nombre": "leerContador",
@@ -61956,7 +62074,7 @@
           "exportada": false,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<",
-          "linea": 63
+          "linea": 65
         },
         {
           "nombre": "companiasConBot",
@@ -61964,7 +62082,7 @@
           "exportada": false,
           "params": "correduriaId: string, ramo: string",
           "retorno": "Promise<string[]>",
-          "linea": 76,
+          "linea": 78,
           "resumen": "Compañías con bot ACTIVO para ese ramo en ESTA correduría (fila activa, `rpa_autorizada`, sin pausa)."
         },
         {
@@ -61973,7 +62091,7 @@
           "exportada": false,
           "params": "info: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 92
+          "linea": 94
         },
         {
           "nombre": "nacimientoFicha",
@@ -61981,7 +62099,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 104
+          "linea": 106
         },
         {
           "nombre": "carneFicha",
@@ -61989,7 +62107,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ramo: string",
           "retorno": "Promise<string | null>",
-          "linea": 123,
+          "linea": 125,
           "resumen": "Fecha del carné del conductor en la FICHA (carné B en coche; en moto SOLO el de moto: A, A1 o A2), la MISMA que lee la pantalla de la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo le"
         },
         {
@@ -61998,7 +62116,7 @@
           "exportada": false,
           "params": "p: Promise<T>, defecto: T",
           "retorno": "Promise<T>",
-          "linea": 132
+          "linea": 134
         },
         {
           "nombre": "motoDelLead",
@@ -62006,7 +62124,7 @@
           "exportada": false,
           "params": "texto: unknown",
           "retorno": "Promise<LecturaMoto | null>",
-          "linea": 136,
+          "linea": 138,
           "resumen": "Moto: el texto libre contra el catálogo de motos de Codeoscopic (GET gratis). Sin Codeoscopic configurado = `no_mirado`."
         },
         {
@@ -62015,7 +62133,7 @@
           "exportada": false,
           "params": "valores: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 149,
+          "linea": 151,
           "resumen": "Comunidades: con una referencia catastral de 20 caracteres, el año de construcción y el CP del Catastro (con la de 14, la de parcela, el Catastro no da datos del bien). Solo si faltan. `null` = no se "
         },
         {
@@ -62024,7 +62142,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: RamoBotLead, infoRiesgo: unknown, nac: string | null, dia: string,",
           "retorno": "Promise<",
-          "linea": 166,
+          "linea": 168,
           "resumen": "El formulario candidato del bot de UNA oportunidad de auto/moto/comunidades: contrato del lead (descifrado) + bloque del riesgo (`datosVehiculo`) + ficha (nacimiento y carné). Compartido por la revisi"
         },
         {
@@ -62033,7 +62151,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: string, ahora = new Date()",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 191,
+          "linea": 193,
           "resumen": "Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE del cliente en ese ramo + su ficha, como el botón (formulario + «completar d"
         },
         {
@@ -62042,8 +62160,17 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ahora: Date",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 206,
+          "linea": 208,
           "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
+        },
+        {
+          "nombre": "catalogosHogarVivos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<CatalogosHogarLeidos>",
+          "linea": 223,
+          "resumen": "Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types, occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera ("
         },
         {
           "nombre": "revisarInterno",
@@ -62051,7 +62178,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 217
+          "linea": 233
         },
         {
           "nombre": "publico",
@@ -62059,7 +62186,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 242
+          "linea": 258
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -62067,7 +62194,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 246
+          "linea": 262
         },
         {
           "nombre": "tarificarLead",
@@ -62075,7 +62202,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 262
+          "linea": 278
         },
         {
           "nombre": "ampliarTopeLead",
@@ -62083,7 +62210,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 364,
+          "linea": 380,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -62092,7 +62219,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 391,
+          "linea": 407,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -62101,7 +62228,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 438,
+          "linea": 454,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -62110,7 +62237,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "ee39e61e0414"
+      "hash": "6900e0170b5a"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -66598,7 +66725,7 @@
           "nombre": "riesgoHogarDeRiesgoOportunidad",
           "kind": "function",
           "exportada": true,
-          "params": "r: RiesgoParaBotsHogar, ahora = new Date()",
+          "params": "r: RiesgoParaBotsHogar, ahora = new Date(), catalogos: CatalogosHogarLeidos = {}",
           "retorno": "ReconstruccionRiesgo",
           "linea": 61,
           "resumen": "HOGAR (27/10/2026): el riesgo se arma como cuando Alberto pulsa «pedir precio» en la oportunidad de hogar de plataforma: `datosVivienda` de la oportunidad MÁS RECIENTE del cliente (`leerRiesgo`, el mi"
@@ -66609,7 +66736,7 @@
           "exportada": true,
           "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, actual: string | null",
           "retorno": "ReconstruccionRiesgo",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre auto con cambio de seguro) con la compañía que deduce la cartera (`companiaActualUnica`: solo con exactamente una póliza de auto en v"
         },
         {
@@ -66618,7 +66745,7 @@
           "exportada": true,
           "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, filas: readonly FilaOrigen[]",
           "retorno": "ReconstruccionRiesgo",
-          "linea": 83,
+          "linea": 85,
           "resumen": "nada personal se copia. Sin origen, otra compañía/ramo, o ya con vehículo → mismo objeto. PURA."
         },
         {
@@ -66627,13 +66754,13 @@
           "exportada": true,
           "params": "e: { reconstruccion: ReconstruccionRiesgo; previo: unknown | null; soloPurgados: boolean; validar: (riesgo: unknown) => ValidacionProbar<E> }",
           "retorno": "DecisionProbar<E>",
-          "linea": 100,
+          "linea": 102,
           "resumen": "Qué riesgo se reencola. Orden: 1) el reconstruido de la oportunidad+ficha, si valida; 2) el del último trabajo, si valida (no purgado); 3) rechazo que dice QUÉ falta (solo etiquetas de campo, nunca va"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aed57306ea86"
+      "hash": "9548cdb57210"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-robustez.ts",
@@ -143892,7 +144019,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "76f0ed1f465e"
+      "hash": "58dc04502963"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -189176,7 +189303,8 @@
       "resumen": "lib/sivra/pricing-suelo-finde.ts — SUELO de fin de semana cuando la fecha NO tiene mercado medido. POR QUÉ (27/09/2026, reserva de House Sevillana 29-31/01/2027 por 600€). El finde solo se encarecía por el ancla de la FECHA exacta (`pricing-ancla-fecha.ts`), que exige ≥5 comps fiables de ESE día. Si",
       "exporta": [
         "esNocheFinde",
-        "sueloFinde"
+        "sueloFinde",
+        "sueloFindePropietario"
       ],
       "funciones": [
         {
@@ -189196,11 +189324,20 @@
           "retorno": "number | null",
           "linea": 41,
           "resumen": "Suelo del finde en base (sin markup), o `null` si no aplica."
+        },
+        {
+          "nombre": "sueloFindePropietario",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: { fecha: string minPriceFinde: number | null maxPrice: number | null }",
+          "retorno": "number | null",
+          "linea": 65,
+          "resumen": "Suelo vie/sáb del propietario en base (sin markup), o `null` si no aplica."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d682ed0deb4b"
+      "hash": "4bd08cb86e11"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-techo-adr.ts",
@@ -189230,7 +189367,8 @@
       "resumen": "lib/sivra/pricing-techo-mercado.ts — el TECHO de mercado medido: no listar al huésped a ×3-×5. POR QUÉ (25/08/2026). El motor tiene varios caminos que SUBEN el precio saltándose el raíl ±%/día a propósito (salto de evento, suelo PL, premio de mercado) y varias guardas que impiden BAJARLO (outlier +4",
       "exporta": [
         "techoMercado",
-        "acotarPorTecho"
+        "acotarPorTecho",
+        "sueloFrenteTecho"
       ],
       "funciones": [
         {
@@ -189250,11 +189388,20 @@
           "retorno": "AcoteTecho",
           "linea": 142,
           "resumen": "Aplica el techo al objetivo del día. El descenso respeta los suelos de siempre: nunca por debajo del suelo del raíl (±%/día sobre el ancla — un ×4 se deshace en varias pasadas, no de golpe) ni del `mi"
+        },
+        {
+          "nombre": "sueloFrenteTecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { minPrice: number | null /** suelo estacional del día ya calculado (incluye el recargo de evento); null = no aplica */ sueloEstacional: number | null /** el mismo suelo SIN evento (solo FLOOR_SEASONAL del mes); null = no aplica */ suelo",
+          "retorno": "number | null",
+          "linea": 178,
+          "resumen": "Suelo que los techos (mercado medido y ADR propio) NO pueden perforar al bajar (27/10/2026). POR QUÉ. `acotarPorTecho` solo volvía a subir hasta `min_price`, así que el suelo ESTACIONAL calculado unas"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9c022f7106c6"
+      "hash": "8dba8ee473fd"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/prior-estacional.ts",
@@ -223608,7 +223755,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ec684bd1d4f"
+      "hash": "eb08d97f1a59"
     },
     {
       "ruta": "packages/module-seguros-portal/src/campos-ramo.ts",
@@ -225333,7 +225480,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is ModuloPortal",
-          "linea": 82,
+          "linea": 87,
           "resumen": "¿Es un id del catálogo? Para validar lo que llega del navegador."
         },
         {
@@ -225342,7 +225489,7 @@
           "exportada": true,
           "params": "id: ModuloPortal, ctx: ContextoModulos",
           "retorno": "DisponibilidadModulo | null",
-          "linea": 94,
+          "linea": 99,
           "resumen": "Disponibilidad de un módulo para ESTA persona. - Flota: `disponible` si ya lleva la flota de alguna sociedad (dueño o jefe), `bajo_solicitud` si no, y `null` si no se ha podido comprobar (no se adivin"
         },
         {
@@ -225351,7 +225498,7 @@
           "exportada": true,
           "params": "c: { titulares: number filas: readonly { modulo: string; estado: string }[] | null tieneInmuebles: boolean | null }",
           "retorno": "boolean",
-          "linea": 122,
+          "linea": 127,
           "resumen": "Patrimonio y alquileres: ¿esta identidad puede usar `/patrimonio`? UNA sola función para el acceso (lib/patrimonio/accesos.ts), el menú y la tarjeta de `/herramientas`/`/inicio` (25/10/2026). Se suma "
         },
         {
@@ -225360,7 +225507,7 @@
           "exportada": false,
           "params": "filas: readonly FilaModulo[], id: ModuloPortal",
           "retorno": "FilaModulo | null",
-          "linea": 153,
+          "linea": 158,
           "resumen": "La fila VIGENTE de un módulo: la no retirada (el índice único parcial de la BD garantiza que hay como mucho una). Una retirada no cuenta: se puede volver a pedir."
         },
         {
@@ -225369,7 +225516,7 @@
           "exportada": true,
           "params": "id: ModuloPortal, ctx: ContextoModulos & { filas: readonly FilaModulo[] | null },",
           "retorno": "AccionModulo",
-          "linea": 157
+          "linea": 162
         },
         {
           "nombre": "tarjetasModulos",
@@ -225377,7 +225524,7 @@
           "exportada": true,
           "params": "ctx: ContextoModulos & { filas: readonly FilaModulo[] | null }",
           "retorno": "TarjetaModulo[]",
-          "linea": 177,
+          "linea": 182,
           "resumen": "Las tarjetas de `/herramientas`, en el orden del catálogo."
         },
         {
@@ -225386,7 +225533,7 @@
           "exportada": true,
           "params": "a: AccionModulo",
           "retorno": "boolean",
-          "linea": 186,
+          "linea": 191,
           "resumen": "¿La acción de la tarjeta permite escribir una fila `solicitado`? Lo usa la ruta, no solo el botón."
         },
         {
@@ -225395,13 +225542,13 @@
           "exportada": true,
           "params": "c: { identidadId: string nombre: string | null vinculada: boolean modulo: ModuloPortal }",
           "retorno": "string",
-          "linea": 194,
+          "linea": 199,
           "resumen": "El aviso de Telegram a Alberto (HTML de Telegram: el nombre lo tecleó la persona, se escapa). `vinculada=false` = el nombre no lo ha comprobado nadie (no hay ficha de la cartera detrás)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee284a184e34"
+      "hash": "f7b2d6079795"
     },
     {
       "ruta": "packages/module-seguros-portal/src/obligacion.ts",
@@ -255262,7 +255409,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5349,
-    "funciones": 20514
+    "archivos": 5351,
+    "funciones": 20527
   }
 }
