@@ -45,3 +45,29 @@ export function sueloFinde(i: SueloFindeInput, factor = FACTOR_SUELO_FINDE): num
   if (!esNocheFinde(i.fecha)) return null
   return Math.round(i.minPrice * factor)
 }
+
+// ─── Suelo de fin de semana FIJADO por el propietario (`pricing_settings.min_price_finde`) ───────
+//
+// POR QUÉ (27/10/2026, House Sevillana 30/04-02/05/2027 vendida en Booking por 1.346,70€ bruto →
+// 1.081,13€ neto de portal → 486€/noche tras la limpieza). El motor la había bajado de 608 a 576 de
+// base el día antes. Con un 19,7% de comisión de Booking y 108,90€ de limpieza por salida, una
+// base que parece holgada deja poco: el suelo de arriba (min_price × 1,15 = 345) no protege nada.
+//
+// Distinto de `sueloFinde`: aquel es un factor sobre min_price y SOLO sin mercado medido ni evento;
+// este es un número que pone el propietario y vale SIEMPRE en noches vie/sáb — con mercado medido,
+// con evento y por encima de los techos de mercado/ADR —. Solo `max_price` (el techo del propietario)
+// le gana. NULL o ≤0 = sin efecto (comportamiento idéntico al de antes de la columna).
+//
+// Como `min_price`, se aplica DESPUÉS del raíl ±max_change_pct: una fecha por debajo del suelo
+// sube a él de golpe (el raíl frena el ruido del mercado, no una regla de negocio del dueño).
+
+/** Suelo vie/sáb del propietario en base (sin markup), o `null` si no aplica. */
+export function sueloFindePropietario(i: {
+  fecha: string
+  minPriceFinde: number | null
+  maxPrice: number | null
+}): number | null {
+  if (i.minPriceFinde == null || !(i.minPriceFinde > 0)) return null
+  if (!esNocheFinde(i.fecha)) return null
+  return i.maxPrice != null ? Math.min(i.minPriceFinde, i.maxPrice) : i.minPriceFinde
+}
