@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T18:07:33Z",
-  "sha": "d4298511eeca9dd369884d17d87467c8c5281678",
+  "generadoEn": "2026-10-27T18:33:21Z",
+  "sha": "158943815e51aca6edd451ec6181186e14c8bde6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6010,7 +6010,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "740b647d42fe"
+      "hash": "2e9bf5d3ec17"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/inicio/page.tsx",
@@ -18134,13 +18134,13 @@
           "exportada": true,
           "params": "pedido: unknown, accesos: AccesosPatrimonio",
           "retorno": "string | null",
-          "linea": 194,
+          "linea": 196,
           "resumen": "El titular pedido (URL/cuerpo) SOLO si está dentro de los accesos ya resueltos. `null` = no existe o no es suyo: la ruta contesta 404 en los dos casos, a propósito."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cbc9a48bd49b"
+      "hash": "2644ea45b903"
     },
     {
       "ruta": "apps/asegura-portal/lib/patrimonio/alta-inmueble.ts",
@@ -29006,13 +29006,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 24,
+          "linea": 29,
           "resumen": "Los módulos del portal («Herramientas») de UN cliente, para la ficha de /correduria (plataforma → asegura, Bearer). GET ?clienteId=… → catálogo con estado y si se puede activar (y por qué no) POST { c"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/cliente/portal-modulos",
-      "hash": "53103b18c541"
+      "hash": "0e8e85de6cd7"
     },
     {
       "ruta": "apps/asegura/app/api/operador/cliente/portal/route.ts",
@@ -31685,7 +31685,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 40
+          "linea": 39
         }
       ],
       "tablas": [
@@ -31694,7 +31694,7 @@
         "seguros"
       ],
       "rutaApi": "/api/operador/portal-modulos",
-      "hash": "88c8a83078ad"
+      "hash": "a3dd994aa01d"
     },
     {
       "ruta": "apps/asegura/app/api/operador/portal-permisos/route.ts",
@@ -51041,7 +51041,9 @@
         "decidirRenovacion",
         "decidirDeclarada",
         "tipoDeRamoDeclarado",
-        "renovacionResuelta"
+        "renovacionResuelta",
+        "decidirAperturas",
+        "consentimientoOVacio"
       ],
       "funciones": [
         {
@@ -51050,7 +51052,7 @@
           "exportada": false,
           "params": "s: string | null | undefined",
           "retorno": "string | null",
-          "linea": 34
+          "linea": 39
         },
         {
           "nombre": "diasEntre",
@@ -51058,7 +51060,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string",
           "retorno": "number",
-          "linea": 40
+          "linea": 45
         },
         {
           "nombre": "sumarDias",
@@ -51066,7 +51068,7 @@
           "exportada": false,
           "params": "iso: string, dias: number",
           "retorno": "string",
-          "linea": 44
+          "linea": 49
         },
         {
           "nombre": "fechaEs",
@@ -51074,7 +51076,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 50
+          "linea": 55
         },
         {
           "nombre": "enVentanaExpediente",
@@ -51082,7 +51084,7 @@
           "exportada": true,
           "params": "dias: number",
           "retorno": "boolean",
-          "linea": 56,
+          "linea": 61,
           "resumen": "¿`dias` hasta el vencimiento cae en la ventana 60→30 (bordes incluidos)?"
         },
         {
@@ -51091,7 +51093,7 @@
           "exportada": true,
           "params": "dias: number",
           "retorno": "boolean",
-          "linea": 65,
+          "linea": 70,
           "resumen": "Ventana de la RENOVACIÓN propia (Alberto, 13/10/2026): desde 60 días antes hasta el mismo día del vencimiento. Pasado el mes del tomador (art. 22) ya no puede oponerse a la prórroga, pero la renovació"
         },
         {
@@ -51100,7 +51102,7 @@
           "exportada": true,
           "params": "c: CandidatoRenovacion, hoy: string",
           "retorno": "DecisionApertura",
-          "linea": 97
+          "linea": 105
         },
         {
           "nombre": "decidirDeclarada",
@@ -51108,7 +51110,7 @@
           "exportada": true,
           "params": "c: CandidatoDeclarada, hoy: string",
           "retorno": "DecisionApertura",
-          "linea": 139
+          "linea": 153
         },
         {
           "nombre": "tipoDeRamoDeclarado",
@@ -51116,7 +51118,7 @@
           "exportada": true,
           "params": "ramo: string | null",
           "retorno": "string",
-          "linea": 160,
+          "linea": 179,
           "resumen": "Ramo declarado → `tipo_seguro`. Lo que no es un ramo conocido va a `otros` (nunca un cast que tumbe el lote)."
         },
         {
@@ -51125,13 +51127,39 @@
           "exportada": true,
           "params": "e: { venceExpediente: string | null venceActual: string | null enVigor: boolean sustituida: boolean }",
           "retorno": "'renovada' | 'sustituida' | null",
-          "linea": 172,
+          "linea": 191,
           "resumen": "¿Se cierra sola (como ganada) una renovación abierta sola? Solo con PRUEBA: el vencimiento real de la póliza ya está más allá del del expediente (renovó: CIMA avanzó la fecha o hay recibo anual cobrad"
+        },
+        {
+          "nombre": "contar",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Partial<Record<MotivoNoAbrir, number>>, k: MotivoNoAbrir",
+          "retorno": null,
+          "linea": 235
+        },
+        {
+          "nombre": "decidirAperturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "renov: readonly FilaRenovacion[], decl: readonly FilaDeclarada[], consentimiento: ReadonlyMap<string, boolean | null>, hoy: string,",
+          "retorno": "",
+          "linea": 240,
+          "resumen": "Qué se abre hoy con lo leído. Una identidad que no está en `consentimiento` cuenta como «no consta» (`null`)."
+        },
+        {
+          "nombre": "consentimientoOVacio",
+          "kind": "function",
+          "exportada": true,
+          "params": "leer: () => Promise<Map<string, boolean | null>>, sp?: Savepoint,",
+          "retorno": "Promise<Map<string, boolean | null>>",
+          "linea": 274,
+          "resumen": "Lee el consentimiento y, si FALLA, devuelve un mapa VACÍO (ninguna declarada abre) y lo deja en el log: un fallo de esta lectura no puede tumbar las renovaciones de cartera. Con `sp` (dentro de una tr"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b017e719775b"
+      "hash": "52e77e7fabb8"
     },
     {
       "ruta": "apps/asegura/lib/expedientes-auto.ts",
@@ -51148,25 +51176,26 @@
           "exportada": false,
           "params": "col: Prisma.Sql",
           "retorno": null,
-          "linea": 38,
+          "linea": 43,
           "resumen": "Nº de póliza comparable: sin separadores, en mayúsculas y sin ceros a la izquierda."
-        },
-        {
-          "nombre": "contar",
-          "kind": "function",
-          "exportada": false,
-          "params": "m: Partial<Record<MotivoNoAbrir, number>>, k: MotivoNoAbrir",
-          "retorno": null,
-          "linea": 74
         },
         {
           "nombre": "planExpedientesAuto",
           "kind": "function",
           "exportada": true,
-          "params": "db: Db, correduriaId: string, hoy: string",
+          "params": "db: Db, correduriaId: string, hoy: string, /** `true` cuando `db` es la transacción del detector: la lectura del consentimiento va en su propio savepoint. */ enTransaccion = false,",
           "retorno": "Promise<PlanExpedientesAuto>",
-          "linea": 79,
+          "linea": 55,
           "resumen": "Lo que abriría y cerraría hoy, SIN escribir nada."
+        },
+        {
+          "nombre": "consentimientosComerciales",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: Db, identidadIds: string[]",
+          "retorno": "Promise<Map<string, boolean | null>>",
+          "linea": 172,
+          "resumen": "Consentimiento `comercial` VIGENTE por identidad (`true` / `false` / `null`), con la regla única del módulo puro sobre el texto actual. Una identidad sin filas no entra en el mapa (= `null`, nunca pre"
         },
         {
           "nombre": "generarExpedientesAuto",
@@ -51174,7 +51203,7 @@
           "exportada": true,
           "params": "tx: Db, correduriaId: string, hoy: string",
           "retorno": "Promise<ResultadoExpedientesAuto>",
-          "linea": 196,
+          "linea": 195,
           "resumen": "Abre y cierra. Se llama DENTRO de la transacción del detector (con su candado). Cada apertura vuelve a comprobar, con la fila ya escrita por otra vía en la misma transacción, que no hay otra de ese ci"
         }
       ],
@@ -51186,11 +51215,12 @@
         "oportunidad_historial",
         "oportunidades",
         "polizas",
+        "portal_consentimiento",
         "portal_poliza_declarada",
         "portal_vinculo"
       ],
       "rutaApi": null,
-      "hash": "ac806ff1a625"
+      "hash": "169135c658cf"
     },
     {
       "ruta": "apps/asegura/lib/expedientes-contacto.ts",
@@ -56297,7 +56327,7 @@
       "exporta": [
         "modulosDeFicha",
         "escribirModulo",
-        "polizasEnVigorPorCliente"
+        "escribirModuloPorIdentidad"
       ],
       "funciones": [
         {
@@ -56306,7 +56336,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<Lectura>",
-          "linea": 24
+          "linea": 34
         },
         {
           "nombre": "modulosDeFicha",
@@ -56314,7 +56344,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 42,
+          "linea": 48,
           "resumen": "Lo que pinta la ficha. Un fallo de lectura se propaga (la ruta lo clasifica): nunca «sin módulos»."
         },
         {
@@ -56323,27 +56353,48 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, modulo: ModuloPortal, accion: 'activar' | 'retirar', actor: string,",
           "retorno": "Promise<ResultadoEscritura>",
-          "linea": 56,
+          "linea": 63,
           "resumen": "Activa/retira. El servidor RE-decide (el botón no manda) y deja una línea en `historial_interno`."
         },
         {
-          "nombre": "polizasEnVigorPorCliente",
+          "nombre": "checkOrigenAplicado",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<boolean>",
+          "linea": 108,
+          "resumen": "¿El CHECK de `portal_vinculo.origen` ya admite el origen nuevo? Lee el catálogo (lo puede leer cualquier rol)."
+        },
+        {
+          "nombre": "esViolacionDelCheck",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 119,
+          "resumen": "El CHECK rechazó el origen (SQL sin aplicar entre la comprobación y la escritura): se dice igual que arriba."
+        },
+        {
+          "nombre": "escribirModuloPorIdentidad",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, clienteIds: string[]",
-          "retorno": "Promise<Map<string, number> | null>",
-          "linea": 100,
-          "resumen": "una ficha sin pólizas en vigor sale con 0."
+          "params": "correduriaId: string, identidadId: string, modulo: ModuloPortal, actor: string,",
+          "retorno": "Promise<ResultadoEscritura>",
+          "linea": 136,
+          "resumen": "Activa un módulo a una identidad del portal SIN ficha (27/10/2026). En UNA transacción, con candado por identidad (el doble clic es el caso normal): vuelve a comprobar que la identidad pidió ESE módul"
         }
       ],
       "tablas": [
         "historial_interno",
-        "polizas",
+        "pg_class",
+        "pg_constraint",
+        "pg_namespace",
+        "portal_identidad",
         "portal_modulo",
         "portal_vinculo"
       ],
       "rutaApi": null,
-      "hash": "119f9f45ec2b"
+      "hash": "5d0d1bc45225"
     },
     {
       "ruta": "apps/asegura/lib/portal-modulos-operador.ts",
@@ -56356,7 +56407,10 @@
         "planDeEscritura",
         "fichasModulos",
         "textoHistorialModulo",
-        "vistaSolicitud"
+        "vistaSolicitud",
+        "decidirProspecto",
+        "fichaProspecto",
+        "textoHistorialProspecto"
       ],
       "funciones": [
         {
@@ -56374,17 +56428,17 @@
           "exportada": true,
           "params": "filas: readonly FilaModuloCliente[], modulo: ModuloPortal",
           "retorno": "EstadoModuloFicha",
-          "linea": 54,
+          "linea": 52,
           "resumen": "Estado agregado de un módulo para la ficha: activo si alguna identidad lo tiene activo, y así."
         },
         {
           "nombre": "puedeActivar",
           "kind": "function",
           "exportada": true,
-          "params": "modulo: ModuloPortal, ctx: ContextoActivacion",
+          "params": "ctx: ContextoActivacion",
           "retorno": "DecisionActivacion",
-          "linea": 64,
-          "resumen": "¿Se puede ACTIVAR este módulo a esta ficha? El motivo es la frase para Alberto."
+          "linea": 65,
+          "resumen": "¿Se puede ACTIVAR un módulo a esta ficha? El motivo es la frase para Alberto. Desde el 27/10/2026 no mira pólizas: la activación ES la autorización. Solo hace falta una identidad del portal sobre la q"
         },
         {
           "nombre": "planDeEscritura",
@@ -56392,7 +56446,7 @@
           "exportada": true,
           "params": "accion: 'activar' | 'retirar', modulo: ModuloPortal, identidades: readonly string[], filas: readonly FilaModuloCliente[],",
           "retorno": "OperacionModulo[]",
-          "linea": 91,
+          "linea": 83,
           "resumen": "Qué escribir. Activar: por identidad, la `solicitado` pasa a `activo`, la inexistente se crea ya `activo` (origen `corredor`), la `activo` no se toca. Retirar: toda fila vigente (activa o solicitada) "
         },
         {
@@ -56401,7 +56455,7 @@
           "exportada": true,
           "params": "filas: readonly FilaModuloCliente[] | null, ctx: ContextoActivacion",
           "retorno": "FichaModuloOperador[] | null",
-          "linea": 120,
+          "linea": 112,
           "resumen": "Lo que pinta la pantalla: el catálogo entero, en su orden, con estado y botón por módulo."
         },
         {
@@ -56410,22 +56464,49 @@
           "exportada": true,
           "params": "modulo: ModuloPortal, accion: 'activar' | 'retirar', actor: string",
           "retorno": "string",
-          "linea": 138,
+          "linea": 130,
           "resumen": "La línea de `historial_interno` (tipo `gestion`) que deja una activación o retirada."
         },
         {
           "nombre": "vistaSolicitud",
           "kind": "function",
           "exportada": true,
-          "params": "modulo: string, clienteId: string | null, polizasEnVigor: number | null",
+          "params": "modulo: string, clienteId: string | null",
           "retorno": "VistaSolicitud",
-          "linea": 151,
+          "linea": 149,
           "resumen": "Cola «Solicitudes del portal» de /correduria → Hoy: lo que cada fila `solicitado` enseña. Misma regla que la ficha (`puedeActivar`), con una identidad ya conocida (la fila existe). `clienteId` null = "
+        },
+        {
+          "nombre": "decidirProspecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EstadoIdentidadSinFicha",
+          "retorno": "DecisionProspecto",
+          "linea": 187,
+          "resumen": "¿Se crea la ficha de prospecto y se activa? Solo para una identidad que ha PEDIDO ese módulo (no se activa a cualquier identidad por id), que no es la del corredor, que no tiene ya ficha (con ficha se"
+        },
+        {
+          "nombre": "fichaProspecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombreTecleado: string | null",
+          "retorno": "",
+          "linea": 209,
+          "resumen": "La ficha de PROSPECTO (27/10/2026). Lead, segmento prospecto, fuente portal, activa y SIN póliza: no es cliente (cliente = póliza en vigor de CIMA, `esCarteraEnVigor`; nunca `clientes.tipo`). El nombr"
+        },
+        {
+          "nombre": "textoHistorialProspecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "modulo: ModuloPortal, actor: string",
+          "retorno": "string",
+          "linea": 233,
+          "resumen": "La línea de `historial_interno` (tipo `gestion`) que deja la creación de la ficha de prospecto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1af6baaadf92"
+      "hash": "f489be5d4538"
     },
     {
       "ruta": "apps/asegura/lib/portal-permisos-operador.ts",
@@ -114500,7 +114581,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "21c76f084fca"
+      "hash": "82531fe487dd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Campanas.tsx",
@@ -125843,12 +125924,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa6d49dcf912"
+      "hash": "f2ec397fb8f2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/subir-poliza/page.tsx",
@@ -135014,7 +135095,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15,
+          "linea": 17,
           "resumen": "/api/correduria/cliente/portal-modulos — los módulos del portal de UN cliente. GET ?clienteId=… → catálogo con estado y si se puede activar (y por qué no) POST { clienteId, modulo, accion } → 'activar"
         },
         {
@@ -135023,12 +135104,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 24
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": "/api/correduria/cliente/portal-modulos",
-      "hash": "ae57a6ea2fd8"
+      "hash": "8f9b841f51d4"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/cliente/portal/route.ts",
@@ -158743,7 +158824,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 57
+          "linea": 63
         },
         {
           "nombre": "interpretarCampana",
@@ -158751,7 +158832,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaCampana",
-          "linea": 86
+          "linea": 92
         },
         {
           "nombre": "tonoGrupo",
@@ -158759,13 +158840,13 @@
           "exportada": true,
           "params": "g: Pick<GrupoCampana, 'nivel' | 'plazoLegal' | 'estado'>",
           "retorno": "'malo' | 'aviso' | 'neutral'",
-          "linea": 111,
+          "linea": 117,
           "resumen": "Rojo = plazo legal o urgente; ámbar = no comprobado; neutro = aviso."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "169bdc53418c"
+      "hash": "ff0f9c7c5c84"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/campos-faltan.ts",
@@ -163145,6 +163226,8 @@
         "leerSolicitud",
         "interpretarSolicitudesPortal",
         "fechaSolicitud",
+        "cuerpoAccion",
+        "confirmacionProspecto",
         "textoResultadoAccion"
       ],
       "funciones": [
@@ -163154,7 +163237,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 29
+          "linea": 34
         },
         {
           "nombre": "leerSolicitud",
@@ -163162,7 +163245,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "SolicitudPortal | null",
-          "linea": 31
+          "linea": 36
         },
         {
           "nombre": "interpretarSolicitudesPortal",
@@ -163170,7 +163253,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaSolicitudesPortal",
-          "linea": 58
+          "linea": 70
         },
         {
           "nombre": "fechaSolicitud",
@@ -163178,8 +163261,26 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 75,
+          "linea": 87,
           "resumen": "dd/mm/aaaa de un ISO (la fecha tal cual viene, sin convertir de zona)."
+        },
+        {
+          "nombre": "cuerpoAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SolicitudPortal, accion: 'activar' | 'retirar'",
+          "retorno": "Record<string, string> | null",
+          "linea": 96,
+          "resumen": "El cuerpo del POST de Activar/Rechazar (27/10/2026), UNA regla para la cola y la campana: con ficha, por `clienteId`; sin ficha, solo ACTIVAR y solo si asegura dijo `creaProspecto` (por `identidadId`)"
+        },
+        {
+          "nombre": "confirmacionProspecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SolicitudPortal, accion: 'activar' | 'retirar'",
+          "retorno": "string | null",
+          "linea": 103,
+          "resumen": "La pregunta antes de activar a alguien sin ficha (se crea una ficha de prospecto). `null` = no hace falta preguntar."
         },
         {
           "nombre": "textoResultadoAccion",
@@ -163187,13 +163288,13 @@
           "exportada": true,
           "params": "accion: 'activar' | 'retirar', status: number, json: unknown",
           "retorno": "",
-          "linea": 81,
+          "linea": 109,
           "resumen": "Texto del aviso tras Activar/Rechazar según lo que contestó el POST (nunca «hecho» si no se sabe)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cac5bd346324"
+      "hash": "4294081ef331"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/supuestos-auto.ts",
@@ -176287,10 +176388,10 @@
           "nombre": "escribirModuloPortalAsegura",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { clienteId: string; modulo: string; accion: 'activar' | 'retirar'; actor: string }",
+          "params": "entrada: ({ clienteId: string } | { identidadId: string }) & { modulo: string; accion: 'activar' | 'retirar'; actor: string },",
           "retorno": "Promise<Reenvio>",
-          "linea": 550,
-          "resumen": "`POST /api/operador/cliente/portal-modulos` — activa o retira un módulo. El `actor` lo pone el servidor."
+          "linea": 553,
+          "resumen": "`POST /api/operador/cliente/portal-modulos` — activa o retira un módulo. El `actor` lo pone el servidor. Por `identidadId` (27/10/2026): persona del portal sin ficha; asegura crea la ficha de prospect"
         },
         {
           "nombre": "solicitudesPortalAsegura",
@@ -176298,13 +176399,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 555,
+          "linea": 560,
           "resumen": "`GET /api/operador/portal-modulos` — la cola de módulos que los clientes piden desde el portal (solo `solicitado`). Solo lectura."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "167c9a4fc6b2"
+      "hash": "8e6def3221d1"
     },
     {
       "ruta": "apps/plataforma/lib/portal-modulos-asegura.ts",
@@ -176324,7 +176425,7 @@
           "params": "id: string",
           "retorno": "string | null",
           "linea": 24,
-          "resumen": "Nota fija bajo «Patrimonio y alquileres» (decisión de Alberto, 27/10/2026; NO cambia ninguna regla): el módulo va ligado al email con el que el cliente entra al portal. `null` = ese módulo no lleva no"
+          "resumen": "Nota fija bajo «Patrimonio y alquileres» (decisión de Alberto, 27/10/2026): el módulo va ligado al email con el que el cliente entra al portal, y activarlo es AUTORIZARLO (no exige póliza con nosotros"
         },
         {
           "nombre": "txt",
@@ -176356,13 +176457,13 @@
           "exportada": true,
           "params": "status: number, json: unknown, accion: 'activar' | 'retirar', nombre: string",
           "retorno": "DesenlaceEscritura",
-          "linea": 89,
+          "linea": 91,
           "resumen": "Frase tras pulsar activar/retirar. `ok` solo si asegura confirma `ok`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "170ffbd2468b"
+      "hash": "4943549ec7c3"
     },
     {
       "ruta": "apps/plataforma/lib/presupuesto-asegura.ts",
@@ -226095,7 +226196,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is ModuloPortal",
-          "linea": 87,
+          "linea": 102,
           "resumen": "¿Es un id del catálogo? Para validar lo que llega del navegador."
         },
         {
@@ -226104,17 +226205,17 @@
           "exportada": true,
           "params": "id: ModuloPortal, ctx: ContextoModulos",
           "retorno": "DisponibilidadModulo | null",
-          "linea": 99,
+          "linea": 114,
           "resumen": "Disponibilidad de un módulo para ESTA persona. - Flota: `disponible` si ya lleva la flota de alguna sociedad (dueño o jefe), `bajo_solicitud` si no, y `null` si no se ha podido comprobar (no se adivin"
         },
         {
           "nombre": "accesoPatrimonioPorModulo",
           "kind": "function",
           "exportada": true,
-          "params": "c: { titulares: number filas: readonly { modulo: string; estado: string }[] | null tieneInmuebles: boolean | null }",
+          "params": "c: { filas: readonly { modulo: string; estado: string }[] | null tieneInmuebles: boolean | null }",
           "retorno": "boolean",
-          "linea": 127,
-          "resumen": "Patrimonio y alquileres: ¿esta identidad puede usar `/patrimonio`? UNA sola función para el acceso (lib/patrimonio/accesos.ts), el menú y la tarjeta de `/herramientas`/`/inicio` (25/10/2026). Se suma "
+          "linea": 146,
+          "resumen": "Patrimonio y alquileres: ¿el MÓDULO deja abrir `/patrimonio` a esta identidad? UNA sola función para el acceso (lib/patrimonio/accesos.ts), el menú y la tarjeta de `/herramientas`/`/inicio` (25/10/202"
         },
         {
           "nombre": "filaVigente",
@@ -226122,7 +226223,7 @@
           "exportada": false,
           "params": "filas: readonly FilaModulo[], id: ModuloPortal",
           "retorno": "FilaModulo | null",
-          "linea": 158,
+          "linea": 175,
           "resumen": "La fila VIGENTE de un módulo: la no retirada (el índice único parcial de la BD garantiza que hay como mucho una). Una retirada no cuenta: se puede volver a pedir."
         },
         {
@@ -226131,7 +226232,7 @@
           "exportada": true,
           "params": "id: ModuloPortal, ctx: ContextoModulos & { filas: readonly FilaModulo[] | null },",
           "retorno": "AccionModulo",
-          "linea": 162
+          "linea": 179
         },
         {
           "nombre": "tarjetasModulos",
@@ -226139,7 +226240,7 @@
           "exportada": true,
           "params": "ctx: ContextoModulos & { filas: readonly FilaModulo[] | null }",
           "retorno": "TarjetaModulo[]",
-          "linea": 182,
+          "linea": 199,
           "resumen": "Las tarjetas de `/herramientas`, en el orden del catálogo."
         },
         {
@@ -226148,7 +226249,7 @@
           "exportada": true,
           "params": "a: AccionModulo",
           "retorno": "boolean",
-          "linea": 191,
+          "linea": 208,
           "resumen": "¿La acción de la tarjeta permite escribir una fila `solicitado`? Lo usa la ruta, no solo el botón."
         },
         {
@@ -226157,13 +226258,13 @@
           "exportada": true,
           "params": "c: { identidadId: string nombre: string | null vinculada: boolean modulo: ModuloPortal }",
           "retorno": "string",
-          "linea": 199,
+          "linea": 216,
           "resumen": "El aviso de Telegram a Alberto (HTML de Telegram: el nombre lo tecleó la persona, se escapa). `vinculada=false` = el nombre no lo ha comprobado nadie (no hay ficha de la cartera detrás)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f7b2d6079795"
+      "hash": "27a3575ab160"
     },
     {
       "ruta": "packages/module-seguros-portal/src/obligacion.ts",
@@ -256200,6 +256301,6 @@
   ],
   "resumen": {
     "archivos": 5366,
-    "funciones": 20593
+    "funciones": 20603
   }
 }
