@@ -100,6 +100,12 @@ const EXENTOS = new Set([
   // Cada consulta parte de `portal_vinculo` de la identidad dueña de la suscripción y SOLO mira sus fichas propias que
   // operan. Cepo: `regression-portal-patrimonio-aislamiento`.
   'apps/asegura-portal/lib/patrimonio/avisos-push-bd.ts',
+  // QR del VEHÍCULO (27/10/2026, F1; spec `2026-10-27-qr-vehiculo-flota.md` §7-6): `vehiculoPorToken` es la
+  // ÚNICA lectura sin identidad del QR. La página `/v/<token>` es pública (pegatina en una guantera, sin cookie);
+  // el filtro es el HASH de un token de 256 bits normalizado ANTES de la BD. El fichero solo lee la etiqueta, su
+  // bien y sus interruptores (nada de la persona ni de la cartera), y no puede tener más funciones: cepo propio en
+  // `test/regression-portal-vehiculo-qr.test.ts`.
+  'apps/asegura-portal/lib/vehiculo-token.ts',
 ])
 
 /**

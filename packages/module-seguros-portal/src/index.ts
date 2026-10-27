@@ -735,6 +735,35 @@ export type {
   VencimientoFlota,
 } from './flota.ts'
 
+// QR del VEHÍCULO (27/10/2026, F1): vista pública por allow-list de salida + quién gestiona el vehículo.
+export {
+  CAMPOS_PROHIBIDOS_EN_VEHICULO_PUBLICO,
+  CLAVES_INTERRUPTORES,
+  INTERRUPTORES_DEFECTO,
+  SEMAFOROS,
+  TEXTO_INTERRUPTOR,
+  TEXTO_SEMAFORO,
+  TEXTO_TIPO_RECORDATORIO,
+  TIPOS_RECORDATORIO_VEHICULO,
+  interruptoresDelCuerpo,
+  interruptoresEfectivos,
+  semaforoItv,
+  semaforoSeguro,
+  vistaPublicaVehiculo,
+} from './vehiculo-publico.ts'
+export type {
+  EntradaVistaPublica,
+  InterruptoresPublicos,
+  PolizaParaSemaforo,
+  RecordatorioPublico,
+  Semaforo,
+  TelefonoPublico,
+  TipoRecordatorioVehiculo,
+  VistaPublicaVehiculo,
+} from './vehiculo-publico.ts'
+export { MAX_ETIQUETAS_LOTE, ambitoDeDefecto, empresasGestionables, esUuid, resolverGestionVehiculo } from './vehiculo-acceso.ts'
+export type { AmbitoDueno, BienParaGestion, GestionVehiculo } from './vehiculo-acceso.ts'
+
 // Preferencias de avisos (13/10/2026): canal, antelación y «no molestar» de «Configuración».
 export {
   CANALES_AVISO,

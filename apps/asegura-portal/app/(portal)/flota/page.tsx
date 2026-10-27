@@ -7,6 +7,7 @@ import { empresasDeFlota, flotaDeEmpresa, nombramientosPendientes } from '@/lib/
 import { fechaEs } from '@/lib/fechas'
 import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
+import { estadoQrEmpresa, estadoQrParaVista } from '@/lib/vehiculo-qr'
 
 import { FlotaEmpresa, NombramientoPendiente } from './FlotaEmpresa'
 import { EncabezadoPortal } from '../../PaginaPortal'
@@ -39,6 +40,12 @@ export default async function FlotaPage({
   if (pedida !== undefined) {
     const flota = await flotaDeEmpresa(identidad.id, pedida)
     if (flota === null) notFound()
+    // El QR del vehículo (27/10/2026, F1). Si no se puede leer, la flota se pinta igual y sin el bloque de QR:
+    // no se afirma «sin etiqueta» de algo que no se ha podido mirar.
+    const qr = await estadoQrEmpresa(identidad.id, flota.empresa.id).catch((e: unknown) => {
+      console.error('[portal/flota] no se pudo leer el estado de los QR:', e instanceof Error ? e.message : e)
+      return null
+    })
     return (
       <>
         <EncabezadoPortal antetitulo="Tu sociedad" titulo="Flota de" acento={flota.empresa.nombre} />
@@ -59,6 +66,8 @@ export default async function FlotaPage({
           }
           candidatos={flota.candidatos}
           textoJefe={TEXTO_JEFE_FLOTA}
+          qrPorClave={qr === null ? null : Object.fromEntries([...qr.porClave].map(([k, e]) => [k, estadoQrParaVista(e)]))}
+          qrDefecto={qr?.defecto ?? null}
         />
         <p style={{ marginTop: 24 }}>
           <Link href="/flota">← Todas tus flotas</Link>

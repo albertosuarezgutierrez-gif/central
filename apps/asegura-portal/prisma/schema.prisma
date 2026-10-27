@@ -200,6 +200,10 @@ model PortalBien {
   identidad    PortalIdentidad?        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
   polizas      PortalPolizaDeclarada[]
   obligaciones PortalObligacion[]
+  /// Las etiquetas QR del vehículo (`portal_vehiculo_qr`, F1 27/10/2026). Una sola viva por bien.
+  qrsVehiculo     PortalVehiculoQr[]
+  /// La excepción de interruptores públicos de ESTE vehículo (0 o 1 fila).
+  publicoVehiculo PortalVehiculoPublico[]
 
   @@map("portal_bien")
   @@schema("seguros")
@@ -1439,6 +1443,48 @@ model PortalHojaQrPoliza {
   hoja PortalHojaQr @relation(fields: [hojaId], references: [id], onDelete: Cascade)
 
   @@map("portal_hoja_qr_poliza")
+  @@schema("seguros")
+}
+
+/// El QR de un VEHÍCULO (`seguros.portal_vehiculo_qr`, F1 27/10/2026; SQL
+/// `prisma/sql/2026-10-27_portal_vehiculo_qr.sql`). Una fila por etiqueta impresa;
+/// token HASHEADO; anular = UPDATE (el rol no tiene DELETE). La única lectura sin
+/// identidad es `vehiculoPorToken` (`lib/vehiculo-token.ts`).
+model PortalVehiculoQr {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bienId                String    @map("bien_id") @db.Uuid
+  tokenHash             String    @unique @map("token_hash")
+  creadoPorIdentidadId  String?   @map("creado_por_identidad_id") @db.Uuid
+  creadoEn              DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  ultimoUsoEn           DateTime? @map("ultimo_uso_en") @db.Timestamptz(6)
+  anuladoEn             DateTime? @map("anulado_en") @db.Timestamptz(6)
+  anuladoPorIdentidadId String?   @map("anulado_por_identidad_id") @db.Uuid
+
+  bien PortalBien @relation(fields: [bienId], references: [id], onDelete: Cascade)
+
+  @@index([bienId, creadoEn])
+  @@map("portal_vehiculo_qr")
+  @@schema("seguros")
+}
+
+/// QUÉ ve quien escanea el QR de un vehículo (`seguros.portal_vehiculo_publico`).
+/// `bienId` null = DEFECTO del dueño; con `bienId` = excepción de ese vehículo.
+/// Dueño = persona (`duenoIdentidadId`) XOR empresa (`clienteId`), copiado del
+/// `portal_bien` en el servidor. Allow-list de salida: `vehiculo-publico.ts`.
+model PortalVehiculoPublico {
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  duenoIdentidadId          String?  @map("dueno_identidad_id") @db.Uuid
+  clienteId                 String?  @map("cliente_id") @db.Uuid
+  bienId                    String?  @map("bien_id") @db.Uuid
+  datosCarretera            Boolean  @default(true) @map("datos_carretera")
+  estadoAlDia               Boolean  @default(true) @map("estado_al_dia")
+  recordatoriosPendientes   Boolean  @default(false) @map("recordatorios_pendientes")
+  actualizadoPorIdentidadId String?  @map("actualizado_por_identidad_id") @db.Uuid
+  actualizadoEn             DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  bien PortalBien? @relation(fields: [bienId], references: [id], onDelete: Cascade)
+
+  @@map("portal_vehiculo_publico")
   @@schema("seguros")
 }
 
