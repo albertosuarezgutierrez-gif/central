@@ -168,9 +168,11 @@ export async function accesosPatrimonio(identidadId: string): Promise<AccesosPat
     fichasVivas: new Set(vivas.map((f) => f.id)),
     hoy: new Date(),
   })
+  // 🚨 Sin ninguna ficha titular, nada (27/10/2026: esta es ahora la ÚNICA guarda «sin titular, nunca»; el puro ya no la
+  // repite). La ficha puede ser un PROSPECTO sin póliza que creó la correduría al autorizar.
   if (porCartera.size === 0) return porCartera
-  // 25/10/2026: además de la póliza viva, el módulo `alquileres` activo de ESTA identidad (regla única, pura:
-  // `accesoPatrimonioPorModulo`). Quien ya tiene inmuebles creados conserva el acceso mientras no se le retire.
+  // 25/10/2026: el módulo `alquileres` activo de ESTA identidad (regla única, pura: `accesoPatrimonioPorModulo`); desde el
+  // 27/10/2026 ya no se exige póliza viva. Quien ya tiene inmuebles creados conserva el acceso mientras no se le retire.
   const [filas, conInmuebles] = await Promise.all([
     prisma.portalModulo
       .findMany({ where: { identidadId, modulo: 'alquileres' }, select: { modulo: true, estado: true } })
@@ -183,7 +185,7 @@ export async function accesosPatrimonio(identidadId: string): Promise<AccesosPat
       .then((n) => n > 0)
       .catch(() => null),
   ])
-  const abre = accesoPatrimonioPorModulo({ titulares: porCartera.size, filas, tieneInmuebles: conInmuebles })
+  const abre = accesoPatrimonioPorModulo({ filas, tieneInmuebles: conInmuebles })
   return abre ? porCartera : new Map()
 }
 

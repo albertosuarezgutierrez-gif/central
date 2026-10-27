@@ -2,7 +2,8 @@
 
 // «Hoy» → cola «Solicitudes del portal» (26/10/2026): módulos («Herramientas») que los clientes piden desde el portal.
 // Mismo patrón que `OportunidadesPatrimonio`. Activar/Rechazar reutilizan el POST de `/api/correduria/cliente/portal-modulos`
-// (el servidor REVALIDA —p. ej. Patrimonio exige póliza EN VIGOR—, va auditado y deja `historial_interno`). Rechazar = `retirar`.
+// (el servidor REVALIDA, va auditado y deja `historial_interno`). Rechazar = `retirar`. 27/10/2026: activar = autorizar (sin
+// exigir póliza) y una petición SIN ficha se activa por `identidadId`: asegura crea una ficha de PROSPECTO (se avisa antes).
 // Tras la acción la fila desaparece SIN desmontar la lista (se recarga en segundo plano). Vacío = la cola no se pinta.
 // Error de lectura ≠ vacío. Lista acotada: ~50 + «Ver más».
 
@@ -10,7 +11,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Clock, Inbox, TriangleAlert } from 'lucide-react'
 import { btnStyle, Badge } from '@/components/ui'
-import { fechaSolicitud, textoResultadoAccion, type LecturaSolicitudesPortal, type SolicitudPortal } from '@/lib/correduria/solicitudes-portal'
+import { confirmacionProspecto, cuerpoAccion, fechaSolicitud, textoResultadoAccion, type LecturaSolicitudesPortal, type SolicitudPortal } from '@/lib/correduria/solicitudes-portal'
 import Bloque from './Bloque'
 import { ConIcono } from './iconos'
 
@@ -31,13 +32,16 @@ export default function SolicitudesPortal() {
   useEffect(() => { cargar() }, [cargar])
 
   async function actuar(s: SolicitudPortal, accion: 'activar' | 'retirar') {
-    if (!s.clienteId) return
+    const cuerpo = cuerpoAccion(s, accion)
+    if (!cuerpo) return
     if (accion === 'retirar' && !window.confirm(`¿Rechazar «${s.moduloNombre}» para ${s.cliente}? La petición se retira.`)) return
+    const pregunta = confirmacionProspecto(s, accion)
+    if (pregunta && !window.confirm(pregunta)) return
     setOcupado(s.id); setAviso(null)
     try {
       const r = await fetch('/api/correduria/cliente/portal-modulos', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clienteId: s.clienteId, modulo: s.modulo, accion }),
+        body: JSON.stringify(cuerpo),
       })
       const t = textoResultadoAccion(accion, r.status, await r.json().catch(() => null))
       setAviso(t.ok ? `${t.texto} (${s.cliente} · ${s.moduloNombre})` : t.texto)
@@ -74,7 +78,7 @@ export default function SolicitudesPortal() {
   return (
     <Bloque
       titulo={solicitudes.length > 0 ? `Solicitudes del portal · ${solicitudes.length}` : 'Solicitudes del portal · sin pendientes'}
-      sub="Herramientas que los clientes han pedido desde el portal. Al activar, el servidor vuelve a comprobar las condiciones."
+      sub="Herramientas que han pedido desde el portal. Activar es autorizar: no exige póliza con nosotros. El servidor vuelve a comprobar al escribir."
       Icono={Inbox}
       tono={solicitudes.length > 0 ? 'aviso' : 'neutral'}
     >
@@ -89,6 +93,7 @@ export default function SolicitudesPortal() {
                     ? <Link href={`/correduria/cliente/${s.clienteId}`} style={{ fontWeight: 700, fontSize: 15, overflowWrap: 'anywhere' }}>{s.cliente}</Link>
                     : <span style={{ fontWeight: 700, fontSize: 15, overflowWrap: 'anywhere' }}>{s.cliente}</span>}
                   {s.sinFicha && <Badge tono="aviso">Sin ficha</Badge>}
+                  {s.creaProspecto && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Al activar se crea su ficha de prospecto</span>}
                 </div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>{s.moduloNombre}</div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Pedido el {fechaSolicitud(s.solicitadoEn)}</div>

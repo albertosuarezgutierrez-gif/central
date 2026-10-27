@@ -15,6 +15,18 @@ test('🚨 accesosPatrimonio aplica accesoPatrimonioPorModulo y lee portal_modul
   assert.match(f, /return abre \? porCartera : new Map\(\)/)
 })
 
+// 27/10/2026: el puro ya no exige «titulares > 0» (acceso = autorización de la correduría, sin póliza viva). La guarda
+// «sin ficha titular, nada» vive SOLO aquí: si se quita, un `activo` sin ninguna ficha devolvería un mapa vacío igual, pero
+// cualquier refactor que mire `abre` sin el mapa abriría en el aire. Tiene que ir ANTES de decidir por el módulo.
+test('🚨 sin ninguna ficha titular, accesosPatrimonio corta ANTES de mirar el módulo', () => {
+  const guarda = f.indexOf('if (porCartera.size === 0) return porCartera')
+  const modulo = f.indexOf('accesoPatrimonioPorModulo(')
+  assert.ok(guarda > 0, 'falta la guarda «sin titular, nada»')
+  assert.ok(guarda < modulo, 'la guarda tiene que ir antes de decidir por el módulo')
+  // Y la regla de fase 1 (póliza viva) no vuelve por la puerta de atrás.
+  assert.doesNotMatch(f, /titulares:\s*porCartera\.size/)
+})
+
 test('🚨 los inmuebles que mantienen el acceso se buscan solo en los titulares ya autorizados', () => {
   assert.match(f, /titular: \{ clienteId: \{ in: \[\.\.\.porCartera\.keys\(\)\] \} \}/)
 })

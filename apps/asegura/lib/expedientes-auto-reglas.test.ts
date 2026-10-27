@@ -15,7 +15,8 @@ const ren = (o: Partial<CandidatoRenovacion> = {}): CandidatoRenovacion => ({
   vence: sumar(45), ramo: 'auto', compania: 'Mapfre', numeroPoliza: '123', yaAbierta: false, yaEsteCiclo: false, ...o,
 })
 const dec = (o: Partial<CandidatoDeclarada> = {}): CandidatoDeclarada => ({
-  declaradaId: 'd1', clienteId: 'c1', vence: sumar(55), ramo: 'hogar', compania: 'Allianz', yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false, ...o,
+  declaradaId: 'd1', clienteId: 'c1', vence: sumar(55), ramo: 'hogar', compania: 'Allianz', yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false,
+  consentimientoComercial: true, ...o,
 })
 
 test('ventana 60→30 días, bordes incluidos (art. 22 LCS: dos meses la compañía, un mes el tomador)', () => {
@@ -81,6 +82,36 @@ test('declarada sin vínculo a ficha: no se abre (no hay a quién llamar) y se d
   assert.equal(decidirDeclarada(dec({ yaEsteCiclo: true }), HOY).abrir, false)
   // Su nº ya está en nuestra cartera: es NUESTRA, no se le «pasa precio» (misma regla que `leadDeclarada`).
   assert.deepEqual(decidirDeclarada(dec({ yaEnCartera: true }), HOY), { abrir: false, motivo: 'ya_en_cartera', dias: 55 })
+})
+
+// ── Gate legal (Alberto, 27/10/2026): declarada → oportunidad SOLO con consentimiento comercial vigente ──
+test('🚨 declarada SIN consentimiento comercial vigente: NO se crea oportunidad (ni con «no», ni sin preguntar)', () => {
+  for (const c of [false, null] as const) {
+    assert.deepEqual(decidirDeclarada(dec({ consentimientoComercial: c }), HOY), { abrir: false, motivo: 'sin_consentimiento', dias: null }, String(c))
+  }
+  // El gate va antes que todo: aunque esté en ventana, vinculada y sin abrir.
+  assert.equal(decidirDeclarada(dec({ consentimientoComercial: null, vence: sumar(40) }), HOY).abrir, false)
+})
+
+test('🚨 declarada CON consentimiento: se abre UNA vez, con fecha útil = vencimiento − 1 mes; el ciclo siguiente no la repite', () => {
+  const r = decidirDeclarada(dec({ vence: sumar(55) }), HOY)
+  assert.equal(r.abrir, true)
+  if (!r.abrir) return
+  assert.equal(r.fechaUtil, sumar(25))
+  assert.match(r.texto, new RegExp(`antes del ${sumar(25).split('-').reverse().join('/')}`))
+  // La primera llamada sigue siendo ANTES de la fecha útil (no se llama el último día).
+  assert.ok(r.fechaAccion <= r.fechaUtil!)
+  // Una sola vez: con la de este ciclo ya creada (o una abierta), no se vuelve a abrir.
+  assert.deepEqual(decidirDeclarada(dec({ yaEsteCiclo: true }), HOY), { abrir: false, motivo: 'ya_tratada_este_ciclo', dias: 55 })
+  assert.deepEqual(decidirDeclarada(dec({ yaAbierta: true }), HOY), { abrir: false, motivo: 'ya_abierta', dias: 55 })
+})
+
+test('🚨 la lectura pasa el consentimiento REAL (comercial, texto vigente) y por defecto «no consta» (null), nunca «sí»', () => {
+  assert.match(SRC, /consentimientoVigente\(fs, 'comercial', VERSION_TEXTO_COMERCIAL\)/)
+  assert.match(SRC, /decidirDeclarada\(\{ \.\.\.f, consentimientoComercial: consentimiento\.get\(f\.identidadId\) \?\? null \}, hoy\)/)
+  assert.match(SRC, /where c\.tipo = 'comercial' and c\.identidad_id = any\(/)
+  // Sin envíos salientes: este fichero no importa ningún canal de correo/mensajería.
+  assert.doesNotMatch(SRC, /core-email|core-telegram|createMailTransporter|sendMail|whatsapp/i)
 })
 
 test('ramo declarado desconocido → «otros» (nunca un cast que tumbe el lote)', () => {

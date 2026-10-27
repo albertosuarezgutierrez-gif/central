@@ -16,6 +16,7 @@
 // El SQL crudo NO prefija el schema: la conexión ya trae `?schema=seguros`.
 
 import { DIAS_PREAVISO_ASEGURADOR, sqlCarteraEnVigor, sqlCarteraViva } from '@central/module-seguros'
+import { VERSION_TEXTO_COMERCIAL, consentimientoVigente } from '@central/module-seguros-portal'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { sqlDeclaradaViva } from './declaradas-eliminadas'
@@ -46,6 +47,8 @@ export type Apertura = {
   vence: string
   dias: number
   fechaAccion: string
+  /** Solo declaradas: último día útil (vencimiento − 1 mes, art. 22 LCS). */
+  fechaUtil: string | null
   texto: string
   numeroPoliza: string | null
   prima: string | null
@@ -67,7 +70,7 @@ type FilaRenovacion = {
 }
 
 type FilaDeclarada = {
-  declaradaId: string; clienteId: string | null; ramo: string | null; compania: string | null
+  declaradaId: string; identidadId: string; clienteId: string | null; ramo: string | null; compania: string | null
   numeroPoliza: string | null; vence: string | null; yaAbierta: boolean; yaEsteCiclo: boolean; yaEnCartera: boolean
 }
 
@@ -112,7 +115,7 @@ export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: str
 
   const decl = await db.$queryRaw<FilaDeclarada[]>(Prisma.sql`
     with d as (
-      select d.id, d.ramo, d.compania, d.numero_poliza, d.fecha_vencimiento,
+      select d.id, d.identidad_id, d.ramo, d.compania, d.numero_poliza, d.fecha_vencimiento,
              (select v.cliente_id from portal_vinculo v
                where v.identidad_id = d.identidad_id and v.correduria_id = ${correduriaId}::uuid
                order by v.creado_en limit 1) as cliente_id
@@ -120,7 +123,7 @@ export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: str
       where ${sqlDeclaradaViva('d')}
         and d.fecha_vencimiento between ${hoy}::date and ${hoy}::date + ${DIAS_PREAVISO_ASEGURADOR}::int
     )
-    select d.id::text as "declaradaId", d.cliente_id::text as "clienteId", d.ramo, d.compania,
+    select d.id::text as "declaradaId", d.identidad_id::text as "identidadId", d.cliente_id::text as "clienteId", d.ramo, d.compania,
            d.numero_poliza as "numeroPoliza", to_char(d.fecha_vencimiento, 'YYYY-MM-DD') as vence,
            (d.cliente_id is not null and exists (
              select 1 from oportunidades o
@@ -144,6 +147,11 @@ export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: str
     from d
     order by d.fecha_vencimiento`)
 
+  // 🚨 Gate legal (27/10/2026): el consentimiento `comercial` de quien declaró. La tabla es append-only y manda la ÚLTIMA
+  // fila sobre el texto vigente (`consentimientoVigente`). Si la lectura falla, se propaga (la pasada lo registra): nunca
+  // se trata como «consiente».
+  const consentimiento = await consentimientosComerciales(db, [...new Set(decl.map((f) => f.identidadId))])
+
   const aperturas: Apertura[] = []
   const noAbiertas: PlanExpedientesAuto['noAbiertas'] = { renovacion: {}, declarada: {} }
   for (const f of renov) {
@@ -151,15 +159,15 @@ export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: str
     if (!d.abrir) { contar(noAbiertas.renovacion, d.motivo); continue }
     aperturas.push({
       tipo: 'renovacion', clienteId: f.clienteId, origenId: f.polizaId, ramo: f.ramo, vence: d.vence, dias: d.dias,
-      fechaAccion: d.fechaAccion, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: f.prima,
+      fechaAccion: d.fechaAccion, fechaUtil: null, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: f.prima,
     })
   }
   for (const f of decl) {
-    const d = decidirDeclarada(f, hoy)
+    const d = decidirDeclarada({ ...f, consentimientoComercial: consentimiento.get(f.identidadId) ?? null }, hoy)
     if (!d.abrir || !f.clienteId) { contar(noAbiertas.declarada, d.abrir ? 'sin_vincular' : d.motivo); continue }
     aperturas.push({
       tipo: 'declarada', clienteId: f.clienteId, origenId: f.declaradaId, ramo: tipoDeRamoDeclarado(f.ramo), vence: d.vence,
-      dias: d.dias, fechaAccion: d.fechaAccion, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: null,
+      dias: d.dias, fechaAccion: d.fechaAccion, fechaUtil: d.fechaUtil ?? null, texto: d.texto, numeroPoliza: f.numeroPoliza, prima: null,
     })
   }
 
@@ -183,6 +191,24 @@ export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: str
   return { hoy, aperturas, noAbiertas, cierres }
 }
 
+/**
+ * Consentimiento `comercial` VIGENTE por identidad (`true` / `false` / `null`), con la regla única del módulo puro sobre el
+ * texto actual. Una identidad sin filas no entra en el mapa (= `null`, nunca preguntada). Lectura cruda sin `correduria_id`:
+ * la tabla del portal no lo lleva; las identidades ya vienen acotadas por `portal_vinculo` de la correduría en `decl`.
+ */
+async function consentimientosComerciales(db: Db, identidadIds: string[]): Promise<Map<string, boolean | null>> {
+  const mapa = new Map<string, boolean | null>()
+  if (identidadIds.length === 0) return mapa
+  const filas = await db.$queryRaw<{ identidadId: string; tipo: 'comercial'; otorgado: boolean; versionTexto: string; creadoEn: Date }[]>(Prisma.sql`
+    select c.identidad_id::text as "identidadId", c.tipo, c.otorgado, c.version_texto as "versionTexto", c.creado_en as "creadoEn"
+    from portal_consentimiento c
+    where c.tipo = 'comercial' and c.identidad_id = any(${identidadIds}::uuid[])`)
+  const por = new Map<string, typeof filas>()
+  for (const f of filas) por.set(f.identidadId, [...(por.get(f.identidadId) ?? []), f])
+  for (const [id, fs] of por) mapa.set(id, consentimientoVigente(fs, 'comercial', VERSION_TEXTO_COMERCIAL))
+  return mapa
+}
+
 export type ResultadoExpedientesAuto = {
   abiertas: { id: string; clienteId: string; tipo: Apertura['tipo'] }[]
   cerradas: { id: string; motivo: 'renovada' | 'sustituida' }[]
@@ -199,7 +225,7 @@ export async function generarExpedientesAuto(tx: Db, correduriaId: string, hoy: 
   for (const a of plan.aperturas) {
     const info = a.tipo === 'renovacion'
       ? { origen: ORIGEN_RENOVACION_CARTERA, polizaId: a.origenId, vence: a.vence }
-      : { origen: ORIGEN_DECLARADA_PORTAL, declaradaId: a.origenId, vence: a.vence }
+      : { origen: ORIGEN_DECLARADA_PORTAL, declaradaId: a.origenId, vence: a.vence, fechaUtil: a.fechaUtil }
     const fuente = a.tipo === 'renovacion' ? 'renovacion' : 'otros'
     const polizaId = a.tipo === 'renovacion' ? a.origenId : null
     // Insertar SOLO si no existe ya la de este ciclo (idempotente aunque el plan se quedara viejo).

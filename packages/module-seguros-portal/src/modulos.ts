@@ -15,6 +15,16 @@ export type ModuloPortal = (typeof MODULOS_PORTAL)[number]
 export const ESTADOS_MODULO = ['solicitado', 'activo', 'retirado'] as const
 export type EstadoModulo = (typeof ESTADOS_MODULO)[number]
 
+/**
+ * `portal_vinculo.origen` del vínculo que crea la CORREDURÍA al autorizar un módulo a una persona sin ficha (27/10/2026):
+ * ficha de prospecto + vínculo `gestionar`. Es una persona de verdad (≠ `corredor`, la vista TEMPORAL de Alberto): OPERA
+ * como `email_hash`/`manual` y nunca la retira el cambio de correo (el trigger solo borra `email_hash`).
+ * 🚨 Necesita ampliar el CHECK `portal_vinculo_origen_check`: `apps/asegura/prisma/sql/2026-10-27_portal_acceso_por_autorizacion.sql`.
+ */
+export const ORIGEN_VINCULO_AUTORIZACION = 'autorizacion_corredor'
+/** Espejo EXACTO del CHECK `portal_vinculo_origen_check` tras el SQL del 27/10/2026 (un cepo lo compara con el fichero). */
+export const ORIGENES_VINCULO = ['email_hash', 'manual', 'corredor', ORIGEN_VINCULO_AUTORIZACION] as const
+
 export type DisponibilidadModulo = 'disponible' | 'bajo_solicitud' | 'proximamente'
 
 /**
@@ -22,11 +32,15 @@ export type DisponibilidadModulo = 'disponible' | 'bajo_solicitud' | 'proximamen
  * Se sella en `portal_modulo.version_condiciones`. Sube con cada cambio del texto: las filas viejas
  * conservan la versión que aceptaron (no se reescriben).
  */
-export const VERSION_CONDICIONES_MODULOS = '2026-10-22'
+export const VERSION_CONDICIONES_MODULOS = '2026-10-27'
 
+/**
+ * 27/10/2026 (Alberto): el acceso a un módulo lo AUTORIZA la correduría, tenga o no la persona seguros con nosotros.
+ * El texto lo dice así (antes: «gratis para nuestros clientes», que daba a entender que exigía ser cliente).
+ */
 export const TEXTO_SOLICITUD_MODULO =
-  'Al pedirlo, avisamos a tu corredor de Grupo ASegura para que se ponga en contacto contigo y te lo active. ' +
-  'Es gratis para nuestros clientes y no te compromete a nada. No se activa solo: lo activamos a mano.'
+  'Al pedirlo, avisamos a tu corredor de Grupo ASegura, que revisa la petición y te da acceso a mano: no se activa solo. ' +
+  'El acceso lo autoriza la correduría y no exige que tengas ningún seguro con nosotros. Es gratis y no te compromete a nada.'
 
 export const TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO =
   'Activado, pero aún no se abre: tienes que entrar con el email que consta en tu ficha de cliente de Grupo ASegura ' +
@@ -70,7 +84,8 @@ export const CATALOGO_MODULOS: Record<ModuloPortal, FichaModulo> = {
   },
   // 24/10/2026 (Alberto): «Gestión de alquileres» y Patrimonio son LA MISMA herramienta. El id `alquileres` se
   // conserva (es el CHECK de `portal_modulo.modulo` y las filas ya pedidas siguen valiendo); cambia lo que dice y a
-  // dónde lleva. Fase 1: solo para clientes con ficha (el acceso lo da `accesosPatrimonio`, no esta tarjeta).
+  // dónde lleva. El acceso lo da `accesosPatrimonio` (ficha titular + módulo activo), no esta tarjeta. 27/10/2026: la
+  // ficha puede ser un PROSPECTO que crea la correduría al autorizar (sin póliza con nosotros).
   alquileres: {
     id: 'alquileres',
     nombre: 'Patrimonio y alquileres',
@@ -115,9 +130,13 @@ export type ContextoModulos = { accesoFlota: boolean | null; accesoPatrimonio: b
 export type FilaModulo = { modulo: string; estado: string; solicitadoEn: Date }
 
 /**
- * Patrimonio y alquileres: ¿esta identidad puede usar `/patrimonio`? UNA sola función para el acceso (lib/patrimonio/accesos.ts),
- * el menú y la tarjeta de `/herramientas`/`/inicio` (25/10/2026). Se suma a la regla de fase 1 (póliza viva = `titulares > 0`,
- * que sigue mandando): sin titulares, nunca.
+ * Patrimonio y alquileres: ¿el MÓDULO deja abrir `/patrimonio` a esta identidad? UNA sola función para el acceso
+ * (lib/patrimonio/accesos.ts), el menú y la tarjeta de `/herramientas`/`/inicio` (25/10/2026).
+ *
+ * 27/10/2026 (Alberto): el acceso es la AUTORIZACIÓN de la correduría (la fila `activo`), tenga o no póliza con nosotros.
+ * Se quita la regla de fase 1 «sin titulares (póliza viva), nunca». OJO: que haya un TITULAR (ficha viva vinculada) sigue
+ * siendo condición, pero no la decide esta función sino quien la llama: `accesosPatrimonio` devuelve el mapa vacío ANTES de
+ * llamarla si no hay ninguna ficha titular (cepo `test/regression-portal-patrimonio-modulo.test.ts`).
  *  - Fila `activo` de `portal_modulo` ('alquileres') → abre.
  *  - Fila solo `retirado` → CIERRA (retirar tiene que cerrar), aunque haya inmuebles.
  *  - Sin fila vigente (ninguna, o solo `solicitado`) → solo si YA tiene inmuebles creados (pilotos previos al módulo:
@@ -125,11 +144,9 @@ export type FilaModulo = { modulo: string; estado: string; solicitadoEn: Date }
  *  - `filas`/`tieneInmuebles` `null` (la lectura falló) → fail-closed salvo fila activa legible: nunca se inventa acceso.
  */
 export function accesoPatrimonioPorModulo(c: {
-  titulares: number
   filas: readonly { modulo: string; estado: string }[] | null
   tieneInmuebles: boolean | null
 }): boolean {
-  if (c.titulares <= 0) return false
   if (c.filas === null) return false
   const mias = c.filas.filter((f) => f.modulo === 'alquileres')
   if (mias.some((f) => f.estado === 'activo')) return true
@@ -169,7 +186,7 @@ export function accionModulo(
   if (disp === 'disponible' && ficha.hrefPortal !== null) return { tipo: 'abrir', href: ficha.hrefPortal }
   if (disp === null || ctx.filas === null) return { tipo: 'sin_comprobar' }
   const fila = filaVigente(ctx.filas, id)
-  // Activado por el corredor pero sin acceso real (p. ej. sin póliza viva): no se manda a una pantalla vacía.
+  // Activado por el corredor pero sin acceso real (p. ej. su acceso al portal no está unido a ninguna ficha): no se manda a una pantalla vacía.
   if (fila?.estado === 'activo' && id === 'alquileres') return { tipo: 'activo', texto: TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO }
   if (fila?.estado === 'activo') {
     return ficha.hrefPortal !== null ? { tipo: 'abrir', href: ficha.hrefPortal } : { tipo: 'activo', texto: ficha.textoActivo }

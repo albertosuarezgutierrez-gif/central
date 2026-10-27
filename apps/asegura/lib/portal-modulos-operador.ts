@@ -6,11 +6,14 @@
 // llega a sus identidades por `portal_vinculo`. Una ficha SIN identidad (nunca ha entrado al portal) no tiene
 // sobre qué colgar la fila: no se activa nada en el aire, se dice que primero hay que invitarla.
 //
-// Tres estados (regla global): `null` en `identidades`/`polizasEnVigor` = «no se ha podido mirar», NUNCA «no
-// tiene». Con `null` no se ofrece activar (podría ser justo lo que no cumple la regla).
+// Tres estados (regla global): `null` en `identidades` = «no se ha podido mirar», NUNCA «no tiene». Con `null` no se
+// ofrece activar.
 //
-// Fase 1 (24/10/2026, Alberto): «Patrimonio y alquileres» (`alquileres`) solo para clientes con una póliza EN
-// VIGOR de CIMA (`esCarteraEnVigor`). Lo decide el SERVIDOR al escribir; el botón solo lo refleja.
+// 27/10/2026 (Alberto): el acceso a un módulo es la AUTORIZACIÓN de la correduría, tenga o no la persona póliza con
+// nosotros. Se quita la regla de fase 1 «Patrimonio solo con póliza en vigor de CIMA». Y una identidad que pide un módulo
+// SIN ficha se puede activar desde la cola: el servidor crea una ficha de PROSPECTO (lead, sin póliza, fuente portal) y el
+// vínculo `gestionar` con origen `autorizacion_corredor` (`portal-modulos-cartera.ts`, `escribirModuloPorIdentidad`).
+// Esa ficha NO es cliente: sin póliza en vigor no entra en ningún recuento de cartera (`esCarteraEnVigor`).
 import {
   CATALOGO_MODULOS,
   MODULOS_PORTAL,
@@ -22,9 +25,6 @@ import {
 
 export { esModuloPortal }
 export type { ModuloPortal }
-
-/** Módulos que, en Fase 1, exigen póliza en vigor de CIMA. */
-export const MODULOS_CON_POLIZA_EN_VIGOR: readonly ModuloPortal[] = ['alquileres']
 
 export type VinculoDeFicha = { identidadId: string; nivel: string; origen: string }
 
@@ -44,10 +44,8 @@ export type FilaModuloCliente = { id: string; identidadId: string; modulo: strin
 export type EstadoModuloFicha = 'activo' | 'solicitado' | 'inactivo'
 
 export type ContextoActivacion = {
-  /** Identidades del portal vinculadas a la ficha. `null` = no se ha podido contar. */
+  /** Identidades del portal vinculadas a la ficha (las que operan, sin la vista de corredor). `null` = no se ha podido contar. */
   identidades: number | null
-  /** Pólizas EN VIGOR (`sqlCarteraEnVigor`) de la ficha. `null` = no se ha podido contar. */
-  polizasEnVigor: number | null
 }
 
 /** Estado agregado de un módulo para la ficha: activo si alguna identidad lo tiene activo, y así. */
@@ -60,20 +58,14 @@ export function estadoDelModulo(filas: readonly FilaModuloCliente[], modulo: Mod
 
 export type DecisionActivacion = { puede: true } | { puede: false; motivo: string }
 
-/** ¿Se puede ACTIVAR este módulo a esta ficha? El motivo es la frase para Alberto. */
-export function puedeActivar(modulo: ModuloPortal, ctx: ContextoActivacion): DecisionActivacion {
+/**
+ * ¿Se puede ACTIVAR un módulo a esta ficha? El motivo es la frase para Alberto. Desde el 27/10/2026 no mira pólizas: la
+ * activación ES la autorización. Solo hace falta una identidad del portal sobre la que colgar la fila.
+ */
+export function puedeActivar(ctx: ContextoActivacion): DecisionActivacion {
   if (ctx.identidades === null) return { puede: false, motivo: 'No se ha podido comprobar si este cliente ha entrado al portal. Vuelve a intentarlo.' }
   if (ctx.identidades === 0) {
     return { puede: false, motivo: 'Este cliente aún no ha entrado al portal: los módulos se activan sobre su acceso. Invítale primero (bloque «Portal del cliente»).' }
-  }
-  if (MODULOS_CON_POLIZA_EN_VIGOR.includes(modulo)) {
-    if (ctx.polizasEnVigor === null) return { puede: false, motivo: 'No se han podido comprobar sus pólizas. Vuelve a intentarlo.' }
-    if (ctx.polizasEnVigor === 0) {
-      return {
-        puede: false,
-        motivo: `«${CATALOGO_MODULOS[modulo].nombre}» es, por ahora, solo para clientes con una póliza en vigor en CIMA. Esta ficha no tiene ninguna (las canceladas, las sustituidas y el volcado histórico no cuentan).`,
-      }
-    }
   }
   return { puede: true }
 }
@@ -121,7 +113,7 @@ export function fichasModulos(filas: readonly FilaModuloCliente[] | null, ctx: C
   if (filas === null) return null
   return MODULOS_PORTAL.map((id) => {
     const estado = estadoDelModulo(filas, id)
-    const d = puedeActivar(id, ctx)
+    const d = puedeActivar(ctx)
     return {
       id,
       nombre: CATALOGO_MODULOS[id].nombre,
@@ -140,22 +132,91 @@ export function textoHistorialModulo(modulo: ModuloPortal, accion: 'activar' | '
   return `${accion === 'activar' ? 'Módulo del portal activado' : 'Módulo del portal retirado'}: ${nombre} (${actor})`
 }
 
-export type VistaSolicitud = { moduloNombre: string; puedeActivar: boolean; motivoNoActivar: string | null }
+export type VistaSolicitud = {
+  moduloNombre: string
+  puedeActivar: boolean
+  motivoNoActivar: string | null
+  /** `true` = la identidad no tiene ficha: activar CREA una ficha de prospecto (27/10/2026). La pantalla lo avisa. */
+  creaProspecto: boolean
+}
 
 /**
  * Cola «Solicitudes del portal» de /correduria → Hoy: lo que cada fila `solicitado` enseña. Misma regla que la ficha
- * (`puedeActivar`), con una identidad ya conocida (la fila existe). `clienteId` null = identidad sin ficha vinculada:
- * no hay a quién activar (`escribirModulo` trabaja por ficha). `polizasEnVigor` null = no se ha podido mirar (≠ 0).
- * El servidor vuelve a decidir al escribir; esto solo pinta el botón.
+ * (`puedeActivar`), con una identidad ya conocida (la fila existe). `clienteId` null = identidad sin ficha vinculada: desde
+ * el 27/10/2026 SÍ se puede activar (por `identidadId`): el servidor crea la ficha de prospecto. El servidor vuelve a decidir
+ * al escribir; esto solo pinta el botón.
  */
-export function vistaSolicitud(modulo: string, clienteId: string | null, polizasEnVigor: number | null): VistaSolicitud {
+export function vistaSolicitud(modulo: string, clienteId: string | null): VistaSolicitud {
   if (!esModuloPortal(modulo)) {
-    return { moduloNombre: modulo, puedeActivar: false, motivoNoActivar: 'Módulo que ya no está en el catálogo del portal.' }
+    return { moduloNombre: modulo, puedeActivar: false, motivoNoActivar: 'Módulo que ya no está en el catálogo del portal.', creaProspecto: false }
   }
   const moduloNombre = CATALOGO_MODULOS[modulo].nombre
-  if (clienteId === null) {
-    return { moduloNombre, puedeActivar: false, motivoNoActivar: 'Esta petición no está vinculada a ninguna ficha de cliente: vincúlala antes de activar.' }
+  if (clienteId === null) return { moduloNombre, puedeActivar: true, motivoNoActivar: null, creaProspecto: true }
+  const d = puedeActivar({ identidades: 1 })
+  return d.puede
+    ? { moduloNombre, puedeActivar: true, motivoNoActivar: null, creaProspecto: false }
+    : { moduloNombre, puedeActivar: false, motivoNoActivar: d.motivo, creaProspecto: false }
+}
+
+// ── Activar a una identidad SIN ficha (27/10/2026): ficha de prospecto + vínculo por autorización ──────────────────
+
+/** Lo que el servidor sabe de la identidad antes de crear nada. `null` en un campo = no se ha podido leer (no se crea). */
+export type EstadoIdentidadSinFicha = {
+  /** Estado de la fila VIGENTE (no retirada) de ESE módulo para ESA identidad; `null` = no hay ninguna. */
+  filaVigente: 'solicitado' | 'activo' | null
+  /** Vínculos de la identidad con alguna ficha (cualquier correduría), sin contar la vista temporal del corredor. */
+  vinculosPropios: number
+  /** Es la identidad dedicada de la vista de corredor (nunca es una persona). */
+  esCorredor: boolean
+}
+
+export type DecisionProspecto =
+  | { crear: true }
+  | { crear: false; status: 409; motivo: string }
+
+/**
+ * ¿Se crea la ficha de prospecto y se activa? Solo para una identidad que ha PEDIDO ese módulo (no se activa a cualquier
+ * identidad por id), que no es la del corredor y que no tiene ya ficha (con ficha se activa desde su ficha: no se duplica).
+ */
+export function decidirProspecto(e: EstadoIdentidadSinFicha): DecisionProspecto {
+  if (e.esCorredor) return { crear: false, status: 409, motivo: 'Esa es la identidad de la vista de corredor: no es un cliente.' }
+  if (e.vinculosPropios > 0) {
+    return { crear: false, status: 409, motivo: 'Esta persona ya tiene una ficha vinculada: actívalo desde su ficha.' }
   }
-  const d = puedeActivar(modulo, { identidades: 1, polizasEnVigor })
-  return d.puede ? { moduloNombre, puedeActivar: true, motivoNoActivar: null } : { moduloNombre, puedeActivar: false, motivoNoActivar: d.motivo }
+  if (e.filaVigente === null) return { crear: false, status: 409, motivo: 'Esta persona no ha pedido ese módulo desde el portal (o ya se retiró).' }
+  if (e.filaVigente === 'activo') return { crear: false, status: 409, motivo: 'Ese módulo ya está activado para esta persona.' }
+  return { crear: true }
+}
+
+/**
+ * La ficha de PROSPECTO (27/10/2026). Lead, segmento prospecto, fuente portal, activa y SIN póliza: no es cliente
+ * (cliente = póliza en vigor de CIMA, `esCarteraEnVigor`; nunca `clientes.tipo`). El nombre es lo que la persona tecleó
+ * al entrar al portal, SIN comprobar: la nota lo dice.
+ */
+export function fichaProspecto(nombreTecleado: string | null): {
+  nombre: string
+  apellidos: string
+  tipo: 'lead'
+  segmento: 'prospecto'
+  fuente: 'portal'
+  activo: true
+  notas: string
+} {
+  const limpio = (nombreTecleado ?? '').replace(/\s+/g, ' ').trim().slice(0, 255)
+  return {
+    nombre: limpio === '' ? 'Prospecto del portal' : limpio,
+    apellidos: '',
+    tipo: 'lead',
+    segmento: 'prospecto',
+    fuente: 'portal',
+    activo: true,
+    notas:
+      'Ficha de prospecto creada al autorizar un módulo del portal a una persona sin ficha. Sin póliza con nosotros: NO es cliente. ' +
+      'El nombre es el que tecleó al entrar al portal, sin comprobar.',
+  }
+}
+
+/** La línea de `historial_interno` (tipo `gestion`) que deja la creación de la ficha de prospecto. */
+export function textoHistorialProspecto(modulo: ModuloPortal, actor: string): string {
+  return `Ficha de prospecto creada al autorizar «${CATALOGO_MODULOS[modulo].nombre}» desde el portal, sin póliza con nosotros (${actor})`
 }

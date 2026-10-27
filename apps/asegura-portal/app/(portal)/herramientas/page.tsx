@@ -61,7 +61,7 @@ export default async function HerramientasPage() {
   return (
     <PaginaPortal antetitulo="Herramientas" titulo="Tus" acento="herramientas">
       <p className="suave" style={{ marginTop: 0 }}>
-        Herramientas gratis para nuestros clientes, pensadas alrededor de sus seguros.
+        Herramientas gratis, pensadas alrededor de tus seguros. No hace falta tenerlos con nosotros: el acceso lo autoriza la correduría.
       </p>
 
       {hayModulos && (
