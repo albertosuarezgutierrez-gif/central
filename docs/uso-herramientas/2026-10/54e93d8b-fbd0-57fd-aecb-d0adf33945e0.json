@@ -1,8 +1,8 @@
 {
  "sesion": "54e93d8b-fbd0-57fd-aecb-d0adf33945e0",
  "inicio": "2026-10-27T07:59:13.868Z",
- "fin": "2026-10-27T08:31:03.832Z",
- "llamadas": 193,
+ "fin": "2026-10-27T08:33:39.968Z",
+ "llamadas": 206,
  "categorias": {
   "lectura-directa": {
    "llamadas": 4,
@@ -17,27 +17,27 @@
    }
   },
   "bash": {
-   "llamadas": 121,
-   "chars_in": 119931,
-   "chars_out": 709365,
+   "llamadas": 128,
+   "chars_in": 121144,
+   "chars_out": 722247,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 121
+    "Bash": 128
    }
   },
   "otro": {
-   "llamadas": 16,
-   "chars_in": 17634,
-   "chars_out": 52422,
+   "llamadas": 22,
+   "chars_in": 21311,
+   "chars_out": 88448,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "ToolSearch": 9,
-    "SubagentHandback": 5,
-    "ReadNotifications": 2
+    "SubagentHandback": 7,
+    "ReadNotifications": 6
    }
   },
   "sql": {
