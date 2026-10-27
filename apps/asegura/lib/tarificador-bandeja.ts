@@ -20,6 +20,7 @@ export async function listarBandeja(correduriaId: string, limite: number, desde:
   const filas = (await hayBotVersion())
     ? await prisma.$queryRaw<FilaBandeja[]>`
     select id::text as id, compania, ramo, estado, intentos, error, oportunidad_id::text as oportunidad_id, bot_version,
+           to_jsonb(t)->>'imagen_bot' as imagen_bot, to_jsonb(t)->>'imagen_prueba' as imagen_prueba,
            coalesce(terminado_at, updated_at) as fecha
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.estado = any(${estados}::text[])
@@ -28,6 +29,7 @@ export async function listarBandeja(correduriaId: string, limite: number, desde:
     limit ${limite}::int offset ${desde}::int`
     : await prisma.$queryRaw<FilaBandeja[]>`
     select id::text as id, compania, ramo, estado, intentos, error, oportunidad_id::text as oportunidad_id, null::text as bot_version,
+           to_jsonb(t)->>'imagen_bot' as imagen_bot, to_jsonb(t)->>'imagen_prueba' as imagen_prueba,
            coalesce(terminado_at, updated_at) as fecha
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.estado = any(${estados}::text[])
@@ -137,16 +139,17 @@ export async function aplicarAccionBandeja(
   return res
 }
 
-export type TrazaTrabajo = { botVersion: string | null; pasos: PasoLectura[] }
+/** `imagen`/`imagenPrueba` (27/10/2026): con qué imagen se lanzó (`null` = no se sabe) y si era de PRUEBA (rama-*). */
+export type TrazaTrabajo = { botVersion: string | null; imagen: string | null; imagenPrueba: boolean; pasos: PasoLectura[] }
 
 /** Traza de un trabajo (pasos en orden) + versión del bot. `null` = el trabajo no es de esta correduría. */
 export async function leerTrazaTrabajo(correduriaId: string, id: string): Promise<TrazaTrabajo | null> {
   // Esquema opcional: sin columna/tabla (SQL sin aplicar) → versión null y sin pasos, no 500.
   const t = (await hayBotVersion())
-    ? await prisma.$queryRaw<{ bot_version: string | null }[]>`
-    select bot_version from seguros.tarificacion_trabajos where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
-    : await prisma.$queryRaw<{ bot_version: string | null }[]>`
-    select null::text as bot_version from seguros.tarificacion_trabajos where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+    ? await prisma.$queryRaw<{ bot_version: string | null; imagen_bot?: string | null; imagen_prueba?: string | null }[]>`
+    select bot_version, to_jsonb(t)->>'imagen_bot' as imagen_bot, to_jsonb(t)->>'imagen_prueba' as imagen_prueba from seguros.tarificacion_trabajos t where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+    : await prisma.$queryRaw<{ bot_version: string | null; imagen_bot?: string | null; imagen_prueba?: string | null }[]>`
+    select null::text as bot_version, to_jsonb(t)->>'imagen_bot' as imagen_bot, to_jsonb(t)->>'imagen_prueba' as imagen_prueba from seguros.tarificacion_trabajos t where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
   if (!t[0]) return null
   const p = (await hayPasos())
     ? await prisma.$queryRaw<FilaPaso[]>`
@@ -155,5 +158,6 @@ export async function leerTrazaTrabajo(correduriaId: string, id: string): Promis
     where trabajo_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
     order by intento, inicio, id`
     : []
-  return { botVersion: t[0].bot_version, pasos: p.map(proyectarPaso) }
+  const prueba = t[0].imagen_prueba ?? null
+  return { botVersion: t[0].bot_version, imagen: t[0].imagen_bot ?? prueba, imagenPrueba: !!prueba, pasos: p.map(proyectarPaso) }
 }

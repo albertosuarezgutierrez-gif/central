@@ -53,6 +53,12 @@ import {
   decidirVerificacionMatricula,
   leerPrecioGenerali,
   avisosObligatorioGenerali,
+  obligatoriosVaciosGenerali,
+  resumenEstadoCalculoGenerali,
+  formaPagoPedidaGenerali,
+  opcionExactaGenerali,
+  decisionesPendientesGenerali,
+  type EstadoCalculoGenerali,
   motivosInteresadoGenerali,
   PESTANA_PERSONAS_GENERALI,
   PREFIJO_ID_PERSONAS_GENERALI,
@@ -257,6 +263,18 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.42 (27/10/2026, prueba real con 0.2.41, trabajo 4b40fc5b). CAUSA (HTML redactado de los cuatro fallos, marco `emiAutosGenB028.do`): Genernet pinta en
+ * `#areaErrores` «El paso anterior no tiene los datos completos» (0.2.38-0.2.40, antes de «Recalcular») y, tras «Recalcular», «No se puede calcular con datos
+ * incompletos» (`li.lowError`, `value=Empty_Property`): «Datos de Valoración» se dejó con algún dato que el portal da por incompleto y por eso la tabla
+ * «Modalidades de Seguro» sigue vacía. No es carga lenta ni otro botón. El aviso NO nombra el campo y el HTML de «Garantías y Resultados» no trae el
+ * formulario anterior; además ahí siguen sin marcar las opciones obligatorias «Forma de pago a contratar», «Envío e-mail» y «Verificación del riesgo».
+ * Ahora el atasco dice (sin valores, justo tras «Recalcular»): los avisos de `#areaErrores`, los obligatorios vacíos de «Datos de Valoración» (al salir
+ * de ella) y de «Garantías y Resultados», si algún marco seguía cargando y los botones/enlaces visibles.
+ * Decisión de Alberto (27/10/2026): antes de «Recalcular» se elige «Forma de pago a contratar» = opción EXACTA «Anual» (o la del riesgo si trae una explícita)
+ * por `ctx.pulsar`; sin opción exacta → atasco con las opciones vistas; la oferta avisa «Forma de pago: anual (por defecto)». «Envío e-mail» y «Verificación
+ * del riesgo» NO se tocan: si siguen obligatorios y vacíos, el error empieza por «(falta decisión de Alberto: …)».
+ */
+/**
  * 0.2.41 (27/10/2026, prueba real con 0.2.40, trabajo 84731cfe): la puerta de «Recalcular» bloqueó por «contratar» en el rótulo informativo «Forma de pago a contratar» de «Garantías y Resultados»
  * (elegir la forma de pago del recibo; no es una acción). La puerta del guard excusa SOLO esa frase exacta (`sinRotulosInformativosGenerali`); el resto de textos de emisión/contratación/pago/firma sigue bloqueando.
  */
@@ -292,7 +310,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.41'
+export const VERSION_GENERALI_AUTO = '0.2.42'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -594,6 +612,135 @@ const JS_SCROLL = `(() => {
 export async function leerPantalla(raiz: Raiz): Promise<PantallaLeida> {
   const r = await raiz.evaluate(JS_LEER_PANTALLA).catch(() => null)
   return (r as PantallaLeida | null) ?? { campos: [], botones: [], avisos: [] }
+}
+
+/**
+ * v0.2.42: estado del cálculo en un marco de Genernet (solo lee, NUNCA valores): textos de `#areaErrores li`, obligatorios vacíos (bloques con
+ * `.required` «*»: opciones sin marcar, desplegable sin elegir o en «Seleccione…», texto vacío), botones/enlaces visibles y `document.readyState`.
+ * Devuelve null si el marco no es de «Valoración Riesgo» (sin `#areaErrores` ni la tabla de modalidades).
+ */
+export const JS_ESTADO_CALCULO_GENERALI = `(() => {${JS_COMUN}
+  const area = document.getElementById('areaErrores');
+  if (!area && !document.querySelector('[id^="reg1063E_gridmodseg"]') && !/emiAutosGenB028/.test(location.pathname)) return null;
+  const avisos = [];
+  if (area && getComputedStyle(area).display !== 'none') {
+    for (const li of Array.from(area.querySelectorAll('li'))) {
+      const t = T(li);
+      if (t && !avisos.includes(t)) avisos.push(t.slice(0, 160));
+      if (avisos.length >= 8) break;
+    }
+  }
+  const obligatoriosVacios = [];
+  const nombresVacios = [];
+  for (const req of Array.from(document.querySelectorAll('.required'))) {
+    const caja = req.closest('.simple') || (req.parentElement && req.parentElement.parentElement);
+    if (!caja || !VIS(caja)) continue;
+    const ctrls = Array.from(caja.querySelectorAll('input,select,textarea')).filter((el) => !['hidden', 'button', 'submit', 'image', 'reset'].includes((el.getAttribute('type') || '').toLowerCase()));
+    if (ctrls.length === 0) continue;
+    const TEXTO = ['text', 'password', 'email', 'tel', 'number', 'date', 'search', 'url', ''];
+    const marcables = ctrls.filter((el) => el.tagName === 'INPUT' && !TEXTO.includes((el.getAttribute('type') || '').toLowerCase()));
+    let vacio;
+    if (marcables.length > 0) vacio = !marcables.some((el) => el.checked);
+    else vacio = ctrls.every((el) => {
+      if (el.tagName === 'SELECT') {
+        const o = el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+        const t = o ? T(o) : '';
+        return t === '' || /^seleccione/i.test(t);
+      }
+      return String(el.value || '').trim() === '';
+    });
+    if (!vacio) continue;
+    for (const el of ctrls) { const nm = el.getAttribute('name') || ''; if (nm && !nombresVacios.includes(nm)) nombresVacios.push(nm.slice(0, 60)); }
+    const col = caja.firstElementChild;
+    const c = (col || caja).cloneNode(true);
+    c.querySelectorAll('.required,input,select,textarea').forEach((x) => x.remove());
+    const etq = T(c).replace(/\\*\\s*$/, '').trim().slice(0, 60);
+    if (etq && !obligatoriosVacios.includes(etq)) obligatoriosVacios.push(etq);
+    if (obligatoriosVacios.length >= 12) break;
+  }
+  const botones = [];
+  for (const el of Array.from(document.querySelectorAll('button,input[type=button],input[type=submit],a[onclick],li[onclick],a[href]'))) {
+    if (!VIS(el)) continue;
+    const t = (T(el) || el.value || el.getAttribute('title') || '').trim();
+    if (t && t.length <= 40 && !botones.includes(t)) botones.push(t);
+    if (botones.length >= 25) break;
+  }
+  return { avisos, obligatoriosVacios, nombresVacios, botones, listo: document.readyState === 'complete' };
+})()`
+
+/** v0.2.42: estado del cálculo de TODOS los marcos de «Valoración Riesgo» + si algún marco seguía cargando (`loading.html` visible o documento sin terminar). Solo lee. */
+export async function volcarEstadoCalculoGenerali(page: Page): Promise<EstadoCalculoGenerali | null> {
+  const total: EstadoCalculoGenerali = { avisos: [], obligatoriosVacios: [], nombresVacios: [], botones: [], cargando: null }
+  let visto = false
+  let cargando = false
+  let sabido = false
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    if (/loading\.html/i.test(f.url())) {
+      const el = await f.frameElement().catch(() => null)
+      const vis = el ? await el.isVisible().catch(() => null) : null
+      if (vis !== null) sabido = true
+      if (vis === true) cargando = true
+      continue
+    }
+    const r = (await f.evaluate(JS_ESTADO_CALCULO_GENERALI).catch(() => null)) as { avisos: string[]; obligatoriosVacios: string[]; nombresVacios: string[]; botones: string[]; listo: boolean } | null
+    if (!r) continue
+    visto = true
+    sabido = true
+    if (!r.listo) cargando = true
+    for (const a of r.avisos) if (!total.avisos.includes(a)) total.avisos.push(a)
+    for (const o of r.obligatoriosVacios) if (!total.obligatoriosVacios.includes(o)) total.obligatoriosVacios.push(o)
+    for (const o of r.nombresVacios ?? []) if (!total.nombresVacios!.includes(o)) total.nombresVacios!.push(o)
+    for (const b of r.botones) if (!total.botones.includes(b)) total.botones.push(b)
+  }
+  total.cargando = sabido ? cargando : null
+  return visto || sabido ? total : null
+}
+
+/** v0.2.42: bloque Genernet «Forma de pago a contratar» y sus opciones (control `reg1063E.gridmodseg.yfp`; el rótulo es el `<span>` que sigue a cada una). */
+const SEL_BLOQUE_FORMA_PAGO_GENERALI = '#reg1063E_gridmodseg_yfpIdentification'
+const SEL_OPCION_FORMA_PAGO_GENERALI = 'input[name="reg1063E.gridmodseg.yfp"]'
+const JS_OPCIONES_FORMA_PAGO_GENERALI = `(() => {
+  const T = (n) => (n ? (n.innerText || n.textContent || '') : '').replace(/\\s+/g, ' ').trim();
+  const b = document.querySelector('${SEL_BLOQUE_FORMA_PAGO_GENERALI}');
+  if (!b) return null;
+  const col = b.firstElementChild ? b.firstElementChild.cloneNode(true) : null;
+  if (col) col.querySelectorAll('.required').forEach((x) => x.remove());
+  const rotulo = T(col).replace(/\\*\\s*$/, '').trim();
+  const opciones = Array.from(b.querySelectorAll('${SEL_OPCION_FORMA_PAGO_GENERALI}')).map((el) => ({ texto: T(el.nextElementSibling), marcada: el.checked === true }));
+  return { rotulo, opciones };
+})()`
+
+/**
+ * v0.2.42 (decisión de Alberto): elige en «Forma de pago a contratar» la opción EXACTA pedida (Anual por defecto). Solo si el bloque está a la vista;
+ * ya marcada → no pulsa. Sin opción exacta, varios bloques o sin quedar marcada → `ErrorMapaIncompletoGenerali` nombrando las opciones vistas.
+ * Pulsa por `ctx.pulsar` (vía común del guard). Devuelve el aviso para la oferta o null si el bloque no está.
+ */
+export async function elegirFormaPagoGenerali(page: Page, form: unknown, ctx: ContextoPortal): Promise<string | null> {
+  const bloques: { marco: Frame; loc: Locator }[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const b = f.locator(SEL_BLOQUE_FORMA_PAGO_GENERALI).filter({ visible: true })
+    const n = await b.count().catch(() => 0)
+    for (let i = 0; i < n; i++) bloques.push({ marco: f, loc: b.nth(i) })
+  }
+  if (bloques.length === 0) return null
+  if (bloques.length > 1) throw new ErrorMapaIncompletoGenerali(`la «Forma de pago a contratar» de «Garantías y Resultados» (${bloques.length} bloques a la vista; hace falta exactamente uno)`)
+  const pedida = formaPagoPedidaGenerali(form)
+  if ('error' in pedida) throw new ErrorMapaIncompletoGenerali(`la «Forma de pago a contratar»: ${pedida.error}`, false)
+  const { marco, loc: bloque } = bloques[0]!
+  const leer = async () => ((await marco.evaluate(JS_OPCIONES_FORMA_PAGO_GENERALI).catch(() => null)) as { rotulo: string; opciones: { texto: string; marcada: boolean }[] } | null) ?? { rotulo: '', opciones: [] }
+  const antes = await leer()
+  const vistas = () => antes.opciones.map((o) => `«${o.texto.slice(0, 30)}»`).join(' · ') || '(ninguna)'
+  if (antes.rotulo !== 'Forma de pago a contratar') throw new ErrorMapaIncompletoGenerali(`la «Forma de pago a contratar» (el bloque se rotula «${antes.rotulo.slice(0, 60)}»)`)
+  const idx = opcionExactaGenerali(antes.opciones.map((o) => o.texto), pedida.etiqueta)
+  if (idx < 0) throw new ErrorMapaIncompletoGenerali(`la opción «${pedida.etiqueta}» de «Forma de pago a contratar» (no existe exactamente; opciones vistas: ${vistas()})`)
+  const aviso = `Forma de pago: ${pedida.etiqueta.toLowerCase()} (${pedida.porDefecto ? 'por defecto' : 'del riesgo'})`
+  if (antes.opciones[idx]!.marcada) return aviso
+  await ctx.pulsar(bloque.locator(SEL_OPCION_FORMA_PAGO_GENERALI).nth(idx))
+  const despues = await leer()
+  if (despues.opciones[idx]?.texto !== pedida.etiqueta || despues.opciones[idx]?.marcada !== true) throw new ErrorMapaIncompletoGenerali(`la opción «${pedida.etiqueta}» de «Forma de pago a contratar» no quedó marcada tras pulsarla (opciones vistas: ${vistas()})`)
+  return aviso
 }
 
 /** Pantalla leída de TODOS los marcos de la página (la vista tras la subpestaña puede estar en otro marco). */
@@ -2706,6 +2853,8 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   })
   ctx.log?.(`generali/auto: Datos de Valoración: ${pantalla.campos.length} campos, ${pantalla.botones.length} botones, mapa provisional: ${hechos.join(',') || 'nada'}`)
   const datos = `Datos de Valoración: ${resumenPantallaGenerali(pantalla, 700)}`
+  // v0.2.42: obligatorios vacíos de «Datos de Valoración» al salir de ella (solo etiquetas): el portal avisa «El paso anterior no tiene los datos completos».
+  const vaciosValoracion = obligatoriosVaciosGenerali(pantalla.campos)
   if (!ctx.pulsarSubpestanaGenerali) throw new ErrorMapaIncompletoGenerali(`la puerta guardada de «${SUBPESTANA_PRECIO_GENERALI}» en el contexto del runner; ${datos}`)
   // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).
   const lAntes = leerPrecioGenerali(await textoPagina(page))
@@ -2723,6 +2872,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // v0.2.39/v0.2.40: tabla de modalidades a la vista y vacía = el portal no ha calculado: «Recalcular» (acción de la botonera, no guarda ni emite) UNA vez por la puerta del guard.
   // v0.2.40: se evalúa DESPUÉS de cada lectura y de cada «Siguiente» (en la prueba real con 0.2.39 la tabla vacía aparecía solo tras «Siguiente×1» y el bloque de antes ya había pasado).
   const avanceRecalcular: string[] = []
+  const avisosFormaPago: string[] = []
   let recalcularIntentado = false
   const recalcularSiHaceFalta = async (): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>> | null> => {
     if (recalcularIntentado || !modalidadesSinCalcularGenerali(await volcarModalidadesGenerali(page))) return null
@@ -2732,6 +2882,9 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
       avanceRecalcular.push('Recalcular no intentado: la tabla de modalidades está vacía y el contexto del runner no trae la puerta guardada')
       return null
     }
+    // v0.2.42 (decisión de Alberto): «Forma de pago a contratar» es obligatoria para calcular: Anual por defecto (o la del riesgo), opción exacta.
+    const fp = await elegirFormaPagoGenerali(page, ant.formulario, ctx)
+    if (fp && !avisosFormaPago.includes(fp)) avisosFormaPago.push(fp)
     try {
       const r = await paso('tarificar', async () => puerta())
       avanceRecalcular.push(`Recalcular×1${r && r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
@@ -2745,7 +2898,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const trasRecalcular = await recalcularSiHaceFalta()
   if (trasRecalcular) {
     lectura = trasRecalcular
-    if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, lectura.avisos)]) }
+    if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, [...(lectura.avisos ?? []), ...avisosFormaPago])]) }
   }
   // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
   let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
@@ -2768,14 +2921,14 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
         break
       }
       lecturaFinal = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
-      if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, lecturaFinal.avisos)]) }
+      if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, [...(lecturaFinal.avisos ?? []), ...avisosFormaPago])]) }
     }
   }
   // v0.2.40: la tabla vacía puede aparecer SOLO tras «Siguiente» (o al terminar el bucle): «Recalcular» se evalúa también aquí, una sola vez por trabajo.
   const trasSiguiente = await recalcularSiHaceFalta()
   if (trasSiguiente) {
     lecturaFinal = trasSiguiente
-    if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, lecturaFinal.avisos)]) }
+    if (lecturaFinal.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lecturaFinal.eur, texto, [...(lecturaFinal.avisos ?? []), ...avisosFormaPago])]) }
   }
   const despues = await leerPantallaPagina(page)
   const textoFinal = await textoPagina(page)
@@ -2789,6 +2942,11 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     avanceRecalcular.push(`Recalcular no intentado: ${!volModalidades?.encontrada ? 'la tabla de modalidades no estaba a la vista' : hayImporteEnFilasGenerali(volModalidades) ? 'la tabla de modalidades ya traía importes' : 'la tabla de modalidades no estaba vacía según la lectura previa'}`)
   }
   const navegacionMarcos = await volcarNavegacionGenerali(page)
+  const vEstado = await volcarEstadoCalculoGenerali(page)
+  const estadoCalculo = resumenEstadoCalculoGenerali(vEstado, vaciosValoracion, 500)
+  // v0.2.42 (decisión de Alberto): «Envío e-mail» y «Verificación del riesgo» NO los decide el robot; si siguen obligatorios y vacíos, van lo PRIMERO.
+  const decisiones = decisionesPendientesGenerali(vEstado?.nombresVacios ?? [])
+  const prefijoDecision = decisiones.length ? `(falta decisión de Alberto: ${decisiones.join(', ')}) ` : ''
   // v0.2.36: si combustible y potencia llevan dato (no «No lo sé»), el error lo dice: descarta la hipótesis de que Generali no calcula por eso.
   const rellenos = combustiblePotenciaRellenosGenerali(supuestos) ? '; con combustible y potencia rellenos' : ''
   const que = (lecturaFinal.tipo === 'varios'
@@ -2798,7 +2956,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // importes/modalidades, la navegación, el resto y la pantalla, con presupuesto decreciente hasta que todo quepa. Lo primero que se recorta es el inventario del tomador
   // y el mapa provisional (v0.2.36); la estructura de la tabla se recorta dentro del bloque de marcos antes que la lista.
   const compuesto = (nav: number, res: number, pan: number, imp: number, amp: number, tom: number, mapa: number, dImp: number, dMod: number): string =>
-    `el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Recalcular: ${avanceRecalcular.join(' · ')}. ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
+    `${prefijoDecision}el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Recalcular: ${avanceRecalcular.join(' · ')}. ${estadoCalculo}. ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
   const LIMITE = 1_900 - 'generali/auto: mapa incompleto: faltan '.length
   let mensaje = compuesto(300, 360, 450, 8, 1_500, 120, 80, 260, 620)
   for (const [nav, res, pan, imp, amp, tom, mapa, dImp, dMod] of [
