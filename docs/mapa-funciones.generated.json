@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T12:55:38Z",
-  "sha": "a38b75ad5f867497cebb6b2ddf891d46122f689e",
+  "generadoEn": "2026-10-27T15:34:50Z",
+  "sha": "9affa616a0c062eb795c74a51fbf45e19805b89b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -61695,12 +61695,21 @@
           "resumen": "Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE del cliente en ese ramo + su ficha, como el botón (formulario + «completar d"
         },
         {
+          "nombre": "riesgoHogarDeOportunidadDelCliente",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, ahora: Date",
+          "retorno": "Promise<ReconstruccionRiesgo>",
+          "linea": 206,
+          "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
+        },
+        {
           "nombre": "revisarInterno",
           "kind": "function",
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 204
+          "linea": 217
         },
         {
           "nombre": "publico",
@@ -61708,7 +61717,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 229
+          "linea": 242
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -61716,7 +61725,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 233
+          "linea": 246
         },
         {
           "nombre": "tarificarLead",
@@ -61724,7 +61733,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 249
+          "linea": 262
         },
         {
           "nombre": "ampliarTopeLead",
@@ -61732,7 +61741,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 351,
+          "linea": 364,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -61741,7 +61750,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 378,
+          "linea": 391,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -61750,7 +61759,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 425,
+          "linea": 438,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -61759,7 +61768,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "791f5dd09dc6"
+      "hash": "ee39e61e0414"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -66229,6 +66238,7 @@
       "ambito": "apps/asegura",
       "exporta": [
         "decidirRelanzar",
+        "riesgoHogarDeRiesgoOportunidad",
         "conCompaniaActualUnica",
         "conVehiculoDeOrigen",
         "decidirRiesgoProbar"
@@ -66240,7 +66250,16 @@
           "exportada": true,
           "params": "e: EntradaRelanzar",
           "retorno": "DecisionRelanzar",
-          "linea": 28
+          "linea": 29
+        },
+        {
+          "nombre": "riesgoHogarDeRiesgoOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RiesgoParaBotsHogar, ahora = new Date()",
+          "retorno": "ReconstruccionRiesgo",
+          "linea": 61,
+          "resumen": "HOGAR (27/10/2026): el riesgo se arma como cuando Alberto pulsa «pedir precio» en la oportunidad de hogar de plataforma: `datosVivienda` de la oportunidad MÁS RECIENTE del cliente (`leerRiesgo`, el mi"
         },
         {
           "nombre": "conCompaniaActualUnica",
@@ -66248,7 +66267,7 @@
           "exportada": true,
           "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, actual: string | null",
           "retorno": "ReconstruccionRiesgo",
-          "linea": 57,
+          "linea": 71,
           "resumen": "Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre auto con cambio de seguro) con la compañía que deduce la cartera (`companiaActualUnica`: solo con exactamente una póliza de auto en v"
         },
         {
@@ -66257,7 +66276,7 @@
           "exportada": true,
           "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, filas: readonly FilaOrigen[]",
           "retorno": "ReconstruccionRiesgo",
-          "linea": 69,
+          "linea": 83,
           "resumen": "nada personal se copia. Sin origen, otra compañía/ramo, o ya con vehículo → mismo objeto. PURA."
         },
         {
@@ -66266,13 +66285,13 @@
           "exportada": true,
           "params": "e: { reconstruccion: ReconstruccionRiesgo; previo: unknown | null; soloPurgados: boolean; validar: (riesgo: unknown) => ValidacionProbar<E> }",
           "retorno": "DecisionProbar<E>",
-          "linea": 86,
+          "linea": 100,
           "resumen": "Qué riesgo se reencola. Orden: 1) el reconstruido de la oportunidad+ficha, si valida; 2) el del último trabajo, si valida (no purgado); 3) rechazo que dice QUÉ falta (solo etiquetas de campo, nunca va"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b7c9e2cd2f6c"
+      "hash": "aed57306ea86"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-robustez.ts",
@@ -194175,106 +194194,20 @@
       "ambito": "apps/plataforma",
       "resumen": "«Bots (gratis)» de HOGAR (19/10/2026) — lo PURO: de los datos de la vivienda de la oportunidad (`info_riesgo.datosVivienda`) y de las elecciones del corredor al `riesgo` de hogar que valida asegura (`ramo: 'hogar'`, sin tomador). Mismo patrón que moto y coche (`tarificador-moto-formulario.ts`, `tari",
       "exporta": [
-        "formularioBotHogar",
         "tomadorDeRiesgoHogar",
-        "datosViviendaParaBot",
-        "eleccionesInicialesHogar",
         "faltanFichaTomadorParaHogar",
         "avisoFichaTomadorParaHogar",
         "riesgoHogarSinTomador"
       ],
       "funciones": [
         {
-          "nombre": "txt",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: string | null | undefined",
-          "retorno": "string | null",
-          "linea": 66
-        },
-        {
-          "nombre": "clave",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: string | null | undefined, lista: readonly string[]",
-          "retorno": "string | null",
-          "linea": 67
-        },
-        {
-          "nombre": "formularioBotHogar",
-          "kind": "function",
-          "exportada": true,
-          "params": "e: EntradaBotHogar, hoy: Date = new Date()",
-          "retorno": "FormularioBotHogar",
-          "linea": 76,
-          "resumen": "Vivienda + elecciones → `riesgo` de hogar, o QUÉ falta (en castellano, sin valores). El tomador NO va: lo pone asegura desde la ficha. Lo que arma pasa por el MISMO validador que asegura (`validarForm"
-        },
-        {
-          "nombre": "obj",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "Record<string, unknown> | null",
-          "linea": 137
-        },
-        {
-          "nombre": "num",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "number | null",
-          "linea": 138
-        },
-        {
-          "nombre": "str",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "string | null",
-          "linea": 139
-        },
-        {
-          "nombre": "bool",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "boolean | null",
-          "linea": 140
-        },
-        {
-          "nombre": "noNeg",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "v: unknown",
-          "retorno": "number | null",
-          "linea": 141
-        },
-        {
           "nombre": "tomadorDeRiesgoHogar",
           "kind": "function",
           "exportada": true,
           "params": "r: RiesgoParaBotsHogar & { oportunidad: { clienteId: string } }",
           "retorno": "string",
-          "linea": 161,
+          "linea": 47,
           "resumen": "Id de la ficha del tomador (la figura `tomador`; sin ella, el cliente de la oportunidad)."
-        },
-        {
-          "nombre": "datosViviendaParaBot",
-          "kind": "function",
-          "exportada": true,
-          "params": "r: RiesgoParaBotsHogar",
-          "retorno": "DatosViviendaBot",
-          "linea": 166,
-          "resumen": "`datosVivienda` de la oportunidad (ya leídos) → vivienda del bloque. Sin el bloque de vivienda → todo `null` («no se sabe»). PURA."
-        },
-        {
-          "nombre": "eleccionesInicialesHogar",
-          "kind": "function",
-          "exportada": true,
-          "params": "r: RiesgoParaBotsHogar, catalogos: CatalogosHogarLeidos = {}",
-          "retorno": "Record<string, string>",
-          "linea": 194,
-          "resumen": "el resto, '' («Elegir…»). La madera: sí/no solo si se contestó (`null` = '' = sin contestar). Ojo: en Codeoscopic `ocupacion` es el USO de la vivienda y `uso` el RÉGIMEN. PURA."
         },
         {
           "nombre": "faltanFichaTomadorParaHogar",
@@ -194282,7 +194215,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsHogar, 'figuras'>",
           "retorno": "string[] | null",
-          "linea": 211,
+          "linea": 55,
           "resumen": "Lo que a la FICHA del tomador le falta para que asegura pueda entregar al bot su DNI/NIE y su nacimiento (lo comprueba al encolar: 422 `falta_datos_tomador`, sin gastar máquina). `null` = no se pudo l"
         },
         {
@@ -194291,7 +194224,7 @@
           "exportada": true,
           "params": "faltan: readonly string[] | null, bot = 'Allianz Hogar'",
           "retorno": "string | null",
-          "linea": 226,
+          "linea": 70,
           "resumen": "«Falta el DNI/NIE y la fecha de nacimiento en la ficha del tomador…» o `null` si no falta nada (o no se sabe). `bot` = el nombre del bot que los pide (21/10/2026: también Mapfre Hogar, que los toma ig"
         },
         {
@@ -194300,13 +194233,13 @@
           "exportada": true,
           "params": "riesgo: Record<string, unknown>",
           "retorno": "Record<string, unknown>",
-          "linea": 236,
+          "linea": 80,
           "resumen": "Riesgo de hogar para encolar sin datos del tomador (19/10/2026): quita `tomador` y cualquier dni/nif/nie/documento/nacimiento (en cualquier nivel) que el navegador haya mandado. El DNI y el nacimiento"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "09b0d22b4efd"
+      "hash": "40792550aea3"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-moto-formulario.ts",
@@ -250946,6 +250879,104 @@
       "hash": "49c2c690dcc3"
     },
     {
+      "ruta": "packages/module-tarificacion/src/hogar-bot-formulario.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Constructor PURO del riesgo de HOGAR para los bots (movido desde apps/plataforma/lib/tarificador-hogar-formulario.ts el 27/10/2026 para que apps/asegura («Probar» autónomo) use EXACTAMENTE el mismo constructor que el botón «pedir precio» de la oportunidad; plataforma lo re-exporta). Mismo patrón que",
+      "exporta": [
+        "formularioBotHogar",
+        "datosViviendaParaBot",
+        "eleccionesInicialesHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 44
+        },
+        {
+          "nombre": "clave",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | null | undefined, lista: readonly string[]",
+          "retorno": "string | null",
+          "linea": 45
+        },
+        {
+          "nombre": "formularioBotHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaBotHogar, hoy: Date = new Date()",
+          "retorno": "FormularioBotHogar",
+          "linea": 54,
+          "resumen": "Vivienda + elecciones → `riesgo` de hogar, o QUÉ falta (en castellano, sin valores). El tomador NO va: lo pone asegura desde la ficha. Lo que arma pasa por el MISMO validador que asegura (`validarForm"
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 113
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 114
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 115
+        },
+        {
+          "nombre": "bool",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean | null",
+          "linea": 116
+        },
+        {
+          "nombre": "noNeg",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 117
+        },
+        {
+          "nombre": "datosViviendaParaBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RiesgoParaBotsHogar",
+          "retorno": "DatosViviendaBot",
+          "linea": 127,
+          "resumen": "`datosVivienda` de la oportunidad (ya leídos) → vivienda del bloque. Sin el bloque de vivienda → todo `null` («no se sabe»). PURA."
+        },
+        {
+          "nombre": "eleccionesInicialesHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RiesgoParaBotsHogar, catalogos: CatalogosHogarLeidos = {}",
+          "retorno": "Record<string, string>",
+          "linea": 155,
+          "resumen": "el resto, '' («Elegir…»). La madera: sí/no solo si se contestó (`null` = '' = sin contestar). Ojo: en Codeoscopic `ocupacion` es el USO de la vivienda y `uso` el RÉGIMEN. PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ac9a7557aef5"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/importes.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "Importes en el formato de los portales españoles (puntos de miles, coma decimal). PURO. Fail-closed: lo que no es un importe inequívoco devuelve `null` (nunca 0, nunca «lo más parecido»).",
@@ -254889,7 +254920,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5341,
-    "funciones": 20485
+    "archivos": 5342,
+    "funciones": 20487
   }
 }
