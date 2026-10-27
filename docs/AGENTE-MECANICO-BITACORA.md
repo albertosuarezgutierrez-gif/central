@@ -79,3 +79,4 @@
 | 26/10/2026 | rrhh: noindex (robots.ts, X-Robots-Tag, metadata) + test | agente-mecanico | ok (vitest 3/3; incidente: respaldo cp falló y hubo que restaurar next.config a mano) |
 | 26/10/2026 | rrhh: `eslint.config.mjs` (flat config calcada de asegura-portal, mismas versiones eslint 9.39.4 / eslint-config-next 16.2.7) para que `pnpm lint` deje de fallar; 0 errores, 141 warnings sin tocar | agente-mecanico | ok (lint exit 0; vitest 46 ficheros / 381 tests verdes) |
 | 27/10/2026 | asegura-portal: auditoría estática responsive 320 px de patrimonio/** (sin cambios, ya conforme) | agente-mecanico | ok (solo lectura) |
+| 27/10/2026 | asegura-portal SQL `2026-10-26_portal_patrimonio_inquilino_acceso.sql`: cabecera → APLICADA 25/10 y GRANT consentimiento→prisma_seguros comentado (NO reejecutar) | agente-mecanico | ok (node --test 2 ficheros, 37/37 verdes, exit 0) |
