@@ -13,7 +13,7 @@
 //   8. los alcances `patrimonio_*` entran en el CHECK de la BD sin perder ninguno y NO en `ALCANCES`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 const RAIZ = new URL('..', import.meta.url).pathname
@@ -437,4 +437,49 @@ test('🚨 recomendación entre propietarios (27/10/2026): SQL aditivo sin borra
   // referencial dispara BEFORE UPDATE), o borrar la identidad del invitado (supresión RGPD) falla con 23514.
   const trig = /FUNCTION seguros\.portal_patrimonio_recomendacion_inmutable[\s\S]*?END \$\$/.exec(SQL_RECOMENDACION)![0]
   assert.match(trig, /NEW\.canjeada_por_identidad_id IS NOT NULL/, 'el trigger bloquea el SET NULL de la FK del invitado')
+})
+
+// ─── Recorte de lo HEREDADO por `prisma_seguros` (27/10/2026, Alberto: «quita los permisos») ───────────────────────────
+// El SQL revoca a apps/asegura lo que su código no usa. Si mañana asegura empieza a leer/escribir una de esas tablas sin
+// tocar los GRANT, en producción cae con 42501: este cepo lo ve antes, cruzando el SQL con el SQL crudo de apps/asegura.
+const RUTA_REVOCAR = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_revocar_heredados.sql'
+
+function codigoAsegura(): string {
+  const trozos: string[] = []
+  const pasear = (dir: string) => {
+    for (const e of readdirSync(dir)) {
+      if (e === 'node_modules' || e === 'generated' || e === '.next') continue
+      const p = join(dir, e)
+      if (statSync(p).isDirectory()) pasear(p)
+      else if (/\.(ts|tsx)$/.test(e) && !/\.test\.tsx?$/.test(e)) trozos.push(readFileSync(p, 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, ''))
+    }
+  }
+  for (const d of ['apps/asegura/lib', 'apps/asegura/app']) pasear(join(RAIZ, d))
+  return trozos.join('\n')
+}
+
+test('🚨 prisma_seguros (27/10/2026): sin lo que asegura no usa, SELECT donde solo lee, backup_seguros intacto', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_REVOCAR), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  const sql = crudo.replace(/--.*$/gm, '')
+  assert.match(sql, /^BEGIN;/m)
+  assert.match(sql, /^COMMIT;/m)
+  assert.doesNotMatch(sql, /backup_seguros/, 'el rol de las copias no se toca: sin SELECT la tabla sale del backup')
+  assert.match(sql, /REVOKE ALL ON seguros\.portal_patrimonio_recomendacion\s+FROM prisma_seguros/)
+  // Revocar UPDATE de TABLA arrastra el de columna: renta_actualizacion conserva UPDATE (notificada_en).
+  assert.doesNotMatch(sql, /REVOKE[^;]*\bUPDATE\b[^;]*portal_patrimonio_renta_actualizacion/)
+  // Lo que asegura escribe no se recorta: el motor de señales y el cron del INE.
+  assert.doesNotMatch(sql, /portal_patrimonio_senal\b/)
+  assert.doesNotMatch(sql, /portal_patrimonio_indice\b/)
+
+  const codigo = codigoAsegura()
+  const nada = [...sql.matchAll(/REVOKE ALL ON seguros\.(portal_patrimonio_\w+)\s+FROM prisma_seguros/g)].map((m) => m[1])
+  assert.ok(nada.length >= 10)
+  const usadas = nada.filter((t) => new RegExp(`\\b${t}\\b`).test(codigo))
+  assert.deepEqual(usadas, [], 'apps/asegura usa una tabla a la que este SQL le quita TODO')
+  const soloLee = [...sql.matchAll(/REVOKE INSERT, UPDATE, DELETE[^;]*ON seguros\.(portal_patrimonio_\w+)\s+FROM prisma_seguros/g)].map((m) => m[1])
+  assert.ok(soloLee.includes('portal_patrimonio_titular'))
+  const escritas = soloLee.filter((t) => new RegExp(`(insert\\s+into|update|delete\\s+from)\\s+(seguros\\.)?"?${t}\\b`, 'i').test(codigo))
+  assert.deepEqual(escritas, [], 'apps/asegura escribe en una tabla que este SQL deja en solo SELECT')
+  for (const t of soloLee) assert.match(sql, new RegExp(`GRANT SELECT ON[^;]*seguros\\.${t}\\b[^;]*TO prisma_seguros`))
 })
