@@ -12,6 +12,9 @@
 
 import type { BrowserContext, Download, Page, Response } from 'playwright'
 
+/** Tope para cerrar las ventanas abiertas durante la espera. */
+export const TOPE_CIERRE_POPUPS_MS = 5_000
+
 export type PdfCapturado = { bytes: Buffer; origen: 'descarga' | 'respuesta' }
 
 export type EsperaPdf = {
@@ -56,7 +59,10 @@ export function esperarPdf(page: Page, tope = 45_000): EsperaPdf {
     contexto.off('response', alResponder)
     for (const p of [...previas, ...nuevas]) p.off('download', alDescargar)
     // Se resuelve cuando las ventanas abiertas para el PDF ya están cerradas.
-    void Promise.all(nuevas.map((p) => p.close().catch(() => undefined))).then(() => resolver(v))
+    // v0.6.31: con tope (5 s): un `close()` que nunca vuelve (popup colgada) no puede dejar la espera sin resolver.
+    const cierre = Promise.all(nuevas.map((p) => p.close().catch(() => undefined)))
+    const topeCierre = new Promise<void>((r) => setTimeout(r, TOPE_CIERRE_POPUPS_MS).unref?.())
+    void Promise.race([cierre, topeCierre]).then(() => resolver(v))
   }
   const alDescargar = (d: Download) => {
     void leerDescarga(d).then((b) => {

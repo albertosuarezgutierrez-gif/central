@@ -1294,6 +1294,21 @@ test('v0.2.17 · sin combustible ni CV en el riesgo: «No lo sé» declarado en 
   }
 })
 
+test('v0.2.36 · sin combustible ni CV en el riesgo: se DEDUCEN de la versión («2.9 CRDI 163 FULL» → Diésel, 163.0 CV) con aviso de supuesto, sin «No lo sé»', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA'], FICHA_0217()))
+  try {
+    const avisos: string[] = []
+    const form = coche({ seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA', descripcion: '2.9 CRDI 163 FULL' } })
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, form, ctx0217(page, guard), avisos), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali)
+    assert.deepEqual(await contador(page, '__combustible'), ['Diésel'])
+    assert.deepEqual(await contador(page, '__potencia'), ['163.0 CV'])
+    assert.ok(avisos.some((a) => /combustible\/potencia deducidos de la versión «2\.9 CRDI 163 FULL» \(supuesto; revisar en la emisión\)/.test(a)), avisos.join(' | '))
+    assert.ok(!avisos.some((a) => /«No lo sé»/.test(a)), avisos.join(' | '))
+  } finally {
+    await cerrar()
+  }
+})
+
 test('v0.2.17 · un campo nuevo que sale tras elegir la versión sigue PARANDO antes de «Confirmar»', async () => {
   const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA'], FICHA_0217('<span>Valor venal</span><input type="text" id="valorvenal">')))
   try {

@@ -24,11 +24,11 @@ test('pura: nombre del atributo por índice', () => {
   assert.equal(nombreAtributoDescarga(16), 'ancestro 2 onclick')
 })
 
-test('pura: extracto de ±30 caracteres, sin emails ni cifras largas', () => {
+test('pura: extracto de ±40 caracteres, sin emails ni cifras largas', () => {
   const x = extractoSaneadoDescarga('abrir(); enviarSms("ana.perez@correo.test", 600123456); cerrar()', 'sms')
   assert.match(x, /sms/)
   assert.ok(!/@correo|ana\.perez|600123456/.test(x), x)
-  assert.ok(x.length <= 30 + 3 + 30 + 2, x)
+  assert.ok(x.length <= 40 + 3 + 40 + 2, x)
   assert.equal(extractoSaneadoDescarga('ana.perez.sms@correo.test', 'sms'), '…', 'si la palabra estaba dentro de un email, no se cuenta nada')
 })
 

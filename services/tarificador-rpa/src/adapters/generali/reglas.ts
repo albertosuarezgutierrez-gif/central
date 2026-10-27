@@ -538,6 +538,71 @@ export function potenciaExactaGenerali(
   return { tipo: 'no_lo_se', texto: noLoSe, supuesto: `${que}: se marcó «${noLoSe}» (supuesto; revisar en la emisión)` }
 }
 
+// ───────────── v0.2.36: combustible y potencia DEDUCIDOS del texto de la versión (hipótesis: sin ellos Generali no calcula) ─────────────
+
+/** Texto de la versión del riesgo (descripción de la selección o denominación confirmada), o `null`. PURA. */
+export function textoVersionRiesgoGenerali(form: FormVehiculoRiesgo): string | null {
+  return textoVersionRiesgo(form)
+}
+
+const RE_DIESEL_MOTOR = regexPalabras(terminosDe(CONCEPTOS_LECTURA.combustible_motor as Concepto, { grupos: ['diesel'] }), { mayus: true })
+const RE_GASOLINA_MOTOR = regexPalabras(terminosDe(CONCEPTOS_LECTURA.combustible_motor as Concepto, { grupos: ['gasolina'] }), { mayus: true })
+
+/** Combustible por las siglas de motor de la versión («2.9 CRDI 163 FULL» → diésel). Solo si UNA familia casa; mezcla o nada → `null`. PURA. */
+export function combustibleDeVersionGenerali(texto: string | null | undefined): Combustible | null {
+  const n = normalizarCatalogo(texto ?? '')
+  if (n === '') return null
+  const d = RE_DIESEL_MOTOR.test(n)
+  const g = RE_GASOLINA_MOTOR.test(n)
+  return d === g ? null : d ? 'diesel' : 'gasolina'
+}
+
+/**
+ * CV de la versión: «NNN CV» explícito (único), o exactamente UN entero de 40–700 suelto («2.9 CRDI 163 FULL» → 163; la cilindrada «2.9» y los
+ * decimales no cuentan). Dos o más candidatos, o ninguno → `null`. PURA.
+ */
+export function potenciaDeVersionGenerali(texto: string | null | undefined): number | null {
+  const n = normalizarCatalogo(texto ?? '')
+  if (n === '') return null
+  const explicitos = new Set([...n.matchAll(/(?<![0-9.])(\d{2,3})\s*CV\b/g)].map((m) => Number(m[1])))
+  if (explicitos.size > 0) {
+    const v = [...explicitos].filter((x) => x >= 40 && x <= 700)
+    return v.length === 1 && explicitos.size === 1 ? v[0]! : null
+  }
+  const sueltos = new Set([...n.matchAll(/(?<![0-9.])(\d{2,3})(?![0-9.])(?!\s*(?:CC|KG|KW|L|V|P)\b)/g)].map((m) => Number(m[1])).filter((x) => x >= 40 && x <= 700))
+  return sueltos.size === 1 ? [...sueltos][0]! : null
+}
+
+/** Aviso de supuesto cuando se rellenaron combustible y/o potencia a partir de la versión. PURA. */
+export function avisoDeducidoDeVersionGenerali(version: string, combustible: boolean, potencia: boolean): string {
+  const que = combustible && potencia ? 'combustible/potencia deducidos' : combustible ? 'combustible deducido' : 'potencia deducida'
+  return `${que} de la versión «${version.slice(0, 80)}» (supuesto; revisar en la emisión)`
+}
+
+/**
+ * Combustible deducido de la versión: SOLO si existe UNA opción del portal que casa exacta con el combustible deducido (no «No lo sé»).
+ * Si no, `null` (se mantiene la decisión de siempre). PURA.
+ */
+export function opcionCombustibleDeVersionGenerali(opciones: readonly string[], version: string | null): string | null {
+  const c = combustibleDeVersionGenerali(version)
+  if (!c) return null
+  const casan = opciones.filter((o) => !esOpcionNoLoSeGenerali(o) && normalizarCombustible(o) === c)
+  return casan.length === 1 ? casan[0]! : null
+}
+
+/** Potencia deducida de la versión: SOLO la opción «NNN CV» cuyo valor entero es EXACTAMENTE el deducido (nunca la parecida). `null` si no. PURA. */
+export function opcionPotenciaDeVersionGenerali(opciones: readonly string[], version: string | null): string | null {
+  const cv = potenciaDeVersionGenerali(version)
+  if (cv === null) return null
+  const r = potenciaExactaGenerali(opciones, cv)
+  return r.tipo === 'exacta' ? r.texto : null
+}
+
+/** ¿Se rellenaron combustible y potencia con datos (ninguno quedó en «No lo sé»)? Se mira en los avisos de supuesto. PURA. */
+export function combustiblePotenciaRellenosGenerali(avisos: readonly string[]): boolean {
+  return !avisos.some((a) => /«No lo sé»/.test(a) && /combustible|potencia/i.test(a))
+}
+
 /** Lo que se sabe del riesgo para elegir la versión del desplegable. `persona` = elección de la bandeja (manda). */
 export type ReferenciaVersionDesplegable = { persona: string | null; buscado: string | null; cv: number | null; combustible: Combustible | null }
 export type EleccionVersionDesplegable = { tipo: 'opcion'; indice: number; supuesto: string | null } | { tipo: 'preguntar'; candidatas: string[] }
@@ -1136,13 +1201,18 @@ export type DiagnosticoModalidadesMarcoGenerali = { url: string; tablas: number;
 
 /** Resumen del diagnóstico ampliado de modalidades: «Marcos N: [i] ruta tablas=T recibo=R estructura: …». Saneado y truncado a `max`. PURA. */
 export function resumenDiagnosticoModalidadesGenerali(d: readonly DiagnosticoModalidadesMarcoGenerali[], max = 700): string {
-  const partes = d.map((m, i) => {
+  const base = d.map((m, i) => {
     const ruta = sanearFragmentoGenerali(String(m.url ?? '').split(/[?#;]/)[0]!.replace(/^https?:\/\/[^/]+/, '')).slice(-60)
-    const est = m.estructura ? ` estructura: ${sanearFragmentoGenerali(m.estructura).slice(0, 600)}` : ''
-    return `[${i}] ${ruta || '/'} tablas=${m.tablas} con-Recibo/Prima=${m.conRecibo}${est}`
+    return { cab: `[${i}] ${ruta || '/'} tablas=${m.tablas} con-Recibo/Prima=${m.conRecibo}`, est: m.estructura ? sanearFragmentoGenerali(m.estructura).slice(0, 600) : '' }
   })
-  const t = `Marcos (${d.length}): ${partes.join(' | ') || 'ninguno'}`
-  return t.length > max ? `${t.slice(0, Math.max(0, max - 1))}…` : t
+  const armar = (tope: number): string => `Marcos (${d.length}): ${base.map((b) => b.cab + (b.est && tope > 0 ? ` estructura: ${b.est.slice(0, tope)}` : '')).join(' | ') || 'ninguno'}`
+  // v0.2.36: primero se recorta la ESTRUCTURA (lo menos importante); la lista de marcos con ruta y tablas va entera mientras quepa.
+  for (const tope of [600, 400, 250, 120, 0]) {
+    const t = armar(tope)
+    if (t.length <= max) return t
+  }
+  const t = armar(0)
+  return t.slice(0, Math.max(0, max - 1)) + '…'
 }
 
 // ───────────────────────── v0.2.28 · inventario de controles de navegación de TODOS los marcos ─────────────────────────
