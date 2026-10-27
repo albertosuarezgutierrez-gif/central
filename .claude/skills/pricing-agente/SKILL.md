@@ -49,6 +49,7 @@ sobrevive a la sesión efímera). Cierra con informe a Alberto y auto-informe en
 - **NO actives `apply_enabled` de pisos nuevos sin OK explícito de Alberto.**
 - **Prima de finde por ritmo propio (27/10/2026):** `lib/sivra/pricing-ritmo-finde.ts` (plataforma) da prima vie/sáb 1,00-1,25 y factor dom-jue 0,85-1,00. Solo se APLICA en los pisos de `SIVRA_PRIMA_FINDE_PISOS` (vacía = sin efecto; revertir = vaciarla). Se lee con `process.env` en runtime (`pricing/apply`, `pricing/canal`), pero en Vercel un cambio de env **exige redeploy** para que las funciones lo vean.
 - Prior estacional en rampa 1,10-1,20. Aviso «caro» = estado `caro_vendiendo` (vende a ese precio o prima>1), nunca por noches de evento.
+- Suelo frente a techos (27/10/2026): `sueloFrenteTecho` (lib/sivra/pricing-techo-mercado.ts) = max(min_price, min(suelo estacional del día, suelo de temporada sin evento)), tope max_price. Los techos de mercado y ADR ya no bajan una noche por debajo del suelo de temporada (caso House 24/11 y 08/12 a 300 con suelo 330/360). Un evento puede perder su recargo por el techo, nunca bajar de un día normal del mismo mes.
 - Sin secretos en chat/commits (solo nombres de variable); no toques RLS/buckets/GRANTs de la
   BD compartida; al cerrar actualiza `docs/CONTEXTO-SESIONES.md`.
 
