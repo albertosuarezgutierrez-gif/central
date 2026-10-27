@@ -262,7 +262,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.36'
+export const VERSION_GENERALI_AUTO = '0.2.37'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -706,7 +706,7 @@ const JS_MODALIDADES = `(() => {
     const v = txt(c);
     return v === '' ? '0' : esImp(v) ? 'imp' : /[A-Za-z]/.test(v) ? 'txt' : 'num';
   };
-  const res = { encontrada: false, filas: [], botones: [], forma: '' };
+  const res = { encontrada: false, filas: [], botones: [], forma: '', fuera: 0, otras: 0 };
   document.querySelectorAll('table').forEach((t) => {
     if (res.encontrada || !vis(t)) return;
     const filasT = Array.from(t.rows || []);
@@ -773,7 +773,23 @@ const JS_MODALIDADES = `(() => {
     });
     procesa(propias, false);
     if (res.filas.length === 0) procesa(extra, true);
-    res.forma = 'cab ' + cabN + 'c; filas propias ' + Math.max(0, filasT.length - 1) + '; anidadas ' + anidadas.length + '; hermanas ' + hermanas + '; ' + formas.join(' ');
+    // v0.2.37 (hipótesis a): el cuerpo del grid puede estar en filas con id «gridmodseg» FUERA del thead de la cabecera, o en OTRA tabla del marco (antes o después) solo si la fila tiene control de elegir una sola opción (una tabla de franquicias no cuenta).
+    // Solo cuentan filas con una cifra con forma de importe; el paginador y la cabecera ya se descartan en procesa.
+    if (res.filas.length === 0) {
+      const conImp = (r) => Array.from(r.cells || []).some((c) => valores(c).some((v) => { const x = String(v).replace(/\\s+/g, ' ').trim(); return x !== '' && esImp(x); }));
+      const fuera = Array.from(document.querySelectorAll('tr[id*=gridmodseg], tbody[id*=gridmodseg] tr')).filter((r) => r !== cabFila && !r.closest('thead') && conImp(r));
+      fuera.forEach((r) => vistas.delete(r));
+      procesa(fuera, false);
+      res.fuera = fuera.length;
+      if (res.filas.length === 0) {
+        const otras = [];
+        Array.from(document.querySelectorAll('table')).forEach((x) => { if (x === t || t.contains(x) || x.contains(t) || !vis(x)) return; Array.from(x.rows || []).forEach((r) => { if (conImp(r) && Array.from(r.querySelectorAll('input')).some((i) => /^ra/i.test(i.type || ''))) otras.push(r); }); });
+        otras.forEach((r) => vistas.delete(r));
+        procesa(otras, false);
+        res.otras = otras.length;
+      }
+    }
+    res.forma = 'cab ' + cabN + 'c; filas propias ' + Math.max(0, filasT.length - 1) + '; anidadas ' + anidadas.length + '; hermanas ' + hermanas + '; gridmodseg fuera ' + res.fuera + '; otras tablas ' + res.otras + '; ' + formas.join(' ');
   });
   if (res.encontrada) {
     document.querySelectorAll('input[type=button], input[type=submit], button').forEach((e) => {
@@ -844,7 +860,17 @@ const JS_DIAG_MODALIDADES = `(() => {
   let estructura = '';
   const mod = tablas.find((t) => Array.from(t.querySelectorAll('th,td')).some((c) => { const x = norm(c.textContent); return x.length > 0 && x.length < 40 && x.indexOf('${CABECERA_MODALIDADES}') >= 0; }));
   if (mod) estructura = forma(mod).slice(0, 600);
-  return { url: String(location.href).split(/[?#;]/)[0], tablas: tablas.length, conRecibo: conRecibo, estructura: estructura };
+  // v0.2.37: la SEGUNDA tabla del marco (la que no es la de modalidades) y las filas/tbody con id «gridmodseg» fuera del thead. Sin textos: solo clase, nº de filas y celdas, y cuántas con forma de importe.
+  let segunda = null;
+  const otra = tablas.find((t) => t !== mod);
+  if (mod && otra) {
+    const filas = Array.from(otra.rows || []);
+    const celdas = filas.slice(0, 6).map((r) => (r.cells ? r.cells.length : 0)).join(',');
+    const imp = filas.reduce((n, r) => n + Array.from(r.cells || []).filter((c) => esImp(String(c.textContent || '').replace(/\\s+/g, ' ').trim())).length, 0);
+    segunda = { clase: saneaAttr(otra.getAttribute('class')), filasTbody: otra.tBodies && otra.tBodies[0] ? otra.tBodies[0].rows.length : 0, filas: filas.length, celdas: celdas, importes: imp };
+  }
+  const gridEls = Array.from(document.querySelectorAll('tr[id*=gridmodseg], tbody[id*=gridmodseg]')).filter((e) => !e.closest('thead'));
+  return { url: String(location.href).split(/[?#;]/)[0], tablas: tablas.length, conRecibo: conRecibo, estructura: estructura, segunda: segunda, gridFuera: gridEls.length, gridIds: gridEls.slice(0, 3).map((e) => saneaAttr(e.id)).join(',') };
 })()`
 
 export async function volcarDiagnosticoModalidadesGenerali(page: Page): Promise<DiagnosticoModalidadesMarcoGenerali[]> {

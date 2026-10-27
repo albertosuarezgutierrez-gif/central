@@ -452,10 +452,15 @@ test('planDelPaso / exigirPasoCompleto: cada operación es de su paso; un paso c
 
 test('el guard rechaza los botones peligrosos de NSEI y el adaptador no pulsa nada', () => {
   for (const t of ['Contratar', 'Contratación', 'Aceptar', 'Aceptar Obs. y Cláusulas']) assert.throws(() => comprobarBoton([t]), EmisionBloqueadaError, t)
-  const src = readFileSync(join(import.meta.dirname, '../src/adapters/mapfre/auto.ts'), 'utf8')
+  let src = readFileSync(join(import.meta.dirname, '../src/adapters/mapfre/auto.ts'), 'utf8')
     .split('\n')
     .filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l))
     .join('\n')
+  // Única excepción (v0.8.27): UNA llamada, dentro de `desplegarAcordeonGuardado`, que solo recibe la cabecera `mat-expansion-panel-header`.
+  const permitida = "await pulsar(raiz.locator('mat-expansion-panel-header').nth(indiceCabecera))"
+  assert.equal(src.split(permitida).length - 1, 1, 'exactamente una llamada permitida a pulsar')
+  assert.match(src, /async function desplegarAcordeonGuardado\([^\n]*\): Promise<void> \{\n  await pulsar\(raiz\.locator\('mat-expansion-panel-header'\)\.nth\(indiceCabecera\)\)\n\}/)
+  src = src.replace(permitida, '')
   assert.ok(!/\.click\s*\(|pulsar\s*\(|\.check\s*\(|setChecked|dispatchEvent|keyboard|\.press\s*\(/.test(src), 'el adaptador de Mapfre no pulsa, marca ni teclea teclas')
   assert.ok(!/aceptar|emitir|archivar|formalizar|has-text|text=/i.test(src), 'ningún selector por texto ni verbo de acción peligrosa en el código')
 })
@@ -651,5 +656,5 @@ test('v0.8.8 · opcionesFilasVehiculo: una opción por fila con denominación ·
   assert.equal(indiceFilaMapfre88(filas, { seleccionVehiculo: { marca: 'MARCA', modelo: 'X' } }), null, 'marca+modelo casan con las 3: ambiguo')
   assert.equal(indiceFilaMapfre88(filas, { eleccionVersion: { codigo: null, etiqueta: ops[1]!.etiqueta } }), 1, 'la etiqueta de la bandeja distingue la fila')
   assert.equal(indiceFilaMapfre88(filas, { seleccionVehiculo: { marca: 'MARCA', modelo: 'X', cilindradaCc: 1968 } }), 2, 'una única candidata por cilindrada: inequívoca')
-  assert.equal(mapfreAuto.version, '0.8.26')
+  assert.equal(mapfreAuto.version, '0.8.27')
 })

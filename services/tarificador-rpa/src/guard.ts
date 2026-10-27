@@ -1551,7 +1551,35 @@ export const REGLAS_DESCARGA_PROYECTO: Readonly<Record<CompaniaDescargaProyecto,
 export const TERMINOS_BLOQUEO_SOLO_GUARD: readonly Termino[] = Object.freeze([terminoPropio('aceptar', 'allianz+mapfre+generali', '26/10/2026', 'rótulo de descarga: nunca un control de aceptación')])
 
 const RE_PROHIBIDO_ROTULO_DESCARGA = regexBloqueoRotulo(TERMINOS_BLOQUEO_SOLO_GUARD)
-const RE_PROHIBIDO_OCULTO_DESCARGA = regexPalabras(BLOQUEO.atributo_interno, { limites: false })
+/** Raíces de la lista negra de atributos internos (en minúsculas, sin tildes). v0.6.32: se casan por TOKEN (ver `palabraBloqueadaEnAtributo`), no por subcadena. */
+const RAICES_ATRIBUTO_DESCARGA: readonly string[] = Object.freeze(BLOQUEO.atributo_interno.map((x) => x.texto.toLowerCase()))
+
+/** v0.6.32: ¿esta tira alfanumérica seguida parece un blob (base64/hex/hash) y no una palabra? Largo >24, mezcla dígito-letra repetida o mayúsculas/minúsculas a saltos. PURA. */
+function esBlobAlfanumerico(run: string): boolean {
+  if (run.length > 24) return true
+  const t = (re: RegExp): number => (run.match(re) ?? []).length
+  if (run.length >= 10 && t(/[0-9][a-zA-Z]|[a-zA-Z][0-9]/g) >= 2) return true
+  return run.length >= 12 && t(/[a-z][A-Z]|[A-Z][a-z]/g) >= 6
+}
+
+/**
+ * v0.6.32: palabra de la lista negra de atributos que casa en `valor` por TOKENS (troceado por no alfanuméricos y por camelCase/snake; minúsculas, sin
+ * tildes): un token igual a una raíz, que EMPIEZA por ella (enviarsms) o que ACABA en ella (lanzarsms). Las tiras largas/mezcladas de blob (base64, hex) no cuentan: «sms» dentro de texto
+ * aleatorio no es un envío. Solo para ATRIBUTOS internos; el rótulo visible se sigue mirando con sus reglas de siempre. PURA.
+ */
+export function palabraBloqueadaEnAtributo(valor: string | null | undefined): string | null {
+  const base = String(valor ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  for (const run of base.split(/[^A-Za-z0-9]+/)) {
+    if (run === '' || esBlobAlfanumerico(run)) continue
+    const tokens = run.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').split(' ')
+    for (const tk of tokens) {
+      const w = tk.toLowerCase()
+      const raiz = RAICES_ATRIBUTO_DESCARGA.find((r) => w.startsWith(r) || w.endsWith(r))
+      if (raiz !== undefined) return raiz
+    }
+  }
+  return null
+}
 const RE_AJENO_DESCARGA = RE_EXCLUIR_DESCARGA
 const RE_VERBO_SUELTO_DESCARGA = RE_VERBO_DESCARGA
 const RE_VERBO_CON_OBJETO_DESCARGA = RE_VERBO_DESCARGA_CON_OBJETO
@@ -1577,8 +1605,7 @@ export function puntuarBotonDescargaProyecto(desc: readonly (string | null | und
   if (rotulos.length === 0) return 0
   const junto = rotulos.join(' | ')
   if (RE_PROHIBIDO_ROTULO_DESCARGA.test(junto) || RE_AJENO_DESCARGA.test(junto)) return 0
-  const ocultos = desc.slice(4).map((x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()).join(' | ')
-  if (RE_PROHIBIDO_OCULTO_DESCARGA.test(ocultos)) return 0
+  if (desc.slice(4).some((x) => palabraBloqueadaEnAtributo(x) !== null)) return 0
   if (RE_VERBO_CON_OBJETO_DESCARGA.test(junto) && RE_OBJETO_DESCARGA.test(junto)) return 2
   if (RE_VERBO_SUELTO_DESCARGA.test(junto) && RE_OBJETO_PROPUESTA_DESCARGA.test(junto)) return 2
   if (guardado && !REGLAS_DESCARGA_PROYECTO[compania].soloConObjeto && RE_VERBO_SUELTO_DESCARGA.test(junto)) return 1
@@ -1593,8 +1620,11 @@ export function rechazoOcultoDescargaProyecto(desc: readonly (string | null | un
   if (puntuarBotonDescargaProyecto(desc, compania, guardado) > 0) return null
   const sinOcultos = [desc[0], desc[1], desc[2], desc[3], desc[11]]
   if (puntuarBotonDescargaProyecto(sinOcultos, compania, guardado) === 0) return null
-  const ocultos = desc.slice(4).map((x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()).join(' | ')
-  return RE_PROHIBIDO_OCULTO_DESCARGA.exec(ocultos)?.[0] ?? null
+  for (const x of desc.slice(4)) {
+    const w = palabraBloqueadaEnAtributo(x)
+    if (w !== null) return w
+  }
+  return null
 }
 
 /** `attrs`: class, aria-controls, aria-haspopup, aria-expanded y data-* del control (solo para diagnóstico y para reconocer un disparador de menú). */
@@ -1645,8 +1675,8 @@ export function esDisparadorMenuDescarga(attrs: Readonly<Record<string, string>>
 export function bloqueoEnAtributosExtraDescarga(attrs: Readonly<Record<string, string>> | undefined): { palabra: string; atributo: string; valor: string } | null {
   for (const [k, v] of Object.entries(attrs ?? {})) {
     if (k === 'aria-haspopup' || k === 'aria-expanded') continue
-    const m = RE_PROHIBIDO_OCULTO_DESCARGA.exec(normalizarOcultoDescarga(v))
-    if (m) return { palabra: m[0], atributo: k, valor: v }
+    const w = palabraBloqueadaEnAtributo(v)
+    if (w !== null) return { palabra: w, atributo: k, valor: v }
   }
   return null
 }
@@ -1661,8 +1691,8 @@ export function detalleRechazoOcultoDescarga(c: ControlDescargaProyecto, compani
   for (let i = 4; i < c.desc.length; i++) {
     const v = c.desc[i]
     if (!v) continue
-    const m = RE_PROHIBIDO_OCULTO_DESCARGA.exec(normalizarOcultoDescarga(v))
-    if (m) return `«${m[0]}» en ${nombreAtributoDescarga(i)} («${extractoSaneadoDescarga(v, m[0])}»)${menu}`
+    const w = palabraBloqueadaEnAtributo(v)
+    if (w !== null) return `«${w}» en ${nombreAtributoDescarga(i)} («${extractoSaneadoDescarga(v, w)}»)${menu}`
   }
   const e = bloqueoEnAtributosExtraDescarga(c.attrs)
   return e ? `«${e.palabra}» en ${e.atributo} («${extractoSaneadoDescarga(e.valor, e.palabra)}»)${menu}` : null
@@ -1690,7 +1720,7 @@ export function puedeAbrirMenuDescarga(c: ControlDescargaProyecto, compania: Com
   // Criterio de seguridad (coordinador, 26/10/2026): NINGÚN atributo (id, name, class, aria-controls, data-*, manejadores, href, ancestros) casa bloqueo.
   for (let i = 4; i < c.desc.length; i++) {
     if (i === 11) continue
-    if (RE_PROHIBIDO_OCULTO_DESCARGA.test(normalizarOcultoDescarga(c.desc[i]))) return false
+    if (palabraBloqueadaEnAtributo(c.desc[i]) !== null) return false
   }
   return bloqueoEnAtributosExtraDescarga(c.attrs) === null
 }

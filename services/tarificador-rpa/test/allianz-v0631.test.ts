@@ -25,7 +25,7 @@ test('0.6.31 · el saneado de un texto largo (con arrobas) no es cuadrático', (
 })
 
 test('0.6.31 · detalleRechazoOcultoDescarga con un manejador de ancestro de 200.000 caracteres: <200 ms', () => {
-  const c: ControlDescargaProyecto = { desc: ['Descargar propuesta', null, null, null, null, null, null, null, null, null, null, null, enorme(200_000)], visible: true, habilitado: true }
+  const c: ControlDescargaProyecto = { desc: ['Descargar propuesta', null, null, null, null, null, null, null, null, null, null, null, enorme(200_000).replace('sms', '/sms/')], visible: true, habilitado: true }
   const t0 = Date.now()
   const d = detalleRechazoOcultoDescarga(c, 'allianz', true)
   assert.ok(Date.now() - t0 < 200, `tardó ${Date.now() - t0} ms`)
