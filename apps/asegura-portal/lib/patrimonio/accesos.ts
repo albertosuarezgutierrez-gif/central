@@ -31,6 +31,7 @@ import {
   ALCANCE_PATRIMONIO_GESTION,
   ALCANCE_PATRIMONIO_TOTAL,
   nivelesPatrimonio,
+  puedeAutorizarPatrimonio,
   type NivelPatrimonio,
 } from '@central/module-patrimonio'
 
@@ -45,6 +46,77 @@ const ALCANCES_PATRIMONIO = [ALCANCE_PATRIMONIO_GESTION, ALCANCE_PATRIMONIO_TOTA
 
 function nivelDe(v: string): Nivel {
   return (NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta'
+}
+
+/**
+ * Reglas 1, 2 y 3: las fichas de las que ESTA identidad es la persona (vínculo que opera, sin la vista de corredor) y las
+ * sociedades de las que es Dueño, desde esos mismos vínculos. La única frontera: `portal_vinculo` de ESTA identidad. NO mira la
+ * sesión (lo hace quien llama) ni si la ficha está viva (regla 4, también de quien llama).
+ */
+async function titularesPropios(identidadId: string): Promise<{ propias: string[]; deDueno: string[] }> {
+  // 🚨 Las MISMAS reglas 1-3 que `accesosPatrimonio` (su cepo vigila las dos copias con el mismo texto).
+  const vinculos = await prisma.portalVinculo.findMany({
+    where: { identidadId },
+    select: { clienteId: true, nivel: true, origen: true },
+  })
+  const queOperan = vinculos.filter((v) => v.origen !== 'corredor' && puedeAutorizar(nivelDe(v.nivel)))
+  const propias = [...new Set(queOperan.map((v) => v.clienteId))]
+  const deDueno = await empresasDeFichas(queOperan)
+  return { propias, deDueno: [...deDueno] }
+}
+
+/**
+ * 🚨 AUTORIZAR A UN TERCERO (27/10/2026): los titulares cuyo patrimonio puede ceder ESTA identidad. Solo el propio titular o el
+ * Dueño (`puedeAutorizarPatrimonio`), NUNCA por nivel: quien entra por una autorización `patrimonio_total` lo VE todo pero no
+ * aparece aquí, así que no reautoriza a un cuarto. Además el titular tiene que estar abierto en `accesosPatrimonio` (misma sesión,
+ * módulo activo, ficha viva). Cepo: `test/regression-portal-patrimonio-autorizar.test.ts`.
+ */
+export async function titularesAutorizables(identidadId: string): Promise<string[]> {
+  const sesion = await getIdentidad()
+  if (!sesion || sesion.id !== identidadId || sesion.corredor) return []
+  const [mapa, { propias, deDueno }] = await Promise.all([accesosPatrimonio(identidadId), titularesPropios(identidadId)])
+  const fuentes = { vinculadas: propias, dueno: deDueno, fichasVivas: new Set(mapa.keys()) }
+  return [...mapa.keys()].filter((id) => mapa.get(id) === 'total' && puedeAutorizarPatrimonio(fuentes, id))
+}
+
+export type FichaTitular = { nombre: string | null; correduriaId: string }
+
+/**
+ * Nombre y correduría de los titulares pedidos, SOLO de los que ESTA identidad ya ve (`accesosPatrimonio`): un id que no está
+ * dentro no se lee. Para pintar «el patrimonio de María» y para sellar la correduría de una invitación.
+ */
+export async function fichasDeTitulares(identidadId: string, pedidos: readonly string[]): Promise<Map<string, FichaTitular>> {
+  const abiertos = await accesosPatrimonio(identidadId)
+  const ids = [...new Set(pedidos)].filter((id) => abiertos.has(id))
+  if (ids.length === 0) return new Map()
+  const filas = await prisma.cliente.findMany({
+    where: { id: { in: ids }, mergedIntoClienteId: null, activo: true },
+    select: { id: true, nombre: true, apellidos: true, correduriaId: true },
+  })
+  return new Map(
+    filas.map((f) => {
+      const n = `${f.nombre} ${f.apellidos}`.trim()
+      return [f.id, { nombre: n === '' ? null : n, correduriaId: f.correduriaId }]
+    }),
+  )
+}
+
+/**
+ * ¿Sigue siendo `identidadId` titular de `clienteId`? SIN sesión a propósito: lo pregunta la ACEPTACIÓN de una invitación, que
+ * hace OTRA persona (el invitado) cuando quien invitó ya no está mirando. Si María perdió el vínculo entre invitar y que José
+ * acepte, la invitación ya no abre nada (fail-closed).
+ */
+export async function esTitularPatrimonio(identidadId: string, clienteId: string): Promise<boolean> {
+  const { propias, deDueno } = await titularesPropios(identidadId)
+  if (!propias.includes(clienteId) && !deDueno.includes(clienteId)) return false
+  const viva = await prisma.cliente.findFirst({
+    where: { id: clienteId, mergedIntoClienteId: null, activo: true },
+    select: { id: true },
+  })
+  return puedeAutorizarPatrimonio(
+    { vinculadas: propias, dueno: deDueno, fichasVivas: new Set(viva ? [viva.id] : []) },
+    clienteId,
+  )
 }
 
 /**

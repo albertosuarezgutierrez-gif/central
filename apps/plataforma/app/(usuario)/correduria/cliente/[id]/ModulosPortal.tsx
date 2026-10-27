@@ -4,6 +4,7 @@ import { btnStyle } from '@/components/ui'
 import {
   ETIQUETA_ESTADO_MODULO,
   interpretarModulos,
+  notaModulo,
   textoEscritura,
   textoMotivoModulos,
   type ModuloFicha,
@@ -102,6 +103,7 @@ export default function ModulosPortal({ clienteId }: { clienteId: string }) {
               <span style={{ fontSize: 12, fontWeight: 600, color: COLOR_ESTADO[m.estado] }}>{ETIQUETA_ESTADO_MODULO[m.estado]}</span>
             </div>
             {m.descripcion !== '' && <p style={{ ...sutil, maxWidth: '72ch' }}>{m.descripcion}</p>}
+            {notaModulo(m.id) !== null && <p role="note" style={{ ...sutil, maxWidth: '72ch' }}>{notaModulo(m.id)}</p>}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {m.estado !== 'activo' && (
                 <button

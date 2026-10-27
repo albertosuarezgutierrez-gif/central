@@ -16,10 +16,12 @@ import {
 import {
   precioHuesped, baseDondeLaCuotaMandaya,
   VENTANA_DIAS_MERCADO, MIN_COMPS_FECHA,
-  type ResumenHuesped, type VeredictoHuesped, type FechaHuesped,
+  type ResumenHuesped, type VeredictoHuesped, type FechaHuesped, fechasEventoParaVentas,
 } from "@/lib/sivra/pricing-precio-huesped"
 import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
 import { FACTOR_EVENTO_MINIMO } from "@/lib/sivra/mercado-ventanas"
+import { pisosConPrimaFinde, primaFindeCentinela, type RitmoFinde } from "@/lib/sivra/pricing-ritmo-finde"
+import { leerRitmoFinde } from "@/lib/sivra/pricing-ritmo-finde-lectura"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -134,7 +136,7 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
            -- Estancia típica REAL del piso: entre esas noches se reparte la cuota fija. Mediana, no
            -- media: una reserva de 14 noches no puede decidir cómo se tarifa un fin de semana.
            (SELECT percentile_disc(0.5) WITHIN GROUP (ORDER BY i.nights)
-              FROM incomes i
+              FROM incomes AS i
              WHERE i."propertyId" = s.property_id AND i.nights > 0
                AND i.date >= CURRENT_DATE - 365)::int AS noches_mediana
     FROM pricing_settings s
@@ -314,9 +316,17 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
   huesped: Map<string, ResumenHuesped>
   /** true = no se ha podido leer `pricing_eventos_auto`: `hayEvento` va como «no se sabe». */
   eventosIlegibles: boolean
+  /** true = no se pudo leer el ritmo de findes con algún piso habilitado: sus findes van «no se sabe». */
+  ritmoIlegible: boolean
 }> {
+  // Fechas de evento del histórico (12 meses atrás hasta el horizonte) para sacarlas de las ventas.
+  const fechasEvento = fechasEventoParaVentas(
+    new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10),
+    new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10),
+  )
   const filas = await prisma.$queryRaw<{
     property_id: string; fecha: string; base: number; med: number | null; comps: number
+    v_n: number | null; v_med: number | null
   }[]>(Prisma.sql`
     WITH base AS (
       SELECT property_id, rate_date, price_live AS base
@@ -340,6 +350,32 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
         AND ${Prisma.raw(sqlCompPlausible("m."))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     ),
+    -- Noches de EVENTO (no representan un día normal): tabla de eventos de la ciudad + calendario fijo
+    -- del motor (pricing_eventos_auto sólo cubre desde jul-2026). Misma condición que más abajo.
+    ev_noches AS (
+      SELECT rate_date AS d FROM pricing_eventos_auto
+      WHERE estado <> 'descartado' AND factor >= ${FACTOR_EVENTO_MINIMO}
+      UNION
+      SELECT unnest(${fechasEvento}::date[])
+    ),
+    -- Ventas REALES del piso (12 meses) por mes del año y tipo de NOCHE (vie/sáb vs resto), noche a
+    -- noche (no por día de entrada), sin noches de evento y desde pricing_settings.historico_desde.
+    -- €/noche huésped = amount_gross / nights. n = RESERVAS distintas (no noches). El cruce con el
+    -- precio de la fecha se hace en TS (depende del guest).
+    ventas AS (
+      SELECT i."propertyId" AS property_id,
+             EXTRACT(MONTH FROM g.d)::int AS mes,
+             (EXTRACT(ISODOW FROM g.d) IN (5, 6)) AS finde,
+             COUNT(DISTINCT i.id)::int AS n,
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY i.amount_gross / i.nights)::float8 AS med
+      FROM incomes AS i
+      LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+      CROSS JOIN LATERAL generate_series(i."checkIn"::date, i."checkIn"::date + (i.nights - 1), interval '1 day') AS g(d)
+      WHERE i."checkIn" >= CURRENT_DATE - 365 AND i.nights > 0 AND i.amount_gross > 0
+        AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
+        AND g.d::date NOT IN (SELECT d FROM ev_noches)
+      GROUP BY 1, 2, 3
+    ),
     mkt AS (
       SELECT b.property_id, b.rate_date,
              percentile_cont(0.5) WITHIN GROUP (ORDER BY c.price_night)::float8 AS med,
@@ -355,9 +391,14 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
            -- veredicto sera 'sin_mercado', que es lo que de verdad se sabe de esa noche.
            -- OJO: esta consulta va en un template literal de TS, aqui NO se pueden usar backticks.
            CASE WHEN m.n_comps >= ${MIN_COMPS_FECHA}::int THEN m.med END AS med,
-           COALESCE(m.n_comps, 0)::int AS comps
+           COALESCE(m.n_comps, 0)::int AS comps,
+           -- NULL = ese mes/tipo no tiene fila de ventas; se trata como «se miró y n=0» (ver abajo).
+           v.n AS v_n, v.med AS v_med
     FROM base b
     LEFT JOIN mkt m ON m.property_id = b.property_id AND m.rate_date = b.rate_date
+    LEFT JOIN ventas v ON v.property_id = b.property_id
+                      AND v.mes = EXTRACT(MONTH FROM b.rate_date)::int
+                      AND v.finde = (EXTRACT(ISODOW FROM b.rate_date) IN (5, 6))
     ORDER BY b.property_id, b.rate_date`)
 
   // Fechas con evento que mueve el mercado. `pricing_eventos_auto` es de la CIUDAD (no tiene piso),
@@ -373,6 +414,17 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
     GROUP BY rate_date`).catch(() => { eventosIlegibles = true; return [] })
   const conEvento = new Set(evRows.map(e => e.fecha))
 
+  // El MISMO «hoy» con el que `apply` cuenta los días vista (`new Date()` formateado en UTC): si
+  // aquí fuera otro, entre las 22:00 y las 24:00 UTC una fecha tarifada sin recargo se juzgaría con él.
+  const hoyMotor = new Date().toISOString().slice(0, 10)
+  // 🏁 Prima vie/sáb por ritmo propio: MISMA lectura y MISMA función que `apply` (no se duplica la
+  // lógica). Un finde subido a propósito por la prima no es «caro», es `caro_vendiendo`. Si la
+  // lectura cae, `null` = no se sabe → el veredicto queda como siempre (caro), y se declara.
+  let ritmoIlegible = false
+  const ritmo: Map<string, RitmoFinde> | null = await leerRitmoFinde(hoyMotor)
+    .catch(() => { ritmoIlegible = true; return null })
+  const pisosPrima = pisosConPrimaFinde(process.env.SIVRA_PRIMA_FINDE_PISOS)
+
   const porPiso = new Map<string, FechaHuesped[]>()
   for (const f of filas) {
     const l = porPiso.get(f.property_id) ?? []
@@ -383,12 +435,15 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
       // Si la tabla no se pudo leer, `null` = «no se ha comprobado». Un false aquí afirmaría que la
       // noche NO tiene evento sin haberlo mirado, que es justo lo que hace accionable el aviso.
       hayEvento: eventosIlegibles ? null : conEvento.has(f.fecha),
+      // La consulta ya leyó `incomes`: sin fila de ventas = se miró y no hay (n=0 → vendeAlPrecio null).
+      ventas: { n: f.v_n ?? 0, med: f.v_med != null ? Number(f.v_med) : null },
+      primaFinde: primaFindeCentinela({
+        fecha: f.fecha, pid: f.property_id, ritmo, habilitados: pisosPrima,
+        hayEvento: eventosIlegibles ? null : conEvento.has(f.fecha),
+      }),
     })
     porPiso.set(f.property_id, l)
   }
-  // El MISMO «hoy» con el que `apply` cuenta los días vista (`new Date()` formateado en UTC): si
-  // aquí fuera otro, entre las 22:00 y las 24:00 UTC una fecha tarifada sin recargo se juzgaría con él.
-  const hoyMotor = new Date().toISOString().slice(0, 10)
   const salida = new Map<string, ResumenHuesped>()
   for (const p of pisos) {
     const fechas = porPiso.get(p.property_id)
@@ -397,7 +452,7 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
       ultimaHora: { recargo: p.recargo_uh_cfg, hoy: hoyMotor },
     }))
   }
-  return { huesped: salida, eventosIlegibles }
+  return { huesped: salida, eventosIlegibles, ritmoIlegible: ritmoIlegible && pisosPrima.size > 0 }
 }
 
 /** Cómo se rotula una noche en el aviso. Los tres estados de `hayEvento`, sin colapsar ninguno. */
@@ -481,6 +536,10 @@ export async function GET(req: NextRequest) {
         avisosCentinela.push(
           "pricing_eventos_auto ilegible: las fechas caras NO se han podido separar entre evento y noche normal")
       }
+      if (c.ritmoIlegible) {
+        avisosCentinela.push(
+          "ritmo de findes ilegible: los vie/sáb de los pisos con prima pueden salir «caros» aunque los subiera el motor a propósito")
+      }
     } catch (e) {
       avisosCentinela.push(`centinela del precio al huésped ilegible (${String(e).slice(0, 60)}): esta pasada NO lo ha mirado`)
     }
@@ -497,7 +556,10 @@ export async function GET(req: NextRequest) {
   const sinMedir = pisos.filter(p => p.estado !== "medido")
   const desviados = pisos.filter(p => p.validacion.estado === "desviado")
   const sinValidar = pisos.filter(p => p.validacion.estado === "sin_muestras")
-  const caros = [...huesped.entries()].filter(([, h]) => h.caras > 0)
+  // Solo se lista un piso con caras accionables (sin evento / sin comprobar): las caras solo-con-evento
+  // y las `caro_vendiendo` no disparan el aviso (la mediana ±3 días diluye el pico del evento).
+  const caros = [...huesped.entries()].filter(([, h]) => h.avisar)
+  const vendiendo = [...huesped.values()].reduce((a, h) => a + h.carasVendiendo, 0)
 
   // 🚨 Un piso que no se ha ajustado NO puede desaparecer del parte. `frenados` es «no he podido»
   // (incluye el desviado cuyo paso acotado no mueve la base, que si no se declara se queda con su
@@ -516,9 +578,10 @@ export async function GET(req: NextRequest) {
     ` · validación: ${pisos.length - desviados.length - sinValidar.length} ok, ${desviados.length} desviados, ` +
     `${sinValidar.length} sin ventanas nuevas` +
     (caros.length
-      ? ` · 🏷️ ${caros.reduce((a, [, h]) => a + h.caras, 0)} fechas listadas caras al huésped` +
+      ? ` · 🏷️ ${caros.reduce((a, [, h]) => a + h.carasSinEvento + h.carasEventoSinComprobar, 0)} fechas listadas caras al huésped` +
         ` (${caros.reduce((a, [, h]) => a + h.carasSinEvento, 0)} entre semana sin evento)`
       : "") +
+    (vendiendo ? ` · ${vendiendo} fechas sobre mercado pero se venden a ese precio` : "") +
     (avisosCentinela.length ? ` · ⚠️ ${avisosCentinela.length} centinela(s) sin poder mirar` : "") +
     (simulacro ? " · SIMULACRO" : "")
 
@@ -575,13 +638,15 @@ export async function GET(req: NextRequest) {
           // 🚨 El titular es la peor fecha SIN evento (ver `precioHuesped`): la noche de maratón
           // puede estar bien puesta y encabezaba el aviso solo por tener el ratio más alto.
           const p0 = h.peores[0]
+          const cerca = suelo != null && p0 != null && p0.baseAplicada <= 1.5 * suelo
           return `• ${piso?.nombre ?? id}: ${h.caras} fecha(s) cara(s) — ` +
             `${h.carasSinEvento} sin evento, ${h.carasConEvento} con evento` +
             (h.carasEventoSinComprobar ? `, ${h.carasEventoSinComprobar} sin comprobar` : "") + `\n` +
             `  peor: ${p0?.fecha} (${etiquetaEvento(p0)}) ${eur(p0?.guest ?? 0)}/noche contra ` +
-            `${eur(p0?.medMercadoGuest ?? 0)} de mercado de ESA fecha ` +
-            `(mediana de ±${VENTANA_DIAS_MERCADO} días, ×${p0?.ratio})` +
-            (suelo ? `\n  Por debajo de ${eur(suelo)} de base, la cuota fija ya es la mitad de lo que paga el ` +
+            `${eur(p0?.medMercadoGuest ?? 0)} de mercado de esas fechas ` +
+            `(mediana ±${VENTANA_DIAS_MERCADO} días, ×${p0?.ratio})` +
+            (h.carasVendiendo ? `\n  ${h.carasVendiendo} fecha(s) sobre mercado pero respaldadas (se venden a ese precio o prima de finde por ritmo)` : "") +
+            (cerca ? `\n  Por debajo de ${eur(suelo ?? 0)} de base, la cuota fija ya es la mitad de lo que paga el ` +
               `huésped: bajar más NO abarata la noche, hay que tocar otra palanca (mín. de noches, oferta del portal).` : "")
         }).join("\n"))
     }
@@ -628,6 +693,8 @@ export async function GET(req: NextRequest) {
       caras_sin_evento: h.carasSinEvento,
       caras_con_evento: h.carasConEvento,
       caras_evento_sin_comprobar: h.carasEventoSinComprobar,
+      caras_vendiendo: h.carasVendiendo,
+      avisar: h.avisar,
       peores: h.peores,
       base_donde_manda_la_cuota: baseDondeLaCuotaMandaya(
         pisos.find(p => p.property_id === id)!.configurado),

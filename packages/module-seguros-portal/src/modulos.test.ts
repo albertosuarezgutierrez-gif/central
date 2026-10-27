@@ -156,3 +156,8 @@ test('tarjeta alquileres: activo sin acceso real NO manda a /patrimonio', () => 
   const a = accionModulo('alquileres', { accesoFlota: false, accesoPatrimonio: false, filas: [{ modulo: 'alquileres', estado: 'activo', solicitadoEn: HOY }] })
   assert.deepEqual(a, { tipo: 'activo', texto: TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO })
 })
+test('texto «activo sin acceso» (27/10/2026): dice la regla real (email de la ficha), no «póliza vigente»', () => {
+  assert.doesNotMatch(TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO, /póliza vigente/)
+  assert.match(TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO, /email que consta en tu ficha/)
+  assert.match(TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO, /cambiado de email, avísanos/)
+})

@@ -28,7 +28,11 @@ export interface Titular {
   deduceIva: boolean | null
 }
 
-export type UsoInmueble = 'vivienda' | 'local' | 'oficina' | 'nave' | 'garaje' | 'trastero' | 'otro'
+/**
+ * `edificio` (27/10/2026): edificio SIN división horizontal (una sola referencia catastral) cuyas UNIDADES (pisos, locales)
+ * son inmuebles normales que cuelgan de él (`Inmueble.inmueblePadreId`). Ver `edificio.ts`.
+ */
+export type UsoInmueble = 'vivienda' | 'local' | 'oficina' | 'nave' | 'garaje' | 'trastero' | 'otro' | 'edificio'
 
 export interface Inmueble {
   id: string
@@ -48,6 +52,15 @@ export interface Inmueble {
   anioConstruccion: number | null
   /** El inmueble está en régimen de propiedad horizontal (tiene comunidad). `null` = no consta. */
   enComunidad: boolean | null
+  /**
+   * Edificio del que cuelga esta UNIDAD (27/10/2026). `null`/ausente = inmueble suelto (o el propio edificio). Un solo
+   * nivel: un edificio no cuelga de nada y una unidad no tiene unidades (lo cierran la BD y `puedeColgarDe`).
+   */
+  inmueblePadreId?: string | null
+  /** Solo en un EDIFICIO: cómo se reparten sus gastos entre las unidades. `null`/ausente = sin elegir (no se reparte). */
+  repartoCriterio?: 'm2' | 'porcentaje' | null
+  /** Solo en una UNIDAD con reparto por %: su parte (0–100, dos decimales). `null`/ausente = no la ha fijado. */
+  repartoPorcentaje?: number | null
 }
 
 export type TipoInquilino = 'persona' | 'sociedad'

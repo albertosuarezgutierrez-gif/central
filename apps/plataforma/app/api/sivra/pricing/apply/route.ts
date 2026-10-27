@@ -10,6 +10,10 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { sueloFinde } from "@/lib/sivra/pricing-suelo-finde"
+import {
+  primaFindeFecha, pisosConPrimaFinde, primaPiso, factorSemanaPiso, factorSemanaFecha, urgenciaCombinada, type RitmoFinde,
+} from "@/lib/sivra/pricing-ritmo-finde"
+import { leerRitmoFinde } from "@/lib/sivra/pricing-ritmo-finde-lectura"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
 import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento, objetivoSaltoEvento } from "@/lib/sivra/pricing-base-evento"
@@ -713,6 +717,20 @@ export async function POST(req: NextRequest) {
     velocidad.get(v.pid)!.set(v.ym, Number(v.n))
   }
 
+  // ─── Prima de FIN DE SEMANA por RITMO PROPIO (27/10/2026, ver pricing-ritmo-finde.ts) ─────
+  // La demanda del motor es la ocupación del MES, que mezcla martes con sábados: House vendía sus
+  // vie/sáb al 78 % con 39 días de antelación mediana (y findes de nov/feb/abr al 100 % con 4-6
+  // meses) mientras el techo p90 del mes impedía a la base subir. Misma fuente y mismo
+  // `historico_desde` que la antelación; sin bloqueos a 0 €. Si la lectura revienta NO hay prima
+  // (null = no se sabe → sin efecto) y se declara como lectura caída.
+  // La lectura (incomes + canceladas, simétricas) vive en `pricing-ritmo-finde-lectura.ts`: el
+  // centinela de `pricing/canal` la usa TAL CUAL para no acusar de «caro» un finde primado.
+  // 🚦 Despliegue gradual: solo se APLICA en los pisos de `SIVRA_PRIMA_FINDE_PISOS`; los demás
+  // la calculan (sale en el parte) pero no la aplican.
+  const ritmoFinde: Map<string, RitmoFinde> = await leerRitmoFinde(fmt(today))
+    .catch((e) => { lecturasCaidas.push({ nombre: 'ritmo_finde', error: String(e).slice(0, 120) }); return new Map() })
+  const pisosPrimaFinde = pisosConPrimaFinde(process.env.SIVRA_PRIMA_FINDE_PISOS)
+
   /** congelaciones de TODOS los pisos, para el aviso agrupado (una pasada = un mensaje como mucho) */
   const congeladasGlobal: { property: string; fecha: string; precio: number; factor: number }[] = []
   /** descongelaciones de TODOS los pisos, para el parte de la respuesta (ver pricing-descongelar.ts) */
@@ -949,6 +967,13 @@ export async function POST(req: NextRequest) {
     // ir de liga — no que el rail este haciendo bien su trabajo en silencio.
     const adrAcotadas: { fecha: string; techo: number; adr: number }[] = []
     const adrSinTecho: { fecha: string; property_id: string; motivo: string }[] = []
+    // Noches vie/sáb a las que se aplicó la prima por ritmo propio (ver pricing-ritmo-finde.ts).
+    const rFinde = ritmoFinde.get(r.property_id) ?? null
+    const primaFindeHabilitada = pisosPrimaFinde.has(r.property_id)
+    const primadasFinde: { fecha: string; prima: number }[] = []
+    // Noches dom-jue en las que el factor de última hora por ritmo BAJÓ más que la urgencia (mismo gate).
+    const fSemanaPiso = factorSemanaPiso(rFinde, r.property_id, pisosPrimaFinde)
+    const bajadasSemana: { fecha: string; factor: number; lastminute: number }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -986,6 +1011,16 @@ export async function POST(req: NextRequest) {
       // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
+      // 🏁 Prima vie/sáb por ritmo propio: SOLO noches de viernes/sábado libres (las ocupadas ya
+      // se saltaron arriba) y sin evento directo (el evento ya trae su premio: no se apilan). Escala
+      // la base Y el techo del clamp, para que la base pueda pasar del p90 hasta p90 × prima; el
+      // suelo no se toca. Los techos de mercado y de ADR de más abajo se escalan con la MISMA prima.
+      const primaD = primaFindeFecha({
+        fecha: date,
+        prima: primaPiso(rFinde, r.property_id, pisosPrimaFinde),
+        factorEvento: r.events_enabled ? Math.max(eventFactor(date), autoEv.get(date) ?? 1) : 1,
+      })
+      if (primaD > 1) primadasFinde.push({ fecha: date, prima: primaD })
       const baseD = useMonth ? aBaseD(mb!.med * dqDate) : baseGlobalD
       // 🚨 El suelo y el techo llevan `dqDate` igual que la base (04/09/2026). Antes NO lo llevaban,
       // y el `clamp` de la línea siguiente acotaba un valor ajustado por demanda y calidad entre dos
@@ -1002,8 +1037,12 @@ export async function POST(req: NextRequest) {
       // sesga. Con `dqDate > 1` (demanda alta) el techo tiene que subir por la misma razón.
       const floorD = useMonth ? aBaseD(mb!.flo * dqDate) : aBaseD(floorGuestGlobal * dqDate)
       const ceilD = useMonth ? aBaseD(mb!.cei * dqDate) : aBaseD(ceilGuestGlobal * dqDate)
-      const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
-      let target = clamp(baseD, floorD, ceilD)
+      // La prima vie/sáb entra AQUÍ, sobre la base y el techo ya ajustados (las dos líneas de arriba
+      // las vigila `pricing-clamp-calidad.test.ts` tal cual). En días sin prima, `primaD = 1`: idénticos.
+      const baseF = Math.round(baseD * primaD)
+      const ceilF = Math.round(ceilD * primaD)
+      const normalBase = baseF // "precio normal" del día (mes/global), referencia del outlier (idea #2)
+      let target = clamp(baseF, floorD, ceilF)
       let eventTarget = 0
       let evFactor = 1
       if (r.events_enabled) {
@@ -1041,7 +1080,7 @@ export async function POST(req: NextRequest) {
           // Duplex 16/09/2026 hizo 158€→289€ (+83%) el 24/08 y volvió a caer al día siguiente.
           const fb = fechaProp?.get(date)
           const baseEv = baseSaltoEvento({
-            baseMes: useMonth ? clamp(baseD, floorD, ceilD) : null,
+            baseMes: useMonth ? clamp(baseF, floorD, ceilF) : null,
             // Mismos límites ajustados que arriba: `baseGlobalD` ya lleva `dqDate`.
             baseGlobal: clamp(baseGlobalD, aBaseD(floorGuestGlobal * dqDate), aBaseD(ceilGuestGlobal * dqDate)),
           })
@@ -1101,7 +1140,7 @@ export async function POST(req: NextRequest) {
       const vel = velocidad.get(r.property_id)?.get(ym) ?? 0
       if (vel >= 2) {
         const boosted = Math.round(target * (vel >= 4 ? 1.2 : 1.1))
-        if (boosted > target) target = Math.min(boosted, Math.max(ceilD, target))
+        if (boosted > target) target = Math.min(boosted, Math.max(ceilF, target))
       }
       // Demanda por vuelos a SVQ (Fase 3): inerte si flight_demand_k=0 o sin dato de la fecha.
       if (Number(r.flight_demand_k) > 0) {
@@ -1150,7 +1189,18 @@ export async function POST(req: NextRequest) {
         },
         { k: Number(r.lastminute_k) },
       )
-      if (lm.factor < 1) target = Math.round(target * lm.factor)
+      // 📉 Factor dom-jue por RITMO propio (pricing-ritmo-finde.ts): solo dentro de la ventana de
+      // antelación típica del piso y si las noches dom-jue van por detrás. NO se multiplica con la
+      // urgencia: las dos bajan la misma noche porque se acerca sin venderse, así que manda la más
+      // fuerte (`urgenciaCombinada`). Va antes del raíl y de min_price: ambos siguen mandando.
+      const fSem = factorSemanaFecha({
+        // Con premio de anticipación en la misma noche (antelacion_k>0) no se baja: señales opuestas.
+        fecha: date, diasVista: daysOut, factor: antic.factor > 1 ? 1 : fSemanaPiso,
+        ventanaDias: rFinde?.semana?.ventanaDias ?? null, factorEvento: evFactor,
+      })
+      if (fSem < lm.factor) bajadasSemana.push({ fecha: date, factor: fSem, lastminute: Number(lm.factor.toFixed(4)) })
+      const urg = urgenciaCombinada(lm.factor, fSem)
+      if (urg < 1) target = Math.round(target * urg)
 
       // Suelo del raíl del día: lo captura también el techo de mercado de más abajo, para que un
       // precio inflado DESCIENDA a velocidad de raíl (varias pasadas), nunca de golpe.
@@ -1224,7 +1274,7 @@ export async function POST(req: NextRequest) {
       const tMkt = techoMercado({
         medFechaGuest: fbT?.med ?? null, compsFecha: fbT?.n ?? 0, fuenteFecha: fbT?.fuente ?? null,
         medMesGuest: useMonth ? mb!.med : null, fuenteMes: useMonth ? mb!.fuente : null,
-        factorEvento: evFactor, markup: markupD, fijoNoche, dqFactor: dqDate,
+        factorEvento: evFactor, markup: markupD, fijoNoche, dqFactor: dqDate, primaFinde: primaD,
       })
       const acote = acotarPorTecho({
         target, techo: tMkt.techo, old, railLo, minPrice: r.min_price,
@@ -1259,6 +1309,7 @@ export async function POST(req: NextRequest) {
           compsFiablesFecha: lecturasCaidas.some(l => l.nombre === 'bucket_fecha')
             ? null
             : (fiablesFecha.get(r.property_id)?.get(date) ?? 0),
+          primaFinde: primaD,
         })
         // 🔇 `suelo_manda` = el techo por ADR cae por DEBAJO del suelo de coste, o sea que este
         // piso-mes historicamente no cubre ni min_price. NO se capa (capar fijaria el precio en
@@ -1385,7 +1436,7 @@ export async function POST(req: NextRequest) {
         // `target_crudo` es baseD, el objetivo ANTES de acotarlo — no el `target` final, que ya
         // pasó por clamp, evento, raíl, min_price y suelo estacional. Guardar el final sería
         // guardar dos veces `new_price`.
-        target_crudo: Math.round(normalBase), clamp_floor: Math.round(floorD), clamp_ceil: Math.round(ceilD),
+        target_crudo: Math.round(normalBase), clamp_floor: Math.round(floorD), clamp_ceil: Math.round(ceilF),
         rail_ancla: railAncla, rail_ancla_origen: railAnclaOrigen,
       })
     }
@@ -1449,6 +1500,20 @@ export async function POST(req: NextRequest) {
       // único resto del serrucho: el ancla global se mueve con lo que el barrido muestree hoy y el
       // salto de evento no pasa por el raíl. Un 0 aquí es una AFIRMACIÓN, no un silencio.
       saltos_evento_sin_mes: saltosEventoSinMes,
+      // Prima vie/sáb por ritmo propio (pricing-ritmo-finde.ts). `prima: null` = sin muestra o
+      // lectura caída (NO se aplicó nada), distinto de `1` = medida y sin prima. `noches` = las
+      // fechas libres vie/sáb de esta pasada a las que se aplicó. NO va a `pricing_applied`: esa
+      // tabla no tiene columna de desglose para esto.
+      // `habilitada:false` = calculada pero NO aplicada (piso fuera de SIVRA_PRIMA_FINDE_PISOS).
+      ritmo_finde: rFinde
+        ? { ...rFinde, habilitada: primaFindeHabilitada, noches: primadasFinde.length, muestra: primadasFinde.slice(0, 6) }
+        : { prima: null, habilitada: primaFindeHabilitada, motivo: lecturasCaidas.some(l => l.nombre === 'ritmo_finde') ? 'lectura_caida' : 'sin_reservas' },
+      // Factor dom-jue de última hora (pricing-ritmo-finde.ts), mismo gate que la prima. `factor: null`
+      // = sin muestra o sin ritmo juzgable (NO se aplicó nada). `noches` = fechas en las que bajó MÁS
+      // que la urgencia (donde la urgencia ya bajaba más, manda ella y no cuenta aquí).
+      ritmo_semana: rFinde?.semana
+        ? { ...rFinde.semana, habilitada: primaFindeHabilitada, noches: bajadasSemana.length, muestra: bajadasSemana.slice(0, 6) }
+        : { factor: null, habilitada: primaFindeHabilitada, motivo: lecturasCaidas.some(l => l.nombre === 'ritmo_finde') ? 'lectura_caida' : 'sin_reservas' },
       // Los límites del parte se componen con los factores GLOBALES del piso (los mismos que
       // `baseTargetGlobal`): por fecha llevan el `dqDate` de esa fecha, que aquí no existe.
       bounds: {

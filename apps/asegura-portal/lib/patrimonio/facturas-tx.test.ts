@@ -9,25 +9,48 @@ import type { DatosConfirmacion } from './facturas-api.ts'
 const reserva = (inmuebleId: string | null) => ({
   identidadId: 'ident', titularId: 'tit', inmuebleId, carpetaFacturas: 'facturas',
   fichero: { nombre: 'f.pdf', mime: 'application/pdf', contenido: Buffer.from('%PDF-1') },
-  desde: new Date('2026-10-22T00:00:00Z'), fechaMarcador: '2026-10-22', max: 20, propuestaInicial: {},
+  desde: new Date('2026-10-22T00:00:00Z'), fechaMarcador: '2026-10-22', max: 20, cupoMes: 60, desdeMes: new Date('2026-10-01T00:00:00Z'), otrasLecturasMes: async () => 0, propuestaInicial: { v: 'normal' }, propuestaSinCupo: { v: 'sin_cupo' },
 })
 
 test('tope de facturas: lock → count → create gasto → create documento → repunte, todo en el mismo tx', async () => {
   const { tx, log, args } = txFalso()
   const r = await reservarConTope(tx, reserva('inm'))
-  assert.deepEqual(log, ['lock', 'gasto.count', 'gasto.create', 'doc.create', 'gasto.update'])
-  assert.deepEqual(r, { ok: true, id: 'g1', documentoId: 'doc1' })
+  assert.deepEqual(log, ['lock', 'lock', 'gasto.count', 'gasto.count', 'gasto.create', 'doc.create', 'gasto.update'])
+  assert.deepEqual(r, { ok: true, id: 'g1', documentoId: 'doc1', cupoAgotado: false })
   assert.deepEqual((args.lock[0] as { v: unknown[] }).v, ['portal-factura:ident'])
+  assert.deepEqual((args.lock[1] as { v: unknown[] }).v, ['portal-cupo-ia:tit'], 'el cupo de IA se bloquea por TITULAR (lo comparte el volcado)')
+})
+
+test('cupo mensual: los VOLCADOS del mes cuentan en el mismo cupo que las facturas', async () => {
+  const t = txFalso({ cuentaMes: 50 })
+  const r = await reservarConTope(t.tx, { ...reserva(null), otrasLecturasMes: async () => 10 })
+  assert.deepEqual(r, { ok: true, id: 'g1', documentoId: null, cupoAgotado: true })
+  const t2 = txFalso({ cuentaMes: 50 })
+  assert.deepEqual(await reservarConTope(t2.tx, { ...reserva(null), otrasLecturasMes: async () => 9 }), { ok: true, id: 'g1', documentoId: null, cupoAgotado: false })
 })
 
 test('tope de facturas: en el tope no se crea nada; sin inmueble no hay documento', async () => {
   const lleno = txFalso({ cuenta: 20 })
   assert.deepEqual(await reservarConTope(lleno.tx, reserva('inm')), { ok: false, motivo: 'tope' })
-  assert.deepEqual(lleno.log, ['lock', 'gasto.count'])
+  assert.deepEqual(lleno.log, ['lock', 'lock', 'gasto.count'])
   const sin = txFalso()
   const r = await reservarConTope(sin.tx, reserva(null))
-  assert.deepEqual(sin.log, ['lock', 'gasto.count', 'gasto.create'])
-  assert.deepEqual(r, { ok: true, id: 'g1', documentoId: null })
+  assert.deepEqual(sin.log, ['lock', 'lock', 'gasto.count', 'gasto.count', 'gasto.create'])
+  assert.deepEqual(r, { ok: true, id: 'g1', documentoId: null, cupoAgotado: false })
+})
+
+test('cupo mensual: se cuenta por TITULAR desde el inicio del mes, y agotado crea igual la fila pero sin promesa de lectura', async () => {
+  const justo = txFalso({ cuentaMes: 59 })
+  assert.deepEqual(await reservarConTope(justo.tx, reserva(null)), { ok: true, id: 'g1', documentoId: null, cupoAgotado: false })
+  const lleno = txFalso({ cuentaMes: 60 })
+  const r = await reservarConTope(lleno.tx, reserva('inm'))
+  assert.deepEqual(r, { ok: true, id: 'g1', documentoId: 'doc1', cupoAgotado: true })
+  const donde = (lleno.args['gasto.count'][1] as { where: Record<string, unknown> }).where
+  assert.equal(donde.titularId, 'tit')
+  assert.equal(donde.origen, 'factura')
+  assert.deepEqual(donde.creadoEn, { gte: new Date('2026-10-01T00:00:00Z') })
+  assert.deepEqual((lleno.args['gasto.create'][0] as { data: { propuesta: unknown } }).data.propuesta, { v: 'sin_cupo' })
+  assert.deepEqual((justo.args['gasto.create'][0] as { data: { propuesta: unknown } }).data.propuesta, { v: 'normal' })
 })
 
 const datos = (inmuebleId: string | null): DatosConfirmacion => ({ inmuebleId, fecha: '2026-10-01', categoria: 'otros' as DatosConfirmacion['categoria'], concepto: null, baseCent: null, ivaCent: null, retencionCent: null, totalCent: 1000 })

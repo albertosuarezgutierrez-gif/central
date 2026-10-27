@@ -4,6 +4,8 @@
 import { createHash } from 'node:crypto'
 
 import { crearDocumentoTx, type TxMin } from './documentos-tx.ts'
+import { quedaCupoIa } from '@central/module-patrimonio'
+
 import type { DatosConfirmacion } from './facturas-api.ts'
 
 const aFecha = (s: string) => new Date(`${s}T00:00:00.000Z`)
@@ -20,12 +22,28 @@ export async function reservarConTope(
     desde: Date
     fechaMarcador: string
     max: number
+    /** Cupo mensual de lectura con IA del titular (`cupoMensualIa`) y el inicio del mes de Madrid. */
+    cupoMes: number
+    desdeMes: Date
+    /**
+     * Las OTRAS lecturas con IA del titular en el mes (volcados iniciales, 27/10/2026): el cupo es uno solo. Se cuenta
+     * dentro de esta transacción y tras el bloqueo del titular, que también toma el volcado.
+     */
+    otrasLecturasMes: (tx: TxMin) => Promise<number>
+    /** La propuesta inicial; si el cupo está agotado se usa `propuestaSinCupo` (nunca se promete una lectura que no va a haber). */
     propuestaInicial: unknown
+    propuestaSinCupo: unknown
   },
-): Promise<{ ok: true; id: string; documentoId: string | null } | { ok: false; motivo: 'tope' }> {
+): Promise<{ ok: true; id: string; documentoId: string | null; cupoAgotado: boolean } | { ok: false; motivo: 'tope' }> {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`portal-factura:${x.identidadId}`}, 0))`
+  // Cupo de IA por TITULAR (lo comparten facturas y volcados, `claveCupoIa`): mismo bloqueo en las dos subidas.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`portal-cupo-ia:${x.titularId}`}, 0))`
   const hoy = await tx.portalPatrimonioGasto.count({ where: { creadoPorIdentidadId: x.identidadId, origen: 'factura', creadoEn: { gte: x.desde } } })
   if (hoy >= x.max) return { ok: false, motivo: 'tope' }
+  // Cupo mensual por TITULAR (cuenta toda factura subida en el mes, también las descartadas: ya gastaron lectura). Agotado = la
+  // fila se crea igual (se puede subir y rellenar a mano), pero NO se leerá con IA.
+  const mes = await tx.portalPatrimonioGasto.count({ where: { titularId: x.titularId, origen: 'factura', creadoEn: { gte: x.desdeMes } } })
+  const cupoAgotado = !quedaCupoIa(mes + (await x.otrasLecturasMes(tx)), x.cupoMes)
   const g = await tx.portalPatrimonioGasto.create({
     data: {
       titularId: x.titularId,
@@ -34,7 +52,7 @@ export async function reservarConTope(
       fecha: aFecha(x.fechaMarcador),
       estado: 'propuesto',
       origen: 'factura',
-      propuesta: x.propuestaInicial,
+      propuesta: cupoAgotado ? x.propuestaSinCupo : x.propuestaInicial,
       creadoPorIdentidadId: x.identidadId,
     },
     select: { id: true },
@@ -54,7 +72,7 @@ export async function reservarConTope(
     })
     await tx.portalPatrimonioGasto.updateMany({ where: { id: g.id, titularId: x.titularId }, data: { documentoId } })
   }
-  return { ok: true, id: g.id, documentoId }
+  return { ok: true, id: g.id, documentoId, cupoAgotado }
 }
 
 /** Otra confirmación (o un descarte) se adelantó dentro de la transacción: se deshace TODO y el llamador responde `ya_resuelto`. */

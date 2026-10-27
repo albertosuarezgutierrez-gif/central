@@ -16,12 +16,17 @@ import {
 
 import type { PolizaPortal } from './cartera-lectura.ts'
 import { eur } from './dinero.ts'
+import { puedeOfrecerMejorarPrecio } from './vencimientos.ts'
 
 /** Lo mínimo de una póliza de la cartera que el calendario lee (`PolizaPortal` lo cumple). */
 export type PolizaCalendario = Pick<
   PolizaPortal,
   'id' | 'compania' | 'vigencia' | 'renovacionSinConfirmar' | 'sustituidaPor' | 'fechaVencimiento'
-> & { recibos: { historial: readonly ReciboHistorial[] } | null }
+> & {
+  recibos: { historial: readonly ReciboHistorial[] } | null
+  /** Para decidir «Revisar mi seguro» (en vigor para actuar = vigente y no sustituida). Ausente = no se ofrece. */
+  sustituidaAt?: Date | null
+}
 
 /** `YYYY-MM-DD` de una columna `date` (medianoche UTC) o `null`. */
 export function diaIso(d: Date | null | undefined): string | null {
@@ -36,6 +41,8 @@ export type TitularParaCalendario<P extends PolizaCalendario = PolizaCalendario>
   nombre: string
   /** `true` = es de otra persona que ha autorizado a esta (se dice de quién es). */
   ajeno: boolean
+  /** Nivel del vínculo (solo las PROPIAS pueden «Revisar mi seguro»). Ausente = no se ofrece. */
+  nivel?: string
   polizas: readonly P[]
 }
 
@@ -66,6 +73,14 @@ export function vencimientosDeSeguros<P extends PolizaCalendario>(
               ? `De ${t.nombre}`
               : null,
         href: `/boveda/poliza/${p.id}`,
+        // Misma regla que la ficha (`hrefRevisarPrecio`): solo propias, con nivel que opera, en vigor para actuar, con
+        // fecha y sin renovación pendiente de confirmar. Si la página no la atendería, no se enlaza.
+        ...(!t.ajeno &&
+        t.nivel !== undefined &&
+        !p.renovacionSinConfirmar &&
+        puedeOfrecerMejorarPrecio({ id: p.id, vigencia: p.vigencia, sustituidaAt: p.sustituidaAt ?? null, fechaVencimiento: p.fechaVencimiento }, t.nivel, null)
+          ? { accion: { texto: 'Revisar mi seguro', href: `/boveda/mejorar/${p.id}` } }
+          : {}),
       })
     }
   }

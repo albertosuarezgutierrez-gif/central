@@ -409,6 +409,7 @@ export {
 export type { HechosMenu, HerramientasVisibles, ModoPuerta, PuertaPortal } from './menu-visible.ts'
 export {
   componerCalendario,
+  agruparPorMes,
   diasHastaDia,
   avisosDeFechaIncompletos,
   ORIGENES_CALENDARIO,
@@ -423,6 +424,7 @@ export type {
   EntradaCalendario,
   FuenteCalendario,
   CalendarioCompuesto,
+  GrupoCalendario,
 } from './calendario-unico.ts'
 export {
   ESTADOS_SINIESTRO,

@@ -4,6 +4,7 @@ import { getIdentidad } from '@/lib/session'
 
 import { SeccionPlegable } from './SeccionPlegable'
 import { Autorizaciones } from './Autorizaciones'
+import { PatrimonioAutorizaciones } from './PatrimonioAutorizaciones'
 import { EncabezadoPortal } from '../../PaginaPortal'
 
 export const dynamic = 'force-dynamic'
@@ -105,6 +106,10 @@ export default async function AutorizacionesPage({
       </SeccionPlegable>
 
       <Autorizaciones aceptarId={aceptarId} />
+
+      {/* 27/10/2026: quién gestiona tu PATRIMONIO (inmuebles y alquileres). Solo se pinta si eres titular de alguno o te han
+          dado acceso al de otra persona; quién puede conceder lo decide el servidor (`/api/patrimonio/autorizaciones`). */}
+      <PatrimonioAutorizaciones />
     </>
   )
 }

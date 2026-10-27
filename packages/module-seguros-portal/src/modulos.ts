@@ -29,7 +29,8 @@ export const TEXTO_SOLICITUD_MODULO =
   'Es gratis para nuestros clientes y no te compromete a nada. No se activa solo: lo activamos a mano.'
 
 export const TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO =
-  'Activado, pero solo se abre con una póliza vigente a tu nombre en Grupo ASegura. Escríbenos y lo vemos.'
+  'Activado, pero aún no se abre: tienes que entrar con el email que consta en tu ficha de cliente de Grupo ASegura ' +
+  'y esa ficha tiene que estar activa. Si has cambiado de email, avísanos.'
 
 export type FichaModulo = {
   id: ModuloPortal

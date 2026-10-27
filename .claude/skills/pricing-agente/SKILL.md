@@ -47,6 +47,8 @@ sobrevive a la sesión efímera). Cierra con informe a Alberto y auto-informe en
   avisa por Telegram (`/api/internal/alerta`), nunca falles en silencio.
 - Circuit-breaker (HTTP 409) → NO lo fuerces: reparte la subida en varios ciclos.
 - **NO actives `apply_enabled` de pisos nuevos sin OK explícito de Alberto.**
+- **Prima de finde por ritmo propio (27/10/2026):** `lib/sivra/pricing-ritmo-finde.ts` (plataforma) da prima vie/sáb 1,00-1,25 y factor dom-jue 0,85-1,00. Solo se APLICA en los pisos de `SIVRA_PRIMA_FINDE_PISOS` (vacía = sin efecto; revertir = vaciarla). Se lee con `process.env` en runtime (`pricing/apply`, `pricing/canal`), pero en Vercel un cambio de env **exige redeploy** para que las funciones lo vean.
+- Prior estacional en rampa 1,10-1,20. Aviso «caro» = estado `caro_vendiendo` (vende a ese precio o prima>1), nunca por noches de evento.
 - Sin secretos en chat/commits (solo nombres de variable); no toques RLS/buckets/GRANTs de la
   BD compartida; al cerrar actualiza `docs/CONTEXTO-SESIONES.md`.
 

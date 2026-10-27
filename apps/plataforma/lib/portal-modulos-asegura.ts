@@ -17,6 +17,18 @@ export type RespuestaModulos =
   | { estado: 'ok'; modulos: ModuloFicha[] }
   | { estado: 'no_encontrado' | 'sin_configurar' | 'error'; motivo: string }
 
+/**
+ * Nota fija bajo «Patrimonio y alquileres» (decisión de Alberto, 27/10/2026; NO cambia ninguna regla): el módulo va
+ * ligado al email con el que el cliente entra al portal. `null` = ese módulo no lleva nota.
+ */
+export function notaModulo(id: string): string | null {
+  if (id !== 'alquileres') return null
+  return (
+    'Va ligado al email con el que el cliente entra al portal: solo se abre si ese email está en su ficha y la ficha ' +
+    'está viva (activar exige póliza en vigor en CIMA). Si cambia de email tiene que avisar; puede tener más emails en su ficha.'
+  )
+}
+
 const txt = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null)
 
 export function interpretarModulos(status: number, json: unknown): RespuestaModulos {

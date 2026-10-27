@@ -2488,3 +2488,10 @@ su matrícula autorrellenada). Lo que fallaba era todo lo que se veía ANTES de 
   colateral de reordenar una pantalla.
 - Cepos en `test/regression-portal-parte-desde-poliza.test.ts` (6, con **seis mutaciones vistas
   morder**) y en `canal-compania.test.ts` del módulo.
+
+
+## Edificio sin división horizontal (27/10/2026)
+inmueble `uso='edificio'` con UNIDADES (`inmueble_padre_id`, un nivel, FK compuesta con `titular_id`: nunca de otro titular). La unidad HEREDA la RC (`rcEfectiva()`, solo para enseñar/declarar; cruce de pólizas, Catastro y señales usan la propia). Gastos y primas del edificio se reparten por m²/% (`rentabilidadConEdificios`; sin dato no se reparte y se dice). 🚨 `prisma/sql/2026-10-27_portal_patrimonio_edificio_unidades.sql` se aplica ANTES de desplegar (editor SQL, no MCP): sin él, toda lectura de inmuebles da 42703. Cepo `regression-portal-patrimonio-edificio`.
+El reparto exige nivel Total (`alta_baja`). La importación Excel no conoce edificios.
+
+Enlace con el inquilino (P17, recortado del índice el 27/10/2026): borrador del correo en `docs/legal/2026-10-26-borrador-correo-inquilino.md`; el consentimiento comercial del inquilino es propio, versionado y no premarcado (sin él cero ofertas) y nada fuera del flujo lee sus tablas.

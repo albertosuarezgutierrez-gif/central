@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { guardarConTope, type TxMin } from './documentos-tx.ts'
 
 /** `tx` falso: anota cada sentencia en orden. */
-export function txFalso(o: { cuenta?: number; filas?: Record<string, unknown>[]; selloCount?: number; gastoCount?: number } = {}) {
+export function txFalso(o: { cuenta?: number; cuentaMes?: number; filas?: Record<string, unknown>[]; selloCount?: number; gastoCount?: number } = {}) {
   const log: string[] = []
   const args: Record<string, unknown[]> = {}
   const anota = (k: string, a: unknown) => { log.push(k); (args[k] ??= []).push(a) }
@@ -19,7 +19,8 @@ export function txFalso(o: { cuenta?: number; filas?: Record<string, unknown>[];
       updateMany: async (a) => { anota('doc.update', a); return { count: o.selloCount ?? 1 } },
     },
     portalPatrimonioGasto: {
-      count: async (a) => { anota('gasto.count', a); return o.cuenta ?? 0 },
+      // El recuento del mes va por titular (`titularId`); el del día, por identidad.
+      count: async (a) => { anota('gasto.count', a); return (a as { where: { titularId?: string } }).where.titularId ? (o.cuentaMes ?? 0) : (o.cuenta ?? 0) },
       create: async (a) => { anota('gasto.create', a); return { id: 'g1' } },
       findFirst: async (a) => { anota('gasto.find', a); return filas.shift() ?? null },
       updateMany: async (a) => { anota('gasto.update', a); return { count: o.gastoCount ?? 1 } },

@@ -74,12 +74,15 @@ import {
   type TipoOtorgante,
 } from '@central/module-seguros-portal'
 
+import { alcancePatrimonio, textoConcesionPatrimonio, type AlcancePatrimonio } from '@central/module-patrimonio'
+
 import { hashCanal } from './auth'
 import {
   textoDeConcesion,
 } from './autorizaciones'
 import { enlaceDeInvitacion, enviarInvitacion } from './correo-invitacion'
 import { prisma } from './db'
+import { esTitularPatrimonio } from './patrimonio/accesos'
 import { esRepresentanteDe } from './representacion'
 import { getIdentidad } from './session'
 import { elegirFicha, type Candidato } from './vinculo-elegir'
@@ -794,7 +797,8 @@ export async function invitacionPorToken(token: unknown): Promise<{ existe: bool
  */
 export type InvitacionParaMi = {
   id: string
-  alcance: AlcanceInvitacion
+  /** 27/10/2026: también los dos de PATRIMONIO (`patrimonio_gestion`/`patrimonio_total`), que no abren ningún seguro. */
+  alcance: AlcanceInvitacion | AlcancePatrimonio
   soloUnaPoliza: boolean
   otorganteNombre: string | null
   mensaje: string | null
@@ -833,8 +837,10 @@ export async function invitacionParaIdentidad(
   if (!invitacionResoluble(fila, new Date())) return { estado: 'no_encontrada' }
   if (!(await casaElCorreo(fila.destinatarioCanalHash, identidadId))) return { estado: 'no_es_tu_correo' }
 
+  // Patrimonio (27/10/2026): su propio vocabulario y su propio texto; NO es un alcance de la bóveda.
+  const patrimonio = alcancePatrimonio(fila.alcance)
   const alcance = alcanceDeFila(fila.alcance)
-  if (alcance === null) return { estado: 'no_encontrada' }
+  if (alcance === null && patrimonio === null) return { estado: 'no_encontrada' }
 
   const ficha = await prisma.cliente.findFirst({
     where: { id: fila.otorganteClienteId, mergedIntoClienteId: null },
@@ -846,7 +852,7 @@ export async function invitacionParaIdentidad(
     estado: 'ok',
     invitacion: {
       id: fila.id,
-      alcance,
+      alcance: patrimonio ?? (alcance as AlcanceInvitacion),
       soloUnaPoliza: fila.polizaId !== null,
       otorganteNombre: nombre === '' ? null : nombre,
       mensaje: fila.mensaje,
@@ -856,9 +862,12 @@ export async function invitacionParaIdentidad(
       // falso. Ficha ilegible → se trata como física, el lado restrictivo.
       // Sin acceso no se cede ningún dato, pero sigue habiendo un texto que se
       // acepta y que se puede enseñar después: lo que se firma se puede decir.
-      texto: !invitacionAbreAcceso(alcance)
-        ? TEXTO_INVITACION_SIN_ACCESO
-        : textoDeConcesion(alcance, tipoDeFicha(ficha?.tipoPersona)).texto,
+      texto:
+        patrimonio !== null
+          ? textoConcesionPatrimonio(patrimonio).texto
+          : alcance === null || !invitacionAbreAcceso(alcance)
+            ? TEXTO_INVITACION_SIN_ACCESO
+            : textoDeConcesion(alcance, tipoDeFicha(ficha?.tipoPersona)).texto,
     },
   }
 }
@@ -975,6 +984,12 @@ export async function responderInvitacion(datos: {
       return { ok: false, error: 'no_encontrada', mensaje: 'Esta invitación ya estaba contestada.' }
     }
     return { ok: true, estado: 'rechazada', autorizacionId: null }
+  }
+
+  // Patrimonio (27/10/2026): se acepta por su propio camino (otro texto, y quien invitó tiene que SEGUIR siendo el titular).
+  const patrimonio = alcancePatrimonio(fila.alcance)
+  if (patrimonio !== null) {
+    return aceptarInvitacionPatrimonio({ fila, patrimonio, identidadId, hoy, ip: datos.ip, userAgent: datos.userAgent })
   }
 
   const alcance = alcanceDeFila(fila.alcance)
@@ -1128,6 +1143,100 @@ export async function responderInvitacion(datos: {
     throw e
   }
 
+  return { ok: true, estado: 'aceptada', autorizacionId }
+}
+
+/**
+ * 27/10/2026 — aceptar una invitación al PATRIMONIO (María invitó a José a gestionarlo o a tenerlo todo). El mismo contrato que
+ * la rama de la bóveda: T1 ya comprobado por quien llama, la autorización SIEMPRE por identidad y en la MISMA transacción que el
+ * sello de la invitación, nace aceptada (aceptar la invitación ES la segunda firma) y sin caducidad, con su texto sellado.
+ *
+ * 🚨 Lo que añade: quien invitó tiene que SEGUIR siendo el titular (`esTitularPatrimonio`, sin sesión: quien está mirando es el
+ * invitado). Si María perdió su vínculo entre invitar y que José acepte, no se abre nada. Y nadie se autoriza a sí mismo.
+ */
+async function aceptarInvitacionPatrimonio(d: {
+  fila: NonNullable<Awaited<ReturnType<typeof filaPorToken>>>
+  patrimonio: AlcancePatrimonio
+  identidadId: string
+  hoy: Date
+  ip: string | null
+  userAgent: string | null
+}): Promise<ResultadoResponder> {
+  const { fila, patrimonio, identidadId, hoy } = d
+  const yaNoVale: ResultadoResponder = { ok: false, error: 'no_encontrada', mensaje: 'Esta invitación ya no se puede aceptar.' }
+  if (fila.polizaId !== null) return yaNoVale
+  if (fila.otorgadaPorIdentidadId === identidadId) return yaNoVale
+  if (!(await esTitularPatrimonio(fila.otorgadaPorIdentidadId, fila.otorganteClienteId))) return yaNoVale
+
+  let autorizacionId: string
+  try {
+    autorizacionId = await prisma.$transaction(async (tx) => {
+      const previas = await tx.portalAutorizacion.findMany({
+        where: {
+          otorganteClienteId: fila.otorganteClienteId,
+          autorizadoClienteId: null,
+          autorizadoIdentidadId: identidadId,
+          alcance: patrimonio,
+          polizaId: null,
+          revocadoEn: null,
+        },
+        select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
+      })
+      const viva = previas.find((p) => estadoAutorizacion(p, hoy) !== 'caducada') ?? null
+      let id: string
+      if (viva !== null) {
+        id = viva.id
+        if (viva.aceptadoEn === null) {
+          await tx.portalAutorizacion.updateMany({
+            where: { id: viva.id, aceptadoEn: null, revocadoEn: null },
+            data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId, caducaEn: null },
+          })
+        }
+      } else {
+        // Una CADUCADA ocupa el sitio del índice único: se cierra con su propia fecha (`caducidad`), no se revoca.
+        const caducada = previas[0] ?? null
+        if (caducada !== null) {
+          await tx.portalAutorizacion.update({
+            where: { id: caducada.id },
+            data: { revocadoEn: caducada.caducaEn, revocadoPor: 'caducidad' },
+            select: { id: true },
+          })
+        }
+        const nueva = await tx.portalAutorizacion.create({
+          data: {
+            correduriaId: fila.correduriaId,
+            otorganteClienteId: fila.otorganteClienteId,
+            autorizadoClienteId: null,
+            autorizadoIdentidadId: identidadId,
+            // Del titular ENTERO (CHECK `portal_autorizacion_patrimonio_entera`).
+            polizaId: null,
+            alcance: patrimonio,
+            origen: 'portal',
+            otorgadoPorIdentidadId: fila.otorgadaPorIdentidadId,
+            caducaEn: null,
+            aceptadoEn: hoy,
+            aceptadoPorIdentidadId: identidadId,
+            versionTexto: textoConcesionPatrimonio(patrimonio).version,
+            ip: d.ip,
+            userAgent: d.userAgent,
+          },
+          select: { id: true },
+        })
+        id = nueva.id
+      }
+      const { count } = await tx.portalInvitacion.updateMany({
+        where: { id: fila.id, aceptadaEn: null, rechazadaEn: null, retiradaEn: null },
+        data: { aceptadaEn: hoy, aceptadaPorIdentidadId: identidadId, autorizacionId: id },
+      })
+      if (count === 0) throw new YaResuelta()
+      return id
+    })
+  } catch (e) {
+    if (e instanceof YaResuelta) {
+      return { ok: false, error: 'no_encontrada', mensaje: 'Esta invitación ya estaba contestada.' }
+    }
+    throw e
+  }
   return { ok: true, estado: 'aceptada', autorizacionId }
 }
 

@@ -78,3 +78,5 @@
 | 26/10/2026 | rrhh: proporción del logo ASegura y pie del login en flujo (PR #5089) | agente-mecanico | ok (vitest 6/6, tsc rrhh ok) |
 | 26/10/2026 | rrhh: noindex (robots.ts, X-Robots-Tag, metadata) + test | agente-mecanico | ok (vitest 3/3; incidente: respaldo cp falló y hubo que restaurar next.config a mano) |
 | 26/10/2026 | rrhh: `eslint.config.mjs` (flat config calcada de asegura-portal, mismas versiones eslint 9.39.4 / eslint-config-next 16.2.7) para que `pnpm lint` deje de fallar; 0 errores, 141 warnings sin tocar | agente-mecanico | ok (lint exit 0; vitest 46 ficheros / 381 tests verdes) |
+| 27/10/2026 | docs: CONTEXTO-SESIONES (pendiente pricing finde, env `SIVRA_PRIMA_FINDE_PISOS`) + skill pricing-agente (prima finde, gate env, prior, aviso caro) | agente-mecanico | ok (sin tsc: solo docs) |
+| 27/10/2026 | asegura-portal: auditoría estática responsive 320 px de patrimonio/** (sin cambios, ya conforme) | agente-mecanico | ok (solo lectura) |

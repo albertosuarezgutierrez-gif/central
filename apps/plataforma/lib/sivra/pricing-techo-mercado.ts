@@ -58,6 +58,12 @@ export type TechoMercadoInput = {
   fijoNoche: number
   /** ajuste demanda/calidad del motor para ESTE día (el mismo que infla el objetivo) */
   dqFactor: number
+  /**
+   * Prima vie/sáb por ritmo propio de ESA fecha (`pricing-ritmo-finde.ts`). Escala el techo igual
+   * que escala el objetivo: si no, la prima subiría el objetivo y este techo se la quitaría en la
+   * misma pasada. Ausente/≤1 = sin efecto.
+   */
+  primaFinde?: number | null
 }
 
 export type TechoMercadoOpts = {
@@ -85,6 +91,7 @@ export function techoMercado(i: TechoMercadoInput, o: TechoMercadoOpts = {}): Te
 
   if (!(i.markup > 0) || !(i.dqFactor > 0)) return { techo: 0, origen: null }
   const fijo = Number(i.fijoNoche) > 0 ? Number(i.fijoNoche) : 0
+  const prima = Number(i.primaFinde) > 1 ? Number(i.primaFinde) : 1
 
   // Escalón 1: la propia fecha, medida con corpus fiable y muestra suficiente.
   if (
@@ -93,7 +100,7 @@ export function techoMercado(i: TechoMercadoInput, o: TechoMercadoOpts = {}): Te
     Number(i.medFechaGuest) > 0
   ) {
     return {
-      techo: baseDesdeGuestConFijo(Number(i.medFechaGuest) * i.dqFactor * ratioFecha, i.markup, fijo),
+      techo: baseDesdeGuestConFijo(Number(i.medFechaGuest) * i.dqFactor * ratioFecha * prima, i.markup, fijo),
       origen: "fecha",
     }
   }
@@ -106,7 +113,7 @@ export function techoMercado(i: TechoMercadoInput, o: TechoMercadoOpts = {}): Te
     Number(i.factorEvento) < inhibe
   ) {
     return {
-      techo: baseDesdeGuestConFijo(Number(i.medMesGuest) * i.dqFactor * ratioMes, i.markup, fijo),
+      techo: baseDesdeGuestConFijo(Number(i.medMesGuest) * i.dqFactor * ratioMes * prima, i.markup, fijo),
       origen: "mes",
     }
   }

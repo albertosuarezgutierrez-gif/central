@@ -66,6 +66,24 @@ test('inmueble: uso fuera de lista revienta (no se convierte en «otro»); nulos
   assert.throws(() => inmuebleDeFila({ ...base, uso: 'chalet' }), /inmueble\.uso/)
 })
 
+test('edificio (27/10/2026): uso «edificio», padre y reparto; sin columnas = suelto; criterio raro revienta', () => {
+  const base = {
+    id: 'u1', titularId: 't1', alias: 'Piso 1', uso: 'vivienda', referenciaCatastral: null, cp: '41003', direccionNormalizada: null,
+    superficieM2: null, anioConstruccion: null, enComunidad: null, suministros: [],
+  }
+  const suelto = inmuebleDeFila(base)
+  assert.equal(suelto.inmueblePadreId, null)
+  assert.equal(suelto.repartoCriterio, null)
+  assert.equal(suelto.repartoPorcentaje, null)
+  const u = inmuebleDeFila({ ...base, inmueblePadreId: 'ed1', repartoPorcentaje: { toString: () => '12.50' } })
+  assert.equal(u.inmueblePadreId, 'ed1')
+  assert.equal(u.repartoPorcentaje, 12.5)
+  const ed = inmuebleDeFila({ ...base, id: 'ed1', uso: 'edificio', repartoCriterio: 'm2' })
+  assert.equal(ed.uso, 'edificio')
+  assert.equal(ed.repartoCriterio, 'm2')
+  assert.throws(() => inmuebleDeFila({ ...base, uso: 'edificio', repartoCriterio: 'a_partes_iguales' }), /reparto_criterio/)
+})
+
 test('inquilino: NIF y email cifrados no llegan al portal → null, no «no tiene»', () => {
   assert.deepEqual(inquilinoDeFila({ id: 'q1', tipo: 'persona', nombre: 'Ana' }), { id: 'q1', tipo: 'persona', nombre: 'Ana', nif: null, email: null })
 })

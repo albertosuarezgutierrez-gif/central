@@ -10,7 +10,13 @@ import { prisma } from '../db'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
 import { fechaDe } from './lectura'
-import { mesesAGuardar, type PuertosObligaciones } from './obligaciones-api'
+import { CategoriaNoDisponible, esRechazoDelCatalogo, mesesAGuardar, type PuertosObligaciones } from './obligaciones-api'
+
+/** El CHECK del catálogo (p. ej. `hipoteca` sin su SQL aplicado) → señal tipada; el resto de fallos, tal cual. */
+function traducir(e: unknown): never {
+  if (esRechazoDelCatalogo(e)) throw new CategoriaNoDisponible()
+  throw e
+}
 
 export function puertosObligaciones(identidadId: string): PuertosObligaciones {
   let accesos: Awaited<ReturnType<typeof accesosPatrimonio>> | null = null
@@ -71,7 +77,7 @@ export function puertosObligaciones(identidadId: string): PuertosObligaciones {
           creadoPorIdentidadId: identidadId,
         },
         select: { id: true },
-      })
+      }).catch(traducir)
     },
 
     async actualizar(inmuebleId, id, v) {
@@ -85,7 +91,7 @@ export function puertosObligaciones(identidadId: string): PuertosObligaciones {
           periodicidadMeses: mesesAGuardar(v.periodicidad),
           avisadaEn: null,
         },
-      })
+      }).catch(traducir)
       return r.count === 1
     },
 

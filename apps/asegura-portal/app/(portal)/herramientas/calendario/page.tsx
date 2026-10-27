@@ -103,7 +103,7 @@ export default async function CalendarioPage() {
     cartera === null
       ? null
       : [
-          ...cartera.propias.map((t: TitularPortal) => ({ nombre: t.nombre, ajeno: false, polizas: t.polizas })),
+          ...cartera.propias.map((t: TitularPortal) => ({ nombre: t.nombre, ajeno: false, nivel: t.nivel, polizas: t.polizas })),
           ...cartera.autorizadas.map((t: TitularPortal) => ({ nombre: t.nombre, ajeno: true, polizas: t.polizas })),
         ]
   const titulo = (p: PolizaPortal) => tituloDePoliza(p)

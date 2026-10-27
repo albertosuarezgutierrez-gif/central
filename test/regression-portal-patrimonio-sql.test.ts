@@ -13,7 +13,7 @@
 //   8. los alcances `patrimonio_*` entran en el CHECK de la BD sin perder ninguno y NO en `ALCANCES`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 const RAIZ = new URL('..', import.meta.url).pathname
@@ -27,6 +27,9 @@ const SQL_TOPE = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10
 // Obligaciones PROPIAS del cliente (25/10/2026): columna `categoria` en la tabla de obligaciones ya existente.
 const RUTA_PROPIA = 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_obligacion_propia.sql'
 const SQL_PROPIA = readFileSync(join(RAIZ, RUTA_PROPIA), 'utf8').replace(/--.*$/gm, '')
+// «Hipoteca» en el catálogo de las propias (27/10/2026): el CHECK vigente del catálogo pasa a ser el `_v2` de este fichero.
+const RUTA_PROPIA_HIPOTECA = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_obligacion_hipoteca.sql'
+const SQL_PROPIA_HIPOTECA = readFileSync(join(RAIZ, RUTA_PROPIA_HIPOTECA), 'utf8').replace(/--.*$/gm, '')
 // Caché del Catastro y presidente de comunidad (25/10/2026): columnas nuevas en `inmueble`; mismo espejo.
 const SQL_CATASTRO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_catastro_comunidad.sql'), 'utf8').replace(/--.*$/gm, '')
 // «¿Tiene hipoteca?» (25/10/2026): columna `hipoteca` en el inmueble; mismo espejo.
@@ -36,6 +39,15 @@ const SQL_HIPOTECA = readFileSync(join(RAIZ, RUTA_HIPOTECA), 'utf8').replace(/--
 const RUTA_IMPORTACION = 'apps/asegura-portal/prisma/sql/2026-10-26_portal_patrimonio_importacion_fichero.sql'
 const SQL_IMPORTACION = readFileSync(join(RAIZ, RUTA_IMPORTACION), 'utf8').replace(/--.*$/gm, '')
 const SQL_INQUILINO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-26_portal_patrimonio_inquilino_acceso.sql'), 'utf8').replace(/--.*$/gm, '')
+// Edificio sin división horizontal (27/10/2026): columnas nuevas en `inmueble`; mismo espejo. Su cepo propio (FK compuesta,
+// un solo borrado, catálogos) es `test/regression-portal-patrimonio-edificio.test.ts`.
+const SQL_EDIFICIO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_edificio_unidades.sql'), 'utf8').replace(/--.*$/gm, '')
+// Volcado inicial (27/10/2026): columna `volcado` en `importacion`; mismo espejo.
+const RUTA_VOLCADO = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_volcado.sql'
+const SQL_VOLCADO = readFileSync(join(RAIZ, RUTA_VOLCADO), 'utf8').replace(/--.*$/gm, '')
+// Recomendación entre propietarios (27/10/2026): tabla nueva; mismo espejo.
+const RUTA_RECOMENDACION = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_recomendacion.sql'
+const SQL_RECOMENDACION = readFileSync(join(RAIZ, RUTA_RECOMENDACION), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
@@ -46,6 +58,9 @@ const SQL = [
   SQL_HIPOTECA,
   SQL_IMPORTACION,
   SQL_INQUILINO,
+  SQL_EDIFICIO,
+  SQL_VOLCADO,
+  SQL_RECOMENDACION,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
@@ -302,14 +317,38 @@ test('🚨 obligaciones propias (25/10/2026): SQL aditivo, sin borrados, columna
   }
   // Una propia no se mete en el CHECK de `tipo` (no se puede ampliar sin borrar la restricción): usa 'otra'.
   assert.match(SQL_PROPIA, /tipo = 'otra' AND vence IS NOT NULL/)
-  // El catálogo de la BD es el del módulo, ni más ni menos.
+  // El catálogo viejo (25/10) es un SUBCONJUNTO del vigente: ampliar nunca deja fuera una fila ya guardada.
   const m = /categoria IN \(([^)]*)\)/.exec(SQL_PROPIA)
   assert.ok(m)
-  const bd = m[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+  const viejo = m[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+  for (const c of viejo) assert.ok(catalogoVigente().includes(c), `${c} se perdería al ampliar`)
+})
+
+/** El catálogo del CHECK vigente (`_v2`, 27/10/2026). */
+function catalogoVigente(): string[] {
+  const m = /categoria_catalogo_v2\s+CHECK \(categoria IS NULL OR categoria IN \(([^)]*)\)\)/.exec(SQL_PROPIA_HIPOTECA)
+  assert.ok(m, 'el CHECK _v2 del catálogo')
+  return m[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+}
+
+test('🚨 hipoteca en las propias (27/10/2026): catálogo de BD = el del módulo, se crea el nuevo ANTES de quitar el viejo y nada más', () => {
+  // El catálogo de la BD es el del módulo, ni más ni menos (y en el mismo orden).
   const mod = readFileSync(join(RAIZ, 'packages/module-patrimonio/src/obligacion-propia.ts'), 'utf8')
   const enModulo = /CATEGORIAS_OBLIGACION_PROPIA = \[([^\]]*)\]/.exec(mod)
   assert.ok(enModulo)
-  assert.deepEqual(bd, enModulo[1].split(',').map((x) => x.trim().replace(/'/g, '')))
+  assert.deepEqual(catalogoVigente(), enModulo[1].split(',').map((x) => x.trim().replace(/'/g, '')))
+  assert.ok(catalogoVigente().includes('hipoteca'))
+  // Un CHECK no se amplía sin quitar el viejo: UNA sola sentencia de borrado, y solo de ESA restricción (se aplica
+  // desde el editor SQL, no por el MCP; lo dice la cabecera).
+  assert.match(readFileSync(join(RAIZ, RUTA_PROPIA_HIPOTECA), 'utf8'), /editor SQL de Supabase, NO por el MCP/i)
+  const borrados = [...SQL_PROPIA_HIPOTECA.matchAll(/\bDROP\b[^;]*;/gi)].map((x) => x[0].replace(/\s+/g, ' '))
+  assert.deepEqual(borrados, ['DROP CONSTRAINT IF EXISTS portal_patrimonio_obligacion_categoria_catalogo;'])
+  assert.doesNotMatch(SQL_PROPIA_HIPOTECA, /\bDELETE\b|\bTRUNCATE\b|\bGRANT\b|\bREVOKE\b|ADD COLUMN|ALTER COLUMN/i)
+  assert.match(SQL_PROPIA_HIPOTECA, /^BEGIN;/m)
+  assert.match(SQL_PROPIA_HIPOTECA, /^COMMIT;/m)
+  assert.ok(SQL_PROPIA_HIPOTECA.indexOf('ADD CONSTRAINT portal_patrimonio_obligacion_categoria_catalogo_v2') < SQL_PROPIA_HIPOTECA.indexOf('DROP CONSTRAINT'))
+  // Idempotente: el CHECK nuevo solo si no existe.
+  assert.match(SQL_PROPIA_HIPOTECA, /IF NOT EXISTS \(SELECT 1 FROM pg_constraint WHERE conname = 'portal_patrimonio_obligacion_categoria_catalogo_v2'\)/)
 })
 
 test('🚨 hipoteca (25/10/2026): SQL aditivo sin borrados, columna por GRANT, catálogo igual al del código y crm_seguros sin nada', () => {
@@ -352,4 +391,138 @@ test('🚨 importación Excel/CSV (26/10/2026): SQL aditivo sin borrados, column
   // El tope de filas de la BD es el del código.
   assert.match(SQL_IMPORTACION, /BETWEEN 1 AND 500/)
   assert.match(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/importacion.ts'), 'utf8'), /MAX_FILAS_IMPORTACION = 500/)
+})
+
+test('🚨 volcado inicial (27/10/2026): SQL aditivo sin borrados, `volcado` solo SELECT/INSERT, sin tipo, y crm_seguros sin nada', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_VOLCADO), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  assert.doesNotMatch(SQL_VOLCADO, /\bDELETE\b|\bTRUNCATE\b/i)
+  assert.match(SQL_VOLCADO, /^BEGIN;/m)
+  assert.match(SQL_VOLCADO, /^COMMIT;/m)
+  assert.match(SQL_VOLCADO, /ADD COLUMN IF NOT EXISTS volcado boolean NOT NULL DEFAULT false/)
+  assert.match(SQL_VOLCADO, /CHECK \(NOT volcado OR tipo IS NULL\)/, 'un volcado no tiene tipo: el importador CSV no lo abre')
+  assert.ok(concedidas('SELECT', 'portal_patrimonio_importacion')!.has('volcado'))
+  assert.ok(concedidas('INSERT', 'portal_patrimonio_importacion')!.has('volcado'))
+  assert.ok(!concedidas('UPDATE', 'portal_patrimonio_importacion')!.has('volcado'), 'un volcado no deja de serlo')
+  assert.match(SQL_VOLCADO, /REVOKE ALL ON seguros\.portal_patrimonio_importacion FROM crm_seguros/)
+  // El tope de elementos del volcado es el CHECK de filas de la BD.
+  assert.match(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/volcado.ts'), 'utf8'), /MAX_ELEMENTOS_VOLCADO = 500/)
+})
+
+test('🚨 recomendación entre propietarios (27/10/2026): SQL aditivo sin borrados ni DROP, sin correo en claro, hash único por invitado y crm_seguros sin nada', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_RECOMENDACION), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  assert.doesNotMatch(SQL_RECOMENDACION, /\bDROP\b|\bTRUNCATE\b/i)
+  assert.doesNotMatch(SQL_RECOMENDACION.replace(/ON DELETE (CASCADE|SET NULL)/g, ''), /\bDELETE\b/i, 'solo ON DELETE de las FK; ningún borrado')
+  assert.match(SQL_RECOMENDACION, /^BEGIN;/m)
+  assert.match(SQL_RECOMENDACION, /^COMMIT;/m)
+  assert.match(SQL_RECOMENDACION, /CREATE TABLE IF NOT EXISTS seguros\.portal_patrimonio_recomendacion/)
+  assert.match(SQL_RECOMENDACION, /REVOKE ALL ON seguros\.portal_patrimonio_recomendacion FROM crm_seguros/)
+  const t = 'portal_patrimonio_recomendacion'
+  // Solo el HASH del correo: ninguna columna de correo/teléfono/nombre en claro en la tabla ni en el modelo.
+  const cols = modeloDe(t)!.campos.map((c) => c.columna)
+  assert.deepEqual(cols.filter((c) => /correo|email|telefono|nombre/.test(c) && c !== 'correo_hash'), [])
+  assert.ok(cols.includes('correo_hash'))
+  // Quien recomienda, cuándo, y el canje no se reescriben desde el portal: solo los sellos.
+  assert.deepEqual([...concedidas('UPDATE', t)!].sort(), ['anulado_en', 'canjeada_en', 'canjeada_por_identidad_id'])
+  assert.deepEqual([...concedidas('INSERT', t)!].sort(), ['caduca_en', 'correo_hash', 'recomendador_identidad_id'])
+  assert.ok(!concedidas('INSERT', t)!.has('canjeada_en'), 'no se nace ya canjeada')
+  // Un invitado, una recompensa; una viva por par.
+  assert.match(SQL_RECOMENDACION, /CREATE UNIQUE INDEX IF NOT EXISTS idx_portal_patrimonio_recomendacion_invitado[\s\S]*?\(canjeada_por_identidad_id\)/)
+  assert.match(SQL_RECOMENDACION, /CREATE UNIQUE INDEX IF NOT EXISTS idx_portal_patrimonio_recomendacion_viva[\s\S]*?\(recomendador_identidad_id, correo_hash\)/)
+  // La recompensa del SQL es la del módulo (90 días como mínimo) y no se guarda en la tabla.
+  assert.match(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/recomendacion.ts'), 'utf8'), /DIAS_RECOMPENSA_RECOMENDACION = 90/)
+  assert.ok(!cols.includes('recompensa_hasta'))
+  // `canjeada_por_identidad_id` es FK ON DELETE SET NULL: el trigger de inmutabilidad tiene que dejar pasar ese NULL (la acción
+  // referencial dispara BEFORE UPDATE), o borrar la identidad del invitado (supresión RGPD) falla con 23514.
+  const trig = /FUNCTION seguros\.portal_patrimonio_recomendacion_inmutable[\s\S]*?END \$\$/.exec(SQL_RECOMENDACION)![0]
+  assert.match(trig, /NEW\.canjeada_por_identidad_id IS NOT NULL/, 'el trigger bloquea el SET NULL de la FK del invitado')
+})
+
+// ─── Recorte de lo HEREDADO por `prisma_seguros` (27/10/2026, Alberto: «quita los permisos») ───────────────────────────
+// El SQL revoca a apps/asegura lo que su código no usa. Si mañana asegura empieza a leer/escribir una de esas tablas sin
+// tocar los GRANT, en producción cae con 42501: este cepo lo ve antes, cruzando el SQL con el SQL crudo de apps/asegura.
+const RUTA_REVOCAR = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_revocar_heredados.sql'
+
+function codigoAsegura(): string {
+  const trozos: string[] = []
+  const pasear = (dir: string) => {
+    for (const e of readdirSync(dir)) {
+      if (e === 'node_modules' || e === 'generated' || e === '.next') continue
+      const p = join(dir, e)
+      if (statSync(p).isDirectory()) pasear(p)
+      else if (/\.(ts|tsx)$/.test(e) && !/\.test\.tsx?$/.test(e)) trozos.push(readFileSync(p, 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, ''))
+    }
+  }
+  for (const d of ['apps/asegura/lib', 'apps/asegura/app']) pasear(join(RAIZ, d))
+  return trozos.join('\n')
+}
+
+test('🚨 prisma_seguros (27/10/2026): sin lo que asegura no usa, SELECT donde solo lee, backup_seguros intacto', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_REVOCAR), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  const sql = crudo.replace(/--.*$/gm, '')
+  assert.match(sql, /^BEGIN;/m)
+  assert.match(sql, /^COMMIT;/m)
+  assert.doesNotMatch(sql, /backup_seguros/, 'el rol de las copias no se toca: sin SELECT la tabla sale del backup')
+  assert.match(sql, /REVOKE ALL ON seguros\.portal_patrimonio_recomendacion\s+FROM prisma_seguros/)
+  // Revocar UPDATE de TABLA arrastra el de columna: renta_actualizacion conserva UPDATE (notificada_en).
+  assert.doesNotMatch(sql, /REVOKE[^;]*\bUPDATE\b[^;]*portal_patrimonio_renta_actualizacion/)
+  // Lo que asegura escribe no se recorta: el motor de señales y el cron del INE.
+  assert.doesNotMatch(sql, /portal_patrimonio_senal\b/)
+  assert.doesNotMatch(sql, /portal_patrimonio_indice\b/)
+
+  const codigo = codigoAsegura()
+  const nada = [...sql.matchAll(/REVOKE ALL ON seguros\.(portal_patrimonio_\w+)\s+FROM prisma_seguros/g)].map((m) => m[1])
+  assert.ok(nada.length >= 10)
+  const usadas = nada.filter((t) => new RegExp(`\\b${t}\\b`).test(codigo))
+  assert.deepEqual(usadas, [], 'apps/asegura usa una tabla a la que este SQL le quita TODO')
+  const soloLee = [...sql.matchAll(/REVOKE INSERT, UPDATE, DELETE[^;]*ON seguros\.(portal_patrimonio_\w+)\s+FROM prisma_seguros/g)].map((m) => m[1])
+  assert.ok(soloLee.includes('portal_patrimonio_titular'))
+  const escritas = soloLee.filter((t) => new RegExp(`(insert\\s+into|update|delete\\s+from)\\s+(seguros\\.)?"?${t}\\b`, 'i').test(codigo))
+  assert.deepEqual(escritas, [], 'apps/asegura escribe en una tabla que este SQL deja en solo SELECT')
+  for (const t of soloLee) assert.match(sql, new RegExp(`GRANT SELECT ON[^;]*seguros\\.${t}\\b[^;]*TO prisma_seguros`))
+})
+
+// ─── Tabla NUEVA `portal_patrimonio_*` ⇒ recorte a `prisma_seguros` en su MISMO SQL (28/10/2026) ───────────────────────
+// Los default privileges del schema `seguros` le dan a `prisma_seguros` (apps/asegura) SELECT/INSERT/UPDATE/DELETE en TODA
+// tabla nueva. No se cambian (romperían las tablas de asegura), así que cada SQL posterior al 27/10 que cree una tabla del
+// portal tiene que recortarla él. Los anteriores se recortaron con `revocar_heredados` y quedan exentos.
+const DIR_SQL_PORTAL = join(RAIZ, 'apps/asegura-portal/prisma/sql')
+
+/** Tablas `portal_patrimonio_*` creadas (sin comentarios) que NO tienen un REVOKE de escritura (o ALL) a `prisma_seguros`. */
+export function tablasSinRecorteSeguros(sqlCrudo: string): string[] {
+  const sql = sqlCrudo.replace(/--.*$/gm, '')
+  const creadas = [...sql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:"?seguros"?\.)?"?(portal_patrimonio_\w+?)"?\s*\(/gi)].map((m) => m[1])
+  const revokes = sql.split(';').filter((s) => /^\s*REVOKE\b/i.test(s) && /\bFROM\s+prisma_seguros\b/i.test(s))
+  return creadas.filter((t) => !revokes.some((r) => {
+    const m = /^\s*REVOKE\s+([\s\S]+?)\s+ON\s+(?:TABLE\s+)?([\s\S]+?)\s+FROM\b/i.exec(r)
+    if (!m) return false
+    const ontabla = m[2].split(',').some((x) => x.trim().replace(/"/g, '').replace(/^seguros\./i, '') === t)
+    const privs = m[1].toUpperCase()
+    const escritura = /^ALL(\s+PRIVILEGES)?$/.test(privs.trim()) || ['INSERT', 'UPDATE', 'DELETE'].every((p) => new RegExp(`\\b${p}\\b`).test(privs))
+    return ontabla && escritura
+  }))
+}
+
+test('🚨 SQL del portal desde 28/10/2026: toda tabla portal_patrimonio_* nueva recorta la escritura de prisma_seguros', () => {
+  const nuevos = readdirSync(DIR_SQL_PORTAL).filter((f) => /^\d{4}-\d{2}-\d{2}_.*\.sql$/.test(f) && f.slice(0, 10) >= '2026-10-28')
+  const fallos: string[] = []
+  for (const f of nuevos) {
+    for (const t of tablasSinRecorteSeguros(readFileSync(join(DIR_SQL_PORTAL, f), 'utf8'))) {
+      fallos.push(`${f}: crea seguros.${t} sin \`REVOKE ALL ON seguros.${t} FROM prisma_seguros\` (o REVOKE INSERT, UPDATE, DELETE ...)`)
+    }
+  }
+  assert.deepEqual(fallos, [], 'Los default privileges de `seguros` dan a prisma_seguros (apps/asegura) SELECT/INSERT/UPDATE/DELETE en toda tabla nueva; '
+    + 'no se cambian porque romperían las tablas de asegura. Cada SQL que cree una tabla portal_patrimonio_* debe recortarla en el mismo fichero:\n' + fallos.join('\n'))
+})
+
+test('el detector del recorte distingue REVOKE bueno, ausente y sobre otra tabla', () => {
+  const crea = 'CREATE TABLE IF NOT EXISTS seguros.portal_patrimonio_x (id int);\n'
+  assert.deepEqual(tablasSinRecorteSeguros(crea), ['portal_patrimonio_x'])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + '-- REVOKE ALL ON seguros.portal_patrimonio_x FROM prisma_seguros;'), ['portal_patrimonio_x'])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + 'REVOKE ALL ON seguros.portal_patrimonio_y FROM prisma_seguros;'), ['portal_patrimonio_x'])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + 'REVOKE SELECT ON seguros.portal_patrimonio_x FROM prisma_seguros;'), ['portal_patrimonio_x'])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + 'REVOKE ALL ON seguros.portal_patrimonio_x FROM prisma_seguros;'), [])
+  assert.deepEqual(tablasSinRecorteSeguros(crea + 'REVOKE INSERT, UPDATE, DELETE ON seguros.portal_patrimonio_x FROM prisma_seguros;'), [])
 })
