@@ -43,7 +43,7 @@ const DOS = (sel: string) => `<body><app-figuras><mat-form-field><label><mat-lab
 const PLAN = { escribibles: [{ sel: SEL_HISTORIAL.companiaAnterior, tipo: 'mat-select', etiqueta: 'compañía anterior', paso: 'figuras', valor: 'ZZ Seguros', opciones: ['ZZ Seguros'] }], pendientes: [] } as never
 const ATRIBUTOS = ['formcontrolname="compania"', 'name="compania"', 'id="compania"'] as const
 
-test('v0.8.29 · la versión del bot es 0.8.29', () => assert.equal(mapfreAuto.version, '0.8.31'))
+test('v0.8.29 · la versión del bot es 0.8.29', () => assert.equal(mapfreAuto.version, '0.8.32'))
 
 for (const attrs of ATRIBUTOS) {
   for (const [nombre, dom] of [['etiqueta suelta + vecino deshabilitado', SUELTA], ['dos bloques «Compañía», uno deshabilitado', DOS]] as const) {

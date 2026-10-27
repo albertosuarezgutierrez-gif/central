@@ -4255,6 +4255,15 @@ export function sinSeccionPrecontractualGenerali(texto: string): string {
   return fuera.join('\n').replace(/documentaci[oó]n precontractual/gi, '')
 }
 
+/**
+ * v0.2.41: rótulo INFORMATIVO de «Garantías y Resultados» de Generali (elegir la forma de pago del recibo; prueba real con 0.2.40: bloqueó «Recalcular» por «contratar»).
+ * Se excusa SOLO esta frase exacta (sin tildes, mayúsculas ni espacios de más); cualquier otro «contratar»/«emitir»/«pagar» sigue casando. Mismo mecanismo que
+ * `sinSeccionPrecontractualGenerali` (texto de la página antes de `casaEmisionGenerali`). PURA.
+ */
+export function sinRotulosInformativosGenerali(texto: string): string {
+  return String(texto ?? '').replace(/forma\s+de\s+pago\s+a\s+contratar(?![\p{L}\p{N}])/giu, '')
+}
+
 /** 26/10/2026: el término «siguiente» sale de `vocabulario.ts` (concepto `avanzar`); aquí solo los adornos admitidos al final (`›`, `>`, `»`, espacios, NBSP). */
 const RE_SIGUIENTE_GENERALI = regexRotuloConAdornos(CONCEPTOS_ACCION.avanzar.grupos.siguiente[0]!)
 
@@ -4370,7 +4379,7 @@ export async function pulsarRecalcularGenerali(page: Page, guard: GuardEmision):
   if (usados.has('generali:recalcular')) throw new EmisionBloqueadaError('fase', '«Recalcular» de Generali ya se pulsó en este trabajo')
   await exigirSinCuentaBancaria(page)
   for (const f of marcosVivos(page)) {
-    const casa = casaEmisionGenerali(sinSeccionPrecontractualGenerali((await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string))
+    const casa = casaEmisionGenerali(sinRotulosInformativosGenerali(sinSeccionPrecontractualGenerali((await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string)))
     if (casa !== null) throw new EmisionBloqueadaError('fase', `«Recalcular» de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
   }
   const control = marco.getByText(new RegExp(`^\\s*${TEXTO_RECALCULAR_GENERALI}\\s*$`)).filter({ visible: true })

@@ -57,6 +57,19 @@ test('hogar: sin bloque de vivienda → 422 (todo «no consta»), nunca valores 
   assert.ok(!b.ok && b.status === 422 && b.errores?.some((e) => /empresa/.test(e)))
 })
 
+test('hogar: el tipo guardado es un ID de Codeoscopic no atestiguado (TerracedHouse): sin catálogo → 422 que lo nombra; con el catálogo vivo (como la pantalla) → adosada', () => {
+  const op = riesgoOp(vivienda({ tipoVivienda: 'TerracedHouse' }))
+  const sin = probar(riesgoHogarDeRiesgoOportunidad(op, new Date('2026-10-27T10:00:00Z')))
+  assert.ok(!sin.ok && sin.status === 422 && sin.errores?.some((e) => /Tipo de vivienda/.test(e)), JSON.stringify(sin))
+  // Nombre ficticio de fixture (frase ya admitida en FRASES_CANONICAS): el catálogo real manda.
+  const con = probar(riesgoHogarDeRiesgoOportunidad(op, new Date('2026-10-27T10:00:00Z'), { tipoVivienda: [{ id: 'TerracedHouse', nombre: 'Chalet adosado' }] }))
+  assert.ok(con.ok, JSON.stringify(con))
+  if (con.ok) assert.equal((con.entrada.riesgo as Record<string, any>).hogar.tipoVivienda, 'adosada')
+  // Un nombre que no casa EXACTO sigue sin suponerse.
+  const raro = probar(riesgoHogarDeRiesgoOportunidad(op, new Date('2026-10-27T10:00:00Z'), { tipoVivienda: [{ id: 'TerracedHouse', nombre: 'Chalet' }] }))
+  assert.ok(!raro.ok && raro.status === 422, JSON.stringify(raro))
+})
+
 test('hogar: sin oportunidad sigue siendo 409 (no inventa datos)', () => {
   const d = probar({ riesgo: null, motivo: 'sin_oportunidad' })
   assert.deepEqual(d, { ok: false, status: 409, motivo: 'origen_purgado' })
@@ -66,9 +79,10 @@ test('cableado: riesgoDesdeOportunidadDelCliente ramifica hogar al constructor c
   const lead = readFileSync(join(import.meta.dirname, 'tarificacion-lead.ts'), 'utf8')
   const f = lead.slice(lead.indexOf('export async function riesgoDesdeOportunidadDelCliente'))
   assert.ok(f.indexOf("ramo === 'hogar'") > -1 && f.indexOf("ramo === 'hogar'") < f.indexOf('esRamoBotLead(ramo)'))
-  assert.match(lead, /async function riesgoHogarDeOportunidadDelCliente[\s\S]*?leerRiesgo\([\s\S]*?riesgoHogarDeRiesgoOportunidad\(/)
+  assert.match(lead, /async function riesgoHogarDeOportunidadDelCliente[\s\S]*?leerRiesgo\([\s\S]*?riesgoHogarDeRiesgoOportunidad\(riesgo, ahora, await catalogosHogarVivos\(\)\)/)
+  assert.match(lead, /async function catalogosHogarVivos[\s\S]*?'property-types'[\s\S]*?'occupancy-types'[\s\S]*?'uses'/, 'los mismos 3 catálogos que useCatalogosHogar')
   const reglas = readFileSync(join(import.meta.dirname, 'tarificador-relanzar-reglas.ts'), 'utf8')
-  assert.match(reglas, /formularioBotHogar\(\{ \.\.\.datosViviendaParaBot\(r\), \.\.\.eleccionesInicialesHogar\(r\) \}/)
+  assert.match(reglas, /formularioBotHogar\(\{ \.\.\.datosViviendaParaBot\(r\), \.\.\.eleccionesInicialesHogar\(r, catalogos\) \}/)
   const plat = readFileSync(join(import.meta.dirname, '../../plataforma/lib/tarificador-hogar-formulario.ts'), 'utf8')
   assert.match(plat, /export \{ formularioBotHogar/, 'plataforma re-exporta el MISMO constructor')
 })

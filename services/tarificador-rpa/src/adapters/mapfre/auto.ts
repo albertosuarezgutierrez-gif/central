@@ -68,11 +68,13 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
-// v0.8.31 (27/10/2026, ejecución real con 0.8.30): la compañía diferida SÍ se resolvió, pero el atasco pasó al siguiente campo del MISMO bloque
-//   («siniestros RC 5 años», `app-historial-siniestralidad input[formcontrolname="siniestros"]`, «no aparece» en «Figuras»): el bloque entero de
-//   siniestralidad (compañía, nº de póliza, siniestros) vive en Coberturas y en «Figuras» está oculto/ausente. Ahora, con el bloque oculto, también
-//   los SINIESTROS (y el nº de póliza anterior) se difieren a después de `continuar('figuras')`, en este orden: compañía → nº póliza → siniestros;
-//   luego se vuelve a leer la prima (`esperarPrimasMapfre`). Nada se omite: si tampoco es visible allí, atasco + hueco como siempre.
+// v0.8.32 (27/10/2026, ejecución real 8ef7a5dc con 0.8.31; diagnóstico de 0.8.30/31 por fin con el DÓNDE): (1) el único «Compañia» habilitado es
+//   `mat-select[compania]` de `app-datos-basicos` (paso 1), oculto por `.mat-horizontal-stepper-content` visibility:hidden en cuanto se pasa de paso: diferirlo a
+//   Coberturas (0.8.30/31) no podía funcionar. Ahora se elige en «Datos básicos» antes de «Continuar» (`companiaAnteriorEnDatosBasicos`: mismo helper
+//   `rellenarMatSelects` y casado de la capa común, nombre del riesgo, sin pulsaciones nuevas). (2) Procedencia / expuestos-años / siniestros son de
+//   `app-info-descuentos` (Coberturas), DESHABILITADOS tras un acordeón plegado: los fija Mapfre y solo se editan con «modificación manual» (no se toca). El bot
+//   no los escribe, los LEE tras las primas y deja un AVISO («Siniestralidad tomada por Mapfre; no modificada…»), sin atascar. Se RETIRAN los diferidos de
+//   0.8.30/31 (compañía y siniestros a Coberturas): ramas muertas. Un bloque que no aparezca en ninguna parte sigue siendo hueco + atasco con diagnóstico.
 // v0.8.30 (27/10/2026, captura del atasco con 0.8.29): «Figuras» (pestaña Tomador) NO pinta bloque de siniestralidad; el «Compañia» habilitado que veía el
 //   diagnóstico NO se ve (la selección exige visible) y no se decía por qué. La lista de 20 controles del atasco es el inventario genérico (corta antes).
 //   Ahora el diagnóstico dice visible/OCULTO, quién lo oculta y el componente que lo contiene. Sin cambio de comportamiento: sigue fail-closed.
@@ -390,7 +392,7 @@ async function leerTarjetasPrima(raiz: Pick<Frame, 'locator'>): Promise<TarjetaP
 }
 
 /** Primas → ofertas normalizadas (una por producto). `vehiculo` es opcional: Mapfre no separa marca y modelo (ver `lecturaResumenVehiculo`). */
-export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null, supuestos: string | null = null, diagnostico: string | null = null): OfertaNormalizada[] {
+export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null, supuestos: string | null = null, diagnostico: string | null = null, avisosExtra: readonly string[] = []): OfertaNormalizada[] {
   return primas.map((p) => ({
     compania: 'mapfre',
     producto: `Auto · ${p.producto}`,
@@ -412,6 +414,8 @@ export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[],
       ...(supuestos ? [supuestos] : []),
       // v0.8.12: diagnóstico de SOLO LECTURA del formato del «Nº de Póliza» anterior (atributos, nunca el valor). No es un supuesto.
       ...(diagnostico ? [diagnostico] : []),
+      // v0.8.32: avisos de lo que fijó Mapfre y el bot no tocó (siniestralidad). No es un supuesto.
+      ...avisosExtra,
     ],
   }))
 }
@@ -983,7 +987,7 @@ export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>, lee
 const ETIQUETAS_SINIESTRALIDAD_FIGURAS = ['procedencia siniestralidad', 'expuestos/anos', 'siniestros', 'modificacion manual niveles bonus malus'] as const
 
 /** v0.8.29 · Un control hallado tras una etiqueta de siniestralidad. `idx` = posición entre TODOS los `mat-select` (−1 si no lo es); `cab` = cabecera del acordeón plegado que lo oculta (−1 si no). */
-export interface ControlSiniestralidad { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number; /** v0.8.30 · quién lo oculta (`'' ` si se ve): etiqueta del primer ancestro con display/visibility/hidden/pestaña inactiva. Solo nombres de etiqueta y clase, nunca texto. */ oculto?: string; /** v0.8.30 · componentes (etiquetas con guion) que lo contienen, del más cercano al más lejano (máx. 5). */ ruta?: string }
+export interface ControlSiniestralidad { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number; /** v0.8.30 · quién lo oculta (`'' ` si se ve): etiqueta del primer ancestro con display/visibility/hidden/pestaña inactiva. Solo nombres de etiqueta y clase, nunca texto. */ oculto?: string; /** v0.8.30 · componentes (etiquetas con guion) que lo contienen, del más cercano al más lejano (máx. 5). */ ruta?: string; /** v0.8.32 · valor actual de los controles de siniestralidad que fija Mapfre (procedencia, expuestos, siniestros); nunca el de «Compañia». Lo escribe el portal, no es dato personal. */ valor?: string }
 
 /**
  * v0.8.29 · ÚNICO localizador de los controles tras las etiquetas de siniestralidad («Compañia»…). Lo usan el DIAGNÓSTICO (`describirControlesSiniestralidad`)
@@ -995,7 +999,7 @@ export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>):
     .locator('body')
     .evaluate((body, args) => {
       const reCompania = new RegExp(args.reCompania, 'i')
-      const salida: { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number; oculto: string; ruta: string }[] = []
+      const salida: { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number; oculto: string; ruta: string; valor: string }[] = []
       // v0.8.26: `<label><mat-label>` anida dos etiquetas con el mismo texto → el mismo control salía dos veces. Se cuenta por NODO.
       const vistos = new Set<Element>()
       for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
@@ -1009,7 +1013,7 @@ export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>):
         let p: Element | null = c ?? e
         while (p && !/^app-/i.test(p.tagName)) p = p.parentElement
         const nombrePadre = p ? p.tagName.toLowerCase() : 'sin-componente-app'
-        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false, padre: nombrePadre, idx: -1, visible: false, cab: -1, oculto: '', ruta: '' }); continue }
+        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false, padre: nombrePadre, idx: -1, visible: false, cab: -1, oculto: '', ruta: '', valor: '' }); continue }
         const tag = c.tagName.toLowerCase()
         const tipoInput = (c.getAttribute('type') ?? '').toLowerCase()
         const tipo = tag === 'input' ? (tipoInput === 'checkbox' ? 'checkbox' : c.getAttribute('aria-autocomplete') || c.hasAttribute('matautocomplete') || c.getAttribute('role') === 'combobox' ? 'mat-autocomplete' : 'input') : tag === 'mat-select' || tag === 'mat-checkbox' || tag === 'mat-slide-toggle' ? tag.replace('mat-checkbox', 'checkbox') : tag
@@ -1047,6 +1051,7 @@ export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>):
           cab: !visible && cabecera ? Array.from(body.querySelectorAll('mat-expansion-panel-header')).indexOf(cabecera) : -1,
           oculto: visible ? '' : oculto,
           ruta: rutaTags.join(' < '),
+          valor: clave === 'compania' ? '' : tag === 'input' || tag === 'textarea' ? String((c as HTMLInputElement).value ?? '') : tag === 'mat-select' ? (c.querySelector('.mat-select-value-text')?.textContent ?? '') : '',
         })
       }
       return salida
@@ -1054,46 +1059,37 @@ export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>):
     .catch(() => null)
 }
 
-/** v0.8.30 · ¿El ÚNICO «Compañia» mat-select habilitado está OCULTO sin acordeón que desplegar (es de otro paso)? Solo lectura; mismo localizador que la selección. */
-export async function companiaHabilitadaOculta(raiz: Pick<Frame, 'locator'>): Promise<boolean> {
-  const todos = await leerControlesSiniestralidad(raiz)
-  const hab = (todos ?? []).filter((c) => c.et === 'compania' && c.tipo === 'mat-select' && c.idx >= 0 && !c.off)
-  return hab.length === 1 && !hab[0].visible && hab[0].cab < 0
+/**
+ * v0.8.32 · ¿Mapfre FIJA él mismo la siniestralidad? Sí cuando el control «Siniestros» del bloque (`app-info-descuentos`) está DESHABILITADO: lo calcula
+ * el portal a partir de la compañía/póliza anterior y solo se edita con «modificación manual» (que este bot nunca toca). Solo lectura. Sin control → false.
+ */
+export async function siniestralidadFijadaPorMapfre(raiz: Pick<Frame, 'locator'>): Promise<boolean> {
+  const todos = (await leerControlesSiniestralidad(raiz)) ?? []
+  return todos.some((c) => c.et === 'siniestros' && c.tipo !== 'sin-control' && c.off)
 }
 
-/** v0.8.31 · ¿TODOS los controles de siniestralidad hallados en esta pantalla están OCULTOS sin acordeón que desplegar (el bloque es de otro paso)? Solo lectura. */
-export async function siniestralidadOcultaEnPantalla(raiz: Pick<Frame, 'locator'>): Promise<boolean> {
-  const reales = ((await leerControlesSiniestralidad(raiz)) ?? []).filter((c) => c.tipo !== 'sin-control')
-  return reales.length > 0 && reales.every((c) => !c.visible && c.cab < 0)
+/** v0.8.32 · Lo que Mapfre puso en procedencia / expuestos-años / siniestros (`null` = no legible: tres estados, nunca 0). Solo lectura. */
+export async function leerSiniestralidadMapfre(raiz: Pick<Frame, 'locator'>): Promise<{ procedencia: string | null; expuestos: string | null; siniestros: string | null }> {
+  const todos = (await leerControlesSiniestralidad(raiz)) ?? []
+  const de = (et: string): string | null => {
+    const c = todos.find((x) => x.et === et && x.tipo !== 'sin-control')
+    const v = (c?.valor ?? '').replace(/[^\p{L}\d .,/-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 40)
+    return c && v !== '' ? v : null
+  }
+  return { procedencia: de('procedencia siniestralidad'), expuestos: de('expuestos/anos'), siniestros: de('siniestros') }
 }
 
 /**
- * v0.8.31 · Campos de texto del bloque de siniestralidad (hoy «siniestros RC 5 años»): si el campo NO se ve en esta pantalla y el bloque está oculto
- * (`bloqueDiferido` = la compañía ya se difirió, o `siniestralidadOcultaEnPantalla`), NO se escribe ni se omite: pasa a `diferidosTexto` para el paso
- * donde sea visible. En cualquier otro caso se escribe aquí, como siempre (campo ausente sin bloque oculto → atasco + hueco).
+ * v0.8.32 · AVISO del resultado cuando Mapfre fijó la siniestralidad (el bot no la escribe ni la modifica). Dice qué puso Mapfre y, si el riesgo declara
+ * otra cifra de siniestros, que el precio es el de Mapfre. PURA. Nunca datos personales (solo cifras y la procedencia que pinta el portal).
  */
-export async function rellenarTextosSiniestralidad(raiz: Pick<Frame, 'locator'>, ops: OperacionNsei[], respaldo: RespaldoCampos, diferidosTexto: OperacionNsei[], bloqueDiferido: boolean): Promise<string[]> {
-  const aqui: OperacionNsei[] = []
-  for (const op of ops) {
-    if (!(await apareceEn(raiz, op.sel, 0)) && (bloqueDiferido || (await siniestralidadOcultaEnPantalla(raiz)))) {
-      diferidosTexto.push(op)
-      respaldo.formador?.log('mapfre_siniestralidad_diferida', { etiqueta: op.etiqueta })
-    } else aqui.push(op)
-  }
-  return rellenarCamposTexto(raiz, { escribibles: aqui, pendientes: [] }, respaldo)
-}
-
-/**
- * v0.8.31 · Escribe los campos de texto DIFERIDOS en el paso donde deberían verse: si siguen sin verse (aparece = visible) tras la espera → atasco + hueco
- * «no aparece» con el nombre del campo (nunca se omiten ni se rellena un campo oculto: `fill` esperaría 30 s y moriría sin atasco).
- */
-export async function rellenarTextosDiferidos(raiz: Pick<Frame, 'locator'>, ops: OperacionNsei[], respaldo: RespaldoCampos, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
-  for (const op of ops) {
-    if (await apareceEn(raiz, op.sel, esperaMs)) continue
-    await registrarAtasco(respaldo.page, respaldo.formador, { clave: claveCampo(op.etiqueta), tipo: 'campo', etiqueta: op.etiqueta, descripcion: `Campo «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI: ni en Figuras ni en Coberturas se ve` }).catch(() => undefined)
-    throw new ErrorMapaIncompleto(`el campo «${op.etiqueta}» (${op.sel}; no aparece — diferido desde «Figuras», donde el bloque estaba oculto, y tampoco se ve en Coberturas)`, true)
-  }
-  return rellenarCamposTexto(raiz, { escribibles: ops, pendientes: [] }, respaldo)
+export function avisoSiniestralidadMapfre(leida: { procedencia: string | null; expuestos: string | null; siniestros: string | null }, declarados: number | null): string {
+  const d = (v: string | null) => v ?? 'no legible'
+  const base = `Siniestralidad tomada por Mapfre; no modificada (procedencia: ${d(leida.procedencia)}; expuestos/años: ${d(leida.expuestos)}; siniestros: ${d(leida.siniestros)}).`
+  const m = leida.siniestros !== null && /^\d+$/.test(leida.siniestros) ? Number(leida.siniestros) : null
+  if (declarados !== null && m !== null && declarados !== m) return `${base} El riesgo declara ${declarados} siniestro(s) en 5 años y Mapfre usa ${m}: el precio es el de Mapfre.`
+  if (declarados !== null && declarados > 0 && m === null) return `${base} El riesgo declara ${declarados} siniestro(s) en 5 años y no se pudo comprobar la cifra de Mapfre.`
+  return base
 }
 
 /**
@@ -1199,7 +1195,7 @@ export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pu
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
  * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
  */
-export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesMatSelect'>>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS, diferidos?: OperacionNsei[]): Promise<string[]> {
+export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesMatSelect'>>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
   const hechos: string[] = []
   for (const op of plan.escribibles) {
     if (op.tipo !== 'mat-select') continue
@@ -1214,13 +1210,6 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
         ausente = false
         respaldo.formador?.log('mapfre_compania_por_etiqueta', {})
       }
-    }
-    // v0.8.30: sin el bloque en «Figuras» y con el ÚNICO «Compañia» habilitado OCULTO en esta pantalla (vive en otro paso), no se atasca aquí: el dato
-    // NO se omite, queda DIFERIDO (`diferidos`) y lo elige quien llama en el paso donde sea visible, con este mismo helper. Sin `diferidos`: como siempre.
-    if (ausente && diferidos && op.sel === SEL_HISTORIAL.companiaAnterior && (await companiaHabilitadaOculta(raiz))) {
-      diferidos.push(op)
-      respaldo.formador?.log('mapfre_compania_diferida', {})
-      continue
     }
     if (ausente) {
       // Opcional que este flujo no pinta (v0.8.1): se sigue sin tocar nada. Obligatorio que no aparece → ATASCO + hueco.
@@ -1511,7 +1500,7 @@ export async function altaTomadorNuevo(nsei: Page, f: FormularioAuto, ctx: Pick<
  * `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a su campo: nunca a logs, mensajes ni
  * resultado. Lo resuelto por el respaldo se confirma tras llegar al paso 2.
  */
-export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<void> {
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect'>>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<boolean> {
   const nif = documentoTomadorDe(f)
   if (nif === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
   const r = await campoConRespaldo(nsei, SEL_TOMADOR.documento, { page: nsei, formador: ctx.formador, etiqueta: 'NIF/CIF', descripcion: 'Campo del documento (NIF/CIF) del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor)' })
@@ -1554,8 +1543,32 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
   if (reaccion === 'indeterminado') await huecoTomador(nsei, ctx, 'NIF/CIF', 'la reacción de Mapfre al NIF/CIF del tomador (ni autorrelleno ni aviso de «no existe ningún registro» en la espera)')
   if (reaccion === 'nuevo') await altaTomadorNuevo(nsei, f, ctx)
   else await exigirSinCamposObligatorios(nsei, ctx, 'con el tomador autorrellenado por Mapfre')
+  // v0.8.32: la compañía anterior («Compañia», app-datos-basicos) vive AQUÍ; en los pasos siguientes el stepper la oculta. Antes de «Continuar».
+  const companiaElegida = await companiaAnteriorEnDatosBasicos(nsei, f, ctx)
   await continuar(nsei, ctx, 'datosBasicos')
   await r.confirmar().catch(() => undefined)
+  return companiaElegida
+}
+
+/**
+ * v0.8.32 · Ejecución real 27/10/2026 (trabajo 8ef7a5dc): el único «Compañia» habilitado cuelga de `app-datos-basicos` (paso 1) y el stepper lo oculta
+ * (`visibility:hidden`) en cuanto se pasa a otro paso: en «Figuras»/«Coberturas» no hay nada que elegir. Se elige aquí, con el MISMO helper
+ * (`rellenarMatSelects` → `ctx.elegirMatSelect`, casado de la capa común) y el nombre del riesgo. Solo si el riesgo trae compañía anterior (años > 0)
+ * y el desplegable es visible, habilitado y ÚNICO en este paso; si no aparece no se inventa nada: devuelve `false` y «Figuras» sigue su camino
+ * (hueco con diagnóstico si tampoco está allí). Sin pulsaciones nuevas.
+ */
+export async function companiaAnteriorEnDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'formador'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect'>>, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<boolean> {
+  const g = conAntecedentesFavorables(f).formulario as FormularioAuto & DatosMatSelectMapfre
+  const nombre = typeof g.companiaAnterior === 'string' ? g.companiaAnterior.trim() : ''
+  if (!((g.aniosAseguradoAnterior ?? 0) > 0) || nombre === '' || nombre.length > 80) return false
+  if (!(await selectCompaniaPorEtiqueta(nsei, ctx.pulsar, esperaMs))) {
+    ctx.formador?.log('mapfre_compania_no_en_datos_basicos', {})
+    return false
+  }
+  const op: OperacionNsei = { sel: SEL_HISTORIAL.companiaAnterior, etiqueta: 'compañía anterior', tipo: 'mat-select', valor: nombre, paso: 'datosBasicos', opciones: [nombre] }
+  await rellenarMatSelects(nsei, { escribibles: [op], pendientes: [] }, { elegirMatSelect: ctx.elegirMatSelect, pulsar: ctx.pulsar, leerOpcionesMatSelect: ctx.leerOpcionesMatSelect } as never, { page: nsei, formador: ctx.formador }, 0)
+  ctx.formador?.log('mapfre_compania_en_datos_basicos', {})
+  return true
 }
 
 // ───────────────────────── paso 3 (historial) y paso 4 (Coberturas): grabación 15/10/2026 ─────────────────────────
@@ -1884,6 +1897,7 @@ export async function precioDesdeObjetoAsegurado(
   ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
+  companiaYaElegida = false,
 ): Promise<ResultadoAdaptador> {
   // v0.8.7: MOTO por el mismo plan que el coche (antes: hueco de mapa «el plan de campos de MOTO en NSEI»).
   // Antecedentes favorables (18/10/2026) también para el interruptor de compañía anterior de `historialAnterior`.
@@ -1899,32 +1913,21 @@ export async function precioDesdeObjetoAsegurado(
   const sinHist = await planFigurasSinHistorial(nsei, f, plan, ctx.formador)
   const planFig = sinHist.plan
   await rellenarCamposTexto(nsei, planDelPaso(planFig, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
-  const diferidos: OperacionNsei[] = []
-  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo, ESPERA_OPCIONAL_MS, diferidos)
-  let diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
+  // v0.8.32: la compañía anterior, si ya se eligió en «Datos básicos» (donde vive), no se vuelve a buscar aquí.
+  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso && !(companiaYaElegida && o.sel === SEL_HISTORIAL.companiaAnterior)), pendientes: [] }, ctx, respaldo)
+  const diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
-  // v0.8.31: con el bloque de siniestralidad oculto en «Figuras» (compañía diferida u oculto del todo) los siniestros también se difieren a Coberturas.
-  const diferidosTexto: OperacionNsei[] = []
-  await rellenarTextosSiniestralidad(nsei, planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), respaldo, diferidosTexto, diferidos.length > 0)
+  // v0.8.32: sin `app-historial-siniestralidad` (no existe en esta variante) y con «Siniestros» de `app-info-descuentos` DESHABILITADO, la siniestralidad la
+  // FIJA Mapfre (solo se edita con «modificación manual», que no se toca): no se escribe, se lee en Coberturas y queda un AVISO en el resultado.
+  const opsSiniestros = planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5)
+  const fijaMapfre = opsSiniestros.length > 0 && !(await apareceEn(nsei, SEL_HISTORIAL.siniestrosRc5, 0)) && (await siniestralidadFijadaPorMapfre(nsei))
+  if (fijaMapfre) ctx.formador?.log('mapfre_siniestralidad_fijada_por_mapfre', {})
+  else await rellenarCamposTexto(nsei, { escribibles: opsSiniestros, pendientes: [] }, respaldo)
   exigirPasoCompleto(planFig, 'figuras')
   await continuar(nsei, ctx, 'figuras')
-  let primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
-  // v0.8.30: compañía anterior diferida (en «Figuras» su desplegable estaba oculto): se elige ahora, con el mismo helper y casado exacto; si aquí tampoco
-  // es visible/elegible, atasco + hueco con el diagnóstico (nunca se omite). Elegida, el precio puede haberse recalculado: se vuelve a leer.
-  if (diferidos.length > 0) {
-    await rellenarMatSelects(nsei, { escribibles: diferidos, pendientes: [] }, ctx, respaldo)
-    await nsei.waitForTimeout(1_500).catch(() => undefined)
-    primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
-  }
-  // v0.8.31: resto del bloque diferido, en el orden de la grabación (compañía ya elegida → nº de póliza anterior → siniestros). Si siguen sin verse aquí,
-  // `rellenarCamposTexto` da atasco + hueco (nunca se omiten). Los siniestros pueden cambiar la prima: se vuelve a leer con la MISMA espera.
-  if (diferidos.length > 0 || diferidosTexto.length > 0) {
-    if (diferidos.length > 0 && !sinHist.omitido) diagnosticoPoliza = (await historialAnterior(nsei, f, ctx.formador)) ?? diagnosticoPoliza
-    await rellenarTextosDiferidos(nsei, diferidosTexto, respaldo)
-    await nsei.waitForTimeout(1_500).catch(() => undefined)
-    primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
-  }
+  const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
+  const avisosExtra = fijaMapfre ? [avisoSiniestralidadMapfre(await leerSiniestralidadMapfre(nsei), Number.isInteger(form.siniestrosUltimos5Anios) ? form.siniestrosUltimos5Anios : null)] : []
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
@@ -1936,7 +1939,7 @@ export async function precioDesdeObjetoAsegurado(
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
   // v0.8.23: PDF del proyecto guardado (botón «Imprimir/Descargar proyecto»); si no llega, aviso y el precio/proyecto se devuelven igual.
   const pdfProyecto = await descargarProyectoAuto(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
-  return { ofertas: ofertasConPdfProyecto(ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), proyecto), pdfProyecto), vehiculoConfirmado: vehiculo }
+  return { ofertas: ofertasConPdfProyecto(ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), proyecto), pdfProyecto), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -1949,7 +1952,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.31',
+  version: '0.8.32',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
@@ -1962,14 +1965,14 @@ export const mapfreAuto = {
     await login(page, ctx)
     await ctx.trasLogin()
     const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, formador: ctx.formador, credenciales: ctx.credenciales, log: ctx.log })
-    await pasoDatosBasicos(nsei, form, ctx)
+    const companiaYaElegida = await pasoDatosBasicos(nsei, form, ctx)
     const { vehiculo: vehiculoConfirmado, supuestoVersion } = await consultarVehiculoPorMatriculaConSupuesto(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form)
     ctx.log('vehiculo confirmado')
     // 18/10/2026: los antecedentes SUPUESTOS (favorables) van detrás del supuesto del vehículo, en el mismo aviso.
     // Conductor = tomador sin `tomadorEsConductor` (solo pasa con la fecha de nacimiento de la ficha igual: `exigirConductorEsTomador`):
     // SUPUESTO declarado, no dato.
     const conductor = supuestoConductorTomador(form)
-    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
+    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]), companiaYaElegida)
   },
 } as const
 

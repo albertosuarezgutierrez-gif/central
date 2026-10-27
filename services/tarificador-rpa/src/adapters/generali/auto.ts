@@ -257,6 +257,10 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.41 (27/10/2026, prueba real con 0.2.40, trabajo 84731cfe): la puerta de «Recalcular» bloqueó por «contratar» en el rótulo informativo «Forma de pago a contratar» de «Garantías y Resultados»
+ * (elegir la forma de pago del recibo; no es una acción). La puerta del guard excusa SOLO esa frase exacta (`sinRotulosInformativosGenerali`); el resto de textos de emisión/contratación/pago/firma sigue bloqueando.
+ */
+/**
  * 0.2.40 (27/10/2026, prueba real con 0.2.39, trabajo 86fd856c). CAUSA PROBADA (pasos del trabajo + HTML redactado): «Recalcular» NUNCA se llegó a evaluar. La puerta de 0.2.39 solo miraba la tabla
  * «Modalidades de Seguro» justo tras la primera lectura; en esa prueba la tabla aún NO estaba a la vista (25 s de lectura sin tabla), el bot pulsó «Siguiente×1» (2 s) y SOLO entonces apareció la
  * tabla, vacía; el bucle de «Siguiente» ve la tabla a la vista, no avanza más y el código seguía sin volver a mirar «Recalcular»: el error no lo decía porque no hubo ni intento ni motivo.
@@ -288,7 +292,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.40'
+export const VERSION_GENERALI_AUTO = '0.2.41'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
