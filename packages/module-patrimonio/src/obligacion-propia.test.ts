@@ -19,7 +19,7 @@ const HOY = '2026-10-25'
 const base = { categoria: 'ibi', vence: '2026-11-10', periodicidad: 'anual' }
 
 test('el catálogo es cerrado y cada categoría tiene etiqueta y aviso', () => {
-  assert.deepEqual([...CATEGORIAS_OBLIGACION_PROPIA], ['ibi', 'comunidad', 'caldera', 'ite', 'fin_seguro', 'basuras', 'otro'])
+  assert.deepEqual([...CATEGORIAS_OBLIGACION_PROPIA], ['ibi', 'comunidad', 'caldera', 'ite', 'fin_seguro', 'basuras', 'hipoteca', 'otro'])
   for (const c of CATEGORIAS_OBLIGACION_PROPIA) assert.ok(CATALOGO_CATEGORIAS[c].etiqueta.length > 0 && CATALOGO_CATEGORIAS[c].avisoDias > 0)
 })
 
@@ -34,7 +34,7 @@ test('validar: caso bueno, texto libre recortado y vacío = null', () => {
 test('validar: cada campo malo se rechaza con SU campo', () => {
   const casos: [unknown, string][] = [
     [null, 'categoria'],
-    [{ ...base, categoria: 'hipoteca' }, 'categoria'],
+    [{ ...base, categoria: 'prestamo' }, 'categoria'],
     [{ ...base, categoria: undefined }, 'categoria'],
     [{ ...base, vence: '2026-02-30' }, 'vence'],
     [{ ...base, vence: null }, 'vence'],
@@ -52,6 +52,14 @@ test('validar: cada campo malo se rechaza con SU campo', () => {
     assert.ok(!r.ok && r.campo === campo, `${JSON.stringify(c)} debería fallar en ${campo}`)
   }
   assert.ok(validarObligacionPropia({ ...base, categoria: 'otro', descripcion: 'Renovar el DNI del portero' }).ok)
+})
+
+test('hipoteca (27/10/2026): categoría válida, sin texto obligatorio, mensual o única', () => {
+  for (const periodicidad of ['mensual', 'unica'] as const) {
+    const r = validarObligacionPropia({ ...base, categoria: 'hipoteca', periodicidad })
+    assert.ok(r.ok && r.valor.categoria === 'hipoteca' && r.valor.descripcion === null, periodicidad)
+  }
+  assert.equal(CATALOGO_CATEGORIAS.hipoteca.descripcionObligatoria, false)
 })
 
 test('periodicidad guardada: 1/3/12/null se leen; otro número NO se adivina', () => {

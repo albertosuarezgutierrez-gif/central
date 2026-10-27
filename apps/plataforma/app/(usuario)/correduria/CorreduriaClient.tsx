@@ -25,6 +25,7 @@ import SinCanal from './SinCanal'
 import ExportRgpd from './ExportRgpd'
 import Companias from './Companias'
 import RadarRecibos from './RadarRecibos'
+import PatrimonioConversion from './PatrimonioConversion'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
 import CambiosCuenta from './CambiosCuenta'
@@ -649,6 +650,9 @@ export default function CorreduriaClient() {
         {/* Qué compañías reconocidas nunca han avisado de un recibo por correo
             (20/09/2026). Sin contador: es radar, no trabajo pendiente. */}
         <RadarRecibos />
+
+        {/* Coste de la IA de Patrimonio frente a pólizas y comisión por titular (27/10/2026). Sin contador: es referencia. */}
+        <PatrimonioConversion />
 
         {/* Qué hacen los clientes en el portal. Sin contador a propósito: no es
             una cola de trabajo (partes, supresiones y leads ya cuentan en «Gestión»). */}

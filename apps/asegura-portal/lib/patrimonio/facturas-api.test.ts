@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import type { NivelPatrimonio } from '@central/module-patrimonio'
+import { CUPO_IA_AMPLIO, CUPO_IA_BASICO, MENSAJE_CUPO_IA_AGOTADO, type NivelPatrimonio, type ValorCliente } from '@central/module-patrimonio'
 
 import { PROPUESTA_VACIA } from './factura-propuesta.ts'
 import {
@@ -25,18 +25,25 @@ const PDF = Buffer.from('%PDF-1.7\n%contenido')
 const fichero = (extra: Partial<FicheroFactura> = {}): FicheroFactura => ({ nombre: 'f.pdf', mime: 'application/pdf', tamano: 1000, contenido: PDF, ...extra })
 const ILEGIBLE: ResultadoLectura = { propuesta: PROPUESTA_VACIA, motivos: ['No legible'], fuente: 'none' }
 
-function puertos(niveles: [string, NivelPatrimonio][], o: { hoy?: number; lectura?: ResultadoLectura; resolver?: 'ok' | 'no_encontrado' | 'ya_resuelto'; leerFalla?: boolean } = {}) {
+function puertos(niveles: [string, NivelPatrimonio][], o: { hoy?: number; lectura?: ResultadoLectura; resolver?: 'ok' | 'no_encontrado' | 'ya_resuelto'; leerFalla?: boolean; valor?: ValorCliente | 'falla'; mesUsadas?: number } = {}) {
   const llamadas = { leer: 0, leerMime: [] as string[], reservar: [] as unknown[], completar: [] as unknown[], confirmar: [] as unknown[], descartar: [] as unknown[] }
   let ocupadas = o.hoy ?? 0
+  let mes = o.mesUsadas ?? 0
   const p: PuertosFacturas = {
     accesos: async () => new Map(niveles),
     inmuebleDelTitular: async (_c, i) => i === INM,
     // Atómico como el real: recuento + reserva en un paso síncrono (no hay await entre comprobar y sumar).
+    valorCliente: async () => {
+      if (o.valor === 'falla') throw new Error('bd')
+      return o.valor ?? { comisionAnualCent: null, polizasEnVigor: 3 }
+    },
     reservarPropuesta: async (x) => {
       llamadas.reservar.push(x)
       if (ocupadas >= MAX_FACTURAS_DIA) return { ok: false, motivo: 'tope' }
       ocupadas++
-      return { ok: true, id: GASTO }
+      const cupoAgotado = mes >= x.cupoMes
+      mes++
+      return { ok: true, id: GASTO, cupoAgotado }
     },
     leer: async (f) => {
       llamadas.leer++
@@ -217,4 +224,33 @@ test('la reserva recibe el fichero validado por sus bytes (para guardarlo como d
   assert.equal(llamadas.reservar[0].fichero?.nombre, 'a b.pdf', 'sin ruta')
   const sin = await subir(p, MIO, {})
   assert.equal((sin.body as { documento: string | null }).documento, null, 'sin inmueble no hay owner: no se guarda')
+})
+
+test('cupo mensual: el valor del cliente fija el tope que se pasa a la reserva (0 pólizas básico, con pólizas amplio, no se sabe amplio)', async () => {
+  const cupoDe = async (valor: ValorCliente | 'falla') => {
+    const { p, llamadas } = puertos([[MIO, 'total']], { valor })
+    await subir(p, MIO)
+    return (llamadas.reservar[0] as { cupoMes: number }).cupoMes
+  }
+  assert.equal(await cupoDe({ comisionAnualCent: null, polizasEnVigor: 0 }), CUPO_IA_BASICO)
+  assert.equal(await cupoDe({ comisionAnualCent: null, polizasEnVigor: 2 }), CUPO_IA_AMPLIO)
+  assert.equal(await cupoDe({ comisionAnualCent: null, polizasEnVigor: null }), CUPO_IA_AMPLIO)
+  assert.equal(await cupoDe('falla'), CUPO_IA_AMPLIO)
+})
+
+test('cupo agotado: 201, NO se llama a la IA, mensaje claro y la fila se completa vacía para rellenar a mano', async () => {
+  const { p, llamadas } = puertos([[MIO, 'total']], { valor: { comisionAnualCent: null, polizasEnVigor: 0 }, mesUsadas: CUPO_IA_BASICO })
+  const r = await subir(p, MIO)
+  assert.equal(r.status, 201)
+  assert.equal(llamadas.leer, 0)
+  assert.equal(r.body.cupo_agotado, true)
+  assert.equal(r.body.fuente, 'none')
+  assert.deepEqual(r.body.motivos, [MENSAJE_CUPO_IA_AGOTADO])
+  assert.match(MENSAJE_CUPO_IA_AGOTADO, /límite de este mes.*con tus seguros en Grupo ASegura tienes más/)
+  assert.equal(llamadas.completar.length, 1)
+  // Con hueco en el cupo sí lee.
+  const ok = puertos([[MIO, 'total']], { valor: { comisionAnualCent: null, polizasEnVigor: 0 }, mesUsadas: CUPO_IA_BASICO - 1 })
+  const r2 = await subir(ok.p, MIO)
+  assert.equal(ok.llamadas.leer, 1)
+  assert.equal(r2.body.cupo_agotado, false)
 })

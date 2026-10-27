@@ -30,6 +30,11 @@ export type EntradaCalendarioCruda = {
   href: string
   /** Pide hacer algo ya (p. ej. un recibo devuelto): se marca, además del color, con texto. */
   urgente?: boolean
+  /**
+   * Una segunda acción propia de la fila (p. ej. «Revisar mi seguro» en un vencimiento de póliza: la oportunidad para
+   * la correduría, el mismo mecanismo que «Mejorar el precio»). Solo se pone cuando la página destino la atendería.
+   */
+  accion?: { texto: string; href: string }
 }
 
 /** `null` = NO se ha podido comprobar (≠ `[]`, que es «se miró y no hay»). */
@@ -134,4 +139,42 @@ export function componerCalendario(entrada: {
     return a.dias - b.dias || a.titulo.localeCompare(b.titulo, 'es')
   })
   return { entradas, avisos, sinComprobar, vacio: sinComprobar.length === 0 && entradas.length === 0 && avisos.length === 0 }
+}
+
+export type GrupoCalendario = {
+  /** `vencidas` · `sin_fecha` · `YYYY-MM`. */
+  clave: string
+  /** «Ya vencido» · «octubre de 2026» · «Sin fecha». */
+  titulo: string
+  entradas: EntradaCalendario[]
+}
+
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/**
+ * Agrupa las entradas YA ordenadas (`componerCalendario`) en: lo ya vencido, un grupo por mes y lo que no tiene fecha al
+ * final. Conserva el orden de entrada dentro de cada grupo y no inventa fecha: sin fecha va a «Sin fecha», nunca a un mes.
+ */
+export function agruparPorMes(entradas: readonly EntradaCalendario[]): GrupoCalendario[] {
+  const vencidas: EntradaCalendario[] = []
+  const sinFecha: EntradaCalendario[] = []
+  const meses = new Map<string, EntradaCalendario[]>()
+  for (const e of entradas) {
+    if (e.fecha === null || e.dias === null) sinFecha.push(e)
+    else if (e.dias < 0) vencidas.push(e)
+    else {
+      const k = e.fecha.slice(0, 7)
+      const l = meses.get(k)
+      if (l) l.push(e)
+      else meses.set(k, [e])
+    }
+  }
+  const out: GrupoCalendario[] = []
+  if (vencidas.length > 0) out.push({ clave: 'vencidas', titulo: 'Ya vencido', entradas: vencidas })
+  for (const k of [...meses.keys()].sort()) {
+    const [a, m] = k.split('-')
+    out.push({ clave: k, titulo: `${MESES[Number(m) - 1]} de ${a}`, entradas: meses.get(k)! })
+  }
+  if (sinFecha.length > 0) out.push({ clave: 'sin_fecha', titulo: 'Sin fecha', entradas: sinFecha })
+  return out
 }

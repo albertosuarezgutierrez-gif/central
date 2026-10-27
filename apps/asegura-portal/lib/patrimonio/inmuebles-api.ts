@@ -17,6 +17,8 @@ export type ResumenInmueble = {
   /** `true` = la calle no casó con el Catastro («calle por validar»); `null` = sin dirección (no consta). */
   calleSinValidar: boolean | null
   superficieM2: number | null
+  /** Edificio del que cuelga (unidad). `null` = inmueble suelto o el propio edificio. */
+  inmueblePadreId: string | null
 }
 
 export type TitularLista = {
@@ -62,5 +64,5 @@ export async function responderAlta(p: PuertosInmuebles, cuerpo: unknown): Promi
 
   const r = await p.crear({ clienteId: pedido, datos: v.datos })
   if (!r.ok) return { status: 409, body: { error: 'ya_existe' } }
-  return { status: 201, body: { id: r.id, porValidar: v.datos.porValidar } }
+  return { status: 201, body: { id: r.id, porValidar: v.datos.porValidar, unidades: v.datos.unidades.length } }
 }

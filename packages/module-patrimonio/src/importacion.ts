@@ -60,6 +60,16 @@ export function esColumnaSensible(cabecera: string): boolean {
   return SENSIBLE.test(normalizarTexto(cabecera))
 }
 
+/**
+ * Volcado inicial (27/10/2026): SOLO los identificadores (NIF/DNI/NIE/CIF, correo, teléfono, IBAN/cuenta). El NOMBRE del
+ * inquilino sí se lee en el volcado (se propone el inquilino del contrato, nivel Total); sus identificadores nunca.
+ */
+const IDENTIFICADOR = /\b(nif|dni|nie|cif|email|e mail|mail|correo|correo electronico|telefono|tel|tlf|tfno|movil|iban|cuenta bancaria|cuenta|ccc|swift|bic|pasaporte|documento)\b/
+
+export function esColumnaIdentificador(cabecera: string): boolean {
+  return IDENTIFICADOR.test(normalizarTexto(cabecera))
+}
+
 // ─── CSV ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** CSV (RFC 4180) con separador autodetectado (`;` · `,` · tabulador) y BOM. Líneas vacías al final se ignoran. */

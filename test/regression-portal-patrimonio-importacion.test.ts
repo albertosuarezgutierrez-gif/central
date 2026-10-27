@@ -43,13 +43,17 @@ test('el detector de «quién toca las tablas de importación» muerde (brazos s
   assert.deepEqual(quienToca([{ f: 'ok.ts', src: 'await prisma.portalPatrimonioGasto.findMany({})' }]), [])
 })
 
-test('🚨 hasta confirmar no entra nada: solo importacion-bd.ts toca las tablas de importación (ni rentabilidad, ni calendario, ni avisos)', () => {
+// Volcado inicial (27/10/2026): segunda PUERTA, deliberada, con su propio cepo (`regression-portal-patrimonio-volcado`).
+const VOLCADO_BD = 'apps/asegura-portal/lib/patrimonio/volcado-bd.ts'
+const VOLCADO_TX = 'apps/asegura-portal/lib/patrimonio/volcado-tx.ts'
+
+test('🚨 hasta confirmar no entra nada: solo importacion-bd.ts (y el volcado) tocan las tablas de importación (ni rentabilidad, ni calendario, ni avisos)', () => {
   const ficheros = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'apps/asegura-portal'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n')
     .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\.tsx?$/.test(f))
     .map((f) => ({ f, src: leer(f) }))
   assert.ok(ficheros.some(({ f }) => f === BD), 'el cepo no está viendo importacion-bd.ts')
-  assert.deepEqual(quienToca(ficheros), [BD], 'las tablas de importación tienen UNA puerta; lo que leen rentabilidad/calendario/avisos no pasa por ellas')
+  assert.deepEqual(quienToca(ficheros).sort(), [BD, VOLCADO_BD, VOLCADO_TX].sort(), 'las tablas de importación tienen sus puertas contadas; lo que leen rentabilidad/calendario/avisos no pasa por ellas')
 })
 
 test('🚨 importacion-bd: parte de accesosPatrimonio y TODA consulta de una importación lleva la identidad y el titular autorizado', () => {
@@ -116,16 +120,25 @@ test('rutas: ninguna toca prisma; la identidad sale de la sesión; la subida cor
   assert.doesNotMatch(leer(RUTAS[4]), /prisma|findMany/, 'la plantilla no consulta la BD')
 })
 
-test('🚨 lector: solo CSV (sin librería de hojas), topes antes de leer y las columnas con datos personales se tiran al leer', () => {
+test('🚨 lector: CSV o .xlsx con el lector PROPIO (sin librería de hojas), topes antes de leer y las columnas con datos personales se tiran al leer', () => {
   const src = leer(LECTURA)
-  assert.doesNotMatch(src, /xlsx|exceljs/i, 'sin librería de hojas de cálculo en un portal público')
-  assert.match(src, /ES_ZIP\(bytes\)\) return \{ ok: false, motivo: 'formato' \}/, '.xlsx fuera')
+  assert.doesNotMatch(src, /from ['"](xlsx|exceljs|sheetjs|node-xlsx|read-excel-file)['"]/i, 'sin librería de hojas de cálculo en un portal público')
+  assert.match(src, /import \{ leerXlsx \} from '\.\/xlsx-lectura\.ts'/, 'el .xlsx lo abre el lector propio')
   assert.match(src, /ES_OLE\(bytes\)\) return \{ ok: false, motivo: 'formato' \}/, '.xls antiguo fuera')
+  assert.ok(src.indexOf('MAX_BYTES_IMPORTACION') < src.indexOf('leerXlsx(bytes)'), 'el tope de tamaño va ANTES de abrir el zip')
+  const xlsx = leer('apps/asegura-portal/lib/patrimonio/xlsx-lectura.ts')
+  assert.match(xlsx, /from 'node:zlib'/, 'zlib de Node, sin dependencia nueva')
+  assert.match(xlsx, /maxOutputLength: MAX_XML_BYTES/, 'el inflado se corta en el tope (bomba zip)')
+  assert.match(xlsx, /<!DOCTYPE\|<!ENTITY/, 'sin DTD ni entidades')
+  assert.doesNotMatch(xlsx, /eval\(|new Function|require\(/, 'nada se ejecuta')
   assert.ok(src.indexOf('MAX_BYTES_IMPORTACION') < src.indexOf('parsearCsv('), 'el tope de tamaño va ANTES de leer')
-  assert.match(src, /esColumnaSensible\(n\)/)
+  assert.match(src, /esSensible: \(cabecera: string\) => boolean = esColumnaSensible/, 'por defecto se tiran TODAS las columnas personales')
+  assert.match(src, /const sensibles = nombres\.map\(\(n\) => esSensible\(n\)\)/)
+  assert.match(src, /export function leerFichero\(bytes: Uint8Array\): ResultadoLectura \{\s*return leerConFiltro\(bytes, esColumnaSensible\)/, 'el importador CSV sigue tirando también el nombre del inquilino')
+  assert.match(src, /return leerConFiltro\(bytes, esColumnaIdentificador\)/, 'el volcado tira NIF, correo, teléfono e IBAN')
   assert.match(src, /sensibles\[k\] \? null/, 'la columna sensible se vacía en cada fila')
   assert.doesNotMatch(src, /prisma|\.\.\/db/, 'el lector no ve la BD')
-  assert.doesNotMatch(readFileSync(join(ROOT, 'apps/asegura-portal/package.json'), 'utf8'), /"xlsx"|"exceljs"/)
+  assert.doesNotMatch(readFileSync(join(ROOT, 'apps/asegura-portal/package.json'), 'utf8'), /"xlsx"|"exceljs"|"sheetjs"|"node-xlsx"/)
   assert.doesNotMatch(leer(BD), /contenido|portalPatrimonioDocumento|documentoId/)
 })
 

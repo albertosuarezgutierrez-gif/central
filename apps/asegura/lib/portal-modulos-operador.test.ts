@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { vistaSolicitud, estadoDelModulo, fichasModulos, planDeEscritura, puedeActivar, textoHistorialModulo, type FilaModuloCliente } from './portal-modulos-operador.ts'
+import { readFileSync } from 'node:fs'
+import { identidadesQueActivan, vistaSolicitud, estadoDelModulo, fichasModulos, planDeEscritura, puedeActivar, textoHistorialModulo, type FilaModuloCliente } from './portal-modulos-operador.ts'
 
 const fila = (o: Partial<FilaModuloCliente>): FilaModuloCliente => ({ id: 'f1', identidadId: 'i1', modulo: 'alquileres', estado: 'activo', ...o })
 
@@ -72,4 +73,25 @@ test('vistaSolicitud: nombre legible, y el motivo cuando no se puede activar', (
   assert.equal(vistaSolicitud('flota', 'c1', 0).puedeActivar, true)
   assert.ok(!vistaSolicitud('flota', null, null).puedeActivar)
   assert.ok(!vistaSolicitud('inventado', 'c1', 3).puedeActivar)
+})
+
+// Cepo (27/10/2026): «Activar Patrimonio en /correduria aún no abre /patrimonio». Con la vista de corredor abierta sobre
+// la ficha, su vínculo temporal (`origen='corredor'`) contaba como «el cliente ha entrado»: la fila `activo` se colgaba
+// de la identidad del CORREDOR, la ficha salía «Activado» y el cliente (que el portal decide por SUS vínculos que operan,
+// `accesosPatrimonio`) nunca abría `/patrimonio`.
+test('🚨 los módulos se cuelgan solo de identidades que SON la persona de la ficha (sin vista de corredor ni niveles que no operan)', () => {
+  const v = (identidadId: string, nivel: string, origen: string) => ({ identidadId, nivel, origen })
+  assert.deepEqual(identidadesQueActivan([v('corr', 'gestionar', 'corredor')]), [])
+  assert.deepEqual(identidadesQueActivan([v('cli', 'gestionar', 'email_hash'), v('corr', 'gestionar', 'corredor')]), ['cli'])
+  assert.deepEqual(identidadesQueActivan([v('a', 'administrar', 'manual'), v('t', 'tarjeta', 'manual'), v('c', 'completo', 'email_hash')]), ['a'])
+  // Solo con la vista del corredor, la ficha cuenta como «aún no ha entrado»: no se activa en el aire.
+  const d = puedeActivar('alquileres', { identidades: identidadesQueActivan([v('corr', 'gestionar', 'corredor')]).length, polizasEnVigor: 1 })
+  assert.ok(!d.puede && /aún no ha entrado/.test(d.motivo))
+})
+
+test('🚨 el SQL de la ficha pasa los vínculos por identidadesQueActivan (lee nivel y origen)', () => {
+  const src = readFileSync(new URL('./portal-modulos-cartera.ts', import.meta.url), 'utf8')
+  const leer = src.slice(src.indexOf('async function leer('), src.indexOf('export async function modulosDeFicha'))
+  assert.match(leer, /select identidad_id::text as "identidadId", nivel, origen from portal_vinculo/)
+  assert.match(leer, /const identidades = identidadesQueActivan\(vinc\)/)
 })

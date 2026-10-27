@@ -19,6 +19,7 @@ import { HipotecaInmueble } from './HipotecaInmueble'
 import { NuevoContrato } from './NuevoContrato'
 import { ObligacionesPropias } from './ObligacionesPropias'
 import { SegurosInmueble } from './SegurosInmueble'
+import { UnidadesEdificio } from './UnidadesEdificio'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,9 +57,11 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
 
   const filas: [string, string][] = [
     ['Titular', ficha.titularNombre || noConsta],
+    ...(ficha.edificio ? [['Edificio', ficha.edificio.alias] as [string, string]] : []),
     ['Uso', ETIQUETA_USO[i.uso]],
     ['Dirección', i.direccion === null ? noConsta : ficha.calleSinValidar ? `${i.direccion} (calle por validar: no casa con el callejero del Catastro)` : i.direccion],
-    ['Referencia catastral', i.referenciaCatastral ?? noConsta],
+    // Unidad de un edificio sin división horizontal: la RC es la del edificio (una sola), salvo que la unidad tenga una propia.
+    ['Referencia catastral', ficha.referenciaCatastralEfectiva === null ? noConsta : i.referenciaCatastral === null && ficha.edificio ? `${ficha.referenciaCatastralEfectiva} (la del edificio)` : ficha.referenciaCatastralEfectiva],
     ['Superficie', i.superficieM2 === null ? noConsta : `${i.superficieM2.toLocaleString('es-ES')} m²`],
     ['Año de construcción', i.anioConstruccion === null ? noConsta : String(i.anioConstruccion)],
     ['En comunidad de propietarios', triestado(i.enComunidad)],
@@ -85,6 +88,22 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
           ))}
         </dl>
       </section>
+      {ficha.edificio && (
+        <p style={{ margin: '0 0 12px' }}>
+          <Link href={`/patrimonio/inmueble/${ficha.edificio.id}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, overflowWrap: 'anywhere' }}>
+            Es una unidad de «{ficha.edificio.alias}»: ver el edificio
+          </Link>
+        </p>
+      )}
+      {i.uso === 'edificio' && (
+        <section className="seccion" aria-labelledby="unidades-edificio">
+          <h2 id="unidades-edificio">Unidades</h2>
+          <UnidadesEdificio edificioId={i.id} unidades={ficha.unidades} criterio={i.repartoCriterio ?? null} puedeEditar={!ficha.archivado && puede(ficha.nivel, 'alta_baja')} />
+          <p style={{ margin: '12px 0 0' }}>
+            <Link href="/patrimonio/rentabilidad" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Rentabilidad del edificio y de cada unidad</Link>
+          </p>
+        </section>
+      )}
       <section className="seccion" aria-labelledby="seguros-inmueble">
         <h2 id="seguros-inmueble">Seguros</h2>
         {seguros === 'error' || seguros === null ? (

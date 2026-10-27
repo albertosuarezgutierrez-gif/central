@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-import type { EntradaCalendario, OrigenCalendario } from '@central/module-seguros-portal'
+import { agruparPorMes, type EntradaCalendario, type OrigenCalendario } from '@central/module-seguros-portal'
 
 /**
  * La lista del calendario único (26/10/2026). Recibe las entradas YA compuestas y ordenadas por el servidor
@@ -42,34 +42,48 @@ export function ListaCalendario({ entradas, tope }: { entradas: EntradaCalendari
 
   return (
     <>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-        {visibles.map((e) => {
-          const chip = TRAMO[e.tramo]
-          return (
-            <li key={e.clave} style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                <strong style={{ overflowWrap: 'anywhere' }}>{e.titulo}</strong>
-                <span className="chip">{ORIGEN[e.origen]}</span>
-                {e.urgente && <span className="chip aviso">Requiere tu atención</span>}
-                {chip !== null && <span className="chip">{chip}</span>}
-              </div>
-              <div className="suave" style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
-                {cuando(e)}
-              </div>
-              {e.detalle && <div style={{ fontSize: 14, overflowWrap: 'anywhere' }}>{e.detalle}</div>}
-              {e.href.startsWith('#') ? (
-                <a href={e.href} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }}>
-                  Ver o gestionar
-                </a>
-              ) : (
-                <Link href={e.href} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }}>
-                  Abrir
-                </Link>
-              )}
-            </li>
-          )
-        })}
-      </ul>
+      {agruparPorMes(visibles).map((g) => (
+        <section key={g.clave} aria-labelledby={`cal-mes-${g.clave}`} style={{ marginBottom: 16 }}>
+          <h3 id={`cal-mes-${g.clave}`} style={{ margin: '0 0 8px', fontSize: 16, textTransform: 'capitalize' }}>
+            {g.titulo}
+          </h3>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+            {g.entradas.map((e) => {
+              const chip = TRAMO[e.tramo]
+              return (
+                <li key={e.clave} style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                    <strong style={{ overflowWrap: 'anywhere' }}>{e.titulo}</strong>
+                    <span className="chip">{ORIGEN[e.origen]}</span>
+                    {e.urgente && <span className="chip aviso">Requiere tu atención</span>}
+                    {chip !== null && <span className="chip">{chip}</span>}
+                  </div>
+                  <div className="suave" style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
+                    {cuando(e)}
+                  </div>
+                  {e.detalle && <div style={{ fontSize: 14, overflowWrap: 'anywhere' }}>{e.detalle}</div>}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', columnGap: 16 }}>
+                    {e.href.startsWith('#') ? (
+                      <a href={e.href} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }}>
+                        Ver o gestionar
+                      </a>
+                    ) : (
+                      <Link href={e.href} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }}>
+                        Abrir
+                      </Link>
+                    )}
+                    {e.accion && (
+                      <Link href={e.accion.href} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }}>
+                        {e.accion.texto}
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ))}
       {restan > 0 && (
         <button
           type="button"

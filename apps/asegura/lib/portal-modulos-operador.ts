@@ -11,13 +11,34 @@
 //
 // Fase 1 (24/10/2026, Alberto): «Patrimonio y alquileres» (`alquileres`) solo para clientes con una póliza EN
 // VIGOR de CIMA (`esCarteraEnVigor`). Lo decide el SERVIDOR al escribir; el botón solo lo refleja.
-import { CATALOGO_MODULOS, MODULOS_PORTAL, esModuloPortal, type ModuloPortal } from '@central/module-seguros-portal'
+import {
+  CATALOGO_MODULOS,
+  MODULOS_PORTAL,
+  ORIGEN_VINCULO_CORREDOR,
+  esModuloPortal,
+  nivelPuedeOperar,
+  type ModuloPortal,
+} from '@central/module-seguros-portal'
 
 export { esModuloPortal }
 export type { ModuloPortal }
 
 /** Módulos que, en Fase 1, exigen póliza en vigor de CIMA. */
 export const MODULOS_CON_POLIZA_EN_VIGOR: readonly ModuloPortal[] = ['alquileres']
+
+export type VinculoDeFicha = { identidadId: string; nivel: string; origen: string }
+
+/**
+ * Las identidades del portal sobre las que se cuelga (y se lee) un módulo de ESTA ficha (27/10/2026). La MISMA
+ * regla con la que el portal decide si esa identidad ES la persona de la ficha (`accesosPatrimonio`, reglas 1 y 2):
+ *  - Fuera el vínculo `origen='corredor'`: es la vista TEMPORAL de Alberto mirando como el cliente. Antes contaba,
+ *    así que con la vista abierta sobre una ficha cuyo cliente aún no había entrado, «Activar» escribía la fila en la
+ *    identidad del CORREDOR, la ficha salía «Activado» y el cliente nunca veía `/patrimonio`.
+ *  - Solo niveles que operan (`gestionar`/`administrar`): un vínculo `tarjeta`/`completo` no abre el patrimonio.
+ */
+export function identidadesQueActivan(vinculos: readonly VinculoDeFicha[]): string[] {
+  return [...new Set(vinculos.filter((v) => v.origen !== ORIGEN_VINCULO_CORREDOR && nivelPuedeOperar(v.nivel)).map((v) => v.identidadId))]
+}
 
 export type FilaModuloCliente = { id: string; identidadId: string; modulo: string; estado: string }
 export type EstadoModuloFicha = 'activo' | 'solicitado' | 'inactivo'

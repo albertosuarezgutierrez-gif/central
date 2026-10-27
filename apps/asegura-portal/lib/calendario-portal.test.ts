@@ -148,3 +148,14 @@ test('recibos: una póliza sin bloque visible no corta las demás y de un ajeno 
   assert.equal(r.length, 1)
   assert.match(r[0]!.detalle!, /De José/)
 })
+
+test('seguros: «Revisar mi seguro» solo en una póliza PROPIA, en vigor, con fecha y con nivel que opera', () => {
+  const t = (polizas: PolizaCalendario[], extra: Partial<TitularParaCalendario> = {}) => titular(polizas, { nivel: 'gestionar', ...extra })
+  const accion = (x: TitularParaCalendario) => vencimientosDeSeguros([x], titulo)[0]!.accion
+  assert.deepEqual(accion(t([pol('a')])), { texto: 'Revisar mi seguro', href: '/boveda/mejorar/a' })
+  assert.equal(accion(t([pol('a')], { ajeno: true })), undefined, 'ajena: no es suya')
+  assert.equal(accion(titular([pol('a')])), undefined, 'sin nivel: no se ofrece')
+  assert.equal(accion(t([pol('a', { fechaVencimiento: null })])), undefined, 'sin fecha: la página no la atendería')
+  assert.equal(accion(t([pol('a', { sustituidaAt: d('2026-01-01') })])), undefined)
+  assert.equal(accion(t([pol('a', { vigencia: 'no_vigente', renovacionSinConfirmar: true })])), undefined, 'renovación sin confirmar')
+})
