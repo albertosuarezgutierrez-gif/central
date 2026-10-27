@@ -171,28 +171,28 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 384 | 66.931 | 58.935.413 | 0 | 0 |
-| `otro` | 379 | 15.531 | 34.097.890 | 19.979.821 | 0 |
-| `lectura-directa` | 326 | 10.357 | 29.208.675 | 0 | 0 |
-| `mcp:github` | 329 | 7.912 | 6.044.004 | 56.083.141 | 106 |
-| `sql` | 241 | 6.390 | 3.266.738 | 2.351.230 | 25 |
-| `escritura` | 239 | 5.820 | 84.032.144 | 0 | 0 |
+| `bash` | 384 | 67.039 | 59.117.821 | 0 | 0 |
+| `otro` | 379 | 15.555 | 34.147.793 | 19.979.821 | 0 |
+| `lectura-directa` | 326 | 10.363 | 29.219.958 | 0 | 0 |
+| `mcp:github` | 329 | 7.920 | 6.050.198 | 56.083.141 | 106 |
+| `sql` | 241 | 6.402 | 3.273.516 | 2.351.230 | 25 |
+| `escritura` | 239 | 5.822 | 84.039.242 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Vercel` | 84 | 1.478 | 1.268.535 | 237.328 | 43 |
 | `mcp:Gmail` | 61 | 1.382 | 1.535.816 | 0 | 101 |
 | `mcp:Booking-com` | 48 | 1.346 | 5.510.355 | 0 | 0 |
-| `agente:general-purpose` | 132 | 1.140 | 675.494 | 23.919.570 | 0 |
-| `mcp:claude-code-remote` | 69 | 854 | 73.460 | 20.519 | 0 |
+| `agente:general-purpose` | 132 | 1.141 | 676.583 | 24.206.204 | 0 |
+| `mcp:claude-code-remote` | 69 | 856 | 73.552 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 13 | 618 | 745.969 | 0 | 0 |
-| `mcp:Supabase` | 141 | 471 | 87.653 | 6.830 | 7 |
-| `agente:agente-architect` | 81 | 429 | 301.153 | 10.218.730 | 0 |
+| `mcp:Supabase` | 141 | 473 | 87.848 | 6.830 | 7 |
+| `agente:agente-architect` | 81 | 431 | 301.603 | 10.218.730 | 0 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
 | `mcp:Google-Drive` | 31 | 165 | 167.421 | 0 | 2 |
-| `agente:agente-mecanico` | 56 | 142 | 78.596 | 7.576.032 | 0 |
+| `agente:agente-mecanico` | 56 | 143 | 78.633 | 7.576.032 | 0 |
 | `agente:rastreador-codigo` | 59 | 115 | 36.314 | 1.675.029 | 0 |
 | `mcp:Resend` | 10 | 95 | 84.756 | 0 | 0 |
 | `mcp:OpenSEO` | 6 | 94 | 77.612 | 0 | 2 |
-| `agente:Explore` | 39 | 86 | 42.159 | 2.194.162 | 0 |
+| `agente:Explore` | 40 | 89 | 43.173 | 2.201.132 | 0 |
 | `mcp:idealista` | 3 | 77 | 205.245 | 0 | 33 |
 | `mcp:Booking_com` | 4 | 71 | 262.059 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
