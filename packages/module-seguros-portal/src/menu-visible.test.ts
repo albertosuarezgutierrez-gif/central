@@ -23,6 +23,7 @@ const AUTORIZADO: HechosMenu = {
   flota: 0,
   puedeConceder: false,
   porAceptar: 0,
+  patrimonioRecibido: 0,
 }
 // Un titular normal.
 const TITULAR: HechosMenu = { ...AUTORIZADO, fichasPropias: 1, puedeConceder: true }
@@ -235,4 +236,18 @@ test('puerta y menú dicen lo mismo en lectura, herramienta a herramienta', () =
     assert.equal(puertaAbierta(h, 'herramientas', 'lectura'), entradasVisibles(h).includes('herramientas'))
     for (const p of ['resumen', 'patrimonio', 'flota', 'catalogo'] as const) assert.equal(puertaAbierta(h, p, 'lectura'), ver[p], p)
   }
+})
+
+test('27/10/2026: con un acceso de PATRIMONIO recibido y vigente, «Contactos» se ofrece (ahí lo ve y renuncia), sin abrir conceder', () => {
+  const h = { ...AUTORIZADO, patrimonio: 1, patrimonioRecibido: 1 }
+  assert.ok(contactosVisibles(h))
+  assert.ok(entradasVisibles(h).includes('contactos'))
+  assert.equal(contactosEnCuenta(h), false)
+  // Solo VISIBILIDAD: no le abre la puerta de conceder ni en lectura ni en escritura.
+  assert.equal(puertaAbierta(h, 'conceder', 'lectura'), false)
+  assert.equal(puertaAbierta(h, 'conceder', 'escritura'), false)
+  // Sin acceso recibido, el autorizado puro sigue sin «Contactos» en el menú (y lo tiene en «Cuenta»).
+  assert.equal(contactosVisibles({ ...AUTORIZADO, patrimonio: 1 }), false)
+  // Tres estados: una lectura caída nunca oculta la entrada.
+  assert.ok(contactosVisibles({ ...AUTORIZADO, patrimonioRecibido: null }))
 })

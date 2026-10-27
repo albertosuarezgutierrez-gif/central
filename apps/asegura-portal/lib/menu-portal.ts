@@ -25,6 +25,7 @@ import {
   type Nivel,
   type SeccionPortal,
 } from '@central/module-seguros-portal'
+import { ALCANCES_PATRIMONIO } from '@central/module-patrimonio'
 
 import { prisma } from './db'
 import { DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
@@ -87,6 +88,32 @@ export async function hechosDeMenu(identidadId: string): Promise<HechosMenu> {
     }
   }
 
+  // 27/10/2026: accesos de PATRIMONIO que me han dado y siguen vigentes (se ven y se dejan en «Contactos»). Mismas dos ramas
+  // que `accesosPatrimonio`: mi identidad o una ficha mía. `null` = no se pudo comprobar (no oculta nada).
+  let patrimonioRecibido: number | null = null
+  if (v !== null) {
+    try {
+      const propias = v.map((x) => x.clienteId)
+      const filas = await prisma.portalAutorizacion.findMany({
+        where: {
+          alcance: { in: [...ALCANCES_PATRIMONIO] },
+          polizaId: null,
+          revocadoEn: null,
+          OR: [
+            { autorizadoIdentidadId: identidadId },
+            ...(propias.length > 0 ? [{ autorizadoClienteId: { in: propias } }] : []),
+          ],
+        },
+        select: { aceptadoEn: true, caducaEn: true, revocadoEn: true },
+        take: 50,
+      })
+      const hoy = new Date()
+      patrimonioRecibido = filas.filter((f) => estadoAutorizacion(f, hoy) === 'vigente').length
+    } catch (e) {
+      console.error('[portal/menu] no se pudo comprobar el patrimonio recibido:', e instanceof Error ? e.message : e)
+    }
+  }
+
   const accesosFlotaLeidos = leyo(flota, 'la flota')
   const nombramientosLeidos = leyo(nombramientos, 'los nombramientos de flota')
   return {
@@ -100,6 +127,7 @@ export async function hechosDeMenu(identidadId: string): Promise<HechosMenu> {
     flota: accesosFlotaLeidos === null || nombramientosLeidos === null ? null : accesosFlotaLeidos.size + nombramientosLeidos.length,
     puedeConceder: v === null ? null : v.some((x) => puedeAutorizar(nivelDe(x.nivel))),
     porAceptar,
+    patrimonioRecibido,
   }
 }
 

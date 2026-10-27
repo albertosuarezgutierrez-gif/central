@@ -13,7 +13,9 @@ import { prisma } from '../db'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
 import { CARPETA_FACTURAS } from './carpetas'
-import { fechaMadrid, inicioDiaMadrid } from './dia-madrid'
+import { MENSAJE_CUPO_IA_AGOTADO } from '@central/module-patrimonio'
+
+import { fechaMadrid, inicioDiaMadrid, inicioMesMadrid } from './dia-madrid'
 import type { TxMin } from './documentos-tx'
 import { extraerFactura } from './extraer-factura'
 import { ConfirmacionAdelantada, confirmarGasto, reservarConTope } from './facturas-tx'
@@ -21,6 +23,7 @@ import type { AccesosMapa } from './gastos-api'
 import { titularDe } from './gastos-bd'
 import { MAX_FACTURAS_DIA, type PuertosFacturas } from './facturas-api'
 import { PROPUESTA_VACIA } from './factura-propuesta'
+import { valorClienteDeIdentidad } from './valor-cliente-bd'
 
 const aFecha = (s: string) => new Date(`${s}T00:00:00.000Z`)
 
@@ -53,7 +56,14 @@ export function puertosFacturas(identidadId: string, ahora: () => Date = () => n
       return i !== null
     },
 
-    async reservarPropuesta({ clienteId, inmuebleId, fichero }) {
+    /**
+     * Valor del grupo (titular + a quienes autoriza) = nº de pólizas en vigor. Las fichas salen de la ficha YA autorizada
+     * (`clienteId` validado por `accesos`) y de las autorizaciones que ESE titular ha dado, nunca de la petición.
+     * Una lectura que falla lanza: el llamador lo toma como «no se sabe» (tramo intermedio), nunca como 0.
+     */
+    valorCliente: (clienteId) => valorClienteDeIdentidad(identidadId, clienteId),
+
+    async reservarPropuesta({ clienteId, inmuebleId, cupoMes, fichero }) {
       if (!(await sesionOk())) return { ok: false, motivo: 'no_encontrado' }
       const t = await titularDe(clienteId, identidadId)
       if (!t) return { ok: false, motivo: 'no_encontrado' }
@@ -69,6 +79,9 @@ export function puertosFacturas(identidadId: string, ahora: () => Date = () => n
           desde: inicioDiaMadrid(ahoraD),
           fechaMarcador: fechaMadrid(ahoraD),
           max: MAX_FACTURAS_DIA,
+          cupoMes,
+          desdeMes: inicioMesMadrid(ahoraD),
+          propuestaSinCupo: { fuente: 'none', motivos: [MENSAJE_CUPO_IA_AGOTADO], leido: PROPUESTA_VACIA } as unknown as Prisma.InputJsonValue,
           propuestaInicial: { fuente: 'none', motivos: ['Leyendo la factura…'], leido: PROPUESTA_VACIA } as unknown as Prisma.InputJsonValue,
         }),
       )
