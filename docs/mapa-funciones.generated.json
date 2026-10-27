@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T12:05:08Z",
-  "sha": "69e9dfcc62dbd0ea8d10a15a64a7794480bf7571",
+  "generadoEn": "2026-10-27T12:55:38Z",
+  "sha": "a38b75ad5f867497cebb6b2ddf891d46122f689e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -31793,7 +31793,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/probar",
-      "hash": "5f32a656d076"
+      "hash": "0b058cddf294"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/relanzar/route.ts",
@@ -62107,6 +62107,7 @@
       "exporta": [
         "nombreCompaniaUtil",
         "companiaActualDeCliente",
+        "companiaActualUnica",
         "necesitaCompaniaActual",
         "aplicarCompaniaActual",
         "ultimosCincoDigitosPoliza",
@@ -62140,12 +62141,21 @@
           "resumen": "Compañía con la que está asegurado hoy el cliente, o `null` si no se sabe. PURA."
         },
         {
+          "nombre": "companiaActualUnica",
+          "kind": "function",
+          "exportada": true,
+          "params": "competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null",
+          "retorno": "string | null",
+          "linea": 56,
+          "resumen": "Variante ESTRICTA para «probar» (riesgo reconstruido, sin nadie delante que lo revise): la compañía de la póliza de AUTO en vigor de la cartera SOLO si hay exactamente UNA (con nombre útil). Cero o va"
+        },
+        {
           "nombre": "vacio",
           "kind": "arrow",
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 51
+          "linea": 63
         },
         {
           "nombre": "necesitaCompaniaActual",
@@ -62153,7 +62163,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown",
           "retorno": "boolean",
-          "linea": 65,
+          "linea": 77,
           "resumen": "¿Hay que buscar la compañía del cliente para este riesgo? Auto de Allianz/Mapfre sin `companiaAnterior` ni `companiaActual`, y sin la declaración «0 años asegurado» (sin seguro anterior: poner compañí"
         },
         {
@@ -62162,7 +62172,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, actual: string | null",
           "retorno": "unknown",
-          "linea": 77,
+          "linea": 89,
           "resumen": "Si el riesgo (Allianz o Mapfre auto) no trae compañía actual ni anterior, le pone `companiaAnterior` = la del cliente (es la clave que `validarFormularioAuto` conserva y que el bot lee primero; `compa"
         },
         {
@@ -62171,7 +62181,7 @@
           "exportada": true,
           "params": "numero: unknown",
           "retorno": "string | null",
-          "linea": 92,
+          "linea": 104,
           "resumen": "Últimas 5 cifras de un número de póliza (solo dígitos; ≥5), o `null` si no hay dato utilizable. PURA."
         },
         {
@@ -62180,13 +62190,13 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, numeroPoliza: unknown",
           "retorno": "unknown",
-          "linea": 102,
+          "linea": 114,
           "resumen": "Si el riesgo (Allianz auto) no trae ya `polizaAnteriorUltimos5`, se la pone con las 5 últimas cifras de `numeroPoliza`. Si ya trae algo, o no hay ≥5 cifras, devuelve el MISMO riesgo. Solo Allianz auto"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d14ae2bb46b"
+      "hash": "e9e3b8f37657"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-coste-reglas.ts",
@@ -66217,9 +66227,10 @@
     {
       "ruta": "apps/asegura/lib/tarificador-relanzar-reglas.ts",
       "ambito": "apps/asegura",
-      "resumen": "Reglas PURAS de «relanzar» un trabajo del tarificador RPA por el puerto de operador (15/10/2026). Sin BD ni red. Relanzar = el MISMO trabajo (mismo riesgo, que sigue en la fila) vuelve a `pendiente`. Pensado para que una sesión de Claude itere arreglo→prueba sin la pantalla de Alberto. Solo TARIFICA",
       "exporta": [
         "decidirRelanzar",
+        "conCompaniaActualUnica",
+        "conVehiculoDeOrigen",
         "decidirRiesgoProbar"
       ],
       "funciones": [
@@ -66229,7 +66240,25 @@
           "exportada": true,
           "params": "e: EntradaRelanzar",
           "retorno": "DecisionRelanzar",
-          "linea": 25
+          "linea": 28
+        },
+        {
+          "nombre": "conCompaniaActualUnica",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, actual: string | null",
+          "retorno": "ReconstruccionRiesgo",
+          "linea": 57,
+          "resumen": "Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre auto con cambio de seguro) con la compañía que deduce la cartera (`companiaActualUnica`: solo con exactamente una póliza de auto en v"
+        },
+        {
+          "nombre": "conVehiculoDeOrigen",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, filas: readonly FilaOrigen[]",
+          "retorno": "ReconstruccionRiesgo",
+          "linea": 69,
+          "resumen": "nada personal se copia. Sin origen, otra compañía/ramo, o ya con vehículo → mismo objeto. PURA."
         },
         {
           "nombre": "decidirRiesgoProbar",
@@ -66237,13 +66266,13 @@
           "exportada": true,
           "params": "e: { reconstruccion: ReconstruccionRiesgo; previo: unknown | null; soloPurgados: boolean; validar: (riesgo: unknown) => ValidacionProbar<E> }",
           "retorno": "DecisionProbar<E>",
-          "linea": 60,
+          "linea": 86,
           "resumen": "Qué riesgo se reencola. Orden: 1) el reconstruido de la oportunidad+ficha, si valida; 2) el del último trabajo, si valida (no purgado); 3) rechazo que dice QUÉ falta (solo etiquetas de campo, nunca va"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cfcdd5ccc20d"
+      "hash": "b7c9e2cd2f6c"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-robustez.ts",
@@ -66762,12 +66791,14 @@
       "exporta": [
         "leerIntegracion",
         "encolarTrabajo",
+        "leerCompaniaActualUnicaCliente",
         "reclamarSiguiente",
         "lanzarPendientes",
         "trabajoParaWorker",
         "registrarResultado",
         "notasPresupuestoExplorado",
-        "barrerTarificadorRpa"
+        "barrerTarificadorRpa",
+        "leerOrigenesVehiculoCliente"
       ],
       "funciones": [
         {
@@ -66814,12 +66845,21 @@
           "resumen": "DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`."
         },
         {
+          "nombre": "leerCompaniaActualUnicaCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 305,
+          "resumen": "Como `leerCompaniaActualCliente` pero ESTRICTA (`companiaActualUnica`): solo con exactamente una póliza de auto en vigor. Para «probar»."
+        },
+        {
           "nombre": "leerCompaniaActualCliente",
           "kind": "function",
           "exportada": false,
-          "params": "correduriaId: string, clienteId: string | null, oportunidadId: string | null",
+          "params": "correduriaId: string, clienteId: string | null, oportunidadId: string | null, decidir: (competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null) => string | null = companiaActualDeCliente,",
           "retorno": "Promise<string | null>",
-          "linea": 305,
+          "linea": 310,
           "resumen": "Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló."
         },
         {
@@ -66828,7 +66868,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 326,
+          "linea": 334,
           "resumen": "Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló."
         },
         {
@@ -66837,7 +66877,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 357,
+          "linea": 365,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -66846,7 +66886,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 414
+          "linea": 422
         },
         {
           "nombre": "lanzarPendientes",
@@ -66854,7 +66894,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 419,
+          "linea": 427,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -66863,7 +66903,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 444
+          "linea": 452
         },
         {
           "nombre": "destruirMaquina",
@@ -66871,7 +66911,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 458,
+          "linea": 466,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -66880,7 +66920,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 484,
+          "linea": 492,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -66889,7 +66929,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 576
+          "linea": 584
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -66897,7 +66937,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 725,
+          "linea": 733,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -66906,7 +66946,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 729
+          "linea": 737
         },
         {
           "nombre": "guardarAdjunto",
@@ -66914,7 +66954,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 786
+          "linea": 794
         },
         {
           "nombre": "guardarPasos",
@@ -66922,7 +66962,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 808,
+          "linea": 816,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -66931,7 +66971,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; capturaConDatos?: boolean; html: string | null } | null",
           "retorno": "Promise<",
-          "linea": 827,
+          "linea": 835,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -66940,7 +66980,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 971,
+          "linea": 979,
           "resumen": "4. lanza lo que quepa por compañía."
         },
         {
@@ -66949,8 +66989,17 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string",
           "retorno": "Promise<FilaOrigen[]>",
-          "linea": 1056,
+          "linea": 1064,
           "resumen": "Los `ok` de Allianz/Mapfre AUTO de la oportunidad (de ESTA correduría), los más recientes primero."
+        },
+        {
+          "nombre": "leerOrigenesVehiculoCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<FilaOrigen[]>",
+          "linea": 1077,
+          "resumen": "Los últimos `ok` de Allianz/Mapfre AUTO del CLIENTE (de ESTA correduría), para «probar» Generali sin oportunidad. Fallo de lectura = sin origen."
         },
         {
           "nombre": "inyectarVehiculoEnEspera",
@@ -66958,7 +67007,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string, v: VehiculoEncadenado",
           "retorno": "Promise<number>",
-          "linea": 1069,
+          "linea": 1094,
           "resumen": "Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos."
         },
         {
@@ -66967,7 +67016,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 1090,
+          "linea": 1115,
           "resumen": "Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta. Sin vehículo: · Generali (no busca por matrícula): sin ningún origen vivo o pasadas 24 h → `cancel"
         }
       ],
@@ -66978,7 +67027,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "562794de5980"
+      "hash": "97b0824e90e1"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -254841,6 +254890,6 @@
   ],
   "resumen": {
     "archivos": 5341,
-    "funciones": 20480
+    "funciones": 20485
   }
 }
