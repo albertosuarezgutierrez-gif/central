@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-26T17:36:31Z",
+  "generadoEn": "2026-10-27T09:11:22Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -381,7 +381,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-web": {
         "estado": "no",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 62
+        "evidencias": 89
       },
       "asegura-web": {
         "estado": "no",
@@ -2325,7 +2325,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 186
+        "evidencias": 190
       },
       "asegura-web": {
         "estado": "usado",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 240
+        "evidencias": 241
       },
       "rrhh": {
         "estado": "no",
@@ -2433,7 +2433,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 145
+        "evidencias": 147
       },
       "asegura-web": {
         "estado": "usado",
@@ -4333,6 +4333,7 @@
       "/api/operador/oportunidades-aviso",
       "/api/operador/oportunidades-patrimonio",
       "/api/operador/partes",
+      "/api/operador/patrimonio-conversion",
       "/api/operador/poliza",
       "/api/operador/poliza-documento",
       "/api/operador/poliza/emitida",
@@ -4508,6 +4509,8 @@
       "/api/mis-datos/cuenta/codigo",
       "/api/modulos",
       "/api/oposicion-senales-patrimonio",
+      "/api/patrimonio/autorizaciones",
+      "/api/patrimonio/autorizaciones/[id]",
       "/api/patrimonio/codigo-postal",
       "/api/patrimonio/comunidades",
       "/api/patrimonio/contratos",
@@ -4527,16 +4530,25 @@
       "/api/patrimonio/importaciones/[id]/confirmar",
       "/api/patrimonio/importaciones/[id]/descartar",
       "/api/patrimonio/importaciones/plantilla",
+      "/api/patrimonio/informe-gestor",
       "/api/patrimonio/inmuebles",
       "/api/patrimonio/inmuebles/[id]/hipoteca",
       "/api/patrimonio/inmuebles/[id]/obligaciones",
       "/api/patrimonio/inmuebles/[id]/pedir-precio",
+      "/api/patrimonio/inmuebles/[id]/reparto",
       "/api/patrimonio/inmuebles/[id]/seguros",
+      "/api/patrimonio/inmuebles/[id]/unidades",
       "/api/patrimonio/inquilinos/[id]",
       "/api/patrimonio/ofertas",
       "/api/patrimonio/plantillas",
+      "/api/patrimonio/recomendaciones",
+      "/api/patrimonio/recomendaciones/[id]",
       "/api/patrimonio/rentabilidad/fiscal",
       "/api/patrimonio/vias",
+      "/api/patrimonio/volcados",
+      "/api/patrimonio/volcados/[id]",
+      "/api/patrimonio/volcados/[id]/confirmar",
+      "/api/patrimonio/volcados/[id]/descartar",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
@@ -5474,6 +5486,7 @@
       "/api/correduria/oportunidad/whatsapp",
       "/api/correduria/oportunidades-patrimonio",
       "/api/correduria/partes",
+      "/api/correduria/patrimonio-conversion",
       "/api/correduria/poliza",
       "/api/correduria/poliza/traer-pdf",
       "/api/correduria/portal-invitaciones",
@@ -6190,6 +6203,7 @@
       "seguros.portal_patrimonio_obligacion",
       "seguros.portal_patrimonio_plantilla_gasto",
       "seguros.portal_patrimonio_recibo_compartido",
+      "seguros.portal_patrimonio_recomendacion",
       "seguros.portal_patrimonio_renta_actualizacion",
       "seguros.portal_patrimonio_titular",
       "seguros.portal_peticion_acceso",
@@ -7200,7 +7214,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1825,
+    "apis": 1838,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
