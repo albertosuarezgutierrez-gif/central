@@ -14,7 +14,9 @@
 import { prisma } from './tenant'
 import { personaDeFicha, leerRiesgo } from './oportunidad-riesgo'
 import { prismaAsegura } from './asegura-db'
-import { claveCompania, puedeAutomatizar } from '@central/module-tarificacion'
+import { claveCompania, puedeAutomatizar, type CatalogosHogarLeidos } from '@central/module-tarificacion'
+import { resolverConfig } from './codeoscopic/config'
+import { catalogoHogar } from './codeoscopic/catalogos'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
 import { companiaAdmiteRamoRpa, rpaActivo, validarEntradaRamo } from './tarificador-reglas'
 import { pausaViva } from './tarificador-robustez'
@@ -211,7 +213,21 @@ async function riesgoHogarDeOportunidadDelCliente(correduriaId: string, clienteI
   if (!op) return { riesgo: null, motivo: 'sin_oportunidad' }
   const riesgo = await leerRiesgo(correduriaId, op.id)
   if (!riesgo) return { riesgo: null, motivo: 'sin_oportunidad' }
-  return riesgoHogarDeRiesgoOportunidad(riesgo, ahora)
+  return riesgoHogarDeRiesgoOportunidad(riesgo, ahora, await catalogosHogarVivos())
+}
+
+/**
+ * Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types,
+ * occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera (`undefined`): no se inventa nada, solo valen los ids atestiguados.
+ */
+async function catalogosHogarVivos(): Promise<CatalogosHogarLeidos> {
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (r.estado !== 'lista') return {}
+  const leer = (n: 'property-types' | 'occupancy-types' | 'uses') => catalogoHogar(r.config, n).catch(() => undefined)
+  const [tipoVivienda, ocupacion, uso] = await Promise.all([leer('property-types'), leer('occupancy-types'), leer('uses')])
+  return {
+    ...(tipoVivienda ? { tipoVivienda } : {}), ...(ocupacion ? { ocupacion } : {}), ...(uso ? { uso } : {}),
+  }
 }
 
 async function revisarInterno(correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date): Promise<{ ops: Interno[]; dia: string }> {
