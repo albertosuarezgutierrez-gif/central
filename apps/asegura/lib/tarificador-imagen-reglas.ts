@@ -77,7 +77,7 @@ export function imagenParaTrabajo(p: { imagenPrueba: string | null; permitirPrue
 /** ¿Se puede pedir una imagen de prueba? Interruptor apagado o sin la tabla → 403 claro. */
 export function decidirPermisoPrueba(fila: FilaImagen | null): { ok: true } | { ok: false; status: 403; motivo: string } {
   if (!fila) return { ok: false, status: 403, motivo: 'imagen_prueba_no_permitida: no hay configuración de imagen en BD (SQL 2026-10-27_tarificador_imagen sin aplicar)' }
-  if (!fila.permitirPrueba) return { ok: false, status: 403, motivo: 'imagen_prueba_no_permitida: el interruptor permitir_imagen_prueba está apagado (lo enciende Alberto en seguros.tarificador_imagen)' }
+  if (!fila.permitirPrueba) return { ok: false, status: 403, motivo: 'imagen_prueba_no_permitida: el interruptor permitir_imagen_prueba está apagado (lo enciende Alberto en la tabla tarificador_imagen)' }
   return { ok: true }
 }
 
