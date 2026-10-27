@@ -44,6 +44,7 @@ import {
 import { Prisma } from '@prisma/client'
 
 import { prisma } from './db'
+import type { EntradaFlotaInicio, SociedadFlotaInicio } from './flota-inicio'
 import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
@@ -309,6 +310,65 @@ export async function flotaDeEmpresa(identidadId: string, empresaPedida: unknown
     jefes,
     candidatos,
   }
+}
+
+/**
+ * Las flotas de TODAS las sociedades que ve esta identidad, en UNA pasada (27/10/2026): para la tarjeta «Mi flota» de Inicio
+ * y las ITV del calendario. Sin N+1 sobre vehículos ni filas: los accesos se resuelven UNA vez (`accesosFlota`), los nombres
+ * en UNA consulta y cada sociedad se lee con `vehiculosDeEmpresa(empresaId)` (la misma lectura de `/flota`, con el `where`
+ * de la empresa ya autorizada), todas en paralelo — el nº de lecturas crece con las SOCIEDADES de la persona (1-3), no con
+ * sus vehículos. Una sociedad que no se lee queda con `vehiculos: null` (≠ «sin vehículos»).
+ *
+ * `null` = no se pudieron resolver los accesos; `[]` = se miró y no lleva la flota de ninguna sociedad.
+ */
+async function flotasDeIdentidad(identidadId: string): Promise<SociedadFlotaInicio[] | null> {
+  let accesos: Map<string, PapelFlota>
+  try {
+    accesos = await accesosFlota(identidadId)
+  } catch (e) {
+    console.error('[flota] accesos sin comprobar:', e instanceof Error ? e.message : e)
+    return null
+  }
+  const ids = [...accesos.keys()]
+  if (ids.length === 0) return []
+  const [rNombres, ...rFlotas] = await Promise.allSettled([
+    prisma.cliente.findMany({ where: { id: { in: ids } }, select: { id: true, nombre: true, apellidos: true } }),
+    ...ids.map((empresaId) => vehiculosDeEmpresa(empresaId)),
+  ])
+  const nombrePor = new Map(
+    rNombres.status === 'fulfilled' ? (rNombres.value as { id: string; nombre: string; apellidos: string }[]).map((f) => [f.id, `${f.nombre} ${f.apellidos}`.trim()] as const) : [],
+  )
+  return ids.map((id, i): SociedadFlotaInicio => {
+    const r = rFlotas[i]!
+    if (r.status === 'rejected') console.error('[flota] vehículos de una sociedad sin leer:', r.reason instanceof Error ? r.reason.message : r.reason)
+    const leida = r.status === 'fulfilled' ? (r.value as { vehiculos: VehiculoFlota[]; recortada: boolean }) : null
+    return { id, nombre: nombrePor.get(id) ?? 'Tu sociedad', vehiculos: leida === null ? null : leida.vehiculos, recortada: leida?.recortada ?? false }
+  })
+}
+
+/** Las flotas para el CALENDARIO (ITV). `null` = no se pudo comprobar (ni los accesos ni alguna sociedad). */
+export async function flotaParaCalendario(identidadId: string): Promise<SociedadFlotaInicio[] | null> {
+  const sociedades = await flotasDeIdentidad(identidadId)
+  if (sociedades === null || sociedades.some((s) => s.vehiculos === null)) return null
+  return sociedades
+}
+
+/**
+ * La tarjeta «Mi flota» de Inicio. `undefined` = sin flota ni nombramientos a la vista (no se pinta nada); `null` = no se
+ * pudo comprobar nada (se dice); objeto = lo leído, con `nombramientos: null` si solo ese dato falló.
+ */
+export async function flotaParaInicio(identidadId: string): Promise<EntradaFlotaInicio | null | undefined> {
+  const [rSoc, rNom] = await Promise.allSettled([flotasDeIdentidad(identidadId), nombramientosPendientes(identidadId)])
+  const sociedades = rSoc.status === 'fulfilled' ? rSoc.value : null
+  let nombramientos: number | null = null
+  if (rNom.status === 'fulfilled') nombramientos = rNom.value.length
+  else console.error('[flota] nombramientos sin comprobar:', rNom.reason instanceof Error ? rNom.reason.message : rNom.reason)
+  if (sociedades === null) return null
+  if (sociedades.length === 0) {
+    if (nombramientos === null) return null
+    return nombramientos === 0 ? undefined : { sociedades: [], nombramientos }
+  }
+  return { sociedades, nombramientos }
 }
 
 export type InvitacionFlota = { autorizacionId: string; empresa: string | null; otorgadoEn: Date }

@@ -118,7 +118,10 @@ test('🪤 H1: la página y la bóveda usan titularesQueOperan / nivelPuedeOpera
   const boveda = readFileSync(new URL('page.tsx', dir), 'utf8')
   assert.match(boveda, /puedeSolicitarBaja=\{grupo === 'mias' && opera &&/)
   assert.match(boveda, /puedeMejorarPrecio=\{puedeOfrecerMejorarPrecio\(p, titular\.nivel, bajasParaMejorar\)\}/)
-  assert.match(boveda, /titularesQueOperan\(cartera\.propias\)\.flatMap/)
+  // 27/10/2026: «Tus vencimientos» ya no está en la bóveda (lo pendiente vive solo en Inicio): la lista que se calculaba aquí con
+  // `titularesQueOperan(cartera.propias).flatMap` desapareció con ella. El «Mejorar el precio» que queda (la ficha y
+  // `mejorar/[id]`) sigue atado a los dos asserts de arriba.
+  assert.doesNotMatch(boveda, /<TusVencimientos|vencimientosEnVentana\(/, 'la bóveda no repite lo pendiente de Inicio')
 })
 
 test('🪤 el enlace «Mejorar el precio» y la página usan el MISMO predicado: nunca se ofrece lo que la página rechaza', () => {

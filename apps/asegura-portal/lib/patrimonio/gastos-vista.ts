@@ -87,9 +87,11 @@ export function pendientesDeInicio(n: number | null | undefined): PendientesInic
 
 export function textoPendientesInicio(n: number | null | undefined): string {
   const p = pendientesDeInicio(n)
-  if (p.tipo === 'sin_comprobar') return 'Ahora no hemos podido comprobar si tienes gastos por confirmar.'
-  if (p.tipo === 'ninguno') return 'No tienes gastos por confirmar.'
-  return p.n === 1 ? '1 gasto por confirmar.' : `${p.n} gastos por confirmar.`
+  // Rotulado como lo que se cuenta (27/10/2026): TODO lo «por confirmar» de la lista de gastos, que mezcla las facturas por
+  // revisar (`origen='factura'`) y los gastos propuestos (cron, derramas): el contador y la lista cuentan lo mismo.
+  if (p.tipo === 'sin_comprobar') return 'Ahora no hemos podido comprobar si tienes facturas o gastos por confirmar.'
+  if (p.tipo === 'ninguno') return 'No tienes facturas ni gastos por confirmar.'
+  return p.n === 1 ? '1 factura o gasto por confirmar.' : `${p.n} facturas y gastos por confirmar.`
 }
 
 /** Nº de inmuebles en Inicio: `null` = no se sabe (no se pinta 0). */

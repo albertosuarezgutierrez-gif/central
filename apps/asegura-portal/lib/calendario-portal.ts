@@ -16,6 +16,7 @@ import {
 
 import type { PolizaPortal } from './cartera-lectura.ts'
 import { eur } from './dinero.ts'
+import type { SociedadFlotaInicio } from './flota-inicio.ts'
 import { puedeOfrecerMejorarPrecio } from './vencimientos.ts'
 
 /** Lo mínimo de una póliza de la cartera que el calendario lee (`PolizaPortal` lo cumple). */
@@ -142,6 +143,32 @@ export function fechasDePatrimonio(vs: readonly VencimientoPatrimonioParaCalenda
       href: v.contratoId ? `/patrimonio/contrato/${v.contratoId}` : `/patrimonio/inmueble/${v.inmuebleId}`,
       urgente: v.estado === 'vencida',
     }))
+}
+
+/**
+ * La ITV de los vehículos de la flota de la empresa (27/10/2026). Solo los que tienen una ITV CALCULADA: es un cálculo
+ * sobre una inspección que no hemos visto (el detalle lo dice), nunca «ITV al día». Un vehículo cuya ITV no sabemos no es
+ * una fecha del calendario (queda en la ficha y en la tarjeta de Inicio). Quien llama ya comprobó que TODAS las sociedades
+ * se leyeron (`flotaParaCalendario` da `null` si no): aquí una sociedad sin leer también da `null`, nunca «sin ITV».
+ * El vencimiento del seguro del vehículo NO se repite: ya sale en «Seguros» con el resto de pólizas.
+ */
+export function fechasDeFlota(sociedades: readonly SociedadFlotaInicio[]): EntradaCalendarioCruda[] | null {
+  if (sociedades.some((s) => s.vehiculos === null)) return null
+  const filas: EntradaCalendarioCruda[] = []
+  for (const s of sociedades) {
+    for (const v of s.vehiculos ?? []) {
+      if (v.itv.estado !== 'calculada') continue
+      filas.push({
+        clave: `flota-itv:${s.id}:${v.polizaId}`,
+        titulo: `${v.itv.fiabilidad === 'primera' ? 'Primera ITV' : 'Próxima ITV'} · ${v.etiqueta}`,
+        fecha: v.itv.fecha,
+        detalle: `${s.nombre} · fecha calculada: compruébala en la tarjeta de la ITV`,
+        href: `/flota?empresa=${encodeURIComponent(s.id)}`,
+        urgente: v.itv.pronto,
+      })
+    }
+  }
+  return filas
 }
 
 /** Un recordatorio propio, tal como lo lee `recordatoriosDeIdentidad`. */

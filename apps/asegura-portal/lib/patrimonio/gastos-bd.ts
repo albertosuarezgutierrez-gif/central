@@ -296,14 +296,19 @@ export async function gastosDeIdentidad(identidadId: string): Promise<TitularGas
  * `clienteId` que no está entre los autorizados da `null`. El filtro por inmueble lo hace `gruposDeInmueble` (puro).
  */
 export async function gastosDeTitular(identidadId: string, clienteId: string): Promise<TitularGastos | null> {
-  const todos = await gastosDeIdentidad(identidadId)
-  return todos.find((t) => t.clienteId === clienteId) ?? null
+  const accesos = await accesosPatrimonio(identidadId)
+  // El `clienteId` solo se lee si está DENTRO de los accesos de la sesión (404 para el resto), y se lee SOLO ese titular
+  // (27/10/2026): antes se cargaban los gastos de todos los titulares para quedarse con uno.
+  if (!accesos.has(clienteId)) return null
+  const [t] = await listarGastos(identidadId, [clienteId], accesos)
+  return t ?? null
 }
 
 /**
  * Tarjeta «Mi patrimonio» de Inicio. `undefined` = sin patrimonio a la vista (no se pinta nada); `null` = no se pudo
  * leer el acceso; objeto con `inmuebles`/`pendientes` `null` = esa cifra no se pudo leer (no es 0). Los «por confirmar»
- * cuentan SOLO donde esta identidad puede gestionar (si no, no podría confirmarlos): sin ninguno así → 0 real.
+ * (facturas por revisar + gastos propuestos: lo mismo que enseña la lista) cuentan SOLO donde esta identidad puede gestionar
+ * (si no, no podría confirmarlos): sin ninguno así → 0 real.
  */
 export async function patrimonioParaInicio(identidadId: string): Promise<{ inmuebles: number | null; pendientes: number | null; puedeConfirmar: boolean } | null | undefined> {
   let accesos: AccesosMapa

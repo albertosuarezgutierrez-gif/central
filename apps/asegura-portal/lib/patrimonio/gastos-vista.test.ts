@@ -85,9 +85,9 @@ test('Inicio: null = no se sabe (no se pinta 0); 0 = revisado', () => {
   assert.deepEqual(pendientesDeInicio(3), { tipo: 'hay', n: 3 })
   assert.doesNotMatch(textoPendientesInicio(null), /\b0\b|No tienes/)
   assert.match(textoPendientesInicio(null), /no hemos podido comprobar/i)
-  assert.equal(textoPendientesInicio(0), 'No tienes gastos por confirmar.')
-  assert.equal(textoPendientesInicio(1), '1 gasto por confirmar.')
-  assert.equal(textoPendientesInicio(4), '4 gastos por confirmar.')
+  assert.equal(textoPendientesInicio(0), 'No tienes facturas ni gastos por confirmar.')
+  assert.equal(textoPendientesInicio(1), '1 factura o gasto por confirmar.')
+  assert.equal(textoPendientesInicio(4), '4 facturas y gastos por confirmar.')
 })
 test('Inicio: nº de inmuebles null no se pinta como 0', () => {
   assert.equal(textoInmueblesInicio(null), null)

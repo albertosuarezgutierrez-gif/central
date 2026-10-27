@@ -22,13 +22,15 @@ import { CargandoEnlace } from './CargandoEnlace'
  * anterior.** Hasta hoy aquí ponía que no había hamburguesa a propósito: «son
  * cuatro secciones, y un botón que las esconde las hace menos visibles». La
  * decisión era correcta con su premisa y la premisa ya no se cumple:
- * `pestanasPortal()` devuelve **ocho** entradas (Seguros, Mi QR, Recibos,
- * Siniestros, Recordatorios, Contactos, Datos). Con siete, el carril horizontal
- * no enseñaba las secciones: las amontonaba y las cortaba — que es justo lo que
- * Alberto vio en su móvil, y lo que ya había obligado a bajar de cuatro a tres
- * en su día. Un enlace que hay que descubrir arrastrando por casualidad está
- * más escondido que uno detrás de un botón que se ve. Pidió el patrón de
- * `apps/plataforma` (☰ + cajón), y es el que se replica.
+ * `pestanasPortal()` devolvía entonces **ocho** entradas; con tantas, el carril
+ * horizontal no enseñaba las secciones: las amontonaba y las cortaba — que es
+ * justo lo que Alberto vio en su móvil. Un enlace que hay que descubrir
+ * arrastrando por casualidad está más escondido que uno detrás de un botón que
+ * se ve. Pidió el patrón de `apps/plataforma` (☰ + cajón), y es el que se
+ * replica. (Hoy son CINCO —Inicio · Seguros · Herramientas · Contactos ·
+ * Cuenta—, ver la constante `TABBAR` y `pestanasPortal()`; el cajón sigue
+ * existiendo para «Contactos», «Cuenta», «Llamar» y «Salir», que no caben en
+ * la barra inferior.)
  *
  * ⚠️ Lo que se PIERDE y conviene tener escrito: el carril era CSS puro, así que
  * funcionaba sin JavaScript. El cajón se abre con un `onClick`. Por eso va el
@@ -199,10 +201,10 @@ export function NavPortal({ visibles, llamar, whatsapp }: {
             </Link>
           )
         })}
-        {/* WhatsApp en vez de «Mensajes» (Alberto, 26/09/2026: «es más directo»). «Mensajes»
-            no desaparece: sigue en el cajón. En el móvil sustituye al botón flotante, que se
-            oculta mientras esta barra existe (ver globals.css): dos botones de WhatsApp en la
-            misma pantalla es uno de más. */}
+        {/* WhatsApp en la barra inferior (Alberto, 26/09/2026: «es más directo»; sustituyó a «Mensajes», que ya no
+            existe como entrada). En el móvil sustituye al botón flotante, que se oculta mientras esta barra existe
+            (ver globals.css): dos botones de WhatsApp en la misma pantalla es uno de más. En escritorio sigue el
+            flotante (`WhatsappFlotante`). */}
         {whatsapp && (
           <a
             className="portal-tabbar-item portal-tabbar-wsp"
@@ -234,7 +236,7 @@ export function NavPortal({ visibles, llamar, whatsapp }: {
       {/* 🚨 Sin JavaScript «Más» no abre nada (el cajón se abre con un
           `onClick`), así que la
           navegación vuelve a ser el carril horizontal que era hasta el
-          19/09/2026: se ve peor con siete pestañas, pero se ve. Un cajón que
+          19/09/2026: se ve peor con cinco entradas, pero se ve. Un cajón que
           no se puede abrir es una pantalla sin salida. */}
       <noscript>
         <style>{`

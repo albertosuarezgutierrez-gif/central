@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { hoyMadrid } from '@central/module-seguros'
@@ -135,7 +136,7 @@ function EditarMatriculacion({ empresaId, v }: { empresaId: string; v: VehiculoF
   )
 }
 
-function ListaVehiculos({ empresaId, vehiculos, recortada }: { empresaId: string; vehiculos: VehiculoFlota[]; recortada: boolean }) {
+function ListaVehiculos({ empresaId, papel, vehiculos, recortada }: { empresaId: string; papel: PapelFlota; vehiculos: VehiculoFlota[]; recortada: boolean }) {
   const [visibles, setVisibles] = useState(PASO)
   if (vehiculos.length === 0) {
     return (
@@ -164,6 +165,13 @@ function ListaVehiculos({ empresaId, vehiculos, recortada }: { empresaId: string
             </div>
             <TextoItv itv={v.itv} />
             <EditarMatriculacion empresaId={empresaId} v={v} />
+            {/* La ficha de su póliza (`/boveda/poliza/[id]`): SOLO el dueño la abre. Un jefe de flota no ve el resto de
+                seguros de la sociedad (la bóveda de la sociedad no se le abre): el enlace le daría un 404. */}
+            {papel === 'dueno' && (
+              <Link className="boton-tenue" style={{ minHeight: 44, width: '100%', marginTop: 8 }} href={`/boveda/poliza/${encodeURIComponent(v.polizaId)}`}>
+                Ver su póliza
+              </Link>
+            )}
           </li>
         ))}
       </ul>
@@ -275,7 +283,7 @@ export function FlotaEmpresa(props: {
         <h2 id="vehiculos-flota" style={{ marginTop: 0 }}>
           Vehículos <span className="suave" style={{ fontSize: 14, fontWeight: 400 }}>({props.vehiculos.length})</span>
         </h2>
-        <ListaVehiculos empresaId={props.empresaId} vehiculos={props.vehiculos} recortada={props.recortada} />
+        <ListaVehiculos empresaId={props.empresaId} papel={props.papel} vehiculos={props.vehiculos} recortada={props.recortada} />
       </section>
       {props.papel === 'dueno' && props.jefes !== null && props.candidatos !== null && (
         <JefesDeFlota empresaId={props.empresaId} jefes={props.jefes} candidatos={props.candidatos} textoJefe={props.textoJefe} />
