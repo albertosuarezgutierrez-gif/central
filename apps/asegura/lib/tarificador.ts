@@ -28,7 +28,7 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
-import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
+import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, companiaActualUnica, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
 import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
@@ -301,8 +301,16 @@ async function leerDniFicha(correduriaId: string, clienteId: string): Promise<st
   return filas[0]?.dni ?? null
 }
 
+/** Como `leerCompaniaActualCliente` pero ESTRICTA (`companiaActualUnica`): solo con exactamente una póliza de auto en vigor. Para «probar». */
+export async function leerCompaniaActualUnicaCliente(correduriaId: string, clienteId: string): Promise<string | null> {
+  return leerCompaniaActualCliente(correduriaId, clienteId, null, companiaActualUnica)
+}
+
 /** Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló. */
-async function leerCompaniaActualCliente(correduriaId: string, clienteId: string | null, oportunidadId: string | null): Promise<string | null> {
+async function leerCompaniaActualCliente(
+  correduriaId: string, clienteId: string | null, oportunidadId: string | null,
+  decidir: (competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null) => string | null = companiaActualDeCliente,
+): Promise<string | null> {
   try {
     const comp = oportunidadId
       ? await prisma.$queryRaw<{ pc: unknown }[]>`
@@ -316,7 +324,7 @@ async function leerCompaniaActualCliente(correduriaId: string, clienteId: string
           where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null`
       : []
     const ps: PolizaParaCompaniaActual[] = polizas.map((p) => ({ tipo: p.tipo, aseguradora: p.aseguradora, companiaDeclarada: p.compania_declarada, estado: p.estado, importRef: p.import_ref, eiacXmlHash: p.eiac_xml_hash, sustituidaAt: p.sustituida_at, fechaEfecto: p.fecha_efecto }))
-    return companiaActualDeCliente(comp[0]?.pc ?? null, ps)
+    return decidir(comp[0]?.pc ?? null, ps)
   } catch {
     return null
   }
@@ -1063,6 +1071,23 @@ async function leerOrigenesVehiculo(db: Db, correduriaId: string, oportunidadId:
     order by t.terminado_at desc nulls last
     limit 10`
   return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
+}
+
+/** Los últimos `ok` de Allianz/Mapfre AUTO del CLIENTE (de ESTA correduría), para «probar» Generali sin oportunidad. Fallo de lectura = sin origen. */
+export async function leerOrigenesVehiculoCliente(correduriaId: string, clienteId: string): Promise<FilaOrigen[]> {
+  try {
+    const filas = await prisma.$queryRaw<{ compania: string; ramo: string; riesgo: unknown; terminado_at: Date | null }[]>`
+      select t.compania, t.ramo, t.riesgo, t.terminado_at
+      from seguros.tarificacion_trabajos t
+      where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${clienteId}::uuid
+        and t.estado = 'ok' and t.ramo = 'auto' and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[])
+        and coalesce(to_jsonb(t)->>'modo', 'tarificar') in ('tarificar', 'identificar')
+      order by t.terminado_at desc nulls last
+      limit 10`
+    return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
+  } catch {
+    return []
+  }
 }
 
 /** Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos. */
