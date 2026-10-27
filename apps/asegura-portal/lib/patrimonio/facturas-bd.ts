@@ -24,6 +24,7 @@ import { titularDe } from './gastos-bd'
 import { MAX_FACTURAS_DIA, type PuertosFacturas } from './facturas-api'
 import { PROPUESTA_VACIA } from './factura-propuesta'
 import { valorClienteDeIdentidad } from './valor-cliente-bd'
+import { contarVolcadosMesTx, type TxVolcado } from './volcado-tx'
 
 const aFecha = (s: string) => new Date(`${s}T00:00:00.000Z`)
 
@@ -81,6 +82,7 @@ export function puertosFacturas(identidadId: string, ahora: () => Date = () => n
           max: MAX_FACTURAS_DIA,
           cupoMes,
           desdeMes: inicioMesMadrid(ahoraD),
+          otrasLecturasMes: (t2) => contarVolcadosMesTx(t2 as unknown as TxVolcado, t.id, inicioMesMadrid(ahoraD)),
           propuestaSinCupo: { fuente: 'none', motivos: [MENSAJE_CUPO_IA_AGOTADO], leido: PROPUESTA_VACIA } as unknown as Prisma.InputJsonValue,
           propuestaInicial: { fuente: 'none', motivos: ['Leyendo la factura…'], leido: PROPUESTA_VACIA } as unknown as Prisma.InputJsonValue,
         }),

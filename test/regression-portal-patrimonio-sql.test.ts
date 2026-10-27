@@ -42,6 +42,9 @@ const SQL_INQUILINO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/20
 // Edificio sin división horizontal (27/10/2026): columnas nuevas en `inmueble`; mismo espejo. Su cepo propio (FK compuesta,
 // un solo borrado, catálogos) es `test/regression-portal-patrimonio-edificio.test.ts`.
 const SQL_EDIFICIO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_edificio_unidades.sql'), 'utf8').replace(/--.*$/gm, '')
+// Volcado inicial (27/10/2026): columna `volcado` en `importacion`; mismo espejo.
+const RUTA_VOLCADO = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_volcado.sql'
+const SQL_VOLCADO = readFileSync(join(RAIZ, RUTA_VOLCADO), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
@@ -53,6 +56,7 @@ const SQL = [
   SQL_IMPORTACION,
   SQL_INQUILINO,
   SQL_EDIFICIO,
+  SQL_VOLCADO,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
@@ -383,4 +387,20 @@ test('🚨 importación Excel/CSV (26/10/2026): SQL aditivo sin borrados, column
   // El tope de filas de la BD es el del código.
   assert.match(SQL_IMPORTACION, /BETWEEN 1 AND 500/)
   assert.match(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/importacion.ts'), 'utf8'), /MAX_FILAS_IMPORTACION = 500/)
+})
+
+test('🚨 volcado inicial (27/10/2026): SQL aditivo sin borrados, `volcado` solo SELECT/INSERT, sin tipo, y crm_seguros sin nada', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_VOLCADO), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  assert.doesNotMatch(SQL_VOLCADO, /\bDELETE\b|\bTRUNCATE\b/i)
+  assert.match(SQL_VOLCADO, /^BEGIN;/m)
+  assert.match(SQL_VOLCADO, /^COMMIT;/m)
+  assert.match(SQL_VOLCADO, /ADD COLUMN IF NOT EXISTS volcado boolean NOT NULL DEFAULT false/)
+  assert.match(SQL_VOLCADO, /CHECK \(NOT volcado OR tipo IS NULL\)/, 'un volcado no tiene tipo: el importador CSV no lo abre')
+  assert.ok(concedidas('SELECT', 'portal_patrimonio_importacion')!.has('volcado'))
+  assert.ok(concedidas('INSERT', 'portal_patrimonio_importacion')!.has('volcado'))
+  assert.ok(!concedidas('UPDATE', 'portal_patrimonio_importacion')!.has('volcado'), 'un volcado no deja de serlo')
+  assert.match(SQL_VOLCADO, /REVOKE ALL ON seguros\.portal_patrimonio_importacion FROM crm_seguros/)
+  // El tope de elementos del volcado es el CHECK de filas de la BD.
+  assert.match(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/volcado.ts'), 'utf8'), /MAX_ELEMENTOS_VOLCADO = 500/)
 })
