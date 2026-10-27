@@ -27,6 +27,7 @@ const CON_PUERTA: ReadonlyArray<readonly [string, 'calendario' | 'conceder', 'le
  */
 const HERRAMIENTAS: ReadonlyArray<readonly [string, 'herramientas' | 'resumen' | 'patrimonio' | 'flota' | 'catalogo']> = [
   ['(portal)/herramientas/page.tsx', 'herramientas'],
+  ['(portal)/herramientas/como-funciona/', 'herramientas'],
   ['(portal)/resumen/page.tsx', 'resumen'],
   ['(portal)/patrimonio/', 'patrimonio'],
   ['api/patrimonio/', 'patrimonio'],

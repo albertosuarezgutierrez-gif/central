@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
-import { TEXTO_JEFE_FLOTA } from '@central/module-seguros-portal'
+import { TEXTO_JEFE_FLOTA, rutaManual } from '@central/module-seguros-portal'
 
 import { empresasDeFlota, flotaDeEmpresa, nombramientosPendientes } from '@/lib/flota'
 import { fechaEs } from '@/lib/fechas'
@@ -10,6 +10,8 @@ import { getIdentidad } from '@/lib/session'
 import { estadoQrEmpresa, estadoQrParaVista } from '@/lib/vehiculo-qr'
 
 import { FlotaEmpresa, NombramientoPendiente } from './FlotaEmpresa'
+import { AvisoManual } from '../herramientas/AvisoManual'
+import { EnlaceComoFunciona } from '../herramientas/EnlaceComoFunciona'
 import { EncabezadoPortal } from '../../PaginaPortal'
 
 export const dynamic = 'force-dynamic'
@@ -50,6 +52,8 @@ export default async function FlotaPage({
     return (
       <>
         <EncabezadoPortal antetitulo="Tu sociedad" titulo="Flota de" acento={flota.empresa.nombre} />
+        <AvisoManual modulo="flota" />
+        <EnlaceComoFunciona modulo="flota" aparte />
         <p className="suave" style={{ marginTop: 0 }}>
           {flota.papel === 'dueno'
             ? 'Los vehículos de la sociedad con su seguro en vigor. Ves esto porque constas como dueño.'
@@ -85,6 +89,8 @@ export default async function FlotaPage({
   return (
     <>
       <EncabezadoPortal antetitulo="Herramientas" titulo="Tu" acento="flota" />
+      <AvisoManual modulo="flota" />
+      <EnlaceComoFunciona modulo="flota" aparte />
       <p className="suave" style={{ marginTop: 0 }}>
         Los vehículos de las sociedades que llevas: seguro, vencimiento y próxima ITV.
       </p>
@@ -113,6 +119,9 @@ export default async function FlotaPage({
             <p style={{ margin: 0 }}>
               No llevas la flota de ninguna sociedad. Si eres el dueño de una empresa cliente y no la ves aquí,
               escríbenos: puede que no conste en tu ficha que eres el dueño.
+            </p>
+            <p className="suave" style={{ margin: '8px 0 0' }}>
+              Mira <Link href={rutaManual('flota')} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>cómo funciona la flota</Link>.
             </p>
           </section>
         )
