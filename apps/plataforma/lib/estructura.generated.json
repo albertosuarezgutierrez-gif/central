@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-27T17:18:15Z",
+  "generadoEn": "2026-10-27T18:07:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2325,7 +2325,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 197
+        "evidencias": 207
       },
       "asegura-web": {
         "estado": "usado",
@@ -2433,7 +2433,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 150
+        "evidencias": 160
       },
       "asegura-web": {
         "estado": "usado",
@@ -3028,8 +3028,8 @@
         "evidencias": 25
       },
       "asegura-portal": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 2
       },
       "asegura-web": {
         "presente": false,
@@ -4583,7 +4583,13 @@
       "/api/sugerencia",
       "/api/sugerencias",
       "/api/sugerencias/pedir",
-      "/api/supresion"
+      "/api/supresion",
+      "/api/vehiculos/[bienId]/publico",
+      "/api/vehiculos/[bienId]/qr",
+      "/api/vehiculos/[bienId]/qr/[id]",
+      "/api/vehiculos/etiquetas",
+      "/api/vehiculos/ficha",
+      "/api/vehiculos/publico-defecto"
     ],
     "asegura-web": [
       "/api/aviso",
@@ -6225,6 +6231,8 @@
       "seguros.portal_push_suscripcion",
       "seguros.portal_revision_poliza",
       "seguros.portal_supresion",
+      "seguros.portal_vehiculo_publico",
+      "seguros.portal_vehiculo_qr",
       "seguros.portal_vinculo",
       "seguros.portal_vista_corredor"
     ],
@@ -6865,12 +6873,12 @@
         "label": "QR / portal cliente",
         "tiene": [
           "asegura",
+          "asegura-portal",
           "ia-rest"
         ],
         "falta": [
           "almacen",
           "alquiler",
-          "asegura-portal",
           "asegura-web",
           "housesevillana",
           "ialimp",
@@ -7228,7 +7236,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1849,
+    "apis": 1855,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

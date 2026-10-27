@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T17:18:15Z",
-  "sha": "69cdcdffadeb5269361f3332c631405f20274922",
+  "generadoEn": "2026-10-27T18:07:33Z",
+  "sha": "d4298511eeca9dd369884d17d87467c8c5281678",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4753,7 +4753,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 67,
+          "linea": 70,
           "resumen": "La ficha de UNA póliza de la cartera. ───────────────────────────────────────────────────────────────────────────── 🚨 EL ID DE LA URL NO CONSULTA NADA. Esta es la línea entera de esta página. Una rut"
         },
         {
@@ -4762,13 +4762,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 454,
+          "linea": 484,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07b6f1fa5d5b"
+      "hash": "a740ed4aca0e"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -5732,7 +5732,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string | null",
-          "linea": 31
+          "linea": 33
         },
         {
           "nombre": "enviar",
@@ -5740,7 +5740,7 @@
           "exportada": false,
           "params": "url: string, cuerpo: unknown",
           "retorno": "Promise<string | null>",
-          "linea": 37
+          "linea": 39
         },
         {
           "nombre": "ChipVencimiento",
@@ -5748,7 +5748,7 @@
           "exportada": false,
           "params": "{ v }: { v: VencimientoFlota }",
           "retorno": null,
-          "linea": 49
+          "linea": 51
         },
         {
           "nombre": "TextoItv",
@@ -5756,7 +5756,7 @@
           "exportada": false,
           "params": "{ itv }: { itv: ItvVehiculo }",
           "retorno": null,
-          "linea": 62
+          "linea": 64
         },
         {
           "nombre": "EditarMatriculacion",
@@ -5764,15 +5764,33 @@
           "exportada": false,
           "params": "{ empresaId, v }: { empresaId: string; v: VehiculoFlota }",
           "retorno": null,
-          "linea": 87
+          "linea": 89
+        },
+        {
+          "nombre": "QrDeFlota",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresaId, v, qr, defecto }: { empresaId: string; v: VehiculoFlota; qr: EstadoQrVista | null; defecto: InterruptoresPublicos }",
+          "retorno": null,
+          "linea": 142,
+          "resumen": "El QR de un vehículo de la flota (27/10/2026, F1). Sin matrícula no hay a qué colgarlo: se dice."
+        },
+        {
+          "nombre": "EtiquetasFlota",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ empresaId, defecto }: { empresaId: string; defecto: InterruptoresPublicos | null }",
+          "retorno": null,
+          "linea": 165,
+          "resumen": "Impresión en LOTE (27/10/2026, F1). Por defecto solo los vehículos SIN etiqueta: reimprimir las demás anula las que ya están pegadas, y eso se marca a mano y se dice."
         },
         {
           "nombre": "ListaVehiculos",
           "kind": "function",
           "exportada": false,
-          "params": "{ empresaId, papel, vehiculos, recortada }: { empresaId: string; papel: PapelFlota; vehiculos: VehiculoFlota[]; recortada: boolean }",
+          "params": "{ empresaId, papel, vehiculos, recortada, qrPorClave, qrDefecto, }: { empresaId: string papel: PapelFlota vehiculos: VehiculoFlota[] recortada: boolean qrPorClave: Record<string, EstadoQrVista> | null qrDefecto: InterruptoresPublicos | null",
           "retorno": null,
-          "linea": 139
+          "linea": 243
         },
         {
           "nombre": "JefesDeFlota",
@@ -5780,15 +5798,15 @@
           "exportada": false,
           "params": "{ empresaId, jefes, candidatos, textoJefe }: { empresaId: string; jefes: Jefe[]; candidatos: Candidato[]; textoJefe: string }",
           "retorno": null,
-          "linea": 187
+          "linea": 306
         },
         {
           "nombre": "FlotaEmpresa",
           "kind": "function",
           "exportada": true,
-          "params": "props: { empresaId: string papel: PapelFlota recortada: boolean vehiculos: VehiculoFlota[] jefes: Jefe[] | null candidatos: Candidato[] | null textoJefe: string }",
+          "params": "props: { empresaId: string papel: PapelFlota recortada: boolean vehiculos: VehiculoFlota[] jefes: Jefe[] | null candidatos: Candidato[] | null textoJefe: string /** Estado del QR de cada vehículo por matrícula. `null` = no se pudo leer o no",
           "retorno": null,
-          "linea": 271
+          "linea": 390
         },
         {
           "nombre": "NombramientoPendiente",
@@ -5796,7 +5814,7 @@
           "exportada": true,
           "params": "{ autorizacionId, empresa, otorgadoEn }: { autorizacionId: string; empresa: string | null; otorgadoEn: string | null }",
           "retorno": null,
-          "linea": 296,
+          "linea": 419,
           "resumen": "Un nombramiento pendiente: aceptarlo o rechazarlo, por la ruta de siempre de las autorizaciones."
         }
       ],
@@ -5805,7 +5823,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3686dfdfa7f8"
+      "hash": "c2c20abe1344"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/page.tsx",
@@ -5820,13 +5838,13 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 30,
+          "linea": 31,
           "resumen": "«Tu flota» (05/10/2026) — el mínimo de empresa del piloto. Sin `?empresa=`: índice de las sociedades cuya flota puede ver esta identidad (dueño o jefe de flota) y los nombramientos que tiene pendiente"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2b7bd746ca9c"
+      "hash": "dc2bc408c985"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/herramientas/BotonSolicitarModulo.tsx",
@@ -7532,6 +7550,72 @@
       ],
       "rutaApi": null,
       "hash": "0567574ddd38"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/QrVehiculo.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "EtiquetasImprimibles",
+        "EtiquetaVehiculo",
+        "Interruptores",
+        "QrVehiculo"
+      ],
+      "funciones": [
+        {
+          "nombre": "pedir",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, metodo: 'POST' | 'PUT' | 'DELETE', cuerpo?: unknown",
+          "retorno": "Promise<",
+          "linea": 36
+        },
+        {
+          "nombre": "EtiquetasImprimibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ etiquetas }: { etiquetas: { clave: string; matricula: string; enlace: string }[] }",
+          "retorno": null,
+          "linea": 53,
+          "resumen": "Las etiquetas listas para imprimir. El botón marca SOLO este bloque para el papel (allow-list de `@media print`)."
+        },
+        {
+          "nombre": "EtiquetaVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ enlace, matricula }: { enlace: string; matricula: string }",
+          "retorno": null,
+          "linea": 83,
+          "resumen": "La etiqueta: el QR (lleva un ENLACE, no datos), la matrícula y la marca. Nada más va al papel."
+        },
+        {
+          "nombre": "VistaPrevia",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ v, deEmpresa }: { v: InterruptoresPublicos; deEmpresa: boolean }",
+          "retorno": null,
+          "linea": 108,
+          "resumen": "Lo que vería quien escanee con estos interruptores. Es una afirmación sobre `vistaPublicaVehiculo()`."
+        },
+        {
+          "nombre": "Interruptores",
+          "kind": "function",
+          "exportada": true,
+          "params": "props: { inicial: InterruptoresPublicos deEmpresa: boolean /** Guardar solo para este vehículo (`null` = este bloque es el del defecto). */ urlVehiculo: string | null ambitoDefecto: AmbitoDefecto textoDefecto: string /** `true` = este vehíc",
+          "retorno": null,
+          "linea": 121
+        },
+        {
+          "nombre": "QrVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "props: { origen: OrigenVehiculo estado: EstadoQrVista /** `true` = la póliza no trae matrícula: se pide antes de generar (no se inventa). */ pideMatricula: boolean ambitoDefecto: AmbitoDefecto }",
+          "retorno": null,
+          "linea": 182
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7da970d5ab8f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/resumen/ImprimirResumen.tsx",
@@ -10780,6 +10864,162 @@
       "hash": "d0cb0a0f4271"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/vehiculos/[bienId]/publico/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "PUT"
+      ],
+      "funciones": [
+        {
+          "nombre": "PUT",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, { params }: { params: Promise<{ bienId: string }> }",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "Qué ve quien escanea ESTE vehículo (excepción sobre el defecto del dueño). Cuerpo: los TRES booleanos (`datosCarretera`, `estadoAlDia`, `recordatoriosPendientes`); uno a medias es 400. El dueño de la "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/vehiculos/[bienId]/publico",
+      "hash": "bfb2889caa9d"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/vehiculos/[bienId]/qr/[id]/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ bienId: string; id: string }> }",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "Anular la etiqueta QR de un vehículo. NO borra la fila (el rol ni siquiera tiene DELETE): queda la fecha de cuándo dejó de abrir nada. 404 si no es tuya o ya estaba anulada (la fecha que consta es la "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/vehiculos/[bienId]/qr/[id]",
+      "hash": "aa44ef5e2b44"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/vehiculos/[bienId]/qr/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, { params }: { params: Promise<{ bienId: string }> }",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "Crear (o REIMPRIMIR) la etiqueta QR de un vehículo. Reimprimir anula la anterior: el papel pegado deja de valer. 🚨 El token EN CLARO solo sale en esta respuesta, dentro del enlace: en la BD vive su h"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/vehiculos/[bienId]/qr",
+      "hash": "11bc64358778"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/vehiculos/comun.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "cuerpoJson",
+        "puertaDelVehiculo"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuerpoJson",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": "Promise<Record<string, unknown> | null>",
+          "linea": 23
+        },
+        {
+          "nombre": "puertaDelVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "g: GestionVehiculo",
+          "retorno": "Promise<NextResponse | null>",
+          "linea": 36,
+          "resumen": "el del particular no tiene puerta propia: su frontera es ser el dueño del bien."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7ccbee9feec4"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/vehiculos/etiquetas/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "IMPRESIÓN EN LOTE de las etiquetas de la flota de una sociedad: `{ empresaId, reimprimir }`. Por defecto solo los vehículos SIN etiqueta viva: reimprimir una anula la pegada (el papel deja de valer), "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/vehiculos/etiquetas",
+      "hash": "deda5df46fa7"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/vehiculos/ficha/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "La FICHA del vehículo al que se le va a colgar un QR, creada bajo demanda e idempotente. - Particular: `{ polizaId, matricula?, fechaMatriculacion? }` → `asegurarVehiculoDePoliza` (solo una póliza PRO"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/vehiculos/ficha",
+      "hash": "aa790563e3d7"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/vehiculos/publico-defecto/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "PUT"
+      ],
+      "funciones": [
+        {
+          "nombre": "PUT",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "El DEFECTO de qué ve quien escanea los vehículos de un dueño: `{ ambito: 'persona', valores }` (los de esta identidad) o `{ ambito: 'empresa', empresaId, valores }` (una sociedad buscada DENTRO de `ac"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/vehiculos/publico-defecto",
+      "hash": "a8307ba39e96"
+    },
+    {
       "ruta": "apps/asegura-portal/app/CabeceraEnlaces.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -12185,6 +12425,52 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9af06a393707"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/v/[token]/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "VehiculoPublico"
+      ],
+      "funciones": [
+        {
+          "nombre": "VehiculoPublico",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ token: string }> }",
+          "retorno": null,
+          "linea": 38,
+          "resumen": "La página del QR de un VEHÍCULO (27/10/2026, F1). Spec `docs/superpowers/specs/2026-10-27-qr-vehiculo-flota.md`. PÚBLICA a propósito —fuera del grupo `(portal)`, sin sesión y sin tocar cookies—: la ab"
+        },
+        {
+          "nombre": "DatosCarretera",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c }: { c: NonNullable<VistaPublicaVehiculo['carretera']> }",
+          "retorno": null,
+          "linea": 101
+        },
+        {
+          "nombre": "Telefonos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ t }: { t: TelefonoPublico[] | null }",
+          "retorno": null,
+          "linea": 134,
+          "resumen": "`null` = no lo tenemos VERIFICADO: se dice «pídenoslo», nunca un número de relleno."
+        },
+        {
+          "nombre": "EstadoAlDia",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ e }: { e: NonNullable<VistaPublicaVehiculo['estado']> }",
+          "retorno": null,
+          "linea": 177
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c1e8d2a8c8c1"
     },
     {
       "ruta": "apps/asegura-portal/app/WhatsappFlotante.tsx",
@@ -14880,7 +15166,8 @@
       "ambito": "apps/asegura-portal",
       "resumen": "El enlace que va DENTRO del QR de la hoja de la nevera. 🚨 En el QR va este enlace, no los datos. Un QR no caduca —es una imagen con un texto dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la póliza, y encima cualquiera que fotografíe la hoja se los ",
       "exporta": [
-        "enlaceDeHoja"
+        "enlaceDeHoja",
+        "enlaceDeVehiculo"
       ],
       "funciones": [
         {
@@ -14891,11 +15178,28 @@
           "retorno": "string | null",
           "linea": 16,
           "resumen": "El enlace que va DENTRO del QR de la hoja de la nevera. 🚨 En el QR va este enlace, no los datos. Un QR no caduca —es una imagen con un texto dentro— pero lo que se mete dentro sí: con los datos escri"
+        },
+        {
+          "nombre": "enlaceDeVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string",
+          "retorno": "string | null",
+          "linea": 25,
+          "resumen": "El enlace que va dentro del QR de un VEHÍCULO (27/10/2026, F1): `/v/<token>`, con las MISMAS reglas que la hoja (https o `null`; quien llama devuelve 503 sin escribir la fila: una pegatina que no llev"
+        },
+        {
+          "nombre": "enlacePublico",
+          "kind": "function",
+          "exportada": false,
+          "params": "ruta: 'hoja' | 'v', token: string",
+          "retorno": "string | null",
+          "linea": 29
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6cbf2e2397d5"
+      "hash": "1c4731184c1f"
     },
     {
       "ruta": "apps/asegura-portal/lib/entrada-enlace.ts",
@@ -15643,7 +15947,9 @@
         "flotaParaInicio",
         "nombramientosPendientes",
         "nombrarJefeFlota",
-        "guardarMatriculacion"
+        "guardarMatriculacion",
+        "asegurarVehiculosDeFlota",
+        "vehiculoDeEmpresaParaQr"
       ],
       "funciones": [
         {
@@ -15760,11 +16066,29 @@
           "retorno": "Promise<ResultadoFlota>",
           "linea": 467,
           "resumen": "Anota (o borra, con `null`) la fecha de matriculación de un vehículo de la flota. La escriben el dueño y el jefe de flota. El vehículo se identifica por la póliza que lo trae, buscada DENTRO de la flo"
+        },
+        {
+          "nombre": "asegurarVehiculosDeFlota",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: { identidadId: string empresaId: unknown polizaIds: readonly unknown[] | 'todos' }",
+          "retorno": "Promise<ResultadoVehiculosFlota>",
+          "linea": 536,
+          "resumen": "La FICHA (`portal_bien`) de los vehículos de la flota a los que se les va a colgar un QR, creada bajo demanda (hoy solo existe si alguien anotó la matriculación). Dueño o jefe de flota. `polizaIds: 't"
+        },
+        {
+          "nombre": "vehiculoDeEmpresaParaQr",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, clave: string | null,",
+          "retorno": "Promise<",
+          "linea": 601,
+          "resumen": "🚨 SIN SESIÓN, a propósito, y por eso se dice en voz alta: la usa SOLO la página PÚBLICA del QR del vehículo (`lib/vehiculo-publico.ts`), con el `cliente_id` del bien que abrió el TOKEN (`vehiculoPorT"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "436c7d83f699"
+      "hash": "e3905e3a007f"
     },
     {
       "ruta": "apps/asegura-portal/lib/herramientas.ts",
@@ -24434,6 +24758,297 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8761413145e6"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/vehiculo-acceso.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El QR del VEHÍCULO (27/10/2026, F1) — LA frontera de quién gestiona un vehículo, con BD. Spec `docs/superpowers/specs/2026-10-27-qr-vehiculo-flota.md` §3.5. La regla vive pura en `vehiculo-acceso.ts` de `@central/module-seguros-portal` (con su test); aquí se leen las filas, y la frontera es: 🚨 `pue",
+      "exporta": [
+        "puedeGestionarVehiculo",
+        "puedeGestionarVehiculos",
+        "puedeGestionarDefecto",
+        "asegurarVehiculoDePoliza",
+        "fichaDeVehiculoDePoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "esLaSesion",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 37
+        },
+        {
+          "nombre": "puedeGestionarVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, bienId: unknown",
+          "retorno": "Promise<GestionVehiculo | null>",
+          "linea": 43,
+          "resumen": "Quién gestiona este vehículo desde esta sesión. `null` = 404. Ver la cabecera."
+        },
+        {
+          "nombre": "puedeGestionarVehiculos",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, bienIds: readonly unknown[]",
+          "retorno": "Promise<Map<string, GestionVehiculo>>",
+          "linea": 64,
+          "resumen": "La misma frontera para VARIOS bienes a la vez (impresión en lote): una sola lectura de accesos y de bienes. Lo que no resuelve no está en el mapa (y no se imprime)."
+        },
+        {
+          "nombre": "puedeGestionarDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, pedido: unknown",
+          "retorno": "Promise<AmbitoDueno | null>",
+          "linea": 90,
+          "resumen": "El ámbito del DEFECTO de interruptores (`PUT /api/vehiculos/publico-defecto`): la propia persona, o una sociedad buscada dentro de `accesosFlota` con papel para editar. `null` = 404."
+        },
+        {
+          "nombre": "polizaPropiaDePersona",
+          "kind": "function",
+          "exportada": false,
+          "params": "cartera: Awaited<ReturnType<typeof carteraDeIdentidad>>, polizaId: string,",
+          "retorno": "",
+          "linea": 100,
+          "resumen": "La póliza PROPIA (no de una sociedad) con ese id, buscada dentro de la cartera ya leída."
+        },
+        {
+          "nombre": "asegurarVehiculoDePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, datos: { polizaId: unknown; matricula?: unknown; fechaMatriculacion?: unknown },",
+          "retorno": "Promise<ResultadoFicha>",
+          "linea": 120,
+          "resumen": "Crea (o devuelve, idempotente por `(identidad_id, matricula)`) la ficha del vehículo de un PARTICULAR desde una póliza PROPIA de auto/moto. La matrícula sale de la póliza; solo si la compañía no la in"
+        },
+        {
+          "nombre": "fichaDeVehiculoDePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, p: Pick<PolizaPortal, 'id' | 'bien'>,",
+          "retorno": "Promise<",
+          "linea": 201,
+          "resumen": "La ficha del vehículo de una póliza PROPIA, si ya existe: por la matrícula de la póliza o, si la compañía no la informa, por la póliza de la que se creó. Recibe la póliza YA encontrada en la cartera d"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "abc6a34519c0"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/vehiculo-publico.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El QR del VEHÍCULO (27/10/2026, F1) — lo que se enseña al escanearlo, armado en el servidor. Aquí NO hay ninguna consulta propia (cero `prisma.*`): se encadenan tres lecturas que ya tienen su frontera, y el resultado pasa SIEMPRE por la allow-list pura `vistaPublicaVehiculo()` antes de llegar a la p",
+      "exporta": [
+        "vistaPublicaPorToken"
+      ],
+      "funciones": [
+        {
+          "nombre": "dia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null",
+          "retorno": "string | null",
+          "linea": 32
+        },
+        {
+          "nombre": "polizaQueManda",
+          "kind": "function",
+          "exportada": false,
+          "params": "candidatas: readonly PolizaPortal[]",
+          "retorno": "PolizaPortal | null",
+          "linea": 35,
+          "resumen": "De las pólizas propias de ese vehículo, la que manda: la que está en vigor y vence más tarde."
+        },
+        {
+          "nombre": "entradaDePersona",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: VehiculoAbierto, identidadDueno: string, hoy: Date",
+          "retorno": "Promise<EntradaVistaPublica>",
+          "linea": 41
+        },
+        {
+          "nombre": "entradaDeEmpresa",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: VehiculoAbierto, empresaId: string, hoy: Date",
+          "retorno": "Promise<EntradaVistaPublica | null>",
+          "linea": 78
+        },
+        {
+          "nombre": "vistaPublicaPorToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "tokenCrudo: unknown, hoy: Date = new Date()",
+          "retorno": "Promise<",
+          "linea": 110,
+          "resumen": "La vista pública del QR. `null` = 404 (token mal formado, inexistente, anulado, bien que no es vehículo o empresa que ya no está viva): la página no distingue los casos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "117f83980904"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/vehiculo-qr.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El QR del VEHÍCULO (27/10/2026, F1) — lo que hace su DUEÑO: crear/reimprimir la etiqueta, anularla y decidir qué ve quien la escanee. Spec `docs/superpowers/specs/2026-10-27-qr-vehiculo-flota.md` §3, §5. 🚨 Las escrituras reciben una `GestionVehiculo` YA resuelta por `puedeGestionarVehiculo()` (la f",
+      "exporta": [
+        "crearQrVehiculo",
+        "anularQrVehiculo",
+        "guardarPublicoVehiculo",
+        "guardarPublicoDefecto",
+        "estadoQrEmpresa",
+        "estadoQrParticular",
+        "estadoQrParaVista"
+      ],
+      "funciones": [
+        {
+          "nombre": "esLaSesion",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 35
+        },
+        {
+          "nombre": "columnasDueno",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: AmbitoDueno",
+          "retorno": "",
+          "linea": 41,
+          "resumen": "Las columnas de dueño de una fila de interruptores, copiadas del ámbito resuelto. Persona XOR empresa."
+        },
+        {
+          "nombre": "ambitoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "g: GestionVehiculo",
+          "retorno": "AmbitoDueno",
+          "linea": 45
+        },
+        {
+          "nombre": "crearQrVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, g: GestionVehiculo",
+          "retorno": "Promise<ResultadoQr>",
+          "linea": 55,
+          "resumen": "Crea la etiqueta del vehículo (o la REIMPRIME: anula la viva y crea otra). Devuelve el token EN CLARO, la única vez que existe fuera del QR. Quien llama lo mete en el enlace y no lo guarda."
+        },
+        {
+          "nombre": "anularQrVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, g: GestionVehiculo, qrId: unknown",
+          "retorno": "Promise<boolean>",
+          "linea": 80,
+          "resumen": "Anular la etiqueta. Idempotente y con el bien DENTRO del where. `false` = no existe, no es de este bien o ya estaba anulada."
+        },
+        {
+          "nombre": "guardarInterruptores",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string, ambito: AmbitoDueno, bienId: string | null, valores: InterruptoresPublicos,",
+          "retorno": "Promise<void>",
+          "linea": 91,
+          "resumen": "Guarda una fila de interruptores (defecto del dueño o excepción del vehículo). Sin DELETE: crear o cambiar."
+        },
+        {
+          "nombre": "guardarPublicoVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, g: GestionVehiculo, valores: InterruptoresPublicos",
+          "retorno": "Promise<boolean>",
+          "linea": 114,
+          "resumen": "La EXCEPCIÓN de este vehículo. El dueño de la fila sale del bien resuelto (`g`)."
+        },
+        {
+          "nombre": "guardarPublicoDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, ambito: AmbitoDueno, valores: InterruptoresPublicos",
+          "retorno": "Promise<boolean>",
+          "linea": 121,
+          "resumen": "El DEFECTO del dueño (persona o sociedad), con el ámbito ya resuelto por `puedeGestionarDefecto`."
+        },
+        {
+          "nombre": "estadoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: FilaBien | null, defectoFila: unknown, matricula: string | null",
+          "retorno": "EstadoQrVehiculo",
+          "linea": 147
+        },
+        {
+          "nombre": "estadoQrEmpresa",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, empresaPedida: unknown,",
+          "retorno": "Promise<",
+          "linea": 165,
+          "resumen": "Estado del QR de cada vehículo de UNA sociedad, por matrícula normalizada. La empresa se busca dentro de `accesosFlota` (papel para editar); si no está, `null` (la página no pinta nada de QR)."
+        },
+        {
+          "nombre": "estadoQrParticular",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, bienId: string | null, matriculaDePoliza: string | null,",
+          "retorno": "Promise<EstadoQrVehiculo | null>",
+          "linea": 182,
+          "resumen": "Estado del QR de la ficha de vehículo de un PARTICULAR (`bienId` de `fichaDeVehiculoDePoliza`, o ninguno)."
+        },
+        {
+          "nombre": "estadoQrParaVista",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EstadoQrVehiculo",
+          "retorno": "EstadoQrVista",
+          "linea": 200
+        }
+      ],
+      "tablas": [
+        "node"
+      ],
+      "rutaApi": null,
+      "hash": "bc12fb2d91d4"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/vehiculo-token.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El QR del VEHÍCULO (27/10/2026, F1) — LA ÚNICA LECTURA SIN IDENTIDAD. 🚨 Este fichero está en EXENTOS de `test/regression-portal-aislamiento.test.ts`, y es una decisión, no un trámite (spec `docs/superpowers/specs/2026-10-27-qr-vehiculo-flota.md` §7-6): la página `/v/<token>` es pública, se abre des",
+      "exporta": [
+        "vehiculoPorToken",
+        "sellarUsoVehiculo"
+      ],
+      "funciones": [
+        {
+          "nombre": "vehiculoPorToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "tokenCrudo: unknown",
+          "retorno": "Promise<VehiculoAbierto | null>",
+          "linea": 47,
+          "resumen": "🚨 Sin identidad, a propósito (ver la cabecera). Devuelve `null` para «no existe», «anulado» y «no es un vehículo» sin distinguirlos."
+        },
+        {
+          "nombre": "sellarUsoVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "qrId: string",
+          "retorno": "Promise<void>",
+          "linea": 89,
+          "resumen": "Sella que alguien la ha escaneado. No se deja fallar hacia arriba (mismo criterio que la hoja: que no se pueda anotar la visita no deja a nadie sin los teléfonos en el arcén). Solo sella las vivas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "961a54f0559a"
     },
     {
       "ruta": "apps/asegura-portal/lib/vehiculos-aviso-reglas.ts",
@@ -224905,7 +225520,7 @@
           "exportada": false,
           "params": "v: VehiculoFlota",
           "retorno": "0 | 1 | 2",
-          "linea": 340,
+          "linea": 342,
           "resumen": "Grupo de orden: 0 = algo pide atención ya (ITV o vencimiento en ≤30 días, o renovación sin confirmar); 1 = algo NO lo sabemos (sin ITV calculable o sin vencimiento): no se entierra al final como si es"
         },
         {
@@ -224914,7 +225529,7 @@
           "exportada": false,
           "params": "v: VehiculoFlota",
           "retorno": "number",
-          "linea": 347
+          "linea": 349
         },
         {
           "nombre": "vehiculosDeFlota",
@@ -224922,12 +225537,12 @@
           "exportada": true,
           "params": "entradas: readonly VehiculoFlotaEntrada[], hoy: Date",
           "retorno": "VehiculoFlota[]",
-          "linea": 354
+          "linea": 356
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2b811ba362ec"
+      "hash": "56fde6598b3e"
     },
     {
       "ruta": "packages/module-seguros-portal/src/hoja-qr.ts",
@@ -227742,6 +228357,181 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cf3c5f81164c"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/vehiculo-acceso.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "El QR del VEHÍCULO (27/10/2026, F1) — quién GESTIONA un vehículo: reglas puras, sin BD. Spec `docs/superpowers/specs/2026-10-27-qr-vehiculo-flota.md` §3.5. Un vehículo (`portal_bien`, `tipo='vehiculo'`) tiene UN dueño, persona XOR empresa (CHECK `portal_bien_un_dueno`): - **Particular**: `portal_bie",
+      "exporta": [
+        "resolverGestionVehiculo",
+        "empresasGestionables",
+        "ambitoDeDefecto",
+        "esUuid",
+        "instanteDelLote",
+        "candidatosDelLote"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverGestionVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { identidadId: string bien: BienParaGestion | null accesosFlota: ReadonlyMap<string, PapelFlota> }",
+          "retorno": "GestionVehiculo | null",
+          "linea": 34,
+          "resumen": "Quién gestiona este vehículo. `null` = nadie de esta sesión (404)."
+        },
+        {
+          "nombre": "empresasGestionables",
+          "kind": "function",
+          "exportada": true,
+          "params": "accesos: ReadonlyMap<string, PapelFlota>",
+          "retorno": "string[]",
+          "linea": 54,
+          "resumen": "Las empresas cuyos vehículos puede gestionar esta identidad (para acotar la consulta del bien)."
+        },
+        {
+          "nombre": "ambitoDeDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedido: unknown, identidadId: string, accesos: ReadonlyMap<string, PapelFlota>,",
+          "retorno": "AmbitoDueno | null",
+          "linea": 63,
+          "resumen": "El ámbito del DEFECTO de interruptores que se quiere cambiar (`PUT /api/vehiculos/publico-defecto`). `{ ambito: 'persona' }` = el de la propia identidad; `{ ambito: 'empresa', empresaId }` = el de una"
+        },
+        {
+          "nombre": "esUuid",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is string",
+          "linea": 80,
+          "resumen": "Forma de un uuid. Un id de la URL que no lo es no llega a la BD (Prisma lanzaría con `@db.Uuid`)."
+        },
+        {
+          "nombre": "instanteDelLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, ahora: Date = new Date()",
+          "retorno": "Date | null",
+          "linea": 88,
+          "resumen": "El inicio de un lote de etiquetas: ausente → ahora; ISO válido y no futuro (5 min de margen de reloj) → ese; si no, `null` (400)."
+        },
+        {
+          "nombre": "candidatosDelLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "vehiculos: readonly T[], qrVivoCreadoEn: (v: T) => Date | null, o: { reimprimir: boolean; inicioLote: Date },",
+          "retorno": "T[]",
+          "linea": 104,
+          "resumen": "Qué vehículos entran en una pasada de la impresión en LOTE (revisión 27/10/2026). 🚨 Una pasada NUNCA vuelve a anular lo creado desde que empezó el lote: con más de `MAX_ETIQUETAS_LOTE` vehículos y «r"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "27372c191e2e"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/vehiculo-publico.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "El QR del VEHÍCULO (27/10/2026, F1) — lo que ve quien lo escanea SIN sesión. Spec: `docs/superpowers/specs/2026-10-27-qr-vehiculo-flota.md` §3.2. Un QR pegado en la guantera de un coche (o bajo el asiento de una moto), de un PARTICULAR o de una EMPRESA. Lo escanea cualquiera: un agente, el contrario",
+      "exporta": [
+        "interruptoresEfectivos",
+        "interruptoresDelCuerpo",
+        "semaforoItv",
+        "semaforoSeguro",
+        "vistaPublicaVehiculo"
+      ],
+      "funciones": [
+        {
+          "nombre": "valorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "fila: unknown, clave: keyof InterruptoresPublicos",
+          "retorno": "boolean | null",
+          "linea": 63
+        },
+        {
+          "nombre": "interruptoresEfectivos",
+          "kind": "function",
+          "exportada": true,
+          "params": "filaVehiculo: unknown, filaDueno: unknown",
+          "retorno": "InterruptoresPublicos",
+          "linea": 75,
+          "resumen": "Los interruptores que valen para ESTE vehículo. Campo a campo: el de la fila del vehículo (excepción) si es un booleano; si no, el del defecto de su dueño (persona o empresa); si no, el del código. La"
+        },
+        {
+          "nombre": "interruptoresDelCuerpo",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "InterruptoresPublicos | null",
+          "linea": 87,
+          "resumen": "Lo que manda el formulario. Exige los TRES booleanos: un cuerpo a medias no se completa con defectos (eso sería decidir por el dueño qué se enseña). `null` = datos inválidos (400)."
+        },
+        {
+          "nombre": "semaforoValido",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Semaforo",
+          "linea": 111
+        },
+        {
+          "nombre": "semaforoItv",
+          "kind": "function",
+          "exportada": true,
+          "params": "itv: ItvVehiculo | null",
+          "retorno": "Semaforo",
+          "linea": 124,
+          "resumen": "El semáforo PÚBLICO de la ITV. 🚨 Solo hay color cuando la fecha es FIRME: la PRIMERA inspección (todavía no le ha tocado ninguna, así que no depende de ninguna anterior) calculada desde una matricula"
+        },
+        {
+          "nombre": "semaforoSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaParaSemaforo | null, hoy: Date",
+          "retorno": "Semaforo",
+          "linea": 148,
+          "resumen": "El semáforo PÚBLICO del seguro (revisión 27/10/2026). 🚨 Nunca dice «Vencido» de un vehículo: a un tercero solo le podemos afirmar lo que tenemos EN VIGOR. Póliza no encontrada o solo terminadas → `no"
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max = 120",
+          "retorno": "string | null",
+          "linea": 236
+        },
+        {
+          "nombre": "telefonosPublicos",
+          "kind": "function",
+          "exportada": false,
+          "params": "canal: CanalCompania | null",
+          "retorno": "TelefonoPublico[] | null",
+          "linea": 242
+        },
+        {
+          "nombre": "titularPublico",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: EntradaVistaPublica['dueno'] | null | undefined",
+          "retorno": "string | null",
+          "linea": 266,
+          "resumen": "La razón social, SOLO de una jurídica explícita. Un `NULL` de tipo no inventa una sociedad."
+        },
+        {
+          "nombre": "vistaPublicaVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaVistaPublica, interruptores: unknown",
+          "retorno": "VistaPublicaVehiculo",
+          "linea": 272,
+          "resumen": "La vista pública, por ALLOW-LIST de salida. Ver la cabecera."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b67e461993e5"
     },
     {
       "ruta": "packages/module-seguros-portal/src/vinculo-elegir.ts",
@@ -255409,7 +256199,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5351,
-    "funciones": 20527
+    "archivos": 5366,
+    "funciones": 20593
   }
 }
