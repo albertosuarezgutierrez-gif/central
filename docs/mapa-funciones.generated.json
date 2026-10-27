@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T09:11:22Z",
-  "sha": "f821df800d5ce6381c1ec38a86d99acf0da8dc8b",
+  "generadoEn": "2026-10-27T11:12:51Z",
+  "sha": "53d072eda9326a0415d232f4043b241f32ac627d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -142857,7 +142857,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 56
+          "linea": 60
         },
         {
           "nombre": "fmt",
@@ -142865,7 +142865,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 57
+          "linea": 61
         },
         {
           "nombre": "GET",
@@ -142873,7 +142873,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 76,
+          "linea": 80,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -142882,7 +142882,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 80
+          "linea": 84
         }
       ],
       "tablas": [
@@ -142905,7 +142905,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "ade9847b4871"
+      "hash": "76f0ed1f465e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -142920,7 +142920,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 125
+          "linea": 127
         },
         {
           "nombre": "marcarUsadas",
@@ -142928,7 +142928,7 @@
           "exportada": false,
           "params": "ids: number[]",
           "retorno": null,
-          "linea": 255,
+          "linea": 257,
           "resumen": "Marca las ventanas que han entrado en un ajuste. A partir de aquí ya NO pueden validar nada: el modelo las ha visto. Las que queden a NULL son la muestra limpia de la pasada siguiente."
         },
         {
@@ -142937,7 +142937,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 265
+          "linea": 267
         },
         {
           "nombre": "centinelaHuesped",
@@ -142945,7 +142945,7 @@
           "exportada": false,
           "params": "pisos: MedicionCanal[]",
           "retorno": "Promise<",
-          "linea": 313,
+          "linea": 315,
           "resumen": "¿Qué ve el HUÉSPED en las fechas ya tarifadas? El motor razona en base y con una cuota fija eso deja de describir el precio real (ver `pricing-precio-huesped.ts`). Se cruza la base viva con la mediana"
         },
         {
@@ -142954,7 +142954,7 @@
           "exportada": false,
           "params": "v: VeredictoHuesped | undefined",
           "retorno": "string",
-          "linea": 404,
+          "linea": 459,
           "resumen": "Cómo se rotula una noche en el aviso. Los tres estados de `hayEvento`, sin colapsar ninguno."
         },
         {
@@ -142963,7 +142963,7 @@
           "exportada": false,
           "params": "cambios: CambioRecargo[]",
           "retorno": null,
-          "linea": 410
+          "linea": 465
         },
         {
           "nombre": "escribir",
@@ -142971,7 +142971,7 @@
           "exportada": false,
           "params": "cambios: Cambio[]",
           "retorno": null,
-          "linea": 418
+          "linea": 473
         },
         {
           "nombre": "lineaCambio",
@@ -142979,7 +142979,7 @@
           "exportada": false,
           "params": "c: Cambio",
           "retorno": "string",
-          "linea": 428
+          "linea": 483
         },
         {
           "nombre": "GET",
@@ -142987,13 +142987,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 435
+          "linea": 490
         }
       ],
       "tablas": [
         "base",
         "comps",
+        "ev_noches",
         "incomes",
+        "lateral",
         "market_rates",
         "mkt",
         "next",
@@ -143001,10 +143003,11 @@
         "pricing_eventos_auto",
         "pricing_piso_zona",
         "pricing_settings",
-        "rate_snapshots"
+        "rate_snapshots",
+        "ventas"
       ],
       "rutaApi": "/api/sivra/pricing/canal",
-      "hash": "b14d7f75ab42"
+      "hash": "90df3322e4c7"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -186807,7 +186810,7 @@
           "exportada": true,
           "params": "fallos: LecturaCaida[]",
           "retorno": "string | null",
-          "linea": 36,
+          "linea": 38,
           "resumen": "Resumen corto para la respuesta HTTP y el parte del latido. `null` si no cayó ninguna. Va nombre a nombre porque el vigía de las 07:45 decide con esto a qué log ir."
         },
         {
@@ -186816,30 +186819,50 @@
           "exportada": true,
           "params": "fallos: LecturaCaida[]",
           "retorno": "string | null",
-          "linea": 49,
+          "linea": 51,
           "resumen": "Aviso de Telegram cuando alguna lectura auxiliar falla. `null` si ninguna. Deja claro lo que separa esto de un `rail_ciego`: la pasada SÍ tarificó, con fallback — los precios están escritos y son plau"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cebbef821a17"
+      "hash": "3651af53dc35"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-precio-huesped.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-precio-huesped.ts — lo que ve el HUÉSPED, que no es lo que decide el motor. POR QUÉ (19/08/2026). El motor razona, decide y se autolimita en precio BASE: el ancla de mercado, el suelo `min_price`, el raíl ±%/día, el prior estacional… todo en base. Pero el huésped no paga la base: p",
       "exporta": [
+        "fechasEventoParaVentas",
+        "vendeAlPrecio",
         "precioHuesped",
         "baseDondeLaCuotaMandaya"
       ],
       "funciones": [
+        {
+          "nombre": "fechasEventoParaVentas",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "string[]",
+          "linea": 110,
+          "resumen": "Noches de EVENTO (Feria, Semana Santa, congresos…) para EXCLUIR de las ventas que deciden `vendeAlPrecio`: la mediana de un finde normal no puede contaminarse con 1.010€ de una noche de Feria (medido:"
+        },
+        {
+          "nombre": "vendeAlPrecio",
+          "kind": "function",
+          "exportada": true,
+          "params": "ventas: { n: number; med: number | null } | null | undefined, guest: number,",
+          "retorno": "boolean | null",
+          "linea": 118,
+          "resumen": "true/false si hay muestra suficiente; null si no se sabe (sin histórico leído o muestra corta)."
+        },
         {
           "nombre": "precioHuesped",
           "kind": "function",
           "exportada": true,
           "params": "fechas: FechaHuesped[], params: ParametrosCanal, opts: { topeCaro?: number; sueloBarato?: number; maxPeores?: number /** tramo de última hora: recargo de la pendiente y el día desde el que se cuenta la antelación */ ultimaHora?: { recargo: ",
           "retorno": "ResumenHuesped",
-          "linea": 143,
+          "linea": 207,
           "resumen": "Juzga el precio que ve el huésped fecha a fecha, contra el mercado de ESA fecha. `peores` solo contiene fechas juzgables —una fecha sin mercado nunca puede encabezar un aviso de «estás caro», porque n"
         },
         {
@@ -186848,7 +186871,7 @@
           "exportada": false,
           "params": "v: VeredictoHuesped",
           "retorno": "number",
-          "linea": 205,
+          "linea": 275,
           "resumen": "Orden del aviso: lo accionable primero. Una noche de evento cara puede estar PERFECTAMENTE puesta (el mercado entero sube y le seguimos), así que no puede desplazar del titular a un martes normal en e"
         },
         {
@@ -186857,13 +186880,13 @@
           "exportada": true,
           "params": "params: ParametrosCanal, pesoMaximo = 0.5,",
           "retorno": "number | null",
-          "linea": 218,
+          "linea": 288,
           "resumen": "Precio BASE por debajo del cual bajar ya no sirve de nada porque el precio del huésped apenas se mueve: la cuota fija ya es la mayor parte de lo que paga. Es el número que le falta al motor para saber"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "da0a91531a8c"
+      "hash": "ea8007192d0a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-premio-mercado.ts",
@@ -186959,6 +186982,202 @@
       "hash": "a09ba3972323"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-ritmo-finde-lectura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lectura de BD de la prima vie/sáb por ritmo propio (ver `pricing-ritmo-finde.ts`). UNA consulta para los dos que la usan: `pricing/apply` (la aplica) y `pricing/canal` (no acusa de «caro» un finde subido por la prima). Si cada ruta tuviera su SQL, el centinela juzgaría con otra prima. Si cualquiera ",
+      "exporta": [
+        "leerRitmoFinde"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerRitmoFinde",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string",
+          "retorno": "Promise<Map<string, RitmoFinde>>",
+          "linea": 13,
+          "resumen": "`hoy` = 'YYYY-MM-DD' inyectado (el mismo «hoy» del motor)."
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "pricing_settings",
+        "reservas_canceladas"
+      ],
+      "rutaApi": null,
+      "hash": "be3ad91acfc3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-ritmo-finde.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Prima de FIN DE SEMANA por RITMO PROPIO de reservas (27/10/2026). Módulo PURO (sin BD ni `@/`). 🚨 El problema que tapa. El motor solo sabe de demanda por la ocupación MENSUAL (`pricing-demanda.ts`), y el mes mezcla martes con sábados. Medido en House Sevillana ese día: viernes/sábado al 78 % en 12 ",
+      "exporta": [
+        "primaRitmoFinde",
+        "factorRitmoSemana",
+        "factorSemanaPiso",
+        "factorSemanaFecha",
+        "urgenciaCombinada",
+        "ritmoFindePorPiso",
+        "pisosConPrimaFinde",
+        "primaPiso",
+        "primaFindeFecha",
+        "primaFindeCentinela"
+      ],
+      "funciones": [
+        {
+          "nombre": "aDia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 102
+        },
+        {
+          "nombre": "aIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 103
+        },
+        {
+          "nombre": "clamp",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number, lo: number, hi: number",
+          "retorno": null,
+          "linea": 104
+        },
+        {
+          "nombre": "curvaNoches",
+          "kind": "function",
+          "exportada": false,
+          "params": "reservas: ReservaRitmo[], canceladas: CanceladaRitmo[], h: number, desde: number, hasta: number, esTipo: (iso: string) => boolean,",
+          "retorno": "CurvaNoches",
+          "linea": 121
+        },
+        {
+          "nombre": "extraCanceladas",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CurvaNoches, k: number",
+          "retorno": "number",
+          "linea": 178,
+          "resumen": "Noches pasadas que a distancia k solo estaban en libro por una cancelada."
+        },
+        {
+          "nombre": "ritmoTramo",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CurvaNoches, h: number, dias: number, esTipo: (iso: string) => boolean",
+          "retorno": null,
+          "linea": 192,
+          "resumen": "Noches del tipo en (h, h+dias] vendidas frente a esperadas a estas alturas: cada noche «debería» estar vendida con probabilidad occ × P(antelación ≥ distancia), más las que a esa distancia estaban en "
+        },
+        {
+          "nombre": "primaRitmoFinde",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaRitmo[], hoy: string, o: RitmoFindeOpts = {}, canceladas: CanceladaRitmo[] = [],",
+          "retorno": "RitmoFinde",
+          "linea": 208,
+          "resumen": "Prima vie/sáb de un piso. `hoy` = 'YYYY-MM-DD' INYECTADO (nunca el reloj de aquí dentro). `reservas` = SOLO las de ese piso, ya filtradas por `historico_desde` y sin bloqueos a 0 €."
+        },
+        {
+          "nombre": "pctl",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[], p: number",
+          "retorno": null,
+          "linea": 305
+        },
+        {
+          "nombre": "factorRitmoSemana",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaRitmo[], hoy: string, o: RitmoSemanaOpts = {}, canceladas: CanceladaRitmo[] = [],",
+          "retorno": "RitmoSemana",
+          "linea": 311,
+          "resumen": "Factor dom-jue de un piso. Mismas entradas que `primaRitmoFinde` (hoy INYECTADO)."
+        },
+        {
+          "nombre": "factorSemanaPiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RitmoFinde | null | undefined, pid: string, habilitados: Set<string>",
+          "retorno": "number | null",
+          "linea": 349,
+          "resumen": "Factor dom-jue que SE APLICA al piso. Mismo gate que la prima: piso no habilitado → 1 · habilitado sin lectura/muestra → null (sin efecto) · habilitado y medido → el factor."
+        },
+        {
+          "nombre": "factorSemanaFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { fecha: string; diasVista: number; factor: number | null; ventanaDias: number | null; factorEvento: number }",
+          "retorno": "number",
+          "linea": 358,
+          "resumen": "Factor que aplica a UNA fecha: solo noches dom-jue, dentro de la ventana (0 ≤ díasVista ≤ ventana) y sin evento (ni víspera: `factorEvento > 1` ya protege). Fuera de eso, 1. Nunca por debajo del mínim"
+        },
+        {
+          "nombre": "urgenciaCombinada",
+          "kind": "function",
+          "exportada": true,
+          "params": "lastminute: number, semana: number",
+          "retorno": "number",
+          "linea": 372,
+          "resumen": "Urgencia combinada: la MÁS FUERTE de la urgencia (`factorLastMinute`) y el factor dom-jue, nunca su producto (las dos bajan la misma noche por la misma razón: se acerca sin venderse)."
+        },
+        {
+          "nombre": "ritmoFindePorPiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: { pid: string; ci: string; nights: number; rv: string | null }[], canceladas: { pid: string; ci: string; nights: number; rv: string | null; vista: string | null }[], hoy: string,",
+          "retorno": "Map<string, RitmoFinde>",
+          "linea": 377,
+          "resumen": "Filas de BD (las de `leerRitmoFinde`) → prima por piso. Puro: lo comparten `apply` y `canal`."
+        },
+        {
+          "nombre": "pisosConPrimaFinde",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: string | null | undefined",
+          "retorno": "Set<string>",
+          "linea": 401,
+          "resumen": "`SIVRA_PRIMA_FINDE_PISOS` → conjunto de property_id. Vacía/ausente = NINGUNO (sin efecto)."
+        },
+        {
+          "nombre": "primaPiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RitmoFinde | null | undefined, pid: string, habilitados: Set<string>",
+          "retorno": "number | null",
+          "linea": 409,
+          "resumen": "Prima que SE APLICA al piso. Tres estados: piso no habilitado → 1 (se sabe: no se aplica nada) · habilitado sin lectura/muestra → null (no se sabe, sin efecto) · habilitado y medida → la prima."
+        },
+        {
+          "nombre": "primaFindeFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { fecha: string; prima: number | null; factorEvento: number }",
+          "retorno": "number",
+          "linea": 415,
+          "resumen": "Prima que aplica a UNA fecha: solo noches vie/sáb sin evento. Fuera de eso, 1 (sin efecto)."
+        },
+        {
+          "nombre": "primaFindeCentinela",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { fecha: string; pid: string; ritmo: Map<string, RitmoFinde> | null habilitados: Set<string>; hayEvento: boolean | null }",
+          "retorno": "number | null",
+          "linea": 428,
+          "resumen": "Prima que el motor APLICÓ a una noche, vista desde el centinela de `pricing/canal`, que solo sabe del evento por `pricing_eventos_auto` (`hayEvento`). Tres estados: `null` = no se sabe (lectura del ri"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d8c5836226cd"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-salud.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-salud.ts — veredicto PURO de salud del motor de precios de SIVRA. ─── POR QUÉ EXISTE (auditoría 27/08/2026) ────────────────────────────────────────────── La auditoría diaria vigilaba que los crons de pricing CORRIERAN (heartbeat `agente_latidos` + filas frescas en `pricing_applied",
@@ -187031,7 +187250,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "87fcb3bb90d1"
+      "hash": "c86e9ed0cdae"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-techo-mercado.ts",
@@ -187048,7 +187267,7 @@
           "exportada": true,
           "params": "i: TechoMercadoInput, o: TechoMercadoOpts = {}",
           "retorno": "TechoMercado",
-          "linea": 80,
+          "linea": 86,
           "resumen": "Techo de precio BASE que el mercado MEDIDO justifica para un día. `techo: 0` significa «no hay con qué acotar» (sin corpus fiable, o fecha de evento sin medición propia) — nunca «techo cero»."
         },
         {
@@ -187057,30 +187276,40 @@
           "exportada": true,
           "params": "p: { target: number techo: number /** precio vivo de la fecha; null = fecha sin precio (sin congelación que liberar) */ old: number | null /** suelo del raíl del día (`ancla × (1 − max_change_pct)`); null = sin raíl (fecha nueva) */ railLo:",
           "retorno": "AcoteTecho",
-          "linea": 135,
+          "linea": 142,
           "resumen": "Aplica el techo al objetivo del día. El descenso respeta los suelos de siempre: nunca por debajo del suelo del raíl (±%/día sobre el ancla — un ×4 se deshace en varias pasadas, no de golpe) ni del `mi"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "308f62d891a8"
+      "hash": "9c022f7106c6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/prior-estacional.ts",
       "ambito": "apps/plataforma",
       "resumen": "Prior estacional del pricing: qué dice MI propio histórico (`incomes`) sobre cada mes. Módulo PURO (sin BD ni `@/`), testeable con `node --test`. Lo consume `pricing/apply`. 🚨 LA ASIMETRÍA ES EL MÓDULO (06/08/2026). Subir y bajar NO se deciden con el mismo índice: · Para SUBIR vale el índice comple",
       "exporta": [
+        "factorRampa",
         "indicesPrior",
         "aplicarPrior"
       ],
       "funciones": [
+        {
+          "nombre": "factorRampa",
+          "kind": "function",
+          "exportada": true,
+          "params": "alza: number",
+          "retorno": "number",
+          "linea": 59,
+          "resumen": "Fracción del suelo que aplica con bucket del mes: 0 → 1 lineal entre RAMPA_DESDE y RAMPA_HASTA."
+        },
         {
           "nombre": "clamp",
           "kind": "arrow",
           "exportada": false,
           "params": "v: number, min: number, max: number",
           "retorno": null,
-          "linea": 47
+          "linea": 63
         },
         {
           "nombre": "indicesPrior",
@@ -187088,7 +187317,7 @@
           "exportada": true,
           "params": "rows: MesHistorico[]",
           "retorno": "IndicePrior[]",
-          "linea": 53,
+          "linea": 69,
           "resumen": "Índices por mes (array de 12, posición 0 = enero) a partir del histórico de un piso. Un mes sin muestra suficiente queda en `{ alza: 1, baja: 1 }`: ni sube ni baja."
         },
         {
@@ -187097,13 +187326,13 @@
           "exportada": true,
           "params": "params: { target: number indice: IndicePrior anclaGlobal: number floor: number hayBucketMes: boolean }",
           "retorno": "number",
-          "linea": 86,
-          "resumen": "Objetivo corregido por el prior. Devuelve el `target` nuevo (o el mismo si no toca). - Al alza actúa como SUELO, igual que antes: sin bucket del mes sustituye al global plano; con bucket solo si el ín"
+          "linea": 102,
+          "resumen": "Objetivo corregido por el prior. Devuelve el `target` nuevo (o el mismo si no toca). - Al alza actúa como SUELO, igual que antes: sin bucket del mes sustituye al global plano; con bucket entra en RAMP"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cb436c13ce68"
+      "hash": "f89fc52b71a8"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/rentabilidad-anual.ts",
@@ -253039,7 +253268,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5300,
-    "funciones": 20342
+    "archivos": 5302,
+    "funciones": 20363
   }
 }
