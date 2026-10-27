@@ -63,6 +63,14 @@ export function pendienteInicio(e: {
   polizas: PolizaPendiente[] | null
   /** Las aportadas. `null` = no se pudieron leer. */
   declaradas?: DeclaradaPendiente[] | null
+  /**
+   * Pólizas con una baja EN MARCHA (`polizasConBajaEnMarcha(firmas, { conConfirmadas: true })`, la misma regla que la lista
+   * «Tus vencimientos» de la bóveda): una póliza que se da de baja no «renueva», así que no sale en Vencimientos.
+   * `null`/ausente = no se pudo saber: no se excluye nada (el servidor rechazaría igualmente pedir cambios sobre ella).
+   */
+  conBaja?: ReadonlySet<string> | null
+  /** «Ya lo pediste»: peticiones de mejorar el precio abiertas (`peticionesPrecio`). `null`/ausente = no se sabe: no se dice nada. */
+  peticiones?: readonly { polizaId: string; pedidoEl: string }[] | null
   hoy: string
 }): PendienteInicio {
   if (e.polizas === null) {
@@ -72,17 +80,21 @@ export function pendienteInicio(e: {
   const recibos: ItemPendiente[] = []
   const siniestros: ItemPendiente[] = []
   const sinComprobar = new Set<FuentePendiente>()
+  const pedidas = new Map(e.peticiones ? e.peticiones.map((x) => [x.polizaId, x.pedidoEl] as const) : [])
 
   for (const p of e.polizas) {
     const href = `/boveda/poliza/${p.id}`
 
     // Vencimientos: en vigor, con fecha, de hoy a la ventana de 60 días. Sin fecha no se inventa nada.
-    if (p.enVigor && p.vence !== null) {
+    if (p.enVigor && p.vence !== null && !(e.conBaja?.has(p.id) ?? false)) {
       const dias = diasHastaVencimientoPortal(p.vence, e.hoy)
       if (dias !== null && enVentanaVencimientos(dias)) {
+        // «Ya lo pediste» (solo en las SUYAS: la petición es de su tomador).
+        const pedido = p.propia ? pedidas.get(p.id) : undefined
+        const detalle = `Vence ${cuando(dias, p.vence)}${pedido ? ` · Nos pediste que lo miremos el ${fechaEs(pedido)}` : ''}`
         vencimientos.push({
           dias,
-          item: { clave: `vence:${p.id}`, titulo: p.etiqueta, detalle: `Vence ${cuando(dias, p.vence)}`, href, urgente: false },
+          item: { clave: `vence:${p.id}`, titulo: p.etiqueta, detalle, href, urgente: false },
         })
       }
     }

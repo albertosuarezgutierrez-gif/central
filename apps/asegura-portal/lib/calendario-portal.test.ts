@@ -1,10 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import type { Aviso } from '@central/module-seguros-portal'
+import type { Aviso, VehiculoFlota } from '@central/module-seguros-portal'
 
 import {
   avisosConFecha,
+  fechasDeFlota,
   fechasDePatrimonio,
   fechasDeRecordatorios,
   recibosPendientes,
@@ -12,6 +13,7 @@ import {
   type PolizaCalendario,
   type TitularParaCalendario,
 } from './calendario-portal.ts'
+import type { SociedadFlotaInicio } from './flota-inicio.ts'
 
 const d = (iso: string) => new Date(`${iso}T00:00:00Z`)
 const pol = (id: string, extra: Partial<PolizaCalendario> = {}): PolizaCalendario => ({
@@ -158,4 +160,27 @@ test('seguros: «Revisar mi seguro» solo en una póliza PROPIA, en vigor, con f
   assert.equal(accion(t([pol('a', { fechaVencimiento: null })])), undefined, 'sin fecha: la página no la atendería')
   assert.equal(accion(t([pol('a', { sustituidaAt: d('2026-01-01') })])), undefined)
   assert.equal(accion(t([pol('a', { vigencia: 'no_vigente', renovacionSinConfirmar: true })])), undefined, 'renovación sin confirmar')
+})
+
+const vehFlota = (id: string, itv: VehiculoFlota['itv']): VehiculoFlota => ({
+  polizaId: id, etiqueta: `Matrícula ${id}`, matricula: id, clave: id, compania: 'Mapfre', ramo: 'auto',
+  vencimiento: { fecha: '2027-01-01', diasHasta: 100, estado: 'vigente' }, itv, numeroPoliza: null, matriculacionDeclarada: null,
+})
+const itvCalculada = { estado: 'calculada', fecha: '2026-12-15', fiabilidad: 'primera', fuente: 'compania', diasHasta: 49, pronto: false, periodicidadMeses: 12, calculadaComoTurismo: true } as VehiculoFlota['itv']
+
+test('calendario: la ITV calculada de la flota es una fecha; la que no sabemos NO es una fecha', () => {
+  const sociedades: SociedadFlotaInicio[] = [
+    { id: 's1', nombre: 'Transportes SL', recortada: false, vehiculos: [vehFlota('1111ABC', itvCalculada), vehFlota('2222DEF', { estado: 'desconocida', motivo: 'sin_matriculacion' })] },
+  ]
+  const r = fechasDeFlota(sociedades)!
+  assert.equal(r.length, 1)
+  assert.equal(r[0]!.fecha, '2026-12-15')
+  assert.equal(r[0]!.href, '/flota?empresa=s1')
+  assert.match(r[0]!.titulo, /Primera ITV · Matrícula 1111ABC/)
+  assert.match(r[0]!.detalle ?? '', /fecha calculada/)
+})
+
+test('calendario: una sociedad cuya flota no se pudo leer da null (no se dice «sin ITV»); sin sociedades es [] (se miró)', () => {
+  assert.equal(fechasDeFlota([{ id: 's1', nombre: 'A', recortada: false, vehiculos: null }]), null)
+  assert.deepEqual(fechasDeFlota([]), [])
 })

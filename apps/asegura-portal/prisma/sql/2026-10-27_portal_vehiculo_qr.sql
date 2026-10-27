@@ -1,4 +1,4 @@
--- ⛔ SIN APLICAR. 🚨 Se aplica ANTES (o en el MISMO paso) que el despliegue de asegura-portal que la usa: el
+-- ✅ APLICADA en producción el 27/10/2026 (apply_migration `portal_vehiculo_qr`, verificaciones previas a 0 y GRANTs comprobados). No reejecutar sin motivo (es idempotente).
 --    `schema.prisma` del portal ya declara `PortalVehiculoQr` y `PortalVehiculoPublico`, y sin esta DDL cualquier
 --    consulta a esos modelos cae con 42P01 / 42501 (el `/v/<token>` y las rutas `/api/vehiculos/*`).
 --

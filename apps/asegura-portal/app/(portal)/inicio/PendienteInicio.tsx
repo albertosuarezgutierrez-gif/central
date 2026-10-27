@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
 import type { Avisos } from '@/lib/avisos'
+import type { PendientesDeTi } from '@/lib/pendiente-de-ti'
 import type { FuentePendiente, ItemPendiente, PendienteInicio as Pendiente } from '@/lib/inicio-pendientes'
 
 import { TarjetaPortal } from '../../TarjetaPortal'
@@ -63,7 +64,18 @@ function Lista({ items }: { items: ItemPendiente[] }) {
  * Sin nada pendiente y todo leído: estado vacío amable con un acceso a Seguros. Mientras los avisos cargan NO se
  * enseña el vacío (diría «todo al día» sobre algo que no se ha mirado); si no se pueden leer, se dice.
  */
-export function PendienteInicio({ pendiente, huecos, patrimonioPendiente = false }: { pendiente: Pendiente; huecos: ReactNode; patrimonioPendiente?: boolean }) {
+export function PendienteInicio({
+  pendiente,
+  huecos,
+  tarjetasPendientes = false,
+  deTi = null,
+}: {
+  pendiente: Pendiente
+  huecos: ReactNode
+  tarjetasPendientes?: boolean
+  /** Lo que antes enseñaba «Pendiente de ti» en la bóveda (firmas, presupuestos, contacto, patrimonio). `null` = no se pudo leer. */
+  deTi?: PendientesDeTi | null
+}) {
   const [avisos, setAvisos] = useState<Avisos | 'error' | null>(null)
 
   const cargar = useCallback(async () => {
@@ -83,7 +95,7 @@ export function PendienteInicio({ pendiente, huecos, patrimonioPendiente = false
   const avisosIlegibles = avisos === 'error' || (avisos !== null && avisos.fuentesIlegibles.length > 0)
   const cargando = avisos === null
   const hayAlgo =
-    pendiente.vencimientos.length + pendiente.recibos.length + pendiente.siniestros.length + avisosVisibles.length > 0 || huecos !== null || patrimonioPendiente
+    pendiente.vencimientos.length + pendiente.recibos.length + pendiente.siniestros.length + avisosVisibles.length > 0 || huecos !== null || tarjetasPendientes || deTi === null || deTi.items.length > 0 || deTi.sinComprobar.length > 0
   const sinComprobar = pendiente.sinComprobar
 
   return (
@@ -107,6 +119,33 @@ export function PendienteInicio({ pendiente, huecos, patrimonioPendiente = false
       )}
 
       <ul className="rejilla-portal">
+        {/* Antes en la bóveda («Pendiente de ti»): ahora lo pendiente vive SOLO aquí. */}
+        {deTi === null && (
+          <li>
+            <TarjetaPortal id="inicio-de-ti" antetitulo="Para ti" titulo="Pendiente de ti" tono="aviso">
+              <p role="status" style={{ margin: 0 }}>
+                Ahora no hemos podido comprobar lo que necesitamos de ti (firmas, presupuestos, tus datos de contacto). Puede haber algo pendiente.
+              </p>
+            </TarjetaPortal>
+          </li>
+        )}
+        {deTi !== null && (deTi.items.length > 0 || deTi.sinComprobar.length > 0) && (
+          <li>
+            <TarjetaPortal
+              id="inicio-de-ti"
+              antetitulo="Para ti"
+              titulo="Pendiente de ti"
+              tono={deTi.items.some((i) => i.urgente) ? 'peligro' : deTi.items.length > 0 ? 'aviso' : undefined}
+            >
+              {deTi.items.length > 0 && <Lista items={deTi.items} />}
+              {deTi.sinComprobar.length > 0 && (
+                <p className="suave" role="status" style={{ fontSize: 13, margin: deTi.items.length > 0 ? '8px 0 0' : 0 }}>
+                  No hemos podido comprobar {deTi.sinComprobar.join(' ni ')}. No significa que no haya nada: vuelve a mirar en un rato.
+                </p>
+              )}
+            </TarjetaPortal>
+          </li>
+        )}
         {pendiente.recibos.length > 0 && (
           <li>
             <TarjetaPortal
@@ -135,7 +174,12 @@ export function PendienteInicio({ pendiente, huecos, patrimonioPendiente = false
         )}
         {pendiente.vencimientos.length > 0 && (
           <li>
-            <TarjetaPortal id="inicio-vencimientos" antetitulo="Próximos 60 días" titulo="Vencimientos">
+            <TarjetaPortal
+              id="inicio-vencimientos"
+              antetitulo="Próximos 60 días"
+              titulo="Vencimientos"
+              accion={<Link className="boton secundario" href="/boveda">Ver mis seguros</Link>}
+            >
               <Lista items={pendiente.vencimientos} />
             </TarjetaPortal>
           </li>

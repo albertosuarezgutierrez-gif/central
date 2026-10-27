@@ -23,9 +23,10 @@ export const dynamic = 'force-dynamic'
  * `flotaDeEmpresa()` lo busca dentro de los accesos ya resueltos por la cookie, y
  * si no está, 404 (nunca 403: no confirma que exista).
  *
- * No está en la barra de secciones a propósito: la ven pocas identidades y la
- * barra es la misma para todas. Se llega desde el aviso de la bóveda
- * (`EnlaceFlota`) y desde la tarjeta de la sociedad.
+ * Vive dentro de «Herramientas» (menú de cinco, 26/10/2026): se llega desde su tarjeta «Flota de vehículos» (que salta
+ * directo a la sociedad si solo hay una, `lib/flota-destino.ts`), desde la tarjeta «Mi flota» de Inicio (lo pendiente) y
+ * desde el atajo de «Seguros» (`EnlaceFlota`). El trabajo diario —ITV, fechas de matriculación, jefes— está en la ficha de
+ * cada sociedad, y desde cada vehículo el dueño llega a la ficha de su póliza.
  */
 export default async function FlotaPage({
   searchParams,

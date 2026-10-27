@@ -1,4 +1,4 @@
-import { formularioBotHogar, datosViviendaParaBot, eleccionesInicialesHogar, type RiesgoParaBotsHogar } from '@central/module-tarificacion'
+import { formularioBotHogar, datosViviendaParaBot, eleccionesInicialesHogar, type CatalogosHogarLeidos, type RiesgoParaBotsHogar } from '@central/module-tarificacion'
 import { aplicarCompaniaActual } from './tarificador-compania-actual.ts'
 import { necesitaVehiculoEncadenado, riesgoConVehiculo, tieneVehiculo, vehiculoDeOrigenes, type FilaOrigen } from './tarificador-espera-vehiculo.ts'
 
@@ -58,8 +58,10 @@ export type ReconstruccionRiesgo =
  * `eleccionesInicialesHogar` (solo lo que casa exactamente) → `formularioBotHogar`. Todo en `@central/module-tarificacion`: el
  * mismo código que el botón. Lo que falta sale como etiquetas de campo (422), nunca un valor supuesto. El tomador lo pone el encolado.
  */
-export function riesgoHogarDeRiesgoOportunidad(r: RiesgoParaBotsHogar, ahora = new Date()): ReconstruccionRiesgo {
-  const f = formularioBotHogar({ ...datosViviendaParaBot(r), ...eleccionesInicialesHogar(r) }, ahora)
+export function riesgoHogarDeRiesgoOportunidad(r: RiesgoParaBotsHogar, ahora = new Date(), catalogos: CatalogosHogarLeidos = {}): ReconstruccionRiesgo {
+  // `catalogos` = los mismos catálogos vivos que lee la pantalla (`useCatalogosHogar`): lo guardado es el ID de Codeoscopic
+  // (p. ej. `TerracedHouse`) y solo su NOMBRE en el catálogo lo traduce a la clave del bot. Sin ellos, solo valen los ids atestiguados.
+  const f = formularioBotHogar({ ...datosViviendaParaBot(r), ...eleccionesInicialesHogar(r, catalogos) }, ahora)
   return f.ok ? { riesgo: f.riesgo, bloqueos: [], repreguntar: [] } : { riesgo: null, motivo: 'faltan_datos', faltan: f.faltan }
 }
 

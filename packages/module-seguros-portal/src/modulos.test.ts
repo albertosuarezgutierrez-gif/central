@@ -161,3 +161,17 @@ test('texto «activo sin acceso» (27/10/2026): dice la regla real (email de la 
   assert.match(TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO, /email que consta en tu ficha/)
   assert.match(TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO, /cambiado de email, avísanos/)
 })
+
+test('cada módulo trae SU antetítulo de tarjeta (la pantalla no lo decide con un if por id)', () => {
+  for (const id of MODULOS_PORTAL) {
+    const a = CATALOGO_MODULOS[id].antetitulo
+    assert.ok(typeof a === 'string' && a.trim().length > 0, `${id} sin antetítulo`)
+  }
+  assert.deepEqual(
+    MODULOS_PORTAL.map((id) => CATALOGO_MODULOS[id].antetitulo),
+    ['Empresa', 'Para tu plantilla', 'Inmuebles'],
+  )
+  // Y viaja en la tarjeta que ve la pantalla.
+  const t = tarjetasModulos({ accesoFlota: true, accesoPatrimonio: false, filas: [] })
+  assert.equal(t.find((x) => x.id === 'alquileres')?.antetitulo, 'Inmuebles')
+})

@@ -14,6 +14,7 @@ const ORIGEN: Record<OrigenCalendario, string> = {
   seguro: 'Seguro',
   recibo: 'Recibo',
   patrimonio: 'Patrimonio',
+  flota: 'Flota',
   recordatorio: 'Recordatorio',
   aviso: 'Aviso',
 }

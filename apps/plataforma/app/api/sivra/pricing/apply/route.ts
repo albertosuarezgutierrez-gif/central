@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
+import { eventFactor, seasonalFloorFactor, FLOOR_SEASONAL, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
 import { combinarEventosDeFecha, normalizarEstado, type EventoBruto } from "@/lib/sivra/eventos-estado"
 import { decidirEventoACiegas } from "@/lib/sivra/pricing-centinelas"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
@@ -14,7 +14,7 @@ import {
   primaFindeFecha, pisosConPrimaFinde, primaPiso, factorSemanaPiso, factorSemanaFecha, urgenciaCombinada, type RitmoFinde,
 } from "@/lib/sivra/pricing-ritmo-finde"
 import { leerRitmoFinde } from "@/lib/sivra/pricing-ritmo-finde-lectura"
-import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
+import { techoMercado, acotarPorTecho, sueloFrenteTecho } from "@/lib/sivra/pricing-techo-mercado"
 import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento, objetivoSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo, markupEnFecha } from "@/lib/sivra/pricing-canal"
@@ -1236,6 +1236,11 @@ export async function POST(req: NextRequest) {
         target = clamp(target, lo, hi)
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
+      // Suelos estacionales del día que viajan a los techos de abajo: sin ellos, `acotarPorTecho`
+      // solo volvía a subir hasta min_price y perforaba el estacional (27/10/2026, House 24/11 y
+      // 08/12 a 300€ con suelo 330/360). Frente al techo cuenta el de la TEMPORADA sin evento.
+      let sueloEstDia: number | null = null
+      let sueloTempDia: number | null = null
       // Suelo estacional: impide que una fecha de temporada alta (primavera/Navidad/eventos) se
       // deslice al suelo base cuando el mercado de ese mes caduca. Inerte si seasonal_floor_k=0.
       if (Number(r.seasonal_floor_k) > 0 && r.min_price != null) {
@@ -1254,7 +1259,12 @@ export async function POST(req: NextRequest) {
         let sf = Math.round(r.min_price * factor)
         if (r.max_price != null) sf = Math.min(sf, r.max_price)
         target = Math.max(target, sf)
+        sueloEstDia = sf
+        const fTemp = 1 + ((FLOOR_SEASONAL[Number(date.slice(5, 7)) - 1] ?? 1) - 1) * Number(r.seasonal_floor_k)
+        sueloTempDia = Math.round(r.min_price * Math.max(1, fTemp))
+        if (r.max_price != null) sueloTempDia = Math.min(sueloTempDia, r.max_price)
       }
+      const sueloTecho = sueloFrenteTecho({ minPrice: r.min_price, sueloEstacional: sueloEstDia, sueloTemporada: sueloTempDia })
       // Suelo de FIN DE SEMANA sin mercado medido de la fecha (ver pricing-suelo-finde.ts): sin él,
       // viernes y sábado caían al mismo min_price que un martes (House 29-30/01/2027 vendido a 300€).
       {
@@ -1285,7 +1295,7 @@ export async function POST(req: NextRequest) {
         factorEvento: evFactor, markup: markupD, fijoNoche, dqFactor: dqDate, primaFinde: primaD,
       })
       const acote = acotarPorTecho({
-        target, techo: tMkt.techo, old, railLo, minPrice: r.min_price,
+        target, techo: tMkt.techo, old, railLo, minPrice: sueloTecho,
       })
       target = acote.target
       // Los suelos del acote (raíl del día, min_price) no pueden re-subir por encima del techo
@@ -1335,7 +1345,7 @@ export async function POST(req: NextRequest) {
           adrSinTecho.push({ fecha: date, property_id: r.property_id, motivo: tAdr.motivo })
         }
         if (tAdr.motivo === 'aplicado' && tAdr.techo != null) {
-          const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: r.min_price })
+          const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: sueloTecho })
           if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBaseD(aq!.adr)) })
           target = acA.target
           // En una fecha de EVENTO sin mercado medido, este techo es el único juicio que hay: si el
