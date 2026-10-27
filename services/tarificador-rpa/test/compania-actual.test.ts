@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { aliasDeOpcion, casarCompaniaActual, mensajeCompaniaAmbigua, normalizarCompania } from '../src/compania-actual.ts'
 import { ErrorTarificador } from '../src/errores.ts'
-import { MENSAJE_FALTA_COMPANIA_ACTUAL, mensajeCompaniaNoCasa, exigirCompaniaActualTurismos } from '../src/adapters/allianz/auto.ts'
+import { MENSAJE_COMPANIA_ACTUAL_ES_ALLIANZ, MENSAJE_FALTA_COMPANIA_ACTUAL, mensajeCompaniaNoCasa, exigirCompaniaActualTurismos } from '../src/adapters/allianz/auto.ts'
 import type { FormularioAuto } from '@central/module-tarificacion'
 
 const LISTA = [
@@ -96,4 +96,23 @@ test('exigirCompaniaActualTurismos: ya lo tenía sin compañía actual → Error
   assert.match(MENSAJE_FALTA_COMPANIA_ACTUAL, /falta la compañía actual del vehículo; Allianz la exige con cambio de seguro/)
   assert.doesNotThrow(() => exigirCompaniaActualTurismos({ ...FORM, companiaAnterior: 'Reale' }, HOY))
   assert.doesNotThrow(() => exigirCompaniaActualTurismos({ ...FORM, fechaMatriculacion: '2026-10-01' }, HOY), 'matriculado hace días y sin póliza: nuevo, no se exige')
+})
+
+// v0.6.35: la compañía actual ES Allianz (la que tarifica) y el desplegable del portal no la ofrece. Sin opción honesta: error de datos
+// accionable ANTES del login; jamás «Allianz» → «Allianz Direct» / «BBVA Allianz» (otras entidades).
+test('compañía actual Allianz: error de datos antes del login (también «Allianz Seguros»); Allianz Direct y otras pasan', () => {
+  const HOY = new Date('2026-10-19T10:00:00Z')
+  for (const nombre of ['Allianz', 'ALLIANZ SEGUROS', 'Allianz, S.A.']) {
+    assert.throws(() => exigirCompaniaActualTurismos({ ...FORM, companiaAnterior: nombre }, HOY), (e: unknown) => e instanceof ErrorTarificador && e.tipo === 'datos' && e.message === MENSAJE_COMPANIA_ACTUAL_ES_ALLIANZ, nombre)
+  }
+  assert.match(MENSAJE_COMPANIA_ACTUAL_ES_ALLIANZ, /ya es Allianz/)
+  assert.doesNotThrow(() => exigirCompaniaActualTurismos({ ...FORM, companiaAnterior: 'Allianz Direct' }, HOY))
+  assert.doesNotThrow(() => exigirCompaniaActualTurismos({ ...FORM, companiaAnterior: 'Reale' }, HOY))
+})
+test('«Allianz» NUNCA casa con «Allianz Direct» ni «BBVA Allianz» (match difuso prohibido)', () => {
+  const opciones = ['ALLIANZ DIRECT VERSICHERUNGS-AG, SUCURSAL EN ESPAÑA', 'BBVA ALLIANZ, SEGUROS Y REASEGUROS, S.A.', 'AXA SEGUROS GENERALES, S.A.', 'MAPFRE ESPAÑA, S.A.']
+  for (const b of ['Allianz', 'Allianz Seguros', 'ALLIANZ, S.A.']) {
+    assert.deepEqual(casarCompaniaActual(opciones, b).indices, [], b)
+    assert.equal(casarCompaniaActual(opciones, b).estado, 'ninguna', b)
+  }
 })

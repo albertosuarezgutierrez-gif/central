@@ -48,7 +48,7 @@ const FIGURAS = `<body><app-figuras>
 <mat-form-field><mat-label>Modificación Manual Niveles Bonus Malus</mat-label><mat-checkbox formcontrolname="bonus"></mat-checkbox></mat-form-field>
 </app-figuras></body>`
 
-test('v0.8.25 · la versión del bot es 0.8.28 (o posterior)', () => assert.equal(mapfreAuto.version, '0.8.29'))
+test('v0.8.25 · la versión del bot es 0.8.28 (o posterior)', () => assert.equal(mapfreAuto.version, '0.8.30'))
 
 test('describirControlesSiniestralidad: tipo, formcontrolname y deshabilitado por cada una de las cinco etiquetas, sin valores', async () => {
   const t = await describirControlesSiniestralidad(await pagina(FIGURAS))

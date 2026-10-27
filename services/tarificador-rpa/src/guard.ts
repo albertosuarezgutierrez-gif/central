@@ -4342,6 +4342,64 @@ export async function pulsarSiguienteValoracionGenerali(page: Page, guard: Guard
   return { dialogo }
 }
 
+// ─────────── v0.2.39: «Recalcular» de la botonera «Acciones» de Generali (calcula la tabla «Modalidades de Seguro») ───────────
+// Prueba real con 0.2.38: «Garantías y Resultados» llega con la tabla de modalidades VACÍA (el portal no ha calculado). La botonera inferior de
+// `emiAutosGenB028.do` trae «Acciones › Recalcular» (`link('calcular')`) junto a «Guardar Cálculo» (`grabarCalcRap`): ese SÍ guarda y NUNCA se pulsa.
+// Puerta acotada: texto EXACTO «Recalcular», marco `emiAutosGenB028.do` único, UNA vez por trabajo, sin textos de emisión en la página, `comprobarBoton`,
+// y rechazo explícito si el texto o el `onclick` del control o de su contenedor hablan de guardar/grabar/emitir/contratar/pagar/firmar.
+
+/** Texto EXACTO de la acción que calcula las modalidades. */
+export const TEXTO_RECALCULAR_GENERALI = 'Recalcular'
+/** Lo que nunca puede llevar el texto ni el `onclick` de la acción pulsable (sin tildes, sin mayúsculas). */
+const RE_RECALCULAR_PELIGROSO_GENERALI = /guard|grab|emit|emisi|contrat|firm|pag(a|o|ar)|acept|formaliz|suplement|anul|calcrap/i
+
+/** ¿Puede el robot pulsar la acción de la botonera con ESTE texto? Solo «Recalcular» exacto (salvo espacios y mayúsculas) y sin nada peligroso. PURA. */
+export function recalcularGeneraliPermitido(texto: string | null | undefined): boolean {
+  const t = textoMenu(texto)
+  if (t === '' || RE_RECALCULAR_PELIGROSO_GENERALI.test(sinTildesNi(t))) return false
+  return t === textoMenu(TEXTO_RECALCULAR_GENERALI)
+}
+
+export async function pulsarRecalcularGenerali(page: Page, guard: GuardEmision): Promise<{ dialogo: string | null }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Recalcular» de Generali con una ventana de red abierta')
+  const marcos = marcosVivos(page).filter((f) => urlDatosPersonasGenerali(f.url()))
+  if (marcos.length !== 1) throw new EmisionBloqueadaError('fase', `«Recalcular» de Generali fuera de emiAutosGenB028.do (${marcos.length} marcos; hace falta exactamente uno)`)
+  const marco = marcos[0]!
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:recalcular')) throw new EmisionBloqueadaError('fase', '«Recalcular» de Generali ya se pulsó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  for (const f of marcosVivos(page)) {
+    const casa = casaEmisionGenerali(sinSeccionPrecontractualGenerali((await f.evaluate(JS_TEXTOS_AVISO_GENERALI).catch(() => '')) as string))
+    if (casa !== null) throw new EmisionBloqueadaError('fase', `«Recalcular» de Generali: casó ${casa.slice(0, 200)} (textos de emisión/contratación/pago/firma en la página o en un diálogo)`)
+  }
+  const control = marco.getByText(new RegExp(`^\\s*${TEXTO_RECALCULAR_GENERALI}\\s*$`)).filter({ visible: true })
+  const n = await control.count()
+  if (n !== 1) throw new ErrorMapaGuardGenerali(`la acción «${TEXTO_RECALCULAR_GENERALI}» (${n} controles visibles con ese texto; hace falta exactamente uno)`)
+  const desc = await descripcion(control, true)
+  if (!recalcularGeneraliPermitido(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
+  if (desc.some((d) => d !== null && RE_RECALCULAR_PELIGROSO_GENERALI.test(sinTildesNi(d)))) throw new EmisionBloqueadaError('boton', desc.filter(Boolean).join(' | ').slice(0, 120))
+  comprobarBoton(desc)
+  usados.add('generali:recalcular')
+  AVANCES_USADOS.set(guard, usados)
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= `${d.type()}: ${mensajesValidacionGenerali([d.message()])[0] ?? '(sin texto)'}`
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    await control.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+    guard.comprobar()
+    const fin = Date.now() + 1_500
+    while (dialogo === null && Date.now() < fin) await page.waitForTimeout(150)
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+  guard.comprobar()
+  return { dialogo }
+}
+
 // ─────────── v0.2.14: potencia y fila de versión del selector de vehículos ───────────
 // Tras el modelo el selector enseña «Potencia» (grupo de opciones «116.0 CV»…), «Versión» y una tabla Código | Modelo | Versión. Dos puertas
 // nuevas, ambas con marco `selVehiculo` único, una vez por trabajo y `comprobarBoton` sobre el control: la potencia (SOLO un grupo que no es

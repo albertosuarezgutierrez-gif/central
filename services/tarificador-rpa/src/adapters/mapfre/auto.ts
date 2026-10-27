@@ -68,6 +68,9 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.30 (27/10/2026, captura del atasco con 0.8.29): «Figuras» (pestaña Tomador) NO pinta bloque de siniestralidad; el «Compañia» habilitado que veía el
+//   diagnóstico NO se ve (la selección exige visible) y no se decía por qué. La lista de 20 controles del atasco es el inventario genérico (corta antes).
+//   Ahora el diagnóstico dice visible/OCULTO, quién lo oculta y el componente que lo contiene. Sin cambio de comportamiento: sigue fail-closed.
 // v0.8.28 (27/10/2026): el respaldo por etiqueta de «Compañia» se leía UNA sola vez al salir de la espera (0 ms si el campo no es opcional): con el control
 //   aún sin pintar o deshabilitado daba null y el hueco decía «no aparece» aunque el diagnóstico, segundos después, lo veía habilitado. Ahora SONDEA
 //   (`selectCompaniaPorEtiqueta(raiz, pulsar, esperaMs)`) y el diagnóstico LEE las opciones al abrir el panel (por `pulsar` guardado, cierre por el telón).
@@ -975,7 +978,7 @@ export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>, lee
 const ETIQUETAS_SINIESTRALIDAD_FIGURAS = ['procedencia siniestralidad', 'expuestos/anos', 'siniestros', 'modificacion manual niveles bonus malus'] as const
 
 /** v0.8.29 · Un control hallado tras una etiqueta de siniestralidad. `idx` = posición entre TODOS los `mat-select` (−1 si no lo es); `cab` = cabecera del acordeón plegado que lo oculta (−1 si no). */
-export interface ControlSiniestralidad { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number }
+export interface ControlSiniestralidad { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number; /** v0.8.30 · quién lo oculta (`'' ` si se ve): etiqueta del primer ancestro con display/visibility/hidden/pestaña inactiva. Solo nombres de etiqueta y clase, nunca texto. */ oculto?: string; /** v0.8.30 · componentes (etiquetas con guion) que lo contienen, del más cercano al más lejano (máx. 5). */ ruta?: string }
 
 /**
  * v0.8.29 · ÚNICO localizador de los controles tras las etiquetas de siniestralidad («Compañia»…). Lo usan el DIAGNÓSTICO (`describirControlesSiniestralidad`)
@@ -987,7 +990,7 @@ export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>):
     .locator('body')
     .evaluate((body, args) => {
       const reCompania = new RegExp(args.reCompania, 'i')
-      const salida: { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number }[] = []
+      const salida: { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number; oculto: string; ruta: string }[] = []
       // v0.8.26: `<label><mat-label>` anida dos etiquetas con el mismo texto → el mismo control salía dos veces. Se cuenta por NODO.
       const vistos = new Set<Element>()
       for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
@@ -1001,7 +1004,7 @@ export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>):
         let p: Element | null = c ?? e
         while (p && !/^app-/i.test(p.tagName)) p = p.parentElement
         const nombrePadre = p ? p.tagName.toLowerCase() : 'sin-componente-app'
-        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false, padre: nombrePadre, idx: -1, visible: false, cab: -1 }); continue }
+        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false, padre: nombrePadre, idx: -1, visible: false, cab: -1, oculto: '', ruta: '' }); continue }
         const tag = c.tagName.toLowerCase()
         const tipoInput = (c.getAttribute('type') ?? '').toLowerCase()
         const tipo = tag === 'input' ? (tipoInput === 'checkbox' ? 'checkbox' : c.getAttribute('aria-autocomplete') || c.hasAttribute('matautocomplete') || c.getAttribute('role') === 'combobox' ? 'mat-autocomplete' : 'input') : tag === 'mat-select' || tag === 'mat-checkbox' || tag === 'mat-slide-toggle' ? tag.replace('mat-checkbox', 'checkbox') : tag
@@ -1009,6 +1012,25 @@ export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>):
         const visible = c.getClientRects().length > 0 && estilo.visibility !== 'hidden' && estilo.display !== 'none'
         const panel = c.closest('mat-expansion-panel')
         const cabecera = panel !== null && !panel.classList.contains('mat-expanded') ? panel.querySelector('mat-expansion-panel-header') : null
+        // v0.8.30: por qué NO se ve (el diagnóstico solo decía «habilitado») y en qué componentes vive. Sin funciones con nombre (esbuild `__name`).
+        const rutaTags: string[] = []
+        let oculto = ''
+        for (let q: Element | null = c; q && q !== body.parentElement; q = q.parentElement) {
+          const tq = q.tagName.toLowerCase()
+          if (tq.includes('-') && rutaTags.length < 5 && !/^mat-(form-field|select|slide-toggle|checkbox)$/.test(tq)) rutaTags.push(tq)
+          if (oculto !== '') continue
+          const sq = getComputedStyle(q)
+          const clq = (q.getAttribute('class') ?? '').split(/\s+/).filter((x) => x !== '').slice(0, 2).join('.')
+          const nom = clq ? `${tq}.${clq}` : tq
+          const visPadre = q.parentElement ? getComputedStyle(q.parentElement).visibility : 'visible'
+          if (sq.display === 'none') oculto = `${nom} display:none`
+          else if (sq.visibility === 'hidden' && visPadre !== 'hidden') oculto = `${nom} visibility:hidden`
+          else if (q.hasAttribute('hidden')) oculto = `${nom} [hidden]`
+          else if (q.getAttribute('aria-hidden') === 'true') oculto = `${nom} aria-hidden`
+        }
+        const tab = c.closest('mat-tab-body')
+        if (tab && !/active/.test(tab.className)) oculto = `${oculto || 'mat-tab-body'} (pestaña inactiva)`
+        if (!visible && oculto === '') oculto = 'sin caja (tamaño 0)'
         salida.push({
           et: clave,
           tipo,
@@ -1018,11 +1040,20 @@ export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>):
           idx: tag === 'mat-select' ? Array.from(body.querySelectorAll('mat-select')).indexOf(c) : -1,
           visible,
           cab: !visible && cabecera ? Array.from(body.querySelectorAll('mat-expansion-panel-header')).indexOf(cabecera) : -1,
+          oculto: visible ? '' : oculto,
+          ruta: rutaTags.join(' < '),
         })
       }
       return salida
     }, { reCompania: PATRON_ETIQUETA_COMPANIA.source, etiquetas: [...ETIQUETAS_SINIESTRALIDAD_FIGURAS] })
     .catch(() => null)
+}
+
+/** v0.8.30 · ¿El ÚNICO «Compañia» mat-select habilitado está OCULTO sin acordeón que desplegar (es de otro paso)? Solo lectura; mismo localizador que la selección. */
+export async function companiaHabilitadaOculta(raiz: Pick<Frame, 'locator'>): Promise<boolean> {
+  const todos = await leerControlesSiniestralidad(raiz)
+  const hab = (todos ?? []).filter((c) => c.et === 'compania' && c.tipo === 'mat-select' && c.idx >= 0 && !c.off)
+  return hab.length === 1 && !hab[0].visible && hab[0].cab < 0
 }
 
 /**
@@ -1034,11 +1065,14 @@ export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locato
   const crudo = await leerControlesSiniestralidad(raiz)
   if (!crudo) return 'no se pudo leer'
   if (crudo.length === 0) return 'ninguna de las etiquetas conocidas'
-  const lista = crudo.map((c) => `«${c.et}» ${c.tipo}${c.id ? `[${c.id.replace(/[^\w-]/g, '').slice(0, 30)}]` : ''} ${c.off ? 'deshabilitado' : 'habilitado'}`)
+  // v0.8.30: además de «habilitado», si NO se ve y por qué/dónde vive: «habilitado OCULTO por … (en app-x < app-y)» (lo visible se dice como siempre) (el 27/10/2026 el diagnóstico decía solo «habilitado» y la selección, que exige visible, no lo hallaba).
+  const limp = (t: string) => t.replace(/[^\p{L}\d_ .:()\[\]<-]/gu, '').slice(0, 80)
+  const lista = crudo.map((c) => `«${c.et}» ${c.tipo}${c.id ? `[${c.id.replace(/[^\w-]/g, '').slice(0, 30)}]` : ''} ${c.off ? 'deshabilitado' : 'habilitado'}${c.tipo === 'sin-control' || c.visible ? '' : ` OCULTO${c.oculto ? ` por ${limp(c.oculto)}` : ''}${c.ruta ? ` (en ${limp(c.ruta)})` : ''}`}`)
   const companias = crudo.filter((c) => c.et === 'compania')
   const distintos = companias.length > 1 ? `; «compania»: ${companias.length} nodos distintos (contenedores: ${companias.map((c) => c.padre).join(', ')})` : ''
   const opciones = leer ? await leerOpcionesCompania(raiz, leer) : null
-  const txtOpc = opciones === null ? (leer ? 'no leídas (el lector no pudo abrir el panel o el desplegable «Compañia» no es único, visible y habilitado)' : 'no leídas (panel cerrado, sin lector de opciones)') : opciones.length ? `«compania»: ${opciones.map((o) => `«${o}»`).join(', ')}` : '«compania»: el panel no mostró opciones'
+  const ocultas = companias.filter((c) => !c.off && c.tipo === 'mat-select' && !c.visible)
+  const txtOpc = opciones === null ? (ocultas.length > 0 && ocultas.length === companias.filter((c) => !c.off && c.tipo === 'mat-select').length ? 'no leídas (el desplegable «Compañia» habilitado está OCULTO en esta pantalla: ver arriba por qué y en qué componente vive)' : leer ? 'no leídas (el lector no pudo abrir el panel o el desplegable «Compañia» no es único, visible y habilitado)' : 'no leídas (panel cerrado, sin lector de opciones)') : opciones.length ? `«compania»: ${opciones.map((o) => `«${o}»`).join(', ')}` : '«compania»: el panel no mostró opciones'
   return `${lista.join('; ')}${distintos}; opciones de los desplegables: ${txtOpc}`
 }
 
@@ -1125,7 +1159,7 @@ export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pu
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
  * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
  */
-export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesMatSelect'>>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
+export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesMatSelect'>>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS, diferidos?: OperacionNsei[]): Promise<string[]> {
   const hechos: string[] = []
   for (const op of plan.escribibles) {
     if (op.tipo !== 'mat-select') continue
@@ -1140,6 +1174,13 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
         ausente = false
         respaldo.formador?.log('mapfre_compania_por_etiqueta', {})
       }
+    }
+    // v0.8.30: sin el bloque en «Figuras» y con el ÚNICO «Compañia» habilitado OCULTO en esta pantalla (vive en otro paso), no se atasca aquí: el dato
+    // NO se omite, queda DIFERIDO (`diferidos`) y lo elige quien llama en el paso donde sea visible, con este mismo helper. Sin `diferidos`: como siempre.
+    if (ausente && diferidos && op.sel === SEL_HISTORIAL.companiaAnterior && (await companiaHabilitadaOculta(raiz))) {
+      diferidos.push(op)
+      respaldo.formador?.log('mapfre_compania_diferida', {})
+      continue
     }
     if (ausente) {
       // Opcional que este flujo no pinta (v0.8.1): se sigue sin tocar nada. Obligatorio que no aparece → ATASCO + hueco.
@@ -1818,14 +1859,22 @@ export async function precioDesdeObjetoAsegurado(
   const sinHist = await planFigurasSinHistorial(nsei, f, plan, ctx.formador)
   const planFig = sinHist.plan
   await rellenarCamposTexto(nsei, planDelPaso(planFig, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
-  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
+  const diferidos: OperacionNsei[] = []
+  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo, ESPERA_OPCIONAL_MS, diferidos)
   const diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
   await rellenarCamposTexto(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
   exigirPasoCompleto(planFig, 'figuras')
   await continuar(nsei, ctx, 'figuras')
-  const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
+  let primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
+  // v0.8.30: compañía anterior diferida (en «Figuras» su desplegable estaba oculto): se elige ahora, con el mismo helper y casado exacto; si aquí tampoco
+  // es visible/elegible, atasco + hueco con el diagnóstico (nunca se omite). Elegida, el precio puede haberse recalculado: se vuelve a leer.
+  if (diferidos.length > 0) {
+    await rellenarMatSelects(nsei, { escribibles: diferidos, pendientes: [] }, ctx, respaldo)
+    await nsei.waitForTimeout(1_500).catch(() => undefined)
+    primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
+  }
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
@@ -1850,7 +1899,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.29',
+  version: '0.8.30',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

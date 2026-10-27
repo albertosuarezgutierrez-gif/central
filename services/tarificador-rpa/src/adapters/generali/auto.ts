@@ -257,6 +257,14 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.39 (27/10/2026, prueba real con 0.2.38: «Garantías y Resultados» llega por fin, pero el precio no sale). CAUSA (HTML redactado del fallo, no la captura): la tabla
+ * «Modalidades de Seguro» (`reg1063E_gridmodseg`) está pintada con su cabecera y el `<tbody>` VACÍO (ni filas ni paginador con datos): Generali NO ha calculado todavía.
+ * No es carga lenta (el bot esperó ~55 s), ni otro marco, ni un texto sin «prima/precio»: no hay ningún importe en toda la página (un solo «€», ajeno). `Siguiente`/`Inicio`
+ * son `falseHidden`; la pantalla trae en su botonera inferior «Acciones › Recalcular» (`link('calcular')`) al lado de «Guardar Cálculo» (`grabarCalcRap`, que NO se pulsa nunca).
+ * Ahora: con la tabla a la vista y sin una sola fila con importe, el adaptador pulsa «Recalcular» UNA vez por `ctx.pulsarRecalcularGenerali` (puerta del guard cableada en el
+ * runner) y relee el precio. Sin puerta, o si falla, el atasco lo dice en «Avance». «Guardar Cálculo» y «Siguiente» siguen sin pulsarse.
+ */
+/**
  * 0.2.28 (26/10/2026, prueba real con 0.2.27: tras «Confirmar» de «Datos personas» el bot queda en `emiAutosGenB028.do` con botones solo «Vehículo»/«Personas»
  * y pestañas de sección, SIN «Datos de Valoración» ni `#siguiente`; el motivo del gate de «Siguiente» no llegó porque el runner corta el mensaje a 2000
  * y «Avance» iba al final). El atasco pone ahora al PRINCIPIO el motivo del gate (también si no se intentó) y el inventario de controles de
@@ -272,7 +280,13 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.38'
+export const VERSION_GENERALI_AUTO = '0.2.39'
+/** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
+export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
+/** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
+export function modalidadesSinCalcularGenerali(v: { encontrada: boolean; filas: readonly { recibo: readonly string[]; prima: readonly string[] }[] } | null): boolean {
+  return !!v?.encontrada && !v.filas.some((f) => [...f.recibo, ...f.prima].some((x) => importeFlexibleEur(x) !== null))
+}
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -2692,11 +2706,28 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     const m = leerModalidadesGenerali((await esperarModalidadesGenerali(page, opciones.esperaModalidadesMs ?? opciones.esperaPrecioMs ?? ESPERA_MODALIDADES_GENERALI_MS))?.filas ?? [])
     return m.tipo === 'unico' ? m : l
   }
-  const lectura = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
+  let lectura = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
   if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, lectura.avisos)]) }
+  // v0.2.39: tabla de modalidades a la vista y vacía = el portal no ha calculado: «Recalcular» (acción de la botonera, no guarda ni emite) UNA vez por la puerta del guard.
+  const avanceRecalcular: string[] = []
+  if (modalidadesSinCalcularGenerali(await volcarModalidadesGenerali(page))) {
+    const puerta = ctx.pulsarRecalcularGenerali
+    if (typeof puerta !== 'function') avanceRecalcular.push('Recalcular no intentado: la tabla de modalidades está vacía y el contexto del runner no trae la puerta guardada')
+    else {
+      try {
+        const r = await paso('tarificar', async () => puerta())
+        avanceRecalcular.push(`Recalcular×1${r && r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
+        lectura = await paso('lectura_primas', async () => conModalidades(await esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS)))
+      } catch (e) {
+        if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e
+        avanceRecalcular.push(`Recalcular no pulsado: ${(e instanceof Error ? e.message : String(e)).slice(0, 260)}`)
+      }
+    }
+    if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, lectura.avisos)]) }
+  }
   // v0.2.27: si la pestaña no cambió la pantalla, «Siguiente» (puerta del guard, máx. 3) avanza hacia «Garantías y Resultados».
   let lecturaFinal: Awaited<ReturnType<typeof esperarPrecioGenerali>> = lectura
-  const avanceSiguiente: string[] = []
+  const avanceSiguiente: string[] = [...avanceRecalcular]
   if (!ctx.pulsarSiguienteGenerali) avanceSiguiente.push('Siguiente no intentado: el contexto del runner no trae la puerta guardada')
   else if (lecturaFinal.tipo !== 'ninguno') avanceSiguiente.push(`Siguiente no intentado: la lectura ya era «${lecturaFinal.tipo}» (no «ninguno»)`)
   if (ctx.pulsarSiguienteGenerali) {
