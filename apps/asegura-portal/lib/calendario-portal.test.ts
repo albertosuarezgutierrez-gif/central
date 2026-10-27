@@ -164,7 +164,7 @@ test('seguros: «Revisar mi seguro» solo en una póliza PROPIA, en vigor, con f
 
 const vehFlota = (id: string, itv: VehiculoFlota['itv']): VehiculoFlota => ({
   polizaId: id, etiqueta: `Matrícula ${id}`, matricula: id, clave: id, compania: 'Mapfre', ramo: 'auto',
-  vencimiento: { fecha: '2027-01-01', diasHasta: 100, estado: 'vigente' }, itv, matriculacionDeclarada: null,
+  vencimiento: { fecha: '2027-01-01', diasHasta: 100, estado: 'vigente' }, itv, numeroPoliza: null, matriculacionDeclarada: null,
 })
 const itvCalculada = { estado: 'calculada', fecha: '2026-12-15', fiabilidad: 'primera', fuente: 'compania', diasHasta: 49, pronto: false, periodicidadMeses: 12, calculadaComoTurismo: true } as VehiculoFlota['itv']
 

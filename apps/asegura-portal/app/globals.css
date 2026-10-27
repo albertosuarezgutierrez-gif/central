@@ -4606,3 +4606,97 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
   /* Con sesión, los dos botones ocupan el sitio de la coletilla (el `auto` pasa a ellos). */
   .marca-barra:has(.cabecera-enlaces) .marca-coletilla { display: none; }
 }
+
+/* ─── QR del VEHÍCULO (27/10/2026, F1) ──────────────────────────────────────
+ * La página PÚBLICA `/v/<token>` (una columna, pensada para el móvil en el arcén) y la ETIQUETA que se pega en
+ * la guantera. Solo tokens del sistema: nada de colores a mano. */
+.vehiculo-publico {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.vp-cabecera { display: flex; align-items: center; gap: 10px; color: var(--brand); }
+.vp-identidad { display: grid; line-height: 1.2; }
+.vp-wordmark { font-family: var(--display, var(--serif)); font-weight: 700; color: var(--text); }
+.vp-dgsfp { font-size: 12px; color: var(--muted); }
+.vp-titulo {
+  margin: 4px 0 0;
+  font-family: var(--display, var(--serif));
+  font-size: 30px;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.vp-seccion {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 14px;
+  min-width: 0;
+}
+.vp-seccion h2 { margin: 0 0 10px; font-size: 18px; }
+.vp-datos { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 4px 12px; margin: 0 0 10px; }
+.vp-datos dt { color: var(--muted); }
+.vp-datos dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.vp-nota { margin: 6px 0 0; font-size: 14px; color: var(--muted); line-height: 1.5; }
+.vp-telefonos, .vp-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+.vp-lista li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 44px; }
+/* El teléfono es lo que se usa con UNA mano: botón entero, ≥ 56 px de alto. */
+.vp-tel {
+  display: grid;
+  min-height: 56px;
+  align-content: center;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  text-decoration: none;
+}
+.vp-tel-uso { font-size: 13px; color: var(--text); }
+.vp-tel-numero { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }
+.vp-tel-horario { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+.vp-tel-112 { font-weight: 700; display: inline-flex; min-height: 44px; align-items: center; padding: 0 6px; }
+.vp-pasos { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.5; }
+.vp-entrar { margin: 0; text-align: center; }
+.vp-entrar a { display: inline-flex; min-height: 44px; align-items: center; }
+.vp-pie { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+
+/* La ETIQUETA (A6, QR ≥ 3 cm). En el papel va SOLO: el QR, la matrícula y la marca. Ningún dato más. */
+.etiquetas-vehiculo { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 640px) { .etiquetas-vehiculo { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.etiqueta-vehiculo {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  background: var(--panel);
+  color: var(--text);
+  min-width: 0;
+}
+.etiqueta-vehiculo-qr { width: 160px; max-width: 100%; }
+.etiqueta-vehiculo-qr svg { width: 100%; height: auto; display: block; }
+.etiqueta-vehiculo-matricula { font-family: var(--display, var(--serif)); font-size: 22px; font-weight: 700; letter-spacing: 0.06em; overflow-wrap: anywhere; }
+.etiqueta-vehiculo-marca { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.etiqueta-vehiculo-marca svg { color: var(--brand); }
+.qr-vehiculo-interruptor { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; font-size: 14px; cursor: pointer; }
+.qr-vehiculo-interruptor input { width: 20px; height: 20px; margin-top: 2px; flex: none; }
+
+@media print {
+  /* 🚨 ALLOW-LIST al imprimir etiquetas: se oculta TODO y se enseña solo el bloque marcado para imprimir. Lo que
+     se añada mañana a la pantalla nace sin imprimirse. */
+  body:has([data-imprimir-etiquetas='si']) * { visibility: hidden !important; }
+  [data-imprimir-etiquetas='si'],
+  [data-imprimir-etiquetas='si'] .etiqueta-vehiculo,
+  [data-imprimir-etiquetas='si'] .etiqueta-vehiculo * { visibility: visible !important; }
+  [data-imprimir-etiquetas='si'] { position: absolute; inset: 0 auto auto 0; width: 100%; }
+  [data-imprimir-etiquetas='si'] .solo-pantalla { display: none !important; }
+  [data-imprimir-etiquetas='si'] .etiquetas-vehiculo { grid-template-columns: repeat(2, 96mm); gap: 6mm; }
+  [data-imprimir-etiquetas='si'] .etiqueta-vehiculo { width: 96mm; padding: 6mm; border: 1px solid var(--text); break-inside: avoid; }
+  [data-imprimir-etiquetas='si'] .etiqueta-vehiculo-qr { width: 45mm; }
+}
