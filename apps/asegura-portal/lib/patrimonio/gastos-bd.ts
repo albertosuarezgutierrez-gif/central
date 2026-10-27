@@ -11,10 +11,12 @@ import { prisma } from '../db'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
 import { leerPropuestaGuardada } from './factura-propuesta'
-import type { AccesosMapa, FacturaPendiente, PuertosGastos, TitularGastos } from './gastos-api'
+import type { AccesosMapa, FacturaPendiente, GastoFila, PuertosGastos, TitularGastos } from './gastos-api'
 
 /** Tope de filas que se traen por titular; la pantalla las pliega de 50 en 50. */
 const MAX_PENDIENTES = 150
+/** Gastos recientes por titular (propuestos + confirmados). */
+const MAX_GASTOS = 200
 
 const dia = (d: Date) => d.toISOString().slice(0, 10)
 const aFecha = (s: string) => new Date(`${s}T00:00:00.000Z`)
@@ -81,6 +83,26 @@ async function listarGastos(identidadId: string, ids: readonly string[], accesos
       )
     }),
   )
+  // Gastos recientes (propuestos por el cron/derrama y confirmados) de CADA titular ya autorizado. Las facturas
+  // propuestas se excluyen: salen en «por revisar».
+  const gastosPorTitular = new Map<string, GastoFila[]>()
+  await Promise.all(
+    titulares.map(async (t) => {
+      const filas = await prisma.portalPatrimonioGasto.findMany({
+        where: { titularId: t.id, estado: { in: ['propuesto', 'confirmado'] }, NOT: { origen: 'factura', estado: 'propuesto' } },
+        orderBy: [{ fecha: 'desc' }, { creadoEn: 'desc' }],
+        take: MAX_GASTOS,
+        select: { id: true, inmuebleId: true, fecha: true, concepto: true, categoria: true, totalCent: true, estado: true, origen: true },
+      })
+      gastosPorTitular.set(
+        t.clienteId,
+        filas.map((g): GastoFila => ({
+          id: g.id, inmuebleId: g.inmuebleId, fecha: dia(g.fecha), concepto: g.concepto, categoria: g.categoria,
+          totalCent: num(g.totalCent), estado: g.estado === 'confirmado' ? 'confirmado' : 'propuesto', origen: g.origen,
+        })),
+      )
+    }),
+  )
   const propias = new Set(vinculos.map((v) => v.clienteId))
   const porCliente = new Map(titulares.map((t) => [t.clienteId, t]))
   return fichas
@@ -96,6 +118,7 @@ async function listarGastos(identidadId: string, ids: readonly string[], accesos
         puedeGestionar: puede(nivel, 'gestionar_gastos_documentos'),
         puedeEstructura: puede(nivel, 'alta_baja'),
         facturasPendientes: pendientesPorTitular.get(f.id) ?? [],
+        gastos: gastosPorTitular.get(f.id) ?? [],
         inmuebles: (t?.inmuebles ?? []).map((i) => ({ id: i.id, alias: i.alias })),
         plantillas: (t?.plantillas ?? []).map((p) => ({
           id: p.id,
@@ -266,4 +289,50 @@ export async function gastosDeIdentidad(identidadId: string): Promise<TitularGas
   const accesos = await accesosPatrimonio(identidadId)
   if (accesos.size === 0) return []
   return listarGastos(identidadId, [...accesos.keys()], accesos)
+}
+
+/**
+ * Los gastos de UN titular para la ficha de su inmueble. 🚨 Sale de `gastosDeIdentidad` (accesos de la sesión): un
+ * `clienteId` que no está entre los autorizados da `null`. El filtro por inmueble lo hace `gruposDeInmueble` (puro).
+ */
+export async function gastosDeTitular(identidadId: string, clienteId: string): Promise<TitularGastos | null> {
+  const todos = await gastosDeIdentidad(identidadId)
+  return todos.find((t) => t.clienteId === clienteId) ?? null
+}
+
+/**
+ * Tarjeta «Mi patrimonio» de Inicio. `undefined` = sin patrimonio a la vista (no se pinta nada); `null` = no se pudo
+ * leer el acceso; objeto con `inmuebles`/`pendientes` `null` = esa cifra no se pudo leer (no es 0). Los «por confirmar»
+ * cuentan SOLO donde esta identidad puede gestionar (si no, no podría confirmarlos): sin ninguno así → 0 real.
+ */
+export async function patrimonioParaInicio(identidadId: string): Promise<{ inmuebles: number | null; pendientes: number | null; puedeConfirmar: boolean } | null | undefined> {
+  let accesos: AccesosMapa
+  try {
+    accesos = await accesosPatrimonio(identidadId)
+  } catch (e) {
+    console.error('[inicio] patrimonio sin comprobar:', e instanceof Error ? e.message : e)
+    return null
+  }
+  if (accesos.size === 0) return undefined
+  const ids = [...accesos.keys()]
+  const gestionables = ids.filter((id) => puede(accesos.get(id), 'gestionar_gastos_documentos'))
+  let titulares: { id: string; clienteId: string }[] | null = null
+  try {
+    titulares = await prisma.portalPatrimonioTitular.findMany({ where: { clienteId: { in: ids }, archivadoEn: null }, select: { id: true, clienteId: true } })
+  } catch (e) {
+    console.error('[inicio] titulares de patrimonio sin leer:', e instanceof Error ? e.message : e)
+  }
+  if (titulares === null) return { inmuebles: null, pendientes: null, puedeConfirmar: gestionables.length > 0 }
+  const todosIds = titulares.map((t) => t.id)
+  const gestIds = titulares.filter((t) => gestionables.includes(t.clienteId)).map((t) => t.id)
+  const [rInm, rPend] = await Promise.allSettled([
+    prisma.portalPatrimonioInmueble.count({ where: { titularId: { in: todosIds }, archivadoEn: null } }),
+    gestIds.length === 0 ? Promise.resolve(0) : prisma.portalPatrimonioGasto.count({ where: { titularId: { in: gestIds }, estado: 'propuesto' } }),
+  ])
+  const val = (r: PromiseSettledResult<number>, f: string) => {
+    if (r.status === 'fulfilled') return r.value
+    console.error(`[inicio] patrimonio «${f}» sin leer:`, r.reason instanceof Error ? r.reason.message : r.reason)
+    return null
+  }
+  return { inmuebles: val(rInm, 'inmuebles'), pendientes: val(rPend, 'pendientes'), puedeConfirmar: gestionables.length > 0 }
 }

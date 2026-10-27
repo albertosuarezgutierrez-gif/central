@@ -7,6 +7,7 @@ import { eur } from '@/lib/dinero'
 import type { PropuestaFactura } from '@/lib/patrimonio/factura-propuesta'
 import { destinoDelFichero, reglaInmuebleSubida } from '@/lib/patrimonio/facturas-regla'
 import { CATEGORIAS_GASTO, ETIQUETA_CATEGORIA, type FacturaPendiente } from '@/lib/patrimonio/gastos-api'
+import { GENERAL, inmuebleInicial } from '@/lib/patrimonio/gastos-vista'
 
 const ERRORES: Record<string, string> = {
   no_encontrado: 'No tienes permiso para hacer eso en este titular.',
@@ -184,7 +185,8 @@ export function FacturasPendientes({ clienteId, inmuebles, pendientes }: { clien
 /** Subir factura → ver propuesta y motivos → corregir → confirmar. El gasto no existe como confirmado hasta el último paso. */
 export function RevisarFactura({ clienteId, inmuebles }: { clienteId: string; inmuebles: { id: string; alias: string }[] }) {
   const [abierto, setAbierto] = useState(false)
-  const [inmueble, setInmueble] = useState('')
+  // Un único inmueble (p. ej. desde su ficha) viene elegido; con varios hay que elegir.
+  const [inmueble, setInmueble] = useState(() => { const i = inmuebleInicial(inmuebles); return i === GENERAL ? '' : i })
   const [fichero, setFichero] = useState<File | null>(null)
   const [subiendo, setSubiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)

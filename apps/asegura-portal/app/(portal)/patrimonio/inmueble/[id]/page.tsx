@@ -5,6 +5,9 @@ import { puede } from '@central/module-patrimonio'
 
 import { eur } from '@/lib/dinero'
 import { contratosDelInmueble } from '@/lib/patrimonio/contratos-bd'
+import { gastosDeTitular } from '@/lib/patrimonio/gastos-bd'
+import type { TitularGastos } from '@/lib/patrimonio/gastos-api'
+import { titularDeInmueble } from '@/lib/patrimonio/gastos-vista'
 import { inmuebleAutorizado } from '@/lib/patrimonio/inmuebles-bd'
 import { obligacionesDeInmueble, type ObligacionesDeInmueble } from '@/lib/patrimonio/obligaciones-api'
 import { puertosObligaciones } from '@/lib/patrimonio/obligaciones-bd'
@@ -15,6 +18,7 @@ import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { Documentos } from './Documentos'
+import { GastosDeEstePiso } from './GastosDeEstePiso'
 import { HipotecaInmueble } from './HipotecaInmueble'
 import { NuevoContrato } from './NuevoContrato'
 import { ObligacionesPropias } from './ObligacionesPropias'
@@ -40,7 +44,7 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
   if (ficha === null) notFound()
   const i = ficha.inmueble
   // Archivado: los contratos vivos no se listan (sus páginas dan 404) y no se ofrece ninguna alta.
-  const [contratos, seguros, recordatorios] = await Promise.all([
+  const [contratos, seguros, recordatorios, gastos] = await Promise.all([
     ficha.archivado ? Promise.resolve([]) : contratosDelInmueble(identidad.id, i.id),
     // Un fallo leyendo los seguros no tumba la ficha: la sección dice «no hemos podido comprobarlo».
     segurosDeInmueble(puertosSegurosInmueble(identidad.id), i.id).catch((e: unknown): SegurosDeInmueble | null | 'error' => {
@@ -52,6 +56,15 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
       console.error('[patrimonio/inmueble] obligaciones:', e instanceof Error ? e.message : e)
       return 'error'
     }),
+    // Gastos de ESTE piso (mismos accesos que /patrimonio/gastos). Un fallo no tumba la ficha ni se pinta como «sin gastos».
+    ficha.archivado
+      ? Promise.resolve(null)
+      : gastosDeTitular(identidad.id, ficha.clienteId)
+          .then((t): TitularGastos | null | 'error' => (t === null ? null : titularDeInmueble(t, i.id)))
+          .catch((e: unknown): TitularGastos | null | 'error' => {
+            console.error('[patrimonio/inmueble] gastos:', e instanceof Error ? e.message : e)
+            return 'error'
+          }),
   ])
   const fechaEs = (f: string) => f.split('-').reverse().join('/')
 
@@ -116,6 +129,19 @@ export default async function InmueblePage({ params }: { params: Promise<{ id: s
         <section className="seccion" aria-labelledby="hipoteca-inmueble">
           <h2 id="hipoteca-inmueble">Hipoteca</h2>
           <HipotecaInmueble inmuebleId={i.id} inicial={ficha.hipoteca} />
+        </section>
+      )}
+      {!ficha.archivado && (
+        <section className="seccion" aria-labelledby="gastos-inmueble">
+          <h2 id="gastos-inmueble">Gastos de este piso</h2>
+          <p className="suave" style={{ marginTop: 0, fontSize: 14 }}>
+            Gastos fijos, comunidad y derramas de este piso. Todos los gastos del titular están en <Link href="/patrimonio/gastos">Gastos</Link>.
+          </p>
+          {gastos === 'error' || gastos === null ? (
+            <p className="aviso-linea" role="status">Ahora no hemos podido comprobar los gastos de este piso. Vuelve a intentarlo en un rato.</p>
+          ) : (
+            <GastosDeEstePiso titular={gastos} inmuebleId={i.id} alias={i.alias} />
+          )}
         </section>
       )}
       <section className="seccion" aria-labelledby="recordatorios-inmueble">
