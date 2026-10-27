@@ -974,17 +974,20 @@ export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>, lee
 /** v0.8.25 · Las cinco etiquetas de la variante de «Figuras» sin `app-historial-siniestralidad` (vistas el 26/10/2026; «Compañia» sale de `vocabulario.ts`). */
 const ETIQUETAS_SINIESTRALIDAD_FIGURAS = ['procedencia siniestralidad', 'expuestos/anos', 'siniestros', 'modificacion manual niveles bonus malus'] as const
 
+/** v0.8.29 · Un control hallado tras una etiqueta de siniestralidad. `idx` = posición entre TODOS los `mat-select` (−1 si no lo es); `cab` = cabecera del acordeón plegado que lo oculta (−1 si no). */
+export interface ControlSiniestralidad { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number }
+
 /**
- * v0.8.25 · Por cada etiqueta de siniestralidad («Compañia», «Procedencia Siniestralidad», «Expuestos/Años», «Siniestros», «Modificación Manual
- * Niveles Bonus Malus»): tipo de control (mat-select/mat-autocomplete/input/checkbox), formcontrolname/name/id y si está deshabilitado. SOLO LEE,
- * nunca valores ni opciones (el panel de un mat-select no está en el DOM cerrado y este adaptador no tiene lector de opciones sin elegir).
+ * v0.8.29 · ÚNICO localizador de los controles tras las etiquetas de siniestralidad («Compañia»…). Lo usan el DIAGNÓSTICO (`describirControlesSiniestralidad`)
+ * y la SELECCIÓN (`selectCompaniaPorEtiqueta`): así no pueden divergir (en producción el diagnóstico veía «compania» mat-select habilitado y la selección
+ * no, porque contaba como candidatos TODOS los mat-select del contenedor de la etiqueta y no solo el control que le corresponde). Solo lectura.
  */
-export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locator'>, leer?: LectorOpcionesMatSelect): Promise<string> {
-  const crudo = await raiz
+export async function leerControlesSiniestralidad(raiz: Pick<Frame, 'locator'>): Promise<ControlSiniestralidad[] | null> {
+  return raiz
     .locator('body')
     .evaluate((body, args) => {
       const reCompania = new RegExp(args.reCompania, 'i')
-      const salida: { et: string; tipo: string; id: string; off: boolean; padre: string }[] = []
+      const salida: { et: string; tipo: string; id: string; off: boolean; padre: string; idx: number; visible: boolean; cab: number }[] = []
       // v0.8.26: `<label><mat-label>` anida dos etiquetas con el mismo texto → el mismo control salía dos veces. Se cuenta por NODO.
       const vistos = new Set<Element>()
       for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
@@ -998,28 +1001,44 @@ export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locato
         let p: Element | null = c ?? e
         while (p && !/^app-/i.test(p.tagName)) p = p.parentElement
         const nombrePadre = p ? p.tagName.toLowerCase() : 'sin-componente-app'
-        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false, padre: nombrePadre }); continue }
+        if (!c) { salida.push({ et: clave, tipo: 'sin-control', id: '', off: false, padre: nombrePadre, idx: -1, visible: false, cab: -1 }); continue }
         const tag = c.tagName.toLowerCase()
         const tipoInput = (c.getAttribute('type') ?? '').toLowerCase()
         const tipo = tag === 'input' ? (tipoInput === 'checkbox' ? 'checkbox' : c.getAttribute('aria-autocomplete') || c.hasAttribute('matautocomplete') || c.getAttribute('role') === 'combobox' ? 'mat-autocomplete' : 'input') : tag === 'mat-select' || tag === 'mat-checkbox' || tag === 'mat-slide-toggle' ? tag.replace('mat-checkbox', 'checkbox') : tag
+        const estilo = getComputedStyle(c)
+        const visible = c.getClientRects().length > 0 && estilo.visibility !== 'hidden' && estilo.display !== 'none'
+        const panel = c.closest('mat-expansion-panel')
+        const cabecera = panel !== null && !panel.classList.contains('mat-expanded') ? panel.querySelector('mat-expansion-panel-header') : null
         salida.push({
           et: clave,
           tipo,
           id: c.getAttribute('formcontrolname') ?? c.getAttribute('name') ?? c.id ?? '',
-          off: (c as HTMLInputElement).disabled === true || c.getAttribute('aria-disabled') === 'true' || /disabled/.test(ff?.className ?? ''),
+          off: (c as HTMLInputElement).disabled === true || c.getAttribute('aria-disabled') === 'true' || c.classList.contains('mat-select-disabled') || /disabled/.test(ff?.className ?? ''),
           padre: nombrePadre,
+          idx: tag === 'mat-select' ? Array.from(body.querySelectorAll('mat-select')).indexOf(c) : -1,
+          visible,
+          cab: !visible && cabecera ? Array.from(body.querySelectorAll('mat-expansion-panel-header')).indexOf(cabecera) : -1,
         })
       }
       return salida
     }, { reCompania: PATRON_ETIQUETA_COMPANIA.source, etiquetas: [...ETIQUETAS_SINIESTRALIDAD_FIGURAS] })
     .catch(() => null)
+}
+
+/**
+ * v0.8.25 · Por cada etiqueta de siniestralidad («Compañia», «Procedencia Siniestralidad», «Expuestos/Años», «Siniestros», «Modificación Manual
+ * Niveles Bonus Malus»): tipo de control (mat-select/mat-autocomplete/input/checkbox), formcontrolname/name/id y si está deshabilitado. SOLO LEE,
+ * nunca valores ni opciones (el panel de un mat-select no está en el DOM cerrado y este adaptador no tiene lector de opciones sin elegir).
+ */
+export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locator'>, leer?: LectorOpcionesMatSelect): Promise<string> {
+  const crudo = await leerControlesSiniestralidad(raiz)
   if (!crudo) return 'no se pudo leer'
   if (crudo.length === 0) return 'ninguna de las etiquetas conocidas'
   const lista = crudo.map((c) => `«${c.et}» ${c.tipo}${c.id ? `[${c.id.replace(/[^\w-]/g, '').slice(0, 30)}]` : ''} ${c.off ? 'deshabilitado' : 'habilitado'}`)
   const companias = crudo.filter((c) => c.et === 'compania')
   const distintos = companias.length > 1 ? `; «compania»: ${companias.length} nodos distintos (contenedores: ${companias.map((c) => c.padre).join(', ')})` : ''
   const opciones = leer ? await leerOpcionesCompania(raiz, leer) : null
-  const txtOpc = opciones === null ? 'no leídas (panel cerrado, sin lector de opciones)' : opciones.length ? `«compania»: ${opciones.map((o) => `«${o}»`).join(', ')}` : '«compania»: el panel no mostró opciones'
+  const txtOpc = opciones === null ? (leer ? 'no leídas (el lector no pudo abrir el panel o el desplegable «Compañia» no es único, visible y habilitado)' : 'no leídas (panel cerrado, sin lector de opciones)') : opciones.length ? `«compania»: ${opciones.map((o) => `«${o}»`).join(', ')}` : '«compania»: el panel no mostró opciones'
   return `${lista.join('; ')}${distintos}; opciones de los desplegables: ${txtOpc}`
 }
 
@@ -1064,28 +1083,18 @@ export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pu
   // devuelve su posición entre todos los mat-select y se re-localiza con `nth`.
   // v0.8.27: si el único mat-select está HABILITADO pero oculto porque su `mat-expansion-panel` está plegado (el contenido plegado va con
   // `visibility:hidden`), se devuelve la posición de la cabecera del panel para desplegarlo con `pulsar` (guard) y volver a mirar.
-  const leer = () =>
-    raiz
-      .locator('body')
-      .evaluate((body, fuente) => {
-        const re = new RegExp(fuente, 'i')
-        const nodos = new Set<Element>()
-        for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
-          if (!re.test(e.textContent ?? '')) continue
-          const ff = e.closest('mat-form-field') ?? e.parentElement
-          if (ff) for (const s of Array.from(ff.querySelectorAll('mat-select'))) nodos.add(s)
-        }
-        if (nodos.size !== 1) return { n: nodos.size, idx: -1, ok: false, off: false, cab: -1 }
-        const nodo = Array.from(nodos)[0]
-        const estilo = getComputedStyle(nodo)
-        const visible = nodo.getClientRects().length > 0 && estilo.visibility !== 'hidden' && estilo.display !== 'none'
-        const off = nodo.getAttribute('aria-disabled') === 'true' || nodo.classList.contains('mat-select-disabled')
-        const panel = nodo.closest('mat-expansion-panel')
-        const plegado = panel !== null && !panel.classList.contains('mat-expanded')
-        const cabecera = plegado ? panel.querySelector('mat-expansion-panel-header') : null
-        return { n: 1, idx: Array.from(body.querySelectorAll('mat-select')).indexOf(nodo), ok: visible && !off, off, cab: !visible && cabecera ? Array.from(body.querySelectorAll('mat-expansion-panel-header')).indexOf(cabecera) : -1 }
-      }, PATRON_ETIQUETA_COMPANIA.source)
-      .catch(() => null)
+  // v0.8.29: MISMO localizador que el diagnóstico (`leerControlesSiniestralidad`): candidato = el control que corresponde a cada etiqueta «Compañia»
+  // (deduplicado por nodo) que es un `mat-select`. Los deshabilitados (p. ej. los de `app-info-descuentos`, calculados por el portal) no cuentan como
+  // ambigüedad: se elige el ÚNICO habilitado; si hay 2+ habilitados es ambiguo y no se adivina.
+  const leer = async () => {
+    const todos = await leerControlesSiniestralidad(raiz)
+    if (!todos) return null
+    const cands = todos.filter((c) => c.et === 'compania' && c.tipo === 'mat-select' && c.idx >= 0)
+    const hab = cands.filter((c) => !c.off)
+    if (hab.length === 1) return { n: 1, idx: hab[0].idx, ok: hab[0].visible, off: false, cab: hab[0].cab }
+    if (hab.length > 1) return { n: hab.length, idx: -1, ok: false, off: false, cab: -1 }
+    return { n: cands.length > 0 ? 1 : 0, idx: cands[0]?.idx ?? -1, ok: false, off: cands.length > 0, cab: -1 }
+  }
   // v0.8.28: sondeo hasta `esperaMs` mientras el control aún no esté (n=0), esté deshabilitado o esté oculto sin acordeón que desplegar: la pantalla
   // de «Figuras» termina de pintar después de que el stepper diga «listo». Más de un candidato (n>1) NO se espera: es ambiguo, no tardío.
   const hasta = Date.now() + Math.max(0, esperaMs)
@@ -1841,7 +1850,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.28',
+  version: '0.8.29',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

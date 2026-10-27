@@ -33,8 +33,8 @@ const pagina = async (html: string): Promise<Page> => {
   return page
 }
 
-test('versión del bot Mapfre auto: 0.8.28', () => {
-  assert.equal(mapfreAuto.version, '0.8.28')
+test('versión del bot Mapfre auto: 0.8.29', () => {
+  assert.equal(mapfreAuto.version, '0.8.29')
 })
 
 test('diagnóstico: lee maxlength/placeholder/obligatorio/hint/error; no toca el valor', async () => {
