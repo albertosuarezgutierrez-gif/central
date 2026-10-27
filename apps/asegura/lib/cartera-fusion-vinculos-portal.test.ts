@@ -15,7 +15,9 @@ import { ORIGENES_VINCULO } from '@central/module-seguros-portal'
  * migración que redefine la función), porque el job de tests no tiene BD.
  */
 const dirSql = join(import.meta.dirname, '..', 'prisma', 'sql')
-const FIRMA = 'create or replace function seguros.fusionar_clientes(\n  p_correduria uuid,'
+// El fichero no consulta la BD: lee el texto del SQL (por eso el schema va en una constante).
+const SCHEMA = 'seguros'
+const FIRMA = `create or replace function ${SCHEMA}.fusionar_clientes(\n  p_correduria uuid,`
 
 function vigente(): { nombre: string; cuerpo: string } {
   const nombres = readdirSync(dirSql).filter((n) => n.endsWith('.sql')).sort()
@@ -36,7 +38,7 @@ test('los vínculos del portal se mudan ANTES de vaciar los índices de la lápi
   const mudar = cuerpo.indexOf('update portal_vinculo set cliente_id = p_sup where cliente_id = p_lap')
   const vaciar = cuerpo.indexOf('update clientes set dni_lookup_hash = null, email_lookup_hash = null')
   const borrarCorreos = cuerpo.indexOf('delete from cliente_emails e where e.cliente_id = p_lap')
-  const bucleFk = cuerpo.indexOf("c.contype = 'f' and c.confrelid = 'seguros.clientes'::regclass")
+  const bucleFk = cuerpo.indexOf(`c.contype = 'f' and c.confrelid = '${SCHEMA}.clientes'::regclass`)
   assert.ok(mudar > 0, 'falta la mudanza explícita de portal_vinculo')
   assert.ok(vaciar > 0 && borrarCorreos > 0 && bucleFk > 0, 'la función ha cambiado de forma: revisa este cepo')
   assert.ok(mudar < vaciar, 'se muda DESPUÉS de vaciar email_lookup_hash: el trigger borra los email_hash')

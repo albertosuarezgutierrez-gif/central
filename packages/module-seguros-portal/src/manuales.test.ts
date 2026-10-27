@@ -39,6 +39,5 @@ test('un id que no es del catálogo no tiene manual', () => {
 test('la ruta del manual cuelga de Herramientas y se escribe «Grupo ASegura»', () => {
   for (const id of MODULOS_PORTAL) assert.equal(rutaManual(id), `/herramientas/como-funciona/${id}`)
   const todo = JSON.stringify(MANUALES_MODULOS)
-  assert.doesNotMatch(todo, /Grupo\s+(?!ASegura)[Aa]segura/)
-  assert.doesNotMatch(todo, /\bGrupo ASEGURA\b/)
+  assert.doesNotMatch(todo, /Grupo\s+(?!ASegura\b)[Aa][Ss][Ee][Gg][Uu][Rr][Aa]/)
 })
