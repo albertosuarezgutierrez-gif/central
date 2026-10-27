@@ -27,6 +27,9 @@ const SQL_TOPE = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10
 // Obligaciones PROPIAS del cliente (25/10/2026): columna `categoria` en la tabla de obligaciones ya existente.
 const RUTA_PROPIA = 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_obligacion_propia.sql'
 const SQL_PROPIA = readFileSync(join(RAIZ, RUTA_PROPIA), 'utf8').replace(/--.*$/gm, '')
+// «Hipoteca» en el catálogo de las propias (27/10/2026): el CHECK vigente del catálogo pasa a ser el `_v2` de este fichero.
+const RUTA_PROPIA_HIPOTECA = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_obligacion_hipoteca.sql'
+const SQL_PROPIA_HIPOTECA = readFileSync(join(RAIZ, RUTA_PROPIA_HIPOTECA), 'utf8').replace(/--.*$/gm, '')
 // Caché del Catastro y presidente de comunidad (25/10/2026): columnas nuevas en `inmueble`; mismo espejo.
 const SQL_CATASTRO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-25_portal_patrimonio_catastro_comunidad.sql'), 'utf8').replace(/--.*$/gm, '')
 // «¿Tiene hipoteca?» (25/10/2026): columna `hipoteca` en el inmueble; mismo espejo.
@@ -302,14 +305,38 @@ test('🚨 obligaciones propias (25/10/2026): SQL aditivo, sin borrados, columna
   }
   // Una propia no se mete en el CHECK de `tipo` (no se puede ampliar sin borrar la restricción): usa 'otra'.
   assert.match(SQL_PROPIA, /tipo = 'otra' AND vence IS NOT NULL/)
-  // El catálogo de la BD es el del módulo, ni más ni menos.
+  // El catálogo viejo (25/10) es un SUBCONJUNTO del vigente: ampliar nunca deja fuera una fila ya guardada.
   const m = /categoria IN \(([^)]*)\)/.exec(SQL_PROPIA)
   assert.ok(m)
-  const bd = m[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+  const viejo = m[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+  for (const c of viejo) assert.ok(catalogoVigente().includes(c), `${c} se perdería al ampliar`)
+})
+
+/** El catálogo del CHECK vigente (`_v2`, 27/10/2026). */
+function catalogoVigente(): string[] {
+  const m = /categoria_catalogo_v2\s+CHECK \(categoria IS NULL OR categoria IN \(([^)]*)\)\)/.exec(SQL_PROPIA_HIPOTECA)
+  assert.ok(m, 'el CHECK _v2 del catálogo')
+  return m[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+}
+
+test('🚨 hipoteca en las propias (27/10/2026): catálogo de BD = el del módulo, se crea el nuevo ANTES de quitar el viejo y nada más', () => {
+  // El catálogo de la BD es el del módulo, ni más ni menos (y en el mismo orden).
   const mod = readFileSync(join(RAIZ, 'packages/module-patrimonio/src/obligacion-propia.ts'), 'utf8')
   const enModulo = /CATEGORIAS_OBLIGACION_PROPIA = \[([^\]]*)\]/.exec(mod)
   assert.ok(enModulo)
-  assert.deepEqual(bd, enModulo[1].split(',').map((x) => x.trim().replace(/'/g, '')))
+  assert.deepEqual(catalogoVigente(), enModulo[1].split(',').map((x) => x.trim().replace(/'/g, '')))
+  assert.ok(catalogoVigente().includes('hipoteca'))
+  // Un CHECK no se amplía sin quitar el viejo: UNA sola sentencia de borrado, y solo de ESA restricción (se aplica
+  // desde el editor SQL, no por el MCP; lo dice la cabecera).
+  assert.match(readFileSync(join(RAIZ, RUTA_PROPIA_HIPOTECA), 'utf8'), /editor SQL de Supabase, NO por el MCP/i)
+  const borrados = [...SQL_PROPIA_HIPOTECA.matchAll(/\bDROP\b[^;]*;/gi)].map((x) => x[0].replace(/\s+/g, ' '))
+  assert.deepEqual(borrados, ['DROP CONSTRAINT IF EXISTS portal_patrimonio_obligacion_categoria_catalogo;'])
+  assert.doesNotMatch(SQL_PROPIA_HIPOTECA, /\bDELETE\b|\bTRUNCATE\b|\bGRANT\b|\bREVOKE\b|ADD COLUMN|ALTER COLUMN/i)
+  assert.match(SQL_PROPIA_HIPOTECA, /^BEGIN;/m)
+  assert.match(SQL_PROPIA_HIPOTECA, /^COMMIT;/m)
+  assert.ok(SQL_PROPIA_HIPOTECA.indexOf('ADD CONSTRAINT portal_patrimonio_obligacion_categoria_catalogo_v2') < SQL_PROPIA_HIPOTECA.indexOf('DROP CONSTRAINT'))
+  // Idempotente: el CHECK nuevo solo si no existe.
+  assert.match(SQL_PROPIA_HIPOTECA, /IF NOT EXISTS \(SELECT 1 FROM pg_constraint WHERE conname = 'portal_patrimonio_obligacion_categoria_catalogo_v2'\)/)
 })
 
 test('🚨 hipoteca (25/10/2026): SQL aditivo sin borrados, columna por GRANT, catálogo igual al del código y crm_seguros sin nada', () => {

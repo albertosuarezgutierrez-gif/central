@@ -44,7 +44,7 @@ function Datos({ d }: { d: RentabilidadDeIdentidad }) {
               {i.gastosSinConfirmar > 0 && (
                 <p style={{ margin: '8px 0 0' }}>
                   Tienes {i.gastosSinConfirmar} {i.gastosSinConfirmar === 1 ? 'factura' : 'facturas'} sin revisar: no cuentan hasta que las confirmes.{' '}
-                  <Link href="/patrimonio/gastos">Revisarlas</Link>
+                  <Link href="/patrimonio/gastos" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Revisarlas</Link>
                 </p>
               )}
               {i.avisos.length > 0 && (
@@ -118,7 +118,7 @@ export default async function RentabilidadPage({ searchParams }: { searchParams:
         </p>
       )}
       <p style={{ marginTop: 24 }}>
-        <Link href="/patrimonio">← Todo el patrimonio</Link>
+        <Link href="/patrimonio" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>← Todo el patrimonio</Link>
       </p>
     </>
   )

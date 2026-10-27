@@ -55,7 +55,7 @@ function Informe({ inf }: { inf: InformeFiscal }) {
           {i.gastosSinConfirmar > 0 && (
             <p style={{ margin: '8px 0 0' }}>
               Tienes {i.gastosSinConfirmar} {i.gastosSinConfirmar === 1 ? 'factura' : 'facturas'} sin revisar: no cuentan hasta que las confirmes.{' '}
-              <Link href="/patrimonio/gastos">Revisarlas</Link>
+              <Link href="/patrimonio/gastos" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Revisarlas</Link>
             </p>
           )}
           {i.avisos.length > 0 && (
@@ -100,7 +100,7 @@ export default async function FiscalPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <p className="antetitulo"><Link href="/patrimonio/rentabilidad">Rentabilidad</Link></p>
+      <p className="antetitulo"><Link href="/patrimonio/rentabilidad" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Rentabilidad</Link></p>
       <h1>Informe fiscal del alquiler</h1>
       {fallo ? (
         <section className="seccion"><p role="status" style={{ margin: 0 }}>Ahora no hemos podido calcular el informe. Vuelve a intentarlo en un rato; no significa que sea cero.</p></section>
@@ -125,7 +125,7 @@ export default async function FiscalPage({ searchParams }: { searchParams: Promi
         </>
       )}
       <p style={{ marginTop: 24 }}>
-        <Link href="/patrimonio/rentabilidad">← Rentabilidad</Link>
+        <Link href="/patrimonio/rentabilidad" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>← Rentabilidad</Link>
       </p>
     </>
   )

@@ -65,6 +65,37 @@ export type ObligacionesDeInmueble = {
 
 export type Respuesta = { status: number; body: Record<string, unknown> }
 const NO_ENCONTRADO: Respuesta = { status: 404, body: { error: 'no_encontrado' } }
+/** La BD aún no admite esa categoría (409, no 500). Sin `campo`: la pantalla da su texto propio («elige “Otro”»). */
+const CATEGORIA_NO_DISPONIBLE: Respuesta = { status: 409, body: { error: 'categoria_no_disponible' } }
+
+/**
+ * El CHECK de BD del catálogo rechazó la categoría. Pasa con una categoría nueva del módulo (`hipoteca`, 27/10/2026)
+ * mientras su SQL (`2026-10-27_portal_patrimonio_obligacion_hipoteca.sql`) no esté aplicado. Los puertos reales la
+ * lanzan; `responderObligaciones` la convierte en 409 `categoria_no_disponible`. Nada se ha escrito.
+ */
+export class CategoriaNoDisponible extends Error {
+  constructor() {
+    super('categoria_no_disponible')
+    this.name = 'CategoriaNoDisponible'
+  }
+}
+
+/**
+ * ¿Es este error el del CHECK del catálogo (`portal_patrimonio_obligacion_categoria_catalogo`, viejo o `_v2`)? Mira el
+ * NOMBRE de la restricción en el mensaje y en `meta` (Prisma cambia de código según versión: P2004, desconocido…);
+ * cualquier otro fallo NO lo es y sigue siendo un error de verdad.
+ */
+export function esRechazoDelCatalogo(e: unknown): boolean {
+  if (e === null || typeof e !== 'object') return false
+  const o = e as { message?: unknown; meta?: unknown }
+  let texto = typeof o.message === 'string' ? o.message : ''
+  try {
+    texto += ' ' + JSON.stringify(o.meta ?? null)
+  } catch {
+    // meta no serializable: solo el mensaje.
+  }
+  return texto.includes('portal_patrimonio_obligacion_categoria_catalogo')
+}
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Todo lo que pinta la sección de la ficha. `null` = 404. Leer exige poder `ver` (cualquier nivel reconocido). */
@@ -104,7 +135,12 @@ export async function responderObligaciones(p: PuertosObligaciones, idPedido: un
     const v = validarObligacionPropia(c)
     if (!v.ok) return { status: 400, body: { error: 'datos_invalidos', campo: v.campo } }
     if ((await p.propias(inm.id)).length >= MAX_PROPIAS_POR_INMUEBLE) return { status: 409, body: { error: 'demasiadas' } }
-    await p.crear(inm.id, v.valor)
+    try {
+      await p.crear(inm.id, v.valor)
+    } catch (e) {
+      if (e instanceof CategoriaNoDisponible) return CATEGORIA_NO_DISPONIBLE
+      throw e
+    }
     return { status: 201, body: { ok: true } }
   }
 
@@ -114,7 +150,14 @@ export async function responderObligaciones(p: PuertosObligaciones, idPedido: un
     if (c.accion === 'editar') {
       const v = validarObligacionPropia(c)
       if (!v.ok) return { status: 400, body: { error: 'datos_invalidos', campo: v.campo } }
-      return (await p.actualizar(inm.id, c.obligacionId, v.valor)) ? { status: 200, body: { ok: true } } : NO_ENCONTRADO
+      let hecho: boolean
+      try {
+        hecho = await p.actualizar(inm.id, c.obligacionId, v.valor)
+      } catch (e) {
+        if (e instanceof CategoriaNoDisponible) return CATEGORIA_NO_DISPONIBLE
+        throw e
+      }
+      return hecho ? { status: 200, body: { ok: true } } : NO_ENCONTRADO
     }
     // hecha: la fila se busca DENTRO de las propias de este inmueble.
     const fila = (await p.propias(inm.id)).find((f) => f.id === c.obligacionId)

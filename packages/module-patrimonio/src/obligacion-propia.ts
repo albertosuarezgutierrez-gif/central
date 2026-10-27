@@ -1,5 +1,5 @@
 // Obligaciones y recordatorios PROPIOS de un inmueble, que escribe el cliente (25/10/2026): IBI, comunidad, revisión
-// de la caldera, ITE, fin de seguro… Entran en el calendario igual que las derivadas de contrato (`calendario.ts`).
+// de la caldera, ITE, fin de seguro, hipoteca… Entran en el calendario igual que las derivadas de contrato (`calendario.ts`).
 //
 // Reglas PURAS: catálogo cerrado + texto libre opcional, periodicidad (única/mensual/trimestral/anual), validación del
 // cuerpo y qué pasa al marcar «hecha». 🚨 Ninguna función lee el reloj: `hoy` entra como parámetro.
@@ -8,7 +8,10 @@
 
 import { diasEntre, esFecha, sumarMeses, type Fecha } from './fechas.ts'
 
-export const CATEGORIAS_OBLIGACION_PROPIA = ['ibi', 'comunidad', 'caldera', 'ite', 'fin_seguro', 'basuras', 'otro'] as const
+// 🚨 Esta lista es la del CHECK de BD (`portal_patrimonio_obligacion_categoria_catalogo_v2`, SQL
+// `apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_obligacion_hipoteca.sql`); el cepo
+// `test/regression-portal-patrimonio-sql.test.ts` compara las dos. `hipoteca` (27/10/2026): cuota o vencimiento.
+export const CATEGORIAS_OBLIGACION_PROPIA = ['ibi', 'comunidad', 'caldera', 'ite', 'fin_seguro', 'basuras', 'hipoteca', 'otro'] as const
 export type CategoriaObligacionPropia = (typeof CATEGORIAS_OBLIGACION_PROPIA)[number]
 
 export interface ReglaCategoria {
@@ -26,6 +29,7 @@ export const CATALOGO_CATEGORIAS: Readonly<Record<CategoriaObligacionPropia, Reg
   ite: { etiqueta: 'ITE del edificio', avisoDias: 180, descripcionObligatoria: false },
   fin_seguro: { etiqueta: 'Fin del seguro', avisoDias: 30, descripcionObligatoria: false },
   basuras: { etiqueta: 'Tasa de basuras', avisoDias: 30, descripcionObligatoria: false },
+  hipoteca: { etiqueta: 'Hipoteca (cuota o vencimiento)', avisoDias: 7, descripcionObligatoria: false },
   otro: { etiqueta: 'Otro recordatorio', avisoDias: 30, descripcionObligatoria: true },
 })
 
