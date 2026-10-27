@@ -1484,9 +1484,10 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 ## (27/10/2026) Pricing SIVRA: prima de finde por ritmo propio + aviso «caro» con demanda
 - House Sevillana: findes 78 % a 693€/noche vendidos meses antes (infravalorado); entre semana 35 % a 412€. El aviso «precio al HUÉSPED caro» comparaba solo con comparables.
-- `lib/sivra/pricing-ritmo-finde.ts`: prima vie/sáb 1,00-1,25 (escala p90/techo mercado/ADR de esa fecha) + factor dom-jue 0,85-1,00 solo en ventana p75 de antelación (máx. con lastminute, no producto). Gate env `SIVRA_PRIMA_FINDE_PISOS` (vacía = sin efecto; NO definida aún en Vercel).
+- `lib/sivra/pricing-ritmo-finde.ts`: prima vie/sáb 1,00-1,25 (escala p90/techo mercado/ADR de esa fecha) + factor dom-jue 0,85-1,00 solo en ventana p75 de antelación (máx. con lastminute, no producto). Gate env `SIVRA_PRIMA_FINDE_PISOS` (vacía = sin efecto; definida = `prop_house_sevillana` desde el 27/10).
 - Prior estacional: rampa 1,10-1,20 en vez de escalón 1,15 (causa del +20 % de House en dic). Aviso: `caro_vendiendo` (vende a ese precio o prima>1), no avisa solo por noches de evento.
-- Pendiente: definir la env (empezar por House), dryRun de apply antes; decidir si el factor dom-jue (0,85 en verano) se quiere.
+- Hecho 27/10: env `SIVRA_PRIMA_FINDE_PISOS=prop_house_sevillana` definida en Vercel plataforma (prod+preview); PR #5138 mergeado. Simulación: prima House 1,25, pero solo 4 noches libres nov-abr (18/12, 8-9/1, 23/1).
+- Pendiente: dryRun real NO hecho (preview sin login y CRON_SECRET sensible). Recordatorio 03/11: analizar y decidir el resto de pisos. Anomalía 24/11: precio a 300€, bajo el suelo de nov (330€).
 
 ## (20/10/2026) Correduría · correos de compañía que no llegaban a la cartera
 `correo_evento_entrante` vacía desde el 14/10: (1) central-asegura en prod con #4881 (anterior a #4885; un build viejo terminó después) → promovido a mano `dpl_HLRsKg1` (4660093); (2) los asuntos reales de Occident no casaban: lectores nuevos «Suscripción <ramo> <nº>, <tomador>» (rechazos de solicitud) y «Resumen de recibos anulados por impago» (tipo `anulacion` con nota de RECIBO anulado, clave póliza/recibo). El correo «Solicitud» rechazado hoy no se reprocesa (cursor+etiqueta; no compensa).
