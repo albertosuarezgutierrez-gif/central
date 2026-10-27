@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T16:09:50Z",
-  "sha": "6924d90efd270635c47dd5b24e3d205eafb62476",
+  "generadoEn": "2026-10-27T17:11:23Z",
+  "sha": "976afea92ddd1ed0e26dcbca2570d46b4e9b42c9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -61940,7 +61940,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 29
+          "linea": 31
         },
         {
           "nombre": "sinTabla",
@@ -61948,7 +61948,7 @@
           "exportada": false,
           "params": "err: unknown",
           "retorno": null,
-          "linea": 30
+          "linea": 32
         },
         {
           "nombre": "leerContador",
@@ -61956,7 +61956,7 @@
           "exportada": false,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<",
-          "linea": 63
+          "linea": 65
         },
         {
           "nombre": "companiasConBot",
@@ -61964,7 +61964,7 @@
           "exportada": false,
           "params": "correduriaId: string, ramo: string",
           "retorno": "Promise<string[]>",
-          "linea": 76,
+          "linea": 78,
           "resumen": "Compañías con bot ACTIVO para ese ramo en ESTA correduría (fila activa, `rpa_autorizada`, sin pausa)."
         },
         {
@@ -61973,7 +61973,7 @@
           "exportada": false,
           "params": "info: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 92
+          "linea": 94
         },
         {
           "nombre": "nacimientoFicha",
@@ -61981,7 +61981,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 104
+          "linea": 106
         },
         {
           "nombre": "carneFicha",
@@ -61989,7 +61989,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ramo: string",
           "retorno": "Promise<string | null>",
-          "linea": 123,
+          "linea": 125,
           "resumen": "Fecha del carné del conductor en la FICHA (carné B en coche; en moto SOLO el de moto: A, A1 o A2), la MISMA que lee la pantalla de la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo le"
         },
         {
@@ -61998,7 +61998,7 @@
           "exportada": false,
           "params": "p: Promise<T>, defecto: T",
           "retorno": "Promise<T>",
-          "linea": 132
+          "linea": 134
         },
         {
           "nombre": "motoDelLead",
@@ -62006,7 +62006,7 @@
           "exportada": false,
           "params": "texto: unknown",
           "retorno": "Promise<LecturaMoto | null>",
-          "linea": 136,
+          "linea": 138,
           "resumen": "Moto: el texto libre contra el catálogo de motos de Codeoscopic (GET gratis). Sin Codeoscopic configurado = `no_mirado`."
         },
         {
@@ -62015,7 +62015,7 @@
           "exportada": false,
           "params": "valores: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 149,
+          "linea": 151,
           "resumen": "Comunidades: con una referencia catastral de 20 caracteres, el año de construcción y el CP del Catastro (con la de 14, la de parcela, el Catastro no da datos del bien). Solo si faltan. `null` = no se "
         },
         {
@@ -62024,7 +62024,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: RamoBotLead, infoRiesgo: unknown, nac: string | null, dia: string,",
           "retorno": "Promise<",
-          "linea": 166,
+          "linea": 168,
           "resumen": "El formulario candidato del bot de UNA oportunidad de auto/moto/comunidades: contrato del lead (descifrado) + bloque del riesgo (`datosVehiculo`) + ficha (nacimiento y carné). Compartido por la revisi"
         },
         {
@@ -62033,7 +62033,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: string, ahora = new Date()",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 191,
+          "linea": 193,
           "resumen": "Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE del cliente en ese ramo + su ficha, como el botón (formulario + «completar d"
         },
         {
@@ -62042,8 +62042,17 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ahora: Date",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 206,
+          "linea": 208,
           "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
+        },
+        {
+          "nombre": "catalogosHogarVivos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<CatalogosHogarLeidos>",
+          "linea": 223,
+          "resumen": "Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types, occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera ("
         },
         {
           "nombre": "revisarInterno",
@@ -62051,7 +62060,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 217
+          "linea": 233
         },
         {
           "nombre": "publico",
@@ -62059,7 +62068,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 242
+          "linea": 258
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -62067,7 +62076,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 246
+          "linea": 262
         },
         {
           "nombre": "tarificarLead",
@@ -62075,7 +62084,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 262
+          "linea": 278
         },
         {
           "nombre": "ampliarTopeLead",
@@ -62083,7 +62092,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 364,
+          "linea": 380,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -62092,7 +62101,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 391,
+          "linea": 407,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -62101,7 +62110,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 438,
+          "linea": 454,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -62110,7 +62119,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "ee39e61e0414"
+      "hash": "6900e0170b5a"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -66598,7 +66607,7 @@
           "nombre": "riesgoHogarDeRiesgoOportunidad",
           "kind": "function",
           "exportada": true,
-          "params": "r: RiesgoParaBotsHogar, ahora = new Date()",
+          "params": "r: RiesgoParaBotsHogar, ahora = new Date(), catalogos: CatalogosHogarLeidos = {}",
           "retorno": "ReconstruccionRiesgo",
           "linea": 61,
           "resumen": "HOGAR (27/10/2026): el riesgo se arma como cuando Alberto pulsa «pedir precio» en la oportunidad de hogar de plataforma: `datosVivienda` de la oportunidad MÁS RECIENTE del cliente (`leerRiesgo`, el mi"
@@ -66609,7 +66618,7 @@
           "exportada": true,
           "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, actual: string | null",
           "retorno": "ReconstruccionRiesgo",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre auto con cambio de seguro) con la compañía que deduce la cartera (`companiaActualUnica`: solo con exactamente una póliza de auto en v"
         },
         {
@@ -66618,7 +66627,7 @@
           "exportada": true,
           "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, filas: readonly FilaOrigen[]",
           "retorno": "ReconstruccionRiesgo",
-          "linea": 83,
+          "linea": 85,
           "resumen": "nada personal se copia. Sin origen, otra compañía/ramo, o ya con vehículo → mismo objeto. PURA."
         },
         {
@@ -66627,13 +66636,13 @@
           "exportada": true,
           "params": "e: { reconstruccion: ReconstruccionRiesgo; previo: unknown | null; soloPurgados: boolean; validar: (riesgo: unknown) => ValidacionProbar<E> }",
           "retorno": "DecisionProbar<E>",
-          "linea": 100,
+          "linea": 102,
           "resumen": "Qué riesgo se reencola. Orden: 1) el reconstruido de la oportunidad+ficha, si valida; 2) el del último trabajo, si valida (no purgado); 3) rechazo que dice QUÉ falta (solo etiquetas de campo, nunca va"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aed57306ea86"
+      "hash": "9548cdb57210"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-robustez.ts",
@@ -143892,7 +143901,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "76f0ed1f465e"
+      "hash": "58dc04502963"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -189176,7 +189185,8 @@
       "resumen": "lib/sivra/pricing-suelo-finde.ts — SUELO de fin de semana cuando la fecha NO tiene mercado medido. POR QUÉ (27/09/2026, reserva de House Sevillana 29-31/01/2027 por 600€). El finde solo se encarecía por el ancla de la FECHA exacta (`pricing-ancla-fecha.ts`), que exige ≥5 comps fiables de ESE día. Si",
       "exporta": [
         "esNocheFinde",
-        "sueloFinde"
+        "sueloFinde",
+        "sueloFindePropietario"
       ],
       "funciones": [
         {
@@ -189196,11 +189206,20 @@
           "retorno": "number | null",
           "linea": 41,
           "resumen": "Suelo del finde en base (sin markup), o `null` si no aplica."
+        },
+        {
+          "nombre": "sueloFindePropietario",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: { fecha: string minPriceFinde: number | null maxPrice: number | null }",
+          "retorno": "number | null",
+          "linea": 65,
+          "resumen": "Suelo vie/sáb del propietario en base (sin markup), o `null` si no aplica."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d682ed0deb4b"
+      "hash": "4bd08cb86e11"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-techo-adr.ts",
@@ -189230,7 +189249,8 @@
       "resumen": "lib/sivra/pricing-techo-mercado.ts — el TECHO de mercado medido: no listar al huésped a ×3-×5. POR QUÉ (25/08/2026). El motor tiene varios caminos que SUBEN el precio saltándose el raíl ±%/día a propósito (salto de evento, suelo PL, premio de mercado) y varias guardas que impiden BAJARLO (outlier +4",
       "exporta": [
         "techoMercado",
-        "acotarPorTecho"
+        "acotarPorTecho",
+        "sueloFrenteTecho"
       ],
       "funciones": [
         {
@@ -189250,11 +189270,20 @@
           "retorno": "AcoteTecho",
           "linea": 142,
           "resumen": "Aplica el techo al objetivo del día. El descenso respeta los suelos de siempre: nunca por debajo del suelo del raíl (±%/día sobre el ancla — un ×4 se deshace en varias pasadas, no de golpe) ni del `mi"
+        },
+        {
+          "nombre": "sueloFrenteTecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { minPrice: number | null /** suelo estacional del día ya calculado (incluye el recargo de evento); null = no aplica */ sueloEstacional: number | null /** el mismo suelo SIN evento (solo FLOOR_SEASONAL del mes); null = no aplica */ suelo",
+          "retorno": "number | null",
+          "linea": 178,
+          "resumen": "Suelo que los techos (mercado medido y ADR propio) NO pueden perforar al bajar (27/10/2026). POR QUÉ. `acotarPorTecho` solo volvía a subir hasta `min_price`, así que el suelo ESTACIONAL calculado unas"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9c022f7106c6"
+      "hash": "8dba8ee473fd"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/prior-estacional.ts",
@@ -255263,6 +255292,6 @@
   ],
   "resumen": {
     "archivos": 5349,
-    "funciones": 20514
+    "funciones": 20517
   }
 }
