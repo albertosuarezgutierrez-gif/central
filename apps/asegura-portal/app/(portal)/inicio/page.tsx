@@ -3,11 +3,14 @@ import { redirect } from 'next/navigation'
 import { nombreDePila } from '@central/module-seguros'
 
 import { resumenInicio } from '@/lib/inicio'
+import { patrimonioParaInicio } from '@/lib/patrimonio/gastos-bd'
+import { puertaDeSesion } from '@/lib/puertas-portal'
 import { getIdentidad } from '@/lib/session'
 
 import { HuecosProteccion } from '../boveda/HuecosProteccion'
 import { PaginaPortal } from '../../PaginaPortal'
 import { PendienteInicio } from './PendienteInicio'
+import { TarjetaPatrimonio } from './TarjetaPatrimonio'
 
 // Lee la cookie: nunca estática (si se cachease, todos verían el Inicio del primero).
 export const dynamic = 'force-dynamic'
@@ -28,6 +31,10 @@ export default async function InicioPage() {
   if (r === null) redirect('/')
 
   // El nombre sale de la IDENTIDAD; si duda, sin nombre (nunca «Hola, cliente»).
+  // «Mi patrimonio» (27/10/2026): solo con acceso a Patrimonio. `undefined` = sin patrimonio (no se pinta); `null` = no se pudo
+  // leer (se dice, no se afirma «0 pendientes»).
+  const patrimonio = (await puertaDeSesion('patrimonio', 'lectura')) ? await patrimonioParaInicio(identidad.id).catch(() => null) : undefined
+
   const pila = nombreDePila(identidad.nombre)
 
   return (
@@ -40,7 +47,12 @@ export default async function InicioPage() {
       <PendienteInicio
         pendiente={r.pendiente}
         huecos={r.sugerencia ? <HuecosProteccion huecos={r.sugerencia.huecos} estado={r.sugerencia.estado} /> : null}
+        // Hay gastos por confirmar (o no se sabe): el «Todo al día» sería falso.
+        patrimonioPendiente={patrimonio !== undefined && (patrimonio === null || patrimonio.pendientes !== 0)}
       />
+      {patrimonio !== undefined && (
+        <ul className="rejilla-portal"><li><TarjetaPatrimonio resumen={patrimonio} /></li></ul>
+      )}
     </PaginaPortal>
   )
 }

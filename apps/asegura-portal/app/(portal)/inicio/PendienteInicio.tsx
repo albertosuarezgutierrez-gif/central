@@ -63,7 +63,7 @@ function Lista({ items }: { items: ItemPendiente[] }) {
  * Sin nada pendiente y todo leído: estado vacío amable con un acceso a Seguros. Mientras los avisos cargan NO se
  * enseña el vacío (diría «todo al día» sobre algo que no se ha mirado); si no se pueden leer, se dice.
  */
-export function PendienteInicio({ pendiente, huecos }: { pendiente: Pendiente; huecos: ReactNode }) {
+export function PendienteInicio({ pendiente, huecos, patrimonioPendiente = false }: { pendiente: Pendiente; huecos: ReactNode; patrimonioPendiente?: boolean }) {
   const [avisos, setAvisos] = useState<Avisos | 'error' | null>(null)
 
   const cargar = useCallback(async () => {
@@ -83,7 +83,7 @@ export function PendienteInicio({ pendiente, huecos }: { pendiente: Pendiente; h
   const avisosIlegibles = avisos === 'error' || (avisos !== null && avisos.fuentesIlegibles.length > 0)
   const cargando = avisos === null
   const hayAlgo =
-    pendiente.vencimientos.length + pendiente.recibos.length + pendiente.siniestros.length + avisosVisibles.length > 0 || huecos !== null
+    pendiente.vencimientos.length + pendiente.recibos.length + pendiente.siniestros.length + avisosVisibles.length > 0 || huecos !== null || patrimonioPendiente
   const sinComprobar = pendiente.sinComprobar
 
   return (
