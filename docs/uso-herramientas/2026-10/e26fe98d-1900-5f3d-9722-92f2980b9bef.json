@@ -1,8 +1,8 @@
 {
  "sesion": "e26fe98d-1900-5f3d-9722-92f2980b9bef",
  "inicio": "2026-10-26T21:07:24.050Z",
- "fin": "2026-10-27T07:11:20.551Z",
- "llamadas": 514,
+ "fin": "2026-10-27T07:43:32.163Z",
+ "llamadas": 645,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 1,
@@ -16,14 +16,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 5,
-   "chars_in": 9525,
-   "chars_out": 10630,
+   "llamadas": 9,
+   "chars_in": 17640,
+   "chars_out": 19629,
    "errores": 0,
-   "archivos_citados": 7,
-   "chars_citados": 112494,
+   "archivos_citados": 22,
+   "chars_citados": 318045,
    "tools": {
-    "Agent": 5
+    "Agent": 9
    }
   },
   "lectura-directa": {
@@ -40,17 +40,17 @@
    }
   },
   "otro": {
-   "llamadas": 75,
-   "chars_in": 45875,
-   "chars_out": 516818,
+   "llamadas": 83,
+   "chars_in": 51633,
+   "chars_out": 629140,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 14,
+    "ToolSearch": 15,
     "WebSearch": 10,
-    "SubagentHandback": 14,
-    "ReadNotifications": 31,
+    "SubagentHandback": 16,
+    "ReadNotifications": 36,
     "SendMessage": 5,
     "Monitor": 1
    }
@@ -68,40 +68,40 @@
    }
   },
   "bash": {
-   "llamadas": 343,
-   "chars_in": 254630,
-   "chars_out": 1417424,
+   "llamadas": 447,
+   "chars_in": 328146,
+   "chars_out": 2040197,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 343
+    "Bash": 447
    }
   },
   "escritura": {
-   "llamadas": 22,
-   "chars_in": 149599,
-   "chars_out": 433878,
+   "llamadas": 35,
+   "chars_in": 305164,
+   "chars_out": 750199,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 20,
+    "Write": 33,
     "Edit": 2
    }
   },
   "mcp:github": {
-   "llamadas": 11,
-   "chars_in": 2446,
-   "chars_out": 53500,
+   "llamadas": 13,
+   "chars_in": 4701,
+   "chars_out": 55373,
    "errores": 0,
-   "archivos_citados": 2,
-   "chars_citados": 1107534,
+   "archivos_citados": 5,
+   "chars_citados": 2232268,
    "tools": {
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 8,
+    "mcp__github__pull_request_read": 9,
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__update_pull_request": 1
+    "mcp__github__update_pull_request": 2
    }
   },
   "mcp:claude-code-remote": {
