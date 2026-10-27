@@ -1562,19 +1562,39 @@ function esBlobAlfanumerico(run: string): boolean {
   return run.length >= 12 && t(/[a-z][A-Z]|[A-Z][a-z]/g) >= 6
 }
 
+/** v0.6.33: segmento de ruta/consulta de una URL que parece CODIFICADO (≥12 con letras y dígitos mezclados, o con % o +; el = de consulta/relleno separa) y no una palabra legible. PURA. */
+function esSegmentoUrlCodificado(seg: string): boolean {
+  if (/[%+]/.test(seg)) return true
+  return seg.length >= 12 && /[0-9]/.test(seg) && /[A-Za-z]/.test(seg)
+}
+
+/** v0.6.33: ¿la `raiz` casa en el token `w` (minúsculas)? Igual, EMPIEZA por ella (emitirpoliza) o la lleva tras un prefijo corto (≤4: btnemitir, doemit; ≤6 pronunciable si acaba en ella: lanzarsms): nunca tras un prefijo largo de token opaco (nrzldmqexemit). PURA. */
+function raizCasaEnToken(w: string, r: string): boolean {
+  if (w.startsWith(r)) return true
+  for (let i = w.indexOf(r, 1); i > 0; i = w.indexOf(r, i + 1)) {
+    const pre = w.slice(0, i)
+    if (/[0-9]/.test(pre)) continue
+    if (pre.length <= 4) return true
+    if (pre.length <= 6 && w.endsWith(r) && !/[^aeiou]{3,}/.test(pre)) return true
+  }
+  return false
+}
+
 /**
  * v0.6.32: palabra de la lista negra de atributos que casa en `valor` por TOKENS (troceado por no alfanuméricos y por camelCase/snake; minúsculas, sin
- * tildes): un token igual a una raíz, que EMPIEZA por ella (enviarsms) o que ACABA en ella (lanzarsms). Las tiras largas/mezcladas de blob (base64, hex) no cuentan: «sms» dentro de texto
- * aleatorio no es un envío. Solo para ATRIBUTOS internos; el rótulo visible se sigue mirando con sus reglas de siempre. PURA.
+ * tildes): un token igual a una raíz, que EMPIEZA por ella (enviarsms) o que ACABA en ella con prefijo corto (v0.6.33: ≤6 y pronunciable; lanzarsms, btnemitir). Las tiras largas/mezcladas de blob (base64, hex) no cuentan: «sms» dentro de texto
+ * aleatorio no es un envío. v0.6.33: en valores tipo URL (http, blob:, /ruta) se saltan los segmentos de ruta/consulta codificados. Solo para ATRIBUTOS internos; el rótulo visible se sigue mirando con sus reglas de siempre. PURA.
  */
 export function palabraBloqueadaEnAtributo(valor: string | null | undefined): string | null {
   const base = String(valor ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
-  for (const run of base.split(/[^A-Za-z0-9]+/)) {
+  const esUrl = /^(?:https?:|blob:|\/|\.\.?\/)/i.test(base.trim())
+  const segmentos = esUrl ? base.split(/[\/?&#=]/).filter((sg) => !esSegmentoUrlCodificado(sg)) : [base]
+  for (const run of segmentos.flatMap((sg) => sg.split(/[^A-Za-z0-9]+/))) {
     if (run === '' || esBlobAlfanumerico(run)) continue
     const tokens = run.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').split(' ')
     for (const tk of tokens) {
       const w = tk.toLowerCase()
-      const raiz = RAICES_ATRIBUTO_DESCARGA.find((r) => w.startsWith(r) || w.endsWith(r))
+      const raiz = RAICES_ATRIBUTO_DESCARGA.find((r) => raizCasaEnToken(w, r))
       if (raiz !== undefined) return raiz
     }
   }
