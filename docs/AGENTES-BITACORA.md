@@ -17,6 +17,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-26 · trading-analista** · hizo: repesca 23:15 UTC (la de 20:15 empujó el saldo pero no llegó a /analizar; trading_pasadas sin fila); NAV 33.621,33€, cartera real (2 pos.), operaciones (0) y latido; /analizar 24 símbolos (0 vetos, 0 compras nuevas) y /puntuar (288, 4 cierres por ventana); Telegram enviado; dudas: velas de 60 sesiones (no 120) y payload por Python por límite de argv del canal-aviso (148 KB); contraste 2ª fuente un día atrasado → 24 «sin juzgar»; snapshot trading_ranking de hoy (lunes) ausente; fallos: primer envío Telegram con campo `mensaje` (400), el campo es `text`; PRs/commits: —
 - **2026-10-26 · facturas-correo** · hizo: 1 candidato real (Endesa Socorro 24 P26CON044354751, PDF aún no en `_buzon_pdf`; sin archivar ni etiquetar); 4.0: 2 `sin_revisar` (SiQue 1.128,48€ y Anthropic 180€) sin cargo localizable; dudas: —; fallos: la cuenta Kutxa (`b8c4376f`) no tiene movimientos desde el 28/09 (sync PSD2 parado) → por eso no casan; Vía B última copia 23/10 (fin de semana, no corte); `gmail-adjuntos` no conectó; PRs/commits: —
 
 - **2026-10-26 · buscador-ia** · hizo: pasada semanal por WebSearch (Gemini 2.5, Groq, OpenRouter, visión NIM, descubrimiento); sin hallazgos nuevos, doc actualizado; dudas: precio/free tier de Groq sigue contradictorio sin key; fallos: — (WebFetch a catálogos no usado, sin keys); PRs/commits: PR draft solo con docs
