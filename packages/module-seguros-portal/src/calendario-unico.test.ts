@@ -27,6 +27,7 @@ const fuentes = (parcial: Partial<Record<OrigenCalendario, FuenteCalendario>> = 
   seguro: [],
   recibo: [],
   patrimonio: [],
+  flota: [],
   recordatorio: [],
   aviso: [],
   ...parcial,

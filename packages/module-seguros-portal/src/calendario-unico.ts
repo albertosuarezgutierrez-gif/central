@@ -1,7 +1,7 @@
 // EL CALENDARIO ÚNICO del portal (26/10/2026, Alberto): hasta hoy había TRES «calendarios» —la pestaña «Recordatorios»
 // de la bóveda, la tarjeta «Calendario» de Inicio y `/patrimonio/calendario`— más la campana «Avisos». Ahora es UNA
 // vista (Herramientas → Calendario) que junta vencimientos de seguros, recibos, avisos con fecha, las fechas del
-// patrimonio y los recordatorios propios.
+// patrimonio, las ITV de la flota de la empresa y los recordatorios propios.
 //
 // Este fichero es la COMPOSICIÓN pura (sin BD, sin reloj: `hoy` entra). La lectura de cada fuente vive en la app.
 //
@@ -13,7 +13,7 @@
 /** La ruta del calendario único. Las viejas (`/boveda?vista=recordatorios`, `/patrimonio/calendario`) redirigen aquí. */
 export const RUTA_CALENDARIO = '/herramientas/calendario' as const
 
-export const ORIGENES_CALENDARIO = ['seguro', 'recibo', 'patrimonio', 'recordatorio', 'aviso'] as const
+export const ORIGENES_CALENDARIO = ['seguro', 'recibo', 'patrimonio', 'flota', 'recordatorio', 'aviso'] as const
 export type OrigenCalendario = (typeof ORIGENES_CALENDARIO)[number]
 
 /** Cuántas filas se pintan de golpe antes del «Ver más» (regla de rendimiento de la casa). */

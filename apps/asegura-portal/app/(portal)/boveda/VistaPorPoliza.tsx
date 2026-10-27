@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import type { BloqueCartera, TitularAgrupable } from '@central/module-seguros-portal'
@@ -141,7 +142,15 @@ export function VistaPorPoliza({
                         {texto !== null && <span className="poliza-bloque-linea">{texto}</span>}
                       </h4>
                     </summary>
-                    <div className="poliza-bloque-cuerpo">{bloque(p)}</div>
+                    <div className="poliza-bloque-cuerpo">
+                      {bloque(p)}
+                      {/* La ficha de la póliza (27/10/2026): recibos y siniestros son vistas TRANSVERSALES; el detalle y las
+                          acciones de cada póliza viven en su ficha. Mismo `id` de la cartera que ya se ve: la ruta lo busca
+                          dentro de lo autorizado (404 si no). */}
+                      <Link className="boton-tenue" style={{ minHeight: 44, marginTop: 8 }} href={`/boveda/poliza/${encodeURIComponent(p.id)}`}>
+                        Ver la póliza
+                      </Link>
+                    </div>
                   </details>
                 )
               })}

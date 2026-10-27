@@ -15,6 +15,7 @@ import { carnetsDeIdentidad } from '@/lib/carnets'
 import { carteraALaVista, carteraDeIdentidad, cuentaComoEnVigor, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import {
   avisosConFecha,
+  fechasDeFlota,
   fechasDePatrimonio,
   fechasDeRecordatorios,
   recibosPendientes,
@@ -23,6 +24,7 @@ import {
 } from '@/lib/calendario-portal'
 import { prisma } from '@/lib/db'
 import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
+import { flotaParaCalendario } from '@/lib/flota'
 import { calendarioDeIdentidad } from '@/lib/patrimonio/calendario-bd'
 import { fechaMadrid } from '@/lib/patrimonio/dia-madrid'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
@@ -41,6 +43,7 @@ const DE_DONDE: Record<OrigenCalendario, string> = {
   seguro: 'los vencimientos de tus seguros',
   recibo: 'tus recibos',
   patrimonio: 'las fechas de tu patrimonio',
+  flota: 'las ITV de tu flota',
   recordatorio: 'tus recordatorios',
   aviso: 'los avisos',
 }
@@ -67,7 +70,7 @@ export default async function CalendarioPage() {
   // ABRE, como el enlace — esta página solo enseña lo que la identidad ya ve en otras pantallas.
   if (!(await puertaDeSesion('calendario', 'lectura'))) redirect('/inicio')
 
-  const [carteraR, declaradasR, recordatoriosR, carnetsR, patrimonioR, avisosR] = await Promise.allSettled([
+  const [carteraR, declaradasR, recordatoriosR, carnetsR, patrimonioR, flotaR, avisosR] = await Promise.allSettled([
     carteraDeIdentidad(identidad.id).then(carteraALaVista),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
@@ -83,6 +86,8 @@ export default async function CalendarioPage() {
       return null
     }),
     calendarioDeIdentidad(identidad.id),
+    // Las ITV de la flota de la empresa (`[]` si no lleva ninguna; `null` si no se pudo leer alguna sociedad).
+    flotaParaCalendario(identidad.id),
     // La MISMA lectura que la campana (`/api/avisos`): el calendario no tiene una segunda lista de avisos.
     leerAvisos().then(async (r) => {
       if (!r.ok) throw new Error(`avisos ${r.status}`)
@@ -93,6 +98,7 @@ export default async function CalendarioPage() {
     ['cartera', carteraR],
     ['recordatorios', recordatoriosR],
     ['patrimonio', patrimonioR],
+    ['flota', flotaR],
     ['avisos', avisosR],
   ] as const) {
     if (r.status === 'rejected') console.error(`[herramientas/calendario] ${que} sin comprobar:`, motivo(r.reason))
@@ -119,6 +125,8 @@ export default async function CalendarioPage() {
       recibo: titulares === null ? null : recibosPendientes(titulares, titulo),
       // `null` de la lectura = esta sesión no tiene patrimonio a la vista: se miró y no hay (≠ lectura caída).
       patrimonio: patrimonioR.status === 'rejected' ? null : patrimonio === null ? [] : fechasDePatrimonio(patrimonio.vencimientos),
+      // `null` = alguna sociedad (o los accesos) no se pudo leer: se declara, no se da por «sin ITV».
+      flota: flotaR.status === 'rejected' || flotaR.value === null ? null : fechasDeFlota(flotaR.value),
       recordatorio: recordatorios === null ? null : fechasDeRecordatorios(recordatorios),
       aviso: avisos === null ? null : avisosConFecha(avisos.avisos),
     },

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { empresasDeFlota, nombramientosPendientes } from '@/lib/flota'
+import { destinoFlota } from '@/lib/flota-destino'
 
 /**
  * La puerta a «Tu flota» desde «Mis seguros» (05/10/2026). Componente de
@@ -21,7 +22,7 @@ export async function EnlaceFlota({ identidadId }: { identidadId: string }) {
     return null
   }
   if (empresas.length === 0 && pendientes === 0) return null
-  const destino = empresas.length === 1 && pendientes === 0 ? `/flota?empresa=${encodeURIComponent(empresas[0]!.id)}` : '/flota'
+  const destino = destinoFlota(empresas, pendientes)
   return (
     <p style={{ margin: '0 0 16px' }}>
       <Link className="boton-tenue" style={{ width: '100%' }} href={destino}>

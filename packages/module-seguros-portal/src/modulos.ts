@@ -35,6 +35,8 @@ export const TEXTO_ACTIVO_SIN_ACCESO_PATRIMONIO =
 export type FichaModulo = {
   id: ModuloPortal
   nombre: string
+  /** El rótulo pequeño sobre el nombre en la tarjeta (27/10/2026): sale de AQUÍ, no de un `if (id === …)` en la pantalla. */
+  antetitulo: string
   descripcion: string
   /** Con qué seguros tiene que ver (texto para la tarjeta, no una regla). */
   seguros: string
@@ -48,6 +50,7 @@ export const CATALOGO_MODULOS: Record<ModuloPortal, FichaModulo> = {
   flota: {
     id: 'flota',
     nombre: 'Flota de vehículos',
+    antetitulo: 'Empresa',
     descripcion:
       'Los vehículos de tu empresa en una lista: seguro de cada uno, cuándo vence y cuándo le toca la ITV. ' +
       'Puedes nombrar a un jefe de flota que los lleve sin ver el resto de seguros de la sociedad.',
@@ -58,6 +61,7 @@ export const CATALOGO_MODULOS: Record<ModuloPortal, FichaModulo> = {
   rrhh: {
     id: 'rrhh',
     nombre: 'Portal del Empleado',
+    antetitulo: 'Para tu plantilla',
     descripcion:
       'Fichaje, vacaciones, nóminas y documentos para tu plantilla, cada empleado con su acceso.',
     seguros: 'Accidentes de convenio, responsabilidad civil y salud de los empleados.',
@@ -70,6 +74,7 @@ export const CATALOGO_MODULOS: Record<ModuloPortal, FichaModulo> = {
   alquileres: {
     id: 'alquileres',
     nombre: 'Patrimonio y alquileres',
+    antetitulo: 'Inmuebles',
     descripcion:
       'Tus pisos y locales en un sitio: gastos, contratos e inquilinos, sus documentos y qué seguro tiene cada uno.',
     seguros: 'Hogar del propietario, comunidad, impago de alquiler y el seguro del inquilino.',
