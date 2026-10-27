@@ -1,7 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { techoMercado, acotarPorTecho, TECHO_FECHA_RATIO, TECHO_MES_RATIO } from "./pricing-techo-mercado.ts"
+import { techoMercado, acotarPorTecho, sueloFrenteTecho, TECHO_FECHA_RATIO, TECHO_MES_RATIO } from "./pricing-techo-mercado.ts"
 
 const RUTA_APPLY = new URL("../../app/api/sivra/pricing/apply/route.ts", import.meta.url)
 
@@ -138,4 +138,45 @@ test("guardián: pricing/apply usa el techo y las guardas de congelación miran 
     /const liberaGuardas = liberaTecho \|\|/,
     "liberaGuardas debe seguir incluyendo liberaTecho: el techo medido no puede dejar de abrir",
   )
+})
+
+// ─── sueloFrenteTecho (27/10/2026) ─────────────────────────────────────────────────────────────
+// Caso real: House Sevillana 24/11 (min_price 300, suelo estacional nov ×1,10 = 330) y 08/12
+// (evento 1,80 → suelo con evento 420; temporada dic ×1,20 = 360) listados a 300 porque el techo
+// de mercado bajaba el objetivo y `acotarPorTecho` solo re-subía hasta min_price.
+
+test("suelo frente al techo: el techo de mercado no perfora el suelo estacional (House 24/11)", () => {
+  const suelo = sueloFrenteTecho({ minPrice: 300, sueloEstacional: 330, sueloTemporada: 330 })
+  assert.equal(suelo, 330)
+  const a = acotarPorTecho({ target: 330, techo: 280, old: 330, railLo: 264, minPrice: suelo })
+  assert.equal(a.target, 330)
+  assert.equal(a.acotado, false)
+})
+
+test("suelo frente al techo: en EVENTO solo cuenta el suelo de la temporada sin evento (08/12)", () => {
+  const suelo = sueloFrenteTecho({ minPrice: 300, sueloEstacional: 420, sueloTemporada: 360 })
+  assert.equal(suelo, 360)
+  // El techo MEDIDO de la noche de evento baja el recargo (420→360), pero no por debajo del mes.
+  const a = acotarPorTecho({ target: 420, techo: 250, old: 420, railLo: 336, minPrice: suelo })
+  assert.equal(a.target, 360)
+  assert.equal(a.acotado, true)
+})
+
+test("suelo frente al techo: sin suelo estacional (k=0) manda min_price; sin nada, null (nunca 0)", () => {
+  assert.equal(sueloFrenteTecho({ minPrice: 300, sueloEstacional: null, sueloTemporada: null }), 300)
+  assert.equal(sueloFrenteTecho({ minPrice: null, sueloEstacional: null, sueloTemporada: null }), null)
+  // Temporada baja (×1,00): el suelo es min_price, no menos.
+  assert.equal(sueloFrenteTecho({ minPrice: 300, sueloEstacional: 300, sueloTemporada: 300 }), 300)
+})
+
+test("cepo: los DOS acotarPorTecho del apply reciben el suelo estacional, no min_price a secas", () => {
+  const src = readFileSync(RUTA_APPLY, "utf8")
+  const llamadas = src.match(/acotarPorTecho\(\{[^}]*\}\)/g) ?? []
+  assert.equal(llamadas.length, 2, "se esperaban dos llamadas a acotarPorTecho en el apply")
+  for (const l of llamadas) {
+    assert.match(l, /minPrice:\s*sueloTecho\b/, `acotarPorTecho sin el suelo estacional: ${l}`)
+  }
+  // El suelo de temporada se calcula con FLOOR_SEASONAL (sin evento) y entra en el helper.
+  assert.match(src, /sueloFrenteTecho\(\{\s*minPrice:\s*r\.min_price,\s*sueloEstacional:\s*sueloEstDia,\s*sueloTemporada:\s*sueloTempDia/)
+  assert.match(src, /FLOOR_SEASONAL\[Number\(date\.slice\(5, 7\)\) - 1\]/)
 })
