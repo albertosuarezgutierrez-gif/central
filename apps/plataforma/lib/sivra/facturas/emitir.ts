@@ -23,6 +23,8 @@ import { fechaMadrid, planEmision, evaluarSerie, type SerieConfig } from './nume
 import { generarPdfFactura } from './pdf'
 import { type Receptor } from './receptor'
 import { mensajeVigente } from './telegram'
+import { avisarFacturaEnSmoobu, correoYAviso, nombreSaludo, type ResultadoAvisoSmoobu } from './aviso-smoobu'
+import { enviarAlHuespedDetallado } from '@/lib/sivra/agente-huesped/enviar'
 import { eur } from '@/lib/dinero'
 
 export type ResultadoEmision =
@@ -84,7 +86,9 @@ export async function emitirFactura(facturaId: string, mensajeId: number | null,
 }
 
 export type ResultadoEnvio =
-  | { estado: 'enviada'; email: string }
+  /** `aviso`: el mensaje al huésped por el hilo de Smoobu («te hemos enviado la factura…»). Fail-open: si falla, la
+   *  factura sigue `enviada` y aquí va el motivo para Alberto. Solo se intenta en la transición a `enviada`. */
+  | { estado: 'enviada'; email: string; aviso: ResultadoAvisoSmoobu }
   | { estado: 'ya_enviada' }
   | { estado: 'en_curso' }
   /** Un envío empezó y no dejó ni éxito ni error (función cortada, o el correo salió y falló el UPDATE final): NO se
@@ -116,13 +120,13 @@ export async function enviarFactura(facturaId: string, opts: { forzar?: boolean 
   // Reclamo atómico: solo una pulsación envía. Un reclamo que quedó colgado (sin éxito ni `envio_error`) NO se vuelve
   // a reclamar solo: el correo pudo salir y fallar el UPDATE final → reenviar duplicaría. Solo con `forzar` (Alberto,
   // avisado) y si lleva >10 min colgado.
-  const [r] = await prisma.$queryRaw<Array<{ numero_completo: string; total: number; receptor: Receptor; pdf: Buffer; property_id: string }>>(Prisma.sql`
+  const [r] = await prisma.$queryRaw<Array<{ numero_completo: string; total: number; receptor: Receptor; pdf: Buffer; property_id: string; reservation_id: string }>>(Prisma.sql`
     UPDATE sivra_facturas_huesped
        SET envio_en_curso_at = now(), envio_intentos = envio_intentos + 1
      WHERE id = ${facturaId}::uuid AND estado = 'emitida'
        AND (envio_en_curso_at IS NULL
             OR (${opts.forzar === true} AND envio_en_curso_at < now() - interval '10 minutes'))
-     RETURNING numero_completo, total::float8 AS total, receptor, pdf, property_id`)
+     RETURNING numero_completo, total::float8 AS total, receptor, pdf, property_id, reservation_id`)
   if (!r) {
     const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: facturaId }, select: { estado: true, envioEnCursoAt: true } })
     if (!f || f.estado === 'borrador') return { estado: 'no_emitida' }
@@ -138,17 +142,39 @@ export async function enviarFactura(facturaId: string, opts: { forzar?: boolean 
   if (!de || !transporte) return fallo(!de ? 'sin remitente configurado (FACTURAS_HUESPED_FROM)' : 'sin proveedor de correo configurado')
   const piso = (await prisma.$queryRaw<Array<{ name: string }>>(Prisma.sql`SELECT name FROM properties WHERE id = ${r.property_id}`))[0]?.name ?? 'el apartamento'
   const { asunto, texto } = cuerpoCorreo(r.numero_completo, r.total, piso)
-  try {
-    await transporte.sendMail({
-      from: de, to: r.receptor.email, subject: asunto, text: texto,
-      ...(process.env.FACTURAS_HUESPED_REPLY_TO ? { replyTo: process.env.FACTURAS_HUESPED_REPLY_TO } : {}),
-      attachments: [{ filename: `factura-${r.numero_completo}.pdf`, content: Buffer.from(r.pdf), contentType: 'application/pdf' }],
-    })
-  } catch (e) {
-    return fallo(e instanceof Error ? e.message : 'fallo de envío')
-  }
-  await prisma.$executeRaw(Prisma.sql`
-    UPDATE sivra_facturas_huesped SET estado = 'enviada', enviada_at = now(), envio_en_curso_at = NULL, envio_error = NULL
-     WHERE id = ${facturaId}::uuid AND estado = 'emitida'`)
-  return { estado: 'enviada', email: r.receptor.email }
+  // Correo → `enviada` → aviso en Smoobu (orden y condiciones en `correoYAviso`, testeado). El aviso solo sale si ESTE
+  // intento hizo la transición a `enviada` (1 fila): una vez por factura. Su ✅ (o 🔁) es la autorización de Alberto.
+  const res = await correoYAviso({
+    enviarCorreo: async () => {
+      await transporte.sendMail({
+        from: de, to: r.receptor.email, subject: asunto, text: texto,
+        ...(process.env.FACTURAS_HUESPED_REPLY_TO ? { replyTo: process.env.FACTURAS_HUESPED_REPLY_TO } : {}),
+        attachments: [{ filename: `factura-${r.numero_completo}.pdf`, content: Buffer.from(r.pdf), contentType: 'application/pdf' }],
+      })
+    },
+    marcarEnviada: () => prisma.$executeRaw(Prisma.sql`
+      UPDATE sivra_facturas_huesped SET estado = 'enviada', enviada_at = now(), envio_en_curso_at = NULL, envio_error = NULL
+       WHERE id = ${facturaId}::uuid AND estado = 'emitida'`),
+    avisar: () => avisarEnSmoobu(r.reservation_id, r.receptor, r.numero_completo),
+  })
+  if (!res.ok) return fallo(res.motivo)
+  if (res.aviso.estado === 'no_enviado') console.warn(`[facturas-huesped] aviso Smoobu no enviado (factura ${r.numero_completo}): ${res.aviso.motivo}`)
+  return { estado: 'enviada', email: r.receptor.email, aviso: res.aviso }
+}
+
+async function avisarEnSmoobu(reservationId: string, receptor: Receptor, numero: string): Promise<ResultadoAvisoSmoobu> {
+  // El nombre de la reserva solo hace falta si factura una empresa (se saluda a la persona alojada). Leerlo es
+  // best-effort: sin él se usa el del receptor.
+  const nombreReserva = receptor.tipo === 'empresa'
+    ? (await prisma.$queryRaw<Array<{ g: string | null }>>(Prisma.sql`SELECT "guestName" AS g FROM incomes WHERE "reservationId" = ${reservationId} LIMIT 1`).catch(() => []))[0]?.g ?? null
+    : null
+  return avisarFacturaEnSmoobu(
+    { reservationId, nombre: nombreSaludo(receptor, nombreReserva), numero, email: receptor.email },
+    {
+      // Segunda barrera contra el doble aviso (sin columna nueva): el texto lleva el número de factura.
+      yaEnviado: async (rid, t) => (await prisma.$queryRaw<Array<{ n: number }>>(Prisma.sql`
+        SELECT 1 AS n FROM mensajes_enviados WHERE booking_id = ${rid} AND texto = ${t} LIMIT 1`)).length > 0,
+      enviar: (rid, t) => enviarAlHuespedDetallado(rid, t),
+    },
+  )
 }

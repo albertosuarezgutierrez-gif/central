@@ -76,3 +76,4 @@
 
 ## Pantallas clave (qué hace qué)
 - `/inicio` (`lib/inicio-resumen.ts`, 4 tarjetas en `<Suspense>` propio; banda «Pide acción hoy» `banca/HoyAccionable.tsx` + `lib/inicio-acciones.ts`: banco viejo (`BANCO_STALE_H=48`) primero; `horasDesdeBanco` = número | `null` | `'no_aplica'`). `/banca` segmentos Dinero · Ingresos · Negocios · Fiscal · Personal (`banca/SegTabs.tsx`, perezoso por `?tab`); libro paginado (`listarMovimientosLedger`), ficha de movimiento, `RevisarBandeja` (pregunta el NEGOCIO). No añadir widgets de detalle a la home.
+- `/sivra/facturas` — facturas a huéspedes (`lib/sivra/facturas/`): serie anual en `sivra_factura_series`, ✅ en Telegram (`fhu_*`, solo el mensaje vigente) → emite → correo (`FACTURAS_HUESPED_FROM`) → aviso en Smoobu. Smoobu ya NO numera. Detalle: skill `sivra-maestro`.
