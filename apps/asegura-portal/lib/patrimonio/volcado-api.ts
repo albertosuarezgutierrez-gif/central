@@ -137,7 +137,10 @@ export async function responderSubirVolcado(p: PuertosVolcado, x: EntradaVolcado
     if (reserva.motivo === 'cupo') return { status: 429, body: { error: 'cupo_ia_agotado' } }
     if (reserva.motivo === 'abierto') {
       const otra = await p.abierto(clienteId, f.hash)
-      return otra ? { status: 200, body: { id: otra.id, nueva: false } } : NO_ENCONTRADO
+      if (otra) return { status: 200, body: { id: otra.id, nueva: false } }
+      // El índice único (titular + hash) lo ocupa otra importación abierta de ESTE titular que no es un volcado (el CSV):
+      // no es «no tuyo / no existe» (404), es un conflicto explícito.
+      return { status: 409, body: { error: 'fichero_ya_importado' } }
     }
     return NO_ENCONTRADO
   }

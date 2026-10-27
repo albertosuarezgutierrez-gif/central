@@ -21,6 +21,9 @@ export function contarPolizasEnVigor(filas: readonly FilaPolizaValor[]): number 
 }
 
 /** `filas` = `null` cuando la lectura falló o no se hizo: NO SE SABE (nunca 0). La comisión no se calcula hoy: siempre `null`. */
-export function valorDelGrupo(filas: readonly FilaPolizaValor[] | null): ValorCliente {
-  return { comisionAnualCent: null, polizasEnVigor: filas === null ? null : contarPolizasEnVigor(filas) }
+export function valorDelGrupo(filas: readonly FilaPolizaValor[] | null, recompensaVigente = false): ValorCliente {
+  const v: ValorCliente = { comisionAnualCent: null, polizasEnVigor: filas === null ? null : contarPolizasEnVigor(filas) }
+  // Recomendación canjeada hace menos de 90 días (`recomendacion.ts`): `cupoMensualIa` sube el básico a amplio, nunca rebaja. Solo
+  // se pone cuando es `true`: ausente = sin recompensa o no se pudo comprobar.
+  return recompensaVigente ? { ...v, recompensaVigente: true } : v
 }

@@ -30,9 +30,15 @@ export type ValorCliente = {
   comisionAnualCent: number | null
   /** Pólizas en vigor del grupo (`esCarteraEnVigor`). `null` = NO SE SABE (no es 0); 0 = revisado y no hay. */
   polizasEnVigor: number | null
+  /**
+   * RECOMPENSA POR RECOMENDAR (27/10/2026, `recomendacion.ts`): `true` = esta persona tiene una recomendación canjeada hace menos
+   * de 90 días. Sube el tramo a «amplio» SOLO si estaba por debajo; nunca rebaja uno superior. Ausente/`false`/no se sabe = sin
+   * recompensa (el llamador, que tiene el reloj, decide la vigencia con `recompensaRecomendacionVigente`).
+   */
+  recompensaVigente?: boolean
 }
 
-export type CupoIa = { tramo: TramoCupoIa; max: number; fuente: 'comision' | 'polizas' | 'desconocido' }
+export type CupoIa = { tramo: TramoCupoIa; max: number; fuente: 'comision' | 'polizas' | 'desconocido' | 'recomendacion' }
 
 const MAX_DE: Record<TramoCupoIa, number> = { basico: CUPO_IA_BASICO, amplio: CUPO_IA_AMPLIO, alto_valor: CUPO_IA_ALTO_VALOR }
 const cupo = (tramo: TramoCupoIa, fuente: CupoIa['fuente']): CupoIa => ({ tramo, max: MAX_DE[tramo], fuente })
@@ -42,6 +48,7 @@ export function cupoMensualIa(v: ValorCliente): CupoIa {
   if (dato(v.comisionAnualCent) && v.comisionAnualCent >= UMBRAL_ALTO_VALOR_COMISION_CENT) return cupo('alto_valor', 'comision')
   if (dato(v.polizasEnVigor)) {
     if (v.polizasEnVigor >= UMBRAL_ALTO_VALOR_POLIZAS) return cupo('alto_valor', 'polizas')
+    if (v.polizasEnVigor === 0 && v.recompensaVigente === true) return cupo('amplio', 'recomendacion')
     return cupo(v.polizasEnVigor > 0 ? 'amplio' : 'basico', 'polizas')
   }
   // No se sabe cuántas pólizas tiene: el conservador intermedio (ni el básico por error ni el ilimitado).

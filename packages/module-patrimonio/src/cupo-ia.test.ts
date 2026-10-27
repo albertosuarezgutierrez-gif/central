@@ -45,3 +45,18 @@ test('quedaCupoIa: la décima factura cabe con tope 10, la undécima no', () => 
   assert.equal(quedaCupoIa(10, 10), false)
   assert.equal(quedaCupoIa(0, 0), false)
 })
+
+test('🎁 recompensa por recomendar: el básico sube a amplio, y NUNCA rebaja un tramo superior ni toca lo demás', () => {
+  const sin = cupoMensualIa({ comisionAnualCent: null, polizasEnVigor: 0 })
+  assert.equal(sin.tramo, 'basico')
+  const con = cupoMensualIa({ comisionAnualCent: null, polizasEnVigor: 0, recompensaVigente: true })
+  assert.deepEqual(con, { tramo: 'amplio', max: CUPO_IA_AMPLIO, fuente: 'recomendacion' })
+  // Ya amplio o más: queda igual (el máximo de los dos, jamás menos).
+  assert.deepEqual(cupoMensualIa({ comisionAnualCent: null, polizasEnVigor: 3, recompensaVigente: true }), cupoMensualIa({ comisionAnualCent: null, polizasEnVigor: 3 }))
+  assert.equal(cupoMensualIa({ comisionAnualCent: null, polizasEnVigor: UMBRAL_ALTO_VALOR_POLIZAS, recompensaVigente: true }).tramo, 'alto_valor')
+  assert.equal(cupoMensualIa({ comisionAnualCent: UMBRAL_ALTO_VALOR_COMISION_CENT, polizasEnVigor: 0, recompensaVigente: true }).tramo, 'alto_valor')
+  assert.deepEqual(cupoMensualIa({ comisionAnualCent: null, polizasEnVigor: null, recompensaVigente: true }), { tramo: 'amplio', max: CUPO_IA_AMPLIO, fuente: 'desconocido' })
+  // `false` o ausente no cambia nada.
+  assert.deepEqual(cupoMensualIa({ comisionAnualCent: null, polizasEnVigor: 0, recompensaVigente: false }), sin)
+  assert.ok(con.max >= sin.max)
+})

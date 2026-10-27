@@ -23,3 +23,9 @@ test('🚨 lectura fallida (null) = no se sabe; lista vacía = 0 revisado', () =
   assert.deepEqual(valorDelGrupo([]), { comisionAnualCent: null, polizasEnVigor: 0 })
   assert.equal(valorDelGrupo([viva(), viva()]).polizasEnVigor, 2)
 })
+
+test('🎁 la recompensa por recomendar solo aparece cuando es true (ausente = sin recompensa) y no toca el resto del valor', () => {
+  assert.deepEqual(valorDelGrupo([], false), { comisionAnualCent: null, polizasEnVigor: 0 })
+  assert.deepEqual(valorDelGrupo([], true), { comisionAnualCent: null, polizasEnVigor: 0, recompensaVigente: true })
+  assert.deepEqual(valorDelGrupo(null, true), { comisionAnualCent: null, polizasEnVigor: null, recompensaVigente: true })
+})

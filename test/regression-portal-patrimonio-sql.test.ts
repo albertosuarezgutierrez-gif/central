@@ -45,6 +45,9 @@ const SQL_EDIFICIO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/202
 // Volcado inicial (27/10/2026): columna `volcado` en `importacion`; mismo espejo.
 const RUTA_VOLCADO = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_volcado.sql'
 const SQL_VOLCADO = readFileSync(join(RAIZ, RUTA_VOLCADO), 'utf8').replace(/--.*$/gm, '')
+// Recomendación entre propietarios (27/10/2026): tabla nueva; mismo espejo.
+const RUTA_RECOMENDACION = 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_recomendacion.sql'
+const SQL_RECOMENDACION = readFileSync(join(RAIZ, RUTA_RECOMENDACION), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
@@ -57,6 +60,7 @@ const SQL = [
   SQL_INQUILINO,
   SQL_EDIFICIO,
   SQL_VOLCADO,
+  SQL_RECOMENDACION,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'
@@ -403,4 +407,34 @@ test('🚨 volcado inicial (27/10/2026): SQL aditivo sin borrados, `volcado` sol
   assert.match(SQL_VOLCADO, /REVOKE ALL ON seguros\.portal_patrimonio_importacion FROM crm_seguros/)
   // El tope de elementos del volcado es el CHECK de filas de la BD.
   assert.match(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/volcado.ts'), 'utf8'), /MAX_ELEMENTOS_VOLCADO = 500/)
+})
+
+test('🚨 recomendación entre propietarios (27/10/2026): SQL aditivo sin borrados ni DROP, sin correo en claro, hash único por invitado y crm_seguros sin nada', () => {
+  const crudo = readFileSync(join(RAIZ, RUTA_RECOMENDACION), 'utf8')
+  assert.doesNotMatch(crudo, /\bDROP\b/i, 'ni en comentarios: el MCP de Supabase se cuelga')
+  assert.doesNotMatch(SQL_RECOMENDACION, /\bDROP\b|\bTRUNCATE\b/i)
+  assert.doesNotMatch(SQL_RECOMENDACION.replace(/ON DELETE (CASCADE|SET NULL)/g, ''), /\bDELETE\b/i, 'solo ON DELETE de las FK; ningún borrado')
+  assert.match(SQL_RECOMENDACION, /^BEGIN;/m)
+  assert.match(SQL_RECOMENDACION, /^COMMIT;/m)
+  assert.match(SQL_RECOMENDACION, /CREATE TABLE IF NOT EXISTS seguros\.portal_patrimonio_recomendacion/)
+  assert.match(SQL_RECOMENDACION, /REVOKE ALL ON seguros\.portal_patrimonio_recomendacion FROM crm_seguros/)
+  const t = 'portal_patrimonio_recomendacion'
+  // Solo el HASH del correo: ninguna columna de correo/teléfono/nombre en claro en la tabla ni en el modelo.
+  const cols = modeloDe(t)!.campos.map((c) => c.columna)
+  assert.deepEqual(cols.filter((c) => /correo|email|telefono|nombre/.test(c) && c !== 'correo_hash'), [])
+  assert.ok(cols.includes('correo_hash'))
+  // Quien recomienda, cuándo, y el canje no se reescriben desde el portal: solo los sellos.
+  assert.deepEqual([...concedidas('UPDATE', t)!].sort(), ['anulado_en', 'canjeada_en', 'canjeada_por_identidad_id'])
+  assert.deepEqual([...concedidas('INSERT', t)!].sort(), ['caduca_en', 'correo_hash', 'recomendador_identidad_id'])
+  assert.ok(!concedidas('INSERT', t)!.has('canjeada_en'), 'no se nace ya canjeada')
+  // Un invitado, una recompensa; una viva por par.
+  assert.match(SQL_RECOMENDACION, /CREATE UNIQUE INDEX IF NOT EXISTS idx_portal_patrimonio_recomendacion_invitado[\s\S]*?\(canjeada_por_identidad_id\)/)
+  assert.match(SQL_RECOMENDACION, /CREATE UNIQUE INDEX IF NOT EXISTS idx_portal_patrimonio_recomendacion_viva[\s\S]*?\(recomendador_identidad_id, correo_hash\)/)
+  // La recompensa del SQL es la del módulo (90 días como mínimo) y no se guarda en la tabla.
+  assert.match(readFileSync(join(RAIZ, 'packages/module-patrimonio/src/recomendacion.ts'), 'utf8'), /DIAS_RECOMPENSA_RECOMENDACION = 90/)
+  assert.ok(!cols.includes('recompensa_hasta'))
+  // `canjeada_por_identidad_id` es FK ON DELETE SET NULL: el trigger de inmutabilidad tiene que dejar pasar ese NULL (la acción
+  // referencial dispara BEFORE UPDATE), o borrar la identidad del invitado (supresión RGPD) falla con 23514.
+  const trig = /FUNCTION seguros\.portal_patrimonio_recomendacion_inmutable[\s\S]*?END \$\$/.exec(SQL_RECOMENDACION)![0]
+  assert.match(trig, /NEW\.canjeada_por_identidad_id IS NOT NULL/, 'el trigger bloquea el SET NULL de la FK del invitado')
 })

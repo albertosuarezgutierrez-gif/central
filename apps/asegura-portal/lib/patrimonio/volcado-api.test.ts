@@ -31,6 +31,7 @@ function puertos(o: {
   volcado?: Partial<VolcadoLeido> | null
   cupo?: boolean
   abierto?: string | null
+  reserva?: 'abierto'
   lectura?: LecturaVolcado
   ctx?: ContextoVolcado
   puente?: 'ok' | 'error'
@@ -42,7 +43,7 @@ function puertos(o: {
     creadasHoy: async () => 0,
     abierto: async (c, h) => { anota('abierto', [c, h]); return o.abierto ? { id: o.abierto } : null },
     valorCliente: async () => ({ comisionAnualCent: null, polizasEnVigor: 2 }),
-    reservar: async (x) => { anota('reservar', x); return o.cupo === false ? { ok: false, motivo: 'cupo' } : { ok: true, id: VID } },
+    reservar: async (x) => { anota('reservar', x); if (o.reserva === 'abierto') return { ok: false, motivo: 'abierto' }; return o.cupo === false ? { ok: false, motivo: 'cupo' } : { ok: true, id: VID } },
     leer: async (f) => { anota('leer', f.tipo); return o.lectura ?? { leido: true, propuesta: PROP, motivos: [] } },
     guardarPropuesta: async (id, prop) => { anota('guardarPropuesta', [id, prop]); return true },
     ver: async (id) => (o.volcado === null ? null : { id, clienteId: A, estado: 'propuesta', nombre: 'x.csv', propuesta: PROP, motivos: [], resultado: null, ...o.volcado }),
@@ -156,4 +157,11 @@ test('ver y descartar: dentro de lo autorizado; el contexto que se enseña es el
   const ajeno = puertos({ volcado: { clienteId: B } })
   assert.equal((await responderDescartarVolcado(ajeno.p, VID)).status, 404)
   assert.equal(ajeno.ll.descartar, undefined)
+})
+
+test('🧱 subir: el mismo fichero ya está en una importación CSV (índice único titular+hash) = 409 fichero_ya_importado, NUNCA 404', async () => {
+  const csv = puertos({ reserva: 'abierto' })
+  const r = await responderSubirVolcado(csv.p, { titular: A, nombre: null, bytes: CSV })
+  assert.deepEqual(r, { status: 409, body: { error: 'fichero_ya_importado' } })
+  assert.equal(csv.ll.leer, undefined)
 })

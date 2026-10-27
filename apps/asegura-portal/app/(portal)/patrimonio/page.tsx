@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { patrimonioDeIdentidad } from '@/lib/patrimonio/inmuebles-bd'
+import { canjearRecomendaciones } from '@/lib/patrimonio/recomendacion-bd'
 import { avisosPolizasSinInmueble, type AvisoPintable } from '@/lib/patrimonio/poliza-sin-inmueble-bd'
 import { precargaDeParametros, type ParametrosAlta } from '@/lib/patrimonio/precarga-alta'
 import { oposicionSenalesVigente } from '@/lib/oposicion-senales'
@@ -10,6 +11,7 @@ import { getIdentidad } from '@/lib/session'
 
 import { AvisoPolizaSinInmueble } from './AvisoPolizaSinInmueble'
 import { OposicionSenalesPatrimonio } from '../configuracion/OposicionSenalesPatrimonio'
+import { InvitaPropietario } from './InvitaPropietario'
 import { ListaInmuebles } from './ListaInmuebles'
 import { NuevoInmueble } from './NuevoInmueble'
 import { EncabezadoPortal } from '../../PaginaPortal'
@@ -27,6 +29,9 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
   if (!(await puertaDeSesion('patrimonio', 'lectura'))) redirect('/inicio')
   const titulares = await patrimonioDeIdentidad(identidad.id)
   const precarga = precargaDeParametros(await searchParams)
+  // Recomendación entre propietarios: si esta persona es la invitada y ya tiene patrimonio activo, se canjea aquí (idempotente,
+  // nunca lanza). Gana el cupo de IA «amplio» 90 días, igual que quien la recomendó.
+  if (titulares.length > 0) await canjearRecomendaciones(identidad.id)
   // P15 publicado (interés legítimo informado): con algún titular se INFORMA aquí, antes de calcular, y se ofrece oponerse.
   // No depende del interruptor del motor. Un fallo al leer la oposición no enseña la casilla (no se puede afirmar su estado).
   let oposicion: boolean | null | 'ilegible' | undefined
@@ -115,6 +120,7 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
               </div>
             </section>
           ))}
+          <InvitaPropietario />
         </>
       )}
     </>

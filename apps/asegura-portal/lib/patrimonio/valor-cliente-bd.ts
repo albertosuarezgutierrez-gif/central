@@ -6,6 +6,7 @@
 import { prisma } from '../db'
 import { getIdentidad } from '../session'
 import { accesosPatrimonio } from './accesos'
+import { recompensaVigenteDeIdentidad } from './recomendacion-bd'
 import { valorDelGrupo } from './valor-cliente'
 
 export async function valorClienteDeIdentidad(identidadId: string, clienteId: string) {
@@ -20,5 +21,6 @@ export async function valorClienteDeIdentidad(identidadId: string, clienteId: st
     where: { clienteId: { in: grupo } },
     select: { importRef: true, eiacXmlHash: true, estado: true, sustituidaAt: true, mergedIntoPolizaId: true },
   })
-  return valorDelGrupo(filas)
+  // Recompensa por recomendar: de la IDENTIDAD de la sesión (no del titular de la URL). Un fallo = sin recompensa.
+  return valorDelGrupo(filas, await recompensaVigenteDeIdentidad(identidadId))
 }

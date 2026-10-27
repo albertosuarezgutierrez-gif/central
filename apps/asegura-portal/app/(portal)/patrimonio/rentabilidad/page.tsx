@@ -196,6 +196,8 @@ export default async function RentabilidadPage({ searchParams }: { searchParams:
       {datos && (
         <p style={{ marginTop: 16 }}>
           <Link href={`/patrimonio/rentabilidad/fiscal?anio=${datos.periodo.anio}`} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }}>Informe fiscal de {datos.periodo.anio}</Link>
+          {' · '}
+          <Link href={`/patrimonio/informe-gestor?anio=${datos.periodo.anio}`} style={{ display: 'inline-block', minHeight: 44, paddingBlock: 10 }}>Informe para tu gestor</Link>
         </p>
       )}
       <p style={{ marginTop: 24 }}>

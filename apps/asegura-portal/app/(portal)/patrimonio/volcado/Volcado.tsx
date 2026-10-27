@@ -53,6 +53,7 @@ const ERRORES: Record<string, string> = {
   demasiadas_peticiones: 'Demasiados intentos seguidos. Prueba más tarde.',
   sin_sesion: 'Tu sesión ha caducado. Vuelve a entrar.',
   cerrado: 'Esta propuesta ya está cerrada.',
+  fichero_ya_importado: 'Este fichero ya está en una importación abierta: termínala, descártala o usa otro.',
   falta_confirmacion: 'Marca la casilla de confirmación.',
   datos_invalidos: 'Hay un dato con un formato que no entendemos. Revísalo.',
 }
