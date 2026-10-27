@@ -61,7 +61,11 @@ const PUBLIC = ['/login', '/api/auth', '/admin', '/api/admin', '/api/cron', '/ap
   // Desde el 02/09/2026 el prefijo cubre también `/api/publico/correduria/lead` (formulario de
   // la correduría): POST sin sesión, con honeypot + rate limit por IP en el handler; solo crea
   // un lead por el puerto de asegura y avisa a Alberto. No lee nada de la cartera.
-  '/api/publico']
+  '/api/publico',
+  // 🧾 Formulario PÚBLICO de datos fiscales del huésped (27/10/2026). Con barra final a propósito: no abre `/facturas*`.
+  // No amplía privilegio: la página solo responde con un token de 43 caracteres aleatorios vivo en
+  // `sivra_factura_solicitudes` y enseña piso y fechas; sus APIs van por `/api/publico/factura/<token>` con rate limit.
+  '/factura/']
 // 🚨 `/seguros` (landing vieja de la correduría, previa a `apps/asegura-web`) SALIÓ de esta
 // lista el 14/09/2026: la página se borró y el sitio 301 hacia grupoasegura.es vive en
 // `next.config.ts::redirects()`, que Next resuelve ANTES de que el middleware corra — dejarla

@@ -493,6 +493,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al escribir un huésped',
   },
   {
+    id: 'huespedes.factura-borrador', categoria: 'huespedes',
+    titulo: 'Factura de huésped para aprobar',
+    que: 'Un huésped ha rellenado sus datos fiscales: te llega el borrador con el PDF y el ✅ que la emite y se la envía.',
+    cuando: 'Al completar un huésped el formulario de factura',
+  },
+  {
     id: 'huespedes.conflicto', categoria: 'huespedes',
     titulo: 'Conflicto con un huésped',
     que: 'La conversación se ha torcido y conviene que entres tú.',

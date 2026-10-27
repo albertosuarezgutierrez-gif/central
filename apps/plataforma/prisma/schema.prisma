@@ -569,3 +569,91 @@ model SeoCorreduriaCambio {
   @@index([ruta, creadoEn(sort: Desc)])
   @@map("seo_correduria_cambios")
 }
+
+// ── Facturas a HUÉSPEDES de los pisos turísticos (sivra) ─────────────────────────────────────────────────────────
+// SQL: prisma/sql/2026-10-27_sivra_facturas_huesped.sql (triggers de inmutabilidad y correlatividad viven ALLÍ).
+// Lógica: lib/sivra/facturas/*. La numeración la asigna SOLO `emitirFactura` (FOR UPDATE sobre la serie).
+model SivraFacturaSerie {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId        String                @map("cuenta_id") @db.Uuid
+  prefijo         String
+  anio            Int
+  /// NULL = número inicial pendiente de Alberto → no se emite (fail-closed).
+  siguienteNumero Int?                  @map("siguiente_numero")
+  /// NULL = tipo de IVA pendiente de Alberto → no se emite (fail-closed).
+  tipoIva         Decimal?              @map("tipo_iva") @db.Decimal(5, 2)
+  mencionIva      String?               @map("mencion_iva")
+  activa          Boolean               @default(true)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime              @default(now()) @map("updated_at") @db.Timestamptz(6)
+  facturas        SivraFacturaHuesped[]
+
+  @@unique([cuentaId, prefijo, anio], map: "sivra_factura_series_unica")
+  @@map("sivra_factura_series")
+}
+
+model SivraFacturaSolicitud {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId          String                @map("cuenta_id") @db.Uuid
+  token             String                @unique(map: "sivra_factura_solicitudes_token")
+  reservationId     String                @map("reservation_id")
+  propertyId        String                @map("property_id")
+  origen            String
+  estado            String                @default("pendiente")
+  receptorTipo      String?               @map("receptor_tipo")
+  receptorNombre    String?               @map("receptor_nombre")
+  receptorNif       String?               @map("receptor_nif")
+  receptorPais      String?               @map("receptor_pais")
+  receptorEmail     String?               @map("receptor_email")
+  receptorDireccion Json?                 @map("receptor_direccion")
+  expiraAt          DateTime              @default(dbgenerated("(now() + '90 days'::interval)")) @map("expira_at") @db.Timestamptz(6)
+  completadaAt      DateTime?             @map("completada_at") @db.Timestamptz(6)
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime              @default(now()) @map("updated_at") @db.Timestamptz(6)
+  facturas          SivraFacturaHuesped[]
+
+  @@map("sivra_factura_solicitudes")
+}
+
+model SivraFacturaHuesped {
+  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId            String                 @map("cuenta_id") @db.Uuid
+  solicitudId         String?                @map("solicitud_id") @db.Uuid
+  reservationId       String                 @map("reservation_id")
+  propertyId          String                 @map("property_id")
+  tipo                String                 @default("ordinaria")
+  rectificaA          String?                @map("rectifica_a") @db.Uuid
+  estado              String                 @default("borrador")
+  serieId             String?                @map("serie_id") @db.Uuid
+  seriePrefijo        String?                @map("serie_prefijo")
+  anio                Int?
+  numero              Int?
+  numeroCompleto      String?                @map("numero_completo")
+  fechaExpedicion     DateTime?              @map("fecha_expedicion") @db.Date
+  fechaOperacionDesde DateTime?              @map("fecha_operacion_desde") @db.Date
+  fechaOperacionHasta DateTime?              @map("fecha_operacion_hasta") @db.Date
+  concepto            String
+  emisor              Json
+  receptor            Json
+  /// Total pagado por el huésped, IVA INCLUIDO (incomes.amount_gross).
+  total               Decimal                @db.Decimal(12, 2)
+  base                Decimal?               @db.Decimal(12, 2)
+  tipoIva             Decimal?               @map("tipo_iva") @db.Decimal(5, 2)
+  cuota               Decimal?               @db.Decimal(12, 2)
+  mencionIva          String?                @map("mencion_iva")
+  pdf                 Bytes?
+  verifactuHuella     String?                @map("verifactu_huella")
+  telegramMessageId   BigInt?                @map("telegram_message_id")
+  emitidaAt           DateTime?              @map("emitida_at") @db.Timestamptz(6)
+  enviadaAt           DateTime?              @map("enviada_at") @db.Timestamptz(6)
+  envioEnCursoAt      DateTime?              @map("envio_en_curso_at") @db.Timestamptz(6)
+  envioIntentos       Int                    @default(0) @map("envio_intentos")
+  envioError          String?                @map("envio_error")
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  serie               SivraFacturaSerie?     @relation(fields: [serieId], references: [id], onDelete: Restrict)
+  solicitud           SivraFacturaSolicitud? @relation(fields: [solicitudId], references: [id], onDelete: Restrict)
+
+  @@index([cuentaId, fechaExpedicion], map: "sivra_facturas_huesped_listado")
+  @@map("sivra_facturas_huesped")
+}

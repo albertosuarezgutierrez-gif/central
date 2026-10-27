@@ -57,6 +57,9 @@ export type Contexto = {
   enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
   preguntaTs?: string     // cuándo escribió el huésped lo que se contesta (lo pone el orquestador)
+  // Enlace al formulario de datos fiscales (/factura/<token>) si el huésped pide factura y se pudo crear la solicitud
+  // (lo pone el orquestador). Sin él, el agente pide los datos en el mensaje como antes.
+  enlaceFactura?: string
 }
 
 function strip(html: string): string {

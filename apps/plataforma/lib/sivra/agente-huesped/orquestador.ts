@@ -19,6 +19,9 @@ import { intentarCobroAutomatico } from '@/lib/sivra/extras/cobro-auto'
 import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { esPeticionFactura } from './factura'
+import { asegurarSolicitud } from '@/lib/sivra/facturas/servicio'
+import { conEnlace } from '@/lib/sivra/facturas/enlace'
 
 
 // Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el
@@ -151,7 +154,18 @@ export async function procesarMensajeHuesped(
       const reply = await recomendar(pregunta, ctx.zona, lang)
       dec = { reply, confidence: 0.6, needs_human: false, categoria: 'recomendacion', sentimiento: 'neutro', motivo: '', fuente: 'web' }
     } else {
+      // 1-quater) FACTURA (27/10/2026): si el huésped la PIDE, se crea (o reutiliza) la solicitud y el borrador lleva el
+      // enlace al formulario de datos fiscales. No cambia la política de envío: una petición de factura sigue pasando
+      // SIEMPRE por Alberto (`needs_human` en decidir.ts y otra vez abajo). Si no se puede crear, el agente pide los
+      // datos en el mensaje como antes y el motivo lo dice.
+      let avisoEnlace = ''
+      if (esPeticionFactura(pregunta)) {
+        const sol = await asegurarSolicitud(ctx.reservationId, 'agente').catch((e: unknown) => ({ ok: false as const, motivo: e instanceof Error ? e.message : 'fallo interno' }))
+        if (sol.ok) ctx.enlaceFactura = sol.url
+        else avisoEnlace = `NO he podido crear el enlace al formulario de factura (${sol.motivo}): el borrador pide los datos a mano; o créalo en /sivra/facturas.`
+      }
       dec = await decidir(ctx, pregunta, categoria)
+      if (avisoEnlace) dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}${avisoEnlace}`
     }
 
     // Hueco de conocimiento: escalamos porque la respuesta no queda cubierta por las fuentes. Antes
@@ -203,6 +217,14 @@ export async function procesarMensajeHuesped(
     } else if (dec.reply && respuestaConfirmaHorario(dec.reply, horarioOficial)) {
       dec.needs_human = true
       dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}El borrador acepta una hora de entrada/salida distinta de la oficial — solo la autorizas tú.`
+    }
+
+    // 2-quinquies) Enlace del formulario de factura: lo pone el CÓDIGO al final (el modelo no escribe URLs) y el
+    // mensaje nunca sale solo (decisión de política: una factura la mira Alberto).
+    if (ctx.enlaceFactura && dec.reply) {
+      dec.reply = conEnlace(dec.reply, ctx.lang, ctx.enlaceFactura)
+      dec.needs_human = true
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}lleva el enlace al formulario de datos fiscales; al rellenarlo te llegará el borrador de la factura`
     }
 
     // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí
