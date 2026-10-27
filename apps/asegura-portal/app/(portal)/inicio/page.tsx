@@ -38,13 +38,15 @@ export default async function InicioPage() {
   // «Mi patrimonio» (27/10/2026): solo con acceso a Patrimonio. `undefined` = sin patrimonio (no se pinta); `null` = no se pudo
   // leer (se dice, no se afirma «0 pendientes»).
   const conPatrimonio = await puertaDeSesion('patrimonio', 'lectura')
-  const patrimonio = conPatrimonio ? await patrimonioParaInicio(identidad.id).catch(() => null) : undefined
-  // «Pendiente de ti» (27/10/2026): lo que antes pintaba la bóveda (firmas, presupuestos, contacto, patrimonio). `null` = no se pudo leer.
-  const deTi = await pendientesDeTiParaInicio(identidad.id, conPatrimonio).catch(() => null)
-
-  // «Mi flota» (27/10/2026): solo con acceso a Flota (o un nombramiento por aceptar: la puerta lo incluye). `undefined` = sin
-  // flota ni nombramientos (no se pinta); `null` = no se pudo leer (se dice). Un fallo NO tumba Inicio (`.catch`).
-  const flota = (await puertaDeSesion('flota', 'lectura')) ? await flotaParaInicio(identidad.id).catch(() => null) : undefined
+  const conFlota = await puertaDeSesion('flota', 'lectura')
+  // Las tres lecturas EN PARALELO (cada una con su `.catch`: una caída NO tumba Inicio, queda en `null` = «no hemos podido
+  // comprobar»). `undefined` = esa tarjeta no se ofrece (sin patrimonio / sin flota ni nombramientos).
+  // «Pendiente de ti» (27/10/2026) = lo que antes pintaba la bóveda (firmas, presupuestos, contacto, patrimonio).
+  const [patrimonio, deTi, flota] = await Promise.all([
+    conPatrimonio ? patrimonioParaInicio(identidad.id).catch(() => null) : Promise.resolve(undefined),
+    pendientesDeTiParaInicio(identidad.id, conPatrimonio).catch(() => null),
+    conFlota ? flotaParaInicio(identidad.id).catch(() => null) : Promise.resolve(undefined),
+  ])
 
   const pila = nombreDePila(identidad.nombre)
 
