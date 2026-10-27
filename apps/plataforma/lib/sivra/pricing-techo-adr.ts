@@ -117,6 +117,11 @@ export function aplicarTechoAdr(input: {
    * deja al mercado, como antes — ante la duda no se recorta un evento.
    */
   compsFiablesFecha?: number | null
+  /**
+   * Prima vie/sáb por ritmo propio de ESA fecha (`pricing-ritmo-finde.ts`). El ADR del mes mezcla
+   * martes con sábados: sin escalarlo, este techo anularía la prima del finde. Ausente/≤1 = nada.
+   */
+  primaFinde?: number | null
 }): TechoAdr {
   const { objetivo, adrBase, nochesMuestra } = input
   const holgura = input.holgura ?? HOLGURA_ADR
@@ -142,7 +147,8 @@ export function aplicarTechoAdr(input: {
     return { techo: null, objetivo, motivo: 'sin_muestra' }
   }
 
-  let techo = Math.round(Number(adrBase) * holgura * escala)
+  const prima = Number(input.primaFinde) > 1 ? Number(input.primaFinde) : 1
+  let techo = Math.round(Number(adrBase) * holgura * escala * prima)
   const suelo = input.suelo != null && Number.isFinite(Number(input.suelo)) ? Number(input.suelo) : null
   if (suelo != null && techo < suelo) {
     return { techo: suelo, objetivo: Math.max(objetivo, suelo), motivo: 'suelo_manda', ...extra }

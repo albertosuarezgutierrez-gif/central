@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   precioHuesped, baseDondeLaCuotaMandaya, TOPE_CARO,
-  VENTANA_DIAS_MERCADO, MIN_COMPS_FECHA,
+  VENTANA_DIAS_MERCADO, MIN_COMPS_FECHA, MIN_VENTAS_PRECIO, vendeAlPrecio, fechasEventoParaVentas,
   type FechaHuesped,
 } from './pricing-precio-huesped.ts'
 
@@ -202,4 +202,102 @@ test('tramo de última hora: la fecha a ≤6 días se ve con SU pendiente, la le
   const guest = (fecha: string) => [...r.peores].find(v => v.fecha === fecha)?.guest
   assert.equal(guest('2026-09-27'), 110)
   assert.equal(guest('2026-10-20'), 100)
+})
+
+// ─── Se vende a ese precio / evento solo / texto ────────────────────────────────────────────────
+
+const P1 = { markup: 1, cuotaFija: 0, nochesRef: 2 }
+const fv = (fecha: string, base: number, mkt: number, ventas: FechaHuesped['ventas'], ev: boolean | null = false): FechaHuesped =>
+  ({ fecha, baseAplicada: base, medMercadoGuest: mkt, hayEvento: ev, ventas })
+
+test('🚨 cara pero se VENDE a ese precio → caro_vendiendo: no cuenta en caras ni dispara el aviso', () => {
+  const r = precioHuesped([fv('2027-05-08', 800, 400, { n: 5, med: 850 })], P1)
+  assert.equal(r.fechas[0].estado, 'caro_vendiendo')
+  assert.equal(r.fechas[0].vendeAlPrecio, true)
+  assert.equal(r.caras, 0)
+  assert.equal(r.carasVendiendo, 1)
+  assert.equal(r.avisar, false)
+})
+
+test('vendeAlPrecio: muestra corta o sin leer = null (no se sabe) y sigue siendo caro como siempre', () => {
+  assert.equal(MIN_VENTAS_PRECIO, 3)
+  assert.equal(vendeAlPrecio({ n: 2, med: 900 }, 800), null)
+  assert.equal(vendeAlPrecio({ n: 0, med: null }, 800), null)
+  assert.equal(vendeAlPrecio(null, 800), null)
+  assert.equal(vendeAlPrecio(undefined, 800), null)
+  assert.equal(vendeAlPrecio({ n: 3, med: 700 }, 800), false)   // se miró y vendió más barato
+  const r = precioHuesped([fv('a', 800, 400, { n: 2, med: 900 }), fv('b', 800, 400, null)], P1)
+  assert.deepEqual(r.fechas.map(v => v.estado), ['caro', 'caro'])
+  assert.deepEqual(r.fechas.map(v => v.vendeAlPrecio), [null, null])
+  assert.equal(r.caras, 2)
+})
+
+test('vendió más barato que el precio actual → sigue siendo caro (false ≠ null)', () => {
+  const r = precioHuesped([fv('a', 800, 400, { n: 6, med: 500 })], P1)
+  assert.equal(r.fechas[0].estado, 'caro')
+  assert.equal(r.fechas[0].vendeAlPrecio, false)
+})
+
+test('🚨 un piso con solo caras CON evento no avisa; con una sin evento o sin comprobar, sí', () => {
+  assert.equal(precioHuesped([f('a', 900, 300, true)], P1).avisar, false)
+  assert.equal(precioHuesped([f('a', 900, 300, true), f('b', 900, 300, false)], P1).avisar, true)
+  assert.equal(precioHuesped([f('a', 900, 300, true), f('b', 900, 300, null)], P1).avisar, true)
+  assert.equal(precioHuesped([f('a', 300, 300, false)], P1).avisar, false)
+})
+
+test('caro_vendiendo no encabeza el aviso ni desplaza a una cara real', () => {
+  const r = precioHuesped([fv('v', 2000, 400, { n: 9, med: 2100 }), fv('c', 600, 400, null)], P1)
+  assert.equal(r.peores[0].fecha, 'c')
+})
+
+test('🚨 el aviso del route: texto «esas fechas», suelo solo si la base está cerca, y filtra por avisar', () => {
+  const fuente = readFileSync(new URL('../../app/api/sivra/pricing/canal/route.ts', import.meta.url), 'utf8')
+  assert.ok(fuente.includes('de mercado de esas fechas'))
+  assert.ok(!fuente.includes('de mercado de ESA fecha'))
+  assert.ok(fuente.includes('p0.baseAplicada <= 1.5 * suelo'))
+  assert.ok(fuente.includes('(cerca ?'))
+  assert.ok(fuente.includes('filter(([, h]) => h.avisar)'))
+  assert.ok(fuente.includes('se venden a ese precio'))
+  assert.ok(fuente.includes('FROM incomes'))
+})
+
+test('🚨 finde subido por la PRIMA de ritmo (>1) → caro_vendiendo; 1 o null (no se sabe) → caro como siempre', () => {
+  const con = (prima: number | null | undefined): FechaHuesped =>
+    ({ fecha: '2027-05-08', baseAplicada: 800, medMercadoGuest: 400, hayEvento: false, ventas: null, primaFinde: prima })
+  const r = precioHuesped([con(1.2)], P1)
+  assert.equal(r.fechas[0].estado, 'caro_vendiendo')
+  assert.equal(r.fechas[0].primaFinde, 1.2)
+  assert.equal(r.caras, 0)
+  assert.equal(r.carasVendiendo, 1)
+  assert.equal(r.avisar, false)
+  for (const p of [1, null, undefined]) {
+    const x = precioHuesped([con(p)], P1)
+    assert.equal(x.fechas[0].estado, 'caro', `primaFinde=${p}`)
+    assert.equal(x.fechas[0].primaFinde, p ?? null)
+    assert.equal(x.avisar, true)
+  }
+  // La prima no convierte en «caro_vendiendo» una noche que no está sobre el mercado.
+  assert.equal(precioHuesped([{ ...con(1.2), baseAplicada: 300 }], P1).fechas[0].estado === 'caro_vendiendo', false)
+})
+
+// ─── Ventas: las noches de EVENTO no entran en la mediana ───────────────────────────────────────
+
+test('fechasEventoParaVentas: Feria 2026 (EVENTS) y Semana Santa derivada entran; un sábado normal de abril, no', () => {
+  const ev = fechasEventoParaVentas('2025-01-01', '2027-12-31')
+  assert.ok(ev.includes('2026-04-24'))       // Feria (EVENTS, 3,50)
+  assert.ok(ev.includes('2026-04-03'))       // Viernes Santo (derivada de la Pascua)
+  assert.ok(ev.includes('2025-04-18'))       // Semana Santa 2025: derivada aunque EVENTS no llegue
+  assert.ok(!ev.includes('2026-04-11'))      // sábado normal de abril
+  assert.ok(ev.every(d => d >= '2025-01-01' && d <= '2027-12-31'))
+})
+
+test('la CTE de ventas va por NOCHES, excluye eventos, respeta historico_desde y cuenta RESERVAS', () => {
+  const src = readFileSync(new URL('../../app/api/sivra/pricing/canal/route.ts', import.meta.url), 'utf8')
+  const cte = src.slice(src.indexOf('ev_noches AS'), src.indexOf('mkt AS ('))
+  assert.match(cte, /generate_series\(/)
+  assert.match(cte, /ISODOW FROM g\.d/)
+  assert.match(cte, /NOT IN \(SELECT d FROM ev_noches\)/)
+  assert.match(cte, /historico_desde/)
+  assert.match(cte, /COUNT\(DISTINCT i\.id\)/)
+  assert.match(cte, /FACTOR_EVENTO_MINIMO/)
 })
