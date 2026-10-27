@@ -171,24 +171,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 385 | 67.532 | 59.706.374 | 0 | 0 |
-| `otro` | 380 | 15.657 | 34.364.422 | 19.979.821 | 0 |
-| `lectura-directa` | 327 | 10.423 | 29.310.994 | 0 | 0 |
-| `mcp:github` | 330 | 7.947 | 6.061.472 | 56.083.141 | 106 |
-| `sql` | 242 | 6.438 | 3.294.687 | 2.351.230 | 25 |
-| `escritura` | 240 | 5.853 | 84.737.203 | 0 | 0 |
-| `mcp:Vercel` | 84 | 1.483 | 1.270.398 | 237.328 | 43 |
+| `bash` | 385 | 67.801 | 59.936.162 | 0 | 0 |
+| `otro` | 380 | 15.704 | 34.462.924 | 19.979.821 | 0 |
+| `lectura-directa` | 327 | 10.442 | 29.357.467 | 0 | 0 |
+| `mcp:github` | 330 | 7.965 | 6.072.035 | 56.083.141 | 106 |
+| `sql` | 242 | 6.472 | 3.322.563 | 2.351.230 | 25 |
+| `escritura` | 240 | 5.920 | 87.139.806 | 0 | 0 |
+| `mcp:Vercel` | 84 | 1.487 | 1.271.892 | 237.328 | 43 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 61 | 1.382 | 1.535.816 | 0 | 101 |
 | `mcp:Booking-com` | 48 | 1.346 | 5.510.355 | 0 | 0 |
-| `agente:general-purpose` | 133 | 1.150 | 681.678 | 24.823.784 | 0 |
-| `mcp:claude-code-remote` | 70 | 867 | 74.324 | 20.519 | 0 |
+| `agente:general-purpose` | 133 | 1.155 | 685.361 | 24.889.507 | 0 |
+| `mcp:claude-code-remote` | 70 | 871 | 74.506 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 13 | 618 | 745.969 | 0 | 0 |
 | `mcp:Supabase` | 142 | 476 | 88.048 | 6.830 | 7 |
-| `agente:agente-architect` | 82 | 437 | 305.347 | 10.541.539 | 0 |
+| `agente:agente-architect` | 82 | 439 | 307.066 | 10.563.985 | 0 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
 | `mcp:Google-Drive` | 31 | 165 | 167.421 | 0 | 2 |
-| `agente:agente-mecanico` | 57 | 144 | 78.670 | 7.576.032 | 0 |
+| `agente:agente-mecanico` | 57 | 145 | 79.923 | 7.590.134 | 0 |
 | `agente:rastreador-codigo` | 60 | 116 | 36.351 | 1.675.029 | 0 |
 | `mcp:Resend` | 10 | 95 | 84.756 | 0 | 0 |
 | `mcp:OpenSEO` | 6 | 94 | 77.612 | 0 | 2 |
