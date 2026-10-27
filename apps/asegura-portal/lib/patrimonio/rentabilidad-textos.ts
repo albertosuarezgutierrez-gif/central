@@ -10,4 +10,5 @@ export const AVISO: Record<AvisoRentabilidad, string> = {
   iva_sin_dato: 'No sabemos si deduces el IVA: los gastos se cuentan con IVA incluido.',
   gasto_sin_importe: 'Hay gastos confirmados sin importe: no se han contado.',
   sin_contrato: 'No tiene contrato anotado: no hay ingresos que contar.',
+  reparto_edificio_pendiente: 'Los gastos del edificio todavía no se reparten entre los pisos (falta elegir el criterio o la superficie/porcentaje de algún piso): este número NO incluye su parte del edificio.',
 }

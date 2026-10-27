@@ -24,8 +24,53 @@ function Fila({ k, v, fuerte }: { k: string; v: string; fuerte?: boolean }) {
   )
 }
 
+/** Edificio sin división horizontal (27/10/2026): una RC; total del edificio y cada unidad debajo con su parte. */
+function EdificioFiscal({ e, anio }: { e: InformeFiscal['edificios'][number]; anio: number }) {
+  return (
+    <section className="seccion" aria-labelledby={`fiscal-ed-${e.edificioId}`}>
+      <h2 id={`fiscal-ed-${e.edificioId}`} style={{ margin: 0, overflowWrap: 'anywhere' }}>{e.alias} · edificio entero</h2>
+      <p className="suave" style={{ margin: '0 0 8px', fontSize: 13, overflowWrap: 'anywhere' }}>
+        {e.titular ? `${e.titular} · ` : ''}Referencia catastral {e.referenciaCatastral ?? 'sin dato'} (una sola para todo el edificio)
+      </p>
+      <dl style={{ margin: 0, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+        <Fila k="Ingresos íntegros del edificio" v={cent(e.ingresosCent)} />
+        <Fila k="Total gastos deducibles del edificio" v={cent(e.totalDeducibleCent)} fuerte />
+        {e.aRevisarCent > 0 && <Fila k="A revisar con tu asesor (no incluido arriba)" v={cent(e.aRevisarCent)} />}
+        {e.noDirectoCent > 0 && <Fila k="Reformas y mobiliario (no incluido arriba)" v={cent(e.noDirectoCent)} />}
+        <Fila k="Rendimiento antes de amortización" v={cent(e.rendimientoAntesAmortizacionCent)} fuerte />
+        <Fila k="Rendimiento neto" v={e.rendimientoNetoCent === null ? 'sin dato: falta la amortización del edificio' : cent(e.rendimientoNetoCent)} fuerte />
+      </dl>
+      {e.avisos.length > 0 && (
+        <ul style={{ margin: '8px 0 0', paddingLeft: 18, display: 'grid', gap: 4 }}>
+          {e.avisos.map((a) => <li key={a} className="suave" style={{ fontSize: 14 }}>{AVISO[a]}</li>)}
+        </ul>
+      )}
+      <h3 style={{ margin: '12px 0 8px' }}>Por unidad (con su parte de los gastos del edificio)</h3>
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+        {[...e.unidades, ...(e.comunes ? [{ ...e.comunes, alias: 'Gastos comunes sin repartir' }] : [])].map((u) => (
+          <li key={u.inmuebleId + u.alias} style={{ minWidth: 0 }}>
+            <strong style={{ overflowWrap: 'anywhere' }}>{u.alias}</strong>
+            <span className="suave" style={{ display: 'block', fontSize: 13 }}>
+              Ingresos {cent(u.ingresosCent)} · deducibles {cent(u.totalDeducibleCent)} · rendimiento {cent(u.rendimientoAntesAmortizacionCent)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {e.unidadesSinIngresos.length > 0 && (
+        <p className="suave" style={{ margin: '8px 0 0', fontSize: 14 }}>Sin renta devengada en {anio}: {e.unidadesSinIngresos.join(', ')}.</p>
+      )}
+      {e.gastosSinConfirmar > 0 && (
+        <p style={{ margin: '8px 0 0' }}>
+          Hay {e.gastosSinConfirmar} {e.gastosSinConfirmar === 1 ? 'factura' : 'facturas'} sin revisar en este edificio: no cuentan hasta que las confirmes.{' '}
+          <Link href="/patrimonio/gastos" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Revisarlas</Link>
+        </p>
+      )}
+    </section>
+  )
+}
+
 function Informe({ inf }: { inf: InformeFiscal }) {
-  if (inf.arrendados.length === 0) {
+  if (inf.arrendados.length === 0 && inf.edificios.length === 0) {
     return <section className="seccion"><p style={{ margin: 0 }}>Ningún inmueble tiene renta devengada en {inf.anio}, así que no hay nada que declarar por alquiler.</p></section>
   }
   return (
@@ -65,6 +110,7 @@ function Informe({ inf }: { inf: InformeFiscal }) {
           )}
         </section>
       ))}
+      {inf.edificios.map((e) => <EdificioFiscal key={e.edificioId} e={e} anio={inf.anio} />)}
       {inf.sinIngresos.length > 0 && (
         <p className="suave" style={{ fontSize: 14 }}>Sin renta devengada en {inf.anio} (no entran): {inf.sinIngresos.join(', ')}.</p>
       )}

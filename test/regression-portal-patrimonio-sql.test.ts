@@ -39,6 +39,9 @@ const SQL_HIPOTECA = readFileSync(join(RAIZ, RUTA_HIPOTECA), 'utf8').replace(/--
 const RUTA_IMPORTACION = 'apps/asegura-portal/prisma/sql/2026-10-26_portal_patrimonio_importacion_fichero.sql'
 const SQL_IMPORTACION = readFileSync(join(RAIZ, RUTA_IMPORTACION), 'utf8').replace(/--.*$/gm, '')
 const SQL_INQUILINO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-26_portal_patrimonio_inquilino_acceso.sql'), 'utf8').replace(/--.*$/gm, '')
+// Edificio sin división horizontal (27/10/2026): columnas nuevas en `inmueble`; mismo espejo. Su cepo propio (FK compuesta,
+// un solo borrado, catálogos) es `test/regression-portal-patrimonio-edificio.test.ts`.
+const SQL_EDIFICIO = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-27_portal_patrimonio_edificio_unidades.sql'), 'utf8').replace(/--.*$/gm, '')
 const SQL = [
   readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/sql/2026-10-22_portal_patrimonio.sql'), 'utf8').replace(/--.*$/gm, ''),
   SQL_DOCUMENTO,
@@ -49,6 +52,7 @@ const SQL = [
   SQL_HIPOTECA,
   SQL_IMPORTACION,
   SQL_INQUILINO,
+  SQL_EDIFICIO,
 ].join('\n')
 const SCHEMA = readFileSync(join(RAIZ, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
 const ROL = 'prisma_asegura_portal'

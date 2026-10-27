@@ -108,6 +108,7 @@ export default async function PatrimonioPage({ searchParams }: { searchParams: P
                     direccion: i.direccion,
                     calleSinValidar: i.calleSinValidar,
                     superficie: i.superficieM2 === null ? null : i.superficieM2.toLocaleString('es-ES'),
+                    inmueblePadreId: i.inmueblePadreId,
                   }))}
                 />
               </div>

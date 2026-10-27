@@ -11,7 +11,7 @@
 //  · avisos de la rentabilidad (seguros sin leer, prima sin dato, gasto sin importe, facturas sin confirmar…) viajan al
 //    informe: un número incompleto no se presenta como completo.
 // Es ORIENTATIVO: no sustituye a un asesor fiscal (`AVISO_ORIENTATIVO`).
-import type { AvisoRentabilidad, ResultadoRentabilidad } from '@central/module-patrimonio'
+import type { AvisoRentabilidad, RentabilidadInmueble, ResultadoRentabilidad } from '@central/module-patrimonio'
 
 export const AVISO_ORIENTATIVO = 'Orientativo: es un cálculo con lo que has anotado y confirmado. Revísalo con tu asesor antes de presentar la declaración.'
 
@@ -55,23 +55,83 @@ export type InformeInmueble = {
   avisos: AvisoRentabilidad[]
 }
 
+/**
+ * EDIFICIO sin división horizontal (27/10/2026): UNA referencia catastral, varias unidades arrendadas. Se declara agrupado
+ * bajo el edificio; cada unidad lleva su parte de los gastos del edificio (reparto m²/% de `rentabilidadConEdificios`) y lo
+ * que no se pudo repartir va en `comunes` (cuenta en el total del edificio, no en ningún piso).
+ */
+export type InformeEdificio = {
+  edificioId: string
+  alias: string
+  titular: string
+  /** La RC del edificio (la de todas sus unidades). `null` = no consta. */
+  referenciaCatastral: string | null
+  /** Unidades con renta devengada en el año. */
+  unidades: InformeInmueble[]
+  /** Alias de las unidades SIN ingresos en el año. */
+  unidadesSinIngresos: string[]
+  /** El propio edificio: sus contratos de edificio entero y los gastos que NO se han podido repartir. `null` = nada. */
+  comunes: InformeInmueble | null
+  ingresosCent: number
+  totalDeducibleCent: number
+  aRevisarCent: number
+  noDirectoCent: number
+  rendimientoAntesAmortizacionCent: number
+  /** Del EDIFICIO (una sola RC). `null` = sin dato. */
+  amortizacionCent: number | null
+  rendimientoNetoCent: number | null
+  gastosSinConfirmar: number
+  avisos: AvisoRentabilidad[]
+}
+
 export type InformeFiscal = {
   anio: number
   enCurso: boolean
   desde: string
   hasta: string
-  /** Inmuebles con renta devengada en el año. */
+  /** Inmuebles SUELTOS con renta devengada en el año (las unidades de un edificio van en `edificios`). */
   arrendados: InformeInmueble[]
+  /** Edificios con alguna unidad (o el propio edificio) con renta en el año, con sus unidades agrupadas. */
+  edificios: InformeEdificio[]
   /** Alias de los inmuebles SIN ingresos en el año: no entran, y se dice. */
   sinIngresos: string[]
   /** Gastos del titular sin inmueble: no se reparten solos. */
   sinImputarCent: number
 }
 
-export type MetaInmueble = { id: string; alias: string; titular: string }
+export type MetaInmueble = { id: string; alias: string; titular: string; edificioId?: string | null; referenciaCatastral?: string | null }
+
+const amortizacionDe = (amortizacion: ReadonlyMap<string, number | null>, id: string): number | null => {
+  const a = amortizacion.get(id)
+  return typeof a === 'number' && Number.isFinite(a) && a > 0 ? a : null
+}
+
+function informeDe(i: RentabilidadInmueble, m: MetaInmueble, amortizacion: ReadonlyMap<string, number | null>): InformeInmueble {
+  const porCat: Record<string, number> = { ...i.gastosPorCategoria }
+  if (i.seguros > 0) porCat.SEGURO = (porCat.SEGURO ?? 0) + i.seguros
+  const claves = [...new Set([...ORDEN, ...Object.keys(porCat)])].filter((k) => (porCat[k] ?? 0) > 0)
+  const lineas = claves.map((k): LineaFiscal => {
+    const regla = REGLAS[k] ?? { etiqueta: k, tratamiento: 'a_revisar' as const, nota: 'Categoría sin clasificar.' }
+    return { clave: k, etiqueta: regla.etiqueta, importeCent: porCat[k], tratamiento: regla.tratamiento, nota: regla.nota }
+  })
+  const suma = (t: Tratamiento) => lineas.filter((l) => l.tratamiento === t).reduce((a, l) => a + l.importeCent, 0)
+  const totalDeducibleCent = suma('deducible')
+  const rendimientoAntesAmortizacionCent = i.ingresos - totalDeducibleCent
+  const amortizacionCent = amortizacionDe(amortizacion, i.inmuebleId)
+  return {
+    inmuebleId: i.inmuebleId, alias: m.alias, titular: m.titular, ingresosCent: i.ingresos, lineas,
+    totalDeducibleCent, aRevisarCent: suma('a_revisar'), noDirectoCent: suma('no_directo'),
+    amortizacionCent,
+    rendimientoAntesAmortizacionCent,
+    rendimientoNetoCent: amortizacionCent === null ? null : rendimientoAntesAmortizacionCent - amortizacionCent,
+    gastosSinConfirmar: i.gastosSinConfirmar,
+    avisos: i.avisos,
+  }
+}
 
 /**
  * `amortizacion`: por inmueble, céntimos ANUALES si hay dato; ausente o `null` = sin dato. Un número ≤ 0 tampoco es un dato.
+ * Sin edificios con unidades en `meta`, el informe es el de siempre (`edificios: []`).
  */
 export function informeFiscal(
   r: ResultadoRentabilidad,
@@ -80,38 +140,59 @@ export function informeFiscal(
   amortizacion: ReadonlyMap<string, number | null> = new Map(),
 ): InformeFiscal {
   const nombre = new Map(meta.map((m) => [m.id, m]))
+  // Edificios con al menos una unidad en la lista (el edificio también tiene que estar: si no, la unidad va suelta).
+  const unidadesDe = new Map<string, string[]>()
+  for (const m of meta) {
+    if (m.edificioId && nombre.has(m.edificioId) && m.edificioId !== m.id) unidadesDe.set(m.edificioId, [...(unidadesDe.get(m.edificioId) ?? []), m.id])
+  }
+  const agrupados = new Set([...unidadesDe.keys(), ...[...unidadesDe.values()].flat()])
+  const porId = new Map(r.inmuebles.map((i) => [i.inmuebleId, i]))
+
   const arrendados: InformeInmueble[] = []
   const sinIngresos: string[] = []
   for (const i of r.inmuebles) {
     const m = nombre.get(i.inmuebleId)
-    if (!m) continue
+    if (!m || agrupados.has(i.inmuebleId)) continue
     if (i.ingresos <= 0) {
       sinIngresos.push(m.alias)
       continue
     }
-    const porCat: Record<string, number> = { ...i.gastosPorCategoria }
-    if (i.seguros > 0) porCat.SEGURO = (porCat.SEGURO ?? 0) + i.seguros
-    const claves = [...new Set([...ORDEN, ...Object.keys(porCat)])].filter((k) => (porCat[k] ?? 0) > 0)
-    const lineas = claves.map((k): LineaFiscal => {
-      const regla = REGLAS[k] ?? { etiqueta: k, tratamiento: 'a_revisar' as const, nota: 'Categoría sin clasificar.' }
-      return { clave: k, etiqueta: regla.etiqueta, importeCent: porCat[k], tratamiento: regla.tratamiento, nota: regla.nota }
-    })
-    const suma = (t: Tratamiento) => lineas.filter((l) => l.tratamiento === t).reduce((a, l) => a + l.importeCent, 0)
-    const totalDeducibleCent = suma('deducible')
-    const rendimientoAntesAmortizacionCent = i.ingresos - totalDeducibleCent
-    const a = amortizacion.get(i.inmuebleId)
-    const amortizacionCent = typeof a === 'number' && Number.isFinite(a) && a > 0 ? a : null
-    arrendados.push({
-      inmuebleId: i.inmuebleId, alias: m.alias, titular: m.titular, ingresosCent: i.ingresos, lineas,
-      totalDeducibleCent, aRevisarCent: suma('a_revisar'), noDirectoCent: suma('no_directo'),
-      amortizacionCent,
+    arrendados.push(informeDe(i, m, amortizacion))
+  }
+
+  const edificios: InformeEdificio[] = []
+  for (const [edId, ids] of unidadesDe) {
+    const mEd = nombre.get(edId)!
+    const unidades: InformeInmueble[] = []
+    const unidadesSinIngresos: string[] = []
+    for (const id of ids) {
+      const i = porId.get(id)
+      if (!i) continue
+      if (i.ingresos <= 0) unidadesSinIngresos.push(nombre.get(id)!.alias)
+      else unidades.push(informeDe(i, nombre.get(id)!, amortizacion))
+    }
+    const propio = porId.get(edId)
+    const comunes = propio && (propio.ingresos > 0 || propio.gastos > 0 || propio.seguros > 0) ? informeDe(propio, mEd, new Map()) : null
+    if (unidades.length === 0 && (comunes === null || comunes.ingresosCent <= 0)) {
+      sinIngresos.push(mEd.alias)
+      continue
+    }
+    const filas = comunes ? [...unidades, comunes] : unidades
+    const suma = (k: 'ingresosCent' | 'totalDeducibleCent' | 'aRevisarCent' | 'noDirectoCent' | 'gastosSinConfirmar') => filas.reduce((a, f) => a + f[k], 0)
+    const rendimientoAntesAmortizacionCent = suma('ingresosCent') - suma('totalDeducibleCent')
+    const amortizacionCent = amortizacionDe(amortizacion, edId)
+    edificios.push({
+      edificioId: edId, alias: mEd.alias, titular: mEd.titular, referenciaCatastral: mEd.referenciaCatastral ?? null,
+      unidades, unidadesSinIngresos, comunes,
+      ingresosCent: suma('ingresosCent'), totalDeducibleCent: suma('totalDeducibleCent'), aRevisarCent: suma('aRevisarCent'), noDirectoCent: suma('noDirectoCent'),
       rendimientoAntesAmortizacionCent,
+      amortizacionCent,
       rendimientoNetoCent: amortizacionCent === null ? null : rendimientoAntesAmortizacionCent - amortizacionCent,
-      gastosSinConfirmar: i.gastosSinConfirmar,
-      avisos: i.avisos,
+      gastosSinConfirmar: suma('gastosSinConfirmar') + (comunes === null ? (propio?.gastosSinConfirmar ?? 0) : 0),
+      avisos: [...new Set(filas.flatMap((f) => f.avisos))].sort(),
     })
   }
-  return { anio: periodo.anio, enCurso: periodo.enCurso, desde: r.desde, hasta: r.hasta, arrendados, sinIngresos, sinImputarCent: r.sinImputar }
+  return { anio: periodo.anio, enCurso: periodo.enCurso, desde: r.desde, hasta: r.hasta, arrendados, edificios, sinIngresos, sinImputarCent: r.sinImputar }
 }
 
 // ─── CSV ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -133,13 +214,25 @@ export function csvFiscal(inf: InformeFiscal): string {
   const filas: string[][] = [['Año', 'Inmueble', 'Titular', 'Concepto', 'Tratamiento', 'Importe (EUR)', 'Nota']]
   const fila = (i: InformeInmueble, concepto: string, tratamiento: string, importe: string, nota = '') =>
     filas.push([String(inf.anio), i.alias, i.titular, concepto, tratamiento, importe, nota])
-  for (const i of inf.arrendados) {
+  const inmueble = (i: InformeInmueble) => {
     fila(i, 'Ingresos íntegros (renta devengada)', 'Ingreso', importeCsv(i.ingresosCent))
     for (const l of i.lineas) fila(i, l.etiqueta, ETIQUETA_TRATAMIENTO[l.tratamiento], importeCsv(l.importeCent), l.nota ?? '')
     fila(i, 'Total gastos deducibles', '', importeCsv(i.totalDeducibleCent))
     fila(i, 'Rendimiento antes de amortización', '', importeCsv(i.rendimientoAntesAmortizacionCent))
     fila(i, 'Amortización estimada', '', i.amortizacionCent === null ? 'sin dato' : importeCsv(i.amortizacionCent), i.amortizacionCent === null ? 'No guardamos el coste de adquisición ni el valor catastral' : '')
     fila(i, 'Rendimiento neto', '', i.rendimientoNetoCent === null ? 'sin dato' : importeCsv(i.rendimientoNetoCent), i.rendimientoNetoCent === null ? 'Falta la amortización' : '')
+  }
+  for (const i of inf.arrendados) inmueble(i)
+  // Edificio: cada unidad como «Edificio · Unidad», lo no repartido como «Edificio · Gastos comunes» y el TOTAL de la RC.
+  for (const e of inf.edificios) {
+    const rc = e.referenciaCatastral ? `RC ${e.referenciaCatastral}` : 'Referencia catastral: sin dato'
+    for (const u of e.unidades) inmueble({ ...u, alias: `${e.alias} · ${u.alias}` })
+    if (e.comunes) inmueble({ ...e.comunes, alias: `${e.alias} · Gastos comunes sin repartir` })
+    const tot = (concepto: string, importe: string, nota = '') => filas.push([String(inf.anio), e.alias, e.titular, concepto, 'Total del edificio', importe, nota])
+    tot('Ingresos íntegros del edificio', importeCsv(e.ingresosCent), rc)
+    tot('Total gastos deducibles del edificio', importeCsv(e.totalDeducibleCent), rc)
+    tot('Rendimiento antes de amortización del edificio', importeCsv(e.rendimientoAntesAmortizacionCent), rc)
+    tot('Rendimiento neto del edificio', e.rendimientoNetoCent === null ? 'sin dato' : importeCsv(e.rendimientoNetoCent), e.rendimientoNetoCent === null ? 'Falta la amortización' : rc)
   }
   filas.push([String(inf.anio), '', '', AVISO_ORIENTATIVO, '', '', inf.enCurso ? `Ejercicio en curso: datos hasta el ${inf.hasta.split('-').reverse().join('/')}` : ''])
   return '﻿' + filas.map((f) => f.map(celdaCsv).join(';')).join('\r\n') + '\r\n'

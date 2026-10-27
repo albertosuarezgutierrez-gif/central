@@ -1688,6 +1688,15 @@ model PortalPatrimonioInmueble {
   /// 🚨 NULL = no lo ha dicho, que NO es «no tiene». Solo `si` ofrece revisar los seguros de la hipoteca (y solo si pulsa).
   /// ⚠️ Declarada ANTES de que exista en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
   hipoteca                          String?
+  /// EDIFICIO sin división horizontal (27/10/2026, `prisma/sql/2026-10-27_portal_patrimonio_edificio_unidades.sql`): la UNIDAD
+  /// cuelga del edificio. NULL = inmueble suelto o el propio edificio. En la BD es FK COMPUESTA `(inmueble_padre_id, titular_id)`
+  /// (nunca de otro titular) + trigger de un nivel; aquí va como escalar a propósito (sin relación Prisma que la «simplifique»).
+  /// ⚠️ Declaradas ANTES de que existan en la BD = 42703 en toda lectura del modelo: el SQL va antes del despliegue.
+  inmueblePadreId                   String?   @map("inmueble_padre_id") @db.Uuid
+  /// Solo en un edificio: 'm2' | 'porcentaje'. NULL = sin elegir → no se reparte (y se dice).
+  repartoCriterio                   String?   @map("reparto_criterio")
+  /// Solo en una unidad: su % del reparto (0–100). NULL = no fijado.
+  repartoPorcentaje                 Decimal?  @map("reparto_porcentaje") @db.Decimal(5, 2)
 
   titular      PortalPatrimonioTitular             @relation(fields: [titularId], references: [id])
   comunidades  PortalPatrimonioInmuebleComunidad[]
