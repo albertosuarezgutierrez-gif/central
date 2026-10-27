@@ -64,12 +64,39 @@ export interface FechaHuesped {
    * es justo la distinción que hace accionable el aviso.
    */
   hayEvento?: boolean | null
+  /**
+   * Ventas del PROPIO piso en los últimos 12 meses del MISMO tipo de noche (vie/sáb vs dom-jue) y
+   * MISMO mes del año que esta fecha: `n` reservas y `med` = mediana de €/noche huésped
+   * (amount_gross / nights). TRES estados: `null`/ausente = no se ha podido leer el histórico →
+   * `vendeAlPrecio` null (comportamiento de siempre) · `{n:0}` = se miró y no hay ventas · dato.
+   */
+  ventas?: { n: number; med: number | null } | null
 }
 
-export type EstadoHuesped = 'sin_mercado' | 'ok' | 'caro' | 'barato'
+/** `caro_vendiendo` = sobre el mercado, pero el piso vende noches comparables a ese precio. */
+export type EstadoHuesped = 'sin_mercado' | 'ok' | 'caro' | 'caro_vendiendo' | 'barato'
+
+/**
+ * Reservas mínimas del histórico para afirmar «se vende a ese precio». Regla (una línea): en los
+ * últimos 12 meses, ≥ MIN_VENTAS_PRECIO reservas del mismo tipo de noche (vie/sáb vs dom-jue) y mismo
+ * mes del año, con mediana de €/noche huésped ≥ el precio huésped de esa fecha. `null` = no se sabe.
+ */
+export const MIN_VENTAS_PRECIO = 3
+
+/** true/false si hay muestra suficiente; null si no se sabe (sin histórico leído o muestra corta). */
+export function vendeAlPrecio(
+  ventas: { n: number; med: number | null } | null | undefined, guest: number,
+): boolean | null {
+  if (!ventas || ventas.med == null || !(ventas.n >= MIN_VENTAS_PRECIO) || !(ventas.med > 0)) return null
+  return ventas.med >= guest
+}
 
 export interface VeredictoHuesped {
   fecha: string
+  /** base aplicada (para decidir si la cuota fija manda) */
+  baseAplicada: number
+  /** `null` = no se sabe si se vende a ese precio (ver `vendeAlPrecio`) */
+  vendeAlPrecio: boolean | null
   /** lo que ve el huésped por esa noche con la base aplicada */
   guest: number
   medMercadoGuest: number | null
@@ -99,6 +126,10 @@ export interface ResumenHuesped {
   carasSinEvento: number
   carasConEvento: number
   carasEventoSinComprobar: number
+  /** Sobre mercado pero vendiéndose a ese precio: NO cuenta en `caras` ni dispara el aviso. */
+  carasVendiendo: number
+  /** Piso listable en el aviso: caras SIN evento o con evento sin comprobar (nunca solo con evento). */
+  avisar: boolean
   /**
    * Las peores para el aviso, ya ordenadas: primero las CARAS SIN evento (las accionables), luego
    * las caras cuyo evento no se ha podido comprobar, luego las caras con evento, y solo después el
@@ -166,12 +197,13 @@ export function precioHuesped(
       const mercado = f.medMercadoGuest != null && Number(f.medMercadoGuest) > 0
         ? Number(f.medMercadoGuest) : null
       const ratio = mercado != null ? Number((guest / mercado).toFixed(3)) : null
+      const vende = vendeAlPrecio(f.ventas, guest)
       const estado: EstadoHuesped = ratio == null ? 'sin_mercado'
-        : ratio > topeCaro ? 'caro'
+        : ratio > topeCaro ? (vende === true ? 'caro_vendiendo' : 'caro')
         : ratio < sueloBarato ? 'barato'
         : 'ok'
       return {
-        fecha: f.fecha, guest, medMercadoGuest: mercado, ratio,
+        fecha: f.fecha, baseAplicada: Number(f.baseAplicada), vendeAlPrecio: vende, guest, medMercadoGuest: mercado, ratio,
         pesoCuota: guest > 0 ? Number((fijo / guest).toFixed(3)) : 0,
         estado,
         hayEvento: f.hayEvento ?? null,
@@ -189,6 +221,9 @@ export function precioHuesped(
     carasSinEvento: caras.filter(v => v.hayEvento === false).length,
     carasConEvento: caras.filter(v => v.hayEvento === true).length,
     carasEventoSinComprobar: caras.filter(v => v.hayEvento == null).length,
+    carasVendiendo: veredictos.filter(v => v.estado === 'caro_vendiendo').length,
+    // Una cara CON evento sola no avisa: la mediana ±3 días diluye el pico de la noche de evento.
+    avisar: caras.some(v => v.hayEvento !== true),
     peores: veredictos
       .filter(v => v.ratio != null)
       .sort((a, b) => prioridadAviso(a) - prioridadAviso(b) || b.ratio! - a.ratio!)
@@ -204,7 +239,7 @@ export function precioHuesped(
  */
 function prioridadAviso(v: VeredictoHuesped): number {
   const evento = v.hayEvento === false ? 0 : v.hayEvento == null ? 1 : 2
-  return (v.estado === 'caro' ? 0 : 4) + evento
+  return (v.estado === 'caro' ? 0 : v.estado === 'caro_vendiendo' ? 3 : 4) * 10 + evento
 }
 
 /**
