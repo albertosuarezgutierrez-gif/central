@@ -2130,7 +2130,19 @@ export async function esperarPreguntasAntecedentesTurismos(page: Pick<Page, 'wai
 export const MENSAJE_FALTA_COMPANIA_ACTUAL = 'falta la compañía actual del vehículo; Allianz la exige con cambio de seguro'
 /** v0.6.15: cambio de seguro sin compañía actual en el riesgo → `datos` (no un «mapa incompleto» del portal). Se llama ANTES del login. Puro. */
 export function exigirCompaniaActualTurismos(f: FormularioAuto, hoy: Date = new Date()): void {
-  if (supuestosAuto(f, hoy).compra.valor === 'ya_lo_tenia' && companiaActualDe(f) === null) throw new ErrorTarificador('datos', MENSAJE_FALTA_COMPANIA_ACTUAL)
+  if (supuestosAuto(f, hoy).compra.valor !== 'ya_lo_tenia') return
+  const actual = companiaActualDe(f)
+  if (actual === null) throw new ErrorTarificador('datos', MENSAJE_FALTA_COMPANIA_ACTUAL)
+  if (esCompaniaPropiaAllianz(actual)) throw new ErrorTarificador('datos', MENSAJE_COMPANIA_ACTUAL_ES_ALLIANZ)
+}
+/**
+ * v0.6.35: la compañía actual ya es ALLIANZ (la misma que tarifica). El desplegable del portal no ofrece Allianz (es su casa; solo
+ * «Allianz Direct» y «BBVA Allianz», que son OTRAS entidades) y elegir una sería falso. No hay opción honesta: se para ANTES del login
+ * con un error de DATOS accionable (nunca un match difuso «Allianz» → «Allianz Direct»).
+ */
+export const MENSAJE_COMPANIA_ACTUAL_ES_ALLIANZ = 'la compañía actual del vehículo ya es Allianz y el desplegable de Allianz no ofrece Allianz (solo «Allianz Direct» y «BBVA Allianz», que son otras entidades); no se elige ninguna. Es un seguro de Allianz a Allianz: tarificarlo a mano en el portal o indicar otra compañía actual si el dato es erróneo'
+export function esCompaniaPropiaAllianz(actual: string): boolean {
+  return normalizarCompania(actual) === 'allianz'
 }
 /** Tope del texto de la lista en el mensaje (el runner corta el mensaje a 2.000 caracteres): se corta por opciones enteras, nunca a mitad. */
 const MAX_LISTA_COMPANIAS_MENSAJE = 1_500
@@ -2968,7 +2980,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.34',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.35',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

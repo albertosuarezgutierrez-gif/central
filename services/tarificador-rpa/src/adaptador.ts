@@ -147,6 +147,8 @@ export type ContextoPortal = ContextoTarificacion & {
   confirmarDatosPersonasGenerali?: () => Promise<{ dialogo: string | null }>
   /** Generali (v0.2.27): «Siguiente» de «Valoración Riesgo» (marco emiAutosGenB028.do, tomador confirmado, máx. 3 por trabajo) por `pulsarSiguienteValoracionGenerali` de guard.ts. */
   pulsarSiguienteGenerali?: () => Promise<{ dialogo: string | null }>
+  /** Generali (v0.2.39): «Recalcular» de la botonera «Acciones» (marco emiAutosGenB028.do, una vez por trabajo; nunca «Guardar Cálculo») por `pulsarRecalcularGenerali` de guard.ts. */
+  pulsarRecalcularGenerali?: () => Promise<{ dialogo: string | null }>
   /** Generali (v0.2.7): abre «Todas las marcas» por su disparador (`abrirDesplegableMarcaGenerali` de guard.ts; id `buscamarca`, una vez). */
   abrirDesplegableMarcaGenerali?: (base: string) => Promise<void>
   /** Generali (v0.2.7): pulsa el `li` de la marca elegida (`elegirMarcaListaGenerali` de guard.ts; texto exacto, una vez). */
