@@ -15,6 +15,7 @@ import { getIdentidad } from '@/lib/session'
 import { PaginaPortal } from '../../PaginaPortal'
 import { TarjetaPortal } from '../../TarjetaPortal'
 import { BotonSolicitarModulo } from './BotonSolicitarModulo'
+import { EnlaceComoFunciona } from './EnlaceComoFunciona'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,6 +86,7 @@ export default async function HerramientasPage() {
                       <a className="boton" href={URL_PORTAL_EMPLEADO} target="_blank" rel="noopener noreferrer">
                         Abrir el Portal del Empleado
                       </a>
+                      <EnlaceComoFunciona modulo={MODULO_RRHH} />
                       {rrhh && (rrhh.accion.tipo === 'solicitar' || rrhh.accion.tipo === 'apuntarse') && (
                         <div className="acciones-nota">
                           ¿Tu empresa aún no lo tiene? <BotonSolicitarModulo modulo={rrhh.id} rotulo="Solicítalo" variante="enlace" />
@@ -164,11 +166,14 @@ function TarjetaModuloPortal({ t, hrefFlota }: { t: TarjetaModulo; hrefFlota: st
       titulo={t.nombre}
       chip={t.disponibilidad !== null ? <span className="chip">{ETIQUETA_DISPONIBILIDAD[t.disponibilidad]}</span> : undefined}
       accion={
-        a.tipo === 'abrir' ? (
-          <Link className="boton" href={t.id === 'flota' && a.href === RUTA_FLOTA ? hrefFlota : a.href}>Abrir</Link>
-        ) : pide ? (
-          <BotonSolicitarModulo modulo={t.id} rotulo={a.tipo === 'apuntarse' ? 'Apuntarme' : 'Solicitar'} />
-        ) : undefined
+        <>
+          {a.tipo === 'abrir' ? (
+            <Link className="boton" href={t.id === 'flota' && a.href === RUTA_FLOTA ? hrefFlota : a.href}>Abrir</Link>
+          ) : pide ? (
+            <BotonSolicitarModulo modulo={t.id} rotulo={a.tipo === 'apuntarse' ? 'Apuntarme' : 'Solicitar'} />
+          ) : null}
+          <EnlaceComoFunciona modulo={t.id} />
+        </>
       }
     >
       <p style={{ marginTop: 0, marginBottom: 4 }}>{t.descripcion}</p>

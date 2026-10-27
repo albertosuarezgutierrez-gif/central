@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
-import { auditado } from '@/lib/auditoria'
+import { anotarCambio, auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
@@ -12,6 +12,9 @@ import { conCompaniaActualUnica, conVehiculoDeOrigen, decidirRiesgoProbar } from
 import { necesitaCompaniaActual } from '@/lib/tarificador-compania-actual'
 import { necesitaVehiculoEncadenado } from '@/lib/tarificador-espera-vehiculo'
 import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
+import { hayImagenTrabajo } from '@/lib/esquema-bd'
+import { leerFilaImagen } from '@/lib/tarificador-imagen'
+import { decidirPermisoPrueba, validarImagenPrueba } from '@/lib/tarificador-imagen-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -25,6 +28,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * Con el riesgo del último trabajo ya purgado, se reconstruye de la oportunidad del cliente + ficha (`riesgoDesdeOportunidadDelCliente`);
  * si aun así falta algo → 422 `riesgo_incompleto` con las etiquetas de campo; sin nada → 409 `sin_riesgo_previo`/`origen_purgado` (no inventa datos). TARIFICAR ≠ EMITIR: solo precio.
  * 202 `{ estado:'encolado', trabajoId }`.
+ *
+ * `imagen` (opcional, 27/10/2026): imagen de RAMA (`registry.fly.io/asegura-tarificador:rama-<sha7>`) para lanzar SOLO este
+ * trabajo con ella. Solo con el interruptor `permitir_imagen_prueba` de `seguros.tarificador_imagen` encendido (si no → 403);
+ * nunca `main-*` (producción) ni otra forma (400). Se registra en `imagen_prueba` del trabajo; con un duplicado vivo → 409.
  */
 export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -36,6 +43,17 @@ export const POST = auditado(async (req: Request) => {
   const ramo = typeof body.ramo === 'string' ? body.ramo.trim() : ''
   if (!UUID.test(clienteId) || !/^[a-z0-9_-]{1,40}$/.test(compania) || !/^[a-z0-9_-]{1,40}$/.test(ramo)) {
     return NextResponse.json({ estado: 'error', mensaje: 'clienteId (uuid), compania y ramo son obligatorios' }, { status: 400 })
+  }
+  // Imagen de PRUEBA: se valida y se exige el interruptor ANTES de leer el riesgo o encolar nada.
+  let imagenPrueba: string | null = null
+  if (body.imagen !== undefined && body.imagen !== null && body.imagen !== '') {
+    const v = validarImagenPrueba(body.imagen)
+    if (!v.ok) return NextResponse.json({ estado: 'error', mensaje: v.motivo }, { status: 400 })
+    const permiso = (await hayImagenTrabajo())
+      ? decidirPermisoPrueba(await leerFilaImagen())
+      : { ok: false as const, status: 403 as const, motivo: 'imagen_prueba_no_permitida: falta el SQL 2026-10-27_tarificador_imagen (columna imagen_prueba)' }
+    if (!permiso.ok) return NextResponse.json({ estado: 'prohibido', motivo: permiso.motivo }, { status: permiso.status })
+    imagenPrueba = v.imagen
   }
   const actor = leerActor(req.headers.get(CABECERA_ACTOR))
   const solicitadoPor = actor.tipo === 'desconocido' ? `desconocido:${actor.motivo}` : `${actor.tipo}:${actor.id}`
@@ -60,12 +78,13 @@ export const POST = auditado(async (req: Request) => {
     const d = decidirRiesgoProbar({ reconstruccion, previo, soloPurgados: leido.soloPurgados, validar: (riesgo) => validarEntradaRamo(ramo, riesgo, compania) })
     if (!d.ok) return NextResponse.json({ estado: 'rechazado', motivo: d.motivo, ...(d.errores ? { errores: d.errores } : {}) }, { status: d.status })
     const valida = d
-    const r = await encolarTrabajo({ correduriaId: correduria.id, oportunidadId: null, clienteId, polizaId: null, compania, ...valida.entrada, solicitadoPor })
+    const r = await encolarTrabajo({ correduriaId: correduria.id, oportunidadId: null, clienteId, polizaId: null, compania, ...valida.entrada, solicitadoPor, imagenPrueba })
     if (r.estado === 'rechazado') return NextResponse.json({ estado: 'rechazado', motivo: r.motivo }, { status: r.status })
+    if (imagenPrueba) anotarCambio({ entidad: 'trabajo_tarificador', id: r.trabajoId, campo: 'imagen_prueba', antes: null, despues: imagenPrueba })
     const lanzado = await lanzarPendientes(correduria.id, compania).catch((e: unknown) => ({
       lanzados: [] as string[], fallidos: [], omitido: `error_lanzando: ${e instanceof Error ? e.message : String(e)}`,
     }))
-    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, estadoPrevio: r.estadoPrevio ?? null, mensaje: r.mensaje ?? null, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
+    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, estadoPrevio: r.estadoPrevio ?? null, mensaje: r.mensaje ?? null, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? lanzado.fallidos.find((f) => f.id === r.trabajoId)?.motivo ?? null, imagenPrueba }, { status: 202 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/probar', e) }, { status: 503 })
   }

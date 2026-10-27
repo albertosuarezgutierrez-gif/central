@@ -54,7 +54,20 @@ export const UMBRAL_CORTE_BOT = 3
 /** Solo cuentan los fallos DEL BOT: un dato mal puesto, una credencial o un captcha no dicen que el portal haya cambiado. */
 export const TIPOS_ERROR_CORTE = ['portal', 'infra'] as const
 
-export type CierreTrabajo = { estado: string; tipoError: string | null }
+/**
+ * `cierreAtasco` (27/10/2026): `error.atasco` del trabajo (`caducado` / `huerfano`) = lo CERRÓ el barrido de un atasco (nadie
+ * eligió, o el atasco se descartó a mano —p. ej. los de una versión vieja tras un despliegue— y el trabajo quedó huérfano). No
+ * dice que el portal haya cambiado: el atasco ya avisó a Alberto. NO cuenta como fallo del bot y rompe la racha (conservador:
+ * ante la duda no se corta). `null`/ausente = cierre normal.
+ */
+export type CierreTrabajo = { estado: string; tipoError: string | null; cierreAtasco?: string | null }
+
+/** ¿Este cierre es un fallo DEL BOT que cuenta para el corte? */
+export function cuentaComoFalloBot(t: CierreTrabajo): boolean {
+  if (t.estado !== 'error_definitivo') return false
+  if (typeof t.cierreAtasco === 'string' && t.cierreAtasco.trim() !== '') return false
+  return (TIPOS_ERROR_CORTE as readonly (string | null)[]).includes(t.tipoError)
+}
 
 /**
  * ¿Se corta la pareja (compañía, ramo)? `ultimos` = los trabajos CERRADOS (`ok` / `error_definitivo`) de la pareja, el más
@@ -64,7 +77,7 @@ export type CierreTrabajo = { estado: string; tipoError: string | null }
 export function debeCortarBot(ultimos: readonly CierreTrabajo[], umbral = UMBRAL_CORTE_BOT): boolean {
   if (credencialesRechazadas(ultimos)) return true
   if (!Number.isInteger(umbral) || umbral < 1 || ultimos.length < umbral) return false
-  return ultimos.slice(0, umbral).every((t) => t.estado === 'error_definitivo' && (TIPOS_ERROR_CORTE as readonly (string | null)[]).includes(t.tipoError))
+  return ultimos.slice(0, umbral).every(cuentaComoFalloBot)
 }
 
 /**

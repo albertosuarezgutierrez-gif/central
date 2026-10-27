@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { hoyMadrid } from '@central/module-seguros'
 
-import { INTERRUPTORES_DEFECTO, type EstadoAutorizacion, type InterruptoresPublicos, type ItvVehiculo, type PapelFlota, type VehiculoFlota, type VencimientoFlota } from '@central/module-seguros-portal'
+import { INTERRUPTORES_DEFECTO, rutaManual, type EstadoAutorizacion, type InterruptoresPublicos, type ItvVehiculo, type PapelFlota, type VehiculoFlota, type VencimientoFlota } from '@central/module-seguros-portal'
 
 import { EtiquetasImprimibles, Interruptores, QrVehiculo, type EstadoQrVista } from '../QrVehiculo'
 
@@ -260,7 +260,8 @@ function ListaVehiculos({
     return (
       <p style={{ margin: 0 }}>
         No nos consta ningún vehículo de la sociedad con un seguro en vigor con nosotros. Si tenéis vehículos
-        asegurados en otra correduría, podemos revisarlos: escríbenos.
+        asegurados en otra correduría, podemos revisarlos: escríbenos.{' '}
+        <Link href={rutaManual('flota')} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Cómo funciona la flota</Link>.
       </p>
     )
   }
