@@ -12,13 +12,13 @@
 // 🛡️ Todo SQL lleva `correduria_id` (puerta `lib/tenant`). 🚨 TARIFICAR ≠ EMITIR: nada de aquí habla con Codeoscopic.
 // Nada de valores personales en la respuesta ni en logs: compañías, claves y conteos.
 import { prisma } from './tenant'
-import { personaDeFicha } from './oportunidad-riesgo'
+import { personaDeFicha, leerRiesgo } from './oportunidad-riesgo'
 import { prismaAsegura } from './asegura-db'
 import { claveCompania, puedeAutomatizar } from '@central/module-tarificacion'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
 import { companiaAdmiteRamoRpa, rpaActivo, validarEntradaRamo } from './tarificador-reglas'
 import { pausaViva } from './tarificador-robustez'
-import type { ReconstruccionRiesgo } from './tarificador-relanzar-reglas'
+import { riesgoHogarDeRiesgoOportunidad, type ReconstruccionRiesgo } from './tarificador-relanzar-reglas'
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
 import { datosVehiculoDeInfoRiesgo, claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
 import {
@@ -189,6 +189,7 @@ async function formularioDeOportunidad(
  * (lo que falta lo dirá `validarEntradaRamo`). El riesgo NO sale de asegura.
  */
 export async function riesgoDesdeOportunidadDelCliente(correduriaId: string, clienteId: string, ramo: string, ahora = new Date()): Promise<ReconstruccionRiesgo> {
+  if (ramo === 'hogar') return riesgoHogarDeOportunidadDelCliente(correduriaId, clienteId, ahora)
   if (!esRamoBotLead(ramo)) return { riesgo: null, motivo: 'sin_formulario' }
   const [op] = await prisma.$queryRaw<{ info_riesgo: unknown }[]>`
     select o.info_riesgo from seguros.oportunidades o
@@ -199,6 +200,18 @@ export async function riesgoDesdeOportunidadDelCliente(correduriaId: string, cli
   const fo = await formularioDeOportunidad(correduriaId, clienteId, ramo, op.info_riesgo, nac, diaMadrid(ahora))
   if (fo.estado === 'discrepancias') return { riesgo: null, motivo: 'discrepancias' }
   return { riesgo: fo.formulario.riesgo, bloqueos: fo.formulario.bloqueos, repreguntar: fo.formulario.repreguntar }
+}
+
+/** HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`). */
+async function riesgoHogarDeOportunidadDelCliente(correduriaId: string, clienteId: string, ahora: Date): Promise<ReconstruccionRiesgo> {
+  const [op] = await prisma.$queryRaw<{ id: string }[]>`
+    select o.id::text as id from seguros.oportunidades o
+    where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid and o.tipo::text = 'hogar'
+    order by (o.info_riesgo->'datosVivienda') is not null desc, o.created_at desc limit 1`
+  if (!op) return { riesgo: null, motivo: 'sin_oportunidad' }
+  const riesgo = await leerRiesgo(correduriaId, op.id)
+  if (!riesgo) return { riesgo: null, motivo: 'sin_oportunidad' }
+  return riesgoHogarDeRiesgoOportunidad(riesgo, ahora)
 }
 
 async function revisarInterno(correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date): Promise<{ ops: Interno[]; dia: string }> {

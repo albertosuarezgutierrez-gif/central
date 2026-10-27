@@ -37,7 +37,7 @@ const CAMPO = (sel: string) => `<mat-form-field><label><mat-label>Compañia</mat
 const FIGURAS = '<app-tomador><datos-licencia><mat-form-field><label><mat-label>Clase</mat-label></label><mat-select formcontrolname="codigoTipoLicencia" style="display:inline-block;min-width:80px;min-height:14px"></mat-select></mat-form-field></datos-licencia></app-tomador>'
 const PLAN = { escribibles: [{ sel: SEL_HISTORIAL.companiaAnterior, tipo: 'mat-select', etiqueta: 'compañía anterior', paso: 'figuras', valor: 'ZZ Seguros', opciones: ['ZZ Seguros'] }], pendientes: [] } as never
 
-test('v0.8.30 · la versión del bot es 0.8.30', () => assert.equal(mapfreAuto.version, '0.8.30'))
+test('v0.8.30 · la versión del bot es 0.8.30', () => assert.equal(mapfreAuto.version, '0.8.31'))
 
 test('«Compañia» habilitado en otro componente OCULTO (display:none): el diagnóstico lo dice con el motivo y el componente; la selección no lo toca', async () => {
   const page = await pagina(`<body>${FIGURAS}<app-info-descuentos style="display:none">${CAMPO(SEL)}</app-info-descuentos></body>`)

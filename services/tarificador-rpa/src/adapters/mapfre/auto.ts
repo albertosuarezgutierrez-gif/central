@@ -68,6 +68,11 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.31 (27/10/2026, ejecución real con 0.8.30): la compañía diferida SÍ se resolvió, pero el atasco pasó al siguiente campo del MISMO bloque
+//   («siniestros RC 5 años», `app-historial-siniestralidad input[formcontrolname="siniestros"]`, «no aparece» en «Figuras»): el bloque entero de
+//   siniestralidad (compañía, nº de póliza, siniestros) vive en Coberturas y en «Figuras» está oculto/ausente. Ahora, con el bloque oculto, también
+//   los SINIESTROS (y el nº de póliza anterior) se difieren a después de `continuar('figuras')`, en este orden: compañía → nº póliza → siniestros;
+//   luego se vuelve a leer la prima (`esperarPrimasMapfre`). Nada se omite: si tampoco es visible allí, atasco + hueco como siempre.
 // v0.8.30 (27/10/2026, captura del atasco con 0.8.29): «Figuras» (pestaña Tomador) NO pinta bloque de siniestralidad; el «Compañia» habilitado que veía el
 //   diagnóstico NO se ve (la selección exige visible) y no se decía por qué. La lista de 20 controles del atasco es el inventario genérico (corta antes).
 //   Ahora el diagnóstico dice visible/OCULTO, quién lo oculta y el componente que lo contiene. Sin cambio de comportamiento: sigue fail-closed.
@@ -1056,6 +1061,41 @@ export async function companiaHabilitadaOculta(raiz: Pick<Frame, 'locator'>): Pr
   return hab.length === 1 && !hab[0].visible && hab[0].cab < 0
 }
 
+/** v0.8.31 · ¿TODOS los controles de siniestralidad hallados en esta pantalla están OCULTOS sin acordeón que desplegar (el bloque es de otro paso)? Solo lectura. */
+export async function siniestralidadOcultaEnPantalla(raiz: Pick<Frame, 'locator'>): Promise<boolean> {
+  const reales = ((await leerControlesSiniestralidad(raiz)) ?? []).filter((c) => c.tipo !== 'sin-control')
+  return reales.length > 0 && reales.every((c) => !c.visible && c.cab < 0)
+}
+
+/**
+ * v0.8.31 · Campos de texto del bloque de siniestralidad (hoy «siniestros RC 5 años»): si el campo NO se ve en esta pantalla y el bloque está oculto
+ * (`bloqueDiferido` = la compañía ya se difirió, o `siniestralidadOcultaEnPantalla`), NO se escribe ni se omite: pasa a `diferidosTexto` para el paso
+ * donde sea visible. En cualquier otro caso se escribe aquí, como siempre (campo ausente sin bloque oculto → atasco + hueco).
+ */
+export async function rellenarTextosSiniestralidad(raiz: Pick<Frame, 'locator'>, ops: OperacionNsei[], respaldo: RespaldoCampos, diferidosTexto: OperacionNsei[], bloqueDiferido: boolean): Promise<string[]> {
+  const aqui: OperacionNsei[] = []
+  for (const op of ops) {
+    if (!(await apareceEn(raiz, op.sel, 0)) && (bloqueDiferido || (await siniestralidadOcultaEnPantalla(raiz)))) {
+      diferidosTexto.push(op)
+      respaldo.formador?.log('mapfre_siniestralidad_diferida', { etiqueta: op.etiqueta })
+    } else aqui.push(op)
+  }
+  return rellenarCamposTexto(raiz, { escribibles: aqui, pendientes: [] }, respaldo)
+}
+
+/**
+ * v0.8.31 · Escribe los campos de texto DIFERIDOS en el paso donde deberían verse: si siguen sin verse (aparece = visible) tras la espera → atasco + hueco
+ * «no aparece» con el nombre del campo (nunca se omiten ni se rellena un campo oculto: `fill` esperaría 30 s y moriría sin atasco).
+ */
+export async function rellenarTextosDiferidos(raiz: Pick<Frame, 'locator'>, ops: OperacionNsei[], respaldo: RespaldoCampos, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
+  for (const op of ops) {
+    if (await apareceEn(raiz, op.sel, esperaMs)) continue
+    await registrarAtasco(respaldo.page, respaldo.formador, { clave: claveCampo(op.etiqueta), tipo: 'campo', etiqueta: op.etiqueta, descripcion: `Campo «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI: ni en Figuras ni en Coberturas se ve` }).catch(() => undefined)
+    throw new ErrorMapaIncompleto(`el campo «${op.etiqueta}» (${op.sel}; no aparece — diferido desde «Figuras», donde el bloque estaba oculto, y tampoco se ve en Coberturas)`, true)
+  }
+  return rellenarCamposTexto(raiz, { escribibles: ops, pendientes: [] }, respaldo)
+}
+
 /**
  * v0.8.25 · Por cada etiqueta de siniestralidad («Compañia», «Procedencia Siniestralidad», «Expuestos/Años», «Siniestros», «Modificación Manual
  * Niveles Bonus Malus»): tipo de control (mat-select/mat-autocomplete/input/checkbox), formcontrolname/name/id y si está deshabilitado. SOLO LEE,
@@ -1861,10 +1901,12 @@ export async function precioDesdeObjetoAsegurado(
   await rellenarCamposTexto(nsei, planDelPaso(planFig, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
   const diferidos: OperacionNsei[] = []
   await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo, ESPERA_OPCIONAL_MS, diferidos)
-  const diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
+  let diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
-  await rellenarCamposTexto(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
+  // v0.8.31: con el bloque de siniestralidad oculto en «Figuras» (compañía diferida u oculto del todo) los siniestros también se difieren a Coberturas.
+  const diferidosTexto: OperacionNsei[] = []
+  await rellenarTextosSiniestralidad(nsei, planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), respaldo, diferidosTexto, diferidos.length > 0)
   exigirPasoCompleto(planFig, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   let primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
@@ -1872,6 +1914,14 @@ export async function precioDesdeObjetoAsegurado(
   // es visible/elegible, atasco + hueco con el diagnóstico (nunca se omite). Elegida, el precio puede haberse recalculado: se vuelve a leer.
   if (diferidos.length > 0) {
     await rellenarMatSelects(nsei, { escribibles: diferidos, pendientes: [] }, ctx, respaldo)
+    await nsei.waitForTimeout(1_500).catch(() => undefined)
+    primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
+  }
+  // v0.8.31: resto del bloque diferido, en el orden de la grabación (compañía ya elegida → nº de póliza anterior → siniestros). Si siguen sin verse aquí,
+  // `rellenarCamposTexto` da atasco + hueco (nunca se omiten). Los siniestros pueden cambiar la prima: se vuelve a leer con la MISMA espera.
+  if (diferidos.length > 0 || diferidosTexto.length > 0) {
+    if (diferidos.length > 0 && !sinHist.omitido) diagnosticoPoliza = (await historialAnterior(nsei, f, ctx.formador)) ?? diagnosticoPoliza
+    await rellenarTextosDiferidos(nsei, diferidosTexto, respaldo)
     await nsei.waitForTimeout(1_500).catch(() => undefined)
     primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
   }
@@ -1899,7 +1949,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.30',
+  version: '0.8.31',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
