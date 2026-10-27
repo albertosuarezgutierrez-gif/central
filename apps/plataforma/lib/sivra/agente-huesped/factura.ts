@@ -60,3 +60,8 @@ export const REGLA_VOZ =
 
 export const REGLA_FACTURA =
   'FACTURA: si el huésped pide factura (o la pide a nombre de una empresa), confirma que SÍ se la emitimos y pídele SOLO los datos que aún falten de esta lista: razón social (o nombre completo si es particular), NIF/CIF/VAT, dirección fiscal completa (calle y número, código postal, ciudad y país) y email de envío. NO le pidas lo que ya haya dado en la conversación. Dile que se la enviamos el día de salida. No inventes importes ni números de factura.'
+
+// Hay formulario (27/10/2026): el orquestador ha creado la solicitud y AÑADE el enlace al final del borrador. El modelo
+// no escribe URLs (las inventaría): solo anuncia que va el enlace. Prevalece sobre «pídele los datos» de REGLA_FACTURA.
+export const REGLA_FACTURA_ENLACE =
+  'Para la factura HAY un formulario seguro: EN LUGAR de pedirle los datos uno a uno, dile que al final del mensaje le dejo un enlace donde rellenar sus datos de facturación, y que en cuanto lo haga se la preparo. NO escribas tú ningún enlace ni URL (se añade solo).'

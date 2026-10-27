@@ -41,6 +41,8 @@ import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-cor
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
+import { PREFIJO_FACTURA_HUESPED, decidirBotonFactura } from '@/lib/sivra/facturas/telegram'
+import { resolverBotonFactura } from '@/lib/sivra/facturas/telegram-acciones'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
 export const dynamic = 'force-dynamic'
@@ -1029,6 +1031,30 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         const hoy = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' })
         const r = await resolverBotonCsg(d, hoy).catch(() => ({ linea: '⚠️ <i>No sé si se ha hecho (fallo interno): mira el Directorio antes de repetir.</i>', botones: undefined }))
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${r.linea}`, r.botones ? { botones: r.botones } : {}).catch(() => {})
+        else await tgSend(r.linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 🧾 Factura a HUÉSPED: ✅ emitir y enviar / ✏️ corregir / 🔁 reintentar envío (fhu_emi / fhu_cor / fhu_env) ──
+    // Crea un documento fiscal y sale a un TERCERO: solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID). Emitir es
+    // idempotente (FOR UPDATE + estado en BD): dos pulsaciones = un número y un correo. Se contesta YA y se trabaja en after().
+    if (prefix === PREFIJO_FACTURA_HUESPED) {
+      const d = decidirBotonFactura(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.accion === 'emi' ? '⏳ Emitiendo…' : d.accion === 'env' ? '⏳ Reintentando el envío…' : '✏️ Corregir')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId && d.accion !== 'cor') await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const r = await resolverBotonFactura(d, mensajeId ?? null).catch((e) => {
+          console.error('[tg] factura huésped:', e instanceof Error ? e.message : e)
+          return { linea: '⚠️ <i>No sé si se ha emitido (fallo interno): mira /sivra/facturas antes de repetir.</i>', botones: undefined }
+        })
+        if (mensajeId && d.accion !== 'cor') await tgEditMessage(mensajeId, `${original}\n\n${r.linea}`, r.botones ? { botones: r.botones } : {}).catch(() => {})
         else await tgSend(r.linea).catch(() => {})
       })
       return NextResponse.json({ ok: true })

@@ -73,6 +73,30 @@ export async function tgSendPhoto(
   } catch { return null }
 }
 
+// Documento por bytes (multipart): p. ej. el PDF de una factura que solo vive en nuestra BD. Caption HTML ≤ 1024.
+export async function tgSendDocument(
+  doc: { data: Uint8Array; nombre: string; tipo?: string },
+  caption: string,
+  opts: { chatId?: string; responderA?: number } = {},
+): Promise<number | null> {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID
+  if (!token || !chat_id) return null
+  try {
+    const form = new FormData()
+    form.set('chat_id', chat_id)
+    form.set('caption', caption.slice(0, 1024))
+    form.set('parse_mode', 'HTML')
+    if (typeof opts.responderA === 'number' && Number.isSafeInteger(opts.responderA) && opts.responderA > 0) {
+      form.set('reply_parameters', JSON.stringify({ message_id: opts.responderA, allow_sending_without_reply: true }))
+    }
+    form.set('document', new Blob([doc.data as BlobPart], { type: doc.tipo || 'application/pdf' }), doc.nombre)
+    const res = await fetch(API(token, 'sendDocument'), { method: 'POST', body: form })
+    const d = await res.json()
+    return d?.result?.message_id ?? null
+  } catch { return null }
+}
+
 export async function tgSendButtons(text: string, botones: Boton[][], opts: { chatId?: string; responderA?: number } = {}): Promise<number | null> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID

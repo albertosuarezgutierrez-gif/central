@@ -325,6 +325,23 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 - **maxDuration = 300** en `auto-reply` y `webhook` (decisión + 2 traducciones en `Promise.all`; con 60s daba 504).
 - Sin asunto fijo (`enviarAlHuesped` no manda "Re: tu estancia"). Detalle vivo en `docs/CONTEXTO-SESIONES.md`.
 
+## 🧾 Facturas a huéspedes (27/10/2026, PR #5141) — `/sivra/facturas` + `lib/sivra/facturas/`
+- **Smoobu ya NO numera**: la factura completa al huésped la emite plataforma. Emisor fijo Alberto (NIF 28823484E,
+  Calle Socorro 24, 41003 Sevilla; `emisor.ts`); solo la cuenta de Alberto factura (`cuentaPuedeFacturar`, fail-closed).
+- **Tablas:** `sivra_factura_series` (una fila por cuenta y AÑO: prefijo, `siguiente_numero`, IVA, mención; **cada año
+  nueva fila de serie**, sin ella el ✅ no emite) · `sivra_factura_solicitudes` (enlace con token al formulario
+  público `/factura/[token]`, una viva por reserva) · `sivra_facturas_huesped` (borrador → emitida → enviada; trigger
+  de correlatividad e inmutabilidad). Numeración sin prefijo: **«2026-046»** (formato que usaba Smoobu).
+- **IVA:** exento, art. 20.Uno.23º LIVA (mención en la serie). Fail-closed si falta IVA o número inicial.
+- **Flujo:** huésped (o alta manual) rellena datos → borrador con PDF a Telegram → **✅ de Alberto, solo el del mensaje
+  VIGENTE** (borrador regenerado = ✅ viejo `obsoleta`) → emite (número, PDF definitivo) → correo con PDF desde
+  `FACTURAS_HUESPED_FROM` → `enviada` → **aviso automático en el hilo de Smoobu** («te hemos enviado la factura…», ES/EN,
+  `aviso-smoobu.ts`). Correo fallido = emitida sin enviar + 🔁; reclamo colgado = `dudoso` (reenvío solo con `forzar`).
+- **Aviso Smoobu:** transaccional, autorizado por el ✅/🔁 de esa factura (no es el agente: su regla «solo ✅ Enviar»
+  no cambia). Solo en la transición a `enviada` (1 fila) + no se repite si `mensajes_enviados` ya tiene el texto.
+  Fail-open: si Smoobu falla, la factura sigue enviada y Telegram dice «⚠️ aviso en Smoobu no enviado: <motivo>».
+- **Pendiente:** VeriFactu (huella F1), rectificativas, lectura de Gmail (respuestas del huésped).
+
 ## Mensajes PROGRAMADOS a huéspedes (31/08/2026 — sustituto de los automáticos de Smoobu)
 Ciclo de reserva NUESTRO (confirmación → acceso a 7 días → víspera con códigos → bienvenida →
 estancia → víspera de salida → post-salida), cron `/api/sivra/mensajes/programados` cada 30 min

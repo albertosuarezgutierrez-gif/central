@@ -776,6 +776,9 @@ importers:
       '@central/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
+      '@central/core-fiscal':
+        specifier: workspace:*
+        version: link:../../packages/core-fiscal
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
@@ -842,6 +845,9 @@ importers:
       next:
         specifier: ^15.5.25
         version: 15.5.25(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       pdf-parse:
         specifier: ^1.1.1
         version: 1.1.4
