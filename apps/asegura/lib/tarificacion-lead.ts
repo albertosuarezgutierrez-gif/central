@@ -18,6 +18,7 @@ import { claveCompania, puedeAutomatizar } from '@central/module-tarificacion'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
 import { companiaAdmiteRamoRpa, rpaActivo, validarEntradaRamo } from './tarificador-reglas'
 import { pausaViva } from './tarificador-robustez'
+import type { ReconstruccionRiesgo } from './tarificador-relanzar-reglas'
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
 import { datosVehiculoDeInfoRiesgo, claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
 import {
@@ -157,6 +158,49 @@ async function catastroComunidad(valores: Record<string, unknown>): Promise<{ an
   return anio === null && cp === null ? null : { anioConstruccion: anio, codigoPostal: cp }
 }
 
+/**
+ * El formulario candidato del bot de UNA oportunidad de auto/moto/comunidades: contrato del lead (descifrado) + bloque del
+ * riesgo (`datosVehiculo`) + ficha (nacimiento y carné). Compartido por la revisión de leads y por «probar» (operador).
+ * `discrepancias` = datos del correo sin elegir: no hay formulario.
+ */
+async function formularioDeOportunidad(
+  correduriaId: string, clienteId: string, tipo: RamoBotLead, infoRiesgo: unknown, nac: string | null, dia: string,
+): Promise<{ estado: 'discrepancias'; pendientes: string[] } | { estado: 'ok'; formulario: FormularioLead }> {
+  const info = esObj(infoRiesgo) ? infoRiesgo : {}
+  // F3b: con discrepancias sin elegir el expediente no está completo: ni se evalúa ni se lanza nada.
+  const pendientes = Object.keys(leerDatosContrato(info.datosContrato).pendientes)
+  if (pendientes.length) return { estado: 'discrepancias', pendientes }
+  const { valores, ilegibles } = await descifrarContrato(info)
+  const ramo = tipo
+  const vehiculo = ramo === 'auto' || ramo === 'moto'
+  const formulario = formularioBotDesdeLead({
+    // Vehículo: el MISMO bloque que ve la oportunidad (con el fallback a las claves antiguas), no solo `datosVehiculo` a pelo.
+    ramo, valores, ilegibles, bloque: vehiculo ? { ...datosVehiculoDeInfoRiesgo(info) } : esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
+    ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo) } : {}),
+    ...(ramo === 'moto' ? { moto: await motoDelLead(valores.codigoVehiculo) } : {}),
+    ...(ramo === 'comunidades' ? { catastro: await catastroComunidad(valores).catch(() => null) } : {}),
+  })
+  return { estado: 'ok', formulario }
+}
+
+/**
+ * Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE
+ * del cliente en ese ramo + su ficha, como el botón (formulario + «completar desde ficha»). Solo SELECT; no inventa nada
+ * (lo que falta lo dirá `validarEntradaRamo`). El riesgo NO sale de asegura.
+ */
+export async function riesgoDesdeOportunidadDelCliente(correduriaId: string, clienteId: string, ramo: string, ahora = new Date()): Promise<ReconstruccionRiesgo> {
+  if (!esRamoBotLead(ramo)) return { riesgo: null, motivo: 'sin_formulario' }
+  const [op] = await prisma.$queryRaw<{ info_riesgo: unknown }[]>`
+    select o.info_riesgo from seguros.oportunidades o
+    where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid and o.tipo::text = ${ramo}
+    order by o.created_at desc limit 1`
+  if (!op) return { riesgo: null, motivo: 'sin_oportunidad' }
+  const nac = await nacimientoFicha(correduriaId, clienteId).catch(() => null)
+  const fo = await formularioDeOportunidad(correduriaId, clienteId, ramo, op.info_riesgo, nac, diaMadrid(ahora))
+  if (fo.estado === 'discrepancias') return { riesgo: null, motivo: 'discrepancias' }
+  return { riesgo: fo.formulario.riesgo, bloqueos: fo.formulario.bloqueos, repreguntar: fo.formulario.repreguntar }
+}
+
 async function revisarInterno(correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date): Promise<{ ops: Interno[]; dia: string }> {
   const dia = diaMadrid(ahora)
   const filas = await prisma.$queryRaw<{ id: string; tipo: string; info_riesgo: unknown }[]>`
@@ -170,20 +214,10 @@ async function revisarInterno(correduriaId: string, clienteId: string, oportunid
     const cias = await companiasConBot(correduriaId, f.tipo)
     if (!cias.length) { ops.push({ ...base, estado: 'sin_bot' }); continue }
     if (!esRamoBotLead(f.tipo)) { ops.push({ ...base, estado: 'sin_formulario' }); continue }
-    const info = esObj(f.info_riesgo) ? f.info_riesgo : {}
-    // F3b: con discrepancias sin elegir el expediente no está completo: ni se evalúa ni se lanza nada.
-    const pendientes = Object.keys(leerDatosContrato(info.datosContrato).pendientes)
-    if (pendientes.length) { ops.push({ ...base, estado: 'discrepancias', pendientes }); continue }
-    const { valores, ilegibles } = await descifrarContrato(info)
+    const fo = await formularioDeOportunidad(correduriaId, clienteId, f.tipo, f.info_riesgo, nac, dia)
+    if (fo.estado === 'discrepancias') { ops.push({ ...base, estado: 'discrepancias', pendientes: fo.pendientes }); continue }
+    const formulario = fo.formulario
     const ramo: RamoBotLead = f.tipo
-    const vehiculo = ramo === 'auto' || ramo === 'moto'
-    const formulario = formularioBotDesdeLead({
-      // Vehículo: el MISMO bloque que ve la oportunidad (con el fallback a las claves antiguas), no solo `datosVehiculo` a pelo.
-      ramo, valores, ilegibles, bloque: vehiculo ? { ...datosVehiculoDeInfoRiesgo(info) } : esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
-      ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo) } : {}),
-      ...(ramo === 'moto' ? { moto: await motoDelLead(valores.codigoVehiculo) } : {}),
-      ...(ramo === 'comunidades' ? { catastro: await catastroComunidad(valores).catch(() => null) } : {}),
-    })
     ops.push({
       ...base, estado: 'evaluada', formulario, supuestos: formulario.supuestos, noLeidos: formulario.noLeidos, concretas: formulario.concretas,
       companias: cias.map((c) => valorarCompania(c, ramo, formulario)),

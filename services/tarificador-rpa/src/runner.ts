@@ -50,7 +50,7 @@ import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, c
 import { puertoCodigoHttp, relevarCodigoSmsGenerali, type Relevo } from './relevo-sms.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
-import { elegirOpcionMatSelect } from './mat-select.ts'
+import { elegirOpcionMatSelect, leerOpcionesMatSelect } from './mat-select.ts'
 import { capturarEvidencia } from './evidencia.ts'
 import { atascoDeRespaldoHueco, cerrarFormador, esPeticionOpcion, prepararFormador, type ContextoFormador } from './formador.ts'
 import { capturaJpegAtasco, capturaParaCable, leerOpcionesVisibles, limpiarOpciones, pideCapturaAtasco } from './opciones-atasco.ts'
@@ -252,6 +252,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       elegirMatSelect: (select, valores, o) => {
         if (select.page().context() !== context) throw new ErrorTarificador('portal', 'mat-select: la pestaña no es de este trabajo')
         return elegirOpcionMatSelect(select, valores, { ...o, formador: k.formador, pulsar: ctx.pulsar })
+      },
+      leerOpcionesMatSelect: async (select) => {
+        if (select.page().context() !== context) return null
+        return leerOpcionesMatSelect(select, { pulsar: ctx.pulsar })
       },
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       marcarOpcionHogar: async (marco, etiqueta) => {

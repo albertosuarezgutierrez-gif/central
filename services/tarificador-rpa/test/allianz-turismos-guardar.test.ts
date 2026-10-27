@@ -52,7 +52,7 @@ test('ofertas: guardado → referenciaPortal + aviso; no guardado → solo aviso
   assert.equal(n!.referenciaPortal, null)
   assert.equal(n!.primaAnualEur, 100)
   assert.match(n!.avisos.at(-1)!, /NO guardado/)
-  assert.equal(allianzAuto.version, '0.6.33')
+  assert.equal(allianzAuto.version, '0.6.34')
 })
 
 // ── Navegador: carcasa ePAC + app de Turismos con el formulario de guardado ──
@@ -242,7 +242,8 @@ test('confirmación: solo cuenta lo NUEVO tras el clic (una referencia previa no
   const { context, guard, marco } = await abrir({ textoPrevio: 'Presupuesto nº 999999999 guardado correctamente', clicMudo: true })
   try {
     const r = await guardarPresupuestoTurismosAllianz(marco, guard, 'GA-20261018-ABCDEF12', 800)
-    assert.deepEqual(r, { estado: 'sin_confirmar', identificador: 'GA-20261018-ABCDEF12' })
+    assert.equal(r.estado, 'sin_confirmar')
+    assert.equal(r.estado === 'sin_confirmar' ? r.identificador : null, 'GA-20261018-ABCDEF12')
     assert.equal(await marco.evaluate(() => (window as unknown as { __pulsado?: boolean }).__pulsado ?? false), true)
   } finally {
     await context.close()

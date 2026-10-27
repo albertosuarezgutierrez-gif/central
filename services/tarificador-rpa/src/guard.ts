@@ -4624,7 +4624,8 @@ export const CASILLAS_GUARDAR_PRESUPUESTO_TURISMOS: Readonly<Record<string, bool
   'Mostrar presupuesto en eCliente': false,
   'Todos los paquetes': true,
 })
-export const MS_CONFIRMA_GUARDADO_TURISMOS = 15_000
+/** v0.6.34 (27/10/2026): 15 s se quedaron cortos (segundo guardado del día: precios sí, confirmación no); el sondeo para en cuanto aparece la señal. */
+export const MS_CONFIRMA_GUARDADO_TURISMOS = 30_000
 
 const planoTurismos = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim()
 /**
@@ -4680,9 +4681,43 @@ export function confirmacionGuardadoNueva(antes: string, despues: string): { con
   return { confirmado: referencia !== null || frases(despues) > frases(antes), referencia }
 }
 
+/** v0.6.34: ¿tras el clic APARECIÓ un «Descargar propuesta» que antes no estaba? (señal tardía de que el portal guardó.) Compara sin tildes/mayúsculas. PURA. */
+export function descargaPropuestaNueva(antes: string, despues: string): boolean {
+  const cuenta = (t: string) => [...claveGuardarTurismos(t).matchAll(/descargar propuesta/g)].length
+  return cuenta(despues) > cuenta(antes)
+}
+
+const MAX_DIAGNOSTICO_SIN_CONFIRMAR = 300
+/** v0.6.34: texto del portal apto para el aviso: fuera correos, NIF/NIE/CIF, matrículas, teléfonos y toda secuencia de 5+ cifras; luego el saneador común de diálogos. PURA. */
+export function limpiarMensajePortalDiagnostico(bruto: string): string {
+  const t = bruto
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160)
+    .replace(/[^\s@]+@[^\s@]+/g, '')
+    .replace(/\b[A-Za-z]?\d{7,8}[A-Za-z]\b/g, '')
+    .replace(/\b\d{4}\s?-?\s?[BCDFGHJKLMNPRSTVWXYZ]{3}\b/gi, '')
+    .replace(/\+?\d[\d\s.\-]{6,}\d/g, '')
+    .replace(/\d{5,}/g, '')
+  return textoDialogoPortalSeguro(t).replace(/\s+/g, ' ').trim()
+}
+
+/** v0.6.34: diagnóstico (≤300) de por qué «Guardar presupuesto» no se confirmó: mensajes del portal ya saneados, estado del formulario y etiquetas de campos vacíos. PURA. */
+export function diagnosticoSinConfirmarTurismos(e: { mensajes: readonly string[]; formularioVisible: boolean; botonHabilitado: boolean | null; pendientes: readonly string[] }): string {
+  const mensajes = [...new Set(e.mensajes.map(limpiarMensajePortalDiagnostico).filter((m) => m !== ''))].slice(0, 4)
+  const partes = [
+    `formulario ${e.formularioVisible ? 'aún a la vista' : 'ya no se ve'}`,
+    `botón ${e.botonHabilitado === null ? 'sin determinar' : e.botonHabilitado ? 'habilitado' : 'deshabilitado'}`,
+    mensajes.length ? `mensajes del portal: ${mensajes.map((m) => `«${m}»`).join(' · ')}` : 'sin mensajes del portal a la vista',
+    e.pendientes.length ? `campos vacíos: ${e.pendientes.map((p) => `«${limpiarMensajePortalDiagnostico(p)}»`).join(', ')}` : '',
+  ].filter(Boolean)
+  const s = partes.join('; ')
+  return s.length > MAX_DIAGNOSTICO_SIN_CONFIRMAR ? `${s.slice(0, MAX_DIAGNOSTICO_SIN_CONFIRMAR - 1)}…` : s
+}
+
 export type ResultadoGuardarPresupuestoTurismos =
   | { estado: 'guardado'; identificador: string; referencia: string | null }
-  | { estado: 'sin_confirmar'; identificador: string }
+  | { estado: 'sin_confirmar'; identificador: string; diagnostico?: string }
   | { estado: 'no_guardado'; motivo: string }
 
 /** Guarda el presupuesto en la pantalla de precios de Turismos con las reglas de arriba. Nunca lanza por «no se pudo»: lo devuelve. */
@@ -5035,6 +5070,37 @@ async function etiquetasPendientesGuardarTurismos(form: Locator): Promise<string
   return [...campos, ...casillas].slice(0, 12)
 }
 
+/** v0.6.34 · SOLO LECTURA (no pulsa ni escribe): mensajes visibles (diálogo/alerta/aviso/error del formulario), estado del formulario y campos vacíos. Nunca lanza. */
+async function diagnosticoTrasGuardarSinConfirmar(form: Locator, boton: Locator): Promise<string> {
+  try {
+    const marco = form.page().frames().find((f) => esAppTurismosAllianz(f.url()))
+    // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`): todo en línea.
+    const mensajes = marco
+      ? await marco.evaluate(() => {
+          const out: string[] = []
+          const globales = '[role=dialog],[role=alertdialog],[role=alert],[role=status],nx-message,nx-error,nx-toast,.nx-toast,.nx-message,mat-snack-bar-container'
+          const enForm = '[class*=error],[class*=invalid],nx-error,mat-error'
+          const forms = Array.from(document.querySelectorAll('nx-mt-save-proposal form, nx-mt-save-proposal'))
+          const nodos = Array.from(document.querySelectorAll(globales))
+          for (const f of forms) nodos.push(...Array.from(f.querySelectorAll(enForm)))
+          for (const n of nodos) {
+            const st = getComputedStyle(n)
+            if (st.display === 'none' || st.visibility === 'hidden') continue
+            const t = (n.textContent ?? '').replace(/\s+/g, ' ').trim()
+            if (t !== '') out.push(t.slice(0, 200))
+          }
+          return out
+        }).catch(() => [] as string[])
+      : []
+    const formularioVisible = (await boton.isVisible().catch(() => false)) || (await form.isVisible().catch(() => false))
+    const botonHabilitado = await boton.isEnabled().then((v) => v, () => null)
+    const pendientes = await etiquetasPendientesGuardarTurismos(form).catch(() => [] as string[])
+    return diagnosticoSinConfirmarTurismos({ mensajes, formularioVisible, botonHabilitado, pendientes })
+  } catch {
+    return 'diagnóstico no disponible'
+  }
+}
+
 export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS, esperaFormMs = MS_APARECE_FORM_GUARDAR_TURISMOS, contacto: ContactoGuardarTurismos | null = null, esperaHabilitaMs = MS_HABILITA_GUARDAR_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_guardado', motivo: 'otra ventana de red abierta' }
@@ -5146,8 +5212,10 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
     await pulsarGuardadoPresupuesto(page, guard, boton, { el: { tag: 'button', texto: planoTurismos(desc[0]) }, pantalla: { tipoPantalla: 'resultado', hayImportes: true, presupuestoEnCurso: false } }, async () => {
       const fin = Date.now() + esperaMs
       while (Date.now() < fin) {
-        const c = confirmacionGuardadoNueva(textoAntes, await marco.locator('body').innerText().catch(() => ''))
-        if (c.confirmado) {
+        const textoAhora = await marco.locator('body').innerText().catch(() => '')
+        const c = confirmacionGuardadoNueva(textoAntes, textoAhora)
+        // v0.6.34: la señal puede llegar tarde y sin frase/número: un «Descargar propuesta» nuevo también confirma (referencia: la que haya, si no null).
+        if (c.confirmado || descargaPropuestaNueva(textoAntes, textoAhora)) {
           confirmado = true
           referencia = c.referencia
           return
@@ -5155,7 +5223,8 @@ export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: Gua
         await page.waitForTimeout(300)
       }
     })
-    return confirmado ? { estado: 'guardado', identificador, referencia } : { estado: 'sin_confirmar', identificador }
+    if (confirmado) return { estado: 'guardado', identificador, referencia }
+    return { estado: 'sin_confirmar', identificador, diagnostico: await diagnosticoTrasGuardarSinConfirmar(form, boton) }
   } catch (e) {
     // Una violación del guard (red de emisión) NO se traga: `comprobar` la relanza. Lo demás (campo bancario a la vista, casilla
     // sospechosa, diálogo, timeout) = no se guardó, sin tocar el precio ya leído.

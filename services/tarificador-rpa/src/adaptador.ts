@@ -176,6 +176,8 @@ export type ContextoPortal = ContextoTarificacion & {
    * clara con `valores` (textos del portal), si no la IA, si no `ErrorOpcionSinResolver`. Todo por el guard.
    */
   elegirMatSelect?: (select: Locator, valores: string | readonly string[], opciones: Pick<OpcionesMatSelect, 'etiqueta' | 'clave'>) => Promise<{ texto: string; origen: 'coincidencia' | 'ia' }>
+  /** v0.8.28 · Solo LEE las opciones de un `mat-select` (lo abre y lo cierra por el guard; no elige). Para el diagnóstico de huecos. `null` = no se pudo. */
+  leerOpcionesMatSelect?: (select: Locator) => Promise<string[] | null>
 }
 
 /**

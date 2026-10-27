@@ -7,6 +7,8 @@ import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
 import { encolarTrabajo, lanzarPendientes } from '@/lib/tarificador'
 import { leerRiesgoParaReencolar } from '@/lib/tarificador-lectura'
 import { riesgoParaReencolar } from '@/lib/tarificador-lectura-reglas'
+import { riesgoDesdeOportunidadDelCliente } from '@/lib/tarificacion-lead'
+import { decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
 import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
 
 export const runtime = 'nodejs'
@@ -18,7 +20,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * `POST /api/operador/tarificador/probar { clienteId, compania, ramo }` — «Probar tarificación» de la ficha: reencola el
  * RIESGO DEL ÚLTIMO TRABAJO de ese cliente+compañía+ramo (se copia en servidor: el riesgo no sale de asegura). Mismos
  * cerrojos que `encolar` (Bearer · `TARIFICADOR_RPA_ACTIVO` · integración `rpa_autorizada` activa · riesgo revalidado).
- * Sin trabajo previo → 409 `sin_riesgo_previo` (esta ruta no inventa datos). TARIFICAR ≠ EMITIR: solo precio.
+ * Con el riesgo del último trabajo ya purgado, se reconstruye de la oportunidad del cliente + ficha (`riesgoDesdeOportunidadDelCliente`);
+ * si aun así falta algo → 422 `riesgo_incompleto` con las etiquetas de campo; sin nada → 409 `sin_riesgo_previo`/`origen_purgado` (no inventa datos). TARIFICAR ≠ EMITIR: solo precio.
  * 202 `{ estado:'encolado', trabajoId }`.
  */
 export const POST = auditado(async (req: Request) => {
@@ -38,12 +41,13 @@ export const POST = auditado(async (req: Request) => {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', mensaje: 'no se ha podido resolver la correduría' }, { status: 503 })
     const leido = await leerRiesgoParaReencolar(correduria.id, clienteId, compania, ramo)
-    // Purga (13/10/2026): un riesgo ya borrado al cerrarse no se reencola; si solo hay de esos, se dice explícitamente.
-    if (leido.soloPurgados) return NextResponse.json({ estado: 'rechazado', motivo: 'origen_purgado', mensaje: 'el riesgo de los trabajos anteriores ya se borró al cerrarse (datos personales): pide el presupuesto desde la oportunidad' }, { status: 409 })
-    const previo = riesgoParaReencolar(leido.riesgo)
-    if (!previo) return NextResponse.json({ estado: 'rechazado', motivo: 'sin_riesgo_previo' }, { status: 409 })
-    const valida = validarEntradaRamo(ramo, previo)
-    if (!valida.ok) return NextResponse.json({ estado: 'rechazado', motivo: 'riesgo_previo_invalido', errores: valida.errores ?? [] }, { status: 422 })
+    // Purga (13/10/2026): el riesgo del trabajo cerrado ya no lleva matrícula ni conductor. Como el botón de plataforma, el
+    // riesgo se arma de la oportunidad del cliente + su ficha; el del último trabajo solo es respaldo si aún está completo.
+    const reconstruccion = await riesgoDesdeOportunidadDelCliente(correduria.id, clienteId, ramo)
+    const previo = leido.riesgo === null ? null : riesgoParaReencolar(leido.riesgo)
+    const d = decidirRiesgoProbar({ reconstruccion, previo, soloPurgados: leido.soloPurgados, validar: (riesgo) => validarEntradaRamo(ramo, riesgo, compania) })
+    if (!d.ok) return NextResponse.json({ estado: 'rechazado', motivo: d.motivo, ...(d.errores ? { errores: d.errores } : {}) }, { status: d.status })
+    const valida = d
     const r = await encolarTrabajo({ correduriaId: correduria.id, oportunidadId: null, clienteId, polizaId: null, compania, ...valida.entrada, solicitadoPor })
     if (r.estado === 'rechazado') return NextResponse.json({ estado: 'rechazado', motivo: r.motivo }, { status: r.status })
     const lanzado = await lanzarPendientes(correduria.id, compania).catch((e: unknown) => ({
