@@ -4,12 +4,13 @@ import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
-import { encolarTrabajo, lanzarPendientes, leerCompaniaActualUnicaCliente } from '@/lib/tarificador'
+import { encolarTrabajo, lanzarPendientes, leerCompaniaActualUnicaCliente, leerOrigenesVehiculoCliente } from '@/lib/tarificador'
 import { leerRiesgoParaReencolar } from '@/lib/tarificador-lectura'
 import { riesgoParaReencolar } from '@/lib/tarificador-lectura-reglas'
 import { riesgoDesdeOportunidadDelCliente } from '@/lib/tarificacion-lead'
-import { conCompaniaActualUnica, decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
+import { conCompaniaActualUnica, conVehiculoDeOrigen, decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
 import { necesitaCompaniaActual } from '@/lib/tarificador-compania-actual'
+import { necesitaVehiculoEncadenado } from '@/lib/tarificador-espera-vehiculo'
 import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
 
 export const runtime = 'nodejs'
@@ -47,9 +48,14 @@ export const POST = auditado(async (req: Request) => {
     const reconstruida = await riesgoDesdeOportunidadDelCliente(correduria.id, clienteId, ramo)
     // Compañía actual (Allianz/Mapfre auto con cambio de seguro): si falta, de la póliza de auto en vigor de la cartera SOLO si es
     // una (cero o varias → sigue faltando y sale 422). Nunca pisa lo que ya trae; la purga no se toca.
-    const reconstruccion = reconstruida.riesgo !== null && necesitaCompaniaActual(compania, ramo, reconstruida.riesgo)
+    const conCompania = reconstruida.riesgo !== null && necesitaCompaniaActual(compania, ramo, reconstruida.riesgo)
       ? conCompaniaActualUnica(reconstruida, compania, ramo, await leerCompaniaActualUnicaCliente(correduria.id, clienteId))
       : reconstruida
+    // Generali auto no busca por matrícula: su vehículo sale del último `ok` de Allianz/Mapfre del cliente (solo claves de catálogo).
+    // Sin ninguno sigue el 422 `generali_sin_vehiculo` del encolado.
+    const reconstruccion = conCompania.riesgo !== null && necesitaVehiculoEncadenado(compania, ramo)
+      ? conVehiculoDeOrigen(conCompania, compania, ramo, await leerOrigenesVehiculoCliente(correduria.id, clienteId))
+      : conCompania
     const previo = leido.riesgo === null ? null : riesgoParaReencolar(leido.riesgo)
     const d = decidirRiesgoProbar({ reconstruccion, previo, soloPurgados: leido.soloPurgados, validar: (riesgo) => validarEntradaRamo(ramo, riesgo, compania) })
     if (!d.ok) return NextResponse.json({ estado: 'rechazado', motivo: d.motivo, ...(d.errores ? { errores: d.errores } : {}) }, { status: d.status })

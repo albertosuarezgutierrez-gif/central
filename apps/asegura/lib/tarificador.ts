@@ -1073,6 +1073,23 @@ async function leerOrigenesVehiculo(db: Db, correduriaId: string, oportunidadId:
   return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
 }
 
+/** Los últimos `ok` de Allianz/Mapfre AUTO del CLIENTE (de ESTA correduría), para «probar» Generali sin oportunidad. Fallo de lectura = sin origen. */
+export async function leerOrigenesVehiculoCliente(correduriaId: string, clienteId: string): Promise<FilaOrigen[]> {
+  try {
+    const filas = await prisma.$queryRaw<{ compania: string; ramo: string; riesgo: unknown; terminado_at: Date | null }[]>`
+      select t.compania, t.ramo, t.riesgo, t.terminado_at
+      from seguros.tarificacion_trabajos t
+      where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${clienteId}::uuid
+        and t.estado = 'ok' and t.ramo = 'auto' and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[])
+        and coalesce(to_jsonb(t)->>'modo', 'tarificar') in ('tarificar', 'identificar')
+      order by t.terminado_at desc nulls last
+      limit 10`
+    return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
+  } catch {
+    return []
+  }
+}
+
 /** Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos. */
 async function inyectarVehiculoEnEspera(db: Db, correduriaId: string, oportunidadId: string, v: VehiculoEncadenado): Promise<number> {
   const filas = await db.$queryRaw<{ id: string; riesgo: unknown }[]>`
