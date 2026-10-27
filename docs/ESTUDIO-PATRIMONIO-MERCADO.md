@@ -91,3 +91,23 @@ clientes de seguros. Orden propuesto, según lo directo que es el seguro que arr
 Condiciones: un solo portal del cliente con módulos (no una app por herramienta). Usar los datos para ofrecer seguros
 exige informarlo en el RGPD, como ya se hizo con las señales de Patrimonio. Medir la conversión a pólizas de cada
 herramienta antes de invertir más en ella.
+
+## 7. Hoja de ruta aprobada por Alberto (27/10/2026)
+Piloto: José Suárez Salas (gestiona) y María Antonia Gutiérrez Alcalá (titular), edificio de C/ Busto Tavera 22,
+RC 5731022TG3453B0001AK, sin división horizontal, 12 pisos. Borrador de WhatsApp preparado (no enviado; José tiene
+`wa_opt_in`=false, así que mejor una llamada primero). Orden:
+1. **Edificio con unidades** (en curso): rentabilidad por piso + reparto de gastos comunes.
+2. **El titular autoriza a quien gestiona** (pantalla para conceder `patrimonio_gestion`/`patrimonio_total`; hoy no existe).
+3. **Cupo de IA según el valor del cliente**: tramos por comisión anual en vigor del grupo familiar (hoy no hay comisión
+   anual consolidada, solo por recibo → calcularla; mientras tanto, por nº de pólizas).
+4. **Volcado inicial semiautomático**: el cliente sube su Excel o sus PDF → la IA propone edificio, pisos, inquilinos,
+   rentas y gastos → el cliente confirma. Leer el xlsx de forma segura en el servidor (la librería anterior se quitó por un CVE).
+5. **Inquilinos como canal**: en el enlace del inquilino, oferta de contenido + RC del inquilino, con consentimiento expreso.
+6. **Señales automáticas** (motor ya hecho; espera el OK legal a los textos de P15): contrato nuevo → impago; piso vacío →
+   vivienda desocupada; infraseguro → revisar el continente; hipoteca → vida vinculada.
+7. **Informe anual para el gestor**: PDF por inmueble con ingresos y gastos clasificados para la renta (exportar datos, no asesorar).
+8. **Calendario único**: renovaciones de pólizas + IBI + actualización de rentas + fin de contratos + ITV.
+9. **Recomendación entre propietarios**: «invita a otro propietario» → nivel completo gratis un tiempo para ambos.
+10. **Panel de conversión para Alberto**: coste por cliente (IA, almacenamiento) frente a pólizas y comisión generadas.
+Descartado: valorar inmuebles con el conector de Idealista (sus condiciones prohíben usarlo para métricas o para alimentar
+una herramienta).
