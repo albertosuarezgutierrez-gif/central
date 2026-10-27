@@ -81,3 +81,4 @@
 | 27/10/2026 | docs: CONTEXTO-SESIONES (pendiente pricing finde, env `SIVRA_PRIMA_FINDE_PISOS`) + skill pricing-agente (prima finde, gate env, prior, aviso caro) | agente-mecanico | ok (sin tsc: solo docs) |
 | 27/10/2026 | asegura-portal: auditoría estática responsive 320 px de patrimonio/** (sin cambios, ya conforme) | agente-mecanico | ok (solo lectura) |
 | 27/10/2026 | asegura-portal SQL `2026-10-26_portal_patrimonio_inquilino_acceso.sql`: cabecera → APLICADA 25/10 y GRANT consentimiento→prisma_seguros comentado (NO reejecutar) | agente-mecanico | ok (node --test 2 ficheros, 37/37 verdes, exit 0) |
+| 27/10/2026 | skill pricing-agente: línea «Suelo frente a techos» (sueloFrenteTecho, techos de mercado/ADR no bajan del suelo de temporada) | agente-mecanico | ok (sin tsc: solo docs) |
