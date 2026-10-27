@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { MEDIADOR } from '@central/module-seguros'
+
 import { responderMiContrato } from '@/lib/inquilino/inquilino-api'
 import { puertosInquilino } from '@/lib/inquilino/inquilino-bd'
 import { eur } from '@/lib/dinero'
@@ -10,6 +12,7 @@ import { EntrarConCodigo } from '../../invitacion/[token]/Invitacion'
 import { PaginaPortal } from '../../PaginaPortal'
 import { TarjetaPortal } from '../../TarjetaPortal'
 import { MiAlquiler, type DatosMiAlquiler } from './MiAlquiler'
+import { PedirPrecioInquilino } from './PedirPrecioInquilino'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,6 +68,18 @@ export default async function MiAlquilerContratoPage({ params }: { params: Promi
           )}
         </dl>
       </TarjetaPortal>
+      {/* Responsable del tratamiento: de `MEDIADOR`, nunca a mano. */}
+      <PedirPrecioInquilino
+        contratoId={contratoId}
+        casilla={d.consentimiento}
+        responsable={{
+          marca: MEDIADOR.marca,
+          nombre: MEDIADOR.identidad.nombre,
+          figura: MEDIADOR.identidad.figura,
+          claveDgsfp: MEDIADOR.identidad.claveDgsfp,
+          email: MEDIADOR.identidad.email,
+        }}
+      />
       <MiAlquiler contratoId={contratoId} datos={d} />
       <p style={{ margin: 0, fontSize: 14 }}>
         <Link href="/mi-alquiler">Mis contratos</Link>

@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/10/2026, 10)** — P6 ENCENDIDO: `PATRIMONIO_SENALES_ACTIVAS=1` en Vercel central-asegura (Production) + redeploy dpl_3JaBrDgh9uPSxBHhqyRy7vN1FvL8 READY; cron diario 06:30 UTC, solo oportunidades internas. P5 construido (modelo «el inquilino pide precio»: lead nuevo + tarea llamada, casilla de ofertas aparte, política 3 ter, VERSION_TEXTOS_LEGALES 2026-10-v3 → todos re-acreditan lds_art19). Bloqueo: SQL P17 `2026-10-26_portal_patrimonio_inquilino_acceso.sql` SIN aplicar (sin él no funciona el enlace del inquilino). Pendiente abogado: dudas del informe del PR; plazo de retención fichas fuente=portal.
+
 **(27/10/2026, 9)** — Patrimonio: #5134 MERGEADO (hoja de ruta §7: 8 de 10 hechos; faltan P5 consentimiento inquilino —borrador entregado, revisión legal— y P6 OK legal P15). Permisos heredados de `prisma_seguros` recortados en prod (SQL revocar_heredados; backup_seguros intacto). NO cambiar default privileges de `seguros` (romperían asegura): cepo #5143 exige REVOKE en cada SQL nuevo de portal_patrimonio_*. `/acc.bak` sigue (lo borra Alberto).
 
 **(27/10/2026, 8)** — ✅ Los 5 SQL de patrimonio (hipoteca, edificio_unidades, invitacion_patrimonio, volcado, recomendacion) APLICADOS en producción por orden de Alberto, verificados (CHECK, FK, triggers, GRANT; crm_seguros sin permisos). PR #5134 sale de draft. Abierto: `prisma_seguros` y `backup_seguros` heredan permisos por defecto del schema en las tablas portal_patrimonio_* (incl. correo_hash de recomendación): decidir si se revocan.

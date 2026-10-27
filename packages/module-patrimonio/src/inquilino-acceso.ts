@@ -91,14 +91,21 @@ export function accesoParaContrato(
 // ─── Consentimiento propio (comercial) ───────────────────────────────────────────────────────────────────────────
 
 /** BORRADOR hasta revisión legal: sube con CADA cambio del texto (un «sí» a una versión vieja no vale para la nueva). */
-export const VERSION_CONSENTIMIENTO_INQUILINO = '2026-10-26-borrador-1'
+// `-2` (27/10/2026): el MISMO consentimiento se ofrece también en «Pedir precio» (casilla aparte, nunca premarcada), así que
+// el texto empieza por la frase que ve allí. Pedir precio NO es esto: es una petición del interesado (ver
+// `apps/asegura-portal/lib/inquilino/precio-inquilino.ts`). Un «sí» a `-1` cuenta como `version_antigua`.
+export const VERSION_CONSENTIMIENTO_INQUILINO = '2026-10-27-borrador-2'
 
-/** Texto en BORRADOR (sin revisar por un jurista). Sin casilla premarcada; la pantalla lo ofrece, nunca lo exige. */
+/**
+ * Texto en BORRADOR (sin revisar por un jurista). Sin casilla premarcada; la pantalla lo ofrece, nunca lo exige.
+ * 🚨 Cada frase es una afirmación sobre el código: «solo dentro de este portal» = nada del portal ni de asegura escribe al
+ * inquilino por este consentimiento (no cruza el puente a asegura); «tu propietario no lo sabrá» = ninguna pantalla ni
+ * ruta del propietario lee `portal_patrimonio_inquilino_consentimiento` (cepo `test/regression-portal-inquilino-acceso.test.ts`).
+ */
 export const TEXTO_CONSENTIMIENTO_INQUILINO =
-  'Quiero que Grupo ASegura, correduría de seguros, me haga llegar por este portal ofertas de seguros que puedan ' +
-  'interesarme como inquilino (por ejemplo, un seguro de hogar). Es opcional: puedes usar esta página sin aceptar, y ' +
-  'puedes retirarlo cuando quieras desde aquí mismo. Tu propietario no sabrá si lo aceptas o no. Mientras no lo aceptes ' +
-  'no te mostraremos ninguna oferta.'
+  'Quiero recibir otras ofertas de seguros de Grupo ASegura. Solo te las enseñaremos dentro de este portal: no te ' +
+  'escribiremos ni te llamaremos por esto. Es opcional: puedes usar esta página y pedir precio sin marcarlo, y puedes ' +
+  'retirarlo cuando quieras desde «Mi alquiler». Tu propietario no sabrá si lo marcas o no.'
 
 export interface ConsentimientoInquilino {
   concedido: boolean

@@ -159,8 +159,9 @@ test('el apartado «3 bis» de la política de privacidad se publica SIEMPRE, co
 
 test('VERSION_TEXTOS_LEGALES es UNA constante y sube con el apartado publicado', async () => {
   const m = (await import('../packages/module-seguros/src/mediador.ts')) as Record<string, unknown>
-  assert.equal(m.VERSION_TEXTOS_LEGALES, '2026-10-v2')
-  assert.equal(m.FECHA_TEXTOS_LEGALES, '2026-10-26')
+  // v3 (27/10/2026): apartado «3 ter» del inquilino (`test/regression-portal-inquilino-precio.test.ts`).
+  assert.equal(m.VERSION_TEXTOS_LEGALES, '2026-10-v3')
+  assert.equal(m.FECHA_TEXTOS_LEGALES, '2026-10-27')
   for (const fuera of ['VERSION_TEXTOS_LEGALES_PATRIMONIO', 'FECHA_TEXTOS_LEGALES_PATRIMONIO', 'versionTextosLegales', 'fechaTextosLegales']) {
     assert.equal(m[fuera], undefined, `${fuera}: no puede haber una segunda versión de los textos`)
   }
