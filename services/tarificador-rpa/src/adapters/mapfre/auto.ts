@@ -43,7 +43,7 @@
 // «Continuar» 1 → 2 → 3 por `ctx.continuarMapfre` (guard.ts). Lo que depende de pantallas NO mapeadas (mat-select sin valor,
 // diálogo tras la búsqueda del tomador) es `ErrorMapaIncompleto` con `pideInventarioDom` = el runner adjunta el inventario de estructura.
 //
-// 🚨 SEGURIDAD. Este fichero NO pulsa nada (ni `.click`, ni `ctx.pulsar`): solo lee y rellena campos de texto, siempre
+// 🚨 SEGURIDAD. Este fichero NO pulsa nada (ni `.click`; v0.8.27: única excepción: `desplegarAcordeonGuardado`, por `ctx.pulsar`, solo sobre `mat-expansion-panel-header`): solo lee y rellena campos de texto, siempre
 // tras `comprobarCampo`. Los clics de la entrada van por `entrada.ts`; el del diálogo de vehículo, «Continuar» y «Generar Proyecto»
 // (v0.8.14), por guard.ts. No hay selectores para: «Contratar» (uno por producto, en la tarjeta de prima), el paso 6, «Ir a generar
 // proyecto», el «Aceptar» de
@@ -1020,33 +1020,57 @@ export async function describirControlesSiniestralidad(raiz: Pick<Frame, 'locato
 const PATRON_ETIQUETA_COMPANIA = regexEtiquetaExacta(CONCEPTOS_LECTURA.compania_anterior.grupos.etiqueta_exacta[0])
 
 /**
+ * v0.8.27 · ÚNICO clic de este fichero: despliega por `ctx.pulsar` (guardado) la CABECERA `mat-expansion-panel-header` del acordeón plegado que
+ * contiene el mat-select «Compañia». Nunca un botón ni un texto. El guardián de test/mapfre-auto.test.ts permite EXACTAMENTE esta llamada.
+ */
+export async function desplegarAcordeonGuardado(raiz: Pick<Frame, 'locator'>, pulsar: (boton: Locator) => Promise<void>, indiceCabecera: number): Promise<void> {
+  await pulsar(raiz.locator('mat-expansion-panel-header').nth(indiceCabecera))
+}
+
+/**
  * v0.8.24 · Alternativa por etiqueta para el desplegable de compañía anterior cuando no existe el selector de
  * `app-historial-siniestralidad`: el `mat-form-field` cuya `mat-label`/`label` es exactamente «Compañia». Devuelve el mat-select SOLO
  * si es único, visible y habilitado (los de `app-info-descuentos` los calcula el portal y vienen deshabilitados). Solo lectura. PURA en
  * cuanto a clics: no pulsa nada.
  */
-export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>): Promise<Locator | null> {
+export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>): Promise<Locator | null> {
   // v0.8.26: UN solo evaluate que recoge los NODOS mat-select tras la etiqueta «Compañia» y los deduplica por identidad (Set): un mismo
   // mat-select alcanzable por dos caminos (label + mat-label anidados, form-fields anidados) cuenta UNO. Sin escribir en el DOM: se
   // devuelve su posición entre todos los mat-select y se re-localiza con `nth`.
-  const r = await raiz
-    .locator('body')
-    .evaluate((body, fuente) => {
-      const re = new RegExp(fuente, 'i')
-      const nodos = new Set<Element>()
-      for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
-        if (!re.test(e.textContent ?? '')) continue
-        const ff = e.closest('mat-form-field') ?? e.parentElement
-        if (ff) for (const s of Array.from(ff.querySelectorAll('mat-select'))) nodos.add(s)
-      }
-      if (nodos.size !== 1) return { n: nodos.size, idx: -1, ok: false }
-      const nodo = Array.from(nodos)[0]
-      const estilo = getComputedStyle(nodo)
-      const visible = nodo.getClientRects().length > 0 && estilo.visibility !== 'hidden' && estilo.display !== 'none'
-      const off = nodo.getAttribute('aria-disabled') === 'true'
-      return { n: 1, idx: Array.from(body.querySelectorAll('mat-select')).indexOf(nodo), ok: visible && !off }
-    }, PATRON_ETIQUETA_COMPANIA.source)
-    .catch(() => null)
+  // v0.8.27: si el único mat-select está HABILITADO pero oculto porque su `mat-expansion-panel` está plegado (el contenido plegado va con
+  // `visibility:hidden`), se devuelve la posición de la cabecera del panel para desplegarlo con `pulsar` (guard) y volver a mirar.
+  const leer = () =>
+    raiz
+      .locator('body')
+      .evaluate((body, fuente) => {
+        const re = new RegExp(fuente, 'i')
+        const nodos = new Set<Element>()
+        for (const e of Array.from(body.querySelectorAll('label, mat-label'))) {
+          if (!re.test(e.textContent ?? '')) continue
+          const ff = e.closest('mat-form-field') ?? e.parentElement
+          if (ff) for (const s of Array.from(ff.querySelectorAll('mat-select'))) nodos.add(s)
+        }
+        if (nodos.size !== 1) return { n: nodos.size, idx: -1, ok: false, off: false, cab: -1 }
+        const nodo = Array.from(nodos)[0]
+        const estilo = getComputedStyle(nodo)
+        const visible = nodo.getClientRects().length > 0 && estilo.visibility !== 'hidden' && estilo.display !== 'none'
+        const off = nodo.getAttribute('aria-disabled') === 'true'
+        const panel = nodo.closest('mat-expansion-panel')
+        const plegado = panel !== null && !panel.classList.contains('mat-expanded')
+        const cabecera = plegado ? panel.querySelector('mat-expansion-panel-header') : null
+        return { n: 1, idx: Array.from(body.querySelectorAll('mat-select')).indexOf(nodo), ok: visible && !off, off, cab: !visible && cabecera ? Array.from(body.querySelectorAll('mat-expansion-panel-header')).indexOf(cabecera) : -1 }
+      }, PATRON_ETIQUETA_COMPANIA.source)
+      .catch(() => null)
+  let r = await leer()
+  if (r && r.n === 1 && !r.ok && !r.off && r.cab >= 0 && r.idx >= 0 && pulsar) {
+    await desplegarAcordeonGuardado(raiz, pulsar, r.cab).catch(() => undefined)
+    const fin = Date.now() + 3_000
+    for (;;) {
+      r = await leer()
+      if (!r || r.ok || Date.now() >= fin) break
+      await new Promise((res) => setTimeout(res, 250))
+    }
+  }
   if (!r || r.n !== 1 || !r.ok || r.idx < 0) return null
   return raiz.locator('mat-select').nth(r.idx)
 }
@@ -1056,7 +1080,7 @@ export async function selectCompaniaPorEtiqueta(raiz: Pick<Frame, 'locator'>): P
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
  * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
  */
-export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
+export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'> & Partial<Pick<ContextoPortal, 'pulsar'>>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
   const hechos: string[] = []
   for (const op of plan.escribibles) {
     if (op.tipo !== 'mat-select') continue
@@ -1065,7 +1089,7 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
     // v0.8.24: sin `app-historial-siniestralidad` (trabajo e886d7d9: «Figuras» pinta «Compañia», «Procedencia Siniestralidad»…), la
     // compañía anterior se busca por su ETIQUETA. Solo si hay UN mat-select visible y habilitado; si no, sigue el hueco de siempre.
     if (ausente && op.sel === SEL_HISTORIAL.companiaAnterior) {
-      const porEtiqueta = await selectCompaniaPorEtiqueta(raiz)
+      const porEtiqueta = await selectCompaniaPorEtiqueta(raiz, ctx.pulsar)
       if (porEtiqueta) {
         sel = porEtiqueta
         ausente = false
@@ -1731,7 +1755,7 @@ export async function precioDesdeObjetoAsegurado(
   nsei: Page,
   form: FormularioAuto,
   vehiculo: VehiculoConfirmado,
-  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
+  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
@@ -1781,7 +1805,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.26',
+  version: '0.8.27',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

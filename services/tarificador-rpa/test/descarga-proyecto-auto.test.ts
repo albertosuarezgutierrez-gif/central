@@ -14,10 +14,10 @@ import { VERSION_GENERALI_AUTO } from '../src/adapters/generali/auto.ts'
 
 const PDF_MINIMO = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n' + ' '.repeat(80), 'latin1')
 
-test('versiones: Allianz auto 0.6.31, Mapfre auto 0.8.26, Generali auto 0.2.36', () => {
-  assert.equal(allianzAuto.version, '0.6.31')
-  assert.equal(mapfreAuto.version, '0.8.26')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.36')
+test('versiones: Allianz auto 0.6.32, Mapfre auto 0.8.27, Generali auto 0.2.37', () => {
+  assert.equal(allianzAuto.version, '0.6.32')
+  assert.equal(mapfreAuto.version, '0.8.27')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.37')
 })
 
 test('interruptor por compañía: todas activadas por defecto', () => {

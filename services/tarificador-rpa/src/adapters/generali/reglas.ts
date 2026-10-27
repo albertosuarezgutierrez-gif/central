@@ -1197,13 +1197,21 @@ export function resumenModalidadesGenerali(v: VolcadoModalidadesGenerali | null,
 }
 
 /** v0.2.35: por marco, URL sin query, nº de tablas, cuántas contienen «Recibo Anual»/«Prima Anualidad» y la estructura saneada de la tabla de modalidades. */
-export type DiagnosticoModalidadesMarcoGenerali = { url: string; tablas: number; conRecibo: number; estructura: string }
+export type DiagnosticoModalidadesMarcoGenerali = {
+  url: string; tablas: number; conRecibo: number; estructura: string
+  /** v0.2.37: segunda tabla del marco (clase, filas del primer tbody, filas totales, celdas de las primeras filas, celdas con forma de importe). */
+  segunda?: { clase: string; filasTbody: number; filas: number; celdas: string; importes: number } | null
+  /** v0.2.37: nº de tr/tbody con id «gridmodseg» fuera del thead, y los primeros ids. */
+  gridFuera?: number; gridIds?: string
+}
 
 /** Resumen del diagnóstico ampliado de modalidades: «Marcos N: [i] ruta tablas=T recibo=R estructura: …». Saneado y truncado a `max`. PURA. */
 export function resumenDiagnosticoModalidadesGenerali(d: readonly DiagnosticoModalidadesMarcoGenerali[], max = 700): string {
   const base = d.map((m, i) => {
     const ruta = sanearFragmentoGenerali(String(m.url ?? '').split(/[?#;]/)[0]!.replace(/^https?:\/\/[^/]+/, '')).slice(-60)
-    return { cab: `[${i}] ${ruta || '/'} tablas=${m.tablas} con-Recibo/Prima=${m.conRecibo}`, est: m.estructura ? sanearFragmentoGenerali(m.estructura).slice(0, 600) : '' }
+    const seg = m.segunda ? ` 2ª[${sanearFragmentoGenerali(m.segunda.clase).slice(0, 20) || 'sin-clase'} tbody=${m.segunda.filasTbody} filas=${m.segunda.filas} celdas=${sanearFragmentoGenerali(m.segunda.celdas).slice(0, 14)} imp=${m.segunda.importes}]` : ''
+    const grid = (m.gridFuera ?? 0) > 0 ? ` gridmodseg-fuera=${m.gridFuera}${m.gridIds ? `(${sanearFragmentoGenerali(m.gridIds).slice(0, 40)})` : ''}` : ''
+    return { cab: `[${i}] ${ruta || '/'} tablas=${m.tablas} con-Recibo/Prima=${m.conRecibo}${seg}${grid}`, est: m.estructura ? sanearFragmentoGenerali(m.estructura).slice(0, 600) : '' }
   })
   const armar = (tope: number): string => `Marcos (${d.length}): ${base.map((b) => b.cab + (b.est && tope > 0 ? ` estructura: ${b.est.slice(0, tope)}` : '')).join(' | ') || 'ninguno'}`
   // v0.2.36: primero se recorta la ESTRUCTURA (lo menos importante); la lista de marcos con ruta y tablas va entera mientras quepa.
