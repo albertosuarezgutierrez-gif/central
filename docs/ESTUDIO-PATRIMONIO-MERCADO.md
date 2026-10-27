@@ -79,3 +79,15 @@ en temporada (110/mes media anual, probablemente concentrado en abril-junio).
 - ✅ **Decisión de Alberto (27/10/2026):** aprobado el modelo de dos niveles (básico gratis; plus gratis con sus
   seguros en Grupo ASegura). El **cobro de rentas con Stripe queda como idea para MÁS ADELANTE**: reutilizar el
   Stripe Connect que ya funciona en ia-rest (cliente Saboga) cuando Patrimonio tenga tracción. No se construye ahora.
+
+## 6. Estrategia: herramientas gratis para captar clientes de seguros (27/10/2026)
+Idea de Alberto: ofrecer como servicio añadido todo lo ya construido (Patrimonio, RRHH, agente fiscal) para captar
+clientes de seguros. Orden propuesto, según lo directo que es el seguro que arrastra cada herramienta:
+1. **Patrimonio** → hogar, impago, comunidad, RC del arrendador. Arrastre directo. Primero.
+2. **RRHH** (ya gratis desde el 26/10) → accidentes de convenio, salud colectivo, RC y D&O de la empresa.
+3. **Agente fiscal** → poco seguro directo y **riesgo alto**: dar asesoramiento fiscal a terceros genera
+   responsabilidad, y la RC profesional de la correduría probablemente no la cubre [Probable]. Solo como
+   *orientación informativa* con aviso legal, o derivando a una gestoría colaboradora. Nunca presentar declaraciones.
+Condiciones: un solo portal del cliente con módulos (no una app por herramienta). Usar los datos para ofrecer seguros
+exige informarlo en el RGPD, como ya se hizo con las señales de Patrimonio. Medir la conversión a pólizas de cada
+herramienta antes de invertir más en ella.
