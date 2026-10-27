@@ -1,8 +1,8 @@
 {
  "sesion": "50350e0f-0da8-56ab-9d14-57bc872dc2c7",
  "inicio": "2026-10-27T15:11:01.234Z",
- "fin": "2026-10-27T16:45:03.192Z",
- "llamadas": 202,
+ "fin": "2026-10-27T16:48:34.792Z",
+ "llamadas": 225,
  "categorias": {
   "lectura-directa": {
    "llamadas": 29,
@@ -18,17 +18,17 @@
    }
   },
   "otro": {
-   "llamadas": 20,
-   "chars_in": 16653,
-   "chars_out": 129959,
+   "llamadas": 26,
+   "chars_in": 22762,
+   "chars_out": 223008,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 7,
+    "SubagentHandback": 8,
     "ToolSearch": 3,
-    "SendMessage": 1,
-    "ReadNotifications": 9
+    "SendMessage": 2,
+    "ReadNotifications": 13
    }
   },
   "agente:rastreador-codigo": {
@@ -55,14 +55,14 @@
    }
   },
   "bash": {
-   "llamadas": 120,
-   "chars_in": 121796,
-   "chars_out": 673741,
+   "llamadas": 137,
+   "chars_in": 146844,
+   "chars_out": 719830,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 120
+    "Bash": 137
    }
   },
   "escritura": {
