@@ -35,17 +35,20 @@
  * nadie puede decir después QUÉ se aceptó. Se sube a mano cada vez que cambie
  * el fondo de cualquiera de las páginas legales (no por una errata).
  */
-export const VERSION_TEXTOS_LEGALES = '2026-10-v2'
+export const VERSION_TEXTOS_LEGALES = '2026-10-v3'
 
 /**
  * Fecha de la última revisión de fondo de los textos legales (ISO, UTC).
+ * `2026-10-v3` (27/10/2026): la política del portal publica el apartado «3 ter» (el inquilino que entra por el enlace de su
+ * propietario, su petición de precio —medidas precontractuales— y su casilla aparte de ofertas) y dos filas en la tabla de
+ * bases legales. BORRADOR sin revisión de abogado (ver el informe de la sesión).
  * `2026-10-v2` (26/10/2026): la política de privacidad del portal publica el apartado «3 bis» (revisión de los seguros
  * de los inmuebles, base interés legítimo, derecho de oposición). Al subirla, cada cliente vuelve a acreditar la
  * información precontractual (`lds_art19`) en su siguiente entrada con código (`necesitaRegistro`).
  * 🚨 Constante ÚNICA: el portal, las solicitudes de supresión, el export RGPD y la aceptación de presupuestos de
  * `apps/asegura` la importan de aquí; nadie copia el literal.
  */
-export const FECHA_TEXTOS_LEGALES = '2026-10-26'
+export const FECHA_TEXTOS_LEGALES = '2026-10-27'
 
 /**
  * Versión de los textos legales de la WEB PÚBLICA (`apps/asegura-web`).

@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import { MEDIADOR, FECHA_TEXTOS_LEGALES, VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
 
+import { ApartadoInquilino } from './ApartadoInquilino'
 import { ApartadoSenalesPatrimonio } from './ApartadoSenalesPatrimonio'
 
 export const metadata: Metadata = {
@@ -203,6 +204,19 @@ export default function Privacidad() {
                 <td>Interés legítimo (art. 6.1.f RGPD) en conocer cómo llega gente nueva al portal, sin saber quién es</td>
               </tr>
               <tr>
+                <td>
+                  Contestar a la petición de precio que haces como inquilino en «Mi alquiler» (apartado 3 ter)
+                </td>
+                <td>Medidas precontractuales a petición tuya (art. 6.1.b RGPD)</td>
+              </tr>
+              <tr>
+                <td>
+                  Enseñarte otras ofertas de seguros dentro del portal si eres inquilino — <strong>solo si marcas esa
+                  casilla</strong>, aparte de la petición de precio
+                </td>
+                <td>Tu consentimiento (art. 6.1.a RGPD), revocable desmarcándola en «Mi alquiler»</td>
+              </tr>
+              <tr>
                 <td>Conservar la documentación de la mediación</td>
                 <td>Obligación legal (art. 6.1.c RGPD)</td>
               </tr>
@@ -232,6 +246,8 @@ export default function Privacidad() {
       </section>
 
       <ApartadoSenalesPatrimonio />
+
+      <ApartadoInquilino />
 
       <section>
         <h2>4. Quién más ve tus datos</h2>
@@ -311,6 +327,10 @@ export default function Privacidad() {
           <li>
             Las señales de la revisión de los seguros de tus inmuebles, 24 meses desde que se cierran o
             desde su última actualización (apartado 3 bis).
+          </li>
+          <li>
+            Si pides precio como inquilino, la ficha con tu nombre y tu contacto: hoy sin borrado automático por plazo; la
+            eliminamos si nos lo pides y no llegas a contratar (apartado 3 ter).
           </li>
           <li>
             La documentación de la mediación, durante los plazos que nos exige la normativa de
