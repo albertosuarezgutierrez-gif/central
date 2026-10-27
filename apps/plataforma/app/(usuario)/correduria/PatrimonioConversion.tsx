@@ -65,6 +65,13 @@ export default function PatrimonioConversion() {
       </Bloque>
     )
   }
+  if (d.estado === 'sin_correduria') {
+    return (
+      <Bloque titulo="Patrimonio · conversión" Icono={Building2}>
+        <p style={pMuted}>Asegura no tiene configurada la correduría: no se puede mirar la conversión. No significa que no haya titulares con patrimonio.</p>
+      </Bloque>
+    )
+  }
   if (d.estado === 'error') {
     const texto = d.motivo in MOTIVOS_PUERTO ? MOTIVOS_PUERTO[d.motivo as keyof typeof MOTIVOS_PUERTO] : d.motivo
     return (

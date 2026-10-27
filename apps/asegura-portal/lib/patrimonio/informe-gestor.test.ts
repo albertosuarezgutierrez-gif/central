@@ -93,3 +93,23 @@ test('CSV: una celda con fórmula se neutraliza (inyección en Excel)', () => {
   const csv = csvGestor(informeGestor(inf, new Map([['i1', { id: 'A', nombre: '=cmd' }]])))
   assert.doesNotMatch(csv, /(^|;|\r\n)=/)
 })
+
+test('soloTitular: sinIngresos solo del titular pedido y sinImputarCent null (no atribuible), nunca mezclado ni 0', () => {
+  const t = new Map([
+    ['i1', { id: 'A', nombre: 'Ana', alias: 'Piso Socorro' }],
+    ['i2', { id: 'B', nombre: 'Berta', alias: 'Local' }],
+    ['i3', { id: 'B', nombre: 'Berta', alias: 'Ático' }],
+  ])
+  const todos = informeGestor(fiscal(), t)
+  assert.deepEqual(todos.sinIngresos, ['Ático'])
+  assert.equal(todos.sinImputarCent, 7_000)
+  const a = informeGestor(fiscal(), t, 'A')
+  assert.deepEqual(a.sinIngresos, [])
+  assert.equal(a.sinImputarCent, null)
+  const b = informeGestor(fiscal(), t, 'B')
+  assert.deepEqual(b.sinIngresos, ['Ático'])
+  assert.equal(b.sinImputarCent, null)
+  // alias sin titular conocido: no se atribuye a nadie
+  assert.deepEqual(informeGestor(fiscal(), new Map([['i1', { id: 'A', nombre: 'Ana' }]]), 'A').sinIngresos, [])
+  assert.match(csvGestor(a), /^(?:(?!sin inmueble asignado)[\s\S])*$/)
+})

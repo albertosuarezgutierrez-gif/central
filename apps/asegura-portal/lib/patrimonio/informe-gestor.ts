@@ -13,7 +13,8 @@ export const TEXTO_LEGAL_GESTOR = 'Exportación de tus datos para tu gestor; no 
 /** Clave de grupo del inmueble sin titular conocido: nunca se mezcla con un titular real. */
 export const TITULAR_SIN_IDENTIFICAR = 'sin-identificar'
 
-export type TitularDeInmueble = { id: string; nombre: string }
+/** `alias` (opcional): permite atribuir a su titular los «sin ingresos» del informe fiscal, que solo trae alias. */
+export type TitularDeInmueble = { id: string; nombre: string; alias?: string }
 
 export type TotalesGestor = {
   ingresosCent: number
@@ -43,8 +44,8 @@ export type InformeGestor = {
   titulares: TitularGestor[]
   /** Inmuebles sin renta en el año (no entran), tal cual los da el informe fiscal. */
   sinIngresos: string[]
-  /** Gastos sin inmueble: no se reparten solos, y se dice. */
-  sinImputarCent: number
+  /** Gastos sin inmueble: no se reparten solos, y se dice. `null` = con `soloTitular` no son atribuibles a un titular («sin dato»). */
+  sinImputarCent: number | null
   textoLegal: string
 }
 
@@ -84,9 +85,14 @@ export function informeGestor(inf: InformeFiscal, titularDe: ReadonlyMap<string,
       totales: totalesDe(g.elementos.map((el) => (el.tipo === 'inmueble' ? el.inmueble : el.edificio))),
     }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  // Con `soloTitular`, ni los «sin ingresos» ni los gastos sin inmueble se toman del total de la persona: solo lo atribuible.
+  const sinIngresos = soloTitular === undefined ? inf.sinIngresos : inf.sinIngresos.filter((alias) => {
+    const duenos = new Set([...titularDe.values()].filter((t) => t.alias === alias).map((t) => t.id))
+    return duenos.size === 1 && duenos.has(soloTitular)
+  })
   return {
     anio: inf.anio, enCurso: inf.enCurso, desde: inf.desde, hasta: inf.hasta, titulares,
-    sinIngresos: inf.sinIngresos, sinImputarCent: inf.sinImputarCent, textoLegal: TEXTO_LEGAL_GESTOR,
+    sinIngresos, sinImputarCent: soloTitular === undefined ? inf.sinImputarCent : null, textoLegal: TEXTO_LEGAL_GESTOR,
   }
 }
 
@@ -134,7 +140,7 @@ export function csvGestor(inf: InformeGestor): string {
     tt('Rendimiento antes de amortización del titular', importeCsv(x.rendimientoAntesAmortizacionCent))
     tt('Rendimiento neto del titular', x.rendimientoNetoCent === null ? SIN_DATO : importeCsv(x.rendimientoNetoCent), x.rendimientoNetoCent === null ? 'Falta la amortización de algún inmueble' : '')
   }
-  if (inf.sinImputarCent > 0) filas.push([anio, '', '', '', 'Gastos sin inmueble asignado (no repartidos)', 'Aparte', importeCsv(inf.sinImputarCent), 'No incluidos en ningún inmueble'])
+  if (inf.sinImputarCent !== null && inf.sinImputarCent > 0) filas.push([anio, '', '', '', 'Gastos sin inmueble asignado (no repartidos)', 'Aparte', importeCsv(inf.sinImputarCent), 'No incluidos en ningún inmueble'])
   filas.push([anio, '', '', '', inf.textoLegal, '', '', inf.enCurso ? `Ejercicio en curso: datos hasta el ${inf.hasta.split('-').reverse().join('/')}` : ''])
   return '﻿' + filas.map((f) => f.map(celdaCsv).join(';')).join('\r\n') + '\r\n'
 }

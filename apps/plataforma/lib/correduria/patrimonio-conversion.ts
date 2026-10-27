@@ -51,6 +51,7 @@ export type TitularConversion = {
 export type LecturaConversionPuerto =
   | { estado: 'ok'; titulares: TitularConversion[] }
   | { estado: 'sin_configurar' }
+  | { estado: 'sin_correduria' }
   | { estado: 'error'; motivo: string }
 
 // ── Intérprete ───────────────────────────────────────────────────────────────
@@ -105,6 +106,7 @@ export function interpretarConversion(status: number, json: unknown): LecturaCon
   const j = registro(json)
   if (status === 404) return { estado: 'error', motivo: 'asegura aún no tiene /api/operador/patrimonio-conversion desplegado' }
   if (status === 200 && j?.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (status === 200 && j?.estado === 'sin_correduria') return { estado: 'sin_correduria' }
   if (status !== 200 || j?.estado !== 'ok' || !Array.isArray(j.titulares)) {
     const causa = typeof j?.causa === 'string' ? ` (${j.causa})` : ''
     return { estado: 'error', motivo: `HTTP ${status}${causa}` }
@@ -260,4 +262,5 @@ export function agregarConversion(titulares: readonly TitularConversion[], ahora
 export type LecturaConversion =
   | { estado: 'ok'; filas: FilaConversion[]; resumen: ResumenConversion }
   | { estado: 'sin_configurar' }
+  | { estado: 'sin_correduria' }
   | { estado: 'error'; motivo: string }

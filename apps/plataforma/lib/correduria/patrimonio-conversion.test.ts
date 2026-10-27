@@ -133,3 +133,8 @@ test('inicioMesMadrid: 00:00 de Madrid del día 1, en invierno (UTC+1) y verano 
   // Tras la medianoche de Madrid ya es mes nuevo aunque en UTC siga siendo el anterior.
   assert.equal(inicioMesMadrid(new Date('2026-06-30T22:30:00Z')).toISOString(), '2026-06-30T22:00:00.000Z')
 })
+
+test('intérprete: 200 {estado:sin_correduria} es un estado propio, no «HTTP 200»', () => {
+  assert.deepEqual(interpretarConversion(200, { estado: 'sin_correduria' }), { estado: 'sin_correduria' })
+  assert.equal(interpretarConversion(500, { estado: 'sin_correduria' }).estado, 'error')
+})

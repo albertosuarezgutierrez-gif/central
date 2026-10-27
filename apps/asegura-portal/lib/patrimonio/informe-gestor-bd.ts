@@ -29,8 +29,8 @@ export async function informeGestorDeIdentidad(identidadId: string, anio: unknow
     where: { id: { in: d.inmuebles.map((i) => i.id) }, archivadoEn: null, titular: { clienteId: { in: [...accesos.keys()] }, archivadoEn: null } },
     select: { id: true, titular: { select: { clienteId: true } } },
   })
-  const nombreDe = new Map(d.inmuebles.map((i) => [i.id, i.titular]))
-  const titularDe = new Map<string, TitularDeInmueble>(filas.map((f) => [f.id, { id: f.titular.clienteId, nombre: nombreDe.get(f.id) ?? '' }]))
+  const metaDe = new Map(d.inmuebles.map((i) => [i.id, i]))
+  const titularDe = new Map<string, TitularDeInmueble>(filas.map((f) => [f.id, { id: f.titular.clienteId, nombre: metaDe.get(f.id)?.titular ?? '', alias: metaDe.get(f.id)?.alias }]))
   const informe = informeGestor(informeFiscal(d.resultado, d.inmuebles, d.periodo), titularDe, pedido)
   const vistos = new Map<string, string>()
   for (const t of titularDe.values()) if (!vistos.has(t.id)) vistos.set(t.id, t.nombre)

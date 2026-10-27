@@ -88,7 +88,8 @@ function Cuerpo({ inf }: { inf: InformeGestor }) {
     <>
       {inf.titulares.map((t) => <Titular key={t.titularId} t={t} />)}
       {inf.sinIngresos.length > 0 && <p className="suave" style={{ fontSize: 14 }}>Sin renta devengada en {inf.anio} (no entran): {inf.sinIngresos.join(', ')}.</p>}
-      {inf.sinImputarCent > 0 && <p className="suave" style={{ fontSize: 14 }}>Además hay {cent(inf.sinImputarCent)} de gastos sin inmueble asignado: no están en ningún total.</p>}
+      {inf.sinImputarCent === null && <p className="suave" style={{ fontSize: 14 }}>Los gastos sin inmueble asignado no se pueden atribuir a un titular: sin dato en este informe.</p>}
+      {inf.sinImputarCent !== null && inf.sinImputarCent > 0 && <p className="suave" style={{ fontSize: 14 }}>Además hay {cent(inf.sinImputarCent)} de gastos sin inmueble asignado: no están en ningún total.</p>}
     </>
   )
 }
