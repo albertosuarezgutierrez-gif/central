@@ -59,3 +59,20 @@ Pasos, en orden:
 ## 4. Lo que no se ha verificado
 Precios en webs oficiales; Arrenta, Smoobu/Hostaway, Alquiler Seguro; volumen de «declarar alquiler renta»
 en temporada (110/mes media anual, probablemente concentrado en abril-junio).
+
+## 5. Modelo de ingresos — conclusiones del 27/10/2026
+- **«Gratis si traes los seguros» — mejor en dos niveles.** Si la herramienta solo se abre trayendo las
+  pólizas, se pierde la captación: el propietario que aún no es cliente no entra y no hay a quién convertir.
+  Propuesta: nivel básico gratis para cualquiera (inmuebles, gastos, rentabilidad, calendario); nivel completo
+  gratis con pólizas en Grupo ASegura (IA de facturas, fiscalidad, avisos, cobro de rentas). Sin pólizas, el
+  nivel completo es de pago.
+  ⚖️ Antes de publicarlo: revisión legal de la venta cruzada (RDL 3/2020, prácticas de venta combinada/vinculada)
+  y del deber de asesoramiento del corredor. [Probable que sea viable; hay que confirmarlo]
+- **Cobro de rentas con Stripe — viable, pero no es lo que nos diferencia** (Homming y Rentger ya lo hacen).
+  Tiene que ir por **Stripe Connect** (cada propietario es una cuenta conectada con su KYC; Stripe es la entidad
+  regulada y nosotros cobramos `application_fee`). Si el dinero pasa por una cuenta nuestra, prestamos un servicio
+  de pago sin licencia (PSD2). Connect ya se usa en el repo (`stripe.accounts`, en plataforma/sivra e ia-rest).
+  Riesgos: el inquilino puede devolver un adeudo SEPA hasta 8 semanas después (13 meses si no estaba autorizado),
+  hay que dar de alta a cada propietario (fricción) y nuestra comisión se factura con IVA.
+  Comisión: un % sobre la renta choca con competidores que cobran gratis. Mejor una cuota fija por recibo o meterlo
+  en el nivel de pago. El ingreso grande es el **seguro de impago**, que se ofrece justo cuando se activa el cobro.
