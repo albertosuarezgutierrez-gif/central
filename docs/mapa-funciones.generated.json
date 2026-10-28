@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T21:21:49Z",
-  "sha": "6f47762e4a55bb2c4b6b24e410953cc46820d97c",
+  "generadoEn": "2026-10-28T22:21:25Z",
+  "sha": "69939532b85a955a6f4172373ee5cabc61b24567",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -255368,7 +255368,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 242,
+          "linea": 244,
           "resumen": "Cuerpo (form-urlencoded) de una petición a una ruta TOLERADA: ¿nombra una acción de emisión real? Mira el NOMBRE de cada parámetro (`formEmision:btnEmitir=…`) y el VALOR de `javax.faces.source` / `jav"
         },
         {
@@ -255377,7 +255377,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined",
           "retorno": "",
-          "linea": 250,
+          "linea": 252,
           "resumen": "Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no se sabía por qué): el NOMBRE del parámetro (o `javax.faces.*`) y la"
         },
         {
@@ -255386,7 +255386,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, reglas: readonly RutaTolerable[], origenPagina?: string | null",
           "retorno": "string | null | undefined",
-          "linea": 276,
+          "linea": 281,
           "resumen": "`origenPagina`: origen de la ventana/marco donde está la ruta. Una ruta RELATIVA (`/…`) solo se tolera si es EXACTAMENTE el de la regla; sin él, nunca (fail-closed). Una URL absoluta lleva su propio o"
         },
         {
@@ -255395,7 +255395,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 317
+          "linea": 322
         },
         {
           "nombre": "tipoDocumentoDe",
@@ -255403,7 +255403,7 @@
           "exportada": true,
           "params": "documento: string | null | undefined",
           "retorno": "TipoDocumento | null",
-          "linea": 326
+          "linea": 331
         },
         {
           "nombre": "opcionTipoDocumento",
@@ -255411,13 +255411,13 @@
           "exportada": true,
           "params": "tipo: TipoDocumento, opciones: readonly { valor: string | null; texto: string | null }[]",
           "retorno": "string | null",
-          "linea": 339,
+          "linea": 344,
           "resumen": "La opción de un desplegable de «Tipo de documento» que corresponde a `tipo`, por su TEXTO (sin tildes, mayúsculas ni signos): NIF → «NIF», «DNI», «DNI/NIF», «NIF/DNI», «N.I.F.»; NIE → empieza por «NIE"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6dfd68e9a1f0"
+      "hash": "780e1a80377e"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-asesor.ts",
