@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Bloque from '../../Bloque'
 import Documentos from '../../Documentos'
-import { leerHilo, modoDeMensaje, motivoFallo, type HiloSiniestro, type Mensaje } from '@/lib/correduria/siniestro-hilo'
+import { leerHilo, modoDeMensaje, precargaPregunta, ultimaFichaPerito, motivoFallo, type HiloSiniestro, type Mensaje } from '@/lib/correduria/siniestro-hilo'
 import { leerSiniestro } from '@/lib/siniestros-asegura'
 import type { DocumentoResumen } from '@central/module-seguros'
 import Cabecera from './Cabecera'
@@ -11,6 +11,8 @@ import Hilo from './Hilo'
 import CajaMensaje, { type Precarga } from './CajaMensaje'
 import AccionesIa from './AccionesIa'
 import Cierre from './Cierre'
+import FichaPerito from './FichaPerito'
+import BuscarPoliza from './BuscarPoliza'
 import { ERROR, NOTA } from './estilos'
 
 type Carga = { estado: 'cargando' } | { estado: 'error'; motivo: string } | { estado: 'ok'; hilo: HiloSiniestro }
@@ -51,16 +53,19 @@ export default function Expediente({ siniestroId }: { siniestroId: string }) {
 
   const h = c.hilo
   const s = leerSiniestro(h.siniestro)
+  const ficha = ultimaFichaPerito(h.mensajes)
   const docs = (h.documentosSiniestro ?? []) as DocumentoResumen[]
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4 }}>
       <Cabecera s={s} poliza={h.poliza} />
       <Plazos plazos={h.plazos} esperando={h.diasEsperandoCompania} />
-      <Hilo mensajes={h.mensajes} onCopiar={copiar} onEnviado={t => setPrecarga({ modo: 'enviado', texto: t, n: Date.now() })} onEditar={editar} />
+      {ficha && <FichaPerito ficha={ficha} />}
+      <Hilo siniestroId={siniestroId} mensajes={h.mensajes} partesPortal={h.partesPortal} onResponder={q => setPrecarga({ modo: 'interna', texto: precargaPregunta(q), n: Date.now() })} onValorado={cargar} onCopiar={copiar} onEnviado={t => setPrecarga({ modo: 'enviado', texto: t, n: Date.now() })} onEditar={editar} />
       {copiado && <p role="status" style={NOTA}>Copiado.</p>}
       <CajaMensaje siniestroId={siniestroId} documentos={docs} precarga={precarga} onGuardado={cargar} />
       <AccionesIa siniestroId={siniestroId} onHecho={cargar} />
+      <BuscarPoliza siniestroId={siniestroId} />
       <Cierre siniestroId={siniestroId} resultado={texto(h.siniestro?.resultado)} motivo={texto(h.siniestro?.resultadoMotivo)} onGuardado={cargar} />
       <Bloque titulo="Documentos del siniestro">
         <Documentos siniestroId={siniestroId} clienteId={s?.clienteId ?? null} polizaId={h.poliza?.id ?? s?.polizaId ?? null}

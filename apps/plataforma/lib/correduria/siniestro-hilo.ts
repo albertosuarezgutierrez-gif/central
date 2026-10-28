@@ -40,6 +40,8 @@ export type HiloSiniestro = {
   mensajes: Mensaje[] | null
   plazos: Plazo[] | null
   diasEsperandoCompania: number | null
+  /** `null` = el hilo no trae partes del portal (sin bloque); `[]` = el cliente no ha comunicado nada. */
+  partesPortal: PartePortal[] | null
 }
 
 export type Esperando = { siniestroId: string; clienteId: string | null; polizaNumero: string | null; dias: number }
@@ -100,6 +102,7 @@ export function leerHilo(v: unknown): HiloSiniestro | null {
     mensajes: leerMensajes(o.mensajes),
     plazos: leerPlazos(o.plazos),
     diasEsperandoCompania: num(o.diasEsperandoCompania),
+    partesPortal: leerPartesPortal(o.partesPortal),
   }
 }
 
@@ -228,4 +231,199 @@ export function puedeEditar(m: Mensaje): boolean {
 /** Autor que escribe cada modo: al editar solo se pueden elegir modos del MISMO autor que el original. */
 export function autorDeModo(modo: ModoCaja): AutorMensaje {
   return modo === 'compania' || modo === 'rehuse' ? 'compania' : modo === 'enviado' ? 'corredor' : 'interna'
+}
+
+// ─── Veredicto de la IA, ficha del perito, volcado de la intranet y búsqueda en la póliza ─────────────────────
+
+export type ArgumentoVeredicto = { texto: string; apoyo: 'poliza' | 'ley' | 'hechos'; cita: string | null; /** `false` = la cita NO se encontró; `null` = no se comprobó. */ citaVerificada: boolean | null }
+export type Veredicto = {
+  semaforo: 'defendible' | 'no_defendible' | 'faltan_datos'
+  confianza: number | null
+  resumen: string | null
+  preguntas: string[]
+  argumentos: ArgumentoVeredicto[]
+  derivar: 'abogado' | 'perito_externo' | null
+  plazosAccion: { que: string; fecha: string | null; base: string | null }[]
+  otrasPolizas: { polizaId: string; ramo: string | null; compania: string | null; motivo: string | null }[]
+  explicacionCliente: string | null
+}
+
+const SEMAFOROS = ['defendible', 'no_defendible', 'faltan_datos'] as const
+const APOYOS = ['poliza', 'ley', 'hechos'] as const
+const lista = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+
+/** `meta.veredicto` válido o `null` (entonces se muestra el texto del mensaje tal cual). Un semáforo desconocido invalida todo. */
+export function leerVeredicto(meta: Record<string, unknown> | null): Veredicto | null {
+  const o = obj(meta?.veredicto)
+  if (!o) return null
+  const semaforo = SEMAFOROS.find(s => s === o.semaforo)
+  if (!semaforo) return null
+  const argumentos: ArgumentoVeredicto[] = []
+  for (const a of lista(o.argumentos)) {
+    const x = obj(a)
+    const texto = x ? str(x.texto) : null
+    if (!x || !texto) continue
+    argumentos.push({ texto, apoyo: APOYOS.find(p => p === x.apoyo) ?? 'hechos', cita: str(x.cita), citaVerificada: typeof x.citaVerificada === 'boolean' ? x.citaVerificada : null })
+  }
+  const plazosAccion: Veredicto['plazosAccion'] = []
+  for (const p of lista(o.plazosAccion)) {
+    const x = obj(p)
+    if (x && str(x.que)) plazosAccion.push({ que: x.que as string, fecha: str(x.fecha), base: str(x.base) })
+  }
+  const otrasPolizas: Veredicto['otrasPolizas'] = []
+  for (const p of lista(o.otrasPolizas)) {
+    const x = obj(p)
+    if (x && str(x.polizaId)) otrasPolizas.push({ polizaId: x.polizaId as string, ramo: str(x.ramo), compania: str(x.compania), motivo: str(x.motivo) })
+  }
+  return {
+    semaforo, confianza: num(o.confianza), resumen: str(o.resumen),
+    preguntas: lista(o.preguntas).flatMap(q => (str(q) ? [q as string] : [])),
+    argumentos,
+    derivar: o.derivar === 'abogado' || o.derivar === 'perito_externo' ? o.derivar : null,
+    plazosAccion, otrasPolizas, explicacionCliente: str(o.explicacionCliente),
+  }
+}
+
+export const SEMAFORO_VISUAL: Record<Veredicto['semaforo'], { icono: string; etiqueta: string; color: string; fondo: string }> = {
+  defendible: { icono: '🟢', etiqueta: 'Defendible', color: 'var(--positive)', fondo: 'var(--positive-bg)' },
+  no_defendible: { icono: '🔴', etiqueta: 'No defendible', color: 'var(--negative)', fondo: 'var(--negative-bg)' },
+  faltan_datos: { icono: '🟡', etiqueta: 'Faltan datos', color: 'var(--warning)', fondo: 'var(--warning-bg)' },
+}
+export const ETIQUETA_DERIVAR = { abogado: 'Derivar a un abogado', perito_externo: 'Derivar a una empresa externa de peritación' } as const
+export const ETIQUETA_APOYO = { poliza: 'Póliza', ley: 'Ley', hechos: 'Hechos' } as const
+
+/** Confianza 0-1 o 0-100 → «80 %»; `null` = no se sabe. */
+export function textoConfianza(c: number | null): string {
+  if (c === null) return 'sin confianza indicada'
+  const p = c <= 1 ? c * 100 : c
+  return `${Math.round(Math.min(100, Math.max(0, p)))} %`
+}
+
+export type FichaPerito = { numeroInforme: number | null; fechaGestion: string | null; fechaProxGestion: string | null; importeCubierto: number | null; importeNoCubierto: number | null; origenCausas: string | null; afectados: number | null }
+
+export function leerFichaPerito(v: unknown): FichaPerito | null {
+  const o = obj(v)
+  if (!o) return null
+  return { numeroInforme: num(o.numeroInforme), fechaGestion: str(o.fechaGestion), fechaProxGestion: str(o.fechaProxGestion), importeCubierto: num(o.importeCubierto), importeNoCubierto: num(o.importeNoCubierto), origenCausas: str(o.origenCausas), afectados: num(o.afectados) }
+}
+
+/** La ficha del perito MÁS RECIENTE del hilo (por orden de aparición); `null` = ningún mensaje la trae. */
+export function ultimaFichaPerito(mensajes: readonly Mensaje[] | null): FichaPerito | null {
+  for (const m of [...(mensajes ?? [])].reverse()) {
+    const f = leerFichaPerito(m.meta?.fichaPerito)
+    if (f) return f
+  }
+  return null
+}
+
+export type TrozoVolcado = { emisor: string | null; rol: 'perito' | 'tramitador' | 'compania' | null; fechaOriginal: string | null; texto: string; huella: string; tipo: 'comentario' | 'rehuse'; duplicado: boolean; fichaPerito: FichaPerito | null }
+export type PropuestaVolcado = { trozos: TrozoVolcado[]; fichaPerito: FichaPerito | null; duplicados: number }
+
+export function leerPropuestaVolcado(v: unknown): PropuestaVolcado | null {
+  const o = obj(v)
+  if (!o || o.estado !== 'propuesta' || !Array.isArray(o.trozos)) return null
+  const trozos: TrozoVolcado[] = []
+  for (const t of o.trozos) {
+    const x = obj(t)
+    const texto = x ? str(x.texto) : null
+    const huella = x ? str(x.huella) : null
+    if (!x || !texto || !huella) continue
+    trozos.push({
+      emisor: str(x.emisor), rol: x.rol === 'perito' || x.rol === 'tramitador' || x.rol === 'compania' ? x.rol : null,
+      fechaOriginal: str(x.fechaOriginal), texto, huella, tipo: x.tipo === 'rehuse' ? 'rehuse' : 'comentario',
+      duplicado: x.duplicado === true, fichaPerito: leerFichaPerito(x.fichaPerito),
+    })
+  }
+  return { trozos, fichaPerito: leerFichaPerito(o.fichaPerito), duplicados: num(o.duplicados) ?? trozos.filter(t => t.duplicado).length }
+}
+
+/** Cuántos mensajes se guardarían (los duplicados se saltan). */
+export const trozosNuevos = (p: PropuestaVolcado): number => p.trozos.filter(t => !t.duplicado).length
+
+export type ResultadoVolcado = { insertados: number; duplicados: number; preRehuse: boolean }
+export function leerResultadoVolcado(v: unknown): ResultadoVolcado | null {
+  const o = obj(v)
+  if (!o || o.estado !== 'ok' || num(o.insertados) === null) return null
+  return { insertados: o.insertados as number, duplicados: num(o.duplicados) ?? 0, preRehuse: o.preRehuse === true }
+}
+
+/** ¿La respuesta del puerto avisa de un posible rehúse? (volcado confirmado o mensaje del hilo). */
+export const hayPreRehuse = (v: unknown): boolean => obj(v)?.preRehuse === true
+
+/** Texto del aviso de Telegram por un posible rehúse. */
+export function textoPreRehuse(referencia: string | null, url: string): string {
+  return `⚠️ Posible rehúse en el siniestro ${referencia ?? '(sin número)'}: actúa antes de que se formalice\n${url}`
+}
+
+export type Fragmento = { documentoId: string; nombre: string | null; posicion: number | null; fragmento: string }
+/** `documentos: 0` = la póliza no tiene PDF legible ≠ `fragmentos: []` = sin resultados. */
+export type ResultadoBusqueda = { documentos: number; fragmentos: Fragmento[] }
+
+export function leerBusquedaPoliza(v: unknown): ResultadoBusqueda | null {
+  const o = obj(v)
+  const documentos = o ? num(o.documentos) : null
+  if (!o || o.estado !== 'ok' || documentos === null || !Array.isArray(o.fragmentos)) return null
+  const fragmentos: Fragmento[] = []
+  for (const f of o.fragmentos) {
+    const x = obj(f)
+    if (x && str(x.documentoId) && str(x.fragmento)) fragmentos.push({ documentoId: x.documentoId as string, nombre: str(x.nombre), posicion: num(x.posicion), fragmento: x.fragmento as string })
+  }
+  return { documentos, fragmentos }
+}
+
+export type TrozoResaltado = { texto: string; marca: boolean }
+
+const sinAcentos = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+
+/** Parte el fragmento en trozos marcando las palabras (≥2 letras) de la consulta, sin distinguir mayúsculas ni acentos. */
+export function resaltarFragmento(fragmento: string, consulta: string): TrozoResaltado[] {
+  const palabras = [...new Set(sinAcentos(consulta).toLowerCase().split(/[^a-z0-9ñ]+/).filter(p => p.length >= 2))]
+  if (palabras.length === 0) return fragmento === '' ? [] : [{ texto: fragmento, marca: false }]
+  // NFD cambia la longitud: se compara por carácter (un carácter con acento sigue siendo UN carácter base).
+  const base = [...fragmento].map(c => sinAcentos(c).toLowerCase() || c.toLowerCase())
+  const plano = base.join('')
+  if (plano.length !== fragmento.length) return [{ texto: fragmento, marca: false }]
+  const marcado = new Array<boolean>(fragmento.length).fill(false)
+  for (const p of palabras) {
+    let i = plano.indexOf(p)
+    while (i !== -1) { for (let k = i; k < i + p.length; k++) marcado[k] = true; i = plano.indexOf(p, i + p.length) }
+  }
+  const out: TrozoResaltado[] = []
+  for (let i = 0; i < fragmento.length; i++) {
+    const ult = out[out.length - 1]
+    if (ult && ult.marca === marcado[i]) ult.texto += fragmento[i]
+    else out.push({ texto: fragmento[i], marca: marcado[i] })
+  }
+  return out
+}
+
+export type PartePortal = { id: string; fecha: string | null; descripcion: string | null; documentos: number | null }
+/** `null` = el hilo no trae el campo (no hay bloque); `[]` = el cliente no ha comunicado nada. */
+export function leerPartesPortal(v: unknown): PartePortal[] | null {
+  if (!Array.isArray(v)) return null
+  return v.flatMap(p => {
+    const x = obj(p)
+    return x && str(x.id) ? [{ id: x.id as string, fecha: str(x.fecha), descripcion: str(x.descripcion), documentos: Array.isArray(x.documentos) ? x.documentos.length : num(x.documentos) }] : []
+  })
+}
+
+export type DestinatarioIa = 'compania_intranet' | 'compania' | 'cliente'
+export const DESTINATARIOS_IA: { valor: DestinatarioIa; etiqueta: string }[] = [
+  { valor: 'compania_intranet', etiqueta: 'Intranet de la compañía (cordial)' },
+  { valor: 'compania', etiqueta: 'Correo a la compañía' },
+  { valor: 'cliente', etiqueta: 'Cliente' },
+]
+
+/** Emisor y fecha original de un mensaje volcado de la intranet (si existen). */
+export function origenVolcado(meta: Record<string, unknown> | null): { emisor: string | null; fechaOriginal: string | null } {
+  return { emisor: str(meta?.emisor), fechaOriginal: str(meta?.fechaOriginal) }
+}
+
+/** Texto de la caja al pulsar «Responder» en una pregunta del veredicto. */
+export const precargaPregunta = (pregunta: string): string => `Pregunta de la IA: ${pregunta}\nRespuesta: `
+
+/** Cuerpo del POST de valoración. */
+export function cuerpoValoracion(siniestroId: string, mensajeId: string, voto: 'bien' | 'mal', motivo: string): Record<string, unknown> {
+  const m = motivo.trim()
+  return { siniestroId, valoracion: { mensajeId, voto, ...(m !== '' ? { motivo: m } : {}) } }
 }

@@ -147,3 +147,18 @@ test('plazos, espera y contexto de la IA leen solo la versión vigente (hiloVige
   const ia = readFileSync(join(ROOT, 'apps/asegura/lib/siniestro-ia.ts'), 'utf8')
   assert.match(ia, /hiloVigente\(/, 'la IA lee solo la versión vigente')
 })
+
+test('volcado de la intranet: auditado() y con confirmar=false NO escribe (la propuesta sale antes de anadirMensajeSiniestro)', () => {
+  const ruta = readFileSync(join(ROOT, 'apps/asegura/app/api/operador/siniestro/hilo/volcado/route.ts'), 'utf8')
+  assert.match(ruta, /export const POST\s*=\s*auditado\(/, 'POST envuelto en auditado()')
+  const propuesta = ruta.search(/if\s*\(\s*!b\.confirmar\s*\)/)
+  const escritura = ruta.indexOf('anadirMensajeSiniestro(')
+  const retorno = ruta.indexOf("estado: 'propuesta'")
+  assert.ok(propuesta > 0 && escritura > 0 && retorno > 0, 'existen el guarda, la propuesta y la escritura')
+  assert.ok(propuesta < escritura, 'el guarda de confirmar va ANTES de escribir')
+  assert.ok(retorno > propuesta && retorno < escritura, 'la propuesta se devuelve antes de escribir')
+  assert.equal(ruta.split('anadirMensajeSiniestro(').length - 1, 1, 'una sola vía de escritura')
+  assert.deepEqual(escriturasProhibidas(ruta), [], 'sin UPDATE/DELETE')
+  assert.match(ruta, /typeof b\.confirmar !== 'boolean'/, 'confirmar tiene que ser booleano (no se escribe por omisión)')
+  assert.match(ruta, /huella/, 'salta los duplicados por huella')
+})

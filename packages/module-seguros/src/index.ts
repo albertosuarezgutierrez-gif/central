@@ -1720,9 +1720,79 @@ export {
 } from './siniestro-citas.ts'
 
 export {
+  CONOCIMIENTO_SINIESTROS,
+  CONOCIMIENTO_SINIESTROS_ESTADO,
+  CONOCIMIENTO_SINIESTROS_VERSION,
+} from './conocimiento-siniestros.ts'
+
+export {
+  encajarMeta,
+  extraerJson,
+  fichaCacheada,
+  hashTexto,
+  huellaDocumentos,
+  huellaHilo,
+  indiceCacheado,
+  metaGabinete,
+  textoVeredicto,
+  ultimoVeredicto,
+  validarFichaCaso,
+  validarIndicePoliza,
+  validarVeredicto,
+  verificarCitasIndice,
+  verificarCitasVeredicto,
+  FICHA_CASO_VERSION,
+  GABINETE_VERSION,
+  INDICE_POLIZA_VERSION,
+  MAX_EXCLUSIONES_INDICE,
+  MAX_GARANTIAS_INDICE,
+  type ApoyoArgumento,
+  type ArgumentoVeredicto,
+  type ExclusionIndice,
+  type FichaCaso,
+  type FichaCasoCacheada,
+  type GarantiaIndice,
+  type IndicePoliza,
+  type IndicePolizaCacheado,
+  type ResultadoVeredicto,
+  type SemaforoVeredicto,
+  type Veredicto,
+} from './siniestro-gabinete.ts'
+
+export {
+  diaMadridDeIso,
+  fechaOriginalDe,
   hiloVigente,
+  instanteEfectivo,
   mapaSustituidoPor,
   sustituyeADe,
   type MensajeConVersion,
   type MensajeVigente,
 } from './siniestro-hilo-versiones.ts'
+
+export {
+  fichaInformePerito,
+  huellaMensaje,
+  importeEspanol,
+  rolDeEmisor,
+  trocearVolcadoIntranet,
+  type FichaInformePerito,
+  type RolEmisorVolcado,
+  type TrozoVolcado,
+} from './siniestro-volcado.ts'
+
+export { buscarEnTexto, plegar as plegarTexto, type FragmentoBusqueda } from './siniestro-buscar.ts'
+
+export {
+  CLAVES_META_PRIVADAS,
+  FACTOR_CIFRADO,
+  correccionesDeValoraciones,
+  desempaquetarMetaPrivado,
+  detectarPreRehuse,
+  empaquetarMetaPrivado,
+  esValoracion,
+  metaConPrivadoEnClaro,
+  tienePrivado,
+  validarValoracion,
+  type ValoracionAnalisis,
+} from './siniestro-privado.ts'
