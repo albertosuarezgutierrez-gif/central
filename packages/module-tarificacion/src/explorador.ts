@@ -80,6 +80,11 @@ export type EntradaExploracion = {
   pestana: string
   productoMenu: string
   avancesAutorizados: readonly AvanceAutorizado[]
+  /**
+   * ePAC (28/10/2026): el diálogo «Atención» que propone ALARGAR el término se cierra por CÓDIGO antes de cada paso («Cancelar» o
+   * «×», nunca «Aceptar»; `cerrarDialogoTerminoEpac` del worker). Sin la clave = no se toca.
+   */
+  cierraDialogoTermino?: true
   /** Avances por identidad exacta del control (ver {@link AvancePorId}). Sin la clave = ninguno. */
   avancesPorId?: readonly AvancePorId[]
   /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
@@ -134,6 +139,7 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'allianz', ramo: 'patinete', producto: 'patinete', pestana: 'Autos', productoMenu: 'Movilidad Personal',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
     avancesPorId: Object.freeze([SIGUIENTE_EPAC_DRVP00]),
+    cierraDialogoTermino: true as const,
     tomadorMediador: true as const,
   }),
   // Mapfre Patinetes (28/10/2026): Portal Digital de Mediadores › «Nueva producción» › «Automóviles» › tarjeta «Patinetes» ›
@@ -909,7 +915,10 @@ function esControlTexto(el: ElementoInventario): boolean {
 function esAvanzable(el: ElementoInventario): boolean {
   if (el.tag === 'button') return true
   if (el.tag === 'input') return ['submit', 'button'].includes((el.type ?? '').toLowerCase())
-  if (el.role === 'button' || el.role === 'tab') return true
+  // Entradas de MENÚ (28/10/2026, Mapfre NSE: menú lateral de `<a>`): role menuitem/link (el inventario marca `link` a un <a href>)
+  // o un <a> con onclick (el de un `href="javascript:…"` viaja como onclick). El guard y `bloqueoAvance` siguen mirando cada una.
+  if (el.role === 'button' || el.role === 'tab' || el.role === 'menuitem' || el.role === 'link') return true
+  if (el.tag === 'a' && typeof el.onclick === 'string' && el.onclick.trim() !== '') return true
   return el.tag === 'td' && typeof el.onclick === 'string'
 }
 

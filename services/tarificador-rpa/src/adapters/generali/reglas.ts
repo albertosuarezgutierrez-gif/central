@@ -1798,3 +1798,61 @@ export function motivoFaltaDatoPersonaGenerali(etiqueta: string, campo: string, 
   const motivo = omitidos.find((o) => o.startsWith(`${campo}:`))?.slice(campo.length + 1)
   return `${etiqueta} (el riesgo lo trae pero el campo no se pudo escribir: ${motivo ?? 'sin motivo leído'})`
 }
+
+// ───────────────────────── «Compañía de procedencia»: nombre de la ficha → opción del desplegable (v0.2.48) ─────────────────────────
+
+/** Palabras que no identifican a una compañía (forma jurídica, «seguros», artículos). Se quitan para comparar la razón social. */
+const PALABRAS_VACIAS_COMPANIA = new Set(['S', 'A', 'SA', 'SAU', 'SL', 'SLU', 'DE', 'DEL', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'E', 'CIA', 'COMPANIA', 'SEGUROS', 'SEGURO', 'REASEGUROS', 'REASEGURO', 'SOCIEDAD', 'ANONIMA', 'SUCURSAL', 'EN'])
+
+/** Palabras significativas de una razón social: MAYÚSCULAS, sin tildes ni puntuación, sin forma jurídica ni «seguros». PURA. */
+export function palabrasCompaniaGenerali(t: string | null | undefined): string[] {
+  return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim().split(' ').filter((p) => p !== '' && !PALABRAS_VACIAS_COMPANIA.has(p))
+}
+
+/**
+ * Alias de las compañías habituales: cómo puede venir en la ficha (`claves`, ya en palabras significativas), la opción EXACTA que se espera en
+ * Genernet (si no está tal cual, se cae a la regla de razón social) y la `raiz` de su razón social. Única fuente.
+ */
+export const ALIAS_COMPANIAS_GENERALI: readonly { claves: readonly string[]; opcion: string; raiz: readonly string[] }[] = Object.freeze([
+  { claves: ['ALLIANZ'], opcion: 'ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO', raiz: ['ALLIANZ'] },
+  { claves: ['MAPFRE', 'MAPFRE ESPANA'], opcion: 'MAPFRE ESPAÑA, COMPAÑIA DE SEGUROS Y REASEGUROS', raiz: ['MAPFRE'] },
+  { claves: ['AXA', 'AXA GENERALES'], opcion: 'AXA SEGUROS GENERALES, S.A. DE SEGUROS Y REASEGUROS', raiz: ['AXA'] },
+  { claves: ['GENERALI', 'GENERALI ESPANA'], opcion: 'GENERALI ESPAÑA, S.A. DE SEGUROS Y REASEGUROS', raiz: ['GENERALI'] },
+  { claves: ['REALE', 'REALE GENERALES'], opcion: 'REALE SEGUROS GENERALES, S.A.', raiz: ['REALE'] },
+  { claves: ['LIBERTY'], opcion: 'LIBERTY SEGUROS, COMPAÑIA DE SEGUROS Y REASEGUROS, S.A.', raiz: ['LIBERTY'] },
+  { claves: ['MUTUA MADRILENA', 'MUTUA MADRILENA AUTOMOVILISTA'], opcion: 'MUTUA MADRILEÑA AUTOMOVILISTA, SOCIEDAD DE SEGUROS A PRIMA FIJA', raiz: ['MUTUA', 'MADRILENA'] },
+  { claves: ['ZURICH'], opcion: 'ZURICH INSURANCE PLC, SUCURSAL EN ESPAÑA', raiz: ['ZURICH'] },
+  { claves: ['CATALANA OCCIDENTE', 'OCCIDENTE'], opcion: 'SEGUROS CATALANA OCCIDENTE, S.A. DE SEGUROS Y REASEGUROS', raiz: ['CATALANA', 'OCCIDENTE'] },
+  { claves: ['LINEA DIRECTA', 'LINEA DIRECTA ASEGURADORA'], opcion: 'LINEA DIRECTA ASEGURADORA, S.A. COMPAÑIA DE SEGUROS Y REASEGUROS', raiz: ['LINEA', 'DIRECTA'] },
+])
+
+export type OpcionCompaniaGenerali =
+  | { indice: number; via: 'exacta' | 'alias' | 'razon_social' }
+  | { error: 'ninguna' | 'varias'; candidatas: string[] }
+
+/**
+ * Prueba real 28/10/2026 (0.2.47): la ficha dice «Allianz» y Genernet ofrece «ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO» (y también
+ * «ALIANZA ESPAÑOLA, S.A. DE SEGUROS, LA»). Orden: 1) texto EXACTO normalizado; 2) la opción EXACTA del alias de la compañía; 3) razón social:
+ * la ÚNICA opción cuyas primeras palabras significativas son, como palabras COMPLETAS, las del nombre de la ficha (o la raíz del alias)
+ * — «ALLIANZ» nunca casa «ALIANZA». 0 o >1 candidatas → error con las candidatas (el bot para; nunca a ciegas). PURA.
+ */
+export function opcionCompaniaProcedenciaGenerali(opciones: readonly string[], compania: string): OpcionCompaniaGenerali {
+  const exacta = indiceOpcionNormalizadaGenerali(opciones, [compania])
+  if (exacta >= 0) return { indice: exacta, via: 'exacta' }
+  const ficha = palabrasCompaniaGenerali(compania)
+  if (ficha.length === 0) return { error: 'ninguna', candidatas: [] }
+  const alias = ALIAS_COMPANIAS_GENERALI.find((a) => a.claves.includes(ficha.join(' ')))
+  if (alias) {
+    // EXACTA: todas las palabras (solo se ignoran tildes, mayúsculas y puntuación).
+    const entera = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim()
+    const objetivo = entera(alias.opcion)
+    const ix = opciones.map((o, i) => (entera(o) === objetivo ? i : -1)).filter((i) => i >= 0)
+    if (ix.length === 1) return { indice: ix[0]!, via: 'alias' }
+  }
+  // Primero el nombre de la ficha tal cual; solo si no casa ninguna, la raíz del alias (más corta, más ambigua).
+  const porRaiz = (r: readonly string[]) => opciones.map((o, i) => { const p = palabrasCompaniaGenerali(o); return r.every((w, k) => p[k] === w) ? i : -1 }).filter((i) => i >= 0)
+  let ix = porRaiz(ficha)
+  if (ix.length === 0 && alias) ix = porRaiz(alias.raiz)
+  if (ix.length === 1) return { indice: ix[0]!, via: 'razon_social' }
+  return { error: ix.length === 0 ? 'ninguna' : 'varias', candidatas: ix.map((i) => opciones[i]!) }
+}

@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarificacion'
-import { cerrarFaseEntrada, instalarGuardEmision, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
+import { cerrarDialogoTerminoEpac, cerrarFaseEntrada, instalarGuardEmision, pulsarMenuOfertaNseMapfre, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import { bucleExploracion, EXPLORADOR_VERSION, type ContextoBucle } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
@@ -50,6 +50,7 @@ let base = ''
 let peticiones: Peticion[] = []
 let figuras = FIGURAS()
 let landing = LANDING(HREF_NSE)
+let menuNse = ''
 let browser: Browser
 
 before(async () => {
@@ -63,6 +64,7 @@ before(async () => {
       if (ruta === '/drvp00/SEAServlet') return void res.end(req.method === 'POST' ? RESULTADO : figuras)
       if (ruta === '/otro/SEAServlet') return void res.end(figuras)
       if (ruta === '/landing') return void res.end(landing)
+      if (ruta === '/EVT21_NSE_FWEB/inicio.jsp' || ruta === '/otra/inicio.jsp') return void res.end(menuNse)
       if (ruta === '/nse-form') return void res.end(PAGINA('<p>Formulario NSE (sintético)</p>'))
       res.end(PAGINA('<h1>404</h1>'))
     })
@@ -95,7 +97,6 @@ async function abrir(ruta: string): Promise<{ context: BrowserContext; page: Pag
   return { context, page, guard }
 }
 
-test('versión del explorador 0.3.3', () => assert.equal(EXPLORADOR_VERSION, '0.3.3'))
 
 // ─── 1) Mapfre «Acceso a NSE» ────────────────────────────────────────────────
 
@@ -491,6 +492,118 @@ test('seguridad 2a: el BUCLE marca el precio visto si el inventario de un paso t
     assert.equal(precioVistoEn(guard), false)
     await bucleExploracion(page, contexto(page, guard, () => respuesta([{ accion: 'parar', motivo: 'ambiguo' }])))
     assert.equal(precioVistoEn(guard), true)
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── 0.3.4 (real 28/10/2026, main-63b6680) ──────────────────────────────────────────────────────────────────
+
+test('versión 0.3.4', () => assert.equal(EXPLORADOR_VERSION, '0.3.4'))
+
+const DIALOGO = (texto: string, botones: string) => `<div class="modal" role="dialog" aria-labelledby="tt" id="dlg"><h4 id="tt">Atención</h4><p>${texto}</p>${botones}</div>
+  <script>window.pulsados = []; document.querySelectorAll('#dlg button').forEach((b) => b.addEventListener('click', () => { window.pulsados.push(b.textContent); document.getElementById('dlg').remove() }))</script>`
+const BOTONES = '<button type="button">×</button><button type="button" id="buttonOkPopup">Aceptar</button><button type="button">Cancelar</button>'
+const TERMINO = '¿Desea alargar el término 1 mes más?'
+
+test('0.3.4 · ePAC: el diálogo «Atención» de alargar el término se cierra por CÓDIGO con «Cancelar» (nunca Aceptar) antes de preguntar a la IA', async () => {
+  figuras = FIGURAS().replace('</form>', `</form>${DIALOGO(TERMINO, BOTONES)}`)
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    let vistoDialogo: boolean | null = null
+    const fin = await bucleExploracion(page, contexto(page, guard, (inv) => {
+      vistoDialogo = elementos(inv).some((e) => e.dialogo === 'Atención')
+      return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+    }))
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(vistoDialogo, false, 'la IA ya no ve el diálogo')
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { pulsados: string[] }).pulsados), ['Cancelar'])
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.4 · ePAC: sin «Cancelar», cierra con «×»; un «Atención» de OTRA cosa u otra entrada no se toca', async () => {
+  figuras = FIGURAS().replace('</form>', `</form>${DIALOGO(TERMINO, '<button type="button" id="buttonOkPopup">Aceptar</button><button type="button">×</button>')}`)
+  {
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      assert.equal(await cerrarDialogoTerminoEpac(page, guard), true)
+      assert.deepEqual(await page.evaluate(() => (window as unknown as { pulsados: string[] }).pulsados), ['×'])
+    } finally {
+      await context.close()
+    }
+  }
+  figuras = FIGURAS().replace('</form>', `</form>${DIALOGO('¿Desea emitir la póliza ahora?', BOTONES)}`)
+  {
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      assert.equal(await cerrarDialogoTerminoEpac(page, guard), false)
+      assert.deepEqual(await page.evaluate(() => (window as unknown as { pulsados: string[] }).pulsados), [])
+    } finally {
+      await context.close()
+    }
+  }
+  figuras = FIGURAS().replace('</form>', `</form>${DIALOGO(TERMINO, BOTONES)}`)
+  {
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      // Otra entrada (Hogar) no tiene `cierraDialogoTermino`: el bucle no lo cierra.
+      await bucleExploracion(page, { ...contexto(page, guard, () => respuesta([{ accion: 'parar', motivo: 'ambiguo' }])), entrada: 'allianz:particulares:hogar', ramo: 'hogar' })
+      assert.deepEqual(await page.evaluate(() => (window as unknown as { pulsados: string[] }).pulsados), [])
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+const MENU_NSE = (extra = '') => PAGINA(`<a onclick="toggleFilter()">Ocultar menú</a>
+  <a href="#" id="m1">Búsqueda de Respuestas y Gestión</a><a href="#" id="m2">Oferta / Contratación</a><a href="javascript:verMultiprecio()" id="m3">Oferta Multiprecio</a>
+  <a href="#" id="m4">Contratar póliza</a>${extra}
+  <script>window.ido = []; document.querySelectorAll('a').forEach((a) => a.addEventListener('click', (ev) => { ev.preventDefault(); window.ido.push(a.textContent) })); function verMultiprecio(){}</script>`)
+
+test('0.3.4 · Mapfre NSE: «Oferta / Contratación» pasa SOLO por su puerta (texto exacto, app NSE, entrada abierta, una vez); `pulsar` genérico lo bloquea', async () => {
+  menuNse = MENU_NSE()
+  const { context, page, guard } = await abrir('/EVT21_NSE_FWEB/inicio.jsp')
+  try {
+    await assert.rejects(pulsar(page.locator('#m2'), guard), EmisionBloqueadaError)
+    await pulsarMenuOfertaNseMapfre(page.locator('#m2'), guard, 'mapfre')
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { ido: string[] }).ido), ['Oferta / Contratación'])
+    await assert.rejects(pulsarMenuOfertaNseMapfre(page.locator('#m2'), guard, 'mapfre'), /ya se usó/)
+  } finally {
+    await context.close()
+  }
+  const casos: [string, string, string, string, ((g: GuardEmision) => void)?][] = [
+    ['Contratar póliza (otro texto)', '/EVT21_NSE_FWEB/inicio.jsp', '#m4', 'mapfre'],
+    ['otra entrada de menú inocua', '/EVT21_NSE_FWEB/inicio.jsp', '#m1', 'mapfre'],
+    ['href con contratar', '/EVT21_NSE_FWEB/inicio.jsp', '#m5', 'mapfre'],
+    ['fuera de la app NSE', '/otra/inicio.jsp', '#m2', 'mapfre'],
+    ['otra compañía', '/EVT21_NSE_FWEB/inicio.jsp', '#m2', 'allianz'],
+    ['fase de entrada cerrada', '/EVT21_NSE_FWEB/inicio.jsp', '#m2', 'mapfre', cerrarFaseEntrada],
+  ]
+  for (const [nombre, ruta, sel, compania, prep] of casos) {
+    menuNse = MENU_NSE('<a id="m5" href="javascript:contratarPoliza()">Oferta / Contratación</a>')
+    const { context, page, guard } = await abrir(ruta)
+    try {
+      prep?.(guard)
+      await assert.rejects(pulsarMenuOfertaNseMapfre(page.locator(sel), guard, compania), EmisionBloqueadaError, nombre)
+      assert.deepEqual(await page.evaluate(() => (window as unknown as { ido: string[] }).ido), [], nombre)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.3.4 · inventario: <a href> de menú sale como role=link y `javascript:` como onclick (para que la IA elija el producto)', async () => {
+  menuNse = MENU_NSE()
+  const { context, page } = await abrir('/EVT21_NSE_FWEB/inicio.jsp')
+  try {
+    const cap = (await capturarInventarioExploracion(page))!
+    const els = elementos(cap.inventario)
+    assert.equal(els.find((e) => e.id === 'm1')?.role, 'link')
+    assert.equal(els.find((e) => e.id === 'm3')?.onclick, 'javascript:verMultiprecio()')
+    await cap.liberar()
   } finally {
     await context.close()
   }

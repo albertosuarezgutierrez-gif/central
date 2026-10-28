@@ -156,3 +156,28 @@ describe('seguridad 2a · precio pegajoso en la validación pura', () => {
     expect(JSON.stringify(val(dos))).toMatch(/avance_por_id_con_precio/)
   })
 })
+
+describe('0.3.4 · entradas de menú avanzables (Mapfre NSE)', () => {
+  const MPF = 'mapfre:automoviles:patinetes'
+  const i = sanearInventarioDom({ marcos: [{ url: 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/inicio.jsp', nombre: null, titulos: [], elementos: [
+    { tag: 'a', role: 'link', texto: 'MásPatín' },
+    { tag: 'a', role: 'menuitem', texto: 'Oferta Multiprecio' },
+    { tag: 'a', onclick: 'javascript:verProducto()', texto: 'Patinetes' },
+    { tag: 'a', role: 'link', texto: 'Contratar póliza' },
+    { tag: 'a', texto: 'Sin nada' },
+    { tag: 'a', role: 'link', texto: 'Aceptar' },
+  ] }] }, undefined, { refs: true })!
+  const refs = i.marcos[0].elementos.map((e) => e.ref!)
+  const av = (r: string) => validarRespuestaExplorador(
+    { version: 1, pantalla: { nombre: 'NSE', tipo: 'seleccion_producto' }, acciones: [{ accion: 'avanzar', ref: r, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null },
+    { inventario: i, ramo: 'patinete', entrada: MPF, datosReales: null },
+  )
+  it('link, menuitem y <a onclick> se pueden pulsar; emisión, «Aceptar» y un <a> sin nada, no', () => {
+    expect(av(refs[0]).ok).toBe(true)
+    expect(av(refs[1]).ok).toBe(true)
+    expect(av(refs[2]).ok).toBe(true)
+    expect(JSON.stringify(av(refs[3]))).toMatch(/boton_de_emision/)
+    expect(JSON.stringify(av(refs[4]))).toMatch(/no es un botón/)
+    expect(JSON.stringify(av(refs[5]))).toMatch(/aceptar_no_autorizado/)
+  })
+})

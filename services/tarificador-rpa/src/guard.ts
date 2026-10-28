@@ -1080,6 +1080,40 @@ export async function pulsarAccesoNseMapfre(boton: Locator, guard: GuardEmision,
   guard.comprobar()
 }
 
+/** Entrada de menú de la aplicación NSE de Mapfre que lleva a las ofertas (MásPatín). Texto EXACTO. */
+export const TEXTO_MENU_OFERTA_NSE_MAPFRE = 'Oferta / Contratación'
+/** Ruta (prefijo) de la aplicación NSE de Mapfre (real 28/10/2026: `/EVT21_NSE_FWEB/inicio.jsp`). */
+const RUTA_APP_NSE_MAPFRE = '/EVT21_NSE_FWEB/'
+
+/**
+ * «OFERTA / CONTRATACIÓN» DEL MENÚ DE LA APLICACIÓN NSE DE MAPFRE (real 28/10/2026, patinete: primera pantalla tras «Acceso a NSE»).
+ * Su texto contiene «contrat» y el guard lo bloquea; es la entrada de menú a la OFERTA (donde se elige MásPatín), no un contrato.
+ * El ÚNICO camino para pulsarla. Exige: guard limpio y ventanas de red cerradas; fase de ENTRADA abierta; compañía `mapfre`; el
+ * control VIVO dentro de la aplicación NSE (ruta `/EVT21_NSE_FWEB/…` de SU documento); EXACTAMENTE un control; texto visible EXACTO
+ * «Oferta / Contratación»; una vez por trabajo; y `comprobarBoton` sobre todas sus descripciones salvo las que son EXACTAMENTE ese
+ * texto (un href/onclick/id con «contrat», emitir, pagar… sigue bloqueando). La red sigue con el guard de siempre.
+ */
+export async function pulsarMenuOfertaNseMapfre(boton: Locator, guard: GuardEmision, compania: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'menú NSE con la ventana de emisión, de avance o de guardado abierta')
+  if (ENTRADA_CERRADA.has(guard)) throw new EmisionBloqueadaError('fase', 'menú NSE fuera de la fase de entrada')
+  await exigirSinCuentaBancaria(boton.page())
+  if (compania !== 'mapfre') throw new EmisionBloqueadaError('boton', `menú NSE no autorizado para ${String(compania).slice(0, 40)}`)
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'menú NSE: no hay exactamente un control')
+  const ruta = await boton.evaluate((el) => el.ownerDocument.location.pathname).catch(() => '')
+  if (!ruta.toUpperCase().startsWith(RUTA_APP_NSE_MAPFRE)) throw new EmisionBloqueadaError('boton', 'menú NSE: el control no está en la aplicación NSE')
+  const desc = await descripcion(boton)
+  const exacto = textoEntrada(TEXTO_MENU_OFERTA_NSE_MAPFRE)
+  if (textoEntrada(desc[0]) !== exacto) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('entrada:menu_oferta_nse')) throw new EmisionBloqueadaError('fase', 'el menú «Oferta / Contratación» ya se usó en este trabajo')
+  comprobarBoton(desc.filter((d) => textoEntrada(d) !== exacto))
+  usados.add('entrada:menu_oferta_nse')
+  AVANCES_USADOS.set(guard, usados)
+  await boton.click()
+  guard.comprobar()
+}
+
 // ─────────── Mapfre NSEI · diálogo «Selección de vehículo» (Alberto, 14/10/2026) ───────────
 
 /** El diálogo de Mapfre tras teclear la matrícula (grabación 13/10/2026). Solo lo nombra este fichero para PULSAR. */
@@ -2948,6 +2982,51 @@ export async function pulsarGuardadoPresupuesto(
 export const SELECTOR_DIALOGO = 'dialog,[role=dialog],[aria-modal=true],mat-dialog-container,.modal-dialog,.modal'
 /** Controles pulsables que se cuentan como CANDIDATOS dentro de un diálogo (los del inventario que tienen texto). */
 const SELECTOR_PULSABLES_DIALOGO = 'button,a[role=button],[role=button],[role=tab],td[onclick]'
+
+/** Tope de cierres del diálogo «Atención» del término (ePAC) por trabajo. */
+export const MAX_CIERRES_DIALOGO_TERMINO = 3
+/** Texto (plano) del diálogo «Atención» de ePAC que propone ALARGAR/AMPLIAR el término (Movilidad Personal, 28/10/2026). */
+export const RE_DIALOGO_TERMINO = /(alarg|ampli|prorrog)[a-z]*\b.*\btermino\b/
+
+/**
+ * CIERRE DETERMINISTA del diálogo «Atención» de ePAC que pregunta si alargar el término (real 28/10/2026, explorador de Movilidad
+ * Personal: la IA quiso pulsar su «Aceptar» `#buttonOkPopup` → `aceptar_no_autorizado`; con «Cancelar» el flujo sigue). Busca en
+ * TODOS los marcos un control VISIBLE de texto EXACTO «Cancelar» (o, si no hay ninguno, «×») dentro de un diálogo cuyo título
+ * vivo es EXACTAMENTE «Atención» y cuyo texto casa con `RE_DIALOGO_TERMINO`. Exactamente uno; lo pulsa por `pulsar()` (el guard de
+ * siempre: nunca un «Aceptar», que además ni se busca). Como mucho `MAX_CIERRES_DIALOGO_TERMINO` por trabajo. `false` = no había.
+ */
+export async function cerrarDialogoTerminoEpac(page: Page, guard: GuardEmision): Promise<boolean> {
+  guard.comprobar()
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const hechos = [...usados].filter((u) => u.startsWith('dialogo_termino#')).length
+  if (hechos >= MAX_CIERRES_DIALOGO_TERMINO) return false
+  const plano = (t: string | null | undefined) => (t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  for (const exacto of ['cancelar', '×']) {
+    const candidatos: Locator[] = []
+    for (const f of marcosVivos(page)) {
+      const l = f.locator('button,[role=button],a,input[type=button]')
+      const n = await l.count().catch(() => 0)
+      for (let i = 0; i < n; i++) {
+        const c = l.nth(i)
+        if (!(await c.isVisible().catch(() => false))) continue
+        const d = await c.evaluate((e) => ({ t: (e as HTMLElement).innerText || (e as HTMLInputElement).value || e.textContent || '', a: e.getAttribute('aria-label') })).catch(() => null)
+        if (!d || plano(d.t) !== exacto) continue
+        const titulo = await c.evaluate(tituloDialogoVivo, SELECTOR_DIALOGO).catch(() => null)
+        if (plano(titulo) !== 'atencion') continue
+        const texto = await c.evaluate((e, sel) => { const dl = e.closest(sel) as HTMLElement | null; return dl ? (dl.innerText || dl.textContent || '') : '' }, SELECTOR_DIALOGO).catch(() => '')
+        if (!RE_DIALOGO_TERMINO.test(plano(texto))) continue
+        candidatos.push(c)
+      }
+    }
+    if (candidatos.length === 0) continue
+    if (candidatos.length > 1) throw new EmisionBloqueadaError('boton', `diálogo «Atención» del término: ${candidatos.length} controles «${exacto}» (ambiguo, no se pulsa)`)
+    usados.add(`dialogo_termino#${hechos + 1}`)
+    AVANCES_USADOS.set(guard, usados)
+    await pulsar(candidatos[0]!, guard)
+    return true
+  }
+  return false
+}
 
 /**
  * RADIO OCULTO DE UNA ETIQUETA (`controlOcultoDeEtiqueta`; vive aquí porque solo guard.ts nombra radios: lo usan el inventario de

@@ -61,6 +61,7 @@ import {
   OPCIONES_SIN_SEGURO_GENERALI,
   indiceOpcionNormalizadaGenerali,
   companiaProcedenciaPedidaGenerali,
+  opcionCompaniaProcedenciaGenerali,
   sanearFragmentoGenerali,
   resumenEstadoCalculoGenerali,
   formaPagoPedidaGenerali,
@@ -278,6 +279,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.48 (28/10/2026, prueba real con 0.2.47): pasó «Datos personas» y paró en «Compañía de procedencia»: la ficha dice «Allianz» y Genernet
+ * ofrece «ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO» (y «ALIANZA ESPAÑOLA, S.A. DE SEGUROS, LA»). `opcionCompaniaProcedenciaGenerali` (pura):
+ * exacta → opción exacta del alias de la compañía habitual → la ÚNICA opción cuya razón social empieza por las palabras COMPLETAS del nombre de
+ * la ficha. 0 o varias → para con las candidatas y las opciones vistas. El aviso dice por qué vía se eligió.
+ */
+/**
  * 0.2.47 (28/10/2026, prueba real con 0.2.46, trabajo ec49068b): pasó el selector y paró en «Datos personas» con nombre, apellidos, sexo y
  * fechas «deshabilitado». El volcado: TODOS los controles (también NIF y tipo de persona) `disabled` con `controlbloqueo="1"`: el `onchange`
  * del NIF (`TratarDependiente(… '/refreshSelPersonas.do')`) bloquea el formulario hasta que vuelve el refresco y el bot leyó a los 1,5 s. Ahora
@@ -361,7 +368,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.47'
+export const VERSION_GENERALI_AUTO = '0.2.48'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -537,10 +544,17 @@ export async function rellenarTipoYProcedenciaGenerali(raiz: Raiz, form: Formula
         ? { error: new ErrorMapaIncompletoGenerali(`la opción de «sin seguro anterior» de «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}» (la ficha dice 0 años asegurado y no hay opción exacta; opciones vistas: ${opcionesVistasGenerali(ops)})`) }
         : { indice: i, aviso: `${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}: ${ops[i]!.trim()} (la ficha dice que no tenía seguro anterior)` }
     }
-    const i = indiceOpcionNormalizadaGenerali(ops, [p.compania])
-    return i < 0
-      ? { error: new ErrorMapaIncompletoGenerali(`la compañía «${sanearFragmentoGenerali(p.compania).slice(0, 60)}» de la ficha en «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}» (no existe exactamente; opciones vistas: ${opcionesVistasGenerali(ops, 40)})`) }
-      : { indice: i, aviso: `${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}: ${ops[i]!.trim()} (compañía anterior de la ficha)` }
+    // v0.2.48: exacta → alias de la compañía → razón social por palabra COMPLETA (única); 0 o varias → para con las opciones.
+    const r = opcionCompaniaProcedenciaGenerali(ops, p.compania)
+    const nombre = sanearFragmentoGenerali(p.compania).slice(0, 60)
+    if ('error' in r) {
+      const que = r.error === 'varias'
+        ? `casan varias por razón social: ${r.candidatas.map((c) => `«${sanearFragmentoGenerali(c).slice(0, 60)}»`).join(' · ')}`
+        : 'ninguna casa ni exacta, ni por alias, ni por razón social'
+      return { error: new ErrorMapaIncompletoGenerali(`la compañía «${nombre}» de la ficha en «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}» (${que}; opciones vistas: ${opcionesVistasGenerali(ops, 40)})`) }
+    }
+    const como = r.via === 'exacta' ? '' : r.via === 'alias' ? ` «${nombre}», por alias` : ` «${nombre}», por razón social`
+    return { indice: r.indice, aviso: `${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}: ${ops[r.indice]!.trim()} (compañía anterior de la ficha${como})` }
   })
   return avisos
 }
