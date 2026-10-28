@@ -601,6 +601,11 @@ model Siniestro {
   /// SQL 2026-10-03d). La fila se CONSERVA; toda lectura de ficha/portal filtra `null`.
   fusionadoEnSiniestroId    String?   @map("fusionado_en_siniestro_id") @db.Uuid
   fusionadoAt               DateTime? @map("fusionado_at") @db.Timestamptz(6)
+  /// Cierre con resultado (SQL 2026-10-28d). NULL = sin cerrar con resultado, NO «perdido».
+  /// `resultado` y `resultadoAt` van juntos (CHECK). Lo escribe PATCH `/api/operador/siniestro/cierre`.
+  resultado                 String?   @map("resultado")
+  resultadoMotivo           String?   @map("resultado_motivo")
+  resultadoAt               DateTime? @map("resultado_at") @db.Timestamptz(6)
 
   correduria      Correduria               @relation(fields: [correduriaId], references: [id])
   cliente         Cliente                  @relation(fields: [clienteId], references: [id])
@@ -612,6 +617,26 @@ model Siniestro {
   partesPortal    PortalParteSiniestro[]
 
   @@map("siniestros")
+}
+
+/// Hilo de conversación del siniestro (SQL 2026-10-28d): SOLO-AÑADIR (trigger + GRANT sin UPDATE/DELETE).
+/// `texto` va CIFRADO (`encryptField`, como `lugarDireccion`). Sin relaciones Prisma a propósito: las FK viven en la
+/// BD y así no se toca el modelo de `Siniestro`/`Documento`. Escritura ÚNICA: `anadirMensajeSiniestro()`
+/// (`lib/siniestro-hilo.ts`). Cepo `test/regression-siniestro-hilo.test.ts`.
+model SiniestroMensaje {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  siniestroId  String   @map("siniestro_id") @db.Uuid
+  autor        String
+  tipo         String
+  texto        String // cifrado
+  documentoId  String?  @map("documento_id") @db.Uuid
+  creadoPor    String   @map("creado_por")
+  creadoAt     DateTime @default(now()) @map("creado_at") @db.Timestamptz(6)
+  meta         Json?
+
+  @@index([siniestroId, creadoAt])
+  @@map("siniestro_mensajes")
 }
 
 /// Terceros y testigos de un siniestro — el hueco que faltaba frente al CRM
