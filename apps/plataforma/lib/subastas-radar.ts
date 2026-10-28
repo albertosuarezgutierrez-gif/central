@@ -21,6 +21,7 @@ import {
   type TipoSubasta,
 } from '@central/module-subastas'
 import { paramsCoste } from '@/lib/subastas/params-coste'
+import { perfilDesdeFila } from '@/lib/subastas/perfil-criterios'
 
 export interface FilaCriterios {
   cuenta_id: string
@@ -187,8 +188,8 @@ export async function cuentasConRadar(): Promise<FilaCriterios[]> {
     SELECT cuenta_id, provincias, palabras_clave, tipos, precio_min, precio_max,
            descuento_min, excluir_ocupadas,
            financia_pct, financia_tipo_anual, financia_meses, financia_comision,
-           municipios, solo_unifamiliar, dormitorios_min, banos_min, superficie_parcela_min, requiere_piscina
-    FROM subastas_criterios WHERE activo = true
+           to_jsonb(c) AS fila
+    FROM subastas_criterios c WHERE activo = true
   `)
   return filas.map((f) => ({
     cuenta_id: f.cuenta_id,
@@ -201,13 +202,9 @@ export async function cuentasConRadar(): Promise<FilaCriterios[]> {
       precioMax: f.precio_max == null ? undefined : Number(f.precio_max),
       descuentoMin: f.descuento_min ?? 0,
       excluirOcupadas: f.excluir_ocupadas ?? false,
-      // Perfil de inversión: vacío / null / false = no filtra.
-      municipios: f.municipios ?? [],
-      soloUnifamiliar: f.solo_unifamiliar ?? false,
-      dormitoriosMin: f.dormitorios_min == null ? undefined : Number(f.dormitorios_min),
-      banosMin: f.banos_min == null ? undefined : Number(f.banos_min),
-      superficieParcelaMin: f.superficie_parcela_min == null ? undefined : Number(f.superficie_parcela_min),
-      requierePiscina: f.requiere_piscina ?? false,
+      // Perfil de inversión: sale del jsonb de la fila, así que sin la migración
+      // (columnas inexistentes) queda vacío = no filtra.
+      ...perfilDesdeFila(f.fila),
     },
   }))
 }

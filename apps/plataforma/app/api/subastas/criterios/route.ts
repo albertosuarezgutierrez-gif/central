@@ -89,18 +89,60 @@ export async function PUT(req: NextRequest) {
     return n != null && n > 0 ? n : null
   }
 
+  const financiaMeses = (() => { const n = num(b.financia_meses); return n != null && n > 0 && n <= 36 ? Math.round(n) : null })()
+  const comunes = {
+    activo: !!b.activo, provincias: arr(b.provincias), palabras: arr(b.palabras_clave), tipos: arr(b.tipos),
+    pmin: num(b.precio_min), pmax: num(b.precio_max),
+    dmin: Math.max(0, Math.min(100, Number(b.descuento_min) || 0)), ocup: !!b.excluir_ocupadas,
+  }
+
+  // Perfil de inversión: SOLO entra en la consulta si el body trae alguno de sus
+  // campos. Sin ellos (UI actual) la consulta es la de siempre y no nombra
+  // columnas que quizá aún no existan (migración sin aplicar).
+  const CAMPOS_PERFIL = ['municipios', 'solo_unifamiliar', 'dormitorios_min', 'banos_min', 'superficie_parcela_min', 'requiere_piscina']
+  const conPerfil = CAMPOS_PERFIL.some(tiene)
+
   try {
-    await prisma.$executeRaw(Prisma.sql`
+    if (!conPerfil) {
+      await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO subastas_criterios
+        (cuenta_id, activo, provincias, palabras_clave, tipos, precio_min, precio_max, descuento_min, excluir_ocupadas,
+         financia_pct, financia_tipo_anual, financia_meses, financia_comision)
+      VALUES (
+        ${cuentaId}::uuid, ${comunes.activo}, ${comunes.provincias}::text[], ${comunes.palabras}::text[],
+        ${comunes.tipos}::text[], ${comunes.pmin}, ${comunes.pmax},
+        ${comunes.dmin}, ${comunes.ocup},
+        ${tantoPorUno(b.financia_pct, 100)}, ${tantoPorUno(b.financia_tipo_anual, 60)},
+        ${financiaMeses},
+        ${tantoPorUno(b.financia_comision, 10)}
+      )
+      ON CONFLICT (cuenta_id) DO UPDATE SET
+        activo = EXCLUDED.activo,
+        provincias = EXCLUDED.provincias,
+        palabras_clave = EXCLUDED.palabras_clave,
+        tipos = EXCLUDED.tipos,
+        precio_min = EXCLUDED.precio_min,
+        precio_max = EXCLUDED.precio_max,
+        descuento_min = EXCLUDED.descuento_min,
+        excluir_ocupadas = EXCLUDED.excluir_ocupadas,
+        financia_pct = EXCLUDED.financia_pct,
+        financia_tipo_anual = EXCLUDED.financia_tipo_anual,
+        financia_meses = EXCLUDED.financia_meses,
+        financia_comision = EXCLUDED.financia_comision,
+        actualizado_en = now()
+    `)
+    } else {
+      await prisma.$executeRaw(Prisma.sql`
       INSERT INTO subastas_criterios
         (cuenta_id, activo, provincias, palabras_clave, tipos, precio_min, precio_max, descuento_min, excluir_ocupadas,
          financia_pct, financia_tipo_anual, financia_meses, financia_comision,
          municipios, solo_unifamiliar, dormitorios_min, banos_min, superficie_parcela_min, requiere_piscina)
       VALUES (
-        ${cuentaId}::uuid, ${!!b.activo}, ${arr(b.provincias)}::text[], ${arr(b.palabras_clave)}::text[],
-        ${arr(b.tipos)}::text[], ${num(b.precio_min)}, ${num(b.precio_max)},
-        ${Math.max(0, Math.min(100, Number(b.descuento_min) || 0))}, ${!!b.excluir_ocupadas},
+        ${cuentaId}::uuid, ${comunes.activo}, ${comunes.provincias}::text[], ${comunes.palabras}::text[],
+        ${comunes.tipos}::text[], ${comunes.pmin}, ${comunes.pmax},
+        ${comunes.dmin}, ${comunes.ocup},
         ${tantoPorUno(b.financia_pct, 100)}, ${tantoPorUno(b.financia_tipo_anual, 60)},
-        ${(() => { const n = num(b.financia_meses); return n != null && n > 0 && n <= 36 ? Math.round(n) : null })()},
+        ${financiaMeses},
         ${tantoPorUno(b.financia_comision, 10)},
         ${arr(b.municipios)}::text[], ${!!b.solo_unifamiliar}, ${entero(b.dormitorios_min)}, ${entero(b.banos_min)},
         ${positivo(b.superficie_parcela_min)}, ${!!b.requiere_piscina}
@@ -126,8 +168,16 @@ export async function PUT(req: NextRequest) {
         requiere_piscina = CASE WHEN ${tiene('requiere_piscina')} THEN EXCLUDED.requiere_piscina ELSE subastas_criterios.requiere_piscina END,
         actualizado_en = now()
     `)
+    }
     return NextResponse.json({ ok: true })
   } catch (e: any) {
+    // 42703 = undefined_column: el body trae el perfil pero la migración aún no está aplicada.
+    if (conPerfil && /42703|does not exist/i.test(`${e?.code ?? ''} ${e?.meta?.code ?? ''} ${e?.message ?? ''}`)) {
+      return NextResponse.json(
+        { error: 'Falta aplicar la migración 2026-10-28_subastas_perfil_inversion.sql: aún no existen las columnas del perfil de inversión.' },
+        { status: 409 },
+      )
+    }
     console.error('[api/subastas/criterios]', e)
     return NextResponse.json({ error: e?.message ?? String(e) }, { status: 500 })
   }
