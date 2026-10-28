@@ -2,9 +2,12 @@
 // LO USAN la ruta manual (`/api/sivra/inversion/analyze` + `bulk_insert`) y el cron diario
 // (`/api/cron/idealista-correos`): una sola lógica.
 //
-// Deduplicación (coste de IA): los ids de mensaje Gmail ya analizados viven en `inversion_config`
-// bajo `CLAVE_PROCESADOS` (JSON, máx. 500). Si ese estado no se puede leer, el cron NO analiza
-// (mejor callar que gastar IA repetida). Además el cron solo mira `newer_than:2d`.
+// Lectura por IMAP (GMAIL_USER + GMAIL_APP_PASSWORD) con el cliente de `lib/agente-facturas/gmail.ts`;
+// la etiqueta Gmail `inmobiliaria` es el buzón IMAP `inmobiliaria`.
+// Deduplicación (coste de IA): los `Message-ID` ya analizados viven en `inversion_config` bajo
+// `CLAVE_PROCESADOS` (JSON, máx. 500; formato nuevo, sin migración: nunca corrió en prod con ids
+// de la API Gmail). Si ese estado no se puede leer, el cron NO analiza (mejor callar que gastar
+// IA repetida). Además el cron solo mira los últimos 2 días (IMAP SINCE).
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { chatConDirector } from '@/lib/pasarela'
@@ -12,9 +15,10 @@ import { encajaCasaVacacional, DORMITORIOS_IDEAL } from '@central/module-subasta
 import { tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 import {
-  CLAVE_PROCESADOS, MAX_PROCESADOS, VENTANA_CRON, consultaGmail, extractAllLinks, extractBody, extractPhone,
-  extractPortalLinks, filtrarNoProcesados, fusionarProcesados,
+  CLAVE_PROCESADOS, MAX_PROCESADOS, cuerpoParaIA, desdeCron, extractAllLinks, extractPhone,
+  extractPortalLinks, filtrarNoProcesados, fusionarProcesados, idEstable,
 } from './inversion-correos-puro'
+import { leerCorreosBuzon } from '@/lib/agente-facturas/gmail'
 
 export const GMAIL_LABEL = process.env.GMAIL_LABEL || 'inmobiliaria'
 
@@ -27,22 +31,8 @@ habitaciones/banos/parcela_m2: números SOLO si el correo los dice; si no, null 
 Si hay URLs de anuncios (idealista, fotocasa, kyero, habitaclia, pisos.com, milanuncios) cópialas exactas en "link".
 Si no es inmobiliaria: {"es_inmobiliaria":false,"propiedades":[],"resumen":""}`
 
-/** El token OAuth de Gmail no está configurado o Google lo rechaza. */
+/** Faltan GMAIL_USER/GMAIL_APP_PASSWORD o IMAP falla. */
 export class GmailNoDisponible extends Error {}
-
-/** Token OAuth del Gmail de Alberto (env del proyecto plataforma): GMAIL_REFRESH_TOKEN + GOOGLE_CLIENT_ID/SECRET. */
-export async function getGoogleAccessToken(): Promise<string> {
-  const { GMAIL_REFRESH_TOKEN: rt, GOOGLE_CLIENT_ID: cid, GOOGLE_CLIENT_SECRET: cs } = process.env
-  if (!rt || !cid || !cs) throw new GmailNoDisponible('Gmail OAuth no configurado (GMAIL_REFRESH_TOKEN / GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)')
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: rt, client_id: cid, client_secret: cs }),
-  })
-  const data = await res.json().catch(() => ({}))
-  if (!data.access_token) throw new GmailNoDisponible(`Token Google fallido: ${data.error ?? res.status}`)
-  return data.access_token
-}
 
 // ── Estado de correos procesados (inversion_config) ─────────────────────────
 /** `null` = no se pudo leer (≠ `[]` = nada procesado aún). */
@@ -92,42 +82,30 @@ export interface ResultadoAnalisis {
 }
 
 export type OpcionesAnalisis = {
-  /** Filtro temporal de Gmail: `after:<fecha>` (manual) o `newer_than:2d` (cron). */
-  filtroTemporal: string
+  /** Inicio de la ventana (IMAP SINCE, por día): `since` del manual o hoy−2 d del cron. */
+  desde: Date
   /** Ids ya analizados que se saltan (solo cron). */
   procesados?: string[]
 }
 
-export async function analizarCorreos(token: string, o: OpcionesAnalisis): Promise<ResultadoAnalisis> {
-  const query = consultaGmail(GMAIL_LABEL, o.filtroTemporal)
-  const searchRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=25`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  )
-  const searchData = await searchRes.json()
-  if (searchRes.status !== 200) throw new Error(`Gmail API error: ${JSON.stringify(searchData)}`)
+const MAX_CORREOS = 25
 
-  const todos: string[] = (searchData.messages || []).map((m: any) => m.id)
-  const messageIds = o.procesados ? filtrarNoProcesados(todos, o.procesados) : todos
+export async function analizarCorreos(o: OpcionesAnalisis): Promise<ResultadoAnalisis> {
+  let correos
+  try {
+    correos = await leerCorreosBuzon({ buzon: GMAIL_LABEL, desde: o.desde, max: MAX_CORREOS })
+  } catch (e: any) {
+    throw new GmailNoDisponible(`IMAP no disponible: ${e?.message ?? String(e)}`)
+  }
+  const conId = correos.map((c) => ({ ...c, id: idEstable(c.messageId, GMAIL_LABEL, c.uid) }))
+  const todos = conId.map((c) => c.id)
+  const nuevos = new Set(o.procesados ? filtrarNoProcesados(todos, o.procesados) : todos)
+  const vistos = new Set<string>()
+  const emails = conId
+    .filter((c) => nuevos.has(c.id) && !vistos.has(c.id) && vistos.add(c.id))
+    .map((c) => ({ id: c.id, subject: c.subject, from: c.from, date: c.fecha, body: cuerpoParaIA(c.text, c.html).slice(0, 3000) }))
   const vacio = { propiedades: [], ultima_fecha: new Date().toISOString(), emails_analyzed: 0, ids_ok: [], emails_encontrados: todos.length }
-  if (!messageIds.length) return vacio
-
-  const emails: any[] = (await Promise.all(
-    messageIds.map(async (id) => {
-      try {
-        const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`, { headers: { Authorization: `Bearer ${token}` } })
-        const msg = await r.json()
-        const hdrs = msg.payload?.headers || []
-        return {
-          id,
-          subject: hdrs.find((h: any) => h.name === 'Subject')?.value || '',
-          from: hdrs.find((h: any) => h.name === 'From')?.value || '',
-          date: hdrs.find((h: any) => h.name === 'Date')?.value || '',
-          body: extractBody(msg.payload || {}).slice(0, 3000),
-        }
-      } catch { return null }
-    }),
-  )).filter(Boolean)
+  if (!emails.length) return vacio
 
   const BATCH = 5
   const newProps: any[] = []
@@ -280,24 +258,19 @@ export type EstadoCron =
   | { ok: true; estado: 'ok'; encontrados: number; analizados: number; inmuebles: number; inserted: number; updated: number; skipped: number }
   | { ok: false; estado: 'gmail_no_disponible' | 'sin_estado' | 'error'; detalle: string }
 
-/** Pasada diaria: Gmail (newer_than:2d) → saltar procesados → IA → insertar + Telegram → marcar procesados. */
+/** Pasada diaria: IMAP (últimos 2 días) → saltar procesados → IA → insertar + Telegram → marcar procesados. */
 export async function ejecutarCronIdealistaCorreos(): Promise<EstadoCron> {
-  let token: string
-  try {
-    token = await getGoogleAccessToken()
-  } catch (e: any) {
-    return { ok: false, estado: 'gmail_no_disponible', detalle: e?.message ?? String(e) }
-  }
   const procesados = await leerProcesados()
   if (procesados === null) {
     return { ok: false, estado: 'sin_estado', detalle: 'No se pudo leer inversion_config: no se analiza para no repetir IA' }
   }
   try {
-    const r = await analizarCorreos(token, { filtroTemporal: VENTANA_CRON, procesados })
+    const r = await analizarCorreos({ desde: desdeCron(), procesados })
     const ins = await insertarPropiedades(r.propiedades, r.emails_analyzed ? r.ultima_fecha : null)
     await marcarProcesados(r.ids_ok)
     return { ok: true, estado: 'ok', encontrados: r.emails_encontrados, analizados: r.emails_analyzed, inmuebles: r.propiedades.length, ...ins }
   } catch (e: any) {
+    if (e instanceof GmailNoDisponible) return { ok: false, estado: 'gmail_no_disponible', detalle: e.message }
     return { ok: false, estado: 'error', detalle: e?.message ?? String(e) }
   }
 }
