@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T08:32:48Z",
-  "sha": "915bf9b4a89f156225ed249342b0628ba3f60f7d",
+  "generadoEn": "2026-10-28T09:28:08Z",
+  "sha": "7a0aa878bcd33608cbe8915715f84da33a15c3d0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -128231,17 +128231,26 @@
           "linea": 16
         },
         {
+          "nombre": "rango",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "dias: string[]",
+          "retorno": null,
+          "linea": 18
+        },
+        {
           "nombre": "CalendarioReservas",
           "kind": "function",
           "exportada": true,
-          "params": "{ dias, filas }: { dias: string[]; filas: Fila[] }",
+          "params": "{ hoy, dias: diasIni, filas: filasIni }: { hoy: string; dias: string[]; filas: Fila[] }",
           "retorno": null,
-          "linea": 18
+          "linea": 23,
+          "resumen": "`hoy`, `dias` y `filas` iniciales son la ventana de HOY (las lee el servidor). Al navegar se pide la ventana pedida a /api/inicio/calendario-pisos; los chips de la tarjeta siguen siendo de hoy."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a346e9a9e75f"
+      "hash": "8ccdef9e2723"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/inicio/loading.tsx",
@@ -128564,15 +128573,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 103
+          "linea": 92
         }
       ],
-      "tablas": [
-        "incomes",
-        "react"
-      ],
+      "tablas": [],
       "rutaApi": null,
-      "hash": "e36096e6aee6"
+      "hash": "c3028fa8d6a3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/inversion/page.tsx",
@@ -129730,12 +129736,20 @@
           "linea": 22
         },
         {
+          "nombre": "fmtFull",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 23
+        },
+        {
           "nombre": "fmt",
           "kind": "function",
           "exportada": false,
           "params": "d: string",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "CalendarioPage",
@@ -129743,7 +129757,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "UpcomingArrivals",
@@ -129751,12 +129765,12 @@
           "exportada": false,
           "params": "{ incomes, now }: { incomes: Income[]; now: Date }",
           "retorno": null,
-          "linea": 330
+          "linea": 331
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "de05a28b0c98"
+      "hash": "79cb31a1e20a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/domotica/DomoticaClient.tsx",
@@ -139657,7 +139671,7 @@
     {
       "ruta": "apps/plataforma/app/api/cron/idealista-correos/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Cron diario: analiza los correos nuevos de alertas de idealista (etiqueta Gmail `inmobiliaria`) y guarda/avisa los inmuebles nuevos. Lógica en `lib/sivra/inversion-correos.ts` (compartida con el botón «Analizar correos»). Requiere GMAIL_REFRESH_TOKEN + GOOGLE_CLIENT_ID/SECRET en el proyecto Vercel d",
+      "resumen": "Cron diario: analiza los correos nuevos de alertas de idealista (etiqueta Gmail `inmobiliaria`) y guarda/avisa los inmuebles nuevos. Lógica en `lib/sivra/inversion-correos.ts` (compartida con el botón «Analizar correos»). Lee por IMAP con GMAIL_USER + GMAIL_APP_PASSWORD (los del agente de facturas);",
       "exporta": [
         "GET"
       ],
@@ -139673,7 +139687,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/idealista-correos",
-      "hash": "6e11b2f4acf8"
+      "hash": "e2ade2d58f38"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/paper-tracker/route.ts",
@@ -141270,6 +141284,27 @@
       ],
       "rutaApi": "/api/finanzas/tarjeta",
       "hash": "d9a4b23b2474"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/inicio/calendario-pisos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "GET /api/inicio/calendario-pisos?desde=YYYY-MM-DD — ventana de 14 días del calendario de Inicio (pasada o futura). Mismas reservas y mismos pisos que la tarjeta; solo cambia la fecha de inicio."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/inicio/calendario-pisos",
+      "hash": "1b1f2d7dc3e9"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/alerta/route.ts",
@@ -142937,13 +142972,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7,
+          "linea": 8,
           "resumen": "Ruta manual («Analizar correos»): misma lógica que el cron diario (`lib/sivra/inversion-correos.ts`). Respeta `since` y NO salta correos procesados: es una orden explícita de Alberto."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/inversion/analyze",
-      "hash": "9bc3f8fd4841"
+      "hash": "78bc5b626f49"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/inversion/route.ts",
@@ -149110,6 +149145,7 @@
       "resumen": "Lectura de Gmail por IMAP para el agente de facturas. Credenciales: GMAIL_USER / GMAIL_APP_PASSWORD (app password, soporta IMAP).",
       "exporta": [
         "listarCandidatosConLimite",
+        "leerCorreosBuzon",
         "listarCandidatos",
         "quitarEtiqueta",
         "etiquetarCorreo",
@@ -149134,12 +149170,21 @@
           "resumen": "Lista correos candidatos a factura desde `desde` (Date). Si `etiqueta` existe como buzón en Gmail, se usa esa; si no, INBOX. 🚨 `deadline` (epoch ms) acota el listado: bajar y parsear el `source` comp"
         },
         {
+          "nombre": "leerCorreosBuzon",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { buzon: string; desde: Date; max?: number }",
+          "retorno": "Promise<CorreoBuzon[]>",
+          "linea": 137,
+          "resumen": "Lee los correos de un buzón/etiqueta de Gmail desde `desde`, con el mismo cliente IMAP que el agente de facturas. Lanza si faltan GMAIL_USER/GMAIL_APP_PASSWORD, si IMAP falla o si el buzón no existe ("
+        },
+        {
           "nombre": "listarCandidatos",
           "kind": "function",
           "exportada": true,
           "params": "opts: { desde: Date; etiqueta?: string }",
           "retorno": "Promise<CorreoCandidato[]>",
-          "linea": 120,
+          "linea": 170,
           "resumen": "Variante sin presupuesto (compatibilidad con los llamadores que no lo acotan)."
         },
         {
@@ -149148,7 +149193,7 @@
           "exportada": true,
           "params": "messageIds: string[], etiqueta: string",
           "retorno": "Promise<number>",
-          "linea": 158,
+          "linea": 208,
           "resumen": "Quita una etiqueta a los correos indicados por `Message-ID`, en UNA sola sesión. 🚨 Por qué hace falta (05/08/2026): la cola `Facturas/Extraccion-fallida` solo crecía. Un correo que un día no se pudo "
         },
         {
@@ -149157,7 +149202,7 @@
           "exportada": true,
           "params": "uid: number, etiqueta: string, buzon = 'INBOX'",
           "retorno": "Promise<boolean>",
-          "linea": 192
+          "linea": 242
         },
         {
           "nombre": "marcarProcesado",
@@ -149165,13 +149210,13 @@
           "exportada": true,
           "params": "uid: number, etiqueta = 'Facturas/Procesada', buzon = 'INBOX',",
           "retorno": "Promise<void>",
-          "linea": 215,
+          "linea": 265,
           "resumen": "Marca un correo como procesado: keyword IMAP + copia a la etiqueta si existe. `buzon` = el que devolvió el listado (ver `etiquetarCorreo`): con el buzón equivocado ni el flag ni la copia encuentran el"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "43ddec119184"
+      "hash": "8eccd21eaf18"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/huella-rescate.ts",
@@ -163320,7 +163365,7 @@
           "exportada": false,
           "params": "p: PolizaFicha",
           "retorno": "Bien",
-          "linea": 320
+          "linea": 342
         },
         {
           "nombre": "identificado",
@@ -163328,7 +163373,7 @@
           "exportada": false,
           "params": "b: Bien",
           "retorno": null,
-          "linea": 325
+          "linea": 347
         },
         {
           "nombre": "casaBien",
@@ -163336,7 +163381,7 @@
           "exportada": false,
           "params": "a: Bien, b: Bien",
           "retorno": "'si' | 'no' | 'quiza'",
-          "linea": 328,
+          "linea": 350,
           "resumen": "¿Es el mismo bien? `quiza` = mismo ramo pero sin dato común con que compararlos."
         },
         {
@@ -163345,7 +163390,7 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 335
+          "linea": 357
         },
         {
           "nombre": "mismoRiesgo",
@@ -163353,8 +163398,17 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente, p: PolizaFicha",
           "retorno": "boolean",
-          "linea": 340,
+          "linea": 362,
           "resumen": "El MISMO riesgo, por matrícula o nº de póliza (la compañía no basta: cambia al competir)."
+        },
+        {
+          "nombre": "comparteNumeroVivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PolizaFicha, numerosVivos: Set<string>",
+          "retorno": "boolean",
+          "linea": 368,
+          "resumen": "¿La fila del volcado lleva el nº de póliza de alguna viva del cliente? `null` (número corto) nunca casa."
         },
         {
           "nombre": "otraMatricula",
@@ -163362,7 +163416,7 @@
           "exportada": false,
           "params": "a: string | null, b: string | null",
           "retorno": "boolean",
-          "linea": 345
+          "linea": 373
         },
         {
           "nombre": "referenciaRiesgo",
@@ -163370,7 +163424,7 @@
           "exportada": true,
           "params": "p: Pick<PolizaFicha, 'tipo' | 'matricula' | 'objeto'>, titulo?: string | null",
           "retorno": "string | null",
-          "linea": 360,
+          "linea": 388,
           "resumen": "Cómo se identifica una póliza ante el cliente (no por su nº de póliza): matrícula en auto/moto, dirección del riesgo en inmueble, nada en el resto. `null` = no se sabe: la tarjeta no pinta línea (nunc"
         },
         {
@@ -163379,7 +163433,7 @@
           "exportada": true,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 375,
+          "linea": 403,
           "resumen": "Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover."
         },
         {
@@ -163388,7 +163442,7 @@
           "exportada": true,
           "params": "r: RepartoSeguros",
           "retorno": "PolizaFicha[]",
-          "linea": 386,
+          "linea": 414,
           "resumen": "Los SEGUROS del cliente = lo «con nosotros» (póliza en cartera en vigor, o emitida y pendiente de CIMA), con la póliza que sustituyen dentro. Es lo ÚNICO que cuenta en «Pólizas vivas», recibos, próxim"
         },
         {
@@ -163397,7 +163451,7 @@
           "exportada": true,
           "params": "r: RepartoSeguros",
           "retorno": "number | null",
-          "linea": 395,
+          "linea": 423,
           "resumen": "Cuántas oportunidades hay que trabajar: las abiertas, las derivadas de pólizas de otras casas (volcado, canceladas) y lo que aportó el cliente. Una perdida que se reintentará al vencimiento no es «abi"
         },
         {
@@ -163406,7 +163460,7 @@
           "exportada": true,
           "params": "r: RepartoSeguros",
           "retorno": "SeguroCliente[] | null",
-          "linea": 401,
+          "linea": 429,
           "resumen": "Las oportunidades que cuenta `contarOportunidades` (mismo criterio; `null` = no se pudieron leer)."
         },
         {
@@ -163415,12 +163469,12 @@
           "exportada": true,
           "params": "p: PolizaFicha, hoy: Date",
           "retorno": "PrecargaAlta",
-          "linea": 419
+          "linea": 447
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a8f249c8f736"
+      "hash": "e4346518fa55"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/sexo-cotizador-ficha.ts",
@@ -173459,12 +173513,57 @@
       "hash": "b714631c63ea"
     },
     {
+      "ruta": "apps/plataforma/lib/inicio-pisos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lectura de reservas de pisos para el calendario de Inicio (tarjeta «Pisos»). La usan la tarjeta (servidor, ventana de hoy) y la API de navegación (ventanas pasadas/futuras): UNA sola consulta.",
+      "exporta": [
+        "leerReservasPisos",
+        "filasCalendario",
+        "ventanaPisos"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerReservasPisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, n = DIAS_CALENDARIO",
+          "retorno": "Promise<ReservaCal[] | null>",
+          "linea": 15,
+          "resumen": "Reservas que tocan [desde, desde+n). `null` = no se pudo leer (≠ «no hay reservas»)."
+        },
+        {
+          "nombre": "filasCalendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "barras: Map<string, Barra[]>",
+          "retorno": "FilaCalendario[]",
+          "linea": 32
+        },
+        {
+          "nombre": "ventanaPisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, n = DIAS_CALENDARIO",
+          "retorno": "Promise<",
+          "linea": 37,
+          "resumen": "Ventana ya calculada (días + filas) para una fecha de inicio cualquiera."
+        }
+      ],
+      "tablas": [
+        "incomes"
+      ],
+      "rutaApi": null,
+      "hash": "921d316c791e"
+    },
+    {
       "ruta": "apps/plataforma/lib/inicio-resumen.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA de las tarjetas del Inicio (`/inicio`, 24/09/2026). Sin BD ni red: la página lee los datos con los helpers de siempre y aquí solo se combinan, para poder testearlo con node --test. Regla que atraviesa todo el archivo (CLAUDE.md, «dato que no hay ≠ dato que no se ha mirado»): `null` es «n",
       "exporta": [
         "estimacionMes",
         "sumarDias",
+        "moverVentana",
+        "desdeValido",
         "ventanaCalendario",
         "resumenBolsa",
         "bolsaVieja",
@@ -173509,12 +173608,30 @@
           "linea": 113
         },
         {
+          "nombre": "moverVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, pasos: number, n = 14",
+          "retorno": "string",
+          "linea": 118,
+          "resumen": "Mueve la fecha de inicio `pasos` ventanas (negativo = atrás, positivo = adelante)."
+        },
+        {
+          "nombre": "desdeValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: string | null, hoy: string",
+          "retorno": "string | null",
+          "linea": 123,
+          "resumen": "Fecha de inicio de la API de navegación: YYYY-MM-DD real y a ≤ 3 años de hoy; si no, null."
+        },
+        {
           "nombre": "ventanaCalendario",
           "kind": "function",
           "exportada": true,
           "params": "reservas: ReservaCal[], pisos: string[], hoy: string, n = 14",
           "retorno": "Ventana",
-          "linea": 117
+          "linea": 130
         },
         {
           "nombre": "sumaONull",
@@ -173522,7 +173639,7 @@
           "exportada": false,
           "params": "xs: (number | null)[]",
           "retorno": "number | null",
-          "linea": 172
+          "linea": 185
         },
         {
           "nombre": "resumenBolsa",
@@ -173530,7 +173647,7 @@
           "exportada": true,
           "params": "posiciones: PosicionBolsa[]",
           "retorno": "ResumenDivisaBolsa[]",
-          "linea": 178,
+          "linea": 191,
           "resumen": "Una línea por divisa: sumar dólares con euros daría una cifra plausible y falsa."
         },
         {
@@ -173539,7 +173656,7 @@
           "exportada": true,
           "params": "actualizado: Date, ahora: Date",
           "retorno": "boolean",
-          "linea": 190
+          "linea": 203
         },
         {
           "nombre": "importeDivisa",
@@ -173547,7 +173664,7 @@
           "exportada": true,
           "params": "n: number, divisa: string",
           "retorno": "string",
-          "linea": 195,
+          "linea": 208,
           "resumen": "Importe en su divisa, formato español: `1.234,56€` / `1.234,56 $`."
         },
         {
@@ -173556,7 +173673,7 @@
           "exportada": true,
           "params": "f: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }",
           "retorno": "string",
-          "linea": 207
+          "linea": 220
         },
         {
           "nombre": "proximosCargos",
@@ -173564,7 +173681,7 @@
           "exportada": true,
           "params": "recurrentes: RecurrenteBanco[], hoy: string, dias = 7",
           "retorno": "ProximoCargo[]",
-          "linea": 223,
+          "linea": 236,
           "resumen": "Próximas apariciones de los recurrentes en (hoy, hoy+dias], con la MISMA regla que `proyectar()` de `lib/tesoreria-core.ts` (última fecha + intervalo, saltando lo ya pasado), para que la lista y el sa"
         },
         {
@@ -173573,13 +173690,13 @@
           "exportada": true,
           "params": "polizas: T[], ventana = 60",
           "retorno": "",
-          "linea": 247,
+          "linea": 260,
           "resumen": "Vencimientos de la correduría para la tarjeta del Inicio. El puerto mira también una anualidad HACIA ATRÁS (para que una póliza vencida sin gestionar no desaparezca), así que `dias` puede ser negativo"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6577c466ed7b"
+      "hash": "683bb569ec78"
     },
     {
       "ruta": "apps/plataforma/lib/intercompany-mapeo.ts",
@@ -187555,23 +187672,52 @@
       "ambito": "apps/plataforma",
       "resumen": "Parte PURA del análisis de correos de alertas inmobiliarias (idealista & co.): sin BD, sin red. La orquestación (Gmail, IA, inserción, Telegram) vive en `inversion-correos.ts`.",
       "exporta": [
-        "consultaGmail",
+        "idEstable",
+        "desdeCron",
+        "parsearSince",
+        "cuerpoParaIA",
         "filtrarNoProcesados",
         "fusionarProcesados",
-        "extractBody",
         "extractAllLinks",
         "extractPortalLinks",
         "extractPhone"
       ],
       "funciones": [
         {
-          "nombre": "consultaGmail",
+          "nombre": "idEstable",
           "kind": "function",
           "exportada": true,
-          "params": "label: string, filtroTemporal: string",
+          "params": "messageId: string | null | undefined, buzon: string, uid: number",
           "retorno": "string",
-          "linea": 14,
-          "resumen": "Consulta de Gmail: etiqueta + filtro temporal (`after:` de la UI o `newer_than:` del cron)."
+          "linea": 18,
+          "resumen": "Id estable de un correo para el dedupe: su `Message-ID` (los UID de IMAP son por buzón). Sin cabecera → `uid:<buzón>:<uid>` (estable mientras no se vacíe el buzón). Formato nuevo: los ids Gmail-API de"
+        },
+        {
+          "nombre": "desdeCron",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date(), dias = VENTANA_CRON_DIAS",
+          "retorno": "Date",
+          "linea": 24,
+          "resumen": "Fecha de inicio de la ventana del cron (hoy − días)."
+        },
+        {
+          "nombre": "parsearSince",
+          "kind": "function",
+          "exportada": true,
+          "params": "since: string",
+          "retorno": "Date | null",
+          "linea": 29,
+          "resumen": "`since` de la ruta manual (YYYY/MM/DD, YYYY-MM-DD, epoch en segundos o ISO) → Date; `null` si no se entiende."
+        },
+        {
+          "nombre": "cuerpoParaIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string, html: string",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Cuerpo para la IA: texto plano; si no hay, HTML sin etiquetas (equivale al `extractBody` de la API)."
         },
         {
           "nombre": "filtrarNoProcesados",
@@ -187579,7 +187725,7 @@
           "exportada": true,
           "params": "ids: string[], procesados: Iterable<string>",
           "retorno": "string[]",
-          "linea": 19,
+          "linea": 52,
           "resumen": "Ids que aún no se han analizado con IA, sin repetidos y conservando el orden."
         },
         {
@@ -187588,24 +187734,8 @@
           "exportada": true,
           "params": "previos: string[], nuevos: string[], max = MAX_PROCESADOS",
           "retorno": "string[]",
-          "linea": 31,
+          "linea": 64,
           "resumen": "Añade `nuevos` al final y recorta a los `max` más recientes (sin duplicados)."
-        },
-        {
-          "nombre": "decodeBase64Url",
-          "kind": "function",
-          "exportada": false,
-          "params": "data: string",
-          "retorno": "string",
-          "linea": 36
-        },
-        {
-          "nombre": "extractBody",
-          "kind": "function",
-          "exportada": true,
-          "params": "payload: any, depth = 0",
-          "retorno": "string",
-          "linea": 40
         },
         {
           "nombre": "extractAllLinks",
@@ -187613,7 +187743,7 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "string[]",
-          "linea": 56
+          "linea": 69
         },
         {
           "nombre": "extractPortalLinks",
@@ -187621,7 +187751,7 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "string[]",
-          "linea": 64
+          "linea": 77
         },
         {
           "nombre": "extractPhone",
@@ -187629,19 +187759,18 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "string | null",
-          "linea": 68
+          "linea": 81
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "911da001ce50"
+      "hash": "bbf0e22d147c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/inversion-correos.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Análisis de correos de alertas inmobiliarias (idealista & co.) → `inmuebles_busqueda`. LO USAN la ruta manual (`/api/sivra/inversion/analyze` + `bulk_insert`) y el cron diario (`/api/cron/idealista-correos`): una sola lógica. Deduplicación (coste de IA): los ids de mensaje Gmail ya analizados viven ",
+      "resumen": "Análisis de correos de alertas inmobiliarias (idealista & co.) → `inmuebles_busqueda`. LO USAN la ruta manual (`/api/sivra/inversion/analyze` + `bulk_insert`) y el cron diario (`/api/cron/idealista-correos`): una sola lógica. Lectura por IMAP (GMAIL_USER + GMAIL_APP_PASSWORD) con el cliente de `lib/",
       "exporta": [
-        "getGoogleAccessToken",
         "leerProcesados",
         "marcarProcesados",
         "analizarCorreos",
@@ -187650,21 +187779,12 @@
       ],
       "funciones": [
         {
-          "nombre": "getGoogleAccessToken",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": "Promise<string>",
-          "linea": 34,
-          "resumen": "Token OAuth del Gmail de Alberto (env del proyecto plataforma): GMAIL_REFRESH_TOKEN + GOOGLE_CLIENT_ID/SECRET."
-        },
-        {
           "nombre": "leerProcesados",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "Promise<string[] | null>",
-          "linea": 49,
+          "linea": 39,
           "resumen": "`null` = no se pudo leer (≠ `[]` = nada procesado aún)."
         },
         {
@@ -187673,15 +187793,15 @@
           "exportada": true,
           "params": "ids: string[]",
           "retorno": "Promise<boolean>",
-          "linea": 62
+          "linea": 52
         },
         {
           "nombre": "analizarCorreos",
           "kind": "function",
           "exportada": true,
-          "params": "token: string, o: OpcionesAnalisis",
+          "params": "o: OpcionesAnalisis",
           "retorno": "Promise<ResultadoAnalisis>",
-          "linea": 101
+          "linea": 93
         },
         {
           "nombre": "insertarPropiedades",
@@ -187689,7 +187809,7 @@
           "exportada": true,
           "params": "propiedades: any[], ultima_fecha?: string | null",
           "retorno": null,
-          "linea": 185,
+          "linea": 163,
           "resumen": "── Inserción en inmuebles_busqueda + aviso Telegram de las NUEVAS ──────────"
         },
         {
@@ -187698,8 +187818,8 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<EstadoCron>",
-          "linea": 284,
-          "resumen": "Pasada diaria: Gmail (newer_than:2d) → saltar procesados → IA → insertar + Telegram → marcar procesados."
+          "linea": 262,
+          "resumen": "Pasada diaria: IMAP (últimos 2 días) → saltar procesados → IA → insertar + Telegram → marcar procesados."
         }
       ],
       "tablas": [
@@ -187707,7 +187827,7 @@
         "inversion_config"
       ],
       "rutaApi": null,
-      "hash": "8e55cc332979"
+      "hash": "b1d21ade4373"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/lavanderia-peso.ts",
@@ -257026,7 +257146,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5382,
-    "funciones": 20657
+    "archivos": 5384,
+    "funciones": 20667
   }
 }
