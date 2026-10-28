@@ -1,7 +1,7 @@
 // Cron diario: analiza los correos nuevos de alertas de idealista (etiqueta Gmail `inmobiliaria`)
 // y guarda/avisa los inmuebles nuevos. Lógica en `lib/sivra/inversion-correos.ts` (compartida con
-// el botón «Analizar correos»). Requiere GMAIL_REFRESH_TOKEN + GOOGLE_CLIENT_ID/SECRET en el
-// proyecto Vercel de plataforma; si faltan responde estado `gmail_no_disponible` sin lanzar.
+// el botón «Analizar correos»). Lee por IMAP con GMAIL_USER + GMAIL_APP_PASSWORD (los del agente
+// de facturas); si faltan o IMAP falla responde estado `gmail_no_disponible` sin lanzar.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { ejecutarCronIdealistaCorreos } from '@/lib/sivra/inversion-correos'
