@@ -167,29 +167,29 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 401 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 402 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 390 | 68.569 | 60.537.233 | 0 | 0 |
-| `otro` | 384 | 15.964 | 34.841.341 | 20.259.513 | 0 |
-| `lectura-directa` | 330 | 10.579 | 29.507.986 | 0 | 0 |
-| `mcp:github` | 332 | 8.038 | 6.128.583 | 57.290.844 | 106 |
-| `sql` | 246 | 6.661 | 3.459.132 | 2.351.230 | 26 |
-| `escritura` | 241 | 5.966 | 88.116.713 | 0 | 0 |
+| `bash` | 391 | 68.896 | 60.751.471 | 0 | 0 |
+| `otro` | 385 | 16.001 | 34.903.684 | 20.259.513 | 0 |
+| `lectura-directa` | 331 | 10.605 | 29.531.961 | 0 | 0 |
+| `mcp:github` | 332 | 8.064 | 6.137.556 | 57.290.844 | 106 |
+| `sql` | 247 | 6.710 | 3.486.744 | 2.351.230 | 26 |
+| `escritura` | 242 | 5.990 | 88.554.371 | 0 | 0 |
 | `mcp:Vercel` | 84 | 1.502 | 1.285.563 | 237.328 | 44 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `mcp:Gmail` | 61 | 1.387 | 1.536.266 | 0 | 101 |
+| `mcp:Gmail` | 62 | 1.395 | 1.545.118 | 0 | 101 |
 | `mcp:Booking-com` | 49 | 1.373 | 5.617.059 | 0 | 0 |
-| `agente:general-purpose` | 136 | 1.183 | 699.865 | 25.073.877 | 0 |
-| `mcp:claude-code-remote` | 71 | 911 | 100.647 | 1.250.070 | 0 |
+| `agente:general-purpose` | 136 | 1.187 | 702.573 | 25.201.265 | 0 |
+| `mcp:claude-code-remote` | 71 | 917 | 100.921 | 1.250.070 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 14 | 646 | 766.860 | 0 | 0 |
 | `mcp:Supabase` | 146 | 483 | 88.439 | 6.830 | 7 |
-| `agente:agente-architect` | 82 | 446 | 312.324 | 11.606.945 | 0 |
+| `agente:agente-architect` | 82 | 447 | 312.726 | 11.637.358 | 0 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
+| `mcp:Google-Drive` | 32 | 171 | 169.980 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
-| `mcp:Google-Drive` | 31 | 165 | 167.421 | 0 | 2 |
-| `agente:agente-mecanico` | 58 | 149 | 81.665 | 7.881.159 | 0 |
+| `agente:agente-mecanico` | 58 | 150 | 82.295 | 7.896.340 | 0 |
 | `agente:rastreador-codigo` | 61 | 117 | 36.755 | 1.675.029 | 0 |
 | `mcp:Resend` | 10 | 95 | 84.756 | 0 | 0 |
 | `mcp:idealista` | 3 | 94 | 255.209 | 0 | 34 |
