@@ -230,7 +230,7 @@ export function esLanzadorAplicacionNseMapfre(d: string | null | undefined): boo
  * La declara cada entrada de exploración (`rutasAppTolerables`); sin regla, todo igual.
  */
 export type RutaTolerable = { origen: string; prefijo: string }
-const RE_ACCION_REAL_TRAS_PREFIJO = /emit|contrat|confirm|firm|pago|pagar|formaliz|grab|suplement|anul|baja|domicili|tarjeta|iban/i
+export const RE_ACCION_REAL_TRAS_PREFIJO = /emit|contrat|confirm|firm|pago|pagar|formaliz|grab|suplement|anul|baja|domicili|tarjeta|iban/i
 /** Sustituto del prefijo neutralizado (no casa con ningún patrón del guard). */
 const PREFIJO_NEUTRO = '/__ruta_app__/'
 /**
