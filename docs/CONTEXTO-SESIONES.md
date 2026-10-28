@@ -12,10 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 ## (28/10/2026, 5) SIVRA pricing: suelo del propietario por fecha
-- Tabla `pricing_suelos_fecha` (migración `2026-10-28_pricing_suelo_fecha.sql`, SIN aplicar; INSERT Duplex SS/Feria 2027 comentado: base 410/455/440/490/410/200). Aplicar ANTES del deploy o la pasada sale `ok:false` (`suelos_fecha` caída).
+- Tabla `pricing_suelos_fecha` (migración `2026-10-28_pricing_suelo_fecha.sql`, APLICADA 28/10; INSERT Duplex SS/Feria 2027 comentado: base 410/455/440/490/410/200). Aplicar ANTES del deploy o la pasada sale `ok:false` (`suelos_fecha` caída).
 - `lib/sivra/pricing-suelo-fecha.ts`: mismo punto/semántica que `min_price_finde`, manda el mayor, solo `max_price` le gana; respuesta `suelos_fecha`.
 - Pendiente: filtro descartado en bucket: −11 % House/Luxury mayo, decidir el 03/11 (¿guarda simétrica global→mes?).
-- Cepo: `pricing-suelo-fecha.test.ts` (9 roturas vistas en rojo). Sin commit.
+- Cepo: `pricing-suelo-fecha.test.ts` (9 roturas vistas en rojo).
 
 ## (28/10/2026, 4) SIVRA pricing: guarda «el mes se fue» + guardián sin alerta con p50 mezclado
 - Causa real de Duplex mayo-2027 a 'global' (11/10): la exclusión de fechas de evento del bucket del mes (`apply/route.ts` ~:475) NO filtra `estado`; una fila DESCARTADA del 22/05 dejó mayo en 2 fechas. No eran fotos caducadas.
@@ -23,6 +23,8 @@
 - Hecho: el guardián ya no alerta `reserva_bajo_mercado` contra el p50 mezclado (cuenta `reservas_bajas_sin_mercado_fecha`).
 - NO hecho (decisión de Alberto): escalar el salto de evento sin mes por el prior (simulado: +25-60 % de golpe en ~40 noches, dobla Feria en abril) y filtrar `descartado` en el bucket (cambia 10 piso-mes; House mayo bajaría ~10 %).
 - Las «17 noches −25 % bajo mercado» de Duplex son todas base 'mes': el hueco es liga + p40 + calidad frente al p50 completo, no la global.
+**(28/10/2026, 4)** — Inversión casa vacacional (Aljarafe/A-49 + Almonte/Pilas/Hinojos, ≤280k). PR #5191 mergeado: perfil `CRITERIOS_CASA_VACACIONAL` (module-subastas) → Telegram «🏡 Casa vacacional» (cron subastas-avisos) y «🏡 Idealista» (al insertar en `inmuebles_busqueda`); cron diario `idealista-correos` 13:17 UTC con dedupe por Message-ID en `inversion_config.idealista_correos_procesados`. SQL `subastas_perfil_inversion` APLICADO. Gmail se lee por **IMAP** (`GMAIL_USER`/`GMAIL_APP_PASSWORD`, como facturas): `GMAIL_REFRESH_TOKEN` de sivra es secreto y no se puede copiar; `GOOGLE_OAUTH_REFRESH_TOKEN` es el de SEO de ia-rest, no vale. Skill idealista-radar actualizada. Pendiente Alberto: búsquedas guardadas en idealista con etiqueta Gmail `inmobiliaria`, rotar ALERTA_TOKEN, oferta Ikesa 150k.
+
 **(28/10/2026, 3)** — Tarificador. Prueba real (`main-b82bec1`): **Mapfre auto completo** (precios + proyecto + PDF guardado). Generali: faltaban «Tipo de vehículo» y «Compañía de procedencia» en «Datos de Valoración» → 0.2.45 los rellena por opción exacta (Turismo; compañía anterior de la ficha), sin probar aún en real.
   Patinete: exploración Allianz paró en Datos Básicos por el NIF del tomador → las entradas de patinete (Allianz `movilidad_personal`, Mapfre `automoviles:patinetes` «MásPatín») usan a Alberto como tomador desde `MEDIADOR` (fecha de nacimiento añadida ahí), con «Aceptar» de Datos Básicos autorizado solo en Allianz. SQL `2026-10-28c` (mapfre/patinete, apagada).
   Regla nueva (Alberto): por ramo, unión de datos que pide cada compañía → un solo enlace /datos por WhatsApp + filtro gratis antes de mandar a los bots.
@@ -1540,11 +1542,20 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+- **(28/10/2026) Calendarios de pisos navegables ◀ Hoy ▶.** Tarjeta «Pisos» de Inicio: ventanas de 14 días hacia atrás/adelante vía `/api/inicio/calendario-pisos?desde=` (sesión obligatoria, ±3 años); consulta común en `lib/inicio-pisos.ts`. Chips «hoy entra/sale», noches libres y estimación siguen sobre hoy real. `/sivra/calendario` ya navegaba (carga año pasado→año que viene): solo botones de 44 px y rango visible.
 - **(29/09/2026) Buscador de la correduría: la matrícula de las OPORTUNIDADES no se buscaba.** «5655dsm» decía «nadie coincide» teniendo una oportunidad de auto abierta: `porMatricula` solo miraba `polizas.datos_especificos` y había 1.735 matrículas de leads (`oportunidades.info_riesgo`) invisibles. Ahora busca en las dos (gana la póliza; la de lead sale «(oportunidad)») y la cobertura cuenta ambas. Cepo `test/regression-busqueda-matricula-oportunidad.test.ts` (visto en rojo). PR #4079 mergeado.
 - **(29/09/2026) Documento REPETIDO en una ficha no abría oportunidad.** cliente C03: su póliza del Terracan (PDF con contraseña = DNI; se abre bien) se subió antes de #4015 y, al re-subirla, asegura la vio repetida (mismo sha256) y se saltó la lectura en silencio. Fix: `/api/operador/documentos` lee también los repetidos (`crearOportunidad` ya deduplica). Cepo `test/regression-oportunidad-documento-repetido.test.ts` (visto en rojo). PR #4052 mergeado. Para esta ficha: re-subir o «Leer para oportunidad».
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 2 (auditoría + «que haga el trabajo por mí»).** Herramientas nuevas: `estado_oportunidad`, `cerrar_tarea`, `ver_siniestro`/`seguir_siniestro`, `contacto_cliente`, `ver_riesgo` y **`precio_hogar`** (Catastro → ficha de hogar → mismo cobro/cola que coche). Arreglos: descripciones por modo (en autónomo ya no dicen «botón»), **huella entre mensajes** (tabla `correduria_asistente_huella`, 30 min, `repetir=true`), `forzar` prohibido en el mismo turno, DNI tapado rechazado, timeout duro. Migración aplicada (huella + ramo `hogar`). Medido antes: 0 👍/👎 en 25 turnos; `preparar_emision` 5/5 fallaba por pasar nº de póliza en vez de uuid (regla nueva en el prompt).
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
+
+## (28/10/2026) Correduría · oportunidad duplicada de una póliza viva (mismo nº, compañía absorbida)
+- Ficha José Suárez Sala: hogar viva Occident nº GPDFL0600228 salía también como oportunidad «Plus Ultra (volcado histórico)».
+  `casaBien` solo miraba ramo+matrícula/título; hogar sin matrícula y títulos distintos → no tapaba.
+- Arreglo en `repartirSegurosCliente` (`apps/plataforma/lib/correduria/seguros-cliente.ts`): grupo del volcado con algún
+  nº (`claveNumeroPoliza`) igual a una póliza viva del cliente no genera oportunidad; sigue en `historicas`. 2 tests + cepo visto en rojo.
+- Alcance en BD: 87 filas del volcado / 64 clientes comparten nº con una viva (techo). Sin cambios de datos.
+- 2ª vía (auditoría): 13 oportunidades ABIERTAS de una póliza viva (poliza_id/nº/matrícula) salían también sueltas → ahora se cuelgan de su tarjeta de «Con nosotros». PR #5198.
 
 ## (27/10/2026) Pricing SIVRA: prima de finde por ritmo propio + aviso «caro» con demanda
 - House Sevillana: findes 78 % a 693€/noche vendidos meses antes (infravalorado); entre semana 35 % a 412€. El aviso «precio al HUÉSPED caro» comparaba solo con comparables.

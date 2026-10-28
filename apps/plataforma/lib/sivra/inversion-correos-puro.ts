@@ -4,15 +4,48 @@
 export const CLAVE_PROCESADOS = 'idealista_correos_procesados'
 /** Tope de ids de mensaje Gmail recordados (los más recientes). */
 export const MAX_PROCESADOS = 500
-/** Ventana de Gmail del cron diario: holgura sobre las 24 h por si un día falla. */
-export const VENTANA_CRON = 'newer_than:2d'
+/** Ventana (días) del cron diario: holgura sobre las 24 h por si un día falla. IMAP `SINCE` es por día. */
+export const VENTANA_CRON_DIAS = 2
 
 const PORTAL_DOMAINS = ['idealista.com', 'fotocasa.es', 'kyero.com', 'habitaclia.com', 'pisos.com', 'milanuncios.com', 'boe.es', 'subastas.boe.es']
 const SKIP_DOMAINS = ['unsubscribe', 'tracking', 'pixel', 'open.', 'click.', 'mailchimp', 'sendgrid', 'mailtrack', 'mandrillapp', 'list-manage', 'amazonaws.com/track']
 
-/** Consulta de Gmail: etiqueta + filtro temporal (`after:` de la UI o `newer_than:` del cron). */
-export function consultaGmail(label: string, filtroTemporal: string): string {
-  return `label:${label} ${filtroTemporal}`.trim()
+/**
+ * Id estable de un correo para el dedupe: su `Message-ID` (los UID de IMAP son por buzón).
+ * Sin cabecera → `uid:<buzón>:<uid>` (estable mientras no se vacíe el buzón). Formato nuevo:
+ * los ids Gmail-API de antes nunca llegaron a guardarse en prod (no había token).
+ */
+export function idEstable(messageId: string | null | undefined, buzon: string, uid: number): string {
+  const m = (messageId ?? '').trim()
+  return m || `uid:${buzon}:${uid}`
+}
+
+/** Fecha de inicio de la ventana del cron (hoy − días). */
+export function desdeCron(ahora: Date = new Date(), dias = VENTANA_CRON_DIAS): Date {
+  return new Date(ahora.getTime() - dias * 86_400_000)
+}
+
+/** `since` de la ruta manual (YYYY/MM/DD, YYYY-MM-DD, epoch en segundos o ISO) → Date; `null` si no se entiende. */
+export function parsearSince(since: string): Date | null {
+  const s = String(since ?? '').trim()
+  if (!s) return null
+  let d: Date
+  if (/^\d{9,10}$/.test(s)) d = new Date(Number(s) * 1000)
+  else if (/^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/.test(s)) {
+    const [y, m, dd] = s.split(/[/-]/).map(Number)
+    d = new Date(Date.UTC(y, m - 1, dd))
+  } else d = new Date(s)
+  return isNaN(d.getTime()) ? null : d
+}
+
+/** Cuerpo para la IA: texto plano; si no hay, HTML sin etiquetas (equivale al `extractBody` de la API). */
+export function cuerpoParaIA(text: string, html: string): string {
+  if (text && text.trim()) return text
+  return (html || '')
+    .replace(/<(style|script)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ').trim()
 }
 
 /** Ids que aún no se han analizado con IA, sin repetidos y conservando el orden. */
@@ -31,26 +64,6 @@ export function filtrarNoProcesados(ids: string[], procesados: Iterable<string>)
 export function fusionarProcesados(previos: string[], nuevos: string[], max = MAX_PROCESADOS): string[] {
   const sinRepetir = [...previos.filter((x) => !nuevos.includes(x)), ...nuevos]
   return sinRepetir.length > max ? sinRepetir.slice(sinRepetir.length - max) : sinRepetir
-}
-
-function decodeBase64Url(data: string): string {
-  return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
-}
-
-export function extractBody(payload: any, depth = 0): string {
-  if (depth > 5) return ''
-  if (payload?.body?.data) return decodeBase64Url(payload.body.data)
-  if (payload?.parts) {
-    for (const p of payload.parts) {
-      if (p.mimeType === 'text/plain' && p.body?.data) return decodeBase64Url(p.body.data)
-    }
-    for (const p of payload.parts) {
-      if (p.mimeType === 'text/html' && p.body?.data)
-        return decodeBase64Url(p.body.data).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
-      if (p.parts) { const nested = extractBody(p, depth + 1); if (nested) return nested }
-    }
-  }
-  return ''
 }
 
 export function extractAllLinks(text: string): string[] {
