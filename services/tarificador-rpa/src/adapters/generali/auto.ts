@@ -283,6 +283,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.51 (28/10/2026, prueba real con 0.2.50, trabajo d8584313): la foto descarta el subtipo (en el selector todo llega marcado: «Turismo», «Turismos»,
+ * marca y versión) y «Tipo de vehículo» sigue vacío. El volcado: sin controles bloqueados, sin marcos cargando, el último refresco (`ocultoIF`) fue el
+ * de la compañía de procedencia, y en 0.2.48 (a12d2139) Genernet NO calculó con ese campo vacío (así que bloquea: la parada se mantiene). Ahora, antes de
+ * declararlo vacío, se espera hasta 15 s a que el portal lo rellene y no quede nada bloqueado; la parada dice lo esperado y el último refresco.
+ */
+/**
  * 0.2.50 (28/10/2026, prueba real con 0.2.49, trabajo 3bbecab7): la parada de 0.2.49 confirmó que tras el selector (`lnkVeh2`) TODO lo de solo lectura
  * llega relleno salvo «Tipo de vehículo» (`wclasv`). El volcado NO dice qué lo rellena (sin scripts, valores redactados, DOM del selector nunca capturado),
  * así que no se inventa un clic: antes de «Confirmar» el bot FOTOGRAFÍA el selector (grupos marcados/sin marcar y lo pintado como activo, sin valores) y
@@ -385,7 +391,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.50'
+export const VERSION_GENERALI_AUTO = '0.2.51'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -3261,7 +3267,42 @@ export async function leerCaracteristicasVehiculoGenerali(raiz: Raiz): Promise<B
   return ((await raiz.evaluate(JS_CARACTERISTICAS_VEHICULO).catch(() => [])) as BloqueVehiculoGenerali[] | null) ?? []
 }
 
-export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number } = {}): Promise<ResultadoAdaptador> {
+/** v0.2.51 · Espera máxima a que el portal rellene los obligatorios de SOLO LECTURA de «Características del vehículo». */
+const ESPERA_PROTEGIDOS_MS = 15_000
+
+/** v0.2.51 · `tarea` del último refresco de Genernet en el marco oculto (`ocultoIF`), sin valores; `(ninguno)` si no hay. PURA sobre la URL. */
+export function tareaRefrescoGenerali(url: string | null | undefined): string {
+  if (!url || /^about:/i.test(url) || /blanco\.html/i.test(url)) return '(ninguno)'
+  try {
+    const u = new URL(url)
+    const ruta = u.pathname.split('/').pop() || '?'
+    const tarea = u.searchParams.get('tarea')
+    return tarea ? `${ruta} tarea=${tarea.slice(0, 40)}` : ruta
+  } catch {
+    return '(ilegible)'
+  }
+}
+
+/**
+ * v0.2.51 (trabajo d8584313) · Relee «Características del vehículo» hasta que no quede ningún obligatorio de solo lectura vacío NI controles con
+ * `controlbloqueo="1"`, o hasta `ms`. Devuelve la última lectura, lo esperado, cuántos seguían bloqueados y el último refresco (`ocultoIF`). Solo lee.
+ */
+async function esperarProtegidosGenerali(marco: Raiz, ms: number): Promise<{ bloques: BloqueVehiculoGenerali[]; ms: number; bloqueados: number; refresco: string }> {
+  const ini = Date.now()
+  for (;;) {
+    const bloques = await leerCaracteristicasVehiculoGenerali(marco)
+    const bloqueados = Number(await marco.evaluate(() => document.querySelectorAll('[controlbloqueo="1"]:disabled').length).catch(() => 0)) || 0
+    const listo = vaciosProtegidosGenerali(bloques).length === 0 && bloqueados === 0
+    if (listo || Date.now() - ini >= ms) {
+      const hijos = 'childFrames' in marco ? marco.childFrames() : marco.mainFrame().childFrames()
+      const oculto = hijos.find((f) => f.name() === 'ocultoIF')
+      return { bloques, ms: Date.now() - ini, bloqueados, refresco: tareaRefrescoGenerali(oculto?.url()) }
+    }
+    await pausaMs(500)
+  }
+}
+
+export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number; esperaProtegidosMs?: number } = {}): Promise<ResultadoAdaptador> {
   const paso = <T>(n: Parameters<ContextoPortal['paso']>[0], fn: () => Promise<T>): Promise<T> => (typeof ctx.paso === 'function' ? ctx.paso(n, fn) : fn())
   const ant = conAntecedentesFavorables(form)
   for (const x of ant.supuestos) if (!supuestos.includes(x)) supuestos.push(x)
@@ -3296,10 +3337,12 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const avisosValoracion = bloquesValoracion?.avisos ?? []
   // v0.2.49 (trabajo a12d2139): «Tipo de vehículo» es de SOLO LECTURA (lo pone el portal al elegir el vehículo) y quedó VACÍO: Genernet no calcula
   // («El paso anterior no tiene los datos completos»). El bot no puede teclearlo: se PARA aquí, antes de «Garantías y Resultados», con el inventario.
-  const caracteristicas = await leerCaracteristicasVehiculoGenerali(marco)
+  // v0.2.51: antes de declararlo vacío se ESPERA (hasta 15 s) a que el portal lo rellene y a que no quede ningún control bloqueado por un refresco.
+  const esperaProtegidos = await esperarProtegidosGenerali(marco, opciones.esperaProtegidosMs ?? ESPERA_PROTEGIDOS_MS)
+  const caracteristicas = esperaProtegidos.bloques
   const protegidosVacios = vaciosProtegidosGenerali(caracteristicas)
   if (protegidosVacios.length > 0) {
-    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}. Selector antes de «Confirmar» (v0.2.50; ¿el subtipo «Turismos» llega marcado?): ${FOTO_SELECTOR_GENERALI.get(page) ?? '(sin foto: no pasó por el selector PrimeFaces)'}`)
+    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». Esperado ${Math.round(esperaProtegidos.ms / 1000)} s (v0.2.51): bloqueados por refresco ${esperaProtegidos.bloqueados}; último refresco del portal: ${esperaProtegidos.refresco}. Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}. Selector antes de «Confirmar» (v0.2.50; ¿el subtipo «Turismos» llega marcado?): ${FOTO_SELECTOR_GENERALI.get(page) ?? '(sin foto: no pasó por el selector PrimeFaces)'}`)
   }
   if (!ctx.pulsarSubpestanaGenerali) throw new ErrorMapaIncompletoGenerali(`la puerta guardada de «${SUBPESTANA_PRECIO_GENERALI}» en el contexto del runner; ${datos}`)
   // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).

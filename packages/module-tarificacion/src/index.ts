@@ -573,6 +573,7 @@ export {
   MAX_IMPORTES_MARCO,
   leerImporteEur,
   redactarValoresInventario,
+  CLAVES_ELEMENTO_TEXTO,
   valoresSensiblesDeRiesgo,
   contieneValorSensible,
   normalizarParaRedactar,

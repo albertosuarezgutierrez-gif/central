@@ -16,6 +16,9 @@ import {
   ENTRADAS_EXPLORACION,
   pareceEmision,
   rutaDeMarco,
+  redactarValoresInventario,
+  CLAVES_ELEMENTO_TEXTO,
+  valoresSensiblesDeRiesgo,
   selectorDeElemento,
   sanearInventarioDom,
   validarRespuestaExplorador,
@@ -261,5 +264,39 @@ describe('0.3.5 · ruta de aplicación NSE tolerada SOLO en Mapfre patinete (dec
     expect(cuerpoToleradoConAccionReal('javax.faces.source=form:btnContratar&formEmision=formEmision')).toBe(true)
     expect(cuerpoToleradoConAccionReal('javax.faces.partial.execute=form%3AbtnConfirmar')).toBe(true)
     expect(cuerpoToleradoConAccionReal('javax.faces.source=form:btnSiguiente&formEmision:campo=1&javax.faces.partial.render=formEmision')).toBe(false)
+  })
+})
+
+describe('0.3.7 · guardia de datos personales: los campos nuevos pasan por redactarValoresInventario', () => {
+  it('un aviso del portal, un mensajeError y un hrefRuta con el nombre o la calle del riesgo desaparecen', () => {
+    const riesgo = { tomador: { nombre: 'Eustaquio', apellido1: 'Villaverdeño' }, direccion: { calle: 'Calle Inventada Larga' } }
+    const inv = sanearInventarioDom({ marcos: [{
+      url: 'https://www.e-pacallianz.com/drvp00/SEAServlet', nombre: 'appArea', titulos: [],
+      avisosPortal: ['El tomador VILLAVERDEÑO, EUSTAQUIO ya existe', 'Revise la dirección Calle Inventada Larga', 'Debe seleccionar el tipo de documento'],
+      elementos: [
+        { tag: 'input', type: 'text', id: 'nif', invalido: true, mensajeError: 'Eustaquio no coincide con el titular' },
+        { tag: 'input', type: 'text', id: 'otro', invalido: true, mensajeError: 'Campo obligatorio' },
+        { tag: 'a', role: 'link', texto: 'Ficha', hrefRuta: '/clientes/villaverdeno-eustaquio/ficha' },
+      ],
+    }] }, undefined, { refs: true })!
+    // El saneado deja pasar estos textos (no tienen forma de dato personal): la redacción por VALORES del riesgo es la que los quita.
+    expect(inv.marcos[0].avisosPortal).toHaveLength(3)
+    const r = redactarValoresInventario(inv, valoresSensiblesDeRiesgo(riesgo))
+    const m = r.marcos[0]
+    expect(m.avisosPortal).toEqual(['Debe seleccionar el tipo de documento'])
+    expect(m.elementos.find((e) => e.id === 'nif')!.mensajeError).toBeUndefined()
+    expect(m.elementos.find((e) => e.id === 'otro')!.mensajeError).toBe('Campo obligatorio')
+    expect(JSON.stringify(r)).not.toMatch(/eustaquio|villaverde|inventada/i)
+    expect(r.textosDescartados).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('0.3.7 · guardia estructural: toda clave de TEXTO que el saneado pone en un elemento se redacta', () => {
+  it('cada `pon(\'clave\', …)` de sanearInventarioDom está en CLAVES_ELEMENTO_TEXTO', async () => {
+    const { readFileSync } = await import('node:fs')
+    const src = readFileSync(new URL('./inventario-dom.ts', import.meta.url), 'utf8')
+    const claves = [...src.matchAll(/\bpon\('([A-Za-z]+)'/g)].map((m) => m[1])
+    expect(claves.length).toBeGreaterThan(10)
+    for (const c of claves) expect(CLAVES_ELEMENTO_TEXTO as readonly string[], c).toContain(c)
   })
 })

@@ -11,7 +11,7 @@ import { resumenFotoSelectorGenerali } from '../src/adapters/generali/reglas.ts'
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.50 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.50'))
+test('v0.2.50 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.51'))
 
 test('v0.2.50 · puro: la foto dice qué grupo está SIN marcar y lo pintado como activo (saneado, sin repetir)', () => {
   const f = resumenFotoSelectorGenerali({
@@ -77,7 +77,7 @@ test('v0.2.50 · caso 3bbecab7: la parada por «Tipo de vehículo» vacío lleva
     assert.match(foto, /marcados en pantalla: «Turismo» · «Turismos»/)
     await page.setContent(`<html><body>${VALORACION}</body></html>`)
     const c = { pausaAccion: async () => {}, pulsarSubpestanaGenerali: async () => {} } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 300 }), (e: unknown) => {
       assert.ok(e instanceof ErrorMapaIncompletoGenerali, String(e))
       const m = (e as Error).message
       assert.match(m, /: Tipo de vehículo\. No se pasa/)
@@ -90,6 +90,6 @@ test('v0.2.50 · caso 3bbecab7: la parada por «Tipo de vehículo» vacío lleva
 test('v0.2.50 · sin pasar por el selector, la parada lo dice (no inventa foto)', async () => {
   await conPagina(VALORACION, async (page) => {
     const c = { pausaAccion: async () => {}, pulsarSubpestanaGenerali: async () => {} } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300 }), /Selector antes de «Confirmar» .*: \(sin foto: no pasó por el selector PrimeFaces\)/)
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 300 }), /Selector antes de «Confirmar» .*: \(sin foto: no pasó por el selector PrimeFaces\)/)
   })
 })

@@ -724,7 +724,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.6', () => assert.equal(EXPLORADOR_VERSION, '0.3.6'))
+test('versión 0.3.7', () => assert.equal(EXPLORADOR_VERSION, '0.3.7'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`
@@ -798,6 +798,25 @@ test('0.3.6 · con la MISMA URL tolerada: «Contratar», «Confirmar», «Firmar
   try {
     tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
     await assert.rejects(pulsarMenuOfertaNseMapfre(page.locator('#m9'), guard, 'mapfre'), EmisionBloqueadaError)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.7 · inventario: un campo INVÁLIDO lleva su mensaje de error y el marco los avisos del portal (informe de incidencias de ePAC)', async () => {
+  figuras = PAGINA(`<table><tr><td><input type="text" id="IntervinientesBean$nifTomador_doc" class="ui-state-error" aria-invalid="true"><span class="errorMessage">El tomador no existe en cartera</span></td></tr></table>
+    <div id="dataErrorSection"><table><tr class="rowAppErrorTextBlock"><td>Debe seleccionar el tipo de documento del tomador</td></tr></table></div>
+    <input type="text" id="otro">`)
+  const { context, page } = await abrir('/drvp00/SEAServlet')
+  try {
+    const cap = (await capturarInventarioExploracion(page))!
+    const m = cap.inventario.marcos[0]
+    const nif = m.elementos.find((e) => e.id === 'IntervinientesBean$nifTomador_doc')!
+    assert.equal(nif.invalido, true)
+    assert.equal(nif.mensajeError, 'El tomador no existe en cartera')
+    assert.equal(m.elementos.find((e) => e.id === 'otro')!.mensajeError, undefined)
+    assert.deepEqual(m.avisosPortal, ['Debe seleccionar el tipo de documento del tomador'])
+    await cap.liberar()
   } finally {
     await context.close()
   }
