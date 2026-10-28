@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T18:28:05Z",
-  "sha": "4549992460f24c9cdcbd66c79169826a9c2d0f02",
+  "generadoEn": "2026-10-28T19:24:44Z",
+  "sha": "061581db7139a22e75f93bb3348b70849f063d78",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -254099,8 +254099,11 @@
         "comprobarBoton",
         "esLanzadorAplicacionNseMapfre",
         "cuerpoToleradoConAccionReal",
+        "detalleCuerpoToleradoConAccionReal",
         "neutralizarRutaTolerable",
-        "esTextoBotonProhibido"
+        "esTextoBotonProhibido",
+        "tipoDocumentoDe",
+        "opcionTipoDocumento"
       ],
       "funciones": [
         {
@@ -254174,12 +254177,21 @@
           "resumen": "Cuerpo (form-urlencoded) de una petición a una ruta TOLERADA: ¿nombra una acción de emisión real? Mira el NOMBRE de cada parámetro (`formEmision:btnEmitir=…`) y el VALOR de `javax.faces.source` / `jav"
         },
         {
+          "nombre": "detalleCuerpoToleradoConAccionReal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: string | null | undefined",
+          "retorno": "",
+          "linea": 250,
+          "resumen": "Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no se sabía por qué): el NOMBRE del parámetro (o `javax.faces.*`) y la"
+        },
+        {
           "nombre": "neutralizarRutaTolerable",
           "kind": "function",
           "exportada": true,
           "params": "texto: string | null | undefined, reglas: readonly RutaTolerable[], origenPagina?: string | null",
           "retorno": "string | null | undefined",
-          "linea": 259,
+          "linea": 276,
           "resumen": "`origenPagina`: origen de la ventana/marco donde está la ruta. Una ruta RELATIVA (`/…`) solo se tolera si es EXACTAMENTE el de la regla; sin él, nunca (fail-closed). Una URL absoluta lleva su propio o"
         },
         {
@@ -254188,12 +254200,29 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 300
+          "linea": 317
+        },
+        {
+          "nombre": "tipoDocumentoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "documento: string | null | undefined",
+          "retorno": "TipoDocumento | null",
+          "linea": 326
+        },
+        {
+          "nombre": "opcionTipoDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoDocumento, opciones: readonly { valor: string | null; texto: string | null }[]",
+          "retorno": "string | null",
+          "linea": 339,
+          "resumen": "La opción de un desplegable de «Tipo de documento» que corresponde a `tipo`, por su TEXTO (sin tildes, mayúsculas ni signos): NIF → «NIF», «DNI», «DNI/NIF», «NIF/DNI», «N.I.F.»; NIE → empieza por «NIE"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3223b339b5c8"
+      "hash": "6dfd68e9a1f0"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-asesor.ts",
@@ -258343,6 +258372,6 @@
   ],
   "resumen": {
     "archivos": 5411,
-    "funciones": 20762
+    "funciones": 20765
   }
 }
