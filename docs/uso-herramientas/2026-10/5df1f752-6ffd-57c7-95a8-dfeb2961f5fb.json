@@ -1,8 +1,8 @@
 {
  "sesion": "5df1f752-6ffd-57c7-95a8-dfeb2961f5fb",
  "inicio": "2026-10-27T18:43:39.106Z",
- "fin": "2026-10-28T03:46:57.490Z",
- "llamadas": 130,
+ "fin": "2026-10-28T04:58:46.136Z",
+ "llamadas": 144,
  "categorias": {
   "agente:general-purpose": {
    "llamadas": 3,
@@ -16,28 +16,28 @@
    }
   },
   "bash": {
-   "llamadas": 51,
-   "chars_in": 19663,
-   "chars_out": 135053,
+   "llamadas": 53,
+   "chars_in": 20255,
+   "chars_out": 137138,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 51
+    "Bash": 53
    }
   },
   "otro": {
-   "llamadas": 46,
-   "chars_in": 13315,
-   "chars_out": 279388,
+   "llamadas": 53,
+   "chars_in": 13489,
+   "chars_out": 314336,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 1118768,
    "tools": {
     "SubagentHandback": 5,
-    "ToolSearch": 9,
+    "ToolSearch": 11,
     "WebSearch": 1,
-    "ReadNotifications": 31
+    "ReadNotifications": 36
    }
   },
   "lectura-directa": {
@@ -96,27 +96,31 @@
    }
   },
   "mcp:github": {
-   "llamadas": 11,
-   "chars_in": 2658,
-   "chars_out": 45832,
+   "llamadas": 14,
+   "chars_in": 3041,
+   "chars_out": 47133,
    "errores": 0,
    "archivos_citados": 24,
    "chars_citados": 4830812,
    "tools": {
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 10
+    "mcp__github__pull_request_read": 11,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__merge_pull_request": 1
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 5,
-   "chars_in": 988,
-   "chars_out": 671,
+   "llamadas": 7,
+   "chars_in": 1107,
+   "chars_out": 1943,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 1,
+   "chars_citados": 1118768,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 1,
-    "mcp__claude-code-remote__send_later": 4
+    "mcp__claude-code-remote__send_later": 4,
+    "mcp__claude-code-remote__delete_trigger": 1,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 1
    }
   }
  }
