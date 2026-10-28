@@ -167,23 +167,23 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 404 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 405 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 393 | 69.491 | 61.128.008 | 0 | 0 |
-| `otro` | 387 | 16.198 | 35.211.192 | 20.259.513 | 0 |
-| `lectura-directa` | 332 | 10.679 | 29.613.097 | 0 | 0 |
-| `mcp:github` | 333 | 8.138 | 6.173.642 | 57.294.135 | 107 |
-| `sql` | 248 | 6.777 | 3.535.241 | 2.351.230 | 26 |
-| `escritura` | 244 | 6.015 | 88.825.378 | 0 | 0 |
+| `bash` | 394 | 69.599 | 61.205.675 | 0 | 0 |
+| `otro` | 388 | 16.210 | 35.228.210 | 20.259.513 | 0 |
+| `lectura-directa` | 333 | 10.681 | 29.619.220 | 0 | 0 |
+| `mcp:github` | 334 | 8.141 | 6.173.715 | 57.294.135 | 107 |
+| `sql` | 249 | 6.781 | 3.537.122 | 2.351.230 | 26 |
+| `escritura` | 244 | 6.020 | 88.851.960 | 0 | 0 |
 | `mcp:Vercel` | 84 | 1.502 | 1.285.563 | 237.328 | 44 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 50 | 1.400 | 5.731.030 | 0 | 0 |
 | `mcp:Gmail` | 62 | 1.395 | 1.545.118 | 0 | 101 |
-| `agente:general-purpose` | 137 | 1.197 | 710.331 | 25.597.049 | 0 |
-| `mcp:claude-code-remote` | 72 | 938 | 102.017 | 1.250.070 | 0 |
-| `mcp:Interactive-Brokers--IBKR-` | 14 | 646 | 766.860 | 0 | 0 |
+| `agente:general-purpose` | 137 | 1.201 | 714.738 | 25.636.981 | 0 |
+| `mcp:claude-code-remote` | 72 | 939 | 102.077 | 1.250.070 | 0 |
+| `mcp:Interactive-Brokers--IBKR-` | 15 | 674 | 793.362 | 0 | 0 |
 | `mcp:Supabase` | 147 | 485 | 88.634 | 6.830 | 7 |
 | `agente:agente-architect` | 83 | 455 | 316.875 | 11.737.703 | 0 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
@@ -209,7 +209,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:openrouter` | 3 | 7 | 19.723 | 0 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
-| `agente:Plan` | 2 | 2 | 1.832 | 12.062 | 0 |
+| `agente:Plan` | 3 | 3 | 2.700 | 18.015 | 0 |
 | `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |

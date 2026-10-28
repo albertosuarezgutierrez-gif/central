@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T20:18:57Z",
-  "sha": "375b8a6fa34e1633f3254981ad1b270d33762d4f",
+  "generadoEn": "2026-10-28T20:57:28Z",
+  "sha": "3b3106f5efc5f48da3d49aecc50a054f9aff5f73",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -32217,13 +32217,22 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 26,
-          "resumen": "mismo siniestro y autor, nunca de la IA, no ya sustituido → 409), actor? } → { estado:'ok', ...Mensaje, mensaje } Cada mensaje del GET lleva `sustituidoPor` (id | null); plazos/espera/IA leen solo la "
+          "linea": 30,
+          "resumen": "mismo siniestro y autor, nunca de la IA, no ya sustituido → 409), actor? } → { estado:'ok', ...Mensaje, mensaje, preRehuse?: true } POST { correduriaId, siniestroId, valoracion: { mensajeId (mensaje '"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/siniestro/hilo",
-      "hash": "7e191470c745"
+      "hash": "b6fa520feeb0"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/siniestro/hilo/volcado/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/siniestro/hilo/volcado",
+      "hash": "c2b25e146533"
     },
     {
       "ruta": "apps/asegura/app/api/operador/siniestro/ia/route.ts",
@@ -32232,7 +32241,30 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/siniestro/ia",
-      "hash": "a9f7fd37bd7f"
+      "hash": "5e144390acb1"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/siniestro/poliza-buscar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "Buscador de texto en los PDF de la póliza del siniestro (sin IA; sin tildes ni mayúsculas; varias palabras = todas dentro de una ventana de 600 caracteres). GET ?correduriaId?&siniestroId&q → { estado"
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/operador/siniestro/poliza-buscar",
+      "hash": "0f9f73a6b5a2"
     },
     {
       "ruta": "apps/asegura/app/api/operador/siniestro/route.ts",
@@ -56492,6 +56524,27 @@
       "hash": "f96f9c8d69b2"
     },
     {
+      "ruta": "apps/asegura/lib/poliza-texto.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Texto de los PDF de una póliza, POR DOCUMENTO (para el buscador `/api/operador/siniestro/poliza-buscar`). Copia de la lógica de `textoPolizaDe` (siniestro-ia.ts) pero conservando el id del documento. Sin IA, sin red: solo lo archivado en `documentos` de ESA correduría (el PDF de Codeoscopic archivad",
+      "exporta": [
+        "textosPolizaPorDocumento"
+      ],
+      "funciones": [
+        {
+          "nombre": "textosPolizaPorDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string",
+          "retorno": "Promise<TextoDocumentoPoliza[]>",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9bc11b505072"
+    },
+    {
       "ruta": "apps/asegura/lib/portal-modulos-cartera.ts",
       "ambito": "apps/asegura",
       "resumen": "SQL de los módulos del portal de UN cliente (puerto de operador). Las reglas son puras: `portal-modulos-operador.ts`. Tabla: `seguros.portal_modulo` (`apps/asegura-portal/prisma/sql/2026-10-22_portal_modulos.sql`); la escritura necesita el GRANT de `prisma/sql/2026-10-24_portal_modulos_operador.sql`",
@@ -61766,6 +61819,9 @@
       "exporta": [
         "leerHiloSiniestro",
         "anadirMensajeSiniestro",
+        "yaAvisadoPreRehuse",
+        "metaPreRehuse",
+        "valorarAnalisisSiniestro",
         "cerrarSiniestroConResultado",
         "siniestrosEsperandoCompania"
       ],
@@ -61776,7 +61832,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "FalloHilo",
-          "linea": 101
+          "linea": 110
         },
         {
           "nombre": "noEncontrado",
@@ -61784,7 +61840,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "FalloHilo",
-          "linea": 102
+          "linea": 111
         },
         {
           "nombre": "yaEditado",
@@ -61792,7 +61848,7 @@
           "exportada": false,
           "params": "",
           "retorno": "FalloHilo",
-          "linea": 103
+          "linea": 112
         },
         {
           "nombre": "sinMigracion",
@@ -61800,7 +61856,7 @@
           "exportada": false,
           "params": "",
           "retorno": "FalloHilo",
-          "linea": 104
+          "linea": 113
         },
         {
           "nombre": "esMigracionAusente",
@@ -61808,7 +61864,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 105
+          "linea": 114
         },
         {
           "nombre": "esObjeto",
@@ -61816,7 +61872,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 125
+          "linea": 134
         },
         {
           "nombre": "isoDia",
@@ -61824,7 +61880,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 126
+          "linea": 135
         },
         {
           "nombre": "leerCierre",
@@ -61832,7 +61888,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, siniestroId: string",
           "retorno": "Promise<CierreRaw | null>",
-          "linea": 132,
+          "linea": 141,
           "resumen": "Lee el cierre por SQL crudo (columnas del SQL 2026-10-28d). Lanza el error de columna ausente (42703): el llamante lo traduce a `sin_migracion`."
         },
         {
@@ -61841,7 +61897,7 @@
           "exportada": false,
           "params": "f: FilaMensaje",
           "retorno": "MensajeSiniestro",
-          "linea": 140
+          "linea": 149
         },
         {
           "nombre": "paraPlazosVigentes",
@@ -61849,7 +61905,7 @@
           "exportada": false,
           "params": "mensajes: MensajeSiniestro[]",
           "retorno": "MensajeParaPlazos[]",
-          "linea": 163,
+          "linea": 173,
           "resumen": "Plazos y espera leen la ÚLTIMA versión de cada mensaje, con la fecha del ORIGINAL (una errata no reinicia un plazo)."
         },
         {
@@ -61858,7 +61914,16 @@
           "exportada": false,
           "params": "correduriaId: string, where: { polizaId: string } | { siniestroId: string }, contexto: string",
           "retorno": "Promise<DocumentoBreve[] | null>",
-          "linea": 171
+          "linea": 185
+        },
+        {
+          "nombre": "partesPortalDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, siniestroId: string",
+          "retorno": "Promise<ParteDelPortal[] | null>",
+          "linea": 201,
+          "resumen": "Partes del portal vinculados (FK `siniestro_id`, ya verificado que el siniestro es de la correduría) y sus documentos."
         },
         {
           "nombre": "leerHiloSiniestro",
@@ -61866,7 +61931,7 @@
           "exportada": true,
           "params": "correduriaId: string, siniestroId: string, hoy: string = diaMadrid(new Date()),",
           "retorno": "Promise<",
-          "linea": 187,
+          "linea": 230,
           "resumen": "El hilo de un siniestro de la correduría, con plazos. `hoy` inyectable (día de Madrid)."
         },
         {
@@ -61875,7 +61940,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 275
+          "linea": 320
         },
         {
           "nombre": "anadirMensajeSiniestro",
@@ -61883,8 +61948,35 @@
           "exportada": true,
           "params": "correduriaId: string, e: EntradaAnadirMensaje,",
           "retorno": "Promise<",
-          "linea": 306,
+          "linea": 351,
           "resumen": "Añade un mensaje al hilo. Valida (puro), comprueba siniestro y documento contra la correduría, CIFRA el texto, inserta y deja fila en `historial_interno` sin el texto. Reutilizable por el endpoint de "
+        },
+        {
+          "nombre": "yaAvisadoPreRehuse",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, siniestroId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 454,
+          "resumen": "¿Este siniestro ya tiene un mensaje con `meta.preRehuseAvisado`? (el aviso de pre-rehúse es UNO por siniestro)"
+        },
+        {
+          "nombre": "metaPreRehuse",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, siniestroId: string, texto: unknown",
+          "retorno": "Promise<",
+          "linea": 468,
+          "resumen": "¿Este texto dispara el aviso de pre-rehúse (y aún no se avisó en el siniestro)? Devuelve el `meta` a añadir al mensaje."
+        },
+        {
+          "nombre": "valorarAnalisisSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, e: { siniestroId: string; valoracion: unknown; creadoPor: string },",
+          "retorno": "Promise<",
+          "linea": 477,
+          "resumen": "Valora un análisis de la IA (👍/👎 + motivo): mensaje autor `interna`, tipo `nota`, `meta.valoracion {mensajeId, voto}`. `mensajeId` tiene que ser un mensaje `ia` de ESTE siniestro y esta correduría."
         },
         {
           "nombre": "cerrarSiniestroConResultado",
@@ -61892,7 +61984,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { siniestroId: string; resultado: unknown; motivo: unknown; actor: string },",
           "retorno": "Promise<",
-          "linea": 409,
+          "linea": 502,
           "resumen": "Cierra (o re-cierra) el siniestro con un resultado y su motivo. No toca `estado` ni `comentario`."
         },
         {
@@ -61901,7 +61993,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: string = diaMadrid(new Date()),",
           "retorno": "Promise<",
-          "linea": 464,
+          "linea": 557,
           "resumen": "Siniestros cuyo último `enviado` del corredor no tiene respuesta posterior de la compañía. Fuera: los fusionados y los ya cerrados con resultado. Orden: los que más llevan esperando primero."
         }
       ],
@@ -61914,7 +62006,7 @@
         "vigentes"
       ],
       "rutaApi": null,
-      "hash": "f7dab9a0fc20"
+      "hash": "569d469da1e1"
     },
     {
       "ruta": "apps/asegura/lib/siniestro-ia-prompt.ts",
@@ -61922,7 +62014,9 @@
       "resumen": "Prompt de sistema de la IA de siniestros (analizar / redactar). Aparte del código para poder afinarlo sin tocar la ruta. La IA ARGUMENTA; la decisión es del corredor. Datos del mediador desde `MEDIADOR`.",
       "exporta": [
         "firmaMediador",
-        "promptSistemaSiniestro"
+        "firmaIntranet",
+        "promptSistemaSiniestro",
+        "promptSistemaVeredicto"
       ],
       "funciones": [
         {
@@ -61931,7 +62025,16 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 34
+          "linea": 39
+        },
+        {
+          "nombre": "firmaIntranet",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 44,
+          "resumen": "Firma breve de la intranet: «Alberto Suárez Gutiérrez · Grupo ASegura» (desde `MEDIADOR`)."
         },
         {
           "nombre": "promptSistemaSiniestro",
@@ -61939,19 +62042,29 @@
           "exportada": true,
           "params": "accion: AccionSiniestroIA, destinatario: DestinatarioSiniestroIA",
           "retorno": "string",
-          "linea": 38
+          "linea": 50
+        },
+        {
+          "nombre": "promptSistemaVeredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 82,
+          "resumen": "Veredicto estructurado (modelo bueno), con la base de conocimiento."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "41fd546625de"
+      "hash": "e72f0939ac34"
     },
     {
       "ruta": "apps/asegura/lib/siniestro-ia.ts",
       "ambito": "apps/asegura",
-      "resumen": "IA del siniestro (analizar / redactar): arma el contexto de ESA correduría, llama a `iaTexto()` UNA vez, verifica las citas contra el texto de la póliza y guarda el resultado como mensaje autor 'ia' del hilo. El texto del PDF y el hilo van a la IA (por la pasarela, `privado`), nunca a `historial_int",
+      "resumen": "IA del siniestro = «gabinete de siniestros» (analizar / redactar). Todo de ESA correduría. · ANALIZAR: (1) ÍNDICE de la póliza con el modelo BARATO, cacheado en el meta del análisis por huella de los documentos; (2) FICHA del caso con el modelo barato, cacheada por huella del hilo vigente; (3) VERED",
       "exporta": [
         "modeloSiniestroIA",
+        "modeloSiniestroExtraccion",
         "textoPolizaDe",
         "ejecutarIASiniestro"
       ],
@@ -61962,17 +62075,68 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env",
           "retorno": "string",
-          "linea": 21,
+          "linea": 42,
           "resumen": "Modelo para razonamiento largo: el potente que ya usa el formador (Claude Sonnet vía OpenRouter, por la pasarela)."
+        },
+        {
+          "nombre": "modeloSiniestroExtraccion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env",
+          "retorno": "string",
+          "linea": 46,
+          "resumen": "Modelo BARATO para índice y ficha: el de lectura de pólizas por defecto (Gemini Flash vía OpenRouter)."
         },
         {
           "nombre": "textoPolizaDe",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, polizaId: string",
+          "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<",
-          "linea": 27,
+          "linea": 52,
           "resumen": "Texto de los PDF de la póliza (documentos con polizaId de ESA correduría + el PDF archivado), recortado."
+        },
+        {
+          "nombre": "llamarIA",
+          "kind": "function",
+          "exportada": false,
+          "params": "paso: PasoIA, prompt: string, o: { system: string; modelo: string; maxTokens: number; timeoutMs: number }",
+          "retorno": "Promise<string>",
+          "linea": 94,
+          "resumen": "LA llamada a la IA del siniestro: un solo intento, sin reintentos, por la pasarela (`privado`)."
+        },
+        {
+          "nombre": "falloIA",
+          "kind": "function",
+          "exportada": false,
+          "params": "err: unknown, donde: string",
+          "retorno": "FalloIA",
+          "linea": 101
+        },
+        {
+          "nombre": "linea",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "m: { creadoAtOriginal: string; autor: string; tipo: string; editado: boolean; texto: string | null }",
+          "retorno": null,
+          "linea": 111
+        },
+        {
+          "nombre": "cola",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string, tope: number",
+          "retorno": null,
+          "linea": 113
+        },
+        {
+          "nombre": "otrasPolizasEnVigor",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, polizaId: string",
+          "retorno": null,
+          "linea": 116,
+          "resumen": "Otras pólizas EN VIGOR del mismo cliente (criterio de cartera, nunca el tipo de la ficha), resumidas: solo para el aviso «otrasPolizas»."
         },
         {
           "nombre": "ejecutarIASiniestro",
@@ -61980,12 +62144,12 @@
           "exportada": true,
           "params": "correduriaId: string, e: { siniestroId: string; accion: AccionSiniestroIA; destinatario: DestinatarioSiniestroIA; actor: string },",
           "retorno": "Promise<",
-          "linea": 61
+          "linea": 134
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7c7a97c70bb9"
+      "hash": "ad50c1e5cd5e"
     },
     {
       "ruta": "apps/asegura/lib/siniestros-vinculo.ts",
@@ -126309,9 +126473,31 @@
           "linea": 10
         }
       ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "3d053acdb06c"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/BuscarPoliza.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "BuscarPoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "BuscarPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ siniestroId }: { siniestroId: string }",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "537a7d99471b"
+      "hash": "9eb1f6e44804"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Cabecera.tsx",
@@ -126346,14 +126532,14 @@
           "exportada": true,
           "params": "{ siniestroId, documentos, precarga, onGuardado }: { siniestroId: string documentos: DocumentoResumen[] precarga: Precarga | null onGuardado: () => void }",
           "retorno": null,
-          "linea": 19
+          "linea": 21
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "3af667af746b"
+      "hash": "ae6dd04c090b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Cierre.tsx",
@@ -126390,7 +126576,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "Expediente",
@@ -126398,12 +126584,51 @@
           "exportada": true,
           "params": "{ siniestroId }: { siniestroId: string }",
           "retorno": null,
-          "linea": 20
+          "linea": 22
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "00eba89ad2dd"
+      "hash": "1bd8aabc3165"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/FichaPerito.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "FichaPeritoVista",
+        "FichaPerito"
+      ],
+      "funciones": [
+        {
+          "nombre": "euros",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": "string",
+          "linea": 6
+        },
+        {
+          "nombre": "FichaPeritoVista",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ ficha, titulo = 'Ficha del perito' }: { ficha: FichaPerito; titulo?: string }",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Ficha del informe previo del perito. Campo sin dato = «—» (nunca 0,00€)."
+        },
+        {
+          "nombre": "FichaPerito",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ ficha }: { ficha: FichaPerito }",
+          "retorno": null,
+          "linea": 32,
+          "resumen": "Bloque de expediente: ficha del último informe del perito que trae el hilo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "328bc5944b04"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Hilo.tsx",
@@ -126418,28 +126643,28 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "Burbuja",
           "kind": "function",
           "exportada": false,
-          "params": "{ m, editado, sustituido, onCopiar, onEnviado, onEditar }: { m: Mensaje; editado: boolean; sustituido: boolean onCopiar: (t: string) => void; onEnviado: (t: string) => void; onEditar: (m: Mensaje) => void }",
+          "params": "{ m, editado, sustituido, siniestroId, onCopiar, onEnviado, onEditar, onResponder, onValorado }: { m: Mensaje; editado: boolean; sustituido: boolean; siniestroId: string onResponder: (p: string) => void; onValorado: () => void onCopiar: (t:",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "Hilo",
           "kind": "function",
           "exportada": true,
-          "params": "{ mensajes, onCopiar, onEnviado, onEditar }: { mensajes: Mensaje[] | null; onCopiar: (t: string) => void; onEnviado: (t: string) => void; onEditar: (m: Mensaje) => void }",
+          "params": "{ siniestroId, mensajes, partesPortal, onCopiar, onEnviado, onEditar, onResponder, onValorado }: { siniestroId: string; partesPortal: PartePortal[] | null; onResponder: (p: string) => void; onValorado: () => void mensajes: Mensaje[] | null;",
           "retorno": null,
-          "linea": 56
+          "linea": 63
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "18509368442c"
+      "hash": "2b0073381a17"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/page.tsx",
@@ -126481,6 +126706,47 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ee418f5ece24"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/VeredictoIa.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "VeredictoIa"
+      ],
+      "funciones": [
+        {
+          "nombre": "VeredictoIa",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ v, siniestroId, mensajeId, onResponder, onValorado }: { v: Veredicto; siniestroId: string; mensajeId: string; onResponder: (pregunta: string) => void; onValorado: () => void }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fd9ad8b7b1fb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/VolcadoIntranet.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "VolcadoIntranet"
+      ],
+      "funciones": [
+        {
+          "nombre": "VolcadoIntranet",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ siniestroId, onGuardado }: { siniestroId: string; onGuardado: () => void }",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "«Subir todo»: pega la conversación de la intranet, se revisa la propuesta y solo entonces se guarda."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "78a902326329"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Siniestros.tsx",
@@ -138087,7 +138353,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8,
+          "linea": 9,
           "resumen": "/api/correduria/siniestro/hilo — hilo, plazos y espera de un siniestro (proxy a asegura; mismo status y json)."
         },
         {
@@ -138096,13 +138362,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18,
+          "linea": 19,
           "resumen": "POST { siniestroId, autor, tipo, texto, documentoId? } — añade un mensaje al hilo."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/correduria/siniestro/hilo",
-      "hash": "5d7e8c94c395"
+      "hash": "b75320ca8d1d"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/siniestro/ia/route.ts",
@@ -138123,7 +138389,28 @@
       ],
       "tablas": [],
       "rutaApi": "/api/correduria/siniestro/ia",
-      "hash": "b7d7a9de37a9"
+      "hash": "144198476e06"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/siniestro/poliza-buscar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET ?siniestroId&q — busca en el texto de la póliza del siniestro (proxy a asegura; mismo status y json)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/siniestro/poliza-buscar",
+      "hash": "7c206238efb4"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/siniestro/route.ts",
@@ -138209,6 +138496,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/siniestro/terceros",
       "hash": "2ab609cc91de"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/siniestro/volcado/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "POST { siniestroId, texto, confirmar } — volcado de la intranet: propuesta (confirmar=false) o guardado (true). Proxy a asegura."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/siniestro/volcado",
+      "hash": "5ad8675326b6"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/siniestros-esperando/route.ts",
@@ -164158,7 +164466,9 @@
         "anotarHiloAsegura",
         "cierreAsegura",
         "iaSiniestroAsegura",
-        "esperandoAsegura"
+        "esperandoAsegura",
+        "volcadoAsegura",
+        "polizaBuscarAsegura"
       ],
       "funciones": [
         {
@@ -164209,11 +164519,27 @@
           "params": "correduriaId: string | null",
           "retorno": "Promise<Reenvio>",
           "linea": 22
+        },
+        {
+          "nombre": "volcadoAsegura",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 25
+        },
+        {
+          "nombre": "polizaBuscarAsegura",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "correduriaId: string | null, siniestroId: string, q: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 28
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7011e2fa37dd"
+      "hash": "2ec18ba0749f"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/siniestro-hilo.ts",
@@ -164236,7 +164562,22 @@
         "cuentaSustituidos",
         "modoDeMensaje",
         "puedeEditar",
-        "autorDeModo"
+        "autorDeModo",
+        "leerVeredicto",
+        "textoConfianza",
+        "leerFichaPerito",
+        "ultimaFichaPerito",
+        "leerPropuestaVolcado",
+        "trozosNuevos",
+        "leerResultadoVolcado",
+        "hayPreRehuse",
+        "textoPreRehuse",
+        "leerBusquedaPoliza",
+        "resaltarFragmento",
+        "leerPartesPortal",
+        "origenVolcado",
+        "precargaPregunta",
+        "cuerpoValoracion"
       ],
       "funciones": [
         {
@@ -164245,7 +164586,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 50
+          "linea": 52
         },
         {
           "nombre": "str",
@@ -164253,7 +164594,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 52
+          "linea": 54
         },
         {
           "nombre": "num",
@@ -164261,7 +164602,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 53
+          "linea": 55
         },
         {
           "nombre": "leerMensaje",
@@ -164269,7 +164610,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Mensaje | null",
-          "linea": 55
+          "linea": 57
         },
         {
           "nombre": "leerMensajes",
@@ -164277,7 +164618,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Mensaje[] | null",
-          "linea": 66,
+          "linea": 68,
           "resumen": "`null` = no es un array legible (no se pudo leer); un elemento ilegible se descarta."
         },
         {
@@ -164286,7 +164627,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Plazo[] | null",
-          "linea": 71
+          "linea": 73
         },
         {
           "nombre": "leerHilo",
@@ -164294,7 +164635,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "HiloSiniestro | null",
-          "linea": 85
+          "linea": 87
         },
         {
           "nombre": "leerEsperando",
@@ -164302,7 +164643,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Esperando[] | null",
-          "linea": 106
+          "linea": 109
         },
         {
           "nombre": "textoDias",
@@ -164310,7 +164651,7 @@
           "exportada": true,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 121,
+          "linea": 124,
           "resumen": "«hace 1 día» / «hace 12 días». `null` = no se sabe (no 0)."
         },
         {
@@ -164319,7 +164660,7 @@
           "exportada": true,
           "params": "p: Plazo",
           "retorno": "EstadoPlazo",
-          "linea": 132
+          "linea": 135
         },
         {
           "nombre": "motivoFallo",
@@ -164327,7 +164668,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "string",
-          "linea": 141,
+          "linea": 144,
           "resumen": "Mensaje de error para el corredor a partir de la respuesta del puerto (`sin_migracion` = BD sin la tabla del hilo)."
         },
         {
@@ -164336,7 +164677,7 @@
           "exportada": true,
           "params": "meta: Record<string, unknown> | null",
           "retorno": "string[]",
-          "linea": 148,
+          "linea": 151,
           "resumen": "Citas de la póliza que la IA mencionó y NO aparecen en el documento (aviso a resaltar)."
         },
         {
@@ -164345,7 +164686,7 @@
           "exportada": true,
           "params": "texto: string, abierto: boolean, limite = LIMITE_PLEGADO",
           "retorno": "",
-          "linea": 156
+          "linea": 159
         },
         {
           "nombre": "combinacionValida",
@@ -164353,7 +164694,7 @@
           "exportada": true,
           "params": "autor: AutorMensaje, tipo: TipoMensaje",
           "retorno": "boolean",
-          "linea": 166,
+          "linea": 169,
           "resumen": "Combinaciones autor/tipo que acepta el puerto: `enviado` solo del corredor, `rehuse` solo de la compañía."
         },
         {
@@ -164362,7 +164703,7 @@
           "exportada": true,
           "params": "modo: ModoCaja, texto: string, documentoId: string | null, reclamacionSac = false, sustituyeA: string | null = null",
           "retorno": "",
-          "linea": 174,
+          "linea": 177,
           "resumen": "Qué se guarda según el selector de la caja. `reclamacionSac` solo cuenta con «enviado»."
         },
         {
@@ -164371,7 +164712,7 @@
           "exportada": true,
           "params": "mensajes: readonly Mensaje[], verAnteriores: boolean",
           "retorno": "MensajeVisible[]",
-          "linea": 193,
+          "linea": 196,
           "resumen": "`verAnteriores` deja también las sustituidas (`sustituido: true`, para pintarlas atenuadas). Orden: el recibido. Una versión que sustituye a un id que no está en la lista cuenta como editada igualment"
         },
         {
@@ -164380,7 +164721,7 @@
           "exportada": true,
           "params": "mensajes: readonly Mensaje[]",
           "retorno": "number",
-          "linea": 210,
+          "linea": 213,
           "resumen": "Cuántas versiones sustituidas hay (para mostrar el conmutador solo si hace falta)."
         },
         {
@@ -164389,7 +164730,7 @@
           "exportada": true,
           "params": "m: Pick<Mensaje, 'autor' | 'tipo'>",
           "retorno": "ModoCaja | null",
-          "linea": 215,
+          "linea": 218,
           "resumen": "El modo de la caja que reproduce autor/tipo de un mensaje; `null` = la caja no sabe escribir esa combinación."
         },
         {
@@ -164398,7 +164739,7 @@
           "exportada": true,
           "params": "m: Mensaje",
           "retorno": "boolean",
-          "linea": 224,
+          "linea": 227,
           "resumen": "«Editar» solo en mensajes NO de la IA, vigentes, legibles y con una combinación que la caja sabe escribir."
         },
         {
@@ -164407,13 +164748,182 @@
           "exportada": true,
           "params": "modo: ModoCaja",
           "retorno": "AutorMensaje",
-          "linea": 229,
+          "linea": 232,
           "resumen": "Autor que escribe cada modo: al editar solo se pueden elegir modos del MISMO autor que el original."
+        },
+        {
+          "nombre": "lista",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 253
+        },
+        {
+          "nombre": "leerVeredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "meta: Record<string, unknown> | null",
+          "retorno": "Veredicto | null",
+          "linea": 256,
+          "resumen": "`meta.veredicto` válido o `null` (entonces se muestra el texto del mensaje tal cual). Un semáforo desconocido invalida todo."
+        },
+        {
+          "nombre": "textoConfianza",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: number | null",
+          "retorno": "string",
+          "linea": 296,
+          "resumen": "Confianza 0-1 o 0-100 → «80 %»; `null` = no se sabe."
+        },
+        {
+          "nombre": "leerFichaPerito",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "FichaPerito | null",
+          "linea": 304
+        },
+        {
+          "nombre": "ultimaFichaPerito",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly Mensaje[] | null",
+          "retorno": "FichaPerito | null",
+          "linea": 311,
+          "resumen": "La ficha del perito MÁS RECIENTE del hilo (por orden de aparición); `null` = ningún mensaje la trae."
+        },
+        {
+          "nombre": "leerPropuestaVolcado",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "PropuestaVolcado | null",
+          "linea": 322
+        },
+        {
+          "nombre": "trozosNuevos",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: PropuestaVolcado",
+          "retorno": "number",
+          "linea": 341,
+          "resumen": "Cuántos mensajes se guardarían (los duplicados se saltan)."
+        },
+        {
+          "nombre": "leerResultadoVolcado",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "ResultadoVolcado | null",
+          "linea": 344
+        },
+        {
+          "nombre": "hayPreRehuse",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 351,
+          "resumen": "¿La respuesta del puerto avisa de un posible rehúse? (volcado confirmado o mensaje del hilo)."
+        },
+        {
+          "nombre": "textoPreRehuse",
+          "kind": "function",
+          "exportada": true,
+          "params": "referencia: string | null, url: string",
+          "retorno": "string",
+          "linea": 354,
+          "resumen": "Texto del aviso de Telegram por un posible rehúse."
+        },
+        {
+          "nombre": "leerBusquedaPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "ResultadoBusqueda | null",
+          "linea": 362
+        },
+        {
+          "nombre": "sinAcentos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 376
+        },
+        {
+          "nombre": "resaltarFragmento",
+          "kind": "function",
+          "exportada": true,
+          "params": "fragmento: string, consulta: string",
+          "retorno": "TrozoResaltado[]",
+          "linea": 379,
+          "resumen": "Parte el fragmento en trozos marcando las palabras (≥2 letras) de la consulta, sin distinguir mayúsculas ni acentos."
+        },
+        {
+          "nombre": "leerPartesPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "PartePortal[] | null",
+          "linea": 402,
+          "resumen": "`null` = el hilo no trae el campo (no hay bloque); `[]` = el cliente no ha comunicado nada."
+        },
+        {
+          "nombre": "origenVolcado",
+          "kind": "function",
+          "exportada": true,
+          "params": "meta: Record<string, unknown> | null",
+          "retorno": "",
+          "linea": 418,
+          "resumen": "Emisor y fecha original de un mensaje volcado de la intranet (si existen)."
+        },
+        {
+          "nombre": "precargaPregunta",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "pregunta: string",
+          "retorno": "string",
+          "linea": 423,
+          "resumen": "Texto de la caja al pulsar «Responder» en una pregunta del veredicto."
+        },
+        {
+          "nombre": "cuerpoValoracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "siniestroId: string, mensajeId: string, voto: 'bien' | 'mal', motivo: string",
+          "retorno": "Record<string, unknown>",
+          "linea": 426,
+          "resumen": "Cuerpo del POST de valoración."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6d8df3356f5"
+      "hash": "b514389e787f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/siniestro-prerehuse.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Aviso de Telegram por un posible rehúse (el puerto de asegura marca `preRehuse:true`). Solo desde rutas API.",
+      "exporta": [
+        "avisarPreRehuseSiProcede"
+      ],
+      "funciones": [
+        {
+          "nombre": "avisarPreRehuseSiProcede",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuesta: unknown, correduriaId: string | null, siniestroId: string",
+          "retorno": "Promise<void>",
+          "linea": 8,
+          "resumen": "Si la respuesta trae `preRehuse:true`, avisa por Telegram. FAIL-OPEN: nunca rompe ni retrasa la respuesta al corredor."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0c4d0d443e89"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/solicitudes-portal.ts",
@@ -183077,9 +183587,10 @@
           "nombre": "llamar",
           "kind": "function",
           "exportada": true,
-          "params": "path: string, init: RequestInit",
+          "params": "path: string, init: RequestInit, timeoutMs = 15_000",
           "retorno": "Promise<Reenvio>",
-          "linea": 444
+          "linea": 445,
+          "resumen": "`timeoutMs`: 15 s por defecto; las llamadas largas (IA, volcado) lo suben para no cortar mientras asegura sigue y guarda (reintento = doble gasto)."
         },
         {
           "nombre": "siniestroAsegura",
@@ -183087,7 +183598,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 461,
+          "linea": 462,
           "resumen": "`GET /api/operador/siniestro?id=` — un siniestro."
         },
         {
@@ -183096,7 +183607,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 466,
+          "linea": 467,
           "resumen": "`POST` — apertura `{polizaId, tipo, fechaHora, descripcion, lugar*?, seConsideraCulpable?, gravedad?, referencia?, actor}`."
         },
         {
@@ -183105,7 +183616,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 471,
+          "linea": 472,
           "resumen": "`PATCH` — `{siniestroId, estado, actor}` · `{siniestroId, …seguimiento, actor}` · `{siniestroId, datosRamo, actor}`."
         },
         {
@@ -183114,7 +183625,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 476,
+          "linea": 477,
           "resumen": "`POST` — añade un tercero/testigo `{siniestroId, tipo, nombre?, telefono?, matricula?, …, actor}`."
         },
         {
@@ -183123,13 +183634,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 481,
+          "linea": 482,
           "resumen": "`DELETE` — quita un tercero/testigo `{siniestroId, intervinienteId, actor}`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d0225cc97514"
+      "hash": "290c276e65eb"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/acceso.ts",
@@ -198183,7 +198694,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 877
+          "linea": 883
         },
         {
           "nombre": "avisosDe",
@@ -198191,7 +198702,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 882,
+          "linea": 888,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -198200,13 +198711,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 892,
+          "linea": 898,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5a2cbdf7bcaf"
+      "hash": "46294332ec58"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -245000,6 +245511,46 @@
       "hash": "83e632b20d6e"
     },
     {
+      "ruta": "packages/module-seguros/src/siniestro-buscar.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Buscador de texto (sin IA) para la póliza: sin tildes ni mayúsculas; varias palabras = todas cerca. PURO.",
+      "exporta": [
+        "plegar",
+        "buscarEnTexto"
+      ],
+      "funciones": [
+        {
+          "nombre": "plegar",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 6,
+          "resumen": "Minúsculas y sin tildes, SIN cambiar la longitud (los índices valen para el texto original)."
+        },
+        {
+          "nombre": "posiciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "h: string, aguja: string",
+          "retorno": "number[]",
+          "linea": 16
+        },
+        {
+          "nombre": "buscarEnTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, consulta: string, opc: { max?: number; ventana?: number; contexto?: number } = {},",
+          "retorno": "FragmentoBusqueda[]",
+          "linea": 26,
+          "resumen": "Hasta `max` fragmentos (±`contexto` caracteres). Varias palabras: todas dentro de una ventana de `ventana` caracteres. Los aciertos que caen dentro del fragmento anterior no se repiten."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "29329b5eaca6"
+    },
+    {
       "ruta": "packages/module-seguros/src/siniestro-citas.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Verificador de citas de la IA de siniestros (PURO). La IA puede citar la póliza entre «» y copiar mal o inventar: aquí se comprueba que cada fragmento entre «» existe en el texto de la póliza. Sin texto de póliza no se puede verificar nada: todas las citas salen como no encontradas.",
@@ -245051,22 +245602,275 @@
       "hash": "75989a9f9628"
     },
     {
+      "ruta": "packages/module-seguros/src/siniestro-gabinete.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "«Gabinete de siniestros»: piezas PURAS de la IA del expediente (índice de la póliza, ficha del caso, veredicto). Sin red ni BD: lo impuro (llamadas a la IA, lectura del hilo) vive en `apps/asegura/lib/siniestro-ia.ts`. · Huellas (`huellaDocumentos`, `huellaHilo`): deciden si el índice/ficha cacheado",
+      "exporta": [
+        "hashTexto",
+        "huellaDocumentos",
+        "huellaHilo",
+        "extraerJson",
+        "validarIndicePoliza",
+        "verificarCitasIndice",
+        "validarFichaCaso",
+        "indiceCacheado",
+        "fichaCacheada",
+        "ultimoVeredicto",
+        "validarVeredicto",
+        "verificarCitasVeredicto",
+        "textoVeredicto",
+        "encajarMeta"
+      ],
+      "funciones": [
+        {
+          "nombre": "fnv1a",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string, semilla: number",
+          "retorno": "number",
+          "linea": 20
+        },
+        {
+          "nombre": "hashTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 30,
+          "resumen": "Hash no criptográfico de 64 bits (dos FNV-1a de 32 con semillas distintas), en hex. Solo para detectar cambios."
+        },
+        {
+          "nombre": "huellaDocumentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "docs: ReadonlyArray<{ id: string; texto: string }>",
+          "retorno": "string",
+          "linea": 35,
+          "resumen": "Huella de los documentos de la póliza usados (id + texto extraído). No depende del orden."
+        },
+        {
+          "nombre": "huellaHilo",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: ReadonlyArray<{ id: string; creadoAt: string; autor?: string }>, extra = ''",
+          "retorno": "string",
+          "linea": 44,
+          "resumen": "Huella del hilo VIGENTE (pásale `hiloVigente(...)`): ids + fechas de los mensajes que NO son de la IA (un análisis nuevo no debe invalidar la ficha que él mismo cachea) + `extra` (estado/fechas del si"
+        },
+        {
+          "nombre": "esObj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: unknown",
+          "retorno": "x is Record<string, unknown>",
+          "linea": 51
+        },
+        {
+          "nombre": "recorta",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string, max: number",
+          "retorno": "string",
+          "linea": 52
+        },
+        {
+          "nombre": "cad",
+          "kind": "function",
+          "exportada": false,
+          "params": "x: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 54,
+          "resumen": "Cadena no vacía recortada, o `null`. Las comillas «» se quitan (romperían la extracción de citas)."
+        },
+        {
+          "nombre": "cita",
+          "kind": "function",
+          "exportada": false,
+          "params": "x: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 60,
+          "resumen": "Una cita no se recorta con «…» (dejaría de verificarse): se corta en seco."
+        },
+        {
+          "nombre": "extraerJson",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "unknown",
+          "linea": 67,
+          "resumen": "Saca el JSON de una respuesta de IA (tolera ```json … ``` y texto alrededor). `null` si no parsea."
+        },
+        {
+          "nombre": "comoJson",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: unknown",
+          "retorno": "unknown",
+          "linea": 76
+        },
+        {
+          "nombre": "validarIndicePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "IndicePoliza | null",
+          "linea": 89
+        },
+        {
+          "nombre": "verificarCitasIndice",
+          "kind": "function",
+          "exportada": true,
+          "params": "indice: IndicePoliza, textoPoliza: string",
+          "retorno": "",
+          "linea": 115,
+          "resumen": "Marca cada cita del índice como verificada o no contra el texto de la póliza."
+        },
+        {
+          "nombre": "lista",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: unknown",
+          "retorno": "unknown[]",
+          "linea": 144
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "x: unknown",
+          "retorno": "string | null",
+          "linea": 146
+        },
+        {
+          "nombre": "validarFichaCaso",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "FichaCaso | null",
+          "linea": 152
+        },
+        {
+          "nombre": "indiceCacheado",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly MensajeConMeta[], huella: string",
+          "retorno": "IndicePolizaCacheado | null",
+          "linea": 187,
+          "resumen": "Índice cacheado del análisis MÁS RECIENTE con la misma huella y versión, completo. Revalida la forma."
+        },
+        {
+          "nombre": "fichaCacheada",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly MensajeConMeta[], huella: string",
+          "retorno": "FichaCasoCacheada | null",
+          "linea": 201
+        },
+        {
+          "nombre": "ultimoVeredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly MensajeConMeta[]",
+          "retorno": "Veredicto | null",
+          "linea": 215,
+          "resumen": "Veredicto del último análisis vigente (para que el siguiente «analizar» sepa qué preguntas hizo)."
+        },
+        {
+          "nombre": "validarVeredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown, opts: { polizasPermitidas?: readonly string[] } = {}",
+          "retorno": "ResultadoVeredicto",
+          "linea": 261,
+          "resumen": "Valida el JSON del veredicto (objeto o texto con JSON). Estricto en lo que la UI pinta: semáforo, confianza, preguntas, argumentos. `polizasPermitidas`: ids de las pólizas en vigor que se pasaron al m"
+        },
+        {
+          "nombre": "verificarCitasVeredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: Veredicto, fuentes: { poliza: string; hechos: string; ley: string },",
+          "retorno": "",
+          "linea": 328,
+          "resumen": "Verifica cada `cita` del veredicto contra la fuente de su apoyo (póliza, hilo o base de conocimiento)."
+        },
+        {
+          "nombre": "textoVeredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: Veredicto",
+          "retorno": "string",
+          "linea": 349,
+          "resumen": "Texto legible del veredicto (es lo que se guarda, cifrado, como mensaje 'analisis')."
+        },
+        {
+          "nombre": "bytes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: unknown",
+          "retorno": "number",
+          "linea": 377
+        },
+        {
+          "nombre": "encajarMeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "meta: Record<string, unknown>, maxBytes: number",
+          "retorno": "",
+          "linea": 383,
+          "resumen": "Encaja el meta en `maxBytes` (el hilo rechaza metas grandes). Orden: recorta el índice (queda `completo:false`, no se reutilizará), quita la ficha, quita el índice, recorta el veredicto y, como último"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bc644e255ae1"
+    },
+    {
       "ruta": "packages/module-seguros/src/siniestro-hilo-versiones.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Versiones de los mensajes del hilo de siniestro. PURO. El hilo es SOLO-AÑADIR (la BD prohíbe UPDATE/DELETE): «editar» un mensaje = añadir uno NUEVO con `meta.sustituyeA = <id del anterior>`. El anterior se conserva (auditoría) pero deja de ser «vigente». Plazos, espera a la compañía y contexto de la",
       "exporta": [
+        "fechaOriginalDe",
+        "instanteEfectivo",
+        "diaMadridDeIso",
         "sustituyeADe",
         "mapaSustituidoPor",
         "hiloVigente"
       ],
       "funciones": [
         {
-          "nombre": "sustituyeADe",
+          "nombre": "fechaOriginalDe",
           "kind": "function",
           "exportada": true,
           "params": "m: { meta?: Record<string, unknown> | null }",
           "retorno": "string | null",
           "linea": 22,
+          "resumen": "`meta.fechaOriginal` (ISO válido: la fecha real de un mensaje volcado de la intranet) o `null`."
+        },
+        {
+          "nombre": "instanteEfectivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: { creadoAt: string; meta?: Record<string, unknown> | null }",
+          "retorno": "string",
+          "linea": 28,
+          "resumen": "Instante que cuenta para plazos y esperas: `meta.fechaOriginal` si existe; si no, `creadoAt`."
+        },
+        {
+          "nombre": "diaMadridDeIso",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 33,
+          "resumen": "Día de Madrid (`YYYY-MM-DD`) de un instante ISO."
+        },
+        {
+          "nombre": "sustituyeADe",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: { meta?: Record<string, unknown> | null }",
+          "retorno": "string | null",
+          "linea": 38,
           "resumen": "`meta.sustituyeA` si es un id no vacío; si no, `null`."
         },
         {
@@ -245075,7 +245879,7 @@
           "exportada": true,
           "params": "mensajes: readonly T[]",
           "retorno": "Map<string, string>",
-          "linea": 28,
+          "linea": 44,
           "resumen": "Para cada id sustituido, el id del mensaje que lo sustituye (solo si el sustituido está en la lista)."
         },
         {
@@ -245084,13 +245888,13 @@
           "exportada": true,
           "params": "mensajes: readonly T[]",
           "retorno": "MensajeVigente<T>[]",
-          "linea": 39,
+          "linea": 55,
           "resumen": "Solo la última versión de cada cadena, en el orden recibido. Un `sustituyeA` que no existe se ignora (el mensaje cuenta como original)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "76bc9a13d537"
+      "hash": "7e1d485a244e"
     },
     {
       "ruta": "packages/module-seguros/src/siniestro-intervinientes.ts",
@@ -245249,7 +246053,6 @@
     {
       "ruta": "packages/module-seguros/src/siniestro-plazos.ts",
       "ambito": "packages/module-seguros",
-      "resumen": "Hilo de conversación por siniestro y plazos legales — reglas PURAS (sin BD, sin reloj). `hoy` SIEMPRE inyectado (`YYYY-MM-DD`, día de Madrid): un test con reloj real es una bomba de tiempo. Plazos (todos en días NATURALES, cómputo de fecha a fecha; si el mes de llegada no tiene ese día, el último de",
       "exporta": [
         "validarMensajeSiniestro",
         "validarCierreSiniestro",
@@ -245267,7 +246070,7 @@
           "exportada": true,
           "params": "e: EntradaMensajeSiniestro, canal: 'operador' | 'servidor',",
           "retorno": "",
-          "linea": 54,
+          "linea": 56,
           "resumen": "Valida un mensaje. `canal: 'operador'` (lo que llega por el puerto) rechaza `autor: 'ia'`; `'servidor'` lo admite. Coherencia autor↔tipo: `enviado` solo del corredor (es lo que arranca la espera), `re"
         },
         {
@@ -245276,7 +246079,7 @@
           "exportada": true,
           "params": "resultado: unknown, motivo: unknown,",
           "retorno": "",
-          "linea": 90,
+          "linea": 92,
           "resumen": "Valida el cierre con resultado. El motivo es obligatorio (lo que se aprende de cada cierre)."
         },
         {
@@ -245285,7 +246088,7 @@
           "exportada": false,
           "params": "dia: string | null | undefined",
           "retorno": "",
-          "linea": 108,
+          "linea": 110,
           "resumen": "`YYYY-MM-DD` válido → sus partes; cualquier otra cosa → null."
         },
         {
@@ -245294,7 +246097,7 @@
           "exportada": false,
           "params": "t: Date",
           "retorno": "string",
-          "linea": 118
+          "linea": 120
         },
         {
           "nombre": "sumarMeses",
@@ -245302,7 +246105,7 @@
           "exportada": true,
           "params": "dia: string, meses: number",
           "retorno": "string | null",
-          "linea": 121,
+          "linea": 123,
           "resumen": "Suma meses de fecha a fecha; si el mes de llegada no tiene ese día, el último del mes (31/01 + 1 mes = 28/02)."
         },
         {
@@ -245311,7 +246114,7 @@
           "exportada": true,
           "params": "dia: string, dias: number",
           "retorno": "string | null",
-          "linea": 130
+          "linea": 132
         },
         {
           "nombre": "diasEntre",
@@ -245319,8 +246122,17 @@
           "exportada": true,
           "params": "desde: string, hasta: string",
           "retorno": "number | null",
-          "linea": 137,
+          "linea": 139,
           "resumen": "Días de `desde` a `hasta` (negativo si `hasta` es anterior). null si alguna no es un día válido."
+        },
+        {
+          "nombre": "efectivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: MensajeParaPlazos",
+          "retorno": "MensajeParaPlazos",
+          "linea": 197,
+          "resumen": "Mensaje con su instante y día EFECTIVOS: `meta.fechaOriginal` (volcado de la intranet) manda sobre `creadoAt`."
         },
         {
           "nombre": "plazo",
@@ -245328,7 +246140,7 @@
           "exportada": false,
           "params": "clave: ClavePlazoSiniestro, etiqueta: string, base_legal: string, fecha: string | null, hoy: string, verificado: boolean, nota: string | null,",
           "retorno": "PlazoSiniestro",
-          "linea": 194
+          "linea": 202
         },
         {
           "nombre": "claseSeguroArt23",
@@ -245336,7 +246148,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "'personas' | 'danos' | null",
-          "linea": 207,
+          "linea": 215,
           "resumen": "Tipo de seguro a efectos del art. 23 LCS. `null` = no se sabe."
         },
         {
@@ -245345,7 +246157,7 @@
           "exportada": false,
           "params": "mensajes: readonly MensajeParaPlazos[]",
           "retorno": "MensajeParaPlazos | null",
-          "linea": 215,
+          "linea": 223,
           "resumen": "Último `enviado` del corredor marcado como reclamación al SAC. `null` si no hay."
         },
         {
@@ -245354,22 +246166,129 @@
           "exportada": true,
           "params": "s: SiniestroParaPlazos, hoy: string, mensajes: readonly MensajeParaPlazos[] | null = [],",
           "retorno": "PlazoSiniestro[]",
-          "linea": 229,
+          "linea": 238,
           "resumen": "Plazos legales del siniestro. `mensajes`: el hilo; `null` = no se pudo leer → el plazo del SAC sale con fecha null y se dice. Sin reclamación al SAC en el hilo, ese plazo NO sale (no hay nada que cont"
         },
         {
           "nombre": "diasEsperandoCompania",
           "kind": "function",
           "exportada": true,
-          "params": "mensajes: readonly MensajeParaPlazos[] | null, hoy: string",
+          "params": "mensajes0: readonly MensajeParaPlazos[] | null, hoy: string",
           "retorno": "number | null",
-          "linea": 300,
+          "linea": 309,
           "resumen": "Días que lleva el corredor esperando a la compañía: desde el ÚLTIMO `enviado` del corredor, si no hay después ningún mensaje de la compañía. `null` si no aplica (nunca se envió nada, la compañía ya co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "75ca3d003bbd"
+      "hash": "303335d068ba"
+    },
+    {
+      "ruta": "packages/module-seguros/src/siniestro-privado.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Privacidad del meta del hilo de siniestros. `siniestro_mensajes.meta` es jsonb EN CLARO: la ficha del caso, el veredicto, el índice de la póliza, la ficha del perito y las citas pueden llevar datos personales. Todo eso va en UN sobre cifrado `meta.privado`; en claro solo queda lo necesario para list",
+      "exporta": [
+        "tienePrivado",
+        "empaquetarMetaPrivado",
+        "desempaquetarMetaPrivado",
+        "metaConPrivadoEnClaro",
+        "detectarPreRehuse",
+        "validarValoracion",
+        "esValoracion",
+        "correccionesDeValoraciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "esObj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 13
+        },
+        {
+          "nombre": "bytes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: unknown",
+          "retorno": "number",
+          "linea": 14
+        },
+        {
+          "nombre": "tienePrivado",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "meta: Record<string, unknown> | null | undefined",
+          "retorno": "boolean",
+          "linea": 19,
+          "resumen": "¿Lleva algo que cifrar?"
+        },
+        {
+          "nombre": "empaquetarMetaPrivado",
+          "kind": "function",
+          "exportada": true,
+          "params": "meta: Record<string, unknown>, cifrar: (texto: string) => string, maxBytes: number,",
+          "retorno": "",
+          "linea": 27,
+          "resumen": "Separa el meta en parte pública (sin PII) y sobre cifrado. `maxBytes` = tope del meta final (ya cifrado): el contenido privado se recorta con `encajarMeta` a lo que quepa antes de cifrar (÷ FACTOR_CIF"
+        },
+        {
+          "nombre": "desempaquetarMetaPrivado",
+          "kind": "function",
+          "exportada": true,
+          "params": "meta: Record<string, unknown> | null, descifrar: (sobre: string) => string,",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 70,
+          "resumen": "Inversa: descifra `meta.privado` y devuelve el meta con los MISMOS campos de antes (`veredicto`, `fichaCaso`, `indicePoliza`, `fichaPerito`, `citas`). Un meta antiguo (campos en claro, sin `privado`) "
+        },
+        {
+          "nombre": "metaConPrivadoEnClaro",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "meta: Record<string, unknown> | null | undefined",
+          "retorno": "string[]",
+          "linea": 87,
+          "resumen": "¿Algún campo de PII del gabinete va en claro en este meta? (cepo de datos ya escritos)"
+        },
+        {
+          "nombre": "detectarPreRehuse",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 95,
+          "resumen": "¿El texto de la compañía/corredor anuncia (o apunta a) un rehúse? Aviso temprano, no veredicto."
+        },
+        {
+          "nombre": "validarValoracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "",
+          "linea": 104
+        },
+        {
+          "nombre": "esValoracion",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "m: { meta?: Record<string, unknown> | null }",
+          "retorno": "boolean",
+          "linea": 122,
+          "resumen": "¿Es un mensaje de valoración (no hecho del caso)?"
+        },
+        {
+          "nombre": "correccionesDeValoraciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly MensajeValorable[], max = 8",
+          "retorno": "string[]",
+          "linea": 125,
+          "resumen": "Correcciones del corredor a análisis anteriores de ESTE siniestro: votos «mal» con motivo escrito. Más recientes al final."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "da48329aceab"
     },
     {
       "ruta": "packages/module-seguros/src/siniestro-ramo.ts",
@@ -245648,6 +246567,109 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7ce26dfececd"
+    },
+    {
+      "ruta": "packages/module-seguros/src/siniestro-volcado.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Volcado del hilo de la intranet de la compañía (texto pegado) → mensajes del expediente. PURO, sin IA. Cabeceras tipo `PERITO-28-09-2026 18:40` o `UE7234 (JC940-940-021)-26-10-2026 17:13` (hora de Madrid).",
+      "exporta": [
+        "rolDeEmisor",
+        "trocearVolcadoIntranet",
+        "importeEspanol",
+        "fichaInformePerito",
+        "huellaMensaje"
+      ],
+      "funciones": [
+        {
+          "nombre": "offsetMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "utcMs: number",
+          "retorno": "number",
+          "linea": 17,
+          "resumen": "Offset (minutos) de Madrid respecto a UTC en un instante dado."
+        },
+        {
+          "nombre": "madridAIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: number, mo: number, y: number, h: number, mi: number",
+          "retorno": "string | null",
+          "linea": 28,
+          "resumen": "Hora de pared de Madrid → instante ISO UTC. `null` si la fecha no existe."
+        },
+        {
+          "nombre": "rolDeEmisor",
+          "kind": "function",
+          "exportada": true,
+          "params": "emisor: string",
+          "retorno": "RolEmisorVolcado",
+          "linea": 37
+        },
+        {
+          "nombre": "trocearVolcadoIntranet",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "TrozoVolcado[]",
+          "linea": 44,
+          "resumen": "Trocea un volcado por sus cabeceras. Sin cabeceras → un solo trozo con `fechaOriginal: null`. Texto vacío → `[]`."
+        },
+        {
+          "nombre": "importeEspanol",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 83,
+          "resumen": "«4.000,00» → 4000. `null` si no es un importe español."
+        },
+        {
+          "nombre": "fechaPunto",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string | undefined",
+          "retorno": "string | null",
+          "linea": 91
+        },
+        {
+          "nombre": "campo",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, etiqueta: RegExp",
+          "retorno": "string | null",
+          "linea": 98
+        },
+        {
+          "nombre": "fichaInformePerito",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "FichaInformePerito | null",
+          "linea": 105,
+          "resumen": "Ficha de un «INFORME PREVIO PERITO». `null` si el texto no es un informe. Campo ausente = `null` (nunca 0)."
+        },
+        {
+          "nombre": "cyrb53",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string, semilla: number",
+          "retorno": "number",
+          "linea": 125
+        },
+        {
+          "nombre": "huellaMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, fechaOriginal: string | null | undefined",
+          "retorno": "string",
+          "linea": 139,
+          "resumen": "Huella estable del mensaje: texto con los espacios normalizados + fecha original. Pura (sin `node:crypto`)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "80d378108b81"
     },
     {
       "ruta": "packages/module-seguros/src/siniestros-cinco-anios.ts",
@@ -258474,7 +259496,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5412,
-    "funciones": 20774
+    "archivos": 5426,
+    "funciones": 20866
   }
 }
