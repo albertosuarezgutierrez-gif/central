@@ -68,6 +68,10 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.34 (27/10/2026, autotest real con 0.8.33): «PDF del proyecto no descargado: locator.click: Timeout 8000ms … [data-rpa-dl="41"]». El clic de
+// descarga (guard.ts `pulsarDescargaProyectoAuto`) no llegaba a darse (Playwright esperó 8 s a que fuese accionable: capa encima, re-pintado tras «Generar
+// Proyecto»…) y el aviso cortaba la traza a 120 caracteres sin la causa. Ahora: se trae a la vista, la causa sale de la traza (`causaClicNoPulsado`) y
+// `descargarProyectoAuto` reintenta UNA vez (Escape si la tapa una capa; re-escaneo con marcas nuevas). Sin `force` ni coordenadas.
 // v0.8.33 (27/10/2026, ejecución real 68c03964 con 0.8.32): la hipótesis de 0.8.32 era ERRÓNEA. El `mat-select[compania]` de «Datos básicos» es la ENTIDAD EMISORA de
 //   Mapfre (única opción real «MAPFRE ESPAÑA…»), no la compañía anterior: no se toca nunca (el flujo pasaba Datos básicos sin tocarlo hasta 0.8.31; se retira
 //   `companiaAnteriorEnDatosBasicos`). Con 0.8.31 ya se vio que no existe `app-historial-siniestralidad` y que procedencia/expuestos/siniestros están deshabilitados:
@@ -1953,7 +1957,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.33',
+  version: '0.8.34',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
