@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-28T10:12:55Z",
+  "generadoEn": "2026-10-28T15:18:32Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2321,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 320
+        "evidencias": 323
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 245
+        "evidencias": 247
       },
       "rrhh": {
         "estado": "no",
@@ -2375,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 64
+        "evidencias": 65
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4364,8 +4364,12 @@
       "/api/operador/revision",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
+      "/api/operador/siniestro/cierre",
+      "/api/operador/siniestro/hilo",
+      "/api/operador/siniestro/ia",
       "/api/operador/siniestro/terceros",
       "/api/operador/siniestros-nuevos",
+      "/api/operador/siniestros/esperando",
       "/api/operador/solicitud-datos",
       "/api/operador/solicitud-datos/lead-web",
       "/api/operador/supresiones",
@@ -5513,7 +5517,11 @@
       "/api/correduria/revision",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
+      "/api/correduria/siniestro/cierre",
+      "/api/correduria/siniestro/hilo",
+      "/api/correduria/siniestro/ia",
       "/api/correduria/siniestro/terceros",
+      "/api/correduria/siniestros-esperando",
       "/api/correduria/solicitud-datos",
       "/api/correduria/solicitudes-portal",
       "/api/correduria/supresiones",
@@ -6151,6 +6159,7 @@
       "seguros.siniestro_contrarios",
       "seguros.siniestro_intervinientes",
       "seguros.siniestro_lesionados",
+      "seguros.siniestro_mensajes",
       "seguros.siniestro_testigos",
       "seguros.siniestros",
       "seguros.solicitud_cambio_documentos",
@@ -7240,7 +7249,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1857,
+    "apis": 1865,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
