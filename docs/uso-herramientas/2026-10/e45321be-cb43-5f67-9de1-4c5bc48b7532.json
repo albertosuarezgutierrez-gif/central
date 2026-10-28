@@ -1,136 +1,182 @@
 {
  "sesion": "e45321be-cb43-5f67-9de1-4c5bc48b7532",
  "inicio": "2026-10-26T09:21:23.851Z",
- "fin": "2026-10-26T09:32:45.429Z",
- "llamadas": 71,
+ "fin": "2026-10-28T07:10:46.557Z",
+ "llamadas": 368,
  "categorias": {
   "otro": {
-   "llamadas": 29,
-   "chars_in": 13968,
-   "chars_out": 112061,
+   "llamadas": 73,
+   "chars_in": 47255,
+   "chars_out": 301641,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 7,
-    "WebSearch": 16,
-    "SubagentHandback": 3,
-    "ReadNotifications": 2
+    "ToolSearch": 19,
+    "WebSearch": 19,
+    "SubagentHandback": 13,
+    "ReadNotifications": 17,
+    "SendUserFile": 1,
+    "SendMessage": 3
    }
   },
   "mcp:idealista": {
-   "llamadas": 1,
-   "chars_in": 58,
-   "chars_out": 10806,
+   "llamadas": 18,
+   "chars_in": 2933,
+   "chars_out": 210665,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__idealista__property_detail": 7,
+    "mcp__idealista__search_properties": 11
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 9,
+   "chars_in": 18987,
+   "chars_out": 20953,
+   "errores": 0,
+   "archivos_citados": 8,
+   "chars_citados": 84806,
+   "tools": {
+    "Agent": 9
+   }
+  },
+  "mcp:Booking_com": {
+   "llamadas": 105,
+   "chars_in": 27573,
+   "chars_out": 859103,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__idealista__property_detail": 1
+    "mcp__Booking_com__accommodations_search": 105
    }
   },
-  "agente:general-purpose": {
-   "llamadas": 2,
-   "chars_in": 4249,
-   "chars_out": 4691,
+  "bash": {
+   "llamadas": 60,
+   "chars_in": 55434,
+   "chars_out": 205251,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
+   "tools": {
+    "Bash": 60
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 8,
+   "chars_in": 8581,
+   "chars_out": 2541,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__create_draft": 4,
+    "mcp__Gmail__update_draft": 2,
+    "mcp__Gmail__search_threads": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 56,
+   "chars_in": 8792,
+   "chars_out": 181379,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 38,
+    "Read": 17,
+    "Glob": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 3,
+   "chars_in": 11929,
+   "chars_out": 54939,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1,
+    "Write": 2
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 2,
+   "chars_in": 2682,
+   "chars_out": 2438,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2760,
    "tools": {
     "Agent": 2
    }
   },
-  "mcp:Booking_com": {
-   "llamadas": 16,
-   "chars_in": 4384,
-   "chars_out": 265564,
-   "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
-   "tools": {
-    "mcp__Booking_com__accommodations_search": 16
-   }
-  },
-  "bash": {
-   "llamadas": 9,
-   "chars_in": 7240,
-   "chars_out": 13075,
-   "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
-   "tools": {
-    "Bash": 9
-   }
-  },
-  "mcp:Gmail": {
-   "llamadas": 3,
-   "chars_in": 4210,
-   "chars_out": 738,
-   "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
-   "tools": {
-    "mcp__Gmail__create_draft": 1,
-    "mcp__Gmail__update_draft": 2
-   }
-  },
-  "lectura-directa": {
-   "llamadas": 5,
-   "chars_in": 599,
-   "chars_out": 7160,
-   "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
-   "tools": {
-    "Grep": 3,
-    "Read": 2
-   }
-  },
-  "escritura": {
-   "llamadas": 1,
-   "chars_in": 579,
-   "chars_out": 16685,
-   "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
-   "tools": {
-    "Edit": 1
-   }
-  },
-  "agente:agente-mecanico": {
-   "llamadas": 1,
-   "chars_in": 629,
-   "chars_out": 148,
-   "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
-   "tools": {
-    "Agent": 1
-   }
-  },
   "mcp:github": {
-   "llamadas": 2,
-   "chars_in": 909,
-   "chars_out": 93,
+   "llamadas": 10,
+   "chars_in": 4947,
+   "chars_out": 17088,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__pull_request_read": 3,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__search_pull_requests": 1
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 2,
-   "chars_in": 272,
-   "chars_out": 347,
+   "llamadas": 12,
+   "chars_in": 1604,
+   "chars_out": 94525,
+   "errores": 0,
+   "archivos_citados": 17,
+   "chars_citados": 2678818,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 2,
+    "mcp__claude-code-remote__send_later": 4,
+    "mcp__claude-code-remote__delete_trigger": 2,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 1,
+    "mcp__claude-code-remote__list_triggers": 3
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 1,
-    "mcp__claude-code-remote__send_later": 1
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 10,
+   "chars_in": 4134,
+   "chars_out": 16049,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 10
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1383,
+   "chars_out": 1618,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
    }
   }
  }
