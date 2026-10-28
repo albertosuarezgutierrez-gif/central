@@ -177,6 +177,14 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     avancesAutorizados: Object.freeze([]),
     guardadosEnDialogo: Object.freeze([Object.freeze({ texto: /^guardar$/, dialogo: /^datos de la situacion$/ })]),
   }),
+  // Fidelidade Vivienda (28/10/2026): intranet de mediadores (usuario + contraseña, sin 2FA) › «OFICINA VIRTUAL» › «PROYECTO» ›
+  // «Nuevo proyecto» › «PARTICULARES - Crear nuevo proyecto» › tarjeta «Producto 4216 · Fidelidade Vivienda» › botón «Simulación».
+  // El recorrido va fijo en el código de Fidelidade (`fidelidade/entrada.ts`; NUNCA la tarjeta EMPRESAS, Producto 4215). Solo se LEE
+  // el formulario: sin avances autorizados; los clics de menú y «Simulación» van por la puerta exacta del guard (`ENLACES_ENTRADA_AUTORIZADOS`).
+  'fidelidade:particulares:vivienda': Object.freeze({
+    compania: 'fidelidade', ramo: 'hogar', producto: 'hogar', pestana: 'Oficina virtual', productoMenu: 'Fidelidade Vivienda',
+    avancesAutorizados: Object.freeze([]),
+  }),
 })
 
 export function esEntradaExploracion(v: unknown): v is keyof typeof ENTRADAS_EXPLORACION {

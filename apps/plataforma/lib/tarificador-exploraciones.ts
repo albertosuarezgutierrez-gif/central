@@ -173,6 +173,7 @@ export const OPCIONES_NUEVA = [
   { entrada: 'mapfre:automoviles:patinetes', compania: 'Mapfre', producto: 'Patinetes (MásPatín)' },
   { entrada: 'mapfre:nueva_produccion:auto', compania: 'Mapfre', producto: 'Auto' },
   { entrada: 'occident:productos:hogar', compania: 'Occident', producto: 'Hogar' },
+  { entrada: 'fidelidade:particulares:vivienda', compania: 'Fidelidade', producto: 'Vivienda (hogar)' },
 ] as const
 export const ENTRADA_POR_DEFECTO = 'allianz:particulares:hogar'
 

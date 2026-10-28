@@ -10,7 +10,7 @@ import { ErrorMapaIncompletoGenerali, VERSION_GENERALI_AUTO, altaDatosPersonasGe
 import { bloqueadosDatosPersonasGenerali, motivoFaltaDatoPersonaGenerali } from '../src/adapters/generali/reglas.ts'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.47 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.52'))
+test('v0.2.47 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.53'))
 
 test('v0.2.47 · puro: bloqueado = deshabilitado Y controlbloqueo="1"', () => {
   assert.deepEqual(bloqueadosDatosPersonasGenerali([

@@ -88,12 +88,13 @@ import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionPatineteMapfre, abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
 import { abrirTarificacionHogar, cabeceraPortalVisible, esperarPortalOSso as esperarPortalOSsoOccident, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
 import { esUrlSso as esUrlSsoOccident } from './adapters/occident/mapa.ts'
+import { abrirFormularioViviendaFidelidade, loginFidelidade } from './adapters/fidelidade/entrada.ts'
 import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
-/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.8'
+/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
+export const EXPLORADOR_VERSION = '0.3.9'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -173,6 +174,19 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await nsei.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await exigirSinCaptcha(nsei)
       return nsei
+    },
+  }),
+  // Fidelidade (28/10/2026): intranet de mediadores con usuario y contraseña (sin 2FA) → «OFICINA VIRTUAL › PROYECTO › Nuevo proyecto» →
+  // tarjeta «Producto 4216 · Fidelidade Vivienda» (nunca EMPRESAS) → «Simulación». Los clics de la ruta, SOLO por `pulsarEnlaceEntrada`
+  // (puerta exacta del guard). Devuelve la página del formulario (la misma, o la pestaña nueva si «Simulación» la abre).
+  fidelidade: Object.freeze({
+    credencial: 'FIDELIDADE_MEDIADORES',
+    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion): Promise<Page> => {
+      await loginFidelidade(page, ctx)
+      await exigirSinVerificacion(page, 'fidelidade')
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      await ctx.exigirSinCaptcha()
+      return abrirFormularioViviendaFidelidade(page, ctx)
     },
   }),
   // Occident (14/10/2026): SSO → menú «Productos › Análisis de necesidades › Hogar › Tarificación» → ruta SPA de hogar, con el
@@ -635,7 +649,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             // incorrecto»). Orden: tipo de documento → documento → salir del campo. Solo el TIPO (NIF/NIE/CIF) sale del valor.
             if (CLAVES_VALIDAN_AL_SALIR.has(a.dato)) {
               const tipo = tipoDocumentoDe(escrito)
-              if (tipo) k.log('exploracion_tipo_documento', { n: pasos, ref: a.ref, tipo, estado: await elegirTipoDocumentoPareado(nodo.marco, loc, tipo) })
+              if (tipo) k.log('exploracion_tipo_documento', { n: pasos, ref: a.ref, tipo, estado: await elegirTipoDocumentoPareado(nodo.marco, loc, tipo, k.pulsar) })
             }
             await loc.fill(escrito, { timeout: 10_000 })
             hechas++
@@ -860,17 +874,19 @@ async function visibleTrasTraer(nodo: NodoInv): Promise<boolean> {
  * `<x>_tipoDoc` (un `<select>`, normalmente OCULTO tras un botón sin texto). Elige la ÚNICA opción cuyo texto corresponde a `tipo`
  * (`opcionTipoDocumento`) con `selectOption` (dispara `change`). Nunca toca otra cosa; si no hay desplegable u opción, no hace nada.
  */
-export async function elegirTipoDocumentoPareado(marco: Frame, loc: Locator, tipo: TipoDocumento): Promise<'elegido' | 'ya' | 'sin_desplegable' | 'sin_opcion'> {
+export async function elegirTipoDocumentoPareado(marco: Frame, loc: Locator, tipo: TipoDocumento, pulsarGuardado?: (b: Locator) => Promise<void>): Promise<'elegido' | 'ya' | 'sin_desplegable' | 'sin_opcion'> {
   const info = await loc.evaluate((el) => {
     const id = (el as HTMLElement).id || ''
     if (!/_doc$/.test(id)) return null
     const selId = id.slice(0, -'_doc'.length) + '_tipoDoc'
     const s = el.ownerDocument.getElementById(selId)
-    if (!s || s.tagName !== 'SELECT') return null
+    if (!s) return el.ownerDocument.getElementById(selId + '_label') ? { selId, widget: true as const, actual: '', opciones: [] } : null
+    if (s.tagName !== 'SELECT') return { selId, widget: true as const, actual: ((s as HTMLInputElement).value || s.textContent || '').replace(/\s+/g, ' ').trim(), opciones: [] }
     const sel = s as HTMLSelectElement
-    return { selId, actual: sel.value, opciones: Array.from(sel.options).slice(0, 40).map((o) => ({ valor: o.value, texto: (o.textContent || '').replace(/\s+/g, ' ').trim() })) }
+    return { selId, widget: false as const, actual: sel.value, opciones: Array.from(sel.options).slice(0, 40).map((o) => ({ valor: o.value, texto: (o.textContent || '').replace(/\s+/g, ' ').trim() })) }
   }).catch(() => null)
   if (!info) return 'sin_desplegable'
+  if (info.widget) return elegirTipoDocumentoWidget(marco, info.selId, info.actual, tipo, pulsarGuardado)
   const valor = opcionTipoDocumento(tipo, info.opciones)
   if (valor === null) return 'sin_opcion'
   if (info.actual === valor) return 'ya'
@@ -878,6 +894,36 @@ export async function elegirTipoDocumentoPareado(marco: Frame, loc: Locator, tip
   if ((await sel.count().catch(() => 0)) !== 1) return 'sin_desplegable'
   const r = await sel.selectOption({ value: valor }, { force: true, timeout: 5_000 }).catch(() => [] as string[])
   return r.length === 1 && r[0] === valor ? 'elegido' : 'sin_opcion'
+}
+
+/**
+ * 0.3.9 (real 28/10/2026, Allianz patinete): `<x>_tipoDoc` NO es un `<select>` sino un `<input>` + lista (`role=listbox/option`) o una
+ * lista JSF `ul/li`. Se abre con el `pulsar` GUARDADO y se pulsa la ÚNICA opción visible que `opcionTipoDocumento` elige por su texto
+ * (NIF exacto, DNI…); luego espera a la red. 0 o >1 candidatas (o sin `pulsar`): `sin_opcion` y no se pulsa ninguna opción.
+ */
+async function elegirTipoDocumentoWidget(marco: Frame, selId: string, actual: string, tipo: TipoDocumento, pulsarGuardado?: (b: Locator) => Promise<void>): Promise<'elegido' | 'ya' | 'sin_desplegable' | 'sin_opcion'> {
+  if (!pulsarGuardado) return 'sin_desplegable'
+  if (actual && opcionTipoDocumento(tipo, [{ valor: '0', texto: actual }]) !== null) return 'ya'
+  const esc = (t: string) => t.replace(/["\\]/g, '\\$&')
+  const visible = (q: string) => marco.locator(q).filter({ visible: true })
+  const ctl = visible(`[id="${esc(selId)}"]`)
+  const etiqueta = visible(`[id="${esc(selId)}_label"]`)
+  const disparador = (await ctl.count().catch(() => 0)) === 1 ? ctl : (await etiqueta.count().catch(() => 0)) === 1 ? etiqueta : null
+  if (!disparador) return 'sin_desplegable'
+  // Solo opciones ATADAS a este control: `ul[id^=selId] li`, `[id^=selId][role=listbox] > *` o la lista que nombra su `aria-controls`/`aria-owns`.
+  // Nunca una lista genérica del marco (un desplegable ajeno con «NIF» no se elige). Se abre SIEMPRE con el `pulsar` guardado.
+  const ids = await disparador.first().evaluate((n) => `${n.getAttribute('aria-controls') ?? ''} ${n.getAttribute('aria-owns') ?? ''}`.split(/\s+/).filter(Boolean).slice(0, 4)).catch(() => [] as string[])
+  const propias = [`ul[id^="${esc(selId)}"] li`, `[id^="${esc(selId)}"][role="listbox"] > *`]
+  for (const id of ids) propias.push(`[id="${esc(id)}"] > *`, `[id="${esc(id)}"] li`, `[id="${esc(id)}"] [role="option"]`)
+  const opciones = visible(propias.join(', '))
+  await pulsarGuardado(disparador.first())
+  await opciones.first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => undefined)
+  const textos = await opciones.evaluateAll((ns) => ns.slice(0, 40).map((n) => ((n as HTMLElement).innerText || n.textContent || '').replace(/\s+/g, ' ').trim())).catch(() => [] as string[])
+  const v = opcionTipoDocumento(tipo, textos.map((texto, i) => ({ valor: String(i), texto })))
+  if (v === null) return 'sin_opcion'
+  await pulsarGuardado(opciones.nth(Number(v)))
+  await marco.page().waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+  return 'elegido'
 }
 
 /**
