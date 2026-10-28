@@ -557,7 +557,7 @@ Vistas: v_stock_critico_grupo, v_pedidos_pendientes_grupo, v_stock_resumen, v_cu
 
 ## EDGE FUNCTIONS ACTIVAS (Deno)
 check-elaboraciones · contact-lead · daily-briefing · eventos-entorno · monitor-health · nim-diagnostico · nim-sentiment · notify-error · qr-call-waiter · qr-cobro · qr-connect · qr-order · qr-session · qr-split · verifactu-sign · courier-route · bridge-agent
-- `eventos-entorno`: disparo único = pg_cron `eventos-entorno-diario` (06:00 diario; el cron de Vercel se quitó). Open-Meteo: plan gratuito no comercial → decidido plan Standard (customer-api + apikey, clave en variable de entorno con `requireSecret`), pendiente de contratar; no AEMET (va por municipio, 2 pasos).
+- `eventos-entorno`: disparo único = pg_cron `eventos-entorno-diario` (06:00 diario; el cron de Vercel se quitó). Open-Meteo: plan gratuito = no comercial, pero hoy NO se usa (28/10/2026: 0 restaurantes activos con coordenadas y domótica de sivra sin usar) → NO se contrata; contratar plan Standard (customer-api + apikey vía requireSecret) cuando ia-rest tenga clientes con coordenadas o se active la domótica. AEMET descartado (va por municipio).
 
 Patrón EF: service role siempre, bloque OPTIONS CORS, incrementar versión en comentario (`// v1`, `// v2`...). Ver skill `ia-rest-supabase-patterns`.
 

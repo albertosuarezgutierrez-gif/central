@@ -9,6 +9,7 @@ import {
 } from "@/lib/sivra/eventos-impacto"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { anioIncoherente } from "@/lib/sivra/eventos-anio"
+import { obtenerFestivosAndalucia } from "@/lib/festivos-nager"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -97,7 +98,7 @@ export async function GET(req: NextRequest) {
   `).catch(() => [])
   const descartadosResumen = descartadasRows.map(r => `${r.rate_date} ${r.nombre}`).join(" | ")
 
-  const prompt = `Busca eventos CONFIRMADOS en Sevilla (España) entre ${desde} y ${hasta} que disparen la demanda de ALOJAMIENTO turístico: partidos de LaLiga del Sevilla FC y del Real Betis (SOLO como locales: en fútbol el equipo local va PRIMERO — «Levante UD vs Sevilla FC» se juega en Valencia y NO cuenta), conciertos en recintos de >1000 personas, ferias y congresos en FIBES, festivales, y festivos locales/puentes grandes (Semana Santa, Feria de Abril).
+  const prompt = `Busca eventos CONFIRMADOS en Sevilla (España) entre ${desde} y ${hasta} que disparen la demanda de ALOJAMIENTO turístico: partidos de LaLiga del Sevilla FC y del Real Betis (SOLO como locales: en fútbol el equipo local va PRIMERO — «Levante UD vs Sevilla FC» se juega en Valencia y NO cuenta), conciertos en recintos de >1000 personas, ferias y congresos en FIBES, festivales, y festivos LOCALES de Sevilla (Semana Santa, Feria de Abril, Corpus…). NO busques festivos nacionales ni autonómicos de Andalucía (ya se cargan aparte).
 
 EVENTOS YA REGISTRADOS (NO repitas ni incluyas nada parecido a estos):
 ${yaResumen || "Ninguno aún"}
@@ -166,6 +167,35 @@ Si no hay nada nuevo: {"eventos":[]}`
     }
   }
 
+  // ─── Festivos nacionales + Andalucía (Nager.Date) ───────────────────────────────────────────
+  // Misma tabla y formato que el resto; fuente='nager'. Si la API falla (null) no se toca nada.
+  let nagerGuardados = 0
+  const nagerAnios: number[] = []
+  for (let a = Number(desde.slice(0, 4)); a <= Number(hasta.slice(0, 4)); a++) nagerAnios.push(a)
+  const nagerListas = await Promise.all(nagerAnios.map(a => obtenerFestivosAndalucia(a)))
+  for (const [i, lista] of nagerListas.entries()) {
+    if (lista === null) { errors.push(`nager ${nagerAnios[i]}: API no disponible`); continue }
+    for (const f of lista) {
+      if (f.fecha < desde || f.fecha > hasta) continue
+      const aforo = 20000 // «feria/festivo ciudad ~20000», igual que le pide el prompt a la IA
+      const factor = impactoEvento(aforo, "festivo", f.nombre)
+      try {
+        await prisma.$executeRaw(Prisma.sql`
+          INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, estado, confianza, evidencia, updated_at)
+          VALUES (${f.fecha}::date, ${f.nombre}, 'nager', 'festivo', ${aforo}::int, ${factor}::numeric, NULL,
+            ${JSON.stringify({ via: "date.nager.at" })}::jsonb,
+            ${estadoInicialWebsearch(factor)}, NULL, NULL, now())
+          ON CONFLICT (fuente, nombre, rate_date) DO UPDATE
+            SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, tipo = EXCLUDED.tipo, updated_at = now()
+            WHERE pricing_eventos_auto.estado <> 'descartado'
+        `)
+        nagerGuardados++
+      } catch (e) {
+        errors.push(`nager ${f.fecha}: ${String(e).slice(0, 100)}`)
+      }
+    }
+  }
+
   // ─── 2ª pasada: ANTICIPACIÓN ────────────────────────────────────────────────────────────────
   const previstos = await buscarPrevistos(desde, hasta, yaResumen, descartadosResumen)
   errors.push(...previstos.errors)
@@ -187,7 +217,7 @@ Si no hay nada nuevo: {"eventos":[]}`
   return NextResponse.json({
     ok: errors.length === 0, configured: true, via,
     vistos: evs.length, upserted, descartados, fuera_de_casa: fueraDeCasa, dudosos, anio_incoherente: anioMal,
-    previstos: previstos.guardados, previstosVistos: previstos.vistos,
+    nager: nagerGuardados, previstos: previstos.guardados, previstosVistos: previstos.vistos,
     errors,
   })
 }
