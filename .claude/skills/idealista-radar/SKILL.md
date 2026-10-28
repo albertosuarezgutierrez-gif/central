@@ -1,56 +1,49 @@
 ---
 name: idealista-radar
-description: Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa (costa de Huelva a diario; Asturias, Cantabria y Cádiz por turnos) con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide "mira Idealista en la costa". Sin secretos.
+description: Referencia de zonas de playa y del corredor A-49 para buscar casas en idealista. RUTINA DESACTIVADA el 28/10/2026 (condiciones de uso del conector). Sin rutina ni escritura en mercado_comparables. Úsala solo si Alberto pide ver anuncios concretos de idealista en el chat, o para guardar búsquedas con alerta. Sin secretos.
 ---
 
-# Radar de Idealista por conector (costa de Huelva)
+# Radar de Idealista: referencia (rutina desactivada)
 
-**Qué haces:** una búsqueda por núcleo de playa con el conector de **Idealista**, mandas los anuncios
-a plataforma y dejas el latido. Nada más. No decides compras, no avisas tú de cada casa (los avisos
-de chollos, 🌊 casas de playa y **buenas bajadas** —última bajada ≥5 %, o ≥10 % acumulado en dos o
-más— los saca el cron `subastas-mercado` sobre el corpus, igual que con los correos) y no contactas con ningún anunciante.
+## ⛔ RUTINA DESACTIVADA (28/10/2026)
 
-## Por qué existes (24/09/2026)
+- **No ejecutes búsquedas periódicas ni masivas** con el conector de idealista.
+- **No escribas anuncios en `mercado_comparables`** (ni con `POST /api/subastas/mercado/idealista`).
+- El conector de idealista **solo se usa a petición de Alberto, en el chat**, para ver anuncios concretos.
+- Motivo: las condiciones de uso del conector prohíben la vigilancia periódica, la recogida de anuncios
+  y alimentar bases de datos o estadísticas.
 
-Las alertas de correo de Idealista solo cubren las búsquedas que Alberto guarda a mano. Un conector
-solo se usa desde una sesión, no desde un cron, así que esto es una rutina: **si no corres, el radar
-de casas de playa calla y ese silencio se lee como «no hay nada».**
+## Vía permitida: búsquedas guardadas con alerta
 
-⚠️ **La skill se escribió el 24/09/2026 pero NADIE la programó hasta el 27/09** (sin rutina, sin un
-solo latido `subastas_idealista`), mientras aquí se afirmaba que ya era «la única vía». Lo que
-sostuvo el corpus esos días fueron las alertas de correo, que siguen llegando (19 correos el 27/09).
-**Alberto quita las alertas de correo solo después de ver varios latidos en verde**, no antes.
+Alberto crea las búsquedas en la app de idealista, con alerta activada. Así:
 
-## 🚨 No romper
+1. Los correos de alerta llegan a Gmail con la etiqueta `inmobiliaria`.
+2. `POST /api/sivra/inversion/analyze` (en `apps/plataforma/app/api/sivra/inversion/analyze/`) procesa
+   esos correos y guarda los inmuebles en `inmuebles_busqueda`.
+3. Se revisan en `/api/sivra/inversion` (`apps/plataforma/app/api/sivra/inversion/route.ts`).
 
-- **La zona la manda el NÚCLEO, no el título.** Idealista titula los anuncios de Matalascañas como
-  «…, Almonte». Manda cada búsqueda con su `nucleo` exacto de la tabla de abajo. El servidor zonifica
-  con ese nombre y descarta lo que cae fuera de su radio (`fueraDeZona`).
-- **Manda los anuncios TAL CUAL, recortados a estos campos**: `propertyCode, price, size, rooms,
-  priceByArea, status, latitude, longitude, suggestedTexts{title}, detailedType{typology}` y, **si viene,
-  `priceInfo{price{priceDropInfo{formerPrice}}}`**: es la bajada que ya declara el portal. Sin ella, una
-  casa que entra ya rebajada no genera nunca el aviso de ⬇️ buena bajada, que es de lo que más le importa
-  a Alberto.
-  **No inventes ni corrijas nada.** Sin `description`, fotos ni teléfonos: no hacen falta y engordan
-  el cuerpo (el script pasa el JSON como argumento, y un argumento de más de ~128 KB revienta).
-- **«El conector no contestó» NO es «no hay casas».** Cuéntalo como `sinRespuesta` y sigue.
-- **0 resultados** en un núcleo pequeño (Matalascañas daba 3) es un dato válido: cuéntalo igual.
-- **Auth: `bash scripts/canal-aviso.sh`** (lee `PLATAFORMA_URL` + `ALERTA_TOKEN` del entorno).
-  **NO uses `CRON_SECRET`.**
+Búsquedas a guardar:
 
-## Pasos
+**a) «Corredor A-49 casa grande»**
+- Tipo: casas y chalets independientes (no pisos).
+- Piscina: sí.
+- Habitaciones: 4 o más. Acepta 3, ampliables.
+- Baños: 2 o más.
+- Precio: hasta 280.000 €.
+- Zona: dibuja en el mapa el eje Bormujos – Espartinas – Umbrete – Sanlúcar la Mayor – Benacazón –
+  Huévar – Carrión de los Céspedes – Chucena, más Villanueva del Ariscal y Olivares.
 
-### 1. Busca los núcleos de HOY (`search_properties`)
-Parámetros fijos: `country: "es"`, `locale: "es-ES"`, `operation: "SALE"`, **`propertyType: "CHALET"`**
-(casas, chalets, adosados y pareados; no pisos) y `maxResults: 50`.
-`query` = `casa o chalet de 3 o más dormitorios cerca de la playa en <búsqueda>`.
+**b) Zona de playa**
+- Usa la tabla de núcleos de abajo como guía de zonas.
+- Crea una búsqueda guardada por zona que Alberto quiera vigilar.
 
-**Turnos (día de la semana en hora de Madrid):** Huelva **todos los días**; además, lunes/miércoles/viernes
-Asturias, martes/jueves/sábado Cantabria y domingo Cádiz. Cada pasada son ≤19 búsquedas: el corpus es
-idempotente y una bajada del norte se detecta como mucho con dos días de retraso, que no justifica
-triplicar el coste de cada sesión.
+## Referencia: núcleos de playa
 
-| turno | nucleo (se manda tal cual) | búsqueda |
+Esta tabla es solo referencia geográfica. No es una rutina. Cada fila tiene su centro en `CENTROS`
+(`packages/module-subastas/src/idealista-api.ts`). No borres filas. Si añades un núcleo, dale antes
+su centro en `CENTROS`. Lo vigila `test/regression-idealista-radar-nucleos.test.ts`.
+
+| turno | nucleo | búsqueda |
 |---|---|---|
 | diario | Isla Canela | Isla Canela, Ayamonte |
 | diario | Isla Cristina | Isla Cristina, Huelva |
@@ -86,37 +79,12 @@ triplicar el coste de cada sesión.
 | D | El Palmar | playa de El Palmar de Vejer |
 | D | Zahara de los Atunes | Zahara de los Atunes, Barbate |
 
-**Gijón se busca por «Somió, Gijón» a propósito:** con «Gijón» a secas el conector devolvió casas de
-Langreo (27/09/2026). El núcleo que se manda sigue siendo «Gijón». Igual con **El Palmar**: «El Palmar,
-Vejer de la Frontera» devolvió 50 casas del pueblo de Vejer (a 7 km de la playa, todas descartadas
-como fuera de zona); si vuelve a pasar con la búsqueda nueva, anótalo en el latido, no lo fuerces.
+Notas de referencia:
+- Gijón se busca como «Somió, Gijón»: con «Gijón» a secas salieron casas de Langreo (27/09/2026).
+  El núcleo sigue siendo «Gijón».
+- El Palmar: «El Palmar, Vejer de la Frontera» devolvió casas del pueblo de Vejer, a 7 km de la playa.
+  Usa «playa de El Palmar de Vejer».
+- En el norte, el núcleo es un municipio de costa de `costa-norte.ts`.
 
-Criterios de Alberto: cerca de la playa (en el norte, a ≤25-30 min), **3 o más dormitorios**, casa y
-no piso, mejor adosado. Si falta un núcleo, no lo añadas aquí sin darle antes su centro en `CENTROS`
-(`packages/module-subastas/src/idealista-api.ts`): sin centro, el servidor rechaza la búsqueda (error
-en `porNucleo`). Lo vigila `test/regression-idealista-radar-nucleos.test.ts`, que lee esta tabla.
-Y en el norte el `nucleo` tiene que ser un MUNICIPIO de costa de `costa-norte.ts`: es lo que hace
-saltar la lente 🌊.
-
-### 2. Escribe (una llamada por núcleo)
-```
-bash scripts/canal-aviso.sh POST /api/subastas/mercado/idealista '{"busquedas":[{"nucleo":"Islantilla","properties":[{"propertyCode":"110709609","price":185000,"size":68,"rooms":3,"priceByArea":2721,"status":"good","latitude":37.2112431,"longitude":-7.2453481,"suggestedTexts":{"title":"Chalet adosado en Avenida del Deporte, Islantilla Golf, Islantilla"},"detailedType":{"typology":"chalet"},"priceInfo":{"price":{"priceDropInfo":{"formerPrice":199000}}}}]}]}'
-```
-Devuelve `{comparables, upserts, fueraDeZona, porNucleo[]}`. Es idempotente: repetir un núcleo solo
-actualiza el precio, y si el precio ha bajado lo registra como bajada.
-
-### 3. Latido (OBLIGATORIO, también si fue mal)
-```
-bash scripts/canal-aviso.sh POST /api/internal/latido '{"agente":"subastas_idealista","ok":<true|false>,"detalle":"<parte>"}'
-```
-`ok = true` solo si escribiste en al menos la mitad de los núcleos de HOY. En el `detalle`, por este orden:
-anuncios escritos y núcleos buscados · ⚠️ núcleos sin respuesta del conector · fuera de zona · errores.
-Ejemplo: `«41 casas en 19/19 núcleos (Huelva + Asturias) · 3 fuera de zona descartadas»`.
-
-### 4. Cierra
-Pon una línea en `docs/AGENTES-BITACORA.md` con los núcleos, los anuncios escritos y lo que falló.
-Si hay dos pasadas malas seguidas, avisa con
-`bash scripts/canal-aviso.sh POST /api/internal/alerta '<aviso>'`.
-
-## Envs y conector
-`PLATAFORMA_URL` + `ALERTA_TOKEN`. Conector requerido: **idealista**, y ninguno más.
+## Envs
+`PLATAFORMA_URL` + `ALERTA_TOKEN` (si algún proceso los necesita). No uses `CRON_SECRET`.
