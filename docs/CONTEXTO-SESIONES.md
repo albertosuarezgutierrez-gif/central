@@ -11,6 +11,12 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (28/10/2026, 5) SIVRA pricing: suelo del propietario por fecha
+- Tabla `pricing_suelos_fecha` (migración `2026-10-28_pricing_suelo_fecha.sql`, SIN aplicar; INSERT Duplex SS/Feria 2027 comentado: base 410/455/440/490/410/200). Aplicar ANTES del deploy o la pasada sale `ok:false` (`suelos_fecha` caída).
+- `lib/sivra/pricing-suelo-fecha.ts`: mismo punto/semántica que `min_price_finde`, manda el mayor, solo `max_price` le gana; respuesta `suelos_fecha`.
+- Pendiente: filtro descartado en bucket: −11 % House/Luxury mayo, decidir el 03/11 (¿guarda simétrica global→mes?).
+- Cepo: `pricing-suelo-fecha.test.ts` (9 roturas vistas en rojo). Sin commit.
+
 ## (28/10/2026, 4) SIVRA pricing: guarda «el mes se fue» + guardián sin alerta con p50 mezclado
 - Causa real de Duplex mayo-2027 a 'global' (11/10): la exclusión de fechas de evento del bucket del mes (`apply/route.ts` ~:475) NO filtra `estado`; una fila DESCARTADA del 22/05 dejó mayo en 2 fechas. No eran fotos caducadas.
 - Hecho: `lib/sivra/pricing-cambio-fuente.ts` (+test): si la última escritura salió del MES y hoy el mes no tiene bucket, la fecha no baja (>30 días vista; libera techo medido/rumor caído/max_price). Habría retenido el 01/05 a 176€ (bajó a 146€ = global×1,45).
