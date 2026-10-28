@@ -419,6 +419,20 @@ describe('«Generar Proyecto» NO es un permiso general de guardado (revisión 2
   })
 })
 
+describe('guard genérico: «Grabar» y «Guardar Cálculo» (grabarCalcRap) bloqueados; solo pasan con permitirGuardarPresupuesto', () => {
+  it('pulsar genérico sobre «Grabar» y onclick link(\'grabarCalcRap\') / «Guardar Cálculo» lanza; «Recalcular» con link(\'calcular\') pasa', () => {
+    for (const d of [['Grabar'], ['  GRABAR '], [null, "link('grabarCalcRap')"], ['Guardar Cálculo'], ['Guardar calculo']])
+      expect(() => comprobarBoton(d), d.join('|')).toThrow()
+    expect(() => comprobarBoton(['Recalcular', "link('calcular')"])).not.toThrow()
+  })
+  it('con permitirGuardarPresupuesto (guardado dedicado) sí pasan, y no abren lo de emisión', () => {
+    const op = { permitirGuardarPresupuesto: true }
+    expect(() => comprobarBoton(['Grabar'], op)).not.toThrow()
+    expect(() => comprobarBoton(['Guardar Cálculo', "link('grabarCalcRap')"], op)).not.toThrow()
+    expect(() => comprobarBoton(['Grabar y emitir'], op)).toThrow()
+  })
+})
+
 describe('referenciaPresupuestoValida: una FECHA no es referencia (revisión 22/10/2026)', () => {
   it('fechas fuera; referencias con barra que no son fecha, dentro', () => {
     for (const f of ['22/10/2026', '1-2-26', '22.10.2026', '01/01/20']) expect(referenciaPortalValida(f), f).toBe(false)
