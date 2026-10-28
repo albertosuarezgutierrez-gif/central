@@ -1,18 +1,20 @@
 {
  "sesion": "fb3edc12-f3f2-511c-9a19-c509f277f0a3",
  "inicio": "2026-10-28T12:45:46.111Z",
- "fin": "2026-10-28T12:45:58.952Z",
- "llamadas": 3,
+ "fin": "2026-10-28T13:22:49.884Z",
+ "llamadas": 128,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 26,
-   "chars_out": 47,
+   "llamadas": 8,
+   "chars_in": 16054,
+   "chars_out": 895,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Skill": 1
+    "Skill": 1,
+    "SubagentHandback": 4,
+    "ToolSearch": 3
    }
   },
   "agente:Explore": {
@@ -27,14 +29,91 @@
    }
   },
   "bash": {
-   "llamadas": 1,
-   "chars_in": 373,
-   "chars_out": 3434,
+   "llamadas": 104,
+   "chars_in": 89944,
+   "chars_out": 390777,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1
+    "Bash": 104
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 13272,
+   "chars_out": 14156,
+   "errores": 0,
+   "archivos_citados": 14,
+   "chars_citados": 173378,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 4,
+   "chars_out": 782,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 2
+   }
+  },
+  "sql": {
+   "llamadas": 1,
+   "chars_in": 479,
+   "chars_out": 777,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 118,
+   "chars_out": 4227,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 5287,
+   "chars_out": 5522,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 68950,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 88,
+   "chars_out": 2681,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 5,
+   "chars_in": 51801,
+   "chars_out": 105613,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 5
    }
   }
  }
