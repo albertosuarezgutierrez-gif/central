@@ -11,6 +11,12 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (28/10/2026, 8) Correduría · ficha de póliza sin duplicidades (PR #5231)
+- «Riesgos» e «Historial del riesgo» integrados en «Qué asegura» (historial plegado si >1 póliza); `Objeto` se queda si el ramo admite dirección y ningún riesgo trae calle (para poder anotarla).
+- Retarificar: una sola entrada (pestaña «Prima y precio»); botón renombrado «Abrir oportunidad de renovación».
+- `vigenciaRiesgo` → null si falta fecha o fin<=inicio (CIMA manda inicio=fin en algunos riesgos: dato, no render). Guardián `lib/correduria/poliza-ficha-duplicidades-guardia.test.ts`.
+- Pendiente: «Personas de la póliza» vs «Intervinientes» (comprobar con póliza real antes de fusionar).
+
 ## (28/10/2026, 7) Tarificador RPA · 3×3: versiones del día y decisión sobre emitir
 - Mergeados PR #5204, #5209, #5211, #5213, #5217, #5220, #5222: explorador 0.3.2→0.3.7, Generali 0.2.46→0.2.51. En vuelo #5224 (explorador 0.3.8); Generali 0.2.52 en desarrollo.
 - Allianz auto da precio; hogar dio 3 precios el 27/10 (falta proyecto/PDF); patinete: el portal rechazaba el NIF por «Tipo Doc. Tomador» vacío (0.3.8 lo elige antes). Mapfre patinete llega a `busquedaProductos.jsf` y el guard la frena por un parámetro del cuerpo. Generali auto: «Tipo de vehículo» (wclasv) queda vacío y Genernet no calcula (0.2.52 prueba hipótesis acotadas).

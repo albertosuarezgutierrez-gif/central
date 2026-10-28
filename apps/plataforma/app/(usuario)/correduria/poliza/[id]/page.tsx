@@ -161,7 +161,8 @@ function accesosPoliza(p: Poliza, cancelada: boolean, tareas: LecturaTareasVincu
   const riesgos = p.contrato?.riesgos ?? []
   const beneficiarios = p.contrato?.beneficiarios ?? []
   // Los riesgos mandan; `Objeto` solo entra si ningún riesgo trae el lugar (y es donde se anota la dirección).
-  const hayLugarEnRiesgos = riesgos.some((r) => lugarRiesgo(r) !== null)
+  // Si el ramo admite dirección, solo cuenta un riesgo CON calle: sin ella, `Objeto` sigue para poder anotarla.
+  const hayLugarEnRiesgos = riesgos.some((r) => (admiteDireccionRiesgo(p.tipo) ? !!r.direccion : lugarRiesgo(r) !== null))
   const lugar1 = riesgos.map((r) => lugarRiesgo(r)).find((l) => l !== null) ?? null
   const extra: (Acceso & { contenido: React.ReactNode })[] = []
   if (contrato.length > 0 || cobro) {
