@@ -16,6 +16,9 @@ import {
   ENTRADAS_EXPLORACION,
   pareceEmision,
   rutaDeMarco,
+  tipoDocumentoDe,
+  opcionTipoDocumento,
+  detalleCuerpoToleradoConAccionReal,
   redactarValoresInventario,
   CLAVES_ELEMENTO_TEXTO,
   valoresSensiblesDeRiesgo,
@@ -298,5 +301,42 @@ describe('0.3.7 · guardia estructural: toda clave de TEXTO que el saneado pone 
     const claves = [...src.matchAll(/\bpon\('([A-Za-z]+)'/g)].map((m) => m[1])
     expect(claves.length).toBeGreaterThan(10)
     for (const c of claves) expect(CLAVES_ELEMENTO_TEXTO as readonly string[], c).toContain(c)
+  })
+})
+
+describe('0.3.8 · tipo de documento y detalle del cuerpo tolerado', () => {
+  it('tipoDocumentoDe: NIF, NIE, CIF por su forma; lo demás null', () => {
+    expect(tipoDocumentoDe('28823484E')).toBe('NIF')
+    expect(tipoDocumentoDe(' 28.823.484-e ')).toBe('NIF')
+    expect(tipoDocumentoDe('X1234567L')).toBe('NIE')
+    expect(tipoDocumentoDe('B12345678')).toBe('CIF')
+    for (const x of ['', '1234', 'PASAPORTE1', null, undefined]) expect(tipoDocumentoDe(x as string)).toBeNull()
+  })
+  it('opcionTipoDocumento: la ÚNICA opción por texto; ambigua o ausente → null', () => {
+    const ops = [{ valor: '', texto: 'Seleccione' }, { valor: 'N', texto: 'N.I.F.' }, { valor: 'E', texto: 'NIE' }, { valor: 'C', texto: 'CIF' }, { valor: 'P', texto: 'Pasaporte' }]
+    expect(opcionTipoDocumento('NIF', ops)).toBe('N')
+    expect(opcionTipoDocumento('NIE', ops)).toBe('E')
+    expect(opcionTipoDocumento('CIF', ops)).toBe('C')
+    expect(opcionTipoDocumento('NIF', [...ops, { valor: 'D', texto: 'DNI' }])).toBeNull()
+    expect(opcionTipoDocumento('NIF', [{ valor: 'P', texto: 'Pasaporte' }])).toBeNull()
+  })
+  it('detalleCuerpoToleradoConAccionReal: nombra el parámetro y la palabra; emitir/contratar como javax.faces.source → bloqueado', () => {
+    expect(detalleCuerpoToleradoConAccionReal('javax.faces.source=form%3AbtnEmitir&x=1')).toEqual({ parametro: 'javax.faces.source', patron: 'emit' })
+    expect(detalleCuerpoToleradoConAccionReal('javax.faces.source=form:btnContratar')).toEqual({ parametro: 'javax.faces.source', patron: 'contrat' })
+    expect(detalleCuerpoToleradoConAccionReal('formContratacion:campo=1')).toEqual({ parametro: 'formContratacion:campo', patron: 'contrat' })
+    expect(detalleCuerpoToleradoConAccionReal('javax.faces.source=form:btnBuscar&formBusqueda:texto=patin')).toBeNull()
+  })
+})
+
+describe('0.3.8b · el detalle del cuerpo nunca saca datos (cuerpos JSON/texto sin «=»)', () => {
+  it('JSON con un NIF: el parámetro no lleva el valor; un nombre de form con cifras largas se enmascara', () => {
+    const d = detalleCuerpoToleradoConAccionReal('{"nif":"12345678Z","pago":1}')
+    expect(d).not.toBeNull()
+    expect(JSON.stringify(d)).not.toContain('12345678Z')
+    expect(d!.parametro).toBe('(cuerpo no form-urlencoded)')
+    expect(detalleCuerpoToleradoConAccionReal('form:pago12345678=1')!.parametro).toBe('form:pago#')
+    // Rama de VALOR: el parámetro es SOLO la clave javax.faces.* exacta; el valor (que casó) no sale.
+    const v = detalleCuerpoToleradoConAccionReal('javax.faces.source=Juan%20Perez%20pago%2012345678Z')
+    expect(v).toEqual({ parametro: 'javax.faces.source', patron: 'pago' })
   })
 })
