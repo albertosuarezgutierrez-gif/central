@@ -20,6 +20,7 @@ function addDays(date: Date, n: number) { const d = new Date(date); d.setDate(d.
 function daysBetween(a: Date, b: Date) { return Math.round((b.getTime() - a.getTime()) / 86400000) }
 function shortDay(d: Date) { return ['D','L','M','X','J','V','S'][d.getDay()] }
 function fmtEur(n: number) { return eur(n) }
+function fmtFull(d: Date) { return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) }
 function fmt(d: string) { const [, m, day] = d.split('-'); return `${day}/${m}` }
 
 export default function CalendarioPage() {
@@ -110,11 +111,11 @@ export default function CalendarioPage() {
       {/* Header */}
       <PageHeader
         titulo="Calendario de ocupación"
-        sub={`${PROPS.length} propiedades · datos Smoobu · ${DAYS} días`}
+        sub={`${PROPS.length} propiedades · datos Smoobu · ${fmtFull(winStart)} – ${fmtFull(addDays(winStart, DAYS - 1))}`}
         acciones={<>
-          <button onClick={() => setWinStart(d => addDays(d, -DAYS))} style={btnStyle}>‹ Anterior</button>
+          <button onClick={() => setWinStart(d => addDays(d, -DAYS))} style={btnStyle}aria-label="Ventana anterior">◀ Anterior</button>
           <button onClick={() => setWinStart(now)} style={{ ...btnStyle, padding: '0 14px', fontWeight: 600 }}>Hoy</button>
-          <button onClick={() => setWinStart(d => addDays(d, DAYS))} style={btnStyle}>Siguiente ›</button>
+          <button onClick={() => setWinStart(d => addDays(d, DAYS))} style={btnStyle}aria-label="Ventana siguiente">Siguiente ▶</button>
         </>}
       />
 
@@ -398,7 +399,7 @@ function UpcomingArrivals({ incomes, now }: { incomes: Income[]; now: Date }) {
 }
 
 const btnStyle: React.CSSProperties = {
-  padding: '0 12px', height: 32, borderRadius: 6,
-  border: '1px solid var(--border)', fontSize: 12, fontWeight: 500,
+  padding: '0 14px', minHeight: 44, minWidth: 44, borderRadius: 8,
+  border: '1px solid var(--border)', fontSize: 13, fontWeight: 500,
   color: 'var(--text)', background: 'var(--surface)', cursor: 'pointer', whiteSpace: 'nowrap',
 }

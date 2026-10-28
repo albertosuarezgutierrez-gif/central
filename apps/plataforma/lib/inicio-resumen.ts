@@ -114,6 +114,19 @@ function diffDias(a: string, b: string): number {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000)
 }
 
+/** Mueve la fecha de inicio `pasos` ventanas (negativo = atrás, positivo = adelante). */
+export function moverVentana(desde: string, pasos: number, n = 14): string {
+  return sumarDias(desde, pasos * n)
+}
+
+/** Fecha de inicio de la API de navegación: YYYY-MM-DD real y a ≤ 3 años de hoy; si no, null. */
+export function desdeValido(x: string | null, hoy: string): string | null {
+  if (!x || !/^\d{4}-\d{2}-\d{2}$/.test(x)) return null
+  const d = new Date(`${x}T00:00:00Z`)
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== x) return null
+  return Math.abs(diffDias(hoy, x)) <= 3 * 366 ? x : null
+}
+
 export function ventanaCalendario(reservas: ReservaCal[], pisos: string[], hoy: string, n = 14): Ventana {
   const dias = Array.from({ length: n }, (_, i) => sumarDias(hoy, i))
   const manana = dias[1] ?? sumarDias(hoy, 1)
