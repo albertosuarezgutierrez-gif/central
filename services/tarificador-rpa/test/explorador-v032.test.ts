@@ -11,8 +11,8 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarificacion'
-import { cerrarDialogoTerminoEpac, cerrarFaseEntrada, instalarGuardEmision, pulsarMenuOfertaNseMapfre, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
+import { EmisionBloqueadaError, rutasAppTolerablesDe, type InventarioDom } from '@central/module-tarificacion'
+import { descripcionParaTest, INDICES_URL_DESCRIPCION, tolerarRutasApp, cerrarDialogoTerminoEpac, cerrarFaseEntrada, instalarGuardEmision, pulsarMenuOfertaNseMapfre, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import { bucleExploracion, EXPLORADOR_VERSION, type ContextoBucle } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
@@ -499,7 +499,6 @@ test('seguridad 2a: el BUCLE marca el precio visto si el inventario de un paso t
 
 // ─── 0.3.4 (real 28/10/2026, main-63b6680) ──────────────────────────────────────────────────────────────────
 
-test('versión 0.3.4', () => assert.equal(EXPLORADOR_VERSION, '0.3.4'))
 
 const DIALOGO = (texto: string, botones: string) => `<div class="modal" role="dialog" aria-labelledby="tt" id="dlg"><h4 id="tt">Atención</h4><p>${texto}</p>${botones}</div>
   <script>window.pulsados = []; document.querySelectorAll('#dlg button').forEach((b) => b.addEventListener('click', () => { window.pulsados.push(b.textContent); document.getElementById('dlg').remove() }))</script>`
@@ -607,6 +606,116 @@ test('0.3.4 · inventario: <a href> de menú sale como role=link y `javascript:`
     assert.equal(els.find((e) => e.id === 'm6')?.onclick, 'marcar() ; javascript:contratarPoliza()', 'onclick Y href javascript: se concatenan')
     assert.equal(els.find((e) => e.id === 'm7')?.hrefRuta, '/EVT21_NSE_FWEB/contratar.do', 'la ruta sin query')
     await cap.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── 0.3.5: ruta de aplicación NSE (`/EVT21_NSE_FWEB/app/emision/`) tolerada SOLO en Mapfre patinete ───────────
+
+test('versión 0.3.5', () => assert.equal(EXPLORADOR_VERSION, '0.3.5'))
+
+const CARGA = 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf'
+const PAG_NSE = (href: string, texto: string) => PAGINA(`<a id="l" href="${href}">${texto}</a><script>document.getElementById('l').addEventListener('click', (e) => { e.preventDefault(); window.pulsado = 1 })</script>`)
+async function postA(page: Page, url: string, cuerpo: string): Promise<void> {
+  await page.evaluate(([u, c]) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: c }).catch(() => undefined), [url, cuerpo] as const)
+  await page.waitForTimeout(300)
+}
+
+test('0.3.5 · Mapfre patinete (rutas toleradas): enlace y POST a cargaOperacion.jsf pasan; emitir.jsf, accion=emitir y «Emitir póliza» no', async () => {
+  for (const [nombre, prueba, permitido] of [
+    ['enlace a cargaOperacion', async (page: Page, guard: GuardEmision) => { landing = PAG_NSE(CARGA, 'Nueva oferta'); await page.goto(`${base}/landing`); await pulsar(page.locator('#l'), guard) }, true],
+    ['POST a cargaOperacion', async (page: Page) => postA(page, CARGA, 'paso=2'), true],
+    ['POST a emitir.jsf', async (page: Page) => postA(page, 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/emitir.jsf', 'paso=2'), false],
+    ['POST con accion=emitir', async (page: Page) => postA(page, CARGA, 'accion=emitir'), false],
+    ['botón «Emitir póliza» bajo NSE', async (page: Page, guard: GuardEmision) => { landing = PAG_NSE(CARGA, 'Emitir póliza'); await page.goto(`${base}/landing`); await pulsar(page.locator('#l'), guard) }, false],
+  ] as const) {
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+      const r = await prueba(page, guard).then(() => null, (e: unknown) => e)
+      const bloqueado = r instanceof EmisionBloqueadaError || guard.violacion() !== null
+      assert.equal(bloqueado, !permitido, `${nombre}: ${String(r ?? guard.violacion())}`)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.3.5 · la MISMA ruta en Allianz o Mapfre auto (sin reglas): enlace y POST a cargaOperacion.jsf siguen bloqueados; reglas raras se rechazan', async () => {
+  for (const entrada of ['allianz:autos:movilidad_personal', 'mapfre:nueva_produccion:auto']) {
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      const reglas = rutasAppTolerablesDe(entrada)
+      if (reglas.length > 0) tolerarRutasApp(guard, reglas)
+      landing = PAG_NSE(CARGA, 'Nueva oferta')
+      await page.goto(`${base}/landing`)
+      await assert.rejects(pulsar(page.locator('#l'), guard), EmisionBloqueadaError, entrada)
+      await postA(page, CARGA, 'paso=2')
+      assert.notEqual(guard.violacion(), null, entrada)
+    } finally {
+      await context.close()
+    }
+  }
+  const { context, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    assert.throws(() => tolerarRutasApp(guard, [{ origen: 'http://wmediadores.mapfre.com', prefijo: '/EVT21_NSE_FWEB/app/emision/' }]), EmisionBloqueadaError)
+    assert.throws(() => tolerarRutasApp(guard, [{ origen: 'https://wmediadores.mapfre.com', prefijo: '/' + 'x?y/' }]), EmisionBloqueadaError)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.5 · el explorador fija en el guard las rutas tolerables de SU entrada (y solo esas) antes de abrir la página', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
+  const i = src.indexOf('const guard = await instalarGuardEmision(context)')
+  const j = src.indexOf('const tolerables = rutasAppTolerablesDe(exp.entrada)', i)
+  const k = src.indexOf('if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)', j)
+  const p = src.indexOf('const page = await context.newPage()', i)
+  assert.ok(i > 0 && j > i && k > j && p > k, 'tolerarRutasApp con las rutas de la entrada, tras instalar el guard y antes de la página')
+  assert.equal(src.match(/tolerarRutasApp\(/g)?.length, 1)
+})
+
+// ─── Revisión 0.3.5 (PR #5217) ───────────────────────────────────────────────────────────────────────────
+
+test('0.3.5b · ruta tolerada: cuerpo con botón JSF / nombre de parámetro de emisión → abortado; navegación NSE normal → pasa', async () => {
+  for (const [cuerpo, permitido] of [
+    ['formEmision:btnEmitir=formEmision:btnEmitir', false],
+    ['javax.faces.source=form:btnContratar', false],
+    ['javax.faces.source=form:btnSiguiente&formEmision:campo=1&javax.faces.partial.render=formEmision', true],
+  ] as const) {
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+      await postA(page, CARGA, cuerpo)
+      assert.equal(guard.violacion() === null, permitido, `${cuerpo}: ${String(guard.violacion())}`)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/formaction/ancestros, y un texto o title con la URL sigue bloqueando', async () => {
+  landing = PAGINA(`<a id="a0" href="${CARGA}">x</a>
+    <button id="b0" formaction="${CARGA}">y</button>
+    <a href="${CARGA}"><span id="s1">uno</span></a>
+    <a href="${CARGA}"><b><span id="s2">dos</span></b></a>
+    <a href="${CARGA}"><b><i><span id="s3">tres</span></i></b></a>
+    <a id="t1" href="#">${CARGA}</a><a id="t2" href="#" title="${CARGA}">z</a>`)
+  const { context, page, guard } = await abrir('/landing')
+  try {
+    const pos = async (sel: string) => (await descripcionParaTest(page.locator(sel))).map((d, i) => (d === CARGA ? i : -1)).filter((i) => i >= 0)
+    assert.deepEqual(await pos('#a0'), [6])
+    assert.deepEqual(await pos('#b0'), [8])
+    assert.deepEqual(await pos('#s1'), [15])
+    assert.deepEqual(await pos('#s2'), [19])
+    assert.deepEqual(await pos('#s3'), [23])
+    assert.deepEqual([...INDICES_URL_DESCRIPCION], [6, 8, 15, 19, 23])
+    tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+    await page.evaluate(() => document.querySelectorAll('a,button').forEach((x) => x.addEventListener('click', (e) => e.preventDefault())))
+    for (const sel of ['#a0', '#s3']) await pulsar(page.locator(sel), guard)
+    for (const sel of ['#t1', '#t2']) await assert.rejects(pulsar(page.locator(sel), guard), EmisionBloqueadaError, sel)
   } finally {
     await context.close()
   }

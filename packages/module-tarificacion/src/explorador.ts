@@ -15,7 +15,7 @@
 // 🚨 TARIFICAR ≠ EMITIR. 🚨 Nada de automatizar SMS/OTP/CAPTCHA: se para y se avisa. 🚨 La IA no escribe texto libre
 // en el portal: solo claves del catálogo y valores de opciones que YA están en el inventario.
 
-import { pareceEmision } from './guard-emision.ts'
+import { neutralizarRutaTolerable, pareceEmision, type RutaTolerable } from './guard-emision.ts'
 import { clasificarAccionPortal, descripcionesSinExcepcionProyecto, fronteraEmisionPorCampos, MOTIVO_FRONTERA_CUENTA, referenciaPresupuestoValida } from './acciones-portal.ts'
 import {
   MAX_TITULOS_MARCO,
@@ -85,6 +85,11 @@ export type EntradaExploracion = {
    * «×», nunca «Aceptar»; `cerrarDialogoTerminoEpac` del worker). Sin la clave = no se toca.
    */
   cierraDialogoTermino?: true
+  /**
+   * Rutas de APLICACIÓN cuyo prefijo no cuenta como emisión en URL/href/ruta (`neutralizarRutaTolerable`; decisión de Alberto,
+   * 28/10/2026, Mapfre NSE `/EVT21_NSE_FWEB/app/emision/`). Textos, onclick, cuerpos, IBAN… siguen igual. Sin la clave = ninguna.
+   */
+  rutasAppTolerables?: readonly RutaTolerable[]
   /** Entradas de menú (`<a>`, menuitem, link) avanzables DENTRO de esta ruta de aplicación (`esEnlaceAvanzable`). Sin la clave = no. */
   enlacesAvanzables?: { rutaApp: string }
   /** Avances por identidad exacta del control (ver {@link AvancePorId}). Sin la clave = ninguno. */
@@ -152,6 +157,8 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     avancesAutorizados: Object.freeze([]),
     // Menú de la aplicación NSE (28/10/2026): sus entradas son `<a>` (la IA elige el producto, MásPatín). Solo dentro de la app.
     enlacesAvanzables: Object.freeze({ rutaApp: '/EVT21_NSE_FWEB/' }),
+    // NSE = «Nuevo Sistema de Emisión»: sus pantallas de TARIFICAR viven bajo `/app/emision/` (real 28/10/2026, `cargaOperacion.jsf`).
+    rutasAppTolerables: Object.freeze([Object.freeze({ origen: 'https://wmediadores.mapfre.com', prefijo: '/EVT21_NSE_FWEB/app/emision/' })]),
     tomadorMediador: true as const,
   }),
   // Mapfre Auto (14/10/2026): «Nueva producción» → «Turismos y Motos». El bloque «Automóviles» y el enlace «Tarificación y
@@ -1050,13 +1057,30 @@ export function esGuardadoEnDialogoAutorizado(entrada: string, el: ElementoInven
   return !cat.emision && !cat.prohibida
 }
 
+/** Rutas de aplicación tolerables de la entrada (lista vacía si no tiene). */
+export function rutasAppTolerablesDe(entrada: string): readonly RutaTolerable[] {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  return e?.rutasAppTolerables ?? []
+}
+
+/**
+ * `descripcionesElemento` con la RUTA del href neutralizada si la entrada declara esa ruta de aplicación (solo `hrefRuta`, y solo si
+ * la ventana del marco es del origen de la regla: la ruta es relativa a ella).
+ */
+function descripcionesEnEntrada(entrada: string, el: ElementoInventario, marco: MarcoInventario): string[] {
+  const reglas = rutasAppTolerablesDe(entrada)
+  if (reglas.length === 0 || typeof el.hrefRuta !== 'string') return descripcionesElemento(el)
+  const origen = /^([a-z][a-z0-9+.-]*:\/\/[^/?#]+)/i.exec(marco.url)?.[1]?.toLowerCase() ?? null
+  return descripcionesElemento({ ...el, hrefRuta: neutralizarRutaTolerable(el.hrefRuta, reglas, origen) ?? undefined })
+}
+
 /** `null` = el botón se puede pulsar en exploración; si no, por qué no. */
 export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
   // Hace falta saber QUÉ es el botón: al menos una descripción visible (texto o aria) entera, no recortada por el saneado.
   if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d))) return 'sin_descripcion_completa'
   // Un onclick recortado puede esconder la llamada de emisión en la parte que no llegó.
   if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
-  const desc = descripcionesElemento(el)
+  const desc = descripcionesEnEntrada(entrada, el, marco)
   const cat = clasificarAccionPortal(desc)
   // Emisión dura (patrón del guard: emitir, contratar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…; y la
   // categoría EMISIÓN de la lista única: firmar, pagar, tramitar, confirmar, domiciliar…): siempre.
