@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-28T15:18:32Z",
+  "generadoEn": "2026-10-28T21:21:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2321,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 323
+        "evidencias": 325
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4366,7 +4366,9 @@
       "/api/operador/siniestro",
       "/api/operador/siniestro/cierre",
       "/api/operador/siniestro/hilo",
+      "/api/operador/siniestro/hilo/volcado",
       "/api/operador/siniestro/ia",
+      "/api/operador/siniestro/poliza-buscar",
       "/api/operador/siniestro/terceros",
       "/api/operador/siniestros-nuevos",
       "/api/operador/siniestros/esperando",
@@ -5520,7 +5522,9 @@
       "/api/correduria/siniestro/cierre",
       "/api/correduria/siniestro/hilo",
       "/api/correduria/siniestro/ia",
+      "/api/correduria/siniestro/poliza-buscar",
       "/api/correduria/siniestro/terceros",
+      "/api/correduria/siniestro/volcado",
       "/api/correduria/siniestros-esperando",
       "/api/correduria/solicitud-datos",
       "/api/correduria/solicitudes-portal",
@@ -7249,7 +7253,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1865,
+    "apis": 1869,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
