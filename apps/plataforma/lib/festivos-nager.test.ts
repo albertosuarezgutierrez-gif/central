@@ -40,3 +40,21 @@ test('obtenerFestivosAndalucia: respuesta buena -> filtrada', async () => {
   const r = await obtenerFestivosAndalucia(2026, (async () => ({ ok: true, json: async () => lista })) as unknown as typeof fetch)
   assert.equal(r?.length, 2)
 })
+
+import { fechasADeduplicar } from './festivos-nager.ts'
+
+test('fechasADeduplicar: solo fechas de Nager dentro del rango, únicas y ordenadas', () => {
+  const nager = [
+    { fecha: '2026-12-25', nombre: 'Navidad' }, { fecha: '2026-12-08', nombre: 'Inmaculada' },
+    { fecha: '2026-12-08', nombre: 'Inmaculada (dup)' }, { fecha: '2027-12-25', nombre: 'fuera' },
+  ]
+  assert.deepEqual(fechasADeduplicar(nager, '2026-10-28', '2027-10-28'), ['2026-12-08', '2026-12-25'])
+})
+test('fechasADeduplicar: null o vacío -> [] (sin datos no se duplica nada)', () => {
+  assert.deepEqual(fechasADeduplicar(null, '2026-01-01', '2026-12-31'), [])
+  assert.deepEqual(fechasADeduplicar([], '2026-01-01', '2026-12-31'), [])
+})
+test('fechasADeduplicar: fecha local que Nager no tiene no aparece', () => {
+  const r = fechasADeduplicar([{ fecha: '2026-12-08', nombre: 'x' }], '2026-01-01', '2026-12-31')
+  assert.ok(!r.includes('2026-04-21'))
+})

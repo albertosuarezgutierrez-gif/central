@@ -43,3 +43,20 @@ export async function obtenerFestivosAndalucia(
     return null
   }
 }
+
+// PURA: fechas (YYYY-MM-DD, únicas, ordenadas) en las que un festivo de Nager dentro de [desde, hasta]
+// ya cubre el día, de modo que un festivo `websearch` de esa MISMA fecha es un duplicado.
+// `null` (API caída) o lista vacía -> [] : sin datos de Nager no se da nada por duplicado.
+// Los festivos locales (fechas que Nager no tiene) nunca salen de aquí.
+export function fechasADeduplicar(
+  festivosNager: readonly FestivoAndalucia[] | null | undefined, desde: string, hasta: string,
+): string[] {
+  if (!Array.isArray(festivosNager)) return []
+  const set = new Set<string>()
+  for (const f of festivosNager) {
+    if (!f || typeof f.fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha)) continue
+    if (f.fecha < desde || f.fecha > hasta) continue
+    set.add(f.fecha)
+  }
+  return [...set].sort()
+}

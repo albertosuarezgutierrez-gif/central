@@ -9,7 +9,7 @@ import {
 } from "@/lib/sivra/eventos-impacto"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { anioIncoherente } from "@/lib/sivra/eventos-anio"
-import { obtenerFestivosAndalucia } from "@/lib/festivos-nager"
+import { obtenerFestivosAndalucia, fechasADeduplicar } from "@/lib/festivos-nager"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -169,7 +169,8 @@ Si no hay nada nuevo: {"eventos":[]}`
 
   // ─── Festivos nacionales + Andalucía (Nager.Date) ───────────────────────────────────────────
   // Misma tabla y formato que el resto; fuente='nager'. Si la API falla (null) no se toca nada.
-  let nagerGuardados = 0
+  let nagerGuardados = 0, nagerDedup = 0
+  const nagerOk: { fecha: string; nombre: string }[] = []
   const nagerAnios: number[] = []
   for (let a = Number(desde.slice(0, 4)); a <= Number(hasta.slice(0, 4)); a++) nagerAnios.push(a)
   const nagerListas = await Promise.all(nagerAnios.map(a => obtenerFestivosAndalucia(a)))
@@ -190,9 +191,30 @@ Si no hay nada nuevo: {"eventos":[]}`
             WHERE pricing_eventos_auto.estado <> 'descartado'
         `)
         nagerGuardados++
+        nagerOk.push(f)
       } catch (e) {
         errors.push(`nager ${f.fecha}: ${String(e).slice(0, 100)}`)
       }
+    }
+  }
+
+  // Dedup idempotente: un festivo nacional/andaluz que la IA metió antes como websearch/festivo queda
+  // duplicado el mismo día. Se marca 'descartado' (el motor lo ignora: eventos-estado.ts) con
+  // raw.dedup='nager'; NO se borra (reversible). Solo fechas cuyo upsert de Nager SÍ se hizo;
+  // si la API devolvió null, nagerOk no tiene nada de ese año y no se toca nada.
+  const fechasDup = fechasADeduplicar(nagerOk, desde, hasta)
+  if (fechasDup.length > 0) {
+    try {
+      nagerDedup = await prisma.$executeRaw(Prisma.sql`
+        UPDATE pricing_eventos_auto
+        SET estado = 'descartado',
+            raw = COALESCE(raw, '{}'::jsonb) || '{"dedup":"nager"}'::jsonb,
+            updated_at = now()
+        WHERE fuente = 'websearch' AND tipo = 'festivo' AND estado <> 'descartado'
+          AND rate_date IN (${Prisma.join(fechasDup.map(d => Prisma.sql`${d}::date`))})
+      `)
+    } catch (e) {
+      errors.push(`nager dedup: ${String(e).slice(0, 100)}`)
     }
   }
 
@@ -217,7 +239,7 @@ Si no hay nada nuevo: {"eventos":[]}`
   return NextResponse.json({
     ok: errors.length === 0, configured: true, via,
     vistos: evs.length, upserted, descartados, fuera_de_casa: fueraDeCasa, dudosos, anio_incoherente: anioMal,
-    nager: nagerGuardados, previstos: previstos.guardados, previstosVistos: previstos.vistos,
+    nager: nagerGuardados, nager_dedup: nagerDedup, previstos: previstos.guardados, previstosVistos: previstos.vistos,
     errors,
   })
 }
