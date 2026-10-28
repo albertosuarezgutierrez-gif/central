@@ -1082,7 +1082,8 @@ export function portalDatosIncompletosGenerali(avisos: readonly string[]): boole
 export function obligatoriosVaciosGenerali(campos: readonly { etiqueta: string; obligatorio: boolean; valor: string }[]): string[] {
   const out: string[] = []
   for (const c of campos) {
-    if (!c.obligatorio || c.valor !== 'vacío') continue
+    // v0.2.44: un desplegable que sigue en «Seleccione…» está VACÍO (antes contaba como relleno).
+    if (!c.obligatorio || (c.valor !== 'vacío' && !/^seleccione\b/i.test(c.valor))) continue
     const e = sanearFragmentoGenerali(String(c.etiqueta ?? '').replace(/\*\s*$/, '')).trim().slice(0, 60)
     if (e && !out.includes(e)) out.push(e)
     if (out.length >= 12) break
@@ -1094,13 +1095,16 @@ export function obligatoriosVaciosGenerali(campos: readonly { etiqueta: string; 
  * v0.2.42: bloque del atasco con el estado del cálculo (va JUSTO tras «Recalcular», el runner corta a 2000). Avisos y etiquetas pasan por
  * `sanearFragmentoGenerali`; nunca hay valores de campos. `vaciosValoracion` = obligatorios vacíos de «Datos de Valoración» al salir de ella. PURA.
  */
-export function resumenEstadoCalculoGenerali(e: EstadoCalculoGenerali | null, vaciosValoracion: readonly string[], max = 600): string {
+export function resumenEstadoCalculoGenerali(e: EstadoCalculoGenerali | null, vaciosValoracion: readonly string[], max = 600, avisosValoracion: readonly string[] = []): string {
   const s = (x: string, n: number) => sanearFragmentoGenerali(x).trim().slice(0, n)
   const avisos = [...new Set((e?.avisos ?? []).map((a) => s(a, 120)).filter(Boolean))].slice(0, 6)
   const partes: string[] = []
   partes.push(`Avisos del portal (areaErrores): ${avisos.length ? avisos.map((a) => `«${a}»`).join(' · ') : '(ninguno visible)'}`)
   if (portalDatosIncompletosGenerali(avisos)) partes.push('el portal da los datos por INCOMPLETOS y no calcula hasta completarlos')
   partes.push(`obligatorios vacíos en «Datos de Valoración»: ${vaciosValoracion.length ? vaciosValoracion.map((x) => s(x, 60)).join(' · ') : '(ninguno detectado)'}`)
+  // v0.2.44: avisos que el portal pintaba en «Datos de Valoración» al salir de ella (solo textos de la interfaz).
+  const avV = [...new Set(avisosValoracion.map((a) => s(a, 100)).filter(Boolean))].slice(0, 4)
+  if (avV.length) partes.push(`avisos en «Datos de Valoración»: ${avV.map((a) => `«${a}»`).join(' · ')}`)
   const vacios = (e?.obligatoriosVacios ?? []).map((x) => s(x, 60)).filter(Boolean)
   partes.push(`obligatorios vacíos en «Garantías y Resultados»: ${vacios.length ? vacios.join(' · ') : '(ninguno detectado)'}`)
   partes.push(`cargando: ${e?.cargando === true ? 'sí' : e?.cargando === false ? 'no' : '¿?'}`)

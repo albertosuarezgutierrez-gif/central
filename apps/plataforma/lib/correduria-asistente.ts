@@ -251,7 +251,7 @@ export const HERRAMIENTAS = [
     {
       clienteId: { type: 'string', description: 'La ficha (sácala de buscar). NO lo pases si Alberto ha subido el documento y no dice de quién es: con usarDocumentos=true lo busco por el tomador.' },
       usarDocumentos: { type: 'boolean', description: 'true si Alberto se refiere a lo que acaba de subir' },
-      ramo: { type: 'string', enum: ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'empresas', 'rc_profesional', 'dyo', 'flotas', 'transporte_mercancias', 'ciberriesgos', 'decenal', 'embarcaciones', 'mascotas', 'impago_alquiler', 'viaje', 'caucion', 'otros'] },
+      ramo: { type: 'string', enum: ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'empresas', 'rc_profesional', 'dyo', 'flotas', 'transporte_mercancias', 'ciberriesgos', 'decenal', 'embarcaciones', 'mascotas', 'impago_alquiler', 'viaje', 'caucion', 'patinete', 'otros'] },
       compania: { type: 'string', description: 'Compañía con la que está ahora' },
       prima: { type: 'number', description: 'Prima anual actual en euros' },
       vence: { type: 'string', description: 'Vencimiento de su póliza actual (aaaa-mm-dd)' },

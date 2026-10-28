@@ -8,6 +8,10 @@
  *     no es el código CNO-11 de `datosCapital` de vida: se cotiza fuera y se teclea en el portal de la compañía);
  *   · mascotas   → `especie`, `raza`, `fechaNacimientoAnimal`, `ppp` (raza potencialmente peligrosa, RD 287/2002) y
  *     `microchip` (lo que piden las compañías de mascotas y el enlace ya preguntaba; sin API en Codeoscopic).
+ *   · patinete (28/10/2026, VMP) → `marca`, `modelo`, `inscripcionDgt` (nº del Registro de VMP de la DGT: no hay
+ *     matrícula), `certificadoVmp` (¿tiene certificado de circulación?), `inscripcionValidaHasta`, `uso` y `valorVmp`.
+ *     No tarifica (ni Avant2 ni bot activo): se cotiza fuera, como el resto del bloque libre. El nº de inscripción
+ *     se guarda tal cual (sin formato oficial publicado que validar: no se inventa uno).
  * Un campo que no es de ese ramo se rechaza al validar con `ramo` (no se guarda en silencio).
  *
  * 🚨 `null` = «no se sabe»; un capital de 0 no es lo mismo que sin capital.
@@ -27,6 +31,14 @@ export const ESPEC_LIBRE = [
   { clave: 'fechaNacimientoAnimal', etiqueta: 'Nacimiento del animal', tipo: { t: 'fecha' } },
   { clave: 'ppp', etiqueta: 'Raza potencialmente peligrosa (PPP)', tipo: { t: 'bool' } },
   { clave: 'microchip', etiqueta: 'Microchip', tipo: { t: 'texto', max: 20 } },
+  // Patinete / VMP.
+  { clave: 'marca', etiqueta: 'Marca', tipo: { t: 'texto', max: 60 } },
+  { clave: 'modelo', etiqueta: 'Modelo', tipo: { t: 'texto', max: 80 } },
+  { clave: 'inscripcionDgt', etiqueta: 'Nº de inscripción DGT', tipo: { t: 'texto', max: 30 } },
+  { clave: 'certificadoVmp', etiqueta: 'Certificado de circulación', tipo: { t: 'bool' } },
+  { clave: 'inscripcionValidaHasta', etiqueta: 'Inscripción válida hasta', tipo: { t: 'fecha', futura: true } },
+  { clave: 'uso', etiqueta: 'Uso', tipo: { t: 'texto', max: 80 } },
+  { clave: 'valorVmp', etiqueta: 'Valor del patinete (€)', tipo: { t: 'numero', min: 0, max: 100_000 } },
 ] as const satisfies Espec
 
 export type CampoRiesgoLibre = (typeof ESPEC_LIBRE)[number]['clave']
@@ -43,6 +55,15 @@ export type DatosRiesgoLibre = {
   fechaNacimientoAnimal: string | null
   ppp: boolean | null
   microchip: string | null
+  marca: string | null
+  modelo: string | null
+  inscripcionDgt: string | null
+  /** `true` = tiene certificado; `false` = dice que no; `null` = no se sabe. */
+  certificadoVmp: boolean | null
+  /** aaaa-mm-dd; puede ser futura (y pasada: una inscripción caducada es un dato). */
+  inscripcionValidaHasta: string | null
+  uso: string | null
+  valorVmp: number | null
   confirmadoAt: string | null
 }
 
@@ -61,19 +82,32 @@ export const ETIQUETA_CAMPO_LIBRE: Record<CampoRiesgoLibre, string> = {
   fechaNacimientoAnimal: 'Nacimiento del animal',
   ppp: 'Raza potencialmente peligrosa (PPP)',
   microchip: 'Microchip',
+  marca: 'Marca',
+  modelo: 'Modelo',
+  inscripcionDgt: 'Nº de inscripción DGT',
+  certificadoVmp: 'Certificado de circulación',
+  inscripcionValidaHasta: 'Inscripción válida hasta',
+  uso: 'Uso',
+  valorVmp: 'Valor del patinete',
 }
 
 const CAMPOS_LIBRE_COMUNES: readonly CampoRiesgoLibre[] = ['descripcion', 'direccion', 'capital', 'notas']
 export const CAMPOS_MASCOTA_LIBRE: readonly CampoRiesgoLibre[] = ['especie', 'raza', 'fechaNacimientoAnimal', 'ppp', 'microchip']
+/** Los del patinete / VMP (28/10/2026): un vehículo SIN matrícula. */
+export const CAMPOS_PATINETE_LIBRE: readonly CampoRiesgoLibre[] = ['marca', 'modelo', 'inscripcionDgt', 'certificadoVmp', 'inscripcionValidaHasta', 'uso', 'valorVmp']
 
 /** Qué campos del bloque libre se usan en cada ramo (los propios de accidentes y mascotas, solo allí). */
 export function camposLibreDelRamo(ramo: unknown): readonly CampoRiesgoLibre[] {
   if (ramo === 'accidentes') return [...CAMPOS_LIBRE_COMUNES, 'profesion']
   if (ramo === 'mascotas') return [...CAMPOS_LIBRE_COMUNES, ...CAMPOS_MASCOTA_LIBRE]
+  if (ramo === 'patinete') return [...CAMPOS_LIBRE_COMUNES, ...CAMPOS_PATINETE_LIBRE]
   return CAMPOS_LIBRE_COMUNES
 }
 
-/** Ramos que se cotizan fuera y llevan este bloque (todos los que no son vehículo, hogar, personas ni comercio). */
+/**
+ * Ramos que se cotizan fuera y llevan este bloque (todos los que no son vehículo, hogar, personas ni comercio). El
+ * patinete es un vehículo pero NO va en `datosVehiculo` (eso es matrícula + catálogo de Codeoscopic): va aquí.
+ */
 export function admiteDatosRiesgoLibre(ramo: unknown): boolean {
   return typeof ramo === 'string' && !['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'comercio'].includes(ramo)
 }

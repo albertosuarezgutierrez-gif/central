@@ -1033,9 +1033,11 @@ function DatosComercio(props: Props & { d: Record<string, unknown>; faltan: stri
 function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boolean }) {
   const { d, dePoliza } = props
   const ramo = props.riesgo.oportunidad.ramo
-  // 26/10/2026: accidentes (profesión) y mascotas (el animal) tienen campos propios; el resto, los cuatro de siempre.
+  // 26/10/2026: accidentes (profesión) y mascotas (el animal) tienen campos propios; 28/10/2026 el patinete (VMP).
+  // El resto, los cuatro de siempre. Cómo se pinta un campo propio lo dice su TIPO en `ESPEC_LIBRE`, no su nombre.
   const claves = camposLibreDelRamo(ramo)
   const spec = ESPEC_LIBRE.filter((c) => (claves as readonly string[]).includes(c.clave))
+  const tipoDe = (k: string) => spec.find((c) => c.clave === k)?.tipo.t
   const E = useEdicion('datosRiesgoLibre', props, spec, d, 'los datos del riesgo')
   const extras = claves.filter((k) => !['descripcion', 'direccion', 'capital', 'notas'].includes(k))
   return (
@@ -1055,7 +1057,7 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
               <div key={k} style={{ display: 'grid', gap: 2, minWidth: 0 }}>
                 <dt style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ETIQUETA_CAMPO_LIBRE[k]}</dt>
                 <dd style={{ margin: 0, fontWeight: 600, overflowWrap: 'anywhere', whiteSpace: k === 'notas' ? 'pre-wrap' : undefined }}>
-                  {v === null || v === undefined ? sinDato : k === 'capital' ? euros(v) ?? sinDato : typeof v === 'boolean' ? (v ? 'Sí' : 'No') : k === 'fechaNacimientoAnimal' ? fechaEs(String(v)) ?? String(v) : String(v)}
+                  {v === null || v === undefined ? sinDato : tipoDe(k) === 'numero' ? euros(v) ?? sinDato : typeof v === 'boolean' ? (v ? 'Sí' : 'No') : tipoDe(k) === 'fecha' ? fechaEs(String(v)) ?? String(v) : String(v)}
                 </dd>
               </div>
             )
@@ -1068,7 +1070,7 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
           <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.direccion}<input value={E.form.direccion ?? ''} onChange={E.set('direccion')} maxLength={200} style={campoCss} /></label>
           <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.capital}<input inputMode="decimal" value={E.form.capital ?? ''} onChange={E.set('capital')} placeholder="p. ej. 300.000" style={campoCss} /></label>
           {extras.map((k) => {
-            if (k === 'ppp') {
+            if (tipoDe(k) === 'bool') {
               return (
                 <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE[k]}
                   <select value={E.form[k] ?? ''} onChange={E.set(k)} style={campoCss}><option value="">Sin dato</option><option value="no">No</option><option value="si">Sí</option></select>
@@ -1087,7 +1089,7 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
             }
             return (
               <label key={k} style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE[k]}
-                <input value={E.form[k] ?? ''} onChange={E.set(k)} type={k === 'fechaNacimientoAnimal' ? 'date' : 'text'} maxLength={k === 'microchip' ? 20 : 120} style={campoCss} />
+                <input value={E.form[k] ?? ''} onChange={E.set(k)} type={tipoDe(k) === 'fecha' ? 'date' : 'text'} inputMode={tipoDe(k) === 'numero' ? 'decimal' : undefined} maxLength={k === 'microchip' ? 20 : 120} style={campoCss} />
               </label>
             )
           })}

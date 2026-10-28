@@ -87,6 +87,12 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'allianz', ramo: 'comunidades', producto: 'comunidades', pestana: 'Particulares', productoMenu: 'Comunidades',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
   }),
+  // Allianz Movilidad Personal (patinete/VMP, 28/10/2026): «Nueva Alta» → acordeón «Autos» → tile «Movilidad Personal».
+  // Solo EXPLORAR (mapear el formulario): sin avances autorizados, ningún «Aceptar» se pulsa.
+  'allianz:autos:movilidad_personal': Object.freeze({
+    compania: 'allianz', ramo: 'patinete', producto: 'patinete', pestana: 'Autos', productoMenu: 'Movilidad Personal',
+    avancesAutorizados: Object.freeze([]),
+  }),
   // Mapfre Auto (14/10/2026): «Nueva producción» → «Turismos y Motos». El bloque «Automóviles» y el enlace «Tarificación y
   // Emisión Rápida» (abre pestaña nueva) van fijos en el código de Mapfre. Sin avances autorizados: solo se lee.
   'mapfre:nueva_produccion:auto': Object.freeze({
@@ -234,6 +240,8 @@ export const CATALOGO_EXPLORACION: Readonly<Record<string, readonly DatoCatalogo
   hogar: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_HOGAR]),
   comunidades: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_COMUNIDADES]),
   auto: Object.freeze([...DATOS_COMUNES_AUTO, ...DATOS_AUTO]),
+  // Movilidad Personal (28/10/2026): primera pasada = mapa del formulario; solo los datos comunes (tomador, contacto, efecto).
+  patinete: Object.freeze([...DATOS_COMUNES]),
 })
 
 export function catalogoDe(ramo: string): readonly DatoCatalogo[] {

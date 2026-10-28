@@ -198,6 +198,7 @@ const SINONIMOS_RAMO: Record<string, RamoOportunidad> = {
   perro: 'mascotas', mascota: 'mascotas',
   'impago de alquiler': 'impago_alquiler', alquiler: 'impago_alquiler',
   flota: 'flotas',
+  'patinete electrico': 'patinete', vmp: 'patinete',
 }
 
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -374,6 +375,7 @@ const ETIQUETA_RAMO: Partial<Record<RamoOportunidad, string>> = {
   auto: 'auto', moto: 'moto', hogar: 'hogar', vida: 'vida', salud: 'salud', decesos: 'decesos',
   responsabilidad_civil: 'responsabilidad civil', comercio: 'comercio', comunidades: 'comunidades',
   mascotas: 'mascotas', impago_alquiler: 'impago de alquiler', flotas: 'flota',
+  patinete: 'patinete (VMP)',
 }
 export const etiquetaRamo = (r: RamoOportunidad) => ETIQUETA_RAMO[r] ?? r.replace(/_/g, ' ')
 

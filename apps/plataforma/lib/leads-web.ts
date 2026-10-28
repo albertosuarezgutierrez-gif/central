@@ -352,8 +352,9 @@ export const RAMO_OPORTUNIDAD_DE_LEAD: Record<TipoSeguroLead, RamoOportunidad> =
   decesos: 'decesos',
   'seguro-perro': 'mascotas',
   'impago-alquiler': 'impago_alquiler',
-  // Sin ramo propio: «otros» (la etiqueta del aviso sigue diciendo «patinete eléctrico»).
-  'patinete-electrico': 'otros',
+  // Ramo propio desde el 28/10/2026 (antes caía en «otros»). Sin el SQL 2026-10-28_ramo_patinete.sql el puerto
+  // contesta 503 `sin_migracion` y el aviso sale «sin enlace»: la ficha del lead se registra igual.
+  'patinete-electrico': 'patinete',
   otros: 'otros',
 }
 

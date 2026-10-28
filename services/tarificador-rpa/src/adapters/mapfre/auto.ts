@@ -68,6 +68,10 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.35 (28/10/2026, ejecución real con 0.8.34): la causa ya se veía: «picture_as_pdf» tapado por `cdk-overlay-backdrop` (un diálogo de Material
+// abierto que Escape no cierra). Ahora (guard.ts): si el control de descarga está DENTRO del diálogo, se pulsa ahí; si el diálogo es informativo (sin
+// campos, sin emitir/contratar/enviar/firmar/pagar y solo controles de cerrar: cruz, «Cerrar», «Aceptar», «OK»), se cierra con rótulo EXACTO y se
+// reintenta; si no, el aviso lleva su texto saneado y sus botones. Nada más del diálogo se pulsa.
 // v0.8.34 (27/10/2026, autotest real con 0.8.33): «PDF del proyecto no descargado: locator.click: Timeout 8000ms … [data-rpa-dl="41"]». El clic de
 // descarga (guard.ts `pulsarDescargaProyectoAuto`) no llegaba a darse (Playwright esperó 8 s a que fuese accionable: capa encima, re-pintado tras «Generar
 // Proyecto»…) y el aviso cortaba la traza a 120 caracteres sin la causa. Ahora: se trae a la vista, la causa sale de la traza (`causaClicNoPulsado`) y
@@ -1957,7 +1961,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.34',
+  version: '0.8.35',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

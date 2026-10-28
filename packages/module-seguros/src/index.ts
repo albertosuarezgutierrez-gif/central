@@ -1404,7 +1404,7 @@ export {
 } from './datos-capital-riesgo.ts'
 export type { AseguradoAdicional, CampoCapital, DatosCapitalRiesgo, RamoCapital, ValidacionCapital, ValorEdicionCapital } from './datos-capital-riesgo.ts'
 export {
-  AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, CAMPOS_MASCOTA_LIBRE, ESPECIES_MASCOTA, camposLibreDelRamo, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
+  AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, CAMPOS_MASCOTA_LIBRE, CAMPOS_PATINETE_LIBRE, ESPECIES_MASCOTA, camposLibreDelRamo, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
   datosRiesgoLibreVacios, faltanDatosRiesgoLibre, leerDatosRiesgoLibre, motivoNoConfirmableLibre, precargaLibreDePoliza,
   validarDatosRiesgoLibre,
 } from './datos-riesgo-libre.ts'

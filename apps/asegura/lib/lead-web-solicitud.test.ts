@@ -33,7 +33,8 @@ test('el lead web escribe la solicitud con `insertarSolicitud` dentro de `trasCr
 
 // ─── 25/10/2026: todos los ramos y fichas que ya existían (a CIEGAS) ─────────
 const sol = readFileSync(new URL('./solicitud-datos.ts', import.meta.url), 'utf8')
-const sqlRamos = readFileSync(new URL('../prisma/sql/2026-10-25_solicitud_datos_todos_ramos.sql', import.meta.url), 'utf8')
+// El ÚLTIMO SQL que redefine el CHECK (28/10/2026: + patinete). Un ramo nuevo exige un SQL nuevo y apuntar aquí.
+const sqlRamos = readFileSync(new URL('../prisma/sql/2026-10-28_ramo_patinete.sql', import.meta.url), 'utf8')
 
 test('un enlace del formulario web (actor `web`) NUNCA trae el DNI ni el nacimiento de la ficha', () => {
   const f = sol.slice(sol.indexOf('export async function solicitudPorToken'), sol.indexOf('export type ResultadoDocSolicitud'))
@@ -55,4 +56,21 @@ test('el SQL del CHECK de ramo admite exactamente RAMOS_OPORTUNIDAD', async () =
   const lista = /CHECK \(ramo IN \(([\s\S]*?)\)\)/.exec(sqlRamos)?.[1] ?? ''
   const enSql = [...lista.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort()
   assert.deepEqual(enSql, [...RAMOS_SOLICITUD].sort())
+})
+
+test('28/10/2026 patinete: el SQL añade el valor al enum (idempotente, fuera de la transacción) antes de usarlo', () => {
+  const add = sqlRamos.search(/ALTER TYPE [a-z_]+\.tipo_seguro ADD VALUE IF NOT EXISTS 'patinete' BEFORE 'otros';/)
+  const begin = sqlRamos.indexOf('BEGIN;')
+  assert.ok(add >= 0, 'falta el ADD VALUE del enum')
+  assert.ok(begin > add, 'el ADD VALUE va solo, ANTES del BEGIN')
+})
+
+test('código antes que SQL: el 22P02 del enum de ramo se degrada a 503 sin_migracion (lead web y alta a mano)', async () => {
+  const { esEnumRamoSinMigrar } = await import('./ramo-sin-migrar.ts')
+  assert.equal(esEnumRamoSinMigrar(new Error('Raw query failed. Code: `22P02`. Message: `invalid input value for enum tipo_seguro: "patinete"`')), true)
+  assert.equal(esEnumRamoSinMigrar(new Error('Code: `22P02`. Message: `invalid input syntax for type uuid: "x"`')), false, 'otro 22P02 sigue siendo error')
+  assert.equal(esEnumRamoSinMigrar(new Error('invalid input value for enum fuente_origen: "x"')), false)
+  assert.match(lead, /esEnumRamoSinMigrar\(e\)/)
+  const ruta = readFileSync(new URL('../app/api/operador/oportunidad/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /if \(esEnumRamoSinMigrar\(e\)\) return NextResponse\.json\(\{ estado: 'sin_migracion'/)
 })

@@ -115,6 +115,17 @@ test('la entrada de Hogar es la de Comunidades con otro producto: Particulares +
   assert.equal(comunidades.productoMenu, 'Comunidades')
 })
 
+test('la entrada de Movilidad Personal (patinete) es Autos + «Movilidad Personal», sin avances, ramo patinete', () => {
+  const e = ENTRADAS_EXPLORACION['allianz:autos:movilidad_personal']
+  assert.equal(e.compania, 'allianz')
+  assert.equal(e.ramo, 'patinete')
+  assert.equal(e.pestana, 'Autos')
+  assert.equal(e.productoMenu, 'Movilidad Personal')
+  assert.equal(e.avancesAutorizados.length, 0)
+  assert.match('Movilidad Personal', etiquetaProducto(e.productoMenu))
+  assert.doesNotMatch('Movilidad Personal Plus', etiquetaProducto(e.productoMenu))
+})
+
 for (const [entrada, tile] of [['allianz:particulares:hogar', 'Allianz HOGAR'], ['allianz:particulares:comunidades', 'Comunidades']] as const) {
   test(`abrirNuevaAlta (helper del adaptador real): Nueva Alta → despliega Particulares → tile «${tile}» por etiqueta exacta`, async () => {
     const { context, page, guard } = await abrir()

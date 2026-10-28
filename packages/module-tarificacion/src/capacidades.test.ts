@@ -145,3 +145,15 @@ describe('prepararSolicitud · mapeo canónico → Allianz', () => {
     if (!r.ok) expect(r.errores.some((e) => e.includes('tipoVivienda'))).toBe(true)
   })
 })
+
+describe('patinete / VMP (28/10/2026): ramo del CRM SIN capacidad de cotización', () => {
+  it('no hay bot registrado: deRamo vacío, obtener null y prepararSolicitud lo dice (nunca cae a otra)', () => {
+    const cat = catalogoCotizacion()
+    expect(cat.deRamo('patinete')).toEqual([])
+    expect(cat.obtener('allianz', 'patinete')).toBeNull()
+    expect(cat.ramos()).not.toContain('patinete')
+    const r = prepararSolicitud(cat, 'allianz', 'patinete', {}, {})
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.errores[0]).toMatch(/no hay bot para el ramo «patinete»/)
+  })
+})

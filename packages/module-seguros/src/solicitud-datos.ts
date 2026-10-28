@@ -66,6 +66,7 @@ const NOMBRE_RAMO: Record<RamoSolicitud, { tuyo: string; del: string; seguro: st
   impago_alquiler: { tuyo: 'tu seguro de impago de alquiler', del: 'el seguro de impago de alquiler', seguro: 'impago de alquiler' },
   viaje: { tuyo: 'tu seguro de viaje', del: 'el seguro de viaje', seguro: 'viaje' },
   caucion: { tuyo: 'tu seguro de caución', del: 'el seguro de caución', seguro: 'caución' },
+  patinete: { tuyo: 'el seguro de tu patinete', del: 'el seguro del patinete', seguro: 'patinete' },
   otros: { tuyo: 'tu seguro', del: 'el seguro', seguro: 'seguro' },
 }
 

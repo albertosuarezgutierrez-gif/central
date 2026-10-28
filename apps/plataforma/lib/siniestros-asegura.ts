@@ -357,6 +357,8 @@ const RAMOS_POR_TIPO_POLIZA: Record<string, readonly string[]> = {
   impago_alquiler: ['general'],
   viaje: ['general'],
   caucion: ['general'],
+  // Patinete / VMP (28/10/2026): sin matrícula ni catálogo de accidente propio; solo el general (conservador).
+  patinete: ['general'],
 }
 
 /**

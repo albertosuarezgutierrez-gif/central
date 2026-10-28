@@ -232,6 +232,8 @@ export const TIPOS_POR_RAMO: Readonly<Record<RamoSiniestro, readonly TipoDeRamo[
   impago_alquiler: OTROS,
   viaje: OTROS,
   caucion: OTROS,
+  // Patinete / VMP (28/10/2026): sin catálogo propio todavía.
+  patinete: OTROS,
   otros: OTROS,
 }
 

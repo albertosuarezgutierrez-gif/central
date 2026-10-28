@@ -976,6 +976,7 @@ enum TipoSeguro {
   impago_alquiler
   viaje
   caucion
+  patinete
   otros
 
   @@map("tipo_seguro")

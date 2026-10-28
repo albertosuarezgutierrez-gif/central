@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
+import { esEnumRamoSinMigrar, MOTIVO_RAMO_SIN_MIGRAR } from '@/lib/ramo-sin-migrar'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { ORIGEN_LEAD_CORREO, TOPE_DIARIO_LEADS_CORREO, cambiarEstadoOportunidad, anularDeclaracion, crearOportunidad, declararEmitida, editarOportunidad, fijarSolicitudCompania, leerOportunidad, oportunidadesDeCliente, posponerOportunidad, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
@@ -146,6 +147,8 @@ export const POST = auditado(async (req: Request) => {
     if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
     return NextResponse.json({ estado: 'ok', oportunidad: r.oportunidad })
   } catch (e) {
+    // Ramo que el código ya conoce y la BD aún no (patinete sin el SQL 2026-10-28): 503 que dice qué falta, no un 500.
+    if (esEnumRamoSinMigrar(e)) return NextResponse.json({ estado: 'sin_migracion', motivo: MOTIVO_RAMO_SIN_MIGRAR }, { status: 503 })
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/oportunidad', e) }, { status: 500 })
   }
 })

@@ -264,6 +264,13 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.44 (28/10/2026, prueba real con 0.2.43, trabajo dd2067b2). El corte de esperas funcionó (8-9 s por lectura) y «Envío e-mail» quedó en «Mediador»
+ * (volcado: marcada); «Verificación del riesgo» NO estaba a la vista y no se tocó. Genernet seguía con «El paso anterior no tiene los datos completos»
+ * pero el atasco decía «obligatorios vacíos en «Datos de Valoración»: (ninguno detectado)»: el lector de esa pestaña contaba un desplegable en
+ * «Seleccione…» como relleno y no veía grupos de opciones sin marcar. Ahora se lee también con el lector por bloques (`leerEstadoBloquesGenerali`), el
+ * atasco trae los avisos de esa pestaña y «Bloques antes de Recalcular» dice qué bloques de decisión estaban a la vista. Nada nuevo se pulsa.
+ */
+/**
  * 0.2.43 (27/10/2026, prueba real con 0.2.42, trabajo b36374f2: «tope del intento de 240 s superado»). El volcado guardado muestra «Valoración Riesgo ›
  * Garantías y Resultados» con `#areaErrores` «No se puede calcular con datos incompletos», la tabla «Modalidades de Seguro» sin filas y «Envío e-mail» y
  * «Verificación del riesgo» con «*» (obligatorias; pendientes de Alberto). Los pasos medidos (formulario 29 s · lectura 25 s · Siguiente · lectura 56 s ·
@@ -321,7 +328,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.43'
+export const VERSION_GENERALI_AUTO = '0.2.44'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -630,9 +637,9 @@ export async function leerPantalla(raiz: Raiz): Promise<PantallaLeida> {
  * `.required` «*»: opciones sin marcar, desplegable sin elegir o en «Seleccione…», texto vacío), botones/enlaces visibles y `document.readyState`.
  * Devuelve null si el marco no es de «Valoración Riesgo» (sin `#areaErrores` ni la tabla de modalidades).
  */
-export const JS_ESTADO_CALCULO_GENERALI = `(() => {${JS_COMUN}
+const jsEstadoCalculoGenerali = (forzar: boolean) => `(() => {${JS_COMUN}
   const area = document.getElementById('areaErrores');
-  if (!area && !document.querySelector('[id^="reg1063E_gridmodseg"]') && !/emiAutosGenB028/.test(location.pathname)) return null;
+  if (!${forzar} && !area && !document.querySelector('[id^="reg1063E_gridmodseg"]') && !/emiAutosGenB028/.test(location.pathname)) return null;
   const avisos = [];
   if (area && getComputedStyle(area).display !== 'none') {
     for (const li of Array.from(area.querySelectorAll('li'))) {
@@ -678,6 +685,19 @@ export const JS_ESTADO_CALCULO_GENERALI = `(() => {${JS_COMUN}
   }
   return { avisos, obligatoriosVacios, nombresVacios, botones, listo: document.readyState === 'complete' };
 })()`
+export const JS_ESTADO_CALCULO_GENERALI = jsEstadoCalculoGenerali(false)
+/** v0.2.44: el mismo lector por bloques (`.required` «*»: opción sin marcar, desplegable en «Seleccione…», texto vacío), SIN exigir que el marco sea B028. */
+const JS_ESTADO_BLOQUES_GENERALI = jsEstadoCalculoGenerali(true)
+
+/**
+ * v0.2.44 (28/10/2026, trabajo dd2067b2 con 0.2.43): «Datos de Valoración» se leía con `leerPantalla` (un desplegable en «Seleccione…» contaba como
+ * relleno y un grupo de opciones sin marcar no contaba como vacío) y el atasco decía «(ninguno detectado)» aunque el portal avisaba «El paso anterior
+ * no tiene los datos completos». Ahora, al salir de ella, se lee también con el lector por bloques del marco. Solo lee; nunca valores.
+ */
+export async function leerEstadoBloquesGenerali(raiz: Raiz): Promise<{ avisos: string[]; obligatoriosVacios: string[]; nombresVacios: string[] } | null> {
+  const r = (await raiz.evaluate(JS_ESTADO_BLOQUES_GENERALI).catch(() => null)) as { avisos: string[]; obligatoriosVacios: string[]; nombresVacios: string[] } | null
+  return r ? { avisos: r.avisos ?? [], obligatoriosVacios: r.obligatoriosVacios ?? [], nombresVacios: r.nombresVacios ?? [] } : null
+}
 
 /** v0.2.42: estado del cálculo de TODOS los marcos de «Valoración Riesgo» + si algún marco seguía cargando (`loading.html` visible o documento sin terminar). Solo lee. */
 export async function volcarEstadoCalculoGenerali(page: Page): Promise<EstadoCalculoGenerali | null> {
@@ -2975,7 +2995,10 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   ctx.log?.(`generali/auto: Datos de Valoración: ${pantalla.campos.length} campos, ${pantalla.botones.length} botones, mapa provisional: ${hechos.join(',') || 'nada'}`)
   const datos = `Datos de Valoración: ${resumenPantallaGenerali(pantalla, 700)}`
   // v0.2.42: obligatorios vacíos de «Datos de Valoración» al salir de ella (solo etiquetas): el portal avisa «El paso anterior no tiene los datos completos».
-  const vaciosValoracion = obligatoriosVaciosGenerali(pantalla.campos)
+  // v0.2.44: + el lector por bloques del marco (desplegables en «Seleccione…» y grupos de opciones sin marcar) y los avisos del portal en ese paso.
+  const bloquesValoracion = await leerEstadoBloquesGenerali(marco)
+  const vaciosValoracion = [...new Set([...obligatoriosVaciosGenerali(pantalla.campos), ...(bloquesValoracion?.obligatoriosVacios ?? [])])].slice(0, 12)
+  const avisosValoracion = bloquesValoracion?.avisos ?? []
   if (!ctx.pulsarSubpestanaGenerali) throw new ErrorMapaIncompletoGenerali(`la puerta guardada de «${SUBPESTANA_PRECIO_GENERALI}» en el contexto del runner; ${datos}`)
   // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).
   const lAntes = leerPrecioGenerali(await textoPagina(page))
@@ -3006,6 +3029,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const avanceRecalcular: string[] = []
   const avisosFormaPago: string[] = []
   let recalcularIntentado = false
+  let bloquesDecision: string | null = null
   const recalcularSiHaceFalta = async (): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>> | null> => {
     if (recalcularIntentado || !modalidadesSinCalcularGenerali(await volcarModalidadesGenerali(page))) return null
     recalcularIntentado = true
@@ -3018,7 +3042,11 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     const fp = await elegirFormaPagoGenerali(page, ant.formulario, ctx)
     if (fp && !avisosFormaPago.includes(fp)) avisosFormaPago.push(fp)
     // v0.2.43 (decisión de Alberto, 28/10/2026): «Envío e-mail» = «Mediador» y «Verificación del riesgo» = «No», opción EXACTA, antes de «Recalcular».
-    for (const aviso of [await elegirEnvioEmailGenerali(page, ctx), await elegirVerificacionRiesgoGenerali(page, ctx)]) if (aviso && !avisosFormaPago.includes(aviso)) avisosFormaPago.push(aviso)
+    const envio = await elegirEnvioEmailGenerali(page, ctx)
+    const verif = await elegirVerificacionRiesgoGenerali(page, ctx)
+    for (const aviso of [envio, verif]) if (aviso && !avisosFormaPago.includes(aviso)) avisosFormaPago.push(aviso)
+    // v0.2.44: que el atasco diga si cada bloque estaba (en dd2067b2 «Verificación del riesgo» no estaba a la vista y no hubo rastro).
+    bloquesDecision = `forma de pago ${fp ? 'marcada' : 'sin bloque a la vista'}, envío e-mail ${envio ? 'Mediador' : 'sin bloque a la vista'}, verificación del riesgo ${verif ? 'No' : 'sin bloque a la vista'}`
     try {
       const r = await paso('tarificar', async () => puerta())
       avanceRecalcular.push(`Recalcular×1${r && r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
@@ -3077,7 +3105,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   }
   const navegacionMarcos = await volcarNavegacionGenerali(page)
   const vEstado = await volcarEstadoCalculoGenerali(page)
-  const estadoCalculo = resumenEstadoCalculoGenerali(vEstado, vaciosValoracion, 500)
+  const estadoCalculo = resumenEstadoCalculoGenerali(vEstado, vaciosValoracion, 500, avisosValoracion)
   // v0.2.42 (decisión de Alberto): «Envío e-mail» y «Verificación del riesgo» NO los decide el robot; si siguen obligatorios y vacíos, van lo PRIMERO.
   const decisiones = decisionesPendientesGenerali(vEstado?.nombresVacios ?? [])
   const prefijoDecision = decisiones.length ? `(falta decisión de Alberto: ${decisiones.join(', ')}) ` : ''
@@ -3090,7 +3118,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // importes/modalidades, la navegación, el resto y la pantalla, con presupuesto decreciente hasta que todo quepa. Lo primero que se recorta es el inventario del tomador
   // y el mapa provisional (v0.2.36); la estructura de la tabla se recorta dentro del bloque de marcos antes que la lista.
   const compuesto = (nav: number, res: number, pan: number, imp: number, amp: number, tom: number, mapa: number, dImp: number, dMod: number): string =>
-    `${prefijoDecision}el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Recalcular: ${avanceRecalcular.join(' · ')}. ${esperasCortadas.length ? `Esperas: ${esperasCortadas.join(' · ')}. ` : ''}${estadoCalculo}. ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
+    `${prefijoDecision}el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Recalcular: ${avanceRecalcular.join(' · ')}. ${esperasCortadas.length ? `Esperas: ${esperasCortadas.join(' · ')}. ` : ''}${estadoCalculo}. ${bloquesDecision ? `Bloques antes de Recalcular: ${bloquesDecision}.` : ''} ${obligatorios.length ? `Avisos del portal: ${obligatorios.join(' · ')}. ` : ''}${resumenDiagnosticoModalidadesGenerali(diagModalidades, amp)}. ${avanceSiguiente.length ? `Avance: ${avanceSiguiente.join(' · ')}. ` : ''}${resumenDiagnosticoImportesGenerali(volImportes, dImp)}. ${resumenModalidadesGenerali(volModalidades, dMod)}. ${nav > 0 ? `Navegación: ${resumenNavegacionGenerali(navegacionMarcos, nav)}. ` : ''}${tom > 0 ? `${tomador.slice(0, tom)}. ` : ''}${mapa > 0 ? `Mapa provisional: ${(hechos.join(',') || 'nada').slice(0, mapa)}. ` : ''}Textos con «€»: ${importes.length ? importes.slice(0, imp).map((f) => `«${f}»`).join(' ') : 'ninguno'}${texto ? `; ${texto}` : ''}. Resultados: ${resumenVolcadoResultadosGenerali(volcado, res)}. Pantalla: ${resumenPantallaGenerali(despues, pan)}`
   const LIMITE = 1_900 - 'generali/auto: mapa incompleto: faltan '.length
   let mensaje = compuesto(300, 360, 450, 8, 1_500, 120, 80, 260, 620)
   for (const [nav, res, pan, imp, amp, tom, mapa, dImp, dMod] of [
