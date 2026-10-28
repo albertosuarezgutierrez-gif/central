@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T09:41:31Z",
-  "sha": "57b99d0e1cd9c0cbdc05833d568d19cc9cad1fe4",
+  "generadoEn": "2026-10-28T10:12:55Z",
+  "sha": "85ed5354d1c5d66f00d0b3b7517b9a21e080200f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -144937,7 +144937,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 60
+          "linea": 62
         },
         {
           "nombre": "fmt",
@@ -144945,7 +144945,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 61
+          "linea": 63
         },
         {
           "nombre": "GET",
@@ -144953,7 +144953,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 80,
+          "linea": 82,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -144962,7 +144962,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 84
+          "linea": 86
         }
       ],
       "tablas": [
@@ -144985,7 +144985,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "58dc04502963"
+      "hash": "e3d4c8c507d1"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -145242,7 +145242,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 112
+          "linea": 113
         }
       ],
       "tablas": [
@@ -145273,7 +145273,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "1d7c86acf7b7"
+      "hash": "a5e59a2d39e2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -189447,6 +189447,38 @@
       "hash": "9fcc6ab73344"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-cambio-fuente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-cambio-fuente.ts — guarda «el mes se fue»: una fecha cuyo precio vivo lo escribió el motor con el bucket del MES no baja en la pasada en que ese mes se queda sin bucket. POR QUÉ (28/10/2026, Duplex 01/05/2027). La elegibilidad del bucket del mes es un ESCALÓN: con 3 fechas medidas ",
+      "exporta": [
+        "normalizarFuenteBase",
+        "congelarPorCambioFuente"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarFuenteBase",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "FuenteBase | null",
+          "linea": 35,
+          "resumen": "`base_fuente` tal y como viene de `pricing_applied`. Cualquier otra cosa es «no consta»."
+        },
+        {
+          "nombre": "congelarPorCambioFuente",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: CambioFuenteInput, horizonteDias = HORIZONTE_DIAS",
+          "retorno": "boolean",
+          "linea": 57,
+          "resumen": "true = esta pasada NO escribe la fecha (se queda al precio vivo)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f7bc7257abc2"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-canal.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-canal.ts — la relación REAL entre nuestra base de Smoobu y lo que paga el huésped. POR QUÉ (18/08/2026, reserva de House 21-25/12). El motor tarifica anclado al mercado: mide el precio GUEST de los comparables y lo convierte a precio BASE dividiendo por `channel_markup` (1,20 = «el",
@@ -190068,7 +190100,7 @@
           "exportada": true,
           "params": "i: ReservaBajaInput, o: ReservaBajaOpts = {}",
           "retorno": "ReservaBajaResult",
-          "linea": 97,
+          "linea": 121,
           "resumen": "¿Una reserva recién entrada salió notablemente por debajo del mercado real del piso? Solo evalúa si hay p50 fiable (≥ minComps). Umbral holgado para no marcar el descuento normal de canal (Genius/móvi"
         },
         {
@@ -190077,13 +190109,13 @@
           "exportada": true,
           "params": "adr: number, precioPublicado: number | null | undefined, umbralDescuento = 0.8",
           "retorno": "'precio' | 'descuento' | null",
-          "linea": 115,
+          "linea": 146,
           "resumen": "14 de 15 avisos de esa semana eran `precio`, y el texto les decía «revisa la reserva»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "745ce117f9fd"
+      "hash": "e14faddfd06a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-lastminute.ts",
@@ -190181,7 +190213,7 @@
           "exportada": true,
           "params": "fallos: LecturaCaida[]",
           "retorno": "string | null",
-          "linea": 38,
+          "linea": 39,
           "resumen": "Resumen corto para la respuesta HTTP y el parte del latido. `null` si no cayó ninguna. Va nombre a nombre porque el vigía de las 07:45 decide con esto a qué log ir."
         },
         {
@@ -190190,13 +190222,13 @@
           "exportada": true,
           "params": "fallos: LecturaCaida[]",
           "retorno": "string | null",
-          "linea": 51,
+          "linea": 52,
           "resumen": "Aviso de Telegram cuando alguna lectura auxiliar falla. `null` si ninguna. Deja claro lo que separa esto de un `rail_ciego`: la pasada SÍ tarificó, con fallback — los precios están escritos y son plau"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3651af53dc35"
+      "hash": "e804ef301627"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-precio-huesped.ts",
@@ -190568,6 +190600,58 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f10c83e4b3d1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-suelo-fecha.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-suelo-fecha.ts — SUELO del propietario por piso y FECHA (`pricing_suelos_fecha`). POR QUÉ (28/10/2026, Alberto). Semana Santa y Feria 2027 en Duplex: el dueño sabe lo que valen esas noches antes que el mercado medido (a 5 meses vista el conector apenas barre esas fechas) y quiere u",
+      "exporta": [
+        "indexarSuelosFecha",
+        "sueloFechaPropietario",
+        "sueloPropietario"
+      ],
+      "funciones": [
+        {
+          "nombre": "clave",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "propertyId: string, fecha: string",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "indexarSuelosFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaSueloFecha[]",
+          "retorno": "Map<string, number>",
+          "linea": 36,
+          "resumen": "esto es la segunda llave por si la tabla cambia."
+        },
+        {
+          "nombre": "sueloFechaPropietario",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: { propertyId: string fecha: string suelos: Map<string, number> | null maxPrice: number | null }",
+          "retorno": "number | null",
+          "linea": 50,
+          "resumen": "Suelo por fecha del propietario en base, o `null` si no aplica. `suelos` null = no se pudo leer."
+        },
+        {
+          "nombre": "sueloPropietario",
+          "kind": "function",
+          "exportada": true,
+          "params": "finde: number | null, fecha: number | null",
+          "retorno": "number | null",
+          "linea": 63,
+          "resumen": "Suelo del propietario que manda en la noche: el MAYOR de los que apliquen, o `null`."
+        }
+      ],
+      "tablas": [
+        "pricing_suelos_fecha"
+      ],
+      "rutaApi": null,
+      "hash": "fb67e680d936"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-suelo-finde.ts",
@@ -257146,7 +257230,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5384,
-    "funciones": 20667
+    "archivos": 5386,
+    "funciones": 20673
   }
 }

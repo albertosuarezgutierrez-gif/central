@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-28T09:41:31Z",
+  "generadoEn": "2026-10-28T10:12:55Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -6471,6 +6471,7 @@
       "pricing_escaparate",
       "pricing_flight_demand",
       "pricing_pl_referencia",
+      "pricing_suelos_fecha",
       "reservas_canceladas",
       "reservas_correo_booking",
       "rutina_tokens",
