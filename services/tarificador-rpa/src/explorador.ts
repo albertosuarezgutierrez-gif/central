@@ -94,7 +94,7 @@ import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.9'
+export const EXPLORADOR_VERSION = '0.3.10'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -485,6 +485,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   }
   /** Incidencias del lote en curso: salen con el SIGUIENTE paso (o con el cierre). */
   let incidencias: IncidenciaEjecucion[] = []
+  const avisosDiagnostico: string[] = []
   const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null, detalle?: DetalleFinExploracion): FinBucle => ({
     motivo, error, redNoGet: [...red].slice(0, 50), efectos: efectos.size ? [...efectos] : ['ninguno_visto'], pasos, acciones,
     ...(detalle ? { detalle } : {}),
@@ -511,6 +512,9 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       captura = await capturarInventarioExploracion(page)
       if (!captura) throw new Error('no se pudo leer el inventario de la pantalla')
       const inv = captura.inventario
+      if (avisosDiagnostico.length > 0 && inv.marcos[0]) {
+        inv.marcos[0].avisosPortal = [...avisosDiagnostico.splice(0), ...(inv.marcos[0].avisosPortal ?? [])].slice(0, 5)
+      }
       // PRECIO PEGAJOSO (revisión de seguridad 28/10/2026): un importe visto en cualquier marco cierra el avance por id para el resto del trabajo.
       if (inv.marcos.some((m) => (m.importes?.length ?? 0) > 0)) registrarPrecioVisto(k.guard)
       const parada = detectarParada(inv)
@@ -649,7 +653,13 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             // incorrecto»). Orden: tipo de documento → documento → salir del campo. Solo el TIPO (NIF/NIE/CIF) sale del valor.
             if (CLAVES_VALIDAN_AL_SALIR.has(a.dato)) {
               const tipo = tipoDocumentoDe(escrito)
-              if (tipo) k.log('exploracion_tipo_documento', { n: pasos, ref: a.ref, tipo, estado: await elegirTipoDocumentoPareado(nodo.marco, loc, tipo, k.pulsar) })
+              if (tipo) {
+                const estado = await elegirTipoDocumentoPareado(nodo.marco, loc, tipo, k.pulsar)
+                // 0.3.10: sin opción/desplegable → diagnóstico estructural (tag/role/id/class, ≤15, sin valores) al log y a los avisos del inventario del paso siguiente.
+                const diag = estado === 'sin_opcion' || estado === 'sin_desplegable' ? await diagnosticoTipoDocumento(loc) : null
+                k.log('exploracion_tipo_documento', { n: pasos, ref: a.ref, tipo, estado, ...(diag ? { diagnostico: diag } : {}) })
+                if (diag) avisosDiagnostico.push(lineaDiagnosticoTipoDoc(estado, diag))
+              }
             }
             await loc.fill(escrito, { timeout: 10_000 })
             hechas++
@@ -878,15 +888,31 @@ export async function elegirTipoDocumentoPareado(marco: Frame, loc: Locator, tip
   const info = await loc.evaluate((el) => {
     const id = (el as HTMLElement).id || ''
     if (!/_doc$/.test(id)) return null
-    const selId = id.slice(0, -'_doc'.length) + '_tipoDoc'
-    const s = el.ownerDocument.getElementById(selId)
-    if (!s) return el.ownerDocument.getElementById(selId + '_label') ? { selId, widget: true as const, actual: '', opciones: [] } : null
-    if (s.tagName !== 'SELECT') return { selId, widget: true as const, actual: ((s as HTMLInputElement).value || s.textContent || '').replace(/\s+/g, ' ').trim(), opciones: [] }
+    const base = id.slice(0, -'_doc'.length) + '_tipoDoc'
+    let selId = base
+    let s: Element | null = el.ownerDocument.getElementById(selId)
+    if (!s) {
+      if (!el.ownerDocument.getElementById(selId + '_label')) return null
+      // 0.3.10 (real 28/10/2026, Allianz patinete): existe `<base>_label` pero NO `<base>`. JSF/RichFaces suele dar al control un id
+      // derivado (`<base>_input`, `<base>Menu`, un combobox…): SOLO si hay EXACTAMENTE UN control (select/input/button/combobox) cuyo
+      // id empieza por la base del label (sin ser el propio label) se usa ese. 0 o >1: se queda con la etiqueta como disparador.
+      const prefijados = Array.from(el.ownerDocument.querySelectorAll('[id]')).filter((n) => {
+        const nid = n.id
+        if (nid === base || !nid.startsWith(base) || /_label$/.test(nid)) return false
+        if (!/^(?:_input|_focus|Menu|_menu|_list|_combobox)/.test(nid.slice(base.length))) return false
+        const t = n.tagName
+        return t === 'SELECT' || t === 'INPUT' || t === 'BUTTON' || n.getAttribute('role') === 'combobox'
+      })
+      if (prefijados.length !== 1) return { selId, base, widget: true as const, actual: '', opciones: [] }
+      s = prefijados[0]!
+      selId = s.id
+    }
+    if (s.tagName !== 'SELECT') return { selId, base, widget: true as const, actual: ((s as HTMLInputElement).value || s.textContent || '').replace(/\s+/g, ' ').trim(), opciones: [] }
     const sel = s as HTMLSelectElement
-    return { selId, widget: false as const, actual: sel.value, opciones: Array.from(sel.options).slice(0, 40).map((o) => ({ valor: o.value, texto: (o.textContent || '').replace(/\s+/g, ' ').trim() })) }
+    return { selId, base, widget: false as const, actual: sel.value, opciones: Array.from(sel.options).slice(0, 40).map((o) => ({ valor: o.value, texto: (o.textContent || '').replace(/\s+/g, ' ').trim() })) }
   }).catch(() => null)
   if (!info) return 'sin_desplegable'
-  if (info.widget) return elegirTipoDocumentoWidget(marco, info.selId, info.actual, tipo, pulsarGuardado)
+  if (info.widget) return elegirTipoDocumentoWidget(marco, info.selId, info.actual, tipo, pulsarGuardado, info.base)
   const valor = opcionTipoDocumento(tipo, info.opciones)
   if (valor === null) return 'sin_opcion'
   if (info.actual === valor) return 'ya'
@@ -897,11 +923,55 @@ export async function elegirTipoDocumentoPareado(marco: Frame, loc: Locator, tip
 }
 
 /**
+ * 0.3.10: DIAGNÓSTICO ESTRUCTURAL (sin valores) de un tipo de documento que no se pudo elegir. Parte del campo `<x>_doc` y mira la base
+ * `<x>_tipoDoc`: etiqueta, hermanos de la etiqueta y elementos cuyo id empieza por la base. Solo tag/role/id/class (máx. 15 elementos,
+ * ids/clases recortados). NUNCA `value`, texto ni atributos de datos. Nunca lanza. `null` si el campo no es un `_doc`.
+ */
+export type ElemDiagTipoDoc = { tag: string; role?: string; id?: string; clase?: string; rel: 'etiqueta' | 'hermano' | 'prefijo' }
+export async function diagnosticoTipoDocumento(loc: Locator): Promise<{ base: string; elementos: ElemDiagTipoDoc[] } | null> {
+  return loc.evaluate((el) => {
+    const id = (el as HTMLElement).id || ''
+    if (!/_doc$/.test(id)) return null
+    const base = id.slice(0, -'_doc'.length) + '_tipoDoc'
+    const doc = el.ownerDocument
+    // Sin funciones con nombre dentro del evaluate (tsx/esbuild inyecta `__name`, que no existe en la página).
+    const cand: { n: Element; rel: 'etiqueta' | 'hermano' | 'prefijo' }[] = []
+    const etiqueta = doc.getElementById(base + '_label')
+    if (etiqueta) {
+      cand.push({ n: etiqueta, rel: 'etiqueta' })
+      const padre = etiqueta.parentElement
+      if (padre) for (const h of Array.from(padre.children)) if (h !== etiqueta) cand.push({ n: h, rel: 'hermano' })
+    }
+    for (const n of Array.from(doc.querySelectorAll('[id]'))) if (n.id.startsWith(base)) cand.push({ n, rel: 'prefijo' })
+    const out: { tag: string; role?: string; id?: string; clase?: string; rel: 'etiqueta' | 'hermano' | 'prefijo' }[] = []
+    const vistos = new Set<Element>()
+    for (const { n, rel } of cand) {
+      if (out.length >= 15) break
+      if (vistos.has(n)) continue
+      vistos.add(n)
+      const o: { tag: string; role?: string; id?: string; clase?: string; rel: 'etiqueta' | 'hermano' | 'prefijo' } = { tag: n.tagName.toLowerCase(), rel }
+      const role = n.getAttribute('role')
+      if (role) o.role = role.slice(0, 30)
+      if (n.id) o.id = n.id.slice(0, 80)
+      const c = n.getAttribute('class')
+      if (c) o.clase = c.replace(/\s+/g, ' ').trim().slice(0, 60)
+      out.push(o)
+    }
+    return { base, elementos: out }
+  }).catch(() => null)
+}
+/** Línea corta (≤160) para `avisosPortal` del inventario del paso siguiente (llega a la BD): estado + ids/tags, nunca valores. */
+export function lineaDiagnosticoTipoDoc(estado: string, d: { base: string; elementos: ElemDiagTipoDoc[] } | null): string {
+  const partes = (d?.elementos ?? []).map((e) => `${e.tag}${e.role ? `[${e.role}]` : ''}${e.id ? `#${e.id.replace(/^.*_tipoDoc/, '~')}` : ''}`)
+  return `diag tipoDoc ${estado}: ${partes.join(' ') || 'sin elementos'}`.slice(0, 160)
+}
+
+/**
  * 0.3.9 (real 28/10/2026, Allianz patinete): `<x>_tipoDoc` NO es un `<select>` sino un `<input>` + lista (`role=listbox/option`) o una
  * lista JSF `ul/li`. Se abre con el `pulsar` GUARDADO y se pulsa la ÚNICA opción visible que `opcionTipoDocumento` elige por su texto
  * (NIF exacto, DNI…); luego espera a la red. 0 o >1 candidatas (o sin `pulsar`): `sin_opcion` y no se pulsa ninguna opción.
  */
-async function elegirTipoDocumentoWidget(marco: Frame, selId: string, actual: string, tipo: TipoDocumento, pulsarGuardado?: (b: Locator) => Promise<void>): Promise<'elegido' | 'ya' | 'sin_desplegable' | 'sin_opcion'> {
+async function elegirTipoDocumentoWidget(marco: Frame, selId: string, actual: string, tipo: TipoDocumento, pulsarGuardado?: (b: Locator) => Promise<void>, base: string = selId): Promise<'elegido' | 'ya' | 'sin_desplegable' | 'sin_opcion'> {
   if (!pulsarGuardado) return 'sin_desplegable'
   if (actual && opcionTipoDocumento(tipo, [{ valor: '0', texto: actual }]) !== null) return 'ya'
   const esc = (t: string) => t.replace(/["\\]/g, '\\$&')
@@ -913,7 +983,9 @@ async function elegirTipoDocumentoWidget(marco: Frame, selId: string, actual: st
   // Solo opciones ATADAS a este control: `ul[id^=selId] li`, `[id^=selId][role=listbox] > *` o la lista que nombra su `aria-controls`/`aria-owns`.
   // Nunca una lista genérica del marco (un desplegable ajeno con «NIF» no se elige). Se abre SIEMPRE con el `pulsar` guardado.
   const ids = await disparador.first().evaluate((n) => `${n.getAttribute('aria-controls') ?? ''} ${n.getAttribute('aria-owns') ?? ''}`.split(/\s+/).filter(Boolean).slice(0, 4)).catch(() => [] as string[])
+  // 0.3.10: también listas cuyo id empieza por la BASE del control (`<base>_lista`, `<base>_panel`…), siempre atadas a su id.
   const propias = [`ul[id^="${esc(selId)}"] li`, `[id^="${esc(selId)}"][role="listbox"] > *`]
+  propias.push(`ul[id^="${esc(base)}"] li`, `[id^="${esc(base)}"][role="listbox"] > *`, `[id^="${esc(base)}"][role="listbox"] [role="option"]`, `div[id^="${esc(base)}"] li`)
   for (const id of ids) propias.push(`[id="${esc(id)}"] > *`, `[id="${esc(id)}"] li`, `[id="${esc(id)}"] [role="option"]`)
   const opciones = visible(propias.join(', '))
   await pulsarGuardado(disparador.first())

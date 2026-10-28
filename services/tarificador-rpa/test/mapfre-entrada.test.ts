@@ -70,7 +70,7 @@ const LOGIN_ANTIGUO = `<!doctype html><html><head><title>Login 2026</title></hea
       else if (q.get('modo') === 'bloq') document.getElementById('msg').textContent = 'Su usuario ha sido bloqueado por demasiados intentos'
       else document.getElementById('msg').textContent = 'Credenciales incorrectas para ' + u + ' / ' + p
     }
-    if (new URLSearchParams(location.search).get('modo') === 'captcha') document.body.insertAdjacentHTML('beforeend', '<div class="g-recaptcha"></div>')
+    if (new URLSearchParams(location.search).get('modo') === 'captcha') document.body.insertAdjacentHTML('beforeend', '<div class="g-recaptcha" style="width:304px;height:78px"></div>')
   </script></body></html>`
 
 // ─── DOM REAL de wmediadores (HTML del fallo a5f06f70, 14/10/2026, sin datos personales) ───

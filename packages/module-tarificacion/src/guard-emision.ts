@@ -231,6 +231,8 @@ export function esLanzadorAplicacionNseMapfre(d: string | null | undefined): boo
  */
 export type RutaTolerable = { origen: string; prefijo: string }
 export const RE_ACCION_REAL_TRAS_PREFIJO = /emit|contrat|confirm|firm|pago|pagar|formaliz|grab|suplement|anul|baja|domicili|tarjeta|iban/i
+/** Estado (abierto/cerrado) de un panel JSF de la pantalla de productos de NSE: no es una acción. ANCLADO. */
+export const RE_ESTADO_PANEL_JSF = /^formProductos:panelConfirm[A-Z]{1,4}OpenedState$/
 /** Sustituto del prefijo neutralizado (no casa con ningún patrón del guard). */
 const PREFIJO_NEUTRO = '/__ruta_app__/'
 /**
@@ -253,6 +255,9 @@ export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undef
   for (const par of cuerpo.split('&')) {
     const i = par.indexOf('=')
     const k = dec(i < 0 ? par : par.slice(0, i))
+    // 0.3.10 (real 28/10/2026, Mapfre patinete `busquedaProduct`): `formProductos:panelConfirmCTOpenedState` es el ESTADO abierto/cerrado
+    // de un panel JSF, no una acción. Solo ese nombre ANCLADO se salta (su valor ni se lee); «confirm» en cualquier otro sitio sigue parando.
+    if (RE_ESTADO_PANEL_JSF.test(k.trim())) continue
     const v = i < 0 ? '' : dec(par.slice(i + 1))
     const enNombre = RE_ACCION_REAL_TRAS_PREFIJO.exec(k)
     // Revisión de seguridad 0.3.8: un trozo SIN «=» (cuerpo JSON o texto) no es un nombre de parámetro y puede llevar datos

@@ -4,7 +4,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Locator, type Page } from 'playwright'
-import { elegirTipoDocumentoPareado } from '../src/explorador.ts'
+import { diagnosticoTipoDocumento, elegirTipoDocumentoPareado, lineaDiagnosticoTipoDoc } from '../src/explorador.ts'
 
 let browser: Browser
 before(async () => {
@@ -87,5 +87,60 @@ test('una SEGUNDA lista visible en otro punto de la página con «NIF» NO se el
   assert.equal(await elegirTipoDocumentoPareado(page.mainFrame(), doc, 'NIF', pulsar), 'sin_opcion')
   assert.equal(await valor(page), '')
   assert.equal(pulsados.length, 1, 'solo se abrió el propio control; no se pulsó el señuelo')
+  await page.close()
+})
+
+// 0.3.10 (Allianz patinete real): existe `..._tipoDoc_label` pero NO `..._tipoDoc`. RichFaces-like: el control lleva un id derivado.
+const RICH_INPUT = `<label id="IntervinientesBean$nifTomador_tipoDoc_label">Tipo Doc. Tomador</label>
+  <input id="IntervinientesBean$nifTomador_tipoDoc_input" readonly value="">
+  <ul id="IntervinientesBean$nifTomador_tipoDoc_lista" hidden><li>CIF</li><li>NIF</li></ul>
+  <ul id="otraLista"><li>NIF</li></ul>
+  <input id="IntervinientesBean$nifTomador_doc">
+  <script>
+    const t = document.getElementById('IntervinientesBean$nifTomador_tipoDoc_input'), u = document.getElementById('IntervinientesBean$nifTomador_tipoDoc_lista')
+    t.addEventListener('click', () => { u.hidden = false })
+    for (const l of u.querySelectorAll('li')) l.addEventListener('click', () => { t.value = l.textContent; u.hidden = true })
+  </script>`
+
+test('0.3.10 · sin `_tipoDoc` pero con `_tipoDoc_input` + lista con la misma base: elige NIF (nunca la lista ajena)', async () => {
+  const { page, doc, pulsados, pulsar } = await pagina(RICH_INPUT)
+  assert.equal(await elegirTipoDocumentoPareado(page.mainFrame(), doc, 'NIF', pulsar), 'elegido')
+  assert.equal(await page.locator('[id="IntervinientesBean$nifTomador_tipoDoc_input"]').inputValue(), 'NIF')
+  assert.equal(pulsados.length, 2)
+  await page.close()
+})
+
+test('0.3.10 · control derivado sin separador (`_tipoDocNumero`): NO es el desplegable → no se elige', async () => {
+  const { page, doc, pulsados, pulsar } = await pagina(RICH_INPUT.replaceAll('_tipoDoc_input', '_tipoDocNumero'))
+  assert.notEqual(await elegirTipoDocumentoPareado(page.mainFrame(), doc, 'NIF', pulsar), 'elegido')
+  assert.equal(await page.locator('[id="IntervinientesBean$nifTomador_tipoDocNumero"]').inputValue(), '')
+  assert.ok(!pulsados.includes('NIF'))
+  await page.close()
+})
+
+test('0.3.10 · `_tipoDoc_label` + select derivado (`_tipoDocMenu`): selectOption sobre ese select', async () => {
+  const { page, doc, pulsar } = await pagina(`<label id="IntervinientesBean$nifTomador_tipoDoc_label">Tipo</label>
+    <select id="IntervinientesBean$nifTomador_tipoDocMenu" style="display:none"><option value="">-</option><option value="C">CIF</option><option value="N">NIF</option></select>
+    <input id="IntervinientesBean$nifTomador_doc">`)
+  assert.equal(await elegirTipoDocumentoPareado(page.mainFrame(), doc, 'NIF', pulsar), 'elegido')
+  assert.equal(await page.locator('select').inputValue(), 'N')
+  await page.close()
+})
+
+test('0.3.10 · solo la etiqueta (sin control ni lista): sin_opcion + diagnóstico estructural SIN valores y ≤15 elementos', async () => {
+  const muchos = Array.from({ length: 30 }, (_, i) => `<span id="IntervinientesBean$nifTomador_tipoDoc_x${i}" class="rf-x"></span>`).join('')
+  const { page, doc, pulsar } = await pagina(`<div class="fila"><label id="IntervinientesBean$nifTomador_tipoDoc_label" class="rf-lbl">Tipo Doc. Tomador</label><div class="rf-sel" role="presentation" data-secreto="X"></div>${muchos}</div>
+    <input id="IntervinientesBean$nifTomador_doc" value="12345678Z">`)
+  const estado = await elegirTipoDocumentoPareado(page.mainFrame(), doc, 'NIF', pulsar)
+  assert.ok(estado === 'sin_opcion' || estado === 'sin_desplegable', estado)
+  const d = await diagnosticoTipoDocumento(doc)
+  assert.ok(d)
+  assert.equal(d.base, 'IntervinientesBean$nifTomador_tipoDoc')
+  assert.ok(d.elementos.length > 0 && d.elementos.length <= 15)
+  assert.equal(d.elementos[0]!.rel, 'etiqueta')
+  assert.ok(d.elementos.some((e) => e.clase === 'rf-sel' && e.role === 'presentation'))
+  const plano = JSON.stringify(d) + lineaDiagnosticoTipoDoc(estado, d)
+  assert.ok(!plano.includes('12345678Z') && !plano.includes('secreto') && !plano.includes('Tomador</'), 'sin valores ni atributos de datos')
+  assert.ok(lineaDiagnosticoTipoDoc(estado, d).length <= 160)
   await page.close()
 })
