@@ -171,26 +171,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 393 | 69.419 | 61.054.190 | 0 | 0 |
-| `otro` | 387 | 16.171 | 35.170.008 | 20.259.513 | 0 |
-| `lectura-directa` | 332 | 10.636 | 29.567.223 | 0 | 0 |
-| `mcp:github` | 333 | 8.126 | 6.165.326 | 57.294.135 | 106 |
-| `sql` | 248 | 6.768 | 3.532.933 | 2.351.230 | 26 |
-| `escritura` | 244 | 6.014 | 88.806.336 | 0 | 0 |
+| `bash` | 393 | 69.478 | 61.096.883 | 0 | 0 |
+| `otro` | 387 | 16.193 | 35.200.967 | 20.259.513 | 0 |
+| `lectura-directa` | 332 | 10.679 | 29.613.097 | 0 | 0 |
+| `mcp:github` | 333 | 8.135 | 6.170.805 | 57.294.135 | 107 |
+| `sql` | 248 | 6.773 | 3.534.530 | 2.351.230 | 26 |
+| `escritura` | 244 | 6.015 | 88.825.378 | 0 | 0 |
 | `mcp:Vercel` | 84 | 1.502 | 1.285.563 | 237.328 | 44 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 50 | 1.400 | 5.731.030 | 0 | 0 |
 | `mcp:Gmail` | 62 | 1.395 | 1.545.118 | 0 | 101 |
-| `agente:general-purpose` | 137 | 1.194 | 708.490 | 25.559.783 | 0 |
-| `mcp:claude-code-remote` | 72 | 931 | 101.550 | 1.250.070 | 0 |
+| `agente:general-purpose` | 137 | 1.196 | 709.598 | 25.583.134 | 0 |
+| `mcp:claude-code-remote` | 72 | 936 | 101.690 | 1.250.070 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 14 | 646 | 766.860 | 0 | 0 |
 | `mcp:Supabase` | 147 | 485 | 88.634 | 6.830 | 7 |
-| `agente:agente-architect` | 83 | 454 | 316.255 | 11.718.850 | 0 |
+| `agente:agente-architect` | 83 | 455 | 316.875 | 11.737.703 | 0 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
 | `mcp:Google-Drive` | 32 | 171 | 169.980 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
-| `agente:agente-mecanico` | 59 | 151 | 82.730 | 7.901.964 | 0 |
-| `agente:rastreador-codigo` | 61 | 117 | 36.755 | 1.675.029 | 0 |
+| `agente:agente-mecanico` | 59 | 152 | 83.119 | 7.901.964 | 0 |
+| `agente:rastreador-codigo` | 61 | 118 | 37.071 | 1.675.029 | 0 |
 | `mcp:Resend` | 10 | 95 | 84.756 | 0 | 0 |
 | `mcp:idealista` | 3 | 94 | 255.209 | 0 | 34 |
 | `mcp:OpenSEO` | 6 | 94 | 77.612 | 0 | 2 |
