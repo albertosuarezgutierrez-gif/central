@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T16:01:03Z",
-  "sha": "42659ce64eb6e03b3a53184376be5b308fe5995b",
+  "generadoEn": "2026-10-28T18:28:05Z",
+  "sha": "4549992460f24c9cdcbd66c79169826a9c2d0f02",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -254443,7 +254443,7 @@
           "exportada": true,
           "params": "texto: unknown",
           "retorno": "number | null",
-          "linea": 105,
+          "linea": 115,
           "resumen": "El texto con forma de importe lleva € o decimales: «2019» suelto no es un importe."
         },
         {
@@ -254452,7 +254452,7 @@
           "exportada": false,
           "params": "r: RegExp",
           "retorno": null,
-          "linea": 117,
+          "linea": 127,
           "resumen": "Copia sin el flag `g` (un `test` con /g arrastra `lastIndex` entre llamadas)."
         },
         {
@@ -254461,7 +254461,7 @@
           "exportada": true,
           "params": "textos: Iterable<unknown>, destino: Set<string> = new Set<string>()",
           "retorno": "Set<string>",
-          "linea": 122,
+          "linea": 132,
           "resumen": "Aprende los nombres de mediador («209-C/12/0000 - Nombre Apellidos») de una lista de textos, para quitarlos donde reaparezcan."
         },
         {
@@ -254470,7 +254470,7 @@
           "exportada": true,
           "params": "t: string, nombresMediador: ReadonlySet<string> = new Set<string>()",
           "retorno": "boolean",
-          "linea": 134,
+          "linea": 144,
           "resumen": "¿Es cabecera personal del portal (mediador, «Último acceso: fecha» o un nombre de mediador ya aprendido)?"
         },
         {
@@ -254479,7 +254479,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 153
+          "linea": 163
         },
         {
           "nombre": "pareceDatoPersonalInventario",
@@ -254487,7 +254487,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 156,
+          "linea": 166,
           "resumen": "¿Tiene forma de dato personal? Los dos filtros del módulo: el de la descripción del vehículo y el redactor general."
         },
         {
@@ -254496,7 +254496,7 @@
           "exportada": true,
           "params": "url: unknown",
           "retorno": "string",
-          "linea": 161,
+          "linea": 171,
           "resumen": "URL sin query ni fragmento, con los datos personales tapados. `about:blank` y similares tal cual."
         },
         {
@@ -254505,7 +254505,7 @@
           "exportada": true,
           "params": "crudo: unknown, maxBytes: number = MAX_BYTES_INVENTARIO_DOM, opciones: OpcionesSaneado = {}",
           "retorno": "InventarioDom | null",
-          "linea": 173,
+          "linea": 183,
           "resumen": "Sanea el inventario CRUDO (lo que devuelve el extractor del navegador, o lo que llega por el cable). `null` si no tiene forma de inventario. Nunca lanza."
         },
         {
@@ -254514,7 +254514,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 359,
+          "linea": 379,
           "resumen": "Minúsculas, sin acentos, espacios colapsados."
         },
         {
@@ -254523,7 +254523,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 363,
+          "linea": 383,
           "resumen": "Solo letras y dígitos, ya sin acentos (sin `\\p{L}`: asegura compila con target ES2017) (para valores con dígitos: «1234 ABC» = «1234-abc», «15/01/1980» = «15.01.1980»)."
         },
         {
@@ -254532,7 +254532,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 364
+          "linea": 384
         },
         {
           "nombre": "contieneValorSensible",
@@ -254540,7 +254540,7 @@
           "exportada": true,
           "params": "texto: string, valores: readonly string[]",
           "retorno": "boolean",
-          "linea": 367,
+          "linea": 387,
           "resumen": "¿El texto contiene alguno de los valores? Con dígitos se compara en compacto; sin dígitos, por palabra completa."
         },
         {
@@ -254549,7 +254549,7 @@
           "exportada": true,
           "params": "inv: InventarioDom, valores: readonly string[]",
           "retorno": "InventarioDom",
-          "linea": 387,
+          "linea": 409,
           "resumen": "Copia del inventario SIN ningún texto que contenga uno de `valores` (normalizado; se ignoran los < 3 caracteres). Cuenta lo quitado en `textosDescartados`. Pura; nunca muta la entrada. Las `ref` y el "
         },
         {
@@ -254558,13 +254558,13 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "string[]",
-          "linea": 428,
+          "linea": 455,
           "resumen": "Los valores sensibles de un `riesgo` (cualquier forma: auto, hogar, comunidades): recorre el objeto y recoge los textos y números de las claves de `CLAVES_RIESGO_SENSIBLES`. Una fecha ISO añade tambié"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e3f80ecded1c"
+      "hash": "299495176587"
     },
     {
       "ruta": "packages/module-tarificacion/src/modo-integracion.ts",
