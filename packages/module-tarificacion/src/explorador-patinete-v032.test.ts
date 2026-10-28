@@ -11,6 +11,7 @@ import {
   esAvanceAutorizado,
   esLanzadorAplicacionNseMapfre,
   neutralizarRutaTolerable,
+  cuerpoToleradoConAccionReal,
   rutasAppTolerablesDe,
   ENTRADAS_EXPLORACION,
   pareceEmision,
@@ -220,7 +221,11 @@ describe('0.3.5 · ruta de aplicación NSE tolerada SOLO en Mapfre patinete (dec
   it('cargaOperacion.jsf pasa; sin la regla (otra entrada) sigue bloqueada', () => {
     expect(pareceEmision(CARGA)).toBe(true)
     expect(bloquea(CARGA)).toBe(false)
-    expect(bloquea('/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf')).toBe(false)
+    // Ruta relativa: solo con la ventana EXACTAMENTE en el origen de la regla.
+    expect(pareceEmision(neutralizarRutaTolerable('/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf', R, 'https://wmediadores.mapfre.com'))).toBe(false)
+    expect(pareceEmision(neutralizarRutaTolerable('/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf', R))).toBe(true)
+    expect(pareceEmision(neutralizarRutaTolerable('/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf', R, 'https://otro.example.test'))).toBe(true)
+    expect(pareceEmision(neutralizarRutaTolerable('/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf', R, 'http://wmediadores.mapfre.com'))).toBe(true)
     expect(bloquea(CARGA, rutasAppTolerablesDe('mapfre:nueva_produccion:auto'))).toBe(true)
     expect(bloquea(CARGA, rutasAppTolerablesDe('allianz:autos:movilidad_personal'))).toBe(true)
   })
@@ -247,5 +252,14 @@ describe('0.3.5 · ruta de aplicación NSE tolerada SOLO en Mapfre patinete (dec
     expect(bloqueoAvance('mapfre:automoviles:patinetes', a, i.marcos[0])).toBeNull()
     expect(bloqueoAvance('mapfre:automoviles:patinetes', b, i.marcos[0])).toBe('boton_de_emision')
     expect(bloqueoAvance('mapfre:nueva_produccion:auto', a, i.marcos[0])).toBe('boton_de_emision')
+    // Misma ruta relativa en una ventana de OTRO origen: no se tolera.
+    const otra = sanearInventarioDom({ marcos: [{ url: 'https://otro.example.test/EVT21_NSE_FWEB/app/emision/inicio.jsf', nombre: null, titulos: [], elementos: [{ tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf', texto: 'Nueva oferta' }] }] }, undefined, { refs: true })!
+    expect(bloqueoAvance('mapfre:automoviles:patinetes', otra.marcos[0].elementos[0], otra.marcos[0])).toBe('boton_de_emision')
+  })
+  it('cuerpo de una ruta tolerada: nombres de parámetro y botón JSF con acción real → sí; navegación normal NSE → no', () => {
+    expect(cuerpoToleradoConAccionReal('formEmision:btnEmitir=formEmision:btnEmitir')).toBe(true)
+    expect(cuerpoToleradoConAccionReal('javax.faces.source=form:btnContratar&formEmision=formEmision')).toBe(true)
+    expect(cuerpoToleradoConAccionReal('javax.faces.partial.execute=form%3AbtnConfirmar')).toBe(true)
+    expect(cuerpoToleradoConAccionReal('javax.faces.source=form:btnSiguiente&formEmision:campo=1&javax.faces.partial.render=formEmision')).toBe(false)
   })
 })

@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { EmisionBloqueadaError, rutasAppTolerablesDe, type InventarioDom } from '@central/module-tarificacion'
-import { tolerarRutasApp, cerrarDialogoTerminoEpac, cerrarFaseEntrada, instalarGuardEmision, pulsarMenuOfertaNseMapfre, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
+import { descripcionParaTest, INDICES_URL_DESCRIPCION, tolerarRutasApp, cerrarDialogoTerminoEpac, cerrarFaseEntrada, instalarGuardEmision, pulsarMenuOfertaNseMapfre, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import { bucleExploracion, EXPLORADOR_VERSION, type ContextoBucle } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
@@ -675,4 +675,48 @@ test('0.3.5 · el explorador fija en el guard las rutas tolerables de SU entrada
   const p = src.indexOf('const page = await context.newPage()', i)
   assert.ok(i > 0 && j > i && k > j && p > k, 'tolerarRutasApp con las rutas de la entrada, tras instalar el guard y antes de la página')
   assert.equal(src.match(/tolerarRutasApp\(/g)?.length, 1)
+})
+
+// ─── Revisión 0.3.5 (PR #5217) ───────────────────────────────────────────────────────────────────────────
+
+test('0.3.5b · ruta tolerada: cuerpo con botón JSF / nombre de parámetro de emisión → abortado; navegación NSE normal → pasa', async () => {
+  for (const [cuerpo, permitido] of [
+    ['formEmision:btnEmitir=formEmision:btnEmitir', false],
+    ['javax.faces.source=form:btnContratar', false],
+    ['javax.faces.source=form:btnSiguiente&formEmision:campo=1&javax.faces.partial.render=formEmision', true],
+  ] as const) {
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+      await postA(page, CARGA, cuerpo)
+      assert.equal(guard.violacion() === null, permitido, `${cuerpo}: ${String(guard.violacion())}`)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/formaction/ancestros, y un texto o title con la URL sigue bloqueando', async () => {
+  landing = PAGINA(`<a id="a0" href="${CARGA}">x</a>
+    <button id="b0" formaction="${CARGA}">y</button>
+    <a href="${CARGA}"><span id="s1">uno</span></a>
+    <a href="${CARGA}"><b><span id="s2">dos</span></b></a>
+    <a href="${CARGA}"><b><i><span id="s3">tres</span></i></b></a>
+    <a id="t1" href="#">${CARGA}</a><a id="t2" href="#" title="${CARGA}">z</a>`)
+  const { context, page, guard } = await abrir('/landing')
+  try {
+    const pos = async (sel: string) => (await descripcionParaTest(page.locator(sel))).map((d, i) => (d === CARGA ? i : -1)).filter((i) => i >= 0)
+    assert.deepEqual(await pos('#a0'), [6])
+    assert.deepEqual(await pos('#b0'), [8])
+    assert.deepEqual(await pos('#s1'), [15])
+    assert.deepEqual(await pos('#s2'), [19])
+    assert.deepEqual(await pos('#s3'), [23])
+    assert.deepEqual([...INDICES_URL_DESCRIPCION], [6, 8, 15, 19, 23])
+    tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+    await page.evaluate(() => document.querySelectorAll('a,button').forEach((x) => x.addEventListener('click', (e) => e.preventDefault())))
+    for (const sel of ['#a0', '#s3']) await pulsar(page.locator(sel), guard)
+    for (const sel of ['#t1', '#t2']) await assert.rejects(pulsar(page.locator(sel), guard), EmisionBloqueadaError, sel)
+  } finally {
+    await context.close()
+  }
 })

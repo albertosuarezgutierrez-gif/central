@@ -55,6 +55,7 @@ import {
   rutaDeMarco,
   esLanzadorAplicacionNseMapfre,
   neutralizarRutaTolerable,
+  cuerpoToleradoConAccionReal,
   type RutaTolerable,
   TEXTO_ACCESO_NSE_MAPFRE,
   esMatriculaEspanola,
@@ -395,8 +396,10 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // «Generar Proyecto» de Mapfre (22/10/2026): su ventana abre SOLO su patrón (`permitirGenerarProyectoMapfre`), no Archivar/store.
       const enProyectoMapfre = enGuardado && gv.proyectoMapfre
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado && !enProyectoMapfre, permitirGenerarProyectoMapfre: enProyectoMapfre }
-      const porUrl = pareceEmision(neutralizarRutaTolerable(url, tolerables) ?? url, op) || parametrosParecenEmision(url, op)
-      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
+      const neutra = neutralizarRutaTolerable(url, tolerables) ?? url
+      const porUrl = pareceEmision(neutra, op) || parametrosParecenEmision(url, op)
+      // Ruta TOLERADA (Mapfre NSE): además, los NOMBRES de parámetro y el botón JSF del cuerpo no pueden nombrar una acción real.
+      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op) || (!porUrl && noGet && neutra !== url && cuerpoToleradoConAccionReal(cuerpoDe(req)))
       if (porUrl && !porCuerpo && !noGet && Date.now() < turismosGenerali && av === null && gv === null && Date.now() >= ventanaHasta && urlTurismosGeneraliPermitida(url)) {
         // Navegación del ÚNICO clic de «TURISMOS (RAMO UV)» (ventana abierta por entrarTurismosGenerali): GET a Generali con
         // «emisión»/«contratación» como sustantivo de menú y nada más que case con el patrón. Un POST, otro origen o cualquier
@@ -503,10 +506,17 @@ export function tolerarRutasApp(guard: GuardEmision, reglas: readonly RutaTolera
   RUTAS_TOLERABLES.set(guard, copia)
   fijar(copia)
 }
+/**
+ * Posiciones de `descripcion()` que son URL (href del control, formaction y href de los <a> ancestros): las ÚNICAS que se neutralizan.
+ * Texto, aria, title, value, id, name, onclick, ng-click… nunca (aunque contengan una URL). Lo vigila un test contra `descripcion`.
+ */
+export const INDICES_URL_DESCRIPCION: readonly number[] = Object.freeze([6, 8, 15, 19, 23])
 const conRutasTolerables = (guard: GuardEmision, desc: readonly (string | null)[]): (string | null)[] => {
   const reglas = RUTAS_TOLERABLES.get(guard) ?? []
-  return reglas.length === 0 ? [...desc] : desc.map((d) => neutralizarRutaTolerable(d, reglas) ?? null)
+  return reglas.length === 0 ? [...desc] : desc.map((d, i) => (INDICES_URL_DESCRIPCION.includes(i) ? neutralizarRutaTolerable(d, reglas) ?? null : d))
 }
+/** Solo para tests: la descripción que ve el guard de un control. */
+export const descripcionParaTest = (boton: Locator) => descripcion(boton)
 
 /** Tope de la ventana de red del LOGIN ASISTIDO: un envío del formulario del SSO y su carga. */
 export const VENTANA_RED_LOGIN_MS = 30_000

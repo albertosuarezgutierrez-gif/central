@@ -1063,11 +1063,15 @@ export function rutasAppTolerablesDe(entrada: string): readonly RutaTolerable[] 
   return e?.rutasAppTolerables ?? []
 }
 
-/** `descripcionesElemento` con la RUTA del href neutralizada si la entrada declara esa ruta de aplicación (solo `hrefRuta`). */
-function descripcionesEnEntrada(entrada: string, el: ElementoInventario): string[] {
+/**
+ * `descripcionesElemento` con la RUTA del href neutralizada si la entrada declara esa ruta de aplicación (solo `hrefRuta`, y solo si
+ * la ventana del marco es del origen de la regla: la ruta es relativa a ella).
+ */
+function descripcionesEnEntrada(entrada: string, el: ElementoInventario, marco: MarcoInventario): string[] {
   const reglas = rutasAppTolerablesDe(entrada)
   if (reglas.length === 0 || typeof el.hrefRuta !== 'string') return descripcionesElemento(el)
-  return descripcionesElemento({ ...el, hrefRuta: neutralizarRutaTolerable(el.hrefRuta, reglas) ?? undefined })
+  const origen = /^([a-z][a-z0-9+.-]*:\/\/[^/?#]+)/i.exec(marco.url)?.[1]?.toLowerCase() ?? null
+  return descripcionesElemento({ ...el, hrefRuta: neutralizarRutaTolerable(el.hrefRuta, reglas, origen) ?? undefined })
 }
 
 /** `null` = el botón se puede pulsar en exploración; si no, por qué no. */
@@ -1076,7 +1080,7 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d))) return 'sin_descripcion_completa'
   // Un onclick recortado puede esconder la llamada de emisión en la parte que no llegó.
   if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
-  const desc = descripcionesEnEntrada(entrada, el)
+  const desc = descripcionesEnEntrada(entrada, el, marco)
   const cat = clasificarAccionPortal(desc)
   // Emisión dura (patrón del guard: emitir, contratar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…; y la
   // categoría EMISIÓN de la lista única: firmar, pagar, tramitar, confirmar, domiciliar…): siempre.
