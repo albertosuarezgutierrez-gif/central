@@ -14,6 +14,7 @@ test('patrimoniales: inmuebles y VEHÍCULOS dentro (decisión de Alberto, 24/10/
   assert.deepEqual(familiaSeguro('impago_alquiler', false), { familia: 'patrimoniales', sublinea: 'inmuebles' })
   assert.deepEqual(familiaSeguro('auto', false), { familia: 'patrimoniales', sublinea: 'vehiculos' })
   assert.deepEqual(familiaSeguro('moto', false), { familia: 'patrimoniales', sublinea: 'vehiculos' })
+  assert.deepEqual(familiaSeguro('patinete', false), { familia: 'patrimoniales', sublinea: 'vehiculos' })
   assert.deepEqual(familiaSeguro('embarcaciones', false), { familia: 'patrimoniales', sublinea: 'vehiculos' })
   assert.deepEqual(familiaSeguro('responsabilidad_civil', false), { familia: 'patrimoniales', sublinea: null })
 })

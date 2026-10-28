@@ -5,7 +5,7 @@
 
 import { claveDatosDeRamo, rolesDelRamo, type ClaveDatosRiesgo, type RolFigura } from '@central/module-seguros'
 
-export const RAMOS_RIESGO = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'comercio', 'rc', 'comunidades', 'otros'] as const
+export const RAMOS_RIESGO = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'comercio', 'rc', 'comunidades', 'patinete', 'otros'] as const
 export type RamoRiesgo = (typeof RAMOS_RIESGO)[number]
 
 /** Cómo se pide precio: `embebido` en la propia pantalla; `pantalla` (transitorio) `…-nuevo`; `bots` y `fuera` sin tarifa CDS. */
@@ -31,9 +31,11 @@ export interface DefinicionRamo {
 const COTIZADOR: Record<RamoRiesgo, TipoCotizador> = {
   auto: 'embebido', moto: 'embebido', hogar: 'embebido', vida: 'embebido', salud: 'embebido', decesos: 'embebido',
   comercio: 'fuera', rc: 'fuera', comunidades: 'bots', otros: 'fuera',
+  // Patinete / VMP (28/10/2026): ni Avant2 ni bot activo. Se cotiza fuera; datos en `datosRiesgoLibre`.
+  patinete: 'fuera',
 }
 const COMPARABLE: Record<RamoRiesgo, boolean> = {
-  auto: true, moto: true, hogar: true, vida: true, salud: true, decesos: true, comercio: false, rc: false, comunidades: false, otros: false,
+  auto: true, moto: true, hogar: true, vida: true, salud: true, decesos: true, comercio: false, rc: false, comunidades: false, patinete: false, otros: false,
 }
 
 export const REGISTRO_RAMOS: Readonly<Record<RamoRiesgo, DefinicionRamo>> = Object.fromEntries(

@@ -24,6 +24,7 @@ import { prismaAsegura } from './asegura-db'
 import { crearOportunidad, ORIGEN_LEAD_WEB } from './oportunidad-seguimiento'
 import { ACTOR_ENLACE_WEB, camposParaPersona, crearSolicitud, insertarSolicitud, urlPortalSolicitud } from './solicitud-datos'
 import { fichaAptaParaEnlace, TOPE_DIARIO_LEADS_WEB } from './lead-web-regla'
+import { esEnumRamoSinMigrar } from './ramo-sin-migrar'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -31,15 +32,19 @@ export type ResultadoLeadWebSolicitud =
   | { ok: true; oportunidadId: string; url: string | null; ramo: RamoSolicitud }
   | { ok: false; estado: 'invalido' | 'no_apta' | 'tope' | 'no_encontrado' | 'conflicto' | 'sin_migracion'; motivo: string; status: 404 | 409 | 422 | 429 | 503 }
 
-/** Postgres 23514 = CHECK violado: el de `solicitud_datos.ramo` sin el SQL del 25/10/2026 (solo admite auto/moto). */
+/**
+ * Postgres 23514 = CHECK violado: el de `solicitud_datos.ramo` sin el SQL del 25/10/2026 (solo admite auto/moto) o
+ * sin el del 28/10/2026 (`patinete`). 22P02 del enum `tipo_seguro` = el ramo aún no existe en la BD (patinete sin el
+ * SQL 2026-10-28): la oportunidad no se puede escribir y todo se deshace igual.
+ */
 function esCheckRamo(e: unknown): boolean {
   const t = e instanceof Error ? e.message : String(e)
-  return /23514|solicitud_datos_ramo_check/.test(t)
+  return /23514|solicitud_datos_ramo_check/.test(t) || esEnumRamoSinMigrar(e)
 }
 
 const SIN_MIGRACION = {
   ok: false as const, estado: 'sin_migracion' as const, status: 503 as const,
-  motivo: 'Falta el SQL 2026-10-25_solicitud_datos_todos_ramos.sql: este ramo aún no admite enlace de datos.',
+  motivo: 'Falta el SQL 2026-10-25_solicitud_datos_todos_ramos.sql o 2026-10-28_ramo_patinete.sql: este ramo aún no admite enlace de datos.',
 }
 
 export async function solicitudParaLeadWeb(

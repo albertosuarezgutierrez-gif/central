@@ -22,7 +22,7 @@ export interface ClaseSeguro {
 
 const PERSONALES = new Set(['vida', 'salud', 'accidentes', 'decesos', 'viaje', 'mascotas'])
 const INMUEBLES = new Set(['hogar', 'comercio', 'comunidades', 'comunidad', 'impago_alquiler', 'alquiler', 'decenal', 'empresas'])
-const VEHICULOS = new Set(['auto', 'moto', 'embarcaciones', 'flotas', 'flota', 'camion', 'furgoneta'])
+const VEHICULOS = new Set(['auto', 'moto', 'patinete', 'embarcaciones', 'flotas', 'flota', 'camion', 'furgoneta'])
 const OTROS_PATRIMONIALES = new Set([
   'responsabilidad_civil',
   'rc_profesional',

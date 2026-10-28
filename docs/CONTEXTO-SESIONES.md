@@ -11,6 +11,10 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+**(28/10/2026, 2)** — Tarificador + ramo patinete. Prueba real (imagen `main-d1deda2`): Mapfre auto OK (392,02€/714,06€, proyecto guardado; PDF tapado por un diálogo) · Generali «paso anterior incompleto» sin campo identificado. Nuevo PR: Mapfre 0.8.35 (cierra diálogo informativo vía guard; si no, aviso con su texto) + Generali 0.2.44 (lee «Datos de Valoración» antes de salir; nombra obligatorios vacíos).
+  Ramo **`patinete`** («Patinete (VMP)») en todo el CRM; el lead web `patinete-electrico` ya no cae en «otros»; datos del riesgo en el bloque libre (7 campos, tres estados). SQL `2026-10-28_ramo_patinete.sql` (enum, sin transacción) + `2026-10-28b_tarificador_allianz_patinete.sql` (integración apagada).
+  Exploración Allianz «Movilidad Personal» (`allianz:autos:movilidad_personal`, sintética) lanzable con `tarificador-relanzar.yml` accion=explorar. Lead real de patinete por WhatsApp: no se pudo dar de alta desde el contenedor (sin claves PII) → Alberto en /correduria.
+
 **(28/10/2026)** — Tarificador RPA: PR #5178 mergeado (Mapfre 0.8.33, Generali 0.2.42, volcado en atascos, imagen del bot desde `seguros.tarificador_imagen` — SQL aplicado, el workflow publica solo `main-*`). Prueba real: **Mapfre auto OK** (392,02€ / 714,06€, proyecto guardado; PDF falló) · Generali agotó 240 s («datos incompletos»).
   Nuevo PR: Mapfre 0.8.34 (descarga del PDF con scroll, causa del clic y 1 reintento) + Generali 0.2.43 (corta la espera ante «datos incompletos»; decisión de Alberto: «Envío e-mail»=Mediador, «Verificación del riesgo»=No; nunca Tomador).
   Trabajos atascados viejos bloquean `probar` (duplicado): se cancelaron 2 a mano. Pendiente: prueba real tras el PR; PDF/coberturas/comparativa/borrador; Mapfre/Generali hogar; fase 3 (fraccionamiento).

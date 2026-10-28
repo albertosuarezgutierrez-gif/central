@@ -304,6 +304,8 @@ export const CAMPOS_POR_RAMO_SINIESTRO: Readonly<Record<RamoSiniestro, readonly 
   impago_alquiler: [],
   viaje: [],
   caucion: [],
+  // Patinete / VMP (28/10/2026): sin catálogo de siniestro propio todavía, como `otros`.
+  patinete: [],
   otros: [],
 }
 

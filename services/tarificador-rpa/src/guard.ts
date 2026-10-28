@@ -1648,7 +1648,7 @@ export function rechazoOcultoDescargaProyecto(desc: readonly (string | null | un
 }
 
 /** `attrs`: class, aria-controls, aria-haspopup, aria-expanded y data-* del control (solo para diagnóstico y para reconocer un disparador de menú). */
-export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolean; habilitado: boolean; attrs?: Readonly<Record<string, string>> }
+export type ControlDescargaProyecto = { desc: (string | null)[]; visible: boolean; habilitado: boolean; attrs?: Readonly<Record<string, string>>; enDialogo?: boolean }
 
 const NOMBRES_ATRIBUTO_DESCARGA = ['texto', 'aria-label', 'title', 'value', 'id', 'name', 'href', 'onclick', 'formaction', 'ng-click', 'data-ng-click', 'mattooltip']
 const NOMBRES_ATRIBUTO_ANCESTRO = ['onclick', 'ng-click', 'data-ng-click', 'href']
@@ -1755,8 +1755,11 @@ export function decidirBotonDescargaProyecto(controles: readonly ControlDescarga
   if (cand.length === 0) return { motivo: `no aparece ningún botón de imprimir/descargar el presupuesto o proyecto${nota}`, definitivo: false, ...conMenu }
   const visibles = cand.filter((x) => x.c.visible)
   if (visibles.length === 0) return { motivo: `hay ${cand.length} botón(es) de descarga pero OCULTO(s) (puede estar plegado)${nota}`, definitivo: false, ...conMenu }
-  const habilitados = visibles.filter((x) => x.c.habilitado)
-  if (habilitados.length === 0) return { motivo: `el botón de descarga está deshabilitado${nota}`, definitivo: false }
+  const habilitados0 = visibles.filter((x) => x.c.habilitado)
+  if (habilitados0.length === 0) return { motivo: `el botón de descarga está deshabilitado${nota}`, definitivo: false }
+  // v0.8.35 (Mapfre, 28/10/2026): con un diálogo abierto encima, el de DENTRO del diálogo manda (el de debajo lo tapa la capa).
+  const enDialogo = habilitados0.filter((x) => x.c.enDialogo === true)
+  const habilitados = enDialogo.length > 0 ? enDialogo : habilitados0
   const mejor = Math.max(...habilitados.map((x) => x.p))
   return { indice: habilitados.find((x) => x.p === mejor)!.i }
 }
@@ -1771,7 +1774,7 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
     const l = await marco
       .evaluate((sel) => {
         document.querySelectorAll('[data-rpa-dl]').forEach((n) => n.removeAttribute('data-rpa-dl'))
-        const out: { desc: (string | null)[]; visible: boolean; habilitado: boolean; marca: number; attrs: Record<string, string> }[] = []
+        const out: { desc: (string | null)[]; visible: boolean; habilitado: boolean; marca: number; attrs: Record<string, string>; enDialogo: boolean }[] = []
         for (const n of Array.from(document.querySelectorAll(sel))) {
           if (out.length >= 300) break
           if (n.querySelector('button, a, [role="button"], input[type="button"], input[type="submit"]')) continue
@@ -1801,6 +1804,7 @@ async function escanearControlesDescargaProyecto(page: Page): Promise<(ControlDe
             habilitado: !(h.disabled === true || h.hasAttribute('disabled') || h.getAttribute('aria-disabled') === 'true' || /\bmat(?:-mdc)?-button-disabled\b/.test(h.className?.toString?.() ?? '')),
             marca,
             attrs,
+            enDialogo: h.closest('mat-dialog-container, [role="dialog"], [role="alertdialog"]') !== null,
           })
         }
         return out
@@ -1887,11 +1891,110 @@ export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision
     const msg = e instanceof Error ? e.message : String(e)
     if (/timeout|intercepts pointer|not visible|not stable|not enabled|detached|outside of the viewport/i.test(msg)) {
       const c = causaClicNoPulsado(msg)
-      throw new DescargaNoPulsadaError(c.causa, c.detalle)
+      if (c.causa !== 'tapado') throw new DescargaNoPulsadaError(c.causa, c.detalle)
+      // v0.8.35: un diálogo encima. Informativo → se cierra (puerta de arriba) y UN clic más al mismo control; si no, su descripción va al aviso.
+      const cierre = await cerrarDialogoInformativoDescarga(page, guard)
+      if (!cierre.cerrado) throw new DescargaNoPulsadaError('tapado', `${c.detalle}; ${cierre.descripcion}`.slice(0, 400))
+      if ((await boton.count()) !== 1) throw new DescargaNoPulsadaError('desaparecido', 'tras cerrar el diálogo informativo')
+      try {
+        await boton.click({ timeout: MS_CLIC_DESCARGA_PROYECTO })
+      } catch (e2) {
+        guard.comprobar()
+        const c2 = causaClicNoPulsado(e2 instanceof Error ? e2.message : String(e2))
+        throw new DescargaNoPulsadaError(c2.causa, `${c2.detalle ? `${c2.detalle}; ` : ''}tras cerrar un diálogo informativo`)
+      }
+      guard.comprobar()
+      return
     }
     throw e
   }
   guard.comprobar()
+}
+
+// ─────────── v0.8.35 (Mapfre, 28/10/2026): diálogo de Material que tapa la descarga y Escape no cierra ───────────
+// Prueba real con 0.8.34: «otro elemento (capa/diálogo) lo tapa (tapa: <div.cdk-overlay-backdrop…>) (también tras Escape y un reintento)». Si el diálogo
+// es INFORMATIVO (sin campos, sin texto de emitir/contratar/enviar/firmar/pagar, y TODOS sus controles son de cerrar: icono de cerrar, «Cerrar»,
+// «Aceptar», «OK»), se cierra con UN clic de texto EXACTO aquí (única puerta con «aceptar» para esto) y se reintenta. Si no, el aviso lleva su texto
+// saneado y sus botones, para mapearlo en la siguiente ejecución. Nunca se pulsa otra cosa del diálogo.
+
+/** Rótulos EXACTOS (sin tildes, minúsculas) que cierran un diálogo informativo. Los de cruz/icono primero (se prefieren a «aceptar»). */
+export const ROTULOS_CIERRE_DIALOGO_DESCARGA: readonly string[] = Object.freeze(['close', 'clear', 'cerrar', 'x', '×', 'aceptar', 'ok'])
+/** Texto de un diálogo que hace NO tocarlo (sobre texto sin tildes y en minúsculas). */
+const RE_DIALOGO_NO_CERRAR_DESCARGA = /emit|emisi|contrat|formaliz|firm|pagar|\bpago\b|grabar poliza|domicili|iban|envi|sms|e-?mail|correo|whatsapp/
+
+export type DialogoDescarga = { texto: string; botones: readonly string[]; campos: number }
+
+/** ¿Se puede cerrar este diálogo y con qué botón (índice)? Si no, por qué. PURA. */
+export function decidirCierreDialogoDescarga(d: DialogoDescarga): { indice: number } | { motivo: string } {
+  const texto = sinTildesDescarga(d.texto)
+  if (d.campos > 0) return { motivo: 'el diálogo tiene campos' }
+  const m = texto.match(RE_DIALOGO_NO_CERRAR_DESCARGA)
+  if (m) return { motivo: `el diálogo menciona «${m[0]}»` }
+  if (d.botones.length === 0) return { motivo: 'el diálogo no tiene botones' }
+  const norm = d.botones.map((b) => sinTildesDescarga(b))
+  const ajeno = norm.findIndex((b) => !ROTULOS_CIERRE_DIALOGO_DESCARGA.includes(b))
+  if (ajeno >= 0) return { motivo: `el diálogo tiene un control que no es de cerrar («${d.botones[ajeno]!.slice(0, 30)}»)` }
+  for (const r of ROTULOS_CIERRE_DIALOGO_DESCARGA) {
+    const i = norm.indexOf(r)
+    if (i >= 0) return { indice: i }
+  }
+  return { motivo: 'sin control de cerrar' }
+}
+
+/** Descripción saneada del diálogo para el aviso (texto sin datos personales + botones). PURA. */
+export function describirDialogoDescarga(d: DialogoDescarga): string {
+  const t = textoDialogoPortalSeguro(sanearTextoDiagnosticoDescarga(d.texto)).slice(0, 160)
+  const b = etiquetasControlesSaneadas(d.botones, 8)
+  return `diálogo: «${t || '(sin texto)'}»; botones: ${b.length ? b.map((x) => `«${x}»`).join(', ') : '(ninguno)'}${d.campos > 0 ? `; ${d.campos} campo(s)` : ''}`
+}
+
+const SEL_DIALOGO_DESCARGA = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
+
+/**
+ * Cierra el ÚNICO diálogo abierto si es informativo (ver arriba) con su control de cerrar de rótulo EXACTO, por `comprobarBoton` con «Aceptar»
+ * permitido SOLO aquí, guard limpio y frontera bancaria. Devuelve `{ cerrado: true }` o `{ cerrado: false, descripcion }` (sin pulsar nada).
+ */
+export async function cerrarDialogoInformativoDescarga(page: Page, guard: GuardEmision): Promise<{ cerrado: true } | { cerrado: false; descripcion: string }> {
+  guard.comprobar()
+  const dialogos = page.locator(SEL_DIALOGO_DESCARGA).filter({ visible: true })
+  const n = await dialogos.count().catch(() => 0)
+  if (n !== 1) return { cerrado: false, descripcion: n === 0 ? 'no hay ningún diálogo a la vista (la capa es otra cosa)' : `hay ${n} diálogos a la vista` }
+  const dlg = dialogos.first()
+  const d = (await dlg
+    .evaluate((el, sel) => {
+      // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+      el.querySelectorAll('[data-rpa-dlg]').forEach((x) => x.removeAttribute('data-rpa-dlg'))
+      const botones: string[] = []
+      for (const b of Array.from(el.querySelectorAll(sel))) {
+        const rb = (b as HTMLElement).getBoundingClientRect()
+        const cb = getComputedStyle(b)
+        if (!(rb.width > 0 && rb.height > 0 && cb.visibility === 'visible' && cb.display !== 'none') || b.querySelector('button, a, [role="button"]')) continue
+        const h = b as HTMLElement & { value?: unknown }
+        h.setAttribute('data-rpa-dlg', String(botones.length))
+        botones.push(((h.innerText || h.textContent || '').replace(/\s+/g, ' ').trim() || h.getAttribute('aria-label') || h.getAttribute('title') || (typeof h.value === 'string' ? h.value : '') || '').slice(0, 60))
+      }
+      const campos = Array.from(el.querySelectorAll('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea')).filter((x) => { const r = (x as HTMLElement).getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(x).visibility === 'visible' }).length
+      return { texto: ((el as HTMLElement).innerText || '').slice(0, 1500), botones, campos }
+    }, SEL_CONTROLES_DESCARGA)
+    .catch(() => null)) as DialogoDescarga | null
+  if (!d) return { cerrado: false, descripcion: 'el diálogo no se pudo leer' }
+  const dec = decidirCierreDialogoDescarga(d)
+  if ('motivo' in dec) return { cerrado: false, descripcion: `${dec.motivo} (no se pulsa); ${describirDialogoDescarga(d)}` }
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'cerrar diálogo de la descarga con otra ventana de red abierta')
+  await exigirSinCuentaBancaria(page)
+  const boton = dlg.locator(`[data-rpa-dlg="${dec.indice}"]`)
+  if ((await boton.count()) !== 1) return { cerrado: false, descripcion: `el control de cerrar cambió antes de pulsarlo; ${describirDialogoDescarga(d)}` }
+  const desc = await descripcion(boton)
+  // Vivo: rótulo EXACTO de la lista (el «aceptar» solo pasa aquí y solo así).
+  if (!ROTULOS_CIERRE_DIALOGO_DESCARGA.includes(sinTildesDescarga(etiquetaEfectivaControl({ texto: desc[0], aria: desc[1], title: desc[2], valor: desc[3] })))) {
+    return { cerrado: false, descripcion: `el control vivo no es de cerrar; ${describirDialogoDescarga(d)}` }
+  }
+  comprobarBoton(desc, { permitirAceptar: true })
+  await boton.click({ timeout: 4_000 })
+  guard.comprobar()
+  await dlg.waitFor({ state: 'hidden', timeout: 4_000 }).catch(() => undefined)
+  if ((await page.locator(SEL_DIALOGO_DESCARGA).filter({ visible: true }).count().catch(() => 0)) > 0) return { cerrado: false, descripcion: `se pulsó «${d.botones[dec.indice]!.slice(0, 20)}» pero el diálogo sigue; ${describirDialogoDescarga(d)}` }
+  return { cerrado: true }
 }
 
 /** v0.8.34: tope del clic de descarga (Playwright reintenta dentro: visible, estable, sin capa encima). */

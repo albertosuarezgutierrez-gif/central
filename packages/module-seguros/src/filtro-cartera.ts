@@ -18,7 +18,7 @@
 export type RamoSeguro =
   | 'auto' | 'moto' | 'hogar' | 'vida' | 'salud'
   | 'decesos' | 'responsabilidad_civil' | 'comercio' | 'comunidades' | 'accidentes'
-  | 'empresas' | 'rc_profesional' | 'dyo' | 'flotas' | 'transporte_mercancias' | 'ciberriesgos' | 'decenal' | 'embarcaciones' | 'mascotas' | 'impago_alquiler' | 'viaje' | 'caucion' | 'otros'
+  | 'empresas' | 'rc_profesional' | 'dyo' | 'flotas' | 'transporte_mercancias' | 'ciberriesgos' | 'decenal' | 'embarcaciones' | 'mascotas' | 'impago_alquiler' | 'viaje' | 'caucion' | 'patinete' | 'otros'
 
 /**
  * Los ramos, con su rótulo. El orden es el de la cartera real medida el
@@ -50,6 +50,7 @@ export const RAMOS: readonly { v: RamoSeguro; label: string }[] = [
   { v: 'impago_alquiler', label: 'Impago de alquiler' },
   { v: 'viaje', label: 'Viaje' },
   { v: 'caucion', label: 'Caución' },
+  { v: 'patinete', label: 'Patinete (VMP)' },
   { v: 'otros', label: 'Otros' },
 ]
 

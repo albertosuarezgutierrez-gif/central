@@ -85,6 +85,15 @@ test('workflow relanzar: manual, uuid validado, secreto solo en env y por stdin,
   assert.ok(!/echo[^\n]*\$ASEGURA_OPERADOR_SECRET/.test(wf), 'el secreto no se imprime')
 })
 
+test('workflow relanzar: accion=explorar valida la entrada, llama a /exploracion y solo manda {entrada} (sintética)', () => {
+  const wf = readFileSync(join(APP, '../../.github/workflows/tarificador-relanzar.yml'), 'utf8')
+  assert.match(wf, /options: \[relanzar, probar, explorar\]/)
+  assert.match(wf, /ENTRADA: \$\{\{ inputs\.entrada \}\}/)
+  assert.match(wf, /\^\[a-z_\]\+:\[a-z_\]\+:\[a-z_\]\+\$/, 'entrada sin validar por regex')
+  assert.match(wf, /ruta="exploracion"/)
+  assert.match(wf, /jq -cn --arg e "\$ENTRADA" '\{entrada: \$e\}'/, 'el cuerpo de explorar solo lleva la entrada')
+})
+
 // ─── probar con el trabajo anterior purgado ───────────────────────────────────────────────────────────────────────
 const validarSi = (completo: (r: any) => boolean) => (r: unknown) => completo(r) ? { ok: true as const, entrada: { riesgo: r } } : { ok: false as const, mensaje: 'riesgo inválido', errores: ['matricula', 'conductor.fechaCarne'] }
 const rec = { riesgo: { ramo: 'auto', matricula: 'X', conductor: {} }, bloqueos: [] as string[], repreguntar: [] as string[] }

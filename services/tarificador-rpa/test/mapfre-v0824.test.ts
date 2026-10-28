@@ -46,7 +46,7 @@ const SIN_BLOQUE = (select: string) => `<body><app-info-descuentos>
 
 const planCompania = (): PlanNsei => ({ escribibles: planObjetoYFiguras(form).escribibles.filter((o) => o.sel === SEL_HISTORIAL.companiaAnterior), pendientes: [] })
 
-test('v0.8.24 · la versión del bot es 0.8.29', () => assert.equal(mapfreAuto.version, '0.8.34'))
+test('v0.8.24 · la versión del bot es 0.8.29', () => assert.equal(mapfreAuto.version, '0.8.35'))
 
 test('sin app-historial-siniestralidad pero con mat-select «Compañia» habilitado → se elige por etiqueta con el nombre del riesgo', async () => {
   const page = await pagina(SIN_BLOQUE(SELECT()))

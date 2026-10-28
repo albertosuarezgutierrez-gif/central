@@ -12,7 +12,7 @@ import { mapfreAuto } from '../src/adapters/mapfre/auto.ts'
 
 const PDF_MINIMO = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n' + ' '.repeat(80), 'latin1')
 
-test('v0.8.34 · versión', () => assert.equal(mapfreAuto.version, '0.8.34'))
+test('v0.8.34 · versión', () => assert.equal(mapfreAuto.version, '0.8.35'))
 
 test('v0.8.34 · puro: la causa sale de la traza de Playwright (la última línea de estado manda)', () => {
   const tapado = `locator.click: Timeout 6000ms exceeded.\nCall log:\n  - waiting for locator('[data-rpa-dl="41"]')\n  - locator resolved to <button>…</button>\n  - attempting click action\n  - waiting for element to be visible, enabled and stable\n  - element is visible, enabled and stable\n  - <div class="cdk-overlay-backdrop cdk-overlay-dark-backdrop cdk-overlay-backdrop-showing"></div> intercepts pointer events\n  - retrying click action`
@@ -107,7 +107,7 @@ test('v0.8.34 · una capa que NO se cierra: no se pulsa nada (ni force ni coorde
   try {
     const r = await descargarProyectoAuto(page, ctx, 'mapfre', 'proyecto-mapfre-auto.pdf', true, 8_000, 30_000)
     assert.equal(r.pdf, null)
-    assert.match(r.aviso!, /^PDF del proyecto no descargado en Mapfre: «Imprimir proyecto»: el control de descarga no se pudo pulsar: otro elemento \(capa\/diálogo\) lo tapa \(tapa: <div\.cdk-overlay-backdrop>\) \(también tras Escape y un reintento\)$/)
+    assert.match(r.aviso!, /^PDF del proyecto no descargado en Mapfre: «Imprimir proyecto»: el control de descarga no se pudo pulsar: otro elemento \(capa\/diálogo\) lo tapa \(tapa: <div\.cdk-overlay-backdrop>; no hay ningún diálogo a la vista \(la capa es otra cosa\)\) \(también tras Escape y un reintento\)$/)
     assert.equal(adjuntos.length, 0)
     assert.equal(await pulsaciones(page), 0, 'el botón tapado no recibió ningún clic')
     assert.equal(await page.locator('#capa').count(), 1, 'la capa sigue (nada la aceptó ni la pulsó)')

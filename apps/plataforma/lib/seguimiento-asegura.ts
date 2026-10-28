@@ -497,6 +497,7 @@ const ROTULO_RAMO: Record<RamoOportunidad, string> = {
   auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud', decesos: 'Decesos',
   responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes',
   empresas: 'Empresas / pymes', rc_profesional: 'RC profesional', dyo: 'D&O (directivos)', flotas: 'Flotas', transporte_mercancias: 'Transporte de mercancías', ciberriesgos: 'Ciberriesgos', decenal: 'Decenal / construcción', embarcaciones: 'Embarcaciones', mascotas: 'Mascotas', impago_alquiler: 'Impago de alquiler', viaje: 'Viaje', caucion: 'Caución',
+  patinete: 'Patinete (VMP)',
   otros: 'Otros',
 }
 export const RAMOS_OPORTUNIDAD_UI: readonly { valor: RamoOportunidad; rotulo: string }[] =
