@@ -449,3 +449,22 @@ test('referenciaRiesgo: matrícula en auto/moto, dirección en inmueble, nada en
   assert.equal(referenciaRiesgo(pol('v', { tipo: 'vida', matricula: '1234ABC', objeto: obj('Calle X') })), null)
   assert.equal(referenciaRiesgo(pol('a2', { tipo: 'auto', objeto: obj('Calle X'), matricula: null })), null)
 })
+
+test('volcado histórico: no sale como oportunidad si una fila comparte nº de póliza con una viva (Plus Ultra absorbida por Occident)', () => {
+  // José Suárez Sala: el hogar vivo de Occident y la fila Plus Ultra del volcado son la misma
+  // póliza, pero ramo+título ("COSTA BALLENA (ROTA)" vs "ROTA") no casan.
+  const viva = pol('occ', { tipo: 'hogar', aseguradora: 'Occident', numeroPoliza: 'GPDFL0600228', objeto: { estado: 'conocido', titulo: 'COSTA BALLENA (ROTA)', detalle: null, nota: null, coberturas: null, direccion: 'CP 11520' } })
+  const volcado = pol('pu', { tipo: 'hogar', aseguradora: 'Plus Ultra', viva: false, estado: 'vencida', numeroPoliza: 'gpdfl 06 00228', fechaVencimiento: '2019-05-01', objeto: { estado: 'conocido', titulo: 'ROTA', detalle: null, nota: null, coberturas: null } })
+  const r = repartirSegurosCliente({ polizas: [viva, volcado], declaradas: [], oportunidades: [] })
+  assert.deepEqual(ids(r.conNosotros), ['occ'])
+  assert.deepEqual(ids(r.oportunidades), [])
+  assert.deepEqual(ids(r.historicas), ['pu'])
+})
+
+test('volcado histórico: con otro nº de póliza distinto sí sale como oportunidad', () => {
+  const viva = pol('occ', { tipo: 'hogar', aseguradora: 'Occident', numeroPoliza: 'GPDFL0600228', objeto: { estado: 'conocido', titulo: 'COSTA BALLENA (ROTA)', detalle: null, nota: null, coberturas: null, direccion: 'CP 11520' } })
+  const volcado = pol('pu', { tipo: 'hogar', aseguradora: 'Plus Ultra', viva: false, estado: 'vencida', numeroPoliza: 'GPDFL0999999', fechaVencimiento: '2019-05-01', objeto: { estado: 'conocido', titulo: 'ROTA', detalle: null, nota: null, coberturas: null } })
+  const r = repartirSegurosCliente({ polizas: [viva, volcado], declaradas: [], oportunidades: [] })
+  assert.deepEqual(ids(r.conNosotros), ['occ'])
+  assert.deepEqual(ids(r.oportunidades), ['pu'])
+})
