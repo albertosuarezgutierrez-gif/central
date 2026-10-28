@@ -17,7 +17,13 @@ export const cierreAsegura = (body: Record<string, unknown>): Promise<Reenvio> =
   llamar('/api/operador/siniestro/cierre', { method: 'PATCH', body: JSON.stringify(body) })
 
 export const iaSiniestroAsegura = (body: Record<string, unknown>): Promise<Reenvio> =>
-  llamar('/api/operador/siniestro/ia', { method: 'POST', body: JSON.stringify(body) })
+  llamar('/api/operador/siniestro/ia', { method: 'POST', body: JSON.stringify(body) }, 170_000)
 
 export const esperandoAsegura = (correduriaId: string | null): Promise<Reenvio> =>
   llamar(`/api/operador/siniestros/esperando${correduriaId ? `?${new URLSearchParams({ correduriaId })}` : ''}`, { method: 'GET' })
+
+export const volcadoAsegura = (body: Record<string, unknown>): Promise<Reenvio> =>
+  llamar('/api/operador/siniestro/hilo/volcado', { method: 'POST', body: JSON.stringify(body) }, 60_000)
+
+export const polizaBuscarAsegura = (correduriaId: string | null, siniestroId: string, q: string): Promise<Reenvio> =>
+  llamar(`/api/operador/siniestro/poliza-buscar?${new URLSearchParams({ ...(correduriaId ? { correduriaId } : {}), siniestroId, q })}`, { method: 'GET' }, 60_000)

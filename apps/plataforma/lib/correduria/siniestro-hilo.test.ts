@@ -119,3 +119,55 @@ test('modoDeMensaje y autorDeModo son coherentes; cuerpoCaja manda sustituyeA so
   assert.equal(cuerpoCaja('rehuse', ' x ', null, false, 'abc').sustituyeA, 'abc')
   assert.equal(cuerpoCaja('rehuse', ' x ', null, false, 'abc').tipo, 'rehuse')
 })
+
+import { leerVeredicto, resaltarFragmento, leerPropuestaVolcado, trozosNuevos, ultimaFichaPerito, leerBusquedaPoliza, textoConfianza, hayPreRehuse, cuerpoValoracion, leerPartesPortal } from './siniestro-hilo.ts'
+
+test('veredicto: inválido o sin semáforo conocido = null; argumento sin texto se descarta', () => {
+  assert.equal(leerVeredicto(null), null)
+  assert.equal(leerVeredicto({ veredicto: null }), null)
+  assert.equal(leerVeredicto({ veredicto: { semaforo: 'verde' } }), null)
+  const v = leerVeredicto({ veredicto: { semaforo: 'faltan_datos', confianza: 0.5, preguntas: ['¿Fecha?', '', 3], argumentos: [{ texto: 'a', apoyo: 'ley', cita: 'art. 1', citaVerificada: false }, { apoyo: 'ley' }], derivar: 'otro' } })!
+  assert.deepEqual(v.preguntas, ['¿Fecha?'])
+  assert.equal(v.argumentos.length, 1)
+  assert.equal(v.argumentos[0].citaVerificada, false)
+  assert.equal(v.derivar, null)
+  assert.equal(v.resumen, null)
+  assert.equal(leerVeredicto({ veredicto: { semaforo: 'defendible', argumentos: [{ texto: 'x' }] } })!.argumentos[0].citaVerificada, null)
+})
+test('confianza: null no es 0', () => {
+  assert.equal(textoConfianza(null), 'sin confianza indicada')
+  assert.equal(textoConfianza(0.8), '80 %')
+  assert.equal(textoConfianza(65), '65 %')
+})
+test('resaltado ignora mayúsculas y acentos y conserva el texto', () => {
+  const t = resaltarFragmento('Quedan EXCLUIDOS los daños por Filtración.', 'filtracion excluidos')
+  assert.equal(t.map(x => x.texto).join(''), 'Quedan EXCLUIDOS los daños por Filtración.')
+  assert.deepEqual(t.filter(x => x.marca).map(x => x.texto), ['EXCLUIDOS', 'Filtración'])
+  assert.deepEqual(resaltarFragmento('abc', ''), [{ texto: 'abc', marca: false }])
+})
+test('volcado: propuesta, duplicados no cuentan, ficha del perito', () => {
+  assert.equal(leerPropuestaVolcado({ estado: 'ok' }), null)
+  const p = leerPropuestaVolcado({ estado: 'propuesta', duplicados: 1, fichaPerito: null, trozos: [
+    { emisor: 'Ana', rol: 'perito', fechaOriginal: '2026-10-01', texto: 'a', huella: 'h1', tipo: 'rehuse', duplicado: false, fichaPerito: { importeCubierto: 100, importeNoCubierto: null } },
+    { texto: 'b', huella: 'h2', tipo: 'comentario', duplicado: true },
+    { texto: '', huella: 'h3' },
+  ] })!
+  assert.equal(p.trozos.length, 2)
+  assert.equal(trozosNuevos(p), 1)
+  assert.equal(p.trozos[0].fichaPerito?.importeNoCubierto, null)
+})
+test('ficha del perito: la más reciente; ausencia = null', () => {
+  const m = (id: string, meta: Record<string, unknown> | null) => ({ id, autor: 'compania' as const, tipo: 'comentario' as const, texto: 'x', textoIlegible: false, documentoId: null, creadoPor: null, creadoAt: null, meta, sustituidoPor: null })
+  assert.equal(ultimaFichaPerito(null), null)
+  assert.equal(ultimaFichaPerito([m('a', null)]), null)
+  assert.equal(ultimaFichaPerito([m('a', { fichaPerito: { importeCubierto: 1 } }), m('b', { fichaPerito: { importeCubierto: 2 } })])!.importeCubierto, 2)
+})
+test('búsqueda en póliza: documentos 0 ≠ sin fragmentos; preRehuse; valoración; partes', () => {
+  assert.equal(leerBusquedaPoliza({ estado: 'ok', documentos: 0, fragmentos: [] })!.documentos, 0)
+  assert.equal(leerBusquedaPoliza({ estado: 'error' }), null)
+  assert.equal(hayPreRehuse({ preRehuse: true }), true)
+  assert.equal(hayPreRehuse(null), false)
+  assert.deepEqual(cuerpoValoracion('s', 'm', 'mal', ' '), { siniestroId: 's', valoracion: { mensajeId: 'm', voto: 'mal' } })
+  assert.equal(leerPartesPortal(undefined), null)
+  assert.deepEqual(leerPartesPortal([]), [])
+})

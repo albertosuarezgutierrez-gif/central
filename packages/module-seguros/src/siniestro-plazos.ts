@@ -1,3 +1,5 @@
+import { diaMadridDeIso, fechaOriginalDe } from './siniestro-hilo-versiones.ts'
+
 /**
  * Hilo de conversación por siniestro y plazos legales — reglas PURAS (sin BD, sin reloj).
  *
@@ -191,6 +193,12 @@ export type MensajeParaPlazos = {
   meta?: Record<string, unknown> | null
 }
 
+/** Mensaje con su instante y día EFECTIVOS: `meta.fechaOriginal` (volcado de la intranet) manda sobre `creadoAt`. */
+function efectivo(m: MensajeParaPlazos): MensajeParaPlazos {
+  const f = fechaOriginalDe(m)
+  return f === null ? m : { ...m, creadoAt: f, dia: diaMadridDeIso(f) }
+}
+
 function plazo(
   clave: ClavePlazoSiniestro,
   etiqueta: string,
@@ -214,7 +222,8 @@ export function claseSeguroArt23(ramo: string | null | undefined): 'personas' | 
 /** Último `enviado` del corredor marcado como reclamación al SAC. `null` si no hay. */
 function ultimaReclamacionSac(mensajes: readonly MensajeParaPlazos[]): MensajeParaPlazos | null {
   let ultimo: MensajeParaPlazos | null = null
-  for (const m of mensajes) {
+  for (const m0 of mensajes) {
+    const m = efectivo(m0)
     if (m.autor !== 'corredor' || m.tipo !== 'enviado' || m.meta?.reclamacionSac !== true) continue
     if (ultimo === null || m.creadoAt > ultimo.creadoAt) ultimo = m
   }
@@ -297,8 +306,9 @@ export function plazosSiniestro(
  * ningún mensaje de la compañía. `null` si no aplica (nunca se envió nada, la compañía ya contestó) o si el hilo
  * no se pudo leer (`mensajes === null`).
  */
-export function diasEsperandoCompania(mensajes: readonly MensajeParaPlazos[] | null, hoy: string): number | null {
-  if (mensajes === null) return null
+export function diasEsperandoCompania(mensajes0: readonly MensajeParaPlazos[] | null, hoy: string): number | null {
+  if (mensajes0 === null) return null
+  const mensajes = mensajes0.map(efectivo)
   let enviado: MensajeParaPlazos | null = null
   for (const m of mensajes) {
     if (m.autor === 'corredor' && m.tipo === 'enviado' && (enviado === null || m.creadoAt > enviado.creadoAt)) enviado = m

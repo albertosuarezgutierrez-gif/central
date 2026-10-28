@@ -3,7 +3,7 @@ import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { conCorreduria, iaSiniestroAsegura } from '@/lib/correduria/siniestro-hilo-red'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+export const maxDuration = 180
 
 /** POST { siniestroId, accion:'analizar'|'redactar', destinatario? } → Mensaje (proxy a asegura; 404 mientras no exista). */
 export async function POST(req: NextRequest) {

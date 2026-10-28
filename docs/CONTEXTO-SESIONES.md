@@ -16,6 +16,11 @@
 - Retarificar: una sola entrada (pestaña «Prima y precio»); botón renombrado «Abrir oportunidad de renovación».
 - `vigenciaRiesgo` → null si falta fecha o fin<=inicio (CIMA manda inicio=fin en algunos riesgos: dato, no render). Guardián `lib/correduria/poliza-ficha-duplicidades-guardia.test.ts`.
 - Pendiente: «Personas de la póliza» vs «Intervinientes» (comprobar con póliza real antes de fusionar).
+## (28/10/2026, 8) Correduría · gabinete de siniestros (fases 1-3)
+- Expediente: «Pegar volcado de la intranet» (trocea por cabeceras, fecha/emisor reales, sin duplicar), ficha del perito, buscador en la póliza (sin IA), plazos con `meta.fechaOriginal`.
+- Gabinete IA: base `conocimiento-siniestros.ts` (PENDIENTE DE REVISIÓN POR ALBERTO, 3 «verificar»), índice de póliza + ficha del caso cacheados, veredicto 🟢🔴🟡 con preguntas, derivar abogado/perito externo, otras pólizas en vigor, canal intranet cordial. Datos sensibles en `meta.privado` cifrado.
+- Fase 3: 👍/👎 por análisis (correcciones al prompt), pre-rehúse → Telegram `correduria.siniestro-prerehuse` (una vez por siniestro), partes del portal en el expediente.
+- Pendiente: tope IA de asegura 5 €/mes (propuesto 20 €, sin decidir); probar con 43141325 (Global 2).
 
 ## (28/10/2026, 7) Tarificador RPA · 3×3: versiones del día y decisión sobre emitir
 - Mergeados PR #5204, #5209, #5211, #5213, #5217, #5220, #5222: explorador 0.3.2→0.3.7, Generali 0.2.46→0.2.51. En vuelo #5224 (explorador 0.3.8); Generali 0.2.52 en desarrollo.

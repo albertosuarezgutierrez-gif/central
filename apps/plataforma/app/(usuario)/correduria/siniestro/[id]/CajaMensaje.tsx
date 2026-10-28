@@ -5,11 +5,13 @@ import { btnStyle } from '@/components/ui'
 import { autorDeModo, combinacionValida, cuerpoCaja, motivoFallo, type ModoCaja } from '@/lib/correduria/siniestro-hilo'
 import type { DocumentoResumen } from '@central/module-seguros'
 import { CAMPO, ERROR, NOTA } from './estilos'
+import VolcadoIntranet from './VolcadoIntranet'
 
 /** `sustituyeA` = EDITAR ese mensaje (se guarda como versión nueva; el anterior se conserva). */
 export type Precarga = { modo: ModoCaja; texto: string; n: number; sustituyeA?: string; documentoId?: string | null; reclamacionSac?: boolean }
 
-const OPCIONES: { modo: ModoCaja; etiqueta: string }[] = [
+const OPCIONES: { modo: ModoCaja | 'volcado'; etiqueta: string }[] = [
+  { modo: 'volcado', etiqueta: 'Pegar volcado de la intranet (subir todo)' },
   { modo: 'compania', etiqueta: 'Pegar de la compañía (comentario)' },
   { modo: 'rehuse', etiqueta: 'Pegar de la compañía (rehúse)' },
   { modo: 'enviado', etiqueta: 'Lo que he enviado' },
@@ -22,7 +24,10 @@ export default function CajaMensaje({ siniestroId, documentos, precarga, onGuard
   precarga: Precarga | null
   onGuardado: () => void
 }) {
-  const [modo, setModo] = useState<ModoCaja>('compania')
+  const [modoSel, setModoSel] = useState<ModoCaja | 'volcado'>('compania')
+  const volcado = modoSel === 'volcado'
+  const modo: ModoCaja = modoSel === 'volcado' ? 'compania' : modoSel
+  const setModo = (m: ModoCaja) => setModoSel(m)
   const [texto, setTexto] = useState('')
   const [docId, setDocId] = useState('')
   const [sac, setSac] = useState(false)
@@ -71,9 +76,10 @@ export default function CajaMensaje({ siniestroId, documentos, precarga, onGuard
             Estás editando un mensaje. Se guardará como versión nueva; la anterior queda en el expediente (se ve con «Ver versiones anteriores»).
           </p>
         )}
-        <select aria-label="Tipo de entrada" value={modo} onChange={e => setModo(e.target.value as ModoCaja)} style={CAMPO}>
-          {OPCIONES.filter(o => !edita || autorDeModo(o.modo) === autorDeModo(edita.modo)).map(o => <option key={o.modo} value={o.modo}>{o.etiqueta}</option>)}
+        <select aria-label="Tipo de entrada" value={modoSel} onChange={e => setModoSel(e.target.value as ModoCaja | 'volcado')} style={CAMPO}>
+          {OPCIONES.filter(o => o.modo !== 'volcado' ? (!edita || autorDeModo(o.modo) === autorDeModo(edita.modo)) : !edita).map(o => <option key={o.modo} value={o.modo}>{o.etiqueta}</option>)}
         </select>
+ {volcado ? <VolcadoIntranet siniestroId={siniestroId} onGuardado={onGuardado} /> : <>
         <textarea aria-label="Texto" value={texto} onChange={e => setTexto(e.target.value)} rows={6} style={{ ...CAMPO, resize: 'vertical' }} />
         {modo === 'enviado' && (
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 14 }}>
@@ -92,7 +98,7 @@ export default function CajaMensaje({ siniestroId, documentos, precarga, onGuard
           <button type="button" disabled={ocupado} onClick={guardar} style={btnStyle('primario')}>{ocupado ? 'Guardando…' : edita ? 'Guardar edición' : 'Guardar'}</button>
           {edita && <button type="button" disabled={ocupado} onClick={cancelarEdicion} style={btnStyle('secundario')}>Cancelar edición</button>}
           <span style={NOTA}>Solo se guarda en el expediente; no se envía nada a nadie.</span>
-        </div>
+        </div></>}
       </div>
     </Bloque>
   )

@@ -631,6 +631,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 06:35, junto al seguimiento de sustituciones, y solo si hay alguna',
   },
   {
+    id: 'correduria.siniestro-prerehuse', categoria: 'correduria',
+    titulo: 'Posible rehúse en un siniestro',
+    que: 'La compañía ha dejado en el hilo de un siniestro un mensaje que apunta a un rehúse inminente (volcado de la intranet o mensaje pegado). Lleva el número del siniestro y el enlace al expediente.',
+    cuando: 'Al instante, al guardar el mensaje y solo si el puerto detecta el posible rehúse',
+  },
+  {
     id: 'correduria.emision-retenida', categoria: 'correduria',
     titulo: 'Emisiones retenidas por la compañía (riesgo condicionado)',
     que: 'Pólizas emitidas desde Avant2 que la compañía dejó retenidas y que han cambiado: liberadas (ya en cartera) o rechazadas, más cuántas siguen retenidas.',

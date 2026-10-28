@@ -12,6 +12,10 @@
 
 import { decryptField, encryptField } from '@central/module-seguros-pii'
 import {
+  desempaquetarMetaPrivado,
+  detectarPreRehuse,
+  empaquetarMetaPrivado,
+  validarValoracion,
   diaMadrid,
   diasEsperandoCompania,
   hiloVigente,
@@ -54,6 +58,9 @@ export type MensajeSiniestro = {
 
 export type DocumentoBreve = { id: string; tipo: string; nombre: string | null }
 
+/** Parte del portal vinculado a este siniestro (`portal_parte_siniestro.siniestro_id`), con sus documentos (`documentos.portal_parte_id`). */
+export type ParteDelPortal = { id: string; fecha: string; descripcion: string; documentos: { id: string; nombre: string | null }[] }
+
 export type SiniestroResumenHilo = {
   id: string
   clienteId: string
@@ -90,6 +97,8 @@ export type HiloSiniestro = {
   mensajes: MensajeSiniestro[] | null
   plazos: PlazoSiniestro[]
   diasEsperandoCompania: number | null
+  /** Partes del portal ya vinculados a este siniestro. `null` = no se pudo leer; `[]` = ninguno. Solo lectura. */
+  partesPortal: ParteDelPortal[] | null
 }
 
 export type FalloHilo =
@@ -154,16 +163,21 @@ function mapMensaje(f: FilaMensaje): MensajeSiniestro {
     documentoId: f.documentoId,
     creadoPor: f.creadoPor,
     creadoAt: f.creadoAt.toISOString(),
-    meta: esObjeto(f.meta) ? f.meta : null,
+    // `meta.privado` (ficha, veredicto, índice, citas) va cifrado: se expone con los mismos campos de siempre.
+    meta: desempaquetarMetaPrivado(esObjeto(f.meta) ? f.meta : null, decryptField),
     sustituidoPor: null,
   }
 }
 
 /** Plazos y espera leen la ÚLTIMA versión de cada mensaje, con la fecha del ORIGINAL (una errata no reinicia un plazo). */
 function paraPlazosVigentes(mensajes: MensajeSiniestro[]): MensajeParaPlazos[] {
-  return hiloVigente(mensajes).map((m) => ({
-    autor: m.autor, tipo: m.tipo, creadoAt: m.creadoAtOriginal, dia: diaMadrid(new Date(m.creadoAtOriginal)), meta: m.meta,
-  }))
+  // `creadoAtOriginal` ya es la fecha efectiva del original (`meta.fechaOriginal` si existe). Se quita `fechaOriginal`
+  // del meta de la versión vigente: la fecha de la cadena es la del ORIGINAL, no la de una edición.
+  return hiloVigente(mensajes).map((m) => {
+    const meta: Record<string, unknown> = { ...(m.meta ?? {}) }
+    delete meta.fechaOriginal
+    return { autor: m.autor, tipo: m.tipo, creadoAt: m.creadoAtOriginal, dia: diaMadrid(new Date(m.creadoAtOriginal)), meta }
+  })
 }
 
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -179,6 +193,35 @@ async function documentosDe(correduriaId: string, where: { polizaId: string } | 
     return filas.map((d) => ({ id: d.id, tipo: d.tipo, nombre: d.nombreFichero }))
   } catch (e) {
     registrarErrorCartera(contexto, e)
+    return null
+  }
+}
+
+/** Partes del portal vinculados (FK `siniestro_id`, ya verificado que el siniestro es de la correduría) y sus documentos. */
+async function partesPortalDe(correduriaId: string, siniestroId: string): Promise<ParteDelPortal[] | null> {
+  try {
+    const db = prismaAsegura()
+    const partes = await db.portalParteSiniestro.findMany({
+      where: { siniestroId },
+      select: { id: true, fechaHecho: true, descripcion: true },
+      orderBy: { fechaHecho: 'desc' },
+      take: 50,
+    })
+    if (partes.length === 0) return []
+    const docs = await db.documento.findMany({
+      where: { correduriaId, portalParteId: { in: partes.map((p) => p.id) } },
+      select: { id: true, nombreFichero: true, portalParteId: true },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    })
+    return partes.map((p) => ({
+      id: p.id,
+      fecha: p.fechaHecho.toISOString().slice(0, 10),
+      descripcion: p.descripcion.length > 200 ? `${p.descripcion.slice(0, 199)}…` : p.descripcion,
+      documentos: docs.filter((d) => d.portalParteId === p.id).map((d) => ({ id: d.id, nombre: d.nombreFichero })),
+    }))
+  } catch (e) {
+    registrarErrorCartera('siniestro/hilo partes del portal', e)
     return null
   }
 }
@@ -223,9 +266,10 @@ export async function leerHiloSiniestro(
     mensajes = null
   }
 
-  const [docsPoliza, docsSiniestro] = await Promise.all([
+  const [docsPoliza, docsSiniestro, partesPortal] = await Promise.all([
     documentosDe(correduriaId, { polizaId: s.polizaId }, 'siniestro/hilo documentos póliza'),
     documentosDe(correduriaId, { siniestroId: s.id }, 'siniestro/hilo documentos siniestro'),
+    partesPortalDe(correduriaId, s.id),
   ])
 
   const resultado = cierre?.resultado != null && RESULTADOS.has(cierre.resultado) ? (cierre.resultado as ResultadoCierreSiniestro) : null
@@ -266,6 +310,7 @@ export async function leerHiloSiniestro(
       lista,
     ),
     diasEsperandoCompania: diasEsperandoCompania(lista, hoy),
+    partesPortal,
   }
   return { ok: true, hilo }
 }
@@ -291,7 +336,7 @@ export type EntradaAnadirMensaje = {
   reclamacionSac?: unknown
   /** Quién lo escribe (`humano:alberto`, `agente:ia-siniestros`, `plataforma`…). Sin PII. */
   creadoPor: string
-  /** Metadatos (modelo de IA, documento usado, citas verificadas). SIN texto libre con datos personales: va en claro. */
+  /** Metadatos (modelo de IA, documento usado, citas verificadas). Las claves de PII (`fichaCaso`, `veredicto`, `indicePoliza`, `fichaPerito`, `citas`) se cifran solas en `meta.privado`; el resto va en claro: SIN texto libre con datos personales. */
   meta?: Record<string, unknown> | null
   /** `operador` = llegó por el puerto (no admite autor `ia`); `servidor` = lo escribe el propio servidor (endpoint de IA). */
   canal: 'operador' | 'servidor'
@@ -323,7 +368,9 @@ export async function anadirMensajeSiniestro(
           ...(sustituyeA ? { sustituyeA } : {}),
         }
       : null
-  if (meta && Buffer.byteLength(JSON.stringify(meta), 'utf8') > META_MAX_BYTES) return invalido('meta demasiado grande')
+  // PRIVACIDAD: ficha/veredicto/índice/ficha del perito/citas se cifran en `meta.privado`; en claro solo lo listable sin PII.
+  const metaFinal = meta ? empaquetarMetaPrivado(meta, encryptField, META_MAX_BYTES).meta : null
+  if (metaFinal && Buffer.byteLength(JSON.stringify(metaFinal), 'utf8') > META_MAX_BYTES) return invalido('meta demasiado grande')
 
   const db = prismaAsegura()
   const s = await db.siniestro.findFirst({
@@ -384,7 +431,7 @@ export async function anadirMensajeSiniestro(
         texto: encryptField(v.mensaje.texto),
         documentoId,
         creadoPor,
-        meta: meta === null ? Prisma.DbNull : (meta as Prisma.InputJsonObject),
+        meta: metaFinal === null ? Prisma.DbNull : (metaFinal as Prisma.InputJsonObject),
       },
       select: SELECT_MENSAJE,
     })
@@ -401,6 +448,52 @@ export async function anadirMensajeSiniestro(
   )
   // Se devuelve con el texto validado (ya en claro), sin volver a descifrar.
   return { ok: true, mensaje: { ...mapMensaje(fila), texto: v.mensaje.texto, textoIlegible: false } }
+}
+
+/** ¿Este siniestro ya tiene un mensaje con `meta.preRehuseAvisado`? (el aviso de pre-rehúse es UNO por siniestro) */
+export async function yaAvisadoPreRehuse(correduriaId: string, siniestroId: string): Promise<boolean> {
+  try {
+    const f = await prismaAsegura().siniestroMensaje.findFirst({
+      where: { correduriaId, siniestroId, meta: { path: ['preRehuseAvisado'], equals: true } },
+      select: { id: true },
+    })
+    return f !== null
+  } catch (e) {
+    registrarErrorCartera('siniestro/hilo preRehuse', e)
+    return true // ante la duda, no avisar dos veces
+  }
+}
+
+/** ¿Este texto dispara el aviso de pre-rehúse (y aún no se avisó en el siniestro)? Devuelve el `meta` a añadir al mensaje. */
+export async function metaPreRehuse(correduriaId: string, siniestroId: string, texto: unknown): Promise<{ preRehuseAvisado: true } | null> {
+  if (typeof texto !== 'string' || !detectarPreRehuse(texto)) return null
+  return (await yaAvisadoPreRehuse(correduriaId, siniestroId)) ? null : { preRehuseAvisado: true }
+}
+
+/**
+ * Valora un análisis de la IA (👍/👎 + motivo): mensaje autor `interna`, tipo `nota`, `meta.valoracion {mensajeId, voto}`.
+ * `mensajeId` tiene que ser un mensaje `ia` de ESTE siniestro y esta correduría.
+ */
+export async function valorarAnalisisSiniestro(
+  correduriaId: string,
+  e: { siniestroId: string; valoracion: unknown; creadoPor: string },
+): Promise<{ ok: true; mensaje: MensajeSiniestro } | FalloHilo> {
+  const v = validarValoracion(e.valoracion)
+  if (!v.ok) return invalido(v.motivo)
+  try {
+    const original = await prismaAsegura().siniestroMensaje.findFirst({
+      where: { id: v.valoracion.mensajeId, correduriaId, siniestroId: e.siniestroId, autor: 'ia' },
+      select: { id: true },
+    })
+    if (!original) return noEncontrado('El mensaje a valorar no es un mensaje de la IA de este siniestro.')
+  } catch (err) {
+    if (esTablaAusente(err)) return sinMigracion()
+    throw err
+  }
+  return anadirMensajeSiniestro(correduriaId, {
+    siniestroId: e.siniestroId, autor: 'interna', tipo: 'nota', texto: v.texto, creadoPor: e.creadoPor, canal: 'operador',
+    meta: { valoracion: { mensajeId: v.valoracion.mensajeId, voto: v.valoracion.voto } },
+  })
 }
 
 // ─── Cierre con resultado ────────────────────────────────────────────────────
@@ -471,7 +564,8 @@ export async function siniestrosEsperandoCompania(
     // cadena: igual que `hiloVigente` en el hilo (una edición no reinicia la espera).
     filas = await prismaAsegura().$queryRaw`
       with recursive cadena as (
-        select id, siniestro_id, autor, tipo, creado_at as original_at
+        select id, siniestro_id, autor, tipo,
+          case when meta->>'fechaOriginal' ~ '^\\d{4}-\\d{2}-\\d{2}T' then (meta->>'fechaOriginal')::timestamptz else creado_at end as original_at
         from siniestro_mensajes
         where correduria_id = ${correduriaId}::uuid and (meta->>'sustituyeA') is null
         union all

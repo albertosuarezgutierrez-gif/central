@@ -1,17 +1,22 @@
 'use client'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Bloque from '../../Bloque'
 import { btnStyle } from '@/components/ui'
-import { citasNoEncontradas, leerMensaje, motivoFallo } from '@/lib/correduria/siniestro-hilo'
-import { ERROR, NOTA } from './estilos'
+import { DESTINATARIOS_IA, citasNoEncontradas, leerMensaje, motivoFallo, type DestinatarioIa } from '@/lib/correduria/siniestro-hilo'
+import { CAMPO, ERROR, NOTA } from './estilos'
 
-type Peticion = { accion: 'analizar' | 'redactar'; destinatario?: 'compania' | 'cliente' }
+type Peticion = { accion: 'analizar' | 'redactar'; destinatario?: DestinatarioIa }
 
 export default function AccionesIa({ siniestroId, onHecho }: { siniestroId: string; onHecho: () => void }) {
+  const [dest, setDest] = useState<DestinatarioIa>('compania_intranet')
   const [ocupado, setOcupado] = useState(false)
   const [aviso, setAviso] = useState<{ mal: boolean; texto: string } | null>(null)
 
+  const enCurso = useRef(false)
+
   async function pedir(p: Peticion) {
+    if (enCurso.current) return // doble clic antes del re-render = doble gasto de IA
+    enCurso.current = true
     setOcupado(true); setAviso(null)
     try {
       const r = await fetch('/api/correduria/siniestro/ia', {
@@ -28,15 +33,17 @@ export default function AccionesIa({ siniestroId, onHecho }: { siniestroId: stri
       onHecho()
     } catch {
       setAviso({ mal: true, texto: 'Sin conexión con la IA.' })
-    } finally { setOcupado(false) }
+    } finally { enCurso.current = false; setOcupado(false) }
   }
 
   return (
     <Bloque titulo="IA con la póliza" sub="Lee la póliza y el hilo. Nunca envía nada: el borrador lo copias tú.">
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <button type="button" disabled={ocupado} onClick={() => pedir({ accion: 'analizar' })} style={btnStyle('secundario')}>Analizar con la póliza</button>
-        <button type="button" disabled={ocupado} onClick={() => pedir({ accion: 'redactar', destinatario: 'compania' })} style={btnStyle('secundario')}>Redactar respuesta (compañía)</button>
-        <button type="button" disabled={ocupado} onClick={() => pedir({ accion: 'redactar', destinatario: 'cliente' })} style={btnStyle('secundario')}>Redactar respuesta (cliente)</button>
+        <select aria-label="Destinatario del borrador" value={dest} onChange={e => setDest(e.target.value as DestinatarioIa)} style={{ ...CAMPO, width: 'auto', flex: '1 1 220px' }}>
+          {DESTINATARIOS_IA.map(d => <option key={d.valor} value={d.valor}>{d.etiqueta}</option>)}
+        </select>
+        <button type="button" disabled={ocupado} onClick={() => pedir({ accion: 'redactar', destinatario: dest })} style={btnStyle('secundario')}>Redactar respuesta</button>
       </div>
       {ocupado && <p style={{ ...NOTA, marginTop: 8 }}>Pensando…</p>}
       {aviso && <p role="status" style={{ ...(aviso.mal ? ERROR : NOTA), marginTop: 8 }}>{aviso.texto}</p>}
