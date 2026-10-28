@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T06:08:22Z",
-  "sha": "d1deda284a7281c949a9be5ccc61a4d3da9fbc80",
+  "generadoEn": "2026-10-28T07:17:45Z",
+  "sha": "35292089c73ff63168dbcd8f6e2e0076dc6ed00b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -145789,7 +145789,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 49
+          "linea": 56
         }
       ],
       "tablas": [
@@ -145798,7 +145798,7 @@
         "subastas_criterios"
       ],
       "rutaApi": "/api/subastas/criterios",
-      "hash": "cabc1a2cdeab"
+      "hash": "cd47f4c50e50"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/documentos/route.ts",
@@ -191180,7 +191180,7 @@
           "exportada": true,
           "params": "f: any",
           "retorno": "SubastaInmueble",
-          "linea": 104,
+          "linea": 105,
           "resumen": "Fila cruda de `subastas` → el tipo del módulo."
         },
         {
@@ -191189,7 +191189,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<FilaCriterios[]>",
-          "linea": 185,
+          "linea": 186,
           "resumen": "Cuentas con el radar activo y sus criterios."
         },
         {
@@ -191198,7 +191198,7 @@
           "exportada": true,
           "params": "limite = 500",
           "retorno": "Promise<SubastaInmueble[]>",
-          "linea": 211,
+          "linea": 216,
           "resumen": "Subastas candidatas: en plazo (o sin fecha conocida) y recientes. No se rebarre todo el histórico en cada pasada."
         },
         {
@@ -191207,7 +191207,7 @@
           "exportada": true,
           "params": "cuentaId: string, criterios: CriteriosSubasta, corpus: SubastaInmueble[], params: ParamsCoste = {},",
           "retorno": "Promise<number>",
-          "linea": 232,
+          "linea": 237,
           "resumen": "Casa el corpus con los criterios de una cuenta e inserta lo nuevo. El upsert REFRESCA el snapshot y las cifras: el radar corre a las 06:30, DESPUÉS del enriquecimiento (06:15) y del valor de mercado ("
         },
         {
@@ -191216,7 +191216,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 305,
+          "linea": 310,
           "resumen": "Pasada completa: descarga el corpus UNA vez y lo empareja con cada cuenta."
         }
       ],
@@ -191228,7 +191228,7 @@
         "subastas_radar"
       ],
       "rutaApi": null,
-      "hash": "631140e0a3d3"
+      "hash": "ae8a9ab2da05"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/aviso-cierre.ts",
@@ -192362,6 +192362,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a816fce0fa2c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/perfil-criterios.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Mapeo PURO fila-jsonb de `subastas_criterios` → criterios del perfil de inversión. Las 6 columnas llegan en una migración aparte (2026-10-28_subastas_perfil_inversion.sql); mientras no exista, la fila no las trae y TODO sale «sin filtro». Así el código se despliega antes que la migración sin romper ",
+      "exporta": [
+        "perfilDesdeFila"
+      ],
+      "funciones": [
+        {
+          "nombre": "numOrUndef",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | undefined",
+          "linea": 10
+        },
+        {
+          "nombre": "perfilDesdeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Fila",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "aeee8cf9aaa1"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/portal-sesion.ts",
@@ -248643,18 +248672,48 @@
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Radar: empareja una subasta ya normalizada con los criterios de una cuenta. PURO y determinista. Un criterio duro incumplido DESCARTA (no resta puntos): avisar de un piso en Lugo a quien solo mira Sevilla es ruido, no una s",
       "exporta": [
+        "esUnifamiliar",
+        "tienePiscina",
+        "superficieParcela",
         "coincideSubasta",
         "filtrarSubastas",
         "claveInmueble"
       ],
       "funciones": [
         {
+          "nombre": "esUnifamiliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble",
+          "retorno": "boolean | null",
+          "linea": 15,
+          "resumen": "true/false si consta que es (o no) una casa; null si no se puede saber."
+        },
+        {
+          "nombre": "tienePiscina",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble",
+          "retorno": "boolean | null",
+          "linea": 26,
+          "resumen": "Piscina: true si el texto la cita, false si dice «sin piscina», null si calla."
+        },
+        {
+          "nombre": "superficieParcela",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SubastaInmueble",
+          "retorno": "number | null",
+          "linea": 33,
+          "resumen": "m² de parcela/solar/terreno/jardín citados en la descripción; null si no hay."
+        },
+        {
           "nombre": "coincideSubasta",
           "kind": "function",
           "exportada": true,
           "params": "s: SubastaInmueble, c: CriteriosSubasta, op?: Oportunidad | null,",
           "retorno": "CoincidenciaSubasta",
-          "linea": 16,
+          "linea": 46,
           "resumen": "@param op evaluación de oportunidad ya calculada; sin ella no se puede aplicar el filtro de descuento mínimo y la puntuación sale solo de las palabras clave."
         },
         {
@@ -248663,7 +248722,7 @@
           "exportada": true,
           "params": "subastas: Array<{ subasta: SubastaInmueble; oportunidad?: Oportunidad | null }>, criterios: CriteriosSubasta,",
           "retorno": "Array<",
-          "linea": 81,
+          "linea": 169,
           "resumen": "Filtra y ordena por puntuación descendente."
         },
         {
@@ -248672,13 +248731,13 @@
           "exportada": true,
           "params": "s: SubastaInmueble",
           "retorno": "string | null",
-          "linea": 97,
+          "linea": 185,
           "resumen": "Clave para detectar el MISMO inmueble llegado por fuentes distintas (el BOE lo subasta y Sareb lo lista porque es colateral de un préstamo suyo). La referencia catastral es la única llave fiable; sin "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "caee77415953"
+      "hash": "652b37044e3e"
     },
     {
       "ruta": "packages/module-subastas/src/reaparicion.ts",
@@ -256653,7 +256712,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5374,
-    "funciones": 20629
+    "archivos": 5375,
+    "funciones": 20634
   }
 }
