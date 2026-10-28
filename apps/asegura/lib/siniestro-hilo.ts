@@ -102,7 +102,7 @@ const esMigracionAusente = (e: unknown): boolean => esTablaAusente(e) || esColum
 
 const SELECT_RESUMEN = {
   id: true, clienteId: true, polizaId: true, estado: true, origen: true, tipo: true, referencia: true,
-  fechaHora: true, fechaDeclaracion: true, gravedad: true, resultado: true, resultadoMotivo: true, resultadoAt: true,
+  fechaHora: true, fechaDeclaracion: true, gravedad: true,
   fusionadoEnSiniestroId: true,
   poliza: { select: { id: true, numeroPoliza: true, aseguradora: true, tipo: true } },
 } as const
@@ -119,6 +119,17 @@ type FilaMensaje = {
 const esObjeto = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 const isoDia = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null)
 const RESULTADOS = new Set(['ganado', 'perdido', 'parcial'])
+
+type CierreRaw = { resultado: string | null; resultadoMotivo: string | null; resultadoAt: Date | null }
+
+/** Lee el cierre por SQL crudo (columnas del SQL 2026-10-28d). Lanza el error de columna ausente (42703): el llamante lo traduce a `sin_migracion`. */
+async function leerCierre(db: ReturnType<typeof prismaAsegura>, correduriaId: string, siniestroId: string): Promise<CierreRaw | null> {
+  const filas = await db.$queryRaw<{ resultado: string | null; resultado_motivo: string | null; resultado_at: Date | null }[]>(Prisma.sql`
+    select resultado, resultado_motivo, resultado_at from siniestros
+    where id = ${siniestroId}::uuid and correduria_id = ${correduriaId}::uuid`)
+  const f = filas[0]
+  return f ? { resultado: f.resultado, resultadoMotivo: f.resultado_motivo, resultadoAt: f.resultado_at } : null
+}
 
 function mapMensaje(f: FilaMensaje): MensajeSiniestro {
   let texto: string | null
@@ -174,6 +185,14 @@ export async function leerHiloSiniestro(
     throw e
   }
   if (!s) return noEncontrado('El siniestro no existe en esta correduría.')
+  // `resultado*` por SQL crudo: no están en el modelo Prisma hasta aplicar el SQL (código ANTES que el SQL).
+  let cierre: CierreRaw | null
+  try {
+    cierre = await leerCierre(db, correduriaId, s.id)
+  } catch (e) {
+    if (esMigracionAusente(e)) return sinMigracion()
+    throw e
+  }
 
   let mensajes: MensajeSiniestro[] | null
   try {
@@ -194,7 +213,7 @@ export async function leerHiloSiniestro(
     documentosDe(correduriaId, { siniestroId: s.id }, 'siniestro/hilo documentos siniestro'),
   ])
 
-  const resultado = s.resultado !== null && RESULTADOS.has(s.resultado) ? (s.resultado as ResultadoCierreSiniestro) : null
+  const resultado = cierre?.resultado != null && RESULTADOS.has(cierre.resultado) ? (cierre.resultado as ResultadoCierreSiniestro) : null
   const lista = mensajes === null ? null : mensajes.map(paraPlazos)
   const hilo: HiloSiniestro = {
     siniestro: {
@@ -209,8 +228,8 @@ export async function leerHiloSiniestro(
       fechaDeclaracion: isoDia(s.fechaDeclaracion),
       gravedad: s.gravedad,
       resultado,
-      resultadoMotivo: s.resultadoMotivo,
-      resultadoAt: s.resultadoAt ? s.resultadoAt.toISOString() : null,
+      resultadoMotivo: cierre?.resultadoMotivo ?? null,
+      resultadoAt: cierre?.resultadoAt ? cierre.resultadoAt.toISOString() : null,
       fusionadoEnSiniestroId: s.fusionadoEnSiniestroId,
     },
     poliza: {
@@ -351,26 +370,38 @@ export async function cerrarSiniestroConResultado(
   try {
     s = await db.siniestro.findFirst({
       where: { id: e.siniestroId, correduriaId },
-      select: { id: true, clienteId: true, referencia: true, resultado: true, fusionadoEnSiniestroId: true },
+      select: { id: true, clienteId: true, referencia: true, fusionadoEnSiniestroId: true },
     })
   } catch (err) {
     if (esMigracionAusente(err)) return sinMigracion()
     throw err
   }
   if (!s) return noEncontrado('El siniestro no existe en esta correduría.')
+  let previo: CierreRaw | null
+  try {
+    previo = await leerCierre(db, correduriaId, s.id)
+  } catch (err) {
+    if (esMigracionAusente(err)) return sinMigracion()
+    throw err
+  }
   if (s.fusionadoEnSiniestroId) return invalido(`Este alta se fusionó en otro siniestro (${s.fusionadoEnSiniestroId}): ciérralo allí.`)
   const ahora = new Date()
   // `updateMany` con la correduría en el WHERE: el aislamiento también en la escritura, no solo en la lectura previa.
-  const r = await db.siniestro.updateMany({
-    where: { id: s.id, correduriaId },
-    data: { resultado: v.resultado, resultadoMotivo: v.motivo, resultadoAt: ahora, updatedAt: ahora },
-  })
-  if (r.count !== 1) return noEncontrado('El siniestro no existe en esta correduría.')
-  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'resultado', antes: s.resultado, despues: v.resultado })
+  let actualizadas: number
+  try {
+    actualizadas = await db.$executeRaw(Prisma.sql`
+      update siniestros set resultado = ${v.resultado}, resultado_motivo = ${v.motivo}, resultado_at = ${ahora}, updated_at = ${ahora}
+      where id = ${s.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+  } catch (err) {
+    if (esMigracionAusente(err)) return sinMigracion()
+    throw err
+  }
+  if (actualizadas !== 1) return noEncontrado('El siniestro no existe en esta correduría.')
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'resultado', antes: previo?.resultado ?? null, despues: v.resultado })
   await anotarHistorial(
     correduriaId,
     s.clienteId,
-    `Siniestro${s.referencia ? ` ${s.referencia}` : ''}: ${s.resultado ? `resultado cambiado de ${s.resultado} a` : 'cerrado con resultado'} ${v.resultado} por ${e.actor}`,
+    `Siniestro${s.referencia ? ` ${s.referencia}` : ''}: ${previo?.resultado ? `resultado cambiado de ${previo.resultado} a` : 'cerrado con resultado'} ${v.resultado} por ${e.actor}`,
   )
   return { ok: true }
 }

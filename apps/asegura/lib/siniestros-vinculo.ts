@@ -355,7 +355,7 @@ async function fusionar(db: Db, correduriaId: string, manual: FilaCorredor, cima
       data: { fusionadoEnSiniestroId: cima.id, fusionadoAt: ahora, updatedAt: ahora },
     })
     if (marca.count !== 1) return false // otra pasada llegó antes
-    // `select` explícito: sin él Prisma devuelve TODAS las columnas y, con `resultado*` declaradas antes del SQL
+    // `select` explícito (inocuo): evita pedir columnas de más. Antes, con `resultado*` declaradas antes del SQL
     // 2026-10-28d, la fusión moriría con «column does not exist».
     await tx.siniestro.update({ where: { id: cima.id }, data: { ...dataDeFusion(cambios), updatedAt: ahora }, select: { id: true } })
     // Lo que colgaba del alta manual pasa al siniestro que queda. Nada se borra.

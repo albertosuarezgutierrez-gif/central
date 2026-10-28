@@ -601,11 +601,8 @@ model Siniestro {
   /// SQL 2026-10-03d). La fila se CONSERVA; toda lectura de ficha/portal filtra `null`.
   fusionadoEnSiniestroId    String?   @map("fusionado_en_siniestro_id") @db.Uuid
   fusionadoAt               DateTime? @map("fusionado_at") @db.Timestamptz(6)
-  /// Cierre con resultado (SQL 2026-10-28d). NULL = sin cerrar con resultado, NO «perdido».
-  /// `resultado` y `resultadoAt` van juntos (CHECK). Lo escribe PATCH `/api/operador/siniestro/cierre`.
-  resultado                 String?   @map("resultado")
-  resultadoMotivo           String?   @map("resultado_motivo")
-  resultadoAt               DateTime? @map("resultado_at") @db.Timestamptz(6)
+  // `resultado`/`resultado_motivo`/`resultado_at` (SQL 2026-10-28d) NO se declaran aquí a propósito: «código ANTES que el SQL».
+  // Se leen/escriben con $queryRaw/$executeRaw en lib/siniestro-hilo.ts; declararlas haría fallar todo findMany/create sin select.
 
   correduria      Correduria               @relation(fields: [correduriaId], references: [id])
   cliente         Cliente                  @relation(fields: [clienteId], references: [id])

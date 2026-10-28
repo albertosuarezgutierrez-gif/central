@@ -93,3 +93,17 @@ test('la ruta de IA del siniestro: valida la correduría, no usa aiComplete, una
   assert.match(lib, /canal:\s*'servidor'/, 'escribe el autor ia con canal servidor')
   assert.match(lib, /correduriaId/, 'todo con correduriaId')
 })
+
+/** Cuerpo del `model Siniestro { ... }` de asegura.prisma. */
+export function cuerpoModeloSiniestro(prisma: string): string {
+  const m = /^model Siniestro \{([\s\S]*?)^\}/m.exec(prisma)
+  return m ? m[1] : ''
+}
+
+test('el modelo Siniestro NO declara resultado* (código ANTES que el SQL 2026-10-28d: si no, todo findMany/create sin select falla con «column does not exist»)', () => {
+  const cuerpo = cuerpoModeloSiniestro(readFileSync(join(ROOT, 'apps/asegura/prisma/asegura.prisma'), 'utf8'))
+  assert.ok(cuerpo.length > 0, 'no se encontró model Siniestro')
+  const sinComentarios = cuerpo.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
+  assert.doesNotMatch(sinComentarios, /^\s*resultado\w*\s/m, 'resultado/resultadoMotivo/resultadoAt van por SQL crudo, no en el modelo, hasta aplicar el SQL')
+  assert.doesNotMatch(sinComentarios, /@map\("resultado/, 'columna resultado* mapeada en el modelo')
+})
