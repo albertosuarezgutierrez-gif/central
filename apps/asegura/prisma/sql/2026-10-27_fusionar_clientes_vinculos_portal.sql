@@ -1,4 +1,4 @@
--- ⏳ SIN APLICAR (27/10/2026) — La fusión de fichas MUDA los vínculos del portal sin perder ninguno.
+-- ✅ APLICADO en producción el 28/10/2026 (Alberto, SQL Editor; verificado) — La fusión de fichas MUDA los vínculos del portal sin perder ninguno.
 --
 -- Redefine `seguros.fusionar_clientes` (firma de 7 argumentos). El cuerpo es el de
 -- `2026-09-28_fusionar_clientes_dni_ilegible.sql` (APLICADO en prod) con UN solo cambio: el bloque
