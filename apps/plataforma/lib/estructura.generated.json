@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-27T19:15:37Z",
+  "generadoEn": "2026-10-28T04:58:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4716,7 +4716,6 @@
       "/api/cron/crm-lead-hunter-sevilla",
       "/api/cron/crm-recordatorio-dia2",
       "/api/cron/crm-recordatorios",
-      "/api/cron/eventos-entorno",
       "/api/cron/feedback-visita",
       "/api/cron/instagram",
       "/api/cron/instagram-ideas",
@@ -7238,7 +7237,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1856,
+    "apis": 1855,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
