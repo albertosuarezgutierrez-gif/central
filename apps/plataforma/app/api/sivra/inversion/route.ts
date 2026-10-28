@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { encajaCasaVacacional, DORMITORIOS_IDEAL } from '@central/module-subastas'
+import { tgAviso } from '@/lib/telegram'
+import { eur } from '@/lib/dinero'
 
 const TIPOS_CASA = ['chalet', 'finca', 'parcela', 'casa', 'adosado', 'villa']
 
@@ -120,6 +123,7 @@ export async function POST(req: NextRequest) {
 
   try {
     let inserted = 0, updated = 0, skipped = 0
+    const casas: Array<{ p: any; pendientes: string[] }> = []
 
     for (const p of propiedades) {
       if (p.es_bajada_precio) {
@@ -169,6 +173,32 @@ export async function POST(req: NextRequest) {
         )
       `)
       inserted++
+
+      // 🏡 Solo las filas RECIÉN insertadas pueden avisar: el SELECT de arriba
+      // (titulo+zona) ya omite las repetidas, así que no hay aviso duplicado.
+      const e = encajaCasaVacacional({
+        precio: p.precio != null ? Number(p.precio) : null,
+        tipo: p.tipo ?? null,
+        dormitorios: p.habitaciones != null ? Number(p.habitaciones) : null,
+        banos: p.banos != null ? Number(p.banos) : null,
+        piscina: typeof p.tiene_piscina === 'boolean' ? p.tiene_piscina : null,
+        parcelaM2: p.parcela_m2 != null ? Number(p.parcela_m2) : null,
+        municipio: p.zona ?? null,
+      })
+      if (e.encaja && !p.es_subasta) casas.push({ p, pendientes: e.pendientes })
+    }
+
+    for (const { p, pendientes } of casas.slice(0, 10)) {
+      const esc = (x: unknown) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const hab = p.habitaciones != null ? `${p.habitaciones} hab.${Number(p.habitaciones) >= DORMITORIOS_IDEAL ? ' ⭐' : ''}` : null
+      const lineas = [
+        `🏡 <b>Idealista — casa vacacional</b> ${esc(p.titulo)}`,
+        esc([p.precio != null ? eur(Number(p.precio)) : 'precio sin consta', p.zona, hab, p.banos != null ? `${p.banos} baños` : null,
+          p.tiene_piscina === true ? 'piscina' : null].filter(Boolean).join(' · ')),
+      ]
+      if (pendientes.length) lineas.push(`⏳ Por comprobar: ${esc(pendientes.join(', '))}`)
+      if (p.link) lineas.push(esc(p.link))
+      await tgAviso('pisos.idealista-casa', lineas.join('\n'), { html: true }).catch(() => {})
     }
 
     if (ultima_fecha) {

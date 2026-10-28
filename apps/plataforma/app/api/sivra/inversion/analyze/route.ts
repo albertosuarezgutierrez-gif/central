@@ -8,10 +8,11 @@ const PORTAL_DOMAINS = ['idealista.com','fotocasa.es','kyero.com','habitaclia.co
 const SKIP_DOMAINS   = ['unsubscribe','tracking','pixel','open.','click.','mailchimp','sendgrid','mailtrack','mandrillapp','list-manage','amazonaws.com/track']
 
 const SYSTEM_PROMPT = `Eres experto inmobiliario en Huelva, Costa de la Luz y Aljarafe sevillano. Analiza correos de inmobiliarias, subastas y alertas de bajada de precio. Devuelve SOLO JSON sin markdown:
-{"es_inmobiliaria":true,"propiedades":[{"titulo":"título corto","tipo":"chalet|parcela|finca|casa|piso|apartamento|otro","zona":"municipio","precio":null,"precio_anterior":null,"es_bajada_precio":false,"metros":null,"tiene_piscina":null,"es_rustica":null,"cerca_playa":null,"puntuacion_chollo":5,"razon_chollo":"motivo en 1 frase","link":null,"es_subasta":false}],"resumen":"1 frase"}
+{"es_inmobiliaria":true,"propiedades":[{"titulo":"título corto","tipo":"chalet|parcela|finca|casa|piso|apartamento|otro","zona":"municipio","precio":null,"precio_anterior":null,"es_bajada_precio":false,"metros":null,"tiene_piscina":null,"habitaciones":null,"banos":null,"parcela_m2":null,"es_rustica":null,"cerca_playa":null,"puntuacion_chollo":5,"razon_chollo":"motivo en 1 frase","link":null,"es_subasta":false}],"resumen":"1 frase"}
 Puntuación 1-10: 10=precio bajo+playa+piscina, 1=caro/no interesa. Las bajadas de precio SUMAN +2 a la puntuación.
 Si el email es alerta de bajada de precio: es_bajada_precio=true, precio=precio nuevo, precio_anterior=precio antiguo.
 Perfil: inversión/residencia, Huelva costa o Aljarafe, chalet/parcela rústica, piscina deseable, playa cerca ideal.
+habitaciones/banos/parcela_m2: números SOLO si el correo los dice; si no, null (no inventes).
 Si hay URLs de anuncios (idealista, fotocasa, kyero, habitaclia, pisos.com, milanuncios) cópialas exactas en "link".
 Si no es inmobiliaria: {"es_inmobiliaria":false,"propiedades":[],"resumen":""}`
 
