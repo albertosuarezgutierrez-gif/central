@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T08:32:48Z",
-  "sha": "915bf9b4a89f156225ed249342b0628ba3f60f7d",
+  "generadoEn": "2026-10-28T09:06:47Z",
+  "sha": "04ddbb5da8410fb385afbc894b91edb80f73b932",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -163320,7 +163320,7 @@
           "exportada": false,
           "params": "p: PolizaFicha",
           "retorno": "Bien",
-          "linea": 320
+          "linea": 342
         },
         {
           "nombre": "identificado",
@@ -163328,7 +163328,7 @@
           "exportada": false,
           "params": "b: Bien",
           "retorno": null,
-          "linea": 325
+          "linea": 347
         },
         {
           "nombre": "casaBien",
@@ -163336,7 +163336,7 @@
           "exportada": false,
           "params": "a: Bien, b: Bien",
           "retorno": "'si' | 'no' | 'quiza'",
-          "linea": 328,
+          "linea": 350,
           "resumen": "¿Es el mismo bien? `quiza` = mismo ramo pero sin dato común con que compararlos."
         },
         {
@@ -163345,7 +163345,7 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 335
+          "linea": 357
         },
         {
           "nombre": "mismoRiesgo",
@@ -163353,8 +163353,17 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente, p: PolizaFicha",
           "retorno": "boolean",
-          "linea": 340,
+          "linea": 362,
           "resumen": "El MISMO riesgo, por matrícula o nº de póliza (la compañía no basta: cambia al competir)."
+        },
+        {
+          "nombre": "comparteNumeroVivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PolizaFicha, numerosVivos: Set<string>",
+          "retorno": "boolean",
+          "linea": 368,
+          "resumen": "¿La fila del volcado lleva el nº de póliza de alguna viva del cliente? `null` (número corto) nunca casa."
         },
         {
           "nombre": "otraMatricula",
@@ -163362,7 +163371,7 @@
           "exportada": false,
           "params": "a: string | null, b: string | null",
           "retorno": "boolean",
-          "linea": 345
+          "linea": 373
         },
         {
           "nombre": "referenciaRiesgo",
@@ -163370,7 +163379,7 @@
           "exportada": true,
           "params": "p: Pick<PolizaFicha, 'tipo' | 'matricula' | 'objeto'>, titulo?: string | null",
           "retorno": "string | null",
-          "linea": 360,
+          "linea": 388,
           "resumen": "Cómo se identifica una póliza ante el cliente (no por su nº de póliza): matrícula en auto/moto, dirección del riesgo en inmueble, nada en el resto. `null` = no se sabe: la tarjeta no pinta línea (nunc"
         },
         {
@@ -163379,7 +163388,7 @@
           "exportada": true,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 375,
+          "linea": 403,
           "resumen": "Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover."
         },
         {
@@ -163388,7 +163397,7 @@
           "exportada": true,
           "params": "r: RepartoSeguros",
           "retorno": "PolizaFicha[]",
-          "linea": 386,
+          "linea": 414,
           "resumen": "Los SEGUROS del cliente = lo «con nosotros» (póliza en cartera en vigor, o emitida y pendiente de CIMA), con la póliza que sustituyen dentro. Es lo ÚNICO que cuenta en «Pólizas vivas», recibos, próxim"
         },
         {
@@ -163397,7 +163406,7 @@
           "exportada": true,
           "params": "r: RepartoSeguros",
           "retorno": "number | null",
-          "linea": 395,
+          "linea": 423,
           "resumen": "Cuántas oportunidades hay que trabajar: las abiertas, las derivadas de pólizas de otras casas (volcado, canceladas) y lo que aportó el cliente. Una perdida que se reintentará al vencimiento no es «abi"
         },
         {
@@ -163406,7 +163415,7 @@
           "exportada": true,
           "params": "r: RepartoSeguros",
           "retorno": "SeguroCliente[] | null",
-          "linea": 401,
+          "linea": 429,
           "resumen": "Las oportunidades que cuenta `contarOportunidades` (mismo criterio; `null` = no se pudieron leer)."
         },
         {
@@ -163415,12 +163424,12 @@
           "exportada": true,
           "params": "p: PolizaFicha, hoy: Date",
           "retorno": "PrecargaAlta",
-          "linea": 419
+          "linea": 447
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a8f249c8f736"
+      "hash": "e4346518fa55"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/sexo-cotizador-ficha.ts",
@@ -257027,6 +257036,6 @@
   ],
   "resumen": {
     "archivos": 5382,
-    "funciones": 20657
+    "funciones": 20658
   }
 }
