@@ -20,3 +20,4 @@ Al informar:
 - Si propones un cambio, sé explícito sobre qué se rompe si te equivocas y cómo se verifica.
 - Si el hallazgo es solo una opinión de diseño (no un bug), dilo como propuesta, no como hecho.
 - No hagas refactors amplios "de paso" — el alcance es el problema que te trajeron aquí.
+- Revisando el tarificador RPA: busca primero fugas de datos personales en campos de diagnóstico nuevos (deben pasar por `redactarValoresInventario`) y que las excepciones del guard sean por texto/id/origen exactos.

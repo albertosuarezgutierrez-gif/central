@@ -45,7 +45,7 @@ import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
 import { companiaActualDe, comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
-import { esUrlOktaSmsGenerali } from '../../guard.ts'
+import { esUrlOktaSmsGenerali, opcionesTipoPlacaGenerali, otroVehiculoGeneraliPermitido } from '../../guard.ts'
 import { CONCEPTOS_LECTURA, alternativa, terminosDe } from '../../vocabulario.ts'
 import {
   AVISO_MATRICULA_PROVINCIAL,
@@ -160,6 +160,11 @@ import {
   resumenCaracteristicasVehiculoGenerali,
   type BloqueVehiculoGenerali,
   resumenFotoSelectorGenerali,
+  antiguedadVehiculoGenerali,
+  opcionIndiqueCodigoGenerali,
+  opcionPlacaOrdinariaGenerali,
+  resumenPruebasTipoVehiculoGenerali,
+  type IntentoTipoVehiculoGenerali,
   type ControlMediador,
   type DecisionMediador,
   type MarcoMediador,
@@ -283,6 +288,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.52 (28/10/2026, prueba real con 0.2.51, trabajo 4107d42d; decisión de Alberto: que pruebe el bot): «Tipo de vehículo» sigue vacío tras 15 s sin
+ * nada bloqueado. `probarTipoVehiculoGenerali`: fase de PRUEBAS acotada (Indique Código · Tipo de placa · change+blur con refresco · el otro botón
+ * «Vehículo»), un intento por hipótesis, parando en cuanto `wclasv` tiene valor; el registro (qué se probó y si se rellenó) va al atasco o, si funcionó,
+ * a los avisos de la oferta. Sin puertas nuevas: los clics van por `ctx.pulsar` (guard genérico) y la reselección por las puertas que ya existen.
+ */
+/**
  * 0.2.51 (28/10/2026, prueba real con 0.2.50, trabajo d8584313): la foto descarta el subtipo (en el selector todo llega marcado: «Turismo», «Turismos»,
  * marca y versión) y «Tipo de vehículo» sigue vacío. El volcado: sin controles bloqueados, sin marcos cargando, el último refresco (`ocultoIF`) fue el
  * de la compañía de procedencia, y en 0.2.48 (a12d2139) Genernet NO calculó con ese campo vacío (así que bloquea: la parada se mantiene). Ahora, antes de
@@ -391,7 +402,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.51'
+export const VERSION_GENERALI_AUTO = '0.2.52'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -3302,7 +3313,135 @@ async function esperarProtegidosGenerali(marco: Raiz, ms: number): Promise<{ blo
   }
 }
 
-export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number; esperaProtegidosMs?: number } = {}): Promise<ResultadoAdaptador> {
+/** v0.2.52 · Prefijo de ids de «Características del vehículo». */
+const ID_CARAC_GENERALI = 'reg1063A_vehiculo_caracVehiculo_'
+/** v0.2.52 · Esperas de la fase de pruebas (inyectables en los tests). */
+export type EsperasPruebasTipoGenerali = { trasAccionMs?: number; selectorMs?: number }
+
+/**
+ * v0.2.52 (trabajo 4107d42d, decisión de Alberto: «que lo pruebe el bot») · Fase de PRUEBAS acotada cuando «Tipo de vehículo» (`wclasv`, solo
+ * lectura) sigue vacío con el resto de la ficha rellena. UN intento por hipótesis, releyendo `wclasv` antes de cada una y parando en cuanto tiene
+ * valor: 1) «Indique Código» (`wvegen`) = «VEHICULOS NUEVOS/USADOS TURISMOS» por la antigüedad del riesgo (si está a la vista; sin fecha no se
+ * supone); 2) «Tipo de placa» ordinaria/nacional (rótulo exacto; si no existe, no se marca otra); 3) change + blur en los campos de la ficha con
+ * `refreshEmiAutosGenA.do` (uno a uno, esperando a que Genernet libere el formulario); 4) el otro botón «Vehículo» (`lnkVehi`) por `ctx.pulsar`
+ * (guard genérico: nunca «Confirmar»/emitir) y, si abre el selector, la misma selección por las puertas del guard (si una puerta ya se usó, se
+ * registra y se para). El 3 va antes que el 4 porque el 4 navega. Nada oculto se fuerza a la vista. Devuelve el registro y el valor final.
+ */
+export async function probarTipoVehiculoGenerali(page: Page, marco: Raiz, form: FormularioAuto, ctx: ContextoPortal, hoy: Date, esperas: EsperasPruebasTipoGenerali = {}): Promise<{ intentos: IntentoTipoVehiculoGenerali[]; valor: string | null }> {
+  const trasMs = esperas.trasAccionMs ?? 8_000
+  const intentos: IntentoTipoVehiculoGenerali[] = []
+  const ctl = (id: string) => marco.locator(`[id="${ID_CARAC_GENERALI}${id}"]`)
+  const leer = async (): Promise<string> => (await ctl('wclasv').first().inputValue({ timeout: 2_000 }).catch(() => '')).trim()
+  /** Tras una acción: espera a que Genernet libere el formulario y a que `wclasv` tenga valor (hasta `trasMs`). */
+  const tras = async (): Promise<string> => {
+    const fin = Date.now() + trasMs
+    for (;;) {
+      const bloqueados = Number(await marco.evaluate(() => document.querySelectorAll('[controlbloqueo="1"]:disabled').length).catch(() => 0)) || 0
+      const v = await leer()
+      if ((v !== '' && bloqueados === 0) || Date.now() >= fin) return v
+      await pausaMs(400)
+    }
+  }
+  const anotar = (hipotesis: string, hecho: string, valor: string) => { intentos.push({ hipotesis, hecho, relleno: valor !== '', valor: valor || null }); return valor !== '' }
+  const visible = async (l: Locator) => (await l.count().catch(() => 0)) > 0 && (await l.first().isVisible().catch(() => false))
+
+  // 1 · «Indique Código»
+  if (await leer()) return { intentos, valor: await leer() }
+  {
+    const h = 'Indique Código (wvegen)'
+    const sel = ctl('wvegen')
+    if ((await sel.count().catch(() => 0)) !== 1) anotar(h, 'no existe', '')
+    else if (!(await visible(sel))) anotar(h, 'oculto; no se fuerza', '')
+    else {
+      const ant = antiguedadVehiculoGenerali(form.fechaMatriculacion ?? form.fechaMatriculacionEstimada ?? null, hoy)
+      const ops = (await opcionesSelect(sel).catch(() => [])).map((o) => o.texto)
+      const i = ant ? opcionIndiqueCodigoGenerali(ops, ant) : -1
+      if (!ant) anotar(h, 'el riesgo no trae fecha de matriculación: no se supone nuevo/usado', '')
+      else if (i < 0) anotar(h, `sin opción exacta para vehículo ${ant} (opciones: ${ops.map((o) => `«${sanearFragmentoGenerali(o).slice(0, 30)}»`).join(' · ').slice(0, 200)})`, '')
+      else if ((await leerOpcionSeleccionada(sel).catch(() => ({ texto: '' }))).texto.trim() === ops[i]!.trim()) anotar(h, `ya estaba «${ops[i]}»`, await leer())
+      else {
+        await elegirIndice(sel, i, ctx)
+        if (anotar(h, `elegida «${ops[i]}» (vehículo ${ant})`, await tras())) return { intentos, valor: await leer() }
+      }
+    }
+  }
+  // 2 · «Tipo de placa»
+  if (await leer()) return { intentos, valor: await leer() }
+  {
+    const h = 'Tipo de placa (yplaca)'
+    const placas = opcionesTipoPlacaGenerali(marco as Page | Frame)
+    const n = await placas.count().catch(() => 0)
+    if (n === 0) anotar(h, 'no existe', '')
+    else if (!(await visible(placas))) anotar(h, 'oculto; no se fuerza', '')
+    else {
+      const rotulos: string[] = []
+      for (let k = 0; k < n; k++) rotulos.push(await placas.nth(k).evaluate((e) => String(e.nextElementSibling?.textContent ?? '').replace(/\s+/g, ' ').trim()).catch(() => ''))
+      const i = opcionPlacaOrdinariaGenerali(rotulos)
+      if (i < 0) anotar(h, `sin opción ordinaria/nacional (opciones: ${rotulos.map((r) => `«${r.slice(0, 30)}»`).join(' · ')}); no se marca otra`, '')
+      else if (await placas.nth(i).isChecked().catch(() => false)) anotar(h, `ya marcada «${rotulos[i]}»`, await leer())
+      else {
+        await comprobarCampo(placas.nth(i)) // `pulsar` no mira el onchange propio del radio
+        await ctx.pulsar(placas.nth(i))
+        if (anotar(h, `marcada «${rotulos[i]}»`, await tras())) return { intentos, valor: await leer() }
+      }
+    }
+  }
+  // 3 · change + blur en los campos de la ficha con refresco
+  if (await leer()) return { intentos, valor: await leer() }
+  {
+    const h = 'change+blur en campos con refreshEmiAutosGenA.do'
+    const ids = ((await marco.evaluate(() => Array.from(document.querySelectorAll('[id^="reg1063A_vehiculo_"]'))
+      .filter((e) => /refreshEmiAutosGenA\.do/.test(e.getAttribute('onchange') || '') && e.getClientRects().length > 0 && !(e as HTMLInputElement).disabled)
+      .map((e) => e.id)).catch(() => [])) as string[]).slice(0, 10)
+    if (ids.length === 0) anotar(h, 'ningún campo a la vista con ese refresco', '')
+    else {
+      const hechos: string[] = []
+      let valor = ''
+      for (const id of ids) {
+        const el = marco.locator(`[id="${id}"]`).first()
+        await ctx.pausaAccion()
+        await comprobarCampo(el)
+        await el.dispatchEvent('change').catch(() => undefined)
+        await el.dispatchEvent('blur').catch(() => undefined)
+        hechos.push(id.replace(/^reg1063A_vehiculo_(identVehiculo_|caracVehiculo_)?/, ''))
+        valor = await tras()
+        if (valor) break
+      }
+      if (anotar(h, `disparado en ${hechos.join(', ')}`, valor)) return { intentos, valor }
+    }
+  }
+  // 4 · el otro botón «Vehículo» (lnkVehi) y repetir la selección
+  if (await leer()) return { intentos, valor: await leer() }
+  {
+    const h = 'otro botón «Vehículo» (lnkVehi)'
+    const btn = ctl('lnkVehi')
+    if ((await btn.count().catch(() => 0)) !== 1) anotar(h, 'no existe', '')
+    else if (!(await visible(btn))) anotar(h, 'oculto; no se fuerza', '')
+    else if (!otroVehiculoGeneraliPermitido(await btn.first().evaluate((e) => ({ id: e.id, texto: (e as HTMLInputElement).value || e.textContent || '', url: location.href })).catch(() => ({ id: '', texto: '', url: '' })))) {
+      anotar(h, 'no pasa la puerta exacta del guard (id/texto/origen); no se pulsa', '')
+    } else {
+      await ctx.pulsar(btn.first())
+      const selector = await marcoConTexto(page, 'Selector de vehículos', esperas.selectorMs ?? ESPERA_PANTALLA_MS)
+      const menu = selector ? await menuPrimeFaces(selector, 'Todas las marcas') : null
+      const v = vehiculoBuscadoGenerali(form)
+      if (!selector) anotar(h, 'pulsado; no apareció el «Selector de vehículos»', await tras())
+      else if (!menu || !v) anotar(h, `pulsado; el selector abierto no es el PrimeFaces conocido${v ? '' : ' (o falta el vehículo)'}; no se repite`, await tras())
+      else {
+        let hecho = 'pulsado; selección repetida y confirmada'
+        try {
+          await seleccionarVehiculoPrimeFaces(page, selector, menu, v, form, ctx)
+        } catch (e) {
+          hecho = `pulsado; repetir la selección paró: ${sanearFragmentoGenerali(String((e as Error)?.message ?? e)).slice(0, 160)}`
+        }
+        await marcoConTexto(page, 'Identificación del vehículo', ESPERA_PANTALLA_MS)
+        if (anotar(h, hecho, await tras())) return { intentos, valor: await leer() }
+      }
+    }
+  }
+  return { intentos, valor: (await leer()) || null }
+}
+
+export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number; esperaProtegidosMs?: number; pruebasTipo?: EsperasPruebasTipoGenerali } = {}): Promise<ResultadoAdaptador> {
   const paso = <T>(n: Parameters<ContextoPortal['paso']>[0], fn: () => Promise<T>): Promise<T> => (typeof ctx.paso === 'function' ? ctx.paso(n, fn) : fn())
   const ant = conAntecedentesFavorables(form)
   for (const x of ant.supuestos) if (!supuestos.includes(x)) supuestos.push(x)
@@ -3339,10 +3478,20 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // («El paso anterior no tiene los datos completos»). El bot no puede teclearlo: se PARA aquí, antes de «Garantías y Resultados», con el inventario.
   // v0.2.51: antes de declararlo vacío se ESPERA (hasta 15 s) a que el portal lo rellene y a que no quede ningún control bloqueado por un refresco.
   const esperaProtegidos = await esperarProtegidosGenerali(marco, opciones.esperaProtegidosMs ?? ESPERA_PROTEGIDOS_MS)
-  const caracteristicas = esperaProtegidos.bloques
-  const protegidosVacios = vaciosProtegidosGenerali(caracteristicas)
+  let caracteristicas = esperaProtegidos.bloques
+  let protegidosVacios = vaciosProtegidosGenerali(caracteristicas)
+  // v0.2.52: SOLO «Tipo de vehículo» vacío (el resto de la ficha rellena) → fase de PRUEBAS acotada (un intento por hipótesis).
+  let pruebas: IntentoTipoVehiculoGenerali[] = []
+  if (protegidosVacios.length === 1 && protegidosVacios[0] === 'Tipo de vehículo') {
+    const r = await probarTipoVehiculoGenerali(page, marco, form, ctx, new Date(), opciones.pruebasTipo)
+    pruebas = r.intentos
+    caracteristicas = await leerCaracteristicasVehiculoGenerali(marco)
+    protegidosVacios = vaciosProtegidosGenerali(caracteristicas)
+    const buena = pruebas.find((p) => p.relleno)
+    if (protegidosVacios.length === 0 && buena) avisosDatosValoracion.push(`Tipo de vehículo: lo puso el portal tras probar «${buena.hipotesis}» (${sanearFragmentoGenerali(buena.hecho).slice(0, 80)})`)
+  }
   if (protegidosVacios.length > 0) {
-    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». Esperado ${Math.round(esperaProtegidos.ms / 1000)} s (v0.2.51): bloqueados por refresco ${esperaProtegidos.bloqueados}; último refresco del portal: ${esperaProtegidos.refresco}. Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}. Selector antes de «Confirmar» (v0.2.50; ¿el subtipo «Turismos» llega marcado?): ${FOTO_SELECTOR_GENERALI.get(page) ?? '(sin foto: no pasó por el selector PrimeFaces)'}`)
+    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». Pruebas (v0.2.52): ${resumenPruebasTipoVehiculoGenerali(pruebas)}. Esperado ${Math.round(esperaProtegidos.ms / 1000)} s (v0.2.51): bloqueados por refresco ${esperaProtegidos.bloqueados}; último refresco del portal: ${esperaProtegidos.refresco}. Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}. Selector antes de «Confirmar» (v0.2.50; ¿el subtipo «Turismos» llega marcado?): ${FOTO_SELECTOR_GENERALI.get(page) ?? '(sin foto: no pasó por el selector PrimeFaces)'}`)
   }
   if (!ctx.pulsarSubpestanaGenerali) throw new ErrorMapaIncompletoGenerali(`la puerta guardada de «${SUBPESTANA_PRECIO_GENERALI}» en el contexto del runner; ${datos}`)
   // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).

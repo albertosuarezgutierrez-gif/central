@@ -292,3 +292,6 @@ orden en §9.
 
 ## Presupuestos de compañías por bot (tarificador RPA)
 Se piden desde la oportunidad (`/correduria/oportunidad/[id]`); estado, decisiones y plan en `docs/TARIFICADOR-RPA.md`.
+- Meta 3×3 (auto/hogar/patinete × Allianz/Mapfre/Generali): tarificar de punta a punta; Alberto emite a mano. Estado vivo y «Aprendizajes 28/10» en el doc.
+- Guard (28/10): no bloquear por ruta con «emision»/«contratacion»; paradas duras en botones finales (emitir, firmar, pagar, formalizar), campos IBAN/cuenta/tarjeta y POST con esas acciones. Excepciones solo por texto/id/origen exactos.
+- Todo campo de texto nuevo del inventario o de errores del bot pasa por `redactarValoresInventario` (ningún dato personal en diagnósticos); revisión `agente-architect` antes de mergear.

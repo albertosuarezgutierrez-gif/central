@@ -1898,3 +1898,35 @@ export function resumenFotoSelectorGenerali(estado: EstadoSelectorGenerali, acti
   const t = `controles: ${grupos.length ? grupos.join(' · ') : '(ninguno)'}; marcados en pantalla: ${a.length ? a.map((x) => `«${x}»`).join(' · ') : '(ninguno)'}`
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
+
+// ───────────────────────── v0.2.52 · fase de PRUEBAS acotada para «Tipo de vehículo» (`wclasv`) vacío ─────────────────────────
+
+/** Antigüedad del vehículo del riesgo para «Indique Código»: «nuevo» si se matriculó hace < 1 año; sin fecha → `null` (no se supone). PURA. */
+export function antiguedadVehiculoGenerali(fechaIso: string | null | undefined, hoy: Date): 'nuevo' | 'usado' | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(fechaIso ?? ''))
+  if (!m) return null
+  const f = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  const unAnio = Date.UTC(hoy.getUTCFullYear() - 1, hoy.getUTCMonth(), hoy.getUTCDate())
+  return f > unAnio ? 'nuevo' : 'usado'
+}
+
+/** Opción de «Indique Código» para la antigüedad: la ÚNICA «VEHICULOS NUEVOS/USADOS TURISMOS» (normalizada); -1 si no hay o hay varias. PURA. */
+export function opcionIndiqueCodigoGenerali(opciones: readonly string[], antiguedad: 'nuevo' | 'usado'): number {
+  return indiceOpcionNormalizadaGenerali(opciones, [antiguedad === 'nuevo' ? 'vehiculos nuevos turismos' : 'vehiculos usados turismos'])
+}
+
+/** Opción «ordinaria/nacional» de «Tipo de placa» (rótulo EXACTO normalizado); -1 si no existe (no se elige otra). PURA. */
+export function opcionPlacaOrdinariaGenerali(opciones: readonly string[]): number {
+  return indiceOpcionNormalizadaGenerali(opciones, ['ordinaria', 'nacional', 'placa ordinaria', 'placa nacional', 'matricula ordinaria', 'matricula nacional'])
+}
+
+/** Un intento de la fase de pruebas: qué se probó, si se hizo y si «Tipo de vehículo» pasó a tener valor (y cuál: un tipo/código del portal). */
+export type IntentoTipoVehiculoGenerali = { hipotesis: string; hecho: string; relleno: boolean; valor: string | null }
+
+/** Registro compacto de la fase de pruebas para el atasco (sin datos personales: el valor de `wclasv` es un tipo del portal). PURA. */
+export function resumenPruebasTipoVehiculoGenerali(intentos: readonly IntentoTipoVehiculoGenerali[], max = 700): string {
+  const t = intentos.length
+    ? intentos.map((i, n) => `${n + 1}) ${i.hipotesis}: ${i.hecho} → Tipo de vehículo ${i.relleno ? `SÍ («${sanearFragmentoGenerali(i.valor ?? '').slice(0, 40)}»)` : 'no'}`).join(' · ')
+    : '(ninguna)'
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}

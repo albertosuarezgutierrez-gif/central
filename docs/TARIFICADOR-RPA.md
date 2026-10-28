@@ -48,11 +48,20 @@ Meta: los tres ramos tarifican de punta a punta (precio → proyecto → PDF →
 compañías; Alberto emite a mano. Orden: cerrar primero lo que está a 1-2 arreglos de dar precio, luego abrir hogar.
 | Ramo | Allianz | Mapfre | Generali |
 |---|---|---|---|
-| Auto | precio OK; verificar proyecto/PDF en real | precio + proyecto + PDF OK (1 cliente); falta 2.º cliente y comparativa/borrador | llega a «Garantías y Resultados»; el portal pide un dato incompleto (0.2.49) |
-| Hogar | precio OK (27/10, 3 precios); verificar proyecto/PDF | sin alta en `companias_integracion` ni exploración: alta + explorar | sin bot: explorar Genernet hogar para mapear |
-| Patinete | explorador en «Figuras Intervinientes» (radios + Aceptar resueltos) | explorador entra en NSE; excepción estrecha de ruta `/app/emision/` (0.3.5, decisión de Alberto) | sin bot: explorar si Genernet lo ofrece |
+| Auto | precio OK; verificar proyecto/PDF en real | precio + proyecto + PDF OK (1 cliente de prueba); falta 2.º cliente, coberturas, comparativa y borrador | llega a «Garantías y Resultados»; «Tipo de vehículo» (readonly, campo `wclasv`) queda vacío tras elegir el vehículo aunque «Turismo/Turismos» estén marcados y se espere 15 s; sin él Genernet no calcula. La 0.2.52 prueba hipótesis acotadas (Indique Código, Tipo de placa, 2.º botón de selección, refresh) con puerta exacta en el guard |
+| Hogar | precio OK (27/10, 3 precios); verificar proyecto/PDF | no habilitado ni explorado: alta en `companias_integracion` + explorar | sin bot: explorar Genernet hogar para mapear |
+| Patinete | el portal rechazaba el NIF («Número de identificación incorrecto») porque «Tipo Doc. Tomador» iba vacío; la 0.3.8 (PR #5224) elige NIF/NIE/CIF antes de teclear el número | entra en el NSE (botón «Acceso a NSE», menú «Oferta / Contratación», ventana nueva) y llega a `busquedaProductos.jsf`; el guard la bloquea por un parámetro del cuerpo (la 0.3.8 diagnostica cuál) | sin bot: explorar si Genernet lo ofrece |
 Común a los tres ramos: formulario único /datos por ramo = unión de lo que pide cada compañía, y filtro previo que no manda al bot
 un riesgo al que le falte algo para alguna compañía (patinete: marca → modelo → versión, como el auto).
+
+### Aprendizajes 28/10
+- **Versiones**: PR #5204, #5209, #5211, #5213, #5217, #5220, #5222 mergeados (explorador 0.3.2→0.3.7, Generali 0.2.46→0.2.51); en vuelo #5224 (explorador 0.3.8) y Generali 0.2.52.
+- **Decisión de Alberto (28/10): no tener miedo a emitir**, porque las compañías piden el IBAN en la penúltima o última página. Postura: dejar de bloquear por ruta/URL que contenga «emision» o «contratacion»; mantener paradas duras en botones o acciones finales (emitir, confirmar emisión, firmar, pagar, formalizar), en campos IBAN/cuenta/tarjeta y en POST con esas acciones. Motivo: algunas emisiones no piden IBAN (cobro en mediador, cuenta ya domiciliada). Es el siguiente cambio tras el #5224.
+- **Datos personales**: toda revisión de seguridad (`agente-architect`) antes de mergear ha encontrado algo; tres veces fueron fugas en campos de diagnóstico nuevos (`mensajeError`, `avisosPortal`, `hrefRuta`, nombre de parámetro de cuerpos JSON). Todo campo de texto nuevo del inventario o de los errores pasa por `redactarValoresInventario` o equivalente; un test estructural lo vigila.
+- **Excepciones del guard**: siempre por texto, id u origen exactos, con tests en rojo y luego verde, incluido que «Emitir/Contratar» con el mismo patrón siga bloqueado.
+- **Git**: si la rama local queda sobre un main antiguo, rehacer el commit aplicando el diff incremental sobre `origin/main` (`git apply --3way`); nunca `reset --soft` sobre un main más nuevo.
+- **Ciclo de despliegue**: mergear → `tarificador-rpa-imagen.yml` → cancelar los trabajos atascados del cliente de prueba → `tarificador-relanzar.yml` (probar o explorar) con ~75 s entre lanzamientos → leer `seguros.tarificacion_trabajos` junto con `tarificador_exploraciones` y `tarificador_exploracion_pasos`.
+- **Pendientes**: Mapfre auto (2.º cliente, coberturas, comparativa, borrador); /datos unificado por ramo con filtro previo al bot; patinete: marca/modelo/versión por compañía y mapeo de aviso-web-reglas de patinete a «otros»; hogar en Mapfre y Generali.
 
 ## Plan de robustez (fases)
 - **F1 (este PR)**: fijo → aprendido → IA en la capa común; Mapfre Auto (entrada + campos) y Allianz Comunidades (campos +
@@ -106,6 +115,13 @@ un riesgo al que le falte algo para alguna compañía (patinete: marca → model
 - **F3**: canario diario 07:00 por bot hasta antes de calcular (datos de prueba, sin generar proyecto) con huella de las pantallas
   clave y aviso si cambian; panel de salud (éxito, % IA, % humano, coste IA).
 - **Futuro**: las mismas capas para otras tareas (siniestros…) con su lista blanca por tarea.
+
+### Después del 3×3 (decidido por Alberto, 28/10/2026)
+1. **Familiarizarse con cada intranet** (Allianz, Mapfre, Generali) para más ramos: hogar primero, luego comunidades y los que se vayan añadiendo; el explorador mapea cada producto antes de escribir el adaptador.
+2. **Tarificación de humo nocturna**: una tarificación de prueba por compañía y ramo cada noche; si alguna no da precio, alerta por Telegram (`core-telegram`) con compañía, ramo y motivo de fin, sin datos personales.
+3. **Hogar precargado desde Catastro** (`@central/core-catastro`): desde la dirección (CP → municipio → calle → número) se rellenan superficie, año de construcción y uso antes de tarificar, sin reteclear.
+
+Descartadas por ahora: tarea manual de respaldo, límite por compañía/hora, comprobación de precio + evidencia.
 
 ## Robustez
 Reintento único y solo transitorio (infraestructura); sesión en memoria con TTL 10 min (hoy NO ahorra logins: cada máquina hace 1 trabajo); pausas de ritmo humano; `VARIANTES` vacía (sin variantes de modalidad por ahora).

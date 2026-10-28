@@ -5957,3 +5957,32 @@ export async function vaciarCodigoSmsGenerali(page: Page): Promise<void> {
 export async function pulsarEscapeAvisoModal(page: Page): Promise<void> {
   await page.keyboard.press('Escape').catch(() => undefined)
 }
+
+// ─────────── v0.2.52 del bot Generali · fase de pruebas de «Tipo de vehículo»: el OTRO botón «Vehículo» (`lnkVehi`) ───────────
+// Puerta EXACTA (decisión de Alberto, 28/10/2026: «que lo pruebe el bot»): solo el control de id `reg1063A_vehiculo_caracVehiculo_lnkVehi` cuyo
+// texto/valor es EXACTAMENTE «Vehículo», en un marco de www.generali.es. El clic va además por `pulsar` (guard genérico). Nunca emitir/contratar/
+// grabar/calcular/confirmar: cualquier otro id o texto, aunque se parezca, no pasa.
+
+/** Id EXACTO del segundo botón «Vehículo» de «Características del vehículo» (Genernet). */
+export const ID_OTRO_VEHICULO_GENERALI = 'reg1063A_vehiculo_caracVehiculo_lnkVehi'
+
+/** ¿Puede la fase de pruebas pulsar este control? Origen www.generali.es, id EXACTO y texto/valor EXACTO «Vehículo». PURA. */
+export function otroVehiculoGeneraliPermitido(c: { id: string | null | undefined; texto: string | null | undefined; url: string | null | undefined }): boolean {
+  let origen = ''
+  try {
+    origen = new URL(String(c.url ?? '')).origin
+  } catch {
+    origen = ''
+  }
+  if (origen !== ORIGEN_PORTAL_GENERALI) return false
+  if (String(c.id ?? '') !== ID_OTRO_VEHICULO_GENERALI) return false
+  return String(c.texto ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase() === 'vehiculo'
+}
+
+/**
+ * v0.2.52 · Opciones de «Tipo de placa» de «Características del vehículo» (Genernet, name EXACTO). Solo LOCALIZA: el adaptador no puede nombrar
+ * radios (cepo de la raíz) y el clic va por `pulsar` (guard genérico + comprobarBoton). La opción (ordinaria/nacional, rótulo exacto) la elige el adaptador.
+ */
+export function opcionesTipoPlacaGenerali(raiz: Page | Frame): Locator {
+  return raiz.locator('input[type="radio"][name="reg1063A.vehiculo.caracVehiculo.yplaca"]')
+}
