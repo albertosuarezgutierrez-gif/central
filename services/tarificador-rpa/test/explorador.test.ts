@@ -1189,6 +1189,8 @@ test('🪤 frontera de cuenta bancaria sobre el control RELOCALIZADO (revisión 
     const fin = await bucleExploracion(page, k)
     assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
     assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
+    assert.match(fin.nota ?? '', /^frontera bancaria: campo «.+»$/)
+    assert.ok((fin.nota ?? '').length <= 60)
     assert.equal(await page.inputValue('#superficie'), '', 'no se escribió nada')
   } finally {
     await context.close()
