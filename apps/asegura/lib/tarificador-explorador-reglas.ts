@@ -18,6 +18,7 @@ import {
   lineaAccionesPortalParaIA,
   esEntradaExploracion,
   guardadosEnDialogoDe,
+  entradaConTomadorMediador,
   leerIncidenciasEjecucion,
   leerPresupuestoMapa,
   normalizarRedNoGet,
@@ -384,7 +385,9 @@ export type EntradaPrompt = {
 export function promptExplorador(e: EntradaPrompt): string {
   const partes = [
     `ENTRADA: ${e.entrada} (ramo ${e.ramo}).`,
-    e.conDatosReales
+    !e.conDatosReales && entradaConTomadorMediador(e.entrada)
+      ? 'Exploración con datos de PRUEBA salvo el TOMADOR, que es el mediador (datos propios, con su consentimiento): las claves tomador.* (nif, nombre, apellidos, fecha de nacimiento) tienen valor y el robot lo pone. Si un campo obligatorio pide otro dato personal sin clave → parar dato_sensible_requerido.'
+      : e.conDatosReales
       ? 'La exploración va ligada a una petición real: las claves del catálogo tienen valor (incluido tomador.nif) SALVO las marcadas sinValor; el robot lo pone. Nunca hay valores de prueba.'
       : 'Exploración con datos de PRUEBA: tomador.nif NO tiene valor. Si un campo obligatorio pide NIF/DNI → parar dato_sensible_requerido.',
     `CATÁLOGO (claves que puedes usar en rellenar y mapeo):\n${JSON.stringify(catalogoParaIA(e.ramo, e.conDatosReales ? { riesgo: e.riesgo ?? null } : undefined))}`,

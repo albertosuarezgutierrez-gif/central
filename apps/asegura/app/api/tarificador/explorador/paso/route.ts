@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { redactarValoresInventario, respuestaParar, valoresSensiblesExploracion } from '@central/module-tarificacion'
+import { entradaConTomadorMediador, redactarValoresInventario, respuestaParar, valoresSensiblesExploracion } from '@central/module-tarificacion'
+import { riesgoTomadorMediador } from '@/lib/tarificador-explorador-mediador'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { hayExplorador } from '@/lib/esquema-bd'
 import { iaTexto } from '@/lib/ia'
@@ -69,8 +70,10 @@ export async function POST(req: Request) {
     if (!faseLoginPermitida(p.fase, e.entrada)) return NextResponse.json({ estado: 'error', motivo: 'fase_login_no_permitida', respuesta: respuestaParar('ambiguo', 'login asistido no autorizado para esta entrada') }, { status: 400 })
 
     // PII: nada del inventario llega a la IA ni a la BD sin quitar antes los valores del cliente que se conocen.
-    const riesgo = e.conDatosReales ? await riesgoDeExploracion(e).catch(() => null) : null
-    const valores = valoresSensiblesExploracion({ conDatosReales: e.conDatosReales, riesgo, env: process.env })
+    // Tomador = MEDIADOR (patinete): sus datos (de `MEDIADOR`, no de la BD) también se quitan del inventario.
+    const tomadorMediador = !e.conDatosReales && entradaConTomadorMediador(e.entrada)
+    const riesgo = e.conDatosReales ? await riesgoDeExploracion(e).catch(() => null) : tomadorMediador ? riesgoTomadorMediador() : null
+    const valores = valoresSensiblesExploracion({ conDatosReales: e.conDatosReales, riesgo, env: process.env, tomadorMediador })
     if (valores === null) {
       return NextResponse.json({ estado: 'error', motivo: 'riesgo_no_disponible', respuesta: respuestaParar('dato_sensible_requerido', 'sin riesgo para redactar el inventario') }, { status: 503 })
     }

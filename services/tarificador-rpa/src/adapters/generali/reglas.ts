@@ -1694,3 +1694,39 @@ export function mensajesValidacionGenerali(textos: readonly string[], max = 6): 
   }
   return out
 }
+
+// ─── v0.2.45 (28/10/2026, trabajo dbbd7ab5 con 0.2.44): «Datos de Valoración» deja vacíos «Tipo de vehículo» y «Compañía de procedencia» ───
+// Las opciones reales de esos dos `<select>` no se han capturado nunca (los volcados son de «Garantías y Resultados»): se casan EN VIVO contra las
+// opciones del portal, solo por igualdad EXACTA (sin tildes, mayúsculas ni espacios de más). Sin opción exacta → el bot para nombrando el campo y las
+// opciones vistas; nunca elige otra clase de vehículo ni otra compañía.
+
+export const ETIQUETA_TIPO_VEHICULO_GENERALI = 'Tipo de vehículo'
+export const ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI = 'Compañía de procedencia'
+/** Ramo auto = turismo: la ÚNICA opción admitida (normalizada). */
+export const OPCION_TIPO_VEHICULO_AUTO_GENERALI = 'Turismo'
+/** Rótulos EXACTOS (normalizados) de «sin seguro anterior» que se aceptan SOLO si la ficha dice 0 años asegurado. */
+export const OPCIONES_SIN_SEGURO_GENERALI: readonly string[] = Object.freeze(['sin seguro anterior', 'sin compania anterior', 'sin compania de procedencia', 'sin seguro previo', 'sin aseguramiento previo', 'no tenia seguro', 'no tenia seguro anterior'])
+
+/** Texto de opción normalizado (sin tildes, minúsculas, espacios colapsados, sin punto final). PURA. */
+export function normalizarOpcionGenerali(t: string | null | undefined): string {
+  return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().replace(/\.$/, '').toLowerCase()
+}
+
+/** Índice de la ÚNICA opción cuyo texto normalizado es exactamente uno de `buscados`; -1 si ninguna o varias. PURA. */
+export function indiceOpcionNormalizadaGenerali(opciones: readonly string[], buscados: readonly string[]): number {
+  const b = buscados.map(normalizarOpcionGenerali)
+  const ix = opciones.map((o, i) => (b.includes(normalizarOpcionGenerali(o)) ? i : -1)).filter((i) => i >= 0)
+  return ix.length === 1 ? ix[0]! : -1
+}
+
+export type CompaniaProcedenciaPedida = { compania: string } | { sinSeguro: true } | { error: string }
+
+/**
+ * Qué poner en «Compañía de procedencia» según la FICHA (riesgo original, nunca el supuesto favorable): la compañía anterior/actual
+ * (`companiaAnterior` → `companiaActual`); sin ella y con 0 años asegurado como DATO → «sin seguro anterior»; si no, error que nombra el campo. PURA.
+ */
+export function companiaProcedenciaPedidaGenerali(compania: string | null, aniosAseguradoAnterior: unknown): CompaniaProcedenciaPedida {
+  if (compania && compania.trim() !== '') return { compania: compania.trim() }
+  if (aniosAseguradoAnterior === 0) return { sinSeguro: true }
+  return { error: `la ficha no trae la compañía anterior del vehículo (ni dice que no tuviera seguro): hace falta para «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}»` }
+}

@@ -49,6 +49,7 @@ import {
   relocalizarElemento,
   redactarHtml,
   resolverDato,
+  entradaConTomadorMediador,
   secretosDelEntorno,
   topesExplorador,
   validarRespuestaExplorador,
@@ -79,7 +80,7 @@ import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, esperarMarcoApp, login as loginEpac, type PestanaEntradaAllianz } from './adapters/allianz/intranet/index.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
-import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
+import { abrirTarificacionPatineteMapfre, abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
 import { abrirTarificacionHogar, cabeceraPortalVisible, esperarPortalOSso as esperarPortalOSsoOccident, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
 import { esUrlSso as esUrlSsoOccident } from './adapters/occident/mapa.ts'
 import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
@@ -145,11 +146,19 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
   // nueva). El contexto NO lleva `httpCredentials` (a propósito: el diálogo de auth básica se cancela con 401).
   mapfre: Object.freeze({
     credencial: 'MAPFRE_WMEDIADORES',
-    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion): Promise<Page> => {
+    entrar: async (page: Page, ctx: CtxEntrada, e: EntradaExploracion): Promise<Page> => {
       await loginMapfre(page, ctx)
       await exigirSinVerificacion(page, 'mapfre')
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await ctx.exigirSinCaptcha()
+      // Patinetes (28/10/2026): tarjeta «Patinetes» › «Tarificación y Emisión» (MásPatín). El resto de Mapfre: Turismos y Motos.
+      if (e.ramo === 'patinete') {
+        const pat = await abrirTarificacionPatineteMapfre(page, ctx)
+        await exigirSinVerificacion(pat, 'mapfre')
+        await pat.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+        await exigirSinCaptcha(pat)
+        return pat
+      }
       const nsei = await abrirTarificacionRapidaAuto(page, ctx)
       await exigirSinVerificacion(nsei, 'mapfre')
       await nsei.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
@@ -594,7 +603,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         let cortar: MotivoCorteLote | null = null
         try {
           if (a.accion === 'rellenar') {
-            const d = resolverDato(a.dato, { ramo: k.ramo, conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, hoy: (k.hoy ?? (() => new Date()))() })
+            const d = resolverDato(a.dato, { ramo: k.ramo, tomadorMediador: entradaConTomadorMediador(k.entrada), conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, hoy: (k.hoy ?? (() => new Date()))() })
             if (!d.ok) {
               const conValor = d.motivo === 'dato_no_disponible' && k.conDatosReales
                 ? await loc.inputValue({ timeout: 5_000 }).then((v) => v.trim() !== '').catch(() => false)

@@ -15,7 +15,7 @@ import { ENTRADAS_EXPLORACION, PATRON_EMISION } from '@central/module-tarificaci
 import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
 import { entrarYExplorar, resultadoDeFin, type ContextoBucle, type CtxEntrada, type PortalExploracion } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
-import { abrirTarificacionRapidaAuto as abrirNuevo, etiquetaExacta, URL_NSEI_AUTO } from '../src/adapters/mapfre/entrada.ts'
+import { abrirTarificacionPatineteMapfre, abrirTarificacionRapidaAuto as abrirNuevo, etiquetaExacta, URL_NSEI_AUTO } from '../src/adapters/mapfre/entrada.ts'
 import { ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
 import { prepararFormador } from '../src/formador.ts'
 
@@ -93,6 +93,17 @@ const ANGULAR = (donde: 'main' | 'iframe' | 'shadow', ia = false) => `<!doctype 
   </script>` : ''}
   <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
 
+/** Patinetes (28/10/2026): «Tarificación y Emisión» sale en VARIAS tarjetas (Camiones lo trae ANTES en el DOM): solo vale el de «Patinetes». */
+const HOME_PATINETES = (variante: 'nueva' | 'misma' | 'sin_enlace') => `<!doctype html><html><body>
+  <nav><a role="tab" onclick="mostrar('menu')">Nueva producción</a></nav>
+  <ul id="menu" hidden><li><a role="menuitem" onclick="mostrar('pag')">Automóviles</a></li></ul>
+  <div id="pag" hidden><h1>Automóviles</h1>
+    <div class="tarjeta"><h3>Camiones, Autobuses y vehículos Industriales</h3><a href="/otro-camiones" target="_blank">Tarificación y Emisión</a></div>
+    <div class="tarjeta"><h3>Turismos y Motos</h3><a href="/otro-general" target="_blank">Tarificación y Emisión Rápida</a></div>
+    <div class="tarjeta"><h3>Patinetes</h3>${variante === 'sin_enlace' ? '<a href="/otro-ayuda" target="_blank">Ayuda patinetes</a>' : `<a id="pt" href="/patinete-destino"${variante === 'nueva' ? ' target="_blank"' : ''}>Tarificación y Emisión</a>`}</div>
+  </div>
+  <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
+
 let servidor: Server
 let base = ''
 let browser: Browser
@@ -137,6 +148,10 @@ before(async () => {
       return void res.end(ruta === '/nsei' ? NSEI : SIN_NSEI)
     }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+    if (ruta === '/patinetes') return void res.end(HOME_PATINETES('nueva'))
+    if (ruta === '/patinetes-misma') return void res.end(HOME_PATINETES('misma'))
+    if (ruta === '/patinetes-sin-enlace') return void res.end(HOME_PATINETES('sin_enlace'))
+    if (ruta === '/patinete-destino') return void res.end('<!doctype html><html><body><p>Formulario de patinetes (sintético)</p></body></html>')
     if (ruta === '/span-trampa') return void res.end(HOME_SPAN_EMITIR)
     if (ruta === '/angular') return void res.end(ANGULAR('main'))
     if (ruta === '/angular-iframe') return void res.end(ANGULAR('iframe'))
@@ -308,6 +323,52 @@ test('entrada cerrada de Mapfre: pestaña/producto fijos y sin avances autorizad
   assert.equal(e.pestana, 'Nueva producción')
   assert.equal(e.productoMenu, 'Turismos y Motos')
   assert.deepEqual([...e.avancesAutorizados], [])
+})
+
+test('entrada cerrada de Mapfre Patinetes: recorrido fijo, ramo patinete, tomador = mediador y sin avances autorizados', () => {
+  const e = ENTRADAS_EXPLORACION['mapfre:automoviles:patinetes']
+  assert.equal(e.compania, 'mapfre')
+  assert.equal(e.ramo, 'patinete')
+  assert.equal(e.pestana, 'Nueva producción')
+  assert.equal(e.productoMenu, 'Patinetes')
+  assert.equal(e.tomadorMediador, true)
+  assert.deepEqual([...e.avancesAutorizados], [])
+})
+
+test('Patinetes: menús → tarjeta «Patinetes» → «Tarificación y Emisión» (no el de Camiones, que va antes) → pestaña nueva; guard real sin violación', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes')
+  const pulsados: string[] = []
+  const ctx = { ...ctxGuard, pulsar: async (b: Locator) => { pulsados.push(((await b.textContent()) ?? '').trim()); await ctxGuard.pulsar(b) }, pulsarEnlaceEntrada: async (b: Locator) => { pulsados.push(((await b.textContent()) ?? '').trim()); await ctxGuard.pulsarEnlaceEntrada(b) } }
+  try {
+    const nueva = await abrirTarificacionPatineteMapfre(page, ctx)
+    assert.notEqual(nueva, page)
+    assert.match(nueva.url(), /\/patinete-destino$/)
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión'])
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: si el enlace navega en la MISMA pestaña, sigue en ella (no hay formulario NSEI que esperar)', async () => {
+  const { context, page, ctx } = await abrir('/patinetes-misma')
+  try {
+    const destino = await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 1_500 })
+    assert.equal(destino, page)
+    assert.match(destino.url(), /\/patinete-destino$/)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: sin el enlace en SU tarjeta → ErrorMapaIncompleto (no se acepta el homónimo de Camiones en toda la página)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/patinetes-sin-enlace')
+  try {
+    await assert.rejects(() => abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 1_500 }), ErrorMapaIncompleto)
+    assert.ok(!pulsados.includes('Tarificación y Emisión'), 'no pulsó el enlace de otra tarjeta')
+  } finally {
+    await context.close()
+  }
 })
 
 test('el contexto del explorador NO lleva httpCredentials (el diálogo HTTP se cancela → 401)', () => {

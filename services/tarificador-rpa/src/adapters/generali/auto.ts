@@ -43,7 +43,7 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
-import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
+import { companiaActualDe, comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
 import { esUrlOktaSmsGenerali } from '../../guard.ts'
 import { CONCEPTOS_LECTURA, alternativa, terminosDe } from '../../vocabulario.ts'
@@ -55,6 +55,13 @@ import {
   avisosObligatorioGenerali,
   obligatoriosVaciosGenerali,
   portalDatosIncompletosGenerali,
+  ETIQUETA_TIPO_VEHICULO_GENERALI,
+  ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI,
+  OPCION_TIPO_VEHICULO_AUTO_GENERALI,
+  OPCIONES_SIN_SEGURO_GENERALI,
+  indiceOpcionNormalizadaGenerali,
+  companiaProcedenciaPedidaGenerali,
+  sanearFragmentoGenerali,
   resumenEstadoCalculoGenerali,
   formaPagoPedidaGenerali,
   opcionExactaGenerali,
@@ -264,6 +271,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.45 (28/10/2026, prueba real con 0.2.44, trabajo dbbd7ab5): el detector nombró el hueco: «obligatorios vacíos en «Datos de Valoración»: Tipo de
+ * vehículo · Compañía de procedencia». Ahora `rellenarTipoYProcedenciaGenerali` los pone (solo si están vacíos) casando EN VIVO contra las opciones del
+ * portal por igualdad EXACTA: «Turismo» (ramo auto) y la compañía anterior de la ficha o, solo con 0 años asegurado como dato, «sin seguro anterior».
+ * Sin opción exacta → para con el campo y las opciones vistas (sus opciones reales aún no se han capturado); sin dato en la ficha → error de datos.
+ */
+/**
  * 0.2.44 (28/10/2026, prueba real con 0.2.43, trabajo dd2067b2). El corte de esperas funcionó (8-9 s por lectura) y «Envío e-mail» quedó en «Mediador»
  * (volcado: marcada); «Verificación del riesgo» NO estaba a la vista y no se tocó. Genernet seguía con «El paso anterior no tiene los datos completos»
  * pero el atasco decía «obligatorios vacíos en «Datos de Valoración»: (ninguno detectado)»: el lector de esa pestaña contaba un desplegable en
@@ -328,7 +341,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.44'
+export const VERSION_GENERALI_AUTO = '0.2.45'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -431,6 +444,85 @@ async function elegirIndice(sel: Locator, indice: number, ctx: Pick<ContextoPort
   await comprobarCampo(sel)
   await sel.selectOption({ index: indice })
   await confirmarUso(sel)
+}
+
+/** v0.2.45: `<select>` del bloque Genernet cuyo rótulo (columna 1, sin «*») es EXACTAMENTE `etiqueta`: su `name`, opciones y la puesta. Solo lee. */
+async function selectPorRotuloGenerali(raiz: Raiz, etiqueta: string): Promise<{ name: string; opciones: string[]; indice: number }[]> {
+  // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+  const r = await raiz
+    .evaluate((et) => {
+      const out: { name: string; opciones: string[]; indice: number }[] = []
+      for (const b of Array.from(document.querySelectorAll('.simple'))) {
+        const col = b.firstElementChild
+        if (!col) continue
+        const c = col.cloneNode(true) as HTMLElement
+        c.querySelectorAll('.required,input,select,textarea').forEach((x) => x.remove())
+        const rot = (c.textContent || '').replace(/\s+/g, ' ').trim().replace(/\*\s*$/, '').trim()
+        if (rot !== et) continue
+        const sels = Array.from(b.querySelectorAll('select')) as HTMLSelectElement[]
+        if (sels.length !== 1) continue
+        const sel = sels[0]!
+        const rr = sel.getBoundingClientRect()
+        if (!(rr.width > 0 && rr.height > 0) || !sel.name) continue
+        out.push({ name: sel.name, opciones: Array.from(sel.options).map((o) => (o.textContent || '').replace(/\s+/g, ' ').trim()), indice: sel.selectedIndex })
+      }
+      return out
+    }, etiqueta)
+    .catch(() => [])
+  return r as { name: string; opciones: string[]; indice: number }[]
+}
+
+/** Opciones para un error (sin datos personales: catálogos del portal), recortadas. PURA. */
+function opcionesVistasGenerali(opciones: readonly string[], max = 25): string {
+  const v = opciones.filter((o) => o !== '' && !/^seleccione/i.test(o)).map((o) => `«${sanearFragmentoGenerali(o).slice(0, 40)}»`)
+  return v.length ? `${v.slice(0, max).join(' · ')}${v.length > max ? ` (+${v.length - max} más)` : ''}` : '(ninguna)'
+}
+
+/**
+ * v0.2.45 (trabajo dbbd7ab5): «Tipo de vehículo» = «Turismo» (ramo auto; opción EXACTA) y «Compañía de procedencia» = la compañía anterior de la ficha
+ * (opción EXACTA) o, solo si la ficha dice 0 años asegurado, la opción exacta de «sin seguro anterior». Solo si el campo está a la vista y VACÍO (en
+ * «Seleccione…»): lo ya puesto no se toca. Sin opción exacta → `ErrorMapaIncompletoGenerali` con el campo y las opciones vistas; sin dato en la ficha →
+ * `ErrorTarificador('datos')` nombrando el campo. Por `elegirIndice` (guard del campo). Devuelve los avisos para la oferta.
+ */
+export async function rellenarTipoYProcedenciaGenerali(raiz: Raiz, form: FormularioAuto, ctx: Pick<ContextoPortal, 'pausaAccion'>): Promise<string[]> {
+  const avisos: string[] = []
+  const vacio = (x: { opciones: string[]; indice: number }) => x.indice < 0 || (x.opciones[x.indice] ?? '') === '' || /^seleccione/i.test(x.opciones[x.indice] ?? '')
+  const poner = async (etiqueta: string, elegir: (opciones: string[]) => { indice: number; aviso: string } | { error: Error }) => {
+    const encontrados = await selectPorRotuloGenerali(raiz, etiqueta)
+    if (encontrados.length === 0) return
+    if (encontrados.length > 1) throw new ErrorMapaIncompletoGenerali(`«${etiqueta}» de «Datos de Valoración» (${encontrados.length} desplegables con ese rótulo; hace falta uno)`)
+    const x = encontrados[0]!
+    if (!vacio(x)) return
+    const d = elegir(x.opciones)
+    if ('error' in d) throw d.error
+    const sel = raiz.locator(`select[name="${x.name.replace(/"/g, '')}"]`)
+    if ((await sel.count()) !== 1) throw new ErrorMapaIncompletoGenerali(`«${etiqueta}» de «Datos de Valoración» (el desplegable no es único por su nombre)`)
+    await elegirIndice(sel, d.indice, ctx)
+    const ahora = await selectPorRotuloGenerali(raiz, etiqueta)
+    if (ahora[0]?.indice !== d.indice) throw new ErrorMapaIncompletoGenerali(`«${etiqueta}» de «Datos de Valoración» no quedó puesto tras elegir «${x.opciones[d.indice]!.slice(0, 40)}»`)
+    avisos.push(d.aviso)
+  }
+  await poner(ETIQUETA_TIPO_VEHICULO_GENERALI, (ops) => {
+    const i = indiceOpcionNormalizadaGenerali(ops, [OPCION_TIPO_VEHICULO_AUTO_GENERALI])
+    return i < 0
+      ? { error: new ErrorMapaIncompletoGenerali(`la opción «${OPCION_TIPO_VEHICULO_AUTO_GENERALI}» de «${ETIQUETA_TIPO_VEHICULO_GENERALI}» (no existe exactamente; opciones vistas: ${opcionesVistasGenerali(ops)})`) }
+      : { indice: i, aviso: `${ETIQUETA_TIPO_VEHICULO_GENERALI}: ${ops[i]!.trim()} (ramo auto)` }
+  })
+  await poner(ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI, (ops) => {
+    const p = companiaProcedenciaPedidaGenerali(companiaActualDe(form), (form as { aniosAseguradoAnterior?: unknown }).aniosAseguradoAnterior)
+    if ('error' in p) return { error: new ErrorTarificador('datos', `generali/auto: ${p.error}`) }
+    if ('sinSeguro' in p) {
+      const i = indiceOpcionNormalizadaGenerali(ops, OPCIONES_SIN_SEGURO_GENERALI)
+      return i < 0
+        ? { error: new ErrorMapaIncompletoGenerali(`la opción de «sin seguro anterior» de «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}» (la ficha dice 0 años asegurado y no hay opción exacta; opciones vistas: ${opcionesVistasGenerali(ops)})`) }
+        : { indice: i, aviso: `${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}: ${ops[i]!.trim()} (la ficha dice que no tenía seguro anterior)` }
+    }
+    const i = indiceOpcionNormalizadaGenerali(ops, [p.compania])
+    return i < 0
+      ? { error: new ErrorMapaIncompletoGenerali(`la compañía «${sanearFragmentoGenerali(p.compania).slice(0, 60)}» de la ficha en «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}» (no existe exactamente; opciones vistas: ${opcionesVistasGenerali(ops, 40)})`) }
+      : { indice: i, aviso: `${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}: ${ops[i]!.trim()} (compañía anterior de la ficha)` }
+  })
+  return avisos
 }
 
 // ───────────────────────── lectura de pantalla (v0.2.0: SOLO LEE; nunca pulsa ni escribe) ─────────────────────────
@@ -2977,6 +3069,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   for (const x of ant.supuestos) if (!supuestos.includes(x)) supuestos.push(x)
   const texto = textoSupuestos(supuestos)
   const marco = (await marcoConTexto(page, 'Identificación del vehículo', 5_000)) ?? page
+  const avisosDatosValoracion: string[] = []
   const { pantalla, hechos, tomador } = await paso('formulario', async () => {
     await recorrerScroll(page, marco)
     const antes = await leerPantalla(marco)
@@ -2986,6 +3079,10 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     // v0.2.22: interesado readonly y vacío → «Personas» (buscar y elegir la persona). Para sin crear nada si no es seguro.
     const persona = await elegirPersonaTomadorGenerali(marco, ant.formulario, ctx)
     if (persona) hechos.push(...persona.hechos)
+    // v0.2.45: «Tipo de vehículo» y «Compañía de procedencia» (obligatorios que 0.2.44 encontró vacíos). Con el riesgo ORIGINAL (no el supuesto favorable).
+    const avisosTipoProc = await rellenarTipoYProcedenciaGenerali(marco, form, ctx)
+    if (avisosTipoProc.length) hechos.push('tipo_vehiculo_y_procedencia')
+    avisosDatosValoracion.push(...avisosTipoProc)
     // Tras rellenar, se relee (el portal puede pintar campos nuevos al salir de uno).
     if (hechos.length > 0) await recorrerScroll(page, marco)
     const personas = await leerPersonasGenerali(page)
@@ -3023,11 +3120,12 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     return l
   }
   let lectura = await paso('lectura_primas', leerPrimas)
-  if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, lectura.avisos)]) }
+  if (lectura.tipo === 'unico') return { ofertas: await conPdfPresupuestoGenerali(page, ctx, [ofertaGenerali(lectura.eur, texto, [...(lectura.avisos ?? []), ...avisosDatosValoracion])]) }
   // v0.2.39/v0.2.40: tabla de modalidades a la vista y vacía = el portal no ha calculado: «Recalcular» (acción de la botonera, no guarda ni emite) UNA vez por la puerta del guard.
   // v0.2.40: se evalúa DESPUÉS de cada lectura y de cada «Siguiente» (en la prueba real con 0.2.39 la tabla vacía aparecía solo tras «Siguiente×1» y el bloque de antes ya había pasado).
   const avanceRecalcular: string[] = []
-  const avisosFormaPago: string[] = []
+  // v0.2.45: los avisos de lo elegido en «Datos de Valoración» viajan con los de la forma de pago a la oferta.
+  const avisosFormaPago: string[] = [...avisosDatosValoracion]
   let recalcularIntentado = false
   let bloquesDecision: string | null = null
   const recalcularSiHaceFalta = async (): Promise<Awaited<ReturnType<typeof esperarPrecioGenerali>> | null> => {

@@ -641,6 +641,7 @@ export {
   esAvanceAutorizado,
   bloqueoAvance,
   guardadosEnDialogoDe,
+  entradaConTomadorMediador,
   casaGuardadoEnDialogo,
   esGuardadoEnDialogoAutorizado,
   MAX_GUARDADOS_DIALOGO,
