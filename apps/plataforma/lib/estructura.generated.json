@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-28T04:58:45Z",
+  "generadoEn": "2026-10-28T07:32:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 244
+        "evidencias": 245
       },
       "rrhh": {
         "estado": "no",
@@ -2565,7 +2565,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 38
+        "evidencias": 39
       },
       "rrhh": {
         "estado": "no",
@@ -6666,7 +6666,7 @@
     {
       "id": "idealista-radar",
       "name": "idealista-radar",
-      "description": "Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa (costa de Huelva a diario; Asturias, Cantabria y Cádiz por turnos) con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide \"mira Idealista en la costa\". Sin secretos."
+      "description": "Referencia de zonas de playa y del corredor A-49 para buscar casas en idealista. RUTINA DESACTIVADA el 28/10/2026 (condiciones de uso del conector). Sin rutina ni escritura en mercado_comparables. Úsala solo si Alberto pide ver anuncios concretos de idealista en el chat, o para guardar búsquedas con alerta. Sin secretos."
     },
     {
       "id": "inversion-inmueble",
