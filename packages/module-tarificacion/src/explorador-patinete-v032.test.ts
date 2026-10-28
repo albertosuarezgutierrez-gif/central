@@ -12,6 +12,7 @@ import {
   esLanzadorAplicacionNseMapfre,
   pareceEmision,
   rutaDeMarco,
+  selectorDeElemento,
   sanearInventarioDom,
   validarRespuestaExplorador,
   type InventarioDom,
@@ -127,5 +128,12 @@ describe('Allianz ePAC drvp00: avance de paso #btnAceptar + eventoSiguiente() po
     const generico = r([{ accion: 'avanzar', ref: refs[4], efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
     expect(generico.ok).toBe(false)
     expect(JSON.stringify(generico)).toMatch(/aceptar_no_autorizado/)
+  })
+})
+
+describe('0.3.3 · selector estable con `$` (ids JSF de ePAC)', () => {
+  it('IntervinientesBean$nifTomador_doc tiene selector por id; caracteres de CSS raros siguen sin selector', () => {
+    expect(selectorDeElemento({ tag: 'input', id: 'IntervinientesBean$nifTomador_doc' } as never)).toEqual({ por: 'id', valor: 'IntervinientesBean$nifTomador_doc', tag: 'input' })
+    expect(selectorDeElemento({ tag: 'input', id: 'a b"c' } as never)).toBeNull()
   })
 })

@@ -12,7 +12,7 @@ import { ErrorTarificador } from '../src/errores.ts'
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.45 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.46'))
+test('v0.2.45 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.47'))
 
 test('v0.2.45 · puro: igualdad EXACTA (solo tildes/mayúsculas/espacios) y una sola coincidencia; la compañía sale de la ficha', () => {
   assert.equal(indiceOpcionNormalizadaGenerali(['Seleccione', 'Furgoneta', ' TURISMO ', 'Motocicleta'], ['Turismo']), 2)

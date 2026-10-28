@@ -2769,6 +2769,17 @@ export async function pulsarExploracionAutorizada(
   } catch {
     endpoint = null
   }
+  // Avance de PASO por id (real 28/10/2026, ePAC drvp00): `eventoSiguiente()` envía el formulario del servlet, pero el botón no está
+  // dentro de un <form> y el marco tiene varios. Su ÚNICO destino conocido es el propio servlet del marco: MISMO origen que el marco
+  // (leído vivo) + la ruta EXACTA de la regla (`rutaMarco`, ya comprobada arriba). Nada más se abre; la capa de parámetros sigue.
+  if (porId) {
+    try {
+      const p = new URL(await boton.evaluate((el) => el.ownerDocument.location.href))
+      endpoint = (p.protocol === 'https:' || p.protocol === 'http:') && !p.username && !p.password ? `${p.origin}${porId.rutaMarco}` : null
+    } catch {
+      endpoint = null
+    }
+  }
   if (!endpoint) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
   const abrir = ABRIR_AVANCE.get(guard)
   if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de avance')

@@ -95,7 +95,7 @@ async function abrir(ruta: string): Promise<{ context: BrowserContext; page: Pag
   return { context, page, guard }
 }
 
-test('versión del explorador 0.3.2', () => assert.equal(EXPLORADOR_VERSION, '0.3.2'))
+test('versión del explorador 0.3.3', () => assert.equal(EXPLORADOR_VERSION, '0.3.3'))
 
 // ─── 1) Mapfre «Acceso a NSE» ────────────────────────────────────────────────
 
@@ -345,6 +345,54 @@ test('seguridad: si el marco muestra un PRECIO al ir a pulsar, el avance por id 
     await page.evaluate(() => { const t = document.createElement('td'); t.textContent = '47,55 €'; document.querySelector('tr')!.appendChild(t) })
     await assert.rejects(pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }), /precio/)
     assert.ok(!peticiones.some((p) => p.metodo === 'POST'))
+    await cap.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── 0.3.3 (real 28/10/2026, main-48f22cd): el botón NO está dentro del form y el marco tiene varios ───────────
+
+const FIGURAS_FUERA = PAGINA(`
+  <form id="buscador" method="post" action="/drvp00/OtroServlet"><input name="q" id="q"></form>
+  <form id="f" method="post" action="/drvp00/SEAServlet">
+    <table><tr><td>Es el Propietario</td><td>
+      <input type="radio" id="IntervinientesBean$esPropietario1" name="IntervinientesBean$esPropietario" value="S" style="display:none"><label for="IntervinientesBean$esPropietario1">Si</label></td></tr></table>
+  </form>
+  <button type="button" id="btnAceptar" onclick="eventoSiguiente()">Aceptar</button>
+  <script>function eventoSiguiente(){ document.getElementById('f').submit() }</script>`)
+
+test('0.3.3 · ePAC: #btnAceptar FUERA del form y con varios forms: el destino es el servlet del marco (UN POST) y llega al precio', async () => {
+  figuras = FIGURAS_FUERA
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    const k = contexto(page, guard, (inv, n) => {
+      if (n === 1) return respuesta([
+        { accion: 'marcar', ref: ref(inv, 'IntervinientesBean$esPropietario1') },
+        { accion: 'avanzar', ref: ref(inv, 'btnAceptar'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ])
+      const imp = inv.marcos.flatMap((m) => m.importes ?? [])
+      return respuesta([{ accion: 'terminar', refsPrecio: [imp[0].ref] }], 'resultado')
+    })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.equal(peticiones.filter((p) => p.metodo === 'POST' && p.ruta === '/drvp00/SEAServlet').length, 1)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.3 · ePAC: la ventana abierta para el avance por id SOLO admite el servlet: un POST a otra ruta durante el clic aborta', async () => {
+  figuras = FIGURAS_FUERA.replace("document.getElementById('f').submit()", "document.getElementById('buscador').submit()")
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    const cap = (await capturarInventarioExploracion(page))!
+    const marco = cap.inventario.marcos[0]
+    const el = marco.elementos.find((e) => e.id === 'btnAceptar')!
+    await pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }).catch(() => undefined)
+    assert.ok(!peticiones.some((p) => p.metodo === 'POST' && p.ruta === '/drvp00/OtroServlet'), 'el POST a otra ruta no salió')
+    assert.notEqual(guard.violacion(), null)
     await cap.liberar()
   } finally {
     await context.close()

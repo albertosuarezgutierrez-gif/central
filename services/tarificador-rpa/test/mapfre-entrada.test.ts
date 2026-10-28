@@ -602,6 +602,29 @@ test('pestaña nueva: una ventana abierta DURANTE el bucle sigue parando con sin
   }
 })
 
+test('Patinetes (real 0.3.2, `sin_salida` con 0 pasos): home → pestaña landing → VENTANA de «Acceso a NSE»; el bucle inventaría la ventana NSE y la landing no cuenta como ventana nueva', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+  try {
+    // La landing abre la aplicación NSE con `abrirAplicacion` (window.open), como el portal real; el formulario tarda en abrirse.
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: `<!doctype html><html><body><a href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');">Acceso a NSE</a><script>function abrirAplicacion(j, a){ setTimeout(() => window.open('/nsei-patin', '_blank'), 300) }</script></body></html>` }))
+    await context.route('**/nsei-patin', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><h1>MásPatín</h1><label for="fp">Fecha de efecto</label><input id="fp" name="fp"></body></html>' }))
+    const ctx = { ...ctxGuard, pulsarAccesoNse: (b: Locator) => pulsarAccesoNseMapfre(b, guard, 'mapfre') }
+    const portal: PortalExploracion = { credencial: 'X', entrar: (pg, c) => abrirTarificacionPatineteMapfre(pg, c, { menuMs: 3_000 }) }
+    const vistos: string[] = []
+    const fin = await entrarYExplorar(page, portal, ctx as unknown as CtxEntrada, ENTRADAS_EXPLORACION['mapfre:automoviles:patinetes'], {
+      guard, redactar: (t) => t, env: {},
+      contextoBucle: ctxBucle(guard, vistos, async () => resp([{ accion: 'parar', motivo: 'dato_no_disponible' }])),
+    })
+    assert.equal(fin.motivo, 'dato_no_disponible', JSON.stringify(fin))
+    assert.equal(context.pages().length, 3)
+    assert.equal(vistos.length, 1)
+    assert.match(vistos[0], /Fecha de efecto/)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
 // ─── URL directa del formulario NSEI (estrategia principal) ───────────────────────────────────────────────────────────
 test('URL directa: carga app-datos-basicos → no se pulsa ningún menú', async () => {
   const { context, page, ctx, pulsados, guard } = await abrir('/')

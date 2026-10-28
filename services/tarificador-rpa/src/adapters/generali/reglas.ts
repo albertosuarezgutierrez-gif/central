@@ -1738,6 +1738,7 @@ export type MarcoCargaGenerali = { ruta: string; listo: string | null; controles
 
 /** Ruta sin query, sin fragmento y sin `;jsessionid=…` (nunca viaja la sesión en un mensaje). PURA. */
 export function rutaMarcoSaneadaGenerali(url: string): string {
+  if (/^(about|data|blob):/i.test(url)) return url.split(/[?#,]/)[0]!
   return rutaSinQuery(url).replace(/;jsessionid=[^/?#]*/gi, '')
 }
 
@@ -1771,4 +1772,29 @@ export function motivoSelectorVehiculoNoVistoGenerali(marcos: readonly MarcoCarg
       ? `el marco «selVehiculo» seguía CARGANDO (sin cuerpo pintado) tras ${segundos} s`
       : `el marco «selVehiculo» cargó pero no muestra el texto «Selector de vehículos» tras ${segundos} s`
   return `la pantalla «Selector de vehículos» tras pulsar «Vehículo» (captura 5): ${que}. Marcos: ${inv || '(ninguno)'}. Botones vistos: ${b}`
+}
+
+// ───────────────────────── «Datos personas»: bloqueo del refresco del NIF (v0.2.47) ─────────────────────────
+
+/** Control de «Datos personas» leído SIN valor: id sin prefijo, si está deshabilitado y su atributo `controlbloqueo` de Genernet. */
+export type ControlBloqueoGenerali = { id: string; deshabilitado: boolean; bloqueo: string | null }
+
+/**
+ * Prueba real 28/10/2026 (trabajo ec49068b, 0.2.46): al salir del NIF, su `onchange` (`TratarDependiente(… '/refreshSelPersonas.do')`) lanza
+ * un refresco y Genernet DESHABILITA todo el formulario marcando cada control con `controlbloqueo="1"` hasta que vuelve la respuesta (el volcado:
+ * NIF, tipo de persona, nombre, apellidos, sexo, fechas… todos `disabled` con `controlbloqueo="1"`). El bot leyó a los 1,5 s y vio
+ * «deshabilitado». Devuelve los controles que siguen BLOQUEADOS por ese refresco (deshabilitado + `controlbloqueo="1"`). PURA.
+ */
+export function bloqueadosDatosPersonasGenerali(controles: readonly ControlBloqueoGenerali[]): string[] {
+  return controles.filter((c) => c.deshabilitado && String(c.bloqueo ?? '').trim() === '1').map((c) => c.id)
+}
+
+/**
+ * Por qué falta un dato mínimo del tomador tras rellenar (nombre, primer apellido): el riesgo no lo trae (→ dato que pedir, nunca se
+ * inventa) o el riesgo sí lo trae y el campo no se pudo escribir (motivo de `omitidos`). PURA, sin valores.
+ */
+export function motivoFaltaDatoPersonaGenerali(etiqueta: string, campo: string, enRiesgo: boolean, omitidos: readonly string[]): string {
+  if (!enRiesgo) return `${etiqueta} (el riesgo no lo trae y el portal no lo puso; no se inventa)`
+  const motivo = omitidos.find((o) => o.startsWith(`${campo}:`))?.slice(campo.length + 1)
+  return `${etiqueta} (el riesgo lo trae pero el campo no se pudo escribir: ${motivo ?? 'sin motivo leído'})`
 }

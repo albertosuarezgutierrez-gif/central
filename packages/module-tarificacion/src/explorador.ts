@@ -1540,7 +1540,8 @@ export type MapaExploracion = {
 }
 
 const RE_ID_GENERADO = /^(?:mat-|cdk-|ng-|ui-id-|react-|ember|j_id|__)|\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}/i
-const RE_SELECTOR_SEGURO = /^[\w.:[\]-]{1,80}$/
+// `$` (28/10/2026): ids de JSF/ePAC como `IntervinientesBean$nifTomador_doc`. El selector se compara por IGUALDAD, nunca como CSS.
+const RE_SELECTOR_SEGURO = /^[\w.:[\]$-]{1,80}$/
 
 /** El selector estable de un elemento: id (no autogenerado) > name > formControlName > etiqueta exacta > texto exacto. */
 export function selectorDeElemento(el: ElementoInventario): SelectorMapa | null {
