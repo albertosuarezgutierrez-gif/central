@@ -75,6 +75,12 @@ export type ReservaBajaInput = {
   marketP50: number
   /** nº de comps que forman ese p50 */
   comps: number
+  /**
+   * true = el p50 es el de la FECHA de la reserva; false = es el p50 MEZCLADO del piso (todas las
+   * fechas), el respaldo cuando la fecha no tiene comps. Obligatorio a propósito: el llamador tiene
+   * que decir de dónde sale el número, porque con el mezclado NO se alerta (ver la función).
+   */
+  fechaEspecifica: boolean
 }
 
 export type ReservaBajaOpts = {
@@ -87,19 +93,31 @@ export type ReservaBajaOpts = {
 export type ReservaBajaResult = {
   alerta: boolean
   diffPct: number
+  /**
+   * true = habría saltado, pero contra el p50 MEZCLADO del piso: se cuenta como informativo, no se
+   * alerta. Con el mezclado no se sabe si la reserva fue barata o si la fecha es de temporada baja.
+   */
+  informativa?: boolean
 }
 
 /**
  * ¿Una reserva recién entrada salió notablemente por debajo del mercado real del piso?
  * Solo evalúa si hay p50 fiable (≥ minComps). Umbral holgado para no marcar el descuento
  * normal de canal (Genius/móvil ~10-15%): avisa a partir del 25% por debajo.
+ *
+ * 🚨 Solo ALERTA contra el p50 de la FECHA (28/10/2026). El mezclado del piso promedia temporada alta
+ * y baja: Duplex 28/01 y 04/02/2027 salieron −42 % y −45 % contra un mezclado de 159 € cuando el
+ * mercado de las fechas vecinas era 104-118 €. Eso no es una reserva barata, es enero. Sin p50 de la
+ * fecha el resultado es `informativa` (se cuenta, no se avisa): «no se sabe» no es «va mal».
  */
 export function decidirReservaBaja(i: ReservaBajaInput, o: ReservaBajaOpts = {}): ReservaBajaResult {
   const umbral = o.umbral ?? 0.25
   const minComps = o.minComps ?? 25
   if (i.marketP50 <= 0 || i.comps < minComps || i.adr <= 0) return { alerta: false, diffPct: 0 }
   const diffPct = ((i.adr - i.marketP50) / i.marketP50) * 100
-  return { alerta: diffPct <= -umbral * 100, diffPct }
+  const bajo = diffPct <= -umbral * 100
+  if (i.fechaEspecifica !== true) return { alerta: false, diffPct, informativa: bajo }
+  return { alerta: bajo, diffPct }
 }
 
 /**

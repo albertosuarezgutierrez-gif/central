@@ -37,6 +37,7 @@ import { eur } from "@/lib/dinero"
 import { anclaRail, anclaRailCon, type OrigenAncla, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
 import { resumenLecturasCaidas, avisoLecturasCaidas, type LecturaCaida } from "@/lib/sivra/pricing-lecturas"
 import { PASADAS_POR_DIA_APPLY } from "@/lib/sivra/pricing-latido-apply"
+import { congelarPorCambioFuente, normalizarFuenteBase } from "@/lib/sivra/pricing-cambio-fuente"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -784,13 +785,13 @@ export async function POST(req: NextRequest) {
   // reciente por fecha; el MAX() anterior solo daba el dia.
   const escrituraRows = await prisma.$queryRaw<{
     pid: string; rate_date: string; dias: number; horas: number
-    prev_price: number | null; ult_price: number
+    prev_price: number | null; ult_price: number; fuente_prev: string | null
   }[]>(Prisma.sql`
     SELECT DISTINCT ON (property_id, rate_date)
            property_id AS pid, rate_date::text AS rate_date,
            (CURRENT_DATE - applied_at::date)::int AS dias,
            (EXTRACT(EPOCH FROM (NOW() - applied_at)) / 3600)::float8 AS horas,
-           old_price AS prev_price, new_price AS ult_price
+           old_price AS prev_price, new_price AS ult_price, base_fuente AS fuente_prev
     FROM pricing_applied
     WHERE dry_run = false AND rate_date >= CURRENT_DATE
     ORDER BY property_id, rate_date, applied_at DESC
@@ -802,6 +803,9 @@ export async function POST(req: NextRequest) {
     prev: x.prev_price == null ? null : Number(x.prev_price),
     ult: Number(x.ult_price),
   }]))
+  /** De qué base salió la última escritura real de cada fecha (`mes`/`global`; NULL = no consta).
+   *  Alimenta la guarda «el mes se fue» (`lib/sivra/pricing-cambio-fuente.ts`). */
+  const fuenteUltimaEscritura = new Map(escrituraRows.map(x => [`${x.pid}|${x.rate_date}`, normalizarFuenteBase(x.fuente_prev)]))
   /** true = la lectura respondió (aunque sea con 0 filas). Sin ella, «nunca escrita» no es afirmable. */
   const hayHistorialEscrituras = !lecturasCaidas.some(l => l.nombre === 'ultima_escritura')
 
@@ -955,6 +959,9 @@ export async function POST(req: NextRequest) {
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
     const congeladas: { fecha: string; precio: number; factor: number }[] = []
+    // Fechas que la guarda «el mes se fue» dejó sin bajar (pricing-cambio-fuente.ts): su última
+    // escritura salió del bucket del MES y en esta pasada ese mes ya no tiene bucket.
+    const congeladasFuente: { fecha: string; precio: number; objetivo: number }[] = []
     // Fechas que se llevaron premio por anticipación en esta pasada. En la respuesta a propósito:
     // una palanca que sube precios en vivo tiene que poder auditarse sin abrir la BD, y un 0 aquí
     // es la prueba de que no ha movido nada (distinto de «no se ha mirado» → `antelacion_k = 0`).
@@ -1398,6 +1405,19 @@ export async function POST(req: NextRequest) {
       // juzgar, y el techo solo está definido cuando ese mercado SÍ está medido.
       if (evFactor >= 2 && !useMonth && old != null && target < old && !liberaTecho
           && (r.max_price == null || old <= r.max_price)) continue
+      // 🧊 Guarda «el mes se fue» (28/10/2026, Duplex 01/05/2027 176→146): que el mes cruce el umbral
+      // de fechas medidas (3→2) no es información nueva sobre la fecha, así que no la baja. Sin
+      // historial legible la fuente anterior no consta y la guarda no actúa. Ver el helper.
+      if (congelarPorCambioFuente({
+        fuenteAnterior: hayHistorialEscrituras ? (fuenteUltimaEscritura.get(`${r.property_id}|${date}`) ?? null) : null,
+        fuenteActual: useMonth ? 'mes' : 'global',
+        target, old, diasVista: daysOut,
+        libera: liberaTecho || rumorCaido.has(date),
+        maxPrice: r.max_price,
+      })) {
+        congeladasFuente.push({ fecha: date, precio: old!, objetivo: target })
+        continue
+      }
       // 🧊 Guarda «evento a ciegas» (caso Bienal, 13/08/2026 — decisión Fable delegada por
       // Alberto): generaliza la de Karol G por FECHA en vez de por mes y desde factor 1,15. Un
       // evento CONFIRMADO cuya fecha no tiene comps fiables propios NO se baja: el ancla global
@@ -1529,6 +1549,9 @@ export async function POST(req: NextRequest) {
       // único resto del serrucho: el ancla global se mueve con lo que el barrido muestree hoy y el
       // salto de evento no pasa por el raíl. Un 0 aquí es una AFIRMACIÓN, no un silencio.
       saltos_evento_sin_mes: saltosEventoSinMes,
+      // Noches que NO bajaron porque su mes perdió el bucket en esta pasada (pricing-cambio-fuente.ts).
+      // Un 0 es la prueba de que la guarda no ha retenido nada; la muestra dice cuáles y a cuánto.
+      congeladas_cambio_fuente: { noches: congeladasFuente.length, muestra: congeladasFuente.slice(0, 10) },
       // Prima vie/sáb por ritmo propio (pricing-ritmo-finde.ts). `prima: null` = sin muestra o
       // lectura caída (NO se aplicó nada), distinto de `1` = medida y sin prima. `noches` = las
       // fechas libres vie/sáb de esta pasada a las que se aplicó. NO va a `pricing_applied`: esa

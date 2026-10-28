@@ -334,18 +334,20 @@ export async function GET(req: NextRequest) {
       AND i.amount_gross > 0 AND i.nights > 0
   `)
   const reservasSinBruto = nuevasReservas.filter(r => !r.bruto_real).length
-  const reservasBajas = nuevasReservas
+  const reservasEvaluadas = nuevasReservas
     .filter(r => r.bruto_real)
     .map(r => ({
       ...r,
       ev: decidirReservaBaja(
-        { adr: Number(r.adr), marketP50: Number(r.p50), comps: Number(r.comps) },
+        { adr: Number(r.adr), marketP50: Number(r.p50), comps: Number(r.comps), fechaEspecifica: r.date_specific === true },
         // El p50 por fecha exacta ya exige ≥8 comps (mismo bar que #4); al blended, que agrega muchas
         // fechas, le mantenemos el mínimo alto por defecto (25) para no fiarnos de una muestra floja.
         { minComps: r.date_specific ? 8 : 25 },
       ),
     }))
-    .filter(r => r.ev.alerta)
+  // Contra el p50 MEZCLADO del piso no se alerta (ver decidirReservaBaja): se cuenta como informativo.
+  const reservasBajas = reservasEvaluadas.filter(r => r.ev.alerta)
+  const reservasBajasSinFecha = reservasEvaluadas.filter(r => r.ev.informativa).length
 
   // #6 €/plaza: precio VIVO más barato de cada piso repartido entre sus plazas. Solo se juzgan los
   // pisos grandes (el centinela descarta solo los pequeños: ver la nota de pricing-centinelas.ts).
@@ -1058,6 +1060,9 @@ export async function GET(req: NextRequest) {
     floor_hits: floorHits.length,
     sub_mercado: subHits.length,
     reservas_bajas: reservasBajas.length,
+    // Reservas que habrían saltado contra el p50 MEZCLADO del piso (la fecha no tenía comps propios):
+    // informativas, sin alerta. Ni «bien de precio» ni «mal»: no se sabe sin el mercado de la fecha.
+    reservas_bajas_sin_mercado_fecha: reservasBajasSinFecha,
     // Reservas de canales sin bruto real (Agoda/Expedia/Airbnb): NO evaluadas, no «bien de precio».
     reservas_sin_bruto: reservasSinBruto,
     por_plaza: plazaHits.length,

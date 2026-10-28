@@ -11,6 +11,12 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (28/10/2026, 4) SIVRA pricing: guarda «el mes se fue» + guardián sin alerta con p50 mezclado
+- Causa real de Duplex mayo-2027 a 'global' (11/10): la exclusión de fechas de evento del bucket del mes (`apply/route.ts` ~:475) NO filtra `estado`; una fila DESCARTADA del 22/05 dejó mayo en 2 fechas. No eran fotos caducadas.
+- Hecho: `lib/sivra/pricing-cambio-fuente.ts` (+test): si la última escritura salió del MES y hoy el mes no tiene bucket, la fecha no baja (>30 días vista; libera techo medido/rumor caído/max_price). Habría retenido el 01/05 a 176€ (bajó a 146€ = global×1,45).
+- Hecho: el guardián ya no alerta `reserva_bajo_mercado` contra el p50 mezclado (cuenta `reservas_bajas_sin_mercado_fecha`).
+- NO hecho (decisión de Alberto): escalar el salto de evento sin mes por el prior (simulado: +25-60 % de golpe en ~40 noches, dobla Feria en abril) y filtrar `descartado` en el bucket (cambia 10 piso-mes; House mayo bajaría ~10 %).
+- Las «17 noches −25 % bajo mercado» de Duplex son todas base 'mes': el hueco es liga + p40 + calidad frente al p50 completo, no la global.
 **(28/10/2026, 3)** — Tarificador. Prueba real (`main-b82bec1`): **Mapfre auto completo** (precios + proyecto + PDF guardado). Generali: faltaban «Tipo de vehículo» y «Compañía de procedencia» en «Datos de Valoración» → 0.2.45 los rellena por opción exacta (Turismo; compañía anterior de la ficha), sin probar aún en real.
   Patinete: exploración Allianz paró en Datos Básicos por el NIF del tomador → las entradas de patinete (Allianz `movilidad_personal`, Mapfre `automoviles:patinetes` «MásPatín») usan a Alberto como tomador desde `MEDIADOR` (fecha de nacimiento añadida ahí), con «Aceptar» de Datos Básicos autorizado solo en Allianz. SQL `2026-10-28c` (mapfre/patinete, apagada).
   Regla nueva (Alberto): por ramo, unión de datos que pide cada compañía → un solo enlace /datos por WhatsApp + filtro gratis antes de mandar a los bots.
