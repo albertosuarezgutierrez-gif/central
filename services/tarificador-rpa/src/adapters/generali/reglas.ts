@@ -1730,3 +1730,45 @@ export function companiaProcedenciaPedidaGenerali(compania: string | null, anios
   if (aniosAseguradoAnterior === 0) return { sinSeguro: true }
   return { error: `la ficha no trae la compañía anterior del vehículo (ni dice que no tuviera seguro): hace falta para «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}»` }
 }
+
+// ───────────────────────── 5 · selector de vehículos que tarda en pintarse (v0.2.46) ─────────────────────────
+
+/** Estado de carga de un marco, SIN contenido: ruta saneada, `document.readyState`, nº de controles y de caracteres del `body`. */
+export type MarcoCargaGenerali = { ruta: string; listo: string | null; controles: number | null; texto: number | null }
+
+/** Ruta sin query, sin fragmento y sin `;jsessionid=…` (nunca viaja la sesión en un mensaje). PURA. */
+export function rutaMarcoSaneadaGenerali(url: string): string {
+  return rutaSinQuery(url).replace(/;jsessionid=[^/?#]*/gi, '')
+}
+
+/** ¿Es el marco del «Selector de vehículos» (`mot_motorWeb/mvc/selVehiculo`)? PURA. */
+export function esMarcoSelectorVehiculoGenerali(url: string): boolean {
+  return /\/selVehiculo(?:[;/?#.]|$)/i.test(rutaMarcoSaneadaGenerali(url))
+}
+
+/**
+ * Prueba real 28/10/2026 (trabajo bf5707a8, 0.2.45): tras «Vehículo» el `mainFrame` YA estaba en `selVehiculo` pero seguía
+ * CARGANDO (solo `<head>`, sin `<body>`) a los 20 s. Eso no es una pantalla nueva: se espera más. Decide si se sigue
+ * esperando (hay un marco del selector a medio cargar) o no (no hay ninguno: es otra cosa y se para). PURA.
+ */
+export function selectorVehiculoCargandoGenerali(marcos: readonly MarcoCargaGenerali[]): boolean {
+  return marcos.some((m) => esMarcoSelectorVehiculoGenerali(m.ruta) && (m.listo !== 'complete' || !m.texto))
+}
+
+/** Mensaje (para `ErrorMapaIncompletoGenerali`) cuando el «Selector de vehículos» no se ve: inventario de marcos SIN valores. PURA. */
+export function motivoSelectorVehiculoNoVistoGenerali(marcos: readonly MarcoCargaGenerali[], segundos: number, botones: readonly string[]): string {
+  const selector = marcos.filter((m) => esMarcoSelectorVehiculoGenerali(m.ruta))
+  const n = (x: number | null) => (x === null ? '?' : String(x))
+  const inv = marcos
+    .filter((m) => !/^about:|vimeo\.com/i.test(m.ruta))
+    .map((m) => `${m.ruta || '(vacío)'} [${m.listo ?? '?'}; ${n(m.controles)} controles; ${n(m.texto)} caracteres]`)
+    .join(' | ')
+    .slice(0, 900)
+  const b = [...new Set(botones)].join(' · ').slice(0, 400) || '(ninguno)'
+  const que = selector.length === 0
+    ? `ningún marco abrió «selVehiculo» en ${segundos} s`
+    : selector.some((m) => m.listo !== 'complete' || !m.texto)
+      ? `el marco «selVehiculo» seguía CARGANDO (sin cuerpo pintado) tras ${segundos} s`
+      : `el marco «selVehiculo» cargó pero no muestra el texto «Selector de vehículos» tras ${segundos} s`
+  return `la pantalla «Selector de vehículos» tras pulsar «Vehículo» (captura 5): ${que}. Marcos: ${inv || '(ninguno)'}. Botones vistos: ${b}`
+}

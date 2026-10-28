@@ -9,7 +9,7 @@
 
 import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
-import { SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
+import { controlOcultoDeEtiqueta, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
 
 /**
  * Extractor que corre EN EL MARCO. Va como TEXTO (no como función) a propósito: tsx envuelve las funciones con nombre
@@ -41,6 +41,7 @@ function extractor(explora: boolean): string {
   // guard.ts, \`pulsarGuardadoDialogoAutorizado\`). Solo se lee.
   const SEL_DIALOGO = ${JSON.stringify(SELECTOR_DIALOGO)};
   const tituloDialogo = (${tituloDialogoVivo.toString()});
+  const ctlOculto = (${controlOcultoDeEtiqueta.toString()});
   const CON_TEXTO = { button: 1, a: 1, td: 1, label: 1, 'mat-icon': 1 };
   const ROLES_CON_TEXTO = { button: 1, tab: 1, link: 1, menuitem: 1, option: 1 };
   const corta = (s, n) => (s == null ? null : (String(s).replace(/\\s+/g, ' ').trim().slice(0, n) || null));
@@ -70,6 +71,18 @@ function extractor(explora: boolean): string {
     if (cs.display === 'none' || cs.visibility === 'hidden') continue;
     const r = el.getBoundingClientRect();
     if (r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
+    // EXPLORACIÓN (28/10/2026, ePAC drvp00): la etiqueta de un control de elección OCULTO se inventaría COMO ese control (tag input,
+    // su type, id/name; texto y etiqueta, los de la label). El NODO es la label (la resolución vive en guard.ts: \`controlOcultoDeEtiqueta\`).
+    const rdo = EXPLORA && tag === 'label' ? ctlOculto(el) : null;
+    if (rdo) {
+      const txt = corta(el.innerText || el.textContent || '', 200);
+      const er = { tag: 'input', id: rdo.id, name: rdo.name, type: rdo.type, role: null, ariaLabel: rdo.ariaLabel, placeholder: null, formControlName: rdo.formControlName, requerido: rdo.requerido, deshabilitado: rdo.deshabilitado, texto: txt, etiqueta: txt, conValor: rdo.marcado };
+      const dlgR = tituloDialogo(el, SEL_DIALOGO);
+      if (dlgR) er.dialogo = dlgR;
+      out.push(er);
+      nodos.push(el);
+      continue;
+    }
     const role = el.getAttribute('role');
     const e = {
       tag: tag,

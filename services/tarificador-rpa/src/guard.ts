@@ -50,6 +50,11 @@ import {
   descripcionesSinExcepcionProyecto,
   comprobarBoton,
   esAvanceAutorizado,
+  avancePorIdAutorizado,
+  onclickNormalizado,
+  rutaDeMarco,
+  esLanzadorAplicacionNseMapfre,
+  TEXTO_ACCESO_NSE_MAPFRE,
   esMatriculaEspanola,
   normalizarMatricula,
   esBotonDeListaBlanca,
@@ -1031,6 +1036,32 @@ export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: Guard
   if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» ya se usó en este trabajo`)
   comprobarBoton(desc.filter((d) => textoEntrada(d) !== autorizado))
   usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await boton.click()
+  guard.comprobar()
+}
+
+/**
+ * «ACCESO A NSE» DE MAPFRE (28/10/2026, patinete): la página intermedia de la tarjeta «Patinetes» solo tiene ese enlace, con
+ * `href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');"` (abre la APLICACIÓN NSE, donde se tarifica;
+ * no emite). El ÚNICO camino para pulsarlo. Exige, en este orden: guard limpio y ventanas de red cerradas; fase de ENTRADA
+ * abierta; compañía `mapfre`; EXACTAMENTE un control; texto visible EXACTO «Acceso a NSE»; una vez por trabajo; y
+ * `comprobarBoton` sobre TODAS sus descripciones salvo la que sea EXACTAMENTE esa llamada (`esLanzadorAplicacionNseMapfre`):
+ * cualquier otro href/onclick/id con emisión, «Aceptar», «Contratar»… sigue bloqueando. La red sigue con el guard de siempre.
+ */
+export async function pulsarAccesoNseMapfre(boton: Locator, guard: GuardEmision, compania: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'acceso a NSE con la ventana de emisión, de avance o de guardado abierta')
+  if (ENTRADA_CERRADA.has(guard)) throw new EmisionBloqueadaError('fase', 'acceso a NSE fuera de la fase de entrada')
+  await exigirSinCuentaBancaria(boton.page())
+  if (compania !== 'mapfre') throw new EmisionBloqueadaError('boton', `acceso a NSE no autorizado para ${String(compania).slice(0, 40)}`)
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'acceso a NSE: no hay exactamente un control')
+  const desc = await descripcion(boton)
+  if (textoEntrada(desc[0]) !== textoEntrada(TEXTO_ACCESO_NSE_MAPFRE)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('entrada:acceso_nse')) throw new EmisionBloqueadaError('fase', 'el acceso a NSE ya se usó en este trabajo')
+  comprobarBoton(desc.filter((d) => !esLanzadorAplicacionNseMapfre(d)))
+  usados.add('entrada:acceso_nse')
   AVANCES_USADOS.set(guard, usados)
   await boton.click()
   guard.comprobar()
@@ -2654,6 +2685,9 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
   return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}` }
 }
 
+/** Tope de avances de PASO por identidad exacta (`AvancePorId`) por trabajo: un asistente de pocos pasos, con margen. */
+export const MAX_AVANCES_POR_ID = 4
+
 /**
  * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
  * puede quedar un proyecto en ePAC, nunca una póliza). El ÚNICO camino del explorador para pulsar un control que el guard
@@ -2677,7 +2711,13 @@ export async function pulsarExploracionAutorizada(
   guard.comprobar()
   if (guard.ventana.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'avance de exploración con la ventana de emisión o de guardado abierta')
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
-  if (usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
+  // Avance por IDENTIDAD EXACTA (28/10/2026, ePAC `#btnAceptar` + `eventoSiguiente()` en `/drvp00/SEAServlet`): es el avance de
+  // PASO del asistente, con su propio contador (≤ `MAX_AVANCES_POR_ID`). El «Aceptar» por título sigue siendo UNA vez por trabajo.
+  const porId = avancePorIdAutorizado(aut.entrada, aut.el, aut.marco)
+  const prefijoId = porId ? `exploracion:id:${porId.id}#` : null
+  const usadosPorId = prefijoId ? [...usados].filter((u) => u.startsWith(prefijoId)).length : 0
+  if (!porId && usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
+  if (porId && usadosPorId >= MAX_AVANCES_POR_ID) throw new EmisionBloqueadaError('fase', `el avance de paso autorizado de exploración ya se usó ${usadosPorId} veces en este trabajo`)
   await exigirSinCuentaBancaria(page)
   if (!esAvanceAutorizado(aut.entrada, aut.el, aut.marco) || bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null) {
     throw new EmisionBloqueadaError('boton', 'avance de exploración no autorizado para esta entrada y esta pantalla')
@@ -2686,6 +2726,13 @@ export async function pulsarExploracionAutorizada(
   const desc = await descripcion(boton)
   const plano = (t: string | null) => (t ?? '').replace(/\s+/g, ' ').trim()
   if (plano(desc[0]) !== plano(aut.el.texto ?? null)) throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el del inventario')
+  if (porId) {
+    // VIVO: id, onclick y ruta del marco EXACTOS (lo que dijo el inventario puede haber cambiado antes del clic).
+    const ruta = rutaDeMarco(await boton.evaluate((el) => el.ownerDocument.location.href).catch(() => null))
+    if (desc[4] !== porId.id || onclickNormalizado(desc[7]) !== porId.onclick || ruta !== porId.rutaMarco) {
+      throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el avance de paso autorizado (id/onclick/marco)')
+    }
+  }
   comprobarBoton(desc, { permitirAceptar: true })
   const destino = await boton.evaluate((el) => {
     const d = el.ownerDocument
@@ -2705,7 +2752,7 @@ export async function pulsarExploracionAutorizada(
   if (!endpoint) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
   const abrir = ABRIR_AVANCE.get(guard)
   if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de avance')
-  usados.add('exploracion')
+  usados.add(prefijoId ? `${prefijoId}${usadosPorId + 1}` : 'exploracion')
   AVANCES_USADOS.set(guard, usados)
   const hasta = Date.now() + VENTANA_RED_AVANCE_MS
   let dialogo: string | null = null
@@ -2820,6 +2867,39 @@ export async function pulsarGuardadoPresupuesto(
 export const SELECTOR_DIALOGO = 'dialog,[role=dialog],[aria-modal=true],mat-dialog-container,.modal-dialog,.modal'
 /** Controles pulsables que se cuentan como CANDIDATOS dentro de un diálogo (los del inventario que tienen texto). */
 const SELECTOR_PULSABLES_DIALOGO = 'button,a[role=button],[role=button],[role=tab],td[onclick]'
+
+/**
+ * RADIO OCULTO DE UNA ETIQUETA (`controlOcultoDeEtiqueta`; vive aquí porque solo guard.ts nombra radios: lo usan el inventario de
+ * exploración y la relectura VIVA del explorador). Detalle (28/10/2026, Allianz ePAC `/drvp00/SEAServlet`, «Figuras Intervinientes»): los radios «Es el
+ * Propietario: Si/No» son `<input type=radio>` OCULTOS (estilizados) y lo que se ve es su `<label>` (id `<x>_label`). El input no
+ * sale en el inventario (oculto) y la etiqueta salía como `label`, que `marcar` rechaza. Esta función, PURA de DOM y sin funciones
+ * con nombre dentro (va a la página con `toString()`, como `tituloDialogoVivo`), resuelve el input asociado: por `for`
+ * (`label.control`) o, si no, por el id `<x>_label` → `#<x>`. Solo si es un RADIO y NO se inventaría por sí mismo (oculto: si se
+ * ve, ya sale como input y no se duplica). Un checkbox → `null` (su etiqueta sigue siendo `label` y `marcar` la rechaza). Solo
+ * lee (nunca `.value`; `marcado` es el booleano `checked`).
+ */
+export const controlOcultoDeEtiqueta = (el: Element): { id: string | null; name: string | null; type: string; ariaLabel: string | null; formControlName: string | null; requerido: boolean; deshabilitado: boolean; marcado: boolean } | null => {
+  if (el.tagName !== 'LABEL') return null
+  const l = el as HTMLLabelElement
+  let c: Element | null = l.control ?? null
+  if (!c && l.id && /_label$/.test(l.id)) c = l.ownerDocument.getElementById(l.id.slice(0, -'_label'.length))
+  if (!c || c.tagName !== 'INPUT' || String((c as HTMLInputElement).type).toLowerCase() !== 'radio') return null
+  const r = c as HTMLInputElement
+  const cs = getComputedStyle(r)
+  const b = r.getBoundingClientRect()
+  const oculto = cs.display === 'none' || cs.visibility === 'hidden' || (b.width === 0 && b.height === 0 && !(r.labels && r.labels.length > 0))
+  if (!oculto) return null
+  return {
+    id: r.id || null,
+    name: r.getAttribute('name'),
+    type: 'radio',
+    ariaLabel: r.getAttribute('aria-label'),
+    formControlName: r.getAttribute('formcontrolname'),
+    requerido: r.hasAttribute('required') || r.getAttribute('aria-required') === 'true',
+    deshabilitado: r.disabled === true || r.getAttribute('aria-disabled') === 'true',
+    marcado: r.checked === true,
+  }
+}
 
 /**
  * Título accesible del diálogo más cercano que contiene a `el` (aria-labelledby → aria-label → primer encabezado del

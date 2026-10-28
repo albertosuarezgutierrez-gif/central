@@ -12,7 +12,7 @@ import type { AddressInfo } from 'node:net'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser } from 'playwright'
 import { ENTRADAS_EXPLORACION, PATRON_EMISION } from '@central/module-tarificacion'
-import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
+import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarAccesoNseMapfre, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
 import { entrarYExplorar, resultadoDeFin, type ContextoBucle, type CtxEntrada, type PortalExploracion } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
 import { abrirTarificacionPatineteMapfre, abrirTarificacionRapidaAuto as abrirNuevo, etiquetaExacta, URL_NSEI_AUTO } from '../src/adapters/mapfre/entrada.ts'
@@ -368,6 +368,32 @@ test('Patinetes: la landing sin formulario trae «Acceso a NSE»: se pulsa (guar
     assert.equal(guard.violacion(), null)
   } finally {
     await context.close()
+  }
+})
+
+test('Patinetes (real 28/10): «Acceso a NSE» con href `abrirAplicacion(\'inicio.jsp\', \'NUEVO SISTEMA DE EMISIÓN\')` pasa SOLO por su puerta; con `pulsar` genérico se bloquea', async () => {
+  const LANDING_NSE = `<!doctype html><html><body><a href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');">Acceso a NSE</a><script>function abrirAplicacion(j, a){ window.open('/patinete-form', '_blank') }</script></body></html>`
+  {
+    const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+    try {
+      await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: LANDING_NSE }))
+      const ctx = { ...ctxGuard, pulsarAccesoNse: (b: Locator) => pulsarAccesoNseMapfre(b, guard, 'mapfre') }
+      const nueva = await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 })
+      assert.match(nueva.url(), /\/patinete-form$/)
+      assert.equal(guard.violacion(), null)
+    } finally {
+      await context.close()
+    }
+  }
+  {
+    // Sin la puerta (el fallo real de main-57b99d0): el guard genérico lo bloquea.
+    const { context, page, ctxGuard } = await abrir('/patinetes-acceso')
+    try {
+      await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: LANDING_NSE }))
+      await assert.rejects(() => abrirTarificacionPatineteMapfre(page, ctxGuard, { menuMs: 2_500 }), /NUEVO SISTEMA DE EMISI/)
+    } finally {
+      await context.close()
+    }
   }
 })
 
