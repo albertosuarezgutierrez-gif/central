@@ -33,15 +33,14 @@ export default function CalendarioReservas({ hoy, dias: diasIni, filas: filasIni
 
   const ir = useCallback(async (destino: string) => {
     setSel(null)
-    setDesde(destino)
-    if (destino === hoy) { setVentana({ dias: diasIni, filas: filasIni }); setError(false); setCargando(false); peticion.current++; return }
+    if (destino === hoy) { setDesde(hoy); setVentana({ dias: diasIni, filas: filasIni }); setError(false); setCargando(false); peticion.current++; return }
     const id = ++peticion.current
     setCargando(true); setError(false)
     try {
       const r = await fetch(`/api/inicio/calendario-pisos?desde=${destino}`)
       if (!r.ok) throw new Error(String(r.status))
       const d = await r.json() as { dias: string[]; filas: Fila[] }
-      if (id === peticion.current) setVentana({ dias: d.dias, filas: d.filas })
+      if (id === peticion.current) { setVentana({ dias: d.dias, filas: d.filas }); setDesde(destino) }
     } catch {
       if (id === peticion.current) setError(true)
     } finally {

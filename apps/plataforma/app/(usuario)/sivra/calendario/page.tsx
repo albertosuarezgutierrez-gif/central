@@ -113,9 +113,9 @@ export default function CalendarioPage() {
         titulo="Calendario de ocupación"
         sub={`${PROPS.length} propiedades · datos Smoobu · ${fmtFull(winStart)} – ${fmtFull(addDays(winStart, DAYS - 1))}`}
         acciones={<>
-          <button onClick={() => setWinStart(d => addDays(d, -DAYS))} style={btnStyle}aria-label="Ventana anterior">◀ Anterior</button>
+          <button onClick={() => setWinStart(d => addDays(d, -DAYS))} style={btnStyle} aria-label="Ventana anterior">◀ Anterior</button>
           <button onClick={() => setWinStart(now)} style={{ ...btnStyle, padding: '0 14px', fontWeight: 600 }}>Hoy</button>
-          <button onClick={() => setWinStart(d => addDays(d, DAYS))} style={btnStyle}aria-label="Ventana siguiente">Siguiente ▶</button>
+          <button onClick={() => setWinStart(d => addDays(d, DAYS))} style={btnStyle} aria-label="Ventana siguiente">Siguiente ▶</button>
         </>}
       />
 
