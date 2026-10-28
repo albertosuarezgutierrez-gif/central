@@ -91,6 +91,7 @@ describe('Allianz ePAC drvp00: avance de paso #btnAceptar + eventoSiguiente() po
       ['título Tarificar', inv([BTN], { titulos: [{ texto: 'Tarificar', tag: 'h2' }] }), MP],
       ['título Revisión y emisión', inv([BTN], { titulos: [{ texto: 'Revisión y emisión', tag: 'th' }] }), MP],
       ['otro texto', inv([{ ...BTN, texto: 'Aceptar y emitir' }]), MP],
+      ['marco con PRECIO (importes)', sanearInventarioDom({ marcos: [{ url: URL_DRVP00, nombre: 'appArea', titulos: [], importes: [{ texto: '47,55 €', etiqueta: 'Prima total' }], elementos: [BTN] }] }, undefined, { refs: true })!, MP],
       ['otra entrada (Hogar)', inv([BTN]), 'allianz:particulares:hogar'],
       ['Mapfre patinete', inv([BTN]), 'mapfre:automoviles:patinetes'],
     ]

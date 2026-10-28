@@ -956,14 +956,16 @@ export function rutaDeMarco(url: string | null | undefined): string | null {
 
 /**
  * ¿Es este control el avance por IDENTIDAD EXACTA (`AvancePorId`) de ESTA entrada en ESTE marco? Exige: id EXACTO, onclick
- * EXACTO (sin recortar), texto EXACTO (y aria-label, si lo hay, igual), ruta del marco EXACTA y ningún título de la pantalla
- * de tarificación/emisión (lista de títulos sin recortar). Devuelve la regla que casa o `null`. Pura y compartida con el worker.
+ * EXACTO (sin recortar), texto EXACTO (y aria-label, si lo hay, igual), ruta del marco EXACTA, ningún título de la pantalla
+ * de tarificación/emisión (lista de títulos sin recortar) y NINGÚN importe en el marco (pantalla con precio = no). Devuelve la regla que casa o `null`. Pura y compartida con el worker.
  */
 export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): AvancePorId | null {
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
   if (!e?.avancesPorId?.length || typeof el.texto !== 'string' || typeof el.id !== 'string' || typeof el.onclick !== 'string') return null
   if (truncado(el.id) || truncado(el.onclick) || truncado(el.texto)) return null
   if ((marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO || (marco.titulosPantalla?.length ?? 0) >= MAX_TITULOS_MARCO) return null
+  // Con PRECIO en el marco (revisión de seguridad 28/10/2026) ya es la pantalla de resultado: su «Aceptar» puede llevar a emitir.
+  if ((marco.importes?.length ?? 0) > 0) return null
   const todos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
   const texto = plano(el.texto)
   const aria = typeof el.ariaLabel === 'string' && el.ariaLabel.trim() !== '' ? plano(el.ariaLabel) : null

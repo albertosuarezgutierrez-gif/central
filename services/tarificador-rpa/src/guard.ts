@@ -754,6 +754,19 @@ async function descripcion(boton: Locator, alContenedor = false): Promise<(strin
         }
         return out
       })(),
+      // LABEL (revisión de seguridad 28/10/2026): pulsar una etiqueta ACTIVA su control (el radio oculto de ePAC, por `for` o por
+      // `<x>_label` → `#<x>`): el id/name/value/onclick/onchange de ESE control también se ejecutan y el patrón los tiene que ver.
+      // `value` solo de casillas/opciones (catálogo): el de un campo de texto podría ser un dato y la descripción llega a mensajes.
+      ...(() => {
+        if (h.tagName !== 'LABEL') return [] as (string | null)[]
+        const l = base as HTMLLabelElement
+        let c: Element | null = l.control ?? null
+        if (!c && l.id && /_label$/.test(l.id)) c = l.ownerDocument.getElementById(l.id.slice(0, -'_label'.length))
+        if (!c) return [] as (string | null)[]
+        const tipo = (c.getAttribute('type') ?? '').toLowerCase()
+        const conValor = c.tagName === 'INPUT' && ['checkbox', 'radio'].includes(tipo)
+        return [c.id || null, c.getAttribute('name'), conValor ? c.getAttribute('value') : null, c.getAttribute('onclick'), c.getAttribute('onchange')]
+      })(),
     ]
   }, alContenedor)
 }
@@ -2685,8 +2698,8 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
   return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}` }
 }
 
-/** Tope de avances de PASO por identidad exacta (`AvancePorId`) por trabajo: un asistente de pocos pasos, con margen. */
-export const MAX_AVANCES_POR_ID = 4
+/** Tope de avances de PASO por identidad exacta (`AvancePorId`) por trabajo (3, revisión de seguridad 28/10/2026). */
+export const MAX_AVANCES_POR_ID = 3
 
 /**
  * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
@@ -2732,6 +2745,13 @@ export async function pulsarExploracionAutorizada(
     if (desc[4] !== porId.id || onclickNormalizado(desc[7]) !== porId.onclick || ruta !== porId.rutaMarco) {
       throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el avance de paso autorizado (id/onclick/marco)')
     }
+    // VIVO: ningún importe a la vista en el marco (el MISMO criterio que el inventario de exploración). Si no se puede leer, no.
+    const conPrecio = await boton.evaluate((el) => Array.from(el.ownerDocument.querySelectorAll('td,th,span,strong,b,div,p,dd,li,label,output')).some((n) => {
+      if (n.children.length > 0 || (n as HTMLElement).getClientRects().length === 0) return false
+      const t = ((n as HTMLElement).innerText || n.textContent || '').replace(/\s+/g, ' ').trim()
+      return t.length > 0 && t.length <= 30 && /\d/.test(t) && /^(?:€\s*)?-?[\d.,]{1,15}\s*(?:€|eur(?:os)?)?$/i.test(t) && (/€|eur/i.test(t) || /,\d{1,2}$/.test(t))
+    })).catch(() => true)
+    if (conPrecio) throw new EmisionBloqueadaError('boton', 'avance de exploración: el marco ya muestra un precio (no se avanza por id)')
   }
   comprobarBoton(desc, { permitirAceptar: true })
   const destino = await boton.evaluate((el) => {

@@ -307,3 +307,46 @@ test(`ePAC: el avance de paso por id tiene tope (${MAX_AVANCES_POR_ID} por traba
     await context.close()
   }
 })
+
+// ─── Revisión de seguridad (28/10/2026) ──────────────────────────────────────
+
+test('seguridad: pulsar una LABEL cuyo radio oculto lleva un handler de emisión → EmisionBloqueadaError (por for y por <x>_label)', async () => {
+  for (const html of [
+    '<label id="lab" for="r">Sí</label><input id="r" type="radio" style="display:none" onclick="emitir()">',
+    '<label id="r_label">Sí</label><input id="r" type="radio" style="display:none" onchange="contratarPoliza()">',
+  ]) {
+    figuras = PAGINA(html)
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      await assert.rejects(pulsar(page.locator('label').first(), guard), EmisionBloqueadaError, html)
+    } finally {
+      await context.close()
+    }
+  }
+  // Y una label normal (radio sin handler de emisión) se sigue pulsando.
+  figuras = PAGINA('<label for="r">Sí</label><input id="r" name="x" value="S" type="radio" style="display:none">')
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    await pulsar(page.locator('label').first(), guard)
+    assert.equal(await page.locator('#r').isChecked(), true)
+  } finally {
+    await context.close()
+  }
+})
+
+test('seguridad: si el marco muestra un PRECIO al ir a pulsar, el avance por id no se pulsa; tope = 3', async () => {
+  assert.equal(MAX_AVANCES_POR_ID, 3)
+  figuras = FIGURAS()
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    const cap = (await capturarInventarioExploracion(page))!
+    const marco = cap.inventario.marcos[0]
+    const el = marco.elementos.find((e) => e.id === 'btnAceptar')!
+    await page.evaluate(() => { const t = document.createElement('td'); t.textContent = '47,55 €'; document.querySelector('tr')!.appendChild(t) })
+    await assert.rejects(pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }), /precio/)
+    assert.ok(!peticiones.some((p) => p.metodo === 'POST'))
+    await cap.liberar()
+  } finally {
+    await context.close()
+  }
+})
