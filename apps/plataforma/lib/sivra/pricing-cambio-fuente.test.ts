@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { descongelar, DIAS_CONGELADA } from './pricing-descongelar.ts'
 import { congelarPorCambioFuente, normalizarFuenteBase, HORIZONTE_DIAS, type CambioFuenteInput } from './pricing-cambio-fuente.ts'
 
 // Caso real: Duplex 01/05/2027, pasada del 24/10/2026. Última escritura (26/09) con bucket del mes a
@@ -63,4 +64,17 @@ test('el motor lee base_fuente de la última escritura y aplica la guarda antes 
   assert.match(src, /normalizarFuenteBase\(x\.fuente_prev\)/)
   assert.match(src, /congelarPorCambioFuente\(\{[\s\S]{0,400}fuenteActual: useMonth \? 'mes' : 'global'/)
   assert.match(src, /congeladas_cambio_fuente:/)
+})
+
+// La guarda recibe la MISMA liberación que las demás (`liberaGuardas`), no solo techo + rumor: una
+// fecha retenida ≥ DIAS_CONGELADA días tiene que salir, no esperar a los 30 días vista.
+test('una fecha retenida ≥ DIAS_CONGELADA días se libera (llave de antigüedad), antes no', () => {
+  const lib = (dias: number) => descongelar({ diasSinEscribir: dias, rumorCaido: false }).libera
+  assert.equal(congelarPorCambioFuente({ ...DUPLEX_0105, libera: lib(DIAS_CONGELADA - 1) }), true)
+  assert.equal(congelarPorCambioFuente({ ...DUPLEX_0105, libera: lib(DIAS_CONGELADA) }), false)
+})
+
+test('el motor pasa liberaGuardas (todas las llaves) a la guarda «el mes se fue»', () => {
+  const src = readFileSync(new URL('../../app/api/sivra/pricing/apply/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /congelarPorCambioFuente\(\{[\s\S]{0,700}libera: liberaGuardas,/)
 })

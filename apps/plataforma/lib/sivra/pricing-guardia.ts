@@ -81,6 +81,13 @@ export type ReservaBajaInput = {
    * que decir de dónde sale el número, porque con el mezclado NO se alerta (ver la función).
    */
   fechaEspecifica: boolean
+  /**
+   * true = la fecha de la reserva tiene un evento activo (no descartado) o un prior estacional > 1.
+   * Son justo las noches con menos comps propios, donde el p50 mezclado NO es un mal patrón (el
+   * mezclado queda por DEBAJO de lo que vale esa noche) y una reserva barata sí lo es. Con el mezclado
+   * y esta marca, se alerta. Ausente/false = como antes (informativa).
+   */
+  fechaSensible?: boolean
 }
 
 export type ReservaBajaOpts = {
@@ -109,6 +116,7 @@ export type ReservaBajaResult = {
  * y baja: Duplex 28/01 y 04/02/2027 salieron −42 % y −45 % contra un mezclado de 159 € cuando el
  * mercado de las fechas vecinas era 104-118 €. Eso no es una reserva barata, es enero. Sin p50 de la
  * fecha el resultado es `informativa` (se cuenta, no se avisa): «no se sabe» no es «va mal».
+ * Excepción: `fechaSensible` (evento activo o prior estacional > 1) sí alerta contra el mezclado.
  */
 export function decidirReservaBaja(i: ReservaBajaInput, o: ReservaBajaOpts = {}): ReservaBajaResult {
   const umbral = o.umbral ?? 0.25
@@ -116,7 +124,12 @@ export function decidirReservaBaja(i: ReservaBajaInput, o: ReservaBajaOpts = {})
   if (i.marketP50 <= 0 || i.comps < minComps || i.adr <= 0) return { alerta: false, diffPct: 0 }
   const diffPct = ((i.adr - i.marketP50) / i.marketP50) * 100
   const bajo = diffPct <= -umbral * 100
-  if (i.fechaEspecifica !== true) return { alerta: false, diffPct, informativa: bajo }
+  if (i.fechaEspecifica !== true) {
+    // Evento activo o temporada alta: el mezclado se queda corto para esa noche, así que una reserva
+    // por debajo de él es barata de verdad.
+    if (i.fechaSensible === true) return { alerta: bajo, diffPct }
+    return { alerta: false, diffPct, informativa: bajo }
+  }
   return { alerta: bajo, diffPct }
 }
 

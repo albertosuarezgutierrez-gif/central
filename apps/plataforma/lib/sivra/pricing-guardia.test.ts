@@ -120,3 +120,29 @@ test("el guardián pasa la procedencia REAL del p50 (date_specific) a decidirRes
   assert.match(src, /\(md\.p50 IS NOT NULL\) AS date_specific/)
   assert.match(src, /reservas_bajas_sin_mercado_fecha:/)
 })
+
+test('reserva baja contra el MEZCLADO: evento activo → alerta; prior > 1 → alerta; noche normal → informativa', () => {
+  const base = { adr: 92, marketP50: 159, comps: 180, fechaEspecifica: false }
+  const evento = decidirReservaBaja({ ...base, fechaSensible: true })   // evento activo
+  assert.equal(evento.alerta, true)
+  assert.notEqual(evento.informativa, true)
+  const prior = decidirReservaBaja({ ...base, fechaSensible: true })    // prior estacional > 1
+  assert.equal(prior.alerta, true)
+  const normal = decidirReservaBaja({ ...base, fechaSensible: false })
+  assert.equal(normal.alerta, false)
+  assert.equal(normal.informativa, true)
+  assert.equal(decidirReservaBaja(base).alerta, false)
+  // sensible pero NO barata: no alerta ni es informativa
+  const nobarata = decidirReservaBaja({ ...base, adr: 150, fechaSensible: true })
+  assert.equal(nobarata.alerta, false)
+  assert.notEqual(nobarata.informativa, true)
+})
+
+test('el guardián calcula fechaSensible con pricing_eventos_auto (no descartados) y el prior estacional', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../../app/api/sivra/pricing/guard/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /fechaSensible: /)
+  assert.match(src, /pricing_eventos_auto/)
+  assert.match(src, /indicesPrior\(/)
+  assert.match(src, /normalizarEstado\(/)
+})

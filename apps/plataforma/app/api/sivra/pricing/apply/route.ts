@@ -1429,7 +1429,9 @@ export async function POST(req: NextRequest) {
         fuenteAnterior: hayHistorialEscrituras ? (fuenteUltimaEscritura.get(`${r.property_id}|${date}`) ?? null) : null,
         fuenteActual: useMonth ? 'mes' : 'global',
         target, old, diasVista: daysOut,
-        libera: liberaTecho || rumorCaido.has(date),
+        // La MISMA liberación que el resto de guardas (techo, ADR de evento, rumor caído, antigüedad
+        // ≥ DIAS_CONGELADA, salto nuestro, descenso en curso): si no, se retendría hasta los 30 días.
+        libera: liberaGuardas,
         maxPrice: r.max_price,
       })) {
         congeladasFuente.push({ fecha: date, precio: old!, objetivo: target })
