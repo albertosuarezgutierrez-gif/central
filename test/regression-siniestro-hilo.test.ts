@@ -78,3 +78,18 @@ test('la regla pura del canal «operador» no admite «ia»', () => {
   assert.ok(m, 'existe AUTORES_MENSAJE_OPERADOR')
   assert.doesNotMatch(m![1], /'ia'/)
 })
+
+test('la ruta de IA del siniestro: valida la correduría, no usa aiComplete, una sola llamada y verifica citas', () => {
+  const ruta = readFileSync(join(ROOT, 'apps/asegura/app/api/operador/siniestro/ia/route.ts'), 'utf8')
+  const lib = readFileSync(join(ROOT, 'apps/asegura/lib/siniestro-ia.ts'), 'utf8')
+  assert.match(ruta, /export const POST = auditado\(/, 'POST envuelto en auditado()')
+  assert.match(ruta, /correduriaPedida\(b\.correduriaId\)/, 'valida la correduría pedida')
+  for (const [n, src] of [['ruta', ruta], ['lib', lib]] as const) {
+    assert.doesNotMatch(src, /\baiComplete\b/, `${n}: no llama a aiComplete (va por iaTexto)`)
+  }
+  assert.match(lib, /\biaTexto\(/, 'usa iaTexto')
+  assert.equal((lib.match(/await iaTexto\(/g) ?? []).length, 1, 'una sola llamada a iaTexto, sin reintentos')
+  assert.match(lib, /verificarCitas\(/, 'verifica las citas contra la póliza')
+  assert.match(lib, /canal:\s*'servidor'/, 'escribe el autor ia con canal servidor')
+  assert.match(lib, /correduriaId/, 'todo con correduriaId')
+})

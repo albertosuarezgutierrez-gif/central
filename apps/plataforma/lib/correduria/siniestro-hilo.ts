@@ -9,7 +9,9 @@ export type Mensaje = {
   id: string
   autor: AutorMensaje
   tipo: TipoMensaje
-  texto: string
+  /** `null` solo con `textoIlegible` (no se pudo descifrar). */
+  texto: string | null
+  textoIlegible: boolean
   documentoId: string | null
   creadoPor: string | null
   creadoAt: string | null
@@ -23,6 +25,8 @@ export type Plazo = {
   diasRestantes: number | null
   baseLegal: string | null
   verificado: boolean
+  /** Por qué falta la fecha o qué se ha supuesto. */
+  nota: string | null
 }
 
 export type DocPoliza = { id: string; tipo: string; nombre: string | null }
@@ -51,8 +55,9 @@ export function leerMensaje(v: unknown): Mensaje | null {
   if (!o || !str(o.id)) return null
   const autor = AUTORES.find(a => a === o.autor)
   const tipo = TIPOS.find(t => t === o.tipo)
-  if (!autor || !tipo || typeof o.texto !== 'string') return null
-  return { id: o.id as string, autor, tipo, texto: o.texto, documentoId: str(o.documentoId), creadoPor: str(o.creadoPor), creadoAt: str(o.creadoAt), meta: obj(o.meta) }
+  const ilegible = o.textoIlegible === true
+  if (!autor || !tipo || (typeof o.texto !== 'string' && !ilegible)) return null
+  return { id: o.id as string, autor, tipo, texto: typeof o.texto === 'string' ? o.texto : null, textoIlegible: ilegible, documentoId: str(o.documentoId), creadoPor: str(o.creadoPor), creadoAt: str(o.creadoAt), meta: obj(o.meta) }
 }
 
 /** `null` = no es un array legible (no se pudo leer); un elemento ilegible se descarta. */
@@ -69,7 +74,7 @@ export function leerPlazos(v: unknown): Plazo[] | null {
     if (!o || !str(o.clave)) continue
     out.push({
       clave: o.clave as string, etiqueta: str(o.etiqueta) ?? (o.clave as string), fecha: str(o.fecha), diasRestantes: num(o.diasRestantes),
-      baseLegal: str(o.baseLegal), verificado: o.verificado === true,
+      baseLegal: str(o.base_legal) ?? str(o.baseLegal), verificado: o.verificado === true, nota: str(o.nota),
     })
   }
   return out
@@ -77,7 +82,7 @@ export function leerPlazos(v: unknown): Plazo[] | null {
 
 export function leerHilo(v: unknown): HiloSiniestro | null {
   const o = obj(v)
-  if (!o || o.estado === 'error' || o.estado === 'sin_configurar') return null
+  if (!o || (o.estado !== undefined && o.estado !== 'ok')) return null
   const p = obj(o.poliza)
   return {
     siniestro: obj(o.siniestro),
@@ -97,7 +102,8 @@ export function leerHilo(v: unknown): HiloSiniestro | null {
 }
 
 export function leerEsperando(v: unknown): Esperando[] | null {
-  const lista = Array.isArray(v) ? v : obj(v) && Array.isArray(obj(v)!.siniestros) ? (obj(v)!.siniestros as unknown[]) : null
+  // El puerto devuelve el array tal cual en 200; un error (500/503) es un objeto y NUNCA se lee como lista vacía.
+  const lista = Array.isArray(v) ? v : null
   if (!lista) return null
   const out: Esperando[] = []
   for (const x of lista) {
@@ -129,6 +135,20 @@ export function estadoPlazo(p: Plazo): EstadoPlazo {
   return { texto, tono: d < UMBRAL_PLAZO_ROJO ? 'malo' : 'neutral', aviso }
 }
 
+/** Mensaje de error para el corredor a partir de la respuesta del puerto (`sin_migracion` = BD sin la tabla del hilo). */
+export function motivoFallo(status: number, j: unknown): string {
+  const o = obj(j)
+  if (o?.estado === 'sin_migracion') return 'El hilo aún no está activado en la base de datos'
+  return str(o?.motivo) ?? `error ${status}`
+}
+
+/** Citas de la póliza que la IA mencionó y NO aparecen en el documento (aviso a resaltar). */
+export function citasNoEncontradas(meta: Record<string, unknown> | null): string[] {
+  const citas = obj(meta?.citas)
+  const l = citas?.noEncontradas
+  return Array.isArray(l) ? l.map(x => (typeof x === 'string' ? x : JSON.stringify(x))).filter(x => x !== '') : []
+}
+
 export const LIMITE_PLEGADO = 600
 
 export function plegarTexto(texto: string, abierto: boolean, limite = LIMITE_PLEGADO): { visible: string; plegado: boolean } {
@@ -138,11 +158,23 @@ export function plegarTexto(texto: string, abierto: boolean, limite = LIMITE_PLE
 
 export const ETIQUETA_AUTOR: Record<AutorMensaje, string> = { compania: 'Compañía', ia: 'IA', corredor: 'Alberto', interna: 'Nota interna' }
 
-export type ModoCaja = 'compania' | 'enviado' | 'interna'
-/** Qué se guarda según el selector de la caja. */
-export function cuerpoCaja(modo: ModoCaja, texto: string, documentoId: string | null): { autor: AutorMensaje; tipo: TipoMensaje; texto: string; documentoId?: string } {
+export type ModoCaja = 'compania' | 'rehuse' | 'enviado' | 'interna'
+
+/** Combinaciones autor/tipo que acepta el puerto: `enviado` solo del corredor, `rehuse` solo de la compañía. */
+export function combinacionValida(autor: AutorMensaje, tipo: TipoMensaje): boolean {
+  if (tipo === 'enviado') return autor === 'corredor'
+  if (tipo === 'rehuse') return autor === 'compania'
+  if (tipo === 'analisis') return autor === 'ia'
+  return true
+}
+
+/** Qué se guarda según el selector de la caja. `reclamacionSac` solo cuenta con «enviado». */
+export function cuerpoCaja(modo: ModoCaja, texto: string, documentoId: string | null, reclamacionSac = false): {
+  autor: AutorMensaje; tipo: TipoMensaje; texto: string; documentoId?: string; reclamacionSac?: boolean
+} {
   const base = { texto: texto.trim(), ...(documentoId ? { documentoId } : {}) }
   if (modo === 'compania') return { autor: 'compania', tipo: 'comentario', ...base }
-  if (modo === 'enviado') return { autor: 'corredor', tipo: 'enviado', ...base }
+  if (modo === 'rehuse') return { autor: 'compania', tipo: 'rehuse', ...base }
+  if (modo === 'enviado') return { autor: 'corredor', tipo: 'enviado', ...base, ...(reclamacionSac ? { reclamacionSac: true } : {}) }
   return { autor: 'interna', tipo: 'nota', ...base }
 }

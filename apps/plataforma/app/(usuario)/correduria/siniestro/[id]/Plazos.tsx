@@ -25,6 +25,7 @@ export default function Plazos({ plazos, esperando }: { plazos: Plazo[] | null; 
                   <strong style={{ color: e.tono === 'malo' ? 'var(--negative)' : 'var(--text)' }}>{e.texto}</strong>
                 </span>
                 {p.baseLegal && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{p.baseLegal}</span>}
+                {p.nota && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{p.nota}</span>}
                 {e.aviso && <span style={{ fontSize: 12, color: 'var(--warning)' }}>⚠ {e.aviso}</span>}
               </li>
             )

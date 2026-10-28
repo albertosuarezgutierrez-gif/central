@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Bloque from '../../Bloque'
 import Documentos from '../../Documentos'
-import { leerHilo, type HiloSiniestro } from '@/lib/correduria/siniestro-hilo'
+import { leerHilo, motivoFallo, type HiloSiniestro } from '@/lib/correduria/siniestro-hilo'
 import { leerSiniestro } from '@/lib/siniestros-asegura'
 import type { DocumentoResumen } from '@central/module-seguros'
 import Cabecera from './Cabecera'
@@ -28,7 +28,8 @@ export default function Expediente({ siniestroId }: { siniestroId: string }) {
       const r = await fetch(`/api/correduria/siniestro/hilo?siniestroId=${encodeURIComponent(siniestroId)}`, { cache: 'no-store' })
       const j: unknown = await r.json().catch(() => null)
       const hilo = r.ok ? leerHilo(j) : null
-      setC(hilo ? { estado: 'ok', hilo } : { estado: 'error', motivo: r.status === 404 ? 'No existe ese siniestro.' : `No se pudo leer (error ${r.status}).` })
+      const motivo = r.status === 404 ? 'No existe ese siniestro.' : (j as { estado?: string } | null)?.estado === 'sin_migracion' ? `${motivoFallo(r.status, j)}.` : `No se pudo leer (error ${r.status}).`
+      setC(hilo ? { estado: 'ok', hilo } : { estado: 'error', motivo })
     } catch {
       setC(prev => (prev.estado === 'ok' ? prev : { estado: 'error', motivo: 'Sin conexión.' }))
     }

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Bloque from '../../Bloque'
 import { btnStyle } from '@/components/ui'
+import { citasNoEncontradas, leerMensaje, motivoFallo } from '@/lib/correduria/siniestro-hilo'
 import { ERROR, NOTA } from './estilos'
 
 type Peticion = { accion: 'analizar' | 'redactar'; destinatario?: 'compania' | 'cliente' }
@@ -18,9 +19,12 @@ export default function AccionesIa({ siniestroId, onHecho }: { siniestroId: stri
       })
       if (r.status === 404) return setAviso({ mal: false, texto: 'Aún no disponible.' })
       if (!r.ok) {
-        const j = (await r.json().catch(() => null)) as { motivo?: string } | null
-        return setAviso({ mal: true, texto: `La IA no ha respondido: ${j?.motivo ?? `error ${r.status}`}.` })
+        const j: unknown = await r.json().catch(() => null)
+        return setAviso({ mal: true, texto: `La IA no ha respondido: ${motivoFallo(r.status, j)}.` })
       }
+      const m = leerMensaje(await r.json().catch(() => null))
+      const faltan = m ? citasNoEncontradas(m.meta) : []
+      if (faltan.length > 0) setAviso({ mal: true, texto: `⚠ La IA cita algo que NO aparece en la póliza: ${faltan.join(' · ')}. Compruébalo antes de usar el texto.` })
       onHecho()
     } catch {
       setAviso({ mal: true, texto: 'Sin conexión con la IA.' })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { anotarHiloAsegura, hiloAsegura } from '@/lib/correduria/siniestro-hilo-red'
+import { anotarHiloAsegura, conCorreduria, hiloAsegura } from '@/lib/correduria/siniestro-hilo-red'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +25,6 @@ export async function POST(req: NextRequest) {
   if (typeof body.texto !== 'string' || body.texto.trim() === '') {
     return NextResponse.json({ estado: 'invalido', motivo: 'El mensaje está vacío.' }, { status: 422 })
   }
-  const r = await anotarHiloAsegura({ ...body, correduriaId: guarda.acceso.correduriaId ?? undefined, actor: guarda.session.email })
+  const r = await anotarHiloAsegura({ ...conCorreduria(guarda.acceso.correduriaId, body), actor: guarda.session.email })
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { iaSiniestroAsegura } from '@/lib/correduria/siniestro-hilo-red'
+import { conCorreduria, iaSiniestroAsegura } from '@/lib/correduria/siniestro-hilo-red'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -16,6 +16,6 @@ export async function POST(req: NextRequest) {
   if (body.accion !== 'analizar' && body.accion !== 'redactar') {
     return NextResponse.json({ estado: 'invalido', motivo: 'Acción no válida.' }, { status: 422 })
   }
-  const r = await iaSiniestroAsegura({ ...body, correduriaId: guarda.acceso.correduriaId ?? undefined, actor: guarda.session.email })
+  const r = await iaSiniestroAsegura({ ...conCorreduria(guarda.acceso.correduriaId, body), actor: guarda.session.email })
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

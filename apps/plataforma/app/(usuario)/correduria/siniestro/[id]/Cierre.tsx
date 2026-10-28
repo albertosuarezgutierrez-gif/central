@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Bloque from '../../Bloque'
 import { btnStyle } from '@/components/ui'
+import { motivoFallo } from '@/lib/correduria/siniestro-hilo'
 import { CAMPO, ERROR, NOTA } from './estilos'
 
 const ETIQUETA: Record<string, string> = { ganado: 'Ganado', perdido: 'Perdido', parcial: 'Parcial' }
@@ -34,8 +35,8 @@ export default function Cierre({ siniestroId, resultado, motivo, onGuardado }: {
         body: JSON.stringify({ siniestroId, resultado: res, motivo: mot.trim() }),
       })
       if (!r.ok) {
-        const j = (await r.json().catch(() => null)) as { motivo?: string } | null
-        return setAviso(`NO se ha cerrado: ${j?.motivo ?? `error ${r.status}`}.`)
+        const j: unknown = await r.json().catch(() => null)
+        return setAviso(`NO se ha cerrado: ${motivoFallo(r.status, j)}.`)
       }
       onGuardado()
     } catch {

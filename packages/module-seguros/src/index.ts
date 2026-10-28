@@ -1710,3 +1710,11 @@ export {
   type SiniestroParaPlazos,
   type TipoMensajeSiniestro,
 } from './siniestro-plazos.ts'
+
+export {
+  avisoCitasNoEncontradas,
+  extraerCitas,
+  normalizarParaCita,
+  verificarCitas,
+  type VerificacionCitas,
+} from './siniestro-citas.ts'

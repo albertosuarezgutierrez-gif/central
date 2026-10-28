@@ -1,6 +1,12 @@
 // Red del expediente de siniestro: llamadas al puerto de asegura (solo desde rutas API de plataforma).
 import { llamar, type Reenvio } from '../siniestros-asegura.ts'
 
+/** Cuerpo para el puerto: `correduriaId` solo si hay (si es null se omite; el puerto usa la correduría única). */
+export const conCorreduria = (correduriaId: string | null, body: Record<string, unknown>): Record<string, unknown> => {
+  const { correduriaId: _ignorado, ...resto } = body
+  return correduriaId ? { ...resto, correduriaId } : resto
+}
+
 export const hiloAsegura = (correduriaId: string | null, siniestroId: string): Promise<Reenvio> =>
   llamar(`/api/operador/siniestro/hilo?${new URLSearchParams({ ...(correduriaId ? { correduriaId } : {}), siniestroId })}`, { method: 'GET' })
 

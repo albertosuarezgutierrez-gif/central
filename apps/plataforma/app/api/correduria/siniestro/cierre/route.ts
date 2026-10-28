@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { cierreAsegura } from '@/lib/correduria/siniestro-hilo-red'
+import { cierreAsegura, conCorreduria } from '@/lib/correduria/siniestro-hilo-red'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +15,6 @@ export async function PATCH(req: NextRequest) {
   if (!['ganado', 'perdido', 'parcial'].includes(String(body.resultado))) {
     return NextResponse.json({ estado: 'invalido', motivo: 'Resultado no válido.' }, { status: 422 })
   }
-  const r = await cierreAsegura({ ...body, correduriaId: guarda.acceso.correduriaId ?? undefined, actor: guarda.session.email })
+  const r = await cierreAsegura({ ...conCorreduria(guarda.acceso.correduriaId, body), actor: guarda.session.email })
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }
