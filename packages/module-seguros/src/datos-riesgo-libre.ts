@@ -8,7 +8,7 @@
  *     no es el código CNO-11 de `datosCapital` de vida: se cotiza fuera y se teclea en el portal de la compañía);
  *   · mascotas   → `especie`, `raza`, `fechaNacimientoAnimal`, `ppp` (raza potencialmente peligrosa, RD 287/2002) y
  *     `microchip` (lo que piden las compañías de mascotas y el enlace ya preguntaba; sin API en Codeoscopic).
- *   · patinete (28/10/2026, VMP) → `marca`, `modelo`, `inscripcionDgt` (nº del Registro de VMP de la DGT: no hay
+ *   · patinete (28/10/2026, VMP) → `marca`, `modelo`, `version`, `inscripcionDgt` (nº del Registro de VMP de la DGT: no hay
  *     matrícula), `certificadoVmp` (¿tiene certificado de circulación?), `inscripcionValidaHasta`, `uso` y `valorVmp`.
  *     No tarifica (ni Avant2 ni bot activo): se cotiza fuera, como el resto del bloque libre. El nº de inscripción
  *     se guarda tal cual (sin formato oficial publicado que validar: no se inventa uno).
@@ -34,6 +34,7 @@ export const ESPEC_LIBRE = [
   // Patinete / VMP.
   { clave: 'marca', etiqueta: 'Marca', tipo: { t: 'texto', max: 60 } },
   { clave: 'modelo', etiqueta: 'Modelo', tipo: { t: 'texto', max: 80 } },
+  { clave: 'version', etiqueta: 'Versión', tipo: { t: 'texto', max: 80 } },
   { clave: 'inscripcionDgt', etiqueta: 'Nº de inscripción DGT', tipo: { t: 'texto', max: 30 } },
   { clave: 'certificadoVmp', etiqueta: 'Certificado de circulación', tipo: { t: 'bool' } },
   { clave: 'inscripcionValidaHasta', etiqueta: 'Inscripción válida hasta', tipo: { t: 'fecha', futura: true } },
@@ -57,6 +58,7 @@ export type DatosRiesgoLibre = {
   microchip: string | null
   marca: string | null
   modelo: string | null
+  version: string | null
   inscripcionDgt: string | null
   /** `true` = tiene certificado; `false` = dice que no; `null` = no se sabe. */
   certificadoVmp: boolean | null
@@ -84,6 +86,7 @@ export const ETIQUETA_CAMPO_LIBRE: Record<CampoRiesgoLibre, string> = {
   microchip: 'Microchip',
   marca: 'Marca',
   modelo: 'Modelo',
+  version: 'Versión',
   inscripcionDgt: 'Nº de inscripción DGT',
   certificadoVmp: 'Certificado de circulación',
   inscripcionValidaHasta: 'Inscripción válida hasta',
@@ -94,7 +97,7 @@ export const ETIQUETA_CAMPO_LIBRE: Record<CampoRiesgoLibre, string> = {
 const CAMPOS_LIBRE_COMUNES: readonly CampoRiesgoLibre[] = ['descripcion', 'direccion', 'capital', 'notas']
 export const CAMPOS_MASCOTA_LIBRE: readonly CampoRiesgoLibre[] = ['especie', 'raza', 'fechaNacimientoAnimal', 'ppp', 'microchip']
 /** Los del patinete / VMP (28/10/2026): un vehículo SIN matrícula. */
-export const CAMPOS_PATINETE_LIBRE: readonly CampoRiesgoLibre[] = ['marca', 'modelo', 'inscripcionDgt', 'certificadoVmp', 'inscripcionValidaHasta', 'uso', 'valorVmp']
+export const CAMPOS_PATINETE_LIBRE: readonly CampoRiesgoLibre[] = ['marca', 'modelo', 'version', 'inscripcionDgt', 'certificadoVmp', 'inscripcionValidaHasta', 'uso', 'valorVmp']
 
 /** Qué campos del bloque libre se usan en cada ramo (los propios de accidentes y mascotas, solo allí). */
 export function camposLibreDelRamo(ramo: unknown): readonly CampoRiesgoLibre[] {

@@ -45,6 +45,11 @@ export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
   log?: (m: string, d?: Record<string, unknown>) => void
   /** El enlace «…Emisión…» de menú: SOLO por la excepción exacta del guard (`pulsarEnlaceEntradaAutorizado`). */
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  /**
+   * «Acceso a NSE» de la página intermedia de Patinetes (28/10/2026): SOLO por la puerta exacta del guard (`pulsarAccesoNseMapfre`),
+   * porque su href (`abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISIÓN')`) casa con `emisi`. Sin ella, `ctx.pulsar` (que lo bloquea).
+   */
+  pulsarAccesoNse?: (boton: Locator) => Promise<void>
   /** Las MISMAS credenciales del login (`ctx.credenciales`): solo para el login antiguo (`/loginexternopi/`) que a veces
    *  se interpone ante la URL directa del NSEI. Jamás van a un mensaje de error ni al log. */
   credenciales?: { usuario: string; contrasena: string }
@@ -317,7 +322,9 @@ async function pasarPorEnlaceIntermedio(pagina: Page, ctx: CtxEntradaMapfre, tex
   if (candidatos.length > 1) throw new ErrorMapaIncompleto(`el enlace «${texto}» de la página intermedia (${candidatos.length} coincidencias exactas visibles, ambiguo) de wmediadores`, true)
   const nueva = pagina.context().waitForEvent('page', { timeout: Math.min(menuMs, 5_000) })
   nueva.catch(() => undefined)
-  await ctx.pulsar(candidatos[0]!)
+  // «Acceso a NSE» abre la aplicación «Nuevo Sistema de Emisión» (su href casa con `emisi`): por su puerta exacta del guard.
+  if (ctx.pulsarAccesoNse && texto === 'Acceso a NSE') await ctx.pulsarAccesoNse(candidatos[0]!)
+  else await ctx.pulsar(candidatos[0]!)
   await ctx.pausa()
   const otra = await nueva.then((p) => p, () => null)
   const destino = otra ?? pagina

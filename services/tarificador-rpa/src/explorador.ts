@@ -71,7 +71,7 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
+import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, controlOcultoDeEtiqueta, instalarGuardEmision, pulsar, pulsarAccesoNseMapfre, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { modoVistaExplorador, vistaDelPaso } from './aprendizaje/vista-aria.ts'
@@ -87,8 +87,8 @@ import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
-/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.3.1'
+/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.2 (28/10/2026): «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
+export const EXPLORADOR_VERSION = '0.3.2'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -113,6 +113,8 @@ const MAX_BYTES_PDF_PRESUPUESTO = 9 * 1024 * 1024
 export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'> & {
   /** Enlace de menú autorizado de la compañía del trabajo (`pulsarEnlaceEntradaAutorizado`); solo en la ENTRADA. */
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  /** «Acceso a NSE» de Mapfre Patinetes (`pulsarAccesoNseMapfre`); solo en la ENTRADA. */
+  pulsarAccesoNse?: (boton: Locator) => Promise<void>
   /**
    * LOGIN ASISTIDO (14/10/2026): SOLO si la compañía de la entrada está en `LOGIN_ASISTIDO` (hoy Occident). Lo que la fase
    * necesita además del contexto: la entrada, el guard (ventana de red del login) y el paso de login hacia asegura.
@@ -793,12 +795,20 @@ type NodoInv = InventarioExploracion['nodos'] extends Map<string, infer N> ? N :
 /** Cuánto se espera, tras traer el nodo a la vista, a que el portal lo pinte (NDBX perezoso, animaciones). */
 const ESPERA_VISIBLE_MS = 1_500
 
-/** Lee el nodo VIVO: `null` = desconectado; lanza si `evaluate` falla (lo traduce `localizar`). */
-const leerVivo = (nodo: NodoInv) => nodo.handle.evaluate((n) => {
-  const e = n as HTMLElement
-  if (!e.isConnected || typeof e.getAttribute !== 'function') return null
-  return { tag: e.tagName.toLowerCase(), id: e.id || null, name: e.getAttribute('name'), type: e.getAttribute('type'), texto: (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim() }
-})
+/**
+ * Lee el nodo VIVO: `null` = desconectado; lanza si `evaluate` falla (lo traduce `localizar`). Una `<label>` de un control de elección
+ * oculto se lee COMO ese control (`controlOcultoDeEtiqueta` de guard.ts, la MISMA resolución que el inventario): si cambió, no casa.
+ */
+const leerVivo = async (nodo: NodoInv): Promise<NodoVivo | null> => {
+  const vivo = await nodo.handle.evaluate((n) => {
+    const e = n as HTMLElement
+    if (!e.isConnected || typeof e.getAttribute !== 'function') return null
+    return { tag: e.tagName.toLowerCase(), id: e.id || null, name: e.getAttribute('name'), type: e.getAttribute('type'), texto: (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim() }
+  })
+  if (vivo?.tag !== 'label') return vivo
+  const ctl = await nodo.handle.evaluate(controlOcultoDeEtiqueta as (n: Node) => ReturnType<typeof controlOcultoDeEtiqueta>)
+  return ctl ? { tag: 'input', id: ctl.id, name: ctl.name, type: ctl.type, texto: vivo.texto } : vivo
+}
 
 /**
  * ¿Lo ve Playwright? Si no, lo TRAE a la vista (14/10/2026, b921b476: año y m² de Allianz Hogar, inventariados con etiqueta,
@@ -1020,6 +1030,10 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
       pulsarEnlaceEntrada: async (boton) => {
         await dormir(azar(300, 1_200))
         await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania)
+      },
+      pulsarAccesoNse: async (boton) => {
+        await dormir(azar(300, 1_200))
+        await pulsarAccesoNseMapfre(boton, guard, trabajo.compania)
       },
       // Login asistido SOLO para las compañías de la lista cerrada del módulo (asegura lo vuelve a comprobar por la entrada).
       ...(loginAsistidoDe(exp.entrada) ? { loginAsistido: { entrada: exp.entrada, guard, log, pedirPaso: (c) => pedirPaso(cfg, { trabajoId: trabajo.id, ...c, fase: 'login' }) } } : {}),

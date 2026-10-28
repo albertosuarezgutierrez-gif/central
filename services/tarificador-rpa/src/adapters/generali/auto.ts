@@ -148,6 +148,10 @@ import {
   decidirMediadorGenerali,
   inventarioMediadorGenerali,
   rutaSinQuery,
+  motivoSelectorVehiculoNoVistoGenerali,
+  rutaMarcoSaneadaGenerali,
+  selectorVehiculoCargandoGenerali,
+  type MarcoCargaGenerali,
   type ControlMediador,
   type DecisionMediador,
   type MarcoMediador,
@@ -271,6 +275,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.46 (28/10/2026, prueba real con 0.2.45, trabajo bf5707a8): «faltan la pantalla «Selector de vehículos» tras pulsar «Vehículo»». El volcado
+ * mostró el `mainFrame` YA en `mot_motorWeb/mvc/selVehiculo` pero CARGANDO (solo `<head>`, sin `<body>`) a los 20 s: no era una pantalla nueva sino
+ * Genernet lento. `esperarSelectorVehiculoGenerali` espera hasta 45 s más si ese marco está a medio cargar; si no aparece, para con el inventario de
+ * marcos (ruta sin sesión, readyState, nº de controles y caracteres) y los botones. La selección marca → modelo → versión no cambia.
+ */
+/**
  * 0.2.45 (28/10/2026, prueba real con 0.2.44, trabajo dbbd7ab5): el detector nombró el hueco: «obligatorios vacíos en «Datos de Valoración»: Tipo de
  * vehículo · Compañía de procedencia». Ahora `rellenarTipoYProcedenciaGenerali` los pone (solo si están vacíos) casando EN VIVO contra las opciones del
  * portal por igualdad EXACTA: «Turismo» (ramo auto) y la compañía anterior de la ficha o, solo con 0 años asegurado como dato, «sin seguro anterior».
@@ -341,7 +351,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.45'
+export const VERSION_GENERALI_AUTO = '0.2.46'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2320,6 +2330,40 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
   return false
 }
 
+/** v0.2.46: espera extra si el marco `selVehiculo` está a medio cargar (prueba real: a los 20 s solo tenía `<head>`). */
+const ESPERA_SELECTOR_LENTO_MS = 45_000
+
+/** Estado de carga de cada marco, SIN valores (ruta saneada, readyState, nº de controles y de caracteres). Solo lee. */
+async function cargaMarcosGenerali(page: Page): Promise<MarcoCargaGenerali[]> {
+  const out: MarcoCargaGenerali[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const e = (await f.evaluate(() => ({
+      listo: document.readyState as string,
+      controles: document.querySelectorAll('input,select,textarea,button').length,
+      texto: (document.body?.innerText ?? '').trim().length,
+    })).catch(() => null)) as { listo: string; controles: number; texto: number } | null
+    out.push({ ruta: rutaMarcoSaneadaGenerali(f.url()), listo: e?.listo ?? null, controles: e?.controles ?? null, texto: e?.texto ?? null })
+  }
+  return out
+}
+
+/**
+ * Tras «Vehículo»: el «Selector de vehículos» (marco `selVehiculo`). Si a los 20 s no se ve pero su marco está CARGANDO, se espera
+ * hasta 45 s más (no es una pantalla nueva: Genernet tarda). Si aun así no aparece, PARA con el inventario de marcos (sin valores).
+ */
+export async function esperarSelectorVehiculoGenerali(page: Page, ms = ESPERA_PANTALLA_MS, extraMs = ESPERA_SELECTOR_LENTO_MS): Promise<Raiz> {
+  const ini = Date.now()
+  let selector = await marcoConTexto(page, 'Selector de vehículos', ms)
+  if (selector) return selector
+  if (selectorVehiculoCargandoGenerali(await cargaMarcosGenerali(page))) selector = await marcoConTexto(page, 'Selector de vehículos', extraMs)
+  if (selector) return selector
+  const marcos = await cargaMarcosGenerali(page)
+  const botones: string[] = []
+  for (const f of page.frames()) if (!f.isDetached()) botones.push(...(await leerPantalla(f).catch(() => ({ botones: [] as string[] }))).botones)
+  throw new ErrorMapaIncompletoGenerali(motivoSelectorVehiculoNoVistoGenerali(marcos, Math.round((Date.now() - ini) / 1000), botones))
+}
+
 /**
  * «Vehículo» → «Selector de vehículos» (captura 5): tipo «Turismo» y subtipo «Turismos» vienen marcados; la marca, en «Todas
  * las marcas». Modelo y versión: SIN captura; se buscan como desplegables etiquetados «Modelo»/«Versión» y, si no están así,
@@ -2331,8 +2375,7 @@ export async function seleccionarVehiculoGenerali(page: Page, marco: Raiz, form:
   const boton = marco.getByRole('button', { name: 'Vehículo', exact: true }).filter({ visible: true })
   if ((await boton.count()) !== 1) throw new ErrorMapaIncompletoGenerali('el botón «Vehículo» de «Características del vehículo» (captura 4)')
   await ctx.pulsar(boton.first())
-  const selector = await marcoConTexto(page, 'Selector de vehículos')
-  if (!selector) throw new ErrorMapaIncompletoGenerali('la pantalla «Selector de vehículos» tras pulsar «Vehículo» (captura 5)')
+  const selector = await esperarSelectorVehiculoGenerali(page)
   // v0.2.6: el selector real es PrimeFaces (select oculto + div combobox): ese camino NO busca modelo/versión (sin captura).
   const menuMarcas = await menuPrimeFaces(selector, 'Todas las marcas')
   if (menuMarcas) return seleccionarVehiculoPrimeFaces(page, selector, menuMarcas, v, form, ctx, avisos)

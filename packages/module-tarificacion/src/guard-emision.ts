@@ -207,6 +207,22 @@ export function comprobarBoton(descripciones: readonly (string | null | undefine
 }
 
 /**
+ * «ACCESO A NSE» DE MAPFRE WMEDIADORES (28/10/2026, patinete «MásPatín»). La página intermedia de la tarjeta «Patinetes» solo
+ * tiene el enlace «Acceso a NSE», cuyo href es `javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');`: ABRE
+ * la aplicación «Nuevo Sistema de Emisión» (donde se tarifica), no emite nada. Excepción ESTRECHA: solo deja fuera de
+ * `comprobarBoton` la descripción que sea EXACTAMENTE esa llamada (decodificada o no, sin tildes; `javascript:` y `;` final
+ * opcionales). Cualquier otra aplicación, otro jsp, un sufijo o «Emitir…» siguen bloqueados; la usa SOLO la puerta
+ * `pulsarAccesoNseMapfre` del worker (guard.ts), junto con el texto visible EXACTO «Acceso a NSE».
+ */
+export const TEXTO_ACCESO_NSE_MAPFRE = 'Acceso a NSE'
+const RE_LANZADOR_NSE_MAPFRE = /^(?:javascript:\s*)?abrirAplicacion\(\s*'inicio\.jsp'\s*,\s*'NUEVO SISTEMA DE EMISION'\s*\)\s*;?$/
+export function esLanzadorAplicacionNseMapfre(d: string | null | undefined): boolean {
+  if (typeof d !== 'string' || d === '' || d.length > 200) return false
+  const t = plano(decodificarUrlTolerante(d)).replace(/\s+/g, ' ').trim()
+  return RE_LANZADOR_NSE_MAPFRE.test(t)
+}
+
+/**
  * Textos de BOTÓN prohibidos solo como texto ENTERO (Alberto, 14/10/2026): «Pago», «Ir al pago», «Confirmar pago»,
  * «Firma», «Firmar», «Domiciliación (bancaria)». Anclado y FUERA de `PATRON_EMISION` (que también mira URLs y cuerpos):
  * «Forma de pago», «Fraccionamiento de pago» o «Confirmar» siguen pasando. Se ignoran signos/flechas en los extremos.

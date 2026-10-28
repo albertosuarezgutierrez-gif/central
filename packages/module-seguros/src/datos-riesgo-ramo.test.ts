@@ -356,7 +356,7 @@ test('patinete: ramo de oportunidad propio, bloque libre (sin matrícula), sin t
   assert.ok((RAMOS_OPORTUNIDAD as readonly string[]).includes('patinete'))
   assert.equal(claveDatosDeRamo('patinete'), 'datosRiesgoLibre', 'un VMP no va en datosVehiculo (matrícula + catálogo CDS)')
   assert.equal(ramoTarificable('patinete'), false)
-  for (const k of ['marca', 'modelo', 'inscripcionDgt', 'certificadoVmp', 'inscripcionValidaHasta', 'uso', 'valorVmp']) {
+  for (const k of ['marca', 'modelo', 'version', 'inscripcionDgt', 'certificadoVmp', 'inscripcionValidaHasta', 'uso', 'valorVmp']) {
     assert.ok(camposLibreDelRamo('patinete').includes(k as never), k)
   }
   // Sus campos solo en su ramo: ni en RC ni en mascotas.
@@ -369,7 +369,7 @@ test('patinete: ramo de oportunidad propio, bloque libre (sin matrícula), sin t
 test('patinete: tres estados (null = no se sabe; false y 0 son datos), sin valores por defecto', () => {
   const vacio = calcularEdicionRiesgo({ ramo: 'patinete', clave: 'datosRiesgoLibre', info: {}, parcial: { marca: 'Xiaomi' }, confirmar: false, ahora: AHORA, hoy: HOY })
   assert.ok(vacio.ok)
-  for (const k of ['modelo', 'inscripcionDgt', 'certificadoVmp', 'inscripcionValidaHasta', 'uso', 'valorVmp']) assert.equal(vacio.datos[k], null, `${k} se inventó`)
+  for (const k of ['modelo', 'version', 'inscripcionDgt', 'certificadoVmp', 'inscripcionValidaHasta', 'uso', 'valorVmp']) assert.equal(vacio.datos[k], null, `${k} se inventó`)
   const v = validarDatosRiesgoLibre({ certificadoVmp: false, valorVmp: 0, inscripcionValidaHasta: '2030-01-31' }, { hoy: HOY, ramo: 'patinete' })
   assert.ok(v.ok)
   assert.equal(v.valor.certificadoVmp, false)

@@ -39,6 +39,25 @@ export type AvanceAutorizado = {
 }
 
 /**
+ * Avance de PASO autorizado por IDENTIDAD EXACTA del control (28/10/2026, Allianz ePAC legacy «Movilidad Personal»): no por título
+ * de pantalla, sino por id + onclick + ruta del marco, los tres EXACTOS, y además el texto exacto. Para el «Aceptar»
+ * `#btnAceptar` con `onclick="eventoSiguiente()"` del marco `/drvp00/SEAServlet` (el avance de paso normal del asistente).
+ * Cualquier otro «Aceptar» (otro id, otro handler, otro marco, un título de tarificación/emisión en la pantalla) sigue sin autorizar.
+ */
+export type AvancePorId = {
+  /** `id` EXACTO del control. */
+  id: string
+  /** `onclick` EXACTO, sin espacios y con o sin `;` final. */
+  onclick: string
+  /** Texto EXACTO (plano) del control. */
+  texto: RegExp
+  /** `pathname` EXACTO de la URL del marco que lo contiene. */
+  rutaMarco: string
+  /** Ningún título de la pantalla puede casar (si dice «Tarificar», «Revisión», «Emisión»… no se avanza). */
+  nuncaConTitulo: RegExp
+}
+
+/**
  * «Guardar» de un MODAL concreto que NO emite (guarda un dato del formulario, p. ej. la dirección del riesgo). Separado de
  * `AvanceAutorizado` a propósito: nunca abre «Aceptar» ni la ventana de red; solo levanta `guardar_solo_en_resultado` para
  * ESE botón en ESE diálogo. Ambos patrones van sobre texto PLANO (sin tildes, minúsculas) y anclados (texto EXACTO).
@@ -61,6 +80,8 @@ export type EntradaExploracion = {
   pestana: string
   productoMenu: string
   avancesAutorizados: readonly AvanceAutorizado[]
+  /** Avances por identidad exacta del control (ver {@link AvancePorId}). Sin la clave = ninguno. */
+  avancesPorId?: readonly AvancePorId[]
   /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
   guardadosEnDialogo?: readonly GuardadoEnDialogo[]
   /**
@@ -81,6 +102,19 @@ const ACEPTAR_DATOS_BASICOS: AvanceAutorizado = Object.freeze({
   nuncaConTitulo: /tarific|revisi|emisi|contrat|pago|firma|iban/,
 })
 
+/**
+ * Allianz ePAC legacy (28/10/2026, exploración real `allianz:autos:movilidad_personal`, «Datos Básicos – Figuras Intervinientes»):
+ * el avance de paso del asistente es `<… id="btnAceptar" onclick="eventoSiguiente()">Aceptar</…>` en el marco `/drvp00/SEAServlet`.
+ * Su título de pantalla no llega como h1-h6/legend, así que `ACEPTAR_DATOS_BASICOS` no lo reconocía. Solo esa identidad exacta.
+ */
+const SIGUIENTE_EPAC_DRVP00: AvancePorId = Object.freeze({
+  id: 'btnAceptar',
+  onclick: 'eventoSiguiente()',
+  texto: /^aceptar$/,
+  rutaMarco: '/drvp00/SEAServlet',
+  nuncaConTitulo: ACEPTAR_DATOS_BASICOS.nuncaConTitulo,
+})
+
 export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> = Object.freeze({
   'allianz:particulares:hogar': Object.freeze({
     compania: 'allianz', ramo: 'hogar', producto: 'hogar', pestana: 'Particulares',
@@ -99,6 +133,7 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   'allianz:autos:movilidad_personal': Object.freeze({
     compania: 'allianz', ramo: 'patinete', producto: 'patinete', pestana: 'Autos', productoMenu: 'Movilidad Personal',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
+    avancesPorId: Object.freeze([SIGUIENTE_EPAC_DRVP00]),
     tomadorMediador: true as const,
   }),
   // Mapfre Patinetes (28/10/2026): Portal Digital de Mediadores › «Nueva producción» › «Automóviles» › tarjeta «Patinetes» ›
@@ -900,7 +935,48 @@ export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marc
   const dePantalla = (marco.titulosPantalla ?? []).map(plano)
   const todos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
   const texto = plano(el.texto)
-  return e.avancesAutorizados.some((a) => a.texto.test(texto) && dePantalla.some((t) => a.enTitulo.test(t)) && !todos.some((t) => a.nuncaConTitulo.test(t)))
+  if (e.avancesAutorizados.some((a) => a.texto.test(texto) && dePantalla.some((t) => a.enTitulo.test(t)) && !todos.some((t) => a.nuncaConTitulo.test(t)))) return true
+  return avancePorIdAutorizado(entrada, el, marco) !== null
+}
+
+/** `onclick` normalizado para la comparación EXACTA de `AvancePorId` (sin espacios ni `;` final). Pura. */
+export function onclickNormalizado(onclick: string | null | undefined): string {
+  return (onclick ?? '').replace(/\s+/g, '').replace(/;+$/, '')
+}
+
+/**
+ * `pathname` de la URL de un marco (sin `;jsessionid=…` final), o `null` si no se puede leer. Pura. Por expresión y no con `new URL`: el saneado del inventario
+ * puede tapar el HOST (`http://[DATO]:puerto/…`) y la ruta sigue siendo legible.
+ */
+export function rutaDeMarco(url: string | null | undefined): string | null {
+  const m = /^[a-z][a-z0-9+.-]*:\/\/[^/?#]*(\/[^?#]*)?(?:[?#]|$)/i.exec(String(url ?? ''))
+  // El `;jsessionid=…` que los servlets Java meten en la ruta no cambia QUÉ marco es.
+  return m ? (m[1] ?? '/').replace(/;jsessionid=[^/?#;]*$/i, '') : null
+}
+
+/**
+ * ¿Es este control el avance por IDENTIDAD EXACTA (`AvancePorId`) de ESTA entrada en ESTE marco? Exige: id EXACTO, onclick
+ * EXACTO (sin recortar), texto EXACTO (y aria-label, si lo hay, igual), ruta del marco EXACTA, ningún título de la pantalla
+ * de tarificación/emisión (lista de títulos sin recortar) y NINGÚN importe en el marco (pantalla con precio = no). Devuelve la regla que casa o `null`. Pura y compartida con el worker.
+ */
+export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): AvancePorId | null {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  if (!e?.avancesPorId?.length || typeof el.texto !== 'string' || typeof el.id !== 'string' || typeof el.onclick !== 'string') return null
+  if (truncado(el.id) || truncado(el.onclick) || truncado(el.texto)) return null
+  if ((marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO || (marco.titulosPantalla?.length ?? 0) >= MAX_TITULOS_MARCO) return null
+  // Con PRECIO en el marco (revisión de seguridad 28/10/2026) ya es la pantalla de resultado: su «Aceptar» puede llevar a emitir.
+  if ((marco.importes?.length ?? 0) > 0) return null
+  const todos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
+  const texto = plano(el.texto)
+  const aria = typeof el.ariaLabel === 'string' && el.ariaLabel.trim() !== '' ? plano(el.ariaLabel) : null
+  const ruta = rutaDeMarco(marco.url)
+  return e.avancesPorId.find((a) =>
+    el.id === a.id &&
+    onclickNormalizado(el.onclick) === a.onclick &&
+    a.texto.test(texto) && (aria === null || a.texto.test(aria)) &&
+    ruta === a.rutaMarco &&
+    !todos.some((t) => a.nuncaConTitulo.test(t)),
+  ) ?? null
 }
 
 /** Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final. */

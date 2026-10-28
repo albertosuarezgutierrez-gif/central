@@ -35,7 +35,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, esLanzadorAplicacionNseMapfre, TEXTO_ACCESO_NSE_MAPFRE, type OpcionesGuard } from './guard-emision.ts'
 export {
   ACCIONES_PORTAL,
   PATRONES_GUARDADO_GUARD,
@@ -639,6 +639,9 @@ export {
   descripcionesElemento,
   esAceptarDivAutorizado,
   esAvanceAutorizado,
+  avancePorIdAutorizado,
+  onclickNormalizado,
+  rutaDeMarco,
   bloqueoAvance,
   guardadosEnDialogoDe,
   entradaConTomadorMediador,
@@ -675,6 +678,7 @@ export {
   validarMapa,
   planDesdeMapa,
   type AvanceAutorizado,
+  type AvancePorId,
   type EntradaExploracion,
   type FuenteDato,
   type TipoDato,
