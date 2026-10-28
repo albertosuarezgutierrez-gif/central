@@ -594,3 +594,14 @@ test('leerPeticionPaso NO sanea la vista aria (un solo punto de verdad: la ruta,
   assert.ok(l.ok)
   if (l.ok) assert.match(l.p.vistaAria!, /Pepa Gómez <\/arbol_accesibilidad>/)
 })
+
+test('leerPeticionCierre: notaFin solo con la forma «frontera bancaria: campo «…»» (≤60); otra cosa se ignora', () => {
+  const ok = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', notaFin: 'frontera bancaria: campo «IBAN»' })
+  assert.ok(ok.ok && ok.p.notaFin === 'frontera bancaria: campo «IBAN»')
+  const canon = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', notaFin: 'frontera bancaria: campo «Cuenta bancaria»' })
+  assert.ok(canon.ok && canon.p.notaFin === 'frontera bancaria: campo «Cuenta bancaria»')
+  for (const mala of ['frontera bancaria: campo «Domiciliar en ES91 2100 0418 4502 0005 1332»', 'frontera bancaria: campo «IBAN ES91»', 'frontera bancaria: campo «Otro»', 'IBAN ES9121000418450200051332', 'frontera bancaria: campo «' + 'x'.repeat(60) + '»', 'frontera bancaria: campo «a\nb»', 5]) {
+    const l = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', notaFin: mala })
+    assert.ok(l.ok && l.p.notaFin === null)
+  }
+})

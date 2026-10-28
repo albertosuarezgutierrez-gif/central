@@ -14,7 +14,8 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { EmisionBloqueadaError, rutasAppTolerablesDe, type InventarioDom } from '@central/module-tarificacion'
 import { descripcionParaTest, INDICES_URL_DESCRIPCION, tolerarRutasApp, cerrarDialogoTerminoEpac, cerrarFaseEntrada, instalarGuardEmision, pulsarMenuOfertaNseMapfre, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
-import { bucleExploracion, EXPLORADOR_VERSION, type ContextoBucle } from '../src/explorador.ts'
+import { ErrorFronteraEmision } from '../src/guard.ts'
+import { bucleExploracion, EXPLORADOR_VERSION, finDeError, notaFronteraBancaria, type ContextoBucle } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
 
 const PAGINA = (cuerpo: string) => `<!doctype html><html><head><meta charset="utf-8"><title>p</title></head><body>${cuerpo}</body></html>`
@@ -725,7 +726,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.10', () => assert.equal(EXPLORADOR_VERSION, '0.3.10'))
+test('versión 0.3.11', () => assert.equal(EXPLORADOR_VERSION, '0.3.11'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`
@@ -870,4 +871,21 @@ test('0.3.8 · Mapfre NSE: el error del guard en la ruta tolerada dice QUÉ par�
   } finally {
     await context.close()
   }
+})
+
+test('0.3.11 · frontera bancaria: la ETIQUETA del campo (≤60, nunca el valor) sale en la nota del fin', () => {
+  const f = finDeError(new ErrorFronteraEmision('IBAN'))
+  assert.equal(f.motivo, 'cerca_de_emision')
+  assert.equal(f.detalle, 'frontera_cuenta_bancaria')
+  assert.equal(f.nota, 'frontera bancaria: campo «IBAN»')
+  assert.equal(notaFronteraBancaria('x'.repeat(200)), null)
+})
+
+test('0.3.11 · frontera bancaria: la nota lleva SOLO el nombre canónico, nunca el texto libre (IBAN en pantalla)', () => {
+  const libre = 'Domiciliar en ES91 2100 0418 4502 0005 1332'
+  assert.equal(notaFronteraBancaria(libre), 'frontera bancaria: campo «Domiciliación»')
+  const f = finDeError(new ErrorFronteraEmision(libre))
+  assert.equal(f.nota, 'frontera bancaria: campo «Domiciliación»')
+  assert.ok(!/\d/.test(f.nota ?? ''), f.nota)
+  assert.equal(finDeError(new ErrorFronteraEmision('algo sin campo conocido')).nota, undefined)
 })

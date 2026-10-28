@@ -9,7 +9,7 @@ import { ENTRADAS_EXPLORACION, nombresCredencial } from '@central/module-tarific
 import { ErrorCredenciales } from '../src/credenciales.ts'
 import { instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado } from '../src/guard.ts'
 import { PORTALES_EXPLORACION, problemaTrabajoExploracion, type CtxEntrada } from '../src/explorador.ts'
-import { abrirFormularioViviendaFidelidade, esTarjetaViviendaFidelidade, etiquetaExactaFidelidade, loginFidelidade, URL_INTRANET_FIDELIDADE } from '../src/adapters/fidelidade/entrada.ts'
+import { abrirFormularioViviendaFidelidade, cerrarDialogoRgpdFidelidade, esTarjetaViviendaFidelidade, etiquetaExactaFidelidade, loginFidelidade, URL_INTRANET_FIDELIDADE } from '../src/adapters/fidelidade/entrada.ts'
 import type { Trabajo } from '../src/api.ts'
 
 let browser: Browser
@@ -27,11 +27,12 @@ before(async () => {
 })
 after(async () => { await browser.close() })
 
-type Variante = { sinVivienda?: boolean; formularioNunca?: boolean; rechazo?: boolean; botonLogin?: string }
+type Variante = { sinVivienda?: boolean; formularioNunca?: boolean; rechazo?: boolean; botonLogin?: string; dialogo?: string[] }
 /** Intranet sintética: login → menú con submenús de ratón → página de tarjetas (EMPRESAS 4215 y VIVIENDA 4216) → formulario lento. */
 const portal = (v: Variante = {}) => `<!doctype html><html><head><meta charset="utf-8"><style>
   .sub{display:none} .m:hover > .sub{display:block} [hidden]{display:none !important}
 </style></head><body>
+${v.dialogo ? `<os-internal-ui-dialog id="dlg" style="position:fixed;inset:0;background:#fff;z-index:99;display:block"><iframe src="https://mediadores.fidelidade.es/OPI_ES_Mediadores/RGPD.aspx" style="width:100px;height:50px"></iframe>${v.dialogo.map((b) => `<button type="button" onclick="reg('DLG-${b}')" data-cierra="${b === 'Aceptar' ? 'no' : 'si'}">${b}</button>`).join('')}</os-internal-ui-dialog>` : ''}
 <div id="login"><form onsubmit="return false"><label for="u">Usuario</label><input id="u" type="text"><label for="p">Clave</label><input id="p" type="password">
   <button id="entrar" type="${v.botonLogin ? 'submit' : 'button'}" onclick="hacerLogin()">${v.botonLogin ?? 'Entrar'}</button></form><p id="err" hidden>Usuario o contraseña incorrectos</p></div>
 <div id="home" hidden>
@@ -49,7 +50,7 @@ const portal = (v: Variante = {}) => `<!doctype html><html><head><meta charset="
   <div id="form" hidden><label for="f1">Fecha de efecto</label><input id="f1"></div>
 </div>
 <script>
-  window.pulsados = []; function reg(x){ window.pulsados.push(x) }
+  window.pulsados = []; document.addEventListener('click', (ev) => { const t = ev.target; if (t && t.dataset && t.dataset.cierra === 'si') document.getElementById('dlg').remove() }); function reg(x){ window.pulsados.push(x) }
   function hacerLogin(){ if (${v.rechazo ? 'true' : 'false'}) { document.getElementById('err').hidden = false; return } setTimeout(()=>{ document.getElementById('login').hidden = true; document.getElementById('home').hidden = false }, 200) }
   function tarjetas(){ setTimeout(()=>{ document.getElementById('tarjetas').hidden = false }, 300) }
   function formulario(){ ${v.formularioNunca ? '' : "setTimeout(()=>{ document.getElementById('tarjetas').hidden = true; document.getElementById('form').hidden = false }, 600)"} }
@@ -61,6 +62,7 @@ async function abrir(v: Variante = {}) {
   const page = await context.newPage()
   page.setDefaultTimeout(5_000)
   await page.route('https://mediadores.fidelidade.es/**', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: portal(v) }))
+  await page.route('**/RGPD.aspx', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><p>Protección de datos</p>' }))
   const ctx = {
     credenciales: { usuario: 'USUARIO_FICTICIO', contrasena: 'CLAVE_FICTICIA' },
     log: () => undefined,
@@ -162,4 +164,36 @@ test('portal registrado: credencial FIDELIDADE_MEDIADORES (fly secrets CRED_FIDE
 
 test('la URL de entrada es la de la intranet de mediadores', () => {
   assert.equal(URL_INTRANET_FIDELIDADE, 'https://mediadores.fidelidade.es/OPI_ES_Mediadores/')
+})
+
+test('0.3.11 · diálogo RGPD con «Cerrar»: se pulsa, desaparece y el login continúa', async () => {
+  const { context, page, ctx } = await abrir({ dialogo: ['Cerrar'] })
+  try {
+    await loginFidelidade(page, ctx, ESPERAS)
+    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), ['DLG-Cerrar'])
+    assert.equal(await page.locator('#home').isVisible(), true)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.11 · diálogo RGPD solo con «Aceptar»: error con los textos de botón y «Aceptar» NO se pulsa', async () => {
+  const { context, page, ctx } = await abrir({ dialogo: ['Aceptar'] })
+  try {
+    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /fidelidade\/login: diálogo RGPD tapa el login; botones: \[«Aceptar»\]/)
+    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), [])
+    await cerrarDialogoRgpdFidelidade(page, ctx, 500).then(() => assert.fail('debía lanzar'), () => undefined)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.11 · diálogo RGPD solo con «Continuar»: error con el texto del botón y NO se pulsa', async () => {
+  const { context, page, ctx } = await abrir({ dialogo: ['Continuar'] })
+  try {
+    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /fidelidade\/login: diálogo RGPD tapa el login; botones: \[«Continuar»\]/)
+    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), [])
+  } finally {
+    await context.close()
+  }
 })

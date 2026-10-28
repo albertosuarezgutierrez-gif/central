@@ -4,7 +4,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Locator, type Page } from 'playwright'
-import { diagnosticoTipoDocumento, elegirTipoDocumentoPareado, lineaDiagnosticoTipoDoc } from '../src/explorador.ts'
+import { catalogoTipoDocumento, lineaCatalogoTipoDoc, diagnosticoTipoDocumento, elegirTipoDocumentoPareado, lineaDiagnosticoTipoDoc } from '../src/explorador.ts'
 
 let browser: Browser
 before(async () => {
@@ -143,4 +143,39 @@ test('0.3.10 · solo la etiqueta (sin control ni lista): sin_opcion + diagnósti
   assert.ok(!plano.includes('12345678Z') && !plano.includes('secreto') && !plano.includes('Tomador</'), 'sin valores ni atributos de datos')
   assert.ok(lineaDiagnosticoTipoDoc(estado, d).length <= 160)
   await page.close()
+})
+
+// 0.3.11 (Allianz real 28/10/2026): el <select> `_tipoDoc` existe pero sus opciones cargan al abrirse.
+test('0.3.11 · select sin opciones hasta abrirlo: cae al widget con el pulsar guardado y elige NIF', async () => {
+  const { page, doc, pulsar } = await pagina(`<label id="IntervinientesBean$nifTomador_tipoDoc_label">Tipo</label>
+    <select id="IntervinientesBean$nifTomador_tipoDoc" aria-controls="lst2"></select>
+    <ul id="IntervinientesBean$nifTomador_tipoDoc_lista"><li>CIF</li><li>NIF</li></ul>
+    <input id="IntervinientesBean$nifTomador_doc">
+    <script>for (const l of document.querySelectorAll('li')) l.addEventListener('click', () => { document.body.dataset.eleg = l.textContent })</script>`)
+  assert.equal(await elegirTipoDocumentoPareado(page.mainFrame(), doc, 'NIF', pulsar), 'elegido')
+  assert.equal(await page.evaluate(() => document.body.dataset.eleg), 'NIF')
+  await page.close()
+})
+
+test('0.3.11 · sin opción tras el widget: catálogo (nº y textos ≤10×30) sin textos que parezcan documento o fecha', async () => {
+  const opts = ['Pasaporte', 'NIE', '12345678Z', '01/02/1990', 'X'.repeat(50), ...Array.from({ length: 12 }, (_, i) => `Tipo${i}`)]
+  const { page, doc, pulsar } = await pagina(`<label id="IntervinientesBean$nifTomador_tipoDoc_label">Tipo</label>
+    <select id="IntervinientesBean$nifTomador_tipoDoc">${opts.map((o) => `<option>${o}</option>`).join('')}</select>
+    <input id="IntervinientesBean$nifTomador_doc">`)
+  const estado = await elegirTipoDocumentoPareado(page.mainFrame(), doc, 'NIF', pulsar)
+  assert.equal(estado, 'sin_opcion')
+  const linea = lineaCatalogoTipoDoc(await catalogoTipoDocumento(doc))!
+  assert.match(linea, /17 opciones/)
+  assert.match(linea, /Pasaporte \| NIE/)
+  assert.ok(!/12345678Z|01\/02\/1990/.test(linea), linea)
+  assert.ok(!linea.includes('X'.repeat(31)), linea)
+  assert.equal(linea.split('|').length, 3) // Pasaporte | NIE | XXX…; «Tipo0…Tipo11» llevan dígito y se descartan
+  assert.equal(lineaCatalogoTipoDoc(null), null)
+  await page.close()
+})
+
+test('lineaCatalogoTipoDoc: descarta opciones con dígitos o con aspecto de dato personal; NIF y Pasaporte se quedan', () => {
+  const linea = lineaCatalogoTipoDoc(['NIF', 'Pasaporte', '12.345.678-Z', 'AB 123 45'])!
+  assert.match(linea, /4 opciones \[NIF \| Pasaporte\]/)
+  assert.ok(!/12\.345|AB 123/.test(linea), linea)
 })

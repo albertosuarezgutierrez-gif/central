@@ -40,6 +40,8 @@ import {
   detectarParada,
   MOTIVO_FRONTERA_CUENTA,
   senalCuentaBancaria,
+  fronteraEmisionPorCampos,
+  pareceDatoPersonalInventario,
   esAvanceAutorizado,
   esGuardadoEnDialogoAutorizado,
   esEntradaExploracion,
@@ -94,7 +96,7 @@ import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.10'
+export const EXPLORADOR_VERSION = '0.3.11'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -255,6 +257,8 @@ export type FinBucle = {
   presupuesto?: PresupuestoWorker
   /** Qué comprobación del worker cortó (lista cerrada, sin valores): distingue los `ambiguo` entre sí. */
   detalle?: DetalleFinExploracion
+  /** 0.3.11: motivo legible del fin (p. ej. «frontera bancaria: campo «<etiqueta>»», ≤60). Solo ETIQUETA del campo, nunca su valor. */
+  nota?: string
   /** Incidencias de ejecución del ÚLTIMO lote aún sin contar a asegura (van en el cierre). Sin valores. */
   incidencias?: IncidenciaEjecucion[]
   /** Solo en los fallos de la ENTRADA cerrada (antes del primer paso): URL, captura y HTML ya redactados. */
@@ -377,10 +381,17 @@ export function valorParaControl(valor: string, el: ElementoInventario): string 
 }
 
 /** Del error que cortó la exploración a su motivo de fin. Nunca lanza. */
-export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: { tipo: TipoError; mensaje: string } | null; detalle?: DetalleFinExploracion } {
+/** 0.3.11: «frontera bancaria: campo «<etiqueta>»» (≤60). La etiqueta del control, nunca su valor. */
+export function notaFronteraBancaria(etiqueta: string): string | null {
+  // SOLO el nombre canónico de la lista cerrada (`CAMPOS_BANCARIOS`): el texto libre de la pantalla puede llevar un IBAN.
+  const campo = fronteraEmisionPorCampos([etiqueta]).campoBancario
+  return campo === null ? null : `frontera bancaria: campo «${campo}»`
+}
+
+export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: { tipo: TipoError; mensaje: string } | null; detalle?: DetalleFinExploracion; nota?: string } {
   if (e instanceof ErrorVerificacionHumana) return { motivo: 'otp', error: null }
   // Frontera de emisión (cuenta bancaria en pantalla): fin CORRECTO de la exploración, no un fallo del guard.
-  if (e instanceof ErrorFronteraEmision) return { motivo: 'cerca_de_emision', error: null, detalle: 'frontera_cuenta_bancaria' }
+  if (e instanceof ErrorFronteraEmision) return { motivo: 'cerca_de_emision', error: null, detalle: 'frontera_cuenta_bancaria', ...(notaFronteraBancaria(e.etiqueta) !== null ? { nota: notaFronteraBancaria(e.etiqueta)! } : {}) }
   if (e instanceof EmisionBloqueadaError) return { motivo: 'guard_emision', error: { tipo: 'emision', mensaje: e.message } }
   if (e instanceof ErrorTarificador && e.tipo === 'captcha') return { motivo: 'captcha', error: null }
   const c = clasificar(e)
@@ -446,7 +457,7 @@ export type ContextoBucle = {
 }
 
 class Parar extends Error {
-  constructor(readonly motivo: MotivoFinExploracion | 'perdido', readonly detalle?: DetalleFinExploracion) {
+  constructor(readonly motivo: MotivoFinExploracion | 'perdido', readonly detalle?: DetalleFinExploracion, readonly nota?: string) {
     super(`parar:${motivo}`)
   }
 }
@@ -486,9 +497,10 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   /** Incidencias del lote en curso: salen con el SIGUIENTE paso (o con el cierre). */
   let incidencias: IncidenciaEjecucion[] = []
   const avisosDiagnostico: string[] = []
-  const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null, detalle?: DetalleFinExploracion): FinBucle => ({
+  const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null, detalle?: DetalleFinExploracion, nota?: string): FinBucle => ({
     motivo, error, redNoGet: [...red].slice(0, 50), efectos: efectos.size ? [...efectos] : ['ninguno_visto'], pasos, acciones,
     ...(detalle ? { detalle } : {}),
+    ...(nota ? { nota } : {}),
     ...(incidencias.length ? { incidencias: [...incidencias] } : {}),
     ...(presupuesto.guardado ? { presupuesto: { ...presupuesto } } : {}),
   })
@@ -588,7 +600,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           const cuenta = senalCuentaBancaria(descripcionesElemento(el))
           if (cuenta === null) return
           k.log('exploracion_parada', { motivo: 'cerca_de_emision', detalle: 'frontera_cuenta_bancaria', senal: `${MOTIVO_FRONTERA_CUENTA} («${cuenta}»)` })
-          throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria')
+          throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria', notaFronteraBancaria(cuenta) ?? undefined)
         }
         exigirSinCuenta(hit.el)
         // Antes del PRIMER rellenar del lote: pantalla quieta (un repintado a medias dejaría el nodo a punto de caducar).
@@ -659,6 +671,8 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
                 const diag = estado === 'sin_opcion' || estado === 'sin_desplegable' ? await diagnosticoTipoDocumento(loc) : null
                 k.log('exploracion_tipo_documento', { n: pasos, ref: a.ref, tipo, estado, ...(diag ? { diagnostico: diag } : {}) })
                 if (diag) avisosDiagnostico.push(lineaDiagnosticoTipoDoc(estado, diag))
+                const cat = estado === 'sin_opcion' ? lineaCatalogoTipoDoc(await catalogoTipoDocumento(loc)) : null
+                if (cat) avisosDiagnostico.push(cat)
               }
             }
             await loc.fill(escrito, { timeout: 10_000 })
@@ -767,12 +781,12 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       }
     }
   } catch (e) {
-    if (e instanceof Parar) return fin(e.motivo, null, e.detalle)
+    if (e instanceof Parar) return fin(e.motivo, null, e.detalle, e.nota)
     // Un diálogo al guardar (confirm/alert): el robot no confirma; se para con su detalle (no es un fallo del guard).
     if (e instanceof GuardadoConDialogoError && !k.guard.violacion()) return fin('ambiguo', null, 'guardado_con_dialogo')
     // Una violación del guard en segundo plano manda sobre el error con el que se cortó.
     const f = finDeError(k.guard.violacion() ?? e)
-    return fin(f.motivo, f.error, f.detalle)
+    return fin(f.motivo, f.error, f.detalle, f.nota)
   } finally {
     vigia.soltar()
     await captura?.liberar()
@@ -914,6 +928,11 @@ export async function elegirTipoDocumentoPareado(marco: Frame, loc: Locator, tip
   if (!info) return 'sin_desplegable'
   if (info.widget) return elegirTipoDocumentoWidget(marco, info.selId, info.actual, tipo, pulsarGuardado, info.base)
   const valor = opcionTipoDocumento(tipo, info.opciones)
+  // 0.3.11 (real 28/10/2026, Allianz): el `<select>` existe pero sus opciones cargan al ABRIR: sin opciones (o sin coincidencia) se prueba el widget.
+  if ((info.opciones.length === 0 || valor === null) && pulsarGuardado) {
+    const r = await elegirTipoDocumentoWidget(marco, info.selId, info.actual, tipo, pulsarGuardado, info.base)
+    return r === 'elegido' || r === 'ya' ? r : 'sin_opcion'
+  }
   if (valor === null) return 'sin_opcion'
   if (info.actual === valor) return 'ya'
   const sel = marco.locator(`[id="${info.selId.replace(/["\\]/g, '\\$&')}"]`)
@@ -958,6 +977,25 @@ export async function diagnosticoTipoDocumento(loc: Locator): Promise<{ base: st
       out.push(o)
     }
     return { base, elementos: out }
+  }).catch(() => null)
+}
+/**
+ * 0.3.11: CATÁLOGO del `<select>` `<x>_tipoDoc` (NIF/NIE/Pasaporte…): nº de opciones y sus textos (≤10, ≤30 car.), descartando cualquier texto
+ * que parezca un número de documento o una fecha. Pura sobre los textos; nunca lanza. `null` si no hay select.
+ */
+export function lineaCatalogoTipoDoc(textos: readonly string[] | null): string | null {
+  if (textos === null) return null
+  const parece = (t: string) => /\d{4,}/.test(t) || /\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4}/.test(t) || /^[XYZxyz]?\d{5,}[A-Za-z]?$/.test(t.replace(/\s/g, ''))
+  const limpios = textos.map((t) => t.replace(/\s+/g, ' ').trim()).filter((t) => t !== '' && !parece(t) && !/\d/.test(t) && !pareceDatoPersonalInventario(t)).slice(0, 10).map((t) => t.slice(0, 30))
+  return `diag tipoDoc catálogo: ${textos.length} opciones${limpios.length ? ` [${limpios.join(' | ')}]` : ''}`.slice(0, 400)
+}
+export async function catalogoTipoDocumento(loc: Locator): Promise<string[] | null> {
+  return loc.evaluate((el) => {
+    const id = (el as HTMLElement).id || ''
+    if (!/_doc$/.test(id)) return null
+    const s = el.ownerDocument.getElementById(id.slice(0, -'_doc'.length) + '_tipoDoc')
+    if (!s || s.tagName !== 'SELECT') return null
+    return Array.from((s as HTMLSelectElement).options).slice(0, 40).map((o) => (o.textContent || '').replace(/\s+/g, ' ').trim())
   }).catch(() => null)
 }
 /** Línea corta (≤160) para `avisosPortal` del inventario del paso siguiente (llega a la BD): estado + ids/tags, nunca valores. */
@@ -1066,7 +1104,7 @@ export async function finDeEntrada(e: unknown, page: Page, redactar: (t: string)
   const f = finDeError(e)
   // La evidencia es un extra: si sanearla fallara, el fin conserva su motivo/error en vez de caer al catch genérico.
   const evidencia = await capturarEvidencia(page).then((ev) => sanearEvidencia(ev, redactar, secretosDelEntorno(env))).catch(() => undefined)
-  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(f.detalle ? { detalle: f.detalle } : {}), ...(evidencia ? { evidencia } : {}) }
+  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(f.detalle ? { detalle: f.detalle } : {}), ...(f.nota ? { nota: f.nota } : {}), ...(evidencia ? { evidencia } : {}) }
 }
 
 /**
@@ -1247,13 +1285,13 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
     await (browser as Browser | null)?.close().catch(() => undefined)
   }
 
-  log('exploracion_fin', { motivo: finExp.motivo, ...(finExp.detalle ? { detalle: finExp.detalle } : {}), pasos: finExp.pasos, acciones: finExp.acciones, red: finExp.redNoGet.length, ...(finExp.error ? { tipo: finExp.error.tipo, mensaje: redactar(finExp.error.mensaje).slice(0, 300) } : {}) })
+  log('exploracion_fin', { motivo: finExp.motivo, ...(finExp.detalle ? { detalle: finExp.detalle } : {}), ...(finExp.nota ? { nota: finExp.nota } : {}), pasos: finExp.pasos, acciones: finExp.acciones, red: finExp.redNoGet.length, ...(finExp.error ? { tipo: finExp.error.tipo, mensaje: redactar(finExp.error.mensaje).slice(0, 300) } : {}) })
   if (finExp.motivo === 'perdido') {
     clearTimeout(respaldo)
     return 0
   }
   const stCierre = await cerrarExploracion(cfg, {
-    trabajoId: trabajo.id, motivoFin: finExp.motivo, ...(finExp.detalle ? { detalleFin: finExp.detalle } : {}), ...(finExp.incidencias?.length ? { incidencias: finExp.incidencias } : {}), redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos,
+    trabajoId: trabajo.id, motivoFin: finExp.motivo, ...(finExp.detalle ? { detalleFin: finExp.detalle } : {}), ...(finExp.nota ? { notaFin: finExp.nota } : {}), ...(finExp.incidencias?.length ? { incidencias: finExp.incidencias } : {}), redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos,
     presupuesto: presupuestoParaCierre(finExp.presupuesto ?? { guardado: false, referencia: null, pdf: null, pdfIntentado: false }),
   })
   log('exploracion_cierre', { status: stCierre })

@@ -113,6 +113,60 @@ async function marcoConPassword(page: Page, ms: number): Promise<Page | Frame> {
   }
 }
 
+/** 0.3.11: botones que cierran el diálogo RGPD (texto normalizado EXACTO; lista cerrada). Nunca «Aceptar» ni otro. */
+export const BOTONES_CERRAR_RGPD_FIDELIDADE = Object.freeze(['cerrar', '×', 'x', 'entendido'] as const)
+const SEL_DIALOGO_RGPD = 'os-internal-ui-dialog, .os-internal-ui-dialog'
+const SEL_BOTONES_DIALOGO = 'button, [role="button"], a, input[type="button"], input[type="submit"]'
+
+/** Texto de un botón normalizado (minúsculas, sin tildes, espacios colapsados). Pura. */
+export const textoBotonRgpd = (t: string): string => sinTildes(t)
+
+/**
+ * 0.3.11 (real 28/10/2026): un diálogo modal de OutSystems (`os-internal-ui-dialog` con `iframe[src*="RGPD.aspx"]`) intercepta los clics de
+ * «Entrar». Se detecta en cualquier marco; si tiene un botón de la lista cerrada se pulsa con `ctx.pulsar` (guard) y se espera a que
+ * desaparezca. Si sigue ahí: `ErrorTarificador('portal')` con SOLO los textos de los botones (≤8 de ≤40 car.). Nada más se pulsa.
+ */
+export async function cerrarDialogoRgpdFidelidade(page: Page, ctx: Pick<CtxEntradaFidelidade, 'pulsar' | 'pausa'>, ms: number): Promise<void> {
+  // Un marco que aún no está listo no puede colgar la detección: cada cuenta tiene tope propio (0 = no se ve).
+  const contar = (l: Locator): Promise<number> => Promise.race([l.count().catch(() => 0), new Promise<number>((ok) => setTimeout(() => ok(0), 1_500))])
+  const dialogo = async () => {
+    for (const r of raices(page)) {
+      const d = r.locator(SEL_DIALOGO_RGPD).locator('visible=true')
+      if ((await contar(d)) > 0) return { r, d }
+    }
+    return null
+  }
+  const botonesDe = async (): Promise<{ loc: Locator; texto: string }[]> => {
+    const hallados: { loc: Locator; texto: string }[] = []
+    for (const r of raices(page)) {
+      const dentro = r.locator(SEL_DIALOGO_RGPD).locator(SEL_BOTONES_DIALOGO).locator('visible=true')
+      const enMarco = r !== page && /RGPD\.aspx/i.test((r as Frame).url()) ? r.locator(SEL_BOTONES_DIALOGO).locator('visible=true') : null
+      for (const grupo of enMarco ? [dentro, enMarco] : [dentro]) {
+        const n = Math.min(await contar(grupo), 20)
+        for (let i = 0; i < n; i++) {
+          const loc = grupo.nth(i)
+          const texto = ((await loc.innerText({ timeout: 1_000 }).catch(() => '')) || (await loc.getAttribute('value').catch(() => '')) || (await loc.getAttribute('aria-label').catch(() => '')) || '').replace(/\s+/g, ' ').trim()
+          hallados.push({ loc, texto })
+        }
+      }
+    }
+    return hallados
+  }
+  const inicial = await dialogo()
+  if (!inicial) return
+  const botones = await botonesDe()
+  const permitidos = new Set<string>(BOTONES_CERRAR_RGPD_FIDELIDADE)
+  const cierre = botones.find((b) => permitidos.has(textoBotonRgpd(b.texto)))
+  if (cierre) {
+    await ctx.pulsar(cierre.loc)
+    const fin = Date.now() + Math.min(ms, 10_000)
+    while ((await dialogo()) && Date.now() < fin) await page.waitForTimeout(250)
+    if (!(await dialogo())) return
+  }
+  const textos = (cierre ? await botonesDe() : botones).slice(0, 8).map((b) => b.texto.slice(0, 40))
+  throw new ErrorTarificador('portal', `fidelidade/login: diálogo RGPD tapa el login; botones: [${textos.map((t) => `«${t}»`).join(', ')}]`)
+}
+
 export async function loginFidelidade(page: Page, ctx: CtxEntradaFidelidade, esperas: EsperasFidelidade = {}, url: string = URL_INTRANET_FIDELIDADE): Promise<void> {
   const e = { ...ESPERAS, ...esperas }
   const r = await page.goto(url)
@@ -121,6 +175,7 @@ export async function loginFidelidade(page: Page, ctx: CtxEntradaFidelidade, esp
   await ctx.exigirSinCaptcha()
 
   const raiz = await marcoConPassword(page, e.loginMs)
+  await cerrarDialogoRgpdFidelidade(page, ctx, e.loginMs)
   const password = raiz.locator('input[type="password"]').locator('visible=true').first()
   // Usuario = el último campo de texto visible ANTES de la contraseña en orden de documento.
   const usuario = raiz.locator('xpath=(//input[@type="password"])[1]/preceding::input[not(@type) or @type="text" or @type="email" or @type="tel"]').locator('visible=true').last()

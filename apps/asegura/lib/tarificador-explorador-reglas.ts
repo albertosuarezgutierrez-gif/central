@@ -22,6 +22,7 @@ import {
   leerIncidenciasEjecucion,
   leerPresupuestoMapa,
   normalizarRedNoGet,
+  CAMPOS_BANCARIOS,
   redactarAriaSnapshot, neutralizarAngulos,
   cortarEnLimiteDeLinea,
   sanearInventarioDom,
@@ -235,6 +236,8 @@ export type PeticionCierre = {
   trabajoId: string
   motivoFin: MotivoFin
   detalleFin: DetalleFinExploracion | null
+  /** 0.3.11: nota «frontera bancaria: campo «…»» validada por forma; va a `mapa.huecos`. */
+  notaFin: string | null
   redNoGet: string[]
   efectosEnPortal: MapaExploracion['efectosEnPortal']
   /** Guardado del presupuesto (14/10/2026). `null` = el worker no lo informó (imagen anterior): el mapa no lo lleva. */
@@ -252,6 +255,14 @@ export function huecoDeDetalleFin(motivoFin: MotivoFin, detalle: DetalleFinExplo
 }
 
 /** Cuerpo de `POST /api/tarificador/explorador/cierre`. La red va SOLO como origen + ruta (se re-normaliza aquí). */
+/** 0.3.11: nota de fin del worker. SOLO «frontera bancaria: campo «<nombre de CAMPOS_BANCARIOS>»»; cualquier otra se ignora. */
+export function leerNotaFin(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const m = /^frontera bancaria: campo «([^»\n\r]{1,40})»$/.exec(v)
+  // Lista CERRADA: solo un nombre canónico de `CAMPOS_BANCARIOS` (nunca texto libre: podría llevar un IBAN).
+  return m && CAMPOS_BANCARIOS.some((c) => c.nombre === m[1]) ? v : null
+}
+
 export function leerPeticionCierre(body: unknown): { ok: true; p: PeticionCierre } | { ok: false; errores: string[] } {
   const b = obj(body)
   if (!b) return { ok: false, errores: ['cuerpo no es un objeto'] }
@@ -271,7 +282,7 @@ export function leerPeticionCierre(body: unknown): { ok: true; p: PeticionCierre
   const redNoGet = [...new Set((red as unknown[]).map(normalizarRedNoGet).filter((x): x is string => x !== null))].slice(0, 50)
   // Opcional y TOLERANTE: un código fuera de la lista cerrada (worker más nuevo) se ignora; nunca tumba el cierre.
   const detalleFin = DETALLES_FIN_EXPLORACION.find((d) => d === b.detalleFin) ?? null
-  return { ok: true, p: { trabajoId: trabajoId!, motivoFin: motivoFin!, detalleFin, redNoGet, efectosEnPortal: [...new Set(ef as MapaExploracion['efectosEnPortal'])], presupuesto, incidencias: leerIncidenciasEjecucion(b.incidencias) } }
+  return { ok: true, p: { trabajoId: trabajoId!, motivoFin: motivoFin!, detalleFin, notaFin: leerNotaFin(b.notaFin), redNoGet, efectosEnPortal: [...new Set(ef as MapaExploracion['efectosEnPortal'])], presupuesto, incidencias: leerIncidenciasEjecucion(b.incidencias) } }
 }
 
 // ─── Prompt ──────────────────────────────────────────────────────────────────
