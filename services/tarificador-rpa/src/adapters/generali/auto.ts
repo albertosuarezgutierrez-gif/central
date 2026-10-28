@@ -160,6 +160,11 @@ import {
   resumenCaracteristicasVehiculoGenerali,
   type BloqueVehiculoGenerali,
   resumenFotoSelectorGenerali,
+  resumenOpcionesTipoSelectorGenerali,
+  estadoNomiagGenerali,
+  lineaDiagTipoVehiculoGenerali,
+  type DiagTipoVehiculoGenerali,
+  type OpcionesTipoSelectorGenerali,
   antiguedadVehiculoGenerali,
   opcionIndiqueCodigoGenerali,
   opcionPlacaOrdinariaGenerali,
@@ -402,7 +407,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.52'
+export const VERSION_GENERALI_AUTO = '0.2.53'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1688,6 +1693,45 @@ async function mediadorDelFormulario(marco: Raiz, ctx: ContextoPortal): Promise<
   if (actual === MEDIADOR_GENERALI) return
   if (actual !== '' && !/^0+$/.test(actual)) throw new ErrorMapaIncompletoGenerali('el «Mediador» del formulario viene con otro código (no se cambia a ciegas)', false)
   await escribir(campo, MEDIADOR_GENERALI, ctx)
+  // v0.2.53 (DIAGNÓSTICO, solo lectura): el onchange de `numiag` llama a /refreshDatosInicioGenA.do; tras esperar la red, ¿`nomiag` (gris) tiene valor? NUNCA el nombre.
+  const pagina: Page = 'page' in marco && typeof marco.page === 'function' ? marco.page() : (marco as Page)
+  await pagina.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+  diagGeneraliDe(pagina).nomiag = await leerNomiagGenerali(marco)
+}
+
+/** v0.2.53 · Mediciones diagnósticas de «Tipo de vehículo» por página (van a la línea «diag:» del atasco). */
+const DIAG_GENERALI = new WeakMap<Page, DiagTipoVehiculoGenerali>()
+export function diagGeneraliDe(page: Page): DiagTipoVehiculoGenerali {
+  let d = DIAG_GENERALI.get(page)
+  if (!d) DIAG_GENERALI.set(page, (d = {}))
+  return d
+}
+
+/** v0.2.53 · «con valor» / «vacío» / «sin campo» de `nomiag` (en el marco o sus hermanos). Solo lee; jamás devuelve el valor. */
+export async function leerNomiagGenerali(marco: Raiz): Promise<'con valor' | 'vacío' | 'sin campo'> {
+  const frames: Raiz[] = 'frames' in marco && typeof marco.frames === 'function' ? [marco, ...marco.frames()] : [marco, ...('page' in marco && typeof marco.page === 'function' ? marco.page().frames() : [])]
+  for (const f of frames) {
+    if ('isDetached' in f && f.isDetached()) continue
+    const l = f.locator('[id$="nomiag"],[name$="nomiag"]').first()
+    if ((await l.count().catch(() => 0)) === 0) continue
+    return estadoNomiagGenerali(await l.inputValue({ timeout: 2_000 }).catch(() => null))
+  }
+  return estadoNomiagGenerali(null)
+}
+
+/** v0.2.53 · `wclasv`/`wclavh` (catálogo) en cualquier marco de la página, saneado. Solo lee. */
+export async function leerClaseTipoGenerali(page: Page): Promise<string> {
+  const v = async (id: string): Promise<string> => {
+    for (const f of page.frames()) {
+      if (f.isDetached()) continue
+      const l = f.locator(`[id="reg1063A_vehiculo_caracVehiculo_${id}"]`).first()
+      if ((await l.count().catch(() => 0)) === 0) continue
+      const t = ((await l.inputValue({ timeout: 2_000 }).catch(() => '')) ?? '').trim()
+      return t ? `«${sanearFragmentoGenerali(t).slice(0, 40)}»` : 'vacío'
+    }
+    return 'sin campo'
+  }
+  return `${await v('wclasv')} (wclavh ${await v('wclavh')})`
 }
 
 type FormVersionGenerali = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>
@@ -2353,6 +2397,34 @@ const JS_ACTIVOS_SELECTOR = `(() => {
   return out.slice(0, 20);
 })()`
 
+/**
+ * v0.2.53 · Opciones de «Tipo de Vehículo» y «Subtipo de Vehículo» que ofrece el selector (hojas de texto corto junto al rótulo; `<select>` y tarjetas)
+ * y la marcada de cada una. Catálogo; sin funciones con nombre (tsx). Solo lee.
+ */
+const JS_OPCIONES_TIPO_SELECTOR = `(() => {
+  const T = (n) => (n ? (n.innerText || n.textContent || '') : '').replace(/\\s+/g, ' ').trim();
+  const ACT = '.ui-state-active,.ui-state-highlight,[aria-checked="true"],[aria-pressed="true"],[aria-selected="true"],.selected,.active,.seleccionado';
+  const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+  const grupo = (re) => {
+    const rot = Array.from(document.querySelectorAll('label,span,div,h1,h2,h3,h4,legend,p,td,th')).find((e) => e.children.length === 0 && re.test(norm(T(e))));
+    if (!rot) return { ops: [], marcada: null };
+    let c = rot.parentElement;
+    for (let i = 0; i < 4 && c; i++) {
+      const hojas = Array.from(c.querySelectorAll('*')).filter((e) => e !== rot && e.children.length === 0 && e.getClientRects().length > 0 && !/^(SCRIPT|STYLE)$/.test(e.tagName) && T(e) && T(e).length <= 40 && !re.test(norm(T(e))));
+      if (hojas.length >= 1) {
+        const ops = []; let marcada = null;
+        c.querySelectorAll('select option').forEach((o) => { const t = T(o); if (t && ops.indexOf(t) < 0) ops.push(t); if (o.selected && t && !/^seleccion/.test(norm(t))) marcada = t; });
+        hojas.forEach((e) => { const t = T(e); if (ops.indexOf(t) < 0) ops.push(t); if ((e.matches(ACT) || (e.closest && e.closest(ACT) && c.contains(e.closest(ACT)))) && !marcada) marcada = t; });
+        return { ops: ops.slice(0, 12), marcada };
+      }
+      c = c.parentElement;
+    }
+    return { ops: [], marcada: null };
+  };
+  const a = grupo(/^tipo de vehiculo$/); const b = grupo(/^subtipo de vehiculo$/);
+  return { tipos: a.ops, subtipos: b.ops, marcadoTipo: a.marcada, marcadoSubtipo: b.marcada };
+})()`
+
 /** v0.2.50 · Última foto del selector (antes de «Confirmar») por página: va al atasco si «Tipo de vehículo» queda vacío. */
 const FOTO_SELECTOR_GENERALI = new WeakMap<Page, string>()
 
@@ -2360,7 +2432,11 @@ const FOTO_SELECTOR_GENERALI = new WeakMap<Page, string>()
 export async function fotografiarSelectorGenerali(page: Page, selector: Raiz): Promise<string> {
   const estado = await leerEstadoSelector(selector).catch(() => ({ controles: [], filas: 0, filasSeleccionadas: 0 }))
   const activos = ((await selector.evaluate(JS_ACTIVOS_SELECTOR).catch(() => [])) as string[] | null) ?? []
-  const foto = resumenFotoSelectorGenerali(estado, activos)
+  // v0.2.53: + opciones de TIPO y SUBTIPO que ofrece el selector y la marcada (catálogo, saneado). Solo lee.
+  const opciones = ((await selector.evaluate(JS_OPCIONES_TIPO_SELECTOR).catch(() => null)) as OpcionesTipoSelectorGenerali | null) ?? null
+  const textoOpciones = resumenOpcionesTipoSelectorGenerali(opciones)
+  diagGeneraliDe(page).subtipos = textoOpciones
+  const foto = `${resumenFotoSelectorGenerali(estado, activos)}; ${textoOpciones}`
   FOTO_SELECTOR_GENERALI.set(page, foto)
   return foto
 }
@@ -2402,6 +2478,7 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
     await fotografiarSelectorGenerali(page, selector)
     await ctx.confirmarVehiculoGenerali()
     await esperarTrasConfirmarGenerali(page, selector)
+    diagGeneraliDe(page).trasSelector = await leerClaseTipoGenerali(page)
     return false
   }
   if (nuevos.length > 0) {
@@ -2414,6 +2491,7 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
   await fotografiarSelectorGenerali(page, selector)
   await ctx.confirmarVehiculoGenerali()
   await esperarTrasConfirmarGenerali(page, selector)
+  diagGeneraliDe(page).trasSelector = await leerClaseTipoGenerali(page)
   return false
 }
 
@@ -3455,6 +3533,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     const omitidos: string[] = []
     hechos.push(...(await rellenarInteresadoGenerali(marco, ant.formulario, ctx, omitidos)))
     // v0.2.22: interesado readonly y vacío → «Personas» (buscar y elegir la persona). Para sin crear nada si no es seguro.
+    diagGeneraliDe(page).antesPersonas = await leerClaseTipoGenerali(page)
     const persona = await elegirPersonaTomadorGenerali(marco, ant.formulario, ctx)
     if (persona) hechos.push(...persona.hechos)
     // v0.2.45: «Tipo de vehículo» y «Compañía de procedencia» (obligatorios que 0.2.44 encontró vacíos). Con el riesgo ORIGINAL (no el supuesto favorable).
@@ -3479,6 +3558,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // v0.2.51: antes de declararlo vacío se ESPERA (hasta 15 s) a que el portal lo rellene y a que no quede ningún control bloqueado por un refresco.
   const esperaProtegidos = await esperarProtegidosGenerali(marco, opciones.esperaProtegidosMs ?? ESPERA_PROTEGIDOS_MS)
   let caracteristicas = esperaProtegidos.bloques
+  diagGeneraliDe(page).final = await leerClaseTipoGenerali(page)
   let protegidosVacios = vaciosProtegidosGenerali(caracteristicas)
   // v0.2.52: SOLO «Tipo de vehículo» vacío (el resto de la ficha rellena) → fase de PRUEBAS acotada (un intento por hipótesis).
   let pruebas: IntentoTipoVehiculoGenerali[] = []
@@ -3491,7 +3571,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
     if (protegidosVacios.length === 0 && buena) avisosDatosValoracion.push(`Tipo de vehículo: lo puso el portal tras probar «${buena.hipotesis}» (${sanearFragmentoGenerali(buena.hecho).slice(0, 80)})`)
   }
   if (protegidosVacios.length > 0) {
-    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». Pruebas (v0.2.52): ${resumenPruebasTipoVehiculoGenerali(pruebas)}. Esperado ${Math.round(esperaProtegidos.ms / 1000)} s (v0.2.51): bloqueados por refresco ${esperaProtegidos.bloqueados}; último refresco del portal: ${esperaProtegidos.refresco}. Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}. Selector antes de «Confirmar» (v0.2.50; ¿el subtipo «Turismos» llega marcado?): ${FOTO_SELECTOR_GENERALI.get(page) ?? '(sin foto: no pasó por el selector PrimeFaces)'}`)
+    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». ${lineaDiagTipoVehiculoGenerali(DIAG_GENERALI.get(page))}. Pruebas (v0.2.52): ${resumenPruebasTipoVehiculoGenerali(pruebas)}. Esperado ${Math.round(esperaProtegidos.ms / 1000)} s (v0.2.51): bloqueados por refresco ${esperaProtegidos.bloqueados}; último refresco del portal: ${esperaProtegidos.refresco}. Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}. Selector antes de «Confirmar» (v0.2.50; ¿el subtipo «Turismos» llega marcado?): ${FOTO_SELECTOR_GENERALI.get(page) ?? '(sin foto: no pasó por el selector PrimeFaces)'}`)
   }
   if (!ctx.pulsarSubpestanaGenerali) throw new ErrorMapaIncompletoGenerali(`la puerta guardada de «${SUBPESTANA_PRECIO_GENERALI}» en el contexto del runner; ${datos}`)
   // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).

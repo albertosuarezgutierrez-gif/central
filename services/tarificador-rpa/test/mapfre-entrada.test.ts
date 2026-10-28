@@ -990,3 +990,23 @@ test('login antiguo: CAPTCHA presente → error captcha ANTES de escribir usuari
     await context.close()
   }
 })
+
+test('Patinetes (real 28/10): un modal AngularJS que aparece TRAS abrir la pestaña y otro tras «Automóviles» se cierran antes de pulsar', async () => {
+  const { context, page, ctx, pulsados, guard } = await abrir('/patinetes')
+  try {
+    // Script en TEXTO (tsx inyecta `__name` en las funciones y el navegador no lo tiene).
+    await page.evaluate(`(() => {
+      const original = window.mostrar
+      const modal = (id) => document.body.insertAdjacentHTML('beforeend', '<div id="' + id + '" role="dialog" modal-window class="modal fade in" style="display:block;position:fixed;inset:0;background:#ccc;z-index:99"><h4 class="modal-title">Aviso</h4><button class="close" aria-label="Cerrar" onclick="this.closest(\\'[role=dialog]\\').remove()">×</button></div>')
+      window.mostrar = (id) => { original(id); if (id === 'menu') modal('m1'); if (id === 'pag') modal('m2') }
+    })()`)
+    const nueva = await abrirTarificacionPatineteMapfre(page, ctx)
+    assert.notEqual(nueva, page)
+    assert.equal(await page.locator('[role=dialog]').count(), 0)
+    assert.deepEqual(pulsados.filter((t) => t !== '×' && !/^cerrar$/i.test(t)), ['Nueva producción', 'Automóviles', 'Tarificación y Emisión'])
+    assert.equal(pulsados.filter((t) => /^(×|cerrar)$/i.test(t)).length, 2, 'cada modal se cierra con su botón de cierre')
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})

@@ -1899,6 +1899,36 @@ export function resumenFotoSelectorGenerali(estado: EstadoSelectorGenerali, acti
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
+// ───────────────────────── v0.2.53 · mediciones DIAGNÓSTICAS de «Tipo de vehículo» (solo lectura) ─────────────────────────
+
+/** v0.2.53 · Opciones de TIPO y SUBTIPO que ofrece el selector y la marcada de cada una (catálogo). */
+export type OpcionesTipoSelectorGenerali = { tipos: readonly string[]; subtipos: readonly string[]; marcadoTipo: string | null; marcadoSubtipo: string | null }
+
+const listaCat = (xs: readonly string[]): string => `[${[...new Set(xs.map((x) => sanearFragmentoGenerali(x).slice(0, 40)).filter((x) => x !== ''))].slice(0, 12).join(' | ')}]`
+const marcadoCat = (x: string | null): string => (x ? `«${sanearFragmentoGenerali(x).slice(0, 40)}»` : 'ninguno')
+
+/** «tipos=[…] (marcado …); subtipos=[…] (marcado …)» del selector. PURA; catálogo saneado. */
+export function resumenOpcionesTipoSelectorGenerali(o: OpcionesTipoSelectorGenerali | null): string {
+  if (!o) return 'tipos=¿? ; subtipos=¿?'
+  return `tipos=${listaCat(o.tipos)} (marcado ${marcadoCat(o.marcadoTipo)}); subtipos=${listaCat(o.subtipos)} (marcado ${marcadoCat(o.marcadoSubtipo)})`
+}
+
+/** Estado de `nomiag` (campo gris del nombre del mediador): NUNCA el nombre, solo si tiene valor. PURA. */
+export function estadoNomiagGenerali(valor: string | null): 'con valor' | 'vacío' | 'sin campo' {
+  if (valor === null) return 'sin campo'
+  return valor.trim() === '' ? 'vacío' : 'con valor'
+}
+
+/** Mediciones diagnósticas acumuladas por página (todas opcionales: lo no medido sale «¿?»). */
+export type DiagTipoVehiculoGenerali = { nomiag?: string; trasSelector?: string; antesPersonas?: string; final?: string; subtipos?: string }
+
+/** Línea corta «diag: …» para el atasco de «Tipo de vehículo» vacío. PURA; solo catálogos y estados. */
+export function lineaDiagTipoVehiculoGenerali(d: DiagTipoVehiculoGenerali | undefined, max = 500): string {
+  const x = (s: string | undefined): string => (s === undefined ? '¿?' : sanearFragmentoGenerali(s).slice(0, 80))
+  const t = `diag: nomiag=${d?.nomiag === 'con valor' || d?.nomiag === 'vacío' || d?.nomiag === 'sin campo' ? d.nomiag : '¿?'}; wclasv tras selector=${x(d?.trasSelector)}/antes personas=${x(d?.antesPersonas)}/final=${x(d?.final)}; ${d?.subtipos ? sanearFragmentoGenerali(d.subtipos).slice(0, 300) : 'subtipos=¿?'}`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
 // ───────────────────────── v0.2.52 · fase de PRUEBAS acotada para «Tipo de vehículo» (`wclasv`) vacío ─────────────────────────
 
 /** Antigüedad del vehículo del riesgo para «Indique Código»: «nuevo» si se matriculó hace < 1 año; sin fecha → `null` (no se supone). PURA. */

@@ -38,6 +38,7 @@ import {
   esGuardadoEnDialogoAutorizado,
   casaGuardadoEnDialogo,
   ENTRADAS_EXPLORACION,
+  esEntradaExploracion,
   normalizarEnteroPortal,
   relocalizarElemento,
   leerIncidenciasEjecucion,
@@ -1243,5 +1244,26 @@ describe('orden del lote y lote cortado (14/10/2026, exploración 8d0676f9: año
       `ejecucion: rellenar ${r('nx-input-38')} «Año de construcción» (inmueble.anio_construccion): lote_cortado`,
       `ejecucion: avanzar ${r('siguiente')} «Siguiente»: lote_cortado`,
     ])
+  })
+})
+
+describe('Fidelidade · Vivienda (hogar), solo EXPLORACIÓN hasta el formulario (Alberto 28/10/2026)', () => {
+  const F = 'fidelidade:particulares:vivienda'
+  it('está en la lista cerrada, compañía/ramo correctos, sin avances de ningún tipo y no es del mediador', () => {
+    expect(esEntradaExploracion(F)).toBe(true)
+    const e = ENTRADAS_EXPLORACION[F]!
+    expect(e.compania).toBe('fidelidade')
+    expect(e.ramo).toBe('hogar')
+    expect(e.productoMenu).toBe('Fidelidade Vivienda')
+    expect([...e.avancesAutorizados]).toEqual([])
+    expect(e.avancesPorId ?? []).toEqual([])
+    expect(e.guardadosEnDialogo ?? []).toEqual([])
+    expect(e.tomadorMediador).toBeUndefined()
+  })
+  it('cumple la regex que valida la entrada en tarificador-relanzar.yml (compania:seccion:producto)', () => {
+    expect(F).toMatch(/^[a-z_]+:[a-z_]+:[a-z_]+$/)
+  })
+  it('NO hay entrada para EMPRESAS (Producto 4215 · Gama Comercio)', () => {
+    expect(Object.keys(ENTRADAS_EXPLORACION).filter((k) => k.startsWith('fidelidade:'))).toEqual([F])
   })
 })

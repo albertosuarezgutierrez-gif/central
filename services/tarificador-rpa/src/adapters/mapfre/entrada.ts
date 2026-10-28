@@ -525,6 +525,7 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   }, confirmaciones)
   await ctx.pulsar(pestana)
   await ctx.pausa()
+  await cerrarAvisosModales(page, ctx) // un modal AngularJS que aparece tras abrir la pestaña intercepta el clic en «Automóviles» (real 28/10/2026)
   // La opción «Automóviles» del desplegable se PULSA (visible tras abrirlo); aún no existe el título homónimo de la página.
   const opcion = await conRespaldo(page, ctx, () => localizar(page, ['menuitem', 'link', 'button'], OPCION_AUTOMOVILES, 'opción del desplegable', menuMs), {
     clave: 'menu_automoviles', tipo: 'accion', textoEsperado: OPCION_AUTOMOVILES,
@@ -532,6 +533,7 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   }, confirmaciones)
   await ctx.pulsar(opcion)
   await ctx.pausa()
+  await cerrarAvisosModales(page, ctx) // y otra vez antes de la tarjeta
   // Página «Automóviles» (SPA AngularJS): se da margen a la red para que pinte las tarjetas; el título solo se comprueba.
   await page.waitForLoadState('networkidle', { timeout: Math.min(ESPERA_TARJETAS_RED_MS, menuMs) }).catch(() => undefined)
   const conTitulo = await enTodosLosMarcos(page, (f) => tituloDe(f).filter({ visible: true }), menuMs)

@@ -48,6 +48,8 @@ import {
 
 import type { ContextoDefensa } from '@/lib/contexto-defensa'
 import { fechaEs } from '@/lib/ficha-asegura'
+import { datosVehiculoDeRetarificar } from '@/lib/retarificar-a-riesgo'
+import TarificarConBots from './TarificarConBots'
 import { FallosTarificacion } from '../../../FallosTarificacion'
 export type { ContextoDefensa }
 
@@ -1544,6 +1546,14 @@ export default function Retarificador({
               ? 'Simular precio — no cuesta nada'
               : 'Pedir precio — cuesta 0,50€'}
         </button>
+
+        {/* Siempre las dos opciones (28/10/2026): Avant2 (arriba, 0,50€) o los bots de cada compañía (gratis). */}
+        <TarificarConBots
+          polizaId={polizaId}
+          deshabilitado={cotizando}
+          datos={datosVehiculoDeRetarificar({ ramo, marcas, modelos, versiones, marcaId, modeloId, motorId, codigoVehiculo, garaje, fechaMatriculacion: matriculacion })}
+          aviso="Viajan la versión, el garaje y la matriculación que hayas elegido; estado civil, tipo de vía y municipio los leen los bots de la ficha del tomador."
+        />
 
         {resultado.estado === 'faltan' && (
           <div style={{ marginTop: 12 }}>

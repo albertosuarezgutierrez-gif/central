@@ -1063,6 +1063,18 @@ export const ENLACES_ENTRADA_AUTORIZADOS: Readonly<Record<string, readonly strin
     'Tarificación y Emisión (Acuerdos)',
     'Tarificación y Emisión',
   ]),
+  // Fidelidade (intranet de mediadores, Alberto 28/10/2026): ruta fija hasta el formulario de Vivienda. Ninguna de estas etiquetas casa con
+  // el patrón de emisión hoy; se listan igual para que el recorrido sea EXACTO, ordenado (`PREVIOS_ENTRADA`) y solo en su origen
+  // (`ORIGEN_ENTRADA`). «Simulación» es el botón rojo de la tarjeta «Fidelidade Vivienda» (simula = tarifica; no emite).
+  fidelidade: Object.freeze(['Oficina Virtual', 'Proyecto', 'Nuevo proyecto', 'Simulación']),
+})
+
+/** Origen EXACTO (https) en el que vale el enlace de entrada de una compañía; sin entrada aquí = sin restricción de origen (Mapfre). */
+export const ORIGEN_ENTRADA: Readonly<Record<string, string>> = Object.freeze({ fidelidade: 'https://mediadores.fidelidade.es' })
+
+/** Orden obligatorio de los enlaces de entrada de una compañía: cada clave solo se pulsa tras su valor (etiquetas normalizadas). */
+export const PREVIOS_ENTRADA: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
+  fidelidade: Object.freeze({ proyecto: 'oficina virtual', 'nuevo proyecto': 'proyecto', 'simulación': 'nuevo proyecto' }),
 })
 
 const textoEntrada = (t: string | null | undefined) => (t ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('es')
@@ -1095,9 +1107,24 @@ export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: Guard
   const autorizado = textoEntrada(desc[0])
   // El mensaje lleva el TEXTO EXACTO del elemento rechazado (llega a plataforma redactado): se desbloquea uno a uno.
   if (!ENLACES_ENTRADA_AUTORIZADOS[compania].some((t) => textoEntrada(t) === autorizado)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  if (Object.hasOwn(ORIGEN_ENTRADA, compania)) {
+    let origen = ''
+    try {
+      const u = new URL(boton.page().url())
+      origen = u.username || u.password ? '' : u.origin
+      // Y el marco DEL BOTÓN (un iframe de otro origen con la misma etiqueta no vale aunque la página de arriba sea la buena).
+      const h = await boton.elementHandle({ timeout: 2_000 })
+      const marco = h ? await h.ownerFrame() : null
+      const m = marco ? new URL(marco.url()) : null
+      if (!m || m.username || m.password || m.origin !== origen) origen = ''
+    } catch { origen = '' }
+    if (origen !== ORIGEN_ENTRADA[compania]) throw new EmisionBloqueadaError('boton', `enlace de entrada de ${compania} fuera de ${ORIGEN_ENTRADA[compania]}`)
+  }
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   const clave = `entrada:${autorizado}`
   if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» ya se usó en este trabajo`)
+  const previo = PREVIOS_ENTRADA[compania]?.[autorizado]
+  if (previo !== undefined && !usados.has(`entrada:${previo}`)) throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» va después de «${previo}»`)
   comprobarBoton(desc.filter((d) => textoEntrada(d) !== autorizado))
   usados.add(clave)
   AVANCES_USADOS.set(guard, usados)
