@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T04:58:45Z",
-  "sha": "2b99c24a522a7594ffd7ba59d85c5bca64011323",
+  "generadoEn": "2026-10-28T06:08:22Z",
+  "sha": "d1deda284a7281c949a9be5ccc61a4d3da9fbc80",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -128373,7 +128373,7 @@
           "exportada": false,
           "params": "n: number, divisa: string",
           "retorno": null,
-          "linea": 10
+          "linea": 12
         },
         {
           "nombre": "colorDe",
@@ -128381,7 +128381,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": null,
-          "linea": 11
+          "linea": 13
         },
         {
           "nombre": "fechaHora",
@@ -128389,7 +128389,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 13
+          "linea": 15
         },
         {
           "nombre": "TarjetaBolsa",
@@ -128397,12 +128397,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 17
+          "linea": 19
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "083b9dee9c9b"
+      "hash": "96fe6778b083"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/inicio/TarjetaCorreduria.tsx",
@@ -142330,7 +142330,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 50
+          "linea": 51
         },
         {
           "nombre": "buscarPrevistos",
@@ -142338,7 +142338,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string, yaResumen: string, descartadosResumen: string,",
           "retorno": "Promise<",
-          "linea": 197,
+          "linea": 249,
           "resumen": "nunca lanza (es una mejora, no puede tumbar el descubrimiento normal)."
         }
       ],
@@ -142348,7 +142348,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "2097c3a7a701"
+      "hash": "6e4ec560b73e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -170892,6 +170892,48 @@
       "hash": "991a10caead7"
     },
     {
+      "ruta": "apps/plataforma/lib/festivos-nager.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Festivos nacionales y autonómicos (Andalucía) desde Nager.Date (gratis, sin clave). Los LOCALES de Sevilla (Feria, Corpus…) no están aquí: siguen saliendo de la búsqueda web. `null` = no se pudo leer (\"no se sabe\"), NUNCA `[]` (\"no hay\"): quien llama no debe dar nada por inexistente.",
+      "exporta": [
+        "filtrarAndalucia",
+        "obtenerFestivosAndalucia",
+        "fechasADeduplicar"
+      ],
+      "funciones": [
+        {
+          "nombre": "filtrarAndalucia",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly FestivoNager[]",
+          "retorno": "FestivoAndalucia[]",
+          "linea": 17,
+          "resumen": "PURA: global === true o counties incluye \"ES-AN\"."
+        },
+        {
+          "nombre": "obtenerFestivosAndalucia",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number, fetchFn: typeof fetch = fetch,",
+          "retorno": "Promise<FestivoAndalucia[] | null>",
+          "linea": 30,
+          "resumen": "null si la API falla (red, timeout, HTTP != 200, JSON no es lista)."
+        },
+        {
+          "nombre": "fechasADeduplicar",
+          "kind": "function",
+          "exportada": true,
+          "params": "festivosNager: readonly FestivoAndalucia[] | null | undefined, desde: string, hasta: string,",
+          "retorno": "string[]",
+          "linea": 51,
+          "resumen": "PURA: fechas (YYYY-MM-DD, únicas, ordenadas) en las que un festivo de Nager dentro de [desde, hasta] ya cubre el día, de modo que un festivo `websearch` de esa MISMA fecha es un duplicado. `null` (API"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d6b731fdef45"
+    },
+    {
       "ruta": "apps/plataforma/lib/ficha-asegura.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -197106,6 +197148,57 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "060ac7e70662"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tipos-cambio.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/tipos-cambio.ts Tipos de cambio del BCE vía Frankfurter (API pública, sin clave). rate = unidades de divisa por 1 EUR, así que EUR = importe / rate. Regla del repo: dato que NO hay ≠ 0 → sin tipo, el resultado es `null`.",
+      "exporta": [
+        "obtenerTiposBCE",
+        "parsearTiposBCE",
+        "aEuros",
+        "totalEnEuros"
+      ],
+      "funciones": [
+        {
+          "nombre": "obtenerTiposBCE",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<TiposBCE | null>",
+          "linea": 10,
+          "resumen": "Server-side. Caché de un día; `null` si la API falla o responde algo inesperado (nunca lanza)."
+        },
+        {
+          "nombre": "parsearTiposBCE",
+          "kind": "function",
+          "exportada": true,
+          "params": "j: unknown",
+          "retorno": "TiposBCE | null",
+          "linea": 20
+        },
+        {
+          "nombre": "aEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "importe: number | null, divisa: string, tipos: TiposBCE | null",
+          "retorno": "number | null",
+          "linea": 31,
+          "resumen": "Importe → euros. EUR tal cual; divisa sin tipo, tipos null o importe no finito → null (nunca 0)."
+        },
+        {
+          "nombre": "totalEnEuros",
+          "kind": "function",
+          "exportada": true,
+          "params": "porDivisa: { divisa: string; valor: number | null; completo: boolean }[], tipos: TiposBCE | null,",
+          "retorno": "TotalEur | null",
+          "linea": 46,
+          "resumen": "Suma de los valores por divisa en €. null si alguna divisa no se puede convertir o su valor es null. `minimo` = alguna divisa tiene precios que faltan (completo=false): el total es un suelo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ec906b18c0cf"
     },
     {
       "ruta": "apps/plataforma/lib/trading-acceso.ts",
@@ -256560,7 +256653,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5372,
-    "funciones": 20622
+    "archivos": 5374,
+    "funciones": 20629
   }
 }
