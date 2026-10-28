@@ -5,8 +5,38 @@
 // floja.
 // ────────────────────────────────────────────────────────────────────────────
 
+import { tipoBien } from './extraccion.ts'
 import { norm } from './parsing.ts'
 import type { CoincidenciaSubasta, CriteriosSubasta, Oportunidad, SubastaInmueble } from './types.ts'
+
+// ── Helpers del perfil de inversión (puros). `null` = «no se sabe». ──────────
+
+/** true/false si consta que es (o no) una casa; null si no se puede saber. */
+export function esUnifamiliar(s: SubastaInmueble): boolean | null {
+  const t = norm(s.descripcion ?? '')
+  const tipo = s.tipoBien ?? tipoBien(s.descripcion)
+  if (tipo === 'otro') return null
+  if (tipo !== 'vivienda') return false
+  if (/unifamiliar|chalet|adosad|pareado|\bcasa\b|villa\b/.test(t)) return true
+  if (s.planta || /\bpiso\b|apartamento|\bduplex|\batico|\bestudio\b|\bplanta\s+\w+\s+(?:puerta|letra)|\bescalera\b/.test(t)) return false
+  return null
+}
+
+/** Piscina: true si el texto la cita, false si dice «sin piscina», null si calla. */
+export function tienePiscina(s: SubastaInmueble): boolean | null {
+  const t = norm(s.descripcion ?? '')
+  if (/\bsin\s+piscina/.test(t)) return false
+  return /piscina/.test(t) ? true : null
+}
+
+/** m² de parcela/solar/terreno/jardín citados en la descripción; null si no hay. */
+export function superficieParcela(s: SubastaInmueble): number | null {
+  const t = norm(s.descripcion ?? '')
+  const m = /(?:parcela|solar|terreno|jardin)[^.;]{0,80}?(\d[\d.,]*)\s*(?:m2|m²|metros)/.exec(t)
+  if (!m) return null
+  const n = Number(m[1].replace(/\.(?=\d{3}\b)/g, '').replace(',', '.'))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
 
 /**
  * @param op evaluación de oportunidad ya calculada; sin ella no se puede aplicar
@@ -58,6 +88,58 @@ export function coincideSubasta(
     }
   }
 
+  // ── Perfil de inversión ───────────────────────────────────────────────────
+  const pendientes: string[] = []
+
+  const municipios = (c.municipios ?? []).map(norm).filter(Boolean)
+  if (municipios.length) {
+    const mun = norm(s.municipio ?? '')
+    if (!mun) return descarta('sin municipio identificado')
+    if (!municipios.includes(mun)) return descarta(`municipio fuera de la lista (${s.municipio})`)
+    motivos.push(`Municipio ${s.municipio}`)
+  }
+
+  if (c.soloUnifamiliar) {
+    const u = esUnifamiliar(s)
+    
+    if (u === false) return descarta('no es vivienda unifamiliar')
+    if (u === null) pendientes.push('unifamiliar')
+    else motivos.push('Vivienda unifamiliar')
+  }
+
+  const minimo = (valor: number | null | undefined, min: number | undefined, nombre: string): CoincidenciaSubasta | null => {
+    if (min == null) return null
+    if (valor == null) { pendientes.push(nombre); return null }
+    if (valor < min) return descarta(`${nombre} ${valor} por debajo del mínimo (${min})`)
+    motivos.push(`${valor} ${nombre}`)
+    return null
+  }
+  const dorm = minimo(s.dormitorios, c.dormitoriosMin, 'dormitorios')
+  if (dorm) return dorm
+  const ban = minimo(s.banos, c.banosMin, 'baños')
+  if (ban) return ban
+
+  // «Piscina o parcela grande»: con ambos declarados basta UNO de los dos.
+  const piscina = c.requierePiscina ? tienePiscina(s) : undefined
+  const parcela = c.superficieParcelaMin != null ? superficieParcela(s) : undefined
+  const parcelaOk = parcela != null && parcela >= (c.superficieParcelaMin ?? 0)
+  if (piscina !== undefined && parcela !== undefined) {
+    if (piscina === true) motivos.push('Con piscina')
+    if (parcelaOk) motivos.push(`Parcela ${parcela} m²`)
+    if (piscina !== true && !parcelaOk) {
+      if (piscina === false && parcela != null) return descarta('sin piscina y parcela por debajo del mínimo')
+      pendientes.push('piscina o parcela')
+    }
+  } else if (piscina !== undefined) {
+    if (piscina === false) return descarta('sin piscina')
+    if (piscina === null) pendientes.push('piscina')
+    else motivos.push('Con piscina')
+  } else if (parcela !== undefined) {
+    if (parcela === null) pendientes.push('parcela')
+    else if (!parcelaOk) return descarta(`parcela ${parcela} m² por debajo del mínimo (${c.superficieParcelaMin})`)
+    else motivos.push(`Parcela ${parcela} m²`)
+  }
+
   // ── Puntuación ────────────────────────────────────────────────────────────
   // La base es la calidad de la oportunidad; las palabras clave son un empujón,
   // no la señal principal.
@@ -74,7 +156,13 @@ export function coincideSubasta(
 
   if (op?.puntuacion != null) motivos.push(...op.motivos)
 
-  return { casa: true, puntuacion: Math.max(0, Math.min(100, Math.round(puntuacion))), motivos }
+  if (pendientes.length) motivos.push(`Pendiente de confirmar: ${pendientes.join(', ')}`)
+  return {
+    casa: true,
+    puntuacion: Math.max(0, Math.min(100, Math.round(puntuacion))),
+    motivos,
+    ...(pendientes.length ? { pendientes } : {}),
+  }
 }
 
 /** Filtra y ordena por puntuación descendente. */

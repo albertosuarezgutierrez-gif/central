@@ -42,6 +42,13 @@ export async function GET() {
       financia_tipo_anual: pct(f?.financia_tipo_anual),
       financia_meses: f?.financia_meses == null ? null : Number(f.financia_meses),
       financia_comision: pct(f?.financia_comision),
+      // Perfil de inversión (vacío / null / false = no filtra).
+      municipios: f?.municipios ?? [],
+      solo_unifamiliar: f?.solo_unifamiliar ?? false,
+      dormitorios_min: f?.dormitorios_min == null ? null : Number(f.dormitorios_min),
+      banos_min: f?.banos_min == null ? null : Number(f.banos_min),
+      superficie_parcela_min: f?.superficie_parcela_min == null ? null : Number(f.superficie_parcela_min),
+      requiere_piscina: f?.requiere_piscina ?? false,
     },
   })
 }
@@ -70,18 +77,33 @@ export async function PUT(req: NextRequest) {
     return n / 100
   }
 
+  // Perfil de inversión: si el cliente NO manda el campo (UI antigua), se conserva
+  // el valor guardado en vez de borrarlo.
+  const tiene = (k: string) => Object.prototype.hasOwnProperty.call(b, k)
+  const entero = (v: unknown): number | null => {
+    const n = num(v)
+    return n != null && n > 0 ? Math.round(n) : null
+  }
+  const positivo = (v: unknown): number | null => {
+    const n = num(v)
+    return n != null && n > 0 ? n : null
+  }
+
   try {
     await prisma.$executeRaw(Prisma.sql`
       INSERT INTO subastas_criterios
         (cuenta_id, activo, provincias, palabras_clave, tipos, precio_min, precio_max, descuento_min, excluir_ocupadas,
-         financia_pct, financia_tipo_anual, financia_meses, financia_comision)
+         financia_pct, financia_tipo_anual, financia_meses, financia_comision,
+         municipios, solo_unifamiliar, dormitorios_min, banos_min, superficie_parcela_min, requiere_piscina)
       VALUES (
         ${cuentaId}::uuid, ${!!b.activo}, ${arr(b.provincias)}::text[], ${arr(b.palabras_clave)}::text[],
         ${arr(b.tipos)}::text[], ${num(b.precio_min)}, ${num(b.precio_max)},
         ${Math.max(0, Math.min(100, Number(b.descuento_min) || 0))}, ${!!b.excluir_ocupadas},
         ${tantoPorUno(b.financia_pct, 100)}, ${tantoPorUno(b.financia_tipo_anual, 60)},
         ${(() => { const n = num(b.financia_meses); return n != null && n > 0 && n <= 36 ? Math.round(n) : null })()},
-        ${tantoPorUno(b.financia_comision, 10)}
+        ${tantoPorUno(b.financia_comision, 10)},
+        ${arr(b.municipios)}::text[], ${!!b.solo_unifamiliar}, ${entero(b.dormitorios_min)}, ${entero(b.banos_min)},
+        ${positivo(b.superficie_parcela_min)}, ${!!b.requiere_piscina}
       )
       ON CONFLICT (cuenta_id) DO UPDATE SET
         activo = EXCLUDED.activo,
@@ -96,6 +118,12 @@ export async function PUT(req: NextRequest) {
         financia_tipo_anual = EXCLUDED.financia_tipo_anual,
         financia_meses = EXCLUDED.financia_meses,
         financia_comision = EXCLUDED.financia_comision,
+        municipios = CASE WHEN ${tiene('municipios')} THEN EXCLUDED.municipios ELSE subastas_criterios.municipios END,
+        solo_unifamiliar = CASE WHEN ${tiene('solo_unifamiliar')} THEN EXCLUDED.solo_unifamiliar ELSE subastas_criterios.solo_unifamiliar END,
+        dormitorios_min = CASE WHEN ${tiene('dormitorios_min')} THEN EXCLUDED.dormitorios_min ELSE subastas_criterios.dormitorios_min END,
+        banos_min = CASE WHEN ${tiene('banos_min')} THEN EXCLUDED.banos_min ELSE subastas_criterios.banos_min END,
+        superficie_parcela_min = CASE WHEN ${tiene('superficie_parcela_min')} THEN EXCLUDED.superficie_parcela_min ELSE subastas_criterios.superficie_parcela_min END,
+        requiere_piscina = CASE WHEN ${tiene('requiere_piscina')} THEN EXCLUDED.requiere_piscina ELSE subastas_criterios.requiere_piscina END,
         actualizado_en = now()
     `)
     return NextResponse.json({ ok: true })

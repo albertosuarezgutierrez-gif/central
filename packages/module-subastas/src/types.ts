@@ -313,6 +313,21 @@ export interface CriteriosSubasta {
   excluirOcupadas?: boolean
   /** Tipos de operación aceptados. Vacío = todos. */
   tipos?: TipoSubasta[]
+
+  // ── Perfil de inversión (todos OPCIONALES: undefined/vacío = no filtra) ────
+  // Los que salen solo del texto (dormitorios, baños, piscina, parcela) siguen
+  // la regla «dato que NO hay ≠ dato que NO se ha mirado»: si la subasta no lo
+  // dice NO se descarta (queda en `pendientes`); solo se descarta si consta y
+  // no cumple.
+  /** Municipios aceptados (comparación sin tildes ni mayúsculas). Vacío = todos. */
+  municipios?: string[]
+  /** Excluye pisos, locales, garajes, trasteros, naves, solares y fincas. */
+  soloUnifamiliar?: boolean
+  dormitoriosMin?: number
+  banosMin?: number
+  /** m² mínimos de parcela (solo se lee de la descripción). */
+  superficieParcelaMin?: number
+  requierePiscina?: boolean
 }
 
 /** Veredicto de casar una subasta contra unos criterios. */
@@ -322,4 +337,6 @@ export interface CoincidenciaSubasta {
   motivos: string[]
   /** Por qué se descartó, cuando `casa` es false. */
   descartadaPor?: string
+  /** Criterios del perfil que NO se pudieron comprobar por falta de dato (no es «no cumple»). */
+  pendientes?: string[]
 }
