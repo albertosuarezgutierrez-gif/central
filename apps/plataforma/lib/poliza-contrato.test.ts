@@ -88,6 +88,17 @@ test('riesgo: vigencia y lugar sin nada cifrado', () => {
   assert.equal(lugarRiesgo(r), 'CL SOCORRO 24, 41003 SEVILLA')
 })
 
+test('vigencia del riesgo: inicio=fin, fin<inicio o falta una fecha → null (sin reloj)', () => {
+  const v = (inicio: string | null, fin: string | null) =>
+    vigenciaRiesgo(leerContrato({ riesgos: [{ tipo: 'auto', inicio, fin }] })!.riesgos[0])
+  assert.equal(v('2026-11-12', '2026-11-12'), null)
+  assert.equal(v('2027-01-01', '2026-01-01'), null)
+  assert.equal(v('2026-01-01', null), null)
+  assert.equal(v(null, '2027-01-01'), null)
+  assert.equal(v(null, null), null)
+  assert.equal(v('2026-01-01', '2027-01-01'), '01/01/2026 → 01/01/2027')
+})
+
 test('interpretarPoliza: asegura vieja sin contrato → contrato/fechas null y recibos sin extras a null', () => {
   const r = interpretarPoliza(200, {
     estado: 'ok',

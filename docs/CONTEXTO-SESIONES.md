@@ -11,6 +11,11 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (28/10/2026, 8) Correduría · ficha de póliza sin duplicidades (PR #5231)
+- «Riesgos» e «Historial del riesgo» integrados en «Qué asegura» (historial plegado si >1 póliza); `Objeto` se queda si el ramo admite dirección y ningún riesgo trae calle (para poder anotarla).
+- Retarificar: una sola entrada (pestaña «Prima y precio»); botón renombrado «Abrir oportunidad de renovación».
+- `vigenciaRiesgo` → null si falta fecha o fin<=inicio (CIMA manda inicio=fin en algunos riesgos: dato, no render). Guardián `lib/correduria/poliza-ficha-duplicidades-guardia.test.ts`.
+- Pendiente: «Personas de la póliza» vs «Intervinientes» (comprobar con póliza real antes de fusionar).
 ## (28/10/2026, 8) Correduría · gabinete de siniestros (fases 1-3)
 - Expediente: «Pegar volcado de la intranet» (trocea por cabeceras, fecha/emisor reales, sin duplicar), ficha del perito, buscador en la póliza (sin IA), plazos con `meta.fechaOriginal`.
 - Gabinete IA: base `conocimiento-siniestros.ts` (PENDIENTE DE REVISIÓN POR ALBERTO, 3 «verificar»), índice de póliza + ficha del caso cacheados, veredicto 🟢🔴🟡 con preguntas, derivar abogado/perito externo, otras pólizas en vigor, canal intranet cordial. Datos sensibles en `meta.privado` cifrado.

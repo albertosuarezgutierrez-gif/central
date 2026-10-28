@@ -40,7 +40,7 @@ export default function AbrirRiesgo({ polizaId }: { polizaId: string }) {
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <button type="button" disabled={ocupado} onClick={() => void abrir()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
-        {ocupado ? 'Abriendo…' : 'Abrir el riesgo de esta póliza'}
+        {ocupado ? 'Abriendo…' : 'Abrir oportunidad de renovación'}
       </button>
       {error && <span role="alert" style={{ fontSize: 12, color: 'var(--negative)' }}>{error}</span>}
     </span>
