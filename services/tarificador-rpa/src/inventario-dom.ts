@@ -99,6 +99,13 @@ function extractor(explora: boolean): string {
       e.opciones = Array.from(el.options).slice(0, 40).map((o) => ({ valor: o.value, texto: o.textContent }));
       e.opcionesTotal = el.options.length;
     }
+    // nx-dropdown (ndbx, Allianz ePAC) ABIERTO: sus opciones son las del panel visible (\`nx-dropdown-item\` / role=option). Cerrado no
+    // las tiene en el DOM: el worker lo abre al ejecutar un \`elegir\` y, si la opción no está, lo deja abierto para el paso siguiente.
+    if (EXPLORA && tag === 'nx-dropdown' && el.getAttribute('aria-expanded') === 'true') {
+      const items = Array.from(document.querySelectorAll('nx-dropdown-item,[role=option]')).filter(visible).slice(0, 40);
+      e.opciones = items.map((o) => ({ valor: null, texto: corta(o.innerText || o.textContent || '', 200) }));
+      e.opcionesTotal = items.length;
+    }
     if (EXPLORA && (tag === 'input' || tag === 'select' || tag === 'textarea')) {
       // Solo el booleano: el valor no sale de la página. Casillas/opciones: marcadas; su valor por defecto es «on».
       e.conValor = el.checked === true || (type !== 'checkbox' && String(el.value || '') !== '' && !(tag === 'input' && el.value === 'on' && type !== 'text'));

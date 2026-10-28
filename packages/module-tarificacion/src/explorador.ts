@@ -1042,11 +1042,18 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
   if (claves.size === 0) errores.push(`ramo «${ctx.ramo.slice(0, 30)}» sin catálogo de exploración`)
 
   const acciones: Accion[] = []
+  // Tolerancia (28/10/2026, Allianz patinete real): [rellenar|elegir|marcar…, parar, …] tiraba TODO el lote («parar va SOLO») y
+  // la pantalla quedaba sin explorar. Se conserva lo anterior al primer `parar` (cada acción se valida igual) y se descarta
+  // el `parar` y lo que le siga; en la pantalla siguiente la IA vuelve a decidir (si no hay salida, para SOLA). Con un
+  // `avanzar` antes, `parar` primero o `terminar`, sigue rechazado: nada se ejecuta a medias en esos casos.
+  let lista: unknown[] = Array.isArray(r.acciones) ? r.acciones : []
+  const iParar = lista.length > 1 ? lista.findIndex((a) => obj(a)?.accion === 'parar') : -1
+  if (iParar > 0 && lista.slice(0, iParar).every((a) => ['rellenar', 'elegir', 'marcar'].includes(String(obj(a)?.accion)))) lista = lista.slice(0, iParar)
   if (!Array.isArray(r.acciones) || r.acciones.length === 0) errores.push('acciones tiene que ser una lista no vacía')
   else if (r.acciones.length > MAX_ACCIONES_RESPUESTA) errores.push(`más de ${MAX_ACCIONES_RESPUESTA} acciones`)
   else {
     const tocados = new Set<string>()
-    r.acciones.forEach((a0, i) => {
+    lista.forEach((a0, i) => {
       const a = obj(a0)
       const donde = `acciones[${i}]`
       if (!a) return void errores.push(`${donde} no es un objeto`)
@@ -1058,7 +1065,7 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
       }
       for (const k of Object.keys(a)) if (!permitidas[tipo].includes(k)) errores.push(`${donde}: clave «${k.slice(0, 30)}» no se admite en ${tipo}`)
       if (tipo === 'parar' || tipo === 'terminar') {
-        if (r.acciones !== undefined && (r.acciones as unknown[]).length !== 1) errores.push(`${donde}: ${tipo} va SOLO`)
+        if (lista.length !== 1) errores.push(`${donde}: ${tipo} va SOLO`)
       }
       if (tipo === 'parar') {
         const m = normalizarMotivoParar(a.motivo)
@@ -1096,9 +1103,20 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (typeof a.dato !== 'string' || !claves.has(a.dato)) return void errores.push(`${donde}: dato fuera del catálogo`)
         acciones.push({ accion: 'rellenar', ref, dato: a.dato })
       } else if (tipo === 'elegir') {
-        if (el.tag !== 'select') return void errores.push(`${donde}: elegir solo en <select>`)
+        if (el.tag !== 'select' && el.tag !== 'nx-dropdown') return void errores.push(`${donde}: elegir solo en <select> o nx-dropdown`)
         const op = obj(a.opcion)
         if (!op || Object.keys(op).some((k) => k !== 'valor') || typeof op.valor !== 'string') return void errores.push(`${donde}: opcion tiene que ser { valor }`)
+        if (el.tag === 'nx-dropdown') {
+          // Desplegable ndbx (Allianz ePAC, 28/10/2026): `valor` = el TEXTO exacto de la opción. Abierto, tiene que ser una de las
+          // opciones capturadas; cerrado no hay opciones en el DOM y el worker la comprueba al abrir (si no casa, no pulsa nada).
+          const v = op.valor.replace(/\s+/g, ' ').trim()
+          if (v === '' || v.length > 80) return void errores.push(`${donde}: la opción de un nx-dropdown tiene que ser un texto de 1 a 80 caracteres`)
+          if (pareceDatoPersonalInventario(v)) return void errores.push(`${donde}: la opción tiene forma de dato personal`)
+          const abiertas = el.opciones ?? []
+          if (abiertas.length > 0 && !abiertas.some((o) => o.texto !== null && o.texto.replace(/\s+/g, ' ').trim() === v)) return void errores.push(`${donde}: el texto no está entre las opciones capturadas del desplegable`)
+          acciones.push({ accion: 'elegir', ref, opcion: { valor: v } })
+          return
+        }
         if (!(el.opciones ?? []).some((o) => o.valor !== null && o.valor === op.valor)) return void errores.push(`${donde}: el valor no está entre las opciones del inventario`)
         acciones.push({ accion: 'elegir', ref, opcion: { valor: op.valor } })
       } else if (tipo === 'marcar') {
@@ -1106,7 +1124,7 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (descripcionesElemento(el).some((d) => RE_CONSENTIMIENTO.test(plano(d)))) return void errores.push(`${donde}: radio de consentimiento`)
         acciones.push({ accion: 'marcar', ref })
       } else {
-        if (i !== (r.acciones as unknown[]).length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
+        if (i !== lista.length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
         if (!esAvanzable(el) && !esAceptarDivAutorizado(ctx.entrada, el, marco)) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
         const efecto = EFECTOS_AVANCE.find((x) => x === a.efectoEsperado)
         if (!efecto) return void errores.push(`${donde}: efectoEsperado fuera de lista`)

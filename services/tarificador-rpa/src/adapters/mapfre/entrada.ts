@@ -75,9 +75,14 @@ export type DestinoMenusMapfre = {
   soloEnTarjeta: boolean
   /** Formulario que se espera en la pestaña nueva; `null` = no se conoce su DOM (se sigue en cuanto carga). */
   selFormulario: string | null
+  /**
+   * Enlace de una página INTERMEDIA que hay que pulsar para llegar al formulario (real 28/10/2026: el enlace de la tarjeta
+   * «Patinetes» aterriza en una página sin formulario cuyo único enlace es «Acceso a NSE»). Si no aparece, la página ya era el formulario.
+   */
+  pasoIntermedio?: string
 }
 export const DESTINO_TURISMOS_Y_MOTOS: DestinoMenusMapfre = { tarjeta: TARJETA_TURISMOS_Y_MOTOS, enlace: ENLACE_TARIFICACION_RAPIDA, soloEnTarjeta: false, selFormulario: 'app-datos-basicos' }
-export const DESTINO_PATINETES: DestinoMenusMapfre = { tarjeta: TARJETA_PATINETES, enlace: ENLACE_TARIFICACION_EMISION, soloEnTarjeta: true, selFormulario: null }
+export const DESTINO_PATINETES: DestinoMenusMapfre = { tarjeta: TARJETA_PATINETES, enlace: ENLACE_TARIFICACION_EMISION, soloEnTarjeta: true, selFormulario: null, pasoIntermedio: 'Acceso a NSE' }
 /** El formulario NSEI está listo cuando existe su primer componente (paso «Datos básicos»). */
 export const SEL_FORMULARIO_NSEI = 'app-datos-basicos'
 
@@ -301,6 +306,25 @@ export async function abrirTarificacionPatineteMapfre(page: Page, ctx: CtxEntrad
   return abrirPorMenus(page, ctx, esperas, DESTINO_PATINETES)
 }
 
+/**
+ * Página intermedia (Patinetes: «Acceso a NSE»). EXACTAMENTE un enlace visible con ese texto en algún marco → se pulsa con
+ * `ctx.pulsar` (el guard genérico: no es emisión) y se sigue en la pestaña nueva si la abre, o en la misma. Ninguno → la
+ * página ya era el formulario. Varios → no se adivina (ErrorMapaIncompleto con inventario).
+ */
+async function pasarPorEnlaceIntermedio(pagina: Page, ctx: CtxEntradaMapfre, texto: string, menuMs: number, formularioMs: number): Promise<Page> {
+  const candidatos = await enTodosLosMarcos(pagina, (f) => pulsablesExactos(f, texto), Math.min(ESPERA_TARJETA_MS * 2, menuMs))
+  if (candidatos.length === 0) return pagina
+  if (candidatos.length > 1) throw new ErrorMapaIncompleto(`el enlace «${texto}» de la página intermedia (${candidatos.length} coincidencias exactas visibles, ambiguo) de wmediadores`, true)
+  const nueva = pagina.context().waitForEvent('page', { timeout: Math.min(menuMs, 5_000) })
+  nueva.catch(() => undefined)
+  await ctx.pulsar(candidatos[0]!)
+  await ctx.pausa()
+  const otra = await nueva.then((p) => p, () => null)
+  const destino = otra ?? pagina
+  await destino.waitForLoadState('domcontentloaded', { timeout: formularioMs }).catch(() => undefined)
+  return destino
+}
+
 /** Login ANTIGUO que Mapfre antepone a la URL directa (`/loginexternopi/docs/html/loginFormPage.html?page=…`). */
 const PATRON_LOGIN_ANTIGUO = /\/loginexternopi\//i
 const ETIQ_CODIGO_USUARIO = /c[oó]digo\s+(de\s+)?usuario/i
@@ -497,6 +521,7 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
       throw new ErrorMapaIncompleto(`el formulario NSEI (${ruta.selFormulario}) en la pestaña nueva`, true)
     }
   }
+  if (ruta.pasoIntermedio) destino = await pasarPorEnlaceIntermedio(destino, ctx, ruta.pasoIntermedio, menuMs, esperas.formularioMs ?? ESPERA_FORMULARIO_MS)
   // La entrada llegó al formulario: lo que resolvió el respaldo (aprendido o IA) queda APRENDIDO. Mejor esfuerzo.
   for (const c of confirmaciones) await c().catch(() => undefined)
   return destino

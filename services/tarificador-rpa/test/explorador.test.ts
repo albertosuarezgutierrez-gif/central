@@ -1503,3 +1503,58 @@ test('🪤 traerlo a la vista NO relaja la identidad: si al pintarse cambia de i
     await context.close()
   }
 })
+
+
+// ─── Allianz ePAC: nx-dropdown (ndbx), 28/10/2026 ────────────────────────────
+// Portal SINTÉTICO: un `nx-dropdown` (role=combobox) que al pulsarlo pinta su lista en un panel de `nx-dropdown-item`.
+const NX = PAGINA(`
+  <h1>Datos básicos</h1>
+  <label id="lt">Tipo de documento</label>
+  <nx-dropdown id="tipoDoc" role="combobox" aria-expanded="false" aria-labelledby="lt" tabindex="0" style="display:inline-block;width:160px;height:26px;border:1px solid #333"><span>Seleccione</span></nx-dropdown>
+  <div id="panel" hidden>
+    <nx-dropdown-item role="option" style="display:block">NIF</nx-dropdown-item>
+    <nx-dropdown-item role="option" style="display:block">NIE</nx-dropdown-item>
+    <nx-dropdown-item role="option" style="display:block">Pasaporte</nx-dropdown-item>
+  </div>
+  <script>
+    window.elegido = null; window.aperturas = 0;
+    const dd = document.getElementById('tipoDoc'), panel = document.getElementById('panel');
+    dd.addEventListener('click', () => { const abrir = panel.hidden; panel.hidden = !abrir; dd.setAttribute('aria-expanded', String(abrir)); if (abrir) window.aperturas++ });
+    for (const it of panel.querySelectorAll('nx-dropdown-item')) it.addEventListener('click', () => { window.elegido = it.textContent.trim(); dd.firstElementChild.textContent = window.elegido; panel.hidden = true; dd.setAttribute('aria-expanded', 'false') });
+  </script>`)
+const estadoNx = (p: Page) => p.evaluate(() => ({ elegido: (window as unknown as { elegido: string | null }).elegido, aperturas: (window as unknown as { aperturas: number }).aperturas, abierto: !(document.getElementById('panel') as HTMLElement).hidden }))
+
+test('nx-dropdown: abre (por el guard) y elige la opción de texto EXACTO; una sola apertura', async () => {
+  inicio = NX
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([{ accion: 'elegir', ref: ref(inv, 'tipoDoc'), opcion: { valor: 'NIE' } }])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]))
+    await bucleExploracion(page, k)
+    assert.deepEqual(await estadoNx(page), { elegido: 'NIE', aperturas: 1, abierto: false })
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('nx-dropdown: una opción que NO existe no pulsa ninguna; la lista queda ABIERTA y el paso siguiente la ve con sus opciones y elige', async () => {
+  inicio = NX
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'elegir', ref: ref(inv, 'tipoDoc'), opcion: { valor: 'DNI' } }])
+      if (n === 2) return respuesta([{ accion: 'elegir', ref: ref(inv, 'tipoDoc'), opcion: { valor: 'Pasaporte' } }])
+      return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+    }, { esperaRepintadoMs: 50 })
+    await bucleExploracion(page, k)
+    const el2 = enviados[1].inventario.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'tipoDoc')!
+    assert.deepEqual((el2.opciones ?? []).map((o) => o.texto), ['NIF', 'NIE', 'Pasaporte'], 'el inventario del 2.º paso trae las opciones del desplegable abierto')
+    // Ya abierto: NO se vuelve a pulsar el desplegable (cerraría la lista).
+    assert.deepEqual(await estadoNx(page), { elegido: 'Pasaporte', aperturas: 1, abierto: false })
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})

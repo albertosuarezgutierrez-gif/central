@@ -295,6 +295,81 @@ describe('validarRespuestaExplorador', () => {
     if (r.ok) expect(r.respuesta.acciones).toHaveLength(4)
   })
 
+  // Real 28/10/2026 (Allianz patinete): la IA devolvió [rellenar…, parar] y el validador tiró TODO el lote (y el paso quedó en
+  // «ambiguo» con la pantalla sin explorar). Un `parar` detrás de rellenar/elegir/marcar se descarta: se hace lo anterior y en
+  // la pantalla siguiente la IA vuelve a decidir (si de verdad no hay salida, para SOLA).
+  describe('parar detrás de acciones de rellenado: se conserva lo anterior y se descarta el parar', () => {
+    it('[rellenar, parar] → solo el rellenar', () => {
+      const r = validarRespuestaExplorador(buena([
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+        { accion: 'parar', motivo: 'ambiguo' },
+      ]), ctx(inv))
+      expect(r.ok).toBe(true)
+      if (r.ok) expect(r.respuesta.acciones.map((a) => a.accion)).toEqual(['rellenar'])
+    })
+    it('[rellenar, elegir, parar, rellenar] → las dos primeras; lo que va detrás del parar se ignora', () => {
+      const r = validarRespuestaExplorador(buena([
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+        { accion: 'elegir', ref: ref(inv, 'tipoVivienda'), opcion: { valor: '1' } },
+        { accion: 'parar', motivo: 'dato_sensible_requerido' },
+        { accion: 'rellenar', ref: ref(inv, 'nifTomador'), dato: 'tomador.nif' },
+      ]), ctx(inv))
+      expect(r.ok).toBe(true)
+      if (r.ok) expect(r.respuesta.acciones.map((a) => a.accion)).toEqual(['rellenar', 'elegir'])
+    })
+    it('NO se tolera cuando hay un avanzar antes, el parar va primero, o es terminar', () => {
+      const avanzar = { accion: 'avanzar', ref: ref(inv, 'btnAceptarBasicos'), efectoEsperado: 'calcular', confianza: 'alta' }
+      expect(validarRespuestaExplorador(buena([avanzar, { accion: 'parar', motivo: 'ambiguo' }]), ctx(inv)).ok).toBe(false)
+      expect(validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'ambiguo' }, { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' }]), ctx(inv)).ok).toBe(false)
+      expect(validarRespuestaExplorador(buena([{ accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' }, { accion: 'terminar', refsPrecio: [] }]), ctx(inv)).ok).toBe(false)
+    })
+    it('un rellenar INVÁLIDO antes del parar sigue invalidando el lote (la tolerancia no relaja la validación)', () => {
+      expect(validarRespuestaExplorador(buena([{ accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'dato.inventado' }, { accion: 'parar', motivo: 'ambiguo' }]), ctx(inv)).ok).toBe(false)
+    })
+    it('parar SOLA sigue valiendo', () => {
+      const r = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'ambiguo' }]), ctx(inv))
+      expect(r.ok).toBe(true)
+    })
+  })
+
+  // Allianz ePAC (28/10/2026): los desplegables ndbx (`nx-dropdown`, role=combobox) no son <select>; se abren y se elige la opción
+  // de texto EXACTO (el mismo mecanismo que Comunidades/Hogar en el worker). Las opciones solo constan con el desplegable abierto.
+  describe('elegir sobre un nx-dropdown (ndbx)', () => {
+    const conNx = (opciones?: { valor: string | null; texto: string }[]) => inventario({
+      elementos: [
+        { tag: 'nx-dropdown', id: 'tipoDoc', role: 'combobox', etiqueta: 'Tipo de documento', ...(opciones ? { opciones } : {}) },
+        { tag: 'button', id: 'btnX', texto: 'Otra cosa' },
+      ],
+    })
+    const elegirNx = (inv: InventarioDom, valor: unknown, extra: Record<string, unknown> = {}) =>
+      buena([{ accion: 'elegir', ref: ref(inv, 'tipoDoc'), opcion: { valor, ...extra } }])
+    it('cerrado (sin opciones capturadas): vale un texto corto; el worker comprueba la opción EXACTA al abrir', () => {
+      const i = conNx()
+      expect(validarRespuestaExplorador(elegirNx(i, 'NIF'), ctx(i)).ok).toBe(true)
+    })
+    it('abierto (opciones capturadas): solo un texto EXACTO de esas opciones', () => {
+      const i = conNx([{ valor: null, texto: 'NIF' }, { valor: null, texto: 'NIE' }])
+      expect(validarRespuestaExplorador(elegirNx(i, 'NIE'), ctx(i)).ok).toBe(true)
+      expect(validarRespuestaExplorador(elegirNx(i, 'Pasaporte'), ctx(i)).ok).toBe(false)
+      expect(validarRespuestaExplorador(elegirNx(i, 'nie'), ctx(i)).ok).toBe(false)
+      expect(validarRespuestaExplorador(elegirNx(i, 'NI'), ctx(i)).ok).toBe(false)
+    })
+    it('forma: opcion.valor texto no vacío ≤80, sin otras claves; un NIF-like no cuela', () => {
+      const i = conNx()
+      for (const malo of [elegirNx(i, ''), elegirNx(i, 7), elegirNx(i, 'x'.repeat(81)), elegirNx(i, 'NIF', { extra: 1 }), elegirNx(i, '00000000T')]) {
+        expect(validarRespuestaExplorador(malo, ctx(i)).ok).toBe(false)
+      }
+    })
+    it('elegir sobre un botón o un input sigue rechazado (solo <select> y nx-dropdown)', () => {
+      const i = conNx()
+      expect(validarRespuestaExplorador(buena([{ accion: 'elegir', ref: ref(i, 'btnX'), opcion: { valor: 'NIF' } }]), ctx(i)).ok).toBe(false)
+    })
+    it('el saneado conserva las opciones de un nx-dropdown abierto (y las filtra como las de un select)', () => {
+      const i = conNx([{ valor: null, texto: 'NIF' }])
+      expect(i.marcos[0].elementos.find((e) => e.id === 'tipoDoc')!.opciones).toEqual([{ valor: null, texto: 'NIF' }])
+    })
+  })
+
   describe('con datos REALES: elegir/marcar solo sobre uso/régimen/tipo de vivienda con valor conocido', () => {
     const riesgo = { tomador: { nif: '00000000T', nombre: 'Ficticio' }, inmueble: { provincia: 'PROVINCIA PRUEBA' }, hogar: { uso: 'MainResidence', regimen: 'Owner', tipoVivienda: 'MiddleFloor' } }
     const invP = inventario({
@@ -363,7 +438,7 @@ describe('validarRespuestaExplorador', () => {
     ['«Aceptar» autorizado por texto pero que llama a validar_aceptar() (contrata)', buena([{ accion: 'avanzar', ref: 'm0e10', efectoEsperado: 'calcular', confianza: 'alta' }])],
     ['avanzar con confianza baja', buena([{ accion: 'avanzar', ref: 'm0e6', efectoEsperado: 'siguiente_pantalla', confianza: 'baja' }])],
     ['avanzar que no es el último', buena([{ accion: 'avanzar', ref: 'm0e6', efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }, { accion: 'rellenar', ref: 'm0e0', dato: 'inmueble.superficie_m2' }])],
-    ['parar acompañado', buena([{ accion: 'rellenar', ref: 'm0e0', dato: 'inmueble.superficie_m2' }, { accion: 'parar', motivo: 'ambiguo' }])],
+    ['parar acompañado (el parar va PRIMERO; detrás de un rellenar se tolera: ver «parar detrás de acciones de rellenado»)', buena([{ accion: 'parar', motivo: 'ambiguo' }, { accion: 'rellenar', ref: 'm0e0', dato: 'inmueble.superficie_m2' }])],
     ['motivo de parada inventado', buena([{ accion: 'parar', motivo: 'me apetece' }])],
     ['terminar sin importes en pantalla', buena([{ accion: 'terminar', refsPrecio: ['m0p0'] }])],
     ['mapeo a campo fuera del catálogo', buena([{ accion: 'parar', motivo: 'ambiguo' }], { mapeo: [{ ref: 'm0e0', campoCanonico: 'tomador.iban', confianza: 'alta' }] })],

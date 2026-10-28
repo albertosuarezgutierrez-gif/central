@@ -245,7 +245,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
         delete el.texto
         descartados++
       }
-      if (tag === 'select' && Array.isArray(eo.opciones)) {
+      if ((tag === 'select' || tag === 'nx-dropdown') && Array.isArray(eo.opciones)) {
         const opciones: OpcionInventario[] = []
         for (const o of eo.opciones.slice(0, MAX_OPCIONES_INVENTARIO)) {
           const oo = obj(o)
