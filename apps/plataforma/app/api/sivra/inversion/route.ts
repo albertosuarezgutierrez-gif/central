@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { encajaCasaVacacional, DORMITORIOS_IDEAL } from '@central/module-subastas'
-import { tgAviso } from '@/lib/telegram'
-import { eur } from '@/lib/dinero'
+import { insertarPropiedades } from '@/lib/sivra/inversion-correos'
 
 const TIPOS_CASA = ['chalet', 'finca', 'parcela', 'casa', 'adosado', 'villa']
 
@@ -122,93 +120,8 @@ export async function POST(req: NextRequest) {
   if (!Array.isArray(propiedades)) return NextResponse.json({ error: 'propiedades must be array' }, { status: 400 })
 
   try {
-    let inserted = 0, updated = 0, skipped = 0
-    const casas: Array<{ p: any; pendientes: string[] }> = []
-
-    for (const p of propiedades) {
-      if (p.es_bajada_precio) {
-        const match = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-          SELECT id FROM inmuebles_busqueda
-          WHERE titulo = ${p.titulo ?? ''} AND zona = ${p.zona ?? ''}
-          LIMIT 1
-        `)
-        if (match.length > 0) {
-          await prisma.$executeRaw(Prisma.sql`
-            UPDATE inmuebles_busqueda
-            SET precio           = ${p.precio ?? null},
-                precio_anterior  = ${p.precio_anterior ?? null},
-                es_bajada_precio = true,
-                is_new           = true,
-                puntuacion_chollo = LEAST(10, puntuacion_chollo + 2)
-            WHERE id = ${match[0].id}::uuid
-          `)
-          updated++; continue
-        }
-      }
-
-      const existing = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-        SELECT id FROM inmuebles_busqueda
-        WHERE titulo = ${p.titulo ?? ''} AND zona = ${p.zona ?? ''}
-        LIMIT 1
-      `)
-      if (existing.length > 0) { skipped++; continue }
-
-      await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO inmuebles_busqueda (
-          titulo, tipo, zona, precio, precio_anterior, es_bajada_precio, metros,
-          tiene_piscina, es_rustica, cerca_playa, es_subasta,
-          puntuacion_chollo, razon_chollo, link, links_all, telefono,
-          email_from, email_subject, email_message_id, email_body, estado, is_new
-        ) VALUES (
-          ${p.titulo ?? null}, ${p.tipo ?? null}, ${p.zona ?? null},
-          ${p.precio ?? null}, ${p.precio_anterior ?? null}, ${p.es_bajada_precio ?? false},
-          ${p.metros ?? null},
-          ${p.tiene_piscina ?? null}, ${p.es_rustica ?? null},
-          ${p.cerca_playa ?? null}, ${p.es_subasta ?? false},
-          ${p.puntuacion_chollo ?? 5}, ${p.razon_chollo ?? null},
-          ${p.link ?? null}, ${(p.links_all ?? []) as any}, ${p.telefono ?? null},
-          ${p.email_from ?? null}, ${p.email_subject ?? null},
-          ${p.email_message_id ?? null}, ${p.email_body ?? null},
-          'pendiente', true
-        )
-      `)
-      inserted++
-
-      // 🏡 Solo las filas RECIÉN insertadas pueden avisar: el SELECT de arriba
-      // (titulo+zona) ya omite las repetidas, así que no hay aviso duplicado.
-      const e = encajaCasaVacacional({
-        precio: p.precio != null ? Number(p.precio) : null,
-        tipo: p.tipo ?? null,
-        dormitorios: p.habitaciones != null ? Number(p.habitaciones) : null,
-        banos: p.banos != null ? Number(p.banos) : null,
-        piscina: typeof p.tiene_piscina === 'boolean' ? p.tiene_piscina : null,
-        parcelaM2: p.parcela_m2 != null ? Number(p.parcela_m2) : null,
-        municipio: p.zona ?? null,
-      })
-      if (e.encaja && !p.es_subasta) casas.push({ p, pendientes: e.pendientes })
-    }
-
-    for (const { p, pendientes } of casas.slice(0, 10)) {
-      const esc = (x: unknown) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      const hab = p.habitaciones != null ? `${p.habitaciones} hab.${Number(p.habitaciones) >= DORMITORIOS_IDEAL ? ' ⭐' : ''}` : null
-      const lineas = [
-        `🏡 <b>Idealista — casa vacacional</b> ${esc(p.titulo)}`,
-        esc([p.precio != null ? eur(Number(p.precio)) : 'precio sin consta', p.zona, hab, p.banos != null ? `${p.banos} baños` : null,
-          p.tiene_piscina === true ? 'piscina' : null].filter(Boolean).join(' · ')),
-      ]
-      if (pendientes.length) lineas.push(`⏳ Por comprobar: ${esc(pendientes.join(', '))}`)
-      if (p.link) lineas.push(esc(p.link))
-      await tgAviso('pisos.idealista-casa', lineas.join('\n'), { html: true }).catch(() => {})
-    }
-
-    if (ultima_fecha) {
-      await prisma.$executeRaw(Prisma.sql`
-        UPDATE inversion_config SET value=${ultima_fecha}, updated_at=now()
-        WHERE key='ultima_fecha_email'
-      `)
-    }
-
-    return NextResponse.json({ ok: true, inserted, updated, skipped })
+    const r = await insertarPropiedades(propiedades, ultima_fecha)
+    return NextResponse.json({ ok: true, ...r })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

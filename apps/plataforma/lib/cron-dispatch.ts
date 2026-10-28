@@ -266,6 +266,9 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/ia-director-refresh', schedule: '0 5 * * 1' },
   // Saldo de OpenRouter con previsión de días + tope mensual por app (pieza 1-6, 23/09/2026).
   { path: '/api/cron/ia-saldo', schedule: '10 6 * * *' },
+  // Alertas de idealista (Gmail `inmobiliaria`) → inmuebles_busqueda + Telegram «🏡 Idealista». 13:17 UTC,
+  // fuera de 06-09 Pacific. Salta correos ya analizados (ids en inversion_config).
+  { path: '/api/cron/idealista-correos', schedule: '17 13 * * *' },
 ]
 
 // Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta
