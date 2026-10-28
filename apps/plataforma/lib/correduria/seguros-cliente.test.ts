@@ -468,3 +468,27 @@ test('volcado histórico: con otro nº de póliza distinto sí sale como oportun
   assert.deepEqual(ids(r.conNosotros), ['occ'])
   assert.deepEqual(ids(r.oportunidades), ['pu'])
 })
+
+test('abierta de una póliza VIVA con nosotros: se cuelga de su tarjeta, no sale suelta', () => {
+  const viva = pol('v1', { numeroPoliza: 'ABC 123/45' })
+  const base = { declaradas: [] as PolizaDeclaradaFicha[], hoy: new Date('2026-10-28') }
+  const sueltas = (r: ReturnType<typeof repartirSegurosCliente>) => r.oportunidades.filter(s => s.clase === 'oportunidad')
+  // (a) por polizaId
+  const a = repartirSegurosCliente({ ...base, polizas: [viva], oportunidades: [opo('o1', { estado: 'en_negociacion', polizaId: 'v1' })] })
+  assert.equal(sueltas(a).length, 0)
+  const ta = a.conNosotros.find(s => s.id === 'v1')
+  assert.ok(ta?.clase === 'poliza' && ta.oportunidad?.id === 'o1')
+  // (b) sin polizaId, nº normalizado igual (espacios/minúsculas/símbolos)
+  const b = repartirSegurosCliente({ ...base, polizas: [viva], oportunidades: [opo('o2', { estado: 'en_negociacion', numeroPoliza: 'abc12345' })] })
+  assert.equal(sueltas(b).length, 0)
+  const tb = b.conNosotros.find(s => s.id === 'v1')
+  assert.ok(tb?.clase === 'poliza' && tb.oportunidad?.id === 'o2')
+  // (c) dos abiertas con el mismo nº: ninguna suelta, la tarjeta conserva la primera
+  const c = repartirSegurosCliente({ ...base, polizas: [viva], oportunidades: [opo('o3', { estado: 'en_negociacion', numeroPoliza: 'abc12345' }), opo('o4', { estado: 'en_negociacion', numeroPoliza: 'ABC 123 45' })] })
+  assert.equal(sueltas(c).length, 0)
+  const tc = c.conNosotros.find(s => s.id === 'v1')
+  assert.ok(tc?.clase === 'poliza' && tc.oportunidad?.id === 'o3')
+  // (d) negativo: nº distinto, sigue suelta
+  const d = repartirSegurosCliente({ ...base, polizas: [viva], oportunidades: [opo('o5', { estado: 'en_negociacion', numeroPoliza: 'ZZZ99999' })] })
+  assert.deepEqual(ids(sueltas(d)), ['o5'])
+})

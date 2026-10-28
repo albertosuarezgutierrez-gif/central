@@ -1540,6 +1540,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Arreglo en `repartirSegurosCliente` (`apps/plataforma/lib/correduria/seguros-cliente.ts`): grupo del volcado con algún
   nº (`claveNumeroPoliza`) igual a una póliza viva del cliente no genera oportunidad; sigue en `historicas`. 2 tests + cepo visto en rojo.
 - Alcance en BD: 87 filas del volcado / 64 clientes comparten nº con una viva (techo). Sin cambios de datos.
+- 2ª vía (auditoría): 13 oportunidades ABIERTAS de una póliza viva (poliza_id/nº/matrícula) salían también sueltas → ahora se cuelgan de su tarjeta de «Con nosotros». PR #5198.
 
 ## (27/10/2026) Pricing SIVRA: prima de finde por ritmo propio + aviso «caro» con demanda
 - House Sevillana: findes 78 % a 693€/noche vendidos meses antes (infravalorado); entre semana 35 % a 412€. El aviso «precio al HUÉSPED caro» comparaba solo con comparables.

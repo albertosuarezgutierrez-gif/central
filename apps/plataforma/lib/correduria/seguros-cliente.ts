@@ -270,6 +270,15 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
       // competencia y difieren de los de nuestra póliza perdida aunque sea el mismo seguro.
       // La que cuelga de una póliza concreta (renovación, o abierta al anotarle el vencimiento)
       // va a SU tarjeta: con dos del mismo ramo, casar por ramo la pintaría en la otra.
+      // Si la abierta es de una póliza VIVA con nosotros (mismo id, o mismo nº normalizado, o misma
+      // matrícula; null nunca casa) NO es una oportunidad aparte: se cuelga de su tarjeta. Si la
+      // tarjeta ya lleva una, no se pisa ni se duplica en sueltas.
+      const viva = conNosotros.find((s): s is Extract<SeguroCliente, { clase: 'poliza' }> => s.clase === 'poliza' && o.polizaId != null && s.poliza.id === o.polizaId)
+        ?? (claveNumeroPoliza(o.numeroPoliza) === null ? undefined
+          : conNosotros.find((s): s is Extract<SeguroCliente, { clase: 'poliza' }> => s.clase === 'poliza' && claveNumeroPoliza(s.poliza.numeroPoliza) === claveNumeroPoliza(o.numeroPoliza)))
+        ?? (claveMatricula(o.matricula) === null ? undefined
+          : conNosotros.find((s): s is Extract<SeguroCliente, { clase: 'poliza' }> => s.clase === 'poliza' && claveMatricula(s.poliza.matricula) === claveMatricula(o.matricula)))
+      if (viva) { if (viva.oportunidad === null) viva.oportunidad = o; continue }
       const hueco = enCompetencia.find(s => s.oportunidad === null && o.polizaId != null && s.poliza.id === o.polizaId)
         ?? enCompetencia.find(s => s.oportunidad === null && o.ramo !== null && s.poliza.tipo === o.ramo
           && !otraMatricula(o.matricula, s.poliza.matricula))
