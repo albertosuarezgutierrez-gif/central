@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T19:52:13Z",
-  "sha": "b63cd0b0aa88f96005be7a0021940eb66df9bd46",
+  "generadoEn": "2026-10-28T20:18:57Z",
+  "sha": "375b8a6fa34e1633f3254981ad1b270d33762d4f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -32217,13 +32217,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 24,
-          "resumen": "Hilo de conversación del siniestro (corredor ↔ IA ↔ compañía), por el puerto de operador. GET ?correduriaId&siniestroId → { estado:'ok', siniestro, poliza, documentosSiniestro, mensajes, plazos, diasE"
+          "linea": 26,
+          "resumen": "mismo siniestro y autor, nunca de la IA, no ya sustituido → 409), actor? } → { estado:'ok', ...Mensaje, mensaje } Cada mensaje del GET lleva `sustituidoPor` (id | null); plazos/espera/IA leen solo la "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/siniestro/hilo",
-      "hash": "baaaadf32d8c"
+      "hash": "7e191470c745"
     },
     {
       "ruta": "apps/asegura/app/api/operador/siniestro/ia/route.ts",
@@ -61776,7 +61776,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "FalloHilo",
-          "linea": 96
+          "linea": 101
         },
         {
           "nombre": "noEncontrado",
@@ -61784,7 +61784,15 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "FalloHilo",
-          "linea": 97
+          "linea": 102
+        },
+        {
+          "nombre": "yaEditado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": "FalloHilo",
+          "linea": 103
         },
         {
           "nombre": "sinMigracion",
@@ -61792,7 +61800,7 @@
           "exportada": false,
           "params": "",
           "retorno": "FalloHilo",
-          "linea": 98
+          "linea": 104
         },
         {
           "nombre": "esMigracionAusente",
@@ -61800,7 +61808,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 99
+          "linea": 105
         },
         {
           "nombre": "esObjeto",
@@ -61808,7 +61816,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 119
+          "linea": 125
         },
         {
           "nombre": "isoDia",
@@ -61816,7 +61824,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 120
+          "linea": 126
         },
         {
           "nombre": "leerCierre",
@@ -61824,7 +61832,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, siniestroId: string",
           "retorno": "Promise<CierreRaw | null>",
-          "linea": 126,
+          "linea": 132,
           "resumen": "Lee el cierre por SQL crudo (columnas del SQL 2026-10-28d). Lanza el error de columna ausente (42703): el llamante lo traduce a `sin_migracion`."
         },
         {
@@ -61833,15 +61841,16 @@
           "exportada": false,
           "params": "f: FilaMensaje",
           "retorno": "MensajeSiniestro",
-          "linea": 134
+          "linea": 140
         },
         {
-          "nombre": "paraPlazos",
-          "kind": "arrow",
+          "nombre": "paraPlazosVigentes",
+          "kind": "function",
           "exportada": false,
-          "params": "m: MensajeSiniestro",
-          "retorno": "MensajeParaPlazos",
-          "linea": 155
+          "params": "mensajes: MensajeSiniestro[]",
+          "retorno": "MensajeParaPlazos[]",
+          "linea": 163,
+          "resumen": "Plazos y espera leen la ÚLTIMA versión de cada mensaje, con la fecha del ORIGINAL (una errata no reinicia un plazo)."
         },
         {
           "nombre": "documentosDe",
@@ -61849,7 +61858,7 @@
           "exportada": false,
           "params": "correduriaId: string, where: { polizaId: string } | { siniestroId: string }, contexto: string",
           "retorno": "Promise<DocumentoBreve[] | null>",
-          "linea": 158
+          "linea": 171
         },
         {
           "nombre": "leerHiloSiniestro",
@@ -61857,7 +61866,7 @@
           "exportada": true,
           "params": "correduriaId: string, siniestroId: string, hoy: string = diaMadrid(new Date()),",
           "retorno": "Promise<",
-          "linea": 174,
+          "linea": 187,
           "resumen": "El hilo de un siniestro de la correduría, con plazos. `hoy` inyectable (día de Madrid)."
         },
         {
@@ -61866,7 +61875,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 260
+          "linea": 275
         },
         {
           "nombre": "anadirMensajeSiniestro",
@@ -61874,7 +61883,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: EntradaAnadirMensaje,",
           "retorno": "Promise<",
-          "linea": 289,
+          "linea": 306,
           "resumen": "Añade un mensaje al hilo. Valida (puro), comprueba siniestro y documento contra la correduría, CIFRA el texto, inserta y deja fila en `historial_interno` sin el texto. Reutilizable por el endpoint de "
         },
         {
@@ -61883,7 +61892,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { siniestroId: string; resultado: unknown; motivo: unknown; actor: string },",
           "retorno": "Promise<",
-          "linea": 362,
+          "linea": 409,
           "resumen": "Cierra (o re-cierra) el siniestro con un resultado y su motivo. No toca `estado` ni `comentario`."
         },
         {
@@ -61892,18 +61901,20 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: string = diaMadrid(new Date()),",
           "retorno": "Promise<",
-          "linea": 417,
+          "linea": 464,
           "resumen": "Siniestros cuyo último `enviado` del corredor no tiene respuesta posterior de la compañía. Fuera: los fusionados y los ya cerrados con resultado. Orden: los que más llevan esperando primero."
         }
       ],
       "tablas": [
+        "cadena",
         "historial_interno",
         "polizas",
         "siniestro_mensajes",
-        "siniestros"
+        "siniestros",
+        "vigentes"
       ],
       "rutaApi": null,
-      "hash": "821a188a2b75"
+      "hash": "f7dab9a0fc20"
     },
     {
       "ruta": "apps/asegura/lib/siniestro-ia-prompt.ts",
@@ -61974,7 +61985,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3a05fae5a0c6"
+      "hash": "7c7a97c70bb9"
     },
     {
       "ruta": "apps/asegura/lib/siniestros-vinculo.ts",
@@ -126335,14 +126346,14 @@
           "exportada": true,
           "params": "{ siniestroId, documentos, precarga, onGuardado }: { siniestroId: string documentos: DocumentoResumen[] precarga: Precarga | null onGuardado: () => void }",
           "retorno": null,
-          "linea": 11
+          "linea": 19
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "368edf81e0e4"
+      "hash": "3af667af746b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Cierre.tsx",
@@ -126392,7 +126403,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "936030109f0f"
+      "hash": "00eba89ad2dd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Hilo.tsx",
@@ -126413,7 +126424,7 @@
           "nombre": "Burbuja",
           "kind": "function",
           "exportada": false,
-          "params": "{ m, onCopiar, onEnviado }: { m: Mensaje; onCopiar: (t: string) => void; onEnviado: (t: string) => void }",
+          "params": "{ m, editado, sustituido, onCopiar, onEnviado, onEditar }: { m: Mensaje; editado: boolean; sustituido: boolean onCopiar: (t: string) => void; onEnviado: (t: string) => void; onEditar: (m: Mensaje) => void }",
           "retorno": null,
           "linea": 18
         },
@@ -126421,14 +126432,14 @@
           "nombre": "Hilo",
           "kind": "function",
           "exportada": true,
-          "params": "{ mensajes, onCopiar, onEnviado }: { mensajes: Mensaje[] | null; onCopiar: (t: string) => void; onEnviado: (t: string) => void }",
+          "params": "{ mensajes, onCopiar, onEnviado, onEditar }: { mensajes: Mensaje[] | null; onCopiar: (t: string) => void; onEnviado: (t: string) => void; onEditar: (m: Mensaje) => void }",
           "retorno": null,
-          "linea": 48
+          "linea": 56
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "476da80d1bbb"
+      "hash": "18509368442c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/page.tsx",
@@ -164220,7 +164231,12 @@
         "citasNoEncontradas",
         "plegarTexto",
         "combinacionValida",
-        "cuerpoCaja"
+        "cuerpoCaja",
+        "mensajesVisibles",
+        "cuentaSustituidos",
+        "modoDeMensaje",
+        "puedeEditar",
+        "autorDeModo"
       ],
       "funciones": [
         {
@@ -164229,7 +164245,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 48
+          "linea": 50
         },
         {
           "nombre": "str",
@@ -164237,7 +164253,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 50
+          "linea": 52
         },
         {
           "nombre": "num",
@@ -164245,7 +164261,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 51
+          "linea": 53
         },
         {
           "nombre": "leerMensaje",
@@ -164253,7 +164269,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Mensaje | null",
-          "linea": 53
+          "linea": 55
         },
         {
           "nombre": "leerMensajes",
@@ -164261,7 +164277,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Mensaje[] | null",
-          "linea": 64,
+          "linea": 66,
           "resumen": "`null` = no es un array legible (no se pudo leer); un elemento ilegible se descarta."
         },
         {
@@ -164270,7 +164286,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Plazo[] | null",
-          "linea": 69
+          "linea": 71
         },
         {
           "nombre": "leerHilo",
@@ -164278,7 +164294,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "HiloSiniestro | null",
-          "linea": 83
+          "linea": 85
         },
         {
           "nombre": "leerEsperando",
@@ -164286,7 +164302,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Esperando[] | null",
-          "linea": 104
+          "linea": 106
         },
         {
           "nombre": "textoDias",
@@ -164294,7 +164310,7 @@
           "exportada": true,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 119,
+          "linea": 121,
           "resumen": "«hace 1 día» / «hace 12 días». `null` = no se sabe (no 0)."
         },
         {
@@ -164303,7 +164319,7 @@
           "exportada": true,
           "params": "p: Plazo",
           "retorno": "EstadoPlazo",
-          "linea": 130
+          "linea": 132
         },
         {
           "nombre": "motivoFallo",
@@ -164311,7 +164327,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "string",
-          "linea": 139,
+          "linea": 141,
           "resumen": "Mensaje de error para el corredor a partir de la respuesta del puerto (`sin_migracion` = BD sin la tabla del hilo)."
         },
         {
@@ -164320,7 +164336,7 @@
           "exportada": true,
           "params": "meta: Record<string, unknown> | null",
           "retorno": "string[]",
-          "linea": 146,
+          "linea": 148,
           "resumen": "Citas de la póliza que la IA mencionó y NO aparecen en el documento (aviso a resaltar)."
         },
         {
@@ -164329,7 +164345,7 @@
           "exportada": true,
           "params": "texto: string, abierto: boolean, limite = LIMITE_PLEGADO",
           "retorno": "",
-          "linea": 154
+          "linea": 156
         },
         {
           "nombre": "combinacionValida",
@@ -164337,22 +164353,67 @@
           "exportada": true,
           "params": "autor: AutorMensaje, tipo: TipoMensaje",
           "retorno": "boolean",
-          "linea": 164,
+          "linea": 166,
           "resumen": "Combinaciones autor/tipo que acepta el puerto: `enviado` solo del corredor, `rehuse` solo de la compañía."
         },
         {
           "nombre": "cuerpoCaja",
           "kind": "function",
           "exportada": true,
-          "params": "modo: ModoCaja, texto: string, documentoId: string | null, reclamacionSac = false",
+          "params": "modo: ModoCaja, texto: string, documentoId: string | null, reclamacionSac = false, sustituyeA: string | null = null",
           "retorno": "",
-          "linea": 172,
+          "linea": 174,
           "resumen": "Qué se guarda según el selector de la caja. `reclamacionSac` solo cuenta con «enviado»."
+        },
+        {
+          "nombre": "mensajesVisibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly Mensaje[], verAnteriores: boolean",
+          "retorno": "MensajeVisible[]",
+          "linea": 193,
+          "resumen": "`verAnteriores` deja también las sustituidas (`sustituido: true`, para pintarlas atenuadas). Orden: el recibido. Una versión que sustituye a un id que no está en la lista cuenta como editada igualment"
+        },
+        {
+          "nombre": "cuentaSustituidos",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly Mensaje[]",
+          "retorno": "number",
+          "linea": 210,
+          "resumen": "Cuántas versiones sustituidas hay (para mostrar el conmutador solo si hace falta)."
+        },
+        {
+          "nombre": "modoDeMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: Pick<Mensaje, 'autor' | 'tipo'>",
+          "retorno": "ModoCaja | null",
+          "linea": 215,
+          "resumen": "El modo de la caja que reproduce autor/tipo de un mensaje; `null` = la caja no sabe escribir esa combinación."
+        },
+        {
+          "nombre": "puedeEditar",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: Mensaje",
+          "retorno": "boolean",
+          "linea": 224,
+          "resumen": "«Editar» solo en mensajes NO de la IA, vigentes, legibles y con una combinación que la caja sabe escribir."
+        },
+        {
+          "nombre": "autorDeModo",
+          "kind": "function",
+          "exportada": true,
+          "params": "modo: ModoCaja",
+          "retorno": "AutorMensaje",
+          "linea": 229,
+          "resumen": "Autor que escribe cada modo: al editar solo se pueden elegir modos del MISMO autor que el original."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0cef7542cf5d"
+      "hash": "c6d8df3356f5"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/solicitudes-portal.ts",
@@ -244990,6 +245051,48 @@
       "hash": "75989a9f9628"
     },
     {
+      "ruta": "packages/module-seguros/src/siniestro-hilo-versiones.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Versiones de los mensajes del hilo de siniestro. PURO. El hilo es SOLO-AÑADIR (la BD prohíbe UPDATE/DELETE): «editar» un mensaje = añadir uno NUEVO con `meta.sustituyeA = <id del anterior>`. El anterior se conserva (auditoría) pero deja de ser «vigente». Plazos, espera a la compañía y contexto de la",
+      "exporta": [
+        "sustituyeADe",
+        "mapaSustituidoPor",
+        "hiloVigente"
+      ],
+      "funciones": [
+        {
+          "nombre": "sustituyeADe",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: { meta?: Record<string, unknown> | null }",
+          "retorno": "string | null",
+          "linea": 22,
+          "resumen": "`meta.sustituyeA` si es un id no vacío; si no, `null`."
+        },
+        {
+          "nombre": "mapaSustituidoPor",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly T[]",
+          "retorno": "Map<string, string>",
+          "linea": 28,
+          "resumen": "Para cada id sustituido, el id del mensaje que lo sustituye (solo si el sustituido está en la lista)."
+        },
+        {
+          "nombre": "hiloVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly T[]",
+          "retorno": "MensajeVigente<T>[]",
+          "linea": 39,
+          "resumen": "Solo la última versión de cada cadena, en el orden recibido. Un `sustituyeA` que no existe se ignora (el mensaje cuenta como original)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "76bc9a13d537"
+    },
+    {
       "ruta": "packages/module-seguros/src/siniestro-intervinientes.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Terceros y testigos de un siniestro — el hueco que `central` no tenía y el CRM viejo de Manuel sí (`siniestro_contrarios`/`siniestro_testigos`). Reglas puras, SIN cifrado: el cifrado de nombre/teléfono/matrícula vive en la capa de datos de `apps/asegura` (mismo mecanismo que ya usa `Cliente`), igual",
@@ -258371,7 +258474,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5411,
-    "funciones": 20765
+    "archivos": 5412,
+    "funciones": 20774
   }
 }
