@@ -1,6 +1,6 @@
 ---
 name: idealista-radar
-description: Referencia de zonas de playa y del corredor A-49 para buscar casas en idealista. RUTINA DESACTIVADA el 28/10/2026 (condiciones de uso del conector). Sin rutina ni escritura en mercado_comparables. Úsala solo si Alberto pide ver anuncios concretos de idealista en el chat, o para guardar búsquedas con alerta. Sin secretos.
+description: Referencia de zonas de playa y del corredor A-49 para buscar casas en idealista. RUTINA DESACTIVADA el 28/10/2026 (condiciones de uso del conector). Sin rutina ni escritura en mercado_comparables. Úsala solo si Alberto pide ver anuncios concretos de idealista en el chat, o para guardar búsquedas con alerta. El perfil casa vacacional (avisos Telegram de idealista y subastas) vive en module-subastas. Sin secretos.
 ---
 
 # Radar de Idealista: referencia (rutina desactivada)
@@ -21,6 +21,18 @@ Alberto crea las búsquedas en la app de idealista, con alerta activada. Así:
 2. `POST /api/sivra/inversion/analyze` (en `apps/plataforma/app/api/sivra/inversion/analyze/`) procesa
    esos correos y guarda los inmuebles en `inmuebles_busqueda`.
 3. Se revisan en `/api/sivra/inversion` (`apps/plataforma/app/api/sivra/inversion/route.ts`).
+4. **Aviso por Telegram «🏡 Idealista»** (canal `pisos.idealista-casa`): al guardar, cada inmueble NUEVO
+   que encaja en el perfil casa vacacional se avisa (máx. 10 por tanda). Hoy NO es automático: solo corre
+   al pulsar «Analizar correos».
+
+### Perfil casa vacacional (fuente única: el código)
+
+`CRITERIOS_CASA_VACACIONAL` en `packages/module-subastas/src/perfil-casa-vacacional.ts`, el mismo para
+idealista (`encajaCasaVacacional`) y subastas (`encajaSubastaCasaVacacional`, aviso «🏡 Casa vacacional»
+en el cron `subastas-avisos`). Resumen: casa independiente ≤280.000 €, ≥3 dormitorios (⭐ con ≥4),
+≥2 baños, piscina o parcela ≥800 m², en el corredor A-49 de abajo más Almonte, Pilas e Hinojos.
+El dato que falta no descarta: el aviso lo marca como «pendiente». Si cambian los criterios, cambia
+el código (y su test) y luego esta lista, nunca al revés.
 
 Búsquedas a guardar:
 
@@ -32,6 +44,7 @@ Búsquedas a guardar:
 - Precio: hasta 280.000 €.
 - Zona: dibuja en el mapa el eje Bormujos – Espartinas – Umbrete – Sanlúcar la Mayor – Benacazón –
   Huévar – Carrión de los Céspedes – Chucena, más Villanueva del Ariscal y Olivares.
+- Segunda búsqueda guardada: Almonte, Pilas e Hinojos, con los mismos filtros.
 
 **b) Zona de playa**
 - Usa la tabla de núcleos de abajo como guía de zonas.

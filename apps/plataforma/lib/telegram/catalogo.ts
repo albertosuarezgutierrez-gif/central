@@ -363,6 +363,12 @@ export const AVISOS: AvisoTelegram[] = [
 
   // ── 🏘️ Pisos turísticos ───────────────────────────────────────────────────
   {
+    id: 'pisos.idealista-casa', categoria: 'pisos',
+    titulo: 'Casa vacacional (Idealista)',
+    que: 'Anuncios nuevos de Idealista (vía correo) que encajan con tu perfil de casa vacacional.',
+    cuando: 'Al pulsar «Analizar correos» en Inversión (no hay cron)',
+  },
+  {
     id: 'pisos.prevision', categoria: 'pisos',
     titulo: 'Previsión de ocupación floja',
     que: 'Los próximos días vienen flojos de reservas.',
@@ -523,6 +529,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Subastas nuevas que encajan',
     que: 'Las subastas del día que pasan tu filtro, con su semáforo de cargas.',
     cuando: 'Todos los días a las 10:00',
+  },
+  {
+    id: 'subastas.casa-vacacional', categoria: 'subastas',
+    titulo: 'Casa vacacional (subastas)',
+    que: 'Subastas nuevas que encajan con tu perfil de casa vacacional (Aljarafe/Huelva, chalet, piscina o parcela).',
+    cuando: 'Todos los días a las 10:00 (solo si hay alguna nueva)',
   },
   {
     id: 'subastas.cierre', categoria: 'subastas',
