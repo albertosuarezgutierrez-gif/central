@@ -306,7 +306,7 @@ describe('0.3.7 · guardia estructural: toda clave de TEXTO que el saneado pone 
 
 describe('0.3.8 · tipo de documento y detalle del cuerpo tolerado', () => {
   it('tipoDocumentoDe: NIF, NIE, CIF por su forma; lo demás null', () => {
-    expect(tipoDocumentoDe('28823484E')).toBe('NIF')
+    expect(tipoDocumentoDe('12345678Z')).toBe('NIF')
     expect(tipoDocumentoDe(' 28.823.484-e ')).toBe('NIF')
     expect(tipoDocumentoDe('X1234567L')).toBe('NIE')
     expect(tipoDocumentoDe('B12345678')).toBe('CIF')
