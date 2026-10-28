@@ -11,6 +11,10 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+**(28/10/2026, 3)** — Tarificador. Prueba real (`main-b82bec1`): **Mapfre auto completo** (precios + proyecto + PDF guardado). Generali: faltaban «Tipo de vehículo» y «Compañía de procedencia» en «Datos de Valoración» → 0.2.45 los rellena por opción exacta (Turismo; compañía anterior de la ficha), sin probar aún en real.
+  Patinete: exploración Allianz paró en Datos Básicos por el NIF del tomador → las entradas de patinete (Allianz `movilidad_personal`, Mapfre `automoviles:patinetes` «MásPatín») usan a Alberto como tomador desde `MEDIADOR` (fecha de nacimiento añadida ahí), con «Aceptar» de Datos Básicos autorizado solo en Allianz. SQL `2026-10-28c` (mapfre/patinete, apagada).
+  Regla nueva (Alberto): por ramo, unión de datos que pide cada compañía → un solo enlace /datos por WhatsApp + filtro gratis antes de mandar a los bots.
+
 **(28/10/2026, 2)** — Tarificador + ramo patinete. Prueba real (imagen `main-d1deda2`): Mapfre auto OK (392,02€/714,06€, proyecto guardado; PDF tapado por un diálogo) · Generali «paso anterior incompleto» sin campo identificado. Nuevo PR: Mapfre 0.8.35 (cierra diálogo informativo vía guard; si no, aviso con su texto) + Generali 0.2.44 (lee «Datos de Valoración» antes de salir; nombra obligatorios vacíos).
   Ramo **`patinete`** («Patinete (VMP)») en todo el CRM; el lead web `patinete-electrico` ya no cae en «otros»; datos del riesgo en el bloque libre (7 campos, tres estados). SQL `2026-10-28_ramo_patinete.sql` (enum, sin transacción) + `2026-10-28b_tarificador_allianz_patinete.sql` (integración apagada).
   Exploración Allianz «Movilidad Personal» (`allianz:autos:movilidad_personal`, sintética) lanzable con `tarificador-relanzar.yml` accion=explorar. Lead real de patinete por WhatsApp: no se pudo dar de alta desde el contenedor (sin claves PII) → Alberto en /correduria.

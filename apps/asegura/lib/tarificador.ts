@@ -7,11 +7,13 @@
 //    guardan con `canal = 'rpa'`, sin `project_id_codeoscopic` ni libro de gasto: ningún camino de
 //    Avant2 puede casarlos (CHECK `tarificacion_fuera_de_avant2`).
 
+import { riesgoConTomadorMediador } from './tarificador-explorador-mediador'
 import { cierraCabeceraTrasFallo, estadoFalloExploracion, exploradoValido, modoParaWorker, modosReclamables } from './tarificador-explorador-reglas'
 import { createHash } from 'node:crypto'
 import {
   MAX_INTENTOS,
   claveCompania,
+  entradaConTomadorMediador,
   estadoTrasError,
   estadoTrasErrorEmision,
   franquiciaGeneral,
@@ -595,7 +597,10 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     select e.entrada from seguros.tarificador_exploraciones e
     join seguros.tarificacion_trabajos t on t.id = e.trabajo_id and t.correduria_id = e.correduria_id
     where e.trabajo_id = ${id}::uuid and e.cerrada_at is null`
-  return x[0] ? { ...base, exploracion: { entrada: x[0].entrada, conDatosReales: f.con_cliente } } : null
+  if (!x[0]) return null
+  // Tomador = MEDIADOR (patinete, 28/10/2026): sus datos van SOLO en la respuesta al worker (como el NIF de arriba), nunca en BD.
+  const conMediador = entradaConTomadorMediador(x[0].entrada) && !f.con_cliente
+  return { ...base, ...(conMediador ? { riesgo: riesgoConTomadorMediador(riesgo) } : {}), exploracion: { entrada: x[0].entrada, conDatosReales: f.con_cliente } }
 }
 
 // ─── Resultado ───────────────────────────────────────────────────────────────

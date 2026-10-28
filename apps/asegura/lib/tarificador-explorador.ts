@@ -289,6 +289,9 @@ export async function encolarExploracion(e: EntradaEncolarExploracion): Promise<
     riesgo = f.riesgo
   }
   const oportunidadId = e.trabajoOrigenId ? null : (e.oportunidadId ?? null)
+  // Tomador = MEDIADOR (patinete, 28/10/2026): solo sintética (con ancla se mezclaría el cliente real con los datos de Alberto).
+  // Los datos del mediador NO se guardan: se añaden a la respuesta al reclamar (`leerTrabajoParaWorker`) y al redactar el inventario.
+  if (def.tomadorMediador && (e.trabajoOrigenId || oportunidadId)) return { estado: 'rechazado', status: 409, motivo: 'entrada_solo_sintetica: el tomador de esta entrada es el mediador' }
   if (oportunidadId) {
     // Vía (c), 13/10/2026: ancla = una OPORTUNIDAD de Hogar de esta correduría. El riesgo se monta con la ficha de SU
     // cliente (descifrada en el servidor, `personaDeFicha`) + `info_riesgo.datosVivienda`. Nada se inventa ni se supone.

@@ -63,6 +63,12 @@ export type EntradaExploracion = {
   avancesAutorizados: readonly AvanceAutorizado[]
   /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
   guardadosEnDialogo?: readonly GuardadoEnDialogo[]
+  /**
+   * TOMADOR = EL MEDIADOR (Alberto, 28/10/2026: «datos del mediador con su consentimiento»). SOLO las exploraciones de
+   * patinete, y SOLO sintéticas (sin cliente). El NIF, el nombre y la fecha de nacimiento NO viven aquí: asegura los toma
+   * de `MEDIADOR` (`@central/module-seguros`) y los pone en `riesgo.tomador` al encolar; el resolver los lee de ahí.
+   */
+  tomadorMediador?: true
 }
 
 /**
@@ -88,10 +94,20 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
   }),
   // Allianz Movilidad Personal (patinete/VMP, 28/10/2026): «Nueva Alta» → acordeón «Autos» → tile «Movilidad Personal».
-  // Solo EXPLORAR (mapear el formulario): sin avances autorizados, ningún «Aceptar» se pulsa.
+  // Tomador = el MEDIADOR (Alberto, 28/10/2026, datos propios con su consentimiento). Solo se autoriza el «Aceptar» de
+  // «Datos Básicos» (el mismo mecanismo que Hogar): el de cualquier pantalla de tarificar/emisión sigue bloqueado.
   'allianz:autos:movilidad_personal': Object.freeze({
     compania: 'allianz', ramo: 'patinete', producto: 'patinete', pestana: 'Autos', productoMenu: 'Movilidad Personal',
+    avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
+    tomadorMediador: true as const,
+  }),
+  // Mapfre Patinetes (28/10/2026): Portal Digital de Mediadores › «Nueva producción» › «Automóviles» › tarjeta «Patinetes» ›
+  // enlace «Tarificación y Emisión» (producto «MásPatín»); el recorrido va fijo en el código de Mapfre (`entrada.ts`).
+  // Tomador = el MEDIADOR (ver arriba). Sin avances autorizados: solo se lee la primera pantalla.
+  'mapfre:automoviles:patinetes': Object.freeze({
+    compania: 'mapfre', ramo: 'patinete', producto: 'patinete', pestana: 'Nueva producción', productoMenu: 'Patinetes',
     avancesAutorizados: Object.freeze([]),
+    tomadorMediador: true as const,
   }),
   // Mapfre Auto (14/10/2026): «Nueva producción» → «Turismos y Motos». El bloque «Automóviles» y el enlace «Tarificación y
   // Emisión Rápida» (abre pestaña nueva) van fijos en el código de Mapfre. Sin avances autorizados: solo se lee.
@@ -233,6 +249,11 @@ const DATOS_AUTO: readonly DatoCatalogo[] = [
   D({ clave: 'historial.anios_asegurado', descripcion: 'Años asegurado en la compañía anterior', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '5', rutaRiesgo: 'aniosAseguradoAnterior' }),
 ]
 
+/** ¿Esta entrada usa al MEDIADOR como tomador? (solo las de patinete; ver {@link EntradaExploracion.tomadorMediador}). */
+export function entradaConTomadorMediador(entrada: string): boolean {
+  return esEntradaExploracion(entrada) && ENTRADAS_EXPLORACION[entrada].tomadorMediador === true
+}
+
 /** Fecha de efecto y contacto: los comunes. En auto, el NIF y la fecha de nacimiento del tomador salen del formulario de auto (arriba y comunes). */
 const DATOS_COMUNES_AUTO: readonly DatoCatalogo[] = DATOS_COMUNES.filter((d) => d.clave !== 'tomador.nif' && d.clave !== 'tomador.nombre_completo')
 
@@ -300,6 +321,8 @@ export function valorVisibleIA(clave: string, riesgo: unknown): { valor: string;
 
 export type ContextoDatos = {
   ramo: string
+  /** La entrada tiene `tomadorMediador`: `tomador.*` sale de `riesgo.tomador` (los datos del mediador que puso asegura). */
+  tomadorMediador?: boolean
   /**
    * `true` SOLO si la exploración va ligada a una petición de tarificación REAL de ese cliente/lead (trabajo origen del
    * mismo cliente). Sin ella, todo lo personal es sintético y lo que no tiene sintético (NIF) PARA.
@@ -386,6 +409,12 @@ function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
     return ok ? { ok: true, valor: v } : { ok: false, motivo: 'dato_no_disponible' }
   }
   if (d.personal) {
+    // Tomador = MEDIADOR (solo entradas con `tomadorMediador`, sintéticas): de `riesgo.tomador` o no sale (nada inventado:
+    // si falta la fecha de nacimiento, el explorador PARA y lo cuenta).
+    if (!ctx.conDatosReales && ctx.tomadorMediador === true && d.rutaRiesgo?.startsWith('tomador.')) {
+      const v = enRuta(ctx.riesgo, d.rutaRiesgo)
+      return v !== null ? { ok: true, valor: v } : { ok: false, motivo: 'dato_sensible_requerido' }
+    }
     if (ctx.conDatosReales) {
       // Lo personal de una exploración ligada a un cliente sale de SU riesgo o no sale: nunca un nombre de prueba con un NIF real.
       const v = d.rutaRiesgo ? enRuta(ctx.riesgo, d.rutaRiesgo) : null
@@ -408,7 +437,7 @@ function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
  * contacto de entorno siempre y, con datos reales, los del riesgo del trabajo. `null` = exploración con datos reales SIN
  * riesgo legible → quien llama PARA (fail-closed: sin saber qué quitar no se manda nada).
  */
-export function valoresSensiblesExploracion(ctx: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined> }): string[] | null {
+export function valoresSensiblesExploracion(ctx: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined>; tomadorMediador?: boolean }): string[] | null {
   const valores: string[] = []
   for (const k of [ENV_EXPLORADOR_EMAIL, ENV_EXPLORADOR_TELEFONO]) {
     const v = ctx.env[k]?.trim()
@@ -418,7 +447,7 @@ export function valoresSensiblesExploracion(ctx: { conDatosReales: boolean; ries
     const dig = v.replace(/\D/g, '')
     if (k === ENV_EXPLORADOR_TELEFONO && dig.length > 9) valores.push(dig.slice(-9))
   }
-  if (!ctx.conDatosReales) return valores
+  if (!ctx.conDatosReales && ctx.tomadorMediador !== true) return valores
   if (typeof ctx.riesgo !== 'object' || ctx.riesgo === null || Array.isArray(ctx.riesgo)) return null
   return [...valores, ...valoresSensiblesDeRiesgo(ctx.riesgo)]
 }

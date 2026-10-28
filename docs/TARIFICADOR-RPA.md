@@ -278,6 +278,7 @@ Encolar moto desde plataforma: sin `poblacion` en el riesgo, se toma `ciudad` de
 - (28/10/2026) Generali auto «Garantías y Resultados», antes de «Recalcular» (0.2.43): «Envío e-mail» = «Mediador» (opción exacta; nunca «Tomador») y «Verificación del riesgo» = «No»; sin la opción exacta, el bot para y la nombra.
 - (27/10/2026) Pruebas de imagen de rama sin mergear: solo con interruptor en BD que enciende Alberto (sustituye en ese caso a «Nunca desplegar imagen desde una rama sin su OK»: el interruptor ES el OK; producción solo `main-*`).
 - (27/10/2026) Allianz auto con compañía actual = Allianz (Allianz→Allianz): no se tarifica por bot (el portal no la ofrece); error de datos claro, se hace a mano.
+- (28/10/2026) patinete en Allianz y Mapfre como comparadores con bots (llegan muchas solicitudes web).
 
 ## PLAN
 
@@ -309,6 +310,13 @@ Encolar moto desde plataforma: sin `poblacion` en el riesgo, se toma `ciudad` de
 - Escala con cada compañía nueva.
 
 **Fase 5 · Más ramos y compañías**
+- **Prioridad (Alberto, 28/10/2026): Patinete (VMP)**. Llegan muchas solicitudes de patinete por la web; meter Allianz y Mapfre como comparadores con los bots.
+  - Estado: ramo `patinete` («Patinete (VMP)») ya existe en el CRM (PR #5192, SQL aplicado); el lead web `patinete-electrico` entra como patinete. **No tarifica aún.**
+  - Allianz ePAC: «Nueva Alta › Autos › Movilidad Personal». Exploración `allianz:autos:movilidad_personal` (accion=explorar en `tarificador-relanzar.yml`) llegó solo a «Datos Básicos – Figuras Intervinientes» y se paró por `dato_sensible_requerido` (NIF del tomador). Siguiente: decidir NIF (sintético de prueba o cliente real con consentimiento) y autorizar el «Aceptar» de Datos básicos; repetir hasta la pantalla de precio. Visto: «Fecha Término» editable y recibo «Bancario» (posible duración corta: sin confirmar).
+  - Mapfre («Portal Digital Mediadores › Nueva producción › Automóviles › Patinetes»: «Tarificación y Emisión», producto «MásPatín»): portal ya mapeado para auto → candidato más rápido al primer precio real. Siguiente: entrada de exploración `mapfre:automoviles:patinetes` y explorarla.
+  - Lo que piden los clientes: RC obligatoria, pago mensual, sin permanencia/corta duración. VMP «no certificado» con inscripción DGT temporal (hasta 22/01/2027): confirmar si cada compañía lo acepta.
+  - Datos del riesgo en el CRM: marca, modelo, nº inscripción DGT, certificado sí/no, inscripción válida hasta, uso, valor (bloque libre, tres estados). Pendientes: aviso web aún manda patinete a «otros»; enlace /datos pide datos genéricos.
+  - **Regla (Alberto, 28/10/2026), para patinete y para TODO ramo:** con los mapas de cada compañía se saca la UNIÓN de datos que exigen; el enlace /datos que se manda por WhatsApp pide exactamente esa unión (un solo formulario), y antes de mandar a los bots un filtro GRATIS comprueba que no falta nada para ninguna compañía; si falta, no se lanza y se dice qué pedir al cliente. Exploraciones con datos del mediador (`MEDIADOR`, consentimiento de Alberto).
 - Repetir el patrón (mapa → atascos con volcado → cierre) en cada ramo/compañía; tarea semanal de actualización de vocabulario (pendiente).
 
 Comunidades / RC / Comercio (anterior):

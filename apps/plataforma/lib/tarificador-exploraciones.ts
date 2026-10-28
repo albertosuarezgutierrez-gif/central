@@ -170,6 +170,7 @@ export const OPCIONES_NUEVA = [
   { entrada: 'allianz:particulares:hogar', compania: 'Allianz', producto: 'Hogar' },
   { entrada: 'allianz:particulares:comunidades', compania: 'Allianz', producto: 'Comunidades (oráculo)' },
   { entrada: 'allianz:autos:movilidad_personal', compania: 'Allianz', producto: 'Movilidad Personal (patinete)' },
+  { entrada: 'mapfre:automoviles:patinetes', compania: 'Mapfre', producto: 'Patinetes (MásPatín)' },
   { entrada: 'mapfre:nueva_produccion:auto', compania: 'Mapfre', producto: 'Auto' },
   { entrada: 'occident:productos:hogar', compania: 'Occident', producto: 'Hogar' },
 ] as const

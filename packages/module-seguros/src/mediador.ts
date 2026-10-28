@@ -109,6 +109,12 @@ export const MEDIADOR = {
   identidad: {
     nombre: 'Alberto Suárez Gutiérrez',
     nif: '28823484E',
+    /**
+     * Fecha de nacimiento de Alberto (ISO). La dio él mismo el 28/10/2026 para usarse como TOMADOR en las exploraciones
+     * del tarificador RPA de patinete («datos del mediador con su consentimiento»). Única copia: nadie la repite en
+     * código, tests ni commits (los tests la importan de aquí). No sale por ninguna superficie pública.
+     */
+    fechaNacimiento: '1984-10-11',
     figura: 'Corredor de seguros (persona física)',
     /** Clave del Registro Administrativo de Distribuidores de Seguros (DGSFP). */
     claveDgsfp: 'CS-F/0170',

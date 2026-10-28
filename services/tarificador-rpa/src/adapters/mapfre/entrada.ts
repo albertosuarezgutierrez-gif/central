@@ -63,6 +63,21 @@ export const OPCION_AUTOMOVILES = 'Automóviles'
 /** Título de la tarjeta (NO se pulsa): solo se comprueba que existe y acota la búsqueda del enlace. */
 export const TARJETA_TURISMOS_Y_MOTOS = 'Turismos y Motos'
 export const ENLACE_TARIFICACION_RAPIDA = 'Tarificación y Emisión Rápida'
+/** Patinetes (28/10/2026): tarjeta «Patinetes» de la página «Automóviles» y su enlace «Tarificación y Emisión» (producto «MásPatín»). */
+export const TARJETA_PATINETES = 'Patinetes'
+export const ENLACE_TARIFICACION_EMISION = 'Tarificación y Emisión'
+
+/** Tarjeta y enlace de la página «Automóviles» a los que lleva la entrada por menús. */
+export type DestinoMenusMapfre = {
+  tarjeta: string
+  enlace: string
+  /** `true` = SOLO el enlace dentro de su tarjeta (sin el respaldo «único en toda la página»: «Tarificación y Emisión» sale en varias). */
+  soloEnTarjeta: boolean
+  /** Formulario que se espera en la pestaña nueva; `null` = no se conoce su DOM (se sigue en cuanto carga). */
+  selFormulario: string | null
+}
+export const DESTINO_TURISMOS_Y_MOTOS: DestinoMenusMapfre = { tarjeta: TARJETA_TURISMOS_Y_MOTOS, enlace: ENLACE_TARIFICACION_RAPIDA, soloEnTarjeta: false, selFormulario: 'app-datos-basicos' }
+export const DESTINO_PATINETES: DestinoMenusMapfre = { tarjeta: TARJETA_PATINETES, enlace: ENLACE_TARIFICACION_EMISION, soloEnTarjeta: true, selFormulario: null }
 /** El formulario NSEI está listo cuando existe su primer componente (paso «Datos básicos»). */
 export const SEL_FORMULARIO_NSEI = 'app-datos-basicos'
 
@@ -239,14 +254,14 @@ async function describirCandidatos(page: Page): Promise<string> {
  * acotado no casa con el DOM, en TODOS los marcos por texto exacto, y solo si hay EXACTAMENTE una coincidencia visible (0 o
  * ≥2 → no se adivina: ErrorMapaIncompleto, y ahí entra el respaldo IA si está encendido).
  */
-async function enlaceDeEntrada(page: Page, menuMs: number): Promise<Locator> {
-  const que = `enlace en la tarjeta «${TARJETA_TURISMOS_Y_MOTOS}»`
-  const enTarjeta = await enTodosLosMarcos(page, (f) => pulsablesExactos(f, ENLACE_TARIFICACION_RAPIDA, tarjetaDe(f, TARJETA_TURISMOS_Y_MOTOS, tituloDe(f))), Math.min(ESPERA_TARJETA_MS, menuMs))
+async function enlaceDeEntrada(page: Page, menuMs: number, destino: DestinoMenusMapfre = DESTINO_TURISMOS_Y_MOTOS): Promise<Locator> {
+  const que = `enlace en la tarjeta «${destino.tarjeta}»`
+  const enTarjeta = await enTodosLosMarcos(page, (f) => pulsablesExactos(f, destino.enlace, tarjetaDe(f, destino.tarjeta, tituloDe(f))), Math.min(ESPERA_TARJETA_MS, menuMs))
   if (enTarjeta.length === 1) return enTarjeta[0]!
-  const todos = await enTodosLosMarcos(page, (f) => pulsablesExactos(f, ENLACE_TARIFICACION_RAPIDA), menuMs)
+  const todos = destino.soloEnTarjeta ? enTarjeta : await enTodosLosMarcos(page, (f) => pulsablesExactos(f, destino.enlace), menuMs)
   if (todos.length === 1) return todos[0]!
   const detalle = todos.length === 0 ? 'ninguna coincidencia exacta visible' : `${todos.length} coincidencias exactas visibles, ambiguo`
-  throw new ErrorMapaIncompleto(`el elemento de menú «${ENLACE_TARIFICACION_RAPIDA}» (${que}; en todos los marcos: ${detalle}${await describirCandidatos(page)}; pantalla: ${await diagnosticoDePagina(page, null)}) de wmediadores`, true)
+  throw new ErrorMapaIncompleto(`el elemento de menú «${destino.enlace}» (${que}; en todos los marcos: ${detalle}${await describirCandidatos(page)}; pantalla: ${await diagnosticoDePagina(page, null)}) de wmediadores`, true)
 }
 
 /** Selector FIJO → capa común `conRespaldoIA` (aprendido → IA, validado en formador.ts). Guarda el `confirmar` para el final. */
@@ -275,6 +290,15 @@ export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMap
     const err = new ErrorMapaIncompleto(`${e.message.replace(/^mapfre\/auto: mapa incompleto: faltan /, '')} (además la URL directa del formulario NSEI falló: ${motivoDirecta})`, e.pideInventarioDom)
     throw err
   }
+}
+
+/**
+ * PATINETES (28/10/2026): home de wmediadores (ya con sesión) → «Nueva producción» › «Automóviles» › tarjeta «Patinetes» › enlace
+ * «Tarificación y Emisión» (producto «MásPatín»). Solo por menús (no hay URL directa conocida). Devuelve la pestaña nueva si el
+ * enlace la abre; si no, la misma página. El enlace es NAVEGACIÓN (excepción exacta del guard); el guard sigue bloqueando emitir.
+ */
+export async function abrirTarificacionPatineteMapfre(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number } = {}): Promise<Page> {
+  return abrirPorMenus(page, ctx, esperas, DESTINO_PATINETES)
 }
 
 /** Login ANTIGUO que Mapfre antepone a la URL directa (`/loginexternopi/docs/html/loginFormPage.html?page=…`). */
@@ -421,7 +445,7 @@ async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string
   }
 }
 
-async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number }): Promise<Page> {
+async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number }, ruta: DestinoMenusMapfre = DESTINO_TURISMOS_Y_MOTOS): Promise<Page> {
   const menuMs = esperas.menuMs ?? ESPERA_MENU_MS
   const confirmaciones: (() => Promise<void>)[] = []
   await cerrarAvisosModales(page, ctx) // v0.8.13: un modal del portal sobre la home intercepta el clic en «Nueva producción»
@@ -444,12 +468,12 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   // La tarjeta «Turismos y Motos» (es un título, no se pulsa) y su enlace: fijo acotado → página entera única → respaldo IA.
   const enlace = await conRespaldo(page, ctx, async () => {
     if (conTitulo.length === 0) throw new ErrorMapaIncompleto(`el título de la página «${OPCION_AUTOMOVILES}» de wmediadores`, true)
-    const tarjeta = await enTodosLosMarcos(page, (f) => f.getByText(etiquetaExacta(TARJETA_TURISMOS_Y_MOTOS)).filter({ visible: true }), menuMs)
-    if (tarjeta.length === 0) throw new ErrorMapaIncompleto(`el elemento de menú «${TARJETA_TURISMOS_Y_MOTOS}» (tarjeta, solo se comprueba) de wmediadores`, true)
-    return enlaceDeEntrada(page, menuMs)
+    const tarjeta = await enTodosLosMarcos(page, (f) => f.getByText(etiquetaExacta(ruta.tarjeta)).filter({ visible: true }), menuMs)
+    if (tarjeta.length === 0) throw new ErrorMapaIncompleto(`el elemento de menú «${ruta.tarjeta}» (tarjeta, solo se comprueba) de wmediadores`, true)
+    return enlaceDeEntrada(page, menuMs, ruta)
   }, {
-    clave: ACCION_ENLACE_ENTRADA, tipo: 'accion', textoEsperado: ENLACE_TARIFICACION_RAPIDA,
-    descripcion: `enlace «${ENLACE_TARIFICACION_RAPIDA}» DENTRO de la tarjeta «${TARJETA_TURISMOS_Y_MOTOS}» (no el de Flotas, Patinetes u otras tarjetas); abre el formulario de cotización`,
+    clave: ACCION_ENLACE_ENTRADA, tipo: 'accion', textoEsperado: ruta.enlace,
+    descripcion: `enlace «${ruta.enlace}» DENTRO de la tarjeta «${ruta.tarjeta}» (no el de otras tarjetas); abre el formulario de cotización`,
   }, confirmaciones)
 
   // El listener va ANTES del clic: la pestaña se abre durante él.
@@ -460,13 +484,18 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   try {
     destino = await nueva
   } catch {
-    throw new ErrorMapaIncompleto(`la pestaña nueva que abre «${ENLACE_TARIFICACION_RAPIDA}» (no se abrió)`, true)
+    // Sin formulario conocido (Patinetes) el enlace puede navegar en la MISMA pestaña; con el de Auto, no abrirla es un fallo.
+    if (ruta.selFormulario !== null) throw new ErrorMapaIncompleto(`la pestaña nueva que abre «${ruta.enlace}» (no se abrió)`, true)
+    destino = page
   }
+  if (ruta.selFormulario === null) await destino.waitForLoadState('domcontentloaded', { timeout: esperas.formularioMs ?? ESPERA_FORMULARIO_MS }).catch(() => undefined)
   // Sin `httpCredentials` en el contexto, el desafío de auth básica se responde 401 (= cancelar) y el formulario sigue ahí.
-  try {
-    await destino.locator(SEL_FORMULARIO_NSEI).first().waitFor({ state: 'attached', timeout: esperas.formularioMs ?? ESPERA_FORMULARIO_MS })
-  } catch {
-    throw new ErrorMapaIncompleto(`el formulario NSEI (${SEL_FORMULARIO_NSEI}) en la pestaña nueva`, true)
+  if (ruta.selFormulario !== null) {
+    try {
+      await destino.locator(ruta.selFormulario).first().waitFor({ state: 'attached', timeout: esperas.formularioMs ?? ESPERA_FORMULARIO_MS })
+    } catch {
+      throw new ErrorMapaIncompleto(`el formulario NSEI (${ruta.selFormulario}) en la pestaña nueva`, true)
+    }
   }
   // La entrada llegó al formulario: lo que resolvió el respaldo (aprendido o IA) queda APRENDIDO. Mejor esfuerzo.
   for (const c of confirmaciones) await c().catch(() => undefined)
