@@ -94,13 +94,13 @@ const ANGULAR = (donde: 'main' | 'iframe' | 'shadow', ia = false) => `<!doctype 
   <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
 
 /** Patinetes (28/10/2026): «Tarificación y Emisión» sale en VARIAS tarjetas (Camiones lo trae ANTES en el DOM): solo vale el de «Patinetes». */
-const HOME_PATINETES = (variante: 'nueva' | 'misma' | 'sin_enlace') => `<!doctype html><html><body>
+const HOME_PATINETES = (variante: 'nueva' | 'misma' | 'sin_enlace', destino = '/patinete-destino') => `<!doctype html><html><body>
   <nav><a role="tab" onclick="mostrar('menu')">Nueva producción</a></nav>
   <ul id="menu" hidden><li><a role="menuitem" onclick="mostrar('pag')">Automóviles</a></li></ul>
   <div id="pag" hidden><h1>Automóviles</h1>
     <div class="tarjeta"><h3>Camiones, Autobuses y vehículos Industriales</h3><a href="/otro-camiones" target="_blank">Tarificación y Emisión</a></div>
     <div class="tarjeta"><h3>Turismos y Motos</h3><a href="/otro-general" target="_blank">Tarificación y Emisión Rápida</a></div>
-    <div class="tarjeta"><h3>Patinetes</h3>${variante === 'sin_enlace' ? '<a href="/otro-ayuda" target="_blank">Ayuda patinetes</a>' : `<a id="pt" href="/patinete-destino"${variante === 'nueva' ? ' target="_blank"' : ''}>Tarificación y Emisión</a>`}</div>
+    <div class="tarjeta"><h3>Patinetes</h3>${variante === 'sin_enlace' ? '<a href="/otro-ayuda" target="_blank">Ayuda patinetes</a>' : `<a id="pt" href="${destino}"${variante === 'nueva' ? ' target="_blank"' : ''}>Tarificación y Emisión</a>`}</div>
   </div>
   <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
 
@@ -151,6 +151,13 @@ before(async () => {
     if (ruta === '/patinetes') return void res.end(HOME_PATINETES('nueva'))
     if (ruta === '/patinetes-misma') return void res.end(HOME_PATINETES('misma'))
     if (ruta === '/patinetes-sin-enlace') return void res.end(HOME_PATINETES('sin_enlace'))
+    // Real 28/10/2026: «Tarificación y Emisión» de Patinetes aterriza en una página SIN formulario con solo el enlace «Acceso a NSE».
+    if (ruta === '/patinetes-acceso') return void res.end(HOME_PATINETES('nueva', '/patinete-landing'))
+    if (ruta === '/patinetes-acceso-misma') return void res.end(HOME_PATINETES('misma', '/patinete-landing'))
+    if (ruta === '/patinete-landing') return void res.end('<!doctype html><html><body><a href="/otro-ayuda">Ayuda</a><a href="/patinete-form" target="_blank">Acceso a NSE</a></body></html>')
+    if (ruta === '/patinete-landing-misma') return void res.end('<!doctype html><html><body><a href="/patinete-form">Acceso a NSE</a></body></html>')
+    if (ruta === '/patinete-landing-doble') return void res.end('<!doctype html><html><body><a href="/otro-1">Acceso a NSE</a><a href="/otro-2">Acceso a NSE</a></body></html>')
+    if (ruta === '/patinete-form') return void res.end('<!doctype html><html><body><p>Formulario NSE patinete (sintético)</p></body></html>')
     if (ruta === '/patinete-destino') return void res.end('<!doctype html><html><body><p>Formulario de patinetes (sintético)</p></body></html>')
     if (ruta === '/span-trampa') return void res.end(HOME_SPAN_EMITIR)
     if (ruta === '/angular') return void res.end(ANGULAR('main'))
@@ -345,6 +352,53 @@ test('Patinetes: menús → tarjeta «Patinetes» → «Tarificación y Emisión
     assert.match(nueva.url(), /\/patinete-destino$/)
     assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión'])
     assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: la landing sin formulario trae «Acceso a NSE»: se pulsa (guard real, sin violación) y se sigue en la pestaña que abre', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+  const pulsados: string[] = []
+  const ctx = { ...ctxGuard, pulsar: async (b: Locator) => { pulsados.push(((await b.textContent()) ?? '').trim()); await ctxGuard.pulsar(b) }, pulsarEnlaceEntrada: async (b: Locator) => { pulsados.push(((await b.textContent()) ?? '').trim()); await ctxGuard.pulsarEnlaceEntrada(b) } }
+  try {
+    const nueva = await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 })
+    assert.match(nueva.url(), /\/patinete-form$/)
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión', 'Acceso a NSE'])
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: si el enlace de la landing no abre pestaña, la navegación sigue en la MISMA', async () => {
+  const { context, page, ctx } = await abrir('/patinetes-acceso-misma')
+  try {
+    // La landing «misma» no tiene target=_blank en «Acceso a NSE»: se sirve desde otra ruta con el enlace en la misma pestaña.
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><a href="/patinete-form">Acceso a NSE</a></body></html>' }))
+    const destino = await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 })
+    assert.match(destino.url(), /\/patinete-form$/)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: DOS «Acceso a NSE» en la landing → ErrorMapaIncompleto (no se adivina)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/patinetes-acceso')
+  try {
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><a href="/otro-1">Acceso a NSE</a><a href="/otro-2">Acceso a NSE</a></body></html>' }))
+    await assert.rejects(() => abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 }), ErrorMapaIncompleto)
+    assert.ok(!pulsados.includes('Acceso a NSE'))
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes: si el enlace de la tarjeta ya lleva al formulario (sin «Acceso a NSE»), no se pulsa nada más', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/patinetes')
+  try {
+    await abrirTarificacionPatineteMapfre(page, ctx, { menuMs: 2_500 })
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión'])
   } finally {
     await context.close()
   }

@@ -24,7 +24,7 @@
 //    prohibidos en el validador, en `pulsar()` y en `pulsarGuardadoPresupuesto`). 🔑 Ningún valor de campo ni credencial va al log, a asegura ni a la IA.
 
 import { randomUUID } from 'node:crypto'
-import { chromium, type Browser, type Locator, type Page } from 'playwright'
+import { chromium, type Browser, type Frame, type Locator, type Page } from 'playwright'
 import {
   CLAVES_AUTOCOMPLETADO,
   EmisionBloqueadaError,
@@ -638,6 +638,18 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
                 cortar = motivoCorteTrasRellenar(a.dato, antes, despues)
               }
             }
+          } else if (a.accion === 'elegir' && hit.el.tag === 'nx-dropdown') {
+            // Desplegable ndbx (Allianz ePAC): abrir y pulsar la opción de texto EXACTO, ambas por `k.pulsar` (guard). Si no está,
+            // no se pulsa ninguna opción: la lista queda ABIERTA y el lote se corta; el paso siguiente ve sus opciones.
+            await k.pausaAccion()
+            const r = await elegirNxDropdown(nodo.marco, loc, a.opcion.valor, k.pulsar)
+            if (r === 'no_encontrada') {
+              k.log('exploracion_nx_opcion', { n: pasos, ref: a.ref, estado: 'no_encontrada' })
+              acciones--
+              cortarLote(i, 'repintado')
+              break lote
+            }
+            hechas++
           } else if (a.accion === 'elegir') {
             await k.pausaAccion()
             const elegidas = await loc.selectOption({ value: a.opcion.valor }, { timeout: 10_000 })
@@ -805,6 +817,24 @@ async function visibleTrasTraer(nodo: NodoInv): Promise<boolean> {
     await dormir(100)
   }
   return visible()
+}
+
+/**
+ * `elegir` sobre un `nx-dropdown` (ndbx): mismo mecanismo que Comunidades/Hogar (abrir el desplegable y pulsar la opción de texto
+ * EXACTO, ambas por el `pulsar` guardado). Si ya está abierto NO se vuelve a pulsar (cerraría la lista). Exactamente UNA opción
+ * visible con ese texto; si no, `no_encontrada` y no se pulsa ninguna (la lista queda abierta para que el paso siguiente la vea).
+ */
+export async function elegirNxDropdown(marco: Frame, loc: Locator, texto: string, pulsarGuardado: (b: Locator) => Promise<void>): Promise<'ok' | 'no_encontrada'> {
+  const items = marco.locator('nx-dropdown-item, [role="option"]').filter({ visible: true })
+  if ((await loc.getAttribute('aria-expanded')) !== 'true') {
+    await pulsarGuardado(loc)
+    await items.first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => undefined)
+  }
+  const escapado = texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const exactas = items.filter({ hasText: new RegExp(`^\\s*${escapado}\\s*$`) })
+  if ((await exactas.count()) !== 1) return 'no_encontrada'
+  await pulsarGuardado(exactas.first())
+  return 'ok'
 }
 
 /**

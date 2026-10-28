@@ -64,7 +64,7 @@ export const POST = auditado(async (req: Request) => {
     // Purga (13/10/2026): el riesgo del trabajo cerrado ya no lleva matrícula ni conductor. Como el botón de plataforma, el
     // riesgo se arma de la oportunidad del cliente + su ficha; el del último trabajo solo es respaldo si aún está completo.
     const reconstruida = await riesgoDesdeOportunidadDelCliente(correduria.id, clienteId, ramo)
-    // Compañía actual (Allianz/Mapfre auto con cambio de seguro): si falta, de la póliza de auto en vigor de la cartera SOLO si es
+    // Compañía actual (Allianz/Mapfre/Generali auto con cambio de seguro): si falta, de la póliza de auto en vigor de la cartera SOLO si es
     // una (cero o varias → sigue faltando y sale 422). Nunca pisa lo que ya trae; la purga no se toca.
     const conCompania = reconstruida.riesgo !== null && necesitaCompaniaActual(compania, ramo, reconstruida.riesgo)
       ? conCompaniaActualUnica(reconstruida, compania, ramo, await leerCompaniaActualUnicaCliente(correduria.id, clienteId))

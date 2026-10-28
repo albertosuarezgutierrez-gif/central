@@ -66,7 +66,7 @@ export function riesgoHogarDeRiesgoOportunidad(r: RiesgoParaBotsHogar, ahora = n
 }
 
 /**
- * Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre auto con cambio de seguro) con la compañía que deduce la cartera
+ * Rellena `companiaAnterior` del riesgo RECONSTRUIDO (Allianz/Mapfre/Generali auto con cambio de seguro) con la compañía que deduce la cartera
  * (`companiaActualUnica`: solo con exactamente una póliza de auto en vigor). `actual` null → mismo objeto. No pisa lo que ya trae.
  * Sin reconstrucción no hace nada. PURA; después sigue pasando por `validar`.
  */
