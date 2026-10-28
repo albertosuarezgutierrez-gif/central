@@ -1,7 +1,7 @@
 // IA del siniestro (analizar / redactar): arma el contexto de ESA correduría, llama a `iaTexto()` UNA vez, verifica
 // las citas contra el texto de la póliza y guarda el resultado como mensaje autor 'ia' del hilo.
 // El texto del PDF y el hilo van a la IA (por la pasarela, `privado`), nunca a `historial_interno`.
-import { verificarCitas, avisoCitasNoEncontradas } from '@central/module-seguros'
+import { verificarCitas, avisoCitasNoEncontradas, hiloVigente } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { iaTexto } from './ia'
 import { textoPdfParse } from './documentos/extraer-poliza'
@@ -75,8 +75,9 @@ export async function ejecutarIASiniestro(
   if (p?.coberturas != null) {
     try { coberturas = JSON.stringify(p.coberturas).slice(0, TOPE_COBERTURAS) } catch { /* sin garantías */ }
   }
-  let hiloTxt = (mensajes ?? [])
-    .map((m) => `[${m.creadoAt.slice(0, 10)} · ${m.autor} · ${m.tipo}] ${m.texto ?? '(ilegible)'}`)
+  // Solo la última versión de cada mensaje: la IA no lee lo que el corredor ya corrigió.
+  let hiloTxt = hiloVigente(mensajes ?? [])
+    .map((m) => `[${m.creadoAtOriginal.slice(0, 10)} · ${m.autor} · ${m.tipo}${m.editado ? ' · editado' : ''}] ${m.texto ?? '(ilegible)'}`)
     .join('\n')
   if (hiloTxt.length > TOPE_HILO) hiloTxt = '…' + hiloTxt.slice(-TOPE_HILO)
 

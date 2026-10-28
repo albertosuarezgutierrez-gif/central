@@ -2,11 +2,19 @@
 import { useEffect, useState } from 'react'
 import Bloque from '../../Bloque'
 import { btnStyle } from '@/components/ui'
-import { combinacionValida, cuerpoCaja, motivoFallo, type ModoCaja } from '@/lib/correduria/siniestro-hilo'
+import { autorDeModo, combinacionValida, cuerpoCaja, motivoFallo, type ModoCaja } from '@/lib/correduria/siniestro-hilo'
 import type { DocumentoResumen } from '@central/module-seguros'
 import { CAMPO, ERROR, NOTA } from './estilos'
 
-export type Precarga = { modo: ModoCaja; texto: string; n: number }
+/** `sustituyeA` = EDITAR ese mensaje (se guarda como versión nueva; el anterior se conserva). */
+export type Precarga = { modo: ModoCaja; texto: string; n: number; sustituyeA?: string; documentoId?: string | null; reclamacionSac?: boolean }
+
+const OPCIONES: { modo: ModoCaja; etiqueta: string }[] = [
+  { modo: 'compania', etiqueta: 'Pegar de la compañía (comentario)' },
+  { modo: 'rehuse', etiqueta: 'Pegar de la compañía (rehúse)' },
+  { modo: 'enviado', etiqueta: 'Lo que he enviado' },
+  { modo: 'interna', etiqueta: 'Nota interna' },
+]
 
 export default function CajaMensaje({ siniestroId, documentos, precarga, onGuardado }: {
   siniestroId: string
@@ -20,12 +28,22 @@ export default function CajaMensaje({ siniestroId, documentos, precarga, onGuard
   const [sac, setSac] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [edita, setEdita] = useState<{ id: string; modo: ModoCaja } | null>(null)
 
-  useEffect(() => { if (precarga) { setModo(precarga.modo); setTexto(precarga.texto) } }, [precarga])
+  useEffect(() => {
+    if (!precarga) return
+    setModo(precarga.modo); setTexto(precarga.texto); setAviso(null)
+    if (precarga.sustituyeA) {
+      setEdita({ id: precarga.sustituyeA, modo: precarga.modo })
+      setDocId(precarga.documentoId ?? ''); setSac(precarga.reclamacionSac === true)
+    } else setEdita(null)
+  }, [precarga])
+
+  function cancelarEdicion() { setEdita(null); setTexto(''); setDocId(''); setSac(false); setAviso(null) }
 
   async function guardar() {
     if (texto.trim() === '') return setAviso('Escribe el texto.')
-    const cuerpo = cuerpoCaja(modo, texto, docId || null, modo === 'enviado' && sac)
+    const cuerpo = cuerpoCaja(modo, texto, docId || null, modo === 'enviado' && sac, edita?.id ?? null)
     if (!combinacionValida(cuerpo.autor, cuerpo.tipo)) return setAviso('Esa combinación de autor y tipo no es válida.')
     setOcupado(true); setAviso(null)
     try {
@@ -38,7 +56,7 @@ export default function CajaMensaje({ siniestroId, documentos, precarga, onGuard
         setAviso(`NO se ha guardado: ${motivoFallo(r.status, j)}.`)
         return
       }
-      setTexto(''); setDocId(''); setSac(false)
+      setTexto(''); setDocId(''); setSac(false); setEdita(null)
       onGuardado()
     } catch {
       setAviso('NO se sabe si se ha guardado: sin conexión. Mira el hilo antes de repetir.')
@@ -46,13 +64,15 @@ export default function CajaMensaje({ siniestroId, documentos, precarga, onGuard
   }
 
   return (
-    <Bloque titulo="Añadir al hilo">
+    <Bloque titulo={edita ? 'Editar mensaje' : 'Añadir al hilo'}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+        {edita && (
+          <p role="status" style={NOTA}>
+            Estás editando un mensaje. Se guardará como versión nueva; la anterior queda en el expediente (se ve con «Ver versiones anteriores»).
+          </p>
+        )}
         <select aria-label="Tipo de entrada" value={modo} onChange={e => setModo(e.target.value as ModoCaja)} style={CAMPO}>
-          <option value="compania">Pegar de la compañía (comentario)</option>
-          <option value="rehuse">Pegar de la compañía (rehúse)</option>
-          <option value="enviado">Lo que he enviado</option>
-          <option value="interna">Nota interna</option>
+          {OPCIONES.filter(o => !edita || autorDeModo(o.modo) === autorDeModo(edita.modo)).map(o => <option key={o.modo} value={o.modo}>{o.etiqueta}</option>)}
         </select>
         <textarea aria-label="Texto" value={texto} onChange={e => setTexto(e.target.value)} rows={6} style={{ ...CAMPO, resize: 'vertical' }} />
         {modo === 'enviado' && (
@@ -69,7 +89,8 @@ export default function CajaMensaje({ siniestroId, documentos, precarga, onGuard
         )}
         {aviso && <p role="alert" style={ERROR}>{aviso}</p>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <button type="button" disabled={ocupado} onClick={guardar} style={btnStyle('primario')}>{ocupado ? 'Guardando…' : 'Guardar'}</button>
+          <button type="button" disabled={ocupado} onClick={guardar} style={btnStyle('primario')}>{ocupado ? 'Guardando…' : edita ? 'Guardar edición' : 'Guardar'}</button>
+          {edita && <button type="button" disabled={ocupado} onClick={cancelarEdicion} style={btnStyle('secundario')}>Cancelar edición</button>}
           <span style={NOTA}>Solo se guarda en el expediente; no se envía nada a nadie.</span>
         </div>
       </div>

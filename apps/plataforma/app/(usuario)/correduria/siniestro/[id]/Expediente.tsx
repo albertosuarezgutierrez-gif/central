@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Bloque from '../../Bloque'
 import Documentos from '../../Documentos'
-import { leerHilo, motivoFallo, type HiloSiniestro } from '@/lib/correduria/siniestro-hilo'
+import { leerHilo, modoDeMensaje, motivoFallo, type HiloSiniestro, type Mensaje } from '@/lib/correduria/siniestro-hilo'
 import { leerSiniestro } from '@/lib/siniestros-asegura'
 import type { DocumentoResumen } from '@central/module-seguros'
 import Cabecera from './Cabecera'
@@ -40,6 +40,12 @@ export default function Expediente({ siniestroId }: { siniestroId: string }) {
     try { await navigator.clipboard.writeText(t); setCopiado(true); setTimeout(() => setCopiado(false), 1500) } catch { /* el texto sigue visible para copiar a mano */ }
   }
 
+  function editar(m: Mensaje) {
+    const modo = modoDeMensaje(m)
+    if (!modo || m.texto === null) return
+    setPrecarga({ modo, texto: m.texto, n: Date.now(), sustituyeA: m.id, documentoId: m.documentoId, reclamacionSac: m.meta?.reclamacionSac === true })
+  }
+
   if (c.estado === 'cargando') return <p style={NOTA}>Cargando expediente…</p>
   if (c.estado === 'error') return <p role="alert" style={ERROR}>{c.motivo} No significa que no haya datos.</p>
 
@@ -51,7 +57,7 @@ export default function Expediente({ siniestroId }: { siniestroId: string }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4 }}>
       <Cabecera s={s} poliza={h.poliza} />
       <Plazos plazos={h.plazos} esperando={h.diasEsperandoCompania} />
-      <Hilo mensajes={h.mensajes} onCopiar={copiar} onEnviado={t => setPrecarga({ modo: 'enviado', texto: t, n: Date.now() })} />
+      <Hilo mensajes={h.mensajes} onCopiar={copiar} onEnviado={t => setPrecarga({ modo: 'enviado', texto: t, n: Date.now() })} onEditar={editar} />
       {copiado && <p role="status" style={NOTA}>Copiado.</p>}
       <CajaMensaje siniestroId={siniestroId} documentos={docs} precarga={precarga} onGuardado={cargar} />
       <AccionesIa siniestroId={siniestroId} onHecho={cargar} />

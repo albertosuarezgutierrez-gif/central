@@ -1718,3 +1718,11 @@ export {
   verificarCitas,
   type VerificacionCitas,
 } from './siniestro-citas.ts'
+
+export {
+  hiloVigente,
+  mapaSustituidoPor,
+  sustituyeADe,
+  type MensajeConVersion,
+  type MensajeVigente,
+} from './siniestro-hilo-versiones.ts'

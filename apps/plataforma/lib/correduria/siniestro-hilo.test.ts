@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { citasNoEncontradas, combinacionValida, cuerpoCaja, estadoPlazo, leerEsperando, leerHilo, leerMensajes, leerPlazos, motivoFallo, plegarTexto, textoDias } from './siniestro-hilo.ts'
+import { autorDeModo, citasNoEncontradas, combinacionValida, cuentaSustituidos, cuerpoCaja, mensajesVisibles, modoDeMensaje, puedeEditar, estadoPlazo, leerEsperando, leerHilo, leerMensajes, leerPlazos, motivoFallo, plegarTexto, textoDias } from './siniestro-hilo.ts'
 
 test('mensajes null ≠ []', () => {
   assert.equal(leerMensajes(null), null)
@@ -80,4 +80,42 @@ test('citas no encontradas', () => {
   assert.deepEqual(citasNoEncontradas({ citas: { noEncontradas: ['art 5'] } }), ['art 5'])
   assert.deepEqual(citasNoEncontradas({ citas: { noEncontradas: [] } }), [])
   assert.deepEqual(citasNoEncontradas(null), [])
+})
+
+const msg = (id: string, o: Record<string, unknown> = {}) =>
+  leerMensajes([{ id, autor: 'compania', tipo: 'comentario', texto: `t${id}`, ...o }])![0]
+
+test('leerMensaje lee sustituidoPor (null si falta)', () => {
+  assert.equal(msg('a').sustituidoPor, null)
+  assert.equal(msg('a', { sustituidoPor: 'b' }).sustituidoPor, 'b')
+})
+test('mensajesVisibles: por defecto solo vigentes con «editado»; con el conmutador, las sustituidas atenuables', () => {
+  const l = [msg('a', { sustituidoPor: 'a2' }), msg('b'), msg('a2', { meta: { sustituyeA: 'a' } })]
+  const v = mensajesVisibles(l, false)
+  assert.deepEqual(v.map(x => [x.mensaje.id, x.editado, x.sustituido]), [['b', false, false], ['a2', true, false]])
+  const t = mensajesVisibles(l, true)
+  assert.deepEqual(t.map(x => [x.mensaje.id, x.editado, x.sustituido]), [['a', false, true], ['b', false, false], ['a2', true, false]])
+  assert.equal(cuentaSustituidos(l), 1)
+})
+test('mensajesVisibles: sin sustituidoPor del servidor, deduce las sustituidas de meta.sustituyeA', () => {
+  const l = [msg('a'), msg('a2', { meta: { sustituyeA: 'a' } })]
+  assert.deepEqual(mensajesVisibles(l, false).map(x => x.mensaje.id), ['a2'])
+})
+test('puedeEditar: nunca IA, ni sustituidos, ni ilegibles, ni combinaciones que la caja no escribe', () => {
+  assert.equal(puedeEditar(msg('a')), true)
+  assert.equal(puedeEditar(msg('a', { autor: 'ia', tipo: 'borrador' })), false)
+  assert.equal(puedeEditar(msg('a', { sustituidoPor: 'b' })), false)
+  assert.equal(puedeEditar(msg('a', { texto: undefined, textoIlegible: true })), false)
+  assert.equal(puedeEditar(msg('a', { autor: 'corredor', tipo: 'comentario' })), false)
+  assert.equal(puedeEditar(msg('a', { autor: 'corredor', tipo: 'enviado' })), true)
+})
+test('modoDeMensaje y autorDeModo son coherentes; cuerpoCaja manda sustituyeA solo si se edita', () => {
+  assert.equal(modoDeMensaje({ autor: 'compania', tipo: 'rehuse' }), 'rehuse')
+  assert.equal(autorDeModo('rehuse'), 'compania')
+  assert.equal(autorDeModo('compania'), 'compania')
+  assert.equal(autorDeModo('enviado'), 'corredor')
+  assert.equal(autorDeModo('interna'), 'interna')
+  assert.equal('sustituyeA' in cuerpoCaja('compania', 'x', null), false)
+  assert.equal(cuerpoCaja('rehuse', ' x ', null, false, 'abc').sustituyeA, 'abc')
+  assert.equal(cuerpoCaja('rehuse', ' x ', null, false, 'abc').tipo, 'rehuse')
 })

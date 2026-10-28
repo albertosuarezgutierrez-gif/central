@@ -14,6 +14,8 @@ import { decryptField, encryptField } from '@central/module-seguros-pii'
 import {
   diaMadrid,
   diasEsperandoCompania,
+  hiloVigente,
+  mapaSustituidoPor,
   plazosSiniestro,
   validarCierreSiniestro,
   validarMensajeSiniestro,
@@ -46,6 +48,8 @@ export type MensajeSiniestro = {
   /** ISO. */
   creadoAt: string
   meta: Record<string, unknown> | null
+  /** Id del mensaje que SUSTITUYE a este (edición = versión nueva; este se conserva para auditoría). `null` = es vigente. */
+  sustituidoPor: string | null
 }
 
 export type DocumentoBreve = { id: string; tipo: string; nombre: string | null }
@@ -91,10 +95,12 @@ export type HiloSiniestro = {
 export type FalloHilo =
   | { ok: false; estado: 'invalido'; motivo: string; status: 422 }
   | { ok: false; estado: 'no_encontrado'; motivo: string; status: 404 }
+  | { ok: false; estado: 'ya_editado'; motivo: string; status: 409 }
   | { ok: false; estado: 'sin_migracion'; motivo: string; status: 503 }
 
 const invalido = (motivo: string): FalloHilo => ({ ok: false, estado: 'invalido', motivo, status: 422 })
 const noEncontrado = (motivo: string): FalloHilo => ({ ok: false, estado: 'no_encontrado', motivo, status: 404 })
+const yaEditado = (): FalloHilo => ({ ok: false, estado: 'ya_editado', motivo: 'Este mensaje ya se editó: edita la última versión.', status: 409 })
 const sinMigracion = (): FalloHilo => ({ ok: false, estado: 'sin_migracion', motivo: `falta aplicar ${SQL_HILO}`, status: 503 })
 const esMigracionAusente = (e: unknown): boolean => esTablaAusente(e) || esColumnaAusente(e)
 
@@ -149,11 +155,18 @@ function mapMensaje(f: FilaMensaje): MensajeSiniestro {
     creadoPor: f.creadoPor,
     creadoAt: f.creadoAt.toISOString(),
     meta: esObjeto(f.meta) ? f.meta : null,
+    sustituidoPor: null,
   }
 }
 
-const paraPlazos = (m: MensajeSiniestro): MensajeParaPlazos =>
-  ({ autor: m.autor, tipo: m.tipo, creadoAt: m.creadoAt, dia: diaMadrid(new Date(m.creadoAt)), meta: m.meta })
+/** Plazos y espera leen la ÚLTIMA versión de cada mensaje, con la fecha del ORIGINAL (una errata no reinicia un plazo). */
+function paraPlazosVigentes(mensajes: MensajeSiniestro[]): MensajeParaPlazos[] {
+  return hiloVigente(mensajes).map((m) => ({
+    autor: m.autor, tipo: m.tipo, creadoAt: m.creadoAtOriginal, dia: diaMadrid(new Date(m.creadoAtOriginal)), meta: m.meta,
+  }))
+}
+
+const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function documentosDe(correduriaId: string, where: { polizaId: string } | { siniestroId: string }, contexto: string): Promise<DocumentoBreve[] | null> {
   try {
@@ -201,7 +214,9 @@ export async function leerHiloSiniestro(
       select: SELECT_MENSAJE,
       orderBy: [{ creadoAt: 'asc' }, { id: 'asc' }],
     })
-    mensajes = filas.map(mapMensaje)
+    const todos = filas.map(mapMensaje)
+    const sustituidoPor = mapaSustituidoPor(todos)
+    mensajes = todos.map((m) => ({ ...m, sustituidoPor: sustituidoPor.get(m.id) ?? null }))
   } catch (e) {
     if (esTablaAusente(e)) return sinMigracion()
     registrarErrorCartera('siniestro/hilo mensajes', e)
@@ -214,7 +229,7 @@ export async function leerHiloSiniestro(
   ])
 
   const resultado = cierre?.resultado != null && RESULTADOS.has(cierre.resultado) ? (cierre.resultado as ResultadoCierreSiniestro) : null
-  const lista = mensajes === null ? null : mensajes.map(paraPlazos)
+  const lista = mensajes === null ? null : paraPlazosVigentes(mensajes)
   const hilo: HiloSiniestro = {
     siniestro: {
       id: s.id,
@@ -280,6 +295,8 @@ export type EntradaAnadirMensaje = {
   meta?: Record<string, unknown> | null
   /** `operador` = llegó por el puerto (no admite autor `ia`); `servidor` = lo escribe el propio servidor (endpoint de IA). */
   canal: 'operador' | 'servidor'
+  /** Id del mensaje que esta entrada SUSTITUYE (edición = versión nueva; el anterior no se toca). Mismo siniestro, mismo autor, no `ia`, no ya sustituido. */
+  sustituyeA?: string | null
 }
 
 /**
@@ -295,9 +312,16 @@ export async function anadirMensajeSiniestro(
   const creadoPor = e.creadoPor.trim().slice(0, 200)
   if (creadoPor === '') return invalido('falta quién escribe el mensaje')
   if (e.meta !== undefined && e.meta !== null && !esObjeto(e.meta)) return invalido('meta tiene que ser un objeto')
+  const sustituyeA = typeof e.sustituyeA === 'string' && e.sustituyeA.trim() !== '' ? e.sustituyeA.trim() : null
+  if (e.sustituyeA !== undefined && e.sustituyeA !== null && sustituyeA === null) return invalido('sustituyeA tiene que ser un id de mensaje')
+  if (sustituyeA !== null && !RE_UUID.test(sustituyeA)) return invalido('sustituyeA no es un id de mensaje válido')
   const meta: Record<string, unknown> | null =
-    v.mensaje.reclamacionSac || e.meta
-      ? { ...(e.meta ?? {}), ...(v.mensaje.reclamacionSac ? { reclamacionSac: true } : {}) }
+    v.mensaje.reclamacionSac || e.meta || sustituyeA
+      ? {
+          ...(e.meta ?? {}),
+          ...(v.mensaje.reclamacionSac ? { reclamacionSac: true } : {}),
+          ...(sustituyeA ? { sustituyeA } : {}),
+        }
       : null
   if (meta && Buffer.byteLength(JSON.stringify(meta), 'utf8') > META_MAX_BYTES) return invalido('meta demasiado grande')
 
@@ -326,6 +350,29 @@ export async function anadirMensajeSiniestro(
     if (!doc) return noEncontrado('El documento no existe en esta correduría o no es de este siniestro, su póliza o su cliente.')
   }
 
+  if (sustituyeA !== null) {
+    // Edición: el original tiene que ser de ESTE siniestro y ESTA correduría, no de la IA, del mismo autor y sin sustituir.
+    let original: { id: string; siniestroId: string; autor: string } | null
+    let yaSustituido: { id: string } | null
+    try {
+      original = await db.siniestroMensaje.findFirst({ where: { id: sustituyeA, correduriaId }, select: { id: true, siniestroId: true, autor: true } })
+      yaSustituido = original
+        ? await db.siniestroMensaje.findFirst({
+            where: { correduriaId, siniestroId: original.siniestroId, meta: { path: ['sustituyeA'], equals: sustituyeA } },
+            select: { id: true },
+          })
+        : null
+    } catch (err) {
+      if (esTablaAusente(err)) return sinMigracion()
+      throw err
+    }
+    if (!original) return noEncontrado('El mensaje a editar no existe en esta correduría.')
+    if (original.siniestroId !== s.id) return invalido('El mensaje a editar es de otro siniestro.')
+    if (original.autor === 'ia') return invalido('Los mensajes de la IA no se editan: se pide otro análisis o borrador.')
+    if (original.autor !== v.mensaje.autor) return invalido('Al editar no se puede cambiar el autor del mensaje.')
+    if (yaSustituido) return yaEditado()
+  }
+
   let fila: FilaMensaje
   try {
     fila = await db.siniestroMensaje.create({
@@ -349,8 +396,8 @@ export async function anadirMensajeSiniestro(
   await anotarHistorial(
     correduriaId,
     s.clienteId,
-    `Siniestro${s.referencia ? ` ${s.referencia}` : ''}: mensaje «${v.mensaje.tipo}» de ${v.mensaje.autor}` +
-      `${v.mensaje.reclamacionSac ? ' (reclamación al SAC)' : ''}${documentoId ? ' con documento' : ''} añadido por ${creadoPor}`,
+    `Siniestro${s.referencia ? ` ${s.referencia}` : ''}: mensaje ${sustituyeA ? 'editado' : 'añadido'} «${v.mensaje.tipo}» de ${v.mensaje.autor}` +
+      `${v.mensaje.reclamacionSac ? ' (reclamación al SAC)' : ''}${documentoId ? ' con documento' : ''} por ${creadoPor}`,
   )
   // Se devuelve con el texto validado (ya en claro), sin volver a descifrar.
   return { ok: true, mensaje: { ...mapMensaje(fila), texto: v.mensaje.texto, textoIlegible: false } }
@@ -420,22 +467,41 @@ export async function siniestrosEsperandoCompania(
 ): Promise<{ ok: true; lista: SiniestroEsperando[] } | FalloHilo> {
   let filas: { siniestro_id: string; cliente_id: string; numero_poliza: string | null; ultimo: Date }[]
   try {
+    // Solo la ÚLTIMA versión de cada mensaje (las editadas llevan `meta.sustituyeA`), con la fecha del ORIGINAL de la
+    // cadena: igual que `hiloVigente` en el hilo (una edición no reinicia la espera).
     filas = await prismaAsegura().$queryRaw`
+      with recursive cadena as (
+        select id, siniestro_id, autor, tipo, creado_at as original_at
+        from siniestro_mensajes
+        where correduria_id = ${correduriaId}::uuid and (meta->>'sustituyeA') is null
+        union all
+        select m.id, m.siniestro_id, m.autor, m.tipo, c.original_at
+        from siniestro_mensajes m
+        join cadena c on m.meta->>'sustituyeA' = c.id::text
+        where m.correduria_id = ${correduriaId}::uuid
+      ),
+      vigentes as (
+        select c.* from cadena c
+        where not exists (
+          select 1 from siniestro_mensajes x
+          where x.correduria_id = ${correduriaId}::uuid and x.meta->>'sustituyeA' = c.id::text
+        )
+      )
       select s.id as siniestro_id, s.cliente_id, p.numero_poliza, e.ultimo
       from (
-        select m.siniestro_id, max(m.creado_at) as ultimo
-        from siniestro_mensajes m
-        where m.correduria_id = ${correduriaId}::uuid and m.autor = 'corredor' and m.tipo = 'enviado'
-        group by m.siniestro_id
+        select v.siniestro_id, max(v.original_at) as ultimo
+        from vigentes v
+        where v.autor = 'corredor' and v.tipo = 'enviado'
+        group by v.siniestro_id
       ) e
       join siniestros s on s.id = e.siniestro_id and s.correduria_id = ${correduriaId}::uuid
       join polizas p on p.id = s.poliza_id and p.correduria_id = ${correduriaId}::uuid
       where s.fusionado_en_siniestro_id is null
         and s.resultado is null
         and not exists (
-          select 1 from siniestro_mensajes c
-          where c.correduria_id = ${correduriaId}::uuid and c.siniestro_id = e.siniestro_id
-            and c.autor = 'compania' and c.creado_at > e.ultimo
+          select 1 from vigentes c
+          where c.siniestro_id = e.siniestro_id
+            and c.autor = 'compania' and c.original_at > e.ultimo
         )`
   } catch (e) {
     if (esMigracionAusente(e)) return sinMigracion()
