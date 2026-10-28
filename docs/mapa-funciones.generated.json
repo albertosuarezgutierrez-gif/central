@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T19:24:44Z",
-  "sha": "061581db7139a22e75f93bb3348b70849f063d78",
+  "generadoEn": "2026-10-28T19:52:13Z",
+  "sha": "b63cd0b0aa88f96005be7a0021940eb66df9bd46",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -250980,7 +250980,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 75
+          "linea": 79
         },
         {
           "nombre": "descripcionesSinExcepcionProyecto",
@@ -250988,7 +250988,7 @@
           "exportada": true,
           "params": "descripciones: readonly T[], id: string | null | undefined, texto: string | null | undefined",
           "retorno": "T[]",
-          "linea": 87,
+          "linea": 91,
           "resumen": "Quita de `descripciones` el id de la excepción (una vez) si el control la cumple; si no, las devuelve tal cual. Pura."
         },
         {
@@ -250997,7 +250997,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[]",
           "retorno": "ClasificacionAccion",
-          "linea": 100,
+          "linea": 104,
           "resumen": "Clasifica TODO lo que describe a un control (texto, aria, id, name, onclick…). Devuelve el nombre de la PRIMERA acción de cada categoría que casa (o `null`). Quien decide aplica: emisión > prohibida >"
         },
         {
@@ -251006,7 +251006,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAccionPortal",
           "retorno": "string[]",
-          "linea": 116,
+          "linea": 120,
           "resumen": "Nombres de una categoría, para el prompt y la documentación."
         },
         {
@@ -251015,7 +251015,7 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 121,
+          "linea": 125,
           "resumen": "Las líneas del prompt del explorador, generadas de {@link ACCIONES_PORTAL} (lo vigila el test de asegura)."
         },
         {
@@ -251024,7 +251024,7 @@
           "exportada": false,
           "params": "d: string",
           "retorno": "string[]",
-          "linea": 167,
+          "linea": 171,
           "resumen": "Las dos formas en que se mira una descripción: plana, y con camelCase y `_` separados (`numCCC` → `num ccc`)."
         },
         {
@@ -251033,7 +251033,7 @@
           "exportada": false,
           "params": "d: string",
           "retorno": "CampoBancario | null",
-          "linea": 170,
+          "linea": 174,
           "resumen": "El {@link CampoBancario} con el que casa UNA descripción, o `null`."
         },
         {
@@ -251042,7 +251042,7 @@
           "exportada": true,
           "params": "camposDesc: readonly (string | null | undefined)[]",
           "retorno": "FronteraCampos",
-          "linea": 180,
+          "linea": 184,
           "resumen": "Descripciones (etiqueta, name, id, placeholder, aria…) de los CAMPOS de una pantalla → ¿hay frontera de emisión? `frontera` ⇔ hay un campo bancario; `campoBancario` = su nombre canónico y `etiqueta` ="
         },
         {
@@ -251051,7 +251051,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[]",
           "retorno": "string | null",
-          "linea": 198,
+          "linea": 202,
           "resumen": "La primera descripción de un control que es campo bancario (tal cual, recortada), o `null`. Pura. La usa el worker."
         },
         {
@@ -251060,7 +251060,7 @@
           "exportada": true,
           "params": "c: unknown",
           "retorno": "c is string",
-          "linea": 215,
+          "linea": 219,
           "resumen": "¿Se puede guardar/enseñar esta referencia? Forma de {@link RE_REFERENCIA_PRESUPUESTO}, al menos una cifra, y NADA con forma de identificador de persona o de cobro: NIF/NIE/CIF, móvil/fijo español de 9"
         },
         {
@@ -251069,7 +251069,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 232,
+          "linea": 236,
           "resumen": "Texto visible tras guardar → la REFERENCIA del presupuesto que da el portal, o `null` (no se vio: «no se sabe», nunca «no hay»). Solo con una etiqueta explícita delante (referencia / nº de presupuesto"
         },
         {
@@ -251078,7 +251078,7 @@
           "exportada": true,
           "params": "c: unknown",
           "retorno": "c is string",
-          "linea": 263,
+          "linea": 267,
           "resumen": "¿Se puede enseñar esta `referenciaPortal` de un bot? El identificador del bot (que {@link referenciaPresupuestoValida} tomaría por un IBAN: «GA» + 2 cifras + resto) o una referencia del portal válida."
         },
         {
@@ -251087,13 +251087,13 @@
           "exportada": true,
           "params": "avisos: unknown",
           "retorno": "string | null",
-          "linea": 268,
+          "linea": 272,
           "resumen": "El aviso de guardado en el portal de una oferta (`avisos[]` del worker), o `null`. Lectura defensiva. PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7c66e287cc3f"
+      "hash": "217c32277963"
     },
     {
       "ruta": "packages/module-tarificacion/src/aria-redaccion.ts",
