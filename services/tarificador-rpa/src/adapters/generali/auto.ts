@@ -156,6 +156,9 @@ import {
   bloqueadosDatosPersonasGenerali,
   motivoFaltaDatoPersonaGenerali,
   type ControlBloqueoGenerali,
+  vaciosProtegidosGenerali,
+  resumenCaracteristicasVehiculoGenerali,
+  type BloqueVehiculoGenerali,
   type ControlMediador,
   type DecisionMediador,
   type MarcoMediador,
@@ -279,6 +282,13 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.49 (28/10/2026, prueba real con 0.2.48, trabajo a12d2139): pasó «Compañía de procedencia» pero Genernet no calculó («El paso anterior no tiene
+ * los datos completos»): «obligatorios vacíos en «Datos de Valoración»: Tipo de vehículo». El volcado de 0.2.47 (fb33fe24) muestra que ese campo NO es un
+ * desplegable (el supuesto de 0.2.45 era erróneo) sino un texto de SOLO LECTURA (`reg1063A_vehiculo_caracVehiculo_wclasv`, `protegidoState`) que el portal
+ * rellena con el vehículo elegido, como «Clase de vehículo», potencia, plazas… El bot no lo teclea: ahora PARA antes de «Garantías y Resultados» con el
+ * inventario de «Características del vehículo» (sin valores libres: tipo de placa, «Indique Código», qué está vacío, qué botón «Vehículo» hay).
+ */
+/**
  * 0.2.48 (28/10/2026, prueba real con 0.2.47): pasó «Datos personas» y paró en «Compañía de procedencia»: la ficha dice «Allianz» y Genernet
  * ofrece «ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO» (y «ALIANZA ESPAÑOLA, S.A. DE SEGUROS, LA»). `opcionCompaniaProcedenciaGenerali` (pura):
  * exacta → opción exacta del alias de la compañía habitual → la ÚNICA opción cuya razón social empieza por las palabras COMPLETAS del nombre de
@@ -368,7 +378,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.48'
+export const VERSION_GENERALI_AUTO = '0.2.49'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -3174,6 +3184,50 @@ export async function conPdfPresupuestoGenerali(page: Page, ctx: ContextoPortal,
   return ofertasConPdfProyecto(ofertas, await descargarProyectoAuto(page, ctx, 'generali', 'presupuesto-generali-auto.pdf', false))
 }
 
+/**
+ * v0.2.49 · Bloques de «Características del vehículo» (`reg1063A_vehiculo_caracVehiculo_*`) SIN valores libres: de un texto solo «vacío»/«con valor»;
+ * de un desplegable o radio (catálogo), el texto de la opción puesta. Solo lee. Sin funciones con nombre (tsx).
+ */
+const JS_CARACTERISTICAS_VEHICULO = `(() => {
+  const T = (n) => (n ? (n.innerText || n.textContent || '') : '').replace(/\\s+/g, ' ').trim();
+  const out = [];
+  document.querySelectorAll('.simple[id^="reg1063A_vehiculo_caracVehiculo_"]').forEach((b) => {
+    const col = b.firstElementChild;
+    if (!col) return;
+    const c = col.cloneNode(true);
+    c.querySelectorAll('.required,input,select,textarea').forEach((x) => x.remove());
+    const rotulo = T(c).replace(/\\*\\s*$/, '').trim();
+    const ctrls = Array.from(b.querySelectorAll('input,select,textarea')).filter((e) => !['hidden', 'button', 'submit', 'image', 'reset'].includes(String(e.getAttribute('type') || '').toLowerCase()));
+    const botones = Array.from(b.querySelectorAll('input[type=button],button'));
+    const visible = b.getClientRects().length > 0;
+    if (ctrls.length === 0) {
+      if (botones.length) out.push({ rotulo: rotulo + ' (botón ' + (botones[0].id || '').replace(/^.*_/, '') + ')', obligatorio: !!b.querySelector('.required'), protegido: false, vacio: false, opcion: null, visible });
+      return;
+    }
+    const protegido = ctrls.every((e) => e.readOnly || e.disabled || /protegido/i.test(String(e.className || '')));
+    let opcion = null;
+    let vacio = true;
+    const sel = ctrls.find((e) => e.tagName === 'SELECT');
+    const opciones = ctrls.filter((e) => e.tagName === 'INPUT' && !/^(text|hidden|checkbox|number|date|search|tel|email)$/i.test(String(e.type || 'text')));
+    if (sel) {
+      const o = sel.options[sel.selectedIndex];
+      opcion = o ? T(o) : '';
+      vacio = !o || opcion === '' || /^seleccione/i.test(opcion);
+    } else if (opciones.length) {
+      const m = opciones.find((r) => r.matches(':checked'));
+      opcion = m ? T(m.nextElementSibling) : '';
+      vacio = !m;
+    } else vacio = ctrls.every((e) => String(e.value || '').trim() === '');
+    out.push({ rotulo, obligatorio: !!b.querySelector('.required'), protegido, vacio, opcion, visible });
+  });
+  return out;
+})()`
+
+/** v0.2.49 · Lee «Características del vehículo» (sin valores libres). Solo lee. */
+export async function leerCaracteristicasVehiculoGenerali(raiz: Raiz): Promise<BloqueVehiculoGenerali[]> {
+  return ((await raiz.evaluate(JS_CARACTERISTICAS_VEHICULO).catch(() => [])) as BloqueVehiculoGenerali[] | null) ?? []
+}
+
 export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number } = {}): Promise<ResultadoAdaptador> {
   const paso = <T>(n: Parameters<ContextoPortal['paso']>[0], fn: () => Promise<T>): Promise<T> => (typeof ctx.paso === 'function' ? ctx.paso(n, fn) : fn())
   const ant = conAntecedentesFavorables(form)
@@ -3207,6 +3261,13 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const bloquesValoracion = await leerEstadoBloquesGenerali(marco)
   const vaciosValoracion = [...new Set([...obligatoriosVaciosGenerali(pantalla.campos), ...(bloquesValoracion?.obligatoriosVacios ?? [])])].slice(0, 12)
   const avisosValoracion = bloquesValoracion?.avisos ?? []
+  // v0.2.49 (trabajo a12d2139): «Tipo de vehículo» es de SOLO LECTURA (lo pone el portal al elegir el vehículo) y quedó VACÍO: Genernet no calcula
+  // («El paso anterior no tiene los datos completos»). El bot no puede teclearlo: se PARA aquí, antes de «Garantías y Resultados», con el inventario.
+  const caracteristicas = await leerCaracteristicasVehiculoGenerali(marco)
+  const protegidosVacios = vaciosProtegidosGenerali(caracteristicas)
+  if (protegidosVacios.length > 0) {
+    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}`)
+  }
   if (!ctx.pulsarSubpestanaGenerali) throw new ErrorMapaIncompletoGenerali(`la puerta guardada de «${SUBPESTANA_PRECIO_GENERALI}» en el contexto del runner; ${datos}`)
   // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).
   const lAntes = leerPrecioGenerali(await textoPagina(page))

@@ -223,6 +223,50 @@ export function esLanzadorAplicacionNseMapfre(d: string | null | undefined): boo
 }
 
 /**
+ * RUTA DE APLICACIÓN TOLERABLE (28/10/2026, decisión EXPLÍCITA de Alberto; Mapfre NSE = «Nuevo Sistema de Emisión»: todas sus pantallas,
+ * también las de TARIFICAR, viven bajo `/EVT21_NSE_FWEB/app/emision/…`). Solo el PREFIJO EXACTO de esa ruta, en ese ORIGEN exacto,
+ * deja de casar con el patrón de emisión; el resto de la URL (segmentos que siguen, query, fragmento) se sigue mirando. Si lo que sigue
+ * al prefijo nombra una acción de emisión real (emitir, contratar, confirmar, firma, pago, formalizar, grabar…), NO se neutraliza nada.
+ * La declara cada entrada de exploración (`rutasAppTolerables`); sin regla, todo igual.
+ */
+export type RutaTolerable = { origen: string; prefijo: string }
+const RE_ACCION_REAL_TRAS_PREFIJO = /emit|contrat|confirm|firm|pago|pagar|formaliz|grab|suplement|anul|baja|domicili|tarjeta|iban/i
+/** Sustituto del prefijo neutralizado (no casa con ningún patrón del guard). */
+const PREFIJO_NEUTRO = '/__ruta_app__/'
+export function neutralizarRutaTolerable(texto: string | null | undefined, reglas: readonly RutaTolerable[]): string | null | undefined {
+  if (typeof texto !== 'string' || texto === '' || reglas.length === 0) return texto
+  const t = texto.trim()
+  for (const r of reglas) {
+    let origen = ''
+    let resto: string | null = null
+    if (/^https?:\/\//i.test(t)) {
+      let u: URL
+      try {
+        u = new URL(t)
+      } catch {
+        continue
+      }
+      if (u.username || u.password) continue
+      origen = u.origin
+      if (origen !== r.origen) continue
+      const ruta = plano(decodificarUrlTolerante(u.pathname))
+      if (!ruta.toLowerCase().startsWith(r.prefijo.toLowerCase())) continue
+      resto = ruta.slice(r.prefijo.length) + plano(decodificarUrlTolerante(u.search + u.hash))
+    } else if (t.startsWith('/') && !t.startsWith('//')) {
+      // Ruta sola (el `hrefRuta` del inventario, que solo lleva la ruta si el enlace es del MISMO origen que la ventana).
+      const ruta = plano(decodificarUrlTolerante(t))
+      if (!ruta.toLowerCase().startsWith(r.prefijo.toLowerCase())) continue
+      resto = ruta.slice(r.prefijo.length)
+    } else {
+      continue
+    }
+    if (resto === null || RE_ACCION_REAL_TRAS_PREFIJO.test(resto)) return texto
+    return `${origen}${PREFIJO_NEUTRO}${resto}`
+  }
+  return texto
+}
+
+/**
  * Textos de BOTÓN prohibidos solo como texto ENTERO (Alberto, 14/10/2026): «Pago», «Ir al pago», «Confirmar pago»,
  * «Firma», «Firmar», «Domiciliación (bancaria)». Anclado y FUERA de `PATRON_EMISION` (que también mira URLs y cuerpos):
  * «Forma de pago», «Fraccionamiento de pago» o «Confirmar» siguen pasando. Se ignoran signos/flechas en los extremos.

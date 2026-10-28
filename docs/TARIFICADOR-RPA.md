@@ -43,6 +43,17 @@ Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de accio
   `anthropic/claude-sonnet-4.5`). Guardián: `services/tarificador-rpa/test/regla-respaldo-ia.test.ts` (todo adaptador registrado
   usa la capa o está en `PENDIENTES_RESPALDO_IA` con motivo; hoy: Allianz Moto).
 
+## Objetivo 3×3 (Alberto, 28/10/2026): auto, hogar y patinete en Allianz, Mapfre y Generali
+Meta: los tres ramos tarifican de punta a punta (precio → proyecto → PDF → coberturas → comparativa → borrador) en las tres
+compañías; Alberto emite a mano. Orden: cerrar primero lo que está a 1-2 arreglos de dar precio, luego abrir hogar.
+| Ramo | Allianz | Mapfre | Generali |
+|---|---|---|---|
+| Auto | precio OK; verificar proyecto/PDF en real | precio + proyecto + PDF OK (1 cliente); falta 2.º cliente y comparativa/borrador | llega a «Garantías y Resultados»; el portal pide un dato incompleto (0.2.49) |
+| Hogar | precio OK (27/10, 3 precios); verificar proyecto/PDF | sin alta en `companias_integracion` ni exploración: alta + explorar | sin bot: explorar Genernet hogar para mapear |
+| Patinete | explorador en «Figuras Intervinientes» (radios + Aceptar resueltos) | explorador entra en NSE; excepción estrecha de ruta `/app/emision/` (0.3.5, decisión de Alberto) | sin bot: explorar si Genernet lo ofrece |
+Común a los tres ramos: formulario único /datos por ramo = unión de lo que pide cada compañía, y filtro previo que no manda al bot
+un riesgo al que le falte algo para alguna compañía (patinete: marca → modelo → versión, como el auto).
+
 ## Plan de robustez (fases)
 - **F1 (este PR)**: fijo → aprendido → IA en la capa común; Mapfre Auto (entrada + campos) y Allianz Comunidades (campos +
   «Calcular») la usan. **IA escalonada**: 1º modelo por defecto (barato), 2º el potente solo si el 1º no señala nada; tope de € por
@@ -144,6 +155,7 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 «🧪 en pruebas» y no gastan cupo. Hoy `false`: Generali auto y Allianz Turismos (se paran antes del precio), hogares y Occident. Al ver
 el primer precio real de un bot, se pone `true` ahí (con su cepo en `obligatorios.test.ts`).
 
+> Generali auto 0.2.49 (28/10/2026): «datos incompletos» en Garantías (trabajo a12d2139) = «Tipo de vehículo» VACÍO, y es un texto de SOLO LECTURA (`caracVehiculo_wclasv`, lo pone el portal con el vehículo elegido; no es un desplegable como suponía 0.2.45). El bot para antes de Garantías con el inventario de «Características del vehículo». PENDIENTE: qué hace que el portal lo rellene (¿otro selector «Vehículo» `lnkVeh2`/«Indique Código»?).
 > Generali auto 0.2.48 (28/10/2026): «Compañía de procedencia» ficha → opción por `opcionCompaniaProcedenciaGenerali` (pura): exacta → opción exacta del alias (10 compañías habituales, `ALIAS_COMPANIAS_GENERALI`) → la ÚNICA cuya razón social empieza por las palabras COMPLETAS de la ficha («Allianz» nunca «ALIANZA ESPAÑOLA»); 0 o varias → para con candidatas.
 > Generali auto 0.2.47 (28/10/2026): «Datos personas» paraba con nombre/apellidos «deshabilitado» (trabajo ec49068b): el `onchange` del NIF (`refreshSelPersonas.do`) bloquea TODO el formulario (`controlbloqueo="1"`) hasta que vuelve el refresco. Ahora espera hasta 20 s a que se libere y rellena desde el riesgo; si no, para nombrando los controles bloqueados; si el riesgo no trae nombre/apellido, lo dice (no se inventa).
 > Generali auto 0.2.46 (28/10/2026): el «faltan la pantalla «Selector de vehículos»» de 0.2.45 (trabajo bf5707a8) era Genernet LENTO: el volcado tenía el marco `selVehiculo` cargando (solo `<head>`) a los 20 s. Si ese marco está a medio cargar se esperan hasta 45 s más; si no aparece, el atasco trae el inventario de marcos (sin jsessionid). La selección marca → modelo → versión no cambia.

@@ -1858,3 +1858,25 @@ export function opcionCompaniaProcedenciaGenerali(opciones: readonly string[], c
   if (ix.length === 1) return { indice: ix[0]!, via: 'razon_social' }
   return { error: ix.length === 0 ? 'ninguna' : 'varias', candidatas: ix.map((i) => opciones[i]!) }
 }
+
+// ───────────────────────── «Datos de Valoración»: obligatorios de SOLO LECTURA vacíos (v0.2.49) ─────────────────────────
+
+/**
+ * Bloque de «Características del vehículo» leído SIN valores libres: rótulo, si es obligatorio, si es de solo lectura (`readonly`/`protegidoState`:
+ * lo pone el portal al elegir el vehículo), si está vacío y, SOLO para desplegables y radios (catálogo del portal), el texto de la opción puesta.
+ */
+export type BloqueVehiculoGenerali = { rotulo: string; obligatorio: boolean; protegido: boolean; vacio: boolean; opcion: string | null; visible: boolean }
+
+/** Rótulos de los obligatorios PROTEGIDOS y VACÍOS (el bot no puede teclearlos: los rellena el portal con el vehículo elegido). PURA. */
+export function vaciosProtegidosGenerali(bloques: readonly BloqueVehiculoGenerali[]): string[] {
+  return [...new Set(bloques.filter((b) => b.visible && b.obligatorio && b.protegido && b.vacio).map((b) => b.rotulo))]
+}
+
+/** Inventario compacto de «Características del vehículo» (sin valores libres: «con valor»/«VACÍO»; opción solo de catálogos). PURA. */
+export function resumenCaracteristicasVehiculoGenerali(bloques: readonly BloqueVehiculoGenerali[], max = 700): string {
+  const s = bloques
+    .filter((b) => b.visible && b.rotulo)
+    .map((b) => `${b.rotulo}${b.obligatorio ? '*' : ''}: ${b.opcion !== null ? `«${sanearFragmentoGenerali(b.opcion).slice(0, 40)}»` : b.vacio ? 'VACÍO' : 'con valor'}${b.protegido ? ' (solo lectura)' : ''}`)
+    .join(' · ')
+  return (s || '(sin bloques legibles)').slice(0, max)
+}

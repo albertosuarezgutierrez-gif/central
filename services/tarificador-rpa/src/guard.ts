@@ -54,6 +54,8 @@ import {
   onclickNormalizado,
   rutaDeMarco,
   esLanzadorAplicacionNseMapfre,
+  neutralizarRutaTolerable,
+  type RutaTolerable,
   TEXTO_ACCESO_NSE_MAPFRE,
   esMatriculaEspanola,
   normalizarMatricula,
@@ -359,6 +361,9 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   // `entrarTurismosGenerali`: mientras dura, una navegación GET a www.generali.es cuyo ÚNICO motivo de bloqueo sean los
   // sustantivos «emisión»/«contratación» del menú pasa (`urlTurismosGeneraliPermitida`). Nada más se relaja.
   let turismosGenerali = 0
+  // Rutas de APLICACIÓN tolerables de la entrada (Mapfre NSE `/EVT21_NSE_FWEB/app/emision/`, decisión de Alberto 28/10/2026): solo
+  // las fija `tolerarRutasApp`; su prefijo no cuenta como emisión en la URL (query y cuerpo se miran igual).
+  let tolerables: readonly RutaTolerable[] = []
   // La ventana se cierra en cuanto el MARCO PRINCIPAL navega a otro origen (el SSO redirige al portal tras el login: el
   // portal ya no está en la fase de login). `request` también salta en cada salto de una redirección (route no lo ve).
   context.on('request', (req) => {
@@ -390,7 +395,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // «Generar Proyecto» de Mapfre (22/10/2026): su ventana abre SOLO su patrón (`permitirGenerarProyectoMapfre`), no Archivar/store.
       const enProyectoMapfre = enGuardado && gv.proyectoMapfre
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado && !enProyectoMapfre, permitirGenerarProyectoMapfre: enProyectoMapfre }
-      const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
+      const porUrl = pareceEmision(neutralizarRutaTolerable(url, tolerables) ?? url, op) || parametrosParecenEmision(url, op)
       const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
       if (porUrl && !porCuerpo && !noGet && Date.now() < turismosGenerali && av === null && gv === null && Date.now() >= ventanaHasta && urlTurismosGeneraliPermitida(url)) {
         // Navegación del ÚNICO clic de «TURISMOS (RAMO UV)» (ventana abierta por entrarTurismosGenerali): GET a Generali con
@@ -466,6 +471,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       if (violacion) throw violacion
     },
   }
+  FIJAR_TOLERABLES.set(g, (r) => { tolerables = r })
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints, ajax = []) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints, ajax } })
   ABRIR_GUARDADO.set(g, (origen, proyectoMapfre = false) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen, proyectoMapfre } })
@@ -477,6 +483,29 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     rechazo: () => rechazoLogin,
   })
   return g
+}
+
+const FIJAR_TOLERABLES = new WeakMap<GuardEmision, (r: readonly RutaTolerable[]) => void>()
+const RUTAS_TOLERABLES = new WeakMap<GuardEmision, readonly RutaTolerable[]>()
+
+/**
+ * RUTAS DE APLICACIÓN TOLERABLES del trabajo (las de su entrada de exploración, `rutasAppTolerablesDe`). Solo origen https sin ruta
+ * y prefijo de ruta absoluto acabado en «/». Desde ese momento, en ESTE guard, el prefijo exacto deja de contar como emisión en la
+ * URL de red y en los href de los botones (`neutralizarRutaTolerable`); textos, onclick, query y cuerpos se miran como siempre.
+ */
+export function tolerarRutasApp(guard: GuardEmision, reglas: readonly RutaTolerable[]): void {
+  const fijar = FIJAR_TOLERABLES.get(guard)
+  if (!fijar) throw new EmisionBloqueadaError('fase', 'guard sin rutas tolerables')
+  for (const r of reglas) {
+    if (!/^https:\/\/[a-z0-9.-]+$/.test(r.origen) || !/^\/[\w./-]+\/$/.test(r.prefijo)) throw new EmisionBloqueadaError('fase', 'ruta tolerable no válida')
+  }
+  const copia = Object.freeze(reglas.map((r) => Object.freeze({ origen: r.origen, prefijo: r.prefijo })))
+  RUTAS_TOLERABLES.set(guard, copia)
+  fijar(copia)
+}
+const conRutasTolerables = (guard: GuardEmision, desc: readonly (string | null)[]): (string | null)[] => {
+  const reglas = RUTAS_TOLERABLES.get(guard) ?? []
+  return reglas.length === 0 ? [...desc] : desc.map((d) => neutralizarRutaTolerable(d, reglas) ?? null)
 }
 
 /** Tope de la ventana de red del LOGIN ASISTIDO: un envío del formulario del SSO y su carga. */
@@ -653,7 +682,7 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   await exigirSinCuentaBancaria(boton.page())
   // La MISMA descripción que el resto de puertas: control + ng-click + manejadores de sus ancestros cercanos.
   const desc = await descripcion(boton)
-  comprobarBoton(desc)
+  comprobarBoton(conRutasTolerables(guard, desc))
   // Generali (26/10/2026): un «Confirmar» de www.generali.es NUNCA por la vía genérica; solo por sus puertas acotadas
   // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`).
   if (confirmarDeGenerali(desc, await boton.evaluate(() => location.href).catch(() => ''))) throw new EmisionBloqueadaError('boton', 'Confirmar (Generali: solo por su puerta del guard)')
@@ -1107,7 +1136,7 @@ export async function pulsarMenuOfertaNseMapfre(boton: Locator, guard: GuardEmis
   if (textoEntrada(desc[0]) !== exacto) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('entrada:menu_oferta_nse')) throw new EmisionBloqueadaError('fase', 'el menú «Oferta / Contratación» ya se usó en este trabajo')
-  comprobarBoton(desc.filter((d) => textoEntrada(d) !== exacto))
+  comprobarBoton(conRutasTolerables(guard, desc.filter((d) => textoEntrada(d) !== exacto)))
   usados.add('entrada:menu_oferta_nse')
   AVANCES_USADOS.set(guard, usados)
   await boton.click()

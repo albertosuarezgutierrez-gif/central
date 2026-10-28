@@ -10,6 +10,9 @@ import {
   comprobarBoton,
   esAvanceAutorizado,
   esLanzadorAplicacionNseMapfre,
+  neutralizarRutaTolerable,
+  rutasAppTolerablesDe,
+  ENTRADAS_EXPLORACION,
   pareceEmision,
   rutaDeMarco,
   selectorDeElemento,
@@ -202,5 +205,47 @@ describe('0.3.4b · enlaces avanzables SOLO donde la entrada lo declara y dentro
   })
   it('la ruta del href entra en la capa pura: /contratar.do → boton_de_emision', () => {
     expect(JSON.stringify(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/contratar.do', texto: 'Seguir' }])))).toMatch(/boton_de_emision/)
+  })
+})
+
+describe('0.3.5 · ruta de aplicación NSE tolerada SOLO en Mapfre patinete (decisión de Alberto)', () => {
+  const R = rutasAppTolerablesDe('mapfre:automoviles:patinetes')
+  const CARGA = 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf'
+  const bloquea = (u: string, reglas = R) => pareceEmision(neutralizarRutaTolerable(u, reglas))
+  it('solo la entrada de patinete la declara (Mapfre auto, Allianz… ninguna)', () => {
+    const con = Object.entries(ENTRADAS_EXPLORACION).filter(([, e]) => (e.rutasAppTolerables ?? []).length > 0).map(([k]) => k)
+    expect(con).toEqual(['mapfre:automoviles:patinetes'])
+    expect(R).toEqual([{ origen: 'https://wmediadores.mapfre.com', prefijo: '/EVT21_NSE_FWEB/app/emision/' }])
+  })
+  it('cargaOperacion.jsf pasa; sin la regla (otra entrada) sigue bloqueada', () => {
+    expect(pareceEmision(CARGA)).toBe(true)
+    expect(bloquea(CARGA)).toBe(false)
+    expect(bloquea('/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf')).toBe(false)
+    expect(bloquea(CARGA, rutasAppTolerablesDe('mapfre:nueva_produccion:auto'))).toBe(true)
+    expect(bloquea(CARGA, rutasAppTolerablesDe('allianz:autos:movilidad_personal'))).toBe(true)
+  })
+  it('acciones reales bajo la ruta, query de emisión, otro origen u otra ruta: siguen bloqueados', () => {
+    for (const u of [
+      'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/emitir.jsf',
+      'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/contratacion/alta.jsf',
+      'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/confirmar.jsf',
+      'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/firma/x.jsf',
+      'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/pago.jsf',
+      `${CARGA}?accion=emitir`,
+      'https://otro.example.test/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf',
+      'https://wmediadores.mapfre.com/OTRA/app/emision/cargaOperacion.jsf',
+      '/EVT21_NSE_FWEB/app/emision/emitir.jsf',
+    ]) expect(bloquea(u), u).toBe(true)
+  })
+  it('bloqueoAvance: el enlace a cargaOperacion pasa en patinete; «Emitir póliza» bajo NSE y la misma ruta en Mapfre auto, no', () => {
+    const NSE = 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/inicio.jsf'
+    const i = sanearInventarioDom({ marcos: [{ url: NSE, nombre: null, titulos: [], elementos: [
+      { tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf', texto: 'Nueva oferta' },
+      { tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf', texto: 'Emitir póliza' },
+    ] }] }, undefined, { refs: true })!
+    const [a, b] = i.marcos[0].elementos
+    expect(bloqueoAvance('mapfre:automoviles:patinetes', a, i.marcos[0])).toBeNull()
+    expect(bloqueoAvance('mapfre:automoviles:patinetes', b, i.marcos[0])).toBe('boton_de_emision')
+    expect(bloqueoAvance('mapfre:nueva_produccion:auto', a, i.marcos[0])).toBe('boton_de_emision')
   })
 })

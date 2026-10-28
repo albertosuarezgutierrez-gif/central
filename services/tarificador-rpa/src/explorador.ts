@@ -29,6 +29,7 @@ import {
   CLAVES_AUTOCOMPLETADO,
   EmisionBloqueadaError,
   ENTRADAS_EXPLORACION,
+  rutasAppTolerablesDe,
   extraerReferenciaPresupuesto,
   detectarBucle,
   descripcionesElemento,
@@ -71,7 +72,7 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, cerrarDialogoTerminoEpac, controlOcultoDeEtiqueta, instalarGuardEmision, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
+import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, cerrarDialogoTerminoEpac, controlOcultoDeEtiqueta, instalarGuardEmision, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, tolerarRutasApp, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { modoVistaExplorador, vistaDelPaso } from './aprendizaje/vista-aria.ts'
@@ -87,8 +88,8 @@ import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
-/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.4 (28/10/2026): diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.4'
+/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.5 (28/10/2026): ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
+export const EXPLORADOR_VERSION = '0.3.5'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -1024,6 +1025,9 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
     // Descargas ACEPTADAS (14/10/2026): el PDF del presupuesto guardado llega como descarga; solo lo lee `esperarPdf` en memoria.
     const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: true })
     const guard = await instalarGuardEmision(context)
+    // Rutas de aplicación tolerables de la entrada (Mapfre NSE `/app/emision/`, decisión de Alberto 28/10/2026); las demás, ninguna.
+    const tolerables = rutasAppTolerablesDe(exp.entrada)
+    if (tolerables.length > 0) tolerarRutasApp(guard, tolerables)
     const page = await context.newPage()
     page.setDefaultTimeout(TOPE_PASO_MS)
     page.setDefaultNavigationTimeout(TOPE_PASO_MS)
