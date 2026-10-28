@@ -12,7 +12,7 @@ import { resumenCaracteristicasVehiculoGenerali, vaciosProtegidosGenerali, type 
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.49 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.50'))
+test('v0.2.49 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.51'))
 
 const b = (rotulo: string, o: Partial<BloqueVehiculoGenerali> = {}): BloqueVehiculoGenerali => ({ rotulo, obligatorio: true, protegido: true, vacio: false, opcion: null, visible: true, ...o })
 
@@ -96,7 +96,7 @@ test('v0.2.49 · caso a12d2139: «Tipo de vehículo» vacío → PARA antes de �
   await conPagina(CARAC(''), async (page) => {
     let pulsada = 0
     const c = { pausaAccion: async () => {}, pulsarSubpestanaGenerali: async () => { pulsada++ } } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 300 }), (e: unknown) => {
       assert.ok(e instanceof ErrorMapaIncompletoGenerali, String(e))
       const m = (e as Error).message
       assert.match(m, /obligatorios de SOLO LECTURA vacíos tras elegir el vehículo .*: Tipo de vehículo\. No se pasa a «Garantías y Resultados»/)
@@ -110,7 +110,7 @@ test('v0.2.49 · caso a12d2139: «Tipo de vehículo» vacío → PARA antes de �
 test('v0.2.49 · con «Tipo de vehículo» puesto por el portal se sigue hasta el precio', async () => {
   await conPagina(CARAC('TURISMO'), async (page) => {
     const c = { pausaAccion: async () => {}, pulsarSubpestanaGenerali: async () => { await page.setContent(`<html><body>${GARANTIAS}</body></html>`) } } as unknown as ContextoPortal
-    const r = await hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300 })
+    const r = await hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 300 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
   })
 })

@@ -59,6 +59,11 @@ export type ElementoInventario = {
   conValor?: boolean
   /** ¿El portal marca el control como INVÁLIDO (aria-invalid, `ng-invalid`, error NDBX)? Solo el booleano (14/10/2026). */
   invalido?: true
+  /**
+   * Texto del MENSAJE de error que el portal pinta junto a un control INVÁLIDO (28/10/2026, ePAC: el NIF del tomador volvía inválido
+   * sin saber por qué). Saneado como cualquier texto (con forma de dato personal → fuera). Solo con `invalido`.
+   */
+  mensajeError?: string
   /** ¿El control AUTOCOMPLETA (aria-autocomplete list/both/inline o `list` de datalist)? Solo el booleano (14/10/2026): su
    *  `rellenar` puede repintar la sección, y el worker lo deja para el final del lote (`ordenarLote`). */
   autocompletar?: true
@@ -84,6 +89,11 @@ export type MarcoInventario = {
   titulosPantalla?: string[]
   /** Importes visibles (pantalla de resultado). Solo si el crudo los trae. */
   importes?: ImporteInventario[]
+  /**
+   * AVISOS de error del portal en el marco (28/10/2026): filas de error del «INFORME DE AVISO E INCIDENCIAS» de ePAC y mensajes de error
+   * de PrimeFaces/Bootstrap. Saneados (sin datos personales), ≤5. Sirven para saber POR QUÉ un campo vuelve inválido.
+   */
+  avisosPortal?: string[]
 }
 
 export type OpcionesSaneado = {
@@ -244,6 +254,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       if (eo.deshabilitado === true) el.deshabilitado = true
       if (typeof eo.conValor === 'boolean' && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.conValor = eo.conValor
       if (eo.invalido === true && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.invalido = true
+      if (el.invalido === true) pon('mensajeError', texto(eo.mensajeError, 160))
       if (eo.autocompletar === true && (tag === 'input' || tag === 'textarea')) el.autocompletar = true
       // Elemento que MUESTRA el usuario/mediador (cabecera: id/name/aria «usuario», «mediador», «perfil»…): su texto fuera.
       if (el.texto !== undefined && tag !== 'input' && tag !== 'select' && tag !== 'textarea'
@@ -271,6 +282,15 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       nombre: texto(mo.nombre, MAX_ATRIBUTO) ?? null,
       elementos,
       ...(mo.ilegible === true ? { ilegible: true as const } : {}),
+    }
+    if (Array.isArray(mo.avisosPortal)) {
+      const avisos: string[] = []
+      for (const a of mo.avisosPortal.slice(0, 20)) {
+        const t = texto(a, 160)
+        if (t !== undefined && !avisos.includes(t)) avisos.push(t)
+        if (avisos.length >= 5) break
+      }
+      if (avisos.length > 0) marco.avisosPortal = avisos
     }
     if (Array.isArray(mo.titulos)) {
       // Crudo del worker: texto suelto o `{ texto, tag }`. Segunda pasada (asegura): `titulos` en texto + `titulosPantalla`.
@@ -378,7 +398,9 @@ export function contieneValorSensible(texto: string, valores: readonly string[])
   return false
 }
 
-const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick', 'dialogo'] as const
+// 0.3.7 (revisión de seguridad): también `mensajeError` (texto del portal junto a un campo inválido) y `hrefRuta` (ruta de un enlace).
+// TODA clave de texto nueva de `ElementoInventario` tiene que estar aquí (lo vigila un test que recorre las claves del saneado).
+export const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick', 'hrefRuta', 'mensajeError', 'dialogo'] as const
 
 /**
  * Copia del inventario SIN ningún texto que contenga uno de `valores` (normalizado; se ignoran los < 3 caracteres). Cuenta
@@ -408,6 +430,11 @@ export function redactarValoresInventario(inv: InventarioDom, valores: readonly 
     const out: MarcoInventario = { ...m, url: limpio(m.url) ? m.url : '', nombre: limpio(m.nombre) ? m.nombre : null, elementos }
     if (m.titulos) out.titulos = m.titulos.filter(limpio)
     if (m.titulosPantalla) out.titulosPantalla = m.titulosPantalla.filter(limpio)
+    if (m.avisosPortal) {
+      const a = m.avisosPortal.filter(limpio)
+      if (a.length > 0) out.avisosPortal = a
+      else delete out.avisosPortal
+    }
     if (m.importes) out.importes = m.importes.map((i) => (i.etiqueta === undefined || limpio(i.etiqueta) ? i : { ref: i.ref, eur: i.eur }))
     return out
   })

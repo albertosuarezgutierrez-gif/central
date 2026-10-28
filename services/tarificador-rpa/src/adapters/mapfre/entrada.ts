@@ -343,13 +343,32 @@ async function pasarPorEnlaceIntermedio(pagina: Page, ctx: CtxEntradaMapfre, tex
  * Menú de la aplicación NSE (Patinetes, real 28/10/2026): EXACTAMENTE una entrada visible con ese texto en algún marco → se pulsa
  * por su puerta exacta del guard (`pulsarMenuNse`). Ninguna → se sigue (la IA verá la pantalla). Varias → no se adivina.
  */
-async function pasarPorMenuNse(pagina: Page, pulsarMenu: (b: Locator) => Promise<void>, ctx: CtxEntradaMapfre, texto: string, menuMs: number): Promise<void> {
+async function pasarPorMenuNse(pagina: Page, pulsarMenu: (b: Locator) => Promise<void>, ctx: CtxEntradaMapfre, texto: string, menuMs: number): Promise<Page> {
   const candidatos = await enTodosLosMarcos(pagina, (f) => pulsablesExactos(f, texto), Math.min(ESPERA_TARJETA_MS * 2, menuMs))
-  if (candidatos.length === 0) return
+  if (candidatos.length === 0) return pagina
   if (candidatos.length > 1) throw new ErrorMapaIncompleto(`la entrada de menú «${texto}» de la aplicación NSE (${candidatos.length} coincidencias exactas visibles, ambiguo)`, true)
+  // Diagnóstico (real 28/10/2026 16:06, 0.3.6): tras el clic la ventana volvió a la PORTADA de NSE («Acceso a NSE») y la IA solo veía
+  // ese enlace. Se anota cómo abre el enlace (target y ruta, sin query) para saberlo con la evidencia del siguiente intento.
+  const como = await candidatos[0]!.evaluate((a) => {
+    const href = a.getAttribute('href') || ''
+    let ruta = ''
+    try { ruta = /^javascript:/i.test(href) ? 'javascript' : new URL(href, document.baseURI).pathname } catch { ruta = '?' }
+    return { target: a.getAttribute('target') || '-', ruta, onclick: a.hasAttribute('onclick') ? 'si' : 'no' }
+  }).catch(() => ({ target: '?', ruta: '?', onclick: '?' }))
+  // Si el enlace abre la oferta en OTRA ventana (target a un marco que no existe, o `_blank`), se sigue en ella (el guard es por contexto).
+  const antes = new Set(pagina.context().pages())
+  const nueva = pagina.context().waitForEvent('page', { timeout: Math.min(menuMs, 5_000) })
+  nueva.catch(() => undefined)
   await pulsarMenu(candidatos[0]!)
   await ctx.pausa()
-  await pagina.waitForLoadState('networkidle', { timeout: Math.min(menuMs, 15_000) }).catch(() => undefined)
+  const otra = (await nueva.then((p) => p, () => null)) ?? pagina.context().pages().filter((p) => !antes.has(p) && !p.isClosed()).pop() ?? null
+  const destino = otra ?? pagina
+  await destino.waitForLoadState('networkidle', { timeout: Math.min(menuMs, 15_000) }).catch(() => undefined)
+  const portada = await enTodosLosMarcos(destino, (f) => pulsablesExactos(f, 'Acceso a NSE'), 1_000)
+  if (portada.length > 0) {
+    throw new ErrorMapaIncompleto(`la oferta de NSE: tras «${texto}» la aplicación volvió a su portada («Acceso a NSE»; enlace target=${como.target}, ruta ${como.ruta}, onclick ${como.onclick}, ${otra ? 'en ventana nueva' : 'en la misma ventana'})`, true)
+  }
+  return destino
 }
 
 /** Login ANTIGUO que Mapfre antepone a la URL directa (`/loginexternopi/docs/html/loginFormPage.html?page=…`). */
@@ -549,7 +568,7 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
     }
   }
   if (ruta.pasoIntermedio) destino = await pasarPorEnlaceIntermedio(destino, ctx, ruta.pasoIntermedio, menuMs, esperas.formularioMs ?? ESPERA_FORMULARIO_MS)
-  if (ruta.menuNse && ctx.pulsarMenuNse) await pasarPorMenuNse(destino, ctx.pulsarMenuNse, ctx, ruta.menuNse, menuMs)
+  if (ruta.menuNse && ctx.pulsarMenuNse) destino = await pasarPorMenuNse(destino, ctx.pulsarMenuNse, ctx, ruta.menuNse, menuMs)
   // La entrada llegó al formulario: lo que resolvió el respaldo (aprendido o IA) queda APRENDIDO. Mejor esfuerzo.
   for (const c of confirmaciones) await c().catch(() => undefined)
   return destino

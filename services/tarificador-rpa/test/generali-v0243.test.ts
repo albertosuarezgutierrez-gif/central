@@ -10,7 +10,7 @@ import { ErrorMapaIncompletoGenerali, VERSION_GENERALI_AUTO, cortarEsperaPorBloq
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.43 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.50'))
+test('v0.2.43 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.51'))
 
 test('v0.2.43 · puro: solo se corta con el aviso estable y pasada la gracia', () => {
   assert.equal(cortarEsperaPorBloqueoGenerali(9_000, 3_500), true)

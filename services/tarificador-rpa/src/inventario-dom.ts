@@ -9,7 +9,7 @@
 
 import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
-import { controlOcultoDeEtiqueta, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
+import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
 
 /**
  * Extractor que corre EN EL MARCO. Va como TEXTO (no como función) a propósito: tsx envuelve las funciones con nombre
@@ -145,6 +145,21 @@ function extractor(explora: boolean): string {
         || /(^|\\s)[\\w-]*-invalid(\\s|$)/.test(String(el.getAttribute('class') || ''))
         || !!(caja && /(^|\\s)[\\w-]*(has-error|invalid)[\\w-]*(\\s|$)/.test(String(caja.getAttribute('class') || '')));
       // ¿AUTOCOMPLETA? (14/10/2026) aria-autocomplete list/both/inline o un datalist (atributo list): su rellenar puede repintar.
+      // MENSAJE de error junto a un control INVÁLIDO (28/10/2026): aria-errormessage/aria-describedby, title, o el texto de error de su
+      // contenedor (PrimeFaces/Bootstrap/ePAC). Solo se lee; el saneado lo filtra.
+      if (e.invalido) {
+        let msg = '';
+        const ids = ((el.getAttribute('aria-errormessage') || '') + ' ' + (el.getAttribute('aria-describedby') || '')).split(/\\s+/).filter((x) => x);
+        for (const id of ids) { const x = document.getElementById(id); if (x && (x.innerText || x.textContent || '').trim()) { msg = x.innerText || x.textContent || ''; break; } }
+        if (!msg && el.getAttribute('title')) msg = el.getAttribute('title');
+        if (!msg) {
+          const cont = el.closest('td,li,.form-group,.ui-g,nx-formfield,div');
+          const cands = cont ? Array.from(cont.querySelectorAll('.error,.errorMessage,.ui-message-error,.ui-message,.help-block,.invalid-feedback,nx-error,[class*="error"],[class*="Error"]')) : [];
+          for (const c of cands) { if (c === el) continue; const t = (c.innerText || c.textContent || '').trim(); if (t) { msg = t; break; } }
+        }
+        if (!msg && el.validationMessage) msg = el.validationMessage;
+        if (msg) e.mensajeError = corta(msg, 300);
+      }
       const ac = String(el.getAttribute('aria-autocomplete') || '').toLowerCase();
       if (tag !== 'select' && (ac === 'list' || ac === 'both' || ac === 'inline' || el.hasAttribute('list'))) e.autocompletar = true;
     }
@@ -177,7 +192,15 @@ function extractor(explora: boolean): string {
     if (!etiqueta && n.previousElementSibling) etiqueta = corta(n.previousElementSibling.innerText || n.previousElementSibling.textContent || '', 200);
     importes.push({ texto: t, etiqueta: etiqueta });
   }
-  return { elementos: out, nodos: nodos, titulos: titulos, importes: importes };
+  // AVISOS de error del portal (28/10/2026): filas de error del informe de incidencias de ePAC y mensajes de error PrimeFaces/Bootstrap.
+  const avisosPortal = [];
+  for (const n of Array.from(document.querySelectorAll(${JSON.stringify(SEL_ERROR_EPAC)} + ',.ui-messages-error-detail,.ui-message-error-detail,.ui-messages-error-summary,.alert-danger'))) {
+    if (avisosPortal.length >= 10) break;
+    if (!visible(n)) continue;
+    const t = corta(n.innerText || n.textContent || '', 300);
+    if (t) avisosPortal.push(t);
+  }
+  return { elementos: out, nodos: nodos, titulos: titulos, importes: importes, avisosPortal: avisosPortal };
 })()`
 }
 
@@ -256,12 +279,12 @@ export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, 
       const resta = fin - Date.now()
       if (resta <= 0) break
       const h = await conTope(f.evaluateHandle(EXTRACTOR_EXPLORACION) as Promise<JSHandle>, Math.min(msPorMarco, resta))
-      let datos: { elementos?: unknown; titulos?: unknown; importes?: unknown } | null = null
+      let datos: { elementos?: unknown; titulos?: unknown; importes?: unknown; avisosPortal?: unknown } | null = null
       let nodos: (ElementHandle<Node> | null)[] = []
       if (h) {
         handles.push(h)
         const [d, n] = await Promise.all([
-          conTope(h.evaluate((x: { elementos: unknown; titulos: unknown; importes: unknown }) => ({ elementos: x.elementos, titulos: x.titulos, importes: x.importes })), msPorMarco),
+          conTope(h.evaluate((x: { elementos: unknown; titulos: unknown; importes: unknown; avisosPortal: unknown }) => ({ elementos: x.elementos, titulos: x.titulos, importes: x.importes, avisosPortal: x.avisosPortal })), msPorMarco),
           conTope(h.getProperty('nodos'), msPorMarco),
         ])
         datos = d
@@ -281,7 +304,7 @@ export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, 
       if (!elementos) nodos = []
       marcos.push({
         url: f.url(), nombre: f.name() || null, elementos: elementos ?? [],
-        ...(elementos ? { titulos: Array.isArray(datos?.titulos) ? datos!.titulos : [], importes: Array.isArray(datos?.importes) ? datos!.importes : [] } : { ilegible: true }),
+        ...(elementos ? { titulos: Array.isArray(datos?.titulos) ? datos!.titulos : [], importes: Array.isArray(datos?.importes) ? datos!.importes : [], ...(Array.isArray(datos?.avisosPortal) ? { avisosPortal: datos!.avisosPortal } : {}) } : { ilegible: true }),
       })
       porMarco.push({ marco: f, nodos })
     }

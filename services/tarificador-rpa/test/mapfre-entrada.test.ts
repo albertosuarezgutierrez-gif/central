@@ -652,6 +652,32 @@ test('Patinetes 0.3.4: en la ventana NSE la entrada pulsa «Oferta / Contrataci�
   }
 })
 
+test('Patinetes 0.3.7 (real 16:06): si tras «Oferta / Contratación» la ventana vuelve a la portada de NSE («Acceso a NSE»), la entrada falla con diagnóstico y SIN preguntar a la IA', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+  try {
+    const PORTADA = `<!doctype html><html><body><a href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');">Acceso a NSE</a><script>function abrirAplicacion(j, a){ window.open('/EVT21_NSE_FWEB/inicio.jsp', '_blank') }</script></body></html>`
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: PORTADA }))
+    await context.route('**/EVT21_NSE_FWEB/inicio.jsp', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><html><body><a href="/EVT21_NSE_FWEB/" target="contenido">Oferta / Contratación</a></body></html>' }))
+    await context.route('**/EVT21_NSE_FWEB/', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: PORTADA }))
+    const ctx = {
+      ...ctxGuard,
+      pulsarAccesoNse: (b: Locator) => pulsarAccesoNseMapfre(b, guard, 'mapfre'),
+      pulsarMenuNse: (b: Locator) => pulsarMenuOfertaNseMapfre(b, guard, 'mapfre'),
+    }
+    const portal: PortalExploracion = { credencial: 'X', entrar: (pg, c) => abrirTarificacionPatineteMapfre(pg, c, { menuMs: 3_000 }) }
+    const vistos: string[] = []
+    const fin = await entrarYExplorar(page, portal, ctx as unknown as CtxEntrada, ENTRADAS_EXPLORACION['mapfre:automoviles:patinetes'], {
+      guard, redactar: (t) => t, env: {},
+      contextoBucle: ctxBucle(guard, vistos, async () => resp([{ accion: 'parar', motivo: 'ambiguo' }])),
+    })
+    assert.equal(vistos.length, 0, 'no se pregunta a la IA por la portada')
+    assert.match(JSON.stringify(fin), /volvi[oó] a su portada/)
+    assert.match(JSON.stringify(fin), /target=contenido/)
+  } finally {
+    await context.close()
+  }
+})
+
 // ─── URL directa del formulario NSEI (estrategia principal) ───────────────────────────────────────────────────────────
 test('URL directa: carga app-datos-basicos → no se pulsa ningún menú', async () => {
   const { context, page, ctx, pulsados, guard } = await abrir('/')
