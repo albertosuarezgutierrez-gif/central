@@ -71,7 +71,7 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, controlOcultoDeEtiqueta, instalarGuardEmision, pulsar, pulsarAccesoNseMapfre, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
+import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, controlOcultoDeEtiqueta, instalarGuardEmision, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { modoVistaExplorador, vistaDelPaso } from './aprendizaje/vista-aria.ts'
@@ -87,8 +87,8 @@ import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
-/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.2 (28/10/2026): «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.2'
+/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.3 (28/10/2026): ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
+export const EXPLORADOR_VERSION = '0.3.3'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -485,6 +485,8 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       captura = await capturarInventarioExploracion(page)
       if (!captura) throw new Error('no se pudo leer el inventario de la pantalla')
       const inv = captura.inventario
+      // PRECIO PEGAJOSO (revisión de seguridad 28/10/2026): un importe visto en cualquier marco cierra el avance por id para el resto del trabajo.
+      if (inv.marcos.some((m) => (m.importes?.length ?? 0) > 0)) registrarPrecioVisto(k.guard)
       const parada = detectarParada(inv)
       if (parada) {
         // La señal (p. ej. la ETIQUETA del campo de cuenta bancaria; nunca un valor) va al log local; al cierre, el código.
@@ -516,7 +518,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       pasos++
       if (r.estado === 'perdido') throw new Parar('perdido')
       // REVALIDACIÓN contra el inventario PROPIO (el que se mandó): lo que no valida aquí no toca el portal.
-      const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null, presupuestoEnCurso: presupuesto.guardado })
+      const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null, presupuestoEnCurso: presupuesto.guardado, precioVisto: precioVistoEn(k.guard) })
       if (!v.ok) throw new Parar('ambiguo', 'lote_no_valido')
       if (r.estado !== 'ok') {
         const p = v.respuesta.acciones[0]
@@ -929,7 +931,9 @@ export async function entrarYExplorar(
     }
     cerrarFaseEntrada(d.guard)
     d.alEntrar?.()
-    return await bucleExploracion(pagina, { ...d.contextoBucle(pagina), paginasDeEntrada: pagina === page ? [page] : [page, pagina] })
+    // TODAS las páginas abiertas al cerrar la entrada son de la entrada (real 28/10/2026, Mapfre Patinetes: home → pestaña del
+    // enlace de la tarjeta → ventana de «Acceso a NSE»; la intermedia contaba como ventana nueva y el bucle paraba `sin_salida`).
+    return await bucleExploracion(pagina, { ...d.contextoBucle(pagina), paginasDeEntrada: [...new Set([page, pagina, ...pagina.context().pages()])] })
   } catch (err) {
     // Fallo de la ENTRADA cerrada (login, menús, producto): antes del primer paso. Con la evidencia del flujo real.
     return finDeEntrada(d.guard.violacion() ?? err, pagina, d.redactar, d.env)

@@ -152,6 +152,9 @@ import {
   rutaMarcoSaneadaGenerali,
   selectorVehiculoCargandoGenerali,
   type MarcoCargaGenerali,
+  bloqueadosDatosPersonasGenerali,
+  motivoFaltaDatoPersonaGenerali,
+  type ControlBloqueoGenerali,
   type ControlMediador,
   type DecisionMediador,
   type MarcoMediador,
@@ -275,6 +278,13 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.47 (28/10/2026, prueba real con 0.2.46, trabajo ec49068b): pasó el selector y paró en «Datos personas» con nombre, apellidos, sexo y
+ * fechas «deshabilitado». El volcado: TODOS los controles (también NIF y tipo de persona) `disabled` con `controlbloqueo="1"`: el `onchange`
+ * del NIF (`TratarDependiente(… '/refreshSelPersonas.do')`) bloquea el formulario hasta que vuelve el refresco y el bot leyó a los 1,5 s. Ahora
+ * espera (hasta 20 s) a que Genernet lo libere y entonces rellena SOLO los vacíos con los datos del riesgo; si no lo libera, para con los
+ * controles bloqueados. Y si falta nombre/apellido, dice si es que el riesgo no lo trae (nunca se inventa) o por qué no se pudo escribir.
+ */
+/**
  * 0.2.46 (28/10/2026, prueba real con 0.2.45, trabajo bf5707a8): «faltan la pantalla «Selector de vehículos» tras pulsar «Vehículo»». El volcado
  * mostró el `mainFrame` YA en `mot_motorWeb/mvc/selVehiculo` pero CARGANDO (solo `<head>`, sin `<body>`) a los 20 s: no era una pantalla nueva sino
  * Genernet lento. `esperarSelectorVehiculoGenerali` espera hasta 45 s más si ese marco está a medio cargar; si no aparece, para con el inventario de
@@ -351,7 +361,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.46'
+export const VERSION_GENERALI_AUTO = '0.2.47'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2788,6 +2798,28 @@ async function interesadoRellenoGenerali(marco: Raiz): Promise<boolean> {
 
 /** Espera tras teclear el NIF: el portal puede autocompletar el resto al salir del campo (se respeta lo que ponga). */
 const ESPERA_AUTOCOMPLETAR_NIF_MS = 1_500
+/** v0.2.47: tope de espera a que Genernet LIBERE el formulario tras el refresco del NIF (`controlbloqueo="1"`). */
+const ESPERA_DESBLOQUEO_NIF_MS = 20_000
+
+/** Controles de «Datos personas» SIN valores: id sin prefijo, deshabilitado y `controlbloqueo`. Sin funciones con nombre (tsx). */
+const JS_BLOQUEO_DATOS_PERSONAS = `(() => Array.from(document.querySelectorAll('[id^="${PREFIJO_ID_DATOS_PERSONAS_GENERALI}"]'))
+  .filter((e) => /^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName))
+  .map((e) => ({ id: e.id.slice(${PREFIJO_ID_DATOS_PERSONAS_GENERALI.length}), deshabilitado: !!e.disabled, bloqueo: e.getAttribute('controlbloqueo') })))()`
+
+/**
+ * v0.2.47 · Espera (hasta `ms`) a que Genernet libere «Datos personas» tras el refresco del NIF. Devuelve los controles que SIGUEN
+ * bloqueados (`[]` = libre). Solo lee.
+ */
+async function esperarDesbloqueoDatosPersonasGenerali(m: Frame, ms: number): Promise<string[]> {
+  const fin = Date.now() + ms
+  for (;;) {
+    const cs = (await m.evaluate(JS_BLOQUEO_DATOS_PERSONAS).catch(() => [])) as ControlBloqueoGenerali[] | null
+    const b = bloqueadosDatosPersonasGenerali(cs ?? [])
+    if (b.length === 0 || Date.now() >= fin) return b
+    await pausaMs(400)
+  }
+}
+
 /** Espera tras «Confirmar» de «Datos personas» a que el portal vuelva (o pinte su validación). */
 const ESPERA_TRAS_CONFIRMAR_PERSONAS_MS = 15_000
 
@@ -2828,7 +2860,7 @@ export async function altaDatosPersonasGenerali(
   m: Frame,
   form: FormDatosPersonasGenerali,
   ctx: ContextoPortal,
-  esperas: { autocompletarMs?: number; trasConfirmarMs?: number } = {},
+  esperas: { autocompletarMs?: number; trasConfirmarMs?: number; desbloqueoMs?: number } = {},
 ): Promise<{ hechos: string[]; diag: string }> {
   const inventario = async () => inventarioPersonas([{ rama: 'marco', marco: m, nuevo: true }])
   const hechos: string[] = []
@@ -2875,6 +2907,15 @@ export async function altaDatosPersonasGenerali(
     hechos.push(`datos_personas.${c}`)
   }
 
+  // v0.2.47: si el formulario llega BLOQUEADO por un refresco en curso (controlbloqueo="1"), se espera a que Genernet lo libere.
+  const desbloqueoMs = esperas.desbloqueoMs ?? ESPERA_DESBLOQUEO_NIF_MS
+  const sigueBloqueado = async (cuando: string): Promise<void> => {
+    const b = await esperarDesbloqueoDatosPersonasGenerali(m, desbloqueoMs)
+    if (b.length === 0) return
+    const oculto = m.childFrames().find((f) => f.name() === 'ocultoIF')
+    await parar(`${cuando} Genernet tiene el formulario BLOQUEADO (refresco del NIF «refreshSelPersonas.do» sin respuesta: ${b.length} controles deshabilitados con controlbloqueo=1: ${b.join(', ')}) y no lo liberó en ${Math.round(desbloqueoMs / 1000)} s; no se escribe nada a ciegas. Marco oculto del refresco: ${oculto ? rutaMarcoSaneadaGenerali(oculto.url()) : '(no hay ocultoIF)'}`, 'bloqueo_nif')
+  }
+  await sigueBloqueado('al llegar,')
   // 1. Tipo de documento, antes del NIF (el portal puede validar el NIF contra él).
   await elegirSiVacio('ynidcl', (ops) => opcionTipoDocumentoGenerali(ops, plan.tipoDocumento))
   // 2. NIF: vacío → se teclea y se espera el autocompletado; con valor → tiene que ser EL MISMO documento.
@@ -2887,6 +2928,8 @@ export async function altaDatosPersonasGenerali(
     await escribir(el, plan.documento, ctx)
     hechos.push('datos_personas.nifcif')
     await pausaMs(esperas.autocompletarMs ?? ESPERA_AUTOCOMPLETAR_NIF_MS)
+    // v0.2.47: el onchange del NIF bloquea TODO el formulario hasta que vuelve el refresco (y puede autocompletar la persona).
+    await sigueBloqueado('tras teclear el NIF')
   } else if (documentoNormalizadoGenerali(nifActual) !== plan.documento) {
     return parar('el NIF que ya trae la pantalla NO es el del tomador; no se sobrescribe ni se confirma otra persona', 'nif_distinto')
   } else omitidos.push('nifcif:con_valor')
@@ -2905,8 +2948,11 @@ export async function altaDatosPersonasGenerali(
   // 4. Mínimo antes de confirmar: el NIF del tomador, nombre y primer apellido (puestos por el bot o por el portal).
   const valor = async (c: string) => (await ctl(c).filter({ visible: true }).first().inputValue().catch(() => '')).trim()
   if (documentoNormalizadoGenerali(await valor('nifcif')) !== plan.documento) return parar('tras rellenar, el NIF de la pantalla no es el del tomador', 'nif_tras_rellenar')
-  const faltan = [(await valor('nombre')) === '' ? 'nombre' : null, (await valor('papell')) === '' ? 'primer apellido' : null].filter((x): x is string => x !== null)
-  if (faltan.length) return parar(`falta ${faltan.join(' y ')} (ni el riesgo ni el portal lo ponen)`, 'incompleto')
+  const faltan = [
+    (await valor('nombre')) === '' ? motivoFaltaDatoPersonaGenerali('nombre', 'nombre', !!plan.nombre, omitidos) : null,
+    (await valor('papell')) === '' ? motivoFaltaDatoPersonaGenerali('primer apellido', 'papell', !!plan.apellido1, omitidos) : null,
+  ].filter((x): x is string => x !== null)
+  if (faltan.length) return parar(`falta ${faltan.join(' y ')}`, 'incompleto')
   if (!ctx.confirmarDatosPersonasGenerali) return parar('falta la puerta guardada de «Confirmar» de «Datos personas» en el contexto del runner', 'sin_puerta')
 
   // 5. «Confirmar» SOLO por el guard (marco emiAutosGenB028.do, pestaña «Datos personas», #confirmar, una vez).
@@ -3040,8 +3086,13 @@ export async function elegirPersonaTomadorGenerali(
   // 4. Elegir esa fila por el guard.
   const fila = coinciden[0]!
   const idx = fila.controles.filter((c) => RE_ELEGIR_FILA_GENERALI.test(c)).length === 1 ? fila.controles.findIndex((c) => RE_ELEGIR_FILA_GENERALI.test(c)) : fila.controles.length === 1 ? 0 : -1
-  if (idx >= 0) await ctx.pulsar(fila.loc.locator(SEL_ACCION).filter({ visible: true }).nth(idx))
-  else if (fila.onclick) await ctx.pulsar(fila.loc)
+  // «Seleccionar» hace `window.close()` en su onclick: Playwright puede dar «Target page … closed» con el clic ya hecho.
+  // Solo se tolera si la ventana de búsqueda está cerrada de verdad; el paso 5 verifica que el interesado quedó relleno.
+  const pulsarQueCierra = async (loc: Locator): Promise<void> => {
+    try { await ctx.pulsar(loc) } catch (e) { if (!/Target page, context or browser has been closed/.test(String(e)) || !mb.page().isClosed()) throw e }
+  }
+  if (idx >= 0) await pulsarQueCierra(fila.loc.locator(SEL_ACCION).filter({ visible: true }).nth(idx))
+  else if (fila.onclick) await pulsarQueCierra(fila.loc)
   else return parar('la fila única no tiene un control claro para elegirla (ni «Seleccionar» ni un solo botón)', rama, `controles: ${await inventarioPersonas(raices)}`)
 
   // 5. Volver y verificar que el interesado ya trae NIF y nombre.

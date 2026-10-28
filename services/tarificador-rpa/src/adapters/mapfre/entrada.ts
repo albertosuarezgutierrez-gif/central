@@ -320,13 +320,16 @@ async function pasarPorEnlaceIntermedio(pagina: Page, ctx: CtxEntradaMapfre, tex
   const candidatos = await enTodosLosMarcos(pagina, (f) => pulsablesExactos(f, texto), Math.min(ESPERA_TARJETA_MS * 2, menuMs))
   if (candidatos.length === 0) return pagina
   if (candidatos.length > 1) throw new ErrorMapaIncompleto(`el enlace «${texto}» de la página intermedia (${candidatos.length} coincidencias exactas visibles, ambiguo) de wmediadores`, true)
-  const nueva = pagina.context().waitForEvent('page', { timeout: Math.min(menuMs, 5_000) })
+  // Real 28/10/2026 (0.3.2): `abrirAplicacion` abre la aplicación NSE en una VENTANA nueva y puede tardar más de 5 s; se espera
+  // el tope de menú entero y, si el evento se perdió, se adopta la página nueva del MISMO contexto (el guard es por contexto).
+  const antes = new Set(pagina.context().pages())
+  const nueva = pagina.context().waitForEvent('page', { timeout: menuMs })
   nueva.catch(() => undefined)
   // «Acceso a NSE» abre la aplicación «Nuevo Sistema de Emisión» (su href casa con `emisi`): por su puerta exacta del guard.
   if (ctx.pulsarAccesoNse && texto === 'Acceso a NSE') await ctx.pulsarAccesoNse(candidatos[0]!)
   else await ctx.pulsar(candidatos[0]!)
   await ctx.pausa()
-  const otra = await nueva.then((p) => p, () => null)
+  const otra = (await nueva.then((p) => p, () => null)) ?? pagina.context().pages().filter((p) => !antes.has(p) && !p.isClosed()).pop() ?? null
   const destino = otra ?? pagina
   await destino.waitForLoadState('domcontentloaded', { timeout: formularioMs }).catch(() => undefined)
   return destino

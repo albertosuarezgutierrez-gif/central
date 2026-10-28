@@ -843,6 +843,8 @@ export type ContextoValidacion = {
    * Por defecto `false` (lo calcula `presupuestoEnCursoDe` sobre los pasos validados anteriores).
    */
   presupuestoEnCurso?: boolean
+  /** `true` si en un paso ANTERIOR de este trabajo se vio un importe en cualquier marco: ningún avance por id más (precio pegajoso). */
+  precioVisto?: boolean
 }
 
 /** ¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}. */
@@ -1209,6 +1211,10 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
           ? bloqueoGuardadoPresupuesto(el, { tipoPantalla: pantalla.tipo, hayImportes: importes.size > 0, presupuestoEnCurso: ctx.presupuestoEnCurso === true })
           : bloqueoAvance(ctx.entrada, el, marco)
         if (bloqueo) return void errores.push(`${donde}: ${bloqueo}`)
+        // Avance por id (ePAC drvp00) con un importe en CUALQUIER marco del inventario (o ya visto antes en este trabajo): nunca.
+        if (efecto !== 'guardar_presupuesto' && avancePorIdAutorizado(ctx.entrada, el, marco) && (importes.size > 0 || ctx.precioVisto === true)) {
+          return void errores.push(`${donde}: avance_por_id_con_precio`)
+        }
         acciones.push({ accion: 'avanzar', ref, efectoEsperado: efecto, confianza: a.confianza })
       }
     })
@@ -1540,7 +1546,8 @@ export type MapaExploracion = {
 }
 
 const RE_ID_GENERADO = /^(?:mat-|cdk-|ng-|ui-id-|react-|ember|j_id|__)|\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}/i
-const RE_SELECTOR_SEGURO = /^[\w.:[\]-]{1,80}$/
+// `$` (28/10/2026): ids de JSF/ePAC como `IntervinientesBean$nifTomador_doc`. El selector se compara por IGUALDAD, nunca como CSS.
+const RE_SELECTOR_SEGURO = /^[\w.:[\]$-]{1,80}$/
 
 /** El selector estable de un elemento: id (no autogenerado) > name > formControlName > etiqueta exacta > texto exacto. */
 export function selectorDeElemento(el: ElementoInventario): SelectorMapa | null {

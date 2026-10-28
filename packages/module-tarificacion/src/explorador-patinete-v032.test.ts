@@ -12,6 +12,7 @@ import {
   esLanzadorAplicacionNseMapfre,
   pareceEmision,
   rutaDeMarco,
+  selectorDeElemento,
   sanearInventarioDom,
   validarRespuestaExplorador,
   type InventarioDom,
@@ -127,5 +128,31 @@ describe('Allianz ePAC drvp00: avance de paso #btnAceptar + eventoSiguiente() po
     const generico = r([{ accion: 'avanzar', ref: refs[4], efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
     expect(generico.ok).toBe(false)
     expect(JSON.stringify(generico)).toMatch(/aceptar_no_autorizado/)
+  })
+})
+
+describe('0.3.3 · selector estable con `$` (ids JSF de ePAC)', () => {
+  it('IntervinientesBean$nifTomador_doc tiene selector por id; caracteres de CSS raros siguen sin selector', () => {
+    expect(selectorDeElemento({ tag: 'input', id: 'IntervinientesBean$nifTomador_doc' } as never)).toEqual({ por: 'id', valor: 'IntervinientesBean$nifTomador_doc', tag: 'input' })
+    expect(selectorDeElemento({ tag: 'input', id: 'a b"c' } as never)).toBeNull()
+  })
+})
+
+describe('seguridad 2a · precio pegajoso en la validación pura', () => {
+  const val = (i: InventarioDom, precioVisto = false) => {
+    const btn = i.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'btnAceptar')!
+    return validarRespuestaExplorador(
+      { version: 1, pantalla: { nombre: 'Figuras', tipo: 'formulario' }, acciones: [{ accion: 'avanzar', ref: btn.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null },
+      { inventario: i, ramo: 'patinete', entrada: MP, datosReales: null, precioVisto },
+    )
+  }
+  it('sin precio: pasa; con importe en OTRO marco o ya visto antes: avance_por_id_con_precio', () => {
+    expect(val(inv([BTN])).ok).toBe(true)
+    expect(JSON.stringify(val(inv([BTN]), true))).toMatch(/avance_por_id_con_precio/)
+    const dos = sanearInventarioDom({ marcos: [
+      { url: 'https://epac.example.test/ngx/app', nombre: null, titulos: [], importes: [{ texto: '310,20 €', etiqueta: 'Prima' }], elementos: [{ tag: 'button', id: 'x', texto: 'Menú' }] },
+      { url: URL_DRVP00, nombre: 'appArea', titulos: [], elementos: [BTN] },
+    ] }, undefined, { refs: true })!
+    expect(JSON.stringify(val(dos))).toMatch(/avance_por_id_con_precio/)
   })
 })

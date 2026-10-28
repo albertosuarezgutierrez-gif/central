@@ -2698,6 +2698,54 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
   return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}` }
 }
 
+/** Trabajos (guards) en los que ya se vio un IMPORTE en algún marco: ningún avance por id más (precio pegajoso, 28/10/2026). */
+const PRECIO_VISTO = new WeakSet<GuardEmision>()
+export function registrarPrecioVisto(guard: GuardEmision): void {
+  PRECIO_VISTO.add(guard)
+}
+export function precioVistoEn(guard: GuardEmision): boolean {
+  return PRECIO_VISTO.has(guard)
+}
+
+/** Cuerpo de `vigilanciaVivaAvancePorId` que corre EN EL MARCO (texto: sin `__name`). */
+const VIGILANCIA_AVANCE_ID = `function (fuenteTitulo) {
+  var reTitulo = new RegExp(fuenteTitulo);
+  var RE = /^(?:€\\s*)?-?\\d[\\d.,]{0,14}\\s*(?:€|eur(?:os)?)?$/i;
+  var esImporte = function (t) { return t.length <= 30 && RE.test(t) && (/€|eur/i.test(t) || /,\\d{1,2}$/.test(t)); };
+  var visible = function (n) { return n.getClientRects().length > 0 && getComputedStyle(n).visibility !== 'hidden'; };
+  var txt = function (n) { return String(n.innerText || n.textContent || '').replace(/\\s+/g, ' ').trim(); };
+  var plano = function (t) { return t.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase(); };
+  var p = false, t = false, i, n, v;
+  var nodos = document.querySelectorAll('td,th,span,strong,b,div,p,dd,li,label,output,em,small,font');
+  for (i = 0; i < nodos.length && !p; i++) { n = nodos[i]; if (visible(n)) { v = txt(n); if (v !== '' && esImporte(v)) p = true; } }
+  var campos = document.querySelectorAll('input[readonly],input[disabled],output');
+  for (i = 0; i < campos.length && !p; i++) { n = campos[i]; v = String(n.value == null ? '' : n.value).replace(/\\s+/g, ' ').trim(); if (v !== '' && visible(n) && esImporte(v)) p = true; }
+  var hs = document.querySelectorAll('h1,h2,h3,h4,h5,h6,legend,th,caption,[role=heading]');
+  for (i = 0; i < hs.length && !t; i++) { n = hs[i]; if (visible(n) && reTitulo.test(plano(txt(n)))) t = true; }
+  return { p: p, t: t };
+}`
+
+/**
+ * VIVO, en TODOS los marcos de la página (revisión de seguridad 28/10/2026), justo antes del clic de un avance por id:
+ *   · `precio`: algún importe visible (texto de un nodo, hoja o no: «123,45 <span>€</span>» cuenta; o el valor de un input/output
+ *     de solo lectura con forma de importe);
+ *   · `titulo`: algún encabezado visible (h1-h6, legend, th, caption, role=heading) que case con `nuncaConTitulo` (texto plano).
+ * Un marco que no se puede leer cuenta como las dos cosas (fail-closed). Solo lee: nunca sale ningún texto ni valor.
+ */
+async function vigilanciaVivaAvancePorId(page: Page, nuncaConTitulo: RegExp): Promise<{ precio: boolean; titulo: boolean }> {
+  let precio = false
+  let titulo = false
+  for (const f of marcosVivos(page)) {
+    // Como TEXTO (no función): tsx envuelve las funciones con nombre en `__name`, que no existe en la página.
+    const r = await (f.evaluate(`(${VIGILANCIA_AVANCE_ID})(${JSON.stringify(nuncaConTitulo.source)})`) as Promise<{ p: boolean; t: boolean }>)
+      .then((x) => (x && typeof x.p === 'boolean' && typeof x.t === 'boolean' ? x : { p: true, t: true }))
+      .catch(() => ({ p: true, t: true }))
+    precio ||= r.p
+    titulo ||= r.t
+  }
+  return { precio, titulo }
+}
+
 /** Tope de avances de PASO por identidad exacta (`AvancePorId`) por trabajo (3, revisión de seguridad 28/10/2026). */
 export const MAX_AVANCES_POR_ID = 3
 
@@ -2745,13 +2793,15 @@ export async function pulsarExploracionAutorizada(
     if (desc[4] !== porId.id || onclickNormalizado(desc[7]) !== porId.onclick || ruta !== porId.rutaMarco) {
       throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el avance de paso autorizado (id/onclick/marco)')
     }
-    // VIVO: ningún importe a la vista en el marco (el MISMO criterio que el inventario de exploración). Si no se puede leer, no.
-    const conPrecio = await boton.evaluate((el) => Array.from(el.ownerDocument.querySelectorAll('td,th,span,strong,b,div,p,dd,li,label,output')).some((n) => {
-      if (n.children.length > 0 || (n as HTMLElement).getClientRects().length === 0) return false
-      const t = ((n as HTMLElement).innerText || n.textContent || '').replace(/\s+/g, ' ').trim()
-      return t.length > 0 && t.length <= 30 && /\d/.test(t) && /^(?:€\s*)?-?[\d.,]{1,15}\s*(?:€|eur(?:os)?)?$/i.test(t) && (/€|eur/i.test(t) || /,\d{1,2}$/.test(t))
-    })).catch(() => true)
-    if (conPrecio) throw new EmisionBloqueadaError('boton', 'avance de exploración: el marco ya muestra un precio (no se avanza por id)')
+    // PRECIO PEGAJOSO + VIVO en TODOS los marcos: un importe visto antes en el trabajo, o a la vista ahora, cierra el avance por id.
+    if (PRECIO_VISTO.has(guard)) throw new EmisionBloqueadaError('boton', 'avance de exploración: ya se vio un precio en este trabajo (no se avanza por id)')
+    const vivo = await vigilanciaVivaAvancePorId(page, porId.nuncaConTitulo)
+    if (vivo.precio) {
+      PRECIO_VISTO.add(guard)
+      throw new EmisionBloqueadaError('boton', 'avance de exploración: la página ya muestra un precio (no se avanza por id)')
+    }
+    // Títulos VIVOS de todos los marcos: tarificar, revisión, emisión, contratar, pago, firma, IBAN… → no.
+    if (vivo.titulo) throw new EmisionBloqueadaError('boton', 'avance de exploración: un título vivo de la página es de tarificación/emisión (no se avanza por id)')
   }
   comprobarBoton(desc, { permitirAceptar: true })
   const destino = await boton.evaluate((el) => {
@@ -2768,6 +2818,17 @@ export async function pulsarExploracionAutorizada(
     }
   } catch {
     endpoint = null
+  }
+  // Avance de PASO por id (real 28/10/2026, ePAC drvp00): `eventoSiguiente()` envía el formulario del servlet, pero el botón no está
+  // dentro de un <form> y el marco tiene varios. Su ÚNICO destino conocido es el propio servlet del marco: MISMO origen que el marco
+  // (leído vivo) + la ruta EXACTA de la regla (`rutaMarco`, ya comprobada arriba). Nada más se abre; la capa de parámetros sigue.
+  if (porId) {
+    try {
+      const p = new URL(await boton.evaluate((el) => el.ownerDocument.location.href))
+      endpoint = (p.protocol === 'https:' || p.protocol === 'http:') && !p.username && !p.password ? `${p.origin}${porId.rutaMarco}` : null
+    } catch {
+      endpoint = null
+    }
   }
   if (!endpoint) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
   const abrir = ABRIR_AVANCE.get(guard)
