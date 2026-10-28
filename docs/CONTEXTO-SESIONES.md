@@ -1534,6 +1534,14 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (28/10/2026) Correduría · oportunidad duplicada de una póliza viva (mismo nº, compañía absorbida)
+- Ficha José Suárez Sala: hogar viva Occident nº GPDFL0600228 salía también como oportunidad «Plus Ultra (volcado histórico)».
+  `casaBien` solo miraba ramo+matrícula/título; hogar sin matrícula y títulos distintos → no tapaba.
+- Arreglo en `repartirSegurosCliente` (`apps/plataforma/lib/correduria/seguros-cliente.ts`): grupo del volcado con algún
+  nº (`claveNumeroPoliza`) igual a una póliza viva del cliente no genera oportunidad; sigue en `historicas`. 2 tests + cepo visto en rojo.
+- Alcance en BD: 87 filas del volcado / 64 clientes comparten nº con una viva (techo). Sin cambios de datos.
+- 2ª vía (auditoría): 13 oportunidades ABIERTAS de una póliza viva (poliza_id/nº/matrícula) salían también sueltas → ahora se cuelgan de su tarjeta de «Con nosotros». PR #5198.
+
 ## (27/10/2026) Pricing SIVRA: prima de finde por ritmo propio + aviso «caro» con demanda
 - House Sevillana: findes 78 % a 693€/noche vendidos meses antes (infravalorado); entre semana 35 % a 412€. El aviso «precio al HUÉSPED caro» comparaba solo con comparables.
 - `lib/sivra/pricing-ritmo-finde.ts`: prima vie/sáb 1,00-1,25 (escala p90/techo mercado/ADR de esa fecha) + factor dom-jue 0,85-1,00 solo en ventana p75 de antelación (máx. con lastminute, no producto). Gate env `SIVRA_PRIMA_FINDE_PISOS` (vacía = sin efecto; definida = `prop_house_sevillana` desde el 27/10).
