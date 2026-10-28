@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { estimacionMes, proximosCargos, ventanaCalendario, resumenBolsa, bolsaVieja, importeDivisa, sumarDias, repartoVencimientos, type ReservaCal } from './inicio-resumen.ts'
+import { estimacionMes, proximosCargos, ventanaCalendario, moverVentana, desdeValido, resumenBolsa, bolsaVieja, importeDivisa, sumarDias, repartoVencimientos, type ReservaCal } from './inicio-resumen.ts'
 
 // ─── Estimación del mes ──────────────────────────────────────────────────────────────────────────
 
@@ -150,4 +150,23 @@ test('«Próximos vencimientos» no incluye las ya vencidas: se cuentan aparte',
   // La más reciente primero: es la que aún se puede salvar.
   assert.deepEqual(r.vencidas.map(p => p.id), ['ayer', 'jun'])
   assert.equal(r.en30, 2)
+})
+
+// ─── Navegación del calendario (fechas relativas a hoy) ──────────────────────────────────────────
+
+test('moverVentana avanza y retrocede ventanas enteras y vuelve al punto de partida', () => {
+  const hoy = new Date().toISOString().slice(0, 10)
+  assert.equal(moverVentana(hoy, 1), sumarDias(hoy, 14))
+  assert.equal(moverVentana(hoy, -1), sumarDias(hoy, -14))
+  assert.equal(moverVentana(moverVentana(hoy, -1), 1), hoy)
+})
+
+test('desdeValido acepta fechas reales cercanas y rechaza basura o fechas lejanísimas', () => {
+  const hoy = new Date().toISOString().slice(0, 10)
+  assert.equal(desdeValido(sumarDias(hoy, -60), hoy), sumarDias(hoy, -60))
+  assert.equal(desdeValido(sumarDias(hoy, 90), hoy), sumarDias(hoy, 90))
+  assert.equal(desdeValido(null, hoy), null)
+  assert.equal(desdeValido('ayer', hoy), null)
+  assert.equal(desdeValido(sumarDias(hoy, 5000), hoy), null)
+  assert.equal(desdeValido('2026-02-31', hoy), null)
 })
