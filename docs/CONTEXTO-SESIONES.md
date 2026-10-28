@@ -18,6 +18,11 @@
 - Proceso: toda revisión `agente-architect` previa al merge halló algo (3 fugas de datos personales en campos de diagnóstico nuevos); excepciones del guard por texto/id/origen exactos.
 - Pendiente: Mapfre auto (2.º cliente, comparativa, borrador), /datos unificado por ramo, patinete marca/modelo/versión, hogar en Mapfre y Generali. Detalle en `docs/TARIFICADOR-RPA.md`.
 
+## (28/10/2026, 7) Correduría · hilo de siniestro: edición por versiones + migración aplicada
+- SQL `2026-10-28d_siniestro_hilo.sql` APLICADO (Alberto, SQL Editor). Código sin depender de él (resultado por SQL crudo, 503 `sin_migracion`). PR #5214 mergeado.
+- Editar mensaje = VERSIÓN NUEVA (`meta.sustituyeA`), nunca UPDATE: `hiloVigente()` en module-seguros; plazos/espera/IA usan la vigente con fecha del original. IA no editable.
+- Caso real: siniestro 43141325 (Global 2, RC post-trabajos, rehúse por «RC cruzada» en curso 26/10); borrador de oposición hecho en sesión, falta el texto literal de la póliza.
+
 ## (28/10/2026, 6) Correduría · expediente de siniestro con hilo + IA
 - Página `/correduria/siniestro/[id]` (plataforma): hilo compañía↔IA↔Alberto (tabla `seguros.siniestro_mensajes`, solo-añadir por trigger, texto cifrado), plazos LCS (arts. 18/20/23; SAC sin verificar), «esperando a la compañía» en Hoy, cierre con resultado (ganado/perdido/parcial).
 - IA bajo botón (`POST /api/operador/siniestro/ia`, `iaTexto` modelo `SINIESTRO_IA_MODELO`, privado): analizar/redactar con el texto de la póliza; `verificarCitas()` marca citas que no están en la póliza.

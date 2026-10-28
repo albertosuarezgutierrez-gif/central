@@ -16,6 +16,8 @@ export type Mensaje = {
   creadoPor: string | null
   creadoAt: string | null
   meta: Record<string, unknown> | null
+  /** Id del mensaje que SUSTITUYE a este (edición = versión nueva). `null` = es la versión vigente. */
+  sustituidoPor: string | null
 }
 
 export type Plazo = {
@@ -57,7 +59,7 @@ export function leerMensaje(v: unknown): Mensaje | null {
   const tipo = TIPOS.find(t => t === o.tipo)
   const ilegible = o.textoIlegible === true
   if (!autor || !tipo || (typeof o.texto !== 'string' && !ilegible)) return null
-  return { id: o.id as string, autor, tipo, texto: typeof o.texto === 'string' ? o.texto : null, textoIlegible: ilegible, documentoId: str(o.documentoId), creadoPor: str(o.creadoPor), creadoAt: str(o.creadoAt), meta: obj(o.meta) }
+  return { id: o.id as string, autor, tipo, texto: typeof o.texto === 'string' ? o.texto : null, textoIlegible: ilegible, documentoId: str(o.documentoId), creadoPor: str(o.creadoPor), creadoAt: str(o.creadoAt), meta: obj(o.meta), sustituidoPor: str(o.sustituidoPor) }
 }
 
 /** `null` = no es un array legible (no se pudo leer); un elemento ilegible se descarta. */
@@ -169,12 +171,61 @@ export function combinacionValida(autor: AutorMensaje, tipo: TipoMensaje): boole
 }
 
 /** Qué se guarda según el selector de la caja. `reclamacionSac` solo cuenta con «enviado». */
-export function cuerpoCaja(modo: ModoCaja, texto: string, documentoId: string | null, reclamacionSac = false): {
-  autor: AutorMensaje; tipo: TipoMensaje; texto: string; documentoId?: string; reclamacionSac?: boolean
+export function cuerpoCaja(modo: ModoCaja, texto: string, documentoId: string | null, reclamacionSac = false, sustituyeA: string | null = null): {
+  autor: AutorMensaje; tipo: TipoMensaje; texto: string; documentoId?: string; reclamacionSac?: boolean; sustituyeA?: string
 } {
-  const base = { texto: texto.trim(), ...(documentoId ? { documentoId } : {}) }
+  const base = { texto: texto.trim(), ...(documentoId ? { documentoId } : {}), ...(sustituyeA ? { sustituyeA } : {}) }
   if (modo === 'compania') return { autor: 'compania', tipo: 'comentario', ...base }
   if (modo === 'rehuse') return { autor: 'compania', tipo: 'rehuse', ...base }
   if (modo === 'enviado') return { autor: 'corredor', tipo: 'enviado', ...base, ...(reclamacionSac ? { reclamacionSac: true } : {}) }
   return { autor: 'interna', tipo: 'nota', ...base }
+}
+
+// ─── Versiones: editar = mensaje nuevo que sustituye al anterior (el hilo es SOLO-AÑADIR) ─────────────────────
+
+export type MensajeVisible = { mensaje: Mensaje; /** Sustituye a otra versión. */ editado: boolean; /** Ya hay una versión posterior (solo se ve con «Ver versiones anteriores»). */ sustituido: boolean }
+
+/**
+ * Qué se pinta. Por defecto solo las vigentes (las sustituidas fuera) con `editado` si sustituyen a otra;
+ * `verAnteriores` deja también las sustituidas (`sustituido: true`, para pintarlas atenuadas). Orden: el recibido.
+ * Una versión que sustituye a un id que no está en la lista cuenta como editada igualmente (`meta.sustituyeA`).
+ */
+export function mensajesVisibles(mensajes: readonly Mensaje[], verAnteriores: boolean): MensajeVisible[] {
+  const ids = new Set(mensajes.map(m => m.id))
+  const sustituidosPorMeta = new Set<string>()
+  for (const m of mensajes) {
+    const a = str(m.meta?.sustituyeA)
+    if (a !== null && a !== m.id && ids.has(a)) sustituidosPorMeta.add(a)
+  }
+  const out: MensajeVisible[] = []
+  for (const m of mensajes) {
+    const sustituido = m.sustituidoPor !== null || sustituidosPorMeta.has(m.id)
+    if (sustituido && !verAnteriores) continue
+    out.push({ mensaje: m, editado: str(m.meta?.sustituyeA) !== null, sustituido })
+  }
+  return out
+}
+
+/** Cuántas versiones sustituidas hay (para mostrar el conmutador solo si hace falta). */
+export function cuentaSustituidos(mensajes: readonly Mensaje[]): number {
+  return mensajes.filter(m => m.sustituidoPor !== null).length
+}
+
+/** El modo de la caja que reproduce autor/tipo de un mensaje; `null` = la caja no sabe escribir esa combinación. */
+export function modoDeMensaje(m: Pick<Mensaje, 'autor' | 'tipo'>): ModoCaja | null {
+  if (m.autor === 'compania' && m.tipo === 'comentario') return 'compania'
+  if (m.autor === 'compania' && m.tipo === 'rehuse') return 'rehuse'
+  if (m.autor === 'corredor' && m.tipo === 'enviado') return 'enviado'
+  if (m.autor === 'interna' && m.tipo === 'nota') return 'interna'
+  return null
+}
+
+/** «Editar» solo en mensajes NO de la IA, vigentes, legibles y con una combinación que la caja sabe escribir. */
+export function puedeEditar(m: Mensaje): boolean {
+  return m.autor !== 'ia' && m.sustituidoPor === null && !m.textoIlegible && m.texto !== null && modoDeMensaje(m) !== null
+}
+
+/** Autor que escribe cada modo: al editar solo se pueden elegir modos del MISMO autor que el original. */
+export function autorDeModo(modo: ModoCaja): AutorMensaje {
+  return modo === 'compania' || modo === 'rehuse' ? 'compania' : modo === 'enviado' ? 'corredor' : 'interna'
 }

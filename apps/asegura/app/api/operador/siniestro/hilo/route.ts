@@ -14,11 +14,13 @@ export const dynamic = 'force-dynamic'
  *   GET  ?correduriaId&siniestroId → { estado:'ok', siniestro, poliza, documentosSiniestro, mensajes, plazos,
  *                                      diasEsperandoCompania }   (`mensajes: null` = no se pudo leer)
  *   POST { correduriaId, siniestroId, autor ('compania'|'corredor'|'interna'), tipo, texto (≤ 50.000),
- *          documentoId?, reclamacionSac? (solo con tipo 'enviado'), actor? } → { estado:'ok', ...Mensaje, mensaje }
+ *          documentoId?, reclamacionSac? (solo con tipo 'enviado'), sustituyeA? (id de mensaje: EDITAR = versión nueva;
+ *          mismo siniestro y autor, nunca de la IA, no ya sustituido → 409), actor? } → { estado:'ok', ...Mensaje, mensaje }
+ * Cada mensaje del GET lleva `sustituidoPor` (id | null); plazos/espera/IA leen solo la última versión.
  *
  * SOLO-AÑADIR: no hay PATCH ni DELETE (cepo `test/regression-siniestro-hilo.test.ts`). El autor `ia` lo escribe
  * SOLO el servidor (`anadirMensajeSiniestro(..., { canal: 'servidor' })`): por aquí → 422.
- * 400 falta un id · 403 otra correduría · 404 siniestro/documento no es de esta correduría · 422 inválido ·
+ * 400 falta un id · 403 otra correduría · 404 siniestro/documento/mensaje no es de esta correduría · 409 mensaje ya editado · 422 inválido ·
  * 503 `sin_migracion` (SQL 2026-10-28d sin aplicar).
  */
 export async function GET(req: Request) {
@@ -45,6 +47,7 @@ export const POST = auditado(async (req: Request) => {
   if (!siniestroId) return NextResponse.json({ estado: 'invalido', motivo: 'falta siniestroId' }, { status: 400 })
   // Defensa explícita además de la regla pura: el puerto NUNCA escribe como IA.
   if (b.autor === 'ia') return NextResponse.json({ estado: 'invalido', motivo: 'autor «ia» solo lo escribe el servidor' }, { status: 422 })
+  // Editar un mensaje de la IA tampoco: `anadirMensajeSiniestro` rechaza `sustituyeA` cuyo original sea autor «ia».
   try {
     const c = await correduriaPedida(b.correduriaId)
     if (!c.ok) return c.res
@@ -55,6 +58,7 @@ export const POST = auditado(async (req: Request) => {
       texto: b.texto,
       documentoId: cadena(b.documentoId),
       reclamacionSac: b.reclamacionSac,
+      sustituyeA: b.sustituyeA === undefined || b.sustituyeA === null ? null : (cadena(b.sustituyeA) ?? ''),
       creadoPor: actorDe(req, b),
       canal: 'operador',
     })

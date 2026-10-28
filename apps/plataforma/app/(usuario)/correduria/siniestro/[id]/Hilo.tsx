@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Bloque from '../../Bloque'
-import { ETIQUETA_AUTOR, LIMITE_PLEGADO, citasNoEncontradas, plegarTexto, type Mensaje } from '@/lib/correduria/siniestro-hilo'
+import { ETIQUETA_AUTOR, LIMITE_PLEGADO, citasNoEncontradas, cuentaSustituidos, mensajesVisibles, plegarTexto, puedeEditar, type Mensaje } from '@/lib/correduria/siniestro-hilo'
 import { btnStyle } from '@/components/ui'
 import { COLUMNA, ERROR, NOTA } from './estilos'
 
@@ -15,14 +15,19 @@ function fechaHora(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-function Burbuja({ m, onCopiar, onEnviado }: { m: Mensaje; onCopiar: (t: string) => void; onEnviado: (t: string) => void }) {
+function Burbuja({ m, editado, sustituido, onCopiar, onEnviado, onEditar }: {
+  m: Mensaje; editado: boolean; sustituido: boolean
+  onCopiar: (t: string) => void; onEnviado: (t: string) => void; onEditar: (m: Mensaje) => void
+}) {
   const [abierto, setAbierto] = useState(false)
   const texto = m.texto ?? ''
   const { visible, plegado } = plegarTexto(texto, abierto)
   return (
-    <li style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--border)', background: FONDO[m.autor], borderLeft: `3px solid ${m.autor === 'compania' ? 'var(--text)' : 'var(--border)'}` }}>
+    <li style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--border)', background: FONDO[m.autor], borderLeft: `3px solid ${m.autor === 'compania' ? 'var(--text)' : 'var(--border)'}`, ...(sustituido ? { opacity: 0.55 } : {}) }}>
       <span style={{ fontSize: 12, color: 'var(--muted)' }}>
         <strong style={{ color: 'var(--text)' }}>{ETIQUETA_AUTOR[m.autor]}</strong> · {m.tipo} · {fechaHora(m.creadoAt)}
+        {editado && <> · <em style={{ fontStyle: 'normal' }}>editado</em></>}
+        {sustituido && <> · versión anterior</>}
       </span>
       {m.textoIlegible
         ? <p role="alert" style={{ ...ERROR, margin: 0 }}>No se pudo descifrar este mensaje</p>
@@ -35,6 +40,9 @@ function Burbuja({ m, onCopiar, onEnviado }: { m: Mensaje; onCopiar: (t: string)
       {plegado && <button type="button" onClick={() => setAbierto(true)} style={{ ...btnStyle('sutil', 'sm'), justifySelf: 'start' }}>Ver todo</button>}
       {abierto && texto.length > LIMITE_PLEGADO && <button type="button" onClick={() => setAbierto(false)} style={{ ...btnStyle('sutil', 'sm'), justifySelf: 'start' }}>Plegar</button>}
       {m.documentoId && <a href={`/api/correduria/documentos/${m.documentoId}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>📎 Adjunto</a>}
+      {puedeEditar(m) && (
+        <button type="button" onClick={() => onEditar(m)} style={{ ...btnStyle('sutil', 'sm'), justifySelf: 'start' }}>Editar</button>
+      )}
       {m.autor === 'ia' && m.tipo === 'borrador' && m.texto !== null && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <button type="button" onClick={() => onCopiar(texto)} style={btnStyle('secundario', 'sm')}>Copiar</button>
@@ -45,9 +53,13 @@ function Burbuja({ m, onCopiar, onEnviado }: { m: Mensaje; onCopiar: (t: string)
   )
 }
 
-export default function Hilo({ mensajes, onCopiar, onEnviado }: { mensajes: Mensaje[] | null; onCopiar: (t: string) => void; onEnviado: (t: string) => void }) {
+export default function Hilo({ mensajes, onCopiar, onEnviado, onEditar }: {
+  mensajes: Mensaje[] | null; onCopiar: (t: string) => void; onEnviado: (t: string) => void; onEditar: (m: Mensaje) => void
+}) {
   const [todos, setTodos] = useState(false)
-  const lista = mensajes ?? []
+  const [verAnteriores, setVerAnteriores] = useState(false)
+  const sustituidos = cuentaSustituidos(mensajes ?? [])
+  const lista = mensajesVisibles(mensajes ?? [], verAnteriores)
   const MAX = 50
   const visibles = todos ? lista : lista.slice(-MAX)
   return (
@@ -58,11 +70,17 @@ export default function Hilo({ mensajes, onCopiar, onEnviado }: { mensajes: Mens
         <p style={NOTA}>Sin mensajes todavía.</p>
       ) : (
         <>
+          {sustituidos > 0 && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 14 }}>
+              <input type="checkbox" checked={verAnteriores} onChange={e => setVerAnteriores(e.target.checked)} style={{ width: 20, height: 20 }} />
+              Ver versiones anteriores ({sustituidos})
+            </label>
+          )}
           {lista.length > MAX && !todos && (
             <button type="button" onClick={() => setTodos(true)} style={{ ...btnStyle('sutil', 'sm'), marginBottom: 8 }}>Ver {lista.length - MAX} anteriores</button>
           )}
           <ul style={{ ...COLUMNA, listStyle: 'none', margin: 0, padding: 0 }}>
-            {visibles.map(m => <Burbuja key={m.id} m={m} onCopiar={onCopiar} onEnviado={onEnviado} />)}
+            {visibles.map(v => <Burbuja key={v.mensaje.id} m={v.mensaje} editado={v.editado} sustituido={v.sustituido} onCopiar={onCopiar} onEnviado={onEnviado} onEditar={onEditar} />)}
           </ul>
         </>
       )}

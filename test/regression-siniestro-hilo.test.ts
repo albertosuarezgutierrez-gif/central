@@ -107,3 +107,43 @@ test('el modelo Siniestro NO declara resultado* (código ANTES que el SQL 2026-1
   assert.doesNotMatch(sinComentarios, /^\s*resultado\w*\s/m, 'resultado/resultadoMotivo/resultadoAt van por SQL crudo, no en el modelo, hasta aplicar el SQL')
   assert.doesNotMatch(sinComentarios, /@map\("resultado/, 'columna resultado* mapeada en el modelo')
 })
+
+// ─── Edición = versión nueva (sin UPDATE: el hilo sigue siendo SOLO-AÑADIR) ──────────────────────────────────
+
+/** Cuerpo de `anadirMensajeSiniestro` (lib de asegura). */
+export function cuerpoAnadirMensaje(lib: string): string {
+  const i = lib.indexOf('export async function anadirMensajeSiniestro')
+  if (i < 0) return ''
+  const j = lib.indexOf('\n// ───', i)
+  return lib.slice(i, j < 0 ? undefined : j)
+}
+
+test('editar un mensaje es AÑADIR una versión con meta.sustituyeA (nunca UPDATE) y la ruta lo propaga', () => {
+  const lib = cuerpoAnadirMensaje(readFileSync(join(ROOT, 'apps/asegura/lib/siniestro-hilo.ts'), 'utf8'))
+  assert.ok(lib.length > 100, 'existe anadirMensajeSiniestro')
+  assert.match(lib, /sustituyeA/, 'acepta sustituyeA')
+  assert.match(lib, /db\.siniestroMensaje\.create\(/, 'la edición se guarda con create()')
+  assert.deepEqual(escriturasProhibidas(lib), [], 'sin UPDATE/DELETE al editar')
+  const ruta = readFileSync(join(ROOT, 'apps/asegura/app/api/operador/siniestro/hilo/route.ts'), 'utf8')
+  assert.match(ruta.slice(ruta.indexOf('export const POST')), /sustituyeA:/, 'el POST pasa sustituyeA a la lib')
+})
+
+test('sustituyeA se rechaza si el original es de la IA, de otro siniestro/autor o ya está sustituido (409)', () => {
+  const lib = cuerpoAnadirMensaje(readFileSync(join(ROOT, 'apps/asegura/lib/siniestro-hilo.ts'), 'utf8'))
+  assert.match(lib, /original\.autor\s*===\s*'ia'\)\s*return\s+invalido\(/, 'un mensaje «ia» no se edita')
+  assert.match(lib, /original\.siniestroId\s*!==\s*s\.id\)\s*return\s+invalido\(/, 'mismo siniestro')
+  assert.match(lib, /original\.autor\s*!==\s*v\.mensaje\.autor\)\s*return\s+invalido\(/, 'mismo autor')
+  assert.match(lib, /if\s*\(yaSustituido\)\s*return\s+yaEditado\(\)/, 'ya sustituido → yaEditado()')
+  assert.match(lib, /where:\s*\{\s*id:\s*sustituyeA,\s*correduriaId\s*\}/, 'el original se busca con la correduría')
+  const todo = readFileSync(join(ROOT, 'apps/asegura/lib/siniestro-hilo.ts'), 'utf8')
+  assert.match(todo, /status:\s*409/, '409 para «ya editado»')
+})
+
+test('plazos, espera y contexto de la IA leen solo la versión vigente (hiloVigente)', () => {
+  const hilo = readFileSync(join(ROOT, 'apps/asegura/lib/siniestro-hilo.ts'), 'utf8')
+  assert.match(hilo, /hiloVigente\(/, 'siniestro-hilo.ts usa hiloVigente')
+  assert.doesNotMatch(hilo, /mensajes\.map\(paraPlazos\)/, 'ya no pasa el hilo entero a los plazos')
+  assert.match(hilo, /sustituyeA/, 'la consulta SQL de «esperando» también descarta las sustituidas')
+  const ia = readFileSync(join(ROOT, 'apps/asegura/lib/siniestro-ia.ts'), 'utf8')
+  assert.match(ia, /hiloVigente\(/, 'la IA lee solo la versión vigente')
+})
