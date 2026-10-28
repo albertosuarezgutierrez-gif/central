@@ -11,6 +11,12 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (28/10/2026, 8) Correduría · gabinete de siniestros (fases 1-3)
+- Expediente: «Pegar volcado de la intranet» (trocea por cabeceras, fecha/emisor reales, sin duplicar), ficha del perito, buscador en la póliza (sin IA), plazos con `meta.fechaOriginal`.
+- Gabinete IA: base `conocimiento-siniestros.ts` (PENDIENTE DE REVISIÓN POR ALBERTO, 3 «verificar»), índice de póliza + ficha del caso cacheados, veredicto 🟢🔴🟡 con preguntas, derivar abogado/perito externo, otras pólizas en vigor, canal intranet cordial. Datos sensibles en `meta.privado` cifrado.
+- Fase 3: 👍/👎 por análisis (correcciones al prompt), pre-rehúse → Telegram `correduria.siniestro-prerehuse` (una vez por siniestro), partes del portal en el expediente.
+- Pendiente: tope IA de asegura 5 €/mes (propuesto 20 €, sin decidir); probar con 43141325 (Global 2).
+
 ## (28/10/2026, 7) Tarificador RPA · 3×3: versiones del día y decisión sobre emitir
 - Mergeados PR #5204, #5209, #5211, #5213, #5217, #5220, #5222: explorador 0.3.2→0.3.7, Generali 0.2.46→0.2.51. En vuelo #5224 (explorador 0.3.8); Generali 0.2.52 en desarrollo.
 - Allianz auto da precio; hogar dio 3 precios el 27/10 (falta proyecto/PDF); patinete: el portal rechazaba el NIF por «Tipo Doc. Tomador» vacío (0.3.8 lo elige antes). Mapfre patinete llega a `busquedaProductos.jsf` y el guard la frena por un parámetro del cuerpo. Generali auto: «Tipo de vehículo» (wclasv) queda vacío y Genernet no calcula (0.2.52 prueba hipótesis acotadas).

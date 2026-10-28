@@ -441,7 +441,8 @@ async function cabeceras(): Promise<Record<string, string> | null> {
 
 export type Reenvio = { status: number; json: unknown }
 
-export async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
+/** `timeoutMs`: 15 s por defecto; las llamadas largas (IA, volcado) lo suben para no cortar mientras asegura sigue y guarda (reintento = doble gasto). */
+export async function llamar(path: string, init: RequestInit, timeoutMs = 15_000): Promise<Reenvio> {
   const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
@@ -449,7 +450,7 @@ export async function llamar(path: string, init: RequestInit): Promise<Reenvio> 
       ...init,
       headers: { ...h, ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
