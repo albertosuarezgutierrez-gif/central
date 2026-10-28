@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   DIAS_COMUNICACION_LCS,
   GRAVEDADES_SINIESTRO,
@@ -786,6 +787,11 @@ function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoP
 
   return (
     <li style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 12px 0' }}>
+        <Link href={`/correduria/siniestro/${s.id}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, fontSize: 13, fontWeight: 600 }}>
+          Abrir expediente →
+        </Link>
+      </div>
       <div
         role="button"
         tabIndex={0}
