@@ -1,0 +1,41 @@
+{
+ "sesion": "fb3edc12-f3f2-511c-9a19-c509f277f0a3",
+ "inicio": "2026-10-28T12:45:46.111Z",
+ "fin": "2026-10-28T12:45:58.952Z",
+ "llamadas": 3,
+ "categorias": {
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 26,
+   "chars_out": 47,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 1247,
+   "chars_out": 1491,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 66356,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 373,
+   "chars_out": 3434,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  }
+ }
+}
