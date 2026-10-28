@@ -11,6 +11,18 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (28/10/2026, 5) SIVRA pricing: suelo del propietario por fecha
+- Tabla `pricing_suelos_fecha` (migración `2026-10-28_pricing_suelo_fecha.sql`, APLICADA 28/10; INSERT Duplex SS/Feria 2027 comentado: base 410/455/440/490/410/200). Aplicar ANTES del deploy o la pasada sale `ok:false` (`suelos_fecha` caída).
+- `lib/sivra/pricing-suelo-fecha.ts`: mismo punto/semántica que `min_price_finde`, manda el mayor, solo `max_price` le gana; respuesta `suelos_fecha`.
+- Pendiente: filtro descartado en bucket: −11 % House/Luxury mayo, decidir el 03/11 (¿guarda simétrica global→mes?).
+- Cepo: `pricing-suelo-fecha.test.ts` (9 roturas vistas en rojo).
+
+## (28/10/2026, 4) SIVRA pricing: guarda «el mes se fue» + guardián sin alerta con p50 mezclado
+- Causa real de Duplex mayo-2027 a 'global' (11/10): la exclusión de fechas de evento del bucket del mes (`apply/route.ts` ~:475) NO filtra `estado`; una fila DESCARTADA del 22/05 dejó mayo en 2 fechas. No eran fotos caducadas.
+- Hecho: `lib/sivra/pricing-cambio-fuente.ts` (+test): si la última escritura salió del MES y hoy el mes no tiene bucket, la fecha no baja (>30 días vista; libera techo medido/rumor caído/max_price). Habría retenido el 01/05 a 176€ (bajó a 146€ = global×1,45).
+- Hecho: el guardián ya no alerta `reserva_bajo_mercado` contra el p50 mezclado (cuenta `reservas_bajas_sin_mercado_fecha`).
+- NO hecho (decisión de Alberto): escalar el salto de evento sin mes por el prior (simulado: +25-60 % de golpe en ~40 noches, dobla Feria en abril) y filtrar `descartado` en el bucket (cambia 10 piso-mes; House mayo bajaría ~10 %).
+- Las «17 noches −25 % bajo mercado» de Duplex son todas base 'mes': el hueco es liga + p40 + calidad frente al p50 completo, no la global.
 **(28/10/2026, 4)** — Inversión casa vacacional (Aljarafe/A-49 + Almonte/Pilas/Hinojos, ≤280k). PR #5191 mergeado: perfil `CRITERIOS_CASA_VACACIONAL` (module-subastas) → Telegram «🏡 Casa vacacional» (cron subastas-avisos) y «🏡 Idealista» (al insertar en `inmuebles_busqueda`); cron diario `idealista-correos` 13:17 UTC con dedupe por Message-ID en `inversion_config.idealista_correos_procesados`. SQL `subastas_perfil_inversion` APLICADO. Gmail se lee por **IMAP** (`GMAIL_USER`/`GMAIL_APP_PASSWORD`, como facturas): `GMAIL_REFRESH_TOKEN` de sivra es secreto y no se puede copiar; `GOOGLE_OAUTH_REFRESH_TOKEN` es el de SEO de ia-rest, no vale. Skill idealista-radar actualizada. Pendiente Alberto: búsquedas guardadas en idealista con etiqueta Gmail `inmobiliaria`, rotar ALERTA_TOKEN, oferta Ikesa 150k.
 
 **(28/10/2026, 3)** — Tarificador. Prueba real (`main-b82bec1`): **Mapfre auto completo** (precios + proyecto + PDF guardado). Generali: faltaban «Tipo de vehículo» y «Compañía de procedencia» en «Datos de Valoración» → 0.2.45 los rellena por opción exacta (Turismo; compañía anterior de la ficha), sin probar aún en real.

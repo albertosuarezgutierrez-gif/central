@@ -10,6 +10,7 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { sueloFinde, sueloFindePropietario } from "@/lib/sivra/pricing-suelo-finde"
+import { SQL_SUELOS_FECHA, indexarSuelosFecha, sueloFechaPropietario, sueloPropietario, type FilaSueloFecha } from "@/lib/sivra/pricing-suelo-fecha"
 import {
   primaFindeFecha, pisosConPrimaFinde, primaPiso, factorSemanaPiso, factorSemanaFecha, urgenciaCombinada, type RitmoFinde,
 } from "@/lib/sivra/pricing-ritmo-finde"
@@ -37,6 +38,7 @@ import { eur } from "@/lib/dinero"
 import { anclaRail, anclaRailCon, type OrigenAncla, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
 import { resumenLecturasCaidas, avisoLecturasCaidas, type LecturaCaida } from "@/lib/sivra/pricing-lecturas"
 import { PASADAS_POR_DIA_APPLY } from "@/lib/sivra/pricing-latido-apply"
+import { congelarPorCambioFuente, normalizarFuenteBase } from "@/lib/sivra/pricing-cambio-fuente"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -784,13 +786,13 @@ export async function POST(req: NextRequest) {
   // reciente por fecha; el MAX() anterior solo daba el dia.
   const escrituraRows = await prisma.$queryRaw<{
     pid: string; rate_date: string; dias: number; horas: number
-    prev_price: number | null; ult_price: number
+    prev_price: number | null; ult_price: number; fuente_prev: string | null
   }[]>(Prisma.sql`
     SELECT DISTINCT ON (property_id, rate_date)
            property_id AS pid, rate_date::text AS rate_date,
            (CURRENT_DATE - applied_at::date)::int AS dias,
            (EXTRACT(EPOCH FROM (NOW() - applied_at)) / 3600)::float8 AS horas,
-           old_price AS prev_price, new_price AS ult_price
+           old_price AS prev_price, new_price AS ult_price, base_fuente AS fuente_prev
     FROM pricing_applied
     WHERE dry_run = false AND rate_date >= CURRENT_DATE
     ORDER BY property_id, rate_date, applied_at DESC
@@ -802,8 +804,18 @@ export async function POST(req: NextRequest) {
     prev: x.prev_price == null ? null : Number(x.prev_price),
     ult: Number(x.ult_price),
   }]))
+  /** De qué base salió la última escritura real de cada fecha (`mes`/`global`; NULL = no consta).
+   *  Alimenta la guarda «el mes se fue» (`lib/sivra/pricing-cambio-fuente.ts`). */
+  const fuenteUltimaEscritura = new Map(escrituraRows.map(x => [`${x.pid}|${x.rate_date}`, normalizarFuenteBase(x.fuente_prev)]))
   /** true = la lectura respondió (aunque sea con 0 filas). Sin ella, «nunca escrita» no es afirmable. */
   const hayHistorialEscrituras = !lecturasCaidas.some(l => l.nombre === 'ultima_escritura')
+
+  // 🧱 Suelos del PROPIETARIO por piso y fecha (`pricing_suelos_fecha`, ver pricing-suelo-fecha.ts).
+  // Tolerante: tabla ausente (código antes que la migración) o lectura caída = sin efecto, pero se
+  // DECLARA — un suelo que el dueño puso y no se aplica no puede pasar en silencio.
+  const suelosFecha: Map<string, number> | null = await prisma.$queryRaw<FilaSueloFecha[]>(Prisma.raw(SQL_SUELOS_FECHA))
+    .then(indexarSuelosFecha)
+    .catch((e) => { lecturasCaidas.push({ nombre: 'suelos_fecha', error: String(e).slice(0, 120) }); return null })
 
   // 🛑 Si CUALQUIERA de las dos lecturas reventó, esta pasada NO tarifica. Ver la cabecera de
   // `pricing-ancla-rail.ts`: un `[]` por excepción es indistinguible del `[]` legítimo (fecha sin
@@ -955,6 +967,9 @@ export async function POST(req: NextRequest) {
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
     const congeladas: { fecha: string; precio: number; factor: number }[] = []
+    // Fechas que la guarda «el mes se fue» dejó sin bajar (pricing-cambio-fuente.ts): su última
+    // escritura salió del bucket del MES y en esta pasada ese mes ya no tiene bucket.
+    const congeladasFuente: { fecha: string; precio: number; objetivo: number }[] = []
     // Fechas que se llevaron premio por anticipación en esta pasada. En la respuesta a propósito:
     // una palanca que sube precios en vivo tiene que poder auditarse sin abrir la BD, y un 0 aquí
     // es la prueba de que no ha movido nada (distinto de «no se ha mirado» → `antelacion_k = 0`).
@@ -970,6 +985,8 @@ export async function POST(req: NextRequest) {
     // Noches vie/sáb que el suelo del propietario (`min_price_finde`) SUBIÓ: si no se cuentan, un
     // suelo que manda se confunde en el parte con un precio que el motor eligió.
     const sueloFindeSubidas: { fecha: string; desde: number; suelo: number }[] = []
+    // Noches que el suelo por FECHA del propietario (`pricing_suelos_fecha`) SUBIÓ. Mismo motivo.
+    const sueloFechaSubidas: { fecha: string; desde: number; suelo: number }[] = []
     // Fechas recortadas por el TECHO POR ADR PROPIO. Viajan a la respuesta a proposito: si
     // este rail muerde en fechas normales, la senal es que el ancla de mercado se ha vuelto a
     // ir de liga — no que el rail este haciendo bien su trabajo en silencio.
@@ -1359,9 +1376,16 @@ export async function POST(req: NextRequest) {
       // estimación: ningún techo derivado del mercado la perfora. Solo max_price le gana (ya va
       // dentro del helper). Como va después del raíl, una noche por debajo sube de golpe.
       const sFindeProp = sueloFindePropietario({ fecha: date, minPriceFinde: r.min_price_finde, maxPrice: r.max_price })
-      if (sFindeProp != null && target < sFindeProp) {
-        sueloFindeSubidas.push({ fecha: date, desde: target, suelo: sFindeProp })
-        target = sFindeProp
+      // 🧱 Suelo por FECHA del propietario (`pricing_suelos_fecha`, ver pricing-suelo-fecha.ts): MISMO
+      // punto y misma semántica que el de vie/sáb. Si coinciden, manda el mayor (`sueloPropietario`).
+      // Nada de lo que viene detrás lo pisa: las guardas de abajo solo RETIENEN el precio vivo cuando
+      // `target < old` (y entonces old > target ≥ suelo), y la banda muerta respeta `sProp`.
+      const sFechaProp = sueloFechaPropietario({ propertyId: r.property_id, fecha: date, suelos: suelosFecha, maxPrice: r.max_price })
+      const sProp = sueloPropietario(sFindeProp, sFechaProp)
+      if (sProp != null && target < sProp) {
+        if (sFechaProp != null && sProp === sFechaProp) sueloFechaSubidas.push({ fecha: date, desde: target, suelo: sProp })
+        else sueloFindeSubidas.push({ fecha: date, desde: target, suelo: sProp })
+        target = sProp
       }
       const liberaTecho = acote.liberaCongelacion
       // 🔓 Segunda llave (27/08/2026). El techo solo abre donde hay mercado MEDIDO de la fecha, y
@@ -1398,6 +1422,21 @@ export async function POST(req: NextRequest) {
       // juzgar, y el techo solo está definido cuando ese mercado SÍ está medido.
       if (evFactor >= 2 && !useMonth && old != null && target < old && !liberaTecho
           && (r.max_price == null || old <= r.max_price)) continue
+      // 🧊 Guarda «el mes se fue» (28/10/2026, Duplex 01/05/2027 176→146): que el mes cruce el umbral
+      // de fechas medidas (3→2) no es información nueva sobre la fecha, así que no la baja. Sin
+      // historial legible la fuente anterior no consta y la guarda no actúa. Ver el helper.
+      if (congelarPorCambioFuente({
+        fuenteAnterior: hayHistorialEscrituras ? (fuenteUltimaEscritura.get(`${r.property_id}|${date}`) ?? null) : null,
+        fuenteActual: useMonth ? 'mes' : 'global',
+        target, old, diasVista: daysOut,
+        // La MISMA liberación que el resto de guardas (techo, ADR de evento, rumor caído, antigüedad
+        // ≥ DIAS_CONGELADA, salto nuestro, descenso en curso): si no, se retendría hasta los 30 días.
+        libera: liberaGuardas,
+        maxPrice: r.max_price,
+      })) {
+        congeladasFuente.push({ fecha: date, precio: old!, objetivo: target })
+        continue
+      }
       // 🧊 Guarda «evento a ciegas» (caso Bienal, 13/08/2026 — decisión Fable delegada por
       // Alberto): generaliza la de Karol G por FECHA en vez de por mes y desde factor 1,15. Un
       // evento CONFIRMADO cuya fecha no tiene comps fiables propios NO se baja: el ancla global
@@ -1440,7 +1479,7 @@ export async function POST(req: NextRequest) {
       // esté por debajo del suelo del propietario (eso se corrige siempre).
       // El suelo vie/sáb del propietario cuenta igual: 570 con suelo 578 se corrige aunque sea un 1,4%.
       if (old != null && (r.min_price == null || old >= r.min_price)
-          && (sFindeProp == null || old >= sFindeProp)
+          && (sProp == null || old >= sProp)
           && Math.abs(target - old) / old < 0.03) continue
       // Idea #3 — min-stay en noches de evento fuerte y lejanas, salvo hueco suelto entre reservas
       // (que sería imposible de cubrir con 2-3 noches). Solo lo escribimos si ya vamos a tocar la
@@ -1529,6 +1568,9 @@ export async function POST(req: NextRequest) {
       // único resto del serrucho: el ancla global se mueve con lo que el barrido muestree hoy y el
       // salto de evento no pasa por el raíl. Un 0 aquí es una AFIRMACIÓN, no un silencio.
       saltos_evento_sin_mes: saltosEventoSinMes,
+      // Noches que NO bajaron porque su mes perdió el bucket en esta pasada (pricing-cambio-fuente.ts).
+      // Un 0 es la prueba de que la guarda no ha retenido nada; la muestra dice cuáles y a cuánto.
+      congeladas_cambio_fuente: { noches: congeladasFuente.length, muestra: congeladasFuente.slice(0, 10) },
       // Prima vie/sáb por ritmo propio (pricing-ritmo-finde.ts). `prima: null` = sin muestra o
       // lectura caída (NO se aplicó nada), distinto de `1` = medida y sin prima. `noches` = las
       // fechas libres vie/sáb de esta pasada a las que se aplicó. NO va a `pricing_applied`: esa
@@ -1588,6 +1630,11 @@ export async function POST(req: NextRequest) {
       // Noches vie/sáb cuyo objetivo subió al suelo del propietario (`min_price_finde`).
       suelo_finde_propietario: r.min_price_finde != null
         ? { suelo: r.min_price_finde, fechas: sueloFindeSubidas.length, sample: sueloFindeSubidas.slice(0, 5) }
+        : undefined,
+      // Noches cuyo objetivo subió al suelo por FECHA del propietario (`pricing_suelos_fecha`).
+      // `noches: 0` es una afirmación (se leyó y no mordió); ausente = la lectura cayó (va en lecturas).
+      suelos_fecha: suelosFecha != null
+        ? { noches: sueloFechaSubidas.length, muestra: sueloFechaSubidas.slice(0, 10) }
         : undefined,
       // Fechas recortadas por el techo por ADR propio (03/09/2026). Ver `pricing-techo-adr.ts`.
       techo_adr: adrAcotadas.length > 0

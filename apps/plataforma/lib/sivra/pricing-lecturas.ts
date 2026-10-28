@@ -28,6 +28,7 @@ export const EFECTO_LECTURA: Record<string, string> = {
   prior_estacional: 'pierde el suelo/techo histórico (ADR de 6 años)',
   velocidad_reservas: 'pierde la señal de ritmo (≥2 reservas en 7 días = precio corto)',
   ultima_escritura: 'no descongela por antigüedad ni reconoce sus propios saltos (llaves de pricing-descongelar): degrada a lo de antes del 27/08/2026',
+  suelos_fecha: 'sin los suelos por fecha del propietario (pricing_suelos_fecha): las noches de evento que fijó el dueño se tarifican sin su mínimo (¿falta la migración 2026-10-28?)',
   ritmo_finde: 'sin prima vie/sáb por ritmo propio: los findes se tarifan con la demanda del MES (y el centinela del canal vuelve a llamarlos «caros»)',
 }
 
