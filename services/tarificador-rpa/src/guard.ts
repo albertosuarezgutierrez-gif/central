@@ -1865,7 +1865,10 @@ export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'descarga del proyecto con otra ventana de red abierta')
   await exigirSinCuentaBancaria(page)
-  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: no hay exactamente un control')
+  const n = await boton.count()
+  // v0.8.34: CERO = el portal re-pintó el control y la marca se perdió (no se pulsa nada; quien llama re-escanea). Más de uno sigue siendo bloqueo.
+  if (n === 0) throw new DescargaNoPulsadaError('desaparecido', '')
+  if (n !== 1) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: no hay exactamente un control')
   const desc = await descripcion(boton)
   comprobarBoton(desc)
   const vivo = { desc, visible: true, habilitado: true, attrs: await atributosMenuVivos(boton) }
@@ -1873,8 +1876,72 @@ export async function pulsarDescargaProyectoAuto(page: Page, guard: GuardEmision
     // v0.6.30: único otro clic posible = ABRIR el menú «Descargar propuesta» (disparador de menú, sin bloqueo en rótulo ni en manejadores/href).
     if (!puedeAbrirMenuDescarga(vivo, compania, guardado)) throw new EmisionBloqueadaError('boton', 'descarga del proyecto: el control vivo no pasa la lista blanca')
   }
-  await boton.click({ timeout: 8_000 })
+  // v0.8.34 (Mapfre, prueba real 27/10/2026: «locator.click: Timeout 8000ms exceeded … waiting for locator('[data-rpa-dl="41"]')»): se trae a la vista
+  // antes y, si Playwright no llega a pulsar (tapado por una capa, oculto, en animación, re-pintado), se lanza `DescargaNoPulsadaError` con la CAUSA
+  // leída de su traza: no se pulsó nada y quien llama decide (Escape a una capa y un único reintento). Nunca `force` ni clic por coordenadas.
+  await boton.scrollIntoViewIfNeeded({ timeout: 2_000 }).catch(() => undefined)
+  try {
+    await boton.click({ timeout: MS_CLIC_DESCARGA_PROYECTO })
+  } catch (e) {
+    guard.comprobar()
+    const msg = e instanceof Error ? e.message : String(e)
+    if (/timeout|intercepts pointer|not visible|not stable|not enabled|detached|outside of the viewport/i.test(msg)) {
+      const c = causaClicNoPulsado(msg)
+      throw new DescargaNoPulsadaError(c.causa, c.detalle)
+    }
+    throw e
+  }
   guard.comprobar()
+}
+
+/** v0.8.34: tope del clic de descarga (Playwright reintenta dentro: visible, estable, sin capa encima). */
+export const MS_CLIC_DESCARGA_PROYECTO = 6_000
+
+export type CausaClicNoPulsado = 'tapado' | 'oculto' | 'inestable' | 'deshabilitado' | 'fuera_de_vista' | 'desaparecido' | 'desconocida'
+
+/** v0.8.34: el clic de descarga NO llegó a darse (Playwright agotó su espera de accionabilidad). No se pulsó nada. */
+export class DescargaNoPulsadaError extends Error {
+  constructor(readonly causa: CausaClicNoPulsado, readonly detalle: string) {
+    super(`el control de descarga no se pudo pulsar: ${textoCausaClicNoPulsado(causa)}${detalle ? ` (${detalle})` : ''}`)
+    this.name = 'DescargaNoPulsadaError'
+  }
+}
+
+/** Texto legible de la causa. PURA. */
+export function textoCausaClicNoPulsado(c: CausaClicNoPulsado): string {
+  return {
+    tapado: 'otro elemento (capa/diálogo) lo tapa',
+    oculto: 'no está visible',
+    inestable: 'se está moviendo (animación)',
+    deshabilitado: 'está deshabilitado',
+    fuera_de_vista: 'queda fuera de la vista y no se puede desplazar',
+    desaparecido: 'el portal lo volvió a pintar (la marca ya no está)',
+    desconocida: 'causa no reconocida en la traza del navegador',
+  }[c]
+}
+
+/**
+ * v0.8.34: causa por la que Playwright no pulsó, leída de la traza de `locator.click` (la ÚLTIMA línea de estado manda; si nunca resolvió el
+ * localizador, el control desapareció). `detalle` = solo etiqueta y clases del elemento que tapa (sin texto ni atributos con datos). PURA.
+ */
+export function causaClicNoPulsado(msg: string): { causa: CausaClicNoPulsado; detalle: string } {
+  const lineas = String(msg ?? '').split('\n').map((l) => l.trim()).filter((l) => l !== '')
+  let causa: CausaClicNoPulsado = 'desconocida'
+  let detalle = ''
+  for (const l of lineas) {
+    if (/intercepts pointer events/i.test(l)) {
+      causa = 'tapado'
+      const m = l.match(/<([a-z][a-z0-9-]*)\b[^>]*?\bclass="([^"]*)"/i) ?? l.match(/<([a-z][a-z0-9-]*)\b/i)
+      const clases = (m?.[2] ?? '').split(/\s+/).filter((c) => /^[A-Za-z_-][\w-]{0,40}$/.test(c)).slice(0, 4).join('.')
+      detalle = m ? `tapa: <${m[1]!.toLowerCase()}${clases ? `.${clases}` : ''}>` : ''
+    } else if (/element is not visible|not visible/i.test(l)) { causa = 'oculto'; detalle = '' }
+    else if (/not stable/i.test(l)) { causa = 'inestable'; detalle = '' }
+    else if (/not enabled|disabled/i.test(l)) { causa = 'deshabilitado'; detalle = '' }
+    else if (/outside of the viewport/i.test(l)) { causa = 'fuera_de_vista'; detalle = '' }
+    else if (/detached from the dom|element is detached/i.test(l)) { causa = 'desaparecido'; detalle = '' }
+  }
+  if (causa === 'desconocida' && /timeout/i.test(msg) && !lineas.some((l) => /locator resolved to|resolved to </i.test(l))) causa = 'desaparecido'
+  return { causa, detalle: detalle.slice(0, 120) }
 }
 
 // ─────────── Mapfre NSEI «Generar Proyecto» (v0.8.14, endurecido en 0.8.15; 22/10/2026, AUTORIZADO por Alberto: un proyecto no es póliza) ───────────

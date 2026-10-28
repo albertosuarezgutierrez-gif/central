@@ -11,6 +11,10 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+**(28/10/2026)** — Tarificador RPA: PR #5178 mergeado (Mapfre 0.8.33, Generali 0.2.42, volcado en atascos, imagen del bot desde `seguros.tarificador_imagen` — SQL aplicado, el workflow publica solo `main-*`). Prueba real: **Mapfre auto OK** (392,02€ / 714,06€, proyecto guardado; PDF falló) · Generali agotó 240 s («datos incompletos»).
+  Nuevo PR: Mapfre 0.8.34 (descarga del PDF con scroll, causa del clic y 1 reintento) + Generali 0.2.43 (corta la espera ante «datos incompletos»; decisión de Alberto: «Envío e-mail»=Mediador, «Verificación del riesgo»=No; nunca Tomador).
+  Trabajos atascados viejos bloquean `probar` (duplicado): se cancelaron 2 a mano. Pendiente: prueba real tras el PR; PDF/coberturas/comparativa/borrador; Mapfre/Generali hogar; fase 3 (fraccionamiento).
+
 **(28/10/2026, 2)** — Plataforma: **Frankfurter** (tipos BCE, `lib/tipos-cambio.ts`) → «Total cartera en €» en `TarjetaBolsa` (null = «sin dato», nunca 0); **Nager.Date** (`lib/festivos-nager.ts`) → festivos nacionales + Andalucía en `pricing_eventos_auto` con `fuente='nager'` desde `/api/sivra/eventos/websearch`; la IA ya solo busca festivos LOCALES. **Open-Meteo: NO se contrata** (0 restaurantes con coordenadas, domótica sin usar); contratar cuando se use. PR #5177 (cron eventos-entorno) mergeado.
 **(28/10/2026)** — ✅ Los dos SQL del 27/10 APLICADOS en prod y verificados: acceso por autorización (CHECK `portal_vinculo_origen_check` con `autorizacion_corredor`) y `fusionar_clientes` con vínculos del portal (Alberto en el SQL Editor; security definer, search_path y grants correctos). `apply_migration` del MCP caduca en cambios grandes esperando confirmación: para funciones largas, SQL Editor. Pendientes de Alberto: invitar a María (ficha cca86411), retención fichas fuente=portal, OK abogado interés legítimo.
 

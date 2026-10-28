@@ -13,15 +13,18 @@ import { EmisionBloqueadaError } from '@central/module-tarificacion'
 import type { OfertaNormalizada, PdfRef } from '@central/module-tarificacion'
 import type { ContextoPortal } from './adaptador.ts'
 import { esperarPdf, esPdf } from './descarga-pdf.ts'
-import { ErrorFronteraEmision, pulsarEscapeAvisoModal, type CompaniaDescargaProyecto } from './guard.ts'
+import { DescargaNoPulsadaError, ErrorFronteraEmision, pulsarEscapeAvisoModal, type CompaniaDescargaProyecto } from './guard.ts'
 
 /** Interruptor por compañía (constante): `false` apaga la descarga SIN tocar nada más. Por defecto, activadas. */
 export const DESCARGA_PROYECTO_ACTIVA: Readonly<Record<CompaniaDescargaProyecto, boolean>> = { allianz: true, mapfre: true, generali: true }
 
 /** Espera al PDF tras el clic. */
 export const TOPE_DESCARGA_PROYECTO_MS = 20_000
-/** v0.6.31: tope TOTAL de la descarga (buscar + abrir menú + clic + PDF): pase lo que pase, el precio sigue y el aviso dice «tiempo agotado». */
-export const TOPE_TOTAL_DESCARGA_PROYECTO_MS = 25_000
+/** v0.6.31: tope TOTAL de la descarga (buscar + abrir menú + clic + PDF): pase lo que pase, el precio sigue y el aviso dice «tiempo agotado».
+ * v0.8.34: 35 s (cabe un clic fallido de 6 s + Escape + re-escaneo + el reintento y la espera del PDF). */
+export const TOPE_TOTAL_DESCARGA_PROYECTO_MS = 35_000
+/** v0.8.34: pausa antes de re-escanear tras un clic que no llegó a darse (deja cerrar la capa o terminar el re-pintado). */
+export const REINTENTO_CLIC_DESCARGA_MS = 800
 /** Tamaño razonable de un PDF de presupuesto: más pequeño no es un documento; más grande lo rechazaría asegura (`MAX_BYTES_ADJUNTO`, 4 MiB). */
 export const MIN_BYTES_PDF_PROYECTO = 100
 export const MAX_BYTES_PDF_PROYECTO = 4 * 1024 * 1024
@@ -103,12 +106,28 @@ async function descargarProyectoAutoInterna(
       b = b2
     }
     if (!('boton' in b)) return sin(b.motivo)
-    const espera = esperarPdf(page, topeMs)
+    let espera = esperarPdf(page, topeMs)
     try {
       await ctx.pulsarDescargaProyectoAuto(page, b.boton, compania, guardado)
     } catch (e) {
       espera.cancelar()
-      throw e
+      if (!(e instanceof DescargaNoPulsadaError)) throw e
+      // v0.8.34 (Mapfre, 27/10/2026): el clic NO se dio. Una capa encima → Escape (cierra, nunca acepta); en todo caso se re-escanea (marcas nuevas:
+      // el portal pudo re-pintar el control) y se intenta UNA vez más por la misma puerta guardada. Si vuelve a fallar, aviso con la causa.
+      const primera = e
+      if (primera.causa === 'tapado') await pulsarEscapeAvisoModal(page)
+      await page.waitForTimeout(REINTENTO_CLIC_DESCARGA_MS)
+      const b2 = await ctx.buscarDescargaProyectoAuto(page, compania, guardado)
+      if (!('boton' in b2)) return sin(`${primera.message}; al reintentar: ${b2.motivo}`)
+      b = b2
+      espera = esperarPdf(page, topeMs)
+      try {
+        await ctx.pulsarDescargaProyectoAuto(page, b.boton, compania, guardado)
+      } catch (e2) {
+        espera.cancelar()
+        if (e2 instanceof DescargaNoPulsadaError) return sin(`«${b.etiqueta.slice(0, 40)}»: ${e2.message} (también tras ${primera.causa === 'tapado' ? 'Escape y ' : ''}un reintento)`)
+        throw e2
+      }
     }
     const r = await espera.promesa
     if (!r) return sin(`«${b.etiqueta.slice(0, 40)}» no produjo ningún PDF en ${Math.round(topeMs / 1000)} s (ni descarga, ni ventana, ni respuesta PDF)`)

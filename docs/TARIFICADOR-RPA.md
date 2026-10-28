@@ -275,6 +275,7 @@ Encolar moto desde plataforma: sin `poblacion` en el riesgo, se toma `ciudad` de
 - Auto/hogar/moto/vida/salud/decesos se quedan en **Avant2** (la API de Codeoscopic no cubre comunidades/RC/comercio).
 - (27/10/2026) Se tarifica SIEMPRE en pago ANUAL; la forma de pago la cambia el cliente al contratar.
 - (27/10/2026) «Envío e-mail» del portal (Generali) nunca en «Sí» sin OK de Alberto (comunicación a tercero). «Verificación del riesgo» (Generali): pendiente de su decisión; mientras, el bot se para y la nombra.
+- (28/10/2026) Generali auto «Garantías y Resultados», antes de «Recalcular» (0.2.43): «Envío e-mail» = «Mediador» (opción exacta; nunca «Tomador») y «Verificación del riesgo» = «No»; sin la opción exacta, el bot para y la nombra.
 - (27/10/2026) Pruebas de imagen de rama sin mergear: solo con interruptor en BD que enciende Alberto (sustituye en ese caso a «Nunca desplegar imagen desde una rama sin su OK»: el interruptor ES el OK; producción solo `main-*`).
 - (27/10/2026) Allianz auto con compañía actual = Allianz (Allianz→Allianz): no se tarifica por bot (el portal no la ofrece); error de datos claro, se hace a mano.
 
