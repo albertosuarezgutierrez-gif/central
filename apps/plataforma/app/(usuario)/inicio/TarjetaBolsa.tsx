@@ -2,6 +2,8 @@ import { getSession } from '@/lib/session'
 import { getCarteraReal } from '@/lib/trading/cartera-real-io'
 import { getBrokerSaldos } from '@/lib/broker'
 import { bolsaVieja, importeDivisa, resumenBolsa, BOLSA_STALE_H } from '@/lib/inicio-resumen'
+import { eur } from '@/lib/dinero'
+import { obtenerTiposBCE, totalEnEuros } from '@/lib/tipos-cambio'
 import { Aviso, Cifra, Cifras, NoDisponible, Tarjeta, fila } from './piezas'
 
 // Bolsa = solo IBKR (el patrimonio inmobiliario «cambia poco», decisión de Alberto 24/09/2026).
@@ -33,6 +35,11 @@ export default async function TarjetaBolsa() {
   const porDivisa = cartera ? resumenBolsa(cartera.posiciones) : []
   const vieja = cartera ? bolsaVieja(cartera.actualizado, new Date()) : false
   const principal = porDivisa[0] ?? null
+  // Total en € solo si hay alguna divisa distinta de EUR (si todo es EUR, el valor ya está arriba).
+  const hayExtranjera = porDivisa.some(d => d.divisa.toUpperCase() !== 'EUR')
+  const tipos = hayExtranjera ? await obtenerTiposBCE() : null
+  const totalEur = hayExtranjera ? totalEnEuros(porDivisa, tipos) : null
+  const fechaBCE = tipos?.fecha ? tipos.fecha.split('-').reverse().join('/') : null
 
   return (
     <Tarjeta titulo="Bolsa · IBKR" href="/trading" enlace="Ver cartera">
@@ -50,6 +57,13 @@ export default async function TarjetaBolsa() {
             label={`Valor posiciones (${principal.divisa})`}
             valor={principal.valor == null ? '—' : importeDivisa(principal.valor, principal.divisa)}
             sub={principal.completo ? `${cartera!.posiciones.filter(p => p.divisa === principal.divisa).length} posición(es)` : 'falta algún precio: es un mínimo'}
+          />
+        )}
+        {hayExtranjera && (
+          <Cifra
+            label="Total cartera en €"
+            valor={totalEur == null ? 'sin dato' : `${totalEur.minimo ? '≥ ' : ''}${eur(totalEur.total)}`}
+            sub={totalEur == null ? 'sin tipo de cambio BCE o falta algún valor' : `${totalEur.minimo ? 'falta algún precio: es un mínimo · ' : ''}tipo BCE ${fechaBCE ?? 'sin fecha'}`}
           />
         )}
         {principal && (
