@@ -1,22 +1,22 @@
 {
  "sesion": "e45321be-cb43-5f67-9de1-4c5bc48b7532",
  "inicio": "2026-10-26T09:21:23.851Z",
- "fin": "2026-10-28T07:10:46.557Z",
- "llamadas": 368,
+ "fin": "2026-10-28T09:06:04.833Z",
+ "llamadas": 477,
  "categorias": {
   "otro": {
-   "llamadas": 73,
-   "chars_in": 47255,
-   "chars_out": 301641,
+   "llamadas": 90,
+   "chars_in": 54816,
+   "chars_out": 458911,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 19,
+    "ToolSearch": 21,
     "WebSearch": 19,
-    "SubagentHandback": 13,
-    "ReadNotifications": 17,
+    "SubagentHandback": 15,
+    "ReadNotifications": 30,
     "SendUserFile": 1,
     "SendMessage": 3
    }
@@ -34,14 +34,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 9,
-   "chars_in": 18987,
-   "chars_out": 20953,
+   "llamadas": 11,
+   "chars_in": 25044,
+   "chars_out": 27400,
    "errores": 0,
-   "archivos_citados": 8,
-   "chars_citados": 84806,
+   "archivos_citados": 15,
+   "chars_citados": 175954,
    "tools": {
-    "Agent": 9
+    "Agent": 11
    }
   },
   "mcp:Booking_com": {
@@ -56,14 +56,14 @@
    }
   },
   "bash": {
-   "llamadas": 60,
-   "chars_in": 55434,
-   "chars_out": 205251,
+   "llamadas": 126,
+   "chars_in": 88934,
+   "chars_out": 436754,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 60
+    "Bash": 126
    }
   },
   "mcp:Gmail": {
@@ -80,28 +80,28 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 56,
-   "chars_in": 8792,
-   "chars_out": 181379,
+   "llamadas": 59,
+   "chars_in": 9043,
+   "chars_out": 215208,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 38,
-    "Read": 17,
+    "Read": 20,
     "Glob": 1
    }
   },
   "escritura": {
-   "llamadas": 3,
-   "chars_in": 11929,
-   "chars_out": 54939,
+   "llamadas": 7,
+   "chars_in": 28845,
+   "chars_out": 103426,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 1,
-    "Write": 2
+    "Edit": 2,
+    "Write": 5
    }
   },
   "agente:agente-mecanico": {
@@ -116,56 +116,57 @@
    }
   },
   "mcp:github": {
-   "llamadas": 10,
-   "chars_in": 4947,
-   "chars_out": 17088,
+   "llamadas": 18,
+   "chars_in": 7487,
+   "chars_out": 53102,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 2,
-    "mcp__github__pull_request_read": 3,
+    "mcp__github__create_pull_request": 3,
+    "mcp__github__pull_request_read": 8,
     "mcp__github__update_pull_request": 2,
-    "mcp__github__merge_pull_request": 1,
+    "mcp__github__merge_pull_request": 3,
     "mcp__github__search_pull_requests": 1
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 12,
-   "chars_in": 1604,
-   "chars_out": 94525,
+   "llamadas": 18,
+   "chars_in": 2136,
+   "chars_out": 97536,
    "errores": 0,
-   "archivos_citados": 17,
-   "chars_citados": 2678818,
+   "archivos_citados": 18,
+   "chars_citados": 3799439,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 2,
-    "mcp__claude-code-remote__send_later": 4,
-    "mcp__claude-code-remote__delete_trigger": 2,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 1,
+    "mcp__claude-code-remote__subscribe_pr_activity": 3,
+    "mcp__claude-code-remote__send_later": 5,
+    "mcp__claude-code-remote__delete_trigger": 4,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 3,
     "mcp__claude-code-remote__list_triggers": 3
    }
   },
   "mcp:Supabase": {
-   "llamadas": 1,
-   "chars_in": 2,
-   "chars_out": 391,
+   "llamadas": 2,
+   "chars_in": 490,
+   "chars_out": 407,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__list_projects": 1
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__apply_migration": 1
    }
   },
   "sql": {
-   "llamadas": 10,
-   "chars_in": 4134,
-   "chars_out": 16049,
+   "llamadas": 12,
+   "chars_in": 4580,
+   "chars_out": 17489,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 10
+    "mcp__Supabase__execute_sql": 12
    }
   },
   "agente:rastreador-codigo": {
