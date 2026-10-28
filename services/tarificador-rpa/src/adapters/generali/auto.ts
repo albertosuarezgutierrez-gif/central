@@ -159,6 +159,7 @@ import {
   vaciosProtegidosGenerali,
   resumenCaracteristicasVehiculoGenerali,
   type BloqueVehiculoGenerali,
+  resumenFotoSelectorGenerali,
   type ControlMediador,
   type DecisionMediador,
   type MarcoMediador,
@@ -282,6 +283,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * (3) el atasco posterior añade «Estado del selector» (campos vacíos/obligatorios, versión elegida, filas marcadas), solo etiquetas.
  */
 /**
+ * 0.2.50 (28/10/2026, prueba real con 0.2.49, trabajo 3bbecab7): la parada de 0.2.49 confirmó que tras el selector (`lnkVeh2`) TODO lo de solo lectura
+ * llega relleno salvo «Tipo de vehículo» (`wclasv`). El volcado NO dice qué lo rellena (sin scripts, valores redactados, DOM del selector nunca capturado),
+ * así que no se inventa un clic: antes de «Confirmar» el bot FOTOGRAFÍA el selector (grupos marcados/sin marcar y lo pintado como activo, sin valores) y
+ * la foto va en esa parada. Hipótesis a confirmar: «Tipo de vehículo» = «Subtipo de Vehículo» (Turismos), que el bot deja como viene.
+ */
+/**
  * 0.2.49 (28/10/2026, prueba real con 0.2.48, trabajo a12d2139): pasó «Compañía de procedencia» pero Genernet no calculó («El paso anterior no tiene
  * los datos completos»): «obligatorios vacíos en «Datos de Valoración»: Tipo de vehículo». El volcado de 0.2.47 (fb33fe24) muestra que ese campo NO es un
  * desplegable (el supuesto de 0.2.45 era erróneo) sino un texto de SOLO LECTURA (`reg1063A_vehiculo_caracVehiculo_wclasv`, `protegidoState`) que el portal
@@ -378,7 +385,7 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.49'
+export const VERSION_GENERALI_AUTO = '0.2.50'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2317,6 +2324,30 @@ export async function esperarTrasConfirmarGenerali(page: Page, selector: Raiz, e
   }
 }
 
+/** v0.2.50 · Textos de lo que el selector pinta como MARCADO (tarjetas/botones de PrimeFaces: clases activas y aria). Catálogo; sin funciones con nombre (tsx). */
+const JS_ACTIVOS_SELECTOR = `(() => {
+  const T = (n) => (n ? (n.innerText || n.textContent || '') : '').replace(/\\s+/g, ' ').trim();
+  const out = [];
+  document.querySelectorAll('.ui-state-active,.ui-state-highlight,[aria-checked="true"],[aria-pressed="true"],[aria-selected="true"],.selected,.active,.seleccionado').forEach((e) => {
+    if (e.getClientRects().length === 0 || /^(INPUT|SELECT|TEXTAREA|OPTION)$/.test(e.tagName)) return;
+    const t = T(e);
+    if (t && t.length <= 60 && out.indexOf(t) < 0) out.push(t);
+  });
+  return out.slice(0, 20);
+})()`
+
+/** v0.2.50 · Última foto del selector (antes de «Confirmar») por página: va al atasco si «Tipo de vehículo» queda vacío. */
+const FOTO_SELECTOR_GENERALI = new WeakMap<Page, string>()
+
+/** v0.2.50 · Fotografía el selector (estado de sus controles y lo marcado en pantalla, sin valores). Solo lee. */
+export async function fotografiarSelectorGenerali(page: Page, selector: Raiz): Promise<string> {
+  const estado = await leerEstadoSelector(selector).catch(() => ({ controles: [], filas: 0, filasSeleccionadas: 0 }))
+  const activos = ((await selector.evaluate(JS_ACTIVOS_SELECTOR).catch(() => [])) as string[] | null) ?? []
+  const foto = resumenFotoSelectorGenerali(estado, activos)
+  FOTO_SELECTOR_GENERALI.set(page, foto)
+  return foto
+}
+
 /**
  * Selector PrimeFaces: «Placas especiales» = «No», marca exacta, «Confirmar» (solo confirma el vehículo) y se PARA con hueco
  * `hueco_mapa` si la pantalla siguiente no es «Identificación del vehículo»: su inventario lo captura el modo exploración.
@@ -2351,6 +2382,7 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
       throw new ErrorMapaIncompletoGenerali(`lo elegido en el selector de vehículos dejó de estar puesto antes de «Confirmar» (se vació tras elegir la versión): ${vacios.join(' · ')}. Estado del selector: ${resumenEstadoSelectorGenerali(estado)}; NO se pulsa «Confirmar»`)
     }
     await verificarModeloAntesDeConfirmar(page, selector, modelo, menu.base, elegida)
+    await fotografiarSelectorGenerali(page, selector)
     await ctx.confirmarVehiculoGenerali()
     await esperarTrasConfirmarGenerali(page, selector)
     return false
@@ -2362,6 +2394,7 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
     throw new ErrorMapaIncompletoGenerali(`los campos nuevos que salen en el selector de vehículos tras elegir marca y modelo (no se pulsa «Confirmar»): ${resumenCamposSelectorGenerali(nuevos)}. Botones vistos: ${p.botones.join(' · ').slice(0, 400) || '(ninguno)'}`)
   }
   await verificarModeloAntesDeConfirmar(page, selector, modelo, menu.base, elegida)
+  await fotografiarSelectorGenerali(page, selector)
   await ctx.confirmarVehiculoGenerali()
   await esperarTrasConfirmarGenerali(page, selector)
   return false
@@ -3266,7 +3299,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const caracteristicas = await leerCaracteristicasVehiculoGenerali(marco)
   const protegidosVacios = vaciosProtegidosGenerali(caracteristicas)
   if (protegidosVacios.length > 0) {
-    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}`)
+    throw new ErrorMapaIncompletoGenerali(`«Datos de Valoración» con obligatorios de SOLO LECTURA vacíos tras elegir el vehículo (los pone el portal con el vehículo elegido; el bot no los teclea y Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${protegidosVacios.join(' · ')}. No se pasa a «${SUBPESTANA_PRECIO_GENERALI}». Características del vehículo: ${resumenCaracteristicasVehiculoGenerali(caracteristicas, 900)}. Otros obligatorios vacíos: ${vaciosValoracion.filter((v) => !protegidosVacios.includes(v)).join(' · ') || '(ninguno)'}. Selector antes de «Confirmar» (v0.2.50; ¿el subtipo «Turismos» llega marcado?): ${FOTO_SELECTOR_GENERALI.get(page) ?? '(sin foto: no pasó por el selector PrimeFaces)'}`)
   }
   if (!ctx.pulsarSubpestanaGenerali) throw new ErrorMapaIncompletoGenerali(`la puerta guardada de «${SUBPESTANA_PRECIO_GENERALI}» en el contexto del runner; ${datos}`)
   // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).

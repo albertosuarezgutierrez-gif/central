@@ -1880,3 +1880,21 @@ export function resumenCaracteristicasVehiculoGenerali(bloques: readonly BloqueV
     .join(' · ')
   return (s || '(sin bloques legibles)').slice(0, max)
 }
+
+// ───────────────────────── v0.2.50 · foto del selector antes de «Confirmar» (para «Tipo de vehículo» vacío) ─────────────────────────
+
+/**
+ * Prueba real 28/10/2026 (trabajo 3bbecab7, 0.2.49): tras el selector (`lnkVeh2`, «vehisphynx») el portal rellena Valor, Potencia, Plazas, C.C.,
+ * Puertas, Combustible y «Clase de vehículo», pero NO «Tipo de vehículo» (`caracVehiculo_wclasv`). El volcado no dice qué lo rellena (sin scripts,
+ * valores redactados y nunca se ha capturado el DOM del selector). Hipótesis principal: «Clase de vehículo» ↔ tarjeta «Tipo de Vehículo» (Turismo) y
+ * «Tipo de vehículo» ↔ «Subtipo de Vehículo» (Turismos), que el bot deja «como viene» sin pulsar. Esta foto (sin valores libres) va al atasco.
+ * `activos` = textos de lo que el selector pinta como marcado (clases/aria de PrimeFaces: catálogo, sin datos personales). PURA.
+ */
+export function resumenFotoSelectorGenerali(estado: EstadoSelectorGenerali, activos: readonly string[], max = 600): string {
+  const grupos = estado.controles
+    .filter((c) => c.tipo === 'grupo' || c.tipo === 'casilla' || c.tipo === 'desplegable' || c.tipo === 'select')
+    .map((c) => `${c.etiqueta || c.clave}=${c.vacio ? 'SIN marcar' : 'marcado'}${c.requerido ? '*' : ''}`)
+  const a = [...new Set(activos.map((x) => sanearFragmentoGenerali(x).slice(0, 40)).filter((x) => x !== ''))].slice(0, 15)
+  const t = `controles: ${grupos.length ? grupos.join(' · ') : '(ninguno)'}; marcados en pantalla: ${a.length ? a.map((x) => `«${x}»`).join(' · ') : '(ninguno)'}`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}

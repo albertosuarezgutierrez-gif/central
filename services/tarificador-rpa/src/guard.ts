@@ -56,6 +56,7 @@ import {
   esLanzadorAplicacionNseMapfre,
   neutralizarRutaTolerable,
   cuerpoToleradoConAccionReal,
+  RE_ACCION_REAL_TRAS_PREFIJO,
   type RutaTolerable,
   TEXTO_ACCESO_NSE_MAPFRE,
   esMatriculaEspanola,
@@ -513,7 +514,13 @@ export function tolerarRutasApp(guard: GuardEmision, reglas: readonly RutaTolera
 export const INDICES_URL_DESCRIPCION: readonly number[] = Object.freeze([6, 8, 15, 19, 23])
 const conRutasTolerables = (guard: GuardEmision, desc: readonly (string | null)[]): (string | null)[] => {
   const reglas = RUTAS_TOLERABLES.get(guard) ?? []
-  return reglas.length === 0 ? [...desc] : desc.map((d, i) => (INDICES_URL_DESCRIPCION.includes(i) ? neutralizarRutaTolerable(d, reglas) ?? null : d))
+  if (reglas.length === 0) return [...desc]
+  // 0.3.6: si el TEXTO/atributos del control (lo que no es URL) nombran una acción real (emitir, contratar, confirmar, firma, pago,
+  // formalizar, grabar, IBAN…), no se tolera NADA: la URL se mira entera. Una excepción por texto exacto (menú «Oferta / Contratación»)
+  // la quita el llamante poniendo ese descriptor a `null` (sin mover posiciones).
+  const plano = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (desc.some((d, i) => !INDICES_URL_DESCRIPCION.includes(i) && typeof d === 'string' && RE_ACCION_REAL_TRAS_PREFIJO.test(plano(d)))) return [...desc]
+  return desc.map((d, i) => (INDICES_URL_DESCRIPCION.includes(i) ? neutralizarRutaTolerable(d, reglas) ?? null : d))
 }
 /** Solo para tests: la descripción que ve el guard de un control. */
 export const descripcionParaTest = (boton: Locator) => descripcion(boton)
@@ -1146,7 +1153,8 @@ export async function pulsarMenuOfertaNseMapfre(boton: Locator, guard: GuardEmis
   if (textoEntrada(desc[0]) !== exacto) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('entrada:menu_oferta_nse')) throw new EmisionBloqueadaError('fase', 'el menú «Oferta / Contratación» ya se usó en este trabajo')
-  comprobarBoton(conRutasTolerables(guard, desc.filter((d) => textoEntrada(d) !== exacto)))
+  // Posiciones INTACTAS (0.3.6, real 15:19): con `filter` el href se desplazaba de la posición 6 a la 5 y la tolerancia no lo veía.
+  comprobarBoton(conRutasTolerables(guard, desc.map((d) => (textoEntrada(d) === exacto ? null : d))))
   usados.add('entrada:menu_oferta_nse')
   AVANCES_USADOS.set(guard, usados)
   await boton.click()

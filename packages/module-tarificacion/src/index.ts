@@ -35,7 +35,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, esLanzadorAplicacionNseMapfre, TEXTO_ACCESO_NSE_MAPFRE, neutralizarRutaTolerable, cuerpoToleradoConAccionReal, type RutaTolerable, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, esLanzadorAplicacionNseMapfre, TEXTO_ACCESO_NSE_MAPFRE, neutralizarRutaTolerable, cuerpoToleradoConAccionReal, RE_ACCION_REAL_TRAS_PREFIJO, type RutaTolerable, type OpcionesGuard } from './guard-emision.ts'
 export {
   ACCIONES_PORTAL,
   PATRONES_GUARDADO_GUARD,
@@ -623,6 +623,7 @@ export {
   type MotivoCorteLote,
   type DiagnosticoIncidencia,
   CLAVES_AUTOCOMPLETADO,
+  CLAVES_VALIDAN_AL_SALIR,
   ACCIONES_INCIDENCIA_SIN_DATO,
   rellenarRepinta,
   ordenarLote,

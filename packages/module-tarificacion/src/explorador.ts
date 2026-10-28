@@ -727,6 +727,13 @@ export function erroresDeIncidencias(incidencias: readonly IncidenciaEjecucion[]
  */
 export const CLAVES_AUTOCOMPLETADO: ReadonlySet<string> = new Set(['inmueble.codigo_postal', 'inmueble.provincia', 'inmueble.municipio'])
 
+/**
+ * Claves que el portal VALIDA al salir del campo (28/10/2026, Allianz ePAC Movilidad Personal, real 15:17: `change` → petición
+ * asíncrona; con «Aceptar» en el mismo lote el envío salía antes y el NIF volvía INVÁLIDO). Tras escribirlas el worker quita el foco y
+ * espera a la red ANTES de la siguiente acción; no cambian el orden del lote ni lo cortan (no repintan).
+ */
+export const CLAVES_VALIDAN_AL_SALIR: ReadonlySet<string> = new Set(['tomador.nif'])
+
 /** Roles ARIA de un control que despliega sugerencias (NDBX/Angular Material: `role=combobox` en el input). */
 const ROLES_AUTOCOMPLETADO = new Set(['combobox', 'searchbox'])
 

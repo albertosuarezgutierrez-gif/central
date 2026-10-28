@@ -51,6 +51,7 @@ let peticiones: Peticion[] = []
 let figuras = FIGURAS()
 let landing = LANDING(HREF_NSE)
 let menuNse = ''
+let validarNif = false
 let browser: Browser
 
 before(async () => {
@@ -61,7 +62,8 @@ before(async () => {
       const ruta = (req.url ?? '/').split('?')[0]
       peticiones.push({ metodo: req.method ?? 'GET', ruta, cuerpo })
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-      if (ruta === '/drvp00/SEAServlet') return void res.end(req.method === 'POST' ? RESULTADO : figuras)
+      if (ruta === '/valida-nif') return void setTimeout(() => res.end('ok'), 300)
+      if (ruta === '/drvp00/SEAServlet') return void res.end(req.method === 'POST' ? (validarNif && !/tomadorValidado=1/.test(cuerpo) ? PAGINA('<p>NIF del tomador no válido</p>') : RESULTADO) : figuras)
       if (ruta === '/otro/SEAServlet') return void res.end(figuras)
       if (ruta === '/landing') return void res.end(landing)
       if (ruta === '/EVT21_NSE_FWEB/inicio.jsp' || ruta === '/otra/inicio.jsp') return void res.end(menuNse)
@@ -613,7 +615,6 @@ test('0.3.4 · inventario: <a href> de menú sale como role=link y `javascript:`
 
 // ─── 0.3.5: ruta de aplicación NSE (`/EVT21_NSE_FWEB/app/emision/`) tolerada SOLO en Mapfre patinete ───────────
 
-test('versión 0.3.5', () => assert.equal(EXPLORADOR_VERSION, '0.3.5'))
 
 const CARGA = 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf'
 const PAG_NSE = (href: string, texto: string) => PAGINA(`<a id="l" href="${href}">${texto}</a><script>document.getElementById('l').addEventListener('click', (e) => { e.preventDefault(); window.pulsado = 1 })</script>`)
@@ -716,6 +717,87 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
     await page.evaluate(() => document.querySelectorAll('a,button').forEach((x) => x.addEventListener('click', (e) => e.preventDefault())))
     for (const sel of ['#a0', '#s3']) await pulsar(page.locator(sel), guard)
     for (const sel of ['#t1', '#t2']) await assert.rejects(pulsar(page.locator(sel), guard), EmisionBloqueadaError, sel)
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
+
+test('versión 0.3.6', () => assert.equal(EXPLORADOR_VERSION, '0.3.6'))
+
+/** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
+const FIGURAS_NIF = PAGINA(`
+  <form id="f" method="post" action="/drvp00/SEAServlet">
+    <table><tr><td>Tipo Doc. Tomador</td><td><input type="text" id="IntervinientesBean$nifTomador_doc" name="nif"><input type="hidden" id="tv" name="tomadorValidado" value="0"></td></tr></table>
+  </form>
+  <button type="button" id="btnAceptar" onclick="eventoSiguiente()">Aceptar</button>
+  <script>
+    document.getElementById('IntervinientesBean$nifTomador_doc').addEventListener('change', () => { fetch('/valida-nif').then(() => { document.getElementById('tv').value = '1' }) })
+    function eventoSiguiente(){ document.getElementById('f').submit() }
+  </script>`)
+
+test('0.3.6 · Allianz: el NIF del tomador se valida (blur + espera de red) ANTES de «Aceptar» del mismo lote', async () => {
+  figuras = FIGURAS_NIF
+  validarNif = true
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    const k = { ...contexto(page, guard, (inv) => {
+      const imp = inv.marcos.flatMap((m) => m.importes ?? [])
+      if (imp.length > 0) return respuesta([{ accion: 'terminar', refsPrecio: [imp[0].ref] }], 'resultado')
+      const nif = elementos(inv).find((e) => e.id === 'IntervinientesBean$nifTomador_doc')
+      const btn = elementos(inv).find((e) => e.id === 'btnAceptar')
+      if (!nif || !btn) return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+      return respuesta([
+        ...(nif.conValor ? [] : [{ accion: 'rellenar', ref: nif.ref, dato: 'tomador.nif' }]),
+        { accion: 'avanzar', ref: btn.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ])
+    }), riesgo: { tomador: { nif: '00000000T' } }, esperaRepintadoMs: 600 }
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.match(peticiones.filter((p) => p.metodo === 'POST').map((p) => p.cuerpo).join('|'), /tomadorValidado=1/)
+  } finally {
+    validarNif = false
+    await context.close()
+  }
+})
+
+test('0.3.6 · Mapfre NSE (real 15:19): «Oferta / Contratación» con href a cargaOperacion.jsf pasa por su puerta con las rutas toleradas', async () => {
+  menuNse = MENU_NSE(`<a id="m8" href="${CARGA}">Oferta / Contratación</a>`).replace('<a href="#" id="m2">Oferta / Contratación</a>', '')
+  const { context, page, guard } = await abrir('/EVT21_NSE_FWEB/inicio.jsp')
+  try {
+    tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+    await pulsarMenuOfertaNseMapfre(page.locator('#m8'), guard, 'mapfre')
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { ido: string[] }).ido), ['Oferta / Contratación'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.6 · con la MISMA URL tolerada: «Contratar», «Confirmar», «Firmar»… y otro origen siguen bloqueados', async () => {
+  const casos: [string, string, (page: Page, guard: GuardEmision) => Promise<void>][] = [
+    ['Contratar', CARGA, (page, guard) => pulsar(page.locator('#l'), guard)],
+    ['Confirmar', CARGA, (page, guard) => pulsar(page.locator('#l'), guard)],
+    ['Grabar', CARGA, (page, guard) => pulsar(page.locator('#l'), guard)],
+    ['Nueva oferta', 'https://otro.example.test/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf', (page, guard) => pulsar(page.locator('#l'), guard)],
+  ]
+  for (const [texto, href, accion] of casos) {
+    landing = PAG_NSE(href, texto)
+    const { context, page, guard } = await abrir('/landing')
+    try {
+      tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+      await assert.rejects(accion(page, guard), EmisionBloqueadaError, texto)
+      assert.equal(await page.evaluate(() => (window as unknown as { pulsado?: number }).pulsado ?? 0), 0, texto)
+    } finally {
+      await context.close()
+    }
+  }
+  // Menú «Oferta / Contratación» con href de OTRO origen: bloqueado.
+  menuNse = MENU_NSE('<a id="m9" href="https://otro.example.test/EVT21_NSE_FWEB/app/emision/cargaOperacion/cargaOperacion.jsf">Oferta / Contratación</a>').replace('<a href="#" id="m2">Oferta / Contratación</a>', '')
+  const { context, page, guard } = await abrir('/EVT21_NSE_FWEB/inicio.jsp')
+  try {
+    tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+    await assert.rejects(pulsarMenuOfertaNseMapfre(page.locator('#m9'), guard, 'mapfre'), EmisionBloqueadaError)
   } finally {
     await context.close()
   }
