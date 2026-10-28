@@ -33,7 +33,9 @@ import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, typ
 import { prisma } from './tenant'
 import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
 import { sobreCoberturasRpa } from './presupuesto-rpa-reglas'
-import { hayBotVersion, hayPasos } from './esquema-bd'
+import { hayBotVersion, hayImagenTrabajo, hayPasos } from './esquema-bd'
+import { leerFilaImagen } from './tarificador-imagen'
+import { elegirImagenProduccion, imagenParaTrabajo } from './tarificador-imagen-reglas'
 import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
@@ -122,6 +124,12 @@ export type EntradaEncolar = {
    * pulsación que solo trae duplicados dice «ya en marcha» sin reservar cupo (ni toparse con el tope).
    */
   soloComprobarDuplicado?: boolean
+  /**
+   * Imagen de PRUEBA (27/10/2026, solo `probar`): `rama-*` YA validada y con el interruptor comprobado por la ruta. Se guarda en
+   * `imagen_prueba` del trabajo NUEVO en el mismo INSERT (nunca hay un instante en que se lance con la de producción). Con un
+   * duplicado vivo → 409 (ese trabajo va con otra imagen). Exige la columna (`hayImagenTrabajo`).
+   */
+  imagenPrueba?: string | null
 }
 
 export type ResultadoEncolar =
@@ -233,8 +241,18 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
         and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo')
       order by t.created_at`
     const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio, actualizadoAt: p.actualizado_at }, p.ahora, MAX_INTENTOS))
+    if (vivo && e.imagenPrueba) return { estado: 'rechazado' as const, status: 409, motivo: `duplicado_imagen_prueba: ya hay un trabajo igual (${vivo.id}, ${vivo.estado}); la imagen de prueba solo va en un trabajo nuevo` }
     if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true, estadoPrevio: vivo.estado, mensaje: mensajeDuplicado(vivo.estado) }
     if (e.soloComprobarDuplicado) return { estado: 'rechazado' as const, status: 409, motivo: 'no_duplicado' }
+    if (e.imagenPrueba) {
+      const conPrueba = await tx.$queryRaw<{ id: string }[]>`
+        insert into seguros.tarificacion_trabajos
+          (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por, imagen_prueba)
+        values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${cid}::uuid, ${polizaId}::uuid,
+                ${compania}, ${e.ramo}, ${riesgoJson}::jsonb, ${e.solicitadoPor}, ${e.imagenPrueba})
+        returning id::text as id`
+      return { estado: 'encolado' as const, trabajoId: conPrueba[0].id, duplicado: false }
+    }
     const filas = await tx.$queryRaw<{ id: string }[]>`
       insert into seguros.tarificacion_trabajos
         (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por)
@@ -344,7 +362,8 @@ async function leerNumeroPolizaActual(correduriaId: string, oportunidadId: strin
 
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
 
-type Reclamado = { id: string; intentos: number }
+/** `imagen_prueba` (27/10/2026): imagen de rama pedida por `probar` solo para este trabajo (`null` = la de producción). */
+type Reclamado = { id: string; intentos: number; imagen_prueba: string | null }
 
 /**
  * Reclama el pendiente más antiguo de (correduría, compañía) si hay hueco bajo `max_concurrencia`
@@ -409,7 +428,7 @@ export async function reclamarSiguiente(correduriaId: string, compania: string, 
         order by w.created_at
         for update of w skip locked
         limit 1)
-      returning t.id::text as id, t.intentos`
+      returning t.id::text as id, t.intentos, to_jsonb(t)->>'imagen_prueba' as imagen_prueba`
     return { trabajo: filas[0] ?? null, maquinasVencidas }
   }, { timeout: 15000, maxWait: 10000 })
 }
@@ -427,19 +446,39 @@ export type ResumenLanzar = { lanzados: string[]; fallidos: { id: string; motivo
 export async function lanzarPendientes(correduriaId: string, compania: string, deps: DepsLanzador = depsReales()): Promise<ResumenLanzar> {
   const r: ResumenLanzar = { lanzados: [], fallidos: [] }
   if (!rpaActivo(deps.env)) return { ...r, omitido: 'rpa_apagado' }
-  const c = configFly(deps.env)
+  // IMAGEN (27/10/2026): la fila `produccion` de `seguros.tarificador_imagen` manda; la env `TARIFICADOR_FLY_IMAGE` es el respaldo
+  // (sin tabla, sin fila, lectura fallida o valor que no casa con `REGEX_IMAGEN_BOT`). Ver tarificador-imagen-reglas.ts.
+  const filaImagen = await leerFilaImagen()
+  const produccion = elegirImagenProduccion(filaImagen?.imagen ?? null, deps.env)
+  if (produccion.aviso) console.error(`[tarificador-imagen] ${produccion.aviso}`)
+  const c = configFly(deps.env, produccion.origen === 'bd' ? produccion.imagen : null)
   if (!c.ok) return { ...r, omitido: `fly_sin_configurar: ${c.faltan.join(', ')}` }
+  const conImagenTrabajo = await hayImagenTrabajo()
   for (let vuelta = 0; vuelta < 5; vuelta++) {
     const { trabajo: t, maquinasVencidas } = await reclamarSiguiente(correduriaId, compania, modosReclamables(deps.env))
     // Una máquina de lease vencido puede seguir viva con la credencial: se destruye ANTES de lanzar otra.
     for (const m of maquinasVencidas) await destruirMaquina(c.cfg, m, deps.fetch)
     if (!t) break
-    const res = await crearMaquina(c.cfg, t.id, deps.fetch)
+    // Imagen de PRUEBA (rama-*, pedida por `probar`): solo para ESTE trabajo y con el interruptor encendido AHORA; si no vale,
+    // el trabajo falla con el motivo (nunca se cae a producción en silencio: la prueba mediría otra cosa).
+    const im = imagenParaTrabajo({ imagenPrueba: t.imagen_prueba ?? null, permitirPrueba: filaImagen?.permitirPrueba === true, produccion: c.cfg.imagen })
+    if (!im.ok) {
+      await marcarFallo(prisma, t.id, t.intentos, { tipo: 'datos', mensaje: im.motivo, url: null }, null)
+      r.fallidos.push({ id: t.id, motivo: im.motivo })
+      continue
+    }
+    const res = await crearMaquina({ ...c.cfg, imagen: im.imagen }, t.id, deps.fetch)
     if (res.ok) {
-      await prisma.$executeRaw`
-        update seguros.tarificacion_trabajos set fly_machine_id = ${res.machineId}, updated_at = now()
-        where id = ${t.id}::uuid and estado = 'en_curso'`
-      console.info(`[tarificador] máquina lanzada: trabajo ${t.id} imagen ${c.cfg.imagen}`) // vuelta atrás: ver MANUAL-NUEVO-BOT.md
+      if (conImagenTrabajo) {
+        await prisma.$executeRaw`
+          update seguros.tarificacion_trabajos set fly_machine_id = ${res.machineId}, imagen_bot = ${im.imagen}, updated_at = now()
+          where id = ${t.id}::uuid and estado = 'en_curso'`
+      } else {
+        await prisma.$executeRaw`
+          update seguros.tarificacion_trabajos set fly_machine_id = ${res.machineId}, updated_at = now()
+          where id = ${t.id}::uuid and estado = 'en_curso'`
+      }
+      console.info(`[tarificador] máquina lanzada: trabajo ${t.id} imagen ${im.imagen}${im.prueba ? ' (PRUEBA)' : ` (${produccion.origen ?? 'env'})`}`) // vuelta atrás: ver MANUAL-NUEVO-BOT.md
       r.lanzados.push(t.id)
     } else {
       await marcarFallo(prisma, t.id, t.intentos, { tipo: 'infra', mensaje: `fly: ${res.motivo}`, url: null }, null)

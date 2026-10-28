@@ -557,13 +557,14 @@ Vistas: v_stock_critico_grupo, v_pedidos_pendientes_grupo, v_stock_resumen, v_cu
 
 ## EDGE FUNCTIONS ACTIVAS (Deno)
 check-elaboraciones · contact-lead · daily-briefing · eventos-entorno · monitor-health · nim-diagnostico · nim-sentiment · notify-error · qr-call-waiter · qr-cobro · qr-connect · qr-order · qr-session · qr-split · verifactu-sign · courier-route · bridge-agent
+- `eventos-entorno`: disparo único = pg_cron `eventos-entorno-diario` (06:00 diario; el cron de Vercel se quitó). Open-Meteo: plan gratuito no comercial → decidido plan Standard (customer-api + apikey, clave en variable de entorno con `requireSecret`), pendiente de contratar; no AEMET (va por municipio, 2 pasos).
 
 Patrón EF: service role siempre, bloque OPTIONS CORS, incrementar versión en comentario (`// v1`, `// v2`...). Ver skill `ia-rest-supabase-patterns`.
 
 ---
 
 ## CRON JOBS (vercel.json)
-alertas */2 · cobro-inactividad */5 · feedback-visita */10 · lead-onboarding */30 · reservas-noshow */5 · cobro-descuento `0 2 1 * *` · backup/drive `0 3 * * *` · completar-locales `0 4 * * *` · mantenimiento-espacios `0 8 * * *` · instagram-metricas `0 7 * * *` · qa-agent `0 6 * * *` + `0 7 * * 1` · pipeline-comercial `0 8 * * 1-5` · crm-recordatorios `0 9 * * 1-5` · eventos-entorno `0 7 * * 1` · briefing-semanal `30 8 * * 0` (domingo) · prospeccion-leads `0 9 * * 1` · instagram `0 8 * * 1,3,5` · instagram-refresh `0 6 1 * *`
+alertas */2 · cobro-inactividad */5 · feedback-visita */10 · lead-onboarding */30 · reservas-noshow */5 · cobro-descuento `0 2 1 * *` · backup/drive `0 3 * * *` · completar-locales `0 4 * * *` · mantenimiento-espacios `0 8 * * *` · instagram-metricas `0 7 * * *` · qa-agent `0 6 * * *` + `0 7 * * 1` · pipeline-comercial `0 8 * * 1-5` · crm-recordatorios `0 9 * * 1-5` · briefing-semanal `30 8 * * 0` (domingo) · prospeccion-leads `0 9 * * 1` · instagram `0 8 * * 1,3,5` · instagram-refresh `0 6 1 * *`
 
 ---
 

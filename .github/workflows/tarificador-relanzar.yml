@@ -4,7 +4,9 @@
 #     vuelve a `pendiente` con su mismo riesgo. 409 si el estado no vale / hay un trabajo vivo de la compañía; 429 pasado el
 #     tope de 6 relanzamientos por compañía en 24 h.
 #   · accion=probar   → POST /api/operador/tarificador/probar { clienteId, compania, ramo }: copia el riesgo del último
-#     trabajo de ese cliente+compañía+ramo.
+#     trabajo de ese cliente+compañía+ramo. Con `imagen` (opcional, 27/10/2026) lanza ESE trabajo con una imagen de RAMA
+#     (`registry.fly.io/asegura-tarificador:rama-<sha7>`, la construye «Tarificador RPA · imagen» desde la rama): solo si
+#     Alberto encendió `permitir_imagen_prueba` en `seguros.tarificador_imagen` (si no, 403). Nunca `main-*`.
 # Secreto de repo REQUERIDO: ASEGURA_OPERADOR_SECRET (el Bearer del puerto de operador de asegura; ningún otro workflow
 # lo usaba antes). Secreto/variable OPCIONAL: ASEGURA_URL (por defecto https://central-asegura.vercel.app).
 # Nunca se imprime el secreto ni el riesgo: solo el estado HTTP y un JSON FILTRADO a claves sin datos personales.
@@ -35,6 +37,10 @@ on:
         description: 'accion=probar: ramo (ej. hogar)'
         required: false
         default: ''
+      imagen:
+        description: 'accion=probar (opcional): imagen de rama registry.fly.io/asegura-tarificador:rama-<sha7> (requiere el interruptor)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -54,6 +60,7 @@ jobs:
       CLIENTE_ID: ${{ inputs.cliente_id }}
       COMPANIA: ${{ inputs.compania }}
       RAMO: ${{ inputs.ramo }}
+      IMAGEN: ${{ inputs.imagen }}
       ASEGURA_URL: ${{ secrets.ASEGURA_URL || vars.ASEGURA_URL || 'https://central-asegura.vercel.app' }}
       ASEGURA_OPERADOR_SECRET: ${{ secrets.ASEGURA_OPERADOR_SECRET }}
     steps:
@@ -64,13 +71,19 @@ jobs:
           uuid='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
           corto='^[a-z0-9_-]{1,40}$'
           if [ -z "$ASEGURA_OPERADOR_SECRET" ]; then echo "::error::Falta el secreto de repo ASEGURA_OPERADOR_SECRET"; exit 1; fi
+          # Misma regex estricta que asegura (REGEX_IMAGEN_BOT) y solo etiquetas de rama: main-* es producción.
+          imagen_rama='^registry\.fly\.io/asegura-tarificador:rama-[a-z0-9._-]{1,59}$'
           case "$ACCION" in
             relanzar)
-              [[ "$TRABAJO_ID" =~ $uuid ]] || { echo "::error::trabajo_id no es un uuid"; exit 1; } ;;
+              [[ "$TRABAJO_ID" =~ $uuid ]] || { echo "::error::trabajo_id no es un uuid"; exit 1; }
+              [ -z "$IMAGEN" ] || { echo "::error::imagen solo vale con accion=probar"; exit 1; } ;;
             probar)
               [[ "$CLIENTE_ID" =~ $uuid ]] || { echo "::error::cliente_id no es un uuid"; exit 1; }
               [[ "$COMPANIA" =~ $corto ]] || { echo "::error::compania no válida"; exit 1; }
-              [[ "$RAMO" =~ $corto ]] || { echo "::error::ramo no válido"; exit 1; } ;;
+              [[ "$RAMO" =~ $corto ]] || { echo "::error::ramo no válido"; exit 1; }
+              if [ -n "$IMAGEN" ] && ! [[ "$IMAGEN" =~ $imagen_rama ]]; then
+                echo "::error::imagen no válida: registry.fly.io/asegura-tarificador:rama-<sha7> (nunca main-*)"; exit 1
+              fi ;;
             *) echo "::error::accion tiene que ser relanzar o probar"; exit 1 ;;
           esac
           case "$ASEGURA_URL" in https://*) ;; *) echo "::error::ASEGURA_URL tiene que ser https"; exit 1 ;; esac
@@ -83,7 +96,7 @@ jobs:
             cuerpo=$(jq -cn --arg t "$TRABAJO_ID" '{trabajoId: $t}')
           else
             ruta="probar"
-            cuerpo=$(jq -cn --arg c "$CLIENTE_ID" --arg o "$COMPANIA" --arg r "$RAMO" '{clienteId: $c, compania: $o, ramo: $r}')
+            cuerpo=$(jq -cn --arg c "$CLIENTE_ID" --arg o "$COMPANIA" --arg r "$RAMO" --arg i "$IMAGEN" '{clienteId: $c, compania: $o, ramo: $r} + (if $i == "" then {} else {imagen: $i} end)')
           fi
           url="${ASEGURA_URL%/}/api/operador/tarificador/${ruta}"
           # El Bearer va por stdin (`--config -`): ni en la línea de órdenes ni en el log.
@@ -92,6 +105,6 @@ jobs:
             -H 'content-type: application/json' -H 'x-actor: agente:claude-actions' --data "$cuerpo") || http="000"
           echo "HTTP ${http} · accion=${ACCION}"
           # Solo claves sin PII, con valores acotados; lo demás no se imprime.
-          jq -c 'if type == "object" then (with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle"))) | map_values(if type == "string" then .[0:300] else . end)) + (if (.errores | type) == "array" then {campos: [.errores[] | tostring | split(":")[0] | .[0:60]]} else {} end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
+          jq -c 'if type == "object" then (with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle","imagenPrueba"))) | map_values(if type == "string" then .[0:300] else . end)) + (if (.errores | type) == "array" then {campos: [.errores[] | tostring | split(":")[0] | .[0:60]]} else {} end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
           rm -f respuesta.json
           case "$http" in 2*) exit 0 ;; *) exit 1 ;; esac

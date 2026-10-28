@@ -503,17 +503,21 @@ export async function evaluarCorte(db: Db, trabajoId: string): Promise<boolean> 
     from seguros.tarificacion_trabajos w where w.id = ${trabajoId}::uuid`
   const f = t[0]
   if (!f || (f.modo ?? 'tarificar') !== 'tarificar') return false
-  const ultimos = await db.$queryRaw<{ id: string; estado: string; tipo: string | null }[]>`
-    select w.id::text as id, w.estado, w.error->>'tipo' as tipo
+  // `cierre_atasco` (27/10/2026): lo cerró el barrido de un atasco (caducado/huérfano, p. ej. atascos de una versión vieja
+  // descartados tras un despliegue): no cuenta como fallo del bot (`cuentaComoFalloBot`) y rompe la racha.
+  const ultimos = await db.$queryRaw<{ id: string; estado: string; tipo: string | null; cierre_atasco: string | null }[]>`
+    select w.id::text as id, w.estado, w.error->>'tipo' as tipo, w.error->>'atasco' as cierre_atasco
     from seguros.tarificacion_trabajos w
     where w.correduria_id = ${f.correduria_id}::uuid and w.compania = ${f.compania} and w.ramo = ${f.ramo}
       and coalesce(to_jsonb(w)->>'modo', 'tarificar') = 'tarificar'
+      -- Un trabajo lanzado con una imagen de PRUEBA (rama-*, 27/10/2026) no dice nada de la de producción: ni corta ni rompe racha.
+      and to_jsonb(w)->>'imagen_prueba' is null
       and w.estado in ('ok', 'error_definitivo') and w.terminado_at is not null
       and w.terminado_at > coalesce((select max(p.reanudada_at) from seguros.tarificador_pausas p
                                      where p.correduria_id = w.correduria_id and p.compania = w.compania and p.ramo = w.ramo), '-infinity'::timestamptz)
     order by w.terminado_at desc
     limit ${UMBRAL_CORTE_BOT}`
-  const motivo = motivoCorte(ultimos.map((u) => ({ estado: u.estado, tipoError: u.tipo })), { compania: f.compania, ramo: f.ramo })
+  const motivo = motivoCorte(ultimos.map((u) => ({ estado: u.estado, tipoError: u.tipo, cierreAtasco: u.cierre_atasco })), { compania: f.compania, ramo: f.ramo })
   if (!motivo) return false
   const n = await db.$executeRaw`
     insert into seguros.tarificador_pausas (correduria_id, compania, ramo, motivo, trabajos)

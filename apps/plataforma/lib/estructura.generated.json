@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-27T18:33:21Z",
+  "generadoEn": "2026-10-28T04:58:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2321,11 +2321,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 317
+        "evidencias": 318
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 207
+        "evidencias": 212
       },
       "asegura-web": {
         "estado": "usado",
@@ -2429,11 +2429,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 50
+        "evidencias": 51
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 160
+        "evidencias": 165
       },
       "asegura-web": {
         "estado": "usado",
@@ -4393,6 +4393,7 @@
       "/api/operador/tarificador/grabaciones/[id]",
       "/api/operador/tarificador/grabaciones/[id]/analizar",
       "/api/operador/tarificador/grabaciones/[id]/pantallas",
+      "/api/operador/tarificador/imagen",
       "/api/operador/tarificador/integraciones",
       "/api/operador/tarificador/intervenciones",
       "/api/operador/tarificador/oportunidad",
@@ -4715,7 +4716,6 @@
       "/api/cron/crm-lead-hunter-sevilla",
       "/api/cron/crm-recordatorio-dia2",
       "/api/cron/crm-recordatorios",
-      "/api/cron/eventos-entorno",
       "/api/cron/feedback-visita",
       "/api/cron/instagram",
       "/api/cron/instagram-ideas",
@@ -6171,6 +6171,7 @@
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
       "seguros.tarificador_humo_informes",
+      "seguros.tarificador_imagen",
       "seguros.tarificador_intervenciones",
       "seguros.tarificador_pausas",
       "seguros.tarificador_sesiones",
