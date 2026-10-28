@@ -10,6 +10,7 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { sueloFinde, sueloFindePropietario } from "@/lib/sivra/pricing-suelo-finde"
+import { SQL_SUELOS_FECHA, indexarSuelosFecha, sueloFechaPropietario, sueloPropietario, type FilaSueloFecha } from "@/lib/sivra/pricing-suelo-fecha"
 import {
   primaFindeFecha, pisosConPrimaFinde, primaPiso, factorSemanaPiso, factorSemanaFecha, urgenciaCombinada, type RitmoFinde,
 } from "@/lib/sivra/pricing-ritmo-finde"
@@ -809,6 +810,13 @@ export async function POST(req: NextRequest) {
   /** true = la lectura respondió (aunque sea con 0 filas). Sin ella, «nunca escrita» no es afirmable. */
   const hayHistorialEscrituras = !lecturasCaidas.some(l => l.nombre === 'ultima_escritura')
 
+  // 🧱 Suelos del PROPIETARIO por piso y fecha (`pricing_suelos_fecha`, ver pricing-suelo-fecha.ts).
+  // Tolerante: tabla ausente (código antes que la migración) o lectura caída = sin efecto, pero se
+  // DECLARA — un suelo que el dueño puso y no se aplica no puede pasar en silencio.
+  const suelosFecha: Map<string, number> | null = await prisma.$queryRaw<FilaSueloFecha[]>(Prisma.raw(SQL_SUELOS_FECHA))
+    .then(indexarSuelosFecha)
+    .catch((e) => { lecturasCaidas.push({ nombre: 'suelos_fecha', error: String(e).slice(0, 120) }); return null })
+
   // 🛑 Si CUALQUIERA de las dos lecturas reventó, esta pasada NO tarifica. Ver la cabecera de
   // `pricing-ancla-rail.ts`: un `[]` por excepción es indistinguible del `[]` legítimo (fecha sin
   // histórico, 1ª pasada del día), así que el motor caería a `actual` para TODAS las fechas y el
@@ -977,6 +985,8 @@ export async function POST(req: NextRequest) {
     // Noches vie/sáb que el suelo del propietario (`min_price_finde`) SUBIÓ: si no se cuentan, un
     // suelo que manda se confunde en el parte con un precio que el motor eligió.
     const sueloFindeSubidas: { fecha: string; desde: number; suelo: number }[] = []
+    // Noches que el suelo por FECHA del propietario (`pricing_suelos_fecha`) SUBIÓ. Mismo motivo.
+    const sueloFechaSubidas: { fecha: string; desde: number; suelo: number }[] = []
     // Fechas recortadas por el TECHO POR ADR PROPIO. Viajan a la respuesta a proposito: si
     // este rail muerde en fechas normales, la senal es que el ancla de mercado se ha vuelto a
     // ir de liga — no que el rail este haciendo bien su trabajo en silencio.
@@ -1366,9 +1376,16 @@ export async function POST(req: NextRequest) {
       // estimación: ningún techo derivado del mercado la perfora. Solo max_price le gana (ya va
       // dentro del helper). Como va después del raíl, una noche por debajo sube de golpe.
       const sFindeProp = sueloFindePropietario({ fecha: date, minPriceFinde: r.min_price_finde, maxPrice: r.max_price })
-      if (sFindeProp != null && target < sFindeProp) {
-        sueloFindeSubidas.push({ fecha: date, desde: target, suelo: sFindeProp })
-        target = sFindeProp
+      // 🧱 Suelo por FECHA del propietario (`pricing_suelos_fecha`, ver pricing-suelo-fecha.ts): MISMO
+      // punto y misma semántica que el de vie/sáb. Si coinciden, manda el mayor (`sueloPropietario`).
+      // Nada de lo que viene detrás lo pisa: las guardas de abajo solo RETIENEN el precio vivo cuando
+      // `target < old` (y entonces old > target ≥ suelo), y la banda muerta respeta `sProp`.
+      const sFechaProp = sueloFechaPropietario({ propertyId: r.property_id, fecha: date, suelos: suelosFecha, maxPrice: r.max_price })
+      const sProp = sueloPropietario(sFindeProp, sFechaProp)
+      if (sProp != null && target < sProp) {
+        if (sFechaProp != null && sProp === sFechaProp) sueloFechaSubidas.push({ fecha: date, desde: target, suelo: sProp })
+        else sueloFindeSubidas.push({ fecha: date, desde: target, suelo: sProp })
+        target = sProp
       }
       const liberaTecho = acote.liberaCongelacion
       // 🔓 Segunda llave (27/08/2026). El techo solo abre donde hay mercado MEDIDO de la fecha, y
@@ -1460,7 +1477,7 @@ export async function POST(req: NextRequest) {
       // esté por debajo del suelo del propietario (eso se corrige siempre).
       // El suelo vie/sáb del propietario cuenta igual: 570 con suelo 578 se corrige aunque sea un 1,4%.
       if (old != null && (r.min_price == null || old >= r.min_price)
-          && (sFindeProp == null || old >= sFindeProp)
+          && (sProp == null || old >= sProp)
           && Math.abs(target - old) / old < 0.03) continue
       // Idea #3 — min-stay en noches de evento fuerte y lejanas, salvo hueco suelto entre reservas
       // (que sería imposible de cubrir con 2-3 noches). Solo lo escribimos si ya vamos a tocar la
@@ -1611,6 +1628,11 @@ export async function POST(req: NextRequest) {
       // Noches vie/sáb cuyo objetivo subió al suelo del propietario (`min_price_finde`).
       suelo_finde_propietario: r.min_price_finde != null
         ? { suelo: r.min_price_finde, fechas: sueloFindeSubidas.length, sample: sueloFindeSubidas.slice(0, 5) }
+        : undefined,
+      // Noches cuyo objetivo subió al suelo por FECHA del propietario (`pricing_suelos_fecha`).
+      // `noches: 0` es una afirmación (se leyó y no mordió); ausente = la lectura cayó (va en lecturas).
+      suelos_fecha: suelosFecha != null
+        ? { noches: sueloFechaSubidas.length, muestra: sueloFechaSubidas.slice(0, 10) }
         : undefined,
       // Fechas recortadas por el techo por ADR propio (03/09/2026). Ver `pricing-techo-adr.ts`.
       techo_adr: adrAcotadas.length > 0

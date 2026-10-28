@@ -56,5 +56,8 @@ test("apply: el suelo vie/sáb va después del raíl y de los techos, y la banda
   assert.ok(suelo > src.indexOf("target = clamp(target, lo, hi)"), "el suelo va antes del raíl")
   assert.ok(suelo > src.indexOf("acotarPorTecho({ target, techo: tAdr.techo"), "el suelo va antes del techo por ADR")
   assert.ok(suelo < src.indexOf("const liberaTecho = acote.liberaCongelacion"), "el suelo va después de las guardas")
-  assert.match(src, /\(sFindeProp == null \|\| old >= sFindeProp\)/, "la banda muerta del 3% se traga la subida al suelo")
+  // Desde el 28/10/2026 la banda muerta mira el suelo COMBINADO (finde + fecha, manda el mayor),
+  // y el de finde entra en él: `sProp = sueloPropietario(sFindeProp, sFechaProp)`.
+  assert.match(src, /const sProp = sueloPropietario\(sFindeProp, sFechaProp\)/, "el suelo vie/sáb ya no entra en el suelo combinado")
+  assert.match(src, /\(sProp == null \|\| old >= sProp\)/, "la banda muerta del 3% se traga la subida al suelo")
 })
