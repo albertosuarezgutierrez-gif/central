@@ -105,13 +105,6 @@ export default async function PolizaPage({ params, searchParams }: {
               ? `⚪ anulada · baja verificada el ${fmt(p.bajaVerificada.en)}${p.bajaVerificada.por ? ` por ${p.bajaVerificada.por}` : ''} · ${estadoBajaCima(p.bajaVerificada)}`
               : p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
             {p.situacion && <SituacionCompania codigo={p.situacion} />}
-            {p.retarificable && (
-              /* Interna desde el 03/09/2026: la retarificación se pinta en
-                 /correduria y ya no salta a asegura, que echaba al login. Sin
-                 `target="_blank"` a propósito: abrir una pestaña para quedarse
-                 en la misma app solo estorba en el móvil. */
-              <Link href={urlRetarificar(p.id)} style={{ fontWeight: 600 }}>{rotuloRetarificar(p.retarificacion)}</Link>
-            )}
           </span>}
         />
         {/* El riesgo de la póliza (29/09/2026): variantes P1…Pn con las mismas personas o con otro tomador. */}
@@ -167,6 +160,9 @@ function accesosPoliza(p: Poliza, cancelada: boolean, tareas: LecturaTareasVincu
   const cobro = bloqueCobro(p.contrato)
   const riesgos = p.contrato?.riesgos ?? []
   const beneficiarios = p.contrato?.beneficiarios ?? []
+  // Los riesgos mandan; `Objeto` solo entra si ningún riesgo trae el lugar (y es donde se anota la dirección).
+  const hayLugarEnRiesgos = riesgos.some((r) => lugarRiesgo(r) !== null)
+  const lugar1 = riesgos.map((r) => lugarRiesgo(r)).find((l) => l !== null) ?? null
   const extra: (Acceso & { contenido: React.ReactNode })[] = []
   if (contrato.length > 0 || cobro) {
     extra.push({
@@ -186,20 +182,16 @@ function accesosPoliza(p: Poliza, cancelada: boolean, tareas: LecturaTareasVincu
       ),
     })
   }
-  if (riesgos.length > 0 || beneficiarios.length > 0) {
-    extra.push({
-      id: 'riesgos', icono: '🧩', titulo: 'Riesgos',
-      detalle: riesgos.length > 0 ? `${riesgos.length}` : `${beneficiarios.length} beneficiario(s)`,
-      contenido: <Tarjeta titulo="Riesgos de la póliza"><Riesgos p={p} /></Tarjeta>,
-    })
-  }
   return [
     {
       id: 'asegura', icono: (TIPOS[p.tipo] ?? '📄').split(' ')[0], titulo: 'Qué asegura',
-      detalle: p.objeto?.titulo ?? null,
+      detalle: p.objeto?.titulo ?? lugar1,
       contenido: (
         <Tarjeta titulo="Qué asegura">
-          <Objeto p={p} />
+          {(riesgos.length > 0 || beneficiarios.length > 0) && <Riesgos p={p} />}
+          {!hayLugarEnRiesgos && (
+            <div style={riesgos.length > 0 || beneficiarios.length > 0 ? { marginTop: 10 } : undefined}><Objeto p={p} /></div>
+          )}
           {/* Solo en hogar, y solo si asegura los manda: `null` no es «no tiene capital». */}
           {p.capitalesHogar && <CapitalesHogar caps={p.capitalesHogar} />}
           {p.tipo === 'responsabilidad_civil' && (
@@ -207,6 +199,14 @@ function accesosPoliza(p: Poliza, cancelada: boolean, tareas: LecturaTareasVincu
               polizaId={p.id}
               informadoPorCima={p.objeto !== null && p.objeto.estado === 'conocido' && !(p.objeto.nota ?? '').includes('a mano')}
             />
+          )}
+          {/* Antes acceso propio: solo si el bien ha pasado por más de una póliza. */}
+          {(p.historialRiesgo?.length ?? 0) > 1 && (
+            <div style={{ marginTop: 12 }}>
+              <Plegable titulo="Historial del riesgo" resumen={`${p.historialRiesgo?.length} pólizas`}>
+                <HistorialRiesgo lista={p.historialRiesgo} />
+              </Plegable>
+            </div>
           )}
         </Tarjeta>
       ),
@@ -317,11 +317,6 @@ function accesosPoliza(p: Poliza, cancelada: boolean, tareas: LecturaTareasVincu
           <TareasVinculadas polizaId={p.id} inicial={tareas} hoy={new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })} />
         </Tarjeta>
       ),
-    },
-    {
-      id: 'historial', icono: '🕘', titulo: 'Historial del riesgo',
-      detalle: p.historialRiesgo?.length ? `${p.historialRiesgo.length}` : null,
-      contenido: <Tarjeta titulo="Historial del riesgo"><HistorialRiesgo lista={p.historialRiesgo} /></Tarjeta>,
     },
     {
       id: 'cima', icono: '🔗', titulo: 'CIMA y referencias',
