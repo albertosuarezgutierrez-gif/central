@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-28T08:32:48Z",
+  "generadoEn": "2026-10-28T09:41:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5654,6 +5654,7 @@
       "/api/finanzas/perfil",
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
+      "/api/inicio/calendario-pisos",
       "/api/internal/alerta",
       "/api/internal/gsc",
       "/api/internal/latido",
@@ -7238,7 +7239,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1856,
+    "apis": 1857,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
