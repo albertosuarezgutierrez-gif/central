@@ -1687,3 +1687,34 @@ export {
   type PersonaPolizaLeida, type Procedencia, type ResultadoFusion, type RiesgoLeido, type RolPersonaPoliza, type ValorLeidoDocumento,
 } from './escaneo-poliza.ts'
 export { PAQUETES_AUTO, coberturasDePaquete, type PaqueteAuto, type CoberturaPaquete, type ValorCobertura, type FuenteCobertura, type TipoFuente, type CompaniaPaquetes } from './coberturas-paquetes-auto.ts'
+export {
+  AUTORES_MENSAJE_OPERADOR,
+  AUTORES_MENSAJE_SINIESTRO,
+  MOTIVO_RESULTADO_MAX,
+  RAMOS_SEGURO_DANOS,
+  RAMOS_SEGURO_PERSONAS,
+  RESULTADOS_SINIESTRO,
+  TEXTO_MENSAJE_SINIESTRO_MAX,
+  TIPOS_MENSAJE_SINIESTRO,
+  claseSeguroArt23,
+  diasEsperandoCompania,
+  plazosSiniestro,
+  validarCierreSiniestro,
+  validarMensajeSiniestro,
+  type AutorMensajeSiniestro,
+  type ClavePlazoSiniestro,
+  type MensajeParaPlazos,
+  type MensajeValidado,
+  type PlazoSiniestro,
+  type ResultadoCierreSiniestro,
+  type SiniestroParaPlazos,
+  type TipoMensajeSiniestro,
+} from './siniestro-plazos.ts'
+
+export {
+  avisoCitasNoEncontradas,
+  extraerCitas,
+  normalizarParaCita,
+  verificarCitas,
+  type VerificacionCitas,
+} from './siniestro-citas.ts'

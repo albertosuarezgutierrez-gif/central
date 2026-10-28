@@ -441,7 +441,7 @@ async function cabeceras(): Promise<Record<string, string> | null> {
 
 export type Reenvio = { status: number; json: unknown }
 
-async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
+export async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
   const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {

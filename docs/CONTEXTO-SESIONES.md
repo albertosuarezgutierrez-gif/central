@@ -11,6 +11,12 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (28/10/2026, 6) Correduría · expediente de siniestro con hilo + IA
+- Página `/correduria/siniestro/[id]` (plataforma): hilo compañía↔IA↔Alberto (tabla `seguros.siniestro_mensajes`, solo-añadir por trigger, texto cifrado), plazos LCS (arts. 18/20/23; SAC sin verificar), «esperando a la compañía» en Hoy, cierre con resultado (ganado/perdido/parcial).
+- IA bajo botón (`POST /api/operador/siniestro/ia`, `iaTexto` modelo `SINIESTRO_IA_MODELO`, privado): analizar/redactar con el texto de la póliza; `verificarCitas()` marca citas que no están en la póliza.
+- SQL `apps/asegura/prisma/sql/2026-10-28d_siniestro_hilo.sql` **PENDIENTE de aplicar** (Supabase pidió confirmación): sin él los endpoints dan 503 `sin_migracion`.
+- Pendiente: confirmar si el pull de CIMA (repo `asegura`) pisa `siniestros.comentario`; búsqueda web/jurisprudencia; condicionados generales (no están en BD); Gmail → hilo.
+
 ## (28/10/2026, 5) SIVRA pricing: suelo del propietario por fecha
 - Tabla `pricing_suelos_fecha` (migración `2026-10-28_pricing_suelo_fecha.sql`, APLICADA 28/10; INSERT Duplex SS/Feria 2027 comentado: base 410/455/440/490/410/200). Aplicar ANTES del deploy o la pasada sale `ok:false` (`suelos_fecha` caída).
 - `lib/sivra/pricing-suelo-fecha.ts`: mismo punto/semántica que `min_price_finde`, manda el mayor, solo `max_price` le gana; respuesta `suelos_fecha`.
