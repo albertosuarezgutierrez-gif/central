@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-28T04:58:45Z",
+  "generadoEn": "2026-10-28T07:41:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2349,7 +2349,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 244
+        "evidencias": 245
       },
       "rrhh": {
         "estado": "no",
@@ -2565,7 +2565,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 38
+        "evidencias": 41
       },
       "rrhh": {
         "estado": "no",
@@ -5591,6 +5591,7 @@
       "/api/cron/health-check",
       "/api/cron/ia-director-refresh",
       "/api/cron/ia-saldo",
+      "/api/cron/idealista-correos",
       "/api/cron/paper-tracker",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
@@ -6666,7 +6667,7 @@
     {
       "id": "idealista-radar",
       "name": "idealista-radar",
-      "description": "Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa (costa de Huelva a diario; Asturias, Cantabria y Cádiz por turnos) con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide \"mira Idealista en la costa\". Sin secretos."
+      "description": "Referencia de zonas de playa y del corredor A-49 para buscar casas en idealista. RUTINA DESACTIVADA el 28/10/2026 (condiciones de uso del conector). Sin rutina ni escritura en mercado_comparables. Úsala solo si Alberto pide ver anuncios concretos de idealista en el chat, o para guardar búsquedas con alerta. El perfil casa vacacional (avisos Telegram de idealista y subastas) vive en module-subastas. Sin secretos."
     },
     {
       "id": "inversion-inmueble",
@@ -7237,7 +7238,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1855,
+    "apis": 1856,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
