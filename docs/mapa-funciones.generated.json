@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-27T19:15:37Z",
-  "sha": "f71edecb532933e130cadd96520b81d2741bff73",
+  "generadoEn": "2026-10-28T04:58:45Z",
+  "sha": "2b99c24a522a7594ffd7ba59d85c5bca64011323",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -74464,26 +74464,6 @@
       ],
       "rutaApi": "/api/cron/crm-recordatorios",
       "hash": "da468dd9b4ef"
-    },
-    {
-      "ruta": "apps/ia-rest/src/app/api/cron/eventos-entorno/route.ts",
-      "ambito": "apps/ia-rest",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 7
-        }
-      ],
-      "tablas": [],
-      "rutaApi": "/api/cron/eventos-entorno",
-      "hash": "b8554cd2cfa5"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/cron/feedback-visita/route.ts",
@@ -256580,7 +256560,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5373,
-    "funciones": 20623
+    "archivos": 5372,
+    "funciones": 20622
   }
 }

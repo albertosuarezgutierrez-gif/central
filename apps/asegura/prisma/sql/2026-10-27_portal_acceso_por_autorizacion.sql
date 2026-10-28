@@ -1,4 +1,4 @@
--- ⏳ SIN APLICAR (27/10/2026) — Acceso a los módulos del portal = AUTORIZACIÓN de la correduría (decisión de Alberto).
+-- ✅ APLICADO en producción el 28/10/2026 (migración portal_acceso_por_autorizacion) — Acceso a los módulos del portal = AUTORIZACIÓN de la correduría (decisión de Alberto).
 --
 -- Qué hace: amplía el CHECK `portal_vinculo_origen_check` con un origen NUEVO, `autorizacion_corredor`: el vínculo
 -- `gestionar` que crea asegura cuando Alberto activa un módulo a una persona del portal SIN ficha (se le crea una ficha de
