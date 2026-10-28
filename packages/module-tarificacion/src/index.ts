@@ -640,6 +640,7 @@ export {
   esAceptarDivAutorizado,
   esAvanceAutorizado,
   avancePorIdAutorizado,
+  esEnlaceAvanzable,
   onclickNormalizado,
   rutaDeMarco,
   bloqueoAvance,

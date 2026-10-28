@@ -109,10 +109,19 @@ function extractor(explora: boolean): string {
     if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 200);
     // EXPLORACIÓN (28/10/2026, menú de Mapfre NSE): un <a href> es una entrada de menú. \`href="javascript:…"\` viaja como onclick
     // (lo miran el validador y el guard); cualquier otro href marca el rol \`link\` (sin la URL: puede llevar datos).
+    // Con onclick Y \`javascript:\` se CONCATENAN (los dos se ejecutan). Un href normal: su RUTA sin query (\`hrefRuta\`; de otro origen,
+    // origen + ruta) para que el validador la mire (\`/contratar.do\` = emisión). Lo largo lo recorta el saneado con «…» (= no se pulsa).
     if (EXPLORA && tag === 'a' && el.hasAttribute('href')) {
       const href = String(el.getAttribute('href') || '').trim();
-      if (/^javascript:/i.test(href)) { if (!e.onclick) e.onclick = corta(href, 200); }
-      else if (!e.role) e.role = 'link';
+      if (/^javascript:/i.test(href)) {
+        const propio = el.getAttribute('onclick');
+        e.onclick = propio ? String(propio).replace(/\\s+/g, ' ').trim() + ' ; ' + href.replace(/\\s+/g, ' ') : href.replace(/\\s+/g, ' ');
+      } else {
+        let u = null;
+        try { u = new URL(href, document.baseURI); } catch (err) { u = null; }
+        if (u) e.hrefRuta = u.origin === location.origin ? u.pathname : u.origin + u.pathname;
+        if (!e.role) e.role = 'link';
+      }
     }
     if (ng && !e.onclick) e.onclick = corta(ng, 200);
     if (tag === 'select') {

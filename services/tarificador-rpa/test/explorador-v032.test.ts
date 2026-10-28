@@ -596,13 +596,16 @@ test('0.3.4 · Mapfre NSE: «Oferta / Contratación» pasa SOLO por su puerta (t
 })
 
 test('0.3.4 · inventario: <a href> de menú sale como role=link y `javascript:` como onclick (para que la IA elija el producto)', async () => {
-  menuNse = MENU_NSE()
+  menuNse = MENU_NSE('<a id="m6" onclick="marcar()" href="javascript:contratarPoliza()">Seguir</a><a id="m7" href="/EVT21_NSE_FWEB/contratar.do?x=1&cliente=2">Seguir 2</a>')
   const { context, page } = await abrir('/EVT21_NSE_FWEB/inicio.jsp')
   try {
     const cap = (await capturarInventarioExploracion(page))!
     const els = elementos(cap.inventario)
     assert.equal(els.find((e) => e.id === 'm1')?.role, 'link')
     assert.equal(els.find((e) => e.id === 'm3')?.onclick, 'javascript:verMultiprecio()')
+    assert.equal(els.find((e) => e.id === 'm1')?.hrefRuta, '/EVT21_NSE_FWEB/inicio.jsp')
+    assert.equal(els.find((e) => e.id === 'm6')?.onclick, 'marcar() ; javascript:contratarPoliza()', 'onclick Y href javascript: se concatenan')
+    assert.equal(els.find((e) => e.id === 'm7')?.hrefRuta, '/EVT21_NSE_FWEB/contratar.do', 'la ruta sin query')
     await cap.liberar()
   } finally {
     await context.close()

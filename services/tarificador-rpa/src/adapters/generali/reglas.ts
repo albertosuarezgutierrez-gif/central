@@ -1828,7 +1828,7 @@ export const ALIAS_COMPANIAS_GENERALI: readonly { claves: readonly string[]; opc
 
 export type OpcionCompaniaGenerali =
   | { indice: number; via: 'exacta' | 'alias' | 'razon_social' }
-  | { error: 'ninguna' | 'varias'; candidatas: string[] }
+  | { error: 'ninguna' | 'varias' | 'generico'; candidatas: string[] }
 
 /**
  * Prueba real 28/10/2026 (0.2.47): la ficha dice «Allianz» y Genernet ofrece «ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO» (y también
@@ -1853,6 +1853,8 @@ export function opcionCompaniaProcedenciaGenerali(opciones: readonly string[], c
   const porRaiz = (r: readonly string[]) => opciones.map((o, i) => { const p = palabrasCompaniaGenerali(o); return r.every((w, k) => p[k] === w) ? i : -1 }).filter((i) => i >= 0)
   let ix = porRaiz(ficha)
   if (ix.length === 0 && alias) ix = porRaiz(alias.raiz)
+  // Revisión 0.2.48: sin alias, UNA sola palabra («Mutua», «Mutual»…) es genérica: nunca se elige; se para con las candidatas.
+  if (!alias && ficha.length < 2) return { error: ix.length === 1 ? 'generico' : ix.length === 0 ? 'ninguna' : 'varias', candidatas: ix.map((i) => opciones[i]!) }
   if (ix.length === 1) return { indice: ix[0]!, via: 'razon_social' }
   return { error: ix.length === 0 ? 'ninguna' : 'varias', candidatas: ix.map((i) => opciones[i]!) }
 }

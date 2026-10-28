@@ -104,3 +104,21 @@ test('v0.2.48 · ambigüedad en el portal: para con las candidatas y no toca el 
     assert.equal(await puesta(page), 'Seleccione una opción')
   })
 })
+
+test('v0.2.48 (revisión) · nombre genérico de UNA palabra sin alias → nunca se elige; para con las candidatas', () => {
+  const ops = ['MUTUA MADRILEÑA AUTOMOVILISTA', 'MUTUA DE PROPIETARIOS', 'MUTUAL MEDICA', 'PELAYO MUTUA DE SEGUROS']
+  assert.deepEqual(elegida(['MUTUA DE PROPIETARIOS', 'PELAYO MUTUA'], 'Mutua'), { error: 'generico', candidatas: ['MUTUA DE PROPIETARIOS'] }, 'una sola candidata tampoco basta')
+  assert.deepEqual(elegida(ops, 'Mutua'), { error: 'varias', candidatas: ['MUTUA MADRILEÑA AUTOMOVILISTA', 'MUTUA DE PROPIETARIOS'] })
+  assert.deepEqual(elegida(ops, 'Seguros'), { error: 'ninguna', candidatas: [] }, '«Seguros» no es nombre')
+  assert.deepEqual(elegida(ops, 'Compañía'), { error: 'ninguna', candidatas: [] })
+  // Con DOS palabras significativas, sí por razón social; una marca del mapa de alias de una palabra, también.
+  assert.deepEqual(elegida(ops, 'Mutua Propietarios'), { opcion: 'MUTUA DE PROPIETARIOS', via: 'razon_social' })
+  assert.deepEqual(elegida(['ZURICH INSURANCE PLC', 'ALIANZA ESPAÑOLA'], 'Zurich'), { opcion: 'ZURICH INSURANCE PLC', via: 'razon_social' })
+})
+
+test('v0.2.48 (revisión) · en el portal: «Mutua» genérica → para nombrando las candidatas y no toca el desplegable', async () => {
+  await conPagina(VALORACION(['Seleccione una opción', 'MUTUA DE PROPIETARIOS', 'PELAYO MUTUA']), async (page) => {
+    await assert.rejects(rellenarTipoYProcedenciaGenerali(page, formulario({ companiaAnterior: 'Mutua', aniosAseguradoAnterior: 3 }), ctx), /nombre genérico de una sola palabra y sin alias: no se elige por razón social; candidatas: «MUTUA DE PROPIETARIOS»/)
+    assert.equal(await puesta(page), 'Seleccione una opción')
+  })
+})

@@ -548,9 +548,12 @@ export async function rellenarTipoYProcedenciaGenerali(raiz: Raiz, form: Formula
     const r = opcionCompaniaProcedenciaGenerali(ops, p.compania)
     const nombre = sanearFragmentoGenerali(p.compania).slice(0, 60)
     if ('error' in r) {
+      const cands = r.candidatas.map((c) => `«${sanearFragmentoGenerali(c).slice(0, 60)}»`).join(' · ')
       const que = r.error === 'varias'
-        ? `casan varias por razón social: ${r.candidatas.map((c) => `«${sanearFragmentoGenerali(c).slice(0, 60)}»`).join(' · ')}`
-        : 'ninguna casa ni exacta, ni por alias, ni por razón social'
+        ? `casan varias por razón social: ${cands}`
+        : r.error === 'generico'
+          ? `nombre genérico de una sola palabra y sin alias: no se elige por razón social; candidatas: ${cands}`
+          : 'ninguna casa ni exacta, ni por alias, ni por razón social'
       return { error: new ErrorMapaIncompletoGenerali(`la compañía «${nombre}» de la ficha en «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}» (${que}; opciones vistas: ${opcionesVistasGenerali(ops, 40)})`) }
     }
     const como = r.via === 'exacta' ? '' : r.via === 'alias' ? ` «${nombre}», por alias` : ` «${nombre}», por razón social`
