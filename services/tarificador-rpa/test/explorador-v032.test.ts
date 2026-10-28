@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarificacion'
-import { cerrarFaseEntrada, instalarGuardEmision, MAX_AVANCES_POR_ID, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
+import { cerrarFaseEntrada, instalarGuardEmision, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import { bucleExploracion, EXPLORADOR_VERSION, type ContextoBucle } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
@@ -394,6 +394,103 @@ test('0.3.3 · ePAC: la ventana abierta para el avance por id SOLO admite el ser
     assert.ok(!peticiones.some((p) => p.metodo === 'POST' && p.ruta === '/drvp00/OtroServlet'), 'el POST a otra ruta no salió')
     assert.notEqual(guard.violacion(), null)
     await cap.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── Revisión de seguridad 2 (28/10/2026, PR #5211): precio pegajoso, títulos vivos y capa de parámetros ───────────
+
+async function intentarAvance(page: Page, guard: GuardEmision, antes?: () => Promise<void>): Promise<unknown> {
+  const cap = (await capturarInventarioExploracion(page))!
+  const marco = cap.inventario.marcos.find((m) => m.elementos.some((e) => e.id === 'btnAceptar'))!
+  const el = marco.elementos.find((e) => e.id === 'btnAceptar')!
+  await antes?.()
+  try {
+    await pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco })
+    return null
+  } catch (e) {
+    return e
+  } finally {
+    await cap.liberar()
+  }
+}
+
+test('seguridad 2a: precio VIVO en cualquier forma (nodo no hoja, input readonly, OTRO marco) bloquea y queda PEGAJOSO en el trabajo', async () => {
+  const inyecciones: [string, (page: Page) => Promise<void>][] = [
+    ['nodo no hoja «123,45 <span>€</span>»', (page) => page.evaluate(() => { const d = document.createElement('div'); d.innerHTML = '123,45 <span>€</span>'; document.body.appendChild(d) })],
+    ['input readonly con importe', (page) => page.evaluate(() => { const i = document.createElement('input'); i.readOnly = true; i.value = '47,55 €'; document.body.appendChild(i) })],
+    ['importe en OTRO marco', (page) => page.evaluate(() => { const f = document.createElement('iframe'); f.srcdoc = '<p>Prima total</p><p>310,20 €</p>'; document.body.appendChild(f) }).then(() => page.waitForTimeout(300))],
+  ]
+  for (const [nombre, inyectar] of inyecciones) {
+    figuras = FIGURAS()
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      const e = await intentarAvance(page, guard, () => inyectar(page))
+      assert.ok(e instanceof EmisionBloqueadaError && /precio/.test(e.message), `${nombre}: ${String(e)}`)
+      assert.equal(precioVistoEn(guard), true, nombre)
+      // Pegajoso: aunque el precio desaparezca (página recargada), el avance por id ya no vuelve.
+      await page.goto(`${base}/drvp00/SEAServlet`)
+      const e2 = await intentarAvance(page, guard)
+      assert.ok(e2 instanceof EmisionBloqueadaError && /ya se vio un precio/.test(e2.message), `${nombre} (pegajoso): ${String(e2)}`)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST'), nombre)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('seguridad 2a: el bucle registra el precio visto en un paso (cualquier marco) y la revalidación rechaza después el avance por id', async () => {
+  figuras = FIGURAS()
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    registrarPrecioVisto(guard)
+    const fin = await bucleExploracion(page, contexto(page, guard, (inv) => respuesta([{ accion: 'avanzar', ref: ref(inv, 'btnAceptar'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])))
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(fin.detalle, 'lote_no_valido')
+    assert.ok(!peticiones.some((p) => p.metodo === 'POST'))
+  } finally {
+    await context.close()
+  }
+})
+
+test('seguridad 2b: un título VIVO de tarificación/emisión en cualquier marco (tras el inventario) bloquea el avance por id', async () => {
+  for (const [nombre, html] of [['h3 Tarificar', '<h3>Tarificar</h3>'], ['th Forma de pago', '<table><tr><th>Forma de pago</th></tr></table>'], ['legend Revisión', '<fieldset><legend>Revisión y emisión</legend></fieldset>']] as const) {
+    figuras = FIGURAS()
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      const e = await intentarAvance(page, guard, () => page.evaluate((h) => { const f = document.createElement('iframe'); f.srcdoc = h; document.body.appendChild(f) }, html).then(() => page.waitForTimeout(300)))
+      assert.ok(e instanceof EmisionBloqueadaError && /título vivo/.test(e.message), `${nombre}: ${String(e)}`)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST'), nombre)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('seguridad 2c: durante el avance por id, un POST al MISMO servlet con acción de emisión en el cuerpo se aborta (EmisionBloqueadaError)', async () => {
+  for (const cuerpo of ['action=contract', 'evento=emitir', 'validar_aceptar=1']) {
+    figuras = FIGURAS().replace("function eventoSiguiente(){ document.getElementById('f').submit() }", `function eventoSiguiente(){ fetch('/drvp00/SEAServlet', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: '${cuerpo}' }).catch(() => {}) }`)
+    assert.ok(figuras.includes(cuerpo))
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      await intentarAvance(page, guard, async () => undefined)
+      await page.waitForTimeout(500)
+      assert.ok(guard.violacion() instanceof EmisionBloqueadaError, cuerpo)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST' && p.cuerpo.includes(cuerpo)), `${cuerpo}: no llegó al servidor`)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('seguridad 2a: el BUCLE marca el precio visto si el inventario de un paso trae importes (en cualquier marco)', async () => {
+  figuras = FIGURAS().replace('</form>', '</form><table><tr><td>Prima total</td><td>47,55 €</td></tr></table>')
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    assert.equal(precioVistoEn(guard), false)
+    await bucleExploracion(page, contexto(page, guard, () => respuesta([{ accion: 'parar', motivo: 'ambiguo' }])))
+    assert.equal(precioVistoEn(guard), true)
   } finally {
     await context.close()
   }

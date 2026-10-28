@@ -843,6 +843,8 @@ export type ContextoValidacion = {
    * Por defecto `false` (lo calcula `presupuestoEnCursoDe` sobre los pasos validados anteriores).
    */
   presupuestoEnCurso?: boolean
+  /** `true` si en un paso ANTERIOR de este trabajo se vio un importe en cualquier marco: ningún avance por id más (precio pegajoso). */
+  precioVisto?: boolean
 }
 
 /** ¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}. */
@@ -1209,6 +1211,10 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
           ? bloqueoGuardadoPresupuesto(el, { tipoPantalla: pantalla.tipo, hayImportes: importes.size > 0, presupuestoEnCurso: ctx.presupuestoEnCurso === true })
           : bloqueoAvance(ctx.entrada, el, marco)
         if (bloqueo) return void errores.push(`${donde}: ${bloqueo}`)
+        // Avance por id (ePAC drvp00) con un importe en CUALQUIER marco del inventario (o ya visto antes en este trabajo): nunca.
+        if (efecto !== 'guardar_presupuesto' && avancePorIdAutorizado(ctx.entrada, el, marco) && (importes.size > 0 || ctx.precioVisto === true)) {
+          return void errores.push(`${donde}: avance_por_id_con_precio`)
+        }
         acciones.push({ accion: 'avanzar', ref, efectoEsperado: efecto, confianza: a.confianza })
       }
     })

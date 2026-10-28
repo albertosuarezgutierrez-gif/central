@@ -137,3 +137,22 @@ describe('0.3.3 · selector estable con `$` (ids JSF de ePAC)', () => {
     expect(selectorDeElemento({ tag: 'input', id: 'a b"c' } as never)).toBeNull()
   })
 })
+
+describe('seguridad 2a · precio pegajoso en la validación pura', () => {
+  const val = (i: InventarioDom, precioVisto = false) => {
+    const btn = i.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'btnAceptar')!
+    return validarRespuestaExplorador(
+      { version: 1, pantalla: { nombre: 'Figuras', tipo: 'formulario' }, acciones: [{ accion: 'avanzar', ref: btn.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null },
+      { inventario: i, ramo: 'patinete', entrada: MP, datosReales: null, precioVisto },
+    )
+  }
+  it('sin precio: pasa; con importe en OTRO marco o ya visto antes: avance_por_id_con_precio', () => {
+    expect(val(inv([BTN])).ok).toBe(true)
+    expect(JSON.stringify(val(inv([BTN]), true))).toMatch(/avance_por_id_con_precio/)
+    const dos = sanearInventarioDom({ marcos: [
+      { url: 'https://epac.example.test/ngx/app', nombre: null, titulos: [], importes: [{ texto: '310,20 €', etiqueta: 'Prima' }], elementos: [{ tag: 'button', id: 'x', texto: 'Menú' }] },
+      { url: URL_DRVP00, nombre: 'appArea', titulos: [], elementos: [BTN] },
+    ] }, undefined, { refs: true })!
+    expect(JSON.stringify(val(dos))).toMatch(/avance_por_id_con_precio/)
+  })
+})
