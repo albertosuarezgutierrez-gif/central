@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T13:48:15Z",
-  "sha": "b951175df6d3db5a113a65d10c76c0eb4cea2e88",
+  "generadoEn": "2026-10-28T15:18:32Z",
+  "sha": "a1627a72d38aa2baa26b6e71d825573a1eddc5f3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -32196,6 +32196,45 @@
       "hash": "0e9950d3b83b"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/siniestro/cierre/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/siniestro/cierre",
+      "hash": "a3805f9a5b88"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/siniestro/hilo/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "Hilo de conversación del siniestro (corredor ↔ IA ↔ compañía), por el puerto de operador. GET ?correduriaId&siniestroId → { estado:'ok', siniestro, poliza, documentosSiniestro, mensajes, plazos, diasE"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/siniestro/hilo",
+      "hash": "baaaadf32d8c"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/siniestro/ia/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/siniestro/ia",
+      "hash": "a9f7fd37bd7f"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/siniestro/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -32280,6 +32319,27 @@
       ],
       "rutaApi": "/api/operador/siniestros-nuevos",
       "hash": "8666fca8dd28"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/siniestros/esperando/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "Siniestros esperando respuesta de la compañía (contador «Hoy»), por el puerto de operador. GET ?correduriaId → 200 [{ siniestroId, clienteId, polizaNumero, dias }] «Esperando» = el último `enviado` de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/siniestros/esperando",
+      "hash": "fd96bf82124d"
     },
     {
       "ruta": "apps/asegura/app/api/operador/solicitud-datos/lead-web/route.ts",
@@ -61650,6 +61710,273 @@
       "hash": "89610c283860"
     },
     {
+      "ruta": "apps/asegura/lib/siniestro-hilo-puerto.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Puerto del hilo de siniestro: comprobaciones comunes de las rutas `/api/operador/siniestro/{hilo,cierre,ia}` y `/api/operador/siniestros/esperando`. Sin `correduriaId` se usa la correduría única (igual que `/api/operador/siniestro`); si viene, tiene que ser la de esta correduría (403 si no).",
+      "exporta": [
+        "correduriaPedida",
+        "respuestaFallo",
+        "actorDe",
+        "cadena"
+      ],
+      "funciones": [
+        {
+          "nombre": "correduriaPedida",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedida: unknown",
+          "retorno": "Promise<",
+          "linea": 10,
+          "resumen": "La correduría pedida (o la única, si no se pide ninguna), comprobada; o la respuesta de error lista para devolver."
+        },
+        {
+          "nombre": "respuestaFallo",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { estado: string; motivo: string; status: number }",
+          "retorno": "NextResponse",
+          "linea": 21
+        },
+        {
+          "nombre": "actorDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, b: Record<string, unknown>",
+          "retorno": "string",
+          "linea": 26,
+          "resumen": "Quién escribe: `actor` del cuerpo, si no la cabecera `x-actor`, si no `plataforma`. Sin PII."
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "27ca944b4bb2"
+    },
+    {
+      "ruta": "apps/asegura/lib/siniestro-hilo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Hilo de conversación por siniestro (corredor ↔ IA ↔ compañía), plazos legales y cierre con resultado. Reglas puras en `@central/module-seguros` (`siniestro-plazos.ts`); aquí la BD. - `correduriaId` SIEMPRE explícito; el siniestro y el documento se comprueban contra la correduría. - `siniestro_mensaj",
+      "exporta": [
+        "leerHiloSiniestro",
+        "anadirMensajeSiniestro",
+        "cerrarSiniestroConResultado",
+        "siniestrosEsperandoCompania"
+      ],
+      "funciones": [
+        {
+          "nombre": "invalido",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "FalloHilo",
+          "linea": 96
+        },
+        {
+          "nombre": "noEncontrado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "FalloHilo",
+          "linea": 97
+        },
+        {
+          "nombre": "sinMigracion",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": "FalloHilo",
+          "linea": 98
+        },
+        {
+          "nombre": "esMigracionAusente",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 99
+        },
+        {
+          "nombre": "esObjeto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 119
+        },
+        {
+          "nombre": "isoDia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null",
+          "retorno": "string | null",
+          "linea": 120
+        },
+        {
+          "nombre": "leerCierre",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, siniestroId: string",
+          "retorno": "Promise<CierreRaw | null>",
+          "linea": 126,
+          "resumen": "Lee el cierre por SQL crudo (columnas del SQL 2026-10-28d). Lanza el error de columna ausente (42703): el llamante lo traduce a `sin_migracion`."
+        },
+        {
+          "nombre": "mapMensaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaMensaje",
+          "retorno": "MensajeSiniestro",
+          "linea": 134
+        },
+        {
+          "nombre": "paraPlazos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "m: MensajeSiniestro",
+          "retorno": "MensajeParaPlazos",
+          "linea": 155
+        },
+        {
+          "nombre": "documentosDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, where: { polizaId: string } | { siniestroId: string }, contexto: string",
+          "retorno": "Promise<DocumentoBreve[] | null>",
+          "linea": 158
+        },
+        {
+          "nombre": "leerHiloSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, siniestroId: string, hoy: string = diaMadrid(new Date()),",
+          "retorno": "Promise<",
+          "linea": 174,
+          "resumen": "El hilo de un siniestro de la correduría, con plazos. `hoy` inyectable (día de Madrid)."
+        },
+        {
+          "nombre": "anotarHistorial",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 260
+        },
+        {
+          "nombre": "anadirMensajeSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, e: EntradaAnadirMensaje,",
+          "retorno": "Promise<",
+          "linea": 289,
+          "resumen": "Añade un mensaje al hilo. Valida (puro), comprueba siniestro y documento contra la correduría, CIFRA el texto, inserta y deja fila en `historial_interno` sin el texto. Reutilizable por el endpoint de "
+        },
+        {
+          "nombre": "cerrarSiniestroConResultado",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, e: { siniestroId: string; resultado: unknown; motivo: unknown; actor: string },",
+          "retorno": "Promise<",
+          "linea": 362,
+          "resumen": "Cierra (o re-cierra) el siniestro con un resultado y su motivo. No toca `estado` ni `comentario`."
+        },
+        {
+          "nombre": "siniestrosEsperandoCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, hoy: string = diaMadrid(new Date()),",
+          "retorno": "Promise<",
+          "linea": 417,
+          "resumen": "Siniestros cuyo último `enviado` del corredor no tiene respuesta posterior de la compañía. Fuera: los fusionados y los ya cerrados con resultado. Orden: los que más llevan esperando primero."
+        }
+      ],
+      "tablas": [
+        "historial_interno",
+        "polizas",
+        "siniestro_mensajes",
+        "siniestros"
+      ],
+      "rutaApi": null,
+      "hash": "821a188a2b75"
+    },
+    {
+      "ruta": "apps/asegura/lib/siniestro-ia-prompt.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Prompt de sistema de la IA de siniestros (analizar / redactar). Aparte del código para poder afinarlo sin tocar la ruta. La IA ARGUMENTA; la decisión es del corredor. Datos del mediador desde `MEDIADOR`.",
+      "exporta": [
+        "firmaMediador",
+        "promptSistemaSiniestro"
+      ],
+      "funciones": [
+        {
+          "nombre": "firmaMediador",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 34
+        },
+        {
+          "nombre": "promptSistemaSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "accion: AccionSiniestroIA, destinatario: DestinatarioSiniestroIA",
+          "retorno": "string",
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "41fd546625de"
+    },
+    {
+      "ruta": "apps/asegura/lib/siniestro-ia.ts",
+      "ambito": "apps/asegura",
+      "resumen": "IA del siniestro (analizar / redactar): arma el contexto de ESA correduría, llama a `iaTexto()` UNA vez, verifica las citas contra el texto de la póliza y guarda el resultado como mensaje autor 'ia' del hilo. El texto del PDF y el hilo van a la IA (por la pasarela, `privado`), nunca a `historial_int",
+      "exporta": [
+        "modeloSiniestroIA",
+        "textoPolizaDe",
+        "ejecutarIASiniestro"
+      ],
+      "funciones": [
+        {
+          "nombre": "modeloSiniestroIA",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env",
+          "retorno": "string",
+          "linea": 21,
+          "resumen": "Modelo para razonamiento largo: el potente que ya usa el formador (Claude Sonnet vía OpenRouter, por la pasarela)."
+        },
+        {
+          "nombre": "textoPolizaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string",
+          "retorno": "Promise<",
+          "linea": 27,
+          "resumen": "Texto de los PDF de la póliza (documentos con polizaId de ESA correduría + el PDF archivado), recortado."
+        },
+        {
+          "nombre": "ejecutarIASiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, e: { siniestroId: string; accion: AccionSiniestroIA; destinatario: DestinatarioSiniestroIA; actor: string },",
+          "retorno": "Promise<",
+          "linea": 61
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3a05fae5a0c6"
+    },
+    {
       "ruta": "apps/asegura/lib/siniestros-vinculo.ts",
       "ambito": "apps/asegura",
       "resumen": "Parte del portal ↔ siniestro, y alta manual ↔ siniestro de CIMA: la BD. Reglas puras (emparejamiento fuerte/ambiguo/ninguno y fusión) en `@central/module-seguros` (`siniestro-vinculo.ts`). SQL: 2026-10-03d. 🚨 Vinculado ≠ comunicado. Un parte pasa a `abierto_en_compania` (lo que el portal le enseña ",
@@ -61772,7 +62099,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResumenReconciliacion>",
-          "linea": 374,
+          "linea": 376,
           "resumen": "Una pasada: (1) funde altas manuales con el siniestro de CIMA que les corresponde, (2) vincula los partes con coincidencia fuerte a un siniestro de CIMA. Lo ambiguo NO se toca: sale como sugerencia en"
         }
       ],
@@ -61781,7 +62108,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "65464fcce2e6"
+      "hash": "ddcb9c557f92"
     },
     {
       "ruta": "apps/asegura/lib/solicitud-borrador-purga.ts",
@@ -119598,7 +119925,7 @@
           "exportada": false,
           "params": "c: Contador | null | undefined",
           "retorno": "string",
-          "linea": 30,
+          "linea": 31,
           "resumen": "Un contador agregado: «n+» si alguna cola no se pudo leer (es un SUELO, no el total)."
         },
         {
@@ -119607,7 +119934,7 @@
           "exportada": true,
           "params": "{ ingesta, nIncidencias, nBlog, onIr, }: { ingesta: VistaIngesta | null /** Todas las colas de los bloques de debajo (las mismas que el badge de la pestaña). */ nIncidencias: Contador | null | undefined nBlog: N onIr: (s: Destino) => void }",
           "retorno": null,
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "FilaOk",
@@ -119615,12 +119942,12 @@
           "exportada": false,
           "params": "{ n, titulo, sub, onClick }: { n: N; titulo: string; sub: string; onClick: () => void }",
           "retorno": null,
-          "linea": 78
+          "linea": 80
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "819e992c3f7c"
+      "hash": "3df82f08d0e2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/iconos.tsx",
@@ -125956,6 +126283,195 @@
       "hash": "5e9e80ad8901"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/AccionesIa.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AccionesIa"
+      ],
+      "funciones": [
+        {
+          "nombre": "AccionesIa",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ siniestroId, onHecho }: { siniestroId: string; onHecho: () => void }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "537a7d99471b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Cabecera.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Cabecera"
+      ],
+      "funciones": [
+        {
+          "nombre": "Cabecera",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ s, poliza }: { s: SiniestroCartera | null; poliza: HiloSiniestro['poliza'] }",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "56c5e0003a30"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/CajaMensaje.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CajaMensaje"
+      ],
+      "funciones": [
+        {
+          "nombre": "CajaMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ siniestroId, documentos, precarga, onGuardado }: { siniestroId: string documentos: DocumentoResumen[] precarga: Precarga | null onGuardado: () => void }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "368edf81e0e4"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Cierre.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Cierre"
+      ],
+      "funciones": [
+        {
+          "nombre": "Cierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ siniestroId, resultado, motivo, onGuardado }: { siniestroId: string resultado: string | null motivo: string | null onGuardado: () => void }",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "49e44c1980b3"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Expediente.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Expediente"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 18
+        },
+        {
+          "nombre": "Expediente",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ siniestroId }: { siniestroId: string }",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "936030109f0f"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Hilo.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Hilo"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaHora",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": "string",
+          "linea": 12
+        },
+        {
+          "nombre": "Burbuja",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ m, onCopiar, onEnviado }: { m: Mensaje; onCopiar: (t: string) => void; onEnviado: (t: string) => void }",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "Hilo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ mensajes, onCopiar, onEnviado }: { mensajes: Mensaje[] | null; onCopiar: (t: string) => void; onEnviado: (t: string) => void }",
+          "retorno": null,
+          "linea": 48
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "476da80d1bbb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SiniestroPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "SiniestroPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Expediente de un siniestro: hilo con la compañía, plazos, IA con la póliza, cierre y documentos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "afed34de2ed8"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/siniestro/[id]/Plazos.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Plazos"
+      ],
+      "funciones": [
+        {
+          "nombre": "Plazos",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ plazos, esperando }: { plazos: Plazo[] | null; esperando: number | null }",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ee418f5ece24"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Siniestros.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -125968,7 +126484,7 @@
           "exportada": true,
           "params": "{ lista: inicial, polizas, documentos, clienteId, }: { lista: SiniestroCartera[] | null polizas: PolizaParaSiniestro[] /** Documentos de la ficha/póliza (los del siniestro se filtran por `siniestroId`). `null`/ausente = no consultados. */ d",
           "retorno": null,
-          "linea": 81
+          "linea": 82
         },
         {
           "nombre": "BloqueDanos",
@@ -125976,7 +126492,7 @@
           "exportada": false,
           "params": "{ danos }: { danos: { descripcion: string | null; valor: string | null }[] | null }",
           "retorno": null,
-          "linea": 295
+          "linea": 296
         },
         {
           "nombre": "BloqueTramitacion",
@@ -125984,7 +126500,7 @@
           "exportada": false,
           "params": "{ t }: { t: SiniestroCartera['tramitacionCima'] }",
           "retorno": null,
-          "linea": 322
+          "linea": 323
         },
         {
           "nombre": "BloqueDetalleCima",
@@ -125992,7 +126508,7 @@
           "exportada": false,
           "params": "{ s }: { s: SiniestroCartera }",
           "retorno": null,
-          "linea": 376
+          "linea": 377
         },
         {
           "nombre": "BloqueRamo",
@@ -126000,7 +126516,7 @@
           "exportada": false,
           "params": "{ siniestroId, ramoPoliza, datosRamo, onGuardar }: { siniestroId: string ramoPoliza: string | null datosRamo: Record<string, string | number | boolean> | null onGuardar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
           "retorno": null,
-          "linea": 533
+          "linea": 534
         },
         {
           "nombre": "valoresIniciales",
@@ -126008,7 +126524,7 @@
           "exportada": false,
           "params": "campos: readonly CampoRamoSiniestro[], datosRamo: Record<string, string | number | boolean> | null",
           "retorno": "Record<string, string>",
-          "linea": 581,
+          "linea": 582,
           "resumen": "`datosRamo` (valores tipados) → strings de formulario. `si`/`no` para triestado."
         },
         {
@@ -126017,7 +126533,7 @@
           "exportada": false,
           "params": "{ def, valor, onCambiar }: { def: CampoRamoSiniestro; valor: string; onCambiar: (v: string) => void }",
           "retorno": null,
-          "linea": 592,
+          "linea": 593,
           "resumen": "Un campo del catálogo, pintado según su `tipo`. Mismo criterio que el catálogo de pólizas: sin valor marcado de salida en opción/triestado."
         },
         {
@@ -126026,7 +126542,7 @@
           "exportada": false,
           "params": "{ siniestroId, terceros, onAnadir, onQuitar }: { siniestroId: string terceros: TerceroCartera[] | null onAnadir: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onQuitar: (body: Record<string, unknown>) => Promise<RespuestaSi",
           "retorno": null,
-          "linea": 625
+          "linea": 626
         },
         {
           "nombre": "FormTercero",
@@ -126034,7 +126550,7 @@
           "exportada": false,
           "params": "{ siniestroId, onAnadir, onHecho }: { siniestroId: string onAnadir: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onHecho: () => void }",
           "retorno": null,
-          "linea": 696
+          "linea": 697
         },
         {
           "nombre": "Fila",
@@ -126042,7 +126558,7 @@
           "exportada": false,
           "params": "{ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza, compania }: { s: SiniestroCartera documentos: DocumentoResumen[] | null onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onAnadirTercero: (body",
           "retorno": null,
-          "linea": 772
+          "linea": 773
         },
         {
           "nombre": "Detalle",
@@ -126050,7 +126566,7 @@
           "exportada": false,
           "params": "{ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza, compania }: { s: SiniestroCartera documentos: DocumentoResumen[] | null onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onAnadirTercero: (body",
           "retorno": null,
-          "linea": 856
+          "linea": 862
         },
         {
           "nombre": "Seguimiento",
@@ -126058,7 +126574,7 @@
           "exportada": false,
           "params": "{ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
           "retorno": null,
-          "linea": 967
+          "linea": 973
         },
         {
           "nombre": "FormSeguimiento",
@@ -126066,7 +126582,7 @@
           "exportada": false,
           "params": "{ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
           "retorno": null,
-          "linea": 979
+          "linea": 985
         },
         {
           "nombre": "CambioEstado",
@@ -126074,7 +126590,7 @@
           "exportada": false,
           "params": "{ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
           "retorno": null,
-          "linea": 1087
+          "linea": 1093
         },
         {
           "nombre": "esEstadoConocido",
@@ -126082,7 +126598,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": "e is EstadoSiniestro",
-          "linea": 1122
+          "linea": 1128
         },
         {
           "nombre": "FormAbrir",
@@ -126090,7 +126606,7 @@
           "exportada": false,
           "params": "{ polizas, precarga, onAbrir, onVincular, onCancelar }: { polizas: PolizaParaSiniestro[] /** Registrar DESDE un parte del portal: sus datos de partida y su id (queda vinculado). */ precarga: PrecargaDesdeParte | null onAbrir: (body: Record<",
           "retorno": null,
-          "linea": 1140
+          "linea": 1146
         },
         {
           "nombre": "BloquePartes",
@@ -126098,7 +126614,7 @@
           "exportada": false,
           "params": "{ partes }: { partes: SiniestroCartera['partes'] }",
           "retorno": null,
-          "linea": 1309
+          "linea": 1315
         },
         {
           "nombre": "textoRespuesta",
@@ -126106,7 +126622,7 @@
           "exportada": false,
           "params": "r: Exclude<RespuestaSiniestro, { estado: 'ok' }>",
           "retorno": "string",
-          "linea": 1335
+          "linea": 1341
         },
         {
           "nombre": "etiquetaGravedad",
@@ -126114,7 +126630,7 @@
           "exportada": false,
           "params": "g: string",
           "retorno": "string",
-          "linea": 1345
+          "linea": 1351
         },
         {
           "nombre": "nombreCampo",
@@ -126122,7 +126638,7 @@
           "exportada": false,
           "params": "k: string",
           "retorno": "string",
-          "linea": 1350
+          "linea": 1356
         },
         {
           "nombre": "Celda",
@@ -126130,7 +126646,7 @@
           "exportada": false,
           "params": "{ label, children }: { label: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1356
+          "linea": 1362
         },
         {
           "nombre": "Dato",
@@ -126138,7 +126654,7 @@
           "exportada": false,
           "params": "{ label, valor }: { label: string; valor: string | null }",
           "retorno": null,
-          "linea": 1365
+          "linea": 1371
         },
         {
           "nombre": "Persona",
@@ -126146,7 +126662,7 @@
           "exportada": false,
           "params": "{ label, nombre, telefono, email }: { label: string; nombre: string | null; telefono: string | null; email: string | null }",
           "retorno": null,
-          "linea": 1374
+          "linea": 1380
         },
         {
           "nombre": "Campo",
@@ -126154,7 +126670,7 @@
           "exportada": false,
           "params": "{ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1385
+          "linea": 1391
         },
         {
           "nombre": "cajaMensaje",
@@ -126162,7 +126678,7 @@
           "exportada": false,
           "params": "tono: Mensaje['tono']",
           "retorno": "React.CSSProperties",
-          "linea": 1395
+          "linea": 1401
         }
       ],
       "tablas": [
@@ -126170,7 +126686,27 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "efa92c1663b8"
+      "hash": "480896d38adf"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/SiniestrosEsperando.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SiniestrosEsperando"
+      ],
+      "funciones": [
+        {
+          "nombre": "SiniestrosEsperando",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ onContador }: { onContador?: (n: number | null) => void }",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "38b8a0332f56"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/SolicitudesPortal.tsx",
@@ -137506,6 +138042,79 @@
       "hash": "5776ec2ca74f"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/siniestro/cierre/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "PATCH { siniestroId, resultado:'ganado'|'perdido'|'parcial', motivo } — cierre del siniestro (proxy a asegura)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/siniestro/cierre",
+      "hash": "38b1707e8413"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/siniestro/hilo/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "/api/correduria/siniestro/hilo — hilo, plazos y espera de un siniestro (proxy a asegura; mismo status y json)."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "POST { siniestroId, autor, tipo, texto, documentoId? } — añade un mensaje al hilo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/siniestro/hilo",
+      "hash": "5d7e8c94c395"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/siniestro/ia/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "POST { siniestroId, accion:'analizar'|'redactar', destinatario? } → Mensaje (proxy a asegura; 404 mientras no exista)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/siniestro/ia",
+      "hash": "b7d7a9de37a9"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/siniestro/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -137589,6 +138198,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/siniestro/terceros",
       "hash": "2ab609cc91de"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/siniestros-esperando/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "GET — siniestros esperando a la compañía: [{ siniestroId, clienteId, polizaNumero, dias }] (proxy a asegura)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/siniestros-esperando",
+      "hash": "a757f4a029a0"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/solicitud-datos/route.ts",
@@ -163508,6 +164138,223 @@
       "hash": "5deef4c47bc0"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/siniestro-hilo-red.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Red del expediente de siniestro: llamadas al puerto de asegura (solo desde rutas API de plataforma).",
+      "exporta": [
+        "conCorreduria",
+        "hiloAsegura",
+        "anotarHiloAsegura",
+        "cierreAsegura",
+        "iaSiniestroAsegura",
+        "esperandoAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "conCorreduria",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "correduriaId: string | null, body: Record<string, unknown>",
+          "retorno": "Record<string, unknown>",
+          "linea": 5,
+          "resumen": "Cuerpo para el puerto: `correduriaId` solo si hay (si es null se omite; el puerto usa la correduría única)."
+        },
+        {
+          "nombre": "hiloAsegura",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "correduriaId: string | null, siniestroId: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 10
+        },
+        {
+          "nombre": "anotarHiloAsegura",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 13
+        },
+        {
+          "nombre": "cierreAsegura",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 16
+        },
+        {
+          "nombre": "iaSiniestroAsegura",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 19
+        },
+        {
+          "nombre": "esperandoAsegura",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "correduriaId: string | null",
+          "retorno": "Promise<Reenvio>",
+          "linea": 22
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7011e2fa37dd"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/siniestro-hilo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Expediente de un siniestro (hilo con la compañía, plazos, espera). PURO: sin red ni env, lo importan los client components. Reglas: `mensajes: null` = «no se pudo leer» ≠ `[]` = «sin mensajes»; plazo con `fecha`/`diasRestantes` null = «falta la fecha base», NUNCA 0.",
+      "exporta": [
+        "leerMensaje",
+        "leerMensajes",
+        "leerPlazos",
+        "leerHilo",
+        "leerEsperando",
+        "textoDias",
+        "estadoPlazo",
+        "motivoFallo",
+        "citasNoEncontradas",
+        "plegarTexto",
+        "combinacionValida",
+        "cuerpoCaja"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 48
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 50
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 51
+        },
+        {
+          "nombre": "leerMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "Mensaje | null",
+          "linea": 53
+        },
+        {
+          "nombre": "leerMensajes",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "Mensaje[] | null",
+          "linea": 64,
+          "resumen": "`null` = no es un array legible (no se pudo leer); un elemento ilegible se descarta."
+        },
+        {
+          "nombre": "leerPlazos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "Plazo[] | null",
+          "linea": 69
+        },
+        {
+          "nombre": "leerHilo",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "HiloSiniestro | null",
+          "linea": 83
+        },
+        {
+          "nombre": "leerEsperando",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "Esperando[] | null",
+          "linea": 104
+        },
+        {
+          "nombre": "textoDias",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null",
+          "retorno": "string",
+          "linea": 119,
+          "resumen": "«hace 1 día» / «hace 12 días». `null` = no se sabe (no 0)."
+        },
+        {
+          "nombre": "estadoPlazo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Plazo",
+          "retorno": "EstadoPlazo",
+          "linea": 130
+        },
+        {
+          "nombre": "motivoFallo",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, j: unknown",
+          "retorno": "string",
+          "linea": 139,
+          "resumen": "Mensaje de error para el corredor a partir de la respuesta del puerto (`sin_migracion` = BD sin la tabla del hilo)."
+        },
+        {
+          "nombre": "citasNoEncontradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "meta: Record<string, unknown> | null",
+          "retorno": "string[]",
+          "linea": 146,
+          "resumen": "Citas de la póliza que la IA mencionó y NO aparecen en el documento (aviso a resaltar)."
+        },
+        {
+          "nombre": "plegarTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, abierto: boolean, limite = LIMITE_PLEGADO",
+          "retorno": "",
+          "linea": 154
+        },
+        {
+          "nombre": "combinacionValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "autor: AutorMensaje, tipo: TipoMensaje",
+          "retorno": "boolean",
+          "linea": 164,
+          "resumen": "Combinaciones autor/tipo que acepta el puerto: `enviado` solo del corredor, `rehuse` solo de la compañía."
+        },
+        {
+          "nombre": "cuerpoCaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "modo: ModoCaja, texto: string, documentoId: string | null, reclamacionSac = false",
+          "retorno": "",
+          "linea": 172,
+          "resumen": "Qué se guarda según el selector de la caja. `reclamacionSac` solo cuenta con «enviado»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0cef7542cf5d"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/solicitudes-portal.ts",
       "ambito": "apps/plataforma",
       "resumen": "Cola «Solicitudes del portal» de /correduria → Hoy (26/10/2026): las peticiones de módulo («Herramientas») que los clientes hacen desde el portal y esperan activación. Intérprete PURO de `GET /api/operador/portal-modulos` de asegura. 🚨 Tres estados, nunca colapsados: `ok` (la lista, puede estar vac",
@@ -182028,6 +182875,7 @@
         "ramosSiniestroParaPoliza",
         "interpretarSiniestro",
         "textoMotivoSiniestro",
+        "llamar",
         "siniestroAsegura",
         "abrirSiniestroAsegura",
         "seguirSiniestroAsegura",
@@ -182167,7 +183015,7 @@
         {
           "nombre": "llamar",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<Reenvio>",
           "linea": 444
@@ -182220,7 +183068,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "16494f7bf507"
+      "hash": "d0225cc97514"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/acceso.ts",
@@ -244091,6 +244939,57 @@
       "hash": "83e632b20d6e"
     },
     {
+      "ruta": "packages/module-seguros/src/siniestro-citas.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Verificador de citas de la IA de siniestros (PURO). La IA puede citar la póliza entre «» y copiar mal o inventar: aquí se comprueba que cada fragmento entre «» existe en el texto de la póliza. Sin texto de póliza no se puede verificar nada: todas las citas salen como no encontradas.",
+      "exporta": [
+        "normalizarParaCita",
+        "extraerCitas",
+        "verificarCitas",
+        "avisoCitasNoEncontradas"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarParaCita",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 8,
+          "resumen": "Normaliza para comparar: minúsculas, comillas tipográficas y guiones unificados, sin espacios/saltos de más."
+        },
+        {
+          "nombre": "extraerCitas",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string[]",
+          "linea": 20,
+          "resumen": "Fragmentos entre «» (sin anidar), sin vacíos, en orden y sin repetir."
+        },
+        {
+          "nombre": "verificarCitas",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuesta: string, textoPoliza: string",
+          "retorno": "VerificacionCitas",
+          "linea": 29
+        },
+        {
+          "nombre": "avisoCitasNoEncontradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "noEncontradas: string[]",
+          "retorno": "string",
+          "linea": 45,
+          "resumen": "Aviso visible que se añade al texto guardado si hay citas que no están en la póliza; `''` si no hay."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "75989a9f9628"
+    },
+    {
       "ruta": "packages/module-seguros/src/siniestro-intervinientes.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Terceros y testigos de un siniestro — el hueco que `central` no tenía y el CRM viejo de Manuel sí (`siniestro_contrarios`/`siniestro_testigos`). Reglas puras, SIN cifrado: el cifrado de nombre/teléfono/matrícula vive en la capa de datos de `apps/asegura` (mismo mecanismo que ya usa `Cliente`), igual",
@@ -244243,6 +245142,131 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b15053cf656d"
+    },
+    {
+      "ruta": "packages/module-seguros/src/siniestro-plazos.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Hilo de conversación por siniestro y plazos legales — reglas PURAS (sin BD, sin reloj). `hoy` SIEMPRE inyectado (`YYYY-MM-DD`, día de Madrid): un test con reloj real es una bomba de tiempo. Plazos (todos en días NATURALES, cómputo de fecha a fecha; si el mes de llegada no tiene ese día, el último de",
+      "exporta": [
+        "validarMensajeSiniestro",
+        "validarCierreSiniestro",
+        "sumarMeses",
+        "sumarDias",
+        "diasEntre",
+        "claseSeguroArt23",
+        "plazosSiniestro",
+        "diasEsperandoCompania"
+      ],
+      "funciones": [
+        {
+          "nombre": "validarMensajeSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaMensajeSiniestro, canal: 'operador' | 'servidor',",
+          "retorno": "",
+          "linea": 54,
+          "resumen": "Valida un mensaje. `canal: 'operador'` (lo que llega por el puerto) rechaza `autor: 'ia'`; `'servidor'` lo admite. Coherencia autor↔tipo: `enviado` solo del corredor (es lo que arranca la espera), `re"
+        },
+        {
+          "nombre": "validarCierreSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "resultado: unknown, motivo: unknown,",
+          "retorno": "",
+          "linea": 90,
+          "resumen": "Valida el cierre con resultado. El motivo es obligatorio (lo que se aprende de cada cierre)."
+        },
+        {
+          "nombre": "partes",
+          "kind": "function",
+          "exportada": false,
+          "params": "dia: string | null | undefined",
+          "retorno": "",
+          "linea": 108,
+          "resumen": "`YYYY-MM-DD` válido → sus partes; cualquier otra cosa → null."
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: Date",
+          "retorno": "string",
+          "linea": 118
+        },
+        {
+          "nombre": "sumarMeses",
+          "kind": "function",
+          "exportada": true,
+          "params": "dia: string, meses: number",
+          "retorno": "string | null",
+          "linea": 121,
+          "resumen": "Suma meses de fecha a fecha; si el mes de llegada no tiene ese día, el último del mes (31/01 + 1 mes = 28/02)."
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": true,
+          "params": "dia: string, dias: number",
+          "retorno": "string | null",
+          "linea": 130
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "number | null",
+          "linea": 137,
+          "resumen": "Días de `desde` a `hasta` (negativo si `hasta` es anterior). null si alguna no es un día válido."
+        },
+        {
+          "nombre": "plazo",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: ClavePlazoSiniestro, etiqueta: string, base_legal: string, fecha: string | null, hoy: string, verificado: boolean, nota: string | null,",
+          "retorno": "PlazoSiniestro",
+          "linea": 194
+        },
+        {
+          "nombre": "claseSeguroArt23",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "'personas' | 'danos' | null",
+          "linea": 207,
+          "resumen": "Tipo de seguro a efectos del art. 23 LCS. `null` = no se sabe."
+        },
+        {
+          "nombre": "ultimaReclamacionSac",
+          "kind": "function",
+          "exportada": false,
+          "params": "mensajes: readonly MensajeParaPlazos[]",
+          "retorno": "MensajeParaPlazos | null",
+          "linea": 215,
+          "resumen": "Último `enviado` del corredor marcado como reclamación al SAC. `null` si no hay."
+        },
+        {
+          "nombre": "plazosSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SiniestroParaPlazos, hoy: string, mensajes: readonly MensajeParaPlazos[] | null = [],",
+          "retorno": "PlazoSiniestro[]",
+          "linea": 229,
+          "resumen": "Plazos legales del siniestro. `mensajes`: el hilo; `null` = no se pudo leer → el plazo del SAC sale con fecha null y se dice. Sin reclamación al SAC en el hilo, ese plazo NO sale (no hay nada que cont"
+        },
+        {
+          "nombre": "diasEsperandoCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly MensajeParaPlazos[] | null, hoy: string",
+          "retorno": "number | null",
+          "linea": 300,
+          "resumen": "Días que lleva el corredor esperando a la compañía: desde el ÚLTIMO `enviado` del corredor, si no hay después ningún mensaje de la compañía. `null` si no aplica (nunca se envió nada, la compañía ya co"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "75ca3d003bbd"
     },
     {
       "ruta": "packages/module-seguros/src/siniestro-ramo.ts",
@@ -251154,6 +252178,7 @@
         "guardadosEnDialogoDe",
         "casaGuardadoEnDialogo",
         "esGuardadoEnDialogoAutorizado",
+        "rutasAppTolerablesDe",
         "bloqueoAvance",
         "bloqueoGuardadoPresupuesto",
         "validarRespuestaExplorador",
@@ -251182,7 +252207,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is keyof typeof ENTRADAS_EXPLORACION",
-          "linea": 175
+          "linea": 182
         },
         {
           "nombre": "D",
@@ -251190,7 +252215,7 @@
           "exportada": false,
           "params": "d: DatoCatalogo",
           "retorno": "DatoCatalogo",
-          "linea": 202
+          "linea": 209
         },
         {
           "nombre": "cvAKw",
@@ -251198,7 +252223,7 @@
           "exportada": true,
           "params": "cv: number | null",
           "retorno": "number | null",
-          "linea": 246,
+          "linea": 253,
           "resumen": "CV → kW (1 CV = 0,73549875 kW). La columna «CV/KW» del diálogo «Selección de vehículo» de Mapfre trae CV."
         },
         {
@@ -251207,7 +252232,7 @@
           "exportada": true,
           "params": "{ esMoto, cilindradaCc, potenciaKw, antiguedadBAnios }: { esMoto: boolean | null cilindradaCc: number | null potenciaKw: number | null antiguedadBAnios: number | null }",
           "retorno": "'B' | 'A1' | 'A2' | 'A' | null",
-          "linea": 256,
+          "linea": 263,
           "resumen": "moto ≤125 cc y ≤11 kW → B si lleva ≥3 años con B, si no A1; moto ≤35 kW → A2; más → A. `null` siempre que falte un dato necesario para decidir (nunca adivinar)."
         },
         {
@@ -251216,7 +252241,7 @@
           "exportada": true,
           "params": "entrada: string",
           "retorno": "boolean",
-          "linea": 298,
+          "linea": 305,
           "resumen": "¿Esta entrada usa al MEDIADOR como tomador? (solo las de patinete; ver {@link EntradaExploracion.tomadorMediador})."
         },
         {
@@ -251225,7 +252250,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "readonly DatoCatalogo[]",
-          "linea": 313
+          "linea": 320
         },
         {
           "nombre": "catalogoParaIA",
@@ -251233,7 +252258,7 @@
           "exportada": true,
           "params": "ramo: string, real?: { riesgo: unknown },",
           "retorno": "",
-          "linea": 321,
+          "linea": 328,
           "resumen": "Lo que la IA ve del catálogo: clave, descripción y tipo. La `pista` (el valor de prueba) SOLO de lo no personal; de un dato personal la IA no ve nada más que su clave."
         },
         {
@@ -251242,7 +252267,7 @@
           "exportada": true,
           "params": "clave: string, riesgo: unknown",
           "retorno": "",
-          "linea": 358,
+          "linea": 365,
           "resumen": "El valor REAL que la IA puede ver de una clave: id + significado, SOLO si la clave es de {@link CLAVES_VALOR_VISIBLE_IA}, no personal, con valor en el riesgo y ese id en el mapa cerrado. `null` = la I"
         },
         {
@@ -251251,7 +252276,7 @@
           "exportada": false,
           "params": "raiz: unknown, ruta: string",
           "retorno": "string | null",
-          "linea": 385
+          "linea": 392
         },
         {
           "nombre": "ddmmaaaa",
@@ -251259,7 +252284,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 396
+          "linea": 403
         },
         {
           "nombre": "resolverDato",
@@ -251267,7 +252292,7 @@
           "exportada": true,
           "params": "clave: string, ctx: ContextoDatos",
           "retorno": "DatoResuelto",
-          "linea": 404,
+          "linea": 411,
           "resumen": "El VALOR de una clave del catálogo. Solo lo llama el WORKER (justo antes de escribir en el portal): el valor no va a la IA, ni a asegura, ni al log. Fail-closed: sin valor seguro → motivo de parada."
         },
         {
@@ -251276,7 +252301,7 @@
           "exportada": true,
           "params": "clave: string, valor: string",
           "retorno": "string | null | undefined",
-          "linea": 432,
+          "linea": 439,
           "resumen": "El valor de una clave de {@link ENTEROS_PORTAL} como lo acepta un `<input type=number>` (14/10/2026, Allianz Hogar: año y m² quedaban vacíos e inválidos): solo dígitos, sin unidades («m2», «m²», «metr"
         },
         {
@@ -251285,7 +252310,7 @@
           "exportada": false,
           "params": "clave: string, ctx: ContextoDatos",
           "retorno": "DatoResuelto",
-          "linea": 448
+          "linea": 455
         },
         {
           "nombre": "valoresSensiblesExploracion",
@@ -251293,7 +252318,7 @@
           "exportada": true,
           "params": "ctx: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined>; tomadorMediador?: boolean }",
           "retorno": "string[] | null",
-          "linea": 485,
+          "linea": 492,
           "resumen": "Valores que hay que QUITAR del inventario antes de mandarlo a la IA o guardarlo (`redactarValoresInventario`): el contacto de entorno siempre y, con datos reales, los del riesgo del trabajo. `null` = "
         },
         {
@@ -251302,7 +252327,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": null,
-          "linea": 563
+          "linea": 570
         },
         {
           "nombre": "relocalizarElemento",
@@ -251310,7 +252335,7 @@
           "exportada": true,
           "params": "el: ElementoInventario, marcoUrl: string, inv: InventarioDom, huellaValidada: string",
           "retorno": "string | null",
-          "linea": 576,
+          "linea": 583,
           "resumen": "- UN solo candidato. Si no, `null` (no se adivina). Devuelve la ref nueva. Pura."
         },
         {
@@ -251319,7 +252344,7 @@
           "exportada": false,
           "params": "o: Record<string, unknown>",
           "retorno": "DiagnosticoIncidencia",
-          "linea": 660,
+          "linea": 667,
           "resumen": "El diagnóstico de una incidencia, SOLO con valores de las listas cerradas (lo demás se ignora, sin tumbar la incidencia)."
         },
         {
@@ -251328,7 +252353,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "IncidenciaEjecucion[]",
-          "linea": 672,
+          "linea": 679,
           "resumen": "Lo que manda el worker, TOLERANTE: lo mal formado se descarta (nunca tumba el paso ni el cierre). Máx. 15. Pura."
         },
         {
@@ -251337,7 +252362,7 @@
           "exportada": false,
           "params": "i: IncidenciaEjecucion",
           "retorno": "string",
-          "linea": 695,
+          "linea": 702,
           "resumen": "`lote_cortado` → `lote_cortado_por_<corte>`; y el motivo de no localizar entre corchetes (`[no_visible:sin_alto]`). Pura."
         },
         {
@@ -251346,7 +252371,7 @@
           "exportada": true,
           "params": "incidencias: readonly IncidenciaEjecucion[], inventario: InventarioDom | null | undefined",
           "retorno": "string[]",
-          "linea": 706,
+          "linea": 713,
           "resumen": "Las incidencias como `errores` del paso: `ejecucion: rellenar m1e39 «Año de construcción» (inmueble.anio_construccion): valor_no_aplicado`. La etiqueta sale del INVENTARIO GUARDADO de ese paso (redact"
         },
         {
@@ -251355,7 +252380,7 @@
           "exportada": true,
           "params": "dato: string, el: ElementoInventario | undefined",
           "retorno": "boolean",
-          "linea": 730,
+          "linea": 737,
           "resumen": "¿Este `rellenar` puede REPINTAR la sección? Su clave dispara autocompletado (`CLAVES_AUTOCOMPLETADO`) o el control es un autocompletado (`role=combobox/searchbox`, `aria-autocomplete`/datalist → `auto"
         },
         {
@@ -251364,7 +252389,7 @@
           "exportada": true,
           "params": "acciones: readonly A[], inventario: InventarioDom",
           "retorno": "A[]",
-          "linea": 745,
+          "linea": 752,
           "resumen": "2. `avanzar` (el validador ya lo exige el último), `terminar` y `parar` (van solos). No añade, quita ni cambia acciones: solo las reordena. Pura."
         },
         {
@@ -251373,7 +252398,7 @@
           "exportada": true,
           "params": "pendientes: readonly Accion[], corte?: MotivoCorteLote, /** Por qué no se localizó la PRIMERA pendiente (la que destapó el corte por `repintado`). */ primera?: Pick<DiagnosticoIncidencia, 'motivo' | 'visibilidad'>,",
           "retorno": "IncidenciaEjecucion[]",
-          "linea": 759,
+          "linea": 766,
           "resumen": "Las acciones de un lote CORTADO que no se llegaron a ejecutar → incidencias `lote_cortado` (ref + clave; nunca el valor ni la opción). `parar`/`terminar` no se reportan (van solos: nunca quedan detrás"
         },
         {
@@ -251382,7 +252407,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 775,
+          "linea": 782,
           "resumen": "La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}."
         },
         {
@@ -251391,7 +252416,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 779
+          "linea": 786
         },
         {
           "nombre": "normalizarMotivoParar",
@@ -251399,7 +252424,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MotivoParar | null",
-          "linea": 786,
+          "linea": 793,
           "resumen": "El motivo de `parar` que manda la IA, a su código. Admite mayúsculas, espacios/guiones por «_» y un código seguido de una explicación («dato_sensible_requerido: piden NIF», «ambiguo (…)»). Una frase l"
         },
         {
@@ -251408,7 +252433,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 793,
+          "linea": 800,
           "resumen": "Para el error del validador: el motivo rechazado SOLO si es un código corto sin cifras (nunca un texto con datos)."
         },
         {
@@ -251417,7 +252442,7 @@
           "exportada": true,
           "params": "t: string | null",
           "retorno": "string | null",
-          "linea": 834,
+          "linea": 841,
           "resumen": "Recorta el `motivo` libre a {@link MAX_MOTIVO} caracteres con «…» (no invalida la respuesta)."
         },
         {
@@ -251426,7 +252451,7 @@
           "exportada": true,
           "params": "respuestas: readonly (RespuestaExplorador | null | undefined)[]",
           "retorno": "boolean",
-          "linea": 861,
+          "linea": 868,
           "resumen": "¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}."
         },
         {
@@ -251435,7 +252460,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 867
+          "linea": 874
         },
         {
           "nombre": "plano",
@@ -251443,7 +252468,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 868
+          "linea": 875
         },
         {
           "nombre": "primerObjetoJsonExplorador",
@@ -251451,7 +252476,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 871,
+          "linea": 878,
           "resumen": "Primer objeto JSON balanceado del texto (la IA a veces añade prosa o ```json). `null` si no hay."
         },
         {
@@ -251460,7 +252485,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Map<string,",
-          "linea": 899,
+          "linea": 906,
           "resumen": "Índice ref → {elemento, marco} del inventario."
         },
         {
@@ -251469,7 +252494,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "string[]",
-          "linea": 910,
+          "linea": 917,
           "resumen": "Todo lo que describe a un elemento (para el guard de emisión y el de consentimientos)."
         },
         {
@@ -251478,7 +252503,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 914
+          "linea": 921
         },
         {
           "nombre": "esAvanzable",
@@ -251486,7 +252511,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 919
+          "linea": 926
         },
         {
           "nombre": "esEnlaceAvanzable",
@@ -251494,7 +252519,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 932,
+          "linea": 939,
           "resumen": "Entradas de MENÚ avanzables (28/10/2026, Mapfre NSE: menú lateral de `<a>`), SOLO en entradas que lo declaran (`enlacesAvanzables`) y SOLO dentro de su aplicación: el marco (la ventana) en la ruta de "
         },
         {
@@ -251503,7 +252528,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 954,
+          "linea": 961,
           "resumen": "El «Aceptar» de Datos básicos del servlet de Allianz no es un button: es `<div id=\"aceptar\" onclick=\"btnAceptar();\">` (DOM real de Comunidades, 06/10/2026). El extractor del worker lo recoge SOLO con "
         },
         {
@@ -251512,7 +252537,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 963,
+          "linea": 970,
           "resumen": "¿Este avance es un «Aceptar» autorizado para ESTA entrada en ESTA pantalla? Además del texto exacto exige el título de la pantalla (marco del botón) y que no haya ningún título de tarificación/emisión"
         },
         {
@@ -251521,7 +252546,7 @@
           "exportada": true,
           "params": "onclick: string | null | undefined",
           "retorno": "string",
-          "linea": 977,
+          "linea": 984,
           "resumen": "`onclick` normalizado para la comparación EXACTA de `AvancePorId` (sin espacios ni `;` final). Pura."
         },
         {
@@ -251530,7 +252555,7 @@
           "exportada": true,
           "params": "url: string | null | undefined",
           "retorno": "string | null",
-          "linea": 985,
+          "linea": 992,
           "resumen": "`pathname` de la URL de un marco (sin `;jsessionid=…` final), o `null` si no se puede leer. Pura. Por expresión y no con `new URL`: el saneado del inventario puede tapar el HOST (`http://[DATO]:puerto"
         },
         {
@@ -251539,7 +252564,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "AvancePorId | null",
-          "linea": 996,
+          "linea": 1003,
           "resumen": "¿Es este control el avance por IDENTIDAD EXACTA (`AvancePorId`) de ESTA entrada en ESTE marco? Exige: id EXACTO, onclick EXACTO (sin recortar), texto EXACTO (y aria-label, si lo hay, igual), ruta del "
         },
         {
@@ -251548,7 +252573,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 1017,
+          "linea": 1024,
           "resumen": "Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final."
         },
         {
@@ -251557,7 +252582,7 @@
           "exportada": true,
           "params": "entrada: string",
           "retorno": "readonly GuardadoEnDialogo[]",
-          "linea": 1020,
+          "linea": 1027,
           "resumen": "Reglas de «Guardar» en modal de la entrada (lista vacía si no tiene)."
         },
         {
@@ -251566,7 +252591,7 @@
           "exportada": true,
           "params": "entrada: string, texto: string | null | undefined, dialogo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 1029,
+          "linea": 1036,
           "resumen": "¿Casan texto del botón y título del diálogo con una regla `GuardadoEnDialogo` de la entrada? Pura y compartida con el worker, que la aplica a lo que lee VIVO del DOM. Textos planos; vacíos o recortado"
         },
         {
@@ -251575,8 +252600,26 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 1042,
+          "linea": 1049,
           "resumen": "¿Es este elemento del INVENTARIO un «Guardar» de modal autorizado para ESTA entrada? Exige: botón/pestaña pulsable, texto y título de diálogo exactos de una regla, aria-label (si lo hay) igual de exac"
+        },
+        {
+          "nombre": "rutasAppTolerablesDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: string",
+          "retorno": "readonly RutaTolerable[]",
+          "linea": 1061,
+          "resumen": "Rutas de aplicación tolerables de la entrada (lista vacía si no tiene)."
+        },
+        {
+          "nombre": "descripcionesEnEntrada",
+          "kind": "function",
+          "exportada": false,
+          "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
+          "retorno": "string[]",
+          "linea": 1070,
+          "resumen": "`descripcionesElemento` con la RUTA del href neutralizada si la entrada declara esa ruta de aplicación (solo `hrefRuta`, y solo si la ventana del marco es del origen de la regla: la ruta es relativa a"
         },
         {
           "nombre": "bloqueoAvance",
@@ -251584,7 +252627,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "string | null",
-          "linea": 1054,
+          "linea": 1078,
           "resumen": "`null` = el botón se puede pulsar en exploración; si no, por qué no."
         },
         {
@@ -251593,7 +252636,7 @@
           "exportada": true,
           "params": "el: ElementoInventario, p: PantallaGuardado",
           "retorno": "string | null",
-          "linea": 1096,
+          "linea": 1120,
           "resumen": "4. pantalla de RESULTADO con importes a la vista (o, tras un guardado previo en esta exploración, la pantalla que sigue). El worker lo repite sobre el control VIVO (`pulsarGuardadoPresupuesto`) antes "
         },
         {
@@ -251602,7 +252645,7 @@
           "exportada": true,
           "params": "entrada: unknown, ctx: ContextoValidacion",
           "retorno": "ValidacionRespuesta",
-          "linea": 1116,
+          "linea": 1140,
           "resumen": "Valida la respuesta de la IA contra la lista blanca, el catálogo y el inventario de ESA pantalla. Fail-closed: cualquier clave desconocida, texto libre donde no toca, acción fuera de lista o ref inexi"
         },
         {
@@ -251611,7 +252654,7 @@
           "exportada": true,
           "params": "motivo: MotivoParar, detalle: string | null = null",
           "retorno": "RespuestaExplorador",
-          "linea": 1295,
+          "linea": 1319,
           "resumen": "La respuesta que se manda al worker cuando algo no cuadra: parar, nunca improvisar."
         },
         {
@@ -251620,7 +252663,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 1314,
+          "linea": 1338,
           "resumen": "Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaB"
         },
         {
@@ -251629,7 +252672,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Parada | null",
-          "linea": 1324,
+          "linea": 1348,
           "resumen": "¿Hay que PARAR antes de hacer nada en esta pantalla? `null` = no. Mira títulos, textos y nombres de campos, y la URL de los marcos (un iframe de reCAPTCHA). No es la única barrera: el guard de emisión"
         },
         {
@@ -251638,7 +252681,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 1363,
+          "linea": 1387,
           "resumen": "Dos FNV-1a de 32 bits con semillas distintas → hex de 16 (sin BigInt ni node:crypto: el index llega al navegador y asegura compila con target ES2017). Es una HUELLA para reconocer pantallas, no un has"
         },
         {
@@ -251647,7 +252690,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 1379,
+          "linea": 1403,
           "resumen": "Huella ESTRUCTURAL de la pantalla: ruta de cada marco + identificadores estables de sus controles (id, name, formControlName, tipo), ordenados. No entran textos variables ni valores: dos visitas a la "
         },
         {
@@ -251656,7 +252699,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string | null",
-          "linea": 1396,
+          "linea": 1420,
           "resumen": "Huella del RELLENO de la pantalla (14/10/2026): qué controles (por `ref`) tienen ya algún valor (`conValor`), nunca el valor. Con la misma huella estructural, que cambie = la exploración AVANZA dentro"
         },
         {
@@ -251665,7 +252708,7 @@
           "exportada": true,
           "params": "huellas: readonly string[], actual: string, avancesFallidos: number, rellenos?: { anteriores: readonly (string | null)[]; actual: string | null },",
           "retorno": "boolean",
-          "linea": 1424,
+          "linea": 1448,
           "resumen": "`huellas` = las de los pasos ANTERIORES, en orden. Bucle = 2 avances sin efecto, o la actual sería la 3.ª seguida con la misma huella Y el mismo relleno (`rellenos`, alineado con `huellas`; `huellaRel"
         },
         {
@@ -251674,7 +252717,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "TopesExplorador",
-          "linea": 1454
+          "linea": 1478
         },
         {
           "nombre": "comprobarTopes",
@@ -251682,7 +252725,7 @@
           "exportada": true,
           "params": "c: ConsumoExplorador, t: TopesExplorador, costeSiguienteMax: number",
           "retorno": "MotivoTope | null",
-          "linea": 1479,
+          "linea": 1503,
           "resumen": "¿Se puede dar UN paso más con IA? `costeSiguienteMax` = el PEOR caso de la próxima llamada (`costeMaximoLlamada`): se para ANTES de pasarse, no después. `null` = adelante."
         },
         {
@@ -251691,7 +252734,7 @@
           "exportada": false,
           "params": "modelo: string",
           "retorno": null,
-          "linea": 1497
+          "linea": 1521
         },
         {
           "nombre": "redondeo6",
@@ -251699,7 +252742,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 1498
+          "linea": 1522
         },
         {
           "nombre": "costeMaximoLlamada",
@@ -251707,7 +252750,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, maxTokensSalida: number",
           "retorno": "number",
-          "linea": 1501,
+          "linea": 1525,
           "resumen": "Peor caso de una llamada: ~3 caracteres por token de entrada y TODOS los tokens de salida permitidos."
         },
         {
@@ -251716,7 +252759,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, caracteresSalida: number",
           "retorno": "number",
-          "linea": 1507,
+          "linea": 1531,
           "resumen": "Estimación tras la llamada (~3 caracteres por token, a la alta)."
         },
         {
@@ -251725,7 +252768,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PresupuestoMapa | null",
-          "linea": 1550,
+          "linea": 1574,
           "resumen": "Valida un {@link PresupuestoMapa} que llega por el cable. `null` si no tiene la forma (o la referencia parece un dato personal)."
         },
         {
@@ -251734,7 +252777,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "SelectorMapa | null",
-          "linea": 1585,
+          "linea": 1609,
           "resumen": "El selector estable de un elemento: id (no autogenerado) > name > formControlName > etiqueta exacta > texto exacto."
         },
         {
@@ -251743,7 +252786,7 @@
           "exportada": false,
           "params": "el: ElementoInventario, s: SelectorMapa",
           "retorno": "boolean",
-          "linea": 1594
+          "linea": 1618
         },
         {
           "nombre": "rutaMarco",
@@ -251751,7 +252794,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": null,
-          "linea": 1603,
+          "linea": 1627,
           "resumen": "Ruta del marco (sin origen): la misma pantalla puede servirse desde otro host del mismo portal."
         },
         {
@@ -251760,7 +252803,7 @@
           "exportada": true,
           "params": "meta: MetaMapa, pasos: readonly PasoExploracion[]",
           "retorno": "MapaExploracion",
-          "linea": 1625,
+          "linea": 1649,
           "resumen": "Construye el MAPA a partir de los pasos validados (el último paso de cada huella manda). Determinista: mismo input, mismo mapa. Lo que no tiene selector estable o no se mapeó a una clave del catálogo "
         },
         {
@@ -251769,7 +252812,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 1693,
+          "linea": 1717,
           "resumen": "Origen + ruta de una petición de red (sin query, fragmento ni credenciales). `null` si no es una URL http(s)."
         },
         {
@@ -251778,7 +252821,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MapaExploracion | null",
-          "linea": 1706,
+          "linea": 1730,
           "resumen": "Valida un mapa leído de BD o de un fichero (estricto: versión 1, forma exacta). `null` si no es un mapa v1 válido. No re-deriva nada: solo comprueba forma y límites."
         },
         {
@@ -251787,13 +252830,13 @@
           "exportada": true,
           "params": "pantalla: PantallaMapaExploracion, inv: InventarioDom",
           "retorno": "RespuestaExplorador | null",
-          "linea": 1741,
+          "linea": 1765,
           "resumen": "MEMORIA: si la pantalla ya está en un mapa, el plan sale del mapa SIN IA. Cada campo y el avance tienen que encontrarse UNA sola vez en el inventario actual (si no, `null` y se pregunta a la IA). La r"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7bbe9ab15f53"
+      "hash": "a585c8453c37"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas-catalogo.ts",
@@ -253055,6 +254098,8 @@
         "comprobarUrl",
         "comprobarBoton",
         "esLanzadorAplicacionNseMapfre",
+        "cuerpoToleradoConAccionReal",
+        "neutralizarRutaTolerable",
         "esTextoBotonProhibido"
       ],
       "funciones": [
@@ -253120,17 +254165,35 @@
           "linea": 219
         },
         {
+          "nombre": "cuerpoToleradoConAccionReal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 242,
+          "resumen": "Cuerpo (form-urlencoded) de una petición a una ruta TOLERADA: ¿nombra una acción de emisión real? Mira el NOMBRE de cada parámetro (`formEmision:btnEmitir=…`) y el VALOR de `javax.faces.source` / `jav"
+        },
+        {
+          "nombre": "neutralizarRutaTolerable",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined, reglas: readonly RutaTolerable[], origenPagina?: string | null",
+          "retorno": "string | null | undefined",
+          "linea": 259,
+          "resumen": "`origenPagina`: origen de la ventana/marco donde está la ruta. Una ruta RELATIVA (`/…`) solo se tolera si es EXACTAMENTE el de la regla; sin él, nunca (fail-closed). Una URL absoluta lleva su propio o"
+        },
+        {
           "nombre": "esTextoBotonProhibido",
           "kind": "function",
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 231
+          "linea": 300
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "41d7bcc74f12"
+      "hash": "5917981a92df"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-asesor.ts",
@@ -257279,7 +258342,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5386,
-    "funciones": 20678
+    "archivos": 5411,
+    "funciones": 20762
   }
 }
