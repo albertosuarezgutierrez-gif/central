@@ -268,6 +268,19 @@ describe('0.3.5 · ruta de aplicación NSE tolerada SOLO en Mapfre patinete (dec
     expect(cuerpoToleradoConAccionReal('javax.faces.partial.execute=form%3AbtnConfirmar')).toBe(true)
     expect(cuerpoToleradoConAccionReal('javax.faces.source=form:btnSiguiente&formEmision:campo=1&javax.faces.partial.render=formEmision')).toBe(false)
   })
+  it('0.3.10 · estado JSF de panel (busquedaProduct): SOLO el nombre anclado pasa; «confirm»/«emit» en cualquier otro sitio sigue parando', () => {
+    expect(cuerpoToleradoConAccionReal('formProductos:panelConfirmCTOpenedState=true&formProductos:campo=1')).toBe(false)
+    // El valor no se lee: aunque nombre una acción, el parámetro permitido se salta.
+    expect(cuerpoToleradoConAccionReal('formProductos:panelConfirmCTOpenedState=emitir')).toBe(false)
+    expect(cuerpoToleradoConAccionReal('formProductos:confirmar=1')).toBe(true)
+    expect(cuerpoToleradoConAccionReal('panelConfirmCTOpenedState=true')).toBe(true)
+    expect(cuerpoToleradoConAccionReal('formProductos:panelConfirmCT=true')).toBe(true)
+    // Solo siglas cortas en mayúsculas: Emitir/Pago siguen parando.
+    expect(cuerpoToleradoConAccionReal('formProductos:panelConfirmEmitirOpenedState=true')).toBe(true)
+    expect(cuerpoToleradoConAccionReal('formProductos:panelConfirmPagoOpenedState=true')).toBe(true)
+    expect(cuerpoToleradoConAccionReal('formProductos:panelConfirmCTOpenedState=true')).toBe(false)
+    expect(cuerpoToleradoConAccionReal('formProductos:panelConfirmCTOpenedState=true&formProductos:btnEmitir=1')).toBe(true)
+  })
 })
 
 describe('0.3.7 · guardia de datos personales: los campos nuevos pasan por redactarValoresInventario', () => {
