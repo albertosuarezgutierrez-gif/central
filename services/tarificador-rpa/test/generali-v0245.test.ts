@@ -12,7 +12,7 @@ import { ErrorTarificador } from '../src/errores.ts'
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.45 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.47'))
+test('v0.2.45 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.48'))
 
 test('v0.2.45 · puro: igualdad EXACTA (solo tildes/mayúsculas/espacios) y una sola coincidencia; la compañía sale de la ficha', () => {
   assert.equal(indiceOpcionNormalizadaGenerali(['Seleccione', 'Furgoneta', ' TURISMO ', 'Motocicleta'], ['Turismo']), 2)
@@ -115,7 +115,7 @@ test('v0.2.45 · compañía de la ficha sin opción EXACTA: para con las opcione
   await conPagina(VALORACION(), async (page) => {
     await assert.rejects(rellenarTipoYProcedenciaGenerali(page, formulario({ companiaAnterior: 'Mapfre Mutualidad' }), ctx), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
-      assert.match(e.message, /la compañía «Mapfre Mutualidad» de la ficha en «Compañía de procedencia» \(no existe exactamente; opciones vistas: «ALLIANZ» · «MAPFRE ESPAÑA» · «MAPFRE» · «Sin seguro anterior»\)/)
+      assert.match(e.message, /la compañía «Mapfre Mutualidad» de la ficha en «Compañía de procedencia» \(ninguna casa ni exacta, ni por alias, ni por razón social; opciones vistas: «ALLIANZ» · «MAPFRE ESPAÑA» · «MAPFRE» · «Sin seguro anterior»\)/)
       return true
     })
     assert.equal(await puesta(page, 'reg1E.ciapro'), 'Seleccione una opción')

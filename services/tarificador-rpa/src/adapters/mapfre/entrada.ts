@@ -50,6 +50,8 @@ export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
    * porque su href (`abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISIÓN')`) casa con `emisi`. Sin ella, `ctx.pulsar` (que lo bloquea).
    */
   pulsarAccesoNse?: (boton: Locator) => Promise<void>
+  /** «Oferta / Contratación» del menú de la aplicación NSE (28/10/2026): SOLO por `pulsarMenuOfertaNseMapfre` del guard. */
+  pulsarMenuNse?: (boton: Locator) => Promise<void>
   /** Las MISMAS credenciales del login (`ctx.credenciales`): solo para el login antiguo (`/loginexternopi/`) que a veces
    *  se interpone ante la URL directa del NSEI. Jamás van a un mensaje de error ni al log. */
   credenciales?: { usuario: string; contrasena: string }
@@ -85,9 +87,11 @@ export type DestinoMenusMapfre = {
    * «Patinetes» aterriza en una página sin formulario cuyo único enlace es «Acceso a NSE»). Si no aparece, la página ya era el formulario.
    */
   pasoIntermedio?: string
+  /** Entrada de menú de la aplicación NSE que se pulsa tras el paso intermedio (Patinetes: «Oferta / Contratación»). */
+  menuNse?: string
 }
 export const DESTINO_TURISMOS_Y_MOTOS: DestinoMenusMapfre = { tarjeta: TARJETA_TURISMOS_Y_MOTOS, enlace: ENLACE_TARIFICACION_RAPIDA, soloEnTarjeta: false, selFormulario: 'app-datos-basicos' }
-export const DESTINO_PATINETES: DestinoMenusMapfre = { tarjeta: TARJETA_PATINETES, enlace: ENLACE_TARIFICACION_EMISION, soloEnTarjeta: true, selFormulario: null, pasoIntermedio: 'Acceso a NSE' }
+export const DESTINO_PATINETES: DestinoMenusMapfre = { tarjeta: TARJETA_PATINETES, enlace: ENLACE_TARIFICACION_EMISION, soloEnTarjeta: true, selFormulario: null, pasoIntermedio: 'Acceso a NSE', menuNse: 'Oferta / Contratación' }
 /** El formulario NSEI está listo cuando existe su primer componente (paso «Datos básicos»). */
 export const SEL_FORMULARIO_NSEI = 'app-datos-basicos'
 
@@ -335,6 +339,19 @@ async function pasarPorEnlaceIntermedio(pagina: Page, ctx: CtxEntradaMapfre, tex
   return destino
 }
 
+/**
+ * Menú de la aplicación NSE (Patinetes, real 28/10/2026): EXACTAMENTE una entrada visible con ese texto en algún marco → se pulsa
+ * por su puerta exacta del guard (`pulsarMenuNse`). Ninguna → se sigue (la IA verá la pantalla). Varias → no se adivina.
+ */
+async function pasarPorMenuNse(pagina: Page, pulsarMenu: (b: Locator) => Promise<void>, ctx: CtxEntradaMapfre, texto: string, menuMs: number): Promise<void> {
+  const candidatos = await enTodosLosMarcos(pagina, (f) => pulsablesExactos(f, texto), Math.min(ESPERA_TARJETA_MS * 2, menuMs))
+  if (candidatos.length === 0) return
+  if (candidatos.length > 1) throw new ErrorMapaIncompleto(`la entrada de menú «${texto}» de la aplicación NSE (${candidatos.length} coincidencias exactas visibles, ambiguo)`, true)
+  await pulsarMenu(candidatos[0]!)
+  await ctx.pausa()
+  await pagina.waitForLoadState('networkidle', { timeout: Math.min(menuMs, 15_000) }).catch(() => undefined)
+}
+
 /** Login ANTIGUO que Mapfre antepone a la URL directa (`/loginexternopi/docs/html/loginFormPage.html?page=…`). */
 const PATRON_LOGIN_ANTIGUO = /\/loginexternopi\//i
 const ETIQ_CODIGO_USUARIO = /c[oó]digo\s+(de\s+)?usuario/i
@@ -532,6 +549,7 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
     }
   }
   if (ruta.pasoIntermedio) destino = await pasarPorEnlaceIntermedio(destino, ctx, ruta.pasoIntermedio, menuMs, esperas.formularioMs ?? ESPERA_FORMULARIO_MS)
+  if (ruta.menuNse && ctx.pulsarMenuNse) await pasarPorMenuNse(destino, ctx.pulsarMenuNse, ctx, ruta.menuNse, menuMs)
   // La entrada llegó al formulario: lo que resolvió el respaldo (aprendido o IA) queda APRENDIDO. Mejor esfuerzo.
   for (const c of confirmaciones) await c().catch(() => undefined)
   return destino

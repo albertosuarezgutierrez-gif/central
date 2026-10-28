@@ -156,3 +156,51 @@ describe('seguridad 2a · precio pegajoso en la validación pura', () => {
     expect(JSON.stringify(val(dos))).toMatch(/avance_por_id_con_precio/)
   })
 })
+
+describe('0.3.4 · entradas de menú avanzables (Mapfre NSE)', () => {
+  const MPF = 'mapfre:automoviles:patinetes'
+  const i = sanearInventarioDom({ marcos: [{ url: 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/inicio.jsp', nombre: null, titulos: [], elementos: [
+    { tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/maspatin.jsp', texto: 'MásPatín' },
+    { tag: 'a', role: 'menuitem', texto: 'Oferta Multiprecio' },
+    { tag: 'a', onclick: 'javascript:verProducto()', texto: 'Patinetes' },
+    { tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/inicio.jsp', texto: 'Contratar póliza' },
+    { tag: 'a', texto: 'Sin nada' },
+    { tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/inicio.jsp', texto: 'Aceptar' },
+  ] }] }, undefined, { refs: true })!
+  const refs = i.marcos[0].elementos.map((e) => e.ref!)
+  const av = (r: string) => validarRespuestaExplorador(
+    { version: 1, pantalla: { nombre: 'NSE', tipo: 'seleccion_producto' }, acciones: [{ accion: 'avanzar', ref: r, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null },
+    { inventario: i, ramo: 'patinete', entrada: MPF, datosReales: null },
+  )
+  it('link, menuitem y <a onclick> se pueden pulsar; emisión, «Aceptar» y un <a> sin nada, no', () => {
+    expect(av(refs[0]).ok).toBe(true)
+    expect(av(refs[1]).ok).toBe(true)
+    expect(av(refs[2]).ok).toBe(true)
+    expect(JSON.stringify(av(refs[3]))).toMatch(/boton_de_emision/)
+    expect(JSON.stringify(av(refs[4]))).toMatch(/no es un botón/)
+    expect(JSON.stringify(av(refs[5]))).toMatch(/aceptar_no_autorizado/)
+  })
+})
+
+describe('0.3.4b · enlaces avanzables SOLO donde la entrada lo declara y dentro de la app', () => {
+  const marcoDe = (url: string, elementos: unknown[]) => sanearInventarioDom({ marcos: [{ url, nombre: null, titulos: [], elementos }] }, undefined, { refs: true })!
+  const av = (entrada: string, i: InventarioDom, ramo = 'patinete') => validarRespuestaExplorador(
+    { version: 1, pantalla: { nombre: 'X', tipo: 'seleccion_producto' }, acciones: [{ accion: 'avanzar', ref: i.marcos[0].elementos[0].ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null },
+    { inventario: i, ramo, entrada, datosReales: null },
+  )
+  const NSE = 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/inicio.jsp'
+  it('Mapfre dentro de la app: href de la app y onclick pasan', () => {
+    expect(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/oferta.jsp', texto: 'MásPatín' }])).ok).toBe(true)
+    expect(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', onclick: 'verProducto() ; javascript:abrir()', texto: 'Patinetes' }])).ok).toBe(true)
+  })
+  it('link en Allianz Movilidad Personal (sin la declaración) → rechazado; en Mapfre, otra ruta / otro origen / ventana fuera de la app → rechazado', () => {
+    expect(JSON.stringify(av('allianz:autos:movilidad_personal', marcoDe('https://www.e-pacallianz.com/ngx-azs-epac/private/application', [{ tag: 'a', role: 'menuitem', texto: 'Venta' }])))).toMatch(/no es un botón/)
+    expect(JSON.stringify(av('allianz:autos:movilidad_personal', marcoDe(URL_DRVP00, [{ tag: 'a', role: 'link', hrefRuta: '/drvp00/SEAServlet', texto: 'Datos' }])))).toMatch(/no es un botón/)
+    expect(JSON.stringify(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', role: 'link', hrefRuta: '/PortalMediadores/x.jsp', texto: 'Otra' }])))).toMatch(/no es un botón/)
+    expect(JSON.stringify(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', role: 'link', hrefRuta: 'https://otro.example.test/EVT21_NSE_FWEB/x.jsp', texto: 'Otra' }])))).toMatch(/no es un botón/)
+    expect(JSON.stringify(av('mapfre:automoviles:patinetes', marcoDe('https://wmediadores.mapfre.com/PortalMediadores_fe-web/', [{ tag: 'a', onclick: 'x()', texto: 'Fuera' }])))).toMatch(/no es un botón/)
+  })
+  it('la ruta del href entra en la capa pura: /contratar.do → boton_de_emision', () => {
+    expect(JSON.stringify(av('mapfre:automoviles:patinetes', marcoDe(NSE, [{ tag: 'a', role: 'link', hrefRuta: '/EVT21_NSE_FWEB/contratar.do', texto: 'Seguir' }])))).toMatch(/boton_de_emision/)
+  })
+})

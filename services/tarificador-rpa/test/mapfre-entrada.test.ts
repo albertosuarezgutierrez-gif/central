@@ -12,7 +12,7 @@ import type { AddressInfo } from 'node:net'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser } from 'playwright'
 import { ENTRADAS_EXPLORACION, PATRON_EMISION } from '@central/module-tarificacion'
-import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarAccesoNseMapfre, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
+import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
 import { entrarYExplorar, resultadoDeFin, type ContextoBucle, type CtxEntrada, type PortalExploracion } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
 import { abrirTarificacionPatineteMapfre, abrirTarificacionRapidaAuto as abrirNuevo, etiquetaExacta, URL_NSEI_AUTO } from '../src/adapters/mapfre/entrada.ts'
@@ -619,6 +619,33 @@ test('Patinetes (real 0.3.2, `sin_salida` con 0 pasos): home → pestaña landin
     assert.equal(context.pages().length, 3)
     assert.equal(vistos.length, 1)
     assert.match(vistos[0], /Fecha de efecto/)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('Patinetes 0.3.4: en la ventana NSE la entrada pulsa «Oferta / Contratación» por su puerta y el bucle empieza en la oferta (MásPatín)', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/patinetes-acceso')
+  try {
+    await context.route('**/patinete-landing', (r) => r.fulfill({ contentType: 'text/html', body: `<!doctype html><html><body><a href="javascript:abrirAplicacion('inicio.jsp', 'NUEVO SISTEMA DE EMISI%C3%93N');">Acceso a NSE</a><script>function abrirAplicacion(j, a){ window.open('/EVT21_NSE_FWEB/inicio.jsp', '_blank') }</script></body></html>` }))
+    await context.route('**/EVT21_NSE_FWEB/inicio.jsp', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><html><body><a href="#">Búsqueda de Respuestas y Gestión</a><a href="/EVT21_NSE_FWEB/oferta.jsp">Oferta / Contratación</a><a href="#">Oferta Multiprecio</a><a href="#" onclick="btnSalirAplicacion();">Salir</a></body></html>' }))
+    await context.route('**/EVT21_NSE_FWEB/oferta.jsp', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><html><body><h1>Oferta</h1><a href="#">MásPatín</a></body></html>' }))
+    const pulsadosMenu: string[] = []
+    const ctx = {
+      ...ctxGuard,
+      pulsarAccesoNse: (b: Locator) => pulsarAccesoNseMapfre(b, guard, 'mapfre'),
+      pulsarMenuNse: async (b: Locator) => { pulsadosMenu.push(((await b.textContent()) ?? '').trim()); await pulsarMenuOfertaNseMapfre(b, guard, 'mapfre') },
+    }
+    const portal: PortalExploracion = { credencial: 'X', entrar: (pg, c) => abrirTarificacionPatineteMapfre(pg, c, { menuMs: 3_000 }) }
+    const vistos: string[] = []
+    const fin = await entrarYExplorar(page, portal, ctx as unknown as CtxEntrada, ENTRADAS_EXPLORACION['mapfre:automoviles:patinetes'], {
+      guard, redactar: (t) => t, env: {},
+      contextoBucle: ctxBucle(guard, vistos, async () => resp([{ accion: 'parar', motivo: 'dato_no_disponible' }])),
+    })
+    assert.equal(fin.motivo, 'dato_no_disponible', JSON.stringify(fin))
+    assert.deepEqual(pulsadosMenu, ['Oferta / Contratación'])
+    assert.match(vistos[0], /MásPatín/)
     assert.equal(guard.violacion(), null)
   } finally {
     await context.close()

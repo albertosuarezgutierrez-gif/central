@@ -46,6 +46,11 @@ export type ElementoInventario = {
   /** Texto visible: SOLO de botones, pestañas, enlaces-botón, celdas con onclick y labels. */
   texto?: string
   onclick?: string
+  /**
+   * `<a href>` normal (28/10/2026, explorador): SOLO la ruta del enlace, sin query ni fragmento (`/EVT21_NSE_FWEB/oferta.jsp`); de
+   * otro origen, `origen + ruta`. La miran `bloqueoAvance` (un `/contratar.do` es emisión) y la regla de enlaces avanzables.
+   */
+  hrefRuta?: string
   requerido?: true
   deshabilitado?: true
   opciones?: OpcionInventario[]
@@ -233,6 +238,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       pon('etiqueta', texto(eo.etiqueta, MAX_TEXTO_INVENTARIO))
       pon('texto', texto(eo.texto, MAX_TEXTO_INVENTARIO))
       pon('onclick', texto(eo.onclick, MAX_ATRIBUTO))
+      pon('hrefRuta', texto(eo.hrefRuta, MAX_ATRIBUTO))
       pon('dialogo', texto(eo.dialogo, MAX_TEXTO_INVENTARIO))
       if (eo.requerido === true) el.requerido = true
       if (eo.deshabilitado === true) el.deshabilitado = true

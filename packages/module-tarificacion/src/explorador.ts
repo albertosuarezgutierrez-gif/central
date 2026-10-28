@@ -80,6 +80,13 @@ export type EntradaExploracion = {
   pestana: string
   productoMenu: string
   avancesAutorizados: readonly AvanceAutorizado[]
+  /**
+   * ePAC (28/10/2026): el diálogo «Atención» que propone ALARGAR el término se cierra por CÓDIGO antes de cada paso («Cancelar» o
+   * «×», nunca «Aceptar»; `cerrarDialogoTerminoEpac` del worker). Sin la clave = no se toca.
+   */
+  cierraDialogoTermino?: true
+  /** Entradas de menú (`<a>`, menuitem, link) avanzables DENTRO de esta ruta de aplicación (`esEnlaceAvanzable`). Sin la clave = no. */
+  enlacesAvanzables?: { rutaApp: string }
   /** Avances por identidad exacta del control (ver {@link AvancePorId}). Sin la clave = ninguno. */
   avancesPorId?: readonly AvancePorId[]
   /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
@@ -134,6 +141,7 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'allianz', ramo: 'patinete', producto: 'patinete', pestana: 'Autos', productoMenu: 'Movilidad Personal',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
     avancesPorId: Object.freeze([SIGUIENTE_EPAC_DRVP00]),
+    cierraDialogoTermino: true as const,
     tomadorMediador: true as const,
   }),
   // Mapfre Patinetes (28/10/2026): Portal Digital de Mediadores › «Nueva producción» › «Automóviles» › tarjeta «Patinetes» ›
@@ -142,6 +150,8 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   'mapfre:automoviles:patinetes': Object.freeze({
     compania: 'mapfre', ramo: 'patinete', producto: 'patinete', pestana: 'Nueva producción', productoMenu: 'Patinetes',
     avancesAutorizados: Object.freeze([]),
+    // Menú de la aplicación NSE (28/10/2026): sus entradas son `<a>` (la IA elige el producto, MásPatín). Solo dentro de la app.
+    enlacesAvanzables: Object.freeze({ rutaApp: '/EVT21_NSE_FWEB/' }),
     tomadorMediador: true as const,
   }),
   // Mapfre Auto (14/10/2026): «Nueva producción» → «Turismos y Motos». El bloque «Automóviles» y el enlace «Tarificación y
@@ -898,7 +908,7 @@ const RE_CONSENTIMIENTO = /rgpd|lopd|acept|consient|autoriz|publicidad|comercial
 
 /** Todo lo que describe a un elemento (para el guard de emisión y el de consentimientos). */
 export function descripcionesElemento(el: ElementoInventario): string[] {
-  return [el.texto, el.ariaLabel, el.etiqueta, el.id, el.name, el.onclick, el.placeholder, el.formControlName].filter((x): x is string => typeof x === 'string' && x !== '')
+  return [el.texto, el.ariaLabel, el.etiqueta, el.id, el.name, el.onclick, el.hrefRuta, el.placeholder, el.formControlName].filter((x): x is string => typeof x === 'string' && x !== '')
 }
 
 function esControlTexto(el: ElementoInventario): boolean {
@@ -911,6 +921,28 @@ function esAvanzable(el: ElementoInventario): boolean {
   if (el.tag === 'input') return ['submit', 'button'].includes((el.type ?? '').toLowerCase())
   if (el.role === 'button' || el.role === 'tab') return true
   return el.tag === 'td' && typeof el.onclick === 'string'
+}
+
+/**
+ * Entradas de MENÚ avanzables (28/10/2026, Mapfre NSE: menú lateral de `<a>`), SOLO en entradas que lo declaran
+ * (`enlacesAvanzables`) y SOLO dentro de su aplicación: el marco (la ventana) en la ruta de la app y, si el enlace es un href normal,
+ * su ruta (mismo origen: empieza por «/») también dentro. Vale un `<a>`/`[role=menuitem|link]` con onclick, role menuitem/link o
+ * href. El guard y `bloqueoAvance` siguen mirando cada uno (texto, onclick, ruta del href).
+ */
+export function esEnlaceAvanzable(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  const regla = e?.enlacesAvanzables
+  if (!regla) return false
+  const ruta = rutaDeMarco(marco.url)
+  if (ruta === null || !ruta.toUpperCase().startsWith(regla.rutaApp.toUpperCase())) return false
+  const esEnlace = el.tag === 'a' || el.role === 'menuitem' || el.role === 'link'
+  if (!esEnlace) return false
+  if (typeof el.hrefRuta === 'string') {
+    if (el.hrefRuta.endsWith('…') || !el.hrefRuta.toUpperCase().startsWith(regla.rutaApp.toUpperCase())) return false
+    return true
+  }
+  // Sin ruta de href: solo con onclick (incluye el `javascript:` del href) o role menuitem. Un role `link` sin ruta (se descartó) no.
+  return (typeof el.onclick === 'string' && el.onclick.trim() !== '') || el.role === 'menuitem'
 }
 
 /**
@@ -1203,7 +1235,7 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         acciones.push({ accion: 'marcar', ref })
       } else {
         if (i !== lista.length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
-        if (!esAvanzable(el) && !esAceptarDivAutorizado(ctx.entrada, el, marco)) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
+        if (!esAvanzable(el) && !esAceptarDivAutorizado(ctx.entrada, el, marco) && !esEnlaceAvanzable(ctx.entrada, el, marco)) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
         const efecto = EFECTOS_AVANCE.find((x) => x === a.efectoEsperado)
         if (!efecto) return void errores.push(`${donde}: efectoEsperado fuera de lista`)
         if (a.confianza !== 'alta' && a.confianza !== 'media') return void errores.push(`${donde}: avanzar exige confianza alta o media`)
