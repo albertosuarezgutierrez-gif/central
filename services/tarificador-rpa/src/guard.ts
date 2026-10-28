@@ -55,7 +55,7 @@ import {
   rutaDeMarco,
   esLanzadorAplicacionNseMapfre,
   neutralizarRutaTolerable,
-  cuerpoToleradoConAccionReal,
+  detalleCuerpoToleradoConAccionReal,
   RE_ACCION_REAL_TRAS_PREFIJO,
   type RutaTolerable,
   TEXTO_ACCESO_NSE_MAPFRE,
@@ -400,7 +400,9 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       const neutra = neutralizarRutaTolerable(url, tolerables) ?? url
       const porUrl = pareceEmision(neutra, op) || parametrosParecenEmision(url, op)
       // Ruta TOLERADA (Mapfre NSE): además, los NOMBRES de parámetro y el botón JSF del cuerpo no pueden nombrar una acción real.
-      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op) || (!porUrl && noGet && neutra !== url && cuerpoToleradoConAccionReal(cuerpoDe(req)))
+      const porCuerpoGeneral = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
+      const detalleTolerado = !porUrl && !porCuerpoGeneral && noGet && neutra !== url ? detalleCuerpoToleradoConAccionReal(cuerpoDe(req)) : null
+      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op) || detalleTolerado !== null
       if (porUrl && !porCuerpo && !noGet && Date.now() < turismosGenerali && av === null && gv === null && Date.now() >= ventanaHasta && urlTurismosGeneraliPermitida(url)) {
         // Navegación del ÚNICO clic de «TURISMOS (RAMO UV)» (ventana abierta por entrarTurismosGenerali): GET a Generali con
         // «emisión»/«contratación» como sustantivo de menú y nada más que case con el patrón. Un POST, otro origen o cualquier
@@ -415,7 +417,10 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       }
       if (porUrl || porCuerpo) {
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
-        violacion ??= new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
+        // En la ruta TOLERADA (Mapfre NSE) se dice QUÉ parámetro casó y con qué palabra de la lista (nunca su valor).
+        const que = detalleTolerado ? `: parámetro «${detalleTolerado.parametro}» casa con «${detalleTolerado.patron}»` : ''
+        // El detalle va DELANTE: el mensaje del error se recorta a 200 caracteres y la URL de NSE es larga.
+        violacion ??= new EmisionBloqueadaError('url', porCuerpo ? (que ? `[acción en el cuerpo de la petición${que}] ${url}` : `${url} [acción en el cuerpo de la petición]`) : url)
         await route.abort('blockedbyclient')
         return
       }

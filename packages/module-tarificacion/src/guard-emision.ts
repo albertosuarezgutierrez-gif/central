@@ -240,16 +240,33 @@ const PREFIJO_NEUTRO = '/__ruta_app__/'
  * (los formularios NSE se llaman `formEmision…`). PURA.
  */
 export function cuerpoToleradoConAccionReal(cuerpo: string | null | undefined): boolean {
-  if (typeof cuerpo !== 'string' || cuerpo === '') return false
+  return detalleCuerpoToleradoConAccionReal(cuerpo) !== null
+}
+
+/**
+ * Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no
+ * se sabía por qué): el NOMBRE del parámetro (o `javax.faces.*`) y la palabra de la lista que casó. NUNCA el valor. `null` = nada.
+ */
+export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undefined): { parametro: string; patron: string } | null {
+  if (typeof cuerpo !== 'string' || cuerpo === '') return null
   const dec = (x: string) => plano(decodificarUrlTolerante(x.replace(/\+/g, ' ')))
   for (const par of cuerpo.split('&')) {
     const i = par.indexOf('=')
     const k = dec(i < 0 ? par : par.slice(0, i))
     const v = i < 0 ? '' : dec(par.slice(i + 1))
-    if (RE_ACCION_REAL_TRAS_PREFIJO.test(k)) return true
-    if (/^javax\.faces\.(?:source|partial\.execute|partial\.render)$/i.test(k.trim()) && RE_ACCION_REAL_TRAS_PREFIJO.test(v)) return true
+    const enNombre = RE_ACCION_REAL_TRAS_PREFIJO.exec(k)
+    // Revisión de seguridad 0.3.8: un trozo SIN «=» (cuerpo JSON o texto) no es un nombre de parámetro y puede llevar datos
+    // ({"nif":"…"}): solo se nombra un id de formulario con forma de id; cifras largas, enmascaradas.
+    if (enNombre) {
+      const n = k.trim()
+      return { parametro: /^[\w.:$\-[\]]{1,80}$/.test(n) ? n.replace(/\d{5,}/g, '#') : '(cuerpo no form-urlencoded)', patron: enNombre[0].toLowerCase() }
+    }
+    if (/^javax\.faces\.(?:source|partial\.execute|partial\.render)$/i.test(k.trim())) {
+      const enValor = RE_ACCION_REAL_TRAS_PREFIJO.exec(v)
+      if (enValor) return { parametro: k.trim(), patron: enValor[0].toLowerCase() }
+    }
   }
-  return false
+  return null
 }
 
 /**
@@ -301,4 +318,27 @@ export function esTextoBotonProhibido(texto: string | null | undefined): boolean
   if (typeof texto !== 'string' || texto === '') return false
   const t = plano(texto).toLowerCase().replace(/\s+/g, ' ').replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
   return RE_TEXTO_BOTON_PROHIBIDO.test(t)
+}
+
+
+/** Tipo de documento de identidad por su FORMA (0.3.8): NIF/DNI (8 cifras + letra), NIE (X/Y/Z + 7 cifras + letra), CIF. PURA. */
+export type TipoDocumento = 'NIF' | 'NIE' | 'CIF'
+export function tipoDocumentoDe(documento: string | null | undefined): TipoDocumento | null {
+  if (typeof documento !== 'string') return null
+  const d = documento.toUpperCase().replace(/[\s.\-/]/g, '')
+  if (/^\d{8}[A-Z]$/.test(d)) return 'NIF'
+  if (/^[XYZ]\d{7}[A-Z]$/.test(d)) return 'NIE'
+  if (/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(d)) return 'CIF'
+  return null
+}
+
+/**
+ * La opción de un desplegable de «Tipo de documento» que corresponde a `tipo`, por su TEXTO (sin tildes, mayúsculas ni signos): NIF →
+ * «NIF», «DNI», «DNI/NIF», «NIF/DNI», «N.I.F.»; NIE → empieza por «NIE»; CIF → empieza por «CIF». EXACTAMENTE una; si no, `null`. PURA.
+ */
+export function opcionTipoDocumento(tipo: TipoDocumento, opciones: readonly { valor: string | null; texto: string | null }[]): string | null {
+  const norm = (t: string | null) => plano(t ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const casa = (t: string) => (tipo === 'NIF' ? ['NIF', 'DNI', 'DNINIF', 'NIFDNI'].includes(t) : t.startsWith(tipo))
+  const hits = opciones.filter((o) => typeof o.valor === 'string' && o.valor !== '' && casa(norm(o.texto)))
+  return hits.length === 1 ? hits[0]!.valor : null
 }

@@ -28,6 +28,9 @@ import { chromium, type Browser, type Frame, type Locator, type Page } from 'pla
 import {
   CLAVES_AUTOCOMPLETADO,
   CLAVES_VALIDAN_AL_SALIR,
+  opcionTipoDocumento,
+  tipoDocumentoDe,
+  type TipoDocumento,
   EmisionBloqueadaError,
   ENTRADAS_EXPLORACION,
   rutasAppTolerablesDe,
@@ -89,8 +92,8 @@ import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
-/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.7 (28/10/2026): diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.7'
+/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
+export const EXPLORADOR_VERSION = '0.3.8'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -628,6 +631,12 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             await k.pausaAccion()
             // 🔑 El valor no se loguea ni sale del proceso: va directo al campo.
             const escrito = valorParaControl(d.valor, hit.el)
+            // 0.3.8 (real 28/10/2026 18:31, ePAC): el tipo de documento VA ANTES del número (vacío → «Número de identificación
+            // incorrecto»). Orden: tipo de documento → documento → salir del campo. Solo el TIPO (NIF/NIE/CIF) sale del valor.
+            if (CLAVES_VALIDAN_AL_SALIR.has(a.dato)) {
+              const tipo = tipoDocumentoDe(escrito)
+              if (tipo) k.log('exploracion_tipo_documento', { n: pasos, ref: a.ref, tipo, estado: await elegirTipoDocumentoPareado(nodo.marco, loc, tipo) })
+            }
             await loc.fill(escrito, { timeout: 10_000 })
             hechas++
             const quedan = i < lote.length - 1
@@ -844,6 +853,31 @@ async function visibleTrasTraer(nodo: NodoInv): Promise<boolean> {
     await dormir(100)
   }
   return visible()
+}
+
+/**
+ * TIPO DE DOCUMENTO pareado con un campo de documento (0.3.8, ePAC «Figuras Intervinientes»): el campo `<x>_doc` tiene su desplegable
+ * `<x>_tipoDoc` (un `<select>`, normalmente OCULTO tras un botón sin texto). Elige la ÚNICA opción cuyo texto corresponde a `tipo`
+ * (`opcionTipoDocumento`) con `selectOption` (dispara `change`). Nunca toca otra cosa; si no hay desplegable u opción, no hace nada.
+ */
+export async function elegirTipoDocumentoPareado(marco: Frame, loc: Locator, tipo: TipoDocumento): Promise<'elegido' | 'ya' | 'sin_desplegable' | 'sin_opcion'> {
+  const info = await loc.evaluate((el) => {
+    const id = (el as HTMLElement).id || ''
+    if (!/_doc$/.test(id)) return null
+    const selId = id.slice(0, -'_doc'.length) + '_tipoDoc'
+    const s = el.ownerDocument.getElementById(selId)
+    if (!s || s.tagName !== 'SELECT') return null
+    const sel = s as HTMLSelectElement
+    return { selId, actual: sel.value, opciones: Array.from(sel.options).slice(0, 40).map((o) => ({ valor: o.value, texto: (o.textContent || '').replace(/\s+/g, ' ').trim() })) }
+  }).catch(() => null)
+  if (!info) return 'sin_desplegable'
+  const valor = opcionTipoDocumento(tipo, info.opciones)
+  if (valor === null) return 'sin_opcion'
+  if (info.actual === valor) return 'ya'
+  const sel = marco.locator(`[id="${info.selId.replace(/["\\]/g, '\\$&')}"]`)
+  if ((await sel.count().catch(() => 0)) !== 1) return 'sin_desplegable'
+  const r = await sel.selectOption({ value: valor }, { force: true, timeout: 5_000 }).catch(() => [] as string[])
+  return r.length === 1 && r[0] === valor ? 'elegido' : 'sin_opcion'
 }
 
 /**

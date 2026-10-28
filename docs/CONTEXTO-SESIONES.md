@@ -11,6 +11,13 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (28/10/2026, 7) Tarificador RPA · 3×3: versiones del día y decisión sobre emitir
+- Mergeados PR #5204, #5209, #5211, #5213, #5217, #5220, #5222: explorador 0.3.2→0.3.7, Generali 0.2.46→0.2.51. En vuelo #5224 (explorador 0.3.8); Generali 0.2.52 en desarrollo.
+- Allianz auto da precio; hogar dio 3 precios el 27/10 (falta proyecto/PDF); patinete: el portal rechazaba el NIF por «Tipo Doc. Tomador» vacío (0.3.8 lo elige antes). Mapfre patinete llega a `busquedaProductos.jsf` y el guard la frena por un parámetro del cuerpo. Generali auto: «Tipo de vehículo» (wclasv) queda vacío y Genernet no calcula (0.2.52 prueba hipótesis acotadas).
+- Decisión de Alberto: no temer a emitir (el IBAN se pide en la penúltima/última página). Tras el #5224: dejar de bloquear por ruta con «emision»/«contratacion»; paradas duras solo en botones finales, campos IBAN/cuenta/tarjeta y POST con esas acciones.
+- Proceso: toda revisión `agente-architect` previa al merge halló algo (3 fugas de datos personales en campos de diagnóstico nuevos); excepciones del guard por texto/id/origen exactos.
+- Pendiente: Mapfre auto (2.º cliente, comparativa, borrador), /datos unificado por ramo, patinete marca/modelo/versión, hogar en Mapfre y Generali. Detalle en `docs/TARIFICADOR-RPA.md`.
+
 ## (28/10/2026, 6) Correduría · expediente de siniestro con hilo + IA
 - Página `/correduria/siniestro/[id]` (plataforma): hilo compañía↔IA↔Alberto (tabla `seguros.siniestro_mensajes`, solo-añadir por trigger, texto cifrado), plazos LCS (arts. 18/20/23; SAC sin verificar), «esperando a la compañía» en Hoy, cierre con resultado (ganado/perdido/parcial).
 - IA bajo botón (`POST /api/operador/siniestro/ia`, `iaTexto` modelo `SINIESTRO_IA_MODELO`, privado): analizar/redactar con el texto de la póliza; `verificarCitas()` marca citas que no están en la póliza.

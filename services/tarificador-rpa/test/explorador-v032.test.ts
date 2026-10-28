@@ -52,6 +52,7 @@ let figuras = FIGURAS()
 let landing = LANDING(HREF_NSE)
 let menuNse = ''
 let validarNif = false
+let validarTipoDoc = false
 let browser: Browser
 
 before(async () => {
@@ -63,7 +64,7 @@ before(async () => {
       peticiones.push({ metodo: req.method ?? 'GET', ruta, cuerpo })
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       if (ruta === '/valida-nif') return void setTimeout(() => res.end('ok'), 300)
-      if (ruta === '/drvp00/SEAServlet') return void res.end(req.method === 'POST' ? (validarNif && !/tomadorValidado=1/.test(cuerpo) ? PAGINA('<p>NIF del tomador no válido</p>') : RESULTADO) : figuras)
+      if (ruta === '/drvp00/SEAServlet') return void res.end(req.method === 'POST' ? ((validarNif && !/tomadorValidado=1/.test(cuerpo)) || (validarTipoDoc && !/IntervinientesBean%24nifTomador_tipoDoc=N(&|$)/.test(cuerpo)) ? PAGINA('<p>NIF del tomador no válido</p>') : RESULTADO) : figuras)
       if (ruta === '/otro/SEAServlet') return void res.end(figuras)
       if (ruta === '/landing') return void res.end(landing)
       if (ruta === '/EVT21_NSE_FWEB/inicio.jsp' || ruta === '/otra/inicio.jsp') return void res.end(menuNse)
@@ -724,7 +725,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.7', () => assert.equal(EXPLORADOR_VERSION, '0.3.7'))
+test('versión 0.3.8', () => assert.equal(EXPLORADOR_VERSION, '0.3.8'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`
@@ -817,6 +818,55 @@ test('0.3.7 · inventario: un campo INVÁLIDO lleva su mensaje de error y el mar
     assert.equal(m.elementos.find((e) => e.id === 'otro')!.mensajeError, undefined)
     assert.deepEqual(m.avisosPortal, ['Debe seleccionar el tipo de documento del tomador'])
     await cap.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── 0.3.8 (real 28/10/2026 18:31-18:33, main-4549992) ──────────────────────────────────────────────────────
+
+/** ePAC «Figuras Intervinientes»: «Tipo Doc. Tomador» es un select OCULTO (`<x>_tipoDoc`) tras un botón sin texto; vacío → NIF inválido. */
+const FIGURAS_TIPODOC = PAGINA(`
+  <form id="f" method="post" action="/drvp00/SEAServlet">
+    <label id="IntervinientesBean$nifTomador_tipoDoc_label">Tipo Doc. Tomador</label>
+    <select id="IntervinientesBean$nifTomador_tipoDoc" name="IntervinientesBean$nifTomador_tipoDoc" style="display:none"><option value="">Seleccione</option><option value="N">NIF</option><option value="E">NIE</option><option value="C">CIF</option><option value="P">Pasaporte</option></select>
+    <button type="button" class="dropdown-toggle"><span class="filter-option"></span></button>
+    <input type="text" id="IntervinientesBean$nifTomador_doc" name="IntervinientesBean$nifTomador_doc">
+  </form>
+  <button type="button" id="btnAceptar" onclick="eventoSiguiente()">Aceptar</button>
+  <script>function eventoSiguiente(){ document.getElementById('f').submit() }</script>`)
+
+test('0.3.8 · Allianz: antes de teclear el NIF se elige su «Tipo Doc.» (NIF por la forma del documento) en el desplegable pareado', async () => {
+  figuras = FIGURAS_TIPODOC
+  validarTipoDoc = true
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    const k = { ...contexto(page, guard, (inv) => {
+      const imp = inv.marcos.flatMap((m) => m.importes ?? [])
+      if (imp.length > 0) return respuesta([{ accion: 'terminar', refsPrecio: [imp[0].ref] }], 'resultado')
+      const nif = elementos(inv).find((e) => e.id === 'IntervinientesBean$nifTomador_doc')
+      const btn = elementos(inv).find((e) => e.id === 'btnAceptar')
+      if (!nif || !btn) return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+      return respuesta([{ accion: 'rellenar', ref: nif.ref, dato: 'tomador.nif' }, { accion: 'avanzar', ref: btn.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+    }), riesgo: { tomador: { nif: '00000000T' } }, esperaRepintadoMs: 200 }
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.match(peticiones.filter((p) => p.metodo === 'POST').map((p) => p.cuerpo).join('|'), /nifTomador_tipoDoc=N/)
+  } finally {
+    validarTipoDoc = false
+    await context.close()
+  }
+})
+
+test('0.3.8 · Mapfre NSE: el error del guard en la ruta tolerada dice QUÉ parámetro del cuerpo casó (nunca su valor)', async () => {
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    tolerarRutasApp(guard, rutasAppTolerablesDe('mapfre:automoviles:patinetes'))
+    await postA(page, 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/busquedaProductos/busquedaProductos.jsf', 'javax.faces.partial.render=formBusqueda%3AdlgConfirmacion&secreto=12345678Z')
+    const v = guard.violacion()
+    assert.ok(v instanceof EmisionBloqueadaError)
+    assert.match(v!.message, /parámetro «javax\.faces\.partial\.render» casa con «confirm»/)
+    assert.ok(!/12345678Z|dlgConfirmacion/.test(v!.message), 'ni valores ni el id completo')
   } finally {
     await context.close()
   }
