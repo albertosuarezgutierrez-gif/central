@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-29 · facturas-correo** · hizo: Vía B sana; 0 candidatos nuevos por archivar (IONOS 28/10, Digi 27/10 ya en Drive); barrido 4.0: conciliada Digi 76€ (mov. 29/10, FK escrita); dudas: SIQUE 1.128,48€ (transf. 27/10 "factura septiembre" vs factura 03/10, fuera de ±7d, destino=personal) sin tocar; anthropic 180€ e ionos 10,90€ sin cargo aún; fallos: gmail-adjuntos (Vía A) caído; PRs/commits: —
+
 - **2026-10-28 · trading-analista** · hizo: pasada 20:15 UTC (sin huella previa): NAV 33.989,27€→/saldo, cartera real (VWCE+CVX)→/cartera (track ok), operaciones 0 nuevas + latido, 24 símbolos (70 velas, secuencial) → /analizar (23 analizados, 0 compras paper) y /puntuar (0 puntuadas); Telegram enviado; dudas: ORCL vetado como «suplantado» por BKNG pero el cierre 144,31 (+10,5%) es REAL según IBKR → falso positivo de la guardia ante un salto grande; contraste 2ª fuente desfasado (solo cierre 27/10) → todo «sinJuzgar»; fallos: canal-aviso.sh no admite cuerpos grandes (Argument list too long) → usé copia en scratchpad con @fichero; PRs/commits: —
 - **2026-10-28 · mercado-booking** · hizo: 24/24 ventanas medidas (plan_total 572, 548 recortadas por tope; rondas 1-3: 24/11/26 evento ASEICA, 10/11/26, 25/05/27, 11-13 y 28-30/09/27, 16/04/27, 27/04/27), 237 comps `booking_mcp` (House: Sevillana propia descartada en 3 ventanas, 9 en vez de 10); escaparate 3/4 (Dúplex center 107€/n, Luxury Busto 103€/n, House 455€/n); dudas: —; fallos: escaparate Busto Reform 24-26/08/27 sin disponibilidad (hueco); el latido dijo 240 comps (real 237); PRs/commits: —
 
