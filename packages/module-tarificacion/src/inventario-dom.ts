@@ -10,7 +10,7 @@
 //   · la URL de cada marco va sin query ni fragmento, y redactada;
 //   · tope de tamaño total con recorte EXPLÍCITO (`recortado`).
 
-import { redactarDatosPersonales } from './formador.ts'
+import { MARCA_DATO_PERSONAL, PATRONES_PERSONALES, PATRON_TIRADA_CIFRAS, redactarDatosPersonales } from './formador.ts'
 import { pareceDatoPersonalEnDescripcion } from './formulario-auto.ts'
 import { PATRON_ELEMENTO_USUARIO, PATRON_MEDIADOR, PATRON_ULTIMO_ACCESO } from './grabador.ts'
 
@@ -47,6 +47,37 @@ export const MAX_ONCLICK_COMPLETO_TOTAL = 48_000
  * manejador y el validador lo dejaría pulsar/marcar). Se sustituye por esta marca, que acaba en «…» = recortado = no se pulsa.
  */
 export const ONCLICK_REDACTADO = '[onclick redactado]…'
+
+/**
+ * 0.3.18 (Mapfre NSE real 29/10/2026, `busquedaProductos.jsf`): los ids JSF de RichFaces/mojarra llevan tiras largas de cifras
+ * (`j_id_jsp_1234567890_5`) y el patrón de «tirada de 7+ cifras» tiraba el onclick ENTERO (→ {@link ONCLICK_REDACTADO} → `onclick_truncado`).
+ * SOLO en el onclick, cada tira CONTIGUA de ≥7 cifras se sustituye por esta marca (nunca se guarda la cifra) y se vuelve a mirar. No es
+ * `0` a propósito: `#` no cabe en un id JSF, así que la forma normalizada no puede coincidir con el id/name real de otro control
+ * (`onclickEnviaFormulario` además trata como AJENA toda cadena que la lleve).
+ */
+export const MARCA_TIRA_CIFRAS_ONCLICK = '#N#'
+
+/**
+ * ¿Parece dato personal con TODOS los patrones salvo la «tirada de 7+ cifras»? (NIF/NIE/CIF, IBAN, email, teléfono, matrícula, VIN, id de
+ * portal…). Se aplica al onclick ORIGINAL: al normalizar las tiras, un IBAN o un NIF pegados dejan de tener su forma. Pura.
+ */
+function pareceDatoPersonalSalvoTirasCifras(texto: string): boolean {
+  if (pareceDatoPersonalEnDescripcion(texto)) return true
+  let out = texto
+  for (const p of PATRONES_PERSONALES) if (p !== PATRON_TIRADA_CIFRAS) out = out.replace(p, (m) => (/\d/.test(m) || m.includes('@') ? MARCA_DATO_PERSONAL : m))
+  return out !== texto
+}
+
+/**
+ * 0.3.18: el onclick con sus tiras contiguas de ≥7 cifras normalizadas, si ESO es lo único que lo hacía parecer dato personal; si no,
+ * `null` (se redacta como siempre). Pura y exportada para los tests.
+ */
+export function onclickSinTirasCifras(plano: string): string | null {
+  const normal = plano.replace(/\d{7,}/g, MARCA_TIRA_CIFRAS_ONCLICK)
+  if (normal === plano) return null
+  if (pareceDatoPersonalInventario(normal) || pareceDatoPersonalSalvoTirasCifras(plano)) return null
+  return normal
+}
 
 export type OpcionInventario = { valor: string | null; texto: string | null }
 
@@ -242,6 +273,17 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
     }
     return plano.length > max ? plano.slice(0, max - 1) + '…' : plano
   }
+  // 0.3.18: SOLO el onclick. Si lo único que parece dato es una tira contigua de ≥7 cifras (id JSF), va NORMALIZADO; si no, `texto` lo redacta.
+  const textoOnclick = (v: unknown, max: number): string | undefined => {
+    if (typeof v === 'string') {
+      const plano = v.replace(/\s+/g, ' ').trim()
+      if (plano && pareceDatoPersonalInventario(plano) && !esCabeceraPersonal(plano, nombresMediador)) {
+        const normal = onclickSinTirasCifras(plano)
+        if (normal !== null) return texto(normal, max)
+      }
+    }
+    return texto(v, max)
+  }
   let presupuestoCompleto = MAX_ONCLICK_COMPLETO_TOTAL
   const refsUsadas = new Set<string>()
   const ponerRef = (propuesta: unknown, re: RegExp, porDefecto: string): string | null => {
@@ -286,7 +328,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       const norm = (v: string) => v.replace(/\s+/g, ' ').trim()
       const prefijo = norm(ocCrudo).replace(/…$/, '')
       const ocFuente = typeof eo.onclickCompleto === 'string' && norm(eo.onclickCompleto).length > norm(ocCrudo).length && norm(eo.onclickCompleto).startsWith(prefijo) ? eo.onclickCompleto : eo.onclick
-      const ocPlano = texto(ocFuente, MAX_ONCLICK_EVALUACION)
+      const ocPlano = textoOnclick(ocFuente, MAX_ONCLICK_EVALUACION)
       // Fail-closed: un onclick no vacío que el saneado quitó (dato personal) queda como RECORTADO, nunca como «sin onclick».
       const ocVacio = !(typeof ocFuente === 'string' && ocFuente.trim() !== '')
       if (ocPlano === undefined) pon('onclick', ocVacio ? undefined : ONCLICK_REDACTADO)
