@@ -16,6 +16,7 @@ import {
   onclickNeutralizado,
   sanearInventarioDom,
   validarRespuestaExplorador,
+  cuerpoLlevaAccionFinal,
   type AvanceSinTexto,
   type ElementoInventario,
   type InventarioDom,
@@ -240,5 +241,23 @@ describe('0.3.19 · Mapfre NSE: «Siguiente >>» con el modal de limpieza de pó
       expect(bloqueoAvance(MF, el0(i), i.marcos[0]), nombre).not.toBeNull()
       expect(avanzar(i, MF, 'patinete').ok, nombre).toBe(false)
     }
+  })
+})
+
+// ─── Revisión adversarial 0.3.19: el POST de OsAjax/ASP.NET nombra el control en `__EVENTTARGET` (`…$wtBtnContratar`) ─────────────
+describe('0.3.19 · inspección estricta: __EVENTTARGET/__EVENTARGUMENT de un widget de acción final', () => {
+  const cuerpo = (t: string) => `__EVENTTARGET=${encodeURIComponent(t)}&__EVENTARGUMENT=&__OSVSTATE=abc`
+  it('el del avance legítimo (B de la regla) pasa', () => {
+    expect(cuerpoLlevaAccionFinal(cuerpo(NAME))).toBe(false)
+  })
+  for (const w of ['wtBtnContratar', 'wtEmitirPoliza', 'wtPagar', 'wtConfirmarSimulacion', 'wtFirmar', 'wtFormalizar', 'wtIBAN', 'wtTarjeta', 'wtPayment']) {
+    it(`BRAZO __EVENTTARGET …$${w} → acción final`, () => {
+      expect(cuerpoLlevaAccionFinal(cuerpo(`OPI_Theme_wt25$block$wtMainContent$${w}`))).toBe(true)
+    })
+  }
+  it('BRAZO en __EVENTARGUMENT, en minúsculas o en multipart → acción final', () => {
+    expect(cuerpoLlevaAccionFinal(`__EVENTTARGET=x&__EVENTARGUMENT=${encodeURIComponent('wtContratar$0')}`)).toBe(true)
+    expect(cuerpoLlevaAccionFinal(`__eventtarget=${encodeURIComponent('a$wtEmitir')}`)).toBe(true)
+    expect(cuerpoLlevaAccionFinal('--b\r\nContent-Disposition: form-data; name="__EVENTTARGET"\r\n\r\nOPI$wtBtnContratar\r\n--b--')).toBe(true)
   })
 })

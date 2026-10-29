@@ -139,7 +139,9 @@ test('0.3.19 · Fidelidade: vigilancia VIVA del onclick → otro onclick, name v
 })
 
 test('0.3.19 · Fidelidade: el POST de OsAjax pasa la inspección ESTRICTA del cuerpo (acción final, IBAN/tarjeta → abortado, no llega)', async () => {
-  for (const cuerpo of ['__OSVSTATE=abc&paso=Confirmar', '__OSVSTATE=abc&btnEmitir=1', '__OSVSTATE=abc&accion=contratar', '__OSVSTATE=abc&IBAN=ES0000000000000000000000', `__OSVSTATE=abc&${encodeURIComponent('OPI_Theme_wt25$block$wtMainContent$wtTarjeta')}=1`]) {
+  for (const cuerpo of ['__OSVSTATE=abc&paso=Confirmar', '__OSVSTATE=abc&btnEmitir=1', '__OSVSTATE=abc&accion=contratar', '__OSVSTATE=abc&IBAN=ES0000000000000000000000', `__OSVSTATE=abc&${encodeURIComponent('OPI_Theme_wt25$block$wtMainContent$wtTarjeta')}=1`,
+    // Revisión adversarial: el POST nombra OTRO widget (de acción final) en `__EVENTTARGET`.
+    `__EVENTTARGET=${encodeURIComponent('OPI_Theme_wt25$block$wtMainContent$wtBtnContratar')}&__EVENTARGUMENT=&__OSVSTATE=abc`]) {
     const { context, page, guard } = await abrir(PAGINA_FI({ cuerpo }), `${ORIGEN_FI}${RUTA_FI}`)
     try {
       const { marco, el, liberar } = await capturaFi(page)
