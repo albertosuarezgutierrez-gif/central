@@ -1,5 +1,6 @@
 // CEPO (29/10/2026, Alberto): la factura del huésped NUNCA se emite ni se envía sola. La única vía es el botón de
-// Alberto: ✅ Enviar en Telegram (`fhu_emi` → `telegram-acciones.ts`) o el «Reenviar» de /sivra/facturas (sesión).
+// Alberto: ✅ Enviar en Telegram (`fhu_emi` → `telegram-acciones.ts`) o, desde la pantalla /sivra/facturas, la ruta CON SESIÓN
+// `[id]/route.ts` (acciones `aprobar` —con diálogo de confirmación— y `reenviar`).
 // El agente, al leer la petición de factura, solo prepara el borrador y se lo manda por Telegram.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -22,8 +23,16 @@ function fuentes(dir: string, out: string[] = []): string[] {
 const TODAS = [...fuentes(join(APP, 'app')), ...fuentes(join(APP, 'lib'))]
 const quienLlama = (fn: string) => TODAS.filter((f) => f !== 'lib/sivra/facturas/emitir.ts' && new RegExp(`\\b${fn}\\(`).test(leer(f))).sort()
 
-test('emitirFactura solo la llama el ✅ de Telegram', () => {
-  assert.deepEqual(quienLlama('emitirFactura'), ['lib/sivra/facturas/telegram-acciones.ts'])
+test('emitirFactura solo la llaman el ✅ de Telegram y el «Aprobar y enviar» con sesión de /sivra/facturas', () => {
+  assert.deepEqual(quienLlama('emitirFactura'), ['app/api/sivra/facturas/[id]/route.ts', 'lib/sivra/facturas/telegram-acciones.ts'])
+  const ruta = leer('app/api/sivra/facturas/[id]/route.ts')
+  assert.match(ruta, /const g = await exigirSesionFacturas\(\)\n\s*if \(!g\.ok\) return g\.respuesta/)
+  // Solo con la confirmación explícita del diálogo, y solo sobre un borrador, y solo con el `visto` del mensaje vigente.
+  const aprobar = ruta.slice(ruta.indexOf("b.accion === 'aprobar'"), ruta.indexOf("b.accion === 'reenviar'"))
+  assert.match(aprobar, /if \(b2\.confirmado !== true\) return/)
+  assert.match(aprobar, /if \(f\.estado !== 'borrador'\) return/)
+  assert.match(aprobar, /emitirFactura\(id, visto\)/)
+  assert.ok(aprobar.indexOf('b2.confirmado') < aprobar.indexOf('emitirFactura('), 'la confirmación va ANTES de emitir')
 })
 
 test('enviarFactura solo la llaman el botón de Telegram y el «Reenviar» con sesión de /sivra/facturas', () => {

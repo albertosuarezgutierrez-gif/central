@@ -9,15 +9,15 @@ import { FileText } from 'lucide-react'
 import { eur } from '@/lib/dinero'
 import { Badge, PageHeader, Pagina, Stat, TablaScroll, btnStyle, cardStyle } from '@/components/ui'
 import AltaManual from './AltaManual'
+import PanelCiclo, { type Aviso, type DatosPanel, type Filtro, type FilaCiclo } from './PanelCiclo'
 
 type Fila = {
   id: string; numeroCompleto: string | null; fechaExpedicion: string | null; estado: string; piso: string; reservationId: string
   receptorNombre: string; receptorNif: string; base: number | null; tipoIva: number | null; cuota: number | null; total: number
   envioError: string | null; tienePdf: boolean
 }
-type Lista = { id: string; reservationId: string; piso: string; receptorNombre: string; receptorNif: string; email: string; cc: string[] }
-type Respuesta = {
-  emitidas: Fila[]; borradores: Fila[]; solicitudesListas: Lista[]; totales: { base: number; cuota: number; total: number; n: number }
+type Respuesta = DatosPanel & {
+  emitidas: Fila[]; totales: { base: number; cuota: number; total: number; n: number }
   pisos: Array<{ id: string; nombre: string }>
   serie: { ok: true; prefijo: string; anio: number; siguiente: number; tipoIva: number } | { ok: false; motivo: string }
 }
@@ -47,8 +47,9 @@ export default function FacturasHuespedesPage() {
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [visibles, setVisibles] = useState(PASO)
-  const [borradoresVisibles, setBorradoresVisibles] = useState(PASO)
-  const [aviso, setAviso] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<Aviso | null>(null)
+  const [filtro, setFiltro] = useState<Filtro | null>(null)
+  const [ocupado, setOcupado] = useState<string | null>(null)
 
   const query = useCallback(() => {
     const p = new URLSearchParams({ periodo, anio: String(anio) })
@@ -65,7 +66,7 @@ export default function FacturasHuespedesPage() {
       const r = await fetch(`/api/sivra/facturas?${query()}`, { cache: 'no-store' })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || `Error ${r.status}`)
-      setDatos(j); setVisibles(PASO); setBorradoresVisibles(PASO)
+      setDatos(j); setVisibles(PASO)
     } catch (e) {
       // Un fallo de lectura NO es «no hay facturas»: se dice y se conserva lo que había.
       setError(e instanceof Error ? e.message : 'No se ha podido leer el libro')
@@ -75,38 +76,85 @@ export default function FacturasHuespedesPage() {
   }, [query])
   useEffect(() => { void cargar() }, [cargar])
 
-  async function accion(id: string, a: 'proponer' | 'reenviar', forzar = false) {
-    setAviso(null)
-    const r = await fetch(`/api/sivra/facturas/${id}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: a, ...(forzar ? { forzar: true } : {}) }) })
-    const j = await r.json().catch(() => ({}))
-    // Envío DUDOSO: pudo salir ya (se cortó sin registrar éxito ni error). Reenviar es decisión de Alberto, avisado.
-    if (a === 'reenviar' && !forzar && j.resultado?.estado === 'dudoso') {
-      if (window.confirm('No sé si el correo de esta factura llegó a salir (el envío anterior se cortó sin registrar éxito ni error). Mira primero el buzón de enviados. ¿Reenviar igualmente? El huésped podría recibirla dos veces.')) return accion(id, a, true)
-      setAviso('No se ha reenviado: el envío anterior es dudoso. Comprueba el buzón de enviados.')
-      return
+  const dar = (ok: boolean, texto: string) => setAviso({ ok, texto })
+
+  async function accion(id: string, a: 'proponer' | 'reenviar', forzar = false): Promise<void> {
+    setAviso(null); setOcupado(id)
+    try {
+      const r = await fetch(`/api/sivra/facturas/${id}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: a, ...(forzar ? { forzar: true } : {}) }) })
+      const j = await r.json().catch(() => ({}))
+      // Envío DUDOSO: pudo salir ya (se cortó sin registrar éxito ni error). Reenviar es decisión de Alberto, avisado.
+      if (a === 'reenviar' && !forzar && j.resultado?.estado === 'dudoso') {
+        if (window.confirm('No sé si el correo de esta factura llegó a salir (el envío anterior se cortó sin registrar éxito ni error). Mira primero el buzón de enviados. ¿Reenviar igualmente? El huésped podría recibirla dos veces.')) return await accion(id, a, true)
+        dar(false, 'No se ha reenviado: el envío anterior es dudoso. Comprueba el buzón de enviados.')
+        return
+      }
+      if (a === 'proponer') {
+        if (j.propuesta === 'enviada') dar(true, 'Te he mandado el borrador por Telegram.')
+        else if (j.propuesta === 'silenciada') dar(false, 'El aviso «Factura de huésped para aprobar» está silenciado en /telegram: no te he mandado nada.')
+        else dar(false, j.error || 'No se ha podido mandar el borrador a Telegram.')
+      } else if (j.ok) dar(true, 'Correo enviado.')
+      else if (j.resultado?.estado === 'en_curso') dar(false, 'El envío está en curso: espera unos minutos.')
+      else dar(false, `No se ha enviado: ${j.resultado?.motivo ?? j.error ?? 'error'}`)
+    } catch (e) {
+      dar(false, `No se ha podido completar la acción: ${e instanceof Error ? e.message : 'sin conexión'}`)
+    } finally {
+      setOcupado(null)
+      void cargar()
     }
-    setAviso(a === 'proponer'
-      ? (j.propuesta === 'enviada' ? 'Borrador enviado a Telegram.' : j.propuesta === 'silenciada' ? 'El aviso «Factura de huésped para aprobar» está silenciado en /telegram.' : j.error || 'No se ha podido proponer.')
-      : (j.ok ? 'Correo enviado.' : j.resultado?.estado === 'en_curso' ? 'El envío está en curso: espera unos minutos.' : `No se ha enviado: ${j.resultado?.motivo ?? j.error ?? 'error'}`))
-    void cargar()
+  }
+
+  async function reenviarConfirmado(id: string) {
+    if (window.confirm('¿Reintentar el envío de esta factura por correo al huésped?')) await accion(id, 'reenviar')
   }
 
   async function preparar(solicitudId: string) {
+    setAviso(null); setOcupado(solicitudId)
+    try {
+      const r = await fetch('/api/sivra/facturas/solicitud/preparar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ solicitudId }) })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) dar(false, `No se ha podido preparar el borrador: ${j.error || `error ${r.status}`}`)
+      else if (j.propuesta === 'enviada') dar(true, 'Te he mandado el borrador por Telegram. Apruébalo allí con ✅ o aquí en «Borradores esperando aprobación».')
+      else if (j.propuesta === 'silenciada') dar(false, 'Borrador preparado, pero NO te lo he mandado: el aviso «Factura de huésped para aprobar» está silenciado en /telegram.')
+      else dar(false, 'Borrador preparado, pero el aviso a Telegram ha fallado: búscalo en «Borradores esperando aprobación» y usa «Reenviar a Telegram».')
+    } catch (e) {
+      dar(false, `No se ha podido preparar el borrador: ${e instanceof Error ? e.message : 'sin conexión'}`)
+    } finally {
+      setOcupado(null)
+      void cargar()
+    }
+  }
+
+  // ✅ Aprobar y enviar: el diálogo de PanelCiclo ya ha confirmado. La ruta exige `confirmado: true` + sesión y reutiliza emitirFactura/enviarFactura.
+  async function aprobar(f: FilaCiclo): Promise<void> {
     setAviso(null)
-    const r = await fetch('/api/sivra/facturas/solicitud/preparar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ solicitudId }) })
-    const j = await r.json().catch(() => ({}))
-    setAviso(r.ok
-      ? (j.propuesta === 'enviada' ? 'Borrador preparado y enviado a Telegram.' : j.propuesta === 'silenciada' ? 'Borrador preparado; el aviso «Factura de huésped para aprobar» está silenciado en /telegram.' : 'Borrador preparado, pero el aviso a Telegram ha fallado: usa «Reenviar a Telegram».')
-      : j.error || 'No se ha podido preparar el borrador.')
-    void cargar()
+    try {
+      const r = await fetch(`/api/sivra/facturas/${f.id}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'aprobar', confirmado: true, visto: f.telegramMessageId }) })
+      const j = await r.json().catch(() => ({}))
+      const n = j.numero ?? j.emision?.numeroCompleto ?? ''
+      const e = j.envio
+      if (e?.estado === 'enviada') dar(true, `Factura ${n} emitida y enviada a ${e.email}${e.cc?.length ? ` (CC ${e.cc.join(', ')})` : ''}.`)
+      else if (e?.estado === 'ya_enviada') dar(true, 'Esa factura ya estaba emitida y enviada. No se ha hecho nada más.')
+      else if (e?.estado === 'fallida') dar(false, `Factura ${n} EMITIDA, pero el correo NO ha salido: ${e.motivo}. Queda en «Emitidas sin enviar» para reintentar.`)
+      else if (e?.estado === 'en_curso' || e?.estado === 'dudoso') dar(false, `Factura ${n} emitida; el envío está ${e.estado === 'dudoso' ? 'en duda' : 'en curso'}: mira «Emitidas sin enviar» antes de repetir.`)
+      else dar(false, j.error || `No se ha emitido (error ${r.status}).`)
+    } catch (err) {
+      dar(false, `No se ha podido completar la aprobación: ${err instanceof Error ? err.message : 'sin conexión'}. Comprueba el estado antes de repetir.`)
+    } finally {
+      void cargar()
+    }
+  }
+
+  async function copiar(enlace: string) {
+    try { await navigator.clipboard.writeText(enlace); dar(true, 'Enlace del formulario copiado: mándaselo al huésped.') }
+    catch { window.prompt('Copia el enlace del formulario:', enlace) }
   }
 
   const emitidas = datos?.emitidas ?? []
-  const listas = datos?.solicitudesListas ?? []
-  return (
+    return (
     <Pagina ancho="tabla">
       <PageHeader titulo="Facturas a huéspedes" icono={<FileText size={20} />}
-        sub="Se emiten desde aquí (plataforma numera la serie). Aprobar = ✅ en Telegram."
+        sub="Plataforma numera la serie. Aprobar = ✅ en Telegram o «Aprobar y enviar» aquí."
         acciones={<a href={`/api/sivra/facturas?${query()}&formato=csv`} style={{ ...btnStyle('secundario'), minHeight: 44 }}>Exportar CSV</a>} />
 
       {datos && !datos.serie.ok && (
@@ -149,7 +197,10 @@ export default function FacturasHuespedesPage() {
       </section>
 
       {error && <div role="alert" style={{ ...cardStyle, marginBottom: 16, color: 'var(--negative)' }}>No se ha podido leer el libro: {error}</div>}
-      {aviso && <div role="status" style={{ ...cardStyle, marginBottom: 16 }}>{aviso}</div>}
+
+      <PanelCiclo datos={datos} aviso={aviso} filtro={filtro} setFiltro={setFiltro} ocupado={ocupado}
+        onPreparar={(id) => void preparar(id)} onProponer={(id) => void accion(id, 'proponer')} onReenviar={(id) => void reenviarConfirmado(id)}
+        onAprobar={aprobar} onCopiar={(e) => void copiar(e)} />
 
       <section style={{ ...cardStyle, marginBottom: 16, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
         <Stat label="Facturas emitidas" value={datos ? datos.totales.n : '—'} />
@@ -181,7 +232,7 @@ export default function FacturasHuespedesPage() {
                     <td style={{ padding: 8 }}><Estado f={f} /></td>
                     <td style={{ padding: 8, whiteSpace: 'nowrap' }}>
                       {f.tienePdf && <a href={`/api/sivra/facturas/${f.id}/pdf`} target="_blank" rel="noreferrer" style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>PDF</a>}
-                      {f.estado === 'emitida' && <button type="button" onClick={() => accion(f.id, 'reenviar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Reintentar envío</button>}
+                      {f.estado === 'emitida' && <button type="button" onClick={() => void reenviarConfirmado(f.id)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Reintentar envío</button>}
                     </td>
                   </tr>
                 ))}
@@ -192,45 +243,6 @@ export default function FacturasHuespedesPage() {
         {emitidas.length > visibles && (
           <button type="button" onClick={() => setVisibles((v) => v + PASO)} style={{ ...btnStyle('secundario'), marginTop: 12, minHeight: 44, width: '100%' }}>
             Ver más ({emitidas.length - visibles} restantes)
-          </button>
-        )}
-      </section>
-
-      {listas.length > 0 && (
-        <section style={{ ...cardStyle, marginBottom: 16 }}>
-          <h2 style={{ fontSize: 16, margin: '0 0 12px' }}>Solicitudes listas sin borrador</h2>
-          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            {listas.slice(0, PASO).map((s) => (
-              <div key={s.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-                <div style={{ minWidth: 0, flex: '1 1 220px', overflowWrap: 'anywhere' }}>
-                  <strong>{s.receptorNombre}</strong> · {s.receptorNif} · {s.piso} · reserva {s.reservationId}
-                  <div style={{ fontSize: 13, color: 'var(--muted)' }}>{s.email}{s.cc.length > 0 && ` · CC: ${s.cc.join(', ')}`}</div>
-                </div>
-                <button type="button" onClick={() => preparar(s.id)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Preparar borrador → Telegram</button>
-              </div>
-            ))}
-          </div>
-          {listas.length > PASO && <p style={{ color: 'var(--muted)', fontSize: 13 }}>Se muestran las primeras {PASO} de {listas.length}.</p>}
-        </section>
-      )}
-
-      <section style={{ ...cardStyle, marginBottom: 16 }}>
-        <h2 style={{ fontSize: 16, margin: '0 0 12px' }}>Borradores pendientes de aprobar</h2>
-        {datos && datos.borradores.length === 0 && <p style={{ color: 'var(--muted)' }}>Ninguno.</p>}
-        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-          {(datos?.borradores ?? []).slice(0, borradoresVisibles).map((f) => (
-            <div key={f.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-              <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-                <strong>{f.receptorNombre}</strong> · {f.piso} · reserva {f.reservationId}
-                <div style={{ fontSize: 13, color: 'var(--muted)' }}>Total {eur(f.total)} (IVA incluido)</div>
-              </div>
-              <button type="button" onClick={() => accion(f.id, 'proponer')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Reenviar a Telegram</button>
-            </div>
-          ))}
-        </div>
-        {(datos?.borradores.length ?? 0) > borradoresVisibles && (
-          <button type="button" onClick={() => setBorradoresVisibles((v) => v + PASO)} style={{ ...btnStyle('secundario'), marginTop: 12, minHeight: 44, width: '100%' }}>
-            Ver más ({(datos?.borradores.length ?? 0) - borradoresVisibles} restantes)
           </button>
         )}
       </section>
