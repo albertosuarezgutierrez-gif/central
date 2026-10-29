@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-29T12:26:02Z",
+  "generadoEn": "2026-10-29T14:36:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3701,7 +3701,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 48
+        "evidencias": 51
       },
       "rrhh": {
         "presente": false,
@@ -5718,6 +5718,7 @@
       "/api/sivra/facturas/[id]/pdf",
       "/api/sivra/facturas/reservas",
       "/api/sivra/facturas/solicitud",
+      "/api/sivra/facturas/solicitud/preparar",
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
@@ -7253,7 +7254,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1869,
+    "apis": 1870,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
