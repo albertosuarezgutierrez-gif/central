@@ -1,0 +1,31 @@
+{
+ "sesion": "237d02c5-32b7-55ef-bee0-79c19a4cb96b",
+ "inicio": "2026-10-29T07:53:34.806Z",
+ "fin": "2026-10-29T07:53:58.266Z",
+ "llamadas": 5,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 742,
+   "chars_out": 843,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "PushNotification": 1
+   }
+  },
+  "sql": {
+   "llamadas": 3,
+   "chars_in": 895,
+   "chars_out": 46403,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 3
+   }
+  }
+ }
+}
