@@ -7,6 +7,7 @@ import {
   eventosDePolizas,
   planificarAvisos,
   textoPushCima,
+  urlPushCima,
   type PolizaParaAviso,
 } from './avisos-cima.ts'
 import { tramitacionSiniestro } from './siniestro-tramitacion.ts'
@@ -67,6 +68,7 @@ test('con la póliza ya sembrada, lo nuevo se envía y lo sellado no se repite',
   })
   const plan = planificarAvisos([nuevo], selladas, NADA, HOY)
   assert.deepEqual(plan.enviar.map((e) => e.tipo), ['recibo_nuevo'])
+  assert.equal(urlPushCima(plan.enviar), `/boveda/poliza/${nuevo.id}#recibo-2026-09-20-2026-10-01`)
   assert.equal(plan.sellarSiempre.length, 0)
 })
 
@@ -168,4 +170,31 @@ test('póliza de otra persona (autorizada): el texto no dice «tu»', () => {
   const eventos = eventosDePolizas([poliza({ ajena: true, siniestros: [siniestro({ estado: 'cerrado' })] })])
   for (const e of eventos) assert.ok(!/\btu\b/i.test(e.texto), e.texto)
   assert.match(eventos[0].texto, /que sigues/)
+})
+
+// ─── Destino de la notificación (29/10/2026): la póliza concreta y, si hay, el dato concreto ───
+import { eventosDePolizas as evsUrl, eventosPolizasNuevas as nuevasUrl, urlPushCima as urlUrl, anclaRecibo as ancUrl, type EventoCima as EvUrl } from './avisos-cima.ts'
+
+const polUrl = (id: string, extra = {}) => ({ id, ramo: 'Hogar', compania: 'Mapfre', recibos: [], siniestros: [], ...extra })
+const evTest = (polizaId: string, url?: string) => ({ clave: polizaId + (url ?? ''), tipo: 'siniestro', polizaId, lista: 'siniestros', fecha: null, texto: 't', url }) as EvUrl
+
+test('poliza_nueva lleva a la ficha de esa póliza', () => {
+  const [e] = nuevasUrl([{ id: 'p 1', ramo: 'Hogar', compania: 'Mapfre', sustituyeA: null } as never])
+  assert.equal(e.url, '/boveda/poliza/p%201')
+})
+test('siniestro lleva a la ficha con ancla del siniestro', () => {
+  const [e] = evsUrl([polUrl('p1', { siniestros: [{ id: 's9', estado: 'abierto', fechaHora: null, tramitacion: null }] })])
+  assert.equal(e.url, '/boveda/poliza/p1#siniestro-s9')
+})
+test('recibo lleva a la ficha con ancla del recibo (mismas fechas que la fila)', () => {
+  const emi = new Date('2026-10-01T00:00:00Z'), ven = new Date('2026-11-01T00:00:00Z')
+  const [e] = evsUrl([polUrl('p1', { recibos: [{ situacion: 'emitido', fechaEmision: emi, fechaVencimiento: ven }] })])
+  assert.equal(e.url, '/boveda/poliza/p1#recibo-2026-10-01-2026-11-01')
+  assert.equal(e.url!.split('#')[1], ancUrl(emi, ven))
+})
+test('varias novedades de la MISMA póliza van a su ficha sin ancla', () => {
+  assert.equal(urlUrl([evTest('p1', '/boveda/poliza/p1#siniestro-a'), evTest('p1', '/boveda/poliza/p1#recibo-x')]), '/boveda/poliza/p1')
+})
+test('novedades de VARIAS pólizas van a la bóveda', () => {
+  assert.equal(urlUrl([evTest('p1', '/boveda/poliza/p1'), evTest('p2', '/boveda/poliza/p2')]), '/boveda')
 })

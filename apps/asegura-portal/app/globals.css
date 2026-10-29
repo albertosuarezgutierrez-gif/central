@@ -4700,3 +4700,11 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
   [data-imprimir-etiquetas='si'] .etiqueta-vehiculo { width: 96mm; padding: 6mm; border: 1px solid var(--text); break-inside: avoid; }
   [data-imprimir-etiquetas='si'] .etiqueta-vehiculo-qr { width: 45mm; }
 }
+
+/* Destino de una notificación push (#siniestro-… / #recibo-…): que no quede tapado y se vea cuál es. */
+.siniestro:target,
+.recibo:target {
+  scroll-margin-top: 72px;
+  outline: 2px solid var(--acento, currentColor);
+  outline-offset: 2px;
+}

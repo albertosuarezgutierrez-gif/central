@@ -11,6 +11,17 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (29/10/2026) Push · clic robusto en todas las apps + mejoras del portal asegura
+- sivra, rrhh, ia-rest (sw.js y sw-alertas.js): mismo fallo que el portal (navigate sin catch / solo focus / ignora data.url) → patrón URL absoluta + try/catch + openWindow. Alertas de voz: prioriza la ventana ya en /edge.
+- Portal: `tag` por póliza (`poliza-<id>`/`anadida-<id>`, renotify), botón «Ver recibo» en devueltos, tags separados por origen (`cima-poliza-`, `oblig-poliza-`, `oblig-anadida-`); el contador del icono lo sigue llevando SOLO `Campana.tsx` (se descartó un segundo contador que lo pisaba). Helpers en `module-seguros-portal/src/push-aviso.ts` con cepos vistos en rojo.
+- No hecho: medir aperturas (no hay tabla/endpoint de eventos en el portal; decidir dónde guardarlo). No hay ancla «cómo pagar» en la ficha.
+
+## (29/10/2026) Portal asegura · tocar la push de recibo abre la ficha de la póliza
+- Causa doble: `recibo_nuevo/devuelto` (y siniestros) sin `url` en `module-seguros-portal/src/avisos-cima.ts` → `/boveda`; y `sw.js` hacía `navigate()` sin `catch` (rechaza en PWA/iOS) → se quedaba en la pantalla previa.
+- Arreglo: url `/boveda/poliza/<id>`; SW con URL absoluta, try/catch y respaldo `openWindow`. Cepo en `avisos-cima.test.ts` (visto en rojo).
+- Ampliado: toda push de póliza abre su ficha (`poliza_nueva/modificada`, obligaciones del cron → póliza o `/boveda/anadida/<id>`); recibo y siniestro bajan a su fila (`#recibo-<emisión>-<venc>`, `#siniestro-<id>`). Agrupadas de una sola póliza → su ficha.
+- Pendiente: SW de sivra/rrhh/ia-rest no revisados; anclas no vistas en navegador real.
+
 ## (29/10/2026) Sivra · factura del huésped: SIN envío automático (revierte la excepción de #5251)
 - Retirado el cron `/api/cron/sivra-facturas-salida` (+ `salida-auto/decision.ts`, `{automatico}` de `emitir.ts`). Disparador = el mensaje del huésped: `orquestador.ts` → `rellenarDesdeChat` → si completa, `proponerSiCompleta` (chat.ts: reclamo pendiente→completada, UN Telegram) → borrador con ✅ Enviar (`fhu_emi`) / ✏️ Modificar (`/sivra/facturas?reserva=`). El formulario manda el mismo Telegram.
 - Al huésped ya no se le promete fecha («tomo nota; te la envío en cuanto la revise»). Cepo `lib/sivra/facturas/sin-boton.test.ts` (visto en rojo). CLAUDE.md raíz y plataforma: línea nueva. Columnas `auto_aviso_*` quedan sin uso.

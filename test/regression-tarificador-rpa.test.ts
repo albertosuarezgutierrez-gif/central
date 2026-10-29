@@ -473,9 +473,13 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarExploracionAutorizada'))
   if (!fn) out.push('falta pulsarExploracionAutorizada en guard.ts')
   else {
-    const abrir = fn.indexOf('abrir(hasta, [endpoint, ...extras])')
+    const abrir = fn.indexOf('abrir(hasta, [endpoint, ...extras], ajaxAvance)')
     const clic = fn.indexOf('.click(')
-    for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'comprobarBoton(desc, { permitirAceptar: true })']) {
+    for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'comprobarBoton(desc, { permitirAceptar: true })',
+      // 0.3.18: avance SIN TEXTO (input submit de Fidelidade): su regla estrecha + el DOM VIVO + sin texto de acción final, todo ANTES de abrir.
+      'avanceSinTextoAutorizado(aut.entrada, aut.el, aut.marco)', 'causaNoEsAvanceSinTextoVivo(boton, sinTexto)', 'hayTextoAccionFinalVivo(page, sinTexto.textoAccionFinal)', 'vigilanciaVivaAvancePorId(page, sinTexto.nuncaConTitulo)',
+      // 0.3.18: «Aceptar» sin id con onclick exacto (ePAC eventoSiguienteDialog): sin otros manejadores ni form* VIVOS, antes de abrir.
+      'sinOtrosManejadoresVivo(boton)']) {
       const i = fn.indexOf(p)
       if (i < 0 || abrir < 0 || i > abrir || abrir > clic) out.push(`pulsarExploracionAutorizada: «${p}» tiene que ir ANTES de abrir la ventana y pulsar`)
     }
@@ -529,6 +533,17 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
   assert.notEqual(sinAut, guard)
   assert.notDeepEqual(infraccionesExplorador(explorador, sinAut, otros), [], 'guard sin autorización')
   assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarExploracionAutorizada(page, guard, b, a)' }), [], 'otro fichero la llama')
+  // 0.3.18: el avance sin texto sin su comprobación VIVA (o sin la vigilancia de texto final) = rojo.
+  for (const [nombre, de, a] of [
+    ['avance sin texto sin DOM vivo', "const causa = await causaNoEsAvanceSinTextoVivo(boton, sinTexto)", "const causa = null"],
+    ['avance sin texto sin texto de acción final', "if (await hayTextoAccionFinalVivo(page, sinTexto.textoAccionFinal))", "if (false)"],
+    ['avance sin texto sin vigilancia de precio/título', "const vivo = await vigilanciaVivaAvancePorId(page, sinTexto.nuncaConTitulo)", "const vivo = { precio: false, titulo: false }"],
+    ['avance sin id con onclick sin mirar manejadores vivos', "!(await sinOtrosManejadoresVivo(boton))", "false"],
+  ] as const) {
+    const sinVivo = guard.replace(de, a)
+    assert.notEqual(sinVivo, guard, `el cepo «${nombre}» no cambió nada`)
+    assert.notDeepEqual(infraccionesExplorador(explorador, sinVivo, otros), [], nombre)
+  }
   // Cepos del «Guardar» de modal (14/10/2026): cada brazo, en ROJO.
   const cambia = (src: string, de: string, a: string) => {
     const r = src.replace(de, a)

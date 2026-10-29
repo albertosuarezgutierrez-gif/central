@@ -13,6 +13,8 @@ import {
   tonoSituacionRecibo,
   etiquetaSituacionRecibo,
   fechaDeCobro,
+  anclaRecibo,
+  anclaSiniestro,
 } from '@central/module-seguros-portal'
 
 import Link from 'next/link'
@@ -474,7 +476,7 @@ export function RecibosDePoliza({
             // La `key` es el índice porque `poliza_recibos.id` NO se pide al
             // `select`: traerlo solo para esto sería sacar un identificador de
             // BD a la vista sin que nada de la pantalla lo use.
-            <li className="recibo" key={i} data-tono={tono}>
+            <li className="recibo" key={i} id={anclaRecibo(rec.fechaEmision, rec.fechaVencimiento)} data-tono={tono}>
               <span className="recibo-importe">
                 {/* `null` = el EIAC no traía un importe legible. Un 0€ inventado
                     aquí sería un cobro que nadie hizo. */}
@@ -653,7 +655,7 @@ export function HistorialSiniestros({
           const cuando = fechaEs(s.fechaHora)
           const tono = tonoEstadoSiniestro(s.estado)
           return (
-            <li key={s.id} className="siniestro" data-tono={tono}>
+            <li key={s.id} id={anclaSiniestro(s.id)} className="siniestro" data-tono={tono}>
               <span className="siniestro-fecha">
                 {/* Es la fecha del HECHO, y se dice cuál es: sin la palabra, en
                     una lista de siniestros se lee como la de resolución. */}

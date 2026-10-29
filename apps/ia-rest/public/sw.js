@@ -120,14 +120,29 @@ self.addEventListener('push', e => {
 })
 
 // ── NOTIFICATION CLICK ────────────────────────────────
-self.addEventListener('notificationclick', e => {
+self.addEventListener('notificationclick', (e) => {
   e.notification.close()
-  const url = e.notification.data?.url || '/edge'
+  const crudo = (e.notification.data && e.notification.data.url) || '/edge'
+  let destino
+  try {
+    destino = new URL(crudo, self.location.origin)
+    if (destino.origin !== self.location.origin) destino = new URL('/edge', self.location.origin)
+  } catch {
+    destino = new URL('/edge', self.location.origin)
+  }
+  const href = destino.href
   e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-      const edge = clients.find(c => c.url.includes('/edge'))
-      if (edge) return edge.focus()
-      return self.clients.openWindow(url)
-    })
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (lista) => {
+      for (const c of lista) {
+        if (!('focus' in c)) continue
+        try {
+          const nav = 'navigate' in c ? await c.navigate(href) : null
+          return await (nav || c).focus()
+        } catch {
+          // navigate rechaza con ventanas no controladas (PWA instalada / iOS): se abre una nueva
+        }
+      }
+      return self.clients.openWindow(href)
+    }),
   )
 })

@@ -801,7 +801,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.17', () => assert.equal(EXPLORADOR_VERSION, '0.3.17'))
+test('versión 0.3.19', () => assert.equal(EXPLORADOR_VERSION, '0.3.19'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`
@@ -1121,5 +1121,121 @@ test('revisión 0.3.17 · ePAC: el «Aceptar» sin id en el marco del SERVLET no
   } finally {
     await context.close()
     figuras = FIGURAS()
+  }
+})
+
+// ─── 0.3.18 · ePAC «Selección de Municipio»: «Aceptar» SIN id con onclick EXACTO `eventoSiguienteDialog()` (real 29/10/2026) ─────────────
+
+/** Botón `type=button`, sin id, `onclick="eventoSiguienteDialog()"`. El manejador envía el formulario a control.do (o el cuerpo dado). */
+const MUNICIPIO_DIALOGO = (opts: { attrs?: string; extra?: string; cuerpoPost?: string; manejador?: string } = {}) => PAGINA(`
+  <form id="f" method="post" action="/drvp00/main/control.do">
+    <h2>Datos del Vehículo</h2><h2>Selección de Municipio</h2><h2>Tomador y Conductor Principal</h2>
+    <table><tr><td>Municipio</td><td><select id="muni"><option value="1">Uno</option></select></td></tr></table>
+    <button type="button" class="btn btn-block alz-wm-btn" onclick="eventoSiguienteDialog()" ${opts.attrs ?? ''}>Aceptar</button>
+    ${opts.extra ?? ''}
+  </form>
+  <script>function eventoSiguienteDialog(){ ${opts.manejador ?? (opts.cuerpoPost ? `fetch('/drvp00/main/control.do', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: '${opts.cuerpoPost}' }).catch(() => {})` : "document.getElementById('f').submit()")} }</script>`)
+const BOTON_DIALOGO = 'button.alz-wm-btn'
+
+test('0.3.18 · ePAC: «Aceptar» sin id con onclick eventoSiguienteDialog() avanza (UN POST a control.do) y llega al precio', async () => {
+  municipio = MUNICIPIO_DIALOGO()
+  const { context, page, guard } = await abrir(CONTROL)
+  try {
+    const { cap, el } = await capturaAceptarSinId(page)
+    assert.equal(el.onclick, 'eventoSiguienteDialog()')
+    assert.equal(el.id, undefined)
+    await cap.liberar()
+    const fin = await bucleExploracion(page, contexto(page, guard, (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'avanzar', ref: elementos(inv).find((e) => e.tag === 'button' && e.texto === 'Aceptar')!.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+      const imp = inv.marcos.flatMap((m) => m.importes ?? [])
+      return respuesta([{ accion: 'terminar', refsPrecio: [imp[0].ref] }], 'resultado')
+    }))
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.equal(peticiones.filter((p) => p.metodo === 'POST' && p.ruta === CONTROL).length, 1)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+    municipio = ''
+  }
+})
+
+test('0.3.18 · ePAC: vigilancia VIVA del «Aceptar» con eventoSiguienteDialog(): otro onclick, id, submit, form*, otros manejadores, segundo «Aceptar», título o precio → no se pulsa', async () => {
+  municipio = MUNICIPIO_DIALOGO()
+  const prueba = async (nombre: string, antes: (page: Page) => Promise<unknown>, esperado: RegExp) => {
+    const { context, page, guard } = await abrir(CONTROL)
+    try {
+      const { cap, marco, el } = await capturaAceptarSinId(page)
+      await antes(page)
+      const e = await pulsarExploracionAutorizada(page, guard, page.locator(BOTON_DIALOGO), { entrada: MP, el, marco }).then(() => null, (x: unknown) => x)
+      await cap.liberar()
+      assert.ok(e instanceof EmisionBloqueadaError && esperado.test(e.message), `${nombre}: ${String(e)}`)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST'), nombre)
+    } finally {
+      await context.close()
+    }
+  }
+  const set = (a: string, v: string) => (p: Page) => p.evaluate(([x, y]) => { document.querySelector('button.alz-wm-btn')!.setAttribute(x, y) }, [a, v])
+  await prueba('onclick con añadido', set('onclick', 'eventoSiguienteDialog(); otra()'), /sin id\/onclick/)
+  await prueba('otro onclick', set('onclick', 'eventoSiguiente()'), /sin id\/onclick/)
+  await prueba('id sobrevenido', set('id', 'otro'), /sin id\/onclick/)
+  await prueba('type submit', set('type', 'submit'), /otros manejadores/)
+  for (const a of ['formaction', 'form', 'formmethod', 'formtarget', 'onmousedown', 'onpointerup']) await prueba(a, set(a, 'x'), /otros manejadores/)
+  await prueba('ng-click', set('ng-click', 'x'), /sin id\/onclick/)
+  await prueba('segundo Aceptar vivo', (p) => p.evaluate(() => { const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Aceptar'; document.body.appendChild(b) }), /único con ese texto/)
+  await prueba('título vivo', (p) => p.evaluate(() => { const h = document.createElement('h2'); h.textContent = 'Resumen y emisión'; document.body.appendChild(h) }), /título vivo/)
+  await prueba('precio vivo', (p) => p.evaluate(() => { const t = document.createElement('p'); t.textContent = '47,55 €'; document.body.appendChild(t) }), /precio/)
+  municipio = ''
+})
+
+test('0.3.18 · ePAC: el POST de eventoSiguienteDialog() a control.do pasa la inspección ESTRICTA (emitir/confirmar/IBAN abortan, no llegan)', async () => {
+  for (const cuerpo of ['action=contract', 'accion=confirmar', 'evento=firmar', 'iban=ES0000000000000000000000']) {
+    municipio = MUNICIPIO_DIALOGO({ cuerpoPost: cuerpo })
+    const { context, page, guard } = await abrir(CONTROL)
+    try {
+      const { cap, marco, el } = await capturaAceptarSinId(page)
+      await pulsarExploracionAutorizada(page, guard, page.locator(BOTON_DIALOGO), { entrada: MP, el, marco }).catch(() => undefined)
+      await page.waitForTimeout(500)
+      assert.ok(guard.violacion() instanceof EmisionBloqueadaError, cuerpo)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST' && p.cuerpo.includes(cuerpo)), `${cuerpo}: no llegó al servidor`)
+      await cap.liberar()
+    } finally {
+      await context.close()
+    }
+  }
+  municipio = ''
+})
+
+test('0.3.18 · ePAC: si eventoSiguienteDialog() abre un confirm() NATIVO, el robot NO confirma (se descarta, no hay POST) y para', async () => {
+  municipio = MUNICIPIO_DIALOGO({ manejador: "if (confirm('¿Municipio correcto?')) document.getElementById('f').submit()" })
+  const { context, page, guard } = await abrir(CONTROL)
+  try {
+    const { cap, marco, el } = await capturaAceptarSinId(page)
+    const e = await pulsarExploracionAutorizada(page, guard, page.locator(BOTON_DIALOGO), { entrada: MP, el, marco }).then(() => null, (x: unknown) => x)
+    await cap.liberar()
+    assert.ok(e instanceof EmisionBloqueadaError && /diálogo/.test(e.message), String(e))
+    assert.ok(!peticiones.some((p) => p.metodo === 'POST'))
+  } finally {
+    await context.close()
+    municipio = ''
+  }
+})
+
+test('0.3.18 · ePAC: el diálogo HTML que abre eventoSiguienteDialog() con su propio «Aceptar» deja DOS «Aceptar»: el del diálogo no se autoriza', async () => {
+  municipio = MUNICIPIO_DIALOGO({ manejador: "var d = document.createElement('div'); d.setAttribute('role', 'dialog'); d.innerHTML = '<p>Confirme el municipio</p><button type=\"button\" class=\"dlg\">Aceptar</button>'; document.body.appendChild(d)" })
+  const { context, page, guard } = await abrir(CONTROL)
+  try {
+    const { cap, marco, el } = await capturaAceptarSinId(page)
+    await pulsarExploracionAutorizada(page, guard, page.locator(BOTON_DIALOGO), { entrada: MP, el, marco })
+    await cap.liberar()
+    const cap2 = (await capturarInventarioExploracion(page))!
+    const m2 = cap2.inventario.marcos.find((m) => m.elementos.some((x) => x.clase === 'dlg'))!
+    const dlg = m2.elementos.find((x) => x.clase === 'dlg')!
+    const e = await pulsarExploracionAutorizada(page, guard, page.locator('button.dlg'), { entrada: MP, el: dlg, marco: m2 }).then(() => null, (x: unknown) => x)
+    await cap2.liberar()
+    assert.ok(e instanceof EmisionBloqueadaError, String(e))
+    assert.ok(!peticiones.some((p) => p.metodo === 'POST'))
+  } finally {
+    await context.close()
+    municipio = ''
   }
 })
