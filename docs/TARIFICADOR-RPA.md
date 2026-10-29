@@ -63,6 +63,12 @@ un riesgo al que le falte algo para alguna compañía (patinete: marca → model
 - **Ciclo de despliegue**: mergear → `tarificador-rpa-imagen.yml` → cancelar los trabajos atascados del cliente de prueba → `tarificador-relanzar.yml` (probar o explorar) con ~75 s entre lanzamientos → leer `seguros.tarificacion_trabajos` junto con `tarificador_exploraciones` y `tarificador_exploracion_pasos`.
 - **Pendientes**: Mapfre auto (2.º cliente, coberturas, comparativa, borrador); /datos unificado por ramo con filtro previo al bot; patinete: marca/modelo/versión por compañía y mapeo de aviso-web-reglas de patinete a «otros»; hogar en Mapfre y Generali.
 
+### Aprendizajes 29/10/2026 (explorador 0.3.12→0.3.14)
+- **Fidelidade**: el diálogo de cookies se cierra con «Sí, acepto cookies» (rechazar lleva a SemCookies.aspx y rompe el login). Ruta: Oficina Virtual (aparece 3 veces, equivalentes → barra de navegación o el primero) › Nuevo proyecto › dos productos → «Simulación» SOLO en la tarjeta 4216 Fidelidade Vivienda (nunca EMPRESAS 4215) › formulario de datos (carga lenta, ~60 s).
+- **Allianz patinete (ePac)**: «Aceptar» de Figuras Intervinientes hace POST a `/drvp00/main/control.do` → permitido solo `#btnAceptar` exacto, mismo origen y filtro estricto de cuerpo (`cuerpoLlevaAccionFinal`). Siguiente pantalla: Datos del Vehículo · Municipio · Tomador y Conductor.
+- **Mapfre patinete**: «Contratación» como título de sección no es emisión (`titulo:contrat` → `/contrat(?!acion)/`). Pantalla NSE «Oferta / contratación» con tabla de productos comerciales; radio de consentimiento pendiente de decisión de Alberto (posible falso positivo por la palabra «comercial»).
+- **Validador IA**: `pantalla.nombre` se recorta a 60; la clave «motivo» se ignora en marcar; `onclick` hasta 200 caracteres (JSF mojarra los supera de 80).
+
 ## Plan de robustez (fases)
 - **F1 (este PR)**: fijo → aprendido → IA en la capa común; Mapfre Auto (entrada + campos) y Allianz Comunidades (campos +
   «Calcular») la usan. **IA escalonada**: 1º modelo por defecto (barato), 2º el potente solo si el 1º no señala nada; tope de € por
@@ -120,6 +126,7 @@ un riesgo al que le falte algo para alguna compañía (patinete: marca → model
 1. **Familiarizarse con cada intranet** (Allianz, Mapfre, Generali) para más ramos: hogar primero, luego comunidades y los que se vayan añadiendo; el explorador mapea cada producto antes de escribir el adaptador.
 2. **Tarificación de humo nocturna**: una tarificación de prueba por compañía y ramo cada noche; si alguna no da precio, alerta por Telegram (`core-telegram`) con compañía, ramo y motivo de fin, sin datos personales.
 3. **Hogar precargado desde Catastro** (`@central/core-catastro`): desde la dirección (CP → municipio → calle → número) se rellenan superficie, año de construcción y uso antes de tarificar, sin reteclear.
+4. **DECISIÓN 29/10 (Alberto):** cuando Fidelidade, Allianz y Mapfre den precio, extraer a un CATÁLOGO DE PATRONES DE INTRANET común (cookies/RGPD, enlaces repetidos equivalentes, producto→Simulación/Tarificar, títulos de pantallas de datos vs emisión, variantes de tipo de documento) para que cada compañía nueva solo declare su ruta de entrada y excepciones; las intranets funcionan casi igual con palabras parecidas.
 
 Descartadas por ahora: tarea manual de respaldo, límite por compañía/hora, comprobación de precio + evidencia.
 

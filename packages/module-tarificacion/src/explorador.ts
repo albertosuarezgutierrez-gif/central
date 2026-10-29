@@ -61,6 +61,13 @@ export type AvancePorId = {
   destinosPost?: readonly string[]
   /** Ningún título de la pantalla puede casar (si dice «Tarificar», «Revisión», «Emisión»… no se avanza). */
   nuncaConTitulo: RegExp
+  /**
+   * 0.3.14: la lista de títulos del inventario puede llegar RECORTADA (tope {@link MAX_TITULOS_MARCO}; una pantalla de datos con
+   * muchos `th`/`legend` lo alcanza). Con este indicador el validador no se rinde por eso: los títulos que SÍ llegaron siguen sin poder
+   * casar `nuncaConTitulo`, y el guard del worker repite la comprobación VIVA sobre TODOS los encabezados de TODOS los marcos y sobre
+   * todo importe visible antes del clic (`vigilanciaVivaAvancePorId`, sin tope). Solo para reglas que pasan por esa puerta.
+   */
+  toleraTitulosRecortados?: true
 }
 
 /**
@@ -132,7 +139,10 @@ const SIGUIENTE_EPAC_DRVP00: AvancePorId = Object.freeze({
   rutaMarco: '/drvp00/SEAServlet',
   // Real 28/10/2026: «Aceptar» de «Figuras Intervinientes» envía el POST a /drvp00/main/control.do (desde /drvp00/SEAServlet).
   destinosPost: Object.freeze(['/drvp00/main/control.do']),
-  nuncaConTitulo: ACEPTAR_DATOS_BASICOS.nuncaConTitulo,
+  // 0.3.14 (revisión): con títulos recortados el guard VIVO es la única mirada a los títulos 21+; además de los de «Datos básicos»,
+  // un «Resumen» o una «Formalización» tampoco son pantalla de datos (fail-closed: el explorador para con «título vivo»).
+  nuncaConTitulo: /tarific|revisi|emisi|contrat|pago|firma|iban|resumen|formaliz/,
+  toleraTitulosRecortados: true as const,
 })
 
 export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> = Object.freeze({
@@ -1020,8 +1030,9 @@ export function esAceptarDivAutorizado(entrada: string, el: ElementoInventario, 
 export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
   if (!e || typeof el.texto !== 'string') return false
-  // Lista de títulos en el TOPE = recortada: el título de Tarificar podría ser justo el que no llegó → ningún «Aceptar».
-  if ((marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO || (marco.titulosPantalla?.length ?? 0) >= MAX_TITULOS_MARCO) return false
+  // Lista de títulos en el TOPE = recortada: el título de Tarificar podría ser justo el que no llegó → ningún «Aceptar» POR TÍTULO.
+  // (El avance por identidad exacta decide por su cuenta si tolera el recorte; ver `toleraTitulosRecortados`.)
+  if (titulosRecortados(marco)) return avancePorIdAutorizado(entrada, el, marco) !== null
   // Autoriza SOLO un título de pantalla (h1-h6/legend), nunca el `th` de una tabla; prohíbe CUALQUIER título.
   const dePantalla = (marco.titulosPantalla ?? []).map(plano)
   const todos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
@@ -1029,6 +1040,9 @@ export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marc
   if (e.avancesAutorizados.some((a) => a.texto.test(texto) && dePantalla.some((t) => a.enTitulo.test(t)) && !todos.some((t) => a.nuncaConTitulo.test(t)))) return true
   return avancePorIdAutorizado(entrada, el, marco) !== null
 }
+
+/** La lista de títulos del marco llegó en el TOPE (recortada): no se sabe qué decía el resto. */
+const titulosRecortados = (marco: MarcoInventario): boolean => (marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO || (marco.titulosPantalla?.length ?? 0) >= MAX_TITULOS_MARCO
 
 /** `onclick` normalizado para la comparación EXACTA de `AvancePorId` (sin espacios ni `;` final). Pura. */
 export function onclickNormalizado(onclick: string | null | undefined): string {
@@ -1054,7 +1068,7 @@ export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, m
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
   if (!e?.avancesPorId?.length || typeof el.texto !== 'string' || typeof el.id !== 'string' || typeof el.onclick !== 'string') return null
   if (truncado(el.id) || truncado(el.onclick) || truncado(el.texto)) return null
-  if ((marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO || (marco.titulosPantalla?.length ?? 0) >= MAX_TITULOS_MARCO) return null
+  const recortada = titulosRecortados(marco)
   // Con PRECIO en el marco (revisión de seguridad 28/10/2026) ya es la pantalla de resultado: su «Aceptar» puede llevar a emitir.
   if ((marco.importes?.length ?? 0) > 0) return null
   const todos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
@@ -1062,12 +1076,33 @@ export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, m
   const aria = typeof el.ariaLabel === 'string' && el.ariaLabel.trim() !== '' ? plano(el.ariaLabel) : null
   const ruta = rutaDeMarco(marco.url)
   return e.avancesPorId.find((a) =>
+    (!recortada || a.toleraTitulosRecortados === true) &&
     el.id === a.id &&
     onclickNormalizado(el.onclick) === a.onclick &&
     a.texto.test(texto) && (aria === null || a.texto.test(aria)) &&
     ruta === a.rutaMarco &&
     !todos.some((t) => a.nuncaConTitulo.test(t)),
   ) ?? null
+}
+
+/**
+ * Por qué NO se autoriza un «Aceptar» por identidad exacta (diagnóstico para el error del validador; SIN valores del portal: solo
+ * el nombre de la condición que falla). `null` si la entrada no tiene reglas de este tipo o si sí se autoriza.
+ */
+export function motivoNoAvancePorId(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  if (!e?.avancesPorId?.length) return null
+  if (avancePorIdAutorizado(entrada, el, marco)) return null
+  if (typeof el.texto !== 'string' || typeof el.id !== 'string' || typeof el.onclick !== 'string') return 'sin_id_u_onclick'
+  if (truncado(el.id) || truncado(el.onclick) || truncado(el.texto)) return 'id_u_onclick_recortado'
+  if ((marco.importes?.length ?? 0) > 0) return 'marco_con_importes'
+  const regla = e.avancesPorId.find((a) => el.id === a.id)
+  if (!regla) return 'id_distinto'
+  if (onclickNormalizado(el.onclick) !== regla.onclick) return 'onclick_distinto'
+  if (rutaDeMarco(marco.url) !== regla.rutaMarco) return 'ruta_de_marco_distinta'
+  if (titulosRecortados(marco) && !regla.toleraTitulosRecortados) return 'titulos_recortados'
+  if (!regla.texto.test(plano(el.texto))) return 'texto_distinto'
+  return 'titulo_de_tarificacion_o_emision'
 }
 
 /** Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final. */
@@ -1213,7 +1248,10 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
     for (const k of Object.keys(p)) if (!['nombre', 'tipo'].includes(k)) errores.push(`pantalla.${k.slice(0, 30)} no se admite`)
     const tipo = TIPOS_PANTALLA.find((t) => t === p.tipo)
     if (!tipo) errores.push('pantalla.tipo fuera de lista')
-    pantalla = { nombre: textoCorto(p.nombre, MAX_NOMBRE_PANTALLA, 'pantalla.nombre'), tipo: tipo ?? 'otro' }
+    // 0.3.14: `nombre` es una etiqueta INFORMATIVA (no actúa en nada): uno largo se recorta a 60, no tira el lote (Allianz patinete, 29/10/2026).
+    // El cepo de dato personal mira el texto ENTERO, antes de recortar.
+    const nombreLargo = textoCorto(p.nombre, Number.POSITIVE_INFINITY, 'pantalla.nombre')
+    pantalla = { nombre: nombreLargo === null ? null : nombreLargo.slice(0, MAX_NOMBRE_PANTALLA).trim() || null, tipo: tipo ?? 'otro' }
   }
   // `motivo` es texto libre INFORMATIVO (no es una acción): uno largo se recorta, no invalida el lote
   // (13/10/2026: un motivo de >200 car. tiró un paso 1 bueno a `parar/ambiguo`). El cepo de dato
@@ -1247,7 +1285,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         rellenar: ['accion', 'ref', 'dato'], elegir: ['accion', 'ref', 'opcion'], marcar: ['accion', 'ref'],
         avanzar: ['accion', 'ref', 'efectoEsperado', 'confianza'], terminar: ['accion', 'refsPrecio'], parar: ['accion', 'motivo'],
       }
-      for (const k of Object.keys(a)) if (!permitidas[tipo].includes(k)) errores.push(`${donde}: clave «${k.slice(0, 30)}» no se admite en ${tipo}`)
+      // 0.3.14: `motivo` fuera de `parar` es texto INFORMATIVO (Mapfre patinete, 29/10/2026): se ignora (la copia limpia no lo lleva).
+      for (const k of Object.keys(a)) if (!permitidas[tipo].includes(k) && !(k === 'motivo' && tipo !== 'parar')) errores.push(`${donde}: clave «${k.slice(0, 30)}» no se admite en ${tipo}`)
       if (tipo === 'parar' || tipo === 'terminar') {
         if (lista.length !== 1) errores.push(`${donde}: ${tipo} va SOLO`)
       }
@@ -1305,7 +1344,9 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         acciones.push({ accion: 'elegir', ref, opcion: { valor: op.valor } })
       } else if (tipo === 'marcar') {
         if (el.tag !== 'input' || (el.type ?? '').toLowerCase() !== 'radio') return void errores.push(`${donde}: marcar solo radios (nunca checkbox)`)
-        if (descripcionesElemento(el).some((d) => RE_CONSENTIMIENTO.test(plano(d)))) return void errores.push(`${donde}: radio de consentimiento`)
+        // El error nombra la PALABRA de la lista que casó (no el valor del portal) para poder decidir si es un falso positivo.
+        const clave = descripcionesElemento(el).map((d) => RE_CONSENTIMIENTO.exec(plano(d))?.[0]).find((x) => x !== undefined)
+        if (clave !== undefined) return void errores.push(`${donde}: radio de consentimiento (palabra: ${clave})`)
         acciones.push({ accion: 'marcar', ref })
       } else {
         if (i !== lista.length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
@@ -1316,7 +1357,10 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         const bloqueo = efecto === 'guardar_presupuesto'
           ? bloqueoGuardadoPresupuesto(el, { tipoPantalla: pantalla.tipo, hayImportes: importes.size > 0, presupuestoEnCurso: ctx.presupuestoEnCurso === true })
           : bloqueoAvance(ctx.entrada, el, marco)
-        if (bloqueo) return void errores.push(`${donde}: ${bloqueo}`)
+        if (bloqueo) {
+          const causa = bloqueo === 'aceptar_no_autorizado' ? motivoNoAvancePorId(ctx.entrada, el, marco) : null
+          return void errores.push(`${donde}: ${bloqueo}${causa ? ` (${causa})` : ''}`)
+        }
         // Avance por id (ePAC drvp00) con un importe en CUALQUIER marco del inventario (o ya visto antes en este trabajo): nunca.
         if (efecto !== 'guardar_presupuesto' && avancePorIdAutorizado(ctx.entrada, el, marco) && (importes.size > 0 || ctx.precioVisto === true)) {
           return void errores.push(`${donde}: avance_por_id_con_precio`)

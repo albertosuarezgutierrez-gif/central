@@ -625,7 +625,7 @@ describe('validarRespuestaExplorador', () => {
     })
 
     it('onclick recortado = bloqueante aunque el texto sea inocente', () => {
-      const i = inventario({ elementos: [{ tag: 'button', id: 'b1', texto: 'Siguiente', onclick: `irA('${'x'.repeat(120)}')` }] })
+      const i = inventario({ elementos: [{ tag: 'button', id: 'b1', texto: 'Siguiente', onclick: `irA('${'x'.repeat(300)}')` }] })
       const r = avanzar(i, 'b1')
       expect(r.ok).toBe(false)
       if (!r.ok) expect(r.errores.join()).toMatch(/onclick_truncado/)
