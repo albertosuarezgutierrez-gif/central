@@ -351,7 +351,20 @@ Responde SOLO un objeto JSON, sin prosa:
  * cadenas) y los refs rN no llevan ángulos. Misma regla que el árbol aria (`neutralizarAngulos`).
  */
 export function inventarioParaPrompt(inv: InventarioDom): string {
-  return neutralizarAngulos(JSON.stringify(inv))
+  return neutralizarAngulos(JSON.stringify(recortarOnclickParaIA(inv)))
+}
+
+/** Lo que la IA ve de un `onclick` (0.3.16): ≤200 car. con «…». El validador y el guard miran el texto COMPLETO (hasta 2000 en radios/casillas), no esto. */
+const MAX_ONCLICK_VISTO_IA = 200
+export function recortarOnclickParaIA(inv: InventarioDom): InventarioDom {
+  if (!inv.marcos.some((m) => m.elementos.some((e) => typeof e.onclick === 'string' && e.onclick.length > MAX_ONCLICK_VISTO_IA))) return inv
+  return {
+    ...inv,
+    marcos: inv.marcos.map((m) => ({
+      ...m,
+      elementos: m.elementos.map((e) => (typeof e.onclick === 'string' && e.onclick.length > MAX_ONCLICK_VISTO_IA ? { ...e, onclick: e.onclick.slice(0, MAX_ONCLICK_VISTO_IA - 1) + '…' } : e)),
+    })),
+  }
 }
 
 /** El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS. */

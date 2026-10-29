@@ -454,13 +454,13 @@ describe('0.3.14 · tolerancias del validador (Allianz patinete / Mapfre patinet
     }
   })
 
-  it('onclick de 81-200 car. (JSF) ya no se recorta a 80; de más de 200 sigue recortado = onclick_truncado', () => {
+  it('onclick de 81-200 car. (JSF) ya no se recorta a 80; de más de 2000 (0.3.16; antes 200) sigue recortado = onclick_truncado', () => {
     const jsf = "mojarra.jsfcljs(document.getElementById('formulario'),{'formulario:botonSiguiente':'formulario:botonSiguiente'},'')"
     expect(jsf.length).toBeGreaterThan(80)
     const i = inv([{ tag: 'button', texto: 'Siguiente', onclick: jsf }])
     expect(el0(i).onclick!.endsWith('…')).toBe(false)
     expect(bloqueoAvance(MF, el0(i), i.marcos[0])).toBeNull()
-    const largo = inv([{ tag: 'button', texto: 'Siguiente', onclick: 'f(' + 'a'.repeat(300) + ')' }])
+    const largo = inv([{ tag: 'button', texto: 'Siguiente', onclick: 'f(' + 'a'.repeat(2100) + ')' }])
     expect(bloqueoAvance(MF, el0(largo), largo.marcos[0])).toBe('onclick_truncado')
     const emite = inv([{ tag: 'button', texto: 'Siguiente', onclick: jsf.replace('botonSiguiente', 'botonEmitir') }])
     expect(bloqueoAvance(MF, el0(emite), emite.marcos[0])).not.toBeNull()

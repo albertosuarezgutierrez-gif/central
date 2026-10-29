@@ -351,3 +351,21 @@ test('🪤 fase de login (revisión): la CONTRASEÑA una sola vez por exploraci�
   const s = await ejecutarPaso(entradaLogin, b.d)
   assert.ok(s.tipo === 'ok' && s.respuesta.acciones.length === 3)
 })
+
+test('🪤 0.3.16: respuesta rechazada por el validador → los errores del paso dicen QUÉ acción y QUÉ ref (sin valores)', async () => {
+  const { d, registrados } = dobles()
+  d.ia = async () => JSON.stringify({
+    version: 1, pantalla: { nombre: 'Riesgo', tipo: 'formulario' },
+    acciones: [
+      { accion: 'rellenar', ref: 'm0e1', dato: 'inmueble.superficie_m2' },
+      { accion: 'marcar', ref: 'r999' },
+    ],
+    mapeo: [], motivo: null,
+  })
+  const r = await ejecutarPaso(entrada, d)
+  assert.ok(r.tipo === 'ok' && r.respuesta.acciones[0].accion === 'parar')
+  const errores = registrados[0].errores ?? []
+  assert.ok(errores.some((e) => /^rechazo acciones\[0\] rellenar m0e1: /.test(e)), errores.join(' | '))
+  // Ref inventada por la IA: no se copia al diagnóstico.
+  assert.ok(errores.some((e) => /^rechazo acciones\[1\] marcar \?: /.test(e)), errores.join(' | '))
+})

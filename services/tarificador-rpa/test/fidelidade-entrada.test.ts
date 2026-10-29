@@ -297,3 +297,46 @@ test('dos «Simulación» equivalentes en la tarjeta de Vivienda: el primero; el
     await context.close()
   }
 })
+
+/** Portal de menú REAL del 29/10/2026: las etiquetas son `<span>` sin manejador propio dentro de un contenedor del menú entero con `onclick`. */
+const portalContenedor = (conHoja: boolean) => `<!doctype html><html><body>
+<div id="menu" class="menu" onclick="reg('CONTENEDOR')">
+  <ul><li><span class="hoja">OFICINA VIRTUAL</span></li><li><span class="hoja">PROYECTO</span></li>
+  <li><span class="hoja">Nuevo proyecto</span></li><li><span class="hoja">Ver proyecto</span></li><li><span class="hoja">NO VIDA</span></li><li><span class="hoja">Ver póliza</span></li></ul>
+</div>
+<div id="tarjetas" hidden><h1>PARTICULARES - Crear nuevo proyecto</h1>
+  <div class="card"><h3>Producto 4216 · Fidelidade Vivienda</h3><button type="button" onclick="reg('SIM-VIVIENDA');formulario()">Simulación</button></div></div>
+<div id="form" hidden><label for="f1">Fecha de efecto</label><input id="f1"></div>
+<script>
+  window.pulsados = []; function reg(x){ window.pulsados.push(x) }
+  function formulario(){ setTimeout(()=>{ document.getElementById('tarjetas').hidden = true; document.getElementById('form').hidden = false }, 300) }
+  ${conHoja ? `document.addEventListener('click', (ev) => { const t = ev.target; if (t && t.classList && t.classList.contains('hoja')) { const x = t.textContent.trim(); reg(x); ev.stopPropagation(); if (x === 'Nuevo proyecto') setTimeout(()=>{ document.getElementById('tarjetas').hidden = false }, 200) } }, true)` : ''}
+</script></body></html>`
+
+async function abrirContenedor(conHoja: boolean) {
+  const context = await browser.newContext()
+  const guard = await instalarGuardEmision(context)
+  const page = await context.newPage()
+  page.setDefaultTimeout(5_000)
+  await page.route('https://mediadores.fidelidade.es/**', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: portalContenedor(conHoja) }))
+  const ctx = {
+    credenciales: { usuario: 'USUARIO_FICTICIO', contrasena: 'CLAVE_FICTICIA' },
+    log: () => undefined,
+    pausa: async () => undefined,
+    pulsar: (b: Parameters<typeof pulsar>[0]) => pulsar(b, guard),
+    exigirSinCaptcha: async () => undefined,
+    pulsarEnlaceEntrada: (b: Parameters<typeof pulsar>[0]) => pulsarEnlaceEntradaAutorizado(b, guard, 'fidelidade'),
+  } satisfies CtxEntrada
+  await page.goto(URL_INTRANET_FIDELIDADE)
+  return { context, page, ctx }
+}
+
+test('0.3.16 · menú con CONTENEDOR (onclick) y hojas sin manejador: se pulsa la HOJA exacta de cada etiqueta, nunca el contenedor', async () => {
+  const { context, page, ctx } = await abrirContenedor(true)
+  try {
+    await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
+    assert.deepEqual(await pulsados(page), ['OFICINA VIRTUAL', 'PROYECTO', 'Nuevo proyecto', 'SIM-VIVIENDA'])
+  } finally {
+    await context.close()
+  }
+})

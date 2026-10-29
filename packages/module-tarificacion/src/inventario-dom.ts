@@ -25,8 +25,20 @@ export const MAX_OPCIONES_INVENTARIO = 40
 export const MAX_TEXTO_INVENTARIO = 60
 /** Truncado de identificadores y atributos (id, name, onclick…). */
 const MAX_ATRIBUTO = 80
-/** 0.3.14: el `onclick` llega al saneado con ≤200 car. (worker) y se conserva entero hasta ahí: uno recortado a 80 bloqueaba (`onclick_truncado`) los manejadores JSF normales (`mojarra.jsfcljs(…)`). Más de 200 sigue recortado = no se pulsa. */
-const MAX_ONCLICK = 200
+/**
+ * 0.3.16: el `onclick` (de cualquier elemento: avances td/button/a/div, radios/casillas, ng-click) se conserva hasta 2000 car. para que
+ * el validador (`bloqueoAvance`, `bloqueoGuardadoPresupuesto`, `marcar`) mire emisión, acción final y envío en el texto COMPLETO
+ * (Mapfre NSE: `A4J.AJAX.Submit('formProductos',…` de «Siguiente >>» pasa de 200). A la IA se le enseña recortado a 200
+ * (`inventarioParaPrompt`). Más de 2000 sigue recortado con «…» = `onclick_truncado` (no se pulsa ni se marca).
+ */
+export const MAX_ONCLICK_INVENTARIO = 2000
+/** @deprecated nombre de 0.3.16 previo: hoy el tope vale para todo onclick ({@link MAX_ONCLICK_INVENTARIO}). */
+export const MAX_ONCLICK_CASILLA = MAX_ONCLICK_INVENTARIO
+/**
+ * 0.3.16: un onclick que el saneado DESCARTA por parecer dato personal no puede desaparecer sin más (el elemento parecería no tener
+ * manejador y el validador lo dejaría pulsar/marcar). Se sustituye por esta marca, que acaba en «…» = recortado = no se pulsa.
+ */
+export const ONCLICK_REDACTADO = '[onclick redactado]…'
 
 export type OpcionInventario = { valor: string | null; texto: string | null }
 
@@ -249,7 +261,9 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       pon('formControlName', texto(eo.formControlName, MAX_ATRIBUTO))
       pon('etiqueta', texto(eo.etiqueta, MAX_TEXTO_INVENTARIO))
       pon('texto', texto(eo.texto, MAX_TEXTO_INVENTARIO))
-      pon('onclick', texto(eo.onclick, MAX_ONCLICK))
+      const onclick = texto(eo.onclick, MAX_ONCLICK_INVENTARIO)
+      // Fail-closed: un onclick no vacío que el saneado quitó (dato personal) queda como RECORTADO, nunca como «sin onclick».
+      pon('onclick', onclick ?? (typeof eo.onclick === 'string' && eo.onclick.trim() !== '' ? ONCLICK_REDACTADO : undefined))
       pon('hrefRuta', texto(eo.hrefRuta, MAX_ATRIBUTO))
       pon('dialogo', texto(eo.dialogo, MAX_TEXTO_INVENTARIO))
       if (eo.requerido === true) el.requerido = true

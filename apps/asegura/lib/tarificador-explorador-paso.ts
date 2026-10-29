@@ -26,6 +26,8 @@ import {
   type RespuestaLogin,
   topesExplorador,
   validarRespuestaExplorador,
+  textoRechazo,
+  type ValidacionRespuesta,
   type ContextoValidacion,
   type IncidenciaEjecucion,
   type InventarioDom,
@@ -269,7 +271,9 @@ async function tx2<B>(
     const segundaContrasena = login && v.ok && contrasenaPedida(v.respuesta) && st.pasos.some((x) => esRespuestaLogin(x.respuesta) && contrasenaPedida(x.respuesta))
     const respuesta = segundaContrasena ? parar('ambiguo', 'login asistido: la contraseña ya se pidió en esta exploración (no se reenvía)')
       : v.ok ? v.respuesta : parar('ambiguo', 'respuesta de la IA rechazada por el validador')
-    const leaseHasta = await d.registrar(bd, { ...base, respuesta, errores: segundaContrasena ? ['login_contrasena_repetida'] : v.ok ? null : v.errores })
+    // 0.3.16: con el rechazo, QUÉ acción y sobre QUÉ ref (sin valores), para saber la próxima vez sobre qué elemento falló.
+    const rechazos = !v.ok && !login ? ((v as Extract<ValidacionRespuesta, { ok: false }>).rechazos ?? []).map(textoRechazo) : []
+    const leaseHasta = await d.registrar(bd, { ...base, respuesta, errores: segundaContrasena ? ['login_contrasena_repetida'] : v.ok ? null : [...v.errores, ...rechazos] })
     return { tipo: 'ok', respuesta, origen: 'ia', huella, leaseHasta }
   })
 }

@@ -10,6 +10,7 @@ import {
   MOTIVOS_FIN,
   RESERVA_IA_MS,
   cierraCabeceraTrasFallo,
+  inventarioParaPrompt,
   estadoFalloExploracion,
   exploradoValido,
   SYSTEM_EXPLORADOR,
@@ -612,4 +613,15 @@ test('0.3.12: detalleFin «titulo:contrat» / «campo:cvv» del worker llega al 
     assert.ok(r.ok && r.p.detalleFin === d)
     if (r.ok) assert.ok(huecoDeDetalleFin(r.p.motivoFin, r.p.detalleFin)?.includes(d))
   }
+})
+
+test('0.3.16 · la IA ve el onclick recortado a 200 car. (el validador del worker lo mira entero); el inventario original no se toca', () => {
+  const largo = "mojarra.jsfcljs(document.getElementById('f')," + 'x'.repeat(500) + ')'
+  const inv = sanearInventarioDom({ marcos: [{ url: 'https://wmediadores.mapfre.com/x', nombre: 'n', titulos: [], elementos: [{ tag: 'input', type: 'radio', id: 'r1', onclick: largo }, { tag: 'button', texto: 'Ok', onclick: 'f()' }] }] }, undefined, { refs: true })!
+  assert.equal(inv.marcos[0].elementos[0].onclick, largo)
+  const visto = JSON.parse(inventarioParaPrompt(inv)) as { marcos: { elementos: { onclick?: string }[] }[] }
+  assert.equal(visto.marcos[0].elementos[0].onclick!.length, 200)
+  assert.ok(visto.marcos[0].elementos[0].onclick!.endsWith('…'))
+  assert.equal(visto.marcos[0].elementos[1].onclick, 'f()')
+  assert.equal(inv.marcos[0].elementos[0].onclick, largo)
 })

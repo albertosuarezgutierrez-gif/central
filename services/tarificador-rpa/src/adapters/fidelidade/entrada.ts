@@ -66,6 +66,34 @@ function candidatos(raiz: Page | Frame, texto: string): Locator {
   return porRol.or(porTexto).locator('visible=true')
 }
 
+/** Elementos HOJA cuyo texto es exactamente `texto` (el propio `<span>`/`<a>` de la etiqueta): último recurso si ningún ancestro clicable es exacto. */
+function hojas(raiz: Page | Frame, texto: string): Locator {
+  return raiz.getByText(etiquetaExactaFidelidade(texto)).locator('visible=true')
+}
+
+/**
+ * 0.3.16 (real 29/10/2026): ¿el texto PROPIO del elemento es EXACTAMENTE la etiqueta? Un contenedor del menú entero («OFICINA VIRTUAL ·
+ * PROYECTO · Nuevo proyecto · Ver proyecto · NO VIDA · …») contiene la etiqueta pero no ES la etiqueta: no es candidato. Compara el
+ * `textContent` (o `value` / `aria-label` de un control) normalizado (sin tildes, mayúsculas ni espacios de más) con la etiqueta.
+ * Sin funciones con nombre dentro de la lambda (tsx las envuelve en `__name`, que en la página no existe).
+ */
+async function esHojaExacta(l: Locator, texto: string): Promise<boolean> {
+  const buscada = sinTildes(texto)
+  return l
+    .evaluate((el, b) => {
+      const v = (el as HTMLInputElement).value
+      const textos = [el.textContent, typeof v === 'string' ? v : '', el.getAttribute('aria-label')]
+      return textos.map((t) => String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()).some((t) => t === b)
+    }, buscada)
+    .catch(() => false)
+}
+
+async function soloHojasExactas(hallados: Locator[], texto: string): Promise<Locator[]> {
+  const out: Locator[] = []
+  for (const h of hallados) if (await esHojaExacta(h, texto)) out.push(h)
+  return out
+}
+
 async function contar(l: Locator): Promise<number> {
   return l.count().catch(() => 0)
 }
@@ -152,11 +180,21 @@ async function elegirUno(hallados: Locator[]): Promise<Locator> {
 
 /** El control visible con ese texto exacto en todos los marcos; `null` si no hay; varios → elección determinista o error descriptivo. */
 async function unicoVisible(page: Page, texto: string): Promise<Locator | null> {
-  const hallados: Locator[] = []
+  let hallados: Locator[] = []
   for (const r of raices(page)) {
     const l = candidatos(r, texto)
     const n = await contar(l)
     for (let i = 0; i < n; i++) hallados.push(l.nth(i))
+  }
+  // 0.3.16: solo HOJAS exactas (nunca el contenedor del menú que contiene la etiqueta); si ningún clicable lo es, la hoja de texto.
+  hallados = await soloHojasExactas(hallados, texto)
+  if (hallados.length === 0) {
+    for (const r of raices(page)) {
+      const l = hojas(r, texto)
+      const n = await contar(l)
+      for (let i = 0; i < n; i++) hallados.push(l.nth(i))
+    }
+    hallados = await soloHojasExactas(hallados, texto)
   }
   if (hallados.length === 0) return null
   return hallados.length === 1 ? hallados[0] : elegirUno(hallados)
@@ -346,7 +384,8 @@ async function botonSimulacionVivienda(page: Page, ms: number): Promise<Locator>
       const nb = await contar(b)
       for (let i = 0; i < nb; i++) hallados.push(b.nth(i))
     }
-    if (hallados.length >= 1) return hallados.length === 1 ? hallados[0] : elegirUno(hallados)
+    const hojasExactas = await soloHojasExactas(hallados, BOTON_SIMULACION_FIDELIDADE)
+    if (hojasExactas.length >= 1) return hojasExactas.length === 1 ? hojasExactas[0] : elegirUno(hojasExactas)
     if (Date.now() >= fin) throw new ErrorTarificador('portal', `fidelidade: no se localiza la tarjeta «Producto ${PRODUCTO_VIVIENDA_FIDELIDADE} · Fidelidade Vivienda» con su botón «${BOTON_SIMULACION_FIDELIDADE}» en ${Math.round(ms / 1000)} s (hueco)`)
     await page.waitForTimeout(500)
   }

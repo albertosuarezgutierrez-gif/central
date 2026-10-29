@@ -227,6 +227,12 @@ export type DatoCatalogo = {
   rutaRiesgo?: string
   /** Variable de entorno (contacto de Alberto). Nunca en código, tests ni logs. */
   env?: string
+  /**
+   * 0.3.16: en una exploración SIN datos reales, si la clave no tiene valor (p. ej. la matrícula de un patinete: no se inventa) el
+   * worker NO rellena ese campo y sigue (en vez de parar). Si el portal lo exige, su mensaje de campo inválido llega al inventario
+   * siguiente y se cuenta. Con datos reales no cambia nada (sale del riesgo o para).
+   */
+  omitibleSinValor?: true
 }
 
 export const ENV_EXPLORADOR_EMAIL = 'TARIFICADOR_EXPLORADOR_EMAIL'
@@ -327,6 +333,22 @@ const DATOS_AUTO: readonly DatoCatalogo[] = [
   D({ clave: 'historial.anios_asegurado', descripcion: 'Años asegurado en la compañía anterior', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '5', rutaRiesgo: 'aniosAseguradoAnterior' }),
 ]
 
+/**
+ * Riesgo de PATINETE / VMP (Allianz ePAC «Datos del Vehículo · Selección de Municipio», 29/10/2026). Datos de PRUEBA, sin PII:
+ * Xiaomi Electric Scooter 4 Pro, uso NO profesional, homologado DGT, CP 41001 / Sevilla. La MATRÍCULA no se inventa (puede ser de una
+ * persona real): sin dato real la clave no tiene valor y el worker deja el campo vacío (`omitibleSinValor`). El CP reutiliza el de
+ * circulación/pernocta de Auto.
+ */
+const DATOS_PATINETE: readonly DatoCatalogo[] = [
+  D({ clave: 'vehiculo.matricula', descripcion: 'Matrícula del patinete/VMP (sin valor de prueba: si el campo no es obligatorio, déjalo vacío)', tipo: 'texto', personal: true, fuente: 'riesgo', rutaRiesgo: 'matricula', omitibleSinValor: true }),
+  D({ clave: 'vehiculo.codigo_postal', descripcion: 'Código postal de circulación/pernocta', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: '41001', rutaRiesgo: 'codigoPostal' }),
+  D({ clave: 'vehiculo.poblacion', descripcion: 'Población/municipio de circulación/pernocta', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: 'Sevilla', rutaRiesgo: 'poblacion' }),
+  D({ clave: 'vmp.marca', descripcion: 'Marca del patinete/VMP', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: 'Xiaomi', rutaRiesgo: 'vmp.marca' }),
+  D({ clave: 'vmp.modelo', descripcion: 'Modelo del patinete/VMP', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: 'Electric Scooter 4 Pro', rutaRiesgo: 'vmp.modelo' }),
+  D({ clave: 'vmp.uso_profesional', descripcion: 'Uso profesional del patinete (Sí/No): radio «uso profesional» / «uso no profesional»', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'No', rutaRiesgo: 'vmp.usoProfesional' }),
+  D({ clave: 'vmp.homologado', descripcion: 'Patinete homologado por la DGT (Sí/No): radio «homologado»', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Sí', rutaRiesgo: 'vmp.homologado' }),
+]
+
 /** ¿Esta entrada usa al MEDIADOR como tomador? (solo las de patinete; ver {@link EntradaExploracion.tomadorMediador}). */
 export function entradaConTomadorMediador(entrada: string): boolean {
   return esEntradaExploracion(entrada) && ENTRADAS_EXPLORACION[entrada].tomadorMediador === true
@@ -339,12 +361,30 @@ export const CATALOGO_EXPLORACION: Readonly<Record<string, readonly DatoCatalogo
   hogar: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_HOGAR]),
   comunidades: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_COMUNIDADES]),
   auto: Object.freeze([...DATOS_COMUNES_AUTO, ...DATOS_AUTO]),
-  // Movilidad Personal (28/10/2026): primera pasada = mapa del formulario; solo los datos comunes (tomador, contacto, efecto).
-  patinete: Object.freeze([...DATOS_COMUNES]),
+  // Patinete/VMP (28-29/10/2026): datos comunes (tomador, contacto, efecto) + vehículo de prueba (0.3.16).
+  patinete: Object.freeze([...DATOS_COMUNES, ...DATOS_PATINETE]),
 })
 
 export function catalogoDe(ramo: string): readonly DatoCatalogo[] {
   return Object.hasOwn(CATALOGO_EXPLORACION, ramo) ? CATALOGO_EXPLORACION[ramo] : []
+}
+
+/** ¿Esta clave del ramo se puede dejar SIN rellenar si no tiene valor (exploración sin datos reales)? Ver {@link DatoCatalogo.omitibleSinValor}. */
+export function claveOmitibleSinValor(ramo: string, clave: string): boolean {
+  return catalogoDe(ramo).some((d) => d.clave === clave && d.omitibleSinValor === true)
+}
+
+/** Lo que dice el propio campo del portal (id, name, etiqueta, placeholder, aria, formControlName): para comprobar que la clave encaja. */
+const RE_CAMPO_VEHICULO_O_DIRECCION = /matr[ií]cula|c[oó]digo\s*_?postal|codigopostal|\bcp\b|poblaci[oó]n|municipio/i
+const RE_CLAVE_CONTACTO = /^contacto\.(telefono|email)$/
+
+/**
+ * 0.3.16: una clave de CONTACTO (teléfono, correo) no se escribe en un campo que se llama matrícula, código postal, población o
+ * municipio (Allianz patinete, 29/10/2026: la IA mapeó matrícula y CP a `contacto.telefono`). `true` = incompatible. Pura.
+ */
+export function claveIncompatibleConCampo(clave: string, el: ElementoInventario): boolean {
+  if (!RE_CLAVE_CONTACTO.test(clave)) return false
+  return [el.id, el.name, el.etiqueta, el.placeholder, el.ariaLabel, el.formControlName].some((t) => typeof t === 'string' && RE_CAMPO_VEHICULO_O_DIRECCION.test(t))
 }
 
 /**
@@ -930,7 +970,32 @@ export function presupuestoEnCursoDe(respuestas: readonly (RespuestaExplorador |
   return respuestas.some((r) => !!r && r.acciones.some((a) => a.accion === 'avanzar' && a.efectoEsperado === 'guardar_presupuesto'))
 }
 
-export type ValidacionRespuesta = { ok: true; respuesta: RespuestaExplorador } | { ok: false; errores: string[] }
+/**
+ * 0.3.16: diagnóstico de una acción RECHAZADA por el validador: qué acción (de la lista blanca), sobre qué ref (solo si existe en
+ * el inventario: `rN`/`mXeY`, sin datos) y la causa (el texto del error sin el prefijo). Nunca valores.
+ */
+export type RechazoAccion = { indice: number; accion: AccionExplorador | null; ref: string | null; causa: string }
+export type ValidacionRespuesta = { ok: true; respuesta: RespuestaExplorador } | { ok: false; errores: string[]; rechazos?: RechazoAccion[] }
+
+/** «rechazo acciones[1] avanzar r12: onclick_truncado» — la línea que se guarda en los errores del paso. Pura. */
+export function textoRechazo(r: RechazoAccion): string {
+  return `rechazo acciones[${r.indice}] ${r.accion ?? '?'} ${r.ref ?? '?'}: ${r.causa}`
+}
+
+/** Las acciones rechazadas de una lista de errores del validador (`acciones[i]…`), con la acción y la ref de la respuesta. Pura. */
+function rechazosDe(errores: readonly string[], lista: readonly unknown[], refs: ReadonlyMap<string, unknown>): RechazoAccion[] {
+  const out: RechazoAccion[] = []
+  for (const e of errores) {
+    const m = /^acciones\[(\d+)\]:?\s*(.*)$/.exec(e)
+    if (!m) continue
+    const indice = Number(m[1])
+    const a = obj(lista[indice])
+    const accion = ACCIONES_EXPLORADOR.find((x) => x === a?.accion) ?? null
+    const ref = typeof a?.ref === 'string' && refs.has(a.ref) ? a.ref : null
+    out.push({ indice, accion, ref, causa: m[2].slice(0, 160) })
+  }
+  return out
+}
 
 const obj = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
 const plano = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
@@ -971,8 +1036,61 @@ export function indiceRefs(inv: InventarioDom): Map<string, { el: ElementoInvent
 }
 
 const TIPOS_INPUT_TEXTO = new Set(['', 'text', 'number', 'date', 'tel', 'email', 'search'])
-/** onclick de una casilla que ENVÍA el formulario (JSF `mojarra.jsfcljs`, `.submit()`): botón disfrazado, no se marca. */
-const RE_ONCLICK_ENVIA = /jsfcljs|\bsubmit\s*\(/i
+/** 0.3.16: `submit()` / `requestSubmit()` en el onclick de una casilla: envío del formulario entero, botón disfrazado, no se marca. */
+const RE_ONCLICK_SUBMIT = /\b(submit|requestSubmit)\s*\(/i
+/** 0.3.16 (revisión): clic PROGRAMÁTICO sobre otro elemento (`x.click()`, `dispatchEvent`, `fireEvent`, jQuery `trigger('click')`). */
+const RE_ONCLICK_CLIC_AJENO = /\.\s*(?:click|dispatchEvent|fireEvent)\s*\(|\.\s*trigger\s*\(\s*['"]click/i
+/** 0.3.16: llamadas JSF/PrimeFaces/RichFaces que mandan algo al servidor (envío clásico o AJAX). */
+const RE_LLAMADA_JSF = /\b(?:mojarra\.jsfcljs|jsfcljs|mojarra\.ab|jsf\.ajax\.request|PrimeFaces\.ab|PrimeFaces\.ajax\.[A-Za-z.]+|A4J\.AJAX\.Submit|a4j\.ajax|RichFaces\.ajax)\s*\(/gi
+/** Cadenas entre comillas de un trozo de código. */
+const cadenas = (s: string) => Array.from(s.matchAll(/['"]([^'"]*)['"]/g), (m) => m[1])
+/**
+ * 0.3.16: ¿el onclick COMPLETO de una radio/casilla envía el formulario o dispara la acción de OTRO componente? Pura. Fail-closed.
+ *  - `submit(…)` / `requestSubmit(…)` o un clic programático sobre otro elemento: sí, siempre.
+ *  - Más de una llamada JSF/AJAX en el mismo onclick: sí (solo se razona sobre una).
+ *  - `jsfcljs(form, {params}, target)`: NO si todas las cadenas de `{params}` son el id o el name del propio control; si no, sí.
+ *  - AJAX `mojarra.ab` / `jsf.ajax.request` / `RichFaces.ajax` (primer argumento) y `PrimeFaces.ab` (`s:`): el ORIGEN tiene que ser
+ *    `this` o el propio control. Motivo (revisión 0.3.16): en JSF una acción de servidor la dispara el componente que figura como
+ *    ORIGEN de la petición, y su id es opaco (`j_idt88`): un ajax cuyo origen es otro componente puede ejecutar la acción de un botón
+ *    sin que ninguna palabra de emisión aparezca en el onclick ni en el cuerpo POST (la red no lo vería).
+ *  - `A4J.AJAX.Submit`: los `parameters` (que nombran el componente de acción) solo el propio control.
+ *  - Otras llamadas reconocidas (p. ej. `PrimeFaces.ajax.Request.handle`): sí (no se sabe leer su origen).
+ * La emisión («emitir», «contratar», «confirmar»…) NO se decide aquí: la mira `pareceEmision` sobre el texto completo.
+ */
+export function onclickEnviaFormulario(onclick: string | undefined, el: Pick<ElementoInventario, 'id' | 'name'>): boolean {
+  const oc = (onclick ?? '').trim()
+  if (oc === '') return false
+  if (RE_ONCLICK_CLIC_AJENO.test(oc)) return true
+  // `A4J.AJAX.Submit(` contiene «Submit(»: el envío genérico se mira con las llamadas reconocidas quitadas.
+  if (RE_ONCLICK_SUBMIT.test(oc.replace(RE_LLAMADA_JSF, '('))) return true
+  const llamadas = Array.from(oc.matchAll(RE_LLAMADA_JSF))
+  if (llamadas.length === 0) return false
+  if (llamadas.length > 1) return true
+  const propios = [el.id, el.name].filter((x): x is string => typeof x === 'string' && x !== '' && !truncado(x))
+  if (propios.length === 0) return true
+  const esPropio = (x: string) => propios.includes(x)
+  const llamada = llamadas[0]
+  const nombre = llamada[0].toLowerCase()
+  const resto = oc.slice((llamada.index ?? 0) + llamada[0].length)
+  if (nombre.includes('jsfcljs')) {
+    const mapa = /^[^{}]*\{([^}]*)\}/.exec(resto)?.[1]
+    const ids = mapa ? cadenas(mapa) : []
+    return ids.length === 0 || !ids.every(esPropio)
+  }
+  if (nombre.startsWith('a4j.ajax.submit')) {
+    const params = /['"]parameters['"]\s*:\s*\{([^}]*)\}/.exec(resto)?.[1]
+    const ids = params ? cadenas(params) : []
+    return ids.length === 0 || !ids.every(esPropio)
+  }
+  if (nombre.startsWith('primefaces.ab')) {
+    const s = /[{,]\s*['"]?s['"]?\s*:\s*(?:(this)\b|['"]([^'"]+)['"])/.exec(resto)
+    return !s || (s[1] !== 'this' && !esPropio(s[2] ?? ''))
+  }
+  if (nombre.startsWith('primefaces.ajax')) return true
+  // mojarra.ab, jsf.ajax.request, RichFaces.ajax, a4j.ajax: el origen es el PRIMER argumento.
+  const origen = /^\s*(?:(this)\b|['"]([^'"]+)['"])\s*,/.exec(resto)
+  return !origen || (origen[1] !== 'this' && !esPropio(origen[2] ?? ''))
+}
 /** Todo lo que describe a un elemento (para el guard de emisión). */
 export function descripcionesElemento(el: ElementoInventario): string[] {
   return [el.texto, el.ariaLabel, el.etiqueta, el.id, el.name, el.onclick, el.hrefRuta, el.placeholder, el.formControlName].filter((x): x is string => typeof x === 'string' && x !== '')
@@ -1324,6 +1442,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         // Las claves de CREDENCIAL solo existen en la fase de login (`validarRespuestaLogin`): aquí, nunca (aunque un catálogo las trajera).
         if (typeof a.dato === 'string' && a.dato.startsWith('credencial.')) return void errores.push(`${donde}: las claves de credencial solo valen en la fase de login`)
         if (typeof a.dato !== 'string' || !claves.has(a.dato)) return void errores.push(`${donde}: dato fuera del catálogo`)
+        // 0.3.16: el contacto (teléfono, correo) no va a un campo de matrícula, código postal o población.
+        if (claveIncompatibleConCampo(a.dato, el)) return void errores.push(`${donde}: la clave de contacto no encaja con ese campo`)
         acciones.push({ accion: 'rellenar', ref, dato: a.dato })
       } else if (tipo === 'elegir') {
         if (el.tag !== 'select' && el.tag !== 'nx-dropdown') return void errores.push(`${donde}: elegir solo en <select> o nx-dropdown`)
@@ -1350,8 +1470,11 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         // Una casilla cuyo texto/etiqueta/id/name/onclick es una ACCIÓN FINAL («Acepto y contrato», `chkEmitir`, onclick que
         // contrata) o cuyo onclick ENVÍA el formulario (submit, jsfcljs) es un botón disfrazado: no se marca. «Acepto…» sí
         // (`permitirAceptar`). El guard del worker no ve la etiqueta de un input pulsado directamente: esta es SU barrera.
+        // 0.3.16: un onclick RECORTADO (>2000 car.) esconde su final: no se marca. El completo se mira entero (emisión y envío); un
+        // refresco AJAX o la selección de fila (`jsfcljs` con el id del propio control) sin emisión SÍ se marca (Mapfre patinete).
+        if (typeof el.onclick === 'string' && truncado(el.onclick)) return void errores.push(`${donde}: onclick_truncado`)
         const desc = descripcionesElemento(el)
-        if (desc.some((d) => pareceEmision(d, { permitirAceptar: true })) || RE_ONCLICK_ENVIA.test(el.onclick ?? '')) return void errores.push(`${donde}: casilla de acción final`)
+        if (desc.some((d) => pareceEmision(d, { permitirAceptar: true })) || onclickEnviaFormulario(el.onclick, el)) return void errores.push(`${donde}: casilla de acción final`)
         acciones.push({ accion: 'marcar', ref })
       } else {
         if (i !== lista.length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
@@ -1388,6 +1511,9 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (m.campoCanonico !== null && (typeof m.campoCanonico !== 'string' || !claves.has(m.campoCanonico))) return void errores.push(`${donde}: campoCanonico fuera del catálogo`)
         const c = CONFIANZAS.find((x) => x === m.confianza)
         if (!c) return void errores.push(`${donde}: confianza fuera de lista`)
+        // 0.3.16: un mapeo contacto → campo de matrícula/CP/población es un error de la IA (informativo): se descarta esa entrada.
+        const elMapeado = refs.get(m.ref)
+        if (typeof m.campoCanonico === 'string' && elMapeado && claveIncompatibleConCampo(m.campoCanonico, elMapeado.el)) return
         mapeo.push({ ref: m.ref, campoCanonico: m.campoCanonico as string | null, confianza: c })
       })
   }
@@ -1410,7 +1536,10 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
     })
   }
 
-  if (errores.length) return { ok: false, errores: errores.slice(0, 20) }
+  if (errores.length) {
+    const rechazos = rechazosDe(errores, lista ?? [], refs)
+    return { ok: false, errores: errores.slice(0, 20), ...(rechazos.length ? { rechazos: rechazos.slice(0, 20) } : {}) }
+  }
   return { ok: true, respuesta: { version: 1, pantalla, acciones, mapeo, motivo } }
 }
 
