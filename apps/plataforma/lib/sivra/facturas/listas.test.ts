@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { solicitudesListas, type SolicitudCruda } from './listas.ts'
+import { solicitudesIncompletas, solicitudesListas, type SolicitudCruda } from './listas.ts'
 
 const base: SolicitudCruda = {
   id: 's1', reservationId: '160296956', piso: 'Socorro 24', estado: 'pendiente', receptorTipo: 'particular', receptorNombre: 'Ana Pérez',
@@ -26,4 +26,17 @@ test('se excluyen: con factura/borrador, no pendiente e inválida o incompleta',
     { ...base, id: 'f', receptorDireccion: null },
   ])
   assert.deepEqual(r, [])
+})
+
+test('incompletas: pendiente sin factura y datos que faltan → qué falta + token; las listas y las atendidas no salen', () => {
+  const t = 'T'.repeat(43)
+  const r = solicitudesIncompletas([
+    { ...base, id: 'ok', token: t },
+    { ...base, id: 'sin-nif', receptorNif: null, receptorEmail: null, token: t },
+    { ...base, id: 'con-factura', receptorNif: null, tieneFactura: true, token: t },
+    { ...base, id: 'completada', receptorNif: null, estado: 'completada', token: t },
+  ])
+  assert.deepEqual(r.map((x) => x.id), ['sin-nif'])
+  assert.equal(r[0].token, t)
+  assert.ok(r[0].faltan.some((x) => /NIF/.test(x)) && r[0].faltan.some((x) => /email/.test(x)))
 })

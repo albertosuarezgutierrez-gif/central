@@ -272,3 +272,20 @@ export async function proponerEnTelegram(facturaId: string, anterior?: bigint | 
   }
   return 'enviada'
 }
+
+/** Vista previa PDF de un BORRADOR (sin número ni validez fiscal): la misma que se manda a Telegram. `null` si no es borrador. */
+export async function pdfBorradorDe(facturaId: string): Promise<Uint8Array | null> {
+  const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: facturaId } })
+  if (!f || f.estado !== 'borrador') return null
+  const receptor = f.receptor as unknown as Receptor
+  const total = Number(f.total)
+  const { anio } = fechaMadrid(new Date())
+  const est = evaluarSerie(await serieDelAnio(f.cuentaId, anio), anio)
+  const imp = est.ok ? desglosarDesdeTotal(total, est.serie.tipoIva) : null
+  return generarPdfFactura({
+    numeroCompleto: null, fechaExpedicion: null, emisor: EMISOR_FACTURAS_HUESPED, receptor, concepto: f.concepto,
+    estanciaDesde: f.fechaOperacionDesde?.toISOString().slice(0, 10) ?? null, estanciaHasta: f.fechaOperacionHasta?.toISOString().slice(0, 10) ?? null,
+    total, base: imp?.base ?? null, tipoIva: imp?.tipoIva ?? null, cuota: imp?.cuota ?? null,
+    mencionIva: est.ok && est.serie.tipoIva === 0 ? est.serie.mencionIva : null,
+  }, { borrador: true })
+}

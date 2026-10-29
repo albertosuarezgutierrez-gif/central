@@ -3,7 +3,9 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import type { FilaLibro } from './csv'
 import type { Receptor } from './receptor'
-import { solicitudesListas, type SolicitudCruda, type SolicitudLista } from './listas'
+import { solicitudesIncompletas, solicitudesListas, type SolicitudCruda, type SolicitudCrudaToken, type SolicitudIncompleta, type SolicitudLista } from './listas'
+import { normalizarCc } from './extraer'
+import { urlFormulario } from './enlace'
 
 export type FilaListado = FilaLibro & { id: string; envioError: string | null; tienePdf: boolean }
 
@@ -85,4 +87,71 @@ export async function listarSolicitudesListas(cuentaId: string, piso: string | n
     receptorEmail: f.e, receptorDireccion: f.d, receptorCc: Array.isArray(f.cc) ? f.cc.filter((x): x is string => typeof x === 'string') : null, tieneFactura: f.fac,
   }))
   return solicitudesListas(crudas)
+}
+
+// ───────── Panel de control del ciclo (solicitud → borrador → emitida → enviada) ─────────
+
+export type FilaCiclo = FilaListado & {
+  email: string; cc: string[]; telegramMessageId: string | null
+  envioIntentos: number; emitidaAt: string | null; enviadaAt: string | null; envioCc: string[]
+}
+type CrudaCiclo = Cruda & { tg: bigint | null; intentos: number; emitida_at: Date | null; enviada_at: Date | null; cc: unknown; envio_cc: unknown }
+
+function aCiclo(r: CrudaCiclo): FilaCiclo {
+  const email = r.receptor?.email ?? ''
+  return {
+    ...aFila(r), email, cc: normalizarCc(r.cc, email), telegramMessageId: r.tg === null ? null : String(r.tg),
+    envioIntentos: r.intentos, emitidaAt: r.emitida_at ? r.emitida_at.toISOString() : null, enviadaAt: r.enviada_at ? r.enviada_at.toISOString() : null,
+    envioCc: Array.isArray(r.envio_cc) ? r.envio_cc.filter((x): x is string => typeof x === 'string') : [],
+  }
+}
+// `to_jsonb(...)->'col'`: NULL si la migración de CC aún no está aplicada (no rompe la lectura).
+const COLS_CICLO = Prisma.sql`${COLS}, f.telegram_message_id AS tg, f.envio_intentos AS intentos, f.emitida_at, f.enviada_at,
+  to_jsonb(s) -> 'receptor_cc' AS cc, to_jsonb(f) -> 'envio_cc' AS envio_cc`
+const DESDE_CICLO = Prisma.sql`FROM sivra_facturas_huesped f LEFT JOIN properties p ON p.id = f.property_id LEFT JOIN sivra_factura_solicitudes s ON s.id = f.solicitud_id`
+
+/** Borradores esperando aprobación (con email, CC y el mensaje de Telegram vigente = versión que Alberto está viendo). */
+export async function listarBorradoresCiclo(cuentaId: string, piso: string | null): Promise<FilaCiclo[]> {
+  const filas = await prisma.$queryRaw<CrudaCiclo[]>(Prisma.sql`
+    SELECT ${COLS_CICLO} ${DESDE_CICLO}
+     WHERE f.cuenta_id = ${cuentaId}::uuid AND f.estado = 'borrador' ${piso ? Prisma.sql`AND f.property_id = ${piso}` : Prisma.empty}
+     ORDER BY f.updated_at DESC LIMIT 200`)
+  return filas.map(aCiclo)
+}
+
+/** Emitidas aún sin enviar (de cualquier periodo): envío fallido (`envio_error`) o pendiente. */
+export async function listarSinEnviar(cuentaId: string, piso: string | null): Promise<FilaCiclo[]> {
+  const filas = await prisma.$queryRaw<CrudaCiclo[]>(Prisma.sql`
+    SELECT ${COLS_CICLO} ${DESDE_CICLO}
+     WHERE f.cuenta_id = ${cuentaId}::uuid AND f.estado = 'emitida' ${piso ? Prisma.sql`AND f.property_id = ${piso}` : Prisma.empty}
+     ORDER BY f.anio, f.serie_prefijo, f.numero LIMIT 200`)
+  return filas.map(aCiclo)
+}
+
+/** Enviadas en el mes en curso (hora de Madrid). */
+export async function listarEnviadasMes(cuentaId: string, piso: string | null): Promise<FilaCiclo[]> {
+  const filas = await prisma.$queryRaw<CrudaCiclo[]>(Prisma.sql`
+    SELECT ${COLS_CICLO} ${DESDE_CICLO}
+     WHERE f.cuenta_id = ${cuentaId}::uuid AND f.estado = 'enviada'
+       AND f.enviada_at >= (date_trunc('month', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid')
+       ${piso ? Prisma.sql`AND f.property_id = ${piso}` : Prisma.empty}
+     ORDER BY f.enviada_at DESC LIMIT 200`)
+  return filas.map(aCiclo)
+}
+
+/** Solicitudes pendientes de datos del huésped (sin borrador): qué falta + enlace del formulario para copiar. */
+export async function listarSolicitudesIncompletas(cuentaId: string, piso: string | null): Promise<Array<Omit<SolicitudIncompleta, 'token'> & { enlace: string }>> {
+  const filas = await prisma.$queryRaw<Array<{ id: string; rid: string; piso: string | null; estado: string; t: string | null; n: string | null; nif: string | null; p: string | null; e: string | null; d: unknown; cc: unknown; fac: boolean; token: string }>>(Prisma.sql`
+    SELECT s.id::text, s.reservation_id AS rid, p.name AS piso, s.estado, s.receptor_tipo AS t, s.receptor_nombre AS n, s.receptor_nif AS nif,
+           s.receptor_pais AS p, s.receptor_email AS e, s.receptor_direccion AS d, to_jsonb(s) -> 'receptor_cc' AS cc, s.token,
+           EXISTS (SELECT 1 FROM sivra_facturas_huesped f WHERE f.reservation_id = s.reservation_id AND f.tipo = 'ordinaria' AND f.estado <> 'rectificada') AS fac
+      FROM sivra_factura_solicitudes s LEFT JOIN properties p ON p.id = s.property_id
+     WHERE s.cuenta_id = ${cuentaId}::uuid AND s.estado = 'pendiente' AND s.expira_at > now()
+       ${piso ? Prisma.sql`AND s.property_id = ${piso}` : Prisma.empty}
+     ORDER BY s.updated_at DESC LIMIT 200`)
+  const crudas: SolicitudCrudaToken[] = filas.map((f) => ({
+    id: f.id, reservationId: f.rid, piso: f.piso, estado: f.estado, receptorTipo: f.t, receptorNombre: f.n, receptorNif: f.nif, receptorPais: f.p,
+    receptorEmail: f.e, receptorDireccion: f.d, receptorCc: null, tieneFactura: f.fac, token: f.token,
+  }))
+  return solicitudesIncompletas(crudas).map(({ token, ...resto }) => ({ ...resto, enlace: urlFormulario(token) }))
 }

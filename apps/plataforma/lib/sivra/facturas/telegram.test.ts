@@ -109,9 +109,12 @@ test('enviarFactura no reclama automáticamente un envío dudoso', () => {
 })
 
 // (6) Rendimiento UI: los borradores se pintan de 50 en 50 y la rejilla no desborda a 320 px.
-test('/sivra/facturas: borradores con «Ver más» y grid minmax(0, 1fr)', () => {
-  const page = readFileSync(new URL('../../../app/(usuario)/sivra/facturas/page.tsx', import.meta.url), 'utf8')
-  assert.match(page, /\.borradores \?\? \[\]\)\.slice\(0, borradoresVisibles\)\.map/)
-  assert.match(page, /setBorradoresVisibles\(\(v\) => v \+ PASO\)/)
-  assert.match(page, /display: 'grid', gap: 8, gridTemplateColumns: 'minmax\(0, 1fr\)'/)
+test('/sivra/facturas: panel del ciclo con plegado «Ver más» (~50) y grid minmax(0, 1fr)', () => {
+  const panel = readFileSync(new URL('../../../app/(usuario)/sivra/facturas/PanelCiclo.tsx', import.meta.url), 'utf8')
+  assert.match(panel, /items\.slice\(0, visibles\)\.map\(render\)/)
+  assert.match(panel, /setVisibles\(\(v\) => v \+ PASO\)/)
+  assert.match(panel, /gridTemplateColumns: 'minmax\(0, 1fr\)'/)
+  assert.match(panel, /Solicitudes listas sin borrador/)
+  assert.match(panel, /No hay solicitudes pendientes\./)
+  assert.match(readFileSync(new URL('../../../app/(usuario)/sivra/facturas/page.tsx', import.meta.url), 'utf8'), /<PanelCiclo /)
 })
