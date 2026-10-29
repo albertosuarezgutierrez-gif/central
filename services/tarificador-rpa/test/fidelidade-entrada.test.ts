@@ -9,7 +9,7 @@ import { ENTRADAS_EXPLORACION, nombresCredencial } from '@central/module-tarific
 import { ErrorCredenciales } from '../src/credenciales.ts'
 import { instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado } from '../src/guard.ts'
 import { PORTALES_EXPLORACION, problemaTrabajoExploracion, type CtxEntrada } from '../src/explorador.ts'
-import { elegirCandidatoFidelidade, type InfoCandidatoFidelidade, abrirFormularioViviendaFidelidade, cerrarDialogoRgpdFidelidade, esTarjetaViviendaFidelidade, etiquetaExactaFidelidade, loginFidelidade, URL_INTRANET_FIDELIDADE } from '../src/adapters/fidelidade/entrada.ts'
+import { describirSondaSimulacion, elegirCandidatoFidelidade, type InfoCandidatoFidelidade, abrirFormularioViviendaFidelidade, cerrarDialogoRgpdFidelidade, esTarjetaViviendaFidelidade, etiquetaExactaFidelidade, loginFidelidade, URL_INTRANET_FIDELIDADE } from '../src/adapters/fidelidade/entrada.ts'
 import type { Trabajo } from '../src/api.ts'
 
 let browser: Browser
@@ -336,6 +336,151 @@ test('0.3.16 · menú con CONTENEDOR (onclick) y hojas sin manejador: se pulsa l
   try {
     await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
     assert.deepEqual(await pulsados(page), ['OFICINA VIRTUAL', 'PROYECTO', 'Nuevo proyecto', 'SIM-VIVIENDA'])
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── 0.3.17 · la tarjeta 4216/Vivienda se localiza en cualquier marco, con otros textos y botones; si falla, el error dice qué hay ───────
+
+/** Portal con el menú de hojas (como el real) y una página de tarjetas libre; `marco` = HTML servido en `/tarjetas.aspx` (iframe). */
+const portalTarjetas = (tarjetas: string, opciones: { retardoMs?: number } = {}) => `<!doctype html><html><body>
+<div id="menu" class="menu"><ul><li><span class="hoja">OFICINA VIRTUAL</span></li><li><span class="hoja">PROYECTO</span></li><li><span class="hoja">Nuevo proyecto</span></li></ul></div>
+<div id="tarjetas" hidden><h1>PARTICULARES - Crear nuevo proyecto</h1><div id="contenido"></div></div>
+<div id="form" hidden><label for="f1">Fecha de efecto</label><input id="f1"></div>
+<template id="plantilla">${tarjetas}</template>
+<script>
+  window.pulsados = []; function reg(x){ window.pulsados.push(x) }
+  function formulario(){ setTimeout(()=>{ document.getElementById('tarjetas').hidden = true; document.getElementById('form').hidden = false }, 300) }
+  document.addEventListener('click', (ev) => { const t = ev.target; if (t && t.classList && t.classList.contains('hoja')) { const x = t.textContent.trim(); reg(x); if (x === 'Nuevo proyecto') setTimeout(()=>{ document.getElementById('contenido').appendChild(document.getElementById('plantilla').content.cloneNode(true)); document.getElementById('tarjetas').hidden = false }, ${opciones.retardoMs ?? 200}) } }, true)
+</script></body></html>`
+
+async function abrirTarjetas(principal: string, marco?: string) {
+  const context = await browser.newContext()
+  const guard = await instalarGuardEmision(context)
+  const page = await context.newPage()
+  page.setDefaultTimeout(5_000)
+  await page.route('https://mediadores.fidelidade.es/**', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: r.request().url().includes('/tarjetas.aspx') && marco !== undefined ? marco : principal }))
+  const ctx = {
+    credenciales: { usuario: 'USUARIO_FICTICIO', contrasena: 'CLAVE_FICTICIA' },
+    log: () => undefined,
+    pausa: async () => undefined,
+    pulsar: (b: Parameters<typeof pulsar>[0]) => pulsar(b, guard),
+    exigirSinCaptcha: async () => undefined,
+    pulsarEnlaceEntrada: (b: Parameters<typeof pulsar>[0]) => pulsarEnlaceEntradaAutorizado(b, guard, 'fidelidade'),
+  } satisfies CtxEntrada
+  await page.goto(URL_INTRANET_FIDELIDADE)
+  return { context, page, ctx }
+}
+
+const EMPRESAS = `<div class="card"><h3>Producto 4215 · Gama Comercio</h3><p>EMPRESAS</p><input type="button" value="Simulación" onclick="reg('SIM-EMPRESAS')"></div>`
+
+test('0.3.17 · «4216» y «FIDELIDADE VIVIENDA» en elementos separados y botón <input value=Simulación>: se pulsa el de Vivienda, nunca el de EMPRESAS', async () => {
+  const viv = `<div class="card"><span class="cod">PRODUCTO 4216</span><span class="nom">FIDELIDADE VIVIENDA</span><input type="button" value="Simulación" onclick="reg('SIM-VIVIENDA');formulario()"></div>`
+  const { context, page, ctx } = await abrirTarjetas(portalTarjetas(EMPRESAS + viv))
+  try {
+    const destino = await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
+    assert.equal(await destino.locator('label').filter({ hasText: 'Fecha de efecto' }).isVisible(), true)
+    const p = await pulsados(page)
+    assert.ok(p.includes('SIM-VIVIENDA') && !p.includes('SIM-EMPRESAS'), JSON.stringify(p))
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.17 · tarjeta sin «4216» (solo «Vivienda»), botón <a><span>Simulación</span></a>: se pulsa el enlace de Vivienda y no el de EMPRESAS', async () => {
+  const viv = `<div class="card"><h3>Fidelidade Vivienda</h3><a href="#" onclick="reg('SIM-VIVIENDA');formulario();return false"><span>Simulación</span></a></div>`
+  const { context, page, ctx } = await abrirTarjetas(portalTarjetas(EMPRESAS + viv))
+  try {
+    await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
+    const p = await pulsados(page)
+    assert.ok(p.includes('SIM-VIVIENDA') && !p.includes('SIM-EMPRESAS'), JSON.stringify(p))
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.17 · la tarjeta vive en un IFRAME del mismo origen: se localiza y se pulsa', async () => {
+  const marco = `<!doctype html><html><body>${EMPRESAS.replace(/reg\(/g, 'parent.reg(')}<div class="card"><h3>Producto 4216 · Fidelidade Vivienda</h3><button type="button" onclick="parent.reg('SIM-VIVIENDA');parent.formulario()">Simulación</button></div></body></html>`
+  const principal = portalTarjetas('<iframe src="https://mediadores.fidelidade.es/tarjetas.aspx" style="width:600px;height:300px"></iframe>')
+  const { context, page, ctx } = await abrirTarjetas(principal, marco)
+  try {
+    await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
+    const p = await pulsados(page)
+    assert.ok(p.includes('SIM-VIVIENDA') && !p.includes('SIM-EMPRESAS'), JSON.stringify(p))
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.17 · carga perezosa: las tarjetas aparecen 1,5 s después y se encuentran', async () => {
+  const viv = `<div class="card"><h3>Producto 4216 · Fidelidade Vivienda</h3><button type="button" onclick="reg('SIM-VIVIENDA');formulario()">Simulación</button></div>`
+  const { context, page, ctx } = await abrirTarjetas(portalTarjetas(EMPRESAS + viv, { retardoMs: 1_500 }))
+  try {
+    await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
+    assert.ok((await pulsados(page)).includes('SIM-VIVIENDA'))
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.17 · una tarjeta «Producto 4217 · … Vivienda» NO es la de Vivienda 4216; solo EMPRESAS: nunca se pulsa «Simulación» y el error describe lo que hay sin PII', async () => {
+  const otra = `<div class="card"><h3>Producto 4217 · Otro Vivienda</h3><button type="button" onclick="reg('SIM-4217')">Simulación</button></div>`
+  const { context, page, ctx } = await abrirTarjetas(portalTarjetas(EMPRESAS + otra + '<a href="#">usuario@ejemplo.invalid</a><a href="#">Mis datos</a>'))
+  try {
+    await assert.rejects(
+      () => abrirFormularioViviendaFidelidade(page, ctx, { ...ESPERAS, paginaMs: 1_500 }),
+      (e: Error) => {
+        assert.match(e.message, /no se localiza la tarjeta «Producto 4216/)
+        assert.match(e.message, /marcos=1/)
+        assert.match(e.message, /«4216» no/)
+        assert.match(e.message, /«vivienda» sí/)
+        assert.match(e.message, /«simulacion»/)
+        assert.match(e.message, /«mis datos»/)
+        assert.doesNotMatch(e.message, /ejemplo\.invalid|@/)
+        return true
+      },
+    )
+    const p = await pulsados(page)
+    assert.ok(!p.some((x) => x.startsWith('SIM-')), JSON.stringify(p))
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.17 · esTarjetaViviendaFidelidade: 4216 o «vivienda» sin tildes ni mayúsculas; 4215/Gama Comercio/EMPRESAS y códigos distintos jamás', () => {
+  assert.equal(esTarjetaViviendaFidelidade('PRODUCTO 4216 FIDELIDADE VIVIENDA'), true)
+  assert.equal(esTarjetaViviendaFidelidade('Fidelidade Vivienda'), true)
+  assert.equal(esTarjetaViviendaFidelidade('Producto 4216'), true)
+  assert.equal(esTarjetaViviendaFidelidade('Producto 4216 · Vivienda para Empresas'), false)
+  assert.equal(esTarjetaViviendaFidelidade('Producto 4217 · Vivienda'), false)
+  assert.equal(esTarjetaViviendaFidelidade('Gama Comercio'), false)
+})
+
+test('0.3.17 · describirSondaSimulacion: ≤30 textos de NAVEGACIÓN de ≤40 car.; nombres, pólizas y datos personales solo se cuentan', () => {
+  const muchos = Array.from({ length: 45 }, (_, i) => `Proyecto ${i}`)
+  const ajenos = ['a'.repeat(80), 'persona@ejemplo.invalid', 'tel 000000000', 'Juan Pérez García', 'Póliza AB-12-34', 'Bienvenido, Mediador Ejemplo']
+  const txt = describirSondaSimulacion(3, [{ botones: [...ajenos, ...muchos], v4216: false, vivienda: true, tarjetas: 0 }, null])
+  assert.match(txt, /marcos=3 \(1 ilegibles\)/)
+  assert.match(txt, /«4216» no; «vivienda» sí/)
+  assert.equal(txt.split('Proyecto ').length - 1, 30)
+  assert.doesNotMatch(txt, /ejemplo\.invalid|000000000|Juan|P[eé]rez|AB-12|Mediador Ejemplo|a{41}/)
+  assert.match(txt, /otros=6$/)
+})
+
+test('0.3.17 · guard de entrada: un <input> sin texto propio se identifica por value/aria-label/title EXACTOS; otro texto, no', async () => {
+  const context = await browser.newContext()
+  const guard = await instalarGuardEmision(context)
+  const page = await context.newPage()
+  await page.route('https://mediadores.fidelidade.es/**', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: '<!doctype html><button id="m1">Oficina Virtual</button><button id="m2">Proyecto</button><button id="m3">Nuevo proyecto</button><input id="a" type="button" value="Simulación" onclick="window.x=1"><input id="b" type="button" value="Simulación avanzada" onclick="window.y=1"><input id="c" type="button" value="Emitir" onclick="window.z=1">' }))
+  try {
+    await page.goto(URL_INTRANET_FIDELIDADE)
+    for (const id of ['#m1', '#m2', '#m3']) await pulsarEnlaceEntradaAutorizado(page.locator(id), guard, 'fidelidade')
+    await pulsarEnlaceEntradaAutorizado(page.locator('#a'), guard, 'fidelidade')
+    assert.equal(await page.evaluate(() => (window as unknown as { x?: number }).x), 1)
+    await assert.rejects(() => pulsarEnlaceEntradaAutorizado(page.locator('#b'), guard, 'fidelidade'), /Simulación avanzada/)
+    await assert.rejects(() => pulsarEnlaceEntradaAutorizado(page.locator('#c'), guard, 'fidelidade'), /Emitir/)
+    assert.equal(await page.evaluate(() => { const w = window as unknown as { y?: number; z?: number }; return w.y ?? w.z ?? null }), null)
   } finally {
     await context.close()
   }

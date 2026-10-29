@@ -51,6 +51,7 @@ import {
   comprobarBoton,
   esAvanceAutorizado,
   avancePorIdAutorizado,
+  rutaCasaAvancePorId,
   onclickNormalizado,
   rutaDeMarco,
   esLanzadorAplicacionNseMapfre,
@@ -405,7 +406,9 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       const detalleTolerado = !porUrl && !porCuerpoGeneral && noGet && neutra !== url ? detalleCuerpoToleradoConAccionReal(cuerpoDe(req)) : null
       // 0.3.13: destinos POST EXTRA del avance (índice ≥ 1, p. ej. /drvp00/main/control.do): inspección estricta del cuerpo (también
       // confirmar/firmar/pagar/IBAN en claves de acción o nombres financieros). El destino primario conserva el criterio de siempre.
-      const enExtraAvance = av !== null && enLista && noGet && destinoAvancePermitido(url, av.endpoints.slice(1)) && !destinoAvancePermitido(url, av.endpoints.slice(0, 1))
+      // Revisión 0.3.17: un destino que es A LA VEZ primario y extra (el «Aceptar» sin id de drvp00 en el marco `control.do`) también
+      // pasa la inspección estricta: estar en la lista de extras basta.
+      const enExtraAvance = av !== null && enLista && noGet && destinoAvancePermitido(url, av.endpoints.slice(1))
       const porCuerpoExtra = !porUrl && enExtraAvance && cuerpoLlevaAccionFinal(cuerpoDe(req), op)
       const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op) || detalleTolerado !== null || porCuerpoExtra
       if (porUrl && !porCuerpo && !noGet && Date.now() < turismosGenerali && av === null && gv === null && Date.now() >= ventanaHasta && urlTurismosGeneraliPermitida(url)) {
@@ -1109,9 +1112,12 @@ export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: Guard
   }
   if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'enlace de entrada: no hay exactamente un control')
   const desc = await descripcion(boton)
-  const autorizado = textoEntrada(desc[0])
+  // 0.3.17: un botón `<input value=…>` o una imagen con `aria-label`/`title` no tiene texto propio: la etiqueta es la primera no vacía (value, aria-label, title).
+  // El texto EXACTO sigue siendo la única puerta; el resto de descripciones pasa por `comprobarBoton` como siempre.
+  const etiquetaVisible = (desc[0] ?? '').trim() !== '' ? desc[0] : [desc[3], desc[1], desc[2]].find((x) => (x ?? '').trim() !== '') ?? desc[0]
+  const autorizado = textoEntrada(etiquetaVisible)
   // El mensaje lleva el TEXTO EXACTO del elemento rechazado (llega a plataforma redactado): se desbloquea uno a uno.
-  if (!ENLACES_ENTRADA_AUTORIZADOS[compania].some((t) => textoEntrada(t) === autorizado)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  if (!ENLACES_ENTRADA_AUTORIZADOS[compania].some((t) => textoEntrada(t) === autorizado)) throw new EmisionBloqueadaError('boton', String(etiquetaVisible ?? ''))
   if (Object.hasOwn(ORIGEN_ENTRADA, compania)) {
     let origen = ''
     try {
@@ -2864,6 +2870,30 @@ async function vigilanciaVivaAvancePorId(page: Page, nuncaConTitulo: RegExp): Pr
   return { precio, titulo }
 }
 
+/**
+ * 0.3.17: VIVO, ¿es `boton` el ÚNICO control del marco cuyo texto (o aria-label/value) normalizado casa con `fuente` (el patrón de la regla,
+ * sobre texto plano: sin tildes, minúsculas)? Cuenta hojas (un contenedor que solo envuelve a otro con el mismo texto no suma) y también
+ * los ocultos (fail-closed). Solo lee; como TEXTO (tsx envuelve las funciones con nombre en `__name`, que no existe en la página).
+ */
+async function esUnicoPorTextoVivo(boton: Locator, fuente: string): Promise<boolean> {
+  return boton
+    .evaluate(
+      (el, src) => {
+        const re = new RegExp(src)
+        const todos = Array.from(el.ownerDocument.querySelectorAll('a,button,input,td,th,div,span,li,label,p,[role=button],[role=link],[role=menuitem],[onclick]'))
+        const casan = todos.filter((n) =>
+          (n.tagName === 'INPUT' ? [(n as HTMLInputElement).value, n.getAttribute('aria-label')] : [n.textContent, n.getAttribute('aria-label')]).some((x) =>
+            re.test(String(x == null ? '' : x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()),
+          ),
+        )
+        const hojas = casan.filter((n) => !casan.some((m) => m !== n && n.contains(m)))
+        return hojas.length === 1 && (hojas[0] === el || el.contains(hojas[0]) || hojas[0].contains(el))
+      },
+      fuente,
+    )
+    .catch(() => false)
+}
+
 /** Tope de avances de PASO por identidad exacta (`AvancePorId`) por trabajo (3, revisión de seguridad 28/10/2026). */
 export const MAX_AVANCES_POR_ID = 3
 
@@ -2908,7 +2938,16 @@ export async function pulsarExploracionAutorizada(
   if (porId) {
     // VIVO: id, onclick y ruta del marco EXACTOS (lo que dijo el inventario puede haber cambiado antes del clic).
     const ruta = rutaDeMarco(await boton.evaluate((el) => el.ownerDocument.location.href).catch(() => null))
-    if (desc[4] !== porId.id || onclickNormalizado(desc[7]) !== porId.onclick || ruta !== porId.rutaMarco) {
+    if (porId.sinIdentidad === true) {
+      // 0.3.17: sin id ni onclick (ni ng-click) VIVOS, ruta de marco VIVA entre las de la regla y ÚNICO «Aceptar» vivo del marco.
+      const vacio = (v: string | null | undefined) => (v ?? '').trim() === ''
+      if (!vacio(desc[4]) || onclickNormalizado(desc[7]) !== '' || !vacio(desc[9]) || !vacio(desc[10]) || !rutaCasaAvancePorId(porId, ruta)) {
+        throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el avance de paso autorizado (sin id/onclick/marco)')
+      }
+      if (!(await esUnicoPorTextoVivo(boton, porId.texto.source))) {
+        throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el único con ese texto en el marco')
+      }
+    } else if (desc[4] !== porId.id || onclickNormalizado(desc[7]) !== porId.onclick || ruta !== porId.rutaMarco) {
       throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el avance de paso autorizado (id/onclick/marco)')
     }
     // PRECIO PEGAJOSO + VIVO en TODOS los marcos: un importe visto antes en el trabajo, o a la vista ahora, cierra el avance por id.
@@ -2944,7 +2983,9 @@ export async function pulsarExploracionAutorizada(
   if (porId) {
     try {
       const p = new URL(await boton.evaluate((el) => el.ownerDocument.location.href))
-      endpoint = (p.protocol === 'https:' || p.protocol === 'http:') && !p.username && !p.password ? `${p.origin}${porId.rutaMarco}` : null
+      // 0.3.17: en `sinIdentidad` el destino es la ruta VIVA del marco (ya comprobada contra las de la regla).
+      const rutaDestino = porId.sinIdentidad === true ? rutaDeMarco(p.href) : porId.rutaMarco
+      endpoint = (p.protocol === 'https:' || p.protocol === 'http:') && !p.username && !p.password && rutaDestino && rutaCasaAvancePorId(porId, rutaDestino) ? `${p.origin}${rutaDestino}` : null
       // 0.3.13: destinos POST declarados de la regla (mismo origen, ruta exacta). Sigue la capa de contenido (URL y cuerpo).
       if (endpoint) extras = (porId.destinosPost ?? []).filter((r) => /^\/[A-Za-z0-9_./-]{1,120}$/.test(r) && !r.includes('..')).map((r) => `${p.origin}${r}`)
     } catch {

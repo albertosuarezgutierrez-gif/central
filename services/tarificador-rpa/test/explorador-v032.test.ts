@@ -52,6 +52,7 @@ let peticiones: Peticion[] = []
 let figuras = FIGURAS()
 let landing = LANDING(HREF_NSE)
 let menuNse = ''
+let municipio = ''
 let validarNif = false
 let validarTipoDoc = false
 let browser: Browser
@@ -66,7 +67,8 @@ before(async () => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       if (ruta === '/valida-nif') return void setTimeout(() => res.end('ok'), 300)
       if (ruta === '/drvp00/SEAServlet') return void res.end(req.method === 'POST' ? ((validarNif && !/tomadorValidado=1/.test(cuerpo)) || (validarTipoDoc && !/IntervinientesBean%24nifTomador_tipoDoc=N(&|$)/.test(cuerpo)) ? PAGINA('<p>NIF del tomador no válido</p>') : RESULTADO) : figuras)
-      if (ruta === '/drvp00/main/control.do') return void res.end(RESULTADO)
+      // 0.3.17: con `municipio` puesto, un GET a control.do sirve la pantalla de «Selección de Municipio» (su POST, el resultado).
+      if (ruta === '/drvp00/main/control.do') return void res.end(req.method === 'GET' && municipio ? municipio : RESULTADO)
       if (ruta === '/otro/SEAServlet') return void res.end(figuras)
       if (ruta === '/landing') return void res.end(landing)
       if (ruta === '/EVT21_NSE_FWEB/inicio.jsp' || ruta === '/otra/inicio.jsp') return void res.end(menuNse)
@@ -799,7 +801,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.16', () => assert.equal(EXPLORADOR_VERSION, '0.3.16'))
+test('versión 0.3.17', () => assert.equal(EXPLORADOR_VERSION, '0.3.17'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`
@@ -979,5 +981,145 @@ test('0.3.12 · parada por TÍTULO (titulo:contrat): el log lleva SOLO el códig
     assert.ok(!/juan|perez|contrataci/.test(linea.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()), linea)
   } finally {
     await context.close()
+  }
+})
+
+// ─── 0.3.17 · ePAC «Datos del Vehículo · Selección de Municipio · Tomador y Conductor Principal»: «Aceptar» SIN id ni onclick ─────────────
+
+/** El «Aceptar» de esta pantalla no tiene id ni onclick (el listener va por addEventListener); envía el formulario a control.do. */
+const MUNICIPIO = (extra = '', cuerpoPost = '') => PAGINA(`
+  <form id="f" method="post" action="/drvp00/main/control.do">
+    <h2>Datos del Vehículo</h2><h2>Selección de Municipio</h2><h2>Tomador y Conductor Principal</h2>
+    <table><tr><td>Municipio</td><td><select id="muni"><option value="1">Uno</option></select></td></tr></table>
+    <button type="button" class="botonAzul">Aceptar</button>
+    ${extra}
+  </form>
+  <script>document.querySelector('button.botonAzul').addEventListener('click', () => { ${cuerpoPost ? `fetch('/drvp00/main/control.do', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: '${cuerpoPost}' }).catch(() => {})` : "document.getElementById('f').submit()"} })</script>`)
+
+const CONTROL = '/drvp00/main/control.do'
+
+async function capturaAceptarSinId(page: Page) {
+  const cap = (await capturarInventarioExploracion(page))!
+  const marco = cap.inventario.marcos.find((m) => m.elementos.some((e) => e.tag === 'button' && e.texto === 'Aceptar'))!
+  const el = marco.elementos.find((e) => e.tag === 'button' && e.texto === 'Aceptar')!
+  return { cap, marco, el }
+}
+
+test('0.3.17 · ePAC: «Aceptar» único sin id ni onclick avanza (UN POST a control.do) y llega al precio; el inventario guarda su clase', async () => {
+  municipio = MUNICIPIO()
+  const { context, page, guard } = await abrir(CONTROL)
+  try {
+    const { cap, el } = await capturaAceptarSinId(page)
+    assert.equal(el.clase, 'botonAzul')
+    await cap.liberar()
+    const fin = await bucleExploracion(page, contexto(page, guard, (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'avanzar', ref: elementos(inv).find((e) => e.tag === 'button' && e.texto === 'Aceptar')!.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+      const imp = inv.marcos.flatMap((m) => m.importes ?? [])
+      return respuesta([{ accion: 'terminar', refsPrecio: [imp[0].ref] }], 'resultado')
+    }))
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.equal(peticiones.filter((p) => p.metodo === 'POST' && p.ruta === '/drvp00/main/control.do').length, 1)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.17 · ePAC: DOS «Aceptar» en el marco (el de la pantalla anterior con id incluido) → el sin id se rechaza y no hay POST', async () => {
+  municipio = MUNICIPIO('<button type="button" id="btnAceptar" onclick="eventoSiguiente()">Aceptar</button><script>function eventoSiguiente(){}</script>')
+  const { context, page, guard } = await abrir(CONTROL)
+  try {
+    const fin = await bucleExploracion(page, contexto(page, guard, (inv) => respuesta([{ accion: 'avanzar', ref: elementos(inv).find((e) => e.tag === 'button' && e.texto === 'Aceptar' && !e.id)!.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])))
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(fin.detalle, 'lote_no_valido')
+    assert.ok(!peticiones.some((p) => p.metodo === 'POST'))
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.17 · ePAC: pantalla con título de emisión/resumen/contratación/pago → «Aceptar» sin id rechazado', async () => {
+  for (const titulo of ['Resumen y emisión', 'Contratación', 'Forma de pago', 'Tarificar']) {
+    municipio = MUNICIPIO(`<h3>${titulo}</h3>`)
+    const { context, page, guard } = await abrir(CONTROL)
+    try {
+      const fin = await bucleExploracion(page, contexto(page, guard, (inv) => respuesta([{ accion: 'avanzar', ref: elementos(inv).find((e) => e.tag === 'button' && e.texto === 'Aceptar')!.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])))
+      assert.notEqual(fin.motivo, 'resultado', titulo)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST'), titulo)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.3.17 · ePAC: el POST del «Aceptar» sin id con ACCIÓN FINAL en el cuerpo se aborta (EmisionBloqueadaError) y no llega al servidor', async () => {
+  for (const cuerpo of ['action=contract', 'evento=emitir', 'validar_aceptar=1']) {
+    municipio = MUNICIPIO('', cuerpo)
+    const { context, page, guard } = await abrir(CONTROL)
+    try {
+      const { cap, marco, el } = await capturaAceptarSinId(page)
+      await pulsarExploracionAutorizada(page, guard, page.locator('button.botonAzul'), { entrada: MP, el, marco }).catch(() => undefined)
+      await page.waitForTimeout(500)
+      assert.ok(guard.violacion() instanceof EmisionBloqueadaError, cuerpo)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST' && p.cuerpo.includes(cuerpo)), `${cuerpo}: no llegó al servidor`)
+      await cap.liberar()
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.3.17 · ePAC: vigilancia VIVA del «Aceptar» sin id: título de emisión, precio, segundo «Aceptar» o id/onclick sobrevenidos → no se pulsa', async () => {
+  municipio = MUNICIPIO()
+  const prueba = async (nombre: string, antes: (page: Page) => Promise<unknown>, esperado: RegExp) => {
+    const { context, page, guard } = await abrir(CONTROL)
+    try {
+      const { cap, marco, el } = await capturaAceptarSinId(page)
+      await antes(page)
+      const e = await pulsarExploracionAutorizada(page, guard, page.locator('button.botonAzul'), { entrada: MP, el, marco }).then(() => null, (x: unknown) => x)
+      await cap.liberar()
+      assert.ok(e instanceof EmisionBloqueadaError && esperado.test(e.message), `${nombre}: ${String(e)}`)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST'), nombre)
+    } finally {
+      await context.close()
+    }
+  }
+  await prueba('título vivo', (p) => p.evaluate(() => { const h = document.createElement('h2'); h.textContent = 'Resumen y emisión'; document.body.appendChild(h) }), /título vivo/)
+  await prueba('precio vivo', (p) => p.evaluate(() => { const t = document.createElement('p'); t.textContent = '47,55 €'; document.body.appendChild(t) }), /precio/)
+  await prueba('segundo Aceptar vivo', (p) => p.evaluate(() => { const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Aceptar'; document.body.appendChild(b) }), /único con ese texto/)
+  await prueba('id sobrevenido', (p) => p.evaluate(() => { document.querySelector('button.botonAzul')!.id = 'otro' }), /sin id\/onclick/)
+  await prueba('onclick sobrevenido', (p) => p.evaluate(() => { document.querySelector('button.botonAzul')!.setAttribute('onclick', 'emitir()') }), /sin id\/onclick/)
+})
+
+test('revisión 0.3.17 · ePAC: el POST del «Aceptar» sin id a control.do (primario Y extra) pasa la inspección ESTRICTA: confirmar/IBAN abortan', async () => {
+  for (const cuerpo of ['accion=confirmar', 'evento=firmar', 'iban=ES0000000000000000000000']) {
+    municipio = MUNICIPIO('', cuerpo)
+    const { context, page, guard } = await abrir(CONTROL)
+    try {
+      const { cap, marco, el } = await capturaAceptarSinId(page)
+      await pulsarExploracionAutorizada(page, guard, page.locator('button.botonAzul'), { entrada: MP, el, marco }).catch(() => undefined)
+      await page.waitForTimeout(500)
+      assert.ok(guard.violacion() instanceof EmisionBloqueadaError, cuerpo)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST' && p.cuerpo.includes(cuerpo)), `${cuerpo}: no llegó al servidor`)
+      await cap.liberar()
+    } finally {
+      await context.close()
+    }
+  }
+  municipio = ''
+})
+
+test('revisión 0.3.17 · ePAC: el «Aceptar» sin id en el marco del SERVLET no se pulsa (regla solo en control.do)', async () => {
+  figuras = MUNICIPIO()
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    const { cap, marco, el } = await capturaAceptarSinId(page)
+    const e = await pulsarExploracionAutorizada(page, guard, page.locator('button.botonAzul'), { entrada: MP, el, marco }).then(() => null, (x: unknown) => x)
+    await cap.liberar()
+    assert.ok(e instanceof EmisionBloqueadaError, String(e))
+    assert.ok(!peticiones.some((p) => p.metodo === 'POST'))
+  } finally {
+    await context.close()
+    figuras = FIGURAS()
   }
 })

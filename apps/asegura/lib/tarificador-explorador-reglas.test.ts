@@ -625,3 +625,16 @@ test('0.3.16 · la IA ve el onclick recortado a 200 car. (el validador del worke
   assert.equal(visto.marcos[0].elementos[1].onclick, 'f()')
   assert.equal(inv.marcos[0].elementos[0].onclick, largo)
 })
+
+test('0.3.17 · la IA NO ve `onclickCompleto` (hasta 8000) ni `clase`; sigue viendo el onclick a 200; el inventario original conserva ambos', () => {
+  const largo = "A4J.AJAX.Submit('f',event,{'p':'" + 'x'.repeat(3000) + "'});return false;"
+  const inv = sanearInventarioDom({ marcos: [{ url: 'https://wmediadores.mapfre.com/x', nombre: 'n', titulos: [], elementos: [{ tag: 'a', role: 'link', id: 'f:s', texto: 'Siguiente >>', clase: 'rich-link', onclick: largo }, { tag: 'button', texto: 'Ok', clase: 'btn', onclick: 'f()' }] }] }, undefined, { refs: true })!
+  assert.equal(inv.marcos[0].elementos[0].onclickCompleto, largo)
+  const crudo = inventarioParaPrompt(inv)
+  assert.ok(!crudo.includes('onclickCompleto') && !crudo.includes('rich-link') && !crudo.includes('"clase"'))
+  const visto = JSON.parse(crudo) as { marcos: { elementos: { onclick?: string }[] }[] }
+  assert.equal(visto.marcos[0].elementos[0].onclick!.length, 200)
+  assert.equal(visto.marcos[0].elementos[1].onclick, 'f()')
+  assert.equal(inv.marcos[0].elementos[0].onclickCompleto, largo)
+  assert.equal(inv.marcos[0].elementos[0].clase, 'rich-link')
+})

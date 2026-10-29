@@ -95,7 +95,8 @@ describe('Allianz ePAC drvp00: avance de paso #btnAceptar + eventoSiguiente() po
 
   it('un «Aceptar» genérico, otro id, otro onclick, otro marco, otra entrada o un título de tarificar/emisión: aceptar_no_autorizado', () => {
     const casos: [string, InventarioDom, string][] = [
-      ['Aceptar genérico', inv([{ tag: 'button', texto: 'Aceptar' }]), MP],
+      ['Aceptar genérico CON id pero sin onclick', inv([{ tag: 'button', id: 'otroAceptar', texto: 'Aceptar' }]), MP],
+      ['Aceptar genérico CON onclick pero sin id', inv([{ tag: 'button', texto: 'Aceptar', onclick: 'enviar()' }]), MP],
       ['otro id', inv([{ ...BTN, id: 'btnAceptar2' }]), MP],
       ['otro onclick', inv([{ ...BTN, onclick: 'eventoSiguiente();emitir()' }]), MP],
       ['onclick de emisión', inv([{ ...BTN, onclick: 'validar_aceptar()' }]), MP],
@@ -111,7 +112,7 @@ describe('Allianz ePAC drvp00: avance de paso #btnAceptar + eventoSiguiente() po
       expect(avancePorIdAutorizado(entrada, el0(i), i.marcos[0]), nombre).toBeNull()
       expect(bloqueoAvance(entrada, el0(i), i.marcos[0]), nombre).not.toBeNull()
     }
-    const gen = inv([{ tag: 'button', texto: 'Aceptar' }])
+    const gen = inv([{ tag: 'button', id: 'otroAceptar', texto: 'Aceptar' }])
     expect(bloqueoAvance(MP, el0(gen), gen.marcos[0])).toBe('aceptar_no_autorizado')
   })
 

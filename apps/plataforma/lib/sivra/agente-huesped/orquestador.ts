@@ -22,7 +22,7 @@ import { Prisma } from '@prisma/client'
 import { esPeticionFactura, esTramiteFiscal } from './factura'
 import { asegurarSolicitud } from '@/lib/sivra/facturas/servicio'
 import { conEnlace } from '@/lib/sivra/facturas/enlace'
-import { rellenarDesdeChat, solicitudVivaDe } from '@/lib/sivra/facturas/chat'
+import { proponerSiCompleta, rellenarDesdeChat, solicitudVivaDe } from '@/lib/sivra/facturas/chat'
 
 
 // Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el
@@ -161,10 +161,11 @@ export async function procesarMensajeHuesped(
       // datos en el mensaje como antes y el motivo lo dice.
       let avisoEnlace = ''
       // 29/10/2026: los datos que el huésped da EN EL CHAT rellenan la solicitud (nunca pisan lo que ya rellenó en el
-      // formulario; lo dudoso queda pendiente) y el cron de salida la emite y envía sola. El texto al huésped dice lo
-      // que de verdad va a pasar (`ctx.facturaEstado`): completa → «la recibirás el día de salida» y sin enlace;
-      // incompleta → pide SOLO lo que falta (+ enlace). Un mensaje que SIGUE a una petición (p. ej. solo los datos) usa
-      // la solicitud que ya existe, sin crear otra.
+      // formulario; lo dudoso queda pendiente). Si queda completa y válida, `proponerSiCompleta` manda YA a Alberto el
+      // borrador por Telegram (✅ Enviar / ✏️ Modificar), una sola vez por solicitud; nada se emite ni envía sin su ✅.
+      // El texto al huésped (`ctx.facturaEstado`): completa → «tomo nota, te la envío en cuanto la revise» (sin fecha)
+      // y sin enlace; incompleta → pide SOLO lo que falta (+ enlace). Un mensaje que SIGUE a una petición (p. ej. solo
+      // los datos) usa la solicitud que ya existe, sin crear otra.
       const guestPrevios = ctx0.historial.filter(h => h.from === 'guest').map(h => h.text)
       const textosGuest = normalizarTexto(guestPrevios.at(-1) || '') === normalizarTexto(pregunta) ? guestPrevios : [...guestPrevios, pregunta]
       let solFactura: { id: string; url: string } | null = null
@@ -182,6 +183,15 @@ export async function procesarMensajeHuesped(
         })
         if (estadoFactura) ctx.facturaEstado = estadoFactura
         if (!estadoFactura?.completa) ctx.enlaceFactura = solFactura.url
+        else {
+          // Fallar aquí no tumba la respuesta al huésped: el borrador se puede preparar a mano en /sivra/facturas.
+          const p = await proponerSiCompleta(solFactura.id).catch((e: unknown) => {
+            console.warn('[agente-huesped] borrador de factura desde el chat:', e instanceof Error ? e.message.slice(0, 120) : 'error')
+            return null
+          })
+          if (p === null || (typeof p === 'object' && !p.ok)) avisoEnlace = `NO he podido preparar el borrador de la factura${p ? ` (${p.motivo})` : ''}: hazlo en /sivra/facturas (alta manual, misma reserva).`
+          else if (typeof p === 'object' && p.propuesta !== 'enviada') avisoEnlace = 'borrador de la factura preparado, pero su Telegram con ✅ Enviar no ha salido: «Reenviar a Telegram» en /sivra/facturas.'
+        }
       }
       dec = await decidir(ctx, pregunta, categoria)
       if (avisoEnlace) dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}${avisoEnlace}`
@@ -248,7 +258,7 @@ export async function procesarMensajeHuesped(
     // Datos completos desde el chat: sin enlace, y el mensaje TAMPOCO sale solo (una factura la mira Alberto).
     if (ctx.facturaEstado?.completa && dec.reply) {
       dec.needs_human = true
-      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}datos de facturación completos (sacados del chat y validados): la factura se emite y envía sola el día de salida`
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}datos de facturación completos (sacados del chat y validados): te llega aparte el borrador de la factura con ✅ Enviar / ✏️ Modificar`
     }
 
     // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí

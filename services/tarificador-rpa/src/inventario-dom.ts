@@ -106,11 +106,13 @@ function extractor(explora: boolean): string {
     // Un [ng-click] que no es control de texto (fila, tarjeta…) puede envolver nombres: su texto, CORTO (80); el saneado lo filtra.
     if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet) e.texto = corta(el.innerText || el.textContent || '', 200);
     else if (ng) e.texto = corta(el.innerText || el.textContent || '', 80);
-    // 0.3.16: el onclick COMPLETO (hasta 2001 car.) de avances (td/button/a/div del servlet) e inputs que no son de texto (casillas,
+    // 0.3.17: el onclick COMPLETO (hasta 8001 car.; el saneado lo parte en onclick hasta 2000 + onclickCompleto hasta 8000, y más de 8000 queda recortado) de avances (td/button/a/div del servlet) e inputs que no son de texto (casillas,
     // elecciones, botones input): el saneado lo deja entero si cabe en 2000 y, si no, lo recorta con «…» (= no se pulsa ni se marca).
     // El validador mira emisión, acción final y envío sobre TODO el texto; la IA lo ve recortado a 200 (inventarioParaPrompt).
-    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 2001);
-    if (tag === 'input' && !['text', 'number', 'date', 'tel', 'email', 'search', 'password'].includes(type)) e.onclick = corta(el.getAttribute('onclick'), 2001);
+    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 8001);
+    if (tag === 'input' && !['text', 'number', 'date', 'tel', 'email', 'search', 'password'].includes(type)) e.onclick = corta(el.getAttribute('onclick'), 8001);
+    // 0.3.17: clases CSS (≤40) de los controles de acción, para el diagnóstico de un avance rechazado (estructura, no dato).
+    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet || (tag === 'input' && !['text', 'number', 'date', 'tel', 'email', 'search', 'password'].includes(type))) e.clase = corta(String(el.getAttribute('class') || '').split(/\\s+/).filter(Boolean).slice(0, 3).join(' '), 40);
     // EXPLORACIÓN (28/10/2026, menú de Mapfre NSE): un <a href> es una entrada de menú. \`href="javascript:…"\` viaja como onclick
     // (lo miran el validador y el guard); cualquier otro href marca el rol \`link\` (sin la URL: puede llevar datos).
     // Con onclick Y \`javascript:\` se CONCATENAN (los dos se ejecutan). Un href normal: su RUTA sin query (\`hrefRuta\`; de otro origen,
@@ -127,7 +129,7 @@ function extractor(explora: boolean): string {
         if (!e.role) e.role = 'link';
       }
     }
-    if (ng && !e.onclick) e.onclick = corta(ng, 2001);
+    if (ng && !e.onclick) e.onclick = corta(ng, 8001);
     if (tag === 'select') {
       e.opciones = Array.from(el.options).slice(0, 40).map((o) => ({ valor: o.value, texto: o.textContent }));
       e.opcionesTotal = el.options.length;

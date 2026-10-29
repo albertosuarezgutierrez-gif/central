@@ -4,7 +4,10 @@
 // texto del huésped: lo que no esté literal o no valide se queda en NULL (pendiente). 3) Calle confirmada con el
 // Catastro si hay UNA coincidencia exacta (best-effort; si el Catastro no responde, la calle queda como la escribió).
 // 4) UPDATE con COALESCE: NUNCA pisa un dato ya puesto (formulario del huésped o Alberto) y solo toca solicitudes
-// `pendiente`. Lo usan el orquestador del agente (cada mensaje del hilo de factura) y el cron de salida.
+// `pendiente`. Lo usa el orquestador del agente en cada mensaje del hilo de factura.
+// 5) `proponerSiCompleta`: si con eso queda completa y válida, UNA vez por solicitud (pendiente → completada, reclamo
+// atómico) se prepara el borrador y va a Alberto por Telegram con ✅ Enviar / ✏️ Modificar. Aquí NUNCA se emite ni se
+// envía: eso solo lo hace el ✅ de Alberto (`telegram-acciones.ts`).
 //
 // Privacidad: los textos van al mismo proveedor que ya redacta la respuesta al huésped; aquí no se registran ni los
 // textos ni los datos (solo contadores).
@@ -17,8 +20,7 @@ import { textosDesdePeticion, type EstadoFacturaChat } from '@/lib/sivra/agente-
 import { confirmarViaCatastro, entradaReceptor, faltasDe, parcheSolicitud, parsearPropuesta, validarExtraccion, TEXTO_FALTA, type FilaSolicitud } from './extraer'
 import { validarReceptor } from './receptor'
 import { buscarViasCatastro } from './vias-catastro'
-import { leerReserva } from './servicio'
-import { fechaMadrid } from './numeracion'
+import { prepararBorrador, type ResultadoBorrador } from './servicio'
 import { urlFormulario } from './enlace'
 
 const SISTEMA = `Extraes los DATOS DE FACTURACIÓN que un huésped ha escrito en sus mensajes. Devuelve SOLO un objeto JSON:
@@ -59,7 +61,7 @@ async function proponer(textos: string[]): Promise<ReturnType<typeof parsearProp
  * Lee lo que dijo el huésped (desde su primera petición de factura), rellena lo que falte y devuelve cómo queda la
  * solicitud. `null` = solicitud inexistente. Si no hay petición de factura en sus mensajes no se extrae nada.
  */
-export async function rellenarDesdeChat(solicitudId: string, textosHuesped: ReadonlyArray<string | null | undefined>, ahora: Date = new Date()): Promise<EstadoFacturaChat | null> {
+export async function rellenarDesdeChat(solicitudId: string, textosHuesped: ReadonlyArray<string | null | undefined>): Promise<EstadoFacturaChat | null> {
   const fila = await leer(solicitudId)
   if (!fila) return null
   const textos = textosDesdePeticion(textosHuesped).slice(-12)
@@ -87,18 +89,46 @@ export async function rellenarDesdeChat(solicitudId: string, textosHuesped: Read
       console.info(`[facturas-chat] solicitud ${solicitudId}: ${Object.keys(p).length} campo(s) rellenado(s) desde el chat`)
     }
   }
-  return estadoSolicitud(solicitudId, ahora)
+  return estadoSolicitud(solicitudId)
 }
 
 /** ¿Está completa y válida? Si sí, a dónde irá; si no, qué falta (en palabras para el huésped). */
-export async function estadoSolicitud(solicitudId: string, ahora: Date = new Date()): Promise<EstadoFacturaChat | null> {
+export async function estadoSolicitud(solicitudId: string): Promise<EstadoFacturaChat | null> {
   const f = await leer(solicitudId)
   if (!f || f.estado === 'cancelada') return null
   const v = validarReceptor(entradaReceptor(f))
   if (!v.ok) return { completa: false, faltan: faltasDe(v.errores).map((k) => TEXTO_FALTA[k]) }
-  const reserva = await leerReserva(f.reservationId).catch(() => null)
-  const hoy = fechaMadrid(ahora).iso
-  return { completa: true, email: v.receptor.email, cc: (f.receptorCc ?? []).filter((e) => e !== v.receptor.email), yaSalio: !!reserva?.hasta && reserva.hasta < hoy }
+  return { completa: true, email: v.receptor.email, cc: (f.receptorCc ?? []).filter((e) => e !== v.receptor.email) }
+}
+
+/**
+ * Solicitud `pendiente` completa y válida con lo del chat → `completada` (reclamo atómico: un solo Telegram por
+ * solicitud aunque el huésped siga escribiendo o dos mensajes se procesen a la vez) → borrador + Telegram a Alberto con
+ * ✅ Enviar / ✏️ Modificar. Ya `completada` (formulario, Alberto o un mensaje anterior) → `ya` (ese camino ya avisó).
+ * NO emite ni envía.
+ */
+export async function proponerSiCompleta(solicitudId: string): Promise<'ya' | 'incompleta' | ResultadoBorrador> {
+  const f = await leer(solicitudId)
+  if (!f || f.estado !== 'pendiente') return 'ya'
+  const v = validarReceptor(entradaReceptor(f))
+  if (!v.ok) return 'incompleta'
+  const reclamada = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    UPDATE sivra_factura_solicitudes SET estado = 'completada', completada_at = now(), updated_at = now()
+     WHERE id = ${solicitudId}::uuid AND estado = 'pendiente' RETURNING id::text`)
+  if (!reclamada.length) return 'ya'
+  const soltar = () => prisma.$executeRaw(Prisma.sql`
+    UPDATE sivra_factura_solicitudes SET estado = 'pendiente', completada_at = NULL WHERE id = ${solicitudId}::uuid AND estado = 'completada'`)
+  let b: ResultadoBorrador
+  try {
+    b = await prepararBorrador(solicitudId, v.receptor, {})
+  } catch (e) {
+    await soltar().catch(() => 0) // revienta antes de crear el borrador: se reintenta con el siguiente mensaje
+    throw e
+  }
+  // Sin reserva legible no hay borrador ni Telegram: se suelta para reintentarlo con el siguiente mensaje. (Sin importe
+  // NO se suelta: `prepararBorrador` ya mandó su aviso único de «no sé el importe».)
+  if (!b.ok && b.codigo === 'sin_reserva') await soltar()
+  return b
 }
 
 /** Solicitud viva de la reserva, sin crearla (para los mensajes que SIGUEN a una petición de factura). */

@@ -6,7 +6,7 @@ import { after, before, test } from 'node:test'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser } from 'playwright'
-import { bloqueoAvance, ONCLICK_REDACTADO, type ElementoInventario } from '@central/module-tarificacion'
+import { bloqueoAvance, conOnclickCompleto, ONCLICK_REDACTADO, type ElementoInventario } from '@central/module-tarificacion'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
 
 const MF = 'mapfre:automoviles:patinetes'
@@ -67,4 +67,38 @@ test('0.3.16 · radio con onclick largo: entero; con dato personal: REDACTADO (n
     <input type="radio" id="r2" name="g" onclick="seleccionar('12345678Z')"><label for="r2">Dos</label>`)
   assert.equal(por(els, 'r1').el.onclick, largo)
   assert.equal(por(els, 'r2').el.onclick, ONCLICK_REDACTADO)
+})
+
+test('0.3.17 · el extractor captura el onclick hasta 8000 car. (onclickCompleto); >8000 recortado; y la clase CSS del control de acción', async () => {
+  const tres = a4j(3000)
+  const els = await capturar(`<form id="formProductos">
+    <a href="#" id="formProductos:btnTres" class="rich-link grande otra cuarta" onclick="${attr(tres)}">Siguiente &gt;&gt;</a>
+    <a href="#" id="formProductos:btnTresEmite" onclick="${attr(a4j(3000, ",'oncomplete':'emitirPoliza()'"))}">Siguiente &gt;&gt;</a>
+    <a href="#" id="formProductos:btnMuyLargo" onclick="${attr(a4j(8100))}">Siguiente &gt;&gt;</a></form>`)
+  const ok = por(els, 'formProductos:btnTres')
+  assert.equal(ok.el.onclickCompleto, tres)
+  assert.ok(ok.el.onclick!.endsWith('…') && ok.el.onclick!.length <= 2000)
+  assert.equal(ok.el.clase, 'rich-link grande otra')
+  const evaluado = (id: string) => {
+    const x = por(els, id)
+    return bloqueoAvance(MF, conOnclickCompleto({ version: 1, marcos: [{ ...x.marco, elementos: [x.el] }], totalElementos: 1, recortado: null, textosDescartados: 0 }).marcos[0].elementos[0], x.marco)
+  }
+  assert.equal(evaluado('formProductos:btnTres'), null)
+  assert.equal(evaluado('formProductos:btnTresEmite'), 'boton_de_emision')
+  const largo = por(els, 'formProductos:btnMuyLargo')
+  assert.equal(largo.el.onclickCompleto, undefined)
+  assert.equal(evaluado('formProductos:btnMuyLargo'), 'onclick_truncado')
+})
+
+// ─── Revisión 0.3.17: el `control` del rechazo en el LOG del worker no lleva valores del riesgo ───────────────────────────────
+test('revisión 0.3.17 · rechazosParaLog: texto del control con un valor del riesgo, o sin riesgo legible con datos reales → «control redactado»', async () => {
+  const { rechazosParaLog } = await import('../src/explorador.ts')
+  const r = (texto: string) => ({ indice: 0, accion: 'avanzar' as const, ref: 'r1', causa: 'onclick_truncado', control: `tag=td type=- name=- clase=fila texto=«${texto}»` })
+  const k = { conDatosReales: true, riesgo: { tomador: { nombre: 'Zacarías', apellido1: 'Ejemplar' } }, env: {}, entrada: 'allianz:autos:movilidad_personal' }
+  const [a, b] = rechazosParaLog([r('ZACARIAS EJEMPLAR'), r('Siguiente')], k)
+  assert.doesNotMatch(a, /ZACARIAS|EJEMPLAR/)
+  assert.match(a, /\[control redactado\]$/)
+  assert.match(b, /texto=«Siguiente»/)
+  const [c] = rechazosParaLog([r('Siguiente')], { ...k, riesgo: null })
+  assert.match(c, /\[control redactado\]$/)
 })

@@ -6,7 +6,9 @@ import { prisma } from '@/lib/db'
 import { emitirFactura, enviarFactura, type ResultadoEnvio } from './emitir'
 import { URL_PLATAFORMA_FACTURAS } from './enlace'
 import { lineaAviso } from './aviso-smoobu'
-import { botonesPropuesta, botonReintento, type DecisionBotonFactura } from './telegram'
+import { botonesPropuesta, botonReintento, urlModificar, type DecisionBotonFactura } from './telegram'
+
+const baseApp = () => process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_FACTURAS
 
 type Salida = { linea: string; botones?: Boton[][] }
 
@@ -25,12 +27,12 @@ export function lineaEnvio(numero: string | null, r: ResultadoEnvio, facturaId: 
 /** `mensajeId` = message_id del mensaje cuyo botón se pulsó (el ✅ solo vale para el mensaje VIGENTE del borrador). */
 export async function resolverBotonFactura(d: Extract<DecisionBotonFactura, { ok: true }>, mensajeId: number | null): Promise<Salida> {
   if (d.accion === 'cor') {
-    const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: d.facturaId }, select: { estado: true } })
+    // Solo llega de mensajes anteriores al 29/10/2026 (hoy ✏️ Modificar es un enlace directo).
+    const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: d.facturaId }, select: { estado: true, reservationId: true } })
     if (!f) return { linea: '⚠️ Factura no encontrada.' }
     if (f.estado !== 'borrador') return { linea: 'ℹ️ Ya está emitida: una corrección será una rectificativa (aún no disponible).' }
-    const base = (process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_FACTURAS).replace(/\/+$/, '')
     // El formulario del huésped NO admite un segundo envío (no reescribe lo que estás revisando): corriges tú.
-    return { linea: escapeHtml(`✏️ Sigue en BORRADOR (sin número). Corrige los datos en ${base}/sivra/facturas?f=${d.facturaId} (alta manual, misma reserva). Al guardar te llegará un borrador nuevo y este ✅ dejará de valer.`) }
+    return { linea: escapeHtml(`✏️ Sigue en BORRADOR (sin número). Corrige los datos en ${urlModificar(baseApp(), f.reservationId)} (alta manual, misma reserva). Al guardar te llegará un borrador nuevo y este ✅ dejará de valer.`) }
   }
   if (d.accion === 'env') {
     const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: d.facturaId }, select: { numeroCompleto: true } })
@@ -40,7 +42,10 @@ export async function resolverBotonFactura(d: Extract<DecisionBotonFactura, { ok
   const r = await emitirFactura(d.facturaId, mensajeId)
   if (r.estado === 'no_existe') return { linea: '⚠️ Factura no encontrada.' }
   if (r.estado === 'obsoleta') return { linea: '♻️ <b>No emitida</b>: este mensaje ya no es el borrador vigente (los datos han cambiado). Revisa y aprueba el ÚLTIMO mensaje (o «Reenviar a Telegram» en /sivra/facturas).' }
-  if (r.estado === 'bloqueada') return { linea: `⛔ <b>No emitida</b>: ${escapeHtml(r.motivo)}. Configúralo y vuelve a pulsar ✅.`, botones: botonesPropuesta(d.facturaId) }
+  if (r.estado === 'bloqueada') {
+    const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: d.facturaId }, select: { reservationId: true } })
+    return { linea: `⛔ <b>No emitida</b>: ${escapeHtml(r.motivo)}. Configúralo y vuelve a pulsar ✅.`, botones: f ? botonesPropuesta(d.facturaId, urlModificar(baseApp(), f.reservationId)) : undefined }
+  }
   if (r.estado === 'ya_emitida' && r.enviada) return { linea: `ℹ️ La factura ${escapeHtml(r.numeroCompleto ?? '')} ya estaba emitida y enviada. No se ha hecho nada.` }
   return lineaEnvio(r.numeroCompleto, await enviarFactura(d.facturaId), d.facturaId)
 }
