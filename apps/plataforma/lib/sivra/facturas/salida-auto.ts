@@ -39,6 +39,9 @@ type Candidata = { id: string; cuenta_id: string; reservation_id: string; estado
 export async function candidatas(ahora: Date): Promise<Candidata[]> {
   const hoy = fechaMadrid(ahora).iso
   const desde = restarDias(hoy, VENTANA_DIAS)
+  // El LIMIT no debe llenarse de solicitudes que hoy acaban en «nada»: se excluyen las emitidas con envío ya intentado
+  // (lo decide Alberto) y las ya avisadas van AL FINAL (no se excluyen: si el huésped completó los datos tras el aviso,
+  // `decidirSalida` las emite).
   // `checkOut` es timestamptz a las 00:00 UTC (fecha de calendario): se compara su fecha UTC, igual que `leerReserva`.
   return prisma.$queryRaw<Candidata[]>(Prisma.sql`
     SELECT s.id::text, s.cuenta_id::text, s.reservation_id, s.estado, to_jsonb(s) ->> 'auto_aviso_at' AS aviso
@@ -48,7 +51,9 @@ export async function candidatas(ahora: Date): Promise<Candidata[]> {
                      AND (i."checkOut" AT TIME ZONE 'UTC')::date BETWEEN ${desde}::date AND ${hoy}::date)
        AND NOT EXISTS (SELECT 1 FROM sivra_facturas_huesped f WHERE f.reservation_id = s.reservation_id
                          AND f.tipo = 'ordinaria' AND f.estado IN ('enviada', 'rectificada'))
-     ORDER BY s.created_at
+       AND NOT EXISTS (SELECT 1 FROM sivra_facturas_huesped f WHERE f.reservation_id = s.reservation_id
+                         AND f.tipo = 'ordinaria' AND f.estado = 'emitida' AND f.envio_intentos > 0)
+     ORDER BY (to_jsonb(s) ->> 'auto_aviso_at') IS NOT NULL, s.created_at
      LIMIT ${MAX_POR_PASE}`)
 }
 

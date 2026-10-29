@@ -13,8 +13,8 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 ## (29/10/2026) Sivra · agente huésped: «Gracias :)» ya no abre hueco de guía
 - `decidir.ts`: un cierre de cortesía puro (`esCierre`) no pasa por el juez `debeEscalar` → sin motivo «no cubre» ni ❓ en Telegram. Reglas duras siguen antes; con pregunta añadida el juez corre. `cortesia.ts`: `:)` admitido en `SEP`. Tests en `cortesia.test.ts` (cepo visto en rojo).
-- Factura huésped: NO hay envío automático el día de salida, ni CC, ni volcado de datos del chat a `sivra_factura_solicitudes`. Propuesto a Alberto (pendiente su OK, choca con la regla de envíos): datos del chat → solicitud + validar NIF → el día de salida emitir y enviar con CC; si falta algo, Telegram.
-- Reserva 160296956 (Nagore, Laietana de Llibreteria B08549784, info@laie.es + CC lcalles@laie.es): solicitud vacía, sin factura emitida a 29/10.
+- Factura huésped AUTOMÁTICA (OK de Alberto): datos del chat → `extraer.ts`/`chat.ts` (anti-invención: NIF/emails literales + dígito control), CC en `receptor_cc`, cron diario `/api/cron/sivra-facturas-salida` (11:13 UTC, ventana 30 días, idempotente) emite+envía; incompleta → UN Telegram. Migración `2026-10-29_sivra_facturas_huesped_auto.sql` APLICADA en prod. Excepción a la regla de envíos anotada en ambos CLAUDE.md. PR #5251.
+- Reserva 160296956 (Laie, 2.666,64€ sin IVA confirmado por Alberto): saldrá sola como 2026-047 en el primer pase tras el despliegue.
 
 ## (28/10/2026, 8) Correduría · ficha de póliza sin duplicidades (PR #5231)
 - «Riesgos» e «Historial del riesgo» integrados en «Qué asegura» (historial plegado si >1 póliza); `Objeto` se queda si el ramo admite dirección y ningún riesgo trae calle (para poder anotarla).
