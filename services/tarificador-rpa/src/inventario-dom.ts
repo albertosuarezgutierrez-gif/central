@@ -7,7 +7,7 @@
 // (catálogo), nunca cuál está elegida. Lo crudo pasa por `sanearInventarioDom` (@central/module-tarificacion): lista
 // blanca de claves, filtro de datos personales, truncados y tope de 60 KB.
 
-import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, type InventarioDom } from '@central/module-tarificacion'
+import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, MAX_OPCIONES_CRUDAS_SELECT, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
 import { controlOcultoDeEtiqueta, SEL_ERROR_EPAC, SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
 
@@ -159,7 +159,8 @@ function extractor(explora: boolean): string {
     }
     if (ng && !e.onclick) e.onclick = corta(ng, 8001);
     if (tag === 'select') {
-      e.opciones = Array.from(el.options).slice(0, 40).map((o) => ({ valor: o.value, texto: o.textContent }));
+      // 0.3.21: hasta MAX_OPCIONES_CRUDAS_SELECT (antes 40: «XIAOMI» de Allianz VMP quedaba fuera). El saneado decide cuántas salen.
+      e.opciones = Array.from(el.options).slice(0, ${MAX_OPCIONES_CRUDAS_SELECT}).map((o) => ({ valor: o.value, texto: o.textContent }));
       e.opcionesTotal = el.options.length;
       if (sp) e.selectpicker = true;
     }
@@ -300,7 +301,7 @@ type MarcoExplorable = Pick<Frame, 'url' | 'name' | 'isDetached' | 'evaluateHand
  * ≤60 KB) más `ref` por elemento, `conValor`, `titulos {texto, tag}` e `importes`, y la lista de NODOS en el mismo orden
  * que el crudo (la ref es el índice crudo: `m<marco>e<índice>`). Solo lectura. `null` si no se puede leer.
  */
-export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, maxBytes = MAX_BYTES_INVENTARIO_DOM, msPorMarco = 5_000, msTotal = 15_000): Promise<InventarioExploracion | null> {
+export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, maxBytes = MAX_BYTES_INVENTARIO_DOM, msPorMarco = 5_000, msTotal = 15_000, pistasOpciones: readonly string[] = []): Promise<InventarioExploracion | null> {
   const handles: JSHandle[] = []
   const liberar = async () => {
     await Promise.all(handles.splice(0).map((h) => h.dispose().catch(() => undefined)))
@@ -343,7 +344,8 @@ export async function capturarInventarioExploracion(page: Pick<Page, 'frames'>, 
       })
       porMarco.push({ marco: f, nodos })
     }
-    const inventario = sanearInventarioDom({ marcos }, maxBytes, { refs: true })
+    // 0.3.21: pistas NO personales del catálogo (`pistasOpcionesInventario`): las opciones que casan se conservan más allá del tope.
+    const inventario = sanearInventarioDom({ marcos }, maxBytes, { refs: true, pistasOpciones })
     if (!inventario) {
       await liberar()
       return null

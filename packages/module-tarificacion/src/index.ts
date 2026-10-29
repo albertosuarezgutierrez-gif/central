@@ -35,7 +35,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, cuerpoLlevaAccionFinal, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, esLanzadorAplicacionNseMapfre, TEXTO_ACCESO_NSE_MAPFRE, neutralizarRutaTolerable, cuerpoToleradoConAccionReal, detalleCuerpoToleradoConAccionReal, esCampoFechaDeAccion, RE_SEGMENTO_FECHA_FIRMA, tipoDocumentoDe, opcionTipoDocumento, type TipoDocumento, RE_ACCION_REAL_TRAS_PREFIJO, type RutaTolerable, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, cuerpoLlevaAccionFinal, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, esLanzadorAplicacionNseMapfre, TEXTO_ACCESO_NSE_MAPFRE, neutralizarRutaTolerable, cuerpoToleradoConAccionReal, detalleCuerpoToleradoConAccionReal, esCampoFechaDeAccion, esCampoDatoDeFirma, RE_SEGMENTO_FECHA_FIRMA, tipoDocumentoDe, opcionTipoDocumento, type TipoDocumento, RE_ACCION_REAL_TRAS_PREFIJO, type RutaTolerable, type OpcionesGuard } from './guard-emision.ts'
 export {
   ACCIONES_PORTAL,
   PATRONES_GUARDADO_GUARD,
@@ -568,6 +568,11 @@ export {
   MAX_BYTES_INVENTARIO_DOM,
   MAX_MARCOS_INVENTARIO,
   MAX_OPCIONES_INVENTARIO,
+  MAX_OPCIONES_GARANTIZADAS_SELECT,
+  MAX_OPCIONES_EXTRA_INVENTARIO,
+  MAX_OPCIONES_PISTA_SELECT,
+  MAX_OPCIONES_CRUDAS_SELECT,
+  opcionCasaConPista,
   MAX_TEXTO_INVENTARIO,
   MAX_ONCLICK_CASILLA,
   MAX_ONCLICK_INVENTARIO,
@@ -713,6 +718,9 @@ export {
   ROTULOS_AVANCE_NEUTROS_SIN_TEXTO,
   rotuloNeutroSinTexto,
   esAccionSinEfecto,
+  // 0.3.21: pistas no personales para conservar opciones de un select (Allianz VMP) y avance deshabilitado al final del lote (Fidelidade).
+  pistasOpcionesInventario,
+  avanceDeshabilitadoAlFinal,
   type AvanceAutorizado,
   type AvancePorId,
   type EntradaExploracion,
