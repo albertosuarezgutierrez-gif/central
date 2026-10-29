@@ -20,6 +20,7 @@ import { clasificarAccionPortal, descripcionesSinExcepcionProyecto, fronteraEmis
 import {
   MAX_TITULOS_MARCO,
   conOnclickCompleto,
+  MARCA_TIRA_CIFRAS_ONCLICK,
   pareceDatoPersonalInventario,
   valoresSensiblesDeRiesgo,
   type ElementoInventario,
@@ -67,6 +68,13 @@ export type AvancePorId = {
    */
   sinIdentidad?: true
   /**
+   * 0.3.18 (Allianz patinete real 29/10/2026, mismo «Aceptar» de «Selección de Municipio» en otra visita): SOLO con `sinIdentidad`. El
+   * control no tiene id pero SÍ un onclick, que tiene que ser EXACTAMENTE este (tras `trim`; sin `;` ni nada más), y tiene que ser un
+   * `type=button` (no envía el formulario por sí mismo). Todo lo demás, igual que la regla sin id (texto exacto, único, ruta, títulos,
+   * importes; el guard lo repite VIVO y además exige que no haya otros manejadores ni atributos `form*`). Sin la clave = sin onclick.
+   */
+  onclickExacto?: string
+  /**
    * 0.3.13: rutas (`pathname` exacto, mismo ORIGEN que el marco) a las que el avance puede enviar además un POST — el destino real del
    * `eventoSiguiente()` (p. ej. `/drvp00/main/control.do`). La capa de contenido del guard sigue mirando URL y cuerpo: un cuerpo con
    * emitir/confirmar/firmar/pagar/contratar… se aborta igual.
@@ -81,6 +89,30 @@ export type AvancePorId = {
    * todo importe visible antes del clic (`vigilanciaVivaAvancePorId`, sin tope). Solo para reglas que pasan por esa puerta.
    */
   toleraTitulosRecortados?: true
+}
+
+/**
+ * 0.3.18 (Fidelidade hogar real 29/10/2026, `OPI_ES_Vivienda/Simualtion.aspx`): el botón de avance de la simulación es un
+ * `<input type=submit>` de OutSystems SIN texto, value, aria-label ni title (el rótulo va por CSS). Excepción ESTRECHA a
+ * `sin_descripcion_completa`: no se identifica por un texto que no existe sino por ORIGEN exacto + ruta + `name` + clases + ausencia de
+ * onclick + ser el ÚNICO control así en el marco, y solo si la pantalla no tiene texto de acción final ni datos bancarios, ni importes.
+ * Tarificar ≠ emitir: el resto del guard (`bloqueoAvance`, red, cuerpo del POST) se aplica igual y el worker repite todo VIVO.
+ */
+export type AvanceSinTexto = {
+  /** Origen EXACTO (esquema + host, sin puerto ni credenciales) del marco que contiene el control. */
+  origen: string
+  /** La ruta del marco contiene esta subcadena (sensible a mayúsculas). */
+  rutaIncluye: string
+  /** `name` empieza por esto… */
+  prefijoName: string
+  /** …y contiene esto. */
+  contieneName: string
+  /** Tokens de clase CSS que tiene que llevar el control (todos, exactos). */
+  clase: readonly string[]
+  /** Ningún título de la pantalla puede casar. */
+  nuncaConTitulo: RegExp
+  /** Ningún texto visible de la pantalla puede casar (texto plano). */
+  textoAccionFinal: RegExp
 }
 
 /**
@@ -120,6 +152,8 @@ export type EntradaExploracion = {
   enlacesAvanzables?: { rutaApp: string }
   /** Avances por identidad exacta del control (ver {@link AvancePorId}). Sin la clave = ninguno. */
   avancesPorId?: readonly AvancePorId[]
+  /** Avance de un `<input type=submit>` sin texto (ver {@link AvanceSinTexto}). Sin la clave = ninguno. */
+  avancesSinTexto?: readonly AvanceSinTexto[]
   /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
   guardadosEnDialogo?: readonly GuardadoEnDialogo[]
   /**
@@ -175,6 +209,48 @@ const ACEPTAR_EPAC_DRVP00_SIN_ID: AvancePorId = Object.freeze({
   sinIdentidad: true as const,
 })
 
+/**
+ * 0.3.18 (real 29/10/2026, ePAC drvp00 `control.do`): el MISMO «Aceptar» de «Selección de Municipio», sin id pero con
+ * `onclick="eventoSiguienteDialog()"` (botón `type=button`, clase `btn btn-block alz-wm-btn`). Es la regla {@link ACEPTAR_EPAC_DRVP00_SIN_ID}
+ * con el onclick EXACTO como única diferencia. `eventoSiguienteDialog` probablemente abre un diálogo (municipio): lo que salga de él pasa
+ * por las reglas normales en el paso siguiente (un `confirm()` nativo se descarta y el explorador para; un segundo «Aceptar» = no único).
+ */
+const ACEPTAR_EPAC_DRVP00_DIALOGO: AvancePorId = Object.freeze({
+  ...ACEPTAR_EPAC_DRVP00_SIN_ID,
+  onclickExacto: 'eventoSiguienteDialog()',
+})
+
+/**
+ * 0.3.18: acción final o dato bancario en un texto visible (texto plano). «pagar» y no «pago»: «Forma de pago» es un campo normal de una
+ * simulación. El worker repite esta MISMA expresión sobre el texto vivo de todos los marcos.
+ */
+export const RE_TEXTO_ACCION_FINAL_SIN_TEXTO = /\b(?:emit|emis|contrat|confirm|firm|pagar|formaliz)|\biban\b|cuenta bancaria|numero de cuenta|\bn[º°.]*\s*de cuenta\b|datos bancarios|cuenta corriente|tarjeta de (?:credito|debito)/
+
+/**
+ * 0.3.18 (revisión adversarial): OutSystems pone el NOMBRE DEL WIDGET al final del `name`/`id` (`…$wtMainContent$wtBtnContratar`). Sin
+ * fronteras de palabra (va pegado). El worker repite esta MISMA expresión sobre el `name` e `id` VIVOS (minúsculas).
+ */
+export const RE_NAME_ACCION_FINAL_SIN_TEXTO = /emit|emis|contrat|contract|confirm|firm|pagar|pago|payment|formaliz|iban|tarjet/
+
+/** Origen del que sale la regla y ruta de la pantalla de simulación de Fidelidade Vivienda (con la errata «Simualtion» del portal). */
+export const ORIGEN_FIDELIDADE_MEDIADORES = 'https://mediadores.fidelidade.es'
+
+/**
+ * 0.3.18 (real 29/10/2026): botón primario de «Simulación» de Fidelidade Vivienda, `input[type=submit]` de OutSystems
+ * (`name="OPI_Theme_wt25$block$wtMainContent$FID_B…"`, clase «Button First Is_Default») sin ningún rótulo.
+ */
+const SIMULACION_FIDELIDADE_SIN_TEXTO: AvanceSinTexto = Object.freeze({
+  origen: ORIGEN_FIDELIDADE_MEDIADORES,
+  // SOLO la pantalla de simulación (revisión adversarial 29/10/2026): con todo el módulo, el botón primario del tema (Button+Is_Default, el
+  // mismo en cada pantalla) de cualquier pantalla de emisión/contratación de Vivienda quedaba cubierto por la regla. Otra pantalla = otra regla.
+  rutaIncluye: '/OPI_ES_Vivienda/Simualtion.aspx',
+  prefijoName: 'OPI_Theme_wt',
+  contieneName: '$block$wtMainContent$',
+  clase: Object.freeze(['Button', 'Is_Default']),
+  nuncaConTitulo: /revisi|emisi|contrat|firma|iban|resumen|formaliz|confirm|pagar/,
+  textoAccionFinal: RE_TEXTO_ACCION_FINAL_SIN_TEXTO,
+})
+
 /** ¿La ruta del marco es la de la regla (o una de sus `rutasMarco`, solo si es `sinIdentidad`)? Pura; la repite el guard con la ruta VIVA. */
 export function rutaCasaAvancePorId(a: AvancePorId, ruta: string | null): boolean {
   if (ruta === null) return false
@@ -199,7 +275,7 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   'allianz:autos:movilidad_personal': Object.freeze({
     compania: 'allianz', ramo: 'patinete', producto: 'patinete', pestana: 'Autos', productoMenu: 'Movilidad Personal',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
-    avancesPorId: Object.freeze([SIGUIENTE_EPAC_DRVP00, ACEPTAR_EPAC_DRVP00_SIN_ID]),
+    avancesPorId: Object.freeze([SIGUIENTE_EPAC_DRVP00, ACEPTAR_EPAC_DRVP00_SIN_ID, ACEPTAR_EPAC_DRVP00_DIALOGO]),
     cierraDialogoTermino: true as const,
     tomadorMediador: true as const,
   }),
@@ -238,6 +314,8 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   'fidelidade:particulares:vivienda': Object.freeze({
     compania: 'fidelidade', ramo: 'hogar', producto: 'hogar', pestana: 'Oficina virtual', productoMenu: 'Fidelidade Vivienda',
     avancesAutorizados: Object.freeze([]),
+    // 0.3.18: el botón de avance de «Simulación» no tiene rótulo (input submit de OutSystems): regla estrecha, ver `AvanceSinTexto`.
+    avancesSinTexto: Object.freeze([SIMULACION_FIDELIDADE_SIN_TEXTO]),
   }),
 })
 
@@ -1116,7 +1194,9 @@ export function onclickEnviaFormulario(onclick: string | undefined, el: Pick<Ele
   if (llamadas.length > 1) return true
   const propios = [el.id, el.name].filter((x): x is string => typeof x === 'string' && x !== '' && !truncado(x))
   if (propios.length === 0) return true
-  const esPropio = (x: string) => propios.includes(x)
+  // 0.3.18: una cadena con la marca de tira de cifras normalizada (`MARCA_TIRA_CIFRAS_ONCLICK`) nunca es «propia»: podría nombrar a OTRO
+  // componente cuyo id solo difiere en las cifras.
+  const esPropio = (x: string) => !x.includes(MARCA_TIRA_CIFRAS_ONCLICK) && propios.includes(x)
   const llamada = llamadas[0]
   const nombre = llamada[0].toLowerCase()
   const resto = oc.slice((llamada.index ?? 0) + llamada[0].length)
@@ -1195,6 +1275,8 @@ export function esAceptarDivAutorizado(entrada: string, el: ElementoInventario, 
  */
 export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  // 0.3.18: el input submit sin rótulo de una entrada que lo declara (no tiene `texto`).
+  if (e && avanceSinTextoAutorizado(entrada, el, marco) !== null) return true
   if (!e || typeof el.texto !== 'string') return false
   // Lista de títulos en el TOPE = recortada: el título de Tarificar podría ser justo el que no llegó → ningún «Aceptar» POR TÍTULO.
   // (El avance por identidad exacta decide por su cuenta si tolera el recorte; ver `toleraTitulosRecortados`.)
@@ -1238,7 +1320,9 @@ export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, m
   if (conIdentidad && (truncado(el.id as string) || truncado(el.onclick as string))) return null
   // 0.3.17: sin id y sin onclick solo vale una regla `sinIdentidad`; con id u onclick (aunque solo uno), una regla por id exacto.
   const sinId = !tieneAlgo(el.id) && !tieneAlgo(el.onclick)
-  if (!conIdentidad && !sinId) return null
+  // 0.3.18: sin id y CON onclick solo vale una regla `sinIdentidad` con `onclickExacto` (ver `casaSinIdentidad`).
+  const sinIdConOnclick = !tieneAlgo(el.id) && tieneAlgo(el.onclick)
+  if (!conIdentidad && !sinId && !sinIdConOnclick) return null
   if (el.id !== undefined && truncado(el.id)) return null
   if (el.onclick !== undefined && truncado(el.onclick)) return null
   const recortada = titulosRecortados(marco)
@@ -1250,7 +1334,7 @@ export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, m
   const ruta = rutaDeMarco(marco.url)
   return e.avancesPorId.find((a) =>
     (!recortada || a.toleraTitulosRecortados === true) &&
-    (a.sinIdentidad === true ? sinId && unicoPorTexto(marco, a.texto) : conIdentidad && el.id === a.id && onclickNormalizado(el.onclick) === a.onclick) &&
+    (a.sinIdentidad === true ? casaSinIdentidad(a, el) && unicoPorTexto(marco, a.texto) : conIdentidad && el.id === a.id && onclickNormalizado(el.onclick) === a.onclick) &&
     a.texto.test(texto) && (aria === null || a.texto.test(aria)) &&
     rutaCasaAvancePorId(a, ruta) &&
     !todos.some((t) => a.nuncaConTitulo.test(t)),
@@ -1258,6 +1342,16 @@ export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, m
 }
 
 const tieneAlgo = (v: string | undefined | null): boolean => typeof v === 'string' && v.trim() !== ''
+
+/**
+ * ¿Casa la IDENTIDAD de un control sin id con una regla `sinIdentidad`? Sin `onclickExacto`: sin id y sin onclick (0.3.17). Con
+ * `onclickExacto` (0.3.18): sin id, onclick EXACTO tras `trim` (sin `onclickCompleto` aparte: no hay recorte) y `type=button`. Pura.
+ */
+function casaSinIdentidad(a: AvancePorId, el: ElementoInventario): boolean {
+  if (tieneAlgo(el.id)) return false
+  if (a.onclickExacto === undefined) return !tieneAlgo(el.onclick) && !tieneAlgo(el.onclickCompleto)
+  return typeof el.onclick === 'string' && el.onclick.trim() === a.onclickExacto && el.onclickCompleto === undefined && (el.type ?? '').toLowerCase() === 'button'
+}
 
 /**
  * 0.3.17: ¿hay EXACTAMENTE un control en el marco cuyo texto (o aria-label) normalizado case con la regla? Un segundo «Aceptar» (de la
@@ -1273,6 +1367,59 @@ export function unicoPorTexto(marco: MarcoInventario, re: RegExp): boolean {
   return n === 1
 }
 
+/** ¿Este elemento tiene las CARACTERÍSTICAS del control de una regla {@link AvanceSinTexto}? (sin mirar origen, ruta ni unicidad). Pura. */
+function casaControlSinTexto(x: ElementoInventario, a: AvanceSinTexto): boolean {
+  if (x.tag !== 'input' || (x.type ?? '').toLowerCase() !== 'submit') return false
+  if (tieneAlgo(x.texto) || tieneAlgo(x.ariaLabel) || tieneAlgo(x.etiqueta)) return false
+  if (tieneAlgo(x.onclick) || tieneAlgo(x.onclickCompleto)) return false
+  if (typeof x.name !== 'string' || !x.name.startsWith(a.prefijoName) || !x.name.includes(a.contieneName)) return false
+  const tokens = (x.clase ?? '').split(/\s+/).filter(Boolean)
+  return a.clase.every((t) => tokens.includes(t))
+}
+
+/**
+ * 0.3.18: qué impide autorizar `el` como avance SIN TEXTO de la entrada (nombre de la condición, sin valores del portal), o `null` si se
+ * autoriza. `'sin_regla'` si la entrada no declara ninguna. Exige TODO: input submit sin texto/aria/etiqueta, sin onclick, `name` y clase de
+ * la regla, ORIGEN exacto y ruta del marco, ningún importe, ningún texto visible de acción final o dato bancario (títulos, textos de
+ * controles, avisos), ningún título de emisión/contratación/resumen… y ser el ÚNICO control así del marco. Pura y compartida con el worker.
+ */
+export function motivoNoAvanceSinTexto(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  const reglas = e?.avancesSinTexto ?? []
+  if (reglas.length === 0) return 'sin_regla'
+  if (el.tag !== 'input' || (el.type ?? '').toLowerCase() !== 'submit') return 'no_es_input_submit'
+  let motivo = 'sin_regla'
+  for (const a of reglas) {
+    if (tieneAlgo(el.texto) || tieneAlgo(el.ariaLabel) || tieneAlgo(el.etiqueta)) { motivo = 'con_nombre_visible'; continue }
+    if (tieneAlgo(el.onclick) || tieneAlgo(el.onclickCompleto)) { motivo = 'con_onclick'; continue }
+    if (typeof el.name !== 'string' || !el.name.startsWith(a.prefijoName) || !el.name.includes(a.contieneName)) { motivo = 'name_distinto'; continue }
+    if (!casaControlSinTexto(el, a)) { motivo = 'clase_distinta'; continue }
+    if ([el.name, el.id].some((v) => typeof v === 'string' && RE_NAME_ACCION_FINAL_SIN_TEXTO.test(v.toLowerCase()))) { motivo = 'name_de_accion_final'; continue }
+    const origen = /^(https?:\/\/[^/?#]+)/i.exec(String(marco.url ?? ''))?.[1]?.toLowerCase() ?? null
+    if (origen !== a.origen) { motivo = 'origen_distinto'; continue }
+    if (!(rutaDeMarco(marco.url) ?? '').includes(a.rutaIncluye)) { motivo = 'ruta_distinta'; continue }
+    if ((marco.importes?.length ?? 0) > 0) { motivo = 'marco_con_importes'; continue }
+    const titulos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
+    if (titulos.some((t) => a.nuncaConTitulo.test(t))) { motivo = 'titulo_de_emision'; continue }
+    const visibles = [
+      ...titulos,
+      ...(marco.avisosPortal ?? []),
+      ...(marco.elementos ?? []).flatMap((x) => [x.texto, x.ariaLabel, x.etiqueta]),
+    ].filter((d): d is string => typeof d === 'string' && d.trim() !== '').map(plano)
+    if (visibles.some((t) => a.textoAccionFinal.test(t))) { motivo = 'texto_de_accion_final'; continue }
+    if ((marco.elementos ?? []).filter((x) => casaControlSinTexto(x, a)).length !== 1) { motivo = 'no_unico_en_marco'; continue }
+    return null
+  }
+  return motivo
+}
+
+/** La regla {@link AvanceSinTexto} que autoriza `el` (o `null`). Pura y compartida con el worker. */
+export function avanceSinTextoAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): AvanceSinTexto | null {
+  if (motivoNoAvanceSinTexto(entrada, el, marco) !== null) return null
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  return (e?.avancesSinTexto ?? []).find((a) => casaControlSinTexto(el, a)) ?? null
+}
+
 /**
  * Por qué NO se autoriza un «Aceptar» por identidad exacta (diagnóstico para el error del validador; SIN valores del portal: solo
  * el nombre de la condición que falla). `null` si la entrada no tiene reglas de este tipo o si sí se autoriza.
@@ -1286,8 +1433,18 @@ export function motivoNoAvancePorId(entrada: string, el: ElementoInventario, mar
   if (typeof el.id !== 'string' && typeof el.onclick !== 'string' && !sinId) return 'sin_id_u_onclick'
   if (truncado(el.texto) || (typeof el.id === 'string' && truncado(el.id)) || (typeof el.onclick === 'string' && truncado(el.onclick))) return 'id_u_onclick_recortado'
   if ((marco.importes?.length ?? 0) > 0) return 'marco_con_importes'
+  // 0.3.18: sin id y CON onclick no es «sin id u onclick»: el onclick no es el de ninguna regla (o el control no es type=button).
+  if (!tieneAlgo(el.id) && tieneAlgo(el.onclick)) {
+    const sr = e.avancesPorId.find((a) => a.sinIdentidad === true && a.onclickExacto !== undefined && casaSinIdentidad(a, el))
+    if (!sr) return 'onclick_no_autorizado'
+    if (!sr.texto.test(plano(el.texto))) return 'texto_distinto'
+    if (!rutaCasaAvancePorId(sr, rutaDeMarco(marco.url))) return 'ruta_de_marco_distinta'
+    if (!unicoPorTexto(marco, sr.texto)) return 'texto_no_unico_en_marco'
+    if (titulosRecortados(marco) && !sr.toleraTitulosRecortados) return 'titulos_recortados'
+    return 'titulo_de_tarificacion_o_emision'
+  }
   if (sinId) {
-    const sr = e.avancesPorId.find((a) => a.sinIdentidad === true)
+    const sr = e.avancesPorId.find((a) => a.sinIdentidad === true && a.onclickExacto === undefined)
     if (!sr) return 'sin_id_u_onclick'
     if (!sr.texto.test(plano(el.texto))) return 'texto_distinto'
     if (!rutaCasaAvancePorId(sr, rutaDeMarco(marco.url))) return 'ruta_de_marco_distinta'
@@ -1362,7 +1519,8 @@ function descripcionesEnEntrada(entrada: string, el: ElementoInventario, marco: 
 /** `null` = el botón se puede pulsar en exploración; si no, por qué no. */
 export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
   // Hace falta saber QUÉ es el botón: al menos una descripción visible (texto o aria) entera, no recortada por el saneado.
-  if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d))) return 'sin_descripcion_completa'
+  // 0.3.18: salvo el input submit sin rótulo que la entrada declara (`avancesSinTexto`; el resto de comprobaciones sigue igual).
+  if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d)) && avanceSinTextoAutorizado(entrada, el, marco) === null) return 'sin_descripcion_completa'
   // Un onclick recortado puede esconder la llamada de emisión en la parte que no llegó.
   if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
   const desc = descripcionesEnEntrada(entrada, el, marco)
@@ -1570,11 +1728,13 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
           ? bloqueoGuardadoPresupuesto(el, { tipoPantalla: pantalla.tipo, hayImportes: importes.size > 0, presupuestoEnCurso: ctx.presupuestoEnCurso === true })
           : bloqueoAvance(ctx.entrada, el, marco)
         if (bloqueo) {
-          const causa = bloqueo === 'aceptar_no_autorizado' ? motivoNoAvancePorId(ctx.entrada, el, marco) : null
+          const causa = bloqueo === 'aceptar_no_autorizado' ? motivoNoAvancePorId(ctx.entrada, el, marco)
+            : bloqueo === 'sin_descripcion_completa' && el.tag === 'input' && (el.type ?? '').toLowerCase() === 'submit' && (ENTRADAS_EXPLORACION[ctx.entrada as keyof typeof ENTRADAS_EXPLORACION]?.avancesSinTexto?.length ?? 0) > 0 ? motivoNoAvanceSinTexto(ctx.entrada, el, marco)
+            : null
           return void errores.push(`${donde}: ${bloqueo}${causa ? ` (${causa})` : ''}`)
         }
         // Avance por id (ePAC drvp00) con un importe en CUALQUIER marco del inventario (o ya visto antes en este trabajo): nunca.
-        if (efecto !== 'guardar_presupuesto' && avancePorIdAutorizado(ctx.entrada, el, marco) && (importes.size > 0 || ctx.precioVisto === true)) {
+        if (efecto !== 'guardar_presupuesto' && (avancePorIdAutorizado(ctx.entrada, el, marco) || avanceSinTextoAutorizado(ctx.entrada, el, marco)) && (importes.size > 0 || ctx.precioVisto === true)) {
           return void errores.push(`${donde}: avance_por_id_con_precio`)
         }
         acciones.push({ accion: 'avanzar', ref, efectoEsperado: efecto, confianza: a.confianza })
