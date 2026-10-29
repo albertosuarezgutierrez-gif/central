@@ -47,9 +47,6 @@ type FilaSerie = { id: string; prefijo: string; anio: number; siguiente_numero: 
  */
 export async function emitirFactura(
   facturaId: string, mensajeId: number | null, ahora: Date = new Date(),
-  /** `automatico`: el cron de salida (`salida-auto.ts`) emite sin ✅ (aprobado por Alberto el 29/10/2026 para facturas con
-   *  datos validados). Se salta SOLO la comprobación del mensaje vigente; el resto (FOR UPDATE, serie, trigger) igual. */
-  opts: { automatico?: boolean } = {},
 ): Promise<ResultadoEmision> {
   return prisma.$transaction(async (tx) => {
     const [f] = await tx.$queryRaw<FilaFactura[]>(Prisma.sql`
@@ -58,7 +55,8 @@ export async function emitirFactura(
         FROM sivra_facturas_huesped WHERE id = ${facturaId}::uuid FOR UPDATE`)
     if (!f) return { estado: 'no_existe' } as const
     if (f.estado !== 'borrador') return { estado: 'ya_emitida', numeroCompleto: f.numero_completo, enviada: f.estado === 'enviada' } as const
-    if (!opts.automatico && !mensajeVigente(f.telegram_message_id, mensajeId)) return { estado: 'obsoleta' } as const
+    // Sin ✅ vigente no se emite NUNCA (29/10/2026: nada sale sin el botón de Alberto; no hay vía automática).
+    if (!mensajeVigente(f.telegram_message_id, mensajeId)) return { estado: 'obsoleta' } as const
 
     const { anio, iso } = fechaMadrid(ahora)
     const [s] = await tx.$queryRaw<FilaSerie[]>(Prisma.sql`

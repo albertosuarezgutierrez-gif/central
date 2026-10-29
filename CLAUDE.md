@@ -68,7 +68,7 @@ y los `module-*` de cada vertical.
 - **Mira los PRs ABIERTOS antes de empezar** algo no trivial (`list_pull_requests`). Mirarlos no es mergearlos.
 - **Un cepo no está terminado hasta verlo FALLAR:** rompe lo que protege, míralo en rojo, restaura. Un brazo por aserción.
 - **Comunicaciones salientes:** NUNCA correo/mensaje a terceros sin OK explícito de Alberto para ESE envío. Por defecto, borrador.
-  - Única excepción (aprobada por Alberto el 29/10/2026): la **factura del huésped de sivra con datos validados** se emite y envía sola (con CC) el día de salida (`apps/plataforma/lib/sivra/facturas/salida-auto.ts`). Cualquier otro envío sigue necesitando OK.
+  - Factura del huésped: cuando el huésped la pide por mensaje, el agente prepara el borrador con sus datos y lo manda a Alberto por Telegram con ✅ Enviar / ✏️ Modificar; nada sale sin su botón (29/10/2026).
 - **Datos de Alberto para formularios/borradores** (NIF, móvil, nombre): ya están en `MEDIADOR` de `packages/module-seguros/src/mediador.ts` (NIF `28823484E`, móvil 637 349 990). Úsalos; **no se los vuelvas a pedir**.
 - **Quién mira qué pantalla:** antes de dar por avisada a una persona, comprueba dónde trabaja. Vanesa (Sique Brilla)
   SOLO abre `/invitado/limpieza`; `sivra_ordenes_limpieza.tarea_id` NULL = no lo ve, y se dice.
