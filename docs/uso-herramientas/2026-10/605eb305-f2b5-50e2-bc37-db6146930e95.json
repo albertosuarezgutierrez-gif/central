@@ -1,0 +1,19 @@
+{
+ "sesion": "605eb305-f2b5-50e2-bc37-db6146930e95",
+ "inicio": "2026-10-29T13:51:56.398Z",
+ "fin": "2026-10-29T13:51:56.399Z",
+ "llamadas": 1,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2179,
+   "chars_out": 2400,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

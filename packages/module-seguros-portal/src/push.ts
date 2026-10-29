@@ -33,3 +33,10 @@ export function textoPushObligacion(o: { tipo: string; titulo: string }): { titl
   }
   return { title: 'Tu seguro pide una decisión', body: `${o.titulo}: te queda poco margen para decidir si lo renuevas.` }
 }
+
+/** A dónde abre el push de una obligación: su póliza (cartera o aportada) o, sin póliza, la bóveda. */
+export function urlPushObligacion(o: { polizaId: string | null; polizaDeclaradaId: string | null }): string {
+  if (o.polizaId) return `/boveda/poliza/${encodeURIComponent(o.polizaId)}`
+  if (o.polizaDeclaradaId) return `/boveda/anadida/${encodeURIComponent(o.polizaDeclaradaId)}`
+  return '/boveda'
+}

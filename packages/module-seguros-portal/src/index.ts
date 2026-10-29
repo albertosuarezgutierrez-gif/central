@@ -142,7 +142,7 @@ export {
   polizasModificadasParaAviso, textoPolizaModificada, textoPushPolizaModificada,
 } from './poliza-cambios.ts'
 export type { CampoCambioPoliza, FotoPoliza, FilaFotoPoliza, FilaCambioPoliza, PolizaModificadaParaAviso } from './poliza-cambios.ts'
-export { debeAvisarPush, textoPushObligacion } from './push.ts'
+export { debeAvisarPush, textoPushObligacion, urlPushObligacion } from './push.ts'
 export {
   normalizarRecordatorio,
   siguienteOcurrencia,
@@ -639,7 +639,7 @@ export {
 } from './mejorar-precio.ts'
 export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } from './mejorar-precio.ts'
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
-export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET, TIPO_AVISO_VENCIMIENTO_ITV, TIPOS_AVISO_INTERRUPTOR, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima, urlPushCima } from './avisos-cima.ts'
+export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, TIPO_AVISO_VENCIMIENTO_CARNET, TIPO_AVISO_VENCIMIENTO_ITV, TIPOS_AVISO_INTERRUPTOR, claveBase, anclaRecibo, anclaSiniestro, urlFichaPoliza, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima, urlPushCima } from './avisos-cima.ts'
 // Fase B de avisos (13/10/2026): vencimiento de aportadas, subida de prima, vencimientos de pólizas autorizadas.
 export {
   DIAS_CAPTACION_APORTADA,
