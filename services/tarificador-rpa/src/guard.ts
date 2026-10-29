@@ -64,6 +64,7 @@ import {
   esBotonDeListaBlanca,
   MOTIVO_FRONTERA_CUENTA,
   parametrosParecenEmision,
+  cuerpoLlevaAccionFinal,
   senalCuentaBancaria,
   pareceEmision,
   redactarDatosPersonales,
@@ -402,7 +403,11 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // Ruta TOLERADA (Mapfre NSE): además, los NOMBRES de parámetro y el botón JSF del cuerpo no pueden nombrar una acción real.
       const porCuerpoGeneral = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
       const detalleTolerado = !porUrl && !porCuerpoGeneral && noGet && neutra !== url ? detalleCuerpoToleradoConAccionReal(cuerpoDe(req)) : null
-      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op) || detalleTolerado !== null
+      // 0.3.13: destinos POST EXTRA del avance (índice ≥ 1, p. ej. /drvp00/main/control.do): inspección estricta del cuerpo (también
+      // confirmar/firmar/pagar/IBAN en claves de acción o nombres financieros). El destino primario conserva el criterio de siempre.
+      const enExtraAvance = av !== null && enLista && noGet && destinoAvancePermitido(url, av.endpoints.slice(1)) && !destinoAvancePermitido(url, av.endpoints.slice(0, 1))
+      const porCuerpoExtra = !porUrl && enExtraAvance && cuerpoLlevaAccionFinal(cuerpoDe(req), op)
+      const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op) || detalleTolerado !== null || porCuerpoExtra
       if (porUrl && !porCuerpo && !noGet && Date.now() < turismosGenerali && av === null && gv === null && Date.now() >= ventanaHasta && urlTurismosGeneraliPermitida(url)) {
         // Navegación del ÚNICO clic de «TURISMOS (RAMO UV)» (ventana abierta por entrarTurismosGenerali): GET a Generali con
         // «emisión»/«contratación» como sustantivo de menú y nada más que case con el patrón. Un POST, otro origen o cualquier
@@ -2923,6 +2928,7 @@ export async function pulsarExploracionAutorizada(
     return f ? { accion: f.action, pagina: d.location.href } : null
   })
   let endpoint: string | null = null
+  let extras: string[] = []
   try {
     if (destino) {
       const a = new URL(destino.accion)
@@ -2939,6 +2945,8 @@ export async function pulsarExploracionAutorizada(
     try {
       const p = new URL(await boton.evaluate((el) => el.ownerDocument.location.href))
       endpoint = (p.protocol === 'https:' || p.protocol === 'http:') && !p.username && !p.password ? `${p.origin}${porId.rutaMarco}` : null
+      // 0.3.13: destinos POST declarados de la regla (mismo origen, ruta exacta). Sigue la capa de contenido (URL y cuerpo).
+      if (endpoint) extras = (porId.destinosPost ?? []).filter((r) => /^\/[A-Za-z0-9_./-]{1,120}$/.test(r) && !r.includes('..')).map((r) => `${p.origin}${r}`)
     } catch {
       endpoint = null
     }
@@ -2955,7 +2963,7 @@ export async function pulsarExploracionAutorizada(
     d.dismiss().catch(() => {})
   }
   page.on('dialog', alDialogo)
-  abrir(hasta, [endpoint])
+  abrir(hasta, [endpoint, ...extras])
   try {
     await boton.click()
     // La pantalla cambió cuando el control ya no está (navegación, recarga del marco o re-pintado).

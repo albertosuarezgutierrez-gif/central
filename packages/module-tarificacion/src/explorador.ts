@@ -53,6 +53,12 @@ export type AvancePorId = {
   texto: RegExp
   /** `pathname` EXACTO de la URL del marco que lo contiene. */
   rutaMarco: string
+  /**
+   * 0.3.13: rutas (`pathname` exacto, mismo ORIGEN que el marco) a las que el avance puede enviar además un POST — el destino real del
+   * `eventoSiguiente()` (p. ej. `/drvp00/main/control.do`). La capa de contenido del guard sigue mirando URL y cuerpo: un cuerpo con
+   * emitir/confirmar/firmar/pagar/contratar… se aborta igual.
+   */
+  destinosPost?: readonly string[]
   /** Ningún título de la pantalla puede casar (si dice «Tarificar», «Revisión», «Emisión»… no se avanza). */
   nuncaConTitulo: RegExp
 }
@@ -124,6 +130,8 @@ const SIGUIENTE_EPAC_DRVP00: AvancePorId = Object.freeze({
   onclick: 'eventoSiguiente()',
   texto: /^aceptar$/,
   rutaMarco: '/drvp00/SEAServlet',
+  // Real 28/10/2026: «Aceptar» de «Figuras Intervinientes» envía el POST a /drvp00/main/control.do (desde /drvp00/SEAServlet).
+  destinosPost: Object.freeze(['/drvp00/main/control.do']),
   nuncaConTitulo: ACEPTAR_DATOS_BASICOS.nuncaConTitulo,
 })
 
@@ -1381,7 +1389,8 @@ const PATRONES_TITULO_EMISION: readonly (readonly [DetalleFinExploracion, RegExp
   ['titulo:firmar', /firmar/],
   ['titulo:emitir', /\bemitir\b/],
   ['titulo:emision', /emision/],
-  ['titulo:contrat', /contrat/],
+  // 0.3.13: «Contratación» (sustantivo de sección: Mapfre «Contratación…») NO para por sí sola; «contratar», «contrato», «contratada/o»… sí.
+  ['titulo:contrat', /contrat(?!acion)/],
   ['titulo:formaliz', /formaliz/],
   ['titulo:grabar', /\bgrabar\b/],
   ['titulo:archivar', /archivar/],

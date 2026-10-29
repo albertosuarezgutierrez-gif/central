@@ -1,5 +1,6 @@
 // Cepos del EXPLORADOR IA (13/10/2026). Fixtures SINTÉTICAS: ningún dato personal real (NIF, correo y teléfono inventados).
 import { describe, it, expect } from 'vitest'
+import { comprobarBoton, cuerpoLlevaAccionFinal } from './guard-emision.ts'
 import {
   ACCIONES_EXPLORADOR,
   DESCRIPCION_MOTIVOS_PARAR,
@@ -1272,11 +1273,58 @@ describe('detectarParada 0.3.12: detalle con el nombre del patrón', () => {
   it('título y campo de emisión llevan código de la lista cerrada, sin texto de la página', () => {
     const t = detectarParada(inventario({ titulos: ['Resumen de contratación'] }))
     expect(t?.motivo).toBe('cerca_de_emision')
-    expect(t?.detalle).toBe('titulo:contrat')
+    expect(t?.detalle).toBe('titulo:resumen_contratacion')
     expect(detectarParada(inventario({ titulos: ['Forma de pago'] }))?.detalle).toBe('titulo:forma_pago')
     const c = detectarParada(inventario({ elementos: [{ tag: 'input', etiqueta: 'CVV' }] }))
     expect(c?.detalle).toBe('campo:cvv')
     for (const d of [t?.detalle, c?.detalle]) expect(DETALLES_FIN_EXPLORACION).toContain(d)
     expect(JSON.stringify(t)).not.toContain('Resumen')
+  })
+})
+
+describe('detectarParada 0.3.13: «Contratación» (sección) no para; contratar/contrato/contratada sí', () => {
+  it('título «Contratación…» a secas NO es parada', () => {
+    for (const t of ['Contratación', 'Contratación de seguros de automóviles', 'Alta y contratación']) {
+      expect(detectarParada(inventario({ titulos: [t] }))).toBeNull()
+    }
+  })
+  it('«contratar», «contrato», «contratada/o» siguen parando con titulo:contrat', () => {
+    for (const t of ['Contratar el seguro', 'Contrato de seguro', 'Póliza contratada', 'Seguro contratado']) {
+      const p = detectarParada(inventario({ titulos: [t] }))
+      expect(p?.motivo, t).toBe('cerca_de_emision')
+      expect(p?.detalle, t).toBe('titulo:contrat')
+    }
+  })
+  it('«Resumen de contratación», emisión, firma y forma de pago siguen parando', () => {
+    expect(detectarParada(inventario({ titulos: ['Resumen de la contratación'] }))?.detalle).toBe('titulo:resumen_contratacion')
+    expect(detectarParada(inventario({ titulos: ['Emisión de la póliza'] }))?.detalle).toBe('titulo:emision')
+    expect(detectarParada(inventario({ titulos: ['Forma de pago'] }))?.detalle).toBe('titulo:forma_pago')
+  })
+  it('los topes de BOTÓN no cambian: Contratar/Emitir/Confirmar pago/Firmar siguen bloqueados', () => {
+    for (const b of ['Contratar', 'Emitir póliza', 'Confirmar pago', 'Firmar', 'Contratación' + ' y emitir']) {
+      expect(() => comprobarBoton([b]), b).toThrow()
+    }
+  })
+})
+
+describe('cuerpoLlevaAccionFinal 0.3.13 (destinos POST extra del avance)', () => {
+  it('cuerpo normal pasa; acción final o campo financiero se rechaza', () => {
+    expect(cuerpoLlevaAccionFinal('paso=2&nifTomador=12345678Z&esPropietario=S')).toBe(false)
+    for (const a of ['emitir', 'confirmar', 'firmar', 'contratar', 'pagar']) expect(cuerpoLlevaAccionFinal(`accion=${a}&x=1`), a).toBe(true)
+    expect(cuerpoLlevaAccionFinal('evento=validar_aceptar()')).toBe(true)
+    expect(cuerpoLlevaAccionFinal('iban=ES00&x=1')).toBe(true)
+  })
+  it('revisión: acción en clave que no es de acción, en el NOMBRE del botón o en multipart, también se rechaza', () => {
+    for (const c of ['op=emitir', '_eventId=contratar', 'tarea=EMITIR', 'paso=emision', 'btnEmitir=1', 'x=1&doFormalizar=', 'sub=Confirmar', 'modo=pago', 'boton=Grabar%20p%C3%B3liza']) {
+      expect(cuerpoLlevaAccionFinal(c, { permitirAceptar: true }), c).toBe(true)
+    }
+    const mp = '--b\r\nContent-Disposition: form-data; name="op"\r\n\r\nemitir\r\n--b--\r\n'
+    expect(cuerpoLlevaAccionFinal(mp)).toBe(true)
+    expect(cuerpoLlevaAccionFinal(mp.replace('emitir', '2'))).toBe(false)
+  })
+  it('revisión: datos del riesgo de Figuras Intervinientes no dan falso positivo', () => {
+    for (const c of ['paso=2&nifTomador=12345678Z&esPropietario=S', 'esContratante=S&pagador=S&domicilio=Calle%20Mayor%201&planta=baja', 'fechaFirma=&nombre=Pagola', 'action=aceptar']) {
+      expect(cuerpoLlevaAccionFinal(c, { permitirAceptar: true }), c).toBe(false)
+    }
   })
 })

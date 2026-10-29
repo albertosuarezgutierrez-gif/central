@@ -113,8 +113,19 @@ async function marcoConPassword(page: Page, ms: number): Promise<Page | Frame> {
   }
 }
 
-/** 0.3.12: botones que cierran el diálogo de cookies/RGPD (texto normalizado EXACTO; lista cerrada). «No acepto cookies» RECHAZA el consentimiento. Nunca «Aceptar», «Sí, acepto cookies» ni el texto vacío. */
-export const BOTONES_CERRAR_RGPD_FIDELIDADE = Object.freeze(['cerrar', '×', 'x', 'entendido', 'no acepto cookies'] as const)
+/** 0.3.13: botones que cierran el diálogo de cookies/RGPD (texto normalizado EXACTO; lista cerrada). El portal EXIGE cookies: «No acepto cookies» lleva a SemCookies.aspx y el login no existe, así que se cierra con «Sí, acepto cookies» (consentimiento de cookies; no compromete nada contractual). Nunca «Aceptar», «Continuar» genéricos ni el texto vacío. */
+export const BOTONES_CERRAR_RGPD_FIDELIDADE = Object.freeze(['cerrar', '×', 'x', 'entendido', 'si, acepto cookies'] as const)
+/** Origen en el que se admite el cierre del diálogo de cookies. */
+export const ORIGEN_RGPD_FIDELIDADE = 'https://mediadores.fidelidade.es'
+const RE_SEM_COOKIES = /SemCookies\.aspx/i
+const urlSemCookies = (page: Page): boolean => [page.url(), ...page.frames().map((f) => f.url())].some((u) => RE_SEM_COOKIES.test(u))
+const origenPagina = (page: Page): string => {
+  try {
+    return new URL(page.url()).origin
+  } catch {
+    return ''
+  }
+}
 const SEL_DIALOGO_RGPD = 'os-internal-ui-dialog, .os-internal-ui-dialog'
 const SEL_BOTONES_DIALOGO = 'button, [role="button"], a, input[type="button"], input[type="submit"]'
 
@@ -153,15 +164,24 @@ export async function cerrarDialogoRgpdFidelidade(page: Page, ctx: Pick<CtxEntra
     return hallados
   }
   const inicial = await dialogo()
-  if (!inicial) return
+  if (!inicial) {
+    if (urlSemCookies(page)) throw new ErrorTarificador('portal', 'fidelidade: portal en SemCookies (cookies rechazadas)')
+    return
+  }
+  // Solo en el origen del portal de mediadores se pulsa algo del diálogo; en cualquier otro, ningún botón (sale el error con los textos).
   const botones = await botonesDe()
+  const origenOk = origenPagina(page) === ORIGEN_RGPD_FIDELIDADE
   const permitidos = new Set<string>(BOTONES_CERRAR_RGPD_FIDELIDADE)
-  const cierre = botones.find((b) => permitidos.has(textoBotonRgpd(b.texto)))
+  const cierre = !origenOk ? undefined : botones.find((b) => permitidos.has(textoBotonRgpd(b.texto)))
   if (cierre) {
     await ctx.pulsar(cierre.loc)
     const fin = Date.now() + Math.min(ms, 10_000)
     while ((await dialogo()) && Date.now() < fin) await page.waitForTimeout(250)
-    if (!(await dialogo())) return
+    if (!(await dialogo())) {
+      await page.waitForTimeout(500)
+      if (urlSemCookies(page)) throw new ErrorTarificador('portal', 'fidelidade: portal en SemCookies (cookies rechazadas)')
+      return
+    }
   }
   const textos = (cierre ? await botonesDe() : botones).slice(0, 8).map((b) => b.texto.slice(0, 40))
   throw new ErrorTarificador('portal', `fidelidade/login: diálogo de cookies/RGPD tapa el login; botones: [${textos.map((t) => `«${t}»`).join(', ')}]`)

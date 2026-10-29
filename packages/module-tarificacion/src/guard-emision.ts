@@ -190,6 +190,53 @@ export function parametrosParecenEmision(cuerpo: string | null | undefined, opci
   return false
 }
 
+/** Claves de campo que nombran IBAN/cuenta/tarjeta (hard cap: nunca viajan en un POST de exploración). */
+const CLAVE_DATO_FINANCIERO = /iban|cvv|cvc|tarjeta|card[\s_.-]*(?:no|num)|numero[\s_.-]*cuenta|cuenta[\s_.-]*bancaria|ccc/i
+
+/**
+ * 0.3.13 — Inspección ESTRICTA del cuerpo para los destinos POST extra de un avance (p. ej. `/drvp00/main/control.do`). Además de
+ * `parametrosParecenEmision`, rechaza el cuerpo si el VALOR de una clave de acción (`action`, `accion`, `evento`…) nombra una acción
+ * final real (emitir, contratar, CONFIRMAR, firmar, pagar, formalizar, grabar…) o si hay un campo de IBAN/cuenta/tarjeta.
+ * Sin falsos positivos con los datos del riesgo: solo se miran claves de acción y nombres financieros. PURA.
+ */
+export function cuerpoLlevaAccionFinal(cuerpo: string | null | undefined, opciones: OpcionesGuard = {}): boolean {
+  if (typeof cuerpo !== 'string' || cuerpo === '') return false
+  if (parametrosParecenEmision(cuerpo, opciones)) return true
+  const t = plano(decodificarUrlTolerante(cuerpo.replace(/\+/g, ' ')))
+  for (const m of t.matchAll(PAR_CLAVE_VALOR)) {
+    if (CLAVE_DATO_FINANCIERO.test(m[1])) return true
+    if (CLAVE_ACCION.test(m[1]) && RE_ACCION_REAL_TRAS_PREFIJO.test(m[2])) return true
+  }
+  // Revisión 0.3.13: la acción puede ir en una clave que NO acaba en action/evento (`op=emitir`, `_eventId=contratar`, `tarea=EMITIR`,
+  // `paso=emision`) o en el NOMBRE del botón enviado (`btnEmitir=1`), también en multipart. Se mira el NOMBRE de cada parámetro y el
+  // COMIENZO de su valor contra verbos de acción final (no contra el patrón general: «planta baja», «Domicilio», «contratante» o
+  // «pagador» no casan). Fail-closed: una dirección que EMPIECE por «Emitir…» abortaría el avance, no emitiría.
+  for (const [k, v] of paresDelCuerpo(cuerpo)) {
+    if (CLAVE_DATO_FINANCIERO.test(k) || NOMBRE_ACCION_FINAL.test(k) || VALOR_ACCION_FINAL.test(v)) return true
+  }
+  return false
+}
+
+/** Verbo de acción final en el NOMBRE de un parámetro (`btnEmitir`, `formEmision:aceptar`, `doContratar`). «contratante» no. */
+const NOMBRE_ACCION_FINAL = /emitir|emision|contrat(?!ante)|confirmar|firmar|pagar|formaliz|grabar|suplement|anular/i
+/** VALOR que EMPIEZA por un verbo/sustantivo de acción final (`EMITIR`, `contratar_poliza`, `Confirmar`, `pago`). */
+const VALOR_ACCION_FINAL = /^\s*(?:emit|emision|contrat(?!ante)|contract|confirm|firmar|pag(?:ar|o)(?![a-z])|formaliz|grabar|suplement|anula)/i
+
+/** Pares (nombre, valor) de un cuerpo form-urlencoded o multipart/form-data, ya decodificados y sin tildes. PURA. */
+function paresDelCuerpo(cuerpo: string): [string, string][] {
+  const dec = (x: string) => plano(decodificarUrlTolerante(x.replace(/\+/g, ' ')))
+  const pares: [string, string][] = []
+  if (/content-disposition\s*:\s*form-data/i.test(cuerpo)) {
+    for (const m of cuerpo.matchAll(/name="([^"\r\n]{0,128})"[^\r\n]*\r?\n(?:[^\r\n]+\r?\n)*\r?\n([^\r\n]{0,200})/gi)) pares.push([plano(m[1]), plano(m[2])])
+    return pares
+  }
+  for (const par of cuerpo.split('&')) {
+    const i = par.indexOf('=')
+    pares.push([dec(i < 0 ? par : par.slice(0, i)), i < 0 ? '' : dec(par.slice(i + 1))])
+  }
+  return pares
+}
+
 /** Lanza si la URL casa con el patrón. */
 export function comprobarUrl(url: string, opciones: OpcionesGuard = {}): void {
   if (pareceEmision(url, opciones)) throw new EmisionBloqueadaError('url', url)

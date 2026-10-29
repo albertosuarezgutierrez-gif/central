@@ -473,7 +473,7 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarExploracionAutorizada'))
   if (!fn) out.push('falta pulsarExploracionAutorizada en guard.ts')
   else {
-    const abrir = fn.indexOf('abrir(hasta, [endpoint])')
+    const abrir = fn.indexOf('abrir(hasta, [endpoint, ...extras])')
     const clic = fn.indexOf('.click(')
     for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'comprobarBoton(desc, { permitirAceptar: true })']) {
       const i = fn.indexOf(p)

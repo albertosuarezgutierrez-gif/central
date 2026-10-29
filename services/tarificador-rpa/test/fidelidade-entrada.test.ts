@@ -198,22 +198,54 @@ test('0.3.11 · diálogo RGPD solo con «Continuar»: error con el texto del bot
   }
 })
 
-test('0.3.12 · diálogo de cookies real: «No acepto cookies» cierra y el login continúa; el resto no se pulsa', async () => {
-  const { context, page, ctx } = await abrir({ dialogo: ['', 'aquí', 'Sí, acepto cookies', 'No acepto cookies'] })
+test('0.3.13 · diálogo de cookies real: «Sí, acepto cookies» cierra y el login continúa; «No acepto cookies», «aquí» y vacío no se pulsan', async () => {
+  const { context, page, ctx } = await abrir({ dialogo: ['', 'aquí', 'No acepto cookies', 'Sí, acepto cookies'] })
   try {
     await loginFidelidade(page, ctx, ESPERAS)
-    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), ['DLG-No acepto cookies'])
+    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), ['DLG-Sí, acepto cookies'])
     assert.equal(await page.locator('#home').isVisible(), true)
   } finally {
     await context.close()
   }
 })
 
-test('0.3.12 · «Sí, acepto cookies» a solas: error con nombre y NO se pulsa', async () => {
+test('0.3.13 · «No acepto cookies» a solas: error con nombre y NO se pulsa (rechazar lleva a SemCookies)', async () => {
+  const { context, page, ctx } = await abrir({ dialogo: ['No acepto cookies'] })
+  try {
+    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /diálogo de cookies\/RGPD tapa el login; botones: \[«No acepto cookies»\]/)
+    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.13 · «Aceptar» y «Continuar» junto a «Sí, acepto cookies»: solo se pulsa el de cookies', async () => {
+  const { context, page, ctx } = await abrir({ dialogo: ['Aceptar', 'Continuar', 'Sí, acepto cookies'] })
+  try {
+    await loginFidelidade(page, ctx, ESPERAS)
+    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), ['DLG-Sí, acepto cookies'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.13 · fuera del origen de mediadores no se pulsa ni «Sí, acepto cookies»', async () => {
   const { context, page, ctx } = await abrir({ dialogo: ['Sí, acepto cookies'] })
   try {
-    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /diálogo de cookies\/RGPD tapa el login; botones: \[«Sí, acepto cookies»\]/)
+    await page.route('https://otro.example.test/**', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: portal({ dialogo: ['Sí, acepto cookies'] }) }))
+    await page.goto('https://otro.example.test/')
+    await assert.rejects(() => cerrarDialogoRgpdFidelidade(page, ctx, 800), /diálogo de cookies\/RGPD tapa el login/)
     assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.13 · URL con SemCookies.aspx: error con nombre claro', async () => {
+  const { context, page, ctx } = await abrir()
+  try {
+    await page.goto('https://mediadores.fidelidade.es/OPI_ES_Mediadores/SemCookies.aspx')
+    await assert.rejects(() => cerrarDialogoRgpdFidelidade(page, ctx, 800), /fidelidade: portal en SemCookies \(cookies rechazadas\)/)
   } finally {
     await context.close()
   }
