@@ -131,6 +131,12 @@ export type ElementoInventario = {
    *  `rellenar` puede repintar la sección, y el worker lo deja para el final del lote (`ordenarLote`). */
   autocompletar?: true
   /**
+   * 0.3.20 (Allianz VMP real 29/10/2026): `<select>` OCULTO que sostiene un bootstrap-select (el portal enseña un `button.dropdown-toggle`
+   * sin texto; marca/modelo). Solo en `select`. El worker lo elige con `selectOption` forzado tras comprobarlo VIVO (oculto, dentro de su
+   * `.bootstrap-select` con el botón visible); la IA lo usa con `elegir` como cualquier `<select>`.
+   */
+  selectpicker?: true
+  /**
    * Título accesible del DIÁLOGO/MODAL que contiene al control (14/10/2026; el más cercano: `SELECTOR_DIALOGO` de guard.ts),
    * saneado. Solo si el crudo lo trae. Sirve para el «Guardar» de un modal autorizado por entrada (`guardadosEnDialogo`).
    */
@@ -349,6 +355,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       if (eo.invalido === true && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.invalido = true
       if (el.invalido === true) pon('mensajeError', texto(eo.mensajeError, 160))
       if (eo.autocompletar === true && (tag === 'input' || tag === 'textarea')) el.autocompletar = true
+      if (eo.selectpicker === true && tag === 'select') el.selectpicker = true
       // Elemento que MUESTRA el usuario/mediador (cabecera: id/name/aria «usuario», «mediador», «perfil»…): su texto fuera.
       if (el.texto !== undefined && tag !== 'input' && tag !== 'select' && tag !== 'textarea'
         && [eo.id, eo.name, eo.ariaLabel].some((x) => typeof x === 'string' && PATRON_ELEMENTO_USUARIO.test(x))) {

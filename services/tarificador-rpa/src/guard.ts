@@ -53,6 +53,7 @@ import {
   avancePorIdAutorizado,
   avanceSinTextoAutorizado,
   RE_NAME_ACCION_FINAL_SIN_TEXTO,
+  rotuloNeutroSinTexto,
   type AvanceSinTexto,
   onclickCasaFormaSinTexto,
   onclickNeutralizado,
@@ -2952,7 +2953,8 @@ async function esUnicoPorTextoVivo(boton: Locator, fuente: string): Promise<bool
 
 /**
  * 0.3.18: VIVO, todo lo que el inventario afirmó del `<input type=submit>` sin rótulo (regla {@link AvanceSinTexto}) y que aquí se repite sobre
- * el DOM de verdad: es un input submit sin value/aria-label/title/texto/alt, sin onclick/formaction/ng-click, con `name` y clases de la regla
+ * el DOM de verdad: es un input submit sin value/aria-label/title/texto/alt (0.3.20: o con un rótulo de avance NEUTRO exacto,
+ * `rotuloNeutroSinTexto`), sin onclick/formaction/ng-click, con `name` y clases de la regla
  * (el `name` entero, no el recortado del inventario), en el ORIGEN exacto y con la ruta de la regla, y es el ÚNICO así de su documento.
  * Devuelve la causa (sin valores del portal) o `null`. Solo lee. Evalúa con funciones ANÓNIMAS (tsx envuelve las con nombre en `__name`).
  */
@@ -2977,7 +2979,8 @@ async function causaNoEsAvanceSinTextoVivo(boton: Locator, a: AvanceSinTexto): P
         ).length
         return {
           submit,
-          conRotulo: rotulos.some((x) => (x ?? '').trim() !== ''),
+          // 0.3.20: los rótulos vivos salen (solo para decidir aquí, en Node; nunca a un mensaje): vale vacío o uno NEUTRO de la lista cerrada.
+          rotulos: rotulos.map((x) => String(x ?? '')),
           conManejador: manejadores.some((x) => x.trim() !== ''),
           onclick: el.getAttribute('onclick') ?? '',
           name,
@@ -2993,7 +2996,9 @@ async function causaNoEsAvanceSinTextoVivo(boton: Locator, a: AvanceSinTexto): P
     .catch(() => null)
   if (!r) return 'no_se_pudo_leer'
   if (!r.submit) return 'no_es_input_submit'
-  if (r.conRotulo) return 'con_rotulo'
+  // 0.3.20 (Fidelidade real, e0e482d1…): el `value` vivo («Siguiente»…) que el inventario no ve. Cualquier rótulo fuera de la lista cerrada
+  // de avance neutro (o que case una acción final) sigue siendo `con_rotulo`.
+  if (!Array.isArray(r.rotulos) || !r.rotulos.every((x) => rotuloNeutroSinTexto(x, a.textoAccionFinal))) return 'con_rotulo'
   if (r.conManejador) return 'con_manejador'
   if (!/^[A-Za-z0-9_$.:-]{1,300}$/.test(r.name) || !r.name.startsWith(a.prefijoName) || !r.name.includes(a.contieneName)) return 'name_distinto'
   // 0.3.19: un onclick VIVO solo con la forma cerrada de la regla y con B === el name VIVO ENTERO; sin `onclickForma`, ninguno (0.3.18).
