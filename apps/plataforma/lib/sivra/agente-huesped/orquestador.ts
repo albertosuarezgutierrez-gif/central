@@ -19,9 +19,10 @@ import { intentarCobroAutomatico } from '@/lib/sivra/extras/cobro-auto'
 import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { esPeticionFactura } from './factura'
+import { esPeticionFactura, esTramiteFiscal } from './factura'
 import { asegurarSolicitud } from '@/lib/sivra/facturas/servicio'
 import { conEnlace } from '@/lib/sivra/facturas/enlace'
+import { rellenarDesdeChat, solicitudVivaDe } from '@/lib/sivra/facturas/chat'
 
 
 // Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el
@@ -159,10 +160,28 @@ export async function procesarMensajeHuesped(
       // SIEMPRE por Alberto (`needs_human` en decidir.ts y otra vez abajo). Si no se puede crear, el agente pide los
       // datos en el mensaje como antes y el motivo lo dice.
       let avisoEnlace = ''
+      // 29/10/2026: los datos que el huésped da EN EL CHAT rellenan la solicitud (nunca pisan lo que ya rellenó en el
+      // formulario; lo dudoso queda pendiente) y el cron de salida la emite y envía sola. El texto al huésped dice lo
+      // que de verdad va a pasar (`ctx.facturaEstado`): completa → «la recibirás el día de salida» y sin enlace;
+      // incompleta → pide SOLO lo que falta (+ enlace). Un mensaje que SIGUE a una petición (p. ej. solo los datos) usa
+      // la solicitud que ya existe, sin crear otra.
+      const guestPrevios = ctx0.historial.filter(h => h.from === 'guest').map(h => h.text)
+      const textosGuest = normalizarTexto(guestPrevios.at(-1) || '') === normalizarTexto(pregunta) ? guestPrevios : [...guestPrevios, pregunta]
+      let solFactura: { id: string; url: string } | null = null
       if (esPeticionFactura(pregunta)) {
         const sol = await asegurarSolicitud(ctx.reservationId, 'agente').catch((e: unknown) => ({ ok: false as const, motivo: e instanceof Error ? e.message : 'fallo interno' }))
-        if (sol.ok) ctx.enlaceFactura = sol.url
+        if (sol.ok) solFactura = { id: sol.solicitudId, url: sol.url }
         else avisoEnlace = `NO he podido crear el enlace al formulario de factura (${sol.motivo}): el borrador pide los datos a mano; o créalo en /sivra/facturas.`
+      } else if (esTramiteFiscal(pregunta, guestPrevios) && guestPrevios.some(t => esPeticionFactura(t))) {
+        solFactura = await solicitudVivaDe(ctx.reservationId).catch(() => null)
+      }
+      if (solFactura) {
+        const estadoFactura = await rellenarDesdeChat(solFactura.id, textosGuest).catch((e: unknown) => {
+          console.warn('[agente-huesped] datos de factura desde el chat:', e instanceof Error ? e.message.slice(0, 120) : 'error')
+          return null
+        })
+        if (estadoFactura) ctx.facturaEstado = estadoFactura
+        if (!estadoFactura?.completa) ctx.enlaceFactura = solFactura.url
       }
       dec = await decidir(ctx, pregunta, categoria)
       if (avisoEnlace) dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}${avisoEnlace}`
@@ -225,6 +244,11 @@ export async function procesarMensajeHuesped(
       dec.reply = conEnlace(dec.reply, ctx.lang, ctx.enlaceFactura)
       dec.needs_human = true
       dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}lleva el enlace al formulario de datos fiscales; al rellenarlo te llegará el borrador de la factura`
+    }
+    // Datos completos desde el chat: sin enlace, y el mensaje TAMPOCO sale solo (una factura la mira Alberto).
+    if (ctx.facturaEstado?.completa && dec.reply) {
+      dec.needs_human = true
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}datos de facturación completos (sacados del chat y validados): la factura se emite y envía sola el día de salida`
     }
 
     // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí

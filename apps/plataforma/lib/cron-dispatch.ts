@@ -134,6 +134,10 @@ export const CRON_JOBS: CronJob[] = [
   // Extras cobrados al huésped: recordatorio a las 24 h y caducidad a 48 h de la entrada. A las
   // 07:00, antes del vigía de latidos de las 07:45, para que su huella del día ya esté escrita.
   { path: '/api/cron/sivra-extras-impago', schedule: '0 7 * * *' },
+  // 🧾 Factura del huésped el DÍA DE SALIDA (29/10/2026, aprobado por Alberto): emite y envía sola (con CC) la factura
+  // de cada solicitud COMPLETA cuya salida es hoy o pasó hace ≤ 30 días; si falta algo, UN aviso. 11:13 UTC = 12:13
+  // (invierno) / 13:13 (verano) en Madrid: después de la hora de salida, y tras los sync de Smoobu de la mañana.
+  { path: '/api/cron/sivra-facturas-salida', schedule: '13 11 * * *' },
   // 🔮 Foto diaria de la previsión por piso (mes en curso + 2) → `pisos_previsiones`, para poder
   // juzgar después si las previsiones se cumplen (seguimiento en /sivra/resultado-pisos) + aviso
   // «previsión floja» a ~30 días del mes. Tras el sync de Smoobu de las 05:00/05:15 a propósito:

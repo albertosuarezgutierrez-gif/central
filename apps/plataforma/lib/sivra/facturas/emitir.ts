@@ -24,6 +24,7 @@ import { generarPdfFactura } from './pdf'
 import { type Receptor } from './receptor'
 import { mensajeVigente } from './telegram'
 import { avisarFacturaEnSmoobu, correoYAviso, nombreSaludo, type ResultadoAvisoSmoobu } from './aviso-smoobu'
+import { destinatarios } from './extraer'
 import { enviarAlHuespedDetallado } from '@/lib/sivra/agente-huesped/enviar'
 import { eur } from '@/lib/dinero'
 
@@ -44,7 +45,12 @@ type FilaSerie = { id: string; prefijo: string; anio: number; siguiente_numero: 
  * `mensajeId`: message_id del ✅ pulsado. Se compara con `telegram_message_id` BAJO el FOR UPDATE: si el borrador se
  * regeneró (datos nuevos → mensaje nuevo), el ✅ viejo no emite (`obsoleta`). Así se emite lo que Alberto VIO.
  */
-export async function emitirFactura(facturaId: string, mensajeId: number | null, ahora: Date = new Date()): Promise<ResultadoEmision> {
+export async function emitirFactura(
+  facturaId: string, mensajeId: number | null, ahora: Date = new Date(),
+  /** `automatico`: el cron de salida (`salida-auto.ts`) emite sin ✅ (aprobado por Alberto el 29/10/2026 para facturas con
+   *  datos validados). Se salta SOLO la comprobación del mensaje vigente; el resto (FOR UPDATE, serie, trigger) igual. */
+  opts: { automatico?: boolean } = {},
+): Promise<ResultadoEmision> {
   return prisma.$transaction(async (tx) => {
     const [f] = await tx.$queryRaw<FilaFactura[]>(Prisma.sql`
       SELECT id::text, cuenta_id::text, estado, numero_completo, total::float8 AS total, concepto, emisor, receptor,
@@ -52,7 +58,7 @@ export async function emitirFactura(facturaId: string, mensajeId: number | null,
         FROM sivra_facturas_huesped WHERE id = ${facturaId}::uuid FOR UPDATE`)
     if (!f) return { estado: 'no_existe' } as const
     if (f.estado !== 'borrador') return { estado: 'ya_emitida', numeroCompleto: f.numero_completo, enviada: f.estado === 'enviada' } as const
-    if (!mensajeVigente(f.telegram_message_id, mensajeId)) return { estado: 'obsoleta' } as const
+    if (!opts.automatico && !mensajeVigente(f.telegram_message_id, mensajeId)) return { estado: 'obsoleta' } as const
 
     const { anio, iso } = fechaMadrid(ahora)
     const [s] = await tx.$queryRaw<FilaSerie[]>(Prisma.sql`
@@ -88,7 +94,7 @@ export async function emitirFactura(facturaId: string, mensajeId: number | null,
 export type ResultadoEnvio =
   /** `aviso`: el mensaje al huésped por el hilo de Smoobu («te hemos enviado la factura…»). Fail-open: si falla, la
    *  factura sigue `enviada` y aquí va el motivo para Alberto. Solo se intenta en la transición a `enviada`. */
-  | { estado: 'enviada'; email: string; aviso: ResultadoAvisoSmoobu }
+  | { estado: 'enviada'; email: string; cc: string[]; aviso: ResultadoAvisoSmoobu }
   | { estado: 'ya_enviada' }
   | { estado: 'en_curso' }
   /** Un envío empezó y no dejó ni éxito ni error (función cortada, o el correo salió y falló el UPDATE final): NO se
@@ -120,13 +126,13 @@ export async function enviarFactura(facturaId: string, opts: { forzar?: boolean 
   // Reclamo atómico: solo una pulsación envía. Un reclamo que quedó colgado (sin éxito ni `envio_error`) NO se vuelve
   // a reclamar solo: el correo pudo salir y fallar el UPDATE final → reenviar duplicaría. Solo con `forzar` (Alberto,
   // avisado) y si lleva >10 min colgado.
-  const [r] = await prisma.$queryRaw<Array<{ numero_completo: string; total: number; receptor: Receptor; pdf: Buffer; property_id: string; reservation_id: string }>>(Prisma.sql`
+  const [r] = await prisma.$queryRaw<Array<{ numero_completo: string; total: number; receptor: Receptor; pdf: Buffer; property_id: string; reservation_id: string; solicitud_id: string | null }>>(Prisma.sql`
     UPDATE sivra_facturas_huesped
        SET envio_en_curso_at = now(), envio_intentos = envio_intentos + 1
      WHERE id = ${facturaId}::uuid AND estado = 'emitida'
        AND (envio_en_curso_at IS NULL
             OR (${opts.forzar === true} AND envio_en_curso_at < now() - interval '10 minutes'))
-     RETURNING numero_completo, total::float8 AS total, receptor, pdf, property_id, reservation_id`)
+     RETURNING numero_completo, total::float8 AS total, receptor, pdf, property_id, reservation_id, solicitud_id::text AS solicitud_id`)
   if (!r) {
     const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: facturaId }, select: { estado: true, envioEnCursoAt: true } })
     if (!f || f.estado === 'borrador') return { estado: 'no_emitida' }
@@ -142,12 +148,24 @@ export async function enviarFactura(facturaId: string, opts: { forzar?: boolean 
   if (!de || !transporte) return fallo(!de ? 'sin remitente configurado (FACTURAS_HUESPED_FROM)' : 'sin proveedor de correo configurado')
   const piso = (await prisma.$queryRaw<Array<{ name: string }>>(Prisma.sql`SELECT name FROM properties WHERE id = ${r.property_id}`))[0]?.name ?? 'el apartamento'
   const { asunto, texto } = cuerpoCorreo(r.numero_completo, r.total, piso)
+  // CC: los correos que el huésped pidió en copia (columna de la SOLICITUD, no del receptor: no es dato fiscal ni va en el
+  // PDF inmutable). `to_jsonb(...)->'receptor_cc'` → NULL si la migración aún no está aplicada (entonces no hay CC
+  // guardado que perder). Si la lectura FALLA, no se envía: mandar sin la copia pedida sería incumplir lo pedido.
+  let ccBruto: unknown = null
+  if (r.solicitud_id) {
+    try {
+      ccBruto = (await prisma.$queryRaw<Array<{ cc: unknown }>>(Prisma.sql`SELECT to_jsonb(s) -> 'receptor_cc' AS cc FROM sivra_factura_solicitudes s WHERE s.id = ${r.solicitud_id}::uuid`))[0]?.cc ?? null
+    } catch (e) {
+      return fallo(`no he podido leer los correos en copia: ${e instanceof Error ? e.message.slice(0, 120) : 'error'}`)
+    }
+  }
+  const dest = destinatarios(r.receptor.email, ccBruto)
   // Correo → `enviada` → aviso en Smoobu (orden y condiciones en `correoYAviso`, testeado). El aviso solo sale si ESTE
   // intento hizo la transición a `enviada` (1 fila): una vez por factura. Su ✅ (o 🔁) es la autorización de Alberto.
   const res = await correoYAviso({
     enviarCorreo: async () => {
       await transporte.sendMail({
-        from: de, to: r.receptor.email, subject: asunto, text: texto,
+        from: de, to: dest.to, ...(dest.cc ? { cc: dest.cc.join(', ') } : {}), subject: asunto, text: texto,
         ...(process.env.FACTURAS_HUESPED_REPLY_TO ? { replyTo: process.env.FACTURAS_HUESPED_REPLY_TO } : {}),
         attachments: [{ filename: `factura-${r.numero_completo}.pdf`, content: Buffer.from(r.pdf), contentType: 'application/pdf' }],
       })
@@ -158,8 +176,10 @@ export async function enviarFactura(facturaId: string, opts: { forzar?: boolean 
     avisar: () => avisarEnSmoobu(r.reservation_id, r.receptor, r.numero_completo),
   })
   if (!res.ok) return fallo(res.motivo)
+  // Rastro de a quién fue en copia (best-effort: la columna puede no existir aún; la factura ya está `enviada`).
+  if (dest.cc) await prisma.$executeRaw(Prisma.sql`UPDATE sivra_facturas_huesped SET envio_cc = ${dest.cc}::text[] WHERE id = ${facturaId}::uuid`).catch(() => 0)
   if (res.aviso.estado === 'no_enviado') console.warn(`[facturas-huesped] aviso Smoobu no enviado (factura ${r.numero_completo}): ${res.aviso.motivo}`)
-  return { estado: 'enviada', email: r.receptor.email, aviso: res.aviso }
+  return { estado: 'enviada', email: r.receptor.email, cc: dest.cc ?? [], aviso: res.aviso }
 }
 
 async function avisarEnSmoobu(reservationId: string, receptor: Receptor, numero: string): Promise<ResultadoAvisoSmoobu> {
