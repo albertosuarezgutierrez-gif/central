@@ -50,7 +50,7 @@ test('🔒 la comparativa solo se ofrece con el consentimiento comercial VIGENTE
 })
 
 test('la notificación abre la ficha de la novedad (no siempre la bóveda)', () => {
-  // El payload lleva más campos (tag, acciones, badge): lo que se vigila es que la url salga de urlPushCima.
+  // El payload lleva más campos (tag, acciones): lo que se vigila es que la url salga de urlPushCima.
   assert.match(CRON, /const data = \{\s*url: urlPushCima\(plan\.enviar\),/)
 })
 

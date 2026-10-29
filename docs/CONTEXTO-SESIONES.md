@@ -13,7 +13,7 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 ## (29/10/2026) Push · clic robusto en todas las apps + mejoras del portal asegura
 - sivra, rrhh, ia-rest (sw.js y sw-alertas.js): mismo fallo que el portal (navigate sin catch / solo focus / ignora data.url) → patrón URL absoluta + try/catch + openWindow. Alertas de voz: prioriza la ventana ya en /edge.
-- Portal: `tag` por póliza (`poliza-<id>`/`anadida-<id>`, renotify), botón «Ver recibo» en devueltos, contador del icono (`pendientesBadge`, sin consultas nuevas; se limpia en `RegistrarSW`). Helpers en `module-seguros-portal/src/push-aviso.ts` con cepos vistos en rojo.
+- Portal: `tag` por póliza (`poliza-<id>`/`anadida-<id>`, renotify), botón «Ver recibo» en devueltos, tags separados por origen (`cima-poliza-`, `oblig-poliza-`, `oblig-anadida-`); el contador del icono lo sigue llevando SOLO `Campana.tsx` (se descartó un segundo contador que lo pisaba). Helpers en `module-seguros-portal/src/push-aviso.ts` con cepos vistos en rojo.
 - No hecho: medir aperturas (no hay tabla/endpoint de eventos en el portal; decidir dónde guardarlo). No hay ancla «cómo pagar» en la ficha.
 
 ## (29/10/2026) Portal asegura · tocar la push de recibo abre la ficha de la póliza

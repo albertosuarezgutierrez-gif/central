@@ -193,7 +193,8 @@ export async function GET(req: Request) {
         // renovación de póliza sobre una ITV le dice a alguien que se queda sin
         // cobertura cuando no es verdad.
         const { title, body } = textoPushObligacion({ tipo: o.tipo, titulo: o.titulo })
-        const payload = { title, body, icon: '/icono-app', data: { url: urlPushObligacion(o), ...(tagPushObligacion(o) ? { tag: tagPushObligacion(o) } : {}) } }
+        const tag = tagPushObligacion(o)
+        const payload = { title, body, icon: '/icono-app', data: { url: urlPushObligacion(o), ...(tag ? { tag } : {}) } }
 
         let algunaOk = false
         for (const s of subs) {

@@ -45,17 +45,7 @@ self.addEventListener('push', (e) => {
     opciones.actions = extra.acciones.slice(0, 2).map((a) => ({ action: String(a.action), title: String(a.title) }))
   }
   e.waitUntil(
-    (async () => {
-      // Contador del icono (solo si el push trae el número); sin soporte o con error, no pasa nada.
-      try {
-        if (typeof extra.badge === 'number' && self.navigator && self.navigator.setAppBadge) {
-          await self.navigator.setAppBadge(extra.badge)
-        }
-      } catch {
-        // Badging API no disponible
-      }
-      await self.registration.showNotification(titulo, opciones)
-    })(),
+    self.registration.showNotification(titulo, opciones),
   )
 })
 

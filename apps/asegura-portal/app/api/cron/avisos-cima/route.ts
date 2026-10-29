@@ -17,7 +17,6 @@ import {
   urlPushCima,
   tagPushCima,
   accionesPushCima,
-  pendientesBadge,
   type EventoCima,
   type ObservacionGuardada,
   type ObservacionPrima,
@@ -184,16 +183,13 @@ export async function GET(req: Request) {
       let algunaOk = false
       // Mismo conjunto de novedades = mismo topic: un reintento sustituye al aviso pendiente, no lo duplica.
       const topic = topicAviso(`cima:${identidadId}:${plan.enviar.map((e) => e.clave).sort().join('|')}`)
-      // Una notificación por póliza (`tag`), botón «Ver recibo» y contador del icono (devueltos + siniestros
-      // abiertos de lo ya leído; `null` = no se sabe, no se toca). Sin consultas nuevas.
+      // Una notificación por póliza (`tag`) y botón «Ver recibo». Sin consultas nuevas.
       const tag = tagPushCima(plan.enviar)
       const acciones = accionesPushCima(plan.enviar)
-      const badge = pendientesBadge(polizas)
       const data = {
         url: urlPushCima(plan.enviar),
         ...(tag ? { tag } : {}),
         ...(acciones.length > 0 ? { acciones } : {}),
-        ...(badge !== null ? { badge } : {}),
       }
       for (const s of subs) {
         const res = await sendWebPush(
