@@ -612,6 +612,7 @@ export const DETALLES_FIN_EXPLORACION = [
   'titulo:resumen_contratacion',
   'titulo:pago_tarjeta',
   'campo:tarjeta_credito',
+  'campo:numero_tarjeta',
   'campo:cvv',
   'campo:cvc',
   'campo:caducidad_tarjeta',
@@ -970,10 +971,9 @@ export function indiceRefs(inv: InventarioDom): Map<string, { el: ElementoInvent
 }
 
 const TIPOS_INPUT_TEXTO = new Set(['', 'text', 'number', 'date', 'tel', 'email', 'search'])
-/** Etiquetas de radio que NUNCA se marcan: consentimientos (RGPD, publicidad, cesión…). */
-const RE_CONSENTIMIENTO = /rgpd|lopd|acept|consient|autoriz|publicidad|comercial|cesion|privacidad|proteccion de datos|condiciones/
-
-/** Todo lo que describe a un elemento (para el guard de emisión y el de consentimientos). */
+/** onclick de una casilla que ENVÍA el formulario (JSF `mojarra.jsfcljs`, `.submit()`): botón disfrazado, no se marca. */
+const RE_ONCLICK_ENVIA = /jsfcljs|\bsubmit\s*\(/i
+/** Todo lo que describe a un elemento (para el guard de emisión). */
 export function descripcionesElemento(el: ElementoInventario): string[] {
   return [el.texto, el.ariaLabel, el.etiqueta, el.id, el.name, el.onclick, el.hrefRuta, el.placeholder, el.formControlName].filter((x): x is string => typeof x === 'string' && x !== '')
 }
@@ -1343,10 +1343,15 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (!(el.opciones ?? []).some((o) => o.valor !== null && o.valor === op.valor)) return void errores.push(`${donde}: el valor no está entre las opciones del inventario`)
         acciones.push({ accion: 'elegir', ref, opcion: { valor: op.valor } })
       } else if (tipo === 'marcar') {
-        if (el.tag !== 'input' || (el.type ?? '').toLowerCase() !== 'radio') return void errores.push(`${donde}: marcar solo radios (nunca checkbox)`)
-        // El error nombra la PALABRA de la lista que casó (no el valor del portal) para poder decidir si es un falso positivo.
-        const clave = descripcionesElemento(el).map((d) => RE_CONSENTIMIENTO.exec(plano(d))?.[0]).find((x) => x !== undefined)
-        if (clave !== undefined) return void errores.push(`${donde}: radio de consentimiento (palabra: ${clave})`)
+        // 0.3.15 (Alberto, 29/10/2026): radios y casillas, también de consentimiento/declaración (intranet privada del mediador; el bot
+        // actúa como él). Marcar una casilla NO es pulsar un botón final: emitir/firmar/pagar/IBAN siguen bloqueados en sus topes.
+        const tipoCtl = (el.type ?? '').toLowerCase()
+        if (el.tag !== 'input' || (tipoCtl !== 'radio' && tipoCtl !== 'checkbox')) return void errores.push(`${donde}: marcar solo radios o casillas`)
+        // Una casilla cuyo texto/etiqueta/id/name/onclick es una ACCIÓN FINAL («Acepto y contrato», `chkEmitir`, onclick que
+        // contrata) o cuyo onclick ENVÍA el formulario (submit, jsfcljs) es un botón disfrazado: no se marca. «Acepto…» sí
+        // (`permitirAceptar`). El guard del worker no ve la etiqueta de un input pulsado directamente: esta es SU barrera.
+        const desc = descripcionesElemento(el)
+        if (desc.some((d) => pareceEmision(d, { permitirAceptar: true })) || RE_ONCLICK_ENVIA.test(el.onclick ?? '')) return void errores.push(`${donde}: casilla de acción final`)
         acciones.push({ accion: 'marcar', ref })
       } else {
         if (i !== lista.length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
@@ -1446,6 +1451,7 @@ const PATRONES_TITULO_EMISION: readonly (readonly [DetalleFinExploracion, RegExp
  *  `CAMPOS_BANCARIOS` (acciones-portal.ts, fuente única) y se miran con `fronteraEmisionPorCampos`. */
 const PATRONES_CAMPO_EMISION: readonly (readonly [DetalleFinExploracion, RegExp])[] = [
   ['campo:tarjeta_credito', /tarjeta de credito/],
+  ['campo:numero_tarjeta', /numero[\s_.-]*(?:de[\s_.-]*)?(?:la[\s_.-]*)?tarjeta(?![\s_.-]*sanitaria)/],
   ['campo:cvv', /\bcvv\b/],
   ['campo:cvc', /\bcvc\b/],
   ['campo:caducidad_tarjeta', /caducidad de la tarjeta/],
