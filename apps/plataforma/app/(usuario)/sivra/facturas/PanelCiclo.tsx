@@ -85,7 +85,7 @@ export default function PanelCiclo(p: {
           const activo = p.filtro === c.k
           return (
             <button key={c.k} type="button" aria-pressed={activo} onClick={() => p.setFiltro(activo ? null : c.k)}
-              style={{ ...cardStyle, minHeight: 64, textAlign: 'left', cursor: 'pointer', display: 'grid', gap: 2, outline: activo ? '2px solid var(--accent, #3364ee)' : 'none', color: 'var(--text)' }}>
+              style={{ ...cardStyle, minHeight: 64, textAlign: 'left', cursor: 'pointer', display: 'grid', gap: 2, outline: activo ? '2px solid var(--primary)' : 'none', color: 'var(--text)' }}>
               <span style={{ fontSize: 24, fontWeight: 700 }}>{cargado ? c.n : '—'}</span>
               <span style={{ fontSize: 13, color: 'var(--muted)' }}>{c.txt}</span>
             </button>
@@ -98,7 +98,7 @@ export default function PanelCiclo(p: {
         </p>
       )}
       {p.aviso && (
-        <div role="status" style={{ ...cardStyle, marginBottom: 16, borderLeft: `4px solid ${p.aviso.ok ? 'var(--success, #16a34a)' : 'var(--warning)'}`, overflowWrap: 'anywhere' }}>{p.aviso.texto}</div>
+        <div role="status" style={{ ...cardStyle, marginBottom: 16, borderLeft: `4px solid ${p.aviso.ok ? 'var(--positive)' : 'var(--warning)'}`, overflowWrap: 'anywhere' }}>{p.aviso.texto}</div>
       )}
 
       {ve('incompletas') && (
