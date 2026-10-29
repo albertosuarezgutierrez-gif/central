@@ -51,6 +51,30 @@ function extractor(explora: boolean): string {
     const r = el.getBoundingClientRect();
     return !(r.width === 0 && r.height === 0);
   };
+  // 0.3.20: bootstrap-select. El contenedor \`.bootstrap-select\` envuelve al select (1.13+) o va JUSTO DESPUÉS de él (1.6, el botón
+  // hereda la clase \`selectpicker\`). El select tiene que estar OCULTO y su contenedor tener UN botón \`dropdown-toggle\` visible.
+  const contenedorSp = (sel) => {
+    const c = sel.parentElement && sel.parentElement.closest('.bootstrap-select');
+    if (c) return c;
+    const n = sel.nextElementSibling;
+    return n && n.classList.contains('bootstrap-select') ? n : null;
+  };
+  const selectpickerDe = (sel) => {
+    const cs = getComputedStyle(sel);
+    const r = sel.getBoundingClientRect();
+    if (!(cs.display === 'none' || cs.visibility === 'hidden' || (r.width <= 1 && r.height <= 1))) return null;
+    const c = contenedorSp(sel);
+    if (!c) return null;
+    const bs = Array.from(c.querySelectorAll('button.dropdown-toggle'));
+    return bs.length === 1 && visible(bs[0]) ? c : null;
+  };
+  const botonDeSelectpicker = (b) => {
+    if (!b.classList.contains('dropdown-toggle')) return false;
+    const c = b.closest('.bootstrap-select');
+    if (!c) return false;
+    const sel = c.querySelector('select') || (c.previousElementSibling && c.previousElementSibling.tagName === 'SELECT' ? c.previousElementSibling : null);
+    return !!(sel && selectpickerDe(sel) === c);
+  };
   const out = [];
   const nodos = [];
   // DIAGNÓSTICO (no exploración): también dentro de shadow DOM ABIERTO (componentes web). En exploración no: sus refs se
@@ -67,10 +91,14 @@ function extractor(explora: boolean): string {
     const tag = el.tagName.toLowerCase();
     const type = (el.getAttribute('type') || '').toLowerCase();
     if (tag === 'input' && type === 'hidden') continue;
+    // 0.3.20 (Allianz VMP real 29/10/2026, marca/modelo): el <select> OCULTO de un bootstrap-select se inventaría (con \`selectpicker\`)
+    // y su \`button.dropdown-toggle\` sin texto NO (la IA elige sobre el select). Solo en exploración.
+    const sp = EXPLORA && tag === 'select' ? selectpickerDe(el) : null;
+    if (EXPLORA && tag === 'button' && botonDeSelectpicker(el)) continue;
     const cs = getComputedStyle(el);
-    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    if (!sp && (cs.display === 'none' || cs.visibility === 'hidden')) continue;
     const r = el.getBoundingClientRect();
-    if (r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
+    if (!sp && r.width === 0 && r.height === 0 && !(el.labels && el.labels.length)) continue;
     // EXPLORACIÓN (28/10/2026, ePAC drvp00): la etiqueta de un control de elección OCULTO se inventaría COMO ese control (tag input,
     // su type, id/name; texto y etiqueta, los de la label). El NODO es la label (la resolución vive en guard.ts: \`controlOcultoDeEtiqueta\`).
     const rdo = EXPLORA && tag === 'label' ? ctlOculto(el) : null;
@@ -133,6 +161,7 @@ function extractor(explora: boolean): string {
     if (tag === 'select') {
       e.opciones = Array.from(el.options).slice(0, 40).map((o) => ({ valor: o.value, texto: o.textContent }));
       e.opcionesTotal = el.options.length;
+      if (sp) e.selectpicker = true;
     }
     // nx-dropdown (ndbx, Allianz ePAC) ABIERTO: sus opciones son las del panel visible (\`nx-dropdown-item\` / role=option). Cerrado no
     // las tiene en el DOM: el worker lo abre al ejecutar un \`elegir\` y, si la opción no está, lo deja abierto para el paso siguiente.

@@ -247,6 +247,28 @@ export const RE_NAME_ACCION_FINAL_SIN_TEXTO = /emit|emis|contrat|contract|confir
  */
 export const RE_ONCLICK_OSAJAX_SIN_TEXTO = /^OsAjax\(arguments\[0\] \|\| window\.event,'([A-Za-z0-9_]{1,300})','([A-Za-z0-9_$]{1,300})','','__OSVSTATE,',''\); return false;$/
 
+/**
+ * 0.3.20 (Fidelidade real 29/10/2026, e0e482d1…): en el DOM VIVO el `<input type=submit>` «sin rótulo» SÍ lleva `value` (el inventario
+ * solo dice `conValor`: puesto por el servidor/JS, el rótulo se ve por CSS) y el guard lo rechazaba con `con_rotulo`. LISTA CERRADA de
+ * rótulos de AVANCE NEUTROS: el rótulo vivo (value, aria-label, title, alt, texto), si existe, tiene que ser EXACTAMENTE uno de estos
+ * (trim, espacios colapsados, sin mayúsculas ni tildes). Nada con acción final («tarificar y contratar», «confirmar», «emitir»…).
+ */
+export const ROTULOS_AVANCE_NEUTROS_SIN_TEXTO: readonly string[] = Object.freeze(['siguiente', 'avanzar', 'continuar', 'siguiente paso', 'calcular', 'simular'])
+
+/**
+ * 0.3.20: ¿es `rotulo` (vivo) un rótulo de avance NEUTRO para la regla {@link AvanceSinTexto}? Vacío = sí (sin rótulo, 0.3.18). Si no, tiene
+ * que ser EXACTAMENTE uno de {@link ROTULOS_AVANCE_NEUTROS_SIN_TEXTO} y además no casar ni `textoAccionFinal` de la regla, ni
+ * {@link RE_TEXTO_ACCION_FINAL_SIN_TEXTO}, ni {@link RE_NAME_ACCION_FINAL_SIN_TEXTO}, ni `pareceEmision`. Pura; el worker la llama sobre el DOM vivo.
+ */
+export function rotuloNeutroSinTexto(rotulo: string | null | undefined, textoAccionFinal: RegExp = RE_TEXTO_ACCION_FINAL_SIN_TEXTO): boolean {
+  if (rotulo === null || rotulo === undefined) return true
+  if (typeof rotulo !== 'string') return false
+  const t = rotulo.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+  if (t === '') return true
+  if (!ROTULOS_AVANCE_NEUTROS_SIN_TEXTO.includes(t)) return false
+  return !textoAccionFinal.test(t) && !RE_TEXTO_ACCION_FINAL_SIN_TEXTO.test(t) && !RE_NAME_ACCION_FINAL_SIN_TEXTO.test(t) && !pareceEmision(t) && !pareceEmision(rotulo)
+}
+
 /** Origen del que sale la regla y ruta de la pantalla de simulación de Fidelidade Vivienda (con la errata «Simualtion» del portal). */
 export const ORIGEN_FIDELIDADE_MEDIADORES = 'https://mediadores.fidelidade.es'
 
@@ -538,6 +560,18 @@ export function catalogoDe(ramo: string): readonly DatoCatalogo[] {
 /** ¿Esta clave del ramo se puede dejar SIN rellenar si no tiene valor (exploración sin datos reales)? Ver {@link DatoCatalogo.omitibleSinValor}. */
 export function claveOmitibleSinValor(ramo: string, clave: string): boolean {
   return catalogoDe(ramo).some((d) => d.clave === clave && d.omitibleSinValor === true)
+}
+
+/**
+ * 0.3.20 (Allianz VMP real 29/10/2026, 5f47a553…): ¿esta acción NO hace nada en el portal? Un `rellenar` de una clave
+ * {@link DatoCatalogo.omitibleSinValor} en una exploración SIN datos reales: el worker deja el campo vacío y sigue. Un lote solo de esto
+ * repite la pantalla tal cual (el robot cortaba por `bucle`). Pura.
+ */
+export function esAccionSinEfecto(a: unknown, ramo: string, datosReales: unknown): boolean {
+  if (datosReales !== null && datosReales !== undefined) return false
+  if (typeof a !== 'object' || a === null) return false
+  const o = a as Record<string, unknown>
+  return o.accion === 'rellenar' && typeof o.dato === 'string' && claveOmitibleSinValor(ramo, o.dato)
 }
 
 /** Lo que dice el propio campo del portal (id, name, etiqueta, placeholder, aria, formControlName): para comprobar que la clave encaja. */
@@ -1757,9 +1791,15 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
   // `avanzar` antes, `parar` primero o `terminar`, sigue rechazado: nada se ejecuta a medias en esos casos.
   let lista: unknown[] = Array.isArray(r.acciones) ? r.acciones : []
   const iParar = lista.length > 1 ? lista.findIndex((a) => obj(a)?.accion === 'parar') : -1
-  if (iParar > 0 && lista.slice(0, iParar).every((a) => ['rellenar', 'elegir', 'marcar'].includes(String(obj(a)?.accion)))) lista = lista.slice(0, iParar)
+  // 0.3.20 (Allianz VMP real, 5f47a553…: [rellenar vehiculo.matricula, parar dato_no_disponible] ×2 → `bucle`): si TODO lo anterior al
+  // `parar` es sin efecto (`esAccionSinEfecto`: rellenar de una clave omitible sin valor), manda el `parar` (va solo); si no, la tolerancia de siempre.
+  const sinEfecto = (a: unknown) => esAccionSinEfecto(a, ctx.ramo, ctx.datosReales)
+  if (iParar > 0 && lista.slice(0, iParar).every(sinEfecto)) lista = [lista[iParar]]
+  else if (iParar > 0 && lista.slice(0, iParar).every((a) => ['rellenar', 'elegir', 'marcar'].includes(String(obj(a)?.accion)))) lista = lista.slice(0, iParar)
   if (!Array.isArray(r.acciones) || r.acciones.length === 0) errores.push('acciones tiene que ser una lista no vacía')
   else if (r.acciones.length > MAX_ACCIONES_RESPUESTA) errores.push(`más de ${MAX_ACCIONES_RESPUESTA} acciones`)
+  // 0.3.20: un lote SOLO de acciones sin efecto repite la pantalla (bucle): rechazo explicado (la IA ve el error en el paso).
+  else if (lista.every(sinEfecto)) errores.push('lote_sin_efecto: rellenar una clave sin valor (omitible) no cambia nada; elige/marca lo que falte (un desplegable «selectpicker» se elige con elegir) o parar dato_no_disponible')
   else {
     const tocados = new Set<string>()
     lista.forEach((a0, i) => {
@@ -1830,6 +1870,14 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
           return
         }
         if (!(el.opciones ?? []).some((o) => o.valor !== null && o.valor === op.valor)) return void errores.push(`${donde}: el valor no está entre las opciones del inventario`)
+        // 0.3.20: el `<select>` OCULTO tras un bootstrap-select (Allianz VMP, marca/modelo): solo si ni él ni la opción elegida nombran una
+        // acción final (el worker lo elige sin verlo; su `change` y la red siguen pasando por el guard de siempre).
+        if (el.selectpicker === true) {
+          const texto = (el.opciones ?? []).find((o) => o.valor === op.valor)?.texto ?? null
+          if ([...descripcionesElemento(el), op.valor, texto].some((d) => typeof d === 'string' && (pareceEmision(d) || RE_TEXTO_ACCION_FINAL_SIN_TEXTO.test(d.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase())))) {
+            return void errores.push(`${donde}: desplegable de acción final`)
+          }
+        }
         acciones.push({ accion: 'elegir', ref, opcion: { valor: op.valor } })
       } else if (tipo === 'marcar') {
         // 0.3.15 (Alberto, 29/10/2026): radios y casillas, también de consentimiento/declaración (intranet privada del mediador; el bot

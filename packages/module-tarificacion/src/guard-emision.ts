@@ -298,6 +298,28 @@ export function cuerpoToleradoConAccionReal(cuerpo: string | null | undefined): 
   return detalleCuerpoToleradoConAccionReal(cuerpo) !== null
 }
 
+/** 0.3.20: último segmento (tras «:») de un campo de FECHA de firma del calendario RichFaces de Mapfre NSE. ANCLADO, sin mayúsculas. */
+export const RE_SEGMENTO_FECHA_FIRMA = /^fechafirma(?:inputdate|inputcurrentdate|inputhidden)?$/
+/** Valor de un campo de fecha: vacío o cifras con separadores (dd/mm/aaaa, mm/aaaa, aaaa-mm-dd, con hora opcional). Sin letras. */
+const RE_VALOR_FECHA = /^(?:|\d{1,4}(?:[/.-]\d{1,4}){1,2}(?: \d{1,2}:\d{2}(?::\d{2})?)?)$/
+
+/**
+ * 0.3.20 (Mapfre NSE real 29/10/2026, POST a `…/informacionGeneral/datosGenerales.jsf`): el parámetro `formDG:fechaFirmaInputDate` (la FECHA
+ * de firma, un dato del formulario) casaba con «firm» y abortaba el paso. Excepción ESTRECHA: el nombre (ya decodificado) tiene forma de id
+ * JSF, su ÚLTIMO segmento casa {@link RE_SEGMENTO_FECHA_FIRMA}, los segmentos anteriores no nombran ninguna acción real
+ * (`RE_ACCION_REAL_TRAS_PREFIJO`) y el valor está vacío o es una fecha sin letras. «btnFirmar», «firmarPoliza», «firma», `fechaFirma=Firmar`
+ * o `btnFirmar:fechaFirma` siguen bloqueando. PURA.
+ */
+export function esCampoFechaDeAccion(nombre: string, valor: string): boolean {
+  const n = nombre.trim()
+  if (!/^[\w.:$-]{1,120}$/.test(n)) return false
+  const segs = n.split(':')
+  const ultimo = segs.pop() ?? ''
+  if (!RE_SEGMENTO_FECHA_FIRMA.test(ultimo.toLowerCase())) return false
+  if (segs.some((s) => RE_ACCION_REAL_TRAS_PREFIJO.test(s))) return false
+  return RE_VALOR_FECHA.test(valor.trim())
+}
+
 /**
  * Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no
  * se sabía por qué): el NOMBRE del parámetro (o `javax.faces.*`) y la palabra de la lista que casó. NUNCA el valor. `null` = nada.
@@ -312,6 +334,8 @@ export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undef
     // de un panel JSF, no una acción. Solo ese nombre ANCLADO se salta (su valor ni se lee); «confirm» en cualquier otro sitio sigue parando.
     if (RE_ESTADO_PANEL_JSF.test(k.trim())) continue
     const v = i < 0 ? '' : dec(par.slice(i + 1))
+    // 0.3.20 (real 29/10/2026, Mapfre NSE `datosGenerales.jsf`): `formDG:fechaFirmaInputDate` es la FECHA de firma (un dato), no firmar.
+    if (i >= 0 && esCampoFechaDeAccion(k, v)) continue
     const enNombre = RE_ACCION_REAL_TRAS_PREFIJO.exec(k)
     // Revisión de seguridad 0.3.8: un trozo SIN «=» (cuerpo JSON o texto) no es un nombre de parámetro y puede llevar datos
     // ({"nif":"…"}): solo se nombra un id de formulario con forma de id; cifras largas, enmascaradas.

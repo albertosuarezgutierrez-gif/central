@@ -101,8 +101,8 @@ import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
-/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.19 (29/10/2026): Fidelidade Vivienda: el input submit sin rótulo de «Simulación» SÍ lleva onclick `OsAjax(arguments[0] || window.event,'<A>','<B>','','__OSVSTATE,',''); return false;` y avanza si casa esa forma CERRADA (A === B con `$`→`_`, B = name entero vivo, sin nombre de acción final, sin otros manejadores ni form*), con inspección ESTRICTA del cuerpo del POST al propio formulario; Mapfre NSE: el «Siguiente >>» de `formDG` (busquedaProductos) se mira sin la subcadena exacta `mostrarModalPanelConfirmarLimpiezaPolizaPorDias` de su oncomplete (origen, ruta, tag, id, name y texto exactos, vivo; el resto del onclick sigue pasando por emisión). 0.3.18 (29/10/2026): Fidelidade Vivienda: el `<input type=submit>` de «Simulación» SIN texto/value/aria-label (OutSystems, name `OPI_Theme_wt…$block$wtMainContent$…`, clase Button+Is_Default) avanza por regla estrecha (origen https://mediadores.fidelidade.es, ruta /OPI_ES_Vivienda/, único, sin onclick, sin texto de acción final ni datos bancarios ni precio), repetida VIVA en el DOM antes del clic; ePAC drvp00 «Selección de Municipio»: «Aceptar» sin id con onclick EXACTO `eventoSiguienteDialog()` (type=button, sin otros manejadores ni atributos form*, vivo) con la misma vigilancia que el «Aceptar» sin id; saneado del onclick: tiras contiguas de ≥7 cifras (ids JSF de Mapfre NSE) normalizadas a `#N#` en vez de redactar el onclick entero (NIF/IBAN/email/teléfono siguen redactando). 0.3.17 (29/10/2026): Fidelidade localiza la tarjeta 4216/Vivienda en todos los marcos y, si falla, describe sin PII lo que hay; ePAC drvp00: «Aceptar» único sin id ni onclick (Selección de Municipio) por texto exacto con la misma vigilancia; onclick hasta 8000 car. solo para la evaluación (`onclickCompleto`, la IA sigue viendo 200); el rechazo del validador describe el control (tag/type/name/clase/texto ≤40). 0.3.16 (29/10/2026): Fidelidade pulsa solo la HOJA exacta del menú (nunca el contenedor); onclick completo hasta 2000 car. en avances y radios/casillas (A4J «Siguiente >>» de Mapfre NSE; radio solo si su ajax/jsfcljs tiene como ORIGEN el propio control y no clica otro; onclick con dato personal = redactado = no se pulsa); el rechazo del validador dice acción, ref y causa; catálogo de patinete/VMP (matrícula omitible, CP, población, marca, modelo, uso, homologado); contacto no va a matrícula/CP/población. 0.3.15 (29/10/2026): el validador deja marcar radios y casillas de consentimiento/declaración (decisión de Alberto); una casilla ya marcada no se vuelve a pulsar. 0.3.14 (29/10/2026): elección determinista de «Oficina Virtual» repetida en Fidelidade; nombre de pantalla recortado, `motivo` ignorado fuera de parar, onclick hasta 200 car., avance ePAC con títulos recortados (guard vivo), errores con causa. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.19'
+/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.20 (29/10/2026): Fidelidade «Simulación»: el input submit «sin rótulo» lleva `value` VIVO; vale si cada rótulo vivo es EXACTAMENTE uno de la lista cerrada neutra (siguiente, avanzar, continuar, siguiente paso, calcular, simular) y no casa acción final (`rotuloNeutroSinTexto`); Mapfre NSE: `formDG:fechaFirmaInputDate` (fecha, valor vacío o fecha sin letras) no cuenta como «firm» en el cuerpo (`esCampoFechaDeAccion`); Allianz VMP: el `<select>` oculto de un bootstrap-select (marca/modelo) se inventaría con `selectpicker` (su botón sin texto no) y se elige con `selectOption` forzado tras comprobarlo vivo; un lote solo de rellenar sin efecto (clave omitible sin valor) no se ejecuta (con `parar` detrás, manda el parar). 0.3.19 (29/10/2026): Fidelidade Vivienda: el input submit sin rótulo de «Simulación» SÍ lleva onclick `OsAjax(arguments[0] || window.event,'<A>','<B>','','__OSVSTATE,',''); return false;` y avanza si casa esa forma CERRADA (A === B con `$`→`_`, B = name entero vivo, sin nombre de acción final, sin otros manejadores ni form*), con inspección ESTRICTA del cuerpo del POST al propio formulario; Mapfre NSE: el «Siguiente >>» de `formDG` (busquedaProductos) se mira sin la subcadena exacta `mostrarModalPanelConfirmarLimpiezaPolizaPorDias` de su oncomplete (origen, ruta, tag, id, name y texto exactos, vivo; el resto del onclick sigue pasando por emisión). 0.3.18 (29/10/2026): Fidelidade Vivienda: el `<input type=submit>` de «Simulación» SIN texto/value/aria-label (OutSystems, name `OPI_Theme_wt…$block$wtMainContent$…`, clase Button+Is_Default) avanza por regla estrecha (origen https://mediadores.fidelidade.es, ruta /OPI_ES_Vivienda/, único, sin onclick, sin texto de acción final ni datos bancarios ni precio), repetida VIVA en el DOM antes del clic; ePAC drvp00 «Selección de Municipio»: «Aceptar» sin id con onclick EXACTO `eventoSiguienteDialog()` (type=button, sin otros manejadores ni atributos form*, vivo) con la misma vigilancia que el «Aceptar» sin id; saneado del onclick: tiras contiguas de ≥7 cifras (ids JSF de Mapfre NSE) normalizadas a `#N#` en vez de redactar el onclick entero (NIF/IBAN/email/teléfono siguen redactando). 0.3.17 (29/10/2026): Fidelidade localiza la tarjeta 4216/Vivienda en todos los marcos y, si falla, describe sin PII lo que hay; ePAC drvp00: «Aceptar» único sin id ni onclick (Selección de Municipio) por texto exacto con la misma vigilancia; onclick hasta 8000 car. solo para la evaluación (`onclickCompleto`, la IA sigue viendo 200); el rechazo del validador describe el control (tag/type/name/clase/texto ≤40). 0.3.16 (29/10/2026): Fidelidade pulsa solo la HOJA exacta del menú (nunca el contenedor); onclick completo hasta 2000 car. en avances y radios/casillas (A4J «Siguiente >>» de Mapfre NSE; radio solo si su ajax/jsfcljs tiene como ORIGEN el propio control y no clica otro; onclick con dato personal = redactado = no se pulsa); el rechazo del validador dice acción, ref y causa; catálogo de patinete/VMP (matrícula omitible, CP, población, marca, modelo, uso, homologado); contacto no va a matrícula/CP/población. 0.3.15 (29/10/2026): el validador deja marcar radios y casillas de consentimiento/declaración (decisión de Alberto); una casilla ya marcada no se vuelve a pulsar. 0.3.14 (29/10/2026): elección determinista de «Oficina Virtual» repetida en Fidelidade; nombre de pantalla recortado, `motivo` ignorado fuera de parar, onclick hasta 200 car., avance ePAC con títulos recortados (guard vivo), errores con causa. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
+export const EXPLORADOR_VERSION = '0.3.20'
 
 /**
  * Revisión 0.3.17: el log del worker (Fly) NO pasa por `redactarValoresInventario` (eso lo hace asegura antes de la IA y la BD), y el
@@ -741,6 +741,17 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
               break lote
             }
             hechas++
+          } else if (a.accion === 'elegir' && hit.el.tag === 'select' && hit.el.selectpicker === true) {
+            // 0.3.20 (Allianz VMP, marca/modelo): el <select> OCULTO de un bootstrap-select (comprobado VIVO en `localizar`). `selectOption`
+            // forzado (dispara input/change: bootstrap-select repinta su botón y el portal carga los modelos); su red pasa por el guard de
+            // siempre. Luego red quieta y, si quedan acciones, se corta el lote: la pantalla siguiente ve las opciones nuevas (modelo).
+            await k.pausaAccion()
+            const elegidas = await loc.selectOption({ value: a.opcion.valor }, { force: true, timeout: 10_000 })
+            if (elegidas.length !== 1 || elegidas[0] !== a.opcion.valor) throw new Parar('ambiguo', 'opcion_no_aplicada')
+            hechas++
+            await dormir(k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
+            await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+            cortar = i < lote.length - 1 ? 'repintado' : null
           } else if (a.accion === 'elegir') {
             await k.pausaAccion()
             const elegidas = await loc.selectOption({ value: a.opcion.valor }, { timeout: 10_000 })
@@ -906,6 +917,31 @@ const leerVivo = async (nodo: NodoInv): Promise<NodoVivo | null> => {
  * no pasaban `isVisible()`) y espera un poco a que se pinte. Nunca relaja la identidad: el llamante la vuelve a comprobar
  * sobre el MISMO handle. Nunca lanza.
  */
+/**
+ * 0.3.20: VIVO, ¿es el nodo el `<select>` OCULTO de un bootstrap-select? Select, oculto (display/visibility o caja ≤1 px), dentro de su
+ * `.bootstrap-select` (o justo antes de él, bootstrap-select 1.6) con EXACTAMENTE un `button.dropdown-toggle` visible. Solo lee; fallo = no.
+ * Función ANÓNIMA (tsx envuelve las con nombre en `__name`).
+ */
+async function esSelectpickerVivo(nodo: NodoInv): Promise<boolean> {
+  return nodo.handle
+    .evaluate((n) => {
+      const sel = n as HTMLSelectElement
+      if (sel.tagName !== 'SELECT') return false
+      const cs = getComputedStyle(sel)
+      const r = sel.getBoundingClientRect()
+      if (!(cs.display === 'none' || cs.visibility === 'hidden' || (r.width <= 1 && r.height <= 1))) return false
+      const c = (sel.parentElement && sel.parentElement.closest('.bootstrap-select')) || (sel.nextElementSibling && sel.nextElementSibling.classList.contains('bootstrap-select') ? sel.nextElementSibling : null)
+      if (!c) return false
+      const bs = Array.from(c.querySelectorAll('button.dropdown-toggle'))
+      if (bs.length !== 1) return false
+      const b = bs[0] as HTMLElement
+      const bcs = getComputedStyle(b)
+      const br = b.getBoundingClientRect()
+      return bcs.display !== 'none' && bcs.visibility !== 'hidden' && !(br.width === 0 && br.height === 0)
+    })
+    .catch(() => false)
+}
+
 async function visibleTrasTraer(nodo: NodoInv): Promise<boolean> {
   const visible = () => nodo.handle.isVisible().catch(() => false)
   if (await visible()) return true
@@ -1098,7 +1134,10 @@ async function localizar(nodo: NodoInv, el: ElementoInventario): Promise<Localiz
   }
   const m = await comprobar()
   if (m) return { motivo: m }
-  if (!(await visibleTrasTraer(nodo))) {
+  // 0.3.20: el <select> OCULTO de un bootstrap-select (inventario `selectpicker`) no se ve por diseño: en su lugar se repite VIVO que sigue
+  // siendo eso (select oculto, en su `.bootstrap-select` con UN botón `dropdown-toggle` visible). Cualquier otro control, visible como siempre.
+  const ocultoSelectpicker = el.tag === 'select' && el.selectpicker === true
+  if (ocultoSelectpicker ? !(await esSelectpickerVivo(nodo)) : !(await visibleTrasTraer(nodo))) {
     const caja = await nodo.handle
       .evaluate((n) => {
         const e = n as HTMLElement
