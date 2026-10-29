@@ -726,7 +726,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.11', () => assert.equal(EXPLORADOR_VERSION, '0.3.11'))
+test('versión 0.3.12', () => assert.equal(EXPLORADOR_VERSION, '0.3.12'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`
@@ -888,4 +888,23 @@ test('0.3.11 · frontera bancaria: la nota lleva SOLO el nombre canónico, nunca
   assert.equal(f.nota, 'frontera bancaria: campo «Domiciliación»')
   assert.ok(!/\d/.test(f.nota ?? ''), f.nota)
   assert.equal(finDeError(new ErrorFronteraEmision('algo sin campo conocido')).nota, undefined)
+})
+
+test('0.3.12 · parada por TÍTULO (titulo:contrat): el log lleva SOLO el código del detalle, nunca el texto de la página', async () => {
+  figuras = PAGINA('<h3>Contratación de Juan Pérez García</h3><table><tr><td>Prima</td><td>1</td></tr></table>')
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    const logs: [string, Record<string, unknown> | undefined][] = []
+    const k = { ...contexto(page, guard, () => respuesta([{ accion: 'parar', motivo: 'ambiguo' }])), log: (ev: string, datos?: Record<string, unknown>) => { logs.push([ev, datos]) } }
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
+    assert.equal(fin.detalle, 'titulo:contrat')
+    const parada = logs.find(([ev]) => ev === 'exploracion_parada')
+    assert.equal(parada?.[1]?.detalle, 'titulo:contrat')
+    const linea = JSON.stringify(logs)
+    // El texto de la página llega normalizado (minúsculas, sin tildes): se compara así.
+    assert.ok(!/juan|perez|contrataci/.test(linea.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()), linea)
+  } finally {
+    await context.close()
+  }
 })

@@ -1267,3 +1267,16 @@ describe('Fidelidade · Vivienda (hogar), solo EXPLORACIÓN hasta el formulario 
     expect(Object.keys(ENTRADAS_EXPLORACION).filter((k) => k.startsWith('fidelidade:'))).toEqual([F])
   })
 })
+
+describe('detectarParada 0.3.12: detalle con el nombre del patrón', () => {
+  it('título y campo de emisión llevan código de la lista cerrada, sin texto de la página', () => {
+    const t = detectarParada(inventario({ titulos: ['Resumen de contratación'] }))
+    expect(t?.motivo).toBe('cerca_de_emision')
+    expect(t?.detalle).toBe('titulo:contrat')
+    expect(detectarParada(inventario({ titulos: ['Forma de pago'] }))?.detalle).toBe('titulo:forma_pago')
+    const c = detectarParada(inventario({ elementos: [{ tag: 'input', etiqueta: 'CVV' }] }))
+    expect(c?.detalle).toBe('campo:cvv')
+    for (const d of [t?.detalle, c?.detalle]) expect(DETALLES_FIN_EXPLORACION).toContain(d)
+    expect(JSON.stringify(t)).not.toContain('Resumen')
+  })
+})

@@ -180,7 +180,7 @@ test('0.3.11 · diálogo RGPD con «Cerrar»: se pulsa, desaparece y el login co
 test('0.3.11 · diálogo RGPD solo con «Aceptar»: error con los textos de botón y «Aceptar» NO se pulsa', async () => {
   const { context, page, ctx } = await abrir({ dialogo: ['Aceptar'] })
   try {
-    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /fidelidade\/login: diálogo RGPD tapa el login; botones: \[«Aceptar»\]/)
+    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /fidelidade\/login: diálogo de cookies\/RGPD tapa el login; botones: \[«Aceptar»\]/)
     assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), [])
     await cerrarDialogoRgpdFidelidade(page, ctx, 500).then(() => assert.fail('debía lanzar'), () => undefined)
   } finally {
@@ -191,7 +191,28 @@ test('0.3.11 · diálogo RGPD solo con «Aceptar»: error con los textos de bot�
 test('0.3.11 · diálogo RGPD solo con «Continuar»: error con el texto del botón y NO se pulsa', async () => {
   const { context, page, ctx } = await abrir({ dialogo: ['Continuar'] })
   try {
-    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /fidelidade\/login: diálogo RGPD tapa el login; botones: \[«Continuar»\]/)
+    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /fidelidade\/login: diálogo de cookies\/RGPD tapa el login; botones: \[«Continuar»\]/)
+    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.12 · diálogo de cookies real: «No acepto cookies» cierra y el login continúa; el resto no se pulsa', async () => {
+  const { context, page, ctx } = await abrir({ dialogo: ['', 'aquí', 'Sí, acepto cookies', 'No acepto cookies'] })
+  try {
+    await loginFidelidade(page, ctx, ESPERAS)
+    assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), ['DLG-No acepto cookies'])
+    assert.equal(await page.locator('#home').isVisible(), true)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.12 · «Sí, acepto cookies» a solas: error con nombre y NO se pulsa', async () => {
+  const { context, page, ctx } = await abrir({ dialogo: ['Sí, acepto cookies'] })
+  try {
+    await assert.rejects(() => loginFidelidade(page, ctx, ESPERAS), /diálogo de cookies\/RGPD tapa el login; botones: \[«Sí, acepto cookies»\]/)
     assert.deepEqual((await pulsados(page)).filter((x) => x.startsWith('DLG-')), [])
   } finally {
     await context.close()

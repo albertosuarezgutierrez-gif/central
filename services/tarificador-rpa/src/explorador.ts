@@ -96,7 +96,7 @@ import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.11'
+export const EXPLORADOR_VERSION = '0.3.12'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -532,7 +532,9 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       const parada = detectarParada(inv)
       if (parada) {
         // La señal (p. ej. la ETIQUETA del campo de cuenta bancaria; nunca un valor) va al log local; al cierre, el código.
-        if (parada.detalle) k.log('exploracion_parada', { motivo: parada.motivo, detalle: parada.detalle, senal: parada.senal })
+        // Paradas por TÍTULO o CAMPO: su señal es texto de la página (puede llevar datos personales) → solo el código.
+        const senalSegura = parada.detalle?.startsWith('titulo:') || parada.detalle?.startsWith('campo:') ? {} : { senal: parada.senal }
+        if (parada.detalle) k.log('exploracion_parada', { motivo: parada.motivo, detalle: parada.detalle, ...senalSegura })
         throw new Parar(parada.motivo, parada.detalle)
       }
       const huella = huellaPantalla(inv)

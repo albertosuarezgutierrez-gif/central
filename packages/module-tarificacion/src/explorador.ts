@@ -572,6 +572,33 @@ export const DETALLES_FIN_EXPLORACION = [
    * encontró por su identidad (`relocalizarElemento`: misma huella de pantalla, marco, tag, type, id exacto, name/formControlName y etiqueta). 14/10/2026.
    */
   'nodo_no_relocalizado',
+  /**
+   * 0.3.12: parada «cerca de emisión» por TÍTULO o por CAMPO. El código lleva el NOMBRE canónico del patrón que casó
+   * (`titulo:<patrón>` / `campo:<patrón>`), nunca el texto de la página.
+   */
+  'titulo:revision',
+  'titulo:forma_pago',
+  'titulo:domiciliacion',
+  'titulo:iban',
+  'titulo:cuenta_bancaria',
+  'titulo:datos_bancarios',
+  'titulo:firma',
+  'titulo:firmar',
+  'titulo:emitir',
+  'titulo:emision',
+  'titulo:contrat',
+  'titulo:formaliz',
+  'titulo:grabar',
+  'titulo:archivar',
+  'titulo:datos_emision',
+  'titulo:resumen_contratacion',
+  'titulo:pago_tarjeta',
+  'campo:tarjeta_credito',
+  'campo:cvv',
+  'campo:cvc',
+  'campo:caducidad_tarjeta',
+  'campo:firma_digital',
+  'campo:firma_manuscrita',
 ] as const
 export type DetalleFinExploracion = (typeof DETALLES_FIN_EXPLORACION)[number]
 
@@ -1343,10 +1370,35 @@ const RE_OTP = /\botp\b|\bsms\b|codigo (?:de )?(?:verificacion|seguridad|confirm
 const RE_CAPTCHA = /captcha|no soy un robot|i'?m not a robot|verifica que eres humano|desafio de seguridad/
 /** Títulos de pantalla de emisión. Solo TÍTULOS: «Contratación» como pestaña futura o «Forma de pago» como desplegable de
  *  periodicidad aparecen en pantallas de tarificar y no son parada. */
-const RE_TITULO_EMISION = /\brevision\b|forma de pago|domiciliacion|\biban\b|cuenta bancaria|datos bancarios|\bfirma\b|firmar|\bemitir\b|emision|contrat|formaliz|\bgrabar\b|archivar|datos (?:de|para) (?:la )?emision|resumen de (?:la )?contratacion|pago con tarjeta/
+const PATRONES_TITULO_EMISION: readonly (readonly [DetalleFinExploracion, RegExp])[] = [
+  ['titulo:revision', /\brevision\b/],
+  ['titulo:forma_pago', /forma de pago/],
+  ['titulo:domiciliacion', /domiciliacion/],
+  ['titulo:iban', /\biban\b/],
+  ['titulo:cuenta_bancaria', /cuenta bancaria/],
+  ['titulo:datos_bancarios', /datos bancarios/],
+  ['titulo:firma', /\bfirma\b/],
+  ['titulo:firmar', /firmar/],
+  ['titulo:emitir', /\bemitir\b/],
+  ['titulo:emision', /emision/],
+  ['titulo:contrat', /contrat/],
+  ['titulo:formaliz', /formaliz/],
+  ['titulo:grabar', /\bgrabar\b/],
+  ['titulo:archivar', /archivar/],
+  ['titulo:datos_emision', /datos (?:de|para) (?:la )?emision/],
+  ['titulo:resumen_contratacion', /resumen de (?:la )?contratacion/],
+  ['titulo:pago_tarjeta', /pago con tarjeta/],
+]
 /** Campos de pago/firma que solo existen en emisión (por etiqueta/name/id). Los BANCARIOS (IBAN, cuenta, SWIFT…) viven en
  *  `CAMPOS_BANCARIOS` (acciones-portal.ts, fuente única) y se miran con `fronteraEmisionPorCampos`. */
-const RE_CAMPO_EMISION = /tarjeta de credito|\bcvv\b|\bcvc\b|caducidad de la tarjeta|firma digital|firma manuscrita/
+const PATRONES_CAMPO_EMISION: readonly (readonly [DetalleFinExploracion, RegExp])[] = [
+  ['campo:tarjeta_credito', /tarjeta de credito/],
+  ['campo:cvv', /\bcvv\b/],
+  ['campo:cvc', /\bcvc\b/],
+  ['campo:caducidad_tarjeta', /caducidad de la tarjeta/],
+  ['campo:firma_digital', /firma digital/],
+  ['campo:firma_manuscrita', /firma manuscrita/],
+]
 
 /** Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El
  *  inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaBancaria`) en cada pulsación. */
@@ -1388,10 +1440,14 @@ export function detectarParada(inv: InventarioDom): Parada | null {
   if (t1 !== undefined) return { motivo: 'captcha', senal: t1.slice(0, 60) }
   const t2 = todos.find((t) => RE_OTP.test(t))
   if (t2 !== undefined) return { motivo: 'otp', senal: t2.slice(0, 60) }
-  const t3 = titulos.find((t) => RE_TITULO_EMISION.test(t))
-  if (t3 !== undefined) return { motivo: 'cerca_de_emision', senal: t3.slice(0, 60) }
-  const t4 = campos.map(plano).find((t) => RE_CAMPO_EMISION.test(t))
-  if (t4 !== undefined) return { motivo: 'cerca_de_emision', senal: t4.slice(0, 60) }
+  for (const t of titulos) {
+    const p = PATRONES_TITULO_EMISION.find(([, re]) => re.test(t))
+    if (p) return { motivo: 'cerca_de_emision', senal: t.slice(0, 60), detalle: p[0] }
+  }
+  for (const t of campos.map(plano)) {
+    const p = PATRONES_CAMPO_EMISION.find(([, re]) => re.test(t))
+    if (p) return { motivo: 'cerca_de_emision', senal: t.slice(0, 60), detalle: p[0] }
+  }
   return null
 }
 

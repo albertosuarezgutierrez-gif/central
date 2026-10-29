@@ -339,11 +339,11 @@ export function tipoDocumentoDe(documento: string | null | undefined): TipoDocum
 
 /**
  * La opción de un desplegable de «Tipo de documento» que corresponde a `tipo`, por su TEXTO (sin tildes, mayúsculas ni signos): NIF →
- * «NIF», «DNI», «DNI/NIF», «NIF/DNI», «N.I.F.»; NIE → empieza por «NIE»; CIF → empieza por «CIF». EXACTAMENTE una; si no, `null`. PURA.
+ * «NIF», «DNI», «DNI/NIF», «NIF/DNI», «N.I.F.», «DNI/NIF/NIE/CIF» (0.3.12, también para NIE y CIF); NIE → empieza por «NIE»; CIF → empieza por «CIF». EXACTAMENTE una; si no, `null`. PURA.
  */
 export function opcionTipoDocumento(tipo: TipoDocumento, opciones: readonly { valor: string | null; texto: string | null }[]): string | null {
   const norm = (t: string | null) => plano(t ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const casa = (t: string) => (tipo === 'NIF' ? ['NIF', 'DNI', 'DNINIF', 'NIFDNI'].includes(t) : t.startsWith(tipo))
+  const casa = (t: string) => (tipo === 'NIF' ? ['NIF', 'DNI', 'DNINIF', 'NIFDNI', 'DNINIFNIECIF'].includes(t) : t === 'DNINIFNIECIF' || t.startsWith(tipo))
   const hits = opciones.filter((o) => typeof o.valor === 'string' && o.valor !== '' && casa(norm(o.texto)))
   return hits.length === 1 ? hits[0]!.valor : null
 }
