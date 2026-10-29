@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-28T22:21:25Z",
-  "sha": "69939532b85a955a6f4172373ee5cabc61b24567",
+  "generadoEn": "2026-10-28T23:38:23Z",
+  "sha": "ddffe85dee3c2e8f44c77c9dfe3e53e66a528930",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -33877,7 +33877,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/tarificador/explorador/cierre",
-      "hash": "14ee3c4f8ff2"
+      "hash": "bd31daabdcc1"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/explorador/paso/route.ts",
@@ -65141,6 +65141,7 @@
         "leerPeticionPaso",
         "leerPeticionEncolarExploracion",
         "huecoDeDetalleFin",
+        "leerNotaFin",
         "leerPeticionCierre",
         "faseLoginPermitida",
         "inventarioParaPrompt",
@@ -65157,7 +65158,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "boolean",
-          "linea": 53,
+          "linea": 54,
           "resumen": "Interruptor: `1` EXACTO. Cualquier otra cosa = apagado (fail-closed)."
         },
         {
@@ -65166,7 +65167,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "string | null",
-          "linea": 60,
+          "linea": 61,
           "resumen": "Modelo de la exploración. Sin env → el por defecto; env con algo que no es un slug → `null` (no se llama a la IA)."
         },
         {
@@ -65175,7 +65176,7 @@
           "exportada": true,
           "params": "cabecera: string | null",
           "retorno": "string[]",
-          "linea": 70,
+          "linea": 71,
           "resumen": "Modos declarados por el worker. Sin cabecera (imagen anterior a la fase B) = solo `tarificar` y `emision`."
         },
         {
@@ -65184,7 +65185,7 @@
           "exportada": true,
           "params": "modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "'tarificar' | 'emision' | 'exploracion' | 'humo' | null",
-          "linea": 80,
+          "linea": 81,
           "resumen": "Qué `modo` se le sirve al worker por `/api/tarificador/trabajo/[id]`. Un modo que el worker no conoce NO se sirve (`null`): una imagen anterior a la fase B trata todo lo que no es `emision` como `tari"
         },
         {
@@ -65193,7 +65194,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "string[]",
-          "linea": 94,
+          "linea": 95,
           "resumen": "Modos que el lanzador puede RECLAMAR de la cola. `exploracion` solo con el interruptor encendido (y Alberto lo enciende cuando `TARIFICADOR_FLY_IMAGE` ya es una imagen con el explorador): así una expl"
         },
         {
@@ -65202,7 +65203,7 @@
           "exportada": true,
           "params": "iniciadoAt: Date | null, primerPasoAt: Date | null",
           "retorno": "Date | null",
-          "linea": 106,
+          "linea": 107,
           "resumen": "Inicio ACUMULADO de la exploración: el más antiguo entre el reclamo actual (`iniciado_at`) y el primer paso guardado (un reintento tras un fallo de infra NO pone el reloj a cero). `null` = aún no cons"
         },
         {
@@ -65211,7 +65212,7 @@
           "exportada": true,
           "params": "p: { ahora: Date; inicio: Date | null; leaseMs: number; maxMs: number }",
           "retorno": "Date",
-          "linea": 115,
+          "linea": 116,
           "resumen": "Lease RENOVADO en cada paso de exploración (el de 6 min no basta si cada paso va a la IA): ahora + `leaseMs`, pero NUNCA más allá del tope de tiempo acumulado + margen de cierre. Si el tope ya pasó, d"
         },
         {
@@ -65220,7 +65221,7 @@
           "exportada": true,
           "params": "estadoPolitica: E, cabeceraCerrada: boolean",
           "retorno": "E | 'error_definitivo'",
-          "linea": 127,
+          "linea": 128,
           "resumen": "Estado del trabajo de EXPLORACIÓN tras un fallo (13/10/2026). Un `error_reintentable` con la cabecera YA cerrada (el worker cierra antes de reportar) no se reintenta: el reintento recibiría 404 de `tr"
         },
         {
@@ -65229,7 +65230,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "boolean",
-          "linea": 132,
+          "linea": 133,
           "resumen": "Un fallo que NO se reintenta deja la cabecera cerrada (la pantalla no la muestra «abierta» para siempre)."
         },
         {
@@ -65238,7 +65239,7 @@
           "exportada": true,
           "params": "cabeceraCerrada: boolean | null | undefined",
           "retorno": "boolean",
-          "linea": 137,
+          "linea": 138,
           "resumen": "Un `explorado` solo vale si la cabecera está cerrada (el mapa guardado); sin cabecera = no cerrada."
         },
         {
@@ -65247,7 +65248,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 142
+          "linea": 143
         },
         {
           "nombre": "sanearVistaAria",
@@ -65255,7 +65256,7 @@
           "exportada": true,
           "params": "v: unknown, valoresSensibles: readonly string[] = []",
           "retorno": "string | undefined",
-          "linea": 162,
+          "linea": 163,
           "resumen": "Vista aria opcional del worker → texto seguro para el prompt, o `undefined`. NO se fía de que llegue redactada: valores de campos fuera, datos personales y valores conocidos del cliente fuera, tope de"
         },
         {
@@ -65264,7 +65265,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 183,
+          "linea": 184,
           "resumen": "Cuerpo de `POST /api/tarificador/explorador/paso`: `{ trabajoId, inventario, avancesFallidos? }`. El inventario se RE-SANEA aquí (defensa en profundidad) conservando las refs del worker. Sin elementos"
         },
         {
@@ -65273,7 +65274,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 211,
+          "linea": 212,
           "resumen": "Cuerpo de `POST /api/operador/tarificador/exploracion`: `{ entrada, trabajoOrigenId? | oportunidadId? }`. La entrada tiene que ser de la lista CERRADA (`ENTRADAS_EXPLORACION`: nada de URLs). Las dos a"
         },
         {
@@ -65282,8 +65283,17 @@
           "exportada": true,
           "params": "motivoFin: MotivoFin, detalle: DetalleFinExploracion | null",
           "retorno": "string | null",
-          "linea": 250,
+          "linea": 253,
           "resumen": "El hueco que deja en el mapa el DETALLE de la parada del worker (14/10/2026): qué comprobación cortó, sin valores. `null` si no hay detalle. No hay columna propia: va a `mapa.huecos`, que es lo que se"
+        },
+        {
+          "nombre": "leerNotaFin",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 259,
+          "resumen": "0.3.11: nota de fin del worker. SOLO «frontera bancaria: campo «<nombre de CAMPOS_BANCARIOS>»»; cualquier otra se ignora."
         },
         {
           "nombre": "leerPeticionCierre",
@@ -65291,8 +65301,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 255,
-          "resumen": "Cuerpo de `POST /api/tarificador/explorador/cierre`. La red va SOLO como origen + ruta (se re-normaliza aquí)."
+          "linea": 266
         },
         {
           "nombre": "faseLoginPermitida",
@@ -65300,7 +65309,7 @@
           "exportada": true,
           "params": "fase: 'normal' | 'login', entrada: string",
           "retorno": "boolean",
-          "linea": 316,
+          "linea": 327,
           "resumen": "¿Se admite un paso de fase `login` para esta entrada? Solo si su compañía está en `LOGIN_ASISTIDO` (módulo; hoy Occident). La fase normal, siempre. Pura."
         },
         {
@@ -65309,7 +65318,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 342,
+          "linea": 353,
           "resumen": "El inventario como JSON para el prompt, con `<` y `>` neutralizados (→ ‹ ›): el texto del portal (no confiable) no puede cerrar `</inventario>` ni abrir otra etiqueta del prompt. El JSON sigue siendo "
         },
         {
@@ -65318,7 +65327,7 @@
           "exportada": true,
           "params": "e: { entrada: string; inventario: InventarioDom; historial: string[]; avancesFallidos: number; pantallasLogin: number }",
           "retorno": "string",
-          "linea": 347,
+          "linea": 358,
           "resumen": "El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS."
         },
         {
@@ -65327,7 +65336,7 @@
           "exportada": true,
           "params": "pasos: readonly { respuesta: RespuestaExplorador | null }[]",
           "retorno": "string[]",
-          "linea": 358,
+          "linea": 369,
           "resumen": "Una línea por paso anterior: pantalla y acciones por CLAVE/ref (nunca valores)."
         },
         {
@@ -65336,7 +65345,7 @@
           "exportada": true,
           "params": "e: EntradaPrompt",
           "retorno": "string",
-          "linea": 385,
+          "linea": 396,
           "resumen": "El mensaje de usuario. El texto del portal va DELIMITADO como datos (`<inventario>`), en JSON: un intento de inyección desde el DOM se queda en una cadena dentro de un objeto. El catálogo va sin valor"
         },
         {
@@ -65345,7 +65354,7 @@
           "exportada": true,
           "params": "pasos: readonly PasoGuardado[], iniciadoAt: Date | null, ahora: Date",
           "retorno": "",
-          "linea": 417,
+          "linea": 428,
           "resumen": "Lo gastado hasta ahora por la exploración (para `comprobarTopes`). `iniciadoAt` null = ahora (0 ms)."
         },
         {
@@ -65354,13 +65363,13 @@
           "exportada": true,
           "params": "mapas: readonly { estado: string; mapa: unknown }[], huella: string",
           "retorno": "PantallaMapaExploracion | null",
-          "linea": 431,
+          "linea": 442,
           "resumen": "MEMORIA: la pantalla con esa huella en los mapas guardados (válidos) de la compañía/producto. Gana un mapa REVISADO por una persona; entre iguales, el primero de la lista (la consulta los trae del más"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3e5a97912ffa"
+      "hash": "29c0dd71fd3e"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador.ts",
@@ -259567,6 +259576,6 @@
   ],
   "resumen": {
     "archivos": 5428,
-    "funciones": 20871
+    "funciones": 20872
   }
 }
