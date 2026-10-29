@@ -59,6 +59,9 @@ import {
   claveOmitibleSinValor,
   textoRechazo,
   entradaConTomadorMediador,
+  valoresSensiblesExploracion,
+  contieneValorSensible,
+  type RechazoAccion,
   secretosDelEntorno,
   topesExplorador,
   validarRespuestaExplorador,
@@ -97,8 +100,18 @@ import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
-/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.16 (29/10/2026): Fidelidade pulsa solo la HOJA exacta del menú (nunca el contenedor); onclick completo hasta 2000 car. en avances y radios/casillas (A4J «Siguiente >>» de Mapfre NSE; radio solo si su ajax/jsfcljs tiene como ORIGEN el propio control y no clica otro; onclick con dato personal = redactado = no se pulsa); el rechazo del validador dice acción, ref y causa; catálogo de patinete/VMP (matrícula omitible, CP, población, marca, modelo, uso, homologado); contacto no va a matrícula/CP/población. 0.3.15 (29/10/2026): el validador deja marcar radios y casillas de consentimiento/declaración (decisión de Alberto); una casilla ya marcada no se vuelve a pulsar. 0.3.14 (29/10/2026): elección determinista de «Oficina Virtual» repetida en Fidelidade; nombre de pantalla recortado, `motivo` ignorado fuera de parar, onclick hasta 200 car., avance ePAC con títulos recortados (guard vivo), errores con causa. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
-export const EXPLORADOR_VERSION = '0.3.16'
+/** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. 0.3.17 (29/10/2026): Fidelidade localiza la tarjeta 4216/Vivienda en todos los marcos y, si falla, describe sin PII lo que hay; ePAC drvp00: «Aceptar» único sin id ni onclick (Selección de Municipio) por texto exacto con la misma vigilancia; onclick hasta 8000 car. solo para la evaluación (`onclickCompleto`, la IA sigue viendo 200); el rechazo del validador describe el control (tag/type/name/clase/texto ≤40). 0.3.16 (29/10/2026): Fidelidade pulsa solo la HOJA exacta del menú (nunca el contenedor); onclick completo hasta 2000 car. en avances y radios/casillas (A4J «Siguiente >>» de Mapfre NSE; radio solo si su ajax/jsfcljs tiene como ORIGEN el propio control y no clica otro; onclick con dato personal = redactado = no se pulsa); el rechazo del validador dice acción, ref y causa; catálogo de patinete/VMP (matrícula omitible, CP, población, marca, modelo, uso, homologado); contacto no va a matrícula/CP/población. 0.3.15 (29/10/2026): el validador deja marcar radios y casillas de consentimiento/declaración (decisión de Alberto); una casilla ya marcada no se vuelve a pulsar. 0.3.14 (29/10/2026): elección determinista de «Oficina Virtual» repetida en Fidelidade; nombre de pantalla recortado, `motivo` ignorado fuera de parar, onclick hasta 200 car., avance ePAC con títulos recortados (guard vivo), errores con causa. 0.3.9 (28/10/2026): tipo de documento también si `_tipoDoc` es input+lista/JSF (pulsar guardado) y avisos modales de Mapfre tras abrir cada menú; portal de exploración de Fidelidade (Vivienda): login + OFICINA VIRTUAL › PROYECTO › Nuevo proyecto › tarjeta 4216 › «Simulación» por la puerta exacta del guard. 0.3.8 (28/10/2026): tipo de documento pareado (NIF/NIE/CIF) antes del documento; el guard nombra el parámetro del cuerpo que casa en la ruta tolerada. 0.3.7: diagnóstico si NSE vuelve a su portada tras «Oferta / Contratación»; inventario con mensaje de error de campos inválidos y avisos del portal. 0.3.6: NIF del tomador validado (blur + espera de red) antes de la acción siguiente; tolerancia NSE también en el menú «Oferta / Contratación» (índices sin desplazar) y no con texto de acción real. 0.3.5: ruta de app NSE `/EVT21_NSE_FWEB/app/emision/` tolerada SOLO en Mapfre patinete (decisión de Alberto). 0.3.4: diálogo «Atención» del término de ePAC cerrado por código («Cancelar»); «Oferta / Contratación» del menú NSE de Mapfre por su puerta; entradas de menú (<a>, menuitem/link) avanzables. 0.3.3: ventana NSE de Mapfre adoptada (sin `sin_salida` falso), destino del avance drvp00 = servlet del marco, ids con `$`. 0.3.2: «Acceso a NSE» de Mapfre Patinetes por su puerta exacta; radios ocultos de ePAC por su label; avance `#btnAceptar`+`eventoSiguiente()` de drvp00. */
+export const EXPLORADOR_VERSION = '0.3.17'
+
+/**
+ * Revisión 0.3.17: el log del worker (Fly) NO pasa por `redactarValoresInventario` (eso lo hace asegura antes de la IA y la BD), y el
+ * `control` del rechazo lleva el texto visible del control (≤40). Aquí se quitan los valores del riesgo/contacto del trabajo: si el
+ * control contiene alguno, o no se sabe qué quitar (`null` = datos reales sin riesgo legible), sale «control redactado». Pura.
+ */
+export function rechazosParaLog(rechazos: readonly RechazoAccion[], k: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined>; entrada: string }): string[] {
+  const valores = valoresSensiblesExploracion({ conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, tomadorMediador: !k.conDatosReales && entradaConTomadorMediador(k.entrada) })
+  return rechazos.map((r) => textoRechazo(r.control && (valores === null || contieneValorSensible(r.control, valores)) ? { ...r, control: 'control redactado' } : r))
+}
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -566,7 +579,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       // REVALIDACIÓN contra el inventario PROPIO (el que se mandó): lo que no valida aquí no toca el portal.
       const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null, presupuestoEnCurso: presupuesto.guardado, precioVisto: precioVistoEn(k.guard) })
       // 0.3.16: qué acción y qué ref rechazó el validador del worker, con su causa (sin valores).
-      if (!v.ok) k.log('exploracion_lote_no_valido', { n: pasos, rechazos: (v.rechazos ?? []).map(textoRechazo) })
+      if (!v.ok) k.log('exploracion_lote_no_valido', { n: pasos, rechazos: rechazosParaLog(v.rechazos ?? [], k) })
       if (!v.ok) throw new Parar('ambiguo', 'lote_no_valido')
       if (r.estado !== 'ok') {
         const p = v.respuesta.acciones[0]
