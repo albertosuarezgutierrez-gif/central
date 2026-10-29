@@ -66,6 +66,7 @@ before(async () => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       if (ruta === '/valida-nif') return void setTimeout(() => res.end('ok'), 300)
       if (ruta === '/drvp00/SEAServlet') return void res.end(req.method === 'POST' ? ((validarNif && !/tomadorValidado=1/.test(cuerpo)) || (validarTipoDoc && !/IntervinientesBean%24nifTomador_tipoDoc=N(&|$)/.test(cuerpo)) ? PAGINA('<p>NIF del tomador no válido</p>') : RESULTADO) : figuras)
+      if (ruta === '/drvp00/main/control.do') return void res.end(RESULTADO)
       if (ruta === '/otro/SEAServlet') return void res.end(figuras)
       if (ruta === '/landing') return void res.end(landing)
       if (ruta === '/EVT21_NSE_FWEB/inicio.jsp' || ruta === '/otra/inicio.jsp') return void res.end(menuNse)
@@ -271,6 +272,55 @@ test('ePAC: #btnAceptar con OTRO onclick, o en OTRO marco, no entra por la puert
       await context.close()
     }
   }
+})
+
+/** 0.3.13: el «Aceptar» de ePAC envía el POST a `/drvp00/main/control.do` (real 28/10/2026). `action` y campos ocultos del cuerpo variables. */
+async function avanzarHacia(action: string, ocultos = ''): Promise<{ violacion: unknown; posts: Peticion[]; fallo: unknown }> {
+  figuras = FIGURAS().replace('action="/drvp00/SEAServlet">', `action="${action}">${ocultos}`)
+  const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+  try {
+    const cap = (await capturarInventarioExploracion(page))!
+    const marco = cap.inventario.marcos[0]
+    const el = marco.elementos.find((e) => e.id === 'btnAceptar')!
+    let fallo: unknown = null
+    await pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }).catch((e) => { fallo = e })
+    await cap.liberar()
+    return { violacion: guard.violacion(), posts: peticiones.filter((p) => p.metodo === 'POST'), fallo }
+  } finally {
+    await context.close()
+  }
+}
+
+test('0.3.13 · ePAC: POST a /drvp00/main/control.do con cuerpo normal = permitido', async () => {
+  const r = await avanzarHacia('/drvp00/main/control.do', '<input type="hidden" name="paso" value="2">')
+  assert.equal(r.violacion, null, String(r.fallo))
+  assert.equal(r.posts.length, 1)
+  assert.equal(r.posts[0].ruta, '/drvp00/main/control.do')
+})
+
+for (const [nombre, oculto] of [
+  ['emitir', '<input type="hidden" name="accion" value="emitir">'],
+  ['confirmar', '<input type="hidden" name="accion" value="confirmar">'],
+  ['firmar', '<input type="hidden" name="accion" value="firmar">'],
+  ['contratar', '<input type="hidden" name="accion" value="contratar">'],
+  ['validar_aceptar', '<input type="hidden" name="evento" value="validar_aceptar()">'],
+  ['op=emitir (clave que no es de acción)', '<input type="hidden" name="op" value="emitir">'],
+  ['btnEmitir (nombre del botón)', '<input type="hidden" name="btnEmitir" value="1">'],
+] as const) {
+  test(`0.3.13 · ePAC: POST a control.do con cuerpo de ${nombre} = bloqueado, no llega al servidor`, async () => {
+    const r = await avanzarHacia('/drvp00/main/control.do', oculto)
+    assert.notEqual(r.violacion, null, 'debía registrarse una violación')
+    assert.equal(r.posts.length, 0)
+  })
+}
+
+test('0.3.13 · ePAC: control.do en OTRO host = bloqueado; otra ruta del mismo host (/drvp00/main/otro.do) también', async () => {
+  const otroHost = await avanzarHacia(`${base.replace('127.0.0.1', 'localhost')}/drvp00/main/control.do`, '<input type="hidden" name="paso" value="2">')
+  assert.notEqual(otroHost.violacion, null)
+  assert.equal(otroHost.posts.length, 0)
+  const otraRuta = await avanzarHacia('/drvp00/main/otro.do', '<input type="hidden" name="paso" value="2">')
+  assert.notEqual(otraRuta.violacion, null)
+  assert.equal(otraRuta.posts.length, 0)
 })
 
 test('ePAC: si el onclick VIVO cambia tras el inventario, la puerta no pulsa', async () => {
@@ -726,7 +776,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.12', () => assert.equal(EXPLORADOR_VERSION, '0.3.12'))
+test('versión 0.3.13', () => assert.equal(EXPLORADOR_VERSION, '0.3.13'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`
@@ -891,7 +941,7 @@ test('0.3.11 · frontera bancaria: la nota lleva SOLO el nombre canónico, nunca
 })
 
 test('0.3.12 · parada por TÍTULO (titulo:contrat): el log lleva SOLO el código del detalle, nunca el texto de la página', async () => {
-  figuras = PAGINA('<h3>Contratación de Juan Pérez García</h3><table><tr><td>Prima</td><td>1</td></tr></table>')
+  figuras = PAGINA('<h3>Contratar el seguro de Juan Pérez García</h3><table><tr><td>Prima</td><td>1</td></tr></table>')
   const { context, page, guard } = await abrir('/drvp00/SEAServlet')
   try {
     const logs: [string, Record<string, unknown> | undefined][] = []
