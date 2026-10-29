@@ -674,6 +674,8 @@ export type {
   TitularAutorizadoParaAviso,
   UmbralSubidaPrima,
 } from './avisos-ampliados.ts'
+export { tagPushCima, tagPushObligacion, accionesPushCima } from './push-aviso.ts'
+export type { AccionPush } from './push-aviso.ts'
 export type { EventoCima, PlanAvisos, PolizaParaAviso, TipoAvisoCima, TipoAvisoInterruptor } from './avisos-cima.ts'
 export { vistaCobertura, capitalDeCobertura, nombreCobertura, LIMITES_LEGALES, type CoberturaVista, type CapitalVista } from './cobertura-vista.ts'
 // Personas de la póliza y terceros del siniestro (CIMA, asegura#880): lista blanca de lo que ve el cliente.

@@ -50,7 +50,8 @@ test('🔒 la comparativa solo se ofrece con el consentimiento comercial VIGENTE
 })
 
 test('la notificación abre la ficha de la novedad (no siempre la bóveda)', () => {
-  assert.match(CRON, /data: \{ url: urlPushCima\(plan\.enviar\) \}/)
+  // El payload lleva más campos (tag, acciones): lo que se vigila es que la url salga de urlPushCima.
+  assert.match(CRON, /const data = \{\s*url: urlPushCima\(plan\.enviar\),/)
 })
 
 test('🚨 el SQL de la fase B amplía los CHECK con EXACTAMENTE los tipos del módulo', () => {

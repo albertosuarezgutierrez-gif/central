@@ -34,17 +34,26 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   if (event.action === 'ok') return
+  const href = new URL('/edge', self.location.origin).href
+  const aviso = { type: 'ALERTA_VOZ', mensaje: event.notification.data?.mensaje_voz }
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-      const edge = clients.find(c => c.url.includes('/edge'))
-      if (edge) {
-        edge.focus()
-        edge.postMessage({ type: 'ALERTA_VOZ', mensaje: event.notification.data?.mensaje_voz })
-      } else {
-        self.clients.openWindow('/edge')
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (lista) => {
+      // Primero la ventana que ya está en /edge: recibe el aviso de voz sin recargar.
+      lista.sort((a, b) => Number(b.url.includes('/edge')) - Number(a.url.includes('/edge')))
+      for (const c of lista) {
+        if (!('focus' in c)) continue
+        try {
+          const nav = 'navigate' in c && !c.url.includes('/edge') ? await c.navigate(href) : null
+          const v = await (nav || c).focus()
+          ;(nav || c).postMessage(aviso)
+          return v
+        } catch {
+          // navigate rechaza con ventanas no controladas (PWA instalada / iOS): se abre una nueva
+        }
       }
-    })
+      return self.clients.openWindow(href)
+    }),
   )
 })
 

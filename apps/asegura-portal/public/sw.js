@@ -29,13 +29,23 @@ self.addEventListener('push', (e) => {
     datos = {}
   }
   const titulo = datos.title || 'Grupo ASegura'
+  const extra = datos.data || {}
+  const opciones = {
+    body: datos.body || '',
+    icon: '/icono-app',
+    badge: '/icono-app',
+    data: extra,
+  }
+  // Una notificación por póliza: la nueva sustituye a la anterior con la misma etiqueta y vuelve a sonar.
+  if (typeof extra.tag === 'string' && extra.tag) {
+    opciones.tag = extra.tag
+    opciones.renotify = true
+  }
+  if (Array.isArray(extra.acciones)) {
+    opciones.actions = extra.acciones.slice(0, 2).map((a) => ({ action: String(a.action), title: String(a.title) }))
+  }
   e.waitUntil(
-    self.registration.showNotification(titulo, {
-      body: datos.body || '',
-      icon: '/icono-app',
-      badge: '/icono-app',
-      data: datos.data || {},
-    }),
+    self.registration.showNotification(titulo, opciones),
   )
 })
 
@@ -44,7 +54,10 @@ self.addEventListener('push', (e) => {
 // el respaldo, la app se quedaba en la pantalla en la que estaba (29/10/2026).
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
-  const crudo = (e.notification.data && e.notification.data.url) || '/boveda'
+  const datos = e.notification.data || {}
+  // Botón pulsado: su url (en `data.acciones`); sin botón (o desconocido), la url general.
+  const accion = e.action && Array.isArray(datos.acciones) ? datos.acciones.find((a) => a && a.action === e.action) : null
+  const crudo = (accion && accion.url) || datos.url || '/boveda'
   let destino
   try {
     destino = new URL(crudo, self.location.origin)
