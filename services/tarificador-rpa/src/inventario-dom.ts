@@ -106,7 +106,7 @@ function extractor(explora: boolean): string {
     // Un [ng-click] que no es control de texto (fila, tarjeta…) puede envolver nombres: su texto, CORTO (80); el saneado lo filtra.
     if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet) e.texto = corta(el.innerText || el.textContent || '', 200);
     else if (ng) e.texto = corta(el.innerText || el.textContent || '', 80);
-    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 200);
+    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 400);
     // EXPLORACIÓN (28/10/2026, menú de Mapfre NSE): un <a href> es una entrada de menú. \`href="javascript:…"\` viaja como onclick
     // (lo miran el validador y el guard); cualquier otro href marca el rol \`link\` (sin la URL: puede llevar datos).
     // Con onclick Y \`javascript:\` se CONCATENAN (los dos se ejecutan). Un href normal: su RUTA sin query (\`hrefRuta\`; de otro origen,
@@ -123,7 +123,7 @@ function extractor(explora: boolean): string {
         if (!e.role) e.role = 'link';
       }
     }
-    if (ng && !e.onclick) e.onclick = corta(ng, 200);
+    if (ng && !e.onclick) e.onclick = corta(ng, 400);
     if (tag === 'select') {
       e.opciones = Array.from(el.options).slice(0, 40).map((o) => ({ valor: o.value, texto: o.textContent }));
       e.opcionesTotal = el.options.length;

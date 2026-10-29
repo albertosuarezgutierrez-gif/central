@@ -25,6 +25,8 @@ export const MAX_OPCIONES_INVENTARIO = 40
 export const MAX_TEXTO_INVENTARIO = 60
 /** Truncado de identificadores y atributos (id, name, onclick…). */
 const MAX_ATRIBUTO = 80
+/** 0.3.14: el `onclick` llega al saneado con ≤200 car. (worker) y se conserva entero hasta ahí: uno recortado a 80 bloqueaba (`onclick_truncado`) los manejadores JSF normales (`mojarra.jsfcljs(…)`). Más de 200 sigue recortado = no se pulsa. */
+const MAX_ONCLICK = 200
 
 export type OpcionInventario = { valor: string | null; texto: string | null }
 
@@ -247,7 +249,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       pon('formControlName', texto(eo.formControlName, MAX_ATRIBUTO))
       pon('etiqueta', texto(eo.etiqueta, MAX_TEXTO_INVENTARIO))
       pon('texto', texto(eo.texto, MAX_TEXTO_INVENTARIO))
-      pon('onclick', texto(eo.onclick, MAX_ATRIBUTO))
+      pon('onclick', texto(eo.onclick, MAX_ONCLICK))
       pon('hrefRuta', texto(eo.hrefRuta, MAX_ATRIBUTO))
       pon('dialogo', texto(eo.dialogo, MAX_TEXTO_INVENTARIO))
       if (eo.requerido === true) el.requerido = true

@@ -360,3 +360,68 @@ describe('0.3.8b · el detalle del cuerpo nunca saca datos (cuerpos JSON/texto s
     expect(v).toEqual({ parametro: 'javax.faces.source', patron: 'pago' })
   })
 })
+
+describe('0.3.14 · tolerancias del validador (Allianz patinete / Mapfre patinete, 29/10/2026)', () => {
+  const resp = (i: InventarioDom, entrada: string, extra: Record<string, unknown>, acciones: unknown[]) =>
+    validarRespuestaExplorador({ version: 1, pantalla: { nombre: 'x', tipo: 'formulario' }, acciones, mapeo: [], motivo: null, ...extra }, { inventario: i, ramo: 'patinete', entrada, datosReales: null })
+  const titulosMuchos = Array.from({ length: 20 }, (_, k) => ({ texto: `Cabecera ${k}`, tag: 'th' }))
+
+  it('pantalla.nombre largo se recorta a 60 y no tira el lote; un dato personal sigue rechazando', () => {
+    const i = inv([BTN])
+    const largo = 'Datos del Vehículo · Selección de Municipio · Tomador y Conductor Principal · ePac'
+    const r = resp(i, MP, { pantalla: { nombre: largo, tipo: 'formulario' } }, [{ accion: 'avanzar', ref: i.marcos[0].elementos[0].ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+    expect(r.ok, JSON.stringify(r)).toBe(true)
+    if (r.ok) expect(r.respuesta.pantalla.nombre!.length).toBeLessThanOrEqual(60)
+    const dp = resp(i, MP, { pantalla: { nombre: 'Datos 12345678Z', tipo: 'formulario' } }, [{ accion: 'avanzar', ref: i.marcos[0].elementos[0].ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+    expect(dp.ok).toBe(false)
+  })
+
+  it('Allianz: #btnAceptar exacto avanza aunque la lista de títulos llegue recortada (el guard repite VIVO); un título prohibido visible sigue bloqueando', () => {
+    const ok = inv([BTN], { titulos: titulosMuchos })
+    expect(avancePorIdAutorizado(MP, el0(ok), ok.marcos[0])).not.toBeNull()
+    const r = resp(ok, MP, {}, [{ accion: 'avanzar', ref: el0(ok).ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+    expect(r.ok, JSON.stringify(r)).toBe(true)
+    const mal = inv([BTN], { titulos: [...titulosMuchos.slice(0, 19), { texto: 'Resumen de contratación y pago', tag: 'h2' }] })
+    expect(avancePorIdAutorizado(MP, el0(mal), mal.marcos[0])).toBeNull()
+    // El «Aceptar» POR TÍTULO (Hogar) NO hereda la tolerancia: con la lista recortada sigue sin autorizar.
+    const hogar = inv([{ tag: 'button', texto: 'Aceptar' }], { titulos: [{ texto: 'Datos básicos', tag: 'h2' }, ...titulosMuchos] })
+    expect(esAvanceAutorizado('allianz:particulares:hogar', el0(hogar), hogar.marcos[0])).toBe(false)
+  })
+
+  it('aceptar_no_autorizado nombra la causa (sin valores del portal)', () => {
+    const g = inv([{ ...BTN, onclick: 'otroManejador()' }])
+    const r = resp(g, MP, {}, [{ accion: 'avanzar', ref: el0(g).ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+    expect(r.ok).toBe(false)
+    expect(JSON.stringify(r)).toMatch(/aceptar_no_autorizado \(onclick_distinto\)/)
+  })
+
+  const radio = { tag: 'input', type: 'radio', id: 'r1', name: 'sel', texto: 'Producto comercial', etiqueta: 'Producto comercial' }
+  const MF = 'mapfre:automoviles:patinetes'
+  it('`motivo` dentro de marcar/rellenar/elegir se ignora (no tira el lote) y no pasa a la copia limpia; otras claves siguen rechazando', () => {
+    const i = inv([{ ...radio, texto: 'Sí', etiqueta: 'Sí', id: 'r2', name: 'otro' }])
+    const ref = el0(i).ref
+    const r = resp(i, MF, {}, [{ accion: 'marcar', ref, motivo: 'porque sí' }])
+    expect(r.ok, JSON.stringify(r)).toBe(true)
+    if (r.ok) expect(JSON.stringify(r.respuesta.acciones)).not.toMatch(/motivo|porque/)
+    expect(resp(i, MF, {}, [{ accion: 'marcar', ref, extra: 1 }]).ok).toBe(false)
+  })
+
+  it('radio de consentimiento NO se relaja: sigue rechazando y nombra la palabra que casó', () => {
+    const i = inv([radio])
+    const r = resp(i, MF, {}, [{ accion: 'marcar', ref: el0(i).ref }])
+    expect(r.ok).toBe(false)
+    expect(JSON.stringify(r)).toMatch(/radio de consentimiento \(palabra: comercial\)/)
+  })
+
+  it('onclick de 81-200 car. (JSF) ya no se recorta a 80; de más de 200 sigue recortado = onclick_truncado', () => {
+    const jsf = "mojarra.jsfcljs(document.getElementById('formulario'),{'formulario:botonSiguiente':'formulario:botonSiguiente'},'')"
+    expect(jsf.length).toBeGreaterThan(80)
+    const i = inv([{ tag: 'button', texto: 'Siguiente', onclick: jsf }])
+    expect(el0(i).onclick!.endsWith('…')).toBe(false)
+    expect(bloqueoAvance(MF, el0(i), i.marcos[0])).toBeNull()
+    const largo = inv([{ tag: 'button', texto: 'Siguiente', onclick: 'f(' + 'a'.repeat(300) + ')' }])
+    expect(bloqueoAvance(MF, el0(largo), largo.marcos[0])).toBe('onclick_truncado')
+    const emite = inv([{ tag: 'button', texto: 'Siguiente', onclick: jsf.replace('botonSiguiente', 'botonEmitir') }])
+    expect(bloqueoAvance(MF, el0(emite), emite.marcos[0])).not.toBeNull()
+  })
+})

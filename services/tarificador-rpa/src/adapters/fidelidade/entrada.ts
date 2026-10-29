@@ -11,7 +11,7 @@
 // Pulsar SOLO por `ctx.pulsarEnlaceEntrada` (puerta EXACTA del guard: texto exacto, origen de Fidelidade, en orden, una vez cada
 // uno y solo en la fase de entrada) y el botón de entrada del login por `ctx.pulsar` (guard genérico, sin ensancharlo). El
 // formulario es LENTO: se espera con generosidad (red en reposo + primera etiqueta, hasta ~60 s) antes de llamarlo hueco.
-// Fail-closed: lo que no aparece o es ambiguo (0 o >1 controles) → `ErrorTarificador('portal')` con QUÉ falta; no se adivina.
+// Varios controles de texto exacto = equivalentes (Alberto, 29/10/2026): el de la barra de navegación, o el primero. Fail-closed: lo que no aparece (0 controles) → `ErrorTarificador('portal')` con QUÉ falta; no se adivina.
 
 import type { Frame, Locator, Page } from 'playwright'
 import type { ContextoPortal } from '../../adaptador.ts'
@@ -70,7 +70,87 @@ async function contar(l: Locator): Promise<number> {
   return l.count().catch(() => 0)
 }
 
-/** El ÚNICO control visible con ese texto exacto en todos los marcos; `null` si no hay; ambiguo (>1) → error (no se elige uno). */
+/** Lo que se sabe de un candidato para decidir entre varios con el MISMO texto exacto. Sin PII: nada de query ni de textos. */
+export type InfoCandidatoFidelidade = {
+  tag: string
+  /** `href` resuelto sin `#hash` (solo para comparar equivalencia); `null` si no hay o es `#`/`javascript:` vacío. */
+  href: string | null
+  /** Ruta del href SIN query ni origen (solo para describir en el error). */
+  hrefRuta: string | null
+  /** `onclick` normalizado (espacios fuera) o `null`. Solo para comparar; en el error solo sale «sí/no». */
+  onclick: string | null
+  /** Dentro de la barra de navegación principal (nav, header, role=menubar/navigation/menu, id/clase «menu»/«nav») y no en footer/aside. */
+  enNav: boolean
+  /** Descripción corta del ancestro de menú: `tag#id.clase` (≤40 car., sin números largos). */
+  ancestro: string
+}
+
+export type DecisionCandidatos = { tipo: 'uno'; indice: number; motivo: 'unico' | 'en_navegacion' | 'primero' } | { tipo: 'ninguno' }
+
+/**
+ * Elección DETERMINISTA entre candidatos de texto EXACTO ya filtrados (visibles, clicables). Decisión de Alberto (29/10/2026): los
+ * repetidos son equivalentes (p. ej. tres «Oficina Virtual»), da igual cuál: se prefiere el que actúa como pestaña/menú (dentro de
+ * la barra de navegación) y, si no se distingue, el primero visible. Sin ninguno → `ninguno` (quien llama da el error descriptivo).
+ * Solo se elige entre controles de texto exacto; el pulsado sigue pasando por la puerta exacta del guard (texto, origen, orden, una vez).
+ */
+export function elegirCandidatoFidelidade(cs: InfoCandidatoFidelidade[]): DecisionCandidatos {
+  if (cs.length === 0) return { tipo: 'ninguno' }
+  if (cs.length === 1) return { tipo: 'uno', indice: 0, motivo: 'unico' }
+  const nav = cs.findIndex((c) => c.enNav)
+  return nav >= 0 ? { tipo: 'uno', indice: nav, motivo: 'en_navegacion' } : { tipo: 'uno', indice: 0, motivo: 'primero' }
+}
+
+/** Lee del navegador lo que distingue a un candidato. Sin funciones con nombre dentro de la lambda: tsx las envuelve en `__name`, que en la página no existe. */
+async function leerCandidato(l: Locator): Promise<InfoCandidatoFidelidade> {
+  const x = (await l
+    .evaluate((el) => {
+      const a = el.tagName === 'A' ? el : el.closest('a')
+      let href: string | null = null
+      let ruta: string | null = null
+      if (a && a.getAttribute('href') !== null) {
+        const raw = String(a.getAttribute('href')).trim()
+        if (!/^(#|javascript:\s*(void\(0\))?;?)?$/i.test(raw)) {
+          try {
+            const u = new URL((a as HTMLAnchorElement).href)
+            const js = /^javascript:/i.test(raw)
+            ruta = js ? null : u.pathname
+            u.hash = ''
+            href = js ? raw.replace(/\s+/g, '') : u.href
+          } catch {
+            href = null
+          }
+        }
+      }
+      const oc = String(el.getAttribute('onclick') || (a && a.getAttribute('onclick')) || '').replace(/\s+/g, '')
+      const fuera = el.closest('footer, aside')
+      const nav = el.closest('nav, header, [role="menubar"], [role="navigation"], [role="menu"], [id*="menu" i], [class*="menu" i], [id*="nav" i], [class*="nav" i]')
+      let anc = ''
+      if (nav) {
+        const cl = String(nav.getAttribute('class') || '').split(/\s+/).filter(Boolean)[0] || ''
+        anc = nav.tagName.toLowerCase() + (nav.id ? '#' + nav.id.replace(/\d{5,}/g, '#').slice(0, 40) : '') + (cl ? '.' + cl.replace(/\d{5,}/g, '#').slice(0, 40) : '')
+      }
+      return { tag: el.tagName.toLowerCase(), href, hrefRuta: ruta, onclick: oc || null, enNav: !!nav && !fuera, ancestro: anc }
+    })
+    .catch(() => null)) as Partial<InfoCandidatoFidelidade> | null
+  return {
+    tag: typeof x?.tag === 'string' ? x.tag : '?',
+    href: typeof x?.href === 'string' ? x.href : null,
+    hrefRuta: typeof x?.hrefRuta === 'string' ? x.hrefRuta : null,
+    onclick: typeof x?.onclick === 'string' ? x.onclick : null,
+    enNav: x?.enNav === true,
+    ancestro: typeof x?.ancestro === 'string' ? x.ancestro : '',
+  }
+}
+
+/** Elige UNO de los locators de texto exacto (ver {@link elegirCandidatoFidelidade}). */
+async function elegirUno(hallados: Locator[]): Promise<Locator> {
+  const infos: InfoCandidatoFidelidade[] = []
+  for (const h of hallados) infos.push(await leerCandidato(h))
+  const d = elegirCandidatoFidelidade(infos)
+  return d.tipo === 'uno' ? hallados[d.indice] : hallados[0]
+}
+
+/** El control visible con ese texto exacto en todos los marcos; `null` si no hay; varios → elección determinista o error descriptivo. */
 async function unicoVisible(page: Page, texto: string): Promise<Locator | null> {
   const hallados: Locator[] = []
   for (const r of raices(page)) {
@@ -78,8 +158,8 @@ async function unicoVisible(page: Page, texto: string): Promise<Locator | null> 
     const n = await contar(l)
     for (let i = 0; i < n; i++) hallados.push(l.nth(i))
   }
-  if (hallados.length > 1) throw new ErrorTarificador('portal', `fidelidade: «${texto}» aparece ${hallados.length} veces visible; no se adivina cuál (hueco)`)
-  return hallados[0] ?? null
+  if (hallados.length === 0) return null
+  return hallados.length === 1 ? hallados[0] : elegirUno(hallados)
 }
 
 /** Espera al control exacto; si no aparece y hay un control PREVIO del menú, lo sobrevuela (hover no es un clic) por si el submenú es de ratón. */
@@ -266,8 +346,7 @@ async function botonSimulacionVivienda(page: Page, ms: number): Promise<Locator>
       const nb = await contar(b)
       for (let i = 0; i < nb; i++) hallados.push(b.nth(i))
     }
-    if (hallados.length === 1) return hallados[0]
-    if (hallados.length > 1) throw new ErrorTarificador('portal', `fidelidade: la tarjeta de Vivienda (Producto ${PRODUCTO_VIVIENDA_FIDELIDADE}) tiene ${hallados.length} botones «${BOTON_SIMULACION_FIDELIDADE}»; no se adivina (hueco)`)
+    if (hallados.length >= 1) return hallados.length === 1 ? hallados[0] : elegirUno(hallados)
     if (Date.now() >= fin) throw new ErrorTarificador('portal', `fidelidade: no se localiza la tarjeta «Producto ${PRODUCTO_VIVIENDA_FIDELIDADE} · Fidelidade Vivienda» con su botón «${BOTON_SIMULACION_FIDELIDADE}» en ${Math.round(ms / 1000)} s (hueco)`)
     await page.waitForTimeout(500)
   }

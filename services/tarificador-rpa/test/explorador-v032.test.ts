@@ -11,7 +11,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { EmisionBloqueadaError, rutasAppTolerablesDe, type InventarioDom } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, esAvanceAutorizado, MAX_TITULOS_MARCO, rutasAppTolerablesDe, type InventarioDom } from '@central/module-tarificacion'
 import { descripcionParaTest, INDICES_URL_DESCRIPCION, tolerarRutasApp, cerrarDialogoTerminoEpac, cerrarFaseEntrada, instalarGuardEmision, pulsarMenuOfertaNseMapfre, MAX_AVANCES_POR_ID, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import { ErrorFronteraEmision } from '../src/guard.ts'
@@ -523,6 +523,29 @@ test('seguridad 2b: un título VIVO de tarificación/emisión en cualquier marco
   }
 })
 
+test('0.3.14 · títulos RECORTADOS en el inventario: el validador tolera #btnAceptar, pero un título prohibido MÁS ALLÁ del nº20 (mismo marco) lo bloquea VIVO', async () => {
+  for (const prohibido of ['<h2>Revisión y emisión</h2>', '<h3>Resumen</h3>', '<table><tr><th>Forma de pago</th></tr></table>', '<legend>Formalización</legend>']) {
+    figuras = FIGURAS()
+    const { context, page, guard } = await abrir('/drvp00/SEAServlet')
+    try {
+      // 25 cabeceras inocentes ANTES (orden del DOM) → la lista del inventario llega en el tope y el prohibido no entra en ella.
+      await page.evaluate((p) => { const d = document.createElement('div'); d.innerHTML = '<table>' + Array.from({ length: 25 }, (_, k) => `<tr><th>Cabecera ${k}</th></tr>`).join('') + '</table>' + p; document.body.appendChild(d) }, prohibido)
+      const cap = (await capturarInventarioExploracion(page))!
+      const marco = cap.inventario.marcos.find((m) => m.elementos.some((e) => e.id === 'btnAceptar'))!
+      const el = marco.elementos.find((e) => e.id === 'btnAceptar')!
+      assert.ok((marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO, `${prohibido}: inventario recortado`)
+      assert.ok(!(marco.titulos ?? []).some((t) => /revisi|resumen|pago|formaliz/i.test(t)), `${prohibido}: el prohibido no llegó al inventario`)
+      assert.equal(esAvanceAutorizado(MP, el, marco), true, `${prohibido}: el validador tolera el recorte`)
+      const e = await pulsarExploracionAutorizada(page, guard, page.locator('#btnAceptar'), { entrada: MP, el, marco }).then(() => null, (x: unknown) => x)
+      await cap.liberar()
+      assert.ok(e instanceof EmisionBloqueadaError && /título vivo/.test(e.message), `${prohibido}: ${String(e)}`)
+      assert.ok(!peticiones.some((p) => p.metodo === 'POST'), prohibido)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
 test('seguridad 2c: durante el avance por id, un POST al MISMO servlet con acción de emisión en el cuerpo se aborta (EmisionBloqueadaError)', async () => {
   for (const cuerpo of ['action=contract', 'evento=emitir', 'validar_aceptar=1']) {
     figuras = FIGURAS().replace("function eventoSiguiente(){ document.getElementById('f').submit() }", `function eventoSiguiente(){ fetch('/drvp00/SEAServlet', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: '${cuerpo}' }).catch(() => {}) }`)
@@ -776,7 +799,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.13', () => assert.equal(EXPLORADOR_VERSION, '0.3.13'))
+test('versión 0.3.14', () => assert.equal(EXPLORADOR_VERSION, '0.3.14'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`

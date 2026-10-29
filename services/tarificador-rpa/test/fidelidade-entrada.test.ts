@@ -9,7 +9,7 @@ import { ENTRADAS_EXPLORACION, nombresCredencial } from '@central/module-tarific
 import { ErrorCredenciales } from '../src/credenciales.ts'
 import { instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado } from '../src/guard.ts'
 import { PORTALES_EXPLORACION, problemaTrabajoExploracion, type CtxEntrada } from '../src/explorador.ts'
-import { abrirFormularioViviendaFidelidade, cerrarDialogoRgpdFidelidade, esTarjetaViviendaFidelidade, etiquetaExactaFidelidade, loginFidelidade, URL_INTRANET_FIDELIDADE } from '../src/adapters/fidelidade/entrada.ts'
+import { elegirCandidatoFidelidade, type InfoCandidatoFidelidade, abrirFormularioViviendaFidelidade, cerrarDialogoRgpdFidelidade, esTarjetaViviendaFidelidade, etiquetaExactaFidelidade, loginFidelidade, URL_INTRANET_FIDELIDADE } from '../src/adapters/fidelidade/entrada.ts'
 import type { Trabajo } from '../src/api.ts'
 
 let browser: Browser
@@ -27,7 +27,7 @@ before(async () => {
 })
 after(async () => { await browser.close() })
 
-type Variante = { sinVivienda?: boolean; formularioNunca?: boolean; rechazo?: boolean; botonLogin?: string; dialogo?: string[] }
+type Variante = { dobleSim?: boolean; repetidos?: 'equivalentes' | 'distintos' | 'fuera'; sinVivienda?: boolean; formularioNunca?: boolean; rechazo?: boolean; botonLogin?: string; dialogo?: string[] }
 /** Intranet sintética: login → menú con submenús de ratón → página de tarjetas (EMPRESAS 4215 y VIVIENDA 4216) → formulario lento. */
 const portal = (v: Variante = {}) => `<!doctype html><html><head><meta charset="utf-8"><style>
   .sub{display:none} .m:hover > .sub{display:block} [hidden]{display:none !important}
@@ -36,16 +36,18 @@ ${v.dialogo ? `<os-internal-ui-dialog id="dlg" style="position:fixed;inset:0;bac
 <div id="login"><form onsubmit="return false"><label for="u">Usuario</label><input id="u" type="text"><label for="p">Clave</label><input id="p" type="password">
   <button id="entrar" type="${v.botonLogin ? 'submit' : 'button'}" onclick="hacerLogin()">${v.botonLogin ?? 'Entrar'}</button></form><p id="err" hidden>Usuario o contraseña incorrectos</p></div>
 <div id="home" hidden>
-  <nav>
+  ${v.repetidos && v.repetidos !== 'fuera' ? `<div id="pie"><a onclick="reg('ov-pie')">Oficina Virtual</a></div>` : ''}
+  ${v.repetidos === 'fuera' ? '' : '<nav>'}
     <div class="m"><a onclick="reg('ov')">OFICINA VIRTUAL</a>
       <div class="sub"><div class="m"><a onclick="reg('proyecto')">PROYECTO</a>
         <div class="sub"><a onclick="reg('nuevo');tarjetas()">Nuevo proyecto</a><a onclick="reg('buscar')">Buscar proyecto</a></div></div></div></div>
     <a onclick="reg('infogestion')">INFORMACIÓN DE GESTIÓN</a><a onclick="reg('productos')">PRODUCTOS</a><a onclick="reg('normas')">NORMAS</a><a onclick="reg('condicionados')">CONDICIONADOS</a>
     <div class="m"><a onclick="reg('novida')">NO VIDA</a><div class="sub"><a onclick="reg('verpoliza')">Ver póliza</a><a onclick="reg('versiniestro')">Ver siniestro</a></div></div>
-  </nav>
+  ${v.repetidos === 'fuera' ? '' : '</nav>'}
+  ${v.repetidos === 'fuera' ? `<div id="pie"><a onclick="reg('ov-pie')">Oficina Virtual</a></div>` : ''}
   <div id="tarjetas" hidden><h1>PARTICULARES - Crear nuevo proyecto</h1>
     <div class="card" id="empresas"><h3>Producto 4215 · Gama Comercio</h3><p>EMPRESAS</p><button type="button" onclick="reg('SIM-EMPRESAS')">Simulación</button></div>
-    ${v.sinVivienda ? '' : '<div class="card" id="vivienda"><h3>Producto 4216 · Fidelidade Vivienda</h3><button type="button" onclick="reg(\'SIM-VIVIENDA\');formulario()">Simulación</button></div>'}
+    ${v.sinVivienda ? '' : '<div class="card" id="vivienda"><h3>Producto 4216 · Fidelidade Vivienda</h3><button type="button" onclick="reg(\'SIM-VIVIENDA\');formulario()">Simulación</button>' + (v.dobleSim ? '<button type="button" onclick="reg(\'SIM-VIVIENDA-2\');formulario()">Simulación</button>' : '') + '</div>'}
   </div>
   <div id="form" hidden><label for="f1">Fecha de efecto</label><input id="f1"></div>
 </div>
@@ -246,6 +248,51 @@ test('0.3.13 · URL con SemCookies.aspx: error con nombre claro', async () => {
   try {
     await page.goto('https://mediadores.fidelidade.es/OPI_ES_Mediadores/SemCookies.aspx')
     await assert.rejects(() => cerrarDialogoRgpdFidelidade(page, ctx, 800), /fidelidade: portal en SemCookies \(cookies rechazadas\)/)
+  } finally {
+    await context.close()
+  }
+})
+
+const inf = (o: Partial<InfoCandidatoFidelidade> = {}): InfoCandidatoFidelidade => ({ tag: 'a', href: null, hrefRuta: null, onclick: null, enNav: false, ancestro: '', ...o })
+test('elegirCandidatoFidelidade: único; varios sin nav → el primero; varios con alguno en la barra → ese; ninguno → ninguno', () => {
+  assert.deepEqual(elegirCandidatoFidelidade([]), { tipo: 'ninguno' })
+  assert.deepEqual(elegirCandidatoFidelidade([inf()]), { tipo: 'uno', indice: 0, motivo: 'unico' })
+  assert.deepEqual(elegirCandidatoFidelidade([inf(), inf(), inf()]), { tipo: 'uno', indice: 0, motivo: 'primero' })
+  assert.deepEqual(elegirCandidatoFidelidade([inf(), inf({ enNav: true }), inf({ enNav: true })]), { tipo: 'uno', indice: 1, motivo: 'en_navegacion' })
+})
+
+test('«Oficina Virtual» repetida 3 veces: se pulsa la de la barra de navegación (una vez) y la ruta sigue', async () => {
+  const { context, page, ctx } = await abrir({ repetidos: 'equivalentes' })
+  try {
+    await loginFidelidade(page, ctx, ESPERAS)
+    await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
+    const p = await pulsados(page)
+    assert.deepEqual(p, ['ov', 'proyecto', 'nuevo', 'SIM-VIVIENDA'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('«Oficina Virtual» repetida sin barra de navegación: el primero visible (en orden de documento); nunca un texto distinto', async () => {
+  const { context, page, ctx } = await abrir({ repetidos: 'fuera' })
+  try {
+    await loginFidelidade(page, ctx, ESPERAS)
+    await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
+    const p = await pulsados(page)
+    assert.equal(p[0], 'ov')
+    assert.ok(!p.includes('ov-pie'))
+    assert.ok(!p.some((x) => ['infogestion', 'productos', 'normas', 'condicionados', 'novida', 'SIM-EMPRESAS'].includes(x)), JSON.stringify(p))
+  } finally {
+    await context.close()
+  }
+})
+
+test('dos «Simulación» equivalentes en la tarjeta de Vivienda: el primero; el de EMPRESAS (4215) jamás', async () => {
+  const { context, page, ctx } = await abrir({ dobleSim: true })
+  try {
+    await loginFidelidade(page, ctx, ESPERAS)
+    await abrirFormularioViviendaFidelidade(page, ctx, ESPERAS)
+    assert.deepEqual(await pulsados(page), ['ov', 'proyecto', 'nuevo', 'SIM-VIVIENDA'])
   } finally {
     await context.close()
   }
