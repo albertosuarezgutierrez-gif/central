@@ -376,10 +376,14 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ES
   // Una petición de FACTURA no es un hueco de la guía (ver `factura.ts`): no se pregunta al control de
   // calidad (su ESCALAR dispararía el aviso «no lo encuentro en la guía» y guardaría datos fiscales de
   // un huésped como hecho del piso). Escala igual, pero por su propio motivo.
+  // Igual un cierre de cortesía puro («Gracias :)»): no hay pregunta que cubrir, así que el juez no
+  // puede decir «no cubre» ni abrir un hueco de guía. Con pregunta añadida `esCierre` es false y el juez corre.
   const peticionFactura = esTramiteFiscal(pregunta, ctx.historial.filter(h => h.from === 'guest').map(h => h.text))
   const veredicto: Veredicto = (sensible || sentimiento === 'negativo' || rev.inventado)
     ? 'ESCALAR'
     : peticionFactura
+    ? 'OK'
+    : esCierre(pregunta)
     ? 'OK'
     : await debeEscalar(ctx, pregunta, reply)
   const escalaIA = veredicto === 'ESCALAR'
