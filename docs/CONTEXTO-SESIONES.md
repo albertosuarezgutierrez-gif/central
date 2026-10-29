@@ -11,6 +11,11 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (29/10/2026) Portal asegura · tocar la push de recibo abre la ficha de la póliza
+- Causa doble: `recibo_nuevo/devuelto` (y siniestros) sin `url` en `module-seguros-portal/src/avisos-cima.ts` → `/boveda`; y `sw.js` hacía `navigate()` sin `catch` (rechaza en PWA/iOS) → se quedaba en la pantalla previa.
+- Arreglo: url `/boveda/poliza/<id>`; SW con URL absoluta, try/catch y respaldo `openWindow`. Cepo en `avisos-cima.test.ts` (visto en rojo).
+- Pendiente: `poliza_nueva` y `api/cron/avisos-push` siguen yendo a `/boveda`; los SW de sivra/rrhh/ia-rest no revisados.
+
 ## (29/10/2026) Sivra · factura del huésped: SIN envío automático (revierte la excepción de #5251)
 - Retirado el cron `/api/cron/sivra-facturas-salida` (+ `salida-auto/decision.ts`, `{automatico}` de `emitir.ts`). Disparador = el mensaje del huésped: `orquestador.ts` → `rellenarDesdeChat` → si completa, `proponerSiCompleta` (chat.ts: reclamo pendiente→completada, UN Telegram) → borrador con ✅ Enviar (`fhu_emi`) / ✏️ Modificar (`/sivra/facturas?reserva=`). El formulario manda el mismo Telegram.
 - Al huésped ya no se le promete fecha («tomo nota; te la envío en cuanto la revise»). Cepo `lib/sivra/facturas/sin-boton.test.ts` (visto en rojo). CLAUDE.md raíz y plataforma: línea nueva. Columnas `auto_aviso_*` quedan sin uso.

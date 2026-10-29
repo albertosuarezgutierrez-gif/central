@@ -149,6 +149,7 @@ export function eventosDePolizas(polizas: readonly PolizaParaAviso[]): EventoCim
           polizaId: p.id,
           lista: 'recibos',
           fecha,
+          url: `/boveda/poliza/${encodeURIComponent(p.id)}`,
           texto: `Hay un recibo nuevo al cobro en ${donde(p)}.`,
         })
       } else if (s === 'devuelto') {
@@ -158,6 +159,7 @@ export function eventosDePolizas(polizas: readonly PolizaParaAviso[]): EventoCim
           polizaId: p.id,
           lista: 'recibos',
           fecha,
+          url: `/boveda/poliza/${encodeURIComponent(p.id)}`,
           texto: `Se ha devuelto un recibo de ${donde(p)}. Entra para ver cómo resolverlo antes de quedarte sin cobertura.`,
         })
       }
@@ -165,7 +167,12 @@ export function eventosDePolizas(polizas: readonly PolizaParaAviso[]): EventoCim
     for (const s of p.siniestros ?? []) {
       // 🔒 Nunca `tipoLegible`: el tipo de siniestro puede ser un dato de salud.
       const que = p.ajena ? `El siniestro de ${p.ramo}` : `Tu siniestro de ${p.ramo}`
-      const base = { tipo: 'siniestro' as const, polizaId: p.id, lista: 'siniestros' as const }
+      const base = {
+        tipo: 'siniestro' as const,
+        polizaId: p.id,
+        lista: 'siniestros' as const,
+        url: `/boveda/poliza/${encodeURIComponent(p.id)}`,
+      }
       eventos.push({ ...base, clave: `sin:${s.id}`, fecha: s.fechaHora, texto: `Se ha registrado un siniestro en ${donde(p)}.` })
       // «abierto» es el estado con el que nace: el aviso de alta ya lo dice. El
       // cambio de estado no trae fecha propia: la ventana no lo filtra, la semilla sí.

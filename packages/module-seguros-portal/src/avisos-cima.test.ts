@@ -7,6 +7,7 @@ import {
   eventosDePolizas,
   planificarAvisos,
   textoPushCima,
+  urlPushCima,
   type PolizaParaAviso,
 } from './avisos-cima.ts'
 import { tramitacionSiniestro } from './siniestro-tramitacion.ts'
@@ -67,6 +68,7 @@ test('con la póliza ya sembrada, lo nuevo se envía y lo sellado no se repite',
   })
   const plan = planificarAvisos([nuevo], selladas, NADA, HOY)
   assert.deepEqual(plan.enviar.map((e) => e.tipo), ['recibo_nuevo'])
+  assert.equal(urlPushCima(plan.enviar), `/boveda/poliza/${nuevo.id}`)
   assert.equal(plan.sellarSiempre.length, 0)
 })
 
