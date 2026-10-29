@@ -19,8 +19,22 @@ export const MAX_BYTES_INVENTARIO_DOM = 60 * 1024
 /** Máximo de marcos y de elementos por marco que se aceptan del crudo (antes del tope de bytes). */
 export const MAX_MARCOS_INVENTARIO = 30
 export const MAX_ELEMENTOS_MARCO_INVENTARIO = 600
-/** Primeras opciones de un `<select>` que se guardan (el total va aparte). */
-export const MAX_OPCIONES_INVENTARIO = 40
+/**
+ * Máximo de opciones de UN `<select>` que se guardan (el total va aparte en `opcionesTotal`). 0.3.21 (Allianz VMP real 29/10/2026, 3c888bba…:
+ * la marca tenía 56 opciones alfabéticas y el tope de 40 dejaba fuera «XIAOMI»): 200, pero solo las primeras
+ * {@link MAX_OPCIONES_GARANTIZADAS_SELECT} van siempre; el resto sale de un fondo COMÚN por inventario ({@link MAX_OPCIONES_EXTRA_INVENTARIO}),
+ * para que varios desplegables enormes no echen elementos por el tope de bytes. Las que casan con una pista NO personal del catálogo
+ * (`OpcionesSaneado.pistasOpciones`) se conservan aunque estén más allá, dentro del mismo tope por select.
+ */
+export const MAX_OPCIONES_INVENTARIO = 200
+/** 0.3.21: opciones de cada `<select>` que se guardan siempre (el tope de antes). */
+export const MAX_OPCIONES_GARANTIZADAS_SELECT = 40
+/** 0.3.21: fondo común de opciones por ENCIMA de las garantizadas, para todo el inventario (~40 B por opción: ≤12 KB de 60). */
+export const MAX_OPCIONES_EXTRA_INVENTARIO = 300
+/** 0.3.21: como mucho estas opciones por select se rescatan por casar con una pista. */
+export const MAX_OPCIONES_PISTA_SELECT = 5
+/** 0.3.21: opciones crudas que el saneado llega a mirar por select (el extractor del worker captura hasta aquí). */
+export const MAX_OPCIONES_CRUDAS_SELECT = 1000
 /** Truncado de los textos visibles (botones, pestañas, etiquetas, opciones). */
 export const MAX_TEXTO_INVENTARIO = 60
 /** Truncado de identificadores y atributos (id, name, onclick…). */
@@ -169,6 +183,30 @@ export type OpcionesSaneado = {
   /** Asigna `ref` a cada elemento/importe. Conserva la que traiga el crudo si tiene la forma exacta y no se repite (la
    *  segunda pasada, en asegura, no debe renumerar lo que numeró el worker). */
   refs?: boolean
+  /**
+   * 0.3.21: textos NO personales del catálogo de la exploración (`pistasOpcionesInventario`: marca/modelo de prueba, población…). Una
+   * opción cuyo texto casa con una pista (palabras completas, sin mayúsculas ni tildes) se conserva aunque quede más allá del tope. Nunca
+   * se pasan valores reales del riesgo.
+   */
+  pistasOpciones?: readonly string[]
+}
+
+/** 0.3.21: minúsculas, sin tildes, solo letras/cifras separadas por un espacio. */
+const normalPista = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+/**
+ * 0.3.21: ¿el texto de una opción casa con alguna pista? Igual, o una contiene a la otra por PALABRAS completas; la más corta tiene que
+ * tener ≥3 caracteres («XIAOMI» ~ «Xiaomi», «ELECTRIC SCOOTER 4 PRO» ~ «Electric Scooter 4 Pro»). PURA.
+ */
+export function opcionCasaConPista(textoOpcion: string | null | undefined, pistas: readonly string[]): boolean {
+  if (typeof textoOpcion !== 'string') return false
+  const o = normalPista(textoOpcion)
+  if (o.length < 3) return false
+  return pistas.some((p0) => {
+    if (typeof p0 !== 'string') return false
+    const p = normalPista(p0)
+    if (p.length < 3) return false
+    return o === p || ` ${o} `.includes(` ${p} `) || ` ${p} `.includes(` ${o} `)
+  })
 }
 
 /** Máximo de títulos e importes por marco. */
@@ -291,6 +329,8 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
     return texto(v, max)
   }
   let presupuestoCompleto = MAX_ONCLICK_COMPLETO_TOTAL
+  let extraRestante = MAX_OPCIONES_EXTRA_INVENTARIO
+  const pistas = Array.isArray(opciones.pistasOpciones) ? opciones.pistasOpciones.filter((p) => typeof p === 'string').slice(0, 50) : []
   const refsUsadas = new Set<string>()
   const ponerRef = (propuesta: unknown, re: RegExp, porDefecto: string): string | null => {
     // Ref del cable con la forma exacta: se conserva; si se repite, el elemento es ambiguo → fuera (null).
@@ -363,15 +403,20 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
         descartados++
       }
       if ((tag === 'select' || tag === 'nx-dropdown') && Array.isArray(eo.opciones)) {
-        const opciones: OpcionInventario[] = []
-        for (const o of eo.opciones.slice(0, MAX_OPCIONES_INVENTARIO)) {
+        const todas: OpcionInventario[] = []
+        for (const o of eo.opciones.slice(0, MAX_OPCIONES_CRUDAS_SELECT)) {
           const oo = obj(o)
           if (!oo) continue
           const valor = texto(oo.valor, MAX_ATRIBUTO) ?? null
           const t = texto(oo.texto, MAX_TEXTO_INVENTARIO) ?? null
-          if (valor !== null || t !== null) opciones.push({ valor, texto: t })
+          if (valor !== null || t !== null) todas.push({ valor, texto: t })
         }
-        el.opciones = opciones
+        // 0.3.21: 40 garantizadas + lo que quede del fondo común, hasta 200; las que casan con una pista se meten en lugar de las del final.
+        const cupo = Math.min(MAX_OPCIONES_INVENTARIO, todas.length, MAX_OPCIONES_GARANTIZADAS_SELECT + extraRestante)
+        extraRestante -= Math.max(0, cupo - MAX_OPCIONES_GARANTIZADAS_SELECT)
+        const rescatar = pistas.length === 0 ? [] : todas.map((o, i) => [o, i] as const).filter(([o, i]) => i >= cupo && opcionCasaConPista(o.texto, pistas)).slice(0, Math.min(MAX_OPCIONES_PISTA_SELECT, cupo))
+        el.opciones = rescatar.length === 0 ? todas.slice(0, cupo) : [...todas.slice(0, cupo - rescatar.length), ...rescatar.map(([o]) => o)]
+        const opciones = el.opciones
         const total = typeof eo.opcionesTotal === 'number' && Number.isFinite(eo.opcionesTotal) ? Math.max(0, Math.floor(eo.opcionesTotal)) : opciones.length
         el.opcionesTotal = Math.min(total, 100_000)
       }

@@ -557,6 +557,17 @@ export function catalogoDe(ramo: string): readonly DatoCatalogo[] {
   return Object.hasOwn(CATALOGO_EXPLORACION, ramo) ? CATALOGO_EXPLORACION[ramo] : []
 }
 
+/**
+ * 0.3.21 (Allianz VMP real 29/10/2026, 3c888bba…: «XIAOMI» era la opción 50 de 56 y el inventario solo llevaba 40): pistas para que el
+ * saneado conserve las opciones de un `<select>` que casan con el dato de prueba (`OpcionesSaneado.pistasOpciones`). SOLO valores
+ * SINTÉTICOS de claves NO personales, de texto u opción, de ≥3 caracteres (nunca `@manana`, nunca el riesgo real ni el entorno). Pura.
+ */
+export function pistasOpcionesInventario(ramo: string): string[] {
+  return [...new Set(catalogoDe(ramo)
+    .filter((d) => !d.personal && d.fuente === 'sintetico' && (d.tipo === 'texto' || d.tipo === 'opcion') && typeof d.sintetico === 'string' && !d.sintetico.startsWith('@') && d.sintetico.trim().length >= 3)
+    .map((d) => d.sintetico!.trim()))]
+}
+
 /** ¿Esta clave del ramo se puede dejar SIN rellenar si no tiene valor (exploración sin datos reales)? Ver {@link DatoCatalogo.omitibleSinValor}. */
 export function claveOmitibleSinValor(ramo: string, clave: string): boolean {
   return catalogoDe(ramo).some((d) => d.clave === clave && d.omitibleSinValor === true)
@@ -572,6 +583,28 @@ export function esAccionSinEfecto(a: unknown, ramo: string, datosReales: unknown
   if (typeof a !== 'object' || a === null) return false
   const o = a as Record<string, unknown>
   return o.accion === 'rellenar' && typeof o.dato === 'string' && claveOmitibleSinValor(ramo, o.dato)
+}
+
+/**
+ * 0.3.21 (Fidelidade real 29/10/2026, b8e871fe…, «Simulación»): la IA manda [rellenar nombre, marcar régimen, avanzar] y el botón de avance
+ * está DESHABILITADO hasta que se rellena (el portal lo habilita después). Antes el lote entero caía («el elemento está deshabilitado»).
+ * ¿Es este lote ese caso? Sí solo si: hay ≥2 acciones, la ÚLTIMA es `avanzar` sobre un ref del inventario marcado `deshabilitado`, y
+ * TODAS las anteriores son rellenar/marcar/elegir sobre refs del inventario del MISMO marco. Entonces el validador quita el `avanzar` (no
+ * lo valida ni lo ejecuta: un control deshabilitado nunca se vuelve pulsable) y valida el resto como siempre; en el paso siguiente la IA
+ * ve el botón ya habilitado y su avance pasa por todas las barreras. Pura.
+ */
+export function avanceDeshabilitadoAlFinal(lista: readonly unknown[], refs: ReadonlyMap<string, { el: ElementoInventario; marco: MarcoInventario }>): boolean {
+  if (lista.length < 2) return false
+  const ult = obj(lista[lista.length - 1])
+  if (!ult || ult.accion !== 'avanzar' || typeof ult.ref !== 'string') return false
+  const av = refs.get(ult.ref)
+  if (!av || av.el.deshabilitado !== true) return false
+  return lista.slice(0, -1).every((a0) => {
+    const a = obj(a0)
+    if (!a || !['rellenar', 'marcar', 'elegir'].includes(String(a.accion)) || typeof a.ref !== 'string') return false
+    const hit = refs.get(a.ref)
+    return hit !== undefined && hit.marco === av.marco
+  })
 }
 
 /** Lo que dice el propio campo del portal (id, name, etiqueta, placeholder, aria, formControlName): para comprobar que la clave encaja. */
@@ -1796,6 +1829,9 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
   const sinEfecto = (a: unknown) => esAccionSinEfecto(a, ctx.ramo, ctx.datosReales)
   if (iParar > 0 && lista.slice(0, iParar).every(sinEfecto)) lista = [lista[iParar]]
   else if (iParar > 0 && lista.slice(0, iParar).every((a) => ['rellenar', 'elegir', 'marcar'].includes(String(obj(a)?.accion)))) lista = lista.slice(0, iParar)
+  // 0.3.21 (Fidelidade real, b8e871fe…): [rellenar, marcar, avanzar DESHABILITADO] → se ejecuta lo anterior y el avanzar se OMITE (no se
+  // valida ni se pulsa); el paso siguiente lo ve habilitado. Solo con el avanzar el último y todo lo demás rellenar/marcar/elegir del mismo marco.
+  if (avanceDeshabilitadoAlFinal(lista, refs)) lista = lista.slice(0, -1)
   if (!Array.isArray(r.acciones) || r.acciones.length === 0) errores.push('acciones tiene que ser una lista no vacía')
   else if (r.acciones.length > MAX_ACCIONES_RESPUESTA) errores.push(`más de ${MAX_ACCIONES_RESPUESTA} acciones`)
   // 0.3.20: un lote SOLO de acciones sin efecto repite la pantalla (bucle): rechazo explicado (la IA ve el error en el paso).

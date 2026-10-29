@@ -464,7 +464,8 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'(?:, '[a-z_]+')?\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
   // 4. Paradas humanas (CAPTCHA, SMS/OTP) ANTES de cada inventario.
   const iBucle = explorador.indexOf('for (;;) {')
-  const iInv = explorador.indexOf('capturarInventarioExploracion(page)', iBucle)
+  // 0.3.21: la captura lleva argumentos (pistas no personales de opciones): se ancla en el prefijo de la llamada.
+  const iInv = explorador.indexOf('capturarInventarioExploracion(page', iBucle)
   for (const p of ['exigirSinCaptcha(page)', 'exigirSinVerificacion(page, k.compania)']) {
     const i = explorador.indexOf(p, iBucle)
     if (i < 0 || i > iInv) out.push(`falta ${p} antes del inventario`)

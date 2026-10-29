@@ -298,27 +298,46 @@ export function cuerpoToleradoConAccionReal(cuerpo: string | null | undefined): 
   return detalleCuerpoToleradoConAccionReal(cuerpo) !== null
 }
 
-/** 0.3.20: último segmento (tras «:») de un campo de FECHA de firma del calendario RichFaces de Mapfre NSE. ANCLADO, sin mayúsculas. */
-export const RE_SEGMENTO_FECHA_FIRMA = /^fechafirma(?:inputdate|inputcurrentdate|inputhidden)?$/
+/**
+ * 0.3.20: último segmento (tras «:») de un campo de FECHA de firma del calendario RichFaces de Mapfre NSE. ANCLADO, sin mayúsculas.
+ * 0.3.21 (Mapfre NSE real 29/10/2026, e6b08ea8…: tras la fecha bloqueó `formDG:localidadFirma`): lista CERRADA de DATOS sobre la firma
+ * (fecha, hora, lugar) con los sufijos de componente JSF/RichFaces/PrimeFaces conocidos. Nada de «firmar», «btnFirma…», «firmaPoliza».
+ */
+export const RE_SEGMENTO_FECHA_FIRMA = /^(fecha|localidad|lugar|provincia|municipio|poblacion|hora|pais)firma(?:inputdate|inputcurrentdate|inputhidden|input|combo|_input|_hinput)?$/
 /** Valor de un campo de fecha: vacío o cifras con separadores (dd/mm/aaaa, mm/aaaa, aaaa-mm-dd, con hora opcional). Sin letras. */
 const RE_VALOR_FECHA = /^(?:|\d{1,4}(?:[/.-]\d{1,4}){1,2}(?: \d{1,2}:\d{2}(?::\d{2})?)?)$/
+/** 0.3.21: valor de un campo de hora: vacío o hh:mm(:ss). Sin letras. */
+const RE_VALOR_HORA = /^(?:|\d{1,2}:\d{2}(?::\d{2})?)$/
+/** 0.3.21: palabras de ACCIÓN FINAL que un valor de lugar no puede llevar (además de `RE_ACCION_REAL_TRAS_PREFIJO`). */
+const RE_VALOR_LUGAR_ACCION = /firm|emit|emis|contrat|confirm|pag|formaliz|acept|grab/
+/** 0.3.21: texto de lugar YA plano (sin tildes, minúsculas): letras, cifras, espacio y ' . , / -; nada de «:», «;», «(», «=», «&». Sin `\\p{L}` (asegura compila con target ES2017). */
+const RE_VALOR_LUGAR = /^[a-z\d '.,/-]{0,60}$/
 
 /**
  * 0.3.20 (Mapfre NSE real 29/10/2026, POST a `…/informacionGeneral/datosGenerales.jsf`): el parámetro `formDG:fechaFirmaInputDate` (la FECHA
- * de firma, un dato del formulario) casaba con «firm» y abortaba el paso. Excepción ESTRECHA: el nombre (ya decodificado) tiene forma de id
- * JSF, su ÚLTIMO segmento casa {@link RE_SEGMENTO_FECHA_FIRMA}, los segmentos anteriores no nombran ninguna acción real
- * (`RE_ACCION_REAL_TRAS_PREFIJO`) y el valor está vacío o es una fecha sin letras. «btnFirmar», «firmarPoliza», «firma», `fechaFirma=Firmar`
- * o `btnFirmar:fechaFirma` siguen bloqueando. PURA.
+ * de firma, un dato del formulario) casaba con «firm» y abortaba el paso. 0.3.21: también la HORA y el LUGAR de firma (`formDG:localidadFirma`,
+ * lugar/provincia/municipio/población/país). Excepción ESTRECHA: el nombre (ya decodificado) tiene forma de id JSF, su ÚLTIMO segmento casa
+ * {@link RE_SEGMENTO_FECHA_FIRMA}, los segmentos anteriores no nombran ninguna acción real (`RE_ACCION_REAL_TRAS_PREFIJO`) y el VALOR es un
+ * dato: fecha/hora vacía o sin letras; lugar vacío o texto de ≤60 car. sin «:»/«;»/«(», sin palabra de acción final, sin datos bancarios
+ * (sin tiradas de ≥6 cifras). «btnFirmar», «firmarPoliza», «firma», `fechaFirma=Firmar`, `localidadFirma=Firmar`, `btnFirmar:localidadFirma`,
+ * `btnCargaLocalidadFirmaSuscriptor` siguen bloqueando. Solo lo usa la inspección del cuerpo en rutas TOLERADAS (Mapfre NSE). PURA.
  */
 export function esCampoFechaDeAccion(nombre: string, valor: string): boolean {
   const n = nombre.trim()
   if (!/^[\w.:$-]{1,120}$/.test(n)) return false
   const segs = n.split(':')
-  const ultimo = segs.pop() ?? ''
-  if (!RE_SEGMENTO_FECHA_FIRMA.test(ultimo.toLowerCase())) return false
+  const ultimo = (segs.pop() ?? '').toLowerCase()
+  const m = RE_SEGMENTO_FECHA_FIRMA.exec(ultimo)
+  if (!m) return false
   if (segs.some((s) => RE_ACCION_REAL_TRAS_PREFIJO.test(s))) return false
-  return RE_VALOR_FECHA.test(valor.trim())
+  const v = valor.trim()
+  if (m[1] === 'fecha' || m[1] === 'hora') return RE_VALOR_FECHA.test(v) || RE_VALOR_HORA.test(v)
+  if (v === '') return true
+  const p = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  return RE_VALOR_LUGAR.test(p) && !RE_VALOR_LUGAR_ACCION.test(p) && !RE_ACCION_REAL_TRAS_PREFIJO.test(p) && !/\d{6,}/.test(p.replace(/[\s.,/-]/g, ''))
 }
+/** 0.3.21: nombre explícito del mismo predicado (dato sobre la firma: fecha, hora o lugar). */
+export const esCampoDatoDeFirma = esCampoFechaDeAccion
 
 /**
  * Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no
