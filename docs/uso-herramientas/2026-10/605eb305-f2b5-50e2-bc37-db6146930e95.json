@@ -1,18 +1,18 @@
 {
  "sesion": "605eb305-f2b5-50e2-bc37-db6146930e95",
  "inicio": "2026-10-29T13:51:56.398Z",
- "fin": "2026-10-29T14:25:21.951Z",
- "llamadas": 132,
+ "fin": "2026-10-29T19:25:17.406Z",
+ "llamadas": 169,
  "categorias": {
   "agente:general-purpose": {
-   "llamadas": 5,
-   "chars_in": 10274,
-   "chars_out": 9875,
+   "llamadas": 7,
+   "chars_in": 13126,
+   "chars_out": 11926,
    "errores": 0,
-   "archivos_citados": 4,
-   "chars_citados": 33359,
+   "archivos_citados": 6,
+   "chars_citados": 45385,
    "tools": {
-    "Agent": 5
+    "Agent": 7
    }
   },
   "lectura-directa": {
@@ -28,55 +28,55 @@
    }
   },
   "bash": {
-   "llamadas": 82,
-   "chars_in": 51051,
-   "chars_out": 241232,
+   "llamadas": 95,
+   "chars_in": 58993,
+   "chars_out": 311099,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 82
+    "Bash": 95
    }
   },
   "otro": {
-   "llamadas": 24,
-   "chars_in": 12692,
-   "chars_out": 127731,
+   "llamadas": 40,
+   "chars_in": 16617,
+   "chars_out": 233669,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 5,
-    "ToolSearch": 8,
-    "ReadNotifications": 11
+    "SubagentHandback": 7,
+    "ToolSearch": 9,
+    "ReadNotifications": 24
    }
   },
   "mcp:github": {
-   "llamadas": 7,
-   "chars_in": 3382,
-   "chars_out": 15278,
+   "llamadas": 12,
+   "chars_in": 5379,
+   "chars_out": 34212,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 19524,
    "tools": {
     "mcp__github__create_pull_request": 2,
-    "mcp__github__pull_request_read": 2,
-    "mcp__github__update_pull_request": 1,
-    "mcp__github__merge_pull_request": 1,
+    "mcp__github__pull_request_read": 5,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__merge_pull_request": 2,
     "mcp__github__get_job_logs": 1
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 5,
-   "chars_in": 453,
-   "chars_out": 1798,
+   "llamadas": 6,
+   "chars_in": 526,
+   "chars_out": 1924,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 2,
     "mcp__claude-code-remote__send_later": 1,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 1,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 2,
     "mcp__claude-code-remote__delete_trigger": 1
    }
   },
