@@ -11,6 +11,10 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (29/10/2026) Sivra · factura del huésped: SIN envío automático (revierte la excepción de #5251)
+- Retirado el cron `/api/cron/sivra-facturas-salida` (+ `salida-auto/decision.ts`, `{automatico}` de `emitir.ts`). Disparador = el mensaje del huésped: `orquestador.ts` → `rellenarDesdeChat` → si completa, `proponerSiCompleta` (chat.ts: reclamo pendiente→completada, UN Telegram) → borrador con ✅ Enviar (`fhu_emi`) / ✏️ Modificar (`/sivra/facturas?reserva=`). El formulario manda el mismo Telegram.
+- Al huésped ya no se le promete fecha («tomo nota; te la envío en cuanto la revise»). Cepo `lib/sivra/facturas/sin-boton.test.ts` (visto en rojo). CLAUDE.md raíz y plataforma: línea nueva. Columnas `auto_aviso_*` quedan sin uso.
+
 ## (29/10/2026) Sivra · agente huésped: «Gracias :)» ya no abre hueco de guía
 - `decidir.ts`: un cierre de cortesía puro (`esCierre`) no pasa por el juez `debeEscalar` → sin motivo «no cubre» ni ❓ en Telegram. Reglas duras siguen antes; con pregunta añadida el juez corre. `cortesia.ts`: `:)` admitido en `SEP`. Tests en `cortesia.test.ts` (cepo visto en rojo).
 - Factura huésped AUTOMÁTICA (OK de Alberto): datos del chat → `extraer.ts`/`chat.ts` (anti-invención: NIF/emails literales + dígito control), CC en `receptor_cc`, cron diario `/api/cron/sivra-facturas-salida` (11:13 UTC, ventana 30 días, idempotente) emite+envía; incompleta → UN Telegram. Migración `2026-10-29_sivra_facturas_huesped_auto.sql` APLICADA en prod. Excepción a la regla de envíos anotada en ambos CLAUDE.md. PR #5251.

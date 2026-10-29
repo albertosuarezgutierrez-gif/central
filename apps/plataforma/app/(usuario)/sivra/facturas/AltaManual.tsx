@@ -4,7 +4,7 @@
 //  · genera el ENLACE del formulario para mandárselo al huésped (no se envía nada solo), o
 //  · rellena él los datos fiscales → borrador + Telegram (igual que si los rellenara el huésped).
 // Para CORREGIR un borrador se vuelven a enviar los datos de la misma reserva: sustituyen a los anteriores.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { btnStyle, cardStyle } from '@/components/ui'
 import DatosFiscalesForm, { type DatosFiscales, type RespuestaEnvio } from '@/components/factura/DatosFiscalesForm'
@@ -23,10 +23,22 @@ export default function AltaManual({ onHecho }: { onHecho: () => void }) {
   const [total, setTotal] = useState('')
   const [hecho, setHecho] = useState<string | null>(null)
 
+  // ✏️ Modificar del Telegram del borrador abre `/sivra/facturas?reserva=<id>`: la reserva llega ya buscada.
+  useEffect(() => {
+    let reserva: string | null = null
+    try { reserva = new URLSearchParams(window.location.search).get('reserva') } catch { /* sin parámetro */ }
+    if (reserva && /^[\w-]{1,40}$/.test(reserva)) { setQ(reserva); void buscarTexto(reserva) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function buscar(e: React.FormEvent) {
     e.preventDefault()
+    await buscarTexto(q)
+  }
+
+  async function buscarTexto(texto: string) {
     setError(null); setReservas(null)
-    const r = await fetch(`/api/sivra/facturas/reservas?q=${encodeURIComponent(q)}`, { cache: 'no-store' })
+    const r = await fetch(`/api/sivra/facturas/reservas?q=${encodeURIComponent(texto)}`, { cache: 'no-store' })
     const j = await r.json().catch(() => ({}))
     if (!r.ok) { setError(j.error || `Error ${r.status}`); return }
     setReservas(j.reservas)

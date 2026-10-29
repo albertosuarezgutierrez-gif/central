@@ -35,8 +35,8 @@ test('el prompt habla en primera persona: sin «anfitrión» ni «se lo traslado
   assert.match(FUENTE.slice(ini, fin), /\$\{REGLA_GESTIONES\}/)
 })
 
-test('regla de factura: confirma, pide solo lo que falta y envía el día de salida', () => {
-  for (const k of [/razón social/, /NIF\/CIF\/VAT/, /dirección fiscal completa/, /email de envío/, /día de salida/, /NO le pidas lo que ya haya dado/])
+test('regla de factura: confirma, pide solo lo que falta y no promete fecha', () => {
+  for (const k of [/razón social/, /NIF\/CIF\/VAT/, /dirección fiscal completa/, /email de envío/, /en cuanto la revise/, /NO le prometas fecha/, /NO le pidas lo que ya haya dado/])
     assert.match(REGLA_FACTURA, k)
 })
 
@@ -88,20 +88,23 @@ test('textosDesdePeticion: solo desde la primera petición de factura (el DNI de
   assert.deepEqual(textosDesdePeticion(['Mi DNI 12345678Z', 'gracias']), [])
 })
 
-test('reglaFacturaEstado: completa promete el día de salida y prohíbe pedir datos/enlaces; incompleta pide solo lo que falta', () => {
-  const c = reglaFacturaEstado({ completa: true, email: 'info@laie.es', cc: ['lcalles@laie.es'], yaSalio: false }, false)
-  assert.match(c, /el día de su salida/)
+test('reglaFacturaEstado: completa «tomo nota, en cuanto la revise» sin fecha ni datos/enlaces; incompleta pide solo lo que falta', () => {
+  const c = reglaFacturaEstado({ completa: true, email: 'info@laie.es', cc: ['lcalles@laie.es'] }, false)
+  assert.match(c, /tomo nota/)
+  assert.match(c, /en cuanto la revise/)
+  assert.match(c, /NO le prometas fecha/)
+  assert.doesNotMatch(c, /día de (su )?salida|24 horas|automátic|sola/)
   assert.match(c, /info@laie\.es \(con copia a lcalles@laie\.es\)/)
   assert.match(c, /NO le pidas ninguno ni le pongas enlaces/)
-  assert.match(reglaFacturaEstado({ completa: true, email: 'a@b.es', cc: [], yaSalio: true }, false), /próximas 24 horas/)
   const i = reglaFacturaEstado({ completa: false, faltan: ['NIF/CIF/VAT'] }, true)
   assert.match(i, /FALTAN: NIF\/CIF\/VAT/)
   assert.match(i, /NO le prometas fecha/)
   assert.doesNotMatch(i, /día de (su )?salida/)
 })
 
-test('REGLA_FACTURA ya no promete el día de salida sin condición', () => {
-  assert.match(REGLA_FACTURA, /NO le prometas esa fecha mientras falte algún dato/)
+test('REGLA_FACTURA no promete fecha ni envío automático (nada sale sin el ✅ de Alberto)', () => {
+  assert.match(REGLA_FACTURA, /NO le prometas fecha ni plazo/)
+  assert.doesNotMatch(REGLA_FACTURA, /día de salida|le llega sola/)
 })
 
 test('orquestador: con datos completos NO hay enlace y el mensaje sigue pasando por Alberto', () => {

@@ -13,11 +13,12 @@ import { tgAviso, tgAvisoBotones } from '@/lib/telegram/avisos'
 import { aceptaDatos, elegirTotal } from './borrador'
 import { EMISOR_FACTURAS_HUESPED, cuentaPuedeFacturar } from './emisor'
 import { desglosarDesdeTotal } from './importes'
-import { evaluarSerie, fechaMadrid, type SerieConfig } from './numeracion'
+import { evaluarSerie, fechaMadrid, formatearNumero, type SerieConfig } from './numeracion'
 import { generarPdfFactura } from './pdf'
 import { type Receptor } from './receptor'
-import { botonesPropuesta, textoPropuesta } from './telegram'
-import { generarToken, urlFormulario } from './enlace'
+import { botonesPropuesta, textoPropuesta, urlModificar } from './telegram'
+import { generarToken, urlFormulario, URL_PLATAFORMA_FACTURAS } from './enlace'
+import { normalizarCc } from './extraer'
 
 export type Reserva = {
   reservationId: string
@@ -129,7 +130,7 @@ export async function vistaPublica(token: string): Promise<VistaPublica> {
 }
 
 export type ResultadoBorrador =
-  | { ok: true; facturaId: string; propuesta: 'enviada' | 'silenciada' | 'fallida' | 'no_propuesta' }
+  | { ok: true; facturaId: string; propuesta: 'enviada' | 'silenciada' | 'fallida' }
   | { ok: false; motivo: string; codigo: 'no_valida' | 'caducada' | 'ya_emitida' | 'ya_recibida' | 'sin_importe' | 'sin_reserva' }
 
 /** Guarda los datos fiscales (ya validados con `validarReceptor`) y prepara el borrador + aviso a Alberto. */
@@ -184,12 +185,8 @@ export async function serieDelAnio(cuentaId: string, anio: number): Promise<Seri
   return { id: s.id, prefijo: s.prefijo, anio: s.anio, siguienteNumero: s.siguienteNumero, tipoIva: s.tipoIva === null ? null : Number(s.tipoIva), mencionIva: s.mencionIva, activa: s.activa }
 }
 
-/**
- * Borrador con estos datos. `proponer: false` (cron de salida, que emite justo después): ni aviso de borrador ni aviso de
- * «no sé el importe» (el cron avisa él, una sola vez).
- */
-export async function prepararBorrador(solicitudId: string, receptor: Receptor, opts: { totalManual?: number | null; proponer?: boolean }): Promise<ResultadoBorrador> {
-  const proponer = opts.proponer !== false
+/** Borrador con estos datos + Telegram a Alberto con ✅ Enviar / ✏️ Modificar. Nunca emite ni envía nada. */
+export async function prepararBorrador(solicitudId: string, receptor: Receptor, opts: { totalManual?: number | null }): Promise<ResultadoBorrador> {
   const s = await prisma.sivraFacturaSolicitud.findUniqueOrThrow({ where: { id: solicitudId } })
   const reserva = await leerReserva(s.reservationId)
   if (!reserva) return { ok: false, motivo: 'reserva no encontrada', codigo: 'sin_reserva' }
@@ -202,7 +199,7 @@ export async function prepararBorrador(solicitudId: string, receptor: Receptor, 
   if (elegido === null) {
     // Sin importe no hay borrador (y el ✅ no podría emitir nada). Tampoco hay uno anterior (elegirTotal lo habría
     // conservado): los datos quedan en la solicitud y Alberto pone el importe a mano.
-    if (proponer) await tgAviso('huespedes.factura-borrador',
+    await tgAviso('huespedes.factura-borrador',
       `🧾 Factura de huésped: ${escapeHtml(reserva.piso)} · reserva ${escapeHtml(reserva.reservationId)}\n⛔ <b>No sé el importe</b> (amount_gross vacío o 0 en incomes). Ponlo a mano en /sivra/facturas.`)
     return { ok: false, motivo: 'importe de la reserva desconocido', codigo: 'sin_importe' }
   }
@@ -226,19 +223,14 @@ export async function prepararBorrador(solicitudId: string, receptor: Receptor, 
   } else {
     facturaId = (await prisma.sivraFacturaHuesped.create({ data: datos })).id
   }
-  if (!proponer) {
-    // El ✅ del mensaje anterior ya no vale (telegram_message_id = NULL): se le quitan los botones.
-    if (mensajeAnterior !== null) await tgEditMessage(Number(mensajeAnterior), TEXTO_SUSTITUIDO_AUTO).catch(() => false)
-    return { ok: true, facturaId, propuesta: 'no_propuesta' }
-  }
   const propuesta = await proponerEnTelegram(facturaId, mensajeAnterior)
   return { ok: true, facturaId, propuesta }
 }
 
-const TEXTO_SUSTITUIDO_AUTO = '🤖 <i>Este borrador lo ha emitido el envío automático del día de salida: mira el aviso más reciente.</i>'
 const TEXTO_SUSTITUIDO = '♻️ <i>Este borrador de factura se ha sustituido por uno nuevo: revisa y aprueba el ÚLTIMO mensaje.</i>'
 
-/** Borrador → aviso a Alberto con resumen, PDF de revisión y botones ✅/✏️. */
+/** Borrador → aviso a Alberto con resumen (receptor, NIF, dirección, importe, nº que tendría, email y CC), PDF de
+ *  revisión y botones ✅ Enviar / ✏️ Modificar. */
 export async function proponerEnTelegram(facturaId: string, anterior?: bigint | null): Promise<'enviada' | 'silenciada' | 'fallida'> {
   const f = await prisma.sivraFacturaHuesped.findUnique({ where: { id: facturaId } })
   if (!f || f.estado !== 'borrador') return 'fallida'
@@ -249,14 +241,21 @@ export async function proponerEnTelegram(facturaId: string, anterior?: bigint | 
   const { anio } = fechaMadrid(new Date())
   const est = evaluarSerie(await serieDelAnio(f.cuentaId, anio), anio)
   const imp = est.ok ? desglosarDesdeTotal(total, est.serie.tipoIva) : null
+  // CC: el mismo que usará el correo (`enviarFactura`). `to_jsonb` → NULL si la columna aún no existe (sin CC).
+  const ccBruto = f.solicitudId
+    ? await prisma.$queryRaw<Array<{ cc: unknown }>>(Prisma.sql`SELECT to_jsonb(s) -> 'receptor_cc' AS cc FROM sivra_factura_solicitudes s WHERE s.id = ${f.solicitudId}::uuid`).then((r) => r[0]?.cc ?? null).catch(() => null)
+    : null
   const desde = f.fechaOperacionDesde?.toISOString().slice(0, 10) ?? null
   const hasta = f.fechaOperacionHasta?.toISOString().slice(0, 10) ?? null
   const texto = textoPropuesta({
     piso: reserva?.piso ?? f.propertyId, reservationId: f.reservationId, estanciaDesde: desde, estanciaHasta: hasta,
     receptor, total, base: imp?.base ?? null, cuota: imp?.cuota ?? null, tipoIva: imp?.tipoIva ?? null,
     bloqueo: est.ok ? null : est.motivo,
+    cc: normalizarCc(ccBruto, receptor.email),
+    numeroPrevisto: est.ok ? formatearNumero(est.serie.prefijo, est.serie.anio, est.serie.siguienteNumero) : null,
   })
-  const msgId = await tgAvisoBotones('huespedes.factura-borrador', texto, botonesPropuesta(f.id))
+  const modificar = urlModificar(process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_FACTURAS, f.reservationId)
+  const msgId = await tgAvisoBotones('huespedes.factura-borrador', texto, botonesPropuesta(f.id, modificar))
   if (msgId === null) return 'silenciada'
   await prisma.sivraFacturaHuesped.updateMany({ where: { id: f.id, estado: 'borrador' }, data: { telegramMessageId: BigInt(msgId) } })
   // El mensaje anterior ya no vale (su ✅ lo rechaza `emitirFactura`): se le quitan los botones para que no confunda.

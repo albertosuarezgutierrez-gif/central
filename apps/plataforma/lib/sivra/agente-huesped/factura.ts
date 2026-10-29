@@ -59,7 +59,7 @@ export const REGLA_VOZ =
   'VOZ: escribes COMO el propio dueño/gestor del alojamiento, en primera persona. NUNCA hables del dueño ni del gestor como un tercero: nada de «el anfitrión», «el propietario», «la propiedad lo gestionará» ni «se lo traslado» / «lo paso a…». Di «lo gestiono yo», «te lo confirmo yo», «te lo envío».'
 
 export const REGLA_FACTURA =
-  'FACTURA: si el huésped pide factura (o la pide a nombre de una empresa), confirma que SÍ se la emitimos y pídele SOLO los datos que aún falten de esta lista: razón social (o nombre completo si es particular), NIF/CIF/VAT, dirección fiscal completa (calle y número, código postal, ciudad y país) y email de envío. NO le pidas lo que ya haya dado en la conversación. Cuando tengamos todos sus datos, la factura le llega sola por correo el día de salida: NO le prometas esa fecha mientras falte algún dato (dile que se la enviamos en cuanto los tengamos). No inventes importes ni números de factura.'
+  'FACTURA: si el huésped pide factura (o la pide a nombre de una empresa), confirma que SÍ se la emitimos y pídele SOLO los datos que aún falten de esta lista: razón social (o nombre completo si es particular), NIF/CIF/VAT, dirección fiscal completa (calle y número, código postal, ciudad y país) y email de envío. NO le pidas lo que ya haya dado en la conversación. Cuando tengamos todos sus datos, dile que tomo nota y que se la envío por correo en cuanto la revise: NO le prometas fecha ni plazo. No inventes importes ni números de factura.'
 
 // Hay formulario (27/10/2026): el orquestador ha creado la solicitud y AÑADE el enlace al final del borrador. El modelo
 // no escribe URLs (las inventaría): solo anuncia que va el enlace. Prevalece sobre «pídele los datos» de REGLA_FACTURA.
@@ -67,9 +67,9 @@ export const REGLA_FACTURA_ENLACE =
   'Para la factura HAY un formulario seguro: EN LUGAR de pedirle los datos uno a uno, dile que al final del mensaje le dejo un enlace donde rellenar sus datos de facturación, y que en cuanto lo haga se la preparo. NO escribas tú ningún enlace ni URL (se añade solo).'
 
 // ── Estado de la solicitud tras leer el chat (29/10/2026) ──────────────────────────────────────────────────────────
-// Los datos que el huésped da en el chat rellenan la solicitud (`lib/sivra/facturas/chat.ts`) y el cron de salida
-// (`/api/cron/sivra-facturas-salida`) la emite y envía sola el día de salida. El texto al huésped no puede prometer más
-// de lo que el sistema va a hacer: «la recibirás el día de salida» SOLO si la solicitud quedó completa y válida.
+// Los datos que el huésped da en el chat rellenan la solicitud (`lib/sivra/facturas/chat.ts`); completa y válida → el
+// borrador va a Alberto por Telegram (✅ Enviar / ✏️ Modificar). Nada sale sin su botón, así que al huésped NO se le
+// promete fecha: «tomo nota de los datos; te la envío en cuanto la revise».
 
 /** Mensajes del huésped que cuentan para la factura: desde su PRIMERA petición de factura (incluida). Lo anterior
  *  (p. ej. el DNI para el registro de viajeros) no se mezcla con los datos de facturación. Sin petición → []. */
@@ -80,15 +80,14 @@ export function textosDesdePeticion(textosHuesped: ReadonlyArray<string | null |
 }
 
 export type EstadoFacturaChat =
-  | { completa: true; email: string; cc: string[]; yaSalio: boolean }
+  | { completa: true; email: string; cc: string[] }
   | { completa: false; faltan: string[] }
 
 /** Bloque del prompt del redactor según cómo quedó la solicitud. */
 export function reglaFacturaEstado(e: EstadoFacturaChat, conEnlace: boolean): string {
   if (e.completa) {
     const copia = e.cc.length ? ` (con copia a ${e.cc.join(', ')})` : ''
-    const cuando = e.yaSalio ? 'en las próximas 24 horas' : 'el día de su salida'
-    return `FACTURA-ESTADO: ya tenemos TODOS sus datos de facturación: NO le pidas ninguno ni le pongas enlaces. Confírmale que recibirá la factura por correo en ${e.email}${copia} ${cuando}.`
+    return `FACTURA-ESTADO: ya tenemos TODOS sus datos de facturación: NO le pidas ninguno ni le pongas enlaces. Dile que tomo nota de sus datos y que le envío la factura por correo a ${e.email}${copia} en cuanto la revise. NO le prometas fecha ni plazo.`
   }
   const faltan = e.faltan.length ? e.faltan.join('; ') : 'los datos de facturación'
   return `FACTURA-ESTADO: de sus datos de facturación aún FALTAN: ${faltan}. Pídele SOLO eso${conEnlace ? ' (o que lo rellene en el enlace del final)' : ''} y NO le prometas fecha de envío hasta tenerlos.`

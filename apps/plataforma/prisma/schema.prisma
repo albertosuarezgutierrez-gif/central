@@ -613,7 +613,8 @@ model SivraFacturaSolicitud {
   updatedAt         DateTime              @default(now()) @map("updated_at") @db.Timestamptz(6)
   facturas          SivraFacturaHuesped[]
   // Columnas fuera del modelo A PROPÓSITO (2026-10-29_sivra_facturas_huesped_auto.sql): receptor_cc, datos_chat_at,
-  // auto_aviso_at, auto_aviso_motivo. Se leen/escriben solo por SQL (`lib/sivra/facturas/{chat,salida-auto,emitir}.ts`):
+  // auto_aviso_at, auto_aviso_motivo (estas dos sin uso desde el 29/10/2026: se retiró el cron de salida). Se leen/escriben
+  // solo por SQL (`lib/sivra/facturas/{chat,servicio,emitir}.ts`):
   // si estuvieran aquí, todo `findFirst` de la solicitud (formulario público incluido) reventaría si el código se
   // desplegara antes que la migración. Igual `sivra_facturas_huesped.envio_cc`.
 
