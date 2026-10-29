@@ -113,11 +113,26 @@ export type EventoCima = {
   /** Fecha propia del hecho (`null` = no consta): la mira la ventana de antigüedad. */
   fecha: Date | null
   texto: string
-  /** A dónde lleva la notificación si es la ÚNICA de la pasada (`urlPushCima`). Sin ella, a la bóveda. */
+  /** A dónde lleva la notificación (`urlPushCima`: la exacta, la ficha si todas son de una póliza, o la bóveda). Sin ella, a la bóveda. */
   url?: string
 }
 
 const MS_DIA = 86_400_000
+
+/** Ficha de una póliza de la cartera. Con `ancla`, baja hasta ese dato (`#siniestro-<id>`, `#recibo-<…>`). */
+export const urlFichaPoliza = (polizaId: string, ancla?: string): string =>
+  `/boveda/poliza/${encodeURIComponent(polizaId)}${ancla ? `#${ancla}` : ''}`
+
+/**
+ * Ancla de un recibo en la ficha. 🚨 `poliza_recibos.id` no llega al portal: el recibo se reconoce por sus
+ * dos fechas, igual que su clave de aviso (`rec:<póliza>:<emisión>:<vencimiento>`). La ficha pinta el mismo
+ * `id` con esta función, así que push y fila no pueden desviarse.
+ */
+export const anclaRecibo = (emision: Date | null, vencimiento: Date | null): string =>
+  `recibo-${emision ? emision.toISOString().slice(0, 10) : '-'}-${vencimiento ? vencimiento.toISOString().slice(0, 10) : '-'}`
+
+/** Ancla de un siniestro en la ficha (`id` de `PolizaPortal.siniestros`, el mismo que lee el aviso). */
+export const anclaSiniestro = (siniestroId: string): string => `siniestro-${siniestroId}`
 const dia = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null)
 const fechaIso = (s: string | null): Date | null => (s ? new Date(`${s}T00:00:00Z`) : null)
 const masReciente = (a: Date | null, b: Date | null): Date | null => (!a ? b : !b ? a : a > b ? a : b)
@@ -149,7 +164,7 @@ export function eventosDePolizas(polizas: readonly PolizaParaAviso[]): EventoCim
           polizaId: p.id,
           lista: 'recibos',
           fecha,
-          url: `/boveda/poliza/${encodeURIComponent(p.id)}`,
+          url: urlFichaPoliza(p.id, anclaRecibo(r.fechaEmision, r.fechaVencimiento)),
           texto: `Hay un recibo nuevo al cobro en ${donde(p)}.`,
         })
       } else if (s === 'devuelto') {
@@ -159,7 +174,7 @@ export function eventosDePolizas(polizas: readonly PolizaParaAviso[]): EventoCim
           polizaId: p.id,
           lista: 'recibos',
           fecha,
-          url: `/boveda/poliza/${encodeURIComponent(p.id)}`,
+          url: urlFichaPoliza(p.id, anclaRecibo(r.fechaEmision, r.fechaVencimiento)),
           texto: `Se ha devuelto un recibo de ${donde(p)}. Entra para ver cómo resolverlo antes de quedarte sin cobertura.`,
         })
       }
@@ -171,7 +186,7 @@ export function eventosDePolizas(polizas: readonly PolizaParaAviso[]): EventoCim
         tipo: 'siniestro' as const,
         polizaId: p.id,
         lista: 'siniestros' as const,
-        url: `/boveda/poliza/${encodeURIComponent(p.id)}`,
+        url: urlFichaPoliza(p.id, anclaSiniestro(s.id)),
       }
       eventos.push({ ...base, clave: `sin:${s.id}`, fecha: s.fechaHora, texto: `Se ha registrado un siniestro en ${donde(p)}.` })
       // «abierto» es el estado con el que nace: el aviso de alta ya lo dice. El
@@ -214,6 +229,7 @@ export function eventosPolizasNuevas(nuevas: readonly PolizaNuevaParaAviso[]): E
       polizaId: p.id,
       lista: 'polizas' as const,
       fecha: null,
+      url: urlFichaPoliza(p.id),
       texto: `Tienes una póliza nueva${que ? ` ${que}` : ''}.${cambio}`,
     }
   })
@@ -231,6 +247,7 @@ export function eventosPolizasModificadas(mods: readonly PolizaModificadaParaAvi
     polizaId: m.polizaId,
     lista: 'polizas' as const,
     fecha: null,
+    url: urlFichaPoliza(m.polizaId),
     texto: textoPushPolizaModificada(m),
   }))
 }
@@ -306,9 +323,17 @@ export function planificarAvisos(
   return { enviar, sellarSiempre }
 }
 
-/** A dónde abre la notificación: a la ficha si solo hay UNA novedad y la trae; si no, a la bóveda. */
+/**
+ * A dónde abre la notificación: la url exacta si todas las novedades coinciden en ella (un solo dato);
+ * la ficha de la póliza (sin ancla) si todas son de la MISMA póliza; si no, la bóveda.
+ */
 export function urlPushCima(eventos: readonly EventoCima[]): string {
-  return eventos.length === 1 && eventos[0].url ? eventos[0].url : '/boveda'
+  const urls = eventos.map((e) => e.url)
+  if (urls.length === 0 || urls.some((u) => !u)) return '/boveda'
+  const unicas = new Set(urls as string[])
+  if (unicas.size === 1) return [...unicas][0]
+  const bases = new Set((urls as string[]).map((u) => u.split('#')[0]))
+  return bases.size === 1 ? [...bases][0] : '/boveda'
 }
 
 /** Una notificación por identidad y pasada: con varias novedades, un resumen. */

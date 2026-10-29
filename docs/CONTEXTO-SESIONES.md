@@ -14,7 +14,8 @@
 ## (29/10/2026) Portal asegura · tocar la push de recibo abre la ficha de la póliza
 - Causa doble: `recibo_nuevo/devuelto` (y siniestros) sin `url` en `module-seguros-portal/src/avisos-cima.ts` → `/boveda`; y `sw.js` hacía `navigate()` sin `catch` (rechaza en PWA/iOS) → se quedaba en la pantalla previa.
 - Arreglo: url `/boveda/poliza/<id>`; SW con URL absoluta, try/catch y respaldo `openWindow`. Cepo en `avisos-cima.test.ts` (visto en rojo).
-- Pendiente: `poliza_nueva` y `api/cron/avisos-push` siguen yendo a `/boveda`; los SW de sivra/rrhh/ia-rest no revisados.
+- Ampliado: toda push de póliza abre su ficha (`poliza_nueva/modificada`, obligaciones del cron → póliza o `/boveda/anadida/<id>`); recibo y siniestro bajan a su fila (`#recibo-<emisión>-<venc>`, `#siniestro-<id>`). Agrupadas de una sola póliza → su ficha.
+- Pendiente: SW de sivra/rrhh/ia-rest no revisados; anclas no vistas en navegador real.
 
 ## (29/10/2026) Sivra · factura del huésped: SIN envío automático (revierte la excepción de #5251)
 - Retirado el cron `/api/cron/sivra-facturas-salida` (+ `salida-auto/decision.ts`, `{automatico}` de `emitir.ts`). Disparador = el mensaje del huésped: `orquestador.ts` → `rellenarDesdeChat` → si completa, `proponerSiCompleta` (chat.ts: reclamo pendiente→completada, UN Telegram) → borrador con ✅ Enviar (`fhu_emi`) / ✏️ Modificar (`/sivra/facturas?reserva=`). El formulario manda el mismo Telegram.
