@@ -325,6 +325,13 @@ describe('0.3.8 · tipo de documento y detalle del cuerpo tolerado', () => {
     expect(tipoDocumentoDe('B12345678')).toBe('CIF')
     for (const x of ['', '1234', 'PASAPORTE1', null, undefined]) expect(tipoDocumentoDe(x as string)).toBeNull()
   })
+  it('opcionTipoDocumento 0.3.12: catálogo real Allianz «DNI/NIF/NIE/CIF»', () => {
+    const ops = [{ valor: 'a', texto: 'DNI/NIF/NIE/CIF' }, { valor: 'b', texto: 'Pasaporte' }, { valor: 'c', texto: 'Otros' }]
+    for (const t of ['NIF', 'NIE', 'CIF'] as const) expect(opcionTipoDocumento(t, ops)).toBe('a')
+    expect(opcionTipoDocumento('NIF', ops.slice(1))).toBeNull()
+    expect(opcionTipoDocumento('NIF', [...ops, { valor: 'd', texto: 'DNI-NIF-NIE-CIF' }])).toBeNull()
+  })
+
   it('opcionTipoDocumento: la ÚNICA opción por texto; ambigua o ausente → null', () => {
     const ops = [{ valor: '', texto: 'Seleccione' }, { valor: 'N', texto: 'N.I.F.' }, { valor: 'E', texto: 'NIE' }, { valor: 'C', texto: 'CIF' }, { valor: 'P', texto: 'Pasaporte' }]
     expect(opcionTipoDocumento('NIF', ops)).toBe('N')

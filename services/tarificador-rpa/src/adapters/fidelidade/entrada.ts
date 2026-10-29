@@ -113,8 +113,8 @@ async function marcoConPassword(page: Page, ms: number): Promise<Page | Frame> {
   }
 }
 
-/** 0.3.11: botones que cierran el diálogo RGPD (texto normalizado EXACTO; lista cerrada). Nunca «Aceptar» ni otro. */
-export const BOTONES_CERRAR_RGPD_FIDELIDADE = Object.freeze(['cerrar', '×', 'x', 'entendido'] as const)
+/** 0.3.12: botones que cierran el diálogo de cookies/RGPD (texto normalizado EXACTO; lista cerrada). «No acepto cookies» RECHAZA el consentimiento. Nunca «Aceptar», «Sí, acepto cookies» ni el texto vacío. */
+export const BOTONES_CERRAR_RGPD_FIDELIDADE = Object.freeze(['cerrar', '×', 'x', 'entendido', 'no acepto cookies'] as const)
 const SEL_DIALOGO_RGPD = 'os-internal-ui-dialog, .os-internal-ui-dialog'
 const SEL_BOTONES_DIALOGO = 'button, [role="button"], a, input[type="button"], input[type="submit"]'
 
@@ -164,7 +164,7 @@ export async function cerrarDialogoRgpdFidelidade(page: Page, ctx: Pick<CtxEntra
     if (!(await dialogo())) return
   }
   const textos = (cierre ? await botonesDe() : botones).slice(0, 8).map((b) => b.texto.slice(0, 40))
-  throw new ErrorTarificador('portal', `fidelidade/login: diálogo RGPD tapa el login; botones: [${textos.map((t) => `«${t}»`).join(', ')}]`)
+  throw new ErrorTarificador('portal', `fidelidade/login: diálogo de cookies/RGPD tapa el login; botones: [${textos.map((t) => `«${t}»`).join(', ')}]`)
 }
 
 export async function loginFidelidade(page: Page, ctx: CtxEntradaFidelidade, esperas: EsperasFidelidade = {}, url: string = URL_INTRANET_FIDELIDADE): Promise<void> {

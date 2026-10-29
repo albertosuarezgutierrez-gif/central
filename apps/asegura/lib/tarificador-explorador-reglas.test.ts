@@ -605,3 +605,11 @@ test('leerPeticionCierre: notaFin solo con la forma «frontera bancaria: campo �
     assert.ok(l.ok && l.p.notaFin === null)
   }
 })
+
+test('0.3.12: detalleFin «titulo:contrat» / «campo:cvv» del worker llega al hueco del mapa', () => {
+  for (const d of ['titulo:contrat', 'campo:cvv']) {
+    const r = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'cerca_de_emision', detalleFin: d })
+    assert.ok(r.ok && r.p.detalleFin === d)
+    if (r.ok) assert.ok(huecoDeDetalleFin(r.p.motivoFin, r.p.detalleFin)?.includes(d))
+  }
+})
