@@ -1,21 +1,21 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-29T14:48:11.726Z",
- "llamadas": 19366,
+ "fin": "2026-10-29T15:47:49.440Z",
+ "llamadas": 19421,
  "categorias": {
   "otro": {
-   "llamadas": 2362,
-   "chars_in": 312987,
-   "chars_out": 15674156,
+   "llamadas": 2375,
+   "chars_in": 313982,
+   "chars_out": 15756028,
    "errores": 0,
    "archivos_citados": 62,
    "chars_citados": 9439766,
    "tools": {
-    "ToolSearch": 489,
+    "ToolSearch": 492,
     "SubagentHandback": 10,
-    "SendMessage": 122,
-    "ReadNotifications": 1274,
+    "SendMessage": 123,
+    "ReadNotifications": 1283,
     "Monitor": 432,
     "AskUserQuestion": 13,
     "TaskStop": 13,
@@ -35,33 +35,33 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 2098,
-   "chars_in": 281565,
-   "chars_out": 14937784,
+   "llamadas": 2110,
+   "chars_in": 283244,
+   "chars_out": 14983612,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 35,
-    "Grep": 945,
-    "Read": 1118
+    "Grep": 950,
+    "Read": 1125
    }
   },
   "mcp:github": {
-   "llamadas": 998,
-   "chars_in": 311743,
-   "chars_out": 2182557,
+   "llamadas": 1006,
+   "chars_in": 313455,
+   "chars_out": 2199113,
    "errores": 14,
    "archivos_citados": 9,
    "chars_citados": 3312411,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__actions_run_trigger": 214,
+    "mcp__github__actions_run_trigger": 219,
     "mcp__github__actions_list": 183,
     "mcp__github__create_pull_request": 124,
     "mcp__github__update_pull_request": 73,
-    "mcp__github__pull_request_read": 147,
-    "mcp__github__merge_pull_request": 125,
+    "mcp__github__pull_request_read": 149,
+    "mcp__github__merge_pull_request": 126,
     "mcp__github__add_reply_to_pull_request_comment": 29,
     "mcp__github__get_job_logs": 57,
     "mcp__github__add_issue_comment": 20,
@@ -70,25 +70,25 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 299,
-   "chars_in": 729921,
-   "chars_out": 792788,
+   "llamadas": 300,
+   "chars_in": 732678,
+   "chars_out": 795741,
    "errores": 0,
    "archivos_citados": 351,
    "chars_citados": 16865137,
    "tools": {
-    "Agent": 299
+    "Agent": 300
    }
   },
   "bash": {
-   "llamadas": 10677,
-   "chars_in": 7826875,
-   "chars_out": 31230540,
+   "llamadas": 10683,
+   "chars_in": 7830627,
+   "chars_out": 31243699,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 10677
+    "Bash": 10683
    }
   },
   "mcp:Vercel": {
@@ -113,15 +113,15 @@
    }
   },
   "sql": {
-   "llamadas": 1397,
-   "chars_in": 550452,
-   "chars_out": 3069807,
+   "llamadas": 1408,
+   "chars_in": 556062,
+   "chars_out": 3087158,
    "errores": 3,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 5,
-    "mcp__Supabase__execute_sql": 1392
+    "mcp__Supabase__execute_sql": 1403
    }
   },
   "mcp:Supabase": {
@@ -138,16 +138,16 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 263,
-   "chars_in": 38867,
-   "chars_out": 59183,
+   "llamadas": 266,
+   "chars_in": 40276,
+   "chars_out": 59507,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 123,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 56,
-    "mcp__claude-code-remote__send_later": 71,
+    "mcp__claude-code-remote__send_later": 74,
     "mcp__claude-code-remote__read_documentation": 3,
     "mcp__claude-code-remote__delete_trigger": 10
    }
@@ -165,14 +165,14 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 67,
-   "chars_in": 148514,
-   "chars_out": 164206,
+   "llamadas": 68,
+   "chars_in": 152726,
+   "chars_out": 168628,
    "errores": 0,
-   "archivos_citados": 101,
-   "chars_citados": 5041603,
+   "archivos_citados": 103,
+   "chars_citados": 5192892,
    "tools": {
-    "Agent": 67
+    "Agent": 68
    }
   },
   "agente:verificador-esceptico": {
