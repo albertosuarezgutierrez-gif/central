@@ -129,7 +129,7 @@ export async function vistaPublica(token: string): Promise<VistaPublica> {
 }
 
 export type ResultadoBorrador =
-  | { ok: true; facturaId: string; propuesta: 'enviada' | 'silenciada' | 'fallida' }
+  | { ok: true; facturaId: string; propuesta: 'enviada' | 'silenciada' | 'fallida' | 'no_propuesta' }
   | { ok: false; motivo: string; codigo: 'no_valida' | 'caducada' | 'ya_emitida' | 'ya_recibida' | 'sin_importe' | 'sin_reserva' }
 
 /** Guarda los datos fiscales (ya validados con `validarReceptor`) y prepara el borrador + aviso a Alberto. */
@@ -184,7 +184,12 @@ export async function serieDelAnio(cuentaId: string, anio: number): Promise<Seri
   return { id: s.id, prefijo: s.prefijo, anio: s.anio, siguienteNumero: s.siguienteNumero, tipoIva: s.tipoIva === null ? null : Number(s.tipoIva), mencionIva: s.mencionIva, activa: s.activa }
 }
 
-async function prepararBorrador(solicitudId: string, receptor: Receptor, opts: { totalManual?: number | null }): Promise<ResultadoBorrador> {
+/**
+ * Borrador con estos datos. `proponer: false` (cron de salida, que emite justo después): ni aviso de borrador ni aviso de
+ * «no sé el importe» (el cron avisa él, una sola vez).
+ */
+export async function prepararBorrador(solicitudId: string, receptor: Receptor, opts: { totalManual?: number | null; proponer?: boolean }): Promise<ResultadoBorrador> {
+  const proponer = opts.proponer !== false
   const s = await prisma.sivraFacturaSolicitud.findUniqueOrThrow({ where: { id: solicitudId } })
   const reserva = await leerReserva(s.reservationId)
   if (!reserva) return { ok: false, motivo: 'reserva no encontrada', codigo: 'sin_reserva' }
@@ -197,7 +202,7 @@ async function prepararBorrador(solicitudId: string, receptor: Receptor, opts: {
   if (elegido === null) {
     // Sin importe no hay borrador (y el ✅ no podría emitir nada). Tampoco hay uno anterior (elegirTotal lo habría
     // conservado): los datos quedan en la solicitud y Alberto pone el importe a mano.
-    await tgAviso('huespedes.factura-borrador',
+    if (proponer) await tgAviso('huespedes.factura-borrador',
       `🧾 Factura de huésped: ${escapeHtml(reserva.piso)} · reserva ${escapeHtml(reserva.reservationId)}\n⛔ <b>No sé el importe</b> (amount_gross vacío o 0 en incomes). Ponlo a mano en /sivra/facturas.`)
     return { ok: false, motivo: 'importe de la reserva desconocido', codigo: 'sin_importe' }
   }
@@ -221,10 +226,16 @@ async function prepararBorrador(solicitudId: string, receptor: Receptor, opts: {
   } else {
     facturaId = (await prisma.sivraFacturaHuesped.create({ data: datos })).id
   }
+  if (!proponer) {
+    // El ✅ del mensaje anterior ya no vale (telegram_message_id = NULL): se le quitan los botones.
+    if (mensajeAnterior !== null) await tgEditMessage(Number(mensajeAnterior), TEXTO_SUSTITUIDO_AUTO).catch(() => false)
+    return { ok: true, facturaId, propuesta: 'no_propuesta' }
+  }
   const propuesta = await proponerEnTelegram(facturaId, mensajeAnterior)
   return { ok: true, facturaId, propuesta }
 }
 
+const TEXTO_SUSTITUIDO_AUTO = '🤖 <i>Este borrador lo ha emitido el envío automático del día de salida: mira el aviso más reciente.</i>'
 const TEXTO_SUSTITUIDO = '♻️ <i>Este borrador de factura se ha sustituido por uno nuevo: revisa y aprueba el ÚLTIMO mensaje.</i>'
 
 /** Borrador → aviso a Alberto con resumen, PDF de revisión y botones ✅/✏️. */

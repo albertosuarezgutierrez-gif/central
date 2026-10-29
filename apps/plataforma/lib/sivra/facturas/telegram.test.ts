@@ -61,7 +61,7 @@ test('el ✅ comprueba el mensaje BAJO el FOR UPDATE y el borrador regenerado an
   const emitir = readFileSync(new URL('./emitir.ts', import.meta.url), 'utf8')
   const tx = emitir.slice(emitir.indexOf('export async function emitirFactura'), emitir.indexOf('const pdf = await generarPdfFactura'))
   assert.match(tx, /telegram_message_id\s*\n\s*FROM sivra_facturas_huesped WHERE id = \$\{facturaId\}::uuid FOR UPDATE/)
-  assert.match(tx, /if \(!mensajeVigente\(f\.telegram_message_id, mensajeId\)\) return \{ estado: 'obsoleta' \}/)
+  assert.match(tx, /if \(!opts\.automatico && !mensajeVigente\(f\.telegram_message_id, mensajeId\)\) return \{ estado: 'obsoleta' \}/)
   const acciones = readFileSync(new URL('./telegram-acciones.ts', import.meta.url), 'utf8')
   assert.match(acciones, /emitirFactura\(d\.facturaId, mensajeId\)/)
   const webhook = readFileSync(new URL('../../../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
@@ -90,4 +90,14 @@ test('/sivra/facturas: borradores con «Ver más» y grid minmax(0, 1fr)', () =>
   assert.match(page, /\.borradores \?\? \[\]\)\.slice\(0, borradoresVisibles\)\.map/)
   assert.match(page, /setBorradoresVisibles\(\(v\) => v \+ PASO\)/)
   assert.match(page, /display: 'grid', gap: 8, gridTemplateColumns: 'minmax\(0, 1fr\)'/)
+})
+
+// (29/10/2026) La emisión SIN ✅ solo la hace el cron del día de salida: el botón de Telegram nunca pasa `automatico`.
+test('el salto del ✅ (`automatico`) solo lo usa salida-auto.ts', () => {
+  const acciones = readFileSync(new URL('./telegram-acciones.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(acciones, /automatico/)
+  const auto = readFileSync(new URL('./salida-auto.ts', import.meta.url), 'utf8')
+  assert.match(auto, /emitirFactura\(facturaId, null, ahora, \{ automatico: true \}\)/)
+  const servicio = readFileSync(new URL('./servicio.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(servicio, /automatico/)
 })

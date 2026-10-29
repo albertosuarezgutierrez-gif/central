@@ -10,10 +10,10 @@ import { botonesPropuesta, botonReintento, type DecisionBotonFactura } from './t
 
 type Salida = { linea: string; botones?: Boton[][] }
 
-function lineaEnvio(numero: string | null, r: ResultadoEnvio, facturaId: string): Salida {
+export function lineaEnvio(numero: string | null, r: ResultadoEnvio, facturaId: string): Salida {
   const n = escapeHtml(numero ?? '')
   switch (r.estado) {
-    case 'enviada': return { linea: `✅ <b>Emitida ${n}</b> y enviada a ${escapeHtml(r.email)}.\n${escapeHtml(lineaAviso(r.aviso))}` }
+    case 'enviada': return { linea: `✅ <b>Emitida ${n}</b> y enviada a ${escapeHtml(r.email)}${r.cc.length ? ` (CC ${escapeHtml(r.cc.join(', '))})` : ''}.\n${escapeHtml(lineaAviso(r.aviso))}` }
     case 'ya_enviada': return { linea: `ℹ️ La factura ${n} ya estaba emitida y enviada. No se ha hecho nada.` }
     case 'en_curso': return { linea: `⏳ La factura ${n} está emitida y su envío está en curso. Mira /sivra/facturas antes de repetir.` }
     case 'dudoso': return { linea: `⚠️ La factura ${n} está emitida pero NO sé si el correo salió (el envío se cortó sin registrar éxito ni error). Mira el buzón de enviados; si no salió, reenvíala desde /sivra/facturas.` }

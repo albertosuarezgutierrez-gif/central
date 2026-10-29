@@ -30,7 +30,7 @@ import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 import { asegurarIdioma } from './idioma-salida'
 import { procedeConsultarWeb, consultarEntorno, bloqueConsulta } from './consulta-web'
 import { buscarWeb } from '@/lib/websearch'
-import { esTramiteFiscal, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA, REGLA_FACTURA_ENLACE } from './factura'
+import { esTramiteFiscal, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA, REGLA_FACTURA_ENLACE, reglaFacturaEstado } from './factura'
 
 export type Decision = {
   reply: string
@@ -287,7 +287,7 @@ HORAS DE ENTRADA/SALIDA — NO AUTORIZAS NADA (decisión de Alberto, 18/10/2026)
 ENTRADA AUTÓNOMA — NUNCA impliques un encuentro en persona: el check-in es AUTOMÁTICO (el huésped accede por su cuenta, sin que nadie le reciba ni le abra) y tú solo escribes mensajes, no vas a estar allí. Por eso NO uses jamás fórmulas de encuentro presencial como «nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro» ni «hasta ahora/luego» con sentido de vernos, en NINGUNA fase de la reserva. Si el huésped confirma su hora de llegada, acúsale recibo sin sugerir cita: por ejemplo «¡Perfecto! Tomo nota de que llegáis sobre las 18:00» en lugar de «Nos vemos a las 18:00».
 NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. ${REGLA_GESTIONES} Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
 ${REGLA_VOZ}
-${REGLA_FACTURA}${ctx.enlaceFactura ? ` ${REGLA_FACTURA_ENLACE}` : ''}
+${REGLA_FACTURA}${ctx.enlaceFactura ? ` ${REGLA_FACTURA_ENLACE}` : ''}${ctx.facturaEstado ? ` ${reglaFacturaEstado(ctx.facturaEstado, !!ctx.enlaceFactura)}` : ''}
 HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
 Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas. ${cierreBlock}
 
@@ -376,10 +376,14 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ES
   // Una petición de FACTURA no es un hueco de la guía (ver `factura.ts`): no se pregunta al control de
   // calidad (su ESCALAR dispararía el aviso «no lo encuentro en la guía» y guardaría datos fiscales de
   // un huésped como hecho del piso). Escala igual, pero por su propio motivo.
+  // Igual un cierre de cortesía puro («Gracias :)»): no hay pregunta que cubrir, así que el juez no
+  // puede decir «no cubre» ni abrir un hueco de guía. Con pregunta añadida `esCierre` es false y el juez corre.
   const peticionFactura = esTramiteFiscal(pregunta, ctx.historial.filter(h => h.from === 'guest').map(h => h.text))
   const veredicto: Veredicto = (sensible || sentimiento === 'negativo' || rev.inventado)
     ? 'ESCALAR'
     : peticionFactura
+    ? 'OK'
+    : esCierre(pregunta)
     ? 'OK'
     : await debeEscalar(ctx, pregunta, reply)
   const escalaIA = veredicto === 'ESCALAR'
