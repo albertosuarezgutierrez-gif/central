@@ -7,6 +7,7 @@ import {
   resolverPreferenciasAvisos,
   textoPushObligacion,
   urlPushObligacion,
+  tagPushObligacion,
   type PreferenciasAvisosEfectivas,
 } from '@central/module-seguros-portal'
 import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
@@ -192,7 +193,7 @@ export async function GET(req: Request) {
         // renovación de póliza sobre una ITV le dice a alguien que se queda sin
         // cobertura cuando no es verdad.
         const { title, body } = textoPushObligacion({ tipo: o.tipo, titulo: o.titulo })
-        const payload = { title, body, icon: '/icono-app', data: { url: urlPushObligacion(o) } }
+        const payload = { title, body, icon: '/icono-app', data: { url: urlPushObligacion(o), ...(tagPushObligacion(o) ? { tag: tagPushObligacion(o) } : {}) } }
 
         let algunaOk = false
         for (const s of subs) {

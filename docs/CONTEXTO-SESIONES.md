@@ -11,6 +11,11 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (29/10/2026) Push · clic robusto en todas las apps + mejoras del portal asegura
+- sivra, rrhh, ia-rest (sw.js y sw-alertas.js): mismo fallo que el portal (navigate sin catch / solo focus / ignora data.url) → patrón URL absoluta + try/catch + openWindow. Alertas de voz: prioriza la ventana ya en /edge.
+- Portal: `tag` por póliza (`poliza-<id>`/`anadida-<id>`, renotify), botón «Ver recibo» en devueltos, contador del icono (`pendientesBadge`, sin consultas nuevas; se limpia en `RegistrarSW`). Helpers en `module-seguros-portal/src/push-aviso.ts` con cepos vistos en rojo.
+- No hecho: medir aperturas (no hay tabla/endpoint de eventos en el portal; decidir dónde guardarlo). No hay ancla «cómo pagar» en la ficha.
+
 ## (29/10/2026) Portal asegura · tocar la push de recibo abre la ficha de la póliza
 - Causa doble: `recibo_nuevo/devuelto` (y siniestros) sin `url` en `module-seguros-portal/src/avisos-cima.ts` → `/boveda`; y `sw.js` hacía `navigate()` sin `catch` (rechaza en PWA/iOS) → se quedaba en la pantalla previa.
 - Arreglo: url `/boveda/poliza/<id>`; SW con URL absoluta, try/catch y respaldo `openWindow`. Cepo en `avisos-cima.test.ts` (visto en rojo).

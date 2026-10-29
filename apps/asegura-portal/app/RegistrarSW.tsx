@@ -9,6 +9,12 @@ import { useEffect } from 'react'
  */
 export function RegistrarSW() {
   useEffect(() => {
+    // Al abrir la app, el contador del icono (avisos pendientes) se limpia.
+    try {
+      void (navigator as Navigator & { clearAppBadge?: () => Promise<void> }).clearAppBadge?.()?.catch?.(() => {})
+    } catch {
+      // sin soporte de Badging API
+    }
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {})
     }
