@@ -113,6 +113,13 @@ export type AvanceSinTexto = {
   nuncaConTitulo: RegExp
   /** Ningún texto visible de la pantalla puede casar (texto plano). */
   textoAccionFinal: RegExp
+  /**
+   * 0.3.19 (Fidelidade real 29/10/2026): el botón SÍ lleva onclick (OutSystems `OsAjax(…); return false;`). Patrón CERRADO y anclado
+   * `^…$` con DOS grupos: A (widget con `_`) y B (name del widget con `$`). Solo vale si además A === B con `$`→`_`, B empieza por el name
+   * del control (inventario recortado: prefijo; worker: name ENTERO === B), B cumple `prefijoName`/`contieneName`, ni A ni B casan
+   * {@link RE_NAME_ACCION_FINAL_SIN_TEXTO} y el onclick no está recortado (`onclickCasaFormaSinTexto`). Sin la clave = sin onclick (0.3.18).
+   */
+  onclickForma?: RegExp
 }
 
 /**
@@ -156,6 +163,8 @@ export type EntradaExploracion = {
   avancesSinTexto?: readonly AvanceSinTexto[]
   /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
   guardadosEnDialogo?: readonly GuardadoEnDialogo[]
+  /** 0.3.19: subcadena exacta del onclick de UN control exacto que no cuenta como acción (ver {@link NeutralizacionOnclick}). Sin la clave = ninguna. */
+  neutralizacionesOnclick?: readonly NeutralizacionOnclick[]
   /**
    * TOMADOR = EL MEDIADOR (Alberto, 28/10/2026: «datos del mediador con su consentimiento»). SOLO las exploraciones de
    * patinete, y SOLO sintéticas (sin cliente). El NIF, el nombre y la fecha de nacimiento NO viven aquí: asegura los toma
@@ -232,6 +241,12 @@ export const RE_TEXTO_ACCION_FINAL_SIN_TEXTO = /\b(?:emit|emis|contrat|confirm|f
  */
 export const RE_NAME_ACCION_FINAL_SIN_TEXTO = /emit|emis|contrat|contract|confirm|firm|pagar|pago|payment|formaliz|iban|tarjet/
 
+/**
+ * 0.3.19 (real 29/10/2026): el onclick EXACTO del avance de «Simulación» de Fidelidade (OutSystems). Sobre el onclick con los espacios
+ * colapsados. Nada antes ni después (sin llamadas extra, sin URL): A = widget con `_`, B = name del widget con `$`.
+ */
+export const RE_ONCLICK_OSAJAX_SIN_TEXTO = /^OsAjax\(arguments\[0\] \|\| window\.event,'([A-Za-z0-9_]{1,300})','([A-Za-z0-9_$]{1,300})','','__OSVSTATE,',''\); return false;$/
+
 /** Origen del que sale la regla y ruta de la pantalla de simulación de Fidelidade Vivienda (con la errata «Simualtion» del portal). */
 export const ORIGEN_FIDELIDADE_MEDIADORES = 'https://mediadores.fidelidade.es'
 
@@ -249,6 +264,41 @@ const SIMULACION_FIDELIDADE_SIN_TEXTO: AvanceSinTexto = Object.freeze({
   clase: Object.freeze(['Button', 'Is_Default']),
   nuncaConTitulo: /revisi|emisi|contrat|firma|iban|resumen|formaliz|confirm|pagar/,
   textoAccionFinal: RE_TEXTO_ACCION_FINAL_SIN_TEXTO,
+  // 0.3.19: el botón real lleva `OsAjax(…,'<widget _>','<name $>',…); return false;` (rechazo real `con_onclick`).
+  onclickForma: RE_ONCLICK_OSAJAX_SIN_TEXTO,
+})
+
+/**
+ * 0.3.19 (Mapfre NSE real 29/10/2026, `busquedaProductos`): el «Siguiente >>» de `formDG` lleva en el `oncomplete` de su A4J la llamada
+ * `mostrarModalPanelConfirmarLimpiezaPolizaPorDias(…)` (abre un modal; NO confirma nada por sí misma), y «conFIRMAr» lo marcaba como emisión
+ * (`ACCIONES_PORTAL`). Excepción ESTRECHA, análoga a `EXCEPCION_PROYECTO_AMPLIADO`: SOLO para el control con origen, ruta, tag, id, name y
+ * texto EXACTOS, se quita del onclick SOLO esa subcadena exacta (una vez, como identificador seguido de `(`); el resto del onclick tiene que
+ * pasar `clasificarAccionPortal` y `pareceEmision` sin emisión (si no, no se neutraliza nada). El modal que abra después pasa por las reglas
+ * normales. El worker repite lo mismo sobre el DOM VIVO.
+ */
+export type NeutralizacionOnclick = {
+  /** Origen EXACTO de la ventana/marco. */
+  origen: string
+  /** La ruta del marco empieza por esto (exacto, sensible a mayúsculas; acaba en «/»). */
+  prefijoRuta: string
+  tag: string
+  /** `id` y `name` EXACTOS (los dos). */
+  id: string
+  name: string
+  /** Texto EXACTO (espacios colapsados). */
+  texto: string
+  /** La ÚNICA subcadena que se quita del onclick. */
+  subcadena: string
+}
+
+const SIGUIENTE_NSE_LIMPIEZA_POLIZA: NeutralizacionOnclick = Object.freeze({
+  origen: 'https://wmediadores.mapfre.com',
+  prefijoRuta: '/EVT21_NSE_FWEB/app/emision/busquedaProductos/',
+  tag: 'a',
+  id: 'formDG:btnSiguiente',
+  name: 'formDG:btnSiguiente',
+  texto: 'Siguiente >>',
+  subcadena: 'mostrarModalPanelConfirmarLimpiezaPolizaPorDias',
 })
 
 /** ¿La ruta del marco es la de la regla (o una de sus `rutasMarco`, solo si es `sinIdentidad`)? Pura; la repite el guard con la ruta VIVA. */
@@ -289,6 +339,8 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     enlacesAvanzables: Object.freeze({ rutaApp: '/EVT21_NSE_FWEB/' }),
     // NSE = «Nuevo Sistema de Emisión»: sus pantallas de TARIFICAR viven bajo `/app/emision/` (real 28/10/2026, `cargaOperacion.jsf`).
     rutasAppTolerables: Object.freeze([Object.freeze({ origen: 'https://wmediadores.mapfre.com', prefijo: '/EVT21_NSE_FWEB/app/emision/' })]),
+    // 0.3.19: el «Siguiente >>» de `formDG` (busquedaProductos) abre en su oncomplete el modal de «limpieza de póliza por días».
+    neutralizacionesOnclick: Object.freeze([SIGUIENTE_NSE_LIMPIEZA_POLIZA]),
     tomadorMediador: true as const,
   }),
   // Mapfre Auto (14/10/2026): «Nueva producción» → «Turismos y Motos». El bloque «Automóviles» y el enlace «Tarificación y
@@ -1367,14 +1419,82 @@ export function unicoPorTexto(marco: MarcoInventario, re: RegExp): boolean {
   return n === 1
 }
 
-/** ¿Este elemento tiene las CARACTERÍSTICAS del control de una regla {@link AvanceSinTexto}? (sin mirar origen, ruta ni unicidad). Pura. */
+/** ¿Este elemento tiene las CARACTERÍSTICAS del control de una regla {@link AvanceSinTexto}? (sin mirar onclick, origen, ruta ni unicidad). Pura. */
 function casaControlSinTexto(x: ElementoInventario, a: AvanceSinTexto): boolean {
   if (x.tag !== 'input' || (x.type ?? '').toLowerCase() !== 'submit') return false
   if (tieneAlgo(x.texto) || tieneAlgo(x.ariaLabel) || tieneAlgo(x.etiqueta)) return false
-  if (tieneAlgo(x.onclick) || tieneAlgo(x.onclickCompleto)) return false
+  // 0.3.19: el onclick NO cuenta aquí (lo exige `motivoNoAvanceSinTexto` sobre el control evaluado): para la UNICIDAD cuenta todo input submit
+  // con name y clase de la regla, tenga el onclick que tenga (como el `iguales` del worker, fail-closed).
   if (typeof x.name !== 'string' || !x.name.startsWith(a.prefijoName) || !x.name.includes(a.contieneName)) return false
   const tokens = (x.clase ?? '').split(/\s+/).filter(Boolean)
   return a.clase.every((t) => tokens.includes(t))
+}
+
+/**
+ * 0.3.19: ¿el onclick casa la forma CERRADA de la regla (`onclickForma`)? Exige: regla con forma, onclick no recortado ni con cifras
+ * normalizadas, casa el patrón anclado (espacios colapsados), A === B con `$`→`_`, B con `prefijoName`/`contieneName`, ni A ni B con
+ * nombre de acción final, y B = el name del control: `nameExacto` (worker, DOM vivo) → name ENTERO === B; si no (inventario), name entero
+ * === B o, si el saneado lo recortó («…»), B empieza por lo que llegó. Pura y compartida con el worker.
+ */
+export function onclickCasaFormaSinTexto(a: AvanceSinTexto, onclick: string | null | undefined, name: string | null | undefined, opts: { nameExacto: boolean }): boolean {
+  if (a.onclickForma === undefined || typeof onclick !== 'string' || typeof name !== 'string' || name === '') return false
+  if (truncado(onclick) || onclick.includes(MARCA_TIRA_CIFRAS_ONCLICK)) return false
+  const m = a.onclickForma.exec(onclick.replace(/\s+/g, ' ').trim())
+  if (!m || typeof m[1] !== 'string' || typeof m[2] !== 'string') return false
+  const [, wA, wB] = m
+  if (wA !== wB.replace(/\$/g, '_')) return false
+  if (RE_NAME_ACCION_FINAL_SIN_TEXTO.test(wA.toLowerCase()) || RE_NAME_ACCION_FINAL_SIN_TEXTO.test(wB.toLowerCase())) return false
+  if (!wB.startsWith(a.prefijoName) || !wB.includes(a.contieneName)) return false
+  if (opts.nameExacto || !truncado(name)) return name === wB
+  const prefijo = name.slice(0, -1)
+  return prefijo.startsWith(a.prefijoName) && prefijo.includes(a.contieneName) && wB.startsWith(prefijo)
+}
+
+/** Reglas de neutralización de onclick de la entrada (lista vacía si no tiene). */
+export function neutralizacionesOnclickDe(entrada: string): readonly NeutralizacionOnclick[] {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  return e?.neutralizacionesOnclick ?? []
+}
+
+/** Lo que hace falta saber de un control (inventario o DOM vivo) para {@link onclickNeutralizado}. */
+export type ControlNeutralizable = {
+  tag: string | null | undefined
+  id: string | null | undefined
+  name: string | null | undefined
+  texto: string | null | undefined
+  onclick: string | null | undefined
+  /** Origen (esquema + host[:puerto]) de la ventana/marco del control. */
+  origen: string | null | undefined
+  /** `pathname` de la ventana/marco del control. */
+  ruta: string | null | undefined
+}
+
+/**
+ * 0.3.19: el onclick con la subcadena de una regla {@link NeutralizacionOnclick} quitada (sustituida por un espacio, para no pegar trozos),
+ * o `null` si no aplica ninguna regla. Exige TODO: origen y tag exactos, ruta con el prefijo (sin `..` ni `//`), id y name EXACTOS, texto
+ * EXACTO, onclick no recortado, la subcadena (solo su primera aparición) como identificador entero seguido de `(`, y que el RESTO no tenga emisión ni
+ * acción prohibida (`clasificarAccionPortal`, `pareceEmision`). Pura y compartida con el worker.
+ */
+export function onclickNeutralizado(reglas: readonly NeutralizacionOnclick[], c: ControlNeutralizable): string | null {
+  const oc = c.onclick
+  if (reglas.length === 0 || typeof oc !== 'string' || oc === '' || truncado(oc)) return null
+  const ruta = typeof c.ruta === 'string' ? c.ruta : ''
+  if (ruta.includes('..') || ruta.includes('//')) return null
+  const texto = typeof c.texto === 'string' && !truncado(c.texto) ? c.texto.replace(/\s+/g, ' ').trim() : null
+  for (const r of reglas) {
+    if (c.origen !== r.origen || !ruta.startsWith(r.prefijoRuta)) continue
+    if ((c.tag ?? '').toLowerCase() !== r.tag || c.id !== r.id || c.name !== r.name || texto !== r.texto) continue
+    // Se quita SOLO la primera aparición: una segunda se queda en `resto` (con su «Confirmar») y la mirada de abajo la rechaza.
+    const i = oc.indexOf(r.subcadena)
+    if (i < 0) continue
+    if (i > 0 && /[A-Za-z0-9_$.]/.test(oc[i - 1])) continue
+    if (!/^\s*\(/.test(oc.slice(i + r.subcadena.length))) continue
+    const resto = `${oc.slice(0, i)} ${oc.slice(i + r.subcadena.length)}`
+    const cat = clasificarAccionPortal([resto])
+    if (cat.emision || cat.prohibida || pareceEmision(resto)) continue
+    return resto
+  }
+  return null
 }
 
 /**
@@ -1391,8 +1511,12 @@ export function motivoNoAvanceSinTexto(entrada: string, el: ElementoInventario, 
   let motivo = 'sin_regla'
   for (const a of reglas) {
     if (tieneAlgo(el.texto) || tieneAlgo(el.ariaLabel) || tieneAlgo(el.etiqueta)) { motivo = 'con_nombre_visible'; continue }
-    if (tieneAlgo(el.onclick) || tieneAlgo(el.onclickCompleto)) { motivo = 'con_onclick'; continue }
     if (typeof el.name !== 'string' || !el.name.startsWith(a.prefijoName) || !el.name.includes(a.contieneName)) { motivo = 'name_distinto'; continue }
+    // 0.3.19: un onclick solo con la forma cerrada de la regla (`onclickForma`); sin ella, ninguno (0.3.18).
+    if (tieneAlgo(el.onclick) || tieneAlgo(el.onclickCompleto)) {
+      if (a.onclickForma === undefined) { motivo = 'con_onclick'; continue }
+      if (tieneAlgo(el.onclickCompleto) || !onclickCasaFormaSinTexto(a, el.onclick, el.name, { nameExacto: false })) { motivo = 'onclick_fuera_de_forma'; continue }
+    }
     if (!casaControlSinTexto(el, a)) { motivo = 'clase_distinta'; continue }
     if ([el.name, el.id].some((v) => typeof v === 'string' && RE_NAME_ACCION_FINAL_SIN_TEXTO.test(v.toLowerCase()))) { motivo = 'name_de_accion_final'; continue }
     const origen = /^(https?:\/\/[^/?#]+)/i.exec(String(marco.url ?? ''))?.[1]?.toLowerCase() ?? null
@@ -1509,10 +1633,13 @@ export function rutasAppTolerablesDe(entrada: string): readonly RutaTolerable[] 
  * `descripcionesElemento` con la RUTA del href neutralizada si la entrada declara esa ruta de aplicación (solo `hrefRuta`, y solo si
  * la ventana del marco es del origen de la regla: la ruta es relativa a ella).
  */
-function descripcionesEnEntrada(entrada: string, el: ElementoInventario, marco: MarcoInventario): string[] {
+function descripcionesEnEntrada(entrada: string, el0: ElementoInventario, marco: MarcoInventario): string[] {
+  const origen = /^([a-z][a-z0-9+.-]*:\/\/[^/?#]+)/i.exec(marco.url)?.[1]?.toLowerCase() ?? null
+  // 0.3.19: la subcadena exacta del onclick de UN control exacto de la entrada (`neutralizacionesOnclick`); el resto se mira igual.
+  const neutro = onclickNeutralizado(neutralizacionesOnclickDe(entrada), { tag: el0.tag, id: el0.id, name: el0.name, texto: el0.texto, onclick: el0.onclick, origen, ruta: rutaDeMarco(marco.url) })
+  const el = neutro === null ? el0 : { ...el0, onclick: neutro }
   const reglas = rutasAppTolerablesDe(entrada)
   if (reglas.length === 0 || typeof el.hrefRuta !== 'string') return descripcionesElemento(el)
-  const origen = /^([a-z][a-z0-9+.-]*:\/\/[^/?#]+)/i.exec(marco.url)?.[1]?.toLowerCase() ?? null
   return descripcionesElemento({ ...el, hrefRuta: neutralizarRutaTolerable(el.hrefRuta, reglas, origen) ?? undefined })
 }
 

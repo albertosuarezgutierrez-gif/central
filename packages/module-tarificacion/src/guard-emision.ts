@@ -213,9 +213,15 @@ export function cuerpoLlevaAccionFinal(cuerpo: string | null | undefined, opcion
   // «pagador» no casan). Fail-closed: una dirección que EMPIECE por «Emitir…» abortaría el avance, no emitiría.
   for (const [k, v] of paresDelCuerpo(cuerpo)) {
     if (CLAVE_DATO_FINANCIERO.test(k) || NOMBRE_ACCION_FINAL.test(k) || VALOR_ACCION_FINAL.test(v)) return true
+    // Revisión adversarial 0.3.19: en ASP.NET/OutSystems (`__doPostBack`, `OsAjax`) el control pulsado viaja como VALOR de `__EVENTTARGET`
+    // (`…$wtBtnContratar`), no al principio del valor ni en una clave de acción: se mira el valor ENTERO contra nombres de acción final.
+    if (/^__event(?:target|argument)$/i.test(k.trim()) && WIDGET_ACCION_FINAL.test(v)) return true
   }
   return false
 }
+
+/** Nombre de widget de acción final DENTRO de `__EVENTTARGET`/`__EVENTARGUMENT` (mismo criterio que `RE_NAME_ACCION_FINAL_SIN_TEXTO`, más grabar/anular/suplemento). */
+const WIDGET_ACCION_FINAL = /emit|emis|contrat(?!ante)|contract|confirm|firm|pagar|pago|payment|formaliz|grabar|suplement|anula|iban|tarjet/i
 
 /** Verbo de acción final en el NOMBRE de un parámetro (`btnEmitir`, `formEmision:aceptar`, `doContratar`). «contratante» no. */
 const NOMBRE_ACCION_FINAL = /emitir|emision|contrat(?!ante)|confirmar|firmar|pagar|formaliz|grabar|suplement|anular/i
