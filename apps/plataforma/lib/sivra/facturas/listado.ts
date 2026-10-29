@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import type { FilaLibro } from './csv'
 import type { Receptor } from './receptor'
+import { solicitudesListas, type SolicitudCruda, type SolicitudLista } from './listas'
 
 export type FilaListado = FilaLibro & { id: string; envioError: string | null; tienePdf: boolean }
 
@@ -67,4 +68,21 @@ export async function buscarReservas(cuentaId: string, q: string): Promise<Reser
     reservationId: r.rid, piso: r.piso, huesped: r.huesped, desde: r.ci ? r.ci.toISOString().slice(0, 10) : null, hasta: r.co ? r.co.toISOString().slice(0, 10) : null,
     total: typeof r.gross === 'number' && r.gross > 0 ? r.gross : null, solicitud: r.sol, factura: r.fac,
   }))
+}
+
+/** Solicitudes `pendiente` con datos válidos y SIN factura/borrador de su reserva (la validación es el helper puro). */
+export async function listarSolicitudesListas(cuentaId: string, piso: string | null): Promise<SolicitudLista[]> {
+  const filas = await prisma.$queryRaw<Array<{ id: string; rid: string; piso: string | null; estado: string; t: string | null; n: string | null; nif: string | null; p: string | null; e: string | null; d: unknown; cc: unknown; fac: boolean }>>(Prisma.sql`
+    SELECT s.id::text, s.reservation_id AS rid, p.name AS piso, s.estado, s.receptor_tipo AS t, s.receptor_nombre AS n, s.receptor_nif AS nif,
+           s.receptor_pais AS p, s.receptor_email AS e, s.receptor_direccion AS d, to_jsonb(s) -> 'receptor_cc' AS cc,
+           EXISTS (SELECT 1 FROM sivra_facturas_huesped f WHERE f.reservation_id = s.reservation_id AND f.tipo = 'ordinaria' AND f.estado <> 'rectificada') AS fac
+      FROM sivra_factura_solicitudes s LEFT JOIN properties p ON p.id = s.property_id
+     WHERE s.cuenta_id = ${cuentaId}::uuid AND s.estado = 'pendiente' AND s.receptor_nombre IS NOT NULL AND s.receptor_email IS NOT NULL
+       ${piso ? Prisma.sql`AND s.property_id = ${piso}` : Prisma.empty}
+     ORDER BY s.updated_at DESC LIMIT 200`)
+  const crudas: SolicitudCruda[] = filas.map((f) => ({
+    id: f.id, reservationId: f.rid, piso: f.piso, estado: f.estado, receptorTipo: f.t, receptorNombre: f.n, receptorNif: f.nif, receptorPais: f.p,
+    receptorEmail: f.e, receptorDireccion: f.d, receptorCc: Array.isArray(f.cc) ? f.cc.filter((x): x is string => typeof x === 'string') : null, tieneFactura: f.fac,
+  }))
+  return solicitudesListas(crudas)
 }

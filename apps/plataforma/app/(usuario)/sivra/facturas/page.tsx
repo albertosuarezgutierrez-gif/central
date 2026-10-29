@@ -15,8 +15,9 @@ type Fila = {
   receptorNombre: string; receptorNif: string; base: number | null; tipoIva: number | null; cuota: number | null; total: number
   envioError: string | null; tienePdf: boolean
 }
+type Lista = { id: string; reservationId: string; piso: string; receptorNombre: string; receptorNif: string; email: string; cc: string[] }
 type Respuesta = {
-  emitidas: Fila[]; borradores: Fila[]; totales: { base: number; cuota: number; total: number; n: number }
+  emitidas: Fila[]; borradores: Fila[]; solicitudesListas: Lista[]; totales: { base: number; cuota: number; total: number; n: number }
   pisos: Array<{ id: string; nombre: string }>
   serie: { ok: true; prefijo: string; anio: number; siguiente: number; tipoIva: number } | { ok: false; motivo: string }
 }
@@ -90,7 +91,18 @@ export default function FacturasHuespedesPage() {
     void cargar()
   }
 
+  async function preparar(solicitudId: string) {
+    setAviso(null)
+    const r = await fetch('/api/sivra/facturas/solicitud/preparar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ solicitudId }) })
+    const j = await r.json().catch(() => ({}))
+    setAviso(r.ok
+      ? (j.propuesta === 'enviada' ? 'Borrador preparado y enviado a Telegram.' : j.propuesta === 'silenciada' ? 'Borrador preparado; el aviso «Factura de huésped para aprobar» está silenciado en /telegram.' : 'Borrador preparado, pero el aviso a Telegram ha fallado: usa «Reenviar a Telegram».')
+      : j.error || 'No se ha podido preparar el borrador.')
+    void cargar()
+  }
+
   const emitidas = datos?.emitidas ?? []
+  const listas = datos?.solicitudesListas ?? []
   return (
     <Pagina ancho="tabla">
       <PageHeader titulo="Facturas a huéspedes" icono={<FileText size={20} />}
@@ -183,6 +195,24 @@ export default function FacturasHuespedesPage() {
           </button>
         )}
       </section>
+
+      {listas.length > 0 && (
+        <section style={{ ...cardStyle, marginBottom: 16 }}>
+          <h2 style={{ fontSize: 16, margin: '0 0 12px' }}>Solicitudes listas sin borrador</h2>
+          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+            {listas.slice(0, PASO).map((s) => (
+              <div key={s.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                <div style={{ minWidth: 0, flex: '1 1 220px', overflowWrap: 'anywhere' }}>
+                  <strong>{s.receptorNombre}</strong> · {s.receptorNif} · {s.piso} · reserva {s.reservationId}
+                  <div style={{ fontSize: 13, color: 'var(--muted)' }}>{s.email}{s.cc.length > 0 && ` · CC: ${s.cc.join(', ')}`}</div>
+                </div>
+                <button type="button" onClick={() => preparar(s.id)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Preparar borrador → Telegram</button>
+              </div>
+            ))}
+          </div>
+          {listas.length > PASO && <p style={{ color: 'var(--muted)', fontSize: 13 }}>Se muestran las primeras {PASO} de {listas.length}.</p>}
+        </section>
+      )}
 
       <section style={{ ...cardStyle, marginBottom: 16 }}>
         <h2 style={{ fontSize: 16, margin: '0 0 12px' }}>Borradores pendientes de aprobar</h2>

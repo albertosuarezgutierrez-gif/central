@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirSesionFacturas } from '@/lib/sivra/facturas/acceso'
-import { listarBorradores, listarEmitidas, pisosDeCuenta } from '@/lib/sivra/facturas/listado'
+import { listarBorradores, listarEmitidas, listarSolicitudesListas, pisosDeCuenta } from '@/lib/sivra/facturas/listado'
 import { periodoDeQuery, rangoPeriodo } from '@/lib/sivra/facturas/periodos'
 import { libroCsv, totalesLibro } from '@/lib/sivra/facturas/csv'
 import { fechaMadrid, evaluarSerie } from '@/lib/sivra/facturas/numeracion'
@@ -25,10 +25,10 @@ export async function GET(req: NextRequest) {
     })
   }
   const { anio } = fechaMadrid(new Date())
-  const [borradores, pisos, serie] = await Promise.all([listarBorradores(g.cuentaId, piso), pisosDeCuenta(g.cuentaId), serieDelAnio(g.cuentaId, anio)])
+  const [borradores, solicitudesListas, pisos, serie] = await Promise.all([listarBorradores(g.cuentaId, piso), listarSolicitudesListas(g.cuentaId, piso), pisosDeCuenta(g.cuentaId), serieDelAnio(g.cuentaId, anio)])
   const est = evaluarSerie(serie, anio)
   return NextResponse.json({
-    rango, emitidas, borradores,
+    rango, emitidas, borradores, solicitudesListas,
     totales: totalesLibro(emitidas), pisos,
     serie: est.ok ? { ok: true, prefijo: est.serie.prefijo, anio, siguiente: est.serie.siguienteNumero, tipoIva: est.serie.tipoIva } : { ok: false, motivo: est.motivo },
   }, { headers: { 'cache-control': 'no-store' } })
