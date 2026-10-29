@@ -68,7 +68,7 @@ async function captura(page: Page): Promise<{ marco: MarcoInventario; el: Elemen
 
 const posts = () => peticiones.filter((p) => p.metodo === 'POST')
 
-test('versión del explorador 0.3.18', () => assert.equal(EXPLORADOR_VERSION, '0.3.18'))
+test('versión del explorador 0.3.19', () => assert.equal(EXPLORADOR_VERSION, '0.3.19'))
 
 test('0.3.18 · el inventario del worker guarda el input submit sin rótulo con name y clase (lo que la regla necesita)', async () => {
   const { context, page } = await abrir(PAGINA(''))
@@ -113,7 +113,7 @@ test('0.3.18 · vigilancia VIVA: rótulo, manejador, clase, segundo control igua
   await prueba('value sobrevenido', (p) => p.evaluate(() => { (document.getElementById('OPI_Theme_wt25_block_wtMainContent_FID_B1') as HTMLInputElement).value = 'Simular' }), /con_rotulo/)
   await prueba('title sobrevenido', (p) => p.evaluate(() => { document.getElementById('OPI_Theme_wt25_block_wtMainContent_FID_B1')!.setAttribute('title', 'Siguiente') }), /con_rotulo/)
   await prueba('aria-label sobrevenido', (p) => p.evaluate(() => { document.getElementById('OPI_Theme_wt25_block_wtMainContent_FID_B1')!.setAttribute('aria-label', 'Siguiente') }), /con_rotulo/)
-  await prueba('onclick sobrevenido (submit)', (p) => p.evaluate(() => { document.getElementById('OPI_Theme_wt25_block_wtMainContent_FID_B1')!.setAttribute('onclick', 'document.forms[0].submit()') }), /con_manejador/)
+  await prueba('onclick sobrevenido (submit)', (p) => p.evaluate(() => { document.getElementById('OPI_Theme_wt25_block_wtMainContent_FID_B1')!.setAttribute('onclick', 'document.forms[0].submit()') }), /onclick_fuera_de_forma/)
   await prueba('formaction sobrevenido', (p) => p.evaluate(() => { document.getElementById('OPI_Theme_wt25_block_wtMainContent_FID_B1')!.setAttribute('formaction', '/otro') }), /con_manejador/)
   await prueba('sin Is_Default', (p) => p.evaluate(() => { document.getElementById('OPI_Theme_wt25_block_wtMainContent_FID_B1')!.className = 'Button First' }), /clase_distinta/)
   await prueba('name distinto', (p) => p.evaluate(() => { document.getElementById('OPI_Theme_wt25_block_wtMainContent_FID_B1')!.setAttribute('name', 'ctl00$Boton') }), /name_distinto/)

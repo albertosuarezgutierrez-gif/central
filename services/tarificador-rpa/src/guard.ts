@@ -54,6 +54,9 @@ import {
   avanceSinTextoAutorizado,
   RE_NAME_ACCION_FINAL_SIN_TEXTO,
   type AvanceSinTexto,
+  onclickCasaFormaSinTexto,
+  onclickNeutralizado,
+  type NeutralizacionOnclick,
   rutaCasaAvancePorId,
   onclickNormalizado,
   rutaDeMarco,
@@ -140,6 +143,11 @@ export type AjaxValidacionAvance = Readonly<{
   /** Únicas claves del cuerpo (urlencoded), cada una una vez, y la forma de su valor. */
   cuerpo: readonly string[]
   valorCuerpo: RegExp
+  /**
+   * 0.3.19: ningún valor del cuerpo (ni la query entera) puede nombrar una acción final ni un dato bancario
+   * (`RE_ACCION_REAL_TRAS_PREFIJO`) y el cuerpo tiene que pasar `cuerpoLlevaAccionFinal`. Sin la clave = solo la forma (`valorCuerpo`).
+   */
+  estricto?: true
 }>
 
 /**
@@ -178,6 +186,18 @@ export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.free
  * LISTA BLANCA de recursos AJAX de SOLO LECTURA (consulta/ayuda/validación) admitidos durante un avance de pestaña. Cada
  * entrada fija endpoint, `resource`, query y cuerpo. Todo lo demás (Emitir/Grabar/Contratar/Guardar/Pago/Firma…) sigue abortado.
  */
+/**
+ * 0.3.19 (regresión real 29/10/2026, Allianz patinete, «Figuras Intervinientes»): la MISMA ayuda contextual, en la aplicación `drvp00`
+ * (`/drvp00/AJAXServlet`). Se dispara en el `ready` de la pantalla de destino del avance de paso por id: si carga antes de que el robot vea
+ * desaparecer el «Aceptar» (sondeo de 250 ms), cae DENTRO de la ventana y la capa (b) la abortaba. Solo para los avances por id de drvp00,
+ * con el cuerpo ESTRICTO (sin acción final ni dato bancario en ningún valor).
+ */
+export const AJAX_AYUDA_APLICACIONES_ALLIANZ_DRVP00: AjaxValidacionAvance = Object.freeze({
+  ...AJAX_AYUDA_APLICACIONES_ALLIANZ,
+  endpoint: 'https://www.e-pacallianz.com/drvp00/AJAXServlet',
+  estricto: true as const,
+})
+
 export const AJAX_LECTURA_ALLIANZ: readonly AjaxValidacionAvance[] = Object.freeze([AJAX_AYUDA_APLICACIONES_ALLIANZ])
 
 /** Claves que la regla declara (se pueden nombrar en un mensaje); cualquier otra podría ser un dato (NIF, nombre) y NUNCA se imprime. */
@@ -228,6 +248,11 @@ function motivoRechazoRegla(r: AjaxValidacionAvance, u: URL, cuerpo: string | nu
   if (falta.length) return `falta clave de cuerpo: ${listaClaves(falta, decl)}`
   for (const k of r.cuerpo) {
     if (!r.valorCuerpo.test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${k}» (${formaValor(cp.get(k) ?? '')})`
+  }
+  if (r.estricto === true) {
+    for (const k of r.cuerpo) if (RE_ACCION_REAL_TRAS_PREFIJO.test(cp.get(k) ?? '')) return `valor de cuerpo con acción final o dato bancario en «${k}»`
+    if ([...u.searchParams.entries()].some(([k, v]) => k !== 'resource' && RE_ACCION_REAL_TRAS_PREFIJO.test(`${k}=${v}`))) return 'query con acción final o dato bancario'
+    if (cuerpoLlevaAccionFinal(texto)) return 'cuerpo con acción final (inspección estricta)'
   }
   return null
 }
@@ -541,6 +566,33 @@ const conRutasTolerables = (guard: GuardEmision, desc: readonly (string | null)[
 /** Solo para tests: la descripción que ve el guard de un control. */
 export const descripcionParaTest = (boton: Locator) => descripcion(boton)
 
+const NEUTRALIZACIONES_ONCLICK = new WeakMap<GuardEmision, readonly NeutralizacionOnclick[]>()
+/**
+ * 0.3.19: reglas de NEUTRALIZACIÓN de onclick de la entrada del trabajo (`neutralizacionesOnclickDe`, Mapfre NSE «Siguiente >>»). Solo
+ * origen https sin ruta, prefijo de ruta absoluto acabado en «/» y subcadena con forma de identificador. Desde ese momento, en `pulsar()`,
+ * si el control VIVO es EXACTAMENTE el de una regla (origen, ruta, tag, id, name, texto), su onclick se mira sin esa subcadena
+ * (`onclickNeutralizado`, la MISMA función que el validador); el resto de la descripción y la red se miran igual.
+ */
+export function neutralizarOnclicksEntrada(guard: GuardEmision, reglas: readonly NeutralizacionOnclick[]): void {
+  for (const r of reglas) {
+    if (!/^https:\/\/[a-z0-9.-]+$/.test(r.origen) || !/^\/[\w./-]+\/$/.test(r.prefijoRuta) || r.prefijoRuta.includes('..') || !/^[A-Za-z_$][\w$]{5,100}$/.test(r.subcadena)) {
+      throw new EmisionBloqueadaError('fase', 'neutralización de onclick no válida')
+    }
+  }
+  NEUTRALIZACIONES_ONCLICK.set(guard, Object.freeze(reglas.map((r) => Object.freeze({ ...r }))))
+}
+/** `desc` con el onclick PROPIO del control (índice 7) neutralizado si el control vivo es el de una regla; si no, tal cual. Solo lee. */
+async function conOnclickNeutralizado(guard: GuardEmision, boton: Locator, desc: readonly (string | null)[]): Promise<(string | null)[]> {
+  const reglas = NEUTRALIZACIONES_ONCLICK.get(guard) ?? []
+  if (reglas.length === 0 || typeof desc[7] !== 'string') return [...desc]
+  const vivo = await boton
+    .evaluate((el) => ({ tag: el.tagName.toLowerCase(), id: el.getAttribute('id'), name: el.getAttribute('name'), origen: el.ownerDocument.location.origin, ruta: el.ownerDocument.location.pathname }))
+    .catch(() => null)
+  if (!vivo) return [...desc]
+  const neutro = onclickNeutralizado(reglas, { ...vivo, texto: desc[0], onclick: desc[7] })
+  return neutro === null ? [...desc] : desc.map((d, i) => (i === 7 ? neutro : d))
+}
+
 /** Tope de la ventana de red del LOGIN ASISTIDO: un envío del formulario del SSO y su carga. */
 export const VENTANA_RED_LOGIN_MS = 30_000
 type VentanaLogin = { abrir(origen: string): void; cerrar(): void; abierta(): boolean; rechazo(): string | null }
@@ -715,7 +767,8 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   await exigirSinCuentaBancaria(boton.page())
   // La MISMA descripción que el resto de puertas: control + ng-click + manejadores de sus ancestros cercanos.
   const desc = await descripcion(boton)
-  comprobarBoton(conRutasTolerables(guard, desc))
+  // 0.3.19: la subcadena exacta del onclick de UN control exacto de la entrada (Mapfre NSE), antes de mirar nada (ver `neutralizarOnclicksEntrada`).
+  comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, boton, desc)))
   // Generali (26/10/2026): un «Confirmar» de www.generali.es NUNCA por la vía genérica; solo por sus puertas acotadas
   // (`pulsarConfirmarVehiculoGenerali`, `pulsarConfirmarDatosPersonasGenerali`).
   if (confirmarDeGenerali(desc, await boton.evaluate(() => location.href).catch(() => ''))) throw new EmisionBloqueadaError('boton', 'Confirmar (Generali: solo por su puerta del guard)')
@@ -2910,10 +2963,12 @@ async function causaNoEsAvanceSinTextoVivo(boton: Locator, a: AvanceSinTexto): P
         const d = el.ownerDocument
         const submit = el.tagName === 'INPUT' && (el.getAttribute('type') ?? '').toLowerCase() === 'submit'
         const rotulos = [(el as HTMLInputElement).value, (el.getAttribute('aria-label') ?? ''), (el.getAttribute('title') ?? ''), (el.getAttribute('alt') ?? ''), (el as HTMLElement).innerText, el.textContent]
-        const manejadores = [(el.getAttribute('onclick') ?? ''), (el.getAttribute('formaction') ?? ''), (el.getAttribute('ng-click') ?? ''), (el.getAttribute('data-ng-click') ?? ''), (el.getAttribute('onmousedown') ?? ''), (el.getAttribute('onmouseup') ?? ''),
+        // 0.3.19: el onclick va APARTE (solo vale el de la forma cerrada de la regla, comprobado fuera con `onclickCasaFormaSinTexto`).
+        const manejadores = [(el.getAttribute('formaction') ?? ''), (el.getAttribute('ng-click') ?? ''), (el.getAttribute('data-ng-click') ?? ''), (el.getAttribute('onmousedown') ?? ''), (el.getAttribute('onmouseup') ?? ''),
+          (el.getAttribute('onpointerdown') ?? ''), (el.getAttribute('onpointerup') ?? ''),
           // Revisión adversarial: `form`/`formmethod`/`formtarget`/`formenctype` desvían el envío a OTRO formulario o lo cambian (el destino
-          // abierto en la red es el del `closest('form')`): fuera.
-          (el.getAttribute('form') ?? ''), (el.getAttribute('formmethod') ?? ''), (el.getAttribute('formtarget') ?? ''), (el.getAttribute('formenctype') ?? '')]
+          // abierto en la red es el del `closest('form')`): fuera. 0.3.19: también `formnovalidate` (presencia, aunque vacío).
+          (el.getAttribute('form') ?? ''), (el.getAttribute('formmethod') ?? ''), (el.getAttribute('formtarget') ?? ''), (el.getAttribute('formenctype') ?? ''), el.hasAttribute('formnovalidate') ? 'x' : '']
         const name = (el.getAttribute('name') ?? '')
         const id = el.id ?? ''
         const clases = (el.getAttribute('class') ?? '').split(/\s+/)
@@ -2924,6 +2979,7 @@ async function causaNoEsAvanceSinTextoVivo(boton: Locator, a: AvanceSinTexto): P
           submit,
           conRotulo: rotulos.some((x) => (x ?? '').trim() !== ''),
           conManejador: manejadores.some((x) => x.trim() !== ''),
+          onclick: el.getAttribute('onclick') ?? '',
           name,
           id,
           clase: cfg.clase.every((t) => clases.includes(t)),
@@ -2940,6 +2996,8 @@ async function causaNoEsAvanceSinTextoVivo(boton: Locator, a: AvanceSinTexto): P
   if (r.conRotulo) return 'con_rotulo'
   if (r.conManejador) return 'con_manejador'
   if (!/^[A-Za-z0-9_$.:-]{1,300}$/.test(r.name) || !r.name.startsWith(a.prefijoName) || !r.name.includes(a.contieneName)) return 'name_distinto'
+  // 0.3.19: un onclick VIVO solo con la forma cerrada de la regla y con B === el name VIVO ENTERO; sin `onclickForma`, ninguno (0.3.18).
+  if (r.onclick.trim() !== '' && (a.onclickForma === undefined || !onclickCasaFormaSinTexto(a, r.onclick, r.name, { nameExacto: true }))) return a.onclickForma === undefined ? 'con_manejador' : 'onclick_fuera_de_forma'
   if (!r.clase) return 'clase_distinta'
   // OutSystems pone el nombre del widget al final del name/id (`…$wtBtnContratar`): la MISMA expresión que el módulo, sobre lo VIVO.
   if ([r.name, r.id].some((v) => typeof v === 'string' && RE_NAME_ACCION_FINAL_SIN_TEXTO.test(v.toLowerCase()))) return 'name_de_accion_final'
@@ -3110,7 +3168,12 @@ export async function pulsarExploracionAutorizada(
       endpoint = null
     }
   }
+  // 0.3.19: el avance sin texto con onclick (OsAjax de OutSystems hace un POST al propio formulario): su ÚNICO destino (el del formulario, mismo
+  // origen y ruta) pasa además la inspección ESTRICTA del cuerpo (`cuerpoLlevaAccionFinal`: acción final, IBAN/cuenta/tarjeta) como extra.
+  if (sinTexto && sinTexto.onclickForma !== undefined && endpoint) extras = [endpoint]
   if (!endpoint) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
+  // 0.3.19: la ayuda contextual de drvp00 (solo lectura) que la pantalla de destino pide al cargar; SOLO en los avances por id de drvp00.
+  const ajaxAvance: readonly AjaxValidacionAvance[] = porId && porId.rutaMarco.startsWith('/drvp00/') ? [AJAX_AYUDA_APLICACIONES_ALLIANZ_DRVP00] : []
   const abrir = ABRIR_AVANCE.get(guard)
   if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de avance')
   usados.add(prefijoId ? `${prefijoId}${usadosPorId + 1}` : 'exploracion')
@@ -3122,7 +3185,7 @@ export async function pulsarExploracionAutorizada(
     d.dismiss().catch(() => {})
   }
   page.on('dialog', alDialogo)
-  abrir(hasta, [endpoint, ...extras])
+  abrir(hasta, [endpoint, ...extras], ajaxAvance)
   try {
     await boton.click()
     // La pantalla cambió cuando el control ya no está (navegación, recarga del marco o re-pintado).
