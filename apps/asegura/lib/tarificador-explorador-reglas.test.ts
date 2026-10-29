@@ -638,3 +638,8 @@ test('0.3.17 · la IA NO ve `onclickCompleto` (hasta 8000) ni `clase`; sigue vie
   assert.equal(inv.marcos[0].elementos[0].onclickCompleto, largo)
   assert.equal(inv.marcos[0].elementos[0].clase, 'rich-link')
 })
+
+test('0.3.20 · prompt: un <select> «selectpicker» (marca/modelo) se elige con elegir; una clave sin valor no se repite (bucle)', () => {
+  assert.match(SYSTEM_EXPLORADOR, /<select> con "selectpicker"[\s\S]*se elige IGUAL, con elegir/)
+  assert.match(SYSTEM_EXPLORADOR, /clave SIN valor[\s\S]*no se rellena nunca[\s\S]*No la repitas/)
+})
