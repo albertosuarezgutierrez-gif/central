@@ -12,6 +12,7 @@ import {
   sanearInventarioDom,
   validarRespuestaExplorador,
   MAX_ONCLICK_CASILLA,
+  MAX_ONCLICK_EVALUACION,
   ONCLICK_REDACTADO,
   bloqueoAvance,
   textoRechazo,
@@ -83,8 +84,8 @@ describe('0.3.16 · radio/casilla con onclick largo: se evalúa el texto COMPLET
     }
   })
 
-  it('onclick de más de 2000 car. (recortado) → no se marca (onclick_truncado)', () => {
-    const i = inv([radio(jsfFila('w'.repeat(MAX_ONCLICK_CASILLA)))])
+  it('onclick de más de 8000 car. (recortado) → no se marca (onclick_truncado)', () => {
+    const i = inv([radio(jsfFila('w'.repeat(MAX_ONCLICK_EVALUACION)))])
     const r = resp(i, MF, 'patinete', [{ accion: 'marcar', ref: i.marcos[0].elementos[0].ref }])
     expect(r.ok).toBe(false)
     expect(JSON.stringify(r)).toMatch(/onclick_truncado/)
@@ -208,11 +209,11 @@ describe('0.3.16 · avance con onclick largo (Mapfre NSE «Siguiente >>», A4J.A
   it('la acción final MÁS ALLÁ de los 200 car. se ve → boton_de_emision', () => {
     for (const fin of [",'emitir':'1'", ",'oncomplete':'contratarPoliza()'", ",'accion':'confirmar'"]) expect(bloqueo(a4j('x'.repeat(300), fin)), fin).toBe('boton_de_emision')
   })
-  it('más de 2000 car. → onclick_truncado (no se pulsa)', () => {
-    expect(bloqueo(a4j('x'.repeat(2100)))).toBe('onclick_truncado')
+  it('más de 8000 car. → onclick_truncado (no se pulsa)', () => {
+    expect(bloqueo(a4j('x'.repeat(8100)))).toBe('onclick_truncado')
   })
   it('el rechazo del validador guarda acción, ref y causa (sin valores)', () => {
-    const i = inv([siguiente(a4j('x'.repeat(2100)))])
+    const i = inv([siguiente(a4j('x'.repeat(8100)))])
     const ref = i.marcos[0].elementos[0].ref!
     const r = resp(i, MF, 'patinete', [{ accion: 'avanzar', ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
     expect(r.ok).toBe(false)

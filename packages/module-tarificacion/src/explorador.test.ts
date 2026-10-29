@@ -625,8 +625,8 @@ describe('validarRespuestaExplorador', () => {
     })
 
     it('onclick recortado = bloqueante aunque el texto sea inocente', () => {
-      // 0.3.16: el onclick se conserva hasta 2000 car.; más largo = recortado.
-      const i = inventario({ elementos: [{ tag: 'button', id: 'b1', texto: 'Siguiente', onclick: `irA('${'x'.repeat(2100)}')` }] })
+      // 0.3.17: el onclick se evalúa entero hasta 8000 car.; más largo = recortado.
+      const i = inventario({ elementos: [{ tag: 'button', id: 'b1', texto: 'Siguiente', onclick: `irA('${'x'.repeat(8100)}')` }] })
       const r = avanzar(i, 'b1')
       expect(r.ok).toBe(false)
       if (!r.ok) expect(r.errores.join()).toMatch(/onclick_truncado/)

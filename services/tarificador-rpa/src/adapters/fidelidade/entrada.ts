@@ -18,6 +18,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { exigirSinVerificacion } from '../../verificacion.ts'
 import { exigirSinRechazoCredenciales, textoVisiblePagina } from '../../credenciales.ts'
+import { pareceDatoPersonalInventario } from '@central/module-tarificacion'
 
 /** URL pública de entrada (dada por Alberto, 28/10/2026; no es secreta). */
 export const URL_INTRANET_FIDELIDADE = 'https://mediadores.fidelidade.es/OPI_ES_Mediadores/'
@@ -50,12 +51,19 @@ export function etiquetaExactaFidelidade(texto: string): RegExp {
   return new RegExp(`^\\s*${partes.join('\\s+')}\\s*$`, 'i')
 }
 
-/** ¿El texto de una tarjeta es la de Vivienda y no la de EMPRESAS? Pura (la usa el localizador y el test). */
+/**
+ * ¿El texto de una tarjeta es la de Vivienda y no la de EMPRESAS? Pura (la usa el test; el localizador aplica la MISMA regla en la página).
+ * 0.3.17: vale con «4216» O con «vivienda» (sin tildes ni mayúsculas) y nunca con 4215/«Gama Comercio»/«EMPRESAS". Si el texto trae códigos
+ * «Producto NNNN», TODOS tienen que ser 4216 (una tarjeta «Producto 4217 · … Vivienda» no es esta).
+ */
 export function esTarjetaViviendaFidelidade(texto: string): boolean {
-  return texto.includes(PRODUCTO_VIVIENDA_FIDELIDADE) && !RE_TARJETA_AJENA_FIDELIDADE.test(texto) && /vivienda/i.test(texto)
+  const n = sinTildes(texto)
+  if (RE_TARJETA_AJENA_FIDELIDADE.test(n)) return false
+  const codigos = [...n.matchAll(/producto\s*(\d{3,5})/g)].map((m) => m[1])
+  if (codigos.length > 0) return codigos.every((c) => c === PRODUCTO_VIVIENDA_FIDELIDADE)
+  return n.includes(PRODUCTO_VIVIENDA_FIDELIDADE) || /vivienda/.test(n)
 }
 
-const SEL_CLICABLE = 'a, button, [role="menuitem"], [role="button"], [role="link"], [onclick], input[type="button"], input[type="submit"]'
 const raices = (page: Page): (Page | Frame)[] => [page, ...page.frames().filter((f) => f !== page.mainFrame())]
 
 /** Controles clicables cuyo texto/nombre accesible es EXACTAMENTE `texto`, en la página y sus marcos (solo los visibles). */
@@ -361,32 +369,130 @@ async function esperarTextoPagina(page: Page, re: RegExp, ms: number): Promise<b
   }
 }
 
-/** La tarjeta de Vivienda (Producto 4216) y, dentro, su botón «Simulación» ÚNICO. La de EMPRESAS (4215) no puede ser candidata. */
+/**
+ * 0.3.17 (real 29/10/2026: «no se localiza la tarjeta … con su botón «Simulación»»): se busca EN LA PÁGINA, en cada marco, con TEXTO (no
+ * función: tsx envuelve las funciones con nombre en `__name`). Pasos: (1) HOJAS cuya etiqueta (texto propio, `value`, aria-label, title o
+ * alt) normalizada es EXACTAMENTE «simulacion» (ningún contenedor que solo las envuelve); (2) de cada hoja se sube hasta el ancestro MÁS
+ * ALTO cuyo texto NO menciona 4215/«Gama Comercio»/«EMPRESAS» (la tarjeta, sin arrastrar a las vecinas); (3) esa tarjeta es la de Vivienda
+ * si (sus códigos «Producto NNNN» son todos 4216) o, sin códigos, contiene «4216» o «vivienda» ({@link esTarjetaViviendaFidelidade});
+ * (4) se prefieren las que contienen «4216» y, entre las equivalentes, la primera visible. Marca el control clicable (o la hoja) con un atributo y devuelve QUÉ
+ * hay (sin PII): nº de tarjetas candidatas, textos normalizados de botones/enlaces visibles (≤30 de ≤40 car.; no los de cabecera/usuario; en el error solo los de navegación)
+ * y si aparece «4216»/«vivienda» en el marco.
+ */
+const ATRIBUTO_SIMULACION = 'data-rpa-simulacion-fidelidade';
+const SCRIPT_SIMULACION = `(() => {
+  const ATR = ${JSON.stringify(ATRIBUTO_SIMULACION)};
+  const norm = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim().toLowerCase();
+  const visible = (el) => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return !(r.width === 0 && r.height === 0); };
+  const etiquetas = (el) => [el.tagName === 'INPUT' ? el.value : el.textContent, el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('alt')].map(norm).filter(Boolean);
+  const AJENA = /4215|gama\\s+comercio|empresas/;
+  const tarjetaVivienda = (n) => {
+    if (AJENA.test(n)) return false;
+    const cods = Array.from(n.matchAll(/producto\\s*(\\d{3,5})/g)).map((m) => m[1]);
+    if (cods.length > 0) return cods.every((c) => c === '4216');
+    return n.includes('4216') || /vivienda/.test(n);
+  };
+  const USUARIO = /usuario|user|perfil|mediador|sesion|bienvenid|login|cabecera|header/i;
+  for (const x of Array.from(document.querySelectorAll('[' + ATR + ']'))) x.removeAttribute(ATR);
+  const todos = Array.from(document.querySelectorAll('a,button,input,img,span,div,td,li,p,label,h1,h2,h3,h4,h5,h6,[role=button],[role=link],[onclick]'));
+  const exactos = todos.filter((el) => etiquetas(el).some((t) => t === 'simulacion'));
+  const hojas = exactos.filter((el) => !exactos.some((o) => o !== el && el.contains(o)));
+  const cuerpo = norm(document.body ? document.body.textContent : '');
+  const cand = [];
+  for (const h of hojas) {
+    let tarjeta = null;
+    for (let a = h.parentElement; a && a !== document.documentElement; a = a.parentElement) {
+      if (AJENA.test(norm(a.textContent))) break;
+      tarjeta = a;
+    }
+    if (!tarjeta) continue;
+    const t = norm(tarjeta.textContent);
+    if (tarjetaVivienda(t)) cand.push({ h: h, con4216: t.includes('4216') });
+  }
+  const con = cand.filter((c) => c.con4216);
+  const lista = (con.length > 0 ? con : cand).filter((c) => visible(c.h));
+  // Se pulsa el control clicable que ES la etiqueta (el a o button cuyo único texto es Simulación), y si no, la propia hoja.
+  if (lista.length > 0) { const c = lista[0].h.closest('a,button,[role=button],[role=link],[onclick],input'); (c && etiquetas(c).some((t) => t === 'simulacion') ? c : lista[0].h).setAttribute(ATR, '1'); }
+  const botones = [];
+  for (const el of Array.from(document.querySelectorAll('a,button,input[type=button],input[type=submit],input[type=image],[role=button],[role=link],[onclick]'))) {
+    if (botones.length >= 30) break;
+    if (!visible(el)) continue;
+    let usr = false;
+    for (let a = el; a && a !== document.body; a = a.parentElement) { if (USUARIO.test((a.id || '') + ' ' + String(a.getAttribute('class') || '')) || a.tagName === 'HEADER') { usr = true; break; } }
+    if (usr) continue;
+    const t = (etiquetas(el)[0] || '').slice(0, 40);
+    if (t && botones.indexOf(t) < 0) botones.push(t);
+  }
+  return { marcado: lista.length, tarjetas: cand.length, botones: botones, v4216: cuerpo.includes('4216'), vivienda: /vivienda/.test(cuerpo) };
+})()`
+
+type SondaSimulacion = { marcado: number; tarjetas: number; botones: string[]; v4216: boolean; vivienda: boolean }
+
+/**
+ * Revisión de seguridad 0.3.17: VOCABULARIO de navegación de la intranet. Un texto de botón/enlace solo sale en el error si TODAS
+ * sus palabras están aquí (o son números de ≤4 cifras, como «4216»). El filtro de forma (correo, NIF, teléfono…) no basta: el
+ * nombre del mediador, el de un cliente de «proyectos recientes» o un nº de póliza con letras no tienen forma de dato y se colarían.
+ * Lo demás solo se CUENTA. Ampliar = añadir palabras genéricas de menú, nunca nombres propios.
+ */
+const VOCABULARIO_NAVEGACION_FIDELIDADE = new Set(
+  ('simulacion simular simulador proyecto proyectos nuevo nueva nuevos oficina virtual vivienda hogar producto productos fidelidade ' +
+    'empresas empresa gama comercio comercios particulares autos auto vida salud decesos accidentes hogares inicio menu volver atras ' +
+    'siguiente anterior cancelar cerrar buscar busqueda consultar consulta consultas mis mi de del la el los las y o en a al ' +
+    'por para con sin ver mas detalle detalles cotizar cotizacion tarificar tarificador presupuesto presupuestos polizas poliza ' +
+    'salir ayuda documentacion documentos herramientas comunicaciones campanas siniestros recibos clientes cartera informes ' +
+    'formacion noticias contacto datos seleccionar continuar guardar editar abrir descargar imprimir ok si no ir acceder entrar area ' +
+    'privada mediadores gestion solicitudes pendientes alta todos todas filtrar limpiar opciones configuracion idioma es pt en')
+    .split(/\s+/),
+)
+const esTextoDeNavegacion = (t: string): boolean => {
+  const palabras = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9ñ]+/).filter(Boolean)
+  return palabras.length > 0 && palabras.every((p) => VOCABULARIO_NAVEGACION_FIDELIDADE.has(p) || /^\d{1,4}$/.test(p))
+}
+
+/**
+ * Resumen SIN PII de lo que hay en la página cuando no se encuentra la tarjeta (nº de marcos, textos de botones/enlaces, «4216»/«vivienda»).
+ * Solo salen textos de NAVEGACIÓN ({@link VOCABULARIO_NAVEGACION_FIDELIDADE}); el resto se cuenta («otros=N»). Pura.
+ */
+export function describirSondaSimulacion(marcos: number, sondas: readonly (Partial<SondaSimulacion> | null)[]): string {
+  const botones: string[] = []
+  let otros = 0
+  for (const s of sondas) {
+    for (const b of Array.isArray(s?.botones) ? s!.botones : []) {
+      const t = String(b).replace(/\s+/g, ' ').trim().slice(0, 40)
+      if (!t || botones.includes(t)) continue
+      // Nunca un texto fuera del vocabulario de navegación ni con forma de dato personal (correo, teléfono, NIF, cuentas…).
+      if (!esTextoDeNavegacion(t) || pareceDatoPersonalInventario(t) || /\d{5,}|@/.test(t)) otros++
+      else if (botones.length < 30) botones.push(t)
+    }
+  }
+  const si = (k: 'v4216' | 'vivienda') => (sondas.some((s) => s?.[k] === true) ? 'sí' : 'no')
+  const ilegibles = sondas.filter((s) => !s).length
+  return `marcos=${marcos}${ilegibles ? ` (${ilegibles} ilegibles)` : ''}; «4216» ${si('v4216')}; «vivienda» ${si('vivienda')}; tarjetas con «Simulación»=${sondas.reduce((n, s) => n + (s?.tarjetas ?? 0), 0)}; botones/enlaces visibles [${botones.map((b) => `«${b}»`).join(', ')}]; otros=${otros}`
+}
+
+/** La tarjeta de Vivienda (4216 / «vivienda», nunca EMPRESAS) y, dentro, su botón «Simulación». Busca en TODOS los marcos. Si no lo halla, el error dice qué hay. */
 async function botonSimulacionVivienda(page: Page, ms: number): Promise<Locator> {
   const fin = Date.now() + ms
-  const re = etiquetaExactaFidelidade(BOTON_SIMULACION_FIDELIDADE)
+  let sondas: (Partial<SondaSimulacion> | null)[] = []
+  let marcos = 1
   for (;;) {
-    const hallados: Locator[] = []
-    for (const r of raices(page)) {
-      const boton = r.getByRole('button', { name: re }).or(r.getByRole('link', { name: re })).or(r.locator('input[type="button"], input[type="submit"]').and(r.getByRole('button', { name: re })))
-      const tarjetas = r
-        .locator('div, li, article, section, td, tr, form')
-        .filter({ hasText: new RegExp(PRODUCTO_VIVIENDA_FIDELIDADE) })
-        .filter({ hasNotText: RE_TARJETA_AJENA_FIDELIDADE })
-        .filter({ has: boton })
-      const n = await contar(tarjetas)
-      if (n === 0) continue
-      // En orden de documento, los envoltorios de la MISMA tarjeta van antes que ella: la más profunda es la última.
-      const tarjeta = tarjetas.last()
-      const texto = await tarjeta.innerText().catch(() => '')
-      if (!esTarjetaViviendaFidelidade(texto)) continue
-      const b = tarjeta.locator(SEL_CLICABLE).filter({ has: r.getByText(re) }).or(tarjeta.getByRole('button', { name: re })).locator('visible=true')
-      const nb = await contar(b)
-      for (let i = 0; i < nb; i++) hallados.push(b.nth(i))
+    const rs = raices(page)
+    marcos = rs.length
+    sondas = []
+    const marcados: Locator[] = []
+    for (const r of rs) {
+      const sonda = await Promise.race([
+        (r.evaluate(SCRIPT_SIMULACION) as Promise<SondaSimulacion>).catch(() => null),
+        new Promise<null>((ok) => setTimeout(() => ok(null), 4_000)),
+      ])
+      sondas.push(sonda)
+      if (sonda && sonda.marcado > 0) marcados.push(r.locator(`[${ATRIBUTO_SIMULACION}="1"]`))
     }
-    const hojasExactas = await soloHojasExactas(hallados, BOTON_SIMULACION_FIDELIDADE)
-    if (hojasExactas.length >= 1) return hojasExactas.length === 1 ? hojasExactas[0] : elegirUno(hojasExactas)
-    if (Date.now() >= fin) throw new ErrorTarificador('portal', `fidelidade: no se localiza la tarjeta «Producto ${PRODUCTO_VIVIENDA_FIDELIDADE} · Fidelidade Vivienda» con su botón «${BOTON_SIMULACION_FIDELIDADE}» en ${Math.round(ms / 1000)} s (hueco)`)
+    // El primero en orden de documento (página, luego marcos): las tarjetas equivalentes dan igual; la de EMPRESAS no puede estar marcada.
+    for (const l of marcados) if ((await contar(l)) === 1) return l
+    if (Date.now() >= fin) {
+      throw new ErrorTarificador('portal', `fidelidade: no se localiza la tarjeta «Producto ${PRODUCTO_VIVIENDA_FIDELIDADE} · Fidelidade Vivienda» con su botón «${BOTON_SIMULACION_FIDELIDADE}» en ${Math.round(ms / 1000)} s (hueco) — ${describirSondaSimulacion(marcos, sondas)}`)
+    }
     await page.waitForTimeout(500)
   }
 }

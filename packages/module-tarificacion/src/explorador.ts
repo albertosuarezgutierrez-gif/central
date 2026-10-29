@@ -19,6 +19,7 @@ import { neutralizarRutaTolerable, pareceEmision, type RutaTolerable } from './g
 import { clasificarAccionPortal, descripcionesSinExcepcionProyecto, fronteraEmisionPorCampos, MOTIVO_FRONTERA_CUENTA, referenciaPresupuestoValida } from './acciones-portal.ts'
 import {
   MAX_TITULOS_MARCO,
+  conOnclickCompleto,
   pareceDatoPersonalInventario,
   valoresSensiblesDeRiesgo,
   type ElementoInventario,
@@ -53,6 +54,18 @@ export type AvancePorId = {
   texto: RegExp
   /** `pathname` EXACTO de la URL del marco que lo contiene. */
   rutaMarco: string
+  /**
+   * 0.3.17: rutas de marco admitidas ADEMÁS de `rutaMarco` (`pathname` exacto; solo con `sinIdentidad`: la pantalla de «Selección de
+   * Municipio» de ePAC cuelga de `control.do`, no del servlet). Sin la clave = solo `rutaMarco`.
+   */
+  rutasMarco?: readonly string[]
+  /**
+   * 0.3.17 (Allianz patinete real 29/10/2026): el «Aceptar» de «Datos del Vehículo · Selección de Municipio · Tomador y Conductor
+   * Principal» NO tiene id ni onclick. Se identifica por texto EXACTO «Aceptar», SIN id y SIN onclick, ÚNICO control con ese texto del
+   * marco, y todo lo demás de la regla (ruta de marco, origen, `destinosPost`, títulos, sin importes; el guard repite vivo la unicidad,
+   * los encabezados y los importes, y el cuerpo del POST con `cuerpoLlevaAccionFinal`). `id` y `onclick` de la regla se ignoran.
+   */
+  sinIdentidad?: true
   /**
    * 0.3.13: rutas (`pathname` exacto, mismo ORIGEN que el marco) a las que el avance puede enviar además un POST — el destino real del
    * `eventoSiguiente()` (p. ej. `/drvp00/main/control.do`). La capa de contenido del guard sigue mirando URL y cuerpo: un cuerpo con
@@ -145,6 +158,29 @@ const SIGUIENTE_EPAC_DRVP00: AvancePorId = Object.freeze({
   toleraTitulosRecortados: true as const,
 })
 
+/**
+ * 0.3.17 (real 29/10/2026, ePAC drvp00 `control.do`): «Aceptar» de «Datos del Vehículo · Selección de Municipio · Tomador y Conductor
+ * Principal», sin id ni onclick (el de la pantalla anterior era `#btnAceptar`). Mismos destinos POST y misma vigilancia de títulos que
+ * {@link SIGUIENTE_EPAC_DRVP00}; solo cambia cómo se identifica el control (texto exacto + único en el marco).
+ */
+const ACEPTAR_EPAC_DRVP00_SIN_ID: AvancePorId = Object.freeze({
+  id: '',
+  onclick: '',
+  texto: /^aceptar$/,
+  // Revisión 0.3.17: SOLO el marco `control.do` (la pantalla real cuelga de ahí); el servlet no se abre a un «Aceptar» sin identidad.
+  rutaMarco: '/drvp00/main/control.do',
+  destinosPost: Object.freeze(['/drvp00/main/control.do']),
+  nuncaConTitulo: /tarific|revisi|emisi|contrat|pago|firma|iban|resumen|formaliz/,
+  toleraTitulosRecortados: true as const,
+  sinIdentidad: true as const,
+})
+
+/** ¿La ruta del marco es la de la regla (o una de sus `rutasMarco`, solo si es `sinIdentidad`)? Pura; la repite el guard con la ruta VIVA. */
+export function rutaCasaAvancePorId(a: AvancePorId, ruta: string | null): boolean {
+  if (ruta === null) return false
+  return ruta === a.rutaMarco || (a.sinIdentidad === true && (a.rutasMarco ?? []).includes(ruta))
+}
+
 export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> = Object.freeze({
   'allianz:particulares:hogar': Object.freeze({
     compania: 'allianz', ramo: 'hogar', producto: 'hogar', pestana: 'Particulares',
@@ -163,7 +199,7 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   'allianz:autos:movilidad_personal': Object.freeze({
     compania: 'allianz', ramo: 'patinete', producto: 'patinete', pestana: 'Autos', productoMenu: 'Movilidad Personal',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
-    avancesPorId: Object.freeze([SIGUIENTE_EPAC_DRVP00]),
+    avancesPorId: Object.freeze([SIGUIENTE_EPAC_DRVP00, ACEPTAR_EPAC_DRVP00_SIN_ID]),
     cierraDialogoTermino: true as const,
     tomadorMediador: true as const,
   }),
@@ -974,12 +1010,23 @@ export function presupuestoEnCursoDe(respuestas: readonly (RespuestaExplorador |
  * 0.3.16: diagnóstico de una acción RECHAZADA por el validador: qué acción (de la lista blanca), sobre qué ref (solo si existe en
  * el inventario: `rN`/`mXeY`, sin datos) y la causa (el texto del error sin el prefijo). Nunca valores.
  */
-export type RechazoAccion = { indice: number; accion: AccionExplorador | null; ref: string | null; causa: string }
+export type RechazoAccion = { indice: number; accion: AccionExplorador | null; ref: string | null; causa: string; /** 0.3.17: qué control era (tag/type/name/clase/texto ≤40; sin valores). */ control?: string }
+
+/**
+ * 0.3.17: descripción corta del control rechazado para el diagnóstico (tag, type, name, clase y texto visible, cada uno ≤40 car.). Nunca
+ * el valor de un campo: de un input de texto/select/textarea no sale texto; un texto con forma de dato personal tampoco. Pura.
+ */
+export function describirControlRechazado(el: ElementoInventario): string {
+  const corto = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.replace(/\s+/g, ' ').trim().slice(0, 40) : '-')
+  const campoDeTexto = el.tag === 'select' || el.tag === 'textarea' || (el.tag === 'input' && !['button', 'submit', 'reset', 'image', 'radio', 'checkbox'].includes((el.type ?? '').toLowerCase()))
+  const texto = !campoDeTexto && typeof el.texto === 'string' && !pareceDatoPersonalInventario(el.texto) ? corto(el.texto) : '-'
+  return `tag=${corto(el.tag)} type=${corto(el.type)} name=${corto(el.name)} clase=${corto(el.clase)} texto=${texto === '-' ? '-' : `«${texto}»`}`
+}
 export type ValidacionRespuesta = { ok: true; respuesta: RespuestaExplorador } | { ok: false; errores: string[]; rechazos?: RechazoAccion[] }
 
 /** «rechazo acciones[1] avanzar r12: onclick_truncado» — la línea que se guarda en los errores del paso. Pura. */
 export function textoRechazo(r: RechazoAccion): string {
-  return `rechazo acciones[${r.indice}] ${r.accion ?? '?'} ${r.ref ?? '?'}: ${r.causa}`
+  return `rechazo acciones[${r.indice}] ${r.accion ?? '?'} ${r.ref ?? '?'}: ${r.causa}${r.control ? ` [${r.control}]` : ''}`
 }
 
 /** Las acciones rechazadas de una lista de errores del validador (`acciones[i]…`), con la acción y la ref de la respuesta. Pura. */
@@ -992,7 +1039,8 @@ function rechazosDe(errores: readonly string[], lista: readonly unknown[], refs:
     const a = obj(lista[indice])
     const accion = ACCIONES_EXPLORADOR.find((x) => x === a?.accion) ?? null
     const ref = typeof a?.ref === 'string' && refs.has(a.ref) ? a.ref : null
-    out.push({ indice, accion, ref, causa: m[2].slice(0, 160) })
+    const hit = ref ? (refs.get(ref) as { el?: ElementoInventario } | undefined) : undefined
+    out.push({ indice, accion, ref, causa: m[2].slice(0, 160), ...(hit?.el ? { control: describirControlRechazado(hit.el) } : {}) })
   }
   return out
 }
@@ -1184,8 +1232,15 @@ export function rutaDeMarco(url: string | null | undefined): string | null {
  */
 export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): AvancePorId | null {
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
-  if (!e?.avancesPorId?.length || typeof el.texto !== 'string' || typeof el.id !== 'string' || typeof el.onclick !== 'string') return null
-  if (truncado(el.id) || truncado(el.onclick) || truncado(el.texto)) return null
+  if (!e?.avancesPorId?.length || typeof el.texto !== 'string') return null
+  if (truncado(el.texto)) return null
+  const conIdentidad = typeof el.id === 'string' && typeof el.onclick === 'string'
+  if (conIdentidad && (truncado(el.id as string) || truncado(el.onclick as string))) return null
+  // 0.3.17: sin id y sin onclick solo vale una regla `sinIdentidad`; con id u onclick (aunque solo uno), una regla por id exacto.
+  const sinId = !tieneAlgo(el.id) && !tieneAlgo(el.onclick)
+  if (!conIdentidad && !sinId) return null
+  if (el.id !== undefined && truncado(el.id)) return null
+  if (el.onclick !== undefined && truncado(el.onclick)) return null
   const recortada = titulosRecortados(marco)
   // Con PRECIO en el marco (revisión de seguridad 28/10/2026) ya es la pantalla de resultado: su «Aceptar» puede llevar a emitir.
   if ((marco.importes?.length ?? 0) > 0) return null
@@ -1195,12 +1250,27 @@ export function avancePorIdAutorizado(entrada: string, el: ElementoInventario, m
   const ruta = rutaDeMarco(marco.url)
   return e.avancesPorId.find((a) =>
     (!recortada || a.toleraTitulosRecortados === true) &&
-    el.id === a.id &&
-    onclickNormalizado(el.onclick) === a.onclick &&
+    (a.sinIdentidad === true ? sinId && unicoPorTexto(marco, a.texto) : conIdentidad && el.id === a.id && onclickNormalizado(el.onclick) === a.onclick) &&
     a.texto.test(texto) && (aria === null || a.texto.test(aria)) &&
-    ruta === a.rutaMarco &&
+    rutaCasaAvancePorId(a, ruta) &&
     !todos.some((t) => a.nuncaConTitulo.test(t)),
   ) ?? null
+}
+
+const tieneAlgo = (v: string | undefined | null): boolean => typeof v === 'string' && v.trim() !== ''
+
+/**
+ * 0.3.17: ¿hay EXACTAMENTE un control en el marco cuyo texto (o aria-label) normalizado case con la regla? Un segundo «Aceptar» (de la
+ * pantalla anterior, de un modal…) hace ambigua la identificación: no se pulsa. Un texto recortado no cuenta (el exacto «Aceptar»
+ * mide 7 car. y un recorte del saneado tiene ≥59). Pura.
+ */
+export function unicoPorTexto(marco: MarcoInventario, re: RegExp): boolean {
+  let n = 0
+  for (const x of marco.elementos ?? []) {
+    const ds = [x.texto, x.ariaLabel].filter((d): d is string => typeof d === 'string' && d.trim() !== '')
+    if (ds.some((d) => !truncado(d) && re.test(plano(d)))) n++
+  }
+  return n === 1
 }
 
 /**
@@ -1211,13 +1281,25 @@ export function motivoNoAvancePorId(entrada: string, el: ElementoInventario, mar
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
   if (!e?.avancesPorId?.length) return null
   if (avancePorIdAutorizado(entrada, el, marco)) return null
-  if (typeof el.texto !== 'string' || typeof el.id !== 'string' || typeof el.onclick !== 'string') return 'sin_id_u_onclick'
-  if (truncado(el.id) || truncado(el.onclick) || truncado(el.texto)) return 'id_u_onclick_recortado'
+  if (typeof el.texto !== 'string') return 'sin_texto'
+  const sinId = !tieneAlgo(el.id) && !tieneAlgo(el.onclick)
+  if (typeof el.id !== 'string' && typeof el.onclick !== 'string' && !sinId) return 'sin_id_u_onclick'
+  if (truncado(el.texto) || (typeof el.id === 'string' && truncado(el.id)) || (typeof el.onclick === 'string' && truncado(el.onclick))) return 'id_u_onclick_recortado'
   if ((marco.importes?.length ?? 0) > 0) return 'marco_con_importes'
-  const regla = e.avancesPorId.find((a) => el.id === a.id)
+  if (sinId) {
+    const sr = e.avancesPorId.find((a) => a.sinIdentidad === true)
+    if (!sr) return 'sin_id_u_onclick'
+    if (!sr.texto.test(plano(el.texto))) return 'texto_distinto'
+    if (!rutaCasaAvancePorId(sr, rutaDeMarco(marco.url))) return 'ruta_de_marco_distinta'
+    if (!unicoPorTexto(marco, sr.texto)) return 'texto_no_unico_en_marco'
+    if (titulosRecortados(marco) && !sr.toleraTitulosRecortados) return 'titulos_recortados'
+    return 'titulo_de_tarificacion_o_emision'
+  }
+  if (typeof el.id !== 'string' || typeof el.onclick !== 'string') return 'sin_id_u_onclick'
+  const regla = e.avancesPorId.find((a) => a.sinIdentidad !== true && el.id === a.id)
   if (!regla) return 'id_distinto'
   if (onclickNormalizado(el.onclick) !== regla.onclick) return 'onclick_distinto'
-  if (rutaDeMarco(marco.url) !== regla.rutaMarco) return 'ruta_de_marco_distinta'
+  if (!rutaCasaAvancePorId(regla, rutaDeMarco(marco.url))) return 'ruta_de_marco_distinta'
   if (titulosRecortados(marco) && !regla.toleraTitulosRecortados) return 'titulos_recortados'
   if (!regla.texto.test(plano(el.texto))) return 'texto_distinto'
   return 'titulo_de_tarificacion_o_emision'
@@ -1376,7 +1458,9 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
   // personal sigue mirando el texto ENTERO, antes de recortar.
   const motivo = recortarMotivo(textoCorto(r.motivo, Number.POSITIVE_INFINITY, 'motivo'))
 
-  const refs = indiceRefs(ctx.inventario)
+  // 0.3.17: el validador mira el onclick ENTERO (hasta 8000 car.) de lo que traiga `onclickCompleto`; la IA solo ve 200.
+  const invEvaluacion = conOnclickCompleto(ctx.inventario)
+  const refs = indiceRefs(invEvaluacion)
   const importes = new Set(ctx.inventario.marcos.flatMap((m) => (m.importes ?? []).map((i) => i.ref)))
   const claves = new Set(catalogoDe(ctx.ramo).map((d) => d.clave))
   if (claves.size === 0) errores.push(`ramo «${ctx.ramo.slice(0, 30)}» sin catálogo de exploración`)

@@ -35,6 +35,14 @@ export const MAX_ONCLICK_INVENTARIO = 2000
 /** @deprecated nombre de 0.3.16 previo: hoy el tope vale para todo onclick ({@link MAX_ONCLICK_INVENTARIO}). */
 export const MAX_ONCLICK_CASILLA = MAX_ONCLICK_INVENTARIO
 /**
+ * 0.3.17: tope de CAPTURA del onclick para la EVALUACIÓN (Mapfre NSE, RichFaces A4J con muchos parámetros: `onclick_truncado` en 0.3.16).
+ * Un onclick de 2001..8000 car. viaja entero en `onclickCompleto` (aparte de `onclick`, que sigue recortado a 2000 con «…»); el validador
+ * lo mira ENTERO ({@link conOnclickCompleto}) y la IA solo ve 200 (`inventarioParaPrompt`). Más de 8000 sigue siendo `onclick_truncado`.
+ */
+export const MAX_ONCLICK_EVALUACION = 8000
+/** Presupuesto TOTAL de `onclickCompleto` por inventario (car.). No cuenta para el tope de 60 KB; lo que no cabe queda recortado (= no se pulsa). */
+export const MAX_ONCLICK_COMPLETO_TOTAL = 48_000
+/**
  * 0.3.16: un onclick que el saneado DESCARTA por parecer dato personal no puede desaparecer sin más (el elemento parecería no tener
  * manejador y el validador lo dejaría pulsar/marcar). Se sustituye por esta marca, que acaba en «…» = recortado = no se pulsa.
  */
@@ -60,6 +68,16 @@ export type ElementoInventario = {
   /** Texto visible: SOLO de botones, pestañas, enlaces-botón, celdas con onclick y labels. */
   texto?: string
   onclick?: string
+  /**
+   * 0.3.17: el `onclick` ENTERO cuando pasa de 2000 car. (y cabe en 8000); `onclick` lleva su prefijo recortado con «…». SOLO para el
+   * validador/guard ({@link conOnclickCompleto}); no cuenta en el tope de 60 KB y la IA no lo ve. Misma lista blanca y mismo filtro de PII.
+   */
+  onclickCompleto?: string
+  /**
+   * 0.3.17 (diagnóstico de un avance rechazado): las primeras clases CSS (≤40 car.) de un control avanzable (td/button/a/input de acción).
+   * Estructura, no dato. Solo se guarda (BD) y se usa en el diagnóstico del rechazo; la IA no lo ve (`recortarOnclickParaIA`).
+   */
+  clase?: string
   /**
    * `<a href>` normal (28/10/2026, explorador): SOLO la ruta del enlace, sin query ni fragmento (`/EVT21_NSE_FWEB/oferta.jsp`); de
    * otro origen, `origen + ruta`. La miran `bloqueoAvance` (un `/contratar.do` es emisión) y la regla de enlaces avanzables.
@@ -224,6 +242,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
     }
     return plano.length > max ? plano.slice(0, max - 1) + '…' : plano
   }
+  let presupuestoCompleto = MAX_ONCLICK_COMPLETO_TOTAL
   const refsUsadas = new Set<string>()
   const ponerRef = (propuesta: unknown, re: RegExp, porDefecto: string): string | null => {
     // Ref del cable con la forma exacta: se conserva; si se repite, el elemento es ambiguo → fuera (null).
@@ -261,9 +280,25 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       pon('formControlName', texto(eo.formControlName, MAX_ATRIBUTO))
       pon('etiqueta', texto(eo.etiqueta, MAX_TEXTO_INVENTARIO))
       pon('texto', texto(eo.texto, MAX_TEXTO_INVENTARIO))
-      const onclick = texto(eo.onclick, MAX_ONCLICK_INVENTARIO)
+      // 0.3.17: el onclick se mira entero hasta 8000 car. (PII sobre el texto ENTERO). Hasta 2000 va en `onclick`; entre 2001 y 8000,
+      // `onclick` lleva el prefijo recortado («…») y el entero va en `onclickCompleto` (fuera del tope de bytes). Más de 8000 = recortado.
+      const ocCrudo = typeof eo.onclick === 'string' ? eo.onclick : ''
+      const norm = (v: string) => v.replace(/\s+/g, ' ').trim()
+      const prefijo = norm(ocCrudo).replace(/…$/, '')
+      const ocFuente = typeof eo.onclickCompleto === 'string' && norm(eo.onclickCompleto).length > norm(ocCrudo).length && norm(eo.onclickCompleto).startsWith(prefijo) ? eo.onclickCompleto : eo.onclick
+      const ocPlano = texto(ocFuente, MAX_ONCLICK_EVALUACION)
       // Fail-closed: un onclick no vacío que el saneado quitó (dato personal) queda como RECORTADO, nunca como «sin onclick».
-      pon('onclick', onclick ?? (typeof eo.onclick === 'string' && eo.onclick.trim() !== '' ? ONCLICK_REDACTADO : undefined))
+      const ocVacio = !(typeof ocFuente === 'string' && ocFuente.trim() !== '')
+      if (ocPlano === undefined) pon('onclick', ocVacio ? undefined : ONCLICK_REDACTADO)
+      else if (ocPlano.length <= MAX_ONCLICK_INVENTARIO) pon('onclick', ocPlano)
+      else {
+        pon('onclick', ocPlano.slice(0, MAX_ONCLICK_INVENTARIO - 1) + '…')
+        if (!ocPlano.endsWith('…') && presupuestoCompleto - ocPlano.length >= 0) {
+          presupuestoCompleto -= ocPlano.length
+          el.onclickCompleto = ocPlano
+        }
+      }
+      pon('clase', texto(eo.clase, 40))
       pon('hrefRuta', texto(eo.hrefRuta, MAX_ATRIBUTO))
       pon('dialogo', texto(eo.dialogo, MAX_TEXTO_INVENTARIO))
       if (eo.requerido === true) el.requerido = true
@@ -355,7 +390,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
   // Tope de bytes: se quitan elementos del FINAL del marco con más elementos hasta caber (recorte explícito).
   // TextEncoder (no Buffer): el index del módulo también llega al navegador.
   const cod = new TextEncoder()
-  const bytes = (v: unknown) => cod.encode(JSON.stringify(v)).length
+  const bytes = (v: unknown) => cod.encode(JSON.stringify(v, (k, x) => (k === 'onclickCompleto' ? undefined : x))).length
   const armar = (rec: InventarioDom['recortado']): InventarioDom => ({
     version: 1,
     marcos,
@@ -416,7 +451,7 @@ export function contieneValorSensible(texto: string, valores: readonly string[])
 
 // 0.3.7 (revisión de seguridad): también `mensajeError` (texto del portal junto a un campo inválido) y `hrefRuta` (ruta de un enlace).
 // TODA clave de texto nueva de `ElementoInventario` tiene que estar aquí (lo vigila un test que recorre las claves del saneado).
-export const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick', 'hrefRuta', 'mensajeError', 'dialogo'] as const
+export const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick', 'onclickCompleto', 'clase', 'hrefRuta', 'mensajeError', 'dialogo'] as const
 
 /**
  * Copia del inventario SIN ningún texto que contenga uno de `valores` (normalizado; se ignoran los < 3 caracteres). Cuenta
@@ -492,4 +527,24 @@ export function valoresSensiblesDeRiesgo(riesgo: unknown): string[] {
   }
   andar(riesgo, 0)
   return [...out]
+}
+
+/**
+ * 0.3.17: copia del inventario donde cada `onclick` recortado que trae su `onclickCompleto` pasa a ser el ENTERO (y desaparece la clave
+ * aparte). Es lo que miran el validador y el guard; lo que sale hacia la IA NO pasa por aquí. Sin `onclickCompleto` devuelve el mismo
+ * objeto. Pura; nunca muta la entrada.
+ */
+export function conOnclickCompleto(inv: InventarioDom): InventarioDom {
+  if (!inv.marcos.some((m) => m.elementos.some((e) => typeof e.onclickCompleto === 'string'))) return inv
+  return {
+    ...inv,
+    marcos: inv.marcos.map((m) => ({
+      ...m,
+      elementos: m.elementos.map((e) => {
+        if (typeof e.onclickCompleto !== 'string') return e
+        const { onclickCompleto, ...resto } = e
+        return typeof e.onclick === 'string' && onclickCompleto.length > e.onclick.length ? { ...resto, onclick: onclickCompleto } : resto
+      }),
+    })),
+  }
 }
