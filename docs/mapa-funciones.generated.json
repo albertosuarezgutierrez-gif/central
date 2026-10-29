@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-29T10:48:23Z",
-  "sha": "7b316048807f118c8eb1b2eb975593e30dbcefbd",
+  "generadoEn": "2026-10-29T11:40:39Z",
+  "sha": "3d868f9843044fafd4311c1f80f87aaa873822c3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -140973,6 +140973,27 @@
       "hash": "14391abb7ea2"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/sivra-facturas-salida/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/cron/sivra-facturas-salida — la factura del huésped se emite y envía SOLA el día de salida (29/10/2026). Excepción aprobada por Alberto a «nunca correo a terceros sin su OK»: SOLO la factura con datos validados, el día de salida (ver CLAUDE.md). Toda la lógica en `lib/sivra/facturas/salida-auto",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/sivra-facturas-salida",
+      "hash": "c6a5b6b40422"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/subastas-avisos/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Aviso por Telegram de las subastas nuevas que han casado. UN solo mensaje agregado por pasada (patrón de `facturas-conciliar-gmail`), no uno por subasta: el ruido es justo lo que hace que Alberto no lea las 200 alertas del BOE que ya tiene sin abrir.",
@@ -169640,7 +169661,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 276,
+          "linea": 280,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -169649,7 +169670,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 306,
+          "linea": 310,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -169658,7 +169679,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 328
+          "linea": 332
         },
         {
           "nombre": "ventanaMinutos",
@@ -169666,7 +169687,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 336,
+          "linea": 340,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -169675,13 +169696,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 348,
+          "linea": 352,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc25d084a41d"
+      "hash": "10dc222a49b9"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -184421,7 +184442,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 65
+          "linea": 69
         },
         {
           "nombre": "toPropertyId",
@@ -184429,7 +184450,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 70,
+          "linea": 74,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -184438,7 +184459,7 @@
           "exportada": true,
           "params": "propertyId: string, bookingId: string, que: 'vispera' | 'entrada', fecha: string,",
           "retorno": "Promise<boolean | null>",
-          "linea": 84,
+          "linea": 88,
           "resumen": "¿Está libre según el CALENDARIO volcado (`incomes`)? Es la fuente principal: la mantiene el webhook de Smoobu en tiempo real (+ cron de red de seguridad) y borra las cancelaciones. No guarda bloqueos "
         },
         {
@@ -184447,7 +184468,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 103
+          "linea": 107
         }
       ],
       "tablas": [
@@ -184457,7 +184478,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "b58b3fb6bbc9"
+      "hash": "768c05707781"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cortesia.ts",
@@ -184499,7 +184520,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ab369b5168e7"
+      "hash": "440b4e86f46f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -184545,7 +184566,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9a265ccb8aa4"
+      "hash": "42c52df796d1"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
@@ -184812,7 +184833,9 @@
       "exporta": [
         "esPeticionFactura",
         "contieneIdFiscal",
-        "esTramiteFiscal"
+        "esTramiteFiscal",
+        "textosDesdePeticion",
+        "reglaFacturaEstado"
       ],
       "funciones": [
         {
@@ -184839,11 +184862,29 @@
           "retorno": "boolean",
           "linea": 43,
           "resumen": "¿Es un trámite fiscal (no un hueco de la guía)? Petición de factura, o un NIF/CIF/VAT suelto, o —si el hilo YA era de factura— cualquier dato personal (email/teléfono/IBAN) o fiscal en este mensaje. U"
+        },
+        {
+          "nombre": "textosDesdePeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "textosHuesped: ReadonlyArray<string | null | undefined>",
+          "retorno": "string[]",
+          "linea": 76,
+          "resumen": "Mensajes del huésped que cuentan para la factura: desde su PRIMERA petición de factura (incluida). Lo anterior (p. ej. el DNI para el registro de viajeros) no se mezcla con los datos de facturación. S"
+        },
+        {
+          "nombre": "reglaFacturaEstado",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EstadoFacturaChat, conEnlace: boolean",
+          "retorno": "string",
+          "linea": 87,
+          "resumen": "Bloque del prompt del redactor según cómo quedó la solicitud."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "61842b9dd8df"
+      "hash": "976adbc3dce4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",
@@ -185594,7 +185635,7 @@
           "exportada": true,
           "params": "bookingId: string, opts: { pregunta?: string; msgId?: string } = {},",
           "retorno": "Promise<",
-          "linea": 30,
+          "linea": 31,
           "resumen": "Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner` y /api/reservations"
         }
       ],
@@ -185603,7 +185644,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "daf4810f68df"
+      "hash": "a1bb0cf59789"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -188235,6 +188276,68 @@
       "hash": "b338e7357666"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/facturas/chat.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/facturas/chat.ts — rellena la solicitud de factura con lo que el HUÉSPED escribió en el chat (SERVIDOR). 1) La IA propone un JSON con los datos (temperatura 0). 2) `validarExtraccion` (puro, testeado) lo contrasta con el texto del huésped: lo que no esté literal o no valide se queda en NUL",
+      "exporta": [
+        "rellenarDesdeChat",
+        "estadoSolicitud",
+        "solicitudVivaDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "leer",
+          "kind": "function",
+          "exportada": false,
+          "params": "solicitudId: string",
+          "retorno": "Promise<FilaBd | null>",
+          "linea": 34
+        },
+        {
+          "nombre": "proponer",
+          "kind": "function",
+          "exportada": false,
+          "params": "textos: string[]",
+          "retorno": "Promise<ReturnType<typeof parsearPropuesta>>",
+          "linea": 48,
+          "resumen": "Propuesta de la IA para estos textos (o `null` si falla: «no se sabe», nunca un objeto vacío inventado)."
+        },
+        {
+          "nombre": "rellenarDesdeChat",
+          "kind": "function",
+          "exportada": true,
+          "params": "solicitudId: string, textosHuesped: ReadonlyArray<string | null | undefined>, ahora: Date = new Date()",
+          "retorno": "Promise<EstadoFacturaChat | null>",
+          "linea": 62,
+          "resumen": "Lee lo que dijo el huésped (desde su primera petición de factura), rellena lo que falte y devuelve cómo queda la solicitud. `null` = solicitud inexistente. Si no hay petición de factura en sus mensaje"
+        },
+        {
+          "nombre": "estadoSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "solicitudId: string, ahora: Date = new Date()",
+          "retorno": "Promise<EstadoFacturaChat | null>",
+          "linea": 94,
+          "resumen": "¿Está completa y válida? Si sí, a dónde irá; si no, qué falta (en palabras para el huésped)."
+        },
+        {
+          "nombre": "solicitudVivaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservationId: string",
+          "retorno": "Promise<",
+          "linea": 105,
+          "resumen": "Solicitud viva de la reserva, sin crearla (para los mensajes que SIGUEN a una petición de factura)."
+        }
+      ],
+      "tablas": [
+        "con",
+        "sivra_factura_solicitudes"
+      ],
+      "rutaApi": null,
+      "hash": "474b580ccbc5"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/facturas/csv.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/facturas/csv.ts — exportación CSV del libro de facturas a huéspedes. PURO. Formato para Excel en español: separador «;», coma decimal, sin símbolo € (columna numérica), BOM UTF-8. Celdas que empiezan por = + - @ se prefijan con «'» (inyección de fórmulas: el nombre lo escribe el huésped).",
@@ -188328,9 +188431,9 @@
           "nombre": "emitirFactura",
           "kind": "function",
           "exportada": true,
-          "params": "facturaId: string, mensajeId: number | null, ahora: Date = new Date()",
+          "params": "facturaId: string, mensajeId: number | null, ahora: Date = new Date(), /** `automatico`: el cron de salida (`salida-auto.ts`) emite sin ✅ (aprobado por Alberto el 29/10/2026 para facturas con * datos validados). Se salta SOLO la comprobació",
           "retorno": "Promise<ResultadoEmision>",
-          "linea": 47,
+          "linea": 48,
           "resumen": "`mensajeId`: message_id del ✅ pulsado. Se compara con `telegram_message_id` BAJO el FOR UPDATE: si el borrador se regeneró (datos nuevos → mensaje nuevo), el ✅ viejo no emite (`obsoleta`). Así se emit"
         },
         {
@@ -188339,7 +188442,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string | null",
-          "linea": 101,
+          "linea": 107,
           "resumen": "Remitente: env explícita; si no, el de la app. Sin ninguno, el envío falla y la factura queda emitida sin enviar."
         },
         {
@@ -188348,7 +188451,7 @@
           "exportada": true,
           "params": "numero: string, total: number, piso: string",
           "retorno": "",
-          "linea": 107
+          "linea": 113
         },
         {
           "nombre": "enviarFactura",
@@ -188356,7 +188459,7 @@
           "exportada": true,
           "params": "facturaId: string, opts: { forzar?: boolean } = {}",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 119
+          "linea": 125
         },
         {
           "nombre": "avisarEnSmoobu",
@@ -188364,7 +188467,7 @@
           "exportada": false,
           "params": "reservationId: string, receptor: Receptor, numero: string",
           "retorno": "Promise<ResultadoAvisoSmoobu>",
-          "linea": 165
+          "linea": 185
         }
       ],
       "tablas": [
@@ -188373,10 +188476,11 @@
         "mensajes_enviados",
         "properties",
         "sivra_factura_series",
+        "sivra_factura_solicitudes",
         "sivra_facturas_huesped"
       ],
       "rutaApi": null,
-      "hash": "eac334557519"
+      "hash": "ff76fdbb38bb"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas/enlace.ts",
@@ -188436,6 +188540,162 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9ebe095adcc2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/facturas/extraer.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/facturas/extraer.ts — datos de facturación sacados de los mensajes del HUÉSPED en el chat. PURO. Caso que lo motiva (29/10/2026, reserva 160296956): la huésped escribió en el chat la razón social, el NIF, la dirección y los correos (destino + copia); se creó la solicitud con todo a NULL y ",
+      "exporta": [
+        "plano",
+        "normalizarId",
+        "idsEspanolesEn",
+        "esCif",
+        "emailsEn",
+        "normalizarCc",
+        "validarExtraccion",
+        "confirmarViaCatastro",
+        "parcheSolicitud",
+        "entradaReceptor",
+        "faltasDe",
+        "parsearPropuesta",
+        "destinatarios"
+      ],
+      "funciones": [
+        {
+          "nombre": "s",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string",
+          "linea": 42
+        },
+        {
+          "nombre": "plano",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 45,
+          "resumen": "Sin tildes, minúsculas, solo [a-z0-9]: para comprobar que un valor está LITERAL en el texto."
+        },
+        {
+          "nombre": "aparece",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string, textoPlano: string, min = 4",
+          "retorno": "boolean",
+          "linea": 49
+        },
+        {
+          "nombre": "normalizarId",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 57
+        },
+        {
+          "nombre": "idsEspanolesEn",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string[]",
+          "linea": 63,
+          "resumen": "NIF/NIE/CIF españoles VÁLIDOS (dígito de control) que aparecen en el texto, normalizados. Admite «B-08549784», «B 08549784», «b.08549784» y el prefijo «ES» del VAT."
+        },
+        {
+          "nombre": "esCif",
+          "kind": "function",
+          "exportada": true,
+          "params": "nif: string",
+          "retorno": "boolean",
+          "linea": 78
+        },
+        {
+          "nombre": "emailsEn",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "",
+          "linea": 90,
+          "resumen": "Emails del texto: `copia` los que van precedidos (≤ 40 caracteres) de «copia/cc/copy…». Minúsculas, sin relés OTA."
+        },
+        {
+          "nombre": "normalizarCc",
+          "kind": "function",
+          "exportada": true,
+          "params": "cc: unknown, destino: string | null | undefined",
+          "retorno": "string[]",
+          "linea": 106,
+          "resumen": "CC limpio: emails válidos, minúsculas, sin duplicados, sin el destino, máx. 5."
+        },
+        {
+          "nombre": "validarExtraccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "propuesta: PropuestaIA | null | undefined, textosHuesped: readonly string[], municipiosPorCp: (cp: string) => string[] | null,",
+          "retorno": "DatosExtraidos",
+          "linea": 125,
+          "resumen": "Valida la propuesta de la IA contra los mensajes del huésped. `municipiosPorCp` = tabla INE (inyectada: es un JSON de servidor). Nada de lo que devuelve sale de la IA sin haber pasado por el texto."
+        },
+        {
+          "nombre": "confirmarViaCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "via: string, sugerencias: ReadonlyArray<{ tipo: string; nombre: string }>",
+          "retorno": "string | null",
+          "linea": 210,
+          "resumen": "Calle confirmada por el Catastro: solo si UNA sugerencia es exactamente la calle escrita. Si no, se deja tal cual."
+        },
+        {
+          "nombre": "parcheSolicitud",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: FilaSolicitud, x: DatosExtraidos",
+          "retorno": "Parche",
+          "linea": 232,
+          "resumen": "Qué se rellena con lo extraído. NUNCA se pisa un dato ya puesto (por el huésped en el formulario o por Alberto); una solicitud que no está `pendiente` (el huésped ya mandó el formulario, o está cancel"
+        },
+        {
+          "nombre": "entradaReceptor",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Omit<FilaSolicitud, 'estado' | 'receptorCc'>",
+          "retorno": "Record<string, unknown>",
+          "linea": 247,
+          "resumen": "Entrada para `validarReceptor` desde las columnas de la solicitud."
+        },
+        {
+          "nombre": "faltasDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "errores: Record<string, string>",
+          "retorno": "Falta[]",
+          "linea": 255,
+          "resumen": "Qué falta (o es inválido), en orden fijo, a partir de los errores de `validarReceptor`."
+        },
+        {
+          "nombre": "parsearPropuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "salida: string | null | undefined",
+          "retorno": "PropuestaIA | null",
+          "linea": 276,
+          "resumen": "JSON de la IA → propuesta (o `null` si no es un objeto JSON). Tolera ```json … ``` y texto alrededor."
+        },
+        {
+          "nombre": "destinatarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "to: string, cc: unknown",
+          "retorno": "",
+          "linea": 290,
+          "resumen": "Destinatarios del correo de la factura: `to` + `cc` (limpio, sin repetir el destino). Sin copia, sin campo `cc`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "83c0820c45df"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas/importes.ts",
@@ -188774,6 +189034,116 @@
       "hash": "6e4df3cc2411"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/facturas/salida-auto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/facturas/salida-auto.ts — EMITIR y ENVIAR SOLA la factura del huésped el día de salida (SERVIDOR). Lo dispara `/api/cron/sivra-facturas-salida` (una vez al día). Excepción a «nunca correo a terceros sin OK de Alberto», aprobada por él el 29/10/2026 y anotada en CLAUDE.md: SOLO la factura c",
+      "exporta": [
+        "candidatas",
+        "procesarSalidas"
+      ],
+      "funciones": [
+        {
+          "nombre": "candidatas",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "Promise<Candidata[]>",
+          "linea": 39
+        },
+        {
+          "nombre": "procesarSalidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date(), opts: { simular?: boolean } = {}",
+          "retorno": "Promise<ResultadoPase[]>",
+          "linea": 61,
+          "resumen": "`simular`: calcula la decisión sin escribir nada, sin IA y sin enviar (para ver qué haría)."
+        },
+        {
+          "nombre": "procesarUna",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Candidata, ahora: Date, simular: boolean",
+          "retorno": "Promise<ResultadoPase>",
+          "linea": 74
+        },
+        {
+          "nombre": "avisar",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Candidata, rid: string, piso: string, hasta: string | null, motivos: string[], borradorId: string | null",
+          "retorno": "Promise<ResultadoPase>",
+          "linea": 142
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "sivra_factura_solicitudes",
+        "sivra_facturas_huesped"
+      ],
+      "rutaApi": null,
+      "hash": "262e46391895"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/facturas/salida-decision.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/facturas/salida-decision.ts — ¿qué hace el cron de salida con UNA solicitud de factura? PURO. Regla (aprobada por Alberto el 29/10/2026): la factura del huésped con datos VALIDADOS se emite y envía SOLA el día de salida (Europe/Madrid) o, si la salida ya pasó sin factura, en el siguiente p",
+      "exporta": [
+        "restarDias",
+        "momentoSalida",
+        "decidirSalida",
+        "textoAvisoIncompleta"
+      ],
+      "funciones": [
+        {
+          "nombre": "restarDias",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string, n: number",
+          "retorno": "string",
+          "linea": 14,
+          "resumen": "`iso` (YYYY-MM-DD) menos `n` días, en calendario (sin horas: no le afectan los cambios de hora)."
+        },
+        {
+          "nombre": "momentoSalida",
+          "kind": "function",
+          "exportada": true,
+          "params": "hasta: string | null | undefined, hoy: string, ventana: number = VENTANA_DIAS",
+          "retorno": "Momento",
+          "linea": 23,
+          "resumen": "Salida `hasta` respecto a `hoy` (ambas YYYY-MM-DD en Madrid). Hoy o pasada dentro de la ventana → `toca`."
+        },
+        {
+          "nombre": "decidirSalida",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaDecision",
+          "retorno": "DecisionSalida",
+          "linea": 47
+        },
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": null,
+          "linea": 59
+        },
+        {
+          "nombre": "textoAvisoIncompleta",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { piso: string; reservationId: string; hasta: string | null; motivos: string[] }",
+          "retorno": "string",
+          "linea": 62,
+          "resumen": "Aviso a Alberto (HTML: el llamador escapa lo que viene del huésped antes de pasarlo)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6595437b97f6"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/facturas/servicio.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/facturas/servicio.ts — solicitudes y borradores de factura al huésped (SERVIDOR: BD + Telegram). Multi-tenant: la cuenta de una factura es la DUEÑA del negocio cuyo `ref_ext` es el piso (`negocios.ref_ext = incomes.propertyId`). Si el piso no está enlazado a exactamente una cuenta, NO se c",
@@ -188785,6 +189155,7 @@
         "completarSolicitud",
         "conceptoEstancia",
         "serieDelAnio",
+        "prepararBorrador",
         "proponerEnTelegram"
       ],
       "funciones": [
@@ -188869,10 +189240,11 @@
         {
           "nombre": "prepararBorrador",
           "kind": "function",
-          "exportada": false,
-          "params": "solicitudId: string, receptor: Receptor, opts: { totalManual?: number | null }",
+          "exportada": true,
+          "params": "solicitudId: string, receptor: Receptor, opts: { totalManual?: number | null; proponer?: boolean }",
           "retorno": "Promise<ResultadoBorrador>",
-          "linea": 187
+          "linea": 191,
+          "resumen": "Borrador con estos datos. `proponer: false` (cron de salida, que emite justo después): ni aviso de borrador ni aviso de «no sé el importe» (el cron avisa él, una sola vez)."
         },
         {
           "nombre": "proponerEnTelegram",
@@ -188880,7 +189252,7 @@
           "exportada": true,
           "params": "facturaId: string, anterior?: bigint | null",
           "retorno": "Promise<'enviada' | 'silenciada' | 'fallida'>",
-          "linea": 231,
+          "linea": 242,
           "resumen": "Borrador → aviso a Alberto con resumen, PDF de revisión y botones ✅/✏️."
         }
       ],
@@ -188892,20 +189264,21 @@
         "sociedades"
       ],
       "rutaApi": null,
-      "hash": "fa114058cbb7"
+      "hash": "3ebba8939dcc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas/telegram-acciones.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/facturas/telegram-acciones.ts — lo que hace cada botón `fhu_*` (SERVIDOR). La autorización (solo la persona de TELEGRAM_CHAT_ID) ya la decidió `decidirBotonFactura`; aquí solo se ejecuta y se redacta la línea.",
       "exporta": [
+        "lineaEnvio",
         "resolverBotonFactura"
       ],
       "funciones": [
         {
           "nombre": "lineaEnvio",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "numero: string | null, r: ResultadoEnvio, facturaId: string",
           "retorno": "Salida",
           "linea": 13
@@ -188922,7 +189295,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d10f56b20d81"
+      "hash": "3bffa857f7e1"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas/telegram.ts",
@@ -259680,7 +260053,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5428,
-    "funciones": 20883
+    "archivos": 5433,
+    "funciones": 20915
   }
 }
