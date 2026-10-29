@@ -5,6 +5,7 @@
 //     con esa identidad exacta; los radios ocultos llegan como `input radio` (los resuelve el worker por su label).
 import { describe, it, expect } from 'vitest'
 import {
+  detectarParada,
   avancePorIdAutorizado,
   bloqueoAvance,
   comprobarBoton,
@@ -114,7 +115,7 @@ describe('Allianz ePAC drvp00: avance de paso #btnAceptar + eventoSiguiente() po
     expect(bloqueoAvance(MP, el0(gen), gen.marcos[0])).toBe('aceptar_no_autorizado')
   })
 
-  it('validador: marcar los radios (inventariados como input radio por su label) + avanzar btnAceptar = OK; checkbox y Aceptar genérico, rechazados', () => {
+  it('validador: marcar los radios (inventariados como input radio por su label) + avanzar btnAceptar = OK; un label y Aceptar genérico, rechazados', () => {
     const i = inv([
       { tag: 'input', type: 'radio', id: 'IntervinientesBean$esPropietario1', name: 'IntervinientesBean$esPropietario', texto: 'Si', etiqueta: 'Si' },
       { tag: 'input', type: 'radio', id: 'IntervinientesBean$esConductor1', name: 'IntervinientesBean$esConductor', texto: 'Si', etiqueta: 'Si' },
@@ -131,10 +132,9 @@ describe('Allianz ePAC drvp00: avance de paso #btnAceptar + eventoSiguiente() po
     const ok = r([{ accion: 'marcar', ref: refs[0] }, { accion: 'marcar', ref: refs[1] }, { accion: 'avanzar', ref: refs[2], efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
     expect(ok.ok, JSON.stringify(ok)).toBe(true)
     const conCheckbox = r([{ accion: 'marcar', ref: refs[3] }])
-    expect(conCheckbox.ok).toBe(false)
-    expect(JSON.stringify(conCheckbox)).toMatch(/marcar solo radios/)
+    expect(conCheckbox.ok, JSON.stringify(conCheckbox)).toBe(true) // 0.3.15: las casillas se pueden marcar
     const conLabel = r([{ accion: 'marcar', ref: refs[5] }])
-    expect(JSON.stringify(conLabel)).toMatch(/marcar solo radios/)
+    expect(JSON.stringify(conLabel)).toMatch(/marcar solo radios o casillas/)
     const generico = r([{ accion: 'avanzar', ref: refs[4], efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
     expect(generico.ok).toBe(false)
     expect(JSON.stringify(generico)).toMatch(/aceptar_no_autorizado/)
@@ -406,11 +406,52 @@ describe('0.3.14 · tolerancias del validador (Allianz patinete / Mapfre patinet
     expect(resp(i, MF, {}, [{ accion: 'marcar', ref, extra: 1 }]).ok).toBe(false)
   })
 
-  it('radio de consentimiento NO se relaja: sigue rechazando y nombra la palabra que casó', () => {
-    const i = inv([radio])
-    const r = resp(i, MF, {}, [{ accion: 'marcar', ref: el0(i).ref }])
-    expect(r.ok).toBe(false)
-    expect(JSON.stringify(r)).toMatch(/radio de consentimiento \(palabra: comercial\)/)
+  it('0.3.15 · consentimientos: el radio «producto comercial» y la casilla «acepto comunicaciones comerciales» se pueden marcar', () => {
+    const i = inv([radio, { tag: 'input', type: 'checkbox', id: 'c1', etiqueta: 'Acepto comunicaciones comerciales' }, { tag: 'input', type: 'checkbox', id: 'c2', etiqueta: 'Acepto la política de privacidad y cesión de datos' }])
+    const refs = i.marcos[0].elementos.map((e) => e.ref)
+    const r = resp(i, MF, {}, refs.map((ref) => ({ accion: 'marcar', ref })))
+    expect(r.ok, JSON.stringify(r)).toBe(true)
+    if (r.ok) expect(r.respuesta.acciones).toHaveLength(3)
+  })
+
+  it('0.3.15 · una casilla/radio que ES una acción final (texto/id/name/onclick de emisión o submit) NO se marca', () => {
+    const malos = [
+      { tag: 'input', type: 'checkbox', id: 'k1', etiqueta: 'Acepto y contrato' },
+      { tag: 'input', type: 'checkbox', id: 'chkEmitirPoliza', etiqueta: 'Sí' },
+      { tag: 'input', type: 'checkbox', id: 'k3', name: 'formalizar', etiqueta: 'Sí' },
+      { tag: 'input', type: 'checkbox', id: 'k4', etiqueta: 'Domiciliar en cuenta' },
+      { tag: 'input', type: 'checkbox', id: 'k5', etiqueta: 'Sí', onclick: "mojarra.jsfcljs(document.getElementById('f'),{'f:b':'f:b'},'')" },
+      { tag: 'input', type: 'checkbox', id: 'k6', etiqueta: 'Sí', onclick: 'this.form.submit()' },
+      { tag: 'input', type: 'radio', id: 'k7', name: 'g', etiqueta: 'Sí', onclick: "accion('contratar')" },
+      { tag: 'input', type: 'checkbox', id: 'k8', etiqueta: 'Firmar digitalmente' },
+    ]
+    for (const m of malos) {
+      const i = inv([m])
+      const r = resp(i, MF, {}, [{ accion: 'marcar', ref: el0(i).ref }])
+      expect(r.ok, m.id).toBe(false)
+      expect(JSON.stringify(r), m.id).toMatch(/casilla de acción final/)
+    }
+  })
+
+  it('0.3.15 · marcar sigue limitado a radios y casillas (no un botón ni un texto)', () => {
+    const i = inv([{ tag: 'button', texto: 'Aceptar condiciones' }, { tag: 'input', type: 'text', id: 't1', etiqueta: 'IBAN' }])
+    for (const e of i.marcos[0].elementos) expect(resp(i, MF, {}, [{ accion: 'marcar', ref: e.ref }]).ok).toBe(false)
+  })
+
+  it('0.3.15 · INTACTO: botones finales (Firmar/Emitir/Contratar/Pagar/Formalizar) siguen bloqueados aunque vayan tras marcar un consentimiento', () => {
+    for (const texto of ['Firmar', 'Emitir', 'Contratar', 'Pagar', 'Formalizar', 'Grabar póliza', 'Confirmar contratación']) {
+      const i = inv([radio, { tag: 'button', texto }])
+      const [rad, btn] = i.marcos[0].elementos.map((e) => e.ref)
+      const r = resp(i, MF, {}, [{ accion: 'marcar', ref: rad }, { accion: 'avanzar', ref: btn, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+      expect(r.ok, texto).toBe(false)
+    }
+  })
+
+  it('0.3.15 · INTACTO: un campo IBAN / cuenta sigue siendo cerca_de_emision', () => {
+    for (const etiqueta of ['IBAN', 'Número de cuenta', 'Número de tarjeta']) {
+      const i = inv([radio, { tag: 'input', type: 'text', id: 'x', etiqueta }])
+      expect(detectarParada(i)?.motivo, etiqueta).toBe('cerca_de_emision')
+    }
   })
 
   it('onclick de 81-200 car. (JSF) ya no se recorta a 80; de más de 200 sigue recortado = onclick_truncado', () => {

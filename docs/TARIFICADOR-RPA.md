@@ -63,11 +63,12 @@ un riesgo al que le falte algo para alguna compañía (patinete: marca → model
 - **Ciclo de despliegue**: mergear → `tarificador-rpa-imagen.yml` → cancelar los trabajos atascados del cliente de prueba → `tarificador-relanzar.yml` (probar o explorar) con ~75 s entre lanzamientos → leer `seguros.tarificacion_trabajos` junto con `tarificador_exploraciones` y `tarificador_exploracion_pasos`.
 - **Pendientes**: Mapfre auto (2.º cliente, coberturas, comparativa, borrador); /datos unificado por ramo con filtro previo al bot; patinete: marca/modelo/versión por compañía y mapeo de aviso-web-reglas de patinete a «otros»; hogar en Mapfre y Generali.
 
-### Aprendizajes 29/10/2026 (explorador 0.3.12→0.3.14)
+### Aprendizajes 29/10/2026 (explorador 0.3.12→0.3.15)
 - **Fidelidade**: el diálogo de cookies se cierra con «Sí, acepto cookies» (rechazar lleva a SemCookies.aspx y rompe el login). Ruta: Oficina Virtual (aparece 3 veces, equivalentes → barra de navegación o el primero) › Nuevo proyecto › dos productos → «Simulación» SOLO en la tarjeta 4216 Fidelidade Vivienda (nunca EMPRESAS 4215) › formulario de datos (carga lenta, ~60 s).
 - **Allianz patinete (ePac)**: «Aceptar» de Figuras Intervinientes hace POST a `/drvp00/main/control.do` → permitido solo `#btnAceptar` exacto, mismo origen y filtro estricto de cuerpo (`cuerpoLlevaAccionFinal`). Siguiente pantalla: Datos del Vehículo · Municipio · Tomador y Conductor.
-- **Mapfre patinete**: «Contratación» como título de sección no es emisión (`titulo:contrat` → `/contrat(?!acion)/`). Pantalla NSE «Oferta / contratación» con tabla de productos comerciales; radio de consentimiento pendiente de decisión de Alberto (posible falso positivo por la palabra «comercial»).
+- **Mapfre patinete**: «Contratación» como título de sección no es emisión (`titulo:contrat` → `/contrat(?!acion)/`). Pantalla NSE «Oferta / contratación» con tabla de productos comerciales; el radio «producto comercial» era un falso positivo de la lista de consentimientos (resuelto en 0.3.15).
 - **Validador IA**: `pantalla.nombre` se recorta a 60; la clave «motivo» se ignora en marcar; `onclick` hasta 200 caracteres (JSF mojarra los supera de 80).
+- **Consentimientos (Alberto, 29/10/2026, 0.3.15)**: intranet privada del mediador, el bot actúa como él y el cliente no firma nada en este flujo → el validador deja marcar radios y casillas de consentimiento/declaración para tarificar (preferencia en el prompt: «No» en marketing/cesión salvo que la pantalla exija «Sí»). Siguen intactos los topes de botones finales (emitir/contratar/firmar/pagar), IBAN/tarjeta, POSTs de acción final y `cerca_de_emision`.
 
 ## Plan de robustez (fases)
 - **F1 (este PR)**: fijo → aprendido → IA en la capa común; Mapfre Auto (entrada + campos) y Allianz Comunidades (campos +
