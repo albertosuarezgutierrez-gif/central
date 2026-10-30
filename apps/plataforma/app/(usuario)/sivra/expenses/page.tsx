@@ -201,7 +201,7 @@ export default function ExpensesPage() {
                     </td>
                     <td style={{ padding: '9px 12px', color: 'var(--muted)', fontSize: 12 }}>{PROP_NAMES[g.propiedad] || g.propiedad || '-'}</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--muted)' }}>{fmt(g.base_imponible)}</td>
-                    <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--muted)' }}>{g.iva_porcentaje ? g.iva_porcentaje + '%' : fmt(g.iva)}</td>
+                    <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--muted)' }}>{Number(g.iva_porcentaje) ? Number(g.iva_porcentaje) + '%' : fmt(g.iva)}</td>
                     <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>{fmt(g.total)}</td>
                     <td style={{ padding: '9px 12px' }}>
                       {g.drive_url
