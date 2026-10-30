@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bookmark, RefreshCw, Upload, Wand2, ArrowUp, ArrowDown, X, Trash2 } from 'lucide-react'
+import { Bookmark, Download, RefreshCw, Upload, Wand2, ArrowUp, ArrowDown, X, Trash2 } from 'lucide-react'
 import type { PantallaMapa } from '@central/module-tarificacion'
 import { Badge, CardHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
@@ -157,9 +157,40 @@ function Instrucciones({ bookmarklet, bookmarkletManual }: { bookmarklet: string
       </ol>
       <p className="muted" style={{ margin: '8px 0 0', fontSize: 12 }}>
         El marcador lee la página y sus marcos del mismo portal, tapa contraseñas, campos ocultos, DNI, IBAN, correos y teléfonos,
-        no toca cookies y no pulsa nada. Asegura lo vuelve a tapar al guardarlo.
+        no toca cookies y no pulsa nada. Asegura lo vuelve a tapar al guardarlo. Los vídeos, mapas y marcos ocultos del portal se ignoran.
       </p>
+      <Extension />
     </section>
+  )
+}
+
+/** Extensión de Chrome para portales con el formulario en un marco de OTRO dominio (Mapfre): el marcador no lo puede leer. */
+function Extension() {
+  return (
+    <div style={{ borderTop: '1px solid var(--border)', marginTop: 12, paddingTop: 12, display: 'grid', gap: 6, minWidth: 0 }}>
+      <strong style={{ fontSize: 14 }}>¿El formulario va en un marco de otro dominio (Mapfre)? Usa la extensión</strong>
+      <span className="muted" style={{ fontSize: 12 }}>
+        Si el marcador avisa de «marcos sin leer», abrirlos en otra pestaña pierde la sesión. La extensión graba igual que el
+        marcador, también dentro de esos marcos, tapando los datos personales antes de que salgan de ellos. Solo observa y solo
+        actúa en portales de compañías.
+      </span>
+      <a
+        href="/api/correduria/tarificador/grabaciones/extension"
+        download
+        style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6, justifySelf: 'start', textDecoration: 'none' }}
+      >
+        <Download size={15} strokeWidth={1.75} aria-hidden /> Descargar la extensión (.zip)
+      </a>
+      <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4, fontSize: 13 }}>
+        <li>Descomprime el zip (queda la carpeta <code>grabador-asegura</code>) y abre <code>chrome://extensions</code> en Chrome.</li>
+        <li>Activa «Modo de desarrollador» (arriba a la derecha).</li>
+        <li>Pulsa «Cargar descomprimida» y elige la carpeta <code>grabador-asegura</code>.</li>
+      </ol>
+      <span className="muted" style={{ fontSize: 12 }}>
+        Luego, en el portal, pulsa el icono de la extensión en vez del marcador: sale el mismo cuadro azul; «Terminar y descargar»
+        baja el <code>grabacion-…html</code> que se sube aquí abajo como siempre.
+      </span>
+    </div>
   )
 }
 

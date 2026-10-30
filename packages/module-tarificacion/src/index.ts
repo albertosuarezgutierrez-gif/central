@@ -294,6 +294,10 @@ export {
   type PantallaSeparada,
 } from './grabador.ts'
 export { VERSION_GRABADOR, FUENTE_GRABADOR, FUENTE_GRABADOR_AUTO, configGrabador, AVISO_MARCO_NO_LEGIBLE, codigoBookmarklet, urlBookmarklet, codigoBookmarkletManual, urlBookmarkletManual, type ConfigGrabador } from './grabador-bookmarklet.ts'
+// Marcos ilegibles (filtro de vídeo/mapas/ocultos…, aviso único no bloqueante) y extensión de Chrome para marcos de otro origen (30/10/2026).
+export { MARCOS_IGNORADOS, MIN_LADO_MARCO_PX, DOMINIOS_PORTALES_GRABADOR, FUENTE_MARCOS, MARCA_MARCO_SIN_LEER, MARCA_MARCO_EXTENSION, motivoMarcoIrrelevante, textoAvisoMarcos, componerMarcos, hostPermitidoGrabador, type MarcoVisto, type Ilegible, type CapturaMarco, type ConfigMarcos } from './grabador-marcos.ts'
+export { VERSION_EXTENSION_GRABADOR, CARPETA_EXTENSION_GRABADOR, AVISO_MARCO_EXTENSION, FUENTE_CONTENIDO, FUENTE_FONDO, configExtension, matchesExtension, manifestExtension, fuenteGrabadorExtension, archivosExtension, zipExtension, type ConfigExtension } from './grabador-extension.ts'
+export { zipSinComprimir, crc32Zip } from './zip-simple.ts'
 
 // Recomendador explicable y control de calidad previo a enseñar/enviar (08/10/2026).
 export {
