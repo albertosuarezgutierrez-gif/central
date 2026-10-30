@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-30T07:44:48Z",
-  "sha": "010b41c152f4573084e93167a21b07beafa6dd58",
+  "generadoEn": "2026-10-30T08:15:49Z",
+  "sha": "318bd8e49ab9fcb3fdd371b176a67fd274e8905d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -63072,6 +63072,8 @@
         "esRamoBotLead",
         "ramoConBot",
         "matriculacionParaRiesgo",
+        "companiaCanonica",
+        "aniosCompletos",
         "garajeDeTexto",
         "historialDeTexto",
         "esElPropioCliente",
@@ -63160,7 +63162,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 140
+          "linea": 146
         },
         {
           "nombre": "sinTildes",
@@ -63168,7 +63170,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 141
+          "linea": 147
         },
         {
           "nombre": "hay",
@@ -63176,7 +63178,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 142
+          "linea": 148
         },
         {
           "nombre": "tokens",
@@ -63184,8 +63186,26 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 144,
+          "linea": 150,
           "resumen": "Minúsculas, sin tildes, todo lo que no es letra o número → un espacio."
+        },
+        {
+          "nombre": "companiaCanonica",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: unknown",
+          "retorno": "string | null",
+          "linea": 153,
+          "resumen": "Nombre de compañía de la póliza → el que espera el bot: el canónico si se reconoce (misma lista que el texto libre); si no, el texto tal cual. `null` = vacío o demasiado largo. PURA."
+        },
+        {
+          "nombre": "aniosCompletos",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: unknown, hoy: string",
+          "retorno": "number | null",
+          "linea": 162,
+          "resumen": "Años COMPLETOS entre `desde` (ISO) y `hoy` (ISO). `null` si alguna fecha no es válida o `desde` es futura. PURA."
         },
         {
           "nombre": "garajeDeTexto",
@@ -63193,7 +63213,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 147,
+          "linea": 171,
           "resumen": "«dónde duerme» en palabras del cliente → garaje del bot. `null` = no se entiende (no se traduce a ojo). PURA."
         },
         {
@@ -63202,7 +63222,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": null,
-          "linea": 177
+          "linea": 201
         },
         {
           "nombre": "historialDeTexto",
@@ -63210,7 +63230,7 @@
           "exportada": true,
           "params": "v: unknown, hoy?: string",
           "retorno": "LecturaHistorial",
-          "linea": 208,
+          "linea": 232,
           "resumen": "El texto libre del «seguro anterior» → lo que piden los bots. TOLERANTE con la forma («diez años», «desde 2016», «llevo 8 años sin partes») pero sin adivinar: lo que el cliente escribió y no se lee co"
         },
         {
@@ -63219,7 +63239,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 264,
+          "linea": 288,
           "resumen": "«yo», «yo mismo», «el mismo», «soy yo», «el tomador»… = el propio cliente. PURA."
         },
         {
@@ -63228,7 +63248,7 @@
           "exportada": true,
           "params": "v: unknown, conCarne: boolean",
           "retorno": "boolean",
-          "linea": 277,
+          "linea": 301,
           "resumen": "¿El texto sobre otra persona trae ya lo que se le pediría? Documento con forma de DNI/NIE y, si es conductor, dos fechas (nacimiento y carné). Solo PRESENCIA: los datos de terceros no se leen ni se va"
         },
         {
@@ -63237,7 +63257,7 @@
           "exportada": true,
           "params": "texto: string, opciones: readonly OpcionCatalogo[]",
           "retorno": "EleccionCatalogo",
-          "linea": 292,
+          "linea": 316,
           "resumen": "Las opciones del catálogo cuyo nombre aparece ENTERO (palabras completas) en el texto. Si casan varias y una contiene a todas las demás («PCX» y «PCX 125»), gana la más larga; si no, `varios` (no se e"
         },
         {
@@ -63246,7 +63266,7 @@
           "exportada": true,
           "params": "texto: string, nombresUsados: readonly string[]",
           "retorno": "number | null",
-          "linea": 308,
+          "linea": 332,
           "resumen": "Cilindrada en cc: «125 cc», «125cc», «125 c.c.» o, si no, UN único número de 50 a 3000 que no forme parte del nombre de la marca ni del modelo elegidos. Varios números distintos o ninguno → `null` (se"
         },
         {
@@ -63255,7 +63275,7 @@
           "exportada": true,
           "params": "cc: number | null",
           "retorno": "1 | 2 | 3 | 4 | null",
-          "linea": 322,
+          "linea": 346,
           "resumen": "Clase de Allianz Moto por cilindrada (tramos de `formulario-auto.ts`). `null` = ≤50 cc (ciclomotor) o sin dato. PURA."
         },
         {
@@ -63264,7 +63284,7 @@
           "exportada": true,
           "params": "texto: string, cargar: { marcas: () => Promise<readonly OpcionCatalogo[]>; modelos: (marcaId: string) => Promise<readonly OpcionCatalogo[]> }",
           "retorno": "Promise<LecturaMoto>",
-          "linea": 331,
+          "linea": 355,
           "resumen": "Texto libre de la moto → `LecturaMoto`, con los catálogos INYECTADOS (marcas y, una vez elegida la marca, sus modelos). Un catálogo que lanza = `no_mirado` (fallo nuestro, no del cliente). Pura salvo "
         },
         {
@@ -63273,7 +63293,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 349,
+          "linea": 373,
           "resumen": "«20 viviendas y 2 locales» / «22» / «20 pisos, sin locales» → total. `null` = no se lee con certeza (se pregunta). PURA."
         },
         {
@@ -63282,7 +63302,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string | null",
-          "linea": 362
+          "linea": 386
         },
         {
           "nombre": "formularioComunidad",
@@ -63290,7 +63310,7 @@
           "exportada": false,
           "params": "e: EntradaFormulario",
           "retorno": "FormularioLead",
-          "linea": 370,
+          "linea": 394,
           "resumen": "Contrato del lead (comunidades) → `RiesgoComunidad` candidato. Desplegables del portal: los de defecto, DICHOS. PURA."
         },
         {
@@ -63299,7 +63319,7 @@
           "exportada": true,
           "params": "e: EntradaFormulario",
           "retorno": "FormularioLead",
-          "linea": 417,
+          "linea": 441,
           "resumen": "Contrato del lead + bloque del riesgo → formulario candidato del bot (auto/moto: `FormularioAuto`; comunidades: `RiesgoComunidad`). Nada personal se inventa: lo que falta no se pone (lo dirá `faltanPa"
         },
         {
@@ -63308,7 +63328,7 @@
           "exportada": true,
           "params": "ramo: string, claveBot: string",
           "retorno": "string | null",
-          "linea": 523,
+          "linea": 560,
           "resumen": "Clave de un validador del bot («conductor.fechaCarne») → clave del contrato que la pregunta (`fechaCarnet`). PURA."
         },
         {
@@ -63317,7 +63337,7 @@
           "exportada": true,
           "params": "compania: string, ramo: RamoBotLead, f: FormularioLead",
           "retorno": "ValoracionCompania",
-          "linea": 549,
+          "linea": 586,
           "resumen": "Para UNA compañía con bot activo: ¿llega a precio con este riesgo? Primero, que su bot llegue a precio de verdad (`llegaAPrecio`); luego lo que falta (`faltanParaTarificar`, sin lo que pone la ficha a"
         },
         {
@@ -63326,7 +63346,7 @@
           "exportada": true,
           "params": "b: unknown, hoy: string",
           "retorno": "",
-          "linea": 601,
+          "linea": 638,
           "resumen": "`{ accion:'revisar'|'tarificar'|'fallos', clienteId, oportunidadIds[], actor, pendienteId?, tgMessageId? }` · `{ accion:'ampliar_tope', dia:'aaaammdd', actor }` · `{ accion:'elegir', clienteId, oportu"
         },
         {
@@ -63335,7 +63355,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, error: { tipo?: unknown; mensaje?: unknown } | null",
           "retorno": "ClaseFalloBot",
-          "linea": 643,
+          "linea": 680,
           "resumen": "¿El fallo de un bot es por un dato del cliente? Solo con `tipo: 'datos'` y cuando su mensaje nombra la ETIQUETA de un obligatorio de ese bot (`obligatoriosPara`) que se le pide al cliente (clave del c"
         },
         {
@@ -63344,7 +63364,7 @@
           "exportada": true,
           "params": "estadoTrabajo: string",
           "retorno": "boolean",
-          "linea": 659,
+          "linea": 696,
           "resumen": "¿Este estado del trabajo, tras el resultado del worker, es un fallo que ya no se reintenta solo? PURA."
         },
         {
@@ -63353,7 +63373,7 @@
           "exportada": true,
           "params": "a: { ramo: string; pendienteId: string | null; clase: ClaseFalloBot }",
           "retorno": "",
-          "linea": 668,
+          "linea": 705,
           "resumen": "Los botones del aviso del fallo. 📝 `clp_fal:<p>` si el fallo es un dato del CLIENTE. 💶 `clp_cds:<p>:<ramo>` (opción B, 19/10/2026) SOLO en coche/moto: entrega el lead al asistente de Avant2 de plata"
         },
         {
@@ -63362,7 +63382,7 @@
           "exportada": true,
           "params": "a: { compania: string; ramo: string; pendienteId: string | null; clase: ClaseFalloBot; tipoError: string | null }",
           "retorno": "string",
-          "linea": 677,
+          "linea": 714,
           "resumen": "Aviso del fallo (HTML seguro para Telegram): compañía, ramo y etiquetas; NUNCA el mensaje del portal ni un valor. PURA."
         },
         {
@@ -63371,13 +63391,13 @@
           "exportada": true,
           "params": "p: object | null, ramo: string",
           "retorno": "string | null",
-          "linea": 694,
+          "linea": 731,
           "resumen": "Fecha del carné que devuelve `personaDeFicha` para tarificar. En MOTO solo vale un carné de moto (A, A1, A2): si la ficha solo trae el B (`tipoCarnet` 'B' o ausente), su fecha NO es la de moto → `null"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4e1f8be190fd"
+      "hash": "f42bdbec4144"
     },
     {
       "ruta": "apps/asegura/lib/tarificacion-lead.ts",
@@ -63460,12 +63480,21 @@
           "resumen": "Fecha del carné del conductor en la FICHA (carné B en coche; en moto SOLO el de moto: A, A1 o A2), la MISMA que lee la pantalla de la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo le"
         },
         {
+          "nombre": "polizaActualVinculada",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, ramo: string, infoRiesgo: unknown",
+          "retorno": "Promise<",
+          "linea": 142,
+          "resumen": "Compañía y antigüedad de la póliza del MISMO ramo, VIVA, vinculada a la oportunidad (`info_riesgo.polizaId`), del mismo cliente. Solo SELECT. `null` = sin póliza vinculada/viva o no se pudo leer (nunc"
+        },
+        {
           "nombre": "conTope",
           "kind": "arrow",
           "exportada": false,
           "params": "p: Promise<T>, defecto: T",
           "retorno": "Promise<T>",
-          "linea": 142
+          "linea": 157
         },
         {
           "nombre": "motoDelLead",
@@ -63473,7 +63502,7 @@
           "exportada": false,
           "params": "texto: unknown",
           "retorno": "Promise<LecturaMoto | null>",
-          "linea": 146,
+          "linea": 161,
           "resumen": "Moto: el texto libre contra el catálogo de motos de Codeoscopic (GET gratis). Sin Codeoscopic configurado = `no_mirado`."
         },
         {
@@ -63482,7 +63511,7 @@
           "exportada": false,
           "params": "valores: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 159,
+          "linea": 174,
           "resumen": "Comunidades: con una referencia catastral de 20 caracteres, el año de construcción y el CP del Catastro (con la de 14, la de parcela, el Catastro no da datos del bien). Solo si faltan. `null` = no se "
         },
         {
@@ -63491,7 +63520,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: RamoBotLead, infoRiesgo: unknown, nac: string | null, dia: string,",
           "retorno": "Promise<",
-          "linea": 176,
+          "linea": 191,
           "resumen": "El formulario candidato del bot de UNA oportunidad de auto/moto/comunidades: contrato del lead (descifrado) + bloque del riesgo (`datosVehiculo`) + ficha (nacimiento y carné). Compartido por la revisi"
         },
         {
@@ -63500,7 +63529,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: string, ahora = new Date()",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 201,
+          "linea": 216,
           "resumen": "Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE del cliente en ese ramo + su ficha, como el botón (formulario + «completar d"
         },
         {
@@ -63509,7 +63538,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ahora: Date",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 216,
+          "linea": 231,
           "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
         },
         {
@@ -63518,7 +63547,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<CatalogosHogarLeidos>",
-          "linea": 231,
+          "linea": 246,
           "resumen": "Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types, occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera ("
         },
         {
@@ -63527,7 +63556,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 241
+          "linea": 256
         },
         {
           "nombre": "publico",
@@ -63535,7 +63564,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 266
+          "linea": 281
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -63543,7 +63572,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 270
+          "linea": 285
         },
         {
           "nombre": "tarificarLead",
@@ -63551,7 +63580,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 286
+          "linea": 301
         },
         {
           "nombre": "ampliarTopeLead",
@@ -63559,7 +63588,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 388,
+          "linea": 403,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -63568,7 +63597,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 415,
+          "linea": 430,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -63577,7 +63606,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 462,
+          "linea": 477,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -63586,7 +63615,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "0b06246b2bb3"
+      "hash": "ee173984022e"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -260523,6 +260552,6 @@
   ],
   "resumen": {
     "archivos": 5435,
-    "funciones": 20961
+    "funciones": 20964
   }
 }
