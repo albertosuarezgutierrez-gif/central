@@ -21,8 +21,10 @@
 //    formador) → [DATO] en textos, valores y atributos; parámetros de sesión de las URL tapados; atributos de
 //    sesión (session, token, auth, csrf…) y cualquier UUID en un atributo → [DATO]; el TEXTO de los elementos
 //    cuyo id/class/aria-label dice usuario/login/cuenta/perfil (cabecera del portal) → [DATO].
-// 🔒 Marcos de OTRO origen (no legibles): la cabecera lista su URL SIN query ni #; y se avisa con un alert() que lleva
-//    la URL completa (solo en pantalla, nunca en el fichero) para abrirla en pestaña nueva y grabar desde ahí.
+// 🔒 Marcos de OTRO origen (no legibles): la cabecera lista su URL SIN query ni #. Los irrelevantes (vídeo, mapas, publicidad,
+//    ocultos, < 50×50 px, sin src http(s): `grabador-marcos.ts`) ni cuentan ni avisan; del resto, UN aviso agregado NO
+//    bloqueante (30/10/2026: antes era un alert() que en Generali salía en bucle por los vídeos de Vimeo). Para leerlos de
+//    verdad (Mapfre), la extensión `grabador-extension.ts` reutiliza este mismo código dentro de cada marco.
 //
 // La función va como TEXTO (`FUENTE_GRABADOR`), no como función serializada con `toString()`: los
 // compiladores inyectan ayudantes (`__name` de esbuild, visto en rojo el 07/10/2026) que en el portal no
@@ -30,6 +32,7 @@
 
 import { PATRONES_PERSONALES, MARCA_DATO_PERSONAL } from './formador.ts'
 import { MARCA_REDACTADO } from './redactar.ts'
+import { AVISO_MARCO_NO_LEGIBLE, FUENTE_MARCOS, MARCA_MARCO_EXTENSION, MARCA_MARCO_SIN_LEER, MARCOS_IGNORADOS, MIN_LADO_MARCO_PX } from './grabador-marcos.ts'
 import { FIN_MARCA_MARCO, MARCA_PANTALLA, MARCA_LOGIN, MARCA_MARCO, PATRON_CAMPO_SENSIBLE, PATRON_CAMPO_PERSONAL, PATRON_CAMPO_USUARIO, PATRON_MEDIADOR, PATRON_PARAM_SENSIBLE, PATRON_ATRIBUTO_SESION, PATRON_UUID, PATRON_ELEMENTO_USUARIO, MAX_TEXTO_ELEMENTO_USUARIO, PATRON_IMAGEN_BASE64, PATRON_ULTIMO_ACCESO, MARCA_IMAGEN_OMITIDA } from './grabador.ts'
 
 export const VERSION_GRABADOR = 3
@@ -39,8 +42,10 @@ export const UMBRAL_NODOS_GRABADOR = 20
 export const ESPERA_CAPTURA_MS = 1500
 export const SONDEO_MS = 600
 
-/** Texto del alert() cuando hay marcos de otro origen; se le pega la URL completa del marco. */
-export const AVISO_MARCO_NO_LEGIBLE = 'Esta pantalla tiene el formulario en un marco que no se puede leer. Abre este enlace en una pestaña nueva y vuelve a pulsar el marcador: '
+/** Aviso (UNO, no bloqueante) de marcos relevantes sin leer: vive en grabador-marcos.ts; se reexporta por compatibilidad. */
+export { AVISO_MARCO_NO_LEGIBLE }
+/** Cuánto se queda en pantalla el aviso no bloqueante del modo manual. */
+export const AVISO_DURA_MS = 30000
 
 export type ConfigGrabador = {
   version: number
@@ -59,6 +64,11 @@ export type ConfigGrabador = {
   ultimo: [string, string]
   maxTextoUsuario: number
   aviso: string
+  avisoMs: number
+  marcosIgnorados: [string, string, string][]
+  minLadoMarco: number
+  sinLeer: string
+  marcaExtension: string
   marca: string
   finMarca: string
   sepPantalla: string
@@ -87,6 +97,11 @@ export function configGrabador(): ConfigGrabador {
     ultimo: [PATRON_ULTIMO_ACCESO.source, PATRON_ULTIMO_ACCESO.flags],
     maxTextoUsuario: MAX_TEXTO_ELEMENTO_USUARIO,
     aviso: AVISO_MARCO_NO_LEGIBLE,
+    avisoMs: AVISO_DURA_MS,
+    marcosIgnorados: MARCOS_IGNORADOS,
+    minLadoMarco: MIN_LADO_MARCO_PX,
+    sinLeer: MARCA_MARCO_SIN_LEER,
+    marcaExtension: MARCA_MARCO_EXTENSION,
     marca: MARCA_MARCO,
     finMarca: FIN_MARCA_MARCO,
     sepPantalla: MARCA_PANTALLA,
@@ -101,6 +116,7 @@ export function configGrabador(): ConfigGrabador {
 /** Fuente JS (ES5, sin tipos: no pasa por ningún compilador) de `grabarPantalla(win, cfg, descargar)` →
  *  `{ nombre, html, marcosSinLeer, urlsSinLeer, aviso }`. Si `descargar`, además lo descarga. Corre EN EL NAVEGADOR del portal. */
 export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, descargar) {
+  var M = (${FUENTE_MARCOS})()
   var PII = []
   for (var p = 0; p < cfg.patrones.length; p++) PII.push(new RegExp(cfg.patrones[p][0], cfg.patrones[p][1]))
   var SENS = new RegExp(cfg.sensible[0], cfg.sensible[1].replace('g', ''))
@@ -118,7 +134,8 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var ELEM_USU = new RegExp(cfg.elemUsuario[0], cfg.elemUsuario[1].replace('g', ''))
   var NO_USU = { html: 1, body: 1, head: 1, main: 1, form: 1, table: 1, script: 1, style: 1, input: 1, select: 1, textarea: 1, option: 1, button: 1 }
   var urlsSinLeer = []
-  var urlsCompletas = []
+  var ilegibles = []
+  var ignorados = 0
   var ATR_SELECTOR = { id: 1, name: 1, 'class': 1, 'for': 1, type: 1, role: 1, style: 1 }
   var ATR_URL = { href: 1, src: 1, action: 1, formaction: 1 }
   var sinLeer = 0
@@ -271,13 +288,24 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
     for (var f = 0; f < marcos.length; f++) {
       var d = null
       try { d = marcos[f].contentDocument } catch (e) { d = null }
-      if (d && d.documentElement) serializar(d, rutas[f], partes)
-      else {
-        sinLeer++
-        var srcCompleta = String(marcos[f].src || '')
-        if (srcCompleta && srcCompleta.indexOf('about:') !== 0) { urlsSinLeer.push(sinParametros(srcCompleta)); urlsCompletas.push(srcCompleta) }
-        partes.push(cfg.marca + rutas[f] + cfg.finMarca + '\n<!-- grabador: marco de otro origen o vacío; no se ha podido leer -->')
+      if (d && d.documentElement) { serializar(d, rutas[f], partes); continue }
+      // Marco ilegible: ¿puede ser el formulario? Vídeo, mapas, publicidad, ocultos, diminutos o sin src http(s): NO (ni aviso ni «sin leer»).
+      var el = marcos[f]
+      var caja = { width: 0, height: 0 }
+      try { caja = el.getBoundingClientRect() } catch (e) { }
+      var oculto = el.hasAttribute('hidden')
+      try { var cs = (el.ownerDocument.defaultView || win).getComputedStyle(el); if (cs && (cs.display === 'none' || cs.visibility === 'hidden')) oculto = true } catch (e) { }
+      var motivo = M.irrelevante({ src: String(el.src || el.getAttribute('src') || ''), ancho: caja.width, alto: caja.height, oculto: oculto }, cfg)
+      if (motivo) {
+        ignorados++
+        partes.push(cfg.marca + rutas[f] + cfg.finMarca + '\n<!-- grabador: marco ignorado (' + motivo + ') -->')
+        continue
       }
+      sinLeer++
+      var urlMarco = sinParametros(String(el.src || ''))
+      urlsSinLeer.push(urlMarco)
+      ilegibles.push({ ruta: rutas[f], nombre: String(el.getAttribute('name') || ''), url: urlMarco })
+      partes.push(cfg.marca + rutas[f] + cfg.finMarca + '\n' + cfg.sinLeer)
     }
   }
 
@@ -290,7 +318,7 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
   var sello = d.getFullYear() + dos(d.getMonth() + 1) + dos(d.getDate()) + '-' + dos(d.getHours()) + dos(d.getMinutes()) + dos(d.getSeconds())
   var titulo = red(String(win.document.title || '')).replace(/--/g, '- -')
   var cabecera = '<!-- grabador ASegura v' + cfg.version + ' · ' + d.toISOString() + ' · ' + host + redUrl(String(loc.pathname || '')).replace(/--/g, '- -') +
-    ' · «' + titulo + '» · marcos sin leer: ' + sinLeer + ' -->\n' + (urlsSinLeer.length ? '<!-- grabador: marcos sin leer (sin query ni tokens): ' + urlsSinLeer.join(' | ').replace(/--/g, '- -').replace(/>/g, '%3E') + ' -->\n' : '') + (hayLogin ? cfg.login + '\n' : '')
+    ' · «' + titulo + '» · marcos sin leer: ' + sinLeer + ' -->\n' + (ignorados ? '<!-- grabador: marcos ignorados (vídeo, mapa, publicidad, ocultos o diminutos): ' + ignorados + ' -->\n' : '') + (urlsSinLeer.length ? '<!-- grabador: marcos sin leer (sin query ni tokens): ' + urlsSinLeer.join(' | ').replace(/--/g, '- -').replace(/>/g, '%3E') + ' -->\n' : '') + (hayLogin ? cfg.login + '\n' : '')
   cabecera = fin(cabecera)
   var cuerpo = fin(partes.join('\n'))
   var html = cabecera + cuerpo
@@ -304,11 +332,38 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
     a.click()
     win.setTimeout(function () { win.URL.revokeObjectURL(url) }, 5000)
   }
-  // Aviso EN PANTALLA (con la URL completa, que NO va al fichero) para abrir el marco en una pestaña nueva.
-  var aviso = ''
-  for (var v = 0; v < urlsCompletas.length; v++) aviso += (aviso ? '\n\n' : '') + cfg.aviso + urlsCompletas[v]
-  if (descargar && aviso) { try { win.alert(aviso) } catch (e) { } }
-  return { nombre: nombre, html: html, cuerpo: cuerpo, host: host, sello: sello, marcosSinLeer: sinLeer, urlsSinLeer: urlsSinLeer, aviso: aviso }
+  // UN aviso agregado y NO bloqueante (nunca una ventana modal del navegador: en Generali salía en bucle por los vídeos). Solo URLs sin query.
+  var aviso = M.textoAviso(urlsSinLeer, cfg)
+  if (descargar && aviso) avisoEnPantalla(aviso)
+  function avisoEnPantalla(texto) {
+    try {
+      var doc = win.document
+      var viejo = doc.querySelector('[data-asegura-grabador-aviso]')
+      if (viejo && viejo.parentNode) viejo.parentNode.removeChild(viejo)
+      var caja = doc.createElement('div')
+      caja.setAttribute('data-asegura-grabador', '1')
+      caja.setAttribute('data-asegura-grabador-aviso', '1')
+      caja.style.cssText = 'all:initial;position:fixed;left:12px;bottom:12px;z-index:2147483647'
+      var raiz = caja.attachShadow ? caja.attachShadow({ mode: 'open' }) : caja
+      var marco = doc.createElement('div')
+      marco.setAttribute('role', 'status')
+      marco.style.cssText = 'font:12px/1.4 system-ui,sans-serif;background:#fff8e6;color:#111;border:2px solid #b07400;border-radius:10px;padding:8px 10px;max-width:min(420px,90vw);white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 10px rgba(0,0,0,.3)'
+      marco.textContent = texto
+      var b = doc.createElement('button')
+      b.type = 'button'
+      b.textContent = 'Cerrar'
+      b.style.cssText = 'display:block;margin:6px 0 0;min-height:32px;padding:4px 10px;font:12px system-ui,sans-serif;border:1px solid #b07400;border-radius:6px;background:#fff;color:#111;cursor:pointer'
+      var quitar = function () { if (caja.parentNode) caja.parentNode.removeChild(caja) }
+      b.addEventListener('click', quitar)
+      marco.appendChild(b)
+      raiz.appendChild(marco)
+      var evs = ['click', 'mousedown', 'mouseup', 'keydown', 'keyup', 'pointerdown', 'pointerup']
+      for (var k = 0; k < evs.length; k++) caja.addEventListener(evs[k], function (e) { e.stopPropagation() })
+      ;(doc.body || doc.documentElement).appendChild(caja)
+      win.setTimeout(quitar, cfg.avisoMs)
+    } catch (e) { }
+  }
+  return { nombre: nombre, html: html, cabecera: cabecera, cuerpo: cuerpo, host: host, sello: sello, url: sinParametros(String(loc.href || '')), login: hayLogin, marcosSinLeer: sinLeer, marcosIgnorados: ignorados, urlsSinLeer: urlsSinLeer, ilegibles: ilegibles, aviso: aviso }
 }`
 
 /** Fuente JS (ES5) del MODO AUTOMÁTICO `grabadorAuto(win, cfg, grabar)`: un indicador flotante (shadow DOM abierto, fuera de
@@ -316,7 +371,8 @@ export const FUENTE_GRABADOR = String.raw`function grabarPantalla(win, cfg, desc
  *  debounce). Dedupe por huella del HTML ya redactado. El estado vive SOLO en memoria de la pestaña (nada de almacenamiento
  *  que el portal pudiera leer): si la página se recarga entera, se pierde y el indicador lo avisa. Al terminar descarga UN
  *  fichero con todas las pantallas. Sin red, sin cookies; el único click() es el del <a download> propio. */
-export const FUENTE_GRABADOR_AUTO = String.raw`function grabadorAuto(win, cfg, grabar) {
+export const FUENTE_GRABADOR_AUTO = String.raw`function grabadorAuto(win, cfg, grabar, ganchos) {
+  ganchos = ganchos || {}
   var doc = win.document
   var previo = doc.querySelector('[data-asegura-grabador]')
   if (previo && previo.__ahora) { previo.__ahora(); return }
@@ -348,6 +404,7 @@ export const FUENTE_GRABADOR_AUTO = String.raw`function grabadorAuto(win, cfg, g
   function linea(css, texto) { var e = doc.createElement('div'); e.style.cssText = css; e.textContent = texto; marco.appendChild(e); return e }
   var titulo = linea('font-weight:700;font-size:13px', '')
   var estado = linea('margin:2px 0 4px;color:#444', 'Navega con normalidad: cada pantalla nueva se guarda sola.')
+  var avisoMarcos = linea('display:none;margin:0 0 6px;padding:4px 6px;border:1px solid #b07400;border-radius:6px;background:#fff8e6;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere', '')
   linea('margin:0 0 6px;color:#8a5a00;font-size:11px', 'Si la pagina se recarga entera se pierde lo grabado: pulsa Terminar antes de salir, o vuelve a pulsar el marcador despues (se juntan por nombre y fecha).')
   function boton(texto, fn) {
     var b = doc.createElement('button')
@@ -359,7 +416,7 @@ export const FUENTE_GRABADOR_AUTO = String.raw`function grabadorAuto(win, cfg, g
     return b
   }
   function pintar(msg) {
-    titulo.textContent = '\u25CF Grabando \u00B7 ' + pantallas.length + ' pantalla' + (pantallas.length === 1 ? '' : 's')
+    titulo.textContent = '\u25CF Grabando \u00B7 ' + pantallas.length + ' pantalla' + (pantallas.length === 1 ? '' : 's') + (ganchos.etiqueta ? ' \u00B7 ' + ganchos.etiqueta : '')
     if (msg) estado.textContent = msg
   }
 
@@ -369,7 +426,8 @@ export const FUENTE_GRABADOR_AUTO = String.raw`function grabadorAuto(win, cfg, g
     var r
     try { r = grabar(win, cfg, false) } finally { ocupado = false }
     pendientes = 0
-    if (r.aviso && !avisado) { avisado = true; try { win.alert(r.aviso) } catch (e) { } }
+    // UN aviso por grabación, dentro del propio cuadro (no bloquea: nada de ventanas modales).
+    if (r.aviso && !avisado) { avisado = true; avisoMarcos.textContent = r.aviso; avisoMarcos.style.display = 'block' }
     var h = huella(r.cuerpo)
     if (vistas[h]) { pintar('Esta pantalla ya estaba guardada.'); return false }
     vistas[h] = 1
@@ -427,6 +485,7 @@ export const FUENTE_GRABADOR_AUTO = String.raw`function grabadorAuto(win, cfg, g
     win.clearInterval(intervalo)
     for (var i = 0; i < observadores.length; i++) observadores[i].disconnect()
     if (caja.parentNode) caja.parentNode.removeChild(caja)
+    if (ganchos.alDetener) { try { ganchos.alDetener() } catch (e) { } }
   }
   function terminar() {
     capturar('final')
@@ -456,7 +515,10 @@ export const FUENTE_GRABADOR_AUTO = String.raw`function grabadorAuto(win, cfg, g
   ;(doc.body || doc.documentElement).appendChild(caja)
   var intervalo = win.setInterval(sondear, cfg.sondeoMs)
   sondear()
-  capturar('inicio')
+  // La extensión espera a que los marcos ajenos manden su primera captura (si no, la 1.ª pantalla saldría sin ellos).
+  if (ganchos.inicioDiferido) programar('inicio'); else capturar('inicio')
+  // Para la extensión: que un marco ajeno que cambia pueda pedir captura (con su espera) y «guardar ahora».
+  return { programar: programar, ahora: caja.__ahora }
 }`
 
 /** Código JS del marcador MANUAL de siempre (una pantalla por pulsación → `pantalla-….html`). */

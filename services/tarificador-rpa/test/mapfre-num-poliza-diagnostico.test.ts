@@ -5,7 +5,8 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
 import type { FormularioAuto } from '@central/module-tarificacion'
-import { diagnosticoPolizaAnterior, historialAnterior, mapfreAuto, ofertasDesdePrimasMapfre } from '../src/adapters/mapfre/auto.ts'
+import { readFileSync } from 'node:fs'
+import { diagnosticoPolizaAnterior, historialAnterior, historialAnteriorConPoliza, mapfreAuto, ofertasDesdePrimasMapfre } from '../src/adapters/mapfre/auto.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 
 let browser: Browser
@@ -34,7 +35,7 @@ const pagina = async (html: string): Promise<Page> => {
 }
 
 test('versión del bot Mapfre auto: 0.8.29', () => {
-  assert.equal(mapfreAuto.version, '0.8.35')
+  assert.equal(mapfreAuto.version, '0.8.36')
 })
 
 test('diagnóstico: lee maxlength/placeholder/obligatorio/hint/error; no toca el valor', async () => {
@@ -114,4 +115,30 @@ test('póliza anterior: el portal no deja fijar el valor → `datos` claro', asy
   const page = await pagina('<input formcontrolname="numPoliza" oninput="this.value=\'\'">')
   await assert.rejects(() => historialAnterior(page, formCon, undefined), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /nº de póliza/.test(e.message) && !e.message.includes(CINCO))
   await page.context().close()
+})
+
+// ───────────── v0.8.36 (30/10/2026, «SINCO al tarificar»): señal de nº de póliza TECLEADO ─────────────
+test('v0.8.36 SINCO: `polizaTecleada` solo si el bot escribió y releyó; ya relleno, sin dato o 0 años → false; el valor nunca sale', async () => {
+  const escrito = await pagina('<input formcontrolname="numPoliza" maxlength="20">')
+  const r = await historialAnteriorConPoliza(escrito, formCon, undefined)
+  assert.equal(r.polizaTecleada, true)
+  assert.equal(await valorDe(escrito), CINCO)
+  assert.ok(!JSON.stringify(r).includes(CINCO))
+  await escrito.context().close()
+  const relleno = await pagina('<input formcontrolname="numPoliza" value="99999">')
+  assert.equal((await historialAnteriorConPoliza(relleno, formCon, undefined)).polizaTecleada, false, 'lo puso el portal: no se sabe qué número usó')
+  await relleno.context().close()
+  const sinDato = await pagina('<input formcontrolname="numPoliza">')
+  assert.equal((await historialAnteriorConPoliza(sinDato, form, undefined)).polizaTecleada, false)
+  await sinDato.context().close()
+  const cero = await pagina('<input formcontrolname="numPoliza">')
+  assert.deepEqual(await historialAnteriorConPoliza(cero, { ...formCon, aniosAseguradoAnterior: 0 } as unknown as FormularioAuto, undefined), { diagnostico: null, polizaTecleada: false })
+  assert.equal(await valorDe(cero), '')
+  await cero.context().close()
+})
+
+test('v0.8.36 SINCO: el flujo de tarificar marca las ofertas con la señal del historial (y el historial omitido no la da)', () => {
+  const src = readFileSync(new URL('../src/adapters/mapfre/auto.ts', import.meta.url), 'utf8')
+  assert.match(src, /const historial = sinHist\.omitido \? \{ diagnostico: null, polizaTecleada: false \} : await historialAnteriorConPoliza\(nsei, f, ctx\.formador\)/)
+  assert.match(src, /ofertas: conPolizaAnteriorTecleada\(ofertasConPdfProyecto\([\s\S]*?\), historial\.polizaTecleada\)/)
 })

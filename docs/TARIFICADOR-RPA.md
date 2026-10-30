@@ -21,6 +21,7 @@ Todo desde `/correduria/oportunidad/[id]`, sección **Presupuestos de compañía
 - Precio verificado contra el manual (06/10/2026): **347,55 € anual / 342,77 € primer recibo.**
 
 ## Seguridad (TARIFICAR ≠ EMITIR)
+- **Firmeza «SINCO al tarificar» (Alberto, 30/10/2026):** precio RPA `firme` solo si compañía ≠ Occident + ramo auto + el riesgo entregado traía `polizaAnteriorUltimos5` + el bot lo tecleó y releyó (`polizaAnteriorTecleada` en la oferta; Mapfre 0.8.36 y Allianz Turismos 0.6.36). Si no, `estimado`. Reglas puras en `packages/module-tarificacion/src/firmeza-rpa.ts`; el lead pone las 5 últimas cifras de la póliza viva vinculada. Generali: campo de nº de póliza PENDIENTE (sin evidencia en el repo).
 - Guardián `test/regression-tarificador-rpa.test.ts`: lista blanca; nunca Emitir/Contratar/Formalizar/Grabar/Archivar ni Aceptar fuera de Tarificar; pulsar solo con `ctx.pulsar()`; sin `.click()` directo.
 - Credenciales (`CRED_<CLAVE>_USER/_PASS`) solo como fly secrets: nunca en código, logs, BD ni IA (se redactan). El worker no lleva `DATABASE_URL` ni `CODEOSCOPIC_*`.
 - CAPTCHA → `requiere_humano`, nunca se evita. **Un cepo se ve en rojo antes de darlo por bueno.**

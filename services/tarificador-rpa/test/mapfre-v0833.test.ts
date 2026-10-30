@@ -35,7 +35,7 @@ const COMPANIA = `<mat-form-field><label><mat-label>Compañia</mat-label></label
 const DATOS_BASICOS = (visible: boolean) => `<mat-stepper><div class="mat-horizontal-stepper-content" style="visibility:${visible ? 'visible' : 'hidden'}"><app-datos-basicos>${COMPANIA}</app-datos-basicos></div></mat-stepper>`
 const OP_COMPANIA = { sel: 'app-historial-siniestralidad mat-select[formcontrolname="companiaAnterior"]', etiqueta: 'compañía anterior', tipo: 'mat-select' as const, valor: 'ZZ Seguros', paso: 'figuras' as const, opciones: ['ZZ Seguros'] }
 
-test('v0.8.33 · la versión del bot es 0.8.33', () => assert.equal(mapfreAuto.version, '0.8.35'))
+test('v0.8.33 · la versión del bot es 0.8.33', () => assert.equal(mapfreAuto.version, '0.8.36'))
 
 test('«Compañia» de Datos básicos oculto por el stepper (única opción Mapfre): NO hay control de compañía anterior, no se usa', async () => {
   const page = await pagina(DATOS_BASICOS(false))

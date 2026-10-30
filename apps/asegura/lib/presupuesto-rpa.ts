@@ -19,6 +19,7 @@
 // 🚨 Nunca lanza hacia `registrarResultado`: el precio ya está guardado; un fallo aquí se registra y se devuelve.
 
 import { calcularVencimiento, compararOfertas, type ResultadoComparacion } from '@central/module-seguros'
+import { firmezaOfertaRpaGuardada } from '@central/module-tarificacion'
 import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
 import { tgSend } from '@central/core-telegram'
 import type { Prisma } from './generated/asegura-client'
@@ -104,8 +105,8 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   if (!op) return { estado: 'nada', motivo: 'oportunidad_no_encontrada' }
 
   // Los trabajos de la oportunidad con su respuesta (solo `respuesta`: el riesgo ni se lee).
-  const filas = await db.$queryRaw<{ id: string; compania: string; estado: string; modo: string | null; created_at: Date; tarificacion_id: string | null; respuesta: unknown }[]>`
-    select t.id::text as id, t.compania, t.estado, to_jsonb(t)->>'modo' as modo, t.created_at,
+  const filas = await db.$queryRaw<{ id: string; compania: string; ramo: string; estado: string; modo: string | null; created_at: Date; tarificacion_id: string | null; respuesta: unknown }[]>`
+    select t.id::text as id, t.compania, t.ramo, t.estado, to_jsonb(t)->>'modo' as modo, t.created_at,
            t.tarificacion_id::text as tarificacion_id, x.respuesta
     from tarificacion_trabajos t
     left join tarificaciones x on x.id = t.tarificacion_id and x.correduria_id = t.correduria_id
@@ -187,6 +188,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   const analisis = await analisisRecomendador(correduriaId, op.id, ahora)
 
   const leidaDe = new Map(leidas.map((l) => [l.clave, l]))
+  const trabajoDe = new Map(filas.map((f) => [f.id, { compania: f.compania, ramo: f.ramo }]))
   const opciones = vivas
     .map((f) => ({ f, l: leidaDe.get(claveRpaDeFila(f.datosExtra) ?? '') }))
     .filter((x): x is { f: (typeof vivas)[number]; l: OfertaRpaLeida } => !!x.l)
@@ -202,8 +204,9 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
         primaEur: l.oferta.primaAnualEur,
         entradaEur: null,
         franquiciaEur: (fila.datosExtra.franquiciaGeneral as number | null) ?? null,
-        // Precio de portal: una OFERTA estimada (la compañía confirma al emitir). Nunca ReRate por Avant2.
-        firmeza: 'estimado',
+        // Precio de portal: una OFERTA estimada (la compañía confirma al emitir), salvo la regla SINCO (30/10/2026): compañía ≠ Occident,
+        // auto y el bot tecleó el nº de póliza anterior (la señal solo sobrevive al guardado si el riesgo lo traía) → `firme`. Nunca ReRate.
+        firmeza: firmezaOfertaRpaGuardada(trabajoDe.get(l.trabajoId)?.compania, trabajoDe.get(l.trabajoId)?.ramo, l.oferta),
         requiereRerate: false,
         referenciaVendor: null,
         avisos: avisosOpcionRpa(l.oferta.avisos, l.oferta.compania),

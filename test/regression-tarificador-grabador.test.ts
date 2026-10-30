@@ -60,7 +60,11 @@ test('el grabador tapa atributos de sesión, UUID y texto de usuario, y avisa de
   assert.match(gr, /replace\(PATRON_UUID/, 'el servidor no tapa los UUID')
   assert.match(bm, /SESION\.test\(n\)/, 'el bookmarklet no tapa los atributos de sesión')
   assert.match(bm, /ELEM_USU\.test/, 'el bookmarklet no tapa el texto del usuario')
-  assert.match(bm, /win\.alert\(aviso\)/, 'el bookmarklet no avisa con alert() de los marcos ilegibles')
+  // 30/10/2026 (Generali): el aviso de marcos ilegibles es UNO y NO bloqueante; un alert() salía en bucle por los vídeos.
+  const fuentes = bm.slice(bm.indexOf('export const FUENTE_GRABADOR = '), bm.indexOf('/** Código JS del marcador MANUAL'))
+  assert.ok(!/\balert\s*\(/.test(fuentes), 'el grabador vuelve a usar alert() (bloquea y, con vídeos, sale en bucle)')
+  assert.match(bm, /var aviso = M\.textoAviso\(urlsSinLeer, cfg\)/, 'el aviso de marcos ilegibles ya no es UNO agregado')
+  assert.match(bm, /var motivo = M\.irrelevante\(/, 'el grabador ya no descarta los marcos irrelevantes (vídeo, mapas, ocultos…)')
   assert.match(bm, /urlsSinLeer\.join/, 'la cabecera no lista las URL de los marcos sin leer')
 })
 

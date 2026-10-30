@@ -179,6 +179,12 @@ export type OfertaNormalizada = {
    * campo `null` = no se pudo leer (NUNCA se rellena con la ficha). Ausente = el bot no lo lee. Ver `datosUsadosDe` (ofertas.ts).
    */
   datosUsados?: DatosUsadosOferta | null
+  /**
+   * (30/10/2026, regla de Alberto «SINCO al tarificar») `true` = el bot TECLEÓ en el portal el nº de póliza anterior del riesgo y lo
+   * RELEYÓ igual (la compañía consulta SINCO con él y el precio ya lleva su siniestralidad). Ausente = no se tecleó o no se sabe: nunca
+   * se supone. Solo es una señal: el valor NUNCA viaja aquí. La firmeza la decide `firmezaPrecioRpa` (firmeza-rpa.ts).
+   */
+  polizaAnteriorTecleada?: true
 }
 
 /** Lo que la compañía usó para el precio, leído del portal (sin matrícula ni datos del tomador salvo CP y localidad). */
