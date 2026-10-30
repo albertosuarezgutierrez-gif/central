@@ -801,7 +801,7 @@ test('0.3.5b · solo los descriptores URL se neutralizan: posiciones de href/for
 
 // ─── 0.3.6 (real 28/10/2026 15:17, main-301931b) ────────────────────────────────────────────────────────────
 
-test('versión 0.3.22', () => assert.equal(EXPLORADOR_VERSION, '0.3.22'))
+test('versión 0.3.23', () => assert.equal(EXPLORADOR_VERSION, '0.3.23'))
 
 /** ePAC valida el NIF al SALIR del campo (change → petición asíncrona → campo oculto); «Aceptar» en el mismo lote llegaba antes. */
 const FIGURAS_NIF = PAGINA(`
@@ -941,7 +941,7 @@ test('0.3.8 · Mapfre NSE: el error del guard en la ruta tolerada dice QUÉ par�
     await postA(page, 'https://wmediadores.mapfre.com/EVT21_NSE_FWEB/app/emision/busquedaProductos/busquedaProductos.jsf', 'javax.faces.partial.render=formBusqueda%3AdlgConfirmacion&secreto=12345678Z')
     const v = guard.violacion()
     assert.ok(v instanceof EmisionBloqueadaError)
-    assert.match(v!.message, /parámetro «javax\.faces\.partial\.render» casa con «confirm»/)
+    assert.match(v!.message, /parámetro «javax\.faces\.partial\.render» \[valor: otro\] casa con «confirm»/)
     assert.ok(!/12345678Z|dlgConfirmacion/.test(v!.message), 'ni valores ni el id completo')
   } finally {
     await context.close()

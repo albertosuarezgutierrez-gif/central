@@ -35,7 +35,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, cuerpoLlevaAccionFinal, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, esLanzadorAplicacionNseMapfre, TEXTO_ACCESO_NSE_MAPFRE, neutralizarRutaTolerable, cuerpoToleradoConAccionReal, detalleCuerpoToleradoConAccionReal, textoDetalleCuerpo, esEstadoModalJsf, esCampoFechaDeAccion, esCampoDatoDeFirma, RE_SEGMENTO_FECHA_FIRMA, tipoDocumentoDe, opcionTipoDocumento, type TipoDocumento, RE_ACCION_REAL_TRAS_PREFIJO, type RutaTolerable, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, PATRON_GENERAR_PROYECTO_MAPFRE, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, cuerpoLlevaAccionFinal, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, esLanzadorAplicacionNseMapfre, TEXTO_ACCESO_NSE_MAPFRE, neutralizarRutaTolerable, cuerpoToleradoConAccionReal, detalleCuerpoToleradoConAccionReal, textoDetalleCuerpo, esEstadoModalJsf, esConfirmarGuardadoObjetoAsegurado, claseValorDiagnostico, MAX_DETALLE_CUERPO_MENSAJE, type ClaseValorDiagnostico, type HalladoCuerpo, esCampoFechaDeAccion, esCampoDatoDeFirma, RE_SEGMENTO_FECHA_FIRMA, tipoDocumentoDe, opcionTipoDocumento, type TipoDocumento, RE_ACCION_REAL_TRAS_PREFIJO, type RutaTolerable, type OpcionesGuard } from './guard-emision.ts'
 export {
   ACCIONES_PORTAL,
   PATRONES_GUARDADO_GUARD,

@@ -68,7 +68,7 @@ async function captura(page: Page): Promise<{ marco: MarcoInventario; el: Elemen
 
 const posts = () => peticiones.filter((p) => p.metodo === 'POST')
 
-test('versión del explorador 0.3.22', () => assert.equal(EXPLORADOR_VERSION, '0.3.22'))
+test('versión del explorador 0.3.23', () => assert.equal(EXPLORADOR_VERSION, '0.3.23'))
 
 test('0.3.18 · el inventario del worker guarda el input submit sin rótulo con name y clase (lo que la regla necesita)', async () => {
   const { context, page } = await abrir(PAGINA(''))

@@ -177,21 +177,22 @@ describe('0.3.22 · Mapfre NSE: <id>OpenedState no es una acción', () => {
     const c = 'formDG%3AbtnConfirmarX=VALOR_SECRETO_1&formDG%3AbtnFirmar=VALOR_SECRETO_2&formDG%3AbtnFirmar=otra&javax.faces.source=formDG%3AbtnEmitir&formDG%3AnifTomador=12345678Z'
     const d = detalleCuerpoToleradoConAccionReal(c)!
     expect(d.parametro).toBe('formDG:btnConfirmarX')
+    // 0.3.23: cada hallazgo lleva la CLASE de su valor (nunca el valor); dos valores de clase distinta del mismo nombre, dos entradas.
     expect(d.parametros).toEqual([
-      { parametro: 'formDG:btnConfirmarX', patron: 'confirm' },
-      { parametro: 'formDG:btnFirmar', patron: 'firm' },
-      { parametro: 'javax.faces.source', patron: 'emit' },
+      { parametro: 'formDG:btnConfirmarX', patron: 'confirm', valor: 'otro' },
+      { parametro: 'formDG:btnFirmar', patron: 'firm', valor: 'otro' },
+      { parametro: 'javax.faces.source', patron: 'emit', valor: 'otro' },
     ])
     const t = textoDetalleCuerpo(d)
-    expect(t).toBe('parámetros (3): «formDG:btnConfirmarX» casa con «confirm», «formDG:btnFirmar» casa con «firm», «javax.faces.source» casa con «emit»')
+    expect(t).toBe('parámetros (3): «formDG:btnConfirmarX» [valor: otro] casa con «confirm», «formDG:btnFirmar» [valor: otro] casa con «firm», «javax.faces.source» [valor: otro] casa con «emit»')
     expect(t).not.toMatch(/SECRETO|12345678Z|btnEmitir/)
   })
-  it('uno solo: el formato de siempre; muchos: recortado con «+N más»', () => {
-    expect(textoDetalleCuerpo(detalleCuerpoToleradoConAccionReal('javax.faces.partial.render=formDG%3ApanelConfirmar')!)).toBe('parámetro «javax.faces.partial.render» casa con «confirm»')
+  it('uno solo: el formato de siempre (0.3.23: con la clase del valor); muchos: recortado con «+N más» solo con un tope explícito', () => {
+    expect(textoDetalleCuerpo(detalleCuerpoToleradoConAccionReal('javax.faces.partial.render=formDG%3ApanelConfirmar')!)).toBe('parámetro «javax.faces.partial.render» [valor: otro] casa con «confirm»')
     const muchos = Array.from({ length: 12 }, (_, k) => `formDG%3AbtnConfirmarNumero${k}=x`).join('&')
-    const t = textoDetalleCuerpo(detalleCuerpoToleradoConAccionReal(muchos)!)
+    const t = textoDetalleCuerpo(detalleCuerpoToleradoConAccionReal(muchos)!, 150)
     expect(t.length).toBeLessThanOrEqual(170)
-    expect(t).toMatch(/^parámetros \(12\): «formDG:btnConfirmarNumero0» casa con «confirm»/)
+    expect(t).toMatch(/^parámetros \(12\): «formDG:btnConfirmarNumero0» \[valor: otro\] casa con «confirm»/)
     expect(t).toMatch(/\(\+\d+ más\)$/)
   })
 })
