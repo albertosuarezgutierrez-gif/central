@@ -12,9 +12,13 @@ import { exigirSinRechazoCredenciales } from '../../../credenciales.ts'
  * ese paso con `portal` (error_definitivo, no se reintenta) en vez de adivinar.
  * El formulario en sí NO usa selectores: va por etiqueta (ver `campoPorEtiqueta`).
  */
+/** URL pública de entrada de ePAC (dada por Alberto, 05/10/2026; no es secreta). */
+export const URL_LOGIN_EPAC = 'https://www.e-pacallianz.com/ngx-azs-epac/public/home'
+/** Origen de ePAC (el de la entrada): el único en el que se recarga el home (`entrada.ts`). */
+export const ORIGEN_EPAC = new URL(URL_LOGIN_EPAC).origin
+
 const SEL = {
-  // URL pública de entrada de ePAC (dada por Alberto, 05/10/2026; no es secreta).
-  urlLogin: 'https://www.e-pacallianz.com/ngx-azs-epac/public/home' as string | null,
+  urlLogin: URL_LOGIN_EPAC as string | null,
 }
 
 function sel(clave: keyof typeof SEL): string {

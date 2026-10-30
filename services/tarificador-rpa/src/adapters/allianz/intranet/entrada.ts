@@ -9,6 +9,7 @@
 import type { Locator, Page } from 'playwright'
 import type { ContextoPortal } from '../../../adaptador.ts'
 import { ErrorTarificador } from '../../../errores.ts'
+import { ORIGEN_EPAC } from './sesion.ts'
 
 export type PestanaEntradaAllianz = 'Particulares' | 'Empresas' | 'Autos'
 
@@ -66,6 +67,21 @@ const SONDEO_NUEVA_ALTA_MS = 500
 /** Ruta del home de ePAC (la única que se recarga). */
 const RE_RUTA_HOME_EPAC = /\/ngx-azs-epac\/private\/home\/?$/
 
+/**
+ * URL a la que se recarga el home: `origin + pathname` (sin query, hash ni credenciales) SOLO si el origen es EXACTAMENTE el de
+ * ePAC ({@link ORIGEN_EPAC}) y la ruta es la del home; si no, `null` (no se recarga). PURA.
+ */
+export function urlRecargaHomeEpac(href: string): string | null {
+  let url: URL
+  try {
+    url = new URL(href)
+  } catch {
+    return null
+  }
+  if (url.origin !== ORIGEN_EPAC || !RE_RUTA_HOME_EPAC.test(url.pathname)) return null
+  return url.origin + url.pathname
+}
+
 /** El «Nueva Alta» del home (el mismo locator que se pulsa). */
 function nuevaAltaDe(page: Page): Locator {
   return page.locator('#link_new_policy').or(page.getByRole('button', { name: textoExacto('Nueva Alta') })).first()
@@ -110,19 +126,14 @@ export async function esperarHabilitadoConRecarga(d: DepsNuevaAlta): Promise<'ha
   throw errorNuevaAltaDeshabilitada(recargado, tope)
 }
 
-/** El caso real: «Nueva Alta» del home, recarga = GET de la MISMA URL del home de ePAC (nunca otra; nunca reenvía un POST). */
+/** El caso real: «Nueva Alta» del home, recarga = GET de `origin + pathname` del home de ePAC ({@link urlRecargaHomeEpac}; nunca otra; nunca reenvía un POST). */
 async function esperarNuevaAltaHabilitada(page: Page, boton: Locator): Promise<void> {
   await esperarHabilitadoConRecarga({
     habilitado: async () => (await boton.isVisible().catch(() => false)) && (await boton.isEnabled({ timeout: 1_000 }).catch(() => false)),
     recargar: async () => {
-      let url: URL
-      try {
-        url = new URL(page.url())
-      } catch {
-        return false
-      }
-      if (!RE_RUTA_HOME_EPAC.test(url.pathname)) return false
-      await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 60_000 }).catch(() => undefined)
+      const destino = urlRecargaHomeEpac(page.url())
+      if (destino === null) return false
+      await page.goto(destino, { waitUntil: 'domcontentloaded', timeout: 60_000 }).catch(() => undefined)
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       return true
     },

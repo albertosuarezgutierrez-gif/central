@@ -85,7 +85,7 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, cerrarDialogoTerminoEpac, controlOcultoDeEtiqueta, instalarGuardEmision, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, tolerarRutasApp, neutralizarOnclicksEntrada, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
+import { cerrarFaseEntrada, ErrorFronteraEmision, exigirCampoNoBancario, GuardadoConDialogoError, cerrarDialogoTerminoEpac, controlOcultoDeEtiqueta, instalarGuardEmision, precioVistoEn, registrarPrecioVisto, pulsar, pulsarAccesoNseMapfre, pulsarMenuOfertaNseMapfre, pulsarEnlaceEntradaAutorizado, tolerarRutasApp, neutralizarOnclicksEntrada, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { modoVistaExplorador, vistaDelPaso } from './aprendizaje/vista-aria.ts'
@@ -680,6 +680,17 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         const marcoNodo = nodo.marco
         const esperado = await esperarSinOverlayCarga(a.accion, { sondear: () => sondearOverlaysCarga(locObjetivo, marcoNodo), dormir, ahora: Date.now, topeMs: k.topeOverlayMs })
         if (esperado > 0) k.log('exploracion_overlay_carga', { n: pasos, ref: a.ref, accion: a.accion, esperaMs: esperado })
+        // Revisión de seguridad 0.3.23: tras ESPERAR al overlay, el portal pudo repintar el control. `marcar`/`avanzar` se revalidan vivos
+        // en `k.pulsar` (guard); `rellenar`/`elegir` no pasan por ahí: se repite la frontera bancaria sobre el control VIVO. Mismo bloqueo.
+        if (esperado > 0 && (a.accion === 'rellenar' || a.accion === 'elegir')) {
+          try {
+            await exigirCampoNoBancario(locObjetivo)
+          } catch (err) {
+            if (!(err instanceof ErrorFronteraEmision)) throw err
+            k.log('exploracion_parada', { motivo: 'cerca_de_emision', detalle: 'frontera_cuenta_bancaria', senal: `${MOTIVO_FRONTERA_CUENTA} («${err.etiqueta}»)` })
+            throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria', notaFronteraBancaria(err.etiqueta) ?? undefined)
+          }
+        }
         let cortar: MotivoCorteLote | null = null
         try {
           if (a.accion === 'rellenar') {

@@ -16,7 +16,7 @@ import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuarda
 import { bucleExploracion, EXPLORADOR_VERSION, type ContextoBucle } from '../src/explorador.ts'
 import { decisionOverlay, esClaseOverlayCarga, esperarSinOverlayCarga, overlayBloquea, sondearOverlaysCarga, type OverlayCarga } from '../src/overlay-carga.ts'
 import { abrirNuevaAlta } from '../src/adapters/allianz/entrada.ts'
-import { esperarHabilitadoConRecarga } from '../src/adapters/allianz/intranet/entrada.ts'
+import { esperarHabilitadoConRecarga, urlRecargaHomeEpac } from '../src/adapters/allianz/intranet/entrada.ts'
 import { ErrorTarificador, clasificar } from '../src/errores.ts'
 import type { RespuestaPaso } from '../src/api.ts'
 
@@ -293,4 +293,73 @@ test('0.3.23 · Allianz real: «Nueva Alta» se habilita a los 3 s (más que el 
   } finally {
     await context.close()
   }
+})
+
+// ─── Revisión de seguridad 0.3.23 ───────────────────────────────────────────────────────────────────────────────────────────────────
+// a) Tras ESPERAR a un overlay, `rellenar`/`elegir` revalidan la frontera bancaria sobre el control VIVO (el portal pudo repintarlo).
+/** El overlay se va 1 s después de que el explorador marque el control y, en ese momento, el portal convierte el control en uno de cuenta bancaria. */
+const PAGINA_OVERLAY_REPINTA = `<!doctype html><html><head><meta charset="utf-8"><title>p</title></head><body>
+  <form id="f" onsubmit="return false"><h2>Datos Cliente</h2>
+    <label for="nom">Nombre y apellidos</label><input type="text" id="nom" name="nombre">
+    <label for="sel">Régimen</label><select id="sel" name="regimen"><option value="">-</option><option value="P">Propietario</option></select>
+  </form>
+  <footer><div id="ov" class="Feedback_AjaxWait loading_overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:9999"></div></footer>
+  <script>
+    // Determinista: el repintado arranca 1 s DESPUÉS de que el explorador marque el control (inventario hecho), no por reloj absoluto.
+    var hecho = false
+    new MutationObserver(function () {
+      if (hecho || !document.querySelector('[data-explorador-ref]')) return
+      hecho = true
+      setTimeout(function () {
+        document.getElementById('nom').setAttribute('aria-label', 'IBAN de la cuenta de cargo')
+        document.getElementById('sel').setAttribute('aria-label', 'IBAN de la cuenta de cargo')
+        document.getElementById('ov').remove()
+      }, 1000)
+    }).observe(document.body, { attributes: true, subtree: true })
+  </script>
+  </body></html>`
+
+async function accionTrasOverlayRepintado(accion: (inv: InventarioDom) => unknown) {
+  const { context, page, guard } = await abrir(PAGINA_OVERLAY_REPINTA, URL_FI)
+  try {
+    const eventos: string[] = []
+    const fin = await bucleExploracion(page, contexto(page, guard, FI, 'hogar', 'fidelidade', (inv, n) =>
+      n === 1 ? respuesta([accion(inv)]) : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]), { topeOverlayMs: 10_000, log: (ev: string) => { eventos.push(ev) } }))
+    // Que el bloqueo venga de la revalidación TRAS la espera (no de la frontera previa, con el control ya repintado).
+    assert.ok(eventos.includes('exploracion_overlay_carga'), `hubo espera al overlay: ${eventos.join(',')}`)
+    return { fin, nom: await page.locator('#nom').inputValue(), sel: await page.locator('#sel').inputValue() }
+  } finally {
+    await context.close()
+  }
+}
+
+test('0.3.23 · revisión: rellenar tras esperar un overlay que repinta el control como IBAN → frontera bancaria, sin escribir', async () => {
+  const r = await accionTrasOverlayRepintado((inv) => ({ accion: 'rellenar', ref: refDe(inv, 'nom'), dato: 'tomador.nombre_completo' }))
+  assert.equal(r.nom, '', JSON.stringify(r.fin))
+  assert.equal(r.fin.motivo, 'cerca_de_emision', JSON.stringify(r.fin))
+  assert.equal(r.fin.detalle, 'frontera_cuenta_bancaria')
+})
+
+test('0.3.23 · revisión: elegir tras esperar un overlay que repinta el control como IBAN → frontera bancaria, sin elegir', async () => {
+  const r = await accionTrasOverlayRepintado((inv) => ({ accion: 'elegir', ref: refDe(inv, 'sel'), opcion: { valor: 'P' } }))
+  assert.equal(r.sel, '', JSON.stringify(r.fin))
+  assert.equal(r.fin.motivo, 'cerca_de_emision', JSON.stringify(r.fin))
+  assert.equal(r.fin.detalle, 'frontera_cuenta_bancaria')
+})
+
+// b) La recarga del home de ePAC: solo en SU origen y a `origin + pathname` (sin query, hash ni credenciales).
+test('0.3.23 · revisión: recarga del home de ePAC solo en su origen exacto y sin query ni hash', () => {
+  assert.equal(urlRecargaHomeEpac('https://www.e-pacallianz.com/ngx-azs-epac/private/home'), 'https://www.e-pacallianz.com/ngx-azs-epac/private/home')
+  assert.equal(urlRecargaHomeEpac('https://www.e-pacallianz.com/ngx-azs-epac/private/home/?a=1&b=2#x'), 'https://www.e-pacallianz.com/ngx-azs-epac/private/home/')
+  assert.equal(urlRecargaHomeEpac('https://u:p@www.e-pacallianz.com/ngx-azs-epac/private/home#frag'), 'https://www.e-pacallianz.com/ngx-azs-epac/private/home')
+  for (const otra of [
+    'https://evil.example/ngx-azs-epac/private/home',
+    'https://cloud.e-pacallianz.com/ngx-azs-epac/private/home',
+    'https://www.e-pacallianz.com.evil.example/ngx-azs-epac/private/home',
+    'http://www.e-pacallianz.com/ngx-azs-epac/private/home',
+    'https://www.e-pacallianz.com:8443/ngx-azs-epac/private/home',
+    'https://www.e-pacallianz.com/ngx-azs-epac/public/home',
+    'about:blank',
+    'no es url',
+  ]) assert.equal(urlRecargaHomeEpac(otra), null, otra)
 })
