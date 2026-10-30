@@ -13,7 +13,7 @@
 //     repregunta (F2). Un bot sin declaración (`null`) no es «no falta nada»: no se lanza.
 //   · el tope diario (env `ASEGURA_TARIF_AUTO_TOPE_DIARIO`: inválido → 20, máximo duro 100) por día de Madrid.
 // 🚨 TARIFICAR ≠ EMITIR. 🚨 Nada de valores en lo que sale de aquí hacia Telegram: claves, etiquetas y nombres de compañía.
-import { CARNETS_MOTO_PRECIO, contratoDatos, etiquetasDe, type CodigoConcreto } from '@central/module-seguros'
+import { CARNETS_MOTO_PRECIO, contratoDatos, estimarMesMatriculacion, etiquetasDe, type CodigoConcreto } from '@central/module-seguros'
 import { duermeEnGaraje, GARAJES_CONOCIDOS } from '@central/module-seguros/garajes'
 import { CAPACIDAD_ALLIANZ_COMUNIDADES, faltanParaTarificar, llegaAPrecio, obligatoriosPara, type Faltante } from '@central/module-tarificacion'
 import { RAMOS_TARIFICABLES_RPA, validarEntradaRamo } from './tarificador-reglas.ts'
@@ -68,6 +68,21 @@ export function ramoConBot(ramo: string): boolean {
 }
 
 export type Supuesto = { campo: string; texto: string }
+
+/**
+ * Primera matriculación para el riesgo del bot (30/10/2026). La fecha REAL (ISO, no futura) manda SIEMPRE y va a `fecha`.
+ * Si falta y la matrícula es estimable por la serie nacional, el mes estimado va a `estimada` (campo APARTE que ya lee
+ * Generali; jamás se pinta como la real) y `supuesto` lo dice en la vista previa. No estimable → ambas ausentes (falta).
+ * No se guarda en BD: se calcula al leer. PURA.
+ */
+export function matriculacionParaRiesgo(
+  real: string, matricula: string, hoy: string,
+): { fecha?: string; estimada?: string; supuesto?: Supuesto } {
+  if (ISO.test(real) && real <= hoy) return { fecha: real }
+  const est = estimarMesMatriculacion(matricula, hoy)
+  if (est.mesAnio === null || est.mesAnio > hoy) return {}
+  return { estimada: est.mesAnio, supuesto: { campo: 'fechaMatriculacion', texto: 'fecha de matriculación estimada por la matrícula (mes aproximado, no es el dato real)' } }
+}
 
 /**
  * Marca/modelo/cilindrada de la moto leídos del texto libre del cliente contra el catálogo de motos (GET gratis de
@@ -467,8 +482,9 @@ export function formularioBotDesdeLead(e: EntradaFormulario): FormularioLead {
     for (const d of dudas) concretas.add(d === 'compania' ? 'seguro_anterior_compania' : d === 'anios' ? 'seguro_anterior_anios' : 'seguro_anterior_siniestros')
   }
 
-  const fm = txt(b.fechaMatriculacion)
-  if (ISO.test(fm) && fm <= e.hoy) riesgo.fechaMatriculacion = fm
+  const mat = matriculacionParaRiesgo(txt(b.fechaMatriculacion), matricula, e.hoy)
+  if (mat.fecha) riesgo.fechaMatriculacion = mat.fecha
+  if (mat.estimada && mat.supuesto) { riesgo.fechaMatriculacionEstimada = mat.estimada; supuestos.push(mat.supuesto) }
   const efecto = txt(v.fechaEfecto)
   if (ISO.test(efecto) && efecto > e.hoy) riesgo.fechaVencimiento = efecto
 
