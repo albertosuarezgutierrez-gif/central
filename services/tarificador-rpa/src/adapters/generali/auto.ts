@@ -166,6 +166,9 @@ import {
   resumenOpcionesTipoSelectorGenerali,
   estadoNomiagGenerali,
   lineaDiagTipoVehiculoGenerali,
+  resumenLegadoTipoGenerali,
+  resumenFilaSelectorGenerali,
+  type LegadoTipoGenerali,
   type DiagTipoVehiculoGenerali,
   type OpcionesTipoSelectorGenerali,
   antiguedadVehiculoGenerali,
@@ -1770,6 +1773,36 @@ export async function leerClaseTipoGenerali(page: Page): Promise<string> {
   return `${await v('wclasv')} (wclavh ${await v('wclavh')})`
 }
 
+/** 30/10/2026 · Extractor de `leerLegadoTipoGenerali` (como TEXTO: tsx envuelve las funciones con nombre en `__name`). */
+const JS_LEGADO_TIPO = `(() => {
+  const vis = (e) => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const T = (e) => String((e && e.textContent) || '').replace(/\\s+/g, ' ').trim();
+  const sel = document.querySelector('select[id="reg1063A_vehiculo_caracVehiculo_wvegen"]');
+  const placas = Array.from(document.querySelectorAll('input[name="reg1063A.vehiculo.caracVehiculo.yplaca"]'));
+  if (!sel && placas.length === 0) return null;
+  const marcado = placas.find((x) => x.checked) || null;
+  return {
+    placa: placas.length ? { visible: placas.some((x) => vis(x)), marcada: marcado ? (T(marcado.nextElementSibling) || null) : null } : null,
+    indique: sel ? { visible: vis(sel), elegida: sel.selectedIndex >= 0 ? (T(sel.options[sel.selectedIndex]) || null) : null, opciones: Array.from(sel.options).map((o) => T(o)).slice(0, 10) } : null,
+  };
+})()`
+
+/**
+ * 30/10/2026 (trabajo f8f473e6) · Estado del camino ANTIGUO de «Características del vehículo» que el selector nuevo deja OCULTO: «Tipo de placa»
+ * (`yplaca`, rótulo de la opción marcada) e «Indique Código» (`wvegen`, obligatorio en el HTML; opción elegida y opciones). Textos de catálogo del
+ * portal, nunca lo tecleado. Solo lee: no fuerza nada a la vista ni dispara eventos.
+ */
+export async function leerLegadoTipoGenerali(page: Page): Promise<LegadoTipoGenerali | null> {
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const r = (await f
+      .evaluate(JS_LEGADO_TIPO)
+      .catch(() => null)) as LegadoTipoGenerali | null
+    if (r) return r
+  }
+  return null
+}
+
 type FormVersionGenerali = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>
 
 /**
@@ -2461,6 +2494,26 @@ const JS_OPCIONES_TIPO_SELECTOR = `(() => {
   return { tipos: a.ops, subtipos: b.ops, marcadoTipo: a.marcada, marcadoSubtipo: b.marcada };
 })()`
 
+/**
+ * 30/10/2026 (trabajo f8f473e6) · Fila ELEGIDA (resaltada/aria-selected; si no hay ninguna y solo hay una fila, esa) de la tabla de versiones
+ * (cabeceras con «Código» y «Versión») y TODAS sus cabeceras/celdas: catálogo de Genernet. Sin funciones con nombre (tsx). Solo lee.
+ */
+const JS_FILA_ELEGIDA_SELECTOR = `(() => {${JS_COMUN}
+  const N = (t) => t.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase().replace(/\\s+/g, ' ').trim();
+  for (const tabla of Array.from(document.querySelectorAll('table'))) {
+    const thsEl = Array.from(tabla.querySelectorAll('thead th, thead td, tr:first-child th'));
+    const ths = thsEl.map((x) => N(T(x)));
+    if (ths.indexOf('CODIGO') < 0 || ths.indexOf('VERSION') < 0 || !VIS(tabla)) continue;
+    const trs = Array.from(tabla.querySelectorAll('tbody tr')).filter((tr) => VIS(tr) && tr.querySelectorAll('td').length > 0);
+    const sel = trs.filter((tr) => tr.classList.contains('ui-state-highlight') || tr.getAttribute('aria-selected') === 'true');
+    const tr = sel.length === 1 ? sel[0] : (sel.length === 0 && trs.length === 1 ? trs[0] : null);
+    if (!tr) return null;
+    const celdas = Array.from(tr.children).filter((x) => x.tagName === 'TD').map((x) => T(x).slice(0, 80));
+    return { cabeceras: thsEl.map((x) => T(x).slice(0, 30)), celdas: celdas.slice(0, 10) };
+  }
+  return null;
+})()`
+
 /** v0.2.50 · Última foto del selector (antes de «Confirmar») por página: va al atasco si «Tipo de vehículo» queda vacío. */
 const FOTO_SELECTOR_GENERALI = new WeakMap<Page, string>()
 
@@ -2472,6 +2525,9 @@ export async function fotografiarSelectorGenerali(page: Page, selector: Raiz): P
   const opciones = ((await selector.evaluate(JS_OPCIONES_TIPO_SELECTOR).catch(() => null)) as OpcionesTipoSelectorGenerali | null) ?? null
   const textoOpciones = resumenOpcionesTipoSelectorGenerali(opciones)
   diagGeneraliDe(page).subtipos = textoOpciones
+  // 30/10/2026 (trabajo f8f473e6): + la fila ELEGIDA de la tabla de versiones con sus cabeceras (catálogo, saneado). Solo lee.
+  const fila = ((await selector.evaluate(JS_FILA_ELEGIDA_SELECTOR).catch(() => null)) as { cabeceras: string[]; celdas: string[] } | null) ?? null
+  diagGeneraliDe(page).fila = resumenFilaSelectorGenerali(fila?.cabeceras, fila?.celdas)
   const foto = `${resumenFotoSelectorGenerali(estado, activos)}; ${textoOpciones}`
   FOTO_SELECTOR_GENERALI.set(page, foto)
   return foto
@@ -3595,6 +3651,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   const esperaProtegidos = await esperarProtegidosGenerali(marco, opciones.esperaProtegidosMs ?? ESPERA_PROTEGIDOS_MS)
   let caracteristicas = esperaProtegidos.bloques
   diagGeneraliDe(page).final = await leerClaseTipoGenerali(page)
+  diagGeneraliDe(page).legado = resumenLegadoTipoGenerali(await leerLegadoTipoGenerali(page).catch(() => null))
   let protegidosVacios = vaciosProtegidosGenerali(caracteristicas)
   // v0.2.52: SOLO «Tipo de vehículo» vacío (el resto de la ficha rellena) → fase de PRUEBAS acotada (un intento por hipótesis).
   let pruebas: IntentoTipoVehiculoGenerali[] = []
