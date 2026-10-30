@@ -45,6 +45,10 @@ Antes de tocar nada: lee `apps/plataforma/CLAUDE.md` y el archivo de references/
     NO se catalogan (silenciarlas rompe la conversación). El gate es **fail-open**: si la BD falla,
     el aviso SALE. Y `make_interval(days => ${n})` siempre con **`::int`** (Prisma manda int8 → 42883).
 
+## Facturas a huéspedes
+- Panel de control en `/sivra/facturas` (`lib/sivra/facturas/`): preparar, ver PDF, modificar, «Aprobar y enviar». Flujo completo y
+  reglas en la sección «Facturas a huéspedes» de `.claude/skills/sivra-maestro/SKILL.md`.
+
 ## ÍNDICE de references/
 **Lee SOLO el archivo de references/ que necesite la tarea; no los cargues todos.**
 

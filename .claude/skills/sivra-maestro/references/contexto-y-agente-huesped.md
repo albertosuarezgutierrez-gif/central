@@ -325,7 +325,11 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 - **maxDuration = 300** en `auto-reply` y `webhook` (decisión + 2 traducciones en `Promise.all`; con 60s daba 504).
 - Sin asunto fijo (`enviarAlHuesped` no manda "Re: tu estancia"). Detalle vivo en `docs/CONTEXTO-SESIONES.md`.
 
-## 🧾 Facturas a huéspedes (27/10/2026, PR #5141) — `/sivra/facturas` + `lib/sivra/facturas/`
+## 🧾 Facturas a huéspedes (actualizado 29/10/2026, PRs #5141, #5251→#5255, #5261, #5272) — `/sivra/facturas` + `lib/sivra/facturas/`
+- **Disparo de hoy:** el huésped pide factura por mensaje → `orquestador.ts` → `rellenarDesdeChat` (chat.ts) → si completa,
+  `proponerSiCompleta` → Telegram con ✅ Enviar / ✏️ Modificar; si queda incompleta, enlace al formulario. Panel en
+  `/sivra/facturas` (`PanelCiclo.tsx`). **Sin cron**: el de #5251 se retiró en #5255. Nada sale sin botón de Alberto
+  (✅ `fhu_emi` o «✅ Aprobar y enviar» del panel). Cepo `sin-boton.test.ts`. Resto del bloque: detalle en la sección de sivra-maestro.
 - **Smoobu ya NO numera**: la factura completa al huésped la emite plataforma. Emisor fijo Alberto (NIF 28823484E,
   Calle Socorro 24, 41003 Sevilla; `emisor.ts`); solo la cuenta de Alberto factura (`cuentaPuedeFacturar`, fail-closed).
 - **Tablas:** `sivra_factura_series` (una fila por cuenta y AÑO: prefijo, `siguiente_numero`, IVA, mención; **cada año

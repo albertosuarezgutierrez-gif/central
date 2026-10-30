@@ -55,6 +55,18 @@ compartida `wswbehlcuxqxyinousql` (con ialimp+plataforma).
     defecto del schema. En esta BD compartida, toda tabla sensible lleva su `REVOKE` en la propia
     migración (patrón: `prisma/sql/2026-08-20_ses_establecimientos.sql`).
 
+## Facturas a huéspedes (estado 29/10/2026)
+- **Disparador:** el huésped pide factura por mensaje → `lib/sivra/agente-huesped/orquestador.ts` → `lib/sivra/facturas/chat.ts`
+  `rellenarDesdeChat` rellena `sivra_factura_solicitudes` (anti-invención en `extraer.ts`: NIF/emails literales + dígito de control;
+  el CC lo decide el texto, columna `receptor_cc`).
+- Si completa: `proponerSiCompleta` (reclamo atómico pendiente→completada) → `prepararBorrador` → Telegram a Alberto con ✅ Enviar / ✏️ Modificar. Si queda incompleta, enlace al formulario.
+- **Nada se emite ni envía sin botón de Alberto:** ✅ de Telegram (`telegram-acciones.ts`, `fhu_emi`) o «✅ Aprobar y enviar» del panel
+  (POST `/api/sivra/facturas/[id]`, accion `aprobar`, con sesión + `confirmado` + `visto`). Cepo `lib/sivra/facturas/sin-boton.test.ts`. No hay cron.
+- **Panel** `/sivra/facturas` (`PanelCiclo.tsx`): contadores por estado, preparar borrador, ver PDF, modificar, aprobar, reintentar envío.
+  Fuera: reenviar factura ya enviada y rectificativas.
+- Tras el envío, el aviso en Smoobu sale solo (`aviso-smoobu.ts`, fail-open). Columnas `auto_aviso_*` sin uso.
+- Agente huésped: un cierre de cortesía puro («Gracias :)») no pasa por el juez ni abre hueco de guía (`decidir.ts`, `cortesia.ts`).
+
 ## ÍNDICE de references/
 **Lee SOLO el archivo que necesite la tarea; no los cargues todos.**
 
