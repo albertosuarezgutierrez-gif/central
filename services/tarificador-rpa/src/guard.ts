@@ -145,6 +145,8 @@ export type AjaxValidacionAvance = Readonly<{
   /** Únicas claves del cuerpo (urlencoded), cada una una vez, y la forma de su valor. */
   cuerpo: readonly string[]
   valorCuerpo: RegExp
+  /** 0.3.25: forma propia de UNA clave del cuerpo (manda sobre `valorCuerpo` para esa clave). Sin la clave = `valorCuerpo` para todas. */
+  valorCuerpoPorClave?: Readonly<Record<string, RegExp>>
   /**
    * 0.3.19: ningún valor del cuerpo (ni la query entera) puede nombrar una acción final ni un dato bancario
    * (`RE_ACCION_REAL_TRAS_PREFIJO`) y el cuerpo tiene que pasar `cuerpoLlevaAccionFinal`. Sin la clave = solo la forma (`valorCuerpo`).
@@ -185,6 +187,17 @@ export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.free
 })
 
 /**
+ * 0.3.25 (Allianz patinete real 30/10/2026, 6255c5e7…, «Figuras Intervinientes»): la ayuda de drvp00 llegó con un `pageId` de longitud 26,
+ * letras+dígitos+símbolos y un símbolo FUERA de `_.:$-` (el diagnóstico no decía cuál: ahora lo dice, ver `formaValor`). Alfabeto CERRADO solo
+ * para `pageId` de drvp00: letras ASCII y latinas con tilde/cedilla (ePAC es de Allianz Portugal), dígitos y la puntuación de un id de
+ * página/recurso (`_ . : $ - / # , | ( ) [ ] ~ ! *`), de 1 a 64. Fuera, siempre: espacio, `& = % + ; ' " < > \ @ { } ?` (estructura de
+ * urlencoded/JS/HTML o forma de correo). El `estricto` de la regla sigue mirando acción final y dato bancario en cada valor.
+ */
+export const RE_PAGEID_AYUDA_DRVP00 = /^[A-Za-z0-9\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF_.:$\/#,|()[\]~!*-]{1,64}$/
+/** 0.3.25: `codCia` de la misma ayuda: código corto alfanumérico (el de drpc18 compartía la forma del pageId; aquí se estrecha). */
+export const RE_CODCIA_AYUDA_DRVP00 = /^[A-Za-z0-9]{1,8}$/
+
+/**
  * LISTA BLANCA de recursos AJAX de SOLO LECTURA (consulta/ayuda/validación) admitidos durante un avance de pestaña. Cada
  * entrada fija endpoint, `resource`, query y cuerpo. Todo lo demás (Emitir/Grabar/Contratar/Guardar/Pago/Firma…) sigue abortado.
  */
@@ -198,6 +211,7 @@ export const AJAX_AYUDA_APLICACIONES_ALLIANZ_DRVP00: AjaxValidacionAvance = Obje
   ...AJAX_AYUDA_APLICACIONES_ALLIANZ,
   endpoint: 'https://www.e-pacallianz.com/drvp00/AJAXServlet',
   estricto: true as const,
+  valorCuerpoPorClave: Object.freeze({ pageId: RE_PAGEID_AYUDA_DRVP00, codCia: RE_CODCIA_AYUDA_DRVP00 }),
 })
 
 export const AJAX_LECTURA_ALLIANZ: readonly AjaxValidacionAvance[] = Object.freeze([AJAX_AYUDA_APLICACIONES_ALLIANZ])
@@ -213,13 +227,19 @@ const listaClaves = (ks: readonly string[], decl: ReadonlySet<string>): string =
   return [...nombradas, ...(n ? [`${n} clave(s) no declarada(s)`] : [])].join(',')
 }
 
-/** Forma de un valor SIN revelarlo: longitud y categorías de caracteres presentes (nunca el texto; puede llevar un NIF). */
-function formaValor(v: string): string {
+/**
+ * Forma de un valor SIN revelarlo: longitud y categorías de caracteres presentes (nunca el texto; puede llevar un NIF). 0.3.25: los
+ * símbolos ASCII de puntuación se NOMBRAN (`símbolos «/#»`, sin repetir y en orden; ni letras ni cifras: no identifican a nadie) y lo que no es
+ * ASCII se cuenta como categoría `no-ASCII` sin decir cuál (una letra con tilde puede ser de un nombre). Exportada para su cepo.
+ */
+export function formaValor(v: string): string {
   const cat: string[] = []
   if (/[A-Za-z]/.test(v)) cat.push('letras')
   if (/[0-9]/.test(v)) cat.push('dígitos')
   if (/\s/.test(v)) cat.push('espacios')
-  if (/[^A-Za-z0-9\s]/.test(v)) cat.push('símbolos')
+  const simbolos = [...new Set(v.match(/[!-/:-@[-`{-~]/g) ?? [])].sort().join('')
+  if (simbolos) cat.push(`símbolos «${simbolos}»`)
+  if (/[^\x00-\x7F]/.test(v)) cat.push('no-ASCII')
   return `longitud ${v.length}, ${cat.join('+') || 'vacío'}`
 }
 
@@ -249,7 +269,7 @@ function motivoRechazoRegla(r: AjaxValidacionAvance, u: URL, cuerpo: string | nu
   const falta = r.cuerpo.filter((k) => !ck.includes(k))
   if (falta.length) return `falta clave de cuerpo: ${listaClaves(falta, decl)}`
   for (const k of r.cuerpo) {
-    if (!r.valorCuerpo.test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${k}» (${formaValor(cp.get(k) ?? '')})`
+    if (!(r.valorCuerpoPorClave?.[k] ?? r.valorCuerpo).test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${k}» (${formaValor(cp.get(k) ?? '')})`
   }
   if (r.estricto === true) {
     for (const k of r.cuerpo) if (RE_ACCION_REAL_TRAS_PREFIJO.test(cp.get(k) ?? '')) return `valor de cuerpo con acción final o dato bancario en «${k}»`
@@ -792,6 +812,58 @@ export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void>
   if (confirmarDeGenerali(desc, await boton.evaluate(() => location.href).catch(() => ''))) throw new EmisionBloqueadaError('boton', 'Confirmar (Generali: solo por su puerta del guard)')
   await boton.click()
   guard.comprobar()
+}
+
+/**
+ * 0.3.25 (Fidelidade real 30/10/2026, 56b4b52c…, «Datos Cliente - Nombre y régimen»): el mapa marcó PROPIETARIO ANTES de que la IA rellenara el
+ * nombre; el portal (OutSystems) calcula si habilita el avance en el `change` del radio, así que el botón se quedó deshabilitado, y volver a
+ * pulsar un radio ya marcado no emite `change`. Tras el clic del explorador POR `pulsar` (que ya pasó este nodo por el guard), aquí se repite la
+ * MISMA barrera sobre el nodo vivo (fase, frontera bancaria, descripción completa con `comprobarBoton`) y solo entonces se emiten `input`+`change`
+ * burbujeantes, SOLO si es un `<input type=radio>` conectado, marcado y no deshabilitado. Nunca `click`/`submit`/teclado. La red que provoque
+ * pasa por el guard de contexto de siempre. Devuelve `cambio` | `no_aplica` | `desaparecido` (al log, sin valores); una violación LANZA.
+ */
+export async function redispararCambioMarcado(control: Locator, guard: GuardEmision): Promise<'cambio' | 'no_aplica' | 'desaparecido'> {
+  if ((await control.count().catch(() => 0)) === 0) return 'desaparecido'
+  guard.comprobar()
+  await exigirSinCuentaBancaria(control.page())
+  const desc = await descripcion(control)
+  comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, control, desc)))
+  // Revisión de seguridad (30/10/2026): `input`/`change` BURBUJEAN y `descripcion` solo ve onclick/ng-click/href (3 ancestros). Aquí se leen
+  // `onchange`/`oninput` del radio y de TODOS sus ancestros (atravesando shadow hosts) y del <form> (también el de `form=`); cualquiera con acción
+  // final LANZA, y un <form> con onchange/oninput/onsubmit LANZA siempre. El mensaje nunca lleva el texto del manejador (podría tener datos).
+  const man = await control
+    .evaluate((n) => {
+      // Sin funciones con nombre dentro de `evaluate` (tsx/esbuild inyecta `__name`, que no existe en la página).
+      const out: { tag: string; ev: string; v: string }[] = []
+      const f = (n as HTMLInputElement).form ?? n.closest('form')
+      const nodos: Element[] = []
+      for (let p: Element | null = n; p; p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)) nodos.push(p)
+      if (f) nodos.push(f)
+      for (const e of nodos) {
+        for (const ev of ['onchange', 'oninput']) {
+          const v = e.getAttribute(ev)
+          if (v !== null) out.push({ tag: e.tagName.toLowerCase(), ev, v })
+        }
+      }
+      return { manejadores: out, formConManejador: !!f && ['onchange', 'oninput', 'onsubmit'].some((a) => f.hasAttribute(a)) }
+    }, undefined, { timeout: 2_000 })
+    .catch(() => null)
+  if (man === null) return 'desaparecido'
+  // `pareceEmision` además: RE_ACCION_REAL_TRAS_PREFIJO no casa «emision()» (no contiene «emit»).
+  const malo = man.manejadores.find((m) => RE_ACCION_REAL_TRAS_PREFIJO.test(m.v.normalize('NFD').replace(/[̀-ͯ]/g, '')) || pareceEmision(m.v))
+  if (malo) throw new EmisionBloqueadaError('boton', `redisparo de cambio: ${malo.ev} de <${malo.tag}> con acción final`)
+  if (man.formConManejador) throw new EmisionBloqueadaError('fase', 'redisparo de cambio: el <form> del radio tiene onchange/oninput/onsubmit (no se redispara)')
+  const r = await control
+    .evaluate((n) => {
+      const c = n as HTMLInputElement
+      if (!c.isConnected || c.tagName !== 'INPUT' || (c.type || '').toLowerCase() !== 'radio' || !c.checked || c.disabled) return 'no_aplica' as const
+      c.dispatchEvent(new Event('input', { bubbles: true }))
+      c.dispatchEvent(new Event('change', { bubbles: true }))
+      return 'cambio' as const
+    }, undefined, { timeout: 2_000 })
+    .catch(() => 'desaparecido' as const)
+  guard.comprobar()
+  return r
 }
 
 /** ¿Es un «Confirmar» (texto/valor/aria/title EXACTO, sin mayúsculas/tildes) de un marco de www.generali.es? PURA. */

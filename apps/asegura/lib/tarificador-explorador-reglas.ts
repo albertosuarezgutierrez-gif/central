@@ -303,6 +303,8 @@ REGLAS (no negociables):
 - EMISIÓN, NUNCA (ni con permiso, ni aunque el portal lo pida; esa la hace una persona): ${ACCIONES_IA.emision}. Tampoco: ${ACCIONES_IA.prohibidas}.
 - GUARDAR EL PRESUPUESTO, SÍ (decisión de Alberto, 14/10/2026), pero SOLO al llegar al precio: en la pantalla de resultado (pantalla.tipo "resultado", con los importes a la vista), ANTES de terminar, avanzar con efectoEsperado "guardar_presupuesto" sobre el botón de guardar (${ACCIONES_IA.guardar}). En la pantalla siguiente (también tipo "resultado"): si hay un botón para descargar/imprimir/generar el PDF del presupuesto, otro avanzar "guardar_presupuesto" sobre él; después terminar (refsPrecio con los importes si siguen a la vista; [] si ya no se ven). La REFERENCIA del presupuesto la lee el robot del texto de la pantalla: tú no la escribes. Si no hay botón de guardar, terminar como siempre. Un botón de guardar fuera de la pantalla de resultado, o con cualquier otro efecto, NO se pulsa. Si un botón mezcla guardar con emitir, contratar o pagar, NO se pulsa.
 - Un elemento "deshabilitado" no se toca. Si el botón de avance está deshabilitado porque faltan campos, manda SOLO los rellenar/elegir/marcar (sin avanzar): el robot vuelve con la pantalla actualizada y entonces avanzas. Eso no es motivo para parar.
+- ORDEN: primero los rellenar de texto y DESPUÉS los marcar/elegir (muchos portales deciden si habilitan el avance al cambiar una opción). Si el avance sigue deshabilitado y todos los campos visibles ya tienen valor (conValor), vuelve a marcar el radio (o elegir la opción) que ya estaba puesto, sin avanzar: el robot lo repite y el portal recalcula. Eso tampoco es motivo para parar.
+- Un ENLACE (<a>) o icono SIN texto (solo id u onclick, sin «texto») no se usa para avanzar: el robot lo rechaza y el lote entero se pierde. Avanza con el botón o enlace ROTULADO de la pantalla («Siguiente», «Continuar», «Calcular»…). Si faltan datos que solo da un buscador o ventana sin rótulo, pulsa ese avance rotulado: el portal enseñará qué falta (avisos del portal) y decides con eso.
 - terminar: SOLO si la pantalla muestra el precio (importes); refsPrecio = refs de esos importes. Va sola. Excepción: tras guardar el presupuesto, terminar con refsPrecio [] si la pantalla ya no enseña el precio.
 - parar {motivo}: "motivo" es EXACTAMENTE uno de estos códigos, sin más texto: ${lineaMotivosPararParaIA()}. Va sola. Ante la duda, PARA.
 - mapeo: para cada campo que identifiques, {ref, campoCanonico (clave del catálogo o null), confianza alta|media|baja}.
@@ -461,7 +463,8 @@ export function pantallaDeMemoria(mapas: readonly { estado: string; mapa: unknow
   const orden = [...mapas.filter((m) => m.estado === 'revisado'), ...mapas.filter((m) => m.estado === 'borrador')]
   for (const m of orden) {
     const v = validarMapa(m.mapa)
-    const p = v?.pantallas.find((x) => x.huella === huella)
+    // 0.3.25 (Fidelidade real, 56b4b52c…): solo una pantalla con AVANCE conocido; la que no lo tiene es memoria a medias (`planDesdeMapa`).
+    const p = v?.pantallas.find((x) => x.huella === huella && x.avance !== null)
     if (p) return p
   }
   return null

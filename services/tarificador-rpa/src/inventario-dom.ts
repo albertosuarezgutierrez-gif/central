@@ -229,8 +229,9 @@ function extractor(explora: boolean): string {
     importes.push({ texto: t, etiqueta: etiqueta });
   }
   // AVISOS de error del portal (28/10/2026): filas de error del informe de incidencias de ePAC y mensajes de error PrimeFaces/Bootstrap.
+  // 0.3.25: y los de RichFaces 3 (rich:messages / rich:message de Mapfre NSE). Pasan por el mismo saneado que el resto (asegura).
   const avisosPortal = [];
-  for (const n of Array.from(document.querySelectorAll(${JSON.stringify(SEL_ERROR_EPAC)} + ',.ui-messages-error-detail,.ui-message-error-detail,.ui-messages-error-summary,.alert-danger'))) {
+  for (const n of Array.from(document.querySelectorAll(${JSON.stringify(SEL_ERROR_EPAC)} + ',.ui-messages-error-detail,.ui-message-error-detail,.ui-messages-error-summary,.alert-danger,.rich-messages-label,.rich-message-label'))) {
     if (avisosPortal.length >= 10) break;
     if (!visible(n)) continue;
     const t = corta(n.innerText || n.textContent || '', 300);

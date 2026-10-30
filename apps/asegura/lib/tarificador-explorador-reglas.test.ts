@@ -250,7 +250,8 @@ test('memoria: gana el mapa REVISADO; un mapa inválido se ignora', () => {
   const huella = huellaPantalla(inv)
   const mk = (dato: string) => construirMapa(
     { entrada: 'allianz:particulares:hogar', compania: 'allianz', producto: 'hogar', modelo: null, fecha: '2026-10-13', efectosEnPortal: [], redNoGet: [], coste: { llamadas: 0, eurEstimado: 0 }, motivoFin: null },
-    [{ huella, inventario: inv, respuesta: { version: 1, pantalla: { nombre: 'X', tipo: 'formulario' }, acciones: [{ accion: 'rellenar', ref: 'm0e0', dato }], mapeo: [], motivo: null } }],
+    // 0.3.25: la memoria solo sirve pantallas con avance conocido.
+    [{ huella, inventario: inv, respuesta: { version: 1, pantalla: { nombre: 'X', tipo: 'formulario' }, acciones: [{ accion: 'rellenar', ref: 'm0e0', dato }, { accion: 'avanzar', ref: inv.marcos[0].elementos.find((e) => e.id === 'btnSig')!.ref!, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null } }],
   )
   const p = pantallaDeMemoria([{ estado: 'borrador', mapa: mk('inmueble.planta') }, { estado: 'revisado', mapa: mk('inmueble.superficie_m2') }, { estado: 'revisado', mapa: { version: 9 } }], huella)
   assert.equal(p?.campos[0].campoCanonico, 'inmueble.superficie_m2')
@@ -656,4 +657,40 @@ test('🪤 0.3.24 prompt: elegir trae ejemplos LITERALES de opcion {valor}/{text
     assert.deepEqual(normalizarOpcionElegir(e.opcion, sel), { ok: true, valor: 'P' })
   }
   assert.match(linea, /nunca null, un número ni un índice/)
+})
+
+// 0.3.25 (Fidelidade real 30/10/2026, 56b4b52c…): la pantalla del mapa traía solo `marcar` del régimen y NINGÚN avance; repetirla marcaba el radio
+// antes del nombre y el portal (que recalcula el avance en el `change` del radio) dejó el botón deshabilitado. La memoria solo sirve una pantalla
+// CON avance conocido; si otro mapa la tiene con avance, gana esa.
+test('🪤 0.3.25 pantallaDeMemoria: una pantalla del mapa SIN avance no se sirve; con avance (aunque sea de otro mapa), sí', () => {
+  const l = leerPeticionPaso({ trabajoId: UUID, inventario: crudo })
+  assert.ok(l.ok)
+  if (!l.ok) return
+  const inv = l.p.inventario
+  const huella = huellaPantalla(inv)
+  const meta = { entrada: 'allianz:particulares:hogar', compania: 'allianz', producto: 'hogar', modelo: null, fecha: '2026-10-30', efectosEnPortal: [], redNoGet: [], coste: { llamadas: 0, eurEstimado: 0 }, motivoFin: null }
+  const refDe = (id: string) => inv.marcos[0].elementos.find((e) => e.id === id)!.ref!
+  const campo = { accion: 'rellenar' as const, ref: refDe('superficie'), dato: 'inmueble.superficie_m2' }
+  const sinAvance = construirMapa(meta, [{ huella, inventario: inv, respuesta: { version: 1, pantalla: { nombre: 'X', tipo: 'formulario' }, acciones: [campo], mapeo: [], motivo: null } }])
+  const conAvance = construirMapa(meta, [{ huella, inventario: inv, respuesta: { version: 1, pantalla: { nombre: 'X', tipo: 'formulario' }, acciones: [campo, { accion: 'avanzar', ref: refDe('btnSig'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null } }])
+  assert.equal(sinAvance.pantallas[0].avance, null)
+  assert.ok(conAvance.pantallas[0].avance)
+  assert.equal(pantallaDeMemoria([{ estado: 'revisado', mapa: sinAvance }], huella), null)
+  assert.ok(pantallaDeMemoria([{ estado: 'revisado', mapa: sinAvance }, { estado: 'borrador', mapa: conAvance }], huella)?.avance)
+})
+
+// 0.3.25: reglas del prompt aprendidas en real. Fidelidade (56b4b52c…): orden textos → opciones y re-marcar si el avance sigue deshabilitado con
+// todo relleno. Mapfre NSE (8951d6f7…): la IA quiso avanzar con un <a> sin texto (`formObjAseg:btnBuscadorVehiculos`) → rechazo y parada.
+test('🪤 0.3.25 prompt: orden textos→opciones, re-marcar con el avance deshabilitado, y nunca avanzar por un enlace sin texto', () => {
+  const lineas = SYSTEM_EXPLORADOR.split('\n')
+  const orden = lineas.find((x) => x.startsWith('- ORDEN:'))
+  assert.ok(orden, 'falta la regla ORDEN')
+  assert.match(orden!, /primero los rellenar de texto y DESPUÉS los marcar\/elegir/)
+  assert.match(orden!, /vuelve a marcar el radio[^.]*sin avanzar/)
+  const enlace = lineas.find((x) => x.startsWith('- Un ENLACE (<a>) o icono SIN texto'))
+  assert.ok(enlace, 'falta la regla del enlace sin texto')
+  assert.match(enlace!, /no se usa para avanzar/)
+  assert.match(enlace!, /ROTULADO/)
+  // Las reglas nuevas no abren la puerta a nada final.
+  for (const l of [orden!, enlace!]) assert.doesNotMatch(l, /emitir|contratar|firmar|pagar|IBAN|tarjeta/i)
 })
