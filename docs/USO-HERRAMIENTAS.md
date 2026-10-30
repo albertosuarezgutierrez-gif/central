@@ -171,21 +171,21 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 400 | 71.507 | 62.684.736 | 0 | 0 |
-| `otro` | 394 | 16.700 | 35.749.525 | 20.278.365 | 0 |
-| `lectura-directa` | 337 | 11.056 | 30.211.830 | 0 | 0 |
-| `mcp:github` | 337 | 8.306 | 6.230.455 | 57.299.016 | 110 |
-| `sql` | 252 | 7.030 | 3.682.504 | 2.351.230 | 26 |
-| `escritura` | 246 | 6.149 | 92.587.055 | 0 | 0 |
+| `bash` | 400 | 71.804 | 62.915.330 | 0 | 0 |
+| `otro` | 394 | 16.738 | 35.821.162 | 20.278.365 | 0 |
+| `lectura-directa` | 337 | 11.112 | 30.276.105 | 0 | 0 |
+| `mcp:github` | 337 | 8.329 | 6.240.362 | 57.299.016 | 110 |
+| `sql` | 252 | 7.074 | 3.710.963 | 2.351.230 | 26 |
+| `escritura` | 246 | 6.201 | 93.715.082 | 0 | 0 |
 | `mcp:Vercel` | 85 | 1.506 | 1.292.499 | 237.328 | 44 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 52 | 1.456 | 5.952.956 | 0 | 0 |
 | `mcp:Gmail` | 63 | 1.398 | 1.548.245 | 0 | 101 |
-| `agente:general-purpose` | 140 | 1.242 | 740.779 | 26.118.233 | 0 |
-| `mcp:claude-code-remote` | 75 | 1.040 | 106.123 | 1.250.070 | 0 |
+| `agente:general-purpose` | 140 | 1.247 | 743.805 | 26.149.585 | 0 |
+| `mcp:claude-code-remote` | 75 | 1.056 | 106.704 | 1.250.070 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 16 | 702 | 824.260 | 0 | 0 |
-| `mcp:Supabase` | 148 | 490 | 89.029 | 6.830 | 7 |
-| `agente:agente-architect` | 84 | 487 | 339.688 | 12.737.038 | 0 |
+| `agente:agente-architect` | 84 | 493 | 344.171 | 12.841.364 | 0 |
+| `mcp:Supabase` | 148 | 491 | 89.127 | 6.830 | 7 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
 | `mcp:Google-Drive` | 33 | 172 | 175.151 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |

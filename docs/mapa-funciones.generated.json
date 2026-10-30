@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-30T08:15:49Z",
-  "sha": "318bd8e49ab9fcb3fdd371b176a67fd274e8905d",
+  "generadoEn": "2026-10-30T09:04:29Z",
+  "sha": "2ed806c3ea24527c4f25db19a8fe8688cb20628e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -65368,7 +65368,7 @@
           "exportada": true,
           "params": "fase: 'normal' | 'login', entrada: string",
           "retorno": "boolean",
-          "linea": 328,
+          "linea": 330,
           "resumen": "¿Se admite un paso de fase `login` para esta entrada? Solo si su compañía está en `LOGIN_ASISTIDO` (módulo; hoy Occident). La fase normal, siempre. Pura."
         },
         {
@@ -65377,7 +65377,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 354,
+          "linea": 356,
           "resumen": "El inventario como JSON para el prompt, con `<` y `>` neutralizados (→ ‹ ›): el texto del portal (no confiable) no puede cerrar `</inventario>` ni abrir otra etiqueta del prompt. El JSON sigue siendo "
         },
         {
@@ -65386,7 +65386,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "InventarioDom",
-          "linea": 360
+          "linea": 362
         },
         {
           "nombre": "promptLoginExplorador",
@@ -65394,7 +65394,7 @@
           "exportada": true,
           "params": "e: { entrada: string; inventario: InventarioDom; historial: string[]; avancesFallidos: number; pantallasLogin: number }",
           "retorno": "string",
-          "linea": 376,
+          "linea": 378,
           "resumen": "El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS."
         },
         {
@@ -65403,7 +65403,7 @@
           "exportada": true,
           "params": "pasos: readonly { respuesta: RespuestaExplorador | null }[]",
           "retorno": "string[]",
-          "linea": 387,
+          "linea": 389,
           "resumen": "Una línea por paso anterior: pantalla y acciones por CLAVE/ref (nunca valores)."
         },
         {
@@ -65412,7 +65412,7 @@
           "exportada": true,
           "params": "e: EntradaPrompt",
           "retorno": "string",
-          "linea": 414,
+          "linea": 416,
           "resumen": "El mensaje de usuario. El texto del portal va DELIMITADO como datos (`<inventario>`), en JSON: un intento de inyección desde el DOM se queda en una cadena dentro de un objeto. El catálogo va sin valor"
         },
         {
@@ -65421,7 +65421,7 @@
           "exportada": true,
           "params": "pasos: readonly PasoGuardado[], iniciadoAt: Date | null, ahora: Date",
           "retorno": "",
-          "linea": 446,
+          "linea": 448,
           "resumen": "Lo gastado hasta ahora por la exploración (para `comprobarTopes`). `iniciadoAt` null = ahora (0 ms)."
         },
         {
@@ -65430,13 +65430,13 @@
           "exportada": true,
           "params": "mapas: readonly { estado: string; mapa: unknown }[], huella: string",
           "retorno": "PantallaMapaExploracion | null",
-          "linea": 460,
+          "linea": 462,
           "resumen": "MEMORIA: la pantalla con esa huella en los mapas guardados (válidos) de la compañía/producto. Gana un mapa REVISADO por una persona; entre iguales, el primero de la lista (la consulta los trae del más"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "427281fad9b6"
+      "hash": "b4c24f5ff226"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador.ts",
@@ -254900,7 +254900,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ccdb91fa3a9f"
+      "hash": "5b5e2d5677f2"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas-catalogo.ts",
@@ -256354,7 +256354,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9dde452e107a"
+      "hash": "68286359073d"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-asesor.ts",
