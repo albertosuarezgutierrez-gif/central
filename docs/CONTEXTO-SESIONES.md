@@ -11,6 +11,12 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (30/10/2026) Contabilidad 2026 cerrada hasta oct + cierre mensual (PR #5285)
+- SQL de cierre aplicado (27 movs BBVA ****1175, seguros Occident por devengo, IBI Socorro, suministros/RETA desde banco). Migración `cierres_mes` + `propiedad_titularidad` APLICADA (Socorro 50/50 Pilar; Dúplex, Luxury y Reform 100% Alberto, estos dos en subarriendo).
+- Fiscal (Alberto): pisos sin servicios = capital inmobiliario; Bustos subarriendo = capital mobiliario; ingresos portales en BRUTO + comisión como gasto. Amortización: Socorro 374.412,20€ × 60,58% × 3% ≈ 6.804€/año (50/50); Dúplex donación 174.650,90€ × 36,53% × 3% ≈ 1.914€. Notaría de la donación la pagaron los padres (no suma).
+- Decisiones de Alberto: TV y climatización de Socorro como GASTO (avisado de que fiscalmente se amortizan); «Pension 28823484E» ene–mar = prestación de PATERNIDAD (exenta); Bizum = personal; TotalEnergies FELEC2600570910 (regularización contador, cobrada en Cajasur de Pilar) gasto Socorro; embargo Ayto = tasa basura (Dúplex, suposición).
+- PENDIENTE: modelo 115 de la retención del 19% del alquiler de los Bustos (1.059,10€ en 2026, nunca ingresado) — Alberto lo habla con el gestor. Booking/Expedia payouts, IBI vigente de cada piso, facturas de muebles, cuenta Cajasur sin conectar, -600€ de impuestos del 25/06 sin identificar.
+
 ## (30/10/2026) Contabilidad pisos · Sí que Brilla y Giraldillo cuadrados (SQL aplicado por Alberto)
 - `limpieza_facturas` sique_brilla ya tiene ene–sep 2026 (desglose por piso del PDF; Kutxabank ****0855). Gasto julio 2025/333 (780,10€) añadido; cargos ene/feb casados y ago/sep pasados de `personal` a pisos.
 - Giraldillo: gastos mayo/junio estaban cruzados (504,57€ / 608,03€); gemelo de AFV-11808 descartado; cargos conciliados. Lavandería la factura Sí que Brilla desde el 19/07 (no junio). AFV-11625 pagada con 0,30€ de menos (decisión de Alberto). AFV-11758 solo en Gmail, falta en Drive.
