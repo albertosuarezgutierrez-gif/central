@@ -145,10 +145,12 @@ describe('0.3.22 · Allianz VMP: elegir con la opción en forma inequívoca', ()
 // ─── 2) Mapfre NSE: estado de modal RichFaces y diagnóstico con TODOS los nombres ───────────────────────────────────────────────────
 describe('0.3.22 · Mapfre NSE: <id>OpenedState no es una acción', () => {
   it('esEstadoModalJsf: solo id JSF, último segmento …OpenedState, prefijo sin acción, valor vacío/true/false', () => {
-    for (const [n, v] of [['formDG:panelConfirmCTOpenedState', ''], ['formDG:panelConfirmCTOpenedState', 'true'], ['formDG:modalLocalidadOpenedState', 'false']]) {
+    for (const [n, v] of [['formDG:panelConfirmCTOpenedState', ''], ['formDG:panelConfirmCTOpenedState', 'false'], ['formDG:modalLocalidadOpenedState', 'false'], ['formDG:modalLocalidadOpenedState', 'true']]) {
       expect(esEstadoModalJsf(n, v), `${n}=${v}`).toBe(true)
     }
     for (const [n, v] of [
+      // Revisión adversarial 0.3.22: un modal de CONFIRMACIÓN ABIERTO ('true') = el POST puede ser su confirmación → sigue bloqueando.
+      ['formDG:panelConfirmCTOpenedState', 'true'],
       ['formDG:panelConfirmCTOpenedState', 'TRUE'], ['formDG:panelConfirmCTOpenedState', 'emitir'], ['formDG:panelConfirmCTOpenedState', '1'],
       ['formEmitir:panelOpenedState', 'true'], ['btnConfirmar:panelOpenedState', ''], ['formDG:panelConfirmCT', ''], ['formDG:panelConfirmCTOpenedStateX', ''],
       ['formDG:OpenedState', ''], ['panelConfirmCTOpenedState', ''], [':panelConfirmCTOpenedState', ''], ['formDG:panelConfirmEmitirOpenedState', 'true'], ['formDG:modalLocalidadFirmaOpenedState', 'false'], ['formDG:panelPagoOpenedState', ''], ['formDG:panel ConfirmOpenedState', ''], ['formDG:panelconfirmctopenedstate', ''],
@@ -158,7 +160,9 @@ describe('0.3.22 · Mapfre NSE: <id>OpenedState no es una acción', () => {
   const REAL = 'formDG=formDG&formDG%3AfechaFirmaInputDate=29%2F10%2F2026&formDG%3AlocalidadFirma=SEVILLA&formDG%3ApanelConfirmCTOpenedState=&formDG%3AbtnSiguiente=formDG%3AbtnSiguiente&javax.faces.ViewState=j_id3'
   it('real (dbf8ef0e): cuerpo de datosGenerales con panelConfirmCTOpenedState vacío → no casa', () => {
     expect(detalleCuerpoToleradoConAccionReal(REAL)).toBeNull()
-    expect(cuerpoToleradoConAccionReal(REAL.replace('OpenedState=', 'OpenedState=true'))).toBe(false)
+    expect(cuerpoToleradoConAccionReal(REAL.replace('OpenedState=', 'OpenedState=false'))).toBe(false)
+    // Modal de confirmación ABIERTO: el envío puede ser la confirmación → bloquea.
+    expect(cuerpoToleradoConAccionReal(REAL.replace('OpenedState=', 'OpenedState=true'))).toBe(true)
   })
   it('OpenedState con valor de acción, prefijo de acción o el botón pulsado → sigue bloqueando', () => {
     for (const c of [

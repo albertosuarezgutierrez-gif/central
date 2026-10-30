@@ -136,8 +136,8 @@ async function postNse(cuerpo: string, tolerar = true) {
 }
 const REAL_DG = 'formDG=formDG&formDG%3AfechaFirmaInputDate=29%2F10%2F2026&formDG%3AlocalidadFirma=SEVILLA&formDG%3ApanelConfirmCTOpenedState=&formDG%3AbtnSiguiente=formDG%3AbtnSiguiente&javax.faces.ViewState=j_id3'
 
-test('0.3.22 · Mapfre NSE: POST a datosGenerales con panelConfirmCTOpenedState (vacío/true/false) → no se aborta (antes: «confirm»)', async () => {
-  for (const v of ['', 'true', 'false']) {
+test('0.3.22 · Mapfre NSE: POST a datosGenerales con panelConfirmCTOpenedState cerrado (vacío/false) → no se aborta (antes: «confirm»)', async () => {
+  for (const v of ['', 'false']) {
     const cuerpo = REAL_DG.replace('OpenedState=', `OpenedState=${v}`) + '&formDG%3AmodalLocalidadOpenedState=false'
     const r = await postNse(cuerpo)
     assert.equal(r.violacion, null, `${cuerpo}: ${String(r.violacion)}`)
@@ -146,7 +146,7 @@ test('0.3.22 · Mapfre NSE: POST a datosGenerales con panelConfirmCTOpenedState 
 })
 
 test('0.3.22 · Mapfre NSE: OpenedState con valor de acción, botones de acción o ruta NO tolerada → abortado; el error nombra TODOS (sin valores)', async () => {
-  for (const [cuerpo, tolerar] of [['formDG%3ApanelConfirmCTOpenedState=confirmar', true], [REAL_DG.replace('OpenedState=', 'OpenedState=TRUE'), true], [REAL_DG, false]] as const) {
+  for (const [cuerpo, tolerar] of [['formDG%3ApanelConfirmCTOpenedState=confirmar', true], [REAL_DG.replace('OpenedState=', 'OpenedState=TRUE'), true], [REAL_DG.replace('OpenedState=', 'OpenedState=true'), true], [REAL_DG, false]] as const) {
     const r = await postNse(cuerpo, tolerar)
     assert.ok(r.violacion instanceof EmisionBloqueadaError, `${cuerpo} (tolerada=${tolerar})`)
     assert.match(String(r.fallo), /^net::ERR_BLOCKED_BY_CLIENT/, cuerpo)

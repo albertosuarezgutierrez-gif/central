@@ -358,8 +358,12 @@ export function esEstadoModalJsf(nombre: string, valor: string): boolean {
   if (!/^[A-Za-z][A-Za-z\d_]{0,80}OpenedState$/.test(ultimo)) return false
   // El nombre del modal no puede nombrar OTRA acción final (0.3.10: `panelConfirmEmitirOpenedState` sigue parando): «confirm» es lo único
   // que se descuenta (es el «panelConfirm…» de RichFaces); emitir, firmar, pagar, contratar, grabar… en el nombre siguen bloqueando.
-  if (RE_ACCION_REAL_TRAS_PREFIJO.test(ultimo.slice(0, -'OpenedState'.length).replace(/confirm/gi, ''))) return false
+  const modal = ultimo.slice(0, -'OpenedState'.length)
+  if (RE_ACCION_REAL_TRAS_PREFIJO.test(modal.replace(/confirm/gi, ''))) return false
   if (segs.some((s) => RE_ACCION_REAL_TRAS_PREFIJO.test(s))) return false
+  // Revisión adversarial 0.3.22: un modal de CONFIRMACIÓN ABIERTO ('true') significa que el envío puede ser precisamente su confirmación:
+  // solo se exime CERRADO ('' o 'false', lo visto en real). Un modal sin «confirm» en el nombre sí puede ir abierto.
+  if (/confirm/i.test(modal)) return valor === '' || valor === 'false'
   return valor === '' || valor === 'true' || valor === 'false'
 }
 
