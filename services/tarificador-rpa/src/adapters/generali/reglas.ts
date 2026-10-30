@@ -1919,13 +1919,69 @@ export function estadoNomiagGenerali(valor: string | null): 'con valor' | 'vací
   return valor.trim() === '' ? 'vacío' : 'con valor'
 }
 
-/** Mediciones diagnósticas acumuladas por página (todas opcionales: lo no medido sale «¿?»). */
-export type DiagTipoVehiculoGenerali = { nomiag?: string; trasSelector?: string; antesPersonas?: string; final?: string; subtipos?: string }
+/**
+ * Mediciones diagnósticas acumuladas por página (todas opcionales: lo no medido sale «¿?»). `legado` y `fila` (30/10/2026, trabajo f8f473e6):
+ * estado del camino ANTIGUO de «Características del vehículo» y fila elegida en el selector (catálogo), ya resumidos por sus funciones puras.
+ */
+export type DiagTipoVehiculoGenerali = { nomiag?: string; trasSelector?: string; antesPersonas?: string; final?: string; subtipos?: string; legado?: string; fila?: string }
 
-/** Línea corta «diag: …» para el atasco de «Tipo de vehículo» vacío. PURA; solo catálogos y estados. */
-export function lineaDiagTipoVehiculoGenerali(d: DiagTipoVehiculoGenerali | undefined, max = 500): string {
+/**
+ * 30/10/2026 (trabajo f8f473e6, 12.ª parada igual con el MISMO vehículo): HIPÓTESIS de catálogo cuando, al final, «Tipo de vehículo» (`wclasv`)
+ * sigue vacío y «Clase de vehículo» (`wclavh`) trae una clase que NO es «TURISMO» (p. ej. «TODO TERRENO»). Es una hipótesis, no un hecho:
+ * nunca se ha visto `wclasv` relleno con OTRO vehículo, así que no se descarta un fallo del bot. `final` = lectura de `leerClaseTipoGenerali`. PURA.
+ */
+export function hipotesisTipoVehiculoGenerali(final: string | undefined): string | null {
+  const m = /^vacío \(wclavh «([^»]+)»\)$/.exec(String(final ?? '').trim())
+  if (!m) return null
+  const clase = sanearFragmentoGenerali(m[1]!).trim().slice(0, 40)
+  if (!clase || normalizarCatalogo(clase) === 'TURISMO') return null
+  return `HIPÓTESIS (sin confirmar): «Tipo de vehículo» vacío con «Clase de vehículo» «${clase}» (no «TURISMO»): probable hueco del catálogo de Genernet para ESTE vehículo; contrastar a mano en Genernet o con otro vehículo`
+}
+
+/** Estado del camino ANTIGUO de «Características del vehículo» (ocultos con el selector nuevo `lnkVeh2`): textos de catálogo, nunca valores tecleados. */
+export type LegadoTipoGenerali = {
+  placa: { visible: boolean; marcada: string | null } | null
+  indique: { visible: boolean; elegida: string | null; opciones: readonly string[] } | null
+}
+
+/**
+ * «legado: Tipo de placa=«…» (oculto) · Indique Código=VACÍO (oculto; opciones: …)». `Indique Código` (`wvegen`) es OBLIGATORIO en el HTML y su
+ * `onchange` recarga el formulario (`reloadEmiAutosGenA.do`): si va vacío y oculto, el atasco lo dice. «Seleccione…» cuenta como VACÍO. PURA.
+ */
+export function resumenLegadoTipoGenerali(l: LegadoTipoGenerali | null | undefined): string {
+  if (!l) return 'legado=¿?'
+  const c = (t: string) => sanearFragmentoGenerali(t).trim().slice(0, 40)
+  const vis = (v: boolean) => (v ? 'a la vista' : 'oculto')
+  const placa = !l.placa ? 'Tipo de placa=sin campo' : `Tipo de placa=${l.placa.marcada ? `«${c(l.placa.marcada)}»` : 'SIN marcar'} (${vis(l.placa.visible)})`
+  let indique = 'Indique Código=sin campo'
+  if (l.indique) {
+    const e = l.indique.elegida && !/^SELECCION/.test(normalizarCatalogo(l.indique.elegida)) ? `«${c(l.indique.elegida)}»` : 'VACÍO'
+    const ops = l.indique.opciones.filter((o) => !/^SELECCION/.test(normalizarCatalogo(o))).map(c).filter(Boolean).slice(0, 6)
+    indique = `Indique Código=${e} (${vis(l.indique.visible)}; opciones: ${ops.length ? ops.join(' | ') : '(ninguna)'})`
+  }
+  return `legado: ${placa} · ${indique}`
+}
+
+/**
+ * «fila elegida=[Cab=celda | …]» de la tabla de versiones del selector justo antes de «Confirmar» (catálogo de Genernet: código, modelo, versión
+ * y las columnas que haya; una celda vacía sale «(vacía)»). Sin cabeceras o sin fila → «fila elegida=¿?». PURA; saneado.
+ */
+export function resumenFilaSelectorGenerali(cabeceras: readonly string[] | null | undefined, celdas: readonly string[] | null | undefined, max = 240): string {
+  if (!cabeceras?.length || !celdas?.length) return 'fila elegida=¿?'
+  const pares = celdas.slice(0, 10).map((v, i) => {
+    const cab = sanearFragmentoGenerali(cabeceras[i] ?? '').trim().slice(0, 20) || `col${i + 1}`
+    const val = sanearFragmentoGenerali(v ?? '').trim().slice(0, 50)
+    return `${cab}=${val || '(vacía)'}`
+  })
+  const t = `fila elegida=[${pares.join(' | ')}]`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+/** Línea corta «diag: …» para el atasco de «Tipo de vehículo» vacío (precedida de la HIPÓTESIS de catálogo si aplica). PURA; solo catálogos y estados. */
+export function lineaDiagTipoVehiculoGenerali(d: DiagTipoVehiculoGenerali | undefined, max = 900): string {
   const x = (s: string | undefined): string => (s === undefined ? '¿?' : sanearFragmentoGenerali(s).slice(0, 80))
-  const t = `diag: nomiag=${d?.nomiag === 'con valor' || d?.nomiag === 'vacío' || d?.nomiag === 'sin campo' ? d.nomiag : '¿?'}; wclasv tras selector=${x(d?.trasSelector)}/antes personas=${x(d?.antesPersonas)}/final=${x(d?.final)}; ${d?.subtipos ? sanearFragmentoGenerali(d.subtipos).slice(0, 300) : 'subtipos=¿?'}`
+  const hip = hipotesisTipoVehiculoGenerali(d?.final)
+  const t = `${hip ? `${hip}. ` : ''}diag: nomiag=${d?.nomiag === 'con valor' || d?.nomiag === 'vacío' || d?.nomiag === 'sin campo' ? d.nomiag : '¿?'}; wclasv tras selector=${x(d?.trasSelector)}/antes personas=${x(d?.antesPersonas)}/final=${x(d?.final)}; ${d?.subtipos ? sanearFragmentoGenerali(d.subtipos).slice(0, 300) : 'subtipos=¿?'}; ${d?.legado ? sanearFragmentoGenerali(d.legado).slice(0, 220) : 'legado=¿?'}; ${d?.fila ? sanearFragmentoGenerali(d.fila).slice(0, 240) : 'fila elegida=¿?'}`
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
