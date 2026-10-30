@@ -3,6 +3,8 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { fingerprint } from '@/lib/sivra/fingerprint'
+import { bloqueoPorCierre, paresDeGastos } from '@/lib/cierre-mes-db'
+import { paresDeGasto } from '@/lib/cierre-mes'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,6 +71,10 @@ export async function POST(req: NextRequest) {
 
   if (!fecha || !total) return NextResponse.json({ error: 'Fecha y total obligatorios' }, { status: 400 })
 
+  // Mes cerrado de ese piso → 409 (antes de subir nada a Drive).
+  const bloqueo = await bloqueoPorCierre(paresDeGasto(fecha, propiedad))
+  if (bloqueo) return bloqueo
+
   let driveUrl: string | null = null
   let carpetaDrive: string | null = null
   let driveFileName: string | null = null
@@ -115,6 +121,8 @@ export async function DELETE(req: NextRequest) {
 
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+  const bloqueo = await bloqueoPorCierre(await paresDeGastos([String(id)]))
+  if (bloqueo) return bloqueo
   await prisma.$executeRaw(Prisma.sql`DELETE FROM gastos WHERE id = ${id}::uuid`)
   return NextResponse.json({ ok: true })
 }
