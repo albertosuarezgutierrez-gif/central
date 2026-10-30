@@ -118,6 +118,14 @@ async function nacimientoFicha(correduriaId: string, clienteId: string): Promise
   } catch { return null }
 }
 
+/** `clientes.codigo_postal` de la ficha (columna en claro; la misma que precarga la pantalla). `null` = no consta o no se pudo leer. */
+async function codigoPostalFicha(correduriaId: string, clienteId: string): Promise<string | null> {
+  const f = await prisma.$queryRaw<{ codigo_postal: string | null }[]>`
+    select codigo_postal from seguros.clientes
+    where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
+  return f[0]?.codigo_postal?.trim() || null
+}
+
 /**
  * Fecha del carné del conductor en la FICHA (carné B en coche; en moto SOLO el de moto: A, A1 o A2), la MISMA que lee la pantalla de
  * la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo leer (nunca un valor de relleno).
@@ -178,7 +186,7 @@ async function formularioDeOportunidad(
   const formulario = formularioBotDesdeLead({
     // Vehículo: el MISMO bloque que ve la oportunidad (con el fallback a las claves antiguas), no solo `datosVehiculo` a pelo.
     ramo, valores, ilegibles, bloque: vehiculo ? { ...datosVehiculoDeInfoRiesgo(info) } : esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
-    ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo) } : {}),
+    ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo), fichaCodigoPostal: await codigoPostalFicha(correduriaId, clienteId).catch(() => null) } : {}),
     ...(ramo === 'moto' ? { moto: await motoDelLead(valores.codigoVehiculo) } : {}),
     ...(ramo === 'comunidades' ? { catastro: await catastroComunidad(valores).catch(() => null) } : {}),
   })

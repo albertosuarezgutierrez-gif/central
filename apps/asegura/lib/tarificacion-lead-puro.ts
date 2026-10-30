@@ -109,6 +109,11 @@ export type EntradaFormulario = {
    * Lo dicho en el correo manda; esto cubre lo que el cliente no repite (igual que `fichaNacimiento`).
    */
   fichaCarne?: string | null
+  /**
+   * De la FICHA: `clientes.codigo_postal` (columna en claro). Cubre el CP de circulación cuando el cliente no lo dijo ni consta
+   * en el bloque del riesgo; solo con 5 dígitos. `null`/ausente = no se sabe (nunca relleno).
+   */
+  fichaCodigoPostal?: string | null
   /** `aaaa-mm-dd` de hoy (Madrid). */
   hoy: string
   /** Moto: la lectura del catálogo (`null` = el cliente no dio marca/modelo). */
@@ -423,7 +428,12 @@ export function formularioBotDesdeLead(e: EntradaFormulario): FormularioLead {
   const matricula = txt(v.matricula) || txt(b.matricula)
   if (matricula) riesgo.matricula = matricula
   const cp = txt(v.cpCirculacion) || txt(b.cpCirculacion)
+  const cpFicha = txt(e.fichaCodigoPostal)
   if (cp) riesgo.codigoPostal = cp
+  else if (/^\d{5}$/.test(cpFicha)) {
+    riesgo.codigoPostal = cpFicha
+    supuestos.push({ campo: 'cpCirculacion', texto: 'código postal de circulación: el de la ficha del cliente (se supone que el vehículo circula donde vive)' })
+  }
 
   const conductor: Record<string, unknown> = {}
   const nac = txt(v.fechaNacimiento) || (e.fichaNacimiento && ISO.test(e.fichaNacimiento) ? e.fichaNacimiento : '')
