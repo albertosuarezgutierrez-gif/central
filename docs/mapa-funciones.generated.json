@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-30T03:49:56Z",
-  "sha": "216ae2e92bf98d4600041f28aeda6874f5e2a8a5",
+  "generadoEn": "2026-10-30T05:21:59Z",
+  "sha": "cba1df0565c84728ea21c628e07781e0fbdf3edf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -256068,6 +256068,8 @@
         "cuerpoToleradoConAccionReal",
         "esCampoFechaDeAccion",
         "esEstadoModalJsf",
+        "esConfirmarGuardadoObjetoAsegurado",
+        "claseValorDiagnostico",
         "detalleCuerpoToleradoConAccionReal",
         "textoDetalleCuerpo",
         "neutralizarRutaTolerable",
@@ -256082,7 +256084,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 127,
+          "linea": 136,
           "resumen": "Quita tildes para que «Emisión» o «Formalización» no se escapen por un acento."
         },
         {
@@ -256091,7 +256093,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 134,
+          "linea": 143,
           "resumen": "Decodifica %-secuencias UTF-8 válidas UNA A UNA: una secuencia mal formada (`%E0%A4%A`) no apaga la decodificación del resto (fail-closed)."
         },
         {
@@ -256100,7 +256102,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 144
+          "linea": 153
         },
         {
           "nombre": "parametrosParecenEmision",
@@ -256108,7 +256110,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 179,
+          "linea": 188,
           "resumen": "· el VALOR de cada parámetro con clave de acción (`action`, `accion`, `event`, `operation`, `cmd`…): `store`, `contract` o cualquier cosa que case con `pareceEmision`. El resto del cuerpo (datos del r"
         },
         {
@@ -256117,7 +256119,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 202,
+          "linea": 211,
           "resumen": "0.3.13 — Inspección ESTRICTA del cuerpo para los destinos POST extra de un avance (p. ej. `/drvp00/main/control.do`). Además de `parametrosParecenEmision`, rechaza el cuerpo si el VALOR de una clave d"
         },
         {
@@ -256126,7 +256128,7 @@
           "exportada": false,
           "params": "cuerpo: string",
           "retorno": "[string, string][]",
-          "linea": 232,
+          "linea": 241,
           "resumen": "Pares (nombre, valor) de un cuerpo form-urlencoded o multipart/form-data, ya decodificados y sin tildes. PURA."
         },
         {
@@ -256135,7 +256137,7 @@
           "exportada": true,
           "params": "url: string, opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 247,
+          "linea": 256,
           "resumen": "Lanza si la URL casa con el patrón."
         },
         {
@@ -256144,7 +256146,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 256,
+          "linea": 265,
           "resumen": "Lanza si el botón a pulsar casa con el patrón. Se mira TODO lo que lo describe (texto visible, `aria-label`, `title`, `value`, `id`, `name`, `href`): un botón con icono y `id=\"btnEmitir\"` también es e"
         },
         {
@@ -256153,15 +256155,15 @@
           "exportada": true,
           "params": "d: string | null | undefined",
           "retorno": "boolean",
-          "linea": 272
+          "linea": 281
         },
         {
           "nombre": "cuerpoToleradoConAccionReal",
           "kind": "function",
           "exportada": true,
-          "params": "cuerpo: string | null | undefined",
+          "params": "cuerpo: string | null | undefined, url?: string | null",
           "retorno": "boolean",
-          "linea": 297,
+          "linea": 306,
           "resumen": "Cuerpo (form-urlencoded) de una petición a una ruta TOLERADA: ¿nombra una acción de emisión real? Mira el NOMBRE de cada parámetro (`formEmision:btnEmitir=…`) y el VALOR de `javax.faces.source` / `jav"
         },
         {
@@ -256170,7 +256172,7 @@
           "exportada": true,
           "params": "nombre: string, valor: string",
           "retorno": "boolean",
-          "linea": 325,
+          "linea": 334,
           "resumen": "0.3.20 (Mapfre NSE real 29/10/2026, POST a `…/informacionGeneral/datosGenerales.jsf`): el parámetro `formDG:fechaFirmaInputDate` (la FECHA de firma, un dato del formulario) casaba con «firm» y abortab"
         },
         {
@@ -256179,26 +256181,43 @@
           "exportada": true,
           "params": "nombre: string, valor: string",
           "retorno": "boolean",
-          "linea": 351,
+          "linea": 360,
           "resumen": "0.3.22 (Mapfre NSE real 29/10/2026, dbf8ef0e…, POST a `…/informacionGeneral/datosGenerales.jsf`): `formDG:panelConfirmCTOpenedState` es el ESTADO abierto/cerrado de un modal RichFaces (`<id>OpenedStat"
+        },
+        {
+          "nombre": "esConfirmarGuardadoObjetoAsegurado",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, valor: string, url: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 403,
+          "resumen": "· el VALOR no es un nombre/rótulo de acción: ficha simple (≤20, sin «:», espacios ni signos) que no casa con ninguna lista de acción final (`RE_ACCION_REAL_TRAS_PREFIJO`, `NOMBRE_ACCION_FINAL`, `VALOR"
+        },
+        {
+          "nombre": "claseValorDiagnostico",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string | null | undefined",
+          "retorno": "ClaseValorDiagnostico",
+          "linea": 424
         },
         {
           "nombre": "detalleCuerpoToleradoConAccionReal",
           "kind": "function",
           "exportada": true,
-          "params": "cuerpo: string | null | undefined",
+          "params": "cuerpo: string | null | undefined, url?: string | null",
           "retorno": "",
-          "linea": 379,
+          "linea": 444,
           "resumen": "Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no se sabía por qué): el NOMBRE del parámetro (o `javax.faces.*`) y la"
         },
         {
           "nombre": "textoDetalleCuerpo",
           "kind": "function",
           "exportada": true,
-          "params": "d: { parametro: string; patron: string; parametros?: readonly { parametro: string; patron: string }[] }",
+          "params": "d: { parametro: string; patron: string; parametros?: readonly HalladoCuerpo[] }, max: number = MAX_DETALLE_CUERPO_MENSAJE",
           "retorno": "string",
-          "linea": 418,
-          "resumen": "0.3.22: el trozo del mensaje del guard con lo que casó en el cuerpo. Uno: `parámetro «X» casa con «p»` (como siempre); varios: `parámetros (N): «X» casa con «p», «Y» casa con «q» (+M más)`, recortado "
+          "linea": 488,
+          "resumen": "0.3.22: el trozo del mensaje del guard con lo que casó en el cuerpo. Solo NOMBRES (y, 0.3.23, la clase del valor). 0.3.23 (real 30/10/2026: la lista salía cortada): uno: `parámetro «X» [valor: vacío] "
         },
         {
           "nombre": "neutralizarRutaTolerable",
@@ -256206,7 +256225,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, reglas: readonly RutaTolerable[], origenPagina?: string | null",
           "retorno": "string | null | undefined",
-          "linea": 438,
+          "linea": 509,
           "resumen": "`origenPagina`: origen de la ventana/marco donde está la ruta. Una ruta RELATIVA (`/…`) solo se tolera si es EXACTAMENTE el de la regla; sin él, nunca (fail-closed). Una URL absoluta lleva su propio o"
         },
         {
@@ -256215,7 +256234,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 479
+          "linea": 550
         },
         {
           "nombre": "tipoDocumentoDe",
@@ -256223,7 +256242,7 @@
           "exportada": true,
           "params": "documento: string | null | undefined",
           "retorno": "TipoDocumento | null",
-          "linea": 488
+          "linea": 559
         },
         {
           "nombre": "opcionTipoDocumento",
@@ -256231,13 +256250,13 @@
           "exportada": true,
           "params": "tipo: TipoDocumento, opciones: readonly { valor: string | null; texto: string | null }[]",
           "retorno": "string | null",
-          "linea": 501,
+          "linea": 572,
           "resumen": "La opción de un desplegable de «Tipo de documento» que corresponde a `tipo`, por su TEXTO (sin tildes, mayúsculas ni signos): NIF → «NIF», «DNI», «DNI/NIF», «NIF/DNI», «N.I.F.», «DNI/NIF/NIE/CIF» (0.3"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8489b6957dba"
+      "hash": "9dde452e107a"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-asesor.ts",
@@ -260435,6 +260454,6 @@
   ],
   "resumen": {
     "archivos": 5434,
-    "funciones": 20953
+    "funciones": 20955
   }
 }
