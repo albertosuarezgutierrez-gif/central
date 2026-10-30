@@ -1,44 +1,44 @@
 {
  "sesion": "17bedc2a-ed32-55d2-a49f-1b702fec45b5",
  "inicio": "2026-10-30T07:10:10.054Z",
- "fin": "2026-10-30T07:44:07.080Z",
- "llamadas": 147,
+ "fin": "2026-10-30T08:14:16.897Z",
+ "llamadas": 168,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 6,
-   "chars_in": 729,
-   "chars_out": 10739,
+   "llamadas": 8,
+   "chars_in": 1002,
+   "chars_out": 27270,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 4,
-    "Read": 2
+    "Read": 4
    }
   },
   "otro": {
-   "llamadas": 22,
-   "chars_in": 20884,
-   "chars_out": 50121,
+   "llamadas": 29,
+   "chars_in": 20961,
+   "chars_out": 91023,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 8,
+    "ToolSearch": 9,
     "SubagentHandback": 7,
-    "ReadNotifications": 3,
+    "ReadNotifications": 9,
     "SendMessage": 4
    }
   },
   "bash": {
-   "llamadas": 31,
-   "chars_in": 47735,
-   "chars_out": 97550,
+   "llamadas": 37,
+   "chars_in": 50063,
+   "chars_out": 112682,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 31
+    "Bash": 37
    }
   },
   "mcp:Supabase": {
@@ -53,14 +53,14 @@
    }
   },
   "sql": {
-   "llamadas": 52,
-   "chars_in": 20034,
-   "chars_out": 148355,
+   "llamadas": 54,
+   "chars_in": 21680,
+   "chars_out": 149656,
    "errores": 0,
    "archivos_citados": 5,
    "chars_citados": 2741777,
    "tools": {
-    "mcp__Supabase__execute_sql": 52
+    "mcp__Supabase__execute_sql": 54
    }
   },
   "agente:general-purpose": {
@@ -75,9 +75,9 @@
    }
   },
   "mcp:github": {
-   "llamadas": 4,
-   "chars_in": 2106,
-   "chars_out": 4762,
+   "llamadas": 8,
+   "chars_in": 2540,
+   "chars_out": 21286,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -85,7 +85,9 @@
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 1,
     "mcp__github__get_job_logs": 1,
-    "mcp__github__add_issue_comment": 1
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__actions_run_trigger": 2,
+    "mcp__github__pull_request_read": 2
    }
   },
   "mcp:claude-code-remote": {
