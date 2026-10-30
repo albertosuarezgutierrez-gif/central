@@ -24,6 +24,7 @@ import {
   pareceDatoPersonalInventario,
   valoresSensiblesDeRiesgo,
   type ElementoInventario,
+  type OpcionInventario,
   type InventarioDom,
   type MarcoInventario,
 } from './inventario-dom.ts'
@@ -101,8 +102,12 @@ export type AvancePorId = {
 export type AvanceSinTexto = {
   /** Origen EXACTO (esquema + host, sin puerto ni credenciales) del marco que contiene el control. */
   origen: string
-  /** La ruta del marco contiene esta subcadena (sensible a mayúsculas). */
-  rutaIncluye: string
+  /**
+   * 0.3.22: LISTA CERRADA de rutas EXACTAS (pathname, sensible a mayúsculas) de las pantallas del flujo en que vale la regla: la del marco
+   * del control y la del formulario al que va el POST (`action`, misma origen, sin query) tienen que ser una de estas. Antes (0.3.18-0.3.21)
+   * una sola subcadena (`/OPI_ES_Vivienda/Simualtion.aspx`). Nunca pantallas de contratación/emisión/pago.
+   */
+  rutas: readonly string[]
   /** `name` empieza por esto… */
   prefijoName: string
   /** …y contiene esto. */
@@ -280,7 +285,10 @@ const SIMULACION_FIDELIDADE_SIN_TEXTO: AvanceSinTexto = Object.freeze({
   origen: ORIGEN_FIDELIDADE_MEDIADORES,
   // SOLO la pantalla de simulación (revisión adversarial 29/10/2026): con todo el módulo, el botón primario del tema (Button+Is_Default, el
   // mismo en cada pantalla) de cualquier pantalla de emisión/contratación de Vivienda quedaba cubierto por la regla. Otra pantalla = otra regla.
-  rutaIncluye: '/OPI_ES_Vivienda/Simualtion.aspx',
+  // 0.3.22 (Fidelidade real 29/10/2026, 530656a4…): LISTA CERRADA de pantallas del flujo de SIMULACIÓN de Vivienda, antes del precio. Solo
+  // las vistas en real: «Simulación» (con la errata del portal) y «Datos Cliente» (`ClientData.aspx`, a la que envía el formulario de la
+  // simulación). No hay más pantallas de Vivienda documentadas en el repo; una nueva se añade aquí al verla, nunca una de contratación/pago.
+  rutas: Object.freeze(['/OPI_ES_Vivienda/Simualtion.aspx', '/OPI_ES_Vivienda/ClientData.aspx']),
   prefijoName: 'OPI_Theme_wt',
   contieneName: '$block$wtMainContent$',
   clase: Object.freeze(['Button', 'Is_Default']),
@@ -605,6 +613,64 @@ export function avanceDeshabilitadoAlFinal(lista: readonly unknown[], refs: Read
     const hit = refs.get(a.ref)
     return hit !== undefined && hit.marco === av.marco
   })
+}
+
+/** 0.3.22: resultado de {@link normalizarOpcionElegir}. `yaPuesta` = la opción de valor VACÍO que el `<select>` ya tiene: no se ejecuta. */
+export type OpcionElegirNormalizada = { ok: true; valor: string } | { ok: true; yaPuesta: true } | { ok: false; error: string }
+
+/**
+ * 0.3.22 (Allianz VMP real 29/10/2026, 6b3176de…, «Figuras Intervinientes»): la IA mandó `elegir` sobre `IntervinientesBean$nifTomador_tipoDoc`
+ * con una `opcion` que no era `{ valor: string }` y el lote entero cayó. La opción que buscaba («DNI/NIF/NIE/CIF») tiene `value=""` y el
+ * inventario la lleva con `valor: null`: la IA NO podía expresarla con `{ valor }`. Formas que se aceptan (INEQUÍVOCAS), siempre resueltas
+ * contra las opciones DEL INVENTARIO (la comprobación de opción permitida no se relaja):
+ *   · `{ valor: string }`: como siempre (el validador comprueba después que es una opción del inventario).
+ *   · una CADENA: el valor de UNA opción, o el texto EXACTO (espacios colapsados) de UNA opción; si casa con dos opciones distintas, ambigua.
+ *   · `{ texto: string }` (o `{ valor: null, texto }`): el texto EXACTO de UNA opción. `{ valor: string, texto }` solo si ambos son de la MISMA.
+ * En un nx-dropdown el «valor» ES el texto: cadena o `{ texto }` → `{ valor: texto }` (sus comprobaciones de siempre van después).
+ * Si la opción resuelta no tiene valor en el inventario (vacío o redactado): solo vale como `yaPuesta` (no se ejecuta nada) cuando el
+ * `<select>` NO tiene valor (`conValor === false`), están TODAS sus opciones en el inventario y esa es la ÚNICA sin valor (luego es la de
+ * `value=""`, la que ya está puesta). Si no, rechazo: una opción redactada nunca se elige. PURA.
+ */
+export function normalizarOpcionElegir(opcion: unknown, el: ElementoInventario): OpcionElegirNormalizada {
+  const forma = 'opcion tiene que ser { valor } (o { texto } con el texto exacto de la opción)'
+  const plano = (s: string) => s.replace(/\s+/g, ' ').trim()
+  let cadena: string | null = null
+  let texto: string | null = null
+  let valor: string | null = null
+  if (typeof opcion === 'string') cadena = opcion
+  else {
+    const o = obj(opcion)
+    if (!o) return { ok: false, error: forma }
+    const ks = Object.keys(o)
+    if (ks.length === 0 || ks.some((k) => k !== 'valor' && k !== 'texto')) return { ok: false, error: forma }
+    if (o.texto !== undefined && typeof o.texto !== 'string') return { ok: false, error: forma }
+    if (o.valor !== undefined && o.valor !== null && typeof o.valor !== 'string') return { ok: false, error: forma }
+    texto = typeof o.texto === 'string' ? o.texto : null
+    valor = typeof o.valor === 'string' ? o.valor : null
+    if (texto === null && valor === null) return { ok: false, error: forma }
+    // La forma de siempre: sin tocar (las comprobaciones de opción del inventario van después, en el validador).
+    if (texto === null) return { ok: true, valor: valor! }
+  }
+  if (el.tag === 'nx-dropdown') {
+    if (cadena !== null) return { ok: true, valor: cadena }
+    if (valor !== null && plano(valor) !== plano(texto!)) return { ok: false, error: `${forma}: valor y texto no son de la misma opción` }
+    return { ok: true, valor: texto! }
+  }
+  const ops = el.opciones ?? []
+  const porTexto = (t: string) => ops.filter((o) => o.texto !== null && plano(o.texto) === plano(t))
+  let candidatas: OpcionInventario[]
+  if (cadena !== null) candidatas = [...new Set([...ops.filter((o) => o.valor !== null && o.valor === cadena), ...porTexto(cadena)])]
+  else {
+    candidatas = porTexto(texto!)
+    if (valor !== null && !(candidatas.length === 1 && candidatas[0].valor === valor)) return { ok: false, error: `${forma}: valor y texto no son de la misma opción` }
+  }
+  if (candidatas.length === 0) return { ok: false, error: 'el valor no está entre las opciones del inventario' }
+  if (candidatas.length > 1) return { ok: false, error: 'opción ambigua: casa con más de una opción del inventario' }
+  const op = candidatas[0]
+  if (op.valor !== null) return { ok: true, valor: op.valor }
+  const todas = typeof el.opcionesTotal === 'number' && el.opcionesTotal === ops.length
+  if (el.conValor === false && todas && ops.filter((o) => o.valor === null).length === 1) return { ok: true, yaPuesta: true }
+  return { ok: false, error: 'esa opción no tiene valor en el inventario (vacía o redactada): no se elige; si es la vacía y el desplegable no tiene valor, ya está puesta' }
 }
 
 /** Lo que dice el propio campo del portal (id, name, etiqueta, placeholder, aria, formControlName): para comprobar que la clave encaja. */
@@ -1588,7 +1654,7 @@ export function motivoNoAvanceSinTexto(entrada: string, el: ElementoInventario, 
     if ([el.name, el.id].some((v) => typeof v === 'string' && RE_NAME_ACCION_FINAL_SIN_TEXTO.test(v.toLowerCase()))) { motivo = 'name_de_accion_final'; continue }
     const origen = /^(https?:\/\/[^/?#]+)/i.exec(String(marco.url ?? ''))?.[1]?.toLowerCase() ?? null
     if (origen !== a.origen) { motivo = 'origen_distinto'; continue }
-    if (!(rutaDeMarco(marco.url) ?? '').includes(a.rutaIncluye)) { motivo = 'ruta_distinta'; continue }
+    if (!a.rutas.includes(rutaDeMarco(marco.url) ?? '')) { motivo = 'ruta_distinta'; continue }
     if ((marco.importes?.length ?? 0) > 0) { motivo = 'marco_con_importes'; continue }
     const titulos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
     if (titulos.some((t) => a.nuncaConTitulo.test(t))) { motivo = 'titulo_de_emision'; continue }
@@ -1838,6 +1904,7 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
   else if (lista.every(sinEfecto)) errores.push('lote_sin_efecto: rellenar una clave sin valor (omitible) no cambia nada; elige/marca lo que falte (un desplegable «selectpicker» se elige con elegir) o parar dato_no_disponible')
   else {
     const tocados = new Set<string>()
+    let yaPuestas = 0
     lista.forEach((a0, i) => {
       const a = obj(a0)
       const donde = `acciones[${i}]`
@@ -1892,8 +1959,12 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         acciones.push({ accion: 'rellenar', ref, dato: a.dato })
       } else if (tipo === 'elegir') {
         if (el.tag !== 'select' && el.tag !== 'nx-dropdown') return void errores.push(`${donde}: elegir solo en <select> o nx-dropdown`)
-        const op = obj(a.opcion)
-        if (!op || Object.keys(op).some((k) => k !== 'valor') || typeof op.valor !== 'string') return void errores.push(`${donde}: opcion tiene que ser { valor }`)
+        // 0.3.22 (Allianz VMP real, 6b3176de…): formas INEQUÍVOCAS (cadena, { texto }) resueltas contra las opciones del inventario.
+        const norm = normalizarOpcionElegir(a.opcion, el)
+        if (!norm.ok) return void errores.push(`${donde}: ${norm.error}`)
+        // La opción vacía que el <select> YA tiene: no se ejecuta nada (ni cuenta como acción).
+        if ('yaPuesta' in norm) return void yaPuestas++
+        const op = { valor: norm.valor }
         if (el.tag === 'nx-dropdown') {
           // Desplegable ndbx (Allianz ePAC, 28/10/2026): `valor` = el TEXTO exacto de la opción. Abierto, tiene que ser una de las
           // opciones capturadas; cerrado no hay opciones en el DOM y el worker la comprueba al abrir (si no casa, no pulsa nada).
@@ -1951,6 +2022,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         acciones.push({ accion: 'avanzar', ref, efectoEsperado: efecto, confianza: a.confianza })
       }
     })
+    // 0.3.22: un lote que solo «elige» la opción vacía que ya está puesta no cambia nada (repetiría la pantalla): rechazo explicado.
+    if (yaPuestas > 0 && acciones.length === 0 && errores.length === 0) errores.push('lote_sin_efecto: la opción vacía de ese desplegable ya está puesta (conValor false); no hace falta elegirla: rellena/marca lo demás o avanza')
   }
 
   const mapeo: MapeoCampo[] = []

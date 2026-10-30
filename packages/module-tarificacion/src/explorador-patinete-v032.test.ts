@@ -342,9 +342,9 @@ describe('0.3.8 · tipo de documento y detalle del cuerpo tolerado', () => {
     expect(opcionTipoDocumento('NIF', [{ valor: 'P', texto: 'Pasaporte' }])).toBeNull()
   })
   it('detalleCuerpoToleradoConAccionReal: nombra el parámetro y la palabra; emitir/contratar como javax.faces.source → bloqueado', () => {
-    expect(detalleCuerpoToleradoConAccionReal('javax.faces.source=form%3AbtnEmitir&x=1')).toEqual({ parametro: 'javax.faces.source', patron: 'emit' })
-    expect(detalleCuerpoToleradoConAccionReal('javax.faces.source=form:btnContratar')).toEqual({ parametro: 'javax.faces.source', patron: 'contrat' })
-    expect(detalleCuerpoToleradoConAccionReal('formContratacion:campo=1')).toEqual({ parametro: 'formContratacion:campo', patron: 'contrat' })
+    expect(detalleCuerpoToleradoConAccionReal('javax.faces.source=form%3AbtnEmitir&x=1')).toMatchObject({ parametro: 'javax.faces.source', patron: 'emit' })
+    expect(detalleCuerpoToleradoConAccionReal('javax.faces.source=form:btnContratar')).toMatchObject({ parametro: 'javax.faces.source', patron: 'contrat' })
+    expect(detalleCuerpoToleradoConAccionReal('formContratacion:campo=1')).toMatchObject({ parametro: 'formContratacion:campo', patron: 'contrat' })
     expect(detalleCuerpoToleradoConAccionReal('javax.faces.source=form:btnBuscar&formBusqueda:texto=patin')).toBeNull()
   })
 })
@@ -358,7 +358,7 @@ describe('0.3.8b · el detalle del cuerpo nunca saca datos (cuerpos JSON/texto s
     expect(detalleCuerpoToleradoConAccionReal('form:pago12345678=1')!.parametro).toBe('form:pago#')
     // Rama de VALOR: el parámetro es SOLO la clave javax.faces.* exacta; el valor (que casó) no sale.
     const v = detalleCuerpoToleradoConAccionReal('javax.faces.source=Juan%20Perez%20pago%2012345678Z')
-    expect(v).toEqual({ parametro: 'javax.faces.source', patron: 'pago' })
+    expect(v).toMatchObject({ parametro: 'javax.faces.source', patron: 'pago' })
   })
 })
 

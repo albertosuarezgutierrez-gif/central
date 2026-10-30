@@ -340,12 +340,45 @@ export function esCampoFechaDeAccion(nombre: string, valor: string): boolean {
 export const esCampoDatoDeFirma = esCampoFechaDeAccion
 
 /**
+ * 0.3.22 (Mapfre NSE real 29/10/2026, dbf8ef0e…, POST a `…/informacionGeneral/datosGenerales.jsf`): `formDG:panelConfirmCTOpenedState` es el
+ * ESTADO abierto/cerrado de un modal RichFaces (`<id>OpenedState`), no una acción. Generaliza `RE_ESTADO_PANEL_JSF` (solo `formProductos`):
+ * el nombre (ya decodificado) tiene forma de id JSF, su ÚLTIMO segmento termina EXACTAMENTE en `OpenedState` (con mayúsculas) y, quitando
+ * «confirm», no nombra otra acción final (emitir, firmar, pagar…: `panelConfirmEmitirOpenedState` sigue parando, 0.3.10), los segmentos
+ * ANTERIORES no nombran ninguna acción real (`RE_ACCION_REAL_TRAS_PREFIJO`) y el VALOR es vacío, `true` o `false` (sin mayúsculas). Solo ese
+ * parámetro deja de contar POR SU NOMBRE; los demás (el botón pulsado, `javax.faces.source/partial.*`) se siguen mirando. Solo lo usa la
+ * inspección del cuerpo en rutas TOLERADAS (Mapfre NSE). PURA.
+ */
+export function esEstadoModalJsf(nombre: string, valor: string): boolean {
+  const n = nombre.trim()
+  if (!/^[\w.:$-]{1,120}$/.test(n)) return false
+  const segs = n.split(':')
+  const ultimo = segs.pop() ?? ''
+  // Con el id del FORMULARIO delante (`formDG:…`): un `panelConfirmCTOpenedState` suelto sigue parando (0.3.10).
+  if (segs.length === 0 || segs.some((x) => x === '')) return false
+  if (!/^[A-Za-z][A-Za-z\d_]{0,80}OpenedState$/.test(ultimo)) return false
+  // El nombre del modal no puede nombrar OTRA acción final (0.3.10: `panelConfirmEmitirOpenedState` sigue parando): «confirm» es lo único
+  // que se descuenta (es el «panelConfirm…» de RichFaces); emitir, firmar, pagar, contratar, grabar… en el nombre siguen bloqueando.
+  if (RE_ACCION_REAL_TRAS_PREFIJO.test(ultimo.slice(0, -'OpenedState'.length).replace(/confirm/gi, ''))) return false
+  if (segs.some((s) => RE_ACCION_REAL_TRAS_PREFIJO.test(s))) return false
+  return valor === '' || valor === 'true' || valor === 'false'
+}
+
+/** 0.3.22: lo que el detalle del cuerpo deja caber en el mensaje del guard (el texto del error se recorta a 200 car.; detrás va la URL). */
+const MAX_LISTA_DETALLE_CUERPO = 150
+
+/**
  * Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no
  * se sabía por qué): el NOMBRE del parámetro (o `javax.faces.*`) y la palabra de la lista que casó. NUNCA el valor. `null` = nada.
+ * 0.3.22: además `parametros` = TODOS los nombres que casan (sin repetir, cifras largas enmascaradas, nunca valores), para ver de una vez
+ * todo lo que bloquearía en vez de ir parámetro a parámetro. `parametro`/`patron` siguen siendo el PRIMERO.
  */
-export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undefined): { parametro: string; patron: string } | null {
+export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undefined): { parametro: string; patron: string; parametros: { parametro: string; patron: string }[] } | null {
   if (typeof cuerpo !== 'string' || cuerpo === '') return null
   const dec = (x: string) => plano(decodificarUrlTolerante(x.replace(/\+/g, ' ')))
+  const hallados: { parametro: string; patron: string }[] = []
+  const anotar = (parametro: string, patron: string) => {
+    if (!hallados.some((h) => h.parametro === parametro && h.patron === patron)) hallados.push({ parametro, patron })
+  }
   for (const par of cuerpo.split('&')) {
     const i = par.indexOf('=')
     const k = dec(i < 0 ? par : par.slice(0, i))
@@ -355,19 +388,43 @@ export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undef
     const v = i < 0 ? '' : dec(par.slice(i + 1))
     // 0.3.20 (real 29/10/2026, Mapfre NSE `datosGenerales.jsf`): `formDG:fechaFirmaInputDate` es la FECHA de firma (un dato), no firmar.
     if (i >= 0 && esCampoFechaDeAccion(k, v)) continue
+    // 0.3.22 (real 29/10/2026, Mapfre NSE `datosGenerales.jsf`): `formDG:panelConfirmCTOpenedState=` es el estado de un modal, no confirmar.
+    if (i >= 0 && esEstadoModalJsf(k, v.trim())) continue
     const enNombre = RE_ACCION_REAL_TRAS_PREFIJO.exec(k)
     // Revisión de seguridad 0.3.8: un trozo SIN «=» (cuerpo JSON o texto) no es un nombre de parámetro y puede llevar datos
     // ({"nif":"…"}): solo se nombra un id de formulario con forma de id; cifras largas, enmascaradas.
     if (enNombre) {
       const n = k.trim()
-      return { parametro: /^[\w.:$\-[\]]{1,80}$/.test(n) ? n.replace(/\d{5,}/g, '#') : '(cuerpo no form-urlencoded)', patron: enNombre[0].toLowerCase() }
+      anotar(/^[\w.:$\-[\]]{1,80}$/.test(n) ? n.replace(/\d{5,}/g, '#') : '(cuerpo no form-urlencoded)', enNombre[0].toLowerCase())
+      continue
     }
     if (/^javax\.faces\.(?:source|partial\.execute|partial\.render)$/i.test(k.trim())) {
       const enValor = RE_ACCION_REAL_TRAS_PREFIJO.exec(v)
-      if (enValor) return { parametro: k.trim(), patron: enValor[0].toLowerCase() }
+      if (enValor) anotar(k.trim(), enValor[0].toLowerCase())
     }
   }
-  return null
+  if (hallados.length === 0) return null
+  return { parametro: hallados[0].parametro, patron: hallados[0].patron, parametros: hallados }
+}
+
+/**
+ * 0.3.22: el trozo del mensaje del guard con lo que casó en el cuerpo. Uno: `parámetro «X» casa con «p»` (como siempre); varios:
+ * `parámetros (N): «X» casa con «p», «Y» casa con «q» (+M más)`, recortado a {@link MAX_LISTA_DETALLE_CUERPO} car. Solo NOMBRES. PURA.
+ */
+export function textoDetalleCuerpo(d: { parametro: string; patron: string; parametros?: readonly { parametro: string; patron: string }[] }): string {
+  const lista = d.parametros && d.parametros.length > 0 ? d.parametros : [{ parametro: d.parametro, patron: d.patron }]
+  if (lista.length === 1) return `parámetro «${lista[0].parametro}» casa con «${lista[0].patron}»`
+  const cab = `parámetros (${lista.length}): `
+  let cuerpo = ''
+  let n = 0
+  for (const h of lista) {
+    const trozo = `${n ? ', ' : ''}«${h.parametro}» casa con «${h.patron}»`
+    const resto = lista.length - n - 1
+    if (n > 0 && (cab + cuerpo + trozo + (resto ? ` (+${resto} más)` : '')).length > MAX_LISTA_DETALLE_CUERPO) break
+    cuerpo += trozo
+    n++
+  }
+  return `${cab}${cuerpo}${n < lista.length ? ` (+${lista.length - n} más)` : ''}`
 }
 
 /**
