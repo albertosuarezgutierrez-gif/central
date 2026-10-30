@@ -11,6 +11,10 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (30/10/2026) Asegura · icono en el correo de avisos + por qué no se felicita a un ex-cliente
+- Correo de avisos de la intranet (`apps/asegura/lib/correo-avisos-intranet.ts`): UN emoji al principio del asunto (por ramo 🏠🚗🏍️…, por tipo `ICONO_POR_TIPO` exhaustivo, 🔔 si se mezclan) + insignia en el HTML. Texto plano sin emoji. Guardián `regression-avisos-intranet` adaptado.
+- Cumpleaños: solo se felicita a quien tiene cartera EN VIGOR (`felicitaciones.ts:52`). Caso Jose Jerez (ex_cliente): póliza «activa» de volcado antiguo sin `eiac_xml_hash` → no cuenta. Pendiente: comprobar si es un falso ex-cliente (póliza viva que CIMA no trae).
+
 ## (29/10/2026) Push · clic robusto en todas las apps + mejoras del portal asegura
 - sivra, rrhh, ia-rest (sw.js y sw-alertas.js): mismo fallo que el portal (navigate sin catch / solo focus / ignora data.url) → patrón URL absoluta + try/catch + openWindow. Alertas de voz: prioriza la ventana ya en /edge.
 - Portal: `tag` por póliza (`poliza-<id>`/`anadida-<id>`, renotify), botón «Ver recibo» en devueltos, tags separados por origen (`cima-poliza-`, `oblig-poliza-`, `oblig-anadida-`); el contador del icono lo sigue llevando SOLO `Campana.tsx` (se descartó un segundo contador que lo pisaba). Helpers en `module-seguros-portal/src/push-aviso.ts` con cepos vistos en rojo.
