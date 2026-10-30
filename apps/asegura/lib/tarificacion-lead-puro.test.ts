@@ -327,3 +327,16 @@ test('🪤 formulario: matrícula estimable sin fecha real → riesgo.fechaMatri
   assert.equal(n.riesgo.fechaMatriculacion, undefined)
   assert.equal(n.riesgo.fechaMatriculacionEstimada, undefined)
 })
+
+test('🪤 CP de circulación: sin él en el correo ni en el bloque, sale de la ficha del cliente (supuesto dicho); lo dicho manda', () => {
+  const { cpCirculacion: _cp, ...sinCp } = COMPLETO
+  const base = { ramo: 'auto' as const, valores: sinCp, bloque: null, fichaNacimiento: null, hoy: HOY }
+  assert.equal('codigoPostal' in formularioBotDesdeLead(base).riesgo, false, 'sin CP en ninguna parte: no se inventa')
+  assert.equal('codigoPostal' in formularioBotDesdeLead({ ...base, fichaCodigoPostal: null }).riesgo, false)
+  assert.equal('codigoPostal' in formularioBotDesdeLead({ ...base, fichaCodigoPostal: '4100' }).riesgo, false, 'solo 5 dígitos')
+  const f = formularioBotDesdeLead({ ...base, fichaCodigoPostal: ' 41001 ' })
+  assert.equal(f.riesgo.codigoPostal, '41001')
+  assert.ok(f.supuestos.some((s) => s.campo === 'cpCirculacion'))
+  assert.equal(formularioBotDesdeLead({ ...base, bloque: { cpCirculacion: '41002' }, fichaCodigoPostal: '41001' }).riesgo.codigoPostal, '41002')
+  assert.equal(formularioBotDesdeLead({ ...base, valores: COMPLETO, fichaCodigoPostal: '41001' }).riesgo.codigoPostal, '41003')
+})
