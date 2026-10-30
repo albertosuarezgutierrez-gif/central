@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-30T06:50:48Z",
-  "sha": "3aa96f16ddadebab0f97d4ec68a5e80578dbfcac",
+  "generadoEn": "2026-10-30T07:37:06Z",
+  "sha": "ec19b82e68b2a8486d7968a3956b212bf1f64302",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -63071,6 +63071,7 @@
         "caben",
         "esRamoBotLead",
         "ramoConBot",
+        "matriculacionParaRiesgo",
         "garajeDeTexto",
         "historialDeTexto",
         "esElPropioCliente",
@@ -63145,12 +63146,21 @@
           "resumen": "¿Hay bot para este ramo en el código? Fuente: `RAMOS_TARIFICABLES_RPA` (la BD decide luego qué compañías). PURA."
         },
         {
+          "nombre": "matriculacionParaRiesgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "real: string, matricula: string, hoy: string,",
+          "retorno": "",
+          "linea": 78,
+          "resumen": "Primera matriculación para el riesgo del bot (30/10/2026). La fecha REAL (ISO, no futura) manda SIEMPRE y va a `fecha`. Si falta y la matrícula es estimable por la serie nacional, el mes estimado va a"
+        },
+        {
           "nombre": "txt",
           "kind": "arrow",
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 120
+          "linea": 135
         },
         {
           "nombre": "sinTildes",
@@ -63158,7 +63168,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 121
+          "linea": 136
         },
         {
           "nombre": "hay",
@@ -63166,7 +63176,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 122
+          "linea": 137
         },
         {
           "nombre": "tokens",
@@ -63174,7 +63184,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 124,
+          "linea": 139,
           "resumen": "Minúsculas, sin tildes, todo lo que no es letra o número → un espacio."
         },
         {
@@ -63183,7 +63193,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 127,
+          "linea": 142,
           "resumen": "«dónde duerme» en palabras del cliente → garaje del bot. `null` = no se entiende (no se traduce a ojo). PURA."
         },
         {
@@ -63192,7 +63202,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": null,
-          "linea": 157
+          "linea": 172
         },
         {
           "nombre": "historialDeTexto",
@@ -63200,7 +63210,7 @@
           "exportada": true,
           "params": "v: unknown, hoy?: string",
           "retorno": "LecturaHistorial",
-          "linea": 188,
+          "linea": 203,
           "resumen": "El texto libre del «seguro anterior» → lo que piden los bots. TOLERANTE con la forma («diez años», «desde 2016», «llevo 8 años sin partes») pero sin adivinar: lo que el cliente escribió y no se lee co"
         },
         {
@@ -63209,7 +63219,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 244,
+          "linea": 259,
           "resumen": "«yo», «yo mismo», «el mismo», «soy yo», «el tomador»… = el propio cliente. PURA."
         },
         {
@@ -63218,7 +63228,7 @@
           "exportada": true,
           "params": "v: unknown, conCarne: boolean",
           "retorno": "boolean",
-          "linea": 257,
+          "linea": 272,
           "resumen": "¿El texto sobre otra persona trae ya lo que se le pediría? Documento con forma de DNI/NIE y, si es conductor, dos fechas (nacimiento y carné). Solo PRESENCIA: los datos de terceros no se leen ni se va"
         },
         {
@@ -63227,7 +63237,7 @@
           "exportada": true,
           "params": "texto: string, opciones: readonly OpcionCatalogo[]",
           "retorno": "EleccionCatalogo",
-          "linea": 272,
+          "linea": 287,
           "resumen": "Las opciones del catálogo cuyo nombre aparece ENTERO (palabras completas) en el texto. Si casan varias y una contiene a todas las demás («PCX» y «PCX 125»), gana la más larga; si no, `varios` (no se e"
         },
         {
@@ -63236,7 +63246,7 @@
           "exportada": true,
           "params": "texto: string, nombresUsados: readonly string[]",
           "retorno": "number | null",
-          "linea": 288,
+          "linea": 303,
           "resumen": "Cilindrada en cc: «125 cc», «125cc», «125 c.c.» o, si no, UN único número de 50 a 3000 que no forme parte del nombre de la marca ni del modelo elegidos. Varios números distintos o ninguno → `null` (se"
         },
         {
@@ -63245,7 +63255,7 @@
           "exportada": true,
           "params": "cc: number | null",
           "retorno": "1 | 2 | 3 | 4 | null",
-          "linea": 302,
+          "linea": 317,
           "resumen": "Clase de Allianz Moto por cilindrada (tramos de `formulario-auto.ts`). `null` = ≤50 cc (ciclomotor) o sin dato. PURA."
         },
         {
@@ -63254,7 +63264,7 @@
           "exportada": true,
           "params": "texto: string, cargar: { marcas: () => Promise<readonly OpcionCatalogo[]>; modelos: (marcaId: string) => Promise<readonly OpcionCatalogo[]> }",
           "retorno": "Promise<LecturaMoto>",
-          "linea": 311,
+          "linea": 326,
           "resumen": "Texto libre de la moto → `LecturaMoto`, con los catálogos INYECTADOS (marcas y, una vez elegida la marca, sus modelos). Un catálogo que lanza = `no_mirado` (fallo nuestro, no del cliente). Pura salvo "
         },
         {
@@ -63263,7 +63273,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 329,
+          "linea": 344,
           "resumen": "«20 viviendas y 2 locales» / «22» / «20 pisos, sin locales» → total. `null` = no se lee con certeza (se pregunta). PURA."
         },
         {
@@ -63272,7 +63282,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string | null",
-          "linea": 342
+          "linea": 357
         },
         {
           "nombre": "formularioComunidad",
@@ -63280,7 +63290,7 @@
           "exportada": false,
           "params": "e: EntradaFormulario",
           "retorno": "FormularioLead",
-          "linea": 350,
+          "linea": 365,
           "resumen": "Contrato del lead (comunidades) → `RiesgoComunidad` candidato. Desplegables del portal: los de defecto, DICHOS. PURA."
         },
         {
@@ -63289,7 +63299,7 @@
           "exportada": true,
           "params": "e: EntradaFormulario",
           "retorno": "FormularioLead",
-          "linea": 397,
+          "linea": 412,
           "resumen": "Contrato del lead + bloque del riesgo → formulario candidato del bot (auto/moto: `FormularioAuto`; comunidades: `RiesgoComunidad`). Nada personal se inventa: lo que falta no se pone (lo dirá `faltanPa"
         },
         {
@@ -63298,7 +63308,7 @@
           "exportada": true,
           "params": "ramo: string, claveBot: string",
           "retorno": "string | null",
-          "linea": 497,
+          "linea": 513,
           "resumen": "Clave de un validador del bot («conductor.fechaCarne») → clave del contrato que la pregunta (`fechaCarnet`). PURA."
         },
         {
@@ -63307,7 +63317,7 @@
           "exportada": true,
           "params": "compania: string, ramo: RamoBotLead, f: FormularioLead",
           "retorno": "ValoracionCompania",
-          "linea": 523,
+          "linea": 539,
           "resumen": "Para UNA compañía con bot activo: ¿llega a precio con este riesgo? Primero, que su bot llegue a precio de verdad (`llegaAPrecio`); luego lo que falta (`faltanParaTarificar`, sin lo que pone la ficha a"
         },
         {
@@ -63316,7 +63326,7 @@
           "exportada": true,
           "params": "b: unknown, hoy: string",
           "retorno": "",
-          "linea": 575,
+          "linea": 591,
           "resumen": "`{ accion:'revisar'|'tarificar'|'fallos', clienteId, oportunidadIds[], actor, pendienteId?, tgMessageId? }` · `{ accion:'ampliar_tope', dia:'aaaammdd', actor }` · `{ accion:'elegir', clienteId, oportu"
         },
         {
@@ -63325,7 +63335,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, error: { tipo?: unknown; mensaje?: unknown } | null",
           "retorno": "ClaseFalloBot",
-          "linea": 617,
+          "linea": 633,
           "resumen": "¿El fallo de un bot es por un dato del cliente? Solo con `tipo: 'datos'` y cuando su mensaje nombra la ETIQUETA de un obligatorio de ese bot (`obligatoriosPara`) que se le pide al cliente (clave del c"
         },
         {
@@ -63334,7 +63344,7 @@
           "exportada": true,
           "params": "estadoTrabajo: string",
           "retorno": "boolean",
-          "linea": 633,
+          "linea": 649,
           "resumen": "¿Este estado del trabajo, tras el resultado del worker, es un fallo que ya no se reintenta solo? PURA."
         },
         {
@@ -63343,7 +63353,7 @@
           "exportada": true,
           "params": "a: { ramo: string; pendienteId: string | null; clase: ClaseFalloBot }",
           "retorno": "",
-          "linea": 642,
+          "linea": 658,
           "resumen": "Los botones del aviso del fallo. 📝 `clp_fal:<p>` si el fallo es un dato del CLIENTE. 💶 `clp_cds:<p>:<ramo>` (opción B, 19/10/2026) SOLO en coche/moto: entrega el lead al asistente de Avant2 de plata"
         },
         {
@@ -63352,7 +63362,7 @@
           "exportada": true,
           "params": "a: { compania: string; ramo: string; pendienteId: string | null; clase: ClaseFalloBot; tipoError: string | null }",
           "retorno": "string",
-          "linea": 651,
+          "linea": 667,
           "resumen": "Aviso del fallo (HTML seguro para Telegram): compañía, ramo y etiquetas; NUNCA el mensaje del portal ni un valor. PURA."
         },
         {
@@ -63361,13 +63371,13 @@
           "exportada": true,
           "params": "p: object | null, ramo: string",
           "retorno": "string | null",
-          "linea": 668,
+          "linea": 684,
           "resumen": "Fecha del carné que devuelve `personaDeFicha` para tarificar. En MOTO solo vale un carné de moto (A, A1, A2): si la ficha solo trae el B (`tipoCarnet` 'B' o ausente), su fecha NO es la de moto → `null"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dc0b167f8b15"
+      "hash": "3211912e23c8"
     },
     {
       "ruta": "apps/asegura/lib/tarificacion-lead.ts",
@@ -238953,6 +238963,36 @@
       "hash": "38add12a065e"
     },
     {
+      "ruta": "packages/module-seguros/src/fecha-matriculacion-estimada.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Mes ESTIMADO de matriculación a partir de la matrícula, para rellenar `fecha_matriculacion_estimada` donde la fecha REAL falta (30/10/2026). 🚨 No duplica la tabla de series: la única tabla de la DGT del monorepo vive en `matricula.ts` (`SERIES_FIN_DE_MES`, 313 hitos mensuales sep-2000 → ago-2026, f",
+      "exporta": [
+        "estimarMesMatriculacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "no",
+          "kind": "function",
+          "exportada": false,
+          "params": "motivo: MotivoNoEstimable",
+          "retorno": "EstimacionMesMatriculacion",
+          "linea": 64
+        },
+        {
+          "nombre": "estimarMesMatriculacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string, hoy?: string",
+          "retorno": "EstimacionMesMatriculacion",
+          "linea": 72,
+          "resumen": "`hoy` (YYYY-MM-DD) solo hace falta para matrículas POSTERIORES al último mes de la tabla; sin él esas salen `fuera_de_tabla` (no se extrapola a ciegas)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7a3705c05b06"
+    },
+    {
       "ruta": "packages/module-seguros/src/fecha-pintable.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Fechas que se pintan en las fichas de la correduría. PURO. 🚨 Las fechas centinela (`1900-01-01`, `9999-12-31`, `0001-01-01`…) son el «sin fecha» de las compañías: nunca se pintan como fecha («Solicitud 01/01/1900»). Son `null` = no consta. /",
@@ -242087,7 +242127,8 @@
         "normalizarMatricula",
         "formatoMatricula",
         "ordinalMatricula",
-        "fechaMatriculacionEstimada"
+        "fechaMatriculacionEstimada",
+        "mesDeTramoMatricula"
       ],
       "funciones": [
         {
@@ -242151,18 +242192,27 @@
           "resumen": "· su ordinal es POSTERIOR al último hito conocido (`ULTIMO_HITO_CONOCIDO`): extrapolar más allá de la tabla es inventarse el futuro. Si la matrícula es de verdad reciente, la respuesta correcta es act"
         },
         {
+          "nombre": "mesDeTramoMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "string | null",
+          "linea": 298,
+          "resumen": "MES (YYYY-MM-01) del tramo de la tabla en que cae la matrícula: el mes cuyo cierre aún no había alcanzado su serie. Es la precisión REAL de la tabla. No uses `estimada.slice(0, 7)` para esto: `estimad"
+        },
+        {
           "nombre": "extrapolarReciente",
           "kind": "function",
           "exportada": false,
           "params": "ordinal: number, hoy: string",
           "retorno": "MatriculacionEstimada | null",
-          "linea": 302,
+          "linea": 323,
           "resumen": "Matrícula POSTERIOR al último hito (la tabla solo tiene meses CERRADOS, así que una matrícula de este mes siempre cae aquí). Sin `hoy` no se estima; con él, el rango es cerrado y real: entre el último"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b426af163633"
+      "hash": "793762abd6b0"
     },
     {
       "ruta": "packages/module-seguros/src/mediador.ts",
@@ -260463,7 +260513,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5434,
-    "funciones": 20956
+    "archivos": 5435,
+    "funciones": 20960
   }
 }
