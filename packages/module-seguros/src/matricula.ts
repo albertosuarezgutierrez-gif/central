@@ -288,6 +288,27 @@ export function fechaMatriculacionEstimada(valor: string, hoy?: string): Matricu
   }
 }
 
+/**
+ * MES (YYYY-MM-01) del tramo de la tabla en que cae la matrícula: el mes cuyo
+ * cierre aún no había alcanzado su serie. Es la precisión REAL de la tabla.
+ * No uses `estimada.slice(0, 7)` para esto: `estimada` se redondea y las últimas
+ * matrículas de un mes caen en el día 1 del siguiente.
+ * `null` si no es moderna o cae fuera de la tabla (no extrapola).
+ */
+export function mesDeTramoMatricula(valor: string): string | null {
+  const ordinal = ordinalMatricula(valor)
+  if (ordinal === null) return null
+  if (ordinal < HITOS[0]![1] || ordinal >= HITOS[HITOS.length - 1]![1]) return null
+  let lo = 0
+  let hi = HITOS.length - 1
+  while (hi - lo > 1) {
+    const medio = (lo + hi) >> 1
+    if (HITOS[medio]![1] <= ordinal) lo = medio
+    else hi = medio
+  }
+  return `${civilDesdeDias(HITOS[lo]![0]).slice(0, 7)}-01`
+}
+
 /** Margen de más allá de `hoy` que se tolera al extrapolar antes de declarar la matrícula imposible. */
 const HOLGURA_EXTRAPOLACION_DIAS = 20
 

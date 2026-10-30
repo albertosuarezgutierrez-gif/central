@@ -297,3 +297,33 @@ test('carné de la ficha: en moto solo vale A, A1 o A2; la fecha del B no se cue
   assert.equal(carneDePersonaFicha(b, 'auto'), '2004-06-01')
   assert.equal(carneDePersonaFicha(null, 'moto'), null)
 })
+
+// ── 30/10/2026: matriculación estimada por la matrícula (matrículas inventadas) ──
+import { matriculacionParaRiesgo } from './tarificacion-lead-puro.ts'
+
+test('🪤 matriculación: la real manda; sin real y estimable → estimada y marcada; no estimable → falta', () => {
+  assert.deepEqual(matriculacionParaRiesgo('2019-03-05', '0000JGB', HOY), { fecha: '2019-03-05' })
+  const est = matriculacionParaRiesgo('', '0000JGB', HOY)
+  assert.equal(est.fecha, undefined)
+  assert.equal(est.estimada, '2015-06-01')
+  assert.match(est.supuesto!.texto, /estimada por la matrícula/)
+  assert.deepEqual(matriculacionParaRiesgo('', '0000BBB', HOY).fecha, undefined)
+  assert.deepEqual(matriculacionParaRiesgo('', 'C0000BBB', HOY), {})
+  assert.deepEqual(matriculacionParaRiesgo('', '', HOY), {})
+  // real futura = no es dato: cae a la estimación, nunca se acepta
+  assert.equal(matriculacionParaRiesgo('2030-01-01', '0000JGB', HOY).fecha, undefined)
+})
+
+test('🪤 formulario: matrícula estimable sin fecha real → riesgo.fechaMatriculacionEstimada + supuesto; la real no se toca', () => {
+  const base = { ramo: 'auto' as const, valores: { ...COMPLETO, matricula: '0000JGB' }, bloque: null, fichaNacimiento: null, hoy: HOY }
+  const f = formularioBotDesdeLead(base)
+  assert.equal(f.riesgo.fechaMatriculacion, undefined)
+  assert.equal(f.riesgo.fechaMatriculacionEstimada, '2015-06-01')
+  assert.ok(f.supuestos.some((s) => s.campo === 'fechaMatriculacion'))
+  const r = formularioBotDesdeLead({ ...base, bloque: { fechaMatriculacion: '2016-02-02' } })
+  assert.equal(r.riesgo.fechaMatriculacion, '2016-02-02')
+  assert.equal(r.riesgo.fechaMatriculacionEstimada, undefined)
+  const n = formularioBotDesdeLead({ ...base, valores: { ...COMPLETO, matricula: 'C0000BBB' } })
+  assert.equal(n.riesgo.fechaMatriculacion, undefined)
+  assert.equal(n.riesgo.fechaMatriculacionEstimada, undefined)
+})

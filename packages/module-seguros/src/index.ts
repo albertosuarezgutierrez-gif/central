@@ -771,9 +771,16 @@ export {
   formatoMatricula,
   ordinalMatricula,
   fechaMatriculacionEstimada,
+  mesDeTramoMatricula,
   type FormatoMatricula,
   type MatriculacionEstimada,
 } from './matricula.ts'
+
+export {
+  estimarMesMatriculacion,
+  type EstimacionMesMatriculacion,
+  type MotivoNoEstimable,
+} from './fecha-matriculacion-estimada.ts'
 
 export {
   MEDIADOR,
