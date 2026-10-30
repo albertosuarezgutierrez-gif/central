@@ -11,6 +11,11 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (30/10/2026) Contabilidad pisos · Sí que Brilla y Giraldillo cuadrados (SQL aplicado por Alberto)
+- `limpieza_facturas` sique_brilla ya tiene ene–sep 2026 (desglose por piso del PDF; Kutxabank ****0855). Gasto julio 2025/333 (780,10€) añadido; cargos ene/feb casados y ago/sep pasados de `personal` a pisos.
+- Giraldillo: gastos mayo/junio estaban cruzados (504,57€ / 608,03€); gemelo de AFV-11808 descartado; cargos conciliados. Lavandería la factura Sí que Brilla desde el 19/07 (no junio). AFV-11625 pagada con 0,30€ de menos (decisión de Alberto). AFV-11758 solo en Gmail, falta en Drive.
+- Pendiente: Dúplex (extractos BBVA que mandará Alberto), feeds parados Kutxabank 0300/0302, N26, Pilar, ES34…1175; auditorías en scratchpad (no persisten).
+
 ## (30/10/2026) Plataforma · gastos sivra pintaban 0,00€
 - `/sivra/expenses`: Base/IVA/Total salían 0,00€ (el total de cabecera sí cuadraba). Causa: `$queryRaw` devuelve los `numeric` como string y `eur()` (`lib/dinero.ts`) hacía `Number.isFinite(string)` → 0.
 - Fix: `eur()` coacciona con `Number()` (string/Decimal); null/''/NaN siguen 0,00€. IVA % sin decimales ("21%"). Test en `lib/dinero.test.ts` (visto en rojo).
