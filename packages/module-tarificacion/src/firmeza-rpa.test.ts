@@ -1,6 +1,6 @@
 // Firmeza RPA «SINCO al tarificar» (30/10/2026). Fixtures SINTÉTICAS: los 5 dígitos son de prueba, no de ningún cliente.
 import { describe, it, expect } from 'vitest'
-import { conPolizaAnteriorTecleada, firmezaOfertaRpaGuardada, firmezaPrecioRpa, ofertasConFirmezaRpa, riesgoTraePolizaAnterior, validarOfertas, type OfertaNormalizada } from './index.ts'
+import { AVISO_VERSION_POR_SIMILITUD, PREFIJO_SUPUESTOS, SUPUESTO_CONDUCTOR_TOMADOR, SUPUESTO_FAVORABLE_ANIOS, SUPUESTO_FAVORABLE_SINIESTROS, avisoEsSupuesto, conPolizaAnteriorTecleada, firmezaOfertaRpaGuardada, firmezaPrecioRpa, ofertasConFirmezaRpa, riesgoTraePolizaAnterior, validarOfertas, type OfertaNormalizada } from './index.ts'
 
 const oferta = (extra: Partial<OfertaNormalizada> = {}): OfertaNormalizada => ({
   compania: 'Compañía', producto: 'Todo riesgo', primaAnualEur: 400, primaNetaEur: null, fraccionamiento: null, importeReciboEur: null,
@@ -61,5 +61,35 @@ describe('señal en la oferta', () => {
   it('riesgoTraePolizaAnterior: solo 5 cifras exactas', () => {
     expect(riesgoTraePolizaAnterior(CON)).toBe(true)
     for (const v of ['1234', '123456', 'abcde', 12345, null, '']) expect(riesgoTraePolizaAnterior({ polizaAnteriorUltimos5: v })).toBe(false)
+  })
+})
+
+describe('supuestos del bot en la oferta → estimado (revisión de seguridad)', () => {
+  const con = (avisos: string[]) => oferta({ polizaAnteriorTecleada: true, avisos })
+  const firma = (o: OfertaNormalizada) => firmezaPrecioRpa({ compania: 'mapfre', ramo: 'auto', riesgo: CON, oferta: o })
+  it('sin supuestos y con avisos informativos de la compañía → firme', () => {
+    expect(firma(con([]))).toBe('firme')
+    expect(firma(con(['Proyecto guardado en Mapfre (no es póliza)']))).toBe('firme')
+  })
+  it('versión elegida por similitud → estimado', () => { expect(firma(con([AVISO_VERSION_POR_SIMILITUD]))).toBe('estimado') })
+  it('antecedentes favorables supuestos (años / siniestros) → estimado', () => {
+    expect(firma(con([SUPUESTO_FAVORABLE_ANIOS]))).toBe('estimado')
+    expect(firma(con([SUPUESTO_FAVORABLE_SINIESTROS]))).toBe('estimado')
+  })
+  it('«Precio con supuestos: …» (uso/garaje/siniestros por defecto) → estimado', () => {
+    expect(firma(con([`${PREFIJO_SUPUESTOS}uso diario, garaje colectivo.`]))).toBe('estimado')
+  })
+  it('conductor = tomador supuesto → estimado', () => { expect(firma(con([SUPUESTO_CONDUCTOR_TOMADOR]))).toBe('estimado') })
+  it('aviso no clasificable (no string) o avisos ausentes → estimado; marca genérica «supuesto» → estimado', () => {
+    expect(avisoEsSupuesto(42)).toBe(true)
+    expect(firma(con(['versión elegida por similitud (supuesto)']))).toBe('estimado')
+    expect(firmezaPrecioRpa({ compania: 'mapfre', ramo: 'auto', riesgo: CON, oferta: { polizaAnteriorTecleada: true } as OfertaNormalizada })).toBe('estimado')
+  })
+  it('ofertasConFirmezaRpa quita la señal si hay supuestos, y la guardada con avisos de supuesto no es firme', () => {
+    const r = ofertasConFirmezaRpa('mapfre', 'auto', CON, [con([AVISO_VERSION_POR_SIMILITUD])])[0]!
+    expect(r.firmeza).toBe('estimado')
+    expect('polizaAnteriorTecleada' in r.oferta).toBe(false)
+    expect(firmezaOfertaRpaGuardada('mapfre', 'auto', con([`${PREFIJO_SUPUESTOS}uso diario.`]))).toBe('estimado')
+    expect(firmezaOfertaRpaGuardada('mapfre', 'auto', { polizaAnteriorTecleada: true })).toBe('firme')
   })
 })

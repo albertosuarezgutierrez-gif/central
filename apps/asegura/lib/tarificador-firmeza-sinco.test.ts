@@ -34,7 +34,13 @@ test('🪤 tarificador.ts guarda la firmeza calculada (no el literal «estimado�
   const tramo = src.slice(src.indexOf('async function guardarTarificacionRpa'), src.indexOf('async function guardarAdjunto'))
   assert.ok(tramo.length > 0)
   assert.match(tramo, /ofertasConFirmezaRpa\(t\.compania, t\.ramo, riesgoEntregado, ofertas\)/)
-  assert.match(tramo, /aplicarPolizaAnteriorUltimos5\(t\.compania, t\.ramo, rg, await leerNumeroPolizaActual\(/)
+  assert.match(tramo, /aplicarPolizaAnteriorUltimos5\(t\.compania, t\.ramo, rg, numeroPolizaActual\)/)
+  // La lectura del nº va ANTES de abrir la transacción y sin `tx` (un fallo suyo no puede abortar la tx del resultado).
+  assert.doesNotMatch(tramo, /leerNumeroPolizaActual/)
+  const reg = src.slice(src.indexOf('export async function registrarResultado'), src.indexOf('async function guardarTarificacionRpa'))
+  const iLectura = reg.indexOf('leerNumeroPolizaActual(')
+  assert.ok(iLectura > 0 && iLectura < reg.indexOf('prisma.$transaction('), 'leerNumeroPolizaActual antes de $transaction')
+  assert.doesNotMatch(reg.slice(iLectura, reg.indexOf(')', iLectura)), /\btx\b|prisma as/)
   assert.match(tramo, /\$\{firmeza\}, false, \$\{o\.referenciaPortal\}/)
   assert.doesNotMatch(tramo, /'estimado', false, \$\{o\.referenciaPortal\}/)
   // Lo guardado en `respuesta.ofertas` es lo SANEADO (sin la señal si no era firme), no lo crudo del worker.

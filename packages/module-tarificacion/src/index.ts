@@ -70,7 +70,7 @@ export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCrede
 export { importeEs, importePuntoDecimal } from './importes.ts'
 export { validarRiesgoComunidad, type ValidacionRiesgo } from './riesgo.ts'
 export { validarOfertas, datosUsadosDe, conDatosUsados, franquiciaGeneral, garantiasComoRegistro, type ValidacionOfertas, type ValorGarantiaCompatible } from './ofertas.ts'
-export { COMPANIAS_SIN_SINCO_AL_TARIFICAR, companiaConfirmaConSinco, conPolizaAnteriorTecleada, firmezaOfertaRpaGuardada, firmezaPrecioRpa, ofertasConFirmezaRpa, riesgoTraePolizaAnterior, type FirmezaPrecioRpa } from './firmeza-rpa.ts'
+export { COMPANIAS_SIN_SINCO_AL_TARIFICAR, companiaConfirmaConSinco, avisoEsSupuesto, conPolizaAnteriorTecleada, firmezaOfertaRpaGuardada, firmezaPrecioRpa, ofertaLlevaSupuestos, ofertasConFirmezaRpa, riesgoTraePolizaAnterior, type FirmezaPrecioRpa } from './firmeza-rpa.ts'
 export { claveCompania, crearRegistro, type RegistroAdaptadores } from './registro.ts'
 export {
   MARCA_DATO_PERSONAL,

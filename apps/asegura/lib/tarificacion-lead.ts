@@ -24,7 +24,7 @@ import { riesgoHogarDeRiesgoOportunidad, type ReconstruccionRiesgo } from './tar
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
 import { datosVehiculoDeInfoRiesgo, claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
 import {
-  AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, carneDePersonaFicha, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, topeDiario, valorarCompania,
+  AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, carneDePersonaFicha, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, riesgoParaCompania, topeDiario, valorarCompania,
   type FormularioLead, type LecturaMoto, type RamoBotLead, type Supuesto, type ValoracionCompania,
 } from './tarificacion-lead-puro'
 
@@ -312,7 +312,7 @@ export async function tarificarLead(
     for (const v of o.companias) {
       if (v.estado !== 'lista') continue
       const val = validarEntradaRamo(o.ramo, o.formulario.riesgo, v.compania)
-      if (val.ok) candidatos.push({ oportunidadId: o.id, ramo: o.ramo, compania: v.compania, riesgo: val.entrada.riesgo })
+      if (val.ok) candidatos.push({ oportunidadId: o.id, ramo: o.ramo, compania: v.compania, riesgo: riesgoParaCompania(v.compania, val.entrada.riesgo) })
     }
   }
   const entrada = (t: (typeof candidatos)[number], soloComprobarDuplicado = false) => ({

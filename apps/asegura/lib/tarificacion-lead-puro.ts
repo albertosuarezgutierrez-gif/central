@@ -152,6 +152,21 @@ const hay = (v: unknown) => v !== undefined && v !== null && !(typeof v === 'str
 const tokens = (s: string) => ` ${sinTildes(s).replace(/[^a-z0-9ñ]+/g, ' ').replace(/(\d)([a-z])/g, '$1 $2').replace(/([a-z])(\d)/g, '$1 $2').trim()} `
 
 /** Nombre de compañía de la póliza → el que espera el bot: el canónico si se reconoce (misma lista que el texto libre); si no, el texto tal cual. `null` = vacío o demasiado largo. PURA. */
+/** Compañías cuyo bot TECLEA el nº de póliza anterior al tarificar (hoy Mapfre y Allianz). Occident, Generali y demás: no lo reciben. */
+export const COMPANIAS_TECLEAN_POLIZA_ANTERIOR: readonly string[] = Object.freeze(['mapfre', 'allianz'])
+
+/**
+ * El riesgo tal como viaja a UNA compañía: `polizaAnteriorUltimos5` (dato del cliente) solo si el bot de esa compañía lo teclea;
+ * para las demás se quita (mínimo necesario). No muta; sin la clave devuelve el mismo objeto. PURA.
+ */
+export function riesgoParaCompania<T>(compania: unknown, riesgo: T): T {
+  if (typeof riesgo !== 'object' || riesgo === null || Array.isArray(riesgo) || !('polizaAnteriorUltimos5' in riesgo)) return riesgo
+  const c = typeof compania === 'string' ? compania.trim().toLowerCase() : ''
+  if (COMPANIAS_TECLEAN_POLIZA_ANTERIOR.includes(c)) return riesgo
+  const { polizaAnteriorUltimos5: _quitada, ...resto } = riesgo as Record<string, unknown>
+  return resto as T
+}
+
 export function companiaCanonica(nombre: unknown): string | null {
   const n = txt(nombre)
   if (!n || n.length > MAX_COMPANIA_ANTERIOR) return null

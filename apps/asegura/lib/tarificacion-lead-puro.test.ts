@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { datosVehiculoDeInfoRiesgo } from '@central/module-seguros'
 import {
   botonesFalloBotLead, caben, carneDePersonaFicha, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
-  garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
+  garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, riesgoParaCompania, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
   valorarCompania, viviendasYLocalesDeTexto,
 } from './tarificacion-lead-puro.ts'
 
@@ -387,4 +387,22 @@ test('🪤 SINCO al tarificar: el nº de la póliza viva vinculada viaja al ries
   const cero = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'Con Mapfre, 0 años asegurado' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
   assert.equal(cero.riesgo.companiaAnterior, 'Mapfre')
   assert.equal('polizaAnteriorUltimos5' in cero.riesgo, false)
+})
+
+test('🪤 SINCO al tarificar: polizaAnteriorUltimos5 solo viaja a las compañías cuyo bot lo teclea (mapfre, allianz)', () => {
+  const riesgo = { ramo: 'auto', matricula: 'TEST', polizaAnteriorUltimos5: '98765' }
+  for (const c of ['mapfre', 'allianz', ' Mapfre ']) assert.equal(riesgoParaCompania(c, riesgo).polizaAnteriorUltimos5, '98765', c)
+  for (const c of ['occident', 'generali', 'reale', '', null, undefined]) {
+    const r = riesgoParaCompania(c, riesgo)
+    assert.equal('polizaAnteriorUltimos5' in r, false, String(c))
+    assert.equal(r.matricula, 'TEST', 'el resto del riesgo no se toca')
+  }
+  assert.equal(riesgo.polizaAnteriorUltimos5, '98765', 'no muta')
+  const sinClave = { ramo: 'auto' }
+  assert.equal(riesgoParaCompania('occident', sinClave), sinClave)
+})
+
+test('🪤 tarificarLead aplica riesgoParaCompania al riesgo de cada compañía', () => {
+  const src = readFileSync(new URL('./tarificacion-lead.ts', import.meta.url), 'utf8')
+  assert.match(src, /riesgo: riesgoParaCompania\(v\.compania, val\.entrada\.riesgo\)/)
 })

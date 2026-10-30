@@ -631,6 +631,15 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
   // Esquema opcional (SQL de 08/10/2026 puede no estar aplicado): se omite `bot_version` / la traza si no existen.
   const conBot = await hayBotVersion()
   type Interno = { res: ResultadoRegistro; traza: { t: FilaTrabajo; captura: 'con_captura' | null } | null }
+  // Nº de póliza actual de Allianz auto (SINCO al tarificar): se lee ANTES de abrir la transacción y sin `tx`, para que un fallo de esta
+  // lectura (ya capturado dentro) no pueda abortar la transacción del resultado. compañía/ramo/oportunidad del trabajo no cambian.
+  let numeroPolizaActual: string | null = null
+  if (r.tipo === 'ok') {
+    const previo = await prisma.$queryRaw<{ correduria_id: string; oportunidad_id: string | null; compania: string; ramo: string }[]>`
+      select correduria_id::text as correduria_id, oportunidad_id::text as oportunidad_id, compania, ramo from seguros.tarificacion_trabajos where id = ${r.trabajoId}::uuid`.catch(() => [])
+    const p = previo[0]
+    if (p && p.compania === 'allianz' && p.ramo === 'auto') numeroPolizaActual = await leerNumeroPolizaActual(p.correduria_id, p.oportunidad_id)
+  }
   const interno: Interno = await prisma.$transaction(async (tx) => {
     const filas = await tx.$queryRaw<(FilaTrabajo & { modo: string | null })[]>`
       select w.id::text as id, w.correduria_id::text as correduria_id, w.cliente_id::text as cliente_id,
@@ -720,7 +729,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     for (const p of r.pdfs) {
       docs.push(await guardarAdjunto(tx, t, { nombre: p.nombre, mime: 'application/pdf', contenido: p.contenido, notas: `Oferta de ${t.compania} (${t.ramo}) obtenida por el tarificador RPA` }))
     }
-    const tarificacionId = await guardarTarificacionRpa(tx, t, r.ofertas, docs)
+    const tarificacionId = await guardarTarificacionRpa(tx, t, r.ofertas, docs, numeroPolizaActual)
     if (conBot) {
       await tx.$executeRaw`
         update seguros.tarificacion_trabajos
@@ -779,7 +788,7 @@ export function notasPresupuestoExplorado(compania: string, ramo: string, refere
   return `Presupuesto de ${compania} (${ramo}) guardado por el explorador del tarificador RPA${referencia ? ` · referencia del portal: ${referencia}` : ' · referencia: no se vio'}`
 }
 
-async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {
+async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[], numeroPolizaActual: string | null): Promise<string> {
   const rg = t.riesgo
   // La columna `ramo` del trabajo manda: si el JSON del riesgo dice otra cosa, no se guarda nada con columnas equivocadas.
   if (rg.ramo !== t.ramo) throw new Error(`tarificador: el riesgo (${String(rg.ramo)}) no casa con el ramo del trabajo (${t.ramo})`)
@@ -796,7 +805,7 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
   // riesgo ENTREGADO + el bot confirmó que lo tecleó. Allianz auto recibe los 5 dígitos solo en la entrega (nunca en BD): se reconstruye
   // igual que en la entrega. El número no sale de aquí (solo su forma decide). La señal solo se guarda en ofertas `firme`.
   const riesgoEntregado = t.compania === 'allianz' && t.ramo === 'auto'
-    ? aplicarPolizaAnteriorUltimos5(t.compania, t.ramo, rg, await leerNumeroPolizaActual(t.correduria_id, t.oportunidad_id, tx))
+    ? aplicarPolizaAnteriorUltimos5(t.compania, t.ramo, rg, numeroPolizaActual)
     : rg
   const conFirmeza = ofertasConFirmezaRpa(t.compania, t.ramo, riesgoEntregado, ofertas)
   const conDocs = conFirmeza.map(({ oferta: o }) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null }))
