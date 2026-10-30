@@ -64,6 +64,7 @@ import {
   esLanzadorAplicacionNseMapfre,
   neutralizarRutaTolerable,
   detalleCuerpoToleradoConAccionReal,
+  textoDetalleCuerpo,
   RE_ACCION_REAL_TRAS_PREFIJO,
   type RutaTolerable,
   TEXTO_ACCESO_NSE_MAPFRE,
@@ -364,6 +365,14 @@ export const VENTANA_RED_AVANCE_MS = 20_000
  * ¿Puede ir a `url` una petición que no es GET durante la ventana del avance? Solo si su origen + ruta es EXACTAMENTE uno de
  * `endpoints`, sin query, fragmento ni credenciales (un `;jsessionid=` en la ruta tampoco casa: fail-closed). Pura.
  */
+/**
+ * 0.3.22: NOMBRES de clave de la query para un mensaje del guard (nunca valores). Solo una clave con forma de identificador (empieza por
+ * letra, ≤40, sin tiras de ≥4 cifras: un NIF/NIE o un id largo puesto como clave no sale); el resto, «?». Como mucho 6, sin repetir.
+ */
+export function clavesQueryDiagnostico(u: URL): string {
+  return [...new Set([...u.searchParams.keys()].map((k) => (/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k) && !/\d{4,}/.test(k) ? k : '?')))].slice(0, 6).join(',')
+}
+
 export function destinoAvancePermitido(url: string, endpoints: readonly string[]): boolean {
   let u: URL
   try {
@@ -455,7 +464,8 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       if (porUrl || porCuerpo) {
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
         // En la ruta TOLERADA (Mapfre NSE) se dice QUÉ parámetro casó y con qué palabra de la lista (nunca su valor).
-        const que = detalleTolerado ? `: parámetro «${detalleTolerado.parametro}» casa con «${detalleTolerado.patron}»` : ''
+        // 0.3.22: TODOS los nombres que casan (solo nombres, nunca valores), para no ir parámetro a parámetro ronda a ronda.
+        const que = detalleTolerado ? `: ${textoDetalleCuerpo(detalleTolerado)}` : ''
         // El detalle va DELANTE: el mensaje del error se recorta a 200 caracteres y la URL de NSE es larga.
         violacion ??= new EmisionBloqueadaError('url', porCuerpo ? (que ? `[acción en el cuerpo de la petición${que}] ${url}` : `${url} [acción en el cuerpo de la petición]`) : url)
         await route.abort('blockedbyclient')
@@ -486,6 +496,12 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
           const u = new URL(url)
           const resource = u.searchParams.get('resource')
           destino = `${u.origin}${u.pathname}${resource && /^[A-Za-z0-9_.]{1,120}$/.test(resource) ? ` (resource=${resource})` : ''}`
+          // 0.3.22 (Fidelidade real, 530656a4…: el destino ERA el del formulario y cayó igual): si origen+ruta están en la lista, lo que sobra
+          // es la query (o credenciales): se dice, solo con los NOMBRES de clave (nunca valores).
+          if (!resource && av.endpoints.includes(`${u.origin}${u.pathname}`)) {
+            const claves = clavesQueryDiagnostico(u)
+            destino += u.search ? ` [ruta en la lista, pero con query: claves ${claves || '?'}]` : ' [ruta en la lista, pero con credenciales]'
+          }
         } catch {}
         // Diagnóstico de un AJAX rechazado (0.7.9): QUÉ no cuadró, solo con nombres de claves y categorías, nunca valores.
         const motivo = destino.includes('AJAXServlet') ? motivoAjaxRechazado(req.method(), url, cuerpoDe(req), av.ajax) : null
@@ -3007,7 +3023,8 @@ async function causaNoEsAvanceSinTextoVivo(boton: Locator, a: AvanceSinTexto): P
   // OutSystems pone el nombre del widget al final del name/id (`…$wtBtnContratar`): la MISMA expresión que el módulo, sobre lo VIVO.
   if ([r.name, r.id].some((v) => typeof v === 'string' && RE_NAME_ACCION_FINAL_SIN_TEXTO.test(v.toLowerCase()))) return 'name_de_accion_final'
   if (r.origen !== a.origen) return 'origen_distinto'
-  if (!r.ruta.includes(a.rutaIncluye)) return 'ruta_distinta'
+  // 0.3.22: ruta EXACTA de la lista cerrada de pantallas de la simulación (antes, una subcadena).
+  if (!a.rutas.includes(r.ruta)) return 'ruta_distinta'
   if (r.iguales !== 1) return 'no_unico'
   return null
 }
@@ -3176,6 +3193,23 @@ export async function pulsarExploracionAutorizada(
   // 0.3.19: el avance sin texto con onclick (OsAjax de OutSystems hace un POST al propio formulario): su ÚNICO destino (el del formulario, mismo
   // origen y ruta) pasa además la inspección ESTRICTA del cuerpo (`cuerpoLlevaAccionFinal`: acción final, IBAN/cuenta/tarjeta) como extra.
   if (sinTexto && sinTexto.onclickForma !== undefined && endpoint) extras = [endpoint]
+  // 0.3.22 (Fidelidade real 29/10/2026, 530656a4…): el formulario de la simulación envía a OTRA pantalla del flujo («Datos Cliente»,
+  // `ClientData.aspx`). El destino del avance sin texto tiene que ser una de las rutas de la LISTA CERRADA de la regla (antes: cualquier ruta
+  // del mismo origen) y SIN query (la red solo admite destinos exactos sin query: con ella el POST caería después, a medias). Se para ANTES
+  // del clic, diciendo solo NOMBRES de clave de la query (nunca valores). Las rutas de la lista entran todas como destinos con inspección
+  // ESTRICTA del cuerpo (la respuesta de la simulación lleva a la siguiente pantalla de la lista, que repinta con su propio POST).
+  if (sinTexto) {
+    let accion: URL | null = null
+    try { accion = destino ? new URL(destino.accion) : null } catch { accion = null }
+    if (!endpoint || !accion) throw new EmisionBloqueadaError('fase', 'avance de exploración sin texto: sin formulario de envío conocido del mismo origen')
+    if (!sinTexto.rutas.includes(accion.pathname)) throw new EmisionBloqueadaError('boton', 'avance de exploración sin texto: el formulario envía a una pantalla fuera de la lista de la simulación')
+    if (accion.search !== '') {
+      const claves = clavesQueryDiagnostico(accion)
+      throw new EmisionBloqueadaError('boton', `avance de exploración sin texto: el formulario envía con query (claves: ${claves || '?'}); solo destinos exactos sin query`)
+    }
+    const origen = accion.origin
+    extras = [...new Set([endpoint, ...sinTexto.rutas.map((r) => `${origen}${r}`)])]
+  }
   if (!endpoint) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
   // 0.3.19: la ayuda contextual de drvp00 (solo lectura) que la pantalla de destino pide al cargar; SOLO en los avances por id de drvp00.
   const ajaxAvance: readonly AjaxValidacionAvance[] = porId && porId.rutaMarco.startsWith('/drvp00/') ? [AJAX_AYUDA_APLICACIONES_ALLIANZ_DRVP00] : []
