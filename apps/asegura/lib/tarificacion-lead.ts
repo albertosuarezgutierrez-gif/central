@@ -135,6 +135,21 @@ async function carneFicha(correduriaId: string, clienteId: string, ramo: string)
   return carneDePersonaFicha(p, ramo)
 }
 
+/**
+ * Compañía y antigüedad de la póliza del MISMO ramo, VIVA, vinculada a la oportunidad (`info_riesgo.polizaId`), del mismo cliente.
+ * Solo SELECT. `null` = sin póliza vinculada/viva o no se pudo leer (nunca relleno).
+ */
+async function polizaActualVinculada(correduriaId: string, clienteId: string, ramo: string, infoRiesgo: unknown): Promise<{ aseguradora: string | null; desde: string | null } | null> {
+  const id = esObj(infoRiesgo) && typeof infoRiesgo.polizaId === 'string' && /^[0-9a-f-]{36}$/i.test(infoRiesgo.polizaId) ? infoRiesgo.polizaId : null
+  if (!id) return null
+  const f = await prisma.$queryRaw<{ aseguradora: string | null; desde: string | null }[]>`
+    select p.aseguradora, to_char(coalesce(p.fecha_efecto_inicial, p.fecha_inicio), 'YYYY-MM-DD') as desde
+    from seguros.polizas p
+    where p.id = ${id}::uuid and p.cliente_id = ${clienteId}::uuid and p.correduria_id = ${correduriaId}::uuid
+      and p.tipo::text = ${ramo} and p.estado::text = 'activa' and p.merged_into_poliza_id is null`
+  return f[0] ?? null
+}
+
 type Interno = RevisionOportunidad & { formulario: FormularioLead | null }
 
 /** Tope de cada consulta externa GRATIS de la revisión (catálogo de motos, Catastro): la revisión corre dentro del triaje. */
@@ -186,7 +201,7 @@ async function formularioDeOportunidad(
   const formulario = formularioBotDesdeLead({
     // Vehículo: el MISMO bloque que ve la oportunidad (con el fallback a las claves antiguas), no solo `datosVehiculo` a pelo.
     ramo, valores, ilegibles, bloque: vehiculo ? { ...datosVehiculoDeInfoRiesgo(info) } : esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
-    ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo), fichaCodigoPostal: await codigoPostalFicha(correduriaId, clienteId).catch(() => null) } : {}),
+    ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo), fichaCodigoPostal: await codigoPostalFicha(correduriaId, clienteId).catch(() => null), polizaActual: await polizaActualVinculada(correduriaId, clienteId, ramo, info).catch(() => null) } : {}),
     ...(ramo === 'moto' ? { moto: await motoDelLead(valores.codigoVehiculo) } : {}),
     ...(ramo === 'comunidades' ? { catastro: await catastroComunidad(valores).catch(() => null) } : {}),
   })
