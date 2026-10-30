@@ -10,7 +10,7 @@ import { after, before, test } from 'node:test'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, RE_ACCION_REAL_TRAS_PREFIJO, type InventarioDom } from '@central/module-tarificacion'
 import { AJAX_AYUDA_APLICACIONES_ALLIANZ_DRVP00, AJAX_LECTURA_ALLIANZ, ajaxValidacionAvancePermitida, formaValor, instalarGuardEmision, motivoAjaxRechazado, pulsar, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, redispararCambioMarcado, type GuardEmision } from '../src/guard.ts'
 import { bucleExploracion, EXPLORADOR_VERSION, type ContextoBucle } from '../src/explorador.ts'
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
@@ -116,7 +116,7 @@ const FI = 'fidelidade:particulares:vivienda'
 /** Réplica del portal: el avance se habilita SOLO en el `change` del régimen y si el nombre ya tiene valor. Arranca con PROPIETARIO marcado
  *  y el nombre escrito DESPUÉS (el orden del mapa real): el botón sigue deshabilitado. */
 const PAGINA_FI = `<!doctype html><html><head><meta charset="utf-8"><title>p</title></head><body>
-  <form id="f" onsubmit="return false"><h2>Datos Cliente - Nombre y régimen</h2>
+  <form id="f"><h2>Datos Cliente - Nombre y régimen</h2>
     <label for="nom">Nombre y apellidos/Razón Social</label><input type="text" id="nom" name="nom" value="Cliente Prueba">
     <fieldset><legend>En calidad de quién realiza el seguro</legend>
       <input type="radio" id="reg1" name="regimen" value="P" checked><label for="reg1">PROPIETARIO</label>
@@ -184,7 +184,47 @@ test('0.3.25 · redispararCambioMarcado: un radio de ACCIÓN FINAL (emitir) → 
   }
 })
 
-// ─── 3) Mapfre NSE: mensajes de RichFaces en los avisos del portal ─────────────────────────────────────────────────────────────────
+// Revisión de seguridad (30/10/2026): `input`/`change` BURBUJEAN; la descripción del guard solo ve onclick/ng-click/href. Un onchange/oninput
+// de acción final en el radio o en un ancestro, o CUALQUIER onchange/oninput/onsubmit del <form>, → LANZA y no se emite nada.
+test('0.3.25 · redispararCambioMarcado: onchange/oninput de acción final en el radio o sus ancestros, o un <form> con manejadores → LANZA sin change', async () => {
+  for (const [nombre, html, id] of [
+    ['onchange emitir en el radio', '<input type="radio" id="x1" name="a" checked onchange="emitir()"><label for="x1">Propietario</label>', '#x1'],
+    ['onchange emision() en el radio', '<input type="radio" id="x0" name="a" checked onchange="emision()">', '#x0'],
+    ['oninput pagar en un div ancestro', '<div oninput="pagarRecibo()"><div><div><div><input type="radio" id="x2" name="a" checked></div></div></div></div>', '#x2'],
+    ['form onchange submit', '<form onchange="this.submit()"><input type="radio" id="x3" name="a" checked></form>', '#x3'],
+    ['form oninput', '<form oninput="recalcular()"><input type="radio" id="x4" name="a" checked></form>', '#x4'],
+    ['form onsubmit', '<form onsubmit="return true"><input type="radio" id="x5" name="a" checked></form>', '#x5'],
+    ['form por atributo form=', '<form id="f6" onchange="this.submit()"></form><input type="radio" id="x6" name="a" form="f6" checked>', '#x6'],
+  ] as const) {
+    const { context, page, guard } = await abrir(`<!doctype html><html><body>${html}
+      <script>window.__n = 0; document.addEventListener('change', function (e) { window.__n++; e.preventDefault() }, true)</script></body></html>`, URL_FI)
+    try {
+      await assert.rejects(redispararCambioMarcado(page.locator(id), guard), EmisionBloqueadaError, nombre)
+      assert.equal(await page.evaluate(() => (window as unknown as { __n: number }).__n), 0, nombre)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.3.25 · redispararCambioMarcado: radio limpio dentro de un <form> sin manejadores (y onchange neutro en un div) → redispara', async () => {
+  const { context, page, guard } = await abrir(`<!doctype html><html><body><form action="/x"><div onchange="recalcularAvance()">
+    <input type="radio" id="ok" name="a" checked><label for="ok">Propietario</label></div></form>
+    <script>window.__n = 0; document.addEventListener('change', function () { window.__n++ })</script></body></html>`, URL_FI)
+  try {
+    assert.equal(await redispararCambioMarcado(page.locator('#ok'), guard), 'cambio')
+    assert.equal(await page.evaluate(() => (window as unknown as { __n: number }).__n), 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.3.25 · vocabulario de acción final: raíces portuguesas (emissão, pagamento, assinatura) casan; rótulos neutros de simulación no', () => {
+  for (const t of ['emissaoApolice()', 'meioPagamento', 'assinaturaDigital', 'EMISSÃO']) assert.equal(RE_ACCION_REAL_TRAS_PREFIJO.test(t), true, t)
+  for (const t of ['recalcularAvance()', 'simulacao', 'proprietario', 'Simulación', 'OsAjax(arguments[0])']) assert.equal(RE_ACCION_REAL_TRAS_PREFIJO.test(t), false, t)
+})
+
+// ─── 3) Mapfre NSE: mensajes de RichFaces en los avisos del portal─────────────────────────────────────────────────────────────────
 test('0.3.25 · inventario: los mensajes de RichFaces (rich-messages-label / rich-message-label) entran en los avisos del portal', async () => {
   const { context, page } = await abrir(`<!doctype html><html><body><form id="formObjAseg"><h2>Datos del vehículo</h2>
     <dl class="rich-messages"><dt><span class="rich-messages-label">El campo Uso es obligatorio</span></dt></dl>

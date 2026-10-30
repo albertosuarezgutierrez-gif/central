@@ -292,7 +292,7 @@ export function esLanzadorAplicacionNseMapfre(d: string | null | undefined): boo
  * La declara cada entrada de exploración (`rutasAppTolerables`); sin regla, todo igual.
  */
 export type RutaTolerable = { origen: string; prefijo: string }
-export const RE_ACCION_REAL_TRAS_PREFIJO = /emit|contrat|confirm|firm|pago|pagar|formaliz|grab|suplement|anul|baja|domicili|tarjeta|iban/i
+export const RE_ACCION_REAL_TRAS_PREFIJO = /emit|emiss|contrat|confirm|firm|assina|pago|pagar|pagam|formaliz|grab|suplement|anul|baja|domicili|tarjeta|iban/i
 /** Estado (abierto/cerrado) de un panel JSF de la pantalla de productos de NSE: no es una acción. ANCLADO. */
 export const RE_ESTADO_PANEL_JSF = /^formProductos:panelConfirm[A-Z]{1,4}OpenedState$/
 /** Sustituto del prefijo neutralizado (no casa con ningún patrón del guard). */

@@ -828,6 +828,31 @@ export async function redispararCambioMarcado(control: Locator, guard: GuardEmis
   await exigirSinCuentaBancaria(control.page())
   const desc = await descripcion(control)
   comprobarBoton(conRutasTolerables(guard, await conOnclickNeutralizado(guard, control, desc)))
+  // Revisión de seguridad (30/10/2026): `input`/`change` BURBUJEAN y `descripcion` solo ve onclick/ng-click/href (3 ancestros). Aquí se leen
+  // `onchange`/`oninput` del radio y de TODOS sus ancestros (atravesando shadow hosts) y del <form> (también el de `form=`); cualquiera con acción
+  // final LANZA, y un <form> con onchange/oninput/onsubmit LANZA siempre. El mensaje nunca lleva el texto del manejador (podría tener datos).
+  const man = await control
+    .evaluate((n) => {
+      // Sin funciones con nombre dentro de `evaluate` (tsx/esbuild inyecta `__name`, que no existe en la página).
+      const out: { tag: string; ev: string; v: string }[] = []
+      const f = (n as HTMLInputElement).form ?? n.closest('form')
+      const nodos: Element[] = []
+      for (let p: Element | null = n; p; p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)) nodos.push(p)
+      if (f) nodos.push(f)
+      for (const e of nodos) {
+        for (const ev of ['onchange', 'oninput']) {
+          const v = e.getAttribute(ev)
+          if (v !== null) out.push({ tag: e.tagName.toLowerCase(), ev, v })
+        }
+      }
+      return { manejadores: out, formConManejador: !!f && ['onchange', 'oninput', 'onsubmit'].some((a) => f.hasAttribute(a)) }
+    }, undefined, { timeout: 2_000 })
+    .catch(() => null)
+  if (man === null) return 'desaparecido'
+  // `pareceEmision` además: RE_ACCION_REAL_TRAS_PREFIJO no casa «emision()» (no contiene «emit»).
+  const malo = man.manejadores.find((m) => RE_ACCION_REAL_TRAS_PREFIJO.test(m.v.normalize('NFD').replace(/[̀-ͯ]/g, '')) || pareceEmision(m.v))
+  if (malo) throw new EmisionBloqueadaError('boton', `redisparo de cambio: ${malo.ev} de <${malo.tag}> con acción final`)
+  if (man.formConManejador) throw new EmisionBloqueadaError('fase', 'redisparo de cambio: el <form> del radio tiene onchange/oninput/onsubmit (no se redispara)')
   const r = await control
     .evaluate((n) => {
       const c = n as HTMLInputElement
