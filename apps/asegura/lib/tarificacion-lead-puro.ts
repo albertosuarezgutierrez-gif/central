@@ -17,6 +17,7 @@ import { CARNETS_MOTO_PRECIO, contratoDatos, estimarMesMatriculacion, etiquetasD
 import { duermeEnGaraje, GARAJES_CONOCIDOS } from '@central/module-seguros/garajes'
 import { CAPACIDAD_ALLIANZ_COMUNIDADES, MAX_COMPANIA_ANTERIOR, faltanParaTarificar, llegaAPrecio, obligatoriosPara, type Faltante } from '@central/module-tarificacion'
 import { RAMOS_TARIFICABLES_RPA, validarEntradaRamo } from './tarificador-reglas.ts'
+import { ultimosCincoDigitosPoliza } from './tarificador-compania-actual.ts'
 
 // ─── Tope diario ─────────────────────────────────────────────────────────────
 
@@ -117,9 +118,10 @@ export type EntradaFormulario = {
   /**
    * De la PÓLIZA de auto/moto VIVA vinculada a la oportunidad (`info_riesgo.polizaId`): su compañía y desde cuándo está asegurado
    * en ella (`fecha_efecto_inicial` o, si no, `fecha_inicio`, ISO). Es la «compañía anterior» de una tarificación nueva. `null`/ausente
-   * = no hay póliza viva vinculada o no se pudo leer (nunca relleno).
+   * = no hay póliza viva vinculada o no se pudo leer (nunca relleno). `numero` (30/10/2026, «SINCO al tarificar»): su nº de póliza;
+   * al riesgo solo viajan sus 5 últimas cifras (`polizaAnteriorUltimos5`). Dato del cliente: nunca en supuestos, Telegram ni logs.
    */
-  polizaActual?: { aseguradora: string | null; desde: string | null } | null
+  polizaActual?: { aseguradora: string | null; desde: string | null; numero?: string | null } | null
   /** `aaaa-mm-dd` de hoy (Madrid). */
   hoy: string
   /** Moto: la lectura del catálogo (`null` = el cliente no dio marca/modelo). */
@@ -527,6 +529,14 @@ export function formularioBotDesdeLead(e: EntradaFormulario): FormularioLead {
       riesgo.aniosAseguradoAnterior = anios
       supuestos.push({ campo: 'aseguradoAntes', texto: 'compañía anterior y años asegurado (mínimo): los de la póliza de auto vigente del cliente' })
     }
+  }
+  // Nº de póliza anterior (30/10/2026, «SINCO al tarificar»): con él la compañía consulta SINCO y el precio sale confirmado. Solo si el
+  // riesgo no lo trae ya, si la compañía anterior del riesgo ES la de esa póliza (si el cliente dijo otra, ese número no es el suyo) y no
+  // se declaró «0 años asegurado». Solo las 5 últimas cifras; el número entero no sale de aquí.
+  if (pa && !hay(riesgo.polizaAnteriorUltimos5) && riesgo.aniosAseguradoAnterior !== 0) {
+    const cia = companiaCanonica(pa.aseguradora)
+    const ultimos5 = ultimosCincoDigitosPoliza(pa.numero)
+    if (cia && riesgo.companiaAnterior === cia && ultimos5) riesgo.polizaAnteriorUltimos5 = ultimos5
   }
 
   const mat = matriculacionParaRiesgo(txt(b.fechaMatriculacion), matricula, e.hoy)

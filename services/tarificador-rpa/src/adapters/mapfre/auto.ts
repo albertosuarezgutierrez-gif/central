@@ -68,6 +68,11 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.36 (30/10/2026, trabajo real 76d731f3, cliente que Mapfre ya conoce): «Figuras» trae la tarjeta «Permiso Conducir» COMPLETA y PLEGADA y otro
+// `datos-licencia` deshabilitado; el clic en `datos-licencia mat-select`.first() esperaba 30 s a un control oculto. Ahora `selectLicenciaHabilitada`: el
+// ÚNICO habilitado y, si su tarjeta está plegada, se despliega por su cabecera (`desplegarAcordeonGuardado`, la misma puerta de v0.8.27).
+// v0.8.36 (30/10/2026, regla de Alberto «SINCO al tarificar»): si el bot teclea y relee el «Nº de Póliza» anterior del riesgo, cada oferta
+// lleva `polizaAnteriorTecleada: true` (solo la señal, nunca el valor). Con ella asegura marca el precio `firme` (Mapfre consulta SINCO).
 // v0.8.35 (28/10/2026, ejecución real con 0.8.34): la causa ya se veía: «picture_as_pdf» tapado por `cdk-overlay-backdrop` (un diálogo de Material
 // abierto que Escape no cierra). Ahora (guard.ts): si el control de descarga está DENTRO del diálogo, se pulsa ahí; si el diálogo es informativo (sin
 // campos, sin emitir/contratar/enviar/firmar/pagar y solo controles de cerrar: cruz, «Cerrar», «Aceptar», «OK»), se cierra con rótulo EXACTO y se
@@ -142,6 +147,7 @@ import {
   supuestoConductorTomador,
   conAntecedentesFavorables,
   conDatosUsados,
+  conPolizaAnteriorTecleada,
   elegirVersionAutomaticamente,
   referenciaRiesgoVersion,
   USO_VEHICULO_POR_DEFECTO,
@@ -1154,6 +1160,49 @@ export async function desplegarAcordeonGuardado(raiz: Pick<Frame, 'locator'>, pu
   await pulsar(raiz.locator('mat-expansion-panel-header').nth(indiceCabecera))
 }
 
+const ESPERA_LICENCIA_DESPLEGADA_MS = 3_000
+
+/**
+ * v0.8.36 (30/10/2026, trabajo real 76d731f3 atascado: `locator.click` 30 s sobre `datos-licencia mat-select` «element is not visible»). Con un
+ * cliente que Mapfre ya conoce, «Figuras» pinta la tarjeta «Permiso Conducir» COMPLETA y PLEGADA (`mat-expansion-panel` sin `mat-expanded`, contenido
+ * con `visibility:hidden`) y hay un segundo `datos-licencia` (otra figura) DESHABILITADO. Devuelve el ÚNICO `datos-licencia mat-select` habilitado;
+ * si está oculto en una tarjeta plegada, la despliega por `desplegarAcordeonGuardado` (cabecera, guard) y espera a verlo. `null` = no hay
+ * exactamente uno habilitado (sigue el camino de siempre). Habilitado pero oculto sin poder desplegarlo → `ErrorMapaIncompleto` claro (no 30 s de clic).
+ * Solo lee el DOM (sin valores) salvo ese despliegue.
+ */
+export async function selectLicenciaHabilitada(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>, formador?: ContextoFormador, esperaMs: number = ESPERA_LICENCIA_DESPLEGADA_MS): Promise<Locator | null> {
+  // Sin funciones con nombre dentro de `evaluateAll` (tsx les mete `__name`, que no existe en la página).
+  const leer = () =>
+    raiz.locator(SEL_LICENCIA.clasePermiso).evaluateAll((els) => {
+      const cabeceras = Array.from(document.querySelectorAll('mat-expansion-panel-header'))
+      const out: { idx: number; visible: boolean; cab: number }[] = []
+      els.forEach((el, idx) => {
+        if (el.classList.contains('mat-select-disabled') || el.getAttribute('aria-disabled') === 'true') return
+        const r = el.getBoundingClientRect()
+        const cs = getComputedStyle(el)
+        const panel = el.closest('mat-expansion-panel')
+        const cab = panel && !panel.classList.contains('mat-expanded') ? panel.querySelector(':scope > mat-expansion-panel-header') : null
+        out.push({ idx, visible: r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none', cab: cab ? cabeceras.indexOf(cab) : -1 })
+      })
+      return out
+    }).catch(() => null)
+  let hab = await leer()
+  if (!hab || hab.length !== 1) return null
+  const { idx, cab } = hab[0]!
+  if (!hab[0]!.visible && cab >= 0 && pulsar) {
+    await desplegarAcordeonGuardado(raiz, pulsar, cab).catch(() => undefined)
+    const fin = Date.now() + Math.max(0, esperaMs)
+    for (;;) {
+      hab = await leer()
+      if ((hab?.length === 1 && hab[0]!.visible) || Date.now() >= fin) break
+      await new Promise((res) => setTimeout(res, 200))
+    }
+    formador?.log('mapfre_licencia_desplegada', { visible: hab?.length === 1 && hab[0]!.visible })
+  }
+  if (!(hab?.length === 1 && hab[0]!.visible)) throw new ErrorMapaIncompleto(`el desplegable «clase del permiso» (${SEL_LICENCIA.clasePermiso}): está habilitado pero OCULTO${cab >= 0 ? ' en la tarjeta plegada «Permiso Conducir», que no se pudo desplegar' : ''}`, true)
+  return raiz.locator(SEL_LICENCIA.clasePermiso).nth(idx)
+}
+
 /**
  * v0.8.24 · Alternativa por etiqueta para el desplegable de compañía anterior cuando no existe el selector de
  * `app-historial-siniestralidad`: el `mat-form-field` cuya `mat-label`/`label` es exactamente «Compañia». Devuelve el mat-select SOLO
@@ -1213,7 +1262,11 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
   for (const op of plan.escribibles) {
     if (op.tipo !== 'mat-select') continue
     let sel = raiz.locator(op.sel).first()
-    let ausente = !(await apareceEn(raiz, op.sel, op.opcional ? esperaOpcionalMs : 0))
+    // v0.8.36 (trabajo 76d731f3): la clase del permiso es el ÚNICO `datos-licencia mat-select` HABILITADO (no el primero del DOM) y, si su
+    // tarjeta «Permiso Conducir» está plegada (cliente que Mapfre ya conoce: la tarjeta sale completa y cerrada), se despliega antes.
+    const licencia = op.sel === SEL_LICENCIA.clasePermiso ? await selectLicenciaHabilitada(raiz, ctx.pulsar, respaldo.formador) : null
+    if (licencia) sel = licencia
+    let ausente = licencia ? false : !(await apareceEn(raiz, op.sel, op.opcional ? esperaOpcionalMs : 0))
     // v0.8.24: sin `app-historial-siniestralidad` (trabajo e886d7d9: «Figuras» pinta «Compañia», «Procedencia Siniestralidad»…), la
     // compañía anterior se busca por su ETIQUETA. Solo si hay UN mat-select visible y habilitado; si no, sigue el hueco de siempre.
     if (ausente && op.sel === SEL_HISTORIAL.companiaAnterior) {
@@ -1655,11 +1708,20 @@ export async function diagnosticoPolizaAnterior(raiz: Pick<Frame, 'locator'>): P
  * el diagnóstico va en el mensaje (los errores no llevan avisos).
  */
 export async function historialAnterior(nsei: Page, f: FormularioAuto, formador: ContextoFormador | undefined): Promise<string | null> {
+  return (await historialAnteriorConPoliza(nsei, f, formador)).diagnostico
+}
+
+/**
+ * v0.8.36 (30/10/2026, «SINCO al tarificar»): lo mismo que `historialAnterior` y además si el bot TECLEÓ el nº de póliza anterior del
+ * riesgo y lo RELEYÓ igual (`polizaTecleada`). Con eso Mapfre consulta SINCO y el precio sale confirmado (la firmeza la decide asegura).
+ * Campo ya relleno por el portal, no editable o sin dato → `false` (no se sabe qué número usó: nunca se supone). El valor no sale.
+ */
+export async function historialAnteriorConPoliza(nsei: Page, f: FormularioAuto, formador: ContextoFormador | undefined): Promise<{ diagnostico: string | null; polizaTecleada: boolean }> {
   const anios = f.aniosAseguradoAnterior ?? 0
   const sw = await interruptorCompaniaAnterior(nsei)
   if (anios > 0 && sw === false) await huecoPaso(nsei, formador, 'compania anterior', 'Figuras', 'el interruptor «¿Tiene compañía anterior?» está apagado y el riesgo trae años en la compañía anterior')
   if (anios === 0 && sw === true) await huecoPaso(nsei, formador, 'compania anterior', 'Figuras', 'el interruptor «¿Tiene compañía anterior?» está encendido y el riesgo no trae compañía anterior')
-  if (anios === 0) return null
+  if (anios === 0) return { diagnostico: null, polizaTecleada: false }
   const diagnostico = await diagnosticoPolizaAnterior(nsei)
   if (diagnostico) formador?.log('mapfre_num_poliza_diagnostico', { diagnostico })
   const p = await estadoPolizaAnterior(nsei)
@@ -1677,14 +1739,14 @@ export async function historialAnterior(nsei: Page, f: FormularioAuto, formador:
       }
       if ((await campo.inputValue().catch(() => '')) !== ultimos5) throw new ErrorTarificador('datos', 'mapfre/auto: el portal no dejó fijado el nº de póliza de la compañía anterior (las 5 últimas cifras del riesgo no se mantuvieron)')
       formador?.log('mapfre_num_poliza_escrito', {})
-      return diagnostico
+      return { diagnostico, polizaTecleada: true }
     }
     formador?.log('mapfre_num_poliza_no_editable', {})
   }
   if (p.presente && p.vacio && p.obligatorio) {
     throw new ErrorTarificador('datos', `mapfre/auto: Mapfre exige el nº de póliza de la compañía anterior y el riesgo no lo trae (falta ese dato en el formulario de auto; no se inventa)${diagnostico ? `. ${diagnostico}` : ''}`)
   }
-  return diagnostico
+  return { diagnostico, polizaTecleada: false }
 }
 
 /**
@@ -1924,7 +1986,8 @@ export async function precioDesdeObjetoAsegurado(
   const sinControlCompania = tieneOpCompania && (await companiaAnteriorSinControl(nsei, ctx.pulsar))
   if (sinControlCompania) ctx.formador?.log('mapfre_compania_anterior_no_pedida', {})
   await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso && !(sinControlCompania && o.sel === SEL_HISTORIAL.companiaAnterior)), pendientes: [] }, ctx, respaldo)
-  const diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
+  const historial = sinHist.omitido ? { diagnostico: null, polizaTecleada: false } : await historialAnteriorConPoliza(nsei, f, ctx.formador)
+  const diagnosticoPoliza = historial.diagnostico
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
   // v0.8.32: sin `app-historial-siniestralidad` (no existe en esta variante) y con «Siniestros» de `app-info-descuentos` DESHABILITADO, la siniestralidad la
@@ -1948,7 +2011,8 @@ export async function precioDesdeObjetoAsegurado(
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
   // v0.8.23: PDF del proyecto guardado (botón «Imprimir/Descargar proyecto»); si no llega, aviso y el precio/proyecto se devuelven igual.
   const pdfProyecto = await descargarProyectoAuto(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
-  return { ofertas: ofertasConPdfProyecto(ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), proyecto), pdfProyecto), vehiculoConfirmado: vehiculo }
+  // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
+  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -1961,7 +2025,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.35',
+  version: '0.8.36',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

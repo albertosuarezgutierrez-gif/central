@@ -137,13 +137,14 @@ async function carneFicha(correduriaId: string, clienteId: string, ramo: string)
 
 /**
  * Compañía y antigüedad de la póliza del MISMO ramo, VIVA, vinculada a la oportunidad (`info_riesgo.polizaId`), del mismo cliente.
- * Solo SELECT. `null` = sin póliza vinculada/viva o no se pudo leer (nunca relleno).
+ * Solo SELECT. `null` = sin póliza vinculada/viva o no se pudo leer (nunca relleno). `numero` (30/10/2026): `numero_poliza` (columna
+ * en claro, no cifrada); solo se usa para las 5 últimas cifras del riesgo. Dato del cliente: nunca a logs ni mensajes.
  */
-async function polizaActualVinculada(correduriaId: string, clienteId: string, ramo: string, infoRiesgo: unknown): Promise<{ aseguradora: string | null; desde: string | null } | null> {
+async function polizaActualVinculada(correduriaId: string, clienteId: string, ramo: string, infoRiesgo: unknown): Promise<{ aseguradora: string | null; desde: string | null; numero: string | null } | null> {
   const id = esObj(infoRiesgo) && typeof infoRiesgo.polizaId === 'string' && /^[0-9a-f-]{36}$/i.test(infoRiesgo.polizaId) ? infoRiesgo.polizaId : null
   if (!id) return null
-  const f = await prisma.$queryRaw<{ aseguradora: string | null; desde: string | null }[]>`
-    select p.aseguradora, to_char(coalesce(p.fecha_efecto_inicial, p.fecha_inicio), 'YYYY-MM-DD') as desde
+  const f = await prisma.$queryRaw<{ aseguradora: string | null; desde: string | null; numero: string | null }[]>`
+    select p.aseguradora, to_char(coalesce(p.fecha_efecto_inicial, p.fecha_inicio), 'YYYY-MM-DD') as desde, p.numero_poliza as numero
     from seguros.polizas p
     where p.id = ${id}::uuid and p.cliente_id = ${clienteId}::uuid and p.correduria_id = ${correduriaId}::uuid
       and p.tipo::text = ${ramo} and p.estado::text = 'activa' and p.merged_into_poliza_id is null`

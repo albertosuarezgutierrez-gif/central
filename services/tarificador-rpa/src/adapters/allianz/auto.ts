@@ -53,6 +53,7 @@
 // los antecedentes sin dato van al supuesto favorable declarado (`conAntecedentesFavorables`). Se fija por el `<select>` de
 // siempre (`resolverVehiculo`: código de la lista leída + relectura).
 // v0.6.12 (20/10/2026, trabajo real d675077b llegó a «Selección de paquete»): LECTOR DE PRECIOS. La pantalla es una tabla comparativa `nx-comparison-table` (3 paquetes: «Terceros con lunas», «Tercero Ampliado», «Todo Riesgo con franq.»; cada cabecera trae «primer recibo» y «la anualidad»; filas de cobertura con icono check/minus o desplegable por paquete, filas de elección única que abarcan los 3 paquetes y «Todos los paquetes incluyen»). `leerPaquetesTurismosAllianz` (guard.ts, solo lectura) + `ofertasDesdePaquetesTurismos` devuelven una oferta por paquete con supuestos y coberturas; importe ilegible → fuera + aviso; sin tabla → hueco como antes. No se pulsa nada en esta pantalla.
+// v0.6.36 (30/10/2026, regla de Alberto «SINCO al tarificar»): si la puerta `polizaActualTurismosAllianz` ESCRIBIÓ y releyó los 5 últimos dígitos de la póliza actual, cada oferta de Turismos lleva `polizaAnteriorTecleada: true` (solo la señal, nunca el valor; «ya con valor» del portal NO cuenta). Con ella asegura marca el precio `firme`.
 // v0.6.11 (19/10/2026, trabajo real atascado en «Antecedentes» con «qué falta para habilitar SIGUIENTE»): el input obligatorio «Cinco últimos dígitos de la póliza actual» (aparece al haber compañía actual) se rellena con `polizaAnteriorUltimos5` del riesgo por la puerta `polizaActualTurismosAllianz` (guard.ts); sin dato → hueco con nombre, nunca inventado; ya con valor → «fijada por Allianz». El atasco genérico lista ahora las etiquetas de los obligatorios vacíos/inválidos del paso. Los 5 dígitos nunca van a supuestos, avisos ni errores.
 // v0.6.10 (18/10/2026, decisión de Alberto «supuesto favorable»): «Antecedentes» contesta las 3 preguntas que bloqueaban «SIGUIENTE» (tiempo en la compañía, partes culpables, tiempo como titular): con dato del riesgo la opción que casa; sin dato, la más favorable y DECLARADA (guard.ts).
 // v0.6.9 (18/10/2026): «Compañía actual del vehículo» casa también por contención de la clave de la ficha en la opción (solo si hay UNA candidata; guard.ts).
@@ -131,6 +132,7 @@ import {
   comprobarBoton,
   conAntecedentesFavorables,
   conDatosUsados,
+  conPolizaAnteriorTecleada,
   MAX_DESCRIPCION_VEHICULO,
   pareceDatoPersonalEnDescripcion,
   AVISO_VERSION_POR_SIMILITUD,
@@ -2461,8 +2463,9 @@ async function teclearTurismos(campo: Locator, valor: string): Promise<boolean> 
  * `min`/`max` del portal no se teclea; las opciones, SOLO por la puerta guardada (`ctx.marcarOpcionTurismos`, lista cerrada de
  * guard.ts). «Localidad» es un autocompletado: NUNCA se teclea; vale si el portal la propone y casa (o, sin dato, se declara).
  * Lo que no aparece, aparece repetido o no queda puesto → hueco (se juntan). Devuelve los huecos y los supuestos APLICADOS.
+ * v0.6.36: `polizaTecleada: true` solo si la puerta de la póliza actual devolvió `escrita` (escrito y releído igual).
  */
-export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTurismos, plan: PasoPlanTurismos): Promise<{ huecos: string[]; aplicados: string[]; opcionesCompania?: string[] }> {
+export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTurismos, plan: PasoPlanTurismos): Promise<{ huecos: string[]; aplicados: string[]; opcionesCompania?: string[]; polizaTecleada?: true }> {
   const marcar = ctx?.marcarOpcionTurismos
   if (typeof marcar !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Turismos en el contexto del worker', false, true)
   const activo = await pasoActivoTurismos(marco)
@@ -2470,6 +2473,7 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
   const huecos = [...plan.huecos]
   const aplicados: string[] = []
   let opcionesCompania: string[] | undefined
+  let polizaTecleada = false
   // v0.6.16: opciones marcables del DOM ANTES de elegir la compañía (las preguntas de «Antecedentes» aparecen después).
   const opcionesAntes = plan.paso === PASO_ANTECEDENTES ? await contarOpcionesMarcablesTurismos(marco) : 0
   const esperar = async (etiqueta: string, bloqueTomador: boolean): Promise<Locator | string> => {
@@ -2519,7 +2523,8 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       }
       // Ni el dato ni nada derivado de él sale en huecos ni supuestos: solo estados.
       const r = await puerta(marco, op.valor)
-      if (r.estado === 'con_valor') aplicados.push(SUPUESTO_POLIZA_FIJADA)
+      if (r.estado === 'escrita') polizaTecleada = true
+      else if (r.estado === 'con_valor') aplicados.push(SUPUESTO_POLIZA_FIJADA)
       else if (r.estado === 'sin_dato') huecos.push(HUECO_POLIZA_ACTUAL)
       else if (r.estado === 'no_unica') huecos.push(`«${ETIQUETA_POLIZA_ACTUAL_TURISMOS}» (${r.motivo})`)
       else if (r.estado === 'no_quedo') huecos.push(`«${ETIQUETA_POLIZA_ACTUAL_TURISMOS}» (el portal no dejó puesto el valor)`)
@@ -2660,7 +2665,7 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
     if (!quedo) huecos.push(`«${op.etiqueta}» (el portal no dejó puesto el valor)`)
     else if (op.supuesto) aplicados.push(op.supuesto)
   }
-  return { huecos, aplicados, ...(opcionesCompania ? { opcionesCompania } : {}) }
+  return { huecos, aplicados, ...(opcionesCompania ? { opcionesCompania } : {}), ...(polizaTecleada ? { polizaTecleada: true as const } : {}) }
 }
 
 /**
@@ -2870,9 +2875,12 @@ export async function recorrerPasosTurismos(
   // de aseguradoras del catálogo del portal, nunca datos del cliente.
   const conOpciones = (m: string) => (opciones ? `${m}; opciones de «${ETIQUETA_COMPANIA_ACTUAL}» leídas (${opciones.length}): ${opciones.join(' | ')}`.slice(0, 1_500) : m)
   const declarar = () => unirSupuestoVersion(supuestoVersion, supuestosAplicadosTurismos(sup, aplicados))
+  // v0.6.36: ¿la puerta escribió y releyó la póliza actual en algún paso? (señal para la firmeza en asegura; el valor no sale).
+  let polizaTecleada = false
   for (const plan of pasos) {
     const r = await rellenarPasoTurismos(page, marco, ctx, plan)
     aplicados.push(...r.aplicados)
+    if (r.polizaTecleada) polizaTecleada = true
     if (r.opcionesCompania) {
       opciones = r.opcionesCompania
       ctx.formador?.log('turismos_compania_actual_opciones', { n: opciones.length, opciones })
@@ -2907,7 +2915,7 @@ export async function recorrerPasosTurismos(
         // v0.6.14: el vehículo de catálogo que Allianz dejó MARCADO viaja también como `seleccionVehiculo` (Generali lo usa).
         // v0.6.28: PDF del presupuesto guardado (botón «Imprimir/Descargar presupuesto»; v0.6.29: también «Descargar propuesta»); si no llega, aviso y el precio se devuelve igual.
         const pdfPresupuesto = await descargarProyectoAuto(page, ctx, 'allianz', 'presupuesto-allianz-turismos.pdf', guardado.estado === 'guardado')
-        return { ofertas: conDatosUsados(ofertasConPdfProyecto(ofertasConPresupuestoTurismos(ofertas, guardado), pdfPresupuesto), usados), seleccionVehiculo: seleccionVehiculoConfirmada(usados?.vehiculo) }
+        return { ofertas: conPolizaAnteriorTecleada(conDatosUsados(ofertasConPdfProyecto(ofertasConPresupuestoTurismos(ofertas, guardado), pdfPresupuesto), usados), polizaTecleada), seleccionVehiculo: seleccionVehiculoConfirmada(usados?.vehiculo) }
       }
       if (Date.now() >= fin) break
       await page.waitForTimeout(300)
@@ -2980,7 +2988,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.35',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.36',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

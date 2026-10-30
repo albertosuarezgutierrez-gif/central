@@ -12,7 +12,7 @@ import { mapfreAuto } from '../src/adapters/mapfre/auto.ts'
 
 const PDF_MINIMO = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n' + ' '.repeat(80), 'latin1')
 
-test('v0.8.34 · versión', () => assert.equal(mapfreAuto.version, '0.8.35'))
+test('v0.8.34 · versión', () => assert.equal(mapfreAuto.version, '0.8.36'))
 
 test('v0.8.34 · puro: la causa sale de la traza de Playwright (la última línea de estado manda)', () => {
   const tapado = `locator.click: Timeout 6000ms exceeded.\nCall log:\n  - waiting for locator('[data-rpa-dl="41"]')\n  - locator resolved to <button>…</button>\n  - attempting click action\n  - waiting for element to be visible, enabled and stable\n  - element is visible, enabled and stable\n  - <div class="cdk-overlay-backdrop cdk-overlay-dark-backdrop cdk-overlay-backdrop-showing"></div> intercepts pointer events\n  - retrying click action`

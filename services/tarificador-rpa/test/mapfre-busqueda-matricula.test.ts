@@ -76,7 +76,7 @@ const formador = (): ContextoFormador => ({
 })
 
 test('Mapfre auto/moto 0.8.7 (0.8.7: moto por el plan del coche; 0.8.6: varias filas de vehículo → la primera como supuesto declarado; antes 0.8.5: siniestros deshabilitado)', () => {
-  assert.equal(mapfreAuto.version, '0.8.35')
+  assert.equal(mapfreAuto.version, '0.8.36')
 })
 
 test('búsqueda por matrícula: se lanza AL SALIR DEL CAMPO (blur) y no se pulsa ningún botón (ni info, ni lupa del buscador, ni NO catalogado)', async () => {

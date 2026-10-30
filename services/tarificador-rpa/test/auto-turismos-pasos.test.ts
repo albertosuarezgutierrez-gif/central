@@ -1026,3 +1026,36 @@ test('v0.6.12 «Selección de paquete»: tabla vacía (sin paquetes) → el huec
     await a.context.close()
   }
 })
+
+// ───────────── v0.6.36 (30/10/2026, «SINCO al tarificar»): señal `polizaAnteriorTecleada` en las ofertas ─────────────
+async function preciosCon(o: Opc, form: FormularioAuto) {
+  const a = await abrir(o)
+  const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, form, a.ctx)
+  return { ...a, resultado: await recorrerPasosTurismos(a.page, a.marco, form, a.ctx, r.supuestoVersion, new Date(), 3_000) }
+}
+
+test('v0.6.36 SINCO: póliza actual ESCRITA y releída → cada oferta lleva la señal (y nunca el valor); ya fijada por el portal o sin campo → sin señal', async () => {
+  const conPol = { ...FORM, companiaAnterior: 'Aseguradora Alfa', polizaAnteriorUltimos5: POL } as FormularioAuto
+  const escrita = await preciosCon({ paquetes: 'completa', poliza: {} }, conPol)
+  try {
+    assert.ok(escrita.pulsados.includes('poliza:escrita'))
+    assert.ok(escrita.resultado.ofertas.length > 0)
+    for (const x of escrita.resultado.ofertas) assert.equal(x.polizaAnteriorTecleada, true)
+    assert.ok(!JSON.stringify(escrita.resultado).includes(POL), 'el valor no viaja en el resultado')
+  } finally {
+    await escrita.context.close()
+  }
+  const fijada = await preciosCon({ paquetes: 'completa', poliza: { valor: '12345' } }, conPol)
+  try {
+    assert.ok(fijada.pulsados.includes('poliza:con_valor'))
+    for (const x of fijada.resultado.ofertas) assert.equal('polizaAnteriorTecleada' in x, false, 'no lo tecleó el bot: no se sabe qué número usó')
+  } finally {
+    await fijada.context.close()
+  }
+  const sinCampo = await preciosCon({ paquetes: 'completa' }, FORM)
+  try {
+    for (const x of sinCampo.resultado.ofertas) assert.equal('polizaAnteriorTecleada' in x, false)
+  } finally {
+    await sinCampo.context.close()
+  }
+})
