@@ -2575,6 +2575,10 @@ export function validarMapa(v: unknown): MapaExploracion | null {
  * `validarRespuestaExplorador` igual que una de la IA.
  */
 export function planDesdeMapa(pantalla: PantallaMapaExploracion, inv: InventarioDom): RespuestaExplorador | null {
+  // 0.3.25 (Fidelidade real 30/10/2026, 56b4b52c…): una pantalla del mapa SIN avance conocido es memoria a medias (el nombre no tenía selector
+  // estable y el submit tampoco): repetirla solo marcaba el régimen ANTES del nombre y el portal, que recalcula el avance en el `change` del
+  // radio, dejó el botón deshabilitado. Sin avance, decide la IA con el inventario completo (y su orden: textos y luego opciones).
+  if (!pantalla.avance) return null
   const unico = (sel: SelectorMapa, marco: string): string | null => {
     const hits = inv.marcos.filter((m) => rutaMarco(m.url) === marco).flatMap((m) => m.elementos.filter((e) => e.ref && casaSelector(e, sel)))
     return hits.length === 1 ? hits[0].ref! : null
