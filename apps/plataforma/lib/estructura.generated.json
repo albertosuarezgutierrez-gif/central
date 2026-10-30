@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-29T19:13:32Z",
+  "generadoEn": "2026-10-30T10:06:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2591,7 +2591,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 68
+        "evidencias": 71
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2619,7 +2619,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 36
       },
       "rrhh": {
         "estado": "no",
@@ -5548,6 +5548,7 @@
       "/api/correduria/tarificador/grabaciones/[id]",
       "/api/correduria/tarificador/grabaciones/[id]/analizar",
       "/api/correduria/tarificador/grabaciones/[id]/pantallas",
+      "/api/correduria/tarificador/grabaciones/extension",
       "/api/correduria/tarificador/integraciones",
       "/api/correduria/tarificador/oportunidad",
       "/api/correduria/tarificador/oportunidad/[id]/presupuesto-rpa",
@@ -7254,7 +7255,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1870,
+    "apis": 1871,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
