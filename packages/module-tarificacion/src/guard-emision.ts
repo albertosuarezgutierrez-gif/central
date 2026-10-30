@@ -107,19 +107,28 @@ export type OpcionesGuard = {
 }
 
 // Sin «parameter properties» (`constructor(readonly x)`): `node --test` solo QUITA tipos y no las admite.
+/** 0.3.23: tope del detalle del cuerpo en el mensaje del guard (el error viaja recortado a 2000 car. con su prefijo y la URL). */
+export const MAX_DETALLE_CUERPO_MENSAJE = 1500
+
 export class EmisionBloqueadaError extends Error {
   readonly tipo = 'emision' as const
   readonly donde: 'url' | 'boton' | 'fase'
   readonly texto: string
-  constructor(donde: 'url' | 'boton' | 'fase', texto: string) {
+  /**
+   * 0.3.23: `detalleCuerpo` = lo que casó en el CUERPO (solo NOMBRES de parámetro y clase de valor, nunca valores: `textoDetalleCuerpo`).
+   * Va DELANTE y sin el recorte de 200 del texto (antes, con la URL de NSE detrás, la lista se cortaba): su propio tope,
+   * {@link MAX_DETALLE_CUERPO_MENSAJE}, por debajo de los 2000 car. con que viaja el error.
+   */
+  constructor(donde: 'url' | 'boton' | 'fase', texto: string, detalleCuerpo?: string) {
+    const det = detalleCuerpo ? `[acción en el cuerpo de la petición: ${detalleCuerpo.slice(0, MAX_DETALLE_CUERPO_MENSAJE)}] ` : ''
     super(
       donde === 'fase'
         ? `guard_emision: fase bloqueada: ${texto.slice(0, 500)}`
-        : `guard_emision: ${donde} bloqueada (casa con el patrón de emisión): «${texto.slice(0, 200)}»`,
+        : `guard_emision: ${donde} bloqueada (casa con el patrón de emisión): «${det}${texto.slice(0, 200)}»`,
     )
     this.name = 'EmisionBloqueadaError'
     this.donde = donde
-    this.texto = texto
+    this.texto = `${det}${texto}`
   }
 }
 
@@ -294,8 +303,8 @@ const PREFIJO_NEUTRO = '/__ruta_app__/'
  * botón JSF que se pulsó) contra la misma lista que el resto de la ruta (`RE_ACCION_REAL_TRAS_PREFIJO`), no contra el patrón genérico
  * (los formularios NSE se llaman `formEmision…`). PURA.
  */
-export function cuerpoToleradoConAccionReal(cuerpo: string | null | undefined): boolean {
-  return detalleCuerpoToleradoConAccionReal(cuerpo) !== null
+export function cuerpoToleradoConAccionReal(cuerpo: string | null | undefined, url?: string | null): boolean {
+  return detalleCuerpoToleradoConAccionReal(cuerpo, url) !== null
 }
 
 /**
@@ -367,21 +376,77 @@ export function esEstadoModalJsf(nombre: string, valor: string): boolean {
   return valor === '' || valor === 'true' || valor === 'false'
 }
 
-/** 0.3.22: lo que el detalle del cuerpo deja caber en el mensaje del guard (el texto del error se recorta a 200 car.; detrás va la URL). */
-const MAX_LISTA_DETALLE_CUERPO = 150
+/**
+ * 0.3.23 (Mapfre NSE real 30/10/2026, «Datos del vehículo (patinete)»): el POST a `…/infObjetoAsegurado/infObjetoAseguradoAutos.jsf` lleva
+ * `formObjAseg:confirmarGuardado` (confirmar el GUARDADO de los datos del objeto asegurado, antes de tarificar) y casaba con «confirm».
+ * Ruta EXACTA (origen + pathname, `;jsessionid` opcional) de la pantalla del objeto asegurado de NSE; nada más del flujo.
+ */
+const ORIGEN_NSE_MAPFRE = 'https://wmediadores.mapfre.com'
+const RE_RUTA_OBJETO_ASEGURADO_NSE = /^\/EVT21_NSE_FWEB\/app\/emision\/infObjetoAsegurado\/infObjetoAsegurado[A-Za-z]{0,30}\.jsf(?:;jsessionid=[A-Za-z0-9._!-]{1,200})?$/
+/** 0.3.23: el VALOR del campo: una ficha simple (≤20, letras/cifras/_/-) o vacío; nunca un nombre de control ni un rótulo con espacios. */
+const RE_VALOR_FICHA_SIMPLE = /^[A-Za-z0-9_-]{0,20}$/
+/** 0.3.23: lo que el valor de `confirmarGuardado` no puede nombrar (además de las listas de acción final): aceptar. */
+const RE_VALOR_ACEPTAR = /acept/i
+
+/**
+ * 0.3.23: ¿es `formObjAseg:confirmarGuardado` (o `<form>:confirmarGuardado`) en el POST de la pantalla del OBJETO ASEGURADO de Mapfre NSE?
+ * Excepción ESTRECHA, todo a la vez:
+ *   · `url`: origen EXACTO `https://wmediadores.mapfre.com` y pathname EXACTO {@link RE_RUTA_OBJETO_ASEGURADO_NSE} (sin URL → no);
+ *   · nombre con forma de id JSF, con formulario delante (≥2 segmentos, ninguno vacío), ÚLTIMO segmento EXACTAMENTE `confirmarGuardado`
+ *     (con mayúsculas) y los anteriores sin acción real (`RE_ACCION_REAL_TRAS_PREFIJO`);
+ *   · el VALOR no es un nombre/rótulo de acción: ficha simple (≤20, sin «:», espacios ni signos) que no casa con ninguna lista de acción
+ *     final (`RE_ACCION_REAL_TRAS_PREFIJO`, `NOMBRE_ACCION_FINAL`, `VALOR_ACCION_FINAL`, `WIDGET_ACCION_FINAL`) ni con «acept». El botón
+ *     JSF pulsado (`formObjAseg:confirmarGuardado=formObjAseg:confirmarGuardado`, name == value) sigue bloqueando.
+ * Solo deja de contar ESE parámetro por su nombre; `javax.faces.source`/`partial.*`, `__EVENTTARGET` y cualquier otro «confirm» se siguen
+ * mirando. Solo lo usa la inspección del cuerpo en rutas TOLERADAS (Mapfre NSE). PURA.
+ */
+export function esConfirmarGuardadoObjetoAsegurado(nombre: string, valor: string, url: string | null | undefined): boolean {
+  if (typeof url !== 'string' || url === '') return false
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  if (u.username || u.password || u.origin !== ORIGEN_NSE_MAPFRE || !RE_RUTA_OBJETO_ASEGURADO_NSE.test(u.pathname)) return false
+  const n = nombre.trim()
+  if (!/^[\w.:$-]{1,120}$/.test(n)) return false
+  const segs = n.split(':')
+  const ultimo = segs.pop() ?? ''
+  if (ultimo !== 'confirmarGuardado' || segs.length === 0 || segs.some((x) => x === '' || RE_ACCION_REAL_TRAS_PREFIJO.test(x))) return false
+  const v = valor.trim()
+  if (!RE_VALOR_FICHA_SIMPLE.test(v)) return false
+  return ![RE_ACCION_REAL_TRAS_PREFIJO, NOMBRE_ACCION_FINAL, VALOR_ACCION_FINAL, WIDGET_ACCION_FINAL, RE_VALOR_ACEPTAR].some((r) => r.test(v))
+}
+
+/** 0.3.23: clase SANEADA del valor de un parámetro para el diagnóstico (nunca el valor). */
+export type ClaseValorDiagnostico = 'vacío' | 'false' | 'true' | 'num' | 'otro'
+export function claseValorDiagnostico(valor: string | null | undefined): ClaseValorDiagnostico {
+  const v = (valor ?? '').trim()
+  if (v === '') return 'vacío'
+  if (v === 'false') return 'false'
+  if (v === 'true') return 'true'
+  if (/^-?\d{1,30}(?:[.,]\d{1,10})?$/.test(v)) return 'num'
+  return 'otro'
+}
+
+/** Lo que casó en el cuerpo de una ruta tolerada: NOMBRE del parámetro, palabra de la lista y (0.3.23) clase de su valor. */
+export type HalladoCuerpo = { parametro: string; patron: string; valor?: ClaseValorDiagnostico }
 
 /**
  * Como `cuerpoToleradoConAccionReal`, pero diciendo QUÉ casó (0.3.8, real 28/10/2026 18:33: el guard paró `busquedaProductos.jsf` y no
  * se sabía por qué): el NOMBRE del parámetro (o `javax.faces.*`) y la palabra de la lista que casó. NUNCA el valor. `null` = nada.
  * 0.3.22: además `parametros` = TODOS los nombres que casan (sin repetir, cifras largas enmascaradas, nunca valores), para ver de una vez
  * todo lo que bloquearía en vez de ir parámetro a parámetro. `parametro`/`patron` siguen siendo el PRIMERO.
+ * 0.3.23: cada hallazgo lleva la CLASE de su valor (`claseValorDiagnostico`: vacío/false/true/num/otro) y `url` (la de la petición) habilita
+ * la exención estrecha {@link esConfirmarGuardadoObjetoAsegurado}; sin `url`, como antes.
  */
-export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undefined): { parametro: string; patron: string; parametros: { parametro: string; patron: string }[] } | null {
+export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undefined, url?: string | null): { parametro: string; patron: string; parametros: HalladoCuerpo[] } | null {
   if (typeof cuerpo !== 'string' || cuerpo === '') return null
   const dec = (x: string) => plano(decodificarUrlTolerante(x.replace(/\+/g, ' ')))
-  const hallados: { parametro: string; patron: string }[] = []
-  const anotar = (parametro: string, patron: string) => {
-    if (!hallados.some((h) => h.parametro === parametro && h.patron === patron)) hallados.push({ parametro, patron })
+  const hallados: HalladoCuerpo[] = []
+  const anotar = (parametro: string, patron: string, valor: ClaseValorDiagnostico) => {
+    if (!hallados.some((h) => h.parametro === parametro && h.patron === patron && h.valor === valor)) hallados.push({ parametro, patron, valor })
   }
   for (const par of cuerpo.split('&')) {
     const i = par.indexOf('=')
@@ -394,17 +459,20 @@ export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undef
     if (i >= 0 && esCampoFechaDeAccion(k, v)) continue
     // 0.3.22 (real 29/10/2026, Mapfre NSE `datosGenerales.jsf`): `formDG:panelConfirmCTOpenedState=` es el estado de un modal, no confirmar.
     if (i >= 0 && esEstadoModalJsf(k, v.trim())) continue
+    // 0.3.23 (real 30/10/2026, Mapfre NSE `infObjetoAseguradoAutos.jsf`): confirmar el GUARDADO de los datos del objeto asegurado, no emitir.
+    if (i >= 0 && esConfirmarGuardadoObjetoAsegurado(k, v, url)) continue
     const enNombre = RE_ACCION_REAL_TRAS_PREFIJO.exec(k)
     // Revisión de seguridad 0.3.8: un trozo SIN «=» (cuerpo JSON o texto) no es un nombre de parámetro y puede llevar datos
     // ({"nif":"…"}): solo se nombra un id de formulario con forma de id; cifras largas, enmascaradas.
     if (enNombre) {
       const n = k.trim()
-      anotar(/^[\w.:$\-[\]]{1,80}$/.test(n) ? n.replace(/\d{5,}/g, '#') : '(cuerpo no form-urlencoded)', enNombre[0].toLowerCase())
+      const forma = /^[\w.:$\-[\]]{1,80}$/.test(n)
+      anotar(forma ? n.replace(/\d{5,}/g, '#') : '(cuerpo no form-urlencoded)', enNombre[0].toLowerCase(), i < 0 ? 'otro' : claseValorDiagnostico(v))
       continue
     }
     if (/^javax\.faces\.(?:source|partial\.execute|partial\.render)$/i.test(k.trim())) {
       const enValor = RE_ACCION_REAL_TRAS_PREFIJO.exec(v)
-      if (enValor) anotar(k.trim(), enValor[0].toLowerCase())
+      if (enValor) anotar(k.trim(), enValor[0].toLowerCase(), claseValorDiagnostico(v))
     }
   }
   if (hallados.length === 0) return null
@@ -412,19 +480,22 @@ export function detalleCuerpoToleradoConAccionReal(cuerpo: string | null | undef
 }
 
 /**
- * 0.3.22: el trozo del mensaje del guard con lo que casó en el cuerpo. Uno: `parámetro «X» casa con «p»` (como siempre); varios:
- * `parámetros (N): «X» casa con «p», «Y» casa con «q» (+M más)`, recortado a {@link MAX_LISTA_DETALLE_CUERPO} car. Solo NOMBRES. PURA.
+ * 0.3.22: el trozo del mensaje del guard con lo que casó en el cuerpo. Solo NOMBRES (y, 0.3.23, la clase del valor).
+ * 0.3.23 (real 30/10/2026: la lista salía cortada): uno: `parámetro «X» [valor: vacío] casa con «p»`; varios: `parámetros (N): «X» [valor: …]
+ * casa con «p», …` ENTEROS. Solo con más de `max` car. (por defecto {@link MAX_DETALLE_CUERPO_MENSAJE}, cuerpo patológico) se dice
+ * `(+M más)`; nunca a mitad de un nombre. Un hallazgo sin `valor` (llamadas antiguas) sale sin la clase. PURA.
  */
-export function textoDetalleCuerpo(d: { parametro: string; patron: string; parametros?: readonly { parametro: string; patron: string }[] }): string {
-  const lista = d.parametros && d.parametros.length > 0 ? d.parametros : [{ parametro: d.parametro, patron: d.patron }]
-  if (lista.length === 1) return `parámetro «${lista[0].parametro}» casa con «${lista[0].patron}»`
+export function textoDetalleCuerpo(d: { parametro: string; patron: string; parametros?: readonly HalladoCuerpo[] }, max: number = MAX_DETALLE_CUERPO_MENSAJE): string {
+  const lista: readonly HalladoCuerpo[] = d.parametros && d.parametros.length > 0 ? d.parametros : [{ parametro: d.parametro, patron: d.patron }]
+  const uno = (h: HalladoCuerpo) => `«${h.parametro}»${h.valor ? ` [valor: ${h.valor}]` : ''} casa con «${h.patron}»`
+  if (lista.length === 1) return `parámetro ${uno(lista[0])}`
   const cab = `parámetros (${lista.length}): `
   let cuerpo = ''
   let n = 0
   for (const h of lista) {
-    const trozo = `${n ? ', ' : ''}«${h.parametro}» casa con «${h.patron}»`
+    const trozo = `${n ? ', ' : ''}${uno(h)}`
     const resto = lista.length - n - 1
-    if (n > 0 && (cab + cuerpo + trozo + (resto ? ` (+${resto} más)` : '')).length > MAX_LISTA_DETALLE_CUERPO) break
+    if (n > 0 && (cab + cuerpo + trozo + (resto ? ` (+${resto} más)` : '')).length > max) break
     cuerpo += trozo
     n++
   }

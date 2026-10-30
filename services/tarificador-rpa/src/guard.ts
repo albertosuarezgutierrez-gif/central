@@ -441,7 +441,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       const porUrl = pareceEmision(neutra, op) || parametrosParecenEmision(url, op)
       // Ruta TOLERADA (Mapfre NSE): además, los NOMBRES de parámetro y el botón JSF del cuerpo no pueden nombrar una acción real.
       const porCuerpoGeneral = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
-      const detalleTolerado = !porUrl && !porCuerpoGeneral && noGet && neutra !== url ? detalleCuerpoToleradoConAccionReal(cuerpoDe(req)) : null
+      const detalleTolerado = !porUrl && !porCuerpoGeneral && noGet && neutra !== url ? detalleCuerpoToleradoConAccionReal(cuerpoDe(req), url) : null
       // 0.3.13: destinos POST EXTRA del avance (índice ≥ 1, p. ej. /drvp00/main/control.do): inspección estricta del cuerpo (también
       // confirmar/firmar/pagar/IBAN en claves de acción o nombres financieros). El destino primario conserva el criterio de siempre.
       // Revisión 0.3.17: un destino que es A LA VEZ primario y extra (el «Aceptar» sin id de drvp00 en el marco `control.do`) también
@@ -465,9 +465,10 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
         // En la ruta TOLERADA (Mapfre NSE) se dice QUÉ parámetro casó y con qué palabra de la lista (nunca su valor).
         // 0.3.22: TODOS los nombres que casan (solo nombres, nunca valores), para no ir parámetro a parámetro ronda a ronda.
-        const que = detalleTolerado ? `: ${textoDetalleCuerpo(detalleTolerado)}` : ''
-        // El detalle va DELANTE: el mensaje del error se recorta a 200 caracteres y la URL de NSE es larga.
-        violacion ??= new EmisionBloqueadaError('url', porCuerpo ? (que ? `[acción en el cuerpo de la petición${que}] ${url}` : `${url} [acción en el cuerpo de la petición]`) : url)
+        // 0.3.23 (real 30/10/2026: la lista salía cortada): cada nombre con la CLASE de su valor (vacío/false/true/num/otro) y el detalle
+        // va DELANTE y FUERA del recorte de 200 del texto (tercer argumento): solo la URL se recorta.
+        const que = detalleTolerado ? textoDetalleCuerpo(detalleTolerado) : ''
+        violacion ??= que ? new EmisionBloqueadaError('url', url, que) : new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
         await route.abort('blockedbyclient')
         return
       }

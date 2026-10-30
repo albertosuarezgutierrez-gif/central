@@ -72,7 +72,7 @@ function contexto(page: Page, guard: GuardEmision, entrada: string, ramo: string
   }
 }
 
-test('versión del explorador 0.3.22', () => assert.equal(EXPLORADOR_VERSION, '0.3.22'))
+test('versión del explorador 0.3.23', () => assert.equal(EXPLORADOR_VERSION, '0.3.23'))
 
 // ─── 1) Allianz VMP: opción de elegir en forma inequívoca ───────────────────────────────────────────────────────────────────────────
 const MP = 'allianz:autos:movilidad_personal'
@@ -154,7 +154,7 @@ test('0.3.22 · Mapfre NSE: OpenedState con valor de acción, botones de acción
   const r = await postNse(`${REAL_DG}&formDG%3AbtnConfirmarX=SECRETO_A&formDG%3AbtnFirmar=SECRETO_B`)
   assert.ok(r.violacion instanceof EmisionBloqueadaError)
   const msg = r.violacion!.message
-  assert.match(msg, /parámetros \(2\): «formDG:btnConfirmarX» casa con «confirm», «formDG:btnFirmar» casa con «firm»/)
+  assert.match(msg, /parámetros \(2\): «formDG:btnConfirmarX» \[valor: otro\] casa con «confirm», «formDG:btnFirmar» \[valor: otro\] casa con «firm»/)
   assert.doesNotMatch(msg, /SECRETO|SEVILLA|panelConfirmCTOpenedState/)
 })
 

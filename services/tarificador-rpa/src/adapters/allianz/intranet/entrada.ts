@@ -6,8 +6,9 @@
 // TODO(capturas): no hay DOM real del modal de Empresas; se localiza por TEXTO visible (las mayúsculas del
 // DOM son CSS). Alternativa en el menú: «Venta» → «Nueva Alta».
 
-import type { Page } from 'playwright'
+import type { Locator, Page } from 'playwright'
 import type { ContextoPortal } from '../../../adaptador.ts'
+import { ErrorTarificador } from '../../../errores.ts'
 
 export type PestanaEntradaAllianz = 'Particulares' | 'Empresas' | 'Autos'
 
@@ -47,6 +48,9 @@ export async function abrirNuevaAlta(
   ctx: Pick<ContextoPortal, 'pulsar' | 'pausa'>,
   destino: { pestana: PestanaEntradaAllianz; producto: string; selectorTarjeta?: string },
 ): Promise<void> {
+  // 0.3.23 (ePAC real 30/10/2026): «Nueva Alta» siguió DESHABILITADO los 30 s del click en el home. Antes de pulsar: habilitado ≤90 s,
+  // si no UNA recarga del home y otros 90 s; si sigue, error reintentable. Se pulsa el MISMO locator de siempre, por `ctx.pulsar` (guard).
+  await esperarNuevaAltaHabilitada(page, nuevaAltaDe(page))
   await ctx.pulsar(page.locator('#link_new_policy').or(page.getByRole('button', { name: textoExacto('Nueva Alta') })).first())
   await ctx.pausa()
   const modal = page.getByRole('dialog').filter({ hasText: /nueva alta/i }).first()
@@ -54,4 +58,75 @@ export async function abrirNuevaAlta(
   await ctx.pausa()
   const tarjeta = destino.selectorTarjeta ? modal.locator(destino.selectorTarjeta) : modal.getByText(etiquetaProducto(destino.producto))
   await ctx.pulsar(tarjeta.first())
+}
+
+/** 0.3.23: tope de la espera a que «Nueva Alta» se habilite, antes y después de la única recarga del home. */
+export const TOPE_NUEVA_ALTA_HABILITADA_MS = 90_000
+const SONDEO_NUEVA_ALTA_MS = 500
+/** Ruta del home de ePAC (la única que se recarga). */
+const RE_RUTA_HOME_EPAC = /\/ngx-azs-epac\/private\/home\/?$/
+
+/** El «Nueva Alta» del home (el mismo locator que se pulsa). */
+function nuevaAltaDe(page: Page): Locator {
+  return page.locator('#link_new_policy').or(page.getByRole('button', { name: textoExacto('Nueva Alta') })).first()
+}
+
+export type DepsNuevaAlta = {
+  /** ¿Visible y habilitado ahora? (nunca lanza: `false` si no se pudo mirar) */
+  habilitado: () => Promise<boolean>
+  /** La ÚNICA recarga del home; `false` = no se recargó (no estamos en el home). */
+  recargar: () => Promise<boolean>
+  dormir: (ms: number) => Promise<void>
+  ahora: () => number
+  topeMs?: number
+  sondeoMs?: number
+}
+
+/** Error REINTENTABLE (orquestador: `infra` → `error_reintentable`, una vez), con el motivo. Sin datos. */
+export function errorNuevaAltaDeshabilitada(recargado: boolean, topeMs: number): ErrorTarificador {
+  const s = Math.round(topeMs / 1000)
+  return new ErrorTarificador('infra', recargado
+    ? `allianz/intranet: «Nueva Alta» (#link_new_policy) sigue deshabilitado tras ${s} s, una recarga del home y otros ${s} s (portal lento; reintentable)`
+    : `allianz/intranet: «Nueva Alta» (#link_new_policy) sigue deshabilitado tras ${s} s y no se está en el home de ePAC para recargarlo (reintentable)`)
+}
+
+/**
+ * Espera a que «Nueva Alta» esté habilitado: hasta `topeMs`; si no, UNA recarga y otra espera igual; si sigue, {@link errorNuevaAltaDeshabilitada}.
+ * Devuelve si hizo falta recargar. Sin navegador: todo inyectado (testeable). Nunca pulsa nada.
+ */
+export async function esperarHabilitadoConRecarga(d: DepsNuevaAlta): Promise<'habilitado' | 'habilitado_tras_recarga'> {
+  const tope = d.topeMs ?? TOPE_NUEVA_ALTA_HABILITADA_MS
+  const esperar = async (): Promise<boolean> => {
+    const inicio = d.ahora()
+    for (;;) {
+      if (await d.habilitado().catch(() => false)) return true
+      if (d.ahora() - inicio >= tope) return false
+      await d.dormir(d.sondeoMs ?? SONDEO_NUEVA_ALTA_MS)
+    }
+  }
+  if (await esperar()) return 'habilitado'
+  const recargado = await d.recargar().catch(() => false)
+  if (recargado && (await esperar())) return 'habilitado_tras_recarga'
+  throw errorNuevaAltaDeshabilitada(recargado, tope)
+}
+
+/** El caso real: «Nueva Alta» del home, recarga = GET de la MISMA URL del home de ePAC (nunca otra; nunca reenvía un POST). */
+async function esperarNuevaAltaHabilitada(page: Page, boton: Locator): Promise<void> {
+  await esperarHabilitadoConRecarga({
+    habilitado: async () => (await boton.isVisible().catch(() => false)) && (await boton.isEnabled({ timeout: 1_000 }).catch(() => false)),
+    recargar: async () => {
+      let url: URL
+      try {
+        url = new URL(page.url())
+      } catch {
+        return false
+      }
+      if (!RE_RUTA_HOME_EPAC.test(url.pathname)) return false
+      await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 60_000 }).catch(() => undefined)
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      return true
+    },
+    dormir: (ms) => new Promise<void>((r) => setTimeout(r, ms)),
+    ahora: Date.now,
+  })
 }
