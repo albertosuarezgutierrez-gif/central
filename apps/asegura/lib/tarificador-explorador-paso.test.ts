@@ -3,8 +3,8 @@
 // respeta el mismo lock y la IA en vuelo). Fixtures sintéticas, sin datos personales.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { huellaPantalla, sanearInventarioDom, type InventarioDom, type RespuestaExplorador } from '@central/module-tarificacion'
-import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, erroresPasoAnterior, esBucle, planDeMemoriaUsable, type DepsPaso, type EstadoPaso, type PasoARegistrar } from './tarificador-explorador-paso.ts'
+import { construirMapa, huellaPantalla, sanearInventarioDom, type InventarioDom, type RespuestaExplorador } from '@central/module-tarificacion'
+import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, erroresPasoAnterior, esBucle, memoriaAgotadaEnPantalla, planDeMemoriaUsable, type DepsPaso, type EstadoPaso, type PasoARegistrar } from './tarificador-explorador-paso.ts'
 
 const inventario = sanearInventarioDom({
   marcos: [{
@@ -368,4 +368,35 @@ test('🪤 0.3.16: respuesta rechazada por el validador → los errores del paso
   assert.ok(errores.some((e) => /^rechazo acciones\[0\] rellenar m0e1: /.test(e)), errores.join(' | '))
   // Ref inventada por la IA: no se copia al diagnóstico.
   assert.ok(errores.some((e) => /^rechazo acciones\[1\] marcar \?: /.test(e)), errores.join(' | '))
+})
+
+// ─── 0.3.24 (Fidelidade real 30/10/2026, 2f0d9b15…): el mapa repetía `marcar` en la MISMA pantalla sin moverla → bucle sin IA ───
+test('🪤 0.3.24 memoriaAgotadaEnPantalla: la racha final con ESTA huella incluye un paso del mapa → true; otra pantalla por medio la rompe', () => {
+  const p = (huella: string, origen: 'ia' | 'mapa' | 'regla') => ({ huella, origen })
+  assert.equal(memoriaAgotadaEnPantalla([], 'h'), false)
+  assert.equal(memoriaAgotadaEnPantalla([p('h', 'mapa')], 'h'), true)
+  assert.equal(memoriaAgotadaEnPantalla([p('h', 'mapa'), p('h', 'ia')], 'h'), true)
+  assert.equal(memoriaAgotadaEnPantalla([p('h', 'ia')], 'h'), false)
+  assert.equal(memoriaAgotadaEnPantalla([p('h', 'mapa'), p('otra', 'mapa')], 'h'), false)
+  assert.equal(memoriaAgotadaEnPantalla([p('otra', 'mapa')], 'h'), false)
+})
+
+test('🪤 0.3.24 ejecutarPaso: el mapa ya aplicado en ESTA pantalla (sigue igual) → decide la IA; en una pantalla nueva el mapa sigue sirviendo', async () => {
+  const huella = huellaPantalla(inventario)
+  const respuesta = JSON.parse(RESPUESTA_IA) as RespuestaExplorador
+  const mapa = construirMapa({ entrada: entrada.entrada, compania: 'allianz', producto: 'hogar', modelo: null, fecha: '2026-10-30', efectosEnPortal: [], redNoGet: [], coste: { llamadas: 1, eurEstimado: 0.01 }, motivoFin: null }, [{ huella, inventario, respuesta }])
+  // Pantalla nueva (el último paso es OTRA huella): el mapa sirve, sin IA.
+  const a = dobles()
+  a.d.mapas = async () => [{ estado: 'revisado', mapa }]
+  a.st.pasos.push({ huella: '0000000000000000', respuesta: null, origen: 'mapa', llamadaIA: false, costeEur: 0, acciones: 1 })
+  const ra = await ejecutarPaso(entrada, a.d)
+  assert.equal(ra.tipo === 'ok' && ra.origen, 'mapa')
+  assert.ok(!a.traza.includes('ia'))
+  // MISMA pantalla tras un paso del mapa: la IA, con el inventario completo.
+  const b = dobles()
+  b.d.mapas = async () => [{ estado: 'revisado', mapa }]
+  b.st.pasos.push({ huella, respuesta, origen: 'mapa', llamadaIA: false, costeEur: 0, acciones: 2 })
+  const rb = await ejecutarPaso(entrada, b.d)
+  assert.equal(rb.tipo === 'ok' && rb.origen, 'ia')
+  assert.ok(b.traza.includes('ia'))
 })

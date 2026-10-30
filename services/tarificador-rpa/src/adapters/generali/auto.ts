@@ -149,6 +149,9 @@ import {
   decidirMediadorGenerali,
   inventarioMediadorGenerali,
   rutaSinQuery,
+  diagMenuNegocioGenerali,
+  MENU_PRIMER_NIVEL_GENERALI,
+  type MarcoMenuGenerali,
   motivoSelectorVehiculoNoVistoGenerali,
   rutaMarcoSaneadaGenerali,
   selectorVehiculoCargandoGenerali,
@@ -1644,6 +1647,39 @@ async function esperarPortalOEntrar(page: Page, esperaMs: number, pausaMs: numbe
     }
     await page.waitForTimeout(pausaMs)
   }
+}
+
+/** Qué pestañas conocidas del menú hay en cada marco (en el DOM y visibles). Solo lee recuentos: ningún texto de la página. */
+async function marcosMenuGenerali(page: Page): Promise<MarcoMenuGenerali[]> {
+  const out: MarcoMenuGenerali[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const pestanas: Record<string, { dom: number; visibles: number }> = {}
+    for (const p of MENU_PRIMER_NIVEL_GENERALI) {
+      const l = f.getByText(new RegExp(`^\\s*${p}\\s*$`))
+      pestanas[p] = { dom: await l.count().catch(() => 0), visibles: await l.filter({ visible: true }).count().catch(() => 0) }
+    }
+    out.push({ url: f.url(), pestanas })
+  }
+  return out
+}
+
+/**
+ * Humo (v0.3.1, 30/10/2026): ¿está el menú «NEGOCIO» del portal del corredor tras elegir el mediador? MISMO criterio que la
+ * tarificación (`menuNegocioVisible`): en el DOM de algún marco de www.generali.es, AUNQUE esté plegado. El humo 0.3.0 exigía
+ * `visible` y fallaba TODAS las noches desde el 20/10 (el `<a>` NEGOCIO sin href no cuenta como visible; las tarificaciones reales
+ * sí pasaban). Solo lee: no sobrevuela ni pulsa. Si no aparece, `portal` con una línea «diag:» saneada (rutas sin query y recuento
+ * de las pestañas conocidas, nunca textos libres).
+ */
+export async function exigirMenuNegocioGenerali(page: Page, o: { esperaMs?: number; pausaMs?: number } = {}): Promise<void> {
+  const fin = Date.now() + (o.esperaMs ?? ESPERA_PANTALLA_MS)
+  const pausa = o.pausaMs ?? PAUSA_MEDIADOR_MS
+  for (;;) {
+    if (rutaSinQuery(page.url()).startsWith('https://www.generali.es/') && (await menuNegocioVisible(page))) return
+    if (Date.now() >= fin) break
+    await page.waitForTimeout(pausa)
+  }
+  throw new ErrorTarificador('portal', `generali: «NEGOCIO» no está en ningún marco tras el mediador. ${diagMenuNegocioGenerali(page.url(), await marcosMenuGenerali(page))}`)
 }
 
 /**

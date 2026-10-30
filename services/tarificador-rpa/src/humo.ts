@@ -39,9 +39,9 @@ import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { PESTANA_NUEVA_PRODUCCION, localizar } from './adapters/mapfre/entrada.ts'
 import { mapfreHogar } from './adapters/mapfre/hogar.ts'
 import { mapfreAuto, mapfreMoto } from './adapters/mapfre/auto.ts'
-import { elegirMediadorGenerali, generaliAuto, loginGenerali } from './adapters/generali/auto.ts'
+import { elegirMediadorGenerali, exigirMenuNegocioGenerali, generaliAuto, loginGenerali } from './adapters/generali/auto.ts'
 
-export const HUMO_VERSION = '0.3.0'
+export const HUMO_VERSION = '0.3.1'
 const TOPE_HUMO_MS = 3 * 60_000
 const TOPE_PASO_MS = 30_000
 const ESPERA_MENU_MS = 20_000
@@ -81,7 +81,8 @@ async function menuMapfre(page: Page): Promise<void> {
 /**
  * Generali (v0.3.0 del humo, 19/10/2026; prueba real b41be722): «Seleccionar mediador» vive en un MARCO sin etiquetas. Se usa el
  * MISMO paso que la tarificación (`elegirMediadorGenerali`, todos los marcos; el botón SOLO por `pulsarMediadorGenerali`) y luego
- * se comprueba que el menú «NEGOCIO» está a la vista en algún marco. No se sobrevuela ni se pulsa el menú.
+ * se comprueba que el menú «NEGOCIO» está en algún marco (v0.3.1: en el DOM, aunque esté plegado: 0.3.0 exigía «visible» y fallaba
+ * siempre). No se sobrevuela ni se pulsa el menú.
  */
 async function menuGenerali(page: Page, guard: GuardEmision): Promise<void> {
   const puerta: Pick<ContextoPortal, 'pausaAccion' | 'confirmarMediadorGenerali' | 'entrarPortalGenerali'> = {
@@ -90,14 +91,8 @@ async function menuGenerali(page: Page, guard: GuardEmision): Promise<void> {
     entrarPortalGenerali: () => pulsarEntrarGenerali(page, guard),
   }
   await elegirMediadorGenerali(page, puerta)
-  const fin = Date.now() + ESPERA_MENU_MS
-  while (Date.now() < fin) {
-    for (const f of page.frames()) {
-      if (!f.isDetached() && (await f.getByText(/^\s*NEGOCIO\s*$/).filter({ visible: true }).count().catch(() => 0)) >= 1) return
-    }
-    await dormir(500)
-  }
-  throw new ErrorTarificador('portal', 'generali: el menú «NEGOCIO» no está visible tras elegir el mediador')
+  // v0.3.1 (30/10/2026): el MISMO criterio que la tarificación (en el DOM aunque esté plegado), con «diag:» saneado si falta.
+  await exigirMenuNegocioGenerali(page, { esperaMs: ESPERA_MENU_MS })
 }
 
 /** El humo llegó a la pantalla del SMS de Okta: no se pide el código de madrugada; se OMITE (no es fallo ni credenciales). */

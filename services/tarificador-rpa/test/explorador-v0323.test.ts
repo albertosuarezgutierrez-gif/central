@@ -80,7 +80,7 @@ function contexto(page: Page, guard: GuardEmision, entrada: string, ramo: string
   }
 }
 
-test('versión del explorador 0.3.23', () => assert.equal(EXPLORADOR_VERSION, '0.3.23'))
+test('versión del explorador 0.3.24', () => assert.equal(EXPLORADOR_VERSION, '0.3.24'))
 
 // ─── 1) Mapfre NSE: confirmarGuardado del objeto asegurado ──────────────────────────────────────────────────────────────────────────
 const MF = 'mapfre:automoviles:patinetes'

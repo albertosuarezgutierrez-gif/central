@@ -69,6 +69,11 @@ export async function esperarSinOverlayCarga(accion: string, d: DepsEsperaOverla
 
 /** Selector de candidatos (atributo `class` que contiene las marcas; el filtro fino lo hace `esClaseOverlayCarga`). */
 const SELECTOR_CANDIDATOS = '[class*="loading_overlay" i], [class*="ajaxwait" i]'
+/**
+ * 0.3.24 (Mapfre NSE real, a13b990c…): tope de la lectura sobre el nodo marcado. Si el portal lo repintó, la `evaluate` esperaba los 30 s
+ * del timeout por defecto; con este tope devuelve `null` (= «seguir») y el bucle comprueba que el nodo ya no está y re-inventaría.
+ */
+export const TOPE_SONDEO_NODO_MS = 5_000
 /** Tope de candidatos leídos por documento. */
 const MAX_CANDIDATOS = 20
 
@@ -101,7 +106,7 @@ export async function sondearOverlaysCarga(loc: Locator, marco: Frame | null): P
         out.push({ clase: String(o.getAttribute('class') ?? '').slice(0, 300), visible, cubre: vw * vh > 0 ? (iw * ih) / (vw * vh) : 0, tapaObjetivo: arriba !== null && o.contains(arriba) })
       }
       return out
-    }, [SELECTOR_CANDIDATOS, MAX_CANDIDATOS] as [string, number])
+    }, [SELECTOR_CANDIDATOS, MAX_CANDIDATOS] as [string, number], { timeout: TOPE_SONDEO_NODO_MS })
     const ancestros: OverlayCarga[] = []
     for (let f = marco?.parentFrame() ?? null; f; f = f.parentFrame()) {
       const r = await f.evaluate(([sel, max]: [string, number]) => {
