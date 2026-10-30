@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MOTIVOS_FIN_EXPLORACION, MOTIVOS_PARAR, construirMapa, lineaAccionesPortalParaIA, huellaPantalla, sanearInventarioDom, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
+import { MOTIVOS_FIN_EXPLORACION, MOTIVOS_PARAR, construirMapa, normalizarOpcionElegir, lineaAccionesPortalParaIA, huellaPantalla, sanearInventarioDom, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
 import {
   MODELO_EXPLORADOR_POR_DEFECTO,
   MOTIVOS_FIN,
@@ -642,4 +642,18 @@ test('0.3.17 · la IA NO ve `onclickCompleto` (hasta 8000) ni `clase`; sigue vie
 test('0.3.20 · prompt: un <select> «selectpicker» (marca/modelo) se elige con elegir; una clave sin valor no se repite (bucle)', () => {
   assert.match(SYSTEM_EXPLORADOR, /<select> con "selectpicker"[\s\S]*se elige IGUAL, con elegir/)
   assert.match(SYSTEM_EXPLORADOR, /clave SIN valor[\s\S]*no se rellena nunca[\s\S]*No la repitas/)
+})
+
+// 0.3.24 (Allianz VMP real 30/10/2026, 8338f86b…): la IA mandó una `opcion` con forma no admitida. El prompt enseña el formato LITERAL
+// correcto y cada ejemplo, copiado tal cual, lo acepta el validador (si el ejemplo se rompe o desaparece, este cepo se pone rojo).
+test('🪤 0.3.24 prompt: elegir trae ejemplos LITERALES de opcion {valor}/{texto} que el validador acepta tal cual', () => {
+  const linea = SYSTEM_EXPLORADOR.split('\n').find((x) => x.startsWith('- elegir:'))!
+  const ejemplos = [...linea.matchAll(/\{"accion":"elegir"[^\n]*?\}\}/g)].map((m) => JSON.parse(m[0]) as { accion: string; ref: string; opcion: unknown })
+  assert.equal(ejemplos.length, 2)
+  const sel = { tag: 'select', ref: 'm1e5', opciones: [{ valor: null, texto: 'DNI/NIF/NIE/CIF', vacio: true as const }, { valor: 'P', texto: 'Pasaporte' }], opcionesTotal: 2, conValor: false }
+  for (const e of ejemplos) {
+    assert.deepEqual(Object.keys(e), ['accion', 'ref', 'opcion'])
+    assert.deepEqual(normalizarOpcionElegir(e.opcion, sel), { ok: true, valor: 'P' })
+  }
+  assert.match(linea, /nunca null, un número ni un índice/)
 })

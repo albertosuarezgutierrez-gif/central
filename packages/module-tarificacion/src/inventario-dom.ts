@@ -93,7 +93,11 @@ export function onclickSinTirasCifras(plano: string): string | null {
   return normal
 }
 
-export type OpcionInventario = { valor: string | null; texto: string | null }
+/**
+ * `vacio` (0.3.24, Allianz VMP real 30/10/2026, 8338f86b…): el `value` de la opción en el DOM es EXACTAMENTE la cadena vacía (no
+ * redactado): solo con `valor: null`. Lo usa {@link normalizarOpcionElegir} para saber que la opción coincide con un `<select>` sin valor.
+ */
+export type OpcionInventario = { valor: string | null; texto: string | null; vacio?: true }
 
 export type ElementoInventario = {
   /** Referencia ESTABLE del elemento dentro de ESTE inventario (`m<marco>e<índice crudo>`); solo con `refs: true`. La
@@ -132,6 +136,11 @@ export type ElementoInventario = {
   deshabilitado?: true
   opciones?: OpcionInventario[]
   opcionesTotal?: number
+  /**
+   * 0.3.24: cuántas opciones del `<select>` se DESCARTARON por ser placeholders totalmente vacíos (`value=""` exacto y sin texto; p. ej.
+   * la `bs-title-option` que bootstrap-select inserta). Solo un número: con él `opcionesTotal` cuadra sin confundirlas con redactadas.
+   */
+  opcionesVacias?: number
   /** ¿El control tiene ya ALGÚN valor? Solo el booleano: el valor nunca sale del navegador. */
   conValor?: boolean
   /** ¿El portal marca el control como INVÁLIDO (aria-invalid, `ng-invalid`, error NDBX)? Solo el booleano (14/10/2026). */
@@ -404,12 +413,17 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       }
       if ((tag === 'select' || tag === 'nx-dropdown') && Array.isArray(eo.opciones)) {
         const todas: OpcionInventario[] = []
+        // 0.3.24: placeholders vacíos descartados (`value=""` EXACTO y sin texto); la 2.ª pasada (asegura) hereda la cuenta de la 1.ª.
+        let vacias = tag === 'select' && typeof eo.opcionesVacias === 'number' && Number.isInteger(eo.opcionesVacias) && eo.opcionesVacias > 0 ? Math.min(eo.opcionesVacias, 100_000) : 0
         for (const o of eo.opciones.slice(0, MAX_OPCIONES_CRUDAS_SELECT)) {
           const oo = obj(o)
           if (!oo) continue
           const valor = texto(oo.valor, MAX_ATRIBUTO) ?? null
           const t = texto(oo.texto, MAX_TEXTO_INVENTARIO) ?? null
-          if (valor !== null || t !== null) todas.push({ valor, texto: t })
+          // `value` EXACTAMENTE '' (no redactado; o ya marcado en la 1.ª pasada): solo en <select>, solo con valor null.
+          const vacio = tag === 'select' && valor === null && (oo.valor === '' || (oo.valor === null && oo.vacio === true))
+          if (valor !== null || t !== null) todas.push(vacio ? { valor, texto: t, vacio: true } : { valor, texto: t })
+          else if (vacio && (oo.texto === undefined || oo.texto === null || (typeof oo.texto === 'string' && oo.texto.trim() === ''))) vacias++
         }
         // 0.3.21: 40 garantizadas + lo que quede del fondo común, hasta 200; las que casan con una pista se meten en lugar de las del final.
         const cupo = Math.min(MAX_OPCIONES_INVENTARIO, todas.length, MAX_OPCIONES_GARANTIZADAS_SELECT + extraRestante)
@@ -419,6 +433,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
         const opciones = el.opciones
         const total = typeof eo.opcionesTotal === 'number' && Number.isFinite(eo.opcionesTotal) ? Math.max(0, Math.floor(eo.opcionesTotal)) : opciones.length
         el.opcionesTotal = Math.min(total, 100_000)
+        if (vacias > 0) el.opcionesVacias = vacias
       }
       elementos.push(el)
     }

@@ -1960,3 +1960,37 @@ export function resumenPruebasTipoVehiculoGenerali(intentos: readonly IntentoTip
     : '(ninguna)'
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
+
+/**
+ * Pestañas de primer nivel del portal del corredor (captura 3 + prueba real 31e76085). El diagnóstico del humo SOLO dice cuáles de
+ * ESTAS están (en el DOM / visibles): nunca vuelca textos libres de la página (la cabecera lleva el nombre del usuario y del mediador).
+ */
+export const MENU_PRIMER_NIVEL_GENERALI = Object.freeze(['NEGOCIO', 'COMPAÑÍA', 'FORMACIÓN', 'NORMAS', 'CERRAR'] as const)
+
+/** Lo que el humo vio de un marco al buscar «NEGOCIO»: ruta saneada y, por pestaña conocida, cuántas hay en el DOM y cuántas visibles. */
+export type MarcoMenuGenerali = { url: string; pestanas: Readonly<Record<string, { dom: number; visibles: number }>> }
+
+/** Última parte de la ruta saneada (sin query ni jsessionid): basta para reconocer la pantalla y cabe en el aviso. PURA. */
+function finRutaGenerali(url: string): string {
+  const r = rutaMarcoSaneadaGenerali(url)
+  if (/^(about|data|blob):/i.test(r)) return r
+  const ult = r.replace(/\/+$/, '').split('/').pop() ?? ''
+  return ult && !/^https?:$/i.test(ult) ? ult : '/'
+}
+
+/**
+ * Línea «diag:» del fallo del menú en el humo (v0.3.1, 30/10/2026). Compacta (el aviso del humo se corta a 300) y sin datos
+ * personales: última parte de la ruta de la página y de cada marco, y SOLO el estado de las pestañas conocidas
+ * (`MENU_PRIMER_NIVEL_GENERALI`: «visible»/«oculta»; las ausentes no se nombran). ≤ `max` caracteres. PURA.
+ */
+export function diagMenuNegocioGenerali(urlPagina: string, marcos: readonly MarcoMenuGenerali[], max = 200): string {
+  const partes = marcos.slice(0, 6).map((m) => {
+    const vistas = MENU_PRIMER_NIVEL_GENERALI.map((p) => {
+      const c = m.pestanas[p]
+      return c && c.dom > 0 ? `${p} ${c.visibles > 0 ? 'visible' : 'oculta'}` : null
+    }).filter((x): x is string => x !== null)
+    return `${finRutaGenerali(m.url)}[${vistas.join(', ') || '-'}]`
+  })
+  const t = `diag: pág ${finRutaGenerali(urlPagina)}; ${marcos.length} marco(s): ${partes.join(' · ') || '-'}`
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}

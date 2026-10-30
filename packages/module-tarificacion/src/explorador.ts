@@ -630,28 +630,49 @@ export type OpcionElegirNormalizada = { ok: true; valor: string } | { ok: true; 
  * Si la opción resuelta no tiene valor en el inventario (vacío o redactado): solo vale como `yaPuesta` (no se ejecuta nada) cuando el
  * `<select>` NO tiene valor (`conValor === false`), están TODAS sus opciones en el inventario y esa es la ÚNICA sin valor (luego es la de
  * `value=""`, la que ya está puesta). Si no, rechazo: una opción redactada nunca se elige. PURA.
+ * 0.3.24 (Allianz VMP real 30/10/2026, 8338f86b…: el mismo rechazo de forma; la respuesta cruda de la IA no se guarda): además
+ *   · `{ valor: null }`, `{ valor: "" }` o `""` (la IA copia el `valor: null` del inventario) = la ÚNICA opción con valor null;
+ *   · sinónimos `value` (de valor) y `text`/`label`/`etiqueta` (de texto), uno por clave; un índice NO (¿base 0 o 1?: ambiguo).
+ *   El inventario de esa pantalla traía `opcionesTotal` 4 con 3 opciones: la cuarta era el placeholder vacío de bootstrap-select
+ *   (`opcionesVacias`); con él, `yaPuesta` exige además que la opción tenga `value=""` EXACTO (`vacio`).
  */
 export function normalizarOpcionElegir(opcion: unknown, el: ElementoInventario): OpcionElegirNormalizada {
-  const forma = 'opcion tiene que ser { valor } (o { texto } con el texto exacto de la opción)'
+  const forma = 'opcion tiene que ser { valor } (o { texto } con el texto exacto de la opción), p. ej. "opcion": { "valor": "P" } o "opcion": { "texto": "Pasaporte" }'
   const plano = (s: string) => s.replace(/\s+/g, ' ').trim()
   let cadena: string | null = null
   let texto: string | null = null
   let valor: string | null = null
-  if (typeof opcion === 'string') cadena = opcion
-  else {
+  /** 0.3.24: la IA señala la opción SIN valor (`{ valor: null }`, `{ valor: "" }` o `""`): la ÚNICA del inventario con valor null. */
+  let sinValor = false
+  if (typeof opcion === 'string') {
+    if (plano(opcion) === '') sinValor = true
+    else cadena = opcion
+  } else {
     const o = obj(opcion)
     if (!o) return { ok: false, error: forma }
+    // 0.3.24 (Allianz VMP real 30/10/2026, 8338f86b…): sinónimos INEQUÍVOCOS de las dos claves (inglés y «etiqueta»); dos sinónimos
+    // de la MISMA clave a la vez = rechazo (no se elige cuál manda). Cualquier otra clave (índice incluido: ¿base 0 o 1?) = rechazo.
+    const SIN_VALOR = ['valor', 'value']
+    const SIN_TEXTO = ['texto', 'text', 'label', 'etiqueta']
     const ks = Object.keys(o)
-    if (ks.length === 0 || ks.some((k) => k !== 'valor' && k !== 'texto')) return { ok: false, error: forma }
-    if (o.texto !== undefined && typeof o.texto !== 'string') return { ok: false, error: forma }
-    if (o.valor !== undefined && o.valor !== null && typeof o.valor !== 'string') return { ok: false, error: forma }
-    texto = typeof o.texto === 'string' ? o.texto : null
-    valor = typeof o.valor === 'string' ? o.valor : null
-    if (texto === null && valor === null) return { ok: false, error: forma }
-    // La forma de siempre: sin tocar (las comprobaciones de opción del inventario van después, en el validador).
-    if (texto === null) return { ok: true, valor: valor! }
+    if (ks.length === 0 || ks.some((k) => !SIN_VALOR.includes(k) && !SIN_TEXTO.includes(k))) return { ok: false, error: forma }
+    const kv = ks.filter((k) => SIN_VALOR.includes(k))
+    const kt = ks.filter((k) => SIN_TEXTO.includes(k))
+    if (kv.length > 1 || kt.length > 1) return { ok: false, error: `${forma}: una sola clave de valor y una de texto` }
+    const v0 = kv.length ? o[kv[0]] : undefined
+    const t0 = kt.length ? o[kt[0]] : undefined
+    if (t0 !== undefined && t0 !== null && typeof t0 !== 'string') return { ok: false, error: forma }
+    if (v0 !== undefined && v0 !== null && typeof v0 !== 'string') return { ok: false, error: forma }
+    texto = typeof t0 === 'string' && plano(t0) !== '' ? t0 : null
+    // `""` y `null` como valor = «la opción sin valor» (la IA copia el `valor: null` del inventario).
+    valor = typeof v0 === 'string' && v0 !== '' ? v0 : null
+    if (texto === null && valor === null) {
+      if (v0 === undefined || (t0 !== undefined && t0 !== null)) return { ok: false, error: forma }
+      sinValor = true
+    } else if (texto === null) return { ok: true, valor: valor! } // La forma de siempre: las comprobaciones de opción van después, en el validador.
   }
   if (el.tag === 'nx-dropdown') {
+    if (sinValor) return { ok: false, error: `${forma}: en un nx-dropdown la opción es su texto` }
     if (cadena !== null) return { ok: true, valor: cadena }
     if (valor !== null && plano(valor) !== plano(texto!)) return { ok: false, error: `${forma}: valor y texto no son de la misma opción` }
     return { ok: true, valor: texto! }
@@ -659,7 +680,8 @@ export function normalizarOpcionElegir(opcion: unknown, el: ElementoInventario):
   const ops = el.opciones ?? []
   const porTexto = (t: string) => ops.filter((o) => o.texto !== null && plano(o.texto) === plano(t))
   let candidatas: OpcionInventario[]
-  if (cadena !== null) candidatas = [...new Set([...ops.filter((o) => o.valor !== null && o.valor === cadena), ...porTexto(cadena)])]
+  if (sinValor) candidatas = ops.filter((o) => o.valor === null)
+  else if (cadena !== null) candidatas = [...new Set([...ops.filter((o) => o.valor !== null && o.valor === cadena), ...porTexto(cadena)])]
   else {
     candidatas = porTexto(texto!)
     if (valor !== null && !(candidatas.length === 1 && candidatas[0].valor === valor)) return { ok: false, error: `${forma}: valor y texto no son de la misma opción` }
@@ -668,8 +690,11 @@ export function normalizarOpcionElegir(opcion: unknown, el: ElementoInventario):
   if (candidatas.length > 1) return { ok: false, error: 'opción ambigua: casa con más de una opción del inventario' }
   const op = candidatas[0]
   if (op.valor !== null) return { ok: true, valor: op.valor }
-  const todas = typeof el.opcionesTotal === 'number' && el.opcionesTotal === ops.length
-  if (el.conValor === false && todas && ops.filter((o) => o.valor === null).length === 1) return { ok: true, yaPuesta: true }
+  // 0.3.24: los placeholders vacíos descartados (`opcionesVacias`, p. ej. la `bs-title-option` de bootstrap-select) cuentan para «están
+  // todas»; con alguno, la opción tiene que tener `value=""` EXACTO (`vacio`): el `<select>` sin valor ya envía ese mismo valor.
+  const vacias = typeof el.opcionesVacias === 'number' ? el.opcionesVacias : 0
+  const todas = typeof el.opcionesTotal === 'number' && el.opcionesTotal === ops.length + vacias
+  if (el.conValor === false && todas && ops.filter((o) => o.valor === null).length === 1 && (vacias === 0 || op.vacio === true)) return { ok: true, yaPuesta: true }
   return { ok: false, error: 'esa opción no tiene valor en el inventario (vacía o redactada): no se elige; si es la vacía y el desplegable no tiene valor, ya está puesta' }
 }
 

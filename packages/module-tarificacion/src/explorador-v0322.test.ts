@@ -41,7 +41,7 @@ const TD = 'IntervinientesBean$nifTomador_tipoDoc'
 describe('0.3.22 · Allianz VMP: elegir con la opción en forma inequívoca', () => {
   it('fixture: la opción de value="" sale con valor null (lo que vio la IA)', () => {
     const el = inv([{ id: TD, opciones: TIPO_DOC }]).marcos[0].elementos[0]
-    expect(el.opciones![0]).toEqual({ valor: null, texto: 'DNI/NIF/NIE/CIF' })
+    expect(el.opciones![0]).toEqual({ valor: null, texto: 'DNI/NIF/NIE/CIF', vacio: true }) // 0.3.24: `vacio` = value="" exacto
     expect(catalogoDe('patinete').some((d) => d.clave === 'vehiculo.codigo_postal')).toBe(true)
   })
 
@@ -76,7 +76,7 @@ describe('0.3.22 · Allianz VMP: elegir con la opción en forma inequívoca', ()
       ['NIF', /no está entre las opciones/],
       [{ texto: 'pasaporte' }, /no está entre las opciones/],
       ['Pasaporte español', /no está entre las opciones/],
-      [{ valor: null }, /opcion tiene que ser \{ valor \}/],
+      // 0.3.24: `{ valor: null }` ya no es forma inválida (= la única opción sin valor): ver explorador-v0324.test.ts.
       [{ valor: 5 }, /opcion tiene que ser \{ valor \}/],
       [{ texto: 'Pasaporte', otra: 1 }, /opcion tiene que ser \{ valor \}/],
       [{}, /opcion tiene que ser \{ valor \}/],

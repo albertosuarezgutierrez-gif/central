@@ -134,6 +134,18 @@ export function planDeMemoriaUsable(plan: RespuestaExplorador, conDatosReales: b
   return !conDatosReales || !plan.acciones.some((a) => a.accion === 'elegir' || a.accion === 'marcar')
 }
 
+/**
+ * 0.3.24 (Fidelidade real 30/10/2026, 2f0d9b15…, «Datos Cliente - Nombre y régimen»): el MAPA repitió `marcar` del radio en 3 pasos
+ * seguidos sobre la MISMA pantalla (el avance seguía deshabilitado: faltaba el nombre, que el mapa no traía) y la exploración acabó en
+ * `bucle` sin llamar a la IA. Regla: si la racha final de pasos guardados con ESTA huella (la pantalla no ha cambiado) incluye uno
+ * servido por el mapa, el mapa ya se aplicó aquí y no bastó → se abandona para esta pantalla y decide la IA con el inventario completo.
+ * Otra pantalla por medio rompe la racha (volver a ella más tarde puede usar el mapa). Pura.
+ */
+export function memoriaAgotadaEnPantalla(pasos: readonly Pick<PasoGuardado, 'huella' | 'origen'>[], huella: string): boolean {
+  for (let i = pasos.length - 1; i >= 0 && pasos[i].huella === huella; i--) if (pasos[i].origen === 'mapa') return true
+  return false
+}
+
 export type SalidaPaso =
   | { tipo: 'ok'; respuesta: RespuestaExplorador | RespuestaLogin; origen: 'ia' | 'mapa' | 'regla'; huella: string; leaseHasta: string | null }
   | { tipo: 'conflicto'; motivo: 'exploracion_cerrada' | 'estado_cambiado' }
@@ -198,8 +210,8 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
       // Tope PROPIO de la fase de login (el worker también lo cuenta): ni memoria ni más pantallas que las previstas.
       if (pasosLogin >= MAX_PANTALLAS_LOGIN) return guardar(parar('sin_salida', `login asistido: ${MAX_PANTALLAS_LOGIN} pantallas sin llegar al portal`), 'regla')
     } else {
-      // MEMORIA: lo ya mapeado no vuelve a costar IA.
-      const pantalla = pantallaDeMemoria(await d.mapas(), huella)
+      // MEMORIA: lo ya mapeado no vuelve a costar IA. 0.3.24: salvo que ya se aplicó en ESTA pantalla y no la movió (`memoriaAgotadaEnPantalla`).
+      const pantalla = memoriaAgotadaEnPantalla(st.pasos, huella) ? null : pantallaDeMemoria(await d.mapas(), huella)
       const plan = pantalla ? planDesdeMapa(pantalla, inventario) : null
       if (plan && planDeMemoriaUsable(plan, e.conDatosReales)) {
         const v = validarRespuestaExplorador(plan, ctx)
