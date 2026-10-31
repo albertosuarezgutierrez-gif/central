@@ -10,8 +10,10 @@ import BaseDevengoBloque from './BaseDevengoBloque'
 import type { BaseDevengo } from '@/lib/base-fiscal-devengo-db'
 import type { CompraGuardada, PanelDatos } from '@/lib/fiscal-panel'
 import PanelFiscal from './PanelFiscal'
+import SituacionFiscal from './SituacionFiscal'
+import type { Seccion } from '@/lib/situacion-fiscal'
 
-type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; baseDevengo: BaseDevengo | null; panel: PanelDatos | null; compras: CompraGuardada[] | null; year: number; quarter: number }
+type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; baseDevengo: BaseDevengo | null; panel: PanelDatos | null; compras: CompraGuardada[] | null; situacion: Seccion[] | null; year: number; quarter: number }
 
 function fmt(n: number) {
   return eur(n)
@@ -135,7 +137,7 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
   )
 }
 
-export default function FiscalPageClient({ initialData, initialComparativa, baseDevengo, panel, compras, year: initYear, quarter: initQuarter }: Props) {
+export default function FiscalPageClient({ initialData, initialComparativa, baseDevengo, panel, compras, situacion, year: initYear, quarter: initQuarter }: Props) {
   const router = useRouter()
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [year, setYear] = useState(initYear)
@@ -184,6 +186,9 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
         {isPending && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Cargando…</span>}
         </>}
       />
+
+      {/* Mi situación fiscal: radiografía de lo personal que usa el motor (arriba del todo). */}
+      <SituacionFiscal secciones={situacion} onEditarPerfil={d ? () => setFormOpen(true) : null} />
 
       {/* Panel fiscal: lo primero. Sin base por devengo o sin perfil → «sin dato» (nunca 0). */}
       {panel ? <PanelFiscal datos={panel} compras={compras} /> : (
@@ -373,9 +378,10 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
             </div>
           </div>
 
-          {formOpen && <SituacionFamiliarForm ded={d.deducciones} onClose={() => setFormOpen(false)} onSaved={refresh} />}
         </details>
       )}
+      {/* Fuera del <details>: debe poder abrirse también desde «Mi situación fiscal». */}
+      {formOpen && d && <SituacionFamiliarForm ded={d.deducciones} onClose={() => setFormOpen(false)} onSaved={refresh} />}
     </main>
   )
 }

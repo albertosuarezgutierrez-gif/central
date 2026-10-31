@@ -64,6 +64,12 @@ model FiscalPerfil {
   ascendientesACargo       Int      @default(0) @map("ascendientes_a_cargo")
   ascendientesMayores75    Int      @default(0) @map("ascendientes_mayores_75")
   donativosAnual           Decimal  @default(0) @map("donativos_anual") @db.Decimal
+  // Cónyuge autónoma (prisma/sql/2026-06-23_pilar_autonoma.sql). NULL = sin dato.
+  conyugeEsAutonomo        Boolean  @default(false) @map("conyuge_es_autonomo")
+  conyugeIngresosBrutos    Decimal? @map("conyuge_ingresos_brutos") @db.Decimal(14, 2)
+  conyugeGastosDeducibles  Decimal? @map("conyuge_gastos_deducibles") @db.Decimal(14, 2)
+  conyugeCuotaAutonomos    Decimal? @map("conyuge_cuota_autonomos") @db.Decimal(14, 2)
+  conyugeRetenciones       Decimal? @map("conyuge_retenciones") @db.Decimal(14, 2)
   createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 

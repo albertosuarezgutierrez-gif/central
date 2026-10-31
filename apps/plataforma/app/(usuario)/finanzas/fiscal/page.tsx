@@ -6,6 +6,8 @@ import { getBaseDevengo, type BaseDevengo } from '@/lib/base-fiscal-devengo-db'
 import { importesDe, minimoPersonalYFamiliar } from '@/lib/fiscal-deducciones'
 import { armarPanel, type PanelDatos } from '@/lib/fiscal-panel'
 import { listarComprasPrevistas } from '@/lib/fiscal-compras-db'
+import { getSituacionFiscal } from '@/lib/situacion-fiscal-db'
+import type { Seccion } from '@/lib/situacion-fiscal'
 import FiscalPageClient from './FiscalPageClient'
 
 export const dynamic = 'force-dynamic'
@@ -71,5 +73,13 @@ export default async function FiscalPage({
     }
   }
 
-  return <FiscalPageClient initialData={data} initialComparativa={comparativa} baseDevengo={baseDevengo} panel={panel} compras={compras} year={year} quarter={quarter} />
+  // Mi situación fiscal (radiografía editable). Si falla, el bloque dice «sin dato».
+  let situacion: Seccion[] | null = null
+  try {
+    situacion = (await getSituacionFiscal(session.id)).secciones
+  } catch (e) {
+    console.error('[fiscal/page] situación fiscal', e)
+  }
+
+  return <FiscalPageClient initialData={data} initialComparativa={comparativa} baseDevengo={baseDevengo} panel={panel} compras={compras} situacion={situacion} year={year} quarter={quarter} />
 }

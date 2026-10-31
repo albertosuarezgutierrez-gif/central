@@ -35,6 +35,17 @@ export const AMORTIZACION_INMUEBLES: Record<string, { anual: number; fuente: str
     fuente: 'Base de amortización 63.799,97€ (borrador IRPF 2023/2025) × 3 %',
   },
 }
+// Intereses de financiación del año por piso (gasto deducible y límite de reparaciones, art. 23.1.a LIRPF).
+// No existen en BD. Alberto 31/10/2026: sin hipoteca → intereses de financiación = 0€ (un 0 comprobado, NO «sin dato»).
+// Solo Socorro y Dúplex (capital inmobiliario): Bustos es subarriendo y no lleva este límite.
+export const INTERESES_FINANCIACION: Record<string, { anual: number; fuente: string; actualizado: string }> = {
+  prop_house_sevillana: { anual: 0, fuente: 'Alberto 31/10/2026: sin hipoteca', actualizado: '2026-10-31' },
+  prop_duplex_center: { anual: 0, fuente: 'Alberto 31/10/2026: sin hipoteca', actualizado: '2026-10-31' },
+}
+/** Forma que lee el simulador (`EntradaSimulador.intereses`): propertyId → € del año. */
+export function interesesParaSimulador(): Record<string, number> {
+  return Object.fromEntries(Object.entries(INTERESES_FINANCIACION).map(([id, v]) => [id, v.anual]))
+}
 export const REDUCCION_CONJUNTA = 3400
 export const UMBRAL_TARIFA_ALTA = 60000
 export const RETENCION_CORREDURIA = 0.15

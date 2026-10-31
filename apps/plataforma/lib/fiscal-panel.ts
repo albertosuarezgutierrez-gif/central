@@ -2,7 +2,7 @@
 // Sin BD, sin reloj (el «hoy» se inyecta) y sin React: se usa igual en el servidor (armarPanel) y en el
 // cliente (los interruptores del simulador recalculan con `declarar`, la MISMA función que el servidor).
 // Regla NULL: un dato que no se sabe viaja como `null` («sin dato»); nunca se sustituye por 0.
-import { REDUCCION_CONJUNTA, UMBRAL_TARIFA_ALTA, esProvisional, periodoCierre, type AvisosDatos, type MesBase } from './base-fiscal-devengo.ts'
+import { REDUCCION_CONJUNTA, UMBRAL_TARIFA_ALTA, esProvisional, interesesParaSimulador, periodoCierre, type AvisosDatos, type MesBase } from './base-fiscal-devengo.ts'
 import type { BaseDevengo } from './base-fiscal-devengo-db.ts'
 import type { Descendiente } from './fiscal-deducciones.ts'
 import {
@@ -68,6 +68,8 @@ export function armarPanel(b: BaseDevengo, ctx: { descendientes: Descendiente[];
     // Retenciones y pagos fraccionados: incompletos → null (el panel no enseña cuota diferencial).
     retenciones: { alberto: null, pilar: null },
     pagosFraccionados: { alberto: null, pilar: null },
+    // Alberto 31/10/2026: Socorro y Dúplex sin hipoteca → 0€ (no «sin dato»); ver INTERESES_FINANCIACION.
+    intereses: interesesParaSimulador(),
   } satisfies Omit<EntradaSimulador, 'periodo'>
   return {
     anio: b.anio, hoy: b.hoy,
