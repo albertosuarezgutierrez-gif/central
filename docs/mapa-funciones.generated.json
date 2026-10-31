@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-31T10:31:27Z",
-  "sha": "011b32ed65dcdea8f8289f2865c46454fb4f36c8",
+  "generadoEn": "2026-10-31T18:08:54Z",
+  "sha": "fa55981236412878ff696e10bd0e010940dba285",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -33061,7 +33061,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/probar",
-      "hash": "186e387f729c"
+      "hash": "2e9d6d2bef21"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/relanzar/route.ts",
@@ -63726,6 +63726,7 @@
       "ambito": "apps/asegura",
       "resumen": "F3a — tarificar con BOTS un lead «listo para tarificar» (19/10/2026, spec lead → propuesta §F3; decisión de Alberto: bots antes que Avant2). Parte con BD; las reglas viven en `tarificacion-lead-puro.ts` (con test). Puerto `POST /api/operador/correo/tarificar-lead`, que solo llama plataforma tras el ",
       "exporta": [
+        "leerVehiculoPolizaVinculadaCliente",
         "riesgoDesdeOportunidadDelCliente",
         "revisarTarificacionLead",
         "tarificarLead",
@@ -63811,12 +63812,21 @@
           "resumen": "Compañía y antigüedad de la póliza del MISMO ramo, VIVA, vinculada a la oportunidad (`info_riesgo.polizaId`), del mismo cliente. Solo SELECT. `null` = sin póliza vinculada/viva o no se pudo leer (nunc"
         },
         {
+          "nombre": "leerVehiculoPolizaVinculadaCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string, ramo: string",
+          "retorno": "Promise<unknown | null>",
+          "linea": 160,
+          "resumen": "31/10/2026 · «probar» Generali auto: de la póliza VIVA del MISMO ramo vinculada a la oportunidad MÁS RECIENTE del cliente (`info_riesgo.polizaId`, mismo filtro que `polizaActualVinculada`), SOLO `marc"
+        },
+        {
           "nombre": "conTope",
           "kind": "arrow",
           "exportada": false,
           "params": "p: Promise<T>, defecto: T",
           "retorno": "Promise<T>",
-          "linea": 158
+          "linea": 185
         },
         {
           "nombre": "motoDelLead",
@@ -63824,7 +63834,7 @@
           "exportada": false,
           "params": "texto: unknown",
           "retorno": "Promise<LecturaMoto | null>",
-          "linea": 162,
+          "linea": 189,
           "resumen": "Moto: el texto libre contra el catálogo de motos de Codeoscopic (GET gratis). Sin Codeoscopic configurado = `no_mirado`."
         },
         {
@@ -63833,7 +63843,7 @@
           "exportada": false,
           "params": "valores: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 175,
+          "linea": 202,
           "resumen": "Comunidades: con una referencia catastral de 20 caracteres, el año de construcción y el CP del Catastro (con la de 14, la de parcela, el Catastro no da datos del bien). Solo si faltan. `null` = no se "
         },
         {
@@ -63842,7 +63852,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: RamoBotLead, infoRiesgo: unknown, nac: string | null, dia: string,",
           "retorno": "Promise<",
-          "linea": 192,
+          "linea": 219,
           "resumen": "El formulario candidato del bot de UNA oportunidad de auto/moto/comunidades: contrato del lead (descifrado) + bloque del riesgo (`datosVehiculo`) + ficha (nacimiento y carné). Compartido por la revisi"
         },
         {
@@ -63851,7 +63861,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: string, ahora = new Date()",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 217,
+          "linea": 244,
           "resumen": "Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE del cliente en ese ramo + su ficha, como el botón (formulario + «completar d"
         },
         {
@@ -63860,7 +63870,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ahora: Date",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 232,
+          "linea": 259,
           "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
         },
         {
@@ -63869,7 +63879,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<CatalogosHogarLeidos>",
-          "linea": 247,
+          "linea": 274,
           "resumen": "Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types, occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera ("
         },
         {
@@ -63878,7 +63888,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 257
+          "linea": 284
         },
         {
           "nombre": "publico",
@@ -63886,7 +63896,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 282
+          "linea": 309
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -63894,7 +63904,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 286
+          "linea": 313
         },
         {
           "nombre": "tarificarLead",
@@ -63902,7 +63912,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 302
+          "linea": 329
         },
         {
           "nombre": "ampliarTopeLead",
@@ -63910,7 +63920,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 404,
+          "linea": 431,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -63919,7 +63929,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 431,
+          "linea": 458,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -63928,7 +63938,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 478,
+          "linea": 505,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -63937,7 +63947,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "0a866797d8a0"
+      "hash": "5ee3be27cf89"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -64932,6 +64942,7 @@
         "esOrigenVehiculo",
         "validarSeleccionCatalogo",
         "leerVehiculoWorker",
+        "vehiculoDePolizaViva",
         "tieneVehiculo",
         "enEsperaVehiculo",
         "riesgoEnEspera",
@@ -64996,12 +65007,21 @@
           "resumen": "El vehículo del cuerpo `ok` del worker (`seleccionVehiculo` / `vehiculoConfirmado`). ACCESORIO: lo inválido se descarta (`descartado` dice qué), nunca tumba el resultado. `null` = no trae nada válido."
         },
         {
+          "nombre": "vehiculoDePolizaViva",
+          "kind": "function",
+          "exportada": true,
+          "params": "datosEspecificos: unknown",
+          "retorno": "VehiculoEncadenado | null",
+          "linea": 97,
+          "resumen": "31/10/2026 · «probar» Generali auto devolvía 422 `generali_sin_vehiculo` con un cliente cuya póliza de auto VIVA vinculada a la oportunidad ya dice qué coche es. De su `datos_especificos` SOLO las cla"
+        },
+        {
           "nombre": "tieneVehiculo",
           "kind": "function",
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "boolean",
-          "linea": 92,
+          "linea": 109,
           "resumen": "¿El riesgo ya trae un vehículo que Generali puede buscar? (marca+modelo, o denominación de Mapfre). PURA."
         },
         {
@@ -65010,7 +65030,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "boolean",
-          "linea": 100,
+          "linea": 117,
           "resumen": "¿El riesgo está en espera del vehículo? PURA."
         },
         {
@@ -65019,7 +65039,7 @@
           "exportada": true,
           "params": "riesgo: T",
           "retorno": "T",
-          "linea": 105,
+          "linea": 122,
           "resumen": "El riesgo con la marca de espera (sin tocar lo demás). PURA."
         },
         {
@@ -65028,7 +65048,7 @@
           "exportada": true,
           "params": "riesgo: T, v: VehiculoEncadenado",
           "retorno": "T",
-          "linea": 110,
+          "linea": 127,
           "resumen": "El riesgo SIN la marca y con el vehículo inyectado (las claves del vehículo encadenado mandan). PURA."
         },
         {
@@ -65037,7 +65057,7 @@
           "exportada": true,
           "params": "compania: string, v: VehiculoEncadenado",
           "retorno": "Record<string, unknown>",
-          "linea": 123,
+          "linea": 140,
           "resumen": "Lo que se ESCRIBE en el riesgo del trabajo de origen (Allianz/Mapfre) al registrar su `ok`: `vehiculoCatalogo` (con el origen) y `vehiculoConfirmado`. Solo lo escribe asegura con lo que mandó el bot: "
         },
         {
@@ -65046,7 +65066,7 @@
           "exportada": true,
           "params": "filas: readonly FilaOrigen[]",
           "retorno": "VehiculoEncadenado | null",
-          "linea": 137,
+          "linea": 154,
           "resumen": "El vehículo de los `ok` de la oportunidad: el `seleccionVehiculo` y el `vehiculoConfirmado` MÁS RECIENTES (cada uno de quien lo tenga). Solo filas de origen válido; lo inválido no cuenta. `null` = nin"
         },
         {
@@ -65055,7 +65075,7 @@
           "exportada": true,
           "params": "riesgo: T, oportunidadId: string | null, deOrigenes: VehiculoEncadenado | null",
           "retorno": "",
-          "linea": 157,
+          "linea": 174,
           "resumen": "Al ENCOLAR (solo si `necesitaVehiculoEncadenado`): el riesgo que se guarda. Ya trae vehículo → tal cual; hay un `ok` de origen en la oportunidad → con ese vehículo; sin oportunidad → rechazo; si no → "
         },
         {
@@ -65064,7 +65084,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string",
           "retorno": "boolean",
-          "linea": 174,
+          "linea": 191,
           "resumen": "¿Un trabajo en espera de esta compañía/ramo se puede LIBERAR (sigue SIN vehículo y tarifica preguntando su versión)? Mapfre y Allianz sí: buscan por matrícula y saben preguntar. Generali NO: no busca "
         },
         {
@@ -65073,13 +65093,13 @@
           "exportada": true,
           "params": "e: { vehiculo: VehiculoEncadenado | null origenesVivos: number creadoAt: Date ahora: Date /** Compañía/ramo del trabajo que espera. Por defecto Generali auto (la regla de siempre). */ compania?: string ramo?: string /** El origen (identific",
           "retorno": "DecisionEspera",
-          "linea": 189,
+          "linea": 206,
           "resumen": "Un Generali en espera, en el BARRIDO: con vehículo → inyectar; sin vehículo y con algún origen vivo y dentro de las 24 h → esperar; si no → cancelar con el motivo (nunca se lanza sin vehículo). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3d4abc5a24ac"
+      "hash": "5ef2b142a1d7"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-estadisticas-reglas.ts",
@@ -68587,6 +68607,7 @@
         "riesgoHogarDeRiesgoOportunidad",
         "conCompaniaActualUnica",
         "conVehiculoDeOrigen",
+        "conVehiculoDePoliza",
         "decidirRiesgoProbar"
       ],
       "funciones": [
@@ -68626,18 +68647,27 @@
           "resumen": "nada personal se copia. Sin origen, otra compañía/ramo, o ya con vehículo → mismo objeto. PURA."
         },
         {
+          "nombre": "conVehiculoDePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ReconstruccionRiesgo, compania: string, ramo: string, datosEspecificos: unknown",
+          "retorno": "ReconstruccionRiesgo",
+          "linea": 97,
+          "resumen": "31/10/2026 · Generali auto sin vehículo de origen (ningún `ok` de Allianz/Mapfre): marca, modelo y versión de la póliza de auto VIVA vinculada a la oportunidad (`datosEspecificos` = su `datos_especifi"
+        },
+        {
           "nombre": "decidirRiesgoProbar",
           "kind": "function",
           "exportada": true,
           "params": "e: { reconstruccion: ReconstruccionRiesgo; previo: unknown | null; soloPurgados: boolean; validar: (riesgo: unknown) => ValidacionProbar<E> }",
           "retorno": "DecisionProbar<E>",
-          "linea": 102,
+          "linea": 114,
           "resumen": "Qué riesgo se reencola. Orden: 1) el reconstruido de la oportunidad+ficha, si valida; 2) el del último trabajo, si valida (no purgado); 3) rechazo que dice QUÉ falta (solo etiquetas de campo, nunca va"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "41861715cb2b"
+      "hash": "6c597f880db3"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-robustez.ts",
@@ -263513,6 +263543,6 @@
   ],
   "resumen": {
     "archivos": 5475,
-    "funciones": 21229
+    "funciones": 21232
   }
 }
