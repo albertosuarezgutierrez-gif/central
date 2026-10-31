@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-30T10:06:51Z",
-  "sha": "b608a349f02cd760f9856d483fd2830a31f3f21c",
+  "generadoEn": "2026-10-31T08:29:40Z",
+  "sha": "bbad3e5458850b6adc49e8a536b2a1319304fe16",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -130810,7 +130810,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "97574266a6a4"
+      "hash": "3f30d1f9fbaa"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/facturas-control/page.tsx",
@@ -134688,6 +134688,26 @@
       "tablas": [],
       "rutaApi": "/api/banca/ticket",
       "hash": "eac2a7d1a5e3"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cierres-mes/reabrir/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cierres-mes/reabrir",
+      "hash": "4dd105ed0f31"
     },
     {
       "ruta": "apps/plataforma/app/api/comunicacion/categorias/route.ts",
@@ -139837,6 +139857,27 @@
       "hash": "0a510a95f777"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/cierre-mes/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "📒 Cierre contable MENSUAL por piso (lib/cierre-mes.ts). Cron días 5 (pre-cierre) y 15 (cierre) del mes ANTERIOR (lib/cron-dispatch.ts). Calcula los checks por unidad, los guarda en `cierres_mes` y ma"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/cierre-mes",
+      "hash": "a9cd966d36fc"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/cima-liq/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/cron/cima-liq — libro de comisiones de la correduría. Tres ejes por (compañía, periodo): DEVENGADO (recibos cobrados) → LIQUIDADO (extracto de la compañía) → COBRADO (BBVA). Cada salto tiene su propio fallo, y llamarlos a todos «descuadre» impedía saber a quién reclamar. 🚨 Antes esto hablaba S",
@@ -141774,7 +141815,7 @@
           "exportada": true,
           "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 14,
+          "linea": 15,
           "resumen": "PATCH /api/expenses/pendientes/[id] — confirma (y APRENDE la regla del proveedor). Body: { categoria?, propiedad? }. Omitir un campo = dejarlo como está; '' = vaciarlo a propósito (los gastos de la co"
         },
         {
@@ -141783,13 +141824,13 @@
           "exportada": true,
           "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 51,
+          "linea": 57,
           "resumen": "DELETE /api/expenses/pendientes/[id] — descarta lo que no es un gasto nuestro."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/expenses/pendientes/[id]",
-      "hash": "c92119e47b5e"
+      "hash": "258561c1c19e"
     },
     {
       "ruta": "apps/plataforma/app/api/expenses/pendientes/[id]/sugerir-ia/route.ts",
@@ -143642,12 +143683,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/fijos/generar",
-      "hash": "a5ae092fd37c"
+      "hash": "b2f24b61c2e8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/fijos/route.ts",
@@ -143742,7 +143783,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 12
+          "linea": 14
         },
         {
           "nombre": "GET",
@@ -143750,7 +143791,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "POST",
@@ -143758,7 +143799,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 48
+          "linea": 50
         },
         {
           "nombre": "DELETE",
@@ -143766,7 +143807,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 112
+          "linea": 118
         }
       ],
       "tablas": [
@@ -143775,7 +143816,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/expenses",
-      "hash": "613540435431"
+      "hash": "73db0f322dc2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/extras/webhook/route.ts",
@@ -145440,7 +145481,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 68,
+          "linea": 70,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -145449,7 +145490,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 85,
+          "linea": 87,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -145458,7 +145499,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 111
+          "linea": 113
         },
         {
           "nombre": "getPendiente",
@@ -145466,7 +145507,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 141
+          "linea": 143
         },
         {
           "nombre": "reclamarPendiente",
@@ -145474,7 +145515,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<(Pendiente & Record<string, unknown>) | null>",
-          "linea": 151,
+          "linea": 153,
           "resumen": "Reclamo ATÓMICO del pendiente (doble pulsación / reintento de Telegram): el primero que borra la fila gana y es el único que envía; el segundo recibe `null`. Si luego el envío no sale, quien reclamó D"
         },
         {
@@ -145483,7 +145524,7 @@
           "exportada": false,
           "params": "p: Pendiente & Record<string, unknown>",
           "retorno": "Promise<void>",
-          "linea": 156
+          "linea": 158
         },
         {
           "nombre": "POST",
@@ -145491,7 +145532,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 164
+          "linea": 166
         },
         {
           "nombre": "procesarUpdate",
@@ -145499,7 +145540,7 @@
           "exportada": false,
           "params": "req: NextRequest, body: any",
           "retorno": "Promise<Response>",
-          "linea": 190
+          "linea": 192
         },
         {
           "nombre": "enrutarTextoLibre",
@@ -145507,7 +145548,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1471,
+          "linea": 1505,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -145516,7 +145557,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1478,
+          "linea": 1512,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -145525,7 +145566,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1490
+          "linea": 1524
         },
         {
           "nombre": "correduriaSegura",
@@ -145533,7 +145574,7 @@
           "exportada": false,
           "params": "texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1496,
+          "linea": 1530,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -145564,7 +145605,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "42c02e080011"
+      "hash": "e032f17382da"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -153306,6 +153347,533 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "75dbd19921a9"
+    },
+    {
+      "ruta": "apps/plataforma/lib/cierre-mes-db.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/cierre-mes-db.ts — lecturas/escrituras del cierre mensual. La lógica (checks, veredicto, guard) es pura y está testeada en `cierre-mes.ts`; aquí solo SQL y el ensamblado. Cada lectura va por `leer()`: si revienta, ESA entrada llega como `null` y su check sale `no_se_sabe` (nunca una lista vacía ",
+      "exporta": [
+        "cuentaDeLosPisos",
+        "calcularCierre",
+        "persistirCierre",
+        "estadosCierre",
+        "cerrarMes",
+        "reabrirCierre",
+        "bloqueoPorCierre",
+        "paresDeGastos",
+        "idsPendientesDelProveedor",
+        "pisosCerrados"
+      ],
+      "funciones": [
+        {
+          "nombre": "leer",
+          "kind": "function",
+          "exportada": false,
+          "params": "etiqueta: string, p: Promise<T>",
+          "retorno": "Promise<T | null>",
+          "linea": 22
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | string | null",
+          "retorno": "string | null",
+          "linea": 29
+        },
+        {
+          "nombre": "minFecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 30
+        },
+        {
+          "nombre": "cuentaDeLosPisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 36,
+          "resumen": "Cuenta (tenant) dueña de los pisos. Las tablas de sivra (`incomes`, `gastos`) no tienen `cuenta_id`: se deduce de quién tiene movimientos de destino turístico. Si hubiera MÁS de una, no se adivina: nu"
+        },
+        {
+          "nombre": "calcularCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string, hoy: string",
+          "retorno": "Promise<ResultadoUnidad[]>",
+          "linea": 53,
+          "resumen": "Calcula los checks de los pisos para `mes` a fecha `hoy` ('YYYY-MM-DD'). Solo lectura."
+        },
+        {
+          "nombre": "persistirCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string, resultados: ResultadoUnidad[]",
+          "retorno": "Promise<void>",
+          "linea": 240,
+          "resumen": "Guarda la evaluación. Un mes `cerrado` NO se toca (es un snapshot); uno `reabierto` sigue reabierto."
+        },
+        {
+          "nombre": "estadosCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string",
+          "retorno": "Promise<Record<string, string>>",
+          "linea": 253
+        },
+        {
+          "nombre": "cerrarMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string, hoy: string, actor: string",
+          "retorno": "Promise<",
+          "linea": 263,
+          "resumen": "Botón ✅ Cerrar mes. Se RECALCULA en el momento de pulsar (los datos pueden haber cambiado desde el aviso): solo cierra si TODAS las unidades siguen cuadrando; si alguna no, no cierra ninguna y dice cu"
+        },
+        {
+          "nombre": "reabrirCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string, unidad: string, motivo: string, actor: string",
+          "retorno": "Promise<ResultadoReapertura>",
+          "linea": 280,
+          "resumen": "Reapertura explícita con motivo (≥5 caracteres; lo exige también el CHECK de la tabla)."
+        },
+        {
+          "nombre": "paresCerrados",
+          "kind": "function",
+          "exportada": false,
+          "params": "pares: ParMesUnidad[]",
+          "retorno": "Promise<ParMesUnidad[]>",
+          "linea": 297,
+          "resumen": "Pares cerrados entre los dados. Tabla aún sin crear (migración pendiente) = ninguno cerrado."
+        },
+        {
+          "nombre": "bloqueoPorCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "pares: ParMesUnidad[]",
+          "retorno": "Promise<NextResponse | null>",
+          "linea": 314,
+          "resumen": "409 si la escritura toca un (mes, unidad) cerrado; 503 si no se pudo comprobar (fail-CLOSED: un guard que no sabe no deja pasar); null = adelante."
+        },
+        {
+          "nombre": "paresDeGastos",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: string[], nuevaPropiedad?: string | null",
+          "retorno": "Promise<ParMesUnidad[]>",
+          "linea": 326,
+          "resumen": "Pares (mes, unidad) que tocan los gastos existentes `ids` (y, si se cambia el piso, también el nuevo)."
+        },
+        {
+          "nombre": "idsPendientesDelProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<string[]>",
+          "linea": 341,
+          "resumen": "Ids que confirmaría `confirmarProveedor(id)`: la de partida + sus hermanas pendientes con la misma huella."
+        },
+        {
+          "nombre": "pisosCerrados",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "Promise<Set<string>>",
+          "linea": 351,
+          "resumen": "Pisos con el mes cerrado (para que la generación de fijos los salte)."
+        }
+      ],
+      "tablas": [
+        "cierres_mes",
+        "cuentas_bancarias",
+        "facturas_proveedor",
+        "fijo",
+        "gastos",
+        "incomes",
+        "limpieza_facturas",
+        "next",
+        "set",
+        "v_movimientos_activos"
+      ],
+      "rutaApi": null,
+      "hash": "362595bf928d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/cierre-mes.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/cierre-mes.ts — Cierre contable MENSUAL por unidad (piso o negocio). MÓDULO PURO (sin red ni BD: `node --test`). Las lecturas viven en `cierre-mes-db.ts`; el cron en `/api/cron/cierre-mes`. Cada unidad y mes se evalúa con seis checks, cada uno en TRES estados: · ok — comprobado y bien. · pendien",
+      "exporta": [
+        "nombreUnidad",
+        "pisosDelDestino",
+        "unidadesDeGasto",
+        "unidadesDeMovimiento",
+        "mesDe",
+        "finDeMes",
+        "mesSiguiente",
+        "sumarDias",
+        "etiquetaMes",
+        "checkBanco",
+        "facturasSinCargo",
+        "checkFacturas",
+        "coberturaFifo",
+        "cobroEnPlazo",
+        "checkCobrosOta",
+        "checkLimpieza",
+        "checkGastosFijos",
+        "buscarDuplicados",
+        "checkDuplicados",
+        "veredicto",
+        "evaluarUnidad",
+        "faseDelDia",
+        "hoyMadrid",
+        "mesACerrar",
+        "callbackCerrar",
+        "ofrecerCierre",
+        "interpretarCallbackCierre",
+        "formatearResumenCierre",
+        "paresBloqueados",
+        "paresDeGasto",
+        "mensajeBloqueo",
+        "titularidadDescuadrada",
+        "unidadesQueNoCuadran",
+        "lecturaCerradosFallidaBloquea"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreUnidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "unidad: string",
+          "retorno": "string",
+          "linea": 34
+        },
+        {
+          "nombre": "pisosDelDestino",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string",
+          "retorno": "string[]",
+          "linea": 39,
+          "resumen": "Pisos que comparten cuenta (pool de cobros) con `unidad`, incluida ella."
+        },
+        {
+          "nombre": "unidadesDeGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "propiedad: string | null | undefined",
+          "retorno": "string[]",
+          "linea": 47,
+          "resumen": "Unidades cuyo cierre afecta a un GASTO con esta `propiedad`. Compartido → todos los pisos (cambia el reparto de todos). Personal, vacío o desconocido → ninguna en F1 (los negocios aún no se cierran)."
+        },
+        {
+          "nombre": "unidadesDeMovimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string | null | undefined, propiedadId: string | null | undefined",
+          "retorno": "string[]",
+          "linea": 57,
+          "resumen": "Unidades afectadas por un MOVIMIENTO bancario. Con `propiedad_id` de un piso → ese piso. Sin él, el movimiento es del destino entero (el banco no separa pisos) → todos los pisos de ese destino."
+        },
+        {
+          "nombre": "mesDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | Date",
+          "retorno": "string",
+          "linea": 64,
+          "resumen": "── Fechas (strings 'YYYY-MM-DD' / 'YYYY-MM', sin zona horaria) ─────────────────────────────────────"
+        },
+        {
+          "nombre": "finDeMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 69
+        },
+        {
+          "nombre": "mesSiguiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, n = 1",
+          "retorno": "string",
+          "linea": 75
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, dias: number",
+          "retorno": "string",
+          "linea": 81
+        },
+        {
+          "nombre": "etiquetaMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 88
+        },
+        {
+          "nombre": "ddmm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": null,
+          "linea": 94
+        },
+        {
+          "nombre": "check",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: IdCheck, estado: EstadoCheck, detalle: string, items: string[] = [], aceptado = false",
+          "retorno": "Check",
+          "linea": 120
+        },
+        {
+          "nombre": "checkBanco",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentas: CuentaUnidad[] | null, mes: string",
+          "retorno": "Check",
+          "linea": 134,
+          "resumen": "`cuentas` null = no se pudieron leer · [] = ninguna cuenta identificada para la unidad."
+        },
+        {
+          "nombre": "facturasSinCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "facturas: FacturaUnidad[], cargos: CargoUnidad[]",
+          "retorno": "Apunte[]",
+          "linea": 163,
+          "resumen": "Facturas (gastos con documento) sin un cargo bancario que las pague: mismo importe (±1 € o ±2 %) entre 15 días antes y 45 después de la fecha de factura. Cada cargo paga UNA factura. Importe ≤ 0 → no "
+        },
+        {
+          "nombre": "checkFacturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "sinFactura: Apunte[] | null, sinCargo: Apunte[] | null",
+          "retorno": "Check",
+          "linea": 179
+        },
+        {
+          "nombre": "coberturaFifo",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaCobro[], abonos: AbonoCobro[], tolerancia = 1",
+          "retorno": "Map<string, boolean | null>",
+          "linea": 198,
+          "resumen": "¿Qué reservas cubre el dinero recibido? FIFO por checkout sobre el POOL de una cuenta (las OTAs agrupan reservas en una transferencia y el banco no separa pisos: misma idea que `sivra/cobros-ota.ts`)."
+        },
+        {
+          "nombre": "cobroEnPlazo",
+          "kind": "function",
+          "exportada": true,
+          "params": "canal: string, checkOut: string, hoy: string",
+          "retorno": "boolean",
+          "linea": 225,
+          "resumen": "¿Sigue siendo normal que no haya llegado? Expedia paga a MES VENCIDO: se acepta hasta fin del mes siguiente."
+        },
+        {
+          "nombre": "checkCobrosOta",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaMes[] | null, unidad: string, hoy: string",
+          "retorno": "Check",
+          "linea": 235,
+          "resumen": "`reservas` = las del MES de todo el pool (todas las unidades que cobran por la misma cuenta). Si en el pool falta dinero ya vencido, la unidad queda pendiente aunque el FIFO lo atribuya a otro piso: e"
+        },
+        {
+          "nombre": "checkLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: LimpiezaMes | null, unidad: string, mes: string, hoy: string",
+          "retorno": "Check",
+          "linea": 268,
+          "resumen": "Si que Brilla factura a MES VENCIDO: sin factura del periodo, se acepta hasta fin del mes siguiente."
+        },
+        {
+          "nombre": "checkGastosFijos",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: FijosMes | null",
+          "retorno": "Check",
+          "linea": 288
+        },
+        {
+          "nombre": "normConcepto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": null,
+          "linea": 309
+        },
+        {
+          "nombre": "buscarDuplicados",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: MovDuplicable[]",
+          "retorno": "GrupoDuplicado[]",
+          "linea": 312,
+          "resumen": "Grupos de misma cuenta + fecha + importe + concepto con más de un movimiento sin revisar."
+        },
+        {
+          "nombre": "checkDuplicados",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: MovDuplicable[] | null",
+          "retorno": "Check",
+          "linea": 326
+        },
+        {
+          "nombre": "veredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "checks: Check[]",
+          "retorno": "Veredicto",
+          "linea": 352
+        },
+        {
+          "nombre": "evaluarUnidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosCierreUnidad",
+          "retorno": "ResultadoUnidad",
+          "linea": 358
+        },
+        {
+          "nombre": "faseDelDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "dia: number",
+          "retorno": "Fase",
+          "linea": 374,
+          "resumen": "Día 5 → pre-cierre; día 15 → cierre. Cualquier otro día (disparo manual) → pre desde el 1 al 14."
+        },
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 379,
+          "resumen": "Fecha civil de Madrid ('YYYY-MM-DD') de un instante."
+        },
+        {
+          "nombre": "mesACerrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string",
+          "retorno": "string",
+          "linea": 384,
+          "resumen": "Mes anterior al de `hoy` ('YYYY-MM-DD')."
+        },
+        {
+          "nombre": "callbackCerrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 391
+        },
+        {
+          "nombre": "ofrecerCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "fase: Fase, res: { veredicto: Veredicto; estado: string | null }[]",
+          "retorno": "boolean",
+          "linea": 396,
+          "resumen": "Botón ✅ Cerrar mes: solo en la fase de cierre, si TODO cuadra y queda algo sin cerrar."
+        },
+        {
+          "nombre": "interpretarCallbackCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "action: string, args: string[]",
+          "retorno": "",
+          "linea": 401,
+          "resumen": "Interpreta `cmes_cerrar:AAAA-MM`. null = botón no válido."
+        },
+        {
+          "nombre": "resumenUnidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: ResultadoUnidad, estado: string | null",
+          "retorno": "string",
+          "linea": 409
+        },
+        {
+          "nombre": "formatearResumenCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { mes: string fase: Fase resultados: ResultadoUnidad[] estados?: Record<string, string | null> }",
+          "retorno": "string",
+          "linea": 420,
+          "resumen": "Telegram (HTML). UN mensaje con el resumen de todas las unidades y la lista de lo que falta."
+        },
+        {
+          "nombre": "paresBloqueados",
+          "kind": "function",
+          "exportada": true,
+          "params": "tocados: ParMesUnidad[], cerrados: ParMesUnidad[]",
+          "retorno": "ParMesUnidad[]",
+          "linea": 451,
+          "resumen": "Pares (mes, unidad) que una escritura toca y que están cerrados. Vacío = se puede escribir."
+        },
+        {
+          "nombre": "paresDeGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | null | undefined, propiedad: string | null | undefined",
+          "retorno": "ParMesUnidad[]",
+          "linea": 463,
+          "resumen": "Pares que toca un gasto con esta fecha y propiedad. Fecha inválida → ninguno (lo rechaza la validación)."
+        },
+        {
+          "nombre": "mensajeBloqueo",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: ParMesUnidad[]",
+          "retorno": "string",
+          "linea": 469
+        },
+        {
+          "nombre": "titularidadDescuadrada",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: { propiedadId: string; porcentaje: number }[]",
+          "retorno": "string[]",
+          "linea": 476,
+          "resumen": "Porcentajes por piso: cada piso debe sumar 100. Devuelve los pisos que NO suman 100."
+        },
+        {
+          "nombre": "unidadesQueNoCuadran",
+          "kind": "function",
+          "exportada": true,
+          "params": "resultados: { unidad: string; veredicto: Veredicto }[], estados: Record<string, string>",
+          "retorno": "string[]",
+          "linea": 487,
+          "resumen": "Unidades que impiden cerrar: no cuadran Y no están ya cerradas (un mes `cerrado` es un snapshot: lo que cambie después no lo bloquea; se corrige reabriéndolo)."
+        },
+        {
+          "nombre": "lecturaCerradosFallidaBloquea",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, hoy: string",
+          "retorno": "boolean",
+          "linea": 495,
+          "resumen": "Si falla la lectura de `cierres_mes` al generar fijos: 503 solo para meses PASADOS (podrían estar cerrados). El mes actual o futuro no puede estar cerrado, así que se sigue con el conjunto vacío."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b78a619bedab"
     },
     {
       "ruta": "apps/plataforma/lib/cierre-negocios.ts",
@@ -169804,7 +170372,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 276,
+          "linea": 279,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -169813,7 +170381,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 306,
+          "linea": 309,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -169822,7 +170390,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 328
+          "linea": 331
         },
         {
           "nombre": "ventanaMinutos",
@@ -169830,7 +170398,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 336,
+          "linea": 339,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -169839,13 +170407,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 348,
+          "linea": 351,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc25d084a41d"
+      "hash": "f4ba00e152a6"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -170298,10 +170866,10 @@
           "nombre": "eur",
           "kind": "function",
           "exportada": true,
-          "params": "n: number",
+          "params": "n: number | string | { toString(): string } | null | undefined",
           "retorno": "string",
-          "linea": 6,
-          "resumen": "Importe en euros con 2 decimales: 2162.49 → \"2.162,49€\", 8 → \"8,00€\"."
+          "linea": 7,
+          "resumen": "Importe en euros con 2 decimales: 2162.49 → \"2.162,49€\", 8 → \"8,00€\". Acepta también string numérico (\"10.90\", como llegan los numeric de $queryRaw) y Decimal de Prisma."
         },
         {
           "nombre": "eurSinDecimales",
@@ -170309,13 +170877,13 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 14,
+          "linea": 16,
           "resumen": "Importe en euros sin decimales: 2163 → \"2.163€\", 8 → \"8€\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "52512dbee65e"
+      "hash": "b1bbd3ba0a5b"
     },
     {
       "ruta": "apps/plataforma/lib/director-modelos.ts",
@@ -189697,9 +190265,9 @@
           "nombre": "generarGastosFijos",
           "kind": "function",
           "exportada": true,
-          "params": "year: number, month: number, opts: { commit?: boolean } = {}",
+          "params": "year: number, month: number, opts: { commit?: boolean; bloqueado?: (propiedad: string | null) => boolean } = {},",
           "retorno": "Promise<ResultadoGeneracion>",
-          "linea": 89
+          "linea": 91
         }
       ],
       "tablas": [
@@ -189708,7 +190276,7 @@
         "gastos_fijos"
       ],
       "rutaApi": null,
-      "hash": "06373f83d9d7"
+      "hash": "07ea5722b198"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/inversion-correos-puro.ts",
@@ -199317,7 +199885,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 883
+          "linea": 889
         },
         {
           "nombre": "avisosDe",
@@ -199325,7 +199893,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 888,
+          "linea": 894,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -199334,13 +199902,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 898,
+          "linea": 904,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "46294332ec58"
+      "hash": "66e03c132ec2"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -260868,7 +261436,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5440,
-    "funciones": 20991
+    "archivos": 5444,
+    "funciones": 21045
   }
 }
