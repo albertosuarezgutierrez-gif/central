@@ -44,6 +44,8 @@ import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex }
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
 import { PREFIJO_FACTURA_HUESPED, decidirBotonFactura } from '@/lib/sivra/facturas/telegram'
 import { resolverBotonFactura } from '@/lib/sivra/facturas/telegram-acciones'
+import { PREFIJO_CIERRE_MES, interpretarCallbackCierre, hoyMadrid, nombreUnidad, etiquetaMes } from '@/lib/cierre-mes'
+import { cerrarMes, cuentaDeLosPisos } from '@/lib/cierre-mes-db'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
 export const dynamic = 'force-dynamic'
@@ -1079,6 +1081,38 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         })
         if (mensajeId && d.accion !== 'cor') await tgEditMessage(mensajeId, `${original}\n\n${r.linea}`, r.botones ? { botones: r.botones } : {}).catch(() => {})
         else await tgSend(r.linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 📒 Cierre de mes: ✅ Cerrar mes (cmes_cerrar:<AAAA-MM>) ──
+    // Bloquea las escrituras de gastos de ese mes: solo la PERSONA autorizada. Se RECALCULA al pulsar y solo
+    // cierra si todas las unidades siguen cuadrando. Idempotente (UPDATE … WHERE estado <> 'cerrado').
+    if (prefix === PREFIJO_CIERRE_MES) {
+      if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+        await tgAnswerCallback(cb.id, 'No autorizado')
+        return NextResponse.json({ ok: true })
+      }
+      const dec = interpretarCallbackCierre(action, args)
+      if (!dec) { await tgAnswerCallback(cb.id, 'Botón no válido'); return NextResponse.json({ ok: true }) }
+      await tgAnswerCallback(cb.id, '⏳ Comprobando y cerrando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      after(async () => {
+        let linea: string
+        try {
+          const cuentaId = await cuentaDeLosPisos()
+          if (!cuentaId) throw new Error('sin cuenta única de los pisos')
+          const r = await cerrarMes(cuentaId, dec.mes, hoyMadrid(), 'telegram')
+          linea = r.noCuadran.length
+            ? `⚠️ <i>No se cierra: ya no cuadra ${escapeHtml(r.noCuadran.map(nombreUnidad).join(', '))}.</i>`
+            : `🔒 <b>${escapeHtml(etiquetaMes(dec.mes))} cerrado</b>${r.cerradas.length ? `: ${escapeHtml(r.cerradas.map(nombreUnidad).join(', '))}` : ' (ya lo estaba)'}.`
+        } catch (e) {
+          console.error('[tg] cierre de mes:', e instanceof Error ? e.message : e)
+          linea = '⚠️ <i>No sé si se ha cerrado (fallo interno): no repitas sin mirar cierres_mes.</i>'
+        }
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
       })
       return NextResponse.json({ ok: true })
     }

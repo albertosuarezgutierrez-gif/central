@@ -26,8 +26,8 @@ import {
 
 const HOY = '2026-09-01'
 
-// Vencimiento de la póliza de la cartera: HOY (inyectado, no el reloj real) + 30 días.
-// Las validaciones de fecha de efecto usan el HOY inyectado: el fixture va con el mismo, así no caduca ni depende del día.
+// Vencimiento de la póliza de la cartera: HOY + 30 días, con el MISMO reloj fijo que se inyecta a las
+// validaciones (el tope de efecto es HOY + 90). Mezclar reloj real y fijo rompió estos tests el 31/10/2026.
 const VENCIMIENTO_POLIZA = sumarDias(HOY, 30)
 
 const CLIENTE: ClienteCartera = {

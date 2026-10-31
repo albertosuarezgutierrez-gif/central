@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import { decidirBotonDescargaProyecto, esBotonDescargaProyecto, rechazoOcultoDescargaProyecto } from '../src/guard.ts'
 import { allianzAuto } from '../src/adapters/allianz/auto.ts'
 
-test('Allianz 0.6.35 · versión', () => assert.equal(allianzAuto.version, '0.6.35'))
+test('Allianz 0.6.35 · versión', () => assert.equal(allianzAuto.version, '0.6.36'))
 
 test('«Descargar propuesta» (y variantes con verbo de descarga) se acepta, con y sin proyecto guardado', () => {
   for (const t of ['Descargar propuesta', 'DESCARGAR PROPUESTA', 'Imprimir propuesta', 'Descargar PDF de la propuesta', 'Ver propuesta en PDF']) {

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { datosVehiculoDeInfoRiesgo } from '@central/module-seguros'
 import {
   botonesFalloBotLead, caben, carneDePersonaFicha, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
-  garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
+  garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, riesgoParaCompania, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
   valorarCompania, viviendasYLocalesDeTexto,
 } from './tarificacion-lead-puro.ts'
 
@@ -356,4 +356,53 @@ test('🪤 póliza viva vinculada: su compañía y antigüedad cubren «compañ�
   }
   const dicho = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'sin seguro anterior' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01' } })
   assert.notEqual(dicho.riesgo.companiaAnterior, 'Mapfre', 'lo que dice el cliente manda')
+})
+
+test('🪤 SINCO al tarificar: el nº de la póliza viva vinculada viaja al riesgo (solo 5 últimas cifras) si su compañía es la anterior', () => {
+  const { aseguradoAntes: _a, ...sinAntes } = COMPLETO as Record<string, unknown>
+  const base = { ramo: 'auto' as const, valores: sinAntes, bloque: null, fichaNacimiento: null, hoy: '2026-10-30' }
+  // Número SINTÉTICO (no es de ningún cliente).
+  const NUM = 'ZZ-000-0098765'
+  const f = formularioBotDesdeLead({ ...base, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal(f.riesgo.polizaAnteriorUltimos5, '98765')
+  assert.equal(JSON.stringify(f).includes(NUM), false, 'el número entero no sale')
+  assert.equal(JSON.stringify(f.supuestos).includes('98765'), false, 'ni en supuestos')
+  // Sin número, con menos de 5 cifras o sin póliza: no se inventa.
+  for (const pa of [{ aseguradora: 'Mapfre', desde: '2020-01-01' }, { aseguradora: 'Mapfre', desde: '2020-01-01', numero: 'AB-12' }, { aseguradora: 'Mapfre', desde: '2020-01-01', numero: null }]) {
+    assert.equal('polizaAnteriorUltimos5' in formularioBotDesdeLead({ ...base, polizaActual: pa }).riesgo, false)
+  }
+  assert.equal('polizaAnteriorUltimos5' in formularioBotDesdeLead(base).riesgo, false)
+  // La póliza no cuenta como anterior (menos de 1 año): su número tampoco.
+  assert.equal('polizaAnteriorUltimos5' in formularioBotDesdeLead({ ...base, polizaActual: { aseguradora: 'Mapfre', desde: '2026-06-01', numero: NUM } }).riesgo, false)
+  // El cliente dijo OTRA compañía: ese número no es el de su seguro anterior.
+  const otra = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'Con Allianz, llevo 6 años asegurado y sin partes' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal('polizaAnteriorUltimos5' in otra.riesgo, false)
+  // El cliente dijo la MISMA compañía: vale.
+  const misma = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'Con Mapfre, llevo 8 años asegurado y sin partes' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal(misma.riesgo.polizaAnteriorUltimos5, '98765')
+  // Dijo «sin seguro anterior» (0 años): nada.
+  const sinSeguro = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'sin seguro anterior' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal('polizaAnteriorUltimos5' in sinSeguro.riesgo, false)
+  // Misma compañía pero declara 0 años: no hay seguro anterior que consultar.
+  const cero = formularioBotDesdeLead({ ...base, valores: { ...sinAntes, aseguradoAntes: 'Con Mapfre, 0 años asegurado' }, polizaActual: { aseguradora: 'Mapfre', desde: '2020-01-01', numero: NUM } })
+  assert.equal(cero.riesgo.companiaAnterior, 'Mapfre')
+  assert.equal('polizaAnteriorUltimos5' in cero.riesgo, false)
+})
+
+test('🪤 SINCO al tarificar: polizaAnteriorUltimos5 solo viaja a las compañías cuyo bot lo teclea (mapfre, allianz)', () => {
+  const riesgo = { ramo: 'auto', matricula: 'TEST', polizaAnteriorUltimos5: '98765' }
+  for (const c of ['mapfre', 'allianz', ' Mapfre ']) assert.equal(riesgoParaCompania(c, riesgo).polizaAnteriorUltimos5, '98765', c)
+  for (const c of ['occident', 'generali', 'reale', '', null, undefined]) {
+    const r = riesgoParaCompania(c, riesgo)
+    assert.equal('polizaAnteriorUltimos5' in r, false, String(c))
+    assert.equal(r.matricula, 'TEST', 'el resto del riesgo no se toca')
+  }
+  assert.equal(riesgo.polizaAnteriorUltimos5, '98765', 'no muta')
+  const sinClave = { ramo: 'auto' }
+  assert.equal(riesgoParaCompania('occident', sinClave), sinClave)
+})
+
+test('🪤 tarificarLead aplica riesgoParaCompania al riesgo de cada compañía', () => {
+  const src = readFileSync(new URL('./tarificacion-lead.ts', import.meta.url), 'utf8')
+  assert.match(src, /riesgo: riesgoParaCompania\(v\.compania, val\.entrada\.riesgo\)/)
 })
