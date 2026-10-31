@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion, type EstadoDeclaracion } from '@/lib/comparativa-declaracion'
+import { getBaseDevengo, type BaseDevengo } from '@/lib/base-fiscal-devengo-db'
+import { importesDe, minimoPersonalYFamiliar } from '@/lib/fiscal-deducciones'
 import FiscalPageClient from './FiscalPageClient'
 
 export const dynamic = 'force-dynamic'
@@ -36,5 +38,21 @@ export default async function FiscalPage({
     }
   }
 
-  return <FiscalPageClient initialData={data} initialComparativa={comparativa} year={year} quarter={quarter} />
+  // Base por devengo («Hasta hoy» + «Estimación cierre de año»). Si falla, el bloque dice «sin dato».
+  let baseDevengo: BaseDevengo | null = null
+  try {
+    const imp = importesDe(year)
+    const cuota = data
+      ? {
+          tramos: imp.tramos,
+          minimoContribuyente: imp.minimoContribuyente,
+          minimoConjunta: minimoPersonalYFamiliar(data.deducciones.perfil, data.deducciones.descendientes, year, imp),
+        }
+      : null
+    baseDevengo = await getBaseDevengo(session.id, year, cuota)
+  } catch (e) {
+    console.error('[fiscal/page] base devengo', e)
+  }
+
+  return <FiscalPageClient initialData={data} initialComparativa={comparativa} baseDevengo={baseDevengo} year={year} quarter={quarter} />
 }
