@@ -73,6 +73,8 @@ export const CRON_JOBS: CronJob[] = [
   // 📒 Cierre contable MENSUAL por piso (lib/cierre-mes.ts): día 5 = pre-cierre, día 15 = cierre (con botón
   // ✅ Cerrar mes si todo cuadra), siempre del mes ANTERIOR. 07:17 UTC (minuto con jitter). Un solo Telegram.
   { path: '/api/cron/cierre-mes', schedule: '17 7 5,15 * *' },
+  // 🧾 Avisos fiscales a Alberto (lib/fiscal-alertas.ts): lunes Y días 5 y 15 (dom OR dow, como cron estándar). 07:41 UTC.
+  { path: '/api/cron/fiscal-avisos', schedule: '41 7 5,15 * 1' },
   { path: '/api/cron/facturas-conciliar-gmail', schedule: '30 6 * * *' },
   { path: '/api/cron/contable-proactivo', schedule: '0 9 * * 1' },
   { path: '/api/cron/concursos-ingesta', schedule: '30 */6 * * *' },

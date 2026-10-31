@@ -188,6 +188,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Días 5 (pre-cierre) y 15 (cierre) de cada mes a las 09:17 (08:17 en invierno)',
   },
   {
+    id: 'finanzas.fiscal-avisos', categoria: 'finanzas',
+    titulo: 'Avisos fiscales',
+    que: 'Umbral de 60.000€ de base liquidable a 31/12, cuentas sin movimientos, meses cerrados sin factura y, en diciembre, acciones antes del 31/12.',
+    cuando: 'Lunes y días 5 y 15 a las 09:41 (08:41 en invierno), solo si hay algo nuevo',
+  },
+  {
     id: 'finanzas.suscripciones', categoria: 'finanzas',
     titulo: 'Revisión de suscripciones',
     que: 'Gastos recurrentes (≥3 de los últimos 4 meses) con coste mensual y anual: ¿sigue valiendo?',
