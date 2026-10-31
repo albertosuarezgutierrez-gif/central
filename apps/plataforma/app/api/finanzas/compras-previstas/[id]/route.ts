@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { normalizarCompra } from '@/lib/fiscal-compras'
+import { pisoExiste } from '@/lib/fiscal-compras-db'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params
   const v = normalizarCompra(await req.json().catch(() => null))
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 })
+  if (!(await pisoExiste(v.valor.propertyId))) return NextResponse.json({ error: 'Piso inválido' }, { status: 400 })
   try {
     const r = await prisma.fiscalCompraPrevista.updateMany({
       where: { id, cuentaId: session.id },

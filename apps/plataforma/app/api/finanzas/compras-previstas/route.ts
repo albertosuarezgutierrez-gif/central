@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { normalizarCompra } from '@/lib/fiscal-compras'
-import { listarComprasPrevistas } from '@/lib/fiscal-compras-db'
+import { listarComprasPrevistas, pisoExiste } from '@/lib/fiscal-compras-db'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const v = normalizarCompra(await req.json().catch(() => null))
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 })
+  if (!(await pisoExiste(v.valor.propertyId))) return NextResponse.json({ error: 'Piso inválido' }, { status: 400 })
   try {
     const c = await prisma.fiscalCompraPrevista.create({
       data: {

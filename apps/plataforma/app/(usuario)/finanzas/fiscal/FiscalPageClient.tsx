@@ -325,7 +325,9 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
                       {r.deducciones.map(dd => (
                         <div key={dd.clave} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
                           <span style={{ color: 'var(--muted)' }}>− {dd.concepto}{dd.ambito === 'andalucia' ? ' 🌅' : ''}{dd.reembolsable ? ' ♻️' : ''}</span>
-                          <span style={{ fontWeight: 600, color: 'var(--primary)' }}>−{fmt(dd.importe)}</span>
+                          {dd.sinDato
+                            ? <span style={{ fontWeight: 600, color: 'var(--muted)' }}>sin dato (falta la cuota SS de la madre)</span>
+                            : <span style={{ fontWeight: 600, color: 'var(--primary)' }}>−{fmt(dd.importe)}</span>}
                         </div>
                       ))}
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
@@ -338,7 +340,7 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
                       </div>
                       <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>♻️ reembolsable · 🌅 Andalucía</div>
                       {r.deducciones.some(dd => dd.clave === 'maternidad') && (
-                        <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>ℹ️ La maternidad se prorratea por meses en el año de nacimiento, pero no está topada por las cotizaciones de la madre ese periodo — orientativa; el borrador AEAT manda.</div>
+                        <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>ℹ️ La maternidad se prorratea por meses y se topa por hijo con las cuotas SS de la madre (art. 81); sin ese dato no se calcula y el resultado no la incluye — el borrador AEAT manda.</div>
                       )}
                     </>
                   )

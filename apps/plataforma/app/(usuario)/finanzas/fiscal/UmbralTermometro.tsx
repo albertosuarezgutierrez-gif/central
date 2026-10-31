@@ -56,7 +56,7 @@ export default function UmbralTermometro({ sel, onSel, hoy, cierre, rango, conPa
         <div role="radiogroup" aria-label="Modalidad de declaración" style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 999, overflow: 'hidden' }}>
           {SELECCIONES.map(s => (
             <button key={s.id} type="button" role="radio" aria-checked={sel === s.id} onClick={() => onSel(s.id)}
-              style={{ minHeight: 44, minWidth: 44, padding: '0 14px', fontSize: 13, fontWeight: sel === s.id ? 700 : 500, border: 'none', cursor: 'pointer', background: sel === s.id ? 'var(--primary)' : 'var(--surface)', color: sel === s.id ? '#fff' : 'var(--text)' }}>
+              style={{ minHeight: 44, minWidth: 44, padding: '0 14px', fontSize: 13, fontWeight: sel === s.id ? 700 : 500, border: 'none', cursor: 'pointer', background: sel === s.id ? 'var(--primary)' : 'var(--surface)', color: sel === s.id ? 'var(--surface)' : 'var(--text)' }}>
               {s.etiqueta}
             </button>
           ))}

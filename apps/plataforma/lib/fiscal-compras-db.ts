@@ -16,3 +16,14 @@ export async function listarComprasPrevistas(cuentaId: string): Promise<CompraGu
     return null
   }
 }
+
+/** ¿El piso existe en la titularidad fiscal? (la tabla no tiene FK a `properties`: el id lo valida la app). */
+export async function pisoExiste(propertyId: string): Promise<boolean> {
+  try {
+    const r = await prisma.$queryRaw<Array<{ n: number }>>`SELECT 1 AS n FROM propiedad_titularidad WHERE propiedad_id = ${propertyId} LIMIT 1`
+    return r.length > 0
+  } catch (e) {
+    console.error('[fiscal-compras] pisoExiste:', e instanceof Error ? e.message : e)
+    return false
+  }
+}
