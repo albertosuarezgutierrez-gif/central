@@ -8,8 +8,10 @@ import { BtnLink, PageHeader } from '@/components/ui'
 import ConsejoFiscalBox from '../ConsejoFiscalBox'
 import BaseDevengoBloque from './BaseDevengoBloque'
 import type { BaseDevengo } from '@/lib/base-fiscal-devengo-db'
+import type { CompraGuardada, PanelDatos } from '@/lib/fiscal-panel'
+import PanelFiscal from './PanelFiscal'
 
-type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; baseDevengo: BaseDevengo | null; year: number; quarter: number }
+type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; baseDevengo: BaseDevengo | null; panel: PanelDatos | null; compras: CompraGuardada[] | null; year: number; quarter: number }
 
 function fmt(n: number) {
   return eur(n)
@@ -133,7 +135,7 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
   )
 }
 
-export default function FiscalPageClient({ initialData, initialComparativa, baseDevengo, year: initYear, quarter: initQuarter }: Props) {
+export default function FiscalPageClient({ initialData, initialComparativa, baseDevengo, panel, compras, year: initYear, quarter: initQuarter }: Props) {
   const router = useRouter()
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [year, setYear] = useState(initYear)
@@ -183,10 +185,18 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
         </>}
       />
 
+      {/* Panel fiscal: lo primero. Sin base por devengo o sin perfil → «sin dato» (nunca 0). */}
+      {panel ? <PanelFiscal datos={panel} compras={compras} /> : (
+        <div style={{ padding: 16, marginBottom: 16, border: '1px dashed var(--muted)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--muted)' }}>
+          Sin dato: no se pudo calcular el panel fiscal (base por devengo o perfil fiscal no disponibles).
+        </div>
+      )}
+
       {!d ? (
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Sin datos para este periodo.</div>
       ) : (
-        <>
+        <details style={{ marginBottom: 16 }}>
+          <summary style={{ minHeight: 44, display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>Detalle: bloques, pisos, meses, trimestral, IVA, deducciones e histórico</summary>
           {/* Base por devengo: hasta hoy + estimación de cierre (fuente fiscal correcta) */}
           <BaseDevengoBloque data={baseDevengo} />
 
@@ -362,7 +372,7 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
           </div>
 
           {formOpen && <SituacionFamiliarForm ded={d.deducciones} onClose={() => setFormOpen(false)} onSaved={refresh} />}
-        </>
+        </details>
       )}
     </main>
   )

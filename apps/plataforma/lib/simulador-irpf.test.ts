@@ -65,6 +65,20 @@ test('mínimos en individual: descendientes a partes iguales → 12.900€ cada 
   assert.deepEqual(ind.map(c => c.minimo), [12900, 12900])
 })
 
+test('mínimos AUTONÓMICOS de Andalucía separados de los estatales (5.790 / 2.510 / 2.820)', () => {
+  cerca(P.minimoAutonomicoContribuyente, 5790)
+  // 3 hijos: 1.º y 2.º con escala andaluza (+110, +120); el resto = estatal (14.700 + 230).
+  cerca(P.minimoAutonomicoDescendientes, 14930)
+  const c = declarar(entrada(), SIN_PALANCAS, 'conjunta').contribuyentes[0]
+  cerca(c.minimo, 20250) // el estatal no cambia
+  cerca(c.minimoAutonomico, 20720)
+  // La cuota autonómica se calcula con SU mínimo, no con el estatal.
+  cerca(c.cuota?.autonomica, Math.max(0, cuotaEscala(c.baseLiquidable!, ESCALA_ANDALUCIA_2026) - cuotaEscala(20720, ESCALA_ANDALUCIA_2026)))
+  cerca(c.cuota?.estatal, Math.max(0, cuotaEscala(c.baseLiquidable!, ESCALA_ESTATAL_2026) - cuotaEscala(20250, ESCALA_ESTATAL_2026)))
+  const ind = declarar(entrada(), SIN_PALANCAS, 'individual').contribuyentes
+  cerca(ind[0].minimoAutonomico, 5790 + 14930 / 2)
+})
+
 // ── Umbral 60.000€ ──────────────────────────────────────────────────────────────────────────
 test('umbral: 59.999,99€ marginal 37 %', () => { cerca(tipoMarginal(59999.99, 12900, P), 0.37, 1e-9) })
 test('umbral: 60.000€ exactos sigue al 37 %', () => { cerca(tipoMarginal(60000, 12900, P), 0.37, 1e-9) })

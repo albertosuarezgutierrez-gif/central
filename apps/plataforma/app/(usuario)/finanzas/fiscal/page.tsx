@@ -4,6 +4,8 @@ import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion, type EstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { getBaseDevengo, type BaseDevengo } from '@/lib/base-fiscal-devengo-db'
 import { importesDe, minimoPersonalYFamiliar } from '@/lib/fiscal-deducciones'
+import { armarPanel, type PanelDatos } from '@/lib/fiscal-panel'
+import { listarComprasPrevistas } from '@/lib/fiscal-compras-db'
 import FiscalPageClient from './FiscalPageClient'
 
 export const dynamic = 'force-dynamic'
@@ -54,5 +56,20 @@ export default async function FiscalPage({
     console.error('[fiscal/page] base devengo', e)
   }
 
-  return <FiscalPageClient initialData={data} initialComparativa={comparativa} baseDevengo={baseDevengo} year={year} quarter={quarter} />
+  // Panel fiscal (F2): datos serializables para el motor en cliente. Sin `data` (perfil/hijos) no se puede fijar el mínimo familiar → sin panel.
+  let panel: PanelDatos | null = null
+  let compras = null
+  if (baseDevengo && data) {
+    try {
+      panel = armarPanel(baseDevengo, {
+        descendientes: data.deducciones.descendientes.map(h => ({ nombre: h.nombre, fechaNacimiento: h.fechaNacimiento, gradoDiscapacidad: h.gradoDiscapacidad, computoCompleto: h.computoCompleto })),
+        conyugeTrabaja: data.deducciones.perfil.conyugeTrabaja,
+      })
+      compras = await listarComprasPrevistas(session.id)
+    } catch (e) {
+      console.error('[fiscal/page] panel', e)
+    }
+  }
+
+  return <FiscalPageClient initialData={data} initialComparativa={comparativa} baseDevengo={baseDevengo} panel={panel} compras={compras} year={year} quarter={quarter} />
 }

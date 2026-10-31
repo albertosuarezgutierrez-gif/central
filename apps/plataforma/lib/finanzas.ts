@@ -313,7 +313,7 @@ async function getDeducciones(
     conyuge_trabaja: boolean; gasto_guarderia_anual: unknown; aportacion_plan_pensiones: unknown
     grado_discapacidad_titular: number; grado_discapacidad_conyuge: number
     ascendientes_a_cargo: number; ascendientes_mayores_75: number; donativos_anual: unknown
-    gasto_deportivo_anual: unknown
+    gasto_deportivo_anual: unknown; conyuge_cuota_autonomos: unknown
   }>>`SELECT * FROM fiscal_perfil WHERE cuenta_id = ${cuentaId}::uuid LIMIT 1`
 
   const perfil: PerfilFiscal = perfilRows[0]
@@ -330,6 +330,8 @@ async function getDeducciones(
         ascendientesMayores75: perfilRows[0].ascendientes_mayores_75,
         donativosAnual: Number(perfilRows[0].donativos_anual),
         gastoDeportivoAnual: Number(perfilRows[0].gasto_deportivo_anual ?? 0),
+        // Cuotas SS/RETA anuales de la madre (tope art. 81). NULL = sin dato ⇒ maternidad «sin dato», nunca 0.
+        cuotasSSMadreAnual: perfilRows[0].conyuge_cuota_autonomos == null ? null : Number(perfilRows[0].conyuge_cuota_autonomos),
       }
     : { ...PERFIL_DEFECTO }
 

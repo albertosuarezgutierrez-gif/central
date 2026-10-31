@@ -52,6 +52,13 @@ export type ParametrosIrpf = {
   minimoContribuyente: number
   /** Mínimo por descendientes TOTAL de la unidad familiar (en individual se reparte a partes iguales, art. 61 LIRPF). */
   minimoDescendientes: number
+  /**
+   * Mínimos AUTONÓMICOS de Andalucía (distintos de los estatales en contribuyente y 1.º/2.º descendiente).
+   * [Probable] 5.790€ / 2.510€ / 2.820€ (fuentes secundarias, sin BOJA verificado). El resto = estatales
+   * [Suposición]: verificar Manual Renta AEAT, Andalucía: importes del mínimo familiar.
+   */
+  minimoAutonomicoContribuyente: number
+  minimoAutonomicoDescendientes: number
   reduccionConjunta: number
   umbral: number
   /** Plan de pensiones propio (art. 52.1 LIRPF): menor de 1.500€ y 30 % de rend. netos trabajo + actividades. */
@@ -70,13 +77,28 @@ const PERFIL_NEUTRO: PerfilFiscal = {
   ascendientesACargo: 0, ascendientesMayores75: 0, donativosAnual: 0, gastoDeportivoAnual: 0,
 }
 
-/** Parámetros 2026 con los mínimos legales de `IMPORTES_POR_ANIO` (mínimos autonómicos = estatales [Suposición]). */
+const MIN_AUT_CONTRIBUYENTE = 5790
+const MIN_AUT_DESCENDIENTE = [2510, 2820] // 1.º y 2.º; del 3.º en adelante = estatal [Suposición]
+
+/** Mínimo por descendientes autonómico: el estatal con la escala andaluza en el 1.º y 2.º hijo (mismos incrementos). */
+function minimoDescendientesAutonomico(minimoEstatal: number, descendientes: Descendiente[], imp: ReturnType<typeof importesDe>): number {
+  const orden = [...descendientes].sort((a, b) => Number(a.fechaNacimiento.slice(0, 4)) - Number(b.fechaNacimiento.slice(0, 4)))
+  let delta = 0
+  orden.slice(0, MIN_AUT_DESCENDIENTE.length).forEach((h, i) => {
+    delta += (MIN_AUT_DESCENDIENTE[i] - imp.minimoDescendiente[Math.min(i, imp.minimoDescendiente.length - 1)]) * (h.computoCompleto ? 1 : 0.5)
+  })
+  return minimoEstatal + delta
+}
+
+/** Parámetros 2026 con los mínimos legales de `IMPORTES_POR_ANIO` (mínimos autonómicos de Andalucía propios: ver minimoAutonomico*). */
 export function parametrosIrpf(anio: number, descendientes: Descendiente[]): ParametrosIrpf {
   const imp = importesDe(anio)
   const minimoDescendientes = minimoPersonalYFamiliar(PERFIL_NEUTRO, descendientes, anio, imp) - imp.minimoContribuyente
   return {
     anio, estatal: ESCALA_ESTATAL_2026, autonomica: ESCALA_ANDALUCIA_2026,
     minimoContribuyente: imp.minimoContribuyente, minimoDescendientes,
+    minimoAutonomicoContribuyente: MIN_AUT_CONTRIBUYENTE,
+    minimoAutonomicoDescendientes: minimoDescendientesAutonomico(minimoDescendientes, descendientes, imp),
     reduccionConjunta: REDUCCION_CONJUNTA, umbral: UMBRAL_TARIFA_ALTA,
     planPropioTope: imp.limitePlanPensiones, planPropioPct: 0.3,
     planConyugeTope: 1000, planConyugeRentaMax: 8000, donativoLimiteBase: 0.1,
@@ -94,20 +116,25 @@ function tipoEn(base: number, e: Escala): number {
   return (e.tramos.find(t => base > t.desde && base <= (t.hasta ?? Infinity)) ?? e.tramos[e.tramos.length - 1]).tipo
 }
 
+/** Mínimo personal y familiar por escala. Un `number` suelto significa el MISMO mínimo en ambas (solo tests/legado). */
+export type Minimos = { estatal: number; autonomico: number }
+const minimos = (m: number | Minimos): Minimos => (typeof m === 'number' ? { estatal: m, autonomico: m } : m)
+
 export type CuotaIntegra = { estatal: number; autonomica: number; total: number }
 /** Cuota íntegra = Σ escala [escala(base liquidable) − escala(mínimo)], cada una ≥ 0. */
-export function cuotaIntegra(baseLiquidable: number, minimo: number, p: ParametrosIrpf): CuotaIntegra {
-  const una = (e: Escala) => Math.max(0, cuotaEscala(baseLiquidable, e) - cuotaEscala(minimo, e))
-  const estatal = una(p.estatal), autonomica = una(p.autonomica)
+export function cuotaIntegra(baseLiquidable: number, minimo: number | Minimos, p: ParametrosIrpf): CuotaIntegra {
+  const m = minimos(minimo)
+  const una = (e: Escala, min: number) => Math.max(0, cuotaEscala(baseLiquidable, e) - cuotaEscala(min, e))
+  const estatal = una(p.estatal, m.estatal), autonomica = una(p.autonomica, m.autonomico)
   return { estatal, autonomica, total: estatal + autonomica }
 }
 /** Tipo marginal combinado (estatal + autonómico). 0 mientras la base no supera el mínimo. */
-export function tipoMarginal(baseLiquidable: number, minimo: number, p: ParametrosIrpf): number {
-  if (baseLiquidable <= minimo) return 0
-  return tipoEn(baseLiquidable, p.estatal) + tipoEn(baseLiquidable, p.autonomica)
+export function tipoMarginal(baseLiquidable: number, minimo: number | Minimos, p: ParametrosIrpf): number {
+  const m = minimos(minimo)
+  return (baseLiquidable > m.estatal ? tipoEn(baseLiquidable, p.estatal) : 0) + (baseLiquidable > m.autonomico ? tipoEn(baseLiquidable, p.autonomica) : 0)
 }
 /** Cuánto sube la cuota si la base sube `delta` (negativo = cuánto baja). */
-export function costeMarginal(baseLiquidable: number, minimo: number, p: ParametrosIrpf, delta = 1000): number {
+export function costeMarginal(baseLiquidable: number, minimo: number | Minimos, p: ParametrosIrpf, delta = 1000): number {
   return cuotaIntegra(Math.max(0, baseLiquidable + delta), minimo, p).total - cuotaIntegra(baseLiquidable, minimo, p).total
 }
 
@@ -245,7 +272,10 @@ export type ResultadoContribuyente = {
   baseImponible: number | null
   reducciones: number
   baseLiquidable: number | null
+  /** Mínimo ESTATAL. */
   minimo: number
+  /** Mínimo AUTONÓMICO (Andalucía). */
+  minimoAutonomico: number
   cuota: CuotaIntegra | null
   tipoMarginal: number | null
   /** umbral − base liquidable: negativo = te pasas. */
@@ -337,7 +367,7 @@ export function limitesPlanes(e: EntradaSimulador): { propio: PorTitular<number 
 }
 
 function contribuyente(
-  titular: ResultadoContribuyente['titular'], baseImponible: number | null, reducciones: number, minimo: number,
+  titular: ResultadoContribuyente['titular'], baseImponible: number | null, reducciones: number, minimo: Minimos,
   donado: number, ret: number | null, pf: number | null, p: ParametrosIrpf,
 ): ResultadoContribuyente {
   const bl = baseImponible == null ? null : Math.max(0, baseImponible - reducciones)
@@ -345,7 +375,7 @@ function contribuyente(
   const ded = bl == null || cuota == null ? null : Math.min(cuota.total, deduccionDonativos(donado, bl, p))
   const liq = cuota == null || ded == null ? null : cuota.total - ded
   return {
-    titular, baseImponible, reducciones, baseLiquidable: bl, minimo, cuota,
+    titular, baseImponible, reducciones, baseLiquidable: bl, minimo: minimo.estatal, minimoAutonomico: minimo.autonomico, cuota,
     tipoMarginal: bl == null ? null : tipoMarginal(bl, minimo, p),
     distanciaUmbral: bl == null ? null : p.umbral - bl,
     cada1000: bl == null ? null : costeMarginal(bl, minimo, p, 1000),
@@ -361,7 +391,8 @@ export function declarar(e: EntradaSimulador, pal: Palancas, modo: Modo): Result
   if (modo === 'conjunta') {
     const red = x.reduccion.alberto + x.reduccion.pilar + p.reduccionConjunta
     const c = contribuyente(
-      'unidad_familiar', x.bases.total, red, p.minimoContribuyente + p.minimoDescendientes,
+      'unidad_familiar', x.bases.total, red,
+      { estatal: p.minimoContribuyente + p.minimoDescendientes, autonomico: p.minimoAutonomicoContribuyente + p.minimoAutonomicoDescendientes },
       x.donado.alberto + x.donado.pilar, sumaN([e.retenciones.alberto, e.retenciones.pilar]),
       sumaN([e.pagosFraccionados.alberto, e.pagosFraccionados.pilar]), p,
     )
@@ -376,7 +407,10 @@ export function declarar(e: EntradaSimulador, pal: Palancas, modo: Modo): Result
     }
     return { modo, contribuyentes: [c], cuotaIntegra: c.cuota?.total ?? null, cuotaLiquida: c.cuotaLiquida, cuotaDiferencial: c.cuotaDiferencial, avisos: x.avisos }
   }
-  const minInd = p.minimoContribuyente + p.minimoDescendientes / 2
+  const minInd: Minimos = {
+    estatal: p.minimoContribuyente + p.minimoDescendientes / 2,
+    autonomico: p.minimoAutonomicoContribuyente + p.minimoAutonomicoDescendientes / 2,
+  }
   const cs = (['alberto', 'pilar'] as const).map(t =>
     contribuyente(t, x.bases[t], x.reduccion[t], minInd, x.donado[t], e.retenciones[t], e.pagosFraccionados[t], p))
   return {
@@ -522,7 +556,7 @@ export function simularEscenario(e: EntradaSimulador, propuestas: Palancas, etiq
       for (const t of tit) {
         const ct = individual.contribuyentes.find(x => x.titular === t.titular)
         if (!ct || ct.baseLiquidable == null) { ahorroSiEn2027 = null; break }
-        ahorroSiEn2027 += (g * t.porcentaje) / 100 * tipoMarginal(ct.baseLiquidable, ct.minimo, p27)
+        ahorroSiEn2027 += (g * t.porcentaje) / 100 * tipoMarginal(ct.baseLiquidable, { estatal: ct.minimo, autonomico: ct.minimoAutonomico }, p27)
       }
     }
     const motivo = c.tipo === 'reparacion' || c.tipo === 'consumible'

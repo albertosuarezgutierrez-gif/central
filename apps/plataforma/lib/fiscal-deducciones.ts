@@ -138,6 +138,13 @@ export type PerfilFiscal = {
   donativosRecurrentes?: boolean
   // Gasto en actividades deportivas (Andalucía D.A.1ª Ley 7/2021): 15% sobre base máx. €100.
   gastoDeportivoAnual: number
+  /**
+   * Cotizaciones y cuotas TOTALES a la SS/mutualidad devengadas por la madre en el ejercicio
+   * (art. 81 LIRPF: tope de maternidad + guardería). Netas de cuotas exoneradas durante la
+   * prestación por nacimiento [Probable]. `undefined`/`null` = «sin dato» ⇒ la maternidad y el
+   * incremento NO se calculan (importe `null`), nunca se devuelve el importe sin tope.
+   */
+  cuotasSSMadreAnual?: number | null
 }
 
 export type Descendiente = {
@@ -153,6 +160,8 @@ export type LineaDeduccion = {
   importe: number
   ambito: 'estatal' | 'andalucia'
   reembolsable: boolean // maternidad/FN devuelven aunque no haya cuota
+  /** true ⇒ no se pudo calcular (falta un dato): `importe` es 0 de relleno y la UI debe mostrar «sin dato». */
+  sinDato?: boolean
 }
 
 export type ResultadoFiscal = {
@@ -171,6 +180,76 @@ const anioNacimiento = (fecha: string) => parseInt(fecha.slice(0, 4), 10)
 /** Menor de 3 años a efectos del incremento del mínimo y de la maternidad. */
 export function esMenor3(fechaNacimiento: string, anio: number): boolean {
   return anio - anioNacimiento(fechaNacimiento) <= 2
+}
+
+/**
+ * Meses del ejercicio `anio` en los que el hijo es menor de 3 años (base de la maternidad).
+ * Cuenta desde el mes de nacimiento (inclusive) y deja de contar EL MES en que cumple 3 años
+ * [Probable: criterio AEAT de meses completos]. Ej.: nacido 11/04/2024 → 2024: 9 · 2025/2026: 12 ·
+ * 2027: 3 (ene-mar) · 2028: 0. Se lee la fecha por texto (sin zona horaria).
+ */
+export function mesesMenor3(fechaNacimiento: string, anio: number): number {
+  const a = parseInt(fechaNacimiento.slice(0, 4), 10)
+  const m = parseInt(fechaNacimiento.slice(5, 7), 10) - 1 // 0-11
+  const inicio = anio < a ? 12 : anio === a ? m : 0
+  const fin = anio < a + 3 ? 12 : anio === a + 3 ? m : 0
+  return Math.max(0, fin - inicio)
+}
+
+export type ResultadoMaternidad = {
+  /** Importe antes del tope (maternidad / incremento). */
+  maternidadBruta: number
+  guarderiaBruta: number
+  /** Tope por cotizaciones; null = sin dato de cuotas. */
+  tope: number | null
+  /** null = sin dato (no hay cuotas): nunca el importe sin tope. */
+  maternidad: number | null
+  guarderia: number | null
+  hijosConDerecho: number
+}
+
+/**
+ * Maternidad (art. 81 LIRPF) + incremento por guardería con el TOPE LITERAL POR HIJO: la deducción
+ * de cada hijo (100 €/mes <3 + su parte del incremento de guardería, máx. 1.000 €) no puede exceder
+ * las cotizaciones/cuotas SS de la madre devengadas en el ejercicio con posterioridad al nacimiento
+ * (hijo nacido antes del 1/1: las del año completo; nacido en el año: cuotas × meses desde el mes
+ * de nacimiento / 12). Cada hijo tiene su propio límite (con 2 hijos puede llegar a 2 × cuotas).
+ * El gasto de guardería (dato único del perfil) se reparte a partes iguales entre los hijos con
+ * derecho, máx. 1.000 € cada uno. Maternidad primero; la guardería usa lo que quede del límite.
+ */
+export function calcularMaternidadGuarderia(
+  perfil: PerfilFiscal,
+  descendientes: Descendiente[],
+  anio: number,
+  imp: ImportesAnio = importesDe(anio),
+): ResultadoMaternidad {
+  const hijos = descendientes
+    .map(h => ({ meses: mesesMenor3(h.fechaNacimiento, anio), nacEsteAnio: parseInt(h.fechaNacimiento.slice(0, 4), 10) === anio, mesNac: parseInt(h.fechaNacimiento.slice(5, 7), 10) - 1 }))
+    .filter(h => h.meses > 0)
+  if (!perfil.conyugeTrabaja || hijos.length === 0) {
+    return { maternidadBruta: 0, guarderiaBruta: 0, tope: 0, maternidad: 0, guarderia: 0, hijosConDerecho: 0 }
+  }
+  const matH = hijos.map(h => imp.maternidadPorHijo * (h.meses / 12))
+  const maternidadBruta = Math.round(matH.reduce((s, m) => s + m, 0))
+  const guarderiaBruta = perfil.gastoGuarderiaAnual > 0
+    ? Math.min(perfil.gastoGuarderiaAnual, imp.maternidadGuarderiaMax * hijos.length)
+    : 0
+  const cuotas = perfil.cuotasSSMadreAnual
+  if (cuotas == null || !Number.isFinite(cuotas)) {
+    return { maternidadBruta, guarderiaBruta, tope: null, maternidad: null, guarderia: perfil.gastoGuarderiaAnual > 0 ? null : 0, hijosConDerecho: hijos.length }
+  }
+  const c = Math.max(0, cuotas)
+  const guardH = guarderiaBruta / hijos.length
+  let tope = 0, maternidad = 0, guarderia = 0
+  hijos.forEach((h, i) => {
+    const capH = h.nacEsteAnio ? c * ((12 - h.mesNac) / 12) : c
+    const m = Math.min(matH[i], capH)
+    tope += capH
+    maternidad += m
+    guarderia += Math.min(guardH, Math.max(0, capH - m))
+  })
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  return { maternidadBruta, guarderiaBruta, tope: r2(tope), maternidad: r2(maternidad), guarderia: r2(guarderia), hijosConDerecho: hijos.length }
 }
 
 /** Edad cumplida a 31-dic del año fiscal. */
@@ -236,34 +315,22 @@ export function calcularDeducciones(
   baseParaLimites?: number,
 ): LineaDeduccion[] {
   const lineas: LineaDeduccion[] = []
-  const menores3 = descendientes.filter(h => esMenor3(h.fechaNacimiento, anio))
-
-  // Maternidad (madre con actividad): €1.200/año (€100/mes) por hijo < 3 + incremento guardería.
-  // PRORRATEO por mes: en el AÑO de nacimiento solo cuentan los meses desde el nacimiento (un hijo
-  // nacido en nov. da 2/12 ≈ €200, no €1.200). Los hijos nacidos en años anteriores (y aún < 3) dan
-  // el año completo. ⚠️ Sigue SIN topar por las cotizaciones de la madre ese periodo (dato que no
-  // tenemos aquí) → puede sobreestimar si la madre cotizó poco; es orientativo (borrador AEAT manda).
-  if (perfil.conyugeTrabaja && menores3.length > 0) {
-    const importeMaternidad = Math.round(
-      menores3.reduce((s, h) => {
-        const nacEsteAnio = anioNacimiento(h.fechaNacimiento) === anio
-        // getMonth() 0-11 → meses con derecho en el año de nacimiento = de su mes a diciembre.
-        const meses = nacEsteAnio ? 12 - new Date(h.fechaNacimiento).getMonth() : 12
-        return s + imp.maternidadPorHijo * (meses / 12)
-      }, 0),
-    )
+  // Maternidad (madre con actividad, art. 81 LIRPF): 100 €/mes por hijo < 3 + incremento guardería
+  // (hasta 1.000 €/hijo). Meses por hijo con `mesesMenor3` (año de nacimiento y año en que cumple 3)
+  // y TOPE conjunto por cotizaciones SS de la madre (`calcularMaternidadGuarderia`). Sin cuotas ⇒
+  // línea `sinDato` (importe 0 de relleno), nunca el importe sin tope.
+  const mat = calcularMaternidadGuarderia(perfil, descendientes, anio, imp)
+  if (perfil.conyugeTrabaja && mat.hijosConDerecho > 0) {
     lineas.push({
       clave: 'maternidad', ambito: 'estatal', reembolsable: true,
-      concepto: `Deducción por maternidad (${menores3.length} hijo/s < 3)`,
-      importe: importeMaternidad,
+      concepto: `Deducción por maternidad (${mat.hijosConDerecho} hijo/s < 3)`,
+      importe: mat.maternidad ?? 0, ...(mat.maternidad === null ? { sinDato: true } : {}),
     })
     if (perfil.gastoGuarderiaAnual > 0) {
       lineas.push({
         clave: 'guarderia', ambito: 'estatal', reembolsable: true,
         concepto: 'Incremento por gastos de guardería/custodia',
-        // Art. 81 LIRPF (AEAT, incremento por gastos de custodia): hasta 1.000 € POR HIJO < 3.
-        // El nº de hijos elegibles sale de `descendientes` (menores3); nunca se asume 1.
-        importe: Math.min(perfil.gastoGuarderiaAnual, imp.maternidadGuarderiaMax * menores3.length),
+        importe: mat.guarderia ?? 0, ...(mat.guarderia === null ? { sinDato: true } : {}),
       })
     }
   }
@@ -377,7 +444,7 @@ export function deduccionesAplicablesNoMarcadas(
   anio: number,
 ): { clave: string; motivo: string }[] {
   const sugerencias: { clave: string; motivo: string }[] = []
-  const hayMenor3 = descendientes.some(h => esMenor3(h.fechaNacimiento, anio))
+  const hayMenor3 = descendientes.some(h => mesesMenor3(h.fechaNacimiento, anio) > 0)
   if (hayMenor3 && perfil.conyugeTrabaja && perfil.gastoGuarderiaAnual === 0) {
     sugerencias.push({ clave: 'guarderia', motivo: 'Tienes hijos < 3 y madre con actividad: si pagas guardería puedes sumar hasta 1.000 €/año.' })
   }

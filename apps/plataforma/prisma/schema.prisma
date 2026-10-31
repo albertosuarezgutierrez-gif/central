@@ -83,6 +83,22 @@ model FiscalDescendiente {
   @@map("fiscal_descendientes")
 }
 
+model FiscalCompraPrevista {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId      String    @map("cuenta_id") @db.Uuid
+  descripcion   String    @default("")
+  importe       Decimal   @db.Decimal(12, 2)
+  propertyId    String    @map("property_id")
+  /// null = sin clasificar → el motor no la cuenta.
+  tipo          String?
+  fechaPrevista DateTime? @map("fecha_prevista") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@map("fiscal_compras_previstas")
+}
+
 model FiscalNovedad {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   anio            Int
