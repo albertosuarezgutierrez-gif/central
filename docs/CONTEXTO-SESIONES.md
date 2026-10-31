@@ -11,6 +11,10 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (31/10/2026) Fiscal · panel por devengo + simulador IRPF + hechos guardados
+- Panel fiscal por devengo mergeado (#5308). Simulador IRPF + pantalla nueva + tope de maternidad por hijo en #5310. Tabla `fiscal_compras_previstas` aplicada. Codeoscopic reclasificado (gasto de la correduría, no de pisos).
+- Hechos confirmados por Alberto (31/10) guardados en la skill `perfil-fiscal` («Hechos confirmados»): no volver a preguntarlos. Fuente viva: `/finanzas/fiscal` + `fiscal_perfil`, `propiedad_titularidad`.
+- Pendiente: cuota de autónomos de Pilar (¿mensual o anual?); retenciones y pagos fraccionados; feeds bancarios parados; requerimiento AEAT de Punto y Coma (no tocar la SL hasta cerrarlo).
 ## (30/10/2026) Asegura · icono en el correo de avisos + por qué no se felicita a un ex-cliente
 - Correo de avisos de la intranet (`apps/asegura/lib/correo-avisos-intranet.ts`): UN emoji al principio del asunto (por ramo 🏠🚗🏍️…, por tipo `ICONO_POR_TIPO` exhaustivo, 🔔 si se mezclan) + insignia en el HTML. Texto plano sin emoji. Guardián `regression-avisos-intranet` adaptado.
 - Felicitación a EX-CLIENTES (31/10): `felicitaciones-exclientes*.ts`, variantes ex_cliente/posible_cliente, puerta `ASEGURA_FELICITACIONES_EXCLIENTES` (aprobar = ✅/❌ Telegram vía webhook plataforma `fex`). Remitente hola@. PR #5296 MERGEADO (31/10). Migración APLICADA y `ASEGURA_FELICITACIONES_EXCLIENTES=aprobar` en Vercel (central-asegura, production). Pendiente: el portal muestra la felicitación aunque se descarte; baja solo «contesta al correo»; ~1.000 posibles falsos ex-clientes por revisar en CIMA.
