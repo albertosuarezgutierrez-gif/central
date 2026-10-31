@@ -11,6 +11,12 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (31/10/2026) PR #5285 MERGEADO (cierre mensual + fix 0€) · IBI y Booking
+- Cierre contable mensual en producción: cron días 5 y 15 + Telegram `cmes_`; migración `cierres_mes`/`propiedad_titularidad` aplicada. Revisión: fijos del mes actual no se bloquean si falla la lectura; recierre ignora pisos ya cerrados. Skill `plataforma-maestro` actualizada.
+- Arreglada bomba de fecha en `apps/asegura/lib/codeoscopic/desde-cartera.test.ts` (rompía `main` desde el 31/10).
+- IBI 2026: Socorro 242,93€×2 (fijo 40,49€/mes) y Dúplex 130,46€/plazo → nuevo fijo `ibi-duplex` 21,74€/mes con relleno ene–oct; 2º plazo (nov) por confirmar. Recibo 130,93€ (16/04, Kutxa) sin identificar.
+- Booking real: comisión 22,0% + tarifa de pagos = 23,3% (factura sep House 2039943), no el 19,7% estimado. Pendiente: facturas de Booking 2026 de los 4 alojamientos (2039943, 2888928, 4340072, 4771238) y certificado catastral de Socorro (ref. 5732032TG3453B0001PK). «Cajasur ES63…7255 0855» = Kutxa ****0855 (IBAN antiguo).
+
 ## (30/10/2026) Contabilidad 2026 cerrada hasta oct + cierre mensual (PR #5285)
 - SQL de cierre aplicado (27 movs BBVA ****1175, seguros Occident por devengo, IBI Socorro, suministros/RETA desde banco). Migración `cierres_mes` + `propiedad_titularidad` APLICADA (Socorro 50/50 Pilar; Dúplex, Luxury y Reform 100% Alberto, estos dos en subarriendo).
 - Fiscal (Alberto): pisos sin servicios = capital inmobiliario; Bustos subarriendo = capital mobiliario; ingresos portales en BRUTO + comisión como gasto. Amortización: Socorro 374.412,20€ × 60,58% × 3% ≈ 6.804€/año (50/50); Dúplex donación 174.650,90€ × 36,53% × 3% ≈ 1.914€. Notaría de la donación la pagaron los padres (no suma).
