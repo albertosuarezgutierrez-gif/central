@@ -95,6 +95,7 @@ import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, esperarMarcoApp, login as loginEpac, type PestanaEntradaAllianz } from './adapters/allianz/intranet/index.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionPatineteMapfre, abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
+import { abrirTarificacionRapidaHogar } from './adapters/mapfre/hogar.ts'
 import { abrirTarificacionHogar, cabeceraPortalVisible, esperarPortalOSso as esperarPortalOSsoOccident, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
 import { esUrlSso as esUrlSsoOccident } from './adapters/occident/mapa.ts'
 import { abrirFormularioViviendaFidelidade, loginFidelidade } from './adapters/fidelidade/entrada.ts'
@@ -157,6 +158,16 @@ export type PortalExploracion = {
   entrar: (page: Page, ctx: CtxEntrada, e: EntradaExploracion) => Promise<Page | void>
 }
 
+/**
+ * Recorrido de entrada de Mapfre por ramo (31/10/2026). Lista CERRADA: un ramo sin recorrido LANZA (antes caía por defecto en
+ * Turismos y Motos y una entrada nueva habría explorado el formulario de otro ramo). Pura.
+ */
+export function destinoEntradaMapfre(ramo: string): 'auto' | 'patinete' | 'hogar' {
+  if (ramo === 'auto' || ramo === 'moto') return 'auto'
+  if (ramo === 'patinete' || ramo === 'hogar') return ramo
+  throw new ErrorTarificador('datos', `mapfre: sin recorrido de entrada de exploración para el ramo ${String(ramo).slice(0, 30)}`)
+}
+
 /** Lista CERRADA de portales con entrada de exploración. Otra compañía = sin portal = no se abre el navegador. */
 export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> = Object.freeze({
   allianz: Object.freeze({
@@ -181,8 +192,17 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await exigirSinVerificacion(page, 'mapfre')
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await ctx.exigirSinCaptcha()
-      // Patinetes (28/10/2026): tarjeta «Patinetes» › «Tarificación y Emisión» (MásPatín). El resto de Mapfre: Turismos y Motos.
-      if (e.ramo === 'patinete') {
+      const destino = destinoEntradaMapfre(e.ramo)
+      // Hogar (31/10/2026): «Nueva producción» › «Patrimoniales» › «Tarificación y emisión rápida», en la MISMA pestaña (mapfre/hogar.ts).
+      if (destino === 'hogar') {
+        await abrirTarificacionRapidaHogar(page, ctx)
+        await exigirSinVerificacion(page, 'mapfre')
+        await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+        await exigirSinCaptcha(page)
+        return page
+      }
+      // Patinetes (28/10/2026): tarjeta «Patinetes» › «Tarificación y Emisión» (MásPatín). Auto y moto: Turismos y Motos.
+      if (destino === 'patinete') {
         const pat = await abrirTarificacionPatineteMapfre(page, ctx)
         await exigirSinVerificacion(pat, 'mapfre')
         await pat.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
