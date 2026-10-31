@@ -5,6 +5,7 @@
 > entera: búscala con Grep** por la palabra del tema («subastas», «latido», «comisiones», «Telegram», «CORS»,
 > «pricing», «banca_destino_reglas», «asistente», «PSD2»…). Skills: `plataforma-maestro`, `correduria-crm`,
 > `sivra-maestro`, `correo-triaje`. Visión del CRM: `docs/CORREDURIA-CRM-VISION.md`.
+> Cierre contable mensual de pisos (`cierres_mes`, cron 5/15, botón `cmes_`): sección en la skill `plataforma-maestro`.
 
 ## Qué es
 - Cuadro de mando consolidado de la casa de marcas. Jerarquía `Cuenta → Sociedad (CIF) → Negocio (sector)`.

@@ -182,6 +182,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Día 5 de cada mes a las 10:00',
   },
   {
+    id: 'finanzas.cierre-mes', categoria: 'finanzas',
+    titulo: 'Cierre contable mensual por piso',
+    que: 'Por piso: banco al día, cargos/facturas casados, reservas cobradas, limpieza, gastos fijos y duplicados. El día 15, si todo cuadra, botón ✅ Cerrar mes.',
+    cuando: 'Días 5 (pre-cierre) y 15 (cierre) de cada mes a las 09:17 (08:17 en invierno)',
+  },
+  {
     id: 'finanzas.suscripciones', categoria: 'finanzas',
     titulo: 'Revisión de suscripciones',
     que: 'Gastos recurrentes (≥3 de los últimos 4 meses) con coste mensual y anual: ¿sigue valiendo?',
