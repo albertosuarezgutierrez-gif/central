@@ -55,6 +55,8 @@ export type FilaIngreso = {
   portal?: string | null
   /** Adultos + niños; null = no se sabe. */
   huespedes?: number | null
+  /** false = `amount_gross` NULL en BD (el bruto cargado es el neto): la comisión es «sin dato». */
+  brutoConocido?: boolean
 }
 /** Gasto ya asignado a un piso (el cargador incluye la limpieza de `limpieza_facturas`). */
 export type FilaGastoPiso = { propertyId: string; mes: string; importe: number; categoria: string }
@@ -108,6 +110,13 @@ export function diasOcupados(ingresos: FilaIngreso[], propertyId: string, desde:
     }
   }
   return out
+}
+
+/** Mismo día del año anterior (YYYY-MM-DD); el 29/02 pasa a 28/02 (fecha válida para la BD). */
+export function mismoDiaAnioAnterior(fecha: string): string {
+  const y = Number(fecha.slice(0, 4)) - 1
+  const md = fecha.slice(5) === '02-29' ? '02-28' : fecha.slice(5)
+  return `${y}-${md}`
 }
 
 // ── Cálculo de un periodo ───────────────────────────────────────────────────────────────────
@@ -372,7 +381,9 @@ export function calcularCostesUnitarios(x: EntradaCostes): CostesUnitarios {
   const ventana = mesesCompletosHasta(x.anio, x.hoy).slice(-VENTANA_SUMINISTROS_MESES)
   for (const id of ids) {
     const luz = x.suministros.filter(s => s.propertyId === id && s.tipo === 'luz' && ventana.includes(s.mes))
-    luzMes[id] = luz.length ? redondear(suma(luz.map(s => s.importe)) / ventana.length) : null
+    // Entre los meses CON cargo (como el agua): un feed parado no debe abaratar la media.
+    const mesesLuz = new Set(luz.map(s => s.mes)).size
+    luzMes[id] = luz.length ? redondear(suma(luz.map(s => s.importe)) / mesesLuz) : null
     const agua = x.suministros.filter(s => s.propertyId === id && s.tipo === 'agua' && ventana.includes(s.mes))
     aguaMes[id] = agua.length ? redondear(suma(agua.map(s => s.importe)) / agua.length / MESES_POR_CARGO_AGUA) : null
     fijosMes[id] = redondear(suma(x.fijos.filter(f => f.propertyId === id).map(f => f.total)))
@@ -392,7 +403,9 @@ export type CosteReserva = {
 }
 export function costeReserva(r: FilaIngreso, c: CostesUnitarios): CosteReserva {
   const dif = r.bruto - r.neto
-  const comision = dif > 0.005 ? dif : /booking/i.test(r.portal ?? '') ? redondear(r.bruto * c.comisionBooking) : null
+  // Sin bruto en BD el «bruto» ya es el neto: aplicarle el % de Booking restaría la comisión dos veces.
+  const comision = dif > 0.005 ? dif
+    : r.brutoConocido !== false && /booking/i.test(r.portal ?? '') ? redondear(r.bruto * c.comisionBooking) : null
   let noches = 0
   for (let d = r.checkIn; d < r.checkOut; d = sumDias(d, 1)) noches++
   return {
@@ -422,12 +435,13 @@ function agregar(rows: CosteReserva[], dias: number): Agregado {
     sinComision: { reservas: sin.length, bruto: suma(sin.map(r => r.bruto)) },
   }
 }
-/** a + k·b (k ≥ 0). Un null en b solo contamina si k > 0. */
-function combinar(a: Agregado, b: Agregado, k: number): Agregado {
+/** a + k·b (k ≥ 0). Un null en b solo contamina si k > 0. Los días añadidos no pasan de `diasTramo − a.dias`. */
+function combinar(a: Agregado, b: Agregado, k: number, diasTramo: number): Agregado {
   if (k <= 0) return a
   const m = (x: number | null) => (x == null ? null : x * k)
   return {
-    reservas: a.reservas + b.reservas * k, bruto: a.bruto + b.bruto * k, dias: a.dias + b.dias * k,
+    reservas: a.reservas + b.reservas * k, bruto: a.bruto + b.bruto * k,
+    dias: a.dias + Math.min(b.dias * k, Math.max(0, diasTramo - a.dias)),
     comision: sumN(a.comision, m(b.comision)), limpieza: sumN(a.limpieza, m(b.limpieza)), lavanderia: sumN(a.lavanderia, m(b.lavanderia)),
     sinComision: { reservas: a.sinComision.reservas + b.sinComision.reservas * k, bruto: a.sinComision.bruto + b.sinComision.bruto * k },
   }
@@ -532,7 +546,7 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       agg: pid => {
         const b = base.get(pid)!, r = refAgg.get(pid)!
         const k = r.reservas > 0 ? Math.max(0, r.reservas - b.reservas) / r.reservas : 0
-        return combinar(b, r, k)
+        return combinar(b, r, k, diasRest)
       },
     },
     {
@@ -589,6 +603,11 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
     return { id: d.id, etiqueta: d.etiqueta, descripcion: d.descripcion, bloques: bl, baseGeneral, baseEstimada, estimadoPorPiso, futuro: fut, desglose, sinDato }
   })
   return { mesesRestantes, escenarios }
+}
+
+/** La cifra estimada cuenta conceptos «sin dato» como 0 → provisional (de todo el escenario o de un piso). */
+export function esProvisional(x: Pick<EscenarioEst, 'sinDato'>, propertyId?: string): boolean {
+  return x.sinDato.some(d => propertyId == null || d.propertyId === propertyId)
 }
 
 /** Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual. */

@@ -11,7 +11,7 @@
 //    `gastos` de la correduría NO se lee aquí.
 import { prisma } from './db'
 import {
-  avisosDatos, calcularCostesUnitarios, calcularPeriodo, compararConjuntaIndividual, estimarCierre, periodoCierre,
+  avisosDatos, calcularCostesUnitarios, mismoDiaAnioAnterior, calcularPeriodo, compararConjuntaIndividual, estimarCierre, periodoCierre,
   type Actividad, type AvisosDatos, type Comparativa, type EntradaBase, type EntradaCostes, type Estimacion, type FilaIngreso, type Periodo,
   type PropiedadFiscal, type ParamsCuota,
 } from './base-fiscal-devengo.ts'
@@ -37,16 +37,16 @@ function hoyMadrid(): string {
 export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: string): Promise<EntradaBase> {
   const ini = `${anio}-01-01`, fin = `${anio}-12-31`
 
-  const refIni = `${anio - 1}${hoy.slice(4)}`, refFin = `${anio - 1}-12-31`
+  const refIni = mismoDiaAnioAnterior(hoy), refFin = `${anio - 1}-12-31`
   const [tit, ing, gas, limp, bancoCor, bancoPil, lavFact, fijosBd, refBd] = await Promise.all([
     prisma.$queryRaw<Array<{ propiedad_id: string; titular: string; porcentaje: unknown; regimen: string | null; nombre: string | null }>>`
       SELECT t.propiedad_id, t.titular, t.porcentaje, t.regimen, p.name AS nombre
       FROM propiedad_titularidad t LEFT JOIN properties p ON p.id = t.propiedad_id`,
-    prisma.$queryRaw<Array<{ pid: string; ci: string; co: string; bruto: unknown; neto: unknown; portal: string | null; adultos: number | null; ninos: number | null }>>`
+    prisma.$queryRaw<Array<{ pid: string; ci: string; co: string; bruto: unknown; neto: unknown; bruto_ok: boolean; portal: string | null; adultos: number | null; ninos: number | null }>>`
       SELECT "propertyId" AS pid, portal::text AS portal, adults AS adultos, children AS ninos,
              to_char(("checkIn" AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS ci,
              to_char(("checkOut" AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS co,
-             coalesce(amount_gross, amount) AS bruto, amount AS neto
+             coalesce(amount_gross, amount) AS bruto, amount AS neto, (amount_gross IS NOT NULL) AS bruto_ok
       FROM incomes
       -- también las estancias que entran desde el año anterior: solo cuentan sus días para la amortización
       WHERE amount > 0 AND ("checkOut" AT TIME ZONE 'Europe/Madrid')::date >= ${ini}::date
@@ -89,11 +89,11 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
       SELECT propiedad, categoria, proveedor, total FROM gastos_fijos
       WHERE activo = true AND propiedad LIKE 'prop\_%'`,
     // Estancias del mismo tramo (hoy→31/12) del año anterior: referencia del escenario de ocupación.
-    prisma.$queryRaw<Array<{ pid: string; ci: string; co: string; bruto: unknown; neto: unknown; portal: string | null; adultos: number | null; ninos: number | null }>>`
+    prisma.$queryRaw<Array<{ pid: string; ci: string; co: string; bruto: unknown; neto: unknown; bruto_ok: boolean; portal: string | null; adultos: number | null; ninos: number | null }>>`
       SELECT "propertyId" AS pid, portal::text AS portal, adults AS adultos, children AS ninos,
              to_char(("checkIn" AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS ci,
              to_char(("checkOut" AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS co,
-             coalesce(amount_gross, amount) AS bruto, amount AS neto
+             coalesce(amount_gross, amount) AS bruto, amount AS neto, (amount_gross IS NOT NULL) AS bruto_ok
       FROM incomes
       WHERE amount > 0 AND ("checkIn" AT TIME ZONE 'Europe/Madrid')::date BETWEEN ${refIni}::date AND ${refFin}::date`,
   ])
@@ -140,7 +140,7 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
   }
 
   const fila = (r: (typeof ing)[number]): FilaIngreso => ({
-    propertyId: r.pid, checkIn: r.ci, checkOut: r.co, bruto: num(r.bruto), neto: num(r.neto), portal: r.portal,
+    propertyId: r.pid, checkIn: r.ci, checkOut: r.co, bruto: num(r.bruto), neto: num(r.neto), portal: r.portal, brutoConocido: r.bruto_ok,
     huespedes: r.adultos == null ? null : r.adultos + (r.ninos ?? 0),
   })
   const ingresos = ing.map(fila)

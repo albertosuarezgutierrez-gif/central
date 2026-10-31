@@ -3,7 +3,7 @@
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge } from '@/components/ui'
 import type { BaseDevengo } from '@/lib/base-fiscal-devengo-db'
-import type { Bloque, Comparativa, ConceptoSinDato, Periodo } from '@/lib/base-fiscal-devengo'
+import { esProvisional, type Bloque, type Comparativa, type ConceptoSinDato, type Periodo } from '@/lib/base-fiscal-devengo'
 
 const NOMBRE_BLOQUE: Record<Bloque, string> = {
   capital_inmobiliario: 'Capital inmobiliario (Socorro, Dúplex)',
@@ -14,6 +14,9 @@ const NOMBRE_BLOQUE: Record<Bloque, string> = {
 const BLOQUES: Bloque[] = ['capital_inmobiliario', 'capital_mobiliario', 'actividad_correduria', 'actividad_pilar']
 
 const money = (n: number | null | undefined) => (n == null ? 'sin dato' : eur(n))
+/** Cifra que cuenta conceptos «sin dato» como 0: «~» delante y título que lo explica (no es firme). */
+const PROV_TITLE = 'Provisional: hay conceptos sin dato contados como 0 (ver la lista de abajo).'
+const estimada = (n: number, provisional: boolean) => (provisional ? `~${eur(n)}` : eur(n))
 const card = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' } as const
 const h = { fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' } as const
 const sub = { fontSize: '11px', color: 'var(--muted)', marginTop: '2px' } as const
@@ -178,11 +181,15 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
               ))}
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>Base general estimada</td>
-                {est.escenarios.map(x => <td key={x.id} style={{ ...td, fontWeight: 700, fontStyle: 'italic' }}>{eur(x.baseGeneral)}</td>)}
+                {est.escenarios.map(x => (
+                  <td key={x.id} style={{ ...td, fontWeight: 700, fontStyle: 'italic' }} title={esProvisional(x) ? PROV_TITLE : undefined}>
+                    {estimada(x.baseGeneral, esProvisional(x))}{esProvisional(x) && <> <Badge tono="aviso" title={PROV_TITLE}>provisional</Badge></>}
+                  </td>
+                ))}
               </tr>
               <tr>
                 <td style={{ ...td, textAlign: 'left', color: 'var(--muted)' }}>…de la que es estimación</td>
-                {est.escenarios.map(x => <td key={x.id} style={{ ...td, color: 'var(--muted)' }}>{eur(x.baseEstimada)}</td>)}
+                {est.escenarios.map(x => <td key={x.id} style={{ ...td, color: 'var(--muted)' }} title={esProvisional(x) ? PROV_TITLE : undefined}>{estimada(x.baseEstimada, esProvisional(x))}</td>)}
               </tr>
             </tbody>
           </table>
@@ -212,7 +219,9 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
                     <td key={i} style={{ ...td, color: v == null ? 'var(--muted)' : undefined }}>{money(v)}</td>
                   ))}
                   <td style={td}>{eur(l.compartidos)}</td><td style={td}>{l.amortizacion == null ? 'n/a' : eur(l.amortizacion)}</td>
-                  <td style={{ ...td, fontWeight: 700 }}>{eur(l.neto)}</td>
+                  <td style={{ ...td, fontWeight: 700 }} title={esProvisional(est.escenarios[0], l.propertyId) ? PROV_TITLE : undefined}>
+                    {estimada(l.neto, esProvisional(est.escenarios[0], l.propertyId))}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -223,7 +232,7 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
             {x.etiqueta}, sin dato (no cuenta como 0): {x.sinDato.map(d => etiquetaSinDato(d)).join(' · ')}.
           </div>
         ))}
-        <div style={sub}>No incluye averías ni mantenimientos puntuales. El neto por piso cuenta los conceptos «sin dato» como 0: es una cota optimista.</div>
+        <div style={sub}>No incluye averías ni mantenimientos puntuales. El neto por piso cuenta los conceptos «sin dato» como 0: es una cota optimista; las cifras con «~» son provisionales.</div>
       </div>
     </>
   )

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 
 import {
   AMORTIZACION_INMUEBLES, avisosDatos, calcularCostesUnitarios, calcularPeriodo, compararConjuntaIndividual, costeReserva, diasOcupados,
-  estimarCierre, periodoCierre, type CostesUnitarios, type EntradaBase, type PropiedadFiscal,
+  esProvisional, estimarCierre, mismoDiaAnioAnterior, periodoCierre, type CostesUnitarios, type EntradaBase, type PropiedadFiscal,
 } from './base-fiscal-devengo.ts'
 import { importesDe } from './fiscal-deducciones.ts'
 
@@ -229,7 +229,7 @@ test('costes unitarios: limpieza tarifa habitual con IVA, lavandería por huésp
   cerca(c.limpiezaPorEstancia.S, 108.9); cerca(c.limpiezaPorEstancia.R, 24.2); assert.equal(c.limpiezaPorEstancia.X, null)
   // 100 € / 5 estancias = 20; huéspedes medios: cartera (8+8+2+2)/4 = 5 (X sin dato no cuenta)
   cerca(c.lavanderiaPorEstancia.S, 20 * 8 / 5); cerca(c.lavanderiaPorEstancia.R, 20 * 2 / 5); assert.equal(c.lavanderiaPorEstancia.X, null)
-  cerca(c.luzMes.S, 180 / 9); assert.equal(c.luzMes.R, null)
+  cerca(c.luzMes.S, 180 / 2); assert.equal(c.luzMes.R, null) // entre meses CON cargo (feb, abr), como el agua
   cerca(c.aguaMes.S, 70 / 2); assert.equal(c.aguaMes.R, null) // media por cargo bimestral
   cerca(c.fijosMes.S, 50.5); cerca(c.fijosMes.R, 0)
   // sin facturas de lavandería → sin dato
@@ -258,4 +258,40 @@ test('avisos: cuentas con último movimiento > 30 días y meses sin facturas', (
 test('parámetros de amortización: Socorro ≈ 6.804,55€/año, Dúplex 1.914,00€/año', () => {
   cerca(AMORTIZACION_INMUEBLES.prop_house_sevillana.anual, 6804.55, 0.05)
   cerca(AMORTIZACION_INMUEBLES.prop_duplex_center.anual, 1914.0, 0.01)
+})
+
+test('comisión: Booking con amount_gross NULL (bruto = neto cargado) → sin dato, no 19,72 % sobre el neto', () => {
+  const r = costeReserva({ propertyId: 'S', checkIn: '2026-11-10', checkOut: '2026-11-13', bruto: 800, neto: 800, portal: 'BOOKING', brutoConocido: false }, COSTES)
+  assert.equal(r.comision, null)
+})
+
+test('referencia del año anterior: 29/02 pasa a 28/02 (fecha válida); el resto se conserva', () => {
+  assert.equal(mismoDiaAnioAnterior('2028-02-29'), '2027-02-28')
+  assert.equal(mismoDiaAnioAnterior('2026-10-31'), '2025-10-31')
+})
+
+test('ocupación tipo: los días añadidos no superan los días que quedan del tramo', () => {
+  const e = entrada({
+    hoy: '2026-12-29', costes: COSTES,
+    ingresos: [{ propertyId: 'S', checkIn: '2026-12-30', checkOut: '2027-01-01', bruto: 300, neto: 240, portal: 'BOOKING' }],
+    referencia: [1, 2, 3, 4].map(() => ({ propertyId: 'S', checkIn: '2025-12-30', checkOut: '2026-01-01', bruto: 300, neto: 240, portal: 'BOOKING' })),
+  })
+  const est = estimarCierre(e, calcularPeriodo(e, '2026-01-01', '2026-12-29'))
+  const ocu = est.escenarios.find(x => x.id === 'ocupacion')!.desglose.find(d => d.propertyId === 'S')!
+  cerca(ocu.amortizacion, 3650 * 2 / 365) // 30 y 31/12: como mucho 2 días, aunque la referencia sume más
+})
+
+test('provisional: el escenario (y el piso) con conceptos «sin dato» no se pinta como cifra firme', () => {
+  const x = { sinDato: [{ concepto: 'limpieza' as const, propertyId: 'R', nombre: 'Bustos' }] }
+  assert.equal(esProvisional(x), true)
+  assert.equal(esProvisional(x, 'R'), true)
+  assert.equal(esProvisional(x, 'S'), false)
+  assert.equal(esProvisional({ sinDato: [] }), false)
+})
+
+test('pantalla: base estimada y neto por piso pasan por esProvisional («~» + marca), no se pintan firmes', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/(usuario)/finanzas/fiscal/BaseDevengoBloque.tsx', import.meta.url), 'utf8')
+  assert.ok(src.includes('estimada(x.baseGeneral, esProvisional(x))'), 'base general estimada sin marca de provisional')
+  assert.ok(src.includes('estimada(l.neto, esProvisional(est.escenarios[0], l.propertyId))'), 'neto por piso sin marca de provisional')
 })
