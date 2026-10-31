@@ -6,8 +6,10 @@ import { Landmark } from 'lucide-react'
 import { eur, eurSinDecimales } from '@/lib/dinero'
 import { BtnLink, PageHeader } from '@/components/ui'
 import ConsejoFiscalBox from '../ConsejoFiscalBox'
+import BaseDevengoBloque from './BaseDevengoBloque'
+import type { BaseDevengo } from '@/lib/base-fiscal-devengo-db'
 
-type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; year: number; quarter: number }
+type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; baseDevengo: BaseDevengo | null; year: number; quarter: number }
 
 function fmt(n: number) {
   return eur(n)
@@ -131,7 +133,7 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
   )
 }
 
-export default function FiscalPageClient({ initialData, initialComparativa, year: initYear, quarter: initQuarter }: Props) {
+export default function FiscalPageClient({ initialData, initialComparativa, baseDevengo, year: initYear, quarter: initQuarter }: Props) {
   const router = useRouter()
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [year, setYear] = useState(initYear)
@@ -185,6 +187,9 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Sin datos para este periodo.</div>
       ) : (
         <>
+          {/* Base por devengo: hasta hoy + estimación de cierre (fuente fiscal correcta) */}
+          <BaseDevengoBloque data={baseDevengo} />
+
           {/* Mi declaración: hoy vs fin de año, solo vs conjunta — el resumen de la página */}
           <DeclaracionBlock year={year} initial={initialComparativa} initialYear={initYear} />
 
@@ -445,7 +450,7 @@ function DeclaracionBlock({ year, initial, initialYear }: { year: number; initia
           <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: 'var(--positive-bg)', borderRadius: '6px', color: 'var(--positive)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div>💡 <strong>Cada 1.000€ más de gasto deducible ⇒ ~{eurSinDecimales(estado.palanca.ahorroPorMilGasto)} menos de cuota</strong> (tramo marginal proyectado: {(estado.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
             {estado.palanca.gastoParaBajarTramo !== null && estado.palanca.tipoPrevio !== null && estado.palanca.gastoParaBajarTramo > 0 && (
-              <div>🎯 Para que la base proyectada baje al tramo del {(estado.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{fmt(estado.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({estado.mesesRestantes} meses restantes) → ahorro ~<strong>{fmt(estado.palanca.ahorroBajarTramo ?? 0)}</strong>.</div>
+              <div>🎯 Para que la base proyectada baje al tramo del {(estado.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{fmt(estado.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({estado.mesesRestantes} meses restantes) → ahorro ~<strong>{estado.palanca.ahorroBajarTramo === null ? 'sin dato' : fmt(estado.palanca.ahorroBajarTramo)}</strong>.</div>
             )}
           </div>
           <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>

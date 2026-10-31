@@ -102,7 +102,7 @@ export default function FiscalResumen({ fiscal, declaracion, year }: {
           <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: 'var(--positive-bg)', borderRadius: '6px', color: 'var(--positive)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div>💡 <strong>Cada 1.000€ más de gasto deducible ⇒ ~{eurSinDecimales(declaracion.palanca.ahorroPorMilGasto)} menos de cuota</strong> (tramo marginal proyectado: {(declaracion.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
             {declaracion.palanca.gastoParaBajarTramo !== null && declaracion.palanca.tipoPrevio !== null && declaracion.palanca.gastoParaBajarTramo > 0 && (
-              <div>🎯 Para que la base proyectada baje al tramo del {(declaracion.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{eur(declaracion.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({declaracion.mesesRestantes} meses restantes) → ahorro ~<strong>{eur(declaracion.palanca.ahorroBajarTramo ?? 0)}</strong>.</div>
+              <div>🎯 Para que la base proyectada baje al tramo del {(declaracion.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{eur(declaracion.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({declaracion.mesesRestantes} meses restantes) → ahorro ~<strong>{declaracion.palanca.ahorroBajarTramo === null ? 'sin dato' : eur(declaracion.palanca.ahorroBajarTramo)}</strong>.</div>
             )}
           </div>
         </div>
