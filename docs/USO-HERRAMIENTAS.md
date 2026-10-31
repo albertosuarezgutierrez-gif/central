@@ -171,25 +171,25 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 402 | 72.312 | 63.282.471 | 0 | 0 |
-| `otro` | 396 | 16.930 | 36.075.121 | 20.278.365 | 0 |
-| `lectura-directa` | 339 | 11.273 | 30.476.833 | 0 | 0 |
-| `mcp:github` | 339 | 8.371 | 6.273.994 | 57.604.167 | 110 |
-| `sql` | 254 | 7.410 | 3.971.031 | 3.040.710 | 26 |
-| `escritura` | 248 | 6.235 | 93.904.780 | 0 | 0 |
+| `bash` | 402 | 72.627 | 63.539.702 | 0 | 0 |
+| `otro` | 396 | 17.001 | 36.164.041 | 20.278.365 | 0 |
+| `lectura-directa` | 339 | 11.320 | 31.285.282 | 0 | 0 |
+| `mcp:github` | 339 | 8.388 | 6.280.985 | 57.604.167 | 110 |
+| `sql` | 254 | 7.506 | 4.038.701 | 3.040.710 | 26 |
+| `escritura` | 248 | 6.287 | 95.845.035 | 0 | 0 |
 | `mcp:Vercel` | 86 | 1.512 | 1.297.602 | 237.328 | 45 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Booking-com` | 52 | 1.456 | 5.952.956 | 0 | 0 |
-| `mcp:Gmail` | 65 | 1.426 | 1.576.967 | 0 | 101 |
-| `agente:general-purpose` | 142 | 1.268 | 754.914 | 26.227.201 | 0 |
-| `mcp:claude-code-remote` | 77 | 1.082 | 110.371 | 1.250.070 | 0 |
+| `mcp:Gmail` | 65 | 1.434 | 1.585.676 | 0 | 101 |
+| `agente:general-purpose` | 142 | 1.281 | 761.944 | 26.250.036 | 0 |
+| `mcp:claude-code-remote` | 77 | 1.086 | 110.512 | 1.250.070 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 16 | 702 | 824.260 | 0 | 0 |
-| `mcp:Supabase` | 150 | 502 | 113.120 | 17.601 | 7 |
-| `agente:agente-architect` | 86 | 498 | 347.168 | 12.869.314 | 0 |
-| `mcp:Google_Drive` | 25 | 456 | 559.152 | 0 | 50 |
+| `mcp:Supabase` | 150 | 507 | 113.140 | 17.601 | 7 |
+| `agente:agente-architect` | 86 | 502 | 350.107 | 12.877.115 | 0 |
+| `mcp:Google_Drive` | 25 | 466 | 598.177 | 0 | 50 |
 | `mcp:Google-Drive` | 33 | 172 | 175.151 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
-| `agente:agente-mecanico` | 59 | 154 | 83.964 | 7.901.964 | 0 |
+| `agente:agente-mecanico` | 60 | 155 | 84.808 | 7.901.964 | 0 |
 | `agente:rastreador-codigo` | 65 | 124 | 39.902 | 2.082.908 | 0 |
 | `mcp:Resend` | 11 | 98 | 86.009 | 0 | 0 |
 | `mcp:idealista` | 3 | 94 | 255.209 | 0 | 34 |
@@ -199,14 +199,14 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
 | `agente:verificador-esceptico` | 18 | 35 | 11.159 | 133.263 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
+| `agente:jefe-contabilidad` | 2 | 22 | 10.354 | 579.584 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `agente:general` | 14 | 20 | 12.731 | 1.297.222 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
-| `agente:lector-correo` | 7 | 17 | 5.900 | 0 | 0 |
-| `agente:jefe-contabilidad` | 2 | 17 | 7.954 | 579.584 | 0 |
+| `agente:lector-correo` | 7 | 18 | 6.289 | 0 | 0 |
 | `mcp:Supabase_asegura` | 14 | 15 | 3.939 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
-| `mcp:Google_Calendar` | 2 | 7 | 5.018 | 0 | 0 |
+| `mcp:Google_Calendar` | 3 | 10 | 6.076 | 0 | 0 |
 | `mcp:openrouter` | 3 | 7 | 19.723 | 0 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
