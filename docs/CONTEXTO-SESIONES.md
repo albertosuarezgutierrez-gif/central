@@ -11,6 +11,11 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (31/10/2026) Fiscal · panel por devengo + simulador IRPF + hechos guardados
+- Panel fiscal por devengo (#5308). #5310: simulador IRPF, pantalla nueva, «Mi situación fiscal», avisos Telegram (`finanzas.fiscal-avisos`), motor que reproduce la renta 2025 al céntimo (backtest permanente: imputación art. 85, FN prorrateada, mínimos andaluces), correduría desde CIMA vía `seguros_agregado.v_comisiones_mes` (5.767,51€ ene-oct; antes banco/0,85 inflaba ~1.570€).
+- BD aplicada: `fiscal_compras_previstas`, `fiscal_avisos_enviados`, columnas de `fiscal_perfil` (meses exonerados, FN desde 18/11/2025, abonos), vista agregada. BBVA 1175 importado hasta 02/11 (14 nuevos); 1 duplicado ignorado; tasa basura 34,40€ → Dúplex.
+- Alberto individual a 31/12 ≈55-57k€ (margen ~2,6-4,8k€ a 60k€); individual ≈5.000€ más barata que conjunta [validar asesoría]. Hechos en skill `perfil-fiscal`.
+- Pendiente: extractos BBVA+Kutxabank de Pilar (recordatorio 02/11 9:30; da la cuota de autónomos real), valor catastral Socorro (¿75.274,63€ por mitad o entero?), póliza 061145138 659,43€, retenciones/130, informe para la asesoría, requerimiento AEAT Punto y Coma.
 ## (30/10/2026) Asegura · icono en el correo de avisos + por qué no se felicita a un ex-cliente
 - Correo de avisos de la intranet (`apps/asegura/lib/correo-avisos-intranet.ts`): UN emoji al principio del asunto (por ramo 🏠🚗🏍️…, por tipo `ICONO_POR_TIPO` exhaustivo, 🔔 si se mezclan) + insignia en el HTML. Texto plano sin emoji. Guardián `regression-avisos-intranet` adaptado.
 - Felicitación a EX-CLIENTES (31/10): `felicitaciones-exclientes*.ts`, variantes ex_cliente/posible_cliente, puerta `ASEGURA_FELICITACIONES_EXCLIENTES` (aprobar = ✅/❌ Telegram vía webhook plataforma `fex`). Remitente hola@. PR #5296 MERGEADO (31/10). Migración APLICADA y `ASEGURA_FELICITACIONES_EXCLIENTES=aprobar` en Vercel (central-asegura, production). Pendiente: el portal muestra la felicitación aunque se descarte; baja solo «contesta al correo»; ~1.000 posibles falsos ex-clientes por revisar en CIMA.

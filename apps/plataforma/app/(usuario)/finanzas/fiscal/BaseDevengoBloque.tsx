@@ -3,7 +3,7 @@
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge } from '@/components/ui'
 import type { BaseDevengo } from '@/lib/base-fiscal-devengo-db'
-import type { Bloque, Comparativa, ConceptoSinDato, Periodo } from '@/lib/base-fiscal-devengo'
+import { esProvisional, type Bloque, type Comparativa, type ConceptoSinDato, type Periodo } from '@/lib/base-fiscal-devengo'
 
 const NOMBRE_BLOQUE: Record<Bloque, string> = {
   capital_inmobiliario: 'Capital inmobiliario (Socorro, Dúplex)',
@@ -14,6 +14,9 @@ const NOMBRE_BLOQUE: Record<Bloque, string> = {
 const BLOQUES: Bloque[] = ['capital_inmobiliario', 'capital_mobiliario', 'actividad_correduria', 'actividad_pilar']
 
 const money = (n: number | null | undefined) => (n == null ? 'sin dato' : eur(n))
+/** Cifra que cuenta conceptos «sin dato» como 0: «~» delante y título que lo explica (no es firme). */
+const PROV_TITLE = 'Provisional: hay conceptos sin dato contados como 0 (ver la lista de abajo).'
+const estimada = (n: number, provisional: boolean) => (provisional ? `~${eur(n)}` : eur(n))
 const card = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px' } as const
 const h = { fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' } as const
 const sub = { fontSize: '11px', color: 'var(--muted)', marginTop: '2px' } as const
@@ -94,7 +97,8 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
     )
   }
   const { hastaHoy: p, estimacion: est, avisos } = data
-  const hayAvisos = avisos.cuentasSinActualizar.length > 0 || avisos.mesesSinLimpieza.length > 0 || avisos.mesesSinSuministros.length > 0
+  const sinId = avisos.ingresosCorreduriaSinIdentificar ?? []
+  const hayAvisos = sinId.length > 0 || avisos.cuentasSinActualizar.length > 0 || avisos.mesesSinLimpieza.length > 0 || avisos.mesesSinSuministros.length > 0
   return (
     <>
       {hayAvisos && (
@@ -103,6 +107,7 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
           {avisos.cuentasSinActualizar.map(c => (
             <div key={c.nombre}>• {c.nombre}: {c.ultimoMovimiento ? `último movimiento ${fecha(c.ultimoMovimiento)} (hace ${c.dias} días)` : 'sin movimientos'}.</div>
           ))}
+          {sinId.length > 0 && <div>• Ingreso de la correduría sin identificar (NO sumado a la base): {sinId.map(x => `${x.pagador} ${eur(x.importe)}`).join('; ')}.</div>}
           {avisos.mesesSinLimpieza.length > 0 && <div>• Sin factura de limpieza: {avisos.mesesSinLimpieza.map(mesCorto).join(', ')}.</div>}
           {avisos.mesesSinSuministros.length > 0 && <div>• Sin factura de suministros (Socorro): {avisos.mesesSinSuministros.map(mesCorto).join(', ')}.</div>}
         </div>
@@ -123,7 +128,14 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '13px' }}>
               <strong>Base general (antes de reducción)</strong><strong>{money(p.baseGeneral)}</strong>
             </div>
-            {p.correduria.retencion != null && <div style={sub}>Correduría: bruto {money(p.correduria.bruto)}, retención 15 % {money(p.correduria.retencion)}.</div>}
+            {p.correduria.fuente === 'cima'
+              ? <div style={sub}>Correduría (CIMA): comisión bruta cobrada {money(p.correduria.bruto)}; retención {p.correduria.retencion == null ? 'sin dato (no consta en los recibos)' : `${money(p.correduria.retencion)} (solo la que consta)`}.</div>
+              : p.correduria.retencion != null && <div style={sub}>Correduría: bruto {money(p.correduria.bruto)}, retención 15 % {money(p.correduria.retencion)}.</div>}
+            {p.correduria.desglose && (
+              <div style={sub}>
+                Ingresos correduría: CIMA {money(p.correduria.desglose.cima)} · banco (compañías fuera de CIMA, elevado al bruto) {money(p.correduria.desglose.banco)} · sin identificar {eur(p.correduria.desglose.sinIdentificar)} (no sumado).
+              </div>
+            )}
             {p.compartidosSinRepartir > 0 && <div style={{ ...sub, color: 'var(--warning)' }}>Gastos compartidos sin repartir (sin ingresos): {eur(p.compartidosSinRepartir)}.</div>}
           </div>
           <Comparativa c={data.comparativaHoy} titulo="Conjunta vs individual hoy" />
@@ -178,11 +190,15 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
               ))}
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>Base general estimada</td>
-                {est.escenarios.map(x => <td key={x.id} style={{ ...td, fontWeight: 700, fontStyle: 'italic' }}>{eur(x.baseGeneral)}</td>)}
+                {est.escenarios.map(x => (
+                  <td key={x.id} style={{ ...td, fontWeight: 700, fontStyle: 'italic' }} title={esProvisional(x) ? PROV_TITLE : undefined}>
+                    {estimada(x.baseGeneral, esProvisional(x))}{esProvisional(x) && <> <Badge tono="aviso" title={PROV_TITLE}>provisional</Badge></>}
+                  </td>
+                ))}
               </tr>
               <tr>
                 <td style={{ ...td, textAlign: 'left', color: 'var(--muted)' }}>…de la que es estimación</td>
-                {est.escenarios.map(x => <td key={x.id} style={{ ...td, color: 'var(--muted)' }}>{eur(x.baseEstimada)}</td>)}
+                {est.escenarios.map(x => <td key={x.id} style={{ ...td, color: 'var(--muted)' }} title={esProvisional(x) ? PROV_TITLE : undefined}>{estimada(x.baseEstimada, esProvisional(x))}</td>)}
               </tr>
             </tbody>
           </table>
@@ -212,7 +228,9 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
                     <td key={i} style={{ ...td, color: v == null ? 'var(--muted)' : undefined }}>{money(v)}</td>
                   ))}
                   <td style={td}>{eur(l.compartidos)}</td><td style={td}>{l.amortizacion == null ? 'n/a' : eur(l.amortizacion)}</td>
-                  <td style={{ ...td, fontWeight: 700 }}>{eur(l.neto)}</td>
+                  <td style={{ ...td, fontWeight: 700 }} title={esProvisional(est.escenarios[0], l.propertyId) ? PROV_TITLE : undefined}>
+                    {estimada(l.neto, esProvisional(est.escenarios[0], l.propertyId))}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -223,7 +241,7 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
             {x.etiqueta}, sin dato (no cuenta como 0): {x.sinDato.map(d => etiquetaSinDato(d)).join(' · ')}.
           </div>
         ))}
-        <div style={sub}>No incluye averías ni mantenimientos puntuales. El neto por piso cuenta los conceptos «sin dato» como 0: es una cota optimista.</div>
+        <div style={sub}>No incluye averías ni mantenimientos puntuales. El neto por piso cuenta los conceptos «sin dato» como 0: es una cota optimista; las cifras con «~» son provisionales.</div>
       </div>
     </>
   )

@@ -35,6 +35,70 @@ export const AMORTIZACION_INMUEBLES: Record<string, { anual: number; fuente: str
     fuente: 'Base de amortización 63.799,97€ (borrador IRPF 2023/2025) × 3 %',
   },
 }
+// Intereses de financiación del año por piso (gasto deducible y límite de reparaciones, art. 23.1.a LIRPF).
+// No existen en BD. Alberto 31/10/2026: sin hipoteca → intereses de financiación = 0€ (un 0 comprobado, NO «sin dato»).
+// Solo Socorro y Dúplex (capital inmobiliario): Bustos es subarriendo y no lleva este límite.
+export const INTERESES_FINANCIACION: Record<string, { anual: number; fuente: string; actualizado: string }> = {
+  prop_house_sevillana: { anual: 0, fuente: 'Alberto 31/10/2026: sin hipoteca', actualizado: '2026-10-31' },
+  prop_duplex_center: { anual: 0, fuente: 'Alberto 31/10/2026: sin hipoteca', actualizado: '2026-10-31' },
+}
+// ── Imputación de rentas inmobiliarias (art. 85 LIRPF) ─────────────────────────────────────
+// Inmuebles urbanos del contribuyente que NO son vivienda habitual ni están arrendados: se imputa el 2 % del
+// valor catastral (1,1 % si fue revisado en procedimiento de valoración colectiva con efectos en el periodo o en
+// los 10 anteriores) × días NO arrendados / días del año × % de titularidad. Va a la base GENERAL.
+// Monte Carmelo (vivienda habitual) no se modela; Bustos (subarriendo) no es de Alberto: no imputan.
+export const TIPO_IMPUTACION = 0.02
+export const TIPO_IMPUTACION_REVISADO = 0.011
+export type ParamImputacion = {
+  /** Valor catastral del inmueble ENTERO del año (null = sin dato: la imputación sale null, nunca 0). */
+  valorCatastral: number | null
+  /** ¿Revisado en los 10 años anteriores? null = no se sabe ⇒ tipo sin dato. */
+  revisado: boolean | null
+  fuente: string
+}
+export const IMPUTACION_INMUEBLES: Record<string, ParamImputacion> = {
+  // Renta 2025 presentada (casillas 0083/0084/0089): cada cónyuge, titular del 50 %, consignó «valor catastral
+  // 75.274,63€, NO revisado, 365 días» y se le imputaron 1.505,49€ = 2 % × 75.274,63, o sea 75.274,63 es el
+  // valor que corresponde a CADA mitad ⇒ inmueble entero 150.549,26€. [Probable] Confirmar con el recibo del IBI:
+  // si el valor del inmueble entero fuera 75.274,63€, la renta 2025 imputó el doble y aquí habría que ponerlo.
+  // 2026: PGE prorrogados ⇒ sin coeficiente de actualización nuevo [Probable].
+  prop_house_sevillana: { valorCatastral: 150549.26, revisado: false, fuente: 'Renta 2025 (0083: 75.274,63€ por cada 50 %; 0084: NO revisado)' },
+  // Renta 2025 (0083/0084/0089): 40.425,46€, NO revisado, 125 días a disposición ⇒ 276,89€. 100 % Alberto.
+  prop_duplex_center: { valorCatastral: 40425.46, revisado: false, fuente: 'Renta 2025 (0083: 40.425,46€; 0084: NO revisado) = valor catastral 2024' },
+}
+/** Renta imputada del inmueble entero (sin % de titularidad). null si falta valor o «revisado». */
+export function rentaImputada(valorCatastral: number | null, revisado: boolean | null, diasNoArrendados: number, diasAnio: number): number | null {
+  if (valorCatastral == null || revisado == null) return null
+  const tipo = revisado ? TIPO_IMPUTACION_REVISADO : TIPO_IMPUTACION
+  return (valorCatastral * tipo * Math.max(0, diasNoArrendados)) / diasAnio
+}
+export type LineaImputacion = {
+  propertyId: string
+  nombre: string
+  valorCatastral: number | null
+  revisado: boolean | null
+  /** Días del periodo (dentro del año) y días con reserva en él. */
+  diasPeriodo: number
+  diasArrendados: number
+  diasNoArrendados: number
+  /** Inmueble entero (se reparte por titularidad); null = sin dato. */
+  importe: number | null
+}
+function lineaImputacion(p: { id: string; nombre: string }, par: ParamImputacion | undefined, diasPeriodo: number, diasArrendados: number | null, anio: number): LineaImputacion {
+  const arr = diasArrendados == null ? null : Math.min(diasPeriodo, diasArrendados)
+  const noArr = arr == null ? 0 : diasPeriodo - arr
+  return {
+    propertyId: p.id, nombre: p.nombre, valorCatastral: par?.valorCatastral ?? null, revisado: par?.revisado ?? null,
+    diasPeriodo, diasArrendados: arr ?? 0, diasNoArrendados: noArr,
+    importe: arr == null ? null : rentaImputada(par?.valorCatastral ?? null, par?.revisado ?? null, noArr, diasDelAnio(anio)),
+  }
+}
+const sumaImputacion = (ls: LineaImputacion[]) => (ls.some(l => l.importe == null) ? null : ls.reduce((s, l) => s + (l.importe as number), 0))
+
+/** Forma que lee el simulador (`EntradaSimulador.intereses`): propertyId → € del año. */
+export function interesesParaSimulador(): Record<string, number> {
+  return Object.fromEntries(Object.entries(INTERESES_FINANCIACION).map(([id, v]) => [id, v.anual]))
+}
 export const REDUCCION_CONJUNTA = 3400
 export const UMBRAL_TARIFA_ALTA = 60000
 export const RETENCION_CORREDURIA = 0.15
@@ -55,11 +119,32 @@ export type FilaIngreso = {
   portal?: string | null
   /** Adultos + niños; null = no se sabe. */
   huespedes?: number | null
+  /** false = `amount_gross` NULL en BD (el bruto cargado es el neto): la comisión es «sin dato». */
+  brutoConocido?: boolean
 }
 /** Gasto ya asignado a un piso (el cargador incluye la limpieza de `limpieza_facturas`). */
 export type FilaGastoPiso = { propertyId: string; mes: string; importe: number; categoria: string }
 export type FilaGastoCompartido = { mes: string; importe: number; categoria?: string }
-export type Actividad = { ingresosPorMes: Record<string, number>; gastosPorMes: Record<string, number> }
+export type Actividad = {
+  /**
+   * Sin `fuente` (o `'banco'`): lo COBRADO en banco, neto de retención (el bruto sale de dividir entre 1-15 %).
+   * `fuente: 'cima'`: el BRUTO de comisiones cobradas según CIMA (`seguros.poliza_recibos`), sin gross-up.
+   */
+  ingresosPorMes: Record<string, number>
+  gastosPorMes: Record<string, number>
+  fuente?: 'banco' | 'cima'
+  /** Solo CIMA: retención IRPF que CONSTA en los recibos, por mes. Un mes sin clave = «sin dato» (no 15 % inventado). */
+  retencionPorMes?: Record<string, number>
+  /** Solo CIMA: bruto de recibos PENDIENTES por mes de efecto (base de la estimación de los meses que faltan). */
+  pendientePorMes?: Record<string, number>
+  /**
+   * Solo CIMA: banco (NETO de caja, tras retención) de compañías que CIMA NO trae (p. ej. Asisa), ya sin las que sí
+   * trae (ver `lib/correduria-companias.ts`). Se suma al bruto de CIMA elevado con el 15 % (misma convención que el banco legado).
+   */
+  ingresosBancoPorMes?: Record<string, number>
+  /** Ingresos `seguros` del banco con pagador NO reconocido: NO se suman; van al aviso de calidad del dato. */
+  sinIdentificar?: { mes: string; pagador: string; importe: number }[]
+}
 
 export type EntradaBase = {
   anio: number
@@ -73,6 +158,8 @@ export type EntradaBase = {
   correduria: Actividad
   pilar: Actividad
   amortizacion?: Record<string, { anual: number }>
+  /** Valor catastral por piso para la imputación de rentas (por defecto `IMPUTACION_INMUEBLES`). */
+  imputacion?: Record<string, ParamImputacion>
   /** Costes unitarios calculados desde BD (ver calcularCostesUnitarios). Sin ellos todo es «sin dato». */
   costes?: CostesUnitarios
   /** Estancias del tramo hoy→31/12 del año ANTERIOR (escenario de ocupación tipo). */
@@ -110,6 +197,13 @@ export function diasOcupados(ingresos: FilaIngreso[], propertyId: string, desde:
   return out
 }
 
+/** Mismo día del año anterior (YYYY-MM-DD); el 29/02 pasa a 28/02 (fecha válida para la BD). */
+export function mismoDiaAnioAnterior(fecha: string): string {
+  const y = Number(fecha.slice(0, 4)) - 1
+  const md = fecha.slice(5) === '02-29' ? '02-28' : fecha.slice(5)
+  return `${y}-${md}`
+}
+
 // ── Cálculo de un periodo ───────────────────────────────────────────────────────────────────
 export type LineaPiso = {
   propertyId: string
@@ -125,15 +219,30 @@ export type LineaPiso = {
   neto: number
 }
 export type MesBase = { mes: string; porBloque: Record<Bloque, number | null>; total: number | null }
+/** De dónde sale el ingreso de la correduría: CIMA (bruto) / banco fuera de CIMA (elevado al bruto) / sin identificar (NO sumado). */
+export type DesgloseIngresosCorreduria = {
+  cima: number | null
+  banco: number | null
+  sinIdentificar: number
+  sinIdentificarLista: { pagador: string; importe: number }[]
+}
 export type BloqueResumen = { neto: number | null; estimado?: number }
 export type Periodo = {
   desde: string
   hasta: string
   lineas: LineaPiso[]
   compartidosSinRepartir: number
-  correduria: { cobrado: number | null; bruto: number | null; retencion: number | null; gastos: number | null; neto: number | null }
+  correduria: { cobrado: number | null; bruto: number | null; retencion: number | null; gastos: number | null; neto: number | null; fuente?: 'banco' | 'cima'; desglose?: DesgloseIngresosCorreduria }
   pilar: { ingresos: number | null; gastos: number | null; neto: number | null }
   bloques: Record<Bloque, number | null>
+  /**
+   * Imputación de rentas inmobiliarias (art. 85) de los pisos de capital inmobiliario por los días NO
+   * arrendados del periodo. Ausente (periodos armados a mano/legado) = no se modela. Suma a la base general.
+   */
+  imputaciones?: LineaImputacion[]
+  /** Σ imputaciones; null si alguna es «sin dato». */
+  imputacionTotal?: number | null
+  /** Σ bloques + imputación (null si la imputación es «sin dato»). */
   baseGeneral: number | null
   porMes: MesBase[]
 }
@@ -176,10 +285,27 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
   })
 
   const c = actividad(e.correduria, meses)
-  const corBruto = c.ingresos == null ? null : c.ingresos / (1 - RETENCION_CORREDURIA)
+  const cima = e.correduria.fuente === 'cima'
+  // CIMA: el ingreso ya es BRUTO y la retención es solo la que consta (null = sin dato). Banco: neto/(1-15 %).
+  const bancoNeto = cima ? suma(meses.map(m => e.correduria.ingresosBancoPorMes?.[m] ?? 0)) : 0
+  const bancoBruto = bancoNeto / (1 - RETENCION_CORREDURIA)
+  const hayBanco = cima && meses.some(m => e.correduria.ingresosBancoPorMes?.[m] != null)
+  const corBruto = cima
+    ? (c.ingresos == null && !hayBanco ? null : (c.ingresos ?? 0) + (hayBanco ? bancoBruto : 0))
+    : c.ingresos == null ? null : c.ingresos / (1 - RETENCION_CORREDURIA)
+  const retConsta = cima ? meses.filter(m => e.correduria.retencionPorMes?.[m] != null) : []
+  const retCima = cima ? (retConsta.length ? suma(retConsta.map(m => e.correduria.retencionPorMes![m])) : c.ingresos == null ? 0 : null) : null
+  const corRet = cima ? (retCima == null ? null : retCima + (hayBanco ? bancoBruto - bancoNeto : 0))
+    : corBruto == null ? null : corBruto - (c.ingresos ?? 0)
+  const sinId = cima ? (e.correduria.sinIdentificar ?? []).filter(x => meses.includes(x.mes)) : []
   const corr = {
-    cobrado: c.ingresos, bruto: corBruto, retencion: corBruto == null ? null : corBruto - (c.ingresos ?? 0),
-    gastos: c.gastos, neto: netoAct(corBruto, c.gastos),
+    cobrado: cima ? (corBruto == null || corRet == null ? null : corBruto - corRet) : c.ingresos,
+    bruto: corBruto, retencion: corRet,
+    gastos: c.gastos, neto: netoAct(corBruto, c.gastos), fuente: cima ? 'cima' as const : 'banco' as const,
+    ...(cima ? { desglose: {
+      cima: c.ingresos, banco: hayBanco ? bancoBruto : null,
+      sinIdentificar: suma(sinId.map(x => x.importe)), sinIdentificarLista: sinId.map(x => ({ pagador: x.pagador, importe: x.importe })),
+    } } : {}),
   }
   const pl = actividad(e.pilar, meses)
   const pilar = { ingresos: pl.ingresos, gastos: pl.gastos, neto: netoAct(pl.ingresos, pl.gastos) }
@@ -190,7 +316,15 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
     actividad_correduria: corr.neto,
     actividad_pilar: pilar.neto,
   }
-  const baseGeneral = suma(BLOQUES.map(b => bloques[b] ?? 0))
+  // Imputación: días del periodo (recortado al año) menos días con reserva, por piso de capital inmobiliario.
+  const imp = e.imputacion ?? IMPUTACION_INMUEBLES
+  const d0 = desde < `${e.anio}-01-01` ? `${e.anio}-01-01` : desde
+  const d1 = hasta > `${e.anio}-12-31` ? `${e.anio}-12-31` : hasta
+  const diasPeriodo = d1 < d0 ? 0 : Math.round((Date.parse(d1) - Date.parse(d0)) / 86400000) + 1
+  const imputaciones = e.propiedades.filter(p => p.bloque === 'capital_inmobiliario')
+    .map(p => lineaImputacion(p, imp[p.id], diasPeriodo, diasOcupados(e.ingresos, p.id, d0, d1).size, e.anio))
+  const imputacionTotal = sumaImputacion(imputaciones)
+  const baseGeneral = imputacionTotal == null ? null : suma(BLOQUES.map(b => bloques[b] ?? 0)) + imputacionTotal
 
   const porMes: MesBase[] = meses.map(m => {
     const d0 = m > desde.slice(0, 7) ? `${m}-01` : desde
@@ -214,14 +348,15 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
       pb[p.bloque] = (pb[p.bloque] ?? 0) + n
     }
     const ci = e.correduria.ingresosPorMes[m], cg = e.correduria.gastosPorMes[m]
-    if (ci != null || cg != null) pb.actividad_correduria = (ci != null ? ci / (1 - RETENCION_CORREDURIA) : 0) - (cg ?? 0)
+    const cb = e.correduria.fuente === 'cima' ? e.correduria.ingresosBancoPorMes?.[m] : undefined
+    if (ci != null || cg != null || cb != null) pb.actividad_correduria = (ci != null ? (e.correduria.fuente === 'cima' ? ci : ci / (1 - RETENCION_CORREDURIA)) : 0) + (cb != null ? cb / (1 - RETENCION_CORREDURIA) : 0) - (cg ?? 0)
     const pi = e.pilar.ingresosPorMes[m], pg = e.pilar.gastosPorMes[m]
     if (pi != null || pg != null) pb.actividad_pilar = (pi ?? 0) - (pg ?? 0)
     const vals = BLOQUES.map(b => pb[b]).filter((x): x is number => x != null)
     return { mes: m, porBloque: pb, total: vals.length ? suma(vals) : null }
   })
 
-  return { desde, hasta, lineas, compartidosSinRepartir: brutoTotal > 0 ? 0 : compTot, correduria: corr, pilar, bloques, baseGeneral, porMes }
+  return { desde, hasta, lineas, compartidosSinRepartir: brutoTotal > 0 ? 0 : compTot, correduria: corr, pilar, bloques, imputaciones, imputacionTotal, baseGeneral, porMes }
 }
 function mesSiguiente(m: string): string {
   const y = Number(m.slice(0, 4)), mm = Number(m.slice(5, 7))
@@ -260,6 +395,13 @@ export function repartoIndividual(p: Periodo, props: PropiedadFiscal[]): { alber
     const pctA = tit.length ? tit.filter(t => t.titular !== 'pilar').reduce((s, t) => s + t.porcentaje, 0) : 100
     alberto += (l.neto * pctA) / 100
     pilar += (l.neto * pctP) / 100
+  }
+  for (const l of p.imputaciones ?? []) {
+    const tit = props.find(x => x.id === l.propertyId)?.titulares ?? []
+    const pctP = tit.find(t => t.titular === 'pilar')?.porcentaje ?? 0
+    const pctA = tit.length ? tit.filter(t => t.titular !== 'pilar').reduce((s, t) => s + t.porcentaje, 0) : 100
+    alberto += ((l.importe ?? 0) * pctA) / 100
+    pilar += ((l.importe ?? 0) * pctP) / 100
   }
   alberto += (p.bloques.actividad_correduria ?? 0)
   pilar += (p.bloques.actividad_pilar ?? 0)
@@ -372,7 +514,9 @@ export function calcularCostesUnitarios(x: EntradaCostes): CostesUnitarios {
   const ventana = mesesCompletosHasta(x.anio, x.hoy).slice(-VENTANA_SUMINISTROS_MESES)
   for (const id of ids) {
     const luz = x.suministros.filter(s => s.propertyId === id && s.tipo === 'luz' && ventana.includes(s.mes))
-    luzMes[id] = luz.length ? redondear(suma(luz.map(s => s.importe)) / ventana.length) : null
+    // Entre los meses CON cargo (como el agua): un feed parado no debe abaratar la media.
+    const mesesLuz = new Set(luz.map(s => s.mes)).size
+    luzMes[id] = luz.length ? redondear(suma(luz.map(s => s.importe)) / mesesLuz) : null
     const agua = x.suministros.filter(s => s.propertyId === id && s.tipo === 'agua' && ventana.includes(s.mes))
     aguaMes[id] = agua.length ? redondear(suma(agua.map(s => s.importe)) / agua.length / MESES_POR_CARGO_AGUA) : null
     fijosMes[id] = redondear(suma(x.fijos.filter(f => f.propertyId === id).map(f => f.total)))
@@ -392,7 +536,9 @@ export type CosteReserva = {
 }
 export function costeReserva(r: FilaIngreso, c: CostesUnitarios): CosteReserva {
   const dif = r.bruto - r.neto
-  const comision = dif > 0.005 ? dif : /booking/i.test(r.portal ?? '') ? redondear(r.bruto * c.comisionBooking) : null
+  // Sin bruto en BD el «bruto» ya es el neto: aplicarle el % de Booking restaría la comisión dos veces.
+  const comision = dif > 0.005 ? dif
+    : r.brutoConocido !== false && /booking/i.test(r.portal ?? '') ? redondear(r.bruto * c.comisionBooking) : null
   let noches = 0
   for (let d = r.checkIn; d < r.checkOut; d = sumDias(d, 1)) noches++
   return {
@@ -422,12 +568,13 @@ function agregar(rows: CosteReserva[], dias: number): Agregado {
     sinComision: { reservas: sin.length, bruto: suma(sin.map(r => r.bruto)) },
   }
 }
-/** a + k·b (k ≥ 0). Un null en b solo contamina si k > 0. */
-function combinar(a: Agregado, b: Agregado, k: number): Agregado {
+/** a + k·b (k ≥ 0). Un null en b solo contamina si k > 0. Los días añadidos no pasan de `diasTramo − a.dias`. */
+function combinar(a: Agregado, b: Agregado, k: number, diasTramo: number): Agregado {
   if (k <= 0) return a
   const m = (x: number | null) => (x == null ? null : x * k)
   return {
-    reservas: a.reservas + b.reservas * k, bruto: a.bruto + b.bruto * k, dias: a.dias + b.dias * k,
+    reservas: a.reservas + b.reservas * k, bruto: a.bruto + b.bruto * k,
+    dias: a.dias + Math.min(b.dias * k, Math.max(0, diasTramo - a.dias)),
     comision: sumN(a.comision, m(b.comision)), limpieza: sumN(a.limpieza, m(b.limpieza)), lavanderia: sumN(a.lavanderia, m(b.lavanderia)),
     sinComision: { reservas: a.sinComision.reservas + b.sinComision.reservas * k, bruto: a.sinComision.bruto + b.sinComision.bruto * k },
   }
@@ -468,12 +615,17 @@ export type EscenarioEst = {
   baseGeneral: number
   baseEstimada: number // parte de baseGeneral que es estimación
   estimadoPorPiso: Record<string, number>
+  /** Días con reserva estimados de hoy+1 a 31/12 por piso (para la imputación de rentas del cierre). */
+  diasPorPiso: Record<string, number>
   futuro: {
     reservas: number; bruto: number
     comision: number | null; limpieza: number | null; lavanderia: number | null
     luz: number | null; agua: number | null; fijos: number | null
     compartidos: number; amortizacion: number
     correduriaNeto: number | null; pilarNeto: number | null
+    /** Cómo se estimó la correduría: recibos pendientes de CIMA (ingresos nov-dic = `correduriaIngresosPendientes`) o media bancaria. */
+    correduriaEstimacion?: 'recibos_pendientes' | 'media_banco'
+    correduriaIngresosPendientes?: number | null
   }
   desglose: DesglosePiso[]
   sinDato: ConceptoSinDato[]
@@ -508,7 +660,16 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
     return v.length ? suma(v) / v.length : null
   }
   const cI = mediaAct(e.correduria.ingresosPorMes), cG = mediaAct(e.correduria.gastosPorMes)
-  const correduriaNeto = cI == null && cG == null ? null : ((cI ?? 0) / (1 - RETENCION_CORREDURIA) - (cG ?? 0)) * mesesRestantes
+  // CIMA: los ingresos de lo que falta = recibos PENDIENTES con efecto en los meses restantes (estimación marcada);
+  // 0 es un valor revisado, no «sin dato». Banco (legado): media mensual elevada al bruto.
+  const cima = e.correduria.fuente === 'cima'
+  const pendienteFuturo = cima ? suma(Object.entries(e.correduria.pendientePorMes ?? {}).filter(([m]) => m > e.hoy.slice(0, 7) && m <= fin.slice(0, 7)).map(([, v]) => v)) : null
+  // Banco fuera de CIMA (no hay recibos pendientes que lo anticipen): media mensual de los meses completos, elevada al bruto.
+  const bancoMedia = cima ? mediaAct(e.correduria.ingresosBancoPorMes ?? {}) : null
+  const bancoFuturo = bancoMedia == null ? 0 : (bancoMedia / (1 - RETENCION_CORREDURIA)) * mesesRestantes
+  const correduriaNeto = cima
+    ? (pendienteFuturo ?? 0) + bancoFuturo - (cG ?? 0) * mesesRestantes
+    : cI == null && cG == null ? null : ((cI ?? 0) / (1 - RETENCION_CORREDURIA) - (cG ?? 0)) * mesesRestantes
   const pI = mediaAct(e.pilar.ingresosPorMes), pG = mediaAct(e.pilar.gastosPorMes)
   const pilarNeto = pI == null && pG == null ? null : ((pI ?? 0) - (pG ?? 0)) * mesesRestantes
 
@@ -532,7 +693,7 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       agg: pid => {
         const b = base.get(pid)!, r = refAgg.get(pid)!
         const k = r.reservas > 0 ? Math.max(0, r.reservas - b.reservas) / r.reservas : 0
-        return combinar(b, r, k)
+        return combinar(b, r, k, diasRest)
       },
     },
     {
@@ -550,11 +711,13 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       actividad_pilar: { real: hastaHoy.bloques.actividad_pilar, estimado: pilarNeto, total: null },
     }
     const estimadoPorPiso: Record<string, number> = {}
+    const diasPorPiso: Record<string, number> = {}
     const desglose: DesglosePiso[] = []
     const sinDato: ConceptoSinDato[] = []
     const fut: EscenarioEst['futuro'] = {
       reservas: 0, bruto: 0, comision: null, limpieza: null, lavanderia: null, luz: null, agua: null, fijos: null,
       compartidos: 0, amortizacion: 0, correduriaNeto, pilarNeto,
+      correduriaEstimacion: cima ? 'recibos_pendientes' : 'media_banco', correduriaIngresosPendientes: pendienteFuturo,
     }
     const acum = (k: 'comision' | 'limpieza' | 'lavanderia' | 'luz' | 'agua' | 'fijos', v: number | null) => { fut[k] = sumN(fut[k], v) }
     for (const p of e.propiedades) {
@@ -567,6 +730,7 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       const amortizacion = p.bloque === 'capital_inmobiliario' && par ? (par.anual * a.dias) / denom : null
       const neto = a.bruto - (a.comision ?? 0) - (a.limpieza ?? 0) - (a.lavanderia ?? 0) - (luz ?? 0) - (agua ?? 0) - (fijos ?? 0) - compartidos - (amortizacion ?? 0)
       estimadoPorPiso[p.id] = neto
+      diasPorPiso[p.id] = Math.min(diasRest, a.dias)
       bl[p.bloque].estimado = (bl[p.bloque].estimado ?? 0) + neto
       desglose.push({ propertyId: p.id, nombre: p.nombre, reservas: a.reservas, bruto: a.bruto, comision: a.comision, limpieza: a.limpieza, lavanderia: a.lavanderia, luz, agua, fijos, compartidos, amortizacion, neto })
       fut.reservas += a.reservas; fut.bruto += a.bruto; fut.compartidos += compartidos; fut.amortizacion += amortizacion ?? 0
@@ -586,18 +750,35 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       baseGeneral += x.total ?? 0
       baseEstimada += x.estimado ?? 0
     }
-    return { id: d.id, etiqueta: d.etiqueta, descripcion: d.descripcion, bloques: bl, baseGeneral, baseEstimada, estimadoPorPiso, futuro: fut, desglose, sinDato }
+    return { id: d.id, etiqueta: d.etiqueta, descripcion: d.descripcion, bloques: bl, baseGeneral, baseEstimada, estimadoPorPiso, diasPorPiso, futuro: fut, desglose, sinDato }
   })
   return { mesesRestantes, escenarios }
 }
 
-/** Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual. */
-export function periodoCierre(real: Periodo, est: Pick<EscenarioEst, 'bloques' | 'baseGeneral' | 'estimadoPorPiso'>, anio: number): Periodo {
+/** La cifra estimada cuenta conceptos «sin dato» como 0 → provisional (de todo el escenario o de un piso). */
+export function esProvisional(x: Pick<EscenarioEst, 'sinDato'>, propertyId?: string): boolean {
+  return x.sinDato.some(d => propertyId == null || d.propertyId === propertyId)
+}
+
+/**
+ * Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual. La imputación de
+ * rentas se rehace para el AÑO entero: días arrendados = reales hasta hoy + estimados del escenario
+ * (`diasPorPiso`); sin `diasPorPiso` del piso ⇒ imputación «sin dato» (null), nunca 0.
+ */
+export function periodoCierre(real: Periodo, est: Pick<EscenarioEst, 'bloques' | 'baseGeneral' | 'estimadoPorPiso'> & { diasPorPiso?: Record<string, number> }, anio: number): Periodo {
+  const diasAnio = diasDelAnio(anio)
+  const imputaciones = real.imputaciones?.map(l => {
+    const fut = est.diasPorPiso?.[l.propertyId]
+    const par: ParamImputacion = { valorCatastral: l.valorCatastral, revisado: l.revisado, fuente: '' }
+    return lineaImputacion({ id: l.propertyId, nombre: l.nombre }, par, diasAnio, fut == null ? null : l.diasArrendados + fut, anio)
+  })
+  const imputacionTotal = imputaciones ? sumaImputacion(imputaciones) : undefined
   return {
     ...real, hasta: `${anio}-12-31`,
     lineas: real.lineas.map(l => ({ ...l, neto: l.neto + (est.estimadoPorPiso[l.propertyId] ?? 0) })),
     bloques: Object.fromEntries(BLOQUES.map(b => [b, est.bloques[b].total])) as Record<Bloque, number | null>,
-    baseGeneral: est.baseGeneral,
+    imputaciones, imputacionTotal,
+    baseGeneral: imputacionTotal === undefined ? est.baseGeneral : imputacionTotal == null ? null : est.baseGeneral + imputacionTotal,
   }
 }
 
@@ -608,6 +789,8 @@ export type AvisosDatos = {
   cuentasSinActualizar: { nombre: string; ultimoMovimiento: string | null; dias: number | null }[]
   mesesSinLimpieza: string[]
   mesesSinSuministros: string[]
+  /** Ingresos `seguros` del banco con pagador sin reconocer (no sumados a la correduría). Opcional: lo rellena el cargador. */
+  ingresosCorreduriaSinIdentificar?: { pagador: string; importe: number }[]
 }
 export function avisosDatos(args: {
   hoy: string

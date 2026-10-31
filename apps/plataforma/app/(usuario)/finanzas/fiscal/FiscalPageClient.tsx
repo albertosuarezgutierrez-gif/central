@@ -8,8 +8,12 @@ import { BtnLink, PageHeader } from '@/components/ui'
 import ConsejoFiscalBox from '../ConsejoFiscalBox'
 import BaseDevengoBloque from './BaseDevengoBloque'
 import type { BaseDevengo } from '@/lib/base-fiscal-devengo-db'
+import type { CompraGuardada, PanelDatos } from '@/lib/fiscal-panel'
+import PanelFiscal from './PanelFiscal'
+import SituacionFiscal from './SituacionFiscal'
+import type { Seccion } from '@/lib/situacion-fiscal'
 
-type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; baseDevengo: BaseDevengo | null; year: number; quarter: number }
+type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; baseDevengo: BaseDevengo | null; panel: PanelDatos | null; compras: CompraGuardada[] | null; situacion: Seccion[] | null; year: number; quarter: number }
 
 function fmt(n: number) {
   return eur(n)
@@ -133,7 +137,7 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
   )
 }
 
-export default function FiscalPageClient({ initialData, initialComparativa, baseDevengo, year: initYear, quarter: initQuarter }: Props) {
+export default function FiscalPageClient({ initialData, initialComparativa, baseDevengo, panel, compras, situacion, year: initYear, quarter: initQuarter }: Props) {
   const router = useRouter()
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [year, setYear] = useState(initYear)
@@ -183,10 +187,21 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
         </>}
       />
 
+      {/* Mi situación fiscal: radiografía de lo personal que usa el motor (arriba del todo). */}
+      <SituacionFiscal secciones={situacion} onEditarPerfil={d ? () => setFormOpen(true) : null} />
+
+      {/* Panel fiscal: lo primero. Sin base por devengo o sin perfil → «sin dato» (nunca 0). */}
+      {panel ? <PanelFiscal datos={panel} compras={compras} /> : (
+        <div style={{ padding: 16, marginBottom: 16, border: '1px dashed var(--muted)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--muted)' }}>
+          Sin dato: no se pudo calcular el panel fiscal (base por devengo o perfil fiscal no disponibles).
+        </div>
+      )}
+
       {!d ? (
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Sin datos para este periodo.</div>
       ) : (
-        <>
+        <details style={{ marginBottom: 16 }}>
+          <summary style={{ minHeight: 44, display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>Detalle: bloques, pisos, meses, trimestral, IVA, deducciones e histórico</summary>
           {/* Base por devengo: hasta hoy + estimación de cierre (fuente fiscal correcta) */}
           <BaseDevengoBloque data={baseDevengo} />
 
@@ -315,7 +330,9 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
                       {r.deducciones.map(dd => (
                         <div key={dd.clave} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
                           <span style={{ color: 'var(--muted)' }}>− {dd.concepto}{dd.ambito === 'andalucia' ? ' 🌅' : ''}{dd.reembolsable ? ' ♻️' : ''}</span>
-                          <span style={{ fontWeight: 600, color: 'var(--primary)' }}>−{fmt(dd.importe)}</span>
+                          {dd.sinDato
+                            ? <span style={{ fontWeight: 600, color: 'var(--muted)' }}>sin dato (falta la cuota SS de la madre)</span>
+                            : <span style={{ fontWeight: 600, color: 'var(--primary)' }}>−{fmt(dd.importe)}</span>}
                         </div>
                       ))}
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
@@ -328,7 +345,7 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
                       </div>
                       <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>♻️ reembolsable · 🌅 Andalucía</div>
                       {r.deducciones.some(dd => dd.clave === 'maternidad') && (
-                        <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>ℹ️ La maternidad se prorratea por meses en el año de nacimiento, pero no está topada por las cotizaciones de la madre ese periodo — orientativa; el borrador AEAT manda.</div>
+                        <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>ℹ️ La maternidad se prorratea por meses y se topa por hijo con las cuotas SS de la madre (art. 81); sin ese dato no se calcula y el resultado no la incluye — el borrador AEAT manda.</div>
                       )}
                     </>
                   )
@@ -361,9 +378,10 @@ export default function FiscalPageClient({ initialData, initialComparativa, base
             </div>
           </div>
 
-          {formOpen && <SituacionFamiliarForm ded={d.deducciones} onClose={() => setFormOpen(false)} onSaved={refresh} />}
-        </>
+        </details>
       )}
+      {/* Fuera del <details>: debe poder abrirse también desde «Mi situación fiscal». */}
+      {formOpen && d && <SituacionFamiliarForm ded={d.deducciones} onClose={() => setFormOpen(false)} onSaved={refresh} />}
     </main>
   )
 }

@@ -302,6 +302,8 @@ function shiftYearStr(fecha: string, delta: number): string {
 }
 
 // ── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────
+const fechaIso = (v: Date | string | null | undefined): string | null =>
+  v == null ? null : v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10)
 async function getDeducciones(
   cuentaId: string,
   year: number,
@@ -313,7 +315,10 @@ async function getDeducciones(
     conyuge_trabaja: boolean; gasto_guarderia_anual: unknown; aportacion_plan_pensiones: unknown
     grado_discapacidad_titular: number; grado_discapacidad_conyuge: number
     ascendientes_a_cargo: number; ascendientes_mayores_75: number; donativos_anual: unknown
-    gasto_deportivo_anual: unknown
+    gasto_deportivo_anual: unknown; conyuge_cuota_autonomos: unknown
+    // Columnas opcionales (migración prisma/sql/2026-10-31_fiscal_perfil_fn_desde.sql): con `SELECT *`
+    // llegan `undefined` mientras no exista la columna ⇒ «sin dato», sin romper la consulta.
+    familia_numerosa_desde?: Date | string | null; abono_anticipado_maternidad?: unknown; abono_anticipado_fn?: unknown
   }>>`SELECT * FROM fiscal_perfil WHERE cuenta_id = ${cuentaId}::uuid LIMIT 1`
 
   const perfil: PerfilFiscal = perfilRows[0]
@@ -330,6 +335,12 @@ async function getDeducciones(
         ascendientesMayores75: perfilRows[0].ascendientes_mayores_75,
         donativosAnual: Number(perfilRows[0].donativos_anual),
         gastoDeportivoAnual: Number(perfilRows[0].gasto_deportivo_anual ?? 0),
+        // Cuotas SS/RETA anuales de la madre (tope art. 81). NULL = sin dato ⇒ maternidad «sin dato», nunca 0.
+        cuotasSSMadreAnual: perfilRows[0].conyuge_cuota_autonomos == null ? null : Number(perfilRows[0].conyuge_cuota_autonomos),
+        // Fecha de inicio del título de FN (prorrateo por meses); sin columna/valor ⇒ FN estatal «sin dato».
+        familiaNumerosaDesde: fechaIso(perfilRows[0].familia_numerosa_desde),
+        abonoAnticipadoMaternidad: perfilRows[0].abono_anticipado_maternidad == null ? null : Number(perfilRows[0].abono_anticipado_maternidad),
+        abonoAnticipadoFamiliaNumerosa: perfilRows[0].abono_anticipado_fn == null ? null : Number(perfilRows[0].abono_anticipado_fn),
       }
     : { ...PERFIL_DEFECTO }
 
