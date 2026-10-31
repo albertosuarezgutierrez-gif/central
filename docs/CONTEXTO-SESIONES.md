@@ -11,6 +11,12 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (31/10/2026) Auditoría diaria (ligera)
+- Sin 🔴 de precio: `rail_baja_roto` 0, `bajo_minimo` 0, palancas on, `oscilantes` 8 (era 68), `rail_alza_sin_justificar` 2 🟠. Pasada 7,6 h, 48 noches.
+- 🟡 Ingesta CIMA DEGRADADA (latido ok): C0072 33 d sin mandar nada (14 pólizas vivas), SIN de Occident 36 d/Allianz 34 d, POL Allianz 22 d, REC Reale 32 d; cola `queueDepth` 235 (217 el 22/10), pull 1 procesado. `cima_siniestros_corte` en rojo («SIN 9 d»).
+- Sin anotar hasta hoy: #5291, #5293, #5295 (tarificador: compañía anterior y años desde póliza viva, explorador 0.3.25, nº póliza anterior → precio firme SINCO, Mapfre 0.8.36, Allianz 0.6.36).
+- Latidos rojos ya conocidos: `seo_correduria` (GSC 403), `ses_transporte`, `subastas_idealista` (27/09), `sivra_eventos` (nager 2027). PRs de registro draft viejos (#3755, #3995, #4257, #4258, #4319, #4476, #4522, #4998) sin mergear. `list_sessions` no disponible: sesiones no contrastadas.
+
 ## (29/10/2026) Push · clic robusto en todas las apps + mejoras del portal asegura
 - sivra, rrhh, ia-rest (sw.js y sw-alertas.js): mismo fallo que el portal (navigate sin catch / solo focus / ignora data.url) → patrón URL absoluta + try/catch + openWindow. Alertas de voz: prioriza la ventana ya en /edge.
 - Portal: `tag` por póliza (`poliza-<id>`/`anadida-<id>`, renotify), botón «Ver recibo» en devueltos, tags separados por origen (`cima-poliza-`, `oblig-poliza-`, `oblig-anadida-`); el contador del icono lo sigue llevando SOLO `Campana.tsx` (se descartó un segundo contador que lo pisaba). Helpers en `module-seguros-portal/src/push-aviso.ts` con cepos vistos en rojo.
