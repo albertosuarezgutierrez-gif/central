@@ -68,6 +68,10 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.38 (31/10/2026, trabajo real 7865539d con 0.8.37, mismo clic de 30 s): el volcado final ya era el caso de 0.8.37 (uno habilitado PLEGADO +
+// otro DESHABILITADO): el criterio se aplicaba justo tras «Continuar», con la licencia de «Figuras» aún DESHABILITADA (cargando) → null → `.first()`,
+// que Mapfre luego habilitaba y plegaba. `selectLicenciaHabilitada` ESPERA a ≥1 habilitado con estado estable (2 lecturas iguales); si no llega,
+// hueco claro con recuento. Sin clics nuevos.
 // v0.8.37 (31/10/2026, trabajo real 7865539d con 0.8.36): seguía el clic de 30 s en `datos-licencia mat-select`.first(): había OTRO `datos-licencia`
 // HABILITADO pero oculto (no solo deshabilitados) y 0.8.36 devolvía null. `selectLicenciaHabilitada` elige el único VISIBLE o el único en tarjeta
 // plegada (que despliega por su cabecera); ninguno visible y 0 o 2+ plegados → hueco claro. Ningún clic nuevo fuera de esa cabecera.
@@ -1164,6 +1168,9 @@ export async function desplegarAcordeonGuardado(raiz: Pick<Frame, 'locator'>, pu
 }
 
 const ESPERA_LICENCIA_DESPLEGADA_MS = 3_000
+/** v0.8.38: tope para que «Figuras» termine de cargar la licencia (habilitada y estable) tras «Continuar» del paso 2. */
+const ESPERA_LICENCIA_HABILITADA_MS = 12_000
+const SONDEO_LICENCIA_MS = 300
 
 /**
  * v0.8.36 (30/10/2026, trabajo real 76d731f3 atascado: `locator.click` 30 s sobre `datos-licencia mat-select` «element is not visible»). Con un
@@ -1172,10 +1179,17 @@ const ESPERA_LICENCIA_DESPLEGADA_MS = 3_000
  * si está oculto en una tarjeta plegada, la despliega por `desplegarAcordeonGuardado` (cabecera, guard) y espera a verlo. `null` = no hay
  * exactamente uno habilitado (sigue el camino de siempre). Habilitado pero oculto sin poder desplegarlo → `ErrorMapaIncompleto` claro (no 30 s de clic).
  * Solo lee el DOM (sin valores) salvo ese despliegue.
+ *
+ * v0.8.38 (31/10/2026, trabajo real 7865539d con 0.8.37, mismo clic de 30 s): el volcado del fallo traía el estado FINAL que 0.8.37 ya resolvía
+ * (uno habilitado en la tarjeta plegada + otro DESHABILITADO en «Contratación»); el criterio se aplicaba DEMASIADO PRONTO: justo tras «Continuar» del
+ * paso 2 la licencia de «Figuras» aún estaba DESHABILITADA (cargando) → 0 habilitados → null → `.first()`, que Mapfre habilitaba y PLEGABA después.
+ * Ahora se ESPERA (hasta `esperaHabilitadoMs`) a que haya ≥1 habilitado y a que su estado (posición, visible, tarjeta) se repita en dos lecturas
+ * seguidas. Hay `datos-licencia` pero NINGUNO habilitado al acabar la espera → `ErrorMapaIncompleto` con el recuento (nunca el `.first()` de 30 s).
+ * Ningún `datos-licencia` → null (camino de siempre: hueco «no aparece»). El mensaje de error lleva solo recuentos (sin PII).
  */
-export async function selectLicenciaHabilitada(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>, formador?: ContextoFormador, esperaMs: number = ESPERA_LICENCIA_DESPLEGADA_MS): Promise<Locator | null> {
+export async function selectLicenciaHabilitada(raiz: Pick<Frame, 'locator'>, pulsar?: (boton: Locator) => Promise<void>, formador?: ContextoFormador, esperaMs: number = ESPERA_LICENCIA_DESPLEGADA_MS, esperaHabilitadoMs: number = ESPERA_LICENCIA_HABILITADA_MS): Promise<Locator | null> {
   // Sin funciones con nombre dentro de `evaluateAll` (tsx les mete `__name`, que no existe en la página).
-  const leer = () =>
+  const leerTodo = () =>
     raiz.locator(SEL_LICENCIA.clasePermiso).evaluateAll((els) => {
       const cabeceras = Array.from(document.querySelectorAll('mat-expansion-panel-header'))
       const out: { idx: number; visible: boolean; cab: number }[] = []
@@ -1187,10 +1201,31 @@ export async function selectLicenciaHabilitada(raiz: Pick<Frame, 'locator'>, pul
         const cab = panel && !panel.classList.contains('mat-expanded') ? panel.querySelector(':scope > mat-expansion-panel-header') : null
         out.push({ idx, visible: r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none', cab: cab ? cabeceras.indexOf(cab) : -1 })
       })
-      return out
+      return { total: els.length, hab: out }
     }).catch(() => null)
-  const hab0 = await leer()
-  if (!hab0 || hab0.length === 0) return null
+  const leer = async () => (await leerTodo())?.hab ?? null
+  const firma = (h: { idx: number; visible: boolean; cab: number }[]) => h.map((x) => `${x.idx}:${x.visible ? 1 : 0}:${x.cab}`).join('|')
+  const t0 = Date.now()
+  const finHab = t0 + Math.max(0, esperaHabilitadoMs)
+  let lectura = await leerTodo()
+  let previa: string | null = null
+  for (;;) {
+    // Sin lectura (el evaluate falló: no es una pantalla real) → camino de siempre al momento; no se espera a ciegas.
+    if (!lectura || !Array.isArray(lectura.hab)) return null
+    const f = lectura.hab.length > 0 ? firma(lectura.hab) : null
+    if (f !== null && f === previa) break
+    if (Date.now() >= finHab) break
+    previa = f
+    await new Promise((res) => setTimeout(res, SONDEO_LICENCIA_MS))
+    lectura = await leerTodo()
+  }
+  if (!lectura || !Array.isArray(lectura.hab) || lectura.total === 0) return null
+  if (lectura.hab.length === 0) {
+    formador?.log('mapfre_licencia_sin_habilitar', { total: lectura.total, ms: Date.now() - t0 })
+    throw new ErrorMapaIncompleto(`el desplegable «clase del permiso» (${SEL_LICENCIA.clasePermiso}): ${lectura.total} en la pantalla y NINGUNO habilitado tras ${Math.round((Date.now() - t0) / 1000)} s de espera; no se pulsa uno deshabilitado`, true)
+  }
+  const hab0 = lectura.hab
+  formador?.log('mapfre_licencia_estado', { total: lectura.total, habilitados: hab0.length, visibles: hab0.filter((h) => h.visible).length, plegados: hab0.filter((h) => !h.visible && h.cab >= 0).length, ms: Date.now() - t0 })
   // v0.8.37 (31/10/2026, trabajo real 7865539d con 0.8.36: «Permiso Conducir» completa y PLEGADA y OTRO `datos-licencia` HABILITADO pero oculto,
   // p. ej. en la pestaña «Conductores Ocasionales»): con 2+ habilitados 0.8.36 devolvía null y el `.first()` (oculto) esperaba 30 s. Ahora:
   // exactamente UNO visible → ese (sin clic); ninguno visible y exactamente UNO en tarjeta plegada → se despliega esa; ninguno visible y 0 o 2+
@@ -2044,7 +2079,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.37',
+  version: '0.8.38',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

@@ -7,10 +7,10 @@ import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
 import { encolarTrabajo, lanzarPendientes, leerCompaniaActualUnicaCliente, leerOrigenesVehiculoCliente } from '@/lib/tarificador'
 import { leerRiesgoParaReencolar } from '@/lib/tarificador-lectura'
 import { riesgoParaReencolar } from '@/lib/tarificador-lectura-reglas'
-import { riesgoDesdeOportunidadDelCliente } from '@/lib/tarificacion-lead'
-import { conCompaniaActualUnica, conVehiculoDeOrigen, decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
+import { leerVehiculoPolizaVinculadaCliente, riesgoDesdeOportunidadDelCliente } from '@/lib/tarificacion-lead'
+import { conCompaniaActualUnica, conVehiculoDeOrigen, conVehiculoDePoliza, decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
 import { necesitaCompaniaActual } from '@/lib/tarificador-compania-actual'
-import { necesitaVehiculoEncadenado } from '@/lib/tarificador-espera-vehiculo'
+import { necesitaVehiculoEncadenado, tieneVehiculo } from '@/lib/tarificador-espera-vehiculo'
 import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
 import { hayImagenTrabajo } from '@/lib/esquema-bd'
 import { leerFilaImagen } from '@/lib/tarificador-imagen'
@@ -70,10 +70,13 @@ export const POST = auditado(async (req: Request) => {
       ? conCompaniaActualUnica(reconstruida, compania, ramo, await leerCompaniaActualUnicaCliente(correduria.id, clienteId))
       : reconstruida
     // Generali auto no busca por matrícula: su vehículo sale del último `ok` de Allianz/Mapfre del cliente (solo claves de catálogo).
-    // Sin ninguno sigue el 422 `generali_sin_vehiculo` del encolado.
-    const reconstruccion = conCompania.riesgo !== null && necesitaVehiculoEncadenado(compania, ramo)
+    // Sin ninguno, marca/modelo/versión de la póliza VIVA vinculada a la oportunidad (31/10/2026); sin eso sigue el 422 `generali_sin_vehiculo`.
+    const conOrigen = conCompania.riesgo !== null && necesitaVehiculoEncadenado(compania, ramo)
       ? conVehiculoDeOrigen(conCompania, compania, ramo, await leerOrigenesVehiculoCliente(correduria.id, clienteId))
       : conCompania
+    const reconstruccion = conOrigen.riesgo !== null && necesitaVehiculoEncadenado(compania, ramo) && !tieneVehiculo(conOrigen.riesgo)
+      ? conVehiculoDePoliza(conOrigen, compania, ramo, await leerVehiculoPolizaVinculadaCliente(correduria.id, clienteId, ramo))
+      : conOrigen
     const previo = leido.riesgo === null ? null : riesgoParaReencolar(leido.riesgo)
     const d = decidirRiesgoProbar({ reconstruccion, previo, soloPurgados: leido.soloPurgados, validar: (riesgo) => validarEntradaRamo(ramo, riesgo, compania) })
     if (!d.ok) return NextResponse.json({ estado: 'rechazado', motivo: d.motivo, ...(d.errores ? { errores: d.errores } : {}) }, { status: d.status })
