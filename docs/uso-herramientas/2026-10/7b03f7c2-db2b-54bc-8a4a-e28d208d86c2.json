@@ -1,21 +1,21 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-31T20:07:34.270Z",
- "llamadas": 21810,
+ "fin": "2026-10-31T20:42:56.356Z",
+ "llamadas": 21900,
  "categorias": {
   "otro": {
-   "llamadas": 2599,
-   "chars_in": 331419,
-   "chars_out": 17016700,
+   "llamadas": 2603,
+   "chars_in": 331486,
+   "chars_out": 17029480,
    "errores": 0,
-   "archivos_citados": 62,
-   "chars_citados": 9439766,
+   "archivos_citados": 63,
+   "chars_citados": 9462858,
    "tools": {
-    "ToolSearch": 541,
+    "ToolSearch": 542,
     "SubagentHandback": 10,
     "SendMessage": 134,
-    "ReadNotifications": 1428,
+    "ReadNotifications": 1431,
     "Monitor": 441,
     "AskUserQuestion": 13,
     "TaskStop": 23,
@@ -35,33 +35,33 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 2344,
-   "chars_in": 311746,
-   "chars_out": 16809823,
+   "llamadas": 2349,
+   "chars_in": 312520,
+   "chars_out": 16837634,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 36,
-    "Grep": 1008,
-    "Read": 1300
+    "Grep": 1009,
+    "Read": 1304
    }
   },
   "mcp:github": {
-   "llamadas": 1142,
-   "chars_in": 356154,
-   "chars_out": 2416355,
+   "llamadas": 1145,
+   "chars_in": 357189,
+   "chars_out": 2416743,
    "errores": 14,
    "archivos_citados": 9,
    "chars_citados": 3312411,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__actions_run_trigger": 274,
+    "mcp__github__actions_run_trigger": 275,
     "mcp__github__actions_list": 201,
-    "mcp__github__create_pull_request": 140,
+    "mcp__github__create_pull_request": 141,
     "mcp__github__update_pull_request": 81,
     "mcp__github__pull_request_read": 160,
-    "mcp__github__merge_pull_request": 141,
+    "mcp__github__merge_pull_request": 142,
     "mcp__github__add_reply_to_pull_request_comment": 29,
     "mcp__github__get_job_logs": 70,
     "mcp__github__add_issue_comment": 20,
@@ -70,25 +70,25 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 314,
-   "chars_in": 763653,
-   "chars_out": 829470,
+   "llamadas": 315,
+   "chars_in": 765651,
+   "chars_out": 831641,
    "errores": 0,
    "archivos_citados": 369,
    "chars_citados": 17546389,
    "tools": {
-    "Agent": 314
+    "Agent": 315
    }
   },
   "bash": {
-   "llamadas": 11972,
-   "chars_in": 8598019,
-   "chars_out": 34737882,
+   "llamadas": 12033,
+   "chars_in": 8612436,
+   "chars_out": 34855258,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 11972
+    "Bash": 12033
    }
   },
   "mcp:Vercel": {
@@ -113,15 +113,15 @@
    }
   },
   "sql": {
-   "llamadas": 1612,
-   "chars_in": 649388,
-   "chars_out": 3637533,
+   "llamadas": 1621,
+   "chars_in": 652517,
+   "chars_out": 3657908,
    "errores": 4,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 5,
-    "mcp__Supabase__execute_sql": 1607
+    "mcp__Supabase__execute_sql": 1616
    }
   },
   "mcp:Supabase": {
@@ -138,31 +138,31 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 344,
-   "chars_in": 71508,
-   "chars_out": 77956,
+   "llamadas": 345,
+   "chars_in": 71947,
+   "chars_out": 78064,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 135,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 68,
-    "mcp__claude-code-remote__send_later": 125,
+    "mcp__claude-code-remote__send_later": 126,
     "mcp__claude-code-remote__read_documentation": 3,
     "mcp__claude-code-remote__delete_trigger": 11,
     "mcp__claude-code-remote__update_trigger": 2
    }
   },
   "escritura": {
-   "llamadas": 860,
-   "chars_in": 2174163,
-   "chars_out": 89253338,
+   "llamadas": 866,
+   "chars_in": 2181139,
+   "chars_out": 89769505,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 687,
-    "Write": 173
+    "Edit": 692,
+    "Write": 174
    }
   },
   "agente:agente-architect": {

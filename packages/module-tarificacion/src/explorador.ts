@@ -379,6 +379,14 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'mapfre', ramo: 'auto', producto: 'auto', pestana: 'Nueva producción', productoMenu: 'Turismos y Motos',
     avancesAutorizados: Object.freeze([]),
   }),
+  // Mapfre Hogar (31/10/2026, «un bot por compañía»): «Nueva producción» → «Patrimoniales» → «Tarificación y emisión rápida» (MISMA
+  // pestaña), el recorrido grabado por Alberto que ya usa el borrador `mapfre/hogar.ts` (`abrirTarificacionRapidaHogar`; el enlace pasa
+  // por la puerta exacta del guard, `ENLACES_ENTRADA_AUTORIZADOS`). Hogar = 2.º ramo de la cartera en vigor. Sin avances autorizados:
+  // solo se LEE el formulario (CP, «Ref. catastral»…). Puerta de BD: fila `companias_integracion` mapfre/hogar activa (hoy no existe).
+  'mapfre:patrimoniales:hogar': Object.freeze({
+    compania: 'mapfre', ramo: 'hogar', producto: 'hogar', pestana: 'Nueva producción', productoMenu: 'Patrimoniales',
+    avancesAutorizados: Object.freeze([]),
+  }),
   // Occident Hogar (14/10/2026): «Productos» › «Análisis de necesidades» › «Hogar» › «Tarificación» (menú fijo en el código de
   // Occident, `occident/hogar.ts`); navega a /productos/multirriesgos/hogar/tarificacion y el formulario va en un iframe. Sin
   // avances autorizados: ningún botón visto necesita el permiso de «Aceptar». El «Guardar» del modal «Datos de la situación»
