@@ -297,3 +297,61 @@ test('pantalla: base estimada y neto por piso pasan por esProvisional («~» + m
   assert.ok(src.includes('estimada(x.baseGeneral, esProvisional(x))'), 'base general estimada sin marca de provisional')
   assert.ok(src.includes('estimada(l.neto, esProvisional(est.escenarios[0], l.propertyId))'), 'neto por piso sin marca de provisional')
 })
+
+// ── Correduría desde CIMA (bruto real, retención solo si consta) ────────────────────────────────
+const cima = {
+  fuente: 'cima' as const,
+  ingresosPorMes: { '2026-01': 485.65, '2026-02': 623.68, '2026-10': 836.54 },
+  retencionPorMes: { '2026-02': 15, '2026-10': 120 },
+  pendientePorMes: { '2026-10': 364.6, '2026-11': 421.65, '2026-12': 344.59, '2027-01': 28.56 },
+  gastosPorMes: { '2026-01': 1000, '2026-02': 1000, '2026-10': 1000 },
+}
+
+test('CIMA: el ingreso es el bruto de CIMA (sin dividir entre 0,85) y la retención solo la que consta', () => {
+  const p = calcularPeriodo(entrada({ correduria: cima }), '2026-01-01', '2026-10-31')
+  cerca(p.correduria.bruto, 1945.87)       // 485,65 + 623,68 + 836,54, tal cual
+  cerca(p.correduria.retencion, 135)       // 15 + 120: NO 15 % de 1.945,87
+  cerca(p.correduria.cobrado, 1945.87 - 135)
+  cerca(p.correduria.neto, 1945.87 - 3000)
+  assert.equal(p.correduria.fuente, 'cima')
+  cerca(p.porMes.find(x => x.mes === '2026-01')!.porBloque.actividad_correduria, 485.65 - 1000)
+})
+
+test('CIMA: sin ninguna retención consignada → retención y cobrado null (sin dato), bruto sí', () => {
+  const p = calcularPeriodo(entrada({ correduria: { ...cima, retencionPorMes: {} } }), '2026-01-01', '2026-10-31')
+  assert.equal(p.correduria.retencion, null)
+  assert.equal(p.correduria.cobrado, null)
+  cerca(p.correduria.bruto, 1945.87)
+})
+
+test('CIMA: la estimación nov-dic son los recibos pendientes con efecto nov-dic (no la media bancaria)', () => {
+  const e = entrada({ correduria: cima })
+  const est = estimarCierre(e, calcularPeriodo(e, '2026-01-01', '2026-10-31'))
+  const f = est.escenarios[0].futuro
+  assert.equal(f.correduriaEstimacion, 'recibos_pendientes')
+  cerca(f.correduriaIngresosPendientes ?? null, 421.65 + 344.59) // sin octubre (pasado) ni 2027
+  cerca(f.correduriaNeto, 766.24 - 1000 * est.mesesRestantes, 0.05)
+})
+
+test('CIMA: sin pendientes el futuro es 0 de ingreso (revisado), no sin dato', () => {
+  const e = entrada({ correduria: { ...cima, pendientePorMes: {} } })
+  const est = estimarCierre(e, calcularPeriodo(e, '2026-01-01', '2026-10-31'))
+  assert.equal(est.escenarios[0].futuro.correduriaIngresosPendientes, 0)
+})
+
+test('cargador: ingresos de la correduría por la vista AGREGADA de CIMA (nunca la tabla); sin 15 % inventado', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('./base-fiscal-devengo-db.ts', import.meta.url), 'utf8')
+  // El rol de plataforma no lee la cartera: solo la vista agregada, filtrada por cuenta.
+  assert.match(src, /FROM seguros_agregado\.v_comisiones_mes/)
+  assert.doesNotMatch(src, /FROM seguros\./)
+  assert.match(src, /v\.cuenta_id = \$\{cuentaId\}/)
+  assert.match(src, /'cobrado', 'pendiente'/)
+  assert.match(src, /retencion_irpf_sum/)
+  assert.doesNotMatch(src, /0[.,]15/)
+  // La regla del mes (cobrado → fecha_situacion; pendiente → fecha_efecto_actual) vive en el SQL de la vista.
+  const sql = readFileSync(new URL('../prisma/sql/2026-10-31_vista_comisiones_cima.sql', import.meta.url), 'utf8')
+  assert.match(sql, /WHEN r\.situacion = 'pendiente' THEN r\.fecha_efecto_actual ELSE r\.fecha_situacion END/)
+  assert.match(sql, /GRANT SELECT ON seguros_agregado\.v_comisiones_mes TO prisma_plataforma/)
+  assert.doesNotMatch(sql, /^\s*GRANT[^\n]*ON (SCHEMA )?seguros(\.| )/m)
+})

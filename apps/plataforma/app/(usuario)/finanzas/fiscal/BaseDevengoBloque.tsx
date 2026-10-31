@@ -126,7 +126,9 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '13px' }}>
               <strong>Base general (antes de reducción)</strong><strong>{money(p.baseGeneral)}</strong>
             </div>
-            {p.correduria.retencion != null && <div style={sub}>Correduría: bruto {money(p.correduria.bruto)}, retención 15 % {money(p.correduria.retencion)}.</div>}
+            {p.correduria.fuente === 'cima'
+              ? <div style={sub}>Correduría (CIMA): comisión bruta cobrada {money(p.correduria.bruto)}; retención {p.correduria.retencion == null ? 'sin dato (no consta en los recibos)' : `${money(p.correduria.retencion)} (solo la que consta)`}.</div>
+              : p.correduria.retencion != null && <div style={sub}>Correduría: bruto {money(p.correduria.bruto)}, retención 15 % {money(p.correduria.retencion)}.</div>}
             {p.compartidosSinRepartir > 0 && <div style={{ ...sub, color: 'var(--warning)' }}>Gastos compartidos sin repartir (sin ingresos): {eur(p.compartidosSinRepartir)}.</div>}
           </div>
           <Comparativa c={data.comparativaHoy} titulo="Conjunta vs individual hoy" />

@@ -125,7 +125,19 @@ export type FilaIngreso = {
 /** Gasto ya asignado a un piso (el cargador incluye la limpieza de `limpieza_facturas`). */
 export type FilaGastoPiso = { propertyId: string; mes: string; importe: number; categoria: string }
 export type FilaGastoCompartido = { mes: string; importe: number; categoria?: string }
-export type Actividad = { ingresosPorMes: Record<string, number>; gastosPorMes: Record<string, number> }
+export type Actividad = {
+  /**
+   * Sin `fuente` (o `'banco'`): lo COBRADO en banco, neto de retención (el bruto sale de dividir entre 1-15 %).
+   * `fuente: 'cima'`: el BRUTO de comisiones cobradas según CIMA (`seguros.poliza_recibos`), sin gross-up.
+   */
+  ingresosPorMes: Record<string, number>
+  gastosPorMes: Record<string, number>
+  fuente?: 'banco' | 'cima'
+  /** Solo CIMA: retención IRPF que CONSTA en los recibos, por mes. Un mes sin clave = «sin dato» (no 15 % inventado). */
+  retencionPorMes?: Record<string, number>
+  /** Solo CIMA: bruto de recibos PENDIENTES por mes de efecto (base de la estimación de los meses que faltan). */
+  pendientePorMes?: Record<string, number>
+}
 
 export type EntradaBase = {
   anio: number
@@ -206,7 +218,7 @@ export type Periodo = {
   hasta: string
   lineas: LineaPiso[]
   compartidosSinRepartir: number
-  correduria: { cobrado: number | null; bruto: number | null; retencion: number | null; gastos: number | null; neto: number | null }
+  correduria: { cobrado: number | null; bruto: number | null; retencion: number | null; gastos: number | null; neto: number | null; fuente?: 'banco' | 'cima' }
   pilar: { ingresos: number | null; gastos: number | null; neto: number | null }
   bloques: Record<Bloque, number | null>
   /**
@@ -259,10 +271,16 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
   })
 
   const c = actividad(e.correduria, meses)
-  const corBruto = c.ingresos == null ? null : c.ingresos / (1 - RETENCION_CORREDURIA)
+  const cima = e.correduria.fuente === 'cima'
+  // CIMA: el ingreso ya es BRUTO y la retención es solo la que consta (null = sin dato). Banco: neto/(1-15 %).
+  const corBruto = c.ingresos == null ? null : cima ? c.ingresos : c.ingresos / (1 - RETENCION_CORREDURIA)
+  const retConsta = cima ? meses.filter(m => e.correduria.retencionPorMes?.[m] != null) : []
+  const corRet = cima ? (retConsta.length ? suma(retConsta.map(m => e.correduria.retencionPorMes![m])) : null)
+    : corBruto == null ? null : corBruto - (c.ingresos ?? 0)
   const corr = {
-    cobrado: c.ingresos, bruto: corBruto, retencion: corBruto == null ? null : corBruto - (c.ingresos ?? 0),
-    gastos: c.gastos, neto: netoAct(corBruto, c.gastos),
+    cobrado: cima ? (corBruto == null || corRet == null ? null : corBruto - corRet) : c.ingresos,
+    bruto: corBruto, retencion: corRet,
+    gastos: c.gastos, neto: netoAct(corBruto, c.gastos), fuente: cima ? 'cima' as const : 'banco' as const,
   }
   const pl = actividad(e.pilar, meses)
   const pilar = { ingresos: pl.ingresos, gastos: pl.gastos, neto: netoAct(pl.ingresos, pl.gastos) }
@@ -305,7 +323,7 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
       pb[p.bloque] = (pb[p.bloque] ?? 0) + n
     }
     const ci = e.correduria.ingresosPorMes[m], cg = e.correduria.gastosPorMes[m]
-    if (ci != null || cg != null) pb.actividad_correduria = (ci != null ? ci / (1 - RETENCION_CORREDURIA) : 0) - (cg ?? 0)
+    if (ci != null || cg != null) pb.actividad_correduria = (ci != null ? (e.correduria.fuente === 'cima' ? ci : ci / (1 - RETENCION_CORREDURIA)) : 0) - (cg ?? 0)
     const pi = e.pilar.ingresosPorMes[m], pg = e.pilar.gastosPorMes[m]
     if (pi != null || pg != null) pb.actividad_pilar = (pi ?? 0) - (pg ?? 0)
     const vals = BLOQUES.map(b => pb[b]).filter((x): x is number => x != null)
@@ -579,6 +597,9 @@ export type EscenarioEst = {
     luz: number | null; agua: number | null; fijos: number | null
     compartidos: number; amortizacion: number
     correduriaNeto: number | null; pilarNeto: number | null
+    /** Cómo se estimó la correduría: recibos pendientes de CIMA (ingresos nov-dic = `correduriaIngresosPendientes`) o media bancaria. */
+    correduriaEstimacion?: 'recibos_pendientes' | 'media_banco'
+    correduriaIngresosPendientes?: number | null
   }
   desglose: DesglosePiso[]
   sinDato: ConceptoSinDato[]
@@ -613,7 +634,13 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
     return v.length ? suma(v) / v.length : null
   }
   const cI = mediaAct(e.correduria.ingresosPorMes), cG = mediaAct(e.correduria.gastosPorMes)
-  const correduriaNeto = cI == null && cG == null ? null : ((cI ?? 0) / (1 - RETENCION_CORREDURIA) - (cG ?? 0)) * mesesRestantes
+  // CIMA: los ingresos de lo que falta = recibos PENDIENTES con efecto en los meses restantes (estimación marcada);
+  // 0 es un valor revisado, no «sin dato». Banco (legado): media mensual elevada al bruto.
+  const cima = e.correduria.fuente === 'cima'
+  const pendienteFuturo = cima ? suma(Object.entries(e.correduria.pendientePorMes ?? {}).filter(([m]) => m > e.hoy.slice(0, 7) && m <= fin.slice(0, 7)).map(([, v]) => v)) : null
+  const correduriaNeto = cima
+    ? (pendienteFuturo ?? 0) - (cG ?? 0) * mesesRestantes
+    : cI == null && cG == null ? null : ((cI ?? 0) / (1 - RETENCION_CORREDURIA) - (cG ?? 0)) * mesesRestantes
   const pI = mediaAct(e.pilar.ingresosPorMes), pG = mediaAct(e.pilar.gastosPorMes)
   const pilarNeto = pI == null && pG == null ? null : ((pI ?? 0) - (pG ?? 0)) * mesesRestantes
 
@@ -661,6 +688,7 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
     const fut: EscenarioEst['futuro'] = {
       reservas: 0, bruto: 0, comision: null, limpieza: null, lavanderia: null, luz: null, agua: null, fijos: null,
       compartidos: 0, amortizacion: 0, correduriaNeto, pilarNeto,
+      correduriaEstimacion: cima ? 'recibos_pendientes' : 'media_banco', correduriaIngresosPendientes: pendienteFuturo,
     }
     const acum = (k: 'comision' | 'limpieza' | 'lavanderia' | 'luz' | 'agua' | 'fijos', v: number | null) => { fut[k] = sumN(fut[k], v) }
     for (const p of e.propiedades) {
