@@ -97,7 +97,8 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
     )
   }
   const { hastaHoy: p, estimacion: est, avisos } = data
-  const hayAvisos = avisos.cuentasSinActualizar.length > 0 || avisos.mesesSinLimpieza.length > 0 || avisos.mesesSinSuministros.length > 0
+  const sinId = avisos.ingresosCorreduriaSinIdentificar ?? []
+  const hayAvisos = sinId.length > 0 || avisos.cuentasSinActualizar.length > 0 || avisos.mesesSinLimpieza.length > 0 || avisos.mesesSinSuministros.length > 0
   return (
     <>
       {hayAvisos && (
@@ -106,6 +107,7 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
           {avisos.cuentasSinActualizar.map(c => (
             <div key={c.nombre}>• {c.nombre}: {c.ultimoMovimiento ? `último movimiento ${fecha(c.ultimoMovimiento)} (hace ${c.dias} días)` : 'sin movimientos'}.</div>
           ))}
+          {sinId.length > 0 && <div>• Ingreso de la correduría sin identificar (NO sumado a la base): {sinId.map(x => `${x.pagador} ${eur(x.importe)}`).join('; ')}.</div>}
           {avisos.mesesSinLimpieza.length > 0 && <div>• Sin factura de limpieza: {avisos.mesesSinLimpieza.map(mesCorto).join(', ')}.</div>}
           {avisos.mesesSinSuministros.length > 0 && <div>• Sin factura de suministros (Socorro): {avisos.mesesSinSuministros.map(mesCorto).join(', ')}.</div>}
         </div>
@@ -129,6 +131,11 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
             {p.correduria.fuente === 'cima'
               ? <div style={sub}>Correduría (CIMA): comisión bruta cobrada {money(p.correduria.bruto)}; retención {p.correduria.retencion == null ? 'sin dato (no consta en los recibos)' : `${money(p.correduria.retencion)} (solo la que consta)`}.</div>
               : p.correduria.retencion != null && <div style={sub}>Correduría: bruto {money(p.correduria.bruto)}, retención 15 % {money(p.correduria.retencion)}.</div>}
+            {p.correduria.desglose && (
+              <div style={sub}>
+                Ingresos correduría: CIMA {money(p.correduria.desglose.cima)} · banco (compañías fuera de CIMA, elevado al bruto) {money(p.correduria.desglose.banco)} · sin identificar {eur(p.correduria.desglose.sinIdentificar)} (no sumado).
+              </div>
+            )}
             {p.compartidosSinRepartir > 0 && <div style={{ ...sub, color: 'var(--warning)' }}>Gastos compartidos sin repartir (sin ingresos): {eur(p.compartidosSinRepartir)}.</div>}
           </div>
           <Comparativa c={data.comparativaHoy} titulo="Conjunta vs individual hoy" />

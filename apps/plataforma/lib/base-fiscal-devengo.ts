@@ -137,6 +137,13 @@ export type Actividad = {
   retencionPorMes?: Record<string, number>
   /** Solo CIMA: bruto de recibos PENDIENTES por mes de efecto (base de la estimación de los meses que faltan). */
   pendientePorMes?: Record<string, number>
+  /**
+   * Solo CIMA: banco (NETO de caja, tras retención) de compañías que CIMA NO trae (p. ej. Asisa), ya sin las que sí
+   * trae (ver `lib/correduria-companias.ts`). Se suma al bruto de CIMA elevado con el 15 % (misma convención que el banco legado).
+   */
+  ingresosBancoPorMes?: Record<string, number>
+  /** Ingresos `seguros` del banco con pagador NO reconocido: NO se suman; van al aviso de calidad del dato. */
+  sinIdentificar?: { mes: string; pagador: string; importe: number }[]
 }
 
 export type EntradaBase = {
@@ -212,13 +219,20 @@ export type LineaPiso = {
   neto: number
 }
 export type MesBase = { mes: string; porBloque: Record<Bloque, number | null>; total: number | null }
+/** De dónde sale el ingreso de la correduría: CIMA (bruto) / banco fuera de CIMA (elevado al bruto) / sin identificar (NO sumado). */
+export type DesgloseIngresosCorreduria = {
+  cima: number | null
+  banco: number | null
+  sinIdentificar: number
+  sinIdentificarLista: { pagador: string; importe: number }[]
+}
 export type BloqueResumen = { neto: number | null; estimado?: number }
 export type Periodo = {
   desde: string
   hasta: string
   lineas: LineaPiso[]
   compartidosSinRepartir: number
-  correduria: { cobrado: number | null; bruto: number | null; retencion: number | null; gastos: number | null; neto: number | null; fuente?: 'banco' | 'cima' }
+  correduria: { cobrado: number | null; bruto: number | null; retencion: number | null; gastos: number | null; neto: number | null; fuente?: 'banco' | 'cima'; desglose?: DesgloseIngresosCorreduria }
   pilar: { ingresos: number | null; gastos: number | null; neto: number | null }
   bloques: Record<Bloque, number | null>
   /**
@@ -273,14 +287,25 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
   const c = actividad(e.correduria, meses)
   const cima = e.correduria.fuente === 'cima'
   // CIMA: el ingreso ya es BRUTO y la retención es solo la que consta (null = sin dato). Banco: neto/(1-15 %).
-  const corBruto = c.ingresos == null ? null : cima ? c.ingresos : c.ingresos / (1 - RETENCION_CORREDURIA)
+  const bancoNeto = cima ? suma(meses.map(m => e.correduria.ingresosBancoPorMes?.[m] ?? 0)) : 0
+  const bancoBruto = bancoNeto / (1 - RETENCION_CORREDURIA)
+  const hayBanco = cima && meses.some(m => e.correduria.ingresosBancoPorMes?.[m] != null)
+  const corBruto = cima
+    ? (c.ingresos == null && !hayBanco ? null : (c.ingresos ?? 0) + (hayBanco ? bancoBruto : 0))
+    : c.ingresos == null ? null : c.ingresos / (1 - RETENCION_CORREDURIA)
   const retConsta = cima ? meses.filter(m => e.correduria.retencionPorMes?.[m] != null) : []
-  const corRet = cima ? (retConsta.length ? suma(retConsta.map(m => e.correduria.retencionPorMes![m])) : null)
+  const retCima = cima ? (retConsta.length ? suma(retConsta.map(m => e.correduria.retencionPorMes![m])) : c.ingresos == null ? 0 : null) : null
+  const corRet = cima ? (retCima == null ? null : retCima + (hayBanco ? bancoBruto - bancoNeto : 0))
     : corBruto == null ? null : corBruto - (c.ingresos ?? 0)
+  const sinId = cima ? (e.correduria.sinIdentificar ?? []).filter(x => meses.includes(x.mes)) : []
   const corr = {
     cobrado: cima ? (corBruto == null || corRet == null ? null : corBruto - corRet) : c.ingresos,
     bruto: corBruto, retencion: corRet,
     gastos: c.gastos, neto: netoAct(corBruto, c.gastos), fuente: cima ? 'cima' as const : 'banco' as const,
+    ...(cima ? { desglose: {
+      cima: c.ingresos, banco: hayBanco ? bancoBruto : null,
+      sinIdentificar: suma(sinId.map(x => x.importe)), sinIdentificarLista: sinId.map(x => ({ pagador: x.pagador, importe: x.importe })),
+    } } : {}),
   }
   const pl = actividad(e.pilar, meses)
   const pilar = { ingresos: pl.ingresos, gastos: pl.gastos, neto: netoAct(pl.ingresos, pl.gastos) }
@@ -323,7 +348,8 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
       pb[p.bloque] = (pb[p.bloque] ?? 0) + n
     }
     const ci = e.correduria.ingresosPorMes[m], cg = e.correduria.gastosPorMes[m]
-    if (ci != null || cg != null) pb.actividad_correduria = (ci != null ? (e.correduria.fuente === 'cima' ? ci : ci / (1 - RETENCION_CORREDURIA)) : 0) - (cg ?? 0)
+    const cb = e.correduria.fuente === 'cima' ? e.correduria.ingresosBancoPorMes?.[m] : undefined
+    if (ci != null || cg != null || cb != null) pb.actividad_correduria = (ci != null ? (e.correduria.fuente === 'cima' ? ci : ci / (1 - RETENCION_CORREDURIA)) : 0) + (cb != null ? cb / (1 - RETENCION_CORREDURIA) : 0) - (cg ?? 0)
     const pi = e.pilar.ingresosPorMes[m], pg = e.pilar.gastosPorMes[m]
     if (pi != null || pg != null) pb.actividad_pilar = (pi ?? 0) - (pg ?? 0)
     const vals = BLOQUES.map(b => pb[b]).filter((x): x is number => x != null)
@@ -638,8 +664,11 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
   // 0 es un valor revisado, no «sin dato». Banco (legado): media mensual elevada al bruto.
   const cima = e.correduria.fuente === 'cima'
   const pendienteFuturo = cima ? suma(Object.entries(e.correduria.pendientePorMes ?? {}).filter(([m]) => m > e.hoy.slice(0, 7) && m <= fin.slice(0, 7)).map(([, v]) => v)) : null
+  // Banco fuera de CIMA (no hay recibos pendientes que lo anticipen): media mensual de los meses completos, elevada al bruto.
+  const bancoMedia = cima ? mediaAct(e.correduria.ingresosBancoPorMes ?? {}) : null
+  const bancoFuturo = bancoMedia == null ? 0 : (bancoMedia / (1 - RETENCION_CORREDURIA)) * mesesRestantes
   const correduriaNeto = cima
-    ? (pendienteFuturo ?? 0) - (cG ?? 0) * mesesRestantes
+    ? (pendienteFuturo ?? 0) + bancoFuturo - (cG ?? 0) * mesesRestantes
     : cI == null && cG == null ? null : ((cI ?? 0) / (1 - RETENCION_CORREDURIA) - (cG ?? 0)) * mesesRestantes
   const pI = mediaAct(e.pilar.ingresosPorMes), pG = mediaAct(e.pilar.gastosPorMes)
   const pilarNeto = pI == null && pG == null ? null : ((pI ?? 0) - (pG ?? 0)) * mesesRestantes
@@ -760,6 +789,8 @@ export type AvisosDatos = {
   cuentasSinActualizar: { nombre: string; ultimoMovimiento: string | null; dias: number | null }[]
   mesesSinLimpieza: string[]
   mesesSinSuministros: string[]
+  /** Ingresos `seguros` del banco con pagador sin reconocer (no sumados a la correduría). Opcional: lo rellena el cargador. */
+  ingresosCorreduriaSinIdentificar?: { pagador: string; importe: number }[]
 }
 export function avisosDatos(args: {
   hoy: string

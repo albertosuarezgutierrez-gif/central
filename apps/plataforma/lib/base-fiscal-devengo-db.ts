@@ -11,6 +11,7 @@
 //    `seguros` / `actividad_pilar`), tarjetas incluidas: no hay doble conteo porque `gastos` de la
 //    correduría NO se lee aquí. Si el rol de BD no puede leer la vista, los ingresos caen al banco (legado).
 import { prisma } from './db'
+import { repartirIngresosBanco, type IngresoSinIdentificar, type MovimientoIngreso } from './correduria-companias.ts'
 import {
   avisosDatos, calcularCostesUnitarios, mismoDiaAnioAnterior, calcularPeriodo, compararConjuntaIndividual, estimarCierre, periodoCierre,
   type Actividad, type AvisosDatos, type Comparativa, type EntradaBase, type EntradaCostes, type Estimacion, type FilaIngreso, type Periodo,
@@ -37,7 +38,7 @@ const num = (x: unknown) => Number(x)
  * Los anulados/devueltos ya NO son `cobrado`, así que no entran (restarlos los descontaría dos veces).
  * `null` = no se pudo leer (p. ej. falta la vista o su GRANT): el llamador cae al banco y lo declara.
  */
-export async function leerIngresosCima(cuentaId: string, anio: number): Promise<Pick<Actividad, 'ingresosPorMes' | 'retencionPorMes' | 'pendientePorMes'> | null> {
+export async function leerIngresosCima(cuentaId: string, anio: number): Promise<(Pick<Actividad, 'ingresosPorMes' | 'retencionPorMes' | 'pendientePorMes'> & { codigosDgs: Set<string> }) | null> {
   const ini = `${anio}-01`, fin = `${anio}-12`
   try {
     // Vista AGREGADA `seguros_agregado.v_comisiones_mes` (SQL `prisma/sql/2026-10-31_vista_comisiones_cima.sql`):
@@ -49,8 +50,14 @@ export async function leerIngresosCima(cuentaId: string, anio: number): Promise<
       WHERE v.cuenta_id = ${cuentaId}::uuid AND v.situacion IN ('cobrado', 'pendiente')
         AND v.mes BETWEEN ${ini} AND ${fin} AND v.comision_bruta_sum IS NOT NULL
       GROUP BY 1, 2`
+    // Compañías que CIMA trae con cobros en el año: su banco NO se vuelve a sumar (ver `lib/correduria-companias.ts`).
+    const cods = await prisma.$queryRaw<Array<{ codigo: string | null }>>`
+      SELECT DISTINCT upper(v.codigo_entidad_dgs) AS codigo
+      FROM seguros_agregado.v_comisiones_mes v
+      WHERE v.cuenta_id = ${cuentaId}::uuid AND v.situacion = 'cobrado' AND v.mes BETWEEN ${ini} AND ${fin} AND v.comision_bruta_sum IS NOT NULL`
     const cob = filas.filter(r => r.situacion === 'cobrado'), pen = filas.filter(r => r.situacion === 'pendiente')
     return {
+      codigosDgs: new Set(cods.map(r => r.codigo).filter((c): c is string => !!c)),
       ingresosPorMes: Object.fromEntries(cob.map(r => [r.mes, num(r.bruto)])),
       retencionPorMes: Object.fromEntries(cob.filter(r => r.ret != null).map(r => [r.mes, num(r.ret)])),
       pendientePorMes: Object.fromEntries(pen.map(r => [r.mes, num(r.bruto)])),
@@ -58,6 +65,13 @@ export async function leerIngresosCima(cuentaId: string, anio: number): Promise<
   } catch {
     return null
   }
+}
+
+/** Un renglón por pagador (suma de sus abonos), de mayor a menor importe. */
+export function agruparSinIdentificar(xs: IngresoSinIdentificar[]): { pagador: string; importe: number }[] {
+  const m = new Map<string, number>()
+  for (const x of xs) m.set(x.pagador, Math.round(((m.get(x.pagador) ?? 0) + x.importe) * 100) / 100)
+  return [...m].map(([pagador, importe]) => ({ pagador, importe })).sort((a, b) => b.importe - a.importe)
 }
 
 function hoyMadrid(): string {
@@ -68,7 +82,7 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
   const ini = `${anio}-01-01`, fin = `${anio}-12-31`
 
   const refIni = mismoDiaAnioAnterior(hoy), refFin = `${anio - 1}-12-31`
-  const [tit, ing, gas, limp, bancoCor, bancoPil, lavFact, fijosBd, refBd, cima] = await Promise.all([
+  const [tit, ing, gas, limp, bancoCor, bancoPil, lavFact, fijosBd, refBd, cima, abonosCor] = await Promise.all([
     prisma.$queryRaw<Array<{ propiedad_id: string; titular: string; porcentaje: unknown; regimen: string | null; nombre: string | null }>>`
       SELECT t.propiedad_id, t.titular, t.porcentaje, t.regimen, p.name AS nombre
       FROM propiedad_titularidad t LEFT JOIN properties p ON p.id = t.propiedad_id`,
@@ -127,6 +141,14 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
       FROM incomes
       WHERE amount > 0 AND ("checkIn" AT TIME ZONE 'Europe/Madrid')::date BETWEEN ${refIni}::date AND ${refFin}::date`,
     leerIngresosCima(cuentaId, anio),
+    // Abonos de la correduría en banco, uno a uno (para reconocer al pagador). `destino = 'seguros'` ya deja fuera los traspasos.
+    prisma.$queryRaw<Array<{ mes: string; importe: unknown; compania: string | null; concepto: string | null; contraparte: string | null }>>`
+      SELECT to_char(mb.fecha_operacion, 'YYYY-MM') AS mes, mb.importe, mb.compania_seguros AS compania, mb.concepto, mb.contraparte
+      FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.destino = 'seguros' AND mb.importe > 0
+        AND coalesce(mb.duplicado_estado,'') <> 'ignorado' AND coalesce(mb.subcategoria,'') <> 'exento'
+        AND coalesce(mb.categoria,'') <> 'devolucion_impuestos'
+        AND mb.fecha_operacion BETWEEN ${ini}::date AND ${fin}::date`,
   ])
 
   // Propiedades y titularidad
@@ -198,11 +220,21 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
       .map(f => ({ propertyId: f.propiedad, total: num(f.total) })),
   })
 
+  // Banco de la correduría: lo de compañías CIMA se excluye, lo de las demás se suma, lo irreconocible se avisa.
+  const reparto = cima
+    ? repartirIngresosBanco(abonosCor.map((r): MovimientoIngreso => ({ mes: r.mes, importe: num(r.importe), compania: r.compania, concepto: r.concepto, contraparte: r.contraparte })), cima.codigosDgs)
+    : null
+
   return {
     anio, hoy, propiedades, ingresos,
     gastosPiso, gastosCompartidos,
     // Ingresos de CIMA (bruto); los gastos siguen saliendo del banco. Sin lectura de CIMA: banco legado.
-    correduria: cima ? { ...act(bancoCor), ingresosPorMes: cima.ingresosPorMes, fuente: 'cima', retencionPorMes: cima.retencionPorMes, pendientePorMes: cima.pendientePorMes } : act(bancoCor),
+    correduria: cima && reparto
+      ? {
+        ...act(bancoCor), ingresosPorMes: cima.ingresosPorMes, fuente: 'cima', retencionPorMes: cima.retencionPorMes, pendientePorMes: cima.pendientePorMes,
+        ingresosBancoPorMes: reparto.fueraCimaPorMes, sinIdentificar: reparto.sinIdentificar,
+      }
+      : act(bancoCor),
     pilar: act(bancoPil),
     costes, referencia: refBd.map(fila),
   }
@@ -239,6 +271,7 @@ export async function getBaseDevengo(cuentaId: string, anio: number, cuota: Para
   const hoy = hoyReal.slice(0, 4) === String(anio) ? hoyReal : hoyReal > `${anio}-12-31` ? `${anio}-12-31` : `${anio}-01-01`
   const [entrada, avisos] = await Promise.all([cargarEntradaBase(cuentaId, anio, hoy), cargarAvisos(cuentaId, anio, hoy)])
   const hastaHoy = calcularPeriodo(entrada, `${anio}-01-01`, hoy)
+  avisos.ingresosCorreduriaSinIdentificar = agruparSinIdentificar((entrada.correduria.sinIdentificar ?? []).filter(x => x.mes <= hoy.slice(0, 7)))
   const estimacion = estimarCierre(entrada, hastaHoy)
   const cierres = estimacion.escenarios.map(esc => {
     const cierre = periodoCierre(hastaHoy, esc, anio)
