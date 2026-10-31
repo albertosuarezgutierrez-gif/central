@@ -11,6 +11,10 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (30/10/2026) Asegura · icono en el correo de avisos + por qué no se felicita a un ex-cliente
+- Correo de avisos de la intranet (`apps/asegura/lib/correo-avisos-intranet.ts`): UN emoji al principio del asunto (por ramo 🏠🚗🏍️…, por tipo `ICONO_POR_TIPO` exhaustivo, 🔔 si se mezclan) + insignia en el HTML. Texto plano sin emoji. Guardián `regression-avisos-intranet` adaptado.
+- Felicitación a EX-CLIENTES (31/10): `felicitaciones-exclientes*.ts`, variantes ex_cliente/posible_cliente, puerta `ASEGURA_FELICITACIONES_EXCLIENTES` (aprobar = ✅/❌ Telegram vía webhook plataforma `fex`). Remitente hola@. PENDIENTE: aplicar `prisma/sql/2026-10-30_felicitacion_exclientes.sql` + env en Vercel; portal muestra la felicitación aunque se descarte.
+- Cumpleaños de clientes: solo se felicita a quien tiene cartera EN VIGOR (`felicitaciones.ts:52`). Caso Jose Jerez (ex_cliente): póliza «activa» de volcado antiguo sin `eiac_xml_hash` → no cuenta. Pendiente: comprobar si es un falso ex-cliente (póliza viva que CIMA no trae).
 ## (31/10/2026) PR #5285 MERGEADO (cierre mensual + fix 0€) · IBI y Booking
 - Cierre contable mensual en producción: cron días 5 y 15 + Telegram `cmes_`; migración `cierres_mes`/`propiedad_titularidad` aplicada. Revisión: fijos del mes actual no se bloquean si falla la lectura; recierre ignora pisos ya cerrados. Skill `plataforma-maestro` actualizada.
 - Arreglada bomba de fecha en `apps/asegura/lib/codeoscopic/desde-cartera.test.ts` (rompía `main` desde el 31/10).

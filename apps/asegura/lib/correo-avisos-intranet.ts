@@ -221,6 +221,62 @@ export const ASUNTO_POR_TIPO: Record<TipoAviso, string> = {
   poliza_modificada: 'cambios en una de tus pólizas',
 }
 
+/**
+ * 🔔 Un emoji por correo, para que se vea en una bandeja llena (Alberto, 30/10/2026). UNO solo y al
+ * principio del asunto: más emojis y Gmail lo manda a Promociones. Record exhaustivo: un tipo nuevo
+ * no compila sin icono.
+ */
+export const ICONO_POR_TIPO: Record<TipoAviso, string> = {
+  peticion_recibida: '🔑',
+  autorizacion_pendiente: '⚠️',
+  autorizacion_sin_aceptar: '🔑',
+  acceso_por_revisar: '🔐',
+  obligacion_en_ventana: '⏰',
+  datos_por_revisar: '📝',
+  carnet_en_ventana: '🪪',
+  carnet_caducado: '⚠️',
+  carnet_sin_nacimiento: '🪪',
+  itv_en_ventana: '🔧',
+  patrimonio_en_ventana: '🏛️',
+  anulacion_por_firmar: '⚠️',
+  felicitacion: '🎂',
+  poliza_emitida: '✅',
+  parte_actualizado: '📋',
+  poliza_modificada: '🔄',
+}
+
+export const ICONO_VARIOS = '🔔'
+export const ICONO_RAMO_DESCONOCIDO = '📄'
+
+/** Icono de un ramo («Hogar», «Auto»…). Sin ramo o desconocido: 📄. Puro. */
+export function iconoDeRamo(ramo: string | null | undefined): string {
+  const r = (ramo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (/hogar|vivienda|casa|piso/.test(r)) return '🏠'
+  if (/moto|ciclomotor/.test(r)) return '🏍️'
+  if (/auto|coche|vehiculo|turismo|furgoneta/.test(r)) return '🚗'
+  if (/salud|medic|sanitari|dental/.test(r)) return '🩺'
+  if (/vida|decesos|fallecimiento/.test(r)) return '❤️'
+  if (/mascota|animal|perro|gato/.test(r)) return '🐾'
+  if (/comercio|comunidad|empresa|negocio|pyme/.test(r)) return '🏢'
+  if (/viaje/.test(r)) return '✈️'
+  return ICONO_RAMO_DESCONOCIDO
+}
+
+/**
+ * El emoji del correo. Un único aviso de póliza con detalle → el del RAMO; si no, el del TIPO; varias
+ * clases mezcladas → 🔔. Puro.
+ */
+export function iconoAviso(d: Pick<DatosAvisosIntranet, 'avisos' | 'detalles'>): string {
+  const tipos = [...new Set(d.avisos.map((a) => a.tipo))]
+  if (tipos.length !== 1) return ICONO_VARIOS
+  const tipo = tipos[0]!
+  if (d.avisos.length === 1 && (tipo === 'poliza_modificada' || tipo === 'poliza_emitida')) {
+    const det = (d.detalles ?? []).find((x) => x.tipo === tipo)
+    if (det) return iconoDeRamo(det.ramo)
+  }
+  return ICONO_POR_TIPO[tipo]
+}
+
 const CAMBIO_POR_CAMPO: Record<CampoCambioPoliza, { solo: string; en: string }> = {
   estado: { solo: 'cambio de estado', en: 'el estado' },
   fechas: { solo: 'cambio en la renovación', en: 'la renovación' },
@@ -353,7 +409,9 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
   const saludo = d.nombre?.trim() ? `Hola, ${d.nombre.trim()}:` : 'Hola:'
   const n = d.avisos.length
   const resumen = resumirAvisos(d.avisos)
-  const { asunto, lineas } = componerAsuntoYLineas(d)
+  const { asunto: asuntoSinIcono, lineas } = componerAsuntoYLineas(d)
+  const icono = iconoAviso(d)
+  const asunto = `${icono} ${asuntoSinIcono}`
   // Lo que ya estaba ahí de antes se nombra como lo que es: no se suma al «nuevo»
   // ni se calla. `total` puede venir por debajo si algo se resolvió entre medias,
   // y entonces esta frase no sale — nunca sale un número negativo de «además».
@@ -387,6 +445,9 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
 
   const html = [
     '<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.5;color:#111">',
+    // Insignia: tabla + estilos inline (Gmail no admite SVG ni CSS externo). El logo lo pone `conMarcaCorreo`.
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" valign="middle" width="56" height="56" style="width:56px;height:56px;background:#eaf0fe;border-radius:28px;font-size:28px;line-height:56px;text-align:center">${icono}</td></tr></table>`,
+    `<p style="margin:12px 0 4px;font-size:18px;font-weight:700;color:#111">${escapar(asuntoSinIcono)}</p>`,
     `<p>${escapar(saludo)}</p>`,
     `<p>${escapar(intro)}</p>`,
     ...(lineas.length > 0 ? [`<ul>${lineas.map((l) => `<li>${escapar(l)}</li>`).join('')}</ul>`] : []),

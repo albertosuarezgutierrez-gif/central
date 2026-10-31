@@ -111,7 +111,8 @@
   nunca `enviados: 0`. `avisada_at`/sellos se escriben justo tras el envío.
 - `avisos-vencimiento` (08:00 UTC) · `avisos-intranet` (08:15, deriva de la campana del portal, sello
   `portal_aviso_enviado`, el correo nunca dice el TÍTULO del aviso) · `avisos-web` (08:30, APAGADO) ·
-  `felicitaciones` (APAGADO) · `polizas-pdf` (horario).
+  `felicitaciones` (APAGADO; ex-clientes con su puerta `ASEGURA_FELICITACIONES_EXCLIENTES` = vacío/`aprobar`/`auto`) · `polizas-pdf` (horario).
+- Felicitaciones y comunicaciones a clientes/ex-clientes salen de hola@grupoasegura.es, nunca de un Gmail personal.
 - Un aviso a un tercero (persona de referencia) nunca se manda como si fuera al tomador (`textoAviso`, `paraTercero`).
 - **Bloqueos de compañía (30/09/2026):** solo es bloqueante si la compañía YA lo anuncia (Allianz, moto de Manuel
   Piña Franco); si no avisa, se emite sin recomendar la básica (no hay aviso preventivo). Un bloqueo anunciado lo
