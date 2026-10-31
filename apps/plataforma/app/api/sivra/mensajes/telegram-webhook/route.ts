@@ -40,6 +40,7 @@ import { requireSecret } from '@central/core-identity'
 import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-correduria-peticion'
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
+import { PREFIJO_FEX, decidirBotonFex, decidirFexEnAsegura, lineaTrasPulsarFex } from '@/lib/felicitaciones-exclientes-asegura'
 import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
 import { PREFIJO_FACTURA_HUESPED, decidirBotonFactura } from '@/lib/sivra/facturas/telegram'
 import { resolverBotonFactura } from '@/lib/sivra/facturas/telegram-acciones'
@@ -1009,6 +1010,28 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       after(async () => {
         const linea = await resolverBotonClp(d, mensajeId ?? null).catch(() => '⚠️ <i>No sé si se ha hecho (fallo interno): mira la ficha del lead antes de repetir.</i>')
         if (linea === null) return
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── 🎂 Felicitación a EX-CLIENTE de Grupo ASegura: ✅ enviar / ❌ descartar (fex_ok / fex_no, 30/10/2026) ──
+    // Sale a un TERCERO: solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID). Se contesta YA y asegura (que reclama
+    // la fila `pendiente_ok` antes de mandar y re-comprueba puerta, día, email y baja) va en after(). Doble clic = un correo.
+    if (prefix === PREFIJO_FEX) {
+      const d = decidirBotonFex(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.decision === 'ok' ? '⏳ Enviando la felicitación…' : 'Descartando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const estado = await decidirFexEnAsegura({ decision: d.decision, clienteId: d.clienteId, anio: d.anio })
+        const linea = lineaTrasPulsarFex(d.decision, estado)
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })

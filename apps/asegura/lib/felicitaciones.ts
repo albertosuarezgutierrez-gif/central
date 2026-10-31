@@ -11,12 +11,14 @@
 //  - La fila se RESERVA antes de enviar (`on conflict do nothing`): dos pasadas solapadas no
 //    mandan dos correos. Si el correo no sale, la fila pasa a `solo_app` y se felicita en el portal.
 //  - Baja de correo (`email_opt_out_at`) o sin correo → solo en la app.
+//  - Los EX-clientes (póliza pero sin cartera en vigor) van aparte, con su puerta: `felicitaciones-exclientes.ts`.
 import { anioCumpleanos, diaMadrid, esCumpleanos, WHERE_CARTERA_EN_VIGOR } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { descifrarCampo } from './cartera-edicion'
 import { destinatarioDeCliente } from './avisos-vencimiento'
 import { enlacePortal } from './avisos-intranet-reglas'
 import { enviarFelicitacion } from './correo-felicitacion'
+import { nombreDePila } from './felicitaciones-exclientes-reglas.ts'
 
 export type ResumenFelicitaciones = {
   cumpleHoy: number
@@ -30,13 +32,6 @@ export type ResumenFelicitaciones = {
 
 export function felicitacionesActivas(env: string | undefined = process.env.ASEGURA_FELICITACIONES_ACTIVAS): boolean {
   return env?.trim() === '1'
-}
-
-/** Nombre de pila para el saludo; un centinela del volcado («Lead») no es un nombre. */
-function nombreDePila(nombre: string | null): string | null {
-  const n = nombre?.trim().split(/\s+/)[0] ?? ''
-  if (!n || /^lead$/i.test(n)) return null
-  return n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
 }
 
 export async function felicitarCumpleanos(
