@@ -72,7 +72,7 @@ function contexto(page: Page, guard: GuardEmision, entrada: string, ramo: string
   }
 }
 
-test('versión del explorador 0.3.25', () => assert.equal(EXPLORADOR_VERSION, '0.3.25'))
+test('versión del explorador 0.3.26', () => assert.equal(EXPLORADOR_VERSION, '0.3.26'))
 
 // ─── 1) Allianz VMP: opción de elegir en forma inequívoca ───────────────────────────────────────────────────────────────────────────
 const MP = 'allianz:autos:movilidad_personal'
@@ -249,7 +249,7 @@ test('0.3.22 · Fidelidade: POST de OsAjax a otra ruta, con query, o con acción
 test('0.3.22 · clavesQueryDiagnostico: solo nombres con forma de identificador; un NIF/NIE o id largo como clave no sale', () => {
   assert.equal(clavesQueryDiagnostico(new URL('https://x.test/a?ProjectId=9&x=1&x=2')), 'ProjectId,x')
   const t = clavesQueryDiagnostico(new URL('https://x.test/a?12345678Z=1&X1234567L&a%20b=1&id_12345=1'))
-  assert.equal(t, '?')
-  assert.doesNotMatch(t, /\d{4}/)
+  assert.equal(t, '?(otra)') // 0.3.26: solo la FORMA de la clave oculta
+  assert.doesNotMatch(t, /\d/)
   assert.equal(clavesQueryDiagnostico(new URL('https://x.test/a?a=1&b=1&c=1&d=1&e=1&f=1&g=1')).split(',').length, 6)
 })

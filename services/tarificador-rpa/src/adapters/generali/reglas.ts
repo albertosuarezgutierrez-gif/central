@@ -2023,7 +2023,17 @@ export function resumenPruebasTipoVehiculoGenerali(intentos: readonly IntentoTip
  */
 export const MENU_PRIMER_NIVEL_GENERALI = Object.freeze(['NEGOCIO', 'COMPAÑÍA', 'FORMACIÓN', 'NORMAS', 'CERRAR'] as const)
 
-/** Lo que el humo vio de un marco al buscar «NEGOCIO»: ruta saneada y, por pestaña conocida, cuántas hay en el DOM y cuántas visibles. */
+/**
+ * v0.2.54 (humo 0.3.2, 31/10/2026, humo real 1f53b8c0): rótulo EXACTO de una pestaña del menú (texto entero, espacios aparte) SIN distinguir
+ * mayúsculas, el MISMO criterio que la puerta que sí entra en la tarificación (`unicoPorTextoGenerali` de guard.ts, flag `i`). El diag del humo
+ * vio en `CorredorPortal.po` «CERRAR» y ninguna otra pestaña en mayúsculas: el DOM lleva «Negocio»/«Compañía»… y es el CSS el que las pinta en
+ * mayúsculas. Sigue siendo texto entero: «NEGOCIO ONLINE» o «Mi negocio» no casan. PURA.
+ */
+export function patronPestanaMenuGenerali(pestana: string): RegExp {
+  return new RegExp(`^\\s*${pestana.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i')
+}
+
+/** Lo que el humo vio de un marco al buscar «NEGOCIO»:ruta saneada y, por pestaña conocida, cuántas hay en el DOM y cuántas visibles. */
 export type MarcoMenuGenerali = { url: string; pestanas: Readonly<Record<string, { dom: number; visibles: number }>> }
 
 /** Última parte de la ruta saneada (sin query ni jsessionid): basta para reconocer la pantalla y cabe en el aviso. PURA. */
