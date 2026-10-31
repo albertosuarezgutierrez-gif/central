@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-30T10:06:51Z",
+  "generadoEn": "2026-10-31T09:13:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1025,7 +1025,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 20
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1053,7 +1053,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 41
+        "evidencias": 42
       },
       "rrhh": {
         "estado": "usado",
@@ -2321,7 +2321,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 325
+        "evidencias": 331
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2375,7 +2375,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 65
+        "evidencias": 66
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2429,7 +2429,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 51
+        "evidencias": 52
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4296,6 +4296,7 @@
       "/api/operador/expedientes",
       "/api/operador/expedientes/auto",
       "/api/operador/export-rgpd",
+      "/api/operador/felicitaciones/exclientes",
       "/api/operador/formacion",
       "/api/operador/formacion/baja",
       "/api/operador/google-contactos",
@@ -5378,6 +5379,7 @@
       "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/banca/ticket",
+      "/api/cierres-mes/reabrir",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -5570,6 +5572,7 @@
       "/api/cron/canario-lead",
       "/api/cron/catastro-pisos",
       "/api/cron/categorizar-movimientos",
+      "/api/cron/cierre-mes",
       "/api/cron/cima-liq",
       "/api/cron/cima-pull-respaldo",
       "/api/cron/cima-sincro",
@@ -6393,6 +6396,7 @@
       "broker_saldos",
       "categoria_alertas",
       "categoria_alertas_log",
+      "cierres_mes",
       "cima_liquidaciones",
       "comisiones_cobertura",
       "comisiones_devengo",
@@ -6487,6 +6491,7 @@
       "pricing_flight_demand",
       "pricing_pl_referencia",
       "pricing_suelos_fecha",
+      "propiedad_titularidad",
       "reservas_canceladas",
       "reservas_correo_booking",
       "rutina_tokens",
@@ -7255,7 +7260,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1871,
+    "apis": 1874,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

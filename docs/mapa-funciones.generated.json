@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-30T10:06:51Z",
-  "sha": "b608a349f02cd760f9856d483fd2830a31f3f21c",
+  "generadoEn": "2026-10-31T09:13:25Z",
+  "sha": "52da9f6df54601eb16fbffc015d5409dc81672b4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28136,13 +28136,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 21,
+          "linea": 24,
           "resumen": "GET /api/cron/felicitaciones — felicita el cumpleaños a los clientes en vigor (correo + campana del portal). Diario a las 07:00 UTC y otra pasada a las 16:00 UTC (`?pase=tarde`, `vercel.json`): la seg"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/felicitaciones",
-      "hash": "fc90e55875f9"
+      "hash": "d5ce931567cf"
     },
     {
       "ruta": "apps/asegura/app/api/cron/google-contactos/route.ts",
@@ -28821,13 +28821,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 16,
-          "resumen": "GET /api/operador/campana/presentacion-app — el embudo de la campaña (enviado → entregado → abierto → clic → visita con `?r=` → registrado en el portal) y, con `?seleccion=1`, el ENSAYO de la selecció"
+          "linea": 22,
+          "resumen": "GET /api/operador/campana/presentacion-app — el embudo de la campaña (enviado → entregado → abierto → clic → visita con `?r=` → registrado en el portal) de `?campana=` (`presentacion_app` por defecto,"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/campana/presentacion-app",
-      "hash": "15a759d12ba5"
+      "hash": "030d7ab692d2"
     },
     {
       "ruta": "apps/asegura/app/api/operador/carta-mediador/route.ts",
@@ -30955,6 +30955,15 @@
       "tablas": [],
       "rutaApi": "/api/operador/export-rgpd",
       "hash": "04b5a65dd200"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/felicitaciones/exclientes/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/felicitaciones/exclientes",
+      "hash": "fe65a69f09ee"
     },
     {
       "ruta": "apps/asegura/app/api/operador/formacion/baja/route.ts",
@@ -35543,6 +35552,40 @@
       "hash": "4db540c0078a"
     },
     {
+      "ruta": "apps/asegura/lib/aviso-venc-app.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Campaña «app en el aviso de vencimiento» (`aviso_venc_app`, 31/10/2026): la parte con BD. Lo puro (texto, cuándo se muestra, cuándo se registra) vive en `correo-avisos-intranet.ts`. Por qué aquí y no en el cron de vencimientos: `avisos-vencimiento.ts` solo recorre `portal_obligacion`, que nace al ab",
+      "exporta": [
+        "prepararPresentacionApp",
+        "registrarPresentacionEnviada"
+      ],
+      "funciones": [
+        {
+          "nombre": "prepararPresentacionApp",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { correduriaId: string clienteId: string destino: string portal: string tiposNuevos: readonly string[] }",
+          "retorno": "Promise<PresentacionPreparada | null>",
+          "linea": 37,
+          "resumen": "Decide si este correo lleva el bloque y con qué enlace. NO escribe nada. `null` = sin bloque. Solo se llama con envío real por delante (quien llama ya ha salido en modo cuenta)."
+        },
+        {
+          "nombre": "registrarPresentacionEnviada",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string, prep: PresentacionPreparada,",
+          "retorno": "Promise<void>",
+          "linea": 77,
+          "resumen": "La fila de `campana_envio` del correo YA aceptado. No lanza: un fallo aquí no puede afectar al aviso ni a su sello (solo se pierde la atribución de ese enlace, y se dice en el log). `on conflict do no"
+        }
+      ],
+      "tablas": [
+        "campana_envio"
+      ],
+      "rutaApi": null,
+      "hash": "c9bf932fd034"
+    },
+    {
       "ruta": "apps/asegura/lib/aviso-web-reglas.ts",
       "ambito": "apps/asegura",
       "resumen": "Reglas PURAS del «avísame antes de que venza» de la web pública (sin Prisma ni red, para que `node --test` las pruebe). La parte de BD vive en `aviso-web.ts`. Los dos plazos del art. 22 LCS mandan en todo: la compañía comunica cambios con 2 meses (60 días) y el tomador se opone a la prórroga hasta 1",
@@ -35894,7 +35937,7 @@
           "exportada": false,
           "params": "c: { nombre: string | null; apellidos: string | null } | null | undefined",
           "retorno": "string | null",
-          "linea": 110
+          "linea": 111
         },
         {
           "nombre": "reunirPendientes",
@@ -35902,7 +35945,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: Date,",
           "retorno": "Promise<",
-          "linea": 125,
+          "linea": 126,
           "resumen": "Reúne, por cliente, las fuentes del catálogo. Una consulta por fuente (no una por cliente): con 80 clientes vivos el bucle N+1 sería gratuito igual, pero el día que la cartera crezca esto ya está bien"
         },
         {
@@ -35911,7 +35954,7 @@
           "exportada": false,
           "params": "correduriaId: string, hoy: Date, conFicha: ReadonlySet<string>",
           "retorno": "Promise<number>",
-          "linea": 721,
+          "linea": 722,
           "resumen": "Cuántos recordatorios propios se pierden por no haber a quién escribir. 🚨 Usa `entraEnVentana()`, la MISMA puerta que el catálogo, y no el rango ancho de la criba: con el rango, una fila de ayer que "
         },
         {
@@ -35920,7 +35963,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, correo: string, tipos: readonly (keyof typeof HREF_POR_TIPO)[], base: string,",
           "retorno": "Promise<",
-          "linea": 744,
+          "linea": 745,
           "resumen": "El enlace del correo con ACCESO DIRECTO (Alberto, 24/09/2026): una llave de un solo uso y 24 h, atada al correo de la ficha por su índice ciego. Sin `PII_LOOKUP_KEY` no se puede atar, y entonces va el"
         },
         {
@@ -35929,7 +35972,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, correo: string, hash: string, destino: string, base: string,",
           "retorno": "Promise<",
-          "linea": 764,
+          "linea": 765,
           "resumen": "La llave en sí: sustituye a las vivas del cliente y devuelve el enlace. Exportada para el aviso de vencimiento de la web (`aviso-web.ts`), que reutiliza la misma llave de un solo uso."
         },
         {
@@ -35938,7 +35981,7 @@
           "exportada": true,
           "params": "p: Pendiente, nuevos: readonly { tipo: string; id: string }[]",
           "retorno": "DetalleAviso[]",
-          "linea": 789,
+          "linea": 790,
           "resumen": "Ramo y tipo de cambio de las pólizas que van en el correo. Solo esos dos datos: el correo nunca lleva nº de póliza, matrícula, compañía ni importes."
         },
         {
@@ -35947,7 +35990,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<Set<string>>",
-          "linea": 807,
+          "linea": 808,
           "resumen": "Direcciones del cliente que han rebotado (duro) o se han quejado, según los eventos de Resend que ya guarda el webhook (`correo_envio` + `correo_evento`). Lanza si no se puede leer."
         },
         {
@@ -35956,7 +35999,7 @@
           "exportada": true,
           "params": "correduriaId: string, opciones: { hoy?: Date; forzarContar?: boolean } = {},",
           "retorno": "Promise<ResumenAvisosIntranet>",
-          "linea": 829
+          "linea": 830
         }
       ],
       "tablas": [
@@ -35970,7 +36013,7 @@
         "portal_vinculo"
       ],
       "rutaApi": null,
-      "hash": "4b692d6807f4"
+      "hash": "0903d9ab2cc2"
     },
     {
       "ruta": "apps/asegura/lib/avisos-mesa-reglas.ts",
@@ -46895,6 +46938,11 @@
       "ambito": "apps/asegura",
       "resumen": "«Tienes algo esperándote en tu área de clientes» — el correo GENÉRICO de la intranet del portal. ── Por qué existe ────────────────────────────────────────────────────────── El portal ya sabe decirle a cada cliente lo que tiene pendiente: es la campana (`avisosDe()`, en `@central/module-seguros-port",
       "exporta": [
+        "debePresentarApp",
+        "enlacePresentarApp",
+        "debeRegistrarCampana",
+        "iconoDeRamo",
+        "iconoAviso",
         "frasePoliza",
         "resumirAvisos",
         "componerAsuntoYLineas",
@@ -46909,12 +46957,57 @@
       ],
       "funciones": [
         {
+          "nombre": "debePresentarApp",
+          "kind": "function",
+          "exportada": true,
+          "params": "tiposNuevos: readonly string[], portal: PortalConocido | null",
+          "retorno": "boolean",
+          "linea": 139,
+          "resumen": "- y su correo resuelve a ESTA ficha (`invitable`): en `ambiguo`/`resuelve_a_otra` acabaría en una bóveda vacía o ajena, y en `ya_entra` ya la tiene."
+        },
+        {
+          "nombre": "enlacePresentarApp",
+          "kind": "function",
+          "exportada": true,
+          "params": "ref: string | null, portal: string",
+          "retorno": "string",
+          "linea": 149,
+          "resumen": "El enlace del botón «Activar mi app»: con `?r=` personal si hay ref (atribuible), si no la entrada del portal pelada. 🚨 Sin ref NO se inventa uno: un `?r=` sin fila en `campana_envio` no atribuye nad"
+        },
+        {
+          "nombre": "debeRegistrarCampana",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { soloContar: boolean; resultado: string; ref: string | null }",
+          "retorno": "boolean",
+          "linea": 158,
+          "resumen": "¿Se escribe la fila de `campana_envio` de este correo? Solo tras un envío ACEPTADO, nunca en el ensayo, y solo si el enlace llevaba un ref nuevo (si ya había fila de esta persona, no se reutiliza: el "
+        },
+        {
+          "nombre": "iconoDeRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "string",
+          "linea": 252,
+          "resumen": "Icono de un ramo («Hogar», «Auto»…). Sin ramo o desconocido: 📄. Puro."
+        },
+        {
+          "nombre": "iconoAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Pick<DatosAvisosIntranet, 'avisos' | 'detalles'>",
+          "retorno": "string",
+          "linea": 269,
+          "resumen": "El emoji del correo. Un único aviso de póliza con detalle → el del RAMO; si no, el del TIPO; varias clases mezcladas → 🔔. Puro."
+        },
+        {
           "nombre": "frasePoliza",
           "kind": "function",
           "exportada": true,
           "params": "d: DetalleAviso",
           "retorno": "",
-          "linea": 193,
+          "linea": 300,
           "resumen": "Qué le pasó a una póliza, en una frase sin números. Puro. 🚨 Renovación: si entre lo cambiado están las FECHAS y el estado NO cambia (`estadoNuevo` null), la póliza se ha renovado (vencimiento movido "
         },
         {
@@ -46923,7 +47016,7 @@
           "exportada": false,
           "params": "partes: readonly string[]",
           "retorno": "string",
-          "linea": 218,
+          "linea": 325,
           "resumen": "`['a','b','c']` → `a, b y c`. Vacío no ocurre (quien llama no escribe sin avisos)."
         },
         {
@@ -46932,7 +47025,7 @@
           "exportada": true,
           "params": "avisos: readonly AvisoParaCorreo[]",
           "retorno": "string",
-          "linea": 227,
+          "linea": 334,
           "resumen": "Las clases presentes, contadas y nombradas, en el orden del catálogo (no en el de llegada: así dos correos con lo mismo se leen igual)."
         },
         {
@@ -46941,7 +47034,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 239
+          "linea": 346
         },
         {
           "nombre": "cap",
@@ -46949,7 +47042,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": null,
-          "linea": 243
+          "linea": 350
         },
         {
           "nombre": "componerAsuntoYLineas",
@@ -46957,7 +47050,7 @@
           "exportada": true,
           "params": "d: DatosAvisosIntranet",
           "retorno": "",
-          "linea": 250,
+          "linea": 357,
           "resumen": "El asunto y las viñetas. Con detalle de póliza: una viñeta por póliza («Tu seguro de Hogar: ...»). Los demás avisos van agrupados por clase y contados («2 vencimientos próximos»). Sin ramo, texto neut"
         },
         {
@@ -46966,7 +47059,7 @@
           "exportada": true,
           "params": "d: DatosAvisosIntranet",
           "retorno": "CuerpoCorreo",
-          "linea": 289,
+          "linea": 396,
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta, para que su cepo pueda recorrer el texto entero. Mismo motivo que en `correo-aviso-acceso.ts`: un guardián que neces"
         },
         {
@@ -46975,7 +47068,7 @@
           "exportada": true,
           "params": "destino: string, d: DatosAvisosIntranet, quien: { correduriaId: string; clienteId: string },",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 358,
+          "linea": 477,
           "resumen": "El envío. Devuelve el desenlace en vez de lanzar, por lo mismo que el resto de correos de esta app: «no hay proveedor» es una variable de Vercel que falta, y un reintento no la pone."
         },
         {
@@ -46984,7 +47077,7 @@
           "exportada": true,
           "params": "ultimoSello: Date | null, hoy: Date",
           "retorno": "boolean",
-          "linea": 390,
+          "linea": 509,
           "resumen": "`false` = hace menos de 7 días que se le escribió: hoy NO se envía y NO se sella (lo pendiente sale junto en el siguiente). `ultimoSello` = el `enviado_en` más reciente de `portal_aviso_enviado`."
         },
         {
@@ -46993,7 +47086,7 @@
           "exportada": true,
           "params": "ultimoSello: Date | null, hoy: Date, tiposNuevos: readonly string[]",
           "retorno": "boolean",
-          "linea": 402,
+          "linea": 521,
           "resumen": "`true` = hoy se escribe: toca por los 7 días, o hay entre los nuevos un aviso con fecha propia."
         },
         {
@@ -47002,7 +47095,7 @@
           "exportada": true,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 407,
+          "linea": 526,
           "resumen": "Error de Postgres «la relación no existe» (42P01), tal como lo envuelve Prisma en `$queryRaw`."
         },
         {
@@ -47011,7 +47104,7 @@
           "exportada": true,
           "params": "email: string",
           "retorno": "boolean",
-          "linea": 419,
+          "linea": 538,
           "resumen": "Dirección de la casa, de pruebas o reservada: no es un cliente. Mira el dominio, no un literal."
         },
         {
@@ -47020,7 +47113,7 @@
           "exportada": true,
           "params": "eventos: readonly EventoRebote[]",
           "retorno": "Set<string>",
-          "linea": 433,
+          "linea": 552,
           "resumen": "Direcciones a las que no se escribe más: rebote DURO (`Permanent`; uno `Transient` es un buzón lleno y se reintenta), queja de spam, o supresión de Resend (ya rebotó antes). En minúscula."
         },
         {
@@ -47029,13 +47122,13 @@
           "exportada": true,
           "params": "candidatas: readonly (string | null)[], bloqueadas: ReadonlySet<string>",
           "retorno": "string | null",
-          "linea": 446,
+          "linea": 565,
           "resumen": "La primera dirección de la lista (ya en orden de preferencia y en claro) que sirve: con forma de email, no canal de la correduría, no interna y no rebotada. `null` = sin canal."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "74c1e3178ced"
+      "hash": "a7138ac7bec0"
     },
     {
       "ruta": "apps/asegura/lib/correo-cruce-cima-bd.ts",
@@ -47496,7 +47589,7 @@
           "exportada": true,
           "params": "c: CorreoCliente, fetchImpl: typeof fetch = fetch",
           "retorno": "Promise<ResultadoCorreoCliente>",
-          "linea": 57
+          "linea": 62
         },
         {
           "nombre": "contenidoBase64",
@@ -47504,7 +47597,7 @@
           "exportada": false,
           "params": "a: AdjuntoCorreo",
           "retorno": "string",
-          "linea": 61
+          "linea": 66
         },
         {
           "nombre": "enviarCorreoSeguido",
@@ -47512,12 +47605,12 @@
           "exportada": true,
           "params": "c: CorreoCliente, fetchImpl: typeof fetch = fetch",
           "retorno": "Promise<EnvioDetallado>",
-          "linea": 65
+          "linea": 70
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c93f268a1c1f"
+      "hash": "f07f76e1aaeb"
     },
     {
       "ruta": "apps/asegura/lib/correo-evento-bd.ts",
@@ -48062,7 +48155,9 @@
       "resumen": "El correo de cumpleaños (24/09/2026). Corto y sin nada que vender, a propósito: una felicitación con una oferta dentro deja de ser una felicitación y pasa a ser una comunicación comercial (art. 21 LSSI), que exige otro consentimiento. Tampoco nombra pólizas, compañías ni importes: el buzón puede ser",
       "exporta": [
         "cuerpoFelicitacion",
-        "enviarFelicitacion"
+        "cuerpoFelicitacionExcliente",
+        "enviarFelicitacion",
+        "enviarFelicitacionExcliente"
       ],
       "funciones": [
         {
@@ -48071,7 +48166,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 9
+          "linea": 12
         },
         {
           "nombre": "cuerpoFelicitacion",
@@ -48079,7 +48174,24 @@
           "exportada": true,
           "params": "d: DatosFelicitacion",
           "retorno": "",
-          "linea": 18
+          "linea": 21
+        },
+        {
+          "nombre": "cuerpoFelicitacionExcliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosFelicitacion & { variante: VarianteCorreoExcliente }",
+          "retorno": "",
+          "linea": 40
+        },
+        {
+          "nombre": "plantilla",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: { asunto: string; saludo: string; parrafos: string[]; boton: { texto: string; enlace: string }; textoEnlace: string; firma: string }",
+          "retorno": "",
+          "linea": 60,
+          "resumen": "Envoltorio ÚNICO de las felicitaciones (logo PNG, colores de marca, pie y baja)."
         },
         {
           "nombre": "enviarFelicitacion",
@@ -48087,12 +48199,20 @@
           "exportada": true,
           "params": "destino: string, d: DatosFelicitacion, quien: { correduriaId: string; clienteId: string },",
           "retorno": "Promise<ResultadoFelicitacion>",
-          "linea": 47
+          "linea": 84
+        },
+        {
+          "nombre": "enviarFelicitacionExcliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string, d: DatosFelicitacion & { variante: VarianteCorreoExcliente }, quien: { correduriaId: string; clienteId: string; anio: number },",
+          "retorno": "Promise<ResultadoFelicitacion>",
+          "linea": 96
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "343bdbc7992f"
+      "hash": "c16389598cfe"
     },
     {
       "ruta": "apps/asegura/lib/correo-hilo.ts",
@@ -51577,6 +51697,207 @@
       "hash": "4179d05f8c93"
     },
     {
+      "ruta": "apps/asegura/lib/felicitaciones-exclientes-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Felicitación de cumpleaños a EX-CLIENTES (Alberto, 30/10/2026: «felicitar también a los ex-clientes con un mensaje de reconquista»). Reglas PURAS (sin BD ni red): las lee `node --test` y las usa `felicitaciones-exclientes.ts`. - Población: persona física con alguna póliza pero SIN cartera en vigor (",
+      "exporta": [
+        "modoExclientes",
+        "nombreDePila",
+        "iniciales",
+        "posiblementeVigente",
+        "varianteExcliente",
+        "clientePorOtraFicha",
+        "varianteSigueIgual",
+        "propuestaDelDia",
+        "telefonoCorto",
+        "botonesExcliente",
+        "textoPropuestaTelegram",
+        "leerBotonFex"
+      ],
+      "funciones": [
+        {
+          "nombre": "modoExclientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | undefined = process.env[ENV_EXCLIENTES]",
+          "retorno": "ModoExclientes",
+          "linea": 18,
+          "resumen": "Cualquier valor que no sea exactamente `aprobar` o `auto` = apagado (fail-closed: un typo no envía)."
+        },
+        {
+          "nombre": "nombreDePila",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string | null",
+          "retorno": "string | null",
+          "linea": 24,
+          "resumen": "Nombre de pila para el saludo; un centinela del volcado («Lead») no es un nombre."
+        },
+        {
+          "nombre": "iniciales",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string | null, apellidos: string | null",
+          "retorno": "string",
+          "linea": 31,
+          "resumen": "«María» + «López García» → «M. L. G.». Para Telegram: sin apellidos enteros."
+        },
+        {
+          "nombre": "posiblementeVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaExcliente, hoy: Date",
+          "retorno": "boolean",
+          "linea": 50,
+          "resumen": "- `fin_riesgo`/`competencia` sin una fecha (vencimiento o situación/efecto de la baja) ya pasada. Compara por DÍA (`YYYY-MM-DD`): una fecha de hoy no está «pasada»."
+        },
+        {
+          "nombre": "varianteExcliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly PolizaExcliente[], hoy: Date",
+          "retorno": "VarianteExcliente | null",
+          "linea": 66,
+          "resumen": "Qué felicitación le toca a una persona según TODAS sus pólizas (no fusionadas). `null` = no entra: sin pólizas (lead) o con alguna en cartera en vigor (la felicita el cron de clientes)."
+        },
+        {
+          "nombre": "clientePorOtraFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "dniLookupHash: string | null | undefined, hashesConCarteraEnVigor: ReadonlySet<string>",
+          "retorno": "boolean",
+          "linea": 76,
+          "resumen": "Identidad: la MISMA persona (mismo `dni_lookup_hash`, no nulo) puede tener OTRA ficha sin fusionar con cartera en vigor. Entonces es cliente: ni se le felicita aquí ni se le dice que ya no tiene sus s"
+        },
+        {
+          "nombre": "varianteSigueIgual",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservada: string | null, ahora: VarianteExcliente | null",
+          "retorno": "ahora is VarianteExcliente",
+          "linea": 81,
+          "resumen": "Al pulsar ✅: solo sale si lo recalculado AHORA es exactamente lo que se reservó (el texto aprobado)."
+        },
+        {
+          "nombre": "propuestaDelDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "dia: string, hoy: string",
+          "retorno": "boolean",
+          "linea": 86,
+          "resumen": "Una propuesta pendiente solo se envía el MISMO día del cumpleaños (`dia` y `hoy` en `YYYY-MM-DD`, Madrid)."
+        },
+        {
+          "nombre": "telefonoCorto",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string = MEDIADOR.identidad.telefono",
+          "retorno": "string",
+          "linea": 91,
+          "resumen": "`+34637349990` → `637 349 990`, siempre desde MEDIADOR (nunca a mano). Otro formato: tal cual."
+        },
+        {
+          "nombre": "botonesExcliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, anio: number",
+          "retorno": "",
+          "linea": 102,
+          "resumen": "callback_data ≤ 64 bytes: `fex_ok:<uuid>:<año>` = 48."
+        },
+        {
+          "nombre": "escaparTg",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 109
+        },
+        {
+          "nombre": "textoPropuestaTelegram",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { nombre: string | null; iniciales: string; variante: VarianteExcliente; texto: string }",
+          "retorno": "string",
+          "linea": 112,
+          "resumen": "Resumen para Alberto (HTML de Telegram): nombre de pila e iniciales, variante y el texto que saldría. Sin email ni NIF."
+        },
+        {
+          "nombre": "leerBotonFex",
+          "kind": "function",
+          "exportada": true,
+          "params": "accion: string, args: readonly string[]",
+          "retorno": "DecisionFex | null",
+          "linea": 121,
+          "resumen": "Lee `fex_<ok|no>:<uuid>:<año>` ya partido por `parseCallback`. `null` = botón no válido."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "775c6d464e51"
+    },
+    {
+      "ruta": "apps/asegura/lib/felicitaciones-exclientes.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Felicitación de cumpleaños a EX-CLIENTES (Alberto, 30/10/2026). Reglas puras y su porqué en `felicitaciones-exclientes-reglas.ts`; el texto, en `correo-felicitacion.ts` (mismo envoltorio). - Puerta `ASEGURA_FELICITACIONES_EXCLIENTES`: sin valor → NADA (ni se lee la BD); `aprobar` → reserva la fila c",
+      "exporta": [
+        "felicitarExclientes",
+        "decidirFelicitacionExcliente"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerModo",
+          "kind": "function",
+          "exportada": false,
+          "params": "env?: Record<string, string | undefined>",
+          "retorno": "ModoExclientes",
+          "linea": 35,
+          "resumen": "Valor de la puerta: de `env` si se pasa (tests), si no de `process.env`. Ausente = apagado."
+        },
+        {
+          "nombre": "hayMigracion",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: { $queryRaw: (q: TemplateStringsArray, ...v: unknown[]) => Promise<unknown> }",
+          "retorno": "Promise<boolean>",
+          "linea": 39
+        },
+        {
+          "nombre": "hashesConCarteraEnVigor",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: DbLectura, correduriaId: string, hashes: (string | null)[]",
+          "retorno": "Promise<Set<string>>",
+          "linea": 58,
+          "resumen": "De estos `dni_lookup_hash`, cuáles tienen ALGUNA ficha no fusionada con cartera en vigor (la misma persona en otra ficha). Quien llama solo pasa fichas SIN cartera en vigor, así que toda coincidencia "
+        },
+        {
+          "nombre": "felicitarExclientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opciones: { ahora?: Date; forzarContar?: boolean; env?: Record<string, string | undefined> } = {},",
+          "retorno": "Promise<ResumenExclientes>",
+          "linea": 68
+        },
+        {
+          "nombre": "decidirFelicitacionExcliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, d: DecisionFex, opciones: { ahora?: Date; env?: Record<string, string | undefined> } = {},",
+          "retorno": "Promise<ResultadoDecisionFex>",
+          "linea": 176,
+          "resumen": "✅ envía (reclamando la fila `pendiente_ok` → `enviando` ANTES de mandar: un doble clic no manda dos) o ❌ descarta. Se re-comprueba todo en el momento: puerta abierta, mismo día, sigue sin cartera en v"
+        }
+      ],
+      "tablas": [
+        "felicitacion",
+        "information_schema",
+        "juridica"
+      ],
+      "rutaApi": null,
+      "hash": "ef23ba98272b"
+    },
+    {
       "ruta": "apps/asegura/lib/felicitaciones.ts",
       "ambito": "apps/asegura",
       "resumen": "Felicitar el cumpleaños a los clientes EN VIGOR (Alberto, 24/09/2026: «felicitar por mail y app los cumpleaños»). Corre en asegura porque la fecha de nacimiento va cifrada y solo aquí está la clave. Deja una fila en `felicitacion` por persona y año: es el sello (no se repite) y lo que la campana del",
@@ -51591,16 +51912,7 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_FELICITACIONES_ACTIVAS",
           "retorno": "boolean",
-          "linea": 31
-        },
-        {
-          "nombre": "nombreDePila",
-          "kind": "function",
-          "exportada": false,
-          "params": "nombre: string | null",
-          "retorno": "string | null",
-          "linea": 36,
-          "resumen": "Nombre de pila para el saludo; un centinela del volcado («Lead») no es un nombre."
+          "linea": 33
         },
         {
           "nombre": "felicitarCumpleanos",
@@ -51608,14 +51920,14 @@
           "exportada": true,
           "params": "correduriaId: string, opciones: { ahora?: Date; forzarContar?: boolean } = {},",
           "retorno": "Promise<ResumenFelicitaciones>",
-          "linea": 42
+          "linea": 37
         }
       ],
       "tablas": [
         "felicitacion"
       ],
       "rutaApi": null,
-      "hash": "f19f9489b123"
+      "hash": "f72eca895042"
     },
     {
       "ruta": "apps/asegura/lib/ficha-de-poliza.ts",
@@ -56877,6 +57189,7 @@
       "exporta": [
         "urlBajaCampana",
         "campanaMigrada",
+        "loteDeHoy",
         "pasadaPresentacionApp",
         "aplicarBajaCampana",
         "aplicarBajaCampanaPorRebote",
@@ -56912,8 +57225,8 @@
         {
           "nombre": "loteDeHoy",
           "kind": "function",
-          "exportada": false,
-          "params": "correduriaId: string",
+          "exportada": true,
+          "params": "correduriaId: string, campana: string = CAMPANA_PRESENTACION_APP",
           "retorno": "Promise<",
           "linea": 109,
           "resumen": "Lo de HOY (día de Madrid): cuántos se han intentado ya (cuentan contra el tope) y qué lote toca — el de hoy si ya se abrió, si no el siguiente al último."
@@ -56966,7 +57279,7 @@
           "nombre": "embudoPresentacionApp",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string",
+          "params": "correduriaId: string, campana: string = CAMPANA_PRESENTACION_APP",
           "retorno": "Promise<EmbudoPresentacion>",
           "linea": 343,
           "resumen": "El embudo de la campaña: total, por lote, por variante y por persona. Lanza si no puede leer."
@@ -56994,7 +57307,7 @@
         "recaptacion_envios"
       ],
       "rutaApi": null,
-      "hash": "8fb693193d38"
+      "hash": "f6411c0b9ba4"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-acceso-tercero.ts",
@@ -115498,7 +115811,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bd9704f8f3b5"
+      "hash": "43ba8c69fc8b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CartasMediador.tsx",
@@ -130810,7 +131123,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "97574266a6a4"
+      "hash": "3f30d1f9fbaa"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/facturas-control/page.tsx",
@@ -134690,6 +135003,26 @@
       "hash": "eac2a7d1a5e3"
     },
     {
+      "ruta": "apps/plataforma/app/api/cierres-mes/reabrir/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cierres-mes/reabrir",
+      "hash": "4dd105ed0f31"
+    },
+    {
       "ruta": "apps/plataforma/app/api/comunicacion/categorias/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -135919,15 +136252,15 @@
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "req: Request",
           "retorno": null,
-          "linea": 13,
-          "resumen": "/api/correduria/campana-presentacion — el embudo de la campaña de correo «presentación app». Solo lectura. Reenvía al puerto de asegura con el secreto de operador y devuelve el MISMO status y json; la"
+          "linea": 14,
+          "resumen": "/api/correduria/campana-presentacion — el embudo de una campaña de correo (`?campana=`, `presentacion_app` por defecto o `aviso_venc_app`). Solo lectura. Reenvía al puerto de asegura con el secreto de"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/correduria/campana-presentacion",
-      "hash": "1d882ff8dd0f"
+      "hash": "2fd20b27e77f"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/carta-mediador/route.ts",
@@ -139837,6 +140170,27 @@
       "hash": "0a510a95f777"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/cierre-mes/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "📒 Cierre contable MENSUAL por piso (lib/cierre-mes.ts). Cron días 5 (pre-cierre) y 15 (cierre) del mes ANTERIOR (lib/cron-dispatch.ts). Calcula los checks por unidad, los guarda en `cierres_mes` y ma"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/cierre-mes",
+      "hash": "a9cd966d36fc"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/cima-liq/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/cron/cima-liq — libro de comisiones de la correduría. Tres ejes por (compañía, periodo): DEVENGADO (recibos cobrados) → LIQUIDADO (extracto de la compañía) → COBRADO (BBVA). Cada salto tiene su propio fallo, y llamarlos a todos «descuadre» impedía saber a quién reclamar. 🚨 Antes esto hablaba S",
@@ -141774,7 +142128,7 @@
           "exportada": true,
           "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 14,
+          "linea": 15,
           "resumen": "PATCH /api/expenses/pendientes/[id] — confirma (y APRENDE la regla del proveedor). Body: { categoria?, propiedad? }. Omitir un campo = dejarlo como está; '' = vaciarlo a propósito (los gastos de la co"
         },
         {
@@ -141783,13 +142137,13 @@
           "exportada": true,
           "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 51,
+          "linea": 57,
           "resumen": "DELETE /api/expenses/pendientes/[id] — descarta lo que no es un gasto nuestro."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/expenses/pendientes/[id]",
-      "hash": "c92119e47b5e"
+      "hash": "258561c1c19e"
     },
     {
       "ruta": "apps/plataforma/app/api/expenses/pendientes/[id]/sugerir-ia/route.ts",
@@ -143642,12 +143996,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 10
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/fijos/generar",
-      "hash": "a5ae092fd37c"
+      "hash": "b2f24b61c2e8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/fijos/route.ts",
@@ -143742,7 +144096,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 12
+          "linea": 14
         },
         {
           "nombre": "GET",
@@ -143750,7 +144104,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "POST",
@@ -143758,7 +144112,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 48
+          "linea": 50
         },
         {
           "nombre": "DELETE",
@@ -143766,7 +144120,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 112
+          "linea": 118
         }
       ],
       "tablas": [
@@ -143775,7 +144129,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/expenses",
-      "hash": "613540435431"
+      "hash": "73db0f322dc2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/extras/webhook/route.ts",
@@ -145440,7 +145794,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 68,
+          "linea": 71,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -145449,7 +145803,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 85,
+          "linea": 88,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -145458,7 +145812,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 111
+          "linea": 114
         },
         {
           "nombre": "getPendiente",
@@ -145466,7 +145820,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 141
+          "linea": 144
         },
         {
           "nombre": "reclamarPendiente",
@@ -145474,7 +145828,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<(Pendiente & Record<string, unknown>) | null>",
-          "linea": 151,
+          "linea": 154,
           "resumen": "Reclamo ATÓMICO del pendiente (doble pulsación / reintento de Telegram): el primero que borra la fila gana y es el único que envía; el segundo recibe `null`. Si luego el envío no sale, quien reclamó D"
         },
         {
@@ -145483,7 +145837,7 @@
           "exportada": false,
           "params": "p: Pendiente & Record<string, unknown>",
           "retorno": "Promise<void>",
-          "linea": 156
+          "linea": 159
         },
         {
           "nombre": "POST",
@@ -145491,7 +145845,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 164
+          "linea": 167
         },
         {
           "nombre": "procesarUpdate",
@@ -145499,7 +145853,7 @@
           "exportada": false,
           "params": "req: NextRequest, body: any",
           "retorno": "Promise<Response>",
-          "linea": 190
+          "linea": 193
         },
         {
           "nombre": "enrutarTextoLibre",
@@ -145507,7 +145861,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1471,
+          "linea": 1528,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -145516,7 +145870,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1478,
+          "linea": 1535,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -145525,7 +145879,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1490
+          "linea": 1547
         },
         {
           "nombre": "correduriaSegura",
@@ -145533,7 +145887,7 @@
           "exportada": false,
           "params": "texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1496,
+          "linea": 1553,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -145564,7 +145918,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "42c02e080011"
+      "hash": "7dce2d566eeb"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -152591,6 +152945,7 @@
         "personasDelPaso",
         "fechaDelPaso",
         "estadoPersona",
+        "campanaDeParametro",
         "campanaPresentacionAsegura"
       ],
       "funciones": [
@@ -152707,17 +153062,26 @@
           "resumen": "Estado a mostrar: rebote y baja pesan más que la etapa alcanzada."
         },
         {
+          "nombre": "campanaDeParametro",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "IdCampana | null",
+          "linea": 263,
+          "resumen": "`null` = no es una campaña conocida (la ruta responde 400; nunca se reenvía texto libre)."
+        },
+        {
           "nombre": "campanaPresentacionAsegura",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "campana: IdCampana = 'presentacion_app'",
           "retorno": "Promise<Reenvio>",
-          "linea": 255
+          "linea": 268
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0ae2ec7bb2d3"
+      "hash": "f72f7edef8d3"
     },
     {
       "ruta": "apps/plataforma/lib/carta-mediador-asegura.ts",
@@ -153306,6 +153670,533 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "75dbd19921a9"
+    },
+    {
+      "ruta": "apps/plataforma/lib/cierre-mes-db.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/cierre-mes-db.ts — lecturas/escrituras del cierre mensual. La lógica (checks, veredicto, guard) es pura y está testeada en `cierre-mes.ts`; aquí solo SQL y el ensamblado. Cada lectura va por `leer()`: si revienta, ESA entrada llega como `null` y su check sale `no_se_sabe` (nunca una lista vacía ",
+      "exporta": [
+        "cuentaDeLosPisos",
+        "calcularCierre",
+        "persistirCierre",
+        "estadosCierre",
+        "cerrarMes",
+        "reabrirCierre",
+        "bloqueoPorCierre",
+        "paresDeGastos",
+        "idsPendientesDelProveedor",
+        "pisosCerrados"
+      ],
+      "funciones": [
+        {
+          "nombre": "leer",
+          "kind": "function",
+          "exportada": false,
+          "params": "etiqueta: string, p: Promise<T>",
+          "retorno": "Promise<T | null>",
+          "linea": 22
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | string | null",
+          "retorno": "string | null",
+          "linea": 29
+        },
+        {
+          "nombre": "minFecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 30
+        },
+        {
+          "nombre": "cuentaDeLosPisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 36,
+          "resumen": "Cuenta (tenant) dueña de los pisos. Las tablas de sivra (`incomes`, `gastos`) no tienen `cuenta_id`: se deduce de quién tiene movimientos de destino turístico. Si hubiera MÁS de una, no se adivina: nu"
+        },
+        {
+          "nombre": "calcularCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string, hoy: string",
+          "retorno": "Promise<ResultadoUnidad[]>",
+          "linea": 53,
+          "resumen": "Calcula los checks de los pisos para `mes` a fecha `hoy` ('YYYY-MM-DD'). Solo lectura."
+        },
+        {
+          "nombre": "persistirCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string, resultados: ResultadoUnidad[]",
+          "retorno": "Promise<void>",
+          "linea": 240,
+          "resumen": "Guarda la evaluación. Un mes `cerrado` NO se toca (es un snapshot); uno `reabierto` sigue reabierto."
+        },
+        {
+          "nombre": "estadosCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string",
+          "retorno": "Promise<Record<string, string>>",
+          "linea": 253
+        },
+        {
+          "nombre": "cerrarMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string, hoy: string, actor: string",
+          "retorno": "Promise<",
+          "linea": 263,
+          "resumen": "Botón ✅ Cerrar mes. Se RECALCULA en el momento de pulsar (los datos pueden haber cambiado desde el aviso): solo cierra si TODAS las unidades siguen cuadrando; si alguna no, no cierra ninguna y dice cu"
+        },
+        {
+          "nombre": "reabrirCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, mes: string, unidad: string, motivo: string, actor: string",
+          "retorno": "Promise<ResultadoReapertura>",
+          "linea": 280,
+          "resumen": "Reapertura explícita con motivo (≥5 caracteres; lo exige también el CHECK de la tabla)."
+        },
+        {
+          "nombre": "paresCerrados",
+          "kind": "function",
+          "exportada": false,
+          "params": "pares: ParMesUnidad[]",
+          "retorno": "Promise<ParMesUnidad[]>",
+          "linea": 297,
+          "resumen": "Pares cerrados entre los dados. Tabla aún sin crear (migración pendiente) = ninguno cerrado."
+        },
+        {
+          "nombre": "bloqueoPorCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "pares: ParMesUnidad[]",
+          "retorno": "Promise<NextResponse | null>",
+          "linea": 314,
+          "resumen": "409 si la escritura toca un (mes, unidad) cerrado; 503 si no se pudo comprobar (fail-CLOSED: un guard que no sabe no deja pasar); null = adelante."
+        },
+        {
+          "nombre": "paresDeGastos",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: string[], nuevaPropiedad?: string | null",
+          "retorno": "Promise<ParMesUnidad[]>",
+          "linea": 326,
+          "resumen": "Pares (mes, unidad) que tocan los gastos existentes `ids` (y, si se cambia el piso, también el nuevo)."
+        },
+        {
+          "nombre": "idsPendientesDelProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<string[]>",
+          "linea": 341,
+          "resumen": "Ids que confirmaría `confirmarProveedor(id)`: la de partida + sus hermanas pendientes con la misma huella."
+        },
+        {
+          "nombre": "pisosCerrados",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "Promise<Set<string>>",
+          "linea": 351,
+          "resumen": "Pisos con el mes cerrado (para que la generación de fijos los salte)."
+        }
+      ],
+      "tablas": [
+        "cierres_mes",
+        "cuentas_bancarias",
+        "facturas_proveedor",
+        "fijo",
+        "gastos",
+        "incomes",
+        "limpieza_facturas",
+        "next",
+        "set",
+        "v_movimientos_activos"
+      ],
+      "rutaApi": null,
+      "hash": "362595bf928d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/cierre-mes.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/cierre-mes.ts — Cierre contable MENSUAL por unidad (piso o negocio). MÓDULO PURO (sin red ni BD: `node --test`). Las lecturas viven en `cierre-mes-db.ts`; el cron en `/api/cron/cierre-mes`. Cada unidad y mes se evalúa con seis checks, cada uno en TRES estados: · ok — comprobado y bien. · pendien",
+      "exporta": [
+        "nombreUnidad",
+        "pisosDelDestino",
+        "unidadesDeGasto",
+        "unidadesDeMovimiento",
+        "mesDe",
+        "finDeMes",
+        "mesSiguiente",
+        "sumarDias",
+        "etiquetaMes",
+        "checkBanco",
+        "facturasSinCargo",
+        "checkFacturas",
+        "coberturaFifo",
+        "cobroEnPlazo",
+        "checkCobrosOta",
+        "checkLimpieza",
+        "checkGastosFijos",
+        "buscarDuplicados",
+        "checkDuplicados",
+        "veredicto",
+        "evaluarUnidad",
+        "faseDelDia",
+        "hoyMadrid",
+        "mesACerrar",
+        "callbackCerrar",
+        "ofrecerCierre",
+        "interpretarCallbackCierre",
+        "formatearResumenCierre",
+        "paresBloqueados",
+        "paresDeGasto",
+        "mensajeBloqueo",
+        "titularidadDescuadrada",
+        "unidadesQueNoCuadran",
+        "lecturaCerradosFallidaBloquea"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreUnidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "unidad: string",
+          "retorno": "string",
+          "linea": 34
+        },
+        {
+          "nombre": "pisosDelDestino",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string",
+          "retorno": "string[]",
+          "linea": 39,
+          "resumen": "Pisos que comparten cuenta (pool de cobros) con `unidad`, incluida ella."
+        },
+        {
+          "nombre": "unidadesDeGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "propiedad: string | null | undefined",
+          "retorno": "string[]",
+          "linea": 47,
+          "resumen": "Unidades cuyo cierre afecta a un GASTO con esta `propiedad`. Compartido → todos los pisos (cambia el reparto de todos). Personal, vacío o desconocido → ninguna en F1 (los negocios aún no se cierran)."
+        },
+        {
+          "nombre": "unidadesDeMovimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string | null | undefined, propiedadId: string | null | undefined",
+          "retorno": "string[]",
+          "linea": 57,
+          "resumen": "Unidades afectadas por un MOVIMIENTO bancario. Con `propiedad_id` de un piso → ese piso. Sin él, el movimiento es del destino entero (el banco no separa pisos) → todos los pisos de ese destino."
+        },
+        {
+          "nombre": "mesDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | Date",
+          "retorno": "string",
+          "linea": 64,
+          "resumen": "── Fechas (strings 'YYYY-MM-DD' / 'YYYY-MM', sin zona horaria) ─────────────────────────────────────"
+        },
+        {
+          "nombre": "finDeMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 69
+        },
+        {
+          "nombre": "mesSiguiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, n = 1",
+          "retorno": "string",
+          "linea": 75
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, dias: number",
+          "retorno": "string",
+          "linea": 81
+        },
+        {
+          "nombre": "etiquetaMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 88
+        },
+        {
+          "nombre": "ddmm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": null,
+          "linea": 94
+        },
+        {
+          "nombre": "check",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: IdCheck, estado: EstadoCheck, detalle: string, items: string[] = [], aceptado = false",
+          "retorno": "Check",
+          "linea": 120
+        },
+        {
+          "nombre": "checkBanco",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentas: CuentaUnidad[] | null, mes: string",
+          "retorno": "Check",
+          "linea": 134,
+          "resumen": "`cuentas` null = no se pudieron leer · [] = ninguna cuenta identificada para la unidad."
+        },
+        {
+          "nombre": "facturasSinCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "facturas: FacturaUnidad[], cargos: CargoUnidad[]",
+          "retorno": "Apunte[]",
+          "linea": 163,
+          "resumen": "Facturas (gastos con documento) sin un cargo bancario que las pague: mismo importe (±1 € o ±2 %) entre 15 días antes y 45 después de la fecha de factura. Cada cargo paga UNA factura. Importe ≤ 0 → no "
+        },
+        {
+          "nombre": "checkFacturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "sinFactura: Apunte[] | null, sinCargo: Apunte[] | null",
+          "retorno": "Check",
+          "linea": 179
+        },
+        {
+          "nombre": "coberturaFifo",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaCobro[], abonos: AbonoCobro[], tolerancia = 1",
+          "retorno": "Map<string, boolean | null>",
+          "linea": 198,
+          "resumen": "¿Qué reservas cubre el dinero recibido? FIFO por checkout sobre el POOL de una cuenta (las OTAs agrupan reservas en una transferencia y el banco no separa pisos: misma idea que `sivra/cobros-ota.ts`)."
+        },
+        {
+          "nombre": "cobroEnPlazo",
+          "kind": "function",
+          "exportada": true,
+          "params": "canal: string, checkOut: string, hoy: string",
+          "retorno": "boolean",
+          "linea": 225,
+          "resumen": "¿Sigue siendo normal que no haya llegado? Expedia paga a MES VENCIDO: se acepta hasta fin del mes siguiente."
+        },
+        {
+          "nombre": "checkCobrosOta",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaMes[] | null, unidad: string, hoy: string",
+          "retorno": "Check",
+          "linea": 235,
+          "resumen": "`reservas` = las del MES de todo el pool (todas las unidades que cobran por la misma cuenta). Si en el pool falta dinero ya vencido, la unidad queda pendiente aunque el FIFO lo atribuya a otro piso: e"
+        },
+        {
+          "nombre": "checkLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: LimpiezaMes | null, unidad: string, mes: string, hoy: string",
+          "retorno": "Check",
+          "linea": 268,
+          "resumen": "Si que Brilla factura a MES VENCIDO: sin factura del periodo, se acepta hasta fin del mes siguiente."
+        },
+        {
+          "nombre": "checkGastosFijos",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: FijosMes | null",
+          "retorno": "Check",
+          "linea": 288
+        },
+        {
+          "nombre": "normConcepto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": null,
+          "linea": 309
+        },
+        {
+          "nombre": "buscarDuplicados",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: MovDuplicable[]",
+          "retorno": "GrupoDuplicado[]",
+          "linea": 312,
+          "resumen": "Grupos de misma cuenta + fecha + importe + concepto con más de un movimiento sin revisar."
+        },
+        {
+          "nombre": "checkDuplicados",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: MovDuplicable[] | null",
+          "retorno": "Check",
+          "linea": 326
+        },
+        {
+          "nombre": "veredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "checks: Check[]",
+          "retorno": "Veredicto",
+          "linea": 352
+        },
+        {
+          "nombre": "evaluarUnidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosCierreUnidad",
+          "retorno": "ResultadoUnidad",
+          "linea": 358
+        },
+        {
+          "nombre": "faseDelDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "dia: number",
+          "retorno": "Fase",
+          "linea": 374,
+          "resumen": "Día 5 → pre-cierre; día 15 → cierre. Cualquier otro día (disparo manual) → pre desde el 1 al 14."
+        },
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 379,
+          "resumen": "Fecha civil de Madrid ('YYYY-MM-DD') de un instante."
+        },
+        {
+          "nombre": "mesACerrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string",
+          "retorno": "string",
+          "linea": 384,
+          "resumen": "Mes anterior al de `hoy` ('YYYY-MM-DD')."
+        },
+        {
+          "nombre": "callbackCerrar",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 391
+        },
+        {
+          "nombre": "ofrecerCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "fase: Fase, res: { veredicto: Veredicto; estado: string | null }[]",
+          "retorno": "boolean",
+          "linea": 396,
+          "resumen": "Botón ✅ Cerrar mes: solo en la fase de cierre, si TODO cuadra y queda algo sin cerrar."
+        },
+        {
+          "nombre": "interpretarCallbackCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "action: string, args: string[]",
+          "retorno": "",
+          "linea": 401,
+          "resumen": "Interpreta `cmes_cerrar:AAAA-MM`. null = botón no válido."
+        },
+        {
+          "nombre": "resumenUnidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: ResultadoUnidad, estado: string | null",
+          "retorno": "string",
+          "linea": 409
+        },
+        {
+          "nombre": "formatearResumenCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { mes: string fase: Fase resultados: ResultadoUnidad[] estados?: Record<string, string | null> }",
+          "retorno": "string",
+          "linea": 420,
+          "resumen": "Telegram (HTML). UN mensaje con el resumen de todas las unidades y la lista de lo que falta."
+        },
+        {
+          "nombre": "paresBloqueados",
+          "kind": "function",
+          "exportada": true,
+          "params": "tocados: ParMesUnidad[], cerrados: ParMesUnidad[]",
+          "retorno": "ParMesUnidad[]",
+          "linea": 451,
+          "resumen": "Pares (mes, unidad) que una escritura toca y que están cerrados. Vacío = se puede escribir."
+        },
+        {
+          "nombre": "paresDeGasto",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | null | undefined, propiedad: string | null | undefined",
+          "retorno": "ParMesUnidad[]",
+          "linea": 463,
+          "resumen": "Pares que toca un gasto con esta fecha y propiedad. Fecha inválida → ninguno (lo rechaza la validación)."
+        },
+        {
+          "nombre": "mensajeBloqueo",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: ParMesUnidad[]",
+          "retorno": "string",
+          "linea": 469
+        },
+        {
+          "nombre": "titularidadDescuadrada",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: { propiedadId: string; porcentaje: number }[]",
+          "retorno": "string[]",
+          "linea": 476,
+          "resumen": "Porcentajes por piso: cada piso debe sumar 100. Devuelve los pisos que NO suman 100."
+        },
+        {
+          "nombre": "unidadesQueNoCuadran",
+          "kind": "function",
+          "exportada": true,
+          "params": "resultados: { unidad: string; veredicto: Veredicto }[], estados: Record<string, string>",
+          "retorno": "string[]",
+          "linea": 487,
+          "resumen": "Unidades que impiden cerrar: no cuadran Y no están ya cerradas (un mes `cerrado` es un snapshot: lo que cambie después no lo bloquea; se corrige reabriéndolo)."
+        },
+        {
+          "nombre": "lecturaCerradosFallidaBloquea",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, hoy: string",
+          "retorno": "boolean",
+          "linea": 495,
+          "resumen": "Si falla la lectura de `cierres_mes` al generar fijos: 503 solo para meses PASADOS (podrían estar cerrados). El mes actual o futuro no puede estar cerrado, así que se sigue con el conjunto vacío."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b78a619bedab"
     },
     {
       "ruta": "apps/plataforma/lib/cierre-negocios.ts",
@@ -169804,7 +170695,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 276,
+          "linea": 279,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -169813,7 +170704,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 306,
+          "linea": 309,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -169822,7 +170713,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 328
+          "linea": 331
         },
         {
           "nombre": "ventanaMinutos",
@@ -169830,7 +170721,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 336,
+          "linea": 339,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -169839,13 +170730,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 348,
+          "linea": 351,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc25d084a41d"
+      "hash": "f4ba00e152a6"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -170298,10 +171189,10 @@
           "nombre": "eur",
           "kind": "function",
           "exportada": true,
-          "params": "n: number",
+          "params": "n: number | string | { toString(): string } | null | undefined",
           "retorno": "string",
-          "linea": 6,
-          "resumen": "Importe en euros con 2 decimales: 2162.49 → \"2.162,49€\", 8 → \"8,00€\"."
+          "linea": 7,
+          "resumen": "Importe en euros con 2 decimales: 2162.49 → \"2.162,49€\", 8 → \"8,00€\". Acepta también string numérico (\"10.90\", como llegan los numeric de $queryRaw) y Decimal de Prisma."
         },
         {
           "nombre": "eurSinDecimales",
@@ -170309,13 +171200,13 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 14,
+          "linea": 16,
           "resumen": "Importe en euros sin decimales: 2163 → \"2.163€\", 8 → \"8€\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "52512dbee65e"
+      "hash": "b1bbd3ba0a5b"
     },
     {
       "ruta": "apps/plataforma/lib/director-modelos.ts",
@@ -172591,6 +173482,48 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "991a10caead7"
+    },
+    {
+      "ruta": "apps/plataforma/lib/felicitaciones-exclientes-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Felicitación de cumpleaños a EX-CLIENTES de Grupo ASegura (30/10/2026): la parte de PLATAFORMA. asegura (cron `felicitaciones`, puerta `ASEGURA_FELICITACIONES_EXCLIENTES=aprobar`) manda a Alberto el texto con «✅ Enviar» (`fex_ok:<clienteId>:<año>`) / «❌ Descartar» (`fex_no:…`). El webhook de Telegra",
+      "exporta": [
+        "decidirBotonFex",
+        "lineaTrasPulsarFex",
+        "decidirFexEnAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirBotonFex",
+          "kind": "function",
+          "exportada": true,
+          "params": "cb: { from?: { id?: unknown } | null } | null | undefined, accion: string, args: readonly string[], chatAutorizado: string | undefined",
+          "retorno": "DecisionBotonFex",
+          "linea": 15,
+          "resumen": "¿Vale esta pulsación? Solo el titular (from.id EXACTO); sin chat configurado, nadie. PURO."
+        },
+        {
+          "nombre": "lineaTrasPulsarFex",
+          "kind": "function",
+          "exportada": true,
+          "params": "decision: 'ok' | 'no', estado: string",
+          "retorno": "string",
+          "linea": 26,
+          "resumen": "Línea que sustituye a los botones tras pulsar. PURO."
+        },
+        {
+          "nombre": "decidirFexEnAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { decision: 'ok' | 'no'; clienteId: string; anio: number }",
+          "retorno": "Promise<string>",
+          "linea": 42,
+          "resumen": "Reenvía la decisión a asegura. Nunca lanza: devuelve el `estado` para pintar la línea."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a16023c2dd0e"
     },
     {
       "ruta": "apps/plataforma/lib/festivos-nager.ts",
@@ -189697,9 +190630,9 @@
           "nombre": "generarGastosFijos",
           "kind": "function",
           "exportada": true,
-          "params": "year: number, month: number, opts: { commit?: boolean } = {}",
+          "params": "year: number, month: number, opts: { commit?: boolean; bloqueado?: (propiedad: string | null) => boolean } = {},",
           "retorno": "Promise<ResultadoGeneracion>",
-          "linea": 89
+          "linea": 91
         }
       ],
       "tablas": [
@@ -189708,7 +190641,7 @@
         "gastos_fijos"
       ],
       "rutaApi": null,
-      "hash": "06373f83d9d7"
+      "hash": "07ea5722b198"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/inversion-correos-puro.ts",
@@ -199317,7 +200250,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 883
+          "linea": 889
         },
         {
           "nombre": "avisosDe",
@@ -199325,7 +200258,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 888,
+          "linea": 894,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -199334,13 +200267,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 898,
+          "linea": 904,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "46294332ec58"
+      "hash": "66e03c132ec2"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -260868,7 +261801,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5440,
-    "funciones": 20991
+    "archivos": 5449,
+    "funciones": 21076
   }
 }
