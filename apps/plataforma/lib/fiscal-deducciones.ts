@@ -5,6 +5,9 @@
 // IMPORTES_POR_ANIO con su FUENTE y FECHA DE REVISIÓN: actualizar = tocar una línea.
 // El vigilante `.claude/skills/fiscal-novedades` contrasta estas cifras con BOE/BOJA.
 import { eur } from './dinero.ts'
+// Import circular a propósito (solo en tiempo de llamada, nada se evalúa al cargar): la liquidación usa
+// las escalas separadas del simulador para que no haya dos cálculos de la cuota.
+import { cuotaIntegra as cuotaIntegraEscalas, parametrosIrpf } from './simulador-irpf.ts'
 
 export type ImportesAnio = {
   fuente: string
@@ -136,8 +139,23 @@ export type PerfilFiscal = {
   donativosAnual: number
   /** Donativos recurrentes (≥ misma cuantía a la misma entidad 3 años seguidos): resto al 45 %. */
   donativosRecurrentes?: boolean
-  // Gasto en actividades deportivas (Andalucía D.A.1ª Ley 7/2021): 15% sobre base máx. €100.
+  // Gasto en actividades deportivas (Andalucía): 15 % del gasto, deducción máx. 100 € POR DECLARANTE.
   gastoDeportivoAnual: number
+  /**
+   * Gasto deportivo de CADA declarante (conjunta: [titular, cónyuge]). Ausente ⇒ el total se reparte a
+   * partes iguales entre los declarantes y la línea sale `estimado`.
+   */
+  gastoDeportivoPorDeclarante?: number[] | null
+  /**
+   * Fecha de INICIO del título de familia numerosa (YYYY-MM-DD). La deducción estatal (art. 81 bis) se
+   * prorratea por meses con título vigente el último día del mes. `undefined`/`null` = «sin dato» ⇒ la
+   * línea sale `sinDato` (nunca el importe anual entero).
+   */
+  familiaNumerosaDesde?: string | null
+  /** Abono anticipado de la maternidad cobrado en el ejercicio (modelo 140; casilla 0612). null/undefined = 0 no comprobado. */
+  abonoAnticipadoMaternidad?: number | null
+  /** Abono anticipado de familia numerosa cobrado en el ejercicio (modelo 143; casilla 0661). */
+  abonoAnticipadoFamiliaNumerosa?: number | null
   /**
    * Cotizaciones y cuotas TOTALES a la SS/mutualidad devengadas por la madre en el ejercicio
    * (art. 81 LIRPF: tope de maternidad + guardería). Netas de cuotas exoneradas durante la
@@ -152,6 +170,10 @@ export type Descendiente = {
   fechaNacimiento: string // YYYY-MM-DD
   gradoDiscapacidad: number
   computoCompleto: boolean // false ⇒ 50 % (custodia compartida)
+  /** Gasto de guardería/escuela infantil autorizada de ESTE hijo en el ejercicio. Ausente = no se sabe por hijo. */
+  gastoGuarderia?: number | null
+  /** Meses del ejercicio en guardería (modelo 233). Ausente ⇒ los meses de menor de 3 años (cota alta). */
+  mesesGuarderia?: number | null
 }
 
 export type LineaDeduccion = {
@@ -162,12 +184,21 @@ export type LineaDeduccion = {
   reembolsable: boolean // maternidad/FN devuelven aunque no haya cuota
   /** true ⇒ no se pudo calcular (falta un dato): `importe` es 0 de relleno y la UI debe mostrar «sin dato». */
   sinDato?: boolean
+  /** true ⇒ calculado con un reparto supuesto (p. ej. gasto total sin desglose por hijo/declarante). */
+  estimado?: boolean
 }
 
 export type ResultadoFiscal = {
+  /** Mínimo personal y familiar ESTATAL. */
   minimoPersonalYFamiliar: number
+  minimoAutonomico: number
   baseLiquidable: number
+  /** estatal + autonómica (escalas separadas, `simulador-irpf.ts`). */
   cuotaIntegra: number
+  cuotaIntegraEstatal: number
+  cuotaIntegraAutonomica: number
+  /** Abono anticipado (maternidad + FN) cobrado en el año: se SUMA al resultado. */
+  abonosAnticipados: number
   deducciones: LineaDeduccion[]
   totalDeducciones: number
   cuotaLiquida: number
@@ -206,16 +237,31 @@ export type ResultadoMaternidad = {
   maternidad: number | null
   guarderia: number | null
   hijosConDerecho: number
+  /** true ⇒ el gasto de guardería se repartió a partes iguales entre varios hijos (no había gasto por hijo). */
+  guarderiaEstimada: boolean
+}
+
+/**
+ * Gasto de guardería de cada hijo con derecho (mismo orden que `hijos`). Si algún hijo trae su
+ * `gastoGuarderia`, manda el desglose por hijo (los que no lo traen = 0). Si solo hay el total del
+ * perfil: con UN hijo con derecho es suyo; con varios se reparte a partes iguales y es `estimado`.
+ */
+function gastoGuarderiaPorHijo(perfil: PerfilFiscal, hijos: { d: Descendiente }[]): { gastos: number[]; estimado: boolean } {
+  if (hijos.some(h => h.d.gastoGuarderia != null)) return { gastos: hijos.map(h => Math.max(0, h.d.gastoGuarderia ?? 0)), estimado: false }
+  const total = Math.max(0, perfil.gastoGuarderiaAnual || 0)
+  return { gastos: hijos.map(() => total / hijos.length), estimado: hijos.length > 1 && total > 0 }
 }
 
 /**
  * Maternidad (art. 81 LIRPF) + incremento por guardería con el TOPE LITERAL POR HIJO: la deducción
- * de cada hijo (100 €/mes <3 + su parte del incremento de guardería, máx. 1.000 €) no puede exceder
- * las cotizaciones/cuotas SS de la madre devengadas en el ejercicio con posterioridad al nacimiento
- * (hijo nacido antes del 1/1: las del año completo; nacido en el año: cuotas × meses desde el mes
- * de nacimiento / 12). Cada hijo tiene su propio límite (con 2 hijos puede llegar a 2 × cuotas).
- * El gasto de guardería (dato único del perfil) se reparte a partes iguales entre los hijos con
- * derecho, máx. 1.000 € cada uno. Maternidad primero; la guardería usa lo que quede del límite.
+ * de cada hijo (100 €/mes <3 + su incremento de guardería) no puede exceder las cotizaciones/cuotas
+ * SS de la madre devengadas en el ejercicio con posterioridad al nacimiento (hijo nacido antes del
+ * 1/1: las del año completo; nacido en el año: cuotas × meses desde el mes de nacimiento / 12).
+ * Cada hijo tiene su propio límite (con 2 hijos puede llegar a 2 × cuotas).
+ * Incremento de guardería por hijo = mín(su gasto, 1.000 € × meses en guardería / 12) [Probable:
+ * RIRPF art. 60.2, proporcional a los meses; la renta 2025 da 833,33 = 1.000 × 10/12]. Meses en
+ * guardería = `mesesGuarderia` (modelo 233) o, si no consta, los de menor de 3. Maternidad primero;
+ * la guardería usa lo que quede del límite.
  */
 export function calcularMaternidadGuarderia(
   perfil: PerfilFiscal,
@@ -224,32 +270,35 @@ export function calcularMaternidadGuarderia(
   imp: ImportesAnio = importesDe(anio),
 ): ResultadoMaternidad {
   const hijos = descendientes
-    .map(h => ({ meses: mesesMenor3(h.fechaNacimiento, anio), nacEsteAnio: parseInt(h.fechaNacimiento.slice(0, 4), 10) === anio, mesNac: parseInt(h.fechaNacimiento.slice(5, 7), 10) - 1 }))
+    .map(d => ({ d, meses: mesesMenor3(d.fechaNacimiento, anio), nacEsteAnio: parseInt(d.fechaNacimiento.slice(0, 4), 10) === anio, mesNac: parseInt(d.fechaNacimiento.slice(5, 7), 10) - 1 }))
     .filter(h => h.meses > 0)
   if (!perfil.conyugeTrabaja || hijos.length === 0) {
-    return { maternidadBruta: 0, guarderiaBruta: 0, tope: 0, maternidad: 0, guarderia: 0, hijosConDerecho: 0 }
+    return { maternidadBruta: 0, guarderiaBruta: 0, tope: 0, maternidad: 0, guarderia: 0, hijosConDerecho: 0, guarderiaEstimada: false }
   }
+  const r2 = (n: number) => Math.round(n * 100) / 100
   const matH = hijos.map(h => imp.maternidadPorHijo * (h.meses / 12))
   const maternidadBruta = Math.round(matH.reduce((s, m) => s + m, 0))
-  const guarderiaBruta = perfil.gastoGuarderiaAnual > 0
-    ? Math.min(perfil.gastoGuarderiaAnual, imp.maternidadGuarderiaMax * hijos.length)
-    : 0
+  const g = gastoGuarderiaPorHijo(perfil, hijos)
+  const guardH = hijos.map((h, i) => {
+    const meses = Math.min(h.meses, Math.max(0, h.d.mesesGuarderia ?? h.meses))
+    return Math.min(g.gastos[i], imp.maternidadGuarderiaMax * meses / 12)
+  })
+  const hayGasto = g.gastos.some(x => x > 0)
+  const guarderiaBruta = r2(guardH.reduce((s, x) => s + x, 0))
   const cuotas = perfil.cuotasSSMadreAnual
   if (cuotas == null || !Number.isFinite(cuotas)) {
-    return { maternidadBruta, guarderiaBruta, tope: null, maternidad: null, guarderia: perfil.gastoGuarderiaAnual > 0 ? null : 0, hijosConDerecho: hijos.length }
+    return { maternidadBruta, guarderiaBruta, tope: null, maternidad: null, guarderia: hayGasto ? null : 0, hijosConDerecho: hijos.length, guarderiaEstimada: g.estimado }
   }
   const c = Math.max(0, cuotas)
-  const guardH = guarderiaBruta / hijos.length
   let tope = 0, maternidad = 0, guarderia = 0
   hijos.forEach((h, i) => {
     const capH = h.nacEsteAnio ? c * ((12 - h.mesNac) / 12) : c
     const m = Math.min(matH[i], capH)
     tope += capH
     maternidad += m
-    guarderia += Math.min(guardH, Math.max(0, capH - m))
+    guarderia += Math.min(guardH[i], Math.max(0, capH - m))
   })
-  const r2 = (n: number) => Math.round(n * 100) / 100
-  return { maternidadBruta, guarderiaBruta, tope: r2(tope), maternidad: r2(maternidad), guarderia: r2(guarderia), hijosConDerecho: hijos.length }
+  return { maternidadBruta, guarderiaBruta, tope: r2(tope), maternidad: r2(maternidad), guarderia: r2(guarderia), hijosConDerecho: hijos.length, guarderiaEstimada: g.estimado }
 }
 
 /** Edad cumplida a 31-dic del año fiscal. */
@@ -326,39 +375,45 @@ export function calcularDeducciones(
       concepto: `Deducción por maternidad (${mat.hijosConDerecho} hijo/s < 3)`,
       importe: mat.maternidad ?? 0, ...(mat.maternidad === null ? { sinDato: true } : {}),
     })
-    if (perfil.gastoGuarderiaAnual > 0) {
+    if (mat.guarderiaBruta > 0 || perfil.gastoGuarderiaAnual > 0 || mat.guarderia === null) {
       lineas.push({
         clave: 'guarderia', ambito: 'estatal', reembolsable: true,
-        concepto: 'Incremento por gastos de guardería/custodia',
-        importe: mat.guarderia ?? 0, ...(mat.guarderia === null ? { sinDato: true } : {}),
+        concepto: `Incremento por gastos de guardería/custodia${mat.guarderiaEstimada ? ' (reparto entre hijos estimado)' : ''}`,
+        importe: mat.guarderia ?? 0, ...(mat.guarderia === null ? { sinDato: true } : {}), ...(mat.guarderiaEstimada ? { estimado: true } : {}),
       })
     }
   }
 
-  // Familia numerosa (estatal).
-  if (perfil.familiaNumerosa === 'general') {
-    lineas.push({ clave: 'fn_general', ambito: 'estatal', reembolsable: true, concepto: 'Deducción familia numerosa (general)', importe: imp.familiaNumerosaGeneral })
-  } else if (perfil.familiaNumerosa === 'especial') {
-    lineas.push({ clave: 'fn_especial', ambito: 'estatal', reembolsable: true, concepto: 'Deducción familia numerosa (especial)', importe: imp.familiaNumerosaEspecial })
+  // Familia numerosa (estatal, art. 81 bis): 100 €/mes (general) prorrateado por meses con título vigente.
+  if (perfil.familiaNumerosa === 'general' || perfil.familiaNumerosa === 'especial') {
+    const anual = perfil.familiaNumerosa === 'general' ? imp.familiaNumerosaGeneral : imp.familiaNumerosaEspecial
+    const meses = mesesFamiliaNumerosa(perfil.familiaNumerosaDesde, anio)
+    lineas.push({
+      clave: perfil.familiaNumerosa === 'general' ? 'fn_general' : 'fn_especial', ambito: 'estatal', reembolsable: true,
+      concepto: `Deducción familia numerosa (${perfil.familiaNumerosa}${meses != null && meses < 12 ? `, ${meses} meses` : ''})`,
+      importe: meses == null ? 0 : Math.round(anual * meses / 12 * 100) / 100,
+      ...(meses == null ? { sinDato: true } : {}),
+    })
   }
 
   // Autonómicas Andalucía.
   if (perfil.comunidadAutonoma === 'andalucia') {
     // Nacimiento/adopción: SOLO el año del nacimiento; SIN límite de renta (Ley 8/2025 lo eliminó).
     const nacidos = descendientes.filter(h => anioNacimiento(h.fechaNacimiento) === anio)
-    if (nacidos.length > 0) {
-      lineas.push({ clave: 'and_nacimiento', ambito: 'andalucia', reembolsable: false, concepto: `Andalucía: nacimiento/adopción (${nacidos.length})`, importe: nacidos.length * imp.andaluciaNacimiento })
-    }
-    // Familia numerosa autonómica: SÍ tiene límite de renta (suma de bases ≤ 25.000 individual /
-    // 30.000 conjunta). Solo se aplica si conocemos la base y NO supera el límite.
+    const nacimiento = nacidos.length * imp.andaluciaNacimiento
+    // Familia numerosa autonómica: límite de renta (suma de bases ≤ 25.000 individual / 30.000 conjunta;
+    // [Probable] — el manual AEAT 2022 daba 80.000/100.000: verificar BOJA) y además INCOMPATIBLE con la
+    // deducción por nacimiento del mismo ejercicio [Probable: manual AEAT Andalucía; la renta 2025 aplicó
+    // nacimiento (0850) y NO familia numerosa con la base en 28.618,20€ < 30.000€]. Se queda la mayor.
     const limiteFN = perfil.declaracionConjunta ? imp.andaluciaFamiliaNumerosaLimiteConjunta : imp.andaluciaFamiliaNumerosaLimiteIndividual
     const dentroLimiteFN = baseParaLimites === undefined || baseParaLimites <= limiteFN
-    if (dentroLimiteFN) {
-      if (perfil.familiaNumerosa === 'general') {
-        lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: 'Andalucía: familia numerosa (general)', importe: imp.andaluciaFamiliaNumerosaGeneral })
-      } else if (perfil.familiaNumerosa === 'especial') {
-        lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: 'Andalucía: familia numerosa (especial)', importe: imp.andaluciaFamiliaNumerosaEspecial })
-      }
+    const fnAut = !dentroLimiteFN ? 0
+      : perfil.familiaNumerosa === 'general' ? imp.andaluciaFamiliaNumerosaGeneral
+        : perfil.familiaNumerosa === 'especial' ? imp.andaluciaFamiliaNumerosaEspecial : 0
+    if (nacimiento > 0 && nacimiento >= fnAut) {
+      lineas.push({ clave: 'and_nacimiento', ambito: 'andalucia', reembolsable: false, concepto: `Andalucía: nacimiento/adopción (${nacidos.length})`, importe: nacimiento })
+    } else if (fnAut > 0) {
+      lineas.push({ clave: 'and_fn', ambito: 'andalucia', reembolsable: false, concepto: `Andalucía: familia numerosa (${perfil.familiaNumerosa})${nacimiento > 0 ? ' — incompatible con nacimiento: se aplica la mayor' : ''}`, importe: fnAut })
     }
   }
 
@@ -375,19 +430,59 @@ export function calcularDeducciones(
     }
   }
 
-  // Deducción deportiva Andalucía (D.A.1ª Ley 7/2021): 15 % sobre base máx. €100.
-  if (perfil.comunidadAutonoma === 'andalucia' && perfil.gastoDeportivoAnual > 0) {
-    const base = Math.min(perfil.gastoDeportivoAnual, 100)
-    const importe = Math.round(base * 0.15)
-    if (importe > 0) {
-      lineas.push({ clave: 'and_deportiva', ambito: 'andalucia', reembolsable: false, concepto: `Andalucía: actividad deportiva (15%, base máx. €100)`, importe })
+  // Deducción deportiva Andalucía: 15 % del gasto de CADA declarante, deducción máx. 100 € por declarante
+  // [Probable: la renta 2025 dedujo 129,60 = 15 % × (432 + 432), casillas 2106/2122]. Al céntimo.
+  if (perfil.comunidadAutonoma === 'andalucia') {
+    const dep = deduccionDeportivaAndalucia(perfil)
+    if (dep.importe > 0) {
+      lineas.push({
+        clave: 'and_deportiva', ambito: 'andalucia', reembolsable: false,
+        concepto: `Andalucía: actividad deportiva (15 %, máx. ${eur(DEPORTE_ANDALUCIA_MAX)} por declarante${dep.estimado ? '; reparto entre declarantes estimado' : ''})`,
+        importe: dep.importe, ...(dep.estimado ? { estimado: true } : {}),
+      })
     }
   }
 
   return lineas
 }
 
-/** Cálculo completo: base → cuota íntegra → deducciones → retenciones → resultado. */
+export const DEPORTE_ANDALUCIA_PCT = 0.15
+export const DEPORTE_ANDALUCIA_MAX = 100
+/** 15 % del gasto por declarante con tope de 100 € cada uno. Sin desglose: el total a partes iguales (estimado). */
+export function deduccionDeportivaAndalucia(perfil: Pick<PerfilFiscal, 'gastoDeportivoAnual' | 'gastoDeportivoPorDeclarante' | 'declaracionConjunta'>): { importe: number; estimado: boolean } {
+  const porDecl = perfil.gastoDeportivoPorDeclarante
+  const total = Math.max(0, perfil.gastoDeportivoAnual || 0)
+  const gastos = porDecl && porDecl.length ? porDecl : perfil.declaracionConjunta ? [total / 2, total / 2] : [total]
+  const estimado = !(porDecl && porDecl.length) && perfil.declaracionConjunta && total > 0
+  const importe = gastos.reduce((s, g) => s + Math.min(Math.max(0, g) * DEPORTE_ANDALUCIA_PCT, DEPORTE_ANDALUCIA_MAX), 0)
+  return { importe: Math.round(importe * 100) / 100, estimado }
+}
+
+/**
+ * Meses del ejercicio con título de familia numerosa vigente EL ÚLTIMO DÍA DEL MES (art. 81 bis LIRPF y
+ * RIRPF art. 60 bis). Título desde el 18/11/2025 ⇒ 2025: 2 meses (nov, dic) ⇒ 200 € (renta 2025, 0660).
+ * null = sin fecha de título («sin dato»).
+ */
+export function mesesFamiliaNumerosa(desde: string | null | undefined, anio: number): number | null {
+  if (!desde || !/^\d{4}-\d{2}-\d{2}/.test(desde)) return null
+  let n = 0
+  for (let m = 1; m <= 12; m++) {
+    const ultimo = new Date(Date.UTC(anio, m, 0)).toISOString().slice(0, 10)
+    if (ultimo >= desde.slice(0, 10)) n++
+  }
+  return n
+}
+
+/**
+ * Cálculo completo: base → cuota íntegra → deducciones → retenciones → resultado.
+ *
+ * Usa la MISMA ruta que el simulador (`simulador-irpf.ts`): escalas estatal y andaluza SEPARADAS, cada una
+ * con su mínimo (estatal y autonómico). Deducciones no reembolsables restan de su cuota: las estatales de
+ * la estatal, las andaluzas de la autonómica, y los donativos (Ley 49/2002) 50/50 (renta 2025: 86 + 86);
+ * cada cuota líquida ≥ 0. Resultado = cuota líquida − retenciones − deducciones reembolsables (maternidad,
+ * guardería, familia numerosa) + abonos anticipados cobrados en el año (modelos 140/143).
+ * `baseImponible` llega ya sin la reducción por tributación conjunta (la aplica el llamador).
+ */
 export function calcularResultadoFiscal(
   baseImponible: number,
   retenciones: number,
@@ -398,20 +493,32 @@ export function calcularResultadoFiscal(
 ): ResultadoFiscal {
   const aportacion = Math.min(Math.max(0, perfil.aportacionPlanPensiones), imp.limitePlanPensiones)
   const baseLiquidable = Math.max(0, baseImponible - aportacion)
-  const minimo = minimoPersonalYFamiliar(perfil, descendientes, anio, imp)
-
-  // Método español: cuota = tarifa(base) − tarifa(mínimo).
-  const cuotaIntegra = Math.max(0, cuotaTarifa(baseLiquidable, imp.tramos) - cuotaTarifa(minimo, imp.tramos))
+  const p = parametrosIrpf(anio, descendientes)
+  // Discapacidad/ascendientes del perfil (no están en `parametrosIrpf`): misma cuantía en ambas escalas [Suposición].
+  const neutro: PerfilFiscal = { ...perfil, gradoDiscapacidadTitular: 0, gradoDiscapacidadConyuge: 0, ascendientesACargo: 0, ascendientesMayores75: 0 }
+  const extra = minimoPersonalYFamiliar(perfil, descendientes, anio, imp) - minimoPersonalYFamiliar(neutro, descendientes, anio, imp)
+  const minimoEstatal = p.minimoContribuyente + p.minimoDescendientes + extra
+  const minimoAutonomico = p.minimoAutonomicoContribuyente + p.minimoAutonomicoDescendientes + extra
+  const ci = cuotaIntegraEscalas(baseLiquidable, { estatal: minimoEstatal, autonomico: minimoAutonomico }, p)
 
   const deducciones = calcularDeducciones(perfil, descendientes, anio, imp, baseLiquidable)
-  const noReembolsables = deducciones.filter(d => !d.reembolsable).reduce((s, d) => s + d.importe, 0)
-  const reembolsables = deducciones.filter(d => d.reembolsable).reduce((s, d) => s + d.importe, 0)
+  const noReemb = deducciones.filter(d => !d.reembolsable)
+  const sum = (xs: LineaDeduccion[]) => xs.reduce((s, d) => s + d.importe, 0)
+  const donat = sum(noReemb.filter(d => d.clave === 'donativos'))
+  const dedEstatal = sum(noReemb.filter(d => d.ambito === 'estatal' && d.clave !== 'donativos')) + donat / 2
+  const dedAutonomica = sum(noReemb.filter(d => d.ambito === 'andalucia')) + donat / 2
+  const reembolsables = sum(deducciones.filter(d => d.reembolsable))
 
-  const cuotaLiquida = Math.max(0, cuotaIntegra - noReembolsables)
-  const totalDeducciones = noReembolsables + reembolsables
-  const resultado = cuotaLiquida - retenciones - reembolsables
+  const cuotaLiquida = Math.max(0, ci.estatal - dedEstatal) + Math.max(0, ci.autonomica - dedAutonomica)
+  const abonosAnticipados = Math.max(0, perfil.abonoAnticipadoMaternidad ?? 0) + Math.max(0, perfil.abonoAnticipadoFamiliaNumerosa ?? 0)
+  const totalDeducciones = sum(noReemb) + reembolsables
+  const resultado = cuotaLiquida - retenciones - reembolsables + abonosAnticipados
 
-  return { minimoPersonalYFamiliar: minimo, baseLiquidable, cuotaIntegra, deducciones, totalDeducciones, cuotaLiquida, retenciones, resultado }
+  return {
+    minimoPersonalYFamiliar: minimoEstatal, minimoAutonomico, baseLiquidable,
+    cuotaIntegra: ci.total, cuotaIntegraEstatal: ci.estatal, cuotaIntegraAutonomica: ci.autonomica, abonosAnticipados,
+    deducciones, totalDeducciones, cuotaLiquida, retenciones, resultado,
+  }
 }
 
 // ── Optimizador / avisos ────────────────────────────────────────────────────

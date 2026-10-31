@@ -11,7 +11,7 @@
 // propaga como `null` («sin dato»); nunca se sustituye por 0.
 
 import { BLOQUES, REDUCCION_CONJUNTA, UMBRAL_TARIFA_ALTA, periodoCierre, type Estimacion, type EscenarioId, type Periodo, type PropiedadFiscal } from './base-fiscal-devengo.ts'
-import { minimoPersonalYFamiliar, parametrosDonativo, importesDe, type Descendiente, type PerfilFiscal } from './fiscal-deducciones.ts'
+import { esMenor3, minimoPersonalYFamiliar, parametrosDonativo, importesDe, type Descendiente, type PerfilFiscal } from './fiscal-deducciones.ts'
 
 // ── Escalas 2026 (separadas) ────────────────────────────────────────────────────────────────
 export type Tramo = { desde: number; hasta: number | null; tipo: number }
@@ -77,15 +77,25 @@ const PERFIL_NEUTRO: PerfilFiscal = {
   ascendientesACargo: 0, ascendientesMayores75: 0, donativosAnual: 0, gastoDeportivoAnual: 0,
 }
 
-const MIN_AUT_CONTRIBUYENTE = 5790
-const MIN_AUT_DESCENDIENTE = [2510, 2820] // 1.º y 2.º; del 3.º en adelante = estatal [Suposición]
+export const MIN_AUT_CONTRIBUYENTE = 5790
+/**
+ * Mínimo por descendiente ANDALUZ: 1.º 2.510 · 2.º 2.820 · 3.º 4.170 · 4.º y siguientes 4.700; incremento por
+ * menor de 3 años 2.920 (no el estatal 2.800). [Probable] Ley 5/2021 Andalucía (mínimo autonómico); cuadra al
+ * euro con la renta 2025 (casilla 0514 = 15.340 con hijos 1.º > 3 años, 2.º y 3.º < 3: 2.510 + 2.820 + 4.170 +
+ * 2 × 2.920). Una sola ecuación no separa el 3.º (4.170) del incremento (2.920): verificar en el manual AEAT
+ * «Andalucía: importes del mínimo familiar». El 4.º (4.700) es [Suposición]. Discapacidad: la estatal.
+ */
+export const MIN_AUT_DESCENDIENTE = [2510, 2820, 4170, 4700]
+export const MIN_AUT_INCREMENTO_MENOR3 = 2920
 
-/** Mínimo por descendientes autonómico: el estatal con la escala andaluza en el 1.º y 2.º hijo (mismos incrementos). */
-function minimoDescendientesAutonomico(minimoEstatal: number, descendientes: Descendiente[], imp: ReturnType<typeof importesDe>): number {
+/** Mínimo por descendientes autonómico: el estatal con los importes andaluces por orden y por menor de 3 años. */
+function minimoDescendientesAutonomico(minimoEstatal: number, descendientes: Descendiente[], anio: number, imp: ReturnType<typeof importesDe>): number {
   const orden = [...descendientes].sort((a, b) => Number(a.fechaNacimiento.slice(0, 4)) - Number(b.fechaNacimiento.slice(0, 4)))
   let delta = 0
-  orden.slice(0, MIN_AUT_DESCENDIENTE.length).forEach((h, i) => {
-    delta += (MIN_AUT_DESCENDIENTE[i] - imp.minimoDescendiente[Math.min(i, imp.minimoDescendiente.length - 1)]) * (h.computoCompleto ? 1 : 0.5)
+  orden.forEach((h, i) => {
+    const f = h.computoCompleto ? 1 : 0.5
+    delta += (MIN_AUT_DESCENDIENTE[Math.min(i, MIN_AUT_DESCENDIENTE.length - 1)] - imp.minimoDescendiente[Math.min(i, imp.minimoDescendiente.length - 1)]) * f
+    if (esMenor3(h.fechaNacimiento, anio)) delta += (MIN_AUT_INCREMENTO_MENOR3 - imp.incrementoMenor3) * f
   })
   return minimoEstatal + delta
 }
@@ -98,7 +108,7 @@ export function parametrosIrpf(anio: number, descendientes: Descendiente[]): Par
     anio, estatal: ESCALA_ESTATAL_2026, autonomica: ESCALA_ANDALUCIA_2026,
     minimoContribuyente: imp.minimoContribuyente, minimoDescendientes,
     minimoAutonomicoContribuyente: MIN_AUT_CONTRIBUYENTE,
-    minimoAutonomicoDescendientes: minimoDescendientesAutonomico(minimoDescendientes, descendientes, imp),
+    minimoAutonomicoDescendientes: minimoDescendientesAutonomico(minimoDescendientes, descendientes, anio, imp),
     reduccionConjunta: REDUCCION_CONJUNTA, umbral: UMBRAL_TARIFA_ALTA,
     planPropioTope: imp.limitePlanPensiones, planPropioPct: 0.3,
     planConyugeTope: 1000, planConyugeRentaMax: 8000, donativoLimiteBase: 0.1,
@@ -226,13 +236,31 @@ export function repartirPorTitular(
     if (a != null) a += l.neto * pct('alberto')
     if (pl != null) pl += l.neto * pct('pilar')
   }
+  // Imputación de rentas inmobiliarias (art. 85): por titularidad del piso; «sin dato» contamina la base.
+  let imputacionSinDato = false
+  for (const l of p.imputaciones ?? []) {
+    const tit = props.find(x => x.id === l.propertyId)?.titulares ?? []
+    const suma = tit.reduce((s, t) => s + t.porcentaje, 0)
+    if (l.importe == null) {
+      avisos.push(`Imputación de rentas de ${l.nombre} sin dato (valor catastral o días): no se puede calcular la base.`)
+      a = null; pl = null; imputacionSinDato = true; continue
+    }
+    if (!tit.length || Math.abs(suma - 100) > 0.01 || tit.some(t => t.titular !== 'alberto' && t.titular !== 'pilar')) {
+      avisos.push(`Titularidad de ${l.nombre} sin dato o incompleta: no se puede repartir la imputación de rentas.`)
+      a = null; pl = null; continue
+    }
+    const pct = (t: Titular) => tit.filter(x => x.titular === t).reduce((s, x) => s + x.porcentaje, 0) / 100
+    if (a != null) a += l.importe * pct('alberto')
+    if (pl != null) pl += l.importe * pct('pilar')
+  }
   const corr = p.bloques.actividad_correduria, act = p.bloques.actividad_pilar
   if (corr == null) avisos.push('Correduría sin dato: base de Alberto desconocida.')
   if (act == null) avisos.push('Actividad de Pilar sin dato: base de Pilar desconocida.')
   const alberto = a == null || corr == null ? null : a + corr
   const pilar = pl == null || act == null ? null : pl + act
   // Coherencia: el total debe ser la base general del periodo (misma base en conjunta e individual).
-  const total = p.baseGeneral == null ? null : BLOQUES.reduce((s, b) => s + (p.bloques[b] ?? 0), 0)
+  const imputacion = (p.imputaciones ?? []).reduce((s, l) => s + (l.importe ?? 0), 0)
+  const total = p.baseGeneral == null || imputacionSinDato ? null : BLOQUES.reduce((s, b) => s + (p.bloques[b] ?? 0), 0) + imputacion
   return { alberto, pilar, total }
 }
 

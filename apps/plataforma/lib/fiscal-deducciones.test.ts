@@ -34,6 +34,7 @@ const PERFIL: PerfilFiscal = {
   donativosAnual: 0,
   gastoDeportivoAnual: 0,
   cuotasSSMadreAnual: 6000, // holgado: no topa los tests que no hablan del tope
+  familiaNumerosaDesde: '2020-01-01', // título vigente todo el año (el prorrateo se prueba aparte)
 }
 
 const HIJOS: Descendiente[] = [
@@ -53,14 +54,15 @@ test('mínimo personal y familiar = 20.250 € (5.550 + 2.400 + 5.500 + 6.800)',
   assert.equal(minimoPersonalYFamiliar(PERFIL, HIJOS, 2025), 20250)
 })
 
-test('deducciones: maternidad 2.400, guardería 1.000, FN 1.200, Andalucía 200+200', () => {
+test('deducciones: maternidad 2.400, guardería 1.500, FN 1.200, Andalucía nacimiento 200 (FN andaluza incompatible ese año)', () => {
   const d = calcularDeducciones(PERFIL, HIJOS, 2025)
   const por = (k: string) => d.find(x => x.clave === k)?.importe ?? 0
   assert.equal(por('maternidad'), 2400) // 2 hijos < 3
   assert.equal(por('guarderia'), 1500) // 2 hijos < 3 ⇒ tope 2×1000; 1500 no topa
   assert.equal(por('fn_general'), 1200)
   assert.equal(por('and_nacimiento'), 200) // 1 nacido en 2025
-  assert.equal(por('and_fn'), 200)
+  assert.equal(por('and_fn'), 0) // incompatible con nacimiento: se aplica la mayor (empate → nacimiento, como la renta 2025)
+  assert.equal(calcularDeducciones(PERFIL, HIJOS, 2026).find(x => x.clave === 'and_fn')?.importe, 200) // 2026 sin nacimientos
 })
 
 test('resultado fiscal: reembolsables salen aunque la cuota sea baja (sale a devolver)', () => {
@@ -98,7 +100,7 @@ test('maternidad PRORRATEA por mes en el año de nacimiento (hijo de noviembre �
 })
 
 test('FN autonómica Andalucía: se aplica bajo el límite de renta y se RETIRA por encima', () => {
-  const por = (base?: number) => calcularDeducciones(PERFIL, HIJOS, 2025, undefined, base).find(x => x.clave === 'and_fn')?.importe ?? 0
+  const por = (base?: number) => calcularDeducciones(PERFIL, HIJOS, 2026, undefined, base).find(x => x.clave === 'and_fn')?.importe ?? 0
   assert.equal(por(28000), 200)   // ≤ 30.000 conjunta → aplica
   assert.equal(por(45000), 0)     // > 30.000 conjunta → NO aplica (Alberto está aquí)
   assert.equal(por(undefined), 200) // sin base conocida → compat: aplica (no gatea)

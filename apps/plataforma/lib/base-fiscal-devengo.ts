@@ -42,6 +42,59 @@ export const INTERESES_FINANCIACION: Record<string, { anual: number; fuente: str
   prop_house_sevillana: { anual: 0, fuente: 'Alberto 31/10/2026: sin hipoteca', actualizado: '2026-10-31' },
   prop_duplex_center: { anual: 0, fuente: 'Alberto 31/10/2026: sin hipoteca', actualizado: '2026-10-31' },
 }
+// ── Imputación de rentas inmobiliarias (art. 85 LIRPF) ─────────────────────────────────────
+// Inmuebles urbanos del contribuyente que NO son vivienda habitual ni están arrendados: se imputa el 2 % del
+// valor catastral (1,1 % si fue revisado en procedimiento de valoración colectiva con efectos en el periodo o en
+// los 10 anteriores) × días NO arrendados / días del año × % de titularidad. Va a la base GENERAL.
+// Monte Carmelo (vivienda habitual) no se modela; Bustos (subarriendo) no es de Alberto: no imputan.
+export const TIPO_IMPUTACION = 0.02
+export const TIPO_IMPUTACION_REVISADO = 0.011
+export type ParamImputacion = {
+  /** Valor catastral del inmueble ENTERO del año (null = sin dato: la imputación sale null, nunca 0). */
+  valorCatastral: number | null
+  /** ¿Revisado en los 10 años anteriores? null = no se sabe ⇒ tipo sin dato. */
+  revisado: boolean | null
+  fuente: string
+}
+export const IMPUTACION_INMUEBLES: Record<string, ParamImputacion> = {
+  // Renta 2025 presentada (casillas 0083/0084/0089): cada cónyuge, titular del 50 %, consignó «valor catastral
+  // 75.274,63€, NO revisado, 365 días» y se le imputaron 1.505,49€ = 2 % × 75.274,63, o sea 75.274,63 es el
+  // valor que corresponde a CADA mitad ⇒ inmueble entero 150.549,26€. [Probable] Confirmar con el recibo del IBI:
+  // si el valor del inmueble entero fuera 75.274,63€, la renta 2025 imputó el doble y aquí habría que ponerlo.
+  // 2026: PGE prorrogados ⇒ sin coeficiente de actualización nuevo [Probable].
+  prop_house_sevillana: { valorCatastral: 150549.26, revisado: false, fuente: 'Renta 2025 (0083: 75.274,63€ por cada 50 %; 0084: NO revisado)' },
+  // Renta 2025 (0083/0084/0089): 40.425,46€, NO revisado, 125 días a disposición ⇒ 276,89€. 100 % Alberto.
+  prop_duplex_center: { valorCatastral: 40425.46, revisado: false, fuente: 'Renta 2025 (0083: 40.425,46€; 0084: NO revisado) = valor catastral 2024' },
+}
+/** Renta imputada del inmueble entero (sin % de titularidad). null si falta valor o «revisado». */
+export function rentaImputada(valorCatastral: number | null, revisado: boolean | null, diasNoArrendados: number, diasAnio: number): number | null {
+  if (valorCatastral == null || revisado == null) return null
+  const tipo = revisado ? TIPO_IMPUTACION_REVISADO : TIPO_IMPUTACION
+  return (valorCatastral * tipo * Math.max(0, diasNoArrendados)) / diasAnio
+}
+export type LineaImputacion = {
+  propertyId: string
+  nombre: string
+  valorCatastral: number | null
+  revisado: boolean | null
+  /** Días del periodo (dentro del año) y días con reserva en él. */
+  diasPeriodo: number
+  diasArrendados: number
+  diasNoArrendados: number
+  /** Inmueble entero (se reparte por titularidad); null = sin dato. */
+  importe: number | null
+}
+function lineaImputacion(p: { id: string; nombre: string }, par: ParamImputacion | undefined, diasPeriodo: number, diasArrendados: number | null, anio: number): LineaImputacion {
+  const arr = diasArrendados == null ? null : Math.min(diasPeriodo, diasArrendados)
+  const noArr = arr == null ? 0 : diasPeriodo - arr
+  return {
+    propertyId: p.id, nombre: p.nombre, valorCatastral: par?.valorCatastral ?? null, revisado: par?.revisado ?? null,
+    diasPeriodo, diasArrendados: arr ?? 0, diasNoArrendados: noArr,
+    importe: arr == null ? null : rentaImputada(par?.valorCatastral ?? null, par?.revisado ?? null, noArr, diasDelAnio(anio)),
+  }
+}
+const sumaImputacion = (ls: LineaImputacion[]) => (ls.some(l => l.importe == null) ? null : ls.reduce((s, l) => s + (l.importe as number), 0))
+
 /** Forma que lee el simulador (`EntradaSimulador.intereses`): propertyId → € del año. */
 export function interesesParaSimulador(): Record<string, number> {
   return Object.fromEntries(Object.entries(INTERESES_FINANCIACION).map(([id, v]) => [id, v.anual]))
@@ -86,6 +139,8 @@ export type EntradaBase = {
   correduria: Actividad
   pilar: Actividad
   amortizacion?: Record<string, { anual: number }>
+  /** Valor catastral por piso para la imputación de rentas (por defecto `IMPUTACION_INMUEBLES`). */
+  imputacion?: Record<string, ParamImputacion>
   /** Costes unitarios calculados desde BD (ver calcularCostesUnitarios). Sin ellos todo es «sin dato». */
   costes?: CostesUnitarios
   /** Estancias del tramo hoy→31/12 del año ANTERIOR (escenario de ocupación tipo). */
@@ -154,6 +209,14 @@ export type Periodo = {
   correduria: { cobrado: number | null; bruto: number | null; retencion: number | null; gastos: number | null; neto: number | null }
   pilar: { ingresos: number | null; gastos: number | null; neto: number | null }
   bloques: Record<Bloque, number | null>
+  /**
+   * Imputación de rentas inmobiliarias (art. 85) de los pisos de capital inmobiliario por los días NO
+   * arrendados del periodo. Ausente (periodos armados a mano/legado) = no se modela. Suma a la base general.
+   */
+  imputaciones?: LineaImputacion[]
+  /** Σ imputaciones; null si alguna es «sin dato». */
+  imputacionTotal?: number | null
+  /** Σ bloques + imputación (null si la imputación es «sin dato»). */
   baseGeneral: number | null
   porMes: MesBase[]
 }
@@ -210,7 +273,15 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
     actividad_correduria: corr.neto,
     actividad_pilar: pilar.neto,
   }
-  const baseGeneral = suma(BLOQUES.map(b => bloques[b] ?? 0))
+  // Imputación: días del periodo (recortado al año) menos días con reserva, por piso de capital inmobiliario.
+  const imp = e.imputacion ?? IMPUTACION_INMUEBLES
+  const d0 = desde < `${e.anio}-01-01` ? `${e.anio}-01-01` : desde
+  const d1 = hasta > `${e.anio}-12-31` ? `${e.anio}-12-31` : hasta
+  const diasPeriodo = d1 < d0 ? 0 : Math.round((Date.parse(d1) - Date.parse(d0)) / 86400000) + 1
+  const imputaciones = e.propiedades.filter(p => p.bloque === 'capital_inmobiliario')
+    .map(p => lineaImputacion(p, imp[p.id], diasPeriodo, diasOcupados(e.ingresos, p.id, d0, d1).size, e.anio))
+  const imputacionTotal = sumaImputacion(imputaciones)
+  const baseGeneral = imputacionTotal == null ? null : suma(BLOQUES.map(b => bloques[b] ?? 0)) + imputacionTotal
 
   const porMes: MesBase[] = meses.map(m => {
     const d0 = m > desde.slice(0, 7) ? `${m}-01` : desde
@@ -241,7 +312,7 @@ export function calcularPeriodo(e: EntradaBase, desde: string, hasta: string): P
     return { mes: m, porBloque: pb, total: vals.length ? suma(vals) : null }
   })
 
-  return { desde, hasta, lineas, compartidosSinRepartir: brutoTotal > 0 ? 0 : compTot, correduria: corr, pilar, bloques, baseGeneral, porMes }
+  return { desde, hasta, lineas, compartidosSinRepartir: brutoTotal > 0 ? 0 : compTot, correduria: corr, pilar, bloques, imputaciones, imputacionTotal, baseGeneral, porMes }
 }
 function mesSiguiente(m: string): string {
   const y = Number(m.slice(0, 4)), mm = Number(m.slice(5, 7))
@@ -280,6 +351,13 @@ export function repartoIndividual(p: Periodo, props: PropiedadFiscal[]): { alber
     const pctA = tit.length ? tit.filter(t => t.titular !== 'pilar').reduce((s, t) => s + t.porcentaje, 0) : 100
     alberto += (l.neto * pctA) / 100
     pilar += (l.neto * pctP) / 100
+  }
+  for (const l of p.imputaciones ?? []) {
+    const tit = props.find(x => x.id === l.propertyId)?.titulares ?? []
+    const pctP = tit.find(t => t.titular === 'pilar')?.porcentaje ?? 0
+    const pctA = tit.length ? tit.filter(t => t.titular !== 'pilar').reduce((s, t) => s + t.porcentaje, 0) : 100
+    alberto += ((l.importe ?? 0) * pctA) / 100
+    pilar += ((l.importe ?? 0) * pctP) / 100
   }
   alberto += (p.bloques.actividad_correduria ?? 0)
   pilar += (p.bloques.actividad_pilar ?? 0)
@@ -493,6 +571,8 @@ export type EscenarioEst = {
   baseGeneral: number
   baseEstimada: number // parte de baseGeneral que es estimación
   estimadoPorPiso: Record<string, number>
+  /** Días con reserva estimados de hoy+1 a 31/12 por piso (para la imputación de rentas del cierre). */
+  diasPorPiso: Record<string, number>
   futuro: {
     reservas: number; bruto: number
     comision: number | null; limpieza: number | null; lavanderia: number | null
@@ -575,6 +655,7 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       actividad_pilar: { real: hastaHoy.bloques.actividad_pilar, estimado: pilarNeto, total: null },
     }
     const estimadoPorPiso: Record<string, number> = {}
+    const diasPorPiso: Record<string, number> = {}
     const desglose: DesglosePiso[] = []
     const sinDato: ConceptoSinDato[] = []
     const fut: EscenarioEst['futuro'] = {
@@ -592,6 +673,7 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       const amortizacion = p.bloque === 'capital_inmobiliario' && par ? (par.anual * a.dias) / denom : null
       const neto = a.bruto - (a.comision ?? 0) - (a.limpieza ?? 0) - (a.lavanderia ?? 0) - (luz ?? 0) - (agua ?? 0) - (fijos ?? 0) - compartidos - (amortizacion ?? 0)
       estimadoPorPiso[p.id] = neto
+      diasPorPiso[p.id] = Math.min(diasRest, a.dias)
       bl[p.bloque].estimado = (bl[p.bloque].estimado ?? 0) + neto
       desglose.push({ propertyId: p.id, nombre: p.nombre, reservas: a.reservas, bruto: a.bruto, comision: a.comision, limpieza: a.limpieza, lavanderia: a.lavanderia, luz, agua, fijos, compartidos, amortizacion, neto })
       fut.reservas += a.reservas; fut.bruto += a.bruto; fut.compartidos += compartidos; fut.amortizacion += amortizacion ?? 0
@@ -611,7 +693,7 @@ export function estimarCierre(e: EntradaBase, hastaHoy: Periodo): Estimacion {
       baseGeneral += x.total ?? 0
       baseEstimada += x.estimado ?? 0
     }
-    return { id: d.id, etiqueta: d.etiqueta, descripcion: d.descripcion, bloques: bl, baseGeneral, baseEstimada, estimadoPorPiso, futuro: fut, desglose, sinDato }
+    return { id: d.id, etiqueta: d.etiqueta, descripcion: d.descripcion, bloques: bl, baseGeneral, baseEstimada, estimadoPorPiso, diasPorPiso, futuro: fut, desglose, sinDato }
   })
   return { mesesRestantes, escenarios }
 }
@@ -621,13 +703,25 @@ export function esProvisional(x: Pick<EscenarioEst, 'sinDato'>, propertyId?: str
   return x.sinDato.some(d => propertyId == null || d.propertyId === propertyId)
 }
 
-/** Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual. */
-export function periodoCierre(real: Periodo, est: Pick<EscenarioEst, 'bloques' | 'baseGeneral' | 'estimadoPorPiso'>, anio: number): Periodo {
+/**
+ * Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual. La imputación de
+ * rentas se rehace para el AÑO entero: días arrendados = reales hasta hoy + estimados del escenario
+ * (`diasPorPiso`); sin `diasPorPiso` del piso ⇒ imputación «sin dato» (null), nunca 0.
+ */
+export function periodoCierre(real: Periodo, est: Pick<EscenarioEst, 'bloques' | 'baseGeneral' | 'estimadoPorPiso'> & { diasPorPiso?: Record<string, number> }, anio: number): Periodo {
+  const diasAnio = diasDelAnio(anio)
+  const imputaciones = real.imputaciones?.map(l => {
+    const fut = est.diasPorPiso?.[l.propertyId]
+    const par: ParamImputacion = { valorCatastral: l.valorCatastral, revisado: l.revisado, fuente: '' }
+    return lineaImputacion({ id: l.propertyId, nombre: l.nombre }, par, diasAnio, fut == null ? null : l.diasArrendados + fut, anio)
+  })
+  const imputacionTotal = imputaciones ? sumaImputacion(imputaciones) : undefined
   return {
     ...real, hasta: `${anio}-12-31`,
     lineas: real.lineas.map(l => ({ ...l, neto: l.neto + (est.estimadoPorPiso[l.propertyId] ?? 0) })),
     bloques: Object.fromEntries(BLOQUES.map(b => [b, est.bloques[b].total])) as Record<Bloque, number | null>,
-    baseGeneral: est.baseGeneral,
+    imputaciones, imputacionTotal,
+    baseGeneral: imputacionTotal === undefined ? est.baseGeneral : imputacionTotal == null ? null : est.baseGeneral + imputacionTotal,
   }
 }
 

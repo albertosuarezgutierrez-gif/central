@@ -20,7 +20,9 @@ const vacio = { ingresosPorMes: {}, gastosPorMes: {} }
 function entrada(p: Partial<EntradaBase> = {}): EntradaBase {
   return {
     anio: 2026, hoy: '2026-10-31', propiedades: PROPS, ingresos: [], gastosPiso: [], gastosCompartidos: [],
-    correduria: vacio, pilar: vacio, amortizacion: { S: { anual: 3650 } }, ...p,
+    correduria: vacio, pilar: vacio, amortizacion: { S: { anual: 3650 } },
+    // Valor catastral 0 en los fixtures antiguos: la imputación (art. 85) se prueba aparte, más abajo.
+    imputacion: { S: { valorCatastral: 0, revisado: false, fuente: 'test' } }, ...p,
   }
 }
 

@@ -65,18 +65,18 @@ test('mínimos en individual: descendientes a partes iguales → 12.900€ cada 
   assert.deepEqual(ind.map(c => c.minimo), [12900, 12900])
 })
 
-test('mínimos AUTONÓMICOS de Andalucía separados de los estatales (5.790 / 2.510 / 2.820)', () => {
+test('mínimos AUTONÓMICOS de Andalucía: 5.790 / 2.510 / 2.820 / 4.170 + 2.920 por menor de 3 (renta 2025: 15.340)', () => {
   cerca(P.minimoAutonomicoContribuyente, 5790)
-  // 3 hijos: 1.º y 2.º con escala andaluza (+110, +120); el resto = estatal (14.700 + 230).
-  cerca(P.minimoAutonomicoDescendientes, 14930)
+  // 3 hijos (1.º > 3 años; 2.º y 3.º < 3): 2.510 + 2.820 + 4.170 + 2 × 2.920 = 15.340 (casilla 0514 de la renta 2025).
+  cerca(P.minimoAutonomicoDescendientes, 15340)
   const c = declarar(entrada(), SIN_PALANCAS, 'conjunta').contribuyentes[0]
   cerca(c.minimo, 20250) // el estatal no cambia
-  cerca(c.minimoAutonomico, 20720)
+  cerca(c.minimoAutonomico, 21130) // casilla 0520
   // La cuota autonómica se calcula con SU mínimo, no con el estatal.
-  cerca(c.cuota?.autonomica, Math.max(0, cuotaEscala(c.baseLiquidable!, ESCALA_ANDALUCIA_2026) - cuotaEscala(20720, ESCALA_ANDALUCIA_2026)))
+  cerca(c.cuota?.autonomica, Math.max(0, cuotaEscala(c.baseLiquidable!, ESCALA_ANDALUCIA_2026) - cuotaEscala(21130, ESCALA_ANDALUCIA_2026)))
   cerca(c.cuota?.estatal, Math.max(0, cuotaEscala(c.baseLiquidable!, ESCALA_ESTATAL_2026) - cuotaEscala(20250, ESCALA_ESTATAL_2026)))
   const ind = declarar(entrada(), SIN_PALANCAS, 'individual').contribuyentes
-  cerca(ind[0].minimoAutonomico, 5790 + 14930 / 2)
+  cerca(ind[0].minimoAutonomico, 5790 + 15340 / 2)
 })
 
 // ── Umbral 60.000€ ──────────────────────────────────────────────────────────────────────────
