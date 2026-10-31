@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-31T09:36:01Z",
-  "sha": "44bec904a99058d9f80a8ab40a0c1c0c762d0925",
+  "generadoEn": "2026-10-31T10:31:27Z",
+  "sha": "011b32ed65dcdea8f8289f2865c46454fb4f36c8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -128946,6 +128946,35 @@
       "hash": "3117cf4e99c7"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/AvisoCalidadDato.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "7. Calidad del dato: feeds parados y facturas que faltan. Si hay avisos, las cifras de arriba son «Provisional».",
+      "exporta": [
+        "AvisoCalidadDato"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesCorto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "m: string",
+          "retorno": null,
+          "linea": 7
+        },
+        {
+          "nombre": "AvisoCalidadDato",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ avisos, provisionalPorEstimacion }: { avisos: AvisosDatos; provisionalPorEstimacion: boolean }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e8a1bd8a7ed6"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/BaseDevengoBloque.tsx",
       "ambito": "apps/plataforma",
       "resumen": "«Hasta hoy» y «Estimación cierre de año» por criterio de DEVENGO (lib/base-fiscal-devengo.ts). Presentacional: sin estado ni fetch. `null` se pinta «sin dato», nunca 0,00€.",
@@ -128962,12 +128991,20 @@
           "linea": 16
         },
         {
+          "nombre": "estimada",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number, provisional: boolean",
+          "retorno": null,
+          "linea": 19
+        },
+        {
           "nombre": "fecha",
           "kind": "arrow",
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 22
+          "linea": 25
         },
         {
           "nombre": "mesCorto",
@@ -128975,7 +129012,7 @@
           "exportada": false,
           "params": "m: string",
           "retorno": null,
-          "linea": 23
+          "linea": 26
         },
         {
           "nombre": "etiquetaSinDato",
@@ -128983,7 +129020,7 @@
           "exportada": false,
           "params": "d: ConceptoSinDato",
           "retorno": "string",
-          "linea": 25
+          "linea": 28
         },
         {
           "nombre": "Comparativa",
@@ -128991,7 +129028,7 @@
           "exportada": false,
           "params": "{ c, titulo }: { c: Comparativa | null; titulo: string }",
           "retorno": null,
-          "linea": 32
+          "linea": 35
         },
         {
           "nombre": "Tabla",
@@ -128999,7 +129036,7 @@
           "exportada": false,
           "params": "{ p }: { p: Periodo }",
           "retorno": null,
-          "linea": 62
+          "linea": 65
         },
         {
           "nombre": "BaseDevengoBloque",
@@ -129007,12 +129044,129 @@
           "exportada": true,
           "params": "{ data }: { data: BaseDevengo | null }",
           "retorno": null,
-          "linea": 87
+          "linea": 90
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "19e793c787dd"
+      "hash": "98b61f4c5c2a"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/ComparativaModalidad.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "2. ¿Qué declaración sale más barata? Conjunta vs individual, hoy y al cierre. Presentacional.",
+      "exporta": [
+        "ComparativaModalidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "margenTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: number | null",
+          "retorno": "string",
+          "linea": 18
+        },
+        {
+          "nombre": "Columna",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, r, estimado }: { titulo: string; r: ResumenModalidad; estimado: boolean }",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "ComparativaModalidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ hoy, cierre }: { hoy: ResumenModalidad; cierre: ResumenModalidad }",
+          "retorno": null,
+          "linea": 50
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "209a7479b23b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/ComprasPrevistas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ComprasPrevistas"
+      ],
+      "funciones": [
+        {
+          "nombre": "lectura",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CompraGuardada, r: ResultadoCompra | undefined",
+          "retorno": "string",
+          "linea": 16
+        },
+        {
+          "nombre": "ComprasPrevistas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ compras, resultados, propiedades }: { compras: CompraGuardada[] | null; resultados: Record<string, ResultadoCompra>; propiedades: { id: string; nombre: string }[] }",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "7228df568181"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/estilosPanel.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Estilos compartidos del panel fiscal. Solo tokens (`var(--…)`), nunca hex.",
+      "exporta": [
+        "rejilla",
+        "dinero",
+        "pct",
+        "fechaEs"
+      ],
+      "funciones": [
+        {
+          "nombre": "rejilla",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "min = 280",
+          "retorno": "CSSProperties",
+          "linea": 8
+        },
+        {
+          "nombre": "dinero",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "n: number | null | undefined, estimado = false",
+          "retorno": "string",
+          "linea": 16,
+          "resumen": "Importe o «sin dato» (nunca 0,00€ para null). `estimado` añade «~»."
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "t: number",
+          "retorno": "string",
+          "linea": 17
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "34bd0f26e7e1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/FiscalPageClient.tsx",
@@ -129027,7 +129181,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 14
+          "linea": 18
         },
         {
           "nombre": "TramoBar",
@@ -129035,7 +129189,7 @@
           "exportada": false,
           "params": "{ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal']['tramosIRPF']; base: number }",
           "retorno": null,
-          "linea": 19,
+          "linea": 23,
           "resumen": "── Barra visual de tramos IRPF ──────────────────────────────────────────────"
         },
         {
@@ -129044,15 +129198,15 @@
           "exportada": false,
           "params": "{ ded, onClose, onSaved }: { ded: ResumenFinanciero['deducciones']; onClose: () => void; onSaved: () => void }",
           "retorno": null,
-          "linea": 65
+          "linea": 69
         },
         {
           "nombre": "FiscalPageClient",
           "kind": "function",
           "exportada": true,
-          "params": "{ initialData, initialComparativa, baseDevengo, year: initYear, quarter: initQuarter }: Props",
+          "params": "{ initialData, initialComparativa, baseDevengo, panel, compras, situacion, year: initYear, quarter: initQuarter }: Props",
           "retorno": null,
-          "linea": 136
+          "linea": 140
         },
         {
           "nombre": "MomentoCard",
@@ -129060,7 +129214,7 @@
           "exportada": false,
           "params": "{ titulo, sub, c }: { titulo: string; sub: string; c: ComparativaDecl }",
           "retorno": null,
-          "linea": 388
+          "linea": 406
         },
         {
           "nombre": "DeclaracionBlock",
@@ -129068,7 +129222,7 @@
           "exportada": false,
           "params": "{ year, initial, initialYear }: { year: number; initial: EstadoDeclaracion | null; initialYear: number }",
           "retorno": null,
-          "linea": 412
+          "linea": 430
         }
       ],
       "tablas": [
@@ -129077,7 +129231,47 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "bf0ad7e01c56"
+      "hash": "6beba162b5c6"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/GraficaAcumulada.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GraficaAcumulada"
+      ],
+      "funciones": [
+        {
+          "nombre": "GraficaAcumulada",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ serie }: { serie: PuntoSerie[] }",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2f8ec724afdb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/ListaAcciones.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ListaAcciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "ListaAcciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ acciones, activas, onAnadir }: { acciones: Accion[]; activas: Partial<Record<PalancaSimulable, boolean>>; onAnadir: (id: PalancaSimulable) => void }",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "93aceacd6d46"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/page.tsx",
@@ -129092,12 +129286,138 @@
           "exportada": true,
           "params": "{ searchParams, }: { searchParams: Promise<{ year?: string; quarter?: string }> }",
           "retorno": null,
-          "linea": 11
+          "linea": 15
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "48b33dc7ce56"
+      "hash": "e1d94bc3c84f"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/PanelFiscal.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PanelFiscal"
+      ],
+      "funciones": [
+        {
+          "nombre": "PanelFiscal",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ datos, compras }: { datos: PanelDatos; compras: CompraGuardada[] | null }",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3b001573ce57"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/SimuladorEscenarios.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SimuladorEscenarios"
+      ],
+      "funciones": [
+        {
+          "nombre": "SimuladorEscenarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ filas, activas, onToggle, onReset, resultado, etiquetaSel }: { filas: FilaPalanca[]; activas: Activas; onToggle: (id: PalancaSimulable) => void; onReset: () => void; resultado: ResultadoSim; etiquetaSel: string }",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b37ff6c67d86"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/SituacionFiscal.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SituacionFiscal"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ d, onEditarPerfil, onGuardado }: { d: Dato; onEditarPerfil: Props['onEditarPerfil']; onGuardado: () => void }",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "SituacionFiscal",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ secciones, onEditarPerfil }: Props",
+          "retorno": null,
+          "linea": 72
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bc2408f683de"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/TablaTramos.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "6. Cuota por tramo: hoy | cierre | con palancas (si hay), y «cada 1.000€ más cuesta X€». Presentacional.",
+      "exporta": [
+        "TablaTramos"
+      ],
+      "funciones": [
+        {
+          "nombre": "TablaTramos",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ datos, columnas, etiquetaSel }: { datos: TablaTramosDatos; columnas: string[]; etiquetaSel: string }",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9df27f10e0b3"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/finanzas/fiscal/UmbralTermometro.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "titular",
+        "UmbralTermometro"
+      ],
+      "funciones": [
+        {
+          "nombre": "titular",
+          "kind": "function",
+          "exportada": true,
+          "params": "nivel: NivelUmbral, cierre: number | null, peor: number | null",
+          "retorno": "string",
+          "linea": 29
+        },
+        {
+          "nombre": "UmbralTermometro",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ sel, onSel, hoy, cierre, rango, conPalancas, nivel, provisional, ahorroMax }: Props",
+          "retorno": null,
+          "linea": 41
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d7706cdad8a0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/gastos/GastosPageClient.tsx",
@@ -141120,6 +141440,27 @@
       "hash": "7a567ac82699"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/fiscal-avisos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "🧾 Avisos fiscales a Alberto (lib/fiscal-alertas.ts): umbral de 60.000€, cuentas paradas, meses cerrados sin factura y recordatorio de diciembre. Lunes + días 5 y 15. Un Telegram por aviso, sin repeti"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/fiscal-avisos",
+      "hash": "550138d5c099"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/health-check/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -142448,6 +142789,66 @@
       "hash": "d7062f3f28cb"
     },
     {
+      "ruta": "apps/plataforma/app/api/finanzas/compras-previstas/[id]/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PUT",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "PUT",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Edita (PUT, cuerpo completo) o borra una compra. `cuentaId` en el WHERE: nunca se toca la de otra cuenta."
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/finanzas/compras-previstas/[id]",
+      "hash": "686ffc8dd856"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/finanzas/compras-previstas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Compras previstas de la cuenta (todo scoped por cuenta_id)."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/finanzas/compras-previstas",
+      "hash": "f896723e0b82"
+    },
+    {
       "ruta": "apps/plataforma/app/api/finanzas/export/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -142768,7 +143169,7 @@
         "set"
       ],
       "rutaApi": "/api/finanzas/perfil",
-      "hash": "359fbc8a80bc"
+      "hash": "0098167f5d5e"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/proyeccion/route.ts",
@@ -142810,6 +143211,37 @@
       "tablas": [],
       "rutaApi": "/api/finanzas",
       "hash": "0d97452d3930"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/finanzas/situacion-fiscal/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Radiografía de lo personal que usa el motor fiscal. Siempre scoped por la cuenta de la sesión."
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "Edita campos sueltos (cuota de autónomos de Pilar, meses exonerados, retenciones). Cuerpo: { campo, valor|null }. La familia/hijos/modalidad/planes se editan por PUT /api/finanzas/perfil (mismo formul"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/finanzas/situacion-fiscal",
+      "hash": "0eca5fede518"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/tarjeta/route.ts",
@@ -152719,6 +153151,8 @@
       "ambito": "apps/plataforma",
       "resumen": "Cargador (SOLO LECTURA) de la base fiscal por devengo: lee BD y arma `EntradaBase` para el helper puro `base-fiscal-devengo.ts`. Ver ese fichero para las reglas. Fuentes por bloque: - Pisos: `incomes` (bruto/neto/check-in) + `gastos` (revisado = true, no descartados) + `limpieza_facturas` (limpieza ",
       "exporta": [
+        "leerIngresosCima",
+        "agruparSinIdentificar",
         "cargarEntradaBase",
         "cargarAvisos",
         "getBaseDevengo"
@@ -152730,7 +153164,25 @@
           "exportada": false,
           "params": "x: unknown",
           "retorno": null,
-          "linea": 31
+          "linea": 33
+        },
+        {
+          "nombre": "leerIngresosCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, anio: number",
+          "retorno": "Promise<(Pick<Actividad, 'ingresosPorMes' | 'retencionPorMes' | 'pendientePorMes'> &",
+          "linea": 41,
+          "resumen": "Ingresos de la correduría desde CIMA: `comision_bruta` (texto → número) de los recibos `cobrado`, en el mes de `fecha_situacion`; retención = solo `retencion_irpf` cuando consta; pendientes por mes de"
+        },
+        {
+          "nombre": "agruparSinIdentificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "xs: IngresoSinIdentificar[]",
+          "retorno": "",
+          "linea": 71,
+          "resumen": "Un renglón por pagador (suma de sus abonos), de mayor a menor importe."
         },
         {
           "nombre": "hoyMadrid",
@@ -152738,7 +153190,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 33
+          "linea": 77
         },
         {
           "nombre": "cargarEntradaBase",
@@ -152746,7 +153198,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number, hoy: string",
           "retorno": "Promise<EntradaBase>",
-          "linea": 37
+          "linea": 81
         },
         {
           "nombre": "cargarAvisos",
@@ -152754,7 +153206,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number, hoy: string",
           "retorno": "Promise<AvisosDatos>",
-          "linea": 178
+          "linea": 243
         },
         {
           "nombre": "getBaseDevengo",
@@ -152762,7 +153214,7 @@
           "exportada": true,
           "params": "cuentaId: string, anio: number, cuota: ParamsCuota | null",
           "retorno": "Promise<BaseDevengo>",
-          "linea": 203,
+          "linea": 268,
           "resumen": "Todo lo que pinta el bloque «Hasta hoy» + «Estimación cierre de año»."
         }
       ],
@@ -152774,35 +153226,74 @@
         "limpieza_facturas",
         "movimientos_bancarios",
         "properties",
-        "propiedad_titularidad"
+        "propiedad_titularidad",
+        "seguros_agregado"
       ],
       "rutaApi": null,
-      "hash": "f5dc9dc2f4f7"
+      "hash": "8c456c3eb342"
     },
     {
       "ruta": "apps/plataforma/lib/base-fiscal-devengo.ts",
       "ambito": "apps/plataforma",
       "resumen": "Base fiscal IRPF por criterio de DEVENGO (puro: sin BD ni red; testeado con `node --test`). Sustituye a la base de CAJA de lib/finanzas.ts (movimientos_bancarios), que no descuenta amortización, no incluye a Pilar, no resta la comisión como gasto y se pierde los gastos sin cargo bancario (p. ej. el ",
       "exporta": [
+        "rentaImputada",
+        "interesesParaSimulador",
         "redondear",
         "diasOcupados",
+        "mismoDiaAnioAnterior",
         "calcularPeriodo",
         "repartoIndividual",
         "compararConjuntaIndividual",
         "calcularCostesUnitarios",
         "costeReserva",
         "estimarCierre",
+        "esProvisional",
         "periodoCierre",
         "avisosDatos"
       ],
       "funciones": [
+        {
+          "nombre": "rentaImputada",
+          "kind": "function",
+          "exportada": true,
+          "params": "valorCatastral: number | null, revisado: boolean | null, diasNoArrendados: number, diasAnio: number",
+          "retorno": "number | null",
+          "linea": 70,
+          "resumen": "Renta imputada del inmueble entero (sin % de titularidad). null si falta valor o «revisado»."
+        },
+        {
+          "nombre": "lineaImputacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: { id: string; nombre: string }, par: ParamImputacion | undefined, diasPeriodo: number, diasArrendados: number | null, anio: number",
+          "retorno": "LineaImputacion",
+          "linea": 87
+        },
+        {
+          "nombre": "sumaImputacion",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "ls: LineaImputacion[]",
+          "retorno": null,
+          "linea": 96
+        },
+        {
+          "nombre": "interesesParaSimulador",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Record<string, number>",
+          "linea": 99,
+          "resumen": "Forma que lee el simulador (`EntradaSimulador.intereses`): propertyId → € del año."
+        },
         {
           "nombre": "redondear",
           "kind": "function",
           "exportada": true,
           "params": "n: number",
           "retorno": "number",
-          "linea": 83,
+          "linea": 170,
           "resumen": "── Utilidades ──────────────────────────────────────────────────────────────────────────────"
         },
         {
@@ -152811,7 +153302,7 @@
           "exportada": false,
           "params": "xs: number[]",
           "retorno": null,
-          "linea": 84
+          "linea": 171
         },
         {
           "nombre": "mesDe",
@@ -152819,7 +153310,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": null,
-          "linea": 85
+          "linea": 172
         },
         {
           "nombre": "diasDelAnio",
@@ -152827,7 +153318,7 @@
           "exportada": false,
           "params": "y: number",
           "retorno": null,
-          "linea": 86
+          "linea": 173
         },
         {
           "nombre": "sumDias",
@@ -152835,7 +153326,7 @@
           "exportada": false,
           "params": "f: string, n: number",
           "retorno": "string",
-          "linea": 87
+          "linea": 174
         },
         {
           "nombre": "mesesDe",
@@ -152843,7 +153334,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string",
           "retorno": "string[]",
-          "linea": 90
+          "linea": 177
         },
         {
           "nombre": "diasOcupados",
@@ -152851,8 +153342,17 @@
           "exportada": true,
           "params": "ingresos: FilaIngreso[], propertyId: string, desde: string, hasta: string",
           "retorno": "Set<string>",
-          "linea": 102,
+          "linea": 189,
           "resumen": "Días DISTINTOS (YYYY-MM-DD) con reserva en [desde, hasta]; la noche del día X cuenta el día X."
+        },
+        {
+          "nombre": "mismoDiaAnioAnterior",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 201,
+          "resumen": "Mismo día del año anterior (YYYY-MM-DD); el 29/02 pasa a 28/02 (fecha válida para la BD)."
         },
         {
           "nombre": "actividad",
@@ -152860,7 +153360,7 @@
           "exportada": false,
           "params": "a: Actividad, meses: string[]",
           "retorno": null,
-          "linea": 141
+          "linea": 250
         },
         {
           "nombre": "netoAct",
@@ -152868,7 +153368,7 @@
           "exportada": false,
           "params": "i: number | null, g: number | null",
           "retorno": null,
-          "linea": 149
+          "linea": 258
         },
         {
           "nombre": "calcularPeriodo",
@@ -152876,7 +153376,7 @@
           "exportada": true,
           "params": "e: EntradaBase, desde: string, hasta: string",
           "retorno": "Periodo",
-          "linea": 151
+          "linea": 260
         },
         {
           "nombre": "mesSiguiente",
@@ -152884,7 +153384,7 @@
           "exportada": false,
           "params": "m: string",
           "retorno": "string",
-          "linea": 226
+          "linea": 361
         },
         {
           "nombre": "repartoIndividual",
@@ -152892,7 +153392,7 @@
           "exportada": true,
           "params": "p: Periodo, props: PropiedadFiscal[]",
           "retorno": "",
-          "linea": 255,
+          "linea": 390,
           "resumen": "Parte de cada piso que declara cada titular; el resto de bloques son de Alberto (Pilar: su actividad)."
         },
         {
@@ -152901,7 +153401,7 @@
           "exportada": true,
           "params": "p: Periodo, props: PropiedadFiscal[], c: ParamsCuota",
           "retorno": "Comparativa",
-          "linea": 269
+          "linea": 411
         },
         {
           "nombre": "mesesCompletosHasta",
@@ -152909,7 +153409,7 @@
           "exportada": false,
           "params": "anio: number, hoy: string",
           "retorno": "string[]",
-          "linea": 328
+          "linea": 470
         },
         {
           "nombre": "calcularCostesUnitarios",
@@ -152917,7 +153417,7 @@
           "exportada": true,
           "params": "x: EntradaCostes",
           "retorno": "CostesUnitarios",
-          "linea": 332
+          "linea": 474
         },
         {
           "nombre": "costeReserva",
@@ -152925,7 +153425,7 @@
           "exportada": true,
           "params": "r: FilaIngreso, c: CostesUnitarios",
           "retorno": "CosteReserva",
-          "linea": 393
+          "linea": 537
         },
         {
           "nombre": "sumN",
@@ -152933,7 +153433,7 @@
           "exportada": false,
           "params": "a: number | null, b: number | null",
           "retorno": null,
-          "linea": 411
+          "linea": 557
         },
         {
           "nombre": "agregar",
@@ -152941,16 +153441,16 @@
           "exportada": false,
           "params": "rows: CosteReserva[], dias: number",
           "retorno": "Agregado",
-          "linea": 412
+          "linea": 558
         },
         {
           "nombre": "combinar",
           "kind": "function",
           "exportada": false,
-          "params": "a: Agregado, b: Agregado, k: number",
+          "params": "a: Agregado, b: Agregado, k: number, diasTramo: number",
           "retorno": "Agregado",
-          "linea": 426,
-          "resumen": "a + k·b (k ≥ 0). Un null en b solo contamina si k > 0."
+          "linea": 572,
+          "resumen": "a + k·b (k ≥ 0). Un null en b solo contamina si k > 0. Los días añadidos no pasan de `diasTramo − a.dias`."
         },
         {
           "nombre": "escalar",
@@ -152958,7 +153458,7 @@
           "exportada": false,
           "params": "a: Agregado, k: number",
           "retorno": "Agregado",
-          "linea": 435
+          "linea": 582
         },
         {
           "nombre": "estimarCierre",
@@ -152966,16 +153466,25 @@
           "exportada": true,
           "params": "e: EntradaBase, hastaHoy: Periodo",
           "retorno": "Estimacion",
-          "linea": 487
+          "linea": 639
+        },
+        {
+          "nombre": "esProvisional",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: Pick<EscenarioEst, 'sinDato'>, propertyId?: string",
+          "retorno": "boolean",
+          "linea": 759,
+          "resumen": "La cifra estimada cuenta conceptos «sin dato» como 0 → provisional (de todo el escenario o de un piso)."
         },
         {
           "nombre": "periodoCierre",
           "kind": "function",
           "exportada": true,
-          "params": "real: Periodo, est: Pick<EscenarioEst, 'bloques' | 'baseGeneral' | 'estimadoPorPiso'>, anio: number",
+          "params": "real: Periodo, est: Pick<EscenarioEst, 'bloques' | 'baseGeneral' | 'estimadoPorPiso'> & { diasPorPiso?: Record<string, number> }, anio: number",
           "retorno": "Periodo",
-          "linea": 595,
-          "resumen": "Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual."
+          "linea": 768,
+          "resumen": "Periodo «cierre» (real + un escenario estimado) listo para compararConjuntaIndividual. La imputación de rentas se rehace para el AÑO entero: días arrendados = reales hasta hoy + estimados del escenari"
         },
         {
           "nombre": "avisosDatos",
@@ -152983,12 +153492,12 @@
           "exportada": true,
           "params": "args: { hoy: string anio: number cuentas: CuentaFeed[] mesesConFacturaLimpieza: string[] mesesConSuministros: string[] umbralDias?: number }",
           "retorno": "AvisosDatos",
-          "linea": 612
+          "linea": 795
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "89e57cc8b869"
+      "hash": "c7aefb58cff6"
     },
     {
       "ruta": "apps/plataforma/lib/base-url.ts",
@@ -158541,6 +159050,62 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7847e025adc6"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria-companias.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "ÚNICO sitio del mapa compañía → código DGS → patrones de concepto bancario (puro, sin BD). Para qué: los ingresos de la correduría son CIMA (devengo, solo las compañías que CIMA trae) + banco de las compañías que CIMA NO trae (p. ej. Asisa). Una compañía que SÍ está en CIMA no se suma otra vez desde",
+      "exporta": [
+        "companiaDeMovimiento",
+        "clasificarIngresoBanco",
+        "repartirIngresosBanco"
+      ],
+      "funciones": [
+        {
+          "nombre": "companiaDeMovimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: Pick<MovimientoIngreso, 'compania' | 'concepto' | 'contraparte'>",
+          "retorno": "Compania | null",
+          "linea": 53,
+          "resumen": "Compañía de un ingreso bancario: primero la columna `compania_seguros`, si no, patrones del concepto."
+        },
+        {
+          "nombre": "clasificarIngresoBanco",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: Pick<MovimientoIngreso, 'compania' | 'concepto' | 'contraparte'>, codigosCima: ReadonlySet<string>",
+          "retorno": "ClasificacionIngreso",
+          "linea": 63
+        },
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 81
+        },
+        {
+          "nombre": "pagadorLegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: MovimientoIngreso",
+          "retorno": "string",
+          "linea": 83
+        },
+        {
+          "nombre": "repartirIngresosBanco",
+          "kind": "function",
+          "exportada": true,
+          "params": "movs: MovimientoIngreso[], codigosCima: ReadonlySet<string>",
+          "retorno": "RepartoIngresosBanco",
+          "linea": 88
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cdc388d33eb8"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-correccion-tg.ts",
@@ -171040,7 +171605,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 279,
+          "linea": 281,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -171049,7 +171614,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 309,
+          "linea": 311,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -171058,7 +171623,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 331
+          "linea": 333
         },
         {
           "nombre": "ventanaMinutos",
@@ -171066,7 +171631,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 339,
+          "linea": 341,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -171075,13 +171640,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 351,
+          "linea": 353,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f4ba00e152a6"
+      "hash": "71800f6510f5"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -174547,13 +175112,21 @@
           "resumen": "Desplaza el año de una fecha 'YYYY-MM-DD' (para la comparativa \"mismo periodo del año anterior\" cuando el periodo es un rango libre). Solo toca los 4 primeros caracteres."
         },
         {
+          "nombre": "fechaIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: Date | string | null | undefined",
+          "retorno": "string | null",
+          "linea": 305,
+          "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
+        },
+        {
           "nombre": "getDeducciones",
           "kind": "function",
           "exportada": false,
           "params": "cuentaId: string, year: number, baseImponible: number, retenciones: number,",
           "retorno": "Promise<DeduccionesView>",
-          "linea": 305,
-          "resumen": "── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────"
+          "linea": 307
         },
         {
           "nombre": "getResumenFinanciero",
@@ -174561,7 +175134,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 420
+          "linea": 431
         },
         {
           "nombre": "getGastosControl",
@@ -174569,7 +175142,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string,",
           "retorno": "Promise<GastosControl>",
-          "linea": 842,
+          "linea": 853,
           "resumen": "── Control de gastos: lista de cargos del periodo agrupada por bucket de deducibilidad ──────── Alimenta la pestaña «Gastos» de /finanzas. Excluye traspasos del cómputo de totales y las cuentas del có"
         },
         {
@@ -174578,7 +175151,7 @@
           "exportada": true,
           "params": "cuentaId: string, year: number, quarter = 0, desde?: string, hasta?: string",
           "retorno": "Promise<ResumenPilar>",
-          "linea": 1018
+          "linea": 1029
         },
         {
           "nombre": "bancoCond",
@@ -174586,7 +175159,7 @@
           "exportada": true,
           "params": "banco?: string",
           "retorno": null,
-          "linea": 1168,
+          "linea": 1179,
           "resumen": "Filtro por cuenta para el eje personal: BBVA (100% de Alberto) vs \"familiar\" (el resto, p.ej. Kutxabank). Coherente con la separación de `getResumenFinanciero.personal.bbva/.kutxa`."
         },
         {
@@ -174595,7 +175168,7 @@
           "exportada": true,
           "params": "cuentaId: string, categoria: string, desde: string, hasta: string, banco?: string,",
           "retorno": "Promise<MerchantRow[]>",
-          "linea": 1174
+          "linea": 1185
         }
       ],
       "tablas": [
@@ -174614,7 +175187,249 @@
         "properties"
       ],
       "rutaApi": null,
-      "hash": "6682fb97e795"
+      "hash": "b43bfd2c005d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/fiscal-alertas-db.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lectura/escritura de los avisos fiscales (solo servidor). Dedupe en `fiscal_avisos_enviados` (prisma/sql/2026-10-31_fiscal_avisos.sql). Sin la tabla NO hay dedupe: se avisa de todos modos (fail-open, como el resto de avisos) y se deja constancia en el log.",
+      "exporta": [
+        "calcularAlertas",
+        "enviosPrevios",
+        "registrarEnvio"
+      ],
+      "funciones": [
+        {
+          "nombre": "calcularAlertas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, anio: number, hoy: string",
+          "retorno": "Promise<Alerta[]>",
+          "linea": 11,
+          "resumen": "Alertas vigentes ahora mismo (sin filtrar por dedupe). Lanza si no se puede leer la base fiscal."
+        },
+        {
+          "nombre": "enviosPrevios",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<EnvioPrevio[]>",
+          "linea": 30,
+          "resumen": "Envíos de los últimos 365 días. `[]` si la tabla aún no existe (sin dedupe)."
+        },
+        {
+          "nombre": "registrarEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, clave: string, hash: string",
+          "retorno": "Promise<void>",
+          "linea": 42
+        }
+      ],
+      "tablas": [
+        "fiscal_avisos_enviados",
+        "fiscal_descendientes",
+        "fiscal_perfil"
+      ],
+      "rutaApi": null,
+      "hash": "d33bec4cc4f1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/fiscal-alertas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Avisos fiscales a ALBERTO por Telegram (puro: sin BD, sin red, sin reloj; `node --test lib/fiscal-alertas.test.ts`). Cuatro avisos: (1) previsión de base liquidable a 31/12 cerca de / por encima del umbral de 60.000€, (2) cuentas sin movimientos hace +30 días, (3) meses CERRADOS sin factura de limpi",
+      "exporta": [
+        "mejorPalanca",
+        "avisoUmbral",
+        "soloCerrados",
+        "estaCubierta",
+        "esPorExtracto",
+        "avisoCuentas",
+        "avisoFacturasMeses",
+        "avisoDiciembre",
+        "construirAlertas",
+        "hashTexto",
+        "decidirEnvios"
+      ],
+      "funciones": [
+        {
+          "nombre": "dinero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "mesEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "m: string",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "mejorPalanca",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahorros: Partial<Record<PalancaSimulable, number | null>>",
+          "retorno": "Mejor | null",
+          "linea": 34,
+          "resumen": "La palanca de mayor ahorro positivo (null si ninguna se sabe o ahorra)."
+        },
+        {
+          "nombre": "avisoUmbral",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSimulador, compras: CompraPrevista[], anio: number",
+          "retorno": "Alerta | null",
+          "linea": 48,
+          "resumen": "`e` = escenario base de cierre (a 31/12). Avisa si la base liquidable de Alberto en individual, o la conjunta, queda a menos de `MARGEN_CERCA` del umbral o lo supera. Si ninguna se sabe, lo dice (no c"
+        },
+        {
+          "nombre": "soloCerrados",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "meses: string[], hoy: string",
+          "retorno": null,
+          "linea": 76,
+          "resumen": "Meses con `YYYY-MM` estrictamente anteriores al de `hoy`: el mes en curso aún no se puede dar por «sin factura»."
+        },
+        {
+          "nombre": "estaCubierta",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": null,
+          "linea": 85
+        },
+        {
+          "nombre": "esPorExtracto",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": null,
+          "linea": 87,
+          "resumen": "BBVA (Dúplex y correduría) y las de Pilar no sincronizan: se pide el extracto; el resto, reconectar."
+        },
+        {
+          "nombre": "avisoCuentas",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AvisosDatos, anio: number",
+          "retorno": "Alerta | null",
+          "linea": 89
+        },
+        {
+          "nombre": "avisoFacturasMeses",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AvisosDatos, hoy: string, anio: number",
+          "retorno": "Alerta | null",
+          "linea": 100
+        },
+        {
+          "nombre": "avisoDiciembre",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSimulador, compras: CompraPrevista[], hoy: string, anio: number",
+          "retorno": "Alerta | null",
+          "linea": 112,
+          "resumen": "Del 1 al 31 de diciembre (`hoy` = 'YYYY-MM-DD'). Un recordatorio único por año."
+        },
+        {
+          "nombre": "construirAlertas",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { hoy: string; anio: number; entrada: EntradaSimulador | null; avisos: AvisosDatos | null; compras: CompraPrevista[] }",
+          "retorno": "Alerta[]",
+          "linea": 128,
+          "resumen": "Los cuatro avisos (los que no apliquen, fuera). `avisos` y `e` salen del panel (`armarPanel`)."
+        },
+        {
+          "nombre": "hashTexto",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": null,
+          "linea": 138,
+          "resumen": "── Anti-spam ───────────────────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "decidirEnvios",
+          "kind": "function",
+          "exportada": true,
+          "params": "alertas: Alerta[], previos: EnvioPrevio[], ahora: Date, ventanaDias = VENTANA_DEDUPE_DIAS",
+          "retorno": "Alerta[]",
+          "linea": 145,
+          "resumen": "No repetir el mismo aviso (clave + contenido) en `ventanaDias` días; los `soloUnaVez` no se repiten en 365 días aunque cambie el contenido. Contenido distinto = aviso nuevo (la situación ha cambiado)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e56cec050a0c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/fiscal-compras-db.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lectura de «Compras previstas» (solo servidor). Siempre filtrada por cuenta_id. `null` = no se pudo leer (p. ej. la tabla aún no está creada) ≠ `[]` = no hay ninguna.",
+      "exporta": [
+        "listarComprasPrevistas",
+        "pisoExiste"
+      ],
+      "funciones": [
+        {
+          "nombre": "listarComprasPrevistas",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<CompraGuardada[] | null>",
+          "linea": 7
+        },
+        {
+          "nombre": "pisoExiste",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 21,
+          "resumen": "¿El piso existe en la titularidad fiscal? (la tabla no tiene FK a `properties`: el id lo valida la app)."
+        }
+      ],
+      "tablas": [
+        "propiedad_titularidad"
+      ],
+      "rutaApi": null,
+      "hash": "ee95270f2082"
+    },
+    {
+      "ruta": "apps/plataforma/lib/fiscal-compras.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Compras previstas» del panel fiscal: validación PURA del cuerpo de la API (sin BD; con test). Tipo null = sin clasificar → el motor no la cuenta (nunca se clasifica en silencio).",
+      "exporta": [
+        "normalizarCompra"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarCompra",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown",
+          "retorno": "",
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7615b0dd9885"
     },
     {
       "ruta": "apps/plataforma/lib/fiscal-deducciones.ts",
@@ -174624,10 +175439,14 @@
         "parametrosDonativo",
         "importesDe",
         "esMenor3",
+        "mesesMenor3",
+        "calcularMaternidadGuarderia",
         "edadAFinDe",
         "cuotaTarifa",
         "minimoPersonalYFamiliar",
         "calcularDeducciones",
+        "deduccionDeportivaAndalucia",
+        "mesesFamiliaNumerosa",
         "calcularResultadoFiscal",
         "avisosOportunidad",
         "deduccionesAplicablesNoMarcadas",
@@ -174641,7 +175460,7 @@
           "exportada": true,
           "params": "anio: number",
           "retorno": "",
-          "linea": 112,
+          "linea": 115,
           "resumen": "AEAT manual IRPF 2024/2025 «Porcentajes de deducción»): 80 % de los primeros 250 € y 40 % del resto (45 % si hubo donativos ≥ misma cuantía a la misma entidad los 2 ejercicios anteriores, o sea 3 años"
         },
         {
@@ -174650,7 +175469,7 @@
           "exportada": true,
           "params": "anio: number",
           "retorno": "ImportesAnio",
-          "linea": 118
+          "linea": 121
         },
         {
           "nombre": "anioNacimiento",
@@ -174658,7 +175477,7 @@
           "exportada": false,
           "params": "fecha: string",
           "retorno": null,
-          "linea": 169
+          "linea": 209
         },
         {
           "nombre": "esMenor3",
@@ -174666,8 +175485,35 @@
           "exportada": true,
           "params": "fechaNacimiento: string, anio: number",
           "retorno": "boolean",
-          "linea": 172,
+          "linea": 212,
           "resumen": "Menor de 3 años a efectos del incremento del mínimo y de la maternidad."
+        },
+        {
+          "nombre": "mesesMenor3",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaNacimiento: string, anio: number",
+          "retorno": "number",
+          "linea": 222,
+          "resumen": "Meses del ejercicio `anio` en los que el hijo es menor de 3 años (base de la maternidad). Cuenta desde el mes de nacimiento (inclusive) y deja de contar EL MES en que cumple 3 años [Probable: criterio"
+        },
+        {
+          "nombre": "gastoGuarderiaPorHijo",
+          "kind": "function",
+          "exportada": false,
+          "params": "perfil: PerfilFiscal, hijos: { d: Descendiente }[]",
+          "retorno": "",
+          "linea": 249,
+          "resumen": "Gasto de guardería de cada hijo con derecho (mismo orden que `hijos`). Si algún hijo trae su `gastoGuarderia`, manda el desglose por hijo (los que no lo traen = 0). Si solo hay el total del perfil: co"
+        },
+        {
+          "nombre": "calcularMaternidadGuarderia",
+          "kind": "function",
+          "exportada": true,
+          "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
+          "retorno": "ResultadoMaternidad",
+          "linea": 266,
+          "resumen": "la guardería usa lo que quede del límite."
         },
         {
           "nombre": "edadAFinDe",
@@ -174675,7 +175521,7 @@
           "exportada": true,
           "params": "fechaNacimiento: string, anio: number",
           "retorno": "number",
-          "linea": 177,
+          "linea": 305,
           "resumen": "Edad cumplida a 31-dic del año fiscal."
         },
         {
@@ -174684,7 +175530,7 @@
           "exportada": true,
           "params": "base: number, tramos: ImportesAnio['tramos']",
           "retorno": "number",
-          "linea": 187,
+          "linea": 315,
           "resumen": "Tarifa progresiva: cuota acumulada para una base dada."
         },
         {
@@ -174693,7 +175539,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "number",
-          "linea": 197,
+          "linea": 325,
           "resumen": "Mínimo personal y familiar (contribuyente + descendientes + discapacidad + ascendientes)."
         },
         {
@@ -174702,8 +175548,26 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio), baseParaLimites?: number,",
           "retorno": "LineaDeduccion[]",
-          "linea": 231,
+          "linea": 359,
           "resumen": "Deducciones de cuota: estatales (maternidad, familia numerosa) + Andalucía + donativos. `baseParaLimites` = base imponible (suma general+ahorro) para las deducciones autonómicas con límite de renta; s"
+        },
+        {
+          "nombre": "deduccionDeportivaAndalucia",
+          "kind": "function",
+          "exportada": true,
+          "params": "perfil: Pick<PerfilFiscal, 'gastoDeportivoAnual' | 'gastoDeportivoPorDeclarante' | 'declaracionConjunta'>",
+          "retorno": "",
+          "linea": 452,
+          "resumen": "15 % del gasto por declarante con tope de 100 € cada uno. Sin desglose: el total a partes iguales (estimado)."
+        },
+        {
+          "nombre": "mesesFamiliaNumerosa",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string | null | undefined, anio: number",
+          "retorno": "number | null",
+          "linea": 466,
+          "resumen": "Meses del ejercicio con título de familia numerosa vigente EL ÚLTIMO DÍA DEL MES (art. 81 bis LIRPF y RIRPF art. 60 bis). Título desde el 18/11/2025 ⇒ 2025: 2 meses (nov, dic) ⇒ 200 € (renta 2025, 066"
         },
         {
           "nombre": "calcularResultadoFiscal",
@@ -174711,8 +175575,8 @@
           "exportada": true,
           "params": "baseImponible: number, retenciones: number, perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "ResultadoFiscal",
-          "linea": 324,
-          "resumen": "Cálculo completo: base → cuota íntegra → deducciones → retenciones → resultado."
+          "linea": 486,
+          "resumen": "cada cuota líquida ≥ 0. Resultado = cuota líquida − retenciones − deducciones reembolsables (maternidad, guardería, familia numerosa) + abonos anticipados cobrados en el año (modelos 140/143). `baseIm"
         },
         {
           "nombre": "avisosOportunidad",
@@ -174720,7 +175584,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, baseImponible: number, anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "string[]",
-          "linea": 353,
+          "linea": 527,
           "resumen": "Avisos de oportunidad antes del cierre del ejercicio."
         },
         {
@@ -174729,7 +175593,7 @@
           "exportada": true,
           "params": "perfil: PerfilFiscal, descendientes: Descendiente[], anio: number,",
           "retorno": "",
-          "linea": 374,
+          "linea": 548,
           "resumen": "Deducciones que APLICAN según el perfil pero podrían no estar reflejadas."
         },
         {
@@ -174738,7 +175602,7 @@
           "exportada": true,
           "params": "descendientes: Descendiente[], anio: number,",
           "retorno": "",
-          "linea": 394,
+          "linea": 568,
           "resumen": "Hijos que cambian de tramo de edad el año siguiente (afecta a las deducciones)."
         },
         {
@@ -174747,13 +175611,176 @@
           "exportada": true,
           "params": "baseTitular: number, retencionesTitular: number, rendimientoNetoConyuge: number, retencionesConyuge: number, perfil: PerfilFiscal, descendientes: Descendiente[], anio: number, imp: ImportesAnio = importesDe(anio),",
           "retorno": "ComparativaDeclaracion",
-          "linea": 432,
+          "linea": 606,
           "resumen": "Compara si conviene declaración conjunta o separada. Para la conjunta: suma las bases, aplica reducción €3.400, usa deducciones comunes. Para la separada: cada cónyuge con su propia base e mínimo indi"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "60f8a5d0dafe"
+      "hash": "44040af13175"
+    },
+    {
+      "ruta": "apps/plataforma/lib/fiscal-panel.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Panel fiscal (F2): helpers PUROS de presentación sobre el motor `simulador-irpf.ts` y la base por devengo. Sin BD, sin reloj (el «hoy» se inyecta) y sin React: se usa igual en el servidor (armarPanel) y en el cliente (los interruptores del simulador recalculan con `declarar`, la MISMA función que el",
+      "exporta": [
+        "modoDe",
+        "contribuyenteDe",
+        "nivelUmbral",
+        "rangoDe",
+        "armarPanel",
+        "hayAvisos",
+        "contarAvisos",
+        "serieAcumulada",
+        "palancasActivas",
+        "comprasParaMotor",
+        "diasHasta",
+        "ahorroPorPalanca",
+        "comparar",
+        "construirAcciones",
+        "tablaTramos"
+      ],
+      "funciones": [
+        {
+          "nombre": "modoDe",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "s: Seleccion",
+          "retorno": "Modo",
+          "linea": 23
+        },
+        {
+          "nombre": "contribuyenteDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: ResultadoDeclaracion, s: Seleccion",
+          "retorno": "ResultadoContribuyente | null",
+          "linea": 24
+        },
+        {
+          "nombre": "nivelUmbral",
+          "kind": "function",
+          "exportada": true,
+          "params": "cierre: number | null, peor: number | null, margenCerca = MARGEN_CERCA, umbral = UMBRAL",
+          "retorno": "NivelUmbral",
+          "linea": 35,
+          "resumen": "`cierre` = base liquidable estimada a 31/12; `peor` = la más alta del rango de escenarios (peor caso). pasa: el cierre central supera 60.000€ · cerca: margen < MARGEN_CERCA o el peor caso cruza el umb"
+        },
+        {
+          "nombre": "rangoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "valores: (number | null)[]",
+          "retorno": "",
+          "linea": 43
+        },
+        {
+          "nombre": "armarPanel",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: BaseDevengo, ctx: { descendientes: Descendiente[]; conyugeTrabaja: boolean }",
+          "retorno": "PanelDatos",
+          "linea": 62
+        },
+        {
+          "nombre": "hayAvisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AvisosDatos",
+          "retorno": "boolean",
+          "linea": 87
+        },
+        {
+          "nombre": "contarAvisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AvisosDatos",
+          "retorno": "number",
+          "linea": 90
+        },
+        {
+          "nombre": "serieAcumulada",
+          "kind": "function",
+          "exportada": true,
+          "params": "porMes: { mes: string; total: number | null }[], cierreBase: number | null, rango: { min: number; max: number } | null, anio: number, reduccion = REDUCCION_CONJUNTA,",
+          "retorno": "PuntoSerie[]",
+          "linea": 110,
+          "resumen": "Base liquidable conjunta acumulada mes a mes (base general − 3.400€, mínimo 0). Meses con total null rompen la serie (acumulado desconocido a partir de ahí). La proyección une el último punto real con"
+        },
+        {
+          "nombre": "palancasActivas",
+          "kind": "function",
+          "exportada": true,
+          "params": "activas: Activas, def: Palancas, compras: CompraPrevista[]",
+          "retorno": "Palancas",
+          "linea": 151,
+          "resumen": "Palancas del motor para los interruptores marcados; `def` = propuesta por defecto (límites legales, 250€ por cabeza)."
+        },
+        {
+          "nombre": "comprasParaMotor",
+          "kind": "function",
+          "exportada": true,
+          "params": "cs: CompraGuardada[], anio: number",
+          "retorno": "CompraPrevista[]",
+          "linea": 162,
+          "resumen": "Compra → entrada del motor evaluada «antes del 31/12»: fecha prevista si es del año; si no, 15/12. Tipo null se conserva (no cuenta)."
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 184
+        },
+        {
+          "nombre": "diasHasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, fin: string",
+          "retorno": "number",
+          "linea": 185
+        },
+        {
+          "nombre": "ahorroPorPalanca",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSimulador, def: Palancas, compras: CompraPrevista[], sel: Seleccion",
+          "retorno": "Record<PalancaSimulable, number | null>",
+          "linea": 190,
+          "resumen": "Ahorro de cuota de cada palanca por separado PARA la modalidad elegida (misma `declarar` que el resultado total)."
+        },
+        {
+          "nombre": "comparar",
+          "kind": "function",
+          "exportada": true,
+          "params": "conjunta: ResultadoDeclaracion, individual: ResultadoDeclaracion",
+          "retorno": null,
+          "linea": 200,
+          "resumen": "Cuota íntegra conjunta vs individual (misma base total en ambas). null si falta alguna."
+        },
+        {
+          "nombre": "construirAcciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "res: ResultadoEscenario, ahorros: Partial<Record<PalancaId, number | null>>, hoy: string, anio: number",
+          "retorno": "Accion[]",
+          "linea": 210,
+          "resumen": "`ahorros` = ahorro por palanca para la modalidad elegida (ver `ahorroPorPalanca`)."
+        },
+        {
+          "nombre": "tablaTramos",
+          "kind": "function",
+          "exportada": true,
+          "params": "cols: (ResultadoContribuyente | null)[]",
+          "retorno": "TablaTramosDatos",
+          "linea": 238,
+          "resumen": "Una columna por contribuyente (hoy | cierre | con palancas). Columna null = sin dato (celdas null, no 0)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5420a6084f3d"
     },
     {
       "ruta": "apps/plataforma/lib/flota-holding.ts",
@@ -184803,6 +185830,267 @@
       "hash": "bbb1cf3c8d68"
     },
     {
+      "ruta": "apps/plataforma/lib/simulador-irpf.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Simulador IRPF 2026 (puro: sin BD ni red; `node --test lib/simulador-irpf.test.ts`). Entrada = un escenario de `estimarCierre` (base-fiscal-devengo.ts) convertido con `periodoCierre`. Salida por escenario: conjunta vs individual, cuota estatal + autonómica (Andalucía) por separado, tipo marginal, di",
+      "exporta": [
+        "parametrosIrpf",
+        "cuotaEscala",
+        "cuotaIntegra",
+        "tipoMarginal",
+        "costeMarginal",
+        "desgloseTramos",
+        "deduccionDonativos",
+        "limitePlanPropio",
+        "limitePlanConyuge",
+        "fraccionDeducible",
+        "repartirPorTitular",
+        "limitesPlanes",
+        "declarar",
+        "palancasPorDefecto",
+        "simularEscenario",
+        "simularEstimacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "minimoDescendientesAutonomico",
+          "kind": "function",
+          "exportada": false,
+          "params": "minimoEstatal: number, descendientes: Descendiente[], anio: number, imp: ReturnType<typeof importesDe>",
+          "retorno": "number",
+          "linea": 92,
+          "resumen": "Mínimo por descendientes autonómico: el estatal con los importes andaluces por orden y por menor de 3 años."
+        },
+        {
+          "nombre": "parametrosIrpf",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number, descendientes: Descendiente[]",
+          "retorno": "ParametrosIrpf",
+          "linea": 104,
+          "resumen": "Parámetros 2026 con los mínimos legales de `IMPORTES_POR_ANIO` (mínimos autonómicos de Andalucía propios: ver minimoAutonomico*)."
+        },
+        {
+          "nombre": "cuotaEscala",
+          "kind": "function",
+          "exportada": true,
+          "params": "base: number, e: Escala",
+          "retorno": "number",
+          "linea": 119,
+          "resumen": "── Cuota por escala ────────────────────────────────────────────────────────────────────────"
+        },
+        {
+          "nombre": "tipoEn",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: number, e: Escala",
+          "retorno": "number",
+          "linea": 124,
+          "resumen": "Tipo del tramo en el que cae `base` (frontera incluida en el tramo inferior: 60.000 → 37 %)."
+        },
+        {
+          "nombre": "minimos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "m: number | Minimos",
+          "retorno": "Minimos",
+          "linea": 131
+        },
+        {
+          "nombre": "cuotaIntegra",
+          "kind": "function",
+          "exportada": true,
+          "params": "baseLiquidable: number, minimo: number | Minimos, p: ParametrosIrpf",
+          "retorno": "CuotaIntegra",
+          "linea": 135,
+          "resumen": "Cuota íntegra = Σ escala [escala(base liquidable) − escala(mínimo)], cada una ≥ 0."
+        },
+        {
+          "nombre": "tipoMarginal",
+          "kind": "function",
+          "exportada": true,
+          "params": "baseLiquidable: number, minimo: number | Minimos, p: ParametrosIrpf",
+          "retorno": "number",
+          "linea": 142,
+          "resumen": "Tipo marginal combinado (estatal + autonómico). 0 mientras la base no supera el mínimo."
+        },
+        {
+          "nombre": "costeMarginal",
+          "kind": "function",
+          "exportada": true,
+          "params": "baseLiquidable: number, minimo: number | Minimos, p: ParametrosIrpf, delta = 1000",
+          "retorno": "number",
+          "linea": 147,
+          "resumen": "Cuánto sube la cuota si la base sube `delta` (negativo = cuánto baja)."
+        },
+        {
+          "nombre": "desgloseTramos",
+          "kind": "function",
+          "exportada": true,
+          "params": "baseLiquidable: number, p: ParametrosIrpf",
+          "retorno": "LineaTramo[]",
+          "linea": 153,
+          "resumen": "Reparto de la base por tramos COMBINADOS (unión de cortes estatales y autonómicos), antes de restar el mínimo."
+        },
+        {
+          "nombre": "deduccionDonativos",
+          "kind": "function",
+          "exportada": true,
+          "params": "donado: number, baseLiquidable: number, p: ParametrosIrpf, recurrente = false",
+          "retorno": "number",
+          "linea": 166,
+          "resumen": "Deducción en CUOTA (no baja la base). Base de deducción limitada al % de la base liquidable."
+        },
+        {
+          "nombre": "limitePlanPropio",
+          "kind": "function",
+          "exportada": true,
+          "params": "rendTrabajo: number | null, rendActividad: number | null, p: ParametrosIrpf",
+          "retorno": "number | null",
+          "linea": 174,
+          "resumen": "Límite de reducción por plan PROPIO. null si no se sabe algún rendimiento. ≤ 0 → 0."
+        },
+        {
+          "nombre": "limitePlanConyuge",
+          "kind": "function",
+          "exportada": true,
+          "params": "rendTrabajoConyuge: number | null, rendActividadConyuge: number | null, p: ParametrosIrpf",
+          "retorno": "number | null",
+          "linea": 179,
+          "resumen": "Límite de la aportación al plan del CÓNYUGE (art. 51.7). null si no se sabe la renta del cónyuge."
+        },
+        {
+          "nombre": "diasDelAnio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "y: number",
+          "retorno": null,
+          "linea": 196
+        },
+        {
+          "nombre": "diasHastaFin",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "fecha: string, anio: number",
+          "retorno": null,
+          "linea": 197
+        },
+        {
+          "nombre": "fraccionDeducible",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CompraPrevista, 'tipo' | 'importe' | 'fecha'>, anio: number",
+          "retorno": "number | null",
+          "linea": 201,
+          "resumen": "Fracción del importe que es gasto del año `anio` si la compra se hace en `fecha` (sin el límite de ingresos)."
+        },
+        {
+          "nombre": "repartirPorTitular",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Periodo, props: PropiedadFiscal[], reasignar: Record<string, Titular> = {}, avisos: string[] = [],",
+          "retorno": "Bases",
+          "linea": 223,
+          "resumen": "correduría → Alberto; actividad de Pilar → Pilar. `reasignar` cambia el titular de pisos concretos (escenario «Bustos a nombre de Pilar»). Piso sin titularidad o que no suma 100 → null + aviso."
+        },
+        {
+          "nombre": "sumaN",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: (number | null)[]",
+          "retorno": null,
+          "linea": 328
+        },
+        {
+          "nombre": "aplicar",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EntradaSimulador, pal: Palancas",
+          "retorno": "Aplicado",
+          "linea": 333,
+          "resumen": "Aplica a las bases el efecto de palancas que mueven base (compras, planes) y devuelve donativos aparte."
+        },
+        {
+          "nombre": "bloqueDePiso",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EntradaSimulador, pid: string",
+          "retorno": null,
+          "linea": 367
+        },
+        {
+          "nombre": "gastoCompra2026",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EntradaSimulador, c: CompraPrevista, margenUsado: Record<string, number>",
+          "retorno": "number | null",
+          "linea": 371,
+          "resumen": "Gasto 2026 de una compra, aplicando el límite intereses + reparación ≤ ingresos íntegros (capital inmobiliario)."
+        },
+        {
+          "nombre": "limitesPlanes",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSimulador",
+          "retorno": "",
+          "linea": 386
+        },
+        {
+          "nombre": "contribuyente",
+          "kind": "function",
+          "exportada": false,
+          "params": "titular: ResultadoContribuyente['titular'], baseImponible: number | null, reducciones: number, minimo: Minimos, donado: number, ret: number | null, pf: number | null, p: ParametrosIrpf,",
+          "retorno": "ResultadoContribuyente",
+          "linea": 397
+        },
+        {
+          "nombre": "declarar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSimulador, pal: Palancas, modo: Modo",
+          "retorno": "ResultadoDeclaracion",
+          "linea": 416
+        },
+        {
+          "nombre": "dif",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: number | null, b: number | null",
+          "retorno": null,
+          "linea": 514
+        },
+        {
+          "nombre": "palancasPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSimulador",
+          "retorno": "Palancas",
+          "linea": 517,
+          "resumen": "Palancas propuestas por defecto: el límite legal de cada plan y 250€ de donativo por cabeza."
+        },
+        {
+          "nombre": "simularEscenario",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSimulador, propuestas: Palancas, etiqueta = '', escenario: string = ''",
+          "retorno": "ResultadoEscenario",
+          "linea": 527
+        },
+        {
+          "nombre": "simularEstimacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "real: Periodo, est: Estimacion, base: Omit<EntradaSimulador, 'periodo'>, propuestas?: (e: EntradaSimulador) => Palancas,",
+          "retorno": "ResultadoEscenario[]",
+          "linea": 615,
+          "resumen": "Un resultado por escenario de `estimarCierre` (base, ocupación tipo, pesimista)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e327833d5379"
+    },
+    {
       "ruta": "apps/plataforma/lib/siniestro-detalle-cima.ts",
       "ambito": "apps/plataforma",
       "resumen": "Detalle del siniestro que manda la COMPAÑÍA por CIMA (desde el 28/09/2026): lector defensivo de lo que sirve el puerto de asegura (`detalleCima` de cada siniestro) y las reglas de pantalla, PURAS — las importa `Siniestros.tsx` (client component) y las prueba `siniestro-detalle-cima.test.ts`. · `deta",
@@ -185147,6 +186435,108 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "290c276e65eb"
+    },
+    {
+      "ruta": "apps/plataforma/lib/situacion-fiscal-db.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cargador (SOLO LECTURA) + escritura acotada de «Mi situación fiscal». Ver situacion-fiscal.ts.",
+      "exporta": [
+        "getSituacionFiscal",
+        "guardarCampoPerfil"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 5
+        },
+        {
+          "nombre": "getSituacionFiscal",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string",
+          "retorno": "Promise<",
+          "linea": 9
+        },
+        {
+          "nombre": "guardarCampoPerfil",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, columna: string, valor: number | null",
+          "retorno": "Promise<void>",
+          "linea": 32,
+          "resumen": "Escribe UNA columna editable de fiscal_perfil de la cuenta (la columna sale de una lista blanca, nunca del cliente)."
+        }
+      ],
+      "tablas": [
+        "fiscal_descendientes",
+        "fiscal_perfil",
+        "properties",
+        "propiedad_titularidad"
+      ],
+      "rutaApi": null,
+      "hash": "9dd2d21e384d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/situacion-fiscal.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Mi situación fiscal» (puro: sin BD ni red; testeado con `node --test lib/situacion-fiscal.test.ts`). Radiografía de TODO lo personal que consume el motor fiscal (base-fiscal-devengo*, simulador-irpf, fiscal-deducciones, fiscal-panel): cada dato con valor, fuente, fecha de actualización y si se edit",
+      "exporta": [
+        "num",
+        "formatearValor",
+        "armarSituacion",
+        "validarCampo"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: unknown",
+          "retorno": "number | null",
+          "linea": 51,
+          "resumen": "numeric de BD (string|number|Decimal) → number; null/undefined/'' → null (NUNCA 0)."
+        },
+        {
+          "nombre": "dia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null | undefined",
+          "retorno": null,
+          "linea": 56
+        },
+        {
+          "nombre": "formatearValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: Dato['valor'], formato: Formato",
+          "retorno": "string",
+          "linea": 58
+        },
+        {
+          "nombre": "armarSituacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSituacion",
+          "retorno": "Seccion[]",
+          "linea": 71
+        },
+        {
+          "nombre": "validarCampo",
+          "kind": "function",
+          "exportada": true,
+          "params": "campo: string, valor: unknown",
+          "retorno": "",
+          "linea": 181,
+          "resumen": "Valida un valor entrante para un campo editable. Devuelve number|null o un error de texto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "29ef61c74cf4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/acceso.ts",
@@ -200571,7 +201961,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 889
+          "linea": 895
         },
         {
           "nombre": "avisosDe",
@@ -200579,7 +201969,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 894,
+          "linea": 900,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -200588,13 +201978,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 904,
+          "linea": 910,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "66e03c132ec2"
+      "hash": "8d66624acce6"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -262122,7 +263512,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5451,
-    "funciones": 21110
+    "archivos": 5475,
+    "funciones": 21229
   }
 }
