@@ -70,6 +70,9 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 5 * *' },
+  // 📒 Cierre contable MENSUAL por piso (lib/cierre-mes.ts): día 5 = pre-cierre, día 15 = cierre (con botón
+  // ✅ Cerrar mes si todo cuadra), siempre del mes ANTERIOR. 07:17 UTC (minuto con jitter). Un solo Telegram.
+  { path: '/api/cron/cierre-mes', schedule: '17 7 5,15 * *' },
   { path: '/api/cron/facturas-conciliar-gmail', schedule: '30 6 * * *' },
   { path: '/api/cron/contable-proactivo', schedule: '0 9 * * 1' },
   { path: '/api/cron/concursos-ingesta', schedule: '30 */6 * * *' },
