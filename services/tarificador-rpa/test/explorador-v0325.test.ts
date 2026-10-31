@@ -16,7 +16,7 @@ import { bucleExploracion, EXPLORADOR_VERSION, type ContextoBucle } from '../src
 import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import type { RespuestaPaso } from '../src/api.ts'
 
-test('versión del explorador 0.3.26', () => assert.equal(EXPLORADOR_VERSION, '0.3.26'))
+test('versión del explorador 0.3.27', () => assert.equal(EXPLORADOR_VERSION, '0.3.27'))
 
 // ─── 1) Allianz drvp00: pageId de la ayuda contextual ──────────────────────────────────────────────────────────────────────────────
 const ORIGEN_EPAC = 'https://www.e-pacallianz.com'

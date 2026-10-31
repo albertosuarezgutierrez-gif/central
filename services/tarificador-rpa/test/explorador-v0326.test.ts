@@ -15,7 +15,7 @@ test('0.3.26 · claves de framework con guion bajo delante se nombran; las ocult
   assert.equal(clavesQueryDiagnostico(new URL(`${CD}?___x=1`)), '?(otra)', 'tres guiones bajos ya no es nombre de framework')
 })
 
-test('0.3.26 · solo diagnóstico: ClientData.aspx con CUALQUIER query sigue fuera de la lista blanca del avance', () => {
-  for (const q of ['?_ts=1', '?__EVENTTARGET=x', '?12345678']) assert.equal(destinoAvancePermitido(`${CD}${q}`, [CD]), false)
+test('0.3.26 · solo diagnóstico: ClientData.aspx con query (salvo `?_ts=<cifras>` solo, 0.3.27) sigue fuera de la lista blanca del avance', () => {
+  for (const q of ['?__EVENTTARGET=x', '?12345678']) assert.equal(destinoAvancePermitido(`${CD}${q}`, [CD]), false)
   assert.equal(destinoAvancePermitido(CD, [CD]), true)
 })

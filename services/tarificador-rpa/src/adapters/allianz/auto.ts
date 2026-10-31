@@ -53,6 +53,7 @@
 // los antecedentes sin dato van al supuesto favorable declarado (`conAntecedentesFavorables`). Se fija por el `<select>` de
 // siempre (`resolverVehiculo`: código de la lista leída + relectura).
 // v0.6.12 (20/10/2026, trabajo real d675077b llegó a «Selección de paquete»): LECTOR DE PRECIOS. La pantalla es una tabla comparativa `nx-comparison-table` (3 paquetes: «Terceros con lunas», «Tercero Ampliado», «Todo Riesgo con franq.»; cada cabecera trae «primer recibo» y «la anualidad»; filas de cobertura con icono check/minus o desplegable por paquete, filas de elección única que abarcan los 3 paquetes y «Todos los paquetes incluyen»). `leerPaquetesTurismosAllianz` (guard.ts, solo lectura) + `ofertasDesdePaquetesTurismos` devuelven una oferta por paquete con supuestos y coberturas; importe ilegible → fuera + aviso; sin tabla → hueco como antes. No se pulsa nada en esta pantalla.
+// v0.6.37 (31/10/2026, trabajo real dbb6d451 atascado en «Datos personales»: «Localidad (no es un campo de texto: desplegable/autocompletado sin puerta en guard.ts)»): «Localidad» del tomador es un autocompletado NDBX (`input[role=combobox][aria-autocomplete=list]`) que el portal no rellena solo tras el CP. Vacío → puerta `localidadTurismosAllianz` (guard.ts): lo enfoca, teclea el municipio (y si no salen opciones, su palabra más larga), lee las `[role=option]` del panel de su `aria-owns` y elige como mucho la que decide `elegirLocalidadTurismos` (CP distinto descartado; única que casa con el municipio; sin casar, solo la única con el CP exacto). Ninguna/varias → hueco con el número de opciones, nunca la primera a ciegas. Con valor del portal distinto → no se toca (hueco, como antes).
 // v0.6.36 (30/10/2026, regla de Alberto «SINCO al tarificar»): si la puerta `polizaActualTurismosAllianz` ESCRIBIÓ y releyó los 5 últimos dígitos de la póliza actual, cada oferta de Turismos lleva `polizaAnteriorTecleada: true` (solo la señal, nunca el valor; «ya con valor» del portal NO cuenta). Con ella asegura marca el precio `firme`.
 // v0.6.11 (19/10/2026, trabajo real atascado en «Antecedentes» con «qué falta para habilitar SIGUIENTE»): el input obligatorio «Cinco últimos dígitos de la póliza actual» (aparece al haber compañía actual) se rellena con `polizaAnteriorUltimos5` del riesgo por la puerta `polizaActualTurismosAllianz` (guard.ts); sin dato → hueco con nombre, nunca inventado; ya con valor → «fijada por Allianz». El atasco genérico lista ahora las etiquetas de los obligatorios vacíos/inválidos del paso. Los 5 dígitos nunca van a supuestos, avisos ni errores.
 // v0.6.10 (18/10/2026, decisión de Alberto «supuesto favorable»): «Antecedentes» contesta las 3 preguntas que bloqueaban «SIGUIENTE» (tiempo en la compañía, partes culpables, tiempo como titular): con dato del riesgo la opción que casa; sin dato, la más favorable y DECLARADA (guard.ts).
@@ -175,9 +176,10 @@ import {
   type Vehiculo,
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
+import type { ResultadoLocalidadTurismos } from '../../guard.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
-import { elegirPoblacionPorLocalidades } from './poblacion-localidad.ts'
+import { busquedasLocalidadTurismos, elegirLocalidadTurismos, elegirPoblacionPorLocalidades } from './poblacion-localidad.ts'
 import { casarCompaniaActual, indiceOpcionGenerica, normalizarCompania, mensajeCompaniaAmbigua, PREFIJO_SUPUESTO_COMPANIA_GENERICA, supuestoCompaniaGenerica } from '../../compania-actual.ts'
 import { conRespaldoIA, registrarAtasco, sugerirOpcion, type PeticionResolver } from '../../formador.ts'
 import { ErrorMapaIncompleto as ErrorLocalizar, localizarControl } from '../../localizar.ts'
@@ -1845,7 +1847,7 @@ export const RE_BOTON_SIGUIENTE_TURISMOS = /^\s*siguiente\s*$/i
 export const botonSiguienteTurismos = (marco: Pick<Frame, 'locator'>): Locator => botonTurismos(marco, RE_BOTON_SIGUIENTE_TURISMOS)
 
 /** `formador` (opcional): solo para el atasco de «Matrícula» (candidatos con pista, se aprende al elegir). */
-export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos' | 'guardarPresupuestoTurismos' | 'trabajoId' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>
+export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'localidadTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos' | 'guardarPresupuestoTurismos' | 'trabajoId' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>
 
 const ESPERA_CONTROL_TURISMOS_MS = 8_000
 /** Espera por campo del resto del paso (la pantalla ya está pintada tras la consulta: no se acumulan 8 s por hueco). */
@@ -2334,6 +2336,19 @@ export function planDatosTurismos(f: FormularioAuto, hoy: Date = new Date()): { 
   return { pasos, supuestos: supuestosAplicadosTurismos(sup, pasos.flatMap((p) => supuestosDelPlan(p.operaciones))) }
 }
 
+/**
+ * v0.6.37: resultado de la puerta de «Localidad» → hueco (texto) o `null` si quedó puesta y casa con el municipio. PURA. Los motivos no
+ * llevan ni el municipio ni las opciones (solo cuántas).
+ */
+export function mensajeLocalidadTurismos(r: ResultadoLocalidadTurismos, municipio: string): string | null {
+  const et = `«${ETIQUETAS_TURISMOS.localidad}»`
+  if (r.estado === 'elegida') return normalizarValorCampoTurismos(r.mostrado, 'poblacion') === normalizarValorCampoTurismos(r.elegida, 'poblacion') || normalizarValorCampoTurismos(r.mostrado, 'poblacion') === normalizarValorCampoTurismos(municipio, 'poblacion') ? null : `${et} (el portal no dejó puesta la opción elegida)`
+  if (r.estado === 'con_valor') return `${et} (el portal propone otra para el CP: no se toca)`
+  if (r.estado === 'sin_opciones') return `${et} (el autocompletado no ofreció opciones para el municipio)`
+  if (r.estado === 'sin_eleccion') return `${et} (ninguna o varias de las ${r.opciones.length} opciones del autocompletado casan con el municipio y el CP)`
+  return `${et} (${r.motivo})`
+}
+
 /** ¿El control es un campo de TEXTO editable (no un desplegable/combobox, que solo se tocaría por una puerta de guard.ts)? */
 async function esCampoTexto(campo: Locator): Promise<boolean> {
   return campo
@@ -2461,7 +2476,8 @@ async function teclearTurismos(campo: Locator, valor: string): Promise<boolean> 
  * nada tocado). Cada control por su etiqueta EXACTA en la zona `appArea` (CP/localidad/documento, en el bloque del tomador); un
  * campo de texto se escribe tras `comprobarCampo` (guard de emisión + frontera bancaria) y se RELEE; una fecha fuera del rango
  * `min`/`max` del portal no se teclea; las opciones, SOLO por la puerta guardada (`ctx.marcarOpcionTurismos`, lista cerrada de
- * guard.ts). «Localidad» es un autocompletado: NUNCA se teclea; vale si el portal la propone y casa (o, sin dato, se declara).
+ * guard.ts). «Localidad» es un autocompletado: vale si el portal la propone y casa (o, sin dato, se declara); vacía, SOLO por la puerta
+ * `ctx.localidadTurismos` (v0.6.37), nunca tecleada directamente.
  * Lo que no aparece, aparece repetido o no queda puesto → hueco (se juntan). Devuelve los huecos y los supuestos APLICADOS.
  * v0.6.36: `polizaTecleada: true` solo si la puerta de la póliza actual devolvió `escrita` (escrito y releído igual).
  */
@@ -2588,7 +2604,19 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       }
       if (clavePoblacion(mostrada) === clavePoblacion(op.valor)) continue
       if (!(await esCampoTexto(campo))) {
-        huecos.push(`«${ETIQUETAS_TURISMOS.localidad}» (no es un campo de texto: desplegable/autocompletado sin puerta en guard.ts${mostrada ? '; el portal propone otra para el CP' : ''})`)
+        // v0.6.37 (31/10/2026, real dbb6d451): autocompletado NDBX vacío → SOLO por la puerta `localidadTurismosAllianz` de guard.ts, que teclea
+        // el municipio y elige como mucho la opción que decide `elegirLocalidadTurismos` (municipio + CP del plan). Con valor del portal, no se toca.
+        const puertaLoc = ctx.localidadTurismos
+        if (mostrada !== '' || typeof puertaLoc !== 'function') {
+          huecos.push(`«${ETIQUETAS_TURISMOS.localidad}» (${mostrada ? 'el portal propone otra para el CP: no se toca' : 'autocompletado sin la puerta guardada en el contexto del worker'})`)
+          continue
+        }
+        const opCp = plan.operaciones.find((o) => o.tipo === 'texto' && o.etiqueta === ETIQUETAS_TURISMOS.codigoPostal)
+        const cpPlan = opCp && opCp.tipo === 'texto' ? normalizarValorCampoTurismos(opCp.valor, 'cp') : null
+        const municipio = op.valor
+        const r = await puertaLoc(marco, busquedasLocalidadTurismos(municipio), (opciones) => elegirLocalidadTurismos(opciones, municipio, cpPlan))
+        const hueco = mensajeLocalidadTurismos(r, municipio)
+        if (hueco) huecos.push(hueco)
         continue
       }
       await ctx.pausaAccion()
@@ -2988,7 +3016,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.21' : '0.6.36',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.37',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
