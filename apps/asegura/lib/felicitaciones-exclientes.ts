@@ -13,7 +13,7 @@
 // Imports de BD/correo/Telegram DINÁMICOS: con la puerta apagada no se carga nada (y `node --test` lo comprueba).
 import { anioCumpleanos, diaMadrid, esCumpleanos, WHERE_CARTERA_EN_VIGOR } from '@central/module-seguros'
 import {
-  botonesExcliente, ENV_EXCLIENTES, iniciales, modoExclientes, nombreDePila, propuestaDelDia, textoPropuestaTelegram, varianteExcliente,
+  botonesExcliente, clientePorOtraFicha, ENV_EXCLIENTES, iniciales, modoExclientes, nombreDePila, propuestaDelDia, textoPropuestaTelegram, varianteExcliente, varianteSigueIgual,
   type DecisionFex, type ModoExclientes, type VarianteExcliente,
 } from './felicitaciones-exclientes-reglas.ts'
 
@@ -44,10 +44,26 @@ async function hayMigracion(db: { $queryRaw: (q: TemplateStringsArray, ...v: unk
 }
 
 const SELECT_FICHA = {
-  id: true, nombre: true, apellidos: true, fechaNacimiento: true, emailOptOutAt: true, email: true,
+  id: true, nombre: true, apellidos: true, fechaNacimiento: true, dniLookupHash: true, emailOptOutAt: true, email: true,
   emails: { select: { email: true, esPrincipal: true, createdAt: true } },
-  polizas: { where: { mergedIntoPolizaId: null }, select: { importRef: true, eiacXmlHash: true, estado: true, sustituidaAt: true } },
+  polizas: { where: { mergedIntoPolizaId: null }, select: { importRef: true, eiacXmlHash: true, estado: true, sustituidaAt: true, fechaVencimiento: true, fechaSituacion: true } },
 } as const
+
+type DbLectura = { cliente: { findMany: (a: unknown) => Promise<{ dniLookupHash: string | null }[]> } }
+
+/**
+ * De estos `dni_lookup_hash`, cuáles tienen ALGUNA ficha no fusionada con cartera en vigor (la misma persona en otra
+ * ficha). Quien llama solo pasa fichas SIN cartera en vigor, así que toda coincidencia es otra ficha.
+ */
+async function hashesConCarteraEnVigor(db: DbLectura, correduriaId: string, hashes: (string | null)[]): Promise<Set<string>> {
+  const unicos = [...new Set(hashes.filter((h): h is string => typeof h === 'string' && h !== ''))]
+  if (unicos.length === 0) return new Set()
+  const filas = await db.cliente.findMany({
+    where: { correduriaId, mergedIntoClienteId: null, dniLookupHash: { in: unicos }, polizas: { some: { mergedIntoPolizaId: null, ...WHERE_CARTERA_EN_VIGOR } } },
+    select: { dniLookupHash: true },
+  })
+  return new Set(filas.map((f) => f.dniLookupHash).filter((h): h is string => !!h))
+}
 
 export async function felicitarExclientes(
   correduriaId: string,
@@ -87,13 +103,21 @@ export async function felicitarExclientes(
 
   const anio = anioCumpleanos(ahora)
   const dia = diaMadrid(ahora)
+  // 1º los que cumplen hoy (descifrar es en memoria); 2º, solo para ellos, la identidad contra las OTRAS fichas.
+  const deHoy: typeof fichas = []
   for (const f of fichas) {
-    // Red: la regla pura vuelve a decidir con TODAS sus pólizas (null = en vigor o sin pólizas → no es de aquí).
-    const variante = varianteExcliente(f.polizas)
-    if (!variante || !f.fechaNacimiento) continue
+    if (!f.fechaNacimiento) continue
     const fecha = descifrarCampo(f.fechaNacimiento)
     if (fecha === null) { r.ilegibles += 1; continue }
-    if (!esCumpleanos(fecha, ahora)) continue
+    if (esCumpleanos(fecha, ahora)) deHoy.push(f)
+  }
+  const enVigorPorDni = await hashesConCarteraEnVigor(db as unknown as DbLectura, correduriaId, deHoy.map((f) => f.dniLookupHash))
+  for (const f of deHoy) {
+    // Misma persona con otra ficha en vigor = cliente: no es de aquí.
+    if (clientePorOtraFicha(f.dniLookupHash, enVigorPorDni)) continue
+    // Red: la regla pura vuelve a decidir con TODAS sus pólizas (null = en vigor o sin pólizas → no es de aquí).
+    const variante = varianteExcliente(f.polizas, ahora)
+    if (!variante) continue
     const destino = destinatarioDeCliente(f)
     if (!destino) { r.sinCorreo += 1; continue }
     r.cumpleHoy += 1
@@ -189,8 +213,10 @@ export async function decidirFelicitacionExcliente(
     where: { id: d.clienteId, correduriaId, mergedIntoClienteId: null, OR: [{ tipoPersona: null }, { NOT: { tipoPersona: 'juridica' } }] },
     select: SELECT_FICHA,
   })
-  const variante = ficha ? varianteExcliente(ficha.polizas) : null
-  if (!ficha || !variante) { await fijar('descartada'); return { estado: 'ya_no_aplica' } }
+  // Se recalcula TODO: identidad (otra ficha en vigor), variante, y que sea la MISMA que se reservó (el texto aprobado).
+  const otraEnVigor = ficha ? clientePorOtraFicha(ficha.dniLookupHash, await hashesConCarteraEnVigor(db as unknown as DbLectura, correduriaId, [ficha.dniLookupHash])) : false
+  const variante = ficha && !otraEnVigor ? varianteExcliente(ficha.polizas, ahora) : null
+  if (!ficha || !varianteSigueIgual(fila.variante, variante)) { await fijar('descartada'); return { estado: 'ya_no_aplica' } }
   const { destinatarioDeCliente } = await import('./avisos-vencimiento-reglas')
   const destino = destinatarioDeCliente(ficha)
   if (!destino) { await fijar('solo_app'); return { estado: 'sin_destino' } }

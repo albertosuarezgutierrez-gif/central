@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { MEDIADOR } from '@central/module-seguros'
 import {
-  botonesExcliente, iniciales, leerBotonFex, modoExclientes, propuestaDelDia, telefonoCorto, textoPropuestaTelegram, varianteExcliente,
+  botonesExcliente, clientePorOtraFicha, iniciales, leerBotonFex, posiblementeVigente, varianteSigueIgual, modoExclientes, propuestaDelDia, telefonoCorto, textoPropuestaTelegram, varianteExcliente,
 } from './felicitaciones-exclientes-reglas.ts'
 import { cuerpoFelicitacionExcliente } from './correo-felicitacion.ts'
 import { felicitarExclientes } from './felicitaciones-exclientes.ts'
@@ -17,20 +17,22 @@ const vivaEnVigor = { importRef: null, eiacXmlHash: 'h', estado: 'activa', susti
 const vivaCancelada = { importRef: null, eiacXmlHash: 'h', estado: 'cancelada', sustituidaAt: null }
 const volcadoVigente = { importRef: 'X1', eiacXmlHash: null, estado: 'en_vigor', sustituidaAt: null }
 const volcadoCancelado = { importRef: 'X2', eiacXmlHash: null, estado: 'cancelada', sustituidaAt: null }
+const HOY = new Date('2026-10-31T10:00:00Z')
+const v = (ps: Parameters<typeof varianteExcliente>[0]) => varianteExcliente(ps, HOY)
 
 test('elegibilidad: sin pólizas (lead) o con cartera en vigor → no entra', () => {
-  assert.equal(varianteExcliente([]), null)
-  assert.equal(varianteExcliente([vivaEnVigor]), null)
-  assert.equal(varianteExcliente([vivaEnVigor, vivaCancelada, volcadoVigente]), null, 'con UNA en vigor ya la felicita el cron de clientes')
+  assert.equal(v([]), null)
+  assert.equal(v([vivaEnVigor]), null)
+  assert.equal(v([vivaEnVigor, vivaCancelada, volcadoVigente]), null, 'con UNA en vigor ya la felicita el cron de clientes')
 })
 
 test('variante: vigente fuera de CIMA → posible_cliente; el resto → ex_cliente', () => {
-  assert.equal(varianteExcliente([vivaCancelada]), 'ex_cliente')
-  assert.equal(varianteExcliente([volcadoCancelado]), 'ex_cliente')
-  assert.equal(varianteExcliente([volcadoVigente]), 'posible_cliente')
-  assert.equal(varianteExcliente([vivaCancelada, volcadoVigente]), 'posible_cliente')
+  assert.equal(v([vivaCancelada]), 'ex_cliente')
+  assert.equal(v([volcadoCancelado]), 'ex_cliente')
+  assert.equal(v([volcadoVigente]), 'posible_cliente')
+  assert.equal(v([vivaCancelada, volcadoVigente]), 'posible_cliente')
   // Viva vigente pero SUSTITUIDA no es «no viva»: no la convierte en posible cliente.
-  assert.equal(varianteExcliente([{ ...vivaEnVigor, sustituidaAt: new Date() }]), 'ex_cliente')
+  assert.equal(v([{ ...vivaEnVigor, sustituidaAt: new Date() }]), 'ex_cliente')
 })
 
 test('🚨 la consulta: persona física, no fusionada, con póliza, sin cartera en vigor, sin baja y con fecha', () => {
@@ -39,12 +41,12 @@ test('🚨 la consulta: persona física, no fusionada, con póliza, sin cartera 
   assert.match(src, /polizas: \{ some: \{ mergedIntoPolizaId: null \} \}/)
   assert.match(src, /polizas: \{ none: \{ mergedIntoPolizaId: null, \.\.\.WHERE_CARTERA_EN_VIGOR \} \}/)
   // Sin email válido no se reserva nada (aquí no hay «solo en la app»).
-  const bucle = src.slice(src.indexOf('for (const f of fichas)'))
+  const bucle = src.slice(src.indexOf('for (const f of deHoy)'))
   assert.ok(bucle.indexOf('if (!destino) { r.sinCorreo += 1; continue }') < bucle.indexOf('insert into felicitacion'))
 })
 
 test('🚨 idempotencia: la MISMA reserva por persona y año, antes de Telegram o del correo', () => {
-  const bucle = src.slice(src.indexOf('for (const f of fichas)'))
+  const bucle = src.slice(src.indexOf('for (const f of deHoy)'))
   const reserva = bucle.indexOf('on conflict (cliente_id, anio) do nothing')
   assert.ok(reserva > 0 && reserva < bucle.indexOf('tgSendButtons(') && reserva < bucle.indexOf('enviarFelicitacionExcliente('))
   assert.match(bucle, /if \(reservada === 0\) \{ r\.yaFelicitados \+= 1; continue \}/)
@@ -70,7 +72,7 @@ test('🚨 puerta apagada = 0 envíos y ni se abre la BD', async () => {
 })
 
 test('en modo aprobar no se envía: solo Telegram con botones', () => {
-  const bucle = src.slice(src.indexOf('for (const f of fichas)'))
+  const bucle = src.slice(src.indexOf('for (const f of deHoy)'))
   const aprobar = bucle.slice(bucle.indexOf("if (modo === 'aprobar') {"), bucle.indexOf('const res = await enviarFelicitacionExcliente('))
   assert.match(aprobar, /tgSendButtons\(/)
   assert.doesNotMatch(aprobar, /enviarFelicitacion/)
@@ -130,4 +132,41 @@ test('Telegram: botones ≤ 64 bytes que se leen de vuelta; resumen sin email', 
 test('una propuesta solo se envía el día del cumpleaños', () => {
   assert.equal(propuestaDelDia('2026-10-30', '2026-10-30'), true)
   assert.equal(propuestaDelDia('2026-10-30', '2026-10-31'), false)
+})
+
+test('🚨 variante conservadora: anula al vencimiento o baja sin fecha pasada = posiblemente vigente', () => {
+  const viva = (estado: string, extra: Record<string, unknown> = {}) => ({ importRef: null, eiacXmlHash: 'h', estado, sustituidaAt: null, ...extra })
+  assert.equal(posiblementeVigente(viva('anula_al_vencimiento'), HOY), true)
+  assert.equal(posiblementeVigente(viva('fin_riesgo'), HOY), true, 'sin fechas no se da la baja por consumada')
+  assert.equal(posiblementeVigente(viva('competencia', { fechaVencimiento: new Date('2027-03-01') }), HOY), true)
+  assert.equal(posiblementeVigente(viva('competencia', { fechaVencimiento: new Date('2026-10-31') }), HOY), true, 'hoy no está pasado')
+  assert.equal(posiblementeVigente(viva('fin_riesgo', { fechaVencimiento: new Date('2026-01-01') }), HOY), false)
+  assert.equal(posiblementeVigente(viva('competencia', { fechaSituacion: new Date('2025-06-01') }), HOY), false)
+  assert.equal(posiblementeVigente(viva('cancelada'), HOY), false)
+  assert.equal(v([viva('anula_al_vencimiento')]), 'posible_cliente')
+  assert.equal(v([viva('fin_riesgo')]), 'posible_cliente')
+  assert.equal(v([viva('fin_riesgo', { fechaVencimiento: new Date('2026-01-01') })]), 'ex_cliente')
+})
+
+test('🚨 identidad: otra ficha (mismo DNI ciego) con cartera en vigor = cliente → fuera, aquí y al pulsar ✅', () => {
+  const enVigor = new Set(['hashA'])
+  assert.equal(clientePorOtraFicha('hashA', enVigor), true)
+  assert.equal(clientePorOtraFicha('hashB', enVigor), false)
+  assert.equal(clientePorOtraFicha(null, enVigor), false, 'sin hash no se funde a nadie')
+  assert.equal(clientePorOtraFicha('', new Set([''])), false)
+  const bucle = src.slice(src.indexOf('for (const f of deHoy)'))
+  assert.ok(bucle.indexOf('clientePorOtraFicha(f.dniLookupHash, enVigorPorDni)') < bucle.indexOf('insert into felicitacion'))
+  const decide = src.slice(src.indexOf('export async function decidirFelicitacionExcliente'))
+  assert.ok(decide.indexOf('clientePorOtraFicha(ficha.dniLookupHash') < decide.indexOf('enviarFelicitacionExcliente('))
+  assert.match(src, /dniLookupHash: \{ in: unicos \}, polizas: \{ some: \{ mergedIntoPolizaId: null, \.\.\.WHERE_CARTERA_EN_VIGOR \} \}/)
+})
+
+test('🚨 al pulsar ✅ solo sale si la variante recalculada es la reservada (el texto aprobado)', () => {
+  assert.equal(varianteSigueIgual('ex_cliente', 'ex_cliente'), true)
+  assert.equal(varianteSigueIgual('ex_cliente', 'posible_cliente'), false)
+  assert.equal(varianteSigueIgual('posible_cliente', 'ex_cliente'), false)
+  assert.equal(varianteSigueIgual(null, 'ex_cliente'), false)
+  assert.equal(varianteSigueIgual('ex_cliente', null), false)
+  const decide = src.slice(src.indexOf('export async function decidirFelicitacionExcliente'))
+  assert.ok(decide.indexOf('varianteSigueIgual(fila.variante, variante)') < decide.indexOf('enviarFelicitacionExcliente('))
 })

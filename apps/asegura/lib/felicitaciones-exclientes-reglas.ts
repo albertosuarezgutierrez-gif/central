@@ -34,15 +34,52 @@ export function iniciales(nombre: string | null, apellidos: string | null): stri
 
 export type VarianteExcliente = 'ex_cliente' | 'posible_cliente'
 
+/** Lo que hace falta de cada póliza: lo de cartera en vigor + las fechas que dicen si una baja ya se consumó. */
+export type PolizaExcliente = EntradaCarteraEnVigor & { fechaVencimiento?: Date | null; fechaSituacion?: Date | null }
+
+/** Estados de BAJA que no se dan por consumados sin una fecha pasada que lo pruebe. */
+const BAJA_SIN_CONSUMAR = new Set(['fin_riesgo', 'competencia'])
+
+/**
+ * ¿Puede seguir en vigor esta póliza aunque no sea cartera en vigor? Conservador (ante la duda, «sí»):
+ *  - estado vigente fuera de CIMA (volcado sin EIAC);
+ *  - `anula_al_vencimiento`: hasta que venza, sigue cubriendo;
+ *  - `fin_riesgo`/`competencia` sin una fecha (vencimiento o situación/efecto de la baja) ya pasada.
+ * Compara por DÍA (`YYYY-MM-DD`): una fecha de hoy no está «pasada».
+ */
+export function posiblementeVigente(p: PolizaExcliente, hoy: Date): boolean {
+  const estado = p.estado ?? ''
+  if (!esCarteraViva(p) && esEstadoVigente(estado)) return true
+  if (estado === 'anula_al_vencimiento') return true
+  if (BAJA_SIN_CONSUMAR.has(estado)) {
+    const dia = hoy.toISOString().slice(0, 10)
+    const pasada = [p.fechaVencimiento, p.fechaSituacion].some((f) => f instanceof Date && !Number.isNaN(f.getTime()) && f.toISOString().slice(0, 10) < dia)
+    return !pasada
+  }
+  return false
+}
+
 /**
  * Qué felicitación le toca a una persona según TODAS sus pólizas (no fusionadas). `null` = no entra:
  * sin pólizas (lead) o con alguna en cartera en vigor (la felicita el cron de clientes).
  */
-export function varianteExcliente(polizas: readonly EntradaCarteraEnVigor[]): VarianteExcliente | null {
+export function varianteExcliente(polizas: readonly PolizaExcliente[], hoy: Date): VarianteExcliente | null {
   if (polizas.length === 0) return null
   if (polizas.some((p) => esCarteraEnVigor(p))) return null
-  const vigenteNoViva = polizas.some((p) => !esCarteraViva(p) && p.estado != null && esEstadoVigente(p.estado))
-  return vigenteNoViva ? 'posible_cliente' : 'ex_cliente'
+  return polizas.some((p) => posiblementeVigente(p, hoy)) ? 'posible_cliente' : 'ex_cliente'
+}
+
+/**
+ * Identidad: la MISMA persona (mismo `dni_lookup_hash`, no nulo) puede tener OTRA ficha sin fusionar con cartera en
+ * vigor. Entonces es cliente: ni se le felicita aquí ni se le dice que ya no tiene sus seguros con nosotros.
+ */
+export function clientePorOtraFicha(dniLookupHash: string | null | undefined, hashesConCarteraEnVigor: ReadonlySet<string>): boolean {
+  return typeof dniLookupHash === 'string' && dniLookupHash !== '' && hashesConCarteraEnVigor.has(dniLookupHash)
+}
+
+/** Al pulsar ✅: solo sale si lo recalculado AHORA es exactamente lo que se reservó (el texto aprobado). */
+export function varianteSigueIgual(reservada: string | null, ahora: VarianteExcliente | null): ahora is VarianteExcliente {
+  return ahora !== null && reservada === ahora
 }
 
 /** Una propuesta pendiente solo se envía el MISMO día del cumpleaños (`dia` y `hoy` en `YYYY-MM-DD`, Madrid). */
