@@ -2060,3 +2060,126 @@ export function diagMenuNegocioGenerali(urlPagina: string, marcos: readonly Marc
   const t = `diag: pág ${finRutaGenerali(urlPagina)}; ${marcos.length} marco(s): ${partes.join(' · ') || '-'}`
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
+
+// ───────────── v0.2.55: desempate del catálogo con el vehículo de ORIGEN (Mapfre/Allianz) ─────────────
+
+/**
+ * Un vehículo de origen tal como llega en el formulario: `vehiculoConfirmado` (Mapfre: denominación + puertas/CV/cc) y
+ * `seleccionVehiculo` (catálogo separado que confirmó Allianz o vino de la póliza: marca/modelo/descripción/cc). Solo
+ * campos técnicos de catálogo: nada personal (la matrícula nunca está aquí).
+ */
+export type OrigenDesempateGenerali = { fuente: string; texto: string; puertas: number | null; cv: number | null; cc: number | null }
+
+/** Los orígenes del formulario (los que traen texto). Vacío = sin datos de origen. PURA. */
+export function origenesDesempateGenerali(form: Pick<FormularioAuto, 'seleccionVehiculo' | 'vehiculoConfirmado'>): OrigenDesempateGenerali[] {
+  const out: OrigenDesempateGenerali[] = []
+  const vc = form.vehiculoConfirmado
+  if (vc && typeof vc.denominacion === 'string' && vc.denominacion.trim() !== '') {
+    const fuente = vc.origen ? `${vc.origen.charAt(0).toUpperCase()}${vc.origen.slice(1)}` : 'vehículo confirmado'
+    out.push({ fuente, texto: vc.denominacion, puertas: vc.puertas ?? null, cv: vc.cv ?? null, cc: vc.cc ?? null })
+  }
+  const sv = form.seleccionVehiculo
+  if (sv && (sv.modelo?.trim() || sv.descripcion?.trim())) {
+    const texto = [sv.marca, sv.modelo, sv.descripcion].filter((x): x is string => typeof x === 'string' && x.trim() !== '').join(' ')
+    out.push({ fuente: 'Allianz/póliza', texto, puertas: null, cv: null, cc: sv.cilindradaCc ?? null })
+  }
+  return out
+}
+
+/** Carrocería canónica: sinónimos del catálogo → una sola palabra (las que no se nombran no cuentan como carrocería). */
+const CARROCERIA_GENERALI: Readonly<Record<string, string>> = Object.freeze({
+  COUPE: 'COUPE', CABRIO: 'CABRIO', CABRIOLET: 'CABRIO', DESCAPOTABLE: 'CABRIO', CONVERTIBLE: 'CABRIO',
+  FAMILIAR: 'FAMILIAR', SW: 'FAMILIAR', ESTATE: 'FAMILIAR', TOURER: 'FAMILIAR', BREAK: 'FAMILIAR', AVANT: 'FAMILIAR', KOMBI: 'FAMILIAR',
+})
+
+export type RasgosCatalogoGenerali = { tokens: Set<string>; carrocerias: Set<string>; puertas: number | null; cv: number | null; cc: number | null }
+
+/** Rasgos de un texto de catálogo: palabras (carrocería canónica, nº de puertas como «5P»), CV («75CV») y cc («1124CC»). PURA. */
+export function rasgosCatalogoGenerali(texto: string, extra: { puertas?: number | null; cv?: number | null; cc?: number | null } = {}): RasgosCatalogoGenerali {
+  const n = normalizarCatalogo(texto)
+  let puertas = extra.puertas ?? null
+  let cv = extra.cv ?? null
+  let cc = extra.cc ?? null
+  const mp = /\b([2-5])\s*(?:P|PTAS?|PUERTAS)\b/.exec(n)
+  if (mp && puertas === null) puertas = Number(mp[1])
+  const mcv = /\b(\d{2,3})\s*(?:CV|HP)\b/.exec(n)
+  if (mcv && cv === null) cv = Number(mcv[1])
+  const mcc = /\b(\d{3,4})\s*CC\b/.exec(n)
+  if (mcc && cc === null) cc = Number(mcc[1])
+  const limpio = n
+    .replace(/\b[2-5]\s*(?:P|PTAS?|PUERTAS)\b/g, ' ')
+    .replace(/\b\d{2,3}\s*(?:CV|HP)\b/g, ' ')
+    .replace(/\b\d{3,4}\s*CC\b/g, ' ')
+  const tokens = new Set<string>()
+  const carrocerias = new Set<string>()
+  for (const w of limpio.split(' ')) {
+    if (w === '') continue
+    const c = CARROCERIA_GENERALI[w]
+    if (c) {
+      carrocerias.add(c)
+      tokens.add(c)
+      continue
+    }
+    // Cifras sueltas fuera (año, kW, CV sin unidad: ambiguas); sí palabras con letras («FORFOUR») y cilindradas en litros («1.1»).
+    if (/[A-Z]/.test(w) || /^\d\.\d$/.test(w)) tokens.add(w)
+  }
+  const p = puertas !== null && puertas > 0 ? puertas : null
+  if (p !== null) tokens.add(`${p}P`)
+  return { tokens, carrocerias, puertas: p, cv, cc }
+}
+
+const cercaGenerali = (a: number, b: number, rel: number, abs: number) => Math.abs(a - b) <= Math.max(abs, Math.abs(b) * rel)
+
+export type DesempateOrigenGenerali =
+  | { tipo: 'unica'; indice: number; supuesto: string }
+  | { tipo: 'sin_datos' }
+  | { tipo: 'ninguna' }
+  | { tipo: 'varias'; indices: number[] }
+
+/** Supuesto declarado (lleva «supuesto»: la oferta queda `estimado` en la firmeza). */
+export function avisoDesempateOrigenGenerali(nivel: 'modelo' | 'version', opcion: string, fuentes: readonly string[]): string {
+  const que = nivel === 'modelo' ? 'modelo' : 'versión'
+  const elegida = nivel === 'modelo' ? 'elegido' : 'elegida'
+  return `${que} «${opcion.replace(/\s+/g, ' ').trim().slice(0, 60)}» ${elegida} por coincidencia con el vehículo de ${fuentes.join(' y ')} (supuesto; revisar en la emisión)`
+}
+
+/**
+ * v0.2.55 · Desempate del catálogo de Generali con el vehículo de ORIGEN (Mapfre/Allianz). Se llama SOLO cuando el bot iba a parar
+ * por `requiere_eleccion_version` (Generali no busca por matrícula). Regla, sobre textos normalizados (`normalizarCatalogo`):
+ *   1. Rasgos de cada opción: palabras + carrocería canónica (COUPE · CABRIO · FAMILIAR) + puertas («5P») + CV/cc si los trae.
+ *      Palabras DISTINTIVAS = las que no están en TODAS las opciones (lo común no desempata).
+ *   2. Una opción CONTRADICE un origen si ambos dicen carrocería y no coinciden, o puertas distintas, o CV/cc fuera de ±5 % (2 CV / 20 cc).
+ *   3. Un origen APOYA una opción si comparte alguna palabra distintiva y no la contradice. Si apoya a alguna, su conjunto son las apoyadas;
+ *      si no apoya a ninguna (su texto no habla de este nivel), solo descarta las contradichas.
+ *   4. Resultado = intersección de los conjuntos de todos los orígenes, y la elegida tiene que estar apoyada por al menos uno.
+ *      Exactamente UNA → `unica` con su supuesto; 0 (p. ej. Mapfre y Allianz discrepan) → `ninguna`; >1 → `varias`. Sin orígenes → `sin_datos`.
+ * `indice` es la posición en `opciones` (las vacías y «Otros…» nunca se eligen). Nunca «la más parecida». PURA.
+ */
+export function desempatarPorOrigenGenerali(opciones: readonly string[], origenes: readonly OrigenDesempateGenerali[], nivel: 'modelo' | 'version' = 'version'): DesempateOrigenGenerali {
+  const conTexto = origenes.filter((o) => normalizarCatalogo(o.texto) !== '')
+  if (conTexto.length === 0) return { tipo: 'sin_datos' }
+  const cand = opciones
+    .map((o, i) => ({ i, o, r: rasgosCatalogoGenerali(o) }))
+    .filter((x) => !esOpcionVaciaCatalogo(x.o) && !esOpcionOtrosModeloGenerali(x.o))
+  if (cand.length === 0) return { tipo: 'ninguna' }
+  const comunes = new Set([...cand[0]!.r.tokens].filter((t) => cand.every((c) => c.r.tokens.has(t))))
+  const distintivas = (r: RasgosCatalogoGenerali) => [...r.tokens].filter((t) => !comunes.has(t))
+  let enJuego = new Set(cand.map((c) => c.i))
+  const apoyos = new Map<number, string[]>()
+  for (const o of conTexto) {
+    const ro = rasgosCatalogoGenerali(o.texto, { puertas: o.puertas, cv: o.cv, cc: o.cc })
+    const contradice = (r: RasgosCatalogoGenerali) =>
+      (r.carrocerias.size > 0 && ro.carrocerias.size > 0 && ![...r.carrocerias].some((c) => ro.carrocerias.has(c))) ||
+      (r.puertas !== null && ro.puertas !== null && r.puertas !== ro.puertas) ||
+      (r.cv !== null && ro.cv !== null && !cercaGenerali(r.cv, ro.cv, 0.05, 2)) ||
+      (r.cc !== null && ro.cc !== null && !cercaGenerali(r.cc, ro.cc, 0.05, 20))
+    const compatibles = cand.filter((c) => !contradice(c.r))
+    const apoya = compatibles.filter((c) => distintivas(c.r).some((t) => ro.tokens.has(t)))
+    const conjunto = new Set((apoya.length > 0 ? apoya : compatibles).map((c) => c.i))
+    for (const c of apoya) apoyos.set(c.i, [...(apoyos.get(c.i) ?? []), o.fuente])
+    enJuego = new Set([...enJuego].filter((i) => conjunto.has(i)))
+  }
+  const finales = [...enJuego].filter((i) => apoyos.has(i))
+  if (finales.length === 1) return { tipo: 'unica', indice: finales[0]!, supuesto: avisoDesempateOrigenGenerali(nivel, opciones[finales[0]!]!, [...new Set(apoyos.get(finales[0]!)!)]) }
+  return finales.length === 0 ? { tipo: 'ninguna' } : { tipo: 'varias', indices: finales }
+}

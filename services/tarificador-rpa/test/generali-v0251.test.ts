@@ -10,7 +10,7 @@ import { ErrorMapaIncompletoGenerali, VERSION_GENERALI_AUTO, hastaPrecioGenerali
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.51 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.54'))
+test('v0.2.51 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.55'))
 
 test('v0.2.51 · puro: tarea del último refresco sin valores', () => {
   assert.equal(tareaRefrescoGenerali('https://www.generali.es/emi_genAutosFormWeb/refreshEmiAutosGenA.do?tarea=updatedCampoSini&valueParameter=x&x=C0109'), 'refreshEmiAutosGenA.do tarea=updatedCampoSini')
