@@ -11,7 +11,7 @@ import { listarGastosFijos, huellaFijo } from '@/lib/sivra/gastos-fijos'
 import { PROVEEDOR_LIMPIEZA } from '@/lib/sivra/factura-limpieza-lectura'
 import {
   UNIDADES_PISO, PROPIEDAD_COMPARTIDA, unidadesDeMovimiento, unidadesDeGasto, coberturaFifo, evaluarUnidad,
-  facturasSinCargo, finDeMes, mesSiguiente, sumarDias, paresBloqueados, mensajeBloqueo,
+  facturasSinCargo, unidadesQueNoCuadran, finDeMes, mesSiguiente, sumarDias, paresBloqueados, mensajeBloqueo,
   type Apunte, type CuentaUnidad, type ReservaMes, type MovDuplicable, type ResultadoUnidad, type ParMesUnidad,
   type FijosMes, type LimpiezaMes,
 } from '@/lib/cierre-mes'
@@ -263,7 +263,7 @@ export async function estadosCierre(cuentaId: string, mes: string): Promise<Reco
 export async function cerrarMes(cuentaId: string, mes: string, hoy: string, actor: string): Promise<{ cerradas: string[]; noCuadran: string[] }> {
   const resultados = await calcularCierre(cuentaId, mes, hoy)
   await persistirCierre(cuentaId, mes, resultados)
-  const noCuadran = resultados.filter(r => r.veredicto !== 'cuadra').map(r => r.unidad)
+  const noCuadran = unidadesQueNoCuadran(resultados, await estadosCierre(cuentaId, mes))
   if (noCuadran.length) return { cerradas: [], noCuadran }
   const filas = await prisma.$queryRaw<{ unidad: string }[]>(Prisma.sql`
     UPDATE cierres_mes SET estado = 'cerrado', cerrado_at = now(), cerrado_por = ${actor}, updated_at = now()

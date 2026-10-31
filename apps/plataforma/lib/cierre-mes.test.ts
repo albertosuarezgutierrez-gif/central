@@ -5,7 +5,7 @@ import {
   coberturaFifo, cobroEnPlazo, facturasSinCargo, buscarDuplicados, veredicto, evaluarUnidad,
   unidadesDeGasto, unidadesDeMovimiento, paresDeGasto, paresBloqueados, faseDelDia, mesACerrar,
   ofrecerCierre, interpretarCallbackCierre, callbackCerrar, formatearResumenCierre, finDeMes,
-  titularidadDescuadrada, type Check, type ReservaMes, type DatosCierreUnidad,
+  titularidadDescuadrada, unidadesQueNoCuadran, lecturaCerradosFallidaBloquea, type Check, type ReservaMes, type DatosCierreUnidad,
 } from './cierre-mes.ts'
 
 const MES = '2026-09'
@@ -242,4 +242,19 @@ test('titularidad: cada piso suma 100', () => {
     { propiedadId: 'prop_house_sevillana', porcentaje: 50 }, { propiedadId: 'prop_house_sevillana', porcentaje: 50 },
     { propiedadId: 'prop_duplex_center', porcentaje: 90 },
   ]), ['prop_duplex_center'])
+})
+
+test('cerrar: una unidad ya cerrada que ahora no cuadra no bloquea; una abierta que no cuadra, sí', () => {
+  const res = [
+    { unidad: 'a', veredicto: 'pendiente' as const }, { unidad: 'b', veredicto: 'no_se_sabe' as const },
+    { unidad: 'c', veredicto: 'cuadra' as const },
+  ]
+  assert.deepEqual(unidadesQueNoCuadran(res, { a: 'cerrado', b: 'en_revision' }), ['b'])
+  assert.deepEqual(unidadesQueNoCuadran(res, {}), ['a', 'b'])
+})
+
+test('fijos: lectura de cierres caída bloquea (503) solo en meses pasados', () => {
+  assert.equal(lecturaCerradosFallidaBloquea('2026-09', '2026-10-31'), true)
+  assert.equal(lecturaCerradosFallidaBloquea('2026-10', '2026-10-31'), false)
+  assert.equal(lecturaCerradosFallidaBloquea('2026-11', '2026-10-31'), false)
 })

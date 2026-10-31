@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { generarGastosFijos } from '@/lib/sivra/gastos-fijos'
 import { pisosCerrados } from '@/lib/cierre-mes-db'
-import { unidadesDeGasto } from '@/lib/cierre-mes'
+import { unidadesDeGasto, lecturaCerradosFallidaBloquea, hoyMadrid } from '@/lib/cierre-mes'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -26,10 +26,15 @@ export async function GET(req: NextRequest) {
 
   // Mes CERRADO de un piso (`cierres_mes`): sus fijos no se generan (se listan en `bloqueados`).
   let cerrados: Set<string>
+  const mes = `${year}-${String(month).padStart(2, '0')}`
   try {
-    cerrados = await pisosCerrados(`${year}-${String(month).padStart(2, '0')}`)
+    cerrados = await pisosCerrados(mes)
   } catch {
-    return NextResponse.json({ error: 'No se pudo comprobar si el mes está cerrado' }, { status: 503 })
+    // Mes actual o futuro: no puede estar cerrado → se sigue sin bloqueados. Pasado: no se adivina.
+    if (lecturaCerradosFallidaBloquea(mes, hoyMadrid())) {
+      return NextResponse.json({ error: 'No se pudo comprobar si el mes está cerrado' }, { status: 503 })
+    }
+    cerrados = new Set<string>()
   }
   const bloqueado = (propiedad: string | null) => unidadesDeGasto(propiedad).some(u => cerrados.has(u))
 

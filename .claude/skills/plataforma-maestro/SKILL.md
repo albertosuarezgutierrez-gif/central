@@ -45,6 +45,16 @@ Antes de tocar nada: lee `apps/plataforma/CLAUDE.md` y el archivo de references/
     NO se catalogan (silenciarlas rompe la conversación). El gate es **fail-open**: si la BD falla,
     el aviso SALE. Y `make_interval(days => ${n})` siempre con **`::int`** (Prisma manda int8 → 42883).
 
+## Cierre contable mensual (pisos turísticos)
+- Código: `apps/plataforma/lib/cierre-mes.ts` (puro, test) + `cierre-mes-db.ts` (SQL). Tablas `cierres_mes` (estado
+  `en_revision`/`cerrado`/`reabierto` por mes+unidad) y `propiedad_titularidad` (SQL `prisma/sql/2026-10-30_cierres_mes.sql`).
+- Cron los días 5 (pre-cierre) y 15 (cierre) sobre el mes anterior; Telegram con el botón `cmes_` (✅ Cerrar mes; recalcula al pulsar).
+- Guard: escribir un gasto de un mes cerrado = 409 (503 si no se puede comprobar); reabrir con motivo en `POST /api/cierres-mes/reabrir`.
+  Generar fijos salta los pisos cerrados (si la lectura cae: 503 en meses pasados; mes actual/futuro sigue).
+- Seis checks por piso, cada uno en tres estados `ok` / `pendiente` / `no_se_sabe` (nunca vacío = ok); cuadra solo con ok o pendiente aceptado.
+- Devengo de fijos: seguros e IBI prorrateados por mes; el cargo bancario solo cuenta si está conciliado.
+- Titularidad: Socorro (`prop_house_sevillana`) 50 % Alberto / 50 % Pilar; el resto 100 % Alberto. Los Bustos (Luxury y Reform) están en subarriendo (régimen `arrendamiento`).
+
 ## ÍNDICE de references/
 **Lee SOLO el archivo de references/ que necesite la tarea; no los cargues todos.**
 

@@ -478,3 +478,20 @@ export function titularidadDescuadrada(filas: { propiedadId: string; porcentaje:
   for (const f of filas) suma.set(f.propiedadId, (suma.get(f.propiedadId) ?? 0) + f.porcentaje)
   return [...suma].filter(([, s]) => Math.abs(s - 100) > 0.001).map(([p]) => p)
 }
+
+// ── Decisiones puras de I/O ───────────────────────────────────────────────────────────────────────
+/**
+ * Unidades que impiden cerrar: no cuadran Y no están ya cerradas (un mes `cerrado` es un snapshot:
+ * lo que cambie después no lo bloquea; se corrige reabriéndolo).
+ */
+export function unidadesQueNoCuadran(resultados: { unidad: string; veredicto: Veredicto }[], estados: Record<string, string>): string[] {
+  return resultados.filter(r => r.veredicto !== 'cuadra' && estados[r.unidad] !== 'cerrado').map(r => r.unidad)
+}
+
+/**
+ * Si falla la lectura de `cierres_mes` al generar fijos: 503 solo para meses PASADOS (podrían estar
+ * cerrados). El mes actual o futuro no puede estar cerrado, así que se sigue con el conjunto vacío.
+ */
+export function lecturaCerradosFallidaBloquea(mes: string, hoy: string): boolean {
+  return mes < mesDe(hoy)
+}
