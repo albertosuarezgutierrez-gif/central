@@ -70,6 +70,7 @@ y los `module-*` de cada vertical.
 - **Comunicaciones salientes:** NUNCA correo/mensaje a terceros sin OK explícito de Alberto para ESE envío. Por defecto, borrador.
   - Factura del huésped: cuando el huésped la pide por mensaje, el agente prepara el borrador con sus datos y lo manda a Alberto por Telegram con ✅ Enviar / ✏️ Modificar; nada sale sin su botón (29/10/2026).
 - **Datos de Alberto para formularios/borradores** (NIF, móvil, nombre): ya están en `MEDIADOR` de `packages/module-seguros/src/mediador.ts` (NIF `28823484E`, móvil 637 349 990). Úsalos; **no se los vuelvas a pedir**.
+- **Situación fiscal personal** (titularidad de pisos, hijos, familia numerosa, hipotecas, decisiones fiscales): ya está en la skill `perfil-fiscal` y en `fiscal_perfil`; léelos antes de preguntar y **no se los vuelvas a pedir**.
 - **Quién mira qué pantalla:** antes de dar por avisada a una persona, comprueba dónde trabaja. Vanesa (Sique Brilla)
   SOLO abre `/invitado/limpieza`; `sivra_ordenes_limpieza.tarea_id` NULL = no lo ve, y se dice.
 - **Dato que NO hay ≠ dato que NO se ha mirado:** en columnas de enriquecimiento, `null` = «no se sabe»; nunca

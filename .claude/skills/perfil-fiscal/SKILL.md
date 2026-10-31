@@ -12,6 +12,21 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
 - **Declaración IRPF 2025 ya presentada (30/06/2026):** no tocar 2025 ni reclasificar movimientos anteriores a 2026-01-01; solo importa 2026 en adelante.
 - **Datos sensibles NO aquí:** viven en BD `fiscal_perfil`/`fiscal_descendientes` (Supabase, por `cuenta_id`) y en el borrador AEAT. Asesoría: Asecon Consultores (Marta).
 
+## Hechos confirmados por Alberto (31/10/2026) — no volver a preguntar
+- **Socorro 24:** 50 % Alberto / 50 % Pilar, capital inmobiliario, una sola unidad (smoobuId 352007), **SIN hipoteca**. Amortización: coste 374.412,20€ × 60,58 % construcción (catastro 2015 / IRPF 2023; valor catastral 75.274,63€ sin revisión) × 3 %, prorrateo por días con reserva cobrada (las de 0€ no cuentan).
+- **Dúplex:** 100 % Alberto, **SIN hipoteca**, ≈1.914€/año de amortización.
+- **Bustos Tavera 22 (dos bajos):** subarriendo, capital mobiliario, titular Alberto, cobra en Kutxa; el alquiler a la propietaria es gasto.
+- **Correduría Grupo ASegura:** persona física, estimación directa. Codeoscopic es gasto de la correduría, no de los pisos.
+- **Pilar:** autónoma (RETA), actividad pequeña. Cobró prestación por nacimiento en 2026 (exenta, art. 7.h). Su cuota de autónomos: `fiscal_perfil.conyuge_cuota_autonomos` (pendiente confirmar si es anual o mensual).
+- **Familia numerosa general, 3 hijos.** Las fechas de nacimiento están solo en `fiscal_perfil` (fuente de verdad); no copiarlas a docs.
+- **Decisiones:**
+  - Televisor El Corte Inglés 1.749€ (Socorro, pagado con tarjeta) = gasto íntegro 2026, por decisión de Alberto.
+  - TotalEnergies = electricidad deducible.
+  - Vía sociedad **DESCARTADA** para los pisos. Punto y Coma está inactiva (~200€/mes de asesoría) y hay un requerimiento AEAT 2024 abierto: no mover nada en ella hasta cerrarlo.
+  - Criterio rector: «lo más sencillo y claro posible».
+  - Declaración individual sale ≈5.000€ más barata que la conjunta en 2026 [Probable, validar con asesoría].
+- **Fuente viva:** panel `/finanzas/fiscal` «Mi situación fiscal» (editable) + tablas `fiscal_perfil` y `propiedad_titularidad`.
+
 ## 🚨 Reglas dictadas por Alberto — canónicas aquí
 - **⛔ Amortización — SOLO con orden explícita de Alberto (dictado 02/07/2026):** NUNCA marcar un
   cargo como `amortizable` sin que Alberto lo diga expresamente para ESA factura. **Su criterio es
