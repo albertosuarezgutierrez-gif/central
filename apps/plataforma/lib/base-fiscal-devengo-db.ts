@@ -11,8 +11,8 @@
 //    `gastos` de la correduría NO se lee aquí.
 import { prisma } from './db'
 import {
-  avisosDatos, calcularPeriodo, compararConjuntaIndividual, estimarCierre, periodoCierre,
-  type Actividad, type AvisosDatos, type Comparativa, type EntradaBase, type Estimacion, type Periodo,
+  avisosDatos, calcularCostesUnitarios, calcularPeriodo, compararConjuntaIndividual, estimarCierre, periodoCierre,
+  type Actividad, type AvisosDatos, type Comparativa, type EntradaBase, type EntradaCostes, type Estimacion, type FilaIngreso, type Periodo,
   type PropiedadFiscal, type ParamsCuota,
 } from './base-fiscal-devengo.ts'
 
@@ -22,8 +22,8 @@ export type BaseDevengo = {
   hastaHoy: Periodo
   comparativaHoy: Comparativa | null
   estimacion: Estimacion
-  cierre: Periodo
-  comparativaCierre: Comparativa | null
+  /** Un cierre (real + escenario estimado) y su comparativa conjunta/individual por escenario. */
+  cierres: { id: Estimacion['escenarios'][number]['id']; cierre: Periodo; comparativa: Comparativa | null }[]
   propiedades: PropiedadFiscal[]
   avisos: AvisosDatos
 }
@@ -37,12 +37,13 @@ function hoyMadrid(): string {
 export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: string): Promise<EntradaBase> {
   const ini = `${anio}-01-01`, fin = `${anio}-12-31`
 
-  const [tit, ing, gas, limp, bancoCor, bancoPil] = await Promise.all([
+  const refIni = `${anio - 1}${hoy.slice(4)}`, refFin = `${anio - 1}-12-31`
+  const [tit, ing, gas, limp, bancoCor, bancoPil, lavFact, fijosBd, refBd] = await Promise.all([
     prisma.$queryRaw<Array<{ propiedad_id: string; titular: string; porcentaje: unknown; regimen: string | null; nombre: string | null }>>`
       SELECT t.propiedad_id, t.titular, t.porcentaje, t.regimen, p.name AS nombre
       FROM propiedad_titularidad t LEFT JOIN properties p ON p.id = t.propiedad_id`,
-    prisma.$queryRaw<Array<{ pid: string; ci: string; co: string; bruto: unknown; neto: unknown }>>`
-      SELECT "propertyId" AS pid,
+    prisma.$queryRaw<Array<{ pid: string; ci: string; co: string; bruto: unknown; neto: unknown; portal: string | null; adultos: number | null; ninos: number | null }>>`
+      SELECT "propertyId" AS pid, portal::text AS portal, adults AS adultos, children AS ninos,
              to_char(("checkIn" AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS ci,
              to_char(("checkOut" AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS co,
              coalesce(amount_gross, amount) AS bruto, amount AS neto
@@ -50,14 +51,14 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
       -- también las estancias que entran desde el año anterior: solo cuentan sus días para la amortización
       WHERE amount > 0 AND ("checkOut" AT TIME ZONE 'Europe/Madrid')::date >= ${ini}::date
         AND ("checkIn" AT TIME ZONE 'Europe/Madrid')::date <= ${fin}::date`,
-    prisma.$queryRaw<Array<{ propiedad: string; categoria: string | null; proveedor: string | null; mes: string; total: unknown }>>`
-      SELECT propiedad, categoria, proveedor, to_char(fecha, 'YYYY-MM') AS mes, total
+    prisma.$queryRaw<Array<{ propiedad: string; categoria: string | null; proveedor: string | null; concepto: string | null; mes: string; total: unknown }>>`
+      SELECT propiedad, categoria, proveedor, concepto, to_char(fecha, 'YYYY-MM') AS mes, total
       FROM gastos
       WHERE fecha BETWEEN ${ini}::date AND ${fin}::date
         AND descartado_at IS NULL AND revisado = true AND total IS NOT NULL
         AND propiedad LIKE 'prop\_%'`,
-    prisma.$queryRaw<Array<{ periodo: string; pid: string; importe: unknown; factor: unknown }>>`
-      SELECT lf.periodo, x->>'propertyId' AS pid, (x->>'importe')::numeric AS importe,
+    prisma.$queryRaw<Array<{ periodo: string; pid: string; importe: unknown; sesiones: unknown; factor: unknown }>>`
+      SELECT lf.periodo, x->>'propertyId' AS pid, (x->>'importe')::numeric AS importe, (x->>'sesiones')::numeric AS sesiones,
              lf.total / nullif(lf.base, 0) AS factor
       FROM limpieza_facturas lf, jsonb_array_elements(lf.limpieza) x
       WHERE lf.cuenta_id = ${cuentaId} AND lf.periodo BETWEEN ${anio + '-01'} AND ${anio + '-12'}`,
@@ -78,6 +79,23 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
       WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.destino = 'actividad_pilar' AND coalesce(mb.duplicado_estado,'') <> 'ignorado'
         AND mb.fecha_operacion BETWEEN ${ini}::date AND ${fin}::date
       GROUP BY 1`,
+    // Lavandería de las facturas de limpieza (sin IVA en la tabla): con IVA = lavanderia × total/base.
+    prisma.$queryRaw<Array<{ periodo: string; importe: unknown }>>`
+      SELECT periodo, lavanderia * total / nullif(base, 0) AS importe
+      FROM limpieza_facturas
+      WHERE cuenta_id = ${cuentaId} AND periodo BETWEEN ${anio + '-01'} AND ${anio + '-12'} AND lavanderia > 0`,
+    // Resto de gastos fijos: plantillas activas de `gastos_fijos` (importe mensual con IVA).
+    prisma.$queryRaw<Array<{ propiedad: string; categoria: string | null; proveedor: string | null; total: unknown }>>`
+      SELECT propiedad, categoria, proveedor, total FROM gastos_fijos
+      WHERE activo = true AND propiedad LIKE 'prop\_%'`,
+    // Estancias del mismo tramo (hoy→31/12) del año anterior: referencia del escenario de ocupación.
+    prisma.$queryRaw<Array<{ pid: string; ci: string; co: string; bruto: unknown; neto: unknown; portal: string | null; adultos: number | null; ninos: number | null }>>`
+      SELECT "propertyId" AS pid, portal::text AS portal, adults AS adultos, children AS ninos,
+             to_char(("checkIn" AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS ci,
+             to_char(("checkOut" AT TIME ZONE 'Europe/Madrid')::date, 'YYYY-MM-DD') AS co,
+             coalesce(amount_gross, amount) AS bruto, amount AS neto
+      FROM incomes
+      WHERE amount > 0 AND ("checkIn" AT TIME ZONE 'Europe/Madrid')::date BETWEEN ${refIni}::date AND ${refFin}::date`,
   ])
 
   // Propiedades y titularidad
@@ -102,7 +120,7 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
       // Sique Brilla ya entra por limpieza_facturas (repartida por piso); la comisión de Booking.com
       // ya está en bruto − neto (posible duplicado).
       if (prov.includes('brilla') || prov.includes('booking.com')) continue
-      gastosCompartidos.push({ mes: g.mes, importe })
+      gastosCompartidos.push({ mes: g.mes, importe, categoria: g.categoria ?? undefined })
     } else if (mapa.has(g.propiedad)) {
       gastosPiso.push({ propertyId: g.propiedad, mes: g.mes, importe, categoria: g.categoria ?? 'OTRO' })
     }
@@ -121,11 +139,39 @@ export async function cargarEntradaBase(cuentaId: string, anio: number, hoy: str
     return a
   }
 
+  const fila = (r: (typeof ing)[number]): FilaIngreso => ({
+    propertyId: r.pid, checkIn: r.ci, checkOut: r.co, bruto: num(r.bruto), neto: num(r.neto), portal: r.portal,
+    huespedes: r.adultos == null ? null : r.adultos + (r.ninos ?? 0),
+  })
+  const ingresos = ing.map(fila)
+
+  // Costes unitarios: MISMA lógica que el informe de costes (media por estancia / fijo mensual), desde BD.
+  const esAgua = (prov: string | null) => /emasesa/i.test(prov ?? '')
+  const esLuz = (g: { proveedor: string | null; concepto: string | null }) =>
+    /endesa|totalenergies|iberdrola|naturgy/i.test(g.proveedor ?? '') && !/ajustes del sistema|inspecci/i.test(g.concepto ?? '')
+  const costes = calcularCostesUnitarios({
+    anio, hoy, propiedadIds: propiedades.map(p => p.id),
+    limpieza: limp.map(l => ({ propertyId: l.pid, sesiones: num(l.sesiones), importe: num(l.importe), factor: l.factor == null ? null : num(l.factor) })),
+    lavanderia: [
+      ...gas.filter(g => g.propiedad === 'prop_multi_apartamentos' && g.categoria === 'LAVANDERIA').map(g => ({ mes: g.mes, importe: num(g.total) })),
+      ...lavFact.map(l => ({ mes: l.periodo, importe: num(l.importe) })),
+    ],
+    estancias: ingresos,
+    suministros: gas.flatMap((g): EntradaCostes['suministros'] => {
+      if (g.categoria !== 'SUMINISTROS' || !mapa.has(g.propiedad)) return []
+      const base = { propertyId: g.propiedad, mes: g.mes, importe: num(g.total) }
+      return esAgua(g.proveedor) ? [{ ...base, tipo: 'agua' as const }] : esLuz(g) ? [{ ...base, tipo: 'luz' as const }] : []
+    }),
+    // Luz y agua van por su propio coste; internet y demás plantillas son «resto de fijos».
+    fijos: fijosBd.filter(f => mapa.has(f.propiedad) && !esAgua(f.proveedor) && !/endesa|totalenergies|iberdrola|naturgy/i.test(f.proveedor ?? ''))
+      .map(f => ({ propertyId: f.propiedad, total: num(f.total) })),
+  })
+
   return {
-    anio, hoy, propiedades,
-    ingresos: ing.map(r => ({ propertyId: r.pid, checkIn: r.ci, checkOut: r.co, bruto: num(r.bruto), neto: num(r.neto) })),
+    anio, hoy, propiedades, ingresos,
     gastosPiso, gastosCompartidos,
     correduria: act(bancoCor), pilar: act(bancoPil),
+    costes, referencia: refBd.map(fila),
   }
 }
 
@@ -161,10 +207,12 @@ export async function getBaseDevengo(cuentaId: string, anio: number, cuota: Para
   const [entrada, avisos] = await Promise.all([cargarEntradaBase(cuentaId, anio, hoy), cargarAvisos(cuentaId, anio, hoy)])
   const hastaHoy = calcularPeriodo(entrada, `${anio}-01-01`, hoy)
   const estimacion = estimarCierre(entrada, hastaHoy)
-  const cierre = periodoCierre(hastaHoy, estimacion, anio)
+  const cierres = estimacion.escenarios.map(esc => {
+    const cierre = periodoCierre(hastaHoy, esc, anio)
+    return { id: esc.id, cierre, comparativa: cuota ? compararConjuntaIndividual(cierre, entrada.propiedades, cuota) : null }
+  })
   return {
-    anio, hoy, hastaHoy, estimacion, cierre, avisos, propiedades: entrada.propiedades,
+    anio, hoy, hastaHoy, estimacion, cierres, avisos, propiedades: entrada.propiedades,
     comparativaHoy: cuota ? compararConjuntaIndividual(hastaHoy, entrada.propiedades, cuota) : null,
-    comparativaCierre: cuota ? compararConjuntaIndividual(cierre, entrada.propiedades, cuota) : null,
   }
 }

@@ -3,7 +3,7 @@
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge } from '@/components/ui'
 import type { BaseDevengo } from '@/lib/base-fiscal-devengo-db'
-import type { Bloque, Comparativa, Periodo } from '@/lib/base-fiscal-devengo'
+import type { Bloque, Comparativa, ConceptoSinDato, Periodo } from '@/lib/base-fiscal-devengo'
 
 const NOMBRE_BLOQUE: Record<Bloque, string> = {
   capital_inmobiliario: 'Capital inmobiliario (Socorro, Dúplex)',
@@ -21,6 +21,13 @@ const th = { textAlign: 'right', padding: '6px 8px', fontSize: '11px', color: 'v
 const td = { textAlign: 'right', padding: '6px 8px', fontSize: '12px', whiteSpace: 'nowrap' } as const
 const fecha = (iso: string) => iso.split('-').reverse().join('/')
 const mesCorto = (m: string) => ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][Number(m.slice(5, 7)) - 1]
+
+function etiquetaSinDato(d: ConceptoSinDato): string {
+  const nombre = { comision: 'comisión', limpieza: 'limpieza', lavanderia: 'lavandería', luz: 'luz', agua: 'agua', fijos: 'gastos fijos' }[d.concepto]
+  return d.concepto === 'comision'
+    ? `${nombre} de ${d.reservas?.toLocaleString('es-ES', { maximumFractionDigits: 1 })} reservas de ${d.nombre} (${eur(d.bruto ?? 0)} brutos)`
+    : `${nombre} de ${d.nombre}`
+}
 
 function Comparativa({ c, titulo }: { c: Comparativa | null; titulo: string }) {
   if (!c) return <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Comparativa sin dato (falta el perfil fiscal).</div>
@@ -145,34 +152,78 @@ export default function BaseDevengoBloque({ data }: { data: BaseDevengo | null }
         <Tabla p={p} />
       </div>
 
-      <div style={card}>
+      <div style={{ ...card, borderStyle: 'dashed' }}>
         <div style={{ marginBottom: '12px' }}>
-          <div style={h}>🔮 Estimación cierre de año (31/12)</div>
+          <div style={h}>🔮 Estimación cierre de año (31/12) <Badge tono="aviso">estimado</Badge></div>
           <div style={sub}>
-            Hasta hoy + {est.mesesRestantes.toLocaleString('es-ES', { maximumFractionDigits: 1 })} meses estimados: {est.futuro.reservas} reservas futuras
-            ({eur(est.futuro.bruto)} brutos, comisión {eur(est.futuro.comision)}), gasto medio mensual de los meses completos ({eur(est.futuro.gastosMedios)}) y amortización ({eur(est.futuro.amortizacion)}).
+            Hasta hoy + {est.mesesRestantes.toLocaleString('es-ES', { maximumFractionDigits: 1 })} meses estimados. Coste variable por reserva
+            (comisión, limpieza y lavandería por estancia), luz, agua y gastos fijos al mes, y amortización por días ocupados.
+            Lo que no tiene dato se dice «sin dato» y no se cuenta como 0.
           </div>
         </div>
-        <div className="fiscal-cols" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '16px' }}>
-          <div>
-            {BLOQUES.map(b => {
-              const x = est.bloques[b]
-              return (
-                <div key={b} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                    <span>{NOMBRE_BLOQUE[b]}</span><strong style={{ color: x.total == null ? 'var(--muted)' : undefined }}>{money(x.total)}</strong>
-                  </div>
-                  <div style={{ fontSize: '10px', color: 'var(--muted)' }}>real {money(x.real)} + estimado {money(x.estimado)}</div>
-                </div>
-              )
-            })}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '13px' }}>
-              <strong>Base general estimada</strong><strong>{eur(est.baseGeneral)}</strong>
-            </div>
-            <div style={sub}>De ella, {eur(est.baseEstimada)} es estimación (el resto, devengado real).</div>
-          </div>
-          <Comparativa c={data.comparativaCierre} titulo="Conjunta vs individual a 31/12 (estimada)" />
+        <TablaScroll>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '560px', marginBottom: '16px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <th style={{ ...th, textAlign: 'left' }}>A 31/12 (estimado)</th>
+                {est.escenarios.map(x => <th key={x.id} style={th} title={x.descripcion}>{x.etiqueta}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {BLOQUES.map(b => (
+                <tr key={b} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ ...td, textAlign: 'left' }}>{NOMBRE_BLOQUE[b].split(' (')[0]}</td>
+                  {est.escenarios.map(x => <td key={x.id} style={{ ...td, color: x.bloques[b].total == null ? 'var(--muted)' : undefined }}>{money(x.bloques[b].total)}</td>)}
+                </tr>
+              ))}
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>Base general estimada</td>
+                {est.escenarios.map(x => <td key={x.id} style={{ ...td, fontWeight: 700, fontStyle: 'italic' }}>{eur(x.baseGeneral)}</td>)}
+              </tr>
+              <tr>
+                <td style={{ ...td, textAlign: 'left', color: 'var(--muted)' }}>…de la que es estimación</td>
+                {est.escenarios.map(x => <td key={x.id} style={{ ...td, color: 'var(--muted)' }}>{eur(x.baseEstimada)}</td>)}
+              </tr>
+            </tbody>
+          </table>
+        </TablaScroll>
+        <div className="fiscal-cols" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '16px', marginBottom: '16px' }}>
+          {est.escenarios.map(x => {
+            const c = data.cierres.find(k => k.id === x.id)?.comparativa ?? null
+            return <Comparativa key={x.id} c={c} titulo={`Conjunta vs individual · ${x.etiqueta}`} />
+          })}
         </div>
+        <div style={{ ...h, marginBottom: '6px' }}>Futuro por piso (escenario base) · coste variable</div>
+        <TablaScroll>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '860px', marginBottom: '12px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <th style={{ ...th, textAlign: 'left' }}>Piso</th><th style={th}>Reservas</th><th style={th}>Bruto</th><th style={th}>Comisión</th>
+                <th style={th}>Limpieza</th><th style={th}>Lavandería</th><th style={th}>Luz</th><th style={th}>Agua</th><th style={th}>Fijos</th>
+                <th style={th}>Compartidos</th><th style={th}>Amortización</th><th style={th}>Neto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {est.escenarios[0].desglose.map(l => (
+                <tr key={l.propertyId} style={{ borderBottom: '1px solid var(--border)', fontStyle: 'italic' }}>
+                  <td style={{ ...td, textAlign: 'left', fontStyle: 'normal' }}>{l.nombre}</td>
+                  <td style={td}>{l.reservas.toLocaleString('es-ES', { maximumFractionDigits: 1 })}</td><td style={td}>{eur(l.bruto)}</td>
+                  {([l.comision, l.limpieza, l.lavanderia, l.luz, l.agua, l.fijos] as (number | null)[]).map((v, i) => (
+                    <td key={i} style={{ ...td, color: v == null ? 'var(--muted)' : undefined }}>{money(v)}</td>
+                  ))}
+                  <td style={td}>{eur(l.compartidos)}</td><td style={td}>{l.amortizacion == null ? 'n/a' : eur(l.amortizacion)}</td>
+                  <td style={{ ...td, fontWeight: 700 }}>{eur(l.neto)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TablaScroll>
+        {est.escenarios.map(x => x.sinDato.length > 0 && (
+          <div key={x.id} style={{ ...sub, color: 'var(--warning)', marginBottom: '4px' }}>
+            {x.etiqueta}, sin dato (no cuenta como 0): {x.sinDato.map(d => etiquetaSinDato(d)).join(' · ')}.
+          </div>
+        ))}
+        <div style={sub}>No incluye averías ni mantenimientos puntuales. El neto por piso cuenta los conceptos «sin dato» como 0: es una cota optimista.</div>
       </div>
     </>
   )
