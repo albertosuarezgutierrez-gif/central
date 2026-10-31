@@ -1,6 +1,6 @@
 import { formularioBotHogar, datosViviendaParaBot, eleccionesInicialesHogar, type CatalogosHogarLeidos, type RiesgoParaBotsHogar } from '@central/module-tarificacion'
 import { aplicarCompaniaActual } from './tarificador-compania-actual.ts'
-import { necesitaVehiculoEncadenado, riesgoConVehiculo, tieneVehiculo, vehiculoDeOrigenes, type FilaOrigen } from './tarificador-espera-vehiculo.ts'
+import { necesitaVehiculoEncadenado, riesgoConVehiculo, tieneVehiculo, vehiculoDeOrigenes, vehiculoDePolizaViva, type FilaOrigen } from './tarificador-espera-vehiculo.ts'
 
 // Reglas PURAS de «relanzar» un trabajo del tarificador RPA por el puerto de operador (15/10/2026). Sin BD ni red.
 // Relanzar = el MISMO trabajo (mismo riesgo, que sigue en la fila) vuelve a `pendiente`. Pensado para que una sesión de
@@ -85,6 +85,18 @@ export function conCompaniaActualUnica(r: ReconstruccionRiesgo, compania: string
 export function conVehiculoDeOrigen(r: ReconstruccionRiesgo, compania: string, ramo: string, filas: readonly FilaOrigen[]): ReconstruccionRiesgo {
   if (r.riesgo === null || !necesitaVehiculoEncadenado(compania, ramo) || tieneVehiculo(r.riesgo)) return r
   const v = vehiculoDeOrigenes(filas)
+  return v ? { ...r, riesgo: riesgoConVehiculo(r.riesgo, v) } : r
+}
+
+/**
+ * 31/10/2026 · Generali auto sin vehículo de origen (ningún `ok` de Allianz/Mapfre): marca, modelo y versión de la póliza de auto VIVA
+ * vinculada a la oportunidad (`datosEspecificos` = su `datos_especificos`, solo esas tres claves; `vehiculoDePolizaViva`). Va DESPUÉS de
+ * `conVehiculoDeOrigen` (lo confirmado por un bot manda). Sin póliza, sin marca/modelo, otra compañía/ramo, o ya con vehículo → mismo
+ * objeto (sigue el 422 `generali_sin_vehiculo`). PURA.
+ */
+export function conVehiculoDePoliza(r: ReconstruccionRiesgo, compania: string, ramo: string, datosEspecificos: unknown): ReconstruccionRiesgo {
+  if (r.riesgo === null || !necesitaVehiculoEncadenado(compania, ramo) || tieneVehiculo(r.riesgo)) return r
+  const v = vehiculoDePolizaViva(datosEspecificos)
   return v ? { ...r, riesgo: riesgoConVehiculo(r.riesgo, v) } : r
 }
 

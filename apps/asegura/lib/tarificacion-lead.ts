@@ -151,6 +151,33 @@ async function polizaActualVinculada(correduriaId: string, clienteId: string, ra
   return f[0] ?? null
 }
 
+/**
+ * 31/10/2026 · «probar» Generali auto: de la póliza VIVA del MISMO ramo vinculada a la oportunidad MÁS RECIENTE del cliente
+ * (`info_riesgo.polizaId`, mismo filtro que `polizaActualVinculada`), SOLO `marca`, `modelo` y `version` de su `datos_especificos`
+ * (la matrícula ni se lee). Solo SELECT. `null` = sin póliza vinculada/viva o la lectura falló (nunca relleno). Lo valida y traduce
+ * `conVehiculoDePoliza` (puro).
+ */
+export async function leerVehiculoPolizaVinculadaCliente(correduriaId: string, clienteId: string, ramo: string): Promise<unknown | null> {
+  try {
+    const [op] = await prisma.$queryRaw<{ info_riesgo: unknown }[]>`
+      select o.info_riesgo from seguros.oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid and o.tipo::text = ${ramo}
+      order by o.created_at desc limit 1`
+    const info = op?.info_riesgo
+    const id = esObj(info) && typeof info.polizaId === 'string' && /^[0-9a-f-]{36}$/i.test(info.polizaId) ? info.polizaId : null
+    if (!id) return null
+    const f = await prisma.$queryRaw<{ v: unknown }[]>`
+      select jsonb_build_object('marca', p.datos_especificos->'marca', 'modelo', p.datos_especificos->'modelo', 'version', p.datos_especificos->'version') as v
+      from seguros.polizas p
+      where p.id = ${id}::uuid and p.cliente_id = ${clienteId}::uuid and p.correduria_id = ${correduriaId}::uuid
+        and p.tipo::text = ${ramo} and p.estado::text = 'activa' and p.merged_into_poliza_id is null
+        and jsonb_typeof(p.datos_especificos) = 'object'`
+    return f[0]?.v ?? null
+  } catch {
+    return null
+  }
+}
+
 type Interno = RevisionOportunidad & { formulario: FormularioLead | null }
 
 /** Tope de cada consulta externa GRATIS de la revisión (catálogo de motos, Catastro): la revisión corre dentro del triaje. */
