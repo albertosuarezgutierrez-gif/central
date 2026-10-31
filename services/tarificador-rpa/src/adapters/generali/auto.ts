@@ -194,6 +194,8 @@ import {
   urlDatosPersonasGenerali,
   esPortalCorredorGenerali,
   vehiculoBuscadoGenerali,
+  desempatarPorOrigenGenerali,
+  origenesDesempateGenerali,
   type VehiculoBuscado,
 } from './reglas.ts'
 
@@ -414,8 +416,13 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-/** v0.2.54 (31/10/2026, humo real 1f53b8c0): el menú «NEGOCIO» se reconoce sin distinguir mayúsculas (`patronPestanaMenuGenerali`). */
-export const VERSION_GENERALI_AUTO = '0.2.54'
+/**
+ * v0.2.54 (31/10/2026, humo real 1f53b8c0): el menú «NEGOCIO» se reconoce sin distinguir mayúsculas (`patronPestanaMenuGenerali`).
+ * v0.2.55 (31/10/2026, trabajo 24317a03 parado con «FORFOUR · FORTWO CABRIO · FORTWO COUPE»): antes de parar por `requiere_eleccion_version`
+ * (modelo o versión) se intenta desempatar con el vehículo de origen (`desempatarPorOrigenGenerali`, reglas.ts: `vehiculoConfirmado` de Mapfre y
+ * `seleccionVehiculo` de Allianz/póliza). Solo con EXACTAMENTE una opción compatible; se declara como supuesto (precio `estimado`).
+ */
+export const VERSION_GENERALI_AUTO = '0.2.55'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1820,7 +1827,20 @@ export function versionGeneraliPorEquivalencia(candidatas: readonly string[], fo
     { riesgo: referenciaRiesgoVersion(form) },
   )
   if (r.tipo === 'automatica' || r.tipo === 'unica') return { indice: r.indice, supuesto: r.supuesto }
+  const d = desempateOrigenSinPersona(candidatas, form, 'version')
+  if (d) return d
   throw new ErrorEleccionVersion(candidatas.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+}
+
+/**
+ * v0.2.55 · Último intento antes de `requiere_eleccion_version`: desempate con el vehículo de origen (Mapfre/Allianz,
+ * `desempatarPorOrigenGenerali`). Solo si NADIE ha elegido en la bandeja (la elección de una persona manda y no se pisa) y solo
+ * con EXACTAMENTE una opción compatible; `null` = sigue parando como antes. El supuesto va a la oferta (precio `estimado`). PURA.
+ */
+export function desempateOrigenSinPersona(opciones: readonly string[], form: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'>, nivel: 'modelo' | 'version'): { indice: number; supuesto: string } | null {
+  if (form.eleccionVersion?.etiqueta?.trim() || form.eleccionVersion?.codigo?.trim()) return null
+  const d = desempatarPorOrigenGenerali(opciones, origenesDesempateGenerali(form), nivel)
+  return d.tipo === 'unica' ? { indice: d.indice, supuesto: d.supuesto } : null
 }
 
 /** Un nivel del selector (marca/modelo/versión) en un `<select>` nativo, casado por la regla de Alberto. Devuelve si fue por similitud. `avisos` recoge el supuesto de una versión elegida sola. */
@@ -1984,7 +2004,14 @@ export async function esperarMenuModelo(page: Page, selector: Raiz, baseMarca: s
  * Elige el modelo en su SelectOneMenu con el criterio de la marca (igualdad EXACTA normalizada). Varias → atasco `eleccion`; ninguna →
  * «Otros» si hay UNA (se declara en `avisos` como supuesto); sin «Otros» → atasco `eleccion` con las cercanas o todas, sin tocar nada.
  */
-export async function elegirModeloPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, ctx: ContextoPortal, avisos?: string[]): Promise<{ valor: string; texto: string; indice: number }> {
+export async function elegirModeloPrimeFaces(
+  raiz: Raiz,
+  menu: MenuPrimeFaces,
+  v: VehiculoBuscado,
+  ctx: ContextoPortal,
+  avisos?: string[],
+  form?: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'>,
+): Promise<{ valor: string; texto: string; indice: number }> {
   const b = buscadoEnNivel(v, 'modelo')
   if (!b) throw new ErrorMapaIncompletoGenerali('el modelo del vehículo de la oportunidad (el selector de Generali lo exige)', false)
   const opciones = await opcionesSelect(menu.select)
@@ -1992,6 +2019,13 @@ export async function elegirModeloPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v
   const e = elegirModeloGenerali(textos, b.texto, b.modo)
   if (e.tipo === 'varias' || e.tipo === 'ninguna') {
     const lista = e.cercanas.length > 0 ? e.cercanas : e.tipo === 'ninguna' ? textos.filter((o) => !esOpcionVaciaCatalogo(o)).slice(0, 25) : []
+    // v0.2.55: antes de parar, desempate con el vehículo de origen sobre TODA la lista (la unicidad se mide contra todas, no solo las cercanas).
+    const d = lista.length > 0 && form ? desempateOrigenSinPersona(textos, form, 'modelo') : null
+    if (d) {
+      await ponerOpcionPrimeFaces(raiz, menu, opciones[d.indice]!, d.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo» (desempate por el vehículo de origen)')
+      avisos?.push(d.supuesto)
+      return { ...opciones[d.indice]!, indice: d.indice }
+    }
     if (lista.length > 0) throw new ErrorEleccionVersion(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
     throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo('modelo', b.texto, textos, { tipo: 'ninguna' }))
   }
@@ -2153,6 +2187,8 @@ export function decidirFilaVersionGenerali(filas: readonly FilaVersionGenerali[]
     { riesgo: referenciaRiesgoVersion(form), eleccion: esPotencia ? null : e },
   )
   if (r.tipo === 'automatica' || r.tipo === 'unica' || r.tipo === 'bandeja') return { fila: filas[r.indice]!, supuesto: r.supuesto }
+  const d = desempateOrigenSinPersona(filas.map((f) => f.version), form, 'version')
+  if (d) return { fila: filas[d.indice]!, supuesto: d.supuesto }
   const op = r.tipo === 'preguntar' ? r.opciones : filas.map((f): CandidatoVersion => ({ etiqueta: f.version, codigo: f.codigo || null }))
   throw new ErrorEleccionVersion(op)
 }
@@ -2170,6 +2206,9 @@ export function decidirVersionDesplegableGenerali(opciones: readonly string[], f
   const e = elegirVersionDesplegableGenerali(opciones, { persona, buscado, cv: cvRiesgoGenerali(form), combustible: combustibleRiesgoGenerali(form) })
   if (e.tipo === 'opcion') return { indice: e.indice, supuesto: e.supuesto }
   const unicas = [...new Set(e.candidatas)]
+  // v0.2.55: entre las candidatas sin repetidos; el índice vuelve a `opciones` (la primera con ese texto, como la puerta de repetidas).
+  const d = persona ? null : desempateOrigenSinPersona(unicas, form, 'version')
+  if (d) return { indice: opciones.indexOf(unicas[d.indice]!), supuesto: d.supuesto }
   throw new ErrorEleccionVersion(unicas.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
 }
 
@@ -2550,7 +2589,7 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
   await elegirMarcaPrimeFaces(selector, menu, v, ctx)
   const modelo = await esperarMenuModelo(page, selector, menu.base)
   if (!modelo) throw new ErrorMapaIncompletoGenerali(`el desplegable «Modelo» del selector de vehículos tras elegir la marca (no apareció en ${Math.round(ESPERA_MODELO_MS / 1000)} s). Campos vistos: ${resumenCamposSelectorGenerali(await leerCamposSelector(selector))}`)
-  const elegida = await elegirModeloPrimeFaces(selector, modelo, v, ctx, avisos)
+  const elegida = await elegirModeloPrimeFaces(selector, modelo, v, ctx, avisos, form)
   await page.waitForTimeout(PAUSA_CAMPOS_NUEVOS_MS)
   const nuevos = camposNuevosSelectorGenerali(antes, await leerCamposSelector(selector), [menu.base, modelo.base])
   // v0.2.14: Potencia / Versión / tabla: se eligen y se verifica el «Resumen»; luego se avanza. Si no hay nada de eso (una sola versión) o hay campos ajenos, como antes.

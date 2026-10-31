@@ -14,7 +14,7 @@ import { validarFormularioAuto, type FormularioAuto } from '@central/module-tari
 import type { ContextoPortal } from '../src/adaptador.ts'
 
 // Solo diagnóstico: no cambia la tarificación, la versión no se sube.
-test('diagnóstico «Tipo de vehículo» · la versión sigue en 0.2.53', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.54'))
+test('diagnóstico «Tipo de vehículo» · la versión sigue en 0.2.53', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.55'))
 
 test('hipótesis de catálogo: solo con «Tipo de vehículo» VACÍO y una clase que no es TURISMO', () => {
   assert.match(hipotesisTipoVehiculoGenerali('vacío (wclavh «TODO TERRENO»)') ?? '', /^HIPÓTESIS \(sin confirmar\): .*«TODO TERRENO» \(no «TURISMO»\): probable hueco del catálogo/)

@@ -11,7 +11,7 @@ import { resumenFotoSelectorGenerali } from '../src/adapters/generali/reglas.ts'
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.50 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.54'))
+test('v0.2.50 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.55'))
 
 test('v0.2.50 · puro: la foto dice qué grupo está SIN marcar y lo pintado como activo (saneado, sin repetir)', () => {
   const f = resumenFotoSelectorGenerali({
