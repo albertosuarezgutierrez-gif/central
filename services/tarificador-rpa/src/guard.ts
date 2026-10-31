@@ -388,9 +388,13 @@ export const VENTANA_RED_AVANCE_MS = 20_000
 /**
  * 0.3.22: NOMBRES de clave de la query para un mensaje del guard (nunca valores). Solo una clave con forma de identificador (empieza por
  * letra, ≤40, sin tiras de ≥4 cifras: un NIF/NIE o un id largo puesto como clave no sale); el resto, «?». Como mucho 6, sin repetir.
+ * 0.3.26 (explorador, Fidelidade real 24fd7252 del 31/10/2026: «claves ?» no dejaba decidir): también los nombres de framework con 1-2 guiones
+ * bajos delante (`_ts`, `__EVENTTARGET`); la clave oculta dice solo su FORMA, sin longitud ni contenido: «?(cifras)», «?(vacía)» u «?(otra)».
+ * Solo diagnóstico: NO abre nada (la red sigue admitiendo solo destinos exactos sin query).
  */
 export function clavesQueryDiagnostico(u: URL): string {
-  return [...new Set([...u.searchParams.keys()].map((k) => (/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k) && !/\d{4,}/.test(k) ? k : '?')))].slice(0, 6).join(',')
+  const forma = (k: string) => (k === '' ? '?(vacía)' : /^\d+$/.test(k) ? '?(cifras)' : '?(otra)')
+  return [...new Set([...u.searchParams.keys()].map((k) => (/^_{0,2}[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k) && !/\d{4,}/.test(k) ? k : forma(k))))].slice(0, 6).join(',')
 }
 
 export function destinoAvancePermitido(url: string, endpoints: readonly string[]): boolean {

@@ -41,7 +41,8 @@ import { mapfreHogar } from './adapters/mapfre/hogar.ts'
 import { mapfreAuto, mapfreMoto } from './adapters/mapfre/auto.ts'
 import { elegirMediadorGenerali, exigirMenuNegocioGenerali, generaliAuto, loginGenerali } from './adapters/generali/auto.ts'
 
-export const HUMO_VERSION = '0.3.1'
+/** 0.3.2 (31/10/2026, humo real 1f53b8c0): Generali reconoce el menú «NEGOCIO» sin distinguir mayúsculas (adapter 0.2.54). */
+export const HUMO_VERSION = '0.3.2'
 const TOPE_HUMO_MS = 3 * 60_000
 const TOPE_PASO_MS = 30_000
 const ESPERA_MENU_MS = 20_000

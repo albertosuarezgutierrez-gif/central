@@ -68,6 +68,9 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.37 (31/10/2026, trabajo real 7865539d con 0.8.36): seguía el clic de 30 s en `datos-licencia mat-select`.first(): había OTRO `datos-licencia`
+// HABILITADO pero oculto (no solo deshabilitados) y 0.8.36 devolvía null. `selectLicenciaHabilitada` elige el único VISIBLE o el único en tarjeta
+// plegada (que despliega por su cabecera); ninguno visible y 0 o 2+ plegados → hueco claro. Ningún clic nuevo fuera de esa cabecera.
 // v0.8.36 (30/10/2026, trabajo real 76d731f3, cliente que Mapfre ya conoce): «Figuras» trae la tarjeta «Permiso Conducir» COMPLETA y PLEGADA y otro
 // `datos-licencia` deshabilitado; el clic en `datos-licencia mat-select`.first() esperaba 30 s a un control oculto. Ahora `selectLicenciaHabilitada`: el
 // ÚNICO habilitado y, si su tarjeta está plegada, se despliega por su cabecera (`desplegarAcordeonGuardado`, la misma puerta de v0.8.27).
@@ -1186,20 +1189,36 @@ export async function selectLicenciaHabilitada(raiz: Pick<Frame, 'locator'>, pul
       })
       return out
     }).catch(() => null)
-  let hab = await leer()
-  if (!hab || hab.length !== 1) return null
-  const { idx, cab } = hab[0]!
-  if (!hab[0]!.visible && cab >= 0 && pulsar) {
+  const hab0 = await leer()
+  if (!hab0 || hab0.length === 0) return null
+  // v0.8.37 (31/10/2026, trabajo real 7865539d con 0.8.36: «Permiso Conducir» completa y PLEGADA y OTRO `datos-licencia` HABILITADO pero oculto,
+  // p. ej. en la pestaña «Conductores Ocasionales»): con 2+ habilitados 0.8.36 devolvía null y el `.first()` (oculto) esperaba 30 s. Ahora:
+  // exactamente UNO visible → ese (sin clic); ninguno visible y exactamente UNO en tarjeta plegada → se despliega esa; ninguno visible y 0 o 2+
+  // plegados → hueco claro (no se adivina). Varios VISIBLES → null (camino de siempre: el `.first()`, que es visible).
+  let elegido: { idx: number; visible: boolean; cab: number }
+  if (hab0.length === 1) elegido = hab0[0]!
+  else {
+    const visibles = hab0.filter((h) => h.visible)
+    const plegados = hab0.filter((h) => !h.visible && h.cab >= 0)
+    if (visibles.length > 1) return null
+    if (visibles.length === 1) elegido = visibles[0]!
+    else if (plegados.length === 1) elegido = plegados[0]!
+    else throw new ErrorMapaIncompleto(`el desplegable «clase del permiso» (${SEL_LICENCIA.clasePermiso}): ${hab0.length} habilitados y ninguno visible (${plegados.length} en tarjeta plegada); no se adivina cuál`, true)
+  }
+  const { idx, cab } = elegido
+  const visibleEn = (h: typeof hab0 | null) => h?.find((x) => x.idx === idx)?.visible === true
+  let hab: typeof hab0 | null = hab0
+  if (!elegido.visible && cab >= 0 && pulsar) {
     await desplegarAcordeonGuardado(raiz, pulsar, cab).catch(() => undefined)
     const fin = Date.now() + Math.max(0, esperaMs)
     for (;;) {
       hab = await leer()
-      if ((hab?.length === 1 && hab[0]!.visible) || Date.now() >= fin) break
+      if (visibleEn(hab) || Date.now() >= fin) break
       await new Promise((res) => setTimeout(res, 200))
     }
-    formador?.log('mapfre_licencia_desplegada', { visible: hab?.length === 1 && hab[0]!.visible })
+    formador?.log('mapfre_licencia_desplegada', { visible: visibleEn(hab) })
   }
-  if (!(hab?.length === 1 && hab[0]!.visible)) throw new ErrorMapaIncompleto(`el desplegable «clase del permiso» (${SEL_LICENCIA.clasePermiso}): está habilitado pero OCULTO${cab >= 0 ? ' en la tarjeta plegada «Permiso Conducir», que no se pudo desplegar' : ''}`, true)
+  if (!visibleEn(hab)) throw new ErrorMapaIncompleto(`el desplegable «clase del permiso» (${SEL_LICENCIA.clasePermiso}): está habilitado pero OCULTO${cab >= 0 ? ' en la tarjeta plegada «Permiso Conducir», que no se pudo desplegar' : ''}`, true)
   return raiz.locator(SEL_LICENCIA.clasePermiso).nth(idx)
 }
 
@@ -2025,7 +2044,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.36',
+  version: '0.8.37',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

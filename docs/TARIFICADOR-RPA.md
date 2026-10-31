@@ -55,6 +55,9 @@ compañías; Alberto emite a mano. Orden: cerrar primero lo que está a 1-2 arre
 Común a los tres ramos: formulario único /datos por ramo = unión de lo que pide cada compañía, y filtro previo que no manda al bot
 un riesgo al que le falte algo para alguna compañía (patinete: marca → modelo → versión, como el auto).
 
+### Atascos 31/10
+- **Mapfre auto 0.8.37 · explorador 0.3.26 · Generali auto 0.2.54 / humo 0.3.2 (31/10):** Mapfre: con 0.8.36 había otro `datos-licencia` HABILITADO pero oculto, así que se elige el único visible o el único en tarjeta plegada, y si no, hueco claro (antes, clic de 30 s). Fidelidade: `ClientData.aspx` con query sigue BLOQUEADO (las claves no se veían, así que no se puede decidir); ahora el diagnóstico nombra `_ts`/`__X` y de las ocultas solo la forma. Generali: el humo busca el menú «NEGOCIO» sin distinguir mayúsculas, como la puerta del guard.
+
 ### Aprendizajes 28/10
 - **Versiones**: PR #5204, #5209, #5211, #5213, #5217, #5220, #5222 mergeados (explorador 0.3.2→0.3.7, Generali 0.2.46→0.2.51); en vuelo #5224 (explorador 0.3.8) y Generali 0.2.52.
 - **Decisión de Alberto (28/10): no tener miedo a emitir**, porque las compañías piden el IBAN en la penúltima o última página. Postura: dejar de bloquear por ruta/URL que contenga «emision» o «contratacion»; mantener paradas duras en botones o acciones finales (emitir, confirmar emisión, firmar, pagar, formalizar), en campos IBAN/cuenta/tarjeta y en POST con esas acciones. Motivo: algunas emisiones no piden IBAN (cobro en mediador, cuenta ya domiciliada). Es el siguiente cambio tras el #5224.

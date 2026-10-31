@@ -34,7 +34,7 @@ const ANIDADO = (sel: string) => `<body><app-figuras><mat-form-field><mat-form-f
 <mat-form-field><label><mat-label>Procedencia Siniestralidad</mat-label></label><input formcontrolname="procedencia" disabled></mat-form-field>
 <mat-form-field><label><mat-label>Modificación Manual Niveles Bonus Malus</mat-label></label><mat-checkbox formcontrolname="modificarNiveles"></mat-checkbox></mat-form-field></app-figuras></body>`
 
-test('v0.8.26 · la versión del bot es 0.8.28', () => assert.equal(mapfreAuto.version, '0.8.36'))
+test('v0.8.26 · la versión del bot es 0.8.28', () => assert.equal(mapfreAuto.version, '0.8.37'))
 
 test('el mismo mat-select por dos caminos cuenta UNO: se devuelve y es el correcto', async () => {
   const page = await pagina(ANIDADO(SELECT()))

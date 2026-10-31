@@ -151,6 +151,7 @@ import {
   rutaSinQuery,
   diagMenuNegocioGenerali,
   MENU_PRIMER_NIVEL_GENERALI,
+  patronPestanaMenuGenerali,
   type MarcoMenuGenerali,
   motivoSelectorVehiculoNoVistoGenerali,
   rutaMarcoSaneadaGenerali,
@@ -413,7 +414,8 @@ export const GENERALI_AUTO_ACTIVO = true
  */
 /** v0.2.35: espera máxima a que aparezcan filas con importe en «Modalidades de Seguro» (carga asíncrona). */
 const ESPERA_MODALIDADES_GENERALI_MS = 30_000
-export const VERSION_GENERALI_AUTO = '0.2.53'
+/** v0.2.54 (31/10/2026, humo real 1f53b8c0): el menú «NEGOCIO» se reconoce sin distinguir mayúsculas (`patronPestanaMenuGenerali`). */
+export const VERSION_GENERALI_AUTO = '0.2.54'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1614,10 +1616,12 @@ async function selectDeCandidato(c: CandidatoMediador): Promise<Locator> {
  * ¿Hay un «NEGOCIO» en algún marco? (el menú del portal del corredor). Prueba real 31e76085: en `CorredorPortal.po` es un
  * enlace `<a>` SIN href con ese texto exacto (junto a COMPAÑÍA · FORMACIÓN · NORMAS · … · CERRAR) que puede estar plegado y no
  * contar como «visible»: aquí basta con que esté en el DOM (solo lee; el sobrevuelo lo hace la puerta del guard).
+ * v0.2.54: sin distinguir mayúsculas (`patronPestanaMenuGenerali`, el criterio de la puerta del guard): el DOM puede llevar «Negocio».
  */
 async function menuNegocioVisible(page: Page): Promise<boolean> {
+  const re = patronPestanaMenuGenerali('NEGOCIO')
   for (const f of page.frames()) {
-    if (!f.isDetached() && (await f.getByText(/^\s*NEGOCIO\s*$/).count().catch(() => 0)) >= 1) return true
+    if (!f.isDetached() && (await f.getByText(re).count().catch(() => 0)) >= 1) return true
   }
   return false
 }
@@ -1659,7 +1663,7 @@ async function marcosMenuGenerali(page: Page): Promise<MarcoMenuGenerali[]> {
     if (f.isDetached()) continue
     const pestanas: Record<string, { dom: number; visibles: number }> = {}
     for (const p of MENU_PRIMER_NIVEL_GENERALI) {
-      const l = f.getByText(new RegExp(`^\\s*${p}\\s*$`))
+      const l = f.getByText(patronPestanaMenuGenerali(p))
       pestanas[p] = { dom: await l.count().catch(() => 0), visibles: await l.filter({ visible: true }).count().catch(() => 0) }
     }
     out.push({ url: f.url(), pestanas })
