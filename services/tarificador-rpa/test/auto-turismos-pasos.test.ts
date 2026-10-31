@@ -11,7 +11,7 @@ import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Frame } from 'playwright'
 import { EmisionBloqueadaError, senalCuentaBancaria, type FormularioAuto } from '@central/module-tarificacion'
 import { ErrorTarificador, clasificar, pideInventarioDom } from '../src/errores.ts'
-import { casarCompaniaActualTurismos, companiaActualTurismosAllianz, instalarGuardEmision, marcarAntecedenteTurismosAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz, pulsar } from '../src/guard.ts'
+import { casarCompaniaActualTurismos, companiaActualTurismosAllianz, localidadTurismosAllianz,instalarGuardEmision, marcarAntecedenteTurismosAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz, pulsar } from '../src/guard.ts'
 import {
   ErrorMapaIncompleto,
   decidirCampoBloqueadoTurismos,
@@ -91,6 +91,8 @@ type Opc = {
   obligatorioAjeno?: boolean
   /** v0.6.12: pantalla de precios de «Selección de paquete» (`app-price` → `nx-comparison-table`) con la ESTRUCTURA real e importes INVENTADOS. `vacia` = tabla sin cabeceras (como en el inventario). */
   paquetes?: 'completa' | 'ilegible' | 'sin_coberturas' | 'vacia'
+  /** v0.6.37: «Localidad» como el HTML real dbb6d451: `aria-autocomplete=list`, vacía tras el CP; al enfocar/teclear abre un listbox (overlay, `aria-owns`) con estas opciones filtradas por lo tecleado. */
+  autocompletado?: string[]
 }
 /** v0.6.12: tabla comparativa con la estructura real de «Selección de paquete» (clases de Allianz; nombres, importes y límites inventados). */
 function tablaPaquetes(modo: NonNullable<Opc['paquetes']>): string {
@@ -133,7 +135,7 @@ function app(o: Opc = {}): string {
   const texto = (id: string, etq: string, extra = '') => `<label for="${id}">${etq}</label><input id="${id}" type="text" ${extra}>`
   const bloq = (v: string | undefined) => (v === undefined ? '' : ` disabled value="${v}" class="nx-input${v ? ' is-filled' : ''} is-disabled"`)
   const ubicacion = (n: number) =>
-    `<nx-mt-person-location>${texto(`ng-z-cp${n}`, 'Código postal', n === 1 ? bloq(o.cpBloqueado) : '')}<label for="ng-z-loc${n}">Localidad</label><input id="ng-z-loc${n}" role="combobox" type="text" maxlength="50"${n === 1 ? bloq(o.locBloqueada) : ''}></nx-mt-person-location>`
+    `<nx-mt-person-location>${texto(`ng-z-cp${n}`, 'Código postal', n === 1 ? bloq(o.cpBloqueado) : '')}<label for="ng-z-loc${n}">Localidad</label><input id="ng-z-loc${n}" role="combobox"${o.autocompletado ? ' aria-autocomplete="list" autocomplete="off"' : ''} type="text" maxlength="50"${n === 1 ? bloq(o.locBloqueada) : ''}></nx-mt-person-location>`
   const nav = (primero: boolean) => `<nav><app-navigation-buttons>${primero ? '' : '<button type="button" class="ant"> Anterior </button>'}<button type="button" class="sig"> Siguiente </button></app-navigation-buttons></nav>`
   const def = o.sinDefectos ? null : 0
   const p1 = `
@@ -188,6 +190,15 @@ function app(o: Opc = {}): string {
     t.querySelectorAll('input').forEach((c) => c.addEventListener('change', () => { sig0.disabled = false; }));
   }, 100));
   $('#ng-z-cp1').addEventListener('input', () => { if ($('#ng-z-cp1').value.length === 5) setTimeout(() => { ${o.localidadPortal === null ? '' : `$('#ng-z-loc1').value = ${JSON.stringify(o.localidadPortal ?? 'Villaficticia')};`} }, 150); });
+  ${o.autocompletado ? `window.__locTecleos = 0; const LOCS = ${JSON.stringify(o.autocompletado)}; const loc1 = $('#ng-z-loc1');
+  const cierraLoc = () => { const p = document.getElementById('ng-z-ac-1'); if (p) p.parentElement.remove(); loc1.removeAttribute('aria-owns'); loc1.setAttribute('aria-expanded', 'false'); };
+  const abreLoc = () => { cierraLoc(); const q = loc1.value.trim().toUpperCase(); if (q === '') return; const hits = LOCS.filter((t) => t.toUpperCase().includes(q)); if (!hits.length) return;
+    const ov = document.createElement('div'); ov.className = 'cdk-overlay-pane'; ov.innerHTML = '<div id="ng-z-ac-1" role="listbox"></div>'; document.body.appendChild(ov);
+    hits.forEach((t, i) => { const it = document.createElement('nx-autocomplete-option'); it.setAttribute('role', 'option'); it.id = 'ng-z-acopt-' + i; it.textContent = t;
+      it.addEventListener('click', () => { loc1.value = t.replace(/^\\d{5} - /, ''); cierraLoc(); }); ov.firstChild.appendChild(it); });
+    loc1.setAttribute('aria-owns', 'ng-z-ac-1'); loc1.setAttribute('aria-expanded', 'true'); };
+  loc1.addEventListener('input', () => { window.__locTecleos++; setTimeout(abreLoc, 80); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cierraLoc(); });` : ''}
   const OPS = ${JSON.stringify(o.companias ?? COMPANIAS)};
   window.__abiertos = 0;
   $('#ng-z-dd250').addEventListener('click', () => { if (document.getElementById('ng-z-nx-dropdown-modal-251')) return; window.__abiertos++; setTimeout(() => {
@@ -255,6 +266,11 @@ async function abrir(o: Opc = {}) {
     companiaActualTurismos: async (m: Frame, buscada: string | null) => {
       const r = await companiaActualTurismosAllianz(m, guard, buscada)
       pulsados.push(`compania:${r.estado}`)
+      return r
+    },
+    localidadTurismos: async (m: Frame, busquedas, elegir) => {
+      const r = await localidadTurismosAllianz(m, guard, busquedas, elegir)
+      pulsados.push(`localidad:${r.estado}`)
       return r
     },
     polizaActualTurismos: async (m: Frame, ultimos5: string | null) => {
@@ -474,7 +490,7 @@ test('v0.6.5 «Localidad»: el portal propone OTRA → hueco sin teclear y sin �
   const a = await abrir({ localidadPortal: 'Otrapoblacion' })
   try {
     const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, FORM, a.ctx)
-    await assert.rejects(recorrerPasosTurismos(a.page, a.marco, FORM, a.ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) => esMapa(/huecos de «Datos personales»: «Localidad» \(no es un campo de texto: desplegable\/autocompletado sin puerta en guard\.ts; el portal propone otra/)(e) && sinPersonales((e as Error).message) && !(e as Error).message.includes('Otrapoblacion'))
+    await assert.rejects(recorrerPasosTurismos(a.page, a.marco, FORM, a.ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) => esMapa(/huecos de «Datos personales»: «Localidad» \(el portal propone otra para el CP: no se toca\)/)(e) && sinPersonales((e as Error).message) && !(e as Error).message.includes('Otrapoblacion'))
     assert.equal(await a.valor('ng-z-loc1'), 'Otrapoblacion', 'no se teclea en el autocompletado')
     assert.equal(a.pulsados.filter((p) => p === 'Siguiente').length, 1, 'el «Siguiente» de «Datos personales» NO se pulsa')
     assert.equal(await pasoActivoTurismos(a.marco), 'Datos personales')
@@ -1057,5 +1073,59 @@ test('v0.6.36 SINCO: póliza actual ESCRITA y releída → cada oferta lleva la 
     for (const x of sinCampo.resultado.ofertas) assert.equal('polizaAnteriorTecleada' in x, false)
   } finally {
     await sinCampo.context.close()
+  }
+})
+
+// ── v0.6.37 (31/10/2026, real dbb6d451): «Localidad» autocompletado vacío → puerta `localidadTurismosAllianz` ──
+const LOC_OK = ['00000 - VILLAFICTICIA', '00000 - VILLAFICTICIA DE ARRIBA', '11111 - OTRAPOBLACION']
+
+test('v0.6.37 «Localidad» autocompletado: teclea el municipio, elige la ÚNICA que casa (exacta) y sigue; nada personal en el mensaje', async () => {
+  const a = await abrir({ localidadPortal: null, autocompletado: LOC_OK })
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, FORM, a.ctx)
+    await assert.rejects(recorrerPasosTurismos(a.page, a.marco, FORM, a.ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) => esMapa(/«Selección de paquete»/)(e) && !(e as Error).message.includes('«Localidad»') && sinPersonales((e as Error).message))
+    assert.equal(await a.valor('ng-z-loc1'), 'VILLAFICTICIA')
+    assert.ok(a.pulsados.includes('localidad:elegida'))
+  } finally {
+    await a.context.close()
+  }
+})
+
+test('v0.6.37 «Localidad» autocompletado: varias que casan, CP distinto o sin opciones → hueco, campo vacío y sin «Siguiente»', async () => {
+  const casos: Array<[string[], RegExp]> = [
+    [['00000 - VILLAFICTICIA NORTE', '00000 - VILLAFICTICIA SUR'], /«Localidad» \(ninguna o varias de las 2 opciones del autocompletado casan con el municipio y el CP\)/],
+    [['11111 - VILLAFICTICIA'], /«Localidad» \(ninguna o varias de las 1 opciones/],
+    [['00000 - OTRAPOBLACION'], /«Localidad» \(el autocompletado no ofreció opciones para el municipio\)/],
+  ]
+  for (const [ops, re] of casos) {
+    const a = await abrir({ localidadPortal: null, autocompletado: ops })
+    try {
+      const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, FORM, a.ctx)
+      await assert.rejects(recorrerPasosTurismos(a.page, a.marco, FORM, a.ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) => esMapa(re)(e) && sinPersonales((e as Error).message))
+      assert.equal(await a.valor('ng-z-loc1'), '', 'no se deja texto a medias')
+      assert.equal(a.pulsados.filter((p) => p === 'Siguiente').length, 1, 'el «Siguiente» de «Datos personales» NO se pulsa')
+      assert.equal(await pasoActivoTurismos(a.marco), 'Datos personales')
+    } finally {
+      await a.context.close()
+    }
+  }
+})
+
+test('v0.6.37 puerta «Localidad»: fuera de «Datos personales» → bloqueo; opción con acción final → bloqueo antes del clic; sin aria-autocomplete → no_unica', async () => {
+  const a = await abrir({ localidadPortal: null, autocompletado: ['Emitir VILLAFICTICIA'] })
+  try {
+    await assert.rejects(localidadTurismosAllianz(a.marco, a.guard, ['x'], () => 0), EmisionBloqueadaError, 'paso 1: fuera de «Datos personales»')
+    await a.aPersonales()
+    await assert.rejects(localidadTurismosAllianz(a.marco, a.guard, ['Villaficticia'], () => 0), EmisionBloqueadaError)
+    assert.equal(await a.valor('ng-z-loc1'), 'Villaficticia', 'la opción no se pulsó')
+  } finally {
+    await a.context.close()
+  }
+  const b = await abrir({ localidadPortal: null })
+  try {
+    await b.aPersonales()
+    assert.deepEqual(await localidadTurismosAllianz(b.marco, b.guard, ['Villaficticia'], () => 0), { estado: 'no_unica', motivo: '0 campos' })
+  } finally {
+    await b.context.close()
   }
 })

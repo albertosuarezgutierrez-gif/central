@@ -19,7 +19,7 @@ const PII = ['12345678Z', 'a.b@example.invalid', '1234BCD', '600123456', '998877
 const sinPii = (t: string) => { for (const p of PII) assert.ok(!t.includes(p), `PII en el texto: ${p}`); assert.ok(!/\d{5,}/.test(t), 'secuencia de 5+ cifras') }
 
 test('0.6.34 · versión y espera ampliada (>15 s)', () => {
-  assert.equal(allianzAuto.version, '0.6.36')
+  assert.equal(allianzAuto.version, '0.6.37')
   assert.ok(MS_CONFIRMA_GUARDADO_TURISMOS >= 25_000)
 })
 

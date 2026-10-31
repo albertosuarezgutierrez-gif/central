@@ -383,7 +383,8 @@ export const VENTANA_RED_AVANCE_MS = 20_000
 
 /**
  * ¿Puede ir a `url` una petición que no es GET durante la ventana del avance? Solo si su origen + ruta es EXACTAMENTE uno de
- * `endpoints`, sin query, fragmento ni credenciales (un `;jsessionid=` en la ruta tampoco casa: fail-closed). Pura.
+ * `endpoints`, sin query (salvo el cache-buster `?_ts=<cifras>` solo, 0.3.27), fragmento ni credenciales (un `;jsessionid=` en la ruta
+ * tampoco casa: fail-closed). Pura.
  */
 /**
  * 0.3.22: NOMBRES de clave de la query para un mensaje del guard (nunca valores). Solo una clave con forma de identificador (empieza por
@@ -404,8 +405,19 @@ export function destinoAvancePermitido(url: string, endpoints: readonly string[]
   } catch {
     return false
   }
-  if (u.username || u.password || u.search || u.hash) return false
+  if (u.username || u.password || u.hash) return false
+  if (u.search && !esQuerySoloCacheBuster(u.search)) return false
   return endpoints.includes(`${u.origin}${u.pathname}`)
+}
+
+/**
+ * 0.3.27 (explorador, Fidelidade Vivienda real 31/10/2026: «POST … /OPI_ES_Vivienda/ClientData.aspx [ruta en la lista, pero con query: claves
+ * _ts]»): la query cuyo ÚNICO parámetro es el cache-buster `_ts` con valor de SOLO cifras (1-17) no impide casar la ruta exacta de la lista.
+ * Cualquier otra clave, `_ts` repetido, vacío o no numérico, o con `=` codificado, sigue fuera (fail-closed). La ruta sigue teniendo que ser
+ * EXACTA de la lista y el cuerpo se inspecciona igual. Pura.
+ */
+export function esQuerySoloCacheBuster(search: string): boolean {
+  return /^\?_ts=\d{1,17}$/.test(search)
 }
 
 export async function instalarGuardEmision(context: BrowserContext): Promise<GuardEmision> {
@@ -4262,6 +4274,132 @@ export async function companiaActualTurismosAllianz(marco: Frame, guard: GuardEm
   const ahora = (await control.innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
   if (planoOpcion(ahora) !== planoOpcion(opciones[hits[0]])) return { estado: 'no_unica', opciones, motivo: 'la opción no quedó elegida' }
   return { estado: 'elegida', opciones, elegida: opciones[hits[0]], ...(generica ? { generica: true as const } : {}) }
+}
+
+// ─────────── «Localidad» del tomador de Allianz AUTOS Turismos (v0.6.37 del bot, 31/10/2026) ───────────
+// HTML real del trabajo dbb6d451 (solo estructura): en «Datos personales», bloque «¿Quién es el tomador?», `nx-formfield label="Localidad"`
+// con un `<input role=combobox aria-autocomplete=list maxlength=50>` (autocompletado NDBX `nxAutocomplete`) y su `<nx-autocomplete>` vacío:
+// las opciones solo existen con el panel abierto (overlay, `[role=option]` del listbox al que apunta `aria-owns`/`aria-controls`). El
+// portal NO la propuso sola tras el CP. Esta puerta es el ÚNICO camino del adaptador para abrirlo, teclear la búsqueda, leer las opciones y,
+// como mucho, elegir UNA (la que decide `elegir`, función PURA del adaptador). Nunca se fuerza un clic ni se elige con Enter.
+
+export const PASO_LOCALIDAD_TURISMOS = 'Datos personales'
+export const ETIQUETA_LOCALIDAD_TURISMOS = 'Localidad'
+const SEL_BLOQUE_TOMADOR_LOCALIDAD_TURISMOS = 'nx-mt-person-information:has(nx-x-common-header[text="¿Quién es el tomador?"])'
+const MS_PANEL_LOCALIDAD = 3_000
+const MS_TECLEO_LOCALIDAD = 5_000
+const MAX_OPCIONES_LOCALIDAD = 100
+
+export type ResultadoLocalidadTurismos =
+  /** Elegida la opción que decidió `elegir`; `mostrado` = valor del campo tras elegir (quien llama lo relee y compara). */
+  | { estado: 'elegida'; elegida: string; mostrado: string }
+  /** El campo ya trae un valor: no se toca. */
+  | { estado: 'con_valor'; mostrado: string }
+  /** Ni al abrir ni tras teclear salió ninguna opción. */
+  | { estado: 'sin_opciones' }
+  /** Hubo opciones pero `elegir` no decidió UNA (ninguna o varias casan): se cerró sin elegir. */
+  | { estado: 'sin_eleccion'; opciones: string[] }
+  /** Control ausente/repetido/no editable, sin panel declarado o elección que no quedó. */
+  | { estado: 'no_unica'; motivo: string }
+
+/**
+ * Rellena «Localidad» (autocompletado) del bloque del TOMADOR de Turismos. Exige, como `companiaActualTurismosAllianz`: guard limpio y sin
+ * ventanas de red; marco de la app de Turismos; sin campos bancarios; pestaña «Datos personales» (todo eso, bloqueo). EXACTAMENTE un
+ * `input[role=combobox][aria-autocomplete=list]` visible con etiqueta EXACTA «Localidad» en el bloque del tomador, en `appArea` y fuera de
+ * la cabecera; `comprobarBoton` y frontera bancaria sobre él ANTES de tocarlo. Primero lo enfoca (clic) por si el portal ofrece ya las del
+ * CP; si no salen, teclea cada `busquedas` (≤50 car.) hasta que salgan. Las opciones son las `[role=option]` del panel de SU
+ * `aria-owns`/`aria-controls` y nada más; `comprobarBoton` sobre la opción antes del único clic. Sin elegir → Escape. Solo nombres de
+ * municipios: ni valores ni opciones salen en los motivos.
+ */
+export async function localidadTurismosAllianz(
+  marco: Frame,
+  guard: GuardEmision,
+  busquedas: readonly string[],
+  elegir: (opciones: readonly string[]) => number | null,
+): Promise<ResultadoLocalidadTurismos> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'localidad de Turismos con una ventana de red abierta')
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'localidad de Turismos fuera de la app de Allianz AUTOS')
+  await exigirSinCuentaBancaria(marco.page())
+  const pestanas = marco.getByRole('tab', { selected: true })
+  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
+  if (activa !== PASO_LOCALIDAD_TURISMOS) throw new EmisionBloqueadaError('fase', `localidad de Turismos fuera del paso «${PASO_LOCALIDAD_TURISMOS}»`)
+  const control = marco
+    .locator(SEL_ZONA_APP_TURISMOS)
+    .locator(SEL_BLOQUE_TOMADOR_LOCALIDAD_TURISMOS)
+    .getByLabel(ETIQUETA_LOCALIDAD_TURISMOS, { exact: true })
+    .and(marco.locator('input[role=combobox][aria-autocomplete=list]'))
+    .and(marco.locator(SEL_FUERA_CABECERA_TURISMOS))
+    .filter({ visible: true })
+  const n = await control.count()
+  if (n !== 1) return { estado: 'no_unica', motivo: `${n} campos` }
+  comprobarBoton(await descripcion(control))
+  await exigirCampoNoBancario(control)
+  if (!(await control.isEditable().catch(() => false))) return { estado: 'no_unica', motivo: 'campo no editable' }
+  const valor = async () => (await control.inputValue().catch(() => '')).replace(/\s+/g, ' ').trim()
+  const actual = await valor()
+  if (actual !== '') return { estado: 'con_valor', mostrado: actual }
+  const cerrar = async () => {
+    await marco.page().keyboard.press('Escape').catch(() => undefined)
+    guard.comprobar()
+  }
+  // Panel declarado por el propio input (NDBX pone `aria-owns` con el panel abierto); sin él no se mira nada más (fail-closed).
+  const leerOpciones = async (): Promise<{ items: Locator; opciones: string[] } | null> => {
+    const fin = Date.now() + MS_PANEL_LOCALIDAD
+    for (;;) {
+      const panelId = ((await control.getAttribute('aria-owns').catch(() => null)) || (await control.getAttribute('aria-controls').catch(() => null)) || '').replace(/["\\]/g, '').trim()
+      if (panelId) {
+        const items = marco.locator(`[id="${panelId}"]`).locator('[role=option]').filter({ visible: true })
+        const k = await items.count().catch(() => 0)
+        if (k > 0) {
+          const opciones = (await items.evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim()))).slice(0, MAX_OPCIONES_LOCALIDAD)
+          return { items, opciones }
+        }
+      }
+      if (Date.now() >= fin) return null
+      await marco.page().waitForTimeout(150)
+    }
+  }
+  await control.click()
+  guard.comprobar()
+  let leidas = await leerOpciones()
+  for (const b of busquedas) {
+    if (leidas) break
+    const texto = b.replace(/\s+/g, ' ').trim().slice(0, 50)
+    if (texto === '') continue
+    try {
+      await control.fill(texto, { timeout: MS_TECLEO_LOCALIDAD })
+    } catch {
+      // El error de Playwright lleva el valor tecleado: nunca sube.
+      await cerrar()
+      return { estado: 'no_unica', motivo: 'el portal no dejó escribir en el campo a tiempo' }
+    }
+    guard.comprobar()
+    leidas = await leerOpciones()
+  }
+  if (!leidas) {
+    await cerrar()
+    await control.fill('', { timeout: MS_TECLEO_LOCALIDAD }).catch(() => undefined)
+    return { estado: 'sin_opciones' }
+  }
+  const i = elegir(leidas.opciones)
+  if (i === null || !Number.isInteger(i) || i < 0 || i >= leidas.opciones.length) {
+    await cerrar()
+    await control.fill('', { timeout: MS_TECLEO_LOCALIDAD }).catch(() => undefined)
+    return { estado: 'sin_eleccion', opciones: leidas.opciones }
+  }
+  const item = leidas.items.nth(i)
+  if (((await item.innerText().catch(() => '')).replace(/\s+/g, ' ').trim()) !== leidas.opciones[i]) {
+    await cerrar()
+    return { estado: 'no_unica', motivo: 'la lista cambió antes de elegir' }
+  }
+  comprobarBoton(await descripcion(item))
+  await item.click()
+  guard.comprobar()
+  await control.blur().catch(() => undefined)
+  const mostrado = await valor()
+  if (mostrado === '') return { estado: 'no_unica', motivo: 'la opción no quedó elegida' }
+  return { estado: 'elegida', elegida: leidas.opciones[i], mostrado }
 }
 
 // ─────────── TARJETAS DE VEHÍCULO de Allianz AUTOS Turismos (v0.6.4 del bot, 17/10/2026) ───────────

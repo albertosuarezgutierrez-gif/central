@@ -82,3 +82,38 @@ export function elegirPoblacionHogar(textos: readonly string[], municipio: strin
   if (textos.length === 1) return { tipo: 'elegida', indice: 0, por: 'unica' }
   return nucleo === null && (municipio === null || municipio.trim() === '') ? { tipo: 'sin_municipio' } : { tipo: 'sin_coincidencia' }
 }
+
+/** Primer código postal (5 cifras sueltas) de una opción, o `null`. */
+function cpDeOpcion(t: string): string | null {
+  const m = /(?:^|\D)(\d{5})(?:\D|$)/.exec(t)
+  return m ? m[1] : null
+}
+
+/**
+ * Allianz AUTOS Turismos (v0.6.37, 31/10/2026): índice de la opción del autocompletado «Localidad» que corresponde al municipio y CP del
+ * tomador, o `null`. Una opción con CP distinto del conocido se descarta; de las demás vale la ÚNICA que casa con el municipio (exacta o
+ * palabras enteras, `elegirPoblacionPorLocalidades`); sin municipio que case, solo la única restante si lleva EXACTAMENTE el CP. Nunca la
+ * primera de la lista a ciegas. PURA.
+ */
+export function elegirLocalidadTurismos(opciones: readonly string[], municipio: string | null, cp: string | null): number | null {
+  const cpRiesgo = cp !== null && /^\d{5}$/.test(cp.trim()) ? cp.trim() : null
+  const validas = opciones.map((t, i) => ({ t, i })).filter(({ t }) => t.trim() !== '' && (cpRiesgo === null || cpDeOpcion(t) === null || cpDeOpcion(t) === cpRiesgo))
+  if (validas.length === 0) return null
+  if (municipio !== null && municipio.trim() !== '') {
+    const o = elegirPoblacionPorLocalidades(
+      validas.map(({ t, i }) => ({ codigo: String(i), etiqueta: t.replace(/^\s*\d{5}\s*-\s*/, '').replace(/\s*\(\d{5}\)\s*$/, '').trim() })),
+      [municipio],
+    )
+    if (o !== null) return Number(o.codigo)
+  }
+  if (validas.length === 1 && cpRiesgo !== null && cpDeOpcion(validas[0].t) === cpRiesgo) return validas[0].i
+  return null
+}
+
+/** Textos a teclear en «Localidad» para que el portal ofrezca opciones: el municipio y, si difiere, su palabra más larga (≥4 letras). PURA. */
+export function busquedasLocalidadTurismos(municipio: string | null): string[] {
+  const m = (municipio ?? '').replace(/^\s*\d{5}\s*-\s*/, '').replace(/\s+/g, ' ').trim()
+  if (m === '') return []
+  const larga = m.split(/[\s,()/-]+/).filter((w) => w.length >= 4).sort((a, b) => b.length - a.length)[0]
+  return larga && larga !== m ? [m, larga] : [m]
+}
