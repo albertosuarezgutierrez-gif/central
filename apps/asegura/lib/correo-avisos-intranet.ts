@@ -38,6 +38,7 @@
  * pendiente» y nadie se enteraría de la omisión.
  */
 import { HORAS_ENLACE_DIRECTO, type CampoCambioPoliza, type TipoAviso } from '@central/module-seguros-portal'
+import { enlacePresentacion } from '@central/module-seguros'
 import { emailAvisable } from './avisos-vencimiento-reglas.ts'
 
 /** Cómo se nombra cada clase de aviso en el correo. Singular y plural, en minúscula. */
@@ -114,6 +115,51 @@ export const INVITACION_APP =
   'Consejo: añade tu área de clientes a la pantalla de inicio del móvil (botón «Instalar» al entrar) y activa las notificaciones. Así te enteras al momento de cualquier cambio en tus seguros, sin esperar a este correo.'
 
 /**
+ * 📱 Campaña «app en el aviso de vencimiento» (31/10/2026). La presentación de la app a LEADS fracasó
+ * (240 envíos, 0 altas): ahora se presenta a CLIENTES en vigor dentro del correo que ya esperan, el de
+ * su vencimiento. El aviso manda; esto va al final, en pequeño, y SUSTITUYE al consejo genérico
+ * `INVITACION_APP` (que da por hecho que ya entra). Atribución por `?r=` en `campana_envio`.
+ */
+export const CAMPANA_AVISO_VENC_APP = 'aviso_venc_app'
+export const TEXTO_PRESENTAR_APP =
+  'Tu app gratuita de Grupo ASegura: todos tus seguros en el móvil y avisos antes de cada vencimiento o ITV. Sin contraseñas: tu correo y un código.'
+export const BOTON_PRESENTAR_APP = 'Activar mi app'
+
+/** Lo que hace falta saber del portal de la ficha: el subconjunto de `FichaPortal` (`invitacion-portal.ts`). */
+export type PortalConocido = { estado: string; identidades: number | null }
+
+/**
+ * ¿Lleva este correo el bloque de la app? Puro. Solo si:
+ *  - entre los avisos NUEVOS hay un vencimiento (es la campaña del aviso de vencimiento, no de cualquier correo);
+ *  - el estado del portal se CONOCE (`null` = no se pudo mirar → no se muestra: estado conservador);
+ *  - nadie entra con esa ficha (`identidades === 0`; `null` = no se pudo contar → no se muestra);
+ *  - y su correo resuelve a ESTA ficha (`invitable`): en `ambiguo`/`resuelve_a_otra` acabaría en una
+ *    bóveda vacía o ajena, y en `ya_entra` ya la tiene.
+ */
+export function debePresentarApp(tiposNuevos: readonly string[], portal: PortalConocido | null): boolean {
+  if (!tiposNuevos.includes('obligacion_en_ventana')) return false
+  if (portal === null) return false
+  return portal.estado === 'invitable' && portal.identidades === 0
+}
+
+/**
+ * El enlace del botón «Activar mi app»: con `?r=` personal si hay ref (atribuible), si no la entrada
+ * del portal pelada. 🚨 Sin ref NO se inventa uno: un `?r=` sin fila en `campana_envio` no atribuye nada.
+ */
+export function enlacePresentarApp(ref: string | null, portal: string): string {
+  return ref ? enlacePresentacion(ref, portal) : `${portal.replace(/\/$/, '')}/`
+}
+
+/**
+ * ¿Se escribe la fila de `campana_envio` de este correo? Solo tras un envío ACEPTADO, nunca en el
+ * ensayo, y solo si el enlace llevaba un ref nuevo (si ya había fila de esta persona, no se reutiliza:
+ * el ref no se guarda en claro).
+ */
+export function debeRegistrarCampana(x: { soloContar: boolean; resultado: string; ref: string | null }): boolean {
+  return !x.soloContar && x.resultado === 'enviado' && x.ref !== null
+}
+
+/**
  * Un aviso, reducido a lo único que el correo necesita: su clase. El detalle de una póliza (ramo y
  * qué cambió) viaja aparte en `DatosAvisosIntranet.detalles`: nunca el título ni nada con números.
  */
@@ -146,6 +192,11 @@ export type DatosAvisosIntranet = {
   enlace: string
   /** `true` = el enlace lleva una llave de acceso directo (un solo uso, `HORAS_ENLACE_DIRECTO`). */
   directo?: boolean
+  /**
+   * Bloque «Tu app gratuita» (`debePresentarApp`). `enlace` lleva el `?r=` personal cuando se puede
+   * atribuir, o la entrada pelada si no. Ausente/`null` = no se presenta (y sale el consejo de siempre).
+   */
+  presentarApp?: { enlace: string } | null
 }
 
 export type CuerpoCorreo = { asunto: string; texto: string; html: string }
@@ -313,6 +364,8 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
       : antes === 1
         ? 'Además, tenías ya otro aviso sin resolver.'
         : `Además, tenías ya otros ${antes} avisos sin resolver.`
+  const app = d.presentarApp ?? null
+  if (app && !/^https:\/\//.test(app.enlace)) throw new Error('enlace_no_https')
   const intro = lineas.length > 0 ? 'Te escribimos para avisarte de lo siguiente en tu área de clientes:' : `Te escribimos para avisarte de que tienes ${resumen} en tu área de clientes.`
 
   const texto = [
@@ -326,7 +379,7 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
     '',
     comoSeEntra,
     '',
-    INVITACION_APP,
+    ...(app ? [TEXTO_PRESENTAR_APP, `${BOTON_PRESENTAR_APP}: ${app.enlace}`] : [INVITACION_APP]),
     '',
     'Un saludo,',
     'Grupo ASegura',
@@ -340,7 +393,12 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
     ...(ademas ? [`<p>${escapar(ademas)}</p>`] : []),
     `<p><a href="${escapar(d.enlace)}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none">Entrar en mi área de clientes</a></p>`,
     `<p style="color:#555;font-size:13px">${escapar(comoSeEntra)}</p>`,
-    `<p style="background:#eef3fe;border-radius:8px;padding:10px 12px;font-size:14px">📱 ${escapar(INVITACION_APP)}</p>`,
+    app
+      ? `<div style="margin:18px 0;border-top:1px solid #e6e9f5;padding-top:14px;font-family:'Nunito Sans',system-ui,sans-serif;font-size:14px;line-height:1.5;color:#333">` +
+        `<p style="margin:0 0 10px">${escapar(TEXTO_PRESENTAR_APP)}</p>` +
+        `<p style="margin:0"><a href="${escapar(app.enlace)}" style="display:inline-block;padding:10px 18px;border-radius:10px;background:#3364ee;color:#fff;text-decoration:none;font-family:Quicksand,'Nunito Sans',system-ui,sans-serif;font-weight:700">${escapar(BOTON_PRESENTAR_APP)}</a></p>` +
+        '</div>'
+      : `<p style="background:#eef3fe;border-radius:8px;padding:10px 12px;font-size:14px">📱 ${escapar(INVITACION_APP)}</p>`,
     '<p>Un saludo,<br>Grupo ASegura</p>',
     '</div>',
   ].join('')

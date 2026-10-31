@@ -1,8 +1,10 @@
 // Texto concreto, agrupación semanal, rebotes y direcciones internas del correo de la intranet.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   cuerpoAvisosIntranet, frasePoliza, tocaEscribir, debeEscribirHoy, esTablaInexistente, esDireccionInterna, direccionesBloqueadas, elegirDestino,
+  BOTON_PRESENTAR_APP, TEXTO_PRESENTAR_APP, INVITACION_APP, debePresentarApp, debeRegistrarCampana, enlacePresentarApp,
   type DatosAvisosIntranet,
 } from './correo-avisos-intranet.ts'
 
@@ -74,4 +76,77 @@ test('«la relación no existe» se reconoce; otros errores no', () => {
   assert.equal(esTablaInexistente(Object.assign(new Error('x'), { meta: { code: '42P01' } })), true)
   assert.equal(esTablaInexistente(new Error('connection refused')), false)
   assert.equal(esTablaInexistente(new Error('column "x" does not exist')), false)
+})
+
+// ── Campaña «app en el aviso de vencimiento» (`aviso_venc_app`, 31/10/2026) ──────────────────────────
+
+const VENC = ['obligacion_en_ventana']
+const REF = 'AAAAAAAAAAAAAAAAAAAAAA' // 22 caracteres base64url: forma de ref válida
+
+test('app: el bloque solo se ofrece a quien SE SABE que no entra al portal y con un vencimiento entre lo nuevo', () => {
+  assert.equal(debePresentarApp(VENC, { estado: 'invitable', identidades: 0 }), true)
+  // Ya entra al portal.
+  assert.equal(debePresentarApp(VENC, { estado: 'ya_entra', identidades: 1 }), false)
+  // Estado desconocido: null = no se pudo mirar → no se muestra.
+  assert.equal(debePresentarApp(VENC, null), false)
+  // Vínculos sin contar (lectura fallida) aunque el correo resuelva: no se sabe → no se muestra.
+  assert.equal(debePresentarApp(VENC, { estado: 'invitable', identidades: null }), false)
+  // Correo que llevaría a otra ficha o a ninguna concreta: no se le manda a una bóveda vacía.
+  for (const estado of ['ambiguo', 'resuelve_a_otra', 'no_comprobado', 'ilegible', 'sin_email']) {
+    assert.equal(debePresentarApp(VENC, { estado, identidades: 0 }), false, estado)
+  }
+  // Sin vencimiento entre lo nuevo (p. ej. solo un cambio de póliza): no es esta campaña.
+  assert.equal(debePresentarApp(['poliza_modificada'], { estado: 'invitable', identidades: 0 }), false)
+})
+
+test('app: el correo lleva el bloque con el ?r= personal, al final y en lugar del consejo genérico', () => {
+  const enlace = enlacePresentarApp(REF, 'https://clientes.grupoasegura.es/')
+  assert.equal(enlace, `https://clientes.grupoasegura.es/?r=${REF}`)
+  const c = cuerpoAvisosIntranet({ ...base, avisos: [{ tipo: 'obligacion_en_ventana' }], presentarApp: { enlace } })
+  assert.ok(c.texto.includes(TEXTO_PRESENTAR_APP))
+  assert.ok(c.texto.includes(`${BOTON_PRESENTAR_APP}: ${enlace}`))
+  assert.ok(c.html.includes(`href="${enlace}"`))
+  assert.match(c.html, />Activar mi app<\/a>/)
+  assert.match(c.html, /background:#3364ee/)
+  assert.match(c.html, /Quicksand/)
+  assert.ok(!c.texto.includes(INVITACION_APP))
+  // Secundario: el aviso (y su botón de siempre) va ANTES que el bloque.
+  assert.ok(c.html.indexOf('Entrar en mi área de clientes') < c.html.indexOf('Activar mi app'))
+  assert.ok(c.texto.indexOf('Puedes verlo aquí') < c.texto.indexOf(TEXTO_PRESENTAR_APP))
+})
+
+test('app: sin bloque (null o ausente) el correo es el de siempre, sin «Activar mi app» ni ?r=', () => {
+  for (const presentarApp of [null, undefined]) {
+    const c = cuerpoAvisosIntranet({ ...base, avisos: [{ tipo: 'obligacion_en_ventana' }], presentarApp })
+    assert.ok(!c.texto.includes(TEXTO_PRESENTAR_APP))
+    assert.ok(!c.html.includes(BOTON_PRESENTAR_APP))
+    assert.doesNotMatch(c.html, /\?r=/)
+    assert.ok(c.texto.includes(INVITACION_APP))
+  }
+})
+
+test('app: sin ref (ya estaba en la campaña) el enlace va sin ?r= — no se inventa atribución', () => {
+  assert.equal(enlacePresentarApp(null, 'https://clientes.grupoasegura.es/'), 'https://clientes.grupoasegura.es/')
+  assert.throws(() => cuerpoAvisosIntranet({ ...base, avisos: [{ tipo: 'obligacion_en_ventana' }], presentarApp: { enlace: 'http://x.es/' } }), /enlace_no_https/)
+})
+
+test('app: la fila de campaña solo tras un envío ACEPTADO, nunca en el modo cuenta ni sin ref', () => {
+  assert.equal(debeRegistrarCampana({ soloContar: false, resultado: 'enviado', ref: REF }), true)
+  assert.equal(debeRegistrarCampana({ soloContar: true, resultado: 'enviado', ref: REF }), false)
+  assert.equal(debeRegistrarCampana({ soloContar: false, resultado: 'rechazado', ref: REF }), false)
+  assert.equal(debeRegistrarCampana({ soloContar: false, resultado: 'sin_proveedor', ref: REF }), false)
+  assert.equal(debeRegistrarCampana({ soloContar: false, resultado: 'enviado', ref: null }), false)
+})
+
+test('app (fuente): en el cron, el ensayo sale ANTES de preparar el bloque, y la fila va DESPUÉS del sello', () => {
+  const src = readFileSync(new URL('./avisos-intranet.ts', import.meta.url), 'utf8')
+  const iEnsayo = src.indexOf('if (soloContar) continue')
+  const iPreparar = src.indexOf('await prepararPresentacionApp(')
+  const iSello = src.indexOf('await db.portalAvisoEnviado.createMany(')
+  const iRegistrar = src.indexOf('await registrarPresentacionEnviada(')
+  assert.ok(iEnsayo > 0 && iPreparar > 0 && iSello > 0 && iRegistrar > 0)
+  assert.ok(iEnsayo < iPreparar, 'el bloque (y su ref) solo se prepara con envío real')
+  assert.ok(iSello < iRegistrar, 'la fila de campaña va después del sello y no lo condiciona')
+  // Y la escritura pasa por la puerta pura.
+  assert.match(src.slice(iSello, iRegistrar + 60), /debeRegistrarCampana\(\{ soloContar, resultado, ref: presentacion\.ref \}\)/)
 })
