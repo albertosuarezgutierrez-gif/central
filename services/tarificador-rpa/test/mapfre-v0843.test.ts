@@ -11,7 +11,7 @@ import { AVISO_COBERTURAS_SIN_LEER, coberturasPorProducto, diagnosticoGarantiasM
 import { esperarSinCapaOverlay } from '../src/descarga-proyecto-auto.ts'
 import { puntuarBotonDescargaProyecto } from '../src/guard.ts'
 
-test('v0.8.43 · versión', () => assert.equal(mapfreAuto.version, '0.8.43'))
+test('v0.8.43 · versión', () => assert.equal(mapfreAuto.version, '0.8.44'))
 
 async function lanzar(): Promise<Browser> {
   try { return await chromium.launch({ headless: true }) } catch (e) {
@@ -49,9 +49,9 @@ test('cableado: auto.ts espera la capa DESPUÉS de «Generar Proyecto» y ANTES 
   assert.ok(iGen > 0 && iCapa > iGen && iDesc > iCapa)
 })
 
-test('icono «picture_as_pdf»: vale con el proyecto guardado (nº leído) y NO sin guardar; «emitir» y compañía distinta de Generali siguen como estaban', () => {
+test('icono «picture_as_pdf»: vale con el proyecto guardado y (desde 0.8.44, run real 01/11) también sin nº leído; «emitir» y compañía distinta de Generali siguen como estaban', () => {
   assert.ok(puntuarBotonDescargaProyecto(['picture_as_pdf'], 'mapfre', true) > 0)
-  assert.equal(puntuarBotonDescargaProyecto(['picture_as_pdf'], 'mapfre', false), 0)
+  assert.equal(puntuarBotonDescargaProyecto(['picture_as_pdf'], 'mapfre', false), 1)
   assert.equal(puntuarBotonDescargaProyecto(['emitir picture_as_pdf'], 'mapfre', true), 0)
 })
 
