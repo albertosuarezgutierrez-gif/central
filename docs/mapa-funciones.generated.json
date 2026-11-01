@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-01T08:49:03Z",
-  "sha": "82fc6ca609187635664843ae4ff8c93adba2a20a",
+  "generadoEn": "2026-11-01T09:32:29Z",
+  "sha": "61e6ad0917de621311af150a001c180264ffe5ef",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -187169,7 +187169,7 @@
           "exportada": false,
           "params": "hhmm?: string | null",
           "retorno": "number | null",
-          "linea": 157
+          "linea": 171
         },
         {
           "nombre": "horasEnTexto",
@@ -187177,7 +187177,7 @@
           "exportada": true,
           "params": "texto: string, tardeSiAmbiguo = false",
           "retorno": "number[]",
-          "linea": 179,
+          "linea": 193,
           "resumen": "TODAS las horas (en minutos) de un texto: «12:00», «13h», «1 pm», «a la 1», «12 del mediodía», y las palabras mediodía/noon/midday/mezzogiorno/midi = 12:00. Rango 0-23:59 (sin tope superior). Una cifr"
         },
         {
@@ -187186,7 +187186,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": null,
-          "linea": 204,
+          "linea": 218,
           "resumen": "Un punto entre dos cifras («11.30») es una hora, no el fin de una frase."
         },
         {
@@ -187195,7 +187195,7 @@
           "exportada": false,
           "params": "frase: string",
           "retorno": null,
-          "linea": 206,
+          "linea": 220,
           "resumen": "Cláusulas dentro de una frase (coma/punto y coma fuera de cifras, «y», «and»…): «la entrada es a las 15:00 y podéis salir a las 15:00»."
         },
         {
@@ -187204,7 +187204,7 @@
           "exportada": false,
           "params": "texto: string, verbo: RegExp, tardeSiAmbiguo: boolean",
           "retorno": "number[]",
-          "linea": 209,
+          "linea": 223,
           "resumen": "Horas de las frases del texto que contienen `verbo` (TODAS las de cada frase, no solo la primera)."
         },
         {
@@ -187213,7 +187213,7 @@
           "exportada": true,
           "params": "texto: string, checkOut?: string | null",
           "retorno": "boolean",
-          "linea": 216,
+          "linea": 230,
           "resumen": "¿El huésped ANUNCIA una salida posterior a la hora oficial («saldremos a las 12:00»)?"
         },
         {
@@ -187222,7 +187222,7 @@
           "exportada": true,
           "params": "texto: string, checkIn?: string | null",
           "retorno": "boolean",
-          "linea": 230,
+          "linea": 244,
           "resumen": "¿El huésped ANUNCIA una llegada anterior a la hora oficial de entrada («llegamos a las 10», «we arrive at 11am»)? Regla de Alberto (18/10/2026): la hora oficial manda salvo que él autorice; el bot SIE"
         },
         {
@@ -187231,7 +187231,7 @@
           "exportada": true,
           "params": "reply: string, horario: HorarioOficial = {}",
           "retorno": "'salida' | 'entrada' | null",
-          "linea": 246,
+          "linea": 260,
           "resumen": "¿El BORRADOR del bot acepta/confirma una hora fuera de la oficial («tomo nota de que saldréis a las 12:00»)? Sin depender de un verbo: SALIDA = cualquier hora posterior al check-out que no sea la de e"
         },
         {
@@ -187240,7 +187240,7 @@
           "exportada": true,
           "params": "texto: string, categoria?: string | null, horario: HorarioOficial = {}",
           "retorno": "PeticionHorario | null",
-          "linea": 272,
+          "linea": 286,
           "resumen": "¿Es una petición de cambio de horario o de guardar maletas? Conservador a propósito: un falso positivo solo convierte un mensaje en PROPUESTA por Telegram (sin daño); un falso negativo deja salir solo"
         },
         {
@@ -187249,7 +187249,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 285
+          "linea": 299
         },
         {
           "nombre": "resolverTipo",
@@ -187257,7 +187257,7 @@
           "exportada": true,
           "params": "pet: PeticionHorario, texto: string, o: { hoy: string; checkIn: string | null }",
           "retorno": "TipoCambio",
-          "linea": 294,
+          "linea": 308,
           "resumen": "«equipaje» no dice si es antes de entrar o después de salir: lo dice el texto, y si no, el momento (`hoy` ≤ llegada → antes de entrar; si no → el día de salida). Fechas YYYY-MM-DD."
         },
         {
@@ -187266,7 +187266,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string | null",
-          "linea": 306,
+          "linea": 320,
           "resumen": "Primera hora pedida («a las 15:00», «until 3pm», «um 15 Uhr»…) como 'HH:MM', o null. Rango 06–23."
         },
         {
@@ -187275,7 +187275,7 @@
           "exportada": true,
           "params": "tipo: TipoCambio, horaPedida: string | null",
           "retorno": "number | null",
-          "linea": 332,
+          "linea": 346,
           "resumen": "Contraoferta (hora entera, 13 o 14) para el botón `🕐`. Salida: 14 si pide 15:00 o más, 13 si no. Entrada: 13 si pide a las 12 o antes, 14 si no. null si coincide con lo que ya pidió (botón redundante"
         },
         {
@@ -187284,7 +187284,7 @@
           "exportada": true,
           "params": "cb: string",
           "retorno": "string",
-          "linea": 346,
+          "linea": 360,
           "resumen": "Telegram rechaza un `callback_data` > 64 BYTES (y el aviso entero falla): se comprueba al construir."
         },
         {
@@ -187293,7 +187293,7 @@
           "exportada": true,
           "params": "p: { bookingId: string; tipo: TipoCambio; semaforo: Semaforo; horaPedida: string | null }",
           "retorno": "BotonCH[][]",
-          "linea": 356,
+          "linea": 370,
           "resumen": "Botones de la propuesta. Prefijo `hsp_` (mismo emisor autorizado que el resto): `hsp_chsi:<id>:<HHMM>`, `hsp_chhasta:<id>:<HH>`, `hsp_chno:<id>`, `hsp_chlimp:<id>`. En ROJO no se ofrecen los «sí»: el "
         },
         {
@@ -187302,7 +187302,7 @@
           "exportada": true,
           "params": "arg: string | undefined",
           "retorno": "string | null",
-          "linea": 374,
+          "linea": 388,
           "resumen": "'HHMM' (callback) → 'HH:MM'; null si no es una hora válida."
         },
         {
@@ -187311,7 +187311,7 @@
           "exportada": false,
           "params": "nombre?: string | null",
           "retorno": null,
-          "linea": 385
+          "linea": 399
         },
         {
           "nombre": "textoAceptacion",
@@ -187319,7 +187319,7 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; hora: string; nombre?: string | null }",
           "retorno": "string",
-          "linea": 390
+          "linea": 404
         },
         {
           "nombre": "consignasDePiso",
@@ -187327,7 +187327,7 @@
           "exportada": true,
           "params": "propertyId: string",
           "retorno": "string[]",
-          "linea": 397,
+          "linea": 411,
           "resumen": "Consignas de la zona del piso (de `equipaje.ts`); vacío = piso sin zona → texto genérico."
         },
         {
@@ -187336,7 +187336,7 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; semaforo: Semaforo; propertyId: string; nombre?: string | null; ofrecerMaletas?: boolean }",
           "retorno": "string",
-          "linea": 402
+          "linea": 416
         },
         {
           "nombre": "tareaLimpieza",
@@ -187344,13 +187344,13 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; hora: string; checkIn: string | null; checkOut: string | null; huesped?: string | null; reservationId: string }",
           "retorno": "",
-          "linea": 420,
+          "linea": 434,
           "resumen": "Instrucción para la tarea de limpieza y fecha en la que se crea."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f711f495e94"
+      "hash": "f511618ce360"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cierre.ts",
