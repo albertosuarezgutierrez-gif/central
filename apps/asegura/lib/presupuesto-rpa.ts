@@ -226,7 +226,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   }))]
 
   // 01/11/2026: ofertas sin NINGUNA garantía leída → borrador INCOMPLETO (el PDF no sale con una columna entera «No figura»; Alberto lo sabe por Telegram).
-  const incompletas = ofertasSinGarantiasRpa(opciones.map((o) => ({ compania: o.compania, producto: o.producto, coberturas: leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === o.ofertaId)?.datosExtra) ?? '')?.oferta.coberturas ?? [] })))
+  const incompletas = ofertasSinGarantiasRpa(opciones.map((o) => ({ compania: o.compania, producto: o.producto, coberturas: leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === o.ofertaId)?.datosExtra) ?? '')?.oferta.coberturas ?? [], avisos: leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === o.ofertaId)?.datosExtra) ?? '')?.oferta.avisos })))
   const { venceEl } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
   // El token en claro no se guarda ni se devuelve: es un borrador; el aviso (`accion:'avisar'`) genera el enlace.
   const tokenHash = await hashTokenVista(generarTokenVista())

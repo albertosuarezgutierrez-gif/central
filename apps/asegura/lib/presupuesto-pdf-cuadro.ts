@@ -24,6 +24,8 @@ export type EstudioPdf = {
   actualId: string | null
   comparacion: ResultadoComparacion
   narrativa: NarrativaPdf
+  /** `estudio.rpa.incompleto`: ofertas del bot sin garantías fiables (borrador incompleto → sin PDF). */
+  incompletas?: string[]
 }
 
 const esObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
@@ -43,7 +45,11 @@ export function leerEstudio(json: unknown): EstudioPdf | null {
   if (!c.ofertas.every((o) => esObj(o) && esTxt(o.id) && esTxt(o.compania) && esObj(o.garantias))) return null
   if (!c.filas.every((f) => esObj(f) && esTxt(f.clave) && esTxt(f.etiqueta) && Array.isArray(f.celdas))) return null
   if (!c.resumen.every((r) => esObj(r) && esTxt(r.ofertaId))) return null
+  const inc = esObj(json.rpa) && Array.isArray(json.rpa.incompleto)
+    ? json.rpa.incompleto.filter(esObj).map((o) => `${esTxt(o.compania) ? o.compania : ''} · ${esTxt(o.producto) ? o.producto : ''}`.trim())
+    : []
   return {
+    ...(inc.length ? { incompletas: inc } : {}),
     recomendadaId: esTxt(json.recomendadaId) ? json.recomendadaId : null,
     actualId: esTxt(json.actualId) ? json.actualId : null,
     comparacion: c as unknown as ResultadoComparacion,

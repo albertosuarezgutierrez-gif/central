@@ -465,8 +465,23 @@ export function rangoPrimas(primas: readonly number[]): string | null {
  * Cuenta como «sin garantías» la que no trae coberturas o cuyas coberturas no dicen si cubre o no (`sobreCoberturasRpa` = null). El borrador
  * se marca INCOMPLETO (`estudio.rpa.incompleto`), el Telegram a Alberto lo dice y el PDF no se genera con una columna entera «No figura».
  */
-export function ofertasSinGarantiasRpa(ofertas: readonly { compania: string; producto: string; coberturas: unknown }[]): { compania: string; producto: string }[] {
-  return ofertas.filter((o) => sobreCoberturasRpa(o.coberturas, '') === null).map((o) => ({ compania: o.compania, producto: o.producto }))
+export function ofertasSinGarantiasRpa(ofertas: readonly { compania: string; producto: string; coberturas: unknown; avisos?: readonly string[] }[]): { compania: string; producto: string; motivo?: string }[] {
+  const out: { compania: string; producto: string; motivo?: string }[] = []
+  for (const o of ofertas) {
+    if (sobreCoberturasRpa(o.coberturas, '') === null) out.push({ compania: o.compania, producto: o.producto })
+    else if (ofertaConGarantiasDudosas(o.avisos ?? [])) out.push({ compania: o.compania, producto: o.producto, motivo: MOTIVO_GARANTIAS_DUDOSAS })
+  }
+  return out
+}
+
+/**
+ * 01/11/2026 (worker Mapfre 0.8.46): avisos con los que el bot declara que NO pudo asegurar las garantías de una oferta. PURA.
+ * Esa oferta no se presenta como comparativa válida: borrador INCOMPLETO y sin PDF, igual que la columna entera «No figura».
+ */
+const PATRONES_GARANTIAS_DUDOSAS = [/garant[ií]as posiblemente incompletas/i, /filas de garant[ií]as no asignadas a producto/i, /garant[ií]as id[eé]nticas entre productos de distinto precio/i]
+export const MOTIVO_GARANTIAS_DUDOSAS = 'garantías dudosas (la compañía no permitió asegurarlas)'
+export function ofertaConGarantiasDudosas(avisos: readonly string[] | null | undefined): boolean {
+  return (avisos ?? []).some((a) => PATRONES_GARANTIAS_DUDOSAS.some((r) => r.test(a)))
 }
 
 export type EntradaAvisoRpa = {
@@ -487,7 +502,7 @@ export type EntradaAvisoRpa = {
   /** Datos que la compañía usó DISTINTOS de la ficha (`alertasDeAvisos`): van arriba, en negrita. */
   alertas?: string[]
   /** Ofertas del borrador SIN garantías leídas (`ofertasSinGarantiasRpa`): el borrador es INCOMPLETO y se dice arriba. */
-  incompletas?: { compania: string; producto: string }[]
+  incompletas?: { compania: string; producto: string; motivo?: string }[]
 }
 
 /** El Telegram para Alberto (parse_mode HTML: todo lo variable, escapado). Solo nombre de pila o referencia: sin NIF ni teléfono. */
@@ -499,7 +514,7 @@ export function textoAvisoPresupuestoRpa(e: EntradaAvisoRpa): string {
     `🤖 <b>Presupuesto en BORRADOR</b> preparado por el tarificador (${escapeHtml(e.ramo)})`,
     `Cliente: ${escapeHtml(quien)}`,
     ...(e.incompletas?.length
-      ? [`⛔ <b>INCOMPLETO</b>: sin garantías leídas en ${escapeHtml(e.incompletas.map((o) => `${o.compania} · ${o.producto}`).join('; '))}. No se genera el PDF ni conviene enviarlo hasta completarlas (vuelve a tarificar esa compañía o revisa el PDF de su proyecto).`]
+      ? [`⛔ <b>INCOMPLETO</b>: sin garantías leídas en ${escapeHtml(e.incompletas.map((o) => `${o.compania} · ${o.producto}${o.motivo ? ` (${o.motivo})` : ''}`).join('; '))}. No se genera el PDF ni conviene enviarlo hasta completarlas (vuelve a tarificar esa compañía o revisa el PDF de su proyecto).`]
       : []),
     ...[...new Set(e.alertas ?? [])].map((a) => `⚠️ <b>Alerta</b>: ${escapeHtml(a)}`),
     `Ofertas: ${e.primas.length}${companias ? ` (${escapeHtml(companias)})` : ''}`,
