@@ -171,9 +171,13 @@ const sinAcentos = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g,
  */
 export function errorDeMora(texto: string, normas: readonly string[] = []): string | null {
   const t = sinAcentos(texto)
-  if (!normas.includes('lcs-20') && !/\bmora\b|articulo 20\b/.test(t)) return null
-  for (const f of t.split(/[.!?\n]+/)) {
-    if (!/interes/.test(f)) continue
+  // Solo la LCS: «artículo 20» a secas es de cualquier ley (LAU, LEC…).
+  const articulo20Lcs = /articulo 20 de la ley de contrato de seguro|articulo 20 de la lcs|art\. 20 lcs/
+  if (!normas.includes('lcs-20') && !/\bmora\b/.test(t) && !articulo20Lcs.test(t)) return null
+  for (const f0 of t.split(/[.!?\n]+/)) {
+    if (!/interes/.test(f0)) continue
+    // «no desde el día 41» / «nunca desde el día cuarenta y uno» NIEGAN el error: se quitan antes de mirar.
+    const f = f0.replace(/\b(no|nunca) (desde |a partir de |tras |despues de )?(el )?(dia (41|cuarenta y uno)|(los )?(40|cuarenta) dias)/g, ' ')
     if (/dia (41|cuarenta y uno)\b|(tras|pasados|transcurridos|despues de|a partir de)l? (los )?(40|cuarenta) dias/.test(f)) {
       return 'dice que los intereses corren desde el día 41 / tras los 40 días: corren desde la fecha del siniestro (art. 20.6 LCS)'
     }
