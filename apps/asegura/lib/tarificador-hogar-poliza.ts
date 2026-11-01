@@ -1,5 +1,5 @@
 import { esCarteraEnVigor, precargaViviendaDePoliza, referenciaCatastral } from '@central/module-seguros'
-import { datosViviendaParaBot, formularioBotHogar, type RiesgoParaBotsHogar } from '@central/module-tarificacion'
+import { capitalContenidoEstimado, capitalContinenteEstimado, datosViviendaParaBot, formularioBotHogar, type RiesgoParaBotsHogar } from '@central/module-tarificacion'
 import { partirDireccion } from './codeoscopic/direccion.ts'
 import type { ReconstruccionRiesgo } from './tarificador-relanzar-reglas.ts'
 
@@ -143,6 +143,23 @@ export function riesgoHogarDePolizas(
   if (vivienda.anioConstruccion == null) {
     const a = Number(esObj(datos) ? datos.anioConstruccionCima : undefined)
     if (Number.isInteger(a) && a >= 1500 && a <= ahora.getFullYear()) { vivienda.anioConstruccion = a; supuestos.push('anioConstruccion') }
+  }
+
+  // 3b) Capitales a 0 o ausentes (01/11/2026, «hay que dar precio»; job ac0b4631): continente = m² × coste de reconstrucción de la zona y
+  // contenido = 30 % del continente (mín. 15.000 €), a miles (`hogar-asesor.ts`). SUPUESTOS (precio estimado). Sin superficie NO se inventa:
+  // `formularioBotHogar` la pide en el 422. Lo que la póliza SÍ trae (>0) no se toca.
+  const positivo = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null)
+  const m2 = positivo(vivienda.metrosCuadrados)
+  if (m2 !== null) {
+    let cont = positivo(vivienda.capitalContinente)
+    if (cont === null) {
+      cont = capitalContinenteEstimado(m2, typeof vivienda.provincia === 'string' ? vivienda.provincia : null)
+      if (cont !== null) { vivienda.capitalContinente = cont; supuestos.push('capitalContinenteEstimado') }
+    }
+    if (positivo(vivienda.capitalContenido) === null) {
+      const cnt = capitalContenidoEstimado(cont)
+      if (cnt !== null) { vivienda.capitalContenido = cnt; supuestos.push('capitalContenidoEstimado') }
+    }
   }
 
   const r: RiesgoParaBotsHogar = { datosRiesgo: { clave: 'datosVivienda', datos: vivienda }, figuras: [] }

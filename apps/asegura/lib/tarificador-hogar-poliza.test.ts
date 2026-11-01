@@ -49,7 +49,7 @@ test('con régimen y madera (vía que SÍ los tenga): riesgo válido para Allian
     assert.equal(x.inmueble.nombreVia, 'FICTICIA'); assert.equal(x.inmueble.numero, '7'); assert.equal(x.inmueble.anioConstruccion, 1994); assert.equal(x.inmueble.superficieM2, 76)
     assert.equal(x.hogar.uso, 'habitual'); assert.equal(x.hogar.tipoVivienda, 'piso')
   }
-  assert.deepEqual([...r.supuestos].sort(), ['anioConstruccion', 'conMadera', 'regimen', 'tipoVivienda', 'uso'])
+  assert.deepEqual([...r.supuestos].sort(), ['anioConstruccion', 'capitalContenidoEstimado', 'capitalContinenteEstimado', 'conMadera', 'regimen', 'tipoVivienda', 'uso'])
   assert.equal(firmezaPrecioRpa({ compania: 'allianz', ramo: 'hogar', riesgo: {}, oferta: { polizaAnteriorTecleada: true, avisos: [] } }), 'estimado')
 })
 
@@ -158,4 +158,20 @@ test('plan B del número: ficha (CP y calle cuadran) → Catastro → «S/N»; c
   assert.ok(callesCompatibles('SOCORRO', 'DEL SOCORRO') && !callesCompatibles('SOCORRO', 'BUSTOS TAVERA') && !callesCompatibles(null, 'X'))
   assert.equal(referenciaCatastralDeHogarElegida([fila({ datosEspecificos: datos({ referenciaCatastral: '1234567VK1234A0001AB' }) })]), '1234567VK1234A0001AB')
   assert.equal(referenciaCatastralDeHogarElegida([fila()]), null)
+})
+
+test('capitales a 0 con superficie: continente = m² × coste de reconstrucción (a miles) y contenido 30 % (mín. 15.000), ambos supuestos; lo que SÍ trae no se pisa; sin m² no se inventa', () => {
+  const el = { regimen: 'propietario', conMadera: 'no' }
+  const r = riesgoHogarDePolizas([fila({ datosEspecificos: datos({ continente: 0, contenido: 0 }) })], descifrar, AHORA, el)
+  const hogar = (r.reconstruccion.riesgo as { hogar: { capitalContinenteEur?: number; capitalContenidoEur?: number } }).hogar
+  assert.equal(hogar.capitalContinenteEur, 87000, '76 m² × 1.150 = 87.400 → 87.000')
+  assert.equal(hogar.capitalContenidoEur, 26000, '30 % de 87.000 = 26.100 → 26.000')
+  assert.ok(r.supuestos.includes('capitalContinenteEstimado') && r.supuestos.includes('capitalContenidoEstimado'))
+  const propios = riesgoHogarDePolizas([fila({ datosEspecificos: datos({ continente: 200000, contenido: 40000 }) })], descifrar, AHORA, el)
+  const h2 = (propios.reconstruccion.riesgo as { hogar: { capitalContinenteEur?: number; capitalContenidoEur?: number } }).hogar
+  assert.deepEqual([h2.capitalContinenteEur, h2.capitalContenidoEur], [200000, 40000])
+  assert.ok(!propios.supuestos.some((x) => x.startsWith('capital')))
+  const sin = riesgoHogarDePolizas([fila({ datosEspecificos: datos({ metrosCuadrados: 0, continente: 0 }) })], descifrar, AHORA, el)
+  assert.equal(sin.reconstruccion.riesgo, null)
+  assert.ok('faltan' in sin.reconstruccion && sin.reconstruccion.faltan.some((x) => /Superficie/.test(x)))
 })

@@ -1039,7 +1039,7 @@ test('0.1.11 puros: esNumeroSinNumero / esRotuloCasillaSinNumero (exactos, nunca
   for (const v of ['12', '12B', 'SN12', 'sin número 3', '', null, undefined]) assert.equal(esNumeroSinNumero(v), false, String(v))
   for (const v of ['Sin número', ' sin numero ', 'S/N', 'Vivienda sin número']) assert.equal(esRotuloCasillaSinNumero(v), true, v)
   for (const v of ['Número', 'Acepto condiciones', 'Sin número de bloque', 'Enviar número']) assert.equal(esRotuloCasillaSinNumero(v), false, v)
-  assert.equal(allianzHogar.version, '0.1.13')
+  assert.equal(allianzHogar.version, '0.1.14')
 })
 
 test('0.1.11: «S/N» + campo numérico + casilla «Sin número» → se marca por la puerta guardada, no se teclea y se declara', async () => {
@@ -1122,6 +1122,44 @@ test('0.1.13: «Caja fuerte» sigue siendo estricta (grupo ausente no se inventa
   try {
     await marco.evaluate(() => { document.querySelector('#g1-0')?.closest('nx-radio-group')?.remove() })
     await assert.rejects(() => rellenarValoracionBienes(page, marco, FORM_VAL, ctx), (e) => e instanceof ErrorMapaIncompleto && /grupo «Caja fuerte».*0 coincidencias/.test((e as Error).message))
+  } finally {
+    await context.close()
+  }
+})
+
+// ───────────── 0.1.14: «Inmueble» sin dato y con valor de serie no razonable → estimado por superficie (job ac0b4631) ─────────────
+
+const FORM_SIN_CAPITAL: FormularioHogar = { ...FORM_VAL, hogar: { ...FORM_VAL.hogar, capitalContinenteEur: null, capitalContenidoEur: null } }
+
+test('0.1.14 puro: el plan lleva el estimado (m² × 1.150, a miles; contenido 30 %, mín. 15.000) y nunca sin superficie', () => {
+  const plan = planValoracionBienes(FORM_SIN_CAPITAL)
+  const g = (c: string) => plan.find((o) => o.tipo === 'importe' && o.control === c) as Extract<(typeof plan)[number], { tipo: 'importe' }>
+  assert.equal(g('sumInsuredBuilding').valor, null)
+  assert.equal(g('sumInsuredBuilding').estimado, 104000, '90 m² × 1.150 = 103.500 → 104.000')
+  assert.equal(g('sumInsuredContent').estimado, 31000, '30 % de 104.000 = 31.200 → 31.000')
+  const sinM2 = planValoracionBienes({ ...FORM_SIN_CAPITAL, inmueble: { ...FORM_SIN_CAPITAL.inmueble, superficieM2: 0 } })
+  assert.equal((sinM2.find((o) => o.tipo === 'importe' && o.control === 'sumInsuredBuilding') as { estimado?: number | null }).estimado, null)
+  assert.equal(g('sumInsuredBuilding').valor, null)
+})
+
+test('0.1.14: serie no razonable (vacío) + sin dato → se escribe el estimado y se anota sin importes; con dato del formulario no se usa', async () => {
+  const { context, page, ctx, marco, valor } = await hastaValoracion({ valoracion: { vacio: 'sumInsuredBuilding' } })
+  try {
+    const supuestos = await rellenarValoracionBienes(page, marco, FORM_SIN_CAPITAL, ctx)
+    assert.equal(await valor('sumInsuredBuilding'), '104000')
+    assert.ok(supuestos.includes('Inmueble: importe estimado por superficie'), supuestos.join(' | '))
+    assert.ok(!supuestos.join(' ').match(/\d/), 'los supuestos no llevan importes')
+    assert.equal(await valor('sumInsuredContent'), '30000', 'serie razonable: se acepta la de serie, no se pisa')
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.14: sin dato, sin superficie y serie no razonable → sigue el hueco (no se inventa)', async () => {
+  const { context, page, ctx, marco } = await hastaValoracion({ valoracion: { vacio: 'sumInsuredBuilding' } })
+  try {
+    const f = { ...FORM_SIN_CAPITAL, inmueble: { ...FORM_SIN_CAPITAL.inmueble, superficieM2: 0 } }
+    await assert.rejects(() => rellenarValoracionBienes(page, marco, f, ctx), (e) => e instanceof ErrorMapaIncompleto && /«Inmueble» de «Valoración de bienes» sin dato en el formulario y sin un importe de serie aceptable/.test((e as Error).message))
   } finally {
     await context.close()
   }
