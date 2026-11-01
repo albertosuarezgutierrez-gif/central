@@ -261,10 +261,7 @@ el primer precio real de un bot, se pone `true` ahí (con su cepo en `obligatori
   única; cepo `CAMPOS_VIVIENDA_DEL_BOT` en plataforma). Ningún adaptador los escribe hasta grabar su pantalla. `datosTomador`
   (nombre/apellidos) es parte del formulario del worker (lo inyecta asegura; plataforma no puede mandarlo). La parrilla Avant2↔bot
   ya lee el lado bot en moto, coche y hogar (`ladoBotDeLecturas`): antes decía «no aplica» en esos ramos.
-- **Mapfre Hogar** (`mapfre/hogar.ts`, borrador 0.2.0): registrado SOLO con `MAPFRE_HOGAR_ACTIVO` (apagado) y encolable SOLO con
-  `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` en asegura (lista cerrada; entonces asegura comprueba al encolar e inyecta al entregar
-  DNI, nacimiento, nombre y apellidos de la ficha). Huecos `TODO(grabación)`: campo de la referencia catastral, clics `#vc`/radio y
-  panel `#protecciones-panel`, y la pantalla de precio. Con el flag encendido cada hueco PARA con inventario DOM (modo grabación).
+- **Mapfre Hogar** (`mapfre/hogar.ts`, 0.3.0, 01/11/2026): listo para la 1.ª ejecución real hasta LEER el precio (sin emitir). Pantalla «Datos de riesgo - Hogar» (exploración 9a1ced53): se tarifica por CP + m² (sin ref. catastral); supuestos (precio ESTIMADO, van en `avisos`): habitaciones/baños por m², calidad Media, planta Intermedia, tipo de construcción/fecha de efecto/forma de aseguramiento de serie, CP tomador = CP vivienda, sin protecciones; uso alquiler/turístico y madera → `datos`. Pantalla de precio: lector del PDF + lectura por líneas y, si no casa, el error dice títulos/botones vistos. Encender: env `MAPFRE_HOGAR_ACTIVO=true` en el worker (o la constante) + fila `mapfre/hogar` activa + `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` en `central-asegura`.
 - **Occident Hogar**: `planFormularioHogar` lee ya el `FormularioHogar` canónico (antes `tomador.nif`: todo trabajo caía en `datos`).
   Sigue SIN registrar (aparcado: SSO paso 2 y formulario sin mecánica).
 
