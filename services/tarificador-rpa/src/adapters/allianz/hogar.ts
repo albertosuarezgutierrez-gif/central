@@ -38,7 +38,7 @@
 // campo; nunca en logs ni mensajes.
 
 import type { Frame, Locator, Page } from 'playwright'
-import { EmisionBloqueadaError, importeEs, textoSupuestos, type FormularioHogar, type OfertaNormalizada, type ResultadoAdaptador } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, capitalContenidoEstimado, capitalContinenteEstimado, importeEs, textoSupuestos, type FormularioHogar, type OfertaNormalizada, type ResultadoAdaptador } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { claveCampo, conRespaldoIA, normalizarTexto, registrarAtasco, type PeticionResolver } from '../../formador.ts'
@@ -863,7 +863,7 @@ export const SEL_PANTALLA_VALORACION = 'epac-goods-page'
 export const TEXTO_SIGUIENTE_VALORACION = 'Siguiente'
 
 export type OperacionValoracion =
-  | { tipo: 'importe'; control: string; que: string; valor: number | null; minimo: number }
+  | { tipo: 'importe'; control: string; que: string; valor: number | null; minimo: number; /** 0.1.14: estimado (m² × coste de reconstrucción) que SOLO se usa si no hay dato y el importe de serie no es razonable. */ estimado?: number | null }
   | {
       tipo: 'grupo'
       pregunta: string
@@ -879,11 +879,14 @@ export function planValoracionBienes(f: FormularioHogar): OperacionValoracion[] 
     throw new ErrorMapaIncompleto('el campo de joyas EN caja fuerte de «Valoración de bienes» (con «Caja fuerte = Si»; sin explorar)')
   }
   const pb = f.hogar.protecciones?.puertaBlindada ?? null
+  // 0.1.14 (job ac0b4631): sin capital en el formulario pero con superficie → estimado de reserva (asegura ya lo manda; esto cubre un riesgo antiguo).
+  const estCont = f.hogar.capitalContinenteEur ?? capitalContinenteEstimado(f.inmueble.superficieM2, null)
+  const estCnt = f.hogar.capitalContenidoEur ?? capitalContenidoEstimado(f.hogar.capitalContinenteEur ?? estCont)
   return [
     // «Caja fuerte» no consta en el formulario: se deja la de serie (solo se exige que haya una marcada).
     { tipo: 'grupo', pregunta: 'Caja fuerte', valor: null },
-    { tipo: 'importe', control: 'sumInsuredBuilding', que: 'Inmueble', valor: f.hogar.capitalContinenteEur, minimo: 1 },
-    { tipo: 'importe', control: 'sumInsuredContent', que: 'Mobiliario', valor: f.hogar.capitalContenidoEur, minimo: 1 },
+    { tipo: 'importe', control: 'sumInsuredBuilding', que: 'Inmueble', valor: f.hogar.capitalContinenteEur, minimo: 1, estimado: estCont },
+    { tipo: 'importe', control: 'sumInsuredContent', que: 'Mobiliario', valor: f.hogar.capitalContenidoEur, minimo: 1, estimado: estCnt },
     { tipo: 'importe', control: 'sumInsuredValuablesNoSafe', que: 'Joyas fuera de caja fuerte', valor: ov?.joyasFueraCajaEur ?? null, minimo: 0 },
     // HIPÓTESIS (a confirmar con Alberto): «Objetos especiales» de Allianz = `objetosValorEur` del formulario.
     { tipo: 'importe', control: 'sumInsuredSpecialObjects', que: 'Objetos especiales', valor: ov?.objetosValorEur ?? null, minimo: 0 },
@@ -949,6 +952,14 @@ async function fijarImporteValoracion(marco: Frame, ctx: CtxVivienda, op: Extrac
   const deshabilitado = await campo.isDisabled()
   const leido = await leer(campo)
   const estado = `campo: ${deshabilitado ? 'deshabilitado' : 'habilitado'}, ${leido === null ? 'valor ilegible' : leido.trim() === '' ? 'vacío' : importeDeSerieAceptable(leido, op.minimo) ? 'con importe del portal' : 'con un valor no razonable'}`
+  if (op.valor === null && (op.estimado ?? null) !== null && (!importeDeSerieAceptable(leido, op.minimo) || (await esInvalido(campo)))) {
+    // 0.1.14: sin dato y el de serie no vale → el estimado por superficie (supuesto; la validación de razonabilidad del de serie se mantiene).
+    if (deshabilitado) throw new ErrorMapaIncompleto(`por qué «${op.que}» de «Valoración de bienes» está deshabilitado (${estado})`)
+    const loc = await escribir(marco, ctx, { tipo: 'escribir', control: op.control, que: op.que, valor: importeCampo(op.estimado as number) }, campo)
+    if (await esInvalido(loc)) throw new ErrorMapaIncompleto(`por qué el portal marca inválido «${op.que}» de «Valoración de bienes» tras rellenarlo con el estimado`)
+    supuestos.push(`${op.que}: importe estimado por superficie`)
+    return
+  }
   if (op.valor === null) {
     if (!importeDeSerieAceptable(leido, op.minimo) || (await esInvalido(campo))) throw new ErrorMapaIncompleto(`«${op.que}» de «Valoración de bienes» sin dato en el formulario y sin un importe de serie aceptable (${estado})`)
     supuestos.push(`${op.que}: el importe de serie del portal`)
@@ -1174,7 +1185,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.13',
+  version: '0.1.14',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)

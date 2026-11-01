@@ -47,6 +47,28 @@ export function capitalContinenteSugerido(m2: number | null | undefined, provinc
   return { capitalEur: Math.round((m2 * eurPorM2) / 100) * 100, eurPorM2, zona, estimacion: true }
 }
 
+// Capitales ESTIMADOS para dar precio (Alberto, 01/11/2026: «coger lo más similar, hay que dar precio, ya iremos afinando»). Cuando la póliza
+// trae los capitales a 0 pero SÍ la superficie: continente = m² × coste de reconstrucción de la zona (`COSTE_RECONSTRUCCION_EUR_M2`, media
+// 1.150 €/m²) redondeado a MILES; contenido = 30 % del continente, mínimo 15.000 €, redondeado a miles. Son SUPUESTOS (precio estimado),
+// nunca datos del cliente. Sin superficie no se inventa nada (`null`).
+export const CONTENIDO_SOBRE_CONTINENTE = 0.3
+export const CONTENIDO_MINIMO_EUR = 15_000
+
+const aMiles = (n: number) => Math.round(n / 1000) * 1000
+
+/** Continente estimado (m² × coste de la zona, a miles). `null` sin superficie válida. PURA. */
+export function capitalContinenteEstimado(m2: number | null | undefined, provincia: string | null | undefined): number | null {
+  const s = capitalContinenteSugerido(m2, provincia)
+  if (!s) return null
+  return Math.max(1000, aMiles(s.capitalEur))
+}
+
+/** Contenido estimado a partir del continente (30 %, mínimo 15.000 €, a miles). `null` sin continente válido. PURA. */
+export function capitalContenidoEstimado(continenteEur: number | null | undefined): number | null {
+  if (typeof continenteEur !== 'number' || !Number.isFinite(continenteEur) || continenteEur <= 0) return null
+  return Math.max(CONTENIDO_MINIMO_EUR, aMiles(continenteEur * CONTENIDO_SOBRE_CONTINENTE))
+}
+
 /** Por debajo de esta fracción del capital sugerido se avisa de infraseguro. */
 export const UMBRAL_INFRASEGURO = 0.8
 
