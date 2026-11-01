@@ -11,6 +11,11 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios
+- Caso Elisa/Luxury Busto: la pregunta no traía verbo de llegada, quedó `general` y el juez LLM escaló con un falso «no está en la guía» (no ve el bloque EARLY CHECK-IN de Smoobu).
+- `cambio-horario.ts`: nueva `RE_DISPONIBLE_ANTES` (EN/ES/IT, exige before/antes/prima) → `tipo:'entrada'`. Tests +2 (vistos en rojo).
+- Pendiente: borrar `mensajes_guia_gaps` id 79 (hueco falso; permiso denegado al agente). Opcional: pasar la línea EARLY CHECK-IN al juez.
+
 ## (31/10/2026) Fiscal · panel por devengo + simulador IRPF + hechos guardados
 - Panel fiscal por devengo (#5308). #5310: simulador IRPF, pantalla nueva, «Mi situación fiscal», avisos Telegram (`finanzas.fiscal-avisos`), motor que reproduce la renta 2025 al céntimo (backtest permanente: imputación art. 85, FN prorrateada, mínimos andaluces), correduría desde CIMA vía `seguros_agregado.v_comisiones_mes` (5.767,51€ ene-oct; antes banco/0,85 inflaba ~1.570€).
 - BD aplicada: `fiscal_compras_previstas`, `fiscal_avisos_enviados`, columnas de `fiscal_perfil` (meses exonerados, FN desde 18/11/2025, abonos), vista agregada. BBVA 1175 importado hasta 02/11 (14 nuevos); 1 duplicado ignorado; tasa basura 34,40€ → Dúplex.

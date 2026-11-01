@@ -124,6 +124,20 @@ const RE_ENTRADA = new RegExp([
   'entrare\\s*prima', 'arrivare\\s*prima', 'entrata\\s*anticipata', 'anticipare\\s*(il\\s*)?check',
 ].join('|'), 'iu')
 
+// Pregunta de DISPONIBILIDAD anticipada sin verbo de llegada («Is the apartment ready before 15?»). Exige «antes/before/prima»:
+// «is the apartment ready?» a secas no es una petición. Solo entrada: nada de check-out aquí.
+const ALOJ = String.raw`(?:(?:the|our|my|el|la|nuestro|nuestra|mi|l['’]|il|lo)\s*)?(?:apartment|room|flat|place|accommodation|unit|piso|apartamento|habitaci[oó]n|alojamiento|casa|appartamento|stanza|camera)`
+const RE_DISPONIBLE_ANTES = new RegExp([
+  `\\b(?:is|are)\\s+${ALOJ}\\s+(?:ready|available|free)\\b[^.?!]{0,25}?\\bbefore\\b`,
+  `\\bcan\\s+(?:we|i)\\s+(?:get\\s*in|enter|access|come\\s*in|check.?in)\\b[^.?!]{0,25}?\\bbefore\\b`,
+  `\\bis\\s+it\\s+possible\\s+to\\s+(?:check.?in|get\\s*in|enter|access)\\b[^.?!]{0,25}?\\b(?:earlier|before)\\b`,
+  `\\best[aá]n?\\s+(?:listo|lista|disponible|libre)s?\\s+${ALOJ}\\s+antes\\b`,
+  `\\best[aá]\\s+${ALOJ}\\s+(?:listo|lista|disponible|libre)\\s+antes\\b`,
+  `\\bpodemos\\s+(?:entrar|acceder|pasar|hacer\\s+(?:el\\s+)?check.?in)\\b[^.?!]{0,25}?\\bantes\\b`,
+  `${ALOJ}\\s+(?:[eè]|e')\\s+(?:pront[oa]|disponibile|libero|libera)\\s+prima\\b`,
+  `\\bpossiamo\\s+(?:entrare|accedere|fare\\s+il\\s+check.?in)\\b[^.?!]{0,25}?\\bprima\\b`,
+].join('|'), 'iu')
+
 const RE_SALIDA = new RegExp([
   'late\\s*check.?out', 'later\\s*check.?out', 'late\\s*departure', 'salida\\s*tard[ií]a',
   '(salir|irnos|marcharnos|dejar\\s*(el\\s*)?(apartamento|piso|alojamiento))\\s*(un\\s*poco\\s*)?(m[aá]s\\s*tarde|despu[eé]s)',
@@ -273,7 +287,7 @@ export function peticionCambioHorario(texto: string, categoria?: string | null, 
   const t = texto || ''
   if (categoria === 'early_checkin') return { tipo: 'entrada' }
   if (categoria === 'late_checkout') return { tipo: 'salida' }
-  if (RE_ENTRADA.test(t)) return { tipo: 'entrada' }
+  if (RE_ENTRADA.test(t) || RE_DISPONIBLE_ANTES.test(t)) return { tipo: 'entrada' }
   if (RE_SALIDA.test(t)) return { tipo: 'salida' }
   if (RE_HASTA_HORA.test(t) && RE_CTX_SALIDA.test(t)) return { tipo: 'salida' }
   if (anunciaSalidaTardia(t, horario.checkOut)) return { tipo: 'salida' }
