@@ -12,7 +12,7 @@ import { validarFormularioAuto, type FormularioAuto } from '@central/module-tari
 import type { ContextoPortal } from '../src/adaptador.ts'
 
 test('v0.2.42 · versión', () => {
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.55')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.56')
 })
 
 let browser: Browser

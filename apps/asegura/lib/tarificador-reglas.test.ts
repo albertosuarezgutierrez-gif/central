@@ -505,7 +505,7 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
-  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conTomador\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b|riesgo = conPoliza\b/g, '')), 'el riesgo solo se toca para la respuesta')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conTomador\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b|riesgo = conPoliza\b|riesgo = riesgoConReferencia\(/g, '')), 'el riesgo solo se toca para la respuesta')
 })
 
 test('póliza actual (19/10/2026): se lee SOLO esa clave, de ESTA correduría, y se inyecta al entregar sin escribir en BD', () => {

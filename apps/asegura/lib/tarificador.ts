@@ -34,6 +34,8 @@ import { decryptField } from '@central/module-seguros-pii'
 import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, companiaActualUnica, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
+import { esRamoVehiculo, ofertasConSupuestoReferencia, referenciaDeResultadoOrigen, riesgoConReferencia } from './tarificador-vehiculo-referencia'
+import { guardarReferenciaOportunidad, leerReferenciaOportunidad } from './tarificador-vehiculo-referencia-bd'
 import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
 import { sobreCoberturasRpa } from './presupuesto-rpa-reglas'
 import { hayBotVersion, hayImagenTrabajo, hayPasos } from './esquema-bd'
@@ -592,6 +594,11 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     const conPoliza = aplicarPolizaAnteriorUltimos5(f.compania, f.ramo, riesgo, await leerNumeroPolizaActual(f.correduria_id, f.oportunidad_id))
     riesgo = conPoliza
   }
+  // VEHÍCULO DE REFERENCIA (01/11/2026): el de la oportunidad que MANDA (humano > Mapfre > póliza > Allianz), solo en la respuesta (nunca
+  // en BD). El bot lo usa si iba a parar por versión. Fallo de lectura = sin él (el bot hace lo de siempre).
+  if (modo !== 'exploracion' && modo !== 'humo' && f.oportunidad_id && esRamoVehiculo(f.ramo)) {
+    riesgo = riesgoConReferencia(riesgo, f.ramo, await leerReferenciaOportunidad(prisma, f.correduria_id, f.oportunidad_id))
+  }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base
   const x = await prisma.$queryRaw<{ entrada: string }[]>`
@@ -631,6 +638,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
   // Esquema opcional (SQL de 08/10/2026 puede no estar aplicado): se omite `bot_version` / la traza si no existen.
   const conBot = await hayBotVersion()
   type Interno = { res: ResultadoRegistro; traza: { t: FilaTrabajo; captura: 'con_captura' | null } | null }
+  let referenciaOk: { correduriaId: string; oportunidadId: string; ref: ReturnType<typeof referenciaDeResultadoOrigen> } | null = null
   // Nº de póliza actual de Allianz auto (SINCO al tarificar): se lee ANTES de abrir la transacción y sin `tx`, para que un fallo de esta
   // lectura (ya capturado dentro) no pueda abortar la transacción del resultado. compañía/ramo/oportunidad del trabajo no cambian.
   let numeroPolizaActual: string | null = null
@@ -752,6 +760,8 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
         set riesgo = riesgo || ${JSON.stringify(vehiculoParaRiesgoOrigen(t.compania, r.vehiculo))}::jsonb
         where id = ${t.id}::uuid and correduria_id = ${t.correduria_id}::uuid and jsonb_typeof(riesgo) = 'object'`
       if (t.oportunidad_id) await inyectarVehiculoEnEspera(tx, t.correduria_id, t.oportunidad_id, r.vehiculo)
+      // VEHÍCULO DE REFERENCIA (01/11/2026): se guarda en la oportunidad DESPUÉS del commit (accesorio: nunca tumba el resultado).
+      if (t.oportunidad_id) referenciaOk = { correduriaId: t.correduria_id, oportunidadId: t.oportunidad_id, ref: referenciaDeResultadoOrigen(t.compania, t.ramo, r.vehiculo) }
     }
     // PURGA (13/10/2026): DESPUÉS de guardar la tarificación y los PDF (lo último que lee el riesgo dentro de la
     // transacción) y en el MISMO commit. El aprendizaje de versión de abajo usa la copia en memoria (`t`), no la fila.
@@ -759,6 +769,9 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     await purgarRiesgoTrabajos(tx, [t.id])
     return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }, traza: { t, captura: null } }
   })
+  // (Asignada dentro del callback de la transacción: el `as` evita que TS la estreche a `null`.)
+  const refOk = referenciaOk as { correduriaId: string; oportunidadId: string; ref: ReturnType<typeof referenciaDeResultadoOrigen> } | null
+  if (refOk?.ref) await guardarReferenciaOportunidad(refOk.correduriaId, refOk.oportunidadId, refOk.ref)
   // APRENDER (13/10/2026): un `ok` con tarificación que llevaba una versión AUTOMÁTICA (IA o memoria) la confirma en
   // `seguros.tarificador_elecciones`. Fuera de la transacción y sin lanzar: el resultado jamás depende de la memoria.
   if (interno.res.estado === 'registrado' && interno.res.estadoTrabajo === 'ok' && interno.res.tarificacionId && interno.traza) {
@@ -807,7 +820,9 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
   const riesgoEntregado = t.compania === 'allianz' && t.ramo === 'auto'
     ? aplicarPolizaAnteriorUltimos5(t.compania, t.ramo, rg, numeroPolizaActual)
     : rg
-  const conFirmeza = ofertasConFirmezaRpa(t.compania, t.ramo, riesgoEntregado, ofertas)
+  // Versión elegida por el VEHÍCULO DE REFERENCIA (01/11/2026, marca `eleccionVersionReferencia` del riesgo): su supuesto va a los avisos
+  // de cada oferta ANTES de la firmeza → `estimado` aunque el bot recibiera la elección como explícita.
+  const conFirmeza = ofertasConFirmezaRpa(t.compania, t.ramo, riesgoEntregado, ofertasConSupuestoReferencia(ofertas, rg))
   const conDocs = conFirmeza.map(({ oferta: o }) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null }))
   // ADITIVO (07/10/2026): el PDF del proyecto de la compañía (`seguros.documentos`), sin columna nueva: va en el
   // jsonb `respuesta`. `null` = el worker no lo obtuvo (el motivo va en los `avisos` de la oferta).

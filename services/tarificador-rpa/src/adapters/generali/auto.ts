@@ -32,6 +32,8 @@ import {
   conAntecedentesFavorables,
   datosEquivalenciaDesdeEtiqueta,
   elegirVersionAutomaticamente,
+  MAX_OPCIONES_VERSION,
+  PREFIJO_ELECCION_VERSION,
   referenciaRiesgoVersion,
   supuestosAuto,
   textoSupuestos,
@@ -422,7 +424,13 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * (modelo o versión) se intenta desempatar con el vehículo de origen (`desempatarPorOrigenGenerali`, reglas.ts: `vehiculoConfirmado` de Mapfre y
  * `seleccionVehiculo` de Allianz/póliza). Solo con EXACTAMENTE una opción compatible; se declara como supuesto (precio `estimado`).
  */
-export const VERSION_GENERALI_AUTO = '0.2.55'
+/**
+ * v0.2.56 (01/11/2026): la elección de la bandeja también vale en el nivel MODELO. Si la etiqueta elegida casa (normalizada, entera) con
+ * EXACTAMENTE una opción de «Modelo» (lista FORFOUR · FORTWO CABRIO · FORTWO COUPE), se elige ahí y manda sobre el desempate por origen; si no
+ * casa en el modelo, el desempate por origen sigue funcionando en ese nivel y la elección se aplica luego en versión, como antes. El atasco
+ * del nivel modelo dice «modelos» (`ErrorEleccionModeloGenerali`), no «versiones», para que la bandeja no confunda.
+ */
+export const VERSION_GENERALI_AUTO = '0.2.56'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1838,9 +1846,57 @@ export function versionGeneraliPorEquivalencia(candidatas: readonly string[], fo
  * con EXACTAMENTE una opción compatible; `null` = sigue parando como antes. El supuesto va a la oferta (precio `estimado`). PURA.
  */
 export function desempateOrigenSinPersona(opciones: readonly string[], form: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'>, nivel: 'modelo' | 'version'): { indice: number; supuesto: string } | null {
-  if (form.eleccionVersion?.etiqueta?.trim() || form.eleccionVersion?.codigo?.trim()) return null
+  if (nivel === 'modelo') {
+    // v0.2.56: en el MODELO la elección de la persona solo apaga el desempate si casa con una opción de ESTE nivel (entonces la aplica
+    // `modeloAmbiguoGenerali`); una elección de versión (o que no casa) no lo apaga: se aplicará luego en el nivel versión.
+    const etq = form.eleccionVersion?.etiqueta?.trim()
+    if (etq && indicePersonaEnNivelGenerali(opciones, etq) !== null) return null
+  } else if (form.eleccionVersion?.etiqueta?.trim() || form.eleccionVersion?.codigo?.trim()) return null
   const d = desempatarPorOrigenGenerali(opciones, origenesDesempateGenerali(form), nivel)
   return d.tipo === 'unica' ? { indice: d.indice, supuesto: d.supuesto } : null
+}
+
+/** v0.2.56 · Índice de la ÚNICA opción del nivel que casa entera (normalizada) con la etiqueta elegida por la persona; `null` si ninguna o varias. PURA. */
+export function indicePersonaEnNivelGenerali(opciones: readonly string[], etiqueta: string | null | undefined): number | null {
+  const k = etiqueta?.trim() ? normalizarCatalogo(etiqueta) : ''
+  if (!k) return null
+  const ix = opciones.flatMap((o, i) => (!esOpcionVaciaCatalogo(o) && normalizarCatalogo(o) === k ? [i] : []))
+  return ix.length === 1 ? ix[0]! : null
+}
+
+/**
+ * v0.2.56 · Modelo AMBIGUO (varias o ninguna exacta): 1) la elección de la persona si casa con UNA opción del modelo (manda); 2) si no, el
+ * desempate por el vehículo de origen (solo con `conOrigen`: hay lista que preguntar); `null` = se pregunta en la bandeja. PURA.
+ */
+export function modeloAmbiguoGenerali(
+  textos: readonly string[],
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'>,
+  conOrigen = true,
+): { tipo: 'persona'; indice: number } | { tipo: 'origen'; indice: number; supuesto: string } | null {
+  const p = indicePersonaEnNivelGenerali(textos, form.eleccionVersion?.etiqueta)
+  if (p !== null) return { tipo: 'persona', indice: p }
+  const d = conOrigen ? desempateOrigenSinPersona(textos, form, 'modelo') : null
+  return d ? { tipo: 'origen', ...d } : null
+}
+
+/**
+ * v0.2.56 · Atasco del nivel MODELO: mismo cable que `ErrorEleccionVersion` (`eleccion`, prefijo `requiere_eleccion_version:`, lista en
+ * `opcionesVersion`) pero el mensaje dice «modelos» para que la bandeja no lo confunda con una lista de versiones. Solo nombres de catálogo.
+ */
+export class ErrorEleccionModeloGenerali extends ErrorEleccionVersion {
+  readonly nivel = 'modelo' as const
+  constructor(opciones: CandidatoVersion[]) {
+    super(opciones)
+    this.name = 'ErrorEleccionModeloGenerali'
+    this.message = mensajeEleccionModeloGenerali(opciones)
+  }
+}
+
+/** v0.2.56 · Mensaje del atasco de MODELO (prefijo de versión para el cable, texto de modelo para la persona). PURA. */
+export function mensajeEleccionModeloGenerali(opciones: readonly CandidatoVersion[]): string {
+  const lista = opciones.slice(0, MAX_OPCIONES_VERSION).map((o) => o.etiqueta)
+  const resto = opciones.length - lista.length
+  return `${PREFIJO_ELECCION_VERSION} el catálogo ofrece ${opciones.length} modelos para este vehículo (nivel MODELO; la versión se elige después); elige un modelo en la bandeja y reintenta: ${lista.join(' · ')}${resto > 0 ? ` (+${resto} más)` : ''}`
 }
 
 /** Un nivel del selector (marca/modelo/versión) en un `<select>` nativo, casado por la regla de Alberto. Devuelve si fue por similitud. `avisos` recoge el supuesto de una versión elegida sola. */
@@ -2019,14 +2075,19 @@ export async function elegirModeloPrimeFaces(
   const e = elegirModeloGenerali(textos, b.texto, b.modo)
   if (e.tipo === 'varias' || e.tipo === 'ninguna') {
     const lista = e.cercanas.length > 0 ? e.cercanas : e.tipo === 'ninguna' ? textos.filter((o) => !esOpcionVaciaCatalogo(o)).slice(0, 25) : []
-    // v0.2.55: antes de parar, desempate con el vehículo de origen sobre TODA la lista (la unicidad se mide contra todas, no solo las cercanas).
-    const d = lista.length > 0 && form ? desempateOrigenSinPersona(textos, form, 'modelo') : null
+    // v0.2.56: la elección de la PERSONA casa con una opción del modelo → esa (manda). v0.2.55: si no, desempate con el vehículo de origen
+    // sobre TODA la lista (la unicidad se mide contra todas, no solo las cercanas).
+    const d = form ? modeloAmbiguoGenerali(textos, form, lista.length > 0) : null
+    if (d?.tipo === 'persona') {
+      await ponerOpcionPrimeFaces(raiz, menu, opciones[d.indice]!, d.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo» (elección de la bandeja)')
+      return { ...opciones[d.indice]!, indice: d.indice }
+    }
     if (d) {
       await ponerOpcionPrimeFaces(raiz, menu, opciones[d.indice]!, d.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo» (desempate por el vehículo de origen)')
       avisos?.push(d.supuesto)
       return { ...opciones[d.indice]!, indice: d.indice }
     }
-    if (lista.length > 0) throw new ErrorEleccionVersion(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+    if (lista.length > 0) throw new ErrorEleccionModeloGenerali(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
     throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo('modelo', b.texto, textos, { tipo: 'ninguna' }))
   }
   await ponerOpcionPrimeFaces(raiz, menu, opciones[e.indice]!, e.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo»')
@@ -2080,7 +2141,7 @@ async function resolverTrasOtrosModelo(
       const e = est.eleccion
       if (e.tipo === 'varias' || e.tipo === 'ninguna') {
         const lista = e.cercanas.length > 0 ? e.cercanas : ops.map((o) => o.texto).filter((o) => !esOpcionVaciaCatalogo(o)).slice(0, 25)
-        if (lista.length > 0) throw new ErrorEleccionVersion(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+        if (lista.length > 0) throw new ErrorEleccionModeloGenerali(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
         throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo('modelo', b.texto, ops.map((o) => o.texto), { tipo: 'ninguna' }))
       }
       // `otros` no llega aquí (estadoTrasOtrosModeloGenerali lo convierte en `ninguna`): unica.

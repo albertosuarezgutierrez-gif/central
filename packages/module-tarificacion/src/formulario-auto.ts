@@ -12,6 +12,7 @@ import { esCif, esDniNie, normalizarDocumento, validarTomador, type Tomador } fr
 import { claveCompania } from './registro.ts'
 import { tieneCaracteresProhibidos } from './poblacion.ts'
 import { validarVehiculoConfirmado, type VehiculoConfirmado } from './vehiculo-confirmado.ts'
+import { validarVehiculoReferencia, type VehiculoReferencia } from './vehiculo-referencia.ts'
 
 export const RAMOS_VEHICULO = ['auto', 'moto'] as const
 export type RamoVehiculo = (typeof RAMOS_VEHICULO)[number]
@@ -307,6 +308,12 @@ export type FormularioAuto = {
    * versión (solo si casa exactamente una). Ausente = no consta.
    */
   vehiculoConfirmado?: VehiculoConfirmado | null
+  /**
+   * Vehículo de REFERENCIA de la oportunidad (01/11/2026, `vehiculo-referencia.ts`): el que manda por prioridad de origen (humano >
+   * Mapfre > póliza > Allianz). Solo catálogo (sin matrícula). Lo pone asegura al ENTREGAR el trabajo; el bot lo usa cuando iba a parar
+   * por elección de modelo/versión (elige por similitud y lo declara como supuesto → precio estimado). Ausente = no consta.
+   */
+  vehiculoReferencia?: VehiculoReferencia | null
   /**
    * DNI/NIE/CIF del TOMADOR para buscarlo en el portal (Mapfre NSEI paso 1: se teclea y el portal busca solo al salir del
    * campo; 14/10/2026). Normalizado
@@ -617,6 +624,11 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     else errores.push(...vc.errores)
   }
 
+  // Vehículo de referencia de la oportunidad (opcional; lo pone asegura al entregar). ACCESORIO: inválido → se descarta (sin él el bot
+  // sigue como siempre), nunca tumba el formulario: siempre hay que dar precio.
+  const vrRef = e.vehiculoReferencia !== undefined && e.vehiculoReferencia !== null ? validarVehiculoReferencia(e.vehiculoReferencia) : null
+  const vehiculoReferencia: VehiculoReferencia | null = vrRef?.ok ? vrRef.valor : null
+
   // Documento del tomador para la búsqueda del portal (opcional; lo rellena asegura). Nunca se repite el valor en el error.
   let documentoTomador: string | null = null
   if (!vacio(e.documentoTomador)) {
@@ -707,6 +719,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(poblacion !== null ? { poblacion } : {}),
       ...(eleccionPoblacion !== null ? { eleccionPoblacion } : {}),
       ...(vehiculoConfirmado !== null ? { vehiculoConfirmado } : {}),
+      ...(vehiculoReferencia !== null ? { vehiculoReferencia } : {}),
       ...(documentoTomador !== null ? { documentoTomador } : {}),
       ...(datosTomador !== null ? { datosTomador } : {}),
       ...(fichaTomador !== null ? { fichaTomador } : {}),
