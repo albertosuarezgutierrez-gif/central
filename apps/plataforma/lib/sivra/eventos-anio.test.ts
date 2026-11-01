@@ -38,3 +38,23 @@ test('fecha ilegible → no opina', () => {
   assert.equal(anioIncoherente('26/09/2027', 'septiembre de 2026'), false)
   assert.equal(anioIncoherente(undefined, 'septiembre de 2026'), false)
 })
+
+test('estadoLeidoEvento: la fila fantasma real (Love The 90s 2026 en 2027-09-26) se lee como descartada', async () => {
+  const { estadoLeidoEvento } = await import('./eventos-anio.ts')
+  assert.equal(estadoLeidoEvento({
+    rate_date: '2027-09-26', estado: 'confirmado',
+    nombre: "Love The 90's Sevilla 2026 (Estadio La Cartuja)",
+    evidencia: "Estadio La Cartuja — 'LOVE THE 90'S FECHA: 26 de septiembre de 2026'",
+  }), 'descartado')
+  // Nombre con año equivocado y sin evidencia (Silvio Rodríguez «Tour España 2026» en 2027-02-13).
+  assert.equal(estadoLeidoEvento({ rate_date: '2027-02-13', estado: 'confirmado', nombre: 'Silvio Rodríguez Tour España 2026 (FIBES)', evidencia: null }), 'descartado')
+})
+
+test('estadoLeidoEvento: no toca lo coherente, lo que no cita año ni lo ya descartado', async () => {
+  const { estadoLeidoEvento } = await import('./eventos-anio.ts')
+  assert.equal(estadoLeidoEvento({ rate_date: '2027-04-13', estado: 'confirmado', nombre: 'Feria de Abril 2027', evidencia: null }), 'confirmado')
+  assert.equal(estadoLeidoEvento({ rate_date: '2026-11-07', estado: 'confirmado', nombre: 'Sevilla de Boda', evidencia: '7 y 8 de noviembre de 2026; novedades de 2027' }), 'confirmado')
+  assert.equal(estadoLeidoEvento({ rate_date: '2027-03-21', estado: null, nombre: 'Semana Santa — Domingo de Ramos', evidencia: 'derivado de la Pascua' }), null)
+  assert.equal(estadoLeidoEvento({ rate_date: '2027-06-07', estado: 'previsto', nombre: 'Semana SEMG', evidencia: 'del 7 al 11 de junio de 2027' }), 'previsto')
+  assert.equal(estadoLeidoEvento({ rate_date: '2027-05-16', estado: 'descartado', nombre: 'Tattoo', evidencia: 'sep 2026' }), 'descartado')
+})
