@@ -502,7 +502,8 @@ export const ARTICULOS: readonly Articulo[] = [
         titulo: 'Qué ocurre si la aseguradora no paga en plazo',
         parrafos: [
           'Si pasan los cuarenta días y no has recibido ese importe mínimo, la aseguradora entra en mora. Según el artículo 20 de la Ley de Contrato de Seguro, la indemnización devenga entonces el interés legal del dinero incrementado en un 50 %.',
-          'Esos intereses se calculan sobre la cantidad que debería haberte pagado y empiezan a correr desde el día cuarenta y uno. No necesitas reclamar formalmente para que nazca ese derecho: la mora es automática por el mero retraso.',
+          'Esos intereses se calculan sobre la cantidad que debería haberte pagado y, según el artículo 20, se cuentan desde la fecha del siniestro, no desde el día cuarenta y uno (salvo que el tomador o el asegurado no lo comunicaran en plazo: entonces corren desde la comunicación). La mora y los intereses nacen por ley, sin necesidad de reclamación previa; aun así, conviene pedirlos por escrito si la compañía no los incluye en el pago.',
+          'Además, el artículo 20 también considera en mora a la aseguradora que no ha pagado la prestación en el plazo de tres meses desde que se produjo el siniestro, aunque ya hubiera abonado algo antes.',
           'Además, si transcurridos dos años desde el siniestro la aseguradora sigue sin pagar, ese interés no puede ser inferior al 20 % anual. Es una penalización adicional para evitar que las compañías dejen los expedientes abiertos sine die.',
         ],
       },
@@ -527,7 +528,7 @@ export const ARTICULOS: readonly Articulo[] = [
     faq: [
       { pregunta: '¿Los cuarenta días se cuentan desde el siniestro o desde que lo comunico?', respuesta: 'Desde que lo declaras a la aseguradora. El plazo empieza a correr cuando la compañía tiene conocimiento oficial del siniestro, no cuando ocurrió. Por eso es importante avisar cuanto antes y guardar el justificante de la fecha en que lo hiciste.' },
       { pregunta: '¿Qué pasa si la aseguradora dice que aún no sabe cuánto es el importe mínimo?', respuesta: 'Esa respuesta no es válida. Siempre hay una cantidad mínima indiscutible, aunque sea parcial. Si la compañía se niega a calcularla, reclama por escrito y recuérdales su obligación legal. Si persiste el bloqueo, acude a tu corredor o presenta una reclamación formal.' },
-      { pregunta: '¿Puedo reclamar los intereses de mora aunque al final me paguen?', respuesta: 'Sí. Si la aseguradora te paga fuera de plazo, tienes derecho a los intereses de mora por el periodo de retraso. Debes reclamarlos expresamente, porque no suelen abonarlos de forma automática. Calcula el importe y añádelo a tu reclamación con las fechas exactas.' },
+      { pregunta: '¿Puedo reclamar los intereses de mora aunque al final me paguen?', respuesta: 'Sí. Si la aseguradora te paga fuera de plazo, tienes derecho a los intereses de mora por el periodo de retraso. Los intereses de mora nacen por ley (art. 20 LCS) sin necesidad de reclamación previa, pero en la práctica conviene pedirlos por escrito si la compañía no los incluye en el pago. Calcula el importe y añádelo a tu reclamación con las fechas exactas.' },
     ],
   },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
