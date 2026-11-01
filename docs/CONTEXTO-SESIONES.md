@@ -19,11 +19,15 @@
 - Decisión de Alberto: «coger el más similar, hay que dar precio y guardar presupuesto, ya iremos afinando»; regla «siniestralidad más favorable». El presupuesto NUNCA muestra «No figura»: hay que descargar el proyecto de la compañía con garantías (agente en curso para Mapfre auto).
 - Presupuesto AS-26-0042 en borrador (Allianz+Mapfre auto), NO enviado.
 - Pendiente: precio Generali, precio Allianz hogar, garantías Mapfre, fallo MEDIO en revisión (requiere_humano cuenta como cerrado → borrador prematuro), `probar` no vincula oportunidad en auto.
+## (01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios
+- Caso Elisa/Luxury Busto: la pregunta no traía verbo de llegada, quedó `general` y el juez LLM escaló con un falso «no está en la guía» (no ve el bloque EARLY CHECK-IN de Smoobu).
+- `cambio-horario.ts`: nueva `RE_DISPONIBLE_ANTES` (EN/ES/IT, exige before/antes/prima) → `tipo:'entrada'`. Tests +2 (vistos en rojo).
+- Pendiente: borrar `mensajes_guia_gaps` id 79 (hueco falso; permiso denegado al agente). Opcional: pasar la línea EARLY CHECK-IN al juez.
 
 ## (01/11/2026) Blog asegura-web · PR #5328 MERGEADO (mora art. 20 LCS)
 - «No se pudo publicar» = `Tests (packages + guardián)` aún corriendo, no rojo. Graphify marcó error jurídico real.
 - Corregido en `claude/blog-asegura` (`cae7a0c`): intereses de mora desde la FECHA DEL SINIESTRO (no día 41), mora también si no paga en 3 meses, sin contradicción «automática/reclamar». Cuerpo del PR actualizado (plataforma lee el artículo de ahí: `blog-pr.ts`).
-- Lección para el agente del blog: los cepos validan citas, no el razonamiento; revisar art. 20.3/20.6 en futuros artículos de mora.
+- #5336: agente del blog blindado — síntesis lcs-18/20 exacta + cepo errorDeMora() (reparo `razonamiento`).
 - #5328 MERGEADO (squash `8ea7844`) con CI verde, por orden de Alberto.
 
 ## (31/10/2026) Fiscal · panel por devengo + simulador IRPF + hechos guardados
