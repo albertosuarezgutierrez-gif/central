@@ -12,7 +12,7 @@ import { mapfreAuto } from '../src/adapters/mapfre/auto.ts'
 
 const PDF_MINIMO = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n' + ' '.repeat(80), 'latin1')
 
-test('v0.8.35 · versión', () => assert.equal(mapfreAuto.version, '0.8.41'))
+test('v0.8.35 · versión', () => assert.equal(mapfreAuto.version, '0.8.42'))
 
 test('v0.8.35 · puro: solo se cierra un diálogo informativo, con rótulo EXACTO de cerrar (la cruz antes que «Aceptar»)', () => {
   const d = (texto: string, botones: string[], campos = 0) => decidirCierreDialogoDescarga({ texto, botones, campos })

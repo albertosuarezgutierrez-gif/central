@@ -2393,6 +2393,8 @@ export function causaClicNoPulsado(msg: string): { causa: CausaClicNoPulsado; de
 export const TEXTO_GENERAR_PROYECTO_MAPFRE = rotuloMayus(CONCEPTOS_ACCION.generar_proyecto, 'rotulos', 'generar proyecto')
 /** Cuánto se espera a leer el nº de proyecto tras el clic (modal «Generando proyecto» incluido). */
 export const MS_PROYECTO_MAPFRE = 45_000
+/** v0.8.42 · cuánto se vigila un diálogo de alta de cliente DESPUÉS de ver ya el nº de proyecto. */
+export const MS_ASENTAR_PROYECTO_MAPFRE = 2_500
 const SEL_DIALOGOS_MAPFRE = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 /** Palabras que, en un diálogo tras el clic, hacen PARAR (sin tocar nada). Sobre texto sin tildes y en minúsculas. */
 const RE_DIALOGO_PELIGROSO_MAPFRE = /emit|emisi|contrat|formaliz|firmar|firma digital|pagar|\bpago\b|grabar poliza|domicili|iban/
@@ -2401,7 +2403,10 @@ const RE_DIALOGO_PELIGROSO_MAPFRE = /emit|emisi|contrat|formaliz|firmar|firma di
 export const AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE = 'Mapfre: diálogo de alta de cliente respondido No (decisión de Alberto 01/11/2026)'
 const planoAltaMapfre = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[¿?¡!]/g, ' ').replace(/\s+/g, ' ').trim()
 /** Lo que puede haber entre «en» y «al contratar esta póliza» (el nombre del sistema): nada que hable de emitir/pagar/firmar/contratar. */
-const RE_ALTA_CLIENTE_MAPFRE = /^desea dar de alta al cliente en ([a-z0-9 ._\-/&()]{1,60}?) al contratar esta poliza$/
+// v0.8.42 (trabajo 89e0a420): el diálogo REAL lleva un icono de Material delante («warning») y un pie («¡<nombre>! info_outlined <nombre>»), no solo la pregunta.
+const RE_ALTA_CLIENTE_MAPFRE = /^(?:(?:warning|info|info_outlined|error|error_outline|help|help_outline|report_problem) )*desea dar de alta al cliente en ([a-z0-9 ._\-/&()]{1,60}?) al contratar esta poliza(.{0,100})$/
+/** El pie tras la pregunta: solo letras/cifras/símbolos mansos y NADA que hable de emitir, pagar, cobrar, firmar, cuentas… */
+const RE_ALTA_PIE_PROHIBIDO = /emit|emisi|contrat|formaliz|firm|pag|domicili|iban|grabar|cobr|recib|tarjeta|cuenta|sepa|prima|importe|envi|sms|mail|correo/
 const RE_SISTEMA_ALTA_PROHIBIDO = /emit|emisi|contrat|formaliz|firm|pag|domicili|iban|grabar/
 /**
  * v0.8.41 · EXCEPCIÓN MÍNIMA (Alberto, 01/11/2026): ¿es este diálogo EXACTAMENTE «¿Desea dar de alta al cliente en el [sistema] al
@@ -2411,6 +2416,8 @@ const RE_SISTEMA_ALTA_PROHIBIDO = /emit|emisi|contrat|formaliz|firm|pag|domicili
 export function esDialogoAltaClienteMapfre(textoSinBotones: string, botones: readonly string[]): boolean {
   const m = RE_ALTA_CLIENTE_MAPFRE.exec(planoAltaMapfre(textoSinBotones))
   if (!m || RE_SISTEMA_ALTA_PROHIBIDO.test(m[1]!)) return false
+  const pie = (m[2] ?? '').trim()
+  if (pie !== '' && (!/^[a-z0-9 ._\-/&()]+$/.test(pie) || RE_ALTA_PIE_PROHIBIDO.test(pie))) return false
   const bs = botones.map(planoAltaMapfre).map((b) => b.replace(/[.,;:]/g, '').trim())
   return bs.length === 2 && [...bs].sort().join('|') === 'no|si'
 }
@@ -3019,6 +3026,7 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
   let numero: string | null = null
   let peligro: string | null = null
   let altaRespondida = false
+  let numeroVistoEn: number | null = null
   try {
     await pulsarGenerarProyectoMapfre(page, guard, boton, async () => {
       pulsado = true
@@ -3050,8 +3058,13 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
           peligro = (malo.match(RE_DIALOGO_PELIGROSO_MAPFRE) ?? [''])[0]
           return
         }
-        numero = numeroProyectoMapfreNuevo(antes, await textoProyectoMapfre(page))
-        if (numero) return
+        numero = numero ?? numeroProyectoMapfreNuevo(antes, await textoProyectoMapfre(page))
+        // v0.8.42: el nº puede pintarse ANTES que el diálogo de alta (run real 89e0a420: nº leído y el diálogo quedó abierto tapando el PDF).
+        // Con nº ya visto se sigue vigilando unos segundos (mismas reglas) antes de dar por cerrado el paso.
+        if (numero) {
+          numeroVistoEn = numeroVistoEn ?? Date.now()
+          if (altaRespondida || Date.now() - numeroVistoEn >= MS_ASENTAR_PROYECTO_MAPFRE) return
+        }
         await page.waitForTimeout(400)
       }
     }, 'generar', conGuardar)

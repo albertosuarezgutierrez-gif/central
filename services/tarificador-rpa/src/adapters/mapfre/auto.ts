@@ -1,4 +1,7 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.42 (01/11/2026, trabajo 89e0a420: nº leído pero coberturas vacías y sin aviso de alta): el diálogo REAL de alta lleva un icono («warning») delante y un pie
+//   («¡X! info_outlined X») y no casaba con el patrón estricto; además el nº se pintó ANTES que el diálogo y el bot dejó de vigilar. Ahora el patrón admite icono + pie
+//   inocuo (sin emitir/pagar/cobrar/firmar/cuenta…, ≤100 car.) y, con nº ya visto, se vigila 2,5 s más. Solo dos botones No/Sí; todo lo demás sigue parando.
 // v0.8.41 (01/11/2026, decisión explícita de Alberto): EXCEPCIÓN MÍNIMA en guard.ts — si tras «Generar Proyecto» sale EXACTAMENTE «¿Desea dar de alta al
 //   cliente en el [sistema] al contratar esta póliza?» con SOLO los botones «No»/«Sí», el bot pulsa «No» (`esDialogoAltaClienteMapfre` + `responderNoAltaClienteMapfre`)
 //   y sigue (proyecto → PDF → garantías). Aviso: «diálogo de alta de cliente respondido No». Cualquier otro diálogo con contrat/emit/pag/firm… sigue parando.
@@ -2126,7 +2129,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.41',
+  version: '0.8.42',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
