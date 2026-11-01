@@ -541,3 +541,19 @@ export function textoAvisoCorteRpa(e: EntradaCorteRpa): string {
     `<a href="${escapeHtml(e.enlace)}">Abrir la oportunidad</a>`,
   ].join('\n')
 }
+
+/**
+ * Régimen de la vivienda con el que SE TARIFICÓ (hogar), para las necesidades deducidas. Sale del riesgo del trabajo:
+ * `hogar.regimen` si consta; si no, `propietario` cuando se tarificó continente (un inquilino no asegura el edificio).
+ * Riesgo purgado, sin dato o trabajos que no coinciden → `null` (no consta; nunca «inquilino» por defecto). PURA.
+ */
+export function regimenHogarUsado(riesgos: readonly unknown[]): 'propietario' | 'inquilino' | null {
+  const vistos = new Set<'propietario' | 'inquilino'>()
+  for (const r of riesgos) {
+    const h = obj(obj(r)?.hogar)
+    if (!h) continue
+    if (h.regimen === 'propietario' || h.regimen === 'inquilino') vistos.add(h.regimen)
+    else if (typeof h.capitalContinenteEur === 'number' && h.capitalContinenteEur > 0) vistos.add('propietario')
+  }
+  return vistos.size === 1 ? [...vistos][0] : null
+}

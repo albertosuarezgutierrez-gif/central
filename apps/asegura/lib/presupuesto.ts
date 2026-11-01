@@ -974,7 +974,7 @@ export function respuestasAuditables(v: unknown): { respuestas?: Record<string, 
  * lo que el cliente firmó. Best-effort: si falla, el presupuesto sigue y el cuestionario queda a
  * mano, como antes. Devuelve el texto guardado o `null`.
  */
-export async function autocompletarNecesidades(correduriaId: string, presupuestoId: string, actor: string): Promise<string | null> {
+export async function autocompletarNecesidades(correduriaId: string, presupuestoId: string, actor: string, riesgoUsado?: { regimen?: 'propietario' | 'inquilino' | null } | null): Promise<string | null> {
   try {
     const db = prismaAsegura()
     const [fila] = await db.$queryRaw<{ ramo: string | null; peticion: unknown; categoria: string | null; franquicia_eur: string | number | null }[]>`
@@ -988,7 +988,7 @@ export async function autocompletarNecesidades(correduriaId: string, presupuesto
       where p.id = ${presupuestoId}::uuid and p.correduria_id = ${correduriaId}::uuid
         and p.necesidades is null and p.aceptado_at is null and p.retirado_at is null`
     if (!fila) return null
-    const d = deducirNecesidades(fila.ramo, fila.peticion, { categoria: fila.categoria, franquiciaEur: numero(fila.franquicia_eur) })
+    const d = deducirNecesidades(fila.ramo, fila.peticion, { categoria: fila.categoria, franquiciaEur: numero(fila.franquicia_eur) }, new Date(), riesgoUsado)
     const v = validarNecesidades(textoNecesidades(fila.ramo, d.respuestas, d.otras))
     if (!v.ok) return null
     const n = await db.presupuesto.updateMany({

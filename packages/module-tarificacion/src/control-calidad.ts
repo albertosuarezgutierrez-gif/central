@@ -109,7 +109,8 @@ export function controlarCalidad(oferta: ControlOferta, solicitud: ControlSolici
 
   // 3) Fecha de efecto: hoy o futura
   if (!fechaValida(hoy)) err('fecha_efecto_invalida', 'Fecha de referencia («hoy») inválida: no se puede comprobar el efecto.', 'hoy')
-  else if (!fechaValida(solicitud.fechaEfecto)) err('fecha_efecto_invalida', 'La fecha de efecto falta o no es una fecha válida (AAAA-MM-DD).', 'fechaEfecto')
+  else if (solicitud.fechaEfecto === null) avi('fecha_efecto_invalida', 'No consta la fecha de efecto con la que se tarificó: se supone la que propone el portal y el precio es estimado.', 'fechaEfecto')
+  else if (!fechaValida(solicitud.fechaEfecto)) err('fecha_efecto_invalida', 'La fecha de efecto no es una fecha válida (AAAA-MM-DD).', 'fechaEfecto')
   else if (solicitud.fechaEfecto < hoy) err('fecha_efecto_pasada', `La fecha de efecto ${solicitud.fechaEfecto} ya pasó (hoy es ${hoy}).`, 'fechaEfecto')
 
   // 4) Oferta caducada
