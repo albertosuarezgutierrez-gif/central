@@ -4914,7 +4914,7 @@ export async function entrarTurismosGenerali(page: Page, guard: GuardEmision, es
  * vista del formulario; NO relaja el guard de red: si ese clic manda una petición que casa con el patrón de emisión, se aborta
  * y el trabajo cae (fail-closed) con el HTML de la pantalla para mapearlo.
  */
-export const SUBPESTANAS_GENERALI = Object.freeze(['Garantías y Resultados'] as const)
+export const SUBPESTANAS_GENERALI = Object.freeze(['Garantías y Resultados', 'Historial Siniestral'] as const)
 /** Lo que NUNCA puede llevar el texto de una subpestaña pulsable, aunque alguien la añada a la lista (sin tildes, sin mayúsculas). */
 const RE_SUBPESTANA_PELIGROSA_GENERALI = /emit|emisi|contrat|grab|firm|pag|acept|poliza|formaliz|suplement|anul/i
 
