@@ -15,7 +15,7 @@ import {
   type MarcoCargaGenerali,
 } from '../src/adapters/generali/reglas.ts'
 
-test('v0.2.46 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.57'))
+test('v0.2.46 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.58'))
 
 const SEL = 'https://www.generali.es/mot_motorWeb/mvc/selVehiculo;jsessionid=ABC123SECRETO?execution=e1s1'
 const marco = (ruta: string, listo: string | null, controles: number | null, texto: number | null): MarcoCargaGenerali => ({ ruta: rutaMarcoSaneadaGenerali(ruta), listo, controles, texto })

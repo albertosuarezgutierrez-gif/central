@@ -1,6 +1,6 @@
-import { esCarteraEnVigor, precargaViviendaDePoliza } from '@central/module-seguros'
+import { esCarteraEnVigor, precargaViviendaDePoliza, referenciaCatastral } from '@central/module-seguros'
 import { datosViviendaParaBot, formularioBotHogar, type RiesgoParaBotsHogar } from '@central/module-tarificacion'
-import { direccionSinNumero, partirDireccion } from './codeoscopic/direccion.ts'
+import { partirDireccion } from './codeoscopic/direccion.ts'
 import type { ReconstruccionRiesgo } from './tarificador-relanzar-reglas.ts'
 
 // «Probar» de HOGAR sin oportunidad de hogar ni trabajo previo (01/11/2026): el riesgo se construye de la póliza de hogar EN VIGOR más
@@ -51,6 +51,29 @@ const TIPO_DE_CODIGO_CIMA: Record<string, string> = {
  */
 export const SUPUESTOS_HOGAR_DESDE_POLIZA = Object.freeze({ regimen: 'propietario', conMadera: 'no' })
 
+/** Dirección y CP de la FICHA del cliente (ya en claro). Plan B del número de calle: solo si CP y calle cuadran con los de la póliza. */
+export type FichaDomicilio = { direccion: string | null; codigoPostal: string | null }
+/** Plan B del número de calle (01/11/2026), en este orden: ficha (`numeroDeFicha`) → Catastro por RC (`numeroDeCatastro`) → «S/N» (`numeroSinNumero`). */
+export type ComplementosHogar = { ficha?: FichaDomicilio | null; numeroCatastro?: string | null }
+
+const cpClaro = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v).replace(/\s+/g, '') : '')
+/** Calles compatibles: mismo nombre normalizado, o uno contenido en el otro por palabras completas (p. ej. «socorro» ⊂ «del socorro»). PURA. */
+export function callesCompatibles(a: string | null, b: string | null): boolean {
+  const ta = clave(a).split(' ').filter(Boolean)
+  const tb = clave(b).split(' ').filter(Boolean)
+  if (!ta.length || !tb.length) return false
+  const [c, l] = ta.length <= tb.length ? [ta, tb] : [tb, ta]
+  return c.every((t) => l.includes(t))
+}
+/** Número válido de portal para el vendor (el mismo patrón que reconoce `partirDireccion`). */
+const esNumeroPortal = (v: unknown): v is string => typeof v === 'string' && /^\d{1,4}[a-z]?$/i.test(v.trim())
+
+/** Referencia catastral (20) de la póliza de hogar elegida, para que quien llama consulte el número al Catastro. PURA. */
+export function referenciaCatastralDeHogarElegida(filas: readonly FilaPolizaHogar[]): string | null {
+  const e = polizasHogarEnVigor(filas)[0]
+  return e && esObj(e.datosEspecificos) ? referenciaCatastral(e.datosEspecificos) : null
+}
+
 /** Solo cartera EN VIGOR de hogar, la más reciente primero (misma fecha → id para que sea estable). PURA. */
 export function polizasHogarEnVigor(filas: readonly FilaPolizaHogar[]): FilaPolizaHogar[] {
   return filas
@@ -76,6 +99,7 @@ export function riesgoHogarDePolizas(
   filas: readonly FilaPolizaHogar[], descifrar: (v: string) => string, ahora = new Date(),
   /** Elecciones que NO constan en la póliza (régimen, madera) y que quien llama SÍ tiene por otra vía. Hoy `probar` no pasa ninguna: se piden (422). */
   elecciones: { regimen?: string; conMadera?: string } = {},
+  complementos: ComplementosHogar = {},
 ): RiesgoHogarDePoliza {
   const vivas = polizasHogarEnVigor(filas)
   if (!vivas.length) return { polizaId: null, reconstruccion: { riesgo: null, motivo: 'sin_oportunidad' }, supuestos: [], avisos: [] }
@@ -95,9 +119,26 @@ export function riesgoHogarDePolizas(
   // 2) Calle y número: la dirección de la póliza es texto libre; el troceo es conservador (lo que no reconoce queda sin dato).
   const p = partirDireccion(direccion)
   Object.assign(vivienda, sinNulos({ nombreVia: p.nombre, numeroVia: p.numero, planta: p.planta, puertaVivienda: p.puerta }))
-  // 2b) «S/N»: la dirección dice que no tiene número. El adaptador de Allianz escribe el texto tal cual en «Número» y el validador lo admite
-  // (≤10 caracteres): se manda «S/N» como SUPUESTO (precio estimado). Que el portal lo acepte NO está verificado: si lo rechaza, falla el trabajo, no el 422.
-  if (p.numero === null && direccionSinNumero(direccion)) { vivienda.numeroVia = 'S/N'; supuestos.push('numeroSinNumero') }
+  // 2b) Falta el número (plan B, 01/11/2026, «hay que dar precio»): 1) la ficha, solo si CP y calle cuadran con los de la póliza; 2) el
+  // Catastro por la referencia catastral de la póliza; 3) «S/N» (el validador lo admite ≤10 caracteres; que el portal lo acepte NO está
+  // verificado: si lo rechaza, falla el trabajo, no el 422). Los tres son SUPUESTOS (precio estimado).
+  if (p.numero === null && p.nombre !== null) { // sin calle no hay plan B: el 422 pide calle y número
+    const f = complementos.ficha ?? null
+    const pf = f ? partirDireccion(f.direccion) : null
+    const cpPoliza = cpClaro(vivienda.cp)
+    if (f && pf && esNumeroPortal(pf.numero) && cpPoliza !== '' && cpPoliza === cpClaro(f.codigoPostal) && callesCompatibles(p.nombre, pf.nombre)) {
+      vivienda.numeroVia = pf.numero.trim()
+      if (vivienda.planta == null && pf.planta) vivienda.planta = pf.planta
+      if (vivienda.puertaVivienda == null && pf.puerta) vivienda.puertaVivienda = pf.puerta
+      supuestos.push('numeroDeFicha')
+    } else if (esNumeroPortal(complementos.numeroCatastro)) {
+      vivienda.numeroVia = complementos.numeroCatastro.trim()
+      supuestos.push('numeroDeCatastro')
+    } else {
+      vivienda.numeroVia = 'S/N'
+      supuestos.push('numeroSinNumero')
+    }
+  }
   // 3) Año de construcción: el de la compañía (EIAC, `anioConstruccionCima`) NO es declarado → vale como SUPUESTO (precio estimado).
   if (vivienda.anioConstruccion == null) {
     const a = Number(esObj(datos) ? datos.anioConstruccionCima : undefined)

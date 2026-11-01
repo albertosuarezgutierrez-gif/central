@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)
+- Vehículo de referencia compartido por oportunidad: humano > Mapfre (matrícula) > póliza > Allianz; elección por similitud; si es supuesto → estimado. `presupuesto-rpa` se dispara con cualquier cierre (#5321).
+- Generali 0.2.56 (elección a nivel modelo), 0.2.57 (procedencia por ramo: Mapfre→AUTOMOVILES), 0.2.58 (Historial Siniestral).
+- Hogar en /probar desde póliza en vigor con supuestos (propietario, sin madera, UD→adosada) y número de calle ficha/Catastro/S-N. Adaptador Mapfre hogar listo pero APAGADO (`MAPFRE_HOGAR_ACTIVO=true` en el worker para la 1ª prueba).
+- Decisión de Alberto: «coger el más similar, hay que dar precio y guardar presupuesto, ya iremos afinando»; regla «siniestralidad más favorable». El presupuesto NUNCA muestra «No figura»: hay que descargar el proyecto de la compañía con garantías (agente en curso para Mapfre auto).
+- Presupuesto AS-26-0042 en borrador (Allianz+Mapfre auto), NO enviado.
+- Pendiente: precio Generali, precio Allianz hogar, garantías Mapfre, fallo MEDIO en revisión (requiere_humano cuenta como cerrado → borrador prematuro), `probar` no vincula oportunidad en auto.
 ## (01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios · PR #5334 MERGEADO (`7d7c971`)
 - Caso Elisa/Luxury Busto: la pregunta no traía verbo de llegada, quedó `general` y el juez LLM escaló con un falso «no está en la guía» (no ve el bloque EARLY CHECK-IN de Smoobu).
 - `cambio-horario.ts`: nueva `RE_DISPONIBLE_ANTES` (EN/ES/IT, exige before/antes/prima) → `tipo:'entrada'`. Tests +2 (vistos en rojo).

@@ -6,6 +6,7 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { leerPdfPresupuesto } from '@/lib/presupuesto-pdf-lectura'
 import { nombreFicheroOfertas, pdfEstudioOfertas } from '@/lib/presupuesto-pdf-ofertas'
+import { EstudioIncompletoError } from '@/lib/presupuesto-pdf-cuadro'
 import { nombreFicheroPresupuesto, pdfPresupuesto } from '@/lib/presupuesto-pdf'
 
 export const dynamic = 'force-dynamic'
@@ -40,6 +41,8 @@ export async function GET(req: Request) {
       },
     })
   } catch (e) {
+    // 01/11/2026: una oferta sin garantías leídas haría una columna entera «No figura»: no se genera el PDF (el borrador está marcado incompleto).
+    if (e instanceof EstudioIncompletoError) return NextResponse.json({ estado: 'incompleto', motivo: 'garantias_sin_leer', ofertas: e.ofertas }, { status: 409 })
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/presupuesto/pdf', e) }, { status: 500 })
   }
 }

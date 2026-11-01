@@ -423,7 +423,8 @@ test('Allianz HOGAR (14/10/2026; encendido por Alberto 21/10/2026): flag propio,
 
 test('Mapfre HOGAR (21/10/2026): flag APAGADO, registro solo bajo el flag y asegura solo lo abre con el interruptor (lista cerrada, sin Occident)', () => {
   const m = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/hogar.ts'), 'utf8'))
-  assert.match(m, /^export const MAPFRE_HOGAR_ACTIVO = false$/m, 'Mapfre Hogar nace APAGADO (lo enciende Alberto)')
+  // Apagado de nacimiento: literal `false` o, solo, el interruptor por env (sin env = false). Cualquier otra forma (`= true`, `|| true`, `!== 'false'`) falla.
+  assert.match(m, /^export const MAPFRE_HOGAR_ACTIVO = (?:false|process\.env\.MAPFRE_HOGAR_ACTIVO === 'true')$/m, 'Mapfre Hogar nace APAGADO (lo enciende Alberto)')
   assert.ok(!/pulsarExploracionAutorizada|avanzarPestanaAutorizada|pulsarGuardado|pulsarEmision|IMPRIMIR/.test(m), 'Mapfre Hogar no usa puertas de avance/guardado/emisión ni imprime')
   const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
   assert.match(idx, /^if \(MAPFRE_HOGAR_ACTIVO\) adaptadores\.registrar\(mapfreHogar\)$/m, 'mapfreHogar se registra SOLO con `if (MAPFRE_HOGAR_ACTIVO)`')

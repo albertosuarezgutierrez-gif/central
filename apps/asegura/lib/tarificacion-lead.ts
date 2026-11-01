@@ -15,7 +15,7 @@ import { prisma } from './tenant'
 import { personaDeFicha, leerRiesgo } from './oportunidad-riesgo'
 import { prismaAsegura } from './asegura-db'
 import { decryptField } from '@central/module-seguros-pii'
-import { riesgoHogarDePolizas, SUPUESTOS_HOGAR_DESDE_POLIZA, type FilaPolizaHogar, type RiesgoHogarDePoliza } from './tarificador-hogar-poliza'
+import { riesgoHogarDePolizas, referenciaCatastralDeHogarElegida, SUPUESTOS_HOGAR_DESDE_POLIZA, type FichaDomicilio, type FilaPolizaHogar, type RiesgoHogarDePoliza } from './tarificador-hogar-poliza'
 import { claveCompania, puedeAutomatizar, type CatalogosHogarLeidos } from '@central/module-tarificacion'
 import { resolverConfig } from './codeoscopic/config'
 import { catalogoHogar } from './codeoscopic/catalogos'
@@ -269,7 +269,33 @@ export async function riesgoHogarDePolizasDelCliente(correduriaId: string, clien
     from seguros.polizas p
     where p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid and p.tipo::text = 'hogar' and p.merged_into_poliza_id is null`
   const filas: FilaPolizaHogar[] = f.map((x) => ({ id: x.id, desde: x.desde, estado: x.estado, importRef: x.import_ref, eiacXmlHash: x.eiac_xml_hash, sustituidaAt: x.sustituida_at, datosEspecificos: x.datos }))
-  return riesgoHogarDePolizas(filas, decryptField, ahora, SUPUESTOS_HOGAR_DESDE_POLIZA)
+  // Plan B del número de calle: ficha (domicilio descifrado en memoria; no sale de aquí) y, solo si la póliza trae referencia catastral, el Catastro.
+  const ficha = await domicilioFicha(correduriaId, clienteId).catch(() => null)
+  const primero = riesgoHogarDePolizas(filas, decryptField, ahora, SUPUESTOS_HOGAR_DESDE_POLIZA, { ficha })
+  if (!primero.supuestos.includes('numeroSinNumero')) return primero
+  const rc = referenciaCatastralDeHogarElegida(filas)
+  const numeroCatastro = rc ? await numeroDeCatastro(rc).catch(() => null) : null
+  return numeroCatastro ? riesgoHogarDePolizas(filas, decryptField, ahora, SUPUESTOS_HOGAR_DESDE_POLIZA, { ficha, numeroCatastro }) : primero
+}
+
+/** Domicilio de la ficha (dirección cifrada → en claro, solo en memoria) para el plan B del número. `null` = no consta o no se pudo abrir. */
+async function domicilioFicha(correduriaId: string, clienteId: string): Promise<FichaDomicilio | null> {
+  const f = await prisma.$queryRaw<{ direccion: string | null; codigo_postal: string | null }[]>`
+    select direccion, codigo_postal from seguros.clientes
+    where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
+  const r = f[0]
+  if (!r) return null
+  let direccion: string | null = null
+  if (r.direccion) { try { direccion = r.direccion.startsWith('v1:') ? decryptField(r.direccion) : r.direccion } catch { direccion = null } }
+  return { direccion, codigoPostal: r.codigo_postal?.trim() || null }
+}
+
+/** Número de portal que el Catastro da para una referencia de 20 (GET gratis, con tope). `null` = sin dato o sin respuesta. */
+async function numeroDeCatastro(ref: string): Promise<string | null> {
+  const { bajarCatastro } = await import('@central/core-catastro/http')
+  const { paramsDnploc } = await import('@central/core-catastro')
+  const d = await conTope(bajarCatastro(ref), null)
+  return d?.direccion ? paramsDnploc(d.direccion)?.numero ?? null : null
 }
 
 /** HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`). */

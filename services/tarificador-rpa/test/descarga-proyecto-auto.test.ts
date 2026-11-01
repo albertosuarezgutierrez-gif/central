@@ -16,8 +16,8 @@ const PDF_MINIMO = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntraile
 
 test('versiones: Allianz auto 0.6.35, Mapfre auto 0.8.30, Generali auto 0.2.41', () => {
   assert.equal(allianzAuto.version, '0.6.38')
-  assert.equal(mapfreAuto.version, '0.8.38')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.57')
+  assert.equal(mapfreAuto.version, '0.8.39')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.58')
 })
 
 test('interruptor por compañía: todas activadas por defecto', () => {
@@ -222,6 +222,6 @@ test('sin las puertas guardadas del runner → aviso, no rompe', async () => {
 test('Mapfre: el «Imprimir» a secas solo si el proyecto quedó GENERADO (no con sin_numero ni no_generado)', async () => {
   const { readFileSync } = await import('node:fs')
   const src = readFileSync(new URL('../src/adapters/mapfre/auto.ts', import.meta.url), 'utf8')
-  assert.match(src, /descargarProyectoAuto\(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto\.pdf', proyecto\.estado === 'generado'\)/)
+  assert.match(src, /descargarProyectoAuto\(nsei, ctxPdf, 'mapfre', 'proyecto-mapfre-auto\.pdf', proyecto\.estado === 'generado'\)/)
   assert.doesNotMatch(src, /'proyecto-mapfre-auto\.pdf', proyecto\.estado !== /)
 })

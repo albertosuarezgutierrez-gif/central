@@ -106,8 +106,8 @@ test('resumen de la pantalla: etiqueta [tipo*] = valor, botones y avisos, con to
   assert.ok(largo.length <= 500)
 })
 
-test('compuerta de subpestañas: SOLO «Garantías y Resultados» exacto; nada con emitir/contratar/grabar/firmar/pagar/aceptar póliza', () => {
-  assert.deepEqual([...SUBPESTANAS_GENERALI], ['Garantías y Resultados'])
+test('compuerta de subpestañas: SOLO «Garantías y Resultados» y «Historial Siniestral» exactas; nada con emitir/contratar/grabar/firmar/pagar/aceptar póliza', () => {
+  assert.deepEqual([...SUBPESTANAS_GENERALI], ['Garantías y Resultados', 'Historial Siniestral'])  // v0.2.58 añade la pestaña de solo lectura de antecedentes
   assert.equal(subpestanaGeneraliPermitida('Garantías y Resultados'), true)
   assert.equal(subpestanaGeneraliPermitida('  Garantías   y Resultados '), true, 'espacios tolerados')
   for (const t of ['Emitir', 'Emisión', 'Contratar', 'Contratación', 'Grabar póliza', 'Grabar', 'Firmar', 'Pagar', 'Ir al pago', 'Aceptar póliza', 'Aceptar',

@@ -2217,3 +2217,49 @@ export function desempatarPorOrigenGenerali(opciones: readonly string[], origene
   if (finales.length === 1) return { tipo: 'unica', indice: finales[0]!, supuesto: avisoDesempateOrigenGenerali(nivel, opciones[finales[0]!]!, [...new Set(apoyos.get(finales[0]!)!)]) }
   return finales.length === 0 ? { tipo: 'ninguna' } : { tipo: 'varias', indices: finales }
 }
+
+// ───────────────────────── v0.2.58 · «Historial Siniestral» (trabajo af1fb857) ─────────────────────────
+// El trabajo llegó a «Garantías y Resultados», pulsó «Recalcular» y el portal dijo «El paso anterior no tiene los datos completos» / «No se puede calcular
+// con datos incompletos» con «Datos de Valoración» y «Garantías y Resultados» SIN obligatorios vacíos: queda la pestaña «Historial Siniestral», que el bot
+// nunca abría. Aquí, la parte PURA: qué dato del riesgo corresponde a cada campo vacío de esa pestaña.
+
+/** Subpestaña de «Valoración Riesgo» con los antecedentes (captura del trabajo af1fb857). Solo se pulsa por la puerta guardada del contexto. */
+export const SUBPESTANA_HISTORIAL_SINIESTRAL_GENERALI = 'Historial Siniestral'
+
+export type BloqueHistorialGenerali = { etiqueta: string; tipo: 'select' | 'texto' | 'opciones'; name: string; opciones: string[]; vacio: boolean; obligatorio: boolean }
+export type ClaveHistorialGenerali = 'aniosAseguradoAnterior' | 'siniestrosUltimos5Anios'
+export type AntecedentesHistorialGenerali = { aniosAseguradoAnterior: number; siniestrosUltimos5Anios: number }
+
+/**
+ * Valor del riesgo para un campo de «Historial Siniestral» según su rótulo. «años sin siniestros» solo si el riesgo no tiene siniestros (= años asegurado);
+ * rótulos de fechas, importes o desconocidos → `null` (no se inventa: el atasco nombra el campo). PURA.
+ */
+export function valorHistorialSiniestralGenerali(etiqueta: string, f: AntecedentesHistorialGenerali): { valor: string; clave: ClaveHistorialGenerali } | null {
+  const e = String(etiqueta ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  if (e === '' || /fecha|importe|euro|prima|cuant|bonus|bonific|porcentaje|%/.test(e)) return null
+  if (/anos? sin siniestr/.test(e)) return f.siniestrosUltimos5Anios === 0 ? { valor: String(f.aniosAseguradoAnterior), clave: 'aniosAseguradoAnterior' } : null
+  if (/siniestr/.test(e)) return { valor: String(f.siniestrosUltimos5Anios), clave: 'siniestrosUltimos5Anios' }
+  if (/\banos?\b/.test(e) && /asegurad|antigued|seguro|compan/.test(e)) return { valor: String(f.aniosAseguradoAnterior), clave: 'aniosAseguradoAnterior' }
+  return null
+}
+
+/**
+ * Qué hacer con los bloques leídos de «Historial Siniestral»: rellenar los VACÍOS con regla (obligatorios o no: un dato que el riesgo trae no sobra) y listar los
+ * obligatorios vacíos SIN regla o que el bot no sabe teclear (grupos de opciones, desplegable sin la opción exacta), para que el atasco los nombre. PURA.
+ */
+export function planHistorialSiniestralGenerali(bloques: readonly BloqueHistorialGenerali[], f: AntecedentesHistorialGenerali, clavesSupuestas: readonly string[]): {
+  acciones: { bloque: BloqueHistorialGenerali; valor: string; clave: ClaveHistorialGenerali; supuesto: boolean }[]
+  sinRegla: string[]
+} {
+  const acciones: { bloque: BloqueHistorialGenerali; valor: string; clave: ClaveHistorialGenerali; supuesto: boolean }[] = []
+  const sinRegla: string[] = []
+  const nombre = (b: BloqueHistorialGenerali) => sanearFragmentoGenerali(b.etiqueta).slice(0, 60)
+  for (const b of bloques) {
+    if (!b.vacio) continue
+    const v = b.tipo === 'opciones' ? null : valorHistorialSiniestralGenerali(b.etiqueta, f)
+    const opcionOk = v && b.tipo === 'select' ? indiceOpcionNormalizadaGenerali(b.opciones, [v.valor]) >= 0 : true
+    if (v && opcionOk) acciones.push({ bloque: b, valor: v.valor, clave: v.clave, supuesto: clavesSupuestas.includes(v.clave) })
+    else if (b.obligatorio && !sinRegla.includes(nombre(b))) sinRegla.push(nombre(b))
+  }
+  return { acciones, sinRegla }
+}
