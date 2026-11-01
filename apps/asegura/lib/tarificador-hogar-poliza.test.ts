@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { firmezaPrecioRpa } from '@central/module-tarificacion'
-import { SUPUESTOS_HOGAR_DESDE_POLIZA, elegirReconstruccionHogar, polizasHogarEnVigor, riesgoHogarDePolizas, type FilaPolizaHogar } from './tarificador-hogar-poliza.ts'
+import { SUPUESTOS_HOGAR_DESDE_POLIZA, callesCompatibles, referenciaCatastralDeHogarElegida, elegirReconstruccionHogar, polizasHogarEnVigor, riesgoHogarDePolizas, type FilaPolizaHogar } from './tarificador-hogar-poliza.ts'
 import { decidirRiesgoProbar, type ReconstruccionRiesgo } from './tarificador-relanzar-reglas.ts'
 import { validarEntradaRamo } from './tarificador-reglas.ts'
 
@@ -109,7 +109,7 @@ test('ruta: solo hogar y solo sin riesgo de oportunidad; vincula la oportunidad 
   assert.match(ruta, /usaPoliza && dePoliza\?\.polizaId && valida\.origen === 'oportunidad'/)
   assert.match(ruta, /oportunidadId,\s*clienteId, polizaId: null/)
   assert.match(ruta, /motivo: d\.motivo[^\n]*avisos/)
-  assert.match(readFileSync(join(import.meta.dirname, 'tarificacion-lead.ts'), 'utf8'), /riesgoHogarDePolizas\(filas, decryptField, ahora, SUPUESTOS_HOGAR_DESDE_POLIZA\)/)
+  assert.match(readFileSync(join(import.meta.dirname, 'tarificacion-lead.ts'), 'utf8'), /riesgoHogarDePolizas\(filas, decryptField, ahora, SUPUESTOS_HOGAR_DESDE_POLIZA, \{ ficha \}\)/)
   assert.match(readFileSync(join(import.meta.dirname, 'tarificador-hogar-poliza.ts'), 'utf8'), /elecciones: \{ regimen\?: string; conMadera\?: string \} = \{\}/, 'el defecto de la función sigue sin suponer nada')
   assert.ok(!/console\.(log|error)/.test(readFileSync(join(import.meta.dirname, 'tarificador-hogar-poliza.ts'), 'utf8')), 'sin logs en el módulo puro (PII)')
 })
@@ -125,7 +125,37 @@ test('dirección con número pegado al marcador o «S/N»: el número llega al r
   const inb = (b.reconstruccion.riesgo as { inmueble: Record<string, unknown> } | null)?.inmueble
   assert.equal(inb?.numero, 'S/N')
   assert.ok(b.supuestos.includes('numeroSinNumero'))
+  // Sin número ni «S/N» y sin plan B: último recurso «S/N» (siempre da precio), pero la calle sigue siendo obligatoria.
   const c = con('PZ FICTICIA')
-  assert.ok(!c.reconstruccion.riesgo && 'faltan' in c.reconstruccion && c.reconstruccion.faltan.some((e) => /Número de la calle/.test(e)))
-  assert.deepEqual(c.supuestos, [])
+  assert.ok(c.supuestos.includes('numeroSinNumero') && !c.supuestos.includes('numeroDeFicha'))
+  assert.equal((c.reconstruccion.riesgo as { inmueble: Record<string, unknown> } | null)?.inmueble.numero, 'S/N')
+})
+
+test('plan B del número: ficha (CP y calle cuadran) → Catastro → «S/N»; cada brazo con su supuesto', () => {
+  const sinNum = () => 'CL FICTICIA'
+  const num = (c: Parameters<typeof riesgoHogarDePolizas>[4], dir = sinNum) => {
+    const r = riesgoHogarDePolizas([fila()], dir, AHORA, SUPUESTOS_HOGAR_DESDE_POLIZA, c)
+    return { r, n: (r.reconstruccion.riesgo as { inmueble: Record<string, unknown> } | null)?.inmueble }
+  }
+  // 1) ficha con mismo CP y calle compatible (la ficha trae también piso/puerta)
+  const f1 = num({ ficha: { direccion: 'CALLE FICTICIA 9 2º B', codigoPostal: '41003' } })
+  assert.equal(f1.n?.numero, '9'); assert.ok(f1.r.supuestos.includes('numeroDeFicha') && !f1.r.supuestos.includes('numeroSinNumero'))
+  // 1b) ficha con OTRO CP o con otra calle → no se usa (pasa al Catastro, y sin él a S/N)
+  for (const ficha of [{ direccion: 'CALLE FICTICIA 9', codigoPostal: '41004' }, { direccion: 'CALLE OTRA 9', codigoPostal: '41003' }, { direccion: 'CALLE FICTICIA', codigoPostal: '41003' }]) {
+    const x = num({ ficha })
+    assert.equal(x.n?.numero, 'S/N'); assert.ok(x.r.supuestos.includes('numeroSinNumero') && !x.r.supuestos.includes('numeroDeFicha'))
+  }
+  // 2) Catastro cuando la ficha no sirve; la ficha gana al Catastro cuando sirve
+  const c2 = num({ ficha: { direccion: 'CALLE FICTICIA 9', codigoPostal: '41004' }, numeroCatastro: '15' })
+  assert.equal(c2.n?.numero, '15'); assert.ok(c2.r.supuestos.includes('numeroDeCatastro'))
+  assert.equal(num({ ficha: { direccion: 'CALLE FICTICIA 9', codigoPostal: '41003' }, numeroCatastro: '15' }).n?.numero, '9')
+  assert.equal(num({ numeroCatastro: 'basura!' }).n?.numero, 'S/N')
+  // Con número en la póliza no se toca nada.
+  const dado = num({ ficha: { direccion: 'CALLE FICTICIA 9', codigoPostal: '41003' } }, () => 'CL FICTICIA 7')
+  assert.equal(dado.n?.numero, '7'); assert.ok(!dado.r.supuestos.some((k) => k.startsWith('numero')))
+  // Sin valores en avisos/supuestos.
+  assert.ok(!JSON.stringify(f1.r.supuestos.concat(f1.r.avisos)).includes('FICTICIA'))
+  assert.ok(callesCompatibles('SOCORRO', 'DEL SOCORRO') && !callesCompatibles('SOCORRO', 'BUSTOS TAVERA') && !callesCompatibles(null, 'X'))
+  assert.equal(referenciaCatastralDeHogarElegida([fila({ datosEspecificos: datos({ referenciaCatastral: '1234567VK1234A0001AB' }) })]), '1234567VK1234A0001AB')
+  assert.equal(referenciaCatastralDeHogarElegida([fila()]), null)
 })
