@@ -12,10 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
-## (01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios
+## (01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios · PR #5334 MERGEADO (`7d7c971`)
 - Caso Elisa/Luxury Busto: la pregunta no traía verbo de llegada, quedó `general` y el juez LLM escaló con un falso «no está en la guía» (no ve el bloque EARLY CHECK-IN de Smoobu).
 - `cambio-horario.ts`: nueva `RE_DISPONIBLE_ANTES` (EN/ES/IT, exige before/antes/prima) → `tipo:'entrada'`. Tests +2 (vistos en rojo).
-- Pendiente: borrar `mensajes_guia_gaps` id 79 (hueco falso; permiso denegado al agente). Opcional: pasar la línea EARLY CHECK-IN al juez.
+- Pendiente: borrar `mensajes_guia_gaps` id 79 (hueco falso; el MCP pide confirmación que no llega desde el móvil: borrarlo a mano). Opcional: pasar la línea EARLY CHECK-IN al juez.
 
 ## (01/11/2026) Blog asegura-web · PR #5328 MERGEADO (mora art. 20 LCS)
 - «No se pudo publicar» = `Tests (packages + guardián)` aún corriendo, no rojo. Graphify marcó error jurídico real.
