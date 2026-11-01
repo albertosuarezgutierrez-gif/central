@@ -189,8 +189,8 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, esperarSinCapaOverlay, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
-import { textoDePdf } from '../../pdf-texto.ts'
-import { coberturasDeLineas, coberturasPorProducto, diagnosticoGarantiasMapfre, ofertasConGarantiasMapfre, textoALineas, type CoberturasPorProducto } from './garantias.ts'
+import { filasDePdf, textoDePdf } from '../../pdf-texto.ts'
+import { coberturasDeLineas, coberturasPorProducto, diagnosticoGarantiasMapfre, estructuraPdfMapfre, ofertasConGarantiasMapfre, textoALineas, type CoberturasPorProducto } from './garantias.ts'
 import { CONCEPTOS_LECTURA, regexEtiquetaExacta } from '../../vocabulario.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/intranet/index.ts'
@@ -2141,12 +2141,12 @@ export async function precioDesdeObjetoAsegurado(
   let garantiasPdf: CoberturasPorProducto = new Map()
   let lineasPdf = 0
   let lineasTextoPdf: string[] = []
-  try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; lineasTextoPdf = lineas; garantiasPdf = coberturasPorProducto(lineas, nombresProductos) } } catch { /* PDF ilegible: queda la pantalla */ }
+  try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; lineasTextoPdf = lineas; garantiasPdf = coberturasPorProducto(lineas, nombresProductos, filasDePdf(Buffer.from(bytesPdf))) } } catch { /* PDF ilegible: queda la pantalla */ }
   ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
   // v0.8.43: si algún producto queda sin garantías, el aviso dice POR QUÉ (PDF no bajado / sin texto / sin sección del producto / pantalla vacía).
   const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresProductos, lineasPdf: lineasTextoPdf })
   // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
-  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla, diagGarantias), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
+  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla, diagGarantias, lineasTextoPdf.length > 0 ? estructuraPdfMapfre(lineasTextoPdf, nombresProductos) : undefined), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -2159,7 +2159,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.45',
+  version: '0.8.46',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

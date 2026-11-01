@@ -13,7 +13,7 @@ import {
 } from '../src/adapters/mapfre/garantias.ts'
 import { textoDePdf } from '../src/pdf-texto.ts'
 
-test('v0.8.39 · versión', () => assert.equal(mapfreAuto.version, '0.8.45'))
+test('v0.8.39 · versión', () => assert.equal(mapfreAuto.version, '0.8.46'))
 
 const ofertas = (): OfertaNormalizada[] => ofertasDesdePrimasMapfre([
   { producto: 'TERCEROS', periodicidad: 'anual', primaTotalEur: 392.02, requiereVerificacionVehiculo: false },
