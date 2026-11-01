@@ -27,6 +27,12 @@
 #   scripts/canal-aviso.sh POST /api/internal/alerta '{"mensaje":"..."}'
 #   scripts/canal-aviso.sh POST /api/internal/latido  '{"agente":"...","ok":true,"detalle":"..."}'
 #
+# Cuerpos grandes (p.ej. ~150-200 KB, que no caben en argv y dan "Argument list too long"):
+#   scripts/canal-aviso.sh POST /api/internal/alerta - < cuerpo.json      # cuerpo por stdin
+#   scripts/canal-aviso.sh POST /api/internal/alerta @/ruta/cuerpo.json   # cuerpo desde fichero
+# Con "-" el cuerpo se lee de stdin; con "@<ruta>" (fichero existente y legible) se lee de ese
+# fichero. Cualquier otro valor de [json-body] se envía literal, como antes.
+#
 # Salida: el cuerpo de la respuesta seguido de una línea "HTTP_STATUS:<code>".
 # Exit code 0 siempre que la petición HTTP se complete (mira HTTP_STATUS, no el
 # exit code, para distinguir 200/401/etc.) — fail-open deliberado: un fallo de red
@@ -37,6 +43,14 @@ set -u
 METHOD="${1:?Uso: canal-aviso.sh <GET|POST> <path> [json-body]}"
 RUTA="${2:?Uso: canal-aviso.sh <GET|POST> <path> [json-body]}"
 BODY="${3:-}"
+BODY_FUENTE="literal"
+BODY_FICHERO=""
+if [ "$BODY" = "-" ]; then
+  BODY_FUENTE="stdin"
+elif [ "${BODY#@}" != "$BODY" ] && [ -f "${BODY#@}" ] && [ -r "${BODY#@}" ]; then
+  BODY_FUENTE="fichero"
+  BODY_FICHERO="${BODY#@}"
+fi
 
 if [ -z "${PLATAFORMA_URL:-}" ] || [ -z "${ALERTA_TOKEN:-}" ]; then
   echo "HTTP_STATUS:000 (PLATAFORMA_URL o ALERTA_TOKEN ausentes en el entorno de este agente)"
@@ -119,7 +133,12 @@ trap 'rm -f "$CONFIG"' EXIT
 } > "$CONFIG"
 
 if [ "$METHOD" = "POST" ]; then
-  printf '%s' "$BODY" | curl -K "$CONFIG"
+  # El cuerpo siempre entra por stdin de curl (data-binary "@-"), nunca por argv.
+  case "$BODY_FUENTE" in
+    stdin)   curl -K "$CONFIG" ;;
+    fichero) curl -K "$CONFIG" < "$BODY_FICHERO" ;;
+    *)       printf '%s' "$BODY" | curl -K "$CONFIG" ;;
+  esac
 else
   curl -K "$CONFIG"
 fi
