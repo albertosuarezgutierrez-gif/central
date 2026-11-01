@@ -1827,8 +1827,36 @@ export const ALIAS_COMPANIAS_GENERALI: readonly { claves: readonly string[]; opc
 ])
 
 export type OpcionCompaniaGenerali =
-  | { indice: number; via: 'exacta' | 'alias' | 'razon_social' }
+  | { indice: number; via: 'exacta' | 'alias' | 'razon_social' | 'aproximada' }
   | { error: 'ninguna' | 'varias' | 'generico'; candidatas: string[] }
+
+/**
+ * v0.2.57 · Desempate de la compañía de procedencia cuando varias opciones casan con la MISMA marca (trabajo af1fb857: «Mapfre» → AGROPECUARIA ·
+ * AUTOMOVILES · FAMILIAR · GUANARTEME · MUTUALIDAD). Por marca (primera palabra de la raíz) y ramo: `evitar` = prefijos de palabra que descartan la
+ * opción salvo que sea la única; `preferir` = niveles de prefijos de palabra, del más al menos adecuado. Ramo o marca sin entrada → sin desempate.
+ */
+export const PREFERENCIAS_PROCEDENCIA_GENERALI: Readonly<Record<string, Readonly<Record<string, { preferir: readonly (readonly string[])[]; evitar: readonly string[] }>>>> = Object.freeze({
+  MAPFRE: { auto: { preferir: [['AUTOMOVIL'], ['FAMILIAR']], evitar: ['AGROPECUARI', 'GUANARTEME'] } },
+  MUTUA: { auto: { preferir: [['AUTOMOVIL']], evitar: [] } },
+})
+
+/**
+ * Elige UNA de las `candidatas` (misma marca) según el ramo: 1) quita las `evitar` (solo se elige una evitable si ES la única candidata, y eso ya lo
+ * resuelve la razón social); 2) recorre los
+ * niveles `preferir` y toma el primero que deje EXACTAMENTE una; 3) si tras quitar quedó una sola, esa. Si no hay forma determinista → `null`. PURA.
+ */
+export function desempatarProcedenciaGenerali(marca: string, ramo: string, candidatas: readonly string[], tabla: typeof PREFERENCIAS_PROCEDENCIA_GENERALI = PREFERENCIAS_PROCEDENCIA_GENERALI): number | null {
+  const reg = tabla[marca]?.[ramo]
+  if (!reg || candidatas.length < 2) return null
+  const tiene = (c: string, pref: readonly string[]) => palabrasCompaniaGenerali(c).some((w) => pref.some((q) => w.startsWith(q)))
+  const vivas = candidatas.map((_, i) => i).filter((i) => !tiene(candidatas[i]!, reg.evitar))
+  for (const nivel of reg.preferir) {
+    const ok = vivas.filter((i) => tiene(candidatas[i]!, nivel))
+    if (ok.length === 1) return ok[0]!
+    if (ok.length > 1) return null
+  }
+  return vivas.length === 1 ? vivas[0]! : null
+}
 
 /**
  * Prueba real 28/10/2026 (0.2.47): la ficha dice «Allianz» y Genernet ofrece «ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO» (y también
@@ -1836,7 +1864,7 @@ export type OpcionCompaniaGenerali =
  * la ÚNICA opción cuyas primeras palabras significativas son, como palabras COMPLETAS, las del nombre de la ficha (o la raíz del alias)
  * — «ALLIANZ» nunca casa «ALIANZA». 0 o >1 candidatas → error con las candidatas (el bot para; nunca a ciegas). PURA.
  */
-export function opcionCompaniaProcedenciaGenerali(opciones: readonly string[], compania: string): OpcionCompaniaGenerali {
+export function opcionCompaniaProcedenciaGenerali(opciones: readonly string[], compania: string, ramo?: string): OpcionCompaniaGenerali {
   const exacta = indiceOpcionNormalizadaGenerali(opciones, [compania])
   if (exacta >= 0) return { indice: exacta, via: 'exacta' }
   const ficha = palabrasCompaniaGenerali(compania)
@@ -1856,6 +1884,12 @@ export function opcionCompaniaProcedenciaGenerali(opciones: readonly string[], c
   // Revisión 0.2.48: sin alias, UNA sola palabra («Mutua», «Mutual»…) es genérica: nunca se elige; se para con las candidatas.
   if (!alias && ficha.length < 2) return { error: ix.length === 1 ? 'generico' : ix.length === 0 ? 'ninguna' : 'varias', candidatas: ix.map((i) => opciones[i]!) }
   if (ix.length === 1) return { indice: ix[0]!, via: 'razon_social' }
+  // v0.2.57: varias de la misma marca → desempate determinista por ramo (solo si hay marca conocida); si no, el atasco de siempre.
+  if (ix.length > 1 && ramo) {
+    const marca = (alias?.raiz ?? ficha)[0] ?? ''
+    const e = desempatarProcedenciaGenerali(marca, ramo, ix.map((i) => opciones[i]!))
+    if (e !== null) return { indice: ix[e]!, via: 'aproximada' }
+  }
   return { error: ix.length === 0 ? 'ninguna' : 'varias', candidatas: ix.map((i) => opciones[i]!) }
 }
 

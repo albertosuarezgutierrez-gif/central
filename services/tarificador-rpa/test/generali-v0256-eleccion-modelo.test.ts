@@ -19,7 +19,7 @@ const SMART = ['Seleccione uno', 'FORFOUR', 'FORTWO CABRIO', 'FORTWO COUPE']
 const formMapfre = { vehiculoConfirmado: { origen: 'mapfre', denominacion: 'Smart Forfour Pure 1.1', cv: 75, cc: 1124, puertas: 5, fechaInicio: '2005-03-01' } } as Form
 const con = (etiqueta: string, base: Form = formMapfre): Form => ({ ...base, eleccionVersion: { etiqueta } }) as Form
 
-test('v0.2.56 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.56'))
+test('v0.2.56 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.57'))
 
 test('v0.2.56 · elección humana a nivel MODELO: casa (normalizada, entera) con UNA opción → esa, y manda sobre el desempate por origen', () => {
   // El origen (Mapfre, Forfour) diría FORFOUR; la persona eligió FORTWO COUPE en la bandeja → manda la persona.
