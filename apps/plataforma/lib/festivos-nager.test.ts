@@ -25,11 +25,11 @@ test('filtrarAndalucia: lista vacía -> []', () => {
   assert.deepEqual(filtrarAndalucia([]), [])
 })
 test('obtenerFestivosAndalucia: fallo de red -> null (no [])', async () => {
-  const r = await obtenerFestivosAndalucia(2026, (async () => { throw new Error('red') }) as unknown as typeof fetch)
+  const r = await obtenerFestivosAndalucia(2026, (async () => { throw new Error('red') }) as unknown as typeof fetch, 0)
   assert.equal(r, null)
 })
 test('obtenerFestivosAndalucia: HTTP 500 -> null', async () => {
-  const r = await obtenerFestivosAndalucia(2026, (async () => ({ ok: false, status: 500 })) as unknown as typeof fetch)
+  const r = await obtenerFestivosAndalucia(2026, (async () => ({ ok: false, status: 500 })) as unknown as typeof fetch, 0)
   assert.equal(r, null)
 })
 test('obtenerFestivosAndalucia: JSON no-lista -> null', async () => {
@@ -57,4 +57,18 @@ test('fechasADeduplicar: null o vacío -> [] (sin datos no se duplica nada)', ()
 test('fechasADeduplicar: fecha local que Nager no tiene no aparece', () => {
   const r = fechasADeduplicar([{ fecha: '2026-12-08', nombre: 'x' }], '2026-01-01', '2026-12-31')
   assert.ok(!r.includes('2026-04-21'))
+})
+
+test('obtenerFestivosAndalucia: un 503 transitorio se reintenta y la segunda vale', async () => {
+  let n = 0
+  const f = (async () => (++n === 1 ? { ok: false, status: 503 } : { ok: true, json: async () => lista })) as unknown as typeof fetch
+  const r = await obtenerFestivosAndalucia(2026, f, 1, 0)
+  assert.equal(n, 2)
+  assert.equal(r?.length, 2)
+})
+test('obtenerFestivosAndalucia: un 404 no se reintenta', async () => {
+  let n = 0
+  const f = (async () => { n++; return { ok: false, status: 404 } }) as unknown as typeof fetch
+  assert.equal(await obtenerFestivosAndalucia(2099, f, 1, 0), null)
+  assert.equal(n, 1)
 })

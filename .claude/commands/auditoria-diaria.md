@@ -294,8 +294,11 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 
    **Sin evento en las últimas 30 h = CIMA parada** (Fly de Manuel apagado, Vercel `asegura`
    caído o `CRON_SECRET` rotado), nunca «no había ficheros»: un pull vacío TAMBIÉN deja evento.
-   `queueDepth` alto con `processed = 0` varias pasadas seguidas (y `modo` no `dry_run`) es la cuarentena del punto (1)
-   otra vez. Que `apps/asegura` lea de central y no del origen se comprueba en el código
+   🚨 `queueDepth` NO es una cola: es `totalResultados`, el histórico que devuelve TIREA y que nunca se vacía
+   (LOO-700); sube con cada fichero nuevo y dio una falsa alarma el 04/10 y otra el 01/11/2026. La señal de
+   cuarentena es `nuevosPendientes` > 0 sostenido, o ficheros de `seguros.cima_ficheros` en `review` / sin
+   `confirmado_at`. El silencio de una compañía (latido `correduria_ingesta` «degradada») se mide por su último
+   fichero por compañía y tipo. Que `apps/asegura` lea de central y no del origen se comprueba en el código
    (`lib/asegura-url.ts` + `regression-asegura-*`), no en la BD. Regla NULL≠0: si la consulta
    falla, es «no he podido mirar», nunca «entra». El conector `Supabase_asegura` ya no hace falta
    para este bloque (queda por si hay que mirar la foto congelada).

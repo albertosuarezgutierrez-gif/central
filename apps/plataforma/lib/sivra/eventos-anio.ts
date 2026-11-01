@@ -39,3 +39,26 @@ export function anioIncoherente(
   if (!citados.length) return false
   return !citados.includes(Number(m[1]))
 }
+
+/**
+ * Estado con el que el MOTOR debe leer una fila ya guardada de `pricing_eventos_auto`.
+ *
+ * POR QUÉ (01/11/2026). La guarda de `anioIncoherente` (04/10) se puso solo a la ENTRADA de la
+ * búsqueda web: las filas que ya estaban dentro siguieron moviendo el precio. «Love The 90's
+ * Sevilla 2026» (concierto del 26/09/2026) seguía `confirmado` en rate_date 2027-09-26 con factor
+ * 2,2, y la regla de vísperas subió House 25/09/2027 de 570€ a 752€ (+32%) saltándose el raíl el
+ * 27/10/2026. Igual Tattoo Convention (sep-2026 en may-2027) y Silvio Rodríguez «Tour 2026».
+ *
+ * Una fila viva cuyo nombre o evidencia citan años y NINGUNO es el de su fecha se lee como
+ * `descartado`: no suma premio y, si era lo único que subía esa fecha, marca el «rumor caído» y
+ * libera la guarda de outlier para que el precio baje por el raíl. Sin año citado no opina.
+ */
+export function estadoLeidoEvento(r: {
+  rate_date: string
+  estado: string | null
+  nombre?: string | null
+  evidencia?: string | null
+}): string | null {
+  if (String(r.estado ?? '').trim().toLowerCase() === 'descartado') return r.estado
+  return anioIncoherente(r.rate_date, `${r.nombre ?? ''} · ${r.evidencia ?? ''}`) ? 'descartado' : r.estado
+}

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { eventFactor, seasonalFloorFactor, FLOOR_SEASONAL, PRICING_HORIZON_DAYS, EVENTS } from "@/lib/pricing-calendar"
 import { combinarEventosDeFecha, normalizarEstado, type EventoBruto } from "@/lib/sivra/eventos-estado"
+import { estadoLeidoEvento } from "@/lib/sivra/eventos-anio"
 import { decidirEventoACiegas } from "@/lib/sivra/pricing-centinelas"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
@@ -280,15 +281,18 @@ export async function POST(req: NextRequest) {
   let eventosIlegibles = false
   const autoEvRows = await prisma.$queryRaw<{
     rate_date: string; factor: number; estado: string | null; confianza: number | null
+    nombre: string | null; evidencia: string | null
   }[]>(Prisma.sql`
-    SELECT rate_date::text AS rate_date, factor::float8 AS factor, estado, confianza::float8 AS confianza
+    SELECT rate_date::text AS rate_date, factor::float8 AS factor, estado, confianza::float8 AS confianza,
+           nombre, evidencia
     FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE
   `).catch(() => { eventosIlegibles = true; return [] })
 
   const porFecha = new Map<string, EventoBruto[]>()
   for (const r of autoEvRows) {
     const lista = porFecha.get(r.rate_date) ?? []
-    lista.push({ estado: r.estado, factor: Number(r.factor), confianza: r.confianza })
+    // Año incoherente (evento de 2026 guardado en 2027) → se lee como descartado: ver `estadoLeidoEvento`.
+    lista.push({ estado: estadoLeidoEvento(r), factor: Number(r.factor), confianza: r.confianza })
     porFecha.set(r.rate_date, lista)
   }
   /** factor que puede mover el PRECIO: confirmados + previstos LEJANOS ponderados (v2) */

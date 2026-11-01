@@ -11,6 +11,11 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (01/11/2026) Auditoría diaria PROFUNDA
+- Verde: 13 apps tsc 0 errores (= matriz), `pnpm test` 1553, `test:guardia` 1916, module-seguros{,-pii,-portal} OK, lint-agentes 0/0.
+- ⚪ CIMA: `queueDepth` (211→235) NO es cola, es el histórico de TIREA: 235/235 ficheros confirmados, 0 errores (falsa alarma). Real: Generali (C0072) sin mandar desde 28/09; Allianz sin SIN desde 27/09 y sin POL desde 09/10; Occident sin SIN desde 25/09; Reale sin REC desde 29/09. Alberto: bajar «Ficheros recibidos» del Portal CIMA por esas compañías desde 23/09.
+- 🟠 Pricing: raíl baja/mínimos OK; 2 alzas sin justificar y 6 fechas oscilantes. Latidos parados ~27 d: `fiscal_novedades`, `rrhh_compliance`; `seo_correduria` (GSC 403), `ses_transporte` (sin establecimiento), `sivra_eventos` (Nager).
+- Gasto Codeoscopic 7 d: 0. Sin reconciliar docs/skills ni sesiones en esta pasada.
 ## (31/10/2026) Fiscal · panel por devengo + simulador IRPF + hechos guardados
 - Panel fiscal por devengo (#5308). #5310: simulador IRPF, pantalla nueva, «Mi situación fiscal», avisos Telegram (`finanzas.fiscal-avisos`), motor que reproduce la renta 2025 al céntimo (backtest permanente: imputación art. 85, FN prorrateada, mínimos andaluces), correduría desde CIMA vía `seguros_agregado.v_comisiones_mes` (5.767,51€ ene-oct; antes banco/0,85 inflaba ~1.570€).
 - BD aplicada: `fiscal_compras_previstas`, `fiscal_avisos_enviados`, columnas de `fiscal_perfil` (meses exonerados, FN desde 18/11/2025, abonos), vista agregada. BBVA 1175 importado hasta 02/11 (14 nuevos); 1 duplicado ignorado; tasa basura 34,40€ → Dúplex.
