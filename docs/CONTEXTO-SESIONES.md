@@ -11,6 +11,10 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+## (01/11/2026) Entrenador de agentes · pasada semanal
+- Rango 25/10→01/11: 15 entradas de bitácora podadas, sin 👎/feedback pendiente. Sin patrón de prompt (lo repetido es infra: `gmail-adjuntos` caído, `canal-aviso.sh` con payload grande, banco Kutxa sin sync). 0 PRs de prompt.
+- Backlog: 11 PR `claude/*` con 2+ semanas sin mergear, el más antiguo #3755 (27/09).
+
 ## (31/10/2026) Fiscal · panel por devengo + simulador IRPF + hechos guardados
 - Panel fiscal por devengo (#5308). #5310: simulador IRPF, pantalla nueva, «Mi situación fiscal», avisos Telegram (`finanzas.fiscal-avisos`), motor que reproduce la renta 2025 al céntimo (backtest permanente: imputación art. 85, FN prorrateada, mínimos andaluces), correduría desde CIMA vía `seguros_agregado.v_comisiones_mes` (5.767,51€ ene-oct; antes banco/0,85 inflaba ~1.570€).
 - BD aplicada: `fiscal_compras_previstas`, `fiscal_avisos_enviados`, columnas de `fiscal_perfil` (meses exonerados, FN desde 18/11/2025, abonos), vista agregada. BBVA 1175 importado hasta 02/11 (14 nuevos); 1 duplicado ignorado; tasa basura 34,40€ → Dúplex.
