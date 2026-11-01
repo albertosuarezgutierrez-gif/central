@@ -1185,11 +1185,11 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
  * Capitalizadas (o en MAYÚSCULAS) seguidas, con partículas «de/del/la/los/las/y» entre ellas, como posible nombre propio → «[nombre]».
  * Las frases normales («La fecha de expedición del carné es anterior…») no tienen dos capitalizadas seguidas y se conservan. Tope 200.
  */
-export function textoDialogoPortalSeguro(bruto: string): string {
+export function textoDialogoPortalSeguro(bruto: string, max = 200): string {
   const palabra = "\\p{Lu}[\\p{L}'’-]+"
   const nombre = new RegExp(`${palabra}(?:\\s+(?:(?:de|del|la|las|los|y)\\s+)?${palabra})+`, 'gu')
   const limpio = bruto.replace(/\s+/g, ' ').trim().replace(nombre, '[nombre]')
-  return redactarDatosPersonales(limpio).slice(0, 200)
+  return redactarDatosPersonales(limpio).slice(0, max)
 }
 
 /** Filas de ERROR del informe de incidencias del framework legado de ePAC (las de aviso no paran). */
@@ -2397,6 +2397,29 @@ const SEL_DIALOGOS_MAPFRE = 'mat-dialog-container, [role="dialog"], [role="alert
 /** Palabras que, en un diálogo tras el clic, hacen PARAR (sin tocar nada). Sobre texto sin tildes y en minúsculas. */
 const RE_DIALOGO_PELIGROSO_MAPFRE = /emit|emisi|contrat|formaliz|firmar|firma digital|pagar|\bpago\b|grabar poliza|domicili|iban/
 
+/**
+ * v0.8.40 · DIAGNÓSTICO (no relaja nada) del diálogo que sale tras «Generar Proyecto» y habla de contratar/emitir/pagar…: su texto ENTERO
+ * (normalizado, sin correos/NIF/matrículas/teléfonos/cifras largas ni nombres propios; tope 600) y los rótulos de sus botones (≤8, ≤40
+ * cada uno), para que Alberto decida si el diálogo es informativo. El bot NO pulsa nada. PURA.
+ */
+export function describirDialogoPeligroMapfre(texto: string, botones: readonly string[]): string {
+  const t = limpiarMensajePortalDiagnosticoHasta(texto, 600)
+  const bs = [...new Set(botones.map((b) => limpiarMensajePortalDiagnosticoHasta(b, 40)).filter((b) => b !== ''))].slice(0, 8)
+  return ` [texto del diálogo: «${t || 'sin texto'}»; botones: ${bs.length ? bs.map((b) => `«${b}»`).join(' · ') : 'ninguno'}]`
+}
+
+/** Lee (solo lectura) el diálogo VISIBLE que casa con las palabras peligrosas: su texto y los rótulos de sus botones. Nunca pulsa. */
+async function leerDialogoPeligroMapfre(page: Page): Promise<string> {
+  try {
+    const ds = await page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').evaluateAll((els) =>
+      els.map((d) => ({ texto: (d as HTMLElement).innerText ?? '', botones: Array.from(d.querySelectorAll('button, a, [role="button"], input[type="button"], input[type="submit"]')).map((b) => ((b as HTMLElement).innerText || (b as HTMLInputElement).value || '').trim()) })))
+    const d = ds.find((x) => RE_DIALOGO_PELIGROSO_MAPFRE.test(x.texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()))
+    return d ? describirDialogoPeligroMapfre(d.texto, d.botones) : ''
+  } catch {
+    return ''
+  }
+}
+
 export type ResultadoProyectoMapfre =
   | { estado: 'generado'; numero: string }
   | { estado: 'sin_numero'; motivo: string }
@@ -2980,7 +3003,7 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
     return pulsado ? { estado: 'sin_numero', motivo } : { estado: 'no_generado', motivo }
   }
   if (numero) return { estado: 'generado', numero }
-  if (peligro !== null) return { estado: 'sin_numero', motivo: `tras pulsar salió un diálogo que menciona «${peligro}»: el bot no toca nada más` }
+  if (peligro !== null) return { estado: 'sin_numero', motivo: `tras pulsar salió un diálogo que menciona «${peligro}»: el bot no toca nada más${await leerDialogoPeligroMapfre(page)}` }
   return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}` }
 }
 
@@ -5773,17 +5796,23 @@ export function descargaPropuestaNueva(antes: string, despues: string): boolean 
 
 const MAX_DIAGNOSTICO_SIN_CONFIRMAR = 300
 /** v0.6.34: texto del portal apto para el aviso: fuera correos, NIF/NIE/CIF, matrículas, teléfonos y toda secuencia de 5+ cifras; luego el saneador común de diálogos. PURA. */
+/** Una sola entrada a propósito: se usa en `.map(...)` y un 2º parámetro recibiría el índice. */
 export function limpiarMensajePortalDiagnostico(bruto: string): string {
+  return limpiarMensajePortalDiagnosticoHasta(bruto, 160)
+}
+
+/** Igual que `limpiarMensajePortalDiagnostico` con tope explícito (v0.8.40, diálogo de Mapfre). PURA. */
+export function limpiarMensajePortalDiagnosticoHasta(bruto: string, max: number): string {
   const t = bruto
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 160)
+    .slice(0, max)
     .replace(/[^\s@]+@[^\s@]+/g, '')
     .replace(/\b[A-Za-z]?\d{7,8}[A-Za-z]\b/g, '')
     .replace(/\b\d{4}\s?-?\s?[BCDFGHJKLMNPRSTVWXYZ]{3}\b/gi, '')
     .replace(/\+?\d[\d\s.\-]{6,}\d/g, '')
     .replace(/\d{5,}/g, '')
-  return textoDialogoPortalSeguro(t).replace(/\s+/g, ' ').trim()
+  return textoDialogoPortalSeguro(t, Math.max(200, max)).replace(/\s+/g, ' ').trim()
 }
 
 /** v0.6.34: diagnóstico (≤300) de por qué «Guardar presupuesto» no se confirmó: mensajes del portal ya saneados, estado del formulario y etiquetas de campos vacíos. PURA. */

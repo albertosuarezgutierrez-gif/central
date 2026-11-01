@@ -22,7 +22,7 @@ import { catalogoHogar } from './codeoscopic/catalogos'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
 import { companiaAdmiteRamoRpa, rpaActivo, validarEntradaRamo } from './tarificador-reglas'
 import { pausaViva } from './tarificador-robustez'
-import { riesgoHogarDeRiesgoOportunidad, type ReconstruccionRiesgo } from './tarificador-relanzar-reglas'
+import { riesgoHogarDeRiesgoOportunidad, type FilaOportunidadProbar, type ReconstruccionRiesgo } from './tarificador-relanzar-reglas'
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
 import { datosVehiculoDeInfoRiesgo, claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
 import {
@@ -177,6 +177,22 @@ export async function leerVehiculoPolizaVinculadaCliente(correduriaId: string, c
     return f[0]?.v ?? null
   } catch {
     return null
+  }
+}
+
+/**
+ * 01/11/2026 · «probar» auto/moto: oportunidades del cliente en ese ramo (id, estado, cierre, alta) para vincular el trabajo a la
+ * ABIERTA más reciente (`elegirOportunidadAbiertaProbar`, puro). Solo SELECT. Fallo de lectura → [] (se encola sin vincular, como antes).
+ */
+export async function leerOportunidadesProbarCliente(correduriaId: string, clienteId: string, ramo: string): Promise<FilaOportunidadProbar[]> {
+  try {
+    return await prisma.$queryRaw<FilaOportunidadProbar[]>`
+      select o.id::text as id, o.estado::text as estado, o.cerrada_at as "cerradaAt", o.created_at as "createdAt"
+      from seguros.oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid and o.tipo::text = ${ramo}
+      order by o.created_at desc limit 20`
+  } catch {
+    return []
   }
 }
 

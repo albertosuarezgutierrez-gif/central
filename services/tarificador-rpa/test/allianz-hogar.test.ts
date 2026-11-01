@@ -15,6 +15,10 @@ import { prepararTrabajo } from '../src/ramo.ts'
 import { adaptadores } from '../src/adapters/index.ts'
 import {
   ALLIANZ_HOGAR_ACTIVO,
+  esNumeroSinNumero,
+  esRotuloCasillaSinNumero,
+  SUPUESTO_NUMERO_CALLE,
+  SUPUESTO_CASILLA_SIN_NUMERO,
   ErrorMapaIncompleto,
   allianzHogar,
   leerPrecioHogar,
@@ -194,6 +198,10 @@ type OpcionesApp = {
    * con importes INVENTADOS; `ilegible` = esa modalidad sin «la anualidad»; `frecuencia` = el texto del desplegable (de serie «Anual»).
    */
   precio?: { ilegible?: string; frecuencia?: string }
+  /** 0.1.11: casilla «Sin número» junto al número de calle (`texto` = el rótulo; por defecto «Sin número»). */
+  casillaSinNumero?: { texto?: string; dos?: boolean }
+  /** 0.1.11: el campo del número de calle es de TEXTO (en el portal real es `type=number`). */
+  numeroTexto?: boolean
 }
 
 function app(o: OpcionesApp = {}): string {
@@ -209,7 +217,7 @@ function app(o: OpcionesApp = {}): string {
 ${campo('idNumber', 'Número de documento')}${campo('dateOfBirth', 'Fecha de nacimiento')}
 <h3>Datos de la vivienda</h3>
 ${campo('postalCode', 'Código postal')}${campo('province', 'Provincia', true, true)}${campo('town', 'Población')}
-${campo('streetType', 'Tipo de vía', true, true)}${campo('streetName', 'Nombre de la vía')}${campo('streetNumber', 'Número', true, false, 'number')}
+${campo('streetType', 'Tipo de vía', true, true)}${campo('streetName', 'Nombre de la vía')}${campo('streetNumber', 'Número', true, false, o.numeroTexto ? 'text' : 'number')}${o.casillaSinNumero ? [0, ...(o.casillaSinNumero.dos ? [1] : [])].map((k) => `<nx-checkbox formcontrolname="noStreetNumber${k}"><input type="checkbox" id="sn-${k}" style="opacity:0;position:absolute;width:1px;height:1px" onchange="document.getElementById('streetNumber').required=!this.checked;document.getElementById('streetNumber').disabled=this.checked"><label for="sn-${k}"> ${o.casillaSinNumero!.texto ?? 'Sin número'} </label></nx-checkbox>`).join('') : ''}
 ${campo('block', 'Bloque', false)}${campo('stair', 'Escalera', false)}${campo('floor', 'Piso', false)}${campo('flat', 'Puerta', false)}
 <div id="check-address"><button type="button" id="comprobar" onclick="${o.infoOculta === 'nunca' ? '' : o.infoOculta === 'overlay' ? `document.body.insertAdjacentHTML('beforeend','<div class=cdk-overlay-pane>Revise la direccion</div>')` : `document.getElementById('buildingInformation').hidden=false`}">Comprobar</button></div>
 <div id="buildingInformation" ${o.infoOculta ? 'hidden' : ''}>${o.catastro ? `<nx-checkbox formcontrolname="enableCadastreEditing" class="nx-checkbox"><input type="checkbox" class="nx-checkbox__input" id="cat-1" value="false" style="opacity:0;position:absolute;width:1px;height:1px"><label class="nx-checkbox__label has-label" for="cat-1"><span class="nx-checkbox__control"></span><div class="nx-checkbox__label-text"> Modificar datos del catastro. </div></label></nx-checkbox>` : ''}${campo('yearOfConstruction', 'Año de construcción', true, !!o.catastro, 'number')}${campo('yearOfRefurbishment', 'Año de la reforma', false, !!o.catastro, 'number')}${campo('surfaceAreaLiving', 'Superficie de la vivienda', true, !!o.catastro)}</div>
@@ -1019,4 +1027,62 @@ test('diagnóstico: dos town VISIBLES y habilitados → «campo town … 2 coinc
   } finally {
     await a.context.close()
   }
+})
+
+
+// ───────────── 0.1.11: número de calle «S/N» en un campo numérico (job 53d9eefe, 01/11/2026) ─────────────
+
+const FORM_SN: FormularioHogar = { ...FORM, inmueble: { ...FORM.inmueble, numero: 'S/N' } }
+
+test('0.1.11 puros: esNumeroSinNumero / esRotuloCasillaSinNumero (exactos, nunca «contiene»)', () => {
+  for (const v of ['S/N', 's/n', ' S / N ', 'SN', 'sin número', 'Sin numero']) assert.equal(esNumeroSinNumero(v), true, v)
+  for (const v of ['12', '12B', 'SN12', 'sin número 3', '', null, undefined]) assert.equal(esNumeroSinNumero(v), false, String(v))
+  for (const v of ['Sin número', ' sin numero ', 'S/N', 'Vivienda sin número']) assert.equal(esRotuloCasillaSinNumero(v), true, v)
+  for (const v of ['Número', 'Acepto condiciones', 'Sin número de bloque', 'Enviar número']) assert.equal(esRotuloCasillaSinNumero(v), false, v)
+  assert.equal(allianzHogar.version, '0.1.12')
+})
+
+test('0.1.11: «S/N» + campo numérico + casilla «Sin número» → se marca por la puerta guardada, no se teclea y se declara', async () => {
+  const { context, page, ctx, pulsados, marco, marcado, valor } = await abrir({ casillaSinNumero: {} })
+  try {
+    const sup = await rellenarPantallaVivienda(page, marco, FORM_SN, ctx)
+    assert.deepEqual(sup, [SUPUESTO_CASILLA_SIN_NUMERO])
+    assert.equal(await marcado('sn-0'), true)
+    assert.equal(await valor('streetNumber').catch(() => ''), '', 'no se tecleó nada en el número')
+    assert.ok(pulsados.includes('Sin número'))
+  } finally { await context.close() }
+})
+
+test('0.1.11: «S/N» + campo numérico SIN casilla → se teclea 0 y el supuesto se declara (precio estimado)', async () => {
+  const { context, page, ctx, marco, valor } = await abrir()
+  try {
+    const sup = await rellenarPantallaVivienda(page, marco, FORM_SN, ctx)
+    assert.deepEqual(sup, [SUPUESTO_NUMERO_CALLE])
+    assert.equal(await valor('streetNumber'), '0')
+  } finally { await context.close() }
+})
+
+test('0.1.11: «S/N» + campo de TEXTO → se escribe S/N tal cual y no hay supuesto; un número normal no cambia nada', async () => {
+  const a = await abrir({ numeroTexto: true })
+  try {
+    assert.deepEqual(await rellenarPantallaVivienda(a.page, a.marco, FORM_SN, a.ctx), [])
+    assert.equal(await a.valor('streetNumber'), 'S/N')
+  } finally { await a.context.close() }
+  const b = await abrir()
+  try {
+    assert.deepEqual(await rellenarPantallaVivienda(b.page, b.marco, FORM, b.ctx), [])
+    assert.equal(await b.valor('streetNumber'), '1')
+  } finally { await b.context.close() }
+})
+
+test('0.1.11: dos casillas «Sin número» → hueco (no se adivina cuál); casilla de otro rótulo («Acepto condiciones») no cuenta', async () => {
+  const a = await abrir({ casillaSinNumero: { dos: true } })
+  try {
+    await assert.rejects(() => rellenarPantallaVivienda(a.page, a.marco, FORM_SN, a.ctx), (e) => e instanceof ErrorMapaIncompleto && /casilla «sin número»/.test((e as Error).message))
+  } finally { await a.context.close() }
+  const b = await abrir({ casilla: true })
+  try {
+    assert.deepEqual(await rellenarPantallaVivienda(b.page, b.marco, FORM_SN, b.ctx), [SUPUESTO_NUMERO_CALLE])
+    assert.equal(await b.marcado('c1'), false, 'no se toca ninguna casilla ajena')
+  } finally { await b.context.close() }
 })

@@ -134,3 +134,21 @@ export function decidirRiesgoProbar<E extends { riesgo: unknown }>(e: { reconstr
   if (faltan) return { ok: false, status: 422, motivo: 'riesgo_incompleto', errores: faltan }
   return { ok: false, status: 409, motivo: e.soloPurgados ? 'origen_purgado' : 'sin_riesgo_previo' }
 }
+
+// 01/11/2026 · «probar» AUTO/MOTO: el trabajo cuelga de la oportunidad ABIERTA del cliente en ese ramo (así entra en el presupuesto
+// automático y usa el vehículo de referencia). Abierta = ni ganada ni perdida ni cerrada. Varias abiertas → la más reciente + aviso.
+export const RAMOS_PROBAR_VINCULA_ABIERTA = ['auto', 'moto'] as const
+export type FilaOportunidadProbar = { id: string; estado: string; cerradaAt: Date | string | null; createdAt: Date | string }
+const msDe = (v: Date | string): number => (v instanceof Date ? v.getTime() : Date.parse(v)) || 0
+
+export function elegirOportunidadAbiertaProbar(ramo: string, filas: readonly FilaOportunidadProbar[]): { oportunidadId: string | null; avisos: string[] } {
+  if (!(RAMOS_PROBAR_VINCULA_ABIERTA as readonly string[]).includes(ramo)) return { oportunidadId: null, avisos: [] }
+  const abiertas = filas
+    .filter((f) => f.cerradaAt == null && f.estado !== 'ganada' && f.estado !== 'perdida')
+    .sort((a, b) => msDe(b.createdAt) - msDe(a.createdAt))
+  if (abiertas.length === 0) return { oportunidadId: null, avisos: [] }
+  return {
+    oportunidadId: abiertas[0].id,
+    avisos: abiertas.length > 1 ? [`hay ${abiertas.length} oportunidades abiertas de ${ramo}: se vincula a la más reciente`] : [],
+  }
+}

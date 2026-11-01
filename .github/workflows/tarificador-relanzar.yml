@@ -10,6 +10,9 @@
 #   · accion=explorar → POST /api/operador/tarificador/exploracion { entrada } (28/10/2026): UNA exploración IA SINTÉTICA
 #     (sin cliente ni datos reales) de una entrada de la lista cerrada. Requiere TARIFICADOR_RPA_ACTIVO=1 y
 #     TARIFICADOR_EXPLORADOR_ACTIVO=1 en central-asegura y la fila activa en companias_integracion (503/409 si no).
+#   · accion=presupuesto → POST /api/operador/tarificador/presupuesto-rpa { oportunidadId, avisar:false } (01/11/2026):
+#     prepara A MANO el presupuesto (BORRADOR) de una oportunidad con las ofertas de los trabajos ya hechos. No avisa
+#     a nadie y no envía nada al cliente (TARIFICAR ≠ EMITIR).
 # Secreto de repo REQUERIDO: ASEGURA_OPERADOR_SECRET (el Bearer del puerto de operador de asegura; ningún otro workflow
 # lo usaba antes). Secreto/variable OPCIONAL: ASEGURA_URL (por defecto https://central-asegura.vercel.app).
 # Nunca se imprime el secreto ni el riesgo: solo el estado HTTP y un JSON FILTRADO a claves sin datos personales.
@@ -19,10 +22,10 @@ on:
   workflow_dispatch:
     inputs:
       accion:
-        description: 'relanzar (trabajo existente), probar (copia el riesgo del último trabajo del cliente) o explorar (mapa del formulario, SINTÉTICO)'
+        description: 'relanzar (trabajo existente), probar (copia el riesgo del último trabajo del cliente), explorar (mapa del formulario, SINTÉTICO) o presupuesto (borrador de una oportunidad)'
         required: true
         type: choice
-        options: [relanzar, probar, explorar]
+        options: [relanzar, probar, explorar, presupuesto]
         default: relanzar
       trabajo_id:
         description: 'accion=relanzar: uuid del trabajo (atascado)'
@@ -42,6 +45,10 @@ on:
         default: ''
       imagen:
         description: 'accion=probar (opcional): imagen de rama registry.fly.io/asegura-tarificador:rama-<sha7> (requiere el interruptor)'
+        required: false
+        default: ''
+      oportunidad_id:
+        description: 'accion=presupuesto: uuid de la oportunidad'
         required: false
         default: ''
       entrada:
@@ -69,6 +76,7 @@ jobs:
       RAMO: ${{ inputs.ramo }}
       IMAGEN: ${{ inputs.imagen }}
       ENTRADA: ${{ inputs.entrada }}
+      OPORTUNIDAD_ID: ${{ inputs.oportunidad_id }}
       ASEGURA_URL: ${{ secrets.ASEGURA_URL || vars.ASEGURA_URL || 'https://central-asegura.vercel.app' }}
       ASEGURA_OPERADOR_SECRET: ${{ secrets.ASEGURA_OPERADOR_SECRET }}
     steps:
@@ -89,6 +97,9 @@ jobs:
               # Lista cerrada en asegura (esEntradaExploracion): aquí solo la forma. Sintética: sin cliente ni riesgo.
               [[ "$ENTRADA" =~ ^[a-z_]+:[a-z_]+:[a-z_]+$ ]] || { echo "::error::entrada no válida (compania:seccion:producto)"; exit 1; }
               [ -z "$IMAGEN" ] || { echo "::error::imagen solo vale con accion=probar"; exit 1; } ;;
+            presupuesto)
+              [[ "$OPORTUNIDAD_ID" =~ $uuid ]] || { echo "::error::oportunidad_id no es un uuid"; exit 1; }
+              [ -z "$IMAGEN" ] || { echo "::error::imagen solo vale con accion=probar"; exit 1; } ;;
             probar)
               [[ "$CLIENTE_ID" =~ $uuid ]] || { echo "::error::cliente_id no es un uuid"; exit 1; }
               [[ "$COMPANIA" =~ $corto ]] || { echo "::error::compania no válida"; exit 1; }
@@ -96,7 +107,7 @@ jobs:
               if [ -n "$IMAGEN" ] && ! [[ "$IMAGEN" =~ $imagen_rama ]]; then
                 echo "::error::imagen no válida: registry.fly.io/asegura-tarificador:rama-<sha7> (nunca main-*)"; exit 1
               fi ;;
-            *) echo "::error::accion tiene que ser relanzar, probar o explorar"; exit 1 ;;
+            *) echo "::error::accion tiene que ser relanzar, probar, explorar o presupuesto"; exit 1 ;;
           esac
           case "$ASEGURA_URL" in https://*) ;; *) echo "::error::ASEGURA_URL tiene que ser https"; exit 1 ;; esac
 
@@ -106,6 +117,9 @@ jobs:
           if [ "$ACCION" = "relanzar" ]; then
             ruta="relanzar"
             cuerpo=$(jq -cn --arg t "$TRABAJO_ID" '{trabajoId: $t}')
+          elif [ "$ACCION" = "presupuesto" ]; then
+            ruta="presupuesto-rpa"
+            cuerpo=$(jq -cn --arg o "$OPORTUNIDAD_ID" '{oportunidadId: $o, avisar: false}')
           elif [ "$ACCION" = "explorar" ]; then
             ruta="exploracion"
             cuerpo=$(jq -cn --arg e "$ENTRADA" '{entrada: $e}')
@@ -120,6 +134,6 @@ jobs:
             -H 'content-type: application/json' -H 'x-actor: agente:claude-actions' --data "$cuerpo") || http="000"
           echo "HTTP ${http} · accion=${ACCION}"
           # Solo claves sin PII, con valores acotados; lo demás no se imprime.
-          jq -c 'if type == "object" then (with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle","imagenPrueba","exploracionId","conDatosReales"))) | map_values(if type == "string" then .[0:300] else . end)) + (if (.errores | type) == "array" then {campos: [.errores[] | tostring | split(":")[0] | .[0:60]]} else {} end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
+          jq -c 'if type == "object" then (with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle","imagenPrueba","exploracionId","presupuestoId","conDatosReales"))) | map_values(if type == "string" then .[0:300] else . end)) + (if (.errores | type) == "array" then {campos: [.errores[] | tostring | split(":")[0] | .[0:60]]} else {} end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
           rm -f respuesta.json
           case "$http" in 2*) exit 0 ;; *) exit 1 ;; esac

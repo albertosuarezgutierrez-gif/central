@@ -19,6 +19,10 @@
 //     repinta el formulario tras el autocompletado de la dirección). Aquí se rellenan los ÚLTIMOS, por `formcontrolname`
 //     (nada de refs viejos) y se comprueba que el valor quedó y que el control no está inválido.
 //
+// 0.1.11 (01/11/2026, job 53d9eefe): `streetNumber` es `input[type=number]`; el riesgo puede traer «S/N» (asegura: número de la ficha → Catastro → «S/N»).
+//   Con «S/N» y campo numérico: casilla visible de rótulo exacto «Sin número»/«S/N» (por `ctx.pulsar`) → si no existe, se teclea `0` como ÚLTIMO recurso y se
+//   declara en «Precio con supuestos: …» (precio estimado). Campo de texto: «S/N» tal cual. Más de una casilla candidata → hueco. Ver `resolverNumeroSinNumero`.
+//
 // HUECOS (→ `ErrorMapaIncompleto` con inventario de estructura de todos los marcos, `pideInventarioDom`):
 //   · la etiqueta exacta del «Tipo de documento» (el robot NO lo cambia: lee lo que muestra y solo sigue si es el del doc.);
 //   · un CP con varias poblaciones, una vía que el autocompletado no resuelve, cualquier obligatorio que siga inválido o un
@@ -34,7 +38,7 @@
 // campo; nunca en logs ni mensajes.
 
 import type { Frame, Locator, Page } from 'playwright'
-import { EmisionBloqueadaError, importeEs, type FormularioHogar, type OfertaNormalizada, type ResultadoAdaptador } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, importeEs, textoSupuestos, type FormularioHogar, type OfertaNormalizada, type ResultadoAdaptador } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { claveCampo, conRespaldoIA, normalizarTexto, registrarAtasco, type PeticionResolver } from '../../formador.ts'
@@ -567,8 +571,10 @@ async function obligatoriosInvalidos(marco: Frame): Promise<string[]> {
  * Pantalla 1 «Vivienda»: rellena con el plan puro y comprueba cada autocompletado. Pulsa «Comprobar» (0.1.5) solo si la información de la vivienda sigue oculta; no
  * cambia el «Tipo de documento» (lista no vista): si hace falta, hueco con inventario.
  */
-export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: FormularioHogar, ctx: CtxVivienda): Promise<void> {
+export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: FormularioHogar, ctx: CtxVivienda): Promise<string[]> {
   await exigirPaso(marco, 'Vivienda')
+  /** 0.1.11: supuestos propios de esta pantalla (hoy: el número de calle «S/N» en un campo numérico); el llamante los declara como «Precio con supuestos». */
+  const supuestosVivienda: string[] = []
   // Solo se LEE (el robot no cambia el tipo): fijo por `formcontrolname` → aprendido → IA → atasco (capa común).
   const { loc: tipoDoc, confirmar: confirmarTipoDoc } = (await conRespaldoIA(
     page,
@@ -602,7 +608,14 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
         throw new ErrorMapaIncompleto(`por qué «Año de construcción» sigue deshabilitado sin un año del Catastro aceptable (${await diagnosticoCampoCatastro(marco, anio)})`)
       }
     }
-    const loc = await escribir(marco, ctx, op)
+    let opEscribir = op
+    if (op.control === CONTROLES.numero && esNumeroSinNumero(op.valor)) {
+      const r = await resolverNumeroSinNumero(marco, ctx, op)
+      if (r.supuesto) supuestosVivienda.push(r.supuesto)
+      if (r.hecho) continue
+      opEscribir = r.op
+    }
+    const loc = await escribir(marco, ctx, opEscribir)
     if (op.autocompleta === 'poblacion') {
       let confirmarPob: (() => Promise<void>) | null = null
       let elegidaPor: 'nucleo' | 'municipio' | 'unica' | null = null
@@ -648,6 +661,61 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
   }
   const invalidos = await obligatoriosInvalidos(marco)
   if (invalidos.length) throw new ErrorMapaIncompleto(`por qué siguen inválidos estos obligatorios: ${invalidos.join(', ')}`)
+  return supuestosVivienda
+}
+
+/**
+ * 0.1.11 (01/11/2026, job 53d9eefe): el riesgo trae «S/N» (asegura: plan B `numeroSinNumero`, última opción tras ficha y Catastro) pero el
+ * campo `streetNumber` de Allianz es `input[type=number]` y `fill('S/N')` revienta («Cannot type text into input[type=number]»).
+ * ¿El número de calle es «sin número»? (S/N, s/n, SN, «sin número», «sin numero»). PURA.
+ */
+export function esNumeroSinNumero(v: string | null | undefined): boolean {
+  return /^\s*(s\s*\/\s*n|sn|sin\s+n[uú]mero|sin\s+numero)\s*\.?\s*$/i.test(String(v ?? ''))
+}
+
+/** Rótulo EXACTO de una casilla «sin número» (texto visible entero; nunca «contiene»). PURA. */
+export function esRotuloCasillaSinNumero(t: string | null | undefined): boolean {
+  return /^\s*(sin\s+n[uú]mero|s\s*\/\s*n|vivienda\s+sin\s+n[uú]mero)\s*\.?\s*$/i.test(String(t ?? '').normalize('NFC'))
+}
+
+/** Número que se teclea cuando el campo es numérico y no hay casilla «sin número» ni número de la ficha (último recurso, SIEMPRE con aviso). */
+export const NUMERO_CALLE_SUPUESTO = '0'
+export const SUPUESTO_NUMERO_CALLE = 'número de calle: 0 (supuesto; la vivienda no tiene número y el portal exige uno numérico)'
+export const SUPUESTO_CASILLA_SIN_NUMERO = 'número de calle: casilla «sin número» del portal'
+
+/**
+ * Orden: (1) campo de TEXTO → se escribe «S/N» tal cual (`hecho: false`, sin supuesto); (2) campo NUMÉRICO con UNA casilla visible de rótulo exacto
+ * «sin número»/«S/N» → se marca por `ctx.pulsar` (guard) y se exige que quede marcada (`hecho: true`); (3) sin casilla → se teclea `0`
+ * (`hecho: false`, op con `0`) y se declara el supuesto (precio estimado). El número de la ficha/Catastro ya lo resuelve asegura ANTES de encolar
+ * (si hubiera, `op.valor` no sería «S/N»). Más de una casilla candidata o una que no queda marcada → hueco con inventario (nunca se adivina).
+ */
+async function resolverNumeroSinNumero(
+  marco: Frame,
+  ctx: Pick<ContextoPortal, 'pulsar' | 'pausaAccion'>,
+  op: Extract<OperacionVivienda, { tipo: 'escribir' }>,
+): Promise<{ hecho: boolean; op: Extract<OperacionVivienda, { tipo: 'escribir' }>; supuesto: string | null }> {
+  const campo = marco.locator(`input${selControl(op.control)}:visible`)
+  if ((await campo.count()) !== 1) return { hecho: false, op, supuesto: null } // `escribir` da el hueco con su diagnóstico
+  const tipo = ((await campo.getAttribute('type').catch(() => null)) ?? 'text').toLowerCase()
+  if (tipo !== 'number') return { hecho: false, op, supuesto: null }
+  const rotulos = marco.locator('nx-checkbox label:visible, label:visible').filter({ hasText: /n[uú]mero|s\s*\/\s*n/i })
+  const todos = await rotulos.all()
+  const candidatas: Locator[] = []
+  for (const r of todos) if (esRotuloCasillaSinNumero(await r.innerText().catch(() => ''))) candidatas.push(r)
+  if (candidatas.length > 1) throw new ErrorMapaIncompleto(`qué casilla «sin número» marcar para la calle (${candidatas.length} coincidencias)`)
+  if (candidatas.length === 1) {
+    const etiqueta = candidatas[0]!
+    await ctx.pausaAccion()
+    await ctx.pulsar(etiqueta)
+    const marcada = await etiqueta.evaluate((el) => {
+      const para = el.getAttribute('for')
+      const c = (para ? document.getElementById(para) : el.parentElement?.querySelector('input[type="checkbox"]')) as HTMLInputElement | null
+      return !!c && c.checked === true
+    }).catch(() => false)
+    if (!marcada) throw new ErrorMapaIncompleto('el efecto de marcar la casilla «sin número» de la calle (tras pulsar no quedó marcada)')
+    return { hecho: true, op, supuesto: SUPUESTO_CASILLA_SIN_NUMERO }
+  }
+  return { hecho: false, op: { ...op, valor: NUMERO_CALLE_SUPUESTO }, supuesto: SUPUESTO_NUMERO_CALLE }
 }
 
 /**
@@ -1081,14 +1149,14 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.11',
+  version: '0.1.12',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
     await ctx.trasLogin()
     await ctx.paso('navegacion', () => abrirNuevaAlta(page, ctx, { pestana: 'Particulares', producto: PRODUCTO_MENU }))
     const marco = await marcoHogar(page)
-    await ctx.paso('formulario', () => rellenarPantallaVivienda(page, marco, f, ctx))
+    const supuestosVivienda = await ctx.paso('formulario', () => rellenarPantallaVivienda(page, marco, f, ctx))
     const paso = await ctx.paso('tarificar', () => avanzarDesdeVivienda(page, marco, ctx))
     if (paso !== 'Valoración de bienes') return pasoSinMapa(page, marco, ctx, paso)
     const supuestos = await ctx.paso('formulario', () => rellenarValoracionBienes(page, marco, f, ctx))
@@ -1096,6 +1164,8 @@ export const allianzHogar = {
     if (paso2 !== 'Precio') return pasoSinMapa(page, marco, ctx, paso2, supuestos)
     // 0.1.10: «Precio» se LEE (sin pulsar nada) y el bot termina aquí: no «Siguiente» (→ Datos/emisión), no «Guardar presupuesto».
     const ofertas = await ctx.paso('lectura_primas', () => leerPrecioHogar(page, marco, supuestos))
-    return { ofertas }
+    // 0.1.11: lo supuesto en «Vivienda» (número de calle) se declara con el formato que asegura reconoce («Precio con supuestos: …»).
+    const aviso = textoSupuestos(supuestosVivienda ?? [])
+    return { ofertas: aviso ? ofertas.map((o) => ({ ...o, avisos: [...o.avisos, aviso] })) : ofertas }
   },
 } as const

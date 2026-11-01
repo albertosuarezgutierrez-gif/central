@@ -1,4 +1,7 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.40 (01/11/2026, DIAGNÓSTICO, el guard NO se toca): tras «Generar Proyecto» sale un diálogo con «contrat…» (botones Sí/No/Aceptar) y el bot para
+//   sin proyecto ni PDF. El aviso/motivo lleva ahora el texto ENTERO del diálogo (normalizado, sin NIF/teléfonos/cifras largas/nombres) y los rótulos de
+//   sus botones (`describirDialogoPeligroMapfre`), para que Alberto decida. Sigue sin pulsarse nada.
 // v0.8.39 (01/11/2026, AS-26-0042: las 14 garantías de las 2 opciones de Mapfre salían «No figura» — el bot solo guardaba el precio; Alberto: «hay que
 //   descargar el proyecto, que tiene toda la información»): las GARANTÍAS (+ límites y franquicias) de cada producto se leen del PDF del proyecto
 //   (texto del PDF descargado, `pdf-texto.ts`) y, si no hay PDF o no se lee, de la pantalla «Coberturas» (solo lectura, antes de «Generar Proyecto»).
@@ -2120,7 +2123,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.39',
+  version: '0.8.40',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
