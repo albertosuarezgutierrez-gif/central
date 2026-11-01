@@ -77,6 +77,25 @@ export function textoCelda(c: CeldaMatriz | undefined): { texto: string; marca: 
 }
 
 /**
+ * 01/11/2026 (AS-26-0042): las ofertas cuya columna sería ENTERA «No figura» (con el cuadro con filas). Nunca se pinta una columna así:
+ * el PDF no se genera hasta que la oferta tenga garantías (el borrador queda marcado incompleto y Alberto lo sabe). PURA.
+ */
+export function ofertasSinGarantias(cmp: Pick<ResultadoComparacion, 'ofertas' | 'filas'>): OfertaNormalizada[] {
+  if (cmp.filas.length === 0) return []
+  return cmp.ofertas.filter((o) => o.rol !== 'actual').filter((o) => cmp.filas.every((f) => textoCelda(f.celdas.find((c) => c.ofertaId === o.id)).icono === 'nose'))
+}
+
+/** El estudio tiene columnas enteras «No figura»: no se genera el PDF. */
+export class EstudioIncompletoError extends Error {
+  ofertas: readonly string[]
+  constructor(ofertas: readonly string[]) {
+    super(`Estudio incompleto: sin garantías leídas en ${ofertas.join(', ')}`)
+    this.name = 'EstudioIncompletoError'
+    this.ofertas = ofertas
+  }
+}
+
+/**
  * Las columnas del cuadro por página: la póliza actual (si la hay) en TODAS, para poder comparar sin
  * volver atrás, y las ofertas repartidas hasta `max` columnas por tabla.
  */
@@ -232,6 +251,8 @@ export async function pintarCuadroComparativo(L: LienzoPdf, cmp: ResultadoCompar
   const { f } = L
   const trozos = repartirColumnas(cmp.ofertas, 4)
   if (trozos.length === 0 || cmp.filas.length === 0) return
+  const vacias = ofertasSinGarantias(cmp)
+  if (vacias.length > 0) throw new EstudioIncompletoError(vacias.map((o) => `${o.compania} · ${o.producto ?? ''}`.trim()))
   const actual = cmp.ofertas.find((o) => o.rol === 'actual') ?? null
   const nombres = cabecerasColumnas(cmp.ofertas)
   if (L.y - 200 < M + PIE) L.nuevaPagina()

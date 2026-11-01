@@ -1,4 +1,9 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.39 (01/11/2026, AS-26-0042: las 14 garantías de las 2 opciones de Mapfre salían «No figura» — el bot solo guardaba el precio; Alberto: «hay que
+//   descargar el proyecto, que tiene toda la información»): las GARANTÍAS (+ límites y franquicias) de cada producto se leen del PDF del proyecto
+//   (texto del PDF descargado, `pdf-texto.ts`) y, si no hay PDF o no se lee, de la pantalla «Coberturas» (solo lectura, antes de «Generar Proyecto»).
+//   Van a `oferta.coberturas`/`franquicias` en el formato de Allianz (`garantias.ts`). Sin garantías por ninguna vía: aviso «coberturas no leídas»
+//   (asegura marca el borrador INCOMPLETO y avisa a Alberto; nunca «No figura» en una columna entera). No se pulsa nada nuevo.
 // v0.8.17 (25/10/2026, run real 0.8.16: en «Coberturas» se veía «Ir a generar proyecto» y NO se pulsó — el portal lo repite, uno por producto, y se exigía
 //   UNO solo): ahora se pulsa el único de `app-coberturas` o el primero visible y habilitado (también en la última vuelta de espera); en la vista/diálogo
 //   siguiente (escaneado también dentro de diálogos) se pulsa UNA vez «Generar Proyecto» o «Guardar proyecto» (texto entero, lista blanca estricta; nunca
@@ -171,6 +176,8 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
+import { textoDePdf } from '../../pdf-texto.ts'
+import { coberturasDeLineas, coberturasPorProducto, ofertasConGarantiasMapfre, textoALineas, type CoberturasPorProducto } from './garantias.ts'
 import { CONCEPTOS_LECTURA, regexEtiquetaExacta } from '../../vocabulario.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/intranet/index.ts'
@@ -397,6 +404,29 @@ export function primasDesdeTarjetas(tarjetas: readonly TarjetaProductoLeida[]): 
 /** Lee las tarjetas de precio del paso Coberturas ya calculado. Solo lectura. */
 export async function leerPrimasMapfre(raiz: Pick<Frame, 'locator'>): Promise<PrimaProductoMapfre[]> {
   return primasDesdeTarjetas(await leerTarjetasPrima(raiz))
+}
+
+/**
+ * v0.8.39 · Garantías de la pantalla «Coberturas» de cada producto (respaldo si no hay PDF). Solo lectura: lee el texto de cada tarjeta
+ * (celdas separadas por tabulador) y, si la pantalla trae un cuadro común, lo reparte por el nombre exacto del producto. Nunca lanza hacia fuera
+ * (el llamador lo atrapa): sin texto legible → mapa vacío.
+ */
+export async function leerGarantiasPantallaMapfre(nsei: Pick<Frame, 'locator'>, productos: readonly string[]): Promise<CoberturasPorProducto> {
+  const tarjetas = await nsei.locator(SEL_PRIMAS.producto).evaluateAll((els) => els.map((e) => ({
+    producto: e.querySelector('mat-select .mat-select-value-text')?.textContent ?? '',
+    texto: ((e as HTMLElement).innerText ?? e.textContent ?? '').split('\n').map((l) => l.replace(/\s*\n\s*/g, ' ')).join('\n'),
+  })))
+  const salida: CoberturasPorProducto = new Map()
+  for (const t of tarjetas) {
+    const k = limpiar(t.producto).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    const c = coberturasDeLineas(t.texto.split('\n'))
+    if (k && c.coberturas.length > 0 && !salida.has(k)) salida.set(k, c)
+  }
+  if (salida.size >= productos.length) return salida
+  const cuadro = nsei.locator('app-coberturas').first()
+  const textoCuadro = (await cuadro.count().catch(() => 0)) > 0 ? await cuadro.innerText({ timeout: 2_000 }).catch(() => '') : ''
+  for (const [k, v] of coberturasPorProducto(textoCuadro.split('\n'), productos)) if (!salida.has(k)) salida.set(k, v)
+  return salida
 }
 
 /** Tarjetas de producto tal cual (sin validar). Solo lectura. */
@@ -2054,6 +2084,9 @@ export async function precioDesdeObjetoAsegurado(
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
   const avisosExtra = [...(sinControlCompania ? [AVISO_COMPANIA_ANTERIOR_NO_PEDIDA] : []), ...(fijaMapfre ? [avisoSiniestralidadMapfre(await leerSiniestralidadMapfre(nsei), Number.isInteger(form.siniestrosUltimos5Anios) ? form.siniestrosUltimos5Anios : null)] : [])]
+  // v0.8.39: garantías de la pantalla «Coberturas» (solo lectura, ANTES de «Generar Proyecto»); sirven si el PDF no llega o no se lee.
+  let garantiasPantalla: CoberturasPorProducto = new Map()
+  try { garantiasPantalla = await leerGarantiasPantallaMapfre(nsei, primas.map((p) => p.producto)) } catch { /* sin garantias de pantalla: queda el PDF o el aviso */ }
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
@@ -2064,9 +2097,17 @@ export async function precioDesdeObjetoAsegurado(
     : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
   // v0.8.23: PDF del proyecto guardado (botón «Imprimir/Descargar proyecto»); si no llega, aviso y el precio/proyecto se devuelven igual.
-  const pdfProyecto = await descargarProyectoAuto(nsei, ctx, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
+  // v0.8.39: se guardan los bytes del PDF para leer de él las garantías (el contrato de salida no cambia: `PdfRef` en `oferta.pdf`).
+  let bytesPdf: Uint8Array | null = null
+  const adjuntar = ctx.adjuntarPdf
+  const ctxPdf = { ...ctx, adjuntarPdf: adjuntar ? (nombre: string, contenido: Uint8Array) => { bytesPdf = contenido; return adjuntar(nombre, contenido) } : undefined }
+  const pdfProyecto = await descargarProyectoAuto(nsei, ctxPdf, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
+  const nombresProductos = primas.map((p) => p.producto)
+  let garantiasPdf: CoberturasPorProducto = new Map()
+  try { if (bytesPdf) garantiasPdf = coberturasPorProducto(textoALineas(textoDePdf(Buffer.from(bytesPdf))), nombresProductos) } catch { /* PDF ilegible: queda la pantalla */ }
+  ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
   // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
-  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
+  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -2079,7 +2120,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.38',
+  version: '0.8.39',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

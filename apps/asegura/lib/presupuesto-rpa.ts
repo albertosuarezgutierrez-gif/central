@@ -38,7 +38,7 @@ import { cargarPropuestaOportunidad, referenciaOportunidad } from './propuesta-o
 import { trabajosVigentes, type TrabajoParaPropuesta } from './propuesta-oportunidad-reglas'
 import { URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
 import {
-  ACTOR_RPA, EUR_ESTIMADO_NARRATIVA, alertasDeAvisos, cierrePuedeDispararPresupuesto, avisosOpcionRpa, claveRpaDeFila, decidirDisparo, decidirIaAuto, decidirSustitucion, enlaceOportunidad,
+  ACTOR_RPA, EUR_ESTIMADO_NARRATIVA, ofertasSinGarantiasRpa, alertasDeAvisos, cierrePuedeDispararPresupuesto, avisosOpcionRpa, claveRpaDeFila, decidirDisparo, decidirIaAuto, decidirSustitucion, enlaceOportunidad,
   filaOfertaRpa, mismoConjunto, nombreDePila, ofertasDeRespuesta, sobreCoberturasRpa, textoAvisoCorteRpa, textoAvisoPresupuestoRpa, type OfertaRpaLeida,
 } from './presupuesto-rpa-reglas'
 
@@ -225,6 +225,8 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
     return l ? alertasDeAvisos(l.oferta.avisos, l.oferta.compania) : []
   }))]
 
+  // 01/11/2026: ofertas sin NINGUNA garantía leída → borrador INCOMPLETO (el PDF no sale con una columna entera «No figura»; Alberto lo sabe por Telegram).
+  const incompletas = ofertasSinGarantiasRpa(opciones.map((o) => ({ compania: o.compania, producto: o.producto, coberturas: leidaDe.get(claveRpaDeFila(vivas.find((v) => v.id === o.ofertaId)?.datosExtra) ?? '')?.oferta.coberturas ?? [] })))
   const { venceEl } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
   // El token en claro no se guarda ni se devuelve: es un borrador; el aviso (`accion:'avisar'`) genera el enlace.
   const tokenHash = await hashTokenVista(generarTokenVista())
@@ -239,7 +241,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
     actualId: null,
     comparacion,
     narrativa,
-    rpa: { tarificaciones, trabajos, sinIa, ...(descartadas.length ? { companiasSinLeer: descartadas } : {}), analisis },
+    rpa: { tarificaciones, trabajos, sinIa, ...(incompletas.length ? { incompleto: incompletas } : {}), ...(descartadas.length ? { companiasSinLeer: descartadas } : {}), analisis },
   }
 
   // 3. El borrador (bajo cerrojo: dos trabajos que acaban a la vez no dejan dos).
@@ -306,6 +308,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
         sinLeer: descartadas,
         conservados: hecho.conservados,
         alertas,
+        incompletas,
       }))
     : false
   return { estado: 'creado', presupuestoId: hecho.creado.id, referencia: hecho.creado.referencia ?? null, ofertas: opciones.length, narrativa: narrativa.fuente, sinIa, avisado, sustituidos: hecho.sustituidos, conservados: hecho.conservados }

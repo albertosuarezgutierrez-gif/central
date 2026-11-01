@@ -460,6 +460,15 @@ export function rangoPrimas(primas: readonly number[]): string | null {
   return min === max ? eur(min) : `de ${eur(min)} a ${eur(max)}`
 }
 
+/**
+ * 01/11/2026 (AS-26-0042: las 14 garantías de 2 opciones de Mapfre salían «No figura»): las ofertas del bot SIN ninguna garantía leída.
+ * Cuenta como «sin garantías» la que no trae coberturas o cuyas coberturas no dicen si cubre o no (`sobreCoberturasRpa` = null). El borrador
+ * se marca INCOMPLETO (`estudio.rpa.incompleto`), el Telegram a Alberto lo dice y el PDF no se genera con una columna entera «No figura».
+ */
+export function ofertasSinGarantiasRpa(ofertas: readonly { compania: string; producto: string; coberturas: unknown }[]): { compania: string; producto: string }[] {
+  return ofertas.filter((o) => sobreCoberturasRpa(o.coberturas, '') === null).map((o) => ({ compania: o.compania, producto: o.producto }))
+}
+
 export type EntradaAvisoRpa = {
   /** Nombre de pila; `null` → se usa la referencia interna. */
   cliente: string | null
@@ -477,6 +486,8 @@ export type EntradaAvisoRpa = {
   conservados?: number
   /** Datos que la compañía usó DISTINTOS de la ficha (`alertasDeAvisos`): van arriba, en negrita. */
   alertas?: string[]
+  /** Ofertas del borrador SIN garantías leídas (`ofertasSinGarantiasRpa`): el borrador es INCOMPLETO y se dice arriba. */
+  incompletas?: { compania: string; producto: string }[]
 }
 
 /** El Telegram para Alberto (parse_mode HTML: todo lo variable, escapado). Solo nombre de pila o referencia: sin NIF ni teléfono. */
@@ -487,6 +498,9 @@ export function textoAvisoPresupuestoRpa(e: EntradaAvisoRpa): string {
   return [
     `🤖 <b>Presupuesto en BORRADOR</b> preparado por el tarificador (${escapeHtml(e.ramo)})`,
     `Cliente: ${escapeHtml(quien)}`,
+    ...(e.incompletas?.length
+      ? [`⛔ <b>INCOMPLETO</b>: sin garantías leídas en ${escapeHtml(e.incompletas.map((o) => `${o.compania} · ${o.producto}`).join('; '))}. No se genera el PDF ni conviene enviarlo hasta completarlas (vuelve a tarificar esa compañía o revisa el PDF de su proyecto).`]
+      : []),
     ...[...new Set(e.alertas ?? [])].map((a) => `⚠️ <b>Alerta</b>: ${escapeHtml(a)}`),
     `Ofertas: ${e.primas.length}${companias ? ` (${escapeHtml(companias)})` : ''}`,
     `Primas anuales: ${rango ? escapeHtml(rango) : 'no constan'}`,

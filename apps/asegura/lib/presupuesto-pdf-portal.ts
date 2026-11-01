@@ -10,6 +10,7 @@ import { prismaAsegura } from './asegura-db'
 import { fichaPropiaDeRecurso } from './contacto-portal'
 import { leerPdfPresupuesto } from './presupuesto-pdf-lectura'
 import { nombreFicheroOfertas, pdfEstudioOfertas } from './presupuesto-pdf-ofertas'
+import { EstudioIncompletoError } from './presupuesto-pdf-cuadro'
 import { origenPresupuesto } from './presupuesto-origen'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -36,5 +37,10 @@ export async function pdfEstudioParaPortal(correduriaId: string, identidadId: st
   const l = await leerPdfPresupuesto(correduriaId, presupuestoId)
   if (l.estado === 'no_encontrado') return { estado: 'no_encontrado' }
   if (l.estado !== 'ok' || l.origen !== 'ofertas') return { estado: 'no_disponible' }
-  return { estado: 'ok', bytes: await pdfEstudioOfertas(l.datos), nombre: nombreFicheroOfertas(l.datos) }
+  try {
+    return { estado: 'ok', bytes: await pdfEstudioOfertas(l.datos), nombre: nombreFicheroOfertas(l.datos) }
+  } catch (e) {
+    if (e instanceof EstudioIncompletoError) return { estado: 'no_disponible' } // columna entera «No figura»: al cliente no se le da
+    throw e
+  }
 }
