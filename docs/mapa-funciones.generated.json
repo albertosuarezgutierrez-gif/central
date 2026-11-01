@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-01T16:54:24Z",
-  "sha": "6464952fe3e102a6184b71788ece48aa16f71df5",
+  "generadoEn": "2026-11-01T22:36:33Z",
+  "sha": "c0c085e3e7c9404fcc7a46f323d1d1e0d69a4317",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -58089,7 +58089,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 29
+          "linea": 31
         },
         {
           "nombre": "esTxt",
@@ -58097,7 +58097,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is string",
-          "linea": 30
+          "linea": 32
         },
         {
           "nombre": "leerEstudio",
@@ -58105,7 +58105,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "EstudioPdf | null",
-          "linea": 36,
+          "linea": 38,
           "resumen": "El `estudio` de la BD → lo que pinta el PDF. Una forma que no cuadra da `null`: el PDF no se genera a medias con un estudio que no se entiende."
         },
         {
@@ -58114,7 +58114,7 @@
           "exportada": false,
           "params": "n: unknown",
           "retorno": "n is number",
-          "linea": 56
+          "linea": 62
         },
         {
           "nombre": "textoCelda",
@@ -58122,7 +58122,7 @@
           "exportada": true,
           "params": "c: CeldaMatriz | undefined",
           "retorno": "",
-          "linea": 65,
+          "linea": 71,
           "resumen": "Lo que se escribe en una celda del cuadro (`\\n` separa líneas). `null`/sin dato = «No figura»."
         },
         {
@@ -58131,7 +58131,7 @@
           "exportada": true,
           "params": "cmp: Pick<ResultadoComparacion, 'ofertas' | 'filas'>",
           "retorno": "OfertaNormalizada[]",
-          "linea": 83,
+          "linea": 89,
           "resumen": "01/11/2026 (AS-26-0042): las ofertas cuya columna sería ENTERA «No figura» (con el cuadro con filas). Nunca se pinta una columna así: el PDF no se genera hasta que la oferta tenga garantías (el borrad"
         },
         {
@@ -58140,7 +58140,7 @@
           "exportada": true,
           "params": "ofertas: readonly OfertaNormalizada[], max = 4",
           "retorno": "OfertaNormalizada[][]",
-          "linea": 102,
+          "linea": 108,
           "resumen": "Las columnas del cuadro por página: la póliza actual (si la hay) en TODAS, para poder comparar sin volver atrás, y las ofertas repartidas hasta `max` columnas por tabla."
         },
         {
@@ -58149,7 +58149,7 @@
           "exportada": true,
           "params": "filas: readonly FilaMatriz[], ids: readonly string[]",
           "retorno": "FilaMatriz[]",
-          "linea": 113,
+          "linea": 119,
           "resumen": "Las filas del cuadro para un trozo de columnas: las que NINGUNA de esas ofertas menciona se omiten."
         },
         {
@@ -58158,7 +58158,7 @@
           "exportada": true,
           "params": "ofertas: readonly OfertaNormalizada[]",
           "retorno": "Map<string, string>",
-          "linea": 118,
+          "linea": 124,
           "resumen": "Cabecera de cada columna: compañía y, si hace falta para distinguirla, su nivel (`etiquetasOfertas`)."
         },
         {
@@ -58167,7 +58167,7 @@
           "exportada": false,
           "params": "o: Pick<OfertaNormalizada, 'firmeza' | 'fuente'>",
           "retorno": null,
-          "linea": 124
+          "linea": 130
         },
         {
           "nombre": "textoPrimaOferta",
@@ -58175,7 +58175,7 @@
           "exportada": true,
           "params": "o: Pick<OfertaNormalizada, 'primaTotal' | 'primaPeriodo' | 'firmeza' | 'fuente'>",
           "retorno": "string",
-          "linea": 133,
+          "linea": 139,
           "resumen": "· nada → «No figura». Con `*` si es un precio ESTIMADO (la compañía lo confirma al emitir)."
         },
         {
@@ -58184,7 +58184,7 @@
           "exportada": true,
           "params": "ofertas: readonly Pick<OfertaNormalizada, 'rol' | 'fuente' | 'firmeza'>[]",
           "retorno": "string",
-          "linea": 145,
+          "linea": 151,
           "resumen": "La frase de debajo del título del cuadro, según de dónde salen los precios. «Tal como constan en los documentos» solo vale para los PDF de compañía: un precio de Avant2 es un precio ESTIMADO que calcu"
         },
         {
@@ -58193,7 +58193,7 @@
           "exportada": true,
           "params": "ofertas: readonly Pick<OfertaNormalizada, 'primaTotal' | 'primaPeriodo' | 'firmeza' | 'fuente'>[]",
           "retorno": "string[]",
-          "linea": 162,
+          "linea": 168,
           "resumen": "Notas al pie del cuadro (estimados y precios que no son de un año)."
         },
         {
@@ -58202,7 +58202,7 @@
           "exportada": true,
           "params": "c: { referencia: string | null; telefono?: string | null; email?: string | null }",
           "retorno": "",
-          "linea": 177,
+          "linea": 183,
           "resumen": "La LLAMADA A LA ACCIÓN del PDF: cómo aceptar. 🚨 Sin enlace con token (el PDF se reenvía; el enlace del portal va solo por correo/WhatsApp y caduca): se acepta contestando o llamando con la REFERENCIA"
         },
         {
@@ -58211,7 +58211,7 @@
           "exportada": false,
           "params": "L: LienzoPdf, tipo: IconoCelda, x: number, yTop: number",
           "retorno": null,
-          "linea": 229,
+          "linea": 235,
           "resumen": "Dibuja el icono de una celda (✓ verde, ✗ rojo, ? gris) en un hueco de 8×8 con esquina superior izquierda (x, yTop)."
         },
         {
@@ -58220,7 +58220,7 @@
           "exportada": false,
           "params": "L: LienzoPdf, t: string, tam = 14, siguiente = 40",
           "retorno": null,
-          "linea": 243
+          "linea": 249
         },
         {
           "nombre": "pintarCuadroComparativo",
@@ -58228,7 +58228,7 @@
           "exportada": true,
           "params": "L: LienzoPdf, cmp: ResultadoComparacion, opts: { titulo?: string; recomendadaId?: string | null } = {}",
           "retorno": "Promise<void>",
-          "linea": 250,
+          "linea": 256,
           "resumen": "El cuadro de garantías (y precios) de un estudio, con la póliza actual en cada tabla y su leyenda."
         },
         {
@@ -58237,7 +58237,7 @@
           "exportada": true,
           "params": "L: LienzoPdf, narrativa: NarrativaPdf",
           "retorno": "void",
-          "linea": 360,
+          "linea": 366,
           "resumen": "«Análisis y recomendación» con la etiqueta SIEMPRE visible de quién lo redactó. No pinta nada si no hay texto."
         },
         {
@@ -58246,13 +58246,13 @@
           "exportada": true,
           "params": "L: LienzoPdf, c: { referencia: string | null; telefono?: string | null; email?: string | null }",
           "retorno": "void",
-          "linea": 385,
+          "linea": 391,
           "resumen": "La llamada a la acción: una caja cobalto, visible, con cómo aceptar y la referencia (`textoLlamadaAccion`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "de188d8dd9dc"
+      "hash": "99a9873497fe"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-pdf-datos.ts",
@@ -58434,7 +58434,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0f4532256200"
+      "hash": "405a98b8a578"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-pdf-portal.ts",
@@ -58627,6 +58627,7 @@
         "enlaceOportunidad",
         "rangoPrimas",
         "ofertasSinGarantiasRpa",
+        "ofertaConGarantiasDudosas",
         "textoAvisoPresupuestoRpa",
         "textoAvisoCorteRpa",
         "regimenHogarUsado"
@@ -58865,10 +58866,18 @@
           "nombre": "ofertasSinGarantiasRpa",
           "kind": "function",
           "exportada": true,
-          "params": "ofertas: readonly { compania: string; producto: string; coberturas: unknown }[]",
+          "params": "ofertas: readonly { compania: string; producto: string; coberturas: unknown; avisos?: readonly string[] }[]",
           "retorno": "",
           "linea": 468,
           "resumen": "01/11/2026 (AS-26-0042: las 14 garantías de 2 opciones de Mapfre salían «No figura»): las ofertas del bot SIN ninguna garantía leída. Cuenta como «sin garantías» la que no trae coberturas o cuyas cobe"
+        },
+        {
+          "nombre": "ofertaConGarantiasDudosas",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: readonly string[] | null | undefined",
+          "retorno": "boolean",
+          "linea": 483
         },
         {
           "nombre": "textoAvisoPresupuestoRpa",
@@ -58876,7 +58885,7 @@
           "exportada": true,
           "params": "e: EntradaAvisoRpa",
           "retorno": "string",
-          "linea": 494,
+          "linea": 509,
           "resumen": "El Telegram para Alberto (parse_mode HTML: todo lo variable, escapado). Solo nombre de pila o referencia: sin NIF ni teléfono."
         },
         {
@@ -58885,7 +58894,7 @@
           "exportada": true,
           "params": "e: EntradaCorteRpa",
           "retorno": "string",
-          "linea": 530,
+          "linea": 545,
           "resumen": "Telegram a Alberto cuando el proceso se CORTA (no hay borrador): que no crea que está hecho."
         },
         {
@@ -58894,13 +58903,13 @@
           "exportada": true,
           "params": "riesgos: readonly unknown[]",
           "retorno": "'propietario' | 'inquilino' | null",
-          "linea": 550,
+          "linea": 565,
           "resumen": "Régimen de la vivienda con el que SE TARIFICÓ (hogar), para las necesidades deducidas. Sale del riesgo del trabajo: `hogar.regimen` si consta; si no, `propietario` cuando se tarificó continente (un in"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ff9f5149cebd"
+      "hash": "2d5c743088c4"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-rpa.ts",
@@ -58972,7 +58981,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "77ca262d4437"
+      "hash": "d7c4d420779b"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-seguimiento-llamada.ts",
@@ -264199,6 +264208,6 @@
   ],
   "resumen": {
     "archivos": 5479,
-    "funciones": 21297
+    "funciones": 21298
   }
 }
