@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-01T06:42:19Z",
-  "sha": "dda00aaa256b7598c2cb439414ff27d3bc5e9b73",
+  "generadoEn": "2026-11-01T08:28:52Z",
+  "sha": "4ba6ad6d9dd1ec04e27ce02c9b98dca26a0ed75a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -26688,7 +26688,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Articulo | null",
-          "linea": 1770
+          "linea": 1822
         },
         {
           "nombre": "textoArticulo",
@@ -26696,7 +26696,7 @@
           "exportada": true,
           "params": "a: Articulo",
           "retorno": "string",
-          "linea": 1775,
+          "linea": 1827,
           "resumen": "Todo el texto visible de un artículo, en una cadena, para barrerlo."
         },
         {
@@ -26705,7 +26705,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Articulo[]",
-          "linea": 1788,
+          "linea": 1840,
           "resumen": "Los artículos que enlazan con un ramo. Alimenta el enlazado de su página."
         },
         {
@@ -26714,13 +26714,13 @@
           "exportada": true,
           "params": "articulos: readonly Articulo[] = ARTICULOS",
           "retorno": "",
-          "linea": 1812,
+          "linea": 1864,
           "resumen": "Entradas de sitemap del blog: el índice más una fila por artículo. 🚨 Vive aquí, y no dentro de `app/sitemap.ts`, por una razón de VERIFICACIÓN: el sitemap de Next no se puede ejecutar desde `node --t"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4450d561adb7"
+      "hash": "08e675e1b139"
     },
     {
       "ruta": "apps/asegura-web/lib/atribucion.ts",
@@ -33061,7 +33061,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/probar",
-      "hash": "2e9d6d2bef21"
+      "hash": "5bcc0bc170f9"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/relanzar/route.ts",
@@ -42753,6 +42753,7 @@
         "tipoViaDeFicha",
         "siglaCanonica",
         "emparejarNombreVia",
+        "direccionSinNumero",
         "partirDireccion"
       ],
       "funciones": [
@@ -42817,18 +42818,36 @@
           "linea": 135
         },
         {
+          "nombre": "prepararTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 148,
+          "resumen": "Formatos habituales de CIMA/CRM que rompían el troceo (01/11/2026): «Nº12», «NUM.12», «N.12» (marcador pegado al número), «CL.SOCORRO» (punto sin espacio tras el tipo de vía) y «12-3-A» / «12-3ºB» (nú"
+        },
+        {
+          "nombre": "direccionSinNumero",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion: string | null",
+          "retorno": "boolean",
+          "linea": 158,
+          "resumen": "La dirección DICE que no tiene número («PLAZA NUEVA S/N»): `partirDireccion` deja `numero: null` y esto distingue «sin número» de «no consta»."
+        },
+        {
           "nombre": "partirDireccion",
           "kind": "function",
           "exportada": true,
           "params": "direccion: string | null",
           "retorno": "DireccionPartida",
-          "linea": 150,
+          "linea": 170,
           "resumen": "Trocea «CL SOCORRO 24 3º IZQ» en tipo de vía / nombre / número / planta / puerta. Best-effort y CONSERVADOR: lo que no se reconoce queda a `null` (y la pantalla lo pide), nunca se inventa un número. S"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "603d93ae79eb"
+      "hash": "c5d0a46e1a02"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/documentos-emitidos.ts",
@@ -63738,6 +63757,7 @@
       "exporta": [
         "leerVehiculoPolizaVinculadaCliente",
         "riesgoDesdeOportunidadDelCliente",
+        "riesgoHogarDePolizasDelCliente",
         "revisarTarificacionLead",
         "tarificarLead",
         "ampliarTopeLead",
@@ -63751,7 +63771,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 31
+          "linea": 33
         },
         {
           "nombre": "sinTabla",
@@ -63759,7 +63779,7 @@
           "exportada": false,
           "params": "err: unknown",
           "retorno": null,
-          "linea": 32
+          "linea": 34
         },
         {
           "nombre": "leerContador",
@@ -63767,7 +63787,7 @@
           "exportada": false,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<",
-          "linea": 65
+          "linea": 67
         },
         {
           "nombre": "companiasConBot",
@@ -63775,7 +63795,7 @@
           "exportada": false,
           "params": "correduriaId: string, ramo: string",
           "retorno": "Promise<string[]>",
-          "linea": 78,
+          "linea": 80,
           "resumen": "Compañías con bot ACTIVO para ese ramo en ESTA correduría (fila activa, `rpa_autorizada`, sin pausa)."
         },
         {
@@ -63784,7 +63804,7 @@
           "exportada": false,
           "params": "info: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 94
+          "linea": 96
         },
         {
           "nombre": "nacimientoFicha",
@@ -63792,7 +63812,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 106
+          "linea": 108
         },
         {
           "nombre": "codigoPostalFicha",
@@ -63800,7 +63820,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 122,
+          "linea": 124,
           "resumen": "`clientes.codigo_postal` de la ficha (columna en claro; la misma que precarga la pantalla). `null` = no consta o no se pudo leer."
         },
         {
@@ -63809,7 +63829,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ramo: string",
           "retorno": "Promise<string | null>",
-          "linea": 133,
+          "linea": 135,
           "resumen": "Fecha del carné del conductor en la FICHA (carné B en coche; en moto SOLO el de moto: A, A1 o A2), la MISMA que lee la pantalla de la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo le"
         },
         {
@@ -63818,7 +63838,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ramo: string, infoRiesgo: unknown",
           "retorno": "Promise<",
-          "linea": 143,
+          "linea": 145,
           "resumen": "Compañía y antigüedad de la póliza del MISMO ramo, VIVA, vinculada a la oportunidad (`info_riesgo.polizaId`), del mismo cliente. Solo SELECT. `null` = sin póliza vinculada/viva o no se pudo leer (nunc"
         },
         {
@@ -63827,7 +63847,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: string",
           "retorno": "Promise<unknown | null>",
-          "linea": 160,
+          "linea": 162,
           "resumen": "31/10/2026 · «probar» Generali auto: de la póliza VIVA del MISMO ramo vinculada a la oportunidad MÁS RECIENTE del cliente (`info_riesgo.polizaId`, mismo filtro que `polizaActualVinculada`), SOLO `marc"
         },
         {
@@ -63836,7 +63856,7 @@
           "exportada": false,
           "params": "p: Promise<T>, defecto: T",
           "retorno": "Promise<T>",
-          "linea": 185
+          "linea": 187
         },
         {
           "nombre": "motoDelLead",
@@ -63844,7 +63864,7 @@
           "exportada": false,
           "params": "texto: unknown",
           "retorno": "Promise<LecturaMoto | null>",
-          "linea": 189,
+          "linea": 191,
           "resumen": "Moto: el texto libre contra el catálogo de motos de Codeoscopic (GET gratis). Sin Codeoscopic configurado = `no_mirado`."
         },
         {
@@ -63853,7 +63873,7 @@
           "exportada": false,
           "params": "valores: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 202,
+          "linea": 204,
           "resumen": "Comunidades: con una referencia catastral de 20 caracteres, el año de construcción y el CP del Catastro (con la de 14, la de parcela, el Catastro no da datos del bien). Solo si faltan. `null` = no se "
         },
         {
@@ -63862,7 +63882,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: RamoBotLead, infoRiesgo: unknown, nac: string | null, dia: string,",
           "retorno": "Promise<",
-          "linea": 219,
+          "linea": 221,
           "resumen": "El formulario candidato del bot de UNA oportunidad de auto/moto/comunidades: contrato del lead (descifrado) + bloque del riesgo (`datosVehiculo`) + ficha (nacimiento y carné). Compartido por la revisi"
         },
         {
@@ -63871,8 +63891,17 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: string, ahora = new Date()",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 244,
+          "linea": 246,
           "resumen": "Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE del cliente en ese ramo + su ficha, como el botón (formulario + «completar d"
+        },
+        {
+          "nombre": "riesgoHogarDePolizasDelCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string, ahora = new Date()",
+          "retorno": "Promise<RiesgoHogarDePoliza>",
+          "linea": 265,
+          "resumen": "01/11/2026 · «probar» HOGAR sin oportunidad de hogar ni trabajo previo: el riesgo sale de la póliza de hogar EN VIGOR más reciente del cliente (`riesgoHogarDePolizas`, puro). Solo SELECT; la dirección"
         },
         {
           "nombre": "riesgoHogarDeOportunidadDelCliente",
@@ -63880,7 +63909,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ahora: Date",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 259,
+          "linea": 276,
           "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
         },
         {
@@ -63889,7 +63918,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<CatalogosHogarLeidos>",
-          "linea": 274,
+          "linea": 291,
           "resumen": "Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types, occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera ("
         },
         {
@@ -63898,7 +63927,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 284
+          "linea": 301
         },
         {
           "nombre": "publico",
@@ -63906,7 +63935,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 309
+          "linea": 326
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -63914,7 +63943,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 313
+          "linea": 330
         },
         {
           "nombre": "tarificarLead",
@@ -63922,7 +63951,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 329
+          "linea": 346
         },
         {
           "nombre": "ampliarTopeLead",
@@ -63930,7 +63959,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 431,
+          "linea": 448,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -63939,7 +63968,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 458,
+          "linea": 475,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -63948,7 +63977,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 505,
+          "linea": 522,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -63957,7 +63986,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "5ee3be27cf89"
+      "hash": "e21893af7605"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -67058,6 +67087,71 @@
       ],
       "rutaApi": null,
       "hash": "61b691c4cd6a"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-hogar-poliza.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "polizasHogarEnVigor",
+        "riesgoHogarDePolizas",
+        "elegirReconstruccionHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "esObj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 33
+        },
+        {
+          "nombre": "clave",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null | undefined",
+          "retorno": null,
+          "linea": 35
+        },
+        {
+          "nombre": "polizasHogarEnVigor",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaPolizaHogar[]",
+          "retorno": "FilaPolizaHogar[]",
+          "linea": 55,
+          "resumen": "Solo cartera EN VIGOR de hogar, la más reciente primero (misma fecha → id para que sea estable). PURA."
+        },
+        {
+          "nombre": "direccionClaro",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: unknown, descifrar: (v: string) => string",
+          "retorno": "",
+          "linea": 61
+        },
+        {
+          "nombre": "riesgoHogarDePolizas",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaPolizaHogar[], descifrar: (v: string) => string, ahora = new Date(), /** Elecciones que NO constan en la póliza (régimen, madera) y que quien llama SÍ tiene por otra vía. Hoy `probar` no pasa ninguna: se piden (422). */ ",
+          "retorno": "RiesgoHogarDePoliza",
+          "linea": 75,
+          "resumen": "Riesgo de hogar para el bot desde las pólizas de hogar del cliente. `filas` = todas las de hogar del cliente (se filtra aquí la cartera en vigor). Varias en vigor: la más reciente, y si hay otra con d"
+        },
+        {
+          "nombre": "elegirReconstruccionHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "deOportunidad: ReconstruccionRiesgo, dePoliza: RiesgoHogarDePoliza | null",
+          "retorno": "",
+          "linea": 126,
+          "resumen": "Qué reconstrucción usa «probar»: la de la oportunidad si dio riesgo; si no hay oportunidad de hogar (`sin_oportunidad`), la de la póliza (sea completa o con `faltan_datos`, para que el 422 nombre lo q"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "85a70090ada9"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-humo-reglas.ts",
@@ -263927,7 +264021,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5478,
-    "funciones": 21269
+    "archivos": 5479,
+    "funciones": 21278
   }
 }
