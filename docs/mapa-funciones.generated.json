@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-01T15:25:11Z",
-  "sha": "90496e55ac009fabe114f93c965c3a4fa1751a57",
+  "generadoEn": "2026-11-01T16:54:24Z",
+  "sha": "6464952fe3e102a6184b71788ece48aa16f71df5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -58628,7 +58628,8 @@
         "rangoPrimas",
         "ofertasSinGarantiasRpa",
         "textoAvisoPresupuestoRpa",
-        "textoAvisoCorteRpa"
+        "textoAvisoCorteRpa",
+        "regimenHogarUsado"
       ],
       "funciones": [
         {
@@ -58886,11 +58887,20 @@
           "retorno": "string",
           "linea": 530,
           "resumen": "Telegram a Alberto cuando el proceso se CORTA (no hay borrador): que no crea que está hecho."
+        },
+        {
+          "nombre": "regimenHogarUsado",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgos: readonly unknown[]",
+          "retorno": "'propietario' | 'inquilino' | null",
+          "linea": 550,
+          "resumen": "Régimen de la vivienda con el que SE TARIFICÓ (hogar), para las necesidades deducidas. Sale del riesgo del trabajo: `hogar.regimen` si consta; si no, `propietario` cuando se tarificó continente (un in"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bf9f02c0b491"
+      "hash": "ff9f5149cebd"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-rpa.ts",
@@ -58933,7 +58943,7 @@
           "exportada": false,
           "params": "correduriaId: string, op: { id: string; ramo: string | null }, texto: (base: BaseAviso) => string",
           "retorno": "Promise<boolean>",
-          "linea": 320,
+          "linea": 322,
           "resumen": "Telegram INTERNO a Alberto. Del cliente solo `clientes.nombre` → nombre de pila. Best effort: `false` si no salió."
         },
         {
@@ -58942,7 +58952,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string, ofertaIds: string[], db: Db | Tx = prismaAsegura()",
           "retorno": "Promise<string | null>",
-          "linea": 342,
+          "linea": 344,
           "resumen": "Un borrador del bot, vivo y sin salir, con EXACTAMENTE estas ofertas (`null` = no hay)."
         },
         {
@@ -58951,7 +58961,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string, ahora: Date",
           "retorno": "Promise<Record<string, unknown> | null>",
-          "linea": 355,
+          "linea": 357,
           "resumen": "El análisis del recomendador (control de calidad + ranking) para el estudio. `null` = no se pudo (se dice, no se inventa)."
         }
       ],
@@ -58962,7 +58972,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "451133f7e5c1"
+      "hash": "77ca262d4437"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-seguimiento-llamada.ts",
@@ -59234,7 +59244,7 @@
           "nombre": "autocompletarNecesidades",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, presupuestoId: string, actor: string",
+          "params": "correduriaId: string, presupuestoId: string, actor: string, riesgoUsado?: { regimen?: 'propietario' | 'inquilino' | null } | null",
           "retorno": "Promise<string | null>",
           "linea": 977,
           "resumen": "Rellena y GUARDA el cuestionario de exigencias y necesidades de un presupuesto que aún no lo tiene, deducido de la petición que viajó a la compañía y de la opción recomendada (la primera visible). Dic"
@@ -59313,7 +59323,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "ad1370ab1b72"
+      "hash": "ad8ee157b949"
     },
     {
       "ruta": "apps/asegura/lib/propuesta-aviso-grupos.ts",
@@ -59942,6 +59952,7 @@
         "nombreCompania",
         "trabajosVigentes",
         "ofertasDeTrabajos",
+        "fechaEfectoUsada",
         "ofertaComparable",
         "perfilDeFormulario",
         "ensamblarPropuesta",
@@ -59987,7 +59998,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 77
+          "linea": 81
         },
         {
           "nombre": "trabajosVigentes",
@@ -59995,7 +60006,7 @@
           "exportada": true,
           "params": "trabajos: readonly TrabajoParaPropuesta[]",
           "retorno": "TrabajoParaPropuesta[]",
-          "linea": 83,
+          "linea": 87,
           "resumen": "El trabajo `ok` más reciente de cada compañía (los demás estados no aportan ofertas)."
         },
         {
@@ -60004,8 +60015,26 @@
           "exportada": true,
           "params": "trabajos: readonly TrabajoParaPropuesta[]",
           "retorno": "OfertaCruda[]",
-          "linea": 97,
+          "linea": 101,
           "resumen": "`respuesta.ofertas[]` (canal rpa) de los trabajos vigentes → ofertas con precio anual válido. Sin precio no es oferta."
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 133,
+          "resumen": "Fecha ISO válida de un valor suelto, o `null`."
+        },
+        {
+          "nombre": "fechaEfectoUsada",
+          "kind": "function",
+          "exportada": true,
+          "params": "oferta: Record<string, unknown> | null, riesgo: unknown",
+          "retorno": "string | null",
+          "linea": 139,
+          "resumen": "La fecha de efecto con la que el bot tarificó de verdad: primero la que la oferta declara en `datosUsados`, después la del riesgo del trabajo. Nunca se inventa: sin ninguna, `null` (el control lo trat"
         },
         {
           "nombre": "ofertaComparable",
@@ -60013,7 +60042,7 @@
           "exportada": true,
           "params": "o: OfertaCruda, ramo: string, presupuestos: readonly PresupuestoExtraido[]",
           "retorno": "OfertaComparable",
-          "linea": 130,
+          "linea": 146,
           "resumen": "La oferta como la compara `compararOfertas`: precio SIEMPRE el anual del portal; capitales solo si salieron del PDF de ESA oferta."
         },
         {
@@ -60022,7 +60051,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 146
+          "linea": 162
         },
         {
           "nombre": "numero",
@@ -60030,7 +60059,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 155
+          "linea": 171
         },
         {
           "nombre": "perfilDeFormulario",
@@ -60038,7 +60067,7 @@
           "exportada": true,
           "params": "ramo: string, f: Record<string, unknown> | null, hoy: string",
           "retorno": "",
-          "linea": 165,
+          "linea": 181,
           "resumen": "Perfil del recomendador y capitales pedidos, desde el formulario guardado. Lo que no consta no suma nada."
         },
         {
@@ -60047,7 +60076,7 @@
           "exportada": false,
           "params": "c: ResultadoCalidad",
           "retorno": "string",
-          "linea": 216,
+          "linea": 232,
           "resumen": "Texto en una línea de las incidencias de una oferta."
         },
         {
@@ -60056,7 +60085,7 @@
           "exportada": true,
           "params": "e: EntradaPropuesta",
           "retorno": "ResultadoPropuesta",
-          "linea": 218
+          "linea": 234
         },
         {
           "nombre": "jsonPropuesta",
@@ -60064,13 +60093,13 @@
           "exportada": true,
           "params": "r: Extract<ResultadoPropuesta, { estado: 'ok' }>",
           "retorno": "Omit<typeof r, 'modelo'>",
-          "linea": 294,
+          "linea": 312,
           "resumen": "El JSON de la ruta: sin el modelo del PDF. Cliente: solo nombre y referencia."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "050b1aea5a96"
+      "hash": "f7bb5a043339"
     },
     {
       "ruta": "apps/asegura/lib/propuesta-oportunidad.ts",
@@ -60111,7 +60140,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "32ef2e56898b"
+      "hash": "80cc5bd3e738"
     },
     {
       "ruta": "apps/asegura/lib/proyecto-auto.ts",
@@ -245711,7 +245740,7 @@
           "nombre": "deducirNecesidades",
           "kind": "function",
           "exportada": true,
-          "params": "ramo: string | null | undefined, peticion: unknown, recomendada: { categoria: string | null; franquiciaEur: number | null } | null, hoy: Date = new Date(),",
+          "params": "ramo: string | null | undefined, peticion: unknown, recomendada: { categoria: string | null; franquiciaEur: number | null } | null, hoy: Date = new Date(), /** Lo que consta del riesgo tarificado cuando no hay petición de Codeoscopic (borra",
           "retorno": "",
           "linea": 165,
           "resumen": "Las respuestas DEDUCIDAS de lo que ya se ha presupuestado (29/09/2026, dictado de Alberto: «que se autorrellene y se guarde, eso no me puede salir»). Sale de la petición que viajó a la compañía y de l"
@@ -245719,7 +245748,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b0195811fbd"
+      "hash": "13b8f064b894"
     },
     {
       "ruta": "packages/module-seguros/src/nombre-de-pila.ts",
@@ -256422,7 +256451,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee4ffa28d87f"
+      "hash": "b8a9f4ade932"
     },
     {
       "ruta": "packages/module-tarificacion/src/eleccion-lista.ts",
@@ -264170,6 +264199,6 @@
   ],
   "resumen": {
     "archivos": 5479,
-    "funciones": 21294
+    "funciones": 21297
   }
 }
