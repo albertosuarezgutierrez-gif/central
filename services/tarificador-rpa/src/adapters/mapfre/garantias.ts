@@ -147,6 +147,18 @@ export function coberturasPorProducto(lineas: readonly string[], productos: read
   const claves = productos.map((p) => plano(p)).filter(Boolean)
   const cab: { i: number; k: string }[] = []
   lineas.forEach((l, i) => { const k = plano(l.replace(/^\W+|\W+$/g, '')); if (claves.includes(k)) cab.push({ i, k }) })
+  // v0.8.43: un producto SIN encabezado exacto (run 48b0df76: solo «TERCEROS AMPLIADO» se halló en el PDF) admite «NOMBRE – 392,02 €» / «NOMBRE (anual)»:
+  // la línea EMPIEZA por el nombre y lo que sigue no es una letra ni un dígito (no «Terceros afectados…»), y no es el comienzo de otro producto más largo.
+  for (const k of claves) {
+    if (cab.some((h) => h.k === k)) continue
+    lineas.forEach((l, i) => {
+      const p = plano(l.replace(/^\W+/, ''))
+      if (!p.startsWith(k) || p.length === k.length || !/^\s*(?:[-–—:(|·/]|\d)/.test(p.slice(k.length))) return
+      if (claves.some((o) => o.length > k.length && p.startsWith(o))) return
+      if (!cab.some((h) => h.i === i)) cab.push({ i, k })
+    })
+  }
+  cab.sort((a, b) => a.i - b.i)
   if (cab.length === 0) {
     if (productos.length === 1) {
       const c = coberturasDeLineas(lineas)
@@ -165,6 +177,16 @@ export function coberturasPorProducto(lineas: readonly string[], productos: read
 
 export const textoALineas = (t: string): string[] => t.split(/\r?\n/)
 
+/**
+ * v0.8.43 · POR QUÉ no se leyeron las garantías (para el aviso; solo recuentos y nombres de producto, sin datos personales). PURA.
+ * Distingue «no hubo PDF» de «hubo PDF pero sin sección para este producto» (run 48b0df76: PDF bajado, solo un producto con sección).
+ */
+export function diagnosticoGarantiasMapfre(d: { pdfBytes: number | null; pdfLineas: number; deLaPdf: CoberturasPorProducto; deLaPantalla: CoberturasPorProducto; productos: readonly string[] }): string {
+  const lista = (m: CoberturasPorProducto) => d.productos.filter((p) => (m.get(plano(p))?.coberturas.length ?? 0) > 0)
+  const pdf = d.pdfBytes === null ? 'PDF del proyecto: no descargado' : d.pdfLineas === 0 ? `PDF del proyecto: descargado (${d.pdfBytes} bytes) pero sin texto legible` : `PDF del proyecto: descargado, ${d.pdfLineas} líneas de texto; con garantías de: ${lista(d.deLaPdf).map((p) => `«${p}»`).join(', ') || 'ningún producto'}`
+  return `Diagnóstico de garantías · ${pdf}; pantalla «Coberturas» con garantías de: ${lista(d.deLaPantalla).map((p) => `«${p}»`).join(', ') || 'ningún producto'}.`
+}
+
 /** Nombre de producto de una oferta de Mapfre auto («Auto · TERCEROS» → «TERCEROS»). */
 export const productoDeOferta = (o: Pick<OfertaNormalizada, 'producto'>): string => o.producto.replace(/^Auto\s*·\s*/i, '')
 
@@ -176,13 +198,14 @@ export function ofertasConGarantiasMapfre(
   ofertas: readonly OfertaNormalizada[],
   deLaPdf: CoberturasPorProducto,
   deLaPantalla: CoberturasPorProducto,
+  diagnostico?: string,
 ): OfertaNormalizada[] {
   return ofertas.map((o) => {
     const k = plano(productoDeOferta(o))
     const pdf = deLaPdf.get(k)
     const pant = deLaPantalla.get(k)
     const elegida = pdf && pdf.coberturas.length > 0 ? { ...pdf, aviso: AVISO_COBERTURAS_PDF } : pant && pant.coberturas.length > 0 ? { ...pant, aviso: AVISO_COBERTURAS_PANTALLA } : null
-    if (!elegida) return { ...o, avisos: [...o.avisos, AVISO_COBERTURAS_SIN_LEER] }
+    if (!elegida) return { ...o, avisos: [...o.avisos, AVISO_COBERTURAS_SIN_LEER, ...(diagnostico ? [diagnostico] : [])] }
     return { ...o, coberturas: elegida.coberturas, franquicias: elegida.franquicias, avisos: [...o.avisos, elegida.aviso] }
   })
 }
