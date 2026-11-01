@@ -87,11 +87,19 @@ test('workflow relanzar: manual, uuid validado, secreto solo en env y por stdin,
 
 test('workflow relanzar: accion=explorar valida la entrada, llama a /exploracion y solo manda {entrada} (sintética)', () => {
   const wf = readFileSync(join(APP, '../../.github/workflows/tarificador-relanzar.yml'), 'utf8')
-  assert.match(wf, /options: \[relanzar, probar, explorar\]/)
+  assert.match(wf, /options: \[relanzar, probar, explorar, presupuesto\]/)
   assert.match(wf, /ENTRADA: \$\{\{ inputs\.entrada \}\}/)
   assert.match(wf, /\^\[a-z_\]\+:\[a-z_\]\+:\[a-z_\]\+\$/, 'entrada sin validar por regex')
   assert.match(wf, /ruta="exploracion"/)
   assert.match(wf, /jq -cn --arg e "\$ENTRADA" '\{entrada: \$e\}'/, 'el cuerpo de explorar solo lleva la entrada')
+})
+
+test('workflow relanzar: accion=presupuesto valida el uuid, llama a /presupuesto-rpa y manda avisar:false', () => {
+  const wf = readFileSync(join(APP, '../../.github/workflows/tarificador-relanzar.yml'), 'utf8')
+  assert.match(wf, /OPORTUNIDAD_ID: \$\{\{ inputs\.oportunidad_id \}\}/)
+  assert.match(wf, /\[\[ "\$OPORTUNIDAD_ID" =~ \$uuid \]\]/, 'oportunidad_id sin validar como uuid')
+  assert.match(wf, /ruta="presupuesto-rpa"/)
+  assert.match(wf, /jq -cn --arg o "\$OPORTUNIDAD_ID" '\{oportunidadId: \$o, avisar: false\}'/, 'el cuerpo debe llevar avisar:false')
 })
 
 // ─── probar con el trabajo anterior purgado ───────────────────────────────────────────────────────────────────────

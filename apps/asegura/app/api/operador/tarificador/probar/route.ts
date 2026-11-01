@@ -7,10 +7,10 @@ import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
 import { encolarTrabajo, lanzarPendientes, leerCompaniaActualUnicaCliente, leerOrigenesVehiculoCliente } from '@/lib/tarificador'
 import { leerRiesgoParaReencolar } from '@/lib/tarificador-lectura'
 import { riesgoParaReencolar } from '@/lib/tarificador-lectura-reglas'
-import { leerVehiculoPolizaVinculadaCliente, riesgoDesdeOportunidadDelCliente, riesgoHogarDePolizasDelCliente } from '@/lib/tarificacion-lead'
+import { leerOportunidadesProbarCliente, leerVehiculoPolizaVinculadaCliente, riesgoDesdeOportunidadDelCliente, riesgoHogarDePolizasDelCliente } from '@/lib/tarificacion-lead'
 import { abrirRiesgoDePoliza } from '@/lib/oportunidad-riesgo'
 import { elegirReconstruccionHogar } from '@/lib/tarificador-hogar-poliza'
-import { conCompaniaActualUnica, conVehiculoDeOrigen, conVehiculoDePoliza, decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
+import { conCompaniaActualUnica, conVehiculoDeOrigen, conVehiculoDePoliza, decidirRiesgoProbar, elegirOportunidadAbiertaProbar } from '@/lib/tarificador-relanzar-reglas'
 import { necesitaCompaniaActual } from '@/lib/tarificador-compania-actual'
 import { necesitaVehiculoEncadenado, tieneVehiculo } from '@/lib/tarificador-espera-vehiculo'
 import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
@@ -91,14 +91,17 @@ export const POST = auditado(async (req: Request) => {
     // El riesgo salió de la póliza: se abre (o se reutiliza) la oportunidad de ESA póliza y el trabajo cuelga de ella. Mejor esfuerzo: si falla, se encola sin vincular.
     const desdePoliza = usaPoliza && dePoliza?.polizaId && valida.origen === 'oportunidad'
     const vinculo = desdePoliza ? await abrirRiesgoDePoliza(correduria.id, { polizaId: dePoliza.polizaId as string, actor: solicitadoPor }).catch(() => null) : null
-    const oportunidadId = vinculo && vinculo.ok ? vinculo.oportunidadId : null
-    const r = await encolarTrabajo({ correduriaId: correduria.id, oportunidadId, clienteId, polizaId: null, compania, ...valida.entrada, solicitadoPor, imagenPrueba })
+    const deHogar = vinculo && vinculo.ok ? vinculo.oportunidadId : null
+    // AUTO/MOTO (01/11/2026): el trabajo cuelga de la oportunidad ABIERTA más reciente del cliente en ese ramo (presupuesto automático + vehículo de referencia).
+    const abierta = deHogar === null ? elegirOportunidadAbiertaProbar(ramo, await leerOportunidadesProbarCliente(correduria.id, clienteId, ramo)) : { oportunidadId: null, avisos: [] as string[] }
+    const oportunidadId = deHogar ?? abierta.oportunidadId
+    const r =await encolarTrabajo({ correduriaId: correduria.id, oportunidadId, clienteId, polizaId: null, compania, ...valida.entrada, solicitadoPor, imagenPrueba })
     if (r.estado === 'rechazado') return NextResponse.json({ estado: 'rechazado', motivo: r.motivo }, { status: r.status })
     if (imagenPrueba) anotarCambio({ entidad: 'trabajo_tarificador', id: r.trabajoId, campo: 'imagen_prueba', antes: null, despues: imagenPrueba })
     const lanzado = await lanzarPendientes(correduria.id, compania).catch((e: unknown) => ({
       lanzados: [] as string[], fallidos: [], omitido: `error_lanzando: ${e instanceof Error ? e.message : String(e)}`,
     }))
-    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, estadoPrevio: r.estadoPrevio ?? null, mensaje: r.mensaje ?? null, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? lanzado.fallidos.find((f) => f.id === r.trabajoId)?.motivo ?? null, imagenPrueba, ...(desdePoliza ? { origenRiesgo: 'poliza', oportunidadId, supuestos: dePoliza?.supuestos ?? [], ...(avisos.length ? { avisos } : {}) } : {}) }, { status: 202 })
+    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, estadoPrevio: r.estadoPrevio ?? null, mensaje: r.mensaje ?? null, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? lanzado.fallidos.find((f) => f.id === r.trabajoId)?.motivo ?? null, imagenPrueba, ...(abierta.oportunidadId ? { oportunidadId, vinculo: 'oportunidad_abierta', ...(abierta.avisos.length ? { avisos: abierta.avisos } : {}) } : {}), ...(desdePoliza ? { origenRiesgo: 'poliza', oportunidadId, supuestos: dePoliza?.supuestos ?? [], ...(avisos.length ? { avisos } : {}) } : {}) }, { status: 202 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/probar', e) }, { status: 503 })
   }
