@@ -66,7 +66,7 @@ async function hastaCoberturas(deshabilitado: boolean, caeAlEscanear = false): P
 }
 
 test('v0.8.20 · la versión del bot es 0.8.29', () => {
-  assert.equal(mapfreAuto.version, '0.8.41')
+  assert.equal(mapfreAuto.version, '0.8.42')
 })
 
 test('v0.8.20 · describirCamposObligatoriosMapfre (PURA): vacíos primero, tope de 12, sin campos → lo dice', () => {
