@@ -11,7 +11,7 @@ import { AVISO_COBERTURAS_SIN_LEER, coberturasPorProducto, diagnosticoGarantiasM
 import { esperarSinCapaOverlay } from '../src/descarga-proyecto-auto.ts'
 import { puntuarBotonDescargaProyecto } from '../src/guard.ts'
 
-test('v0.8.43 · versión', () => assert.equal(mapfreAuto.version, '0.8.45'))
+test('v0.8.43 · versión', () => assert.equal(mapfreAuto.version, '0.8.46'))
 
 async function lanzar(): Promise<Browser> {
   try { return await chromium.launch({ headless: true }) } catch (e) {

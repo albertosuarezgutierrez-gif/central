@@ -120,3 +120,61 @@ export function textoDePdf(bytes: Buffer | Uint8Array | null | undefined): strin
     return ''
   }
 }
+
+// ── v0.8.46 · POSICIÓN X/Y de cada fragmento de texto (tablas por columnas con celdas vacías) ─────────────────────────────────────────────────────────
+// Sigue Tm/Td/TD dentro de cada BT (sin interpretar `cm` ni el ancho de las fuentes): suficiente para saber a qué columna cae un fragmento. PURA; nunca lanza.
+export type FragmentoPdf = { x: number; y: number; t: string }
+export type FilaPdf = { y: number; frags: FragmentoPdf[] }
+
+function fragmentosDeContenido(c: string, mapa: Map<number, string>): FragmentoPdf[] {
+  const out: FragmentoPdf[] = []
+  const re = /\(((?:\\[\s\S]|[^\\()])*)\)|<([0-9A-Fa-f\s]+)>|(-?\d+\.?\d*)|(\[|\]|T[jJdDmf*]|ET|BT|'|")/g
+  let m: RegExpExecArray | null
+  let x = 0, y = 0, buf = '', enArray = false
+  let nums: number[] = []
+  const vaciar = () => { if (buf.trim() !== '') out.push({ x, y, t: buf.replace(/\s+/g, ' ').trim() }); buf = '' }
+  while ((m = re.exec(c))) {
+    if (m[1] !== undefined) buf += literal(m[1])
+    else if (m[2] !== undefined) buf += hex(m[2], mapa)
+    else if (m[3] !== undefined) {
+      if (enArray) { if (Number(m[3]) < -250) buf += ' ' } else nums.push(Number(m[3]))
+    } else {
+      const op = m[4]!
+      if (op === '[') enArray = true
+      else if (op === ']') enArray = false
+      else if (op === 'Td' || op === 'TD') { vaciar(); if (nums.length >= 2) { x += nums[nums.length - 2]!; y += nums[nums.length - 1]! } nums = [] }
+      else if (op === 'Tm') { vaciar(); if (nums.length >= 6) { x = nums[nums.length - 2]!; y = nums[nums.length - 1]! } nums = [] }
+      else if (op === 'BT') { vaciar(); x = 0; y = 0; nums = [] }
+      else { vaciar(); nums = [] }
+    }
+  }
+  vaciar()
+  return out
+}
+
+/** Filas del PDF (fragmentos con su X; misma Y ±2 = misma fila; de arriba abajo dentro de cada bloque de contenido). Sin texto → []. Nunca lanza. */
+export function filasDePdf(bytes: Buffer | Uint8Array | null | undefined): FilaPdf[] {
+  try {
+    if (!bytes || bytes.length < 8) return []
+    const pdf = Buffer.from(bytes)
+    if (!L1(pdf.subarray(0, 8)).includes('%PDF')) return []
+    const ss = streams(pdf)
+    const mapa = new Map<number, string>()
+    for (const s of ss) { const t = L1(s); if (/begin(?:bfchar|bfrange)/.test(t)) leerCmap(t, mapa) }
+    const filas: FilaPdf[] = []
+    for (const s of ss) {
+      const t = L1(s)
+      if (!/\bBT\b/.test(t) || !/\bET\b/.test(t)) continue
+      const bloque: FilaPdf[] = []
+      for (const f of fragmentosDeContenido(t, mapa)) {
+        const fila = bloque.find((r) => Math.abs(r.y - f.y) <= 2)
+        if (fila) fila.frags.push(f); else bloque.push({ y: f.y, frags: [f] })
+      }
+      bloque.sort((a, b) => b.y - a.y)
+      for (const r of bloque) { r.frags.sort((a, b) => a.x - b.x); filas.push(r) }
+    }
+    return filas
+  } catch {
+    return []
+  }
+}
