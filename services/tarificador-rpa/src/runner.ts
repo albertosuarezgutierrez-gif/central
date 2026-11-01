@@ -252,7 +252,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña de controles técnicos no es de este trabajo')
         return cerrarControlesTecnicosMapfre(pagina, guard)
       },
-      reintentarContinuarMapfre: async (pagina, paso) => {
+      reintentarAvanceMapfre: async (pagina, paso) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del stepper no es de este trabajo')
         rearmarContinuarMapfreTrasControlesTecnicos(guard, paso)
         await pulsarContinuarMapfre(pagina, guard, paso, (p) => localizarContinuarConRespaldo(p, k.formador))

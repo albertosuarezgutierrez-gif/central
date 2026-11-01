@@ -1461,7 +1461,7 @@ export async function sinOpcionalesAusentes(raiz: Pick<Frame, 'locator'>, plan: 
   return { escribibles: plan.escribibles, pendientes }
 }
 
-type CtxContinuar = Pick<ContextoPortal, 'continuarMapfre'> & Partial<Pick<ContextoPortal, 'cerrarControlesTecnicosMapfre' | 'reintentarContinuarMapfre'>> & { formador?: ContextoFormador }
+type CtxAvanceStepper = Pick<ContextoPortal, 'continuarMapfre'> & Partial<Pick<ContextoPortal, 'cerrarControlesTecnicosMapfre' | 'reintentarAvanceMapfre'>> & { formador?: ContextoFormador }
 
 /** Texto del diálogo «Controles técnicos» si está abierto (solo lectura); `null` si no hay o no se puede leer. */
 async function leerDialogoControlesTecnicos(nsei: Page): Promise<string | null> {
@@ -1507,17 +1507,17 @@ export async function ajustarFechaEfectoTras232(nsei: Page, hoy: string = hoyEs(
  * «Mapfre rechaza (Código NNN): …». Código 232 desde Datos básicos: UN reintento con la fecha de efecto ajustada (devuelve el
  * aviso de supuesto). `null` = no hay tal diálogo.
  */
-async function atenderControlesTecnicos(nsei: Page, ctx: CtxContinuar, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras', hoy?: string): Promise<string | null> {
+async function atenderControlesTecnicos(nsei: Page, ctx: CtxAvanceStepper, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras', hoy?: string): Promise<string | null> {
   const bruto = await leerDialogoControlesTecnicos(nsei)
   if (bruto === null) return null
   const limpiar = (t: string) => limpiarMensajePortalDiagnosticoHasta(t, 200)
   const rechazo = extraerRechazoControlesTecnicos(bruto, limpiar)!
   if (!ctx.cerrarControlesTecnicosMapfre) throw new ErrorTarificador('portal', `${mensajeRechazoControlesTecnicos(rechazo)} (el robot no tiene la función guardada para cerrar el diálogo)`)
   await ctx.cerrarControlesTecnicosMapfre(nsei)
-  if (paso !== 'datosBasicos' || !esRechazoFechaEfectoAnteriorMecanizacion(rechazo) || !ctx.reintentarContinuarMapfre) throw new ErrorTarificador('portal', mensajeRechazoControlesTecnicos(rechazo))
+  if (paso !== 'datosBasicos' || !esRechazoFechaEfectoAnteriorMecanizacion(rechazo) || !ctx.reintentarAvanceMapfre) throw new ErrorTarificador('portal', mensajeRechazoControlesTecnicos(rechazo))
   const fecha = await ajustarFechaEfectoTras232(nsei, hoy)
   if (fecha === null) throw new ErrorTarificador('portal', `${mensajeRechazoControlesTecnicos(rechazo)} (no se pudo leer con seguridad la fecha de efecto/mecanización: candidato a reintento diferido)`)
-  await ctx.reintentarContinuarMapfre(nsei, paso).catch(async (e: unknown) => {
+  await ctx.reintentarAvanceMapfre(nsei, paso).catch(async (e: unknown) => {
     if (!(e instanceof ErrorTarificador) || !/la llegada a «/.test(e.message)) throw e
     const segundo = await leerDialogoControlesTecnicos(nsei)
     if (segundo === null) throw e
@@ -1528,7 +1528,7 @@ async function atenderControlesTecnicos(nsei: Page, ctx: CtxContinuar, paso: 'da
   return avisoFechaEfectoSupuesta(fecha)
 }
 
-const continuar = (nsei: Page, ctx: CtxContinuar, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras'): Promise<string | null> => {
+const continuar = (nsei: Page, ctx: CtxAvanceStepper, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras'): Promise<string | null> => {
   if (!ctx.continuarMapfre) throw new ErrorMapaIncompleto('la función guardada «Continuar» de Mapfre en el contexto del runner')
   // v0.8.3: si no se llega al destino y el portal marca campos con `mat-error`, el hueco los NOMBRA (etiquetas, sin valores).
   return ctx.continuarMapfre(nsei, paso).then(() => null as string | null, async (e: unknown): Promise<string | null> => {
@@ -1764,7 +1764,7 @@ export async function altaTomadorNuevo(nsei: Page, f: FormularioAuto, ctx: Pick<
  * `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a su campo: nunca a logs, mensajes ni
  * resultado. Lo resuelto por el respaldo se confirma tras llegar al paso 2.
  */
-export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect' | 'cerrarControlesTecnicosMapfre' | 'reintentarContinuarMapfre'>>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<string | null> {
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect' | 'cerrarControlesTecnicosMapfre' | 'reintentarAvanceMapfre'>>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<string | null> {
   const nif = documentoTomadorDe(f)
   if (nif === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
   const r = await campoConRespaldo(nsei, SEL_TOMADOR.documento, { page: nsei, formador: ctx.formador, etiqueta: 'NIF/CIF', descripcion: 'Campo del documento (NIF/CIF) del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor)' })
