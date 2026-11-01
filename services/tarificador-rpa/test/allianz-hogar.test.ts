@@ -192,7 +192,7 @@ type OpcionesApp = {
    * Importes RELLENOS de serie (inventados); radios NDBX Si/No con el punto `.nx-radio__dot` en «No» y SIN `checked`.
    * `sinSerie` = esa pregunta sin opción marcada; `vacio` = ese importe vacío de serie.
    */
-  valoracion?: { sinSerie?: string; vacio?: string }
+  valoracion?: { sinSerie?: string; vacio?: string; rotuloAlarma?: string; sinAlarma?: boolean }
   /**
    * 0.1.10: «Precio» (forma del HTML real del job 03b0d6f5, `epac-price-page`), visible tras «Siguiente» de Valoración. 3 modalidades
    * con importes INVENTADOS; `ilegible` = esa modalidad sin «la anualidad»; `frecuencia` = el texto del desplegable (de serie «Anual»).
@@ -233,7 +233,7 @@ ${(() => {
     return `<epac-goods-page id="goods" style="display:none"><nx-message-banner context="warning"><span>No se ha podido obtener la información del Catastro con los valores introducidos</span></nx-message-banner>
 <h4><span> Bienes asegurados </span></h4>${grupo(1, 'Caja fuerte')}${imp('sumInsuredBuilding', 'Inmueble', '120000')}<nx-checkbox formcontrolname="firstRisk"><input type="checkbox" id="fr" value="false"><label for="fr">Asegurar a valor máximo cubierto</label></nx-checkbox>
 ${imp('sumInsuredContent', 'Mobiliario', '30000')}<p>Joyas fuera de caja fuerte</p>${imp('sumInsuredValuablesNoSafe', '¿Qué cantidad quieres asegurar?', '0')}${imp('sumInsuredSpecialObjects', 'Objetos especiales', '0')}
-<h4><span> Medidas de seguridad </span></h4>${grupo(2, 'Alarma conectada')}${grupo(3, 'Puerta blindada')}
+<h4><span> Medidas de seguridad </span></h4>${v.sinAlarma ? '' : grupo(2, v.rotuloAlarma ?? 'Alarma conectada')}${grupo(3, 'Puerta blindada')}
 <h4><span> Fecha de inicio del seguro </span></h4><input formcontrolname="startDate" nxdatefield value="22/10/2026">
 <button type="button" nxbutton="primary">Anterior</button><button type="button" nxbutton="primary" id="sigGoods">Siguiente</button></epac-goods-page>`
   })()}
@@ -533,7 +533,7 @@ test('0.1.9: «Valoración de bienes» (forma real): escribe capitales y joyas d
 test('0.1.9: sin dato y sin valor de serie razonable → hueco con el estado observado (nunca se adivina)', async () => {
   for (const [o, re] of [
     [{ vacio: 'sumInsuredSpecialObjects' }, /«Objetos especiales» de «Valoración de bienes» sin dato en el formulario y sin un importe de serie aceptable \(campo: habilitado, vacío\)/],
-    [{ sinSerie: 'Alarma conectada' }, /«Alarma conectada» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie \(0 marcadas\)/],
+    [{ sinSerie: 'Caja fuerte' }, /«Caja fuerte» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie \(0 marcadas\)/],
   ] as const) {
     const { context, page, ctx, marco } = await hastaValoracion({ valoracion: o })
     try {
@@ -1039,7 +1039,7 @@ test('0.1.11 puros: esNumeroSinNumero / esRotuloCasillaSinNumero (exactos, nunca
   for (const v of ['12', '12B', 'SN12', 'sin número 3', '', null, undefined]) assert.equal(esNumeroSinNumero(v), false, String(v))
   for (const v of ['Sin número', ' sin numero ', 'S/N', 'Vivienda sin número']) assert.equal(esRotuloCasillaSinNumero(v), true, v)
   for (const v of ['Número', 'Acepto condiciones', 'Sin número de bloque', 'Enviar número']) assert.equal(esRotuloCasillaSinNumero(v), false, v)
-  assert.equal(allianzHogar.version, '0.1.12')
+  assert.equal(allianzHogar.version, '0.1.13')
 })
 
 test('0.1.11: «S/N» + campo numérico + casilla «Sin número» → se marca por la puerta guardada, no se teclea y se declara', async () => {
@@ -1085,4 +1085,44 @@ test('0.1.11: dos casillas «Sin número» → hueco (no se adivina cuál); casi
     assert.deepEqual(await rellenarPantallaVivienda(b.page, b.marco, FORM_SN, b.ctx), [SUPUESTO_NUMERO_CALLE])
     assert.equal(await b.marcado('c1'), false, 'no se toca ninguna casilla ajena')
   } finally { await b.context.close() }
+})
+
+// ───────────── 0.1.13: protecciones sí/no robustas (job ac0b4631: «Alarma conectada», 0 coincidencias) ─────────────
+
+test('0.1.13: rótulo de la alarma distinto del esperado → se localiza por respaldo y se sigue (sin bloquear)', async () => {
+  const { context, page, ctx, marco } = await hastaValoracion({ valoracion: { rotuloAlarma: 'Alarma conectada a central receptora' } })
+  try {
+    const supuestos = await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+    assert.ok(supuestos.includes('Alarma conectada: «No» (de serie)'), supuestos.join(' | '))
+    assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+  } finally {
+    await context.close()
+  }
+})
+
+test('0.1.13: sin dato y sin opción marcada → «No» como supuesto; grupo inexistente → se anota y se sigue', async () => {
+  for (const [o, esperado] of [
+    [{ sinSerie: 'Alarma conectada' }, 'Alarma conectada: «No» (supuesto; el riesgo no trae el dato)'],
+    [{ sinAlarma: true }, 'Alarma conectada: no localizada en la pantalla (supuesto: se sigue sin ella)'],
+  ] as const) {
+    const { context, page, ctx, marco } = await hastaValoracion({ valoracion: o })
+    try {
+      const supuestos = await rellenarValoracionBienes(page, marco, FORM_VAL, ctx)
+      assert.ok(supuestos.includes(esperado), supuestos.join(' | '))
+      if ('sinSerie' in o) assert.equal(await marco.locator('#g2-1').isChecked(), true, 'Alarma = No')
+      assert.equal(await avanzarDesdeValoracion(page, marco, ctx, 3_000), 'Precio')
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('0.1.13: «Caja fuerte» sigue siendo estricta (grupo ausente no se inventa)', async () => {
+  const { context, page, ctx, marco } = await hastaValoracion()
+  try {
+    await marco.evaluate(() => { document.querySelector('#g1-0')?.closest('nx-radio-group')?.remove() })
+    await assert.rejects(() => rellenarValoracionBienes(page, marco, FORM_VAL, ctx), (e) => e instanceof ErrorMapaIncompleto && /grupo «Caja fuerte».*0 coincidencias/.test((e as Error).message))
+  } finally {
+    await context.close()
+  }
 })

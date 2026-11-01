@@ -1,4 +1,7 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.41 (01/11/2026, decisión explícita de Alberto): EXCEPCIÓN MÍNIMA en guard.ts — si tras «Generar Proyecto» sale EXACTAMENTE «¿Desea dar de alta al
+//   cliente en el [sistema] al contratar esta póliza?» con SOLO los botones «No»/«Sí», el bot pulsa «No» (`esDialogoAltaClienteMapfre` + `responderNoAltaClienteMapfre`)
+//   y sigue (proyecto → PDF → garantías). Aviso: «diálogo de alta de cliente respondido No». Cualquier otro diálogo con contrat/emit/pag/firm… sigue parando.
 // v0.8.40 (01/11/2026, DIAGNÓSTICO, el guard NO se toca): tras «Generar Proyecto» sale un diálogo con «contrat…» (botones Sí/No/Aceptar) y el bot para
 //   sin proyecto ni PDF. El aviso/motivo lleva ahora el texto ENTERO del diálogo (normalizado, sin NIF/teléfonos/cifras largas/nombres) y los rótulos de
 //   sus botones (`describirDialogoPeligroMapfre`), para que Alberto decida. Sigue sin pulsarse nada.
@@ -1870,7 +1873,7 @@ export function ofertasConProyectoMapfre(ofertas: readonly OfertaNormalizada[], 
         ? `Se pulsó «Generar Proyecto» en Mapfre pero no se leyó el nº de proyecto (${r.motivo}): compruébalo en Mapfre.`
         : `Proyecto NO guardado en Mapfre: ${r.motivo}.`
   const ref = r.estado === 'generado' ? r.numero : null
-  return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso] }))
+  return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso, ...(r.estado === 'no_generado' ? [] : (r.avisos ?? []))] }))
 }
 const SEL_DIALOGO_OCUPADO = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 
@@ -2123,7 +2126,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.40',
+  version: '0.8.41',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

@@ -40,7 +40,7 @@ const INFO = (siniestros: string, off = true) => `<app-coberturas><app-info-desc
 <mat-form-field><label><mat-label>Siniestros</mat-label></label><input formcontrolname="siniestros" value="${siniestros}" ${off ? 'disabled' : ''}></mat-form-field>
 </div></mat-expansion-panel></mat-accordion></app-info-descuentos></app-coberturas>`
 
-test('v0.8.32 · la versión del bot es 0.8.33 (o posterior)', () => assert.equal(mapfreAuto.version, '0.8.40'))
+test('v0.8.32 · la versión del bot es 0.8.33 (o posterior)', () => assert.equal(mapfreAuto.version, '0.8.41'))
 
 test('siniestralidad DESHABILITADA tras acordeón plegado = la fija Mapfre; habilitada o ausente = no', async () => {
   assert.equal(await siniestralidadFijadaPorMapfre(await pagina(`<body>${INFO('2')}</body>`)), true)

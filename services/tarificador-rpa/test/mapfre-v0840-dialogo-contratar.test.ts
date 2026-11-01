@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import { describirDialogoPeligroMapfre } from '../src/guard.ts'
 import { mapfreAuto } from '../src/adapters/mapfre/auto.ts'
 
-test('v0.8.40 · versión', () => assert.equal(mapfreAuto.version, '0.8.40'))
+test('v0.8.40 · versión', () => assert.equal(mapfreAuto.version, '0.8.41'))
 
 test('describirDialogoPeligroMapfre: texto entero normalizado + botones; sin NIF, teléfonos, correos, cifras largas ni nombres', () => {
   const d = describirDialogoPeligroMapfre(

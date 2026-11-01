@@ -18,6 +18,8 @@ import {
   esBotonIrAGenerarProyectoMapfre,
   descripcionGenerarProyecto,
   esBotonGenerarProyectoMapfre,
+  esDialogoAltaClienteMapfre,
+  AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE,
   etiquetaEfectivaControl,
   etiquetasControlesSaneadas,
   sufijoControlesVisibles,
@@ -148,7 +150,7 @@ const TARJETA = (producto: string, prima: string) => `<prima-producto><section><
 
 /** Una página NSEI con TODOS los componentes a la vez (como la SPA): el stepper manda. Mat-select con overlay CDK. */
 /** v0.8.14 · qué hace el portal al pulsar «Generar Proyecto»: pinta el nº en «Proyectos» (input de solo lectura), nada, o un diálogo de pago. */
-type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago' | 'validacion'; texto?: string; previo?: string; donde?: 'duplicado' | 'pie' | 'icono' | 'aria' | 'enlace' | 'tarde' | 'oculto' | 'ninguno'
+type ProyectoFixture = { tras?: 'numero' | 'mudo' | 'dialogoPago' | 'validacion' | 'altaNo' | 'altaContratar' | 'altaOtroTexto' | 'altaReaparece'; texto?: string; previo?: string; donde?: 'duplicado' | 'pie' | 'icono' | 'aria' | 'enlace' | 'tarde' | 'oculto' | 'ninguno'
   /** v0.8.16 · «Ir a generar proyecto» (enlace) + «Contratar» en la botonera: `navega` abre la vista con «Generar Proyecto»; `inerte` no hace nada. */
   ir?: 'navega' | 'inerte' | 'dialogo' | 'duplicado' }
 /** v0.8.15 · dónde y cómo pinta el portal el botón «Generar Proyecto» (por defecto: <button> dentro de `app-coberturas`). */
@@ -204,9 +206,10 @@ function irProyecto(){window.__ir=(window.__ir||0)+1;const ir=${JSON.stringify(o
  if(ir==='dialogo'){setTimeout(()=>{document.getElementById('ov').insertAdjacentHTML('beforeend','<mat-dialog-container id="dlgProy"><p>Proyecto de seguro</p><label><input type="checkbox" id="consent" onclick="window.__consent=1"> Acepto el tratamiento de datos</label><button onclick="window.__verif=1">Verificación</button><button onclick="window.__contratar=(window.__contratar||0)+1">Contratar</button><button onclick="generarProyecto()">Guardar proyecto</button></mat-dialog-container>')},300);return}
  setTimeout(()=>{document.querySelector('app-proyecto').insertAdjacentHTML('beforebegin','<div id="vistaProy"><button onclick="generarProyecto()">Generar Proyecto</button></div>')},300)}
 function generarProyecto(){window.__proyecto=(window.__proyecto||0)+1;const dp=document.getElementById('dlgProy');if(dp)dp.remove();const tras=${JSON.stringify(o.proyecto?.tras ?? 'numero')};const ov=document.getElementById('ov');ov.insertAdjacentHTML('beforeend','<mat-dialog-container id="gen">Generando proyecto</mat-dialog-container>');
- setTimeout(()=>{document.getElementById('gen').remove();if(tras==='mudo')return;if(tras==='validacion'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Revise los datos: falta el campo obligatorio del conductor habitual. Proyecto pendiente 2026/000123</p><button onclick="window.__ok=1">Entendido</button></mat-dialog-container>');return}if(tras==='dialogoPago'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Para continuar debe realizar el pago</p><button onclick="window.__pagado=1">Aceptar</button></mat-dialog-container>');return}
- const h=[...document.querySelectorAll('mat-step-header')];h[3].setAttribute('aria-selected','false');h[4].setAttribute('aria-selected','true');
- document.querySelector('app-proyecto').innerHTML='<mat-form-field><mat-label>Nº Proyecto</mat-label><input readonly value="9876543210"></mat-form-field><mat-select><span>Castellano</span></mat-select>'},300)}
+ setTimeout(()=>{document.getElementById('gen').remove();if(tras==='mudo')return;if(tras==='validacion'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Revise los datos: falta el campo obligatorio del conductor habitual. Proyecto pendiente 2026/000123</p><button onclick="window.__ok=1">Entendido</button></mat-dialog-container>');return}if(tras.startsWith('alta')){const txt=tras==='altaOtroTexto'?'¿Desea contratar ahora el seguro y emitir la póliza?':'¿Desea dar de alta al cliente en el CRM Mapfre al contratar esta póliza?';const bs=tras==='altaContratar'?'<button onclick="window.__altaNo=(window.__altaNo||0)+1">No</button><button onclick="window.__contratar=(window.__contratar||0)+1">Contratar</button>':'<button onclick="window.__altaSi=(window.__altaSi||0)+1">Sí</button><button onclick="window.__altaNo=(window.__altaNo||0)+1;window.__altaTras()">No</button>';window.__altaTras=()=>{document.getElementById('dlgAlta').remove();if(tras==='altaReaparece'){ov.insertAdjacentHTML('beforeend',window.__altaHtml);return}terminar()};window.__altaHtml='<mat-dialog-container id="dlgAlta"><p>'+txt+'</p>'+bs+'</mat-dialog-container>';ov.insertAdjacentHTML('beforeend',window.__altaHtml);return}if(tras==='dialogoPago'){ov.insertAdjacentHTML('beforeend','<mat-dialog-container><p>Para continuar debe realizar el pago</p><button onclick="window.__pagado=1">Aceptar</button></mat-dialog-container>');return}
+ terminar()},300)}
+function terminar(){const h=[...document.querySelectorAll('mat-step-header')];h[3].setAttribute('aria-selected','false');h[4].setAttribute('aria-selected','true');
+ document.querySelector('app-proyecto').innerHTML='<mat-form-field><mat-label>Nº Proyecto</mat-label><input readonly value="9876543210"></mat-form-field><mat-select><span>Castellano</span></mat-select>'}
 function cerrarClub(){document.querySelector('mat-dialog-container').remove();calcular()}
 function calcular(){document.getElementById('ov').insertAdjacentHTML('beforeend','<mat-dialog-container id="calc">Calculando las primas</mat-dialog-container>');setTimeout(()=>{document.getElementById('calc').remove();document.getElementById('primas').innerHTML=${JSON.stringify(o.primas ?? TARJETA('PRODUCTO UNO', 'PRIMA TOTAL: 1.234,56 €') + TARJETA('PRODUCTO DOS', 'PRIMA TOTAL: 987,65 €'))}},300)}
 </script></body>`
@@ -583,6 +586,68 @@ test('«Generar Proyecto» SIN nº legible o con diálogo de PAGO → precio int
     assert.equal(await marca(page, '__pagado'), null, 'no acepta el diálogo de pago')
     await context.close()
   }
+})
+
+test('v0.8.41 · diálogo EXACTO de alta de cliente (No/Sí) → pulsa «No» UNA vez, nunca «Sí», sigue y lee el nº + aviso', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { tras: 'altaNo' } }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  const r = await generarProyectoMapfre(page, guard, 4_000)
+  assert.deepEqual(r, { estado: 'generado', numero: '9876543210', avisos: [AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE] })
+  assert.match(AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE, /^Mapfre: diálogo de alta de cliente respondido No \(decisión de Alberto 01\/11\/2026\)$/)
+  assert.equal(await marca(page, '__altaNo'), 1, 'pulsa «No» una vez')
+  assert.equal(await marca(page, '__altaSi'), null, 'NUNCA «Sí»')
+  assert.equal(await marca(page, '__contratar'), null)
+  await context.close()
+})
+
+test('v0.8.41 · mismo texto pero con botón «Contratar» → PARA sin pulsar nada', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { tras: 'altaContratar' } }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  const r = await generarProyectoMapfre(page, guard, 1_500)
+  assert.equal(r.estado, 'sin_numero')
+  if (r.estado === 'sin_numero') assert.match(r.motivo, /diálogo que menciona «contrat/)
+  assert.equal(await marca(page, '__altaNo'), null)
+  assert.equal(await marca(page, '__contratar'), null)
+  await context.close()
+})
+
+test('v0.8.41 · otro diálogo con «contrat»/«emit» (aunque tenga No/Sí) → PARA; nunca pulsa «Sí»', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { tras: 'altaOtroTexto' } }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  const r = await generarProyectoMapfre(page, guard, 1_500)
+  assert.equal(r.estado, 'sin_numero')
+  if (r.estado === 'sin_numero') assert.match(r.motivo, /diálogo que menciona «(emit|contrat)/)
+  assert.equal(await marca(page, '__altaNo'), null)
+  assert.equal(await marca(page, '__altaSi'), null)
+  await context.close()
+})
+
+test('v0.8.41 · si el diálogo de alta REAPARECE tras «No», no se vuelve a pulsar: se para', async () => {
+  const { context, page, guard } = await prepararHttps(NSEI({ club: null, proyecto: { tras: 'altaReaparece' } }))
+  await hastaCoberturas(page, guard)
+  await esperarPrimasMapfre(page, { cerrarClubMapfre: (pg: Page) => cerrarClubMapfre(pg, guard), formador: undefined }, 5_000)
+  const r = await generarProyectoMapfre(page, guard, 2_000)
+  assert.equal(r.estado, 'sin_numero')
+  assert.equal(await marca(page, '__altaNo'), 1, '«No» solo una vez')
+  assert.equal(await marca(page, '__altaSi'), null)
+  await context.close()
+})
+
+test('v0.8.41 · el aviso del diálogo de alta llega a las ofertas; sin él, no hay aviso extra', () => {
+  const o = { compania: 'mapfre', producto: 'Auto · UNO', primaAnualEur: 100, avisos: ['a'], referenciaPortal: null } as unknown as import('@central/module-tarificacion').OfertaNormalizada
+  assert.equal(ofertasConProyectoMapfre([o], { estado: 'generado', numero: '9876543210', avisos: [AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE] })[0]!.avisos.at(-1), AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE)
+  assert.equal(ofertasConProyectoMapfre([o], { estado: 'generado', numero: '9876543210' })[0]!.avisos.length, 2)
+})
+
+test('v0.8.41 · esDialogoAltaClienteMapfre (PURA): solo el texto estricto + exactamente No/Sí', () => {
+  const T = '¿Desea dar de alta al cliente en el CRM Mapfre al contratar esta póliza?'
+  assert.equal(esDialogoAltaClienteMapfre(T, ['No', 'Sí']), true)
+  assert.equal(esDialogoAltaClienteMapfre(`  ${T}  `, [' SÍ ', 'no']), true)
+  for (const b of [['No', 'Contratar'], ['No'], ['Sí'], ['No', 'Sí', 'Aceptar'], ['Aceptar', 'Sí'], ['No', 'No'], []]) assert.equal(esDialogoAltaClienteMapfre(T, b), false, b.join('|'))
+  for (const t of ['¿Desea contratar esta póliza?', '¿Desea dar de alta al cliente y emitir al contratar esta póliza?', '¿Desea dar de alta al cliente en el pago al contratar esta póliza?', '¿Desea dar de alta al cliente en el CRM al contratar esta póliza? Se emitirá', 'Aviso: ¿Desea dar de alta al cliente en el CRM al contratar esta póliza?', '']) assert.equal(esDialogoAltaClienteMapfre(t, ['No', 'Sí']), false, t)
 })
 
 test('v0.8.15 · el botón vive en el PIE del paso (fuera de `app-coberturas`), con icono, solo-icono, enlace o se pinta TARDE → se pulsa UNA vez y se lee el nº', async () => {
