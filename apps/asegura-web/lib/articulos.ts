@@ -479,6 +479,57 @@ export const ARTICULOS: readonly Articulo[] = [
       { pregunta: '¿El registro de actividad lo veo yo o solo lo ve el corredor?', respuesta: 'Lo ves tú. Es tu información y tú decides quién accede a ella. El corredor solo interviene si se lo pides.' },
     ],
   },
+  {
+    slug: 'cuanto-tarda-en-pagar-un-seguro-un-siniestro',
+    h1: 'Cuánto tarda el seguro en pagar un siniestro',
+    title: 'Cuánto tarda el seguro en pagar un siniestro',
+    description: 'Te explicamos los plazos legales que tiene tu aseguradora para pagarte tras un siniestro y qué hacer si se retrasa el pago.',
+    fecha: '2026-11-01',
+    resumen: 'Cuando la aseguradora acepta tu siniestro, tiene cuarenta días desde que lo declaraste para pagarte al menos el importe mínimo de lo que te debe, aunque la peritación no haya terminado. Si se retrasa, entra en mora y debe pagarte intereses.',
+    consulta: 'cuánto tarda el seguro en pagar un siniestro',
+    base: ['lcs-18', 'lcs-20'],
+    ramos: ['hogar', 'comercio'],
+    secciones: [
+      {
+        titulo: 'El plazo de los cuarenta días: lo que te deben pagar sí o sí',
+        parrafos: [
+          'El artículo 18 de la Ley de Contrato de Seguro establece que el asegurador debe pagar el importe mínimo de lo que pueda deber dentro de los cuarenta días siguientes a la declaración del siniestro, aunque la peritación no haya terminado.',
+          'Esto significa que la compañía no puede escudarse en que el perito aún está trabajando o en que falta documentación complementaria para retrasar indefinidamente el pago. Debe calcular cuánto es lo mínimo indiscutible que te corresponde y abonarlo en ese plazo.',
+          'Ese importe mínimo no es el total de la indemnización, pero sí la cantidad que nadie puede poner en duda. Por ejemplo, si tu coche está siniestrado y el perito aún valora daños ocultos, la aseguradora debe pagarte lo que ya ha tasado sin esperar a cerrar el informe completo.',
+        ],
+      },
+      {
+        titulo: 'Qué ocurre si la aseguradora no paga en plazo',
+        parrafos: [
+          'Si pasan los cuarenta días y no has recibido ese importe mínimo, la aseguradora entra en mora. Según el artículo 20 de la Ley de Contrato de Seguro, la indemnización devenga entonces el interés legal del dinero incrementado en un 50 %.',
+          'Esos intereses se calculan sobre la cantidad que debería haberte pagado y empiezan a correr desde el día cuarenta y uno. No necesitas reclamar formalmente para que nazca ese derecho: la mora es automática por el mero retraso.',
+          'Además, si transcurridos dos años desde el siniestro la aseguradora sigue sin pagar, ese interés no puede ser inferior al 20 % anual. Es una penalización adicional para evitar que las compañías dejen los expedientes abiertos sine die.',
+        ],
+      },
+      {
+        titulo: 'Qué hacer mientras la peritación sigue abierta',
+        parrafos: [
+          'Lo primero es reclamar por escrito el pago del importe mínimo si ya han pasado los cuarenta días. Hazlo por correo electrónico o burofax para tener constancia de la fecha y del contenido.',
+          'En esa reclamación, recuerda a la aseguradora su obligación legal y pide que te abonen lo que ya está valorado. No esperes a que cierren el expediente completo: tienes derecho a cobrar sobre la marcha.',
+          'Si la compañía no responde o sigue dilatando el pago, puedes acudir al servicio de atención al cliente de la aseguradora y, si no hay solución, presentar una reclamación ante la Dirección General de Seguros. También puedes consultar con tu corredor para que interceda y acelere el trámite.',
+          'Mientras tanto, guarda toda la documentación: el parte del siniestro, los correos con la aseguradora, los informes periciales parciales y cualquier justificante de gastos. Te servirá si finalmente tienes que reclamar también los intereses de mora.',
+        ],
+      },
+      {
+        titulo: 'Cuándo se considera cerrada la peritación',
+        parrafos: [
+          'La peritación se cierra cuando el perito emite su informe definitivo y la aseguradora lo acepta. A partir de ahí, la compañía debe abonar el resto de la indemnización que falte por pagar.',
+          'Si ya habías cobrado el importe mínimo en plazo, solo recibirás la diferencia. Si no lo habías cobrado, te pagarán todo junto más los intereses de mora que correspondan.',
+          'Ten en cuenta que la peritación puede alargarse semanas o meses, sobre todo en siniestros complejos. Pero eso no exime a la aseguradora de pagar lo mínimo en los primeros cuarenta días. Son dos obligaciones distintas.',
+        ],
+      },
+    ],
+    faq: [
+      { pregunta: '¿Los cuarenta días se cuentan desde el siniestro o desde que lo comunico?', respuesta: 'Desde que lo declaras a la aseguradora. El plazo empieza a correr cuando la compañía tiene conocimiento oficial del siniestro, no cuando ocurrió. Por eso es importante avisar cuanto antes y guardar el justificante de la fecha en que lo hiciste.' },
+      { pregunta: '¿Qué pasa si la aseguradora dice que aún no sabe cuánto es el importe mínimo?', respuesta: 'Esa respuesta no es válida. Siempre hay una cantidad mínima indiscutible, aunque sea parcial. Si la compañía se niega a calcularla, reclama por escrito y recuérdales su obligación legal. Si persiste el bloqueo, acude a tu corredor o presenta una reclamación formal.' },
+      { pregunta: '¿Puedo reclamar los intereses de mora aunque al final me paguen?', respuesta: 'Sí. Si la aseguradora te paga fuera de plazo, tienes derecho a los intereses de mora por el periodo de retraso. Debes reclamarlos expresamente, porque no suelen abonarlos de forma automática. Calcula el importe y añádelo a tu reclamación con las fechas exactas.' },
+    ],
+  },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
   //
   // 26/09/2026 — OpenSEO: «registro de seguros de vida» 260/mes (KD 9), «cómo
