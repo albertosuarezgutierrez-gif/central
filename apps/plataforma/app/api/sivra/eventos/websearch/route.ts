@@ -171,11 +171,14 @@ Si no hay nada nuevo: {"eventos":[]}`
   // Misma tabla y formato que el resto; fuente='nager'. Si la API falla (null) no se toca nada.
   let nagerGuardados = 0, nagerDedup = 0
   const nagerOk: { fecha: string; nombre: string }[] = []
+  // Avisos NO críticos: Nager es un complemento (festivos nacionales); si no responde no se toca nada
+  // y el descubrimiento sigue siendo válido. Se declaran en el detalle pero no ponen el latido en rojo.
+  const avisos: string[] = []
   const nagerAnios: number[] = []
   for (let a = Number(desde.slice(0, 4)); a <= Number(hasta.slice(0, 4)); a++) nagerAnios.push(a)
   const nagerListas = await Promise.all(nagerAnios.map(a => obtenerFestivosAndalucia(a)))
   for (const [i, lista] of nagerListas.entries()) {
-    if (lista === null) { errors.push(`nager ${nagerAnios[i]}: API no disponible`); continue }
+    if (lista === null) { avisos.push(`nager ${nagerAnios[i]}: API no disponible (tras reintento)`); continue }
     for (const f of lista) {
       if (f.fecha < desde || f.fecha > hasta) continue
       const aforo = 20000 // «feria/festivo ciudad ~20000», igual que le pide el prompt a la IA
@@ -226,7 +229,8 @@ Si no hay nada nuevo: {"eventos":[]}`
   await registrarLatido(
     'sivra_eventos', okFinal,
     `web: ${evs.length} vistos / ${upserted} guardados · previstos: ${previstos.guardados}` +
-    (errors.length ? ` · ${errors.length} fallos: ${errors[0]}` : ''),
+    (errors.length ? ` · ${errors.length} fallos: ${errors[0]}` : '') +
+    (avisos.length ? ` · avisos (no críticos): ${avisos.join('; ')}` : ''),
   ).catch(() => {})
 
   // ⚠️ Aquí había un aviso 🔮 por Telegram que pedía a Alberto pasar cada previsto a
@@ -240,7 +244,7 @@ Si no hay nada nuevo: {"eventos":[]}`
     ok: errors.length === 0, configured: true, via,
     vistos: evs.length, upserted, descartados, fuera_de_casa: fueraDeCasa, dudosos, anio_incoherente: anioMal,
     nager: nagerGuardados, nager_dedup: nagerDedup, previstos: previstos.guardados, previstosVistos: previstos.vistos,
-    errors,
+    errors, avisos,
   })
 }
 
