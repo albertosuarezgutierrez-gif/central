@@ -113,3 +113,19 @@ test('ruta: solo hogar y solo sin riesgo de oportunidad; vincula la oportunidad 
   assert.match(readFileSync(join(import.meta.dirname, 'tarificador-hogar-poliza.ts'), 'utf8'), /elecciones: \{ regimen\?: string; conMadera\?: string \} = \{\}/, 'el defecto de la función sigue sin suponer nada')
   assert.ok(!/console\.(log|error)/.test(readFileSync(join(import.meta.dirname, 'tarificador-hogar-poliza.ts'), 'utf8')), 'sin logs en el módulo puro (PII)')
 })
+
+test('dirección con número pegado al marcador o «S/N»: el número llega al riesgo (S/N como supuesto numeroSinNumero), sin valores en avisos', () => {
+  const con = (dir: string) => riesgoHogarDePolizas([fila()], () => dir, AHORA, SUPUESTOS_HOGAR_DESDE_POLIZA)
+  const a = con('CL FICTICIA Nº12-3-A')
+  assert.ok(a.reconstruccion.riesgo, JSON.stringify(a.reconstruccion))
+  const inm = (a.reconstruccion.riesgo as { inmueble: Record<string, unknown> }).inmueble
+  assert.equal(inm.numero, '12')
+  assert.ok(!a.supuestos.includes('numeroSinNumero'))
+  const b = con('PZ FICTICIA S/N')
+  const inb = (b.reconstruccion.riesgo as { inmueble: Record<string, unknown> } | null)?.inmueble
+  assert.equal(inb?.numero, 'S/N')
+  assert.ok(b.supuestos.includes('numeroSinNumero'))
+  const c = con('PZ FICTICIA')
+  assert.ok(!c.reconstruccion.riesgo && 'faltan' in c.reconstruccion && c.reconstruccion.faltan.some((e) => /Número de la calle/.test(e)))
+  assert.deepEqual(c.supuestos, [])
+})
