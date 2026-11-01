@@ -5,7 +5,9 @@
 > `.claude/skills/radar-espana/SKILL.md`. Diseño:
 > `docs/superpowers/specs/2026-08-22-patrimonio-cfo-design.md`.
 
-**Última pasada: 01/09/2026** (primera pasada real vía trigger).
+**Última pasada: 01/11/2026** (anterior: 01/09/2026). Nota 01/11: `mercado_zonas_hist` solo conserva 3 capturas de `sevilla-capital` (29/08 2.869 · 29/09 3.034 · 30/10 2.635€/m², muestra 25-28): el p50 municipal oscila ±8-13% mes a mes por ruido de muestra, contradice a idealista (jul-26: [2.931€/m², +10,4% interanual](https://www.idealista.com/news/etiquetas/evolucion-precio-vivienda)). **Casco antiguo NO se refresca desde el 29/08** (4.444€/m², 64 días): hueco de datos, no se revalora Socorro 24 ni Dúplex Center. Regulación VUT: búsqueda sin novedades fechadas en 2026 (límite 10% por distrito y Decreto 31/2024 ya conocidos); sin cambio con plazo. Sin Telegram (nada accionable).
+
+**Valoración 01/11/2026:** Monte Carmelo 68 `vivienda` 540.175€ (antes 588.145€, −8,2%, <10%) — proxy municipal ruidoso, ver notas en la fila. `vut` sigue pendiente (mismo bloqueo del P&L).
 
 ## 🌡️ Termómetro de ciclo por zona
 

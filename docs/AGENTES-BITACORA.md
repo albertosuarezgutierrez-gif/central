@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-11-01 · radar-espana** · hizo: valoración Monte Carmelo 540.175€ (−8,2%, ruido del p50 municipal); casco-antiguo sin refrescar desde 29/08 → Socorro/Dúplex no revaluados; regulación VUT sin novedades; dudas: p50 municipal inestable (muestra ~25) sugiere no usarlo como proxy; fallos: —; PRs/commits: doc estado
+
 - **2026-10-31 · facturas-correo** · hizo: Paso 0 salud (Vía B sana, última copia 30/10), candidatos Gmail 2d (6, ninguno factura recibida), 4.0 backlog (1 `sin_revisar`: IONOS 10,90€ 28/10, aún sin cargo; último mov banco 30/10); dudas: —; fallos: pasada PARCIAL — no reintenté 0.b (7 hilos en `PDF-pendiente`/`Revisar`: 5 Endesa, Asecon, Pilar «Cobros septiembre»); latido enviado `ok:false` y respondió `registrado:false`; PRs/commits: —
 
 - **2026-10-29 · trading-analista** · hizo: pasada 20:19 UTC (sin huella previa; NAV 33.827,70€→/saldo sin salto), cartera real (VWCE+CVX)→/cartera, operaciones 0 nuevas + latido, 24 símbolos (80 velas, secuencial, payload 197 KB enviado desde fichero porque el arg de canal-aviso.sh no admite >128 KB) → /analizar (0 compras paper: CHT/CVX por concentración, LLY/RBLX por earnings) y /puntuar (96 puntuadas, 0 cerradas), Telegram enviado (campo `text`, no `mensaje`); dudas: contraste 2ª fuente 'desfasado' en los 24 (solo llega al 28/10, mi serie incluye la vela del 29/10) → sin juzgar; vela del 29/10 con volumen parcial (RVOL bajos); fallos: 3 velas con cierre fuera de [bajo,alto] por 0,03-0,3 en el dato de IBKR (CVX 30/09, LLY 10/08, SPOT 22/07), enviadas tal cual; PRs/commits: —
