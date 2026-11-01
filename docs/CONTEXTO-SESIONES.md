@@ -11,6 +11,13 @@
 > **🚨 Regla de tamaño (ahorro de contexto):** cada entrada, **máximo ~8 líneas**:
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
+
+## (01/11/2026) Blog asegura-web · PR #5328 MERGEADO (mora art. 20 LCS)
+- «No se pudo publicar» = `Tests (packages + guardián)` aún corriendo, no rojo. Graphify marcó error jurídico real.
+- Corregido en `claude/blog-asegura` (`cae7a0c`): intereses de mora desde la FECHA DEL SINIESTRO (no día 41), mora también si no paga en 3 meses, sin contradicción «automática/reclamar». Cuerpo del PR actualizado (plataforma lee el artículo de ahí: `blog-pr.ts`).
+- Lección para el agente del blog: los cepos validan citas, no el razonamiento; revisar art. 20.3/20.6 en futuros artículos de mora.
+- #5328 MERGEADO (squash `8ea7844`) con CI verde, por orden de Alberto.
+
 ## (31/10/2026) Fiscal · panel por devengo + simulador IRPF + hechos guardados
 - Panel fiscal por devengo (#5308). #5310: simulador IRPF, pantalla nueva, «Mi situación fiscal», avisos Telegram (`finanzas.fiscal-avisos`), motor que reproduce la renta 2025 al céntimo (backtest permanente: imputación art. 85, FN prorrateada, mínimos andaluces), correduría desde CIMA vía `seguros_agregado.v_comisiones_mes` (5.767,51€ ene-oct; antes banco/0,85 inflaba ~1.570€).
 - BD aplicada: `fiscal_compras_previstas`, `fiscal_avisos_enviados`, columnas de `fiscal_perfil` (meses exonerados, FN desde 18/11/2025, abonos), vista agregada. BBVA 1175 importado hasta 02/11 (14 nuevos); 1 duplicado ignorado; tasa basura 34,40€ → Dúplex.
