@@ -2140,10 +2140,11 @@ export async function precioDesdeObjetoAsegurado(
   const nombresProductos = primas.map((p) => p.producto)
   let garantiasPdf: CoberturasPorProducto = new Map()
   let lineasPdf = 0
-  try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; garantiasPdf = coberturasPorProducto(lineas, nombresProductos) } } catch { /* PDF ilegible: queda la pantalla */ }
+  let lineasTextoPdf: string[] = []
+  try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; lineasTextoPdf = lineas; garantiasPdf = coberturasPorProducto(lineas, nombresProductos) } } catch { /* PDF ilegible: queda la pantalla */ }
   ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
   // v0.8.43: si algún producto queda sin garantías, el aviso dice POR QUÉ (PDF no bajado / sin texto / sin sección del producto / pantalla vacía).
-  const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresProductos })
+  const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresProductos, lineasPdf: lineasTextoPdf })
   // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
   return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla, diagGarantias), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
 }
@@ -2158,7 +2159,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.44',
+  version: '0.8.45',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

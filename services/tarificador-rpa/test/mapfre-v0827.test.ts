@@ -38,7 +38,7 @@ const desplegar = (page: Page) => async (b: Locator) => {
   await b.evaluate(() => { const c = document.getElementById('cont')!; c.style.visibility = 'visible'; c.style.height = 'auto'; document.getElementById('p')!.classList.add('mat-expanded') })
 }
 
-test('v0.8.27 · la versión del bot es 0.8.28', () => assert.equal(mapfreAuto.version, '0.8.44'))
+test('v0.8.27 · la versión del bot es 0.8.28', () => assert.equal(mapfreAuto.version, '0.8.45'))
 
 test('único habilitado en acordeón plegado: sin pulsar → null; con pulsar → se despliega y se devuelve', async () => {
   const sin = await pagina(PANEL)
