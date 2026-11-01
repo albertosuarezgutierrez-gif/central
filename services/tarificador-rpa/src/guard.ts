@@ -2397,6 +2397,24 @@ const SEL_DIALOGOS_MAPFRE = 'mat-dialog-container, [role="dialog"], [role="alert
 /** Palabras que, en un diálogo tras el clic, hacen PARAR (sin tocar nada). Sobre texto sin tildes y en minúsculas. */
 const RE_DIALOGO_PELIGROSO_MAPFRE = /emit|emisi|contrat|formaliz|firmar|firma digital|pagar|\bpago\b|grabar poliza|domicili|iban/
 
+/** v0.8.41 · aviso que deja constancia de la ÚNICA excepción (decisión de Alberto, 01/11/2026). */
+export const AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE = 'Mapfre: diálogo de alta de cliente respondido No (decisión de Alberto 01/11/2026)'
+const planoAltaMapfre = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[¿?¡!]/g, ' ').replace(/\s+/g, ' ').trim()
+/** Lo que puede haber entre «en» y «al contratar esta póliza» (el nombre del sistema): nada que hable de emitir/pagar/firmar/contratar. */
+const RE_ALTA_CLIENTE_MAPFRE = /^desea dar de alta al cliente en ([a-z0-9 ._\-/&()]{1,60}?) al contratar esta poliza$/
+const RE_SISTEMA_ALTA_PROHIBIDO = /emit|emisi|contrat|formaliz|firm|pag|domicili|iban|grabar/
+/**
+ * v0.8.41 · EXCEPCIÓN MÍNIMA (Alberto, 01/11/2026): ¿es este diálogo EXACTAMENTE «¿Desea dar de alta al cliente en el [sistema] al
+ * contratar esta póliza?» con EXACTAMENTE dos botones «No» y «Sí»? `textoSinBotones` = texto del diálogo sin sus botones. Cualquier otra
+ * cosa (otro texto, otro botón —«Contratar», «Aceptar»—, un solo botón, tres) → false y el guard sigue parando como siempre. PURA.
+ */
+export function esDialogoAltaClienteMapfre(textoSinBotones: string, botones: readonly string[]): boolean {
+  const m = RE_ALTA_CLIENTE_MAPFRE.exec(planoAltaMapfre(textoSinBotones))
+  if (!m || RE_SISTEMA_ALTA_PROHIBIDO.test(m[1]!)) return false
+  const bs = botones.map(planoAltaMapfre).map((b) => b.replace(/[.,;:]/g, '').trim())
+  return bs.length === 2 && [...bs].sort().join('|') === 'no|si'
+}
+
 /**
  * v0.8.40 · DIAGNÓSTICO (no relaja nada) del diálogo que sale tras «Generar Proyecto» y habla de contratar/emitir/pagar…: su texto ENTERO
  * (normalizado, sin correos/NIF/matrículas/teléfonos/cifras largas ni nombres propios; tope 600) y los rótulos de sus botones (≤8, ≤40
@@ -2421,9 +2439,38 @@ async function leerDialogoPeligroMapfre(page: Page): Promise<string> {
 }
 
 export type ResultadoProyectoMapfre =
-  | { estado: 'generado'; numero: string }
-  | { estado: 'sin_numero'; motivo: string }
+  | { estado: 'generado'; numero: string; avisos?: readonly string[] }
+  | { estado: 'sin_numero'; motivo: string; avisos?: readonly string[] }
   | { estado: 'no_generado'; motivo: string }
+
+/** Selector de controles de un diálogo (el mismo para contar y para pulsar). */
+const SEL_CONTROLES_DIALOGO_MAPFRE = 'button, a, [role="button"], input[type="button"], input[type="submit"]'
+
+/**
+ * v0.8.41 · pulsa «No» (y SOLO «No») del diálogo de alta de cliente ya validado por `esDialogoAltaClienteMapfre`. Vuelve a exigir en VIVO:
+ * sin cuenta bancaria, exactamente 2 controles visibles en ese diálogo, exactamente UNO con rótulo entero «No», y `comprobarBoton`.
+ * Nunca «Sí», «Aceptar» ni «Contratar». Un diálogo nativo se descarta y el trabajo cae.
+ */
+async function responderNoAltaClienteMapfre(page: Page, guard: GuardEmision, indice: number): Promise<void> {
+  guard.comprobar()
+  await exigirSinCuentaBancaria(page)
+  const dialogo = page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').nth(indice)
+  const controles = dialogo.locator(SEL_CONTROLES_DIALOGO_MAPFRE).locator('visible=true')
+  const n = await controles.count()
+  if (n !== 2) throw new EmisionBloqueadaError('boton', 'diálogo de alta de cliente: no hay exactamente dos controles')
+  let no: Locator | null = null
+  for (let i = 0; i < n; i++) {
+    const c = controles.nth(i)
+    const d = await descripcion(c)
+    if (planoAltaMapfre(String(d[0] ?? '')).replace(/[.,;:]/g, '').trim() === 'no') {
+      if (no) throw new EmisionBloqueadaError('boton', 'diálogo de alta de cliente: más de un «No»')
+      no = c
+    }
+  }
+  if (!no) throw new EmisionBloqueadaError('boton', 'diálogo de alta de cliente: no hay botón «No»')
+  comprobarBoton(await descripcion(no))
+  await clicSinDialogoNativo(page, guard, no, 'diálogo de alta de cliente')
+}
 
 /** ¿Este control es «Generar Proyecto» y nada más? Texto ENTERO exacto + `comprobarBoton` con SOLO `permitirGenerarProyectoMapfre` + lista única: nunca emisión ni prohibida. PURA. */
 export function esBotonGenerarProyectoMapfre(descripciones: readonly (string | null | undefined)[], conGuardar = false): boolean {
@@ -2971,6 +3018,7 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
   let pulsado = false
   let numero: string | null = null
   let peligro: string | null = null
+  let altaRespondida = false
   try {
     await pulsarGenerarProyectoMapfre(page, guard, boton, async () => {
       pulsado = true
@@ -2978,8 +3026,26 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
       while (Date.now() < fin) {
         guard.comprobar()
         // Tras el clic NO se pulsa nada: un diálogo que hable de emitir/contratar/firmar/pagar → se para aquí.
-        const dialogos = await page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').allInnerTexts().catch(() => [] as string[])
-        const malo = dialogos.map((t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()).find((t) => RE_DIALOGO_PELIGROSO_MAPFRE.test(t))
+        const dialogos = await page
+          .locator(SEL_DIALOGOS_MAPFRE)
+          .locator('visible=true')
+          .evaluateAll((els, selC) => els.map((d) => { const c = d.cloneNode(true) as HTMLElement; c.querySelectorAll(selC).forEach((x) => x.remove()); return { todo: (d as HTMLElement).innerText ?? '', sinBotones: c.textContent ?? '', botones: Array.from(d.querySelectorAll(selC)).map((b) => ((b as HTMLElement).innerText || (b as HTMLInputElement).value || '').trim()) } }), SEL_CONTROLES_DIALOGO_MAPFRE)
+          .catch(() => [] as Array<{ todo: string; sinBotones: string; botones: string[] }>)
+        // v0.8.41: la ÚNICA excepción — el diálogo exacto de alta de cliente se responde «No» (una vez por trabajo). Si además hay otro diálogo
+        // peligroso, o el de alta reaparece, se para como siempre.
+        const esAlta = dialogos.map((d) => esDialogoAltaClienteMapfre(d.sinBotones, d.botones))
+        const peligrosos = dialogos.filter((_, i) => !esAlta[i]).map((d) => d.todo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
+        let malo = peligrosos.find((t) => RE_DIALOGO_PELIGROSO_MAPFRE.test(t))
+        const iAlta = esAlta.indexOf(true)
+        if (malo === undefined && iAlta >= 0) {
+          if (altaRespondida) malo = 'contrat'
+          else {
+            altaRespondida = true
+            await responderNoAltaClienteMapfre(page, guard, iAlta)
+            await page.waitForTimeout(400)
+            continue
+          }
+        }
         if (malo !== undefined) {
           peligro = (malo.match(RE_DIALOGO_PELIGROSO_MAPFRE) ?? [''])[0]
           return
@@ -3002,9 +3068,10 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
     const motivo = `${base}${causa}${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}`
     return pulsado ? { estado: 'sin_numero', motivo } : { estado: 'no_generado', motivo }
   }
-  if (numero) return { estado: 'generado', numero }
-  if (peligro !== null) return { estado: 'sin_numero', motivo: `tras pulsar salió un diálogo que menciona «${peligro}»: el bot no toca nada más${await leerDialogoPeligroMapfre(page)}` }
-  return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}` }
+  const avisos = altaRespondida ? { avisos: [AVISO_DIALOGO_ALTA_CLIENTE_MAPFRE] } : {}
+  if (numero) return { estado: 'generado', numero, ...avisos }
+  if (peligro !== null) return { estado: 'sin_numero', motivo: `tras pulsar salió un diálogo que menciona «${peligro}»: el bot no toca nada más${await leerDialogoPeligroMapfre(page)}`, ...avisos }
+  return { estado: 'sin_numero', motivo: `no se leyó el nº de proyecto en ${Math.round(esperaMs / 1000)} s${sufijoDiagnosticoProyectoMapfre(await diagnosticoPantallaProyectoMapfre(page))}`, ...avisos }
 }
 
 /** Trabajos (guards) en los que ya se vio un IMPORTE en algún marco: ningún avance por id más (precio pegajoso, 28/10/2026). */
