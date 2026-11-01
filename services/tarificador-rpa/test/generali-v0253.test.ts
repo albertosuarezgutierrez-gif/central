@@ -11,7 +11,7 @@ import { estadoNomiagGenerali, lineaDiagTipoVehiculoGenerali } from '../src/adap
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.53 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.58'))
+test('v0.2.53 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.59'))
 
 let browser: Browser
 before(async () => {

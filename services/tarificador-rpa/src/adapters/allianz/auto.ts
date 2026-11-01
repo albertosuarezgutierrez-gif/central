@@ -181,6 +181,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import type { ResultadoLocalidadTurismos } from '../../guard.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
+import { valorDeTextoEnFila } from '../mapfre/garantias.ts'
 import { busquedasLocalidadTurismos, elegirLocalidadTurismos, elegirPoblacionPorLocalidades } from './poblacion-localidad.ts'
 import { casarCompaniaActual, indiceOpcionGenerica, normalizarCompania, mensajeCompaniaAmbigua, PREFIJO_SUPUESTO_COMPANIA_GENERICA, supuestoCompaniaGenerica } from '../../compania-actual.ts'
 import { conRespaldoIA, registrarAtasco, sugerirOpcion, type PeticionResolver } from '../../formador.ts'
@@ -2846,15 +2847,20 @@ export function ofertasDesdePaquetesTurismos(lectura: LecturaPaquetesTurismos, s
       for (const c of f.comunes) if (c !== '') cob(c, c, 'incluida')
       for (const o of f.opciones.filter((x) => x.marcada && x.texto !== '')) {
         const estado: CoberturaOferta['estado'] = /^no\s+incluid/i.test(o.texto) ? 'excluida' : 'incluida'
-        cob(f.descripcion, `${f.descripcion}: ${o.texto}`, estado, importeEs(o.texto))
+        // v0.6.39: límite/franquicia en importe solo si el texto de la opción los trae (nunca el suplemento `adicional`, que es precio).
+        const v = valorDeTextoEnFila(f.descripcion, o.texto)
+        coberturas.push({ clave: f.descripcion, literal: `${f.descripcion}: ${o.texto}`, estado, capital: importeEs(o.texto), limite: v?.limite ?? null, franquicia: v?.franquicia ?? null })
+        if (v && v.franquicia !== null) franquicias.push({ ambito: f.descripcion, importeEur: v.franquicia, literal: null })
       }
       const c = f.celdas.length === n ? f.celdas[i]! : null
       if (c === null || f.opciones.length > 0 || f.comunes.length > 0) continue
       if (c.texto !== '') {
         const t = c.texto.toLowerCase()
         const estado: CoberturaOferta['estado'] = t === 'no' ? 'excluida' : 'incluida'
-        cob(f.descripcion, `${f.descripcion}: ${c.texto}`, estado)
-        if (t !== 'sí' && t !== 'si' && t !== 'no') franquicias.push({ ambito: f.descripcion, importeEur: null, literal: `nivel «${c.texto}» del desplegable (sin importe en pantalla)` })
+        // v0.6.39: si el texto de la celda trae un importe («Franquicia 150 €», «Hasta 6.000 €»), va a franquicia/límite; si no, nivel sin importe como antes.
+        const v = t === 'sí' || t === 'si' || t === 'no' ? null : valorDeTextoEnFila(f.descripcion, c.texto)
+        coberturas.push({ clave: f.descripcion, literal: `${f.descripcion}: ${c.texto}`, estado, capital: null, limite: v?.limite ?? null, franquicia: v?.franquicia ?? null })
+        if (t !== 'sí' && t !== 'si' && t !== 'no') franquicias.push(v && v.franquicia !== null ? { ambito: f.descripcion, importeEur: v.franquicia, literal: null } : { ambito: f.descripcion, importeEur: null, literal: `nivel «${c.texto}» del desplegable (sin importe en pantalla)` })
       } else if (c.icono === 'check') cob(f.descripcion, f.descripcion, 'incluida')
       else if (c.icono === 'minus') cob(f.descripcion, f.descripcion, 'excluida')
     }
@@ -3041,7 +3047,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.22' : '0.6.38',
+    version: ramo === 'moto' ? '0.7.22' : '0.6.39',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

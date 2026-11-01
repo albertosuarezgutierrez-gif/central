@@ -15,7 +15,7 @@ const OPCIONES: CandidatoVersion[] = [
   { codigo: 'A3', etiqueta: 'FORFOUR PURE 52KW DIESEL' },
 ]
 
-test('versión 0.6.38', () => assert.equal(allianzAuto.version, '0.6.38'))
+test('versión 0.6.38', () => assert.equal(allianzAuto.version, '0.6.39'))
 
 test('sin referencia: sigue parando como siempre (requiere_humano)', () => {
   assert.throws(() => versionAutomaticaAllianz(OPCIONES, {}), ErrorEleccionVersion)

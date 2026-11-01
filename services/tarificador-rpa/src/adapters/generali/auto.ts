@@ -45,6 +45,7 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
+import { garantiasDePdfGenerali, leerGarantiasPantallaGenerali, ofertasConGarantiasGenerali, type GarantiasLeidas } from './garantias.ts'
 import { companiaActualDe, comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
 import { esUrlOktaSmsGenerali, opcionesTipoPlacaGenerali, otroVehiculoGeneraliPermitido } from '../../guard.ts'
@@ -440,6 +441,12 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * del nivel modelo dice «modelos» (`ErrorEleccionModeloGenerali`), no «versiones», para que la bandeja no confunda.
  */
 /**
+ * v0.2.59 (01/11/2026, Alberto: el presupuesto no puede mostrar «No figura»): la oferta salía con `coberturas: []`. Ahora se leen las garantías (con límites y
+ * franquicias) de la pantalla «Garantías y Resultados» (solo lectura, ANTES de la descarga) y del PDF del presupuesto que ya descarga `conPdfPresupuestoGenerali`
+ * (mismo botón y misma puerta guardada; NO se añade ningún guardado de proyecto: Generali sigue sin botón identificado). Prioridad PDF > pantalla; sin ninguna,
+ * aviso «coberturas no leídas». Parser y texto de PDF compartidos con Mapfre (`mapfre/garantias.ts`, `pdf-texto.ts`). Formatos SUPUESTOS hasta ver pantalla/PDF real.
+ */
+/**
  * v0.2.58 (01/11/2026, trabajo af1fb857: primera vez que pasa el desempate de «Compañía de procedencia»): llegó a «Garantías y Resultados», «Recalcular» y el
  * portal dijo «El paso anterior no tiene los datos completos» con «Datos de Valoración» y «Garantías y Resultados» sin obligatorios vacíos. HIPÓTESIS (sin
  * captura de la pestaña «Historial Siniestral», que el bot nunca abría): el portal exige sus antecedentes. Ahora, antes de «Garantías y Resultados», se abre
@@ -447,7 +454,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  */
-export const VERSION_GENERALI_AUTO = '0.2.58'
+export const VERSION_GENERALI_AUTO = '0.2.59'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -3626,7 +3633,16 @@ async function esperarPrecioGenerali(page: Page, ignorar: readonly number[], ms 
  * rótulo; el «Imprimir» a secas no vale hasta que guarde). Sin botón / sin PDF → aviso en la oferta y el precio igual. Interruptor: `DESCARGA_PROYECTO_ACTIVA.generali`.
  */
 export async function conPdfPresupuestoGenerali(page: Page, ctx: ContextoPortal, ofertas: OfertaNormalizada[]): Promise<OfertaNormalizada[]> {
-  return ofertasConPdfProyecto(ofertas, await descargarProyectoAuto(page, ctx, 'generali', 'presupuesto-generali-auto.pdf', false))
+  // v0.2.59: garantías de la pantalla (solo lectura, antes de la descarga) y del PDF (bytes capturados al adjuntarlo).
+  let deLaPantalla: GarantiasLeidas = { coberturas: [], franquicias: [] }
+  try { deLaPantalla = await leerGarantiasPantallaGenerali(page) } catch { /* queda el PDF o el aviso */ }
+  let bytesPdf: Uint8Array | null = null
+  const adjuntar = ctx.adjuntarPdf
+  const ctxPdf = { ...ctx, adjuntarPdf: adjuntar ? (nombre: string, contenido: Uint8Array) => { bytesPdf = contenido; return adjuntar(nombre, contenido) } : undefined }
+  const pdf = await descargarProyectoAuto(page, ctxPdf, 'generali', 'presupuesto-generali-auto.pdf', false)
+  const deLaPdf = garantiasDePdfGenerali(bytesPdf)
+  ctx.log?.(`generali: garantías ${deLaPdf.coberturas.length} del PDF, ${deLaPantalla.coberturas.length} de la pantalla`)
+  return ofertasConGarantiasGenerali(ofertasConPdfProyecto(ofertas, pdf), deLaPdf, deLaPantalla)
 }
 
 /**

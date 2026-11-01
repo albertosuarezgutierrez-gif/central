@@ -22,7 +22,7 @@ const MAPFRE = [
 const sin = (...quitar: number[]) => MAPFRE.filter((_, i) => !quitar.includes(i))
 const nombre = (ops: readonly string[], r: ReturnType<typeof opcionCompaniaProcedenciaGenerali>) => ('indice' in r ? ops[r.indice] : r.error)
 
-test('v0.2.57 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.58'))
+test('v0.2.57 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.59'))
 
 test('v0.2.57 · caso real: «Mapfre» en auto → la de AUTOMOVILES, vía aproximada', () => {
   const r = opcionCompaniaProcedenciaGenerali(MAPFRE, 'Mapfre', 'auto')
