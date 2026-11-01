@@ -68,7 +68,8 @@ REGLAS ABSOLUTAS
 4. Prohibido acotar el servicio a un territorio: nada de "en Sevilla", "en Andalucía", "Sevilla y provincia". Se media en toda España.
 5. No inventes cifras, estudios, casos de clientes ni testimonios. Nada de datos que no puedas sostener.
 6. No hables de las compañías por su nombre ni compares entre ellas.
-7. Español de España, tuteando. Frases cortas. Cero relleno de introducción: la primera frase ya responde algo.
+7. Mora del art. 20 LCS (si lo citas): los intereses corren desde la fecha del siniestro, NUNCA desde el día 41; los 40 días se cuentan desde la declaración y son solo el plazo para pagar el importe mínimo; también hay mora si no se cumple la prestación en tres meses desde el siniestro; los intereses nacen por ley, sin reclamación previa (conviene pedirlos por escrito, pero no es requisito).
+8. Español de España, tuteando. Frases cortas. Cero relleno de introducción: la primera frase ya responde algo.
 
 FORMA
 - 700-950 palabras en total.
@@ -155,7 +156,33 @@ export function revisarGenerado(a: ArticuloGenerado, tema: TemaBlog): Reparo[] {
     })
   }
 
+  const errorMora = errorDeMora(texto, tema.normas)
+  if (errorMora) reparos.push({ campo: 'razonamiento', motivo: errorMora })
+
   return reparos
+}
+
+const sinAcentos = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+/**
+ * Cepo de RAZONAMIENTO sobre la mora del art. 20 LCS (PR #5328): `citasNoRespaldadas`
+ * solo comprueba que la norma sea citable, no que se diga bien. Regex simple por frase.
+ * Devuelve el motivo del primer error, o null.
+ */
+export function errorDeMora(texto: string, normas: readonly string[] = []): string | null {
+  const t = sinAcentos(texto)
+  if (!normas.includes('lcs-20') && !/\bmora\b|articulo 20\b/.test(t)) return null
+  for (const f of t.split(/[.!?\n]+/)) {
+    if (!/interes/.test(f)) continue
+    if (/dia (41|cuarenta y uno)\b|(tras|pasados|transcurridos|despues de|a partir de)l? (los )?(40|cuarenta) dias/.test(f)) {
+      return 'dice que los intereses corren desde el día 41 / tras los 40 días: corren desde la fecha del siniestro (art. 20.6 LCS)'
+    }
+    if (/reclam\w*[^,;]{0,40}expresamente|expresamente[^,;]{0,40}reclam/.test(f) &&
+        !/\bno (hay|hace falta|es necesario|tienes|debes|necesitas)|sin necesidad|sin que/.test(f)) {
+      return 'dice que hay que reclamar expresamente los intereses para que nazcan: nacen por ley; conviene pedirlos por escrito, sin ser requisito'
+    }
+  }
+  return null
 }
 
 /** Todo el texto visible, que es sobre lo que se revisa. */
