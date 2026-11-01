@@ -9,7 +9,7 @@ import { textoDePdf } from '../src/pdf-texto.ts'
 
 const PRODUCTOS = ['TERCEROS', 'TERCEROS AMPLIADO']
 
-test('v0.8.45 · versión', () => assert.equal(mapfreAuto.version, '0.8.46'))
+test('v0.8.45 · versión', () => assert.equal(mapfreAuto.version, '0.8.47'))
 
 // Una celda por línea (así sale del PDF: cada Td es una línea).
 const TABLA_LINEAS = [

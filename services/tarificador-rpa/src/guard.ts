@@ -9,6 +9,7 @@
 
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
 import { ErrorTarificador } from './errores.ts'
+import { esTextoControlesTecnicos, SEL_DIALOGO_CONTROLES_TECNICOS } from './controles-tecnicos-mapfre.ts'
 import { indiceOpcionGenerica, indicesCompaniaActualCompuesta } from './compania-actual.ts'
 import {
   BLOQUEO,
@@ -1757,6 +1758,60 @@ export async function pulsarContinuarMapfre(
   } finally {
     page.off('dialog', alDialogo)
   }
+}
+
+// ─────────── Mapfre NSEI · diálogo «Controles técnicos» tras «Continuar» (v0.8.47) ───────────
+
+/**
+ * CERRAR el diálogo «Controles técnicos» (`.controles-tecnicos-dialog`) que Mapfre abre al rechazar el «Continuar» desde «Datos
+ * básicos» (Código NNN). Exige: guard limpio y ventanas de red cerradas; EXACTAMENTE un diálogo visible cuyo texto es el de
+ * controles técnicos; EXACTAMENTE un botón visible de texto ENTERO «Cerrar» (nada más), que pase `comprobarBoton` SIN «Aceptar»
+ * permitido; como mucho dos veces por trabajo. Devuelve el texto del diálogo (lo sanea quien llama). El diálogo tiene que cerrarse.
+ */
+export async function cerrarControlesTecnicosMapfre(page: Page, guard: GuardEmision): Promise<string> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Controles técnicos» con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const clave = usados.has('mapfre:controles_tecnicos:1') ? 'mapfre:controles_tecnicos:2' : 'mapfre:controles_tecnicos:1'
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', 'el diálogo «Controles técnicos» de Mapfre ya se cerró dos veces en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const dialogos = page.locator(SEL_DIALOGO_CONTROLES_TECNICOS).locator('visible=true')
+  if ((await dialogos.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: no hay exactamente un diálogo «Controles técnicos» visible')
+  const dialogo = dialogos.first()
+  const texto = await dialogo.evaluate((e) => (e as HTMLElement).innerText ?? e.textContent ?? '')
+  if (!esTextoControlesTecnicos(texto)) throw new ErrorTarificador('portal', 'mapfre: el diálogo no es el de «Controles técnicos» (no se cierra)')
+  const cierre = dialogo.locator('button, [role="button"], input[type="button"], input[type="submit"]').locator('visible=true').filter({ hasText: /^\s*Cerrar\s*$/ })
+  if ((await cierre.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: el diálogo «Controles técnicos» no tiene exactamente un botón «Cerrar»')
+  const desc = await descripcion(cierre)
+  if (sinTildesMayus(desc[0]) !== 'CERRAR') throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await clicSinDialogoNativo(page, guard, cierre, 'controles técnicos')
+  const hasta = Date.now() + ESPERA_CIERRE_DIALOGO_MAPFRE_MS
+  for (;;) {
+    guard.comprobar()
+    if ((await page.locator(SEL_DIALOGO_CONTROLES_TECNICOS).locator('visible=true').count()) === 0) return texto
+    if (Date.now() >= hasta) throw new ErrorTarificador('portal', 'mapfre: el diálogo «Controles técnicos» no se cerró')
+    await page.waitForTimeout(200)
+  }
+}
+
+/**
+ * UN reintento del «Continuar» desde «Datos básicos», solo si el primero se usó y su rechazo fue el diálogo «Controles
+ * técnicos» YA cerrado en este trabajo (`cerrarControlesTecnicosMapfre`). Una vez por trabajo; ningún otro paso. Solo libera la
+ * marca de «usado» de ese paso: el resto de comprobaciones de `pulsarContinuarMapfre` (stepper, botón, `comprobarBoton`,
+ * red) se aplican íntegras al pulsar.
+ */
+export function rearmarContinuarMapfreTrasControlesTecnicos(guard: GuardEmision, paso: PasoContinuarMapfre): void {
+  guard.comprobar()
+  if (paso !== 'datosBasicos') throw new EmisionBloqueadaError('fase', `reintento de «Continuar» de Mapfre no autorizado desde «${String(paso).slice(0, 40)}»`)
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has('mapfre:continuar:datosBasicos') || !usados.has('mapfre:controles_tecnicos:1')) throw new EmisionBloqueadaError('fase', 'reintento de «Continuar» de Mapfre sin rechazo previo de controles técnicos')
+  if (usados.has('mapfre:continuar_reintento')) throw new EmisionBloqueadaError('fase', 'el reintento de «Continuar» de Mapfre ya se usó en este trabajo')
+  usados.add('mapfre:continuar_reintento')
+  usados.delete('mapfre:continuar:datosBasicos')
+  AVANCES_USADOS.set(guard, usados)
 }
 
 // ─────────── Mapfre NSEI · diálogo «Club MAPFRE» tras calcular (grabación de Alberto, 15/10/2026) ───────────
