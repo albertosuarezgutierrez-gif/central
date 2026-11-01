@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)
+- Vehículo de referencia compartido por oportunidad: humano > Mapfre (matrícula) > póliza > Allianz; elección por similitud; si es supuesto → estimado. `presupuesto-rpa` se dispara con cualquier cierre (#5321).
+- Generali 0.2.56 (elección a nivel modelo), 0.2.57 (procedencia por ramo: Mapfre→AUTOMOVILES), 0.2.58 (Historial Siniestral).
+- Hogar en /probar desde póliza en vigor con supuestos (propietario, sin madera, UD→adosada) y número de calle ficha/Catastro/S-N. Adaptador Mapfre hogar listo pero APAGADO (`MAPFRE_HOGAR_ACTIVO=true` en el worker para la 1ª prueba).
+- Decisión de Alberto: «coger el más similar, hay que dar precio y guardar presupuesto, ya iremos afinando»; regla «siniestralidad más favorable». El presupuesto NUNCA muestra «No figura»: hay que descargar el proyecto de la compañía con garantías (agente en curso para Mapfre auto).
+- Presupuesto AS-26-0042 en borrador (Allianz+Mapfre auto), NO enviado.
+- Pendiente: precio Generali, precio Allianz hogar, garantías Mapfre, fallo MEDIO en revisión (requiere_humano cuenta como cerrado → borrador prematuro), `probar` no vincula oportunidad en auto.
+
 ## (01/11/2026) Blog asegura-web · PR #5328 MERGEADO (mora art. 20 LCS)
 - «No se pudo publicar» = `Tests (packages + guardián)` aún corriendo, no rojo. Graphify marcó error jurídico real.
 - Corregido en `claude/blog-asegura` (`cae7a0c`): intereses de mora desde la FECHA DEL SINIESTRO (no día 41), mora también si no paga en 3 meses, sin contradicción «automática/reclamar». Cuerpo del PR actualizado (plataforma lee el artículo de ahí: `blog-pr.ts`).
