@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-01T09:47:54Z",
-  "sha": "205b91a9f7a842a1c7946c7fdf3e8fb16b8e7755",
+  "generadoEn": "2026-11-01T11:31:42Z",
+  "sha": "6e0e2fe8bdc9a0fecfcbd2ab4e7f6a6583a8c308",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -33061,7 +33061,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/probar",
-      "hash": "5bcc0bc170f9"
+      "hash": "de8529ba8e0e"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/relanzar/route.ts",
@@ -63776,6 +63776,7 @@
       "resumen": "F3a — tarificar con BOTS un lead «listo para tarificar» (19/10/2026, spec lead → propuesta §F3; decisión de Alberto: bots antes que Avant2). Parte con BD; las reglas viven en `tarificacion-lead-puro.ts` (con test). Puerto `POST /api/operador/correo/tarificar-lead`, que solo llama plataforma tras el ",
       "exporta": [
         "leerVehiculoPolizaVinculadaCliente",
+        "leerOportunidadesProbarCliente",
         "riesgoDesdeOportunidadDelCliente",
         "riesgoHogarDePolizasDelCliente",
         "revisarTarificacionLead",
@@ -63871,12 +63872,21 @@
           "resumen": "31/10/2026 · «probar» Generali auto: de la póliza VIVA del MISMO ramo vinculada a la oportunidad MÁS RECIENTE del cliente (`info_riesgo.polizaId`, mismo filtro que `polizaActualVinculada`), SOLO `marc"
         },
         {
+          "nombre": "leerOportunidadesProbarCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string, ramo: string",
+          "retorno": "Promise<FilaOportunidadProbar[]>",
+          "linea": 187,
+          "resumen": "01/11/2026 · «probar» auto/moto: oportunidades del cliente en ese ramo (id, estado, cierre, alta) para vincular el trabajo a la ABIERTA más reciente (`elegirOportunidadAbiertaProbar`, puro). Solo SELE"
+        },
+        {
           "nombre": "conTope",
           "kind": "arrow",
           "exportada": false,
           "params": "p: Promise<T>, defecto: T",
           "retorno": "Promise<T>",
-          "linea": 187
+          "linea": 203
         },
         {
           "nombre": "motoDelLead",
@@ -63884,7 +63894,7 @@
           "exportada": false,
           "params": "texto: unknown",
           "retorno": "Promise<LecturaMoto | null>",
-          "linea": 191,
+          "linea": 207,
           "resumen": "Moto: el texto libre contra el catálogo de motos de Codeoscopic (GET gratis). Sin Codeoscopic configurado = `no_mirado`."
         },
         {
@@ -63893,7 +63903,7 @@
           "exportada": false,
           "params": "valores: Record<string, unknown>",
           "retorno": "Promise<",
-          "linea": 204,
+          "linea": 220,
           "resumen": "Comunidades: con una referencia catastral de 20 caracteres, el año de construcción y el CP del Catastro (con la de 14, la de parcela, el Catastro no da datos del bien). Solo si faltan. `null` = no se "
         },
         {
@@ -63902,7 +63912,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: RamoBotLead, infoRiesgo: unknown, nac: string | null, dia: string,",
           "retorno": "Promise<",
-          "linea": 221,
+          "linea": 237,
           "resumen": "El formulario candidato del bot de UNA oportunidad de auto/moto/comunidades: contrato del lead (descifrado) + bloque del riesgo (`datosVehiculo`) + ficha (nacimiento y carné). Compartido por la revisi"
         },
         {
@@ -63911,7 +63921,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: string, ahora = new Date()",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 246,
+          "linea": 262,
           "resumen": "Riesgo para «probar» (operador) cuando el del último trabajo ya está purgado: se reconstruye de la oportunidad MÁS RECIENTE del cliente en ese ramo + su ficha, como el botón (formulario + «completar d"
         },
         {
@@ -63920,7 +63930,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ahora = new Date()",
           "retorno": "Promise<RiesgoHogarDePoliza>",
-          "linea": 265,
+          "linea": 281,
           "resumen": "01/11/2026 · «probar» HOGAR sin oportunidad de hogar ni trabajo previo: el riesgo sale de la póliza de hogar EN VIGOR más reciente del cliente (`riesgoHogarDePolizas`, puro). Solo SELECT; la dirección"
         },
         {
@@ -63929,7 +63939,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FichaDomicilio | null>",
-          "linea": 282,
+          "linea": 298,
           "resumen": "Domicilio de la ficha (dirección cifrada → en claro, solo en memoria) para el plan B del número. `null` = no consta o no se pudo abrir."
         },
         {
@@ -63938,7 +63948,7 @@
           "exportada": false,
           "params": "ref: string",
           "retorno": "Promise<string | null>",
-          "linea": 294,
+          "linea": 310,
           "resumen": "Número de portal que el Catastro da para una referencia de 20 (GET gratis, con tope). `null` = sin dato o sin respuesta."
         },
         {
@@ -63947,7 +63957,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ahora: Date",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 302,
+          "linea": 318,
           "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
         },
         {
@@ -63956,7 +63966,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<CatalogosHogarLeidos>",
-          "linea": 317,
+          "linea": 333,
           "resumen": "Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types, occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera ("
         },
         {
@@ -63965,7 +63975,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 327
+          "linea": 343
         },
         {
           "nombre": "publico",
@@ -63973,7 +63983,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 352
+          "linea": 368
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -63981,7 +63991,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 356
+          "linea": 372
         },
         {
           "nombre": "tarificarLead",
@@ -63989,7 +63999,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 372
+          "linea": 388
         },
         {
           "nombre": "ampliarTopeLead",
@@ -63997,7 +64007,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 474,
+          "linea": 490,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -64006,7 +64016,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 501,
+          "linea": 517,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -64015,7 +64025,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 548,
+          "linea": 564,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -64024,7 +64034,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "47ef2933b9ff"
+      "hash": "e5cb1d4edb40"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -68787,7 +68797,8 @@
         "conCompaniaActualUnica",
         "conVehiculoDeOrigen",
         "conVehiculoDePoliza",
-        "decidirRiesgoProbar"
+        "decidirRiesgoProbar",
+        "elegirOportunidadAbiertaProbar"
       ],
       "funciones": [
         {
@@ -68842,11 +68853,27 @@
           "retorno": "DecisionProbar<E>",
           "linea": 114,
           "resumen": "Qué riesgo se reencola. Orden: 1) el reconstruido de la oportunidad+ficha, si valida; 2) el del último trabajo, si valida (no purgado); 3) rechazo que dice QUÉ falta (solo etiquetas de campo, nunca va"
+        },
+        {
+          "nombre": "msDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: Date | string",
+          "retorno": "number",
+          "linea": 142
+        },
+        {
+          "nombre": "elegirOportunidadAbiertaProbar",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string, filas: readonly FilaOportunidadProbar[]",
+          "retorno": "",
+          "linea": 144
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6c597f880db3"
+      "hash": "2c30f355d415"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-robustez.ts",
@@ -264115,6 +264142,6 @@
   ],
   "resumen": {
     "archivos": 5479,
-    "funciones": 21288
+    "funciones": 21291
   }
 }
