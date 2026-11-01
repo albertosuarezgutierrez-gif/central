@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-01T08:49:03Z",
-  "sha": "82fc6ca609187635664843ae4ff8c93adba2a20a",
+  "generadoEn": "2026-11-01T09:47:54Z",
+  "sha": "205b91a9f7a842a1c7946c7fdf3e8fb16b8e7755",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -31875,13 +31875,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19,
+          "linea": 20,
           "resumen": "GET /api/operador/presupuesto/pdf?id= — el presupuesto en PDF (solo lectura, gratis). Lo descarga Alberto desde la ficha del cliente para mandarlo él; aquí no sale nada a nadie."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/presupuesto/pdf",
-      "hash": "6e128a175bbd"
+      "hash": "73a85bad0bb5"
     },
     {
       "ruta": "apps/asegura/app/api/operador/presupuesto/propuesta/pdf/route.ts",
@@ -58070,6 +58070,7 @@
       "exporta": [
         "leerEstudio",
         "textoCelda",
+        "ofertasSinGarantias",
         "repartirColumnas",
         "filasParaColumnas",
         "cabecerasColumnas",
@@ -58125,12 +58126,21 @@
           "resumen": "Lo que se escribe en una celda del cuadro (`\\n` separa líneas). `null`/sin dato = «No figura»."
         },
         {
+          "nombre": "ofertasSinGarantias",
+          "kind": "function",
+          "exportada": true,
+          "params": "cmp: Pick<ResultadoComparacion, 'ofertas' | 'filas'>",
+          "retorno": "OfertaNormalizada[]",
+          "linea": 83,
+          "resumen": "01/11/2026 (AS-26-0042): las ofertas cuya columna sería ENTERA «No figura» (con el cuadro con filas). Nunca se pinta una columna así: el PDF no se genera hasta que la oferta tenga garantías (el borrad"
+        },
+        {
           "nombre": "repartirColumnas",
           "kind": "function",
           "exportada": true,
           "params": "ofertas: readonly OfertaNormalizada[], max = 4",
           "retorno": "OfertaNormalizada[][]",
-          "linea": 83,
+          "linea": 102,
           "resumen": "Las columnas del cuadro por página: la póliza actual (si la hay) en TODAS, para poder comparar sin volver atrás, y las ofertas repartidas hasta `max` columnas por tabla."
         },
         {
@@ -58139,7 +58149,7 @@
           "exportada": true,
           "params": "filas: readonly FilaMatriz[], ids: readonly string[]",
           "retorno": "FilaMatriz[]",
-          "linea": 94,
+          "linea": 113,
           "resumen": "Las filas del cuadro para un trozo de columnas: las que NINGUNA de esas ofertas menciona se omiten."
         },
         {
@@ -58148,7 +58158,7 @@
           "exportada": true,
           "params": "ofertas: readonly OfertaNormalizada[]",
           "retorno": "Map<string, string>",
-          "linea": 99,
+          "linea": 118,
           "resumen": "Cabecera de cada columna: compañía y, si hace falta para distinguirla, su nivel (`etiquetasOfertas`)."
         },
         {
@@ -58157,7 +58167,7 @@
           "exportada": false,
           "params": "o: Pick<OfertaNormalizada, 'firmeza' | 'fuente'>",
           "retorno": null,
-          "linea": 105
+          "linea": 124
         },
         {
           "nombre": "textoPrimaOferta",
@@ -58165,7 +58175,7 @@
           "exportada": true,
           "params": "o: Pick<OfertaNormalizada, 'primaTotal' | 'primaPeriodo' | 'firmeza' | 'fuente'>",
           "retorno": "string",
-          "linea": 114,
+          "linea": 133,
           "resumen": "· nada → «No figura». Con `*` si es un precio ESTIMADO (la compañía lo confirma al emitir)."
         },
         {
@@ -58174,7 +58184,7 @@
           "exportada": true,
           "params": "ofertas: readonly Pick<OfertaNormalizada, 'rol' | 'fuente' | 'firmeza'>[]",
           "retorno": "string",
-          "linea": 126,
+          "linea": 145,
           "resumen": "La frase de debajo del título del cuadro, según de dónde salen los precios. «Tal como constan en los documentos» solo vale para los PDF de compañía: un precio de Avant2 es un precio ESTIMADO que calcu"
         },
         {
@@ -58183,7 +58193,7 @@
           "exportada": true,
           "params": "ofertas: readonly Pick<OfertaNormalizada, 'primaTotal' | 'primaPeriodo' | 'firmeza' | 'fuente'>[]",
           "retorno": "string[]",
-          "linea": 143,
+          "linea": 162,
           "resumen": "Notas al pie del cuadro (estimados y precios que no son de un año)."
         },
         {
@@ -58192,7 +58202,7 @@
           "exportada": true,
           "params": "c: { referencia: string | null; telefono?: string | null; email?: string | null }",
           "retorno": "",
-          "linea": 158,
+          "linea": 177,
           "resumen": "La LLAMADA A LA ACCIÓN del PDF: cómo aceptar. 🚨 Sin enlace con token (el PDF se reenvía; el enlace del portal va solo por correo/WhatsApp y caduca): se acepta contestando o llamando con la REFERENCIA"
         },
         {
@@ -58201,7 +58211,7 @@
           "exportada": false,
           "params": "L: LienzoPdf, tipo: IconoCelda, x: number, yTop: number",
           "retorno": null,
-          "linea": 210,
+          "linea": 229,
           "resumen": "Dibuja el icono de una celda (✓ verde, ✗ rojo, ? gris) en un hueco de 8×8 con esquina superior izquierda (x, yTop)."
         },
         {
@@ -58210,7 +58220,7 @@
           "exportada": false,
           "params": "L: LienzoPdf, t: string, tam = 14, siguiente = 40",
           "retorno": null,
-          "linea": 224
+          "linea": 243
         },
         {
           "nombre": "pintarCuadroComparativo",
@@ -58218,7 +58228,7 @@
           "exportada": true,
           "params": "L: LienzoPdf, cmp: ResultadoComparacion, opts: { titulo?: string; recomendadaId?: string | null } = {}",
           "retorno": "Promise<void>",
-          "linea": 231,
+          "linea": 250,
           "resumen": "El cuadro de garantías (y precios) de un estudio, con la póliza actual en cada tabla y su leyenda."
         },
         {
@@ -58227,7 +58237,7 @@
           "exportada": true,
           "params": "L: LienzoPdf, narrativa: NarrativaPdf",
           "retorno": "void",
-          "linea": 339,
+          "linea": 360,
           "resumen": "«Análisis y recomendación» con la etiqueta SIEMPRE visible de quién lo redactó. No pinta nada si no hay texto."
         },
         {
@@ -58236,13 +58246,13 @@
           "exportada": true,
           "params": "L: LienzoPdf, c: { referencia: string | null; telefono?: string | null; email?: string | null }",
           "retorno": "void",
-          "linea": 364,
+          "linea": 385,
           "resumen": "La llamada a la acción: una caja cobalto, visible, con cómo aceptar y la referencia (`textoLlamadaAccion`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d4688650b5c7"
+      "hash": "de188d8dd9dc"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-pdf-datos.ts",
@@ -58440,12 +58450,12 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, presupuestoId: string",
           "retorno": "Promise<ResultadoPdfPortal>",
-          "linea": 24
+          "linea": 25
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "92dd24bd87cb"
+      "hash": "04e46cc6c795"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-pdf.ts",
@@ -58616,6 +58626,7 @@
         "decidirIaAuto",
         "enlaceOportunidad",
         "rangoPrimas",
+        "ofertasSinGarantiasRpa",
         "textoAvisoPresupuestoRpa",
         "textoAvisoCorteRpa"
       ],
@@ -58850,12 +58861,21 @@
           "resumen": "«de 392,02€ a 1.212,65€» (o el único importe). `null` = no hay primas (no se inventa un rango)."
         },
         {
+          "nombre": "ofertasSinGarantiasRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "ofertas: readonly { compania: string; producto: string; coberturas: unknown }[]",
+          "retorno": "",
+          "linea": 468,
+          "resumen": "01/11/2026 (AS-26-0042: las 14 garantías de 2 opciones de Mapfre salían «No figura»): las ofertas del bot SIN ninguna garantía leída. Cuenta como «sin garantías» la que no trae coberturas o cuyas cobe"
+        },
+        {
           "nombre": "textoAvisoPresupuestoRpa",
           "kind": "function",
           "exportada": true,
           "params": "e: EntradaAvisoRpa",
           "retorno": "string",
-          "linea": 483,
+          "linea": 494,
           "resumen": "El Telegram para Alberto (parse_mode HTML: todo lo variable, escapado). Solo nombre de pila o referencia: sin NIF ni teléfono."
         },
         {
@@ -58864,13 +58884,13 @@
           "exportada": true,
           "params": "e: EntradaCorteRpa",
           "retorno": "string",
-          "linea": 516,
+          "linea": 530,
           "resumen": "Telegram a Alberto cuando el proceso se CORTA (no hay borrador): que no crea que está hecho."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7ca768655f7f"
+      "hash": "bf9f02c0b491"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-rpa.ts",
@@ -58913,7 +58933,7 @@
           "exportada": false,
           "params": "correduriaId: string, op: { id: string; ramo: string | null }, texto: (base: BaseAviso) => string",
           "retorno": "Promise<boolean>",
-          "linea": 317,
+          "linea": 320,
           "resumen": "Telegram INTERNO a Alberto. Del cliente solo `clientes.nombre` → nombre de pila. Best effort: `false` si no salió."
         },
         {
@@ -58922,7 +58942,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string, ofertaIds: string[], db: Db | Tx = prismaAsegura()",
           "retorno": "Promise<string | null>",
-          "linea": 339,
+          "linea": 342,
           "resumen": "Un borrador del bot, vivo y sin salir, con EXACTAMENTE estas ofertas (`null` = no hay)."
         },
         {
@@ -58931,7 +58951,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string, ahora: Date",
           "retorno": "Promise<Record<string, unknown> | null>",
-          "linea": 352,
+          "linea": 355,
           "resumen": "El análisis del recomendador (control de calidad + ranking) para el estudio. `null` = no se pudo (se dice, no se inventa)."
         }
       ],
@@ -58942,7 +58962,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "acc18079f209"
+      "hash": "451133f7e5c1"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-seguimiento-llamada.ts",
@@ -63904,12 +63924,30 @@
           "resumen": "01/11/2026 · «probar» HOGAR sin oportunidad de hogar ni trabajo previo: el riesgo sale de la póliza de hogar EN VIGOR más reciente del cliente (`riesgoHogarDePolizas`, puro). Solo SELECT; la dirección"
         },
         {
+          "nombre": "domicilioFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<FichaDomicilio | null>",
+          "linea": 282,
+          "resumen": "Domicilio de la ficha (dirección cifrada → en claro, solo en memoria) para el plan B del número. `null` = no consta o no se pudo abrir."
+        },
+        {
+          "nombre": "numeroDeCatastro",
+          "kind": "function",
+          "exportada": false,
+          "params": "ref: string",
+          "retorno": "Promise<string | null>",
+          "linea": 294,
+          "resumen": "Número de portal que el Catastro da para una referencia de 20 (GET gratis, con tope). `null` = sin dato o sin respuesta."
+        },
+        {
           "nombre": "riesgoHogarDeOportunidadDelCliente",
           "kind": "function",
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, ahora: Date",
           "retorno": "Promise<ReconstruccionRiesgo>",
-          "linea": 276,
+          "linea": 302,
           "resumen": "HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`)."
         },
         {
@@ -63918,7 +63956,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<CatalogosHogarLeidos>",
-          "linea": 291,
+          "linea": 317,
           "resumen": "Los tres catálogos de hogar que la pantalla de plataforma lee para traducir lo guardado (`useCatalogosHogar`: property-types, occupancy-types, uses). GET gratis. Uno que no se pueda leer queda fuera ("
         },
         {
@@ -63927,7 +63965,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
           "retorno": "Promise<",
-          "linea": 301
+          "linea": 327
         },
         {
           "nombre": "publico",
@@ -63935,7 +63973,7 @@
           "exportada": false,
           "params": "o: Interno",
           "retorno": "RevisionOportunidad",
-          "linea": 326
+          "linea": 352
         },
         {
           "nombre": "revisarTarificacionLead",
@@ -63943,7 +63981,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
           "retorno": "Promise<Revision>",
-          "linea": 330
+          "linea": 356
         },
         {
           "nombre": "tarificarLead",
@@ -63951,7 +63989,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string; pendienteId?: string; tgMessageId?: string }, ahora = new Date(),",
           "retorno": "Promise<ResultadoTarificar>",
-          "linea": 346
+          "linea": 372
         },
         {
           "nombre": "ampliarTopeLead",
@@ -63959,7 +63997,7 @@
           "exportada": true,
           "params": "correduriaId: string, dia: string",
           "retorno": "Promise<ResultadoAmpliar>",
-          "linea": 448,
+          "linea": 474,
           "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
         },
         {
@@ -63968,7 +64006,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadId: string; clave: string; eleccion: 'ficha' | 'correo'; actor: string },",
           "retorno": "Promise<ResultadoElegir>",
-          "linea": 475,
+          "linea": 501,
           "resumen": "Alberto pulsa «quedarme con el de la ficha» o «usar el del correo» (botón `clp_dis` de plataforma). En UNA transacción con la oportunidad bloqueada: aplica la elección en `datosContrato` (`elegirEnCon"
         },
         {
@@ -63977,7 +64015,7 @@
           "exportada": true,
           "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }",
           "retorno": "Promise<",
-          "linea": 522,
+          "linea": 548,
           "resumen": "Las claves del contrato que han hecho fallar a los bots lanzados desde el lead (filas `tarificacion_bot_fallo_lead` del historial que escribe `avisarFalloBotLead`), para la repregunta. Solo claves. `n"
         }
       ],
@@ -63986,7 +64024,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "e21893af7605"
+      "hash": "47ef2933b9ff"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -67092,6 +67130,8 @@
       "ruta": "apps/asegura/lib/tarificador-hogar-poliza.ts",
       "ambito": "apps/asegura",
       "exporta": [
+        "callesCompatibles",
+        "referenciaCatastralDeHogarElegida",
         "polizasHogarEnVigor",
         "riesgoHogarDePolizas",
         "elegirReconstruccionHogar"
@@ -67114,12 +67154,47 @@
           "linea": 35
         },
         {
+          "nombre": "cpClaro",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 59
+        },
+        {
+          "nombre": "callesCompatibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string | null, b: string | null",
+          "retorno": "boolean",
+          "linea": 61,
+          "resumen": "Calles compatibles: mismo nombre normalizado, o uno contenido en el otro por palabras completas (p. ej. «socorro» ⊂ «del socorro»). PURA."
+        },
+        {
+          "nombre": "esNumeroPortal",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is string",
+          "linea": 69,
+          "resumen": "Número válido de portal para el vendor (el mismo patrón que reconoce `partirDireccion`)."
+        },
+        {
+          "nombre": "referenciaCatastralDeHogarElegida",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaPolizaHogar[]",
+          "retorno": "string | null",
+          "linea": 72,
+          "resumen": "Referencia catastral (20) de la póliza de hogar elegida, para que quien llama consulte el número al Catastro. PURA."
+        },
+        {
           "nombre": "polizasHogarEnVigor",
           "kind": "function",
           "exportada": true,
           "params": "filas: readonly FilaPolizaHogar[]",
           "retorno": "FilaPolizaHogar[]",
-          "linea": 55,
+          "linea": 78,
           "resumen": "Solo cartera EN VIGOR de hogar, la más reciente primero (misma fecha → id para que sea estable). PURA."
         },
         {
@@ -67128,7 +67203,7 @@
           "exportada": false,
           "params": "datos: unknown, descifrar: (v: string) => string",
           "retorno": "",
-          "linea": 61
+          "linea": 84
         },
         {
           "nombre": "riesgoHogarDePolizas",
@@ -67136,7 +67211,7 @@
           "exportada": true,
           "params": "filas: readonly FilaPolizaHogar[], descifrar: (v: string) => string, ahora = new Date(), /** Elecciones que NO constan en la póliza (régimen, madera) y que quien llama SÍ tiene por otra vía. Hoy `probar` no pasa ninguna: se piden (422). */ ",
           "retorno": "RiesgoHogarDePoliza",
-          "linea": 75,
+          "linea": 98,
           "resumen": "Riesgo de hogar para el bot desde las pólizas de hogar del cliente. `filas` = todas las de hogar del cliente (se filtra aquí la cartera en vigor). Varias en vigor: la más reciente, y si hay otra con d"
         },
         {
@@ -67145,13 +67220,13 @@
           "exportada": true,
           "params": "deOportunidad: ReconstruccionRiesgo, dePoliza: RiesgoHogarDePoliza | null",
           "retorno": "",
-          "linea": 126,
+          "linea": 167,
           "resumen": "Qué reconstrucción usa «probar»: la de la oportunidad si dio riesgo; si no hay oportunidad de hogar (`sin_oportunidad`), la de la póliza (sea completa o con `faltan_datos`, para que el 422 nombre lo q"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "85a70090ada9"
+      "hash": "d6e8e1fdd2f8"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-humo-reglas.ts",
@@ -187169,7 +187244,7 @@
           "exportada": false,
           "params": "hhmm?: string | null",
           "retorno": "number | null",
-          "linea": 157
+          "linea": 171
         },
         {
           "nombre": "horasEnTexto",
@@ -187177,7 +187252,7 @@
           "exportada": true,
           "params": "texto: string, tardeSiAmbiguo = false",
           "retorno": "number[]",
-          "linea": 179,
+          "linea": 193,
           "resumen": "TODAS las horas (en minutos) de un texto: «12:00», «13h», «1 pm», «a la 1», «12 del mediodía», y las palabras mediodía/noon/midday/mezzogiorno/midi = 12:00. Rango 0-23:59 (sin tope superior). Una cifr"
         },
         {
@@ -187186,7 +187261,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": null,
-          "linea": 204,
+          "linea": 218,
           "resumen": "Un punto entre dos cifras («11.30») es una hora, no el fin de una frase."
         },
         {
@@ -187195,7 +187270,7 @@
           "exportada": false,
           "params": "frase: string",
           "retorno": null,
-          "linea": 206,
+          "linea": 220,
           "resumen": "Cláusulas dentro de una frase (coma/punto y coma fuera de cifras, «y», «and»…): «la entrada es a las 15:00 y podéis salir a las 15:00»."
         },
         {
@@ -187204,7 +187279,7 @@
           "exportada": false,
           "params": "texto: string, verbo: RegExp, tardeSiAmbiguo: boolean",
           "retorno": "number[]",
-          "linea": 209,
+          "linea": 223,
           "resumen": "Horas de las frases del texto que contienen `verbo` (TODAS las de cada frase, no solo la primera)."
         },
         {
@@ -187213,7 +187288,7 @@
           "exportada": true,
           "params": "texto: string, checkOut?: string | null",
           "retorno": "boolean",
-          "linea": 216,
+          "linea": 230,
           "resumen": "¿El huésped ANUNCIA una salida posterior a la hora oficial («saldremos a las 12:00»)?"
         },
         {
@@ -187222,7 +187297,7 @@
           "exportada": true,
           "params": "texto: string, checkIn?: string | null",
           "retorno": "boolean",
-          "linea": 230,
+          "linea": 244,
           "resumen": "¿El huésped ANUNCIA una llegada anterior a la hora oficial de entrada («llegamos a las 10», «we arrive at 11am»)? Regla de Alberto (18/10/2026): la hora oficial manda salvo que él autorice; el bot SIE"
         },
         {
@@ -187231,7 +187306,7 @@
           "exportada": true,
           "params": "reply: string, horario: HorarioOficial = {}",
           "retorno": "'salida' | 'entrada' | null",
-          "linea": 246,
+          "linea": 260,
           "resumen": "¿El BORRADOR del bot acepta/confirma una hora fuera de la oficial («tomo nota de que saldréis a las 12:00»)? Sin depender de un verbo: SALIDA = cualquier hora posterior al check-out que no sea la de e"
         },
         {
@@ -187240,7 +187315,7 @@
           "exportada": true,
           "params": "texto: string, categoria?: string | null, horario: HorarioOficial = {}",
           "retorno": "PeticionHorario | null",
-          "linea": 272,
+          "linea": 286,
           "resumen": "¿Es una petición de cambio de horario o de guardar maletas? Conservador a propósito: un falso positivo solo convierte un mensaje en PROPUESTA por Telegram (sin daño); un falso negativo deja salir solo"
         },
         {
@@ -187249,7 +187324,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 285
+          "linea": 299
         },
         {
           "nombre": "resolverTipo",
@@ -187257,7 +187332,7 @@
           "exportada": true,
           "params": "pet: PeticionHorario, texto: string, o: { hoy: string; checkIn: string | null }",
           "retorno": "TipoCambio",
-          "linea": 294,
+          "linea": 308,
           "resumen": "«equipaje» no dice si es antes de entrar o después de salir: lo dice el texto, y si no, el momento (`hoy` ≤ llegada → antes de entrar; si no → el día de salida). Fechas YYYY-MM-DD."
         },
         {
@@ -187266,7 +187341,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string | null",
-          "linea": 306,
+          "linea": 320,
           "resumen": "Primera hora pedida («a las 15:00», «until 3pm», «um 15 Uhr»…) como 'HH:MM', o null. Rango 06–23."
         },
         {
@@ -187275,7 +187350,7 @@
           "exportada": true,
           "params": "tipo: TipoCambio, horaPedida: string | null",
           "retorno": "number | null",
-          "linea": 332,
+          "linea": 346,
           "resumen": "Contraoferta (hora entera, 13 o 14) para el botón `🕐`. Salida: 14 si pide 15:00 o más, 13 si no. Entrada: 13 si pide a las 12 o antes, 14 si no. null si coincide con lo que ya pidió (botón redundante"
         },
         {
@@ -187284,7 +187359,7 @@
           "exportada": true,
           "params": "cb: string",
           "retorno": "string",
-          "linea": 346,
+          "linea": 360,
           "resumen": "Telegram rechaza un `callback_data` > 64 BYTES (y el aviso entero falla): se comprueba al construir."
         },
         {
@@ -187293,7 +187368,7 @@
           "exportada": true,
           "params": "p: { bookingId: string; tipo: TipoCambio; semaforo: Semaforo; horaPedida: string | null }",
           "retorno": "BotonCH[][]",
-          "linea": 356,
+          "linea": 370,
           "resumen": "Botones de la propuesta. Prefijo `hsp_` (mismo emisor autorizado que el resto): `hsp_chsi:<id>:<HHMM>`, `hsp_chhasta:<id>:<HH>`, `hsp_chno:<id>`, `hsp_chlimp:<id>`. En ROJO no se ofrecen los «sí»: el "
         },
         {
@@ -187302,7 +187377,7 @@
           "exportada": true,
           "params": "arg: string | undefined",
           "retorno": "string | null",
-          "linea": 374,
+          "linea": 388,
           "resumen": "'HHMM' (callback) → 'HH:MM'; null si no es una hora válida."
         },
         {
@@ -187311,7 +187386,7 @@
           "exportada": false,
           "params": "nombre?: string | null",
           "retorno": null,
-          "linea": 385
+          "linea": 399
         },
         {
           "nombre": "textoAceptacion",
@@ -187319,7 +187394,7 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; hora: string; nombre?: string | null }",
           "retorno": "string",
-          "linea": 390
+          "linea": 404
         },
         {
           "nombre": "consignasDePiso",
@@ -187327,7 +187402,7 @@
           "exportada": true,
           "params": "propertyId: string",
           "retorno": "string[]",
-          "linea": 397,
+          "linea": 411,
           "resumen": "Consignas de la zona del piso (de `equipaje.ts`); vacío = piso sin zona → texto genérico."
         },
         {
@@ -187336,7 +187411,7 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; semaforo: Semaforo; propertyId: string; nombre?: string | null; ofrecerMaletas?: boolean }",
           "retorno": "string",
-          "linea": 402
+          "linea": 416
         },
         {
           "nombre": "tareaLimpieza",
@@ -187344,13 +187419,13 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; hora: string; checkIn: string | null; checkOut: string | null; huesped?: string | null; reservationId: string }",
           "retorno": "",
-          "linea": 420,
+          "linea": 434,
           "resumen": "Instrucción para la tarea de limpieza y fecha en la que se crea."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f711f495e94"
+      "hash": "f511618ce360"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cierre.ts",
@@ -264040,6 +264115,6 @@
   ],
   "resumen": {
     "archivos": 5479,
-    "funciones": 21280
+    "funciones": 21288
   }
 }
