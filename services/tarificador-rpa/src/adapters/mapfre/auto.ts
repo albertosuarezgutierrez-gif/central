@@ -1,4 +1,8 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.44 (01/11/2026, run real: «Generar Proyecto» → `locator.click: Timeout 30000ms`): tras el clic salen DOS diálogos apilados, el informativo «Operación consolidada
+//   correctamente … Aceptar» y el de alta de cliente (No/Sí); el primero tapaba el «No». Ahora (guard.ts) el informativo se cierra con «Aceptar» (rótulo entero, único botón) y el
+//   de alta se responde «No», en cualquier orden, con tope de 6 acciones y clics de 4 s. Nº de proyecto también por «Nº/N°/No. Proyecto: X». El icono `picture_as_pdf` (rótulo
+//   entero) es el botón del PDF del proyecto en Mapfre aunque el nº no se leyera. Los hard stops (emitir/contratar/firmar/pagar…) no se tocan.
 // v0.8.42 (01/11/2026, trabajo 89e0a420: nº leído pero coberturas vacías y sin aviso de alta): el diálogo REAL de alta lleva un icono («warning») delante y un pie
 //   («¡X! info_outlined X») y no casaba con el patrón estricto; además el nº se pintó ANTES que el diálogo y el bot dejó de vigilar. Ahora el patrón admite icono + pie
 //   inocuo (sin emitir/pagar/cobrar/firmar/cuenta…, ≤100 car.) y, con nº ya visto, se vigila 2,5 s más. Solo dos botones No/Sí; todo lo demás sigue parando.
@@ -2154,7 +2158,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.43',
+  version: '0.8.44',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

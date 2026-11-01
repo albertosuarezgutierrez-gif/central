@@ -1609,7 +1609,7 @@ export async function cerrarAvisoTomadorMapfre(page: Page, guard: GuardEmision):
 }
 
 /** Clic con los diálogos NATIVOS del navegador descartados: si el portal abre uno, el trabajo cae (el robot no confirma). */
-async function clicSinDialogoNativo(page: Page, guard: GuardEmision, boton: Locator, que: string): Promise<void> {
+async function clicSinDialogoNativo(page: Page, guard: GuardEmision, boton: Locator, que: string, timeoutMs?: number): Promise<void> {
   let nativo: string | null = null
   const alDialogo = (d: Dialog) => {
     nativo ??= d.type()
@@ -1617,7 +1617,7 @@ async function clicSinDialogoNativo(page: Page, guard: GuardEmision, boton: Loca
   }
   page.on('dialog', alDialogo)
   try {
-    await boton.click()
+    await (timeoutMs === undefined ? boton.click() : boton.click({ timeout: timeoutMs }))
     await page.waitForTimeout(100)
     guard.comprobar()
     if (nativo) throw new EmisionBloqueadaError('fase', `${que}: el portal abrió un diálogo («${nativo}») y el robot no confirma`)
@@ -1956,6 +1956,8 @@ export function puntuarBotonDescargaProyecto(desc: readonly (string | null | und
   const junto = rotulos.join(' | ')
   if (RE_PROHIBIDO_ROTULO_DESCARGA.test(junto) || RE_AJENO_DESCARGA.test(junto)) return 0
   if (desc.slice(4).some((x) => palabraBloqueadaEnAtributo(x) !== null)) return 0
+  // v0.8.44 (Mapfre, run real 01/11/2026): el icono de Material «picture_as_pdf» (rótulo ENTERO) ES el botón del PDF del proyecto; vale aunque el nº no se leyera.
+  if (compania === 'mapfre' && rotulos.some((t) => t === 'picture as pdf')) return 1
   if (RE_VERBO_CON_OBJETO_DESCARGA.test(junto) && RE_OBJETO_DESCARGA.test(junto)) return 2
   if (RE_VERBO_SUELTO_DESCARGA.test(junto) && RE_OBJETO_PROPUESTA_DESCARGA.test(junto)) return 2
   if (guardado && !REGLAS_DESCARGA_PROYECTO[compania].soloConObjeto && RE_VERBO_SUELTO_DESCARGA.test(junto)) return 1
@@ -2422,6 +2424,34 @@ export function esDialogoAltaClienteMapfre(textoSinBotones: string, botones: rea
   return bs.length === 2 && [...bs].sort().join('|') === 'no|si'
 }
 
+/** v0.8.44 · tope del clic sobre un diálogo de Mapfre: si otro diálogo lo tapa, falla rápido (no 30 s) y se prueba el otro. */
+export const MS_CLIC_DIALOGO_MAPFRE = 4_000
+/** v0.8.44 · tope de respuestas a diálogos (cerrar informativos + «No» al alta) por «Generar Proyecto». */
+export const MAX_ACCIONES_DIALOGOS_MAPFRE = 6
+const RE_CONSOLIDADA_MAPFRE = /^(?:(?:info_outlined|info|check_circle|check|done) ?)*operacion consolidada correctamente(.{0,120})$/
+const RE_CONSOLIDADA_RESTO_PROHIBIDO = /emit|emisi|contrat|formaliz|firm|pag|domicili|iban|grabar|cobr|recib|tarjeta|cuenta|sepa|prima|importe|envi|sms|mail|correo/
+/**
+ * v0.8.44 · ¿es este diálogo el INFORMATIVO «Operación consolidada correctamente <cliente>: <ref>» con UN solo botón «Aceptar»? (run real
+ * 01/11/2026: salía apilado con el de alta y lo tapaba). «consolidada» no es una palabra de emisión; el resto del texto (≤120 car.) solo puede
+ * llevar letras/cifras/signos mansos y nada de emitir/contratar/pagar/firmar/cuenta… PURA.
+ */
+export function esDialogoConsolidadoMapfre(textoSinBotones: string, botones: readonly string[]): boolean {
+  const m = RE_CONSOLIDADA_MAPFRE.exec(planoAltaMapfre(textoSinBotones))
+  if (!m) return false
+  const resto = (m[1] ?? '').trim()
+  if (resto !== '' && (!/^[a-z0-9 ._\-/&():,'[\]]+$/.test(resto) || RE_CONSOLIDADA_RESTO_PROHIBIDO.test(resto))) return false
+  const bs = botones.map(planoAltaMapfre).map((b) => b.replace(/[.,;:]/g, '').trim())
+  return bs.length === 1 && bs[0] === 'aceptar'
+}
+
+export type ClaseDialogoMapfre = 'alta' | 'consolidada' | 'otro'
+/** v0.8.44 · clasifica un diálogo visible tras «Generar Proyecto»: el de alta (→ «No»), el informativo «consolidada» (→ «Aceptar») u otro (→ para). PURA. */
+export function clasificarDialogoMapfre(textoSinBotones: string, botones: readonly string[]): ClaseDialogoMapfre {
+  if (esDialogoAltaClienteMapfre(textoSinBotones, botones)) return 'alta'
+  if (esDialogoConsolidadoMapfre(textoSinBotones, botones)) return 'consolidada'
+  return 'otro'
+}
+
 /**
  * v0.8.40 · DIAGNÓSTICO (no relaja nada) del diálogo que sale tras «Generar Proyecto» y habla de contratar/emitir/pagar…: su texto ENTERO
  * (normalizado, sin correos/NIF/matrículas/teléfonos/cifras largas ni nombres propios; tope 600) y los rótulos de sus botones (≤8, ≤40
@@ -2476,7 +2506,24 @@ async function responderNoAltaClienteMapfre(page: Page, guard: GuardEmision, ind
   }
   if (!no) throw new EmisionBloqueadaError('boton', 'diálogo de alta de cliente: no hay botón «No»')
   comprobarBoton(await descripcion(no))
-  await clicSinDialogoNativo(page, guard, no, 'diálogo de alta de cliente')
+  await clicSinDialogoNativo(page, guard, no, 'diálogo de alta de cliente', MS_CLIC_DIALOGO_MAPFRE)
+}
+
+/**
+ * v0.8.44 · pulsa «Aceptar» (y SOLO «Aceptar») del diálogo informativo «Operación consolidada» ya validado por `esDialogoConsolidadoMapfre`. En VIVO:
+ * sin cuenta bancaria, exactamente UN control visible en ese diálogo, de rótulo entero «Aceptar», `comprobarBoton` con `permitirAceptar` (única puerta).
+ */
+async function cerrarConsolidadaMapfre(page: Page, guard: GuardEmision, indice: number): Promise<void> {
+  guard.comprobar()
+  await exigirSinCuentaBancaria(page)
+  const dialogo = page.locator(SEL_DIALOGOS_MAPFRE).locator('visible=true').nth(indice)
+  const controles = dialogo.locator(SEL_CONTROLES_DIALOGO_MAPFRE).locator('visible=true')
+  if ((await controles.count()) !== 1) throw new EmisionBloqueadaError('boton', 'diálogo «consolidada»: no hay exactamente un control')
+  const c = controles.first()
+  const d = await descripcion(c)
+  if (planoAltaMapfre(String(d[0] ?? '')).replace(/[.,;:]/g, '').trim() !== 'aceptar') throw new EmisionBloqueadaError('boton', 'diálogo «consolidada»: el control no es «Aceptar»')
+  comprobarBoton(d, { permitirAceptar: true })
+  await clicSinDialogoNativo(page, guard, c, 'diálogo «consolidada»', MS_CLIC_DIALOGO_MAPFRE)
 }
 
 /** ¿Este control es «Generar Proyecto» y nada más? Texto ENTERO exacto + `comprobarBoton` con SOLO `permitirGenerarProyectoMapfre` + lista única: nunca emisión ni prohibida. PURA. */
@@ -2756,7 +2803,8 @@ async function pulsarGenerarProyectoMapfre(page: Page, guard: GuardEmision, boto
   }
 }
 
-const RE_PROYECTO_SUELTO = /\bproyecto\s*[:#]?\s*(\d[\d/.-]{4,29})(?![A-Za-z0-9])/gi
+const RE_NUM_PROYECTO_MAPFRE = /\bn(?:[º°o]|\.\s?º|um(?:ero)?)?\.?\s*proyecto\s*[:#]?\s*([A-Za-z0-9][A-Za-z0-9/.-]{4,29})(?![A-Za-z0-9])/gi
+const RE_PROYECTO_SUELTO =/\bproyecto\s*[:#]?\s*(\d[\d/.-]{4,29})(?![A-Za-z0-9])/gi
 
 /** Todas las referencias de proyecto de un texto (con etiqueta: «Nº proyecto…», «Proyecto nº…», «Proyecto 123456…»), en orden. PURA. */
 function referenciasProyectoMapfre(texto: string): string[] {
@@ -2771,6 +2819,11 @@ function referenciasProyectoMapfre(texto: string): string[] {
   for (const m of t.matchAll(RE_PROYECTO_SUELTO)) {
     const c = m[1]!.replace(/[.-]+$/, '')
     if (referenciaPresupuestoValida(c)) out.push(c)
+  }
+  // v0.8.44: «Nº Proyecto: XXXXX» (run real 01/11/2026), con Nº/N°/No./N.º/Num. y el valor alfanumérico (letras dentro o delante); misma validación.
+  for (const m of t.matchAll(RE_NUM_PROYECTO_MAPFRE)) {
+    const c = m[1]!.replace(/[.-]+$/, '')
+    if (/\d/.test(c) && referenciaPresupuestoValida(c) && !out.includes(c)) out.push(c)
   }
   return out
 }
@@ -3026,6 +3079,7 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
   let numero: string | null = null
   let peligro: string | null = null
   let altaRespondida = false
+  let accionesDialogos = 0
   let numeroVistoEn: number | null = null
   try {
     await pulsarGenerarProyectoMapfre(page, guard, boton, async () => {
@@ -3041,15 +3095,29 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
           .catch(() => [] as Array<{ todo: string; sinBotones: string; botones: string[] }>)
         // v0.8.41: la ÚNICA excepción — el diálogo exacto de alta de cliente se responde «No» (una vez por trabajo). Si además hay otro diálogo
         // peligroso, o el de alta reaparece, se para como siempre.
-        const esAlta = dialogos.map((d) => esDialogoAltaClienteMapfre(d.sinBotones, d.botones))
-        const peligrosos = dialogos.filter((_, i) => !esAlta[i]).map((d) => d.todo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
+        // v0.8.44: pueden salir DOS di\u00e1logos apilados (\u00abOperaci\u00f3n consolidada\u00bb informativo + el de alta): el informativo se cierra con \u00abAceptar\u00bb y el de
+        // alta se responde \u00abNo\u00bb, en el orden en que el portal los deje pulsar (el de encima primero; si un clic no llega, se prueba el otro), con tope.
+        const clases = dialogos.map((d) => clasificarDialogoMapfre(d.sinBotones, d.botones))
+        const peligrosos = dialogos.filter((_, i) => clases[i] === 'otro').map((d) => d.todo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
         let malo = peligrosos.find((t) => RE_DIALOGO_PELIGROSO_MAPFRE.test(t))
-        const iAlta = esAlta.indexOf(true)
-        if (malo === undefined && iAlta >= 0) {
-          if (altaRespondida) malo = 'contrat'
-          else {
-            altaRespondida = true
-            await responderNoAltaClienteMapfre(page, guard, iAlta)
+        if (malo === undefined && altaRespondida && clases.includes('alta')) malo = 'contrat'
+        if (malo === undefined && accionesDialogos < MAX_ACCIONES_DIALOGOS_MAPFRE) {
+          let hecho = false
+          for (let i = clases.length - 1; i >= 0 && !hecho; i--) {
+            if (clases[i] === 'otro') continue
+            accionesDialogos++
+            try {
+              if (clases[i] === 'alta') {
+                await responderNoAltaClienteMapfre(page, guard, i)
+                altaRespondida = true
+              } else await cerrarConsolidadaMapfre(page, guard, i)
+              hecho = true
+            } catch (e) {
+              // Una violaci\u00f3n del guard (o un di\u00e1logo nativo) para el trabajo; un clic que no lleg\u00f3 (tapado por el otro di\u00e1logo) prueba el siguiente.
+              if (e instanceof EmisionBloqueadaError || e instanceof GuardadoConDialogoError) throw e
+            }
+          }
+          if (hecho) {
             await page.waitForTimeout(400)
             continue
           }
@@ -3063,7 +3131,7 @@ export async function generarProyectoMapfre(page: Page, guard: GuardEmision, esp
         // Con nº ya visto se sigue vigilando unos segundos (mismas reglas) antes de dar por cerrado el paso.
         if (numero) {
           numeroVistoEn = numeroVistoEn ?? Date.now()
-          if (altaRespondida || Date.now() - numeroVistoEn >= MS_ASENTAR_PROYECTO_MAPFRE) return
+          if ((altaRespondida && dialogos.length === 0) || Date.now() - numeroVistoEn >= MS_ASENTAR_PROYECTO_MAPFRE) return
         }
         await page.waitForTimeout(400)
       }
