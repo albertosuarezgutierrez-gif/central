@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-01T11:31:42Z",
-  "sha": "6e0e2fe8bdc9a0fecfcbd2ab4e7f6a6583a8c308",
+  "generadoEn": "2026-11-01T15:25:11Z",
+  "sha": "90496e55ac009fabe114f93c965c3a4fa1751a57",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -67230,13 +67230,13 @@
           "exportada": true,
           "params": "deOportunidad: ReconstruccionRiesgo, dePoliza: RiesgoHogarDePoliza | null",
           "retorno": "",
-          "linea": 167,
+          "linea": 184,
           "resumen": "Qué reconstrucción usa «probar»: la de la oportunidad si dio riesgo; si no hay oportunidad de hogar (`sin_oportunidad`), la de la póliza (sea completa o con `faltan_datos`, para que el 422 nombre lo q"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d6e8e1fdd2f8"
+      "hash": "a1aa623c46d4"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-humo-reglas.ts",
@@ -259756,6 +259756,8 @@
       "exporta": [
         "zonaCostePorProvincia",
         "capitalContinenteSugerido",
+        "capitalContinenteEstimado",
+        "capitalContenidoEstimado",
         "avisoInfraseguro",
         "discrepanciasCatastro",
         "preguntasPorAntiguedad",
@@ -259789,12 +259791,38 @@
           "resumen": "`null` si los m² no constan o no son una superficie (≤ 0). No se inventa una superficie."
         },
         {
+          "nombre": "aMiles",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 57
+        },
+        {
+          "nombre": "capitalContinenteEstimado",
+          "kind": "function",
+          "exportada": true,
+          "params": "m2: number | null | undefined, provincia: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 60,
+          "resumen": "Continente estimado (m² × coste de la zona, a miles). `null` sin superficie válida. PURA."
+        },
+        {
+          "nombre": "capitalContenidoEstimado",
+          "kind": "function",
+          "exportada": true,
+          "params": "continenteEur: number | null | undefined",
+          "retorno": "number | null",
+          "linea": 67,
+          "resumen": "Contenido estimado a partir del continente (30 %, mínimo 15.000 €, a miles). `null` sin continente válido. PURA."
+        },
+        {
           "nombre": "avisoInfraseguro",
           "kind": "function",
           "exportada": true,
           "params": "capitalTecleadoEur: number | null | undefined, sugeridoEur: number | null | undefined",
           "retorno": "AvisoInfraseguro | null",
-          "linea": 56,
+          "linea": 78,
           "resumen": "`null` si falta el capital tecleado o el sugerido (sin base no se compara). `ratio` = tecleado / sugerido."
         },
         {
@@ -259803,7 +259831,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 70
+          "linea": 92
         },
         {
           "nombre": "discrepanciasCatastro",
@@ -259811,7 +259839,7 @@
           "exportada": true,
           "params": "declarado: { metrosCuadrados?: number | null; anioConstruccion?: number | null }, catastro: { metrosCuadrados?: number | null; anioConstruccion?: number | null },",
           "retorno": "DiscrepanciaCatastro[]",
-          "linea": 73,
+          "linea": 95,
           "resumen": "Solo se compara lo que consta en AMBOS lados; un lado `null` no genera aviso (no se sabe)."
         },
         {
@@ -259820,7 +259848,7 @@
           "exportada": true,
           "params": "anioConstruccion: number | null | undefined, hoy: Date",
           "retorno": "PreguntasAntiguedad",
-          "linea": 103
+          "linea": 125
         },
         {
           "nombre": "aceptaUso",
@@ -259828,7 +259856,7 @@
           "exportada": true,
           "params": "compania: string, uso: string",
           "retorno": "AceptaUso",
-          "linea": 131
+          "linea": 153
         },
         {
           "nombre": "filtrarBotsPorUso",
@@ -259836,13 +259864,13 @@
           "exportada": true,
           "params": "uso: string | null | undefined, bots: readonly string[]",
           "retorno": "FiltroBotsPorUso",
-          "linea": 149,
+          "linea": 171,
           "resumen": "`uso` vacío/`null` = pendiente: nada se lanza (el bot cuesta dinero o tiempo y el uso decide la tarifa). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "49c2c690dcc3"
+      "hash": "e273b9dba038"
     },
     {
       "ruta": "packages/module-tarificacion/src/hogar-bot-formulario.ts",
@@ -264142,6 +264170,6 @@
   ],
   "resumen": {
     "archivos": 5479,
-    "funciones": 21291
+    "funciones": 21294
   }
 }
