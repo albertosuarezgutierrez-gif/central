@@ -74,7 +74,7 @@ export const NORMAS_CITABLES: readonly NormaCitable[] = [
     norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
     articulo: '18',
     sintesis:
-      'El asegurador debe pagar el importe mínimo de lo que pueda deber dentro de los cuarenta días siguientes a la declaración del siniestro, aunque la peritación no haya terminado.',
+      'El asegurador debe pagar el importe mínimo de lo que pueda deber dentro de los cuarenta días siguientes a la declaración del siniestro, aunque la peritación no haya terminado. Los cuarenta días se cuentan desde la declaración, no desde el siniestro.',
     url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
     verificado: '2026-09-07',
     cubre: ['articulo:18', 'ley:50/1980'],
@@ -84,7 +84,7 @@ export const NORMAS_CITABLES: readonly NormaCitable[] = [
     norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
     articulo: '20',
     sintesis:
-      'Si el asegurador incurre en mora, la indemnización devenga el interés legal del dinero incrementado en un 50 %; transcurridos dos años desde el siniestro, ese interés no puede ser inferior al 20 % anual.',
+      'Hay mora si el asegurador no paga el importe mínimo en los cuarenta días desde la declaración del siniestro, o no cumple la prestación en tres meses desde la producción del siniestro. La indemnización devenga entonces el interés legal del dinero incrementado en un 50 %; transcurridos dos años desde el siniestro, no puede ser inferior al 20 % anual. Los intereses corren desde la fecha del siniestro (no desde el día cuarenta y uno), salvo que el tomador, asegurado o beneficiario no comunicara el siniestro en plazo: entonces, desde la comunicación. Nacen por ley, sin reclamación previa; en la práctica conviene pedirlos por escrito.',
     url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
     verificado: '2026-09-07',
     cubre: ['articulo:20', 'ley:50/1980'],

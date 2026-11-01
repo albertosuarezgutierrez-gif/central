@@ -11,6 +11,7 @@ import {
   type ResueltosHogar,
 } from './desde-cartera-hogar.ts'
 import type { ClienteCartera } from './desde-cartera.ts'
+import { direccionSinNumero } from './direccion.ts'
 import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 import { paramsDnploc } from '@central/core-catastro'
 
@@ -250,4 +251,26 @@ test('la referencia catastral consultada viaja en los datos (address.cadastralRe
   assert.equal(con.datos.referenciaCatastral, '1234567VK1234A0001XY')
   const sin = precalificarHogarCartera(CLIENTE, { numeroPoliza: null, fechaVencimiento: null, hogar: GEMELA }, RESUELTOS, HOY)
   assert.equal(sin.datos.referenciaCatastral, undefined)
+})
+
+test('partirDireccion: formatos CIMA habituales (marcador pegado al número, guiones, punto sin espacio) — formas ficticias', () => {
+  const v = (d: string) => partirDireccion(d)
+  assert.deepEqual(v('CL FICTICIA Nº12'), { tipoVia: 'Calle', nombre: 'FICTICIA', numero: '12', planta: null, puerta: null })
+  assert.deepEqual(v('CL FICTICIA NUM.12 3º B'), { tipoVia: 'Calle', nombre: 'FICTICIA', numero: '12', planta: '3', puerta: 'B' })
+  assert.deepEqual(v('CL FICTICIA, N.12'), { tipoVia: 'Calle', nombre: 'FICTICIA', numero: '12', planta: null, puerta: null })
+  assert.deepEqual(v('AV FICTICIA NÚMERO 7 BAJO A'), { tipoVia: 'Avenida', nombre: 'FICTICIA', numero: '7', planta: 'BAJO', puerta: 'A' })
+  assert.deepEqual(v('CL.FICTICIA 12'), { tipoVia: 'Calle', nombre: 'FICTICIA', numero: '12', planta: null, puerta: null })
+  assert.deepEqual(v('CL FICTICIA 12-3-A'), { tipoVia: 'Calle', nombre: 'FICTICIA', numero: '12', planta: '3', puerta: 'A' })
+  assert.deepEqual(v('CL FICTICIA 12 - 3ºB'), { tipoVia: 'Calle', nombre: 'FICTICIA', numero: '12', planta: '3', puerta: 'B' })
+  assert.deepEqual(v('CL FICTICIA,12,3º-A'), { tipoVia: 'Calle', nombre: 'FICTICIA', numero: '12', planta: '3', puerta: 'A' })
+  assert.deepEqual(v('PZ FICTICIA S/N'), { tipoVia: 'Plaza', nombre: 'FICTICIA', numero: null, planta: null, puerta: null })
+})
+
+test('direccionSinNumero: «S/N» explícito ≠ dirección sin número que no se reconoce', () => {
+  assert.equal(direccionSinNumero('PZ FICTICIA S/N'), true)
+  assert.equal(direccionSinNumero('PZ FICTICIA, SN'), true)
+  assert.equal(direccionSinNumero('PZ FICTICIA SIN NÚMERO'), true)
+  assert.equal(direccionSinNumero('PZ FICTICIA'), false)
+  assert.equal(direccionSinNumero('PZ FICTICIA 12'), false)
+  assert.equal(direccionSinNumero(null), false)
 })

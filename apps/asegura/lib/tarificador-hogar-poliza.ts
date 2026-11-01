@@ -1,6 +1,6 @@
 import { esCarteraEnVigor, precargaViviendaDePoliza } from '@central/module-seguros'
 import { datosViviendaParaBot, formularioBotHogar, type RiesgoParaBotsHogar } from '@central/module-tarificacion'
-import { partirDireccion } from './codeoscopic/direccion.ts'
+import { direccionSinNumero, partirDireccion } from './codeoscopic/direccion.ts'
 import type { ReconstruccionRiesgo } from './tarificador-relanzar-reglas.ts'
 
 // «Probar» de HOGAR sin oportunidad de hogar ni trabajo previo (01/11/2026): el riesgo se construye de la póliza de hogar EN VIGOR más
@@ -95,6 +95,9 @@ export function riesgoHogarDePolizas(
   // 2) Calle y número: la dirección de la póliza es texto libre; el troceo es conservador (lo que no reconoce queda sin dato).
   const p = partirDireccion(direccion)
   Object.assign(vivienda, sinNulos({ nombreVia: p.nombre, numeroVia: p.numero, planta: p.planta, puertaVivienda: p.puerta }))
+  // 2b) «S/N»: la dirección dice que no tiene número. El adaptador de Allianz escribe el texto tal cual en «Número» y el validador lo admite
+  // (≤10 caracteres): se manda «S/N» como SUPUESTO (precio estimado). Que el portal lo acepte NO está verificado: si lo rechaza, falla el trabajo, no el 422.
+  if (p.numero === null && direccionSinNumero(direccion)) { vivienda.numeroVia = 'S/N'; supuestos.push('numeroSinNumero') }
   // 3) Año de construcción: el de la compañía (EIAC, `anioConstruccionCima`) NO es declarado → vale como SUPUESTO (precio estimado).
   if (vivienda.anioConstruccion == null) {
     const a = Number(esObj(datos) ? datos.anioConstruccionCima : undefined)
