@@ -15,7 +15,7 @@
 ## (01/11/2026) Blog asegura-web · PR #5328 MERGEADO (mora art. 20 LCS)
 - «No se pudo publicar» = `Tests (packages + guardián)` aún corriendo, no rojo. Graphify marcó error jurídico real.
 - Corregido en `claude/blog-asegura` (`cae7a0c`): intereses de mora desde la FECHA DEL SINIESTRO (no día 41), mora también si no paga en 3 meses, sin contradicción «automática/reclamar». Cuerpo del PR actualizado (plataforma lee el artículo de ahí: `blog-pr.ts`).
-- Lección para el agente del blog: los cepos validan citas, no el razonamiento; revisar art. 20.3/20.6 en futuros artículos de mora.
+- #5336: agente del blog blindado — síntesis lcs-18/20 exacta + cepo errorDeMora() (reparo `razonamiento`).
 - #5328 MERGEADO (squash `8ea7844`) con CI verde, por orden de Alberto.
 
 ## (31/10/2026) Fiscal · panel por devengo + simulador IRPF + hechos guardados

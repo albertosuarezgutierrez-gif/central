@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 import {
   construirPrompt,
   revisarGenerado,
+  errorDeMora,
   textoPlano,
   bloqueTs,
   insertarEnFuente,
@@ -229,4 +230,40 @@ test('ningún tema de la cola repite un artículo ya publicado', () => {
   const tras = primerPendiente === -1 ? [] : TEMAS.slice(primerPendiente)
   const chocan = tras.filter(t => publicados.has(t.slug)).map(t => t.slug)
   assert.deepEqual(chocan, [], `temas en cola que ya están publicados (y nunca se escribirán):\n${chocan.join('\n')}`)
+})
+
+// 🚨 Cepo de razonamiento (PR #5328): errores reales sobre la mora del art. 20 LCS.
+test('la mora: rechaza «día 41» y «reclamar expresamente»; acepta el texto correcto', () => {
+  const mal = [
+    'Los intereses empiezan a correr desde el día cuarenta y uno.',
+    'Los intereses de mora se devengan pasados los 40 días.',
+    'Debes reclamarlos expresamente: los intereses no llegan solos.',
+  ]
+  for (const m of mal) assert.ok(errorDeMora(`La mora es clara. ${m}`, ['lcs-20']), m)
+  const bien = [
+    'Los cuarenta días se cuentan desde la declaración del siniestro.',
+    'Los intereses de mora corren desde la fecha del siniestro.',
+    'No hace falta reclamar expresamente los intereses: nacen por ley, aunque conviene pedirlos por escrito.',
+  ]
+  for (const b of bien) assert.equal(errorDeMora(`La mora es clara. ${b}`, ['lcs-20']), null, b)
+  assert.equal(errorDeMora('Intereses desde el día 41.', []), null, 'sin mora ni lcs-20 no aplica')
+  const a = articuloValido()
+  a.secciones[0].parrafos = ['Hay mora y los intereses empiezan a correr desde el día cuarenta y uno.']
+  assert.ok(revisarGenerado(a, TEMA).some((r) => r.campo === 'razonamiento'))
+})
+
+// La negación del día 41 es la frase CORRECTA: no puede tumbar el artículo.
+test('la mora: «no desde el día 41» y «nunca desde el día cuarenta y uno» son correctos', () => {
+  const bien = [
+    'Los intereses corren desde la fecha del siniestro, no desde el día 41.',
+    'Los intereses corren desde la fecha del siniestro, nunca desde el día cuarenta y uno.',
+  ]
+  for (const b of bien) assert.equal(errorDeMora(`La mora es clara. ${b}`, ['lcs-20']), null, b)
+})
+
+// «Artículo 20» a secas es de cualquier ley: sin mora ni lcs-20, el cepo no se activa.
+test('artículo 20 de otra ley (LAU) sin mora ni lcs-20 no activa el cepo de la LCS', () => {
+  const lau = 'El artículo 20 de la Ley de Arrendamientos Urbanos regula los intereses: se cuentan tras los 40 días.'
+  assert.equal(errorDeMora(lau, ['lcs-22']), null)
+  assert.equal(errorDeMora(lau, []), null)
 })
