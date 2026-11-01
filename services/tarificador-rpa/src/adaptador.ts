@@ -72,6 +72,10 @@ export type ContextoPortal = ContextoTarificacion & {
    * contexto que `confirmarVehiculoMapfre`.
    */
   continuarMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
+  /** Mapfre NSEI (v0.8.47): cierra el diálogo «Controles técnicos» (`cerrarControlesTecnicosMapfre`) y devuelve su texto SIN sanear. */
+  cerrarControlesTecnicosMapfre?: (pagina: Page) => Promise<string>
+  /** Mapfre NSEI (v0.8.47): UN reintento de «Continuar» desde «Datos básicos» tras cerrar un rechazo de controles técnicos (código 232). */
+  reintentarAvanceMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
   /**
    * Mapfre NSEI (14/10/2026): elige en el diálogo de selección de persona del tomador la ÚNICA fila cuyo NIF normalizado es
    * el del riesgo (`elegirTomadorMapfre` de guard.ts; la comparación y el NIF no salen del guard). `ninguna`/`varias`/

@@ -197,7 +197,18 @@ import { fechaEs } from '../allianz/intranet/index.ts'
 import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
-import { pasoActivoMapfre, SEL_CLUB_MAPFRE, SEL_FILAS_DIALOGO_PERSONAS } from '../../guard.ts'
+import { pasoActivoMapfre, SEL_CLUB_MAPFRE, SEL_FILAS_DIALOGO_PERSONAS, limpiarMensajePortalDiagnosticoHasta } from '../../guard.ts'
+import {
+  avisoFechaEfectoSupuesta,
+  esRechazoFechaEfectoAnteriorMecanizacion,
+  esTextoControlesTecnicos,
+  extraerRechazoControlesTecnicos,
+  fechaEfectoTrasMecanizacion,
+  hoyEs,
+  mensajeRechazoControlesTecnicos,
+  SEL_DIALOGO_CONTROLES_TECNICOS,
+  SEL_OVERLAY_EXCLUIDO,
+} from '../../controles-tecnicos-mapfre.ts'
 import { ErrorOpcionSinResolver } from '../../mat-select.ts'
 
 /**
@@ -989,20 +1000,21 @@ export async function esperarCampoAsentado(raiz: Pick<Frame, 'locator'>, campo: 
 /**
  * v0.8.3 · Etiquetas de los campos con `mat-error` VISIBLE (sin el «*», redactadas; nunca el valor ni el texto del error), en
  * orden y sin repetir. Para que un «Continuar» que no llega a su destino diga QUÉ campo rechaza el portal. Solo lectura.
+ * v0.8.47: se ignoran los `mat-error` de overlays/diálogos (el formulario vacío del diálogo «Controles técnicos» no es del paso).
  */
 export async function camposConErrorVisibles(raiz: Pick<Frame, 'locator'>): Promise<string[]> {
   const etiquetas = await raiz
     .locator('mat-error')
     .locator('visible=true')
-    .evaluateAll((els) =>
-      els.map((e) => {
+    .evaluateAll((els, excluido) =>
+      els.filter((e) => e.closest(excluido) === null).map((e) => {
         const ff = e.closest('mat-form-field')
         const l = ff?.querySelector('mat-label') ?? ff?.querySelector('label')
         const ctl = ff?.querySelector('input, textarea, mat-select')
         const t = (l?.textContent ?? '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim()
         return t !== '' ? t : (ctl?.getAttribute('formcontrolname') ?? ctl?.getAttribute('name') ?? '')
       }),
-    )
+    SEL_OVERLAY_EXCLUIDO)
     .catch(() => [] as string[])
   const vistas = new Set<string>()
   for (const t of etiquetas) {
@@ -1449,11 +1461,81 @@ export async function sinOpcionalesAusentes(raiz: Pick<Frame, 'locator'>, plan: 
   return { escribibles: plan.escribibles, pendientes }
 }
 
-const continuar = (nsei: Page, ctx: Pick<ContextoPortal, 'continuarMapfre'> & { formador?: ContextoFormador }, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras') => {
+type CtxAvanceStepper = Pick<ContextoPortal, 'continuarMapfre'> & Partial<Pick<ContextoPortal, 'cerrarControlesTecnicosMapfre' | 'reintentarAvanceMapfre'>> & { formador?: ContextoFormador }
+
+/** Texto del diálogo «Controles técnicos» si está abierto (solo lectura); `null` si no hay o no se puede leer. */
+async function leerDialogoControlesTecnicos(nsei: Page): Promise<string | null> {
+  try {
+    const d = nsei.locator(SEL_DIALOGO_CONTROLES_TECNICOS).locator('visible=true')
+    if ((await d.count()) !== 1) return null
+    const t = await d.first().evaluate((e) => (e as HTMLElement).innerText ?? e.textContent ?? '')
+    return esTextoControlesTecnicos(t) ? t : null
+  } catch {
+    return null
+  }
+}
+
+/** Valor dd/mm/aaaa de UN solo input en el `mat-form-field` con esa etiqueta de «Datos básicos»; `null` si no hay exactamente uno. */
+async function inputPorEtiquetaDatosBasicos(nsei: Page, etiqueta: string): Promise<Locator | null> {
+  try {
+    const campos = nsei.locator('app-datos-basicos mat-form-field').filter({ hasText: patronEtiqueta(etiqueta) }).locator('input')
+    return (await campos.count()) === 1 ? campos.first() : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Código 232 (efecto anterior a la mecanización): lee «Fecha de efecto» y «Fecha de mecanización» de Datos básicos y, si ambas son
+ * legibles, fija efecto = max(efecto, mecanización, hoy). `null` = no se puede con seguridad (nada se escribe). `hoy` inyectable.
+ */
+export async function ajustarFechaEfectoTras232(nsei: Page, hoy: string = hoyEs()): Promise<string | null> {
+  const efecto = await inputPorEtiquetaDatosBasicos(nsei, 'Fecha de efecto')
+  const mecaniz = await inputPorEtiquetaDatosBasicos(nsei, 'Fecha de mecanización')
+  if (!efecto || !mecaniz) return null
+  const ajuste = fechaEfectoTrasMecanizacion(await efecto.inputValue().catch(() => null), await mecaniz.inputValue().catch(() => null), hoy)
+  if (!ajuste || !ajuste.cambia) return null
+  if (!(await esperarEditable(efecto))) return null
+  await efecto.fill(ajuste.fecha)
+  await efecto.blur().catch(() => undefined)
+  if (compararFechaEs(await efecto.inputValue().catch(() => ''), ajuste.fecha) !== 'ok') return null
+  return ajuste.fecha
+}
+
+/**
+ * v0.8.47 · Diálogo «Controles técnicos» tras «Continuar»: lo cierra («Cerrar», guard) y lanza un error de portal claro
+ * «Mapfre rechaza (Código NNN): …». Código 232 desde Datos básicos: UN reintento con la fecha de efecto ajustada (devuelve el
+ * aviso de supuesto). `null` = no hay tal diálogo.
+ */
+async function atenderControlesTecnicos(nsei: Page, ctx: CtxAvanceStepper, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras', hoy?: string): Promise<string | null> {
+  const bruto = await leerDialogoControlesTecnicos(nsei)
+  if (bruto === null) return null
+  const limpiar = (t: string) => limpiarMensajePortalDiagnosticoHasta(t, 200)
+  const rechazo = extraerRechazoControlesTecnicos(bruto, limpiar)!
+  if (!ctx.cerrarControlesTecnicosMapfre) throw new ErrorTarificador('portal', `${mensajeRechazoControlesTecnicos(rechazo)} (el robot no tiene la función guardada para cerrar el diálogo)`)
+  await ctx.cerrarControlesTecnicosMapfre(nsei)
+  if (paso !== 'datosBasicos' || !esRechazoFechaEfectoAnteriorMecanizacion(rechazo) || !ctx.reintentarAvanceMapfre) throw new ErrorTarificador('portal', mensajeRechazoControlesTecnicos(rechazo))
+  const fecha = await ajustarFechaEfectoTras232(nsei, hoy)
+  if (fecha === null) throw new ErrorTarificador('portal', `${mensajeRechazoControlesTecnicos(rechazo)} (no se pudo leer con seguridad la fecha de efecto/mecanización: candidato a reintento diferido)`)
+  await ctx.reintentarAvanceMapfre(nsei, paso).catch(async (e: unknown) => {
+    if (!(e instanceof ErrorTarificador) || !/la llegada a «/.test(e.message)) throw e
+    const segundo = await leerDialogoControlesTecnicos(nsei)
+    if (segundo === null) throw e
+    const r2 = extraerRechazoControlesTecnicos(segundo, limpiar)!
+    await ctx.cerrarControlesTecnicosMapfre!(nsei)
+    throw new ErrorTarificador('portal', `${mensajeRechazoControlesTecnicos(r2)} (tras ajustar la fecha de efecto)`)
+  })
+  return avisoFechaEfectoSupuesta(fecha)
+}
+
+const continuar = (nsei: Page, ctx: CtxAvanceStepper, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras'): Promise<string | null> => {
   if (!ctx.continuarMapfre) throw new ErrorMapaIncompleto('la función guardada «Continuar» de Mapfre en el contexto del runner')
   // v0.8.3: si no se llega al destino y el portal marca campos con `mat-error`, el hueco los NOMBRA (etiquetas, sin valores).
-  return ctx.continuarMapfre(nsei, paso).catch(async (e: unknown) => {
+  return ctx.continuarMapfre(nsei, paso).then(() => null as string | null, async (e: unknown): Promise<string | null> => {
     if (!(e instanceof ErrorTarificador) || !/la llegada a «/.test(e.message)) throw e
+    // v0.8.47: antes de nombrar campos con error, ¿es el diálogo «Controles técnicos»? (sus «Campo obligatorio» no son del paso)
+    const aviso = await atenderControlesTecnicos(nsei, ctx, paso)
+    if (aviso !== null) return aviso
     const conError = await camposConErrorVisibles(nsei)
     if (conError.length === 0) throw e
     const nombre = PASOS_NSEI.find((x) => x.id === paso)!.nombre
@@ -1682,7 +1764,7 @@ export async function altaTomadorNuevo(nsei: Page, f: FormularioAuto, ctx: Pick<
  * `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a su campo: nunca a logs, mensajes ni
  * resultado. Lo resuelto por el respaldo se confirma tras llegar al paso 2.
  */
-export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect'>>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<void> {
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'elegirMatSelect' | 'leerOpcionesMatSelect' | 'cerrarControlesTecnicosMapfre' | 'reintentarAvanceMapfre'>>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<string | null> {
   const nif = documentoTomadorDe(f)
   if (nif === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
   const r = await campoConRespaldo(nsei, SEL_TOMADOR.documento, { page: nsei, formador: ctx.formador, etiqueta: 'NIF/CIF', descripcion: 'Campo del documento (NIF/CIF) del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor)' })
@@ -1726,8 +1808,9 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
   if (reaccion === 'nuevo') await altaTomadorNuevo(nsei, f, ctx)
   else await exigirSinCamposObligatorios(nsei, ctx, 'con el tomador autorrellenado por Mapfre')
   // v0.8.33: el «Compañia» de «Datos básicos» es la ENTIDAD EMISORA de Mapfre, no la compañía anterior: este paso nunca lo toca (pasaba sin tocarlo hasta 0.8.31).
-  await continuar(nsei, ctx, 'datosBasicos')
+  const avisoFecha = await continuar(nsei, ctx, 'datosBasicos')
   await r.confirmar().catch(() => undefined)
+  return avisoFecha
 }
 
 /** v0.8.33 · AVISO que queda en la oferta cuando «Figuras»/«Coberturas» no traen ningún control de compañía anterior (la toma Mapfre de su consulta de historial). */
@@ -2159,7 +2242,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.46',
+  version: '0.8.47',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
@@ -2172,14 +2255,14 @@ export const mapfreAuto = {
     await login(page, ctx)
     await ctx.trasLogin()
     const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, formador: ctx.formador, credenciales: ctx.credenciales, log: ctx.log })
-    await pasoDatosBasicos(nsei, form, ctx)
+    const avisoFechaEfecto = await pasoDatosBasicos(nsei, form, ctx)
     const { vehiculo: vehiculoConfirmado, supuestoVersion } = await consultarVehiculoPorMatriculaConSupuesto(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form)
     ctx.log('vehiculo confirmado')
     // 18/10/2026: los antecedentes SUPUESTOS (favorables) van detrás del supuesto del vehículo, en el mismo aviso.
     // Conductor = tomador sin `tomadorEsConductor` (solo pasa con la fecha de nacimiento de la ficha igual: `exigirConductorEsTomador`):
     // SUPUESTO declarado, no dato.
     const conductor = supuestoConductorTomador(form)
-    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
+    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(avisoFechaEfecto ? [avisoFechaEfecto] : []), ...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
   },
 } as const
 

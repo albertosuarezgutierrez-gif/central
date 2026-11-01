@@ -37,7 +37,7 @@ const FIGURAS = '<app-tomador><datos-licencia><mat-form-field><label><mat-label>
 // (los tests de «compañía diferida» de 0.8.30 se retiraron en 0.8.32: el desplegable es de «Datos básicos», ver mapfre-v0832.test.ts)
 const PLAN = { escribibles: [{ sel: SEL_HISTORIAL.companiaAnterior, tipo: 'mat-select', etiqueta: 'compañía anterior', paso: 'figuras', valor: 'ZZ Seguros', opciones: ['ZZ Seguros'] }], pendientes: [] } as never
 
-test('v0.8.30 · la versión del bot es 0.8.30', () => assert.equal(mapfreAuto.version, '0.8.46'))
+test('v0.8.30 · la versión del bot es 0.8.30', () => assert.equal(mapfreAuto.version, '0.8.47'))
 
 test('«Compañia» habilitado en otro componente OCULTO (display:none): el diagnóstico lo dice con el motivo y el componente; la selección no lo toca', async () => {
   const page = await pagina(`<body>${FIGURAS}<app-info-descuentos style="display:none">${CAMPO(SEL)}</app-info-descuentos></body>`)

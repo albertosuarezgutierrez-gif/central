@@ -7,7 +7,7 @@ import { mapfreAuto } from '../src/adapters/mapfre/auto.ts'
 const CONS = 'Operación consolidada correctamente Cliente Prueba: 12345Y67890'
 const ALTA = 'warning ¿Desea dar de alta al cliente en el CRM Mapfre al contratar esta póliza? ¡Mapfre! info_outlined Mapfre'
 
-test('v0.8.44 · versión', () => assert.equal(mapfreAuto.version, '0.8.46'))
+test('v0.8.44 · versión', () => assert.equal(mapfreAuto.version, '0.8.47'))
 
 test('clasificarDialogoMapfre: textos reales → consolidada (Aceptar) / alta (No, Sí); el resto, otro', () => {
   assert.equal(clasificarDialogoMapfre(CONS, ['Aceptar']), 'consolidada')
