@@ -15,7 +15,7 @@ import { VERSION_GENERALI_AUTO } from '../src/adapters/generali/auto.ts'
 const PDF_MINIMO = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n' + ' '.repeat(80), 'latin1')
 
 test('versiones: Allianz auto 0.6.35, Mapfre auto 0.8.30, Generali auto 0.2.41', () => {
-  assert.equal(allianzAuto.version, '0.6.37')
+  assert.equal(allianzAuto.version, '0.6.38')
   assert.equal(mapfreAuto.version, '0.8.38')
   assert.equal(VERSION_GENERALI_AUTO, '0.2.56')
 })

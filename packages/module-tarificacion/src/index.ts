@@ -469,6 +469,25 @@ export {
   type CandidataConDatos,
   type ResolucionPorVehiculoConfirmado,
 } from './vehiculo-confirmado.ts'
+// Vehículo de REFERENCIA de la oportunidad (01/11/2026): uno para todas las compañías, por prioridad de origen; elección por similitud.
+export {
+  ORIGENES_VEHICULO_REFERENCIA,
+  NOMBRE_ORIGEN_VEHICULO_REFERENCIA,
+  CLAVES_VEHICULO_REFERENCIA,
+  validarVehiculoReferencia,
+  prioridadOrigenVehiculo,
+  vehiculoReferenciaEfectivo,
+  vehiculoReferenciaDesdeConfirmado,
+  vehiculoReferenciaDesdeSeleccion,
+  textoVehiculoReferencia,
+  supuestoVehiculoReferencia,
+  elegirOpcionPorVehiculoReferencia,
+  type OrigenVehiculoReferencia,
+  type VehiculoReferencia,
+  type ValidacionVehiculoReferencia,
+  type OpcionCatalogo,
+  type EleccionPorReferencia,
+} from './vehiculo-referencia.ts'
 // Población de un CP con varias localidades (13/10/2026): la elige el riesgo (exacta) o una persona; nunca la IA.
 export {
   PREFIJO_ELECCION_POBLACION,

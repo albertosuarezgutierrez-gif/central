@@ -33,7 +33,8 @@ test('🪤 tarificador.ts guarda la firmeza calculada (no el literal «estimado�
   const src = readFileSync(new URL('./tarificador.ts', import.meta.url), 'utf8')
   const tramo = src.slice(src.indexOf('async function guardarTarificacionRpa'), src.indexOf('async function guardarAdjunto'))
   assert.ok(tramo.length > 0)
-  assert.match(tramo, /ofertasConFirmezaRpa\(t\.compania, t\.ramo, riesgoEntregado, ofertas\)/)
+  // 01/11/2026: las ofertas llevan antes el supuesto del vehículo de referencia (si lo hubo); la firmeza sigue con el riesgo ENTREGADO.
+  assert.match(tramo, /ofertasConFirmezaRpa\(t\.compania, t\.ramo, riesgoEntregado, ofertasConSupuestoReferencia\(ofertas, rg\)\)/)
   assert.match(tramo, /aplicarPolizaAnteriorUltimos5\(t\.compania, t\.ramo, rg, numeroPolizaActual\)/)
   // La lectura del nº va ANTES de abrir la transacción y sin `tx` (un fallo suyo no puede abortar la tx del resultado).
   assert.doesNotMatch(tramo, /leerNumeroPolizaActual/)

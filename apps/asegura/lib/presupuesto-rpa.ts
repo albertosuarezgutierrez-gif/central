@@ -38,7 +38,7 @@ import { cargarPropuestaOportunidad, referenciaOportunidad } from './propuesta-o
 import { trabajosVigentes, type TrabajoParaPropuesta } from './propuesta-oportunidad-reglas'
 import { URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
 import {
-  ACTOR_RPA, EUR_ESTIMADO_NARRATIVA, alertasDeAvisos, avisosOpcionRpa, claveRpaDeFila, decidirDisparo, decidirIaAuto, decidirSustitucion, enlaceOportunidad,
+  ACTOR_RPA, EUR_ESTIMADO_NARRATIVA, alertasDeAvisos, cierrePuedeDispararPresupuesto, avisosOpcionRpa, claveRpaDeFila, decidirDisparo, decidirIaAuto, decidirSustitucion, enlaceOportunidad,
   filaOfertaRpa, mismoConjunto, nombreDePila, ofertasDeRespuesta, sobreCoberturasRpa, textoAvisoCorteRpa, textoAvisoPresupuestoRpa, type OfertaRpaLeida,
 } from './presupuesto-rpa-reglas'
 
@@ -65,7 +65,7 @@ type Opciones = {
 
 /**
  * Lo que llama la ruta del resultado del worker (en `after`) con el trabajo recién cerrado. NUNCA lanza.
- * Solo trabajos de tarificar `ok` con oportunidad: el resto no tiene nada que presupuestar.
+ * Trabajos de tarificar CERRADOS (con o sin precio) con oportunidad: el borrador sale cuando no queda ninguno abierto y hay algún `ok`.
  */
 export async function presupuestoTrasTrabajoRpa(trabajoId: string): Promise<ResultadoPresupuestoRpa> {
   try {
@@ -75,7 +75,8 @@ export async function presupuestoTrasTrabajoRpa(trabajoId: string): Promise<Resu
              to_jsonb(t)->>'modo' as modo
       from tarificacion_trabajos t where t.id = ${trabajoId}::uuid`
     if (!t) return { estado: 'nada', motivo: 'trabajo_no_encontrado' }
-    if (t.estado !== 'ok' || (t.modo ?? 'tarificar') !== 'tarificar') return { estado: 'nada', motivo: 'no_es_tarificar_ok' }
+    // 01/11/2026: también un cierre SIN precio (error, humano, cancelado): puede ser el último abierto y los `ok` de los demás tienen borrador.
+    if (!cierrePuedeDispararPresupuesto(t.estado, t.modo)) return { estado: 'nada', motivo: 'no_es_tarificar_cerrado' }
     if (!t.oportunidad_id) return { estado: 'nada', motivo: 'sin_oportunidad' }
     return await prepararPresupuestoRpa(t.correduria_id, t.oportunidad_id, { esperarAbiertos: true, avisar: true })
   } catch (e) {

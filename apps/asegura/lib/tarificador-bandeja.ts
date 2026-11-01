@@ -6,6 +6,8 @@ import { hayBotVersion, hayPasos } from './esquema-bd'
 import { claveMemoriaDeRiesgo } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
 import { purgarRiesgoTrabajos } from './tarificador-purga'
+import { esRamoVehiculo, type TrabajoPropagado } from './tarificador-vehiculo-referencia'
+import { propagarEleccionHumana } from './tarificador-vehiculo-referencia-bd'
 import { eleccionContraLista, eleccionPoblacionContraLista, mismaEleccion, proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino, type EleccionBandeja, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
 
 export type ListaBandeja = { total: number; items: ItemBandeja[]; hayMas: boolean }
@@ -45,7 +47,8 @@ export async function listarBandeja(correduriaId: string, limite: number, desde:
 }
 
 export type ResultadoAccion =
-  | { estado: 'aplicado'; estadoTrabajo: string; compania: string }
+  /** `propagados` (01/11/2026): otros trabajos de la oportunidad relanzados con la elección de esta persona (vehículo de referencia). */
+  | { estado: 'aplicado'; estadoTrabajo: string; compania: string; propagados?: TrabajoPropagado[] }
   | { estado: 'sin_cambios'; estadoTrabajo: string }
   | { estado: 'conflicto'; motivo: string; estadoTrabajo: string }
   | { estado: 'no_encontrado' }
@@ -75,10 +78,11 @@ export async function aplicarAccionBandeja(
   eleccionPoblacion: string | null = null,
 ): Promise<ResultadoAccion> {
   let aprender: { compania: string; ramo: string; clave: string; codigo: string; etiqueta: string } | null = null
+  let propagar: { oportunidadId: string; etiqueta: string } | null = null
   const res = await prisma.$transaction(async (tx) => {
     // `modo` por to_jsonb: sin el SQL de emisión (2026-10-10) la columna no existe y sale null (= tarificar).
-    const filas = await tx.$queryRaw<{ estado: string; error: unknown; compania: string; ramo: string; riesgo: unknown; modo: string | null; eleccion_codigo: string | null; eleccion_etiqueta: string | null; eleccion_poblacion: string | null }[]>`
-      select t.estado, t.error, t.compania, t.ramo, t.riesgo, to_jsonb(t)->>'modo' as modo, t.riesgo->'eleccionVersion'->>'codigo' as eleccion_codigo,
+    const filas = await tx.$queryRaw<{ estado: string; error: unknown; compania: string; ramo: string; riesgo: unknown; modo: string | null; oportunidad_id: string | null; eleccion_codigo: string | null; eleccion_etiqueta: string | null; eleccion_poblacion: string | null }[]>`
+      select t.estado, t.error, t.compania, t.ramo, t.riesgo, to_jsonb(t)->>'modo' as modo, t.oportunidad_id::text as oportunidad_id, t.riesgo->'eleccionVersion'->>'codigo' as eleccion_codigo,
              t.riesgo->'eleccionVersion'->>'etiqueta' as eleccion_etiqueta,
              t.riesgo->>'eleccionPoblacion' as eleccion_poblacion
       from seguros.tarificacion_trabajos t
@@ -116,6 +120,8 @@ export async function aplicarAccionBandeja(
       // La memoria va por CÓDIGO: una elección sin código (por etiqueta, p. ej. Mapfre) no se recuerda.
       const clave = claveMemoriaDeRiesgo(f.riesgo)
       if (clave && v.eleccion.codigo !== null) aprender = { compania: f.compania, ramo: f.ramo, clave, codigo: v.eleccion.codigo, etiqueta: v.eleccion.etiqueta }
+      // VEHÍCULO DE REFERENCIA (01/11/2026): la elección de una persona vale para TODA la oportunidad (se propaga tras el commit).
+      if (f.oportunidad_id && esRamoVehiculo(f.ramo)) propagar = { oportunidadId: f.oportunidad_id, etiqueta: v.eleccion.etiqueta }
     } else if (accion === 'reintentar') {
       await tx.$executeRaw`
         update seguros.tarificacion_trabajos
@@ -135,6 +141,12 @@ export async function aplicarAccionBandeja(
   const a = aprender as { compania: string; ramo: string; clave: string; codigo: string; etiqueta: string } | null
   if (res.estado === 'aplicado' && a) {
     await guardarMemoriaVersion({ correduriaId, compania: a.compania, ramo: a.ramo, clave: a.clave }, { codigo: a.codigo, etiqueta: a.etiqueta, origen: 'humano' })
+  }
+  // Propagación DESPUÉS de la transacción y sin lanzar (`propagarEleccionHumana`): la acción de la persona nunca depende de ella.
+  const p = propagar as { oportunidadId: string; etiqueta: string } | null
+  if (res.estado === 'aplicado' && p) {
+    const propagados = await propagarEleccionHumana(correduriaId, id, p.oportunidadId, p.etiqueta)
+    if (propagados.length) return { ...res, propagados }
   }
   return res
 }

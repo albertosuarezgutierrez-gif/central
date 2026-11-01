@@ -338,6 +338,16 @@ export function decidirDisparo(trabajos: readonly TrabajoParaDisparo[]): { dispa
   return { disparar: true }
 }
 
+/**
+ * ¿El cierre de ESTE trabajo puede ser el último de la oportunidad y disparar el borrador? (01/11/2026) Cualquier trabajo de tarificar
+ * que ya NO está abierto: `ok`, pero también `error_definitivo`, `requiere_humano`, `cancelado`, `atascado`… Antes solo el `ok`: si el
+ * último en cerrarse fallaba, el borrador con los `ok` de los demás no se creaba nunca. Después decide `decidirDisparo` (hace falta un
+ * `ok` y ningún abierto). PURA.
+ */
+export function cierrePuedeDispararPresupuesto(estado: string, modo: string | null): boolean {
+  return (modo ?? 'tarificar') === 'tarificar' && !ABIERTOS.has(estado)
+}
+
 /** Mismo conjunto de ids (orden indiferente). Para no duplicar un borrador con exactamente las mismas ofertas. */
 export function mismoConjunto(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) return false

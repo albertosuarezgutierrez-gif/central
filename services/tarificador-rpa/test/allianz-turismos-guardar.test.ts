@@ -52,7 +52,7 @@ test('ofertas: guardado → referenciaPortal + aviso; no guardado → solo aviso
   assert.equal(n!.referenciaPortal, null)
   assert.equal(n!.primaAnualEur, 100)
   assert.match(n!.avisos.at(-1)!, /NO guardado/)
-  assert.equal(allianzAuto.version, '0.6.37')
+  assert.equal(allianzAuto.version, '0.6.38')
 })
 
 // ── Navegador: carcasa ePAC + app de Turismos con el formulario de guardado ──
