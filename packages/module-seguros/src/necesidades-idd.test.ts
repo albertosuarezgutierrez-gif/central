@@ -59,7 +59,6 @@ test('una respuesta que no es de la lista no se escribe en la declaración', () 
 })
 
 // ─── Deducir de lo presupuestado (29/09/2026) ────────────────────────────────
-import { deducirNecesidades } from './necesidades-idd.ts'
 
 const HOY = new Date('2026-09-29T00:00:00Z')
 const persona = (id: string, nacimiento = '1980-01-01', carne = '2000-01-01', tipo = 'Dni') => ({
