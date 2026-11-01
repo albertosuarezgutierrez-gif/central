@@ -209,7 +209,7 @@ test('encolar · un riesgo de moto PURGADO no se puede volver a encolar («Proba
   const ruta = leer('app/api/operador/tarificador/probar/route.ts')
   const t = trozo('app/api/operador/tarificador/probar/route.ts', 'const d = decidirRiesgoProbar(', 'lanzarPendientes(')
   assert.match(t, /validar: \(riesgo\) => validarEntradaRamo\(ramo, riesgo, compania\)/, 'la ruta inyecta validarEntradaRamo(ramo, riesgo, compania)')
-  assert.match(t, /if \(!d\.ok\) return NextResponse\.json\(\{ estado: 'rechazado', motivo: d\.motivo, \.\.\.\(d\.errores \? \{ errores: d\.errores \} : \{\}\) \}, \{ status: d\.status \}\)/)
+  assert.match(t, /if \(!d\.ok\) return NextResponse\.json\(\{ estado: 'rechazado', motivo: d\.motivo, \.\.\.\(d\.errores \? \{ errores: d\.errores \} : \{\}\), \.\.\.\(avisos\.length \? \{ avisos \} : \{\}\) \}, \{ status: d\.status \}\)/)
   assert.ok(t.indexOf('if (!d.ok)') < t.indexOf('encolarTrabajo('), 'se encola ANTES de comprobar d.ok')
   assert.equal(ruta.split('encolarTrabajo({').length - 1, 1, 'la ruta solo encola por un camino')
   assert.match(t, /\.\.\.valida\.entrada/, 'se encola la entrada ya validada, no el riesgo crudo')

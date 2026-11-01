@@ -425,12 +425,18 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * `seleccionVehiculo` de Allianz/póliza). Solo con EXACTAMENTE una opción compatible; se declara como supuesto (precio `estimado`).
  */
 /**
+ * v0.2.57 (01/11/2026, trabajo af1fb857 parado con «Mapfre» en «Compañía de procedencia»: AGROPECUARIA · AUTOMOVILES · FAMILIAR · GUANARTEME · MUTUALIDAD):
+ * si varias opciones casan con la misma marca, `desempatarProcedenciaGenerali` (reglas.ts, tabla por marca y ramo) elige de forma determinista (auto:
+ * AUTOMOVIL(ES) > FAMILIAR, nunca AGROPECUARIA/GUANARTEME salvo que sea la única). Dato que no condiciona la emisión; va como supuesto (precio `estimado`).
+ * Sin desempate posible, el atasco de siempre.
+ */
+/**
  * v0.2.56 (01/11/2026): la elección de la bandeja también vale en el nivel MODELO. Si la etiqueta elegida casa (normalizada, entera) con
  * EXACTAMENTE una opción de «Modelo» (lista FORFOUR · FORTWO CABRIO · FORTWO COUPE), se elige ahí y manda sobre el desempate por origen; si no
  * casa en el modelo, el desempate por origen sigue funcionando en ese nivel y la elección se aplica luego en versión, como antes. El atasco
  * del nivel modelo dice «modelos» (`ErrorEleccionModeloGenerali`), no «versiones», para que la bandeja no confunda.
  */
-export const VERSION_GENERALI_AUTO = '0.2.56'
+export const VERSION_GENERALI_AUTO = '0.2.57'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -607,7 +613,7 @@ export async function rellenarTipoYProcedenciaGenerali(raiz: Raiz, form: Formula
         : { indice: i, aviso: `${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}: ${ops[i]!.trim()} (la ficha dice que no tenía seguro anterior)` }
     }
     // v0.2.48: exacta → alias de la compañía → razón social por palabra COMPLETA (única); 0 o varias → para con las opciones.
-    const r = opcionCompaniaProcedenciaGenerali(ops, p.compania)
+    const r = opcionCompaniaProcedenciaGenerali(ops, p.compania, 'auto')
     const nombre = sanearFragmentoGenerali(p.compania).slice(0, 60)
     if ('error' in r) {
       const cands = r.candidatas.map((c) => `«${sanearFragmentoGenerali(c).slice(0, 60)}»`).join(' · ')
@@ -618,6 +624,8 @@ export async function rellenarTipoYProcedenciaGenerali(raiz: Raiz, form: Formula
           : 'ninguna casa ni exacta, ni por alias, ni por razón social'
       return { error: new ErrorMapaIncompletoGenerali(`la compañía «${nombre}» de la ficha en «${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}» (${que}; opciones vistas: ${opcionesVistasGenerali(ops, 40)})`) }
     }
+    // v0.2.57: elegida entre varias de la misma marca por la tabla de preferencias del ramo → se declara como supuesto (precio `estimado`).
+    if (r.via === 'aproximada') return { indice: r.indice, aviso: `${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}: ${ops[r.indice]!.trim()} (compañía anterior de la ficha «${nombre}»: elegida por aproximación entre varias de la misma marca; supuesto)` }
     const como = r.via === 'exacta' ? '' : r.via === 'alias' ? ` «${nombre}», por alias` : ` «${nombre}», por razón social`
     return { indice: r.indice, aviso: `${ETIQUETA_COMPANIA_PROCEDENCIA_GENERALI}: ${ops[r.indice]!.trim()} (compañía anterior de la ficha${como})` }
   })

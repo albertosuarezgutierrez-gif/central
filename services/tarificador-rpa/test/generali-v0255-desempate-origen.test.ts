@@ -12,7 +12,7 @@ const SMART = ['Seleccione uno', 'FORFOUR', 'FORTWO CABRIO', 'FORTWO COUPE']
 const MAPFRE: OrigenDesempateGenerali = { fuente: 'Mapfre', texto: 'Smart Forfour Pure 1.1', puertas: 5, cv: 75, cc: 1124 }
 const ALLIANZ: OrigenDesempateGenerali = { fuente: 'Allianz/póliza', texto: 'SMART Fortwo PASSION 52', puertas: null, cv: null, cc: null }
 
-test('v0.2.55 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.56'))
+test('v0.2.55 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.57'))
 
 test('v0.2.55 · única coincidencia: la denominación de Mapfre (FORFOUR, 5 puertas) casa con UNA opción → esa, declarada', () => {
   const d = desempatarPorOrigenGenerali(SMART, [MAPFRE], 'modelo')
