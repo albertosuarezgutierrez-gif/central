@@ -184,9 +184,9 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { descargarProyectoAuto, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
+import { descargarProyectoAuto, esperarSinCapaOverlay, ofertasConPdfProyecto } from '../../descarga-proyecto-auto.ts'
 import { textoDePdf } from '../../pdf-texto.ts'
-import { coberturasDeLineas, coberturasPorProducto, ofertasConGarantiasMapfre, textoALineas, type CoberturasPorProducto } from './garantias.ts'
+import { coberturasDeLineas, coberturasPorProducto, diagnosticoGarantiasMapfre, ofertasConGarantiasMapfre, textoALineas, type CoberturasPorProducto } from './garantias.ts'
 import { CONCEPTOS_LECTURA, regexEtiquetaExacta } from '../../vocabulario.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/intranet/index.ts'
@@ -435,6 +435,25 @@ export async function leerGarantiasPantallaMapfre(nsei: Pick<Frame, 'locator'>, 
   const cuadro = nsei.locator('app-coberturas').first()
   const textoCuadro = (await cuadro.count().catch(() => 0)) > 0 ? await cuadro.innerText({ timeout: 2_000 }).catch(() => '') : ''
   for (const [k, v] of coberturasPorProducto(textoCuadro.split('\n'), productos)) if (!salida.has(k)) salida.set(k, v)
+  if (salida.size >= productos.length) return salida
+  // v0.8.43: paneles PLEGADOS de cada tarjeta (el `innerText` no ve lo oculto): se lee su `textContent` por filas (celdas con tabulador). Solo lectura: no se despliega nada.
+  const ocultas = await nsei.locator(SEL_PRIMAS.producto).evaluateAll((els) => els.map((e) => {
+    // Recorrido iterativo en orden de documento (sin funciones con nombre dentro: tsx les añade un ayudante que no existe en el navegador).
+    const lineas: string[] = []
+    const pila: Element[] = [e]
+    while (pila.length > 0) {
+      const n = pila.pop()!
+      if (n.tagName === 'TR') { lineas.push(Array.from(n.children).map((c) => (c.textContent ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean).join('\t')); continue }
+      if (n.children.length === 0) { const t = (n.textContent ?? '').replace(/\s+/g, ' ').trim(); if (t) lineas.push(t); continue }
+      for (let i = n.children.length - 1; i >= 0; i--) pila.push(n.children[i]!)
+    }
+    return { producto: e.querySelector('mat-select .mat-select-value-text')?.textContent ?? '', lineas }
+  })).catch(() => [])
+  for (const t of ocultas) {
+    const k = limpiar(t.producto).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    const c = coberturasDeLineas(t.lineas)
+    if (k && c.coberturas.length > 0 && !salida.has(k)) salida.set(k, c)
+  }
   return salida
 }
 
@@ -2110,13 +2129,19 @@ export async function precioDesdeObjetoAsegurado(
   let bytesPdf: Uint8Array | null = null
   const adjuntar = ctx.adjuntarPdf
   const ctxPdf = { ...ctx, adjuntarPdf: adjuntar ? (nombre: string, contenido: Uint8Array) => { bytesPdf = contenido; return adjuntar(nombre, contenido) } : undefined }
+  // v0.8.43: con el diálogo de alta ya respondido, se espera a que desaparezca su capa (cdk-overlay-backdrop) antes de buscar «picture_as_pdf».
+  const capaLibre = await esperarSinCapaOverlay(nsei)
+  if (!capaLibre) ctx.log?.('mapfre: la capa cdk-overlay-backdrop sigue visible tras la espera; se intenta la descarga igualmente')
   const pdfProyecto = await descargarProyectoAuto(nsei, ctxPdf, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
   const nombresProductos = primas.map((p) => p.producto)
   let garantiasPdf: CoberturasPorProducto = new Map()
-  try { if (bytesPdf) garantiasPdf = coberturasPorProducto(textoALineas(textoDePdf(Buffer.from(bytesPdf))), nombresProductos) } catch { /* PDF ilegible: queda la pantalla */ }
+  let lineasPdf = 0
+  try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; garantiasPdf = coberturasPorProducto(lineas, nombresProductos) } } catch { /* PDF ilegible: queda la pantalla */ }
   ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
+  // v0.8.43: si algún producto queda sin garantías, el aviso dice POR QUÉ (PDF no bajado / sin texto / sin sección del producto / pantalla vacía).
+  const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresProductos })
   // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
-  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
+  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla, diagGarantias), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -2129,7 +2154,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.42',
+  version: '0.8.43',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

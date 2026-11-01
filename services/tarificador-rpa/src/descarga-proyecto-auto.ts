@@ -29,6 +29,26 @@ export const REINTENTO_CLIC_DESCARGA_MS = 800
 export const MIN_BYTES_PDF_PROYECTO = 100
 export const MAX_BYTES_PDF_PROYECTO = 4 * 1024 * 1024
 
+/** v0.8.43: tope de espera a que desaparezca la capa de un diálogo de Material (cdk-overlay-backdrop) antes de buscar el botón de descarga. */
+export const TOPE_CAPA_OVERLAY_MS = 6_000
+const SEL_CAPA_OVERLAY = '.cdk-overlay-backdrop-showing, .cdk-overlay-backdrop.cdk-overlay-dark-backdrop'
+
+/**
+ * v0.8.43 (Mapfre, tras cerrar el diálogo de alta): espera —SOLO LECTURA, sin pulsar nada— a que no quede ninguna capa `cdk-overlay-backdrop` visible
+ * (la que tapaba el icono «picture_as_pdf»). Devuelve true si ya no hay capa, false si sigue tras `topeMs` (la descarga se intenta igual: su reintento
+ * y su cierre de diálogos informativos siguen siendo los de siempre). Nunca lanza. Una página sin `locator` (de prueba) cuenta como sin capa.
+ */
+export async function esperarSinCapaOverlay(page: Page, topeMs = TOPE_CAPA_OVERLAY_MS): Promise<boolean> {
+  const hasta = Date.now() + topeMs
+  for (;;) {
+    let visibles = 0
+    try { visibles = await page.locator(SEL_CAPA_OVERLAY).evaluateAll((els) => els.filter((e) => { const r = (e as HTMLElement).getBoundingClientRect(); const st = getComputedStyle(e as HTMLElement); return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' }).length) } catch { return true }
+    if (visibles === 0) return true
+    if (Date.now() >= hasta) return false
+    try { await page.waitForTimeout(250) } catch { return true }
+  }
+}
+
 const NOMBRE_COMPANIA: Record<CompaniaDescargaProyecto, string> = { allianz: 'Allianz', mapfre: 'Mapfre', generali: 'Generali' }
 
 /** ¿Tamaño y cabecera de un PDF aceptables? `null` = bien; texto = motivo. PURA. */
