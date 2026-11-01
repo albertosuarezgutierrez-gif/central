@@ -3793,8 +3793,10 @@ export async function marcarOpcionResueltaHogarAllianz(marco: Frame, guard: Guar
  * su pregunta (`[nxheadline]`) dentro de `ambito`. Solo localiza y lee (el adaptador no puede nombrar radios: guardián de la raíz);
  * marcar sigue siendo SOLO `marcarOpcionResueltaHogarAllianz` (comprobarBoton + label for único + que quede marcado).
  */
-export function grupoOpcionesHogarAllianz(marco: Frame, ambito: string, pregunta: string): Locator {
-  const exacto = new RegExp(`^\\s*${pregunta.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\s*$`, 'i')
+export function grupoOpcionesHogarAllianz(marco: Frame, ambito: string, pregunta: string, contiene = false): Locator {
+  const lit = pregunta.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+  // 0.1.13: `contiene` = respaldo tolerante (el rótulo real puede llevar más texto que el esperado); sigue siendo solo localizar.
+  const exacto = contiene ? new RegExp(lit, 'i') : new RegExp(`^\\s*${lit}\\s*$`, 'i')
   return marco.locator(`${ambito} nx-radio-group:visible`).filter({ has: marco.locator('[nxheadline]', { hasText: exacto }) })
 }
 

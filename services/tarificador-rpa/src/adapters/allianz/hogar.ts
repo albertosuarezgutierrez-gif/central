@@ -864,7 +864,13 @@ export const TEXTO_SIGUIENTE_VALORACION = 'Siguiente'
 
 export type OperacionValoracion =
   | { tipo: 'importe'; control: string; que: string; valor: number | null; minimo: number }
-  | { tipo: 'grupo'; pregunta: string; valor: 'Si' | 'No' | null }
+  | {
+      tipo: 'grupo'
+      pregunta: string
+      valor: 'Si' | 'No' | null
+      /** 0.1.13: protecciones sí/no: rótulos de respaldo (contiene) y, si el grupo no existe, se anota y se sigue (no bloquea). */
+      opcional?: { alternativas: string[] }
+    }
 
 /** Plan de «Valoración de bienes» (orden incluido). Pura. Joyas EN caja fuerte > 0 → hueco (su campo no está visto). */
 export function planValoracionBienes(f: FormularioHogar): OperacionValoracion[] {
@@ -882,8 +888,8 @@ export function planValoracionBienes(f: FormularioHogar): OperacionValoracion[] 
     // HIPÓTESIS (a confirmar con Alberto): «Objetos especiales» de Allianz = `objetosValorEur` del formulario.
     { tipo: 'importe', control: 'sumInsuredSpecialObjects', que: 'Objetos especiales', valor: ov?.objetosValorEur ?? null, minimo: 0 },
     // La alarma NO está en el formulario (id de catálogo sin traducir): se deja la de serie.
-    { tipo: 'grupo', pregunta: 'Alarma conectada', valor: null },
-    { tipo: 'grupo', pregunta: 'Puerta blindada', valor: pb === null ? null : pb ? 'Si' : 'No' },
+    { tipo: 'grupo', pregunta: 'Alarma conectada', valor: null, opcional: { alternativas: ['Alarma'] } },
+    { tipo: 'grupo', pregunta: 'Puerta blindada', valor: pb === null ? null : pb ? 'Si' : 'No', opcional: { alternativas: ['Puerta', 'Blindada'] } },
   ]
 }
 
@@ -899,13 +905,32 @@ export function importeDeSerieAceptable(leido: string | null | undefined, minimo
 }
 
 async function fijarGrupoValoracion(marco: Frame, ctx: CtxVivienda, op: Extract<OperacionValoracion, { tipo: 'grupo' }>, supuestos: string[]): Promise<void> {
-  const grupo = grupoOpcionesHogarAllianz(marco, SEL_PANTALLA_VALORACION, op.pregunta)
-  const n = await grupo.count()
-  if (n !== 1) throw new ErrorMapaIncompleto(`el grupo «${op.pregunta}» de «Valoración de bienes» (${n} coincidencias)`)
+  let grupo = grupoOpcionesHogarAllianz(marco, SEL_PANTALLA_VALORACION, op.pregunta)
+  let n = await grupo.count()
+  // 0.1.13: rótulo de respaldo (contiene) solo si el exacto no encuentra nada (job ac0b4631: «Alarma conectada», 0 coincidencias).
+  for (const alt of op.opcional?.alternativas ?? []) {
+    if (n !== 0) break
+    grupo = grupoOpcionesHogarAllianz(marco, SEL_PANTALLA_VALORACION, alt, true)
+    n = await grupo.count()
+  }
+  if (n !== 1) {
+    if (op.opcional) {
+      supuestos.push(`${op.pregunta}: no localizada en la pantalla (supuesto: se sigue sin ella)`)
+      return
+    }
+    throw new ErrorMapaIncompleto(`el grupo «${op.pregunta}» de «Valoración de bienes» (${n} coincidencias)`)
+  }
   const marcadas = await opcionesMarcadasHogarAllianz(grupo)
   if (op.valor === null) {
-    if (marcadas.length !== 1) throw new ErrorMapaIncompleto(`«${op.pregunta}» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie (${marcadas.length} marcadas)`)
-    supuestos.push(`${op.pregunta}: «${marcadas[0]}» (de serie)`)
+    if (marcadas.length === 1) {
+      supuestos.push(`${op.pregunta}: «${marcadas[0]}» (de serie)`)
+      return
+    }
+    if (!op.opcional || marcadas.length !== 0) throw new ErrorMapaIncompleto(`«${op.pregunta}» de «Valoración de bienes» sin dato en el formulario y sin una opción de serie (${marcadas.length} marcadas)`)
+    // 0.1.13: el riesgo no trae el dato y el portal no deja nada marcado → «No» (supuesto; precio estimado).
+    if (typeof ctx.marcarOpcionHogarResuelta !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Hogar en el contexto del worker', false)
+    const r = await ctx.marcarOpcionHogarResuelta(marco, etiquetaEnGrupoHogarAllianz(grupo, 'No'))
+    supuestos.push(r.estado === 'no_unica' || r.estado === 'no_quedo' ? `${op.pregunta}: sin poder marcar «No» (supuesto: se sigue)` : `${op.pregunta}: «No» (supuesto; el riesgo no trae el dato)`)
     return
   }
   if (marcadas.length === 1 && plano(marcadas[0]) === plano(op.valor)) return
@@ -1149,7 +1174,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.12',
+  version: '0.1.13',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
