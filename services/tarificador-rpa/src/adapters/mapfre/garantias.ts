@@ -70,6 +70,16 @@ export function valorDeTexto(texto: string): Valor | null {
   return { estado, capital, limite: limite ?? suelto, franquicia, franquiciaTexto: fr || RE_SIN_FRANQ.test(t) ? t.slice(0, 120) : null }
 }
 
+/**
+ * v0.2.59/Allianz: valor de un texto en el contexto de su FILA. Una fila de «franquicia» con un importe suelto (sin palabra clave) → franquicia, no límite.
+ * Sin importe en el texto → no cambia nada (nunca se inventa). PURA.
+ */
+export function valorDeTextoEnFila(descripcion: string, texto: string): Valor | null {
+  const v = valorDeTexto(texto)
+  if (v && /franquicia/i.test(descripcion) && v.franquicia === null && v.limite !== null && v.capital === null) return { ...v, franquicia: v.limite, limite: null, franquiciaTexto: limpiar(texto).slice(0, 120) }
+  return v
+}
+
 const SEP = /\t+|\s{2,}|\s*\|\s*|\s*:\s+|\s*\.{3,}\s*/
 const RE_VALOR_FINAL = /^(.*\S)\s+(no\s+incluid[oa]s?|no\s+contratad[oa]s?|incluid[oa]s?|contratad[oa]s?|excluid[oa]s?|s[ií]|no)$/i
 

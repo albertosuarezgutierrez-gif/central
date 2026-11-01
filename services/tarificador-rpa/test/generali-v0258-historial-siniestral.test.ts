@@ -66,7 +66,7 @@ const valor = (page: Page, name: string) => page.evaluate((n) => {
 }, name)
 const ant = (extra: Record<string, unknown> = {}) => conAntecedentesFavorables(formulario(extra))
 
-test('v0.2.58 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.58'))
+test('v0.2.58 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.59'))
 
 test('v0.2.58 · la pestaña «Historial Siniestral» está en la lista blanca (exacta) y nada peligroso se cuela', () => {
   assert.ok(SUBPESTANAS_GENERALI.includes('Historial Siniestral'))

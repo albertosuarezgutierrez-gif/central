@@ -4500,6 +4500,39 @@ const SCRIPT_LEER_PAQUETES_TURISMOS = `(() => {
   return { paquetes, filas };
 })()`
 
+export type FilaGarantiaLeidaHogar = { descripcion: string; celdas: { icono: string | null; texto: string }[]; opciones: { texto: string; marcada: boolean; adicional: string }[]; comunes: string[] }
+/**
+ * v0.1.11 (Allianz hogar): SOLO LECTURA de las filas de cobertura de la tabla comparativa de «Precio» (`epac-price-page` → `nx-comparison-table`); no pulsa nada.
+ * Texto JS, no función (tsx). Sin tabla → `null`. Mismos selectores que `leerPaquetesTurismosAllianz`; SIN captura de hogar (supuesto).
+ */
+const SCRIPT_LEER_GARANTIAS_HOGAR = `(() => {
+  const txt = (e) => ((e && (e.innerText || e.textContent)) || '').replace(/[\\s\\u00a0]+/g, ' ').trim();
+  const visible = (e) => !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0;
+  const pag = Array.from(document.querySelectorAll('epac-price-page')).find(visible);
+  if (!pag) return null;
+  const tabla = Array.from(pag.querySelectorAll('nx-comparison-table')).find(visible);
+  if (!tabla) return null;
+  return Array.from(tabla.querySelectorAll('.is-content-row')).map((f) => ({
+    descripcion: txt(f.querySelector('.nx-comparison-table__description-cell')),
+    celdas: Array.from(f.querySelectorAll('.nx-comparison-table__cell')).filter((c) => !c.classList.contains('nx-comparison-table__description-cell') && !c.classList.contains('nx-comparison-table__intersection-cell')).map((c) => ({
+      icono: c.querySelector('nx-icon[name="check"]') ? 'check' : c.querySelector('nx-icon[name="minus"]') ? 'minus' : null,
+      texto: txt(c.querySelector('.nx-dropdown__rendered')) || txt(c),
+    })),
+    opciones: Array.from(f.querySelectorAll('.nx-comparison-table__intersection-cell nx-radio')).map((o) => ({
+      texto: txt(o.querySelector('.nx-radio__label--text > span:first-child')) || txt(o.querySelector('.nx-radio__label--text')),
+      marcada: o.querySelector('.nx-radio__dot') !== null || (o.querySelector('input') !== null && o.querySelector('input').checked === true),
+      adicional: txt(o.querySelector('.option-additional-text')),
+    })),
+    comunes: Array.from(f.querySelectorAll('.common-coverages li')).map((li) => txt(li.querySelector('span') || li)),
+  }));
+})()`
+
+/** Filas de cobertura de «Precio» de Allianz Hogar (textos crudos). Marco desvinculado o sin tabla → `null`. */
+export async function leerGarantiasTablaHogarAllianz(marco: Frame): Promise<FilaGarantiaLeidaHogar[] | null> {
+  if (marco.isDetached()) return null
+  return (marco.evaluate(SCRIPT_LEER_GARANTIAS_HOGAR) as Promise<FilaGarantiaLeidaHogar[] | null>).catch(() => null)
+}
+
 /**
  * Elige UNA tarjeta de vehículo de Turismos (el ÚNICO camino para tocarla). Exige, como `marcarOpcionTurismosAllianz`: guard limpio y
  * sin ventanas de red abiertas, marco vivo de la app de Turismos, sin campos de cuenta bancaria y pestaña seleccionada «Datos del

@@ -39,8 +39,9 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { claveCampo, conRespaldoIA, normalizarTexto, registrarAtasco, type PeticionResolver } from '../../formador.ts'
 import { esTextoContinuar } from '../../continuar.ts'
-import { esAppHogarAllianz, etiquetaEnGrupoHogarAllianz, grupoOpcionesHogarAllianz, opcionesMarcadasHogarAllianz } from '../../guard.ts'
+import { leerGarantiasTablaHogarAllianz, esAppHogarAllianz, etiquetaEnGrupoHogarAllianz, grupoOpcionesHogarAllianz, opcionesMarcadasHogarAllianz } from '../../guard.ts'
 import { comprobarCampo } from './auto.ts'
+import { garantiasPorModalidadHogar, ofertasConGarantiasHogar } from './garantias-hogar.ts'
 import { login, sesionSirve } from './comunidades.ts'
 import { abrirNuevaAlta, esperarMarcoApp } from './entrada.ts'
 import { elegirPoblacionHogar, nucleoDeVia } from './poblacion-localidad.ts'
@@ -1025,7 +1026,10 @@ export async function leerPrecioHogar(page: Page, marco: Frame, supuestos: reado
     const lista = l !== null && l.modalidades.length > 0 && l.modalidades.every((m) => primaDeTexto(m.anualidad) !== null)
     if (lista || Date.now() >= fin) {
       if (l === null) throw new ErrorMapaIncompleto(`la pantalla «Precio» (${SEL_PANTALLA_PRECIO} visible: no)`)
-      return ofertasDesdePrecioHogar(l, supuestos)
+      const ofertas = ofertasDesdePrecioHogar(l, supuestos)
+      // 0.1.11: garantías por modalidad de la tabla (solo lectura); sin filas legibles → aviso «coberturas no leídas».
+      const filas = await leerGarantiasTablaHogarAllianz(marco)
+      return ofertasConGarantiasHogar(ofertas, garantiasPorModalidadHogar(Array.isArray(filas) ? filas : [], ofertas.length))
     }
     await page.waitForTimeout(500)
   }
@@ -1077,7 +1081,7 @@ export const allianzHogar = {
   compania: 'allianz',
   ramo: 'hogar',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.1.10',
+  version: '0.1.11',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (f.ramo !== 'hogar') throw new ErrorTarificador('datos', `${ADAPTADOR}: el formulario no es de hogar`)
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
