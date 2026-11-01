@@ -14,6 +14,8 @@
 import { prisma } from './tenant'
 import { personaDeFicha, leerRiesgo } from './oportunidad-riesgo'
 import { prismaAsegura } from './asegura-db'
+import { decryptField } from '@central/module-seguros-pii'
+import { riesgoHogarDePolizas, SUPUESTOS_HOGAR_DESDE_POLIZA, type FilaPolizaHogar, type RiesgoHogarDePoliza } from './tarificador-hogar-poliza'
 import { claveCompania, puedeAutomatizar, type CatalogosHogarLeidos } from '@central/module-tarificacion'
 import { resolverConfig } from './codeoscopic/config'
 import { catalogoHogar } from './codeoscopic/catalogos'
@@ -253,6 +255,21 @@ export async function riesgoDesdeOportunidadDelCliente(correduriaId: string, cli
   const fo = await formularioDeOportunidad(correduriaId, clienteId, ramo, op.info_riesgo, nac, diaMadrid(ahora))
   if (fo.estado === 'discrepancias') return { riesgo: null, motivo: 'discrepancias' }
   return { riesgo: fo.formulario.riesgo, bloqueos: fo.formulario.bloqueos, repreguntar: fo.formulario.repreguntar }
+}
+
+/**
+ * 01/11/2026 · «probar» HOGAR sin oportunidad de hogar ni trabajo previo: el riesgo sale de la póliza de hogar EN VIGOR más reciente del
+ * cliente (`riesgoHogarDePolizas`, puro). Solo SELECT; la dirección `v1:` se abre en memoria y no sale de aquí. Un fallo de lectura
+ * se propaga (no se confunde con «no hay póliza»).
+ */
+export async function riesgoHogarDePolizasDelCliente(correduriaId: string, clienteId: string, ahora = new Date()): Promise<RiesgoHogarDePoliza> {
+  const f = await prisma.$queryRaw<{ id: string; desde: string | null; estado: string | null; import_ref: string | null; eiac_xml_hash: string | null; sustituida_at: Date | null; datos: unknown }[]>`
+    select p.id::text as id, to_char(coalesce(p.fecha_efecto_inicial, p.fecha_inicio), 'YYYY-MM-DD') as desde, p.estado::text as estado,
+           p.import_ref, p.eiac_xml_hash, p.sustituida_at, p.datos_especificos as datos
+    from seguros.polizas p
+    where p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid and p.tipo::text = 'hogar' and p.merged_into_poliza_id is null`
+  const filas: FilaPolizaHogar[] = f.map((x) => ({ id: x.id, desde: x.desde, estado: x.estado, importRef: x.import_ref, eiacXmlHash: x.eiac_xml_hash, sustituidaAt: x.sustituida_at, datosEspecificos: x.datos }))
+  return riesgoHogarDePolizas(filas, decryptField, ahora, SUPUESTOS_HOGAR_DESDE_POLIZA)
 }
 
 /** HOGAR (27/10/2026): ver `riesgoHogarDeRiesgoOportunidad` (puro, `tarificador-relanzar-reglas.ts`). */

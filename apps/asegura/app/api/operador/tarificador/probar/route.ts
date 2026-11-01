@@ -7,7 +7,9 @@ import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
 import { encolarTrabajo, lanzarPendientes, leerCompaniaActualUnicaCliente, leerOrigenesVehiculoCliente } from '@/lib/tarificador'
 import { leerRiesgoParaReencolar } from '@/lib/tarificador-lectura'
 import { riesgoParaReencolar } from '@/lib/tarificador-lectura-reglas'
-import { leerVehiculoPolizaVinculadaCliente, riesgoDesdeOportunidadDelCliente } from '@/lib/tarificacion-lead'
+import { leerVehiculoPolizaVinculadaCliente, riesgoDesdeOportunidadDelCliente, riesgoHogarDePolizasDelCliente } from '@/lib/tarificacion-lead'
+import { abrirRiesgoDePoliza } from '@/lib/oportunidad-riesgo'
+import { elegirReconstruccionHogar } from '@/lib/tarificador-hogar-poliza'
 import { conCompaniaActualUnica, conVehiculoDeOrigen, conVehiculoDePoliza, decidirRiesgoProbar } from '@/lib/tarificador-relanzar-reglas'
 import { necesitaCompaniaActual } from '@/lib/tarificador-compania-actual'
 import { necesitaVehiculoEncadenado, tieneVehiculo } from '@/lib/tarificador-espera-vehiculo'
@@ -63,7 +65,11 @@ export const POST = auditado(async (req: Request) => {
     const leido = await leerRiesgoParaReencolar(correduria.id, clienteId, compania, ramo)
     // Purga (13/10/2026): el riesgo del trabajo cerrado ya no lleva matrícula ni conductor. Como el botón de plataforma, el
     // riesgo se arma de la oportunidad del cliente + su ficha; el del último trabajo solo es respaldo si aún está completo.
-    const reconstruida = await riesgoDesdeOportunidadDelCliente(correduria.id, clienteId, ramo)
+    const deOportunidad = await riesgoDesdeOportunidadDelCliente(correduria.id, clienteId, ramo)
+    // Hogar sin riesgo previo utilizable (01/11/2026): se construye de la póliza de hogar EN VIGOR más reciente del cliente (mismo mapeo que
+    // la precarga del PATCH de riesgo). Lo que aun así falte → 422 `riesgo_incompleto` con etiquetas; datos deducidos → `supuestos` (precio estimado).
+    const dePoliza = ramo === 'hogar' && deOportunidad.riesgo === null ? await riesgoHogarDePolizasDelCliente(correduria.id, clienteId) : null
+    const { reconstruccion: reconstruida, usaPoliza } = elegirReconstruccionHogar(deOportunidad, dePoliza)
     // Compañía actual (Allianz/Mapfre/Generali auto con cambio de seguro): si falta, de la póliza de auto en vigor de la cartera SOLO si es
     // una (cero o varias → sigue faltando y sale 422). Nunca pisa lo que ya trae; la purga no se toca.
     const conCompania = reconstruida.riesgo !== null && necesitaCompaniaActual(compania, ramo, reconstruida.riesgo)
@@ -79,15 +85,20 @@ export const POST = auditado(async (req: Request) => {
       : conOrigen
     const previo = leido.riesgo === null ? null : riesgoParaReencolar(leido.riesgo)
     const d = decidirRiesgoProbar({ reconstruccion, previo, soloPurgados: leido.soloPurgados, validar: (riesgo) => validarEntradaRamo(ramo, riesgo, compania) })
-    if (!d.ok) return NextResponse.json({ estado: 'rechazado', motivo: d.motivo, ...(d.errores ? { errores: d.errores } : {}) }, { status: d.status })
+    const avisos = usaPoliza && dePoliza ? dePoliza.avisos : []
+    if (!d.ok) return NextResponse.json({ estado: 'rechazado', motivo: d.motivo, ...(d.errores ? { errores: d.errores } : {}), ...(avisos.length ? { avisos } : {}) }, { status: d.status })
     const valida = d
-    const r = await encolarTrabajo({ correduriaId: correduria.id, oportunidadId: null, clienteId, polizaId: null, compania, ...valida.entrada, solicitadoPor, imagenPrueba })
+    // El riesgo salió de la póliza: se abre (o se reutiliza) la oportunidad de ESA póliza y el trabajo cuelga de ella. Mejor esfuerzo: si falla, se encola sin vincular.
+    const desdePoliza = usaPoliza && dePoliza?.polizaId && valida.origen === 'oportunidad'
+    const vinculo = desdePoliza ? await abrirRiesgoDePoliza(correduria.id, { polizaId: dePoliza.polizaId as string, actor: solicitadoPor }).catch(() => null) : null
+    const oportunidadId = vinculo && vinculo.ok ? vinculo.oportunidadId : null
+    const r = await encolarTrabajo({ correduriaId: correduria.id, oportunidadId, clienteId, polizaId: null, compania, ...valida.entrada, solicitadoPor, imagenPrueba })
     if (r.estado === 'rechazado') return NextResponse.json({ estado: 'rechazado', motivo: r.motivo }, { status: r.status })
     if (imagenPrueba) anotarCambio({ entidad: 'trabajo_tarificador', id: r.trabajoId, campo: 'imagen_prueba', antes: null, despues: imagenPrueba })
     const lanzado = await lanzarPendientes(correduria.id, compania).catch((e: unknown) => ({
       lanzados: [] as string[], fallidos: [], omitido: `error_lanzando: ${e instanceof Error ? e.message : String(e)}`,
     }))
-    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, estadoPrevio: r.estadoPrevio ?? null, mensaje: r.mensaje ?? null, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? lanzado.fallidos.find((f) => f.id === r.trabajoId)?.motivo ?? null, imagenPrueba }, { status: 202 })
+    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, estadoPrevio: r.estadoPrevio ?? null, mensaje: r.mensaje ?? null, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? lanzado.fallidos.find((f) => f.id === r.trabajoId)?.motivo ?? null, imagenPrueba, ...(desdePoliza ? { origenRiesgo: 'poliza', oportunidadId, supuestos: dePoliza?.supuestos ?? [], ...(avisos.length ? { avisos } : {}) } : {}) }, { status: 202 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/probar', e) }, { status: 503 })
   }
