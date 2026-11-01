@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  deducirNecesidades,
   grupoNecesidades,
   preguntasNecesidades,
   textoNecesidades,
@@ -93,8 +94,21 @@ test('deducir: conductor joven o con carné reciente → «jovenes»', () => {
 })
 
 test('deducir hogar y otros ramos: completos y válidos aunque no haya petición legible', () => {
-  for (const ramo of ['hogar', 'vida', 'decesos']) {
+  for (const ramo of ['vida', 'decesos']) {
     const d = deducirNecesidades(ramo, null, null, HOY)
     assert.equal(validarRespuestasNecesidades(ramo, d.respuestas).ok, true, ramo)
   }
+  // Hogar sin petición: completo SALVO el régimen, que no consta y no se inventa.
+  const h = deducirNecesidades('hogar', null, null, HOY)
+  const v = validarRespuestasNecesidades('hogar', h.respuestas)
+  assert.deepEqual(v.ok ? [] : v.faltan, ['regimen'])
+})
+
+test('hogar deducido: el régimen sale de risk.owner o del riesgo usado; sin ninguno NO se responde (nunca inquilino por defecto)', () => {
+  const rec = { categoria: null, franquiciaEur: null }
+  assert.equal(deducirNecesidades('hogar', { risk: { owner: true } }, rec).respuestas.regimen, 'propietario')
+  assert.equal(deducirNecesidades('hogar', { risk: { owner: false } }, rec).respuestas.regimen, 'inquilino')
+  assert.equal(deducirNecesidades('hogar', null, rec, new Date(), { regimen: 'propietario' }).respuestas.regimen, 'propietario')
+  assert.equal('regimen' in deducirNecesidades('hogar', null, rec).respuestas, false)
+  assert.equal('regimen' in deducirNecesidades('hogar', null, rec, new Date(), { regimen: null }).respuestas, false)
 })

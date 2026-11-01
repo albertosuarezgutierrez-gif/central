@@ -41,6 +41,8 @@ export type TrabajoParaPropuesta = {
   creadoEn: string
   tarificacionId: string | null
   respuesta: unknown
+  /** Riesgo con el que tarificó el bot (`tarificacion_trabajos.riesgo`); ausente/`null` = no se leyó o está purgado. */
+  riesgo?: unknown
 }
 
 /** Lo extraído del PDF del proyecto de una tarificación (`tarificador_coberturas_presupuesto`). */
@@ -72,6 +74,8 @@ type OfertaCruda = {
   /** Esta oferta es la del PDF del proyecto (la que tiene valores extraídos). */
   esProyecto: boolean
   tarificacionId: string
+  /** Fecha de efecto con la que SE TARIFICÓ (datosUsados de la oferta o riesgo del trabajo). `null` = no consta. */
+  fechaEfecto: string | null
 }
 
 const periodo = (v: unknown) => {
@@ -118,10 +122,22 @@ export function ofertasDeTrabajos(trabajos: readonly TrabajoParaPropuesta[]): Of
         validaHasta: typeof o.validaHasta === 'string' && ISO.test(o.validaHasta) ? o.validaHasta : null,
         esProyecto,
         tarificacionId: t.tarificacionId as string,
+        fechaEfecto: fechaEfectoUsada(o, t.riesgo),
       })
     })
   }
   return out
+}
+
+/** Fecha ISO válida de un valor suelto, o `null`. */
+const fechaIso = (v: unknown): string | null => (typeof v === 'string' && ISO.test(v.trim()) ? v.trim() : null)
+
+/**
+ * La fecha de efecto con la que el bot tarificó de verdad: primero la que la oferta declara en `datosUsados`, después la del
+ * riesgo del trabajo. Nunca se inventa: sin ninguna, `null` (el control lo trata como aviso, no como error).
+ */
+export function fechaEfectoUsada(oferta: Record<string, unknown> | null, riesgo: unknown): string | null {
+  return fechaIso(obj(oferta?.datosUsados)?.fechaEfecto) ?? fechaIso(obj(riesgo)?.fechaEfecto)
 }
 
 const VACIO: ValoresPresupuesto = { primaTotalEur: null, primaNetaEur: null, capitales: {}, franquiciaGeneral: null }
@@ -222,7 +238,7 @@ export function ensamblarPropuesta(e: EntradaPropuesta): ResultadoPropuesta {
   }
   const comparables = crudas.map((o) => ofertaComparable(o, e.ramo, e.presupuestos))
   const tabla: TablaComparador = compararOfertas(e.fichas, comparables)
-  const { perfil, capitalesPedidos, fechaEfecto } = perfilDeFormulario(e.ramo, e.formulario, e.hoy)
+  const { perfil, capitalesPedidos, fechaEfecto: fechaFormulario } = perfilDeFormulario(e.ramo, e.formulario, e.hoy)
 
   const evaluadas: OfertaEvaluada[] = crudas.map((o, i) => {
     const col = tabla.columnas.find((c) => c.ofertaId === o.id)
@@ -238,6 +254,8 @@ export function ensamblarPropuesta(e: EntradaPropuesta): ResultadoPropuesta {
       datosUsados: {},
     }
     // `datos: {}`: el worker no devuelve qué datos usó (no consta) → no se afirma ni se compara.
+    // La fecha con la que se tarificó manda; la del formulario solo si el bot no dejó ninguna (el borrador automático no tiene formulario).
+    const fechaEfecto = o.fechaEfecto ?? fechaFormulario
     const calidad = controlarCalidad(control, { fechaEfecto, capitalesPedidos, datos: {} }, e.hoy)
     return { ofertaId: o.id, compania: nombreCompania(o.compania), producto: o.producto, primaAnualEur: o.primaAnualEur, recomendable: calidad.ok, calidad }
   })

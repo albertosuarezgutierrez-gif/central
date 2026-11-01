@@ -104,3 +104,25 @@ test('perfil: ascensor/antigüedad/capitales desde el formulario; lo que no cons
   const vacio = perfilDeFormulario('comunidades', null, HOY)
   assert.deepEqual(vacio, { perfil: {}, capitalesPedidos: {}, fechaEfecto: null })
 })
+
+test('sin formulario (borrador automático): la fecha de efecto sale de la oferta o del riesgo del trabajo; sin ninguna, aviso y SÍ hay recomendación', () => {
+  const sinForm = { formulario: null }
+  // Del riesgo del trabajo.
+  const conRiesgo = { ...trabajo('allianz', 'a', 1200), riesgo: { fechaEfecto: '2026-11-15' } }
+  const r1 = ensamblarPropuesta(base([conRiesgo], sinForm))
+  assert.equal(r1.estado, 'ok')
+  if (r1.estado !== 'ok') return
+  assert.equal(r1.ofertas[0].recomendable, true)
+  assert.deepEqual(r1.ofertas[0].calidad.avisos, [])
+  // De los datos usados de la oferta (manda sobre el riesgo).
+  const conDatos = trabajo('occident', 'o', 1000, { oferta: { datosUsados: { fechaEfecto: '2026-10-01' } } })
+  assert.equal(ofertasDeTrabajos([{ ...conDatos, riesgo: { fechaEfecto: '2026-12-01' } }])[0].fechaEfecto, '2026-10-01')
+  // Ninguna: no se inventa; aviso, oferta recomendable.
+  const r2 = ensamblarPropuesta(base([trabajo('allianz', 'a', 1200), trabajo('occident', 'o', 1000)], sinForm))
+  assert.equal(r2.estado, 'ok')
+  if (r2.estado !== 'ok') return
+  assert.ok(r2.ofertas.every((o) => o.recomendable && o.calidad.errores.length === 0))
+  assert.ok(r2.ofertas.every((o) => o.calidad.avisos.some((a) => a.codigo === 'fecha_efecto_invalida')))
+  assert.ok(r2.recomendada)
+  assert.ok(!r2.avisos.some((a) => a.includes('Ninguna oferta supera')))
+})

@@ -35,8 +35,8 @@ export async function cargarPropuestaOportunidad(correduriaId: string, oportunid
     where o.id = ${oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
   if (!op) return { estado: 'no_encontrada' }
 
-  const filas = await prisma.$queryRaw<{ id: string; compania: string; estado: string; created_at: Date; tarificacion_id: string | null; respuesta: unknown }[]>`
-    select t.id::text as id, t.compania, t.estado, t.created_at, t.tarificacion_id::text as tarificacion_id, x.respuesta
+  const filas = await prisma.$queryRaw<{ id: string; compania: string; estado: string; created_at: Date; tarificacion_id: string | null; respuesta: unknown; riesgo: unknown }[]>`
+    select t.id::text as id, t.compania, t.estado, t.created_at, t.tarificacion_id::text as tarificacion_id, x.respuesta, t.riesgo
     from seguros.tarificacion_trabajos t
     left join seguros.tarificaciones x on x.id = t.tarificacion_id and x.correduria_id = t.correduria_id
     where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${oportunidadId}::uuid
@@ -44,7 +44,7 @@ export async function cargarPropuestaOportunidad(correduriaId: string, oportunid
     order by t.created_at desc
     limit ${MAX_TRABAJOS}`
   const trabajos: TrabajoParaPropuesta[] = filas.map((f) => ({
-    trabajoId: f.id, compania: f.compania, estado: f.estado, creadoEn: f.created_at.toISOString(), tarificacionId: f.tarificacion_id, respuesta: f.respuesta,
+    trabajoId: f.id, compania: f.compania, estado: f.estado, creadoEn: f.created_at.toISOString(), tarificacionId: f.tarificacion_id, respuesta: f.respuesta, riesgo: f.riesgo,
   }))
 
   const ramo = op.tipo ?? 'comunidades'

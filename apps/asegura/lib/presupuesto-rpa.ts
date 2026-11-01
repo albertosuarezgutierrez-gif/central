@@ -39,7 +39,7 @@ import { trabajosVigentes, type TrabajoParaPropuesta } from './propuesta-oportun
 import { URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
 import {
   ACTOR_RPA, EUR_ESTIMADO_NARRATIVA, ofertasSinGarantiasRpa, alertasDeAvisos, cierrePuedeDispararPresupuesto, avisosOpcionRpa, claveRpaDeFila, decidirDisparo, decidirIaAuto, decidirSustitucion, enlaceOportunidad,
-  filaOfertaRpa, mismoConjunto, nombreDePila, ofertasDeRespuesta, sobreCoberturasRpa, textoAvisoCorteRpa, textoAvisoPresupuestoRpa, type OfertaRpaLeida,
+  filaOfertaRpa, mismoConjunto, regimenHogarUsado, nombreDePila, ofertasDeRespuesta, sobreCoberturasRpa, textoAvisoCorteRpa, textoAvisoPresupuestoRpa, type OfertaRpaLeida,
 } from './presupuesto-rpa-reglas'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -105,10 +105,10 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   const op = await leerOportunidadParaOfertas(correduriaId, oportunidadId)
   if (!op) return { estado: 'nada', motivo: 'oportunidad_no_encontrada' }
 
-  // Los trabajos de la oportunidad con su respuesta (solo `respuesta`: el riesgo ni se lee).
-  const filas = await db.$queryRaw<{ id: string; compania: string; ramo: string; estado: string; modo: string | null; created_at: Date; tarificacion_id: string | null; respuesta: unknown }[]>`
+  // Los trabajos de la oportunidad con su respuesta (`respuesta` y el riesgo, este solo para el régimen de las necesidades de hogar).
+  const filas = await db.$queryRaw<{ id: string; compania: string; ramo: string; estado: string; modo: string | null; created_at: Date; tarificacion_id: string | null; respuesta: unknown; riesgo: unknown }[]>`
     select t.id::text as id, t.compania, t.ramo, t.estado, to_jsonb(t)->>'modo' as modo, t.created_at,
-           t.tarificacion_id::text as tarificacion_id, x.respuesta
+           t.tarificacion_id::text as tarificacion_id, x.respuesta, t.riesgo
     from tarificacion_trabajos t
     left join tarificaciones x on x.id = t.tarificacion_id and x.correduria_id = t.correduria_id
     where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${op.id}::uuid
@@ -295,7 +295,9 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   if (hecho.tipo === 'otro') return { estado: 'ya_existe', presupuestoId: hecho.id, ofertas: idsOfertas.length }
   if (hecho.tipo === 'superado') return { estado: 'superado' }
 
-  await autocompletarNecesidades(correduriaId, hecho.creado.id, actor).catch((e: unknown) => { registrarErrorCartera('presupuesto/rpa/necesidades', e) })
+  // Hogar: el régimen sale del riesgo con el que tarificaron los trabajos de estas ofertas (no hay petición de Codeoscopic).
+  const riesgoUsado = op.ramo === 'hogar' ? { regimen: regimenHogarUsado(filas.filter((f) => trabajos.includes(f.id)).map((f) => f.riesgo)) } : null
+  await autocompletarNecesidades(correduriaId, hecho.creado.id, actor, riesgoUsado).catch((e: unknown) => { registrarErrorCartera('presupuesto/rpa/necesidades', e) })
 
   // 4. Aviso INTERNO a Alberto. Best effort: si no sale, el borrador ya está y se dice en el resultado.
   const avisado = opts.avisar

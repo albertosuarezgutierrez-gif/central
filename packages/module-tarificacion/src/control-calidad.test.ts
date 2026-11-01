@@ -46,7 +46,14 @@ describe('controlarCalidad', () => {
     expect(controlarCalidad(oferta(), solicitud({ fechaEfecto: HOY }), HOY).ok).toBe(true)
     expect(codigos(controlarCalidad(oferta(), solicitud({ fechaEfecto: '2026-10-07' }), HOY).errores)).toEqual(['fecha_efecto_pasada'])
     expect(codigos(controlarCalidad(oferta(), solicitud({ fechaEfecto: '2026-02-31' }), HOY).errores)).toEqual(['fecha_efecto_invalida'])
-    expect(codigos(controlarCalidad(oferta(), solicitud({ fechaEfecto: null }), HOY).errores)).toEqual(['fecha_efecto_invalida'])
+  })
+
+  it('sin fecha de efecto (no consta): solo AVISO, no tumba la oferta; una fecha ilegible sí es error', () => {
+    const r = controlarCalidad(oferta(), solicitud({ fechaEfecto: null }), HOY)
+    expect(r.ok).toBe(true)
+    expect(r.errores).toEqual([])
+    expect(codigos(r.avisos)).toEqual(['fecha_efecto_invalida'])
+    expect(r.avisos[0].mensaje).toMatch(/estimado/)
   })
 
   it('oferta caducada bloquea; validez desconocida solo avisa; hoy aún vale', () => {

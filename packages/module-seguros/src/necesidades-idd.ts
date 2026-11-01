@@ -167,6 +167,8 @@ export function deducirNecesidades(
   peticion: unknown,
   recomendada: { categoria: string | null; franquiciaEur: number | null } | null,
   hoy: Date = new Date(),
+  /** Lo que consta del riesgo tarificado cuando no hay petición de Codeoscopic (borrador del bot): `null`/ausente = no consta. */
+  riesgoUsado?: { regimen?: 'propietario' | 'inquilino' | null } | null,
 ): { respuestas: Record<string, string>; otras: string } {
   const g = grupoNecesidades(ramo)
   const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {})
@@ -215,7 +217,9 @@ export function deducirNecesidades(
     r.sustitucion = 'indiferente'
   } else if (g === 'hogar') {
     const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
-    r.regimen = risk.owner ? 'propietario' : 'inquilino'
+    // Régimen: `risk.owner` (petición de Codeoscopic) o el del riesgo usado. Sin ninguno de los dos NO se responde (ni «inquilino» por defecto).
+    if (typeof risk.owner === 'boolean') r.regimen = risk.owner ? 'propietario' : 'inquilino'
+    else if (riesgoUsado?.regimen === 'propietario' || riesgoUsado?.regimen === 'inquilino') r.regimen = riesgoUsado.regimen
     r.vivienda = 'habitual'
     const cont = n(risk.buildingsLimit) > 0
     const cdo = n(risk.contentsLimit) > 0
