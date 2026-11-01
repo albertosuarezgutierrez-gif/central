@@ -12,7 +12,7 @@ import { ID_OTRO_VEHICULO_GENERALI, instalarGuardEmision, otroVehiculoGeneraliPe
 import { EmisionBloqueadaError, validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.52 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.55'))
+test('v0.2.52 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.56'))
 
 test('v0.2.52 · puro: antigüedad (sin fecha no se supone), opciones exactas y registro', () => {
   const hoy = new Date('2026-10-28T12:00:00Z')

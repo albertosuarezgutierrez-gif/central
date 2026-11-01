@@ -868,6 +868,26 @@ test('v0.2.11 · selector: modelo ambiguo o sin «Otros» → atasco `eleccion` 
   }
 })
 
+test('v0.2.56 · selector: la elección de la bandeja que casa con UN modelo se elige en «Modelo»; sin ella, atasco que dice «modelos»', async () => {
+  {
+    const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['LEON', 'ARONA']))
+    try {
+      await assert.rejects(seleccionarVehiculoGenerali(page, page, coche({ eleccionVersion: { etiqueta: 'arona' } }), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /sigue a «Confirmar»/.test(e.message))
+      assert.equal(await page.locator('#selmodelo_input').inputValue(), '1', 'ARONA, la elegida por la persona')
+      assert.deepEqual(await page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo), ['ARONA'])
+    } finally {
+      await cerrar()
+    }
+  }
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['LEON', 'ARONA']))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche({ eleccionVersion: { etiqueta: '1.0 TSI STYLE' } }), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && /2 modelos/.test(e.message) && !/versiones/.test(e.message))
+    assert.equal(await page.locator('#selmodelo_input').inputValue(), 'null', 'una elección de versión no elige modelo')
+  } finally {
+    await cerrar()
+  }
+})
+
 test('v0.2.11 · selector: si tras el modelo salen campos NUEVOS, NO se pulsa «Confirmar» y el hueco lista etiquetas y opciones', async () => {
   const nuevos = '<span>Combustible</span><select id="combustible"><option>Seleccione uno</option><option>Gasolina</option><option>Diésel</option></select><span>Potencia</span><input id="potencia" type="text">'
   const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA', 'LEON'], nuevos))

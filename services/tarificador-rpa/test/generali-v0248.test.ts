@@ -11,7 +11,7 @@ import { ALIAS_COMPANIAS_GENERALI, opcionCompaniaProcedenciaGenerali, palabrasCo
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.48 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.55'))
+test('v0.2.48 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.56'))
 
 const REAL = ['Seleccione una opción', 'ALIANZA ESPAÑOLA, S.A. DE SEGUROS, LA', 'ALLIANZ, COMPAÑIA DE SEGUROS Y REASEGURO', 'AXA SEGUROS GENERALES, S.A.', 'MAPFRE ESPAÑA, CIA DE SEGUROS Y REASEGUROS, S.A.', 'MUTUA MADRILEÑA AUTOMOVILISTA', 'SEGUROS CATALANA OCCIDENTE, S.A.', 'LINEA DIRECTA ASEGURADORA, S.A.']
 const elegida = (ops: readonly string[], c: string) => { const r = opcionCompaniaProcedenciaGenerali(ops, c); return 'error' in r ? r : { opcion: ops[r.indice], via: r.via } }
