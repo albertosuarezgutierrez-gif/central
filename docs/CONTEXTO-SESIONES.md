@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
+- Auditoría completa mergeada (#5385). CRM `asegura` (app.grupoasegura.com): sin uso humano (Alberto: «Manuel no usa nada»); solo vive la ingesta CIMA.
+- Decisión: NO mover el CRM entero; portar solo la ingesta (capa BD con Drizzle tal cual) y apagar el resto. Spec validada: `docs/superpowers/specs/2026-11-02-unificar-ingesta-cima.md` (+ `-fase0.md`).
+- Riesgos clave: hoy ya hay 2 escritores (Actions del CRM + respaldo de plataforma) sin candado → fase 1 = candado en BD; confirmar a TIREA es irreversible; sombra = reprocesar los 235 crudos en rama Supabase.
+- En curso: candado de ingesta (CRM + central) y bug enum `portal_bien_tipo` (Prisma ≠ BD, «mascota» rompe la lectura).
+
 ## (02/11/2026) Auditoría completa (12 agentes) + arreglos — docs/AUDITORIA-2026-11.md
 - 🔴 cerrados: 11 server actions de /correduria sin guarda (cotización 0,50€); ia-rest con sesión forjable (x-ia-session, super/impersonate, seleccionar-restaurante); sivra/ialimp rutas sin auth; crons «Bearer undefined»; BD: `iarest.ejecutar_qa_patron` = SQL libre como postgres con la clave anon → REVOKE en 73 SECURITY DEFINER (migración APLICADA `migrations/20261102_auditoria.sql`, rollback al lado).
 - Tope Codeoscopic con advisory lock; Next 15.5.28/16.4.4 (0 critical); ialimp solo cron `pms/sync` (ahora con Bearer); module-agenda borrado.
