@@ -6,7 +6,7 @@ import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
 import type { OpcionesMatSelect } from './mat-select.ts'
-import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoLocalidadTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, ResultadoProyectoMapfre, SelectorAvancePestana, CompaniaDescargaProyecto, BusquedaDescargaProyecto, OpcionesComercialesMapfre } from './guard.ts'
+import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoLocalidadTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, ResultadoProyectoMapfre, SelectorAvancePestana, CompaniaDescargaProyecto, BusquedaDescargaProyecto, OpcionesComercialesMapfre, EstadoTarjetaComercialMapfre } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -95,6 +95,12 @@ export type ContextoPortal = ContextoTarificacion & {
    * `ErrorSelectorComercialAlteradoMapfre` (cambió valor/prima) aborta el trabajo.
    */
   leerOpcionesComercialesMapfre?: (pagina: Page, indice: number) => Promise<OpcionesComercialesMapfre>
+  /**
+   * Mapfre 0.8.50 (Alberto, 02/11/2026): ELIGE la variante comercial `opcion` (texto EXACTO de la lista cerrada `permitidas` leída de esa tarjeta) en la tarjeta `indice`
+   * y espera su recálculo (`elegirOpcionComercialMapfre` de guard.ts). Sirve también para RESTAURAR la selección original. Tope duro por trabajo; sin ventanas de red.
+   * Fallo blando = `ErrorTarificador`; `ErrorSelectorComercialAlteradoMapfre` (otra tarjeta cambió, diálogo desconocido, recálculo que no acaba) aborta SOLO las variantes.
+   */
+  elegirOpcionComercialMapfre?: (pagina: Page, indice: number, opcion: string, permitidas: readonly string[]) => Promise<EstadoTarjetaComercialMapfre>
   /**
    * Mapfre NSEI (v0.8.14, 22/10/2026, autorizado por Alberto: un proyecto no es póliza): tras LEER las primas, pulsa «Generar
    * Proyecto» y lee el nº de proyecto, por `generarProyectoMapfre` (guard.ts). Nunca lanza por «no se pudo» (salvo violación del guard).

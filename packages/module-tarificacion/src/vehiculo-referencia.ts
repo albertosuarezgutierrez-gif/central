@@ -281,7 +281,23 @@ export function elegirOpcionPorVehiculoReferencia(
   const quitar = new Set(marcaTokens)
   const rr = rasgosReferencia(ref, quitar)
   const modeloTokens = ref.modelo ? [...rasgosDeTexto(ref.modelo, quitar).tokens] : []
-  const rasgos = enJuego.map((c) => ({ ...c, r: rasgosDeTexto(c.etiqueta, quitar) }))
+  let rasgos = enJuego.map((c) => ({ ...c, r: rasgosDeTexto(c.etiqueta, quitar) }))
+  // Nivel MODELO (02/11/2026, trabajo 7f358ff2: «Fortwo» ante FORFOUR · FORTWO CABRIO · FORTWO COUPE): con el modelo de la referencia, solo cuentan
+  // las opciones que lo nombran entero (FORFOUR nunca gana para «Fortwo»; si ninguna lo nombra no se inventa: `sin_opciones`). Y si la referencia
+  // no dice carrocería, se asume la NO descapotable (coupé antes que cabrio) y se declara en el supuesto.
+  let notaCarroceria = ''
+  if (nivel === 'modelo' && modeloTokens.length > 0) {
+    const nombran = rasgos.filter((x) => modeloTokens.every((t) => x.r.tokens.has(t)))
+    if (nombran.length === 0) return { tipo: 'sin_opciones' }
+    rasgos = nombran
+    if (rr.carrocerias.size === 0 && rasgos.length > 1) {
+      const sinCabrio = rasgos.filter((x) => !x.r.carrocerias.has('CABRIO'))
+      if (sinCabrio.length > 0 && sinCabrio.length < rasgos.length) {
+        rasgos = sinCabrio
+        notaCarroceria = ' (la referencia no dice carrocería: se asume la no descapotable)'
+      }
+    }
+  }
   const comunes = new Set([...rasgos[0]!.r.tokens].filter((t) => rasgos.every((x) => x.r.tokens.has(t))))
   const puntuadas = rasgos.map((c) => {
     const r = c.r
@@ -318,6 +334,6 @@ export function elegirOpcionPorVehiculoReferencia(
   // Palabras comunes a TODAS las opciones que la referencia no dice (p. ej. todas «FORTWO» y la referencia «FORFOUR»): la lista habla de
   // otro modelo → nunca «coincidencia».
   const comunesAjenas = comunes.size > 0 && cand.length > 1 && ![...comunes].some((t) => rr.tokens.has(t))
-  const tipo = !comunesAjenas && apoyadas.length === 1 && apoyadas[0]!.i === g.i ? 'coincidencia' : 'aproximacion'
-  return { tipo, indice: g.i, etiqueta: g.etiqueta, puntuacion: Math.round((g.estructural + g.similitud) * 1000) / 1000, supuesto: supuestoVehiculoReferencia(tipo, nivel, g.etiqueta, ref.origen) }
+  const tipo = !notaCarroceria && !comunesAjenas && apoyadas.length === 1 && apoyadas[0]!.i === g.i ? 'coincidencia' : 'aproximacion'
+  return { tipo, indice: g.i, etiqueta: g.etiqueta, puntuacion: Math.round((g.estructural + g.similitud) * 1000) / 1000, supuesto: supuestoVehiculoReferencia(tipo, nivel, g.etiqueta, ref.origen) + notaCarroceria }
 }

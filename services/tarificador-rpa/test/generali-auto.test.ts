@@ -36,7 +36,7 @@ import {
   urlConMediador,
   vehiculoBuscadoGenerali,
 } from '../src/adapters/generali/reglas.ts'
-import { ErrorMapaIncompletoGenerali, decidirFilaVersionGenerali, decidirPotenciaGenerali, clasificarPostConfirmarGenerali, fijarEsperaPostConfirmarGenerali, fijarEsperasTrasOtrosGenerali, modeloVerificadoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
+import { ErrorEleccionModeloGenerali, ErrorMapaIncompletoGenerali, decidirFilaVersionGenerali, decidirPotenciaGenerali, clasificarPostConfirmarGenerali, fijarEsperaPostConfirmarGenerali, fijarEsperasTrasOtrosGenerali, modeloVerificadoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
 import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, elegirCombustibleGenerali, abrirDesplegableVersionGenerali, elegirVersionListaGenerali, pulsarAvanzarSelectorVehiculosGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
@@ -1013,6 +1013,42 @@ test('v0.2.16 · «Otros modelos ...» recarga la lista y vuelve a «Seleccione 
     fijarEsperasTrasOtrosGenerali(3_000, 1_000)
     await cerrar()
   }
+})
+
+// v0.2.61 (trabajo 7f358ff2): con «Otros modelos ...» la lista AMPLIADA (FORFOUR · FORTWO CABRIO · FORTWO COUPE) lanzaba el atasco SIN mirar la elección de la
+// bandeja ni el vehículo de referencia. Fixtures sintéticas (solo catálogo).
+const SMART_AMPLIADA = ['FORFOUR', 'FORTWO CABRIO', 'FORTWO COUPE']
+async function modeloTrasOtros(f: FormularioAuto): Promise<{ modelos: string[] | undefined; avisos: string[]; error: unknown }> {
+  fijarEsperasTrasOtrosGenerali(3_000, 1_200)
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, RECARGA_OTROS(SMART_AMPLIADA) + PRIMEFACES_HTML(['SMART'], 'Confirmar', ['Otros modelos ...']))
+  try {
+    const avisos: string[] = []
+    let error: unknown = null
+    try { await seleccionarVehiculoGenerali(page, page, f, ctxPF(page, guard), avisos) } catch (e) { error = e }
+    return { modelos: await page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo), avisos, error }
+  } finally {
+    fijarEsperasTrasOtrosGenerali(3_000, 1_000)
+    await cerrar()
+  }
+}
+
+test('v0.2.61 · lista ampliada tras «Otros modelos ...»: la elección de la bandeja (FORTWO COUPE) se aplica y no vuelve a preguntar', async () => {
+  const r = await modeloTrasOtros(coche({ seleccionVehiculo: { marca: 'SMART', modelo: 'Fortwo' }, eleccionVersion: { codigo: null, etiqueta: ' fortwo  coupe ' } }))
+  assert.deepEqual(r.modelos, ['Otros modelos ...', 'FORTWO COUPE'])
+  assert.ok(!(r.error instanceof ErrorEleccionModeloGenerali), 'no es el atasco de modelo')
+})
+
+test('v0.2.61 · lista ampliada: sin elección, la referencia de Allianz «Fortwo PASSION 52» elige COUPE (no CABRIO ni FORFOUR) y lo declara como supuesto', async () => {
+  const r = await modeloTrasOtros(coche({ seleccionVehiculo: { marca: 'SMART', modelo: 'Fortwo' }, vehiculoReferencia: { origen: 'allianz', marca: 'SMART', modelo: 'Fortwo', version: 'PASSION 52', carroceria: null, puertas: null, cc: null, cv: null, combustible: null, anio: null } }))
+  assert.deepEqual(r.modelos, ['Otros modelos ...', 'FORTWO COUPE'])
+  assert.ok(!(r.error instanceof ErrorEleccionModeloGenerali))
+  assert.equal(r.avisos.filter((a) => /FORTWO COUPE/.test(a) && /supuesto/.test(a) && /Allianz/.test(a)).length, 1)
+})
+
+test('v0.2.61 · lista ampliada sin elección ni referencia: sigue parando con la lista de modelos (nada se elige a ciegas)', async () => {
+  const r = await modeloTrasOtros(coche({ seleccionVehiculo: { marca: 'SMART', modelo: 'Fortwo' } }))
+  assert.ok(r.error instanceof ErrorEleccionModeloGenerali)
+  assert.deepEqual(r.modelos, ['Otros modelos ...'])
 })
 
 test('v0.2.16 · «Otros modelos ...» que vuelve a «Seleccione uno» sin recargar nada → hueco claro y NO se pulsa «Confirmar»', async () => {

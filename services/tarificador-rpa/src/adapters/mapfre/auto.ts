@@ -370,7 +370,8 @@ export type TarjetaProductoLeida = {
   textoTarjeta?: string
 }
 
-export type PrimaProductoMapfre = { producto: string; periodicidad: 'anual'; primaTotalEur: number; requiereVerificacionVehiculo: boolean }
+/** `variante` (v0.8.50): oferta de una variante comercial («BASICar …») elegida temporalmente en la tarjeta `tarjeta`; no es un producto base de Coberturas. */
+export type PrimaProductoMapfre = { producto: string; periodicidad: 'anual'; primaTotalEur: number; requiereVerificacionVehiculo: boolean; variante?: { tarjeta: string } }
 
 const limpiar = (s: string) => s.replace(/\s+/g, ' ').trim()
 
@@ -498,7 +499,9 @@ async function leerTarjetasPrima(raiz: Pick<Frame, 'locator'>): Promise<TarjetaP
 
 /** v0.8.49: opciones del selector comercial de la tarjeta (solo nombres de catálogo) o el motivo por el que no se leyeron. */
 export type ComercialVistoMapfre = { opciones: readonly string[]; seleccionada: string | null } | { error: string }
-export type ProductoVistoMapfre = { producto: string; prima: number | null; deshabilitado: boolean; texto: string; comercial?: ComercialVistoMapfre }
+/** v0.8.50: resultado de elegir una variante comercial en esa tarjeta (solo nombres de catálogo, importes y un motivo canónico). */
+export type VarianteVistaMapfre = { opcion: string; estado: 'prima' | 'bloqueada' | 'no_leida'; prima: number | null; motivo?: string }
+export type ProductoVistoMapfre = { producto: string; prima: number | null; deshabilitado: boolean; texto: string; comercial?: ComercialVistoMapfre; variantes?: VarianteVistaMapfre[] }
 export type ControlesNoAbiertosMapfre = { verMas: number; pestanas: string[]; carrusel: boolean }
 
 /** Motivo canónico (nunca texto crudo del portal) de una tarjeta sin prima. */
@@ -524,21 +527,32 @@ function textoComercialVisto(c: ComercialVistoMapfre | undefined): string {
   return ` [comercial: ${nombres.map((x) => `${x.n}${c.seleccionada !== null && x.o === c.seleccionada ? ' (seleccionada)' : ''}`).join(' / ')}]`
 }
 
-/** Pura: «Productos vistos en Coberturas: NOMBRE (estado) · …» + controles de modalidades que el bot no abre. */
-export function avisoProductosVistosMapfre(productos: readonly ProductoVistoMapfre[], controles: ControlesNoAbiertosMapfre | null): string {
+const nombreOpcionSaneado = (o: string) => limpiar(redactarDatosPersonales(o)).replace(/[^\p{L}\p{N}\s\-/()+.]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 60)
+
+/** Pura (v0.8.50): « [variantes: X (prima 1.234,00€) / Y (no disponible: controles técnicos)]»; vacío si no se probó ninguna. */
+function textoVariantesVistas(v: readonly VarianteVistaMapfre[] | undefined): string {
+  if (!v || v.length === 0) return ''
+  return ` [variantes: ${v.map((x) => `${nombreOpcionSaneado(x.opcion) || '(sin nombre)'} (${x.estado === 'prima' && x.prima !== null ? `prima ${eurTexto(x.prima)}` : x.estado === 'bloqueada' ? `no disponible: ${x.motivo ?? 'sin prima'}` : `no leída: ${limpiarMensajePortalDiagnosticoHasta(x.motivo ?? '', 80) || 'sin motivo'}`})`).join(' / ')}]`
+}
+
+/** Pura: «Productos vistos en Coberturas: NOMBRE (estado) · …» + controles de modalidades que el bot no abre. `notasVariantes` (v0.8.50): lo que pasó con las variantes comerciales. */
+export function avisoProductosVistosMapfre(productos: readonly ProductoVistoMapfre[], controles: ControlesNoAbiertosMapfre | null, notasVariantes: readonly string[] = []): string {
   const lista = productos.length === 0
     ? 'ninguna tarjeta de producto leída'
     : productos.map((p) => {
       const nombre = nombreProductoSaneado(p.producto) || '(sin nombre)'
-      const com = textoComercialVisto(p.comercial)
+      const com = textoComercialVisto(p.comercial) + textoVariantesVistas(p.variantes)
       if (p.prima !== null) return `${nombre} (${p.deshabilitado ? 'deshabilitado, ' : ''}prima ${eurTexto(p.prima)})${com}`
       if (p.deshabilitado) return `${nombre} (deshabilitado: ${motivoSinPrima(p.texto)})${com}`
       const motivo = motivoSinPrima(p.texto)
       return (motivo === 'sin motivo visible' ? `${nombre} (sin prima)` : `${nombre} (no disponible: ${motivo})`) + com
     }).join(' · ')
-  const extra: string[] = productos.some((p) => p.comercial !== undefined)
-    ? ['solo se LEYERON las opciones del selector comercial; ninguna se eligió ni se recalculó']
-    : ['cada tarjeta trae un selector de producto comercial cuyas opciones el bot no abre']
+  const extra: string[] = productos.some((p) => p.variantes !== undefined && p.variantes.length > 0)
+    ? ['se LEYERON las opciones del selector comercial y las variantes «BASICar» se eligieron TEMPORALMENTE (una tarjeta cada vez) solo para leer su prima']
+    : productos.some((p) => p.comercial !== undefined)
+      ? ['solo se LEYERON las opciones del selector comercial; ninguna se eligió ni se recalculó']
+      : ['cada tarjeta trae un selector de producto comercial cuyas opciones el bot no abre']
+  extra.push(...notasVariantes)
   if (controles) {
     if (controles.verMas > 0) extra.push(`${controles.verMas} control(es) tipo «ver más»/«más productos» sin pulsar`)
     if (controles.pestanas.length > 0) extra.push(`pestañas de modalidad sin abrir: ${controles.pestanas.join(', ')}`)
@@ -594,6 +608,97 @@ export async function leerProductosVistosMapfre(nsei: Pick<Frame, 'locator'>, le
   return { productos, controles }
 }
 
+// ───────────────────────── v0.8.50 · tarificar las variantes comerciales «BASICar …» ─────────────────────────
+// Alberto (02/11/2026) AUTORIZA elegir, en UNA tarjeta cada vez, una variante del selector de producto comercial para leer su prima. Una variante se elige por su texto EXACTO
+// de la lista cerrada leída de esa tarjeta (`ctx.elegirOpcionComercialMapfre`, guard.ts: nunca por índice, comprobarBoton, sin ventanas de red) y SE RESTAURA la selección original
+// de la tarjeta ANTES de seguir (y por tanto antes de «Generar Proyecto», que no se toca). Tope: 4 variantes y 120 s por trabajo. Cualquier anomalía (otra tarjeta cambia, diálogo
+// desconocido, recálculo que no acaba) aborta SOLO las variantes y se devuelve lo ya leído. Si la restauración no se pudo VERIFICAR, `restaurado` = false y el llamador NO genera el proyecto.
+// Las variantes sin prima (controles técnicos…) quedan anotadas en «Productos vistos». Solo se prueban las «BASICar …» no tarificadas ya; «TODO RIESGO» (sin BASICar) no se elige: su tarjeta sale bloqueada.
+
+export const MAX_VARIANTES_COMERCIALES_MAPFRE = 4
+const MAX_MS_VARIANTES_MAPFRE = 120_000
+const esVarianteBasicar = (o: string) => /^BASICar\b/i.test(limpiar(o))
+const claveProducto = (t: string) => limpiar(t).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+
+export type ResultadoVariantesMapfre = {
+  primas: PrimaProductoMapfre[]
+  garantias: CoberturasPorProducto
+  /** false = una tarjeta pudo quedar con una variante elegida (no se verificó la restauración): NO se debe generar el proyecto. */
+  restaurado: boolean
+  notas: string[]
+}
+
+export async function tarificarVariantesComercialesMapfre(
+  nsei: Page,
+  productos: ProductoVistoMapfre[],
+  primas: readonly PrimaProductoMapfre[],
+  elegir: (pagina: Page, indice: number, opcion: string, permitidas: readonly string[]) => Promise<{ valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean }>,
+  ahora: () => number = Date.now,
+): Promise<ResultadoVariantesMapfre> {
+  const salida: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
+  const tarificadas = new Set(primas.map((p) => claveProducto(p.producto)))
+  // Anfitrionas posibles: tarjeta con selector leído, selección actual conocida y en la lista, prima legible y sin bloqueo.
+  const anfitrionas = productos.flatMap((p, i) => {
+    const c = p.comercial
+    if (!c || 'error' in c || c.seleccionada === null || !c.opciones.includes(c.seleccionada) || p.prima === null || p.deshabilitado) return []
+    return [{ i, p, opciones: c.opciones, original: c.seleccionada }]
+  })
+  const candidatas: string[] = []
+  for (const p of productos) {
+    const c = p.comercial
+    if (!c || 'error' in c) continue
+    for (const o of c.opciones) if (esVarianteBasicar(o) && !tarificadas.has(claveProducto(o)) && !candidatas.includes(o)) candidatas.push(o)
+  }
+  if (candidatas.length === 0) return salida
+  const sinProbar = candidatas.slice(MAX_VARIANTES_COMERCIALES_MAPFRE)
+  if (sinProbar.length > 0) salida.notas.push(`${sinProbar.length} variante(s) comercial(es) sin tarificar por el tope de ${MAX_VARIANTES_COMERCIALES_MAPFRE} por trabajo`)
+  const inicio = ahora()
+  for (const opcion of candidatas.slice(0, MAX_VARIANTES_COMERCIALES_MAPFRE)) {
+    if (ahora() - inicio > MAX_MS_VARIANTES_MAPFRE) { salida.notas.push('variantes comerciales restantes sin tarificar por el tiempo máximo'); break }
+    const base = claveProducto(opcion.replace(/^BASICar\s+/i, ''))
+    const candidatasHost = anfitrionas.filter((a) => a.opciones.includes(opcion))
+    const host = candidatasHost.find((a) => claveProducto(a.p.producto) === base) ?? candidatasHost[0]
+    if (!host) { salida.notas.push(`«${nombreOpcionSaneado(opcion)}»: ninguna tarjeta con prima la ofrece en su selector (no se probó)`); continue }
+    const registrar = (v: VarianteVistaMapfre) => { (host.p.variantes ??= []).push(v) }
+    let cambiada = false
+    let abortar = false
+    try {
+      const e = await elegir(nsei, host.i, opcion, host.opciones)
+      cambiada = true
+      const prima = importeDePrimaTotal(e.textoPrima) ?? importeDePrimaTotal(e.textoTarjeta)
+      if (e.valor !== opcion) throw new ErrorSelectorComercialAlteradoMapfre('la tarjeta no muestra la variante elegida')
+      if (e.bloqueada || prima === null) registrar({ opcion, estado: 'bloqueada', prima: null, motivo: motivoSinPrima(`${e.textoTarjeta} ${e.textoPrima}`) })
+      else if (!/\bANUAL\b/i.test(e.textoTarjeta)) registrar({ opcion, estado: 'no_leida', prima: null, motivo: 'periodicidad no confirmada como ANUAL' })
+      else {
+        registrar({ opcion, estado: 'prima', prima })
+        const base0 = primas.find((x) => claveProducto(x.producto) === claveProducto(host.p.producto))
+        salida.primas.push({ producto: nombreOpcionSaneado(opcion), periodicidad: 'anual', primaTotalEur: prima, requiereVerificacionVehiculo: base0?.requiereVerificacionVehiculo ?? false, variante: { tarjeta: host.p.producto } })
+        // Garantías de la pantalla con la variante elegida (solo lectura): sirven si la variante no está en el PDF del proyecto.
+        try { const g = await leerGarantiasPantallaMapfre(nsei, [opcion]); const k = claveProducto(opcion); const v = g.get(k); if (v && v.coberturas.length > 0) salida.garantias.set(k, v) } catch { /* sin garantías de pantalla: aviso de garantías no leídas */ }
+      }
+    } catch (e) {
+      if (e instanceof EmisionBloqueadaError) throw e
+      registrar({ opcion, estado: 'no_leida', prima: null, motivo: e instanceof Error ? e.message : 'error' })
+      if (e instanceof ErrorSelectorComercialAlteradoMapfre) { cambiada = true; abortar = true; salida.notas.push('variantes comerciales ABORTADAS por una anomalía del portal; se devuelve lo ya leído') }
+    }
+    if (cambiada) {
+      try {
+        const r = await elegir(nsei, host.i, host.original, host.opciones)
+        const primaR = importeDePrimaTotal(r.textoPrima)
+        if (r.valor !== host.original || primaR === null || primaR !== host.p.prima) { salida.restaurado = false; salida.notas.push(`no se pudo verificar la restauración de la tarjeta «${nombreOpcionSaneado(host.p.producto)}»`); break }
+      } catch (e) {
+        if (e instanceof EmisionBloqueadaError) throw e
+        salida.restaurado = false
+        salida.notas.push(`no se pudo restaurar la tarjeta «${nombreOpcionSaneado(host.p.producto)}»`)
+        break
+      }
+    }
+    if (abortar) break
+  }
+  if (!salida.restaurado) salida.notas.push('selección original NO verificada: no se genera el proyecto')
+  return salida
+}
+
 /** Primas → ofertas normalizadas (una por producto). `vehiculo` es opcional: Mapfre no separa marca y modelo (ver `lecturaResumenVehiculo`). */
 export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null, supuestos: string | null = null, diagnostico: string | null = null, avisosExtra: readonly string[] = []): OfertaNormalizada[] {
   return primas.map((p) => ({
@@ -611,6 +716,7 @@ export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[],
     desglose: null,
     avisos: [
       'PRIMA TOTAL anual de la tarjeta del producto; sin desglose neta/impuestos (el desglose está tras el botón «Desgloses», sin grabar).',
+      ...(p.variante ? [`Variante comercial de Mapfre («${nombreOpcionSaneado(p.producto)}»): se eligió TEMPORALMENTE en el selector de producto comercial de la tarjeta «${nombreOpcionSaneado(p.variante.tarjeta)}» solo para leer su prima y se restauró la selección original; NO es un producto base de «Coberturas» y no figura en el PDF/proyecto de Mapfre. Confirma sus condiciones en Mapfre antes de ofrecerla.`] : []),
       ...(p.requiereVerificacionVehiculo ? ['Mapfre exige la verificación del vehículo antes de contratar este producto.'] : []),
       ...(vehiculo ? [`Vehículo según el catálogo de Mapfre: ${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.version}.`] : []),
       // v0.8.6: lo que el bot SUPUSO (la fila del vehículo), junto al precio, como en Allianz. Asegura lo deja pasar (`supuestosDeAvisos`).
@@ -2266,7 +2372,7 @@ export async function precioDesdeObjetoAsegurado(
   nsei: Page,
   form: FormularioAuto,
   vehiculo: VehiculoConfirmado,
-  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesComercialesMapfre' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
+  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesComercialesMapfre' | 'elegirOpcionComercialMapfre' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
@@ -2304,8 +2410,20 @@ export async function precioDesdeObjetoAsegurado(
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
   // v0.8.48: diagnóstico de TODAS las tarjetas vistas (también las no ofertadas). Solo lectura; si falla, el aviso lo dice y el precio sigue.
   let avisoVistos: string
+  let variantes: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
   const leerCom = ctx.leerOpcionesComercialesMapfre
-  try { const v = await leerProductosVistosMapfre(nsei, leerCom ? (i) => leerCom(nsei, i) : undefined); avisoVistos = avisoProductosVistosMapfre(v.productos, v.controles) } catch (e) {
+  const elegirCom = ctx.elegirOpcionComercialMapfre
+  try {
+    const v = await leerProductosVistosMapfre(nsei, leerCom ? (i) => leerCom(nsei, i) : undefined)
+    // v0.8.50: variantes «BASICar» (elegir en una tarjeta, leer la prima y RESTAURAR). Una anomalía aborta solo las variantes; una violación del guard se relanza.
+    if (leerCom && elegirCom) {
+      try { variantes = await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm)) } catch (e) {
+        if (e instanceof EmisionBloqueadaError) throw e
+        variantes = { primas: [], garantias: new Map(), restaurado: false, notas: ['variantes comerciales: error inesperado; selección original NO verificada: no se genera el proyecto'] }
+      }
+    }
+    avisoVistos = avisoProductosVistosMapfre(v.productos, v.controles, variantes.notas)
+  } catch (e) {
     if (e instanceof EmisionBloqueadaError || e instanceof ErrorSelectorComercialAlteradoMapfre) throw e
     avisoVistos = 'Productos vistos en Coberturas: no se pudo leer la lista de tarjetas (diagnóstico no disponible).'
   }
@@ -2313,12 +2431,16 @@ export async function precioDesdeObjetoAsegurado(
   // v0.8.39: garantías de la pantalla «Coberturas» (solo lectura, ANTES de «Generar Proyecto»); sirven si el PDF no llega o no se lee.
   let garantiasPantalla: CoberturasPorProducto = new Map()
   try { garantiasPantalla = await leerGarantiasPantallaMapfre(nsei, primas.map((p) => p.producto)) } catch { /* sin garantias de pantalla: queda el PDF o el aviso */ }
+  for (const [k, v] of variantes.garantias) if (!garantiasPantalla.has(k)) garantiasPantalla.set(k, v)
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
   const usados = { codigoPostal: cpPortal, localidad: null, vehiculo: { marca: null, modelo: null, version: null, denominacion: vehiculo?.denominacion ?? null } }
   // v0.8.14: «Generar Proyecto» DESPUÉS de leer (el precio ya está a salvo). Una violación del guard se relanza (fail-closed).
-  const proyecto: ResultadoProyecto = ctx.generarProyectoMapfre
+  // v0.8.50: si tras tarificar variantes no se pudo VERIFICAR la selección original de las tarjetas, NO se genera el proyecto (su PDF no coincidiría con las ofertas).
+  const proyecto: ResultadoProyecto = !variantes.restaurado
+    ? { estado: 'no_generado', motivo: 'no se pudo verificar que las tarjetas de Coberturas recuperasen su producto original tras tarificar variantes comerciales' }
+    : ctx.generarProyectoMapfre
     ? await ctx.generarProyectoMapfre(nsei, (p) => completarFormularioProyectoMapfre(p, form, ctx))
     : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
@@ -2332,15 +2454,16 @@ export async function precioDesdeObjetoAsegurado(
   if (!capaLibre) ctx.log?.('mapfre: la capa cdk-overlay-backdrop sigue visible tras la espera; se intenta la descarga igualmente')
   const pdfProyecto = await descargarProyectoAuto(nsei, ctxPdf, 'mapfre', 'proyecto-mapfre-auto.pdf', proyecto.estado === 'generado')
   const nombresProductos = primas.map((p) => p.producto)
+  const nombresConVariantes = [...nombresProductos, ...variantes.primas.map((p) => p.producto)]
   let garantiasPdf: CoberturasPorProducto = new Map()
   let lineasPdf = 0
   let lineasTextoPdf: string[] = []
   try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; lineasTextoPdf = lineas; garantiasPdf = coberturasPorProducto(lineas, nombresProductos, filasDePdf(Buffer.from(bytesPdf))) } } catch { /* PDF ilegible: queda la pantalla */ }
   ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
   // v0.8.43: si algún producto queda sin garantías, el aviso dice POR QUÉ (PDF no bajado / sin texto / sin sección del producto / pantalla vacía).
-  const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresProductos, lineasPdf: lineasTextoPdf })
+  const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresConVariantes, lineasPdf: lineasTextoPdf })
   // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
-  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla, diagGarantias, lineasTextoPdf.length > 0 ? estructuraPdfMapfre(lineasTextoPdf, nombresProductos) : undefined), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
+  return { ofertas: conPolizaAnteriorTecleada(ofertasConPdfProyecto(ofertasConProyectoMapfre(ofertasConGarantiasMapfre(conDatosUsados(ofertasDesdePrimasMapfre([...primas, ...variantes.primas], null, supuestos, diagnosticoPoliza, avisosExtra), usados), garantiasPdf, garantiasPantalla, diagGarantias, lineasTextoPdf.length > 0 ? estructuraPdfMapfre(lineasTextoPdf, nombresProductos) : undefined), proyecto), pdfProyecto), historial.polizaTecleada), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -2353,7 +2476,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.49',
+  version: '0.8.50',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

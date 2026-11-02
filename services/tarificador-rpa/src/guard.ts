@@ -1952,6 +1952,124 @@ export async function leerOpcionesComercialesMapfre(page: Page, guard: GuardEmis
   return { opciones: utiles.map((o) => o.t.slice(0, 60)), seleccionada: (marcada ?? porValor)?.t.slice(0, 60) ?? null }
 }
 
+// ─────────── Mapfre 0.8.50 · ELEGIR una variante comercial en UNA tarjeta de Coberturas y leer su prima (Alberto, 02/11/2026) ───────────
+// Alberto AUTORIZA tarificar las variantes «BASICar …» del selector comercial. Es un cambio de selección de PRECIO, no un avance ni una emisión: la opción se elige por
+// su texto EXACTO dentro de la lista CERRADA que `leerOpcionesComercialesMapfre` leyó de esa misma tarjeta (nunca por índice), con guard limpio, sin ventanas de red,
+// sin cuenta bancaria y `comprobarBoton` antes de CADA clic (el selector y la opción). El recálculo de la tarjeta NO abre ninguna ventana de red ni amplía la lista
+// blanca: sus peticiones pasan por el filtro normal del guard (emitir/contratar/firmar/pagar/IBAN siguen abortando). Tras elegir se espera el recálculo (diálogo/
+// spinner «Calculando») y se comprueba que NINGUNA OTRA tarjeta cambió y que no salió un diálogo desconocido (→ `ErrorSelectorComercialAlteradoMapfre`: el adaptador
+// aborta SOLO las variantes). Tope duro por trabajo: `MAX_CAMBIOS_COMERCIALES_MAPFRE` elecciones (incluidas las restauraciones de la selección original).
+
+export const MAX_CAMBIOS_COMERCIALES_MAPFRE = 8
+const ESPERA_RECALCULO_COMERCIAL_MS = 15_000
+const MIN_RECALCULO_COMERCIAL_MS = 1_200
+const CAMBIOS_COMERCIALES = new WeakMap<GuardEmision, number>()
+const SEL_DIALOGOS_COMERCIAL = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
+const SEL_OCUPADO_COMERCIAL = 'mat-spinner, mat-progress-spinner, mat-progress-bar, .mat-progress-spinner, .mat-spinner, .mat-progress-bar'
+const RE_DIALOGO_CALCULANDO = /calculando|verificando|procesando|cargando|espere/i
+const RE_PRIMA_RESUELTA = /PRIMA\s+TOTAL\s*:\s*\d/i
+const RE_TARJETA_BLOQUEADA = /controles\s+t[eé]cnicos|impiden\s+tarificar|no\s+disponible|no\s+tarificable|consultar|consulte/i
+const escaparRegex = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Estado de una tarjeta tras elegir una variante: valor mostrado, texto de la caja de prima y texto de la tarjeta (sin PII), más si quedó sin prima (bloqueada). */
+export type EstadoTarjetaComercialMapfre = { valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean }
+
+export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmision, indice: number, opcion: string, permitidas: readonly string[]): Promise<EstadoTarjetaComercialMapfre> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'elegir variante comercial de Mapfre con una ventana de red abierta')
+  if (!Number.isInteger(indice) || indice < 0 || indice > 20) throw new EmisionBloqueadaError('fase', 'variante comercial de Mapfre: índice de tarjeta fuera de rango')
+  const texto = compactarTexto(opcion)
+  if (texto === '' || texto.length > 60 || !permitidas.some((p) => compactarTexto(p) === texto)) throw new EmisionBloqueadaError('fase', 'variante comercial de Mapfre: la opción no está en la lista cerrada leída de la tarjeta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (!usados.has('mapfre:continuar:figuras')) throw new EmisionBloqueadaError('fase', 'variante comercial de Mapfre fuera de orden (antes de calcular las primas)')
+  if (!usados.has(`mapfre:comercial:${indice}`)) throw new EmisionBloqueadaError('fase', 'variante comercial de Mapfre: la lista de opciones de esa tarjeta no se leyó antes')
+  const hechos = CAMBIOS_COMERCIALES.get(guard) ?? 0
+  if (hechos >= MAX_CAMBIOS_COMERCIALES_MAPFRE) throw new EmisionBloqueadaError('fase', 'variantes comerciales de Mapfre: tope de cambios de selección por trabajo agotado')
+  await exigirSinCuentaBancaria(page)
+  const tarjetas = page.locator(SEL_PRODUCTO_PRIMAS_MAPFRE)
+  const tarjeta = tarjetas.nth(indice)
+  if ((await tarjeta.count().catch(() => 0)) !== 1) throw new ErrorTarificador('portal', 'la tarjeta no está')
+  const select = tarjeta.locator('mat-select').first()
+  if ((await select.locator('visible=true').count().catch(() => 0)) !== 1) throw new ErrorTarificador('portal', 'selector ausente o no visible')
+  const [dis, multi, ctrl] = await select.evaluate((el) => [el.getAttribute('aria-disabled'), el.getAttribute('aria-multiselectable'), el.getAttribute('aria-controls') ?? el.getAttribute('aria-owns')] as const)
+  if (dis === 'true') throw new ErrorTarificador('portal', 'selector deshabilitado')
+  if (multi === 'true') throw new ErrorTarificador('portal', 'selector de selección múltiple')
+  const leerTodas = () => tarjetas.evaluateAll((els) => els.map((e) => ({
+    valor: ((e.querySelector('.mat-select-value-text, .mat-mdc-select-value-text')?.textContent) ?? '').replace(/\s+/g, ' ').trim(),
+    prima: ((e.querySelector('.caja-primas p strong')?.textContent) ?? '').replace(/\s+/g, ' ').trim(),
+    texto: (((e as HTMLElement).innerText || e.textContent) ?? '').replace(/\s+/g, ' ').trim().slice(0, 1500),
+  })))
+  const antes = await leerTodas()
+  if (antes.length <= indice) throw new ErrorTarificador('portal', 'la tarjeta no está')
+  if (antes[indice]!.valor === texto) return { valor: texto, textoPrima: antes[indice]!.prima, textoTarjeta: antes[indice]!.texto, bloqueada: !RE_PRIMA_RESUELTA.test(antes[indice]!.prima) && RE_TARJETA_BLOQUEADA.test(antes[indice]!.texto) }
+  comprobarBoton(await descripcion(select))
+  CAMBIOS_COMERCIALES.set(guard, hechos + 1)
+  await clicSinDialogoNativo(page, guard, select, 'selector comercial de Mapfre (elegir variante)')
+  const porId = ctrl ? page.locator(`[id="${ctrl.replace(/"/g, '')}"]`) : null
+  const ambito = porId && (await porId.count().catch(() => 0)) > 0 ? porId : page.locator('.cdk-overlay-container')
+  const filas = ambito.locator('mat-option, [role="option"]')
+  const hastaPanel = Date.now() + ESPERA_PANEL_COMERCIAL_MS
+  while ((await filas.locator('visible=true').count().catch(() => 0)) === 0 && Date.now() < hastaPanel) {
+    guard.comprobar()
+    await page.waitForTimeout(100)
+  }
+  const cerrarPanel = async () => {
+    await page.keyboard.press('Escape').catch(() => undefined)
+    const fin = Date.now() + ESPERA_PANEL_COMERCIAL_MS
+    while ((await filas.locator('visible=true').count().catch(() => 0)) > 0 && Date.now() < fin) await page.waitForTimeout(100)
+  }
+  const visibles = filas.locator('visible=true')
+  const textos = await visibles.evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim())).catch(() => [] as string[])
+  const exactas = textos.filter((t) => t === texto).length
+  if (textos.length === 0 || exactas !== 1) {
+    await cerrarPanel()
+    if ((await filas.locator('visible=true').count().catch(() => 0)) > 0) throw new ErrorSelectorComercialAlteradoMapfre('el panel no se cerró con Escape')
+    throw new ErrorTarificador('portal', textos.length === 0 ? 'el panel de opciones no apareció' : exactas === 0 ? 'la opción no está en el panel' : 'la opción está repetida en el panel')
+  }
+  const fila = visibles.filter({ hasText: new RegExp(`^\\s*${escaparRegex(texto)}\\s*$`) })
+  if ((await fila.count().catch(() => 0)) !== 1) { await cerrarPanel(); throw new ErrorTarificador('portal', 'la opción no se pudo localizar por su texto exacto') }
+  if (await fila.first().evaluate((e) => e.getAttribute('aria-disabled') === 'true' || /\bmat-(?:mdc-)?option-disabled\b|\bmdc-list-item--disabled\b/.test(e.className)).catch(() => true)) { await cerrarPanel(); throw new ErrorTarificador('portal', 'la opción está deshabilitada') }
+  comprobarBoton(await descripcion(fila))
+  await clicSinDialogoNativo(page, guard, fila, 'opción comercial de Mapfre')
+  // Espera del recálculo: diálogo/spinner «Calculando» → esperar; «Controles técnicos» → cerrar y marcar bloqueada; cualquier otro diálogo → ALTERADO.
+  const inicio = Date.now()
+  const hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
+  let bloqueoDialogo = false
+  let firmaPrevia: string | null = null
+  for (;;) {
+    guard.comprobar()
+    const dialogos = await page.locator(SEL_DIALOGOS_COMERCIAL).locator('visible=true').evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim())).catch(() => [] as string[])
+    let ocupado = (await page.locator(SEL_OCUPADO_COMERCIAL).locator('visible=true').count().catch(() => 0)) > 0
+    for (const d of dialogos) {
+      if (esTextoControlesTecnicos(d)) {
+        if ((AVANCES_USADOS.get(guard) ?? new Set<string>()).has('mapfre:controles_tecnicos:2')) throw new ErrorSelectorComercialAlteradoMapfre('el diálogo «Controles técnicos» ya se cerró dos veces en este trabajo')
+        await cerrarControlesTecnicosMapfre(page, guard)
+        bloqueoDialogo = true
+        ocupado = true
+      } else if (RE_DIALOGO_CALCULANDO.test(d)) ocupado = true
+      else throw new ErrorSelectorComercialAlteradoMapfre('apareció un diálogo desconocido tras elegir la variante')
+    }
+    if (!ocupado && (await filas.locator('visible=true').count().catch(() => 0)) === 0) {
+      const ahora = await leerTodas()
+      const t = ahora[indice]
+      if (t && t.valor !== antes[indice]!.valor && t.valor !== texto) throw new ErrorSelectorComercialAlteradoMapfre('la tarjeta muestra un producto distinto del elegido')
+      if (t && t.valor === texto && (RE_PRIMA_RESUELTA.test(t.prima) || bloqueoDialogo || RE_TARJETA_BLOQUEADA.test(t.texto)) && !/\{\{/.test(`${t.prima} ${t.texto}`) && Date.now() - inicio >= MIN_RECALCULO_COMERCIAL_MS) {
+        const firma = `${t.valor}|${t.prima}|${bloqueoDialogo}`
+        if (firma === firmaPrevia) {
+          if (ahora.length !== antes.length) throw new ErrorSelectorComercialAlteradoMapfre('cambió el número de tarjetas al elegir la variante')
+          for (let j = 0; j < ahora.length; j++) {
+            if (j !== indice && (ahora[j]!.valor !== antes[j]!.valor || ahora[j]!.prima !== antes[j]!.prima)) throw new ErrorSelectorComercialAlteradoMapfre('cambió OTRA tarjeta al elegir la variante')
+          }
+          return { valor: t.valor, textoPrima: t.prima, textoTarjeta: t.texto, bloqueada: bloqueoDialogo || !RE_PRIMA_RESUELTA.test(t.prima) }
+        }
+        firmaPrevia = firma
+      } else firmaPrevia = null
+    } else firmaPrevia = null
+    if (Date.now() >= hasta) throw new ErrorSelectorComercialAlteradoMapfre('el recálculo de la tarjeta no terminó a tiempo')
+    await page.waitForTimeout(400)
+  }
+}
+
 // ─────────── Diagnóstico de pantalla SIN datos personales (Mapfre 0.8.15 / Allianz Turismos 0.6.21, 22/10/2026) ───────────
 // Los guardados fallaban con «no aparece el botón» sin HTML guardado. Cuando no se encuentra el control, el motivo (benigno, el
 // precio no se toca) lleva ahora una lista corta de las ETIQUETAS de botones/enlaces a la vista, para saber qué hay en la pantalla.
