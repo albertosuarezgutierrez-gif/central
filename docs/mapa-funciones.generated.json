@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T17:39:51Z",
-  "sha": "7fb6e93756bdbd9ca946fb32111e16f84ce5954f",
+  "generadoEn": "2026-11-02T17:56:59Z",
+  "sha": "7ce8c075356936ac2f4c7237350d001b016e83bd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7800,7 +7800,7 @@
           "exportada": false,
           "params": "retryAfter: number",
           "retorno": null,
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "POST",
@@ -7808,12 +7808,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         }
       ],
       "tablas": [],
       "rutaApi": "/api/acceso/solicitar",
-      "hash": "0afa36f313b7"
+      "hash": "717013729b5d"
     },
     {
       "ruta": "apps/asegura-portal/app/api/acceso/verificar/route.ts",
@@ -12873,7 +12873,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "664593aeac7e"
+      "hash": "bf199c87b928"
     },
     {
       "ruta": "apps/asegura-portal/lib/autorizaciones.ts",
@@ -15188,6 +15188,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3a291ff74b92"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/email-sintaxis.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Sintaxis ENTREGABLE de un correo, más estricta que `destinoValido` del paquete. Motivo (auditoría 02/11/2026): 3 envíos de `/api/acceso/solicitar` acabaron en SMTP «Bad recipient address syntax». `destinoValido` deja pasar `a..b@x.es`, `.a@x.es`, `a.@x.es`, dominios con `_`/`!`/guion al borde o cara",
+      "exporta": [
+        "emailEntregable"
+      ],
+      "funciones": [
+        {
+          "nombre": "emailEntregable",
+          "kind": "function",
+          "exportada": true,
+          "params": "email: unknown",
+          "retorno": "boolean",
+          "linea": 12
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "69c17039a726"
     },
     {
       "ruta": "apps/asegura-portal/lib/encoger-imagen.ts",
@@ -25480,6 +25501,27 @@
       "hash": "d875cccf757c"
     },
     {
+      "ruta": "apps/asegura-portal/lib/vista-corredor-consumo.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Consumo ATÓMICO del enlace de la vista de corredor (1 uso). Aparte de `vista-corredor.ts` (que importa Prisma) para poder probarlo sin BD. 🚨 `usadoEn: null` va EN el `where` del `updateMany`: con un `update` por id, dos aperturas simultáneas del mismo token leían ambas «válido» y ambas pasaban. Gan",
+      "exporta": [
+        "consumirEnlaceVista"
+      ],
+      "funciones": [
+        {
+          "nombre": "consumirEnlaceVista",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: TxVistaCorredor, id: string, ahora: Date = new Date()",
+          "retorno": "Promise<boolean>",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3d8aafcece45"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/vista-corredor.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "La «vista de corredor»: Alberto abre el portal COMO lo ve un cliente (08/09/2026). El enlace lo crea asegura; aquí se consume UNA vez y se monta la sesión. Reglas y constantes en `@central/module-seguros-portal/vista-corredor`. 🚨 Cómo se consigue «ver lo mismo» sin tocar ninguna lectura: la identid",
@@ -25495,7 +25537,7 @@
           "exportada": true,
           "params": "tokenCrudo: unknown",
           "retorno": "Promise<AperturaVista>",
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "cerrarVistaCorredorDeSesion",
@@ -25503,7 +25545,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 68,
+          "linea": 74,
           "resumen": "Al salir: si la sesión es la del corredor, se suelta su vínculo temporal. La ficha sale de la SESIÓN, no de un parámetro: nadie puede pedir por HTTP que se suelte el vínculo de otra. Best-effort — la "
         },
         {
@@ -25512,13 +25554,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string | null>",
-          "linea": 85,
+          "linea": 91,
           "resumen": "Para la banda «Estás viendo el portal de …»: el nombre de la ficha que la sesión del corredor tiene abierta. `null` = sesión normal (no hay banda) o no se pudo leer. Igual que arriba, el id sale de la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bb2bfe4c4ed6"
+      "hash": "5f8821dd8525"
     },
     {
       "ruta": "apps/asegura-portal/lib/vista-previa.ts",
@@ -33735,7 +33777,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 13,
+          "linea": 16,
           "resumen": "Baja de un correo de campaña (LSSI art. 21: baja sencilla y gratuita en cada comunicación comercial). `t` = `campana_envio.id`. Sin sesión, a propósito (está bajo `/api/publico`, PUBLIC en `middleware"
         },
         {
@@ -33744,7 +33786,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 22
+          "linea": 23
+        },
+        {
+          "nombre": "html",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string, status: number",
+          "retorno": "NextResponse",
+          "linea": 36
         },
         {
           "nombre": "pagina",
@@ -33752,26 +33802,19 @@
           "exportada": false,
           "params": "mensaje: string, status: number",
           "retorno": "NextResponse",
-          "linea": 29
-        },
-        {
-          "nombre": "escaparHtml",
-          "kind": "function",
-          "exportada": false,
-          "params": "s: string",
-          "retorno": "string",
-          "linea": 37
+          "linea": 40
         }
       ],
       "tablas": [],
       "rutaApi": "/api/publico/campana/baja",
-      "hash": "d3cd4a604609"
+      "hash": "3562f0035683"
     },
     {
       "ruta": "apps/asegura/app/api/publico/recaptacion/baja/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
-        "GET"
+        "GET",
+        "POST"
       ],
       "funciones": [
         {
@@ -33780,8 +33823,24 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 11,
-          "resumen": "GET /api/publico/recaptacion/baja?t=<recaptacion_envios.id> — sin sesión, a propósito: lo abre el propio cliente desde el correo (LSSI art. 21, baja de un solo clic). Está en `PUBLIC` de `middleware.t"
+          "linea": 14,
+          "resumen": "/api/publico/recaptacion/baja?t=<recaptacion_envios.id> — sin sesión, a propósito: lo abre el propio cliente desde el correo (LSSI art. 21). Está en `PUBLIC` de `middleware.ts`. Responde HTML. · GET: "
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "html",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string, status: number",
+          "retorno": "NextResponse",
+          "linea": 34
         },
         {
           "nombre": "pagina",
@@ -33789,20 +33848,12 @@
           "exportada": false,
           "params": "mensaje: string, status: number",
           "retorno": "NextResponse",
-          "linea": 21
-        },
-        {
-          "nombre": "escaparHtml",
-          "kind": "function",
-          "exportada": false,
-          "params": "s: string",
-          "retorno": "string",
-          "linea": 29
+          "linea": 38
         }
       ],
       "tablas": [],
       "rutaApi": "/api/publico/recaptacion/baja",
-      "hash": "ff49c67043de"
+      "hash": "0f2f87261564"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/codigo-sms/[trabajo]/route.ts",
@@ -55499,6 +55550,65 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "37a01e53371c"
+    },
+    {
+      "ruta": "apps/asegura/lib/pagina-baja.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Páginas HTML de las bajas públicas (campaña y recaptación). 🚨 La baja NO se ejecuta por GET (auditoría 02/11/2026): los escáneres de correo (antivirus, Safe Links, previsualizadores) abren todos los enlaces de un mensaje y daban de baja a la persona sin que lo pidiera. El GET solo muestra esta pági",
+      "exporta": [
+        "escaparHtml",
+        "paginaMensajeBaja",
+        "paginaConfirmarBaja",
+        "esConfirmacionDeFormulario"
+      ],
+      "funciones": [
+        {
+          "nombre": "escaparHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 9
+        },
+        {
+          "nombre": "documento",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuerpo: string",
+          "retorno": "string",
+          "linea": 21
+        },
+        {
+          "nombre": "paginaMensajeBaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensaje: string",
+          "retorno": "string",
+          "linea": 30,
+          "resumen": "Mensaje final (resultado)."
+        },
+        {
+          "nombre": "paginaConfirmarBaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "accion: string, pregunta: string",
+          "retorno": "string",
+          "linea": 35,
+          "resumen": "Confirmación del GET: formulario POST que conserva el token en la URL."
+        },
+        {
+          "nombre": "esConfirmacionDeFormulario",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: string",
+          "retorno": "boolean",
+          "linea": 44,
+          "resumen": "¿El POST viene del botón de la página (HTML) y no del one-click de Gmail/Yahoo?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "87d84b1a2ec1"
     },
     {
       "ruta": "apps/asegura/lib/palabras-nombre.ts",
@@ -92972,7 +93082,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "Propuesta[]",
-          "linea": 28,
+          "linea": 29,
           "resumen": "Parsea bloques ---PROPUESTA--- del texto del agente"
         },
         {
@@ -92981,7 +93091,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "string",
-          "linea": 53,
+          "linea": 54,
           "resumen": "Quita los bloques ---PROPUESTA--- del texto visible"
         },
         {
@@ -92990,7 +93100,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "string",
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "AgenteArquitectoTab",
@@ -92998,12 +93108,12 @@
           "exportada": true,
           "params": "{ session }: Props",
           "retorno": null,
-          "linea": 87
+          "linea": 79
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "90efd647eefe"
+      "hash": "88114ab97dc1"
     },
     {
       "ruta": "apps/ia-rest/src/components/AgentesIATab.tsx",
@@ -99826,6 +99936,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f2ff7367028f"
+    },
+    {
+      "ruta": "apps/ia-rest/src/lib/render-md.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Markdown mínimo → HTML para la salida del LLM (panel del agente arquitecto). 🚨 La salida del modelo es input NO confiable y se inyecta con dangerouslySetInnerHTML: se ESCAPA el HTML antes de aplicar los regex de markdown (auditoría 11/2026).",
+      "exporta": [
+        "escaparHtml",
+        "renderMd"
+      ],
+      "funciones": [
+        {
+          "nombre": "escaparHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 6
+        },
+        {
+          "nombre": "renderMd",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string, C: ColoresMd",
+          "retorno": "string",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7731e63cc9ea"
     },
     {
       "ruta": "apps/ia-rest/src/lib/reposicion-stock.ts",
@@ -112861,6 +113001,47 @@
       "hash": "e80cd720279e"
     },
     {
+      "ruta": "apps/ialimp/lib/fetch-seguro.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "fetch server-side con guarda anti-SSRF que REVALIDA cada salto de redirección. Antes (auditoría 11/2026) se validaba solo la URL inicial y `fetch` seguía las redirecciones por su cuenta: un host público podía responder 302 → http://169.254.169.254/… Sin dependencias de la app (solo node:*), para pod",
+      "exporta": [
+        "isPrivateIp",
+        "isSafePublicUrl",
+        "fetchSeguro"
+      ],
+      "funciones": [
+        {
+          "nombre": "isPrivateIp",
+          "kind": "function",
+          "exportada": true,
+          "params": "ip: string",
+          "retorno": "boolean",
+          "linea": 10,
+          "resumen": "La URL la configura un usuario/propietario → input no confiable. Exigimos http(s) y que el host NO resuelva a una IP interna (loopback / link-local / privada / metadata cloud)."
+        },
+        {
+          "nombre": "isSafePublicUrl",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string",
+          "retorno": "Promise<boolean>",
+          "linea": 25
+        },
+        {
+          "nombre": "fetchSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "url: string, init: RequestInit = {}, op: OpcionesFetchSeguro = {}",
+          "retorno": "Promise<Response>",
+          "linea": 62,
+          "resumen": "`fetch` con `redirect: 'manual'`: valida la URL inicial y CADA destino de redirección antes de pedirlo. Lanza `UrlNoPermitidaError` si algún salto no es válido, si se baja de https a http o si se supe"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d5085e88c706"
+    },
+    {
       "ruta": "apps/ialimp/lib/firma-limpiadora.ts",
       "ambito": "apps/ialimp",
       "resumen": "Firma avanzada con OTP (eIDAS art.26) de los documentos de la limpiadora. Espejo de apps/rrhh/lib/firma.ts: la orquestación owner-agnóstica vive en @central/module-rrhh; aquí se inyecta la persistencia de ialimp (tablas `*_limpiadora`), el Storage privado y el email.",
@@ -112936,7 +113117,7 @@
           "exportada": true,
           "params": "opts: { query: string max?: number }",
           "retorno": "Promise<",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Búsqueda de texto en Places (New). Devuelve hasta `max` resultados (paginando)."
         },
         {
@@ -112945,7 +113126,7 @@
           "exportada": true,
           "params": "e: string",
           "retorno": "boolean",
-          "linea": 82,
+          "linea": 83,
           "resumen": "Rechaza emails que NO son de contacto de la empresa: imágenes, dominios de terceros (Google, CDNs, plantillas) y local-parts de relleno (\"email@ejemplo\")."
         },
         {
@@ -112954,7 +113135,7 @@
           "exportada": true,
           "params": "web: string",
           "retorno": "Promise<string | null>",
-          "linea": 97,
+          "linea": 98,
           "resumen": "Intenta extraer un email de contacto de la web (home + /contacto). Best-effort."
         },
         {
@@ -112963,7 +113144,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "Promise<",
-          "linea": 131,
+          "linea": 132,
           "resumen": "Descarga una URL (un listado/directorio de empresas) y usa la IA de NVIDIA para extraer las empresas con sus datos de contacto. Gratis (sin Google Places). OJO: solo sirve para páginas servidas como H"
         },
         {
@@ -112972,7 +113153,7 @@
           "exportada": true,
           "params": "query: string, max: number",
           "retorno": "Promise<",
-          "linea": 187
+          "linea": 188
         },
         {
           "nombre": "apifyResults",
@@ -112980,12 +113161,12 @@
           "exportada": true,
           "params": "runId: string",
           "retorno": "Promise<",
-          "linea": 205
+          "linea": 206
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1a9affd8a91"
+      "hash": "14f265903195"
     },
     {
       "ruta": "apps/ialimp/lib/ical-sync.ts",
@@ -112999,29 +113180,12 @@
       ],
       "funciones": [
         {
-          "nombre": "isPrivateIp",
-          "kind": "function",
-          "exportada": false,
-          "params": "ip: string",
-          "retorno": "boolean",
-          "linea": 16,
-          "resumen": "── Guarda anti-SSRF ──────────────────────────────────────────────────────────── La URL iCal la configura el propietario → input no confiable. Antes de hacer fetch server-side, exigimos http(s) y que "
-        },
-        {
-          "nombre": "isSafePublicUrl",
-          "kind": "function",
-          "exportada": false,
-          "params": "raw: string",
-          "retorno": "Promise<boolean>",
-          "linea": 30
-        },
-        {
           "nombre": "parseIcal",
           "kind": "function",
           "exportada": true,
           "params": "text: string",
           "retorno": "any[]",
-          "linea": 45,
+          "linea": 15,
           "resumen": "── iCal parser ───────────────────────────────────────────────────────────────"
         },
         {
@@ -113030,7 +113194,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 67
+          "linea": 37
         },
         {
           "nombre": "extractGuest",
@@ -113038,7 +113202,7 @@
           "exportada": true,
           "params": "summary: string, desc: string",
           "retorno": "string | null",
-          "linea": 73,
+          "linea": 43,
           "resumen": "── Extraer nombre huésped del SUMMARY/DESCRIPTION de Booking/Airbnb ─────────"
         },
         {
@@ -113047,7 +113211,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 92,
+          "linea": 62,
           "resumen": "Fecha de HOY en la zona horaria de España (la salida del huésped es lo que define la limpieza; comparamos contra el día local, no UTC)."
         },
         {
@@ -113056,7 +113220,7 @@
           "exportada": false,
           "params": "empresa: { nombre: string; email: string | null }, piso: string, guest: string | null, fecha: string,",
           "retorno": "Promise<boolean>",
-          "linea": 98,
+          "linea": 68,
           "resumen": "Correo a la empresa por una limpieza de ÚLTIMA HORA (salida hoy, piso aún sin limpiar). No crítico: si falla o no hay proveedor SMTP, no rompe el sync."
         },
         {
@@ -113065,7 +113229,7 @@
           "exportada": true,
           "params": "prop: any",
           "retorno": "Promise<",
-          "linea": 125,
+          "linea": 95,
           "resumen": "── Sync iCal de una propiedad ──────────────────────────────────────────────── prop debe traer: id, empresa_id, cliente_id, nombre, ical_urls, limpiadora_principal_id"
         }
       ],
@@ -113073,11 +113237,10 @@
         "alertas",
         "cleaning_sessions",
         "empresas",
-        "node",
         "set"
       ],
       "rutaApi": null,
-      "hash": "3247668fdcff"
+      "hash": "de668455c0ae"
     },
     {
       "ruta": "apps/ialimp/lib/impagos.ts",
@@ -141127,7 +141290,7 @@
           "exportada": false,
           "params": "id: string",
           "retorno": "Promise<boolean>",
-          "linea": 23,
+          "linea": 24,
           "resumen": "Anti-spam: como mucho 1 aviso de cada tipo cada ~día (bitácora `telegram_avisos_log`, mismo patrón que canario-lead). Best-effort: si la consulta falla se avisa igual (mejor duplicado que silencio)."
         },
         {
@@ -141136,7 +141299,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "avisosTelegramBanca",
@@ -141144,7 +141307,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Avisos Telegram de banca (frescura por cuenta + picos de gasto). Nunca rompe el cron."
         },
         {
@@ -141153,7 +141316,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 56
+          "linea": 57
         }
       ],
       "tablas": [
@@ -141161,7 +141324,7 @@
         "telegram_avisos_log"
       ],
       "rutaApi": "/api/cron/banca-alertas",
-      "hash": "42aa46fe5a6d"
+      "hash": "d9a1c6bd5a03"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/blog-asegura/route.ts",
@@ -141245,12 +141408,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/briefing",
-      "hash": "810745abd555"
+      "hash": "8bf97c939b35"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/canario-lead/route.ts",
@@ -141358,7 +141521,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         }
       ],
       "tablas": [
@@ -141372,7 +141535,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "1bb8cb43af31"
+      "hash": "b08d8f093818"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts",
@@ -141439,40 +141602,15 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/cima-sincro",
-      "hash": "610214291e22"
+      "hash": "4b40557b080b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-avisos/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 14
-        }
-      ],
-      "tablas": [
-        "concursos_perfil_empresa",
-        "concursos_radar_anuncios",
-        "cuentas",
-        "next"
-      ],
-      "rutaApi": "/api/cron/concursos-avisos",
-      "hash": "8acc20767d83"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/cron/concursos-cierre/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
         "GET"
@@ -141488,12 +141626,37 @@
         }
       ],
       "tablas": [
+        "concursos_perfil_empresa",
+        "concursos_radar_anuncios",
+        "cuentas",
+        "next"
+      ],
+      "rutaApi": "/api/cron/concursos-avisos",
+      "hash": "b3e59951a9de"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/concursos-cierre/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [
         "concursos_seguidos",
         "cuentas",
         "next"
       ],
       "rutaApi": "/api/cron/concursos-cierre",
-      "hash": "7e238c4871a7"
+      "hash": "06d76cbc0b27"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-ingesta/route.ts",
@@ -141553,7 +141716,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "GET",
@@ -141561,7 +141724,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         }
       ],
       "tablas": [
@@ -141569,7 +141732,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/contable-proactivo",
-      "hash": "000ade6ee05e"
+      "hash": "e59a9dfb877e"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-actividad/route.ts",
@@ -142131,14 +142294,14 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/facturas-conciliar-gmail",
-      "hash": "54298346452c"
+      "hash": "48f304459b20"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts",
@@ -142154,7 +142317,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "GET",
@@ -142162,7 +142325,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         }
       ],
       "tablas": [
@@ -142170,7 +142333,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-resumen-semanal",
-      "hash": "3c2de24637cb"
+      "hash": "fa1f104907e8"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/facturas-scan/route.ts",
@@ -142186,7 +142349,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "GET",
@@ -142194,7 +142357,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         }
       ],
       "tablas": [
@@ -142202,7 +142365,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-scan",
-      "hash": "7a567ac82699"
+      "hash": "aa5184727c9c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/fiscal-avisos/route.ts",
@@ -148670,30 +148833,6 @@
       "tablas": [],
       "rutaApi": "/api/subastas/documentos",
       "hash": "5557790209cd"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/subastas/fase3-debug/route.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "── TEMPORAL (Fase 3 subastas, 29/07/2026) ────────────────────────────────── Puente de exploración: la sesión de Claude no puede salir a los hosts de las fuentes nuevas (allowlist del contenedor, solo se relee al arrancar), pero Vercel sí. Este endpoint baja una URL de una LISTA CERRADA de hosts ofi",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 38
-        }
-      ],
-      "tablas": [
-        "next",
-        "subastas_debug_token"
-      ],
-      "rutaApi": "/api/subastas/fase3-debug",
-      "hash": "269acf739e89"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/mapa/route.ts",
@@ -206121,17 +206260,8 @@
           "exportada": false,
           "params": "pathname: string",
           "retorno": "boolean",
-          "linea": 75,
+          "linea": 73,
           "resumen": "Las páginas (y sus acciones de servidor) y la API de la correduría: solo con sesión de la correduría."
-        },
-        {
-          "nombre": "igualConstante",
-          "kind": "function",
-          "exportada": false,
-          "params": "dado: string | null, secreto: string",
-          "retorno": "boolean",
-          "linea": 83,
-          "resumen": "Igualdad de cadenas en tiempo constante, apta para el runtime EDGE (sin `node:crypto`): recorre siempre la longitud del secreto y acumula diferencias con XOR. `null`/vacío = no."
         },
         {
           "nombre": "middleware",
@@ -206139,12 +206269,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 92
+          "linea": 77
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb7abca916e3"
+      "hash": "962d2c02432f"
     },
     {
       "ruta": "apps/plataforma/scripts/backfill-gastos-titular.ts",
@@ -208496,7 +208626,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 10,
+          "linea": 11,
           "resumen": "Vercel Cron: 0 20 * * * (cada día a las 20:00 UTC ≈ 22:00 hora española) Detecta fichajes activos con más de HORAS_LIMITE horas sin fichar salida y avisa por Telegram."
         }
       ],
@@ -208505,7 +208635,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/alerta-fichajes-abiertos",
-      "hash": "565afcda614e"
+      "hash": "42d87a2bc2f5"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/alerta-jornada-maxima/route.ts",
@@ -208520,7 +208650,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 11,
+          "linea": 12,
           "resumen": "Vercel Cron: 30 20 * * * (cada día a las 20:30 UTC ≈ 22:30 hora española) Detecta empleados que han superado 9 h en la jornada de hoy o 40 h esta semana ISO."
         }
       ],
@@ -208529,7 +208659,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/alerta-jornada-maxima",
-      "hash": "321c5d55a802"
+      "hash": "bd8f0d79476f"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/nominas/route.ts",
@@ -208544,7 +208674,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [
@@ -208552,7 +208682,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/nominas",
-      "hash": "7cf01eaf757f"
+      "hash": "2a5a92ceef58"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/recordatorio-fichaje/route.ts",
@@ -208567,7 +208697,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8,
+          "linea": 9,
           "resumen": "Vercel Cron: 0 7 * * 1-5 (lunes a viernes a las 7:00 UTC ≈ 9:00 hora española) Envía una notificación push a los empleados que aún no han fichado hoy."
         }
       ],
@@ -208576,7 +208706,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/cron/recordatorio-fichaje",
-      "hash": "5cbb09922135"
+      "hash": "04844f5e3d97"
     },
     {
       "ruta": "apps/rrhh/app/api/cron/recordatorio-firmas/route.ts",
@@ -208586,25 +208716,17 @@
       ],
       "funciones": [
         {
-          "nombre": "digest",
-          "kind": "arrow",
-          "exportada": false,
-          "params": "s: string",
-          "retorno": null,
-          "linea": 14
-        },
-        {
           "nombre": "GET",
           "kind": "function",
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 16
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/recordatorio-firmas",
-      "hash": "01dbef36ff0c"
+      "hash": "ec652fa3a6e2"
     },
     {
       "ruta": "apps/rrhh/app/api/e/acceso/completar/route.ts",
@@ -213552,7 +213674,6 @@
     {
       "ruta": "apps/rrhh/lib/operador.ts",
       "ambito": "apps/rrhh",
-      "resumen": "Autoriza el puerto de operador (god-panel → rrhh) por secreto compartido. Cerrado por defecto: si falta RRHH_OPERADOR_SECRET, no autoriza. Secreto PROPIO de iarrhh (no se reutiliza el OPERADOR_SHARED_SECRET de ia-rest).",
       "exporta": [
         "operadorAutorizado"
       ],
@@ -213563,13 +213684,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 4,
+          "linea": 6,
           "resumen": "Autoriza el puerto de operador (god-panel → rrhh) por secreto compartido. Cerrado por defecto: si falta RRHH_OPERADOR_SECRET, no autoriza. Secreto PROPIO de iarrhh (no se reutiliza el OPERADOR_SHARED_"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0937f3bb525c"
+      "hash": "b6257739121d"
     },
     {
       "ruta": "apps/rrhh/lib/otp-fake.ts",
@@ -221128,7 +221249,6 @@
     {
       "ruta": "apps/transporte/lib/ingest-auth.ts",
       "ambito": "apps/transporte",
-      "resumen": "Clave de ingesta de posiciones (hardware/servidor GPS → API, server-to-server). Gatea ESCRITURA, así que NUNCA cae a un literal en producción (patrón guarda env || (prod ? throw : 'dev'), igual que el secreto de sesión). El device_id ya identifica el vehículo y su cuenta; esta clave solo evita escri",
       "exporta": [
         "claveDeIngesta",
         "ingestaAutorizada"
@@ -221140,7 +221260,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 6,
+          "linea": 8,
           "resumen": "Clave de ingesta de posiciones (hardware/servidor GPS → API, server-to-server). Gatea ESCRITURA, así que NUNCA cae a un literal en producción (patrón guarda env || (prod ? throw : 'dev'), igual que el"
         },
         {
@@ -221149,7 +221269,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "string | null",
-          "linea": 14
+          "linea": 16
         },
         {
           "nombre": "ingestaAutorizada",
@@ -221157,12 +221277,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 24
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "29e2027ca064"
+      "hash": "08f2b0bcc69a"
     },
     {
       "ruta": "apps/transporte/lib/session.ts",
@@ -223374,6 +223494,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "5b1c5e357a3d"
+    },
+    {
+      "ruta": "packages/core-identity/src/secreto-comparar.ts",
+      "ambito": "packages/core-identity",
+      "resumen": "Comparación de secretos de servicio (CRON_SECRET, tokens de operador, claves de ingesta). 🔒 Dos propiedades que `===` no tiene: · TIEMPO CONSTANTE respecto al secreto: el bucle recorre la longitud de lo RECIBIDO (la fija quien llama) y acumula diferencias con XOR; el secreto se lee con `i % esperad",
+      "exporta": [
+        "secretoCoincide",
+        "autorizacionBearerValida"
+      ],
+      "funciones": [
+        {
+          "nombre": "secretoCoincide",
+          "kind": "function",
+          "exportada": true,
+          "params": "recibido: string | null | undefined, esperado: string | null | undefined,",
+          "retorno": "boolean",
+          "linea": 14,
+          "resumen": "true solo si `esperado` existe, no está vacío y `recibido` es EXACTAMENTE igual."
+        },
+        {
+          "nombre": "autorizacionBearerValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "fuente: ConCabeceras | { get(nombre: string): string | null } | string | null | undefined, nombreEnv: string, env: Record<string, string | undefined> = process.env,",
+          "retorno": "boolean",
+          "linea": 34,
+          "resumen": "true solo si la cabecera `Authorization` es `Bearer <valor de process.env[nombreEnv]>`. Acepta una Request/NextRequest, unos Headers o el valor de la cabecera ya extraído. Variable de entorno ausente "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "03b1809936a2"
     },
     {
       "ruta": "packages/core-identity/src/token.ts",
@@ -267188,7 +267340,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5513,
-    "funciones": 21572
+    "archivos": 5518,
+    "funciones": 21582
   }
 }

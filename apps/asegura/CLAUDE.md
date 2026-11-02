@@ -130,6 +130,11 @@
 
 - **Figuras multi (10/10/2026):** rol `asegurado` en `oportunidad_figura` (varias fichas; la misma no dos veces), cardinalidad por ramo en `cardinalidadesDelRamo()` de `module-seguros`. SQL `prisma/sql/2026-10-10_figuras_multi.sql`: **código ANTES que el SQL** (todo `on conflict (oportunidad_id, rol)` lleva `where rol <> 'asegurado'`). Sin el SQL, el puerto da 503 `sin_migracion` (`estadoFigurasMultiBD`). Alta ligera sin DNI = SIEMPRE ficha nueva. Cepo `lib/oportunidad-figuras-multi.test.ts`.
 
+## Aislamiento por correduría (garantía real)
+- El rol `prisma_seguros` tiene BYPASSRLS: las políticas RLS NO aplican. `lib/tenant` solo re-exporta Prisma; **no es una garantía**.
+- La garantía son dos cosas, por sentencia o por fichero: el SQL sobre tablas con `correduria_id` lo filtra, o el fichero usa `correduriaUnica()` (`lib/cartera.ts`), que LANZA si hay más de una correduría en la base (hoy hay 1).
+- Cepo `test/regression-asegura-aislamiento.test.ts`: lee las tablas multi-tenant del DDL y falla si una plantilla SQL las toca sin `correduria_id`. Excepciones (UPDATE/EXISTS por id de fila ya acotada) en su allowlist `SIN_FILTRO_A_PROPOSITO`, con motivo. Al dar de alta la 2ª correduría, `correduriaUnica()` deja de valer: hay que acotar cada consulta.
+
 ## Tarificador RPA (bots Playwright)
 Guía viva (arquitectura, DOM de ePAC, seguridad, interruptores, plan): **`docs/TARIFICADOR-RPA.md`**. TARIFICAR ≠ EMITIR; guardián `test/regression-tarificador-rpa.test.ts`.
 Conocimiento de portales (capa común, Allianz ePAC, uso/régimen de Hogar): **`docs/tarificador/CONOCIMIENTO-PORTALES.md`**.

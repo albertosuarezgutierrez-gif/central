@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { tgSend } from '@central/core-telegram'
@@ -9,8 +10,7 @@ const HORAS_SEMANA_MAX = 40
 // Vercel Cron: 30 20 * * * (cada día a las 20:30 UTC ≈ 22:30 hora española)
 // Detecta empleados que han superado 9 h en la jornada de hoy o 40 h esta semana ISO.
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET
-  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!autorizacionBearerValida(req, 'CRON_SECRET')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

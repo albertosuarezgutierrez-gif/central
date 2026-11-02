@@ -19,6 +19,7 @@ import {
 import { prisma } from './db'
 export { destinoVistaCorredor } from './vista-previa'
 import { getIdentidad } from './session'
+import { consumirEnlaceVista } from './vista-corredor-consumo'
 
 export type AperturaVista =
   | { estado: 'ok'; clienteId: string }
@@ -39,13 +40,16 @@ export async function abrirVistaCorredor(tokenCrudo: unknown): Promise<AperturaV
   const corredor = await prisma.portalIdentidad.findUnique({ where: { id: IDENTIDAD_CORREDOR_ID }, select: { id: true } })
   if (!corredor) return { estado: 'sin_identidad_corredor' }
 
-  await prisma.$transaction([
-    prisma.portalVistaCorredor.update({ where: { id: fila.id }, data: { usadoEn: new Date() } }),
+  // Transacción interactiva: el enlace se gasta ATÓMICAMENTE (solo si seguía sin usar) y, si
+  // alguien lo gastó entre medias, no se toca ningún vínculo.
+  const gastado = await prisma.$transaction(async (tx) => {
+    if (!(await consumirEnlaceVista(tx, fila.id))) return false
     // Un solo vínculo de corredor a la vez: el de la ficha que se abre ahora.
-    prisma.portalVinculo.deleteMany({
+    // (Identidad compartida: ver la propuesta de identidad por sesión en el informe de auditoría.)
+    await tx.portalVinculo.deleteMany({
       where: { identidadId: IDENTIDAD_CORREDOR_ID, origen: ORIGEN_VINCULO_CORREDOR, clienteId: { not: fila.clienteId } },
-    }),
-    prisma.portalVinculo.upsert({
+    })
+    await tx.portalVinculo.upsert({
       where: { identidadId_clienteId: { identidadId: IDENTIDAD_CORREDOR_ID, clienteId: fila.clienteId } },
       create: {
         identidadId: IDENTIDAD_CORREDOR_ID,
@@ -55,8 +59,10 @@ export async function abrirVistaCorredor(tokenCrudo: unknown): Promise<AperturaV
         origen: ORIGEN_VINCULO_CORREDOR,
       },
       update: {},
-    }),
-  ])
+    })
+    return true
+  })
+  if (!gastado) return { estado: 'usado' }
   return { estado: 'ok', clienteId: fila.clienteId }
 }
 

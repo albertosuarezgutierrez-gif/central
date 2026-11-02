@@ -11,6 +11,7 @@
 // que sirve lo que el JAR oficial de TIREA ya dejó parseado, con la comisión,
 // la retención y la remesa SEPARADAS.
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCoincide, autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { tgAviso } from '@/lib/telegram/avisos'
@@ -36,10 +37,9 @@ const AGENTE = 'cima_liq'
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
-  const auth = req.headers.get('authorization')
   const ok =
-    (!!secret && auth === `Bearer ${secret}`) ||
-    (!!secret && req.nextUrl.searchParams.get('secret') === secret)
+    autorizacionBearerValida(req, 'CRON_SECRET') ||
+    secretoCoincide(req.nextUrl.searchParams.get('secret'), secret)
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   // 🚨 De QUIÉN es el libro. Era `SELECT id FROM cuentas LIMIT 1` sin orden: con tres cuentas en la BD,

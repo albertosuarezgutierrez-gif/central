@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { secretoCoincide, autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getTransporter, MAIL_FROM } from '@/lib/mailer'
@@ -13,8 +14,7 @@ export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
-  const auth = req.headers.get('authorization')
-  const ok = !!secret && (auth === `Bearer ${secret}` || req.nextUrl.searchParams.get('secret') === secret)
+  const ok = autorizacionBearerValida(req, 'CRON_SECRET') || secretoCoincide(req.nextUrl.searchParams.get('secret'), secret)
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`

@@ -12,10 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
-## (02/11/2026) PR #5396 · `@central/module-cima` fase 2 (lógica pura)
-- Port literal del CRM: mappers EIAC, matching, pipeline `runCimaPull` con deps inyectadas, `pull-puro.ts` (ACK, fusión, allowlist entidad); 750+ tests, equivalencia golden con el CRM, revisión crítica apta.
-- Pendiente fase 3 = capa BD Drizzle + persist/pull/candado (y cliente del adaptador Fly/TIREA).
-- Ojo: `field-encryption` sin `PII_ENCRYPTION_KEY` fuera de production guarda EN CLARO (heredado del CRM): vigilarlo si la ingesta corre desde Actions/tsx.
+## (02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)
+- Hecho: vista de corredor con `usadoEn` atómico; `/api/acceso/solicitar` valida email; asegura-portal sin `devFallback`; bajas campana/recaptacion GET=botón, POST=ejecuta; ruta `subastas/fase3-debug` retirada; helper `secretoCoincide`/`autorizacionBearerValida` (core-identity, apto edge) en 10 crons plataforma, 5 rrhh, transporte, sivra y middleware (`?secret=` se mantiene, ahora en tiempo constante).
+- Cepos: asegura-aislamiento reescrito (SQL sobre `seguros` con correduria_id o `correduriaUnica()`); nuevo rrhh `empresa_id`. Hook Stop timeout 30; `persist-memoria.sh` no empuja en main. ialimp `fetchSeguro` (SSRF); ia-rest `renderMd` escapa.
+- Pendiente: identidad compartida `IDENTIDAD_CORREDOR_ID` (BD); tabla `subastas_debug_token` y `lib/subastas/portal-sesion.ts` sin uso; sivra `expenses/fijos/generar` y transporte `?key=`; comparaciones en asegura*/ialimp; `nombreEmpleado` sin filtro empresa en rrhh `notificar.ts`. Detalle: `docs/AUDITORIA-2026-11.md` §3.
+
+## (02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)
+- Port literal del CRM (`packages/module-cima`): parsers/mappers POL/REC/SIN/CEF, matching, cobertura, pipeline `runCimaPull` con deps inyectadas, `pull-puro.ts`; 751 tests, equivalencia golden con el CRM. Aún nada lo importa: la ingesta en producción sigue en el CRM.
+- Siguiente: fase 3 capa BD Drizzle + persist/pull/candado; fase 4 sombra (replay 235 crudos en rama Supabase); fase 5 corte con interruptor `CIMA_ESCRITOR`.
+- Ojo: `field-encryption` sin `PII_ENCRYPTION_KEY` fuera de production guarda EN CLARO (heredado del CRM).
 
 ## (02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
 - Auditoría completa mergeada (#5385). CRM `asegura` (app.grupoasegura.com): sin uso humano (Alberto: «Manuel no usa nada»); solo vive la ingesta CIMA.

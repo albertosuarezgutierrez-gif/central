@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { autorizacionBearerValida } from '@central/core-identity'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { generarBorradores, periodoActual } from '@/lib/nominas'
@@ -6,8 +7,7 @@ import { generarBorradores, periodoActual } from '@/lib/nominas'
 export const maxDuration = 60
 
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET
-  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!autorizacionBearerValida(req, 'CRON_SECRET')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

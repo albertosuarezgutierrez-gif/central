@@ -1,31 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { esTokenBajaValido } from '@/lib/recaptacion-baja'
 import { aplicarBajaEmail } from '@/lib/cartera-recaptacion'
+import { esConfirmacionDeFormulario, paginaConfirmarBaja, paginaMensajeBaja } from '@/lib/pagina-baja'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/publico/recaptacion/baja?t=<recaptacion_envios.id> — sin sesión, a
-// propósito: lo abre el propio cliente desde el correo (LSSI art. 21, baja de
-// un solo clic). Está en `PUBLIC` de `middleware.ts`. Responde HTML, no JSON:
-// quien lo abre es una persona en un navegador, no un llamador programático.
+// /api/publico/recaptacion/baja?t=<recaptacion_envios.id> — sin sesión, a propósito: lo abre el propio
+// cliente desde el correo (LSSI art. 21). Está en `PUBLIC` de `middleware.ts`. Responde HTML.
+//  · GET: SOLO muestra la confirmación (botón → POST). Los escáneres de correo abren los enlaces y
+//    daban de baja por GET. No toca la BD.
+//  · POST: ejecuta la baja (botón de la página, `confirmar=1`, responde HTML; o un one-click RFC 8058,
+//    sin cuerpo útil, que responde sin cuerpo).
 export async function GET(req: NextRequest) {
   const t = req.nextUrl.searchParams.get('t')
   if (!esTokenBajaValido(t)) return pagina('El enlace no es válido.', 400)
+  const accion = `${req.nextUrl.pathname}?t=${encodeURIComponent(t.trim())}`
+  return html(paginaConfirmarBaja(accion, '¿Quieres dejar de recibir estos correos?'), 200)
+}
 
+export async function POST(req: NextRequest) {
+  const t = req.nextUrl.searchParams.get('t')
+  const desdeFormulario = esConfirmacionDeFormulario(await req.text().catch(() => ''))
+  if (!esTokenBajaValido(t)) return desdeFormulario ? pagina('El enlace no es válido.', 400) : new NextResponse(null, { status: 400 })
   const r = await aplicarBajaEmail(t)
-  if (r.estado === 'ok') return pagina('Hecho: no volverás a recibir estos correos.', 200)
-  if (r.estado === 'no_encontrado') return pagina('El enlace no es válido.', 404)
-  return pagina('No se ha podido procesar la baja. Vuelve a intentarlo en unos minutos.', 500)
+  if (desdeFormulario) {
+    if (r.estado === 'ok') return pagina('Hecho: no volverás a recibir estos correos.', 200)
+    if (r.estado === 'no_encontrado') return pagina('El enlace no es válido.', 404)
+    return pagina('No se ha podido procesar la baja. Vuelve a intentarlo en unos minutos.', 500)
+  }
+  return new NextResponse(null, { status: r.estado === 'ok' ? 200 : r.estado === 'no_encontrado' ? 404 : 500 })
+}
+
+function html(cuerpo: string, status: number): NextResponse {
+  return new NextResponse(cuerpo, { status, headers: { 'content-type': 'text/html; charset=utf-8' } })
 }
 
 function pagina(mensaje: string, status: number): NextResponse {
-  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">` +
-    `<meta name="viewport" content="width=device-width, initial-scale=1"><title>Baja</title>` +
-    `<style>body{font-family:system-ui,sans-serif;max-width:480px;margin:80px auto;padding:0 16px;color:#111}</style>` +
-    `</head><body><p>${escaparHtml(mensaje)}</p></body></html>`
-  return new NextResponse(html, { status, headers: { 'content-type': 'text/html; charset=utf-8' } })
-}
-
-function escaparHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return html(paginaMensajeBaja(mensaje), status)
 }
