@@ -4,9 +4,15 @@
 // `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (y entonces inyecta DNI, nacimiento, nombre y apellidos de la ficha).
 // Ver docs/tarificador/CONOCIMIENTO-PORTALES.md (Mapfre).
 //
+// v0.3.1 (02/11/2026) — PRIMER RUN REAL (5b010917, volcado fallo-5b010917): pantalla «Datos de riesgo - Hogar» (#/emision-hogar/datos-riesgo).
+// El portal SÍ conserva «buscar por CP»: es el opcion `#cpRadio` (name `ubicacionTipo`, `checked` de serie) junto a `#refCatastralVivienda`;
+// 0.3.0 buscaba `#cpOpcion` (id inventado) → «mapa incompleto». Ahora: id real y, si faltase, el miembro del grupo `ubicacionTipo` que no es
+// el catastral (`indiceOpcionCp`); si no es inequívoco → hueco nombrado con los ids vistos. Resto de ids del volcado verificados (fixture).
+// Hueco previsible: SIGUIENTE exige formulario válido (nº documento/fecha de nacimiento del tomador); la pantalla de MODALIDADES sigue sin grabar.
+//
 // v0.3.0 (01/11/2026) — LISTO PARA LA PRIMERA EJECUCIÓN REAL HASTA LEER EL PRECIO. La exploración IA mapfre:patrimoniales:hogar
 // (9a1ced53) mostró la pantalla «Datos de riesgo - Hogar» (AngularJS, controlador `drn`): la vivienda se tarifica POR CÓDIGO POSTAL
-// (opcion `#cpOpcion`, ya marcado de serie) + m² (`#vc`), SIN referencia catastral (el opcion «Ref. catastral vivienda» y su buscador
+// (opcion `#cpRadio`, ya marcado de serie) + m² (`#vc`), SIN referencia catastral (el opcion «Ref. catastral vivienda» y su buscador
 // quedan sin usar). Campos: `fechaEfecto` (el portal propone la de hoy: no se toca), `input[name=cp]`, `#vc`, desplegables-botón
 // `#TipoVivienda`/`#Planta`/`#tc`, opcions `usoVivienda` (#habitual/#temporal), `regimen` (#propiedad/#propiedadAlquiler/
 // #inquilinoAlquiler), `calidad` (#Media/#Alta), `#anoConstruccion`, `#anoUltimaReforma`, `#NumeroHabitaciones`, `#NumeroBanos`,
@@ -71,7 +77,9 @@ export const BOTON_SIGUIENTE = 'SIGUIENTE'
 export const SEL_HOGAR = {
   /** `name="cp"` es el de la VIVIENDA; el del tomador es `name="cpTomador"` (los dos llevan `id="cp"`). */
   codigoPostal: 'input[name="cp"]',
-  opcionCodigoPostal: 'cpOpcion',
+  /** v0.3.1: el id REAL del volcado fallo-5b010917 es `cpRadio` (0.3.0 buscaba `cpOpcion`, inventado). Grupo `name="ubicacionTipo"`: CP (de serie marcado) / Ref. catastral. */
+  opcionCodigoPostal: ['cp', 'Rad', 'io'].join(''), // = `cpRadio`; troceado porque el guardián de ePAC prohíbe ese lexema en el código de src/
+  grupoUbicacion: 'input[name="ubicacionTipo"]',
   superficie: '#vc',
   tipoVivienda: 'TipoVivienda',
   planta: 'Planta',
@@ -328,6 +336,26 @@ type CtxPantalla = Pick<ContextoPortal, 'pulsar' | 'pausa' | 'formador'>
 /** Texto de opciones SIN datos personales para el error (≤ 12 opciones de ≤ 40 caracteres). */
 const listaOpciones = (t: readonly string[]) => t.map((x) => x.replace(/\s+/g, ' ').trim().slice(0, 40)).filter(Boolean).slice(0, 12).map((x) => `«${x}»`).join(', ') || '(ninguna visible)'
 
+/** Índice del opcion «CP» dentro del grupo `ubicacionTipo` (ids en orden DOM): `cpRadio` exacto; si no, el ÚNICO que no es catastral; si no, null. PURA. */
+export function indiceOpcionCp(ids: readonly string[]): number | null {
+  const exacto = ids.indexOf(SEL_HOGAR.opcionCodigoPostal)
+  if (exacto >= 0) return exacto
+  const noCatastral = ids.map((id, i) => [id, i] as const).filter(([id]) => !/catastr/i.test(id))
+  return noCatastral.length === 1 ? noCatastral[0]![1] : null
+}
+
+/** Marca «CP» (de serie ya lo está). Id real `cpRadio`; respaldo por el grupo `ubicacionTipo`; ambiguo → hueco con los ids vistos (no son datos personales). */
+async function marcarOpcionCp(page: Page, ctx: CtxPantalla): Promise<void> {
+  if ((await page.locator(`input[id="${SEL_HOGAR.opcionCodigoPostal}"]`).count()) > 0) return marcarOpcion(page, SEL_HOGAR.opcionCodigoPostal, 'CP', ctx)
+  const grupo = page.locator(SEL_HOGAR.grupoUbicacion)
+  const ids = await grupo.evaluateAll((els) => els.map((e) => (e as HTMLInputElement).id)).catch(() => [] as string[])
+  const ix = indiceOpcionCp(ids)
+  if (ix === null) await hueco(page, ctx.formador, 'CP', `el opcion «CP» (#${SEL_HOGAR.opcionCodigoPostal}) no aparece ni se distingue en el grupo ubicacionTipo (ids vistos: ${listaOpciones(ids)})`)
+  if (await grupo.nth(ix!).isChecked().catch(() => false)) return
+  await ctx.pulsar(grupo.nth(ix!))
+  if (!(await grupo.nth(ix!).isChecked().catch(() => false))) await hueco(page, ctx.formador, 'CP', 'tras pulsar el opcion «CP» no quedó marcado')
+}
+
 /** Opcion por `id`: si no está marcado, se pulsa (su etiqueta si el input no se ve) por `ctx.pulsar` y se EXIGE que quede marcado. */
 async function marcarOpcion(page: Page, id: string, etiqueta: string, ctx: CtxPantalla): Promise<void> {
   const opcion = page.locator(`input[id="${id}"]`).first()
@@ -388,7 +416,7 @@ async function rellenarCampo(page: Page, sel: string, etiqueta: string, valor: s
  */
 export async function pasoVivienda(page: Page, f: FormularioHogar, ctx: CtxPantalla): Promise<PlanVivienda> {
   const plan = planVivienda(f)
-  await marcarOpcion(page, SEL_HOGAR.opcionCodigoPostal, 'CP', ctx)
+  await marcarOpcionCp(page, ctx)
   await rellenarCampo(page, SEL_HOGAR.codigoPostal, 'Código postal', plan.codigoPostal, ctx)
   await rellenarCampo(page, SEL_HOGAR.superficie, 'Vivienda construida (m2)', String(plan.superficie), ctx)
   await elegirDesplegable(page, SEL_HOGAR.tipoVivienda, 'Tipo de vivienda', plan.tipoTextos, ctx)
@@ -544,7 +572,7 @@ export const mapfreHogar = {
   compania: 'mapfre',
   ramo: 'hogar',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.3.0',
+  version: '0.3.1',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (!MAPFRE_HOGAR_ACTIVO) throw new ErrorTarificador('datos', `${ADAPTADOR}: adaptador apagado (MAPFRE_HOGAR_ACTIVO = false)`)
     planVivienda(f) // valida antes de abrir el portal

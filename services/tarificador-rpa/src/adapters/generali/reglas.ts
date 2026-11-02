@@ -344,6 +344,11 @@ export function esOpcionOtrosModeloGenerali(texto: string): boolean {
   return !esOpcionVaciaCatalogo(texto) && normalizarCatalogo(texto).split(' ')[0] === OPCION_OTROS_MODELO_GENERALI
 }
 
+/** v0.2.62 · ¿Es la opción de cierre «Otras versiones ...» (o «Otros …») del desplegable «Versión»? PURA. */
+export function esOpcionOtrasVersionesGenerali(texto: string): boolean {
+  return !esOpcionVaciaCatalogo(texto) && ['OTRAS', 'OTROS'].includes(normalizarCatalogo(texto).split(' ')[0] ?? '')
+}
+
 /**
  * La opción decidida está PUESTA en el `<select>` oculto cuando su valor Y el texto de la opción seleccionada son los de la elegida
  * (normalizados). Solo el valor no basta: si «Seleccione uno» y «Otros modelos ...» comparten valor, el valor «casa» sin elegir nada. PURA.

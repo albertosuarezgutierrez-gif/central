@@ -22,6 +22,7 @@ import {
   planVivienda,
   habitacionesYBanosPorM2,
   indiceOpcionDesplegable,
+  indiceOpcionCp,
   primasDesdeTextoLibre,
   resumenPantallaPrecio,
 } from '../src/adapters/mapfre/hogar.ts'
@@ -136,6 +137,35 @@ test('el borrador no nombra acciones de emisión ni de impresión como acción',
   const src = readFileSync(new URL('../src/adapters/mapfre/hogar.ts', import.meta.url), 'utf8')
   const codigo = src.split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/**')).join('\n')
   assert.ok(!/imprimir|contratar|emitir|\.click\(|grabar/i.test(codigo.replace(/«[^»]*»/g, '')))
+})
+
+// v0.3.1 (primer run real 5b010917): el opcion «CP» es `#cpRadio` (no `#cpOpcion`); ids contrastados con un fixture ficticio de la pantalla real.
+const FIXTURE_RIESGO = readFileSync(new URL('./fixtures/mapfre-hogar/datos-riesgo.html', import.meta.url), 'utf8')
+const idsDe = (html: string) => [...html.matchAll(/<(?:input|button)\b[^>]*\bid="([^"]+)"/g)].map((m) => m[1]!)
+
+test('v0.3.1: version y opcion CP con el id real del portal (cpRadio), no el inventado', () => {
+  assert.equal(mapfreHogar.version, '0.3.1')
+  assert.equal(SEL_HOGAR.opcionCodigoPostal, 'cpRadio')
+  const codigo = readFileSync(new URL('../src/adapters/mapfre/hogar.ts', import.meta.url), 'utf8').replace(/^\s*\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+  assert.ok(!/cpOpcion/.test(codigo))
+})
+
+test('v0.3.1: todos los ids que el adaptador pulsa o rellena existen en la estructura real (fixture)', () => {
+  const ids = new Set(idsDe(FIXTURE_RIESGO))
+  const usados = [SEL_HOGAR.opcionCodigoPostal, SEL_HOGAR.tipoVivienda, SEL_HOGAR.planta, SEL_HOGAR.tipoConstruccion, 'habitual', 'temporal', 'propiedad', 'inquilinoAlquiler', 'Media',
+    SEL_HOGAR.superficie, SEL_HOGAR.anoConstruccion, SEL_HOGAR.anoReforma, SEL_HOGAR.habitaciones, SEL_HOGAR.banos, SEL_HOGAR.documento, SEL_HOGAR.fechaNacimiento, SEL_HOGAR.nombre, SEL_HOGAR.apellido1, SEL_HOGAR.apellido2]
+    .map((s) => s.replace(/^#/, ''))
+  for (const id of usados) assert.ok(ids.has(id), `falta #${id} en la pantalla real`)
+  assert.ok(FIXTURE_RIESGO.includes('name="cp"') && FIXTURE_RIESGO.includes('name="cpTomador"'))
+  assert.ok(FIXTURE_RIESGO.includes('id="cpRadio" name="ubicacionTipo" checked')) // de serie
+})
+
+test('v0.3.1: indiceOpcionCp — exacto, único no catastral, o nada', () => {
+  assert.equal(indiceOpcionCp(['cpRadio', 'refCatastralVivienda']), 0)
+  assert.equal(indiceOpcionCp(['refCatastralVivienda', 'cpRadio']), 1)
+  assert.equal(indiceOpcionCp(['codigoPostalRadio', 'refCatastralVivienda']), 0)
+  assert.equal(indiceOpcionCp(['a', 'b', 'refCatastralVivienda']), null)
+  assert.equal(indiceOpcionCp([]), null)
 })
 
 test('planVivienda: mapeo a los campos de «Datos de riesgo - Hogar» y supuestos declarados', () => {

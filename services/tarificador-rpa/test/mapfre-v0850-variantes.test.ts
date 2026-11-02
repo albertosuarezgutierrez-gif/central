@@ -17,7 +17,7 @@ import {
   pulsarContinuarMapfre, type GuardEmision,
 } from '../src/guard.ts'
 
-test('v0.8.50 · versión', () => assert.equal(mapfreAuto.version, '0.8.50'))
+test('v0.8.50 · versión', () => assert.equal(mapfreAuto.version, '0.8.51'))
 
 const MATRICULA = '1234BCD'
 const OPCIONES = ['TERCEROS', 'TERCEROS AMPLIADO', 'TODO RIESGO', 'BASICar TERCEROS AMPLIADO', 'BASICar TODO RIESGO']
@@ -242,7 +242,7 @@ test('adaptador: una anomalía aborta SOLO las variantes (lo ya leído se conser
   assert.deepEqual(p.actual, ['TERCEROS', 'TERCEROS AMPLIADO', 'TODO RIESGO'])
 })
 
-test('adaptador: restauración que no se verifica → restaurado=false (el llamador no genera el proyecto); y un EmisionBloqueadaError se relanza', async () => {
+test('adaptador: restauración que no se verifica → restaurado=false (solo aviso desde 0.8.51); y un EmisionBloqueadaError se relanza', async () => {
   const p = portalFalso({ restauraMal: true })
   const r = await tarificarVariantesComercialesMapfre({} as Page, vistos(), PRIMAS, p.elegir)
   assert.equal(r.restaurado, false)
@@ -259,12 +259,9 @@ test('ofertas: la variante sale como oferta propia «Auto · BASICar …» con a
   assert.equal(o[2]!.primaAnualEur, 1234.5)
 })
 
-test('cableado: la variante nunca se elige después de «Generar Proyecto» y sin restauración verificada no se genera el proyecto', () => {
+test('cableado (guardián del guard; el ORDEN respecto a «Generar Proyecto» lo fija desde 0.8.51 mapfre-v0851-calcular.test.ts)', () => {
   const src = readFileSync(join(import.meta.dirname, '../src/adapters/mapfre/auto.ts'), 'utf8')
-  const iVar = src.indexOf('await tarificarVariantesComercialesMapfre(')
-  const iGen = src.indexOf('await ctx.generarProyectoMapfre(nsei')
-  assert.ok(iVar > -1 && iGen > iVar, 'las variantes se tarifican ANTES de «Generar Proyecto»')
-  assert.match(src, /!variantes\.restaurado\s*\n\s*\? \{ estado: 'no_generado'/)
+  assert.ok(src.indexOf('await tarificarVariantesComercialesMapfre(') > -1)
   const guard = readFileSync(join(import.meta.dirname, '../src/guard.ts'), 'utf8')
   const fn = guard.slice(guard.indexOf('export async function elegirOpcionComercialMapfre'), guard.indexOf('// ─────────── Diagnóstico de pantalla SIN datos personales'))
   assert.ok(fn.indexOf('comprobarBoton(await descripcion(select))') < fn.indexOf('clicSinDialogoNativo(page, guard, select'), 'comprobarBoton antes del clic del selector')

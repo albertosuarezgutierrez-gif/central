@@ -1961,6 +1961,11 @@ export async function leerOpcionesComercialesMapfre(page: Page, guard: GuardEmis
 // aborta SOLO las variantes). Tope duro por trabajo: `MAX_CAMBIOS_COMERCIALES_MAPFRE` elecciones (incluidas las restauraciones de la selección original).
 
 export const MAX_CAMBIOS_COMERCIALES_MAPFRE = 8
+/** v0.8.51: «Calcular» (tarificación) pulsado tras elegir una variante cuando el portal no recalcula solo: uno por elección, tope por trabajo. */
+export const MAX_CALCULOS_COMERCIALES_MAPFRE = 8
+const CALCULOS_COMERCIALES = new WeakMap<GuardEmision, number>()
+const GRACIA_AUTORECALCULO_MS = 1_500
+const RE_ROTULO_CALCULAR = /^\s*(?:calculate\s*)?Calcular\s*$/i
 const ESPERA_RECALCULO_COMERCIAL_MS = 15_000
 const MIN_RECALCULO_COMERCIAL_MS = 1_200
 const CAMBIOS_COMERCIALES = new WeakMap<GuardEmision, number>()
@@ -1972,7 +1977,13 @@ const RE_TARJETA_BLOQUEADA = /controles\s+t[eé]cnicos|impiden\s+tarificar|no\s+
 const escaparRegex = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /** Estado de una tarjeta tras elegir una variante: valor mostrado, texto de la caja de prima y texto de la tarjeta (sin PII), más si quedó sin prima (bloqueada). */
-export type EstadoTarjetaComercialMapfre = { valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean }
+export type EstadoTarjetaComercialMapfre = {
+  valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean
+  /** v0.8.51: cómo se recalculó la prima: sola (diálogo/spinner/cambio de importe), tras pulsar «Calcular» (botón de tarificación, no de emisión) o NO se recalculó (sin botón). */
+  recalculo?: 'auto' | 'calcular' | 'ninguno'
+  /** v0.8.51: si «Calcular» recalculó OTRAS tarjetas con otra prima: «posición: 238,37 → 240,00» (solo importes). Un cambio de producto sí aborta. */
+  otrasPrimas?: string[]
+}
 
 export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmision, indice: number, opcion: string, permitidas: readonly string[]): Promise<EstadoTarjetaComercialMapfre> {
   guard.comprobar()
@@ -2001,7 +2012,7 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
   })))
   const antes = await leerTodas()
   if (antes.length <= indice) throw new ErrorTarificador('portal', 'la tarjeta no está')
-  if (antes[indice]!.valor === texto) return { valor: texto, textoPrima: antes[indice]!.prima, textoTarjeta: antes[indice]!.texto, bloqueada: !RE_PRIMA_RESUELTA.test(antes[indice]!.prima) && RE_TARJETA_BLOQUEADA.test(antes[indice]!.texto) }
+  if (antes[indice]!.valor === texto) return { valor: texto, textoPrima: antes[indice]!.prima, textoTarjeta: antes[indice]!.texto, bloqueada: !RE_PRIMA_RESUELTA.test(antes[indice]!.prima) && RE_TARJETA_BLOQUEADA.test(antes[indice]!.texto), recalculo: 'ninguno' }
   comprobarBoton(await descripcion(select))
   CAMBIOS_COMERCIALES.set(guard, hechos + 1)
   await clicSinDialogoNativo(page, guard, select, 'selector comercial de Mapfre (elegir variante)')
@@ -2032,35 +2043,64 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
   comprobarBoton(await descripcion(fila))
   await clicSinDialogoNativo(page, guard, fila, 'opción comercial de Mapfre')
   // Espera del recálculo: diálogo/spinner «Calculando» → esperar; «Controles técnicos» → cerrar y marcar bloqueada; cualquier otro diálogo → ALTERADO.
-  const inicio = Date.now()
-  const hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
+  let inicio = Date.now()
+  let hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
   let bloqueoDialogo = false
   let firmaPrevia: string | null = null
+  let recalculoVisto = false
+  let calcularPulsado = false
   for (;;) {
     guard.comprobar()
     const dialogos = await page.locator(SEL_DIALOGOS_COMERCIAL).locator('visible=true').evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim())).catch(() => [] as string[])
     let ocupado = (await page.locator(SEL_OCUPADO_COMERCIAL).locator('visible=true').count().catch(() => 0)) > 0
+    if (ocupado) recalculoVisto = true
     for (const d of dialogos) {
       if (esTextoControlesTecnicos(d)) {
         if ((AVANCES_USADOS.get(guard) ?? new Set<string>()).has('mapfre:controles_tecnicos:2')) throw new ErrorSelectorComercialAlteradoMapfre('el diálogo «Controles técnicos» ya se cerró dos veces en este trabajo')
         await cerrarControlesTecnicosMapfre(page, guard)
         bloqueoDialogo = true
         ocupado = true
-      } else if (RE_DIALOGO_CALCULANDO.test(d)) ocupado = true
+        recalculoVisto = true
+      } else if (RE_DIALOGO_CALCULANDO.test(d)) { ocupado = true; recalculoVisto = true }
       else throw new ErrorSelectorComercialAlteradoMapfre('apareció un diálogo desconocido tras elegir la variante')
     }
     if (!ocupado && (await filas.locator('visible=true').count().catch(() => 0)) === 0) {
       const ahora = await leerTodas()
       const t = ahora[indice]
       if (t && t.valor !== antes[indice]!.valor && t.valor !== texto) throw new ErrorSelectorComercialAlteradoMapfre('la tarjeta muestra un producto distinto del elegido')
-      if (t && t.valor === texto && (RE_PRIMA_RESUELTA.test(t.prima) || bloqueoDialogo || RE_TARJETA_BLOQUEADA.test(t.texto)) && !/\{\{/.test(`${t.prima} ${t.texto}`) && Date.now() - inicio >= MIN_RECALCULO_COMERCIAL_MS) {
+      if (t && t.prima !== antes[indice]!.prima) recalculoVisto = true
+      // v0.8.51: elegir la opción puede NO recalcular la prima hasta pulsar «Calcular» (botón de tarificación). Pasada la gracia sin recálculo, se pulsa UNA vez por elección.
+      if (t && t.valor === texto && !recalculoVisto && !calcularPulsado && Date.now() - inicio >= GRACIA_AUTORECALCULO_MS) {
+        const boton = await localizarCalcularComercial(tarjeta, page)
+        if (boton) {
+          const hechosCalc = CALCULOS_COMERCIALES.get(guard) ?? 0
+          if (hechosCalc >= MAX_CALCULOS_COMERCIALES_MAPFRE) throw new EmisionBloqueadaError('fase', 'variantes comerciales de Mapfre: tope de «Calcular» por trabajo agotado')
+          comprobarBoton(await descripcion(boton))
+          CALCULOS_COMERCIALES.set(guard, hechosCalc + 1)
+          await clicSinDialogoNativo(page, guard, boton, 'Calcular (variante comercial de Mapfre)')
+          calcularPulsado = true
+          inicio = Date.now()
+          hasta = inicio + ESPERA_RECALCULO_COMERCIAL_MS
+          firmaPrevia = null
+          continue
+        }
+      }
+      const sinRecalculo = !recalculoVisto && !calcularPulsado
+      if (t && t.valor === texto && (RE_PRIMA_RESUELTA.test(t.prima) || bloqueoDialogo || RE_TARJETA_BLOQUEADA.test(t.texto)) && !/\{\{/.test(`${t.prima} ${t.texto}`) && Date.now() - inicio >= (sinRecalculo ? GRACIA_AUTORECALCULO_MS : MIN_RECALCULO_COMERCIAL_MS)) {
         const firma = `${t.valor}|${t.prima}|${bloqueoDialogo}`
         if (firma === firmaPrevia) {
           if (ahora.length !== antes.length) throw new ErrorSelectorComercialAlteradoMapfre('cambió el número de tarjetas al elegir la variante')
+          const otrasPrimas: string[] = []
           for (let j = 0; j < ahora.length; j++) {
-            if (j !== indice && (ahora[j]!.valor !== antes[j]!.valor || ahora[j]!.prima !== antes[j]!.prima)) throw new ErrorSelectorComercialAlteradoMapfre('cambió OTRA tarjeta al elegir la variante')
+            if (j === indice) continue
+            if (ahora[j]!.valor !== antes[j]!.valor) throw new ErrorSelectorComercialAlteradoMapfre('cambió OTRA tarjeta al elegir la variante')
+            if (ahora[j]!.prima !== antes[j]!.prima) {
+              // Sin «Calcular» pulsado por el bot, otra tarjeta no tiene por qué cambiar: anomalía. Tras «Calcular» el portal puede recalcular todas: se anota y se sigue.
+              if (!calcularPulsado) throw new ErrorSelectorComercialAlteradoMapfre('cambió OTRA tarjeta al elegir la variante')
+              otrasPrimas.push(`tarjeta ${j + 1}: ${ahora[j]!.prima.replace(/[^\d.,€ ]/g, '').trim() || '(vacía)'} (antes ${antes[j]!.prima.replace(/[^\d.,€ ]/g, '').trim() || '(vacía)'})`)
+            }
           }
-          return { valor: t.valor, textoPrima: t.prima, textoTarjeta: t.texto, bloqueada: bloqueoDialogo || !RE_PRIMA_RESUELTA.test(t.prima) }
+          return { valor: t.valor, textoPrima: t.prima, textoTarjeta: t.texto, bloqueada: bloqueoDialogo || !RE_PRIMA_RESUELTA.test(t.prima), recalculo: calcularPulsado ? 'calcular' : recalculoVisto ? 'auto' : 'ninguno', ...(otrasPrimas.length > 0 ? { otrasPrimas } : {}) }
         }
         firmaPrevia = firma
       } else firmaPrevia = null
@@ -2068,6 +2108,17 @@ export async function elegirOpcionComercialMapfre(page: Page, guard: GuardEmisio
     if (Date.now() >= hasta) throw new ErrorSelectorComercialAlteradoMapfre('el recálculo de la tarjeta no terminó a tiempo')
     await page.waitForTimeout(400)
   }
+}
+
+/** v0.8.51: el botón «Calcular» (icono `calculate`) de la tarjeta o, si no está en ella, de la pantalla de Coberturas: exactamente UNO visible con el rótulo exacto; si no, null. */
+async function localizarCalcularComercial(tarjeta: Locator, page: Page): Promise<Locator | null> {
+  for (const ambito of [tarjeta, page.locator('app-coberturas, app-primas')]) {
+    const c = ambito.locator('button, [role="button"], nx-button').filter({ hasText: RE_ROTULO_CALCULAR }).locator('visible=true')
+    const n = await c.count().catch(() => 0)
+    if (n === 1) return c.first()
+    if (n > 1) return null
+  }
+  return null
 }
 
 // ─────────── Diagnóstico de pantalla SIN datos personales (Mapfre 0.8.15 / Allianz Turismos 0.6.21, 22/10/2026) ───────────
@@ -6099,14 +6150,30 @@ export async function elegirModeloListaGenerali(page: Page, guard: GuardEmision,
 // texto está repetido se pulsa el PRIMERO de los idénticos (el adaptador lo declara como supuesto).
 const esIdVersionGenerali = (guard: GuardEmision) => (b: string) => esIdModeloGenerali(b) && !(BASES_MODELO_GENERALI.get(guard)?.has(b) ?? false)
 
-/** Abre el desplegable «Versión» por su disparador propio, UNA vez por trabajo (nunca el de marcas ni el de modelos). */
+/**
+ * v0.2.62: la puerta de versión admite UNA segunda ronda (abrir + elegir) SOLO si la primera elección fue «Otras versiones ...» (misma idea que
+ * «Otros modelos ...» en 0.2.16: el portal recarga la lista con más versiones). La segunda ronda usa su propia clave (`<clave>:2`), también una
+ * vez, y nunca vuelve a elegir «Otras versiones».
+ */
+const CLAVE_VERSION_OTRAS_GENERALI = 'generali:version-otras'
+function claveRondaVersionGenerali(guard: GuardEmision, clave: string): string {
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  return usados.has(clave) && usados.has(CLAVE_VERSION_OTRAS_GENERALI) ? `${clave}:2` : clave
+}
+const esTextoOtrasVersionesGenerali = (t: string) => /^OTR[AO]S\b/.test(textoMenu(t))
+
+/** Abre el desplegable «Versión» por su disparador propio, UNA vez por trabajo (y una segunda tras «Otras versiones ...»; nunca el de marcas ni el de modelos). */
 export async function abrirDesplegableVersionGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
-  await abrirMenuGenerali(page, guard, base, esIdVersionGenerali(guard), 'generali:abrir-version', 'el desplegable de versiones')
+  await abrirMenuGenerali(page, guard, base, esIdVersionGenerali(guard), claveRondaVersionGenerali(guard, 'generali:abrir-version'), 'el desplegable de versiones')
 }
 
-/** Pulsa el `li` de la versión elegida (`data-label` exacto; repetido → el primero) del panel `#<base>_panel`, UNA vez por trabajo; el texto pasa `comprobarBoton`. */
+/** Pulsa el `li` de la versión elegida (`data-label` exacto; repetido → el primero) del panel `#<base>_panel`, UNA vez por trabajo (y una segunda tras «Otras versiones ...»); el texto pasa `comprobarBoton`. */
 export async function elegirVersionListaGenerali(page: Page, guard: GuardEmision, base: string, texto: string): Promise<void> {
-  await elegirItemMenuGenerali(page, guard, base, texto, esIdVersionGenerali(guard), 'generali:elegir-version-lista', 'la versión de la lista', true)
+  const clave = claveRondaVersionGenerali(guard, 'generali:elegir-version-lista')
+  const otras = esTextoOtrasVersionesGenerali(texto ?? '')
+  if (otras && clave !== 'generali:elegir-version-lista') throw new EmisionBloqueadaError('fase', '«Otras versiones» en el desplegable de versiones de Generali ya se eligió en este trabajo')
+  await elegirItemMenuGenerali(page, guard, base, texto, esIdVersionGenerali(guard), clave, 'la versión de la lista', true)
+  if (otras) AVANCES_USADOS.get(guard)?.add(CLAVE_VERSION_OTRAS_GENERALI)
 }
 
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────

@@ -197,7 +197,7 @@ import { fechaEs } from '../allianz/intranet/index.ts'
 import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
-import { ErrorSelectorComercialAlteradoMapfre, pasoActivoMapfre, SEL_CLUB_MAPFRE, SEL_FILAS_DIALOGO_PERSONAS, limpiarMensajePortalDiagnosticoHasta } from '../../guard.ts'
+import { ErrorSelectorComercialAlteradoMapfre, pasoActivoMapfre, SEL_CLUB_MAPFRE, SEL_PRODUCTO_PRIMAS_MAPFRE, SEL_FILAS_DIALOGO_PERSONAS, limpiarMensajePortalDiagnosticoHasta } from '../../guard.ts'
 import {
   avisoFechaEfectoSupuesta,
   esRechazoFechaEfectoAnteriorMecanizacion,
@@ -623,17 +623,24 @@ const claveProducto = (t: string) => limpiar(t).normalize('NFD').replace(/\p{M}/
 export type ResultadoVariantesMapfre = {
   primas: PrimaProductoMapfre[]
   garantias: CoberturasPorProducto
-  /** false = una tarjeta pudo quedar con una variante elegida (no se verificó la restauración): NO se debe generar el proyecto. */
+  /** false = una tarjeta pudo quedar con una variante elegida (no se verificó la restauración). Desde 0.8.51 NO impide generar el proyecto (va antes); solo se avisa. */
   restaurado: boolean
   notas: string[]
 }
+
+/** v0.8.51: lectura (solo lectura) del producto mostrado y la caja de prima de cada tarjeta, para comprobar la restauración cuando la propia elección no la confirma. */
+export type TarjetaLeidaMapfre = { valor: string; prima: string }
+
+/** Pura (v0.8.51): importes de «PRIMA TOTAL» → «1.234,50€»; vacío si no hay. Solo importes y nombres de catálogo: sin PII. */
+const importeVisto = (t: string): string => { const n = importeDePrimaTotal(t); return n === null ? 'sin importe' : eurTexto(n) }
 
 export async function tarificarVariantesComercialesMapfre(
   nsei: Page,
   productos: ProductoVistoMapfre[],
   primas: readonly PrimaProductoMapfre[],
-  elegir: (pagina: Page, indice: number, opcion: string, permitidas: readonly string[]) => Promise<{ valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean }>,
+  elegir: (pagina: Page, indice: number, opcion: string, permitidas: readonly string[]) => Promise<{ valor: string; textoPrima: string; textoTarjeta: string; bloqueada: boolean; recalculo?: 'auto' | 'calcular' | 'ninguno'; otrasPrimas?: string[] }>,
   ahora: () => number = Date.now,
+  releer?: (pagina: Page) => Promise<TarjetaLeidaMapfre[]>,
 ): Promise<ResultadoVariantesMapfre> {
   const salida: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
   const tarificadas = new Set(primas.map((p) => claveProducto(p.producto)))
@@ -667,7 +674,9 @@ export async function tarificarVariantesComercialesMapfre(
       cambiada = true
       const prima = importeDePrimaTotal(e.textoPrima) ?? importeDePrimaTotal(e.textoTarjeta)
       if (e.valor !== opcion) throw new ErrorSelectorComercialAlteradoMapfre('la tarjeta no muestra la variante elegida')
-      if (e.bloqueada || prima === null) registrar({ opcion, estado: 'bloqueada', prima: null, motivo: motivoSinPrima(`${e.textoTarjeta} ${e.textoPrima}`) })
+      if (e.otrasPrimas && e.otrasPrimas.length > 0) salida.notas.push(`«Calcular» cambió la prima de otras tarjetas al tarificar «${nombreOpcionSaneado(opcion)}» (${e.otrasPrimas.slice(0, 6).join('; ')}); las ofertas base se leyeron antes`)
+      if (e.recalculo === 'ninguno') registrar({ opcion, estado: 'no_leida', prima: null, motivo: 'sin recálculo: la prima no cambió y no hay botón Calcular' })
+      else if (e.bloqueada || prima === null) registrar({ opcion, estado: 'bloqueada', prima: null, motivo: motivoSinPrima(`${e.textoTarjeta} ${e.textoPrima}`) })
       else if (!/\bANUAL\b/i.test(e.textoTarjeta)) registrar({ opcion, estado: 'no_leida', prima: null, motivo: 'periodicidad no confirmada como ANUAL' })
       else {
         registrar({ opcion, estado: 'prima', prima })
@@ -685,18 +694,63 @@ export async function tarificarVariantesComercialesMapfre(
       try {
         const r = await elegir(nsei, host.i, host.original, host.opciones)
         const primaR = importeDePrimaTotal(r.textoPrima)
-        if (r.valor !== host.original || primaR === null || primaR !== host.p.prima) { salida.restaurado = false; salida.notas.push(`no se pudo verificar la restauración de la tarjeta «${nombreOpcionSaneado(host.p.producto)}»`); break }
+        if (!(r.valor === host.original && primaR !== null && primaR === host.p.prima)) {
+        // v0.8.51: la propia elección no confirma la restauración → se RELEE la pantalla y se comparan producto y prima (visto vs esperado). Nunca aborta el proyecto.
+        const detalle = `restauración de «${nombreOpcionSaneado(host.p.producto)}»: producto visto «${nombreOpcionSaneado(r.valor) || '(vacío)'}» vs esperado «${nombreOpcionSaneado(host.original)}»; prima vista ${importeVisto(r.textoPrima)} vs esperada ${host.p.prima !== null ? eurTexto(host.p.prima) : 'sin importe'}${r.recalculo === 'ninguno' ? '; sin recálculo' : ''}`
+        const ok = await relecturaCorrecta(nsei, productos, releer, salida.notas)
+        if (r.valor === host.original && ok) { salida.notas.push(`${detalle} (la relectura de las tarjetas confirma los productos originales)`) }
+        else { salida.restaurado = false; salida.notas.push(`${detalle}${ok ? '' : ' (relectura sin confirmar los productos originales)'}`); break }
+        }
       } catch (e) {
         if (e instanceof EmisionBloqueadaError) throw e
-        salida.restaurado = false
-        salida.notas.push(`no se pudo restaurar la tarjeta «${nombreOpcionSaneado(host.p.producto)}»`)
-        break
+        const ok = await relecturaCorrecta(nsei, productos, releer, salida.notas)
+        const motivo = e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) : 'error'
+        if (ok) salida.notas.push(`restauración de «${nombreOpcionSaneado(host.p.producto)}» sin confirmar por la elección (${motivo || 'error'}); la relectura confirma los productos originales`)
+        else { salida.restaurado = false; salida.notas.push(`no se pudo restaurar la tarjeta «${nombreOpcionSaneado(host.p.producto)}» (${motivo || 'error'})`); break }
       }
     }
     if (abortar) break
   }
-  if (!salida.restaurado) salida.notas.push('selección original NO verificada: no se genera el proyecto')
+  if (!salida.restaurado) salida.notas.push('selección original NO verificada tras las variantes; el proyecto y las garantías de las ofertas base ya estaban a salvo')
   return salida
+}
+
+/** v0.8.51: ¿las tarjetas muestran de nuevo su producto original? Relectura de solo lectura (`releer`); anota en `notas` las primas que difieren de las leídas al principio. */
+async function relecturaCorrecta(nsei: Page, productos: readonly ProductoVistoMapfre[], releer: ((pagina: Page) => Promise<TarjetaLeidaMapfre[]>) | undefined, notas: string[]): Promise<boolean> {
+  if (!releer) return false
+  let t: TarjetaLeidaMapfre[]
+  try { t = await releer(nsei) } catch { return false }
+  if (t.length < productos.length) return false
+  const difieren: string[] = []
+  for (let i = 0; i < productos.length; i++) {
+    const c = productos[i]!.comercial
+    if (c && !('error' in c) && c.seleccionada !== null && limpiar(t[i]!.valor) !== limpiar(c.seleccionada)) return false
+    const p = productos[i]!.prima
+    const vista = importeDePrimaTotal(t[i]!.prima)
+    if (p !== null && vista !== p) difieren.push(`${nombreProductoSaneado(productos[i]!.producto)}: ${vista === null ? 'sin importe' : eurTexto(vista)} (leída antes ${eurTexto(p)})`)
+  }
+  if (difieren.length > 0) notas.push(`primas de las tarjetas distintas tras restaurar: ${difieren.slice(0, 6).join('; ')}`)
+  return true
+}
+
+/** v0.8.51 (solo lectura): ¿Coberturas sigue a la vista con las mismas tarjetas y productos que se leyeron? Devuelve el motivo si no. */
+export async function coberturasAccesiblesMapfre(nsei: Page, productos: readonly ProductoVistoMapfre[]): Promise<string | null> {
+  const t = await leerTarjetasMapfre(nsei).catch(() => null)
+  if (!t) return 'no se pudieron leer las tarjetas'
+  if (t.length !== productos.length) return `hay ${t.length} tarjeta(s) y se leyeron ${productos.length}`
+  for (let i = 0; i < productos.length; i++) {
+    const c = productos[i]!.comercial
+    if (c && !('error' in c) && c.seleccionada !== null && limpiar(t[i]!.valor) !== limpiar(c.seleccionada)) return `la tarjeta ${i + 1} muestra otro producto que el leído`
+  }
+  return null
+}
+
+/** v0.8.51 (solo lectura): producto mostrado y caja de prima de cada tarjeta de Coberturas. */
+export async function leerTarjetasMapfre(nsei: Page): Promise<TarjetaLeidaMapfre[]> {
+  return nsei.locator(SEL_PRODUCTO_PRIMAS_MAPFRE).evaluateAll((els) => els.map((e) => ({
+    valor: ((e.querySelector('.mat-select-value-text, .mat-mdc-select-value-text')?.textContent) ?? '').replace(/\s+/g, ' ').trim(),
+    prima: ((e.querySelector('.caja-primas p strong')?.textContent) ?? '').replace(/\s+/g, ' ').trim(),
+  })))
 }
 
 /** Primas → ofertas normalizadas (una por producto). `vehiculo` es opcional: Mapfre no separa marca y modelo (ver `lecturaResumenVehiculo`). */
@@ -2375,6 +2429,7 @@ export async function precioDesdeObjetoAsegurado(
   ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesComercialesMapfre' | 'elegirOpcionComercialMapfre' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
+  opciones: { variantesAntesDeProyecto?: boolean } = {},
 ): Promise<ResultadoAdaptador> {
   // v0.8.7: MOTO por el mismo plan que el coche (antes: hueco de mapa «el plan de campos de MOTO en NSEI»).
   // Antecedentes favorables (18/10/2026) también para el interruptor de compañía anterior de `historialAnterior`.
@@ -2409,38 +2464,44 @@ export async function precioDesdeObjetoAsegurado(
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
   // v0.8.48: diagnóstico de TODAS las tarjetas vistas (también las no ofertadas). Solo lectura; si falla, el aviso lo dice y el precio sigue.
-  let avisoVistos: string
+  let vistos: Awaited<ReturnType<typeof leerProductosVistosMapfre>> | null = null
+  let errorVistos = false
   let variantes: ResultadoVariantesMapfre = { primas: [], garantias: new Map(), restaurado: true, notas: [] }
   const leerCom = ctx.leerOpcionesComercialesMapfre
   const elegirCom = ctx.elegirOpcionComercialMapfre
   try {
-    const v = await leerProductosVistosMapfre(nsei, leerCom ? (i) => leerCom(nsei, i) : undefined)
-    // v0.8.50: variantes «BASICar» (elegir en una tarjeta, leer la prima y RESTAURAR). Una anomalía aborta solo las variantes; una violación del guard se relanza.
-    if (leerCom && elegirCom) {
-      try { variantes = await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm)) } catch (e) {
-        if (e instanceof EmisionBloqueadaError) throw e
-        variantes = { primas: [], garantias: new Map(), restaurado: false, notas: ['variantes comerciales: error inesperado; selección original NO verificada: no se genera el proyecto'] }
-      }
-    }
-    avisoVistos = avisoProductosVistosMapfre(v.productos, v.controles, variantes.notas)
+    vistos = await leerProductosVistosMapfre(nsei, leerCom ? (i) => leerCom(nsei, i) : undefined)
   } catch (e) {
     if (e instanceof EmisionBloqueadaError || e instanceof ErrorSelectorComercialAlteradoMapfre) throw e
-    avisoVistos = 'Productos vistos en Coberturas: no se pudo leer la lista de tarjetas (diagnóstico no disponible).'
+    errorVistos = true
   }
-  const avisosExtra = [avisoVistos, ...(sinControlCompania ? [AVISO_COMPANIA_ANTERIOR_NO_PEDIDA] : []),...(fijaMapfre ? [avisoSiniestralidadMapfre(await leerSiniestralidadMapfre(nsei), Number.isInteger(form.siniestrosUltimos5Anios) ? form.siniestrosUltimos5Anios : null)] : [])]
+  // v0.8.51 · ORDEN: las variantes «BASICar» se prueban DESPUÉS de leer las primas, generar el proyecto, bajar el PDF y leer las garantías de las ofertas base, para que un fallo de
+  // variantes nunca cuente contra el proyecto ni las garantías (run real 49569458: una restauración sin verificar abortó el proyecto → TERCEROS sin garantías). Una violación del guard se relanza.
+  const probarVariantes = async (): Promise<void> => {
+    if (!vistos || !leerCom || !elegirCom) return
+    const v = vistos
+    try {
+      const inaccesible = await coberturasAccesiblesMapfre(nsei, v.productos)
+      if (inaccesible) { variantes = { primas: [], garantias: new Map(), restaurado: true, notas: [`variantes comerciales no probadas: «Coberturas» ya no está a la vista como se leyó (${inaccesible})`] }; return }
+      variantes = await tarificarVariantesComercialesMapfre(nsei, v.productos, primas, (pg, i, o, perm) => elegirCom(pg, i, o, perm), Date.now, leerTarjetasMapfre)
+    } catch (e) {
+      if (e instanceof EmisionBloqueadaError) throw e
+      variantes = { primas: [], garantias: new Map(), restaurado: false, notas: [`variantes comerciales: error inesperado (${e instanceof Error ? limpiarMensajePortalDiagnosticoHasta(e.message, 80) : 'error'}); selección original NO verificada`] }
+    }
+  }
+  // La siniestralidad se lee ya (pantalla de Coberturas intacta), antes de cualquier clic posterior.
+  const avisoSiniestro = fijaMapfre ? avisoSiniestralidadMapfre(await leerSiniestralidadMapfre(nsei), Number.isInteger(form.siniestrosUltimos5Anios) ? form.siniestrosUltimos5Anios : null) : null
+  if (opciones.variantesAntesDeProyecto) await probarVariantes()
   // v0.8.39: garantías de la pantalla «Coberturas» (solo lectura, ANTES de «Generar Proyecto»); sirven si el PDF no llega o no se lee.
   let garantiasPantalla: CoberturasPorProducto = new Map()
   try { garantiasPantalla = await leerGarantiasPantallaMapfre(nsei, primas.map((p) => p.producto)) } catch { /* sin garantias de pantalla: queda el PDF o el aviso */ }
-  for (const [k, v] of variantes.garantias) if (!garantiasPantalla.has(k)) garantiasPantalla.set(k, v)
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
   const usados = { codigoPostal: cpPortal, localidad: null, vehiculo: { marca: null, modelo: null, version: null, denominacion: vehiculo?.denominacion ?? null } }
   // v0.8.14: «Generar Proyecto» DESPUÉS de leer (el precio ya está a salvo). Una violación del guard se relanza (fail-closed).
-  // v0.8.50: si tras tarificar variantes no se pudo VERIFICAR la selección original de las tarjetas, NO se genera el proyecto (su PDF no coincidiría con las ofertas).
-  const proyecto: ResultadoProyecto = !variantes.restaurado
-    ? { estado: 'no_generado', motivo: 'no se pudo verificar que las tarjetas de Coberturas recuperasen su producto original tras tarificar variantes comerciales' }
-    : ctx.generarProyectoMapfre
+  // v0.8.51: ya NO se condiciona a las variantes (van después); un fallo al restaurar solo deja un aviso.
+  const proyecto: ResultadoProyecto = ctx.generarProyectoMapfre
     ? await ctx.generarProyectoMapfre(nsei, (p) => completarFormularioProyectoMapfre(p, form, ctx))
     : { estado: 'no_generado', motivo: 'el runner no trae la puerta de «Generar Proyecto»' }
   ctx.formador?.log('mapfre_generar_proyecto', { estado: proyecto.estado })
@@ -2460,6 +2521,11 @@ export async function precioDesdeObjetoAsegurado(
   let lineasTextoPdf: string[] = []
   try { if (bytesPdf) { const lineas = textoALineas(textoDePdf(Buffer.from(bytesPdf))).filter((l) => l.trim() !== ''); lineasPdf = lineas.length; lineasTextoPdf = lineas; garantiasPdf = coberturasPorProducto(lineas, nombresProductos, filasDePdf(Buffer.from(bytesPdf))) } } catch { /* PDF ilegible: queda la pantalla */ }
   ctx.log?.(`mapfre: garantías ${garantiasPdf.size} producto(s) del PDF, ${garantiasPantalla.size} de la pantalla`)
+  // v0.8.51: variantes comerciales AL FINAL (proyecto, PDF y garantías base ya a salvo), en la misma pantalla de Coberturas si sigue a la vista.
+  if (!opciones.variantesAntesDeProyecto) await probarVariantes()
+  for (const [k, v] of variantes.garantias) if (!garantiasPantalla.has(k)) garantiasPantalla.set(k, v)
+  const avisoVistos = vistos ? avisoProductosVistosMapfre(vistos.productos, vistos.controles, variantes.notas) : errorVistos ? 'Productos vistos en Coberturas: no se pudo leer la lista de tarjetas (diagnóstico no disponible).' : ''
+  const avisosExtra = [avisoVistos, ...(sinControlCompania ? [AVISO_COMPANIA_ANTERIOR_NO_PEDIDA] : []),...(avisoSiniestro ? [avisoSiniestro] : [])]
   // v0.8.43: si algún producto queda sin garantías, el aviso dice POR QUÉ (PDF no bajado / sin texto / sin sección del producto / pantalla vacía).
   const diagGarantias = diagnosticoGarantiasMapfre({ pdfBytes: bytesPdf ? (bytesPdf as Uint8Array).length : null, pdfLineas: lineasPdf, deLaPdf: garantiasPdf, deLaPantalla: garantiasPantalla, productos: nombresConVariantes, lineasPdf: lineasTextoPdf })
   // v0.8.36: señal «nº de póliza anterior tecleado» en cada oferta (asegura decide la firmeza; el valor nunca viaja).
@@ -2476,7 +2542,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.50',
+  version: '0.8.51',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
