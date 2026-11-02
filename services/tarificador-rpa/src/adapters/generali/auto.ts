@@ -150,6 +150,7 @@ import {
   decidirUsoGenerali,
   esEtiquetaVerificacionMatricula,
   esOpcionVaciaCatalogo,
+  esOpcionOtrasVersionesGenerali,
   fechaGenerali,
   matriculaGenerali,
   mensajeAtascoCatalogo,
@@ -469,7 +470,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  */
-export const VERSION_GENERALI_AUTO = '0.2.61'
+export const VERSION_GENERALI_AUTO = '0.2.62'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2454,18 +2455,33 @@ export function decidirFilaVersionGenerali(filas: readonly FilaVersionGenerali[]
  * sea una potencia o un combustible), versión/denominación del riesgo, y si no casa, CV y combustible del riesgo. Devuelve el índice en
  * `opciones` y el supuesto; sin elección posible → `ErrorEleccionVersion` con la lista (sin repetidos). PURA salvo el lanzamiento.
  */
-export function decidirVersionDesplegableGenerali(opciones: readonly string[], form: FormFichaGenerali, otrasOpciones: readonly string[] = []): { indice: number; supuesto: string | null } {
+export function decidirVersionDesplegableGenerali(opciones: readonly string[], form: FormFichaGenerali, otrasOpciones: readonly string[] = [], o: { ampliada?: boolean } = {}): { indice: number; supuesto: string | null; otras?: true } {
   const etq = form.eleccionVersion?.etiqueta?.trim() || null
-  const persona = etq && !otrasOpciones.some((o) => normalizarCatalogo(o) === normalizarCatalogo(etq)) ? etq : null
+  const persona = etq && !otrasOpciones.some((x) => normalizarCatalogo(x) === normalizarCatalogo(etq)) ? etq : null
   const v = vehiculoBuscadoGenerali(form)
   const buscado = v ? (v.tipo === 'separado' ? v.version : v.denominacion) : null
-  const e = elegirVersionDesplegableGenerali(opciones, { persona, buscado, cv: cvRiesgoGenerali(form), combustible: combustibleRiesgoGenerali(form) })
-  if (e.tipo === 'opcion') return { indice: e.indice, supuesto: e.supuesto }
-  const unicas = [...new Set(e.candidatas)]
+  // v0.2.62: «Otras versiones ...» no es una versión: se aparta de la elección y solo se pulsa si nada de lo visible sirve (y no se ha ampliado ya).
+  const ixOtras = opciones.findIndex(esOpcionOtrasVersionesGenerali)
+  const hayOtras = ixOtras >= 0 && !o.ampliada
+  const reales = opciones.map((x, i) => ({ x, i })).filter((r) => !esOpcionOtrasVersionesGenerali(r.x))
+  const conSolo = reales.filter((r) => !esOpcionVaciaCatalogo(r.x)).length >= 2
+  const base = conSolo ? reales : opciones.map((x, i) => ({ x, i }))
+  const e = elegirVersionDesplegableGenerali(base.map((r) => r.x), { persona, buscado, cv: cvRiesgoGenerali(form), combustible: combustibleRiesgoGenerali(form) })
+  if (e.tipo === 'opcion') return { indice: base[e.indice]!.i, supuesto: e.supuesto }
+  const unicas = [...new Set(e.candidatas.filter((x) => !esOpcionOtrasVersionesGenerali(x)))]
   // v0.2.55: entre las candidatas sin repetidos; el índice vuelve a `opciones` (la primera con ese texto, como la puerta de repetidas).
   const d = persona ? null : desempateOrigenSinPersona(unicas, form, 'version')
   if (d) return { indice: opciones.indexOf(unicas[d.indice]!), supuesto: d.supuesto }
-  throw new ErrorEleccionVersion(unicas.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+  // v0.2.62: sin elección de la persona, manda la similitud con el vehículo de REFERENCIA (combustible, potencia, acabado); si lo visible no casa
+  // bien (todas «ELECTRIC DRIVE EQ» y la referencia es gasolina) se amplía con «Otras versiones ...» y se vuelve a decidir sobre la lista nueva.
+  if (!persona && form.vehiculoReferencia && unicas.length > 0) {
+    const r = elegirOpcionPorVehiculoReferencia(unicas, form.vehiculoReferencia, { nivel: 'version' })
+    if ((r.tipo === 'coincidencia' || r.tipo === 'aproximacion') && !r.contradice && (r.compartidas > 0 || r.puntuacion >= 0.9)) {
+      return { indice: opciones.indexOf(unicas[r.indice]!), supuesto: r.supuesto }
+    }
+  }
+  if (hayOtras && (persona || form.vehiculoReferencia)) return { indice: ixOtras, supuesto: null, otras: true }
+  throw new ErrorEleccionVersion((o.ampliada ? unicas : [...new Set(opciones.filter((x) => !esOpcionVaciaCatalogo(x)))]).map((x): CandidatoVersion => ({ etiqueta: x, codigo: null })))
 }
 
 /** Lee los controles del selector hasta que dos lecturas seguidas coinciden (el AJAX de combustible/potencia recarga listas) tras un mínimo; tope `esperaMs`. Solo lee. */
@@ -2494,8 +2510,36 @@ async function elegirVersionDesplegableSelector(page: Page, selector: Raiz, camp
   const pf = campo.tipo === 'desplegable'
   const select = pf ? selector.locator(`select[id="${campo.clave.replace(/"/g, '')}_input"]`) : selector.locator(`select[id="${campo.clave.replace(/"/g, '')}"]`)
   if ((await select.count().catch(() => 0)) !== 1) throw new ErrorMapaIncompletoGenerali(`el desplegable «Versión» del selector (no se localiza su <select> por «${campo.clave.slice(0, 60)}»); NO se pulsa «Confirmar»`)
-  const opciones = await opcionesSelect(select)
-  const d = decidirVersionDesplegableGenerali(opciones.map((o) => o.texto), form, otras)
+  let opciones = await opcionesSelect(select)
+  let d = decidirVersionDesplegableGenerali(opciones.map((o) => o.texto), form, otras)
+  if (d.otras) {
+    // v0.2.62: nada de lo visible sirve → «Otras versiones ...» (misma puerta de versión, 2ª ronda) y se decide sobre la lista AMPLIADA.
+    if (!pf) throw new ErrorMapaIncompletoGenerali('«Otras versiones ...» solo se sabe pulsar en el desplegable de PrimeFaces de «Versión»; NO se pulsa «Confirmar»')
+    const antes = opciones.map((o) => o.texto)
+    // Sin la vía de reserva de `ponerOpcionPrimeFaces`: la lista se RECARGA y un `selectOption` por índice caería en otra versión de la lista nueva.
+    if (!ctx.abrirDesplegableVersionGenerali || !ctx.elegirVersionListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del desplegable de «Otras versiones ...» (disparador y `li`) en el contexto del runner', false)
+    await ctx.pausaAccion()
+    await ctx.abrirDesplegableVersionGenerali(campo.clave)
+    const etiquetas = await selector.locator(`[id="${campo.clave.replace(/"/g, '')}_panel"] li[data-label]`).evaluateAll((els) => els.map((el) => el.getAttribute('data-label') ?? '')).catch(() => [] as string[])
+    const etqOtras = dataLabelDeOpcionGenerali(etiquetas, opciones[d.indice]!.texto, true)
+    if (etqOtras === null) throw new ErrorMapaIncompletoGenerali('el elemento «Otras versiones ...» del panel de «Versión» (no se localiza por su texto exacto); NO se pulsa «Confirmar»')
+    await ctx.elegirVersionListaGenerali(campo.clave, etqOtras)
+    const previas = new Set(antes.map(normalizarCatalogo))
+    const ini = Date.now()
+    for (;;) {
+      await page.waitForTimeout(400)
+      const ahora = await opcionesSelect(select).catch(() => [] as { valor: string; texto: string }[])
+      if (ahora.some((o) => !esOpcionVaciaCatalogo(o.texto) && !previas.has(normalizarCatalogo(o.texto)))) {
+        opciones = ahora
+        break
+      }
+      if (Date.now() - ini >= ESPERA_TRAS_OTROS_MS) throw new ErrorMapaIncompletoGenerali(`lo que hace el portal tras elegir «Otras versiones ...» en «Versión»: en ${Math.round(ESPERA_TRAS_OTROS_MS / 1000)} s no cambió la lista (${ahora.length} opciones); NO se pulsa «Confirmar»`)
+    }
+    // Deja que el AJAX termine de repintar antes de leer la lista definitiva.
+    await page.waitForTimeout(MIN_RECARGA_SELECTOR_MS)
+    opciones = await opcionesSelect(select)
+    d = decidirVersionDesplegableGenerali(opciones.map((o) => o.texto), form, otras, { ampliada: true })
+  }
   const elegida = opciones[d.indice]!
   const actual = await leerOpcionSeleccionada(select)
   if (!opcionPuestaPrimeFaces(actual.valor, actual.texto, elegida)) {
@@ -2547,7 +2591,8 @@ function textoVersionDeducibleGenerali(desplegable: { opciones: string[] } | nul
   const reales = (desplegable?.opciones ?? []).filter((o) => !esOpcionVaciaCatalogo(o))
   if (reales.length > 0) {
     try {
-      return reales[decidirVersionDesplegableGenerali(reales, form, otras).indice] ?? null
+      const dv = decidirVersionDesplegableGenerali(reales, form, otras)
+      return dv.otras ? textoVersionRiesgoGenerali(form) : (reales[dv.indice] ?? null)
     } catch {
       /* la versión no sale sola: se mira el texto del riesgo */
     }

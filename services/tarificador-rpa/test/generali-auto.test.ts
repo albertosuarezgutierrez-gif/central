@@ -1412,3 +1412,80 @@ test('v0.2.17 · puertas del guard: combustible (lista blanca, grupo «combustib
     await b.cerrar()
   }
 })
+
+// ───────────── v0.2.62: «Otras versiones ...» en «Versión» (trabajo 7f358ff2): se amplía y se decide sobre la lista nueva. Fixtures sintéticas (solo catálogo) ─────────────
+
+const VISIBLES_0262 = ['ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ PULSE', 'Otras versiones ...']
+/** «Versión» (id `selversion`) con «Otras versiones ...»: al elegirla el portal recarga la lista (300 ms) con `ampliada`. */
+const FICHA_0262 = (ampliada: string[]) => `<span>Versión</span>
+  <div id="selversion" role="combobox" tabindex="0" onclick="document.getElementById('selversion_panel').style.display='block'"><div class="ui-helper-hidden-accessible" style="position:absolute;width:0;height:0;overflow:hidden"><select id="selversion_input" name="selversion_input" style="width:0;height:0;border:0;padding:0"></select></div><label id="selversion_label" class="ui-selectonemenu-label">Seleccione una</label><div class="ui-selectonemenu-trigger"><span class="ui-icon ui-icon-triangle-1-s"></span></div></div>
+  <div id="selversion_panel" style="display:none"><ul id="selversion_items"></ul></div>
+  <script>
+    window.__pintar=function(vs){var s=document.getElementById('selversion_input');s.innerHTML='<option value="null">Seleccione una</option>'+vs.map(function(v,i){return '<option value="V'+i+'">'+v+'</option>'}).join('');
+      document.getElementById('selversion_items').innerHTML=vs.map(function(v){return '<li data-label="'+v+'" class="ui-selectonemenu-item">'+v+'</li>'}).join('');
+      Array.from(document.querySelectorAll('#selversion_items li')).forEach(function(li,i){li.onclick=function(){
+        window.__version=(window.__version||[]).concat(li.dataset.label);document.getElementById('selversion_panel').style.display='none';
+        if(/^Otras/.test(li.dataset.label)){setTimeout(function(){window.__pintar(${JSON.stringify(ampliada)});document.getElementById('selversion_label').textContent='Seleccione una'},300);return}
+        s.selectedIndex=i+1;document.getElementById('selversion_label').textContent=li.dataset.label}})};
+    window.__pintar(${JSON.stringify(VISIBLES_0262)});
+  </script>`
+const AMPLIADA_0262 = ['ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASSION', '1.0 52KW PULSE', '1.0 52KW PASSION']
+const REF_0262 = { origen: 'allianz', marca: 'SMART', modelo: 'Fortwo', version: 'PASSION 52', carroceria: null, puertas: null, cc: null, cv: null, combustible: null, anio: null }
+async function versionOtras(extra: Record<string, unknown>, ampliada = AMPLIADA_0262) {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SMART'], 'Confirmar', ['FORTWO COUPE'], FICHA_0262(ampliada)))
+  try {
+    const avisos: string[] = []
+    let error: unknown = null
+    try { await seleccionarVehiculoGenerali(page, page, coche({ seleccionVehiculo: { marca: 'SMART', modelo: 'FORTWO COUPE' }, ...extra }), ctx0217(page, guard), avisos) } catch (e) { error = e }
+    return { avisos, error, versiones: await contador(page, '__version') as string[] | null, confirmado: await contador(page, '__confirmado'), label: await page.locator('#selversion_label').textContent(), violacion: guard.violacion() }
+  } finally {
+    await cerrar()
+  }
+}
+
+test('v0.2.62 · todo ELECTRIC/EQ visible y referencia gasolina: pulsa «Otras versiones ...», elige 1.0 52KW PASSION en la ampliada, lo declara como supuesto y sigue a «Confirmar»', async () => {
+  const r = await versionOtras({ vehiculoReferencia: REF_0262 })
+  assert.deepEqual(r.versiones, ['Otras versiones ...', '1.0 52KW PASSION'], String(r.error))
+  assert.equal(r.label, '1.0 52KW PASSION')
+  assert.equal(r.confirmado, 1)
+  assert.equal(r.avisos.filter((a) => /1\.0 52KW PASSION/.test(a) && /supuesto/.test(a) && /Allianz/.test(a)).length, 1, r.avisos.join(' | '))
+  assert.equal(r.violacion, null)
+  assert.ok(!(r.error instanceof ErrorEleccionVersion), String(r.error))
+})
+
+test('v0.2.62 · la elección de la bandeja también vale en la lista ampliada de versiones (sin supuesto)', async () => {
+  const r = await versionOtras({ vehiculoReferencia: REF_0262, eleccionVersion: { codigo: null, etiqueta: '1.0 52KW pulse' } })
+  assert.deepEqual(r.versiones, ['Otras versiones ...', '1.0 52KW PULSE'])
+  assert.equal(r.confirmado, 1)
+  assert.ok(!r.avisos.some((a) => /referencia|Allianz/.test(a)), r.avisos.join(' | '))
+})
+
+test('v0.2.62 · sin referencia ni elección NO se amplía: para con la lista visible (nada a ciegas)', async () => {
+  const r = await versionOtras({})
+  assert.ok(r.error instanceof ErrorEleccionVersion && r.error.opcionesVersion.length === 4)
+  assert.equal(r.versiones, null)
+  assert.equal(r.confirmado, null)
+})
+
+test('v0.2.62 · ampliada y aun así nada casa (todo eléctrico): requiere_humano con la lista AMPLIADA y sin «Confirmar»', async () => {
+  const r = await versionOtras({ vehiculoReferencia: REF_0262 }, ['ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ PRIME'])
+  assert.ok(r.error instanceof ErrorEleccionVersion && r.error.opcionesVersion.map((o) => o.etiqueta).join('|') === 'ELECTRIC DRIVE EQ|ELECTRIC DRIVE EQ PASSION|ELECTRIC DRIVE EQ PRIME', String(r.error))
+  assert.deepEqual(r.versiones, ['Otras versiones ...'])
+  assert.equal(r.confirmado, null)
+})
+
+test('v0.2.62 · guard: «Otras versiones ...» abre una 2ª ronda de versión, una sola vez y nunca otra vez «Otras»', async () => {
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SMART'], 'Confirmar', ['FORTWO COUPE'], FICHA_0262(AMPLIADA_0262)))
+  try {
+    await a.page.evaluate(() => { (document.getElementById('bloque_modelo') as HTMLElement).style.display = 'block'; (document.getElementById('nuevos') as HTMLElement).style.display = 'block' })
+    await abrirDesplegableVersionGenerali(a.page, a.guard, 'selversion')
+    await elegirVersionListaGenerali(a.page, a.guard, 'selversion', 'Otras versiones ...')
+    await a.page.waitForTimeout(500)
+    await abrirDesplegableVersionGenerali(a.page, a.guard, 'selversion')
+    await assert.rejects(elegirVersionListaGenerali(a.page, a.guard, 'selversion', 'Otras versiones ...'), EmisionBloqueadaError)
+    await elegirVersionListaGenerali(a.page, a.guard, 'selversion', '1.0 52KW PASSION')
+    await assert.rejects(abrirDesplegableVersionGenerali(a.page, a.guard, 'selversion'), EmisionBloqueadaError, 'tercera ronda: no')
+  } finally {
+    await a.cerrar()
+  }
+})

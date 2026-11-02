@@ -180,3 +180,17 @@ describe('formulario de auto: vehiculoReferencia', () => {
     expect(malo.formulario.vehiculoReferencia).toBeUndefined()
   })
 })
+
+describe('elegirOpcionPorVehiculoReferencia · nivel versión (v0.2.62)', () => {
+  const ref = vr({ origen: 'allianz', marca: 'SMART', modelo: 'Fortwo', version: 'PASSION 52' })
+  it('referencia no eléctrica: ELECTRIC/EQ contradicen aunque la referencia no traiga combustible; «Otras versiones» no es candidata', () => {
+    const r = elegirOpcionPorVehiculoReferencia(['Otras versiones ...', 'ELECTRIC DRIVE EQ PASSION', '1.0 52KW PASSION'], ref, { nivel: 'version' })
+    expect(r).toMatchObject({ etiqueta: '1.0 52KW PASSION', contradice: false })
+    const solo = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ'], ref, { nivel: 'version' })
+    expect(solo).toMatchObject({ tipo: 'aproximacion', contradice: true })
+  })
+  it('referencia eléctrica: no penaliza', () => {
+    const r = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ PULSE'], vr({ ...ref, version: 'Electric Drive EQ Passion', combustible: 'electrico' }), { nivel: 'version' })
+    expect(r).toMatchObject({ etiqueta: 'ELECTRIC DRIVE EQ PASSION', contradice: false })
+  })
+})

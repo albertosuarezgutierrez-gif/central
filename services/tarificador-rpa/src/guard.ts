@@ -6150,14 +6150,30 @@ export async function elegirModeloListaGenerali(page: Page, guard: GuardEmision,
 // texto está repetido se pulsa el PRIMERO de los idénticos (el adaptador lo declara como supuesto).
 const esIdVersionGenerali = (guard: GuardEmision) => (b: string) => esIdModeloGenerali(b) && !(BASES_MODELO_GENERALI.get(guard)?.has(b) ?? false)
 
-/** Abre el desplegable «Versión» por su disparador propio, UNA vez por trabajo (nunca el de marcas ni el de modelos). */
+/**
+ * v0.2.62: la puerta de versión admite UNA segunda ronda (abrir + elegir) SOLO si la primera elección fue «Otras versiones ...» (misma idea que
+ * «Otros modelos ...» en 0.2.16: el portal recarga la lista con más versiones). La segunda ronda usa su propia clave (`<clave>:2`), también una
+ * vez, y nunca vuelve a elegir «Otras versiones».
+ */
+const CLAVE_VERSION_OTRAS_GENERALI = 'generali:version-otras'
+function claveRondaVersionGenerali(guard: GuardEmision, clave: string): string {
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  return usados.has(clave) && usados.has(CLAVE_VERSION_OTRAS_GENERALI) ? `${clave}:2` : clave
+}
+const esTextoOtrasVersionesGenerali = (t: string) => /^OTR[AO]S\b/.test(textoMenu(t))
+
+/** Abre el desplegable «Versión» por su disparador propio, UNA vez por trabajo (y una segunda tras «Otras versiones ...»; nunca el de marcas ni el de modelos). */
 export async function abrirDesplegableVersionGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
-  await abrirMenuGenerali(page, guard, base, esIdVersionGenerali(guard), 'generali:abrir-version', 'el desplegable de versiones')
+  await abrirMenuGenerali(page, guard, base, esIdVersionGenerali(guard), claveRondaVersionGenerali(guard, 'generali:abrir-version'), 'el desplegable de versiones')
 }
 
-/** Pulsa el `li` de la versión elegida (`data-label` exacto; repetido → el primero) del panel `#<base>_panel`, UNA vez por trabajo; el texto pasa `comprobarBoton`. */
+/** Pulsa el `li` de la versión elegida (`data-label` exacto; repetido → el primero) del panel `#<base>_panel`, UNA vez por trabajo (y una segunda tras «Otras versiones ...»); el texto pasa `comprobarBoton`. */
 export async function elegirVersionListaGenerali(page: Page, guard: GuardEmision, base: string, texto: string): Promise<void> {
-  await elegirItemMenuGenerali(page, guard, base, texto, esIdVersionGenerali(guard), 'generali:elegir-version-lista', 'la versión de la lista', true)
+  const clave = claveRondaVersionGenerali(guard, 'generali:elegir-version-lista')
+  const otras = esTextoOtrasVersionesGenerali(texto ?? '')
+  if (otras && clave !== 'generali:elegir-version-lista') throw new EmisionBloqueadaError('fase', '«Otras versiones» en el desplegable de versiones de Generali ya se eligió en este trabajo')
+  await elegirItemMenuGenerali(page, guard, base, texto, esIdVersionGenerali(guard), clave, 'la versión de la lista', true)
+  if (otras) AVANCES_USADOS.get(guard)?.add(CLAVE_VERSION_OTRAS_GENERALI)
 }
 
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────

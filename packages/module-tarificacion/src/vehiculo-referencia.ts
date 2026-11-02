@@ -232,13 +232,25 @@ export type OpcionCatalogo = string | { etiqueta: string }
 
 export type EleccionPorReferencia =
   /** `indice` = posición en `opciones` (la lista ORIGINAL). `supuesto` va tal cual en los avisos de la oferta (lleva «supuesto»). */
-  | { tipo: 'coincidencia' | 'aproximacion'; indice: number; etiqueta: string; puntuacion: number; supuesto: string }
+  | {
+      tipo: 'coincidencia' | 'aproximacion'
+      indice: number
+      etiqueta: string
+      puntuacion: number
+      supuesto: string
+      /** v0.2.62: la ganadora contradice a la referencia (carrocería, puertas, combustible o, en versión, «eléctrico» sin que la referencia lo diga). */
+      contradice: boolean
+      /** v0.2.62: palabras distintivas que la ganadora comparte con la referencia. */
+      compartidas: number
+    }
   | { tipo: 'sin_referencia' }
   | { tipo: 'sin_opciones' }
   | { tipo: 'sin_marca' }
 
 const etiquetaDe = (o: OpcionCatalogo): string => espacios(typeof o === 'string' ? o : String(o?.etiqueta ?? ''))
-const esOtros = (t: string): boolean => /^OTROS?\b/.test(normalizar(t))
+/** Palabras que dicen «eléctrico» en una versión (ELECTRIC, ELECTRICO, EQ, ED, EV, BEV). */
+const RE_ELECTRICA = /\s(ELECTRIC|ELECTRICO|ELECTRICA|EQ|ED|EV|BEV)\s/
+const esOtros = (t: string): boolean => /^OTR[AO]S?\b/.test(normalizar(t))
 
 /** Aviso del supuesto (sin comas: los bots unen supuestos con «, »). PURA. */
 export function supuestoVehiculoReferencia(tipo: 'coincidencia' | 'aproximacion', nivel: 'modelo' | 'version', etiqueta: string, origen: OrigenVehiculoReferencia): string {
@@ -299,6 +311,7 @@ export function elegirOpcionPorVehiculoReferencia(
     }
   }
   const comunes = new Set([...rasgos[0]!.r.tokens].filter((t) => rasgos.every((x) => x.r.tokens.has(t))))
+  const refNoElectrica = rr.combustible !== 'electrico' && !RE_ELECTRICA.test(` ${normalizar(textoVehiculoReferencia(ref))} `)
   const puntuadas = rasgos.map((c) => {
     const r = c.r
     let estructural = 0
@@ -315,6 +328,12 @@ export function elegirOpcionPorVehiculoReferencia(
     tri(r.carrocerias.size && rr.carrocerias.size ? [...r.carrocerias].some((x) => rr.carrocerias.has(x)) : null)
     tri(r.puertas !== null && rr.puertas !== null ? r.puertas === rr.puertas : null)
     tri(r.combustible && rr.combustible ? r.combustible === rr.combustible : null)
+    // v0.2.62 (nivel versión): si la referencia no es eléctrica ni lo dice, una versión ELECTRIC/EQ/ED/EV (o de combustible eléctrico) la contradice
+    // (Smart: «ELECTRIC DRIVE EQ …» no es un «Fortwo PASSION» de gasolina), aunque la referencia no traiga combustible.
+    if (nivel === 'version' && refNoElectrica && !(r.combustible && rr.combustible) && (r.combustible === 'electrico' || RE_ELECTRICA.test(` ${normalizar(c.etiqueta)} `))) {
+      estructural -= 1
+      contradice = true
+    }
     const union = new Set([...r.tokens, ...rr.tokens])
     const inter = [...r.tokens].filter((t) => rr.tokens.has(t))
     const jaccard = union.size ? inter.length / union.size : 0
@@ -324,7 +343,7 @@ export function elegirOpcionPorVehiculoReferencia(
     if (r.anio !== null && rr.anio !== null) nums.push(Math.max(0, 1 - Math.abs(r.anio - rr.anio) / 5))
     const numerica = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0
     const distintiva = inter.some((t) => !comunes.has(t))
-    return { ...c, estructural, similitud: jaccard + numerica, contradice, distintiva }
+    return { ...c, estructural, similitud: jaccard + numerica, contradice, distintiva, compartidas: inter.length }
   })
   let g = puntuadas[0]!
   for (const p of puntuadas.slice(1)) {
@@ -335,5 +354,5 @@ export function elegirOpcionPorVehiculoReferencia(
   // otro modelo → nunca «coincidencia».
   const comunesAjenas = comunes.size > 0 && cand.length > 1 && ![...comunes].some((t) => rr.tokens.has(t))
   const tipo = !notaCarroceria && !comunesAjenas && apoyadas.length === 1 && apoyadas[0]!.i === g.i ? 'coincidencia' : 'aproximacion'
-  return { tipo, indice: g.i, etiqueta: g.etiqueta, puntuacion: Math.round((g.estructural + g.similitud) * 1000) / 1000, supuesto: supuestoVehiculoReferencia(tipo, nivel, g.etiqueta, ref.origen) + notaCarroceria }
+  return { tipo, indice: g.i, etiqueta: g.etiqueta, puntuacion: Math.round((g.estructural + g.similitud) * 1000) / 1000, supuesto: supuestoVehiculoReferencia(tipo, nivel, g.etiqueta, ref.origen) + notaCarroceria, contradice: g.contradice, compartidas: g.compartidas }
 }
