@@ -66,7 +66,9 @@ import {
   companiaProcedenciaPedidaGenerali,
   opcionCompaniaProcedenciaGenerali,
   sanearFragmentoGenerali,
-  SUBPESTANA_HISTORIAL_SINIESTRAL_GENERALI,
+  esBloqueHistorialGenerali,
+  esCampoOrigenHistorialGenerali,
+  planOrigenHistorialGenerali,
   planHistorialSiniestralGenerali,
   type BloqueHistorialGenerali,
   resumenEstadoCalculoGenerali,
@@ -441,6 +443,11 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * del nivel modelo dice «modelos» (`ErrorEleccionModeloGenerali`), no «versiones», para que la bandeja no confunda.
  */
 /**
+ * v0.2.60 (02/11/2026, volcados reales de af1fb857): «Historial Siniestral» es una SECCIÓN de «Datos de Valoración» (`reg1063A.histSiniestral.*`), no una subpestaña:
+ * se lee ahí, sin pulsar nada y sin descartar bloques «previos»; primero «Origen del historial siniestral» (`yhsori`: SINCO consulta con póliza anterior en la ficha,
+ * simulación + aviso supuesto sin ella), se espera el refresco y se rellenan solo los vacíos con dato de la ficha o supuesto favorable; certificados/fechas no se inventan.
+ */
+/**
  * v0.2.59 (01/11/2026, Alberto: el presupuesto no puede mostrar «No figura»): la oferta salía con `coberturas: []`. Ahora se leen las garantías (con límites y
  * franquicias) de la pantalla «Garantías y Resultados» (solo lectura, ANTES de la descarga) y del PDF del presupuesto que ya descarga `conPdfPresupuestoGenerali`
  * (mismo botón y misma puerta guardada; NO se añade ningún guardado de proyecto: Generali sigue sin botón identificado). Prioridad PDF > pantalla; sin ninguna,
@@ -454,7 +461,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  */
-export const VERSION_GENERALI_AUTO = '0.2.59'
+export const VERSION_GENERALI_AUTO = '0.2.60'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -959,61 +966,88 @@ export function resumenHistorialSiniestralGenerali(bloques: readonly BloqueHisto
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
+/** v0.2.60: la sección «Historial Siniestral» de «Datos de Valoración» (campos `reg1063A.histSiniestral.*`): el marco con más bloques suyos y esos bloques. Solo lee. */
+async function leerSeccionHistorialGenerali(page: Page): Promise<{ raiz: Raiz; bloques: BloqueHistorialGenerali[] } | null> {
+  let mejor: { raiz: Raiz; bloques: BloqueHistorialGenerali[] } | null = null
+  for (const fr of page.frames()) {
+    if (fr.isDetached()) continue
+    const bloques = (await leerBloquesHistorialGenerali(fr)).filter(esBloqueHistorialGenerali)
+    if (bloques.length > (mejor?.bloques.length ?? 0)) mejor = { raiz: fr, bloques }
+  }
+  return mejor
+}
+
 /**
- * v0.2.58 (trabajo af1fb857): abre «Historial Siniestral» (puerta guardada del contexto; solo cambia la vista), lee sus bloques y rellena los VACÍOS con regla
- * a partir de los antecedentes ya resueltos (`conAntecedentesFavorables`: dato de la ficha o siniestralidad más favorable). Un obligatorio vacío SIN regla (una
- * fecha, un grupo de opciones) o que no queda puesto → `ErrorMapaIncompletoGenerali` con el nombre exacto del campo. Si la pestaña no está (0 controles) se anota y
- * se sigue. Devuelve avisos para la oferta (con «supuesto» cuando el dato no es de la ficha) y la nota de diagnóstico para el atasco final.
+ * v0.2.60 (trabajo af1fb857, volcados reales): «Historial Siniestral» NO es una subpestaña sino una SECCIÓN de «Datos de Valoración» (`reg1063A.histSiniestral.*`),
+ * ya visible al llegar. Se lee ahí (sin pulsar nada) ANTES de ir a «Garantías y Resultados». Orden: 1) «Origen del historial siniestral» (`yhsori`; dispara un
+ * refresco): «Consulta al fichero SINCO» si la ficha trae póliza anterior (años asegurado como DATO), si no «Simulación fichero SINCO» (supuesto → estimado);
+ * se elige por el TEXTO de la opción, nunca por índice. 2) Se espera el refresco y se relee. 3) Se rellenan SOLO los vacíos con regla (dato de la ficha o
+ * siniestralidad más favorable, marcado supuesto). Certificados/fechas (ffcerd, ffcerh, ffefep, ffvtop) y siniestros según certificado: no se inventan; si
+ * siguen vacíos y obligatorios, `ErrorMapaIncompletoGenerali` los nombra. Sin la sección a la vista: nota y se sigue.
  */
 export async function completarHistorialSiniestralGenerali(
   page: Page,
-  ctx: Pick<ContextoPortal, 'pausaAccion' | 'pulsarSubpestanaGenerali'>,
+  ctx: Pick<ContextoPortal, 'pausaAccion'>,
   f: { aniosAseguradoAnterior: number; siniestrosUltimos5Anios: number },
   clavesSupuestas: readonly string[],
   esperaMs = 4_000,
 ): Promise<{ avisos: string[]; nota: string }> {
-  if (typeof ctx.pulsarSubpestanaGenerali !== 'function') return { avisos: [], nota: 'Historial Siniestral no intentado: el contexto del runner no trae la puerta guardada' }
-  // Solo cuenta lo NUEVO tras abrir la pestaña: lo que ya estaba a la vista antes (zonas comunes del marco) no es de «Historial Siniestral».
-  const previos = new Set<string>()
-  for (const f of page.frames()) if (!f.isDetached()) for (const bl of await leerBloquesHistorialGenerali(f)) previos.add(`${bl.etiqueta}|${bl.name}`)
-  const nuevos = (l: BloqueHistorialGenerali[]) => l.filter((bl) => !previos.has(`${bl.etiqueta}|${bl.name}`))
-  let raiz: Raiz = page
-  let esperar = false
-  try {
-    const marco = await ctx.pulsarSubpestanaGenerali(SUBPESTANA_HISTORIAL_SINIESTRAL_GENERALI)
-    if (marco) { raiz = marco; esperar = true }
-  } catch (e) {
-    if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e
-    return { avisos: [], nota: `Historial Siniestral no abierto: ${sanearFragmentoGenerali(e instanceof Error ? e.message : String(e)).slice(0, 160)}` }
-  }
   const fin = Date.now() + esperaMs
-  let bloques = nuevos(await leerBloquesHistorialGenerali(raiz))
-  while (esperar && bloques.length === 0 && Date.now() < fin) {
+  let sec = await leerSeccionHistorialGenerali(page)
+  while (!sec && Date.now() < fin) {
     await new Promise((r) => setTimeout(r, 300))
-    bloques = nuevos(await leerBloquesHistorialGenerali(raiz))
+    sec = await leerSeccionHistorialGenerali(page)
   }
-  const plan = planHistorialSiniestralGenerali(bloques, f, clavesSupuestas)
+  if (!sec) return { avisos: [], nota: 'Historial Siniestral no encontrado (sin histSiniestral)' }
   const avisos: string[] = []
+  const sinRegla: string[] = []
+  // 1) Origen del historial: primero, porque su cambio refresca la sección.
+  const origen = sec.bloques.find((b) => b.vacio && b.tipo === 'select' && esCampoOrigenHistorialGenerali(b))
+  if (origen) {
+    const rotulo = sanearFragmentoGenerali(origen.etiqueta).slice(0, 60)
+    const o = planOrigenHistorialGenerali(origen.opciones, f, clavesSupuestas)
+    const sel = origen.name && !origen.name.includes('"') ? sec.raiz.locator(`select[name="${origen.name}"]`) : null
+    if (o.tipo === 'sinRegla' || !sel || (await sel.count()) !== 1) {
+      if (origen.obligatorio) sinRegla.push(`${rotulo} (sin opción SINCO identificable)`)
+    } else {
+      await elegirIndice(sel, o.indice, ctx)
+      avisos.push(`Historial Siniestral · ${rotulo}: ${origen.opciones[o.indice]} (${o.supuesto ? 'sin póliza anterior en la ficha; supuesto' : 'póliza anterior de la ficha'})`)
+      // 2) Esperar el refresco: la sección se relee hasta que dos lecturas seguidas coinciden (o se acaba el tiempo).
+      let previo = ''
+      for (let i = 0; i < 20; i++) {
+        const s2 = await leerSeccionHistorialGenerali(page)
+        if (s2) sec = s2
+        const act = s2 ? resumenHistorialSiniestralGenerali(s2.bloques, 4000) : ''
+        if (act === previo || Date.now() >= fin) break
+        previo = act
+        await new Promise((r) => setTimeout(r, 300))
+      }
+    }
+  }
+  // 3) Resto de vacíos con regla.
+  const plan = planHistorialSiniestralGenerali(sec.bloques, f, clavesSupuestas)
+  sinRegla.push(...plan.sinRegla.filter((x) => !sinRegla.includes(x)))
+  const raiz = sec.raiz
   for (const a of plan.acciones) {
     const b = a.bloque
     const rotulo = sanearFragmentoGenerali(b.etiqueta).slice(0, 60)
-    if (!b.name || b.name.includes('"')) { if (b.obligatorio) plan.sinRegla.push(`${rotulo} (control sin nombre)`); continue }
+    if (!b.name || b.name.includes('"')) { if (b.obligatorio) sinRegla.push(`${rotulo} (control sin nombre)`); continue }
     if (b.tipo === 'select') {
       const sel = raiz.locator(`select[name="${b.name}"]`)
-      if ((await sel.count()) !== 1) { if (b.obligatorio) plan.sinRegla.push(`${rotulo} (desplegable no único)`); continue }
+      if ((await sel.count()) !== 1) { if (b.obligatorio) sinRegla.push(`${rotulo} (desplegable no único)`); continue }
       await elegirIndice(sel, indiceOpcionNormalizadaGenerali(b.opciones, [a.valor]), ctx)
     } else {
       const campo = raiz.locator(`input[name="${b.name}"], textarea[name="${b.name}"]`)
-      if ((await campo.count()) !== 1) { if (b.obligatorio) plan.sinRegla.push(`${rotulo} (campo no único)`); continue }
+      if ((await campo.count()) !== 1) { if (b.obligatorio) sinRegla.push(`${rotulo} (campo no único)`); continue }
       await escribir(campo, a.valor, ctx as ContextoPortal)
     }
     avisos.push(`Historial Siniestral · ${rotulo}: ${a.valor} (${a.supuesto ? 'siniestralidad más favorable; supuesto' : 'dato de la ficha'})`)
   }
-  const despues = plan.acciones.length > 0 ? nuevos(await leerBloquesHistorialGenerali(raiz)) : bloques
+  const despues = avisos.length > 0 ? ((await leerSeccionHistorialGenerali(page))?.bloques ?? sec.bloques) : sec.bloques
   const siguenVacios = despues.filter((b) => b.vacio && b.obligatorio).map((b) => sanearFragmentoGenerali(b.etiqueta).slice(0, 60))
-  const faltan = [...new Set([...plan.sinRegla, ...siguenVacios])]
+  const faltan = [...new Set([...sinRegla, ...siguenVacios])]
   if (faltan.length > 0) {
-    throw new ErrorMapaIncompletoGenerali(`«${SUBPESTANA_HISTORIAL_SINIESTRAL_GENERALI}» con obligatorios vacíos que el bot no puede rellenar con el riesgo (Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${faltan.join(' · ')}. Bloques: ${resumenHistorialSiniestralGenerali(despues)}`)
+    throw new ErrorMapaIncompletoGenerali(`«Historial Siniestral» con obligatorios vacíos que el bot no puede rellenar con el riesgo (certificados y fechas no se inventan; Genernet no calcularía: «El paso anterior no tiene los datos completos»): ${faltan.join(' · ')}. Bloques: ${resumenHistorialSiniestralGenerali(despues)}`)
   }
   return { avisos, nota: `Historial Siniestral: ${resumenHistorialSiniestralGenerali(despues, 220)}${avisos.length ? ` · rellenados ${avisos.length}` : ''}` }
 }
@@ -3911,7 +3945,7 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
   // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).
   const lAntes = leerPrecioGenerali(await textoPagina(page))
   const ignorar = lAntes.tipo === 'unico' ? [lAntes.eur] : lAntes.tipo === 'varios' ? lAntes.candidatos.map((c) => c.eur) : []
-  // v0.2.58 (trabajo af1fb857): antes de «Garantías y Resultados», los antecedentes de «Historial Siniestral» (con el dato del riesgo o la siniestralidad más favorable).
+  // v0.2.60 (trabajo af1fb857): antes de «Garantías y Resultados», la sección «Historial Siniestral» de Datos de Valoración (origen SINCO + antecedentes).
   const historial = await paso('formulario', () => completarHistorialSiniestralGenerali(page, ctx, ant.formulario, ant.claves, opciones.esperaHistorialMs))
   avisosDatosValoracion.push(...historial.avisos)
   await paso('tarificar', () => ctx.pulsarSubpestanaGenerali!(SUBPESTANA_PRECIO_GENERALI))
