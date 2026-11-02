@@ -6102,13 +6102,14 @@ async function abrirMenuGenerali(page: Page, guard: GuardEmision, base: string, 
   guard.comprobar()
 }
 
-/** Pulsa el `li` de `data-label` EXACTO del panel `#<base>_panel`. Exactamente uno; su texto y atributos pasan `comprobarBoton`. Una vez por `clave`. */
+/** Pulsa el `li` (o `tr`) de `data-label` EXACTO del panel `#<base>_panel`. Exactamente uno; su texto y atributos pasan `comprobarBoton`. Una vez por `clave`. */
 async function elegirItemMenuGenerali(page: Page, guard: GuardEmision, base: string, texto: string, idValido: (b: string) => boolean, clave: string, que: string, primeraDeIguales = false): Promise<void> {
   const { marco, usados } = await prepararPuertaMenuGenerali(page, guard, base, idValido, clave, que)
   const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
   if (t === '') throw new EmisionBloqueadaError('boton', '')
   const etq = texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-  const todos = marco.locator(`[id="${base}_panel"] li[data-label="${etq}"]`)
+  // v0.2.65: el panel de «Versión» puede pintar FILAS de tabla (`tr.ui-selectonemenu-item[data-label]`) en vez de `li`; mismas comprobaciones.
+  const todos = marco.locator(`[id="${base}_panel"] li[data-label="${etq}"], [id="${base}_panel"] tr[data-label="${etq}"]`)
   const n = await todos.count()
   // v0.2.17: la versión puede venir REPETIDA con el mismo texto exacto (prueba real): solo ahí se admite la PRIMERA de las idénticas (tope 40).
   if (primeraDeIguales ? n < 1 || n > 40 : n !== 1) throw new ErrorMapaGuardGenerali(`la opción «${t.slice(0, 60)}» en el panel «#${base}_panel» (${n} elementos con ese texto exacto; hace falta ${primeraDeIguales ? 'al menos uno' : 'exactamente uno'})`)

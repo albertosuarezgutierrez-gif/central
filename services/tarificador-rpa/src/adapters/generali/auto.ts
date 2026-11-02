@@ -472,9 +472,10 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.64'
+export const VERSION_GENERALI_AUTO = '0.2.65'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2242,6 +2243,18 @@ export async function elegirMarcaPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v:
 }
 
 /**
+ * v0.2.65: `data-label` de TODAS las opciones del panel `#<base>_panel`. El panel de «Versión» con columnas (Versión | Puertas | Potencia; trabajo
+ * bf088ce8) pinta las opciones como `<tr class="ui-selectonemenu-item" data-label>` y no como `<li>`: solo con `li` no se veía ni «Otras versiones ...».
+ */
+export async function etiquetasPanelGenerali(raiz: Raiz, base: string): Promise<string[]> {
+  const b = base.replace(/"/g, '')
+  return raiz
+    .locator(`[id="${b}_panel"] li[data-label], [id="${b}_panel"] tr[data-label]`)
+    .evaluateAll((els) => els.map((el) => el.getAttribute('data-label') ?? ''))
+    .catch(() => [] as string[])
+}
+
+/**
  * Pone una opción ya decidida en un SelectOneMenu de PrimeFaces: abre por su disparador (puerta del guard), pulsa el `li` de `data-label`
  * exacto (puerta del guard) y, si el navegador agota el plazo, cae a `selectOption` en el select oculto + change. Comprueba que quedó puesta.
  */
@@ -2267,7 +2280,7 @@ async function ponerOpcionPrimeFaces(
     // v0.2.7: se abre pulsando el disparador propio de PrimeFaces (sin las opciones dentro), no el `div` que las contiene.
     await abrir(menu.base)
     // v0.2.16: el `li` se empareja con la opción normalizada («…» vs «...», espacios) y a la puerta va su `data-label` EXACTO.
-    const etiquetas = await raiz.locator(`[id="${menu.base}_panel"] li[data-label]`).evaluateAll((els) => els.map((el) => el.getAttribute('data-label') ?? '')).catch(() => [] as string[])
+    const etiquetas = await etiquetasPanelGenerali(raiz, menu.base)
     const etq = dataLabelDeOpcionGenerali(etiquetas, elegida.texto, repetidas)
     if (etq !== null) {
       await elegir(menu.base, etq)
@@ -2585,7 +2598,7 @@ async function elegirVersionDesplegableSelector(page: Page, selector: Raiz, camp
     if (!ctx.abrirDesplegableVersionGenerali || !ctx.elegirVersionListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del desplegable de «Otras versiones ...» (disparador y `li`) en el contexto del runner', false)
     await ctx.pausaAccion()
     await ctx.abrirDesplegableVersionGenerali(campo.clave)
-    const etiquetas = await selector.locator(`[id="${campo.clave.replace(/"/g, '')}_panel"] li[data-label]`).evaluateAll((els) => els.map((el) => el.getAttribute('data-label') ?? '')).catch(() => [] as string[])
+    const etiquetas = await etiquetasPanelGenerali(selector, campo.clave)
     const etqOtras = dataLabelDeOpcionGenerali(etiquetas, opciones[d.indice]!.texto, true)
     if (etqOtras === null) throw new ErrorMapaIncompletoGenerali('el elemento «Otras versiones ...» del panel de «Versión» (no se localiza por su texto exacto); NO se pulsa «Confirmar»')
     await ctx.elegirVersionListaGenerali(campo.clave, etqOtras)
