@@ -1,4 +1,5 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.54 (02/11/2026): la `eleccionVersion` ya puesta en el riesgo NO salta la comprobación de modelo: una fila de otro modelo que la referencia se descarta aunque la hayan elegido.
 // v0.8.53 (02/11/2026, Alberto: MISMO modelo en todas las compañías): la fila de la matrícula (una sola o elegida) de OTRO modelo que la referencia no humana-Mapfre NO se tarifica: se descarta y, sin otra fila, `ErrorEleccionVersion` (otro modelo, ambos nombres, sin matrícula).
 // v0.8.44 (01/11/2026, run real: «Generar Proyecto» → `locator.click: Timeout 30000ms`): tras el clic salen DOS diálogos apilados, el informativo «Operación consolidada
 //   correctamente … Aceptar» y el de alta de cliente (No/Sí); el primero tapaba el «No». Ahora (guard.ts) el informativo se cierra con «Aceptar» (rótulo entero, único botón) y el
@@ -830,7 +831,7 @@ export class ErrorOtroModeloMapfre extends ErrorEleccionVersion {
   constructor(filas: readonly FilaVehiculoDialogo[], ref: Parameters<typeof textoVehiculoReferencia>[0]) {
     super(opcionesFilasVehiculo(filas))
     const mapfre = [...new Set(filas.map((f) => f.denominacion))].slice(0, 3).join(' / ')
-    this.message = `Mapfre propone por matrícula «${mapfre}» pero el modelo de referencia de la oportunidad es «${textoVehiculoReferencia(ref)}» (otro modelo): no se tarifica con el de Mapfre. Elige la fila si es correcta o corrige el vehículo de referencia.`
+    this.message = `Mapfre propone por matrícula «${mapfre}» pero el modelo de referencia de la oportunidad es «${textoVehiculoReferencia(ref)}» (otro modelo): no se tarifica con el de Mapfre. Corrige el vehículo de referencia de la oportunidad si el de Mapfre es el correcto.`
   }
 }
 
@@ -896,11 +897,11 @@ export function opcionesFilasVehiculo(filas: readonly FilaVehiculoDialogo[]): Ca
  * filas, como en la 0.8.8. La elección de la bandeja se respeta exacta (`indiceFilaVehiculoMapfre`, antes que esto). PURA.
  */
 export function filaVehiculoPorEquivalencia(filas: readonly FilaVehiculoDialogo[], c: Partial<CriterioFilaVehiculo> | null | undefined): { indice: number; supuesto: string | null } {
-  // v0.8.53 (02/11/2026, Alberto: MISMO modelo en todas las compañías): con referencia que NO es la propia de Mapfre y sin elección humana de fila,
+  // v0.8.53 (02/11/2026, Alberto: MISMO modelo en todas las compañías): con referencia que NO es la propia de Mapfre y aunque el riesgo ya traiga `eleccionVersion` (v0.8.54: la elección no salta el control),
   // las filas de OTRO modelo (p. ej. FORFOUR ante FORTWO) se descartan ANTES de elegir, incluida la fila única. Sin ninguna del mismo modelo →
   // `ErrorEleccionVersion` con ambos nombres (la persona elige la fila o corrige el vehículo). Nunca se tarifica a ciegas con lo de la matrícula.
   const ref = c?.vehiculoReferencia
-  if (ref && ref.origen !== 'mapfre' && !(c?.eleccionVersion?.etiqueta ?? '').trim() && filas.length > 0) {
+  if (ref && ref.origen !== 'mapfre' && filas.length > 0) {
     const mismas = filas.flatMap((f, i) => (vehiculoDivergeDeReferencia(ref, f.denominacion) ? [] : [i]))
     if (mismas.length === 0) throw new ErrorOtroModeloMapfre(filas, ref)
     if (mismas.length < filas.length) {
@@ -2573,7 +2574,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.53',
+  version: '0.8.54',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
