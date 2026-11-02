@@ -4,7 +4,7 @@ import {
   comprobarAritmetica, cuadrarFactura, esCorreoFacturaSique, esGuardable, limitesDelPeriodo,
   mensajeCuadre, parsearFacturaSique, periodoFacturado, type Salida,
 } from './factura-cuadre.ts'
-import { TEXTO_FACTURA_SEPTIEMBRE } from './factura-cuadre.fixture.ts'
+import { TEXTO_FACTURA_OCTUBRE, TEXTO_FACTURA_SEPTIEMBRE } from './factura-cuadre.fixture.ts'
 
 const d = (propertyId: string, fecha: string): Salida => ({ propertyId, fecha })
 const SEPT: Salida[] = [
@@ -121,4 +121,33 @@ test('reservas sin fecha de salida: nunca ✅ limpio, aviso por piso', () => {
   // con discrepancia real, el titular sigue siendo Discrepancia
   const sal = SEPT.slice(1)
   assert.match(mensajeCuadre(cuadrarFactura(f, '2026-09', sal, [{ propertyId: 'prop_luxury_busto' }])), /<b>Discrepancia<\/b>/)
+})
+
+test('octubre: lavandería «285 ud × 1,70» con total 485,21 (kg redondeados) no es error aritmético y se guarda', () => {
+  const f = parsearFacturaSique(TEXTO_FACTURA_OCTUBRE)!
+  assert.equal(f.numero, '2025/444')
+  assert.deepEqual([f.base, f.iva, f.total], [1561.21, 327.85, 1889.06])
+  assert.deepEqual(f.lineas.map((l) => [l.propertyId, l.unidades]), [
+    ['prop_duplex_center', 8], ['prop_house_sevillana', 6], ['prop_busto_reform', 7], ['prop_luxury_busto', 7], [null, 285],
+  ])
+  assert.equal(f.lineas[4].tipo, 'lavanderia')
+  assert.deepEqual(comprobarAritmetica(f), [])
+  const oct: Salida[] = [
+    ...Array.from({ length: 8 }, (_, i) => d('prop_duplex_center', `2026-10-${String(i + 1).padStart(2, '0')}`)),
+    ...Array.from({ length: 6 }, (_, i) => d('prop_house_sevillana', `2026-10-${String(i + 1).padStart(2, '0')}`)),
+    ...Array.from({ length: 7 }, (_, i) => d('prop_busto_reform', `2026-10-${String(i + 1).padStart(2, '0')}`)),
+    ...Array.from({ length: 7 }, (_, i) => d('prop_luxury_busto', `2026-10-${String(i + 1).padStart(2, '0')}`)),
+  ]
+  const r = cuadrarFactura(f, '2026-10', oct)
+  assert.deepEqual(r.aritmetica, [])
+  assert.equal(r.cuadra, true)
+  assert.equal(esGuardable(r), true)
+})
+
+test('lavandería muy desviada (285 ud × 1,70 = 520,00) sigue siendo error aritmético; la limpieza, estricta', () => {
+  const t = TEXTO_FACTURA_OCTUBRE.replace('485,21 €', '520,00 €').replace('1.561,21', '1.596,00')
+  const ar = comprobarAritmetica(parsearFacturaSique(t)!)
+  assert.ok(ar.some((e) => /LAVANDERIA: 285 × 1,70€ = 484,50€, la factura pone 520,00€/.test(e)), ar.join('|'))
+  const lim = comprobarAritmetica(parsearFacturaSique(TEXTO_FACTURA_OCTUBRE.replace('140,00 € \n13', '140,50 € \n13'))!)
+  assert.ok(lim.some((e) => /BUSTOS REFORMA: 7 × 20,00€ = 140,00€, la factura pone 140,50€/.test(e)), lim.join('|'))
 })

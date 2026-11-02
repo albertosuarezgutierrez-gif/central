@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (01/11/2026) Factura Sique Brilla octubre · cuadre por correo: lavandería redondeada
+- La factura nº 2025/444 (octubre, 1.889,06€) llegó y el triaje la procesó, pero NO se guardó: lavandería venía «285 ud × 1,70 = 485,21» (kg redondeados) y `comprobarAritmetica` la marcaba.
+- Arreglo en `lib/sivra/factura-cuadre.ts`: en lavandería se acepta si `round(total/precio) === unidades`; limpieza sigue estricta. Fixture octubre + brazo desviado (cepo visto en rojo).
+- Cuadre real de octubre: Luxury 7 facturados vs 9 salidas, Duplex 8 vs 9, Socorro 6=6, Bustos 7=7 (faltan 3 cambios por facturar). Pendiente: tras mergear, reprocesar el correo para guardar la fila; Alberto revisa la discrepancia con Sique Brilla.
+
 ## (01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)
 - Vehículo de referencia compartido por oportunidad: humano > Mapfre (matrícula) > póliza > Allianz; elección por similitud; si es supuesto → estimado. `presupuesto-rpa` se dispara con cualquier cierre (#5321).
 - Generali 0.2.56 (elección a nivel modelo), 0.2.57 (procedencia por ramo: Mapfre→AUTOMOVILES), 0.2.58 (Historial Siniestral).
