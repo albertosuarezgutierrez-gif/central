@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T17:56:15Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T17:56:59Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -127,7 +127,7 @@
   - Depende de: —
 - **module-cima** (module) → `@central/module-cima`
   - Lo usan: —
-  - Depende de: —
+  - Depende de: module-seguros, module-seguros-pii
 - **module-concursos** (module) → `@central/module-concursos`
   - Lo usan: plataforma
   - Depende de: —
@@ -281,6 +281,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/11/2026) 02/11/2026) PR #5396 · `@central/module-cima` fase 2 (lógica pura)
 - (02/11/2026) 02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
 - (02/11/2026) 02/11/2026) Auditoría completa (12 agentes) + arreglos — docs/AUDITORIA-2026-11.md
 - (02/11/2026) 02/11/2026) Ingresos 2026 pisos: neto real fijado · PENDIENTE cuadre Smoobu

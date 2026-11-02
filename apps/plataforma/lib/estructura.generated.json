@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-02T17:56:15Z",
+  "generadoEn": "2026-11-02T17:56:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4069,7 +4069,10 @@
     ],
     "module-asn": [],
     "module-chat": [],
-    "module-cima": [],
+    "module-cima": [
+      "module-seguros",
+      "module-seguros-pii"
+    ],
     "module-concursos": [],
     "module-contabilidad": [],
     "module-crm": [],
@@ -6806,9 +6809,7 @@
     }
   ],
   "saludRepo": {
-    "packagesSinDescripcion": [
-      "module-cima"
-    ],
+    "packagesSinDescripcion": [],
     "appsSinClaudeMd": [
       "asegura-web"
     ],

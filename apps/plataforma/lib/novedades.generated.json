@@ -1,6 +1,10 @@
 {
   "novedades": [
     {
+      "titulo": "02/11/2026) PR #5396 · `@central/module-cima` fase 2 (lógica pura)",
+      "fecha": "02/11/2026"
+    },
+    {
       "titulo": "02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central",
       "fecha": "02/11/2026"
     },
