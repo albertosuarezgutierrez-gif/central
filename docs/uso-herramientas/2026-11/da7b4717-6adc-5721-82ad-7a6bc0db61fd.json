@@ -1,97 +1,142 @@
 {
  "sesion": "da7b4717-6adc-5721-82ad-7a6bc0db61fd",
  "inicio": "2026-11-02T11:30:36.360Z",
- "fin": "2026-11-02T11:32:16.759Z",
- "llamadas": 33,
+ "fin": "2026-11-02T11:45:25.676Z",
+ "llamadas": 302,
  "categorias": {
   "otro": {
-   "llamadas": 4,
-   "chars_in": 481,
-   "chars_out": 944,
+   "llamadas": 14,
+   "chars_in": 20867,
+   "chars_out": 2380,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 3
+    "ToolSearch": 7,
+    "SubagentHandback": 6
    }
   },
   "bash": {
-   "llamadas": 16,
-   "chars_in": 4216,
-   "chars_out": 97597,
+   "llamadas": 212,
+   "chars_in": 79400,
+   "chars_out": 746731,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 16
+    "Bash": 212
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 4,
-   "chars_in": 306,
-   "chars_out": 148939,
+   "llamadas": 20,
+   "chars_in": 2553,
+   "chars_out": 303543,
    "errores": 0,
-   "archivos_citados": 26,
-   "chars_citados": 4153330,
+   "archivos_citados": 44,
+   "chars_citados": 6929329,
    "tools": {
-    "mcp__claude-code-remote__list_triggers": 4
+    "mcp__claude-code-remote__list_triggers": 7,
+    "mcp__claude-code-remote__delete_trigger": 10,
+    "mcp__claude-code-remote__get_trigger": 2,
+    "mcp__claude-code-remote__update_trigger": 1
    }
   },
   "mcp:github": {
-   "llamadas": 1,
-   "chars_in": 132,
-   "chars_out": 2783,
+   "llamadas": 14,
+   "chars_in": 1344,
+   "chars_out": 76577,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 6,
+   "chars_citados": 1275160,
    "tools": {
-    "mcp__github__list_pull_requests": 1
+    "mcp__github__list_pull_requests": 2,
+    "mcp__github__actions_list": 1,
+    "mcp__github__update_pull_request": 11
    }
   },
   "agente:agente-architect": {
-   "llamadas": 1,
-   "chars_in": 1706,
-   "chars_out": 1916,
-   "errores": 0,
-   "archivos_citados": 3,
-   "chars_citados": 127179,
-   "tools": {
-    "Agent": 1
-   }
-  },
-  "agente:general-purpose": {
    "llamadas": 4,
-   "chars_in": 7249,
-   "chars_out": 8033,
+   "chars_in": 8514,
+   "chars_out": 9354,
    "errores": 0,
-   "archivos_citados": 4,
-   "chars_citados": 1212491,
+   "archivos_citados": 6,
+   "chars_citados": 142383,
    "tools": {
     "Agent": 4
    }
   },
+  "agente:general-purpose": {
+   "llamadas": 7,
+   "chars_in": 14333,
+   "chars_out": 15705,
+   "errores": 0,
+   "archivos_citados": 8,
+   "chars_citados": 2462848,
+   "tools": {
+    "Agent": 7
+   }
+  },
   "lectura-directa": {
-   "llamadas": 1,
-   "chars_in": 112,
-   "chars_out": 182,
+   "llamadas": 4,
+   "chars_in": 435,
+   "chars_out": 88729,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 1
+    "Grep": 2,
+    "Read": 2
    }
   },
   "mcp:Supabase": {
-   "llamadas": 2,
-   "chars_in": 57,
-   "chars_out": 1789,
-   "errores": 1,
+   "llamadas": 5,
+   "chars_in": 189,
+   "chars_out": 75150,
+   "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase__list_projects": 1,
-    "mcp__Supabase__get_advisors": 1
+    "mcp__Supabase__get_advisors": 2,
+    "mcp__Supabase__list_edge_functions": 1,
+    "mcp__Supabase__list_migrations": 1
+   }
+  },
+  "sql": {
+   "llamadas": 10,
+   "chars_in": 3294,
+   "chars_out": 17642,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 10
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 7,
+   "chars_in": 734,
+   "chars_out": 24159,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__list_projects": 1,
+    "mcp__Vercel__list_deployments": 1,
+    "mcp__Vercel__get_runtime_errors": 4
+   }
+  },
+  "escritura": {
+   "llamadas": 5,
+   "chars_in": 64741,
+   "chars_out": 65126,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 5
    }
   }
  }
