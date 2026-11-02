@@ -78,6 +78,14 @@ test('entrega: el riesgo lleva la referencia solo en vehículo', () => {
   assert.equal(riesgoConReferencia(sin, 'auto', null), sin)
 })
 
+test('parada por MODELO (mensaje «nivel MODELO»): «Fortwo» de Allianz → FORTWO COUPE de SU lista, nunca FORFOUR ni CABRIO, con el supuesto', () => {
+  const allianz = vr({ origen: 'allianz', marca: 'SMART', modelo: 'Fortwo', version: 'PASSION 52' })
+  const fila = parada({ error: { tipo: 'eleccion', mensaje: 'requiere_eleccion_version: el catálogo ofrece 3 modelos para este vehículo (nivel MODELO; la versión se elige después)', opcionesVersion: LISTA_GENERALI } })
+  const d = eleccionPorReferenciaParaTrabajo(fila, allianz, { humano: false })
+  assert.deepEqual(d.aplicar && d.eleccion, { codigo: 'G3', etiqueta: 'FORTWO COUPE' })
+  assert.match(d.aplicar ? d.supuesto : '', /no descapotable/)
+})
+
 test('parada por versión: casa con la referencia → elección DE SU lista + supuesto; un solo intento automático', () => {
   const ref = vr({ origen: 'mapfre', marca: 'SMART', modelo: 'FORFOUR', puertas: 5 })
   const d = eleccionPorReferenciaParaTrabajo(parada(), ref, { humano: false })

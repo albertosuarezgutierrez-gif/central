@@ -123,7 +123,10 @@ export function eleccionPorReferenciaParaTrabajo(f: FilaParadaVersion, ref: Vehi
   const tieneEleccion = rg?.eleccionVersion !== undefined && rg?.eleccionVersion !== null
   const marcaAuto = rg?.eleccionVersionIa !== undefined || rg?.[MARCA_ELECCION_REFERENCIA] !== undefined
   if (o.humano ? tieneEleccion && !marcaAuto : tieneEleccion || marcaAuto) return { aplicar: false, motivo: 'el trabajo ya tuvo una elección de versión' }
-  const e = elegirOpcionPorVehiculoReferencia(opciones, ref)
+  // 02/11/2026 (trabajo 7f358ff2): el atasco del nivel MODELO (Generali ≥0.2.56) lleva «nivel MODELO» en el mensaje; se puntúa como modelo
+  // (solo las que nombran el modelo de la referencia; coupé antes que cabrio si la referencia no dice carrocería).
+  const nivel = /nivel MODELO/i.test(typeof err.mensaje === 'string' ? err.mensaje : '') ? 'modelo' : 'version'
+  const e = elegirOpcionPorVehiculoReferencia(opciones, ref, { nivel })
   if (e.tipo !== 'coincidencia' && e.tipo !== 'aproximacion') return { aplicar: false, motivo: e.tipo }
   const elegida = opciones[e.indice]!
   return { aplicar: true, eleccion: { codigo: elegida.codigo, etiqueta: elegida.etiqueta }, supuesto: e.supuesto }

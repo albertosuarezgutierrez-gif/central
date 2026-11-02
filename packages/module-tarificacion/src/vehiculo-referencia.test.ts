@@ -129,6 +129,26 @@ describe('elegirOpcionPorVehiculoReferencia', () => {
     expect(r).toMatchObject({ indice: 1 })
   })
 
+  it('nivel modelo: «Fortwo» (Allianz, sin carrocería) → COUPE antes que CABRIO, nunca FORFOUR, y lo dice en el supuesto', () => {
+    const allianz = vr({ origen: 'allianz', marca: 'SMART', modelo: 'Fortwo', version: 'PASSION 52' })
+    for (const lista of [['FORFOUR', 'FORTWO CABRIO', 'FORTWO COUPE'], ['FORTWO CABRIO', 'FORFOUR', 'FORTWO COUPE'], ['FORFOUR', 'FORTWO COUPE', 'FORTWO CABRIO']]) {
+      const r = elegirOpcionPorVehiculoReferencia(lista, allianz, { nivel: 'modelo' })
+      if (r.tipo !== 'aproximacion') throw new Error(`no: ${r.tipo}`)
+      expect(r.etiqueta).toBe('FORTWO COUPE')
+      expect(lista[r.indice]).toBe('FORTWO COUPE')
+      expect(r.supuesto).toContain('no descapotable')
+      expect(r.supuesto).toContain('vehículo según Allianz')
+      expect(r.supuesto).not.toContain(',')
+    }
+    // Si la referencia SÍ dice descapotable, gana CABRIO.
+    const cab = elegirOpcionPorVehiculoReferencia(['FORFOUR', 'FORTWO CABRIO', 'FORTWO COUPE'], vr({ origen: 'allianz', marca: 'SMART', modelo: 'Fortwo', version: 'PASSION 52', carroceria: 'DESCAPOTABLE' }), { nivel: 'modelo' })
+    expect(cab).toMatchObject({ etiqueta: 'FORTWO CABRIO' })
+  })
+
+  it('nivel modelo: si ninguna opción nombra el modelo de la referencia NO se elige otra («Fortwo» ante solo FORFOUR)', () => {
+    expect(elegirOpcionPorVehiculoReferencia(['FORFOUR'], vr({ origen: 'allianz', marca: 'SMART', modelo: 'Fortwo' }), { nivel: 'modelo' })).toEqual({ tipo: 'sin_opciones' })
+  })
+
   it('humano gana: con la referencia efectiva humana se elige lo que dijo la persona', () => {
     const efectiva = vehiculoReferenciaEfectivo([ref, vr({ origen: 'humano', modelo: 'FORTWO', carroceria: 'COUPE' })])
     const r = elegirOpcionPorVehiculoReferencia(['FORTWO CABRIO', 'FORFOUR', 'FORTWO COUPE'], efectiva, { nivel: 'modelo' })

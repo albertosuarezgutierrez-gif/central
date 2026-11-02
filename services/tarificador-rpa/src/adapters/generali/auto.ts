@@ -31,6 +31,7 @@ import type { Frame, Locator, Page } from 'playwright'
 import {
   conAntecedentesFavorables,
   datosEquivalenciaDesdeEtiqueta,
+  elegirOpcionPorVehiculoReferencia,
   elegirVersionAutomaticamente,
   MAX_OPCIONES_VERSION,
   PREFIJO_ELECCION_VERSION,
@@ -437,6 +438,13 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * Sin desempate posible, el atasco de siempre.
  */
 /**
+ * v0.2.61 (02/11/2026, trabajo 7f358ff2: «FORTWO COUPE» elegido en la bandeja y el modelo seguía parando con «FORFOUR · FORTWO CABRIO · FORTWO COUPE»):
+ * la elección de la persona y el desempate solo se miraban en la rama «ninguna/varias» del modelo; con «Otros modelos ...» (lista que se amplía) el
+ * bot lanzaba el atasco desde `resolverTrasOtrosModelo` SIN mirar nada. Ahora ambas ramas pasan por `modeloAmbiguoGenerali` (persona → vehículo de
+ * REFERENCIA de la oportunidad por similitud, `elegirOpcionPorVehiculoReferencia` nivel modelo: «Fortwo» → COUPE antes que CABRIO, nunca FORFOUR,
+ * declarado como supuesto → origen Mapfre/Allianz), y la elección de la persona vale aunque «Otros» esté en la lista (repetidas siguen sin adivinarse).
+ */
+/**
  * v0.2.56 (01/11/2026): la elección de la bandeja también vale en el nivel MODELO. Si la etiqueta elegida casa (normalizada, entera) con
  * EXACTAMENTE una opción de «Modelo» (lista FORFOUR · FORTWO CABRIO · FORTWO COUPE), se elige ahí y manda sobre el desempate por origen; si no
  * casa en el modelo, el desempate por origen sigue funcionando en ese nivel y la elección se aplica luego en versión, como antes. El atasco
@@ -461,7 +469,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  */
-export const VERSION_GENERALI_AUTO = '0.2.60'
+export const VERSION_GENERALI_AUTO = '0.2.61'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -1984,7 +1992,7 @@ export async function leerLegadoTipoGenerali(page: Page): Promise<LegadoTipoGene
   return null
 }
 
-type FormVersionGenerali = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>
+type FormVersionGenerali = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion' | 'vehiculoReferencia'>
 
 /**
  * Versión de Generali por EQUIVALENCIA (v0.2.10, 19/10/2026). `candidatas` = textos de las opciones (las que siguen en juego); devuelve
@@ -2026,17 +2034,27 @@ export function indicePersonaEnNivelGenerali(opciones: readonly string[], etique
   return ix.length === 1 ? ix[0]! : null
 }
 
+/** v0.2.61 · Modelo por el vehículo de REFERENCIA de la oportunidad (similitud, nivel modelo). `null` = sin referencia/sin modelo que casar. PURA. */
+export function modeloPorReferenciaGenerali(textos: readonly string[], form: Pick<FormularioAuto, 'vehiculoReferencia'>): { indice: number; supuesto: string } | null {
+  if (!form.vehiculoReferencia) return null
+  const e = elegirOpcionPorVehiculoReferencia(textos, form.vehiculoReferencia, { nivel: 'modelo' })
+  return e.tipo === 'coincidencia' || e.tipo === 'aproximacion' ? { indice: e.indice, supuesto: e.supuesto } : null
+}
+
 /**
  * v0.2.56 · Modelo AMBIGUO (varias o ninguna exacta): 1) la elección de la persona si casa con UNA opción del modelo (manda); 2) si no, el
  * desempate por el vehículo de origen (solo con `conOrigen`: hay lista que preguntar); `null` = se pregunta en la bandeja. PURA.
  */
 export function modeloAmbiguoGenerali(
   textos: readonly string[],
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'> & Partial<Pick<FormularioAuto, 'vehiculoReferencia'>>,
   conOrigen = true,
 ): { tipo: 'persona'; indice: number } | { tipo: 'origen'; indice: number; supuesto: string } | null {
   const p = indicePersonaEnNivelGenerali(textos, form.eleccionVersion?.etiqueta)
   if (p !== null) return { tipo: 'persona', indice: p }
+  // v0.2.61: sin elección de la persona, manda el vehículo de referencia de la oportunidad (Alberto: «coger el más similar»), siempre como supuesto.
+  const r = conOrigen ? modeloPorReferenciaGenerali(textos, form) : null
+  if (r) return { tipo: 'origen', ...r }
   const d = conOrigen ? desempateOrigenSinPersona(textos, form, 'modelo') : null
   return d ? { tipo: 'origen', ...d } : null
 }
@@ -2228,13 +2246,19 @@ export async function elegirModeloPrimeFaces(
   v: VehiculoBuscado,
   ctx: ContextoPortal,
   avisos?: string[],
-  form?: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'>,
+  form?: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'> & Partial<Pick<FormularioAuto, 'vehiculoReferencia'>>,
 ): Promise<{ valor: string; texto: string; indice: number }> {
   const b = buscadoEnNivel(v, 'modelo')
   if (!b) throw new ErrorMapaIncompletoGenerali('el modelo del vehículo de la oportunidad (el selector de Generali lo exige)', false)
   const opciones = await opcionesSelect(menu.select)
   const textos = opciones.map((o) => o.texto)
   const e = elegirModeloGenerali(textos, b.texto, b.modo)
+  // v0.2.61: la elección de la persona manda también con «Otros modelos ...» en la lista (antes se saltaba y acababa en el atasco de la lista ampliada).
+  const pOtros = e.tipo === 'otros' && form ? indicePersonaEnNivelGenerali(textos, form.eleccionVersion?.etiqueta) : null
+  if (pOtros !== null) {
+    await ponerOpcionPrimeFaces(raiz, menu, opciones[pOtros]!, pOtros, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo» (elección de la bandeja)')
+    return { ...opciones[pOtros]!, indice: pOtros }
+  }
   if (e.tipo === 'varias' || e.tipo === 'ninguna') {
     const lista = e.cercanas.length > 0 ? e.cercanas : e.tipo === 'ninguna' ? textos.filter((o) => !esOpcionVaciaCatalogo(o)).slice(0, 25) : []
     // v0.2.56: la elección de la PERSONA casa con una opción del modelo → esa (manda). v0.2.55: si no, desempate con el vehículo de origen
@@ -2254,7 +2278,7 @@ export async function elegirModeloPrimeFaces(
   }
   await ponerOpcionPrimeFaces(raiz, menu, opciones[e.indice]!, e.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo»')
   if (e.tipo !== 'otros') return { ...opciones[e.indice]!, indice: e.indice }
-  return resolverTrasOtrosModelo(raiz, menu, textos, opciones[e.indice]!, e.indice, e.supuesto, b, ctx, avisos)
+  return resolverTrasOtrosModelo(raiz, menu, textos, opciones[e.indice]!, e.indice, e.supuesto, b, ctx, avisos, form)
 }
 
 /** Plazo para que el AJAX de «Otros modelos ...» termine (deje «Otros» puesto o recargue la lista). */
@@ -2283,6 +2307,7 @@ async function resolverTrasOtrosModelo(
   b: { texto: string; modo: 'dato' | 'denominacion' },
   ctx: ContextoPortal,
   avisos?: string[],
+  form?: Pick<FormularioAuto, 'eleccionVersion' | 'seleccionVehiculo' | 'vehiculoConfirmado'> & Partial<Pick<FormularioAuto, 'vehiculoReferencia'>>,
 ): Promise<{ valor: string; texto: string; indice: number }> {
   const ini = Date.now()
   let ultimo = { label: '', input: '', n: antes.length }
@@ -2303,6 +2328,14 @@ async function resolverTrasOtrosModelo(
       const e = est.eleccion
       if (e.tipo === 'varias' || e.tipo === 'ninguna') {
         const lista = e.cercanas.length > 0 ? e.cercanas : ops.map((o) => o.texto).filter((o) => !esOpcionVaciaCatalogo(o)).slice(0, 25)
+        // v0.2.61: misma regla que en la lista inicial (persona → referencia → origen) sobre la lista AMPLIADA, antes de preguntar.
+        const textosAmp = ops.map((o) => o.texto)
+        const d = form ? modeloAmbiguoGenerali(textosAmp, form, lista.length > 0) : null
+        if (d) {
+          await ponerOpcionPrimeFaces(raiz, menu, ops[d.indice]!, d.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, d.tipo === 'persona' ? 'el modelo elegido en «Modelo» (elección de la bandeja; lista ampliada)' : 'el modelo elegido en «Modelo» (por referencia u origen; lista ampliada)')
+          if (d.tipo === 'origen') avisos?.push(d.supuesto)
+          return { ...ops[d.indice]!, indice: d.indice }
+        }
         if (lista.length > 0) throw new ErrorEleccionModeloGenerali(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
         throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo('modelo', b.texto, ops.map((o) => o.texto), { tipo: 'ninguna' }))
       }
