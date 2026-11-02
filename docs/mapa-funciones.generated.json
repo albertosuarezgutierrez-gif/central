@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-01T22:36:33Z",
-  "sha": "c0c085e3e7c9404fcc7a46f323d1d1e0d69a4317",
+  "generadoEn": "2026-11-02T02:09:38Z",
+  "sha": "6d4ccca513529abe2b159c327b492dc3318fb151",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -191193,7 +191193,7 @@
           "exportada": true,
           "params": "leida: FacturaLeida | null, periodo: string | null, salidas: Salida[], sinSalida: SinSalida[] = []",
           "retorno": "ResultadoCuadre",
-          "linea": 199,
+          "linea": 203,
           "resumen": "Cuadra unidades facturadas por piso con las salidas del mes. `leida: null` → no cuadra."
         },
         {
@@ -191202,7 +191202,7 @@
           "exportada": true,
           "params": "r: ResultadoCuadre",
           "retorno": "boolean",
-          "linea": 236,
+          "linea": 240,
           "resumen": "¿Se puede guardar en `limpieza_facturas`? Solo si su aritmética es sana y no hay líneas desconocidas: el P&L usa el desglose para repartir el gasto, y uno con la aritmética rota lo contaminaría. Una d"
         },
         {
@@ -191211,7 +191211,7 @@
           "exportada": true,
           "params": "periodo: string | null",
           "retorno": "string",
-          "linea": 241,
+          "linea": 245,
           "resumen": "Nombre del mes en español con mayúscula: '2026-09' → 'Septiembre 2026'."
         },
         {
@@ -191220,7 +191220,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 247
+          "linea": 251
         },
         {
           "nombre": "mensajeCuadre",
@@ -191228,13 +191228,13 @@
           "exportada": true,
           "params": "r: ResultadoCuadre",
           "retorno": "string",
-          "linea": 250,
+          "linea": 254,
           "resumen": "Texto del aviso de Telegram (HTML). Importes en formato español."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4456738d23b4"
+      "hash": "a891765b66a3"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
