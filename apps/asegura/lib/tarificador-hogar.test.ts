@@ -194,9 +194,9 @@ test('Mapfre Hogar con interruptor: riesgoParaEncolar exige la ficha (DNI, nacim
     assert.deepEqual(ok.ok && ok.riesgo, casa, 'se guarda sin tomador ni datosTomador')
     const sinNombre = riesgoParaEncolar('mapfre', 'hogar', casa, noLeer, () => lecturaTomadorFicha({ ...fila, nombre: null }, sinDescifrar), () => lecturaTomadorHogar(fila, sinDescifrar))
     assert.ok(!sinNombre.ok && sinNombre.status === 422 && !sinNombre.motivo.includes('PRUEBA'))
-    // Sin referencia catastral de 20: Mapfre no se lanza (su obligatorio propio), antes de gastar máquina.
+    // 02/11/2026: el adaptador Mapfre hogar v0.3.0 tarifica por CP y m², sin referencia catastral: ya no es obligatoria.
     const sinRc = riesgoParaEncolar('mapfre', 'hogar', HOGAR, noLeer, () => lecturaTomadorFicha(fila, sinDescifrar), () => lecturaTomadorHogar(fila, sinDescifrar))
-    assert.ok(!sinRc.ok && sinRc.status === 422 && /referencia catastral/.test(sinRc.motivo))
+    assert.ok(sinRc.ok, sinRc.ok ? '' : sinRc.motivo)
   } finally {
     if (prev === undefined) delete process.env.TARIFICADOR_HOGAR_COMPANIAS_EXTRA
     else process.env.TARIFICADOR_HOGAR_COMPANIAS_EXTRA = prev
