@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-11-02 · facturas-correo** · hizo: Vía B sana (copias 02/11); 0 candidatos nuevos sin Procesada (solo ruido Booking/holaplace); barrido 4.0: 0 `sin_revisar` en `v_facturas_sin_cargo`; sin cargos bancarios nuevos que casar (Fly/Stripe/Ionos/Cruzz fuera de feed o aún sin cargo); ETTERNA 11567 sigue en `Revisar` y 4 hilos Endesa en `PDF-pendiente`; latido ok; dudas: —; fallos: `gmail-adjuntos` (Vía A) sin conexión, irrelevante con B sana; PRs/commits: —
+
 - **2026-11-02 · pricing-agente** · hizo: ciclo semanal 4 pisos (12 ventanas nov26-sep27 por 4 agentes); comps house=120, busto=120, luxury=120, duplex=120; 12 propuestas dry-run (SS/Feria/11-jun), breaker no salto; aprendizaje `ciclo_02_11_2026`; dudas: —; fallos: —; alerta: Luxury Feria 15-17 abr vendida a ~140€/noche vs mercado 1105€ (reserva 16/07); PRs/commits: —
 
 - **2026-11-01 · facturas-correo** · hizo: Vía B sana (copias hoy); 7 candidatos Gmail, 1 factura real (ETTERNA 2026/11567, 59,29€, alarma, a nombre de TRIUNFO CB/Espartinas) → NO archivada, `Facturas/Revisar`; backlog 4.0: `ionos-contrato-111849515` 10,90€ marcada `fuera_del_feed` (último cargo Ionos en banco 15/07), resto de la cola ya revisada; dudas: Etterna ¿es gasto de Alberto o de un tercero (Espartinas = suministro de tercero en la skill)? Alberto la reenvió a Pilar y a jsuarezsalas; fallos: gmail-adjuntos (Vía A) caído; PRs/commits: este commit
