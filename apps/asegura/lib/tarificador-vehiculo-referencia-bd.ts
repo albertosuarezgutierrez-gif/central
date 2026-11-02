@@ -3,12 +3,13 @@
 // (sin ella cada bot hace lo de siempre) y nunca tumba un resultado, una entrega ni una acción de la bandeja.
 // Sin migración: vive en `oportunidades.info_riesgo.vehiculoReferencia` (jsonb existente).
 
-import type { VehiculoReferencia } from '@central/module-tarificacion'
+import type { VehiculoReferencia, VehiculoUsado } from '@central/module-tarificacion'
 import { prisma } from './tenant'
 import {
   MARCA_ELECCION_REFERENCIA,
   eleccionPorReferenciaParaTrabajo,
   infoConReferencia,
+  infoConVehiculoUsado,
   planPropagacion,
   referenciaDeEleccionHumana,
   referenciaEfectiva,
@@ -54,9 +55,8 @@ export async function leerReferenciaOportunidad(db: Db, correduriaId: string, op
   }
 }
 
-/** Guarda la referencia de SU origen en la oportunidad (pisa solo esa casilla). Devuelve si escribió. Nunca lanza. */
-export async function guardarReferenciaOportunidad(correduriaId: string, oportunidadId: string, v: VehiculoReferencia | null): Promise<boolean> {
-  if (!v) return false
+/** Aplica `fn` al `info_riesgo` de la oportunidad (bloqueando la fila). Devuelve si escribió. Nunca lanza. */
+async function actualizarInfoRiesgo(correduriaId: string, oportunidadId: string, fn: (info: unknown) => Record<string, unknown>, que: string): Promise<boolean> {
   try {
     return await prisma.$transaction(async (tx) => {
       const [op] = await tx.$queryRaw<{ info_riesgo: unknown }[]>`
@@ -64,14 +64,26 @@ export async function guardarReferenciaOportunidad(correduriaId: string, oportun
         where o.id = ${oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid for update`
       if (!op) return false
       const n = await tx.$executeRaw`
-        update seguros.oportunidades set info_riesgo = ${JSON.stringify(infoConReferencia(op.info_riesgo, v))}::jsonb
+        update seguros.oportunidades set info_riesgo = ${JSON.stringify(fn(op.info_riesgo))}::jsonb
         where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
       return n === 1
     })
   } catch (e) {
-    console.error('[tarificador] vehículo de referencia: no se pudo guardar', oportunidadId, v.origen, msg(e))
+    console.error(`[tarificador] vehículo de referencia: no se pudo guardar ${que}`, oportunidadId, msg(e))
     return false
   }
+}
+
+/** Guarda la referencia de SU origen en la oportunidad (la canónica solo la sube una de mayor prioridad). Devuelve si escribió. Nunca lanza. */
+export async function guardarReferenciaOportunidad(correduriaId: string, oportunidadId: string, v: VehiculoReferencia | null): Promise<boolean> {
+  if (!v) return false
+  return actualizarInfoRiesgo(correduriaId, oportunidadId, (info) => infoConReferencia(info, v), v.origen)
+}
+
+/** Anota con qué vehículo tarificó una compañía (y recalcula `retarificar`: compañías con otro vehículo que el canónico). Nunca lanza. */
+export async function anotarVehiculoUsado(correduriaId: string, oportunidadId: string, compania: string, usado: VehiculoUsado | null): Promise<boolean> {
+  if (!usado) return false
+  return actualizarInfoRiesgo(correduriaId, oportunidadId, (info) => infoConVehiculoUsado(info, compania, usado), `vehículo usado por ${compania}`)
 }
 
 /** Escribe la elección por referencia y devuelve el trabajo a `pendiente` (como «Reintentar» de la bandeja). Solo si SIGUE `requiere_humano`. */

@@ -174,6 +174,7 @@ import {
   conDatosUsados,
   conPolizaAnteriorTecleada,
   elegirVersionAutomaticamente,
+  elegirOpcionPorVehiculoReferencia,
   referenciaRiesgoVersion,
   USO_VEHICULO_POR_DEFECTO,
   vehiculoConfirmadoDesdeMapfre,
@@ -827,7 +828,7 @@ export function etiquetaFilaVehiculo(f: FilaVehiculoDialogo): string {
 }
 
 /** Datos del riesgo con los que se elige la fila del diálogo cuando hay VARIAS (nunca la matrícula: esa la compara el guard). */
-export type CriterioFilaVehiculo = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>
+export type CriterioFilaVehiculo = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'> & Partial<Pick<FormularioAuto, 'vehiculoReferencia'>>
 
 /**
  * Fila de «Selección de vehículo» por REGLA FIJA (grabación 15/10/2026; sin IA ni «la primera»). PURA. Una fila → 0. Varias →
@@ -885,6 +886,12 @@ export function opcionesFilasVehiculo(filas: readonly FilaVehiculoDialogo[]): Ca
 export function filaVehiculoPorEquivalencia(filas: readonly FilaVehiculoDialogo[], c: Partial<CriterioFilaVehiculo> | null | undefined): { indice: number; supuesto: string | null } {
   const casada = indiceFilaVehiculoMapfre(filas, c)
   if (casada !== null) return { indice: casada, supuesto: null }
+  // v0.8.51 (02/11/2026, Alberto: MISMO modelo en todas las compañías): varias filas por matrícula y la referencia de la oportunidad (humana o la
+  // primera automática) existe → se elige por SIMILITUD con ella (modelo, CV, cc, acabado), no por equivalencia ciega; declarado como supuesto.
+  if (c?.vehiculoReferencia) {
+    const e = elegirOpcionPorVehiculoReferencia(filas.map((f) => etiquetaFilaVehiculo(f)), c.vehiculoReferencia)
+    if (e.tipo === 'coincidencia' || e.tipo === 'aproximacion') return { indice: e.indice, supuesto: e.supuesto }
+  }
   const r = elegirVersionAutomaticamente(
     filas.map((f) => {
       const v = vehiculoConfirmadoDesdeMapfre(f)
@@ -2542,7 +2549,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.51',
+  version: '0.8.52',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

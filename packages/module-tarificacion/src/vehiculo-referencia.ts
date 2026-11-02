@@ -246,6 +246,8 @@ export type EleccionPorReferencia =
   | { tipo: 'sin_referencia' }
   | { tipo: 'sin_opciones' }
   | { tipo: 'sin_marca' }
+  /** Nivel versión: la lista habla de OTRO modelo (palabras comunes ajenas a la referencia y ninguna opción nombra lo propio de ella): no se elige. */
+  | { tipo: 'otro_modelo' }
 
 const etiquetaDe = (o: OpcionCatalogo): string => espacios(typeof o === 'string' ? o : String(o?.etiqueta ?? ''))
 /** Palabras que dicen «eléctrico» en una versión (ELECTRIC, ELECTRICO, EQ, ED, EV, BEV). */
@@ -353,6 +355,42 @@ export function elegirOpcionPorVehiculoReferencia(
   // Palabras comunes a TODAS las opciones que la referencia no dice (p. ej. todas «FORTWO» y la referencia «FORFOUR»): la lista habla de
   // otro modelo → nunca «coincidencia».
   const comunesAjenas = comunes.size > 0 && cand.length > 1 && ![...comunes].some((t) => rr.tokens.has(t))
+  // 02/11/2026 (regla de Alberto: MISMO modelo para todas las compañías): en una lista de versiones donde TODAS comparten una palabra ajena a la
+  // referencia (p. ej. FORTWO ante una referencia FORFOUR) y alguna palabra propia de la referencia no la nombra ninguna, la lista es de otro
+  // modelo: NO se elige la «más parecida» (se preguntaría a una persona en vez de tarificar otro coche).
+  if (nivel === 'version' && rasgos.length > 1 && [...comunes].some((t) => /[A-Z]/.test(t) && !rr.tokens.has(t))) {
+    const propiosRef = [...rr.tokens].filter((t) => /[A-Z]/.test(t) && !comunes.has(t))
+    if (propiosRef.some((t) => rasgos.every((x) => !x.r.tokens.has(t)))) return { tipo: 'otro_modelo' }
+  }
   const tipo = !notaCarroceria && !comunesAjenas && apoyadas.length === 1 && apoyadas[0]!.i === g.i ? 'coincidencia' : 'aproximacion'
   return { tipo, indice: g.i, etiqueta: g.etiqueta, puntuacion: Math.round((g.estructural + g.similitud) * 1000) / 1000, supuesto: supuestoVehiculoReferencia(tipo, nivel, g.etiqueta, ref.origen) + notaCarroceria, contradice: g.contradice, compartidas: g.compartidas }
+}
+
+/** Lo que una compañía usó para tarificar (solo catálogo). */
+export type VehiculoUsado = { marca?: string | null; modelo?: string | null; version?: string | null }
+
+/**
+ * ¿El vehículo con el que tarificó una compañía es OTRO que la referencia? (regla de Alberto, 02/11/2026: mismo modelo para todas.)
+ * Conservadora: solo `true` con evidencia (modelo contra modelo que no se contienen; o, sin modelo en la referencia, el modelo usado no
+ * aparece en ella; combustible que difiere). Sin datos para comparar → `false`. `usado` puede ser una etiqueta suelta (p. ej. de una tarjeta). PURA.
+ */
+export function vehiculoDivergeDeReferencia(ref: VehiculoReferencia, usado: VehiculoUsado | string): boolean {
+  const marcaToks = [ref.marca, typeof usado === 'string' ? null : usado.marca].flatMap((m) => (m ? normalizar(m).split(' ') : []))
+  const quitar = new Set(marcaToks)
+  const u = typeof usado === 'string' ? { marca: null, modelo: null, version: usado } : usado
+  const modeloRef = ref.modelo ? rasgosDeTexto(ref.modelo, quitar).tokens : new Set<string>()
+  const modeloUsado = u.modelo ? rasgosDeTexto(u.modelo, quitar).tokens : new Set<string>()
+  const refToks = rasgosReferencia(ref, quitar).tokens
+  const usadoToks = rasgosDeTexto([u.modelo, u.version].filter((x): x is string => !!x).join(' '), quitar)
+  const contiene = (a: Set<string>, b: Set<string>) => [...a].every((t) => b.has(t))
+  if (modeloRef.size && modeloUsado.size) {
+    if (!contiene(modeloRef, modeloUsado) && !contiene(modeloUsado, modeloRef)) return true
+  } else if (modeloUsado.size) {
+    if (![...modeloUsado].some((t) => refToks.has(t))) return true
+  } else if (modeloRef.size && usadoToks.tokens.size) {
+    if (![...modeloRef].some((t) => usadoToks.tokens.has(t))) return true
+  }
+  const cRef = rasgosReferencia(ref, quitar).combustible
+  if (cRef && usadoToks.combustible && cRef !== usadoToks.combustible) return true
+  return false
 }
