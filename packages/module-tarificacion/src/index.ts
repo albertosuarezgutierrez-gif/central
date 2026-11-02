@@ -482,6 +482,8 @@ export {
   textoVehiculoReferencia,
   supuestoVehiculoReferencia,
   elegirOpcionPorVehiculoReferencia,
+  vehiculoDivergeDeReferencia,
+  type VehiculoUsado,
   type OrigenVehiculoReferencia,
   type VehiculoReferencia,
   type ValidacionVehiculoReferencia,

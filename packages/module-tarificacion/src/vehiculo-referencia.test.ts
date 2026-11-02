@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest'
 import {
   avisoEsSupuesto,
   elegirOpcionPorVehiculoReferencia,
+  vehiculoDivergeDeReferencia,
   firmezaPrecioRpa,
   validarFormularioAuto,
   validarVehiculoReferencia,
@@ -64,10 +65,14 @@ describe('elegirOpcionPorVehiculoReferencia', () => {
   })
 
   it('ninguna casa: elige por aproximación (palabras de la versión), nunca para', () => {
-    const r = elegirOpcionPorVehiculoReferencia(['FORTWO PASSION 52', 'FORTWO PULSE 52', 'FORTWO PURE 52'], ref)
+    const r = elegirOpcionPorVehiculoReferencia(['FORFOUR PASSION 52', 'FORFOUR PULSE 52', 'FORFOUR PURE 52'], ref)
     expect(r).toMatchObject({ tipo: 'aproximacion', indice: 2 })
     if (r.tipo !== 'aproximacion') throw new Error('no')
     expect(r.supuesto).toContain('por aproximación al vehículo de referencia')
+  })
+
+  it('02/11/2026: una lista entera de OTRO modelo (FORTWO ante una referencia FORFOUR) ya no se aproxima: otro_modelo', () => {
+    expect(elegirOpcionPorVehiculoReferencia(['FORTWO PASSION 52', 'FORTWO PULSE 52', 'FORTWO PURE 52'], ref)).toEqual({ tipo: 'otro_modelo' })
   })
 
   it('varias casan: gana la más cercana en potencia/cilindrada', () => {
@@ -192,5 +197,23 @@ describe('elegirOpcionPorVehiculoReferencia · nivel versión (v0.2.62)', () => 
   it('referencia eléctrica: no penaliza', () => {
     const r = elegirOpcionPorVehiculoReferencia(['ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ PULSE'], vr({ ...ref, version: 'Electric Drive EQ Passion', combustible: 'electrico' }), { nivel: 'version' })
     expect(r).toMatchObject({ etiqueta: 'ELECTRIC DRIVE EQ PASSION', contradice: false })
+  })
+})
+
+describe('MISMO modelo para todas las compañías (02/11/2026)', () => {
+  const mapfre = vr({ origen: 'mapfre', version: 'Smart Forfour Pure 1.1', cc: 1124, cv: 75, puertas: 5 })
+  it('lista de versiones de OTRO modelo → otro_modelo (no se elige la más parecida)', () => {
+    expect(elegirOpcionPorVehiculoReferencia(['SMART FORTWO PASSION 52', 'SMART FORTWO PULSE 52'], mapfre)).toEqual({ tipo: 'otro_modelo' })
+  })
+  it('lista del mismo modelo o sin nombre de modelo sigue eligiendo', () => {
+    expect(elegirOpcionPorVehiculoReferencia(['SMART FORFOUR PASSION', 'SMART FORFOUR PURE 1.1'], mapfre)).toMatchObject({ indice: 1 })
+    expect(['coincidencia', 'aproximacion']).toContain(elegirOpcionPorVehiculoReferencia(['PASSION 52', 'PURE 1.1 75CV'], mapfre).tipo)
+  })
+  it('vehiculoDivergeDeReferencia: Fortwo distinto de Forfour; mismo modelo, no; sin datos, no', () => {
+    expect(vehiculoDivergeDeReferencia(mapfre, { marca: 'SMART', modelo: 'FORTWO', version: 'PASSION 52' })).toBe(true)
+    expect(vehiculoDivergeDeReferencia(mapfre, { marca: 'SMART', modelo: 'FORFOUR', version: 'PURE' })).toBe(false)
+    expect(vehiculoDivergeDeReferencia(vr({ marca: 'SMART', modelo: 'FORFOUR' }), { modelo: 'FORFOUR COUPE' })).toBe(false)
+    expect(vehiculoDivergeDeReferencia(vr({ marca: 'SMART', modelo: 'FORFOUR' }), 'SMART FORTWO GASOLINA')).toBe(true)
+    expect(vehiculoDivergeDeReferencia(mapfre, {})).toBe(false)
   })
 })

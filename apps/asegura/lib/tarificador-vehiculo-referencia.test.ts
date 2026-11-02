@@ -8,6 +8,8 @@ import {
   MARCA_ELECCION_REFERENCIA,
   eleccionPorReferenciaParaTrabajo,
   infoConReferencia,
+  infoConVehiculoUsado,
+  canonicaDeInfo,
   ofertasConSupuestoReferencia,
   planPropagacion,
   referenciaDeEleccionHumana,
@@ -134,7 +136,8 @@ test('cableado: entrega, ok de origen, oferta y bandeja usan la referencia', () 
   const t = readFileSync(new URL('./tarificador.ts', import.meta.url), 'utf8')
   const entrega = t.slice(t.indexOf('export async function trabajoParaWorker'), t.indexOf('// ─── Resultado'))
   assert.match(entrega, /riesgo = riesgoConReferencia\(riesgo, f\.ramo, await leerReferenciaOportunidad\(prisma, f\.correduria_id, f\.oportunidad_id\)\)/)
-  assert.match(t, /referenciaOk = \{ correduriaId: t\.correduria_id, oportunidadId: t\.oportunidad_id, ref: referenciaDeResultadoOrigen\(t\.compania, t\.ramo, r\.vehiculo\) \}/)
+  assert.match(t, /referenciaOk = \{ correduriaId: t\.correduria_id, oportunidadId: t\.oportunidad_id, compania: t\.compania, ref: referenciaDeResultadoOrigen\(t\.compania, t\.ramo, r\.vehiculo\), usado: usadoDeResultado\(t\.compania, t\.ramo, r\.vehiculo\) \}/)
+  assert.match(t, /if \(refOk\?\.usado\) await anotarVehiculoUsado\(/)
   assert.match(t, /if \(refOk\?\.ref\) await guardarReferenciaOportunidad\(/)
   assert.match(t, /ofertasConFirmezaRpa\(t\.compania, t\.ramo, riesgoEntregado, ofertasConSupuestoReferencia\(ofertas, rg\)\)/)
   const b = readFileSync(new URL('./tarificador-bandeja.ts', import.meta.url), 'utf8')
@@ -160,4 +163,42 @@ test('presupuesto: un cierre SIN precio también dispara (con los ok de los dem�
   assert.match(res, /!paradaVersion && cierrePuedeDispararPresupuesto\(r\.estadoTrabajo, null\)\) \{\n\s*const trabajoId = l\.r\.trabajoId\n\s*after\(\(\) => presupuestoTrasTrabajoRpa\(trabajoId\)/)
   const ban = readFileSync(new URL('../app/api/operador/tarificador/bandeja/[id]/route.ts', import.meta.url), 'utf8')
   assert.match(ban, /accion === 'cancelar' && r\.estado === 'aplicado'\) after\(\(\) => presupuestoTrasTrabajoRpa\(id\)/)
+})
+
+// ───── 02/11/2026 (Alberto: MISMO modelo de vehículo en todas las compañías) ─────
+test('canónica: Allianz primero, luego Mapfre por matrícula la sustituye y conserva porOrigen', () => {
+  const allianz = vr({ origen: 'allianz', marca: 'SMART', modelo: 'FORTWO', version: 'PASSION 52' })
+  const mapfre = vr({ origen: 'mapfre', version: 'Smart Forfour Pure 1.1' })
+  const i1 = infoConReferencia({}, allianz)
+  assert.equal(canonicaDeInfo(i1)?.origen, 'allianz')
+  const i2 = infoConReferencia(i1, mapfre)
+  assert.equal(canonicaDeInfo(i2)?.origen, 'mapfre')
+  assert.equal(referenciasDeInfo(i2).length, 2)
+})
+
+test('una referencia de MENOR prioridad no pisa la canónica (Allianz tardío tras Mapfre)', () => {
+  const mapfre = vr({ origen: 'mapfre', version: 'Smart Forfour Pure 1.1' })
+  const i = infoConReferencia(infoConReferencia({}, mapfre), vr({ origen: 'allianz', modelo: 'FORTWO', version: 'PASSION 52' }))
+  assert.equal(canonicaDeInfo(i)?.origen, 'mapfre')
+  assert.equal(referenciaEfectiva(i, null)?.version, 'Smart Forfour Pure 1.1')
+})
+
+test('la primera identificación automática de un origen no se pisa; la humana sí (la última)', () => {
+  const a1 = vr({ origen: 'allianz', modelo: 'FORTWO', version: 'A' })
+  const a2 = vr({ origen: 'allianz', modelo: 'FORTWO', version: 'B' })
+  assert.equal(canonicaDeInfo(infoConReferencia(infoConReferencia({}, a1), a2))?.version, 'A')
+  assert.equal(referenciasDeInfo(infoConReferencia(infoConReferencia({}, a1), a2)).find((x) => x.origen === 'allianz')?.version, 'A')
+  const h1 = vr({ origen: 'humano', version: 'H1' })
+  const h2 = vr({ origen: 'humano', version: 'H2' })
+  assert.equal(canonicaDeInfo(infoConReferencia(infoConReferencia(infoConReferencia({}, a1), h1), h2))?.version, 'H2')
+})
+
+test('Allianz tarificó FORTWO y la canónica es Mapfre FORFOUR → marcada para re-tarificar; al repetir con el mismo modelo, deja de estarlo', () => {
+  const mapfre = vr({ origen: 'mapfre', version: 'Smart Forfour Pure 1.1' })
+  let i: Record<string, unknown> = infoConVehiculoUsado({}, 'Allianz', { marca: 'SMART', modelo: 'FORTWO', version: 'PASSION 52' })
+  i = infoConReferencia(i, mapfre)
+  const marca = (x: Record<string, unknown>) => (x.vehiculoReferencia as { retarificar: { compania: string }[] }).retarificar
+  assert.deepEqual(marca(i).map((m) => m.compania), ['allianz'])
+  i = infoConVehiculoUsado(i, 'allianz', { marca: 'SMART', modelo: 'FORFOUR', version: 'PURE' })
+  assert.deepEqual(marca(i), [])
 })

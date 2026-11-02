@@ -21,9 +21,12 @@ import {
   vehiculoReferenciaDesdeConfirmado,
   vehiculoReferenciaDesdeSeleccion,
   vehiculoReferenciaEfectivo,
+  vehiculoDivergeDeReferencia,
+  textoVehiculoReferencia,
   claveCompania,
   ORIGENES_VEHICULO_REFERENCIA,
   type VehiculoReferencia,
+  type VehiculoUsado,
 } from '@central/module-tarificacion'
 import { vehiculoDePolizaViva, type VehiculoEncadenado } from './tarificador-espera-vehiculo.ts'
 
@@ -49,12 +52,74 @@ export function referenciasDeInfo(info: unknown): VehiculoReferencia[] {
   return out
 }
 
-/** `info_riesgo` con la referencia de su origen puesta (pisa solo esa casilla; lo demás intacto). PURA. */
+/** Claves de `info_riesgo.vehiculoReferencia` además de `porOrigen`. */
+export const CLAVE_CANONICA = 'canonica'
+export const CLAVE_TARIFICADO_POR = 'tarificadoPor'
+export const CLAVE_RETARIFICAR = 'retarificar'
+
+/** La referencia CANÓNICA guardada (la que manda en la oportunidad, sin póliza). `null` si no hay o no valida. PURA. */
+export function canonicaDeInfo(info: unknown): VehiculoReferencia | null {
+  const v = validarVehiculoReferencia(obj(obj(obj(info)?.[CLAVE_VEHICULO_REFERENCIA])?.[CLAVE_CANONICA]))
+  return v.ok ? v.valor : null
+}
+
+export type AvisoRetarificar = { compania: string; usado: string; canonico: string }
+
+/** Compañías que tarificaron con un vehículo distinto del canónico (de `tarificadoPor`). PURA. */
+export function companiasARetarificar(info: unknown, canonica: VehiculoReferencia | null): AvisoRetarificar[] {
+  if (!canonica) return []
+  const por = obj(obj(obj(info)?.[CLAVE_VEHICULO_REFERENCIA])?.[CLAVE_TARIFICADO_POR]) ?? {}
+  const out: AvisoRetarificar[] = []
+  for (const [compania, raw] of Object.entries(por)) {
+    const u = obj(raw)
+    if (!u) continue
+    const usado: VehiculoUsado = { marca: typeof u.marca === 'string' ? u.marca : null, modelo: typeof u.modelo === 'string' ? u.modelo : null, version: typeof u.version === 'string' ? u.version : null }
+    if (vehiculoDivergeDeReferencia(canonica, usado)) {
+      out.push({ compania, usado: [usado.marca, usado.modelo, usado.version].filter(Boolean).join(' ').slice(0, 120), canonico: textoVehiculoReferencia(canonica).slice(0, 120) })
+    }
+  }
+  return out
+}
+
+/** Recalcula `retarificar` (estado: compañías cuyo presupuesto usó otro vehículo que el canónico). Lo demás intacto. PURA. */
+function conRetarificar(info: Record<string, unknown>): Record<string, unknown> {
+  const actual = obj(info[CLAVE_VEHICULO_REFERENCIA]) ?? {}
+  return { ...info, [CLAVE_VEHICULO_REFERENCIA]: { ...actual, [CLAVE_RETARIFICAR]: companiasARetarificar(info, canonicaDeInfo(info)) } }
+}
+
+/**
+ * `info_riesgo` con la referencia de su origen puesta (lo demás intacto). PURA.
+ * Regla de Alberto (02/11/2026): UN vehículo canónico por oportunidad. `porOrigen` se conserva entero; la casilla de un origen AUTOMÁTICO
+ * (mapfre/poliza/allianz) NO se pisa (la primera identificación manda); la humana sí (la última elección de la persona). La canónica es la
+ * de mayor prioridad (humano > Mapfre por matrícula > póliza > Allianz); a igual origen, la ya guardada; una de menor prioridad nunca la pisa.
+ */
 export function infoConReferencia(info: unknown, v: VehiculoReferencia): Record<string, unknown> {
   const i = obj(info) ?? {}
   const actual = obj(i[CLAVE_VEHICULO_REFERENCIA]) ?? {}
   const por = obj(actual.porOrigen) ?? {}
-  return { ...i, [CLAVE_VEHICULO_REFERENCIA]: { ...actual, porOrigen: { ...por, [v.origen]: v } } }
+  const previaCasilla = validarVehiculoReferencia(por[v.origen])
+  const nuevaCasilla = v.origen !== 'humano' && previaCasilla.ok && previaCasilla.valor.origen === v.origen ? previaCasilla.valor : v
+  const porNuevo = { ...por, [v.origen]: nuevaCasilla }
+  const previa = canonicaDeInfo(i)
+  // La humana nueva va primera (gana el empate con la humana anterior); después la canónica previa; después las casillas.
+  const canonica = vehiculoReferenciaEfectivo([v.origen === 'humano' ? nuevaCasilla : null, previa, ...ORIGENES_VEHICULO_REFERENCIA.map((o) => porNuevo[o])])
+  return conRetarificar({ ...i, [CLAVE_VEHICULO_REFERENCIA]: { ...actual, porOrigen: porNuevo, ...(canonica ? { [CLAVE_CANONICA]: canonica } : {}) } })
+}
+
+/** El vehículo con el que una compañía acaba de tarificar (solo catálogo) para saber si hay que re-tarificar. PURA. */
+export function usadoDeResultado(compania: string, ramo: string, v: VehiculoEncadenado | null): VehiculoUsado | null {
+  if (!v || !esRamoVehiculo(ramo)) return null
+  const s = v.seleccionVehiculo
+  if (s) return { marca: s.marca, modelo: s.modelo, version: s.descripcion || null }
+  return v.vehiculoConfirmado ? { marca: null, modelo: null, version: v.vehiculoConfirmado.denominacion } : null
+}
+
+/** `info_riesgo` anotando con qué vehículo tarificó `compania` (clave normalizada) y recalculando `retarificar`. PURA. */
+export function infoConVehiculoUsado(info: unknown, compania: string, usado: VehiculoUsado): Record<string, unknown> {
+  const i = obj(info) ?? {}
+  const actual = obj(i[CLAVE_VEHICULO_REFERENCIA]) ?? {}
+  const por = obj(actual[CLAVE_TARIFICADO_POR]) ?? {}
+  return conRetarificar({ ...i, [CLAVE_VEHICULO_REFERENCIA]: { ...actual, [CLAVE_TARIFICADO_POR]: { ...por, [claveCompania(compania)]: usado } } })
 }
 
 /** La referencia que da el `ok` de un bot de ORIGEN (Mapfre: su vehículo confirmado por matrícula; Allianz: su catálogo). PURA. */
@@ -79,7 +144,7 @@ export function referenciaDePoliza(datosEspecificos: unknown): VehiculoReferenci
 
 /** La que MANDA en la oportunidad: guardadas + la de la póliza viva. PURA. */
 export function referenciaEfectiva(info: unknown, datosPoliza: unknown): VehiculoReferencia | null {
-  return vehiculoReferenciaEfectivo([...referenciasDeInfo(info), referenciaDePoliza(datosPoliza)])
+  return vehiculoReferenciaEfectivo([...referenciasDeInfo(info), canonicaDeInfo(info), referenciaDePoliza(datosPoliza)])
 }
 
 /**

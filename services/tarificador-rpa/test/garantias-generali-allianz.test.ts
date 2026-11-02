@@ -37,7 +37,7 @@ function pdfSintetico(contenido: string): Buffer {
 test('versiones: Generali auto 0.2.59, Allianz hogar 0.1.14, Allianz auto 0.6.39', () => {
   assert.equal(VERSION_GENERALI_AUTO, '0.2.62')
   assert.equal(allianzHogar.version, '0.1.14')
-  assert.equal(allianzAuto.version, '0.6.39')
+  assert.equal(allianzAuto.version, '0.6.40')
 })
 
 test('Generali: garantías del PDF (límite y franquicia incluidos); PDF ilegible o ausente → vacío, nunca lanza', () => {
