@@ -31,6 +31,9 @@ model Income {
   date          DateTime
   amount        Float
   amount_gross  Float?
+  /// Neto confirmado por cobro bancario. Si no es NULL, el trigger incomes_compute_net lo copia a
+  /// `amount` y no aplica comisión. NULL = sin cobro confirmado (no «cero»).
+  amount_net_bank Decimal? @db.Decimal(12, 2)
   portal        Portal
   reservationId String?   @unique
   guestName     String?
