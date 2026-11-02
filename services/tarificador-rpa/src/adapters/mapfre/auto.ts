@@ -1,4 +1,5 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.55 (02/11/2026, Alberto: «que el bot coja el que haya»): si la matrícula solo devuelve filas de OTRO modelo que la referencia, se tarifica la más parecida con aviso «Modelo distinto del de referencia» (supuesto); se retira la parada ErrorOtroModeloMapfre de la 0.8.53/54.
 // v0.8.54 (02/11/2026): la `eleccionVersion` ya puesta en el riesgo NO salta la comprobación de modelo: una fila de otro modelo que la referencia se descarta aunque la hayan elegido.
 // v0.8.53 (02/11/2026, Alberto: MISMO modelo en todas las compañías): la fila de la matrícula (una sola o elegida) de OTRO modelo que la referencia no humana-Mapfre NO se tarifica: se descarta y, sin otra fila, `ErrorEleccionVersion` (otro modelo, ambos nombres, sin matrícula).
 // v0.8.44 (01/11/2026, run real: «Generar Proyecto» → `locator.click: Timeout 30000ms`): tras el clic salen DOS diálogos apilados, el informativo «Operación consolidada
@@ -178,6 +179,7 @@ import {
   elegirVersionAutomaticamente,
   elegirOpcionPorVehiculoReferencia,
   vehiculoDivergeDeReferencia,
+  supuestoOtroModelo,
   textoVehiculoReferencia,
   referenciaRiesgoVersion,
   USO_VEHICULO_POR_DEFECTO,
@@ -826,15 +828,6 @@ export function indiceFilaVehiculo(filas: readonly FilaVehiculoDialogo[], elecci
   return coinciden[0]!
 }
 
-/** v0.8.53: la matrícula devuelve solo vehículos de OTRO modelo que la referencia de la oportunidad (requiere_humano, sin matrícula). */
-export class ErrorOtroModeloMapfre extends ErrorEleccionVersion {
-  constructor(filas: readonly FilaVehiculoDialogo[], ref: Parameters<typeof textoVehiculoReferencia>[0]) {
-    super(opcionesFilasVehiculo(filas))
-    const mapfre = [...new Set(filas.map((f) => f.denominacion))].slice(0, 3).join(' / ')
-    this.message = `Mapfre propone por matrícula «${mapfre}» pero el modelo de referencia de la oportunidad es «${textoVehiculoReferencia(ref)}» (otro modelo): no se tarifica con el de Mapfre. Corrige el vehículo de referencia de la oportunidad si el de Mapfre es el correcto.`
-  }
-}
-
 /** Etiqueta de una fila para la persona que elige (solo catálogo: denominación, CV, CC, fecha de inicio). PURA. */
 export function etiquetaFilaVehiculo(f: FilaVehiculoDialogo): string {
   return [f.denominacion, f.cvKw && `${f.cvKw} CV`, f.cc && `${f.cc} cc`, f.fechaInicio].filter(Boolean).join(' · ')
@@ -903,7 +896,14 @@ export function filaVehiculoPorEquivalencia(filas: readonly FilaVehiculoDialogo[
   const ref = c?.vehiculoReferencia
   if (ref && ref.origen !== 'mapfre' && filas.length > 0) {
     const mismas = filas.flatMap((f, i) => (vehiculoDivergeDeReferencia(ref, f.denominacion) ? [] : [i]))
-    if (mismas.length === 0) throw new ErrorOtroModeloMapfre(filas, ref)
+    if (mismas.length === 0) {
+      // v0.8.55 (02/11/2026, Alberto: «que el bot coja el que haya; si sale uno solo, uno solo»): ninguna fila del modelo de la referencia → se tarifica la más parecida con aviso.
+      const e = elegirOpcionPorVehiculoReferencia(filas.map((f) => etiquetaFilaVehiculo(f)), ref, { compania: 'Mapfre' })
+      // La elección humana (`eleccionVersion`) que casa con una fila manda sobre la similitud.
+      const casadaPorPersona = indiceFilaVehiculoMapfre(filas, c)
+      const indice = casadaPorPersona ?? (e.tipo === 'coincidencia' || e.tipo === 'aproximacion' ? e.indice : 0)
+      return { indice, supuesto: supuestoOtroModelo(etiquetaFilaVehiculo(filas[indice]!), textoVehiculoReferencia(ref), 'Mapfre', (e.tipo === 'aproximacion' || e.tipo === 'coincidencia') && !!e.combustibleDistinto) }
+    }
     if (mismas.length < filas.length) {
       const r = filaVehiculoPorEquivalencia(mismas.map((i) => filas[i]!), c)
       return { indice: mismas[r.indice]!, supuesto: r.supuesto }
@@ -2574,7 +2574,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.54',
+  version: '0.8.55',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

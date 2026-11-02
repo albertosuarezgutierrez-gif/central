@@ -242,12 +242,14 @@ export type EleccionPorReferencia =
       contradice: boolean
       /** v0.2.62: palabras distintivas que la ganadora comparte con la referencia. */
       compartidas: number
+      /** 02/11/2026: la lista es de OTRO modelo que la referencia; se elige igual la más parecida y `supuesto` lo avisa («Modelo distinto del de referencia…»). */
+      otroModelo?: boolean
+      /** La elegida es de otro combustible que la referencia (o «eléctrica» sin que la referencia lo sea): se avisa en el supuesto de otro modelo. */
+      combustibleDistinto?: boolean
     }
   | { tipo: 'sin_referencia' }
   | { tipo: 'sin_opciones' }
   | { tipo: 'sin_marca' }
-  /** Nivel versión: la lista habla de OTRO modelo (palabras comunes ajenas a la referencia y ninguna opción nombra lo propio de ella): no se elige. */
-  | { tipo: 'otro_modelo' }
 
 const etiquetaDe = (o: OpcionCatalogo): string => espacios(typeof o === 'string' ? o : String(o?.etiqueta ?? ''))
 /** Palabras que dicen «eléctrico» en una versión (ELECTRIC, ELECTRICO, EQ, ED, EV, BEV). */
@@ -261,6 +263,24 @@ export function supuestoVehiculoReferencia(tipo: 'coincidencia' | 'aproximacion'
   const como = tipo === 'coincidencia' ? 'por coincidencia con el vehículo de referencia' : 'por aproximación al vehículo de referencia'
   const e = espacios(etiqueta.replace(/,/g, ' ')).slice(0, 60)
   return `${que} «${e}» ${elegida} ${como} (vehículo según ${NOMBRE_ORIGEN_VEHICULO_REFERENCIA[origen]}; supuesto); revisar en la emisión`
+}
+
+/**
+ * Aviso del supuesto cuando la compañía NO ofrece el modelo de la referencia y se tarifica la mejor opción disponible (regla de Alberto, 02/11/2026:
+ * «que el bot coja el que haya; la idea da precio y ya cuando el cliente acepte se confirma todo»). Sin comas. PURA.
+ */
+export function supuestoOtroModelo(etiqueta: string, referencia: string, compania: string | null | undefined, combustibleDistinto = false): string {
+  const e = espacios(etiqueta.replace(/,/g, ' ')).slice(0, 60)
+  const r = espacios(referencia.replace(/,/g, ' ')).slice(0, 60)
+  const quien = compania && compania.trim() ? compania.trim() : 'la compañía'
+  const comb = combustibleDistinto ? ' (además de otro combustible que el de la referencia)' : ''
+  return `Modelo distinto del de referencia: se tarificó «${e}»${comb} porque ${quien} no ofrece «${r}» para este vehículo (supuesto; precio estimado); se confirma al aceptar el cliente`
+}
+
+/** Aviso cuando todas las versiones son de una generación lanzada DESPUÉS de la del vehículo y se tarifica la más parecida (regla de Alberto, 02/11/2026). Sin comas. PURA. */
+export function supuestoGeneracionPosterior(etiqueta: string, anioLanzamiento: number | null): string {
+  const e = espacios(etiqueta.replace(/,/g, ' ')).slice(0, 60)
+  return `Versión de generación posterior a la del vehículo${anioLanzamiento !== null ? ` (lanzada ${anioLanzamiento})` : ''}: se tarificó «${e}» (supuesto; precio estimado); se confirma al aceptar el cliente`
 }
 
 /**
@@ -279,7 +299,7 @@ export function supuestoVehiculoReferencia(tipo: 'coincidencia' | 'aproximacion'
 export function elegirOpcionPorVehiculoReferencia(
   opciones: readonly OpcionCatalogo[],
   referencia: unknown,
-  o: { nivel?: 'modelo' | 'version'; marcaLista?: string | null } = {},
+  o: { nivel?: 'modelo' | 'version'; marcaLista?: string | null; compania?: string | null } = {},
 ): EleccionPorReferencia {
   const nivel = o.nivel ?? 'version'
   const vr = validarVehiculoReferencia(referencia)
@@ -355,15 +375,22 @@ export function elegirOpcionPorVehiculoReferencia(
   // Palabras comunes a TODAS las opciones que la referencia no dice (p. ej. todas «FORTWO» y la referencia «FORFOUR»): la lista habla de
   // otro modelo → nunca «coincidencia».
   const comunesAjenas = comunes.size > 0 && cand.length > 1 && ![...comunes].some((t) => rr.tokens.has(t))
-  // 02/11/2026 (regla de Alberto: MISMO modelo para todas las compañías): en una lista de versiones donde TODAS comparten una palabra ajena a la
-  // referencia (p. ej. FORTWO ante una referencia FORFOUR) y alguna palabra propia de la referencia no la nombra ninguna, la lista es de otro
-  // modelo: NO se elige la «más parecida» (se preguntaría a una persona en vez de tarificar otro coche).
+  // 02/11/2026 (regla de Alberto, revisada: «que el bot coja el que haya»): una lista de versiones donde TODAS comparten una palabra ajena a la
+  // referencia (p. ej. FORTWO ante una referencia FORFOUR) y alguna palabra propia de la referencia no la nombra ninguna es de OTRO modelo: se
+  // elige igual la más parecida, pero se DECLARA («Modelo distinto del de referencia…», supuesto). Nunca eléctrico si la referencia no lo es y
+  // hay alguna que no lo sea; si todas son de otro combustible, se elige igual y el aviso lo dice.
+  let otroModelo = false
   if (nivel === 'version' && rasgos.length > 1 && [...comunes].some((t) => /[A-Z]/.test(t) && !rr.tokens.has(t))) {
     const propiosRef = [...rr.tokens].filter((t) => /[A-Z]/.test(t) && !comunes.has(t))
-    if (propiosRef.some((t) => rasgos.every((x) => !x.r.tokens.has(t)))) return { tipo: 'otro_modelo' }
+    if (propiosRef.some((t) => rasgos.every((x) => !x.r.tokens.has(t)))) otroModelo = true
   }
-  const tipo = !notaCarroceria && !comunesAjenas && apoyadas.length === 1 && apoyadas[0]!.i === g.i ? 'coincidencia' : 'aproximacion'
-  return { tipo, indice: g.i, etiqueta: g.etiqueta, puntuacion: Math.round((g.estructural + g.similitud) * 1000) / 1000, supuesto: supuestoVehiculoReferencia(tipo, nivel, g.etiqueta, ref.origen) + notaCarroceria, contradice: g.contradice, compartidas: g.compartidas }
+  const tipo = !notaCarroceria && !otroModelo && !comunesAjenas && apoyadas.length === 1 && apoyadas[0]!.i === g.i ? 'coincidencia' : 'aproximacion'
+  const gr = rasgos.find((x) => x.i === g.i)!.r
+  // ¿La elegida es de otro combustible que la referencia (o «eléctrica» cuando la referencia no lo es)? Para avisarlo.
+  const combustibleDistinto = !!(gr.combustible && rr.combustible && gr.combustible !== rr.combustible) || (refNoElectrica && (gr.combustible === 'electrico' || RE_ELECTRICA.test(` ${normalizar(g.etiqueta)} `)))
+  const base = { tipo, indice: g.i, etiqueta: g.etiqueta, puntuacion: Math.round((g.estructural + g.similitud) * 1000) / 1000, contradice: g.contradice, compartidas: g.compartidas, combustibleDistinto } as const
+  if (otroModelo) return { ...base, tipo: 'aproximacion', supuesto: supuestoOtroModelo(g.etiqueta, textoVehiculoReferencia(ref), o.compania, combustibleDistinto), otroModelo: true }
+  return { ...base, supuesto: supuestoVehiculoReferencia(tipo, nivel, g.etiqueta, ref.origen) + notaCarroceria }
 }
 
 /** Lo que una compañía usó para tarificar (solo catálogo). */

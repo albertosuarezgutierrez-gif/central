@@ -34,7 +34,7 @@ before(async () => {
 })
 after(async () => { await browser?.close() })
 
-test('v0.2.65 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.67'))
+test('v0.2.65 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.68'))
 
 test('v0.2.65 · el panel de «Versión» en filas <tr data-label> se lee entero, «Otras versiones ...» incluida (antes: 0 etiquetas)', async () => {
   const page = await browser.newPage()
@@ -60,9 +60,9 @@ test('v0.2.65 · estructura real (todo ELECTRIC DRIVE EQ, referencia gasolina 71
   assert.equal(SELECT[d.indice], 'Otras versiones ...')
 })
 
-test('v0.2.65 · tras ampliar sin nada que case: requiere_humano con la lista (sin elegir a ciegas ni «Otras versiones»)', () => {
-  assert.throws(
-    () => decidirVersionDesplegableGenerali(SELECT, form, [], { ampliada: true }),
-    (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 7 && e.opcionesVersion.every((o) => /ELECTRIC DRIVE EQ/.test(o.etiqueta)),
-  )
+test('v0.2.68 · tras ampliar sin nada que case: se elige la más parecida (nunca «Otras versiones») y se declara el modelo/combustible distinto', () => {
+  const d = decidirVersionDesplegableGenerali(SELECT, form, [], { ampliada: true })
+  assert.equal(d.otras, undefined)
+  assert.ok(/ELECTRIC DRIVE EQ/.test(SELECT[d.indice]!), SELECT[d.indice])
+  assert.match(d.supuesto ?? '', /Modelo distinto del de referencia/)
 })
