@@ -17,6 +17,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-11-02 · trading-analista** · hizo: REPESCA 23:15 UTC (la de las 20:15 solo refrescó el saldo, `analizar` sin fila); NAV 33.217€ → saldo, cartera real (2 pos.), operaciones 0 + latido, /analizar (24 símbolos, 21 analizados, LLY abierta paper) y /puntuar (168 puntuadas, 0 cerradas), Telegram enviado; dudas: APP/RBLX/STX vetados por `suplantados` con refs viejas (254,98/52,39/700,21) aunque mis cierres previos enlazan — parece caída real, revisar guardia con refs obsoletas; contraste Yahoo desfasado (cierre 30/10, sinJuzgar 21); fallos: payload >límite de argv (resuelto con copia del script que lee el body de fichero); PRs/commits: —
 - **2026-11-02 · facturas-correo** · hizo: Vía B sana (copias 02/11); 0 candidatos nuevos sin Procesada (solo ruido Booking/holaplace); barrido 4.0: 0 `sin_revisar` en `v_facturas_sin_cargo`; sin cargos bancarios nuevos que casar (Fly/Stripe/Ionos/Cruzz fuera de feed o aún sin cargo); ETTERNA 11567 sigue en `Revisar` y 4 hilos Endesa en `PDF-pendiente`; latido ok; dudas: —; fallos: `gmail-adjuntos` (Vía A) sin conexión, irrelevante con B sana; PRs/commits: —
 
 - **2026-11-02 · pricing-agente** · hizo: ciclo semanal 4 pisos (12 ventanas nov26-sep27 por 4 agentes); comps house=120, busto=120, luxury=120, duplex=120; 12 propuestas dry-run (SS/Feria/11-jun), breaker no salto; aprendizaje `ciclo_02_11_2026`; dudas: —; fallos: —; alerta: Luxury Feria 15-17 abr vendida a ~140€/noche vs mercado 1105€ (reserva 16/07); PRs/commits: —
