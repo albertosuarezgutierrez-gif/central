@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T06:54:15Z",
-  "sha": "c826d6fa7884fb01dd8f484bc10a1e2f5af126e2",
+  "generadoEn": "2026-11-02T08:19:49Z",
+  "sha": "244854e27dcc1deaa481b09897fb03b5b6053918",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -68715,10 +68715,10 @@
           "nombre": "peticionMaquina",
           "kind": "function",
           "exportada": true,
-          "params": "cfg: ConfigFly, jobId: string, vistaExplorador?: string | null",
+          "params": "cfg: ConfigFly, jobId: string, vistaExplorador?: string | null, mapfreHogarActivo?: string | null",
           "retorno": "",
           "linea": 583,
-          "resumen": "La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que re"
+          "resumen": "La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, y `MAP"
         },
         {
           "nombre": "leerMetaWorker",
@@ -68824,7 +68824,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "615133debfc3"
+      "hash": "944816133964"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-relanzar-reglas.ts",
@@ -69875,7 +69875,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "29877a28991f"
+      "hash": "9cc4259c6d1c"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -256909,7 +256909,7 @@
           "nombre": "envDeMaquina",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { jobId: string; apiUrl: string; vistaExplorador?: string | null }",
+          "params": "entrada: { jobId: string; apiUrl: string; vistaExplorador?: string | null; mapfreHogarActivo?: string | null }",
           "retorno": "Record<'JOB_ID' | 'TARIFICADOR_API_URL', string> &",
           "linea": 39,
           "resumen": "El `env` de la máquina efímera. Solo el id del trabajo y a dónde preguntar. El Bearer del worker y las credenciales de portal son fly secrets de la app `asegura-tarificador`: no viajan en la config de"
@@ -256920,13 +256920,13 @@
           "exportada": true,
           "params": "clave: string",
           "retorno": "",
-          "linea": 58,
+          "linea": 61,
           "resumen": "Nombre de las variables de credencial de un portal: `CRED_ALLIANZ_EPAC_USER` / `_PASS`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2ce2c0faf97"
+      "hash": "777f3ba55e2e"
     },
     {
       "ruta": "packages/module-tarificacion/src/estados.ts",
@@ -260458,7 +260458,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f8a5fcae6ade"
+      "hash": "34baee9264c4"
     },
     {
       "ruta": "packages/module-tarificacion/src/ofertas.ts",
