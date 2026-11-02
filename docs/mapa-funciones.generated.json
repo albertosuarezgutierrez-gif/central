@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T09:34:13Z",
-  "sha": "f8fc304627dc6bb19db7a1d3d142b1e66aa14792",
+  "generadoEn": "2026-11-02T10:57:07Z",
+  "sha": "b3620ab197458a1717ff776463835314471757b0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -71433,7 +71433,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "369a98b38987"
+      "hash": "57fa8405d919"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
@@ -262172,7 +262172,7 @@
           "exportada": false,
           "params": "o: OpcionCatalogo",
           "retorno": "string",
-          "linea": 240
+          "linea": 250
         },
         {
           "nombre": "esOtros",
@@ -262180,7 +262180,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "boolean",
-          "linea": 241
+          "linea": 253
         },
         {
           "nombre": "supuestoVehiculoReferencia",
@@ -262188,7 +262188,7 @@
           "exportada": true,
           "params": "tipo: 'coincidencia' | 'aproximacion', nivel: 'modelo' | 'version', etiqueta: string, origen: OrigenVehiculoReferencia",
           "retorno": "string",
-          "linea": 244,
+          "linea": 256,
           "resumen": "Aviso del supuesto (sin comas: los bots unen supuestos con «, »). PURA."
         },
         {
@@ -262197,13 +262197,13 @@
           "exportada": true,
           "params": "opciones: readonly OpcionCatalogo[], referencia: unknown, o: { nivel?: 'modelo' | 'version'; marcaLista?: string | null } = {},",
           "retorno": "EleccionPorReferencia",
-          "linea": 265,
+          "linea": 277,
           "resumen": "Elige UNA opción del catálogo de un portal con el vehículo de referencia. Regla (determinista, sin IA): 0. Fuera opciones vacías y «Otros…». Ninguna → `sin_opciones`. Sin referencia válida → `sin_refe"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "52f66d310141"
+      "hash": "1921a69e5f45"
     },
     {
       "ruta": "packages/module-tarificacion/src/vehiculo.ts",

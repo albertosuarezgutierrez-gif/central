@@ -167,27 +167,27 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 423 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 424 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 411 | 74.563 | 64.788.020 | 0 | 0 |
-| `otro` | 405 | 17.414 | 36.450.363 | 21.480.658 | 0 |
-| `lectura-directa` | 346 | 11.488 | 31.553.785 | 0 | 0 |
-| `mcp:github` | 348 | 8.602 | 6.350.399 | 57.889.405 | 110 |
-| `sql` | 261 | 8.025 | 4.458.163 | 3.040.710 | 28 |
-| `escritura` | 252 | 6.545 | 102.404.345 | 0 | 0 |
+| `bash` | 412 | 74.690 | 64.869.866 | 0 | 0 |
+| `otro` | 406 | 17.455 | 36.455.258 | 21.480.658 | 0 |
+| `lectura-directa` | 347 | 11.502 | 31.569.831 | 0 | 0 |
+| `mcp:github` | 349 | 8.609 | 6.350.727 | 57.889.405 | 110 |
+| `sql` | 262 | 8.043 | 4.468.089 | 3.040.710 | 28 |
+| `escritura` | 252 | 6.555 | 102.438.848 | 0 | 0 |
 | `mcp:Vercel` | 88 | 1.519 | 1.299.199 | 237.328 | 45 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `mcp:Gmail` | 68 | 1.453 | 1.600.438 | 0 | 101 |
-| `agente:general-purpose` | 147 | 1.351 | 797.012 | 26.936.025 | 0 |
-| `mcp:claude-code-remote` | 82 | 1.217 | 114.968 | 1.250.070 | 0 |
+| `mcp:Gmail` | 69 | 1.461 | 1.609.999 | 0 | 101 |
+| `agente:general-purpose` | 147 | 1.354 | 798.767 | 26.998.921 | 0 |
+| `mcp:claude-code-remote` | 83 | 1.224 | 115.194 | 1.250.070 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 16 | 702 | 824.260 | 0 | 0 |
 | `mcp:Supabase` | 151 | 508 | 113.238 | 17.601 | 7 |
 | `agente:agente-architect` | 88 | 506 | 352.842 | 12.889.647 | 0 |
 | `mcp:Google_Drive` | 26 | 468 | 599.051 | 0 | 51 |
-| `mcp:Google-Drive` | 35 | 175 | 181.969 | 0 | 2 |
+| `mcp:Google-Drive` | 36 | 177 | 183.372 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
 | `agente:agente-mecanico` | 63 | 158 | 85.672 | 8.187.207 | 0 |
 | `agente:rastreador-codigo` | 65 | 124 | 39.902 | 2.082.908 | 0 |
