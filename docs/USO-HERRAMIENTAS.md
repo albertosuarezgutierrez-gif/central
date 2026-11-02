@@ -167,25 +167,25 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 424 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 425 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 412 | 74.771 | 64.919.392 | 0 | 0 |
-| `otro` | 406 | 17.464 | 36.460.844 | 21.480.658 | 0 |
-| `lectura-directa` | 347 | 11.502 | 31.569.831 | 0 | 0 |
-| `mcp:github` | 349 | 8.612 | 6.350.824 | 57.889.405 | 110 |
-| `sql` | 262 | 8.046 | 4.468.614 | 3.040.710 | 28 |
-| `escritura` | 252 | 6.557 | 102.464.578 | 0 | 0 |
-| `mcp:Vercel` | 88 | 1.519 | 1.299.199 | 237.328 | 45 |
+| `bash` | 413 | 75.405 | 65.413.375 | 0 | 0 |
+| `otro` | 407 | 17.517 | 36.476.406 | 21.480.658 | 0 |
+| `lectura-directa` | 348 | 11.520 | 31.602.615 | 0 | 0 |
+| `mcp:github` | 350 | 8.657 | 6.380.525 | 58.208.195 | 113 |
+| `sql` | 263 | 8.118 | 4.524.639 | 3.040.710 | 28 |
+| `escritura` | 253 | 6.576 | 102.899.618 | 0 | 0 |
+| `mcp:Vercel` | 89 | 1.537 | 1.331.114 | 237.328 | 49 |
 | `mcp:Booking-com` | 53 | 1.505 | 6.179.360 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 69 | 1.461 | 1.609.999 | 0 | 101 |
-| `agente:general-purpose` | 147 | 1.355 | 799.373 | 27.030.232 | 0 |
-| `mcp:claude-code-remote` | 83 | 1.227 | 115.280 | 1.250.070 | 0 |
+| `agente:general-purpose` | 148 | 1.369 | 807.947 | 27.673.925 | 0 |
+| `mcp:claude-code-remote` | 84 | 1.262 | 191.584 | 2.982.403 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 16 | 702 | 824.260 | 0 | 0 |
-| `mcp:Supabase` | 151 | 508 | 113.238 | 17.601 | 7 |
-| `agente:agente-architect` | 88 | 506 | 352.842 | 12.889.647 | 0 |
+| `mcp:Supabase` | 152 | 516 | 148.539 | 17.601 | 9 |
+| `agente:agente-architect` | 89 | 512 | 356.288 | 12.940.667 | 0 |
 | `mcp:Google_Drive` | 26 | 468 | 599.051 | 0 | 51 |
 | `mcp:Google-Drive` | 36 | 177 | 183.372 | 0 | 2 |
 | `mcp:Booking_com` | 5 | 166 | 443.032 | 0 | 0 |
