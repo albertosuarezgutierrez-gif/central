@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T18:07:14Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T18:45:18Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -127,7 +127,7 @@
   - Depende de: —
 - **module-cima** (module) → `@central/module-cima`
   - Lo usan: —
-  - Depende de: module-seguros, module-seguros-pii
+  - Depende de: core-identity, module-seguros, module-seguros-pii
 - **module-concursos** (module) → `@central/module-concursos`
   - Lo usan: plataforma
   - Depende de: —
@@ -281,6 +281,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/11/2026) 02/11/2026) CIMA fase 3 MERGEADA (#5403) + vista corredor (#5401)
 - (02/11/2026) 02/11/2026) Auditoría lote 2 PR #5398 MERGEADO
 - (02/11/2026) 02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)
 - (02/11/2026) 02/11/2026) Pendiente de despliegue: edge functions de ia-rest (PR #5391 abierto, NO mergear antes)
@@ -290,5 +291,4 @@
 - (02/11/2026) 02/11/2026) Control 2026 pisos: expenses retirada · métrica «Gastos mes» sivra
 - (01/11/2026) 01/11/2026) Factura Sique Brilla octubre · cuadre por correo: lavandería redondeada
 - (01/11/2026) 01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)
-- (01/11/2026) 01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios · PR #5334 MERGEADO (`7d7c971`)
 

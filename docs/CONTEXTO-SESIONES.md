@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (02/11/2026) CIMA fase 3 MERGEADA (#5403) + vista corredor (#5401)
+- `packages/module-cima` ya tiene capa BD (Drizzle, 18 tablas `seguros`) y red inyectadas; 1047 tests; golden de escrituras SQL = CRM. Nada lo importa aún.
+- Cepos: sin `CIMA_ESCRITOR=central` no confirma/envía a TIREA ni escribe; credenciales CIMA BLOQUEADAS siempre en central; falla sin `PII_ENCRYPTION_KEY`/`PII_LOOKUP_KEY`.
+- Fase 4 (sombra): la ruta debe mirar `CIMA_ESCRITOR` ANTES del candado; separar eventos `cima_pull_*` de central con otro `source`.
+- #5401: asegura-portal, una identidad por apertura de vista de corredor (sin DDL).
+- Pendiente OK de Alberto: mover 5 tablas `_backup_*`/`_csv_staging` a schema `archivo` + borrar 21 `seguros.operational_events` >180 d (el MCP pidió confirmación y caducó). `app_user`: sin sesiones ni logs 24 h; propuesta NOLOGIN (reversible).
+
 ## (02/11/2026) Auditoría lote 2 PR #5398 MERGEADO
 - Hecho: vista de corredor con `usadoEn` atómico; `/api/acceso/solicitar` valida email; asegura-portal sin `devFallback`; bajas campana/recaptacion GET=botón, POST=ejecuta; ruta `subastas/fase3-debug` retirada; helper `secretoCoincide`/`autorizacionBearerValida` (core-identity, apto edge) en 10 crons plataforma, 5 rrhh, transporte, sivra y middleware (`?secret=` se mantiene, ahora en tiempo constante).
 - Cepos: asegura-aislamiento reescrito (SQL sobre `seguros` con correduria_id o `correduriaUnica()`); nuevo rrhh `empresa_id`. Hook Stop timeout 30; `persist-memoria.sh` no empuja en main. ialimp `fetchSeguro` (SSRF); ia-rest `renderMd` escapa.

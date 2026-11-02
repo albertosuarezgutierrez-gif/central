@@ -8,9 +8,10 @@
 // módulo se activa por `identidadId` (`escribirModuloPorIdentidad`): ficha de prospecto + vínculo `autorizacion_corredor`.
 // Ese vínculo necesita `prisma/sql/2026-10-27_portal_acceso_por_autorizacion.sql`; sin él, 503 `sin_migracion` y NO se
 // escribe nada (la transacción entera vuelve atrás).
-import { IDENTIDAD_CORREDOR_ID, ORIGEN_VINCULO_AUTORIZACION, ORIGEN_VINCULO_CORREDOR } from '@central/module-seguros-portal'
+import { ORIGEN_VINCULO_AUTORIZACION, ORIGEN_VINCULO_CORREDOR } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
+import { esIdentidadCorredor } from './portal-modulos-corredor'
 import { anotarCambio } from './auditoria'
 import { Prisma } from './generated/asegura-client'
 import {
@@ -122,8 +123,12 @@ function esViolacionDelCheck(e: unknown): boolean {
 }
 
 class NoPermitido extends Error {
-  constructor(readonly status: 409, readonly motivo: string) {
+  readonly status: 409
+  readonly motivo: string
+  constructor(status: 409, motivo: string) {
     super(motivo)
+    this.status = status
+    this.motivo = motivo
   }
 }
 
@@ -154,10 +159,13 @@ export async function escribirModuloPorIdentidad(
       const [v] = await tx.$queryRaw<{ n: number }[]>`
         select count(*)::int as n from portal_vinculo
          where identidad_id = ${identidadId}::uuid and origen <> ${ORIGEN_VINCULO_CORREDOR}`
+      const [vista] = await tx.$queryRaw<{ n: number }[]>`
+        select count(*)::int as n from portal_vista_corredor
+         where id = ${identidadId}::uuid and usado_en is not null`
       const d = decidirProspecto({
         filaVigente: fila ? (fila.estado === 'activo' ? 'activo' : 'solicitado') : null,
         vinculosPropios: v?.n ?? 0,
-        esCorredor: identidadId === IDENTIDAD_CORREDOR_ID,
+        esCorredor: esIdentidadCorredor({ identidadId, nombre: ident.nombre, esVistaGastada: (vista?.n ?? 0) > 0 }),
         ultimoVinculo: ident.ultimoVinculo,
       })
       if (!d.crear) throw new NoPermitido(d.status, d.motivo)

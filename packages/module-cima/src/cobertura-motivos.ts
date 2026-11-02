@@ -16,9 +16,9 @@
  */
 import type { RutaCampo } from "./field-coverage.ts";
 
-// PORT central (fase 1, solo lógica pura): `escribirMotivosExclusion` (UPDATE sobre
-// `cima_cobertura_campos` vía drizzle + `columna-opcional`) se queda en el CRM y se
-// porta con la capa de BD (`src/db/`) en la fase 2. Aquí solo `motivosExclusion`.
+// PORT central: aquí solo la parte PURA (`motivosExclusion`). `escribirMotivosExclusion`
+// (UPDATE sobre `cima_cobertura_campos` vía drizzle + `columna-opcional`) vive en
+// `db/cobertura-motivos.ts` (fase 3), para que la raíz del paquete no cargue drizzle.
 
 export interface ClaveCobertura {
   correduriaId: string;
