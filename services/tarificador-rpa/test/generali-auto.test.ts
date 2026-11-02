@@ -1489,3 +1489,69 @@ test('v0.2.62 · guard: «Otras versiones ...» abre una 2ª ronda de versión, 
     await a.cerrar()
   }
 })
+
+// ───────────── v0.2.66: «Otras versiones ...» (trabajo f84801ce): el desplegable solo marca «Versión» en error y NO cambia la lista; la tabla espejo sí amplía ─────────────
+
+const FICHA_0266 = (ampliada: string[], filaAmplia: boolean) => `<span>Versión</span>
+  <div id="selversion" role="combobox" tabindex="0" onclick="document.getElementById('selversion_panel').style.display='block'"><div class="ui-helper-hidden-accessible" style="position:absolute;width:0;height:0;overflow:hidden"><select id="selversion_input" name="selversion_input" style="width:0;height:0;border:0;padding:0"></select></div><label id="selversion_label" class="ui-selectonemenu-label">Seleccione una</label><div class="ui-selectonemenu-trigger"><span class="ui-icon ui-icon-triangle-1-s"></span></div></div>
+  <div id="selversion_panel" style="display:none"><ul id="selversion_items"></ul></div>
+  <table><tbody><tr id="fila_otras" onclick="${filaAmplia ? 'window.__fila=(window.__fila||0)+1;setTimeout(function(){window.__pintar(' + JSON.stringify(ampliada).replace(/"/g, '&quot;') + ')},300)' : 'window.__fila=(window.__fila||0)+1'}"><td></td><td>Otras versiones ...</td><td></td></tr></tbody></table>
+  <script>
+    window.__pintar=function(vs){var s=document.getElementById('selversion_input');s.innerHTML='<option value="null">Seleccione una</option>'+vs.map(function(v,i){return '<option value="V'+i+'">'+v+'</option>'}).join('');
+      document.getElementById('selversion_items').innerHTML=vs.map(function(v){return '<li data-label="'+v+'" class="ui-selectonemenu-item">'+v+'</li>'}).join('');
+      Array.from(document.querySelectorAll('#selversion_items li')).forEach(function(li,i){li.onclick=function(){
+        window.__version=(window.__version||[]).concat(li.dataset.label);document.getElementById('selversion_panel').style.display='none';
+        s.selectedIndex=i+1;document.getElementById('selversion_label').textContent=li.dataset.label;
+        if(/^Otras/.test(li.dataset.label)){document.getElementById('selversion').className+=' ui-state-error'}}})};
+    window.__pintar(${JSON.stringify(VISIBLES_0262)});
+  </script>`
+async function versionOtras0266(extra: Record<string, unknown>, filaAmplia: boolean, ampliada = AMPLIADA_0262) {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SMART'], 'Confirmar', ['FORTWO COUPE'], FICHA_0266(ampliada, filaAmplia)))
+  try {
+    const avisos: string[] = []
+    let error: unknown = null
+    try { await seleccionarVehiculoGenerali(page, page, coche({ seleccionVehiculo: { marca: 'SMART', modelo: 'FORTWO COUPE' }, ...extra }), ctx0217(page, guard), avisos) } catch (e) { error = e }
+    return { avisos, error, versiones: await contador(page, '__version') as string[] | null, fila: await contador(page, '__fila'), confirmado: await contador(page, '__confirmado'), violacion: guard.violacion() }
+  } finally {
+    await cerrar()
+  }
+}
+
+test('v0.2.66 · el desplegable no amplía (solo «Versión» en error): se pulsa la fila espejo «Otras versiones ...» de la tabla, una vez, y se decide en la lista ampliada', async () => {
+  const r = await versionOtras0266({ vehiculoReferencia: REF_0262 }, true)
+  assert.deepEqual(r.versiones, ['Otras versiones ...', '1.0 52KW PASSION'], String(r.error))
+  assert.equal(r.fila, 1)
+  assert.equal(r.confirmado, 1)
+  assert.equal(r.violacion, null)
+})
+
+test('v0.2.66 · mismo nº de opciones pero OTRO contenido tras la fila: cuenta como cambio (se compara contenido, no longitud)', async () => {
+  const mismoNumero = ['ELECTRIC DRIVE EQ', '1.0 52KW PASSION', '1.0 52KW PULSE', 'Otras versiones ...']
+  const r = await versionOtras0266({ vehiculoReferencia: REF_0262 }, true, mismoNumero)
+  assert.deepEqual(r.versiones, ['Otras versiones ...', '1.0 52KW PASSION'], String(r.error))
+})
+
+test('v0.2.66 · si ni el desplegable ni la fila cambian nada: hueco con diagnóstico (contenido, label, «en error») y SIN «Confirmar»', async () => {
+  const r = await versionOtras0266({ vehiculoReferencia: REF_0262 }, false)
+  assert.ok(r.error instanceof ErrorMapaIncompletoGenerali && /no cambió el contenido de la lista/.test(r.error.message) && /«Versión» en error/.test(r.error.message) && /se pulsó la fila/.test(r.error.message), String(r.error))
+  assert.deepEqual(r.versiones, ['Otras versiones ...'])
+  assert.equal(r.fila, 1, 'la fila se pulsa UNA vez')
+  assert.equal(r.confirmado, null)
+})
+
+test('v0.2.66 · guard: la fila «Otras versiones ...» solo tras elegirla en el desplegable, una vez, sin gastar la puerta de la fila real', async () => {
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SMART'], 'Confirmar', ['FORTWO COUPE'], FICHA_0266(AMPLIADA_0262, false)))
+  try {
+    await a.page.evaluate(() => { (document.getElementById('bloque_modelo') as HTMLElement).style.display = 'block'; (document.getElementById('nuevos') as HTMLElement).style.display = 'block' })
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, null, 'Otras versiones ...'), EmisionBloqueadaError, 'antes de elegirla en el desplegable: no')
+    await abrirDesplegableVersionGenerali(a.page, a.guard, 'selversion')
+    await elegirVersionListaGenerali(a.page, a.guard, 'selversion', 'Otras versiones ...')
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, '123', 'Otras versiones ...'), EmisionBloqueadaError, 'con código: no')
+    await elegirFilaVersionGenerali(a.page, a.guard, null, 'Otras versiones ...')
+    assert.equal(await contador(a.page, '__fila'), 1)
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, null, 'Otras versiones ...'), EmisionBloqueadaError, 'una vez')
+    assert.equal(await contador(a.page, '__fila'), 1)
+  } finally {
+    await a.cerrar()
+  }
+})

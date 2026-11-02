@@ -14,7 +14,7 @@ const AMPLIADA = ['Seleccione una', 'ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASS
 const ref = (extra: Record<string, unknown> = {}) => ({ origen: 'allianz', marca: 'SMART', modelo: 'Fortwo', version: 'PASSION 52', carroceria: null, puertas: null, cc: null, cv: null, combustible: null, anio: null, ...extra }) as unknown as FormularioAuto['vehiculoReferencia']
 const form = (extra: Partial<Form> = {}): Form => ({ ...extra }) as Form
 
-test('v0.2.62 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.65'))
+test('v0.2.62 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.66'))
 
 test('v0.2.62 · «Otras versiones ...» / «Otros …» se reconocen; una versión normal no', () => {
   assert.equal(esOpcionOtrasVersionesGenerali('Otras versiones ...'), true)

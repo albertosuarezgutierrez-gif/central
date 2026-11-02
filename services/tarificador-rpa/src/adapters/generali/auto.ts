@@ -153,6 +153,7 @@ import {
   esEtiquetaVerificacionMatricula,
   esOpcionVaciaCatalogo,
   esOpcionOtrasVersionesGenerali,
+  listaVersionCambiadaGenerali,
   fechaGenerali,
   matriculaGenerali,
   mensajeAtascoCatalogo,
@@ -472,10 +473,11 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  *
+ * 0.2.66 (02/11/2026): tras «Otras versiones ...» la lista no cambia (el portal solo marca «Versión» en error): espera 20 s comparando contenido y pulsa la fila espejo «Otras versiones ...» de la tabla.
  * 0.2.65 (02/11/2026): el panel de «Versión» con columnas lista las opciones como `tr[data-label]` (no `li`): «Otras versiones ...» se localiza también ahí.
  * 0.2.64 (02/11/2026): «Garantías y Resultados» no se vuelve a pulsar si ya se pulsó en el trabajo (el guard solo lo permite una vez); solo espera al bloque.
  */
-export const VERSION_GENERALI_AUTO = '0.2.65'
+export const VERSION_GENERALI_AUTO = '0.2.66'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -2602,16 +2604,36 @@ async function elegirVersionDesplegableSelector(page: Page, selector: Raiz, camp
     const etqOtras = dataLabelDeOpcionGenerali(etiquetas, opciones[d.indice]!.texto, true)
     if (etqOtras === null) throw new ErrorMapaIncompletoGenerali('el elemento «Otras versiones ...» del panel de «Versión» (no se localiza por su texto exacto); NO se pulsa «Confirmar»')
     await ctx.elegirVersionListaGenerali(campo.clave, etqOtras)
-    const previas = new Set(antes.map(normalizarCatalogo))
+    // v0.2.66 (trabajo f84801ce): tras la elección el portal marcó «Versión» en error y NO cambió nada (misma lista, sin diálogo): el desplegable no es lo que amplía.
+    // Se espera hasta 2× el plazo comparando el CONTENIDO; a media espera, si sigue igual, se pulsa la fila «Otras versiones ...» de la tabla espejo (puerta guardada).
+    const total = 2 * ESPERA_TRAS_OTROS_MS
     const ini = Date.now()
+    let filaProbada = false
+    let nota = ''
     for (;;) {
       await page.waitForTimeout(400)
       const ahora = await opcionesSelect(select).catch(() => [] as { valor: string; texto: string }[])
-      if (ahora.some((o) => !esOpcionVaciaCatalogo(o.texto) && !previas.has(normalizarCatalogo(o.texto)))) {
+      if (listaVersionCambiadaGenerali(antes, ahora.map((o) => o.texto))) {
         opciones = ahora
         break
       }
-      if (Date.now() - ini >= ESPERA_TRAS_OTROS_MS) throw new ErrorMapaIncompletoGenerali(`lo que hace el portal tras elegir «Otras versiones ...» en «Versión»: en ${Math.round(ESPERA_TRAS_OTROS_MS / 1000)} s no cambió la lista (${ahora.length} opciones); NO se pulsa «Confirmar»`)
+      if (!filaProbada && Date.now() - ini >= total / 2 && ctx.elegirFilaVersionGenerali) {
+        filaProbada = true
+        try {
+          await ctx.elegirFilaVersionGenerali(null, opciones[d.indice]!.texto.replace(/\s+/g, ' ').trim())
+          nota = 'se pulsó la fila «Otras versiones ...» de la tabla'
+        } catch (e) {
+          nota = `la fila «Otras versiones ...» de la tabla no se pudo pulsar (${(e instanceof Error ? e.message : String(e)).slice(0, 100)})`
+        }
+      }
+      if (Date.now() - ini >= total) {
+        const m = await leerModeloMostrado({ select, base: campo.clave }).catch(() => ({ label: '', input: '' }))
+        const enError = await select.evaluate((el, b) => document.getElementById(b)?.classList.contains('ui-state-error') ?? false, campo.clave).catch(() => false)
+        throw new ErrorMapaIncompletoGenerali(
+          `lo que hace el portal tras elegir «Otras versiones ...» en «Versión»: en ${Math.round(total / 1000)} s no cambió el contenido de la lista (${ahora.length} opciones; label=«${m.label.slice(0, 40)}», ` +
+            `«Versión» ${enError ? 'en error' : 'sin error'}${nota ? `; ${nota}` : ''}); NO se pulsa «Confirmar»`,
+        )
+      }
     }
     // Deja que el AJAX termine de repintar antes de leer la lista definitiva.
     await page.waitForTimeout(MIN_RECARGA_SELECTOR_MS)
