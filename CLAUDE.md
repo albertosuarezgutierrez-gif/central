@@ -139,8 +139,8 @@ y los `module-*` de cada vertical.
 - 🚨 **Todo `apps/<app>/vercel.json` lleva `"ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app>"`**
   (sin ella cada push reconstruye TODAS las apps: incidente de ~600 US$). Todas salvo ialimp llevan `--sin-previews`.
 - **`[preview]`** fuerza una preview solo si va en el asunto del **último** commit del push **y** ese commit toca la app.
-  **Nunca en un commit de merge** (construye las once). `Building` en el comentario de Vercel es intermedio.
-- **`Ignored` no es gratis del todo:** cada push a una rama de PR crea 11 deployments contra un cupo de 450/h de
+  **Nunca en un commit de merge** (construye las 13). `Building` en el comentario de Vercel es intermedio.
+- **`Ignored` no es gratis del todo:** cada push a una rama de PR crea un deployment por app (13) contra un cupo de 450/h de
   cuenta. Verifica en local y empuja UNA vez.
 - **NUNCA** `apps/` en el `.vercelignore` de la raíz.
 - Las apps consumen `packages/*` por `file:`/`workspace:`; no acoples un paquete a una vertical.

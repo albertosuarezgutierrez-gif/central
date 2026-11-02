@@ -142,7 +142,7 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
   `cima_pull_*` en `seguros.operational_events` (`occurred_at`, dos crons al día, 05:30 y 11:30
   UTC). Un día sin heartbeat es «CIMA parada» (el adaptador Java vive en el Fly de Manuel y se
   apaga sin error), nunca «no hay ficheros». **Nunca** escribir en el proyecto de Manuel.
-- Vercel: `list_projects` puede no listar las 12 apps si alguna vive en otro team/cuenta fuera del
+- Vercel: `list_projects` puede no listar las apps de la matriz de `tests.yml` (13) si alguna vive en otro team/cuenta fuera del
   alcance del conector — no lo des por "no desplegada" sin más, márcalo para que Alberto lo mire a
   mano en el dashboard. `list_deployments` (último deploy de cada proyecto visible y su resultado).
   `mariscos` está pendiente de proyecto Vercel a propósito (ver `apps/mariscos/CLAUDE.md`).
