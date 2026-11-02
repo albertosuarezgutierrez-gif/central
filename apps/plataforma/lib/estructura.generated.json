@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-02T17:56:59Z",
+  "generadoEn": "2026-11-02T18:26:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4070,6 +4070,7 @@
     "module-asn": [],
     "module-chat": [],
     "module-cima": [
+      "core-identity",
       "module-seguros",
       "module-seguros-pii"
     ],

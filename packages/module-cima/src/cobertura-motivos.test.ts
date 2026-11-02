@@ -9,8 +9,8 @@ import { test } from "node:test";
 import { motivosExclusion } from "./cobertura-motivos.ts";
 import type { RutaCampo } from "./field-coverage.ts";
 
-// PORT central (fase 1): los tests «medidor: …» de `escribirMotivosExclusion` (BD,
-// drizzle PgDialect) se portan con la capa de BD en la fase 2.
+// PORT central: los 4 tests «medidor: …» de `escribirMotivosExclusion` (BD, drizzle
+// PgDialect) viven en `db/cobertura-motivos.test.ts` (fase 3).
 
 const RUTAS: RutaCampo[] = [
   { ruta: "Objetos.Recibo.X.IBAN", hoja: true, leido: false, excluido: "bancario" },
