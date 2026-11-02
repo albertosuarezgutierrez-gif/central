@@ -197,7 +197,7 @@ import { fechaEs } from '../allianz/intranet/index.ts'
 import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
-import { pasoActivoMapfre, SEL_CLUB_MAPFRE, SEL_FILAS_DIALOGO_PERSONAS, limpiarMensajePortalDiagnosticoHasta } from '../../guard.ts'
+import { ErrorSelectorComercialAlteradoMapfre, pasoActivoMapfre, SEL_CLUB_MAPFRE, SEL_FILAS_DIALOGO_PERSONAS, limpiarMensajePortalDiagnosticoHasta } from '../../guard.ts'
 import {
   avisoFechaEfectoSupuesta,
   esRechazoFechaEfectoAnteriorMecanizacion,
@@ -496,7 +496,9 @@ async function leerTarjetasPrima(raiz: Pick<Frame, 'locator'>): Promise<TarjetaP
 // Este aviso lista TODAS las tarjetas de producto de la pantalla (nombre + estado + importe), aunque no se oferten, y nombra los controles que el bot NO abre.
 // Solo lectura, sin clics. Sin PII: solo nombres de producto (texto de un desplegable de catálogo), estados canónicos e importes; el motivo sale de una lista fija.
 
-export type ProductoVistoMapfre = { producto: string; prima: number | null; deshabilitado: boolean; texto: string }
+/** v0.8.49: opciones del selector comercial de la tarjeta (solo nombres de catálogo) o el motivo por el que no se leyeron. */
+export type ComercialVistoMapfre = { opciones: readonly string[]; seleccionada: string | null } | { error: string }
+export type ProductoVistoMapfre = { producto: string; prima: number | null; deshabilitado: boolean; texto: string; comercial?: ComercialVistoMapfre }
 export type ControlesNoAbiertosMapfre = { verMas: number; pestanas: string[]; carrusel: boolean }
 
 /** Motivo canónico (nunca texto crudo del portal) de una tarjeta sin prima. */
@@ -511,18 +513,32 @@ function motivoSinPrima(texto: string): string {
 
 const nombreProductoSaneado = (s: string) => limpiar(s).replace(/[^\p{L}\s\-/()+.]/gu, '').slice(0, 60)
 
+/** Pura (v0.8.49): « [comercial: X (seleccionada) / Y]» o « [selector comercial no leído: motivo]»; vacío si no se intentó. Solo nombres de producto, saneados. */
+function textoComercialVisto(c: ComercialVistoMapfre | undefined): string {
+  if (!c) return ''
+  if ('error' in c) return ` [selector comercial no leído: ${limpiarMensajePortalDiagnosticoHasta(c.error, 80) || 'sin motivo'}]`
+  // OJO: `limpiarMensajePortalDiagnostico*` convertiría «TERCEROS BÁSICO» en «[nombre]» (2+ palabras en mayúsculas = posible nombre propio); aquí se usa
+  // `redactarDatosPersonales` (correos, NIF, teléfonos, 5+ cifras) + solo letras/cifras/signos de nombre de producto. El MOTIVO de un fallo sí va por limpiarMensajePortalDiagnosticoHasta.
+  const nombres = c.opciones.map((o) => ({ o, n: limpiar(redactarDatosPersonales(o)).replace(/[^\p{L}\p{N}\s\-/()+.]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 60) })).filter((x) => x.n !== '')
+  if (nombres.length === 0) return ' [selector comercial no leído: sin opciones]'
+  return ` [comercial: ${nombres.map((x) => `${x.n}${c.seleccionada !== null && x.o === c.seleccionada ? ' (seleccionada)' : ''}`).join(' / ')}]`
+}
+
 /** Pura: «Productos vistos en Coberturas: NOMBRE (estado) · …» + controles de modalidades que el bot no abre. */
 export function avisoProductosVistosMapfre(productos: readonly ProductoVistoMapfre[], controles: ControlesNoAbiertosMapfre | null): string {
   const lista = productos.length === 0
     ? 'ninguna tarjeta de producto leída'
     : productos.map((p) => {
       const nombre = nombreProductoSaneado(p.producto) || '(sin nombre)'
-      if (p.prima !== null) return `${nombre} (${p.deshabilitado ? 'deshabilitado, ' : ''}prima ${eurTexto(p.prima)})`
-      if (p.deshabilitado) return `${nombre} (deshabilitado: ${motivoSinPrima(p.texto)})`
+      const com = textoComercialVisto(p.comercial)
+      if (p.prima !== null) return `${nombre} (${p.deshabilitado ? 'deshabilitado, ' : ''}prima ${eurTexto(p.prima)})${com}`
+      if (p.deshabilitado) return `${nombre} (deshabilitado: ${motivoSinPrima(p.texto)})${com}`
       const motivo = motivoSinPrima(p.texto)
-      return motivo === 'sin motivo visible' ? `${nombre} (sin prima)` : `${nombre} (no disponible: ${motivo})`
+      return (motivo === 'sin motivo visible' ? `${nombre} (sin prima)` : `${nombre} (no disponible: ${motivo})`) + com
     }).join(' · ')
-  const extra: string[] = ['cada tarjeta trae un selector de producto comercial cuyas opciones el bot no abre']
+  const extra: string[] = productos.some((p) => p.comercial !== undefined)
+    ? ['solo se LEYERON las opciones del selector comercial; ninguna se eligió ni se recalculó']
+    : ['cada tarjeta trae un selector de producto comercial cuyas opciones el bot no abre']
   if (controles) {
     if (controles.verMas > 0) extra.push(`${controles.verMas} control(es) tipo «ver más»/«más productos» sin pulsar`)
     if (controles.pestanas.length > 0) extra.push(`pestañas de modalidad sin abrir: ${controles.pestanas.join(', ')}`)
@@ -534,7 +550,7 @@ export function avisoProductosVistosMapfre(productos: readonly ProductoVistoMapf
 const eurTexto = (n: number) => `${n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}€`
 
 /** Solo lectura: TODAS las tarjetas de producto de la pantalla (también sin prima/deshabilitadas) y los controles de modalidades. Sin clics. */
-export async function leerProductosVistosMapfre(nsei: Pick<Frame, 'locator'>): Promise<{ productos: ProductoVistoMapfre[]; controles: ControlesNoAbiertosMapfre }> {
+export async function leerProductosVistosMapfre(nsei: Pick<Frame, 'locator'>, leerComercial?: (indice: number) => Promise<{ opciones: readonly string[]; seleccionada: string | null }>): Promise<{ productos: ProductoVistoMapfre[]; controles: ControlesNoAbiertosMapfre }> {
   const tarjetas = await nsei.locator(SEL_PRIMAS.producto).evaluateAll(
     (els, s) => els.map((e) => ({
       producto: e.querySelector(s.desplegable)?.textContent ?? '',
@@ -544,12 +560,21 @@ export async function leerProductosVistosMapfre(nsei: Pick<Frame, 'locator'>): P
     })),
     { desplegable: 'mat-select .mat-select-value-text', prima: SEL_PRIMAS.prima },
   )
-  const productos = tarjetas.map((t) => ({
+  const productos: ProductoVistoMapfre[] = tarjetas.map((t) => ({
     producto: t.producto,
     prima: importeDePrimaTotal(t.textoPrima) ?? importeDePrimaTotal(t.texto),
     deshabilitado: t.deshabilitado,
     texto: `${t.texto} ${t.textoPrima}`,
   }))
+  // v0.8.49: opciones del selector comercial, UNA apertura por tarjeta (la función guardada abre, lee y cierra sin elegir). Fallo blando → motivo; alterado/guard → aborta.
+  if (leerComercial) {
+    for (let i = 0; i < productos.length; i++) {
+      try { productos[i]!.comercial = await leerComercial(i) } catch (e) {
+        if (e instanceof EmisionBloqueadaError || e instanceof ErrorSelectorComercialAlteradoMapfre) throw e
+        productos[i]!.comercial = { error: e instanceof Error ? e.message : 'error' }
+      }
+    }
+  }
   const controles = await nsei.locator('app-primas, app-coberturas').evaluateAll((raices) => {
     let verMas = 0
     let carrusel = false
@@ -2241,7 +2266,7 @@ export async function precioDesdeObjetoAsegurado(
   nsei: Page,
   form: FormularioAuto,
   vehiculo: VehiculoConfirmado,
-  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
+  ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'> & Partial<Pick<ContextoPortal, 'pulsar' | 'leerOpcionesComercialesMapfre' | 'generarProyectoMapfre' | 'adjuntarPdf' | 'log' | 'buscarDescargaProyectoAuto' | 'pulsarDescargaProyectoAuto'>>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
@@ -2279,7 +2304,11 @@ export async function precioDesdeObjetoAsegurado(
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
   // v0.8.48: diagnóstico de TODAS las tarjetas vistas (también las no ofertadas). Solo lectura; si falla, el aviso lo dice y el precio sigue.
   let avisoVistos: string
-  try { const v = await leerProductosVistosMapfre(nsei); avisoVistos = avisoProductosVistosMapfre(v.productos, v.controles) } catch { avisoVistos = 'Productos vistos en Coberturas: no se pudo leer la lista de tarjetas (diagnóstico no disponible).' }
+  const leerCom = ctx.leerOpcionesComercialesMapfre
+  try { const v = await leerProductosVistosMapfre(nsei, leerCom ? (i) => leerCom(nsei, i) : undefined); avisoVistos = avisoProductosVistosMapfre(v.productos, v.controles) } catch (e) {
+    if (e instanceof EmisionBloqueadaError || e instanceof ErrorSelectorComercialAlteradoMapfre) throw e
+    avisoVistos = 'Productos vistos en Coberturas: no se pudo leer la lista de tarjetas (diagnóstico no disponible).'
+  }
   const avisosExtra = [avisoVistos, ...(sinControlCompania ? [AVISO_COMPANIA_ANTERIOR_NO_PEDIDA] : []),...(fijaMapfre ? [avisoSiniestralidadMapfre(await leerSiniestralidadMapfre(nsei), Number.isInteger(form.siniestrosUltimos5Anios) ? form.siniestrosUltimos5Anios : null)] : [])]
   // v0.8.39: garantías de la pantalla «Coberturas» (solo lectura, ANTES de «Generar Proyecto»); sirven si el PDF no llega o no se lee.
   let garantiasPantalla: CoberturasPorProducto = new Map()
@@ -2324,7 +2353,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.48',
+  version: '0.8.49',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
