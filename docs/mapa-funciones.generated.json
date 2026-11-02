@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T17:36:10Z",
-  "sha": "0524db819b234d26db2eea1b61cc00dfd02e5ed1",
+  "generadoEn": "2026-11-02T17:39:51Z",
+  "sha": "7fb6e93756bdbd9ca946fb32111e16f84ce5954f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -226406,7 +226406,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f5029cb0e8ab"
+      "hash": "79853c3c749e"
     },
     {
       "ruta": "packages/module-cima/src/poliza-matching.ts",
@@ -226615,6 +226615,79 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "417c3c4abae8"
+    },
+    {
+      "ruta": "packages/module-cima/src/pull-puro.ts",
+      "ambito": "packages/module-cima",
+      "resumen": "PORT central (fase 2): funciones PURAS extraídas LITERALMENTE del CRM (repo `asegura`): `classifyConfirmarDescargaAck` + `seguirFusionHastaSuperviviente` (de `pull-deps.ts`), `getIngestaCodigosEntidad` + `isCodigoEntidadAutorizado` + `splitNombreCompleto` (de `pull-persist.ts`) y `unwrapCimaWseEnvel",
+      "exporta": [
+        "unwrapCimaWseEnvelope",
+        "classifyConfirmarDescargaAck",
+        "seguirFusionHastaSuperviviente",
+        "getIngestaCodigosEntidad",
+        "isCodigoEntidadAutorizado",
+        "splitNombreCompleto"
+      ],
+      "funciones": [
+        {
+          "nombre": "unwrapCimaWseEnvelope",
+          "kind": "function",
+          "exportada": true,
+          "params": "json: unknown",
+          "retorno": "unknown",
+          "linea": 27,
+          "resumen": "Si la respuesta no tiene `parsed` (legacy adapter o error path), devolvemos el json tal cual — la validación Zod fallará downstream con `code: \"schema\"` y el caller lo gestionará igual que cualquier o"
+        },
+        {
+          "nombre": "classifyConfirmarDescargaAck",
+          "kind": "function",
+          "exportada": true,
+          "params": "res: ConfirmarDescargaHttpResponse,",
+          "retorno": "Promise<ConfirmAckResult>",
+          "linea": 62,
+          "resumen": "LOO-759 — Clasifica la respuesta HTTP de `confirmarDescarga` en un {@link ConfirmAckResult}, distinguiendo fallo TRANSITORIO (retriable) de error REAL de FORMA/contrato (parse). FUNCIÓN PURA (sin BD/r"
+        },
+        {
+          "nombre": "seguirFusionHastaSuperviviente",
+          "kind": "function",
+          "exportada": true,
+          "params": "absorbidaEn: string, cargar: (id: string) => Promise<NodoFusion | null>,",
+          "retorno": "Promise<string | null>",
+          "linea": 115,
+          "resumen": "26/09/2026 — sigue la cadena `merged_into_cliente_id` desde una ficha absorbida hasta su SUPERVIVIENTE. Caso: dos fichas de la misma persona con DNIs distintos, fusionadas a mano; la absorbida conserv"
+        },
+        {
+          "nombre": "getIngestaCodigosEntidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "ReadonlySet<string>",
+          "linea": 133,
+          "resumen": "Allowlist de códigos DGS de entidad autorizados (CSV env). Vacío = nada autorizado."
+        },
+        {
+          "nombre": "isCodigoEntidadAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string | null | undefined, allow: ReadonlySet<string> = getIngestaCodigosEntidad(),",
+          "retorno": "boolean",
+          "linea": 143
+        },
+        {
+          "nombre": "splitNombreCompleto",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombreCompleto: string | null | undefined",
+          "retorno": "",
+          "linea": 152,
+          "resumen": "Parte `nombreCompleto` en nombre + apellidos (ambos NOT NULL en clientes)."
+        }
+      ],
+      "tablas": [
+        "corr"
+      ],
+      "rutaApi": null,
+      "hash": "a7c49bbef2b7"
     },
     {
       "ruta": "packages/module-cima/src/quarantine-recovery.ts",
@@ -267115,7 +267188,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5512,
-    "funciones": 21566
+    "archivos": 5513,
+    "funciones": 21572
   }
 }

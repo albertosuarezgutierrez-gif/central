@@ -11,7 +11,7 @@ test("sanitizePiiES: null/empty → empty string", () => {
 
 test("sanitizePiiES: DNI español redacted", () => {
   assert.equal(
-    sanitizePiiES("Key (dni_lookup_hash)=(28792627P) conflict"),
+    sanitizePiiES("Key (dni_lookup_hash)=(00000000T) conflict"),
     "Key (dni_lookup_hash)=([dni]) conflict",
   );
   assert.equal(sanitizePiiES("DNI 12345678Z encontrado"), "DNI [dni] encontrado");

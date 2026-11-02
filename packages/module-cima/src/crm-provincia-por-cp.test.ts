@@ -30,3 +30,8 @@ test("LOO-855 — provinciaPorCp: entradas no numéricas / vacías → null", ()
   assert.equal(provinciaPorCp("2A"), null);
   assert.equal(provinciaPorCp("ES28001"), null);
 });
+
+test("guardián CRM — provinciaPorCp: CP 07xxx → exactamente «Islas Baleares»", () => {
+  assert.equal(provinciaPorCp("07001"), "Islas Baleares");
+  assert.equal(provinciaPorCp("07"), "Islas Baleares");
+});

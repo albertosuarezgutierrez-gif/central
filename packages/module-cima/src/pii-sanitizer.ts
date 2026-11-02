@@ -7,7 +7,7 @@
  * Por qué: helpers de error (mensajes Postgres, exceptions Java del adapter,
  * `match.reason`/`resolved.reason`) propagan strings literales que pueden
  * contener PII Tier 1 españolas (DNI/NIE/CIF/email/teléfono). Sin sanitizer,
- * un mensaje de driver tipo `Key (dni_lookup_hash)=(28792627P)` o `INSERT
+ * un mensaje de driver tipo `Key (dni_lookup_hash)=(00000000T)` o `INSERT
  * cliente nombre=Juan Pérez email=juan@example.com` llegaría a `payload.errorDetalle`
  * → audit hole + LOPD breach.
  *

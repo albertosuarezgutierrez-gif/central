@@ -18,7 +18,7 @@
   "license": "UNLICENSED",
   "dependencies": {
     "@central/module-seguros-pii": "workspace:*",
-    "fast-xml-parser": "^5.10.1",
+    "fast-xml-parser": "^5.11.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {

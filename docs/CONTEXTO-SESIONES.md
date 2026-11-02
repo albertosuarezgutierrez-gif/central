@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (02/11/2026) PR #5396 · `@central/module-cima` fase 2 (lógica pura)
+- Port literal del CRM: mappers EIAC, matching, pipeline `runCimaPull` con deps inyectadas, `pull-puro.ts` (ACK, fusión, allowlist entidad); 750+ tests, equivalencia golden con el CRM, revisión crítica apta.
+- Pendiente fase 3 = capa BD Drizzle + persist/pull/candado (y cliente del adaptador Fly/TIREA).
+- Ojo: `field-encryption` sin `PII_ENCRYPTION_KEY` fuera de production guarda EN CLARO (heredado del CRM): vigilarlo si la ingesta corre desde Actions/tsx.
+
 ## (02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
 - Auditoría completa mergeada (#5385). CRM `asegura` (app.grupoasegura.com): sin uso humano (Alberto: «Manuel no usa nada»); solo vive la ingesta CIMA.
 - Decisión: NO mover el CRM entero; portar solo la ingesta (capa BD con Drizzle tal cual) y apagar el resto. Spec validada: `docs/superpowers/specs/2026-11-02-unificar-ingesta-cima.md` (+ `-fase0.md`).

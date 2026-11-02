@@ -93,3 +93,15 @@ export {
   decideCimaPullMode,
   type CimaPullMode,
 } from "./ingest-flag.ts";
+
+export {
+  classifyConfirmarDescargaAck,
+  seguirFusionHastaSuperviviente,
+  isCodigoEntidadAutorizado,
+  getIngestaCodigosEntidad,
+  splitNombreCompleto,
+  unwrapCimaWseEnvelope,
+  MAX_SALTOS_FUSION,
+  type ConfirmarDescargaHttpResponse,
+  type NodoFusion,
+} from "./pull-puro.ts";

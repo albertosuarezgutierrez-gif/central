@@ -985,7 +985,7 @@ test("LOO-555 sentinel: payload NO contiene PII Tier 1 (DNI/NIE/CIF/email/tel)",
       }),
     resolveCliente: async () => ({
       status: "collision",
-      reason: "conflict on key (dni_lookup_hash)=(28792627P), email=juan.perez@example.com, tel=+34 612 345 678",
+      reason: "conflict on key (dni_lookup_hash)=(00000000T), email=juan.perez@example.com, tel=+34 612 345 678",
     }),
   });
   await runCimaPull([fichero()], deps, { dryRun: false });
