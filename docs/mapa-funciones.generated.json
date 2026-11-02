@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T12:21:16Z",
-  "sha": "f9b0f47766a3e449352d7bf6f41e65452b275fb9",
+  "generadoEn": "2026-11-02T12:43:03Z",
+  "sha": "40b3c9d7130f035aad8070e00e0c3178380f5e3f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -44135,13 +44135,13 @@
           "exportada": true,
           "params": "p: { correduriaId: string operacion: OperacionEmision solicitadoPor: string /** Para poder explicar la factura línea a línea. Puede no conocerse aún. */ projectId: string | null }, llamada: () => Promise<T>, opciones: { evidenciaSinCargo?: ",
           "retorno": "Promise<GastoEmision<T>>",
-          "linea": 63,
+          "linea": 69,
           "resumen": "Envuelve UNA llamada al vendor con su línea en el libro. `llamada` se invoca **una sola vez** y su excepción se propaga tal cual: el caller (la cascada de reparación de `/oferta` y `/emitir`) necesita"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a45744f0fee1"
+      "hash": "df9d5bbaeebc"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/limites-hogar.ts",
@@ -69442,6 +69442,7 @@
       "exporta": [
         "leerReferenciaOportunidad",
         "guardarReferenciaOportunidad",
+        "anotarVehiculoUsado",
         "propagarEleccionHumana",
         "intentarEleccionPorReferencia"
       ],
@@ -69452,7 +69453,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "msg",
@@ -69460,7 +69461,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "leerReferenciaOportunidad",
@@ -69468,8 +69469,17 @@
           "exportada": true,
           "params": "db: Db, correduriaId: string, oportunidadId: string",
           "retorno": "Promise<VehiculoReferencia | null>",
-          "linea": 31,
+          "linea": 32,
           "resumen": "La referencia que MANDA en la oportunidad: lo guardado en `info_riesgo.vehiculoReferencia` + la póliza VIVA vinculada (`info_riesgo.polizaId` o `poliza_id`; solo `marca`/`modelo`/`version` de su `dato"
+        },
+        {
+          "nombre": "actualizarInfoRiesgo",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, oportunidadId: string, fn: (info: unknown) => Record<string, unknown>, que: string",
+          "retorno": "Promise<boolean>",
+          "linea": 59,
+          "resumen": "Aplica `fn` al `info_riesgo` de la oportunidad (bloqueando la fila). Devuelve si escribió. Nunca lanza."
         },
         {
           "nombre": "guardarReferenciaOportunidad",
@@ -69477,8 +69487,17 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, v: VehiculoReferencia | null",
           "retorno": "Promise<boolean>",
-          "linea": 58,
-          "resumen": "Guarda la referencia de SU origen en la oportunidad (pisa solo esa casilla). Devuelve si escribió. Nunca lanza."
+          "linea": 78,
+          "resumen": "Guarda la referencia de SU origen en la oportunidad (la canónica solo la sube una de mayor prioridad). Devuelve si escribió. Nunca lanza."
+        },
+        {
+          "nombre": "anotarVehiculoUsado",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, oportunidadId: string, compania: string, usado: VehiculoUsado | null",
+          "retorno": "Promise<boolean>",
+          "linea": 84,
+          "resumen": "Anota con qué vehículo tarificó una compañía (y recalcula `retarificar`: compañías con otro vehículo que el canónico). Nunca lanza."
         },
         {
           "nombre": "aplicarEleccionReferencia",
@@ -69486,7 +69505,7 @@
           "exportada": false,
           "params": "tx: Db, correduriaId: string, id: string, eleccion: { codigo: string | null; etiqueta: string }, supuesto: string",
           "retorno": "Promise<boolean>",
-          "linea": 78,
+          "linea": 90,
           "resumen": "Escribe la elección por referencia y devuelve el trabajo a `pendiente` (como «Reintentar» de la bandeja). Solo si SIGUE `requiere_humano`."
         },
         {
@@ -69495,7 +69514,7 @@
           "exportada": true,
           "params": "correduriaId: string, trabajoId: string, oportunidadId: string, etiqueta: string",
           "retorno": "Promise<TrabajoPropagado[]>",
-          "linea": 93,
+          "linea": 105,
           "resumen": "Tras la elección de una PERSONA en la bandeja (trabajo `trabajoId`, opción `etiqueta`): se guarda como referencia `humano` de la oportunidad y se propaga a los demás trabajos de esa oportunidad parado"
         },
         {
@@ -69504,7 +69523,7 @@
           "exportada": true,
           "params": "trabajoId: string",
           "retorno": "Promise<ResultadoEleccionReferencia>",
-          "linea": 125,
+          "linea": 137,
           "resumen": "Un trabajo acaba de parar por versión (`requiere_humano` con lista): si la oportunidad tiene vehículo de referencia, asegura elige de la lista guardada con el helper compartido (UN intento automático)"
         }
       ],
@@ -69512,7 +69531,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "588aaa0a9b35"
+      "hash": "3122cc9602c9"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-vehiculo-referencia.ts",
@@ -69521,7 +69540,11 @@
       "exporta": [
         "esRamoVehiculo",
         "referenciasDeInfo",
+        "canonicaDeInfo",
+        "companiasARetarificar",
         "infoConReferencia",
+        "usadoDeResultado",
+        "infoConVehiculoUsado",
         "referenciaDeResultadoOrigen",
         "referenciaDePoliza",
         "referenciaEfectiva",
@@ -69538,7 +69561,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 35
+          "linea": 38
         },
         {
           "nombre": "esRamoVehiculo",
@@ -69546,7 +69569,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "boolean",
-          "linea": 38,
+          "linea": 41,
           "resumen": "Ramos donde aplica (los de vehículo)."
         },
         {
@@ -69555,8 +69578,35 @@
           "exportada": true,
           "params": "info: unknown",
           "retorno": "VehiculoReferencia[]",
-          "linea": 41,
+          "linea": 44,
           "resumen": "Las referencias guardadas en `info_riesgo` (solo las válidas, cada una con el origen de su casilla). PURA."
+        },
+        {
+          "nombre": "canonicaDeInfo",
+          "kind": "function",
+          "exportada": true,
+          "params": "info: unknown",
+          "retorno": "VehiculoReferencia | null",
+          "linea": 61,
+          "resumen": "La referencia CANÓNICA guardada (la que manda en la oportunidad, sin póliza). `null` si no hay o no valida. PURA."
+        },
+        {
+          "nombre": "companiasARetarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "info: unknown, canonica: VehiculoReferencia | null",
+          "retorno": "AvisoRetarificar[]",
+          "linea": 69,
+          "resumen": "Compañías que tarificaron con un vehículo distinto del canónico (de `tarificadoPor`). PURA."
+        },
+        {
+          "nombre": "conRetarificar",
+          "kind": "function",
+          "exportada": false,
+          "params": "info: Record<string, unknown>",
+          "retorno": "Record<string, unknown>",
+          "linea": 85,
+          "resumen": "Recalcula `retarificar` (estado: compañías cuyo presupuesto usó otro vehículo que el canónico). Lo demás intacto. PURA."
         },
         {
           "nombre": "infoConReferencia",
@@ -69564,8 +69614,26 @@
           "exportada": true,
           "params": "info: unknown, v: VehiculoReferencia",
           "retorno": "Record<string, unknown>",
-          "linea": 53,
-          "resumen": "`info_riesgo` con la referencia de su origen puesta (pisa solo esa casilla; lo demás intacto). PURA."
+          "linea": 96,
+          "resumen": "`info_riesgo` con la referencia de su origen puesta (lo demás intacto). PURA. Regla de Alberto (02/11/2026): UN vehículo canónico por oportunidad. `porOrigen` se conserva entero; la casilla de un orig"
+        },
+        {
+          "nombre": "usadoDeResultado",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string, v: VehiculoEncadenado | null",
+          "retorno": "VehiculoUsado | null",
+          "linea": 110,
+          "resumen": "El vehículo con el que una compañía acaba de tarificar (solo catálogo) para saber si hay que re-tarificar. PURA."
+        },
+        {
+          "nombre": "infoConVehiculoUsado",
+          "kind": "function",
+          "exportada": true,
+          "params": "info: unknown, compania: string, usado: VehiculoUsado",
+          "retorno": "Record<string, unknown>",
+          "linea": 118,
+          "resumen": "`info_riesgo` anotando con qué vehículo tarificó `compania` (clave normalizada) y recalculando `retarificar`. PURA."
         },
         {
           "nombre": "referenciaDeResultadoOrigen",
@@ -69573,7 +69641,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, v: VehiculoEncadenado | null",
           "retorno": "VehiculoReferencia | null",
-          "linea": 61,
+          "linea": 126,
           "resumen": "La referencia que da el `ok` de un bot de ORIGEN (Mapfre: su vehículo confirmado por matrícula; Allianz: su catálogo). PURA."
         },
         {
@@ -69582,7 +69650,7 @@
           "exportada": true,
           "params": "datosEspecificos: unknown",
           "retorno": "VehiculoReferencia | null",
-          "linea": 75,
+          "linea": 140,
           "resumen": "De `datos_especificos` de la póliza VIVA (solo marca/modelo/versión, `vehiculoDePolizaViva`). PURA."
         },
         {
@@ -69591,7 +69659,7 @@
           "exportada": true,
           "params": "info: unknown, datosPoliza: unknown",
           "retorno": "VehiculoReferencia | null",
-          "linea": 81,
+          "linea": 146,
           "resumen": "La que MANDA en la oportunidad: guardadas + la de la póliza viva. PURA."
         },
         {
@@ -69600,7 +69668,7 @@
           "exportada": true,
           "params": "etiqueta: string, previa: VehiculoReferencia | null",
           "retorno": "VehiculoReferencia | null",
-          "linea": 89,
+          "linea": 154,
           "resumen": "La referencia HUMANA a partir de la opción que eligió una persona en la bandeja: su etiqueta de catálogo es la versión (el modelo NO se hereda: la persona puede haber elegido otro distinto del de la r"
         },
         {
@@ -69609,7 +69677,7 @@
           "exportada": true,
           "params": "riesgo: T, ramo: string, v: VehiculoReferencia | null",
           "retorno": "T",
-          "linea": 95,
+          "linea": 160,
           "resumen": "El riesgo con `vehiculoReferencia` (solo vehículo y riesgo objeto; sin referencia → el mismo objeto). PURA."
         },
         {
@@ -69618,7 +69686,7 @@
           "exportada": true,
           "params": "f: FilaParadaVersion, ref: VehiculoReferencia | null, o: { humano: boolean }",
           "retorno": "EleccionPorReferenciaTrabajo",
-          "linea": 113,
+          "linea": 178,
           "resumen": "¿Se puede resolver por la referencia un trabajo parado por versión? Exige: `requiere_humano`, tarificar, vehículo, `error.tipo` `eleccion` con su lista (`opcionesVersion`). Tope de UN intento automáti"
         },
         {
@@ -69627,7 +69695,7 @@
           "exportada": true,
           "params": "filas: readonly FilaPropagacion[], ref: VehiculoReferencia | null, origenId: string",
           "retorno": "TrabajoPropagado[]",
-          "linea": 143,
+          "linea": 208,
           "resumen": "Propagar la elección de una PERSONA (ya convertida en referencia `humano`) a los DEMÁS trabajos de la oportunidad parados por versión: los que `eleccionPorReferenciaParaTrabajo` (modo humano) resuelve"
         },
         {
@@ -69636,13 +69704,13 @@
           "exportada": true,
           "params": "ofertas: readonly O[], riesgo: unknown",
           "retorno": "O[]",
-          "linea": 154,
+          "linea": 219,
           "resumen": "Las ofertas con el supuesto de la referencia en sus avisos (si el riesgo lleva la marca y no está ya). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "86610622dda7"
+      "hash": "32b8fe8176a5"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-verificacion-reglas.ts",
@@ -69901,7 +69969,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 800,
+          "linea": 802,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -69910,7 +69978,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[], numeroPolizaActual: string | null",
           "retorno": "Promise<string>",
-          "linea": 804
+          "linea": 806
         },
         {
           "nombre": "guardarAdjunto",
@@ -69918,7 +69986,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 870
+          "linea": 872
         },
         {
           "nombre": "guardarPasos",
@@ -69926,7 +69994,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 892,
+          "linea": 894,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -69935,7 +70003,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; capturaConDatos?: boolean; html: string | null } | null",
           "retorno": "Promise<",
-          "linea": 911,
+          "linea": 913,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -69944,7 +70012,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 1055,
+          "linea": 1057,
           "resumen": "4. lanza lo que quepa por compañía."
         },
         {
@@ -69953,7 +70021,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string",
           "retorno": "Promise<FilaOrigen[]>",
-          "linea": 1140,
+          "linea": 1142,
           "resumen": "Los `ok` de Allianz/Mapfre AUTO de la oportunidad (de ESTA correduría), los más recientes primero."
         },
         {
@@ -69962,7 +70030,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaOrigen[]>",
-          "linea": 1153,
+          "linea": 1155,
           "resumen": "Los últimos `ok` de Allianz/Mapfre AUTO del CLIENTE (de ESTA correduría), para «probar» Generali sin oportunidad. Fallo de lectura = sin origen."
         },
         {
@@ -69971,7 +70039,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string, v: VehiculoEncadenado",
           "retorno": "Promise<number>",
-          "linea": 1170,
+          "linea": 1172,
           "resumen": "Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos."
         },
         {
@@ -69980,7 +70048,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 1191,
+          "linea": 1193,
           "resumen": "Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta. Sin vehículo: · Generali (no busca por matrícula): sin ningún origen vivo o pasadas 24 h → `cancel"
         }
       ],
@@ -69991,7 +70059,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "9cc4259c6d1c"
+      "hash": "6f72da272379"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -262162,7 +262230,8 @@
         "vehiculoReferenciaDesdeSeleccion",
         "textoVehiculoReferencia",
         "supuestoVehiculoReferencia",
-        "elegirOpcionPorVehiculoReferencia"
+        "elegirOpcionPorVehiculoReferencia",
+        "vehiculoDivergeDeReferencia"
       ],
       "funciones": [
         {
@@ -262283,7 +262352,7 @@
           "exportada": false,
           "params": "o: OpcionCatalogo",
           "retorno": "string",
-          "linea": 250
+          "linea": 252
         },
         {
           "nombre": "esOtros",
@@ -262291,7 +262360,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "boolean",
-          "linea": 253
+          "linea": 255
         },
         {
           "nombre": "supuestoVehiculoReferencia",
@@ -262299,7 +262368,7 @@
           "exportada": true,
           "params": "tipo: 'coincidencia' | 'aproximacion', nivel: 'modelo' | 'version', etiqueta: string, origen: OrigenVehiculoReferencia",
           "retorno": "string",
-          "linea": 256,
+          "linea": 258,
           "resumen": "Aviso del supuesto (sin comas: los bots unen supuestos con «, »). PURA."
         },
         {
@@ -262308,13 +262377,22 @@
           "exportada": true,
           "params": "opciones: readonly OpcionCatalogo[], referencia: unknown, o: { nivel?: 'modelo' | 'version'; marcaLista?: string | null } = {},",
           "retorno": "EleccionPorReferencia",
-          "linea": 277,
+          "linea": 279,
           "resumen": "Elige UNA opción del catálogo de un portal con el vehículo de referencia. Regla (determinista, sin IA): 0. Fuera opciones vacías y «Otros…». Ninguna → `sin_opciones`. Sin referencia válida → `sin_refe"
+        },
+        {
+          "nombre": "vehiculoDivergeDeReferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "ref: VehiculoReferencia, usado: VehiculoUsado | string",
+          "retorno": "boolean",
+          "linea": 377,
+          "resumen": "¿El vehículo con el que tarificó una compañía es OTRO que la referencia? (regla de Alberto, 02/11/2026: mismo modelo para todas.) Conservadora: solo `true` con evidencia (modelo contra modelo que no s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1921a69e5f45"
+      "hash": "8974b2cabd4d"
     },
     {
       "ruta": "packages/module-tarificacion/src/vehiculo.ts",
@@ -264330,6 +264408,6 @@
   ],
   "resumen": {
     "archivos": 5485,
-    "funciones": 21303
+    "funciones": 21311
   }
 }

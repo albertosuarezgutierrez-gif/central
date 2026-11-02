@@ -67,6 +67,7 @@ import {
   detalleCuerpoToleradoConAccionReal,
   textoDetalleCuerpo,
   RE_ACCION_REAL_TRAS_PREFIJO,
+  decodificarUrlTolerante,
   type RutaTolerable,
   TEXTO_ACCESO_NSE_MAPFRE,
   esMatriculaEspanola,
@@ -421,6 +422,28 @@ export function esQuerySoloCacheBuster(search: string): boolean {
   return /^\?_ts=\d{1,17}$/.test(search)
 }
 
+/**
+ * TARIFICAR HOGAR DE MAPFRE (adaptador mapfre hogar 0.3.2, 02/11/2026). «SIGUIENTE» en «Datos de riesgo - Hogar» lanza la XHR que CALCULA el
+ * precio, y Mapfre la sirve bajo `/api/emision/…` (todo su portal se llama «emisión»). Excepción ESTRECHA: SOLO este origen + ruta EXACTOS
+ * (sin `;jsessionid`, sin codificar, sin credenciales ni fragmento) dejan de casar con el patrón por la RUTA. La query se sigue mirando
+ * (`pareceEmision`/`parametrosParecenEmision` sobre ella) y, si nombra una acción real (emitir, contratar, confirmar, firma, pago, IBAN,
+ * póliza…), no se neutraliza nada. El cuerpo se inspecciona igual que siempre. Cualquier otra ruta bajo `/api/emision/` sigue bloqueada.
+ */
+export const URL_TARIFICACION_PROYECTO_MAPFRE = 'https://wmediadores.mapfre.com/PortalMediadores_fe-web/api/emision/proyectos/tarificacion'
+export function neutralizarTarificacionProyectoMapfre(url: string): string | null {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return null
+  }
+  if (u.username || u.password || u.hash) return null
+  if (`${u.origin}${u.pathname}` !== URL_TARIFICACION_PROYECTO_MAPFRE) return null
+  const query = decodificarUrlTolerante(u.search.replace(/\+/g, ' ')).normalize('NFD').replace(/[̀-ͯ]/g, '')
+  if (RE_ACCION_REAL_TRAS_PREFIJO.test(query) || /poliz/i.test(query)) return null
+  return `${u.origin}/__tarificacion_proyecto_mapfre__${u.search}`
+}
+
 export async function instalarGuardEmision(context: BrowserContext): Promise<GuardEmision> {
   let violacion: EmisionBloqueadaError | null = null
   const fases = new MaquinaFases()
@@ -475,7 +498,9 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       const enProyectoMapfre = enGuardado && gv.proyectoMapfre
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado && !enProyectoMapfre, permitirGenerarProyectoMapfre: enProyectoMapfre }
       const neutra = neutralizarRutaTolerable(url, tolerables) ?? url
-      const porUrl = pareceEmision(neutra, op) || parametrosParecenEmision(url, op)
+      // Tarificación de hogar de Mapfre (ruta EXACTA, `neutralizarTarificacionProyectoMapfre`): solo su RUTA deja de contar; query y cuerpo igual.
+      const neutraUrl = neutralizarTarificacionProyectoMapfre(url) ?? neutra
+      const porUrl = pareceEmision(neutraUrl, op) || parametrosParecenEmision(url, op)
       // Ruta TOLERADA (Mapfre NSE): además, los NOMBRES de parámetro y el botón JSF del cuerpo no pueden nombrar una acción real.
       const porCuerpoGeneral = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
       const detalleTolerado = !porUrl && !porCuerpoGeneral && noGet && neutra !== url ? detalleCuerpoToleradoConAccionReal(cuerpoDe(req), url) : null

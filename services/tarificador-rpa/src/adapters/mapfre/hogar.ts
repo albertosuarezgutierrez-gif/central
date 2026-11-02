@@ -4,6 +4,8 @@
 // `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (y entonces inyecta DNI, nacimiento, nombre y apellidos de la ficha).
 // Ver docs/tarificador/CONOCIMIENTO-PORTALES.md (Mapfre).
 //
+// v0.3.2 (02/11/2026) — el guard deja pasar SOLO la XHR de tarificar `/PortalMediadores_fe-web/api/emision/proyectos/tarificacion` (ruta exacta; emitir sigue bloqueado).
+//
 // v0.3.1 (02/11/2026) — PRIMER RUN REAL (5b010917, volcado fallo-5b010917): pantalla «Datos de riesgo - Hogar» (#/emision-hogar/datos-riesgo).
 // El portal SÍ conserva «buscar por CP»: es el opcion `#cpRadio` (name `ubicacionTipo`, `checked` de serie) junto a `#refCatastralVivienda`;
 // 0.3.0 buscaba `#cpOpcion` (id inventado) → «mapa incompleto». Ahora: id real y, si faltase, el miembro del grupo `ubicacionTipo` que no es
@@ -572,7 +574,7 @@ export const mapfreHogar = {
   compania: 'mapfre',
   ramo: 'hogar',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.3.1',
+  version: '0.3.2',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (!MAPFRE_HOGAR_ACTIVO) throw new ErrorTarificador('datos', `${ADAPTADOR}: adaptador apagado (MAPFRE_HOGAR_ACTIVO = false)`)
     planVivienda(f) // valida antes de abrir el portal

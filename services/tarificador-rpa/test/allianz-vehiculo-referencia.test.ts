@@ -1,4 +1,4 @@
-// Allianz 0.6.38 / Moto 0.7.22 (01/11/2026): el vehículo de REFERENCIA de la oportunidad decide la versión donde antes se paraba.
+// Allianz 0.6.40 / Moto 0.7.23 (02/11/2026; base 01/11): el vehículo de REFERENCIA CANÓNICA de la oportunidad decide la versión donde antes se paraba.
 // Fixtures SINTÉTICAS (solo nombres de catálogo). Cada brazo visto en rojo rompiendo lo que protege.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,7 +15,7 @@ const OPCIONES: CandidatoVersion[] = [
   { codigo: 'A3', etiqueta: 'FORFOUR PURE 52KW DIESEL' },
 ]
 
-test('versión 0.6.38', () => assert.equal(allianzAuto.version, '0.6.39'))
+test('versión 0.6.40', () => assert.equal(allianzAuto.version, '0.6.40'))
 
 test('sin referencia: sigue parando como siempre (requiere_humano)', () => {
   assert.throws(() => versionAutomaticaAllianz(OPCIONES, {}), ErrorEleccionVersion)
@@ -57,4 +57,22 @@ test('referencia HUMANA manda sobre la similitud con Mapfre y sobre la equivalen
   const r = versionAutomaticaAllianz(equivalentes, { vehiculoReferencia: humano })
   assert.equal(r.indice, 2)
   assert.match(r.supuesto ?? '', /vehículo según elección en la bandeja/)
+})
+
+// ───── 02/11/2026 (Alberto: MISMO modelo de vehículo para todas las compañías) ─────
+test('canónica de Mapfre (no humana) manda sobre la equivalencia de siempre', () => {
+  const equivalentes: CandidatoVersion[] = [{ codigo: 'B1', etiqueta: 'FORTWO PASSION' }, { codigo: 'B2', etiqueta: 'FORFOUR PURE' }]
+  assert.equal(versionAutomaticaAllianz(equivalentes, {}).indice, 0)
+  assert.equal(versionAutomaticaAllianz(equivalentes, { vehiculoReferencia: vr({ version: 'Smart Forfour Pure 1.1' }) }).indice, 1)
+})
+
+test('lista de OTRO modelo (todas FORTWO ante una canónica Forfour): requiere_humano, no la «más parecida»', () => {
+  const fortwo: CandidatoVersion[] = [{ codigo: 'F1', etiqueta: 'SMART FORTWO PASSION 52' }, { codigo: 'F2', etiqueta: 'SMART FORTWO PULSE 52' }]
+  assert.throws(() => versionAutomaticaAllianz(fortwo, { vehiculoReferencia: vr({ version: 'Smart Forfour Pure 1.1', cv: 75 }) }), ErrorEleccionVersion)
+})
+
+test('tarjeta ÚNICA de otro modelo que la canónica: se pregunta; del mismo modelo, pasa', () => {
+  const ref = vr({ marca: 'SMART', modelo: 'FORFOUR', version: 'Pure 1.1' })
+  assert.throws(() => decidirTarjetaVehiculoTurismos([{ etiqueta: 'SMART FORTWO PASSION GASOLINA' }], { vehiculoReferencia: ref }), ErrorEleccionVersion)
+  assert.equal(decidirTarjetaVehiculoTurismos([{ etiqueta: 'SMART FORFOUR PURE GASOLINA' }], { vehiculoReferencia: ref }).indice, 0)
 })
