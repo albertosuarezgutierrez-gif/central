@@ -1,7 +1,11 @@
 {
   "novedades": [
     {
-      "titulo": "02/11/2026) PR #5396 · `@central/module-cima` fase 2 (lógica pura)",
+      "titulo": "02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)",
+      "fecha": "02/11/2026"
+    },
+    {
+      "titulo": "02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)",
       "fecha": "02/11/2026"
     },
     {

@@ -297,6 +297,13 @@ deriva de contrato, no un secreto mal configurado. ⚠️ **Con una sola muestra
 cambia el esquema**: deja que la caja negra acumule unos días (el `veces` y la
 estabilidad de la forma son la evidencia) antes de tocar el parser.
 
+## Migración a central (02/11/2026)
+
+- La lógica PURA de la ingesta vive ya en `packages/module-cima` (`@central/module-cima`, PR #5396 mergeado): parsers/mappers POL/REC/SIN/CEF, matching, cobertura, pipeline, `pull-puro.ts`. Aún NADA lo importa: la ingesta en producción sigue en el CRM (repo `asegura`).
+- Fases: 1 candado en BD · 2 lógica pura (HECHA) · 3 capa BD Drizzle + persist/pull/candado · 4 sombra (replay de los 235 crudos en rama Supabase) · 5 corte con interruptor `CIMA_ESCRITOR`. Spec: `docs/superpowers/specs/2026-11-02-unificar-ingesta-cima.md`.
+- 🚨 No dupliques a ciegas: hasta el corte, un cambio en parser/mapper se hace en AMBOS lados (CRM y `module-cima`); el test de equivalencia golden contra el CRM lo vigila.
+- `field-encryption` sin `PII_ENCRYPTION_KEY` fuera de production guarda EN CLARO (heredado del CRM).
+
 ## Índice — dónde está el detalle
 
 - **`docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`** — la cadena completa, el contrato

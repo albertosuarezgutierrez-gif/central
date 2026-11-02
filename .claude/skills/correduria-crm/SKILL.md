@@ -48,6 +48,7 @@ real medido, orden de trabajo). Después, según lo que toques:
 1. **Dos caras, dos apps.** Corredor en `apps/plataforma` (`/correduria`); cliente en
    `apps/asegura-portal` (rol `prisma_asegura_portal` sin BYPASSRLS, secreto propio). Nunca una
    pantalla compartida con permisos. En el portal el aislamiento **lo da el código**, no RLS.
+   - Bajas públicas (`campana/baja`, `recaptacion/baja`): GET solo muestra el botón, POST ejecuta (los escáneres de correo no dan de baja). Vista de corredor del portal: `usadoEn` se consume de forma atómica (`usadoEn: null`); identidad compartida `IDENTIDAD_CORREDOR_ID` pendiente (exige BD).
 2. **«Cliente» = póliza viva de CIMA**, y qué es «viva» lo decide UNA fuente:
    `packages/module-seguros/src/cartera-viva.ts` de `@central/module-seguros` (`esCarteraViva()`,
    `WHERE_CARTERA_VIVA`, `sqlCarteraViva()`) = **`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`**.
