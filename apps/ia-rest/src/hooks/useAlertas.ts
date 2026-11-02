@@ -45,18 +45,18 @@ async function registrarPush(camareroId: string, restauranteId: string) {
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     })
-    await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/push-send/subscribe`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          camarero_id: camareroId,
-          restaurante_id: restauranteId,
-          subscription: sub.toJSON(),
-        }),
-      }
-    )
+    // Por ia-rest (sesión firmada): la Edge Function push-send ya no acepta suscripciones del
+    // navegador. El local sale de la sesión; restauranteId queda solo como contexto del hook.
+    void restauranteId
+    const r = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ia-session': localStorage.getItem('ia_rest_session') ?? '',
+      },
+      body: JSON.stringify({ camarero_id: camareroId, subscription: sub.toJSON() }),
+    })
+    if (!r.ok) throw new Error(`subscribe ${r.status}`)
     console.log('[alertas] Push registrado ✓')
   } catch (e) {
     console.warn('[alertas] Push no disponible:', e)

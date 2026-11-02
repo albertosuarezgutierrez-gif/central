@@ -12,7 +12,20 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
-## (02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)
+## (02/11/2026) CIMA fase 4 MERGEADA (#5407): sombra de solo lectura
+- `packages/module-cima/src/sombra/` + `scripts/cima-sombra.mts` + workflow manual `cima-sombra.yml`: repite los crudos del CRM por el pipeline de central con escrituras GRABADAS (nunca ejecutadas), transacción READ ONLY, aborta si `CIMA_ESCRITOR=central`; informe con lista BLANCA de columnas + seudónimos HMAC (revisión adversarial: sin escritura ni TIREA; PII corregida).
+- Para ejecutarla faltan secretos (decide Alberto): `CIMA_SOMBRA_DATABASE_URL` (rol solo lectura) y las claves PII de producción. Recomendado: NO en GitHub; correrla una vez desde una sesión con variables temporales y rotar después.
+- Migración de limpieza aprobada en `migrations/20261102_archivar_respaldos_purgar_eventos.sql` (+rollback): SIN APLICAR (el MCP exige confirmación interactiva; 3 intentos caducados). Aplicar desde el SQL Editor o con Alberto delante.
+- Siguiente: fase 5 (corte con `CIMA_ESCRITOR`) solo tras una sombra limpia.
+
+## (02/11/2026) CIMA fase 3 MERGEADA (#5403) + vista corredor (#5401)
+- `packages/module-cima` ya tiene capa BD (Drizzle, 18 tablas `seguros`) y red inyectadas; 1047 tests; golden de escrituras SQL = CRM. Nada lo importa aún.
+- Cepos: sin `CIMA_ESCRITOR=central` no confirma/envía a TIREA ni escribe; credenciales CIMA BLOQUEADAS siempre en central; falla sin `PII_ENCRYPTION_KEY`/`PII_LOOKUP_KEY`.
+- Fase 4 (sombra): la ruta debe mirar `CIMA_ESCRITOR` ANTES del candado; separar eventos `cima_pull_*` de central con otro `source`.
+- #5401: asegura-portal, una identidad por apertura de vista de corredor (sin DDL).
+- Pendiente OK de Alberto: mover 5 tablas `_backup_*`/`_csv_staging` a schema `archivo` + borrar 21 `seguros.operational_events` >180 d (el MCP pidió confirmación y caducó). `app_user`: sin sesiones ni logs 24 h; propuesta NOLOGIN (reversible).
+
+## (02/11/2026) Auditoría lote 2 PR #5398 MERGEADO
 - Hecho: vista de corredor con `usadoEn` atómico; `/api/acceso/solicitar` valida email; asegura-portal sin `devFallback`; bajas campana/recaptacion GET=botón, POST=ejecuta; ruta `subastas/fase3-debug` retirada; helper `secretoCoincide`/`autorizacionBearerValida` (core-identity, apto edge) en 10 crons plataforma, 5 rrhh, transporte, sivra y middleware (`?secret=` se mantiene, ahora en tiempo constante).
 - Cepos: asegura-aislamiento reescrito (SQL sobre `seguros` con correduria_id o `correduriaUnica()`); nuevo rrhh `empresa_id`. Hook Stop timeout 30; `persist-memoria.sh` no empuja en main. ialimp `fetchSeguro` (SSRF); ia-rest `renderMd` escapa.
 - Pendiente: identidad compartida `IDENTIDAD_CORREDOR_ID` (BD); tabla `subastas_debug_token` y `lib/subastas/portal-sesion.ts` sin uso; sivra `expenses/fijos/generar` y transporte `?key=`; comparaciones en asegura*/ialimp; `nombreEmpleado` sin filtro empresa en rrhh `notificar.ts`. Detalle: `docs/AUDITORIA-2026-11.md` §3.
@@ -21,6 +34,11 @@
 - Port literal del CRM (`packages/module-cima`): parsers/mappers POL/REC/SIN/CEF, matching, cobertura, pipeline `runCimaPull` con deps inyectadas, `pull-puro.ts`; 751 tests, equivalencia golden con el CRM. Aún nada lo importa: la ingesta en producción sigue en el CRM.
 - Siguiente: fase 3 capa BD Drizzle + persist/pull/candado; fase 4 sombra (replay 235 crudos en rama Supabase); fase 5 corte con interruptor `CIMA_ESCRITOR`.
 - Ojo: `field-encryption` sin `PII_ENCRYPTION_KEY` fuera de production guarda EN CLARO (heredado del CRM).
+## (02/11/2026) Pendiente de despliegue: edge functions de ia-rest (PR #5391 abierto, NO mergear antes)
+- Hecho hoy: #5389 (enum portal_bien_tipo + CI Prisma), candado de ingesta CIMA en prod (tabla `seguros.ingesta_candado` creada; CRM `asegura` #894 mergeado), spec CIMA con añadidos (credenciales TIREA NO se tocan).
+- BLOQUEO: la herramienta MCP no fija valores de secretos de Edge Functions. Alberto elige vía PERMANENTE: añadir `SUPABASE_ACCESS_TOKEN` como secreto del entorno cloud → la PRÓXIMA sesión lo hace con `npx supabase secrets set`.
+- Orden obligatorio (si no, los crons alerta-ritmo/infra-monitor/eventos-entorno dan 401): 1) secretos EDGE_CRON_SECRET, TG_SEND_SECRET, IA_TRAINING_DASHBOARD_PIN (+INTERNAL_API_SECRET si falta) en Edge Functions; `edge_cron_secret` en el Vault (=EDGE_CRON_SECRET); TG_SEND_SECRET en Vercel ia-rest. 2) `migrations/20261102_crons_edge_secret.sql`. 3) desplegar las 12 funciones (+ `_shared/auth-interna.ts`). 4) verificar 200 en crons y 401 sin credencial. 5) mergear #5391.
+
 
 ## (02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
 - Auditoría completa mergeada (#5385). CRM `asegura` (app.grupoasegura.com): sin uso humano (Alberto: «Manuel no usa nada»); solo vive la ingesta CIMA.

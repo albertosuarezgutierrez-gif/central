@@ -1,11 +1,23 @@
 {
   "novedades": [
     {
-      "titulo": "02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)",
+      "titulo": "02/11/2026) CIMA fase 4 MERGEADA (#5407): sombra de solo lectura",
+      "fecha": "02/11/2026"
+    },
+    {
+      "titulo": "02/11/2026) CIMA fase 3 MERGEADA (#5403) + vista corredor (#5401)",
+      "fecha": "02/11/2026"
+    },
+    {
+      "titulo": "02/11/2026) Auditoría lote 2 PR #5398 MERGEADO",
       "fecha": "02/11/2026"
     },
     {
       "titulo": "02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)",
+      "fecha": "02/11/2026"
+    },
+    {
+      "titulo": "02/11/2026) Pendiente de despliegue: edge functions de ia-rest (PR #5391 abierto, NO mergear antes)",
       "fecha": "02/11/2026"
     },
     {

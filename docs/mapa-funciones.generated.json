@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T19:44:05Z",
-  "sha": "ce71d6c7d1ef4360f7234b92c9cbbc6fbe8c2f08",
+  "generadoEn": "2026-11-02T19:51:22Z",
+  "sha": "22103f384d5b772aae82271dc2db74207e0c62a4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -85096,12 +85096,20 @@
       ],
       "funciones": [
         {
+          "nombre": "camareroDeSesion",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: ApiSession, pedido: unknown",
+          "retorno": "string | null",
+          "linea": 14
+        },
+        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 20
         },
         {
           "nombre": "DELETE",
@@ -85109,12 +85117,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 21
+          "linea": 44
         }
       ],
       "tablas": [],
       "rutaApi": "/api/push/subscribe",
-      "hash": "478a13cf5dd7"
+      "hash": "3121db71a83c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/qr/avisar/route.ts",
@@ -87496,6 +87504,26 @@
       "tablas": [],
       "rutaApi": "/api/super/tg-notify",
       "hash": "e6ae0d76e179"
+    },
+    {
+      "ruta": "apps/ia-rest/src/app/api/super/tg-send/route.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/super/tg-send",
+      "hash": "7a797e44548c"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/super/training-stats/route.ts",
@@ -92992,7 +93020,7 @@
           "exportada": false,
           "params": "{ session, C, SE, SN, SM }: { session: any; C: any; SE: string; SN: string; SM: string }",
           "retorno": null,
-          "linea": 2297,
+          "linea": 2299,
           "resumen": "─── BlogSuperTab ─────────────────────────────────────────────────────────────"
         }
       ],
@@ -93001,7 +93029,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ff6701c269ed"
+      "hash": "81997c73a24e"
     },
     {
       "ruta": "apps/ia-rest/src/app/tapas-bar/page.tsx",
@@ -96989,7 +97017,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6c5b92d6aee7"
+      "hash": "54d58668ebff"
     },
     {
       "ruta": "apps/ia-rest/src/hooks/useAuth.ts",
@@ -97202,7 +97230,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db211ccea048"
+      "hash": "9918efb1bc77"
     },
     {
       "ruta": "apps/ia-rest/src/hooks/useRealtime.ts",
@@ -100846,6 +100874,129 @@
       "hash": "1c4be50c8b69"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/_shared/auth-interna.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Autorización de Edge Functions desplegadas con verify_jwt=false — fuente ÚNICA (02/11/2026). Con verify_jwt=false el gateway no comprueba nada: la función es una URL abierta. Este módulo da las dos puertas permitidas, ambas FAIL-CLOSED (sin la variable configurada no entra nadie) y con comparación e",
+      "exporta": [
+        "igualesTiempoConstante",
+        "clavesDeServicio",
+        "esLlamadaDeServicio",
+        "secretoValido",
+        "secretoEnValor",
+        "exigirServicio",
+        "exigirServicioOSecreto"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerDeno",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 26
+        },
+        {
+          "nombre": "igualesTiempoConstante",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string, b: string",
+          "retorno": "boolean",
+          "linea": 33,
+          "resumen": "Comparación en tiempo constante (recorre siempre la longitud mayor)."
+        },
+        {
+          "nombre": "clavesDeServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: LeerEnv = leerDeno",
+          "retorno": "string[]",
+          "linea": 43,
+          "resumen": "Claves de servicio válidas ahora mismo: todas las de SUPABASE_SECRET_KEYS + la legacy."
+        },
+        {
+          "nombre": "credencialesPresentadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "h: Headers",
+          "retorno": "string[]",
+          "linea": 63,
+          "resumen": "Credenciales que trae la petición: `apikey` y el token de `Authorization: Bearer`."
+        },
+        {
+          "nombre": "coincideAlguna",
+          "kind": "function",
+          "exportada": false,
+          "params": "presentadas: string[], validas: string[]",
+          "retorno": "boolean",
+          "linea": 73
+        },
+        {
+          "nombre": "esLlamadaDeServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Headers, env: LeerEnv = leerDeno",
+          "retorno": "boolean",
+          "linea": 81,
+          "resumen": "true si la petición trae la clave de servicio. Sin claves configuradas → false."
+        },
+        {
+          "nombre": "secretoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Headers, nombreEnv: string, cabecera = \"x-internal-secret\", env: LeerEnv = leerDeno",
+          "retorno": "boolean",
+          "linea": 88,
+          "resumen": "true si `cabecera` coincide con la variable `nombreEnv`. Variable ausente/vacía → false."
+        },
+        {
+          "nombre": "secretoEnValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string | null | undefined, nombreEnv: string, env: LeerEnv = leerDeno",
+          "retorno": "boolean",
+          "linea": 97,
+          "resumen": "true si `valor` (p. ej. un parámetro de query de una página que abre el navegador) coincide con la variable `nombreEnv`. Variable ausente/vacía → false (fail-closed)."
+        },
+        {
+          "nombre": "denegar",
+          "kind": "function",
+          "exportada": false,
+          "params": "extra: Record<string, string> = {}",
+          "retorno": "Response",
+          "linea": 106
+        },
+        {
+          "nombre": "exigirServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, cabecerasExtra: Record<string, string> = {}, env: LeerEnv = leerDeno",
+          "retorno": "Response | null",
+          "linea": 111,
+          "resumen": "Solo clave de servicio. `null` = autorizado; si no, la Response a devolver."
+        },
+        {
+          "nombre": "exigirServicioOSecreto",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, nombreEnv: string, cabecera = \"x-internal-secret\", cabecerasExtra: Record<string, string> = {}, env: LeerEnv = leerDeno,",
+          "retorno": "Response | null",
+          "linea": 116,
+          "resumen": "Clave de servicio O secreto propio `nombreEnv` en `cabecera`. `null` = autorizado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "afc9800a8078"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/_shared/clave-supabase.ts",
       "ambito": "apps/ia-rest",
       "resumen": "Claves de Supabase para Edge Functions — fuente ÚNICA del monorepo. Contexto: la `service_role` legacy (JWT) del proyecto compartido estuvo pública ~3 meses (06/05→12/08/2026) y hay que poder desactivarla. El botón «Disable JWT-based API keys» mata a la vez la `service_role` y la `anon` legacy, así ",
@@ -100954,7 +101105,7 @@
           "exportada": false,
           "params": "triggerTipos: string[], mesaCodigo: string | null, contexto: Record<string, unknown>",
           "retorno": "string",
-          "linea": 12
+          "linea": 15
         },
         {
           "nombre": "generarTituloPush",
@@ -100962,7 +101113,7 @@
           "exportada": false,
           "params": "triggerTipos: string[], mesaCodigo: string | null",
           "retorno": "string",
-          "linea": 73
+          "linea": 76
         },
         {
           "nombre": "minDesde",
@@ -100970,7 +101121,7 @@
           "exportada": false,
           "params": "ts: string | null",
           "retorno": "number",
-          "linea": 89
+          "linea": 92
         },
         {
           "nombre": "enHorario",
@@ -100978,7 +101129,7 @@
           "exportada": false,
           "params": "desde: string | null, hasta: string | null",
           "retorno": "boolean",
-          "linea": 94
+          "linea": 97
         },
         {
           "nombre": "getComandaIds",
@@ -100986,7 +101137,7 @@
           "exportada": false,
           "params": "mesaId: string",
           "retorno": "Promise<string[]>",
-          "linea": 104
+          "linea": 107
         },
         {
           "nombre": "yaAlertado",
@@ -100994,7 +101145,7 @@
           "exportada": false,
           "params": "reglaId: string, mesaId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 109
+          "linea": 112
         },
         {
           "nombre": "getDestinatarios",
@@ -101002,7 +101153,7 @@
           "exportada": false,
           "params": "regla: Record<string,unknown>, mesa: Record<string,unknown> | null",
           "retorno": "Promise<string[]>",
-          "linea": 117
+          "linea": 120
         },
         {
           "nombre": "evalCondMesa",
@@ -101010,7 +101161,7 @@
           "exportada": false,
           "params": "cond: Cond, mesa: Mesa",
           "retorno": "Promise<CondResult>",
-          "linea": 137
+          "linea": 140
         },
         {
           "nombre": "evalCondGlobal",
@@ -101018,7 +101169,7 @@
           "exportada": false,
           "params": "cond: Cond, rid: string",
           "retorno": "Promise<CondResult>",
-          "linea": 199
+          "linea": 202
         },
         {
           "nombre": "evaluarRegla",
@@ -101026,7 +101177,7 @@
           "exportada": false,
           "params": "regla: Regla, mesas: Mesa[]",
           "retorno": "Promise<Match[]>",
-          "linea": 227
+          "linea": 230
         },
         {
           "nombre": "enviarPush",
@@ -101034,14 +101185,14 @@
           "exportada": false,
           "params": "camarero_ids: string[], title: string, body: string, mensaje_voz: string",
           "retorno": null,
-          "linea": 254
+          "linea": 257
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "3b825d9c9cdc"
+      "hash": "cb7f7a851813"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/analizar-cv/index.ts",
@@ -101297,7 +101448,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 9
+          "linea": 13
         },
         {
           "nombre": "json",
@@ -101305,14 +101456,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 161
+          "linea": 168
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "d3b21dee475f"
+      "hash": "20079f0c2190"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/cobro-stripe/index.ts",
@@ -101325,7 +101476,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 9
+          "linea": 13
         },
         {
           "nombre": "stripe",
@@ -101333,7 +101484,7 @@
           "exportada": false,
           "params": "method: string, path: string, params: URLSearchParams, secretKey: string, idempotencyKey?: string",
           "retorno": "Promise<Response>",
-          "linea": 185
+          "linea": 192
         },
         {
           "nombre": "json",
@@ -101341,14 +101492,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 197
+          "linea": 204
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "8ef0d95a4292"
+      "hash": "6173de06587e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/contact-lead/index.ts",
@@ -101511,7 +101662,7 @@
           "exportada": false,
           "params": "f: any",
           "retorno": "string",
-          "linea": 155,
+          "linea": 162,
           "resumen": "── Generar XML LROE (SOAP) para AEAT ─────────────────────────────────── Especificación: Orden HAC/1177/2024 + RD 1007/2023"
         },
         {
@@ -101520,7 +101671,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 221,
+          "linea": 228,
           "resumen": "Escapar caracteres especiales XML"
         },
         {
@@ -101529,14 +101680,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 231
+          "linea": 238
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "d4087d5adc92"
+      "hash": "6520f31b14b3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -101549,7 +101700,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 13
+          "linea": 16
         },
         {
           "nombre": "enviarTelegram",
@@ -101557,14 +101708,14 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 21
+          "linea": 24
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "c2542a64f084"
+      "hash": "17ab0b466492"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ia-training-dashboard/index.ts",
@@ -101577,7 +101728,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 40
+          "linea": 43
         },
         {
           "nombre": "dashboardPage",
@@ -101585,14 +101736,14 @@
           "exportada": false,
           "params": "pin:string",
           "retorno": "string",
-          "linea": 44
+          "linea": 47
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "ae9a739989cb"
+      "hash": "9342e169f151"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -101651,7 +101802,7 @@
           "exportada": false,
           "params": "ts: string | null",
           "retorno": "number",
-          "linea": 22
+          "linea": 25
         },
         {
           "nombre": "yaAlertado",
@@ -101659,7 +101810,7 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string",
           "retorno": "Promise<boolean>",
-          "linea": 27
+          "linea": 30
         },
         {
           "nombre": "getOwnerIds",
@@ -101667,7 +101818,7 @@
           "exportada": false,
           "params": "restauranteId: string",
           "retorno": "Promise<string[]>",
-          "linea": 39
+          "linea": 42
         },
         {
           "nombre": "enviarPush",
@@ -101675,7 +101826,7 @@
           "exportada": false,
           "params": "camareroIds: string[], title: string, body: string",
           "retorno": null,
-          "linea": 49
+          "linea": 52
         },
         {
           "nombre": "registrarAlerta",
@@ -101683,14 +101834,14 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string, mensaje: string",
           "retorno": null,
-          "linea": 63
+          "linea": 66
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "0c0df322876b"
+      "hash": "21625699030e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/kds-token-validate/index.ts",
@@ -101835,7 +101986,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "2ea8f2a49408"
+      "hash": "e72c9db8dbc8"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/owner-panel/index.ts",
@@ -102013,7 +102164,7 @@
           "exportada": false,
           "params": "d: unknown, s = 200",
           "retorno": null,
-          "linea": 15
+          "linea": 20
         },
         {
           "nombre": "generarVapidKeys",
@@ -102021,7 +102172,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 18,
+          "linea": 23,
           "resumen": "── Generación de claves VAPID (ECDSA P-256) ──────────────────────────────"
         },
         {
@@ -102030,7 +102181,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 32
+          "linea": 37
         },
         {
           "nombre": "vapidJWT",
@@ -102038,7 +102189,7 @@
           "exportada": false,
           "params": "audience: string, privateKeyB64: string",
           "retorno": "Promise<string>",
-          "linea": 42,
+          "linea": 47,
           "resumen": "── JWT VAPID ────────────────────────────────────────────────────"
         },
         {
@@ -102047,7 +102198,7 @@
           "exportada": false,
           "params": "sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: { title: string; body: string; mensaje_voz?: string }, vapidKeys: { publicKey: string; privateKey: string }",
           "retorno": null,
-          "linea": 69,
+          "linea": 74,
           "resumen": "── Enviar una notificación push ──────────────────────────────────────"
         }
       ],
@@ -102055,7 +102206,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "7bb57c177113"
+      "hash": "fb8bbbbfc6b3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-assistant/index.ts",
@@ -102260,14 +102411,14 @@
           "exportada": false,
           "params": "slug: string, body: unknown",
           "retorno": "Promise<",
-          "linea": 11
+          "linea": 15
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "c419d2c137ec"
+      "hash": "16b8a367df63"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
@@ -141615,7 +141766,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string | null>",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Lo que dejó la pasada anterior, para no repetir el mismo aviso dos veces al día."
         },
         {
@@ -141624,7 +141775,7 @@
           "exportada": false,
           "params": "dias: Record<string, number | null> | null | undefined,",
           "retorno": "Promise<string>",
-          "linea": 60,
+          "linea": 61,
           "resumen": "Alerta de CORTE DE SINIESTROS (SIN sin novedades > 7 días mientras POL/REC sí llegan). Va aquí porque este cron corre 3 veces al día y ya lee la ingesta. Como mucho UN aviso por día de Madrid: la marc"
         },
         {
@@ -141633,7 +141784,7 @@
           "exportada": false,
           "params": "entidades: EntradaCortePorCompania[] | null,",
           "retorno": "Promise<string>",
-          "linea": 92,
+          "linea": 93,
           "resumen": "Alerta de corte de SINIESTROS POR COMPAÑÍA (22/09/2026: Generali dejó de mandar SIN y el global, que mira el agregado, no lo vio). Una compañía con pólizas en vigor que alguna vez mandó SIN y lleva má"
         },
         {
@@ -141642,7 +141793,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 116
+          "linea": 117
         }
       ],
       "tablas": [
@@ -141650,7 +141801,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/cima-pull-respaldo",
-      "hash": "40dfd33a92db"
+      "hash": "022d77df38cb"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cima-sincro/route.ts",
@@ -249411,6 +249562,7 @@
         "saludIngesta",
         "detalleSalud",
         "decidirRespaldoPull",
+        "clasificarRespuestaPull",
         "firmaAvisoIngesta",
         "cambioDuplicadasEnFirma",
         "cambioAnulacionesEnFirma",
@@ -249528,12 +249680,21 @@
           "resumen": "¿Dispara el respaldo el pull de CIMA? Existe por la avería del 22/09/2026: el presupuesto de GitHub Actions de la cuenta se agotó (lo consume casi todo `central`), los jobs de `asegura` se quedaron si"
         },
         {
+          "nombre": "clasificarRespuestaPull",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, cuerpo: Record<string, unknown> | null | undefined,",
+          "retorno": "ResultadoRespuestaPull",
+          "linea": 1158,
+          "resumen": "Qué significa la respuesta del endpoint de pull del CRM para el respaldo. `ocupado` (02/11/2026): el CRM tiene un candado único entre escritores de la ingesta (asegura mig 0109, `ingesta-candado.ts`)."
+        },
+        {
           "nombre": "firmaAvisoIngesta",
           "kind": "function",
           "exportada": true,
           "params": "salud: SaludIngesta",
           "retorno": "string",
-          "linea": 1157,
+          "linea": 1180,
           "resumen": "Firma de lo que el vigía ha visto hoy, para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta (el Telegram suena cuando algo CAMBIA; ver `decidirAvisoIngesta`). Vivía dentro de la"
         },
         {
@@ -249542,7 +249703,7 @@
           "exportada": true,
           "params": "previa: string | null, actual: string",
           "retorno": "boolean",
-          "linea": 1223,
+          "linea": 1246,
           "resumen": "¿Ha cambiado el tramo de pólizas duplicadas entre dos firmas (ya normalizadas)? Lo usa el cron para mandar el aviso INFORMATIVO cuando el resto está en `ok` (en `degradada`/`parcial` ya suena por el a"
         },
         {
@@ -249551,7 +249712,7 @@
           "exportada": true,
           "params": "previa: string | null, actual: string",
           "retorno": "boolean",
-          "linea": 1235,
+          "linea": 1258,
           "resumen": "¿Hay una señal de anulación NUEVA entre dos firmas ya normalizadas? Solo cuenta lo que aparece: las señales son ventanas deslizantes (48/72 h) y su caducidad no es un cambio. Una firma previa `null` s"
         },
         {
@@ -249560,7 +249721,7 @@
           "exportada": true,
           "params": "previa: string | null, actual: string",
           "retorno": "string | null",
-          "linea": 1247,
+          "linea": 1270,
           "resumen": "La firma previa con el tramo de anulaciones puesto al de hoy. Se usa para DECIDIR el aviso: un cambio solo en las señales de anulación (nuevas o caducadas) no es una avería nueva, no debe sonar como `"
         },
         {
@@ -249569,7 +249730,7 @@
           "exportada": true,
           "params": "firma: string | null",
           "retorno": "string | null",
-          "linea": 1274,
+          "linea": 1297,
           "resumen": "Lee una firma GUARDADA en el formato de hoy. Las anteriores al 23/09/2026 no traían el tramo del cron (cinco tramos en vez de seis): se leen como «el cron corría», que es lo que decía el vigía cuando "
         },
         {
@@ -249578,7 +249739,7 @@
           "exportada": true,
           "params": "e: { firmaAnterior: string | null firmaActual: string ultimoAvisoEn: Date | null /** Desde cuándo consta abierta esta misma avería. `null` = no se sabe. */ abiertaDesde?: Date | null hoy: Date diasRecordatorio?: number }",
           "retorno": "DecisionAviso",
-          "linea": 1302,
+          "linea": 1325,
           "resumen": "¿Hay que sonar hoy? - `primera` — no consta que se haya avisado nunca. Suena siempre: perder un aviso es peor que duplicarlo. - `cambio` — el estado ha cambiado (entró otro fichero, apareció otra huér"
         },
         {
@@ -249587,7 +249748,7 @@
           "exportada": false,
           "params": "g: { entidad: string; entidadNombre: string | null; clave: string | null },",
           "retorno": "string",
-          "linea": 1437,
+          "linea": 1460,
           "resumen": "Etiqueta de a quién se le pide: compañía + CLAVE DE MEDIADOR, nunca solo la compañía. Occident manda por tres claves y el atasco no está repartido igual: decir «Occident» manda a revisar una cartera q"
         },
         {
@@ -249596,7 +249757,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 1444
+          "linea": 1467
         },
         {
           "nombre": "agrupar",
@@ -249604,7 +249765,7 @@
           "exportada": false,
           "params": "filas: PolizaHuerfana[]",
           "retorno": "GrupoHuerfanas[]",
-          "linea": 1452
+          "linea": 1475
         },
         {
           "nombre": "repartirHuerfanas",
@@ -249612,7 +249773,7 @@
           "exportada": true,
           "params": "filas: PolizaHuerfana[] | null",
           "retorno": "RepartoHuerfanas | null",
-          "linea": 1510,
+          "linea": 1533,
           "resumen": "Reparte las huérfanas por lo que hay que HACER con cada una. 🚨 `null` entra, `null` sale: no haber podido listarlas no es «no hay ninguna». Un `[]` aquí significa «se miró y no hay», y la diferencia "
         },
         {
@@ -249621,7 +249782,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string",
-          "linea": 1527,
+          "linea": 1550,
           "resumen": "Los números vienen de un XML de la compañía: se escapan antes de ir a HTML."
         },
         {
@@ -249630,13 +249791,13 @@
           "exportada": true,
           "params": "r: RepartoHuerfanas | null, opciones: { tope?: number; donde?: string } = {},",
           "retorno": "string",
-          "linea": 1539,
+          "linea": 1562,
           "resumen": "El bloque del Telegram, en HTML. Cadena vacía cuando no hay nada que decir. Dice QUÉ HACER, no cuántas hay: «pídele a Occident el volcado de estas 12 pólizas de la clave M00171» y la lista detrás, par"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1350bdf3598e"
+      "hash": "fe28f36b1855"
     },
     {
       "ruta": "packages/module-seguros/src/intervinientes.ts",
@@ -268862,7 +269023,7 @@
     }
   ],
   "resumen": {
-    "archivos": 5541,
-    "funciones": 21711
+    "archivos": 5543,
+    "funciones": 21726
   }
 }

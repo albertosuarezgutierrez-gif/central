@@ -3,6 +3,9 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { cabecerasServicio, claveSecreta } from "../_shared/clave-supabase.ts";
+import { exigirServicioOSecreto } from '../_shared/auth-interna.ts'
+// 02/11/2026: verify_jwt=false → exige clave de servicio o `EDGE_CRON_SECRET` en `x-cron-secret`
+// (pg_cron lo lee del Vault: vault.decrypted_secrets name='edge_cron_secret'). Fail-closed.
 
 const sb = createClient(Deno.env.get('SUPABASE_URL')!, claveSecreta(), { db: { schema: 'iarest' } })
 const PUSH_URL = Deno.env.get('SUPABASE_URL')!.replace(/\/$/, '') + '/functions/v1/push-send'
@@ -266,7 +269,10 @@ async function enviarPush(camarero_ids: string[], title: string, body: string, m
   }
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
+  const denegado = exigirServicioOSecreto(req, 'EDGE_CRON_SECRET', 'x-cron-secret')
+  if (denegado) return denegado
+
   try {
     const { data: raw, error } = await sb.from('alerta_reglas')
       .select('id,local_id,nombre,logica,horario_desde,horario_hasta,destinatario_tipo,camarero_id,canal_vox,canal_push,canal_hub,alerta_condiciones(tipo,umbral_min,umbral_valor,orden)')

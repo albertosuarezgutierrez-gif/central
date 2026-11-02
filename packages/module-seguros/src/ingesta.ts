@@ -1141,6 +1141,29 @@ export function decidirRespaldoPull(
   return { disparar: false, motivo: 'al_dia', horas: ultimoPull.horas }
 }
 
+export type ResultadoRespuestaPull = 'ok' | 'ocupado' | 'fallo'
+
+/**
+ * Qué significa la respuesta del endpoint de pull del CRM para el respaldo.
+ *
+ * `ocupado` (02/11/2026): el CRM tiene un candado único entre escritores de la
+ * ingesta (asegura mig 0109, `ingesta-candado.ts`). Si otro escritor —el cron de
+ * Actions, u otra franja— está ingiriendo, responde **409 `{error:'ocupado'}` sin
+ * tocar TIREA**. Eso es «ya está corriendo», no un fallo: el respaldo no reintenta
+ * ni avisa en rojo. Solo cuenta con el 409 Y el cuerpo exacto; cualquier otro 409
+ * (o un «ocupado» con otro código) sigue siendo fallo.
+ *
+ * El handler puede devolver 200 con `{ok:false}`: se mira el cuerpo, no solo el código.
+ */
+export function clasificarRespuestaPull(
+  status: number,
+  cuerpo: Record<string, unknown> | null | undefined,
+): ResultadoRespuestaPull {
+  if (status === 409 && cuerpo?.error === 'ocupado') return 'ocupado'
+  if (status >= 200 && status < 300 && cuerpo?.ok === true) return 'ok'
+  return 'fallo'
+}
+
 /**
  * Firma de lo que el vigía ha visto hoy, para no repetir el MISMO aviso cada
  * mañana mientras la avería sigue abierta (el Telegram suena cuando algo

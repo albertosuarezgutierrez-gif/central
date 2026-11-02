@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T19:44:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-11-02T19:51:22Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1875 rutas API.
+**Resumen:** 13 apps · 45 packages · 23 capacidades · 44 skills · 1876 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -41,7 +41,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-consent, core-direccion, core-fiscal, core-payments, core-push, core-receipts, module-asn, module-contabilidad, module-crm, module-feedback, module-flota, module-horario, module-materiales, module-organizador-trabajo, module-presupuestos, module-proveedores, module-trazabilidad
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (83):** arqueos_caja_empleado, avisos_operador, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_horario, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, iarest.recibos_digitales, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos…
-- **Rutas API:** 495
+- **Rutas API:** 496
 ### ialimp
 - **Módulos que usa:** core-ai, core-catastro, core-direccion, core-email, core-firma, core-fiscal, core-identity, core-payments, core-push, core-receipts, core-storage, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA
@@ -281,14 +281,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (02/11/2026) 02/11/2026) Auditoría lote 2 (rama `claude/auditoria-lote2`, PR por abrir)
+- (02/11/2026) 02/11/2026) CIMA fase 4 MERGEADA (#5407): sombra de solo lectura
+- (02/11/2026) 02/11/2026) CIMA fase 3 MERGEADA (#5403) + vista corredor (#5401)
+- (02/11/2026) 02/11/2026) Auditoría lote 2 PR #5398 MERGEADO
 - (02/11/2026) 02/11/2026) PR #5396 MERGEADO · `@central/module-cima` fase 2 (lógica pura)
+- (02/11/2026) 02/11/2026) Pendiente de despliegue: edge functions de ia-rest (PR #5391 abierto, NO mergear antes)
 - (02/11/2026) 02/11/2026) #5385 MERGEADO · arranca la unificación de la ingesta CIMA en central
 - (02/11/2026) 02/11/2026) Auditoría completa (12 agentes) + arreglos — docs/AUDITORIA-2026-11.md
 - (02/11/2026) 02/11/2026) Ingresos 2026 pisos: neto real fijado · PENDIENTE cuadre Smoobu
 - (02/11/2026) 02/11/2026) Control 2026 pisos: expenses retirada · métrica «Gastos mes» sivra
 - (01/11/2026) 01/11/2026) Factura Sique Brilla octubre · cuadre por correo: lavandería redondeada
-- (01/11/2026) 01/11/2026) Tarificador RPA · vehículo de referencia y presupuestos (#5321, #5326, #5332, #5337)
-- (01/11/2026) 01/11/2026) Agente huésped: «ready before 15?» → compuerta de horarios · PR #5334 MERGEADO (`7d7c971`)
-- (01/11/2026) 01/11/2026) Blog asegura-web · PR #5328 MERGEADO (mora art. 20 LCS)
 

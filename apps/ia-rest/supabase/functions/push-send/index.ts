@@ -4,6 +4,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { claveSecreta } from "../_shared/clave-supabase.ts";
+import { exigirServicio } from "../_shared/auth-interna.ts";
+// 02/11/2026: verify_jwt=false y sin auth → cualquiera enviaba push a cualquier camarero_id o
+// registraba/pisaba su suscripción. Ahora `GET /vapid-public-key` sigue público (es una clave
+// PÚBLICA) y todo lo demás exige la clave de servicio. El navegador registra su suscripción por
+// ia-rest `/api/push/subscribe` (sesión firmada), nunca directo aquí.
 
 const sb = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -104,16 +109,22 @@ Deno.serve(async (req) => {
     return json({ publicKey: keys.publicKey })
   }
 
+  // Lo de abajo (suscribir / enviar) solo servidor→servidor.
+  const denegado = exigirServicio(req, JH)
+  if (denegado) return denegado
+
   // ── POST /subscribe — guardar suscripción push de un camarero ────────────────
   if (seg === 'subscribe' && req.method === 'POST') {
     const { camarero_id, restaurante_id, subscription } = await req.json()
-    if (!camarero_id || !subscription) return json({ error: 'Faltan datos' }, 400)
-    await sb.from('push_subscriptions').upsert({
+    if (!camarero_id || !restaurante_id || !subscription) return json({ error: 'Faltan datos' }, 400)
+    // La columna es `local_id` (no existe `restaurante_id`: el upsert fallaba en silencio).
+    const { error } = await sb.from('push_subscriptions').upsert({
       camarero_id,
-      restaurante_id,
+      local_id: restaurante_id,
       subscription: typeof subscription === 'string' ? subscription : JSON.stringify(subscription),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'camarero_id' })
+    if (error) return json({ ok: false, error: error.message }, 500)
     return json({ ok: true })
   }
 

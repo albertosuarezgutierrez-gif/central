@@ -7,13 +7,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // `origen_clave` en la respuesta dice CUÁL de las dos se usó: sin ese dato un 200 no
 // demuestra que la clave nueva funcione (podría estar cayendo a la legacy).
 import { claveSecreta, origenClaveSecreta } from "../_shared/clave-supabase.ts";
-
-const SUPER_PIN = "9999";
+// 02/11/2026: el PIN era un LITERAL de 4 cifras escrito aquí (repo público) y la página devuelve
+// transcripciones de voz reales (ia_training_log.input_raw). Ahora la clave sale de la variable
+// `IA_TRAINING_DASHBOARD_PIN` (Edge Functions), fail-closed y en tiempo constante. Usa una cadena
+// larga y aleatoria: viaja en la query (?pin=) y no hay límite de intentos.
+import { secretoEnValor } from "../_shared/auth-interna.ts";
 
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const pin = url.searchParams.get("pin");
-  if (!pin || pin !== SUPER_PIN) return new Response(authPage(), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  if (!secretoEnValor(pin, "IA_TRAINING_DASHBOARD_PIN")) return new Response(authPage(), { headers: { "Content-Type": "text/html; charset=utf-8" } });
   if (url.searchParams.get("api") === "1") {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, claveSecreta(), { db: { schema: 'iarest' } });
     const [a, b, c, d, e] = await Promise.all([
@@ -38,7 +41,7 @@ Deno.serve(async (req: Request) => {
 });
 
 function authPage():string{
-  return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>ia.rest IA Training</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#14110E;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui}.card{background:#1F1A15;border:1px solid #3A332C;border-radius:16px;padding:48px 40px;text-align:center;width:320px}.logo{font-style:italic;font-size:28px;color:#F6F1E7;margin-bottom:8px}.sub{color:#6B5F52;font-size:12px;margin-bottom:32px;text-transform:uppercase;letter-spacing:.05em}input{width:100%;background:#14110E;border:1px solid #3A332C;border-radius:10px;padding:14px;color:#F6F1E7;font-size:24px;text-align:center;letter-spacing:12px;outline:none;margin-bottom:16px}input:focus{border-color:#D9442B}button{width:100%;background:#D9442B;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:600;cursor:pointer}button:hover{background:#A8311E}</style></head><body><div class="card"><div class="logo">ia.rest</div><div class="sub">IA Training &middot; Super Admin</div><form onsubmit="go(event)"><input type="password" id="p" maxlength="4" placeholder="&middot;&middot;&middot;&middot;" autofocus><button>Acceder</button></form></div><script>function go(e){e.preventDefault();var v=document.getElementById("p").value;if(v)window.location.search="?pin="+v;}<\/script></body></html>';
+  return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>ia.rest IA Training</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#14110E;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui}.card{background:#1F1A15;border:1px solid #3A332C;border-radius:16px;padding:48px 40px;text-align:center;width:320px}.logo{font-style:italic;font-size:28px;color:#F6F1E7;margin-bottom:8px}.sub{color:#6B5F52;font-size:12px;margin-bottom:32px;text-transform:uppercase;letter-spacing:.05em}input{width:100%;background:#14110E;border:1px solid #3A332C;border-radius:10px;padding:14px;color:#F6F1E7;font-size:24px;text-align:center;letter-spacing:12px;outline:none;margin-bottom:16px}input:focus{border-color:#D9442B}button{width:100%;background:#D9442B;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:600;cursor:pointer}button:hover{background:#A8311E}</style></head><body><div class="card"><div class="logo">ia.rest</div><div class="sub">IA Training &middot; Super Admin</div><form onsubmit="go(event)"><input type="password" id="p" placeholder="&middot;&middot;&middot;&middot;" autofocus><button>Acceder</button></form></div><script>function go(e){e.preventDefault();var v=document.getElementById("p").value;if(v)window.location.search="?pin="+v;}<\/script></body></html>';
 }
 
 function dashboardPage(pin:string):string{

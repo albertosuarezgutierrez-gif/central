@@ -11,9 +11,10 @@
 // completado (`decidirRespaldoPull`, con su cepo). Además, dos franjas FIJAS
 // (`?franja=16h` y `?franja=2030`, hora de Madrid) que disparan siempre: ver GET.
 //
-// ⚠️ Riesgo residual declarado: si un run de Actions arranca más de 2,5 h tarde
-// y sigue en marcha a la hora del respaldo, los dos pulls coincidirían. El
-// respaldo solo ve pulls COMPLETADOS, no los que están en curso.
+// Dos pulls a la vez (un run de Actions que arranca tarde y sigue en marcha a la
+// hora del respaldo) los para el CANDADO ÚNICO del CRM (02/11/2026, mig 0109):
+// el segundo recibe 409 `{error:'ocupado'}` sin tocar TIREA, y aquí cuenta como
+// OK (`clasificarRespuestaPull`), sin reintento ni aviso.
 //
 // Se enciende al configurar `ASEGURA_CRM_CRON_SECRET` en el proyecto Vercel de
 // plataforma (el mismo valor que `CRON_SECRET` del proyecto Vercel `asegura`).
@@ -27,7 +28,7 @@ import { tgAviso } from '@/lib/telegram'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { leerIngestaCima } from '@/lib/correduria/ingesta-cima'
-import { decidirRespaldoPull, corteSiniestros, textoCorteSiniestros, corteSiniestrosPorCompania, textoCorteSiniestrosPorCompania, type EntradaCortePorCompania } from '@central/module-seguros'
+import { decidirRespaldoPull, clasificarRespuestaPull, corteSiniestros, textoCorteSiniestros, corteSiniestrosPorCompania, textoCorteSiniestrosPorCompania, type EntradaCortePorCompania } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 // El pull espera al adaptador Java (~200 s). El dispatch corta a los 280 s.
@@ -154,7 +155,7 @@ export async function GET(req: NextRequest) {
   }
 
   const url = process.env.ASEGURA_CRM_CIMA_PULL_URL || URL_POR_DEFECTO
-  let resultado: 'ok' | 'fallo' | 'sin_confirmar'
+  let resultado: 'ok' | 'ocupado' | 'fallo' | 'sin_confirmar'
   let resumen: string
   try {
     const res = await fetch(url, {
@@ -164,10 +165,14 @@ export async function GET(req: NextRequest) {
     })
     const cuerpo = (await res.json().catch(() => null)) as Record<string, unknown> | null
     // El handler puede devolver 200 con `{ok:false}`: se mira el cuerpo, no solo el código.
-    resultado = res.ok && cuerpo?.ok === true ? 'ok' : 'fallo'
+    // 409 `{error:'ocupado'}` (02/11/2026, candado único del CRM): otro escritor ya está
+    // ingiriendo y el CRM NO ha tocado TIREA. Es «ya está corriendo»: OK, sin reintento.
+    resultado = clasificarRespuestaPull(res.status, cuerpo)
     resumen = resultado === 'ok'
       ? `procesados ${String(cuerpo?.processed ?? '?')}`
-      : `HTTP ${res.status} · ${String(cuerpo?.error ?? cuerpo?.reason ?? 'cuerpo no válido')}`
+      : resultado === 'ocupado'
+        ? 'ya había una ingesta en marcha (candado ocupado): no se lanza otra'
+        : `HTTP ${res.status} · ${String(cuerpo?.error ?? cuerpo?.reason ?? 'cuerpo no válido')}`
   } catch (e) {
     // Cortar la espera NO para el pull en el CRM: puede terminar igualmente. No se
     // afirma que falló — lo confirmará (o no) el vigía de la ingesta.
@@ -179,7 +184,14 @@ export async function GET(req: NextRequest) {
   }
 
   const detalle = `disparado (${resultado}): el último pull tenía ${decision.horas} h · ${resumen}`
-  await registrarLatido(AGENTE, resultado === 'ok', detalle)
+  // `ocupado` cuenta como sano: hay un pull corriendo; si no completa, lo dirá el vigía.
+  const sano = resultado === 'ok' || resultado === 'ocupado'
+  await registrarLatido(AGENTE, sano, detalle)
+
+  if (resultado === 'ocupado') {
+    // Sin Telegram: no es un fallo, y tampoco es «el respaldo ha tenido que actuar».
+    return NextResponse.json({ ok: true, disparado: true, ...(franja ? { franja } : {}), resultado, horas: decision.horas, resumen })
+  }
 
   if (franja) {
     if (resultado !== 'ok') {

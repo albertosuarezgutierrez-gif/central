@@ -9,6 +9,9 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { cabecerasServicio, claveSecreta } from "../_shared/clave-supabase.ts";
+import { exigirServicioOSecreto } from '../_shared/auth-interna.ts'
+// 02/11/2026: verify_jwt=false → exige clave de servicio o `EDGE_CRON_SECRET` en `x-cron-secret`
+// (pg_cron lo lee del Vault: vault.decrypted_secrets name='edge_cron_secret'). Fail-closed.
 
 const sb = createClient(Deno.env.get('SUPABASE_URL')!, claveSecreta(), { db: { schema: 'iarest' } })
 const PUSH_URL = Deno.env.get('SUPABASE_URL')!.replace(/\/$/, '') + '/functions/v1/push-send'
@@ -72,7 +75,10 @@ async function registrarAlerta(restauranteId: string, tipo: string, mensaje: str
   if (error) console.error('[infra-log]', error)
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
+  const denegado = exigirServicioOSecreto(req, 'EDGE_CRON_SECRET', 'x-cron-secret')
+  if (denegado) return denegado
+
   const alertasDisparadas: string[] = []
 
   try {

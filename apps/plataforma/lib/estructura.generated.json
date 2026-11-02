@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-11-02T19:44:05Z",
+  "generadoEn": "2026-11-02T19:51:22Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5075,6 +5075,7 @@
       "/api/super/stripe-operador/checkout",
       "/api/super/sugerencias",
       "/api/super/tg-notify",
+      "/api/super/tg-send",
       "/api/super/training",
       "/api/super/training-stats",
       "/api/telegram/briefing-callback",
@@ -7267,7 +7268,7 @@
     "packages": 45,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1875,
+    "apis": 1876,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
