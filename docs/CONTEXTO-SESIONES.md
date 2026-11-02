@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 
+## (02/11/2026) Ingresos 2026 pisos: neto real fijado · PENDIENTE cuadre Smoobu
+- `incomes.amount_net_bank` (PR #5370, aplicado): si no es NULL el trigger NO recalcula comisión. Fijado en 151 Booking (Σ 82.413,08€, casando abonos banco con salidas: Duplex→BBVA …1175, resto→Kutxa …0855) + 2 Airbnb (990,37 / 524,60). Para corregir una fila: escribir `amount_net_bank`, no `amount`.
+- Gastos: +30 gastos de cargos sin gasto (2.963,33€, `revisado=false`), PriceLabs a USD, 2 comisiones Booking descartadas. `expenses` obsoleta (todo está en `gastos`).
+- PENDIENTE (siguiente sesión, requiere secreto `SMOOBU_API_KEY` en el entorno): cuadrar API Smoobu vs `incomes` 2026 (altas/bajas, canceladas, precio bruto vs `amount_gross`, fechas/piso) por mes y piso. Solo lectura.
+- PENDIENTE Alberto: Expedia 3.398,50€ sin cobro (may–oct); CSV pagos Booking (15 reservas factor anómalo, 12 sin cobro, 36 abonos huérfanos); extractos tarjeta Kutxa …0300 (ago–oct, PSD2), N26 y BBVA …2620 (jul–oct), Pilar (cuenta jul–oct, tarjeta …0302 oct, Cajasur); Sique: 3 salidas oct sin facturar.
+
 ## (02/11/2026) Control 2026 pisos: expenses retirada · métrica «Gastos mes» sivra
 - PR #5354 mergeado (lavandería redondeada). BD: 2025/421 → pagada (27/10); 2025/444 insertada en `limpieza_facturas`.
 - `expenses` (34 filas, congelada 27/04) está 100 % en `gastos`; duplicados AFV NO borrados (inútil). `lib/adapters/sivra.ts` pasa a leer `gastos` (daba 0€ desde mayo) + guardián (visto en rojo).
