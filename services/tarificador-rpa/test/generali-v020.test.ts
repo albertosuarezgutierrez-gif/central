@@ -287,7 +287,7 @@ test('guard · «Garantías y Resultados»: manejador con verbo de emisión, dos
 test('hasta el precio: scroll + mapa + subpestaña por la compuerta + lector → OFERTA con avisos y supuestos declarados', async () => {
   const { page, guard, cerrar } = await abrir(PORTAL, PANEL('<table><tr><td>Prima total anual</td><td>1.234,56 €</td></tr><tr><td>Franquicia</td><td>300,00 €</td></tr></table>'))
   try {
-    const r = await hastaPrecioGenerali(page, coche(), ['el tomador es el propietario'], ctxCon(page, guard), { esperaPrecioMs: 3_000 })
+    const r = await hastaPrecioGenerali(page, coche(), ['el tomador es el propietario'], ctxCon(page, guard), { esperaGarantiasMs: 0, esperaPrecioMs: 3_000 })
     assert.equal(r.ofertas.length, 1)
     const o = r.ofertas[0]!
     assert.equal(o.compania, 'generali')
@@ -304,7 +304,7 @@ test('hasta el precio: scroll + mapa + subpestaña por la compuerta + lector →
 test('hasta el precio: sin importe legible → PARA con el registro de esa pantalla (inventario + HTML los guarda el runner)', async () => {
   const { page, guard, cerrar } = await abrir(PORTAL, PANEL('<p>Seleccione las garantías</p><label for="mod">Modalidad</label><select id="mod"><option>TERCEROS</option></select><button>Calcular</button>'))
   try {
-    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctxCon(page, guard), { esperaPrecioMs: 1_500 }), (e: unknown) =>
+    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctxCon(page, guard), { esperaGarantiasMs: 0, esperaPrecioMs: 1_500 }), (e: unknown) =>
       e instanceof ErrorMapaIncompletoGenerali && e.pideInventarioDom && /ningún importe legible/.test(e.message) && /Modalidad \[select\] = TERCEROS/.test(e.message) && /Calcular/.test(e.message) && !/SECRETO/.test(e.message))
   } finally {
     await cerrar()
@@ -314,7 +314,7 @@ test('hasta el precio: sin importe legible → PARA con el registro de esa panta
 test('hasta el precio: varias modalidades con importe → PARA con la lista (no elige una)', async () => {
   const { page, guard, cerrar } = await abrir(PORTAL, PANEL('<p>Total Terceros 300,00 €</p><p>Total Todo Riesgo 900,00 €</p>'))
   try {
-    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctxCon(page, guard), { esperaPrecioMs: 2_500 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /2 importes candidatos/.test(e.message))
+    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctxCon(page, guard), { esperaGarantiasMs: 0, esperaPrecioMs: 2_500 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /2 importes candidatos/.test(e.message))
   } finally {
     await cerrar()
   }
@@ -324,7 +324,7 @@ test('hasta el precio: sin la puerta del guard en el contexto → PARA con el re
   const { page, guard, cerrar } = await abrir(PORTAL, PANEL('<p>Prima total 500,00 €</p>'))
   try {
     const ctx = ctxCon(page, guard, { pulsarSubpestanaGenerali: undefined })
-    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctx, { esperaPrecioMs: 500 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /puerta guardada/.test(e.message) && /Datos de Valoración: \d+ campos/.test(e.message))
+    await assert.rejects(hastaPrecioGenerali(page, coche(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 500 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /puerta guardada/.test(e.message) && /Datos de Valoración: \d+ campos/.test(e.message))
     assert.equal(await page.evaluate(() => (window as unknown as { __tab?: number }).__tab ?? 0), 0)
   } finally {
     await cerrar()

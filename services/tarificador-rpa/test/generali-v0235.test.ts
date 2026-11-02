@@ -103,7 +103,7 @@ test('v0.2.35 · hastaPrecioGenerali: sin importes el error trae el diagnóstico
   if (!v.ok) throw new Error(JSON.stringify(v))
   const ctx = { pulsarSubpestanaGenerali: async () => {}, pulsarSiguienteGenerali: async () => ({}) } as unknown as ContextoPortal
   await conPagina(`<table>${HEAD}${PAGINADOR}</table>`, async (page) => {
-    await assert.rejects(hastaPrecioGenerali(page, v.formulario as FormularioAuto, [], ctx, { esperaPrecioMs: 300 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, v.formulario as FormularioAuto, [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 300 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.match(e.message, /Marcos \(1\): \[0\] .*tablas=1 con-Recibo\/Prima=1 estructura: <table>/, e.message)
       return true

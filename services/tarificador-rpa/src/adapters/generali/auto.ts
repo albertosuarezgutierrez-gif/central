@@ -76,6 +76,8 @@ import {
   formaPagoPedidaGenerali,
   opcionExactaGenerali,
   decisionesPendientesGenerali,
+  elegirSumaAbogadoGenerali,
+  avisoSumaAbogadoGenerali,
   type EstadoCalculoGenerali,
   motivosInteresadoGenerali,
   PESTANA_PERSONAS_GENERALI,
@@ -470,7 +472,7 @@ const ESPERA_MODALIDADES_GENERALI_MS = 30_000
  * dato, la siniestralidad más favorable (aviso «supuesto» → precio estimado). Un obligatorio vacío sin regla (p. ej. una fecha) para con su nombre. Si la
  * pestaña no existe se anota y se sigue como antes; el atasco final trae el inventario (etiquetas, sin valores) de esa pestaña.
  */
-export const VERSION_GENERALI_AUTO = '0.2.62'
+export const VERSION_GENERALI_AUTO = '0.2.63'
 /** v0.2.39: etiqueta EXACTA de la acción que calcula las modalidades (botonera «Acciones»). La pulsa SOLO la puerta guardada `pulsarRecalcularGenerali` del contexto. */
 export const ACCION_RECALCULAR_GENERALI = 'Recalcular'
 /** v0.2.39: ¿la tabla de modalidades está a la vista pero SIN ninguna fila con importe (el portal aún no calculó)? PURA. */
@@ -916,7 +918,8 @@ const jsEstadoCalculoGenerali = (forzar: boolean) => `(() => {${JS_COMUN}
     if (t && t.length <= 40 && !botones.includes(t)) botones.push(t);
     if (botones.length >= 25) break;
   }
-  return { avisos, obligatoriosVacios, nombresVacios, botones, listo: document.readyState === 'complete' };
+  const bloquesVisibles = Array.from(document.querySelectorAll('#reg1063E_verifRiesgo_zvriepIdentification,#reg1063E_gridmodseg_yfpIdentification,select[name="reg1063E.general.ysuabo"]')).some((e) => VIS(e));
+  return { avisos, obligatoriosVacios, nombresVacios, botones, bloquesVisibles, listo: document.readyState === 'complete' };
 })()`
 export const JS_ESTADO_CALCULO_GENERALI = jsEstadoCalculoGenerali(false)
 /** v0.2.44: el mismo lector por bloques (`.required` «*»: opción sin marcar, desplegable en «Seleccione…», texto vacío), SIN exigir que el marco sea B028. */
@@ -1063,7 +1066,7 @@ export async function completarHistorialSiniestralGenerali(
 
 /** v0.2.42: estado del cálculo de TODOS los marcos de «Valoración Riesgo» + si algún marco seguía cargando (`loading.html` visible o documento sin terminar). Solo lee. */
 export async function volcarEstadoCalculoGenerali(page: Page): Promise<EstadoCalculoGenerali | null> {
-  const total: EstadoCalculoGenerali = { avisos: [], obligatoriosVacios: [], nombresVacios: [], botones: [], cargando: null }
+  const total: EstadoCalculoGenerali = { avisos: [], obligatoriosVacios: [], nombresVacios: [], botones: [], cargando: null, bloquesVisibles: null }
   let visto = false
   let cargando = false
   let sabido = false
@@ -1076,9 +1079,11 @@ export async function volcarEstadoCalculoGenerali(page: Page): Promise<EstadoCal
       if (vis === true) cargando = true
       continue
     }
-    const r = (await f.evaluate(JS_ESTADO_CALCULO_GENERALI).catch(() => null)) as { avisos: string[]; obligatoriosVacios: string[]; nombresVacios: string[]; botones: string[]; listo: boolean } | null
+    const r = (await f.evaluate(JS_ESTADO_CALCULO_GENERALI).catch(() => null)) as { avisos: string[]; obligatoriosVacios: string[]; nombresVacios: string[]; botones: string[]; bloquesVisibles?: boolean; listo: boolean } | null
     if (!r) continue
     visto = true
+    if (r.bloquesVisibles === true) total.bloquesVisibles = true
+    else if (total.bloquesVisibles === null && r.bloquesVisibles === false) total.bloquesVisibles = false
     sabido = true
     if (!r.listo) cargando = true
     for (const a of r.avisos) if (!total.avisos.includes(a)) total.avisos.push(a)
@@ -1188,6 +1193,57 @@ export async function elegirEnvioEmailGenerali(page: Page, ctx: ContextoPortal):
 /** v0.2.43 (decisión de Alberto, 28/10/2026): «Verificación del riesgo» = «No» EXACTA. Aviso para la oferta o null si el bloque no está. */
 export async function elegirVerificacionRiesgoGenerali(page: Page, ctx: ContextoPortal): Promise<string | null> {
   return (await elegirOpcionExactaBloqueGenerali(page, ctx, BLOQUE_VERIFICACION, OPCION_VERIFICACION_RIESGO_GENERALI)) ? AVISO_VERIFICACION_RIESGO_GENERALI : null
+}
+
+/** v0.2.63: `select` de la suma de libre elección de abogado (`reg1063E.general.ysuabo`, obligatorio). */
+const SEL_SUMA_ABOGADO_GENERALI = 'select[name="reg1063E.general.ysuabo"]'
+const JS_LEER_SUMA_ABOGADO_GENERALI = `(() => {
+  const s = document.querySelector('${SEL_SUMA_ABOGADO_GENERALI}');
+  if (!s) return null;
+  const T = (o) => (o.textContent || '').replace(/\\s+/g, ' ').trim();
+  return { opciones: Array.from(s.options).map(T), indice: s.selectedIndex };
+})()`
+
+/**
+ * v0.2.63: si el select de la suma de abogado sigue en «Seleccione…», elige la opción de importe MÁS ALTO (por texto) y comprueba `selectedIndex` tras el AJAX
+ * (reintento acotado). Ya elegido por el portal o sin select a la vista → null (no se toca). Sin importe identificable o sin quedar puesta → `ErrorMapaIncompletoGenerali`.
+ * Pulsa por `elegirIndice` (guard del campo). Devuelve el aviso «Supuesto: …» para la oferta (precio `estimado`).
+ */
+export async function elegirSumaAbogadoVisibleGenerali(page: Page, ctx: ContextoPortal, pausaMs = 500, intentos = 6): Promise<string | null> {
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const l = f.locator(SEL_SUMA_ABOGADO_GENERALI).filter({ visible: true })
+    if ((await l.count().catch(() => 0)) !== 1) continue
+    const leer = async () => (await f.evaluate(JS_LEER_SUMA_ABOGADO_GENERALI).catch(() => null)) as { opciones: string[]; indice: number } | null
+    const antes = await leer()
+    if (!antes) continue
+    if (antes.indice >= 0 && !/^seleccione/i.test(antes.opciones[antes.indice] ?? '')) return null
+    const e = elegirSumaAbogadoGenerali(antes.opciones)
+    if (!e) throw new ErrorMapaIncompletoGenerali(`la «Suma asegurada para libre elección abogado» (ninguna opción con importe único más alto; opciones vistas: ${antes.opciones.map((o) => `«${o.slice(0, 30)}»`).join(' · ') || '(ninguna)'})`)
+    await elegirIndice(l.first(), e.indice, ctx)
+    for (let i = 0; i < intentos; i++) {
+      const d = await leer()
+      if (d && d.indice === e.indice) return avisoSumaAbogadoGenerali(e.texto)
+      await page.waitForTimeout(pausaMs)
+    }
+    throw new ErrorMapaIncompletoGenerali(`la «Suma asegurada para libre elección abogado» no quedó en «${e.texto}» tras elegirla (el AJAX del portal la devolvió a «Seleccione…»)`)
+  }
+  return null
+}
+
+/**
+ * v0.2.63: antes de marcar forma de pago / envío / verificación / abogado, asegura estar en «Garantías y Resultados» (si el bloque de verificación no está a la
+ * vista se pulsa la subpestaña por la puerta guardada que ya existe) y espera con reintento acotado a que aparezca. Si no aparece → `ErrorMapaIncompletoGenerali`
+ * con nombre claro: no se sigue a ciegas.
+ */
+export async function asegurarGarantiasYResultadosGenerali(page: Page, ctx: ContextoPortal, pausaMs = 700, intentos = 8): Promise<void> {
+  if (await hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI)) return
+  if (ctx.pulsarSubpestanaGenerali) await ctx.pulsarSubpestanaGenerali(SUBPESTANA_PRECIO_GENERALI).catch((e) => { if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e })
+  for (let i = 0; i < intentos; i++) {
+    if (await hayBloqueVisibleGenerali(page, SEL_BLOQUE_VERIFICACION_GENERALI)) return
+    await page.waitForTimeout(pausaMs)
+  }
+  throw new ErrorMapaIncompletoGenerali(`el bloque «Verificación del riesgo» de «${SUBPESTANA_PRECIO_GENERALI}» (no apareció a la vista tras ${Math.round((intentos * pausaMs) / 1000)} s; el bot no marca forma de pago, envío ni abogado a ciegas)`)
 }
 
 /** Pantalla leída de TODOS los marcos de la página (la vista tras la subpestaña puede estar en otro marco). */
@@ -3964,7 +4020,7 @@ export async function probarTipoVehiculoGenerali(page: Page, marco: Raiz, form: 
   return { intentos, valor: (await leer()) || null }
 }
 
-export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number; esperaProtegidosMs?: number; esperaHistorialMs?: number; pruebasTipo?: EsperasPruebasTipoGenerali } = {}): Promise<ResultadoAdaptador> {
+export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number; esperaModalidadesMs?: number; graciaBloqueoMs?: number; estableBloqueoMs?: number; esperaProtegidosMs?: number; esperaHistorialMs?: number; esperaGarantiasMs?: number; pruebasTipo?: EsperasPruebasTipoGenerali } = {}): Promise<ResultadoAdaptador> {
   const paso = <T>(n: Parameters<ContextoPortal['paso']>[0], fn: () => Promise<T>): Promise<T> => (typeof ctx.paso === 'function' ? ctx.paso(n, fn) : fn())
   const ant = conAntecedentesFavorables(form)
   for (const x of ant.supuestos) if (!supuestos.includes(x)) supuestos.push(x)
@@ -4063,18 +4119,29 @@ export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supu
       return null
     }
     // v0.2.42 (decisión de Alberto): «Forma de pago a contratar» es obligatoria para calcular: Anual por defecto (o la del riesgo), opción exacta.
+    // v0.2.63: `esperaGarantiasMs: 0` (solo pruebas con páginas sintéticas sin esos bloques) omite la comprobación.
+    if (opciones.esperaGarantiasMs !== 0) await asegurarGarantiasYResultadosGenerali(page, ctx, 700, Math.max(1, Math.ceil((opciones.esperaGarantiasMs ?? 5600) / 700)))
     const fp = await elegirFormaPagoGenerali(page, ant.formulario, ctx)
     if (fp && !avisosFormaPago.includes(fp)) avisosFormaPago.push(fp)
     // v0.2.43 (decisión de Alberto, 28/10/2026): «Envío e-mail» = «Mediador» y «Verificación del riesgo» = «No», opción EXACTA, antes de «Recalcular».
     const envio = await elegirEnvioEmailGenerali(page, ctx)
     const verif = await elegirVerificacionRiesgoGenerali(page, ctx)
-    for (const aviso of [envio, verif]) if (aviso && !avisosFormaPago.includes(aviso)) avisosFormaPago.push(aviso)
+    // v0.2.63 (trabajo 7f358ff2): la suma de libre elección de abogado (obligatoria) se elige en la más alta; el aviso «Supuesto» deja el precio en `estimado`.
+    const abogado = await elegirSumaAbogadoVisibleGenerali(page, ctx)
+    for (const aviso of [envio, verif, abogado]) if (aviso && !avisosFormaPago.includes(aviso)) avisosFormaPago.push(aviso)
     // v0.2.44: que el atasco diga si cada bloque estaba (en dd2067b2 «Verificación del riesgo» no estaba a la vista y no hubo rastro).
-    bloquesDecision = `forma de pago ${fp ? 'marcada' : 'sin bloque a la vista'}, envío e-mail ${envio ? 'Mediador' : 'sin bloque a la vista'}, verificación del riesgo ${verif ? 'No' : 'sin bloque a la vista'}`
+    bloquesDecision = `forma de pago ${fp ? 'marcada' : 'sin bloque a la vista'}, envío e-mail ${envio ? 'Mediador' : 'sin bloque a la vista'}, verificación del riesgo ${verif ? 'No' : 'sin bloque a la vista'}, suma de abogado ${abogado ? 'la más alta' : 'sin cambio'}`
     try {
       const r = await paso('tarificar', async () => puerta())
       avanceRecalcular.push(`Recalcular×1${r && r.dialogo ? ` (diálogo cancelado: ${r.dialogo.slice(0, 120)})` : ''}`)
-      return await paso('lectura_primas', leerPrimas)
+      let lec = await paso('lectura_primas', leerPrimas)
+      // v0.2.63: si #areaErrores sigue con «datos incompletos» y no hay precio, un SEGUNDO Recalcular (máx. 2 en total).
+      if (lec.tipo !== 'unico' && portalDatosIncompletosGenerali(await avisosAreaErroresGenerali(page))) {
+        const r2 = await paso('tarificar', async () => puerta())
+        avanceRecalcular.push(`Recalcular×2 (el portal seguía con «datos incompletos»)${r2 && r2.dialogo ? ` (diálogo cancelado: ${r2.dialogo.slice(0, 120)})` : ''}`)
+        lec = await paso('lectura_primas', leerPrimas)
+      }
+      return lec
     } catch (e) {
       if (e instanceof Error && /Bloqueada/.test(e.constructor.name)) throw e
       avanceRecalcular.push(`Recalcular no pulsado: ${(e instanceof Error ? e.message : String(e)).slice(0, 260)}`)

@@ -10,7 +10,7 @@ import { ErrorMapaIncompletoGenerali, VERSION_GENERALI_AUTO, cortarEsperaPorBloq
 import { validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.43 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.62'))
+test('v0.2.43 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.63'))
 
 test('v0.2.43 · puro: solo se corta con el aviso estable y pasada la gracia', () => {
   assert.equal(cortarEsperaPorBloqueoGenerali(9_000, 3_500), true)
@@ -94,9 +94,9 @@ test('v0.2.43 · con «datos incompletos» las lecturas largas se cortan: el ata
     } as unknown as ContextoPortal
     const t0 = Date.now()
     // Esperas «reales» de 20 s por lectura: sin el corte serían ≥ 40 s (dos lecturas × texto + tabla).
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 20_000, graciaBloqueoMs: 400, estableBloqueoMs: 300 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 20_000, graciaBloqueoMs: 400, estableBloqueoMs: 300 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
-      assert.match(e.message, /^generali\/auto: mapa incompleto: faltan \(falta decisión de Alberto: Envío e-mail, Verificación del riesgo\) el PRECIO/, e.message.slice(0, 300))
+      assert.match(e.message, /^generali\/auto: mapa incompleto: faltan \(falta decisión de Alberto: Envío e-mail, Verificación del riesgo(?:, Suma libre elección de abogado)?\) el PRECIO/, e.message.slice(0, 300))
       assert.match(e.message, /Esperas: espera del precio cortada a \d+ s: el portal avisa «[^»]*datos (in)?completos»/)
       assert.ok(e.message.length <= 1_900, String(e.message.length))
       return true
@@ -106,7 +106,7 @@ test('v0.2.43 · con «datos incompletos» las lecturas largas se cortan: el ata
     assert.equal(await page.locator('input[name="reg1063E.opcEnvio.opcenv"]:checked').count(), 0)
     assert.equal(await page.locator('input[name="reg1063E.verifRiesgo.zvriep"]:checked').count(), 0)
   })
-  assert.equal(recalculos, 1)
+  assert.equal(recalculos, 2) // v0.2.63: segundo Recalcular con «datos incompletos» persistente (máx. 2)
 })
 
 // ── Decisión de Alberto (28/10/2026): «Envío e-mail» = «Mediador» (nunca «Tomador») y «Verificación del riesgo» = «No», opción EXACTA, antes de «Recalcular» ──
@@ -149,7 +149,7 @@ test('v0.2.43 · decisión de Alberto: marca «Mediador» y «No» (exactas) con
     page.setDefaultTimeout(2_000)
     await page.goto(B028)
     const cuenta = { rec: 0, pulsados: 0 }
-    const r = await hastaPrecioGenerali(page, formulario(), [], ctxDecision(page, cuenta, (l) => pulsar(l, guard)), { esperaPrecioMs: 300 })
+    const r = await hastaPrecioGenerali(page, formulario(), [], ctxDecision(page, cuenta, (l) => pulsar(l, guard)), { esperaGarantiasMs: 0, esperaPrecioMs: 300 })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
     const avisos = r.ofertas[0]!.avisos
     for (const a of ['Forma de pago: anual (por defecto)', 'Envío e-mail: mediador (decisión de Alberto)', 'Verificación del riesgo: no']) assert.ok(avisos.includes(a), `${a} · ${avisos.join(' | ')}`)
@@ -166,7 +166,7 @@ test('v0.2.43 · decisión de Alberto: marca «Mediador» y «No» (exactas) con
 test('v0.2.43 · sin «Mediador» EXACTA: error que la nombra, no se marca «Tomador» ni ninguna otra y no se recalcula', async () => {
   const cuenta = { rec: 0, pulsados: 0 }
   await conPagina(PANTALLA_DEC(ENVIO_REAL([['2', 'Tomador'], ['1', 'Mediador (copia)'], ['3', 'Sin envío']])), async (page) => {
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctxDecision(page, cuenta), { esperaPrecioMs: 200 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctxDecision(page, cuenta), { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.match(e.message, /la opción «Mediador» de «Envío e-mail» \(no existe exactamente; opciones vistas: «Tomador» · «Mediador \(copia\)» · «Sin envío»\)/)
       return true
@@ -182,7 +182,7 @@ test('v0.2.43 · con envío y verificación ya marcados, el atasco por otra caus
   await conPagina(PANTALLA_DEC(), async (page) => {
     const ctx = ctxDecision(page, cuenta)
     ;(ctx as unknown as { pulsarRecalcularGenerali: () => Promise<{ dialogo: null }> }).pulsarRecalcularGenerali = async () => { cuenta.rec++; return { dialogo: null } }
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaPrecioMs: 200 }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], ctx, { esperaGarantiasMs: 0, esperaPrecioMs: 200 }), (e: unknown) => {
       if (!(e instanceof ErrorMapaIncompletoGenerali)) return false
       assert.doesNotMatch(e.message, /falta decisión de Alberto/, e.message.slice(0, 200))
       assert.match(e.message, /^generali\/auto: mapa incompleto: faltan el PRECIO/)

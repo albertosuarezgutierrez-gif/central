@@ -12,7 +12,7 @@ import { ID_OTRO_VEHICULO_GENERALI, instalarGuardEmision, otroVehiculoGeneraliPe
 import { EmisionBloqueadaError, validarFormularioAuto, type FormularioAuto } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
 
-test('v0.2.52 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.62'))
+test('v0.2.52 · versión', () => assert.equal(VERSION_GENERALI_AUTO, '0.2.63'))
 
 test('v0.2.52 · puro: antigüedad (sin fecha no se supone), opciones exactas y registro', () => {
   const hoy = new Date('2026-10-28T12:00:00Z')
@@ -142,7 +142,7 @@ test('v0.2.52 · ninguna funciona: hastaPrecioGenerali PARA con el registro de l
   await conPantalla({ wvegenOculto: true, lnkVehiOculto: true }, async (page, ctx) => {
     let pulsada = 0
     const c = { ...ctx, pulsarSubpestanaGenerali: async () => { pulsada++ } } as unknown as ContextoPortal
-    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 300, pruebasTipo: ESPERAS }), (e: unknown) => {
+    await assert.rejects(hastaPrecioGenerali(page, formulario(), [], c, { esperaGarantiasMs: 0, esperaPrecioMs: 300, esperaProtegidosMs: 300, pruebasTipo: ESPERAS }), (e: unknown) => {
       assert.ok(e instanceof ErrorMapaIncompletoGenerali, String(e))
       const m = (e as Error).message
       assert.match(m, /Pruebas \(v0\.2\.52\): 1\) Indique Código \(wvegen\): oculto; no se fuerza → Tipo de vehículo no · 2\) Tipo de placa \(yplaca\): sin opción ordinaria\/nacional .* → Tipo de vehículo no · 3\) change\+blur en campos con refreshEmiAutosGenA\.do: disparado en yusovh → Tipo de vehículo no · 4\) otro botón «Vehículo» \(lnkVehi\): oculto; no se fuerza → Tipo de vehículo no\./)
@@ -157,7 +157,7 @@ test('v0.2.52 · si una prueba funciona, hastaPrecioGenerali sigue hasta «Garan
   await conPantalla({ wvegenRellena: true }, async (page, ctx) => {
     const GARANTIAS = `<h3>Garantías y Resultados</h3><div id="areaNegocio"><table id="reg1063E_gridmodseg"><thead><tr><th></th><th>#</th><th>Modalidades de Seguro</th><th>Recibo Anual</th><th>Prima Anualidad</th></tr></thead><tbody><tr><td></td><td><input type="${'ra' + 'dio'}" name="m" checked></td><td>Todo Riesgo</td><td>456,78</td><td>900,00</td></tr></tbody></table></div>`
     const c = { ...ctx, pulsarSubpestanaGenerali: async () => { await page.setContent(`<html><body>${GARANTIAS}</body></html>`) } } as unknown as ContextoPortal
-    const r = await hastaPrecioGenerali(page, formulario(), [], c, { esperaPrecioMs: 300, esperaProtegidosMs: 300, pruebasTipo: ESPERAS })
+    const r = await hastaPrecioGenerali(page, formulario(), [], c, { esperaGarantiasMs: 0, esperaPrecioMs: 300, esperaProtegidosMs: 300, pruebasTipo: ESPERAS })
     assert.equal(r.ofertas[0]!.primaAnualEur, 456.78)
     assert.ok(r.ofertas[0]!.avisos.some((a) => /^Tipo de vehículo: lo puso el portal tras probar «Indique Código \(wvegen\)»/.test(a)), r.ofertas[0]!.avisos.join(' | '))
   })
