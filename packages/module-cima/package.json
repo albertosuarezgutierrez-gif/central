@@ -2,7 +2,7 @@
   "name": "@central/module-cima",
   "version": "0.0.0",
   "private": true,
-  "description": "Ingesta CIMA/EIAC de la correduría (Grupo ASegura): lógica PURA portada del CRM — mappers EIAC POL/REC/SIN/CEF (claves de la norma V07.1), matching póliza/recibo/siniestro/CEF, schemas WSE, figuras y su cifrado PII, cobertura de campos, cimaExtra y el pipeline runCimaPull con sus deps inyectadas. Sin BD ni red: la capa Drizzle, el cliente del adaptador Fly/TIREA, las rutas y los crons llegan en fases posteriores.",
+  "description": "Ingesta CIMA/EIAC de la correduría (Grupo ASegura) portada del CRM. Raíz (`src/*.ts`): lógica PURA (mappers EIAC POL/REC/SIN/CEF, matching, schemas WSE, figuras y su cifrado PII, cobertura, cimaExtra y el pipeline runCimaPull con deps inyectadas). `src/client.ts`: cliente HTTP del adaptador Java (Fly) con fetch y config inyectados. `src/db/`: capa Drizzle (schema recortado de `seguros`, persist-*, pull-deps, pull-audit, candado, salud) con el db inyectado, sin leer env al importar y bloqueada por CIMA_ESCRITOR≠central. Aún no la importa ninguna app.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -11,14 +11,17 @@
     "./*": "./src/*.ts"
   },
   "scripts": {
-    "test": "node --test src/*.test.ts",
+    "test": "node --test src/*.test.ts src/db/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "sideEffects": false,
   "license": "UNLICENSED",
   "dependencies": {
+    "@central/core-identity": "workspace:*",
     "@central/module-seguros-pii": "workspace:*",
+    "drizzle-orm": "^0.45.3",
     "fast-xml-parser": "^5.11.1",
+    "postgres": "^3.4.9",
     "zod": "^3.25.76"
   },
   "devDependencies": {

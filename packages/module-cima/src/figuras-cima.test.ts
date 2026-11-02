@@ -14,8 +14,8 @@ import {
   descifrarFigurasCima,
   fusionarTercerosCima,
 } from "./figuras-cima-pii.ts";
-// PORT central (fase 1): los 4 tests que usan `prepararDatosEspecificosCima`
-// (pull-persist) y `valorCimaExtraSin` (persist-siniestro) se portan con la capa de BD.
+// PORT central: los 4 tests que usan `prepararDatosEspecificosCima` (pull-persist) y
+// `valorCimaExtraSin` (persist-siniestro) viven en `db/figuras-cima-bd.test.ts` (fase 3).
 import { motivoExclusionCima } from "./cima-extra.ts";
 import { medirCoberturaCampos } from "./field-coverage.ts";
 

@@ -399,6 +399,5 @@ test("GUARDIÁN: una póliza CIMA con número y compañía de una ficha viva NO 
   assert.equal(c.filas[0].codigoEntidadDgs, "C0109");
 });
 
-// PORT central (fase 1): el cepo «0107: índice NO único con la MISMA expresión que la
-// consulta de pull-deps» lee `pull-deps.ts` y la migración 0107 (capa de BD); se porta
-// con `src/db/` en la fase 2.
+// PORT central (fase 3): el cepo «0107: índice NO único con la MISMA expresión que la
+// consulta de pull-deps» vive en `db/anti-duplicados-0107.test.ts`.
