@@ -1,0 +1,30 @@
+{
+ "sesion": "d8bde082-6ff3-585e-9b7f-7dc53bc4de3a",
+ "inicio": "2026-11-02T08:03:17.095Z",
+ "fin": "2026-11-02T08:03:42.195Z",
+ "llamadas": 3,
+ "categorias": {
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 435,
+   "chars_out": 4646,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 1,
+   "chars_in": 53,
+   "chars_out": 776,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__read_documentation": 1
+   }
+  }
+ }
+}
