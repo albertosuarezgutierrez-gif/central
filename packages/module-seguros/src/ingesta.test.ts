@@ -9,6 +9,7 @@ import {
   firmaAvisoIngesta,
   normalizarFirmaIngesta,
   decidirRespaldoPull,
+  clasificarRespuestaPull,
   HORAS_RESPALDO_PULL,
   repartirHuerfanas,
   textoHuerfanas,
@@ -875,6 +876,31 @@ test('respaldo: sin dato del último pull NO dispara (no sé ≠ está parado)',
   assert.deepEqual(decidirRespaldoPull(null), { disparar: false, motivo: 'sin_dato', horas: null })
   assert.deepEqual(decidirRespaldoPull(undefined), { disparar: false, motivo: 'sin_dato', horas: null })
   assert.deepEqual(decidirRespaldoPull({ horas: Number.NaN, procesados: null }), { disparar: false, motivo: 'sin_dato', horas: null })
+})
+
+// ── Candado único de la ingesta (02/11/2026, mig 0109 del CRM) ───────────────
+// Si el respaldo llama al CRM mientras otro escritor ingiere, el CRM responde 409
+// `{error:'ocupado'}` SIN tocar TIREA. Eso es «ya está corriendo»: ni fallo, ni
+// reintento, ni Telegram rojo.
+
+test('respaldo: 409 «ocupado» del CRM = ya hay una ingesta en marcha, no un fallo', () => {
+  assert.equal(clasificarRespuestaPull(409, { ok: false, error: 'ocupado', reason: 'lock_busy' }), 'ocupado')
+})
+
+test('respaldo: un 409 SIN el cuerpo «ocupado» sigue siendo un fallo (no se traga cualquier 409)', () => {
+  assert.equal(clasificarRespuestaPull(409, null), 'fallo')
+  assert.equal(clasificarRespuestaPull(409, { ok: false, error: 'conflict' }), 'fallo')
+})
+
+test('respaldo: «ocupado» con otro código (200/500) no cuenta como ocupado', () => {
+  assert.equal(clasificarRespuestaPull(200, { ok: false, error: 'ocupado' }), 'fallo')
+  assert.equal(clasificarRespuestaPull(500, { ok: false, error: 'ocupado' }), 'fallo')
+})
+
+test('respaldo: 200 con ok:true = ok; 200 con ok:false = fallo (se mira el cuerpo)', () => {
+  assert.equal(clasificarRespuestaPull(200, { ok: true, processed: 2 }), 'ok')
+  assert.equal(clasificarRespuestaPull(200, { ok: false, error: 'adapter_error' }), 'fallo')
+  assert.equal(clasificarRespuestaPull(502, { ok: false, error: 'adapter_error' }), 'fallo')
 })
 
 // ── Renovaciones que no llegan (27/09/2026) ─────────────────────────────────
