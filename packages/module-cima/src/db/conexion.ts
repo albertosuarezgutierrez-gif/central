@@ -21,6 +21,7 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { exigirEscritorCentral } from "./escritor.ts";
 import * as schema from "./schema.ts";
 
 /** El `db` de Drizzle que espera toda la capa de BD (mismo tipo que el `db` del CRM). */
@@ -37,15 +38,34 @@ export class ClavePiiAusenteError extends Error {
 }
 
 /**
- * Fail-CLOSED: lanza si falta `PII_ENCRYPTION_KEY` o `PII_LOOKUP_KEY`, salvo en
- * `NODE_ENV === "test"`. Solo comprueba PRESENCIA (el formato lo valida
- * `module-seguros-pii` al usarla).
+ * Fail-CLOSED: lanza si falta `PII_ENCRYPTION_KEY` o `PII_LOOKUP_KEY`. Solo comprueba
+ * PRESENCIA (el formato lo valida `module-seguros-pii` al usarla).
+ *
+ * Mira el `env` inyectado (si se pasa) Y `process.env`, porque el cifrado de
+ * `module-seguros-pii` lee `process.env`: un env inyectado con claves no salva un
+ * `process.env` sin ellas (guardaría EN CLARO). La exención `NODE_ENV === "test"` solo
+ * vale si TODAS las fuentes miradas la dicen.
  */
-export function exigirClavesPii(env: Readonly<Record<string, string | undefined>>): void {
-  if (env.NODE_ENV === "test") return;
-  for (const nombre of CLAVES_PII_OBLIGATORIAS) {
-    if (!env[nombre]?.trim()) throw new ClavePiiAusenteError(nombre);
+export function exigirClavesPii(env?: Readonly<Record<string, string | undefined>>): void {
+  const fuentes: ReadonlyArray<Readonly<Record<string, string | undefined>>> =
+    env && env !== process.env ? [env, process.env] : [process.env];
+  if (fuentes.every((f) => f.NODE_ENV === "test")) return;
+  for (const f of fuentes) {
+    for (const nombre of CLAVES_PII_OBLIGATORIAS) {
+      if (!f[nombre]?.trim()) throw new ClavePiiAusenteError(nombre);
+    }
   }
+}
+
+/** Gate de TODA función de escritura exportada: `CIMA_ESCRITOR=central` + claves PII.
+ * `env` por defecto `process.env`; `buildCimaPullDeps` pasa el suyo (mismo gate que ya
+ * aplicó: el doble chequeo no cambia la semántica). */
+export function exigirGateEscritura(
+  env: Readonly<Record<string, string | undefined>>,
+  operacion: string,
+): void {
+  exigirEscritorCentral(env, operacion);
+  exigirClavesPii(env);
 }
 
 export interface CrearDbCimaOpts {

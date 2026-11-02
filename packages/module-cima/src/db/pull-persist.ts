@@ -34,17 +34,18 @@
  * PORT central (fase 3) — copia LITERAL salvo:
  *  - `db` INYECTADO (sin `= db` por defecto: en el CRM el default leía DATABASE_URL al
  *    importar). En central el gate fail-CLOSED de claves PII está en
- *    `conexion.ts#exigirClavesPii` (lo llaman `crearDbCima` y `buildCimaPullDeps`).
+ *    `conexion.ts#exigirClavesPii` (lo llaman `crearDbCima`, `buildCimaPullDeps` y,
+ *    vía `exigirGateEscritura`, cada función de escritura exportada).
  *  - `getIngestaCodigosEntidad`/`isCodigoEntidadAutorizado`/`splitNombreCompleto`
  *    se portaron PUROS en la fase 2 (`../pull-puro.ts`): se importan y reexportan,
  *    no se redefinen. `getIngestaCorreduriaId` (lee env AL LLAMAR, no al importar)
  *    sigue aquí, literal.
  *  - La alerta de Telegram (`alertarCimaSituacionDesconocida`) llega INYECTADA
- *    (`alertas`, 3er parámetro; sin él, va al log — nunca silencio).
+ *    (`alertas`, 3er parámetro; sin él, va al log con aviso — nunca silencio).
  */
 
 import { and, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
-import type { CimaDb } from "./conexion.ts";
+import { exigirGateEscritura, type CimaDb } from "./conexion.ts";
 import {
   clienteEmails,
   clienteTelefonos,
@@ -753,6 +754,19 @@ class PersistRollback extends Error {
   }
 }
 
+let avisoAlertasSoloLogDado = false;
+/** `ALERTAS_SOLO_LOG` como default de `persistCimaFichero`: fuera de tests avisa UNA vez
+ * (por proceso) de que las alertas solo irán al log, sin canal real. */
+function alertasPorDefecto(): AlertasCima {
+  if (!avisoAlertasSoloLogDado && process.env.NODE_ENV !== "test") {
+    avisoAlertasSoloLogDado = true;
+    console.warn(
+      JSON.stringify({ source: "cima.alertas", event: "alertas_solo_log_por_defecto", funcion: "persistCimaFichero" }),
+    );
+  }
+  return ALERTAS_SOLO_LOG;
+}
+
 /**
  * Persiste UN fichero POL en una transacción atómica. Implementa `deps.persist`
  * del pipeline (PR-5): firma exacta `(input: PersistInput) => Promise<PersistResult>`.
@@ -762,9 +776,14 @@ export async function persistCimaFichero(
   input: PersistInput,
   /** Inyectado (patrón de `persistCimaSiniestro`). PORT central: sin default. */
   dbc: PolizaPersistDbClient,
-  /** PORT central: canal de alertas inyectado (en el CRM, Telegram directo). */
-  alertas: AlertasCima = ALERTAS_SOLO_LOG,
+  /** PORT central: canal de alertas inyectado (en el CRM, Telegram directo). Sin él,
+   * `ALERTAS_SOLO_LOG` y un aviso (una vez) fuera de `NODE_ENV=test`. */
+  alertas?: AlertasCima,
+  /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */
+  env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<PersistResult> {
+  exigirGateEscritura(env, "persistCimaFichero");
+  const canalAlertas = alertas ?? alertasPorDefecto();
   const { fichero, xmlHash, mapped, resolvedClienteId, match } = input;
   const correduriaId = getIngestaCorreduriaId();
 
@@ -1194,7 +1213,7 @@ export async function persistCimaFichero(
     });
 
     // LOO-990 — DESPUÉS del commit, nunca dentro de la tx (fetch de red).
-    if (alertaSituacionDesconocida) void alertas.cimaSituacionDesconocida(alertaSituacionDesconocida).catch(() => undefined);
+    if (alertaSituacionDesconocida) void canalAlertas.cimaSituacionDesconocida(alertaSituacionDesconocida).catch(() => undefined);
 
     return { ok: true, polizaId: result.polizaId };
   } catch (e) {

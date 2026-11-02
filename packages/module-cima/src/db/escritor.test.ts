@@ -20,6 +20,11 @@ import { ClavePiiAusenteError, crearDbCima, exigirClavesPii, type CimaDb } from 
 import { CimaEscritorNoCentralError, cimaEscritorActivo, exigirEscritorCentral } from "./escritor.ts";
 import { buildCimaPullDeps } from "./pull-deps.ts";
 import { recordCimaPullLifecycleEvent } from "./pull-audit.ts";
+import { escribirMotivosExclusion } from "./cobertura-motivos.ts";
+import { persistCimaCef } from "./persist-cef.ts";
+import { persistCimaRecibo } from "./persist-recibo.ts";
+import { persistCimaSiniestro } from "./persist-siniestro.ts";
+import { persistCimaFichero } from "./pull-persist.ts";
 
 const CORR = "11111111-2222-3333-4444-555555555555";
 const RAW = "<x/>";
@@ -90,9 +95,15 @@ function fichero(): FicheroParseado {
 }
 
 let prev: Record<string, string | undefined>;
+const CLAVES_ENV = ["CIMA_INGESTA_CORREDURIA_ID", "NODE_ENV", "CIMA_ESCRITOR", "PII_ENCRYPTION_KEY", "PII_LOOKUP_KEY"];
 beforeEach(() => {
-  prev = { CIMA_INGESTA_CORREDURIA_ID: process.env.CIMA_INGESTA_CORREDURIA_ID };
+  prev = Object.fromEntries(CLAVES_ENV.map((k) => [k, process.env[k]]));
   process.env.CIMA_INGESTA_CORREDURIA_ID = CORR;
+  // P2-a: la exención de claves PII exige NODE_ENV=test TAMBIÉN en process.env.
+  process.env.NODE_ENV = "test";
+  delete process.env.CIMA_ESCRITOR;
+  delete process.env.PII_ENCRYPTION_KEY;
+  delete process.env.PII_LOOKUP_KEY;
 });
 afterEach(() => {
   for (const [k, v] of Object.entries(prev)) {
@@ -230,8 +241,21 @@ describe("claves PII fail-CLOSED", () => {
   it("también en development (no solo en production)", () => {
     assert.throws(() => exigirClavesPii({ NODE_ENV: "development" }), ClavePiiAusenteError);
   });
-  it("con las dos → no lanza", () => {
+  it("con las dos (inyectado Y process.env) → no lanza", () => {
+    process.env.PII_ENCRYPTION_KEY = K;
+    process.env.PII_LOOKUP_KEY = K;
     assert.doesNotThrow(() => exigirClavesPii({ PII_ENCRYPTION_KEY: K, PII_LOOKUP_KEY: K }));
+  });
+  it("P2-a: claves en el env INYECTADO pero no en process.env (lo que lee el cifrado) → lanza", () => {
+    assert.throws(() => exigirClavesPii({ PII_ENCRYPTION_KEY: K, PII_LOOKUP_KEY: K }), ClavePiiAusenteError);
+  });
+  it("P2-a: sin env inyectado mira process.env (sin claves y sin NODE_ENV=test → lanza)", () => {
+    delete process.env.NODE_ENV;
+    assert.throws(() => exigirClavesPii(), ClavePiiAusenteError);
+  });
+  it("P2-a: NODE_ENV=test solo en el env INYECTADO no exime si process.env no lo es", () => {
+    process.env.NODE_ENV = "development";
+    assert.throws(() => exigirClavesPii(ENV_TEST), ClavePiiAusenteError);
   });
   it("NODE_ENV=test → no lanza", () => {
     assert.doesNotThrow(() => exigirClavesPii(ENV_TEST));
@@ -257,5 +281,99 @@ describe("claves PII fail-CLOSED", () => {
   });
   it("crearDbCima sin claves LANZA (no abre conexión)", () => {
     assert.throws(() => crearDbCima({ url: "postgres://x@127.0.0.1:1/x", env: {} }), ClavePiiAusenteError);
+  });
+});
+
+// 🪤 P1-b: el gate vive DENTRO de cada función de escritura exportada (no solo en
+// buildCimaPullDeps). Doble del db que FALLA si se toca.
+function dbIntocable() {
+  const tocado: string[] = [];
+  const db = new Proxy(
+    {},
+    {
+      get(_t, prop) {
+        tocado.push(String(prop));
+        throw new Error(`db_tocado:${String(prop)}`);
+      },
+    },
+  );
+  return { db: db as never, tocado };
+}
+type Env = Record<string, string | undefined>;
+const funcionesEscritura: Array<[string, (db: never, env?: Env) => Promise<unknown>]> = [
+  ["persistCimaFichero", (db, env) => persistCimaFichero({} as never, db, ALERTAS_SOLO_LOG, env)],
+  ["persistCimaSiniestro", (db, env) => persistCimaSiniestro({} as never, db, env)],
+  ["persistCimaRecibo", (db, env) => persistCimaRecibo({} as never, db, env)],
+  ["persistCimaCef", (db, env) => persistCimaCef({} as never, db, env)],
+  [
+    "escribirMotivosExclusion",
+    (db, env) =>
+      escribirMotivosExclusion(db, { correduriaId: CORR, tipoObjeto: "REC", codigoEntidad: null }, [], env),
+  ],
+];
+describe("P1-b: funciones de escritura exportadas sin CIMA_ESCRITOR=central", () => {
+  const envsNoCentral: Array<[string, Env | undefined]> = [
+    ["crm", { ...ENV_TEST, CIMA_ESCRITOR: "crm" }],
+    ["ninguno", { ...ENV_TEST, CIMA_ESCRITOR: "ninguno" }],
+    ["sin variable", ENV_TEST],
+    ["sin env (default process.env, sin CIMA_ESCRITOR)", undefined],
+  ];
+  for (const [nombre, llamar] of funcionesEscritura) {
+    for (const [nombreEnv, env] of envsNoCentral) {
+      it(`${nombre} con ${nombreEnv} → lanza sin tocar la BD`, async () => {
+        const { db, tocado } = dbIntocable();
+        await assert.rejects(llamar(db, env), CimaEscritorNoCentralError);
+        assert.deepEqual(tocado, []);
+      });
+    }
+    it(`${nombre} con central pero sin claves PII → lanza sin tocar la BD`, async () => {
+      delete process.env.NODE_ENV;
+      const { db, tocado } = dbIntocable();
+      await assert.rejects(llamar(db, { CIMA_ESCRITOR: "central" }), ClavePiiAusenteError);
+      assert.deepEqual(tocado, []);
+    });
+    it(`${nombre} con central (default process.env) → pasa el gate`, async () => {
+      process.env.CIMA_ESCRITOR = "central";
+      const { db } = dbIntocable();
+      const r = await llamar(db).catch((e: unknown) => e);
+      assert.ok(!(r instanceof CimaEscritorNoCentralError) && !(r instanceof ClavePiiAusenteError), String(r));
+    });
+  }
+});
+
+describe("P2-b: persistCimaFichero sin canal de alertas avisa UNA vez fuera de tests", () => {
+  function capturarAvisos(): { avisos: string[]; restaurar: () => void } {
+    const avisos: string[] = [];
+    const orig = console.warn;
+    console.warn = (...a: unknown[]) => {
+      avisos.push(a.map(String).join(" "));
+    };
+    return { avisos, restaurar: () => (console.warn = orig) };
+  }
+  const ENV_CENTRAL = { CIMA_ESCRITOR: "central", PII_ENCRYPTION_KEY: "a".repeat(64), PII_LOOKUP_KEY: "b".repeat(64) };
+  const avisosDefault = (xs: string[]) => xs.filter((x) => x.includes("alertas_solo_log_por_defecto")).length;
+  // Orden importa: el aviso es una vez POR PROCESO.
+  it("con NODE_ENV=test → no avisa", async () => {
+    const { avisos, restaurar } = capturarAvisos();
+    try {
+      await persistCimaFichero({} as never, dbIntocable().db, undefined, { ...ENV_CENTRAL, NODE_ENV: "test" }).catch(() => {});
+    } finally {
+      restaurar();
+    }
+    assert.equal(avisosDefault(avisos), 0);
+  });
+  it("fuera de test → avisa una sola vez aunque se llame dos veces; con canal inyectado, nunca", async () => {
+    process.env.NODE_ENV = "development";
+    Object.assign(process.env, ENV_CENTRAL);
+    const { avisos, restaurar } = capturarAvisos();
+    try {
+      await persistCimaFichero({} as never, dbIntocable().db, ALERTAS_SOLO_LOG, ENV_CENTRAL).catch(() => {});
+      assert.equal(avisosDefault(avisos), 0, "avisó con canal inyectado");
+      await persistCimaFichero({} as never, dbIntocable().db, undefined, ENV_CENTRAL).catch(() => {});
+      await persistCimaFichero({} as never, dbIntocable().db, undefined, ENV_CENTRAL).catch(() => {});
+    } finally {
+      restaurar();
+    }
+    assert.equal(avisosDefault(avisos), 1);
   });
 });

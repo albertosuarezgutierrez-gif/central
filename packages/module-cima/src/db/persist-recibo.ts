@@ -28,7 +28,7 @@
  */
 
 import { sql } from "drizzle-orm";
-import type { CimaDb } from "./conexion.ts";
+import { exigirGateEscritura, type CimaDb } from "./conexion.ts";
 import {
   operationalEvents,
   polizaRecibos,
@@ -78,7 +78,10 @@ function reciboEventPayload(
 export async function persistCimaRecibo(
   input: PersistReciboInput,
   dbc: ReciboDbClient,
+  /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */
+  env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<PersistReciboResult> {
+  exigirGateEscritura(env, "persistCimaRecibo");
   const { xmlHash, mapped, match } = input;
   const correduriaId = getIngestaCorreduriaId();
 

@@ -24,6 +24,7 @@ import {
   getCimaAdapterConfig,
   type CimaAdapterConfig,
 } from "./config.ts";
+import { exigirEscritorCentral } from "./db/escritor.ts";
 
 export { unwrapCimaWseEnvelope } from "./pull-puro.ts";
 
@@ -96,6 +97,54 @@ export type CimaFetch = typeof globalThis.fetch;
 export interface ClienteAdaptadorCimaDeps {
   config: CimaAdapterConfig;
   fetch: CimaFetch;
+  /** PORT central — 🚨 entorno del gate `CIMA_ESCRITOR` (normalmente `process.env`, el
+   * MISMO que reciba `buildCimaPullDeps`). Se lee en CADA llamada: toda ruta que
+   * confirme una descarga (IRREVERSIBLE en TIREA) exige `CIMA_ESCRITOR=central`. */
+  env: Readonly<Record<string, string | undefined>>;
+}
+
+/** Ruta decodificada (hasta 3 veces); `null` si no se puede decodificar. */
+function decodificarRuta(path: string): string | null {
+  let p = path;
+  for (let i = 0; i < 3; i++) {
+    let d: string;
+    try {
+      d = decodeURIComponent(p);
+    } catch {
+      return null;
+    }
+    if (d === p) break;
+    p = d;
+  }
+  return p;
+}
+
+/**
+ * PURA. ¿Esta ruta del adaptador ESCRIBE en TIREA (confirmar una descarga o enviar un
+ * fichero)? Conservadora: busca `confirmar` o `enviar` sin mirar mayúsculas en
+ * CUALQUIER parte de la ruta decodificada (`/wse/confirmar-descarga`,
+ * `WSE/Enviar-Fichero/`, `%63onfirmar`…). Indecodificable → sí (fail-CLOSED).
+ */
+export function rutaConfirmaDescarga(path: string): boolean {
+  const p = decodificarRuta(path);
+  return p === null || /confirmar|enviar/i.test(p);
+}
+
+/** PURA. ¿La ruta toca credenciales CIMA/TIREA? (`credencial` en cualquier parte,
+ * sin mirar mayúsculas). Indecodificable → sí (fail-CLOSED). */
+export function rutaTocaCredenciales(path: string): boolean {
+  const p = decodificarRuta(path);
+  return p === null || /credencial/i.test(p);
+}
+
+export const CREDENCIALES_BLOQUEADAS_MSG =
+  "credenciales CIMA no se gestionan desde central (regla de Alberto)";
+
+export class CimaCredencialesBloqueadasError extends Error {
+  constructor() {
+    super(CREDENCIALES_BLOQUEADAS_MSG);
+    this.name = "CimaCredencialesBloqueadasError";
+  }
 }
 
 export type CimaHealthResult = {
@@ -142,6 +191,11 @@ export function crearClienteAdaptadorCima(deps: ClienteAdaptadorCimaDeps): Clien
     init?: CimaRequestInit,
     logCtx?: CimaRequestLogContext,
   ): Promise<Response> {
+    // PORT central — credenciales CIMA/TIREA: BLOQUEADAS siempre, sea cual sea el env.
+    if (rutaTocaCredenciales(path)) throw new CimaCredencialesBloqueadasError();
+    // PORT central — 🚨 IRREVERSIBLE: confirmar o enviar a TIREA no sale sin
+    // CIMA_ESCRITOR=central (antes de validar config y de cualquier fetch).
+    if (rutaConfirmaDescarga(path)) exigirEscritorCentral(deps.env, `escritura_tirea:${path}`);
     const cfg: CimaAdapterConfig = deps.config;
     assertCimaAdapterCallable(cfg);
 

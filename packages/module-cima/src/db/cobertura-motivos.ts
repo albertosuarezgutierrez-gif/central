@@ -9,6 +9,7 @@
  */
 import { sql } from "drizzle-orm";
 import { columnaExiste, type ConExecute } from "./columna-opcional.ts";
+import { exigirGateEscritura } from "./conexion.ts";
 import { motivosExclusion, type ClaveCobertura } from "../cobertura-motivos.ts";
 import type { RutaCampo } from "../field-coverage.ts";
 
@@ -23,7 +24,10 @@ export async function escribirMotivosExclusion(
   dbc: ConExecute,
   clave: ClaveCobertura,
   rutas: readonly RutaCampo[],
+  /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */
+  env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<number> {
+  exigirGateEscritura(env, "escribirMotivosExclusion");
   const motivos = motivosExclusion(rutas);
   if (motivos.length === 0) return 0;
   if (!(await columnaExiste(dbc, "cima_cobertura_campos", "excluido_motivo"))) return 0;

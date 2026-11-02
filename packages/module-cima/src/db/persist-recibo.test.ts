@@ -15,6 +15,22 @@ import { operationalEvents, polizaRecibos } from "./schema.ts";
 import type { PersistReciboInput } from "../ingest-pipeline.ts";
 import type { EiacRecMapped } from "../eiac-rec-mapper.ts";
 import type { FicheroParseado } from "../wse-schemas.ts";
+import { after as despuesGate, before as antesGate } from "node:test";
+// PORT central (fase 3, P1-b): cada función de escritura exportada exige
+// CIMA_ESCRITOR=central y claves PII (o NODE_ENV=test) en process.env. Esta prueba es
+// de la LÓGICA de persistencia; el cepo del gate vive en `escritor.test.ts`.
+const envGatePrevio = { CIMA_ESCRITOR: process.env.CIMA_ESCRITOR, NODE_ENV: process.env.NODE_ENV };
+antesGate(() => {
+  process.env.CIMA_ESCRITOR = "central";
+  process.env.NODE_ENV = "test";
+});
+despuesGate(() => {
+  for (const [k, v] of Object.entries(envGatePrevio)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+});
+
 
 const VALID_UUID = "11111111-2222-3333-4444-555555555555";
 const IBAN = "ES9121000418450200051332";

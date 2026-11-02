@@ -21,6 +21,22 @@ import type { EiacPolMapped } from "../eiac-pol-mapper.ts";
 import type { PersistInput } from "../ingest-pipeline.ts";
 import { persistCimaFichero, type PolizaPersistDbClient } from "./pull-persist.ts";
 import type { FicheroParseado } from "../wse-schemas.ts";
+import { after as despuesGate, before as antesGate } from "node:test";
+// PORT central (fase 3, P1-b): cada función de escritura exportada exige
+// CIMA_ESCRITOR=central y claves PII (o NODE_ENV=test) en process.env. Esta prueba es
+// de la LÓGICA de persistencia; el cepo del gate vive en `escritor.test.ts`.
+const envGatePrevio = { CIMA_ESCRITOR: process.env.CIMA_ESCRITOR, NODE_ENV: process.env.NODE_ENV };
+antesGate(() => {
+  process.env.CIMA_ESCRITOR = "central";
+  process.env.NODE_ENV = "test";
+});
+despuesGate(() => {
+  for (const [k, v] of Object.entries(envGatePrevio)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+});
+
 
 const CORREDURIA = "11111111-2222-3333-4444-555555555555";
 const CLIENTE_ACTUAL = "aaaaaaaa-0000-4000-8000-000000000001";

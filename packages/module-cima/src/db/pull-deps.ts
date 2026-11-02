@@ -316,7 +316,7 @@ export async function buildCimaPullDeps(
 
     persist: async (input) => {
       escribe("persist");
-      return persistCimaFichero(input, db, alertas);
+      return persistCimaFichero(input, db, alertas, env);
     },
 
     // Anti-duplicados (03/10/2026) — fichas VIVAS de ESTA correduría (de cualquier
@@ -384,7 +384,7 @@ export async function buildCimaPullDeps(
     },
     persistSiniestro: async (input) => {
       escribe("persistSiniestro");
-      return persistCimaSiniestro(input, db);
+      return persistCimaSiniestro(input, db, env);
     },
 
     // ── LOO-753 — Ingesta de recibos (REC). Flag propio default OFF. ─────────────
@@ -425,7 +425,7 @@ export async function buildCimaPullDeps(
     },
     persistRecibo: async (input) => {
       escribe("persistRecibo");
-      return persistCimaRecibo(input, db);
+      return persistCimaRecibo(input, db, env);
     },
 
     // ── LOO-757 — Ingesta de cuenta de efectivo / liquidaciones (CEF). Flag propio
@@ -488,7 +488,7 @@ export async function buildCimaPullDeps(
     },
     persistCef: async (input) => {
       escribe("persistCef");
-      return persistCimaCef(input, db);
+      return persistCimaCef(input, db, env);
     },
 
     confirm: async (nombreFichero, codigoEntidad) => {
@@ -711,7 +711,7 @@ export async function buildCimaPullDeps(
       // (lista de `cimaExtra`) va a `excluido_motivo` (0106). Fuera del schema de
       // Drizzle a propósito y solo si la columna existe: sin el DDL aplicado, esto
       // no escribe nada y el upsert de arriba sigue igual (ver columna-opcional.ts).
-      await escribirMotivosExclusion(db, { correduriaId, tipoObjeto, codigoEntidad }, rutasCanonicas);
+      await escribirMotivosExclusion(db, { correduriaId, tipoObjeto, codigoEntidad }, rutasCanonicas, env);
     },
 
     // LOO-748 — Escribe la fila cima_ficheros UNA vez por fichero (estado del

@@ -33,7 +33,7 @@
 
 import { eq, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import type { CimaDb } from "./conexion.ts";
+import { exigirGateEscritura, type CimaDb } from "./conexion.ts";
 import {
   cimaFicheros,
   operationalEvents,
@@ -98,7 +98,10 @@ function siniestroEventPayload(
 export async function persistCimaSiniestro(
   input: PersistSiniestroInput,
   dbc: SiniestroDbClient,
+  /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */
+  env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<PersistSiniestroResult> {
+  exigirGateEscritura(env, "persistCimaSiniestro");
   const { xmlHash, mapped, match } = input;
   const correduriaId = getIngestaCorreduriaId();
 

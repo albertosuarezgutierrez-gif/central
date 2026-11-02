@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-11-02T18:27:45Z",
-  "sha": "5d8d73b4aebeec92ff6a7d2939dab6f683639d99",
+  "generadoEn": "2026-11-02T18:37:24Z",
+  "sha": "d0a17e57050a0727101997f83788b3468324f776",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -224586,6 +224586,8 @@
       "resumen": "Cliente HTTP del adaptador CIMA (Java en Fly.io), PORT central (fase 3) de `asegura/src/lib/integrations/cima/client.ts`. Divergencia ÚNICA con el CRM: las dependencias de red entran INYECTADAS. En el CRM cada llamada leía `process.env` (`getCimaAdapterConfig()`) y usaba el `fetch` global. Aquí `cre",
       "exporta": [
         "getWseOpPath",
+        "rutaConfirmaDescarga",
+        "rutaTocaCredenciales",
         "configAdaptadorCimaDesdeEnv",
         "crearClienteAdaptadorCima"
       ],
@@ -224596,7 +224598,7 @@
           "exportada": true,
           "params": "op: CimaWseOp",
           "retorno": "string",
-          "linea": 61
+          "linea": 62
         },
         {
           "nombre": "errorSummary",
@@ -224604,8 +224606,35 @@
           "exportada": false,
           "params": "error: unknown",
           "retorno": "",
-          "linea": 82,
+          "linea": 83,
           "resumen": "Copia literal de `errorSummary` (`asegura/src/lib/observability/safe-log.ts`)."
+        },
+        {
+          "nombre": "decodificarRuta",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string",
+          "retorno": "string | null",
+          "linea": 107,
+          "resumen": "Ruta decodificada (hasta 3 veces); `null` si no se puede decodificar."
+        },
+        {
+          "nombre": "rutaConfirmaDescarga",
+          "kind": "function",
+          "exportada": true,
+          "params": "path: string",
+          "retorno": "boolean",
+          "linea": 128,
+          "resumen": "PURA. ¿Esta ruta del adaptador ESCRIBE en TIREA (confirmar una descarga o enviar un fichero)? Conservadora: busca `confirmar` o `enviar` sin mirar mayúsculas en CUALQUIER parte de la ruta decodificada"
+        },
+        {
+          "nombre": "rutaTocaCredenciales",
+          "kind": "function",
+          "exportada": true,
+          "params": "path: string",
+          "retorno": "boolean",
+          "linea": 135,
+          "resumen": "PURA. ¿La ruta toca credenciales CIMA/TIREA? (`credencial` en cualquier parte, sin mirar mayúsculas). Indecodificable → sí (fail-CLOSED)."
         },
         {
           "nombre": "configAdaptadorCimaDesdeEnv",
@@ -224613,7 +224642,7 @@
           "exportada": true,
           "params": "",
           "retorno": "CimaAdapterConfig",
-          "linea": 121,
+          "linea": 170,
           "resumen": "Config de PRODUCCIÓN desde el entorno. NO se llama al importar: la invoca el caller (la ruta, en su fase). Token con `requireSecret` (sin fallback: en production falta → lanza; fuera, también lanza). "
         },
         {
@@ -224622,13 +224651,13 @@
           "exportada": true,
           "params": "deps: ClienteAdaptadorCimaDeps",
           "retorno": "ClienteAdaptadorCima",
-          "linea": 137,
+          "linea": 186,
           "resumen": "Fetch autenticada al CIMA adapter (Fly.io). - Sin retries: las ops WSE backend NO son idempotentes (un retry a ciegas podría disparar dos veces una operación TIREA). El caller decide reintentar tras i"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "42562eb9b594"
+      "hash": "4bb3800ede6f"
     },
     {
       "ruta": "packages/module-cima/src/cobertura-motivos.ts",
@@ -224835,15 +224864,15 @@
           "nombre": "escribirMotivosExclusion",
           "kind": "function",
           "exportada": true,
-          "params": "dbc: ConExecute, clave: ClaveCobertura, rutas: readonly RutaCampo[],",
+          "params": "dbc: ConExecute, clave: ClaveCobertura, rutas: readonly RutaCampo[], /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */ env: Readonly<Record<string, string | undefined>> = process",
           "retorno": "Promise<number>",
-          "linea": 22,
+          "linea": 23,
           "resumen": "Escribe (o limpia) el motivo de exclusión de las filas YA upsertadas del medidor (misma clave de negocio). Solo toca filas cuyo motivo CAMBIA. Devuelve cuántas rutas se enviaron (0 si no hay o si la c"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "60d14e3d2fc7"
+      "hash": "0eec4ffa5199"
     },
     {
       "ruta": "packages/module-cima/src/db/columna-opcional.ts",
@@ -224886,6 +224915,7 @@
       "resumen": "PORT central (fase 3) — conexión Drizzle de la capa de BD de la ingesta CIMA. En el CRM esto era `src/db/index.ts`: leía `process.env.DATABASE_URL` AL IMPORTAR y abría el pool. Aquí NO: nada se conecta ni lee env al importar. La conexión la crea quien la necesite (`crearDbCima`) con la URL que le pa",
       "exporta": [
         "exigirClavesPii",
+        "exigirGateEscritura",
         "crearDbCima"
       ],
       "funciones": [
@@ -224893,10 +224923,19 @@
           "nombre": "exigirClavesPii",
           "kind": "function",
           "exportada": true,
-          "params": "env: Readonly<Record<string, string | undefined>>",
+          "params": "env?: Readonly<Record<string, string | undefined>>",
           "retorno": "void",
-          "linea": 44,
-          "resumen": "Fail-CLOSED: lanza si falta `PII_ENCRYPTION_KEY` o `PII_LOOKUP_KEY`, salvo en `NODE_ENV === \"test\"`. Solo comprueba PRESENCIA (el formato lo valida `module-seguros-pii` al usarla)."
+          "linea": 49,
+          "resumen": "Fail-CLOSED: lanza si falta `PII_ENCRYPTION_KEY` o `PII_LOOKUP_KEY`. Solo comprueba PRESENCIA (el formato lo valida `module-seguros-pii` al usarla). Mira el `env` inyectado (si se pasa) Y `process.env"
+        },
+        {
+          "nombre": "exigirGateEscritura",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Readonly<Record<string, string | undefined>>, operacion: string,",
+          "retorno": "void",
+          "linea": 63,
+          "resumen": "Gate de TODA función de escritura exportada: `CIMA_ESCRITOR=central` + claves PII. `env` por defecto `process.env`; `buildCimaPullDeps` pasa el suyo (mismo gate que ya aplicó: el doble chequeo no camb"
         },
         {
           "nombre": "crearDbCima",
@@ -224904,13 +224943,13 @@
           "exportada": true,
           "params": "opts: CrearDbCimaOpts",
           "retorno": "CimaDb",
-          "linea": 61,
+          "linea": 81,
           "resumen": "Abre el pool dedicado de la ingesta. Lanza si faltan las claves PII (ver arriba)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ada0be0dbeec"
+      "hash": "7c4c59a56d0b"
     },
     {
       "ruta": "packages/module-cima/src/db/datos-especificos-pii.ts",
@@ -225216,7 +225255,7 @@
           "nombre": "persistCimaCef",
           "kind": "function",
           "exportada": true,
-          "params": "input: PersistCefInput, dbc: CefDbClient,",
+          "params": "input: PersistCefInput, dbc: CefDbClient, /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */ env: Readonly<Record<string, string | undefined>> = process.env,",
           "retorno": "Promise<PersistCefResult>",
           "linea": 87,
           "resumen": "Persiste UNA cuenta de efectivo EIAC CEF en una transacción atómica. Implementa `deps.persistCef` del pipeline. - `mapped.codigoEntidadDgs` null → review (sin clave de negocio para la uq). - presente "
@@ -225224,7 +225263,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "371f99cdc01c"
+      "hash": "ddd866925ac9"
     },
     {
       "ruta": "packages/module-cima/src/db/persist-recibo.ts",
@@ -225247,7 +225286,7 @@
           "nombre": "persistCimaRecibo",
           "kind": "function",
           "exportada": true,
-          "params": "input: PersistReciboInput, dbc: ReciboDbClient,",
+          "params": "input: PersistReciboInput, dbc: ReciboDbClient, /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */ env: Readonly<Record<string, string | undefined>> = process.env,",
           "retorno": "Promise<PersistReciboResult>",
           "linea": 78,
           "resumen": "Persiste UN recibo EIAC REC en una transacción atómica. Implementa `deps.persistRecibo` del pipeline. - `input.match` null → cuarentena: NO inserta, emite review event, outcome 'review'. - `input.matc"
@@ -225255,7 +225294,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bbfaf122955d"
+      "hash": "949dc6622b48"
     },
     {
       "ruta": "packages/module-cima/src/db/persist-siniestro.ts",
@@ -225287,7 +225326,7 @@
           "nombre": "persistCimaSiniestro",
           "kind": "function",
           "exportada": true,
-          "params": "input: PersistSiniestroInput, dbc: SiniestroDbClient,",
+          "params": "input: PersistSiniestroInput, dbc: SiniestroDbClient, /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */ env: Readonly<Record<string, string | undefined>> = process.env,",
           "retorno": "Promise<PersistSiniestroResult>",
           "linea": 98,
           "resumen": "Persiste UN siniestro EIAC SIN en una transacción atómica. Implementa `deps.persistSiniestro` del pipeline. - `input.match` null → cuarentena: NO inserta, emite review event, outcome 'review'. - `inpu"
@@ -225298,7 +225337,7 @@
           "exportada": false,
           "params": "tx: Parameters<Parameters<CimaDb[\"transaction\"]>[0]>[0], figura: MappedFigura, siniestroId: string, correduriaId: string,",
           "retorno": "Promise<void>",
-          "linea": 389,
+          "linea": 392,
           "resumen": "Inserta UN tercero en su subtabla según `kind`, cifrando la PII Tier-1."
         },
         {
@@ -225307,7 +225346,7 @@
           "exportada": false,
           "params": "tx: Parameters<Parameters<CimaDb[\"transaction\"]>[0]>[0], siniestroId: string,",
           "retorno": "Promise<ContrarioComparable[]>",
-          "linea": 441,
+          "linea": 444,
           "resumen": "Contrarios ya guardados del siniestro, DESCIFRADOS en memoria (no salen de aquí)."
         },
         {
@@ -225316,7 +225355,7 @@
           "exportada": false,
           "params": "v: string | null | undefined, digitos = false",
           "retorno": "string | null",
-          "linea": 468
+          "linea": 471
         },
         {
           "nombre": "contrarioCubierto",
@@ -225324,7 +225363,7 @@
           "exportada": true,
           "params": "guardado: ContrarioComparable, nuevo: MappedFigura",
           "retorno": "boolean",
-          "linea": 481,
+          "linea": 484,
           "resumen": "¿El contrario que llega ya está guardado? Sí si un guardado lo CUBRE: todo lo que trae el nuevo coincide con el guardado (un delta que repite al contrario con menos datos no lo duplica). Regla de iden"
         },
         {
@@ -225333,7 +225372,7 @@
           "exportada": false,
           "params": "f: T",
           "retorno": "T",
-          "linea": 501,
+          "linea": 504,
           "resumen": "Figura con nombre: el de PERSONA FÍSICA se cifra; la razón social de empresa, en claro."
         },
         {
@@ -225342,7 +225381,7 @@
           "exportada": false,
           "params": "a: MappedAccion",
           "retorno": "MappedAccion",
-          "linea": 505
+          "linea": 508
         },
         {
           "nombre": "columnasHuecos",
@@ -225350,7 +225389,7 @@
           "exportada": true,
           "params": "mapped: EiacSinMapped",
           "retorno": null,
-          "linea": 515,
+          "linea": 518,
           "resumen": "Columnas nuevas del 28/09/2026. PII (contacto, conductor, nombres de persona física, todo lo del contrario salvo la marca) CIFRADA con el mismo `encryptFieldNullable` que los terceros. `null` = no vin"
         },
         {
@@ -225359,7 +225398,7 @@
           "exportada": false,
           "params": "tx: Pick<Tx, \"execute\">, siniestroId: string",
           "retorno": "Promise<unknown>",
-          "linea": 550,
+          "linea": 553,
           "resumen": "Lo guardado en `siniestros.cima_extra` (fila ya bloqueada por la tx)."
         },
         {
@@ -225368,7 +225407,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CimaExtraEntrada[] | null",
-          "linea": 557
+          "linea": 560
         },
         {
           "nombre": "fusionarCimaExtraSin",
@@ -225376,7 +225415,7 @@
           "exportada": true,
           "params": "guardado: unknown, entrante: { entradas: CimaExtraEntrada[]; truncado: boolean }, ganaExistente: boolean,",
           "retorno": "",
-          "linea": 573,
+          "linea": 576,
           "resumen": "PURA. Valor de `siniestros.cima_extra` tras aplicar un SIN. Un SIN es un delta: una ruta que el fichero NO trae no se borra. Por RUTA (grupo completo, una ruta puede repetirse en arrays): normal → gan"
         },
         {
@@ -225385,7 +225424,7 @@
           "exportada": true,
           "params": "guardado: unknown, entrante: { entradas: CimaExtraEntrada[]; truncado: boolean } | null, terceros: FiguraCima[] | undefined, ganaExistente: boolean,",
           "retorno": "Record<string, unknown>",
-          "linea": 597,
+          "linea": 600,
           "resumen": "PURA salvo el cifrado de terceros. Valor COMPLETO de `siniestros.cima_extra` tras aplicar un SIN: el resto (`cimaExtra`, `fusionarCimaExtraSin`) y los `terceros` (`fusionarTercerosCima`), los dos como"
         },
         {
@@ -225394,7 +225433,7 @@
           "exportada": false,
           "params": "columna: ColumnaHistorico, opts: { ignorar?: string[]; clave?: string; ganaExistente?: boolean } = {},",
           "retorno": null,
-          "linea": 634,
+          "linea": 637,
           "resumen": "Unión sin duplicados de un histórico jsonb (lo que había + lo que trae el fichero). `null` si los dos están vacíos. Dos elementos son «el mismo» si coincide su CLAVE: por defecto el valor entero; con "
         },
         {
@@ -225403,7 +225442,7 @@
           "exportada": true,
           "params": "nombre: string | null | undefined",
           "retorno": "ClaveFicheroSin | null",
-          "linea": 680,
+          "linea": 683,
           "resumen": "Nombre EIAC `<ent>_<med>_SIN_<proceso>_<n>_<YYYYMMDD>_<seq>.zip` → clave comparable; `null` si el nombre no se puede leer (manual, renombrado…). Puro: sin BD."
         },
         {
@@ -225412,7 +225451,7 @@
           "exportada": true,
           "params": "a: ClaveFicheroSin, b: ClaveFicheroSin",
           "retorno": "number",
-          "linea": 702,
+          "linea": 705,
           "resumen": "<0 si a es anterior a b, 0 si iguales, >0 si posterior. Orden: fecha del dato, luego seq NUMÉRICA (marca de generación: el orden real dentro del día — un 399 de cierre a las 10:00 y un 361 de reapertu"
         },
         {
@@ -225421,7 +225460,7 @@
           "exportada": true,
           "params": "entrante: string | null | undefined, almacenada: string | null | undefined",
           "retorno": "boolean",
-          "linea": 717,
+          "linea": 720,
           "resumen": "¿El fichero entrante es MÁS VIEJO que el último aplicado? Clave igual = NO (replay idempotente del mismo fichero). Entrante ilegible frente a una almacenada = SÍ (conservador: solo rellena). Almacenad"
         },
         {
@@ -225430,7 +225469,7 @@
           "exportada": true,
           "params": "nombres: Array<string | null | undefined>",
           "retorno": "string | null",
-          "linea": 726,
+          "linea": 729,
           "resumen": "De una lista de nombres, el de clave MÁS NUEVA (los ilegibles no cuentan)."
         },
         {
@@ -225439,7 +225478,7 @@
           "exportada": true,
           "params": "tx: Pick<Tx, \"execute\">, k: { correduriaId: string; idSiniestroEntidad: string; codigoEntidadDgs: string },",
           "retorno": "Promise<",
-          "linea": 750,
+          "linea": 753,
           "resumen": "Dentro de la tx: BLOQUEA la fila del siniestro (FOR UPDATE) y devuelve el nombre del fichero MÁS NUEVO ya aplicado a ella. Fuentes: los op_events `cima_siniestro_persisted`/`cima_siniestro_actualizado"
         }
       ],
@@ -225450,7 +225489,7 @@
         "sean"
       ],
       "rutaApi": null,
-      "hash": "e16fca773dc3"
+      "hash": "9f2d16ffb62c"
     },
     {
       "ruta": "packages/module-cima/src/db/pull-audit.ts",
@@ -225535,7 +225574,7 @@
         "node"
       ],
       "rutaApi": null,
-      "hash": "b02952945d1d"
+      "hash": "ba16fa37ca05"
     },
     {
       "ruta": "packages/module-cima/src/db/pull-persist.ts",
@@ -225564,7 +225603,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 95,
+          "linea": 96,
           "resumen": "correduriaId de Alberto (single-tenant MVP). Sin hardcode → env UUID."
         },
         {
@@ -225573,7 +225612,7 @@
           "exportada": true,
           "params": "input: { fichero: FicheroParseado; xmlHash: string; mapped: { codigoEntidadDgs: string | null }; }, objeto: \"siniestro\" | \"recibo\" | \"cef\", correduriaId: string, dbc: Pick<CimaDb, \"insert\">,",
           "retorno": "Promise<",
-          "linea": 121,
+          "linea": 122,
           "resumen": "LOO-826 A1 (hallazgo #18 auditoría) — Guard de entidad autorizada COMPARTIDO por los persist de SIN/REC/CEF. Espejo del guard inline que POL ya tenía en `persistCimaFichero`: hasta este ticket un SIN/"
         },
         {
@@ -225582,7 +225621,7 @@
           "exportada": true,
           "params": "coberturas: EiacPolMapped[\"coberturas\"], correduriaId: string, polizaId: string,",
           "retorno": "NewPolizaCobertura[]",
-          "linea": 170,
+          "linea": 171,
           "resumen": "LOO-751 — proyecta las coberturas mapeadas (forma intermedia, fechas ISO string) a filas `poliza_coberturas` listas para insertar (fechas → Date). PURA: sin BD. La usa el persist en su delete-reinsert"
         },
         {
@@ -225591,7 +225630,7 @@
           "exportada": true,
           "params": "intervinientes: EiacPolMapped[\"intervinientes\"], correduriaId: string, polizaId: string, // LOO-761 — `nif_lookup_hash` → clienteId del MISMO tenant. Default vacío → // todos los clienteId quedan null (comportamiento previo a LOO-761). clie",
           "retorno": "NewPolizaInterviniente[]",
-          "linea": 211,
+          "linea": 212,
           "resumen": "LOO-752 — proyecta los intervinientes mapeados (PII en claro) a filas `poliza_intervinientes` listas para insertar, CIFRANDO la PII Tier-1 (Art.14). PURA: sin BD. La usa el persist en su delete-reinse"
         },
         {
@@ -225600,7 +225639,7 @@
           "exportada": false,
           "params": "tx: PersistTx, rows: NewPolizaInterviniente[], correduriaId: string,",
           "retorno": "Promise<Map<string, string>>",
-          "linea": 259,
+          "linea": 260,
           "resumen": "LOO-761 — Resuelve el FK `cliente_id` de los intervinientes CIMA por blind-index del NIF, DENTRO de la tx de persistencia. Reúne los `nif_lookup_hash` no-null de las filas (dedup), consulta `clientes`"
         },
         {
@@ -225609,7 +225648,7 @@
           "exportada": true,
           "params": "rows: NewPolizaInterviniente[],",
           "retorno": "NewPolizaInterviniente[]",
-          "linea": 308,
+          "linea": 309,
           "resumen": "LOO-752 — dedup de intervinientes CIMA por (`nif_lookup_hash`, `rol`) ANTES de insertar, igual que el índice único parcial (correduria, poliza, nif_lookup_hash, rol WHERE hash NOT NULL). 🚨 Hasta el 2"
         },
         {
@@ -225618,7 +225657,7 @@
           "exportada": false,
           "params": "tx: PersistTx, bloque: \"coberturas\" | \"intervinientes\", correduriaId: string, polizaId: string, ctx: PersistChildCtx,",
           "retorno": "Promise<void>",
-          "linea": 333,
+          "linea": 334,
           "resumen": "LOO-835 (D10 Opción A) — rastro telemétrico del SKIP de un bloque hijo por EIAC parcial. Op_event DENTRO de la tx (mismo patrón Art.30 que el resto del persist), payload SIN PII: `polizaId`/`idPolizaE"
         },
         {
@@ -225627,7 +225666,7 @@
           "exportada": true,
           "params": "tx: PersistTx, coberturas: EiacPolMapped[\"coberturas\"], correduriaId: string, polizaId: string, ctx: PersistChildCtx,",
           "retorno": "Promise<",
-          "linea": 375,
+          "linea": 376,
           "resumen": "LOO-751 + guard EIAC parcial LOO-835 (D10 Opción A) — SUSTITUYE (delete-reinsert) el conjunto de coberturas CIMA de ESTA póliza DENTRO de la tx. CIMA es autoritativo del contrato: el conjunto del EIAC"
         },
         {
@@ -225636,7 +225675,7 @@
           "exportada": true,
           "params": "tx: PersistTx, intervinientes: EiacPolMapped[\"intervinientes\"], correduriaId: string, polizaId: string, ctx: PersistChildCtx,",
           "retorno": "Promise<",
-          "linea": 416,
+          "linea": 417,
           "resumen": "LOO-752/761 + guard EIAC parcial LOO-835 (D10 Opción A) — SUSTITUYE (delete-reinsert) los intervinientes CIMA de ESTA póliza DENTRO de la tx. PII Tier-1 (Art.14) CIFRADA (buildIntervinienteRows). El d"
         },
         {
@@ -225645,7 +225684,7 @@
           "exportada": true,
           "params": "matchedId: string, correduriaId: string, clienteId: string,",
           "retorno": null,
-          "linea": 490,
+          "linea": 491,
           "resumen": "LOO-887 (Slice 1c) — condiciones del UPDATE que reconcilia una fila legacy con el feed de CIMA. Extraído a helper puro para poder fijarlo en tests sin BBDD. Además del `id` y del tenant guard, dos inv"
         },
         {
@@ -225654,7 +225693,7 @@
           "exportada": true,
           "params": "datos: Record<string, unknown> | null,",
           "retorno": "Record<string, unknown> | null",
-          "linea": 524,
+          "linea": 525,
           "resumen": "`datos_especificos` de un EIAC → objeto LISTO PARA ESCRIBIR (PII cifrada), o `null` si no hay nada que escribir. Por qué existe (20/09/2026): hasta hoy el mapper solo metía aquí matrícula/ marca/model"
         },
         {
@@ -225663,7 +225702,7 @@
           "exportada": true,
           "params": "contacto: EiacPolMapped[\"tomadorContacto\"], existing: { direccion: string | null; codigoPostal: string | null; ciudad: string | null; provincia: string | null; telefono: string | null; email: string | null; fechaNacimiento: string | null; e",
           "retorno": "Partial<NewCliente>",
-          "linea": 583,
+          "linea": 584,
           "resumen": "L14 (28/09/2026) — contacto del Tomador → columnas de `clientes`. PURA salvo el cifrado (`encryptClientePiiInput`: direccion/telefono/email/fechaNacimiento cifrados + `email_lookup_hash`/`telefono_loo"
         },
         {
@@ -225672,7 +225711,7 @@
           "exportada": false,
           "params": "tx: PersistTx, clienteId: string, correduriaId: string,",
           "retorno": "Promise<",
-          "linea": 631,
+          "linea": 632,
           "resumen": "¿La ficha tiene ya algún email / teléfono en sus tablas de contactos?"
         },
         {
@@ -225681,7 +225720,7 @@
           "exportada": false,
           "params": "tx: PersistTx, email: string | null | undefined, excluirClienteId: string | null,",
           "retorno": "Promise<boolean>",
-          "linea": 655,
+          "linea": 656,
           "resumen": "¿Otra ficha ya tiene este email? (índice único GLOBAL sobre el hash). Sin hash (sin `PII_LOOKUP_KEY` o sin email) → false: no hay nada que choque."
         },
         {
@@ -225690,7 +225729,7 @@
           "exportada": true,
           "params": "datos: Record<string, unknown>",
           "retorno": "SQL",
-          "linea": 686,
+          "linea": 687,
           "resumen": "Expresión de escritura de `datos_especificos` en un UPDATE/upsert: FUSIÓN (`jsonb ||`) de lo que ya hay con lo que trae CIMA, no sustitución. Por qué (medido el 20/09/2026): el `SET datos_especificos "
         },
         {
@@ -225699,7 +225738,7 @@
           "exportada": true,
           "params": "matricula: string",
           "retorno": "string",
-          "linea": 690
+          "linea": 691
         },
         {
           "nombre": "buildMotoPorMatriculaConds",
@@ -225707,7 +225746,7 @@
           "exportada": true,
           "params": "correduriaId: string, matricula: string,",
           "retorno": "SQL[]",
-          "linea": 706,
+          "linea": 707,
           "resumen": "Condiciones para buscar, en la cartera de la correduría, una póliza ya marcada como MOTO con la misma matrícula. Por qué: la ingesta solo reconoce moto con `ClaseVehiculo = 'MO'`, y Allianz y Mapfre m"
         },
         {
@@ -225716,16 +225755,25 @@
           "exportada": false,
           "params": "tx: PersistTx, correduriaId: string, mapped: EiacPolMapped, match: PersistInput[\"match\"],",
           "retorno": "Promise<",
-          "linea": 724,
+          "linea": 725,
           "resumen": "Póliza que CHOCARÍA con el upsert del alta nueva: misma clave que su `onConflictDoUpdate` (correduria_id + id_poliza_entidad + codigo_entidad_dgs, sin filtrar tombstones porque el índice único tampoco"
+        },
+        {
+          "nombre": "alertasPorDefecto",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "AlertasCima",
+          "linea": 760,
+          "resumen": "`ALERTAS_SOLO_LOG` como default de `persistCimaFichero`: fuera de tests avisa UNA vez (por proceso) de que las alertas solo irán al log, sin canal real."
         },
         {
           "nombre": "persistCimaFichero",
           "kind": "function",
           "exportada": true,
-          "params": "input: PersistInput, /** Inyectado (patrón de `persistCimaSiniestro`). PORT central: sin default. */ dbc: PolizaPersistDbClient, /** PORT central: canal de alertas inyectado (en el CRM, Telegram directo). */ alertas: AlertasCima = ALERTAS_S",
+          "params": "input: PersistInput, /** Inyectado (patrón de `persistCimaSiniestro`). PORT central: sin default. */ dbc: PolizaPersistDbClient, /** PORT central: canal de alertas inyectado (en el CRM, Telegram directo). Sin él, * `ALERTAS_SOLO_LOG` y un a",
           "retorno": "Promise<PersistResult>",
-          "linea": 761,
+          "linea": 775,
           "resumen": "Persiste UN fichero POL en una transacción atómica. Implementa `deps.persist` del pipeline (PR-5): firma exacta `(input: PersistInput) => Promise<PersistResult>`. El pipeline ya resolvió `match`, `res"
         }
       ],
@@ -225736,7 +225784,7 @@
         "que"
       ],
       "rutaApi": null,
-      "hash": "9109ed6418d4"
+      "hash": "230209215aea"
     },
     {
       "ruta": "packages/module-cima/src/eiac-cef-mapper.ts",
@@ -268392,6 +268440,6 @@
   ],
   "resumen": {
     "archivos": 5536,
-    "funciones": 21667
+    "funciones": 21672
   }
 }

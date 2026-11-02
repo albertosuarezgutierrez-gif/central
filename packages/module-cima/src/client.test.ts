@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { describe, it } from "node:test";
 
 import {
   CIMA_ADAPTER_INTERNAL_TOKEN_HEADER,
   CimaAdapterTimeoutError,
+  CimaCredencialesBloqueadasError,
   configAdaptadorCimaDesdeEnv,
   crearClienteAdaptadorCima,
   getWseOpPath,
@@ -13,6 +14,7 @@ import {
   type CimaWseOp,
 } from "./client.ts";
 import { CIMA_ADAPTER_INTERNAL_TOKEN_MIN_LENGTH } from "./config.ts";
+import { CimaEscritorNoCentralError } from "./db/escritor.ts";
 
 // PORT central (fase 3): en el CRM las funciones leían `process.env` y el `fetch`
 // GLOBAL en cada llamada. Aquí el cliente recibe config y fetch INYECTADOS. Para
@@ -24,6 +26,7 @@ const cliente = () =>
   crearClienteAdaptadorCima({
     config: configAdaptadorCimaDesdeEnv(),
     fetch: (fetchDePrueba ?? (() => Promise.reject(new Error("fetch_no_inyectado")))) as FetchFn,
+    env: process.env,
   });
 const cimaAdapterRequest = (path: string, init?: CimaRequestInit, logCtx?: CimaRequestLogContext) =>
   cliente().request(path, init, logCtx);
@@ -277,7 +280,9 @@ test("cimaInvokeWse usa POST + path correcto + operación tipada", async () => {
           return jsonResponse(200, { ok: true });
         }) as FetchFn,
         async () => {
-          await cimaInvokeWse("consultarPlantillaCredencial", {
+          // PORT central: el literal del CRM usaba consultarPlantillaCredencial; en
+          // central las credenciales están BLOQUEADAS → misma forma con una op de lectura.
+          await cimaInvokeWse("ficherosDisponibles", {
             codigoPlataforma: "PLAT",
             codigoEntidad: "E1",
           });
@@ -285,7 +290,7 @@ test("cimaInvokeWse usa POST + path correcto + operación tipada", async () => {
       );
       assert.equal(
         receivedUrl,
-        "https://adapter.example.test/wse/consultar-plantilla-credencial",
+        "https://adapter.example.test/wse/ficheros-disponibles",
       );
       assert.equal(receivedMethod, "POST");
       assert.equal(
@@ -418,6 +423,7 @@ test("central: el cliente usa el fetch INYECTADO, nunca el global", async () => 
         inyectado++;
         return jsonResponse(200, {});
       }) as FetchFn,
+      env: {},
     });
     await c.request("/health");
   } finally {
@@ -430,5 +436,97 @@ test("central: el cliente usa el fetch INYECTADO, nunca el global", async () => 
 test("central: sin CIMA_ADAPTER_INTERNAL_TOKEN la config de entorno LANZA (requireSecret, sin literal)", async () => {
   await withEnv({ CIMA_ADAPTER_URL: "https://adapter.example.test", CIMA_ADAPTER_INTERNAL_TOKEN: undefined }, () => {
     assert.throws(() => configAdaptadorCimaDesdeEnv(), /CIMA_ADAPTER_INTERNAL_TOKEN/);
+  });
+});
+
+// 🪤 PORT central (fase 3, P1-a): el CLIENTE exige CIMA_ESCRITOR=central ante CUALQUIER
+// ruta que confirme una descarga (IRREVERSIBLE en TIREA), no solo `buildCimaPullDeps`.
+describe("🚨 confirmar descarga en el cliente sin CIMA_ESCRITOR=central", () => {
+  const CFG = { baseUrl: "https://adapter.example.test", internalToken: VALID_TOKEN, timeoutMs: 1000 };
+  function clienteContado(env: Record<string, string | undefined>) {
+    const llamadas: string[] = [];
+    const c = crearClienteAdaptadorCima({
+      config: CFG,
+      fetch: (async (url: string | URL | Request) => {
+        llamadas.push(String(url));
+        return jsonResponse(200, { codigoRespuesta: "CIMA-200" });
+      }) as FetchFn,
+      env,
+    });
+    return { c, llamadas };
+  }
+  const variantes: Array<[string, (c: ReturnType<typeof crearClienteAdaptadorCima>) => Promise<unknown>]> = [
+    ["invokeWse(confirmarDescarga)", (c) => c.invokeWse("confirmarDescarga", {})],
+    ["request(/wse/confirmar-descarga)", (c) => c.request("/wse/confirmar-descarga", { method: "POST", body: {} })],
+    ["request sin barra y en mayúsculas", (c) => c.request("WSE/Confirmar-Descarga/", { method: "POST", body: {} })],
+    ["request percent-encoded", (c) => c.request("/wse/%63onfirmar-descarga", { method: "POST", body: {} })],
+    ["invokeWse(enviarFichero)", (c) => c.invokeWse("enviarFichero", {})],
+    ["request(WSE/Enviar-Fichero/)", (c) => c.request("WSE/Enviar-Fichero/", { method: "POST", body: {} })],
+  ];
+  const envsNoCentral: Array<[string, Record<string, string | undefined>]> = [
+    ["crm", { CIMA_ESCRITOR: "crm" }],
+    ["ninguno", { CIMA_ESCRITOR: "ninguno" }],
+    ["sin variable", {}],
+  ];
+  for (const [nombreEnv, env] of envsNoCentral) {
+    for (const [nombre, llamar] of variantes) {
+      it(`${nombre} con ${nombreEnv} → lanza y 0 fetch`, async () => {
+        const { c, llamadas } = clienteContado(env);
+        await assert.rejects(llamar(c), CimaEscritorNoCentralError);
+        assert.equal(llamadas.length, 0, "se llamó a TIREA sin ser el escritor");
+      });
+    }
+  }
+  for (const [nombre, llamar] of variantes) {
+    it(`${nombre} con central → SÍ llama (el gate es lo único que lo impide)`, async () => {
+      const { c, llamadas } = clienteContado({ CIMA_ESCRITOR: "central" });
+      await llamar(c);
+      assert.equal(llamadas.length, 1);
+      assert.match(llamadas[0]!, /\/wse\/((confirmar|%63onfirmar)-descarga|enviar-fichero)/i);
+    });
+  }
+  it("el gate se lee en CADA llamada (central → crm tras crear el cliente)", async () => {
+    const env: Record<string, string | undefined> = { CIMA_ESCRITOR: "central" };
+    const { c, llamadas } = clienteContado(env);
+    env.CIMA_ESCRITOR = "crm";
+    await assert.rejects(c.invokeWse("confirmarDescarga", {}), CimaEscritorNoCentralError);
+    assert.equal(llamadas.length, 0);
+  });
+  const opsCredenciales: CimaWseOp[] = [
+    "consultarPlantillaCredencial",
+    "consultarCredencial",
+    "agregarCredencial",
+    "modificarCredencial",
+    "eliminarCredencial",
+    "validarCredencial",
+  ];
+  for (const op of opsCredenciales) {
+    for (const [nombreEnv, env] of [...envsNoCentral, ["central", { CIMA_ESCRITOR: "central" }] as const]) {
+      it(`credenciales: ${op} con ${nombreEnv} → BLOQUEADA y 0 fetch`, async () => {
+        const { c, llamadas } = clienteContado({ ...env });
+        await assert.rejects(c.invokeWse(op, {}), (e: unknown) => {
+          assert.ok(e instanceof CimaCredencialesBloqueadasError);
+          assert.equal(e.message, "credenciales CIMA no se gestionan desde central (regla de Alberto)");
+          return true;
+        });
+        assert.equal(llamadas.length, 0);
+      });
+    }
+  }
+  it("credenciales: request con ruta en mayúsculas/codificada también BLOQUEADA", async () => {
+    const { c, llamadas } = clienteContado({ CIMA_ESCRITOR: "central" });
+    await assert.rejects(c.request("/WSE/Agregar-%43redencial", { method: "POST", body: {} }), CimaCredencialesBloqueadasError);
+    assert.equal(llamadas.length, 0);
+  });
+  it("estadoEnvio (lectura) no exige central", async () => {
+    const { c, llamadas } = clienteContado({});
+    await c.invokeWse("estadoEnvio", {});
+    assert.equal(llamadas.length, 1);
+  });
+  it("ops que NO confirman (recibirFichero, health) no exigen central", async () => {
+    const { c, llamadas } = clienteContado({});
+    await c.invokeWse("recibirFichero", {});
+    await c.health();
+    assert.equal(llamadas.length, 2);
   });
 });

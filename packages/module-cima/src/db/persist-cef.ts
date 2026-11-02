@@ -27,7 +27,7 @@
  */
 
 import { and, eq, sql } from "drizzle-orm";
-import type { CimaDb } from "./conexion.ts";
+import { exigirGateEscritura, type CimaDb } from "./conexion.ts";
 import {
   cuentaEfectivo,
   liquidaciones,
@@ -87,7 +87,10 @@ function cefEventPayload(
 export async function persistCimaCef(
   input: PersistCefInput,
   dbc: CefDbClient,
+  /** PORT central — gate `CIMA_ESCRITOR=central` + claves PII (`exigirGateEscritura`). Default `process.env`. */
+  env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<PersistCefResult> {
+  exigirGateEscritura(env, "persistCimaCef");
   const { xmlHash, mapped, reciboIndex, polizaIndex } = input;
   const correduriaId = getIngestaCorreduriaId();
 
