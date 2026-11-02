@@ -15,7 +15,7 @@ const OPCIONES: CandidatoVersion[] = [
   { codigo: 'A3', etiqueta: 'FORFOUR PURE 52KW DIESEL' },
 ]
 
-test('versión 0.6.40', () => assert.equal(allianzAuto.version, '0.6.40'))
+test('versión 0.6.41', () => assert.equal(allianzAuto.version, '0.6.41'))
 
 test('sin referencia: sigue parando como siempre (requiere_humano)', () => {
   assert.throws(() => versionAutomaticaAllianz(OPCIONES, {}), ErrorEleccionVersion)
@@ -66,13 +66,27 @@ test('canónica de Mapfre (no humana) manda sobre la equivalencia de siempre', (
   assert.equal(versionAutomaticaAllianz(equivalentes, { vehiculoReferencia: vr({ version: 'Smart Forfour Pure 1.1' }) }).indice, 1)
 })
 
-test('lista de OTRO modelo (todas FORTWO ante una canónica Forfour): requiere_humano, no la «más parecida»', () => {
-  const fortwo: CandidatoVersion[] = [{ codigo: 'F1', etiqueta: 'SMART FORTWO PASSION 52' }, { codigo: 'F2', etiqueta: 'SMART FORTWO PULSE 52' }]
-  assert.throws(() => versionAutomaticaAllianz(fortwo, { vehiculoReferencia: vr({ version: 'Smart Forfour Pure 1.1', cv: 75 }) }), ErrorEleccionVersion)
+test('lista de OTRO modelo (todas FORTWO ante una canónica Forfour): se elige la más parecida (PURE) con aviso de modelo distinto (0.6.41)', () => {
+  const fortwo: CandidatoVersion[] = [{ codigo: 'F1', etiqueta: 'SMART FORTWO PASSION 52' }, { codigo: 'F2', etiqueta: 'SMART FORTWO PULSE 52' }, { codigo: 'F3', etiqueta: 'SMART FORTWO PURE 52' }]
+  const r = versionAutomaticaAllianz(fortwo, { vehiculoReferencia: vr({ version: 'Smart Forfour Pure 1.1', cv: 75, combustible: 'gasolina' }) })
+  assert.equal(r.eleccion.etiqueta, 'SMART FORTWO PURE 52')
+  assert.match(r.supuesto ?? '', /Modelo distinto del de referencia/)
+  assert.match(r.supuesto ?? '', /Allianz no ofrece/)
+  assert.match(r.supuesto ?? '', /supuesto/)
 })
 
-test('tarjeta ÚNICA de otro modelo que la canónica: se pregunta; del mismo modelo, pasa', () => {
+test('la elección HUMANA (eleccionVersion) manda sobre la referencia aunque sea de otro modelo', () => {
+  const fortwo: CandidatoVersion[] = [{ codigo: 'F1', etiqueta: 'SMART FORTWO PASSION 52' }, { codigo: 'F3', etiqueta: 'SMART FORTWO PURE 52' }]
+  const r = versionAutomaticaAllianz(fortwo, { vehiculoReferencia: vr({ version: 'Smart Forfour Pure 1.1', cv: 75 }), eleccionVersion: { codigo: 'F1', etiqueta: 'SMART FORTWO PASSION 52' } })
+  assert.equal(r.eleccion.etiqueta, 'SMART FORTWO PASSION 52')
+})
+
+test('tarjeta ÚNICA de otro modelo que la canónica: se tarifica con aviso (0.6.41); del mismo modelo, pasa sin aviso', () => {
   const ref = vr({ marca: 'SMART', modelo: 'FORFOUR', version: 'Pure 1.1' })
-  assert.throws(() => decidirTarjetaVehiculoTurismos([{ etiqueta: 'SMART FORTWO PASSION GASOLINA' }], { vehiculoReferencia: ref }), ErrorEleccionVersion)
-  assert.equal(decidirTarjetaVehiculoTurismos([{ etiqueta: 'SMART FORFOUR PURE GASOLINA' }], { vehiculoReferencia: ref }).indice, 0)
+  const otra = decidirTarjetaVehiculoTurismos([{ etiqueta: 'SMART FORTWO PASSION GASOLINA' }], { vehiculoReferencia: ref })
+  assert.equal(otra.indice, 0)
+  assert.match(otra.supuesto ?? '', /Modelo distinto del de referencia/)
+  const misma = decidirTarjetaVehiculoTurismos([{ etiqueta: 'SMART FORFOUR PURE GASOLINA' }], { vehiculoReferencia: ref })
+  assert.equal(misma.indice, 0)
+  assert.equal(misma.supuesto, null)
 })

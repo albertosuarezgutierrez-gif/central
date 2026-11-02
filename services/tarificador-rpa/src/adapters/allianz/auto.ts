@@ -53,6 +53,7 @@
 // los antecedentes sin dato van al supuesto favorable declarado (`conAntecedentesFavorables`). Se fija por el `<select>` de
 // siempre (`resolverVehiculo`: código de la lista leída + relectura).
 // v0.6.12 (20/10/2026, trabajo real d675077b llegó a «Selección de paquete»): LECTOR DE PRECIOS. La pantalla es una tabla comparativa `nx-comparison-table` (3 paquetes: «Terceros con lunas», «Tercero Ampliado», «Todo Riesgo con franq.»; cada cabecera trae «primer recibo» y «la anualidad»; filas de cobertura con icono check/minus o desplegable por paquete, filas de elección única que abarcan los 3 paquetes y «Todos los paquetes incluyen»). `leerPaquetesTurismosAllianz` (guard.ts, solo lectura) + `ofertasDesdePaquetesTurismos` devuelven una oferta por paquete con supuestos y coberturas; importe ilegible → fuera + aviso; sin tabla → hueco como antes. No se pulsa nada en esta pantalla.
+// v0.6.41 (02/11/2026, Alberto: «que el bot coja el que haya»): si el catálogo no tiene el modelo de la referencia (lista de otro modelo o tarjeta única de otro modelo) se tarifica la más parecida con aviso «Modelo distinto del de referencia» (supuesto) en vez de requiere_humano.
 // v0.6.40 / Moto v0.7.23 (02/11/2026, regla de Alberto «siempre el MISMO modelo de vehículo en todas las compañías»): la referencia canónica manda de cualquier origen (no solo humana), una lista de otro modelo (`otro_modelo`) o una tarjeta única de otro modelo NO se tarifican: requiere_humano.
 // Turismos v0.6.38 / Moto v0.7.22 (01/11/2026, Alberto: «identificar el vehículo UNA vez»): si la versión iba a parar (`requiere_eleccion_version`), se elige SOLA con el vehículo de REFERENCIA de la oportunidad (`vehiculoReferencia`, lo pone asegura al entregar: humano > Mapfre > póliza > Allianz) por similitud (`elegirOpcionPorVehiculoReferencia`, module-tarificacion, compartido con Generali) y se DECLARA como supuesto («vehículo según …» → precio estimado). Una referencia HUMANA manda también sobre la similitud con Mapfre y la equivalencia. Solo sigue parando sin referencia, sin opciones o con la lista de otra marca.
 // v0.6.37 (31/10/2026, trabajo real dbb6d451 atascado en «Datos personales»: «Localidad (no es un campo de texto: desplegable/autocompletado sin puerta en guard.ts)»): «Localidad» del tomador es un autocompletado NDBX (`input[role=combobox][aria-autocomplete=list]`) que el portal no rellena solo tras el CP. Vacío → puerta `localidadTurismosAllianz` (guard.ts): lo enfoca, teclea el municipio (y si no salen opciones, su palabra más larga), lee las `[role=option]` del panel de su `aria-owns` y elige como mucho la que decide `elegirLocalidadTurismos` (CP distinto descartado; única que casa con el municipio; sin casar, solo la única con el CP exacto). Ninguna/varias → hueco con el número de opciones, nunca la primera a ciegas. Con valor del portal distinto → no se toca (hueco, como antes).
@@ -146,6 +147,8 @@ import {
   elegirVersionAutomaticamente,
   elegirOpcionPorVehiculoReferencia,
   vehiculoDivergeDeReferencia,
+  supuestoOtroModelo,
+  textoVehiculoReferencia,
   datosEquivalenciaDesdeEtiqueta,
   referenciaRiesgoVersion,
   etiquetasSupuestos,
@@ -458,8 +461,7 @@ export function versionAutomaticaAllianz(
   // v0.6.38 (01/11/2026, Alberto): vehículo de REFERENCIA de la oportunidad (`elegirOpcionPorVehiculoReferencia`, compartido con
   // Generali). Si lo eligió una PERSONA manda (antes que la equivalencia); si es de un bot/póliza, entra donde antes se paraba.
   const porReferencia = (): { indice: number; eleccion: EleccionVersion; supuesto: string } | null => {
-    const e = elegirOpcionPorVehiculoReferencia(opciones, form.vehiculoReferencia ?? null)
-    if (e.tipo === 'otro_modelo') throw new ErrorEleccionVersion(mostrar.filter((o) => !esOpcionVacia(o.etiqueta)).map((o): CandidatoVersion => ({ etiqueta: o.etiqueta, codigo: o.codigo })))
+    const e = elegirOpcionPorVehiculoReferencia(opciones, form.vehiculoReferencia ?? null, { compania: 'Allianz' })
     if (e.tipo !== 'coincidencia' && e.tipo !== 'aproximacion') return null
     const o = opciones[e.indice]!
     return { indice: e.indice, eleccion: { codigo: o.codigo, etiqueta: o.etiqueta }, supuesto: e.supuesto }
@@ -2003,8 +2005,8 @@ export function decidirTarjetaVehiculoTurismos(
 ): { indice: number; supuesto: string | null } {
   if (tarjetas.length === 0) throw new ErrorMapaIncompleto(`las tarjetas de vehículo de «${BOTON_ENCUENTRA_VEHICULO}» (no hay ninguna)`, true)
   if (tarjetas.length === 1) {
-    // v0.6.40: una sola tarjeta de OTRO modelo que la referencia canónica no se tarifica en silencio (se pregunta a una persona).
-    if (form.vehiculoReferencia && !form.eleccionVersion?.etiqueta?.trim() && vehiculoDivergeDeReferencia(form.vehiculoReferencia, tarjetas[0]!.etiqueta)) throw new ErrorEleccionVersion([{ etiqueta: tarjetas[0]!.etiqueta, codigo: null }])
+    // v0.6.41 (02/11/2026, Alberto: «que el bot coja el que haya»): una sola tarjeta de OTRO modelo que la referencia canónica SÍ se tarifica, con aviso (supuesto).
+    if (form.vehiculoReferencia && !form.eleccionVersion?.etiqueta?.trim() && vehiculoDivergeDeReferencia(form.vehiculoReferencia, tarjetas[0]!.etiqueta)) return { indice: 0, supuesto: supuestoOtroModelo(tarjetas[0]!.etiqueta, textoVehiculoReferencia(form.vehiculoReferencia), 'Allianz') }
     return { indice: 0, supuesto: null }
   }
   const candidatos: CandidatoVersion[] = tarjetas.map((t) => ({ etiqueta: t.etiqueta, codigo: null }))
@@ -3056,7 +3058,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.23' : '0.6.40',
+    version: ramo === 'moto' ? '0.7.23' : '0.6.41',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

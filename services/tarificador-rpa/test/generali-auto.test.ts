@@ -1467,11 +1467,14 @@ test('v0.2.62 · sin referencia ni elección NO se amplía: para con la lista vi
   assert.equal(r.confirmado, null)
 })
 
-test('v0.2.62 · ampliada y aun así nada casa (todo eléctrico): requiere_humano con la lista AMPLIADA y sin «Confirmar»', async () => {
+test('v0.2.68 · ampliada y aun así nada casa (todo eléctrico): se elige la más parecida, se avisa del combustible distinto (supuesto) y se sigue a «Confirmar»', async () => {
   const r = await versionOtras({ vehiculoReferencia: REF_0262 }, ['ELECTRIC DRIVE EQ', 'ELECTRIC DRIVE EQ PASSION', 'ELECTRIC DRIVE EQ PRIME'])
-  assert.ok(r.error instanceof ErrorEleccionVersion && r.error.opcionesVersion.map((o) => o.etiqueta).join('|') === 'ELECTRIC DRIVE EQ|ELECTRIC DRIVE EQ PASSION|ELECTRIC DRIVE EQ PRIME', String(r.error))
-  assert.deepEqual(r.versiones, ['Otras versiones ...'])
-  assert.equal(r.confirmado, null)
+  assert.ok(!(r.error instanceof ErrorEleccionVersion), String(r.error))
+  assert.equal(r.versiones?.[0], 'Otras versiones ...')
+  assert.equal(r.label, 'ELECTRIC DRIVE EQ PASSION')
+  assert.equal(r.confirmado, 1)
+  assert.equal(r.avisos.filter((a) => /Modelo distinto del de referencia/.test(a) && /otro combustible/.test(a) && /supuesto/.test(a) && /Generali no ofrece/.test(a)).length, 1, r.avisos.join(' | '))
+  assert.equal(r.violacion, null)
 })
 
 test('v0.2.62 · guard: «Otras versiones ...» abre una 2ª ronda de versión, una sola vez y nunca otra vez «Otras»', async () => {
@@ -1554,4 +1557,56 @@ test('v0.2.66 · guard: la fila «Otras versiones ...» solo tras elegirla en el
   } finally {
     await a.cerrar()
   }
+})
+
+// ───────────── v0.2.68: grupo «potencia» que sale DESPUÉS de elegir la versión (trabajo real con la 0.2.67) ─────────────
+
+const POTENCIAS_0268 = ['64.0 CV', '68.0 CV', '71.0 CV', '75.0 CV', '82.0 CV', '90.0 CV', '95.0 CV', '109.0 CV', '122.0 CV', '177.0 CV', 'No lo sé']
+/** Solo el desplegable «Versión»; el grupo «potencia» (radios) sale al elegir la versión. */
+const FICHA_0268 = () => {
+  const radios = POTENCIAS_0268.map((o, i) => `<td><input type="radio" id="potencia:${i}" name="potencia" style="position:absolute;left:-999px" onchange="window.__potencia=(window.__potencia||[]).concat('${o}')"><label for="potencia:${i}">${o}</label></td>`).join('')
+  return `<span>Versión</span>
+  <div id="selversion" role="combobox" tabindex="0" onclick="document.getElementById('selversion_panel').style.display='block'"><div class="ui-helper-hidden-accessible" style="position:absolute;width:0;height:0;overflow:hidden"><select id="selversion_input" name="selversion_input" style="width:0;height:0;border:0;padding:0"></select></div><label id="selversion_label">Seleccione una</label></div>
+  <div id="selversion_panel" style="display:none"><ul id="selversion_items"></ul></div>
+  <div id="extra" style="display:none"><span>potencia</span><table><tr>${radios}</tr></table></div>
+  <script>
+    (function(){var vs=['1.1 PURE'];var s=document.getElementById('selversion_input');
+      s.innerHTML='<option value="null">Seleccione una</option>'+vs.map(function(v,i){return '<option value="V'+i+'">'+v+'</option>'}).join('');
+      document.getElementById('selversion_items').innerHTML=vs.map(function(v){return '<li data-label="'+v+'" class="ui-selectonemenu-item">'+v+'</li>'}).join('');
+      Array.from(document.querySelectorAll('#selversion_items li')).forEach(function(li,i){li.onclick=function(){s.selectedIndex=i+1;document.getElementById('selversion_label').textContent=li.dataset.label;window.__version=(window.__version||[]).concat(i);document.getElementById('selversion_panel').style.display='none';document.getElementById('extra').style.display='block'}})})();
+  </script>`
+}
+const ctx0268 = (page: Page, guard: GuardEmision) => ctx0217(page, guard)
+
+async function potenciaTardia(extra: Record<string, unknown>) {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA', 'LEON'], FICHA_0268()))
+  try {
+    const avisos: string[] = []
+    let error: unknown = null
+    try { await seleccionarVehiculoGenerali(page, page, coche({ seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA', descripcion: '1.1 PURE' }, ...extra }), ctx0268(page, guard), avisos) } catch (e) { error = e }
+    return { avisos, error, potencia: await contador(page, '__potencia') as string[] | null, version: await contador(page, '__version'), confirmado: await contador(page, '__confirmado'), violacion: guard.violacion() }
+  } finally {
+    await cerrar()
+  }
+}
+const REF_0268 = (cv: number | null) => ({ origen: 'mapfre', marca: 'SMART', modelo: 'Forfour', version: 'Pure 1.1', carroceria: null, puertas: null, cc: null, cv, combustible: null, anio: null })
+
+test('v0.2.68 · potencia que sale tras la versión: la referencia trae 75 CV → marca «75.0 CV» exacta, sin supuesto, y no se queda en «faltan los campos nuevos»', async () => {
+  const r = await potenciaTardia({ vehiculoReferencia: REF_0268(75) })
+  assert.deepEqual(r.potencia, ['75.0 CV'], String(r.error))
+  assert.equal(r.avisos.filter((a) => /potencia/.test(a)).length, 0, r.avisos.join(' | '))
+  assert.ok(!(r.error instanceof ErrorMapaIncompletoGenerali && /campos nuevos/.test(r.error.message)), String(r.error))
+  assert.equal(r.violacion, null)
+})
+
+test('v0.2.68 · potencia tardía sin opción exacta: la MÁS CERCANA, con supuesto', async () => {
+  const r = await potenciaTardia({ vehiculoReferencia: REF_0268(80) })
+  assert.deepEqual(r.potencia, ['82.0 CV'], String(r.error))
+  assert.equal(r.avisos.filter((a) => /más cercana «82\.0 CV»/.test(a) && /supuesto/.test(a)).length, 1, r.avisos.join(' | '))
+})
+
+test('v0.2.68 · potencia tardía sin CV en la referencia ni en el riesgo: «No lo sé» con supuesto', async () => {
+  const r = await potenciaTardia({ vehiculoReferencia: REF_0268(null) })
+  assert.deepEqual(r.potencia, ['No lo sé'], String(r.error))
+  assert.equal(r.avisos.filter((a) => /No lo sé/.test(a) && /supuesto/.test(a)).length, 1, r.avisos.join(' | '))
 })

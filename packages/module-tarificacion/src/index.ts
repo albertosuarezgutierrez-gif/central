@@ -481,6 +481,8 @@ export {
   vehiculoReferenciaDesdeSeleccion,
   textoVehiculoReferencia,
   supuestoVehiculoReferencia,
+  supuestoOtroModelo,
+  supuestoGeneracionPosterior,
   elegirOpcionPorVehiculoReferencia,
   vehiculoDivergeDeReferencia,
   type VehiculoUsado,

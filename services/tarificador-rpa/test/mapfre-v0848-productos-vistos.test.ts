@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { chromium, type Browser } from 'playwright'
 import { mapfreAuto, avisoProductosVistosMapfre, leerProductosVistosMapfre, ofertasDesdePrimasMapfre, primasDesdeTarjetas } from '../src/adapters/mapfre/auto.ts'
 
-test('v0.8.48 · versión', () => assert.equal(mapfreAuto.version, '0.8.54'))
+test('v0.8.48 · versión', () => assert.equal(mapfreAuto.version, '0.8.55'))
 
 test('pura: prima, bloqueada por controles, consultar, deshabilitada y sin motivo; sin texto crudo', () => {
   const a = avisoProductosVistosMapfre([
