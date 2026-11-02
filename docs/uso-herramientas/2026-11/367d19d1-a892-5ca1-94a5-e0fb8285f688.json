@@ -1,0 +1,19 @@
+{
+ "sesion": "367d19d1-a892-5ca1-94a5-e0fb8285f688",
+ "inicio": "2026-11-02T11:43:38.159Z",
+ "fin": "2026-11-02T11:43:38.160Z",
+ "llamadas": 1,
+ "categorias": {
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 831,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ReadNotifications": 1
+   }
+  }
+ }
+}
