@@ -1,0 +1,32 @@
+{
+ "sesion": "262b3809-6fc2-5e08-a98e-526358f104bc",
+ "inicio": "2026-11-02T14:22:06.188Z",
+ "fin": "2026-11-02T14:22:15.151Z",
+ "llamadas": 4,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 619,
+   "chars_out": 676,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1,
+    "PushNotification": 1
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 167,
+   "chars_out": 171,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  }
+ }
+}
